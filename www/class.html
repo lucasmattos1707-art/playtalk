@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <title>Aulas | PlayTalk</title>
+  <meta
+    name="description"
+    content="Aulas interativas com quadros de imagem, áudio, vídeo, texto e opções."
+  >
+  <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="/config.js"></script>
+  <script src="js/gamesounds.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/lens.js"></script>
+  <script src="js/site-nav.js"></script>
+</head>
+<body class="page-class" data-lens-context="menus">
+  <header class="site-header" id="global-header">
+    <div class="site-header__profile">
+      <div class="site-header__text">
+        <span class="site-header__name">PlayTalk</span>
+      </div>
+    </div>
+  </header>
+  <main id="class-container" class="container-screen container-screen--class" data-page-transition>
+    <section id="class-library" class="class-library" aria-live="polite">
+      <div class="class-library__header">
+        <h1 class="class-title">Aulas disponíveis</h1>
+        <div class="class-library__actions">
+          <button id="import-class-btn" class="btn-secondary" type="button">Importar aula</button>
+          <input id="import-class-input" type="file" accept="application/json" hidden>
+        </div>
+      </div>
+      <div id="class-list" class="class-list"></div>
+    </section>
+    <section id="class-player" class="class-player hidden" aria-live="polite">
+      <div class="class-player__header">
+        <button id="class-back-btn" class="btn-primary class-back" type="button">Voltar</button>
+        <div>
+          <h1 id="class-lesson-title" class="class-title"></h1>
+          <p id="class-progress" class="class-progress"></p>
+        </div>
+      </div>
+      <div id="class-frame" class="class-frame"></div>
+    </section>
+  </main>
+  <script src="js/class-page.js"></script>
+</body>
+</html>

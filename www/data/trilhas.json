@@ -1,0 +1,21 @@
+{
+  "days": {
+    "1": {
+      "phases": {
+        "1": "planting.mp3",
+        "2": "connecting.mp3",
+        "3": "reading.mp3",
+        "4": "sequence.mp3",
+        "5": "listening.mp3",
+        "6": "meaning.mp3",
+        "7": "memory.mp3",
+        "8": "building.mp3",
+        "9": "typing.mp3",
+        "10": "blocks.mp3",
+        "11": "watching.mp3",
+        "12": "talking.mp3"
+      },
+      "postGame": ""
+    }
+  }
+}

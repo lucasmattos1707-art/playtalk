@@ -1,0 +1,162 @@
+{
+  "soundtrack": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/movies/Untitled%20(27).mp3",
+  "level": "talking_day_1",
+  "characters": [
+    {
+      "id": "bit",
+      "name": "Bit",
+      "image": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/personagens/bit.png"
+    },
+    {
+      "id": "jimmy",
+      "name": "Jimmy",
+      "image": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/personagens/jimmy.png"
+    }
+  ],
+  "items": [
+    {
+      "id": 1,
+      "character": "bit",
+      "portuguese": "Oi, Jimmy! Eu sou o Bit, seu robô de inglês.",
+      "english": "Hi, Jimmy! I am Bit, your English robot.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id1_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id1_2.mp3"
+    },
+    {
+      "id": 2,
+      "character": "jimmy",
+      "portuguese": "Oi, Bit! Hoje é minha primeira aula.",
+      "english": "Hi, Bit! Today is my first class.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id2_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id2_2.mp3"
+    },
+    {
+      "id": 3,
+      "character": "bit",
+      "portuguese": "Perfeito. Vamos começar com uma conversa simples.",
+      "english": "Perfect. Let's start with a simple conversation.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id3_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id3_2.mp3"
+    },
+    {
+      "id": 4,
+      "character": "jimmy",
+      "portuguese": "Ótimo. Eu quero falar bem em inglês.",
+      "english": "Great. I want to speak English well.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id4_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id4_2.mp3"
+    },
+    {
+      "id": 5,
+      "character": "bit",
+      "portuguese": "Repita depois de mim: Meu nome é Jimmy.",
+      "english": "Repeat after me: My name is Jimmy.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id5_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id5_2.mp3"
+    },
+    {
+      "id": 6,
+      "character": "jimmy",
+      "portuguese": "Meu nome é Jimmy.",
+      "english": "My name is Jimmy.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id6_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id6_2.mp3"
+    },
+    {
+      "id": 7,
+      "character": "bit",
+      "portuguese": "Muito bem. Agora diga: Eu gosto de aprender.",
+      "english": "Very good. Now say: I like learning.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id7_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id7_2.mp3"
+    },
+    {
+      "id": 8,
+      "character": "jimmy",
+      "portuguese": "Eu gosto de aprender.",
+      "english": "I like learning.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id8_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id8_2.mp3"
+    },
+    {
+      "id": 9,
+      "character": "bit",
+      "portuguese": "Excelente. Vamos praticar uma pergunta.",
+      "english": "Excellent. Let's practice a question.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id9_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id9_2.mp3"
+    },
+    {
+      "id": 10,
+      "character": "jimmy",
+      "portuguese": "Qual pergunta?",
+      "english": "Which question?",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id10_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id10_2.mp3"
+    },
+    {
+      "id": 11,
+      "character": "bit",
+      "portuguese": "Pergunte: Você pode me ajudar?",
+      "english": "Ask: Can you help me?",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id11_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id11_2.mp3"
+    },
+    {
+      "id": 12,
+      "character": "jimmy",
+      "portuguese": "Você pode me ajudar?",
+      "english": "Can you help me?",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id12_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id12_2.mp3"
+    },
+    {
+      "id": 13,
+      "character": "bit",
+      "portuguese": "Ótima pronúncia. Agora uma resposta curta.",
+      "english": "Great pronunciation. Now a short answer.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id13_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id13_2.mp3"
+    },
+    {
+      "id": 14,
+      "character": "jimmy",
+      "portuguese": "Claro, eu posso.",
+      "english": "Sure, I can.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id14_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id14_2.mp3"
+    },
+    {
+      "id": 15,
+      "character": "bit",
+      "portuguese": "Muito bom, Jimmy. Última frase.",
+      "english": "Very good, Jimmy. Last sentence.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id15_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id15_2.mp3"
+    },
+    {
+      "id": 16,
+      "character": "jimmy",
+      "portuguese": "Eu estou pronto para continuar.",
+      "english": "I am ready to continue.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id16_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id16_2.mp3"
+    },
+    {
+      "id": 17,
+      "character": "bit",
+      "portuguese": "Perfeito. Você completou a aula 1.",
+      "english": "Perfect. You completed lesson 1.",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id17_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id17_2.mp3"
+    },
+    {
+      "id": 18,
+      "character": "jimmy",
+      "portuguese": "Obrigado, Bit. Vamos para a próxima!",
+      "english": "Thanks, Bit. Let's go to the next one!",
+      "audio_portuguese": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id18_1.mp3",
+      "audio_english": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/scenes/scene1/id18_2.mp3"
+    }
+  ]
+}

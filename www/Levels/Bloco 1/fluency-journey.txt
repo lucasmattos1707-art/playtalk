@@ -1,0 +1,17 @@
+﻿FLUENCY JOURNEY (journey-plan.json)
+
+Este diretório de dias (Dia 1, Dia 2, Dia 3...) alimenta a Fluency Journey.
+
+Como funciona:
+- A Fluency Journey é controlada pelo arquivo data/journey-plan.json.
+- Cada dia possui até 12 fases (fase1.json ... fase12.json).
+- Essas 12 fases abastecem os 12 modos de jogo.
+- A sequência de fases do dia pode ser customizada pelo journey-plan.json.
+
+Diferença para Single Game:
+- Fluency Journey percorre a jornada do dia, com progresso da jornada.
+- Single Game executa uma fase isolada iniciada pelo menu #play.
+
+Sinalização visual no header:
+- Fluency Journey ativa: rocket.svg.
+- Single Game ativo: play.svg.

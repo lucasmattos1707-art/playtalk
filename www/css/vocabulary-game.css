@@ -1,0 +1,4798 @@
+    :root {
+      --primary: #0b1f44;
+      --secondary: #4c96dc;
+      --panel: rgba(11, 31, 68, 0.06);
+      --border: rgba(11, 31, 68, 0.12);
+      --text: #0b1f44;
+      --success: #2ecc71;
+      --danger: #e74c3c;
+      --muted: rgba(11, 31, 68, 0.7);
+      --game-bg-image: url('https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/images/images/beautiful-starry-night-sky-paper-clouds-background_1017-62547.avif');
+    }
+
+    * { box-sizing: border-box; }
+
+    .vocabulary-game {
+      margin: 0;
+      padding: 90px 0 0;
+      font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--game-bg-image) center center / cover no-repeat fixed;
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.page-home.game-active,
+    body.vocabulary-game {
+      margin: 0;
+      background: var(--game-bg-image) center center / cover no-repeat fixed;
+    }
+
+    body.page-home.game-active #home-main {
+      margin: 0;
+      padding: 0 !important;
+      min-height: 100vh;
+      background: transparent;
+    }
+
+    .start-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--game-bg-image) center center / cover no-repeat;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      text-align: center;
+      cursor: pointer;
+      z-index: 30;
+      user-select: none;
+    }
+
+    .start-screen.hidden {
+      display: none;
+    }
+
+    .start-screen__logo {
+      width: min(240px, 70vw);
+      max-width: 280px;
+      height: auto;
+    }
+
+    .start-screen__text {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--primary);
+      transition: opacity 0.4s ease;
+    }
+
+    .start-screen__text.is-fading {
+      opacity: 0;
+    }
+
+    .start-screen__button {
+      min-width: 180px;
+    }
+
+    .start-screen--blank > * {
+      opacity: 0;
+    }
+
+    .start-screen__difficulty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: min(300px, 80vw);
+    }
+
+    .start-screen__difficulty.hidden {
+      display: none;
+    }
+
+    .start-screen__difficulty-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .start-screen__difficulty-btn {
+      width: 100%;
+    }
+
+    @media (min-width: 1024px) {
+      .start-screen__text {
+        font-size: 29px;
+      }
+    }
+
+    .game-status {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 8;
+    }
+
+    .game-status--top {
+      margin-bottom: 0;
+    }
+
+    .game-status--bottom {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(var(--nav-height, 0px) + 30px);
+      margin-top: 0;
+      min-height: 0;
+      z-index: 12;
+      pointer-events: none;
+    }
+
+    .vocabulary-game.from-flashcards .game-status,
+    .vocabulary-game.from-flashcards .progress-footer,
+    .vocabulary-game.from-flashcards .phase-audio-progress,
+    .vocabulary-game.from-flashcards .phase-audio-skip {
+      display: none;
+    }
+
+    .game-hearts {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .game-status--bottom {
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .game-heart {
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.5s ease;
+    }
+
+    .game-heart img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .game-heart--lost {
+      opacity: 0.4;
+    }
+
+    .vocabulary-game .game-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .vocabulary-game .game-control {
+      width: 60px;
+      height: 60px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      filter: none;
+      transition: opacity 0.2s ease, filter 0.2s ease, transform 0.2s ease;
+      pointer-events: auto;
+    }
+
+    .vocabulary-game .game-control img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .vocabulary-game .game-control--character img {
+      border-radius: 999px;
+      object-fit: cover;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+    }
+
+    .vocabulary-game .game-control .game-control__dual-lang {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .vocabulary-game .game-control .game-control__dual-lang-icon {
+      position: absolute;
+      width: 60%;
+      height: 60%;
+      object-fit: contain;
+    }
+
+    .vocabulary-game .game-control .game-control__dual-lang-icon--pt {
+      top: 4%;
+      left: 4%;
+    }
+
+    .vocabulary-game .game-control .game-control__dual-lang-icon--en {
+      right: 4%;
+      bottom: 4%;
+    }
+
+    .vocabulary-game .game-control[data-control-badge] {
+      position: relative;
+    }
+
+    .vocabulary-game .game-control[data-control-badge]::after {
+      content: attr(data-control-badge);
+      position: absolute;
+      right: -2px;
+      bottom: -4px;
+      min-width: 26px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: rgba(11, 31, 68, 0.92);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+    }
+
+    .vocabulary-game .game-control--primary {
+      transform: scale(1.12);
+    }
+
+    .vocabulary-game .game-control--mirrored img {
+      transform: scaleX(-1);
+    }
+
+    .game-control--active {
+      opacity: 1;
+      filter: none;
+    }
+
+    .game-control--disabled {
+      opacity: 1;
+      filter: none;
+      cursor: default;
+    }
+
+    .game-control--mic-on .game-control__mic-icon {
+      filter: none;
+    }
+
+    .game-control--mic-continuous .game-control__mic-icon {
+      filter: saturate(1.35) brightness(1.08);
+    }
+
+    .vocabulary-game.game-paused .board,
+    .vocabulary-game.game-paused .text-container,
+    .vocabulary-game.game-paused .choice-row {
+      pointer-events: none;
+    }
+
+    .game-medal {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+
+    .vocabulary-game .game-medal {
+      display: flex;
+    }
+
+    .game-medal img {
+      width: calc(54px * 1.6);
+      height: calc(54px * 1.6);
+      object-fit: contain;
+    }
+
+    .vocabulary-game .game-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 30px 16px 60px;
+      position: relative;
+      gap: 0;
+    }
+
+    .vocabulary-game.phase-2 .game-main {
+      transform: translateY(90px);
+    }
+
+    .vocabulary-game.phase-3 .game-main {
+      transform: translateY(60px);
+    }
+
+    .vocabulary-game.phase-4 .game-main {
+      transform: translateY(50px);
+    }
+
+    .vocabulary-game.phase-7 .game-main {
+      transform: translateY(70px);
+    }
+
+    .vocabulary-game.phase-9 .game-main {
+      transform: translateY(100px);
+    }
+
+    .board-wrapper {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-top: 0;
+    }
+
+    .board {
+      width: min(450px, 100%);
+      max-width: 450px;
+      height: 450px;
+      background: rgba(11, 31, 68, 0.04);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      transition: opacity 0.5s ease;
+    }
+
+    .board.board--expanded {
+      width: min(550px, 100%);
+      max-width: 550px;
+      height: 550px;
+    }
+
+    .board.board--compact {
+      width: min(360px, 100%);
+      max-width: 360px;
+      height: 360px;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+
+    @media (max-width: 768px) {
+      .board { width: 360px; height: 360px; }
+      .board.board--expanded { width: min(420px, 100%); height: 460px; }
+      .board.board--compact { width: min(300px, 100%); height: 300px; }
+    }
+
+    .board__inner {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      transition: opacity 0.5s ease;
+    }
+
+    .board.board--compact .board__inner {
+      gap: 4px;
+    }
+
+    .board__inner--grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: minmax(0, 1fr);
+      gap: 10px;
+      padding: 10px;
+      place-items: stretch;
+    }
+
+    .board__inner--characters .grid-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(11, 31, 68, 0.14);
+    }
+
+    .board__inner--characters .board__image-single {
+      width: 78%;
+      height: auto;
+      margin: 0 auto;
+      aspect-ratio: 1 / 1;
+    }
+
+    .board__inner--characters .board__image-text {
+      position: static;
+      width: 100%;
+      height: auto;
+      padding: 0 8px 10px;
+      font-size: clamp(15px, 3vw, 18px);
+      color: #ffffff;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    }
+
+    .mode12-picker {
+      width: 100%;
+      max-width: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 18px;
+      margin: 0 auto;
+      padding: 8px 0 14px;
+      min-height: calc(100vh - var(--nav-height, 0px) - max(86px, env(safe-area-inset-top)));
+    }
+
+    .mode12-picker__title {
+      margin: 0;
+      color: #ffffff;
+      font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-weight: 800;
+      font-size: clamp(28px, 5vw, 42px);
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+      text-align: center;
+      transform: translateY(-130px);
+      position: relative;
+      z-index: 20;
+    }
+
+    .mode12-hearts-title {
+      position: fixed;
+      top: calc(max(86px, env(safe-area-inset-top)) + 42px);
+      left: 50%;
+      transform: translateX(-50%);
+      margin: 0;
+      color: #ffffff;
+      font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-weight: 800;
+      font-size: clamp(20px, 4.2vw, 30px);
+      line-height: 1.1;
+      text-shadow: 0 4px 10px rgba(0, 0, 0, 0.55);
+      text-align: center;
+      z-index: 13;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .mode12-picker__viewport {
+      width: calc(100% - 10px);
+      margin: 0 5px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      align-items: center;
+      flex: 1;
+      transform: translateY(-60px);
+      border: none;
+      border-radius: 24px;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    .mode12-picker__stage {
+      width: 100%;
+      margin: 0 5px;
+      min-height: clamp(340px, 62vh, 560px);
+      display: grid;
+      place-items: center;
+      position: relative;
+      overflow: hidden;
+      touch-action: none;
+      border: none;
+      border-radius: 20px;
+      box-sizing: border-box;
+    }
+
+    .mode12-picker__nav {
+      width: 34px;
+      height: 34px;
+      border: none;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      color: #ffffff;
+      opacity: 0.5;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .mode12-picker__nav svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    .mode12-character-btn {
+      border: none;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .mode12-character-btn--single {
+      position: relative;
+      width: min(92vw, 420px);
+      min-height: clamp(320px, 58vh, 500px);
+      margin-top: -40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      transition: none;
+      transform: translateX(0);
+    }
+
+    .mode12-character-btn--single.is-active {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .mode12-character-btn--single.is-enter-from-right {
+      transform: translateX(0);
+    }
+
+    .mode12-character-btn--single.is-enter-from-left {
+      transform: translateX(0);
+    }
+
+    .mode12-character-btn--single.is-exit-to-left {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .mode12-character-btn--single.is-exit-to-right {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .mode12-character-btn__avatar {
+      width: clamp(210px, 42vw, 300px);
+      height: clamp(210px, 42vw, 300px);
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+      border: 3px solid rgba(255, 255, 255, 0.85);
+    }
+
+    .mode12-character-btn__name {
+      color: #ffffff;
+      font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-weight: 700;
+      font-size: clamp(16px, 3.3vw, 22px);
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+      text-align: center;
+      margin-top: 14px;
+      width: min(92vw, 360px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.2;
+    }
+
+    .vocabulary-game.phase-4 .board {
+      height: auto;
+      width: min(675px, 100%);
+      max-width: 675px;
+      aspect-ratio: 2 / 3;
+    }
+
+    .vocabulary-game.phase-4 .board__inner--grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+      gap: 15px;
+      padding: 15px;
+    }
+
+    .vocabulary-game.phase-4 .grid-card {
+      padding: 15px;
+      border-radius: 30px;
+    }
+
+    .vocabulary-game.phase-4 .grid-card .image-visual {
+      width: 100%;
+      height: 100%;
+    }
+
+    .board__image-single {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      opacity: 0.85;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .board__image-icon {
+      object-fit: contain;
+      padding: 18px;
+    }
+
+    .image-visual {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: var(--image-visual-size, clamp(140px, 40vw, 220px));
+      height: var(--image-visual-size, clamp(140px, 40vw, 220px));
+      --tense-ring: none;
+      --tense-animation: none;
+      --tense-glow: none;
+      --form-ring: none;
+      --form-animation: none;
+      --form-glow: none;
+      --tense-filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.25));
+      --tense-mask: none;
+      --tense-lens: none;
+      --form-lens: none;
+    }
+
+    .image-visual--fill {
+      width: 100%;
+      height: 100%;
+    }
+
+    .vocabulary-game.phase-2 .image-visual {
+      border-radius: 50%;
+      overflow: hidden;
+      width: calc(var(--image-visual-size, clamp(140px, 40vw, 220px)) + 30px);
+      height: var(--image-visual-size, clamp(140px, 40vw, 220px));
+    }
+
+    .vocabulary-game.phase-2 .grid-card {
+      aspect-ratio: 1 / 1;
+    }
+
+    .vocabulary-game.phase-2 .board__inner--grid {
+      gap: 4px;
+      padding: 6px;
+    }
+
+    .vocabulary-game.phase-2 .grid-card {
+      padding: 6px;
+    }
+
+    .vocabulary-game.phase-2 .grid-card .image-visual {
+      transform: scale(1.15);
+      transform-origin: center;
+    }
+
+    .vocabulary-game.phase-5 .image-visual {
+      transform: scale(1.15);
+      transform-origin: center;
+    }
+
+    .vocabulary-game.phase-8 .image-visual {
+      transform: scale(1);
+      transform-origin: center;
+      --image-visual-size: clamp(286px, 82vw, 450px);
+    }
+
+    .vocabulary-game.phase-8 .image-visual img {
+      border: none;
+    }
+
+    .vocabulary-game.phase-8 .image-lens {
+      display: none;
+    }
+
+    .image-ring,
+    .image-lens {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .image-ring {
+      background: var(--ring-gradient, none);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-width, 12px)), #000 calc(100% - var(--ring-width, 12px)));
+      mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-width, 12px)), #000 calc(100% - var(--ring-width, 12px)));
+      animation: var(--ring-animation, none);
+      box-shadow: var(--ring-glow, none);
+      z-index: 1;
+    }
+
+    .image-ring--tense {
+      --ring-gradient: var(--tense-ring);
+      --ring-animation: var(--tense-animation);
+      --ring-glow: var(--tense-glow);
+      --ring-width: 15px;
+    }
+
+    .vocabulary-game.phase-1 .image-ring--tense {
+      --ring-width: 22px;
+    }
+
+    .image-ring--form {
+      display: none;
+    }
+
+    .image-ring-accuracy {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 6;
+      transform: rotate(-90deg);
+    }
+
+    .image-ring-accuracy__track,
+    .image-ring-accuracy__progress {
+      fill: none;
+      stroke-width: 7;
+    }
+
+    .image-ring-accuracy__track {
+      stroke: rgba(255, 255, 255, 0.25);
+    }
+
+    .image-ring-accuracy__progress {
+      stroke: #22c55e;
+      stroke-linecap: round;
+      stroke-dasharray: 326.73;
+      stroke-dashoffset: 326.73;
+      opacity: 0;
+      transition: opacity 200ms ease, stroke-dashoffset 1000ms linear;
+      filter: drop-shadow(0 0 6px rgba(255, 180, 80, 0.45));
+      will-change: stroke-dashoffset;
+    }
+
+    .image-lens--tense { background: var(--tense-lens, none); }
+    .image-lens--form { background: var(--form-lens, none); }
+
+    .image-lens {
+      inset: 10px;
+      z-index: 4;
+    }
+
+    .image-visual img {
+      width: 100%;
+      height: 100%;
+      filter: var(--tense-filter);
+      -webkit-mask-image: var(--tense-mask);
+      mask-image: var(--tense-mask);
+    }
+
+    .board__image-text {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 16px;
+      font-size: clamp(16px, 4vw, 22px);
+      font-weight: 800;
+      color: #0b1f44;
+      line-height: 1.2;
+      z-index: 6;
+    }
+
+    .vocabulary-game.phase-6 .image-visual {
+      --image-visual-size: clamp(170px, 50vw, 260px);
+    }
+
+    .vocabulary-game.phase-6 .board.board--compact {
+      width: min(420px, 100%);
+      max-width: 420px;
+      height: 420px;
+    }
+
+    .vocabulary-game.phase-6 .image-ring,
+    .vocabulary-game.phase-6 .image-lens {
+      display: none;
+    }
+
+    .vocabulary-game.phase-6 .board__image-text {
+      font-size: clamp(28px, 8vw, 48px);
+      line-height: 1.15;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes spin-partial {
+      0% { transform: rotate(0deg); }
+      80% { transform: rotate(270deg); }
+      100% { transform: rotate(270deg); }
+    }
+
+    @keyframes swing {
+      0% { transform: rotate(-90deg); }
+      50% { transform: rotate(90deg); }
+      100% { transform: rotate(-90deg); }
+    }
+
+    .board__image-single--phase-one {
+      opacity: 1;
+    }
+
+    .mode11-stage {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 1;
+    }
+
+    .mode11-stage--fade-in {
+      animation: mode11DissolveIn 1000ms ease forwards;
+    }
+
+    .mode11-stage--fade-out {
+      animation: mode11DissolveOut 1000ms ease forwards;
+    }
+
+    .mode11-subtitle {
+      width: min(540px, 88vw);
+      text-align: center;
+      font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-weight: 700;
+      color: #ffffff;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.75);
+      line-height: 1.3;
+      font-size: clamp(22px, 4.2vw, 34px);
+      margin-top: 4px;
+    }
+
+    .mode11-subtitle.is-hidden {
+      opacity: 0;
+    }
+
+    .vocabulary-game.phase-11 .text-container {
+      display: block;
+      min-height: 56px;
+      color: #ffffff;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.75);
+      font-weight: 700;
+      font-size: clamp(18px, 3.8vw, 30px);
+    }
+
+    .vocabulary-game.phase-11 .board {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      overflow: visible;
+    }
+
+    .vocabulary-game.phase-11 .board__image-single--phase-one {
+      transform: scale(1.15) translateY(-40px);
+      transform-origin: center;
+    }
+
+    @keyframes mode11DissolveIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes mode11DissolveOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    .vocabulary-game.phase-1 .board__image-single--phase-one {
+      transform: scale(1.15);
+      transform-origin: center;
+    }
+
+    .board__image-speech {
+      opacity: 0.6;
+      cursor: default;
+      transition: opacity 0.5s ease, transform 0.2s ease;
+    }
+
+    .board__image-speech--static {
+      cursor: default;
+    }
+
+    .board__image-speech--listening {
+      opacity: 1;
+      transform: scale(1.02);
+    }
+
+    .board__image-speech--evaluating {
+      opacity: 1;
+    }
+
+    .vocabulary-game.phase-8 .image-ring-accuracy {
+      display: none;
+    }
+
+    .vocabulary-game.phase-8 .board,
+    .vocabulary-game.phase-9 .board,
+    .vocabulary-game.phase-10 .board {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+
+    .vocabulary-game.phase-2 .image-ring--tense {
+      --ring-width: 9px;
+    }
+
+    .vocabulary-game.phase-4 .image-ring--tense {
+      --ring-width: 7px;
+    }
+
+    .board__mic-prompt {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      text-align: center;
+    }
+
+    .board__mic-button {
+      background: transparent;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .board__mic-button:disabled {
+      cursor: default;
+      opacity: 0.8;
+    }
+
+    .board__mic-image {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      object-fit: cover;
+      opacity: 0.6;
+    }
+
+    .board__mic-text {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.3;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+      text-transform: lowercase;
+    }
+
+    .phase-mic-hint {
+      margin: 8px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .board__mic-image {
+        width: 180px;
+        height: 180px;
+      }
+    }
+
+    .grid-card {
+      width: 100%;
+      height: 100%;
+      padding: 10px;
+      border-radius: 20px;
+      aspect-ratio: 1 / 1;
+      background-color: rgba(11, 31, 68, 0.08);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease, background-color 300ms ease, opacity 300ms ease;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      opacity: 1;
+    }
+
+    .grid-card--static {
+      pointer-events: none;
+      cursor: default;
+    }
+
+    .grid-card .image-visual {
+      width: 100%;
+      height: 100%;
+      aspect-ratio: 1 / 1;
+    }
+
+    .grid-card img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .grid-card img.image--webp { object-fit: cover; border-radius: 50%; }
+
+    .board__image-single.image--webp {
+      border-radius: 50%;
+      object-fit: cover;
+      aspect-ratio: 1 / 1;
+    }
+
+    .board.board--compact {
+      --image-visual-size: clamp(220px, 45vw, 300px);
+    }
+
+    .grid-card--correct { background-color: rgba(46, 204, 113, 0.5); }
+    .grid-card--wrong { background-color: rgba(231, 76, 60, 0.5); }
+
+    .grid-card--enter {
+      opacity: 0;
+      animation: cardFadeIn 0.5s ease forwards;
+    }
+
+    .grid-card--dissolve {
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+
+    .grid-card--gone {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .board--hidden { opacity: 0; pointer-events: none; }
+
+    .hidden-phase { opacity: 0; pointer-events: none; }
+
+    .text-container {
+      margin-top: 0;
+      width: min(480px, 100%);
+      min-height: 48px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .text-container.active { opacity: 1; }
+
+    .text-container--split {
+      text-align: justify;
+      text-align-last: justify;
+      text-justify: inter-word;
+    }
+
+    .text-container--writing {
+      font-size: 24px;
+      font-weight: 800;
+      transition: opacity 0.25s ease;
+    }
+
+    .vocabulary-game.phase-9 .text-container,
+    .vocabulary-game.phase-10 .text-container {
+      font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-weight: 700;
+      font-size: 26px;
+    }
+
+    .vocabulary-game.phase-9 .text-container {
+      color: #3b82f6;
+      text-shadow: none;
+      transform: translateY(20px);
+    }
+
+    .vocabulary-game.phase-10 .text-container {
+      color: #fff;
+      text-shadow: 0 2px 4px rgba(60, 60, 60, 0.6);
+    }
+
+    .vocabulary-game.phase-9 .game-main,
+    .vocabulary-game.phase-10 .game-main {
+      align-items: center;
+    }
+
+    .vocabulary-game.phase-9 .game-status--top,
+    .vocabulary-game.phase-10 .game-status--top {
+      order: 1;
+    }
+
+    .vocabulary-game.phase-9 .board-wrapper,
+    .vocabulary-game.phase-10 .board-wrapper {
+      order: 2;
+    }
+
+    .vocabulary-game.phase-9 .board {
+      height: 150px;
+      max-height: 150px;
+    }
+
+    .vocabulary-game.phase-9 .text-container,
+    .vocabulary-game.phase-10 .text-container {
+      order: 3;
+      margin-top: 0;
+    }
+
+    .vocabulary-game.phase-9 .game-status--bottom,
+    .vocabulary-game.phase-10 .game-status--bottom {
+      order: 4;
+      margin-top: 0;
+    }
+
+    .vocabulary-game.phase-9 .choice-row,
+    .vocabulary-game.phase-10 .choice-row {
+      order: 5;
+    }
+
+    .vocabulary-game.phase-10 .choice-row {
+      transform: translateY(-20px);
+    }
+
+    .text-container--writing-feedback {
+      background: #22c55e;
+      color: #fff;
+      border-radius: 12px;
+      padding: 8px 12px;
+    }
+
+    .text-container--writing-dissolve {
+      opacity: 0;
+    }
+
+    .text-container--compact {
+      width: auto;
+      margin-top: -24px;
+      min-height: 32px;
+    }
+
+    .vocabulary-game.phase-8 .text-container {
+      font-size: 18.7px;
+      margin-top: 20px;
+    }
+
+    .vocabulary-game.phase-8 .text-container.text-container--phase-eight-animate {
+      animation: phaseEightTextGrow 8000ms linear forwards;
+      transform-origin: center;
+      will-change: transform, opacity;
+    }
+
+    .vocabulary-game.phase-7 .text-container.text-container--phase-eight-animate {
+      animation: phaseEightTextGrow 8000ms linear forwards;
+      transform-origin: center;
+      will-change: transform, opacity;
+    }
+
+    .vocabulary-game.phase-6 .text-container {
+      font-size: 44px;
+      width: min(720px, 100%);
+    }
+
+    .vocabulary-game.phase-8 .game-main {
+      gap: 0;
+    }
+
+    .vocabulary-game.phase-8 .game-status--top,
+    .vocabulary-game.phase-8 .game-status--bottom {
+      margin: 0;
+    }
+
+    .vocabulary-game.phase-8 .board-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      margin-top: 100px;
+    }
+
+    .vocabulary-game.phase-10 .board {
+      height: auto;
+      width: min(520px, 95vw);
+      max-width: 520px;
+    }
+
+    .vocabulary-game.phase-10 .image-visual {
+      --image-visual-size: clamp(220px, 65vw, 360px);
+    }
+
+    .vocabulary-game.phase-10 .board__inner--writing {
+      gap: 10px;
+      padding: 10px 12px 16px;
+    }
+
+    @media (max-width: 768px) {
+      .vocabulary-game.phase-9 .game-main,
+      .vocabulary-game.phase-10 .game-main {
+        padding: 18px 12px 70px;
+        gap: 6px;
+      }
+
+      .vocabulary-game.phase-9 .board {
+        width: min(360px, 95vw);
+        height: 150px;
+      }
+
+      .vocabulary-game.phase-10 .board {
+        width: min(360px, 95vw);
+        height: min(360px, 95vw);
+      }
+
+      .vocabulary-game.phase-9 .game-medal img,
+      .vocabulary-game.phase-10 .game-medal img {
+        width: calc(54px * 1.3);
+        height: calc(54px * 1.3);
+      }
+
+      .vocabulary-game.phase-9 .game-heart,
+      .vocabulary-game.phase-10 .game-heart {
+        width: 28px;
+        height: 28px;
+      }
+
+      .game-control {
+        width: 54px;
+        height: 54px;
+      }
+
+      .vocabulary-game.phase-9 .text-container,
+      .vocabulary-game.phase-10 .text-container {
+        font-size: 22px;
+        min-height: 40px;
+      }
+    }
+
+    .choice-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+      margin-top: 0;
+      transition: opacity 0.5s ease;
+      width: min(450px, 100%);
+      transform: none;
+    }
+
+    .choice-row.choice-row--writing {
+      width: min(840px, 100%);
+      transform: translateY(0);
+      gap: 12px;
+    }
+
+    .choice-row.choice-row--phase-nine {
+      width: min(560px, 100%);
+      align-items: center;
+      gap: 14px;
+    }
+
+    .vocabulary-game.phase-9 .choice-row.choice-row--phase-nine {
+      transform: translateY(-70px);
+    }
+
+    .phase-nine-display {
+      width: 100%;
+      min-height: 40px;
+      border-radius: 12px;
+      background: rgba(30, 64, 175, 0.16);
+      border: 1px solid rgba(147, 197, 253, 0.45);
+      color: #ffffff;
+      font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-size: clamp(24px, 5.2vw, 32px);
+      font-weight: 700;
+      line-height: 1.1;
+      text-align: center;
+      padding: 8px 10px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .phase-nine-display--error {
+      border-color: rgba(248, 113, 113, 0.8);
+      background: rgba(185, 28, 28, 0.28);
+    }
+
+    @keyframes typingTapFlash {
+      0% { opacity: 0; }
+      20% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .vocabulary-game.typing-tap-flash::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: rgba(15, 48, 140, 0.34);
+      animation: typingTapFlash 500ms ease-out both;
+      z-index: 5;
+    }
+
+    .phase-nine-keyboard {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .phase-nine-keyboard__grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(var(--phase-nine-columns, 4), minmax(0, 1fr));
+      gap: 8px;
+      justify-items: center;
+    }
+
+    .phase-nine-key {
+      border: none;
+      border-radius: 12px;
+      background: #7ec8ff;
+      color: #ffffff;
+      font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .phase-nine-key:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+    }
+
+    .phase-nine-keyboard[data-key-count='16'] .phase-nine-key {
+      width: 70px;
+      height: 70px;
+    }
+
+    .phase-nine-keyboard[data-key-count='20'] .phase-nine-key {
+      width: 60px;
+      height: 60px;
+      font-size: 24px;
+    }
+
+    .phase-nine-spacebar {
+      width: 100%;
+      max-width: 360px;
+      height: 48px;
+      border: none;
+      border-radius: 12px;
+      background: #7ec8ff;
+      color: #ffffff;
+      font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      text-transform: uppercase;
+      opacity: 1;
+    }
+
+    .writing-toolbar {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .writing-undo {
+      border: none;
+      border-radius: 999px;
+      padding: 6px 18px;
+      font-weight: 800;
+      background: #f1f5f9;
+      color: #0f172a;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .writing-undo:hover {
+      transform: translateY(-1px);
+    }
+
+    .writing-hub {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .writing-chip {
+      border: none;
+      background: #eee;
+      color: #fff;
+      font-weight: 800;
+      height: 34px;
+      padding: 0 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      text-transform: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.5s ease, opacity 0.5s ease;
+    }
+
+    .writing-chip:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+    }
+
+    .writing-chip:disabled,
+    .writing-chip--selected {
+      cursor: default;
+      box-shadow: none;
+    }
+
+    .writing-chip--display {
+      cursor: default;
+      opacity: 1;
+    }
+
+    .writing-chip--correct {
+      background: #22c55e;
+      color: #fff;
+    }
+
+    .writing-chip--red {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    .writing-chip--blue {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    }
+
+    .writing-chip--purple {
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    }
+
+    .writing-chip--gold {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+
+    .writing-chip--gremio {
+      background: linear-gradient(135deg, #00a0e4, #0b4da8);
+    }
+
+    .writing-chip--orange {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+    }
+
+    @keyframes phaseEightTextGrow {
+      0% {
+        opacity: 0;
+        transform: scale(1);
+      }
+      12.5% {
+        opacity: 1;
+      }
+      87.5% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: scale(2);
+      }
+    }
+
+    @keyframes phaseTenRowGap {
+      0% {
+        column-gap: 10px;
+      }
+      50% {
+        column-gap: 20px;
+      }
+      100% {
+        column-gap: 10px;
+      }
+    }
+
+    .board__inner--writing {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    .writing-display {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .writing-display--highlight {
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
+    }
+
+    .vocabulary-game.phase-1 .choice-row {
+      transform: none;
+    }
+
+    .choice-row--compact {
+      width: auto;
+      margin-top: -24px;
+    }
+
+    .choice-btn {
+      background: #2c6fbf;
+      color: #fff;
+      border: none;
+      padding: 15px 23px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.2s ease;
+      min-width: 192px;
+      width: 100%;
+      font-size: 26px;
+      font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      text-transform: capitalize;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
+    }
+
+    .vocabulary-game.phase-8 .choice-btn {
+      font-size: 22.1px;
+      padding: 12.75px 19.55px;
+      min-width: 163.2px;
+    }
+
+    .choice-btn:hover { transform: translateY(-1px); }
+    .choice-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+    .choice-btn.success { background: var(--success); }
+    .choice-btn.error { background: var(--danger); }
+
+    .phase-word-btn {
+      background: linear-gradient(120deg, #3a86d1, #4c96dc);
+      color: #fff;
+      border: none;
+      padding: 18px 28px;
+      border-radius: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.2s ease;
+      min-width: 282px;
+      width: min(450px, 100%);
+      font-size: 30px;
+      font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      text-transform: capitalize;
+      box-shadow: 0 8px 24px rgba(76, 150, 220, 0.3);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
+    }
+
+    .vocabulary-game.phase-8 .phase-word-btn {
+      font-size: 25.5px;
+      padding: 15.3px 23.8px;
+      min-width: 239.7px;
+      box-shadow: 0 6.8px 20.4px rgba(76, 150, 220, 0.3);
+      margin-top: 60px;
+    }
+
+    .vocabulary-game.phase-5 .phase-word-btn {
+      margin-top: 70px;
+    }
+
+    .vocabulary-game.phase-9 {
+      --writing-chip-font-size: 15px;
+      --writing-chip-height: 34px;
+      --writing-chip-padding: 13px;
+      --writing-chip-radius: 11px;
+    }
+
+    .vocabulary-game.phase-10 {
+      --writing-chip-font-size: 18px;
+      --writing-chip-height: 41px;
+      --writing-chip-padding: 16px;
+      --writing-chip-radius: 13px;
+    }
+
+    .vocabulary-game.phase-9 .writing-hub {
+      display: grid;
+      grid-template-columns: repeat(4, max-content);
+      gap: 8px;
+      width: min(640px, 100%);
+      justify-content: center;
+    }
+
+    .vocabulary-game.phase-10 .writing-hub {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: min(640px, 100%);
+      justify-content: center;
+    }
+
+    .vocabulary-game.phase-10 .writing-hub__row {
+      display: flex;
+      justify-content: center;
+      column-gap: 10px;
+      animation: phaseTenRowGap 1500ms ease-in-out infinite;
+    }
+
+    .vocabulary-game.phase-10 .writing-hub__row--2 { animation-duration: 1700ms; }
+    .vocabulary-game.phase-10 .writing-hub__row--3 { animation-duration: 1800ms; }
+    .vocabulary-game.phase-10 .writing-hub__row--4 { animation-duration: 2100ms; }
+
+    .vocabulary-game.phase-10 .writing-display {
+      display: none;
+    }
+
+    .vocabulary-game.phase-9 .writing-chip,
+    .vocabulary-game.phase-10 .writing-chip,
+    .vocabulary-game.phase-9 .writing-chip--display,
+    .vocabulary-game.phase-10 .writing-chip--display {
+      font-size: var(--writing-chip-font-size);
+      height: var(--writing-chip-height);
+      padding: 0 var(--writing-chip-padding);
+      border-radius: var(--writing-chip-radius);
+      width: max-content;
+      justify-self: center;
+    }
+
+    .vocabulary-game.phase-10 .writing-chip {
+      border-radius: 4px;
+      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.35);
+      font-family: 'Open Sans FB', 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      text-transform: capitalize;
+    }
+
+    .vocabulary-game.phase-9 .writing-chip:disabled,
+    .vocabulary-game.phase-10 .writing-chip:disabled {
+      opacity: 1;
+    }
+
+    .vocabulary-game.phase-9 .writing-chip--selected,
+    .vocabulary-game.phase-10 .writing-chip--selected {
+      background: #22c55e;
+      color: #fff;
+    }
+
+    .vocabulary-game.phase-9 .writing-hub--error .writing-chip,
+    .vocabulary-game.phase-10 .writing-hub--error .writing-chip {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+    }
+
+    .phase-word-btn:hover { transform: translateY(-1px); }
+
+    .phase-word-btn--listening {
+      box-shadow: 0 0 0 4px rgba(76, 150, 220, 0.25);
+      transform: translateY(-1px) scale(1.01);
+    }
+
+    .phase-word-btn--icon-only {
+      width: 110px;
+      height: 110px;
+      min-width: auto;
+      font-size: 41px;
+      border-radius: 50%;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .progress-footer {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(var(--nav-height, 0px));
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .vocabulary-game.phase-4 .progress-footer {
+      visibility: hidden;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 10px;
+      background: transparent;
+      border-radius: 0;
+      overflow: hidden;
+      box-shadow: none;
+    }
+
+    .progress-bar__fill {
+      height: 100%;
+      width: 0%;
+      background: #22c55e;
+      transition: width 0.25s ease;
+    }
+
+    .game-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--game-bg-image) center center / cover no-repeat;
+      backdrop-filter: blur(6px);
+      z-index: 10;
+    }
+
+    .game-overlay.hidden { display: none; }
+
+    .full-green-overlay {
+      position: fixed;
+      inset: 0;
+      background: #17a94c;
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .full-green-overlay.active {
+      display: flex;
+    }
+
+    .final-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--game-bg-image) center center / cover no-repeat;
+      z-index: 25;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 24px;
+      color: var(--text);
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .final-overlay.active {
+      display: flex;
+    }
+
+    .final-overlay::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: transparent;
+      z-index: 0;
+    }
+
+    .final-overlay > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .final-overlay__bar {
+      width: min(520px, 92%);
+      height: 16px;
+      background: rgba(11, 31, 68, 0.06);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 24px;
+    }
+
+    .final-overlay__fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #3a86d1, #4c96dc);
+      transition: width 0.15s linear;
+    }
+
+    .final-overlay__slideshow {
+      width: min(520px, 84vw);
+      height: min(520px, 60vh);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      overflow: visible;
+      background: transparent;
+    }
+
+    .final-overlay__slideshow img {
+      width: min(420px, 72vw);
+      height: min(420px, 72vw);
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid rgba(255, 255, 255, 0.58);
+      box-shadow: 0 20px 42px rgba(0, 0, 0, 0.35);
+      opacity: 1;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+
+    .final-overlay__slideshow img.is-dissolving {
+      opacity: 0.25;
+      transform: scale(0.97);
+    }
+
+    .final-overlay__medal {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .final-overlay__medal img {
+      width: 160px;
+      height: 160px;
+      object-fit: contain;
+    }
+
+    .final-overlay__medal span {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      text-transform: capitalize;
+    }
+
+    .final-overlay__stats {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .final-overlay__actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .final-overlay.hide-actions .final-overlay__actions {
+      display: none;
+    }
+
+    .final-overlay__actions .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+    }
+
+    .final-overlay__avatar {
+      width: 250px;
+      height: 250px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 4px solid rgba(255, 255, 255, 0.85);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #0d63d8 0%, #4db6ff 100%);
+      margin-top: -8px;
+    }
+
+    .final-overlay__avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .final-overlay__avatar span {
+      color: #fff;
+      font-weight: 800;
+      font-size: 90px;
+      line-height: 1;
+    }
+
+    .final-overlay__summary-grid {
+      width: min(920px, 96vw);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .final-summary-card {
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(0, 0, 0, 0.34);
+      padding: 10px 12px;
+      text-align: left;
+    }
+
+    .final-summary-card span {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      opacity: 0.8;
+      margin-bottom: 6px;
+    }
+
+    .final-summary-card strong {
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.32);
+    }
+
+    .final-overlay__phase-list {
+      width: min(920px, 96vw);
+      max-height: 30vh;
+      overflow: auto;
+      display: grid;
+      gap: 8px;
+      padding-right: 4px;
+    }
+
+    .final-phase-row {
+      display: grid;
+      grid-template-columns: 110px 1fr 50px;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .final-phase-row__label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      text-align: left;
+      color: #ffffff;
+    }
+
+    .final-phase-row__bar {
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.32);
+    }
+
+    .final-phase-row__fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #3a86d1, #7dff9b);
+      transition: width 900ms ease;
+    }
+
+    .final-phase-row__value {
+      text-align: right;
+      font-weight: 800;
+      font-size: 12px;
+      color: #ffffff;
+    }
+
+    @media (max-width: 768px) {
+      .final-overlay__avatar {
+        width: 190px;
+        height: 190px;
+      }
+
+      .final-overlay__avatar span {
+        font-size: 72px;
+      }
+
+      .final-overlay__phase-list {
+        max-height: 26vh;
+      }
+
+      .final-phase-row {
+        grid-template-columns: 90px 1fr 44px;
+      }
+    }
+
+    .final-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-width: 160px;
+    }
+
+    .final-stat__content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .final-stat--rotating {
+      overflow: hidden;
+    }
+
+    .final-stat--rotating .final-stat__content {
+      transition: transform 0.6s ease, opacity 0.6s ease;
+    }
+
+    .final-stat--rotating.is-sliding .final-stat__content {
+      transform: translateY(12px);
+      opacity: 0;
+    }
+
+    .final-stat__icon {
+      width: 54px;
+      height: 54px;
+      object-fit: contain;
+      filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.35));
+    }
+
+    .final-stat__value {
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .final-stat__label {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.85;
+    }
+
+    .phase-audio-progress {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(11, 31, 68, 0.12);
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .phase-audio-progress__fill {
+      width: 0%;
+      height: 100%;
+      background: var(--secondary);
+      transition: width 0.2s ease;
+    }
+
+    .phase-audio-skip {
+      margin: 12px 0 0;
+      font-size: 15px;
+      font-weight: 400;
+      color: #4a4a4a;
+    }
+
+    .overlay-card {
+      width: min(520px, 92%);
+      background: #fff;
+      color: #0b1f44;
+      border-radius: 20px;
+      padding: 32px 28px;
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28);
+      text-align: center;
+    }
+
+    .overlay-card h1 {
+      margin: 0 0 24px;
+      font-size: 26px;
+      font-weight: 800;
+    }
+
+    .pre-game__icon {
+      width: 150px;
+      height: 150px;
+      object-fit: contain;
+      display: block;
+      margin: 0;
+    }
+
+    #pre-game-screen .overlay-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 20px;
+      min-height: auto;
+      background: transparent;
+      box-shadow: none;
+      border: none;
+      width: min(420px, calc(100vw - 24px));
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    #pre-game-screen {
+      top: 0;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 12px;
+    }
+
+    #playing .overlay-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      min-height: calc(100vh - var(--nav-height, 0px));
+      background: transparent;
+      box-shadow: none;
+      border: none;
+      width: min(640px, 96%);
+      padding: 0 20px 28px;
+    }
+
+    #playing {
+      top: 0;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #playing .playing-top-status {
+      position: absolute;
+      top: calc(var(--nav-height, 0px) + 30px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(320px, 72vw);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    #playing .playing-top-status .myhome-status {
+      margin: 0;
+      min-height: 1.5em;
+    }
+
+    #playing .playing-top-status .myhome-progress {
+      width: 100%;
+      margin-top: 11px;
+    }
+    #results-screen {
+      top: 0;
+      z-index: 2500;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    #results-screen .overlay-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 24px;
+      min-height: calc(100vh - var(--nav-height, 0px));
+      background: transparent;
+      box-shadow: none;
+      border: none;
+      width: min(640px, 96%);
+      padding: 24px 20px 28px;
+      color: #ffffff;
+    }
+
+    .results-avatar-wrap {
+      position: relative;
+      width: 136px;
+      height: 136px;
+      display: grid;
+      place-items: center;
+    }
+
+    .results-avatar {
+      width: 104px;
+      height: 104px;
+      border-radius: 999px;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #0d63d8 0%, #4db6ff 100%);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+    }
+
+    .results-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .results-avatar span {
+      color: #fff;
+      font-weight: 800;
+      font-size: 42px;
+      line-height: 1;
+    }
+
+    .results-ring {
+      position: absolute;
+      inset: 0;
+      transform: rotate(-90deg);
+    }
+
+    .results-ring__track,
+    .results-ring__progress {
+      fill: none;
+      stroke-width: 9;
+    }
+
+    .results-ring__track {
+      stroke: rgba(255, 255, 255, 0.22);
+    }
+
+    .results-ring__progress {
+      stroke: #7dff9b;
+      stroke-linecap: round;
+      stroke-dasharray: 326.73;
+      stroke-dashoffset: 326.73;
+      transition: stroke-dashoffset 2000ms linear;
+      filter: drop-shadow(0 0 6px rgba(125, 255, 155, 0.5));
+      will-change: stroke-dashoffset;
+    }
+
+    .results-metric {
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      text-align: center;
+    }
+
+    .results-metric img {
+      width: 62px;
+      height: 62px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35));
+    }
+
+    .results-metric img.results-metric-icon--flash {
+      animation: resultsMetricIconFlash 420ms ease-out;
+    }
+
+    @keyframes resultsMetricIconFlash {
+      0% {
+        transform: scale(1);
+        filter: brightness(1) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35));
+      }
+      35% {
+        transform: scale(1.14);
+        filter: brightness(1.85) drop-shadow(0 0 18px rgba(255, 255, 255, 0.55));
+      }
+      100% {
+        transform: scale(1);
+        filter: brightness(1) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35));
+      }
+    }
+
+    .results-metric h2 {
+      margin: 0;
+      font-size: clamp(24px, 4.8vw, 34px);
+      font-weight: 800;
+      text-shadow: 0 4px 14px rgba(0, 0, 0, 0.42);
+    }
+
+    .results-metric p {
+      margin: 0;
+      font-size: clamp(20px, 4.2vw, 30px);
+      font-weight: 700;
+      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.42);
+    }
+
+    #pre-game-screen .overlay-card h1 {
+      order: 1;
+      margin: 0;
+      font-size: clamp(28px, 5vw, 42px);
+      line-height: 1.1;
+      color: #ffffff;
+      text-shadow: 0 4px 14px rgba(0, 0, 0, 0.42);
+      text-align: center;
+    }
+
+    #pre-game-screen .pre-game__icon {
+      order: 2;
+      margin: 0;
+    }
+
+    #pre-game-screen .pre-game-logline {
+      order: 3;
+      margin: 0;
+      max-width: 30ch;
+    }
+
+    #playing .overlay-card h1 {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 42px);
+      line-height: 1.1;
+      color: #ffffff;
+      text-shadow: 0 4px 14px rgba(0, 0, 0, 0.42);
+      text-align: center;
+      font-weight: 800;
+    }
+
+    #playing .pre-game__icon,
+    #playing .pre-game-logline {
+      display: none !important;
+    }
+
+    .pre-game-logline {
+      margin: 0;
+      max-width: 34ch;
+      color: #ffffff;
+      text-align: center;
+      font-size: clamp(16px, 2.8vw, 20px);
+      line-height: 1.45;
+      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    #pre-game-screen .overlay-actions {
+      order: 4;
+      margin: 0;
+      width: min(260px, 100%);
+      max-width: 260px;
+    }
+
+    #pre-game-screen .overlay-actions .btn-primary {
+      width: 100%;
+      font-size: 20px;
+      padding: 16px 18px;
+      opacity: 0.8;
+    }
+
+    .playing-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 6px;
+    }
+
+    .playing-action {
+      border: none;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .playing-action img {
+      width: 46px;
+      height: 46px;
+      object-fit: contain;
+      filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.35));
+    }
+
+    .playing-action:active {
+      transform: scale(0.96);
+    }
+
+    body.pre-game-active .vocabulary-game .game-hearts {
+      display: none;
+    }
+
+    body.pause-menu-active .vocabulary-game .game-hearts {
+      display: none;
+    }
+
+    .vocabulary-game .board-wrapper,
+    .vocabulary-game .text-container,
+    .vocabulary-game .choice-row,
+    .vocabulary-game .progress-footer,
+    .vocabulary-game .game-status {
+      transition: opacity 500ms ease;
+    }
+
+    .vocabulary-game.pause-dissolving .board-wrapper,
+    .vocabulary-game.pause-dissolving .text-container,
+    .vocabulary-game.pause-dissolving .choice-row,
+    .vocabulary-game.pause-dissolving .progress-footer,
+    .vocabulary-game.pause-dissolving .game-status {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .vocabulary-game.pause-dissolved .board-wrapper,
+    .vocabulary-game.pause-dissolved .text-container,
+    .vocabulary-game.pause-dissolved .choice-row,
+    .vocabulary-game.pause-dissolved .progress-footer,
+    .vocabulary-game.pause-dissolved .game-status {
+      visibility: hidden;
+    }
+
+    .device-select__subtitle {
+      margin: -10px 0 18px;
+      font-size: 16px;
+      color: rgba(11, 31, 68, 0.7);
+    }
+
+    .device-select__options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .device-select__button {
+      padding: 14px 18px;
+      font-size: 16px;
+    }
+
+    .phase-list {
+      list-style: none;
+      padding-left: 0;
+      margin: 0 0 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .phase-list li {
+      background: rgba(27, 79, 154, 0.06);
+      border: 1px solid rgba(27, 79, 154, 0.12);
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-weight: 600;
+      color: #0b1f44;
+    }
+
+    .overlay-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(120deg, #3a86d1, #4c96dc);
+      color: #fff;
+      border: none;
+      padding: 15px 23px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.2s ease;
+    }
+
+    .btn-primary:hover { transform: translateY(-1px); }
+
+    .btn-primary:disabled {
+      cursor: default;
+      opacity: 0.6;
+    }
+
+    .level-complete__countdown {
+      margin: 8px 0 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    @keyframes cardFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    .is-hidden {
+      display: none !important;
+    }
+
+    /* Unified game layout: hearts on top, controls near footer, content centered between both */
+    .vocabulary-game .game-status--bottom {
+      position: static;
+      min-height: 0;
+      margin: 0;
+      pointer-events: none;
+    }
+
+    .vocabulary-game .game-hearts {
+      position: fixed;
+      top: max(86px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 13;
+      width: auto;
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      backdrop-filter: none;
+    }
+
+    .vocabulary-game .game-controls {
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--nav-height, 0px) + 30px);
+      transform: translateX(-50%);
+      z-index: 13;
+      width: auto;
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      backdrop-filter: none;
+      pointer-events: auto;
+    }
+
+    .vocabulary-game .game-main {
+      min-height: 100vh;
+      padding-top: max(92px, calc(env(safe-area-inset-top) + 72px)) !important;
+      padding-bottom: calc(var(--nav-height, 0px) + 120px) !important;
+      transform: none !important;
+      gap: 12px;
+    }
+
+    .vocabulary-game .board-wrapper {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+    }
+
+    .vocabulary-game .board {
+      width: min(640px, 92vw);
+      max-width: 640px;
+      height: min(640px, 60vh);
+      max-height: 640px;
+      margin: 0 auto;
+    }
+
+    .vocabulary-game .text-container,
+    .vocabulary-game .choice-row {
+      width: min(760px, 92vw);
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .vocabulary-game .text-container {
+      min-height: 56px;
+      font-size: clamp(24px, 3.2vw, 38px);
+    }
+
+    .vocabulary-game .choice-btn,
+    .vocabulary-game .phase-word-btn {
+      min-height: 56px;
+      font-size: clamp(22px, 2.4vw, 34px);
+    }
+
+    .vocabulary-game[class*="phase-"] .game-main,
+    .vocabulary-game[class*="phase-"] .board-wrapper,
+    .vocabulary-game[class*="phase-"] .choice-row,
+    .vocabulary-game[class*="phase-"] .text-container {
+      transform: none !important;
+      margin-top: 0 !important;
+    }
+
+    @media (max-width: 768px) {
+      .vocabulary-game .game-hearts {
+        top: max(80px, env(safe-area-inset-top));
+      }
+
+      .mode12-hearts-title {
+        top: calc(max(80px, env(safe-area-inset-top)) + 40px);
+        font-size: clamp(18px, 5vw, 24px);
+      }
+
+      .vocabulary-game .game-controls {
+        bottom: calc(var(--nav-height, 0px) + 30px);
+      }
+
+      .vocabulary-game .game-main {
+        padding-top: max(82px, calc(env(safe-area-inset-top) + 60px)) !important;
+        padding-bottom: calc(var(--nav-height, 0px) + 108px) !important;
+      }
+
+      .vocabulary-game .board {
+        width: min(94vw, 560px);
+        height: min(52vh, 560px);
+      }
+
+      .vocabulary-game .text-container {
+        font-size: clamp(20px, 5.2vw, 30px);
+        min-height: 48px;
+      }
+
+      .vocabulary-game .choice-btn,
+      .vocabulary-game .phase-word-btn {
+        font-size: clamp(20px, 4.6vw, 28px);
+      }
+    }
+
+    /* Phase-specific layout tuning requested */
+    .vocabulary-game .image-ring {
+      display: none !important;
+    }
+
+    .vocabulary-game .image-ring-accuracy {
+      display: block !important;
+    }
+
+    .vocabulary-game.phase-1 .board-wrapper {
+      margin-top: 50px !important;
+      flex: 0 0 auto !important;
+      transform: translateY(-35px) !important;
+    }
+
+    .vocabulary-game.phase-1 .choice-row {
+      margin-top: 30px !important;
+      display: flex !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      position: relative;
+      z-index: 14;
+      pointer-events: auto;
+      transform: translateY(-190px) !important;
+    }
+
+    .vocabulary-game.phase-1 .image-visual,
+    .vocabulary-game.phase-1 .board__image-single--phase-one {
+      border-radius: 50%;
+      overflow: hidden;
+      transform: translateY(0) scale(1.26) !important;
+    }
+
+    .vocabulary-game.phase-1 .choice-btn {
+      min-width: 162px !important;
+    }
+
+    .vocabulary-game.phase-2 .board-wrapper {
+      transform: translateY(-20px) !important;
+    }
+
+    .vocabulary-game.phase-2 .image-visual {
+      width: 100% !important;
+      height: 100% !important;
+      aspect-ratio: 1 / 1 !important;
+    }
+
+    .vocabulary-game.phase-2 .grid-card {
+      background: transparent !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      aspect-ratio: 1 / 1 !important;
+      width: 80% !important;
+      height: auto !important;
+      margin: auto !important;
+    }
+
+    .vocabulary-game.phase-2 .board__inner--grid {
+      gap: 8px !important;
+      padding: 8px !important;
+      place-items: center !important;
+    }
+
+    .vocabulary-game.phase-2 .grid-card .image-visual {
+      width: 100% !important;
+      height: 100% !important;
+      aspect-ratio: 1 / 1 !important;
+      border-radius: 50% !important;
+      overflow: hidden !important;
+      transform: scale(1.15) !important;
+    }
+
+    .vocabulary-game.phase-2 .grid-card .image-visual img {
+      width: 100% !important;
+      height: 100% !important;
+      aspect-ratio: 1 / 1 !important;
+      border-radius: 50% !important;
+      object-fit: cover !important;
+    }
+
+    .mode12-slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    .mode12-slide .mode12-character-btn--single {
+      pointer-events: auto;
+    }
+
+    .vocabulary-game.phase-3 .board-wrapper {
+      transform: translateY(-40px) !important;
+      flex: 0 0 auto !important;
+    }
+
+    .vocabulary-game.phase-3 .image-visual {
+      transform: scale(1.12) !important;
+    }
+
+    .vocabulary-game.phase-3 .image-ring--tense {
+      --ring-width: 18px !important;
+    }
+
+    .vocabulary-game.phase-3 .choice-row {
+      margin-top: 30px !important;
+      display: flex !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      position: relative;
+      z-index: 14;
+      pointer-events: auto;
+      transform: translateY(-160px) !important;
+    }
+
+    .vocabulary-game.phase-3 .phase-option-button,
+    .vocabulary-game.phase-3 .phase-word-btn {
+      padding-top: 29px !important;
+      padding-bottom: 8px !important;
+    }
+
+    .vocabulary-game.phase-4 .board-wrapper {
+      transform: translateY(-15px) !important;
+    }
+
+    .vocabulary-game.phase-4 .grid-card--correct {
+      background: linear-gradient(135deg, #00d95f 0%, #00b34a 100%) !important;
+      opacity: 1 !important;
+    }
+
+    .vocabulary-game.phase-5 .board-wrapper {
+      transform: translateY(-15px) !important;
+    }
+
+    .vocabulary-game.phase-5 .board__inner {
+      padding: 26px !important;
+    }
+
+    .vocabulary-game.phase-6 .board__image-text {
+      color: #fff !important;
+      animation: phaseSixTextGrowFade 10s linear forwards;
+    }
+
+    @keyframes phaseSixTextGrowFade {
+      0% { transform: scale(1); opacity: 1; }
+      89% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1.3); opacity: 0; }
+    }
+
+    .vocabulary-game.phase-7 .board-wrapper {
+      transform: translateY(-30px) !important;
+    }
+
+    .vocabulary-game.phase-7 .text-container {
+      display: none !important;
+    }
+
+    .vocabulary-game.phase-7 .image-visual {
+      transform: translateY(30px) scale(1.2) !important;
+    }
+
+    .vocabulary-game.phase-8 .board-wrapper {
+      transform: translateY(-30px) !important;
+      margin-top: 0 !important;
+    }
+
+    .vocabulary-game.phase-8 .text-container {
+      color: #fff !important;
+      transform: translateY(-80px) !important;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+    }
+
+    .vocabulary-game.phase-8 .image-visual {
+      transform: translateY(-50px) scale(0.84) !important;
+    }
+
+    .vocabulary-game.phase-8 .board {
+      width: min(700px, 96vw) !important;
+      height: min(700px, 66vh) !important;
+      overflow: visible !important;
+    }
+
+    .vocabulary-game.phase-9 .choice-row {
+      transform: translateY(-100px) !important;
+    }
+
+    .vocabulary-game.phase-9 .text-container {
+      color: #fff !important;
+      font-size: clamp(28px, 4.2vw, 48px) !important;
+      line-height: 1.08 !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      width: min(1400px, 98vw) !important;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+      transform: translateY(-160px) !important;
+    }
+
+    .vocabulary-game.phase-9 .writing-hub,
+    .vocabulary-game.phase-10 .writing-hub {
+      margin-top: 12px;
+    }
+
+    .vocabulary-game.phase-9 .writing-chip,
+    .vocabulary-game.phase-10 .writing-chip,
+    .vocabulary-game.phase-9 .writing-chip--display,
+    .vocabulary-game.phase-10 .writing-chip--display {
+      color: #fff !important;
+    }
+
+    .vocabulary-game.phase-9 .writing-chip--red,
+    .vocabulary-game.phase-10 .writing-chip--red {
+      background: linear-gradient(135deg, #1f4ea8, #19428f) !important;
+    }
+
+    .vocabulary-game.phase-9 .writing-chip--blue,
+    .vocabulary-game.phase-10 .writing-chip--blue {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    }
+
+    .vocabulary-game.phase-9 .writing-chip--purple,
+    .vocabulary-game.phase-10 .writing-chip--purple {
+      background: linear-gradient(135deg, #2b6fd8, #225ab0) !important;
+    }
+
+    .vocabulary-game.phase-9 .writing-chip--gold,
+    .vocabulary-game.phase-10 .writing-chip--gold {
+      background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+    }
+
+    .vocabulary-game.phase-9 .writing-chip--gremio,
+    .vocabulary-game.phase-10 .writing-chip--gremio {
+      background: linear-gradient(135deg, #60a5fa, #3b82f6) !important;
+    }
+
+    .vocabulary-game.phase-9 .writing-chip--orange,
+    .vocabulary-game.phase-10 .writing-chip--orange {
+      background: linear-gradient(135deg, #1e40af, #1d4ed8) !important;
+    }
+
+    .vocabulary-game.phase-10 .board-wrapper {
+      transform: translateY(-40px) !important;
+    }
+
+    .vocabulary-game.phase-10 .choice-row {
+      transform: translateY(-100px) !important;
+      margin-top: 8px !important;
+    }
+
+    .vocabulary-game.phase-10 .writing-hub {
+      transform: translateY(-35px) !important;
+    }
+
+    .vocabulary-game.phase-11 .game-main {
+      justify-content: flex-start;
+    }
+
+    .vocabulary-game.phase-11 .board-wrapper {
+      order: 1;
+      flex: 0 0 auto;
+      margin-top: -10px !important;
+    }
+
+    .vocabulary-game.phase-11 .text-container {
+      order: 2;
+      margin-top: 14px;
+      margin-bottom: 0;
+      transform: translateY(-125px) !important;
+      max-width: min(760px, 92vw);
+      font-size: clamp(25px, 5.4vw, 43px);
+      line-height: 1.35;
+      min-height: calc(1.35em * 2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+      text-wrap: balance;
+    }
+
+    .vocabulary-game.phase-11 .board__image-single--phase-one {
+      transform: translateY(-35px) scale(1.15) !important;
+    }
+
+    .vocabulary-game.phase-11 .mode11-subtitle {
+      display: none !important;
+    }
+
+    .vocabulary-game.phase-12 .board__image-single--phase-one {
+      transform: scale(1.1) translateY(-90px) !important;
+      transform-origin: center;
+    }
+
+    .vocabulary-game.phase-12 .image-ring-accuracy {
+      display: none !important;
+    }
+
+    .vocabulary-game.phase-12 .mode12-image--fade-in {
+      animation: mode12DissolveIn 500ms ease forwards;
+    }
+
+    @keyframes mode12DissolveIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .vocabulary-game.phase-12 .text-container {
+      transform: translateY(-250px) !important;
+      margin-top: 0 !important;
+      max-width: min(760px, 92vw);
+      min-height: calc(1.25em * 2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.9);
+      font-size: clamp(25px, 5.2vw, 45px);
+      line-height: 1.25;
+      text-wrap: balance;
+    }
+
+    .vocabulary-game.phase-12 .mode12-picker__title {
+      margin-top: 0;
+      color: #ffffff;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    }
+
+    .vocabulary-game.phase-12 .board-wrapper {
+      width: 100vw !important;
+      max-width: 100vw !important;
+      margin-left: calc(50% - 50vw) !important;
+      margin-right: calc(50% - 50vw) !important;
+    }
+
+    .vocabulary-game.phase-12 .board {
+      width: 100vw !important;
+      max-width: 100vw !important;
+      margin: 0 !important;
+    }
+
+    .vocabulary-game.phase-12 .mode12-picker {
+      width: 100vw !important;
+      margin: 0 !important;
+      padding-left: auto !important;
+      padding-right: auto !important;
+    }
+
+    .vocabulary-game.phase-12 .mode12-picker__viewport {
+      width: 100vw !important;
+      margin: 0 !important;
+    }
+
+    .vocabulary-game.phase-12 .mode12-picker__stage {
+      width: 100vw !important;
+      margin: 0 !important;
+    }
+
+/* Circular bar + phase layout adjustments (2026-03-04) */
+.vocabulary-game .image-ring-accuracy {
+  inset: 0 !important;
+}
+
+.vocabulary-game .image-ring-accuracy__track,
+.vocabulary-game .image-ring-accuracy__progress {
+  stroke-width: 6 !important;
+}
+
+.vocabulary-game.phase-2 .image-ring-accuracy,
+.vocabulary-game.phase-3 .image-ring-accuracy,
+.vocabulary-game.phase-11 .image-ring-accuracy,
+.vocabulary-game.phase-12 .image-ring-accuracy {
+  display: none !important;
+}
+
+/* Mode 1: circle + 2 blue buttons vertically balanced between stars and footer */
+.vocabulary-game.phase-1 .game-main {
+  justify-content: center !important;
+  gap: 18px !important;
+}
+
+.vocabulary-game.phase-1 .text-container {
+  display: none !important;
+}
+
+.vocabulary-game.phase-1 .board-wrapper {
+  flex: 0 0 auto !important;
+  margin-top: 0 !important;
+  transform: none !important;
+}
+
+.vocabulary-game.phase-1 .choice-row {
+  margin-top: 0 !important;
+  transform: none !important;
+  width: min(560px, 92vw) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+}
+
+.vocabulary-game.phase-1 .image-visual,
+.vocabulary-game.phase-1 .board__image-single--phase-one {
+  transform: none !important;
+  overflow: hidden !important;
+  border-radius: 50% !important;
+  aspect-ratio: 1 / 1 !important;
+}
+
+.vocabulary-game.phase-1 .board__image-single--phase-one img,
+.vocabulary-game.phase-1 .image-visual img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+}
+
+.vocabulary-game.phase-1 .choice-btn {
+  min-width: 190px !important;
+}
+
+.vocabulary-game.pause-dissolving.phase-1 .choice-row,
+.vocabulary-game.pause-dissolved.phase-1 .choice-row,
+body.pause-menu-active .vocabulary-game.phase-1 .choice-row,
+.vocabulary-game.pause-dissolving.phase-1 .choice-btn,
+.vocabulary-game.pause-dissolved.phase-1 .choice-btn,
+body.pause-menu-active .vocabulary-game.phase-1 .choice-btn {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Mode 2: large complete circles, 2x2 centered */
+.vocabulary-game.phase-2 .game-main {
+  justify-content: center !important;
+  gap: 0 !important;
+}
+
+.vocabulary-game.phase-2 .text-container,
+.vocabulary-game.phase-2 .choice-row {
+  display: none !important;
+}
+
+.vocabulary-game.phase-2 .board-wrapper {
+  flex: 0 0 auto !important;
+  margin-top: 0 !important;
+  transform: none !important;
+}
+
+.vocabulary-game.phase-2 .board {
+  width: min(720px, 94vw) !important;
+  height: min(620px, 62vh) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+.vocabulary-game.phase-2 .board__inner--grid {
+  grid-template-columns: repeat(2, minmax(170px, 240px)) !important;
+  grid-auto-rows: minmax(170px, 240px) !important;
+  justify-content: center !important;
+  align-content: center !important;
+  place-items: center !important;
+  gap: 22px !important;
+  padding: 0 !important;
+}
+
+.vocabulary-game.phase-2 .grid-card {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 50% !important;
+  overflow: visible !important;
+}
+
+.vocabulary-game.phase-2 .grid-card .image-visual {
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+  overflow: visible !important;
+}
+
+.vocabulary-game.phase-2 .grid-card .image-visual img {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+}
+
+/* Mode 3: same vertical balance rule */
+.vocabulary-game.phase-3 .game-main {
+  justify-content: center !important;
+  gap: 18px !important;
+}
+
+.vocabulary-game.phase-3 .text-container {
+  display: none !important;
+}
+
+.vocabulary-game.phase-3 .board-wrapper {
+  flex: 0 0 auto !important;
+  margin-top: 0 !important;
+  transform: none !important;
+}
+
+.vocabulary-game.phase-3 .choice-row {
+  margin-top: 0 !important;
+  transform: none !important;
+  width: min(640px, 92vw) !important;
+}
+
+.vocabulary-game.phase-3 .image-visual {
+  transform: none !important;
+}
+
+/* Mode 4: move letter blocks 10px up */
+.vocabulary-game.phase-4 .board-wrapper {
+  transform: translateY(-25px) !important;
+}
+
+/* Mode 5: mic SVG circle vertically centered */
+.vocabulary-game.phase-5 .game-main {
+  justify-content: center !important;
+  gap: 0 !important;
+}
+
+.vocabulary-game.phase-5 .text-container,
+.vocabulary-game.phase-5 .choice-row {
+  display: none !important;
+}
+
+.vocabulary-game.phase-5 .board-wrapper {
+  flex: 0 0 auto !important;
+  margin-top: 0 !important;
+  transform: none !important;
+}
+
+.vocabulary-game.phase-5 .board__inner {
+  padding: 0 !important;
+}
+
+/* Mode 6: image circle ~40px lower */
+.vocabulary-game.phase-6 .board-wrapper {
+  transform: translateY(40px) !important;
+}
+
+
+/* Mode 1 container alignment: image + buttons in one centered container */
+.vocabulary-game .game-contnent {
+  width: 100%;
+}
+
+.vocabulary-game.phase-1 .game-main {
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.vocabulary-game.phase-1 .game-contnent {
+  width: min(560px, 92vw) !important;
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  margin: 0 auto !important;
+}
+
+.vocabulary-game.phase-1 .game-contnent .board-wrapper {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+.vocabulary-game.phase-1 .game-contnent .choice-row {
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.vocabulary-game.pause-dissolving.phase-1 .game-contnent,
+.vocabulary-game.pause-dissolved.phase-1 .game-contnent,
+body.pause-menu-active .vocabulary-game.phase-1 .game-contnent {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Mode 1 fine-tune (2026-03-04): bigger circle/ring + button spacing */
+.vocabulary-game.phase-1 .image-visual,
+.vocabulary-game.phase-1 .board__image-single--phase-one {
+  width: calc(clamp(140px, 40vw, 220px) * 1.25) !important;
+  height: calc(clamp(140px, 40vw, 220px) * 1.25) !important;
+}
+
+.vocabulary-game.phase-1 .image-ring-accuracy__track,
+.vocabulary-game.phase-1 .image-ring-accuracy__progress {
+  stroke-width: 7.5 !important;
+}
+
+.vocabulary-game.phase-1 .game-contnent .choice-row {
+  margin-top: 20px !important;
+}
+
+.vocabulary-game .image-ring-accuracy__progress {
+  transition: opacity 200ms ease, stroke-dashoffset 500ms linear !important;
+}
+
+
+
+
+
+
+/* Phase 1 container outlines (white) */
+.vocabulary-game.phase-1 .game-contnent {
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  border-radius: 20px !important;
+  padding: 16px !important;
+}
+
+.vocabulary-game.phase-1 .game-contnent .board-wrapper {
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  border-radius: 16px !important;
+  padding: 10px !important;
+}
+
+.vocabulary-game.phase-1 .game-contnent .choice-row {
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  border-radius: 14px !important;
+  padding: 10px !important;
+}
+
+/* Phase 1 container sizing tweak (2026-03-04) */
+.vocabulary-game.phase-1 .game-contnent {
+  --phase1-circle-size: calc(clamp(140px, 40vw, 220px) * 1.25);
+  flex: 0 0 auto !important;
+  height: calc(100vh - 150px) !important;
+  max-height: calc(100vh - 150px) !important;
+  box-sizing: border-box !important;
+}
+
+.vocabulary-game.phase-1 .game-contnent .board-wrapper {
+  height: calc(var(--phase1-circle-size) + 30px) !important;
+  max-height: calc(var(--phase1-circle-size) + 30px) !important;
+  box-sizing: border-box !important;
+}
+
+/* Fixed shells for stars/footer, independent from dynamic game content */
+.vocabulary-game .game-stars-shell,
+.vocabulary-game .game-footer-shell {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 13;
+  pointer-events: none;
+}
+
+.vocabulary-game .game-stars-shell {
+  top: max(86px, env(safe-area-inset-top));
+}
+
+.vocabulary-game .game-footer-shell {
+  bottom: calc(var(--nav-height, 0px) + 30px);
+}
+
+.vocabulary-game .game-stars-shell .game-hearts {
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  width: auto !important;
+  padding: 0 !important;
+}
+
+.vocabulary-game .game-footer-shell .game-controls {
+  position: static !important;
+  left: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  width: auto !important;
+  padding: 0 !important;
+}
+
+/* Phase 1: dynamic content strictly between stars shell and footer shell */
+.vocabulary-game.phase-1 .game-main {
+  padding-top: calc(max(86px, env(safe-area-inset-top)) + 56px) !important;
+  padding-bottom: calc(var(--nav-height, 0px) + 190px) !important;
+  box-sizing: border-box !important;
+}
+
+.vocabulary-game.phase-1 .game-contnent {
+  height: calc(100vh - (max(86px, env(safe-area-inset-top)) + 56px) - (var(--nav-height, 0px) + 190px)) !important;
+  max-height: calc(100vh - (max(86px, env(safe-area-inset-top)) + 56px) - (var(--nav-height, 0px) + 190px)) !important;
+}
+
+/* White guide lines for current editing pass */
+.vocabulary-game.phase-1 .game-stars-shell,
+.vocabulary-game.phase-1 .game-footer-shell {
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  border-radius: 14px !important;
+  padding: 8px 10px !important;
+}
+
+/* Unified bottom container for all game modes */
+.vocabulary-game .game-bottom-shell {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 13;
+  pointer-events: none;
+}
+
+.vocabulary-game .game-bottom-shell .game-footer-shell {
+  position: static !important;
+  left: auto !important;
+  transform: none !important;
+  bottom: auto !important;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.vocabulary-game .game-bottom-shell .game-footer-shell .game-controls {
+  pointer-events: auto;
+}
+
+.vocabulary-game .game-bottom-shell .progress-footer {
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: 100%;
+}
+
+.vocabulary-game .game-bottom-shell .progress-bar {
+  width: 100%;
+}
+
+/* Phase 1: remove any empty text container footprint */
+.vocabulary-game.phase-1 .text-container {
+  display: none !important;
+  min-height: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+
+/* Footer debug tweak: lift icons + yellow container */
+.vocabulary-game .game-bottom-shell .game-footer-shell {
+  transform: translateY(-60px) !important;
+}
+
+.vocabulary-game .game-bottom-shell .game-footer-shell .game-status--bottom {
+  background: #ffeb3b !important;
+  border: 2px solid rgba(0, 0, 0, 0.35) !important;
+  border-radius: 16px !important;
+  padding: 8px 14px !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* Stabilize stars/footer shells at first paint (no jump) */
+.vocabulary-game .game-stars-shell,
+.vocabulary-game .game-bottom-shell,
+.vocabulary-game .game-stars-shell .game-status--top,
+.vocabulary-game .game-bottom-shell .game-footer-shell,
+.vocabulary-game .game-bottom-shell .game-status--bottom {
+  transition: none !important;
+  animation: none !important;
+}
+
+.vocabulary-game .game-stars-shell {
+  position: fixed !important;
+  top: max(86px, env(safe-area-inset-top)) !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translateX(-50%) !important;
+}
+
+.vocabulary-game .game-bottom-shell {
+  position: fixed !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  top: auto !important;
+}
+
+.vocabulary-game .game-bottom-shell .game-footer-shell {
+  position: relative !important;
+  transform: translateY(-60px) !important;
+}
+
+.vocabulary-game .game-bottom-shell .game-status--bottom {
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+}
+
+/* Remove yellow debug container style */
+.vocabulary-game .game-bottom-shell .game-footer-shell .game-status--bottom {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Level 1: hide all container borders */
+.vocabulary-game.phase-1 .game-contnent,
+.vocabulary-game.phase-1 .game-contnent .board-wrapper,
+.vocabulary-game.phase-1 .game-contnent .choice-row,
+.vocabulary-game.phase-1 .game-stars-shell,
+.vocabulary-game.phase-1 .game-footer-shell {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Mode 2 visual fix: subtle white container + perfect square cards + true circular crops */
+.vocabulary-game.phase-2 .board {
+  border: 1px solid rgba(255, 255, 255, 0.42) !important;
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.vocabulary-game.phase-2 .board__inner--grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-auto-rows: 1fr !important;
+  gap: 16px !important;
+  width: min(460px, 88vw) !important;
+  height: min(460px, 88vw) !important;
+  margin: 0 auto !important;
+  padding: 10px !important;
+  box-sizing: border-box !important;
+}
+
+.vocabulary-game.phase-2 .grid-card {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: 1 / 1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+}
+
+.vocabulary-game.phase-2 .grid-card .image-visual {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  transform: none !important;
+}
+
+.vocabulary-game.phase-2 .grid-card .image-visual img {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: 1 / 1 !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+}
+
+/* Mode 3 refinements: centered larger text, bigger circle, narrower blue button, pause dissolve */
+.vocabulary-game.phase-3 .image-visual,
+.vocabulary-game.phase-3 .board__image-single--phase-one,
+.vocabulary-game.phase-3 .board__image-single.board__image-speech {
+  transform: scale(1.15) !important;
+}
+
+.vocabulary-game.phase-3 .phase-word-btn {
+  width: calc(min(450px, 100%) - 30px) !important;
+  min-width: 252px !important;
+  font-size: 37.5px !important;
+  padding: 14px 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1.1 !important;
+}
+
+.vocabulary-game.phase-3 .phase-option-button,
+.vocabulary-game.phase-3 .phase-word-btn {
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+
+.vocabulary-game.pause-dissolving.phase-3 .choice-row,
+.vocabulary-game.pause-dissolved.phase-3 .choice-row,
+body.pause-menu-active .vocabulary-game.phase-3 .choice-row,
+.vocabulary-game.pause-dissolving.phase-3 .phase-word-btn,
+.vocabulary-game.pause-dissolved.phase-3 .phase-word-btn,
+body.pause-menu-active .vocabulary-game.phase-3 .phase-word-btn,
+.vocabulary-game.pause-dissolving.phase-3 .phase-option-button,
+.vocabulary-game.pause-dissolved.phase-3 .phase-option-button,
+body.pause-menu-active .vocabulary-game.phase-3 .phase-option-button {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Mode 3 final tune: text -10% and enable animated accuracy ring */
+.vocabulary-game.phase-3 .phase-word-btn {
+  font-size: 33.75px !important;
+}
+
+.vocabulary-game.phase-3 .image-ring-accuracy {
+  display: block !important;
+}
+
+.vocabulary-game.phase-3 .image-ring-accuracy__track,
+.vocabulary-game.phase-3 .image-ring-accuracy__progress {
+  stroke-width: 7px !important;
+}
+
+/* Mode 3 tweak: thin white ring, button attached, circle moved up */
+.vocabulary-game.phase-3 .board-wrapper {
+  transform: translateY(-40px) !important;
+}
+
+.vocabulary-game.phase-3 .image-visual,
+.vocabulary-game.phase-3 .board__image-single--phase-one,
+.vocabulary-game.phase-3 .board__image-single.board__image-speech {
+  border: 1px solid rgba(255, 255, 255, 0.92) !important;
+  border-radius: 50% !important;
+}
+
+.vocabulary-game.phase-3 .game-main {
+  gap: 0 !important;
+}
+
+.vocabulary-game.phase-3 .choice-row {
+  margin-top: -6px !important;
+}
+
+/* Mode 3 container: image + blue button in a single wrapped stack */
+.vocabulary-game.phase-3 .phase-3-speech-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 25px !important;
+  padding: 10px;
+  width: fit-content;
+  max-width: calc(100% - 20px);
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.vocabulary-game.phase-3 .board__inner {
+  flex-wrap: nowrap !important;
+}
+
+.vocabulary-game.phase-3 .phase-3-speech-stack .phase-word-btn {
+  margin: 0 !important;
+}
+
+/* Mode 3 polish: hide white lines and fit pronunciation ring around circle */
+.vocabulary-game.phase-3 .image-visual,
+.vocabulary-game.phase-3 .board__image-single--phase-one,
+.vocabulary-game.phase-3 .board__image-single.board__image-speech {
+  border: none !important;
+}
+
+.vocabulary-game.phase-3 .image-ring,
+.vocabulary-game.phase-3 .image-ring--tense,
+.vocabulary-game.phase-3 .image-ring--form {
+  display: none !important;
+}
+
+.vocabulary-game.phase-3 .image-ring-accuracy__track {
+  stroke: transparent !important;
+  opacity: 0 !important;
+}
+
+.vocabulary-game.phase-3 .image-ring-accuracy {
+  inset: -4px !important;
+  transform-origin: center center;
+  transform: rotate(-90deg) scale(1.06) !important;
+}
+
+.vocabulary-game.phase-3 .phase-3-speech-stack .phase-word-btn__label {
+  display: inline-block;
+  transform: translateY(40px);
+}
+
+/* Mode 3 final pass: position/size first, then container fit */
+.vocabulary-game.phase-3 .phase-3-speech-stack .phase-word-btn {
+  margin-top: 40px !important;
+  transform: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+.vocabulary-game.phase-3 .phase-3-speech-stack .phase-word-btn__label {
+  display: block !important;
+  width: 100% !important;
+  font-size: 85% !important;
+  line-height: 1.08 !important;
+  text-align: center !important;
+  transform: none !important;
+}
+
+.vocabulary-game.phase-3 .phase-3-speech-stack {
+  gap: 25px !important;
+  padding: 12px 16px 22px !important;
+  width: fit-content !important;
+  max-width: min(96vw, 560px) !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+}
+
+/* Mode 4 final: clean invisible containers + centered 6-card grid */
+.vocabulary-game.phase-4 .game-main {
+  justify-content: center !important;
+}
+
+.vocabulary-game.phase-4 .board-wrapper {
+  transform: none !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Main 6-image container fully invisible (no fill/border) */
+.vocabulary-game.phase-4 .board,
+.vocabulary-game.phase-4 .board__inner--grid {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove circular bars/rings from phase 4 images */
+.vocabulary-game.phase-4 .image-ring,
+.vocabulary-game.phase-4 .image-ring-accuracy,
+.vocabulary-game.phase-4 .image-ring--tense,
+.vocabulary-game.phase-4 .image-ring--form {
+  display: none !important;
+}
+
+/* Each image card transparent by default */
+.vocabulary-game.phase-4 .grid-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Keep correct state fully green */
+.vocabulary-game.phase-4 .grid-card--correct {
+  background: #00d95f !important;
+  opacity: 1 !important;
+}
+
+/* Mode 5: move mic icon up and show PT prompt below after speaking */
+.vocabulary-game.phase-5 .board__inner {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  padding: 0 !important;
+}
+
+.vocabulary-game.phase-5 .board__image-icon {
+  transform: translateY(-60px) !important;
+}
+
+.vocabulary-game.phase-5 .phase-five-pt-text {
+  margin: 0;
+  color: #ffffff;
+  font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight: 700;
+  font-size: clamp(30px, 6.6vw, 45px);
+  line-height: 1.15;
+  text-align: center;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  max-width: min(86vw, 520px);
+  white-space: normal;
+}
+
+
+/* Mode 5 final alignment: move mic + ring together and reserve PT text space */
+.vocabulary-game.phase-5 .board__image-icon {
+  transform: none !important;
+}
+
+.vocabulary-game.phase-5 .image-visual {
+  transform: translateY(-60px) scale(1.15) !important;
+}
+
+.vocabulary-game.phase-5 .phase-five-pt-text {
+  font-size: clamp(30px, 6.6vw, 45px) !important;
+  min-height: 2.4em;
+}
+
+.vocabulary-game.phase-5 .phase-five-pt-text--hidden {
+  visibility: hidden;
+}
+
+/* Mode 6 final: white square container with dynamic growth by text length */
+.vocabulary-game.phase-6 .image-visual {
+  --image-visual-size-base: clamp(170px, 50vw, 260px);
+  --phase6-square-scale: 1;
+  width: calc(var(--image-visual-size-base) * var(--phase6-square-scale)) !important;
+  height: calc(var(--image-visual-size-base) * var(--phase6-square-scale)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  border-radius: 0 !important;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.vocabulary-game.phase-6 .board__image-text {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  color: #ffffff !important;
+  animation: none !important;
+}
+
+/* Mode 6: remove white container border */
+.vocabulary-game.phase-6 .image-visual {
+  border: none !important;
+}
+
+/* Mode 7: hide soft ring track, keep colored progress fully visible */
+.vocabulary-game.phase-7 .image-ring-accuracy {
+  display: block !important;
+}
+
+.vocabulary-game.phase-7 .image-ring-accuracy__track {
+  stroke: transparent !important;
+  opacity: 0 !important;
+}
+
+.vocabulary-game.phase-7 .image-ring-accuracy__progress {
+  opacity: 1 !important;
+}
+
+.vocabulary-game.phase-7 .board__inner {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.vocabulary-game.phase-7 .phase-seven-en-text {
+  margin: 50px 0 0;
+  color: #ffffff;
+  font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight: 700;
+  font-size: clamp(20px, 4.8vw, 34px);
+  line-height: 1.12;
+  text-align: center;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  max-width: min(88vw, 560px);
+  min-height: 1.2em;
+}
+
+.vocabulary-game.phase-7 .phase-seven-en-text--hidden {
+  visibility: hidden;
+}
+
+/* Mode 7 text tweak */
+.vocabulary-game.phase-7 .phase-seven-en-text {
+  margin: 90px 0 0 !important;
+  font-size: clamp(32px, 7.7vw, 54px) !important;
+}
+
+/* Mode 8: PT text below image, same size as mode 7 */
+.vocabulary-game.phase-8 .board__inner {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.vocabulary-game.phase-8 .phase-eight-pt-text {
+  margin: 40px 0 0;
+  color: #ffffff;
+  font-family: 'Open Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight: 700;
+  font-size: clamp(32px, 7.7vw, 54px);
+  line-height: 1.12;
+  text-align: center;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  max-width: min(88vw, 560px);
+  min-height: 1.2em;
+}
+
+/* Mode 8 ring behavior: invisible track, fully visible colored progress */
+.vocabulary-game.phase-8 .image-ring-accuracy {
+  display: block !important;
+}
+
+.vocabulary-game.phase-8 .image-ring-accuracy__track {
+  stroke: transparent !important;
+  opacity: 0 !important;
+}
+
+.vocabulary-game.phase-8 .image-ring-accuracy__progress {
+  opacity: 1 !important;
+}
+
+/* Phase 8: move PT text 60px up */
+.vocabulary-game.phase-8 .phase-eight-pt-text {
+  margin-top: -20px !important;
+}
+
+/* Phase 9: typing layout refinements */
+.vocabulary-game.phase-9 .text-container {
+  font-size: calc(clamp(24px, 5.2vw, 32px) * 1.2) !important;
+  margin-top: 40px !important;
+}
+
+.vocabulary-game.phase-9 .phase-nine-display {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.vocabulary-game.phase-9 .phase-nine-keyboard {
+  transform: translateY(150px) !important;
+}
+
+/* Phase 8 + 9 final polish */
+.vocabulary-game.phase-8 .phase-eight-pt-text {
+  margin-top: -80px !important;
+}
+
+.vocabulary-game.phase-9 .text-container {
+  order: 2 !important;
+  margin-top: 30px !important;
+  font-size: calc(clamp(24px, 5.2vw, 32px) * 1.2) !important;
+}
+
+.vocabulary-game.phase-9 .board-wrapper {
+  order: 3 !important;
+}
+
+.vocabulary-game.phase-9 .phase-nine-display {
+  margin-top: 40px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  text-transform: none !important;
+}
+
+.vocabulary-game.phase-9 .phase-nine-keyboard {
+  transform: translateY(150px) !important;
+}
+
+/* Mode 10 (Blocks): position and ring visibility fixes */
+.vocabulary-game.phase-10 .board-wrapper {
+  transform: none !important;
+}
+
+.vocabulary-game.phase-10 .choice-row {
+  transform: none !important;
+  margin-top: 0 !important;
+}
+
+.vocabulary-game.phase-10 .writing-hub {
+  transform: translateY(30px) !important;
+}
+
+/* Keep the "off" ring fully invisible; only colored animation should appear */
+.vocabulary-game.phase-10 .image-ring-accuracy__track {
+  stroke: transparent !important;
+  opacity: 0 !important;
+}
+
+
+
+
+/* Mode 12 picker text refinements */
+.mode12-hearts-title {
+  top: calc(max(86px, env(safe-area-inset-top)) + 92px) !important;
+  font-size: clamp(25px, 5.25vw, 37px) !important;
+  line-height: 1.06 !important;
+  white-space: normal !important;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.mode12-hearts-title__main {
+  display: block;
+  text-align: center;
+}
+
+.mode12-hearts-title__hint {
+  display: block;
+  font-size: clamp(13px, 2.6vw, 18px);
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+  opacity: 0.95;
+}
+
+.mode12-character-btn__name {
+  font-size: clamp(27px, 5.6vw, 37px) !important;
+}
+
+
+/* Mode 12: picker hint animation + in-game positioning */
+.mode12-hearts-title__hint {
+  margin-top: 15px;
+  min-height: 1.25em;
+  font-size: clamp(21px, 4.2vw, 29px) !important;
+  line-height: 1.1;
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.mode12-hearts-title__hint-current,
+.mode12-hearts-title__hint-alt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  opacity: 0;
+}
+
+.mode12-hearts-title__hint-current {
+  animation: mode12HintCurrent 4s ease-in-out infinite;
+}
+
+.mode12-hearts-title__hint-alt {
+  animation: mode12HintAlt 4s ease-in-out infinite;
+}
+
+@keyframes mode12HintCurrent {
+  0%, 37.5% { opacity: 1; }
+  50%, 87.5% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes mode12HintAlt {
+  0%, 37.5% { opacity: 0; }
+  50%, 87.5% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.vocabulary-game.phase-12 .board__image-single--phase-one {
+  transform: scale(1.1) translateY(-20px) !important;
+}
+
+.vocabulary-game.phase-12 .text-container {
+  transform: translateY(-160px) !important;
+}
+
+/* Mode 12 hint: JS-driven dissolve */
+.mode12-hearts-title__hint {
+  transition: opacity 250ms ease;
+}
+
+.mode12-hearts-title__hint.is-fading {
+  opacity: 0;
+}
+
+.mode12-hearts-title__hint-current,
+.mode12-hearts-title__hint-alt {
+  display: none !important;
+}
+
+/* Mode 12 swipe affordance + synchronized 4s cycle */
+.mode12-hearts-title__hint {
+  font-weight: 400 !important;
+  transition: opacity 500ms ease;
+}
+
+.mode12-hearts-title__hint.is-fading {
+  opacity: 0;
+}
+
+.mode12-swipe-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: clamp(24px, 4.8vw, 34px);
+  font-weight: 400;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  opacity: 0.85;
+}
+
+.mode12-swipe-arrow--left {
+  left: max(8px, 3vw);
+}
+
+.mode12-swipe-arrow--right {
+  right: max(8px, 3vw);
+}
+
+.mode12-slide--fade-in {
+  animation: mode12SlideFadeIn 500ms ease both;
+}
+
+@keyframes mode12SlideFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+
+/* Post-game results overrides */
+    .results-avatar-wrap {
+      width: 218px;
+      height: 218px;
+      margin-top: 60px;
+    }
+
+    .results-avatar {
+      width: 166px;
+      height: 166px;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
+    }
+
+    .results-metric {
+      min-height: 132px;
+      min-width: min(560px, 92vw);
+      padding: 18px 24px;
+      display: grid;
+      grid-template-columns: auto auto;
+      grid-template-areas:
+        'label label'
+        'icon value';
+      align-items: center;
+      justify-content: center;
+      column-gap: 18px;
+      row-gap: 8px;
+      text-align: center;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 18px;
+      box-shadow: none;
+      backdrop-filter: none;
+      margin-top: -48px;
+    }
+
+    .results-metric img {
+      grid-area: icon;
+      justify-self: end;
+      width: 80px;
+      height: 80px;
+      filter: drop-shadow(0 5px 14px rgba(0, 0, 0, 0.35));
+      flex: 0 0 auto;
+    }
+
+    .results-metric h2 {
+      grid-area: label;
+      display: block;
+      margin: 0;
+      font-size: clamp(22px, 4.4vw, 34px);
+      font-weight: 800;
+      line-height: 1.05;
+      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.36);
+    }
+
+    .results-metric p {
+      grid-area: value;
+      justify-self: start;
+      margin: 0;
+      font-size: clamp(52px, 11vw, 92px);
+      line-height: 1;
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.36);
+      letter-spacing: 0.02em;
+    }
+
+    body.results-active .vocabulary-game .board-wrapper,
+    body.results-active .vocabulary-game .text-container,
+    body.results-active .vocabulary-game .choice-row,
+    body.results-active .vocabulary-game .progress-footer,
+    body.results-active .vocabulary-game .game-status {
+      display: none !important;
+    }
+    body.results-active .site-header,
+    body.results-active #main-nav {
+      pointer-events: none !important;
+    }
+
+
+
+/* PlayTalk game test layout with fixed vertical containers (2026-03-06) */
+#home-game.vocabulary-game {
+  --game-visor-size: 60fr;
+  --game-input-size: 0fr;
+  --game-visor-offset: 5dvh;
+}
+
+#home-game.vocabulary-game.phase-1,
+#home-game.vocabulary-game.phase-10 {
+  --game-visor-size: 40fr;
+  --game-input-size: 30fr;
+  --game-visor-offset: 0dvh;
+}
+
+#home-game.vocabulary-game.phase-9 {
+  --game-visor-size: 25fr;
+  --game-input-size: 45fr;
+  --game-visor-offset: 0dvh;
+}
+
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden),
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) {
+  height: calc(100dvh - var(--header-height)) !important;
+  min-height: calc(100dvh - var(--header-height)) !important;
+  max-height: calc(100dvh - var(--header-height)) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: grid !important;
+  grid-template-rows: 10fr var(--game-visor-size) var(--game-input-size) 10fr;
+  overflow: hidden;
+}
+
+
+#home-game.vocabulary-game #game-feedback {
+  grid-row: 1;
+  min-height: 0;
+  padding: 0 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0 !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#home-game.vocabulary-game #game-feedback .game-stars-shell {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  width: 100%;
+}
+
+#home-game.vocabulary-game #game-feedback .game-status--top,
+#home-game.vocabulary-game #game-feedback .game-hearts {
+  position: static !important;
+  margin: 0 !important;
+  transform: none !important;
+  width: auto !important;
+}
+
+#home-game.vocabulary-game .game-feedback__label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #ffffff;
+  text-align: center;
+}
+
+#home-game.vocabulary-game .game-feedback__idle {
+  display: inline;
+  color: #ffffff;
+  opacity: 0.01;
+}
+
+#home-game.vocabulary-game .game-feedback__hit {
+  color: #00ff5a;
+  margin-right: 8px;
+  display: none;
+}
+
+#home-game.vocabulary-game .game-feedback__miss {
+  color: #ff2b2b;
+  display: none;
+}
+
+#home-game.vocabulary-game #game-feedback[data-feedback='hit'] .game-feedback__hit {
+  display: inline;
+}
+
+#home-game.vocabulary-game #game-feedback[data-feedback='miss'] .game-feedback__miss {
+  display: inline;
+}
+
+#home-game.vocabulary-game #game-feedback[data-feedback='hit'] .game-feedback__idle,
+#home-game.vocabulary-game #game-feedback[data-feedback='miss'] .game-feedback__idle {
+  display: none;
+}
+
+#home-game.vocabulary-game #game-visor {
+  grid-row: 2;
+  min-height: 0;
+  margin: 0 !important;
+  padding: 6px 8px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transform: translateY(var(--game-visor-offset, 0dvh));
+}
+
+#home-game.vocabulary-game #game-visor .game-contnent {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#home-game.vocabulary-game #game-visor .board-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0 !important;
+}
+
+#home-game.vocabulary-game #game-visor .board {
+  width: min(94vw, 640px);
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0;
+}
+
+#home-game.vocabulary-game #game-visor .text-container {
+  min-height: 34px;
+  margin: 0 auto !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+#home-game.vocabulary-game #player-input {
+  grid-row: 3;
+  min-height: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  overflow: hidden;
+}
+
+#home-game.vocabulary-game.phase-1 #player-input,
+#home-game.vocabulary-game.phase-9 #player-input,
+#home-game.vocabulary-game.phase-10 #player-input {
+  display: flex;
+}
+
+#home-game.vocabulary-game #player-input #choice-row {
+  width: 100%;
+  max-width: min(860px, 96vw);
+  max-height: 100%;
+  margin: 0 auto !important;
+  overflow: auto;
+}
+
+#home-game.vocabulary-game #dynamic-bar {
+  grid-row: 4;
+  position: static !important;
+  min-height: 0;
+  margin-top: auto;
+  align-self: stretch;
+  padding: 4px 8px max(4px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  pointer-events: auto !important;
+}
+
+#home-game.vocabulary-game #dynamic-bar .game-footer-shell,
+#home-game.vocabulary-game #dynamic-bar .game-status--bottom,
+#home-game.vocabulary-game #dynamic-bar .game-controls,
+#home-game.vocabulary-game #dynamic-bar .progress-footer {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  margin: 0 !important;
+}
+
+#home-game.vocabulary-game #dynamic-bar .game-footer-shell {
+  width: 100%;
+  pointer-events: none;
+}
+
+#home-game.vocabulary-game #dynamic-bar .game-controls {
+  width: auto !important;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+#home-game.vocabulary-game #dynamic-bar .progress-footer,
+#home-game.vocabulary-game #dynamic-bar .progress-bar {
+  width: 100%;
+}
+
+#home-game.vocabulary-game #dynamic-bar .progress-bar {
+  height: 6px;
+}
+
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #game-feedback .game-stars-shell {
+  display: block !important;
+}
+
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #game-feedback .game-status--top,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #game-feedback .game-hearts {
+  display: flex !important;
+}
+
+@media (max-width: 900px) {
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden),
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) {
+    overflow: hidden !important;
+  }
+
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #game-feedback,
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #game-visor,
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #player-input,
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #game-feedback,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #game-visor,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #player-input,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #game-visor .game-contnent,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #game-visor .game-contnent,
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #game-visor .board-wrapper,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #game-visor .board-wrapper,
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #player-input #choice-row,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #player-input #choice-row {
+    width: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 auto !important;
+  }
+
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #player-input #choice-row,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #player-input #choice-row {
+    overflow: auto !important;
+  }
+
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) .board,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) .board,
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) .text-container,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) .text-container,
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) .choice-row,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) .choice-row,
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) .phase-3-speech-stack,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) .phase-3-speech-stack,
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) .writing-hub,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) .writing-hub,
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) .phase-nine-keyboard,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) .phase-nine-keyboard,
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) .phase-nine-display,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) .phase-nine-display {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    transform: none !important;
+  }
+
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) .board-wrapper,
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) .choice-row,
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) .text-container,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) .board-wrapper,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) .choice-row,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) .text-container {
+    transform: none !important;
+    margin-top: 0 !important;
+    margin-bottom: auto !important;
+  }
+
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) .game-controls,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) .game-controls {
+    gap: clamp(4px, 1.6vw, 10px) !important;
+    flex-wrap: nowrap !important;
+    justify-content: center !important;
+  }
+
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) .game-control,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) .game-control {
+    width: clamp(42px, 10vw, 56px) !important;
+    height: clamp(42px, 10vw, 56px) !important;
+  }
+}
+
+
+
+
+
+/* Final game layout: fixed sections + bottom controls + full-screen background */
+:root {
+  --game-bg-image: url('https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/images/Twinkling%20stars%20above%20soft%20clouds.png');
+  --game-bg-position: center bottom;
+}
+
+body.page-home.game-active,
+body.page-play.play-inline-active,
+body.vocabulary-game {
+  background: var(--game-bg-image) var(--game-bg-position) / cover no-repeat fixed !important;
+}
+
+body.page-home.game-active #home-main {
+  background: transparent !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden),
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: calc(100dvh - var(--header-height)) !important;
+  min-height: calc(100dvh - var(--header-height)) !important;
+  max-height: calc(100dvh - var(--header-height)) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #game-feedback,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #game-feedback {
+  order: 1;
+  flex: 0 0 10dvh !important;
+  min-height: auto !important;
+  max-height: auto !important;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  justify-content: center !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #game-visor,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #game-visor {
+  order: 2;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  transform: none !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #player-input,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #player-input {
+  order: 3;
+  display: none !important;
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  overflow: hidden !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #player-input,
+body.page-home.game-active #home-game.vocabulary-game.phase-9:not(.is-hidden) #player-input,
+body.page-home.game-active #home-game.vocabulary-game.phase-10:not(.is-hidden) #player-input,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #player-input,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-9:not(.is-hidden) #player-input,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-10:not(.is-hidden) #player-input {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 10dvh !important;
+  min-height: auto !important;
+  max-height: auto !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar {
+  order: 4;
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  top: auto !important;
+  transform: none !important;
+  margin: 0 !important;
+  padding: 0 8px max(0px, env(safe-area-inset-bottom)) !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 0 !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar .progress-footer,
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar .progress-bar,
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar .progress-bar__fill,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar .progress-footer,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar .progress-bar,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar .progress-bar__fill {
+  display: none !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar .game-footer-shell,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar .game-footer-shell {
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar .game-controls,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar .game-controls {
+  margin: 0 !important;
+}
+
+/* Hard layout rules: no overlap between header/feedback and fixed bottom dynamic bar */
+body.game-active,
+body.page-play.play-inline-active {
+  --header-height: clamp(56px, 10dvh, 112px) !important;
+}
+
+body.page-home.game-active #home-main,
+body.page-play.play-inline-active #home-main {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  min-height: 100dvh !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden),
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) {
+  height: calc(100dvh - var(--header-height)) !important;
+  min-height: calc(100dvh - var(--header-height)) !important;
+  max-height: calc(100dvh - var(--header-height)) !important;
+  padding-bottom: 0 !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #game-feedback,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #game-feedback {
+  flex: 0 0 10dvh !important;
+  min-height: auto !important;
+  max-height: auto !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar {
+  bottom: auto !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: auto !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Play route parity with Home route: same game container disposition */
+body.page-play.game-active,
+body.page-play.play-inline-active {
+  --header-height: clamp(56px, 10dvh, 112px) !important;
+}
+
+body.page-play.play-inline-active #play-container.play-modes-layout {
+  margin-top: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-height: none !important;
+  min-height: 100dvh !important;
+}
+
+body.page-play.play-inline-active #home-game[data-play-inline='true'] {
+  position: relative !important;
+  width: 100% !important;
+  height: calc(100dvh - var(--header-height)) !important;
+  min-height: calc(100dvh - var(--header-height)) !important;
+  max-height: calc(100dvh - var(--header-height)) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+}
+
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #game-feedback {
+  flex: 0 0 10dvh !important;
+  min-height: auto !important;
+  max-height: auto !important;
+  margin: 0 !important;
+}
+
+
+/* Keep core game containers always visible on /#play inline session. */
+body.page-play.play-inline-active #game-header,
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #game-feedback,
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #game-visor,
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #player-input,
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #dynamic-bar {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body.page-play.play-inline-active #game-header {
+  display: block !important;
+}
+
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #game-feedback,
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #game-visor,
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #player-input,
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #dynamic-bar {
+  display: flex !important;
+}
+
+/* Phase-specific visor/input sizing overrides (2026-03-06) */
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor,
+body.page-home.game-active #home-game.vocabulary-game.phase-10:not(.is-hidden) #game-visor,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-10:not(.is-hidden) #game-visor {
+  flex: 0 0 35dvh !important;
+  min-height: 35dvh !important;
+  max-height: 35dvh !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #player-input,
+body.page-home.game-active #home-game.vocabulary-game.phase-10:not(.is-hidden) #player-input,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #player-input,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-10:not(.is-hidden) #player-input {
+  display: flex !important;
+  flex: 0 0 35dvh !important;
+  min-height: 35dvh !important;
+  max-height: 35dvh !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-9:not(.is-hidden) #game-visor,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-9:not(.is-hidden) #game-visor {
+  flex: 0 0 25dvh !important;
+  min-height: 25dvh !important;
+  max-height: 25dvh !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-9:not(.is-hidden) #player-input,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-9:not(.is-hidden) #player-input {
+  display: flex !important;
+  flex: 0 0 45dvh !important;
+  min-height: 45dvh !important;
+  max-height: 45dvh !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  padding: 4px 8px !important;
+  overflow: hidden !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-9:not(.is-hidden) #player-input #choice-row,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-9:not(.is-hidden) #player-input #choice-row {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  overflow: hidden !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-9:not(.is-hidden) .phase-nine-keyboard,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-9:not(.is-hidden) .phase-nine-keyboard {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-9:not(.is-hidden) .phase-nine-keyboard__grid,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-9:not(.is-hidden) .phase-nine-keyboard__grid {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  grid-auto-rows: minmax(0, 1fr) !important;
+  align-content: stretch !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-9:not(.is-hidden) .phase-nine-key,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-9:not(.is-hidden) .phase-nine-key {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+
+
+
+/* Responsive reference guides + footer anchor fix (2026-03-07) */
+body.page-home.game-active #game-header,
+body.page-home.game-active #global-header,
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #game-feedback,
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #game-visor,
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #player-input,
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar,
+body.page-play.play-inline-active #game-header,
+body.page-play.play-inline-active #global-header,
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #game-feedback,
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #game-visor,
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #player-input,
+
+body.page-home.game-active #home-main {
+  margin-top: 0 !important;
+  padding-top: var(--header-height) !important;
+  padding-right: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 0 !important;
+  min-height: 100dvh !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden),
+body.page-play.play-inline-active #home-game[data-play-inline='true'] {
+  position: relative !important;
+  margin: 0 !important;
+  width: 100% !important;
+  height: calc(100dvh - var(--header-height)) !important;
+  min-height: calc(100dvh - var(--header-height)) !important;
+  max-height: calc(100dvh - var(--header-height)) !important;
+  padding-top: 0 !important;
+  padding-right: 0 !important;
+  padding-bottom: calc(clamp(64px, 11dvh, 110px) + env(safe-area-inset-bottom)) !important;
+  padding-left: 0 !important;
+  overflow: hidden !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #game-feedback,
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #game-feedback {
+  margin-top: 0 !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar,

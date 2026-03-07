@@ -1,0 +1,32 @@
+{
+  "default": [
+    "planting",
+    "blocks",
+    "connecting",
+    "listening",
+    "sequence",
+    "typing",
+    "reading",
+    "memory",
+    "meaning",
+    "building",
+    "watching",
+    "talking"
+  ],
+  "days": {
+    "1": [
+      "planting",
+      "blocks",
+      "connecting",
+      "listening",
+      "sequence",
+      "typing",
+      "reading",
+      "memory",
+      "meaning",
+      "building",
+      "watching",
+      "talking"
+    ]
+  }
+}

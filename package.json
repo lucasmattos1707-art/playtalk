@@ -1,0 +1,38 @@
+{
+  "name": "game",
+  "version": "1.0.0",
+  "description": "Fluency game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "node build-static.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "cap:init": "npx cap init PlayTalk com.playtalk.app --web-dir www",
+    "cap:add:android": "npx cap add android",
+    "cap:sync:android": "npx cap sync android",
+    "cap:open:android": "npx cap open android",
+    "db:reset:users": "node scripts/reset-users-table.js",
+    "android:update": "npm run build && npm run cap:sync:android",
+    "android:auto-sync": "node scripts/android-auto-sync.js",
+    "deploy:pages": "npm run build && npx wrangler pages deploy dist",
+    "android:build:debug": "cd android && .\\gradlew.bat assembleDebug",
+    "android:build:release": "cd android && .\\gradlew.bat assembleRelease",
+    "android:build:aab": "cd android && .\\gradlew.bat bundleRelease"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.4.3",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/cli": "^7.4.3",
+    "typescript": "^5.9.3"
+  }
+}

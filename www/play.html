@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <title>Game Modes | PlayTalk</title>
+  <meta name="description" content="Escolha um modo de jogo e jogue uma fase completa.">
+  <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/vocabulary-game.css?v=20260227b">
+  <script src="/config.js"></script>
+  <script src="js/gamesounds.js"></script>
+  <script src="js/player-state.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/global-radio.js"></script>
+  <script src="js/lens.js"></script>
+  <script src="js/site-nav.js"></script>
+</head>
+<body class="page-play" data-lens-context="stats">
+  <header class="site-header site-header--app" id="global-header">
+    <div class="site-header__slot site-header__slot--left">
+      <button type="button" class="site-header__avatar-button" aria-label="Perfil do jogador">
+        <img id="global-header-avatar-image" class="site-header__avatar" src="Avatar/avatar-boy-male-svgrepo-com.svg" alt="Avatar do jogador">
+        <span id="global-header-avatar-fallback" class="site-header__avatar-fallback">P</span>
+      </button>
+    </div>
+    <div class="site-header__slot site-header__slot--center">
+      <button id="global-header-menu" type="button" class="site-header__menu-button" aria-label="Menu principal">
+        <span class="site-header__menu-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false"><path d="M4 7h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+        </span>
+        <span id="global-header-menu-label" class="site-header__menu-label">PlayTalk</span>
+      </button>
+    </div>
+    <div class="site-header__slot site-header__slot--right">
+      <div class="site-header__coins" aria-label="Moedas">
+        <span class="site-header__coins-icon" aria-hidden="true">?</span>
+        <span id="global-header-coins">0</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="play-container" class="container-screen container-screen--play play-modes-layout" data-page-transition>
+    <section class="play-modes-hub" aria-label="Modos de jogo">
+      <div class="play-sky-clock" id="clock-top">
+        <span id="playSkyClock" class="play-sky-clock__time">00:00</span>
+      </div>
+      <div class="play-modes-grid-shell">
+      <div class="play-modes-icons" id="game-modes">
+        <div class="play-mode-item" data-phase="1" role="button" tabindex="0" aria-label="Abrir Planting">
+          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/01.png" alt="">
+          <span class="play-mode-item__label">Planting</span>
+        </div>
+        <div class="play-mode-item" data-phase="2" role="button" tabindex="0" aria-label="Abrir Connecting">
+          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/02.png" alt="">
+          <span class="play-mode-item__label">Connecting</span>
+        </div>
+        <div class="play-mode-item" data-phase="3" role="button" tabindex="0" aria-label="Abrir Reading">
+          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/03.png" alt="">
+          <span class="play-mode-item__label">Reading</span>
+        </div>
+        <div class="play-mode-item" data-phase="4" role="button" tabindex="0" aria-label="Abrir Sequence">
+          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/04.png" alt="">
+          <span class="play-mode-item__label">Sequence</span>
+        </div>
+        <div class="play-mode-item" data-phase="5" role="button" tabindex="0" aria-label="Abrir Listening">
+          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/05.png" alt="">
+          <span class="play-mode-item__label">Listening</span>
+        </div>
+        <div class="play-mode-item" data-phase="6" role="button" tabindex="0" aria-label="Abrir Meaning">
+          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/06.png" alt="">
+          <span class="play-mode-item__label">Meaning</span>
+        </div>
+        <div class="play-mode-item" data-phase="7" role="button" tabindex="0" aria-label="Abrir Memory">
+          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/07.png" alt="">
+          <span class="play-mode-item__label">Memory</span>
+        </div>
+        <div class="play-mode-item" data-phase="8" role="button" tabindex="0" aria-label="Abrir Building">
+          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/08.png" alt="">
+          <span class="play-mode-item__label">Building</span>
+        </div>
+        <div class="play-mode-item" data-phase="9" role="button" tabindex="0" aria-label="Abrir Typing">
+          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/09.png" alt="">
+          <span class="play-mode-item__label">Typing</span>
+        </div>
+        <div class="play-mode-item" data-phase="10" role="button" tabindex="0" aria-label="Abrir Blocks">
+          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/10.png" alt="">
+          <span class="play-mode-item__label">Blocks</span>
+        </div>
+        <div class="play-mode-item" data-phase="11" role="button" tabindex="0" aria-label="Abrir Watching">
+          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/11.png" alt="">
+          <span class="play-mode-item__label">Watching</span>
+        </div>
+        <div class="play-mode-item" data-phase="12" role="button" tabindex="0" aria-label="Abrir Talking">
+          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/12.png" alt="">
+          <span class="play-mode-item__label">Talking</span>
+        </div>
+      </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="page-footer">
+    <nav id="main-nav">
+      <a href="#home" class="nav-item" aria-label="Jornada da Fluencia" data-nav-index="0">
+        <span class="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+        </span>
+        <span class="sr-only">Jornada da Fluencia</span>
+      </a>
+      <a href="#fun" class="nav-item" aria-label="FlashCards" data-nav-index="1">
+        <span class="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false"><path d="M11 5a1 1 0 0 1 1-1h8v9.6a3.4 3.4 0 1 1-2-3.08V7.22l-6 1.5v7.88a3.4 3.4 0 1 1-2-3.08V5z"/></svg>
+        </span>
+        <span class="sr-only">FlashCards</span>
+      </a>
+      <a href="#play" class="nav-item active" aria-label="Modos de Jogo" data-nav-index="2">
+        <span class="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false"><path d="M5 21a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5Zm6 0a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-2Zm6 0a1 1 0 0 1-1-1V13a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-2Z"/></svg>
+        </span>
+        <span class="sr-only">Modos de Jogo</span>
+      </a>
+      <a href="#profile" class="nav-item" aria-label="Perfil" data-nav-index="3">
+        <span class="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.01-8 4.5V21h16v-2.5c0-2.49-3.58-4.5-8-4.5Z"/></svg>
+        </span>
+        <span class="sr-only">Perfil</span>
+      </a>
+    </nav>
+  </footer>
+
+  <script src="js/play-modes-page.js"></script>
+</body>
+</html>
+
+
+
+

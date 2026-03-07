@@ -1,0 +1,15 @@
+node_modules/
+dist/
+public/
+runtime-data/
+
+.env
+.env.*
+!.env.example
+
+# Android build/cache artifacts
+android/.gradle/
+android/.idea/
+android/local.properties
+android/**/build/
+android/captures/

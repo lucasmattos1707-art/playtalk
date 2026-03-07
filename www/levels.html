@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlayTalk | Níveis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c1222;
+      --card: #121a2e;
+      --accent: #3f8cff;
+      --accent-soft: #2a3a5c;
+      --text: #e7ecf5;
+      --muted: #9eafc7;
+      --border: #1f2a44;
+      --success: #2dc98a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(63, 140, 255, 0.16), transparent 30%),
+                  radial-gradient(circle at 80% 0%, rgba(119, 77, 255, 0.12), transparent 30%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    header p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .pill {
+      background: var(--accent-soft);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 600;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .controls {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+      flex-wrap: wrap;
+    }
+
+    .controls button {
+      border: 1px solid var(--border);
+      background: var(--accent-soft);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.2s ease;
+    }
+
+    .controls button:hover { box-shadow: 0 10px 30px rgba(63, 140, 255, 0.22); }
+    .controls button:active { transform: translateY(1px); }
+
+    .paste-panel {
+      display: none;
+      margin-top: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+      gap: 12px;
+      flex-direction: column;
+    }
+
+    .paste-panel.is-open { display: flex; }
+
+    .paste-panel textarea {
+      width: 100%;
+      min-height: 140px;
+      resize: vertical;
+      background: #0f1526;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .paste-panel__actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .paste-panel__actions button {
+      border: 1px solid var(--border);
+      background: var(--accent-soft);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    main { margin-top: 20px; }
+
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .image-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+      position: relative;
+      overflow: hidden;
+      min-height: 220px;
+    }
+
+    .level-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(63, 140, 255, 0.14);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .image-card img, .image-placeholder {
+      width: 140px;
+      height: 140px;
+      object-fit: cover;
+      display: block;
+      border-radius: 50%;
+      background: #0f1526;
+      border: 1px dashed var(--border);
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .image-visual {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      display: grid;
+      place-items: center;
+      --tense-ring: none;
+      --tense-animation: none;
+      --tense-glow: none;
+      --tense-filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.25));
+      --tense-mask: none;
+      --tense-lens: none;
+    }
+
+    .image-visual--audio {
+      --audio-progress: 0deg;
+      --audio-start: #f78c1f;
+      --audio-end: #2dc98a;
+      padding: 10px;
+      border-radius: 50%;
+      background: conic-gradient(
+        var(--audio-end) 0deg,
+        var(--audio-end) var(--audio-progress),
+        var(--audio-start) var(--audio-progress),
+        var(--audio-start) 360deg
+      );
+      transition: background 0.18s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+    }
+
+    .image-visual--audio .audio-backdrop {
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      background: rgba(15, 21, 38, 0.85);
+      z-index: 0;
+    }
+
+    .image-ring,
+    .image-lens {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .image-ring {
+      background: var(--ring-gradient, none);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-width, 12px)), #000 calc(100% - var(--ring-width, 12px)));
+      mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-width, 12px)), #000 calc(100% - var(--ring-width, 12px)));
+      animation: var(--ring-animation, none);
+      box-shadow: var(--ring-glow, none);
+      z-index: 1;
+    }
+
+    .image-ring--tense {
+      --ring-gradient: var(--tense-ring);
+      --ring-animation: var(--tense-animation);
+      --ring-glow: var(--tense-glow);
+      --ring-width: 15px;
+    }
+
+    .image-ring--form {
+      display: none;
+    }
+
+    .image-lens--tense { background: var(--tense-lens, none); }
+    .image-lens {
+      inset: 10px;
+      z-index: 4;
+    }
+
+    .image-visual--audio img,
+    .image-visual--audio .image-placeholder {
+      position: relative;
+      z-index: 3;
+      border: none;
+    }
+
+    .image-visual img {
+      filter: var(--tense-filter);
+      -webkit-mask-image: var(--tense-mask);
+      mask-image: var(--tense-mask);
+    }
+
+    .image-visual .image-placeholder {
+      filter: var(--tense-filter);
+    }
+
+    .image-visual--audio:hover {
+      box-shadow: 0 0 0 2px rgba(247, 140, 31, 0.35);
+    }
+
+    .image-visual--audio.is-playing {
+      box-shadow: 0 0 0 2px rgba(45, 201, 138, 0.35);
+    }
+
+    .image-placeholder {
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 8px;
+    }
+
+    .label-btn {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--accent-soft);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      text-transform: none;
+      text-align: center;
+    }
+
+    .label-btn--pt { background: linear-gradient(90deg, rgba(63, 140, 255, 0.4), rgba(63, 140, 255, 0.2)); }
+    .label-btn--en { background: #0f1526; color: var(--muted); }
+    .label-btn--folder { background: #0f1526; color: var(--text); border-style: dashed; }
+
+    .hint { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+    .selectors {
+      width: 100%;
+      display: grid;
+      gap: 8px;
+    }
+
+    .selectors label {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .selectors select {
+      background: #0f1526;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes spin-slow {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes spin-partial {
+      0% { transform: rotate(0deg); }
+      80% { transform: rotate(270deg); }
+      100% { transform: rotate(270deg); }
+    }
+
+    @keyframes swing {
+      0% { transform: rotate(-90deg); }
+      50% { transform: rotate(90deg); }
+      100% { transform: rotate(-90deg); }
+    }
+
+    .loading { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 15px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; animation: pulse 1.1s ease-in-out infinite; }
+    .dot:nth-child(2) { animation-delay: 0.15s; }
+    .dot:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes pulse { 0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 10;
+    }
+
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.28);
+    }
+
+    .modal h3 { margin: 0 0 10px; }
+    .modal p { margin: 0 0 12px; color: var(--muted); }
+
+    .modal .field { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+    .modal select { flex: 1; background: #0f1526; color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+    .modal .actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal button { border: 1px solid var(--border); background: var(--accent-soft); color: var(--text); padding: 10px 12px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+
+    .controls__level-filter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .controls__level-filter label { color: var(--muted); font-size: 14px; }
+
+    .controls__level-filter select {
+      background: #0f1526;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-weight: 600;
+    }
+
+    .controls__select-all {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #0f1526;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .controls__select-all input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .image-card.is-selected {
+      border-color: rgba(63, 140, 255, 0.65);
+      box-shadow: 0 0 0 2px rgba(63, 140, 255, 0.25);
+    }
+
+    .selection-checkbox {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .empty-state { margin-top: 24px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 12px; padding: 18px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div>
+        <h1>Edição de níveis pessoais</h1>
+        <p>Suas alterações ficam apenas no seu navegador (localStorage).</p>
+      </div>
+      <div class="pill" id="loading-indicator">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span>Carregando</span>
+      </div>
+    </header>
+
+    <div class="controls">
+      <button id="new-grid-btn">Nova grade</button>
+      <button id="upload-btn">Upload de imagens</button>
+      <button id="refresh-server-btn">Atualizar servidor</button>
+      <button id="paste-text-btn" type="button">Colar texto</button>
+      <label class="controls__select-all" for="select-all">
+        <input type="checkbox" id="select-all" />
+        Selecionar tudo
+      </label>
+      <div class="controls__level-filter">
+        <label for="source-select">Fonte</label>
+        <select id="source-select">
+          <option value="images">images.json</option>
+          <option value="building">building.json</option>
+        </select>
+      </div>
+      <button id="export-json-btn">Exportar JSON</button>
+      <button id="set-image-base-url-btn" type="button">Adicionar link de imagens</button>
+      <button id="set-audio-base-url-btn" type="button">Adicionar link de áudio</button>
+      <button id="export-images-btn">Exportar imagens</button>
+      <button id="export-audio-btn">Exportar áudios</button>
+      <button id="remove-audio-btn">Remover MP3</button>
+      <div class="controls__level-filter">
+        <label for="level-filter">Nível</label>
+        <select id="level-filter"></select>
+      </div>
+      <span class="hint">Dê dois toques para editar textos/imagens. Clique para ouvir ou adicionar um áudio.</span>
+    </div>
+    <div class="paste-panel" id="paste-panel" aria-hidden="true">
+      <label for="paste-textarea" class="hint">Cole o texto abaixo (uma linha por campo: português, inglês, folder).</label>
+      <textarea id="paste-textarea" placeholder="Português&#10;Inglês&#10;Folder&#10;Português&#10;Inglês&#10;Folder"></textarea>
+      <div class="paste-panel__actions">
+        <button id="paste-apply-btn" type="button">Preencher campos</button>
+      </div>
+    </div>
+
+    <main>
+      <div id="image-grid" class="image-grid"></div>
+      <div id="empty-state" class="empty-state">Nenhuma imagem encontrada para este nível.</div>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="image-modal">
+    <div class="modal">
+      <h3>Gerenciar imagem</h3>
+      <p>Envie um arquivo novo ou mova a imagem para outro nível.</p>
+      <div class="field">
+        <label for="move-select">Mover para o nível</label>
+        <select id="move-select"></select>
+      </div>
+      <div class="actions" style="justify-content: space-between;">
+        <div>
+          <label for="change-image-input" class="label-btn" style="padding: 8px 12px; display: inline-flex; align-items: center; gap: 8px;">Enviar arquivo</label>
+          <input id="change-image-input" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml" style="display:none" />
+        </div>
+        <div class="actions">
+          <button id="remove-image-btn">Remover foto</button>
+          <button id="copy-image-btn">Mover</button>
+          <button id="close-modal-btn">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <input id="upload-input" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml" multiple style="display:none" />
+  <input id="audio-upload-input" type="file" accept="audio/mpeg,audio/mp3,audio/ogg,audio/opus,audio/webm,audio/wav" style="display:none" />
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script>
+    const STORAGE_KEY = 'playtalk-levels-editor-v1';
+    const MAX_LEVELS = 100;
+    const grid = document.getElementById('image-grid');
+    const emptyState = document.getElementById('empty-state');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const uploadInput = document.getElementById('upload-input');
+    const changeImageInput = document.getElementById('change-image-input');
+    const audioUploadInput = document.getElementById('audio-upload-input');
+    const newGridBtn = document.getElementById('new-grid-btn');
+    const pasteTextBtn = document.getElementById('paste-text-btn');
+    const pastePanel = document.getElementById('paste-panel');
+    const pasteTextarea = document.getElementById('paste-textarea');
+    const pasteApplyBtn = document.getElementById('paste-apply-btn');
+    const uploadBtn = document.getElementById('upload-btn');
+    const refreshServerBtn = document.getElementById('refresh-server-btn');
+    const sourceSelect = document.getElementById('source-select');
+    const exportJsonBtn = document.getElementById('export-json-btn');
+    const setImageBaseUrlBtn = document.getElementById('set-image-base-url-btn');
+    const setAudioBaseUrlBtn = document.getElementById('set-audio-base-url-btn');
+    const exportImagesBtn = document.getElementById('export-images-btn');
+    const exportAudioBtn = document.getElementById('export-audio-btn');
+    const removeAudioBtn = document.getElementById('remove-audio-btn');
+    const imageModal = document.getElementById('image-modal');
+    const moveSelect = document.getElementById('move-select');
+    const moveBtn = document.getElementById('copy-image-btn');
+    const removeBtn = document.getElementById('remove-image-btn');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const levelFilter = document.getElementById('level-filter');
+    const selectAllCheckbox = document.getElementById('select-all');
+
+    let levels = [];
+    let imageCache = new Map();
+    let audioDataCache = new Map();
+    let activeLevelIndex = null;
+    let selectedLevelFilter = 'all';
+    let pendingAudioIndex = null;
+    let activeAudioPlayback = null;
+    let activeSource = 'images';
+    let exportImageBaseUrl = '';
+    let exportAudioBaseUrl = '';
+    let visibleLevelIndexes = [];
+    const selectedIndexes = new Set();
+
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/svg+xml'];
+    const allowedAudioTypes = ['audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/opus', 'audio/webm', 'audio/wav'];
+    const allowedAudioExtensions = ['mp3', 'wav', 'ogg', 'opus', 'webm'];
+
+    const resolveLevelNumber = (level, index) => {
+      const value = Number(level.folderIndex);
+      if (Number.isInteger(value) && value > 0) return value;
+      return index + 1;
+    };
+
+    const buildLevelFilter = () => {
+      const numericSelected = Number(selectedLevelFilter);
+      if (selectedLevelFilter !== 'all' && (!Number.isInteger(numericSelected) || numericSelected < 1 || numericSelected > MAX_LEVELS)) {
+        selectedLevelFilter = 'all';
+      }
+
+      levelFilter.innerHTML = '';
+      const allOption = document.createElement('option');
+      allOption.value = 'all';
+      allOption.textContent = 'Todos';
+      levelFilter.appendChild(allOption);
+
+      for (let levelNumber = 1; levelNumber <= MAX_LEVELS; levelNumber += 1) {
+        const option = document.createElement('option');
+        option.value = String(levelNumber);
+        option.textContent = `Nível ${levelNumber}`;
+        levelFilter.appendChild(option);
+      }
+
+      levelFilter.value = selectedLevelFilter;
+    };
+
+    const toggleLoading = (show) => {
+      loadingIndicator.style.display = show ? 'inline-flex' : 'none';
+    };
+
+    const defaultLevel = () => ({
+      pt: '',
+      en: '',
+      folder: '',
+      folderIndex: 1,
+      file: '',
+      dataUrl: '',
+      format: '',
+      audioFile: '',
+      audioDataUrl: '',
+      audioFormat: '',
+      tense: '',
+      sentenceForm: ''
+    });
+
+    const applyPastedLines = (lines = []) => {
+      const fields = ['pt', 'en', 'folder'];
+      let lineIndex = 0;
+
+      for (let i = 0; i < levels.length && lineIndex < lines.length; i += 1) {
+        const current = levels[i] || defaultLevel();
+        const updated = { ...current };
+
+        fields.forEach((field) => {
+          if (lineIndex >= lines.length) return;
+          if (!updated[field]) {
+            updated[field] = lines[lineIndex];
+            lineIndex += 1;
+          }
+        });
+
+        levels[i] = updated;
+      }
+
+      return lineIndex;
+    };
+
+    const TENSE_OPTIONS = [
+      { value: '', label: 'Vazio (Presente simples)' },
+      { value: 'present-simple', label: 'Present Simple' },
+      { value: 'present-continuous', label: 'Present Continuous' },
+      { value: 'present-perfect', label: 'Present Perfect' },
+      { value: 'present-perfect-continuous', label: 'Present Perfect Continuous' },
+      { value: 'past-simple', label: 'Past Simple' },
+      { value: 'past-continuous', label: 'Past Continuous' },
+      { value: 'past-perfect', label: 'Past Perfect' },
+      { value: 'past-perfect-continuous', label: 'Past Perfect Continuous' },
+      { value: 'future-simple', label: 'Future Simple (will)' },
+      { value: 'future-continuous', label: 'Future Continuous' },
+      { value: 'future-perfect', label: 'Future Perfect' },
+      { value: 'future-perfect-continuous', label: 'Future Perfect Continuous' },
+      { value: 'going-to-future', label: 'Going to Future' },
+      { value: 'present-continuous-future', label: 'Present Continuous (Future Use)' },
+      { value: 'present-simple-future', label: 'Present Simple (Future Use)' },
+      { value: 'conditional-would', label: 'Conditional (would)' }
+    ];
+
+    const SENTENCE_FORM_OPTIONS = [
+      { value: '', label: 'Sem estado' },
+      { value: 'affirmative', label: 'Afirmativa' },
+      { value: 'negative', label: 'Negativa' },
+      { value: 'question', label: 'Pergunta' },
+      { value: 'imperative', label: 'Imperativo' }
+    ];
+
+    const TENSE_STYLES = {
+      '': {
+        ring: 'conic-gradient(#8dc9ff, #8dc9ff)'
+      },
+      'present-simple': {
+        ring: 'conic-gradient(#8dc9ff, #8dc9ff)'
+      },
+      'present-continuous': {
+        ring: 'conic-gradient(#8dc9ff, #cfeaff, #8dc9ff)',
+        animation: 'spin 3s linear infinite'
+      },
+      'present-perfect': {
+        ring: 'conic-gradient(#8dc9ff, #c2b15a, #f2c14f, #8dc9ff)'
+      },
+      'present-perfect-continuous': {
+        ring: 'conic-gradient(#8dc9ff, #cfeaff, #f78c1f, #8dc9ff)',
+        animation: 'spin 1s linear infinite'
+      },
+      'past-simple': {
+        ring: 'conic-gradient(#8d939e, #8d939e)',
+        filter: 'drop-shadow(0 10px 16px rgba(0, 0, 0, 0.25)) grayscale(1)'
+      },
+      'past-continuous': {
+        ring: 'conic-gradient(#8d939e, #1b1b1b, #8d939e)',
+        animation: 'spin 3s linear infinite',
+        filter: 'drop-shadow(0 10px 16px rgba(0, 0, 0, 0.25)) grayscale(1)'
+      },
+      'past-perfect': {
+        ring: 'conic-gradient(#8d939e, #1b1b1b, #f2c14f, #8d939e)',
+        filter: 'drop-shadow(0 10px 16px rgba(0, 0, 0, 0.25)) grayscale(1)'
+      },
+      'past-perfect-continuous': {
+        ring: 'conic-gradient(#8d939e, #6f7480, #f78c1f, #8d939e)',
+        animation: 'spin 1s linear infinite',
+        filter: 'drop-shadow(0 10px 16px rgba(0, 0, 0, 0.25)) grayscale(1)'
+      },
+      'future-simple': {
+        ring: 'conic-gradient(#172c6b, #172c6b)'
+      },
+      'future-continuous': {
+        ring: 'conic-gradient(#172c6b, #0a0a0a, #172c6b)',
+        animation: 'spin 3s linear infinite'
+      },
+      'future-perfect': {
+        ring: 'conic-gradient(#172c6b, #0a0a0a, #f2c14f, #172c6b)'
+      },
+      'future-perfect-continuous': {
+        ring: 'conic-gradient(#172c6b, #0a0a0a, #f78c1f, #172c6b)',
+        animation: 'spin 1s linear infinite'
+      },
+      'going-to-future': {
+        ring: 'conic-gradient(#172c6b, #172c6b)'
+      },
+      'present-continuous-future': {
+        ring: 'conic-gradient(#172c6b, #172c6b)'
+      },
+      'present-simple-future': {
+        ring: 'conic-gradient(#172c6b, #172c6b)'
+      },
+      'conditional-would': {
+        lens: 'linear-gradient(40deg, rgba(90, 150, 255, 0.75) 0%, rgba(90, 150, 255, 0) 60%)'
+      }
+    };
+
+    const saveState = () => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          levels,
+          source: activeSource,
+          exportImageBaseUrl,
+          exportAudioBaseUrl
+        }));
+      } catch (err) {
+        console.error('Erro ao salvar localmente', err);
+      }
+    };
+
+    const getVisibleIndexes = () => visibleLevelIndexes.slice();
+
+    const updateSelectAllState = () => {
+      const visibleIndexes = getVisibleIndexes();
+      if (!selectAllCheckbox) return;
+      if (!visibleIndexes.length) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+        return;
+      }
+      const selectedVisible = visibleIndexes.filter(index => selectedIndexes.has(index));
+      selectAllCheckbox.checked = selectedVisible.length === visibleIndexes.length;
+      selectAllCheckbox.indeterminate = selectedVisible.length > 0 && selectedVisible.length < visibleIndexes.length;
+    };
+
+    const resetSelection = () => {
+      selectedIndexes.clear();
+      updateSelectAllState();
+    };
+
+    const getTargetIndexes = (originIndex) => {
+      if (selectedIndexes.has(originIndex) && selectedIndexes.size > 0) {
+        return Array.from(selectedIndexes);
+      }
+      return [originIndex];
+    };
+
+    const updateLevelsForIndexes = (indexes, updater) => {
+      indexes.forEach((index) => {
+        if (!levels[index]) return;
+        levels[index] = updater(levels[index]);
+      });
+    };
+
+    const clearAudioForIndexes = (indexes) => {
+      if (!indexes.length) return;
+      updateLevelsForIndexes(indexes, (current) => ({
+        ...current,
+        audioFile: '',
+        audioDataUrl: '',
+        audioFormat: ''
+      }));
+      saveState();
+      renderGrid();
+    };
+
+    const loadState = () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) return null;
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed?.levels)) {
+          return {
+            levels: parsed.levels.map((level, idx) => ({ ...defaultLevel(), ...level, order: idx + 1 })).slice(0, MAX_LEVELS),
+            source: parsed.source,
+            exportImageBaseUrl: typeof parsed.exportImageBaseUrl === 'string' ? parsed.exportImageBaseUrl : '',
+            exportAudioBaseUrl: typeof parsed.exportAudioBaseUrl === 'string' ? parsed.exportAudioBaseUrl : ''
+          };
+        }
+      } catch (err) {
+        console.warn('Estado local inválido', err);
+      }
+      return null;
+    };
+
+    const normalizeLevelNumber = (value) => {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : null;
+    };
+
+    const SOURCE_OPTIONS = {
+      images: {
+        label: 'images.json',
+        url: 'images/images.json',
+        exportName: 'images.json',
+        useServerLevels: true
+      },
+      building: {
+        label: 'building.json',
+        url: 'images/building.json',
+        exportName: 'building.json',
+        useServerLevels: false
+      }
+    };
+
+    const resolveSource = (key) => SOURCE_OPTIONS[key] || SOURCE_OPTIONS.images;
+
+    const fetchDefaults = async (sourceKey = activeSource, { refreshServer = false } = {}) => {
+      try {
+        const source = resolveSource(sourceKey);
+        const requests = [fetch(source.url)];
+        if (source.useServerLevels) {
+          requests.push(fetch(
+            '/api/image-levels' + (refreshServer ? '/refresh' : ''),
+            refreshServer ? { method: 'POST' } : undefined
+          ));
+        }
+        const responses = await Promise.all(requests);
+        const [imageResponse, levelsResponse] = responses;
+
+        if (!imageResponse.ok || (source.useServerLevels && !levelsResponse?.ok)) {
+          throw new Error('Não foi possível carregar os dados de imagem.');
+        }
+
+        const imageData = await imageResponse.json();
+        const levelData = source.useServerLevels && levelsResponse ? await levelsResponse.json() : null;
+        const levelMap = new Map(
+          Object.entries((levelData && levelData.levels) || {})
+            .map(([file, level]) => [file, normalizeLevelNumber(level)])
+        );
+
+        const orderedImages = Array.isArray(imageData) ? imageData.slice(0, MAX_LEVELS) : [];
+        const base = orderedImages.map((item, idx) => {
+          const fileName = item.file || item.imagem || '';
+          const audioFileName = typeof item.audio === 'string' ? item.audio : '';
+          const categoryNumber = normalizeLevelNumber(item.folder || item.categoria);
+          const levelNumber = source.useServerLevels
+            ? normalizeLevelNumber(levelMap.get(fileName))
+            : categoryNumber;
+          const targetIndex = Number.isInteger(levelNumber) && levelNumber >= 1 ? levelNumber - 1 : idx;
+
+          return {
+            ...defaultLevel(),
+            order: targetIndex + 1,
+            pt: item.pt || item.nomePortugues || '',
+            en: item.en || item.nomeIngles || '',
+            folder: item.folder || item.categoria || '',
+            tense: item.tense || '',
+            sentenceForm: item.sentenceForm || '',
+            folderIndex: targetIndex + 1,
+            file: fileName,
+            dataUrl: '',
+            format: (fileName || '').split('.').pop() || 'webp',
+            audioFile: audioFileName,
+            audioDataUrl: '',
+            audioFormat: (audioFileName.split('.').pop() || '').toLowerCase()
+          };
+        });
+
+        return base;
+      } catch (error) {
+        console.error('Erro ao carregar dados padrão:', error);
+        return [];
+      }
+    };
+
+    const renderButtons = (level, index, card) => {
+      const levelNumber = resolveLevelNumber(level, index);
+      const fields = [
+        { key: 'pt', label: 'Português', className: 'label-btn--pt' },
+        { key: 'en', label: 'English', className: 'label-btn--en' },
+        { key: 'folder', label: 'Folder', className: 'label-btn--folder' }
+      ];
+
+      fields.forEach(field => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `label-btn ${field.className}`;
+        button.textContent = level[field.key] || '';
+        button.title = 'Dê dois cliques para editar';
+        button.addEventListener('dblclick', () => {
+          const value = prompt(`Digite o ${field.label} do nível ${levelNumber}`, level[field.key] || '');
+          if (value === null) return;
+          const trimmed = value.trim();
+          const targets = getTargetIndexes(index);
+          updateLevelsForIndexes(targets, (current) => ({
+            ...current,
+            [field.key]: trimmed
+          }));
+          saveState();
+          renderGrid();
+        });
+        card.appendChild(button);
+      });
+    };
+
+    const renderSelectors = (level, index, card) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'selectors';
+
+      const tenseLabel = document.createElement('label');
+      tenseLabel.textContent = 'Tempo verbal';
+      const tenseSelect = document.createElement('select');
+      TENSE_OPTIONS.forEach(option => {
+        const item = document.createElement('option');
+        item.value = option.value;
+        item.textContent = option.label;
+        tenseSelect.appendChild(item);
+      });
+      tenseSelect.value = level.tense || '';
+      tenseSelect.addEventListener('change', (event) => {
+        const targets = getTargetIndexes(index);
+        updateLevelsForIndexes(targets, (current) => ({
+          ...current,
+          tense: event.target.value
+        }));
+        saveState();
+        renderGrid();
+      });
+      tenseLabel.appendChild(tenseSelect);
+
+      const formLabel = document.createElement('label');
+      formLabel.textContent = 'Estado da frase';
+      const formSelect = document.createElement('select');
+      SENTENCE_FORM_OPTIONS.forEach(option => {
+        const item = document.createElement('option');
+        item.value = option.value;
+        item.textContent = option.label;
+        formSelect.appendChild(item);
+      });
+      formSelect.value = level.sentenceForm || '';
+      formSelect.addEventListener('change', (event) => {
+        const targets = getTargetIndexes(index);
+        updateLevelsForIndexes(targets, (current) => ({
+          ...current,
+          sentenceForm: event.target.value
+        }));
+        saveState();
+        renderGrid();
+      });
+      formLabel.appendChild(formSelect);
+
+      wrapper.appendChild(tenseLabel);
+      wrapper.appendChild(formLabel);
+      card.appendChild(wrapper);
+    };
+
+    const applyVisualStyles = (wrapper, level = {}) => {
+      const tenseStyle = TENSE_STYLES[level.tense] || {};
+
+      wrapper.style.setProperty('--tense-ring', tenseStyle.ring || 'none');
+      wrapper.style.setProperty('--tense-animation', tenseStyle.animation || 'none');
+      wrapper.style.setProperty('--tense-glow', tenseStyle.glow || 'none');
+      wrapper.style.setProperty('--tense-filter', tenseStyle.filter || 'drop-shadow(0 10px 16px rgba(0, 0, 0, 0.25))');
+      wrapper.style.setProperty('--tense-mask', tenseStyle.mask || 'none');
+      wrapper.style.setProperty('--tense-lens', tenseStyle.lens || 'none');
+
+    };
+
+    const getImageSource = (level) => {
+      if (level.dataUrl) return level.dataUrl;
+      if (level.file) return `images/${level.file}`;
+      return null;
+    };
+
+    const stopActiveAudio = () => {
+      if (!activeAudioPlayback) return;
+
+      if (activeAudioPlayback.raf) {
+        cancelAnimationFrame(activeAudioPlayback.raf);
+      }
+
+      const { audio, wrapper } = activeAudioPlayback;
+      if (audio) {
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+        } catch (error) {
+          // ignore
+        }
+      }
+
+      if (wrapper?.isConnected) {
+        wrapper.classList.remove('is-playing');
+        wrapper.style.setProperty('--audio-progress', '0deg');
+      }
+
+      activeAudioPlayback = null;
+    };
+
+    const playLevelAudio = (level, wrapper) => {
+      const source = getLevelAudioSource(level);
+      if (!source) return;
+
+      stopActiveAudio();
+      const audio = new Audio(source);
+      activeAudioPlayback = { audio, wrapper, raf: null };
+
+      if (wrapper) {
+        wrapper.classList.add('is-playing');
+        wrapper.style.setProperty('--audio-progress', '0deg');
+      }
+
+      const tick = () => {
+        if (!activeAudioPlayback || activeAudioPlayback.audio !== audio) return;
+        if (wrapper?.isConnected && audio.duration) {
+          const progress = Math.min(1, audio.currentTime / Math.max(audio.duration, 0.01));
+          wrapper.style.setProperty('--audio-progress', `${Math.round(progress * 360)}deg`);
+        }
+
+        if (!audio.paused && !audio.ended) {
+          activeAudioPlayback.raf = requestAnimationFrame(tick);
+        }
+      };
+
+      const cleanup = () => {
+        if (activeAudioPlayback?.raf) {
+          cancelAnimationFrame(activeAudioPlayback.raf);
+        }
+
+        if (wrapper?.isConnected) {
+          wrapper.classList.remove('is-playing');
+          wrapper.style.setProperty('--audio-progress', '0deg');
+        }
+
+        if (activeAudioPlayback?.audio === audio) {
+          activeAudioPlayback = null;
+        }
+      };
+
+      audio.addEventListener('ended', () => {
+        if (wrapper?.isConnected) {
+          wrapper.style.setProperty('--audio-progress', '360deg');
+          setTimeout(cleanup, 140);
+        } else {
+          cleanup();
+        }
+      });
+      audio.addEventListener('error', cleanup);
+
+      audio.play()
+        .then(() => {
+          tick();
+        })
+        .catch(cleanup);
+    };
+
+    const renderGrid = () => {
+      stopActiveAudio();
+      grid.innerHTML = '';
+      const fragment = document.createDocumentFragment();
+      let renderedCount = 0;
+      visibleLevelIndexes = [];
+
+      levels.forEach((level, index) => {
+        const levelNumber = resolveLevelNumber(level, index);
+        if (selectedLevelFilter !== 'all' && Number(selectedLevelFilter) !== levelNumber) return;
+
+        const card = document.createElement('div');
+        card.className = 'image-card';
+        if (selectedIndexes.has(index)) {
+          card.classList.add('is-selected');
+        }
+
+        const selectionCheckbox = document.createElement('input');
+        selectionCheckbox.type = 'checkbox';
+        selectionCheckbox.className = 'selection-checkbox';
+        selectionCheckbox.checked = selectedIndexes.has(index);
+        selectionCheckbox.addEventListener('click', (event) => {
+          event.stopPropagation();
+        });
+        selectionCheckbox.addEventListener('change', (event) => {
+          if (event.target.checked) {
+            selectedIndexes.add(index);
+          } else {
+            selectedIndexes.delete(index);
+          }
+          updateSelectAllState();
+          renderGrid();
+        });
+        card.appendChild(selectionCheckbox);
+
+        const badge = document.createElement('div');
+        badge.className = 'level-badge';
+        badge.textContent = `Nível ${levelNumber}`;
+        card.appendChild(badge);
+
+        const visualWrapper = document.createElement('div');
+        visualWrapper.className = 'image-visual';
+
+        const tenseRing = document.createElement('div');
+        tenseRing.className = 'image-ring image-ring--tense';
+        const tenseLens = document.createElement('div');
+        tenseLens.className = 'image-lens image-lens--tense';
+        visualWrapper.appendChild(tenseRing);
+        visualWrapper.appendChild(tenseLens);
+
+        if (hasAudioForLevel(level)) {
+          visualWrapper.classList.add('image-visual--audio');
+          visualWrapper.style.setProperty('--audio-progress', '0deg');
+          const backdrop = document.createElement('div');
+          backdrop.className = 'audio-backdrop';
+          visualWrapper.appendChild(backdrop);
+          visualWrapper.title = 'Clique para tocar. Shift+clique para trocar o áudio.';
+        }
+
+        const src = getImageSource(level);
+        if (src) {
+          const img = document.createElement('img');
+          img.src = src;
+          img.alt = level.pt || level.en || `Nível ${levelNumber}`;
+          img.loading = 'lazy';
+          img.addEventListener('dblclick', () => openImageModal(index));
+          visualWrapper.appendChild(img);
+        } else {
+          const placeholder = document.createElement('div');
+          placeholder.className = 'image-placeholder';
+          placeholder.textContent = 'Duplo clique para adicionar imagem';
+          placeholder.addEventListener('dblclick', () => openImageModal(index));
+          visualWrapper.appendChild(placeholder);
+        }
+
+        applyVisualStyles(visualWrapper, level);
+
+        visualWrapper.addEventListener('click', (event) => {
+          if (event.detail > 1) return;
+          const currentLevel = levels[index] || level;
+          if (hasAudioForLevel(currentLevel) && !event.shiftKey) {
+            playLevelAudio(currentLevel, visualWrapper);
+            return;
+          }
+          stopActiveAudio();
+          pendingAudioIndex = index;
+          audioUploadInput.click();
+        });
+
+        card.appendChild(visualWrapper);
+
+        renderButtons(level, index, card);
+        renderSelectors(level, index, card);
+        fragment.appendChild(card);
+        renderedCount += 1;
+        visibleLevelIndexes.push(index);
+      });
+
+      grid.appendChild(fragment);
+      emptyState.style.display = renderedCount > 0 ? 'none' : 'block';
+      updateSelectAllState();
+    };
+
+    const sanitizeFileName = (name, extension) => {
+      const base = name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
+      const suffix = Date.now();
+      return `${base || 'imagem'}-${suffix}.${extension}`;
+    };
+
+    const resolveAudioExtension = (file) => {
+      const fromName = (file.name.split('.').pop() || '').toLowerCase();
+      if (allowedAudioExtensions.includes(fromName)) return fromName;
+
+      const mimeMap = {
+        'audio/mpeg': 'mp3',
+        'audio/mp3': 'mp3',
+        'audio/ogg': 'ogg',
+        'audio/opus': 'opus',
+        'audio/webm': 'webm',
+        'audio/wav': 'wav'
+      };
+
+      return mimeMap[file.type] || fromName || 'mp3';
+    };
+
+    const sanitizeAudioFileName = (name, extension) => sanitizeFileName(name, extension || 'mp3');
+
+    const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const readFileAsText = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsText(file);
+    });
+
+    const buildVoicePath = (fileName = '') => {
+      if (!fileName) return '';
+      const lower = fileName.toLowerCase();
+      if (!allowedAudioExtensions.some(ext => lower.endsWith(ext))) return '';
+
+      const sanitized = fileName.replace(/^[/\\]+/, '');
+      const hasPrefix = sanitized.toLowerCase().startsWith('voices/');
+      const encoded = sanitized.split('/')
+        .map(piece => encodeURIComponent(piece))
+        .join('/');
+
+      return hasPrefix ? encoded : `voices/${encoded}`;
+    };
+
+    const getLevelAudioSource = (level = {}) => {
+      if (level.audioDataUrl) return level.audioDataUrl;
+      if (level.audioFile) return buildVoicePath(level.audioFile);
+      return '';
+    };
+
+    const hasAudioForLevel = (level = {}) => Boolean(getLevelAudioSource(level));
+
+    const resizeImage = (img, type = 'image/webp') => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 600;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, 600, 600);
+
+      const scale = Math.max(600 / img.width, 600 / img.height);
+      const width = img.width * scale;
+      const height = img.height * scale;
+      const offsetX = (600 - width) / 2;
+      const offsetY = (600 - height) / 2;
+      ctx.drawImage(img, offsetX, offsetY, width, height);
+      return canvas.toDataURL(type, 0.82);
+    };
+
+    const processSvg = async (file) => {
+      const text = await readFileAsText(file);
+      const sized = text.replace(/(width|height)="[^"]*"/g, '')
+        .replace('<svg', '<svg width="600" height="600"');
+      const blob = new Blob([sized], { type: 'image/svg+xml' });
+      const dataUrl = await readFileAsDataUrl(blob);
+      return { dataUrl, format: 'svg', fileName: sanitizeFileName(file.name, 'svg') };
+    };
+
+    const processRaster = async (file, keepWebp) => {
+      const dataUrl = await readFileAsDataUrl(file);
+      const img = new Image();
+      img.src = dataUrl;
+      await img.decode();
+      const outputType = keepWebp ? 'image/webp' : 'image/webp';
+      const resized = resizeImage(img, outputType);
+      const extension = keepWebp ? 'webp' : 'webp';
+      return { dataUrl: resized, format: extension, fileName: sanitizeFileName(file.name, extension) };
+    };
+
+    const handleFileProcessing = async (file) => {
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error(`Formato não suportado: ${file.type}`);
+      }
+
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      if (ext === 'svg' || file.type === 'image/svg+xml') {
+        return processSvg(file);
+      }
+
+      const keepWebp = ext === 'webp' || file.type === 'image/webp';
+      return processRaster(file, keepWebp);
+    };
+
+    const assignImageToLevel = (index, processed) => {
+      const existingLevel = levels[index] || defaultLevel();
+      const targetLevel = Number(existingLevel.folderIndex) || 1;
+      levels[index] = {
+        ...existingLevel,
+        file: processed.fileName,
+        dataUrl: processed.dataUrl,
+        format: processed.format,
+        folderIndex: targetLevel,
+      };
+    };
+
+    const handleUpload = async (fileList) => {
+      const availableSlots = MAX_LEVELS - levels.length;
+      if (availableSlots <= 0) return;
+
+      const files = Array.from(fileList).slice(0, availableSlots);
+      let targetIndex = levels.length;
+
+      for (const file of files) {
+        try {
+          const processed = await handleFileProcessing(file);
+          assignImageToLevel(targetIndex, processed);
+          levels[targetIndex].pt = '';
+          levels[targetIndex].en = '';
+          levels[targetIndex].folder = '';
+          levels[targetIndex].folderIndex = 1;
+          levels[targetIndex].audioFile = '';
+          levels[targetIndex].audioDataUrl = '';
+          levels[targetIndex].audioFormat = '';
+          targetIndex += 1;
+        } catch (error) {
+          console.error('Erro ao processar arquivo', error);
+        }
+      }
+
+      saveState();
+      buildLevelFilter();
+      renderGrid();
+    };
+
+    const isAllowedAudioFile = (file) => {
+      if (!file) return false;
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      return allowedAudioTypes.includes(file.type) || allowedAudioExtensions.includes(ext);
+    };
+
+    const handleAudioFileForLevel = async (file, levelIndex) => {
+      if (!file || levelIndex === null || levelIndex === undefined) return;
+      if (!isAllowedAudioFile(file)) {
+        alert('Formato de áudio não suportado. Use mp3, opus, wav, ogg ou webm.');
+        return;
+      }
+
+      const extension = resolveAudioExtension(file);
+      const fileName = sanitizeAudioFileName(file.name, extension);
+      const dataUrl = await readFileAsDataUrl(file);
+      const existingLevel = levels[levelIndex] || defaultLevel();
+
+      levels[levelIndex] = {
+        ...existingLevel,
+        audioFile: fileName,
+        audioDataUrl: dataUrl,
+        audioFormat: extension,
+      };
+
+      saveState();
+      renderGrid();
+    };
+
+    const openImageModal = (index) => {
+      activeLevelIndex = index;
+      moveSelect.innerHTML = '';
+      const currentLevel = resolveLevelNumber(levels[index] || {}, index);
+      for (let i = 1; i <= MAX_LEVELS; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `Nível ${i}`;
+        moveSelect.appendChild(option);
+      }
+      moveSelect.value = currentLevel;
+      imageModal.style.display = 'flex';
+    };
+
+    const closeModal = () => {
+      imageModal.style.display = 'none';
+      activeLevelIndex = null;
+      changeImageInput.value = '';
+    };
+
+    moveBtn.addEventListener('click', () => {
+      if (activeLevelIndex === null) return;
+      const to = Number(moveSelect.value);
+      if (!Number.isInteger(to) || to <= 0 || to > MAX_LEVELS) return;
+      levels[activeLevelIndex] = {
+        ...levels[activeLevelIndex],
+        folderIndex: to
+      };
+      saveState();
+      renderGrid();
+      closeModal();
+    });
+
+    removeBtn.addEventListener('click', () => {
+      if (activeLevelIndex === null) return;
+      levels[activeLevelIndex] = defaultLevel(activeLevelIndex + 1);
+      saveState();
+      renderGrid();
+      closeModal();
+    });
+
+    closeModalBtn.addEventListener('click', closeModal);
+
+    changeImageInput.addEventListener('change', async (event) => {
+      if (activeLevelIndex === null) return;
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        const processed = await handleFileProcessing(file);
+        assignImageToLevel(activeLevelIndex, processed);
+        saveState();
+        renderGrid();
+      } catch (error) {
+        console.error('Erro ao trocar imagem', error);
+      } finally {
+        closeModal();
+      }
+    });
+
+    audioUploadInput.addEventListener('change', async (event) => {
+      const file = event.target.files?.[0];
+      if (!file || pendingAudioIndex === null) {
+        pendingAudioIndex = null;
+        audioUploadInput.value = '';
+        return;
+      }
+
+      try {
+        await handleAudioFileForLevel(file, pendingAudioIndex);
+      } catch (error) {
+        console.error('Erro ao processar áudio', error);
+      } finally {
+        pendingAudioIndex = null;
+        audioUploadInput.value = '';
+      }
+    });
+
+    uploadBtn.addEventListener('click', () => uploadInput.click());
+    uploadInput.addEventListener('change', (event) => {
+      const { files } = event.target;
+      if (!files?.length) return;
+      handleUpload(files);
+      uploadInput.value = '';
+    });
+
+    levelFilter.addEventListener('change', (event) => {
+      selectedLevelFilter = event.target.value;
+      renderGrid();
+    });
+
+    pasteTextBtn.addEventListener('click', () => {
+      const isOpen = pastePanel.classList.toggle('is-open');
+      pastePanel.setAttribute('aria-hidden', String(!isOpen));
+      pasteTextBtn.textContent = isOpen ? 'Fechar colar texto' : 'Colar texto';
+      if (isOpen) {
+        pasteTextarea.focus();
+      }
+    });
+
+    pasteApplyBtn.addEventListener('click', () => {
+      const lines = pasteTextarea.value
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean);
+      if (!lines.length) return;
+      applyPastedLines(lines);
+      pasteTextarea.value = '';
+      saveState();
+      renderGrid();
+    });
+
+    newGridBtn.addEventListener('click', () => {
+      if (!confirm('Criar uma nova grade vazia? Isso substitui sua edição local.')) return;
+      levels = [];
+      selectedLevelFilter = 'all';
+      resetSelection();
+      buildLevelFilter();
+      saveState();
+      renderGrid();
+    });
+
+    const downloadBlob = (blob, filename) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    };
+
+    const normalizeBaseUrl = (value = '') => {
+      const trimmed = String(value || '').trim();
+      if (!trimmed) return '';
+      return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
+    };
+
+    const getFileNameOnly = (value = '') => {
+      const normalized = String(value || '').replace(/\\/g, '/');
+      const parts = normalized.split('/').filter(Boolean);
+      return parts.length ? parts[parts.length - 1] : '';
+    };
+
+    const buildExportFileUrl = (baseUrl, fileName) => {
+      const normalizedBase = normalizeBaseUrl(baseUrl);
+      const pureName = getFileNameOnly(fileName);
+      if (!normalizedBase || !pureName) return fileName || '';
+      return normalizedBase + encodeURIComponent(pureName);
+    };
+
+    exportJsonBtn.addEventListener('click', () => {
+      const source = resolveSource(activeSource);
+      const payload = levels
+        .filter(level => level.file && level.pt && level.en && level.folder)
+        .map(level => ({
+          imagem: buildExportFileUrl(exportImageBaseUrl, level.file),
+          nomePortugues: level.pt,
+          nomeIngles: level.en,
+          categoria: level.folder,
+          audio: buildExportFileUrl(exportAudioBaseUrl, level.audioFile || ''),
+          tense: level.tense || '',
+          sentenceForm: level.sentenceForm || ''
+        }));
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      downloadBlob(blob, source.exportName);
+    });
+
+    const fetchRemoteImage = async (path) => {
+      if (imageCache.has(path)) return imageCache.get(path);
+      const response = await fetch(path);
+      const blob = await response.blob();
+      const dataUrl = await readFileAsDataUrl(blob);
+      imageCache.set(path, dataUrl);
+      return dataUrl;
+    };
+
+    const fetchRemoteAudio = async (path) => {
+      if (audioDataCache.has(path)) return audioDataCache.get(path);
+      const response = await fetch(path);
+      const blob = await response.blob();
+      const dataUrl = await readFileAsDataUrl(blob);
+      audioDataCache.set(path, dataUrl);
+      return dataUrl;
+    };
+
+    exportImagesBtn.addEventListener('click', async () => {
+      const zip = new JSZip();
+      for (let i = 0; i < levels.length; i++) {
+        const level = levels[i];
+        const folderName = `${resolveLevelNumber(level, i)}`;
+        const folder = zip.folder(`${folderName}/`);
+
+        if (!level.file && !level.dataUrl) continue;
+        try {
+          const ext = (level.format || 'webp').toLowerCase();
+          let dataUrl = level.dataUrl;
+          if (!dataUrl && level.file) {
+            dataUrl = await fetchRemoteImage(`images/${level.file}`);
+          }
+          if (!dataUrl) continue;
+          const base64 = dataUrl.split(',')[1];
+          folder.file(level.file || `nivel-${i + 1}.${ext}`, base64, { base64: true });
+        } catch (error) {
+          console.error('Erro ao adicionar imagem ao zip', error);
+        }
+      }
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      downloadBlob(blob, 'levels-imagens.zip');
+    });
+
+    exportAudioBtn.addEventListener('click', async () => {
+      const zip = new JSZip();
+      let addedFiles = 0;
+
+      for (let i = 0; i < levels.length; i++) {
+        const level = levels[i];
+        const folderName = `${resolveLevelNumber(level, i)}`;
+        const folder = zip.folder(`${folderName}/`);
+        const audioSource = getLevelAudioSource(level);
+
+        if (!audioSource || !level.audioFile) continue;
+
+        try {
+          let dataUrl = level.audioDataUrl;
+          if (!dataUrl && audioSource.startsWith('voices/')) {
+            dataUrl = await fetchRemoteAudio(audioSource);
+          }
+
+          if (!dataUrl) continue;
+          const base64 = dataUrl.split(',')[1];
+          const audioName = (level.audioFile.split(/[/\\]/).pop() || `audio-${i + 1}.${level.audioFormat || 'mp3'}`);
+          folder.file(audioName, base64, { base64: true });
+          addedFiles += 1;
+        } catch (error) {
+          console.error('Erro ao adicionar áudio ao zip', error);
+        }
+      }
+
+      if (!addedFiles) {
+        alert('Nenhum áudio vinculado para exportar.');
+        return;
+      }
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      downloadBlob(blob, 'levels-audios.zip');
+    });
+
+    removeAudioBtn.addEventListener('click', () => {
+      const targets = Array.from(selectedIndexes);
+      if (!targets.length) {
+        alert('Selecione pelo menos uma música para remover o áudio.');
+        return;
+      }
+      if (!confirm(`Remover o áudio de ${targets.length} item(ns) selecionado(s)?`)) return;
+      clearAudioForIndexes(targets);
+    });
+
+    const refreshFromServer = async ({ refreshLevels = false } = {}) => {
+      toggleLoading(true);
+      levels = await fetchDefaults(activeSource, { refreshServer: refreshLevels });
+      selectedLevelFilter = 'all';
+      resetSelection();
+      buildLevelFilter();
+      saveState();
+      renderGrid();
+      toggleLoading(false);
+    };
+
+    sourceSelect.addEventListener('change', async (event) => {
+      const nextSource = event.target.value;
+      if (nextSource === activeSource) return;
+      if (!confirm('Carregar dados do servidor? Isso substitui sua edição local.')) {
+        sourceSelect.value = activeSource;
+        return;
+      }
+      activeSource = nextSource;
+      resetSelection();
+      await refreshFromServer();
+    });
+
+    refreshServerBtn.addEventListener('click', async () => {
+      await refreshFromServer({ refreshLevels: true });
+    });
+
+    setImageBaseUrlBtn.addEventListener('click', () => {
+      const value = window.prompt(
+        'Cole o link base das imagens (ex.: https://pub-...r2.dev/images/1/):',
+        exportImageBaseUrl
+      );
+      if (value === null) return;
+      exportImageBaseUrl = normalizeBaseUrl(value);
+      saveState();
+    });
+
+    setAudioBaseUrlBtn.addEventListener('click', () => {
+      const value = window.prompt(
+        'Cole o link base dos áudios (ex.: https://pub-...r2.dev/voices/1/):',
+        exportAudioBaseUrl
+      );
+      if (value === null) return;
+      exportAudioBaseUrl = normalizeBaseUrl(value);
+      saveState();
+    });
+
+    selectAllCheckbox.addEventListener('change', (event) => {
+      const visibleIndexes = getVisibleIndexes();
+      if (!visibleIndexes.length) return;
+      if (event.target.checked) {
+        visibleIndexes.forEach(index => selectedIndexes.add(index));
+      } else {
+        visibleIndexes.forEach(index => selectedIndexes.delete(index));
+      }
+      renderGrid();
+    });
+
+    const init = async () => {
+      toggleLoading(true);
+      const local = loadState();
+      if (local) {
+        levels = local.levels;
+        if (local.source && SOURCE_OPTIONS[local.source]) {
+          activeSource = local.source;
+        }
+        exportImageBaseUrl = normalizeBaseUrl(local.exportImageBaseUrl || '');
+        exportAudioBaseUrl = normalizeBaseUrl(local.exportAudioBaseUrl || '');
+        sourceSelect.value = activeSource;
+        buildLevelFilter();
+        renderGrid();
+        toggleLoading(false);
+        return;
+      }
+
+      sourceSelect.value = activeSource;
+      levels = await fetchDefaults(activeSource);
+      buildLevelFilter();
+      renderGrid();
+      toggleLoading(false);
+    };
+
+    init();
+  </script>
+</body>
+</html>
