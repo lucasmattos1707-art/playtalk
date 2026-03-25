@@ -463,6 +463,16 @@
       font: inherit;
     }
 
+    .admin-tools select {
+      min-width: 220px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(10, 14, 24, 0.46);
+      color: var(--text);
+      font: inherit;
+    }
+
     .admin-tools__actions {
       display: flex;
       gap: 10px;
@@ -2371,7 +2381,14 @@
         <div class="admin-tools" id="adminTools" hidden>
           <div class="admin-tools__copy">
             <strong>Painel do Admin</strong>
-            <span>GPT, DALL-E e ElevenLabs atuam so na pagina atual. O GPT preenche apenas textos vazios com no maximo 30 caracteres.</span>
+            <span>Selecione um deck .json para editar so aquele grupo. Textos vazios usam GPT nano, imagens usam o modelo mais barato da OpenAI e tudo salvo aqui fica disponivel para todos os jogadores.</span>
+          </div>
+          <div class="admin-tools__actions">
+            <select id="adminDeckSelect" aria-label="Selecionar deck">
+              <option value="">Todos os decks</option>
+            </select>
+            <button class="btn" id="adminAddSlotsBtn" type="button">Criar cartas</button>
+            <button class="btn" id="adminCreateDeckBtn" type="button">Criar novo deck</button>
           </div>
           <textarea id="adminPromptInput" rows="2" maxlength="240" placeholder="Prompt base opcional para orientar a geracao das imagens e dos textos."></textarea>
           <div class="admin-tools__actions">
@@ -2632,7 +2649,8 @@
           status: 'Nenhuma acao em andamento.',
           error: false,
           prompt: '',
-          activeCardId: ''
+          activeCardId: '',
+          selectedDeckSource: ''
         },
         game: {
           active: false,
@@ -2693,7 +2711,10 @@
         libraryTitle: document.getElementById('libraryTitle'),
         adminBadge: document.getElementById('adminBadge'),
         adminTools: document.getElementById('adminTools'),
-          adminPromptInput: document.getElementById('adminPromptInput'),
+        adminDeckSelect: document.getElementById('adminDeckSelect'),
+        adminAddSlotsBtn: document.getElementById('adminAddSlotsBtn'),
+        adminCreateDeckBtn: document.getElementById('adminCreateDeckBtn'),
+        adminPromptInput: document.getElementById('adminPromptInput'),
           adminFillTextBtn: document.getElementById('adminFillTextBtn'),
           adminFillImageBtn: document.getElementById('adminFillImageBtn'),
           adminFillAudioBtn: document.getElementById('adminFillAudioBtn'),
@@ -3320,6 +3341,7 @@
         state.ownedIds = new Set();
         state.stats = normalizeStatsSnapshot({});
         state.libraryPage = 1;
+        state.admin.selectedDeckSource = '';
         renderMetrics();
         updateGameChips();
         if (els.libraryTitle) {
@@ -3845,9 +3867,58 @@
         return cards.slice(startIndex, startIndex + FLASHCARDS_PAGE_SIZE);
       }
 
+      function adminDeckOptions() {
+        const deckMap = new Map();
+        state.allCards.forEach((card) => {
+          const source = safeText(card?.source);
+          if (!source || deckMap.has(source)) return;
+          deckMap.set(source, {
+            source,
+            title: safeText(card?.deckTitle) || safeText(card?.source) || 'Deck',
+            count: 0
+          });
+        });
+        state.allCards.forEach((card) => {
+          const source = safeText(card?.source);
+          if (!source || !deckMap.has(source)) return;
+          deckMap.get(source).count += 1;
+        });
+        return Array.from(deckMap.values())
+          .sort((left, right) => left.title.localeCompare(right.title, 'pt-BR', { sensitivity: 'base' }));
+      }
+
+      function selectedAdminDeckMeta() {
+        const selectedSource = safeText(state.admin.selectedDeckSource);
+        if (!selectedSource) return null;
+        return adminDeckOptions().find((deck) => deck.source === selectedSource) || null;
+      }
+
+      function syncAdminDeckSelect() {
+        if (!els.adminDeckSelect) return;
+        const options = adminDeckOptions();
+        if (state.admin.selectedDeckSource && !options.some((deck) => deck.source === state.admin.selectedDeckSource)) {
+          state.admin.selectedDeckSource = '';
+        }
+        const currentValue = safeText(state.admin.selectedDeckSource);
+        const rendered = ['<option value="">Todos os decks</option>']
+          .concat(options.map((deck) => (
+            `<option value="${escapeHtml(deck.source)}">${escapeHtml(`${deck.title} (${deck.count})`)}</option>`
+          )));
+        els.adminDeckSelect.innerHTML = rendered.join('');
+        els.adminDeckSelect.value = currentValue;
+      }
+
+      function currentAdminDeckCards() {
+        const selectedSource = safeText(state.admin.selectedDeckSource);
+        if (!selectedSource) {
+          return state.allCards.slice();
+        }
+        return state.allCards.filter((card) => safeText(card?.source) === selectedSource);
+      }
+
       function currentLibrarySourceCards() {
         const cards = isAdminUser()
-          ? state.allCards.slice()
+          ? currentAdminDeckCards()
           : userProgressCards().map(card => ({ ...card }));
         return currentLibraryPageSlice(cards);
       }
@@ -3892,6 +3963,18 @@
         if (els.adminPromptInput) {
           els.adminPromptInput.value = state.admin.prompt || '';
           els.adminPromptInput.disabled = state.admin.busy || !adminMode;
+        }
+        syncAdminDeckSelect();
+        if (els.adminDeckSelect) {
+          els.adminDeckSelect.disabled = state.admin.busy || !adminMode;
+        }
+        if (els.adminAddSlotsBtn) {
+          els.adminAddSlotsBtn.disabled = state.admin.busy || !adminMode || !state.admin.selectedDeckSource;
+          els.adminAddSlotsBtn.textContent = state.admin.busy ? 'Processando...' : 'Criar cartas';
+        }
+        if (els.adminCreateDeckBtn) {
+          els.adminCreateDeckBtn.disabled = state.admin.busy || !adminMode;
+          els.adminCreateDeckBtn.textContent = state.admin.busy ? 'Processando...' : 'Criar novo deck';
         }
         if (els.adminFillTextBtn) {
           els.adminFillTextBtn.disabled = state.admin.busy || !adminMode;
@@ -3997,6 +4080,82 @@
         }
       }
 
+      async function runAdminAddSlots() {
+        if (!isAdminUser() || state.admin.busy) return;
+        const source = safeText(state.admin.selectedDeckSource);
+        if (!source) {
+          setAdminToolsStatus('Selecione um deck antes de criar cartas.', true);
+          syncAdminTools();
+          return;
+        }
+        const rawCount = window.prompt('Quantas cartas vazias deseja criar nesse deck? Maximo 100.', '10');
+        if (rawCount === null) return;
+        const parsedCount = Number.parseInt(rawCount, 10);
+        if (!Number.isInteger(parsedCount) || parsedCount < 1) {
+          setAdminToolsStatus('Quantidade invalida para criar cartas.', true);
+          syncAdminTools();
+          return;
+        }
+        const count = Math.min(100, parsedCount);
+
+        state.admin.busy = true;
+        state.admin.error = false;
+        state.admin.status = `Criando ${count} carta(s) vazia(s)...`;
+        syncAdminTools();
+        try {
+          await postAdminFlashcardAction('/api/admin/flashcards/add-slot', { source, count });
+          await reloadCardsFromNetwork();
+          state.libraryPage = 1;
+          state.admin.status = `${count} carta(s) vazia(s) criada(s) no deck selecionado.`;
+        } catch (error) {
+          state.admin.status = error.message || 'Falha ao criar cartas.';
+          state.admin.error = true;
+        } finally {
+          state.admin.busy = false;
+          refreshLibrary();
+          syncAdminTools();
+        }
+      }
+
+      async function runAdminCreateDeck() {
+        if (!isAdminUser() || state.admin.busy) return;
+        const deckTitle = safeText(window.prompt('Nome do novo deck:', '')).trim();
+        if (!deckTitle) return;
+        const coverImage = safeText(window.prompt('Link pub da foto de capa do deck (opcional):', '')).trim();
+        const rawCount = window.prompt('Quantas cartas vazias o novo deck deve abrir? Maximo 100.', '12');
+        if (rawCount === null) return;
+        const parsedCount = Number.parseInt(rawCount, 10);
+        if (!Number.isInteger(parsedCount) || parsedCount < 1) {
+          setAdminToolsStatus('Quantidade invalida para o novo deck.', true);
+          syncAdminTools();
+          return;
+        }
+        const slotCount = Math.min(100, parsedCount);
+
+        state.admin.busy = true;
+        state.admin.error = false;
+        state.admin.status = `Criando deck ${deckTitle}...`;
+        syncAdminTools();
+        try {
+          const payload = await postAdminFlashcardAction('/api/admin/flashcards/create-deck', {
+            deckTitle,
+            coverImage,
+            slotCount
+          });
+          await reloadCardsFromNetwork();
+          state.admin.selectedDeckSource = safeText(payload?.source);
+          state.libraryPage = 1;
+          state.admin.status = `Deck ${deckTitle} criado com ${slotCount} carta(s).`;
+        } catch (error) {
+          state.admin.status = error.message || 'Falha ao criar o deck.';
+          state.admin.error = true;
+        } finally {
+          state.admin.busy = false;
+          refreshLibrary();
+          syncAdminTools();
+        }
+      }
+
       async function runAdminFlashcardFill(kind) {
         if (!isAdminUser() || state.admin.busy) return;
 
@@ -4052,12 +4211,15 @@
         const adminMode = isAdminUser();
         syncAdminTheme();
         const cards = adminMode
-          ? state.allCards.map(buildAdminLibraryCardView)
+          ? currentAdminDeckCards().map(buildAdminLibraryCardView)
           : userProgressCards().map(buildLibraryCardView);
         const visibleCards = currentLibraryPageSlice(cards);
         const username = state.user?.username ? ` de ${state.user.username}` : '';
+        const selectedDeck = adminMode ? selectedAdminDeckMeta() : null;
         if (els.libraryTitle) {
-          els.libraryTitle.textContent = adminMode ? 'Flashcards do administrador' : 'Meus flashcards';
+          els.libraryTitle.textContent = adminMode
+            ? (selectedDeck ? `Deck: ${selectedDeck.title}` : 'Flashcards do administrador')
+            : 'Meus flashcards';
         }
         if (els.adminBadge) {
           els.adminBadge.hidden = !adminMode;
@@ -5742,6 +5904,13 @@
           state.libraryPage += 1;
           refreshLibrary();
         });
+        els.adminDeckSelect?.addEventListener('change', (event) => {
+          state.admin.selectedDeckSource = safeText(event.target.value);
+          state.libraryPage = 1;
+          refreshLibrary();
+        });
+        els.adminAddSlotsBtn?.addEventListener('click', runAdminAddSlots);
+        els.adminCreateDeckBtn?.addEventListener('click', runAdminCreateDeck);
         els.adminPromptInput?.addEventListener('input', (event) => {
           state.admin.prompt = String(event.target.value || '').trim();
         });

@@ -64,6 +64,8 @@ const ELEVENLABS_MODEL_ID = env(process.env.ELEVENLABS_MODEL_ID) || 'eleven_mult
 const OPENAI_API_KEY = env(process.env.OPENAI_API_KEY);
 const OPENAI_IMAGE_MODEL = env(process.env.OPENAI_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_TEXT_MODEL = env(process.env.OPENAI_TEXT_MODEL) || 'gpt-5-mini';
+const OPENAI_FLASHCARD_ADMIN_TEXT_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_TEXT_MODEL) || 'gpt-5-nano';
+const OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_STORY_MODEL = env(process.env.OPENAI_STORY_MODEL) || 'gpt-5';
 const OPENAI_TTS_MODEL = env(process.env.OPENAI_TTS_MODEL) || 'gpt-4o-mini-tts';
 const OPENAI_STT_MODEL = env(process.env.OPENAI_STT_MODEL) || 'gpt-4o-mini-transcribe';
@@ -2062,6 +2064,15 @@ function buildEditableFlashcardItemTemplate() {
     imagem: '',
     audio: '',
     categoria: 'flashcard'
+  };
+}
+
+function createEditableFlashcardDeckPayload(title, coverImage = '', slotCount = 1) {
+  const normalizedCount = Math.max(1, Math.min(100, Number.parseInt(slotCount, 10) || 1));
+  return {
+    title: String(title || '').trim() || 'Novo deck',
+    coverImage: String(coverImage || '').trim(),
+    items: Array.from({ length: normalizedCount }, () => buildEditableFlashcardItemTemplate())
   };
 }
 
@@ -4778,7 +4789,7 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
     ].join('\n');
 
     const { payload, parsed } = await requestOpenAiJsonPayload(prompt, {
-      model: OPENAI_TEXT_MODEL,
+      model: OPENAI_FLASHCARD_ADMIN_TEXT_MODEL,
       maxOutputTokens: 1400
     });
 
@@ -4833,7 +4844,7 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
       updatedCount: updated.length,
       updated,
       usage: payload?.usage || null,
-      model: OPENAI_TEXT_MODEL
+      model: OPENAI_FLASHCARD_ADMIN_TEXT_MODEL
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({
@@ -4906,7 +4917,7 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: OPENAI_IMAGE_MODEL,
+            model: OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL,
             prompt,
             size: '1024x1024',
             quality: 'low',
@@ -4964,7 +4975,8 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
       updatedCount: updated.length,
       updated,
       failedCount: failed.length,
-      failed
+      failed,
+      model: OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({
@@ -5199,6 +5211,7 @@ app.post('/api/admin/flashcards/add-slot', express.json({ limit: '1mb' }), async
     await requireAdminUserFromRequest(req);
 
     const source = typeof req.body?.source === 'string' ? req.body.source.trim() : '';
+    const count = Math.max(1, Math.min(100, Number.parseInt(req.body?.count, 10) || 1));
     if (!source) {
       res.status(400).json({ error: 'Origem do deck nao informada.' });
       return;
@@ -5207,16 +5220,54 @@ app.post('/api/admin/flashcards/add-slot', express.json({ limit: '1mb' }), async
     const sourceInfo = resolveAdminFlashcardSourceInfo(source);
     const payload = await readJsonFromRelativePath(sourceInfo.relativeJsonPath);
     const items = getFlashcardPayloadItems(payload);
-    items.push(buildEditableFlashcardItemTemplate());
+    for (let index = 0; index < count; index += 1) {
+      items.push(buildEditableFlashcardItemTemplate());
+    }
     await writeJsonToRelativePath(sourceInfo.relativeJsonPath, payload);
     if (sourceInfo.type === 'local-other') {
       await refreshLocalLevelManifestMirror();
     }
 
-    res.json({ success: true, sourceIndex: items.length - 1 });
+    res.json({ success: true, addedCount: count, sourceIndex: items.length - 1 });
   } catch (error) {
     res.status(error.statusCode || 500).json({
       error: error.message || 'Falha ao adicionar slot vazio.',
+      ...(error.instructions ? { instructions: error.instructions } : {})
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/create-deck', express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+
+    const deckTitle = typeof req.body?.deckTitle === 'string' ? req.body.deckTitle.trim() : '';
+    const coverImage = typeof req.body?.coverImage === 'string' ? req.body.coverImage.trim() : '';
+    const slotCount = Math.max(1, Math.min(100, Number.parseInt(req.body?.slotCount, 10) || 1));
+    if (!deckTitle) {
+      res.status(400).json({ error: 'Informe o nome do deck.' });
+      return;
+    }
+
+    const baseName = safeGeneratedBase(deckTitle, 'novo-deck');
+    const fileName = `${baseName}-${Date.now()}.json`;
+    const relativeJsonPath = `Niveis/others/${fileName}`;
+    const payload = createEditableFlashcardDeckPayload(deckTitle, coverImage, slotCount);
+
+    await writeJsonToRelativePath(relativeJsonPath, payload);
+    await refreshLocalLevelManifestMirror();
+
+    res.json({
+      success: true,
+      source: relativeJsonPath,
+      fileName,
+      title: payload.title,
+      coverImage: payload.coverImage,
+      slotCount
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Falha ao criar o deck.',
       ...(error.instructions ? { instructions: error.instructions } : {})
     });
   }
