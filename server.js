@@ -104,8 +104,16 @@ const pool = (DATABASE_URL || DATABASE_CONFIG.host)
   : null;
 let flashcardRankingsTableReadyPromise = null;
 let usersAvatarColumnReadyPromise = null;
+let flashcardUserStateTablesReadyPromise = null;
 
 const FLASHCARD_RANKING_ORDER_SQL = 'flashcards_count DESC, updated_at ASC, player_number ASC';
+const FLASHCARD_REVIEW_PHASES = {
+  1: { key: 'prata', label: 'Prata', durationMs: 24 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
+  2: { key: 'quartz', label: 'Quartz', durationMs: 3 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
+  3: { key: 'gold', label: 'Gold', durationMs: 7 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/ouro.png' },
+  4: { key: 'platina', label: 'Platina', durationMs: 12 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
+  5: { key: 'diamante', label: 'Diamante', durationMs: 30 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/diamante.png' }
+};
 
 const normalizeFlashcardsCount = (value) => {
   const parsed = Number.parseInt(value, 10);
@@ -113,6 +121,155 @@ const normalizeFlashcardsCount = (value) => {
     return 0;
   }
   return parsed;
+};
+
+const clampInteger = (value, minimum, maximum, fallback) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed)) {
+    return fallback;
+  }
+  return Math.min(maximum, Math.max(minimum, parsed));
+};
+
+const normalizeFlashcardStatus = (value) => (value === 'ready' ? 'ready' : 'memorizing');
+
+const normalizeFlashcardStats = (value) => ({
+  playTimeMs: Math.max(0, Math.round(Number(value?.playTimeMs) || 0)),
+  speakings: Math.max(0, Math.round(Number(value?.speakings) || 0)),
+  listenings: Math.max(0, Math.round(Number(value?.listenings) || 0))
+});
+
+const flashcardTimestampFromMillis = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return new Date(parsed);
+};
+
+const flashcardMillisFromTimestamp = (value) => {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const resolveFlashcardSealImage = (record) => {
+  if (!record) return '';
+  const phaseIndex = record.status === 'memorizing'
+    ? clampInteger(record.targetPhaseIndex || record.phaseIndex, 1, 5, 1)
+    : clampInteger(record.phaseIndex, 0, 5, 0);
+  if (phaseIndex <= 0) return '';
+  return FLASHCARD_REVIEW_PHASES[phaseIndex]?.sealImage || '';
+};
+
+const normalizeFlashcardProgressRecord = (raw) => {
+  const cardId = typeof raw?.cardId === 'string' ? raw.cardId.trim() : '';
+  if (!cardId) return null;
+
+  const phaseIndex = clampInteger(raw?.phaseIndex, 0, 5, 0);
+  const targetPhaseIndex = clampInteger(raw?.targetPhaseIndex, 1, 5, 1);
+  const status = normalizeFlashcardStatus(raw?.status);
+  const memorizingDurationMs = Math.max(
+    0,
+    Math.round(Number(raw?.memorizingDurationMs) || 0)
+  ) || FLASHCARD_REVIEW_PHASES[targetPhaseIndex]?.durationMs || FLASHCARD_REVIEW_PHASES[1].durationMs;
+  const memorizingStartedAtMs = flashcardMillisFromTimestamp(raw?.memorizingStartedAt) || Math.max(0, Math.round(Number(raw?.memorizingStartedAt) || 0));
+  const availableAtMs = flashcardMillisFromTimestamp(raw?.availableAt) || Math.max(0, Math.round(Number(raw?.availableAt) || 0));
+  const returnedAtMs = flashcardMillisFromTimestamp(raw?.returnedAt) || Math.max(0, Math.round(Number(raw?.returnedAt) || 0));
+  const createdAtMs = flashcardMillisFromTimestamp(raw?.createdAt) || Math.max(0, Math.round(Number(raw?.createdAt) || 0)) || Date.now();
+
+  const normalized = {
+    cardId,
+    phaseIndex,
+    targetPhaseIndex,
+    status,
+    memorizingStartedAt: status === 'memorizing' ? memorizingStartedAtMs || Date.now() : 0,
+    memorizingDurationMs,
+    availableAt: status === 'memorizing'
+      ? availableAtMs || ((memorizingStartedAtMs || Date.now()) + memorizingDurationMs)
+      : availableAtMs || returnedAtMs || createdAtMs,
+    returnedAt: status === 'ready' ? (returnedAtMs || availableAtMs || Date.now()) : returnedAtMs,
+    createdAt: createdAtMs,
+    sealImage: ''
+  };
+
+  normalized.sealImage = resolveFlashcardSealImage(normalized);
+  return normalized;
+};
+
+const mapStoredFlashcardProgressRow = (row) => {
+  const mapped = {
+    cardId: String(row?.card_id || '').trim(),
+    phaseIndex: clampInteger(row?.phase_index, 0, 5, 0),
+    targetPhaseIndex: clampInteger(row?.target_phase_index, 1, 5, 1),
+    status: normalizeFlashcardStatus(row?.status),
+    memorizingStartedAt: flashcardMillisFromTimestamp(row?.memorizing_started_at),
+    memorizingDurationMs: Math.max(0, Math.round(Number(row?.memorizing_duration_ms) || 0)),
+    availableAt: flashcardMillisFromTimestamp(row?.available_at),
+    returnedAt: flashcardMillisFromTimestamp(row?.returned_at),
+    createdAt: flashcardMillisFromTimestamp(row?.created_at),
+    sealImage: String(row?.seal_image || '').trim()
+  };
+
+  if (!mapped.sealImage) {
+    mapped.sealImage = resolveFlashcardSealImage(mapped);
+  }
+  if (mapped.status !== 'memorizing') {
+    mapped.memorizingStartedAt = 0;
+  }
+  return mapped;
+};
+
+const ensureFlashcardUserStateTables = async () => {
+  if (!pool) return false;
+
+  await ensureUsersAvatarColumn();
+
+  if (!flashcardUserStateTablesReadyPromise) {
+    flashcardUserStateTablesReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_progress (
+          id bigserial PRIMARY KEY,
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          card_id text NOT NULL,
+          phase_index integer NOT NULL DEFAULT 0,
+          target_phase_index integer NOT NULL DEFAULT 1,
+          status text NOT NULL DEFAULT 'memorizing',
+          memorizing_started_at timestamptz,
+          memorizing_duration_ms integer NOT NULL DEFAULT 0,
+          available_at timestamptz,
+          returned_at timestamptz,
+          seal_image text NOT NULL DEFAULT '',
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          CONSTRAINT user_flashcard_progress_unique UNIQUE (user_id, card_id)
+        )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_progress
+        ADD COLUMN IF NOT EXISTS seal_image text NOT NULL DEFAULT ''
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_progress_user_idx
+        ON public.user_flashcard_progress (user_id, status, available_at, updated_at DESC)
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_stats (
+          user_id integer PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+          play_time_ms bigint NOT NULL DEFAULT 0,
+          speakings integer NOT NULL DEFAULT 0,
+          listenings integer NOT NULL DEFAULT 0,
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      return true;
+    })().catch((error) => {
+      flashcardUserStateTablesReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return flashcardUserStateTablesReadyPromise;
 };
 
 const ensureFlashcardRankingsTable = async () => {
@@ -304,6 +461,236 @@ const upsertFlashcardRankingForUser = async (userId, flashcardsCount) => {
   throw new Error('Nao foi possivel gerar um numero aleatorio para o ranking.');
 };
 
+const readFlashcardProgressCountForUser = async (userId) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  await ensureFlashcardUserStateTables();
+
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    const error = new Error('userId invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const result = await pool.query(
+    `SELECT COUNT(*)::int AS total
+     FROM public.user_flashcard_progress
+     WHERE user_id = $1`,
+    [normalizedUserId]
+  );
+
+  return Number(result.rows[0]?.total) || 0;
+};
+
+const syncFlashcardRankingFromProgressCount = async (userId) => {
+  const count = await readFlashcardProgressCountForUser(userId);
+  return upsertFlashcardRankingForUser(userId, count);
+};
+
+const readFlashcardStateForUser = async (userId) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  await ensureFlashcardUserStateTables();
+
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    const error = new Error('userId invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const [progressResult, statsResult] = await Promise.all([
+    pool.query(
+      `SELECT
+         card_id,
+         phase_index,
+         target_phase_index,
+         status,
+         memorizing_started_at,
+         memorizing_duration_ms,
+         available_at,
+         returned_at,
+         seal_image,
+         created_at
+       FROM public.user_flashcard_progress
+       WHERE user_id = $1
+       ORDER BY updated_at DESC, created_at DESC, card_id ASC`,
+      [normalizedUserId]
+    ),
+    pool.query(
+      `SELECT play_time_ms, speakings, listenings, updated_at
+       FROM public.user_flashcard_stats
+       WHERE user_id = $1
+       LIMIT 1`,
+      [normalizedUserId]
+    )
+  ]);
+
+  if (progressResult.rows.length) {
+    await upsertFlashcardRankingForUser(normalizedUserId, progressResult.rows.length);
+  }
+
+  return {
+    progress: progressResult.rows.map(mapStoredFlashcardProgressRow).filter((item) => item.cardId),
+    stats: statsResult.rows[0]
+      ? normalizeFlashcardStats({
+        playTimeMs: statsResult.rows[0].play_time_ms,
+        speakings: statsResult.rows[0].speakings,
+        listenings: statsResult.rows[0].listenings
+      })
+      : normalizeFlashcardStats({}),
+    meta: {
+      hasProgress: progressResult.rows.length > 0,
+      hasStats: Boolean(statsResult.rows[0])
+    }
+  };
+};
+
+const saveFlashcardStateForUser = async (userId, payload) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  await ensureFlashcardUserStateTables();
+
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    const error = new Error('userId invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const rawProgress = Array.isArray(payload?.progress) ? payload.progress : [];
+  if (rawProgress.length > 5000) {
+    const error = new Error('Quantidade de flashcards acima do limite suportado.');
+    error.statusCode = 413;
+    throw error;
+  }
+
+  const dedupedProgress = new Map();
+  rawProgress.forEach((item) => {
+    const normalized = normalizeFlashcardProgressRecord(item);
+    if (normalized) {
+      dedupedProgress.set(normalized.cardId, normalized);
+    }
+  });
+  const progress = Array.from(dedupedProgress.values());
+  const stats = normalizeFlashcardStats(payload?.stats);
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (progress.length) {
+      const cardIds = progress.map((item) => item.cardId);
+      await client.query(
+        `DELETE FROM public.user_flashcard_progress
+         WHERE user_id = $1
+           AND NOT (card_id = ANY($2::text[]))`,
+        [normalizedUserId, cardIds]
+      );
+
+      const values = [];
+      const params = [];
+      progress.forEach((item, index) => {
+        const offset = index * 11;
+        values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, now())`);
+        params.push(
+          normalizedUserId,
+          item.cardId,
+          item.phaseIndex,
+          item.targetPhaseIndex,
+          item.status,
+          flashcardTimestampFromMillis(item.memorizingStartedAt),
+          item.memorizingDurationMs,
+          flashcardTimestampFromMillis(item.availableAt),
+          flashcardTimestampFromMillis(item.returnedAt),
+          flashcardTimestampFromMillis(item.createdAt),
+          item.sealImage
+        );
+      });
+
+      await client.query(
+        `INSERT INTO public.user_flashcard_progress (
+           user_id,
+           card_id,
+           phase_index,
+           target_phase_index,
+           status,
+           memorizing_started_at,
+           memorizing_duration_ms,
+           available_at,
+           returned_at,
+           created_at,
+           seal_image,
+           updated_at
+         )
+         VALUES ${values.join(', ')}
+         ON CONFLICT (user_id, card_id)
+         DO UPDATE SET
+           phase_index = EXCLUDED.phase_index,
+           target_phase_index = EXCLUDED.target_phase_index,
+           status = EXCLUDED.status,
+           memorizing_started_at = EXCLUDED.memorizing_started_at,
+           memorizing_duration_ms = EXCLUDED.memorizing_duration_ms,
+           available_at = EXCLUDED.available_at,
+           returned_at = EXCLUDED.returned_at,
+           seal_image = EXCLUDED.seal_image,
+           updated_at = now()`,
+        params
+      );
+    } else {
+      await client.query(
+        `DELETE FROM public.user_flashcard_progress
+         WHERE user_id = $1`,
+        [normalizedUserId]
+      );
+    }
+
+    await client.query(
+      `INSERT INTO public.user_flashcard_stats (
+         user_id,
+         play_time_ms,
+         speakings,
+         listenings,
+         updated_at
+       )
+       VALUES ($1, $2, $3, $4, now())
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         play_time_ms = EXCLUDED.play_time_ms,
+         speakings = EXCLUDED.speakings,
+         listenings = EXCLUDED.listenings,
+         updated_at = now()`,
+      [
+        normalizedUserId,
+        stats.playTimeMs,
+        stats.speakings,
+        stats.listenings
+      ]
+    );
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  const rankingRecord = await upsertFlashcardRankingForUser(normalizedUserId, progress.length);
+  return {
+    progressCount: progress.length,
+    stats,
+    rankingRecord
+  };
+};
+
 const logDatabaseConnectionStatus = async () => {
   if (!pool) {
     console.warn('Banco de dados não configurado: defina DATABASE_URL ou DATABASE_HOST.');
@@ -316,6 +703,8 @@ const logDatabaseConnectionStatus = async () => {
 
   try {
     await pool.query('SELECT 1');
+    await ensureUsersAvatarColumn();
+    await ensureFlashcardUserStateTables();
     await ensureFlashcardRankingsTable();
     console.log('Conexão com Postgres validada com sucesso.');
   } catch (error) {
@@ -1717,6 +2106,75 @@ window.API_CONFIG = Object.assign({}, window.API_CONFIG || {}, {
 });`);
 });
 
+app.get('/api/flashcards/state', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const state = await readFlashcardStateForUser(authUser.id);
+    res.json({
+      success: true,
+      progress: state.progress,
+      stats: state.stats,
+      meta: state.meta,
+      serverTimeMs: Date.now()
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao carregar estado dos flashcards:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: statusCode === 400
+        ? 'Usuario invalido.'
+        : 'Erro ao carregar estado dos flashcards.'
+    });
+  }
+});
+
+app.put('/api/flashcards/state', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const savedState = await saveFlashcardStateForUser(authUser.id, req.body);
+    res.json({
+      success: true,
+      progressCount: savedState.progressCount,
+      stats: savedState.stats,
+      updatedAt: savedState.rankingRecord?.updated_at || new Date().toISOString()
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao salvar estado dos flashcards:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: statusCode === 400
+        ? 'Estado de flashcards invalido.'
+        : statusCode === 413
+          ? 'Quantidade de flashcards acima do limite.'
+          : 'Erro ao salvar estado dos flashcards.'
+    });
+  }
+});
+
 app.get('/api/rankings/flashcards', async (req, res) => {
   try {
     if (!pool) {
@@ -1845,7 +2303,7 @@ app.post('/api/rankings/flashcards', async (req, res) => {
       return;
     }
 
-    const record = await upsertFlashcardRankingForUser(authUser.id, req.body?.flashcardsCount);
+    const record = await syncFlashcardRankingFromProgressCount(authUser.id);
     const playerRankResult = await pool.query(
       `WITH ranked AS (
          SELECT

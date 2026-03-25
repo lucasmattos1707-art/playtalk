@@ -2437,10 +2437,9 @@
         timeOffsetMs: 0,
         user: null,
         authMode: 'login',
-        rankSyncInFlight: false,
-        rankSyncQueued: false,
-        rankLastSyncedCount: null,
-        rankSyncTimer: 0,
+        flashcardsSyncInFlight: false,
+        flashcardsSyncQueued: false,
+        flashcardsSyncTimer: 0,
         secretBuffer: '',
         game: {
           active: false,
@@ -2678,7 +2677,7 @@
         }
       }
 
-      function saveOwnedIds() {
+      function persistOwnedIdsLocally() {
         if (!state.user?.id) return;
         localStorage.setItem(userScopedStorageKey(OWNED_STORAGE_KEY), JSON.stringify(Array.from(state.ownedIds)));
       }
@@ -2721,29 +2720,45 @@
         }
       }
 
+      function normalizeStatsSnapshot(raw) {
+        return {
+          playTimeMs: Math.max(0, Math.round(Number(raw?.playTimeMs) || 0)),
+          speakings: Math.max(0, Math.round(Number(raw?.speakings) || 0)),
+          listenings: Math.max(0, Math.round(Number(raw?.listenings) || 0))
+        };
+      }
+
+      function hasMeaningfulStats(raw) {
+        const stats = normalizeStatsSnapshot(raw);
+        return stats.playTimeMs > 0 || stats.speakings > 0 || stats.listenings > 0;
+      }
+
       function readUserStats() {
         if (!state.user?.id) {
-          return { playTimeMs: 0, speakings: 0, listenings: 0 };
+          return normalizeStatsSnapshot({});
         }
         try {
           const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(USER_STATS_STORAGE_KEY)) || 'null') || {};
-          return {
-            playTimeMs: Number.isFinite(Number(parsed.playTimeMs)) ? Number(parsed.playTimeMs) : 0,
-            speakings: Number.isFinite(Number(parsed.speakings)) ? Number(parsed.speakings) : 0,
-            listenings: Number.isFinite(Number(parsed.listenings)) ? Number(parsed.listenings) : 0
-          };
+          return normalizeStatsSnapshot(parsed);
         } catch (_error) {
-          return { playTimeMs: 0, speakings: 0, listenings: 0 };
+          return normalizeStatsSnapshot({});
         }
       }
 
-      function saveUserStats() {
+      function persistUserStatsLocally() {
         if (!state.user?.id) return;
         localStorage.setItem(userScopedStorageKey(USER_STATS_STORAGE_KEY), JSON.stringify({
           playTimeMs: Math.max(0, Math.round(Number(state.stats.playTimeMs) || 0)),
           speakings: Math.max(0, Math.round(Number(state.stats.speakings) || 0)),
           listenings: Math.max(0, Math.round(Number(state.stats.listenings) || 0))
         }));
+      }
+
+      function saveUserStats(options = {}) {
+        persistUserStatsLocally();
+        if (!options.skipCloudSync) {
+          scheduleFlashcardCloudSync();
+        }
       }
 
       function syncOwnedIdsFromProgress() {
@@ -2806,12 +2821,18 @@
         })]));
       }
 
-      function saveUserProgress() {
+      function persistUserProgressLocally() {
         syncOwnedIdsFromProgress();
-        saveOwnedIds();
+        persistOwnedIdsLocally();
         if (!state.user?.id) return;
         localStorage.setItem(userScopedStorageKey(USER_PROGRESS_STORAGE_KEY), JSON.stringify(Array.from(state.userCards.values())));
-        scheduleFlashcardRankingSync();
+      }
+
+      function saveUserProgress(options = {}) {
+        persistUserProgressLocally();
+        if (!options.skipCloudSync) {
+          scheduleFlashcardCloudSync();
+        }
       }
 
       function buildApiUrl(path) {
@@ -2858,6 +2879,89 @@
         };
       }
 
+      function buildFlashcardCloudPayload() {
+        return {
+          progress: Array.from(state.userCards.values()).map(record => ({
+            cardId: safeText(record?.cardId),
+            phaseIndex: Math.max(0, Math.min(5, Number.parseInt(record?.phaseIndex, 10) || 0)),
+            targetPhaseIndex: Math.max(1, Math.min(5, Number.parseInt(record?.targetPhaseIndex, 10) || 1)),
+            status: record?.status === 'ready' ? 'ready' : 'memorizing',
+            memorizingStartedAt: Number.isFinite(Number(record?.memorizingStartedAt)) ? Number(record.memorizingStartedAt) : 0,
+            memorizingDurationMs: Math.max(0, Math.round(Number(record?.memorizingDurationMs) || 0)),
+            availableAt: Number.isFinite(Number(record?.availableAt)) ? Number(record.availableAt) : 0,
+            returnedAt: Number.isFinite(Number(record?.returnedAt)) ? Number(record.returnedAt) : 0,
+            createdAt: Number.isFinite(Number(record?.createdAt)) ? Number(record.createdAt) : Date.now(),
+            sealImage: safeText(record?.sealImage)
+          })).filter(record => record.cardId),
+          stats: normalizeStatsSnapshot(state.stats)
+        };
+      }
+
+      async function fetchFlashcardCloudState() {
+        const response = await fetch(buildApiUrl('/api/flashcards/state'), {
+          credentials: 'include',
+          headers: buildAuthHeaders(),
+          cache: 'no-store'
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success) {
+          const error = new Error(payload?.message || 'Falha ao carregar seus flashcards salvos.');
+          error.statusCode = response.status;
+          throw error;
+        }
+        return payload;
+      }
+
+      async function syncFlashcardCloudNow() {
+        if (!state.user?.id) return false;
+
+        if (state.flashcardsSyncInFlight) {
+          state.flashcardsSyncQueued = true;
+          return false;
+        }
+
+        state.flashcardsSyncInFlight = true;
+        try {
+          const response = await fetch(buildApiUrl('/api/flashcards/state'), {
+            method: 'PUT',
+            credentials: 'include',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            }),
+            body: JSON.stringify(buildFlashcardCloudPayload())
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            if (response.status === 401) {
+              await handleLoggedOutState('Sua sessao expirou. Entre novamente para continuar.');
+              return false;
+            }
+            throw new Error(payload?.message || 'Falha ao salvar seus flashcards.');
+          }
+          return true;
+        } catch (error) {
+          console.warn('Falha ao sincronizar estado dos flashcards:', error);
+          return false;
+        } finally {
+          state.flashcardsSyncInFlight = false;
+          if (state.flashcardsSyncQueued) {
+            state.flashcardsSyncQueued = false;
+            scheduleFlashcardCloudSync(350);
+          }
+        }
+      }
+
+      function scheduleFlashcardCloudSync(delayMs = 900) {
+        if (!state.user?.id) return;
+        if (state.flashcardsSyncTimer) {
+          window.clearTimeout(state.flashcardsSyncTimer);
+        }
+        state.flashcardsSyncTimer = window.setTimeout(() => {
+          state.flashcardsSyncTimer = 0;
+          syncFlashcardCloudNow();
+        }, Math.max(0, Number(delayMs) || 0));
+      }
+
       function setAuthMode(mode) {
         state.authMode = mode === 'register' ? 'register' : 'login';
         const isRegister = state.authMode === 'register';
@@ -2901,10 +3005,39 @@
           throw new Error('Sessao invalida.');
         }
 
-        state.stats = readUserStats();
-        state.userCards = readUserProgress();
+        const localStats = readUserStats();
+        const localProgress = readUserProgress();
+        let cloudState = null;
+        try {
+          cloudState = await fetchFlashcardCloudState();
+        } catch (error) {
+          if (Number(error?.statusCode) === 401) {
+            throw error;
+          }
+          console.warn('Falha ao carregar estado salvo dos flashcards:', error);
+        }
+
+        const cloudProgress = Array.isArray(cloudState?.progress)
+          ? cloudState.progress.map(normalizeProgressRecord).filter(Boolean)
+          : [];
+        const hasCloudProgress = Boolean(cloudState?.meta?.hasProgress);
+        const hasCloudStats = Boolean(cloudState?.meta?.hasStats);
+
+        state.stats = hasCloudStats
+          ? normalizeStatsSnapshot(cloudState?.stats)
+          : localStats;
+        state.userCards = hasCloudProgress
+          ? new Map(cloudProgress.map(record => [record.cardId, record]))
+          : localProgress;
         syncOwnedIdsFromProgress();
-        state.rankLastSyncedCount = null;
+
+        if (Number.isFinite(Number(cloudState?.serverTimeMs)) && Number(cloudState.serverTimeMs) > 0) {
+          state.timeOffsetMs = Math.round(Number(cloudState.serverTimeMs) - Date.now());
+          saveTimeOffsetMs();
+        }
+
+        persistUserStatsLocally();
+        persistUserProgressLocally();
 
         renderMetrics();
         updateGameChips();
@@ -2925,16 +3058,23 @@
           }
         }
 
-        scheduleFlashcardRankingSync(200);
+        if ((!hasCloudProgress && localProgress.size > 0) || (!hasCloudStats && hasMeaningfulStats(localStats))) {
+          await syncFlashcardCloudNow();
+        }
       }
 
       async function handleLoggedOutState(message) {
         persistAuthToken('');
+        if (state.flashcardsSyncTimer) {
+          window.clearTimeout(state.flashcardsSyncTimer);
+          state.flashcardsSyncTimer = 0;
+        }
+        state.flashcardsSyncInFlight = false;
+        state.flashcardsSyncQueued = false;
         state.user = null;
         state.userCards = new Map();
         state.ownedIds = new Set();
-        state.stats = { playTimeMs: 0, speakings: 0, listenings: 0 };
-        state.rankLastSyncedCount = null;
+        state.stats = normalizeStatsSnapshot({});
         renderMetrics();
         updateGameChips();
         renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
@@ -3026,58 +3166,11 @@
       }
 
       async function syncFlashcardRankingNow() {
-        if (!state.user?.id) return;
-
-        if (state.rankSyncInFlight) {
-          state.rankSyncQueued = true;
-          return;
-        }
-
-        const currentCount = state.userCards.size;
-        if (state.rankLastSyncedCount === currentCount) {
-          return;
-        }
-
-        state.rankSyncInFlight = true;
-        try {
-          const response = await fetch(buildApiUrl('/api/rankings/flashcards'), {
-            method: 'POST',
-            credentials: 'include',
-            headers: buildAuthHeaders({
-              'Content-Type': 'application/json'
-            }),
-            body: JSON.stringify({
-              flashcardsCount: currentCount
-            })
-          });
-          const payload = await response.json().catch(() => ({}));
-          if (!response.ok || !payload?.success) {
-            if (response.status === 401) {
-              await handleLoggedOutState('Sua sessao expirou. Entre novamente para continuar.');
-              return;
-            }
-            throw new Error(payload?.message || 'Falha ao sincronizar ranking.');
-          }
-          state.rankLastSyncedCount = currentCount;
-        } catch (error) {
-          console.warn('Falha ao sincronizar ranking de flashcards:', error);
-        } finally {
-          state.rankSyncInFlight = false;
-          if (state.rankSyncQueued) {
-            state.rankSyncQueued = false;
-            scheduleFlashcardRankingSync(250);
-          }
-        }
+        return syncFlashcardCloudNow();
       }
 
       function scheduleFlashcardRankingSync(delayMs = 900) {
-        if (state.rankSyncTimer) {
-          window.clearTimeout(state.rankSyncTimer);
-        }
-        state.rankSyncTimer = window.setTimeout(() => {
-          state.rankSyncTimer = 0;
-          syncFlashcardRankingNow();
-        }, Math.max(0, Number(delayMs) || 0));
+        scheduleFlashcardCloudSync(delayMs);
       }
 
       function phaseMeta(phaseIndex) {
