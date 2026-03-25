@@ -2785,23 +2785,44 @@ app.get('/api/users/flashcards', async (req, res) => {
       return;
     }
 
+    await ensureUsersAvatarColumn();
+    await ensureFlashcardUserStateTables();
+
     const requestedLimit = Number.parseInt(req.query.limit, 10);
     const limit = Number.isInteger(requestedLimit) && requestedLimit > 0
       ? Math.min(requestedLimit, 5000)
       : 5000;
-    const snapshot = await fetchFlashcardRankingSnapshot({
-      periodId: FLASHCARD_RANKING_PERIODS.allTime.id,
-      limit,
-      currentUserId: 0
-    });
+    const result = await pool.query(
+      `SELECT
+         u.id,
+         u.email,
+         COALESCE(u.avatar_image, '') AS avatar_image,
+         u.created_at,
+         COALESCE(progress.total, 0) AS flashcards_count
+       FROM public.users u
+       LEFT JOIN (
+         SELECT
+           user_id,
+           COUNT(*)::int AS total
+         FROM public.user_flashcard_progress
+         GROUP BY user_id
+       ) progress
+         ON progress.user_id = u.id
+       ORDER BY
+         COALESCE(progress.total, 0) DESC,
+         COALESCE(u.created_at, now()) ASC,
+         u.id ASC
+       LIMIT $1`,
+      [limit]
+    );
 
     res.json({
       success: true,
-      users: snapshot.ranking.map((entry) => ({
-        userId: Number(entry.userId) || 0,
-        username: String(entry.username || '').trim() || 'Usuario',
-        avatarImage: String(entry.avatarImage || '').trim(),
-        flashcardsCount: Number(entry.allTimeFlashcardsCount ?? entry.flashcardsCount) || 0
+      users: result.rows.map((entry) => ({
+        userId: Number(entry.id) || 0,
+        username: String(entry.email || '').trim() || 'Usuario',
+        avatarImage: String(entry.avatar_image || '').trim(),
+        flashcardsCount: Number(entry.flashcards_count) || 0
       }))
     });
   } catch (error) {
