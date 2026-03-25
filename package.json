@@ -5,6 +5,7 @@
     "main": "server.js",
     "scripts": {
         "prebuild": "npm run sync:levels",
+        "prestart": "npm run build",
         "start": "node server.js",
         "build": "node build-static.js",
         "sync:levels": "node scripts/sync-local-level-assets.js",
