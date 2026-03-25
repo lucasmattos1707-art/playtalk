@@ -1,0 +1,726 @@
+{
+  "title": "Verbos",
+  "coverImage": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/Sequ%C3%AAncia%2001.00_00_00_00.Quadro001.png",
+  "items": [
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000001.webp",
+      "nomePortugues": "andando",
+      "nomeIngles": "walking",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000002.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000003.webp",
+      "nomePortugues": "correndo",
+      "nomeIngles": "running",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000004.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000005.webp",
+      "nomePortugues": "pulando",
+      "nomeIngles": "jumping",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000006.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000007.webp",
+      "nomePortugues": "sentado",
+      "nomeIngles": "sitting",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000008.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000009.webp",
+      "nomePortugues": "em pé",
+      "nomeIngles": "standing",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000010.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000011.webp",
+      "nomePortugues": "deitado",
+      "nomeIngles": "lying down",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000012.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000013.webp",
+      "nomePortugues": "dormindo",
+      "nomeIngles": "sleeping",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000014.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000015.webp",
+      "nomePortugues": "acordado",
+      "nomeIngles": "awake",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000016.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000017.webp",
+      "nomePortugues": "cansado",
+      "nomeIngles": "tired",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000018.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000019.webp",
+      "nomePortugues": "descansando",
+      "nomeIngles": "resting",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000020.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000021.webp",
+      "nomePortugues": "gritando",
+      "nomeIngles": "shouting",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000022.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000023.webp",
+      "nomePortugues": "falando",
+      "nomeIngles": "speaking",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000024.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000025.webp",
+      "nomePortugues": "sussurrando",
+      "nomeIngles": "whispering",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000026.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000027.webp",
+      "nomePortugues": "rindo",
+      "nomeIngles": "laughing",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000028.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000029.webp",
+      "nomePortugues": "chorando",
+      "nomeIngles": "crying",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000030.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000031.webp",
+      "nomePortugues": "sorrindo",
+      "nomeIngles": "smiling",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000032.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000033.webp",
+      "nomePortugues": "pensando",
+      "nomeIngles": "thinking",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000034.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000035.webp",
+      "nomePortugues": "olhando",
+      "nomeIngles": "looking",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000036.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000037.webp",
+      "nomePortugues": "observando",
+      "nomeIngles": "watching",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000038.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000039.webp",
+      "nomePortugues": "ouvindo",
+      "nomeIngles": "listening",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000040.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000041.webp",
+      "nomePortugues": "tocando",
+      "nomeIngles": "touching",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000042.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000043.webp",
+      "nomePortugues": "segurando",
+      "nomeIngles": "holding",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000044.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000045.webp",
+      "nomePortugues": "carregando",
+      "nomeIngles": "carrying",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000046.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000047.webp",
+      "nomePortugues": "empurrando",
+      "nomeIngles": "pushing",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000048.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000049.webp",
+      "nomePortugues": "puxando",
+      "nomeIngles": "pulling",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000050.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000051.webp",
+      "nomePortugues": "abrindo",
+      "nomeIngles": "opening",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000052.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000053.webp",
+      "nomePortugues": "fechando",
+      "nomeIngles": "closing",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000054.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000055.webp",
+      "nomePortugues": "quebrando",
+      "nomeIngles": "breaking",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000056.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000057.webp",
+      "nomePortugues": "caindo",
+      "nomeIngles": "falling",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000058.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000059.webp",
+      "nomePortugues": "levantando",
+      "nomeIngles": "lifting",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000060.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000061.webp",
+      "nomePortugues": "girando",
+      "nomeIngles": "spinning",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000062.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000063.webp",
+      "nomePortugues": "rodando",
+      "nomeIngles": "turning",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000064.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000065.webp",
+      "nomePortugues": "balançando",
+      "nomeIngles": "swinging",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000066.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000067.webp",
+      "nomePortugues": "tremendo",
+      "nomeIngles": "shaking",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000068.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000069.webp",
+      "nomePortugues": "vibrando",
+      "nomeIngles": "vibrating",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000070.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000071.webp",
+      "nomePortugues": "andando devagar",
+      "nomeIngles": "walking slowly",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000072.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000073.webp",
+      "nomePortugues": "correndo rápido",
+      "nomeIngles": "running fast",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000074.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000075.webp",
+      "nomePortugues": "parado",
+      "nomeIngles": "still",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000076.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000077.webp",
+      "nomePortugues": "em movimento",
+      "nomeIngles": "moving",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000078.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000079.webp",
+      "nomePortugues": "chegando",
+      "nomeIngles": "arriving",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000080.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000081.webp",
+      "nomePortugues": "saindo",
+      "nomeIngles": "leaving",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000082.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000083.webp",
+      "nomePortugues": "entrando",
+      "nomeIngles": "entering",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000084.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000085.webp",
+      "nomePortugues": "subindo",
+      "nomeIngles": "going up",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000086.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000087.webp",
+      "nomePortugues": "descendo",
+      "nomeIngles": "going down",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000088.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000089.webp",
+      "nomePortugues": "viajando",
+      "nomeIngles": "traveling",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000090.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000091.webp",
+      "nomePortugues": "dirigindo",
+      "nomeIngles": "driving",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000092.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000093.webp",
+      "nomePortugues": "voando",
+      "nomeIngles": "flying",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000094.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000095.webp",
+      "nomePortugues": "nadando",
+      "nomeIngles": "swimming",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000096.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000097.webp",
+      "nomePortugues": "flutuando",
+      "nomeIngles": "floating",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000098.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000099.webp",
+      "nomePortugues": "afundando",
+      "nomeIngles": "sinking",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000100.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000101.webp",
+      "nomePortugues": "crescendo",
+      "nomeIngles": "growing",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000102.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000103.webp",
+      "nomePortugues": "diminuindo",
+      "nomeIngles": "shrinking",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000104.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000105.webp",
+      "nomePortugues": "aumentando",
+      "nomeIngles": "increasing",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000106.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000107.webp",
+      "nomePortugues": "mudando",
+      "nomeIngles": "changing",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000108.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000109.webp",
+      "nomePortugues": "melhorando",
+      "nomeIngles": "improving",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000110.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000111.webp",
+      "nomePortugues": "piorando",
+      "nomeIngles": "worsening",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000112.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000113.webp",
+      "nomePortugues": "esquentando",
+      "nomeIngles": "heating",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000114.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000115.webp",
+      "nomePortugues": "esfriando",
+      "nomeIngles": "cooling",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000116.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000117.webp",
+      "nomePortugues": "queimando",
+      "nomeIngles": "burning",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000118.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000119.webp",
+      "nomePortugues": "congelando",
+      "nomeIngles": "freezing",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000120.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000121.webp",
+      "nomePortugues": "brilhando",
+      "nomeIngles": "shining",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000122.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000123.webp",
+      "nomePortugues": "apagando",
+      "nomeIngles": "fading",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000124.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000125.webp",
+      "nomePortugues": "ligando",
+      "nomeIngles": "turning on",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000126.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000127.webp",
+      "nomePortugues": "desligando",
+      "nomeIngles": "turning off",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000128.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000129.webp",
+      "nomePortugues": "conectando",
+      "nomeIngles": "connecting",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000130.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000131.webp",
+      "nomePortugues": "desconectando",
+      "nomeIngles": "disconnecting",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000132.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000133.webp",
+      "nomePortugues": "carregando bateria",
+      "nomeIngles": "charging",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000134.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000135.webp",
+      "nomePortugues": "descarregando",
+      "nomeIngles": "discharging",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000136.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000137.webp",
+      "nomePortugues": "abrindo porta",
+      "nomeIngles": "opening a door",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000138.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000139.webp",
+      "nomePortugues": "fechando porta",
+      "nomeIngles": "closing a door",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000140.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000141.webp",
+      "nomePortugues": "batendo",
+      "nomeIngles": "hitting",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000142.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000143.webp",
+      "nomePortugues": "chutando",
+      "nomeIngles": "kicking",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000144.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000145.webp",
+      "nomePortugues": "caçando",
+      "nomeIngles": "hunting",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000146.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000147.webp",
+      "nomePortugues": "procurando",
+      "nomeIngles": "searching",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000148.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000149.webp",
+      "nomePortugues": "encontrando",
+      "nomeIngles": "finding",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000150.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000151.webp",
+      "nomePortugues": "perdendo",
+      "nomeIngles": "losing",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000152.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000153.webp",
+      "nomePortugues": "ganhando",
+      "nomeIngles": "winning",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000154.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000155.webp",
+      "nomePortugues": "tentando",
+      "nomeIngles": "trying",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000156.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000157.webp",
+      "nomePortugues": "aprendendo",
+      "nomeIngles": "learning",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000158.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000159.webp",
+      "nomePortugues": "ensinando",
+      "nomeIngles": "teaching",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/126/001/000160.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    }
+  ]
+}

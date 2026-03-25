@@ -1,0 +1,320 @@
+﻿{
+    "soundtrack":  "",
+    "level":  "movie_day_1",
+    "title":  "Um dia no vilarejo - Dia 199",
+    "coverImage":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000001.webp",
+    "characters":  [
+                       {
+                           "id":  "bella",
+                           "name":  "Bella",
+                           "voiceId":  "hpp4J3VqNfWAUOO0d1Us",
+                           "image":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000002.webp"
+                       },
+                       {
+                           "id":  "roger",
+                           "name":  "Roger",
+                           "voiceId":  "CwhRBWXzGAHq8TQ4Fs17",
+                           "image":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000003.webp"
+                       },
+                       {
+                           "id":  "charlie",
+                           "name":  "Charlie",
+                           "voiceId":  "IKne3meq5aSn9XLyUdCD",
+                           "image":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000004.webp"
+                       },
+                       {
+                           "id":  "lily",
+                           "name":  "Lily",
+                           "voiceId":  "pFZP5JQG7iQjIQuC4Bku",
+                           "image":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000005.webp"
+                       },
+                       {
+                           "id":  "jessica",
+                           "name":  "Jessica",
+                           "voiceId":  "yj30vwTGJxSHezdAGsv9",
+                           "image":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000006.webp"
+                       },
+                       {
+                           "id":  "lax",
+                           "name":  "Lax",
+                           "voiceId":  "tS45q0QcrDHqHoaWdCDR",
+                           "image":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000007.webp"
+                       },
+                       {
+                           "id":  "annie",
+                           "name":  "Annie",
+                           "voiceId":  "Sm1seazb4gs7RSlUVw7c",
+                           "image":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000008.webp"
+                       },
+                       {
+                           "id":  "nina",
+                           "name":  "Nina",
+                           "voiceId":  "u0Dga8xTuplGDHoYA40p",
+                           "image":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000009.webp"
+                       },
+                       {
+                           "id":  "harry",
+                           "name":  "Harry",
+                           "voiceId":  "SOYHLrjzK2X1ezoPC6cr",
+                           "image":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000010.webp"
+                       }
+                   ],
+    "items":  [
+                  {
+                      "id":  1,
+                      "character":  "bella",
+                      "portuguese":  "Bom dia vilarejo",
+                      "english":  "Good morning town",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000002.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000003.mp3"
+                  },
+                  {
+                      "id":  2,
+                      "character":  "roger",
+                      "portuguese":  "Pronto para patrulha",
+                      "english":  "Ready for patrol",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000004.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000005.mp3"
+                  },
+                  {
+                      "id":  3,
+                      "character":  "charlie",
+                      "portuguese":  "O que hÃ¡ ali?",
+                      "english":  "What\u0027s that there?",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000006.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000007.mp3"
+                  },
+                  {
+                      "id":  4,
+                      "character":  "bella",
+                      "portuguese":  "Vejam minha bolsa",
+                      "english":  "See my small bag",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000008.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000009.mp3"
+                  },
+                  {
+                      "id":  5,
+                      "character":  "roger",
+                      "portuguese":  "Cuidado, curiosos",
+                      "english":  "Careful, curious",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000010.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000011.mp3"
+                  },
+                  {
+                      "id":  6,
+                      "character":  "charlie",
+                      "portuguese":  "O cheiro Ã© estranho",
+                      "english":  "The smell is odd",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000012.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000013.mp3"
+                  },
+                  {
+                      "id":  7,
+                      "character":  "bella",
+                      "portuguese":  "Ã‰ uma poÃ§Ã£o?",
+                      "english":  "Is it a potion?",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000014.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000015.mp3"
+                  },
+                  {
+                      "id":  8,
+                      "character":  "roger",
+                      "portuguese":  "Vou checar logo",
+                      "english":  "I\u0027ll check now",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000016.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000017.mp3"
+                  },
+                  {
+                      "id":  9,
+                      "character":  "charlie",
+                      "portuguese":  "Eu acho mÃ¡gico",
+                      "english":  "I think it\u0027s magic",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000018.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000019.mp3"
+                  },
+                  {
+                      "id":  10,
+                      "character":  "bella",
+                      "portuguese":  "NÃ£o toque nisso",
+                      "english":  "Do not touch it",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000020.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000021.mp3"
+                  },
+                  {
+                      "id":  11,
+                      "character":  "roger",
+                      "portuguese":  "Fico na frente",
+                      "english":  "I\u0027ll stand in front",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000022.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000023.mp3"
+                  },
+                  {
+                      "id":  12,
+                      "character":  "charlie",
+                      "portuguese":  "Olhem a sombra",
+                      "english":  "Look at the shadow",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000024.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000025.mp3"
+                  },
+                  {
+                      "id":  13,
+                      "character":  "bella",
+                      "portuguese":  "Tem alguÃ©m atrÃ¡s?",
+                      "english":  "Is someone behind?",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000026.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000027.mp3"
+                  },
+                  {
+                      "id":  14,
+                      "character":  "roger",
+                      "portuguese":  "SÃ³ um gato",
+                      "english":  "Just a cat",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000028.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000029.mp3"
+                  },
+                  {
+                      "id":  15,
+                      "character":  "charlie",
+                      "portuguese":  "Gato com espada?",
+                      "english":  "Cat with a sword?",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000030.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000031.mp3"
+                  },
+                  {
+                      "id":  16,
+                      "character":  "bella",
+                      "portuguese":  "Ele morde?",
+                      "english":  "Does it bite?",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000032.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000033.mp3"
+                  },
+                  {
+                      "id":  17,
+                      "character":  "roger",
+                      "portuguese":  "SÃ³ molhe ele",
+                      "english":  "Just wet it",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000034.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000035.mp3"
+                  },
+                  {
+                      "id":  18,
+                      "character":  "charlie",
+                      "portuguese":  "Esta espada Ã© real?",
+                      "english":  "Is this sword real?",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000036.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000037.mp3"
+                  },
+                  {
+                      "id":  19,
+                      "character":  "bella",
+                      "portuguese":  "Seja valente",
+                      "english":  "Be brave",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000038.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000039.mp3"
+                  },
+                  {
+                      "id":  20,
+                      "character":  "roger",
+                      "portuguese":  "Eu protejo",
+                      "english":  "I will protect",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000040.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000041.mp3"
+                  },
+                  {
+                      "id":  21,
+                      "character":  "charlie",
+                      "portuguese":  "Mas e o gato?",
+                      "english":  "And the cat?",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000042.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000043.mp3"
+                  },
+                  {
+                      "id":  22,
+                      "character":  "bella",
+                      "portuguese":  "Espada brilhante",
+                      "english":  "A shiny sword",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000044.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000045.mp3"
+                  },
+                  {
+                      "id":  23,
+                      "character":  "roger",
+                      "portuguese":  "Cuidado, escorpiÃ£o",
+                      "english":  "Watch out, scorpion",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000046.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000047.mp3"
+                  },
+                  {
+                      "id":  24,
+                      "character":  "charlie",
+                      "portuguese":  "Ã‰ sÃ³ um brinquedo",
+                      "english":  "It\u0027s just a toy",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000048.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000049.mp3"
+                  },
+                  {
+                      "id":  25,
+                      "character":  "bella",
+                      "portuguese":  "Hora do banquete",
+                      "english":  "Time for a feast",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000050.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000051.mp3"
+                  },
+                  {
+                      "id":  26,
+                      "character":  "roger",
+                      "portuguese":  "Eu trago carne",
+                      "english":  "I\u0027ll bring meat",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000052.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000053.mp3"
+                  },
+                  {
+                      "id":  27,
+                      "character":  "charlie",
+                      "portuguese":  "E torta de maÃ§Ã£?",
+                      "english":  "And apple pie?",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000054.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000055.mp3"
+                  },
+                  {
+                      "id":  28,
+                      "character":  "bella",
+                      "portuguese":  "Vamos brincar?",
+                      "english":  "Shall we play?",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000056.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000057.mp3"
+                  },
+                  {
+                      "id":  29,
+                      "character":  "roger",
+                      "portuguese":  "Patrulha depois",
+                      "english":  "Patrol later",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000058.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000059.mp3"
+                  },
+                  {
+                      "id":  30,
+                      "character":  "charlie",
+                      "portuguese":  "Dia engraÃ§ado",
+                      "english":  "Funny day",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000060.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000061.mp3"
+                  },
+                  {
+                      "id":  31,
+                      "character":  "bella",
+                      "portuguese":  "Rimos juntos",
+                      "english":  "We laugh together",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000062.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000063.mp3"
+                  },
+                  {
+                      "id":  32,
+                      "character":  "roger",
+                      "portuguese":  "AmanhÃ£ nova saga",
+                      "english":  "Tomorrow new tale",
+                      "audio_portuguese":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000064.mp3",
+                      "audio_english":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/012/000065.mp3"
+                  }
+              ]
+}

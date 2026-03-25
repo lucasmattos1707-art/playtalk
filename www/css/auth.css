@@ -3,7 +3,7 @@
   margin: 0;
   display: grid;
   place-items: center;
-  background: #ffffff url('https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/images/images/beautiful-starry-night-sky-paper-clouds-background_1017-62547.avif') center/cover fixed no-repeat;
+  background: #000000;
   font-family: 'Open Sans', sans-serif;
   padding: 20px;
 }
@@ -162,3 +162,4 @@
 .auth-message.is-success {
   color: #047857;
 }
+

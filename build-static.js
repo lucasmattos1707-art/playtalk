@@ -7,6 +7,23 @@ const outputDirs = [
   path.join(rootDir, 'public'),
   path.join(rootDir, 'dist')
 ];
+const rootStaticFiles = [
+  'edu.html'
+];
+const rootStaticDirectories = [
+  {
+    source: 'musicas',
+    destination: 'eventos'
+  },
+  {
+    source: 'selos',
+    destination: 'selos'
+  },
+  {
+    source: 'newsongs',
+    destination: 'newsongs'
+  }
+];
 
 async function removeDir(target) {
   await fs.rm(target, { recursive: true, force: true });
@@ -42,6 +59,30 @@ async function build() {
     for (const outputDir of outputDirs) {
       await copyRecursive(sourceDir, outputDir);
       console.log(`Copied www/ to ${path.basename(outputDir)}/.`);
+
+      for (const file of rootStaticFiles) {
+        const sourceFile = path.join(rootDir, file);
+        try {
+          await copyRecursive(sourceFile, path.join(outputDir, file));
+          console.log(`Copied ${file} to ${path.basename(outputDir)}/.`);
+        } catch (error) {
+          if (error.code !== 'ENOENT') {
+            throw error;
+          }
+        }
+      }
+
+      for (const directory of rootStaticDirectories) {
+        const sourceDirectory = path.join(rootDir, directory.source);
+        try {
+          await copyRecursive(sourceDirectory, path.join(outputDir, directory.destination));
+          console.log(`Copied ${directory.source}/ to ${path.basename(outputDir)}/${directory.destination}/.`);
+        } catch (error) {
+          if (error.code !== 'ENOENT') {
+            throw error;
+          }
+        }
+      }
     }
   } catch (error) {
     if (error.code === 'ENOENT') {

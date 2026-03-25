@@ -1,0 +1,276 @@
+{
+    "title":  "I did it",
+    "coverImage":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/01.png",
+    "items":  [
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000001.webp",
+                      "nomePortugues":  "eu comi pizza",
+                      "nomeIngles":  "I ate pizza",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000002.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000003.webp",
+                      "nomePortugues":  "eu bebi cafÃ©",
+                      "nomeIngles":  "I drank coffee",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000004.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000005.webp",
+                      "nomePortugues":  "eu li um livro",
+                      "nomeIngles":  "I read a book",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000006.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000007.webp",
+                      "nomePortugues":  "eu comprei pÃ£o",
+                      "nomeIngles":  "I bought bread",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000008.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000009.webp",
+                      "nomePortugues":  "eu vi um filme",
+                      "nomeIngles":  "I saw a movie",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000010.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000011.webp",
+                      "nomePortugues":  "eu visitei o parque",
+                      "nomeIngles":  "I visited the park",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000012.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000013.webp",
+                      "nomePortugues":  "eu joguei futebol",
+                      "nomeIngles":  "I played soccer",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000014.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000015.webp",
+                      "nomePortugues":  "eu nadei na piscina",
+                      "nomeIngles":  "I swam in the pool",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000016.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000017.webp",
+                      "nomePortugues":  "eu cozinhei arroz",
+                      "nomeIngles":  "I cooked rice",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000018.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000019.webp",
+                      "nomePortugues":  "eu abri a porta",
+                      "nomeIngles":  "I opened the door",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000020.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000021.webp",
+                      "nomePortugues":  "eu fechei a janela",
+                      "nomeIngles":  "I closed the window",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000022.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000023.webp",
+                      "nomePortugues":  "eu lavei o carro",
+                      "nomeIngles":  "I washed the car",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000024.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000025.webp",
+                      "nomePortugues":  "eu limpei a mesa",
+                      "nomeIngles":  "I cleaned the table",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000026.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000027.webp",
+                      "nomePortugues":  "eu comprei leite",
+                      "nomeIngles":  "I bought milk",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000028.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000029.webp",
+                      "nomePortugues":  "eu comi uma maÃ§Ã£",
+                      "nomeIngles":  "I ate an apple",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000030.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000031.webp",
+                      "nomePortugues":  "eu dirigi um carro",
+                      "nomeIngles":  "I drove a car",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000032.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000033.webp",
+                      "nomePortugues":  "eu tirei uma foto",
+                      "nomeIngles":  "I took a photo",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000034.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000035.webp",
+                      "nomePortugues":  "eu encontrei um amigo",
+                      "nomeIngles":  "I met a friend",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000036.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000037.webp",
+                      "nomePortugues":  "eu escutei mÃºsica",
+                      "nomeIngles":  "I listened to music",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000038.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000039.webp",
+                      "nomePortugues":  "eu assisti TV",
+                      "nomeIngles":  "I watched TV",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000040.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000041.webp",
+                      "nomePortugues":  "eu escrevi uma carta",
+                      "nomeIngles":  "I wrote a letter",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000042.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000043.webp",
+                      "nomePortugues":  "eu desenhei um gato",
+                      "nomeIngles":  "I drew a cat",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000044.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000045.webp",
+                      "nomePortugues":  "eu plantei flores",
+                      "nomeIngles":  "I planted flowers",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000046.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000047.webp",
+                      "nomePortugues":  "eu pesquei no lago",
+                      "nomeIngles":  "I fished in the lake",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000048.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000049.webp",
+                      "nomePortugues":  "eu caminhei na praia",
+                      "nomeIngles":  "I walked on the beach",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000050.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000051.webp",
+                      "nomePortugues":  "eu subi a montanha",
+                      "nomeIngles":  "I climbed the mountain",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000052.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000053.webp",
+                      "nomePortugues":  "eu visitei o museu",
+                      "nomeIngles":  "I visited the museum",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000054.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000055.webp",
+                      "nomePortugues":  "eu entrei no restaurante",
+                      "nomeIngles":  "I entered the restaurant",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000056.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000057.webp",
+                      "nomePortugues":  "eu comprei um hambÃºrguer",
+                      "nomeIngles":  "I bought a hamburger",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000058.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000059.webp",
+                      "nomePortugues":  "eu encontrei um cachorro",
+                      "nomeIngles":  "I found a dog",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/010/001/000060.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  }
+              ]
+}

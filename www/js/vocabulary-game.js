@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   const STORAGE_KEY = 'vocabulary-level';
   const JOURNEY_STARTED_KEY = 'playtalk-journey-started';
   const GAME_CONFIG = window.PLAYTALK_GAME_CONFIG || {};
@@ -9,7 +9,11 @@
   const board = document.getElementById('board');
   const boardInner = document.getElementById('board-inner');
   const gameFeedback = document.getElementById('game-feedback');
+  const feedbackProgress = document.getElementById('game-feedback-progress');
+  const feedbackProgressFill = document.getElementById('game-feedback-progress-fill');
   const textContainer = document.getElementById('text-container');
+  const textContainerHomeParent = textContainer ? textContainer.parentNode : null;
+  const textContainerHomeNextSibling = textContainer ? textContainer.nextSibling : null;
   const choiceRow = document.getElementById('choice-row');
   const progressFill = document.getElementById('progress-fill');
   const phaseLabel = document.getElementById('phase-label');
@@ -25,6 +29,12 @@
   const preGameTitle = document.getElementById('pre-game-title');
   const preGameLogline = document.getElementById('pre-game-logline');
   const preGameStartBtn = document.getElementById('pre-game-start-btn');
+  const preGameAdmin = document.getElementById('pre-game-admin');
+  const preGameLoadLevelBtn = document.getElementById('pre-game-load-level-btn');
+  const preGameLevelPicker = document.getElementById('pre-game-level-picker');
+  const preGameLevelSelect = document.getElementById('pre-game-level-select');
+  const preGameApplyLevelBtn = document.getElementById('pre-game-apply-level-btn');
+  const preGameLevelStatus = document.getElementById('pre-game-level-status');
   const playingScreen = document.getElementById('playing');
   const playingTitle = document.getElementById('playing-title');
   const playingLogline = document.getElementById('playing-logline');
@@ -37,6 +47,7 @@
   const playingHelpBtn = document.getElementById('playing-help-btn');
   const playingHomeBtn = document.getElementById('playing-home-btn');
   const playingResetBtn = document.getElementById('playing-reset-btn');
+  const dynamicBar = document.getElementById('dynamic-bar');
   const resultsScreen = document.getElementById('results-screen');
   const resultsRingProgress = document.getElementById('results-ring-progress');
   const resultsAvatarImage = document.getElementById('results-avatar-image');
@@ -119,12 +130,13 @@
     prata: 'bronze',
     bronze: 'bronze'
   };
-  const LEVELS_ROOT = 'Levels';
+  const LOCAL_LEVEL_API_PATH = '/api/local-level/day/{day}/phase/{phase}';
+  const LOCAL_LEVEL_FILES_MANIFEST_PATH = 'data/local-level-files.json';
+  const FLUENCY_PHASE_CACHE_PREFIX = 'playtalk-fluency-phase-cache-v1';
   const MIRROR_PATH = 'data/mirror.json';
   const VOICE_CHARACTER_STORAGE_KEY = 'playtalk-voice-character';
   const HARRY_VOICE_ICON = 'images/personagens/harry.png';
   const ANNIE_VOICE_ICON = 'images/personagens/annie.png';
-  const JOURNEY_PLAN_PATH = 'data/journey-plan.json';
   const AUDIO_LEVELS_PATHS = [
     'data/trilhas.json',
     'data/audiosniveis.json'
@@ -164,6 +176,7 @@
   const WRITING_COLOR_CYCLE_MS = 3000;
   const AUDIO_LISTENED_STORAGE_KEY = 'playtalk-phase-audio-listened';
   const DEVICE_STORAGE_KEY = 'playtalk-device-selection';
+  const CUSTOM_JSON_HOLD_MS = 2000;
   const FLASHCARD_STATS_STORAGE_KEY = 'playtalk-flashcard-stats';
   const FLASHCARD_PRONUNCIATION_LIMIT = 6;
   const FLASHCARD_METRIC_LIMIT = 10;
@@ -180,8 +193,8 @@
   const micAudio = document.getElementById('audio-mic');
   const MIC_PROMPT_STORAGE_KEY = 'vocabulary-mic-prompted';
   const PHASE_THREE_HINT_STORAGE_KEY = 'vocabulary-phase3-mic-hint';
-  const LEVEL_TWO_UNLOCK_STORAGE_KEY = 'vocabulary-level2-unlock-at';
-  const LEVEL_TWO_UNLOCK_HOUR = 6;
+  const NEXT_LEVEL_UNLOCK_STORAGE_KEY = 'vocabulary-next-level-unlock-at';
+  const LEGACY_LEVEL_TWO_UNLOCK_STORAGE_KEY = 'vocabulary-level2-unlock-at';
   const MODE_PHASE_MAP = {
     association: 2,
     reading: 3,
@@ -349,7 +362,11 @@
     }
   })();
   const launchSource = String(urlParams.get('source') || '').toLowerCase();
-  const hasPlayLaunchPayload = launchSource === 'play' && Boolean(playLaunchPayload && playLaunchPayload.source === 'play');
+  const isPlayLaunch = launchSource === 'play' || Boolean(playLaunchPayload && playLaunchPayload.source === 'play');
+  const isCardsLaunch = launchSource === 'cards' || Boolean(playLaunchPayload && playLaunchPayload.source === 'cards');
+  const isExternalSingleLaunch = isPlayLaunch || isCardsLaunch;
+  const hasPlayLaunchPayload = (launchSource === 'play' || launchSource === 'cards')
+    && Boolean(playLaunchPayload && (playLaunchPayload.source === 'play' || playLaunchPayload.source === 'cards'));
   const requestedMode = urlParams.get('mode');
   const requestedPhaseRaw = Number.parseInt(urlParams.get('phase') || '', 10);
   const requestedDayRaw = Number.parseInt(urlParams.get('day') || '', 10);
@@ -363,14 +380,13 @@
   const forcedPhase = Number.isFinite(requestedPhase)
     ? requestedPhase
     : (Number.isFinite(modePhase) ? modePhase : null);
-  const isSingleModeLaunch = launchSource === 'play' || hasPlayLaunchPayload || Number.isFinite(modePhase);
+  const isSingleModeLaunch = isExternalSingleLaunch || Number.isFinite(modePhase);
   const singlePhaseMode = isSingleModeLaunch && Number.isFinite(forcedPhase) && forcedPhase >= 1 && forcedPhase <= MAX_PHASE;
   let singleModeSessionActive = singlePhaseMode;
   let activeSinglePhase = Number.isFinite(forcedPhase) ? forcedPhase : null;
   const isSingleModeSession = () => singlePhaseMode || singleModeSessionActive;
   const isFunLaunch = launchSource === 'fun';
-  const isPlayLaunch = launchSource === 'play' || hasPlayLaunchPayload;
-  if (!isPlayLaunch && playLaunchPayload) {
+  if (!isExternalSingleLaunch && playLaunchPayload) {
     try {
       sessionStorage.removeItem('playtalk-play-launch');
     } catch (error) {
@@ -397,7 +413,14 @@
   const MODE12_SPECTATOR_ID = '__spectator__';
   const MODE12_PICKER_TITLE_ID = 'mode12-hearts-title';
   const MIC_CONTINUOUS_HOLD_MS = 2000;
-  const PAUSE_DISSOLVE_MS = 500;
+  const PAUSE_DISSOLVE_MS = 0;
+
+  if (document.body) {
+    document.body.classList.toggle('cards-library-launch', isCardsLaunch);
+  }
+  if (gameRoot) {
+    gameRoot.classList.toggle('from-cards-library', isCardsLaunch);
+  }
 
   function normalizeAudioSourceCandidates(sources) {
     const list = Array.isArray(sources) ? sources : [];
@@ -733,20 +756,14 @@
 
   function animateResultsRing(fromPercent, toPercent) {
     if (!resultsRingProgress) return;
-    const fromOffset = getResultsRingOffset(fromPercent);
     const toOffset = getResultsRingOffset(toPercent);
     resultsRingProgress.style.transition = 'none';
-    resultsRingProgress.style.strokeDashoffset = String(fromOffset);
-    void resultsRingProgress.offsetWidth;
-    resultsRingProgress.style.transition = `stroke-dashoffset ${RESULTS_RING_ANIMATION_MS}ms linear`;
     resultsRingProgress.style.strokeDashoffset = String(toOffset);
   }
 
   function flashResultsMetricIcon() {
     if (!resultsMetricIcon) return;
     resultsMetricIcon.classList.remove('results-metric-icon--flash');
-    void resultsMetricIcon.offsetWidth;
-    resultsMetricIcon.classList.add('results-metric-icon--flash');
   }
 
   function normalizeResultMetric(metric) {
@@ -903,7 +920,7 @@
     const _totalTimeMs = Math.max(0, Number(finalElapsedMs) || Number(safeStats.timePlayedMsTotal) || 0);
 
     return [
-      { key: 'pronunciation', label: 'PronÃºncia', percent: pronunciationPercent, value: `${pronunciationPercent}%` },
+      { key: 'pronunciation', label: 'PronÃƒÂºncia', percent: pronunciationPercent, value: `${pronunciationPercent}%` },
       { key: 'listens', label: 'Listening', percent: listeningPercent, value: `${listeningPercent}%` },
       { key: 'tempo', label: 'Tempo', percent: tempoPercent, value: `${tempoPercent}%` },
       { key: 'typing', label: 'Typing', percent: typingPercent, value: `${typingPercent}%` },
@@ -930,7 +947,7 @@
     const phaseMetrics = sortResultMetricsByPercent([
       pronunciationAverage == null ? null : {
         key: 'pronunciation',
-        label: 'PronÃºncia',
+        label: 'PronÃƒÂºncia',
         percent: Math.round(pronunciationAverage),
         value: `${Math.round(pronunciationAverage)}%`
       },
@@ -1005,7 +1022,27 @@
         if (postGameAudio) {
           fadeOutAndStopAudio(postGameAudio, { durationMs: 0, resetVolume: isAudioMuted ? 0 : 1 }).catch(() => {});
         }
-        showLevelCompleteOverlay(completedLevel);
+        const resolvedCompletedLevel = Number.isFinite(completedLevel) && completedLevel > 0 ? completedLevel : level;
+        const nextLevel = resolvedCompletedLevel + 1;
+        clearNextLevelUnlockAt();
+        saveCompletionStorage({
+          completedLevel: resolvedCompletedLevel,
+          nextLevel,
+          completedAt: Date.now()
+        });
+        completedLevelSnapshot = resolvedCompletedLevel;
+        clearProgressStorage();
+        hideResultsOverlay();
+        document.body.classList.remove('results-active');
+        if (progressCompleteOverlay) progressCompleteOverlay.setAttribute('aria-hidden', 'true');
+        if (finalOverlay) {
+          finalOverlay.classList.remove('active');
+          finalOverlay.setAttribute('aria-hidden', 'true');
+        }
+        setGameStartedState(false);
+        clearJourneyStarted();
+        clearGameContext();
+        window.dispatchEvent(new CustomEvent('playtalk:return-home'));
       },
       {
         waitFor: waitForAudio,
@@ -1132,7 +1169,7 @@
     } else if (isTalkingPhase(targetPhase)) {
       controls.push(createControlButton({ id: 'game-subtitle-btn', icon: SUBTITLE_ICON, ariaLabel: 'Alternar legenda da fala' }));
       controls.push(createControlButton({ id: 'game-back-btn', icon: BACK_ICON, ariaLabel: 'Voltar para a fala anterior' }));
-      controls.push(createControlButton({ id: 'game-mic-btn', icon: MIC_ICON_OFF, ariaLabel: 'Ativar microfone para praticar a fala', extraClass: 'game-control--primary' }));
+      controls.push(createControlButton({ id: 'game-pause-btn', icon: 'SVG/codex-icons/home.svg', ariaLabel: 'Abrir pausa do jogo', extraClass: 'game-control--primary' }));
       controls.push(createControlButton({ id: 'game-speed-btn', icon: getCurrentSpeedIcon(), ariaLabel: 'Alterar velocidade do audio' }));
       controls.push(createControlButton({ id: 'game-language-btn', icon: getMode12LanguageIcon(), ariaLabel: 'Alternar idioma do audio e do microfone' }));
     } else {
@@ -1397,18 +1434,17 @@
 
   let dayPhaseEntries = new Map();
   let dayPhaseMeta = new Map();
+  let customPhaseOverrides = new Map();
   let dayPhaseSequence = [];
   let baseDayPhaseSequence = [];
   let hasCustomJourneySequence = false;
-  let journeyPlanConfig = null;
-  let journeyPlanPromise = null;
   let journeyPhaseIndex = 0;
   let dayEntries = [];
   let level = 1;
   let phase = 1;
   let pool = [];
   let cycle = [];
-  let index = 0; // posiÃƒÂ§ÃƒÂ£o atual no ciclo
+  let index = 0; // posiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o atual no ciclo
   let score = 0; // progresso / acertos
   let currentItem = null;
   let completionGridShown = false;
@@ -1419,6 +1455,8 @@
   let phaseFourAudioPlaying = false;
   let audioLevelsConfig = null;
   let audioLevelsPromise = null;
+  let localLevelFilesManifest = null;
+  let localLevelFilesManifestPromise = null;
   const resolvedAudioCache = new Map();
   let writingState = null;
   let writingCleanup = null;
@@ -1435,6 +1473,7 @@
   let pendingAdvanceCycle = false;
   let openPauseOnResume = false;
   let pauseOverlayTimer = null;
+  let playingOverlayHideTimer = null;
   let playerIdleAutoPauseTimer = null;
   let lastPlayerActivityAt = Date.now();
   let phaseStartInProgress = false;
@@ -1452,6 +1491,8 @@
   let liveStatsPulseTimer = null;
   let playingInstructionAudio = null;
   let pauseStatusSyncTimer = null;
+  let dynamicBarOriginalParent = null;
+  let dynamicBarOriginalNextSibling = null;
   let pausePromptStartMode = false;
   const pauseInstructionAudioCache = new Map();
   const levelCompleteAudio = createAudioWithFallback(LEVEL_COMPLETE_AUDIO_SOURCES);
@@ -1464,6 +1505,7 @@
   let writingPoolsPromise = null;
   let writingPools = null;
   let levelCache = new Map();
+  let adminLevelJsonFilesPromise = null;
   let mode11VoiceMode = 'both';
   let mode11SpeedIndex = 2;
   let mode11SubtitleMode = 'english';
@@ -1575,6 +1617,7 @@
 
   function isAutoPauseEligible() {
     if (!gameStarted || isGamePaused) return false;
+    if (isWatchingPhase() || isTalkingPhase()) return false;
     if (document.body && document.body.classList.contains('pause-menu-active')) return false;
     if (preGameScreen && !preGameScreen.classList.contains('hidden')) return false;
     if (resultsScreen && !resultsScreen.classList.contains('hidden')) return false;
@@ -1769,30 +1812,30 @@
     return SUPPORTED_ENTRY_AUDIO_EXTENSIONS.some(ext => lower.endsWith(ext));
   }
 
-  function buildAudioSrcFromName(audioName = '') {
+  function extractAssetFileName(assetName = '') {
+    const trimmed = typeof assetName === 'string' ? assetName.trim() : '';
+    if (!trimmed) return '';
+    const normalized = trimmed.replace(/\\/g, '/').replace(/^\/+/, '');
+    const segments = normalized.split('/').filter(Boolean);
+    return segments.length ? segments[segments.length - 1] : '';
+  }
+
+  function buildPublicLevelAssetUrl(assetName = '', dayNumber = level, phaseNumber = phase) {
+    const trimmed = typeof assetName === 'string' ? assetName.trim() : '';
+    if (!trimmed) return '';
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    const fileName = extractAssetFileName(trimmed);
+    if (!fileName) return '';
+    const dayFolder = String(Math.max(1, Number.parseInt(dayNumber, 10) || 1)).padStart(3, '0');
+    const phaseFolder = getPhaseFolderCode(Number.parseInt(phaseNumber, 10) || 1);
+    return `${PUBLIC_LEVEL_ASSET_BASE_URL}/${dayFolder}/${phaseFolder}/${encodeURIComponent(fileName)}`;
+  }
+
+  function buildAudioSrcFromName(audioName = '', dayNumber = level, phaseNumber = phase) {
     const trimmed = typeof audioName === 'string' ? audioName.trim() : '';
     if (!trimmed || !hasSupportedAudioExtension(trimmed)) return '';
     if (/^https?:\/\//i.test(trimmed)) return applyVoiceCharacterToAudioUrl(trimmed);
-
-    const sanitized = trimmed.replace(/^[/\\]+/, '');
-    const normalized = sanitized.replace(/\\/g, '/');
-    const lower = normalized.toLowerCase();
-    let relativePath = '';
-
-    if (lower.startsWith('voices/')) {
-      relativePath = normalized.slice('voices/'.length);
-    } else if (/^\d+\//.test(normalized)) {
-      relativePath = normalized;
-    } else {
-      const dayFolder = Number.isFinite(level) && level > 0 ? String(level) : '1';
-      relativePath = `${dayFolder}/${normalized}`;
-    }
-
-    const encodedPath = relativePath
-      .split('/')
-      .map(segment => encodeURIComponent(segment))
-      .join('/');
-    return applyVoiceCharacterToAudioUrl(`${R2_VOICES_BASE_URL}/${encodedPath}`);
+    return applyVoiceCharacterToAudioUrl(buildPublicLevelAssetUrl(trimmed, dayNumber, phaseNumber));
   }
 
   function buildAudioSrc(entry) {
@@ -1800,20 +1843,11 @@
     return buildAudioSrcFromName(audioName);
   }
 
-  function buildImageSrcFromName(fileName = '') {
+  function buildImageSrcFromName(fileName = '', dayNumber = level, phaseNumber = phase) {
     const trimmed = typeof fileName === 'string' ? fileName.trim() : '';
     if (!trimmed) return '';
     if (/^https?:\/\//i.test(trimmed)) return trimmed;
-    const sanitized = trimmed.replace(/^[/\\]+/, '');
-    const lower = sanitized.toLowerCase();
-    const encodedPath = sanitized
-      .split('/')
-      .map(segment => encodeURIComponent(segment))
-      .join('/');
-    if (lower.startsWith('images/') || lower.startsWith('imagens/')) {
-      return encodedPath;
-    }
-    return `images/${encodedPath}`;
+    return buildPublicLevelAssetUrl(trimmed, dayNumber, phaseNumber);
   }
 
   function isWebpFile(fileName) {
@@ -2006,6 +2040,9 @@
       } else {
         hasPlayed = true;
       }
+      if (levelCountdown) {
+        levelCountdown.textContent = '';
+      }
     });
   }
 
@@ -2052,25 +2089,6 @@
     return index >= cycle.length ? FINAL_ADVANCE_DELAY_MS : defaultDelayMs;
   }
 
-  function getLevelTwoUnlockAt() {
-    const stored = Number(localStorage.getItem(LEVEL_TWO_UNLOCK_STORAGE_KEY));
-    return Number.isFinite(stored) && stored > 0 ? stored : null;
-  }
-
-  function setNextLevelTwoUnlockAt() {
-    const unlockDate = new Date();
-    unlockDate.setDate(unlockDate.getDate() + 1);
-    unlockDate.setHours(LEVEL_TWO_UNLOCK_HOUR, 0, 0, 0);
-    const timestamp = unlockDate.getTime();
-    localStorage.setItem(LEVEL_TWO_UNLOCK_STORAGE_KEY, String(timestamp));
-    return timestamp;
-  }
-
-  function isLevelTwoLocked() {
-    const unlockAt = getLevelTwoUnlockAt();
-    return unlockAt ? Date.now() < unlockAt : false;
-  }
-
   function clearLevelUnlockTimer() {
     if (levelUnlockTimer) {
       clearInterval(levelUnlockTimer);
@@ -2078,11 +2096,41 @@
     }
   }
 
-  function formatCountdownTime(remainingMs) {
-    const totalMinutes = Math.max(0, Math.ceil(remainingMs / 60000));
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return { hours, minutes };
+  function clearNextLevelUnlockAt() {
+    localStorage.removeItem(NEXT_LEVEL_UNLOCK_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_LEVEL_TWO_UNLOCK_STORAGE_KEY);
+  }
+
+  function getCompletionStateStatus(completionState = readCompletionStorage()) {
+    if (!completionState || !completionState.completedLevel) return null;
+    const completedLevel = Number(completionState.completedLevel);
+    if (!Number.isFinite(completedLevel) || completedLevel <= 0) return null;
+    const nextLevel = Number(completionState.nextLevel);
+    const resolvedNextLevel = Number.isFinite(nextLevel) && nextLevel > completedLevel
+      ? nextLevel
+      : completedLevel + 1;
+    return {
+      completedLevel,
+      nextLevel: resolvedNextLevel
+    };
+  }
+
+  function syncCompletionUnlockStorage(completionState = readCompletionStorage()) {
+    const status = getCompletionStateStatus(completionState);
+    clearNextLevelUnlockAt();
+    if (!status) return null;
+    return status;
+  }
+
+  function resolveReadyCompletionState() {
+    const status = getCompletionStateStatus();
+    if (!status) return null;
+    clearCompletionStorage();
+    clearNextLevelUnlockAt();
+    level = status.nextLevel;
+    saveLevelToStorage();
+    updateLevelIndicators();
+    return status;
   }
 
   function resetPhaseAudioProgress() {
@@ -2128,13 +2176,11 @@
   }
 
   function loadLevelFromStorage() {
+    resolveReadyCompletionState();
     const stored = Number(localStorage.getItem(STORAGE_KEY));
     if (Number.isFinite(stored) && stored > 0) {
       level = stored;
     } else {
-      level = 1;
-    }
-    if (level >= 2 && isLevelTwoLocked()) {
       level = 1;
     }
     updateLevelIndicators();
@@ -2154,6 +2200,503 @@
 
   function getPhaseIconUrl(phaseNumber) {
     return PHASE_ICON_URLS[phaseNumber] || PHASE_ICON_URLS[1];
+  }
+
+  function getPlayerStateSnapshot() {
+    try {
+      if (window.playtalkPlayerState && typeof window.playtalkPlayerState.get === 'function') {
+        return window.playtalkPlayerState.get() || {};
+      }
+      return JSON.parse(localStorage.getItem('playtalk-player-state') || '{}') || {};
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function isAdminPlayer() {
+    const player = getPlayerStateSnapshot();
+    const username = player && typeof player.username === 'string' ? player.username.trim().toLowerCase() : '';
+    return username === 'adm';
+  }
+
+  function rebuildDayEntriesFromPhases() {
+    dayEntries = Array.from(dayPhaseEntries.values()).flatMap(entries => (Array.isArray(entries) ? entries : []));
+  }
+
+  function getCustomPhaseOverride(phaseNumber) {
+    const entry = customPhaseOverrides.get(phaseNumber);
+    return entry && typeof entry === 'object' ? entry : null;
+  }
+
+  function getPreGameLoglineText(phaseNumber) {
+    const segments = [PRE_GAME_LOG_LINES[phaseNumber] || ''];
+    segments.push('Toque no icone para carregar um JSON do seu computador.');
+    const override = getCustomPhaseOverride(phaseNumber);
+    if (override && override.sourceLabel) {
+      segments.push(`JSON carregado: ${override.sourceLabel}.`);
+    }
+    if (isAdminPlayer()) {
+      segments.push('Adm: use "Carregar NÃ­vel" para escolher um JSON do bucket.');
+    }
+    return segments.filter(Boolean).join(' ');
+  }
+
+  function getPreGameLoglineText(phaseNumber) {
+    const segments = [PRE_GAME_LOG_LINES[phaseNumber] || ''];
+    segments.push('Toque no icone para abrir a lista fixa de arquivos JSON desta fase.');
+    const override = getCustomPhaseOverride(phaseNumber);
+    if (override && override.sourceLabel) {
+      segments.push(`Arquivo carregado: ${override.sourceLabel}.`);
+    }
+    if (isAdminPlayer()) {
+      segments.push('Adm: use "Ver arquivos" para escolher um JSON local desta fase.');
+    }
+    return segments.filter(Boolean).join(' ');
+  }
+
+  function applyCustomPhaseData(phaseNumber, phaseData, sourceLabel) {
+    const safePhase = Number.parseInt(phaseNumber, 10);
+    if (!Number.isFinite(safePhase) || safePhase < 1 || safePhase > MAX_PHASE) {
+      throw new Error('Fase invÃ¡lida para JSON personalizado.');
+    }
+    const normalizedEntries = normalizePhaseEntries(phaseData.entries, safePhase);
+    if (!normalizedEntries.length) {
+      throw new Error('Esse JSON nÃ£o trouxe itens vÃ¡lidos para este modo.');
+    }
+    const metadata = phaseData.metadata && typeof phaseData.metadata === 'object' ? phaseData.metadata : {};
+    dayPhaseEntries.set(safePhase, normalizedEntries);
+    dayPhaseMeta.set(safePhase, metadata);
+    customPhaseOverrides.set(safePhase, {
+      entries: normalizedEntries.slice(),
+      metadata: { ...metadata },
+      sourceLabel: String(sourceLabel || 'JSON personalizado').trim()
+    });
+    baseDayPhaseSequence = Array.from(new Set([...baseDayPhaseSequence, safePhase])).sort((a, b) => a - b);
+    applyDevicePhaseSequence();
+    rebuildDayEntriesFromPhases();
+  }
+
+  function normalizeCustomPhasePayload(payload) {
+    if (Array.isArray(payload)) {
+      return { entries: payload, metadata: {} };
+    }
+    if (!payload || typeof payload !== 'object') {
+      throw new Error('O arquivo precisa conter um JSON vÃ¡lido.');
+    }
+    const metadata = {
+      soundtrack: typeof payload.soundtrack === 'string' ? payload.soundtrack.trim() : '',
+      level: typeof payload.level === 'string' ? payload.level : '',
+      characters: Array.isArray(payload.characters) ? payload.characters : []
+    };
+    if (Array.isArray(payload.items)) return { entries: payload.items, metadata };
+    if (Array.isArray(payload.entries)) return { entries: payload.entries, metadata };
+    if (Array.isArray(payload.phrases)) return { entries: payload.phrases, metadata };
+    throw new Error('JSON sem lista de itens. Use um arquivo com array, "items", "entries" ou "phrases".');
+  }
+
+  function setPreGameAdminStatus(message, options = {}) {
+    if (!preGameLevelStatus) return;
+    const text = typeof message === 'string' ? message.trim() : '';
+    preGameLevelStatus.hidden = !text;
+    preGameLevelStatus.textContent = text;
+    preGameLevelStatus.classList.toggle('is-error', Boolean(options.isError && text));
+  }
+
+  function resetPreGameLevelSelect() {
+    if (!preGameLevelSelect) return;
+    preGameLevelSelect.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Selecione um arquivo JSON da fase';
+    preGameLevelSelect.appendChild(placeholder);
+    preGameLevelSelect.value = '';
+    updatePreGameApplyLevelButton();
+  }
+
+  function updatePreGameApplyLevelButton() {
+    if (!preGameApplyLevelBtn) return;
+    preGameApplyLevelBtn.disabled = !(preGameLevelSelect && preGameLevelSelect.value);
+  }
+
+  function getLocalLevelsFolderFromPhaseNumber(phaseNumber) {
+    if (Number(phaseNumber) === 11) return 'talking';
+    if (Number(phaseNumber) === 12) return 'watching';
+    return 'others';
+  }
+
+  async function fetchLocalLevelFilesManifest() {
+    if (localLevelFilesManifest) {
+      return localLevelFilesManifest;
+    }
+    if (localLevelFilesManifestPromise) {
+      return localLevelFilesManifestPromise;
+    }
+
+    localLevelFilesManifestPromise = (async () => {
+      const response = await fetch(LOCAL_LEVEL_FILES_MANIFEST_PATH, { cache: 'no-store' });
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (error) {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        throw new Error('Nao foi possivel listar os arquivos locais da fase.');
+      }
+
+      const files = Array.isArray(payload && payload.files) ? payload.files : [];
+      localLevelFilesManifest = files.filter(file => (
+        file &&
+        typeof file.folder === 'string' &&
+        file.folder.trim() &&
+        typeof file.path === 'string' &&
+        file.path.trim()
+      ));
+      return localLevelFilesManifest;
+    })();
+
+    try {
+      return await localLevelFilesManifestPromise;
+    } finally {
+      localLevelFilesManifestPromise = null;
+    }
+  }
+
+  function filterLocalLevelFilesForPhase(files, phaseNumber) {
+    const targetFolder = getLocalLevelsFolderFromPhaseNumber(phaseNumber);
+    return (Array.isArray(files) ? files : [])
+      .filter(file => file.folder === targetFolder)
+      .sort((left, right) => {
+        const leftDay = Number.isFinite(left.day) ? left.day : Number.MAX_SAFE_INTEGER;
+        const rightDay = Number.isFinite(right.day) ? right.day : Number.MAX_SAFE_INTEGER;
+        if (leftDay !== rightDay) return leftDay - rightDay;
+        return String(left.name || '').localeCompare(String(right.name || ''), 'pt-BR');
+      });
+  }
+
+  function populatePreGameLevelSelect(files) {
+    resetPreGameLevelSelect();
+    if (!preGameLevelSelect) return;
+    const fragment = document.createDocumentFragment();
+    files.forEach(file => {
+      const option = document.createElement('option');
+      option.value = file.path;
+      option.textContent = file.name || file.path;
+      fragment.appendChild(option);
+    });
+    preGameLevelSelect.appendChild(fragment);
+    preGameLevelSelect.selectedIndex = 0;
+    updatePreGameApplyLevelButton();
+  }
+
+  async function applySelectedPreGameLevelFromAssets(phaseNumber) {
+    const assetPath = preGameLevelSelect && typeof preGameLevelSelect.value === 'string'
+      ? preGameLevelSelect.value.trim()
+      : '';
+
+    if (!assetPath) {
+      throw new Error('Escolha um arquivo JSON antes de carregar.');
+    }
+
+    const response = await fetch(encodeURI(assetPath), { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error('Nao foi possivel carregar o arquivo selecionado.');
+    }
+
+    const payload = await response.json();
+    const phaseData = normalizeCustomPhasePayload(payload);
+    applyCustomPhaseData(phaseNumber, phaseData, assetPath);
+    if (preGameLogline) {
+      preGameLogline.textContent = getPreGameLoglineText(phaseNumber);
+    }
+    return assetPath;
+  }
+
+  function configurePreGameAdminControls(phaseNumber) {
+    if (!preGameAdmin || !preGameLoadLevelBtn || !preGameLevelPicker || !preGameLevelSelect || !preGameApplyLevelBtn) {
+      return;
+    }
+
+    const restoreStatus = () => {
+      const override = getCustomPhaseOverride(phaseNumber);
+      if (override && override.sourceLabel) {
+        setPreGameAdminStatus(`JSON atual: ${override.sourceLabel}`);
+        return;
+      }
+      setPreGameAdminStatus('');
+    };
+
+    resetPreGameLevelSelect();
+    preGameLevelPicker.hidden = true;
+    preGameLoadLevelBtn.textContent = 'Ver arquivos';
+    preGameLoadLevelBtn.disabled = false;
+    preGameLevelSelect.onchange = null;
+    preGameApplyLevelBtn.onclick = null;
+    preGameLoadLevelBtn.onclick = null;
+
+    if (!isAdminPlayer()) {
+      preGameAdmin.hidden = true;
+      setPreGameAdminStatus('');
+      return;
+    }
+
+    preGameAdmin.hidden = false;
+    restoreStatus();
+
+    preGameLevelSelect.onchange = () => {
+      updatePreGameApplyLevelButton();
+      if (preGameLevelSelect.value) {
+        setPreGameAdminStatus(`Selecionado: ${preGameLevelSelect.value}`);
+      } else {
+        restoreStatus();
+      }
+    };
+
+    preGameLoadLevelBtn.onclick = async () => {
+      if (!preGameLevelPicker.hidden) {
+        preGameLevelPicker.hidden = true;
+        preGameLoadLevelBtn.textContent = 'Ver arquivos';
+        restoreStatus();
+        return;
+      }
+
+      preGameLevelPicker.hidden = false;
+      preGameLoadLevelBtn.textContent = 'Ocultar NÃ­veis';
+      preGameLoadLevelBtn.disabled = true;
+      setPreGameAdminStatus('Carregando JSONs de Niveis/...');
+
+      try {
+        const files = await fetchAdminLevelJsonFiles();
+        populatePreGameLevelSelect(files);
+        if (!files.length) {
+          setPreGameAdminStatus('Nenhum arquivo .json foi encontrado em Niveis/.');
+        } else {
+          setPreGameAdminStatus(`${files.length} arquivo(s) .json encontrados em Niveis/.`);
+        }
+      } catch (error) {
+        setPreGameAdminStatus(
+          error && error.message ? error.message : 'Nao foi possivel listar os arquivos do bucket.',
+          { isError: true }
+        );
+      } finally {
+        preGameLoadLevelBtn.disabled = false;
+        updatePreGameApplyLevelButton();
+      }
+    };
+
+    preGameApplyLevelBtn.onclick = async () => {
+      if (!preGameLevelSelect.value) {
+        setPreGameAdminStatus('Escolha um JSON antes de carregar.', { isError: true });
+        return;
+      }
+
+      const selectedKey = preGameLevelSelect.value;
+      preGameApplyLevelBtn.disabled = true;
+      preGameLoadLevelBtn.disabled = true;
+      preGameStartBtn.disabled = true;
+      setPreGameAdminStatus(`Carregando ${selectedKey}...`);
+
+      try {
+        const loadedKey = await applySelectedPreGameLevelFromBucket(phaseNumber);
+        setPreGameAdminStatus(`JSON carregado: ${loadedKey}`);
+      } catch (error) {
+        setPreGameAdminStatus(
+          error && error.message ? error.message : 'Nao foi possivel carregar o JSON selecionado.',
+          { isError: true }
+        );
+      } finally {
+        preGameLoadLevelBtn.disabled = false;
+        preGameStartBtn.disabled = false;
+        updatePreGameApplyLevelButton();
+      }
+    };
+  }
+
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('NÃ£o foi possÃ­vel ler o arquivo.'));
+      reader.readAsText(file);
+    });
+  }
+
+  function ensureCustomJsonFileInput() {
+    let input = document.getElementById('admin-custom-phase-json-input');
+    if (input) return input;
+    input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'admin-custom-phase-json-input';
+    input.accept = 'application/json,.json';
+    input.hidden = true;
+    document.body.appendChild(input);
+    return input;
+  }
+
+  async function promptCustomJsonUrl(phaseNumber) {
+    const rawUrl = window.prompt('Cole o link pÃºblico do JSON desta fase:');
+    const url = typeof rawUrl === 'string' ? rawUrl.trim() : '';
+    if (!url) return false;
+    let parsedUrl = null;
+    try {
+      parsedUrl = new URL(url);
+    } catch (error) {
+      throw new Error('Link invÃ¡lido. Cole uma URL pÃºblica completa.');
+    }
+    const response = await fetch(parsedUrl.toString(), { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`NÃ£o consegui baixar o JSON (${response.status}).`);
+    }
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      throw new Error('O link retornou algo que nÃ£o Ã© um JSON vÃ¡lido.');
+    }
+    const phaseData = normalizeCustomPhasePayload(payload);
+    applyCustomPhaseData(phaseNumber, phaseData, parsedUrl.toString());
+    if (preGameLogline) {
+      preGameLogline.textContent = getPreGameLoglineText(phaseNumber);
+    }
+    return true;
+  }
+
+  async function promptCustomJsonFile(phaseNumber) {
+    const input = ensureCustomJsonFileInput();
+    return new Promise((resolve, reject) => {
+      input.value = '';
+      input.onchange = async () => {
+        try {
+          const file = input.files && input.files[0] ? input.files[0] : null;
+          if (!file) {
+            resolve(false);
+            return;
+          }
+          const raw = await readFileAsText(file);
+          let payload = null;
+          try {
+            payload = JSON.parse(raw);
+          } catch (error) {
+            throw new Error('O arquivo selecionado nÃ£o contÃ©m um JSON vÃ¡lido.');
+          }
+          const phaseData = normalizeCustomPhasePayload(payload);
+          applyCustomPhaseData(phaseNumber, phaseData, file.name || 'arquivo local');
+          if (preGameLogline) {
+            preGameLogline.textContent = getPreGameLoglineText(phaseNumber);
+          }
+          resolve(true);
+        } catch (error) {
+          reject(error);
+        } finally {
+          input.value = '';
+          input.onchange = null;
+        }
+      };
+      input.click();
+    });
+  }
+
+  function configurePreGameAdminControls(phaseNumber) {
+    if (!preGameAdmin || !preGameLoadLevelBtn || !preGameLevelPicker || !preGameLevelSelect || !preGameApplyLevelBtn) {
+      return;
+    }
+
+    const restoreStatus = () => {
+      const override = getCustomPhaseOverride(phaseNumber);
+      if (override && override.sourceLabel) {
+        setPreGameAdminStatus(`JSON atual: ${override.sourceLabel}`);
+        return;
+      }
+      setPreGameAdminStatus('');
+    };
+
+    resetPreGameLevelSelect();
+    preGameLevelPicker.hidden = true;
+    preGameLoadLevelBtn.textContent = 'Ver arquivos';
+    preGameLoadLevelBtn.disabled = false;
+    preGameLevelSelect.onchange = null;
+    preGameApplyLevelBtn.onclick = null;
+    preGameLoadLevelBtn.onclick = null;
+
+    if (!isAdminPlayer()) {
+      preGameAdmin.hidden = true;
+      setPreGameAdminStatus('');
+      return;
+    }
+
+    preGameAdmin.hidden = false;
+    restoreStatus();
+
+    preGameLevelSelect.onchange = () => {
+      updatePreGameApplyLevelButton();
+      if (preGameLevelSelect.value) {
+        setPreGameAdminStatus(`Selecionado: ${preGameLevelSelect.value}`);
+      } else {
+        restoreStatus();
+      }
+    };
+
+    preGameLoadLevelBtn.onclick = async () => {
+      if (!preGameLevelPicker.hidden) {
+        preGameLevelPicker.hidden = true;
+        preGameLoadLevelBtn.textContent = 'Ver arquivos';
+        restoreStatus();
+        return;
+      }
+
+      const folderName = getLocalLevelsFolderFromPhaseNumber(phaseNumber);
+      preGameLevelPicker.hidden = false;
+      preGameLoadLevelBtn.textContent = 'Ocultar arquivos';
+      preGameLoadLevelBtn.disabled = true;
+      setPreGameAdminStatus(`Carregando arquivos de Niveis/${folderName}/...`);
+
+      try {
+        const manifestFiles = await fetchLocalLevelFilesManifest();
+        const files = filterLocalLevelFilesForPhase(manifestFiles, phaseNumber);
+        populatePreGameLevelSelect(files);
+        if (!files.length) {
+          setPreGameAdminStatus(`Nenhum arquivo .json foi encontrado em Niveis/${folderName}/.`);
+        } else {
+          setPreGameAdminStatus(`${files.length} arquivo(s) .json encontrados em Niveis/${folderName}/.`);
+        }
+      } catch (error) {
+        setPreGameAdminStatus(
+          error && error.message ? error.message : 'Nao foi possivel listar os arquivos locais.',
+          { isError: true }
+        );
+      } finally {
+        preGameLoadLevelBtn.disabled = false;
+        updatePreGameApplyLevelButton();
+      }
+    };
+
+    preGameApplyLevelBtn.onclick = async () => {
+      if (!preGameLevelSelect.value) {
+        setPreGameAdminStatus('Escolha um arquivo JSON antes de carregar.', { isError: true });
+        return;
+      }
+
+      const selectedKey = preGameLevelSelect.value;
+      preGameApplyLevelBtn.disabled = true;
+      preGameLoadLevelBtn.disabled = true;
+      preGameStartBtn.disabled = true;
+      setPreGameAdminStatus(`Carregando ${selectedKey}...`);
+
+      try {
+        const loadedKey = await applySelectedPreGameLevelFromAssets(phaseNumber);
+        setPreGameAdminStatus(`Arquivo carregado: ${loadedKey}`);
+      } catch (error) {
+        setPreGameAdminStatus(
+          error && error.message ? error.message : 'Nao foi possivel carregar o arquivo selecionado.',
+          { isError: true }
+        );
+      } finally {
+        preGameLoadLevelBtn.disabled = false;
+        preGameStartBtn.disabled = false;
+        updatePreGameApplyLevelButton();
+      }
+    };
   }
 
   function ensurePreGameIcon() {
@@ -2178,6 +2721,85 @@
     }
   }
 
+  function configurePreGameIconActions(phaseNumber) {
+    const currentIcon = ensurePreGameIcon();
+    if (!currentIcon || !currentIcon.parentNode) return null;
+    const icon = currentIcon.cloneNode(true);
+    currentIcon.parentNode.replaceChild(icon, currentIcon);
+    let isLoading = false;
+    const triggerLocalJsonPicker = async () => {
+      if (isLoading || !preGameStartBtn) return;
+      isLoading = true;
+      icon.classList.add('is-loading');
+      preGameStartBtn.disabled = true;
+      icon.setAttribute('aria-busy', 'true');
+      try {
+        await promptCustomJsonFile(phaseNumber);
+      } catch (error) {
+        const message = error && error.message ? error.message : 'Nao foi possivel carregar o JSON selecionado.';
+        window.alert(message);
+      } finally {
+        isLoading = false;
+        icon.classList.remove('is-loading');
+        icon.removeAttribute('aria-busy');
+        preGameStartBtn.disabled = false;
+      }
+    };
+
+    icon.style.cursor = 'pointer';
+    icon.tabIndex = 0;
+    icon.setAttribute('role', 'button');
+    icon.removeAttribute('aria-hidden');
+    icon.setAttribute('aria-label', 'Carregar um arquivo JSON local para este modo');
+    icon.title = 'Toque para carregar um JSON do seu computador';
+    icon.addEventListener('click', () => {
+      triggerLocalJsonPicker();
+    });
+    icon.addEventListener('keydown', event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      triggerLocalJsonPicker();
+    });
+    return icon;
+  }
+
+  function configurePreGameIconActions(phaseNumber) {
+    const currentIcon = ensurePreGameIcon();
+    if (!currentIcon || !currentIcon.parentNode) return null;
+    const icon = currentIcon.cloneNode(true);
+    currentIcon.parentNode.replaceChild(icon, currentIcon);
+
+    const toggleFileList = async () => {
+      if (!preGameLoadLevelBtn || !preGameStartBtn || preGameLoadLevelBtn.disabled) return;
+      preGameStartBtn.disabled = true;
+      icon.classList.add('is-loading');
+      icon.setAttribute('aria-busy', 'true');
+      try {
+        await preGameLoadLevelBtn.onclick?.();
+      } finally {
+        icon.classList.remove('is-loading');
+        icon.removeAttribute('aria-busy');
+        preGameStartBtn.disabled = false;
+      }
+    };
+
+    icon.style.cursor = 'pointer';
+    icon.tabIndex = 0;
+    icon.setAttribute('role', 'button');
+    icon.removeAttribute('aria-hidden');
+    icon.setAttribute('aria-label', 'Abrir lista fixa de arquivos JSON desta fase');
+    icon.title = 'Toque para ver os arquivos fixos desta fase';
+    icon.addEventListener('click', () => {
+      toggleFileList();
+    });
+    icon.addEventListener('keydown', event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      toggleFileList();
+    });
+    return icon;
+  }
+
   function ensurePlayingIcon() {
     if (!playingScreen) return null;
     let icon = document.getElementById('playing-icon');
@@ -2195,12 +2817,21 @@
 
   function showPlayingOverlay() {
     if (!playingScreen) return;
+    if (playingOverlayHideTimer) {
+      window.clearTimeout(playingOverlayHideTimer);
+      playingOverlayHideTimer = null;
+    }
+    if (dynamicBar && dynamicBar.parentNode && dynamicBar.parentNode !== playingScreen) {
+      dynamicBarOriginalParent = dynamicBar.parentNode;
+      dynamicBarOriginalNextSibling = dynamicBar.nextSibling;
+      playingScreen.appendChild(dynamicBar);
+    }
     const icon = ensurePlayingIcon();
     if (icon) {
       icon.src = getPhaseIconUrl(phase);
     }
     if (playingTitle) {
-      playingTitle.textContent = pausePromptStartMode ? 'Toque para comeÃ§ar' : 'Toque para retornar';
+      playingTitle.textContent = pausePromptStartMode ? 'Toque para comeÃƒÂ§ar' : 'Toque para retornar';
     }
     if (playingLogline) {
       playingLogline.textContent = '';
@@ -2208,16 +2839,39 @@
     syncPlayingTopStatus();
     startPlayingTopStatusSync();
     playingScreen.classList.remove('hidden');
+    playingScreen.classList.remove('is-hiding');
     playingScreen.setAttribute('aria-hidden', 'false');
     document.body.classList.add('pause-menu-active');
+    if (!playingScreen.classList.contains('hidden')) {
+      playingScreen.classList.add('is-visible');
+    }
   }
 
   function hidePlayingOverlay() {
     if (!playingScreen) return;
     stopPlayingTopStatusSync();
-    playingScreen.classList.add('hidden');
-    playingScreen.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('pause-menu-active');
+    playingScreen.classList.remove('is-visible');
+    playingScreen.classList.add('is-hiding');
+    if (playingOverlayHideTimer) {
+      window.clearTimeout(playingOverlayHideTimer);
+    }
+    playingOverlayHideTimer = window.setTimeout(() => {
+      if (!playingScreen) return;
+      playingScreen.classList.remove('is-hiding');
+      playingScreen.classList.add('hidden');
+      playingScreen.setAttribute('aria-hidden', 'true');
+      if (dynamicBar && dynamicBarOriginalParent) {
+        if (dynamicBarOriginalNextSibling && dynamicBarOriginalNextSibling.parentNode === dynamicBarOriginalParent) {
+          dynamicBarOriginalParent.insertBefore(dynamicBar, dynamicBarOriginalNextSibling);
+        } else {
+          dynamicBarOriginalParent.appendChild(dynamicBar);
+        }
+        dynamicBarOriginalParent = null;
+        dynamicBarOriginalNextSibling = null;
+      }
+      document.body.classList.remove('pause-menu-active');
+      playingOverlayHideTimer = null;
+    }, PAUSE_DISSOLVE_MS);
   }
 
   function syncPlayingTopStatus() {
@@ -2237,7 +2891,7 @@
       return;
     }
     if (playingStatus) {
-      const nextText = (myhomeStatus && myhomeStatus.textContent) ? myhomeStatus.textContent : 'FluÃªncia FÃ¡cil';
+      const nextText = (myhomeStatus && myhomeStatus.textContent) ? myhomeStatus.textContent : 'FluÃƒÂªncia FÃƒÂ¡cil';
       playingStatus.textContent = nextText;
     }
     if (!playingProgress || !playingProgressFill) return;
@@ -2357,87 +3011,18 @@
     return dayPhaseSequence.length ? dayPhaseSequence[0] : null;
   }
 
-  function normalizeDeviceSelection(value) {
-    const normalized = String(value || '').trim().toLowerCase();
-    if (normalized === 'iphone' || normalized === 'ios') return 'iphone';
-    if (normalized === 'android') return 'android';
-    if (normalized === 'windows') return 'windows';
-    return null;
-  }
-
-  function getDeviceSelection() {
-    const stored = localStorage.getItem(DEVICE_STORAGE_KEY);
-    return normalizeDeviceSelection(stored);
-  }
-
-  function setDeviceSelection(value) {
-    const normalized = normalizeDeviceSelection(value);
-    if (!normalized) return null;
-    localStorage.setItem(DEVICE_STORAGE_KEY, normalized);
-    return normalized;
-  }
-
-  function buildDevicePhaseSequence(sequence) {
-    if (!Array.isArray(sequence) || !sequence.length) return [];
-    if (hasCustomJourneySequence) return sequence.slice();
-    const available = sequence.filter(phaseNumber => Number.isFinite(phaseNumber));
-    const availableSet = new Set(available);
-    const ordered = JOURNEY_PHASE_ORDER.filter(phaseNumber => availableSet.has(phaseNumber));
-    const leftovers = available.filter(phaseNumber => !ordered.includes(phaseNumber));
-    return [...ordered, ...leftovers];
-  }
-
   function applyDevicePhaseSequence() {
-    dayPhaseSequence = buildDevicePhaseSequence(baseDayPhaseSequence);
+    dayPhaseSequence = Array.isArray(baseDayPhaseSequence)
+      ? baseDayPhaseSequence
+        .filter(phaseNumber => Number.isFinite(phaseNumber))
+        .slice()
+        .sort((left, right) => left - right)
+      : [];
   }
 
   function getNextPhaseForDay() {
     if (!dayPhaseSequence.length) return null;
     return dayPhaseSequence[journeyPhaseIndex + 1] || null;
-  }
-
-  function normalizeJourneyModeToken(raw) {
-    const token = String(raw || '')
-      .trim()
-      .toLowerCase()
-      .replace(/^modo\s+/, '')
-      .replace(/[^a-z0-9]+/g, '');
-    if (!token) return null;
-    if (MODE_NAME_TO_PHASE[token]) return MODE_NAME_TO_PHASE[token];
-    const asNumber = Number.parseInt(token, 10);
-    if (Number.isFinite(asNumber) && asNumber >= 1 && asNumber <= MAX_PHASE) return asNumber;
-    return null;
-  }
-
-  function loadJourneyPlanConfig() {
-    if (journeyPlanConfig) return Promise.resolve(journeyPlanConfig);
-    if (journeyPlanPromise) return journeyPlanPromise;
-    journeyPlanPromise = fetch(JOURNEY_PLAN_PATH)
-      .then(response => (response.ok ? response.json() : null))
-      .then((data) => {
-        journeyPlanConfig = data && typeof data === 'object' ? data : {};
-        return journeyPlanConfig;
-      })
-      .catch(() => {
-        journeyPlanConfig = {};
-        return journeyPlanConfig;
-      });
-    return journeyPlanPromise;
-  }
-
-  function resolveJourneySequence(dayNumber, availablePhases) {
-    const availableSet = new Set((availablePhases || []).filter(Number.isFinite));
-    if (!availableSet.size) return [];
-    const fromDay = journeyPlanConfig?.days && Array.isArray(journeyPlanConfig.days[String(dayNumber)])
-      ? journeyPlanConfig.days[String(dayNumber)]
-      : null;
-    const fallback = Array.isArray(journeyPlanConfig?.default) ? journeyPlanConfig.default : null;
-    const source = Array.isArray(fromDay) ? fromDay : fallback;
-    if (!Array.isArray(source) || !source.length) return [];
-    const resolved = source
-      .map(token => normalizeJourneyModeToken(token))
-      .filter(phaseNumber => Number.isFinite(phaseNumber) && availableSet.has(phaseNumber));
-    return resolved;
   }
 
   function ensureDeviceSelection() {
@@ -2673,6 +3258,7 @@
 
   function clearCompletionStorage() {
     localStorage.removeItem(COMPLETION_STORAGE_KEY);
+    clearNextLevelUnlockAt();
   }
 
   function readLevelTimeStorage() {
@@ -3069,15 +3655,8 @@
 
     const fills = Array.from(finalPhaseProgressList.querySelectorAll('[data-final-fill]'));
     fills.forEach((fill) => {
-      fill.style.width = '0%';
-    });
-    window.requestAnimationFrame(() => {
-      fills.forEach((fill, index) => {
-        const percent = Math.max(0, Math.min(100, Number(fill.getAttribute('data-percent')) || 0));
-        window.setTimeout(() => {
-          fill.style.width = `${percent}%`;
-        }, index * 55);
-      });
+      const percent = Math.max(0, Math.min(100, Number(fill.getAttribute('data-percent')) || 0));
+      fill.style.width = `${percent}%`;
     });
   }
 
@@ -3113,18 +3692,9 @@
 
   function setRotatingStatContent(stat, animate = true) {
     if (!finalPronunciationEl || !finalRotatingLabel || !finalRotatingStat) return;
-    if (!animate) {
-      finalPronunciationEl.textContent = stat.value;
-      finalRotatingLabel.textContent = stat.label;
-      return;
-    }
-
-    finalRotatingStat.classList.add('is-sliding');
-    window.setTimeout(() => {
-      finalPronunciationEl.textContent = stat.value;
-      finalRotatingLabel.textContent = stat.label;
-      finalRotatingStat.classList.remove('is-sliding');
-    }, 300);
+    finalRotatingStat.classList.remove('is-sliding');
+    finalPronunciationEl.textContent = stat.value;
+    finalRotatingLabel.textContent = stat.label;
   }
 
   function startFinalStatsRotation(pronunciationAverage) {
@@ -3132,23 +3702,19 @@
     stopFinalStatsRotation();
     const aggregate = getAggregateFlashcardStats();
     const stats = [
-      { label: 'PronÃƒÂºncia', value: `${pronunciationAverage.toFixed(1)}%` },
+      { label: 'PronÃƒÆ’Ã‚Âºncia', value: `${pronunciationAverage.toFixed(1)}%` },
       { label: 'Total speakings', value: `${aggregate.totalSpeakings}` },
       { label: 'Total listenings', value: `${aggregate.totalListenings}` },
-      { label: 'MÃƒÂ©dia listening', value: `${aggregate.avgListening}` },
-      { label: 'MÃƒÂ©dia reading', value: `${aggregate.avgReading}` },
-      { label: 'MÃƒÂ©dia association', value: `${aggregate.avgAssociation}` },
-      { label: 'MÃƒÂ©dia meaning', value: `${aggregate.avgMeaning}` }
+      { label: 'MÃƒÆ’Ã‚Â©dia listening', value: `${aggregate.avgListening}` },
+      { label: 'MÃƒÆ’Ã‚Â©dia reading', value: `${aggregate.avgReading}` },
+      { label: 'MÃƒÆ’Ã‚Â©dia association', value: `${aggregate.avgAssociation}` },
+      { label: 'MÃƒÆ’Ã‚Â©dia meaning', value: `${aggregate.avgMeaning}` }
     ];
 
     finalStatsRotationIndex = 0;
     setRotatingStatContent(stats[0], false);
 
     if (stats.length <= 1) return;
-    finalStatsRotationTimer = window.setInterval(() => {
-      finalStatsRotationIndex = (finalStatsRotationIndex + 1) % stats.length;
-      setRotatingStatContent(stats[finalStatsRotationIndex], true);
-    }, 5000);
   }
 
   function getSessionMemorySummary() {
@@ -3182,11 +3748,8 @@
   function renderFinalSlide(images, index) {
     if (!finalSlideshowImage || !Array.isArray(images) || !images.length) return;
     const safeIndex = ((index % images.length) + images.length) % images.length;
-    finalSlideshowImage.classList.add('is-dissolving');
-    window.setTimeout(() => {
-      finalSlideshowImage.src = images[safeIndex];
-      finalSlideshowImage.classList.remove('is-dissolving');
-    }, 170);
+    finalSlideshowImage.classList.remove('is-dissolving');
+    finalSlideshowImage.src = images[safeIndex];
   }
 
   function startFinalSlideshow(images) {
@@ -3198,10 +3761,6 @@
     }
     renderFinalSlide(images, 0);
     if (images.length <= 1) return;
-    finalSlideshowTimer = window.setInterval(() => {
-      finalSlideshowIndex = (finalSlideshowIndex + 1) % images.length;
-      renderFinalSlide(images, finalSlideshowIndex);
-    }, FINAL_SLIDESHOW_INTERVAL_MS);
   }
 
   function getMedalForErrors(errorCount) {
@@ -3211,7 +3770,7 @@
   }
 
   function getMedalImage(medalKey) {
-    return 'SVG/codex-icons/coraÃƒÂ§ÃƒÂ£o.svg';
+    return 'SVG/codex-icons/coraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.svg';
   }
 
   function updateMedalHud(medalKey) {
@@ -3222,9 +3781,9 @@
   }
 
   function updateFinalMedal(medalKey) {
-    const label = 'CoraÃƒÂ§ÃƒÂ£o';
+    const label = 'CoraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o';
     if (finalMedalImage) finalMedalImage.src = getMedalImage(medalKey);
-    if (finalMedalImage) finalMedalImage.alt = 'CoraÃƒÂ§ÃƒÂ£o';
+    if (finalMedalImage) finalMedalImage.alt = 'CoraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o';
     if (finalMedalLabel) finalMedalLabel.textContent = label;
   }
 
@@ -3244,6 +3803,24 @@
       .replace(/[^a-z0-9' ]/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  function toSpeechTextList(value) {
+    if (Array.isArray(value)) {
+      return value.flatMap(item => toSpeechTextList(item)).filter(Boolean);
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed ? [trimmed] : [];
+    }
+    return [];
+  }
+
+  function stripSpeechInstructionPrefix(text) {
+    const trimmed = String(text || '').trim();
+    if (!trimmed) return '';
+    const match = trimmed.match(/^(repeat after me|now say|say|ask|answer|tell me|repeat)\s*:\s*(.+)$/i);
+    return match && match[2] ? match[2].trim() : trimmed;
   }
 
   function escapeRegExp(value) {
@@ -3288,6 +3865,149 @@
     if (!normalizedExpected) return 0;
     const longestMatch = longestCommonSubstringLength(normalizedExpected, normalizedSpoken);
     return (longestMatch / normalizedExpected.length) * 100;
+  }
+
+  function getNormalizedSpeechComparisonText(text) {
+    return applyMirrorGroups(normalizeSpeechText(text));
+  }
+
+  function expandEnglishSpeechContractions(text) {
+    return String(text || '')
+      .replace(/\bi'm\b/g, 'i am')
+      .replace(/\byou're\b/g, 'you are')
+      .replace(/\bhe's\b/g, 'he is')
+      .replace(/\bshe's\b/g, 'she is')
+      .replace(/\bit's\b/g, 'it is')
+      .replace(/\bwe're\b/g, 'we are')
+      .replace(/\bthey're\b/g, 'they are')
+      .replace(/\bthat's\b/g, 'that is')
+      .replace(/\bthere's\b/g, 'there is')
+      .replace(/\bhere's\b/g, 'here is')
+      .replace(/\bwhat's\b/g, 'what is')
+      .replace(/\bwho's\b/g, 'who is')
+      .replace(/\bwhere's\b/g, 'where is')
+      .replace(/\bwhen's\b/g, 'when is')
+      .replace(/\bwhy's\b/g, 'why is')
+      .replace(/\bhow's\b/g, 'how is')
+      .replace(/\bcan't\b/g, 'cannot')
+      .replace(/\bwon't\b/g, 'will not')
+      .replace(/\bn't\b/g, ' not')
+      .replace(/\b(\w+)'ll\b/g, '$1 will')
+      .replace(/\b(\w+)'ve\b/g, '$1 have')
+      .replace(/\b(\w+)'re\b/g, '$1 are')
+      .replace(/\b(\w+)'d\b/g, '$1 would')
+      .replace(/\b(\w+)'s\b/g, '$1 is')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function getSpeechComparisonCandidates(text) {
+    const variants = new Set();
+    toSpeechTextList(text).forEach((entry) => {
+      const stripped = stripSpeechInstructionPrefix(entry);
+      const normalized = getNormalizedSpeechComparisonText(stripped);
+      if (!normalized) return;
+      variants.add(normalized);
+      variants.add(normalized.replace(/'/g, '').trim());
+      const expanded = expandEnglishSpeechContractions(normalized);
+      if (expanded) {
+        variants.add(expanded);
+        variants.add(expanded.replace(/'/g, '').trim());
+      }
+    });
+    return Array.from(variants).filter(Boolean);
+  }
+
+  function getSpeechCaptureSettings(expected) {
+    const candidates = getSpeechComparisonCandidates(expected);
+    const shortestCandidate = candidates.reduce((best, candidate) => {
+      if (!candidate) return best;
+      if (!best || candidate.length < best.length) return candidate;
+      return best;
+    }, '');
+    const compactCandidate = shortestCandidate.replace(/\s+/g, '');
+    const words = shortestCandidate.split(' ').filter(Boolean);
+    const charCount = compactCandidate.length;
+    const isShortSingleWord = words.length === 1 && charCount > 0 && charCount <= 5;
+    const isMicroUtterance = words.length === 1 && charCount > 0 && charCount <= 2;
+
+    return {
+      browserContinuous: isShortSingleWord,
+      browserInterimResults: true,
+      completeSilenceMs: isShortSingleWord ? (isMicroUtterance ? 1800 : 2400) : 3200,
+      possibleSilenceMs: isShortSingleWord ? (isMicroUtterance ? 700 : 1100) : 1800,
+      languageModel: isShortSingleWord ? 'web_search' : 'free_form',
+      maxResults: isShortSingleWord ? 10 : 6,
+      minimumLengthMs: isShortSingleWord ? (isMicroUtterance ? 250 : 450) : 900
+    };
+  }
+
+  function levenshteinDistance(a, b) {
+    const source = String(a || '');
+    const target = String(b || '');
+    const rows = source.length + 1;
+    const cols = target.length + 1;
+    const matrix = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+    for (let i = 0; i < rows; i += 1) matrix[i][0] = i;
+    for (let j = 0; j < cols; j += 1) matrix[0][j] = j;
+
+    for (let i = 1; i < rows; i += 1) {
+      for (let j = 1; j < cols; j += 1) {
+        const cost = source[i - 1] === target[j - 1] ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + cost
+        );
+      }
+    }
+
+    return matrix[rows - 1][cols - 1];
+  }
+
+  function longestCommonWordSubsequenceLength(expectedWords, spokenWords) {
+    if (!expectedWords.length || !spokenWords.length) return 0;
+    const dp = Array.from({ length: expectedWords.length + 1 }, () => Array(spokenWords.length + 1).fill(0));
+    for (let i = 1; i <= expectedWords.length; i += 1) {
+      for (let j = 1; j <= spokenWords.length; j += 1) {
+        if (expectedWords[i - 1] === spokenWords[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1] + 1;
+        } else {
+          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        }
+      }
+    }
+    return dp[expectedWords.length][spokenWords.length];
+  }
+
+  function calculateNormalizedSpeechMatchPercent(normalizedExpected, normalizedSpoken) {
+    if (!normalizedExpected) return 0;
+    if (normalizedExpected === normalizedSpoken) return 100;
+
+    const substringPercent = calculateSequenceMatchPercent(normalizedExpected, normalizedSpoken);
+    const expectedWords = normalizedExpected ? normalizedExpected.split(' ').filter(Boolean) : [];
+    const spokenWords = normalizedSpoken ? normalizedSpoken.split(' ').filter(Boolean) : [];
+    const wordLcs = longestCommonWordSubsequenceLength(expectedWords, spokenWords);
+    const wordPercent = expectedWords.length ? (wordLcs / expectedWords.length) * 100 : 0;
+    const maxLen = Math.max(normalizedExpected.length, normalizedSpoken.length, 1);
+    const editPercent = Math.max(0, (1 - (levenshteinDistance(normalizedExpected, normalizedSpoken) / maxLen)) * 100);
+
+    return Math.max(substringPercent, wordPercent, editPercent);
+  }
+
+  function calculateSpeechMatchPercent(expected, spoken) {
+    const expectedCandidates = getSpeechComparisonCandidates(expected);
+    const spokenCandidates = getSpeechComparisonCandidates(spoken);
+    if (!expectedCandidates.length || !spokenCandidates.length) return 0;
+
+    let best = 0;
+    expectedCandidates.forEach((expectedCandidate) => {
+      spokenCandidates.forEach((spokenCandidate) => {
+        best = Math.max(best, calculateNormalizedSpeechMatchPercent(expectedCandidate, spokenCandidate));
+      });
+    });
+    return best;
   }
 
   function readFlashcardStats() {
@@ -3524,8 +4244,20 @@
   }
 
   function isSpokenCorrect(expected, spoken) {
-    const percent = calculateSequenceMatchPercent(expected, spoken);
+    const candidates = Array.isArray(spoken) ? spoken : [spoken];
+    const percent = candidates.reduce((best, candidate) => (
+      Math.max(best, calculateSpeechMatchPercent(expected, candidate))
+    ), 0);
     pronunciationSamples.push(percent);
+    if (percent < 50) {
+      console.info('[speech-compare]', {
+        expected,
+        spoken: candidates,
+        expectedCandidates: getSpeechComparisonCandidates(expected),
+        spokenCandidates: candidates.flatMap(candidate => getSpeechComparisonCandidates(candidate)),
+        percent
+      });
+    }
     return {
       percent,
       success: percent >= 50
@@ -3582,29 +4314,19 @@
     }
     const clamped = Math.max(0, Math.min(100, percent));
     const { onPeak } = options;
-    const currentPercent = Math.max(0, Math.min(100, Number(ring.dataset.currentPercent) || 0));
-    const currentColor = ring.dataset.currentColor || getPronunciationRingColor(currentPercent);
     const ringColor = getPronunciationRingColor(clamped);
-    ring.style.stroke = currentColor;
-    setAccuracyRingProgress(ring, currentPercent, true);
-    return new Promise(resolve => {
-      window.requestAnimationFrame(() => {
-        ring.style.transition = `opacity 200ms ease, stroke-dashoffset ${ACCURACY_RING_ANIMATION_MS}ms linear, stroke ${ACCURACY_RING_ANIMATION_MS}ms linear`;
-        setAccuracyRingProgress(ring, clamped, true);
-        ring.style.stroke = ringColor;
-        window.setTimeout(() => {
-          ring.dataset.currentPercent = `${clamped}`;
-          ring.dataset.currentColor = ringColor;
-          if (clamped >= 100) {
-            playSuccessAudio().catch(() => {});
-          }
-          if (typeof onPeak === 'function') {
-            onPeak();
-          }
-          resolve();
-        }, ACCURACY_RING_ANIMATION_MS);
-      });
-    });
+    ring.style.transition = 'none';
+    setAccuracyRingProgress(ring, clamped, true);
+    ring.style.stroke = ringColor;
+    ring.dataset.currentPercent = `${clamped}`;
+    ring.dataset.currentColor = ringColor;
+    if (clamped >= 100) {
+      playSuccessAudio().catch(() => {});
+    }
+    if (typeof onPeak === 'function') {
+      onPeak();
+    }
+    return Promise.resolve();
   }
 
   function normalizeMirrorGroups(data) {
@@ -3736,12 +4458,71 @@
   }
 
   function buildLevelPhasePaths(dayNumber, phaseNumber) {
-    const block = Math.max(1, Math.ceil(dayNumber / 10));
-    const blockLabel = `Bloco ${block}`;
-    const dayLabel = `Dia ${dayNumber}`;
     return [
-      `${LEVELS_ROOT}/${blockLabel}/${dayLabel}/fase${phaseNumber}.json`
+      LOCAL_LEVEL_API_PATH
+        .replace('{day}', encodeURIComponent(String(dayNumber)))
+        .replace('{phase}', encodeURIComponent(String(phaseNumber)))
     ];
+  }
+
+  function buildLevelPhasePaths(dayNumber, phaseNumber) {
+    const folderName = getLocalLevelsFolderFromPhaseNumber(phaseNumber);
+    const fileName = `flashcard-dia-${dayNumber}.json`;
+    return [
+      `Niveis/${folderName}/${fileName}`,
+      LOCAL_LEVEL_API_PATH
+        .replace('{day}', encodeURIComponent(String(dayNumber)))
+        .replace('{phase}', encodeURIComponent(String(phaseNumber)))
+    ];
+  }
+
+  function getPhaseFolderCode(phaseNumber) {
+    if (Number(phaseNumber) === 11) return '011';
+    if (Number(phaseNumber) === 12) return '012';
+    return '001';
+  }
+
+  function getPhaseCacheKey(dayNumber, phaseNumber) {
+    return `${FLUENCY_PHASE_CACHE_PREFIX}:${String(dayNumber).padStart(3, '0')}:${getPhaseFolderCode(phaseNumber)}`;
+  }
+
+  function readCachedPhaseData(dayNumber, phaseNumber) {
+    try {
+      const raw = localStorage.getItem(getPhaseCacheKey(dayNumber, phaseNumber));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' && parsed.data ? parsed.data : parsed;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function writeCachedPhaseData(dayNumber, phaseNumber, data) {
+    try {
+      localStorage.setItem(getPhaseCacheKey(dayNumber, phaseNumber), JSON.stringify({
+        savedAt: Date.now(),
+        day: Number(dayNumber) || 1,
+        folder: getPhaseFolderCode(phaseNumber),
+        data
+      }));
+    } catch (error) {
+      // ignore storage limits
+    }
+  }
+
+  function toPhaseDataResult(data) {
+    const metadata = data && typeof data === 'object'
+      ? {
+        soundtrack: typeof data.soundtrack === 'string' ? data.soundtrack.trim() : '',
+        level: typeof data.level === 'string' ? data.level : '',
+        characters: Array.isArray(data.characters) ? data.characters : []
+      }
+      : {};
+    if (Array.isArray(data)) return { entries: data, metadata };
+    if (data && Array.isArray(data.items)) return { entries: data.items, metadata };
+    if (data && Array.isArray(data.entries)) return { entries: data.entries, metadata };
+    if (data && Array.isArray(data.phrases)) return { entries: data.phrases, metadata };
+    return { entries: [], metadata };
   }
 
   function normalizePhaseEntries(entries, phaseNumber) {
@@ -3758,24 +4539,19 @@
   }
 
   async function fetchLevelPhaseData(dayNumber, phaseNumber) {
+    const cachedData = readCachedPhaseData(dayNumber, phaseNumber);
+    if (cachedData) {
+      return toPhaseDataResult(cachedData);
+    }
+
     const candidates = buildLevelPhasePaths(dayNumber, phaseNumber);
     for (const path of candidates) {
       try {
         const response = await fetch(encodeURI(path));
         if (!response.ok) continue;
         const data = await response.json();
-        const metadata = data && typeof data === 'object'
-          ? {
-            soundtrack: typeof data.soundtrack === 'string' ? data.soundtrack.trim() : '',
-            level: typeof data.level === 'string' ? data.level : '',
-            characters: Array.isArray(data.characters) ? data.characters : []
-          }
-          : {};
-        if (Array.isArray(data)) return { entries: data, metadata };
-        if (data && Array.isArray(data.items)) return { entries: data.items, metadata };
-        if (data && Array.isArray(data.entries)) return { entries: data.entries, metadata };
-        if (data && Array.isArray(data.phrases)) return { entries: data.phrases, metadata };
-        return { entries: [], metadata };
+        writeCachedPhaseData(dayNumber, phaseNumber, data);
+        return toPhaseDataResult(data);
       } catch (error) {
         // ignore and keep trying
       }
@@ -3790,8 +4566,15 @@
       dayPhaseMeta = new Map(cached.meta || []);
       baseDayPhaseSequence = cached.sequence.slice();
       hasCustomJourneySequence = Boolean(cached.hasCustomJourneySequence);
+      customPhaseOverrides.forEach((override, phaseNumber) => {
+        applyCustomPhaseData(phaseNumber, override, override.sourceLabel || 'JSON personalizado');
+      });
       applyDevicePhaseSequence();
-      dayEntries = cached.allEntries.slice();
+      if (!customPhaseOverrides.size) {
+        dayEntries = cached.allEntries.slice();
+      } else {
+        rebuildDayEntriesFromPhases();
+      }
       return;
     }
 
@@ -3811,19 +4594,25 @@
       allEntries.push(...normalized);
     }
 
-    const resolvedCustomSequence = resolveJourneySequence(dayNumber, sequence);
-    hasCustomJourneySequence = resolvedCustomSequence.length > 0;
+    hasCustomJourneySequence = false;
     dayPhaseEntries = entries;
     dayPhaseMeta = meta;
-    baseDayPhaseSequence = hasCustomJourneySequence ? resolvedCustomSequence : sequence;
+    baseDayPhaseSequence = sequence.slice().sort((left, right) => left - right);
+    customPhaseOverrides.forEach((override, phaseNumber) => {
+      applyCustomPhaseData(phaseNumber, override, override.sourceLabel || 'JSON personalizado');
+    });
     applyDevicePhaseSequence();
-    dayEntries = allEntries;
+    if (!customPhaseOverrides.size) {
+      dayEntries = allEntries;
+    } else {
+      rebuildDayEntriesFromPhases();
+    }
     levelCache.set(dayNumber, {
       entries: new Map(entries),
       meta: new Map(meta),
       sequence: baseDayPhaseSequence.slice(),
       allEntries: allEntries.slice(),
-      hasCustomJourneySequence
+      hasCustomJourneySequence: false
     });
   }
 
@@ -3856,11 +4645,11 @@
   }
 
   function loadJourneyData(dayNumber = level) {
-    return loadJourneyPlanConfig().then(() => Promise.all([
+    return Promise.all([
       loadDayLevels(dayNumber),
       loadWritingPools(),
       loadMirrorGroups()
-    ]));
+    ]);
   }
 
   function buildImageSrc(entry) {
@@ -3920,8 +4709,8 @@
 
     if (!cycle.length) {
       const message = dayPhaseSequence.length
-        ? 'Nenhuma frase disponÃƒÂ­vel para esta fase.'
-        : 'Estamos criando essa aula.';
+        ? 'Nenhuma frase disponivel para esta fase.'
+        : 'Aula nao encontrada';
       showText(message);
     }
 
@@ -3999,6 +4788,13 @@
       const total = Math.max(phaseFourBatch.length, 1);
       const percent = Math.min(100, Math.round((phaseFourResolved / total) * 100));
       progressFill.style.width = `${percent}%`;
+      if (feedbackProgress) {
+        feedbackProgress.hidden = !isCardsLaunch;
+        feedbackProgress.setAttribute('aria-valuenow', String(percent));
+      }
+      if (feedbackProgressFill) {
+        feedbackProgressFill.style.width = `${percent}%`;
+      }
       persistProgressState();
       emitJourneyProgress();
       return;
@@ -4006,6 +4802,13 @@
     const total = Math.max(cycle.length, 1);
     const percent = Math.min(100, Math.round((score / total) * 100));
     progressFill.style.width = `${percent}%`;
+    if (feedbackProgress) {
+      feedbackProgress.hidden = !isCardsLaunch;
+      feedbackProgress.setAttribute('aria-valuenow', String(percent));
+    }
+    if (feedbackProgressFill) {
+      feedbackProgressFill.style.width = `${percent}%`;
+    }
     persistProgressState();
     emitJourneyProgress();
   }
@@ -4159,7 +4962,9 @@
     attemptCount = 0;
     setRoundFeedbackState('hit');
     if (awardCoins) {
-      pendingPhaseCoinAward += getCurrentPhaseCoinReward(phase);
+      const reward = getCurrentPhaseCoinReward(phase);
+      pendingPhaseCoinAward += reward;
+      awardPhaseCoins(phase, reward);
     }
     if (phase === 9) {
       registerPhaseTypingResult(true);
@@ -4376,19 +5181,51 @@
     return source[Math.floor(Math.random() * source.length)];
   }
 
+  function getBrowserSpeechRecognitionCtor() {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+
+  function getRecognitionLanguage(targetPhase = phase) {
+    return isTalkingPhase(targetPhase) ? getMode12RecognitionLanguage() : 'en-US';
+  }
+
   function primeMicrophonePermission() {
     if (micPermissionPromise) return micPermissionPromise;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      micPermissionPromise = Promise.resolve(false);
+
+    const rememberPermissionAttempt = (promise) => {
+      micPermissionPromise = Promise.resolve(promise)
+        .then((granted) => {
+          const resolved = Boolean(granted);
+          if (!resolved) {
+            micPermissionPromise = null;
+          }
+          return resolved;
+        })
+        .catch(() => {
+          micPermissionPromise = null;
+          return false;
+        });
       return micPermissionPromise;
+    };
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      micPermissionPromise = null;
+      return Promise.resolve(false);
     }
-    micPermissionPromise = navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(stream => {
-        stream.getTracks().forEach(track => track.stop());
-        return true;
+    return rememberPermissionAttempt(
+      navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
       })
-      .catch(() => false);
-    return micPermissionPromise;
+        .then(stream => {
+          stream.getTracks().forEach(track => track.stop());
+          return true;
+        })
+    );
   }
 
   function requestMicrophoneAccess() {
@@ -4396,7 +5233,6 @@
     if (!recognition) return Promise.resolve(true);
     return primeMicrophonePermission().catch(() => false);
   }
-
   function showMicActivationPrompt() {
     return new Promise(resolve => {
       const promptItem = getRandomPromptItem();
@@ -4438,9 +5274,13 @@
         if (isGamePaused) return;
         setMicControlActive(true);
         stopMicPromptLoop();
-        localStorage.setItem(MIC_PROMPT_STORAGE_KEY, 'true');
-        requestMicrophoneAccess().then(() => {
+        requestMicrophoneAccess().then((granted) => {
           setMicControlActive(false);
+          if (!granted) {
+            startMicPromptLoop();
+            return;
+          }
+          localStorage.setItem(MIC_PROMPT_STORAGE_KEY, 'true');
           if (micButton) {
             micButton.removeEventListener('click', handleActivate);
           }
@@ -4498,13 +5338,8 @@
       return;
     }
 
-    boardInner.style.opacity = '0';
-    window.setTimeout(() => {
-      renderer();
-      requestAnimationFrame(() => {
-        boardInner.style.opacity = '1';
-      });
-    }, IMAGE_DISSOLVE_MS);
+    boardInner.style.opacity = '1';
+    renderer();
   }
 
   function clearPhaseEightTimeout() {
@@ -4588,21 +5423,12 @@
 
   function startRotatingText() {
     if (!rotatingText) return;
-    const phrases = ['Jornada PlayTalk', 'InglÃƒÂªs em 200 dias', 'Toque para comeÃƒÂ§ar'];
+    rotatingText.textContent = 'Jornada PlayTalk';
     rotatingText.classList.remove('is-fading');
-
-    const fadeAndSwap = () => {
-      rotatingText.classList.add('is-fading');
-      window.setTimeout(() => {
-        rotationIndex = (rotationIndex + 1) % phrases.length;
-        rotatingText.textContent = phrases[rotationIndex];
-        rotatingText.classList.remove('is-fading');
-      }, ROTATION_FADE_MS);
-    };
-
-    rotationTimer = window.setInterval(() => {
-      fadeAndSwap();
-    }, 1500);
+    if (rotationTimer) {
+      window.clearInterval(rotationTimer);
+      rotationTimer = null;
+    }
   }
 
   function clearBoard() {
@@ -4613,6 +5439,16 @@
     mode12AdvanceAction = null;
     setMicPersistentEnabled(false);
     setMicControlAction(null);
+    if (textContainer) {
+      textContainer.classList.remove('text-container--media-caption');
+      if (textContainerHomeParent && textContainer.parentNode !== textContainerHomeParent) {
+        if (textContainerHomeNextSibling && textContainerHomeNextSibling.parentNode === textContainerHomeParent) {
+          textContainerHomeParent.insertBefore(textContainer, textContainerHomeNextSibling);
+        } else {
+          textContainerHomeParent.appendChild(textContainer);
+        }
+      }
+    }
     if (boardInner) boardInner.innerHTML = '';
     if (choiceRow) choiceRow.innerHTML = '';
   }
@@ -4678,6 +5514,7 @@
       choiceRow.appendChild(btn);
       scheduleButtonTextFit(btn, 16);
     });
+
   }
 
   function handlePhaseOneChoice(btn, correct) {
@@ -4804,18 +5641,21 @@
   }
 
   function setupSpeechRecognition() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition = getBrowserSpeechRecognitionCtor();
     if (SpeechRecognition) {
       recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      if ('maxAlternatives' in recognition) {
+        recognition.maxAlternatives = 10;
+      }
     }
   }
 
   function updateRecognitionLanguage(targetPhase) {
     if (!recognition) return;
-    recognition.lang = isTalkingPhase(targetPhase) ? getMode12RecognitionLanguage() : 'en-US';
+    recognition.lang = getRecognitionLanguage(targetPhase);
   }
 
   function showPhaseThreeCard(item) {
@@ -5864,13 +6704,9 @@
       mode12SubtitleFadeTimer = null;
     }
 
-    textContainer.style.transition = 'opacity 250ms ease';
-    textContainer.style.opacity = '0';
-    mode12SubtitleFadeTimer = window.setTimeout(() => {
-      applySubtitle();
-      textContainer.style.opacity = '1';
-      mode12SubtitleFadeTimer = null;
-    }, 250);
+    textContainer.style.transition = 'none';
+    textContainer.style.opacity = '1';
+    applySubtitle();
   }
   function showPhaseElevenCard(item, options = {}) {
     const narrationToken = ++phaseNarrationToken;
@@ -5894,13 +6730,14 @@
     stage.className = 'mode11-stage mode11-stage--fade-in';
     const imageWrapper = createEntryImage(item, 'board__image-single board__image-single--phase-one mode11-image');
     stage.appendChild(imageWrapper);
+    if (textContainer) {
+      stage.appendChild(textContainer);
+      textContainer.classList.add('text-container--media-caption');
+    }
     boardInner.appendChild(stage);
     updateMode11SubtitleForCurrentItem(item);
     if (previousStage && previousStage !== stage) {
-      previousStage.classList.add('mode11-stage--fade-out');
-      window.setTimeout(() => {
-        if (previousStage.parentNode) previousStage.parentNode.removeChild(previousStage);
-      }, 1000);
+      if (previousStage.parentNode) previousStage.parentNode.removeChild(previousStage);
     }
     mode11BackAction = () => {
       if (index <= 0 || isGamePaused) return;
@@ -6024,20 +6861,7 @@
       hintEl.textContent = hintText;
       title.appendChild(hintEl);
 
-      let showAlt = false;
-      mode12HeartsHintTimer = window.setInterval(() => {
-        if (!mode12HeartsTitleEl || !hintEl.isConnected) return;
-        hintEl.classList.add('is-fading');
-        if (mode12HeartsHintFadeTimer) {
-          window.clearTimeout(mode12HeartsHintFadeTimer);
-        }
-        mode12HeartsHintFadeTimer = window.setTimeout(() => {
-          showAlt = !showAlt;
-          hintEl.textContent = showAlt ? 'Toque para iniciar' : hintText;
-          hintEl.classList.remove('is-fading');
-          mode12HeartsHintFadeTimer = null;
-        }, 250);
-      }, 2000);
+      hintEl.classList.remove('is-fading');
     }
 
     (gameRoot || document.body).appendChild(title);
@@ -6088,23 +6912,22 @@
         textContainer.classList.remove('active');
       }
 
-      showMode12HeartsTitle('Escolha um\npersonagem', 'Delise para mudar');
+      showMode12HeartsTitle('Escolha um\npersonagem', 'Deslize para mudar');
 
       const picker = document.createElement('div');
       picker.className = 'mode12-picker';
 
+      const canUseSpectator = Boolean(document.body && document.body.classList.contains('page-play'));
       const options = [
         ...Array.from(mode12CharacterMap.values()).map(character => ({
           id: character.id,
           name: character.name,
           image: character.image
         })),
-        { id: MODE12_SPECTATOR_ID, name: 'Espectador', image: 'SVG/logo.png' }
+        ...(canUseSpectator ? [{ id: MODE12_SPECTATOR_ID, name: 'Espectador', image: 'SVG/logo.png' }] : [])
       ];
       let currentOptionIndex = 0;
       let selectionLocked = false;
-      let mode12AutoCycleTimer = null;
-      let mode12HintAltActive = false;
 
       const viewport = document.createElement('div');
       viewport.className = 'mode12-picker__viewport';
@@ -6143,10 +6966,6 @@
         document.removeEventListener('pointercancel', onPointerCancel);
         picker.removeEventListener('click', onTapStart);
         boardInner.removeEventListener('click', onTapStart);
-        if (mode12AutoCycleTimer) {
-          window.clearInterval(mode12AutoCycleTimer);
-          mode12AutoCycleTimer = null;
-        }
       };
       const finalizeSelection = (optionId) => {
         if (selectionLocked) return;
@@ -6208,26 +7027,12 @@
 
       const arrowLeft = document.createElement('div');
       arrowLeft.className = 'mode12-swipe-arrow mode12-swipe-arrow--left';
-      arrowLeft.textContent = 'â€¹';
+      arrowLeft.textContent = 'Ã¢â‚¬Â¹';
       const arrowRight = document.createElement('div');
       arrowRight.className = 'mode12-swipe-arrow mode12-swipe-arrow--right';
-      arrowRight.textContent = 'â€º';
+      arrowRight.textContent = 'Ã¢â‚¬Âº';
       picker.appendChild(arrowLeft);
       picker.appendChild(arrowRight);
-
-      const hintEl = mode12HeartsTitleEl ? mode12HeartsTitleEl.querySelector('.mode12-hearts-title__hint') : null;
-      const runSynchronizedCycle = () => {
-        if (selectionLocked) return;
-        goToOption(1);
-        if (!hintEl) return;
-        hintEl.classList.add('is-fading');
-        window.setTimeout(() => {
-          mode12HintAltActive = !mode12HintAltActive;
-          hintEl.textContent = mode12HintAltActive ? 'Toque para iniciar' : 'Delise para mudar';
-          hintEl.classList.remove('is-fading');
-        }, 250);
-      };
-      mode12AutoCycleTimer = window.setInterval(runSynchronizedCycle, 4000);
 
       renderCard(options[currentOptionIndex]);
       viewport.appendChild(stage);
@@ -6287,9 +7092,16 @@
     setMicControlAction(isUserLine ? () => startMode12MicCapture(item) : null);
 
     const imageEntry = buildMode12ImageEntry(item);
+    const stage = document.createElement('div');
+    stage.className = 'mode12-stage';
     const imageWrapper = createEntryImage(imageEntry, 'board__image-single board__image-single--phase-one');
     imageWrapper.classList.add('mode12-image--fade-in');
-    boardInner.appendChild(imageWrapper);
+    stage.appendChild(imageWrapper);
+    if (textContainer) {
+      stage.appendChild(textContainer);
+      textContainer.classList.add('text-container--media-caption');
+    }
+    boardInner.appendChild(stage);
 
     updateMode12SubtitleForCurrentItem(item, { animate: false });
 
@@ -6372,8 +7184,33 @@
     const listenLimitMs = Number.isFinite(options.listenLimitMs)
       ? Math.max(1000, Number(options.listenLimitMs))
       : SPEECH_LISTEN_LIMIT_MS;
+    const captureSettings = getSpeechCaptureSettings(expected);
     let resolved = false;
     let listenTimeout = null;
+    const cancelSpeechAttempt = (message) => {
+      if (resolved) return;
+      resolved = true;
+      if (listenTimeout) {
+        window.clearTimeout(listenTimeout);
+        listenTimeout = null;
+      }
+      setMicControlActive(false);
+      if (recognition && typeof recognition.stop === 'function') {
+        try {
+          recognition.stop();
+        } catch (error) {
+          // ignore
+        }
+      }
+      if (typeof onListeningEnd === 'function') {
+        onListeningEnd();
+      }
+      if (errorTextTarget && typeof message === 'string' && message) {
+        errorTextTarget.textContent = message;
+        scheduleButtonTextFit(errorTextTarget, 18);
+      }
+      awaiting = false;
+    };
     const onResult = async (spoken) => {
       if (resolved) return;
       resolved = true;
@@ -6390,6 +7227,7 @@
           // ignore
         }
       }
+      const spokenSample = Array.isArray(spoken) ? (spoken.find(Boolean) || '') : spoken;
       const { success, percent } = isSpokenCorrect(expected, spoken, options);
       registerPhasePronunciation(percent);
       const entry = options.entry || currentItem;
@@ -6456,7 +7294,7 @@
       if (typeof options.onAttemptComplete === 'function') {
         try {
           options.onAttemptComplete({
-            spoken,
+            spoken: spokenSample,
             expected,
             percent,
             success,
@@ -6506,37 +7344,50 @@
       }, getAdvanceDelay(0));
     };
 
-    primeMicrophonePermission();
-    if (recognition) {
-      listenTimeout = window.setTimeout(() => {
-        onResult('');
-      }, listenLimitMs);
-      recognition.onresult = (event) => {
-        const text = Array.from(event.results)
-          .map(result => result[0] && result[0].transcript)
-          .join(' ');
-        onResult(text);
-      };
-      recognition.onerror = () => onResult('');
-      recognition.onend = () => onResult('');
-      try {
-        recognition.start();
-      } catch (error) {
-        if (error && error.name === 'InvalidStateError') {
-          try {
-            recognition.stop();
-            recognition.start();
-          } catch (restartError) {
-            onResult('');
-          }
-        } else {
-          onResult('');
+    Promise.resolve(primeMicrophonePermission())
+      .catch(() => false)
+      .then((permissionReady) => {
+        if (permissionReady === false) {
+          cancelSpeechAttempt(options.permissionErrorText || 'Ative o microfone para continuar.');
+          return;
         }
-      }
-    } else {
-      const typed = window.prompt('Diga o nome em inglÃƒÂªs:') || '';
-      onResult(typed);
-    }
+        if (recognition) {
+          recognition.continuous = Boolean(captureSettings.browserContinuous);
+          recognition.interimResults = Boolean(captureSettings.browserInterimResults);
+          if ('maxAlternatives' in recognition) {
+            recognition.maxAlternatives = captureSettings.maxResults;
+          }
+          listenTimeout = window.setTimeout(() => {
+            onResult('');
+          }, listenLimitMs);
+          recognition.onresult = (event) => {
+            const transcripts = Array.from(event.results)
+              .flatMap(result => Array.from(result || []))
+              .map(alternative => alternative && alternative.transcript)
+              .filter(Boolean);
+            onResult(transcripts.length ? transcripts : '');
+          };
+          recognition.onerror = () => onResult('');
+          recognition.onend = () => onResult('');
+          try {
+            recognition.start();
+          } catch (error) {
+            if (error && error.name === 'InvalidStateError') {
+              try {
+                recognition.stop();
+                recognition.start();
+              } catch (restartError) {
+                cancelSpeechAttempt(options.micErrorText || 'Nao foi possivel abrir o microfone.');
+              }
+            } else {
+              cancelSpeechAttempt(options.micErrorText || 'Nao foi possivel abrir o microfone.');
+            }
+          }
+          return;
+        }
+        const typed = window.prompt('Diga o nome em inglÃƒÂªs:') || '';
+        onResult(typed);
+      });
 
   }
 
@@ -6812,10 +7663,12 @@
 
     preGameTitle.textContent = config.title;
     if (preGameLogline) {
-      preGameLogline.textContent = PRE_GAME_LOG_LINES[nextPhase] || '';
+      preGameLogline.textContent = getPreGameLoglineText(nextPhase);
     }
     preGameStartBtn.textContent = config.cta;
     setPreGameIcon(nextPhase);
+    configurePreGameIconActions(nextPhase);
+    configurePreGameAdminControls(nextPhase);
     preGameScreen.classList.remove('hidden');
     preGameScreen.setAttribute('aria-hidden', 'false');
     preGameStartBtn.disabled = false;
@@ -6923,19 +7776,15 @@
 
     awaiting = true;
     showCompletionGrid(currentItem);
-    setTimeout(() => {
-      awaiting = false;
-      handlePhaseComplete({ nextPhase });
-    }, 1500);
+    awaiting = false;
+    handlePhaseComplete({ nextPhase });
   }
 
   function dissolveEnvironment(callback) {
     hidePhaseElements();
-    setTimeout(() => {
-      if (typeof callback === 'function') {
-        callback();
-      }
-    }, PHASE_DISSOLVE_MS);
+    if (typeof callback === 'function') {
+      callback();
+    }
   }
 
   async function startPhase(nextPhase, options = {}) {
@@ -6948,14 +7797,14 @@
         phase = nextPhase;
         updatePhaseLabel();
         clearBoard();
-        showText('Estamos criando essa aula.');
+        showText('Aula nao encontrada');
         return;
       }
       if (isSingleModeSession() && !dayPhaseEntries.has(nextPhase)) {
         phase = nextPhase;
         updatePhaseLabel();
         clearBoard();
-        showText('Modo indisponivel para este dia.');
+        showText('Aula nao encontrada');
         return;
       }
       phase = dayPhaseEntries.has(nextPhase) ? nextPhase : fallbackPhase;
@@ -6978,7 +7827,7 @@
       }
       if (isTalkingPhase(phase)) {
         showPhaseElements();
-        if (isPlayLaunch) {
+        if (isExternalSingleLaunch) {
           notifyPlayLaunchReady();
         }
         await showMode12CharacterPicker();
@@ -6994,9 +7843,7 @@
       startLiveStatsPulseLoop();
       pulseLiveJourneyStats();
       if (!isTalkingPhase(phase)) {
-        requestAnimationFrame(() => {
-          showPhaseElements();
-        });
+        showPhaseElements();
       }
     } finally {
       phaseStartInProgress = false;
@@ -7008,14 +7855,14 @@
     const nextLevel = level;
     saveLevelToStorage();
     updateLevelIndicators();
-    levelCompleteText.textContent = `VocÃƒÂª concluiu o dia ${previousLevel}. Vamos para o dia ${nextLevel}?`;
+    levelCompleteText.textContent = `VocÃƒÆ’Ã‚Âª concluiu o dia ${previousLevel}. Vamos para o dia ${nextLevel}?`;
     if (levelCountdown) {
       levelCountdown.textContent = '';
     }
     levelComplete.classList.remove('hidden');
     nextLevelBtn.disabled = true;
     nextLevelBtn.classList.add('is-hidden');
-    nextLevelBtn.textContent = 'Ir para o prÃƒÂ³ximo';
+    nextLevelBtn.textContent = 'Ir para o prÃƒÆ’Ã‚Â³ximo';
     if (replayLevelBtn) {
       replayLevelBtn.disabled = false;
     }
@@ -7025,34 +7872,11 @@
     const playPromise = shouldPlayConclusion ? playAudioElement(conclusionAudio) : Promise.resolve();
 
     playPromise.then(() => {
-      if (previousLevel === 1) {
-        const unlockAt = getLevelTwoUnlockAt() || setNextLevelTwoUnlockAt();
-        const updateUnlockState = () => {
-          const remainingMs = unlockAt - Date.now();
-          if (remainingMs <= 0) {
-            clearLevelUnlockTimer();
-            nextLevelBtn.disabled = false;
-            nextLevelBtn.textContent = `Iniciar dia ${nextLevel}`;
-            nextLevelBtn.classList.remove('is-hidden');
-            if (levelCountdown) {
-              levelCountdown.textContent = 'PrÃƒÂ³ximo dia liberado!';
-            }
-            return;
-          }
-          const { hours, minutes } = formatCountdownTime(remainingMs);
-          nextLevelBtn.disabled = true;
-          if (levelCountdown) {
-            levelCountdown.textContent = `PrÃƒÂ³ximo dia em ${hours} horas e ${minutes} minutos`;
-          }
-        };
-        updateUnlockState();
-        levelUnlockTimer = window.setInterval(updateUnlockState, 60000);
-      } else {
-        nextLevelBtn.disabled = false;
-        nextLevelBtn.classList.remove('is-hidden');
-        if (levelCountdown) {
-          levelCountdown.textContent = 'PrÃƒÂ³ximo dia liberado!';
-        }
+      nextLevelBtn.disabled = false;
+      nextLevelBtn.textContent = `Iniciar dia ${nextLevel}`;
+      nextLevelBtn.classList.remove('is-hidden');
+      if (levelCountdown) {
+        levelCountdown.textContent = '';
       }
     });
   }
@@ -7067,9 +7891,6 @@
     } = options;
     const proceedAfterResults = () => {
       phaseCompleteInProgress = false;
-      if (pendingPhaseCoinAward > 0) {
-        awardPhaseCoins(phase, pendingPhaseCoinAward);
-      }
       pendingPhaseCoinAward = 0;
       clearLiveJourneyStats();
 
@@ -7081,19 +7902,21 @@
         dissolveEnvironment(() => {
           if (returnToHomeAfterSinglePhase) {
             resetJourneyState({ resetLevel: false, clearJourneyProgress: false });
+            if (isCardsLaunch) {
+              window.dispatchEvent(new CustomEvent('playtalk:return-cards'));
+              return;
+            }
             if (document.body && document.body.classList.contains('page-play')) {
               window.dispatchEvent(new CustomEvent('playtalk:return-play'));
               return;
             }
             document.body.classList.add('page-return-to-play');
-            window.setTimeout(() => {
-              try {
-                sessionStorage.removeItem('playtalk-play-launch');
-              } catch (error) {
-                // no-op
-              }
-              window.location.href = '/#play';
-            }, 1000);
+            try {
+              sessionStorage.removeItem('playtalk-play-launch');
+            } catch (error) {
+              // no-op
+            }
+            window.location.href = '/#play';
             return;
           }
           startPhase(restartSinglePhase, { skipIntroAudio: true });
@@ -7147,7 +7970,7 @@
       }
       showPhaseElements();
       clearBoard();
-      showText('Estamos criando essa aula.');
+      showText('Aula nao encontrada');
       return;
     }
     const phaseToStart = isSingleModeSession()
@@ -7209,6 +8032,7 @@
     clearGameContext();
     dayPhaseEntries = new Map();
     dayPhaseMeta = new Map();
+    customPhaseOverrides = new Map();
     dayPhaseSequence = [];
     baseDayPhaseSequence = [];
     hasCustomJourneySequence = false;
@@ -7231,9 +8055,7 @@
     setMicContinuousMode(false);
     setMicPersistentEnabled(false, { force: true });
     if (resetLevel) {
-      level = 1;
-      saveLevelToStorage();
-      updateLevelIndicators();
+      loadLevelFromStorage();
     }
     phase = 1;
     updatePhaseLabel();
@@ -7278,6 +8100,11 @@
       handleStartInteraction();
       return;
     }
+    const readyCompletion = resolveReadyCompletionState();
+    if (readyCompletion) {
+      handleStartInteraction();
+      return;
+    }
     const storedProgress = readProgressStorage();
     if (storedProgress && storedProgress.level) {
       level = storedProgress.level;
@@ -7307,8 +8134,9 @@
         return;
       }
       if (completionState && completionState.completedLevel) {
-        completedLevelSnapshot = completionState.completedLevel;
-        showLevelCompleteOverlay(completionState.completedLevel);
+        setGameStartedState(false);
+        clearGameContext();
+        window.dispatchEvent(new CustomEvent('playtalk:return-home'));
         openPauseOnResume = false;
         return;
       }
@@ -7662,6 +8490,7 @@
     }
     dayPhaseEntries = new Map();
     dayPhaseMeta = new Map();
+    customPhaseOverrides = new Map();
     dayPhaseSequence = [];
     baseDayPhaseSequence = [];
     hasCustomJourneySequence = false;
@@ -7684,9 +8513,7 @@
     setMicContinuousMode(false);
     setMicPersistentEnabled(false, { force: true });
     if (resetLevel) {
-      level = 1;
-      saveLevelToStorage();
-      updateLevelIndicators();
+      loadLevelFromStorage();
     }
     phase = 1;
     updatePhaseLabel();
@@ -7727,7 +8554,7 @@
     journeyRunStats = createEmptyJourneyStats();
     configureFeedbackAudioSources();
     const storedProgress = isSingleModeSession() ? null : readProgressStorage();
-    const completionState = isSingleModeSession() ? null : readCompletionStorage();
+    const completionState = isSingleModeSession() ? null : (resolveReadyCompletionState(), readCompletionStorage());
     const onboardingDone = (() => {
       if (window.playtalkPlayerState && typeof window.playtalkPlayerState.get === 'function') {
         const state = window.playtalkPlayerState.get();
@@ -7742,8 +8569,8 @@
         return false;
       }
     })();
-    const shouldAutoStart = (!deferAutoStart || isPlayLaunch) && (onboardingDone || !isPlayLaunch);
-    if (isPlayLaunch) {
+    const shouldAutoStart = (!deferAutoStart || isExternalSingleLaunch) && (onboardingDone || !isExternalSingleLaunch);
+    if (isExternalSingleLaunch) {
       gameRoot.classList.add('from-play');
       returnToHomeAfterSinglePhase = true;
     }
@@ -7805,7 +8632,7 @@
     }, true);
     if (playingScreen) {
       playingScreen.addEventListener('pointerdown', (event) => {
-        if (event.target && event.target.closest('.playing-action')) return;
+        if (event.target && event.target.closest('.playing-action, #dynamic-bar')) return;
         if (!isGamePaused) return;
         resumeFromPauseOverlay().catch(() => {});
       });
@@ -7827,7 +8654,9 @@
         }
         setGamePaused(true);
         hidePlayingOverlay();
-        if (document.body && document.body.classList.contains('page-play') && isSingleModeSession()) {
+        if (isCardsLaunch) {
+          window.dispatchEvent(new CustomEvent('playtalk:return-cards'));
+        } else if (isPlayLaunch || (document.body && document.body.classList.contains('page-play'))) {
           window.dispatchEvent(new CustomEvent('playtalk:return-play'));
         } else {
           window.dispatchEvent(new CustomEvent('playtalk:return-home'));
@@ -7844,8 +8673,8 @@
     resetLevelState();
     if (shouldAutoStart) {
       loadJourneyData(level).then(() => {
-        if (isPlayLaunch) {
-    setGameStartedState(true);
+        if (isExternalSingleLaunch) {
+          setGameStartedState(true);
           if (startScreen) {
             startScreen.classList.add('start-screen--blank');
             startScreen.classList.add('hidden');
@@ -7894,19 +8723,17 @@
         }
 
         if (completionState && completionState.completedLevel) {
-    setGameStartedState(true);
-          markJourneyStarted();
-          completedLevelSnapshot = completionState.completedLevel;
           if (startScreen) {
-            startScreen.classList.add('start-screen--blank');
-            startScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            startScreen.classList.remove('start-screen--blank');
           }
-          showLevelCompleteOverlay(completionState.completedLevel);
+          setGameStartedState(false);
+          clearGameContext();
         }
       });
 
       if (!storedProgress && !(completionState && completionState.completedLevel)) {
-        if (!isPlayLaunch) {
+        if (!isExternalSingleLaunch) {
           startRotatingText();
         }
       }
@@ -7915,7 +8742,7 @@
       startScreen.classList.add('hidden');
     }
 
-    if (startScreen && !isPlayLaunch && shouldAutoStart) {
+    if (startScreen && !isExternalSingleLaunch && shouldAutoStart) {
       startScreen.addEventListener('click', handleStartInteraction);
       startScreen.addEventListener('touchstart', handleStartInteraction, { passive: true });
       startScreen.addEventListener('pointerdown', handleStartInteraction);
@@ -7924,9 +8751,6 @@
     setupMedalSkipShortcut();
 
     nextLevelBtn.addEventListener('click', () => {
-      if (level === 2 && isLevelTwoLocked()) {
-        return;
-      }
       clearLevelUnlockTimer();
       clearCompletionStorage();
       clearProgressStorage();
@@ -7971,6 +8795,33 @@
     hasSavedJourneyState
   };
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/vocabulary-game.css?v=20260227b">
   <script src="/config.js"></script>
   <script src="js/gamesounds.js"></script>
+  <script src="js/mode-logos.js" defer></script>
   <script src="js/player-state.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/global-radio.js"></script>
@@ -42,58 +43,58 @@
   </header>
 
   <main id="play-container" class="container-screen container-screen--play play-modes-layout" data-page-transition>
-    <section class="play-modes-hub" aria-label="Modos de jogo">
+    <section class="play-modes-hub" id="gamehub" aria-label="Modos de jogo">
       <div class="play-sky-clock" id="clock-top">
         <span id="playSkyClock" class="play-sky-clock__time">00:00</span>
       </div>
       <div class="play-modes-grid-shell">
       <div class="play-modes-icons" id="game-modes">
         <div class="play-mode-item" data-phase="1" role="button" tabindex="0" aria-label="Abrir Planting">
-          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/01.png" alt="">
+          <img data-mode-icon="01" src="SVG/gamehub/planting.svg" alt="">
           <span class="play-mode-item__label">Planting</span>
         </div>
         <div class="play-mode-item" data-phase="2" role="button" tabindex="0" aria-label="Abrir Connecting">
-          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/02.png" alt="">
+          <img data-mode-icon="02" src="SVG/gamehub/connecting.svg" alt="">
           <span class="play-mode-item__label">Connecting</span>
         </div>
         <div class="play-mode-item" data-phase="3" role="button" tabindex="0" aria-label="Abrir Reading">
-          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/03.png" alt="">
+          <img data-mode-icon="03" src="SVG/gamehub/reading.svg" alt="">
           <span class="play-mode-item__label">Reading</span>
         </div>
         <div class="play-mode-item" data-phase="4" role="button" tabindex="0" aria-label="Abrir Sequence">
-          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/04.png" alt="">
+          <img data-mode-icon="04" src="SVG/gamehub/sequence.svg" alt="">
           <span class="play-mode-item__label">Sequence</span>
         </div>
         <div class="play-mode-item" data-phase="5" role="button" tabindex="0" aria-label="Abrir Listening">
-          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/05.png" alt="">
+          <img data-mode-icon="05" src="SVG/gamehub/listening.svg" alt="">
           <span class="play-mode-item__label">Listening</span>
         </div>
         <div class="play-mode-item" data-phase="6" role="button" tabindex="0" aria-label="Abrir Meaning">
-          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/06.png" alt="">
+          <img data-mode-icon="06" src="SVG/gamehub/meaning.svg" alt="">
           <span class="play-mode-item__label">Meaning</span>
         </div>
         <div class="play-mode-item" data-phase="7" role="button" tabindex="0" aria-label="Abrir Memory">
-          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/07.png" alt="">
+          <img data-mode-icon="07" src="SVG/gamehub/memory.svg" alt="">
           <span class="play-mode-item__label">Memory</span>
         </div>
         <div class="play-mode-item" data-phase="8" role="button" tabindex="0" aria-label="Abrir Building">
-          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/08.png" alt="">
+          <img data-mode-icon="08" src="SVG/gamehub/building.svg" alt="">
           <span class="play-mode-item__label">Building</span>
         </div>
         <div class="play-mode-item" data-phase="9" role="button" tabindex="0" aria-label="Abrir Typing">
-          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/09.png" alt="">
+          <img data-mode-icon="09" src="SVG/gamehub/typing.svg" alt="">
           <span class="play-mode-item__label">Typing</span>
         </div>
         <div class="play-mode-item" data-phase="10" role="button" tabindex="0" aria-label="Abrir Blocks">
-          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/10.png" alt="">
+          <img data-mode-icon="10" src="SVG/gamehub/blocks.svg" alt="">
           <span class="play-mode-item__label">Blocks</span>
         </div>
         <div class="play-mode-item" data-phase="11" role="button" tabindex="0" aria-label="Abrir Watching">
-          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/11.png" alt="">
+          <img data-mode-icon="11" src="SVG/gamehub/watching.svg" alt="">
           <span class="play-mode-item__label">Watching</span>
         </div>
         <div class="play-mode-item" data-phase="12" role="button" tabindex="0" aria-label="Abrir Talking">
-          <img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/icones%20novos/12.png" alt="">
+          <img data-mode-icon="12" src="SVG/gamehub/talking.svg" alt="">
           <span class="play-mode-item__label">Talking</span>
         </div>
       </div>
@@ -109,15 +110,15 @@
         </span>
         <span class="sr-only">Jornada da Fluencia</span>
       </a>
-      <a href="#fun" class="nav-item" aria-label="FlashCards" data-nav-index="1">
+      <a href="#options" class="nav-item" aria-label="Opções" data-nav-index="1">
         <span class="nav-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" role="img" focusable="false"><path d="M11 5a1 1 0 0 1 1-1h8v9.6a3.4 3.4 0 1 1-2-3.08V7.22l-6 1.5v7.88a3.4 3.4 0 1 1-2-3.08V5z"/></svg>
+          <svg viewBox="0 0 24 24" role="img" focusable="false"><path d="M19.14 12.94a7.43 7.43 0 0 0 .05-.94 7.43 7.43 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.28 7.28 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.22-1.12.53-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.43 7.43 0 0 0-.05.94c0 .32.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.51.41 1.05.72 1.63.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.58-.22 1.12-.53 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
         </span>
-        <span class="sr-only">FlashCards</span>
+        <span class="sr-only">Opções</span>
       </a>
       <a href="#play" class="nav-item active" aria-label="Modos de Jogo" data-nav-index="2">
         <span class="nav-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" role="img" focusable="false"><path d="M5 21a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5Zm6 0a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-2Zm6 0a1 1 0 0 1-1-1V13a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-2Z"/></svg>
+          <svg viewBox="0 0 24 24" role="img" focusable="false"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10.5-6.86a1 1 0 0 0 0-1.72L9.5 4.28A1 1 0 0 0 8 5.14Z"/></svg>
         </span>
         <span class="sr-only">Modos de Jogo</span>
       </a>
@@ -127,12 +128,20 @@
         </span>
         <span class="sr-only">Perfil</span>
       </a>
-    </nav>
+          <a href="#cards" class="nav-item" aria-label="Cards" data-nav-index="4">
+        <span class="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false"><path d="M12.66 2.58c.2-.77 1.3-.77 1.5 0 .3 1.17 1.04 2.38 2.08 3.42 1.04 1.04 2.25 1.78 3.42 2.08.77.2.77 1.3 0 1.5-1.17.3-2.38 1.04-3.42 2.08-1.04 1.04-1.78 2.25-2.08 3.42-.2.77-1.3.77-1.5 0-.3-1.17-1.04-2.38-2.08-3.42-1.04-1.04-2.25-1.78-3.42-2.08-.77-.2-.77-1.3 0-1.5 1.17-.3 2.38-1.04 3.42-2.08 1.04-1.04 1.78-2.25 2.08-3.42ZM7 14c2.76 0 5 2.24 5 5 0 1.66-.81 3.13-2.06 4.04a.7.7 0 0 1-1.08-.57c0-1.9-1.54-3.44-3.44-3.44a.7.7 0 0 1-.57-1.08A4.97 4.97 0 0 1 7 14Z"/></svg>
+        </span>
+        <span class="sr-only">Cards</span>
+      </a></nav>
   </footer>
 
   <script src="js/play-modes-page.js"></script>
 </body>
 </html>
+
+
+
 
 
 

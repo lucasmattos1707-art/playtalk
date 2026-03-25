@@ -1,4 +1,4 @@
-(function() {
+﻿(function() {
   const SETTINGS_STORAGE_KEY = 'playtalkSettings';
   const SUPPORTED_LENS_KEYS = ['1', '2', '3', '4', '5', '6', 'home', 'game', 'menus', 'profile', 'stats'];
   const DEFAULT_SETTINGS = {
@@ -299,34 +299,15 @@
     return container;
   }
 
-  function applyGameBackground({ gameBackgroundType, gameBackgroundData } = {}) {
+  function applyGameBackground() {
     const body = document.body;
     if (!body) return;
-    const type = typeof gameBackgroundType === 'string' ? gameBackgroundType : '';
-    const data = typeof gameBackgroundData === 'string' ? gameBackgroundData : '';
-    const hasBackground = Boolean(type && data);
-    body.classList.toggle('has-game-background', hasBackground);
+    body.classList.remove('has-game-background');
 
     const container = ensureGameBackgroundContainer();
     container.innerHTML = '';
-    if (!hasBackground) {
-      container.style.removeProperty('background-image');
-      return;
-    }
-    if (type === 'image') {
-      container.style.backgroundImage = `url('${data}')`;
-      return;
-    }
-    if (type === 'video') {
-      const video = document.createElement('video');
-      video.className = 'game-background__video';
-      video.src = data;
-      video.autoplay = true;
-      video.loop = true;
-      video.muted = true;
-      video.playsInline = true;
-      container.appendChild(video);
-    }
+    container.style.removeProperty('background-image');
+    container.style.background = '#ffffff';
   }
 
   function applyContextLensColors(lensColors = {}, fallbackColor = '') {
@@ -379,7 +360,7 @@
   function handleThemeSync(event) {
     const key = event && (event.key || (event.detail && event.detail.key));
     if (!key || key === SETTINGS_STORAGE_KEY) {
-      requestAnimationFrame(applyStoredTheme);
+      applyStoredTheme();
     }
   }
 
@@ -487,3 +468,8 @@
     }
   };
 })();
+
+
+
+
+

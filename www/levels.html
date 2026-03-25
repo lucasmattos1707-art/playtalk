@@ -1,1714 +1,492 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PlayTalk | Níveis</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <title>PlayTalk | Levels</title>
+  <script src="/config.js"></script>
   <style>
-    :root {
-      --bg: #0c1222;
-      --card: #121a2e;
-      --accent: #3f8cff;
-      --accent-soft: #2a3a5c;
-      --text: #e7ecf5;
-      --muted: #9eafc7;
-      --border: #1f2a44;
-      --success: #2dc98a;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: radial-gradient(circle at 20% 20%, rgba(63, 140, 255, 0.16), transparent 30%),
-                  radial-gradient(circle at 80% 0%, rgba(119, 77, 255, 0.12), transparent 30%),
-                  var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
-
-    .page {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 32px 20px 64px;
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-
-    header h1 {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-
-    header p {
-      margin: 4px 0 0;
-      color: var(--muted);
-      font-size: 15px;
-    }
-
-    .pill {
-      background: var(--accent-soft);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 999px;
-      padding: 8px 14px;
-      font-weight: 600;
-      font-size: 13px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .controls {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
-      flex-wrap: wrap;
-    }
-
-    .controls button {
-      border: 1px solid var(--border);
-      background: var(--accent-soft);
-      color: var(--text);
-      padding: 10px 12px;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 14px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      transition: transform 0.1s ease, box-shadow 0.2s ease;
-    }
-
-    .controls button:hover { box-shadow: 0 10px 30px rgba(63, 140, 255, 0.22); }
-    .controls button:active { transform: translateY(1px); }
-
-    .paste-panel {
-      display: none;
-      margin-top: 12px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
-      gap: 12px;
-      flex-direction: column;
-    }
-
-    .paste-panel.is-open { display: flex; }
-
-    .paste-panel textarea {
-      width: 100%;
-      min-height: 140px;
-      resize: vertical;
-      background: #0f1526;
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-      font-size: 14px;
-      font-family: inherit;
-    }
-
-    .paste-panel__actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-    }
-
-    .paste-panel__actions button {
-      border: 1px solid var(--border);
-      background: var(--accent-soft);
-      color: var(--text);
-      padding: 10px 12px;
-      border-radius: 10px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    main { margin-top: 20px; }
-
-    .image-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 16px;
-    }
-
-    .image-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px 14px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      align-items: center;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
-      position: relative;
-      overflow: hidden;
-      min-height: 220px;
-    }
-
-    .level-badge {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(63, 140, 255, 0.14);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 6px 10px;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 12px;
-    }
-
-    .image-card img, .image-placeholder {
-      width: 140px;
-      height: 140px;
-      object-fit: cover;
-      display: block;
-      border-radius: 50%;
-      background: #0f1526;
-      border: 1px dashed var(--border);
-      cursor: pointer;
-      overflow: hidden;
-    }
-
-    .image-visual {
-      position: relative;
-      width: 160px;
-      height: 160px;
-      display: grid;
-      place-items: center;
-      --tense-ring: none;
-      --tense-animation: none;
-      --tense-glow: none;
-      --tense-filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.25));
-      --tense-mask: none;
-      --tense-lens: none;
-    }
-
-    .image-visual--audio {
-      --audio-progress: 0deg;
-      --audio-start: #f78c1f;
-      --audio-end: #2dc98a;
-      padding: 10px;
-      border-radius: 50%;
-      background: conic-gradient(
-        var(--audio-end) 0deg,
-        var(--audio-end) var(--audio-progress),
-        var(--audio-start) var(--audio-progress),
-        var(--audio-start) 360deg
-      );
-      transition: background 0.18s ease, box-shadow 0.2s ease;
-      cursor: pointer;
-    }
-
-    .image-visual--audio .audio-backdrop {
-      position: absolute;
-      inset: 6px;
-      border-radius: 50%;
-      background: rgba(15, 21, 38, 0.85);
-      z-index: 0;
-    }
-
-    .image-ring,
-    .image-lens {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      pointer-events: none;
-    }
-
-    .image-ring {
-      background: var(--ring-gradient, none);
-      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-width, 12px)), #000 calc(100% - var(--ring-width, 12px)));
-      mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-width, 12px)), #000 calc(100% - var(--ring-width, 12px)));
-      animation: var(--ring-animation, none);
-      box-shadow: var(--ring-glow, none);
-      z-index: 1;
-    }
-
-    .image-ring--tense {
-      --ring-gradient: var(--tense-ring);
-      --ring-animation: var(--tense-animation);
-      --ring-glow: var(--tense-glow);
-      --ring-width: 15px;
-    }
-
-    .image-ring--form {
-      display: none;
-    }
-
-    .image-lens--tense { background: var(--tense-lens, none); }
-    .image-lens {
-      inset: 10px;
-      z-index: 4;
-    }
-
-    .image-visual--audio img,
-    .image-visual--audio .image-placeholder {
-      position: relative;
-      z-index: 3;
-      border: none;
-    }
-
-    .image-visual img {
-      filter: var(--tense-filter);
-      -webkit-mask-image: var(--tense-mask);
-      mask-image: var(--tense-mask);
-    }
-
-    .image-visual .image-placeholder {
-      filter: var(--tense-filter);
-    }
-
-    .image-visual--audio:hover {
-      box-shadow: 0 0 0 2px rgba(247, 140, 31, 0.35);
-    }
-
-    .image-visual--audio.is-playing {
-      box-shadow: 0 0 0 2px rgba(45, 201, 138, 0.35);
-    }
-
-    .image-placeholder {
-      display: grid;
-      place-items: center;
-      color: var(--muted);
-      font-size: 12px;
-      text-align: center;
-      padding: 8px;
-    }
-
-    .label-btn {
-      width: 100%;
-      border: 1px solid var(--border);
-      background: var(--accent-soft);
-      color: var(--text);
-      padding: 10px 12px;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-      text-transform: none;
-      text-align: center;
-    }
-
-    .label-btn--pt { background: linear-gradient(90deg, rgba(63, 140, 255, 0.4), rgba(63, 140, 255, 0.2)); }
-    .label-btn--en { background: #0f1526; color: var(--muted); }
-    .label-btn--folder { background: #0f1526; color: var(--text); border-style: dashed; }
-
-    .hint { color: var(--muted); font-size: 13px; margin-top: 4px; }
-
-    .selectors {
-      width: 100%;
-      display: grid;
-      gap: 8px;
-    }
-
-    .selectors label {
-      font-size: 12px;
-      color: var(--muted);
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .selectors select {
-      background: #0f1526;
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 8px 10px;
-      font-weight: 600;
-      font-size: 13px;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    @keyframes spin-slow {
-      to { transform: rotate(360deg); }
-    }
-
-    @keyframes spin-partial {
-      0% { transform: rotate(0deg); }
-      80% { transform: rotate(270deg); }
-      100% { transform: rotate(270deg); }
-    }
-
-    @keyframes swing {
-      0% { transform: rotate(-90deg); }
-      50% { transform: rotate(90deg); }
-      100% { transform: rotate(-90deg); }
-    }
-
-    .loading { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 15px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; animation: pulse 1.1s ease-in-out infinite; }
-    .dot:nth-child(2) { animation-delay: 0.15s; }
-    .dot:nth-child(3) { animation-delay: 0.3s; }
-    @keyframes pulse { 0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
-
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.55);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      z-index: 10;
-    }
-
-    .modal {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      max-width: 420px;
-      width: 100%;
-      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.28);
-    }
-
-    .modal h3 { margin: 0 0 10px; }
-    .modal p { margin: 0 0 12px; color: var(--muted); }
-
-    .modal .field { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
-    .modal select { flex: 1; background: #0f1526; color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
-    .modal .actions { display: flex; gap: 8px; justify-content: flex-end; }
-    .modal button { border: 1px solid var(--border); background: var(--accent-soft); color: var(--text); padding: 10px 12px; border-radius: 10px; font-weight: 700; cursor: pointer; }
-
-    .controls__level-filter {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-left: auto;
-    }
-
-    .controls__level-filter label { color: var(--muted); font-size: 14px; }
-
-    .controls__level-filter select {
-      background: #0f1526;
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 8px 10px;
-      font-weight: 600;
-    }
-
-    .controls__select-all {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: #0f1526;
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .controls__select-all input {
-      width: 16px;
-      height: 16px;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
-
-    .image-card.is-selected {
-      border-color: rgba(63, 140, 255, 0.65);
-      box-shadow: 0 0 0 2px rgba(63, 140, 255, 0.25);
-    }
-
-    .selection-checkbox {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 16px;
-      height: 16px;
-      accent-color: var(--accent);
-      cursor: pointer;
-      z-index: 2;
-    }
-
-    .empty-state { margin-top: 24px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 12px; padding: 18px; display: none; }
+    body{margin:0;font-family:Arial,sans-serif;background:#f4ead7;color:#241d18}button,input,select,textarea{font:inherit}
+    .page{max-width:1100px;margin:0 auto;padding:24px 16px 48px}.box,.card{background:#fff9ef;border:1px solid #dbcdb9;border-radius:16px}
+    .box{padding:14px;margin-bottom:16px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+    button{cursor:pointer;border:1px solid #dbcdb9;background:#fff;border-radius:12px;padding:10px 12px}.mode,.accent{color:#fff;font-weight:700}.mode{background:#c85732;border-color:#c85732}.accent{background:#ef8f1a;border-color:#ef8f1a}.tts-btn{background:linear-gradient(135deg,#7d36ff,#5a1fd1);border-color:#5a1fd1;color:#fff;font-weight:700}.eleven-btn{background:linear-gradient(135deg,#050505,#6b6b6b);border-color:#050505;color:#fff;font-weight:700}.r2-btn{background:linear-gradient(135deg,#1b7cff,#16b86a);border-color:#1777d8;color:#fff;font-weight:700;display:inline-flex;align-items:center;gap:8px}.r2-btn svg{width:16px;height:16px;fill:currentColor}
+    .toolbar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;align-items:start}
+    .toolbar .mode{min-height:72px}
+    .icon-btn{display:grid;place-items:center;width:100%;min-height:72px;padding:10px;background:#fff}
+    .icon-btn img{display:block;width:100%;max-width:120px;height:44px;object-fit:contain}
+    .icon-btn[disabled]{opacity:.45;cursor:not-allowed;filter:grayscale(1)}
+    @media (max-width:960px){.toolbar{grid-template-columns:repeat(5,minmax(0,1fr))}}
+    @media (max-width:700px){.toolbar{grid-template-columns:repeat(4,minmax(0,1fr))}.icon-btn img{max-width:92px;height:38px}}
+    @media (max-width:520px){.toolbar{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    .hidden{display:none!important}.muted,.mini{color:#73675a}.mini{font-size:12px}.field{display:flex;flex-direction:column;gap:6px;min-width:180px}.field input,.field textarea,.field select{padding:10px 12px;border:1px solid #dbcdb9;border-radius:12px;background:#fff}
+    .card{padding:12px;display:flex;flex-direction:column;gap:10px}.visual,.charpic{border:1px dashed #dbcdb9;background:#efe2cd center/cover no-repeat;display:grid;place-items:center;color:#73675a}
+    .visual{width:126px;height:126px;border-radius:999px;padding:12px;margin:0 auto}.visual.has-image{border-style:solid}.charpic{width:70px;height:70px;border-radius:16px}.textbtn{text-align:left;min-height:56px}.textbtn small{display:block;text-transform:uppercase;color:#73675a;font-weight:700;margin-bottom:6px}
+    .audio{display:flex;gap:10px;align-items:center}.audio button{width:56px;height:56px;padding:0;display:grid;place-items:center}.audio img{width:28px;height:28px;filter:grayscale(1) brightness(1.2)}.audio .has img{filter:none}.audio.voice-target button{background:linear-gradient(135deg,#8f53ff,#6427db);border-color:#6427db}.audio.voice-target img{filter:brightness(0) invert(1)}.audio button.ready{background:linear-gradient(135deg,#41c26e,#1f6b3e);border-color:#1f6b3e}.audio button.ready img{filter:brightness(0) invert(1)}
+    .char{background:#fff;border:1px solid #dbcdb9;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
+    .popover{position:fixed;inset:0;background:rgba(36,29,24,.28);display:grid;place-items:center;padding:20px;z-index:50}.popover-card{width:min(420px,100%);background:#fff9ef;border:1px solid #dbcdb9;border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:14px}
+    .popover-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.media-btn{position:relative;min-height:112px;padding:14px 12px 12px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:6px;border-radius:20px;text-align:left;overflow:hidden}
+    .media-btn.active{border-color:#ef8f1a;box-shadow:0 0 0 3px rgba(239,143,26,.18)}.media-btn strong{font-size:17px}.media-btn span{font-size:12px;color:#73675a}.icon-swap{position:absolute;top:14px;right:14px;width:40px;height:40px}
+    .icon-swap img{position:absolute;inset:0;width:40px;height:40px;animation:swapPulse 1s steps(1,end) infinite}.icon-swap img:last-child{animation-delay:.5s}@keyframes swapPulse{0%,49.9%{opacity:1}50%,100%{opacity:0}}
+    .characters-panel__toggle{display:flex;align-items:center;justify-content:space-between;width:100%;background:transparent;border:none;padding:0;text-align:left}
+    .characters-panel__toggle strong{font-size:20px}
+    .characters-panel__caret{font-size:18px;color:#73675a}
+    .story-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+    .story-picker__card{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;border:1px solid #dbcdb9;border-radius:16px;background:#fff;cursor:pointer}
+    .story-picker__card.is-selected{border-color:#c85732;box-shadow:0 0 0 3px rgba(200,87,50,.14)}
+    .story-picker__thumb{width:72px;height:72px;border-radius:18px;background:#efe2cd center/cover no-repeat}
+    .story-picker__name{font-size:12px;font-weight:700;text-align:center}
+    .story-selected{display:grid;gap:10px;margin-top:12px}
+    .story-characters{display:grid;gap:10px}
+    .story-character{display:grid;gap:8px;padding:10px 12px;border:1px solid #dbcdb9;border-radius:14px;background:#fff}
+    .story-character__top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .story-character__toggle{display:flex;align-items:center;gap:10px;font-weight:700}
+    .story-character__toggle input{width:18px;height:18px}
+    .story-character__range{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+    .story-character__range input[type="range"]{width:100%}
+    .story-character__value{font-weight:700;color:#c85732;min-width:48px;text-align:right}
+    .story-character__bar{height:8px;border-radius:999px;background:#eadfce;overflow:hidden}
+    .story-character__fill{height:100%;background:linear-gradient(90deg,#ef8f1a,#c85732);border-radius:inherit}
+    .watch-popover-card{width:min(520px,100%)}
+    .watch-options{display:grid;gap:12px}
+    .watch-options .field{min-width:0}
+    .watch-view{position:fixed;inset:0;z-index:70;background:linear-gradient(180deg,#0d1f4a,#09142d 58%,#050b18);color:#fff;padding:24px 18px;display:flex;flex-direction:column}
+    .watch-view.hidden{display:none!important}
+    .watch-view__top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+    .watch-view__close{min-width:48px;min-height:48px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;font-size:28px;line-height:1}
+    .watch-view__meta{display:grid;gap:6px}
+    .watch-view__meta h2{margin:0;font-size:clamp(24px,5vw,36px)}
+    .watch-view__status{color:rgba(255,255,255,.76);font-size:14px}
+    .watch-stage{flex:1;display:grid;place-items:center}
+    .watch-card{width:min(720px,100%);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:22px;backdrop-filter:blur(14px);box-shadow:0 22px 60px rgba(0,0,0,.28);display:grid;gap:18px}
+    .watch-card__image{width:min(100%,420px);aspect-ratio:1/1;margin:0 auto;border-radius:30px;background:#102654 center/cover no-repeat;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+    .watch-card__body{display:grid;gap:10px;text-align:center}
+    .watch-card__deck{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+    .watch-card__pt{font-size:clamp(26px,5vw,44px);font-weight:700}
+    .watch-card__en{font-size:clamp(18px,3.6vw,28px);color:#bfd8ff}
+    .watch-card__hint{font-size:14px;color:rgba(255,255,255,.72)}
+    .watch-view__actions{display:flex;justify-content:center;margin-top:18px}
+    .watch-stop{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#fff;padding:14px 20px;border-radius:16px;font-weight:700}
+    @media (max-width:640px){.watch-view{padding:18px 14px}.watch-card{padding:18px;border-radius:24px}.watch-card__image{border-radius:24px}.watch-view__top{margin-bottom:12px}}
   </style>
 </head>
 <body>
   <div class="page">
-    <header>
-      <div>
-        <h1>Edição de níveis pessoais</h1>
-        <p>Suas alterações ficam apenas no seu navegador (localStorage).</p>
-      </div>
-      <div class="pill" id="loading-indicator">
-        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-        <span>Carregando</span>
-      </div>
-    </header>
-
-    <div class="controls">
-      <button id="new-grid-btn">Nova grade</button>
-      <button id="upload-btn">Upload de imagens</button>
-      <button id="refresh-server-btn">Atualizar servidor</button>
-      <button id="paste-text-btn" type="button">Colar texto</button>
-      <label class="controls__select-all" for="select-all">
-        <input type="checkbox" id="select-all" />
-        Selecionar tudo
-      </label>
-      <div class="controls__level-filter">
-        <label for="source-select">Fonte</label>
-        <select id="source-select">
-          <option value="images">images.json</option>
-          <option value="building">building.json</option>
-        </select>
-      </div>
-      <button id="export-json-btn">Exportar JSON</button>
-      <button id="set-image-base-url-btn" type="button">Adicionar link de imagens</button>
-      <button id="set-audio-base-url-btn" type="button">Adicionar link de áudio</button>
-      <button id="export-images-btn">Exportar imagens</button>
-      <button id="export-audio-btn">Exportar áudios</button>
-      <button id="remove-audio-btn">Remover MP3</button>
-      <div class="controls__level-filter">
-        <label for="level-filter">Nível</label>
-        <select id="level-filter"></select>
-      </div>
-      <span class="hint">Dê dois toques para editar textos/imagens. Clique para ouvir ou adicionar um áudio.</span>
+    <div class="row" style="justify-content:space-between;margin-bottom:16px">
+      <div><h1 style="margin:0">Levels Studio</h1><div class="muted">FlashCard, Filmes (fase11) e Cenas (fase12).</div></div>
+      <div class="box" id="status">Modo atual: FlashCard</div>
     </div>
-    <div class="paste-panel" id="paste-panel" aria-hidden="true">
-      <label for="paste-textarea" class="hint">Cole o texto abaixo (uma linha por campo: português, inglês, folder).</label>
-      <textarea id="paste-textarea" placeholder="Português&#10;Inglês&#10;Folder&#10;Português&#10;Inglês&#10;Folder"></textarea>
-      <div class="paste-panel__actions">
-        <button id="paste-apply-btn" type="button">Preencher campos</button>
+    <div class="box toolbar">
+      <button id="modeBtn" class="mode" type="button">FlashCard</button>
+      <button id="newBtn" class="icon-btn" type="button" aria-label="Nova grade" title="Nova grade"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/Nova%20grade.svg" alt=""></button>
+      <button id="addBtn" class="icon-btn eleven-btn" type="button" aria-label="ElevenLabs" title="ElevenLabs"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/gerar%20eleven%20labs.svg" alt=""></button>
+      <button id="uploadBtn" class="icon-btn" type="button" aria-label="Upload de imagens" title="Upload de imagens"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/upload%20de%20imagens.svg" alt=""></button>
+      <button id="pasteBtn" class="icon-btn" type="button" aria-label="Colar texto" title="Colar texto"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/colar%20texto.svg" alt=""></button>
+      <button id="voiceModeBtn" class="icon-btn tts-btn" type="button" aria-label="Gerar voz" title="Gerar voz"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/gerar%20eleven%20labs.svg" alt=""></button>
+      <button id="aiImageBtn" class="icon-btn" type="button" aria-label="Gerar imagens IA" title="Gerar imagens IA"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/Gerar%20imagens%20IA.svg" alt=""></button>
+      <button id="translateBtn" class="icon-btn" type="button" aria-label="Traduzir PT para EN" title="Traduzir PT para EN"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/traduzir.svg" alt=""></button>
+      <button id="aiTextBtn" class="icon-btn" type="button" aria-label="Gerar frases IA" title="Gerar frases IA"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/gerar%20texto%20ia.svg" alt=""></button>
+      <button id="importJsonBtn" class="icon-btn" type="button" aria-label="Importar JSON" title="Importar JSON"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/importar%20json.svg" alt=""></button>
+      <button id="exportBtn" class="icon-btn" type="button" aria-label="Exportar JSON" title="Exportar JSON"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/exportar%20json.svg" alt=""></button>
+      <button id="exportZipBtn" class="icon-btn" type="button" aria-label="Exportar ZIP" title="Exportar ZIP"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/exportar%20zip.svg" alt=""></button>
+      <button id="uploadR2Btn" class="icon-btn r2-btn" type="button" aria-label="Enviar R2" title="Enviar R2"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/enviar%20r2.svg" alt=""></button>
+      <button id="testOnlineBtn" class="icon-btn" type="button" aria-label="Testar online" title="Testar online" disabled><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/testar%20online.svg" alt=""></button>
+      <button id="watchFlashcardsBtn" class="icon-btn accent flashcardOnly" type="button" aria-label="Assistir flashcards" title="Assistir flashcards">Assistir flashcards</button>
+      <span class="muted" id="hint" style="grid-column:1 / -1">Clique no botao de modo para alternar entre FlashCard, Filmes e Cenas.</span>
+    </div>
+    <div class="box">
+      <div class="row">
+        <div class="field"><label for="dayInput">Dia</label><input id="dayInput" type="number" min="1" max="200" value="1"></div>
+        <div class="field"><label for="titleInput">Titulo</label><input id="titleInput" type="text"></div>
+        <div class="field movieOnly hidden"><label for="levelInput">Level</label><input id="levelInput" type="text"></div>
+        <div class="field flashcardOnly hidden"><label for="flashcardCoverUrlInput">Link publico da capa</label><input id="flashcardCoverUrlInput" type="url" placeholder="https://..."></div>
+      </div>
+      <div class="row movieOnly hidden" id="movieTop" style="margin-top:10px">
+        <button id="coverBtn" type="button">Enviar capa</button>
+        <button id="soundBtn" type="button">Enviar trilha MP3</button>
+        <button id="clearCoverBtn" type="button">Remover capa</button>
+        <button id="clearSoundBtn" type="button">Remover trilha</button>
+      </div>
+      <div class="box" id="preview" style="margin:12px 0 0;background:#ebe1cd;color:#fff">
+        <div class="mini" id="previewMode" style="color:#f4ece2">FlashCard</div>
+        <h2 id="previewTitle" style="margin:8px 0 0">Biblioteca FlashCard</h2>
+        <div id="previewMeta">Dia 1</div>
       </div>
     </div>
-
-    <main>
-      <div id="image-grid" class="image-grid"></div>
-      <div id="empty-state" class="empty-state">Nenhuma imagem encontrada para este nível.</div>
-    </main>
+    <div class="box hidden" id="charactersWrap">
+      <button id="charactersToggleBtn" class="characters-panel__toggle" type="button" aria-expanded="false">
+        <span><strong>Personagens</strong><div class="mini">Elenco fixo das Cenas com 9 vozes oficiais.</div></span>
+        <span id="charactersToggleCaret" class="characters-panel__caret">+</span>
+      </button>
+      <div id="charactersPanelBody" class="hidden">
+        <div class="grid" id="characters" style="margin-top:12px"></div>
+      </div>
+    </div>
+    <div class="box hidden" id="pasteWrap">
+      <div class="mini" id="pasteHelp">FlashCard usa 3 linhas por item: portugues, ingles e categoria. Filmes usa 2 linhas. Cenas aceita 2 linhas por fala ou atalho como #1, portugues, ingles.</div>
+      <div class="field" style="margin-top:10px"><label for="pasteArea">Texto colado</label><textarea id="pasteArea" rows="6"></textarea></div>
+      <div class="row" style="margin-top:10px"><button id="applyPasteBtn" type="button">Preencher cards</button></div>
+    </div>
+    <div class="grid" id="items"></div>
+    <div class="box" style="margin-top:18px;text-align:center"><button id="startGameBtn" type="button" style="background:#2f8f6b;color:#fff;border-color:#2f8f6b;padding:16px 28px;font-size:22px;font-weight:700;border-radius:18px;min-width:260px">iniciar jogo</button></div>
   </div>
-
-  <div class="modal-backdrop" id="image-modal">
-    <div class="modal">
-      <h3>Gerenciar imagem</h3>
-      <p>Envie um arquivo novo ou mova a imagem para outro nível.</p>
-      <div class="field">
-        <label for="move-select">Mover para o nível</label>
-        <select id="move-select"></select>
+  <input id="batchImageInput" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml" multiple hidden>
+  <input id="singleImageInput" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml" hidden>
+  <input id="audioInput" type="file" accept="audio/mpeg,audio/mp3,audio/ogg,audio/opus,audio/webm,audio/wav" hidden>
+  <input id="audioBatchInput" type="file" accept="audio/mpeg,audio/mp3,audio/ogg,audio/opus,audio/webm,audio/wav" multiple hidden>
+  <input id="jsonInput" type="file" accept="application/json,.json" hidden>
+  <div id="audioPopover" class="popover hidden" aria-hidden="true">
+    <div class="popover-card" role="dialog" aria-modal="true">
+      <div><div class="mini">Importacao de MP3</div><h2 id="audioPopoverTitle" style="margin:6px 0 0">Preencher slots vazios de audio</h2></div>
+      <div class="popover-actions">
+        <button id="audioPtBtn" class="media-btn" type="button"><div class="icon-swap" aria-hidden="true"><img src="../arquivos-codex/icones/portugues.svg" alt=""><img src="../arquivos-codex/icones/ingles.svg" alt=""></div><strong>Portugues</strong><span>Importa varios MP3 so nos campos PT vazios.</span></button>
+        <button id="audioEnBtn" class="media-btn" type="button"><div class="icon-swap" aria-hidden="true"><img src="../arquivos-codex/icones/ingles.svg" alt=""><img src="../arquivos-codex/icones/portugues.svg" alt=""></div><strong>English</strong><span>Importa varios MP3 so nos campos EN vazios.</span></button>
       </div>
-      <div class="actions" style="justify-content: space-between;">
-        <div>
-          <label for="change-image-input" class="label-btn" style="padding: 8px 12px; display: inline-flex; align-items: center; gap: 8px;">Enviar arquivo</label>
-          <input id="change-image-input" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml" style="display:none" />
+      <div class="row" style="justify-content:space-between"><button id="audioPopoverCloseBtn" type="button">Fechar</button><button id="audioBatchConfirmBtn" class="accent" type="button">Selecionar MP3</button></div>
+      <div class="mini" id="audioPopoverHint">Voce pode ativar um lado ou os dois. Quando os dois estiverem ativos, a ordem segue PT e EN por item, pulando os slots ja preenchidos.</div>
+    </div>
+  </div>
+  <div id="textPopover" class="popover hidden" aria-hidden="true">
+    <div class="popover-card" role="dialog" aria-modal="true">
+      <div><div class="mini" id="textPopoverEyebrow">FlashCard com IA</div><h2 id="textPopoverHeading" style="margin:6px 0 0">Gerar frases PT + EN</h2></div>
+      <div id="flashcardTextFields">
+        <div class="field"><label for="textTopicInput">Tipo de frases / contexto</label><textarea id="textTopicInput" rows="4" placeholder="Ex.: rotina de casa no present simple, frases curtas e naturais para criancas."></textarea></div>
+        <div class="row">
+          <div class="field"><label for="textMinCharsInput">Min caracteres</label><input id="textMinCharsInput" type="number" min="1" max="300" value="12"></div>
+          <div class="field"><label for="textMaxCharsInput">Max caracteres</label><input id="textMaxCharsInput" type="number" min="1" max="300" value="36"></div>
+          <div class="field"><label for="textCountInput">Qtd frases</label><input id="textCountInput" type="number" min="1" max="24" value="8"></div>
         </div>
-        <div class="actions">
-          <button id="remove-image-btn">Remover foto</button>
-          <button id="copy-image-btn">Mover</button>
-          <button id="close-modal-btn">Fechar</button>
+        <div class="mini">Cada item gerado vai preencher os campos Portugues e English dos cards FlashCard.</div>
+      </div>
+      <div id="movieTextFields" class="hidden">
+        <div class="field"><label for="movieStoryTopicInput">Filme / contexto</label><textarea id="movieStoryTopicInput" rows="4" placeholder="Ex.: passeio em Paris, misterio em um trem, encontro em familia, viagem leve e emocionante."></textarea></div>
+        <div class="row">
+          <div class="field"><label for="movieStoryCountInput">Qtd containers</label><input id="movieStoryCountInput" type="number" min="1" max="60" value="8"></div>
+          <div class="field"><label for="movieStoryMinCharsInput">Min caracteres</label><input id="movieStoryMinCharsInput" type="number" min="1" max="300" value="18"></div>
+          <div class="field"><label for="movieStoryMaxCharsInput">Max caracteres</label><input id="movieStoryMaxCharsInput" type="number" min="1" max="300" value="80"></div>
+        </div>
+        <div class="mini">A IA cria titulo, frases fluidas e descricoes visuais curtas para o DALL-E gerar as cenas em grade 2x2.</div>
+      </div>
+      <div id="sceneTextFields" class="hidden">
+        <div class="field"><label for="sceneStoryTopicInput">Historia / contexto</label><textarea id="sceneStoryTopicInput" rows="4" placeholder="Ex.: recreio na escola, misterio leve no parque, viagem em familia, conversa divertida na cozinha."></textarea></div>
+        <div class="row">
+          <div class="field"><label for="sceneStoryLineCountInput">Qtd falas</label><input id="sceneStoryLineCountInput" type="number" min="1" max="80" value="8"></div>
+          <div class="field"><label for="sceneStoryMinCharsInput">Min caracteres</label><input id="sceneStoryMinCharsInput" type="number" min="1" max="300" value="18"></div>
+          <div class="field"><label for="sceneStoryMaxCharsInput">Max caracteres</label><input id="sceneStoryMaxCharsInput" type="number" min="1" max="300" value="80"></div>
+        </div>
+        <div class="mini">Escolha ate 4 personagens. Ao tocar, abrimos a configuracao dele logo abaixo.</div>
+        <div class="story-picker" id="sceneStoryPicker"></div>
+        <div class="mini" id="sceneStoryCountHint">A historia vai criar automaticamente os containers necessarios.</div>
+        <div class="story-selected">
+          <div class="story-characters" id="sceneStoryCharacters"></div>
+        </div>
+      </div>
+      <div class="row" style="justify-content:space-between"><button id="textPopoverCloseBtn" type="button">Fechar</button><button id="textGenerateBtn" class="accent" type="button">Gerar agora</button></div>
+    </div>
+  </div>
+  <div id="watchPopover" class="popover hidden" aria-hidden="true">
+    <div class="popover-card watch-popover-card" role="dialog" aria-modal="true">
+      <div><div class="mini">Assistir flashcards</div><h2 style="margin:6px 0 0">Como quer ouvir?</h2></div>
+      <div class="watch-options">
+        <div class="field">
+          <label for="watchGapSelect">Espaco de repeticao</label>
+          <select id="watchGapSelect">
+            <option value="3000">3 segundos</option>
+            <option value="5000">5 segundos</option>
+            <option value="10000">10 segundos</option>
+            <option value="30000">30 segundos</option>
+            <option value="60000">1 minuto</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="watchScopeSelect">Assistir</label>
+          <select id="watchScopeSelect">
+            <option value="mine">Meus flashcards</option>
+            <option value="all">Todos os flashcards</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="watchMusicSelect">Trilhas</label>
+          <select id="watchMusicSelect">
+            <option value="off">Off</option>
+            <option value="on">On</option>
+          </select>
+        </div>
+      </div>
+      <div class="mini">O audio toca primeiro em 0.75x, espera 3 segundos, toca em 1.00x e depois aguarda o intervalo escolhido antes do proximo card aleatorio.</div>
+      <div class="row" style="justify-content:space-between"><button id="watchPopoverCloseBtn" type="button">Fechar</button><button id="watchStartBtn" class="accent" type="button">Comecar</button></div>
+    </div>
+  </div>
+  <div id="watchView" class="watch-view hidden" aria-hidden="true">
+    <div class="watch-view__top">
+      <div class="watch-view__meta">
+        <div class="mini" id="watchDeckLabel" style="color:rgba(255,255,255,.72)">Flashcards</div>
+        <h2 id="watchPrimaryText">Pronto para ouvir</h2>
+        <div class="watch-view__status" id="watchStatusText">Escolha as opcoes e comece.</div>
+      </div>
+      <button id="watchCloseBtn" class="watch-view__close" type="button" aria-label="Fechar">×</button>
+    </div>
+    <div class="watch-stage">
+      <div class="watch-card">
+        <div id="watchCardImage" class="watch-card__image"></div>
+        <div class="watch-card__body">
+          <div id="watchCardDeck" class="watch-card__deck">Deck atual</div>
+          <div id="watchCardPt" class="watch-card__pt">Português</div>
+          <div id="watchCardEn" class="watch-card__en">English</div>
+          <div id="watchCardHint" class="watch-card__hint">A reproducao segue em ordem aleatoria continua.</div>
         </div>
       </div>
     </div>
+    <div class="watch-view__actions">
+      <button id="watchStopBtn" class="watch-stop" type="button">Parar reproducao</button>
+    </div>
   </div>
-
-  <input id="upload-input" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml" multiple style="display:none" />
-  <input id="audio-upload-input" type="file" accept="audio/mpeg,audio/mp3,audio/ogg,audio/opus,audio/webm,audio/wav" style="display:none" />
-
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script>
-    const STORAGE_KEY = 'playtalk-levels-editor-v1';
-    const MAX_LEVELS = 100;
-    const grid = document.getElementById('image-grid');
-    const emptyState = document.getElementById('empty-state');
-    const loadingIndicator = document.getElementById('loading-indicator');
-    const uploadInput = document.getElementById('upload-input');
-    const changeImageInput = document.getElementById('change-image-input');
-    const audioUploadInput = document.getElementById('audio-upload-input');
-    const newGridBtn = document.getElementById('new-grid-btn');
-    const pasteTextBtn = document.getElementById('paste-text-btn');
-    const pastePanel = document.getElementById('paste-panel');
-    const pasteTextarea = document.getElementById('paste-textarea');
-    const pasteApplyBtn = document.getElementById('paste-apply-btn');
-    const uploadBtn = document.getElementById('upload-btn');
-    const refreshServerBtn = document.getElementById('refresh-server-btn');
-    const sourceSelect = document.getElementById('source-select');
-    const exportJsonBtn = document.getElementById('export-json-btn');
-    const setImageBaseUrlBtn = document.getElementById('set-image-base-url-btn');
-    const setAudioBaseUrlBtn = document.getElementById('set-audio-base-url-btn');
-    const exportImagesBtn = document.getElementById('export-images-btn');
-    const exportAudioBtn = document.getElementById('export-audio-btn');
-    const removeAudioBtn = document.getElementById('remove-audio-btn');
-    const imageModal = document.getElementById('image-modal');
-    const moveSelect = document.getElementById('move-select');
-    const moveBtn = document.getElementById('copy-image-btn');
-    const removeBtn = document.getElementById('remove-image-btn');
-    const closeModalBtn = document.getElementById('close-modal-btn');
-    const levelFilter = document.getElementById('level-filter');
-    const selectAllCheckbox = document.getElementById('select-all');
-
-    let levels = [];
-    let imageCache = new Map();
-    let audioDataCache = new Map();
-    let activeLevelIndex = null;
-    let selectedLevelFilter = 'all';
-    let pendingAudioIndex = null;
-    let activeAudioPlayback = null;
-    let activeSource = 'images';
-    let exportImageBaseUrl = '';
-    let exportAudioBaseUrl = '';
-    let visibleLevelIndexes = [];
-    const selectedIndexes = new Set();
-
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/svg+xml'];
-    const allowedAudioTypes = ['audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/opus', 'audio/webm', 'audio/wav'];
-    const allowedAudioExtensions = ['mp3', 'wav', 'ogg', 'opus', 'webm'];
-
-    const resolveLevelNumber = (level, index) => {
-      const value = Number(level.folderIndex);
-      if (Number.isInteger(value) && value > 0) return value;
-      return index + 1;
-    };
-
-    const buildLevelFilter = () => {
-      const numericSelected = Number(selectedLevelFilter);
-      if (selectedLevelFilter !== 'all' && (!Number.isInteger(numericSelected) || numericSelected < 1 || numericSelected > MAX_LEVELS)) {
-        selectedLevelFilter = 'all';
-      }
-
-      levelFilter.innerHTML = '';
-      const allOption = document.createElement('option');
-      allOption.value = 'all';
-      allOption.textContent = 'Todos';
-      levelFilter.appendChild(allOption);
-
-      for (let levelNumber = 1; levelNumber <= MAX_LEVELS; levelNumber += 1) {
-        const option = document.createElement('option');
-        option.value = String(levelNumber);
-        option.textContent = `Nível ${levelNumber}`;
-        levelFilter.appendChild(option);
-      }
-
-      levelFilter.value = selectedLevelFilter;
-    };
-
-    const toggleLoading = (show) => {
-      loadingIndicator.style.display = show ? 'inline-flex' : 'none';
-    };
-
-    const defaultLevel = () => ({
-      pt: '',
-      en: '',
-      folder: '',
-      folderIndex: 1,
-      file: '',
-      dataUrl: '',
-      format: '',
-      audioFile: '',
-      audioDataUrl: '',
-      audioFormat: '',
-      tense: '',
-      sentenceForm: ''
-    });
-
-    const applyPastedLines = (lines = []) => {
-      const fields = ['pt', 'en', 'folder'];
-      let lineIndex = 0;
-
-      for (let i = 0; i < levels.length && lineIndex < lines.length; i += 1) {
-        const current = levels[i] || defaultLevel();
-        const updated = { ...current };
-
-        fields.forEach((field) => {
-          if (lineIndex >= lines.length) return;
-          if (!updated[field]) {
-            updated[field] = lines[lineIndex];
-            lineIndex += 1;
-          }
-        });
-
-        levels[i] = updated;
-      }
-
-      return lineIndex;
-    };
-
-    const TENSE_OPTIONS = [
-      { value: '', label: 'Vazio (Presente simples)' },
-      { value: 'present-simple', label: 'Present Simple' },
-      { value: 'present-continuous', label: 'Present Continuous' },
-      { value: 'present-perfect', label: 'Present Perfect' },
-      { value: 'present-perfect-continuous', label: 'Present Perfect Continuous' },
-      { value: 'past-simple', label: 'Past Simple' },
-      { value: 'past-continuous', label: 'Past Continuous' },
-      { value: 'past-perfect', label: 'Past Perfect' },
-      { value: 'past-perfect-continuous', label: 'Past Perfect Continuous' },
-      { value: 'future-simple', label: 'Future Simple (will)' },
-      { value: 'future-continuous', label: 'Future Continuous' },
-      { value: 'future-perfect', label: 'Future Perfect' },
-      { value: 'future-perfect-continuous', label: 'Future Perfect Continuous' },
-      { value: 'going-to-future', label: 'Going to Future' },
-      { value: 'present-continuous-future', label: 'Present Continuous (Future Use)' },
-      { value: 'present-simple-future', label: 'Present Simple (Future Use)' },
-      { value: 'conditional-would', label: 'Conditional (would)' }
-    ];
-
-    const SENTENCE_FORM_OPTIONS = [
-      { value: '', label: 'Sem estado' },
-      { value: 'affirmative', label: 'Afirmativa' },
-      { value: 'negative', label: 'Negativa' },
-      { value: 'question', label: 'Pergunta' },
-      { value: 'imperative', label: 'Imperativo' }
-    ];
-
-    const TENSE_STYLES = {
-      '': {
-        ring: 'conic-gradient(#8dc9ff, #8dc9ff)'
-      },
-      'present-simple': {
-        ring: 'conic-gradient(#8dc9ff, #8dc9ff)'
-      },
-      'present-continuous': {
-        ring: 'conic-gradient(#8dc9ff, #cfeaff, #8dc9ff)',
-        animation: 'spin 3s linear infinite'
-      },
-      'present-perfect': {
-        ring: 'conic-gradient(#8dc9ff, #c2b15a, #f2c14f, #8dc9ff)'
-      },
-      'present-perfect-continuous': {
-        ring: 'conic-gradient(#8dc9ff, #cfeaff, #f78c1f, #8dc9ff)',
-        animation: 'spin 1s linear infinite'
-      },
-      'past-simple': {
-        ring: 'conic-gradient(#8d939e, #8d939e)',
-        filter: 'drop-shadow(0 10px 16px rgba(0, 0, 0, 0.25)) grayscale(1)'
-      },
-      'past-continuous': {
-        ring: 'conic-gradient(#8d939e, #1b1b1b, #8d939e)',
-        animation: 'spin 3s linear infinite',
-        filter: 'drop-shadow(0 10px 16px rgba(0, 0, 0, 0.25)) grayscale(1)'
-      },
-      'past-perfect': {
-        ring: 'conic-gradient(#8d939e, #1b1b1b, #f2c14f, #8d939e)',
-        filter: 'drop-shadow(0 10px 16px rgba(0, 0, 0, 0.25)) grayscale(1)'
-      },
-      'past-perfect-continuous': {
-        ring: 'conic-gradient(#8d939e, #6f7480, #f78c1f, #8d939e)',
-        animation: 'spin 1s linear infinite',
-        filter: 'drop-shadow(0 10px 16px rgba(0, 0, 0, 0.25)) grayscale(1)'
-      },
-      'future-simple': {
-        ring: 'conic-gradient(#172c6b, #172c6b)'
-      },
-      'future-continuous': {
-        ring: 'conic-gradient(#172c6b, #0a0a0a, #172c6b)',
-        animation: 'spin 3s linear infinite'
-      },
-      'future-perfect': {
-        ring: 'conic-gradient(#172c6b, #0a0a0a, #f2c14f, #172c6b)'
-      },
-      'future-perfect-continuous': {
-        ring: 'conic-gradient(#172c6b, #0a0a0a, #f78c1f, #172c6b)',
-        animation: 'spin 1s linear infinite'
-      },
-      'going-to-future': {
-        ring: 'conic-gradient(#172c6b, #172c6b)'
-      },
-      'present-continuous-future': {
-        ring: 'conic-gradient(#172c6b, #172c6b)'
-      },
-      'present-simple-future': {
-        ring: 'conic-gradient(#172c6b, #172c6b)'
-      },
-      'conditional-would': {
-        lens: 'linear-gradient(40deg, rgba(90, 150, 255, 0.75) 0%, rgba(90, 150, 255, 0) 60%)'
-      }
-    };
-
-    const saveState = () => {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          levels,
-          source: activeSource,
-          exportImageBaseUrl,
-          exportAudioBaseUrl
-        }));
-      } catch (err) {
-        console.error('Erro ao salvar localmente', err);
-      }
-    };
-
-    const getVisibleIndexes = () => visibleLevelIndexes.slice();
-
-    const updateSelectAllState = () => {
-      const visibleIndexes = getVisibleIndexes();
-      if (!selectAllCheckbox) return;
-      if (!visibleIndexes.length) {
-        selectAllCheckbox.checked = false;
-        selectAllCheckbox.indeterminate = false;
-        return;
-      }
-      const selectedVisible = visibleIndexes.filter(index => selectedIndexes.has(index));
-      selectAllCheckbox.checked = selectedVisible.length === visibleIndexes.length;
-      selectAllCheckbox.indeterminate = selectedVisible.length > 0 && selectedVisible.length < visibleIndexes.length;
-    };
-
-    const resetSelection = () => {
-      selectedIndexes.clear();
-      updateSelectAllState();
-    };
-
-    const getTargetIndexes = (originIndex) => {
-      if (selectedIndexes.has(originIndex) && selectedIndexes.size > 0) {
-        return Array.from(selectedIndexes);
-      }
-      return [originIndex];
-    };
-
-    const updateLevelsForIndexes = (indexes, updater) => {
-      indexes.forEach((index) => {
-        if (!levels[index]) return;
-        levels[index] = updater(levels[index]);
-      });
-    };
-
-    const clearAudioForIndexes = (indexes) => {
-      if (!indexes.length) return;
-      updateLevelsForIndexes(indexes, (current) => ({
-        ...current,
-        audioFile: '',
-        audioDataUrl: '',
-        audioFormat: ''
-      }));
-      saveState();
-      renderGrid();
-    };
-
-    const loadState = () => {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (!stored) return null;
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed?.levels)) {
-          return {
-            levels: parsed.levels.map((level, idx) => ({ ...defaultLevel(), ...level, order: idx + 1 })).slice(0, MAX_LEVELS),
-            source: parsed.source,
-            exportImageBaseUrl: typeof parsed.exportImageBaseUrl === 'string' ? parsed.exportImageBaseUrl : '',
-            exportAudioBaseUrl: typeof parsed.exportAudioBaseUrl === 'string' ? parsed.exportAudioBaseUrl : ''
-          };
-        }
-      } catch (err) {
-        console.warn('Estado local inválido', err);
-      }
-      return null;
-    };
-
-    const normalizeLevelNumber = (value) => {
-      const numeric = Number(value);
-      return Number.isFinite(numeric) ? numeric : null;
-    };
-
-    const SOURCE_OPTIONS = {
-      images: {
-        label: 'images.json',
-        url: 'images/images.json',
-        exportName: 'images.json',
-        useServerLevels: true
-      },
-      building: {
-        label: 'building.json',
-        url: 'images/building.json',
-        exportName: 'building.json',
-        useServerLevels: false
-      }
-    };
-
-    const resolveSource = (key) => SOURCE_OPTIONS[key] || SOURCE_OPTIONS.images;
-
-    const fetchDefaults = async (sourceKey = activeSource, { refreshServer = false } = {}) => {
-      try {
-        const source = resolveSource(sourceKey);
-        const requests = [fetch(source.url)];
-        if (source.useServerLevels) {
-          requests.push(fetch(
-            '/api/image-levels' + (refreshServer ? '/refresh' : ''),
-            refreshServer ? { method: 'POST' } : undefined
-          ));
-        }
-        const responses = await Promise.all(requests);
-        const [imageResponse, levelsResponse] = responses;
-
-        if (!imageResponse.ok || (source.useServerLevels && !levelsResponse?.ok)) {
-          throw new Error('Não foi possível carregar os dados de imagem.');
-        }
-
-        const imageData = await imageResponse.json();
-        const levelData = source.useServerLevels && levelsResponse ? await levelsResponse.json() : null;
-        const levelMap = new Map(
-          Object.entries((levelData && levelData.levels) || {})
-            .map(([file, level]) => [file, normalizeLevelNumber(level)])
-        );
-
-        const orderedImages = Array.isArray(imageData) ? imageData.slice(0, MAX_LEVELS) : [];
-        const base = orderedImages.map((item, idx) => {
-          const fileName = item.file || item.imagem || '';
-          const audioFileName = typeof item.audio === 'string' ? item.audio : '';
-          const categoryNumber = normalizeLevelNumber(item.folder || item.categoria);
-          const levelNumber = source.useServerLevels
-            ? normalizeLevelNumber(levelMap.get(fileName))
-            : categoryNumber;
-          const targetIndex = Number.isInteger(levelNumber) && levelNumber >= 1 ? levelNumber - 1 : idx;
-
-          return {
-            ...defaultLevel(),
-            order: targetIndex + 1,
-            pt: item.pt || item.nomePortugues || '',
-            en: item.en || item.nomeIngles || '',
-            folder: item.folder || item.categoria || '',
-            tense: item.tense || '',
-            sentenceForm: item.sentenceForm || '',
-            folderIndex: targetIndex + 1,
-            file: fileName,
-            dataUrl: '',
-            format: (fileName || '').split('.').pop() || 'webp',
-            audioFile: audioFileName,
-            audioDataUrl: '',
-            audioFormat: (audioFileName.split('.').pop() || '').toLowerCase()
-          };
-        });
-
-        return base;
-      } catch (error) {
-        console.error('Erro ao carregar dados padrão:', error);
-        return [];
-      }
-    };
-
-    const renderButtons = (level, index, card) => {
-      const levelNumber = resolveLevelNumber(level, index);
-      const fields = [
-        { key: 'pt', label: 'Português', className: 'label-btn--pt' },
-        { key: 'en', label: 'English', className: 'label-btn--en' },
-        { key: 'folder', label: 'Folder', className: 'label-btn--folder' }
+    (() => {
+      const STORE='playtalk-levels-editor-v2',ROOT='https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev',MODES=['flashcard','movies','scenes'],LABEL={flashcard:'FlashCard',movies:'Filmes',scenes:'Cenas'},PHASE={flashcard:'Fase 1',movies:'Fase 11',scenes:'Fase 12'},PHASE_CODE={flashcard:'001',movies:'011',scenes:'012'};
+      const WATCH_SETTINGS_STORE='playtalk-levels-watch-settings-v1',BALANCE_TRACKS=['zen1.mp3','zen2.mp3','zen3.mp3','zen4.mp3'],BALANCE_TRACK_ROOT=`${ROOT}/musicas`;
+      const DEFAULT_SCENE_CHARACTER_IMAGE_ROOT=`${ROOT}/Niveis/200/001`;
+      const SCENE_CHARACTERS=[
+        {id:'bella',name:'Bella',voiceId:'hpp4J3VqNfWAUOO0d1Us',defaultImageFile:'000002.webp'},
+        {id:'roger',name:'Roger',voiceId:'CwhRBWXzGAHq8TQ4Fs17',defaultImageFile:'000003.webp'},
+        {id:'charlie',name:'Charlie',voiceId:'IKne3meq5aSn9XLyUdCD',defaultImageFile:'000004.webp'},
+        {id:'lily',name:'Lily',voiceId:'pFZP5JQG7iQjIQuC4Bku',defaultImageFile:'000005.webp'},
+        {id:'jessica',name:'Jessica',voiceId:'yj30vwTGJxSHezdAGsv9',defaultImageFile:'000006.webp'},
+        {id:'lax',name:'Lax',voiceId:'tS45q0QcrDHqHoaWdCDR',defaultImageFile:'000007.webp'},
+        {id:'annie',name:'Annie',voiceId:'Sm1seazb4gs7RSlUVw7c',defaultImageFile:'000008.webp'},
+        {id:'nina',name:'Nina',voiceId:'u0Dga8xTuplGDHoYA40p',defaultImageFile:'000009.webp'},
+        {id:'harry',name:'Harry',voiceId:'SOYHLrjzK2X1ezoPC6cr',defaultImageFile:'000010.webp'}
       ];
-
-      fields.forEach(field => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = `label-btn ${field.className}`;
-        button.textContent = level[field.key] || '';
-        button.title = 'Dê dois cliques para editar';
-        button.addEventListener('dblclick', () => {
-          const value = prompt(`Digite o ${field.label} do nível ${levelNumber}`, level[field.key] || '');
-          if (value === null) return;
-          const trimmed = value.trim();
-          const targets = getTargetIndexes(index);
-          updateLevelsForIndexes(targets, (current) => ({
-            ...current,
-            [field.key]: trimmed
-          }));
-          saveState();
-          renderGrid();
-        });
-        card.appendChild(button);
-      });
-    };
-
-    const renderSelectors = (level, index, card) => {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'selectors';
-
-      const tenseLabel = document.createElement('label');
-      tenseLabel.textContent = 'Tempo verbal';
-      const tenseSelect = document.createElement('select');
-      TENSE_OPTIONS.forEach(option => {
-        const item = document.createElement('option');
-        item.value = option.value;
-        item.textContent = option.label;
-        tenseSelect.appendChild(item);
-      });
-      tenseSelect.value = level.tense || '';
-      tenseSelect.addEventListener('change', (event) => {
-        const targets = getTargetIndexes(index);
-        updateLevelsForIndexes(targets, (current) => ({
-          ...current,
-          tense: event.target.value
-        }));
-        saveState();
-        renderGrid();
-      });
-      tenseLabel.appendChild(tenseSelect);
-
-      const formLabel = document.createElement('label');
-      formLabel.textContent = 'Estado da frase';
-      const formSelect = document.createElement('select');
-      SENTENCE_FORM_OPTIONS.forEach(option => {
-        const item = document.createElement('option');
-        item.value = option.value;
-        item.textContent = option.label;
-        formSelect.appendChild(item);
-      });
-      formSelect.value = level.sentenceForm || '';
-      formSelect.addEventListener('change', (event) => {
-        const targets = getTargetIndexes(index);
-        updateLevelsForIndexes(targets, (current) => ({
-          ...current,
-          sentenceForm: event.target.value
-        }));
-        saveState();
-        renderGrid();
-      });
-      formLabel.appendChild(formSelect);
-
-      wrapper.appendChild(tenseLabel);
-      wrapper.appendChild(formLabel);
-      card.appendChild(wrapper);
-    };
-
-    const applyVisualStyles = (wrapper, level = {}) => {
-      const tenseStyle = TENSE_STYLES[level.tense] || {};
-
-      wrapper.style.setProperty('--tense-ring', tenseStyle.ring || 'none');
-      wrapper.style.setProperty('--tense-animation', tenseStyle.animation || 'none');
-      wrapper.style.setProperty('--tense-glow', tenseStyle.glow || 'none');
-      wrapper.style.setProperty('--tense-filter', tenseStyle.filter || 'drop-shadow(0 10px 16px rgba(0, 0, 0, 0.25))');
-      wrapper.style.setProperty('--tense-mask', tenseStyle.mask || 'none');
-      wrapper.style.setProperty('--tense-lens', tenseStyle.lens || 'none');
-
-    };
-
-    const getImageSource = (level) => {
-      if (level.dataUrl) return level.dataUrl;
-      if (level.file) return `images/${level.file}`;
-      return null;
-    };
-
-    const stopActiveAudio = () => {
-      if (!activeAudioPlayback) return;
-
-      if (activeAudioPlayback.raf) {
-        cancelAnimationFrame(activeAudioPlayback.raf);
+      const SCENE_CHARACTER_MAP=new Map(SCENE_CHARACTERS.map(char=>[char.id,char]));
+      const $=id=>document.getElementById(id),state={mode:'flashcard',day:1,title:'',levelKey:'',coverFile:'',coverDataUrl:'',soundFile:'',soundDataUrl:'',flashcardCoverUrl:'',items:[],chars:[],paste:false,testOnline:false,voiceMode:false,imageAiHint:'',sceneCharactersOpen:false};
+      const sceneStoryDraft={selectedIds:[],shares:{},topic:'',lineCount:8};
+      const movieStoryDraft={topic:'',itemCount:8};
+      let pendingImage=null,pendingAudio=null,currentAudio=null,audioBatchTargets={pt:false,en:false},aiBatchBusy=false,aiTextBusy=false,zipBusy=false,elevenBusy=false,r2UploadBusy=false;
+      let watchRuntime=null,watchVoiceAudio=null,watchMusicAudio=null,watchLibraryCache=null;
+      const aiImageLocks=new Set();
+      const defaultItem=()=>({imageFile:'',imageDataUrl:'',pt:'',en:'',imagePrompt:'',category:'flashcard',tense:'present-simple',sentenceForm:'affirmative',audioFile:'',audioDataUrl:'',audioPtFile:'',audioPtDataUrl:'',audioEnFile:'',audioEnDataUrl:'',characterId:''});
+      const defaultChar=input=>{const normalizedKey=String(input||'').trim().toLowerCase()==='jessa'?'jessica':String(input||'').trim().toLowerCase();const base=typeof input==='number'?SCENE_CHARACTERS[input]||SCENE_CHARACTERS[0]:SCENE_CHARACTER_MAP.get(normalizedKey)||SCENE_CHARACTERS[0];return{id:base.id,name:base.name,voiceId:base.voiceId,defaultImageFile:base.defaultImageFile,imageFile:'',imageDataUrl:''}};
+      const clampDay=v=>Math.min(200,Math.max(1,parseInt(v,10)||1));
+      const pad=(value,size=3)=>String(value).padStart(size,'0');
+      const encodePath=parts=>parts.filter(Boolean).map(p=>encodeURIComponent(String(p))).join('/');
+      const cloud=(day,phase,file,mode=state.mode)=>file?`${ROOT}/${encodePath(['Niveis',pad(clampDay(day)),PHASE_CODE[mode]||PHASE_CODE.flashcard,String(file).split(/[\\/]/).pop()])}`:'';
+      const fileNameOnly=value=>String(value||'').split(/[\\/]/).pop()||'';
+      function parseCloudAssetInfo(value){
+        const input=String(value||'').trim();
+        if(!input)return null;
+        const escapedRoot=ROOT.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+        const match=input.match(new RegExp(`^${escapedRoot}/Niveis/(\\d{3})/(\\d{3})/([^?#]+)`,'i'));
+        if(!match)return null;
+        return{day:Number.parseInt(match[1],10)||0,phaseCode:match[2],fileName:decodeURIComponent(match[3])};
       }
-
-      const { audio, wrapper } = activeAudioPlayback;
-      if (audio) {
-        try {
-          audio.pause();
-          audio.currentTime = 0;
-        } catch (error) {
-          // ignore
+      function importedFileName(value){
+        const parsed=parseCloudAssetInfo(value);
+        return parsed?.fileName||fileNameOnly(value);
+      }
+      const safeBase=(name,fallback)=>String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase()||fallback;
+      const safeFile=(name,ext,fallback)=>`${safeBase(name,fallback)}.${ext}`,ext=name=>(String(name).split('.').pop()||'').toLowerCase();
+      const dataUrlExt=dataUrl=>{const match=String(dataUrl||'').match(/^data:([^;]+);/i),mime=(match?.[1]||'').toLowerCase();if(mime==='image/jpeg')return'jpg';if(mime==='image/png')return'png';if(mime==='image/webp')return'webp';if(mime==='image/svg+xml')return'svg';if(mime==='audio/mpeg')return'mp3';if(mime==='audio/wav')return'wav';if(mime==='audio/ogg')return'ogg';if(mime==='audio/webm')return'webm';return''};
+      const assetExt=(fileName,dataUrl,fallback)=>dataUrlExt(dataUrl)||ext(fileName)||fallback;
+      const numberedName=(index,extension)=>`${String(index).padStart(6,'0')}.${extension}`;
+      const phase=(mode=state.mode)=>PHASE[mode]||PHASE.flashcard,label=(mode=state.mode)=>LABEL[mode]||LABEL.flashcard;
+      function normalizeSceneChars(chars=[]){const legacyById=new Map(),legacyByName=new Map();if(Array.isArray(chars)){chars.forEach(char=>{const id=String(char?.id||'').trim().toLowerCase()==='jessa'?'jessica':String(char?.id||'').trim().toLowerCase(),name=String(char?.name||'').trim().toLowerCase()==='jessa'?'jessica':String(char?.name||'').trim().toLowerCase();if(id)legacyById.set(id,char);if(name)legacyByName.set(name,char)})}return SCENE_CHARACTERS.map(base=>{const legacy=legacyById.get(base.id)||legacyByName.get(base.name.toLowerCase())||{};return{...defaultChar(base.id),imageFile:String(legacy.imageFile||'').split('/').pop()||'',imageDataUrl:legacy.imageDataUrl||''}})}
+      function ensureChars(){state.chars=normalizeSceneChars(state.chars)}
+      function getSceneCharacter(characterId){return SCENE_CHARACTER_MAP.get(String(characterId||'').trim().toLowerCase())||null}
+      function getItemVoiceId(item){if(state.mode!=='scenes')return'';const character=getSceneCharacter(item?.characterId);return character?.voiceId||''}
+      function languageCodeForKind(kind){return kind==='pt'?'pt':kind==='en'?'en':''}
+      function defaultSceneCharacterImageUrl(characterId){const character=getSceneCharacter(characterId);return character?.defaultImageFile?`${DEFAULT_SCENE_CHARACTER_IMAGE_ROOT}/${character.defaultImageFile}`:''}
+      function sceneCharacterImageUrl(char){if(!char)return'';if(char.imageDataUrl)return char.imageDataUrl;if(char.imageFile)return remoteOrLocal(cloud(state.day,PHASE.scenes,char.imageFile,'scenes'),char.imageDataUrl);return defaultSceneCharacterImageUrl(char.id)}
+      const itemStem=index=>`flashcard-item-${pad(index+1)}`;
+      const charStem=(index,char)=>`flashcard-char-${pad(index+1)}-${safeBase(char?.name||char?.id||`char-${index+1}`,'char')}`;
+      const coverStem=()=>`flashcard-cover-dia-${state.day}`;
+      const soundtrackStem=()=>`flashcard-soundtrack-dia-${state.day}`;
+      const flashcardFileStem=()=>safeBase(state.title||`flashcard-dia-${state.day}`,`flashcard-dia-${state.day}`);
+      const flashcardJsonFileName=()=>`${flashcardFileStem()}.json`;
+      const flashcardCoverPreview=()=>String(state.flashcardCoverUrl||'').trim();
+      function syncAssetFileNames(){let index=1;const assign=(target,fileKey,dataKey,fallback)=>{if(!(target?.[fileKey]||target?.[dataKey]))return;if(target?.[dataKey]){target[fileKey]=numberedName(index,assetExt(target[fileKey],target[dataKey],fallback));index+=1;return}target[fileKey]=fileNameOnly(target[fileKey])};if(state.mode==='flashcard'){state.items.forEach(item=>{assign(item,'imageFile','imageDataUrl','webp');assign(item,'audioFile','audioDataUrl','mp3')});return}assign(state,'coverFile','coverDataUrl','webp');assign(state,'soundFile','soundDataUrl','mp3');if(state.mode==='movies'){state.items.forEach(item=>{assign(item,'imageFile','imageDataUrl','webp');assign(item,'audioPtFile','audioPtDataUrl','mp3');assign(item,'audioEnFile','audioEnDataUrl','mp3')});return}ensureChars();state.chars.forEach(char=>assign(char,'imageFile','imageDataUrl','webp'));state.items.forEach(item=>{assign(item,'audioPtFile','audioPtDataUrl','mp3');assign(item,'audioEnFile','audioEnDataUrl','mp3')})}
+      const defaultLevelKey=()=>state.mode==='movies'?`movie_day_${state.day}`:`scene_day_${state.day}`,save=()=>{syncAssetFileNames();localStorage.setItem(STORE,JSON.stringify(state))};
+      const load=()=>{try{const parsed=JSON.parse(localStorage.getItem(STORE)||'null');if(!parsed)return;Object.assign(state,parsed);state.mode=MODES.includes(state.mode)?state.mode:'flashcard';state.day=clampDay(state.day);state.items=Array.isArray(state.items)?state.items.map(i=>({...defaultItem(),...i})):[];state.chars=normalizeSceneChars(Array.isArray(state.chars)?state.chars:[])}catch{}};
+      const stopAudio=()=>{if(!currentAudio)return;currentAudio.audio.pause();currentAudio.audio.currentTime=0;currentAudio.button.classList.remove('has');currentAudio=null};
+      const play=(src,btn)=>{if(!src)return;stopAudio();const audio=new Audio(src);currentAudio={audio,button:btn};btn.classList.add('has');audio.addEventListener('ended',stopAudio);audio.addEventListener('error',stopAudio);audio.play().catch(stopAudio)};
+      const audioSrc=(item,kind)=>kind==='single'?(item.audioDataUrl||cloud(state.day,PHASE.flashcard,item.audioFile,'flashcard')):kind==='pt'?(item.audioPtDataUrl||cloud(state.day,phase(),item.audioPtFile,state.mode)):(item.audioEnDataUrl||cloud(state.day,phase(),item.audioEnFile,state.mode));
+      const hasGeneratedAudio=(item,kind)=>kind==='single'?Boolean(item?.audioFile||item?.audioDataUrl):kind==='pt'?Boolean(item?.audioPtFile||item?.audioPtDataUrl):Boolean(item?.audioEnFile||item?.audioEnDataUrl);
+      const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+      const watchTrackUrl=fileName=>`${BALANCE_TRACK_ROOT}/${encodeURIComponent(fileName)}`;
+      const preferredItemAudioSrc=item=>state.mode==='flashcard'?audioSrc(item,'single'):(audioSrc(item,'en')||audioSrc(item,'pt'));
+      const remoteOrLocal=(remote,local)=>state.testOnline?(remote||''):(local||remote||'');
+      const itemImg=item=>remoteOrLocal(cloud(state.day,phase(),item.imageFile,state.mode),item.imageDataUrl),charImg=char=>sceneCharacterImageUrl(char),coverImg=()=>state.mode==='flashcard'?flashcardCoverPreview():remoteOrLocal(cloud(state.day,phase(),state.coverFile,state.mode),state.coverDataUrl);
+      const asDataUrl=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)}),asText=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsText(file)});
+      async function prepImage(file,fallback){if(ext(file.name)==='svg'||file.type==='image/svg+xml'){const blob=new Blob([await asText(file)],{type:'image/svg+xml'});return{fileName:safeFile(file.name,'svg',fallback),dataUrl:await asDataUrl(blob)}}const url=await asDataUrl(file),img=new Image();img.src=url;await img.decode();const c=document.createElement('canvas');c.width=900;c.height=900;const x=c.getContext('2d'),s=Math.max(900/img.width,900/img.height),w=img.width*s,h=img.height*s;x.drawImage(img,(900-w)/2,(900-h)/2,w,h);return{fileName:safeFile(file.name,'webp',fallback),dataUrl:c.toDataURL('image/webp',.88)}}
+      const prepAudio=async(file,fallback)=>{const e=['mp3','wav','ogg','opus','webm'].includes(ext(file.name))?ext(file.name):'mp3';return{fileName:safeFile(file.name,e,fallback),dataUrl:await asDataUrl(file)}};
+      const normalizeImportedItem=item=>({...defaultItem(),...item});
+      const aiImageMissingTargets=()=>{
+        const targets=[];
+        if(state.mode==='movies'||state.mode==='scenes'){
+          if(!state.coverFile&&!state.coverDataUrl)targets.push({kind:'cover',index:0});
         }
-      }
-
-      if (wrapper?.isConnected) {
-        wrapper.classList.remove('is-playing');
-        wrapper.style.setProperty('--audio-progress', '0deg');
-      }
-
-      activeAudioPlayback = null;
-    };
-
-    const playLevelAudio = (level, wrapper) => {
-      const source = getLevelAudioSource(level);
-      if (!source) return;
-
-      stopActiveAudio();
-      const audio = new Audio(source);
-      activeAudioPlayback = { audio, wrapper, raf: null };
-
-      if (wrapper) {
-        wrapper.classList.add('is-playing');
-        wrapper.style.setProperty('--audio-progress', '0deg');
-      }
-
-      const tick = () => {
-        if (!activeAudioPlayback || activeAudioPlayback.audio !== audio) return;
-        if (wrapper?.isConnected && audio.duration) {
-          const progress = Math.min(1, audio.currentTime / Math.max(audio.duration, 0.01));
-          wrapper.style.setProperty('--audio-progress', `${Math.round(progress * 360)}deg`);
+        if(state.mode==='scenes'){
+          return targets.concat(state.chars.map((char,index)=>({kind:'char',index,char})).filter(entry=>entry.char&&!entry.char.imageFile&&!entry.char.imageDataUrl));
         }
-
-        if (!audio.paused && !audio.ended) {
-          activeAudioPlayback.raf = requestAnimationFrame(tick);
-        }
+        return targets.concat(state.items.map((item,index)=>({kind:'item',index,item})).filter(entry=>entry.item&&(entry.item.pt||entry.item.en)&&!entry.item.imageFile&&!entry.item.imageDataUrl));
       };
-
-      const cleanup = () => {
-        if (activeAudioPlayback?.raf) {
-          cancelAnimationFrame(activeAudioPlayback.raf);
-        }
-
-        if (wrapper?.isConnected) {
-          wrapper.classList.remove('is-playing');
-          wrapper.style.setProperty('--audio-progress', '0deg');
-        }
-
-        if (activeAudioPlayback?.audio === audio) {
-          activeAudioPlayback = null;
-        }
-      };
-
-      audio.addEventListener('ended', () => {
-        if (wrapper?.isConnected) {
-          wrapper.style.setProperty('--audio-progress', '360deg');
-          setTimeout(cleanup, 140);
-        } else {
-          cleanup();
-        }
-      });
-      audio.addEventListener('error', cleanup);
-
-      audio.play()
-        .then(() => {
-          tick();
-        })
-        .catch(cleanup);
-    };
-
-    const renderGrid = () => {
-      stopActiveAudio();
-      grid.innerHTML = '';
-      const fragment = document.createDocumentFragment();
-      let renderedCount = 0;
-      visibleLevelIndexes = [];
-
-      levels.forEach((level, index) => {
-        const levelNumber = resolveLevelNumber(level, index);
-        if (selectedLevelFilter !== 'all' && Number(selectedLevelFilter) !== levelNumber) return;
-
-        const card = document.createElement('div');
-        card.className = 'image-card';
-        if (selectedIndexes.has(index)) {
-          card.classList.add('is-selected');
-        }
-
-        const selectionCheckbox = document.createElement('input');
-        selectionCheckbox.type = 'checkbox';
-        selectionCheckbox.className = 'selection-checkbox';
-        selectionCheckbox.checked = selectedIndexes.has(index);
-        selectionCheckbox.addEventListener('click', (event) => {
-          event.stopPropagation();
-        });
-        selectionCheckbox.addEventListener('change', (event) => {
-          if (event.target.checked) {
-            selectedIndexes.add(index);
-          } else {
-            selectedIndexes.delete(index);
-          }
-          updateSelectAllState();
-          renderGrid();
-        });
-        card.appendChild(selectionCheckbox);
-
-        const badge = document.createElement('div');
-        badge.className = 'level-badge';
-        badge.textContent = `Nível ${levelNumber}`;
-        card.appendChild(badge);
-
-        const visualWrapper = document.createElement('div');
-        visualWrapper.className = 'image-visual';
-
-        const tenseRing = document.createElement('div');
-        tenseRing.className = 'image-ring image-ring--tense';
-        const tenseLens = document.createElement('div');
-        tenseLens.className = 'image-lens image-lens--tense';
-        visualWrapper.appendChild(tenseRing);
-        visualWrapper.appendChild(tenseLens);
-
-        if (hasAudioForLevel(level)) {
-          visualWrapper.classList.add('image-visual--audio');
-          visualWrapper.style.setProperty('--audio-progress', '0deg');
-          const backdrop = document.createElement('div');
-          backdrop.className = 'audio-backdrop';
-          visualWrapper.appendChild(backdrop);
-          visualWrapper.title = 'Clique para tocar. Shift+clique para trocar o áudio.';
-        }
-
-        const src = getImageSource(level);
-        if (src) {
-          const img = document.createElement('img');
-          img.src = src;
-          img.alt = level.pt || level.en || `Nível ${levelNumber}`;
-          img.loading = 'lazy';
-          img.addEventListener('dblclick', () => openImageModal(index));
-          visualWrapper.appendChild(img);
-        } else {
-          const placeholder = document.createElement('div');
-          placeholder.className = 'image-placeholder';
-          placeholder.textContent = 'Duplo clique para adicionar imagem';
-          placeholder.addEventListener('dblclick', () => openImageModal(index));
-          visualWrapper.appendChild(placeholder);
-        }
-
-        applyVisualStyles(visualWrapper, level);
-
-        visualWrapper.addEventListener('click', (event) => {
-          if (event.detail > 1) return;
-          const currentLevel = levels[index] || level;
-          if (hasAudioForLevel(currentLevel) && !event.shiftKey) {
-            playLevelAudio(currentLevel, visualWrapper);
-            return;
-          }
-          stopActiveAudio();
-          pendingAudioIndex = index;
-          audioUploadInput.click();
-        });
-
-        card.appendChild(visualWrapper);
-
-        renderButtons(level, index, card);
-        renderSelectors(level, index, card);
-        fragment.appendChild(card);
-        renderedCount += 1;
-        visibleLevelIndexes.push(index);
-      });
-
-      grid.appendChild(fragment);
-      emptyState.style.display = renderedCount > 0 ? 'none' : 'block';
-      updateSelectAllState();
-    };
-
-    const sanitizeFileName = (name, extension) => {
-      const base = name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
-      const suffix = Date.now();
-      return `${base || 'imagem'}-${suffix}.${extension}`;
-    };
-
-    const resolveAudioExtension = (file) => {
-      const fromName = (file.name.split('.').pop() || '').toLowerCase();
-      if (allowedAudioExtensions.includes(fromName)) return fromName;
-
-      const mimeMap = {
-        'audio/mpeg': 'mp3',
-        'audio/mp3': 'mp3',
-        'audio/ogg': 'ogg',
-        'audio/opus': 'opus',
-        'audio/webm': 'webm',
-        'audio/wav': 'wav'
-      };
-
-      return mimeMap[file.type] || fromName || 'mp3';
-    };
-
-    const sanitizeAudioFileName = (name, extension) => sanitizeFileName(name, extension || 'mp3');
-
-    const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-    const readFileAsText = (file) => new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsText(file);
-    });
-
-    const buildVoicePath = (fileName = '') => {
-      if (!fileName) return '';
-      const lower = fileName.toLowerCase();
-      if (!allowedAudioExtensions.some(ext => lower.endsWith(ext))) return '';
-
-      const sanitized = fileName.replace(/^[/\\]+/, '');
-      const hasPrefix = sanitized.toLowerCase().startsWith('voices/');
-      const encoded = sanitized.split('/')
-        .map(piece => encodeURIComponent(piece))
-        .join('/');
-
-      return hasPrefix ? encoded : `voices/${encoded}`;
-    };
-
-    const getLevelAudioSource = (level = {}) => {
-      if (level.audioDataUrl) return level.audioDataUrl;
-      if (level.audioFile) return buildVoicePath(level.audioFile);
-      return '';
-    };
-
-    const hasAudioForLevel = (level = {}) => Boolean(getLevelAudioSource(level));
-
-    const resizeImage = (img, type = 'image/webp') => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 600;
-      canvas.height = 600;
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, 600, 600);
-
-      const scale = Math.max(600 / img.width, 600 / img.height);
-      const width = img.width * scale;
-      const height = img.height * scale;
-      const offsetX = (600 - width) / 2;
-      const offsetY = (600 - height) / 2;
-      ctx.drawImage(img, offsetX, offsetY, width, height);
-      return canvas.toDataURL(type, 0.82);
-    };
-
-    const processSvg = async (file) => {
-      const text = await readFileAsText(file);
-      const sized = text.replace(/(width|height)="[^"]*"/g, '')
-        .replace('<svg', '<svg width="600" height="600"');
-      const blob = new Blob([sized], { type: 'image/svg+xml' });
-      const dataUrl = await readFileAsDataUrl(blob);
-      return { dataUrl, format: 'svg', fileName: sanitizeFileName(file.name, 'svg') };
-    };
-
-    const processRaster = async (file, keepWebp) => {
-      const dataUrl = await readFileAsDataUrl(file);
-      const img = new Image();
-      img.src = dataUrl;
-      await img.decode();
-      const outputType = keepWebp ? 'image/webp' : 'image/webp';
-      const resized = resizeImage(img, outputType);
-      const extension = keepWebp ? 'webp' : 'webp';
-      return { dataUrl: resized, format: extension, fileName: sanitizeFileName(file.name, extension) };
-    };
-
-    const handleFileProcessing = async (file) => {
-      if (!allowedTypes.includes(file.type)) {
-        throw new Error(`Formato não suportado: ${file.type}`);
-      }
-
-      const ext = (file.name.split('.').pop() || '').toLowerCase();
-      if (ext === 'svg' || file.type === 'image/svg+xml') {
-        return processSvg(file);
-      }
-
-      const keepWebp = ext === 'webp' || file.type === 'image/webp';
-      return processRaster(file, keepWebp);
-    };
-
-    const assignImageToLevel = (index, processed) => {
-      const existingLevel = levels[index] || defaultLevel();
-      const targetLevel = Number(existingLevel.folderIndex) || 1;
-      levels[index] = {
-        ...existingLevel,
-        file: processed.fileName,
-        dataUrl: processed.dataUrl,
-        format: processed.format,
-        folderIndex: targetLevel,
-      };
-    };
-
-    const handleUpload = async (fileList) => {
-      const availableSlots = MAX_LEVELS - levels.length;
-      if (availableSlots <= 0) return;
-
-      const files = Array.from(fileList).slice(0, availableSlots);
-      let targetIndex = levels.length;
-
-      for (const file of files) {
-        try {
-          const processed = await handleFileProcessing(file);
-          assignImageToLevel(targetIndex, processed);
-          levels[targetIndex].pt = '';
-          levels[targetIndex].en = '';
-          levels[targetIndex].folder = '';
-          levels[targetIndex].folderIndex = 1;
-          levels[targetIndex].audioFile = '';
-          levels[targetIndex].audioDataUrl = '';
-          levels[targetIndex].audioFormat = '';
-          targetIndex += 1;
-        } catch (error) {
-          console.error('Erro ao processar arquivo', error);
-        }
-      }
-
-      saveState();
-      buildLevelFilter();
-      renderGrid();
-    };
-
-    const isAllowedAudioFile = (file) => {
-      if (!file) return false;
-      const ext = (file.name.split('.').pop() || '').toLowerCase();
-      return allowedAudioTypes.includes(file.type) || allowedAudioExtensions.includes(ext);
-    };
-
-    const handleAudioFileForLevel = async (file, levelIndex) => {
-      if (!file || levelIndex === null || levelIndex === undefined) return;
-      if (!isAllowedAudioFile(file)) {
-        alert('Formato de áudio não suportado. Use mp3, opus, wav, ogg ou webm.');
-        return;
-      }
-
-      const extension = resolveAudioExtension(file);
-      const fileName = sanitizeAudioFileName(file.name, extension);
-      const dataUrl = await readFileAsDataUrl(file);
-      const existingLevel = levels[levelIndex] || defaultLevel();
-
-      levels[levelIndex] = {
-        ...existingLevel,
-        audioFile: fileName,
-        audioDataUrl: dataUrl,
-        audioFormat: extension,
-      };
-
-      saveState();
-      renderGrid();
-    };
-
-    const openImageModal = (index) => {
-      activeLevelIndex = index;
-      moveSelect.innerHTML = '';
-      const currentLevel = resolveLevelNumber(levels[index] || {}, index);
-      for (let i = 1; i <= MAX_LEVELS; i++) {
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = `Nível ${i}`;
-        moveSelect.appendChild(option);
-      }
-      moveSelect.value = currentLevel;
-      imageModal.style.display = 'flex';
-    };
-
-    const closeModal = () => {
-      imageModal.style.display = 'none';
-      activeLevelIndex = null;
-      changeImageInput.value = '';
-    };
-
-    moveBtn.addEventListener('click', () => {
-      if (activeLevelIndex === null) return;
-      const to = Number(moveSelect.value);
-      if (!Number.isInteger(to) || to <= 0 || to > MAX_LEVELS) return;
-      levels[activeLevelIndex] = {
-        ...levels[activeLevelIndex],
-        folderIndex: to
-      };
-      saveState();
-      renderGrid();
-      closeModal();
-    });
-
-    removeBtn.addEventListener('click', () => {
-      if (activeLevelIndex === null) return;
-      levels[activeLevelIndex] = defaultLevel(activeLevelIndex + 1);
-      saveState();
-      renderGrid();
-      closeModal();
-    });
-
-    closeModalBtn.addEventListener('click', closeModal);
-
-    changeImageInput.addEventListener('change', async (event) => {
-      if (activeLevelIndex === null) return;
-      const file = event.target.files?.[0];
-      if (!file) return;
-      try {
-        const processed = await handleFileProcessing(file);
-        assignImageToLevel(activeLevelIndex, processed);
-        saveState();
-        renderGrid();
-      } catch (error) {
-        console.error('Erro ao trocar imagem', error);
-      } finally {
-        closeModal();
-      }
-    });
-
-    audioUploadInput.addEventListener('change', async (event) => {
-      const file = event.target.files?.[0];
-      if (!file || pendingAudioIndex === null) {
-        pendingAudioIndex = null;
-        audioUploadInput.value = '';
-        return;
-      }
-
-      try {
-        await handleAudioFileForLevel(file, pendingAudioIndex);
-      } catch (error) {
-        console.error('Erro ao processar áudio', error);
-      } finally {
-        pendingAudioIndex = null;
-        audioUploadInput.value = '';
-      }
-    });
-
-    uploadBtn.addEventListener('click', () => uploadInput.click());
-    uploadInput.addEventListener('change', (event) => {
-      const { files } = event.target;
-      if (!files?.length) return;
-      handleUpload(files);
-      uploadInput.value = '';
-    });
-
-    levelFilter.addEventListener('change', (event) => {
-      selectedLevelFilter = event.target.value;
-      renderGrid();
-    });
-
-    pasteTextBtn.addEventListener('click', () => {
-      const isOpen = pastePanel.classList.toggle('is-open');
-      pastePanel.setAttribute('aria-hidden', String(!isOpen));
-      pasteTextBtn.textContent = isOpen ? 'Fechar colar texto' : 'Colar texto';
-      if (isOpen) {
-        pasteTextarea.focus();
-      }
-    });
-
-    pasteApplyBtn.addEventListener('click', () => {
-      const lines = pasteTextarea.value
-        .split(/\r?\n/)
-        .map(line => line.trim())
-        .filter(Boolean);
-      if (!lines.length) return;
-      applyPastedLines(lines);
-      pasteTextarea.value = '';
-      saveState();
-      renderGrid();
-    });
-
-    newGridBtn.addEventListener('click', () => {
-      if (!confirm('Criar uma nova grade vazia? Isso substitui sua edição local.')) return;
-      levels = [];
-      selectedLevelFilter = 'all';
-      resetSelection();
-      buildLevelFilter();
-      saveState();
-      renderGrid();
-    });
-
-    const downloadBlob = (blob, filename) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    };
-
-    const normalizeBaseUrl = (value = '') => {
-      const trimmed = String(value || '').trim();
-      if (!trimmed) return '';
-      return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
-    };
-
-    const getFileNameOnly = (value = '') => {
-      const normalized = String(value || '').replace(/\\/g, '/');
-      const parts = normalized.split('/').filter(Boolean);
-      return parts.length ? parts[parts.length - 1] : '';
-    };
-
-    const buildExportFileUrl = (baseUrl, fileName) => {
-      const normalizedBase = normalizeBaseUrl(baseUrl);
-      const pureName = getFileNameOnly(fileName);
-      if (!normalizedBase || !pureName) return fileName || '';
-      return normalizedBase + encodeURIComponent(pureName);
-    };
-
-    exportJsonBtn.addEventListener('click', () => {
-      const source = resolveSource(activeSource);
-      const payload = levels
-        .filter(level => level.file && level.pt && level.en && level.folder)
-        .map(level => ({
-          imagem: buildExportFileUrl(exportImageBaseUrl, level.file),
-          nomePortugues: level.pt,
-          nomeIngles: level.en,
-          categoria: level.folder,
-          audio: buildExportFileUrl(exportAudioBaseUrl, level.audioFile || ''),
-          tense: level.tense || '',
-          sentenceForm: level.sentenceForm || ''
-        }));
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      downloadBlob(blob, source.exportName);
-    });
-
-    const fetchRemoteImage = async (path) => {
-      if (imageCache.has(path)) return imageCache.get(path);
-      const response = await fetch(path);
-      const blob = await response.blob();
-      const dataUrl = await readFileAsDataUrl(blob);
-      imageCache.set(path, dataUrl);
-      return dataUrl;
-    };
-
-    const fetchRemoteAudio = async (path) => {
-      if (audioDataCache.has(path)) return audioDataCache.get(path);
-      const response = await fetch(path);
-      const blob = await response.blob();
-      const dataUrl = await readFileAsDataUrl(blob);
-      audioDataCache.set(path, dataUrl);
-      return dataUrl;
-    };
-
-    exportImagesBtn.addEventListener('click', async () => {
-      const zip = new JSZip();
-      for (let i = 0; i < levels.length; i++) {
-        const level = levels[i];
-        const folderName = `${resolveLevelNumber(level, i)}`;
-        const folder = zip.folder(`${folderName}/`);
-
-        if (!level.file && !level.dataUrl) continue;
-        try {
-          const ext = (level.format || 'webp').toLowerCase();
-          let dataUrl = level.dataUrl;
-          if (!dataUrl && level.file) {
-            dataUrl = await fetchRemoteImage(`images/${level.file}`);
-          }
-          if (!dataUrl) continue;
-          const base64 = dataUrl.split(',')[1];
-          folder.file(level.file || `nivel-${i + 1}.${ext}`, base64, { base64: true });
-        } catch (error) {
-          console.error('Erro ao adicionar imagem ao zip', error);
-        }
-      }
-
-      const blob = await zip.generateAsync({ type: 'blob' });
-      downloadBlob(blob, 'levels-imagens.zip');
-    });
-
-    exportAudioBtn.addEventListener('click', async () => {
-      const zip = new JSZip();
-      let addedFiles = 0;
-
-      for (let i = 0; i < levels.length; i++) {
-        const level = levels[i];
-        const folderName = `${resolveLevelNumber(level, i)}`;
-        const folder = zip.folder(`${folderName}/`);
-        const audioSource = getLevelAudioSource(level);
-
-        if (!audioSource || !level.audioFile) continue;
-
-        try {
-          let dataUrl = level.audioDataUrl;
-          if (!dataUrl && audioSource.startsWith('voices/')) {
-            dataUrl = await fetchRemoteAudio(audioSource);
-          }
-
-          if (!dataUrl) continue;
-          const base64 = dataUrl.split(',')[1];
-          const audioName = (level.audioFile.split(/[/\\]/).pop() || `audio-${i + 1}.${level.audioFormat || 'mp3'}`);
-          folder.file(audioName, base64, { base64: true });
-          addedFiles += 1;
-        } catch (error) {
-          console.error('Erro ao adicionar áudio ao zip', error);
-        }
-      }
-
-      if (!addedFiles) {
-        alert('Nenhum áudio vinculado para exportar.');
-        return;
-      }
-
-      const blob = await zip.generateAsync({ type: 'blob' });
-      downloadBlob(blob, 'levels-audios.zip');
-    });
-
-    removeAudioBtn.addEventListener('click', () => {
-      const targets = Array.from(selectedIndexes);
-      if (!targets.length) {
-        alert('Selecione pelo menos uma música para remover o áudio.');
-        return;
-      }
-      if (!confirm(`Remover o áudio de ${targets.length} item(ns) selecionado(s)?`)) return;
-      clearAudioForIndexes(targets);
-    });
-
-    const refreshFromServer = async ({ refreshLevels = false } = {}) => {
-      toggleLoading(true);
-      levels = await fetchDefaults(activeSource, { refreshServer: refreshLevels });
-      selectedLevelFilter = 'all';
-      resetSelection();
-      buildLevelFilter();
-      saveState();
-      renderGrid();
-      toggleLoading(false);
-    };
-
-    sourceSelect.addEventListener('change', async (event) => {
-      const nextSource = event.target.value;
-      if (nextSource === activeSource) return;
-      if (!confirm('Carregar dados do servidor? Isso substitui sua edição local.')) {
-        sourceSelect.value = activeSource;
-        return;
-      }
-      activeSource = nextSource;
-      resetSelection();
-      await refreshFromServer();
-    });
-
-    refreshServerBtn.addEventListener('click', async () => {
-      await refreshFromServer({ refreshLevels: true });
-    });
-
-    setImageBaseUrlBtn.addEventListener('click', () => {
-      const value = window.prompt(
-        'Cole o link base das imagens (ex.: https://pub-...r2.dev/images/1/):',
-        exportImageBaseUrl
-      );
-      if (value === null) return;
-      exportImageBaseUrl = normalizeBaseUrl(value);
-      saveState();
-    });
-
-    setAudioBaseUrlBtn.addEventListener('click', () => {
-      const value = window.prompt(
-        'Cole o link base dos áudios (ex.: https://pub-...r2.dev/voices/1/):',
-        exportAudioBaseUrl
-      );
-      if (value === null) return;
-      exportAudioBaseUrl = normalizeBaseUrl(value);
-      saveState();
-    });
-
-    selectAllCheckbox.addEventListener('change', (event) => {
-      const visibleIndexes = getVisibleIndexes();
-      if (!visibleIndexes.length) return;
-      if (event.target.checked) {
-        visibleIndexes.forEach(index => selectedIndexes.add(index));
-      } else {
-        visibleIndexes.forEach(index => selectedIndexes.delete(index));
-      }
-      renderGrid();
-    });
-
-    const init = async () => {
-      toggleLoading(true);
-      const local = loadState();
-      if (local) {
-        levels = local.levels;
-        if (local.source && SOURCE_OPTIONS[local.source]) {
-          activeSource = local.source;
-        }
-        exportImageBaseUrl = normalizeBaseUrl(local.exportImageBaseUrl || '');
-        exportAudioBaseUrl = normalizeBaseUrl(local.exportAudioBaseUrl || '');
-        sourceSelect.value = activeSource;
-        buildLevelFilter();
-        renderGrid();
-        toggleLoading(false);
-        return;
-      }
-
-      sourceSelect.value = activeSource;
-      levels = await fetchDefaults(activeSource);
-      buildLevelFilter();
-      renderGrid();
-      toggleLoading(false);
-    };
-
-    init();
+      const aiStatusLabel=()=>aiBatchBusy?'Gerando imagens IA...':'Gerar imagens IA';
+      const aiTextStatusLabel=()=>aiTextBusy?(state.mode==='scenes'?'Gerando historia IA...':state.mode==='movies'?'Gerando filme IA...':'Gerando frases IA...'):(state.mode==='scenes'?'Gerar historia IA':state.mode==='movies'?'Gerar filme IA':'Gerar frases IA');
+      const voiceModeStatusLabel=()=>state.voiceMode?'Gerar voz: on':'Gerar voz';
+      const onlineTestStatusLabel=()=>`Testar online: ${state.testOnline?'on':'off'}`;
+      const setButtonLabel=(id,label)=>{const button=$(id);if(!button)return;button.setAttribute('aria-label',label);button.setAttribute('title',label)};
+      const aiLockKey=(kind,index)=>`${kind}:${index}`;
+      const isAiLocked=(kind,index)=>aiImageLocks.has(aiLockKey(kind,index));
+      function syncAiButton(){const targets=aiImageMissingTargets();setButtonLabel('aiImageBtn',aiStatusLabel());$('aiImageBtn').disabled=aiBatchBusy||!targets.length}
+      function syncZipButton(){setButtonLabel('exportZipBtn',zipBusy?'Montando ZIP...':'Exportar ZIP');$('exportZipBtn').disabled=zipBusy||r2UploadBusy;$('uploadR2Btn').disabled=zipBusy||r2UploadBusy;setButtonLabel('uploadR2Btn',r2UploadBusy?'Enviando R2...':'Enviar R2')}
+      function closeTextPopover(){$('textPopover').classList.add('hidden');$('textPopover').setAttribute('aria-hidden','true')}
+      function normalizeAiFlashcardItems(items){return items.map(item=>({pt:String(item?.pt||'').trim(),en:String(item?.en||'').trim()})).filter(item=>item.pt&&item.en)}
+      function loadWatchSettings(){try{const raw=JSON.parse(localStorage.getItem(WATCH_SETTINGS_STORE)||'null');if(raw&&typeof raw==='object')return{gapMs:[3000,5000,10000,30000,60000].includes(Number(raw.gapMs))?Number(raw.gapMs):5000,scope:raw.scope==='all'?'all':'mine',music:raw.music==='on'?'on':'off'}}catch{}return{gapMs:5000,scope:'mine',music:'off'}}
+      function saveWatchSettings(settings){try{localStorage.setItem(WATCH_SETTINGS_STORE,JSON.stringify(settings))}catch{}}
+      function syncWatchPopover(){const settings=loadWatchSettings();$('watchGapSelect').value=String(settings.gapMs);$('watchScopeSelect').value=settings.scope;$('watchMusicSelect').value=settings.music}
+      function openWatchPopover(){if(state.mode!=='flashcard')return;syncWatchPopover();$('watchPopover').classList.remove('hidden');$('watchPopover').setAttribute('aria-hidden','false')}
+      function closeWatchPopover(){$('watchPopover').classList.add('hidden');$('watchPopover').setAttribute('aria-hidden','true')}
+      function showWatchView(){$('watchView').classList.remove('hidden');$('watchView').setAttribute('aria-hidden','false')}
+      function hideWatchView(){$('watchView').classList.add('hidden');$('watchView').setAttribute('aria-hidden','true')}
+      function stopWatchMusic(){if(!watchMusicAudio)return;watchMusicAudio.pause();watchMusicAudio.removeAttribute('src');watchMusicAudio.load();watchMusicAudio=null}
+      function stopWatchVoice(){if(!watchVoiceAudio)return;watchVoiceAudio.pause();watchVoiceAudio.currentTime=0;watchVoiceAudio=null}
+      function stopWatchPlayback(){if(watchRuntime)watchRuntime.running=false;stopWatchVoice();stopWatchMusic();watchRuntime=null;hideWatchView();if('mediaSession'in navigator){navigator.mediaSession.playbackState='none'}}
+      function setWatchStatus(text){$('watchStatusText').textContent=text||''}
+      function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim();$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';$('watchCardPt').textContent=item?.pt||'Sem portugues';$('watchCardEn').textContent=item?.en||'Sem english';$('watchCardHint').textContent=extraStatus||'A reproducao segue em ordem aleatoria continua.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';setWatchStatus(extraStatus||'Preparando audio...')}
+      function normalizeWatchItem(entry,deckTitle,sourceLabel){const pt=String(entry?.nomePortugues||entry?.pt||entry?.portuguese||'').trim(),en=String(entry?.nomeIngles||entry?.en||entry?.english||'').trim(),audio=String(entry?.audio||entry?.audioFile||'').trim(),image=String(entry?.imagem||entry?.image||entry?.imageFile||'').trim();if(!audio||!(pt||en))return null;return{key:`${sourceLabel}::${deckTitle}::${pt}::${en}::${audio}`,pt,en,audio,image,deckTitle:String(deckTitle||'Flashcards').trim()||'Flashcards',sourceLabel:String(sourceLabel||'Flashcards').trim()||'Flashcards'}}
+      function currentDeckWatchItems(){return state.items.map(item=>normalizeWatchItem({pt:item.pt,en:item.en,audio:audioSrc(item,'single'),image:itemImg(item)},state.title.trim()||`Dia ${state.day}`,'Meus flashcards')).filter(Boolean)}
+      async function loadJsonFile(filePath){const response=await fetch(filePath.startsWith('/')?filePath:`/${filePath}`);if(!response.ok)throw new Error(`Nao foi possivel carregar ${filePath}.`);return response.json()}
+      async function loadAllWatchItems(){if(Array.isArray(watchLibraryCache)&&watchLibraryCache.length)return watchLibraryCache;const manifest=await loadJsonFile('/data/local-level-files.json');const files=Array.isArray(manifest?.files)?manifest.files:[];const flashcardFiles=files.filter(file=>file?.folder==='words'||(file?.folder==='others'&&/^flashcard-dia-\d+/i.test(String(file?.name||''))));const loaded=await Promise.all(flashcardFiles.map(async file=>{try{const data=await loadJsonFile(`/${String(file.path||'').replace(/^\/+/,'')}`);const title=String(data?.title||file?.name||'Flashcards').trim()||'Flashcards';const items=Array.isArray(data?.items)?data.items:[];return items.map(item=>normalizeWatchItem(item,title,'Todos os flashcards')).filter(Boolean)}catch(error){console.error('Falha ao carregar deck para assistir flashcards',file,error);return[]}}));watchLibraryCache=loaded.flat();return watchLibraryCache}
+      function shuffleWatchItems(items){const copy=[...items];for(let i=copy.length-1;i>0;i-=1){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy}
+      function nextWatchItem(session){if(!session.queue.length){const pool=session.items.length>1&&session.lastKey?session.items.filter(item=>item.key!==session.lastKey):session.items;session.queue=shuffleWatchItems(pool.length?pool:session.items)}const item=session.queue.shift()||session.items[0]||null;if(item)session.lastKey=item.key;return item}
+      function isWatchSessionActive(session){return Boolean(session&&watchRuntime&&watchRuntime.id===session.id&&session.running)}
+      function waitForWatch(session,ms,statusText){if(statusText)setWatchStatus(statusText);return new Promise(resolve=>{const started=Date.now();const tick=()=>{if(!isWatchSessionActive(session))return resolve(false);const elapsed=Date.now()-started;if(elapsed>=ms)return resolve(true);setTimeout(tick,Math.min(250,ms-elapsed))};tick()})}
+      function updateWatchMediaSession(item){if(!('mediaSession'in navigator))return;try{navigator.mediaSession.metadata=new MediaMetadata({title:item?.pt||item?.en||'Flashcard',artist:item?.en||'',album:item?.deckTitle||'PlayTalk',artwork:item?.image?[{src:item.image,sizes:'512x512',type:'image/png'}]:[]});navigator.mediaSession.playbackState='playing';navigator.mediaSession.setActionHandler('stop',()=>stopWatchPlayback());navigator.mediaSession.setActionHandler('pause',()=>stopWatchPlayback());navigator.mediaSession.setActionHandler('play',()=>{});}catch(error){console.error('Falha ao atualizar Media Session',error)}}
+      function startWatchMusic(session){if(!session.musicEnabled)return;if(!watchMusicAudio){watchMusicAudio=new Audio();watchMusicAudio.preload='auto';watchMusicAudio.loop=false;watchMusicAudio.volume=.7;watchMusicAudio.addEventListener('ended',()=>{if(!isWatchSessionActive(session))return;session.musicQueue=session.musicQueue?.length?session.musicQueue:shuffleWatchItems(BALANCE_TRACKS);const nextTrack=session.musicQueue.shift();if(!nextTrack)return;watchMusicAudio.src=watchTrackUrl(nextTrack);watchMusicAudio.play().catch(error=>console.error('Erro ao tocar trilha',error))})}if(!session.musicQueue?.length)session.musicQueue=shuffleWatchItems(BALANCE_TRACKS);if(!watchMusicAudio.src){const nextTrack=session.musicQueue.shift();if(nextTrack)watchMusicAudio.src=watchTrackUrl(nextTrack)}watchMusicAudio.play().catch(error=>console.error('Erro ao iniciar trilha',error))}
+      async function playWatchVoice(session,item,rate){if(!isWatchSessionActive(session))return false;stopWatchVoice();return new Promise(resolve=>{const audio=new Audio(item.audio);watchVoiceAudio=audio;audio.preload='auto';audio.playsInline=true;audio.playbackRate=rate;audio.defaultPlaybackRate=rate;audio.volume=1;const finish=()=>{audio.onended=null;audio.onerror=null;if(watchVoiceAudio===audio)watchVoiceAudio=null;resolve(isWatchSessionActive(session))};audio.onended=finish;audio.onerror=finish;audio.play().catch(error=>{console.error('Erro ao tocar audio do flashcard',error);finish()})})}
+      async function playWatchSequence(session,item){renderWatchCard(item,'Reproduzindo em 0.75x');updateWatchMediaSession(item);startWatchMusic(session);const firstPass=await playWatchVoice(session,item,.75);if(!firstPass)return false;const pauseBetween=await waitForWatch(session,3000,'Nova repeticao em 3 segundos...');if(!pauseBetween)return false;renderWatchCard(item,'Reproduzindo em 1.00x');const secondPass=await playWatchVoice(session,item,1);if(!secondPass)return false;return waitForWatch(session,session.gapMs,`Proximo flashcard em ${Math.round(session.gapMs/1000)} segundo(s)...`)}
+      async function startWatchPlayback(){const settings={gapMs:Number($('watchGapSelect').value)||5000,scope:$('watchScopeSelect').value==='all'?'all':'mine',music:$('watchMusicSelect').value==='on'?'on':'off'};saveWatchSettings(settings);closeWatchPopover();showWatchView();renderWatchCard({pt:'Carregando...',en:'Loading...',deckTitle:'PlayTalk',sourceLabel:settings.scope==='all'?'Todos os flashcards':'Meus flashcards'},'Preparando biblioteca...');let items=[];try{items=settings.scope==='all'?await loadAllWatchItems():currentDeckWatchItems()}catch(error){hideWatchView();alert(error.message||'Erro ao preparar os flashcards para reproducao.');return}if(!items.length){hideWatchView();alert(settings.scope==='all'?'Nenhum flashcard com audio foi encontrado na biblioteca.':'Seu deck atual precisa ter flashcards com audio para assistir.');return}const session={id:`watch-${Date.now()}-${Math.random()}`,running:true,items,gapMs:settings.gapMs,musicEnabled:settings.music==='on',queue:[],musicQueue:[],lastKey:''};watchRuntime=session;try{while(isWatchSessionActive(session)){const item=nextWatchItem(session);if(!item)break;const keepGoing=await playWatchSequence(session,item);if(!keepGoing)break}}catch(error){console.error('Erro no modo assistir flashcards',error);if(isWatchSessionActive(session))alert(error.message||'Erro ao assistir flashcards.')}finally{if(isWatchSessionActive(session))stopWatchPlayback()}}
+      function syncAiTextButton(){const supportedMode=state.mode==='flashcard'||state.mode==='scenes'||state.mode==='movies';$('aiTextBtn').classList.toggle('hidden',!supportedMode);setButtonLabel('aiTextBtn',aiTextStatusLabel());$('aiTextBtn').disabled=!supportedMode||aiTextBusy;setButtonLabel('translateBtn',aiTextBusy?'Traduzindo...':'Traduzir PT para EN');$('translateBtn').disabled=aiTextBusy||!state.items.some(item=>String(item?.pt||'').trim()&&!String(item?.en||'').trim())}
+      function openTextPopover(){const sceneMode=state.mode==='scenes',movieMode=state.mode==='movies';$('textPopoverEyebrow').textContent=sceneMode?'Historia com IA':movieMode?'Filme com IA':'FlashCard com IA';$('textPopoverHeading').textContent=sceneMode?'Criar historia para Cenas':movieMode?'Criar sequencia para Filmes':'Gerar frases PT + EN';$('flashcardTextFields').classList.toggle('hidden',sceneMode||movieMode);$('movieTextFields').classList.toggle('hidden',!movieMode);$('sceneTextFields').classList.toggle('hidden',!sceneMode);if(sceneMode)renderSceneStoryEditor();if(movieMode){$('movieStoryTopicInput').value=movieStoryDraft.topic||'';$('movieStoryCountInput').value=movieStoryDraft.itemCount||8}$('textPopover').classList.remove('hidden');$('textPopover').setAttribute('aria-hidden','false')}
+      function sceneStorySelectedIds(){return SCENE_CHARACTERS.filter(char=>sceneStoryDraft.selectedIds.includes(char.id)).map(char=>char.id).slice(0,4)}
+      function sceneCharacterIdFromShortcut(line){const match=String(line||'').trim().match(/^#\s*(\d+)\b/i);if(!match)return'';const index=Number.parseInt(match[1],10)-1;return SCENE_CHARACTERS[index]?.id||''}
+      function normalizeSceneStoryShares(preferredId=''){const selectedIds=sceneStorySelectedIds();if(!selectedIds.length)return;const current={};selectedIds.forEach(id=>{current[id]=Math.max(0,Math.min(100,Number(sceneStoryDraft.shares?.[id]||0)))});if(selectedIds.length===1){sceneStoryDraft.shares={[selectedIds[0]]:100};return}let lockedId=preferredId&&selectedIds.includes(preferredId)?preferredId:'';let lockedValue=lockedId?Math.max(0,Math.min(100,current[lockedId])):0;if(lockedId)lockedValue=Math.min(100-(selectedIds.length-1),lockedValue);const remainder=100-(lockedId?lockedValue:0);const targets=selectedIds.filter(id=>id!==lockedId);let remaining=remainder;const nextShares={};if(lockedId)nextShares[lockedId]=lockedValue;targets.forEach((id,index)=>{const slotsLeft=targets.length-index;const value=index===targets.length-1?remaining:Math.round(remaining/slotsLeft);nextShares[id]=value;remaining-=value});sceneStoryDraft.shares=nextShares}
+      function renderSceneStoryEditor(){$('sceneStoryTopicInput').value=sceneStoryDraft.topic||'';$('sceneStoryLineCountInput').value=sceneStoryDraft.lineCount||8;$('sceneStoryCountHint').textContent=`A historia vai criar ${sceneStoryDraft.lineCount||0} container(s) automaticamente.`;const picker=$('sceneStoryPicker');picker.innerHTML='';SCENE_CHARACTERS.forEach(char=>{const selected=sceneStoryDraft.selectedIds.includes(char.id);const card=document.createElement('button');card.type='button';card.className=`story-picker__card${selected?' is-selected':''}`;card.onclick=()=>{if(selected){sceneStoryDraft.selectedIds=sceneStorySelectedIds().filter(id=>id!==char.id);delete sceneStoryDraft.shares[char.id];normalizeSceneStoryShares();renderSceneStoryEditor();return}if(sceneStorySelectedIds().length>=4){alert('Escolha no maximo 4 personagens.');return}sceneStoryDraft.selectedIds=[...sceneStorySelectedIds(),char.id];sceneStoryDraft.shares={...sceneStoryDraft.shares,[char.id]:0};normalizeSceneStoryShares();renderSceneStoryEditor()};const thumb=document.createElement('div');thumb.className='story-picker__thumb';thumb.style.backgroundImage=`url("${defaultSceneCharacterImageUrl(char.id)}")`;const name=document.createElement('div');name.className='story-picker__name';name.textContent=char.name;card.append(thumb,name);picker.appendChild(card)});const host=$('sceneStoryCharacters');host.innerHTML='';sceneStorySelectedIds().forEach(id=>{const char=getSceneCharacter(id);if(!char)return;const share=Number(sceneStoryDraft.shares?.[char.id]||0);const card=document.createElement('div');card.className='story-character';const top=document.createElement('div');top.className='story-character__top';top.innerHTML=`<strong>${char.name}</strong>`;const value=document.createElement('div');value.className='story-character__value';value.textContent=`${share}%`;top.appendChild(value);const rangeWrap=document.createElement('div');rangeWrap.className='story-character__range';const range=document.createElement('input');range.type='range';range.min='0';range.max='100';range.step='1';range.value=String(share);range.oninput=()=>{sceneStoryDraft.shares={...sceneStoryDraft.shares,[char.id]:Number(range.value)};normalizeSceneStoryShares(char.id);renderSceneStoryEditor()};const hint=document.createElement('div');hint.className='mini';hint.textContent='Participacao media nas falas.';rangeWrap.append(range,hint);const bar=document.createElement('div');bar.className='story-character__bar';const fill=document.createElement('div');fill.className='story-character__fill';fill.style.width=`${share}%`;bar.appendChild(fill);card.append(top,rangeWrap,bar);host.appendChild(card)})}
+      function sceneStoryCharacterPlan(lineCount){const selectedIds=sceneStorySelectedIds();const counts=[];let assigned=0;selectedIds.forEach((id,index)=>{const share=Number(sceneStoryDraft.shares?.[id]||0);const exact=(share/100)*lineCount;const target=index===selectedIds.length-1?lineCount-assigned:Math.max(1,Math.round(exact));counts.push({id,share,targetLines:target});assigned+=target});while(assigned>lineCount){const candidate=counts.find(entry=>entry.targetLines>1);if(!candidate)break;candidate.targetLines-=1;assigned-=1}while(assigned<lineCount&&counts.length){counts[assigned%counts.length].targetLines+=1;assigned+=1}return counts.map(entry=>({...entry,name:getSceneCharacter(entry.id)?.name||entry.id}))}
+      async function generateSceneStoryBatch({topic,minChars,maxChars,lineCount,characters}){const response=await fetch('/api/text/openai/scenes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,minChars,maxChars,lineCount,characters})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao gerar historia.');const items=Array.isArray(payload?.items)?payload.items.map(item=>({characterId:String(item?.characterId||'').trim().toLowerCase()==='jessa'?'jessica':String(item?.characterId||'').trim().toLowerCase(),pt:String(item?.pt||'').trim(),en:String(item?.en||'').trim()})).filter(item=>item.characterId&&item.pt&&item.en):[];if(!items.length)throw new Error('A OpenAI nao retornou falas validas para a historia.');return items}
+      function applySceneStory(items){state.items=items.map(entry=>{const item=defaultItem();item.characterId=entry.characterId;item.pt=entry.pt;item.en=entry.en;return item});save();renderAll();return state.items.length}
+      async function generateMovieStoryBatch({topic,minChars,maxChars,itemCount}){const response=await fetch('/api/text/openai/movies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,minChars,maxChars,itemCount})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao gerar filme.');const items=Array.isArray(payload?.items)?payload.items.map(item=>({pt:String(item?.pt||'').trim(),en:String(item?.en||'').trim(),imagePrompt:String(item?.imagePrompt||'').trim()})).filter(item=>item.pt&&item.en&&item.imagePrompt):[];return{title:String(payload?.title||'').trim(),items}}
+      function applyMovieStory({title,items}){state.title=title;state.items=items.map(entry=>{const item=defaultItem();item.pt=entry.pt;item.en=entry.en;item.imagePrompt=entry.imagePrompt;return item});save();renderAll();return state.items.length}
+      function imagePromptAssist(){const extra=String(state.imageAiHint||'').trim();return extra?` Additional instruction for all generated images: ${extra}`:''}
+      async function generateFlashcardTextBatch({topic,minChars,maxChars,count}){const response=await fetch('/api/text/openai/flashcards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,minChars,maxChars,count})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao gerar frases.');const items=normalizeAiFlashcardItems(payload?.items||[]);if(!items.length)throw new Error('A OpenAI nao retornou frases validas.');return items}
+      function applyGeneratedFlashcards(items){const normalized=normalizeAiFlashcardItems(items);if(!normalized.length)return 0;const emptyIndexes=[];state.items.forEach((item,index)=>{if(!(item.pt||item.en))emptyIndexes.push(index)});while(emptyIndexes.length<normalized.length){addItem();emptyIndexes.push(state.items.length-1)}normalized.forEach((entry,listIndex)=>{const item=state.items[emptyIndexes[listIndex]];if(!item)return;item.pt=entry.pt;item.en=entry.en;item.category=item.category||'flashcard'});save();renderAll();return normalized.length}
+      async function translatePortugueseBatch(items){const response=await fetch('/api/text/openai/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao traduzir textos.');const translations=Array.isArray(payload?.items)?payload.items.map(item=>({index:Number.parseInt(item?.index,10),en:String(item?.en||'').trim()})).filter(item=>Number.isInteger(item.index)&&item.en):[];if(!translations.length)throw new Error('A OpenAI nao retornou traducoes validas.');return translations}
+      function applyTranslations(items){let applied=0;(items||[]).forEach(entry=>{const item=state.items[entry.index];if(!item)return;if(!String(item.pt||'').trim())return;if(String(item.en||'').trim())return;item.en=String(entry.en||'').trim();if(item.en)applied+=1});save();renderAll();return applied}
+      async function uploadLevelFilesToR2(files){const response=await fetch('/api/r2/upload-level-files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day:state.day,mode:state.mode,files})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.details||payload?.error||'Erro ao enviar arquivos para o R2.');return payload}
+      function remainingVoiceTargets(){if(state.mode==='scenes'||state.mode==='movies'){const out=[];state.items.forEach((item,index)=>{const pt=String(item?.pt||'').trim(),en=String(item?.en||'').trim();if(pt&&!hasGeneratedAudio(item,'pt'))out.push({index,kind:'pt',text:pt,fileName:`${itemStem(index)}-pt.mp3`});if(en&&!hasGeneratedAudio(item,'en'))out.push({index,kind:'en',text:en,fileName:`${itemStem(index)}-en.mp3`})});return out}return state.items.map((item,index)=>({item,index,text:String(item?.en||item?.pt||'').trim()})).filter(entry=>entry.text&&!hasGeneratedAudio(entry.item,'single')).map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${itemStem(entry.index)}-en.mp3`}))}
+      async function generateRemainingVoiceAssets(){const targets=remainingVoiceTargets();if(!targets.length){alert('Nao existem audios restantes para gerar.');return 0}elevenBusy=true;renderAll();let done=0,failed=0;try{for(const target of targets){const item=state.items[target.index];if(!item)continue;try{const asset=await generateVoiceAsset(target.text,target.fileName,getItemVoiceId(item),languageCodeForKind(target.kind));if(target.kind==='single'){item.audioFile=asset.fileName;item.audioDataUrl=asset.dataUrl}else if(target.kind==='pt'){item.audioPtFile=asset.fileName;item.audioPtDataUrl=asset.dataUrl}else{item.audioEnFile=asset.fileName;item.audioEnDataUrl=asset.dataUrl}done+=1;save();renderItems()}catch(error){failed+=1;console.error('Erro ao gerar audio ElevenLabs',target,error)}if(done+failed<targets.length)await wait(2000)}if(!done&&failed)throw new Error('Nao foi possivel gerar os audios restantes no ElevenLabs.');if(failed)alert(`${done} audio(s) gerado(s). ${failed} falharam e ficaram para a proxima tentativa.`);return done}finally{elevenBusy=false;renderAll()}}
+      const crcTable=(()=>{const table=new Uint32Array(256);for(let n=0;n<256;n+=1){let c=n;for(let k=0;k<8;k+=1)c=(c&1)?(0xedb88320^(c>>>1)):(c>>>1);table[n]=c>>>0}return table})();
+      const utf8=value=>new TextEncoder().encode(String(value||''));
+      const concatBytes=arrays=>{const total=arrays.reduce((sum,array)=>sum+(array?.length||0),0),out=new Uint8Array(total);let offset=0;arrays.forEach(array=>{if(!array)return;out.set(array,offset);offset+=array.length});return out};
+      const u16=value=>Uint8Array.of(value&255,(value>>>8)&255),u32=value=>Uint8Array.of(value&255,(value>>>8)&255,(value>>>16)&255,(value>>>24)&255);
+      const crc32=bytes=>{let crc=0xffffffff;for(let i=0;i<bytes.length;i+=1)crc=crcTable[(crc^bytes[i])&255]^(crc>>>8);return (crc^0xffffffff)>>>0};
+      function toDosDateTime(date=new Date()){const year=Math.max(1980,date.getFullYear());return{time:((date.getHours()&31)<<11)|((date.getMinutes()&63)<<5)|((Math.floor(date.getSeconds()/2))&31),date:(((year-1980)&127)<<9)|(((date.getMonth()+1)&15)<<5)|(date.getDate()&31)}}
+      function buildZipBlob(files){const now=toDosDateTime(),locals=[],centrals=[];let offset=0;files.forEach(file=>{const nameBytes=utf8(file.path.replace(/\\/g,'/'));const data=file.bytes instanceof Uint8Array?file.bytes:new Uint8Array(file.bytes||[]);const crc=crc32(data);const local=concatBytes([u32(0x04034b50),u16(20),u16(0),u16(0),u16(now.time),u16(now.date),u32(crc),u32(data.length),u32(data.length),u16(nameBytes.length),u16(0),nameBytes,data]);locals.push(local);const central=concatBytes([u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(now.time),u16(now.date),u32(crc),u32(data.length),u32(data.length),u16(nameBytes.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),nameBytes]);centrals.push(central);offset+=local.length});const centralBytes=concatBytes(centrals),localBytes=concatBytes(locals),end=concatBytes([u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(centralBytes.length),u32(localBytes.length),u16(0)]);return new Blob([localBytes,centralBytes,end],{type:'application/zip'})}
+      function triggerDownload(blob,fileName){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=fileName;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+      function extFromName(name,fallback='bin'){const clean=String(name||'').split('?')[0].split('#')[0],part=clean.includes('.')?clean.split('.').pop().toLowerCase():'';return part||fallback}
+      function extFromDataUrl(dataUrl,fallback='bin'){return dataUrlExt(dataUrl)||fallback}
+      function bytesFromDataUrl(dataUrl){const parts=String(dataUrl||'').split(',');if(parts.length<2)throw new Error('Data URL invalido.');const binary=atob(parts[1]),out=new Uint8Array(binary.length);for(let i=0;i<binary.length;i+=1)out[i]=binary.charCodeAt(i);return out}
+      function base64FromBytes(bytes){let binary='';const chunkSize=32768;for(let i=0;i<bytes.length;i+=chunkSize){binary+=String.fromCharCode(...bytes.subarray(i,i+chunkSize))}return btoa(binary)}
+      async function bytesFromRemote(url){const response=await fetch(url);if(!response.ok)throw new Error(`Falha ao baixar arquivo remoto: ${url}`);return new Uint8Array(await response.arrayBuffer())}
+      async function resolveAssetBytes(localDataUrl,remoteUrl){if(localDataUrl)return bytesFromDataUrl(localDataUrl);if(remoteUrl)return bytesFromRemote(remoteUrl);throw new Error('Arquivo nao encontrado para exportar.')}
+      const zipFolderName=()=>`playtalk-dia-${pad(state.day)}-${state.mode}`;
+      const jsonFileName=()=>state.mode==='movies'?`fase11-dia-${state.day}.json`:state.mode==='scenes'?`fase12-dia-${state.day}.json`:flashcardJsonFileName();
+      const joinPath=(...parts)=>parts.filter(Boolean).join('/');
+      const bundleZipPath=relativePath=>joinPath(zipFolderName(),relativePath);
+      function bundleAssetPath(name){return joinPath('all',name)}
+      async function collectBundleFiles(options={}){const publicJsonAssets=Boolean(options.publicJsonAssets);syncAssetFileNames();const files=[];const addTextFile=(name,text)=>files.push({name,bytes:utf8(text)});const addAsset=async(name,localDataUrl,remoteUrl)=>{files.push({name,bytes:await resolveAssetBytes(localDataUrl,remoteUrl)})};let jsonPayload=null;if(state.mode==='flashcard'){validateFlashcard();const items=state.items.filter(item=>item.imageFile&&item.pt&&item.en).map(item=>({entry:{imagem:item.imageFile,nomePortugues:item.pt,nomeIngles:item.en,categoria:item.category||'flashcard',audio:item.audioFile||'',tense:item.tense||'present-simple',sentenceForm:item.sentenceForm||'affirmative'},item}));for(const {entry,item} of items){await addAsset(entry.imagem,item.imageDataUrl,cloud(state.day,PHASE.flashcard,item.imageFile));if(item.audioFile||item.audioDataUrl)await addAsset(entry.audio,item.audioDataUrl,cloud(state.day,PHASE.flashcard,item.audioFile))}jsonPayload=publicJsonAssets?payload():{title:state.title.trim(),coverImage:flashcardCoverPreview(),items:items.map(item=>item.entry)}}else if(state.mode==='movies'){validateMovie();const entries=[];const coverPath=state.coverFile||'';const soundtrackPath=state.soundFile||'';if(coverPath)await addAsset(coverPath,state.coverDataUrl,cloud(state.day,PHASE.movies,state.coverFile));if(soundtrackPath)await addAsset(soundtrackPath,state.soundDataUrl,cloud(state.day,PHASE.movies,state.soundFile));for(const [index,item] of state.items.filter(item=>item.imageFile&&item.pt&&item.en).entries()){const imagePath=item.imageFile;await addAsset(imagePath,item.imageDataUrl,cloud(state.day,PHASE.movies,item.imageFile));const audioPtPath=item.audioPtFile||'';const audioEnPath=item.audioEnFile||'';if(audioPtPath)await addAsset(audioPtPath,item.audioPtDataUrl,cloud(state.day,PHASE.movies,item.audioPtFile));if(audioEnPath)await addAsset(audioEnPath,item.audioEnDataUrl,cloud(state.day,PHASE.movies,item.audioEnFile));entries.push({id:index+1,image:cloud(state.day,PHASE.movies,item.imageFile),portuguese:item.pt,english:item.en,image_prompt:item.imagePrompt||'',audio_portuguese:audioPtPath?cloud(state.day,PHASE.movies,item.audioPtFile):'',audio_english:audioEnPath?cloud(state.day,PHASE.movies,item.audioEnFile):''})}jsonPayload={soundtrack:soundtrackPath?cloud(state.day,PHASE.movies,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),items:entries,title:state.title.trim(),coverImage:coverPath?cloud(state.day,PHASE.movies,state.coverFile):''}}else{validateMovie();const sceneExport=getSceneExportData();const coverPath=state.coverFile||'';const soundtrackPath=state.soundFile||'';if(coverPath)await addAsset(coverPath,state.coverDataUrl,cloud(state.day,PHASE.scenes,state.coverFile));if(soundtrackPath)await addAsset(soundtrackPath,state.soundDataUrl,cloud(state.day,PHASE.scenes,state.soundFile));for(const char of sceneExport.characterAssets){const imagePath=char.imageFile||'';const imageUrl=char.imageFile?cloud(state.day,PHASE.scenes,char.imageFile):defaultSceneCharacterImageUrl(char.id);if(char.imageFile||char.imageDataUrl)await addAsset(imagePath||fileNameOnly(imageUrl)||`${char.id}.webp`,char.imageDataUrl,cloud(state.day,PHASE.scenes,char.imageFile))}for(const entry of sceneExport.items){const item=entry.item;const audioPtPath=item.audioPtFile||'';const audioEnPath=item.audioEnFile||'';if(audioPtPath)await addAsset(audioPtPath,item.audioPtDataUrl,cloud(state.day,PHASE.scenes,item.audioPtFile));if(audioEnPath)await addAsset(audioEnPath,item.audioEnDataUrl,cloud(state.day,PHASE.scenes,item.audioEnFile))}jsonPayload={soundtrack:soundtrackPath?cloud(state.day,PHASE.scenes,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),characters:sceneExport.characters,items:sceneExport.items.map(({item,...entry})=>entry),title:state.title.trim(),coverImage:coverPath?cloud(state.day,PHASE.scenes,state.coverFile):''}}addTextFile(jsonFileName(),JSON.stringify(jsonPayload,null,2));return files}
+      async function buildZipBundle(options={}){const files=await collectBundleFiles(options),root=zipFolderName();return{zipName:`${root}.zip`,blob:buildZipBlob(files.map(file=>({path:bundleZipPath(file.name),bytes:file.bytes}))),files}}
+      async function downloadBundleZip(){zipBusy=true;renderAll();try{const bundle=await buildZipBundle();triggerDownload(bundle.blob,bundle.zipName)}finally{zipBusy=false;renderAll()}}
+      function itemImagePrompt(item,index){const pt=String(item?.pt||'').trim(),en=String(item?.en||'').trim(),visual=String(item?.imagePrompt||'').trim(),base=`Create a photorealistic image for a language-learning app. Show adult people only when people are needed. The image must represent the sentence directly and literally: "${en||pt}"${pt&&en?` (${pt} in Portuguese)`:''}. ${visual?`Use this visual direction: ${visual}.`:''} Real-life scene, realistic textures, photographic detail, believable materials, natural lighting, no children, no text, no letters, no captions.`;if(state.mode==='movies')return `${base} Cinematic photography, expressive action, consistent framing, day ${state.day}${state.title?`, title "${state.title}"`:''}.${imagePromptAssist()}`;return `${base} Square composition, simple background, direct and easy to understand at a glance.${imagePromptAssist()}`}
+      function itemGridImagePrompt(targets){const intro=`Create one 1024x1024 photorealistic image for a language-learning app, arranged as a strict 2x2 grid of four equal 512x512 quadrants. Each quadrant must contain one complete, self-contained illustration. Do not let any object, person, shadow, background element, or text cross quadrant boundaries. Keep the split exactly in the center both horizontally and vertically so the image can be sliced into four separate 512x512 tiles.`;const style=state.mode==='movies'?`Use cinematic photography, expressive action, consistent framing across all quadrants, and make the sequence pleasant and fluid to follow. Day ${state.day}${state.title?`, title "${state.title}"`:''}.`:'Use realistic lighting, clear composition, simple backgrounds, and visuals that are easy to understand at a glance.';const tiles=targets.map((target,listIndex)=>{const item=target?.item||{},pt=String(item.pt||'').trim(),en=String(item.en||'').trim(),visual=String(item.imagePrompt||'').trim(),slotLabel=['top-left','top-right','bottom-left','bottom-right'][listIndex]||`slot-${listIndex+1}`;return `${listIndex+1}. ${slotLabel} quadrant: represent the sentence directly and literally: "${en||pt}"${pt&&en?` (${pt} in Portuguese)`:''}. ${visual?`Visual direction: ${visual}.`:''} Adult people only when people are needed. Real-life scene, realistic textures, believable materials, natural lighting, no children, no text, no letters, no captions.`}).join(' ');const filler=targets.length<4?`Any unused quadrant must stay empty with a plain neutral background and no subject.`:'';return `${intro} ${style} ${tiles} ${filler}${imagePromptAssist()}`.trim()}
+      function coverImagePrompt(){if(state.mode==='movies'){const highlights=state.items.filter(item=>item.pt||item.en||item.imagePrompt).slice(0,4).map((item,index)=>`${index+1}. "${String(item.en||item.pt).trim()}"${item.imagePrompt?` Visual direction: ${String(item.imagePrompt).trim()}.`:''}`).join(' ');return `Create a single photorealistic movie cover for a language-learning app. Cinematic poster composition, strong focal point, clean readable layout without any text. Day ${state.day}.${state.title?` Title reference: "${state.title}".`:''} Use realistic lighting, expressive action, adult characters only when people are needed, and make the cover feel consistent with these scenes: ${highlights||'Create an inviting cinematic story cover with one strong central moment.'}${imagePromptAssist()}`.trim()}const dialogueHints=state.items.filter(item=>item.pt||item.en).slice(0,4).map((item,index)=>`${index+1}. ${String(item.en||item.pt).trim()}`).join(' ');const characters=state.chars.filter(char=>char.id&&char.name).slice(0,4).map(char=>char.name).join(', ');return `Create a single photorealistic cover image for a language-learning story scene pack. Square composition, cinematic but clean, no text, no letters, no captions. Day ${state.day}.${state.title?` Story title reference: "${state.title}".`:''} Main cast reference: ${characters||'adult characters from the dialogue set'}. Suggested story beats: ${dialogueHints||'friendly everyday conversation with visual clarity.'}${imagePromptAssist()}`.trim()}
+      function charImagePrompt(char,index){const name=String(char?.name||`Personagem ${index+1}`).trim(),id=String(char?.id||`char${index+1}`).trim();return `Create a photorealistic adult character portrait for a language-learning app. Character name: "${name}". Character id: "${id}". Adult only, realistic face, natural skin texture, realistic hair, realistic clothing fabric, studio-quality lighting, clean background, memorable appearance.`}
+      async function generateAiImage({prompt,fileName,background='auto'}){const cleanPrompt=String(prompt||'').trim();if(!cleanPrompt)throw new Error('Faltou texto para montar o prompt da imagem.');const response=await fetch('/api/images/openai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:cleanPrompt,fileName,background,outputFormat:'webp',quality:'low',size:'1024x1024'})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao gerar imagem.');if(!payload?.dataUrl||!payload?.fileName)throw new Error('A OpenAI nao retornou imagem valida.');return payload}
+      const loadImageFromDataUrl=dataUrl=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Nao foi possivel abrir a imagem gerada.'));img.src=dataUrl});
+      async function sliceGridImage(dataUrl){const img=await loadImageFromDataUrl(dataUrl),tileWidth=Math.floor(img.width/2),tileHeight=Math.floor(img.height/2),quadrants=[[0,0],[tileWidth,0],[0,tileHeight],[tileWidth,tileHeight]];return quadrants.map(([sx,sy])=>{const canvas=document.createElement('canvas');canvas.width=512;canvas.height=512;canvas.getContext('2d').drawImage(img,sx,sy,tileWidth,tileHeight,0,0,512,512);return canvas.toDataURL('image/webp',.9)})}
+      function itemBatchTargets(limit=4){return aiImageMissingTargets().filter(target=>target.kind==='item').slice(0,limit)}
+      function lockTargets(targets){targets.forEach(target=>aiImageLocks.add(aiLockKey(target.kind,target.index)))}
+      function unlockTargets(targets){targets.forEach(target=>aiImageLocks.delete(aiLockKey(target.kind,target.index)))}
+      async function generateItemImageBatch(targets){const validTargets=(targets||[]).filter(target=>target?.item&&(target.item.pt||target.item.en)&&!target.item.imageFile&&!target.item.imageDataUrl).slice(0,4);if(!validTargets.length)return 0;lockTargets(validTargets);renderAll();try{const payload=await generateAiImage({prompt:itemGridImagePrompt(validTargets),fileName:`${itemStem(validTargets[0].index)}-grid`});const slices=await sliceGridImage(payload.dataUrl);validTargets.forEach((target,listIndex)=>{const item=state.items[target.index],slice=slices[listIndex];if(!item||!slice)return;item.imageFile=safeFile(`${itemStem(target.index)}-grid-${listIndex+1}`,'webp',itemStem(target.index));item.imageDataUrl=slice});save();return validTargets.length}finally{unlockTargets(validTargets);renderAll()}}
+      async function generateItemImage(index){const item=state.items[index];if(!item)throw new Error('Item nao encontrado.');const lockKey=aiLockKey('item',index);if(aiImageLocks.has(lockKey))return;aiImageLocks.add(lockKey);renderAll();try{const payload=await generateAiImage({prompt:itemImagePrompt(item,index),fileName:itemStem(index)});item.imageFile=payload.fileName;item.imageDataUrl=payload.dataUrl;save()}finally{aiImageLocks.delete(lockKey);renderAll()}}
+      async function generateCoverImage(){if(state.mode==='flashcard')return;const lockKey=aiLockKey('cover',0);if(aiImageLocks.has(lockKey))return;aiImageLocks.add(lockKey);renderAll();try{const payload=await generateAiImage({prompt:coverImagePrompt(),fileName:coverStem()});state.coverFile=payload.fileName;state.coverDataUrl=payload.dataUrl;save()}finally{aiImageLocks.delete(lockKey);renderAll()}}
+      async function generateCharImage(index){const char=state.chars[index];if(!char)throw new Error('Personagem nao encontrado.');const lockKey=aiLockKey('char',index);if(aiImageLocks.has(lockKey))return;aiImageLocks.add(lockKey);renderAll();try{const payload=await generateAiImage({prompt:charImagePrompt(char,index),fileName:charStem(index,char),background:'transparent'});char.imageFile=payload.fileName;char.imageDataUrl=payload.dataUrl;save()}finally{aiImageLocks.delete(lockKey);renderAll()}}
+      async function generateMissingAiImages(){if(aiBatchBusy)return;const targets=aiImageMissingTargets();if(!targets.length){alert(state.mode==='scenes'?'Todos os personagens e a capa ja tem imagem.':'Todos os itens e a capa ja tem imagem.');return}aiBatchBusy=true;renderAll();let done=0;try{if((state.mode==='movies'||state.mode==='scenes')&&!state.coverFile&&!state.coverDataUrl){await generateCoverImage();done+=1}if(state.mode==='scenes'){for(const target of aiImageMissingTargets().filter(target=>target.kind==='char')){await generateCharImage(target.index);done+=1}}else{while(itemBatchTargets().length){done+=await generateItemImageBatch(itemBatchTargets())}}alert(`${done} imagem(ns) gerada(s) com IA.`)}catch(error){alert(`${done} imagem(ns) gerada(s) antes da parada.\n${error.message||'Erro ao gerar imagem.'}`)}finally{aiBatchBusy=false;renderAll()}}
+      function syncAudioPopover(){const movieMode=state.mode!=='flashcard';$('audioPtBtn').classList.toggle('active',!!audioBatchTargets.pt);$('audioEnBtn').classList.toggle('active',!!audioBatchTargets.en);$('audioBatchConfirmBtn').disabled=!movieMode||(!audioBatchTargets.pt&&!audioBatchTargets.en)}
+      function openAudioPopover(){audioBatchTargets={pt:true,en:true};$('audioPopover').classList.remove('hidden');$('audioPopover').setAttribute('aria-hidden','false');syncAudioPopover()}
+      function closeAudioPopover(){audioBatchTargets={pt:false,en:false};$('audioPopover').classList.add('hidden');$('audioPopover').setAttribute('aria-hidden','true')}
+      function audioBatchOrder(){if(state.mode==='flashcard')return[];const kinds=[];if(audioBatchTargets.pt)kinds.push('pt');if(audioBatchTargets.en)kinds.push('en');const targets=[];state.items.forEach((item,index)=>{kinds.forEach(kind=>{const filled=kind==='pt'?item.audioPtFile||item.audioPtDataUrl:item.audioEnFile||item.audioEnDataUrl;if(!filled)targets.push({index,kind})})});return targets}
+      async function importAudioBatch(files){const targets=audioBatchOrder();if(!targets.length){alert('Nao existem slots de audio vazios para preencher.');return}let used=0;for(let i=0;i<files.length&&used<targets.length;i+=1){const target=targets[used],data=await prepAudio(files[i],`${itemStem(target.index)}-${target.kind}`),item=state.items[target.index];if(!item)continue;if(target.kind==='pt'){item.audioPtFile=data.fileName;item.audioPtDataUrl=data.dataUrl}else{item.audioEnFile=data.fileName;item.audioEnDataUrl=data.dataUrl}used+=1}save();renderItems();alert(`${used} audio(s) importado(s) em sequencia.`)}
+      function detectModeFromJson(data){if(Array.isArray(data))return'flashcard';if(data&&typeof data==='object'){if(Array.isArray(data.characters))return'scenes';if(Array.isArray(data.items)&&data.items.every(entry=>entry&&typeof entry==='object'&&('imagem' in entry||'nomePortugues' in entry||'nomeIngles' in entry)))return'flashcard';if(Array.isArray(data.items))return'movies'}throw new Error('JSON nao reconhecido para este editor.')}
+      function importJsonPayload(data){state.mode=detectModeFromJson(data);state.items=[];state.chars=[];state.flashcardCoverUrl='';const importedAssets=[];const rememberDay=value=>{const parsed=parseCloudAssetInfo(value);if(parsed?.day)importedAssets.push(parsed);return parsed};if(state.mode==='flashcard'){const flashcardItems=Array.isArray(data)?data:(Array.isArray(data?.items)?data.items:[]);state.title=Array.isArray(data)?'':String(data?.title||'').trim();state.flashcardCoverUrl=Array.isArray(data)?'':String(data?.coverImage||'').trim();state.items=flashcardItems.map(entry=>{rememberDay(entry.imagem);rememberDay(entry.audio);return normalizeImportedItem({imageFile:importedFileName(entry.imagem),pt:entry.nomePortugues||'',en:entry.nomeIngles||'',category:entry.categoria||'flashcard',audioFile:importedFileName(entry.audio),tense:entry.tense||'present-simple',sentenceForm:entry.sentenceForm||'affirmative'})})}else{state.title=data.title||'';state.levelKey=data.level||defaultLevelKey();rememberDay(data.coverImage);rememberDay(data.soundtrack);state.coverFile=importedFileName(data.coverImage);state.coverDataUrl='';state.soundFile=importedFileName(data.soundtrack);state.soundDataUrl='';if(state.mode==='movies'){state.items=data.items.map(entry=>{rememberDay(entry.image);rememberDay(entry.audio_portuguese);rememberDay(entry.audio_english);return normalizeImportedItem({imageFile:importedFileName(entry.image),pt:entry.portuguese||'',en:entry.english||'',imagePrompt:entry.image_prompt||entry.imagePrompt||'',audioPtFile:importedFileName(entry.audio_portuguese),audioEnFile:importedFileName(entry.audio_english)})})}else{state.chars=normalizeSceneChars(Array.isArray(data.characters)?data.characters.map(char=>{rememberDay(char.image);return{id:char.id||'',name:char.name||'',voiceId:char.voiceId||'',imageFile:importedFileName(char.image),imageDataUrl:''}}):[]);state.items=data.items.map(entry=>{rememberDay(entry.audio_portuguese);rememberDay(entry.audio_english);return normalizeImportedItem({pt:entry.portuguese||'',en:entry.english||'',characterId:entry.character||'',audioPtFile:importedFileName(entry.audio_portuguese),audioEnFile:importedFileName(entry.audio_english)})})}}const expectedPhaseCode=PHASE_CODE[state.mode]||PHASE_CODE.flashcard;const detectedDay=(importedAssets.find(asset=>asset.phaseCode===expectedPhaseCode&&Number.isFinite(asset.day)&&asset.day>0)||importedAssets.find(asset=>Number.isFinite(asset.day)&&asset.day>0))?.day;if(detectedDay)state.day=clampDay(detectedDay);save();renderAll()}
+      async function generateVoiceAsset(text,fileName,voiceId='',languageCode=''){const cleanText=String(text||'').trim();if(!cleanText)throw new Error('Preencha o texto antes de gerar voz.');if(state.mode==='scenes'&&!String(voiceId||'').trim())throw new Error('Selecione um dos 9 personagens fixos antes de gerar a voz.');const response=await fetch('/api/tts/elevenlabs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:cleanText,fileName,voiceId,languageCode})});let payload=null;if(!response.ok){try{payload=await response.json()}catch{}throw new Error(payload?.instructions||payload?.error||'Erro ao gerar voz.')}const blob=await response.blob();return{fileName,dataUrl:await asDataUrl(blob)}}
+      function updateTop(){state.testOnline=false;const movie=state.mode!=='flashcard';$('status').textContent=`Modo atual: ${label()}${state.testOnline?' • testando links online':''}${aiBatchBusy?' • gerando imagens IA':''}${aiTextBusy?' • gerando frases IA':''}${elevenBusy?' • gerando audios ElevenLabs':''}${zipBusy?' • montando ZIP':''}${r2UploadBusy?' • enviando ZIP ao R2':''}`;$('modeBtn').textContent=label();$('hint').textContent=state.mode==='flashcard'?'FlashCard agora exporta title, coverImage e items no formato de Niveis/words.':state.mode==='movies'?'Filmes exporta JSON de fase11 e gera capa com IA junto das imagens.':'Cenas exporta JSON de fase12 e gera capa com IA junto das imagens.';$('uploadBtn').classList.toggle('hidden',state.mode==='scenes');setButtonLabel('addBtn',elevenBusy?'ElevenLabs...':'ElevenLabs');$('addBtn').disabled=elevenBusy||r2UploadBusy;setButtonLabel('testOnlineBtn',onlineTestStatusLabel());$('testOnlineBtn').classList.remove('accent');$('voiceModeBtn').classList.toggle('accent',state.voiceMode);setButtonLabel('voiceModeBtn',voiceModeStatusLabel());document.querySelectorAll('.movieOnly').forEach(n=>n.classList.toggle('hidden',state.mode==='flashcard'));document.querySelectorAll('.flashcardOnly').forEach(n=>n.classList.toggle('hidden',state.mode!=='flashcard'));$('watchFlashcardsBtn').disabled=state.mode!=='flashcard';$('charactersWrap').classList.toggle('hidden',state.mode!=='scenes');$('charactersPanelBody').classList.toggle('hidden',!state.sceneCharactersOpen);$('charactersToggleBtn').setAttribute('aria-expanded',state.sceneCharactersOpen?'true':'false');$('charactersToggleCaret').textContent=state.sceneCharactersOpen?'−':'+';$('pasteWrap').classList.toggle('hidden',!state.paste);$('dayInput').value=state.day;$('titleInput').value=state.title;$('levelInput').value=state.levelKey;$('flashcardCoverUrlInput').value=state.flashcardCoverUrl||'';$('previewMode').textContent=label();$('previewTitle').textContent=state.title||`Projeto em ${label()}`;const meta=[`Dia ${state.day}`];if(movie)meta.push(phase(),state.levelKey||defaultLevelKey());if(state.mode==='flashcard'&&state.flashcardCoverUrl)meta.push('capa publica');if(state.mode==='scenes')meta.push('personagens por historia');if(state.testOnline)meta.push('links do JSON');if(state.voiceMode)meta.push('geracao de voz');if(aiBatchBusy)meta.push('imagens IA');if(aiTextBusy)meta.push('frases IA');if(elevenBusy)meta.push('elevenlabs');if(zipBusy)meta.push('zip');if(r2UploadBusy)meta.push('r2');$('previewMeta').textContent=meta.join(' • ');$('preview').style.backgroundImage=coverImg()?`linear-gradient(rgba(0,0,0,.15), rgba(0,0,0,.55)), url("${coverImg()}")`:'';syncAudioPopover();syncAiButton();syncAiTextButton();syncZipButton()}
+      function textBtn(title,value,onClick){const b=document.createElement('button');b.type='button';b.className='textbtn';b.innerHTML=`<small>${title}</small>${value||'Clique para preencher'}`;b.onclick=onClick;return b}
+      function audioControl(icon,labelText,has,onClick,onDelete,voiceTarget=false){const wrap=document.createElement('div');wrap.className='audio';if(voiceTarget&&state.voiceMode)wrap.classList.add('voice-target');const btn=document.createElement('button');btn.type='button';btn.className=has?'has ready':'';btn.innerHTML=`<img src="${icon}" alt="">`;const text=document.createElement('div');text.className='mini';text.textContent=has?'Ok':`${labelText} vazio`;let timer=null,held=false;btn.onpointerdown=()=>{held=false;if(!has||state.voiceMode)return;timer=setTimeout(()=>{held=true;onDelete()},2000)};['pointerup','pointerleave','pointercancel'].forEach(name=>btn.addEventListener(name,()=>{if(timer)clearTimeout(timer);timer=null}));btn.onclick=()=>{if(held){held=false;return}onClick(btn)};wrap.append(btn,text);return wrap}
+      function renderChars(){const host=$('characters');host.innerHTML='';if(state.mode!=='scenes')return;ensureChars();state.chars.forEach((char,index)=>{const card=document.createElement('div');card.className='char';const pic=document.createElement('div');pic.className='charpic';pic.style.backgroundImage=charImg(char)?`url("${charImg(char)}")`:'';pic.textContent=charImg(char)?'':'Sem imagem';const id=document.createElement('div');id.className='field';id.innerHTML=`<label>ID</label><input type="text" value="${char.id||''}" readonly>`;const name=document.createElement('div');name.className='field';name.innerHTML=`<label>Nome</label><input type="text" value="${char.name||''}" readonly>`;const voice=document.createElement('div');voice.className='field';voice.innerHTML=`<label>ElevenLabs</label><input type="text" value="${char.voiceId||''}" readonly>`;const row=document.createElement('div');row.className='row';const imgBtn=document.createElement('button');imgBtn.type='button';imgBtn.textContent='Imagem';imgBtn.onclick=()=>{pendingImage={type:'char',index};$('singleImageInput').click()};const locked=isAiLocked('char',index),aiBtn=document.createElement('button');aiBtn.type='button';aiBtn.textContent=locked?'Gerando...':'IA';aiBtn.disabled=locked;aiBtn.onclick=async()=>{try{await generateCharImage(index)}catch(error){alert(error.message||'Erro ao gerar imagem.')}};row.append(imgBtn,aiBtn);card.append(pic,id,name,voice,row);host.appendChild(card)})}
+      function renderItems(){stopAudio();const host=$('items');host.innerHTML='';const options=state.chars.filter(char=>char.id&&char.name);state.items.forEach((item,index)=>{const card=document.createElement('div');card.className='card';const top=document.createElement('div');top.className='row';top.style.justifyContent='space-between';top.innerHTML=`<span class="mini">${state.mode==='scenes'?'Fala':'Item'} ${index+1}</span>`;const del=document.createElement('button');del.type='button';del.textContent='Apagar';del.onclick=()=>{state.items.splice(index,1);save();renderAll()};top.appendChild(del);card.appendChild(top);if(state.mode!=='scenes'){const visual=document.createElement('button');visual.type='button';visual.className=`visual${itemImg(item)?' has-image':''}`;visual.style.backgroundImage=itemImg(item)?`url("${itemImg(item)}")`:'';visual.textContent=itemImg(item)?'':'Imagem';let timer=null,held=false;visual.onpointerdown=()=>{held=false;if(!itemImg(item))return;timer=setTimeout(()=>{held=true;item.imageFile='';item.imageDataUrl='';save();renderAll()},2000)};['pointerup','pointerleave','pointercancel'].forEach(name=>visual.addEventListener(name,()=>{if(timer)clearTimeout(timer);timer=null}));visual.onclick=()=>{if(held){held=false;return}if(!itemImg(item)){pendingImage={type:'item',index};$('singleImageInput').click();return}const src=preferredItemAudioSrc(item);if(src){play(src,visual);return}};card.appendChild(visual);const visualActions=document.createElement('div');visualActions.className='row';const uploadBtn=document.createElement('button');uploadBtn.type='button';uploadBtn.textContent='Upload';uploadBtn.onclick=()=>{pendingImage={type:'item',index};$('singleImageInput').click()};const locked=isAiLocked('item',index),aiBtn=document.createElement('button');aiBtn.type='button';aiBtn.textContent=locked?'Gerando...':'IA';aiBtn.disabled=locked;aiBtn.onclick=async()=>{try{await generateItemImage(index)}catch(error){alert(error.message||'Erro ao gerar imagem.')}};visualActions.append(uploadBtn,aiBtn);card.appendChild(visualActions)}else{const visual=document.createElement('div');visual.className='visual';const selected=state.chars.find(char=>char.id===item.characterId);visual.style.backgroundImage=charImg(selected)?`url("${charImg(selected)}")`:'';visual.textContent=charImg(selected)?'':'Escolha um personagem';card.appendChild(visual);const sel=document.createElement('select');sel.innerHTML='<option value="">Definir personagem</option>';options.forEach(opt=>{const o=document.createElement('option');o.value=opt.id;o.textContent=`${opt.name} (${opt.id})`;sel.appendChild(o)});sel.value=item.characterId||'';sel.onchange=e=>{item.characterId=e.target.value;save();renderItems()};card.appendChild(sel);const voice=document.createElement('div');voice.className='mini';const voiceId=getItemVoiceId(item);voice.textContent=voiceId?`Voice ID: ${voiceId}`:'Selecione um personagem para travar a voz ElevenLabs.';card.appendChild(voice)}card.appendChild(textBtn('Portugues',item.pt,()=>{const v=prompt(`Portugues do item ${index+1}`,item.pt);if(v===null)return;item.pt=v.trim();save();renderItems()}));card.appendChild(textBtn('English',item.en,()=>{const v=prompt(`English do item ${index+1}`,item.en);if(v===null)return;item.en=v.trim();save();renderItems()}));if(state.mode==='movies'){card.appendChild(textBtn('Descricao IA',item.imagePrompt,()=>{const v=prompt(`Descricao visual do item ${index+1}`,item.imagePrompt);if(v===null)return;item.imagePrompt=v.trim();save();renderItems()}))}if(state.mode==='flashcard'){card.appendChild(textBtn('Categoria',item.category,()=>{const v=prompt(`Categoria do item ${index+1}`,item.category);if(v===null)return;item.category=v.trim()||'flashcard';save();renderItems()}));const row=document.createElement('div');row.className='row';const tense=document.createElement('select');['present-simple','present-continuous','present-perfect','past-simple','past-continuous','future-simple'].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;tense.appendChild(o)});tense.value=item.tense||'present-simple';tense.onchange=e=>{item.tense=e.target.value;save()};const form=document.createElement('select');['affirmative','negative','question','imperative'].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;form.appendChild(o)});form.value=item.sentenceForm||'affirmative';form.onchange=e=>{item.sentenceForm=e.target.value;save()};row.append(tense,form);card.appendChild(row);card.appendChild(audioControl('../arquivos-codex/icones/ingles.svg','Audio',Boolean(audioSrc(item,'single')),async btn=>{if(state.voiceMode){try{const asset=await generateVoiceAsset(item.en||item.pt,`${itemStem(index)}-en.mp3`,'','en');item.audioFile=asset.fileName;item.audioDataUrl=asset.dataUrl;save();renderItems()}catch(error){alert(error.message||'Erro ao gerar voz.')}return}const src=audioSrc(item,'single');if(src)return play(src,btn);pendingAudio={type:'item',kind:'single',index};$('audioInput').click()},()=>{item.audioFile='';item.audioDataUrl='';save();renderItems()},true))}else{const row=document.createElement('div');row.className='row';row.appendChild(audioControl('../arquivos-codex/icones/portugues.svg','Portugues',Boolean(audioSrc(item,'pt')),async btn=>{if(state.voiceMode){try{const asset=await generateVoiceAsset(item.pt,`${itemStem(index)}-pt.mp3`,getItemVoiceId(item),'pt');item.audioPtFile=asset.fileName;item.audioPtDataUrl=asset.dataUrl;save();renderItems()}catch(error){alert(error.message||'Erro ao gerar voz.')}return}const src=audioSrc(item,'pt');if(src)return play(src,btn);pendingAudio={type:'item',kind:'pt',index};$('audioInput').click()},()=>{item.audioPtFile='';item.audioPtDataUrl='';save();renderItems()},true));row.appendChild(audioControl('../arquivos-codex/icones/ingles.svg','English',Boolean(audioSrc(item,'en')),async btn=>{if(state.voiceMode){try{const asset=await generateVoiceAsset(item.en,`${itemStem(index)}-en.mp3`,getItemVoiceId(item),'en');item.audioEnFile=asset.fileName;item.audioEnDataUrl=asset.dataUrl;save();renderItems()}catch(error){alert(error.message||'Erro ao gerar voz.')}return}const src=audioSrc(item,'en');if(src)return play(src,btn);pendingAudio={type:'item',kind:'en',index};$('audioInput').click()},()=>{item.audioEnFile='';item.audioEnDataUrl='';save();renderItems()},true));card.appendChild(row)}host.appendChild(card)})}
+      function renderAll(){syncAssetFileNames();updateTop();renderChars();renderItems()}
+      function addItem(image=null){const item=defaultItem();if(image){item.imageFile=image.fileName;item.imageDataUrl=image.dataUrl}if(state.mode==='scenes'){ensureChars();item.characterId=state.chars[0]?.id||''}state.items.push(item)}
+      function validateFlashcard(){if(state.mode!=='flashcard')return;if(!state.title.trim())throw new Error('Preencha o nome do deck antes de exportar.');if(!flashcardCoverPreview())throw new Error('Preencha o link publico da capa do deck antes de exportar.');if(!state.items.length)throw new Error('Adicione pelo menos um item antes de exportar.')}
+      function validateMovie(){if(state.mode==='flashcard')return;if(!state.title.trim())throw new Error('Preencha o titulo antes de exportar.');if(!state.coverFile)throw new Error('Envie a capa antes de exportar.');if(!state.items.length)throw new Error('Adicione pelo menos um item antes de exportar.')}
+      function getSceneExportData(){ensureChars();const itemEntries=state.items.filter(i=>i.pt&&i.en&&i.characterId).map((i,n)=>({id:n+1,character:i.characterId,portuguese:i.pt,english:i.en,audio_portuguese:i.audioPtFile?cloud(state.day,PHASE.scenes,i.audioPtFile):'',audio_english:i.audioEnFile?cloud(state.day,PHASE.scenes,i.audioEnFile):'',item:i}));const usedIds=new Set(itemEntries.map(entry=>entry.character));const characters=state.chars.filter(char=>{const id=String(char?.id||'').trim();const name=String(char?.name||'').trim();return id&&name&&usedIds.has(id)}).map(char=>({id:char.id.trim(),name:char.name.trim(),voiceId:char.voiceId||getSceneCharacter(char.id)?.voiceId||'',image:char.imageFile?cloud(state.day,PHASE.scenes,char.imageFile):defaultSceneCharacterImageUrl(char.id),char}));const validIds=new Set(characters.map(char=>char.id));return{characters:characters.map(({char,...entry})=>entry),items:itemEntries.filter(entry=>validIds.has(entry.character)).map(({item,...entry})=>entry),characterAssets:characters.map(entry=>entry.char)}}
+      function payload(){if(state.mode==='flashcard'){validateFlashcard();return{title:state.title.trim(),coverImage:flashcardCoverPreview(),items:state.items.filter(i=>i.imageFile&&i.pt&&i.en).map(i=>({imagem:cloud(state.day,PHASE.flashcard,i.imageFile),nomePortugues:i.pt,nomeIngles:i.en,categoria:i.category||'flashcard',audio:i.audioFile?cloud(state.day,PHASE.flashcard,i.audioFile):'',tense:i.tense||'present-simple',sentenceForm:i.sentenceForm||'affirmative'}))}}validateMovie();if(state.mode==='movies')return{soundtrack:state.soundFile?cloud(state.day,PHASE.movies,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),items:state.items.filter(i=>i.imageFile&&i.pt&&i.en).map((i,n)=>({id:n+1,image:cloud(state.day,PHASE.movies,i.imageFile),portuguese:i.pt,english:i.en,image_prompt:i.imagePrompt||'',audio_portuguese:i.audioPtFile?cloud(state.day,PHASE.movies,i.audioPtFile):'',audio_english:i.audioEnFile?cloud(state.day,PHASE.movies,i.audioEnFile):''})),title:state.title.trim(),coverImage:state.coverFile?cloud(state.day,PHASE.movies,state.coverFile):''};const sceneExport=getSceneExportData();return{soundtrack:state.soundFile?cloud(state.day,PHASE.scenes,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),characters:sceneExport.characters,items:sceneExport.items,title:state.title.trim(),coverImage:state.coverFile?cloud(state.day,PHASE.scenes,state.coverFile):''}}
+      const downloadJson=()=>{const blob=new Blob([JSON.stringify(payload(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=jsonFileName();document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)};
+      const startGame=()=>{const cfg=state.mode==='movies'?{mode:'watching',phase:11}:state.mode==='scenes'?{mode:'talking',phase:12}:{mode:'planting',phase:1};try{sessionStorage.setItem('playtalk-play-launch',JSON.stringify({phase:cfg.phase,day:state.day,source:'play',createdAt:Date.now()}))}catch{}window.location.href=`https://playtalk.life/play?mode=${encodeURIComponent(cfg.mode)}&day=${encodeURIComponent(String(state.day))}&source=play#home`};
+      $('modeBtn').onclick=()=>{state.mode=MODES[(MODES.indexOf(state.mode)+1)%MODES.length];if(state.mode==='scenes')ensureChars();if(state.mode!=='flashcard'&&!state.levelKey)state.levelKey=defaultLevelKey();save();renderAll()};
+      $('newBtn').onclick=()=>{if(!confirm('Apagar os itens e comecar uma grade nova?'))return;state.items=[];save();renderAll()};
+      $('charactersToggleBtn').onclick=()=>{state.sceneCharactersOpen=!state.sceneCharactersOpen;save();renderAll()};
+      $('addBtn').onclick=async()=>{if(elevenBusy)return;try{const done=await generateRemainingVoiceAssets();if(done&&!remainingVoiceTargets().length)alert(`${done} audio(s) gerado(s) com ElevenLabs.`)}catch(error){alert(error.message||'Erro ao gerar audio.')}}
+      $('watchFlashcardsBtn').onclick=()=>openWatchPopover();
+      $('uploadBtn').onclick=()=>$('batchImageInput').click();
+      $('pasteBtn').onclick=()=>{state.paste=!state.paste;save();renderAll()};
+      $('voiceModeBtn').onclick=()=>{state.voiceMode=!state.voiceMode;save();renderAll()};
+      $('aiImageBtn').onclick=async()=>{if(aiBatchBusy)return;const answer=window.prompt('Instrucao extra opcional para ajudar a IA nas imagens. Ex.: fundo branco, estilo catalogo, close-up, sem sombras fortes.',state.imageAiHint||'');if(answer===null)return;state.imageAiHint=answer.trim();save();try{await generateMissingAiImages()}catch(error){alert(error.message||'Erro ao gerar imagem.')}};
+      $('translateBtn').onclick=async()=>{if(aiTextBusy)return;const targets=state.items.map((item,index)=>({index,pt:String(item?.pt||'').trim(),en:String(item?.en||'').trim()})).filter(item=>item.pt&&!item.en);if(!targets.length){alert('Nao ha campos em portugues aguardando traducao para ingles.');return}aiTextBusy=true;renderAll();try{const translations=await translatePortugueseBatch(targets);const applied=applyTranslations(translations);alert(`${applied} traducao(oes) aplicada(s) no campo English.`)}catch(error){alert(error.message||'Erro ao traduzir textos.')}finally{aiTextBusy=false;renderAll()}};
+      $('aiTextBtn').onclick=()=>{if(state.mode!=='flashcard'&&state.mode!=='scenes'&&state.mode!=='movies')return;openTextPopover()};
+      $('importJsonBtn').onclick=()=>$('jsonInput').click();
+      $('exportBtn').onclick=()=>{try{downloadJson()}catch(error){alert(error.message||'Erro ao exportar JSON.')}};
+      $('exportZipBtn').onclick=()=>{downloadBundleZip().catch(error=>alert(error.message||'Erro ao exportar ZIP.'))};
+      $('uploadR2Btn').onclick=async()=>{if(zipBusy||r2UploadBusy)return;r2UploadBusy=true;renderAll();try{const bundle=await buildZipBundle({publicJsonAssets:true}),payloadFiles=bundle.files.map(file=>({name:file.name,base64:base64FromBytes(file.bytes)})),result=await uploadLevelFilesToR2(payloadFiles);alert(`${result.uploadedCount} arquivo(s) enviado(s) para ${result.prefix}`)}catch(error){alert(error.message||'Erro ao enviar arquivos para o R2.')}finally{r2UploadBusy=false;renderAll()}};
+      $('testOnlineBtn').onclick=()=>{};
+      $('applyPasteBtn').onclick=()=>{const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),size=state.mode==='flashcard'?3:2,out=[];if(state.mode==='scenes'){ensureChars();for(let i=0;i<lines.length;){let characterId='';const shortcutId=sceneCharacterIdFromShortcut(lines[i]);if(shortcutId){characterId=shortcutId;i+=1}else{characterId=state.chars[0]?.id||''}const pt=lines[i]||'',en=lines[i+1]||'';if(!pt||!en)break;const item=defaultItem();item.characterId=characterId;item.pt=pt;item.en=en;out.push(item);i+=2}state.items=out;$('pasteArea').value='';save();renderAll();return}for(let i=0;i<lines.length;i+=size){const chunk=lines.slice(i,i+size);if(chunk.length<size)break;const item=defaultItem();item.pt=chunk[0]||'';item.en=chunk[1]||'';if(size===3)item.category=chunk[2]||'flashcard';out.push(item)}state.items=out;$('pasteArea').value='';save();renderAll()};
+      $('dayInput').oninput=e=>{state.day=clampDay(e.target.value);save();renderAll()};
+      $('titleInput').oninput=e=>{state.title=e.target.value;save();renderAll()};
+      $('levelInput').oninput=e=>{state.levelKey=e.target.value.trim();save();renderAll()};
+      $('flashcardCoverUrlInput').oninput=e=>{state.flashcardCoverUrl=e.target.value.trim();save();renderAll()};
+      $('coverBtn').onclick=()=>{pendingImage={type:'cover'};$('singleImageInput').click()};
+      $('soundBtn').onclick=()=>{pendingAudio={type:'sound'};$('audioInput').click()};
+      $('clearCoverBtn').onclick=()=>{state.coverFile='';state.coverDataUrl='';save();renderAll()};
+      $('clearSoundBtn').onclick=()=>{state.soundFile='';state.soundDataUrl='';save();renderAll()};
+      $('audioPtBtn').onclick=()=>{audioBatchTargets.pt=!audioBatchTargets.pt;syncAudioPopover()};
+      $('audioEnBtn').onclick=()=>{audioBatchTargets.en=!audioBatchTargets.en;syncAudioPopover()};
+      $('audioPopoverCloseBtn').onclick=()=>closeAudioPopover();
+      $('textPopoverCloseBtn').onclick=()=>closeTextPopover();
+      $('watchPopoverCloseBtn').onclick=()=>closeWatchPopover();
+      $('watchStartBtn').onclick=()=>startWatchPlayback();
+      $('watchCloseBtn').onclick=()=>stopWatchPlayback();
+      $('watchStopBtn').onclick=()=>stopWatchPlayback();
+      $('textGenerateBtn').onclick=async()=>{if(aiTextBusy)return;if(state.mode==='scenes'){const topic=$('sceneStoryTopicInput').value.trim();const minChars=parseInt($('sceneStoryMinCharsInput').value,10)||0;const maxChars=parseInt($('sceneStoryMaxCharsInput').value,10)||0;const lineCount=parseInt($('sceneStoryLineCountInput').value,10)||0;sceneStoryDraft.topic=topic;sceneStoryDraft.lineCount=lineCount;if(!lineCount||lineCount<1||lineCount>80)return alert('Defina entre 1 e 80 falas para a historia.');if(!topic)return alert('Descreva o tema da historia primeiro.');if(minChars<1||maxChars<minChars)return alert('A faixa de caracteres das falas esta invalida.');const selectedIds=sceneStorySelectedIds();if(!selectedIds.length||selectedIds.length>4)return alert('Escolha entre 1 e 4 personagens.');if(lineCount<selectedIds.length)return alert('A historia precisa ter pelo menos uma fala para cada personagem selecionado.');normalizeSceneStoryShares();const characters=sceneStoryCharacterPlan(lineCount);aiTextBusy=true;renderAll();try{const items=await generateSceneStoryBatch({topic,minChars,maxChars,lineCount,characters});const applied=applySceneStory(items);closeTextPopover();alert(`${applied} fala(s) gerada(s) para a historia.`)}catch(error){alert(error.message||'Erro ao gerar historia.')}finally{aiTextBusy=false;renderAll()}return}if(state.mode==='movies'){const topic=$('movieStoryTopicInput').value.trim(),minChars=parseInt($('movieStoryMinCharsInput').value,10)||0,maxChars=parseInt($('movieStoryMaxCharsInput').value,10)||0,itemCount=parseInt($('movieStoryCountInput').value,10)||0;movieStoryDraft.topic=topic;movieStoryDraft.itemCount=itemCount;if(!topic)return alert('Descreva o contexto do filme primeiro.');if(minChars<1||maxChars<minChars)return alert('A faixa de caracteres esta invalida.');if(itemCount<1||itemCount>60)return alert('Defina entre 1 e 60 containers para o filme.');aiTextBusy=true;renderAll();try{const movie=await generateMovieStoryBatch({topic,minChars,maxChars,itemCount});if(!movie.title||!movie.items.length)throw new Error('A IA nao retornou um filme valido.');const applied=applyMovieStory(movie);closeTextPopover();alert(`${applied} container(s) criados para o filme.`)}catch(error){alert(error.message||'Erro ao gerar filme.')}finally{aiTextBusy=false;renderAll()}return}const topic=$('textTopicInput').value.trim(),minChars=parseInt($('textMinCharsInput').value,10)||0,maxChars=parseInt($('textMaxCharsInput').value,10)||0,count=parseInt($('textCountInput').value,10)||0;if(!topic)return alert('Descreva o tipo de frases primeiro.');if(minChars<1||maxChars<minChars)return alert('A faixa de caracteres esta invalida.');if(count<1||count>24)return alert('A quantidade deve ficar entre 1 e 24.');aiTextBusy=true;renderAll();try{const items=await generateFlashcardTextBatch({topic,minChars,maxChars,count});const applied=applyGeneratedFlashcards(items);closeTextPopover();alert(`${applied} frase(s) gerada(s) e preenchida(s).`)}catch(error){alert(error.message||'Erro ao gerar frases.')}finally{aiTextBusy=false;renderAll()}};
+      $('audioBatchConfirmBtn').onclick=()=>{if(!audioBatchTargets.pt&&!audioBatchTargets.en)return alert('Selecione Portugues, English ou os dois.');$('audioBatchInput').click()};
+      $('audioPopover').onclick=e=>{if(e.target===e.currentTarget)closeAudioPopover()};
+      $('textPopover').onclick=e=>{if(e.target===e.currentTarget)closeTextPopover()};
+      $('watchPopover').onclick=e=>{if(e.target===e.currentTarget)closeWatchPopover()};
+      $('batchImageInput').onchange=async e=>{for(const file of Array.from(e.target.files||[])){addItem(await prepImage(file,itemStem(state.items.length)))}e.target.value='';save();renderAll()};
+      $('singleImageInput').onchange=async e=>{const file=e.target.files?.[0];if(!file||!pendingImage){e.target.value='';pendingImage=null;return}const data=await prepImage(file,pendingImage.type==='cover'?coverStem():pendingImage.type==='char'?charStem(pendingImage.index,state.chars[pendingImage.index]):itemStem(pendingImage.index));if(pendingImage.type==='cover'){state.coverFile=data.fileName;state.coverDataUrl=data.dataUrl}else if(pendingImage.type==='char'){const c=state.chars[pendingImage.index];if(c){c.imageFile=data.fileName;c.imageDataUrl=data.dataUrl}}else{const item=state.items[pendingImage.index];if(item){item.imageFile=data.fileName;item.imageDataUrl=data.dataUrl}}e.target.value='';pendingImage=null;save();renderAll()};
+      $('audioInput').onchange=async e=>{const file=e.target.files?.[0];if(!file||!pendingAudio){e.target.value='';pendingAudio=null;return}const data=await prepAudio(file,pendingAudio.type==='sound'?soundtrackStem():`${itemStem(pendingAudio.index)}-${pendingAudio.kind}`);if(pendingAudio.type==='sound'){state.soundFile=data.fileName;state.soundDataUrl=data.dataUrl}else{const item=state.items[pendingAudio.index];if(item){if(pendingAudio.kind==='single'){item.audioFile=data.fileName;item.audioDataUrl=data.dataUrl}if(pendingAudio.kind==='pt'){item.audioPtFile=data.fileName;item.audioPtDataUrl=data.dataUrl}if(pendingAudio.kind==='en'){item.audioEnFile=data.fileName;item.audioEnDataUrl=data.dataUrl}}}e.target.value='';pendingAudio=null;save();renderAll()};
+      $('audioBatchInput').onchange=async e=>{const files=Array.from(e.target.files||[]);e.target.value='';if(!files.length)return;await importAudioBatch(files);closeAudioPopover()};
+      $('jsonInput').onchange=async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{importJsonPayload(JSON.parse(await asText(file)))}catch(error){alert(error.message||'Erro ao importar JSON.')}};
+      $('startGameBtn').onclick=()=>startGame();
+      load();if(state.mode==='scenes')ensureChars();if(state.mode!=='flashcard'&&!state.levelKey)state.levelKey=defaultLevelKey();renderAll();
+    })();
   </script>
 </body>
 </html>

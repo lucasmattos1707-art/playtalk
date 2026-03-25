@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Storage | PlayTalk</title>
+  <meta name="description" content="Explorador simples do conteudo de Niveis no R2.">
+  <script src="js/api-config.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #09111f;
+      --panel: rgba(9, 20, 35, 0.82);
+      --panel-border: rgba(149, 189, 255, 0.18);
+      --text: #eef4ff;
+      --muted: #9fb1cc;
+      --accent: #73d2ff;
+      --success: #7ff0b7;
+      --error: #ff8c8c;
+      --warning: #ffd37a;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Open Sans", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(79, 174, 255, 0.22), transparent 32%),
+        linear-gradient(180deg, #0a1424 0%, #09111f 100%);
+      color: var(--text);
+    }
+
+    .storage-page {
+      width: min(1200px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+
+    .storage-hero {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .storage-hero__title {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 44px);
+      line-height: 1.05;
+    }
+
+    .storage-hero__copy {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 720px;
+    }
+
+    .storage-button {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font: inherit;
+      font-weight: 700;
+      color: #03111f;
+      background: linear-gradient(135deg, #73d2ff, #b8f0ff);
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+
+    .storage-status,
+    .storage-panel {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .storage-status {
+      padding: 16px 18px;
+      margin-bottom: 18px;
+    }
+
+    .storage-status[data-tone="loading"] {
+      color: var(--warning);
+    }
+
+    .storage-status[data-tone="success"] {
+      color: var(--success);
+    }
+
+    .storage-status[data-tone="error"] {
+      color: var(--error);
+    }
+
+    .storage-stats {
+      margin: 0 0 18px;
+      color: var(--muted);
+    }
+
+    .storage-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+    }
+
+    .storage-panel {
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .storage-panel__title {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .storage-tree,
+    .storage-names {
+      max-height: 70vh;
+      overflow: auto;
+      padding-right: 8px;
+    }
+
+    .storage-tree__list,
+    .storage-names {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .storage-tree__list {
+      padding-left: 18px;
+    }
+
+    .storage-tree__item {
+      margin: 6px 0;
+    }
+
+    .storage-tree__label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .storage-tree__item--folder > .storage-tree__label::before {
+      content: "[D]";
+    }
+
+    .storage-tree__item--file > .storage-tree__label::before {
+      content: "[F]";
+    }
+
+    .storage-names__item {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      margin-bottom: 8px;
+      word-break: break-word;
+    }
+
+    @media (max-width: 880px) {
+      .storage-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="storage-page">
+    <section class="storage-hero">
+      <div>
+        <h1 class="storage-hero__title">Storage Explorer</h1>
+        <p class="storage-hero__copy">
+          Aqui a gente enxerga o que existe dentro de <strong>Niveis/</strong> no bucket, sem depender dos JSONs locais do app.
+        </p>
+      </div>
+      <button id="storage-refresh" class="storage-button" type="button">Atualizar</button>
+    </section>
+
+    <section id="storage-status" class="storage-status" data-tone="neutral">
+      Preparando leitura do bucket...
+    </section>
+
+    <p id="storage-stats" class="storage-stats"></p>
+
+    <section class="storage-grid">
+      <article class="storage-panel">
+        <h2 class="storage-panel__title">Arvore de pastas</h2>
+        <div id="storage-tree" class="storage-tree"></div>
+      </article>
+
+      <article class="storage-panel">
+        <h2 class="storage-panel__title">Lista de nomes</h2>
+        <ul id="storage-names" class="storage-names"></ul>
+      </article>
+    </section>
+
+    <section class="storage-panel" style="margin-top:18px;">
+      <h2 class="storage-panel__title">Debug rapido</h2>
+      <pre id="storage-debug" hidden style="margin:0; white-space:pre-wrap; word-break:break-word; color:#ffd37a;"></pre>
+    </section>
+  </main>
+
+  <script src="js/storage-page.js"></script>
+</body>
+</html>

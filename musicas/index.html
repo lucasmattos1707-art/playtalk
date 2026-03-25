@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Musicas</title>
+  <style>
+    :root{
+      --bg:
+        radial-gradient(circle at top left, rgba(255,255,255,.2), transparent 30%),
+        radial-gradient(circle at 85% 15%, rgba(132,221,255,.28), transparent 24%),
+        linear-gradient(145deg, #4fb6ff 0%, #2594ef 38%, #5fc8ff 68%, #c5f0ff 100%);
+      --panel: rgba(10, 35, 76, .34);
+      --panel-border: rgba(255,255,255,.22);
+      --text: #fffaf2;
+      --text-soft: rgba(255,250,242,.78);
+      --accent: #ffd24f;
+      --shadow: 0 24px 90px rgba(0,0,0,.24);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%}
+    body{
+      font-family: "Segoe UI", sans-serif;
+      background: #3ca8f5;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+    body::before{
+      content:"";
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      transform: scale(1.04);
+      z-index: -2;
+    }
+    body::after{
+      content:"";
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(7,55,110,.1), rgba(9,41,88,.3));
+      z-index: -1;
+    }
+    .page{
+      width: min(1200px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+    }
+    .hero{
+      display: grid;
+      gap: 14px;
+      padding: 28px;
+      border-radius: 28px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+    }
+    h1{
+      margin: 0;
+      font-size: clamp(2.3rem, 5vw, 4.4rem);
+      line-height: .95;
+    }
+    .subtitle{
+      margin: 0;
+      max-width: 720px;
+      color: var(--text-soft);
+      font-size: 1.04rem;
+    }
+    .hero-actions{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    button{
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 20px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .video-btn{
+      background: var(--accent);
+      color: #17365f;
+    }
+    .status,.error{
+      min-height: 24px;
+      font-weight: 700;
+    }
+    .error{
+      color: #ffe2e2;
+    }
+    .grid{
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .music-card{
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border-radius: 24px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: 0 16px 40px rgba(0,0,0,.14);
+      min-height: 220px;
+    }
+    .music-card h2{
+      margin: 0;
+      font-size: 1.1rem;
+      line-height: 1.15;
+    }
+    .music-card p{
+      margin: 0;
+      color: var(--text-soft);
+      font-size: .95rem;
+    }
+    .play-btn{
+      width: 100%;
+      background: rgba(255,255,255,.18);
+      color: var(--text);
+    }
+    .play-btn.is-playing{
+      background: rgba(41,178,90,.92);
+    }
+    audio{
+      width: 100%;
+      height: 44px;
+    }
+    .video-overlay{
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(4,14,31,.88);
+    }
+    .hidden{
+      display: none !important;
+    }
+    .video-shell{
+      position: relative;
+      width: min(96vw, 1180px);
+      aspect-ratio: 16 / 9;
+      border-radius: 28px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 24px 90px rgba(0,0,0,.45);
+    }
+    .video-close{
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 1;
+      background: rgba(8,22,49,.74);
+      color: var(--text);
+    }
+    .video-frame{
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+    .video-overlay.is-fullscreen .video-close{
+      display: none;
+    }
+    @media (max-width: 1100px){
+      .grid{grid-template-columns: repeat(3, minmax(0, 1fr))}
+    }
+    @media (max-width: 760px){
+      .page{width: min(100vw - 20px, 100%)}
+      .hero{padding: 22px}
+      .grid{grid-template-columns: 1fr}
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>Musicas</h1>
+      <p class="subtitle">Cinco musicas fixas carregadas de <strong>atual.json</strong>. Sem letras na tela, sem upload de JSON e sem opcoes visuais. Aqui fica so a reproducao para memorizar o beat.</p>
+      <div class="hero-actions">
+        <button id="heroVideoBtn" type="button" class="video-btn">Fabrica de Herois</button>
+      </div>
+      <div id="status" class="status"></div>
+      <div id="errorBox" class="error"></div>
+    </section>
+
+    <section id="musicGrid" class="grid" aria-live="polite"></section>
+  </main>
+
+  <section id="videoOverlay" class="video-overlay hidden" aria-label="Video Fabrica de Herois">
+    <div class="video-shell">
+      <button id="closeVideoBtn" type="button" class="video-close">Fechar</button>
+      <iframe
+        id="heroVideoFrame"
+        class="video-frame"
+        src=""
+        title="Fabrica de Herois"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen
+      ></iframe>
+    </div>
+  </section>
+
+  <script>
+    const HERO_VIDEO_EMBED_URL = "https://www.youtube.com/embed/8cZ7Nv51nhs?autoplay=1&rel=0&vq=hd1080";
+    const MAX_MUSICS = 5;
+
+    const musicGrid = document.getElementById("musicGrid");
+    const status = document.getElementById("status");
+    const errorBox = document.getElementById("errorBox");
+    const heroVideoBtn = document.getElementById("heroVideoBtn");
+    const videoOverlay = document.getElementById("videoOverlay");
+    const heroVideoFrame = document.getElementById("heroVideoFrame");
+    const closeVideoBtn = document.getElementById("closeVideoBtn");
+
+    let audioPlayers = [];
+
+    function setStatus(message) {
+      status.textContent = message;
+    }
+
+    function showError(message) {
+      errorBox.textContent = message;
+    }
+
+    function clearError() {
+      errorBox.textContent = "";
+    }
+
+    function normalizeMusicEntry(entry) {
+      if (!entry || typeof entry !== "object") return null;
+      return {
+        titulo: typeof entry.titulo === "string" && entry.titulo.trim() ? entry.titulo.trim() : "Sem titulo",
+        link: typeof entry.link === "string" ? entry.link.trim() : ""
+      };
+    }
+
+    function stopOtherPlayers(currentAudio) {
+      audioPlayers.forEach((audio) => {
+        if (audio !== currentAudio) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      });
+    }
+
+    function syncButtons() {
+      audioPlayers.forEach((audio) => {
+        const button = audio.closest(".music-card")?.querySelector(".play-btn");
+        if (!button) return;
+        const playing = !audio.paused;
+        button.textContent = playing ? "Parar musica" : "Tocar musica";
+        button.classList.toggle("is-playing", playing);
+      });
+    }
+
+    function createMusicCard(music, index) {
+      const card = document.createElement("article");
+      card.className = "music-card";
+
+      const title = document.createElement("h2");
+      title.textContent = `${index + 1}. ${music.titulo}`;
+
+      const hint = document.createElement("p");
+      hint.textContent = "Reproduz aqui mesmo, sem abrir outra pagina e sem mostrar letras.";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "play-btn";
+      button.textContent = "Tocar musica";
+
+      const audio = document.createElement("audio");
+      audio.controls = true;
+      audio.preload = "none";
+      audio.src = music.link;
+
+      button.addEventListener("click", async () => {
+        clearError();
+        try {
+          if (audio.paused) {
+            stopOtherPlayers(audio);
+            await audio.play();
+            setStatus(`Tocando: ${music.titulo}`);
+          } else {
+            audio.pause();
+            audio.currentTime = 0;
+            setStatus(`Parado: ${music.titulo}`);
+          }
+        } catch (error) {
+          console.error(error);
+          showError(`Nao consegui reproduzir "${music.titulo}".`);
+        } finally {
+          syncButtons();
+        }
+      });
+
+      audio.addEventListener("play", () => {
+        stopOtherPlayers(audio);
+        setStatus(`Tocando: ${music.titulo}`);
+        syncButtons();
+      });
+
+      audio.addEventListener("pause", syncButtons);
+      audio.addEventListener("ended", () => {
+        setStatus(`Finalizada: ${music.titulo}`);
+        syncButtons();
+      });
+
+      card.append(title, hint, button, audio);
+      audioPlayers.push(audio);
+      return card;
+    }
+
+    function renderMusics(musics) {
+      musicGrid.innerHTML = "";
+      audioPlayers = [];
+
+      musics.slice(0, MAX_MUSICS).forEach((music, index) => {
+        musicGrid.appendChild(createMusicCard(music, index));
+      });
+
+      if (musics.length < MAX_MUSICS) {
+        showError(`O atual.json precisa ter ${MAX_MUSICS} musicas. Encontrei ${musics.length}.`);
+        return;
+      }
+
+      clearError();
+      setStatus(`${MAX_MUSICS} musicas carregadas de atual.json.`);
+      syncButtons();
+    }
+
+    async function loadCurrentJson() {
+      try {
+        const response = await fetch("./atual.json");
+        if (!response.ok) throw new Error(`Falha ${response.status}`);
+
+        const payload = await response.json();
+        const musics = Array.isArray(payload) ? payload.map(normalizeMusicEntry).filter(Boolean) : [];
+
+        if (!musics.length) throw new Error("Sem musicas validas.");
+        renderMusics(musics);
+      } catch (error) {
+        console.error("Falha ao carregar atual.json:", error);
+        showError("Nao consegui carregar o atual.json.");
+      }
+    }
+
+    function openHeroVideo() {
+      heroVideoFrame.src = HERO_VIDEO_EMBED_URL;
+      videoOverlay.classList.remove("hidden");
+      syncVideoFullscreenState();
+    }
+
+    function closeHeroVideo() {
+      heroVideoFrame.src = "";
+      videoOverlay.classList.add("hidden");
+      syncVideoFullscreenState();
+    }
+
+    function syncVideoFullscreenState() {
+      const isFullscreen = Boolean(document.fullscreenElement);
+      videoOverlay.classList.toggle("is-fullscreen", isFullscreen);
+      closeVideoBtn.classList.toggle("hidden", isFullscreen);
+      closeVideoBtn.setAttribute("aria-hidden", String(isFullscreen));
+    }
+
+    heroVideoBtn.addEventListener("click", openHeroVideo);
+    closeVideoBtn.addEventListener("click", closeHeroVideo);
+    videoOverlay.addEventListener("click", (event) => {
+      if (event.target === videoOverlay) closeHeroVideo();
+    });
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !videoOverlay.classList.contains("hidden")) {
+        closeHeroVideo();
+      }
+    });
+    document.addEventListener("fullscreenchange", syncVideoFullscreenState);
+
+    loadCurrentJson();
+  </script>
+</body>
+</html>

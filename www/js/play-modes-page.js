@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
   let initialized = false;
   let leaving = false;
   const AUDIO_RESOLVE_ENDPOINT = '/api/media/resolve';
@@ -8,7 +8,7 @@
   const MODE_ENTRANCE_STAGGER_MS = 200;
   const MODE_ENTRANCE_DURATION_MS = 500;
   const MODE_PICK_HIDE_MS = 500;
-  const MODE_PICK_FLASH_MS = 120;
+  const MODE_PICK_FLASH_MS = 500;
   const NAV_EXIT_MS = 500;
 
   function initPlayModesPage() {
@@ -18,7 +18,25 @@
     const items = Array.from(document.querySelectorAll('.play-mode-item[data-phase]'));
     const skyClock = document.getElementById('playSkyClock');
     const playContainer = document.getElementById('play-container');
-    const modesHub = playContainer ? playContainer.querySelector('.play-modes-hub') : null;
+    const modesHub = document.getElementById('gamehub');
+    const modesGrid = document.getElementById('game-modes');
+    const ensureGameHubChromeVisible = () => {
+      if (!document.body || !document.body.classList.contains('page-play')) return;
+      if (document.body.classList.contains('play-inline-active')) return;
+      const header = document.getElementById('global-header');
+      const headerContainer = document.getElementById('game-header');
+      const footer = document.querySelector('.page-footer');
+      const nav = document.getElementById('main-nav');
+      [header, headerContainer, footer, nav].forEach((node) => {
+        if (!node) return;
+        node.classList.remove('is-hidden');
+        node.style.removeProperty('display');
+        node.style.removeProperty('opacity');
+        node.style.removeProperty('visibility');
+        node.style.removeProperty('pointer-events');
+        node.style.removeProperty('transform');
+      });
+    };
     const ensurePlayHeaderPinned = () => {
       if (!document.body || !document.body.classList.contains('page-play')) return;
       const header = document.getElementById('global-header');
@@ -52,6 +70,7 @@
     };
     const refreshPlayHeader = () => {
       ensurePlayHeaderPinned();
+    ensureGameHubChromeVisible();
       if (window.playtalkPlayerState && typeof window.playtalkPlayerState.renderHeader === 'function') {
         window.playtalkPlayerState.renderHeader();
       }
@@ -84,28 +103,9 @@
       resetModeSelectionAnimation();
       clearModeIntroTimers();
       items.forEach((item) => {
+        item.classList.remove('play-mode-item--intro');
         item.classList.remove('play-mode-item--intro-visible');
-        item.classList.add('play-mode-item--intro');
       });
-
-      const kickoffTimer = window.setTimeout(() => {
-        items.forEach((item, index) => {
-          const showTimer = window.setTimeout(() => {
-            item.classList.add('play-mode-item--intro-visible');
-          }, index * MODE_ENTRANCE_STAGGER_MS);
-          modeIntroTimers.push(showTimer);
-        });
-      }, 10);
-      modeIntroTimers.push(kickoffTimer);
-
-      const totalMs = ((items.length - 1) * MODE_ENTRANCE_STAGGER_MS) + MODE_ENTRANCE_DURATION_MS + 120;
-      const cleanupTimer = window.setTimeout(() => {
-        items.forEach((item) => {
-          item.classList.remove('play-mode-item--intro');
-          item.classList.remove('play-mode-item--intro-visible');
-        });
-      }, totalMs);
-      modeIntroTimers.push(cleanupTimer);
     };
 
     const visualClock = (() => {
@@ -133,64 +133,24 @@
     };
 
     const runModePickAnimation = (clickedItem) => new Promise((resolve) => {
-      if (!clickedItem) {
-        window.setTimeout(resolve, MODE_PICK_HIDE_MS + MODE_PICK_FLASH_MS);
-        return;
+      resetModeSelectionAnimation();
+      if (clickedItem) {
+        clickedItem.classList.remove('play-mode-item--selected-hidden');
       }
-
-      const itemRect = clickedItem.getBoundingClientRect();
-      const clone = clickedItem.cloneNode(true);
-      clone.classList.remove('play-mode-item--intro');
-      clone.classList.remove('play-mode-item--intro-visible');
-      clone.classList.add('play-mode-item--launch-focus');
-      clone.setAttribute('aria-hidden', 'true');
-      clone.style.setProperty('--start-left', `${itemRect.left}px`);
-      clone.style.setProperty('--start-top', `${itemRect.top}px`);
-      clone.style.setProperty('--start-width', `${itemRect.width}px`);
-      clone.style.setProperty('--start-height', `${itemRect.height}px`);
-      const shiftX = (window.innerWidth / 2) - (itemRect.left + (itemRect.width / 2));
-      const shiftY = (window.innerHeight / 2) - (itemRect.top + (itemRect.height / 2));
-      clone.style.setProperty('--shift-x', `${shiftX}px`);
-      clone.style.setProperty('--shift-y', `${shiftY}px`);
-
-      items.forEach((item) => {
-        if (item === clickedItem) {
-          item.classList.add('play-mode-item--selected-hidden');
-        } else {
-          item.classList.add('play-mode-item--exit');
-        }
-      });
-
-      document.body.appendChild(clone);
-
-      window.requestAnimationFrame(() => {
-        clone.classList.add('is-visible');
-      });
-
-      window.setTimeout(() => {
-        clone.classList.add('is-flash');
-      }, MODE_PICK_HIDE_MS);
-
-      window.setTimeout(() => {
-        if (clone.parentNode) {
-          clone.parentNode.removeChild(clone);
-        }
-        resolve();
-      }, MODE_PICK_HIDE_MS + MODE_PICK_FLASH_MS);
+      resolve();
     });
 
     const runNavExitAnimation = () => new Promise((resolve) => {
-      if (!document.body || !document.body.classList.contains('page-play')) {
-        resolve();
-        return;
+      if (document.body) {
+        document.body.classList.remove('play-nav-hiding');
       }
-      document.body.classList.add('play-nav-hiding');
-      window.setTimeout(resolve, NAV_EXIT_MS);
+      resolve();
     });
 
     syncSkyClock();
     window.setInterval(syncSkyClock, 30000);
     ensurePlayHeaderPinned();
+    ensureGameHubChromeVisible();
     if (window.MutationObserver && document.body) {
       const headerVisibilityObserver = new MutationObserver(() => ensurePlayHeaderPinned());
       headerVisibilityObserver.observe(document.body, {
@@ -247,9 +207,68 @@
       });
     };
 
-    const buildLevelPhasePath = (dayNumber, phaseNumber) => {
-      const block = Math.max(1, Math.ceil(dayNumber / 10));
-      return `Levels/Bloco ${block}/Dia ${dayNumber}/fase${phaseNumber}.json`;
+    const LOCAL_LEVEL_API_PATH = '/api/local-level/day/{day}/phase/{phase}';
+    const PUBLIC_LEVEL_ASSET_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis';
+    const FLUENCY_PHASE_CACHE_PREFIX = 'playtalk-fluency-phase-cache-v1';
+
+    const buildLevelPhasePaths = (dayNumber, phaseNumber) => {
+      return [
+        LOCAL_LEVEL_API_PATH
+          .replace('{day}', encodeURIComponent(String(dayNumber)))
+          .replace('{phase}', encodeURIComponent(String(phaseNumber)))
+      ];
+    };
+
+    const getPhaseFolderCode = (phaseNumber) => {
+      if (Number(phaseNumber) === 11) return '011';
+      if (Number(phaseNumber) === 12) return '012';
+      return '001';
+    };
+
+    const getPhaseCacheKey = (dayNumber, phaseNumber) => (
+      `${FLUENCY_PHASE_CACHE_PREFIX}:${String(dayNumber).padStart(3, '0')}:${getPhaseFolderCode(phaseNumber)}`
+    );
+
+    const readCachedPhaseData = (dayNumber, phaseNumber) => {
+      try {
+        const raw = localStorage.getItem(getPhaseCacheKey(dayNumber, phaseNumber));
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' && parsed.data ? parsed.data : parsed;
+      } catch (error) {
+        return null;
+      }
+    };
+
+    const writeCachedPhaseData = (dayNumber, phaseNumber, data) => {
+      try {
+        localStorage.setItem(getPhaseCacheKey(dayNumber, phaseNumber), JSON.stringify({
+          savedAt: Date.now(),
+          day: Number(dayNumber) || 1,
+          folder: getPhaseFolderCode(phaseNumber),
+          data
+        }));
+      } catch (error) {
+        // ignore storage limits
+      }
+    };
+
+    const getPhaseDataForLaunch = async (dayNumber, phaseNumber) => {
+      const cachedData = readCachedPhaseData(dayNumber, phaseNumber);
+      if (cachedData) return cachedData;
+      const candidates = buildLevelPhasePaths(dayNumber, phaseNumber);
+      for (const levelPath of candidates) {
+        try {
+          const response = await fetch(encodeURI(levelPath), { cache: 'no-store' });
+          if (!response.ok) continue;
+          const data = await response.json();
+          writeCachedPhaseData(dayNumber, phaseNumber, data);
+          return data;
+        } catch (error) {
+          // try next source
+        }
+      }
+      return null;
     };
 
     const getEntriesFromPhaseData = (data) => {
@@ -269,20 +288,30 @@
       entry?.audio_english || entry?.targetAudioMp3 || entry?.audioMp3 || entry?.audio || ''
     ).trim();
 
-    const buildImageSrcFromName = (fileName = '') => {
+    const extractAssetFileName = (assetName = '') => {
+      const trimmed = typeof assetName === 'string' ? assetName.trim() : '';
+      if (!trimmed) return '';
+      const normalized = trimmed.replace(/\\/g, '/').replace(/^\/+/, '');
+      const segments = normalized.split('/').filter(Boolean);
+      return segments.length ? segments[segments.length - 1] : '';
+    };
+
+    const buildPublicLevelAssetUrl = (assetName = '', dayNumber = 1, phaseNumber = 1) => {
+      const trimmed = typeof assetName === 'string' ? assetName.trim() : '';
+      if (!trimmed) return '';
+      if (/^https?:\/\//i.test(trimmed)) return trimmed;
+      const fileName = extractAssetFileName(trimmed);
+      if (!fileName) return '';
+      const dayFolder = String(Math.max(1, Number(dayNumber) || 1)).padStart(3, '0');
+      const phaseFolder = getPhaseFolderCode(Number(phaseNumber) || 1);
+      return `${PUBLIC_LEVEL_ASSET_BASE_URL}/${dayFolder}/${phaseFolder}/${encodeURIComponent(fileName)}`;
+    };
+
+    const buildImageSrcFromName = (fileName = '', dayNumber = 1, phaseNumber = 1) => {
       const trimmed = typeof fileName === 'string' ? fileName.trim() : '';
       if (!trimmed) return '';
       if (/^https?:\/\//i.test(trimmed)) return trimmed;
-      const sanitized = trimmed.replace(/^[/\\]+/, '');
-      const lower = sanitized.toLowerCase();
-      const encodedPath = sanitized
-        .split('/')
-        .map(segment => encodeURIComponent(segment))
-        .join('/');
-      if (lower.startsWith('images/') || lower.startsWith('imagens/')) {
-        return encodedPath;
-      }
-      return `images/${encodedPath}`;
+      return buildPublicLevelAssetUrl(trimmed, dayNumber, phaseNumber);
     };
 
     const hasSupportedAudioExtension = (fileName = '') => {
@@ -290,30 +319,14 @@
       return SUPPORTED_ENTRY_AUDIO_EXTENSIONS.some(ext => lower.endsWith(ext));
     };
 
-    const buildAudioSrcFromName = (audioName = '', dayNumber = 1) => {
+    const buildAudioSrcFromName = (audioName = '', dayNumber = 1, phaseNumber = 1) => {
       const trimmed = typeof audioName === 'string' ? audioName.trim() : '';
       if (!trimmed || !hasSupportedAudioExtension(trimmed)) return '';
       if (/^https?:\/\//i.test(trimmed)) return trimmed;
-
-      const sanitized = trimmed.replace(/^[/\\]+/, '');
-      const normalized = sanitized.replace(/\\/g, '/');
-      let relativePath = '';
-      if (normalized.toLowerCase().startsWith('voices/')) {
-        relativePath = normalized.slice('voices/'.length);
-      } else if (/^\d+\//.test(normalized)) {
-        relativePath = normalized;
-      } else {
-        relativePath = `${Math.max(1, Number(dayNumber) || 1)}/${normalized}`;
-      }
-
-      const encodedPath = relativePath
-        .split('/')
-        .map(segment => encodeURIComponent(segment))
-        .join('/');
-      return `${R2_VOICES_BASE_URL}/${encodedPath}`;
+      return buildPublicLevelAssetUrl(trimmed, dayNumber, phaseNumber);
     };
 
-    const resolveAudioSrc = async (audioName, dayNumber) => {
+    const resolveAudioSrc = async (audioName, dayNumber, phaseNumber = 1) => {
       const trimmed = String(audioName || '').trim();
       if (!trimmed) return '';
       try {
@@ -327,7 +340,7 @@
       } catch (error) {
         // fallback below
       }
-      return buildAudioSrcFromName(trimmed, dayNumber);
+      return buildAudioSrcFromName(trimmed, dayNumber, phaseNumber);
     };
 
     const preloadImage = (src) => new Promise((resolve) => {
@@ -368,18 +381,16 @@
     });
 
     const preloadPhaseMedia = async ({ phase, day }) => {
-      const levelPath = buildLevelPhasePath(day, phase);
       try {
-        const response = await fetch(encodeURI(levelPath), { cache: 'force-cache' });
-        if (!response.ok) return;
-        const data = await response.json();
+        const data = await getPhaseDataForLaunch(day, phase);
+        if (!data) return;
         const entries = getEntriesFromPhaseData(data);
         if (!entries.length) return;
         const firstEntry = entries.find(Boolean) || entries[0];
         const imageName = getEntryImageName(firstEntry);
         const audioName = getEntryAudioName(firstEntry);
-        const imageSrc = buildImageSrcFromName(imageName);
-        const audioSrc = await resolveAudioSrc(audioName, day);
+        const imageSrc = buildImageSrcFromName(imageName, day, phase);
+        const audioSrc = await resolveAudioSrc(audioName, day, phase);
         await Promise.all([
           preloadImage(imageSrc),
           preloadAudio(audioSrc)
@@ -413,21 +424,27 @@
     };
 
     const showPlayModesHub = () => {
-      refreshPlayHeader();
       if (modesHub) modesHub.classList.remove('is-hidden');
       if (playContainer) playContainer.classList.remove('play-inline-active');
       document.body.classList.remove('game-active');
       document.body.classList.remove('play-inline-active');
       document.body.classList.remove('play-nav-hiding');
+      refreshPlayHeader();
+      ensureGameHubChromeVisible();
       resetModeSelectionAnimation();
       restoreGameNodeToHome();
       leaving = false;
       renderModeProgressBadges();
       runModesEntranceAnimation();
+      window.requestAnimationFrame(() => {
+        refreshPlayHeader();
+        ensureGameHubChromeVisible();
+      });
     };
 
     const mountSharedGameIntoPlay = () => {
       refreshPlayHeader();
+      ensureGameHubChromeVisible();
       if (!playContainer || !modesHub) return false;
       const gameNode = getSharedGameNode();
       if (!gameNode) return false;
@@ -469,7 +486,8 @@
 
       await Promise.all([
         runModePickAnimation(clickedItem),
-        runNavExitAnimation()
+        runNavExitAnimation(),
+        getPhaseDataForLaunch(currentDay, phase)
       ]);
 
       if (canRunInline && mountSharedGameIntoPlay()) {
@@ -540,6 +558,13 @@
     initPlayModesPage();
   }
 })();
+
+
+
+
+
+
+
 
 
 

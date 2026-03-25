@@ -1,2 +1,0 @@
-npm run android:update
-npm run cap:open:android

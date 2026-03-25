@@ -1,0 +1,530 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Historia Infantil - Leitor</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #ffffff;
+      --text-dark: #111111;
+      --text-mid: #3b3b3b;
+      --track: #ececec;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #ffffff;
+      background: var(--bg);
+      color: #111111;
+    }
+
+    .app {
+      min-height: 100%;
+      min-height: 100vh;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+      -ms-flex-direction: column;
+      flex-direction: column;
+    }
+
+    .top {
+      padding: 18px 18px 10px;
+    }
+
+    .progress-info {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-pack: justify;
+      -ms-flex-pack: justify;
+      justify-content: space-between;
+      -webkit-box-align: center;
+      -ms-flex-align: center;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: #444444;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #ececec;
+      background: var(--track);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      width: 0;
+      height: 100%;
+      background: #111111;
+      background: linear-gradient(90deg, #3f3f3f 0%, #111111 100%);
+      border-radius: 999px;
+      transition: width 0.28s ease;
+    }
+
+    .content {
+      -webkit-box-flex: 1;
+      -ms-flex: 1 0 auto;
+      flex: 1 0 auto;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-pack: center;
+      -ms-flex-pack: center;
+      justify-content: center;
+      -webkit-box-align: center;
+      -ms-flex-align: center;
+      align-items: center;
+      padding: 24px 28px 120px;
+      text-align: center;
+    }
+
+    .text-block {
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .line {
+      font-size: 3.4rem;
+      line-height: 1.18;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #111111;
+      padding-left: 2vw;
+      padding-right: 2vw;
+      word-break: break-word;
+    }
+
+    .line + .line {
+      margin-top: 18px;
+    }
+
+    .line.red {
+      color: #d61f1f;
+    }
+
+    .line.blue {
+      color: #1f5eff;
+    }
+
+    .footer {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #ffffff;
+      background: rgba(255, 255, 255, 0.96);
+      border-top: 1px solid #e9e9e9;
+      padding: 14px 18px 14px;
+    }
+
+    .nav {
+      max-width: 700px;
+      margin: 0 auto;
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    .nav-cell {
+      display: table-cell;
+      vertical-align: middle;
+      padding: 0 7px;
+    }
+
+    .nav-btn {
+      width: 100%;
+      min-height: 58px;
+      border: none;
+      border-radius: 18px;
+      background: #f5f5f5;
+      color: #161616;
+      cursor: pointer;
+      transition: background 0.2s ease, opacity 0.2s ease;
+      text-align: center;
+      font-size: 0;
+    }
+
+    .nav-btn:hover {
+      background: #ededed;
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .nav-btn svg,
+    .nav-btn .nav-label {
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .nav-btn svg {
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
+    }
+
+    .nav-label {
+      margin: 0 0 0 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #222222;
+    }
+
+    .nav-btn.next .nav-label {
+      margin: 0 10px 0 0;
+    }
+
+    .nav-btn.home {
+      background: #111111;
+      color: #ffffff;
+    }
+
+    .nav-btn.home .nav-label {
+      color: #ffffff;
+    }
+
+    @media (max-width: 600px) {
+      .content {
+        padding: 20px 18px 115px;
+      }
+
+      .line {
+        font-size: 2.4rem;
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      .line + .line {
+        margin-top: 14px;
+      }
+
+      .nav-label {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="top">
+      <div class="progress-info">
+        <span id="counter">Bloco 1 de 1</span>
+        <span id="percent">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <main class="content">
+      <div class="text-block" id="textBlock"></div>
+    </main>
+
+    <footer class="footer">
+      <div class="nav">
+        <div class="nav-cell">
+          <button class="nav-btn prev" id="prevBtn" aria-label="Anterior" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path>
+            </svg>
+            <span class="nav-label">Anterior</span>
+          </button>
+        </div>
+        <div class="nav-cell">
+          <button class="nav-btn home" id="homeBtn" aria-label="Inicio" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path>
+            </svg>
+            <span class="nav-label">Home</span>
+          </button>
+        </div>
+        <div class="nav-cell">
+          <button class="nav-btn next" id="nextBtn" aria-label="Proximo" type="button">
+            <span class="nav-label">Proximo</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m8.59 16.59 1.41 1.41 6-6-6-6-1.41 1.41L13.17 12z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    var rawText = [
+      "E aí meu chegado #2",
+      "O que cê tá fazendo aqui?\" #2",
+      "",
+      "Olha só o cachorrinho #1",
+      "tô vendendo para ti! #1",
+      "",
+      "Não tô sabendo de nada #2",
+      "Não falou nem o valor!!! #2",
+      "",
+      "É mercadoria rara #1",
+      "Não tem preço, não senhor. #1",
+      "",
+      "E se não corresponder #2",
+      "Como é que eu vou ficar? #2",
+      "",
+      "Abandona no lixão #1",
+      "que ninguém vai se importar! #1",
+      "",
+      "Abandona no lixão!",
+      "Abandona no lixão!",
+      "",
+      "Abandona no lixão!!! #1",
+      "Isso é crime sem perdão! #2",
+      "",
+      "Abandona no lixão",
+      "Abandona no lixão?",
+      "",
+      "Abandona no lixão!!! #1",
+      "ABRAESCA dá pressão! #2",
+      "",
+      "O negócio é da hora #1",
+      "É melhor fechar agora #1",
+      "",
+      "Não tô sentindo firmeza #2",
+      "eu to querendo é pular fora #2",
+      "",
+      "Tu tá doido meu irmão #1",
+      "Vai perder de se dar bem? #1",
+      "",
+      "Depois que eu quebrei a cara #2",
+      "Eu não confio em mais ninguém! #2",
+      "",
+      "E se não corresponder #2",
+      "Como é que eu vou ficar? #2",
+      "",
+      "Abandona no lixão #1",
+      "que ninguém vai se importar #1",
+      "",
+      "Abandona no lixão?",
+      "Abandona no lixão.",
+      "",
+      "Abandona no lixão!#1",
+      "Isso é crime sem perdão.#2",
+      "",
+      "Abandona no lixão",
+      "Abandona no lixão!",
+      "",
+      "Abandona no lixão#1",
+      "A Abraesca dá pressão!#2",
+      "",
+      "Abandono de bichinho#2",
+      "É um crime sem perdão#2",
+      "A Abraesca denuncia  #2",
+      "vem pra cima e dá pressão#2",
+      "",
+      "Compra logo esse cachorro#1",
+      "Larga de ser vacilão#1",
+      "Vou comprar mas se eu for preso#2",
+      "tu vai junto meu irmão!!! #2",
+      "",
+      "E se não corresponder#1",
+      "e o negócio azedar#1",
+      "abandona no lixão#1",
+      "que ninguém vai se importar#1",
+      "",
+      "Abandona no lixão?",
+      "Abandona no lixão",
+      "",
+      "Abandona no lixão#1",
+      "Isso é crime sem perdão#2",
+      "",
+      "Abandona no lixão",
+      "Abandona no lixão",
+      "",
+      "Abandona no lixão#1",
+      "A Abraesca dá pressão#2",
+      "",
+      "Aii amigo! Faz o seguinte cara: #1",
+      "Para de ser vacilão #1",
+      "e compra esse cachorro! #1",
+      "Sem medo da pressão!!! #1",
+      "",
+      "Eu vou comprar #2",
+      "mas eu tô com medo! #2",
+      "Ai Ai Ai #2",
+      "Aai aaaaaiii #2"
+    ].join("\n");
+
+    function trimText(text) {
+      return text.replace(/^\s+|\s+$/g, "");
+    }
+
+    function decodeDisplayText(text) {
+      var normalizedText = text;
+
+      if (!normalizedText) {
+        return "";
+      }
+
+      try {
+        if (/%[0-9A-Fa-f]{2}/.test(normalizedText) || normalizedText.indexOf("+") !== -1) {
+          normalizedText = decodeURIComponent(normalizedText.replace(/\+/g, " "));
+        }
+      } catch (error) {
+        return text;
+      }
+
+      return normalizedText;
+    }
+
+    function keyName(eventObject) {
+      if (eventObject.key) {
+        return eventObject.key;
+      }
+
+      if (eventObject.keyCode === 37) {
+        return "ArrowLeft";
+      }
+      if (eventObject.keyCode === 39) {
+        return "ArrowRight";
+      }
+      if (eventObject.keyCode === 36) {
+        return "Home";
+      }
+
+      return "";
+    }
+
+    var lines = rawText.split("\n");
+    var cleanedLines = [];
+    var index;
+
+    for (index = 0; index < lines.length; index += 1) {
+      var fixedLine = trimText(decodeDisplayText(lines[index]));
+      if (fixedLine !== "") {
+        cleanedLines.push(fixedLine);
+      }
+    }
+
+    function parseLine(line) {
+      if (line.slice(-2) === "#1") {
+        return {
+          text: trimText(line.slice(0, -2)),
+          colorClass: "red"
+        };
+      }
+
+      if (line.slice(-2) === "#2") {
+        return {
+          text: trimText(line.slice(0, -2)),
+          colorClass: "blue"
+        };
+      }
+
+      return {
+        text: line,
+        colorClass: ""
+      };
+    }
+
+    var blocks = [];
+    for (index = 0; index < cleanedLines.length; index += 4) {
+      blocks.push(cleanedLines.slice(index, index + 4));
+    }
+
+    var currentIndex = 0;
+    var textBlock = document.getElementById("textBlock");
+    var prevBtn = document.getElementById("prevBtn");
+    var nextBtn = document.getElementById("nextBtn");
+    var homeBtn = document.getElementById("homeBtn");
+    var counter = document.getElementById("counter");
+    var percent = document.getElementById("percent");
+    var progressFill = document.getElementById("progressFill");
+
+    function renderBlock() {
+      var currentBlock;
+      var lineIndex;
+      var lineText;
+      var parsedLine;
+      var lineElement;
+      var progress;
+
+      textBlock.innerHTML = "";
+      currentBlock = blocks[currentIndex] || [];
+
+      for (lineIndex = 0; lineIndex < currentBlock.length; lineIndex += 1) {
+        lineText = currentBlock[lineIndex];
+        parsedLine = parseLine(lineText);
+        lineElement = document.createElement("div");
+        lineElement.className = parsedLine.colorClass ? "line " + parsedLine.colorClass : "line";
+        lineElement.appendChild(document.createTextNode(parsedLine.text));
+        textBlock.appendChild(lineElement);
+      }
+
+      progress = 0;
+      if (blocks.length > 0) {
+        progress = ((currentIndex + 1) / blocks.length) * 100;
+      }
+
+      progressFill.style.width = progress + "%";
+      counter.innerHTML = "Bloco " + (currentIndex + 1) + " de " + blocks.length;
+      percent.innerHTML = Math.round(progress) + "%";
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = currentIndex >= blocks.length - 1;
+    }
+
+    function goPrev() {
+      if (currentIndex > 0) {
+        currentIndex -= 1;
+        renderBlock();
+      }
+    }
+
+    function goNext() {
+      if (currentIndex < blocks.length - 1) {
+        currentIndex += 1;
+        renderBlock();
+      }
+    }
+
+    function goHome() {
+      currentIndex = 0;
+      renderBlock();
+    }
+
+    prevBtn.onclick = goPrev;
+    nextBtn.onclick = goNext;
+    homeBtn.onclick = goHome;
+
+    document.onkeydown = function(eventObject) {
+      var pressedKey = keyName(eventObject || window.event);
+
+      if (pressedKey === "ArrowLeft") {
+        goPrev();
+      } else if (pressedKey === "ArrowRight") {
+        goNext();
+      } else if (pressedKey === "Home") {
+        goHome();
+      }
+    };
+
+    renderBlock();
+  </script>
+</body>
+</html>
+

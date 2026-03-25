@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   const STORAGE_KEY = 'playtalk-global-radio-station';
   const MUTE_STORAGE_KEY = 'playtalk-global-radio-muted';
   const PLAYBACK_STORAGE_KEY = 'playtalk-global-radio-playback';
@@ -143,6 +143,7 @@
   }
 
   function emitChange() {
+    document.documentElement.dataset.globalRadioStation = currentStation;
     const detail = {
       stationId: currentStation,
       station: getStationMeta(currentStation),
@@ -344,4 +345,3 @@
     emitChange();
   }
 })();
-

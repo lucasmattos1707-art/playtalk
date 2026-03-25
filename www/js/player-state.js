@@ -64,7 +64,7 @@
 
     const route = getCurrentRoute();
     const activeView = route.endsWith('/index.html') ? getActiveIndexView() : '';
-    if (route.endsWith('/fun.html') || route.endsWith('/play.html') || activeView === 'fun' || activeView === 'play') {
+    if (route.endsWith('/fun.html') || route.endsWith('/play.html') || route.endsWith('/cards.html') || activeView === 'options' || activeView === 'play' || activeView === 'cards') {
       return true;
     }
 
@@ -83,7 +83,7 @@
     if (route.endsWith('/profile.html')) return true;
 
     if (route.endsWith('/index.html')) {
-      return activeView === 'home' || activeView === 'play' || activeView === 'fun' || activeView === 'profile';
+      return activeView === 'home' || activeView === 'play' || activeView === 'options' || activeView === 'profile' || activeView === 'cards';
     }
 
     return false;
@@ -279,6 +279,11 @@
     homeLink.setAttribute('href', '#home');
   }
 
+  function readJourneyDay() {
+    const stored = Number.parseInt(localStorage.getItem('vocabulary-level') || '', 10);
+    return Number.isFinite(stored) && stored > 0 ? stored : 1;
+  }
+
   function renderHeader(state = read()) {
     const header = document.getElementById('global-header');
     if (!header) return;
@@ -317,7 +322,7 @@
       usernameEl.textContent = state.username || 'Player';
     }
     if (dayEl) {
-      dayEl.textContent = `Nível ${getLevelFromCoins(state.coins)}`;
+      dayEl.textContent = `Dia ${readJourneyDay()}`;
     }
     if (menuBtn && menuLabel) {
       menuLabel.textContent = 'PlayTalk';
@@ -359,12 +364,22 @@
     api.renderHeader();
   });
 
+  document.addEventListener('playtalk:level-updated', () => {
+    api.renderHeader();
+  });
+
   document.addEventListener(GAME_CONTEXT_EVENT, () => {
     api.renderHeader();
   });
 
   window.addEventListener('hashchange', () => {
     api.renderHeader();
+  });
+
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'vocabulary-level') {
+      api.renderHeader();
+    }
   });
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -378,3 +393,6 @@
     }
   });
 })();
+
+
+

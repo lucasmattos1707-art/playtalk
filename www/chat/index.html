@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <title>Chat | PlayTalk</title>
+  <meta name="description" content="Chat rapido da PlayTalk com tela preta, respostas curtas e voz.">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/config.js"></script>
+</head>
+<body class="page-chat">
+  <main class="chat-page">
+    <section class="chat-stage">
+      <div class="chat-stage__top">
+        <p class="chat-kicker">PlayTalk / GPT-5 mini</p>
+        <p class="chat-hint">Aperte R para gravar voz. Usuario ate 120 caracteres. GPT ate 140.</p>
+      </div>
+
+      <div id="chat-feed" class="chat-feed" aria-live="polite"></div>
+
+      <form id="chat-form" class="chat-dock">
+        <label class="chat-input-wrap" for="chat-input">
+          <textarea id="chat-input" maxlength="120" rows="2" placeholder="Escreva algo curto..."></textarea>
+        </label>
+        <div class="chat-dock__meta">
+          <span id="chat-count">0/120</span>
+          <span id="chat-recording-indicator">R para voz</span>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="/js/chat-page.js"></script>
+</body>
+</html>

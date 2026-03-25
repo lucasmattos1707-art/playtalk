@@ -2,6 +2,13 @@ node_modules/
 dist/
 public/
 runtime-data/
+.idea/
+.wrangler/
+.wzz/
+playtalk-main/
+desktop.ini
+codex-write-test.txt
+**/codex-write-test.txt
 
 .env
 .env.*

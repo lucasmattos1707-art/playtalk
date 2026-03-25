@@ -1,5 +1,8 @@
-(() => {
+﻿(() => {
   let initialized = false;
+  const LEVEL_STORAGE_KEY = 'vocabulary-level';
+  const MIN_DAY = 1;
+  const MAX_DAY = 200;
 
   const stationOrder = ['modern', 'balance', 'happy', 'soft'];
   const stationDescriptions = {
@@ -15,7 +18,7 @@
     if (String(stationName || '').trim().toLowerCase() === 'modern') {
       return stationDescriptions.modern;
     }
-    return 'Escolha o clima musical que combina com seu momento.';
+    return 'Escolha um tema para o app.';
   }
 
   function initFunPage() {
@@ -30,22 +33,47 @@
     const prevBtn = document.getElementById('radioPrevBtn');
     const nextBtn = document.getElementById('radioNextBtn');
     const cover = document.getElementById('radioCover');
+    const journeyDayForm = document.getElementById('journeyDayForm');
+    const journeyDayInput = document.getElementById('journeyDayInput');
+    const journeyDayStatus = document.getElementById('journeyDayStatus');
 
-    if (!stationImage || !stationLabel || !stationTitle || !stationDescription || !stationDots || !prevBtn || !nextBtn || !cover) {
+    if (!stationImage || !stationLabel || !stationTitle || !stationDescription || !stationDots || !prevBtn || !nextBtn || !cover || !journeyDayForm || !journeyDayInput || !journeyDayStatus) {
       return;
     }
 
     const radioApi = window.playtalkGlobalRadio;
-    if (!radioApi || !radioApi.stations || typeof radioApi.setStation !== 'function') {
-      return;
-    }
+    const hasRadioApi = Boolean(radioApi && radioApi.stations && typeof radioApi.setStation === 'function');
 
     let stationIndex = 0;
     let pointerStartX = 0;
     let pointerTracking = false;
     const swipeThreshold = 35;
 
+    function readStoredDay() {
+      const stored = Number.parseInt(localStorage.getItem(LEVEL_STORAGE_KEY) || '', 10);
+      return Number.isFinite(stored) && stored >= MIN_DAY && stored <= MAX_DAY ? stored : MIN_DAY;
+    }
+
+    function clampDay(value) {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed)) return null;
+      return Math.min(MAX_DAY, Math.max(MIN_DAY, parsed));
+    }
+
+    function setDayStatus(message, options = {}) {
+      const text = typeof message === 'string' ? message.trim() : '';
+      journeyDayStatus.textContent = text;
+      journeyDayStatus.classList.toggle('is-error', Boolean(options.isError && text));
+    }
+
+    function syncDayInput() {
+      const storedDay = readStoredDay();
+      journeyDayInput.value = String(storedDay);
+      setDayStatus(`Dia atual salvo: ${storedDay}`);
+    }
+
     function renderDots() {
+      if (!hasRadioApi) return;
       stationDots.innerHTML = '';
       stationOrder.forEach((stationId, index) => {
         const stationMeta = radioApi.stations[stationId];
@@ -63,6 +91,7 @@
     }
 
     const applyState = (detail) => {
+      if (!hasRadioApi) return;
       const station = detail && detail.station ? detail.station : null;
       const stationId = detail && detail.stationId ? String(detail.stationId) : '';
       const name = station && station.name ? station.name : 'Sem Fundo Musical';
@@ -71,18 +100,20 @@
       stationImage.src = image;
       stationImage.alt = `Album ${name}`;
       stationLabel.textContent = name;
-      stationTitle.textContent = 'Escolha sua música';
+      stationTitle.textContent = 'Escolha um tema';
       stationDescription.textContent = getDescription(stationId, name);
       renderDots();
     };
 
     const syncIndexFromState = (state) => {
+      if (!hasRadioApi) return;
       const stationId = state && state.stationId ? String(state.stationId) : '';
       const foundIndex = stationOrder.indexOf(stationId);
       stationIndex = foundIndex >= 0 ? foundIndex : 0;
     };
 
     const goToStationByIndex = (nextIndex, { forceUnmute = false } = {}) => {
+      if (!hasRadioApi) return;
       stationIndex = (nextIndex + stationOrder.length) % stationOrder.length;
       const stationId = stationOrder[stationIndex];
       radioApi.setStation(stationId);
@@ -99,7 +130,7 @@
       goToStationByIndex(stationIndex - 1, { forceUnmute: true });
     };
 
-    if (typeof radioApi.getState === 'function') {
+    if (hasRadioApi && typeof radioApi.getState === 'function') {
       const state = radioApi.getState();
       syncIndexFromState(state);
       if (!state || stationOrder.indexOf(String(state.stationId || '')) < 0) {
@@ -107,15 +138,17 @@
       } else {
         applyState(state);
       }
-    } else {
+    } else if (hasRadioApi) {
       goToStationByIndex(0, { forceUnmute: true });
     }
 
-    document.addEventListener('playtalk:global-radio-change', (event) => {
-      const detail = event ? event.detail : null;
-      syncIndexFromState(detail);
-      applyState(detail);
-    });
+    if (hasRadioApi) {
+      document.addEventListener('playtalk:global-radio-change', (event) => {
+        const detail = event ? event.detail : null;
+        syncIndexFromState(detail);
+        applyState(detail);
+      });
+    }
 
     prevBtn.addEventListener('click', (event) => {
       event.preventDefault();
@@ -153,6 +186,30 @@
     cover.addEventListener('pointercancel', () => {
       pointerTracking = false;
     });
+
+    syncDayInput();
+
+    journeyDayForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const nextDay = clampDay(journeyDayInput.value);
+      if (!Number.isFinite(nextDay)) {
+        setDayStatus('Digite um numero entre 1 e 200.', { isError: true });
+        return;
+      }
+
+      localStorage.setItem(LEVEL_STORAGE_KEY, String(nextDay));
+      journeyDayInput.value = String(nextDay);
+      setDayStatus(`Pronto. Seu progresso agora esta no Dia ${nextDay}.`);
+      window.dispatchEvent(new CustomEvent('playtalk:level-updated', {
+        detail: { day: nextDay }
+      }));
+    });
+
+    journeyDayInput.addEventListener('blur', () => {
+      const nextDay = clampDay(journeyDayInput.value);
+      if (!Number.isFinite(nextDay)) return;
+      journeyDayInput.value = String(nextDay);
+    });
   }
 
   if (typeof window !== 'undefined' && typeof window.registerPlaytalkPage === 'function') {
@@ -166,3 +223,4 @@
     initFunPage();
   }
 })();
+

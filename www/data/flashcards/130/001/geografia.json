@@ -1,0 +1,465 @@
+{
+  "title": "Geografia",
+  "coverImage": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/Sequ%C3%AAncia%2001.00_00_00_00.Quadro001.png",
+  "items": [
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000001.webp",
+      "nomePortugues": "mundo",
+      "nomeIngles": "world",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000002.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000003.webp",
+      "nomePortugues": "terra",
+      "nomeIngles": "earth",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000004.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000005.webp",
+      "nomePortugues": "continente",
+      "nomeIngles": "continent",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000006.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000007.webp",
+      "nomePortugues": "país",
+      "nomeIngles": "country",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000008.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000009.webp",
+      "nomePortugues": "estado",
+      "nomeIngles": "state",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000010.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000011.webp",
+      "nomePortugues": "cidade",
+      "nomeIngles": "city",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000012.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000013.webp",
+      "nomePortugues": "capital",
+      "nomeIngles": "capital",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000014.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000015.webp",
+      "nomePortugues": "região",
+      "nomeIngles": "region",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000016.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000017.webp",
+      "nomePortugues": "fronteira",
+      "nomeIngles": "border",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000018.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000019.webp",
+      "nomePortugues": "mapa",
+      "nomeIngles": "map",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000020.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000021.webp",
+      "nomePortugues": "oceano",
+      "nomeIngles": "ocean",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000022.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000023.webp",
+      "nomePortugues": "mar",
+      "nomeIngles": "sea",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000024.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000025.webp",
+      "nomePortugues": "rio",
+      "nomeIngles": "river",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000026.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000027.webp",
+      "nomePortugues": "lago",
+      "nomeIngles": "lake",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000028.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000029.webp",
+      "nomePortugues": "ilha",
+      "nomeIngles": "island",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000030.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000031.webp",
+      "nomePortugues": "península",
+      "nomeIngles": "peninsula",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000032.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000033.webp",
+      "nomePortugues": "montanha",
+      "nomeIngles": "mountain",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000034.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000035.webp",
+      "nomePortugues": "cordilheira",
+      "nomeIngles": "mountain range",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000036.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000037.webp",
+      "nomePortugues": "vale",
+      "nomeIngles": "valley",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000038.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000039.webp",
+      "nomePortugues": "planície",
+      "nomeIngles": "plain",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000040.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000041.webp",
+      "nomePortugues": "planalto",
+      "nomeIngles": "plateau",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000042.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000043.webp",
+      "nomePortugues": "deserto",
+      "nomeIngles": "desert",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000044.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000045.webp",
+      "nomePortugues": "floresta",
+      "nomeIngles": "forest",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000046.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000047.webp",
+      "nomePortugues": "selva",
+      "nomeIngles": "jungle",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000048.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000049.webp",
+      "nomePortugues": "cachoeira",
+      "nomeIngles": "waterfall",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000050.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000051.webp",
+      "nomePortugues": "vulcão",
+      "nomeIngles": "volcano",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000052.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000053.webp",
+      "nomePortugues": "glaciar",
+      "nomeIngles": "glacier",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000054.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000055.webp",
+      "nomePortugues": "caverna",
+      "nomeIngles": "cave",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000056.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000057.webp",
+      "nomePortugues": "praia",
+      "nomeIngles": "beach",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000058.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000059.webp",
+      "nomePortugues": "costa",
+      "nomeIngles": "coast",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000060.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000061.webp",
+      "nomePortugues": "baía",
+      "nomeIngles": "bay",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000062.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000063.webp",
+      "nomePortugues": "golfo",
+      "nomeIngles": "gulf",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000064.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000065.webp",
+      "nomePortugues": "estreito",
+      "nomeIngles": "strait",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000066.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000067.webp",
+      "nomePortugues": "canal",
+      "nomeIngles": "canal",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000068.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000069.webp",
+      "nomePortugues": "delta",
+      "nomeIngles": "delta",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000070.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000071.webp",
+      "nomePortugues": "bacia",
+      "nomeIngles": "basin",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000072.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000073.webp",
+      "nomePortugues": "altitude",
+      "nomeIngles": "altitude",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000074.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000075.webp",
+      "nomePortugues": "latitude",
+      "nomeIngles": "latitude",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000076.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000077.webp",
+      "nomePortugues": "longitude",
+      "nomeIngles": "longitude",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000078.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000079.webp",
+      "nomePortugues": "hemisfério",
+      "nomeIngles": "hemisphere",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000080.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000081.webp",
+      "nomePortugues": "equador",
+      "nomeIngles": "equator",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000082.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000083.webp",
+      "nomePortugues": "trópico",
+      "nomeIngles": "tropic",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000084.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000085.webp",
+      "nomePortugues": "polo",
+      "nomeIngles": "pole",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000086.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000087.webp",
+      "nomePortugues": "norte",
+      "nomeIngles": "north",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000088.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000089.webp",
+      "nomePortugues": "sul",
+      "nomeIngles": "south",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000090.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000091.webp",
+      "nomePortugues": "leste",
+      "nomeIngles": "east",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000092.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000093.webp",
+      "nomePortugues": "oeste",
+      "nomeIngles": "west",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000094.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000095.webp",
+      "nomePortugues": "nordeste",
+      "nomeIngles": "northeast",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000096.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000097.webp",
+      "nomePortugues": "noroeste",
+      "nomeIngles": "northwest",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000098.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000099.webp",
+      "nomePortugues": "sudeste",
+      "nomeIngles": "southeast",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000100.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000101.webp",
+      "nomePortugues": "sudoeste",
+      "nomeIngles": "southwest",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/166/001/000102.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+    "title":  "Life in action",
+    "coverImage":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/02.png",
+    "items":  [
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000001.webp",
+                      "nomePortugues":  "Eles cozinham muito bem",
+                      "nomeIngles":  "They cook really well.",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000002.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000003.webp",
+                      "nomePortugues":  "Eles sÃ£o casados hÃ¡ 20 anos",
+                      "nomeIngles":  "They\u0027ve been married for 20 years.",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000004.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000005.webp",
+                      "nomePortugues":  "Ele quase nunca vem aqui aqui",
+                      "nomeIngles":  "He hardly ever comes here.",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000006.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000007.webp",
+                      "nomePortugues":  "Ela Ã© muito observadora",
+                      "nomeIngles":  "She\u0027s very observant.",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000008.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000009.webp",
+                      "nomePortugues":  "Eles estÃ£o noivos",
+                      "nomeIngles":  "They\u0027re engaged.",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000010.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000011.webp",
+                      "nomePortugues":  "Um brinde a vida",
+                      "nomeIngles":  "Here\u0027s to life!",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000012.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000013.webp",
+                      "nomePortugues":  "Eu amo esse casal",
+                      "nomeIngles":  "I love that couple.",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000014.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000015.webp",
+                      "nomePortugues":  "Ela adora a praia",
+                      "nomeIngles":  "She loves the beach.",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000016.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000017.webp",
+                      "nomePortugues":  "Eles sÃ£o casados hÃ¡ 40 anos",
+                      "nomeIngles":  "They\u0027ve been married for 40 years.",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000018.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000019.webp",
+                      "nomePortugues":  "Ele sÃ³ bebe no fim do ano",
+                      "nomeIngles":  "He only drinks at the end of the year.",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000020.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000021.webp",
+                      "nomePortugues":  "Ela parece interessada",
+                      "nomeIngles":  "She seems interested.",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000022.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000023.webp",
+                      "nomePortugues":  "As crianÃ§as sempre sabem",
+                      "nomeIngles":  "Kids always know.",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000024.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000025.webp",
+                      "nomePortugues":  "Aventuras na cozinha",
+                      "nomeIngles":  "Kitchen adventures.",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/014/001/000026.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  }
+              ]
+}

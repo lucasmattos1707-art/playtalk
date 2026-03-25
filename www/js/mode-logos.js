@@ -1,4 +1,19 @@
-(function() {
+﻿(function() {
+  const DEFAULT_THEME = 'happy';
+  const GAMEHUB_ICON_PATHS = {
+    1: 'SVG/gamehub/planting.svg',
+    2: 'SVG/gamehub/connecting.svg',
+    3: 'SVG/gamehub/reading.svg',
+    4: 'SVG/gamehub/sequence.svg',
+    5: 'SVG/gamehub/listening.svg',
+    6: 'SVG/gamehub/meaning.svg',
+    7: 'SVG/gamehub/memory.svg',
+    8: 'SVG/gamehub/building.svg',
+    9: 'SVG/gamehub/typing.svg',
+    10: 'SVG/gamehub/blocks.svg',
+    11: 'SVG/gamehub/watching.svg',
+    12: 'SVG/gamehub/talking.svg'
+  };
   const DEFAULT_ICON_MARKUP = `
     <g transform="translate(6.4 6.4) scale(0.8)">
       <path d="M12 18c0-5.523 4.477-10 10-10h20c5.523 0 10 4.477 10 10v8c0 5.523-4.477 10-10 10H28l-8 8v-8h-6c-5.523 0-10-4.477-10-10Z" opacity="0.92" />
@@ -6,23 +21,58 @@
     </g>
   `;
 
-  const MODE_ICON_SOURCES = {
-    1: { href: 'SVG/vocabulary.svg' },
-    2: { href: 'SVG/explore.svg' },
-    3: { href: 'SVG/listening.svg' },
-    4: { href: 'SVG/reading.svg' },
-    5: { href: 'SVG/building.svg' },
-    6: { href: 'SVG/fluent.svg' },
-    11: { href: 'SVG/voice.svg' },
-    12: { href: 'SVG/codex-icons/microfone.svg' }
+  const MODE_ICONS = {
+    1: { number: '01' },
+    2: { number: '02' },
+    3: { number: '03' },
+    4: { number: '04' },
+    5: { number: '05' },
+    6: { number: '06' },
+    7: { number: '07' },
+    8: { number: '08' },
+    9: { number: '09' },
+    10: { number: '10' },
+    11: { number: '11' },
+    12: { number: '12' }
   };
+
+  function normalizeTheme(theme) {
+    const normalized = String(theme || '').trim().toLowerCase();
+    return normalized || DEFAULT_THEME;
+  }
+
+  function normalizeMode(mode) {
+    const parsedMode = Number.parseInt(mode, 10);
+    if (Number.isFinite(parsedMode) && MODE_ICONS[parsedMode]) {
+      return parsedMode;
+    }
+    return 1;
+  }
+
+  function getCurrentTheme() {
+    const radioApi = window.playtalkGlobalRadio;
+    const stateTheme = radioApi && typeof radioApi.getStation === 'function'
+      ? radioApi.getStation()
+      : document.documentElement.dataset.globalRadioStation;
+    return normalizeTheme(stateTheme);
+  }
+
+  function getModeIconNumber(mode) {
+    const safeMode = normalizeMode(mode);
+    return MODE_ICONS[safeMode].number;
+  }
+
+  function buildModeIconUrl(mode, theme = getCurrentTheme()) {
+    const safeMode = normalizeMode(mode);
+    void theme;
+    return GAMEHUB_ICON_PATHS[safeMode] || GAMEHUB_ICON_PATHS[1];
+  }
 
   function renderModeLogo(element, mode) {
     if (!element) {
       return;
     }
-    const parsedMode = Number(mode);
-    const safeMode = MODE_ICON_SOURCES[parsedMode] ? parsedMode : 1;
+    const safeMode = normalizeMode(mode);
     element.dataset.mode = String(safeMode);
     element.classList.add('mode-logo');
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -30,12 +80,12 @@
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('focusable', 'false');
     svg.classList.add('mode-logo__icon');
-    const source = MODE_ICON_SOURCES[safeMode] || {};
+    const sourceHref = buildModeIconUrl(safeMode);
     svg.innerHTML = '';
-    if (source.href) {
+    if (sourceHref) {
       const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-      image.setAttribute('href', source.href);
-      image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', source.href);
+      image.setAttribute('href', sourceHref);
+      image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', sourceHref);
       image.setAttribute('x', '0');
       image.setAttribute('y', '0');
       image.setAttribute('width', '100%');
@@ -43,10 +93,21 @@
       image.setAttribute('preserveAspectRatio', 'xMidYMid meet');
       svg.appendChild(image);
     } else {
-      svg.innerHTML = source.markup || DEFAULT_ICON_MARKUP;
+      svg.innerHTML = DEFAULT_ICON_MARKUP;
     }
     element.innerHTML = '';
     element.appendChild(svg);
+  }
+
+  function renderThemedModeImages(root = document) {
+    const scope = root || document;
+    scope.querySelectorAll('img[data-mode-icon]').forEach((image) => {
+      const mode = image.dataset.modeIcon || image.closest('[data-phase]')?.dataset.phase || 1;
+      const nextSrc = buildModeIconUrl(mode);
+      if (image.getAttribute('src') !== nextSrc) {
+        image.setAttribute('src', nextSrc);
+      }
+    });
   }
 
   function renderAllModeLogos(root = document) {
@@ -57,6 +118,7 @@
       const mode = Number(logo.dataset.mode) || inherited || 1;
       renderModeLogo(logo, mode);
     });
+    renderThemedModeImages(scope);
   }
 
   function createModeLogoElement(mode, extraClass = '') {
@@ -66,10 +128,28 @@
     return el;
   }
 
+  function refreshAllModeIcons() {
+    renderAllModeLogos(document);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', refreshAllModeIcons, { once: true });
+  } else {
+    refreshAllModeIcons();
+  }
+
+  document.addEventListener('playtalk:global-radio-change', refreshAllModeIcons);
+
   window.playtalkModeLogos = {
-    ICONS: MODE_ICON_SOURCES,
+    ICONS: MODE_ICONS,
+    normalizeTheme,
+    getCurrentTheme,
+    getModeIconNumber,
+    buildModeIconUrl,
     renderModeLogo,
+    renderThemedModeImages,
     renderAllModeLogos,
-    createModeLogoElement
+    createModeLogoElement,
+    refreshAllModeIcons
   };
 })();

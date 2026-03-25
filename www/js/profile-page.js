@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   const GAME_STATS_STORAGE_KEY = 'playtalk-game-stats-v1';
   const LIVE_STATS_STORAGE_KEY = 'playtalk-game-stats-live-v1';
   const PROGRESS_STORAGE_KEY = 'vocabulary-progress';
@@ -9,8 +9,22 @@
   const ICONS = {
     pronunciation: 'SVG/codex-icons/post-results/pronuncia.svg',
     tempo: 'SVG/codex-icons/post-results/clock.svg',
-    constancy: 'arquivos-codex/novos%20icones/005.svg'
+    constancy: 'SVG/codex-icons/star.svg'
   };
+  const LEVEL_BADGES = [
+    { min: 1, max: 5, tier: 'Nivel 1', name: 'Iniciante', icon: 'selos/1iniciante.svg', gradient: 'linear-gradient(135deg, #d8ffb0 0%, #89e46a 100%)', text: '#ffffff' },
+    { min: 6, max: 10, tier: 'Nivel 2', name: 'Aprendiz', icon: 'selos/2aprendiz.svg', gradient: 'linear-gradient(135deg, #d9f4ff 0%, #74c7ff 100%)', text: '#ffffff' },
+    { min: 11, max: 20, tier: 'Nivel 3', name: 'Estudante', icon: 'selos/3estudante.svg', gradient: 'linear-gradient(135deg, #7fd2ff 0%, #58e1cf 100%)', text: '#ffffff' },
+    { min: 21, max: 40, tier: 'Nivel 4', name: 'Explorador', icon: 'selos/4explorador.svg', gradient: 'linear-gradient(135deg, #64f5ea 0%, #1fc7c0 100%)', text: '#ffffff' },
+    { min: 41, max: 60, tier: 'Nivel 5', name: 'Comunicador', icon: 'selos/5estudante.svg', gradient: 'linear-gradient(135deg, #4ba8ff 0%, #12347f 100%)', text: '#ffffff' },
+    { min: 61, max: 80, tier: 'Nivel 6', name: 'Conversador', icon: 'selos/6comunicador.svg', gradient: 'linear-gradient(135deg, #14357f 0%, #6c173e 100%)', text: '#ffffff' },
+    { min: 81, max: 100, tier: 'Nivel 7', name: 'Independente', icon: 'selos/7conversador.svg', gradient: 'linear-gradient(135deg, #7a27d6 0%, #080808 100%)', text: '#ffffff' },
+    { min: 101, max: 130, tier: 'Nivel 8', name: 'Avancado', icon: 'selos/8independente.svg.svg', gradient: 'linear-gradient(135deg, #ff5fd1 0%, #ce1ba9 100%)', text: '#ffffff' },
+    { min: 131, max: 160, tier: 'Nivel 9', name: 'Especialista', icon: 'selos/9avançado.svg', gradient: 'linear-gradient(135deg, #ff6666 0%, #d51111 100%)', text: '#ffffff' },
+    { min: 161, max: 190, tier: 'Nivel 10', name: 'Fluente', icon: 'selos/10especialista.svg', gradient: 'linear-gradient(135deg, #ffbf63 0%, #ff7e16 100%)', text: '#ffffff' },
+    { min: 191, max: 220, tier: 'Nivel 11', name: 'Mestre', icon: 'selos/11mestre.svg', gradient: 'linear-gradient(135deg, #f4de72 0%, #cf980d 100%)', text: '#ffffff' },
+    { min: 221, max: 9999, tier: 'Nivel 12', name: 'Nativo', icon: 'selos/12nativo.svg', gradient: 'linear-gradient(135deg, #fdfdfd 0%, #e8f8ff 48%, #ffffff 100%)', text: '#ffffff' }
+  ];
 
   function readJson(key, fallback) {
     try {
@@ -32,11 +46,6 @@
   function avgPercent(sum, count) {
     if (!count) return null;
     return clampPercent(sum / count);
-  }
-
-  function formatPercent(sum, count) {
-    const avg = avgPercent(sum, count);
-    return avg == null ? '--' : `${avg}%`;
   }
 
   function ringOffset(percent) {
@@ -133,6 +142,20 @@
     return Math.max(1, Math.floor(elapsed / DAY_MS) + 1);
   }
 
+  function normalizeCoins(value) {
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+    return Math.floor(parsed);
+  }
+
+  function getPlayerLevel(state) {
+    return Math.max(1, Math.floor(normalizeCoins(state?.coins) / 1000) + 1);
+  }
+
+  function getLevelBadge(level) {
+    return LEVEL_BADGES.find((badge) => level >= badge.min && level <= badge.max) || LEVEL_BADGES[LEVEL_BADGES.length - 1];
+  }
+
   function escapeHtml(value) {
     return String(value)
       .replace(/&/g, '&amp;')
@@ -153,6 +176,8 @@
     const username = String(state?.username || '').trim() || 'Jogador';
     const avatar = String(state?.avatar || '').trim();
     const hasAvatar = Boolean(avatar) && avatar !== 'Avatar/avatar-boy-male-svgrepo-com.svg';
+    const levelNumber = getPlayerLevel(state);
+    const levelBadge = getLevelBadge(levelNumber);
 
     const pronunciationPercent = avgPercent(stats.pronunciationSum, stats.pronunciationCount);
     const speedPercent = avgPercent(stats.aspectMetrics?.tempo?.sum, stats.aspectMetrics?.tempo?.count);
@@ -167,19 +192,19 @@
 
     const aspects = [
       {
-        label: 'Pronúncia',
         value: pronunciationPercent == null ? '--' : `${pronunciationPercent}%`,
-        icon: ICONS.pronunciation
+        icon: ICONS.pronunciation,
+        alt: 'Pronuncia'
       },
       {
-        label: 'Velocidade',
         value: resolvedSpeed == null ? '--' : `${resolvedSpeed}%`,
-        icon: ICONS.tempo
+        icon: ICONS.tempo,
+        alt: 'Velocidade'
       },
       {
-        label: 'Constância',
         value: `${constancyPercent}%`,
-        icon: ICONS.constancy
+        icon: ICONS.constancy,
+        alt: 'Constancia'
       }
     ];
 
@@ -196,14 +221,15 @@
           <span id="profile-photo-fallback">${escapeHtml(username.charAt(0).toUpperCase())}</span>
         </div>
       </div>
+      <div id="selos-nivel" class="profile-level-badge" style="--level-badge-bg:${escapeHtml(levelBadge.gradient)};--level-badge-color:${escapeHtml(levelBadge.text)};">
+        <img class="profile-level-badge__icon" src="${escapeHtml(levelBadge.icon)}" alt="">
+        <span class="profile-level-badge__text">${escapeHtml(levelBadge.name)}</span>
+      </div>
       <section class="profile-dashboard__aspects" aria-label="Aspectos do jogador">
         ${aspects.map((aspect) => `
-          <article class="profile-dashboard__aspect" aria-label="${aspect.label}">
-            <img class="profile-dashboard__aspect-icon" src="${aspect.icon}" alt="">
-            <div class="profile-dashboard__aspect-text">
-              <span>${aspect.label}</span>
-              <strong>${aspect.value}</strong>
-            </div>
+          <article class="profile-dashboard__aspect" aria-label="${aspect.alt}">
+            <img class="profile-dashboard__aspect-icon" src="${aspect.icon}" alt="${aspect.alt}">
+            <strong>${aspect.value}</strong>
           </article>
         `).join('')}
       </section>
@@ -246,3 +272,4 @@
     init();
   }
 })();
+

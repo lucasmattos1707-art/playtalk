@@ -1,11 +1,12 @@
-window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
+﻿window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
 
 (() => {
+  const STORAGE_KEY = 'vocabulary-level';
   const JOURNEY_STARTED_KEY = 'playtalk-journey-started';
   const PROGRESS_STORAGE_KEY = 'vocabulary-progress';
   const COMPLETION_STORAGE_KEY = 'vocabulary-last-complete';
-  const LEVEL_TWO_UNLOCK_STORAGE_KEY = 'vocabulary-level2-unlock-at';
-  const LEVEL_TWO_UNLOCK_HOUR = 6;
+  const NEXT_LEVEL_UNLOCK_STORAGE_KEY = 'vocabulary-next-level-unlock-at';
+  const LEGACY_LEVEL_TWO_UNLOCK_STORAGE_KEY = 'vocabulary-level2-unlock-at';
   const STICKY_JOURNEY_PERCENT_KEY = 'playtalk-home-journey-percent-sticky-v1';
   const LAST_COMPLETED_DAY_STORAGE_KEY = 'playtalk-home-last-completed-day-v1';
   const AVATAR_COUNT = 54;
@@ -14,6 +15,8 @@ window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
   const SWIPE_THRESHOLD = 50;
   const TYPE_SOUND_SRC = 'sounds/type.mp3';
   const KEYBOARD_REFRESH_MS = 3000;
+  const HOME_MIC_HOLD_MS = 5000;
+  const HOME_MIC_TARGET_LENGTH = 100;
   const BASE_KEYBOARD_LETTERS = Array.from({ length: 24 }, (_, index) =>
     String.fromCharCode('A'.charCodeAt(0) + index)
   );
@@ -112,6 +115,12 @@ window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
   let clearAllPressTimer = null;
   let clearAllTriggered = false;
   let longPressTriggeredAt = 0;
+  let homePressTimer = null;
+  let homePressTriggered = false;
+  let homeMicDiagnosticActive = false;
+  let homeMicOverlay = null;
+  let homeMicTranscript = '';
+  let homeMicRecognition = null;
   
   function normalizeNameCasing(value) {
     return value
@@ -134,20 +143,169 @@ window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
     }
   })();
 
+  const isSingleLaunchSource = launchSource === 'play' || launchSource === 'cards';
+
   const hasPlayLaunchPayload = (() => {
-    if (launchSource !== 'play') return false;
+    if (!isSingleLaunchSource) return false;
     try {
       const raw = sessionStorage.getItem('playtalk-play-launch');
       if (!raw) return false;
       const payload = JSON.parse(raw);
       const source = String(payload && payload.source ? payload.source : '').toLowerCase();
-      return Boolean(source === 'play' && Number.isFinite(Number(payload && payload.phase)));
+      return Boolean((source === 'play' || source === 'cards') && Number.isFinite(Number(payload && payload.phase))); 
     } catch (error) {
       return false;
     }
   })();
 
-  const isPlayLaunch = launchSource === 'play' || hasPlayLaunchPayload;
+    const isPlayLaunch = isSingleLaunchSource || hasPlayLaunchPayload;
+  function getHomeSpeechRecognitionCtor() {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+
+  function stopHomeMicRecognition() {
+    if (homeMicRecognition && typeof homeMicRecognition.stop === 'function') {
+      try {
+        homeMicRecognition.onresult = null;
+        homeMicRecognition.onerror = null;
+        homeMicRecognition.onend = null;
+        homeMicRecognition.stop();
+      } catch (_error) {
+        // no-op
+      }
+    }
+    homeMicRecognition = null;
+  }
+
+  function destroyHomeMicOverlay() {
+    if (homeMicOverlay && homeMicOverlay.parentNode) {
+      homeMicOverlay.parentNode.removeChild(homeMicOverlay);
+    }
+    homeMicOverlay = null;
+  }
+
+  function exitHomeMicDiagnostic() {
+    stopHomeMicRecognition();
+    homeMicDiagnosticActive = false;
+    homeMicTranscript = '';
+    destroyHomeMicOverlay();
+    showHome();
+  }
+
+  function updateHomeMicTranscript(textValue) {
+    if (!homeMicOverlay) return;
+    const output = homeMicOverlay.querySelector('[data-home-mic-output]');
+    if (!output) return;
+    homeMicTranscript = String(textValue || '').slice(0, HOME_MIC_TARGET_LENGTH);
+    output.textContent = homeMicTranscript || 'Listening in English...';
+    if (homeMicTranscript.length >= HOME_MIC_TARGET_LENGTH) {
+      window.setTimeout(() => {
+        exitHomeMicDiagnostic();
+      }, 250);
+    }
+  }
+
+  function appendHomeMicTranscript(textValue) {
+    const next = [homeMicTranscript, String(textValue || '').trim()]
+      .filter(Boolean)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    updateHomeMicTranscript(next);
+  }
+
+  function createHomeMicOverlay() {
+    destroyHomeMicOverlay();
+    const overlay = document.createElement('div');
+    overlay.setAttribute('data-home-mic-overlay', 'true');
+    Object.assign(overlay.style, {
+      position: 'fixed',
+      inset: '0',
+      zIndex: '9999',
+      background: '#ffffff',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '32px',
+      boxSizing: 'border-box'
+    });
+
+    const textNode = document.createElement('div');
+    textNode.setAttribute('data-home-mic-output', 'true');
+    Object.assign(textNode.style, {
+      maxWidth: '320px',
+      width: '100%',
+      color: '#000000',
+      fontFamily: '"Open Sans", sans-serif',
+      fontWeight: '700',
+      fontSize: '15px',
+      lineHeight: '1.6',
+      textAlign: 'left',
+      whiteSpace: 'pre-wrap'
+    });
+    textNode.textContent = 'Listening in English...';
+
+    overlay.appendChild(textNode);
+    document.body.appendChild(overlay);
+    homeMicOverlay = overlay;
+  }
+
+  function startHomeBrowserMicRecognition() {
+    const SpeechRecognition = getHomeSpeechRecognitionCtor();
+    if (!SpeechRecognition) return false;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .flatMap((result) => Array.from(result || []))
+        .map((alt) => alt && alt.transcript)
+        .filter(Boolean)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      updateHomeMicTranscript(transcript);
+    };
+    recognition.onerror = () => {};
+    recognition.onend = () => {
+      if (!homeMicDiagnosticActive || homeMicTranscript.length >= HOME_MIC_TARGET_LENGTH) return;
+      try {
+        recognition.start();
+      } catch (_error) {
+        // no-op
+      }
+    };
+    homeMicRecognition = recognition;
+    try {
+      recognition.start();
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function startHomeMicDiagnostic() {
+    if (homeMicDiagnosticActive) return;
+    homeMicDiagnosticActive = true;
+    homeMicTranscript = '';
+    showHome();
+    createHomeMicOverlay();
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (startHomeBrowserMicRecognition()) return;
+      updateHomeMicTranscript('Speech recognition unavailable.');
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((stream) => {
+        stream.getTracks().forEach((track) => track.stop());
+        if (startHomeBrowserMicRecognition()) return;
+        updateHomeMicTranscript('Speech recognition unavailable.');
+      })
+      .catch(() => {
+        updateHomeMicTranscript('Microphone permission denied.');
+      });
+  }
 
   const revealPlayLaunchGame = () => {
     if (!isPlayLaunch) return;
@@ -242,6 +400,44 @@ window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
     localStorage.setItem(key, String(Math.max(0, Math.round(value))));
   };
 
+  const removeNumericStorage = (key) => {
+    localStorage.removeItem(key);
+  };
+
+  const getCompletionStatus = (completion = safeParse(COMPLETION_STORAGE_KEY)) => {
+    const completedLevel = Number(completion.completedLevel);
+    if (!Number.isFinite(completedLevel) || completedLevel <= 0) return null;
+    const nextLevelRaw = Number(completion.nextLevel);
+    const nextLevel = Number.isFinite(nextLevelRaw) && nextLevelRaw > completedLevel
+      ? nextLevelRaw
+      : completedLevel + 1;
+    return {
+      completedLevel,
+      nextLevel
+    };
+  };
+
+  const syncCompletionUnlockStorage = () => {
+    removeNumericStorage(NEXT_LEVEL_UNLOCK_STORAGE_KEY);
+    removeNumericStorage(LEGACY_LEVEL_TWO_UNLOCK_STORAGE_KEY);
+  };
+
+  const resolveUnlockedCompletion = () => {
+    const completion = safeParse(COMPLETION_STORAGE_KEY);
+    const status = getCompletionStatus(completion);
+    if (!status) {
+      syncCompletionUnlockStorage(null);
+      return null;
+    }
+    localStorage.removeItem(COMPLETION_STORAGE_KEY);
+    removeNumericStorage(NEXT_LEVEL_UNLOCK_STORAGE_KEY);
+    removeNumericStorage(LEGACY_LEVEL_TWO_UNLOCK_STORAGE_KEY);
+    writeNumericStorage(STORAGE_KEY, status.nextLevel);
+    writeNumericStorage(STICKY_JOURNEY_PERCENT_KEY, 0);
+    writeNumericStorage(LAST_COMPLETED_DAY_STORAGE_KEY, status.completedLevel);
+    return null;
+  };
+
   const getProgressPercent = (progress, completion) => {
     const totalStepsRaw = Number(progress.journeyTotalSteps);
     const completedStepsRaw = Number(progress.journeyCompletedSteps);
@@ -253,34 +449,8 @@ window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
     return completion && completion.completedLevel ? 100 : 0;
   };
 
-  const formatNextLessonCountdown = () => {
-    const now = Date.now();
-    const storedUnlockAt = readNumericStorage(LEVEL_TWO_UNLOCK_STORAGE_KEY);
-    let unlockAt = Number.isFinite(storedUnlockAt) && storedUnlockAt > now ? storedUnlockAt : null;
-    if (!unlockAt) {
-      const target = new Date();
-      target.setDate(target.getDate() + 1);
-      target.setHours(LEVEL_TWO_UNLOCK_HOUR, 0, 0, 0);
-      unlockAt = target.getTime();
-    }
-
-    const remainingMs = unlockAt - now;
-    if (remainingMs <= 0) {
-      return 'Pr\u00F3xima aula liberada';
-    }
-
-    const oneHourMs = 60 * 60 * 1000;
-    const oneMinuteMs = 60 * 1000;
-    if (remainingMs < oneHourMs) {
-      const minutes = Math.max(1, Math.ceil(remainingMs / oneMinuteMs));
-      return 'Pr\u00F3xima aula em ' + minutes + ' minuto' + (minutes === 1 ? '' : 's');
-    }
-
-    const hours = Math.max(1, Math.ceil(remainingMs / oneHourMs));
-    return 'Pr\u00F3xima aula em ' + hours + ' hora' + (hours === 1 ? '' : 's');
-  };
-
   const updateMyhomeProgress = () => {
+    const completionStatus = resolveUnlockedCompletion();
     const progress = safeParse(PROGRESS_STORAGE_KEY);
     const completion = safeParse(COMPLETION_STORAGE_KEY);
     const sequence = Array.isArray(progress.journeyPhaseSequence) ? progress.journeyPhaseSequence : [];
@@ -297,16 +467,24 @@ window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
 
     const completionDay = Number(completion.completedLevel);
     const progressDay = Number(progress.level);
+    const storedLevel = readNumericStorage(STORAGE_KEY);
     let completedDay = readNumericStorage(LAST_COMPLETED_DAY_STORAGE_KEY);
+    let currentDay = Number.isFinite(progressDay) && progressDay > 0
+      ? progressDay
+      : (Number.isFinite(storedLevel) && storedLevel > 0
+        ? storedLevel
+        : (Number.isFinite(completedDay) && completedDay > 0 ? completedDay : 1));
 
     if (Number.isFinite(completionDay) && completionDay > 0) {
       completedDay = completionDay;
+      currentDay = completionDay;
       percent = 100;
       writeNumericStorage(STICKY_JOURNEY_PERCENT_KEY, 100);
       writeNumericStorage(LAST_COMPLETED_DAY_STORAGE_KEY, completionDay);
     } else if (basePercent >= 100) {
       const resolvedDay = Number.isFinite(progressDay) && progressDay > 0 ? progressDay : 1;
       completedDay = resolvedDay;
+      currentDay = resolvedDay;
       percent = 100;
       writeNumericStorage(STICKY_JOURNEY_PERCENT_KEY, 100);
       writeNumericStorage(LAST_COMPLETED_DAY_STORAGE_KEY, resolvedDay);
@@ -322,41 +500,26 @@ window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
 
     if (myhomeStatus) {
       if (!started) {
-        const introMessages = ['Flu\u00EAncia F\u00E1cil', 'Toque para come\u00E7ar'];
-        myhomeStatus.textContent = introMessages[0];
+        myhomeStatus.textContent = 'Fluência Fácil';
         myhomeStatus.classList.remove('is-fading');
-        myhomeStatusCycleTimer = setInterval(() => {
-          myhomeStatusTextIndex = (myhomeStatusTextIndex + 1) % introMessages.length;
-          setMyhomeStatusText(introMessages[myhomeStatusTextIndex]);
-        }, 2000);
-      } else if (percent >= 100) {
-        const dayLabel = Number.isFinite(completedDay) && completedDay > 0 ? completedDay : 1;
-        const completionText = 'Voc\u00EA completou o dia ' + dayLabel;
-        const completionMessages = [
-          completionText,
-          formatNextLessonCountdown()
-        ];
-        myhomeStatus.textContent = completionMessages[0];
-        myhomeStatus.classList.remove('is-fading');
-        myhomeStatusCycleTimer = setInterval(() => {
-          completionMessages[1] = formatNextLessonCountdown();
-          myhomeStatusTextIndex = (myhomeStatusTextIndex + 1) % completionMessages.length;
-          setMyhomeStatusText(completionMessages[myhomeStatusTextIndex]);
-        }, 2200);
       } else {
-        const progressMessages = [
-          `Fase ${phaseNumber} de ${Math.max(totalPhases, 1)}`,
-          `${percent}% Completo`,
-          'Toque para continuar'
-        ];
-        myhomeStatus.textContent = progressMessages[0];
+        const statusTexts = [];
+        if (completionStatus) {
+          const dayLabel = Number.isFinite(completedDay) && completedDay > 0 ? completedDay : completionStatus.completedLevel;
+          statusTexts.push('Você completou o dia ' + dayLabel);
+          statusTexts.push('Dia ' + completionStatus.nextLevel + ' liberado');
+        } else {
+          statusTexts.push(`${percent}% concluído`);
+          statusTexts.push(`Dia ${Math.max(1, currentDay)}`);
+        }
+        myhomeStatus.textContent = statusTexts[0];
         myhomeStatus.classList.remove('is-fading');
-        myhomeStatusCycleTimer = setInterval(() => {
-          myhomeStatusTextIndex = (myhomeStatusTextIndex + 1) % progressMessages.length;
-          const nextText = progressMessages[myhomeStatusTextIndex];
-          myhomeCanContinueByTap = nextText === 'Toque para continuar';
-          setMyhomeStatusText(nextText);
-        }, 2000);
+        if (statusTexts.length > 1) {
+          myhomeStatusCycleTimer = window.setInterval(() => {
+            myhomeStatusTextIndex = (myhomeStatusTextIndex + 1) % statusTexts.length;
+            setMyhomeStatusText(statusTexts[myhomeStatusTextIndex]);
+          }, 3000);
+        }
       }
     }
 
@@ -462,6 +625,7 @@ window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
 
   const startJourneyGame = () => {
     if (!window.playtalkGame) return;
+    resolveUnlockedCompletion();
 
     const fromPlayQuery = (() => {
       try {
@@ -543,20 +707,9 @@ window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
   function startNameHintCycle() {
     if (!nameHint) return;
     stopNameHintCycle();
-    const messages = ['Toque em qualquer lugar para apagar', 'Toque por 1 segundo para apagar tudo'];
-    nameHint.textContent = messages[0];
+    nameHint.textContent = 'Toque em qualquer lugar para apagar';
     nameHint.classList.remove('is-fading');
     nameHintIndex = 0;
-    nameHintCycleTimer = window.setInterval(() => {
-      nameHintIndex = (nameHintIndex + 1) % messages.length;
-      nameHint.classList.add('is-fading');
-      if (nameHintSwapTimer) window.clearTimeout(nameHintSwapTimer);
-      nameHintSwapTimer = window.setTimeout(() => {
-        nameHint.textContent = messages[nameHintIndex];
-        nameHint.classList.remove('is-fading');
-        nameHintSwapTimer = null;
-      }, 500);
-    }, 2600);
   }
 
   function stopNameHintCycle() {
@@ -731,21 +884,32 @@ window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
       nameKeyboard.appendChild(row);
     }
 
+    const bottomRow = document.createElement('div');
+    bottomRow.className = 'journey-name-keyboard__row journey-name-keyboard__row--bottom';
+
     const spacebar = document.createElement('button');
     spacebar.type = 'button';
     spacebar.className = 'journey-name-spacebar phase-nine-spacebar';
     spacebar.textContent = 'Espaco';
     spacebar.setAttribute('aria-label', 'Espaco');
     spacebar.addEventListener('click', addTypedSpace);
-    nameKeyboard.appendChild(spacebar);
+    bottomRow.appendChild(spacebar);
+
+    const deleteKey = document.createElement('button');
+    deleteKey.type = 'button';
+    deleteKey.className = 'journey-name-delete phase-nine-key';
+    deleteKey.setAttribute('aria-label', 'Apagar ultima letra');
+    deleteKey.innerHTML = '<svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true"><path fill="#ffffff" d="M20 4H9.5a2 2 0 0 0-1.4.6L3 9.7a2 2 0 0 0 0 2.8l5.1 5.1a2 2 0 0 0 1.4.6H20a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm-4.6 9.4a1 1 0 0 1 0 1.4 1 1 0 0 1-1.4 0L12 12.8l-2 2a1 1 0 0 1-1.4-1.4l2-2-2-2A1 1 0 0 1 10 8l2 2 2-2a1 1 0 1 1 1.4 1.4l-2 2 2 2Z"/></svg>';
+    deleteKey.addEventListener('click', removeLastTypedCharacter);
+    bottomRow.appendChild(deleteKey);
+
+    nameKeyboard.appendChild(bottomRow);
   }
 
   function startKeyboardTicker() {
     stopKeyboardTicker();
-    keyboardSwapTimer = window.setInterval(() => {
-      keyboardShifted = !keyboardShifted;
-      renderNameKeyboard();
-    }, KEYBOARD_REFRESH_MS);
+    keyboardShifted = false;
+    renderNameKeyboard();
   }
 
   function showAvatarStep() {
@@ -788,6 +952,10 @@ window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
         username,
         password: ''
       });
+    }
+
+    if (username.trim().toLowerCase() === 'adm') {
+      writeNumericStorage(LAST_COMPLETED_DAY_STORAGE_KEY, 1);
     }
 
     startJourneyGame();
@@ -848,9 +1016,47 @@ window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
     if (!body) return;
     if (!body.classList.contains('page-home')) return;
     if (body.classList.contains('game-active') || body.classList.contains('journey-onboarding-active')) return;
+    if (homeMicDiagnosticActive) return;
+    const target = event.target;
+    if (target && target.closest('#main-nav')) return;
+
+    homePressTriggered = false;
+    if (homePressTimer) {
+      window.clearTimeout(homePressTimer);
+      homePressTimer = null;
+    }
+    homePressTimer = window.setTimeout(() => {
+      homePressTriggered = true;
+      startHomeMicDiagnostic();
+      homePressTimer = null;
+    }, HOME_MIC_HOLD_MS);
+  });
+
+  document.addEventListener('pointerup', (event) => {
+    const body = document.body;
+    if (!body) return;
+    if (!body.classList.contains('page-home')) return;
+    if (body.classList.contains('game-active') || body.classList.contains('journey-onboarding-active')) return;
+    if (homePressTimer) {
+      window.clearTimeout(homePressTimer);
+      homePressTimer = null;
+    }
+    if (homeMicDiagnosticActive) return;
+    if (homePressTriggered) {
+      homePressTriggered = false;
+      return;
+    }
     const target = event.target;
     if (target && target.closest('#main-nav')) return;
     startJourneyFromTap();
+  });
+
+  document.addEventListener('pointercancel', () => {
+    if (homePressTimer) {
+      window.clearTimeout(homePressTimer);
+      homePressTimer = null;
+    }
+    homePressTriggered = false;
   });
   document.addEventListener('pointerdown', (event) => {
     const body = document.body;
@@ -963,6 +1169,12 @@ window.PLAYTALK_GAME_CONFIG = { deferAutoStart: true };
     showHome();
   });
 })();
+
+
+
+
+
+
 
 
 

@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Musicas</title>
+  <style>
+    :root{--font-family:'Aver',sans-serif;--menu-text:#fffaf2;--menu-shadow:18px;--lyrics-offset-y:0px;--bg-gradient:
+      radial-gradient(circle at top left,rgba(255,255,255,.22),transparent 32%),
+      radial-gradient(circle at 85% 18%,rgba(132,221,255,.34),transparent 28%),
+      linear-gradient(145deg,#4fb6ff 0%,#2594ef 38%,#5fc8ff 68%,#c5f0ff 100%)}
+    @font-face{font-family:'Aver';src:url('/Fontes/Aver.ttf') format('truetype');font-display:swap}
+    @font-face{font-family:'Bronaco';src:url('/Fontes/Bronaco.ttf') format('truetype');font-display:swap}
+    @font-face{font-family:'Colombia';src:url('/Fontes/Colombia.ttf') format('truetype');font-display:swap}
+    @font-face{font-family:'Enceladus';src:url('/Fontes/Enceladus.otf') format('opentype');font-display:swap}
+    @font-face{font-family:'Enceladus Regular';src:url('/Fontes/Enceladus Regular.otf') format('opentype');font-display:swap}
+    @font-face{font-family:'Gealid Light';src:url('/Fontes/Gealid Light.otf') format('opentype');font-display:swap}
+    @font-face{font-family:'Gealit';src:url('/Fontes/Gealit.otf') format('opentype');font-display:swap}
+    @font-face{font-family:'Glametrix';src:url('/Fontes/Glametrix.otf') format('opentype');font-display:swap}
+    @font-face{font-family:'Glametrix Light';src:url('/Fontes/Glametrix Light.otf') format('opentype');font-display:swap}
+    @font-face{font-family:'Glametrix Feather';src:url('/Fontes/Glametrix Feather.otf') format('opentype');font-display:swap}
+    @font-face{font-family:'Gotama';src:url('/Fontes/Gotama.ttf') format('truetype');font-display:swap}
+    @font-face{font-family:'Hadir Sans';src:url('/Fontes/Hadir Sans.otf') format('opentype');font-display:swap}
+    @font-face{font-family:'Kimberry';src:url('/Fontes/Kimberry.ttf') format('truetype');font-display:swap}
+    @font-face{font-family:'Liscence Plate';src:url('/Fontes/Liscence Plate.ttf') format('truetype');font-display:swap}
+    @font-face{font-family:'Metropolis';src:url('/Fontes/Metropolis.ttf') format('truetype');font-display:swap}
+    @font-face{font-family:'Momcake';src:url('/Fontes/Momcake.otf') format('opentype');font-display:swap}
+    @font-face{font-family:'Momcake Thin';src:url('/Fontes/Momcake Thin.otf') format('opentype');font-display:swap}
+    @font-face{font-family:'Munich Regular';src:url('/Fontes/Munich Regular.ttf') format('truetype');font-display:swap}
+    @font-face{font-family:'Newspappe';src:url('/Fontes/Newspappe.ttf') format('truetype');font-display:swap}
+    @font-face{font-family:'Tittilum';src:url('/Fontes/Tittilum.ttf') format('truetype');font-display:swap}
+    @font-face{font-family:'Titillium Web Semibold';src:url('/Fontes/TitilliumWebsemibold-Kv2y.ttf') format('truetype');font-display:swap}
+    @font-face{font-family:'Venus Light';src:url('/Fontes/Venus Light.otf') format('opentype');font-display:swap}
+    @font-face{font-family:'Venus YG';src:url('/Fontes/Venus YG.otf') format('opentype');font-display:swap}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:var(--font-family);background:#3ca8f5;color:var(--menu-text)}
+    body{overflow:hidden}.hidden{display:none!important}.screen{position:relative;min-height:100vh;width:100vw;overflow:hidden}
+    .screen::before{content:"";position:absolute;inset:0;background:var(--bg-gradient);transform:scale(1.04)}
+    .overlay{position:absolute;inset:0;pointer-events:none}
+    .overlay.menu{background:linear-gradient(180deg,rgba(7,55,110,.12),rgba(9,41,88,.34))}.overlay.player{background:linear-gradient(180deg,rgba(12,69,136,.10),rgba(8,34,76,.24))}
+    .home-content,.player-content{position:relative;z-index:2}.home-content{min-height:100vh;display:grid;place-items:center;padding:24px}
+    .panel{width:min(920px,100%);padding:28px;border-radius:30px;background:rgba(13,41,84,.34);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(12px)}
+    h1{margin:0 0 8px;font-size:clamp(2.2rem,5vw,4rem)}.subtitle,.hint,.status,.error,label,button,select,input{color:var(--menu-text);text-shadow:0 0 var(--menu-shadow) rgba(0,0,0,.85)}
+    .subtitle{margin:0 0 24px}.layout{display:grid;grid-template-columns:1.2fr .95fr;gap:24px}.stack,.field{display:grid;gap:16px}.field{gap:8px}
+    .field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}label{font-weight:800}select,input[type=file],input[type=color],input[type=range]{width:100%;padding:12px 14px;border-radius:16px;border:1px solid rgba(255,255,255,.22);background:rgba(10,31,67,.34)}
+    .actions{display:flex;gap:12px;flex-wrap:wrap}button{border:0;border-radius:999px;padding:12px 18px;background:rgba(255,255,255,.18);cursor:pointer}.sync-play{background:rgba(41,178,90,.92)}.hero-video-btn{background:rgba(255,210,79,.9);color:#17365f;text-shadow:none;font-weight:900}
+    .preview-box{display:grid;gap:10px;padding:18px;border-radius:22px;background:rgba(255,255,255,.12);transform:translateY(var(--lyrics-offset-y))}
+    .preview-box p,.lyrics-stage p{margin:0}
+    .preview-text,.lyric-line{text-align:center;opacity:1;transform:translateX(0) scale(1)}.preview-text{font-size:clamp(1.6rem,3vw,2.6rem);min-height:2.05em;line-height:.94}.player-content{min-height:100vh;display:grid;place-items:center;padding:24px}
+    .lyrics-stage{width:85vw;max-width:85vw;display:grid;gap:.04em;transform:translateY(var(--lyrics-offset-y))}.lyric-line{font-size:clamp(2rem,5vw,5rem);font-weight:800;line-height:.9}.empty{visibility:hidden}
+    .status,.error{min-height:24px;font-weight:700}.badge{display:inline-flex;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.1);font-weight:700}
+    .video-overlay{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:24px;background:rgba(4,14,31,.94)}
+    .video-shell{position:relative;width:min(96vw,1600px);aspect-ratio:16/9;border-radius:28px;overflow:hidden;background:#000;box-shadow:0 24px 90px rgba(0,0,0,.45)}
+    .video-frame{width:100%;height:100%;border:0}
+    .video-close{position:absolute;top:16px;right:16px;z-index:1;background:rgba(8,22,49,.74);backdrop-filter:blur(8px)}
+    audio{position:fixed;left:-9999px;width:1px;height:1px;opacity:0}.transition-dissolve .preview-text,.transition-dissolve .lyric-line{transition:opacity .75s ease,transform .75s ease}
+    .transition-slide .preview-text,.transition-slide .lyric-line{transition:opacity .75s ease,transform .75s cubic-bezier(.22,1,.36,1)}.is-transitioning .preview-text,.is-transitioning .lyric-line{opacity:0}
+    .is-transitioning.transition-slide .preview-text,.is-transitioning.transition-slide .lyric-line{transform:translateX(8vw) scale(.98)}.text-idle-expand .preview-text,.text-idle-expand .lyric-line{animation:breathe 6s ease-in-out infinite}
+    @keyframes breathe{0%,100%{transform:translateX(0) scale(1)}50%{transform:translateX(0) scale(1.12)}}
+    @media (max-width:820px){body{overflow:auto}.layout,.field-grid{grid-template-columns:1fr}.actions>*{flex:1 1 100%}}
+  </style>
+</head>
+<body>
+  <audio id="player" preload="auto"></audio>
+  <main id="homeView" class="screen">
+    <div class="overlay menu"></div>
+    <div class="home-content">
+      <section class="panel">
+        <h1>Musicas</h1>
+        <p class="subtitle">Background 1 fixo. Seta cima e seta baixo movem o texto 20px.</p>
+        <div class="layout">
+          <div class="stack">
+            <div class="field"><label for="musicSelect">Musica</label><select id="musicSelect"></select></div>
+            <div class="field"><label for="jsonFiles">Adicionar JSONs</label><input id="jsonFiles" type="file" accept=".json,application/json" multiple></div>
+            <div class="field-grid">
+              <div class="field"><label for="fontSelect">Fonte</label><select id="fontSelect"></select></div>
+            </div>
+            <div class="field-grid">
+              <div class="field"><label for="transitionSelect">Transicao</label><select id="transitionSelect"><option value="dissolve">Dissolucao suave</option><option value="slide">Slide animado</option></select></div>
+              <div class="field"><label for="animationSelect">Animacao</label><select id="animationSelect"><option value="none">Sem animacao</option><option value="expand">Expandir</option><option value="animated">Animado</option></select></div>
+            </div>
+            <div class="field-grid">
+              <div class="field"><label for="colorPicker">Cor</label><input id="colorPicker" type="color" value="#fffaf2"></div>
+              <div class="field"><label for="shadowRange">Sombra</label><input id="shadowRange" type="range" min="0" max="40" step="1" value="18"></div>
+            </div>
+            <div class="actions">
+              <button id="playBtn" type="button">Tocar musica</button>
+              <button id="syncPlayBtn" type="button" class="sync-play hidden">Reproduzir sync</button>
+              <button id="heroVideoBtn" type="button" class="hero-video-btn">Fábrica de Heróis</button>
+              <button id="memorizeBtn" type="button">Memorizar beat</button>
+              <button id="downloadBtn" type="button" class="hidden">Baixar JSON sincronizado</button>
+            </div>
+            <div id="syncBadge" class="badge hidden">Beat memorizado</div>
+            <div id="status" class="status"></div>
+            <div id="errorBox" class="error"></div>
+            <div class="hint">Atalhos: `H` volta. `Seta esquerda/direita` troca trecho. `Seta cima/baixo` move o texto. No memorizar, `espaco`, `enter` ou clique marcam.</div>
+          </div>
+          <div class="stack">
+            <div class="preview-box">
+              <p>Preview</p>
+              <p id="previewLine1" class="preview-text">Linha um da musica</p>
+              <p id="previewLine2" class="preview-text">Linha dois da musica</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <section id="playerView" class="screen hidden" aria-live="polite">
+    <div class="overlay player"></div>
+    <div class="player-content">
+      <div class="lyrics-stage">
+        <p id="line1" class="lyric-line"></p>
+        <p id="line2" class="lyric-line"></p>
+      </div>
+    </div>
+  </section>
+  <section id="videoOverlay" class="video-overlay hidden" aria-label="Video Fábrica de Heróis">
+    <div id="videoShell" class="video-shell">
+      <button id="closeVideoBtn" type="button" class="video-close">Fechar</button>
+      <iframe
+        id="heroVideoFrame"
+        class="video-frame"
+        src=""
+        title="Fábrica de Heróis"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen
+      ></iframe>
+    </div>
+  </section>
+  <script>
+    const HERO_VIDEO_EMBED_URL="https://www.youtube.com/embed/8cZ7Nv51nhs?autoplay=1&rel=0";
+    const FONT_LIBRARY=[
+      {label:"Aver",family:"Aver",fallback:"sans-serif"},
+      {label:"Bronaco",family:"Bronaco",fallback:"sans-serif"},
+      {label:"Colombia",family:"Colombia",fallback:"sans-serif"},
+      {label:"Enceladus",family:"Enceladus",fallback:"sans-serif"},
+      {label:"Enceladus Regular",family:"Enceladus Regular",fallback:"sans-serif"},
+      {label:"Gealid Light",family:"Gealid Light",fallback:"sans-serif"},
+      {label:"Gealit",family:"Gealit",fallback:"sans-serif"},
+      {label:"Glametrix",family:"Glametrix",fallback:"sans-serif"},
+      {label:"Glametrix Light",family:"Glametrix Light",fallback:"sans-serif"},
+      {label:"Glametrix Feather",family:"Glametrix Feather",fallback:"sans-serif"},
+      {label:"Gotama",family:"Gotama",fallback:"sans-serif"},
+      {label:"Hadir Sans",family:"Hadir Sans",fallback:"sans-serif"},
+      {label:"Kimberry",family:"Kimberry",fallback:"sans-serif"},
+      {label:"Liscence Plate",family:"Liscence Plate",fallback:"sans-serif"},
+      {label:"Metropolis",family:"Metropolis",fallback:"sans-serif"},
+      {label:"Momcake",family:"Momcake",fallback:"sans-serif"},
+      {label:"Momcake Thin",family:"Momcake Thin",fallback:"sans-serif"},
+      {label:"Munich Regular",family:"Munich Regular",fallback:"sans-serif"},
+      {label:"Newspappe",family:"Newspappe",fallback:"sans-serif"},
+      {label:"Tittilum",family:"Tittilum",fallback:"sans-serif"},
+      {label:"Titillium Web Semibold",family:"Titillium Web Semibold",fallback:"sans-serif"},
+      {label:"Venus Light",family:"Venus Light",fallback:"sans-serif"},
+      {label:"Venus YG",family:"Venus YG",fallback:"sans-serif"}
+    ];
+    const $=(id)=>document.getElementById(id);
+    const musicSelect=$("musicSelect"),jsonFiles=$("jsonFiles"),fontSelect=$("fontSelect"),transitionSelect=$("transitionSelect"),animationSelect=$("animationSelect"),colorPicker=$("colorPicker"),shadowRange=$("shadowRange"),playBtn=$("playBtn"),syncPlayBtn=$("syncPlayBtn"),heroVideoBtn=$("heroVideoBtn"),memorizeBtn=$("memorizeBtn"),downloadBtn=$("downloadBtn"),syncBadge=$("syncBadge"),status=$("status"),errorBox=$("errorBox"),homeView=$("homeView"),playerView=$("playerView"),videoOverlay=$("videoOverlay"),videoShell=$("videoShell"),heroVideoFrame=$("heroVideoFrame"),closeVideoBtn=$("closeVideoBtn"),previewLine1=$("previewLine1"),previewLine2=$("previewLine2"),player=$("player"),line1=$("line1"),line2=$("line2");
+    let musicas=[],musicaAtual=0,blocoAtual=0,blocosAtuais=[],modoAtual="home",lyricsOffsetY=0,marcacoesAtuais=[],ultimoJsonExportado="",syncAnimationId=0,renderToken=0;
+    const setStatus=(m)=>status.textContent=m,showError=(m)=>errorBox.textContent=m,clearError=()=>errorBox.textContent="";
+    const hasSync=(m)=>Array.isArray(m?.blocos)&&m.blocos.some((b)=>Number.isFinite(Number(b.ms)));
+    function buildFontValue(family,fallback="sans-serif"){return`'${family}',${fallback}`}
+    function ensureFontOption(value,label=value){
+      if(!value)return;
+      if(Array.from(fontSelect.options).some((option)=>option.value===value))return;
+      const option=document.createElement("option");
+      option.value=value;
+      option.textContent=label;
+      fontSelect.appendChild(option);
+    }
+    function populateFontSelect(){
+      fontSelect.innerHTML="";
+      FONT_LIBRARY.forEach(({label,family,fallback})=>{
+        const option=document.createElement("option");
+        option.value=buildFontValue(family,fallback);
+        option.textContent=label;
+        fontSelect.appendChild(option);
+      });
+      if(!fontSelect.value&&fontSelect.options.length)fontSelect.value=fontSelect.options[0].value;
+    }
+    function applyLyricsOffset(){document.documentElement.style.setProperty("--lyrics-offset-y",`${lyricsOffsetY}px`)}
+    function adjustLyricsOffset(direction){lyricsOffsetY+=direction*20;applyLyricsOffset();setStatus(`Posicao vertical do texto: ${lyricsOffsetY}px.`)}
+    function getCurrentPresentation(){return{background:0,font:fontSelect.value,color:colorPicker.value,shadow:Number(shadowRange.value)||18,transition:transitionSelect.value,animation:animationSelect.value}}
+    function applyPresentation(p){if(!p||typeof p!=="object")return;if(p.font){ensureFontOption(p.font,p.font.replace(/['"]/g,"").split(",")[0]);fontSelect.value=p.font}if(p.color)colorPicker.value=p.color;if(p.shadow!==undefined)shadowRange.value=String(p.shadow);if(p.transition)transitionSelect.value=p.transition;if(p.animation)animationSelect.value=p.animation;applyAppearance()}
+    function savePresentationIntoCurrentMusic(){const m=musicas[musicaAtual];if(m)m.apresentacao=getCurrentPresentation()}
+    function sanitizeFileName(v){return v.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9]+/g,"-").replace(/^-+|-+$/g,"").toLowerCase()||"musica"}
+    function getBlocos(m){const titulo=m?.titulo||"";if(Array.isArray(m?.blocos)&&m.blocos.length){const blocos=m.blocos.map((b)=>({ms:Number.isFinite(Number(b.ms))?Number(b.ms):null,linhas:Array.isArray(b.linhas)?[b.linhas[0]||"",b.linhas[1]||""]:["",""]}));const primeiro=blocos[0];const isTitulo=primeiro&&primeiro.linhas[0]===titulo&&!(primeiro.linhas[1]||"");if(titulo&&!isTitulo)blocos.unshift({ms:0,linhas:[titulo,""]});return blocos}const letra=Array.isArray(m?.letra)?m.letra:[];const blocos=titulo?[{ms:0,linhas:[titulo,""]}]:[];for(let i=0;i<letra.length;i+=2)blocos.push({ms:null,linhas:[letra[i]||"",letra[i+1]||""]});return blocos}
+    function resolveSyncBlocos(blocos){const resolved=blocos.map((b)=>({ms:Number.isFinite(b.ms)?b.ms:null,linhas:[...b.linhas]}));let last=-1;for(let i=0;i<resolved.length;i+=1){if(!Number.isFinite(resolved[i].ms))continue;if(last===-1){for(let j=0;j<i;j+=1)resolved[j].ms=resolved[i].ms}else if(i-last>1){const start=resolved[last].ms,end=resolved[i].ms,gap=i-last;for(let j=1;j<gap;j+=1)resolved[last+j].ms=Math.round(start+((end-start)*j)/gap)}last=i}if(last>-1&&last<resolved.length-1){const baseGap=last>0?resolved[last].ms-resolved[last-1].ms:2000;const step=Math.max(400,baseGap||2000);for(let i=last+1;i<resolved.length;i+=1)resolved[i].ms=resolved[i-1].ms+step}return resolved}
+    function buildMusicKey(m){return`${m.titulo||""}::${m.link||""}`}
+    function normalizeMusicEntry(entry){if(!entry||typeof entry!=="object")return null;return{titulo:entry.titulo||"Sem titulo",link:entry.link||"",letra:Array.isArray(entry.letra)?entry.letra:[],blocos:Array.isArray(entry.blocos)?entry.blocos:undefined,apresentacao:entry.apresentacao&&typeof entry.apresentacao==="object"?entry.apresentacao:undefined}}
+    function normalizePayload(data){if(Array.isArray(data))return data.map(normalizeMusicEntry).filter(Boolean);const unica=normalizeMusicEntry(data);return unica?[unica]:[]}
+    function mergeMusicas(novas){const mapa=new Map(musicas.map((m)=>[buildMusicKey(m),m]));novas.forEach((m)=>{const key=buildMusicKey(m),atual=mapa.get(key);if(!atual)return mapa.set(key,m);if(!hasSync(atual)&&hasSync(m))return mapa.set(key,m);if(atual.letra.length===0&&m.letra.length>0)return mapa.set(key,{...atual,letra:m.letra,blocos:atual.blocos||m.blocos,apresentacao:atual.apresentacao||m.apresentacao});if(!atual.apresentacao&&m.apresentacao)mapa.set(key,{...atual,apresentacao:m.apresentacao})});musicas=Array.from(mapa.values()).sort((a,b)=>a.titulo.localeCompare(b.titulo,"pt-BR"))}
+    function applyAppearance(){document.documentElement.style.setProperty("--font-family",fontSelect.value);document.documentElement.style.setProperty("--menu-text",colorPicker.value);document.documentElement.style.setProperty("--menu-shadow",`${shadowRange.value}px`);applyMotionClasses();savePresentationIntoCurrentMusic()}
+    function applyMotionClasses(){const transitionClass=transitionSelect.value==="slide"?"transition-slide":"transition-dissolve";const animationType=animationSelect.value;[homeView,playerView].forEach((el)=>{el.classList.remove("transition-dissolve","transition-slide","text-idle-expand");el.classList.add(transitionClass)});document.documentElement.style.setProperty("--idle-duration",animationType==="animated"?"1s":"6s");[homeView,playerView].forEach((el)=>{if(animationType==="expand"||animationType==="animated")el.classList.add("text-idle-expand")})}
+    function updateDownloadState(){downloadBtn.classList.toggle("hidden",!ultimoJsonExportado)}
+    function updateSyncBadge(){const m=musicas[musicaAtual],synced=!!m&&hasSync(m);syncBadge.classList.toggle("hidden",!synced);syncPlayBtn.classList.toggle("hidden",!synced)}
+    function renderSelect(){musicSelect.innerHTML="";musicas.forEach((m,i)=>{const option=document.createElement("option");option.value=String(i);option.textContent=hasSync(m)?`${m.titulo} [sync]`:m.titulo;if(hasSync(m))option.classList.add("sync");musicSelect.appendChild(option)});if(musicas.length)musicSelect.value=String(Math.min(musicaAtual,musicas.length-1))}
+    function animateTextSwap(container,updateFn){const token=++renderToken;container.classList.add("is-transitioning");window.setTimeout(()=>{if(token!==renderToken)return;updateFn();container.classList.remove("is-transitioning")},375)}
+    async function openHeroVideo(){
+      heroVideoFrame.src=HERO_VIDEO_EMBED_URL;
+      videoOverlay.classList.remove("hidden");
+      if(document.fullscreenElement===videoShell)return;
+      try{await videoShell.requestFullscreen()}catch(error){console.warn("Nao consegui entrar em tela cheia para o video.",error)}
+    }
+    async function closeHeroVideo(){
+      heroVideoFrame.src="";
+      videoOverlay.classList.add("hidden");
+      if(document.fullscreenElement)try{await document.exitFullscreen()}catch(error){console.warn("Nao consegui sair da tela cheia do video.",error)}
+    }
+    function renderPreview(){const m=musicas[musicaAtual],blocos=m?getBlocos(m):[],atual=blocos[blocoAtual]||blocos[0]||{linhas:["Linha um da musica","Linha dois da musica"]};animateTextSwap(homeView,()=>{previewLine1.textContent=atual.linhas[0]||"";previewLine2.textContent=atual.linhas[1]||"";previewLine2.classList.toggle("empty",!(atual.linhas[1]||""))})}
+    function renderLetra(){const bloco=blocosAtuais[blocoAtual]||{linhas:["",""]};animateTextSwap(playerView,()=>{line1.textContent=bloco.linhas[0]||"";line2.textContent=bloco.linhas[1]||"";line2.classList.toggle("empty",!(bloco.linhas[1]||""))})}
+    function prepararMusica(index){if(!musicas.length)return;musicaAtual=index;blocosAtuais=getBlocos(musicas[musicaAtual]);blocoAtual=0;applyPresentation(musicas[musicaAtual].apresentacao);player.src=musicas[musicaAtual].link;player.load();renderPreview();renderLetra();updateSyncBadge()}
+    function findBlocoByTime(ms){let indice=0;for(let i=0;i<blocosAtuais.length;i+=1){const inicio=blocosAtuais[i].ms;if(Number.isFinite(inicio)&&ms>=inicio)indice=i}return indice}
+    function syncPorTempo(){if(modoAtual!=="sync")return;if(blocosAtuais.some((b)=>Number.isFinite(b.ms))){const indice=findBlocoByTime(Math.round(player.currentTime*1000));if(indice!==blocoAtual){blocoAtual=indice;renderLetra()}}syncAnimationId=requestAnimationFrame(syncPorTempo)}
+    function goHome(){cancelAnimationFrame(syncAnimationId);syncAnimationId=0;player.pause();player.currentTime=0;modoAtual="home";marcacoesAtuais=[];blocoAtual=0;renderLetra();homeView.classList.remove("hidden");playerView.classList.add("hidden");setStatus("Home pronta.")}
+    function buildSyncedMusic(m,marcacoes){const blocosBase=getBlocos(m);return{...m,apresentacao:getCurrentPresentation(),blocos:blocosBase.map((b,i)=>({ms:Number.isFinite(marcacoes[i]?.ms)?marcacoes[i].ms:null,linhas:b.linhas}))}}
+    function moveBloco(direction){if(!blocosAtuais.length&&musicas[musicaAtual])blocosAtuais=getBlocos(musicas[musicaAtual]);if(!blocosAtuais.length)return;const novoIndice=Math.min(Math.max(blocoAtual+direction,0),blocosAtuais.length-1);if(novoIndice===blocoAtual)return;blocoAtual=novoIndice;if(modoAtual==="sync"&&Number.isFinite(blocosAtuais[blocoAtual]?.ms))player.currentTime=Math.max(0,blocosAtuais[blocoAtual].ms/1000);if(modoAtual==="home")return renderPreview();renderLetra();setStatus(`Trecho ${blocoAtual+1} de ${blocosAtuais.length}.`)}
+    function triggerJsonDownload(jsonText){const m=musicas[musicaAtual],blob=new Blob([jsonText],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=`${sanitizeFileName(m.titulo)}-sync.json`;link.click();URL.revokeObjectURL(url)}
+    function exportarJsonSincronizado(){const m=musicas[musicaAtual];if(!m)return;ultimoJsonExportado=JSON.stringify(m,null,2);updateDownloadState();triggerJsonDownload(ultimoJsonExportado);setStatus("JSON sincronizado baixado.")}
+    function finalizarMemorizacao(){const m=musicas[musicaAtual];if(!m)return;musicas[musicaAtual]=buildSyncedMusic(m,marcacoesAtuais);prepararMusica(musicaAtual);renderSelect();exportarJsonSincronizado()}
+    function marcarProximoBloco(){if(modoAtual!=="memorize")return;const proximoIndice=blocoAtual+1;if(proximoIndice>=blocosAtuais.length)return;const ms=Math.round(player.currentTime*1000);marcacoesAtuais[proximoIndice]={ms,linhas:blocosAtuais[proximoIndice].linhas};blocoAtual=proximoIndice;renderLetra();setStatus(`Trecho ${blocoAtual+1} de ${blocosAtuais.length} marcado em ${ms} ms.`)}
+    async function iniciarModo(tipo){if(!musicas.length)return showError("Carregue pelo menos um JSON com musicas.");clearError();ultimoJsonExportado="";updateDownloadState();prepararMusica(Number(musicSelect.value||0));modoAtual=tipo;homeView.classList.add("hidden");playerView.classList.remove("hidden");if(tipo==="memorize"){marcacoesAtuais=[{ms:0,linhas:blocosAtuais[0]?.linhas||["",""]}];blocoAtual=0;renderLetra();setStatus("Memorizando beat. Marque cada troca de texto.")}else if(tipo==="sync"){applyPresentation(musicas[musicaAtual].apresentacao);blocosAtuais=resolveSyncBlocos(getBlocos(musicas[musicaAtual]));blocoAtual=0;renderLetra();setStatus("Reproduzindo modelo sync.")}else setStatus("Tocando musica.");try{await player.play()}catch(error){showError(error&&error.name==="NotAllowedError"?"O navegador bloqueou o inicio automatico. Tente iniciar de novo.":"Nao consegui abrir o audio desta musica.");console.error(error);goHome();return}if(tipo==="sync")syncPorTempo()}
+    async function handleLoadedPayload(data){const normalizadas=normalizePayload(data);if(!normalizadas.length)throw new Error("Sem musicas validas no arquivo.");mergeMusicas(normalizadas);renderSelect();prepararMusica(Number(musicSelect.value||0));clearError();setStatus(`${normalizadas.length} musica(s) adicionada(s). Total: ${musicas.length}.`)}
+    async function carregarMusicasIniciais(){
+      const arquivoPadrao="./atual.json";
+      try{
+        const response=await fetch(arquivoPadrao);
+        if(!response.ok)throw new Error(`Falha ${response.status}`);
+        await handleLoadedPayload(await response.json());
+        setStatus(`Carregado automaticamente de ${arquivoPadrao.replace("./","")}.`);
+      }catch(error){
+        console.error(`Falha ao carregar ${arquivoPadrao}:`,error);
+        showError("Nao consegui carregar automaticamente o atual.json. Adicione um ou mais JSONs manualmente.");
+      }
+    }
+    jsonFiles.addEventListener("change",async(event)=>{const arquivos=Array.from(event.target.files||[]);if(!arquivos.length)return;try{for(const arquivo of arquivos)await handleLoadedPayload(JSON.parse(await arquivo.text()))}catch(error){showError("Um dos arquivos JSON nao esta em formato valido.");console.error(error)}finally{jsonFiles.value=""}});
+    musicSelect.addEventListener("change",(event)=>{prepararMusica(Number(event.target.value||0));setStatus(hasSync(musicas[musicaAtual])?"Musica sincronizada selecionada.":"Musica selecionada.")});
+    fontSelect.addEventListener("change",applyAppearance);transitionSelect.addEventListener("change",applyMotionClasses);animationSelect.addEventListener("change",applyMotionClasses);colorPicker.addEventListener("input",applyAppearance);shadowRange.addEventListener("input",applyAppearance);
+    playBtn.addEventListener("click",()=>iniciarModo("play"));syncPlayBtn.addEventListener("click",()=>{if(musicas[musicaAtual]&&hasSync(musicas[musicaAtual]))iniciarModo("sync")});heroVideoBtn.addEventListener("click",openHeroVideo);memorizeBtn.addEventListener("click",()=>iniciarModo("memorize"));downloadBtn.addEventListener("click",()=>{if(ultimoJsonExportado)triggerJsonDownload(ultimoJsonExportado)});closeVideoBtn.addEventListener("click",closeHeroVideo);videoOverlay.addEventListener("click",(event)=>{if(event.target===videoOverlay)closeHeroVideo()});
+    player.addEventListener("ended",()=>{if(modoAtual==="memorize")finalizarMemorizacao();goHome()});playerView.addEventListener("click",()=>marcarProximoBloco());
+    window.addEventListener("keydown",(event)=>{if(event.key==="Escape"&&!videoOverlay.classList.contains("hidden"))return closeHeroVideo();if(event.key.toLowerCase()==="h")return goHome();if(event.key==="ArrowLeft"){event.preventDefault();return moveBloco(-1)}if(event.key==="ArrowRight"){event.preventDefault();return modoAtual==="memorize"?marcarProximoBloco():moveBloco(1)}if(event.key==="ArrowUp"){event.preventDefault();return adjustLyricsOffset(-1)}if(event.key==="ArrowDown"){event.preventDefault();return adjustLyricsOffset(1)}if(modoAtual==="memorize"&&[" ","Enter"].includes(event.key)){event.preventDefault();marcarProximoBloco()}});
+    populateFontSelect();applyLyricsOffset();applyAppearance();applyMotionClasses();carregarMusicasIniciais();
+  </script>
+</body>
+</html>

@@ -7,7 +7,7 @@
       --success: #2ecc71;
       --danger: #e74c3c;
       --muted: rgba(11, 31, 68, 0.7);
-      --game-bg-image: url('https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/images/images/beautiful-starry-night-sky-paper-clouds-background_1017-62547.avif');
+      --game-bg-image: none;
     }
 
     * { box-sizing: border-box; }
@@ -2137,18 +2137,71 @@
       align-items: center;
       justify-content: center;
       gap: 22px;
-      min-height: calc(100vh - var(--nav-height, 0px));
+      min-height: auto;
+      flex: 1 1 auto;
       background: transparent;
       box-shadow: none;
       border: none;
       width: min(640px, 96%);
-      padding: 0 20px 28px;
+      padding: 0 20px 120px;
     }
 
     #playing {
       top: 0;
       align-items: center;
+      justify-content: space-between;
+      flex-direction: column;
+      padding: 0;
+    }
+    #playing {
+      opacity: 0;
+      transition: opacity 750ms ease;
+    }
+
+    #playing .overlay-card,
+    #playing #dynamic-bar,
+    #playing .playing-actions {
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 750ms ease, transform 750ms ease;
+    }
+
+    #playing.is-visible {
+      opacity: 1;
+    }
+
+    #playing.is-visible .overlay-card,
+    #playing.is-visible #dynamic-bar,
+    #playing.is-visible .playing-actions {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    #playing .playing-top-status {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    #playing #dynamic-bar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      margin: 0;
+      z-index: 3;
+    }
+
+    #playing .playing-actions {
+      display: flex !important;
+      align-items: center;
       justify-content: center;
+      gap: 14px;
+      width: 100%;
+      margin-top: 8px;
+      z-index: 4;
     }
 
     #playing .playing-top-status {
@@ -2317,6 +2370,18 @@
     #pre-game-screen .pre-game__icon {
       order: 2;
       margin: 0;
+      transition: transform 180ms ease, filter 180ms ease, opacity 180ms ease;
+      outline: none;
+    }
+
+    #pre-game-screen .pre-game__icon[role="button"]:hover,
+    #pre-game-screen .pre-game__icon[role="button"]:focus-visible {
+      transform: scale(1.04);
+      filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.28));
+    }
+
+    #pre-game-screen .pre-game__icon.is-loading {
+      opacity: 0.65;
     }
 
     #pre-game-screen .pre-game-logline {
@@ -2364,6 +2429,76 @@
       opacity: 0.8;
     }
 
+    #pre-game-screen .pre-game-admin {
+      order: 5;
+      width: min(420px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    #pre-game-screen .pre-game-admin[hidden] {
+      display: none;
+    }
+
+    #pre-game-screen .pre-game-admin .btn-secondary,
+    #pre-game-screen .pre-game-admin .pre-game-admin__apply {
+      width: 100%;
+    }
+
+    .pre-game-admin__picker {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(11, 31, 68, 0.46);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(10px);
+    }
+
+    .pre-game-admin__picker[hidden] {
+      display: none;
+    }
+
+    .pre-game-admin__label {
+      color: #ffffff;
+      text-align: left;
+      font-size: 14px;
+      font-weight: 700;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+    }
+
+    .pre-game-admin__select {
+      width: 100%;
+      min-height: 180px;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(7, 16, 35, 0.82);
+      color: #ffffff;
+      font: inherit;
+    }
+
+    .pre-game-admin__select:focus {
+      outline: 2px solid rgba(255, 255, 255, 0.5);
+      outline-offset: 2px;
+    }
+
+    .pre-game-admin__status {
+      margin: 0;
+      color: #ffffff;
+      text-align: left;
+      font-size: 14px;
+      line-height: 1.45;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+    }
+
+    .pre-game-admin__status.is-error {
+      color: #ffd5d5;
+    }
+
     .playing-actions {
       display: flex;
       align-items: center;
@@ -2408,7 +2543,7 @@
     .vocabulary-game .choice-row,
     .vocabulary-game .progress-footer,
     .vocabulary-game .game-status {
-      transition: opacity 500ms ease;
+      transition: opacity 750ms ease;
     }
 
     .vocabulary-game.pause-dissolving .board-wrapper,
@@ -2485,6 +2620,29 @@
     .btn-primary:hover { transform: translateY(-1px); }
 
     .btn-primary:disabled {
+      cursor: default;
+      opacity: 0.6;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.16);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      padding: 15px 23px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.2s ease, background 0.2s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .btn-secondary:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    .btn-secondary:disabled {
       cursor: default;
       opacity: 0.6;
     }
@@ -3770,7 +3928,7 @@ body.pause-menu-active .vocabulary-game.phase-3 .phase-option-button {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
-  color: #ffffff !important;
+  color: #000000 !important;
   animation: none !important;
 }
 
@@ -4462,7 +4620,7 @@ body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #ga
 
 /* Final game layout: fixed sections + bottom controls + full-screen background */
 :root {
-  --game-bg-image: url('https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/images/Twinkling%20stars%20above%20soft%20clouds.png');
+  --game-bg-image: none;
   --game-bg-position: center bottom;
 }
 
@@ -4550,14 +4708,28 @@ body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden) #dy
   transform: none !important;
   margin: 0 !important;
   padding: 0 8px max(0px, env(safe-area-inset-bottom)) !important;
-  height: auto !important;
-  min-height: auto !important;
-  max-height: auto !important;
+  height: 10dvh !important;
+  min-height: 10dvh !important;
+  max-height: 10dvh !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
   align-items: center !important;
   gap: 0 !important;
+  flex: 0 0 10dvh !important;
+}
+
+body.page-home.pause-menu-active #home-game.vocabulary-game:not(.is-hidden)::after,
+body.page-play.pause-menu-active #home-game.vocabulary-game:not(.is-hidden)::after {
+  content: '';
+  order: 4;
+  display: block;
+  width: 100%;
+  height: 10dvh;
+  min-height: 10dvh;
+  max-height: 10dvh;
+  flex: 0 0 10dvh;
+  pointer-events: none;
 }
 
 body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar .progress-footer,
@@ -4677,8 +4849,13 @@ body.page-play.play-inline-active #home-game[data-play-inline='true'] #dynamic-b
 
 /* Phase-specific visor/input sizing overrides (2026-03-06) */
 body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor {
+  flex: 0 0 38.5dvh !important;
+  min-height: 38.5dvh !important;
+  max-height: 38.5dvh !important;
+}
+
 body.page-home.game-active #home-game.vocabulary-game.phase-10:not(.is-hidden) #game-visor,
-body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor,
 body.page-play.play-inline-active #home-game.vocabulary-game.phase-10:not(.is-hidden) #game-visor {
   flex: 0 0 35dvh !important;
   min-height: 35dvh !important;
@@ -4686,8 +4863,16 @@ body.page-play.play-inline-active #home-game.vocabulary-game.phase-10:not(.is-hi
 }
 
 body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #player-input,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #player-input {
+  display: flex !important;
+  flex: 0 0 31.5dvh !important;
+  min-height: 31.5dvh !important;
+  max-height: 31.5dvh !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+}
+
 body.page-home.game-active #home-game.vocabulary-game.phase-10:not(.is-hidden) #player-input,
-body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #player-input,
 body.page-play.play-inline-active #home-game.vocabulary-game.phase-10:not(.is-hidden) #player-input {
   display: flex !important;
   flex: 0 0 35dvh !important;
@@ -4697,6 +4882,23 @@ body.page-play.play-inline-active #home-game.vocabulary-game.phase-10:not(.is-hi
   justify-content: flex-start !important;
 }
 
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one,
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual {
+  height: 90% !important;
+  width: auto !important;
+  aspect-ratio: 1 / 1 !important;
+  max-height: 90% !important;
+  max-width: 90% !important;
+}
 body.page-home.game-active #home-game.vocabulary-game.phase-9:not(.is-hidden) #game-visor,
 body.page-play.play-inline-active #home-game.vocabulary-game.phase-9:not(.is-hidden) #game-visor {
   flex: 0 0 25dvh !important;
@@ -4754,25 +4956,16 @@ body.page-play.play-inline-active #home-game.vocabulary-game.phase-9:not(.is-hid
 
 
 /* Responsive reference guides + footer anchor fix (2026-03-07) */
-body.page-home.game-active #game-header,
-body.page-home.game-active #global-header,
-body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #game-feedback,
-body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #game-visor,
-body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #player-input,
-body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar,
-body.page-play.play-inline-active #game-header,
-body.page-play.play-inline-active #global-header,
-body.page-play.play-inline-active #home-game[data-play-inline='true'] #game-feedback,
-body.page-play.play-inline-active #home-game[data-play-inline='true'] #game-visor,
-body.page-play.play-inline-active #home-game[data-play-inline='true'] #player-input,
-
-body.page-home.game-active #home-main {
+body.page-home.game-active #home-main,
+body.page-play.play-inline-active #play-container.play-modes-layout {
   margin-top: 0 !important;
   padding-top: var(--header-height) !important;
   padding-right: 0 !important;
   padding-bottom: 0 !important;
   padding-left: 0 !important;
   min-height: 100dvh !important;
+  max-height: 100dvh !important;
+  box-sizing: border-box !important;
 }
 
 body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden),
@@ -4785,7 +4978,7 @@ body.page-play.play-inline-active #home-game[data-play-inline='true'] {
   max-height: calc(100dvh - var(--header-height)) !important;
   padding-top: 0 !important;
   padding-right: 0 !important;
-  padding-bottom: calc(clamp(64px, 11dvh, 110px) + env(safe-area-inset-bottom)) !important;
+  padding-bottom: 0 !important;
   padding-left: 0 !important;
   overflow: hidden !important;
 }
@@ -4796,3 +4989,875 @@ body.page-play.play-inline-active #home-game[data-play-inline='true'] #game-feed
 }
 
 body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden) #dynamic-bar,
+body.page-play.play-inline-active #home-game[data-play-inline='true'] #dynamic-bar {
+  margin-bottom: 0 !important;
+}
+
+/* Mode-specific fixes requested (2026-03-09) */
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .game-contnent,
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board-wrapper,
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__inner,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .game-contnent,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board-wrapper,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__inner {
+  height: 100% !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one,
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual {
+  height: 90% !important;
+  width: auto !important;
+  aspect-ratio: 1 / 1 !important;
+  max-height: 90% !important;
+  max-width: 90% !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-2:not(.is-hidden) .board,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-2:not(.is-hidden) .board {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-3:not(.is-hidden) .board,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-3:not(.is-hidden) .board,
+body.page-home.game-active #home-game.vocabulary-game.phase-3:not(.is-hidden) .board-wrapper,
+body.page-home.game-active #home-game.vocabulary-game.phase-3:not(.is-hidden) .board__inner,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-3:not(.is-hidden) .board-wrapper,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-3:not(.is-hidden) .board__inner {
+  overflow: visible !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-3:not(.is-hidden) .board__image-single--phase-one,
+body.page-home.game-active #home-game.vocabulary-game.phase-3:not(.is-hidden) .image-visual,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-3:not(.is-hidden) .board__image-single--phase-one,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-3:not(.is-hidden) .image-visual {
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+/* Mode 4 (Sequence) layout resize requested (2026-03-09) */
+body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor {
+  --seq-card-height: 30%;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .game-contnent,
+body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board-wrapper,
+body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board,
+body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board__inner--grid,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .game-contnent,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board-wrapper,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board__inner--grid {
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board-wrapper,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board-wrapper {
+  margin-top: 0 !important;
+  transform: none !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board {
+  overflow: visible !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board__inner--grid,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board__inner--grid {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  align-content: center !important;
+  align-items: center !important;
+  gap: 2.5% !important;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .grid-card,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .grid-card {
+  height: var(--seq-card-height) !important;
+  width: auto !important;
+  aspect-ratio: 1 / 1 !important;
+  flex: 0 0 auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .grid-card .image-visual,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .grid-card .image-visual {
+  width: 95% !important;
+  height: 95% !important;
+  aspect-ratio: 1 / 1 !important;
+  margin: 0 auto !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .grid-card .image-visual img,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .grid-card .image-visual img {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+}
+
+body.page-home.pause-menu-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board-wrapper,
+body.page-play.pause-menu-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board-wrapper,
+body.page-home.pause-menu-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board__inner--grid,
+body.page-play.pause-menu-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board__inner--grid {
+  transform: none !important;
+  margin-top: 0 !important;
+}
+
+
+@media (min-width: 1024px) {
+  .vocabulary-game.phase-4,
+  body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden),
+  body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) {
+    background: url('/arquivos-codex/skydesktop.png') center center / cover no-repeat fixed !important;
+  }
+
+  body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor,
+  body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor {
+    --seq-card-height: auto;
+  }
+
+  body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .game-contnent,
+  body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board-wrapper,
+  body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board,
+  body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .game-contnent,
+  body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board-wrapper,
+  body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board__inner--grid,
+  body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .board__inner--grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
+    place-items: center !important;
+    place-content: center !important;
+    gap: clamp(18px, 2vw, 28px) !important;
+    width: min(100%, 900px) !important;
+    max-width: 900px !important;
+    height: min(100%, 620px) !important;
+    max-height: 620px !important;
+    margin: 0 auto !important;
+  }
+
+  body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .grid-card,
+  body.page-play.play-inline-active #home-game.vocabulary-game.phase-4:not(.is-hidden) #game-visor .grid-card {
+    width: min(100%, 220px) !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important;
+    justify-self: center !important;
+    align-self: center !important;
+  }
+}
+/* Pause/playing + Listening fixes requested (2026-03-09) */
+#playing .playing-actions {
+  display: none !important;
+}
+
+body.page-home.pause-menu-active #playing #dynamic-bar,
+body.page-play.pause-menu-active #playing #dynamic-bar {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 1200 !important;
+  pointer-events: auto !important;
+}
+
+body.page-home.pause-menu-active #playing #dynamic-bar .game-footer-shell,
+body.page-home.pause-menu-active #playing #dynamic-bar .game-status--bottom,
+body.page-home.pause-menu-active #playing #dynamic-bar .game-controls,
+body.page-play.pause-menu-active #playing #dynamic-bar .game-footer-shell,
+body.page-play.pause-menu-active #playing #dynamic-bar .game-status--bottom,
+body.page-play.pause-menu-active #playing #dynamic-bar .game-controls {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body.page-home.pause-menu-active #playing #dynamic-bar .game-controls,
+body.page-play.pause-menu-active #playing #dynamic-bar .game-controls {
+  justify-content: center !important;
+  align-items: center !important;
+  pointer-events: auto !important;
+}
+
+body.page-home.pause-menu-active #playing .overlay-card,
+body.page-play.pause-menu-active #playing .overlay-card {
+  padding-bottom: 120px !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .game-contnent,
+body.page-home.game-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board-wrapper,
+body.page-home.game-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board,
+body.page-home.game-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board__inner,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .game-contnent,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board-wrapper,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board__inner {
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board {
+  overflow: visible !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board__inner,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board__inner {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board__image-icon,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board__image-icon {
+  width: min(92%, 440px) !important;
+  height: min(92%, 440px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transform: none !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board__image-icon .image-visual,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board__image-icon .image-visual {
+  width: 82% !important;
+  height: 82% !important;
+  transform: none !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board__image-icon img,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-5:not(.is-hidden) #game-visor .board__image-icon img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+/* Playing footer stability fix (2026-03-09) */
+#playing .playing-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 24px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+#playing #dynamic-bar,
+body.page-home.pause-menu-active #playing #dynamic-bar,
+body.page-play.pause-menu-active #playing #dynamic-bar {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 1200 !important;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: auto !important;
+  transition: none !important;
+}
+
+#playing .overlay-card,
+body.page-home.pause-menu-active #playing .overlay-card,
+body.page-play.pause-menu-active #playing .overlay-card {
+  padding-bottom: 120px !important;
+}
+
+#playing #dynamic-bar .game-status--bottom,
+body.page-home.pause-menu-active #playing #dynamic-bar .game-status--bottom,
+body.page-play.pause-menu-active #playing #dynamic-bar .game-status--bottom {
+  display: none !important;
+}
+
+#playing #dynamic-bar .game-footer-shell,
+#playing #dynamic-bar .game-controls,
+body.page-home.pause-menu-active #playing #dynamic-bar .game-footer-shell,
+body.page-home.pause-menu-active #playing #dynamic-bar .game-controls,
+body.page-play.pause-menu-active #playing #dynamic-bar .game-footer-shell,
+body.page-play.pause-menu-active #playing #dynamic-bar .game-controls {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  justify-content: center !important;
+  align-items: center !important;
+  pointer-events: auto !important;
+}
+/* Debug pause view + no dissolve transitions (2026-03-09) */
+#playing {
+  background: transparent !important;
+}
+
+#playing,
+#playing .overlay-card,
+#playing #dynamic-bar,
+#playing .playing-actions,
+#playing.is-visible,
+#playing.is-visible .overlay-card,
+#playing.is-visible #dynamic-bar,
+#playing.is-visible .playing-actions {
+  transition: none !important;
+  animation: none !important;
+}
+
+#playing,
+#playing .overlay-card,
+#playing #dynamic-bar,
+#playing .playing-actions {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.vocabulary-game .board-wrapper,
+.vocabulary-game .text-container,
+.vocabulary-game .choice-row,
+.vocabulary-game .progress-footer,
+.vocabulary-game .game-status,
+.vocabulary-game.pause-dissolving .board-wrapper,
+.vocabulary-game.pause-dissolving .text-container,
+.vocabulary-game.pause-dissolving .choice-row,
+.vocabulary-game.pause-dissolving .progress-footer,
+.vocabulary-game.pause-dissolving .game-status,
+.vocabulary-game.pause-dissolved .board-wrapper,
+.vocabulary-game.pause-dissolved .text-container,
+.vocabulary-game.pause-dissolved .choice-row,
+.vocabulary-game.pause-dissolved .progress-footer,
+.vocabulary-game.pause-dissolved .game-status {
+  transition: none !important;
+  animation: none !important;
+}
+
+
+
+
+
+
+html[data-global-radio-station="modern"] body.page-home.game-active,
+html[data-global-radio-station="soft"] body.page-home.game-active,
+html[data-global-radio-station="balance"] body.page-home.game-active {
+  background: var(--app-bg-solid) var(--playtalk-global-bg-image) center/cover fixed no-repeat !important;
+}
+
+html[data-global-radio-station="modern"] body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden),
+html[data-global-radio-station="soft"] body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden),
+html[data-global-radio-station="balance"] body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden),
+html[data-global-radio-station="modern"] body.page-home.game-active #home-game .start-screen,
+html[data-global-radio-station="soft"] body.page-home.game-active #home-game .start-screen,
+html[data-global-radio-station="balance"] body.page-home.game-active #home-game .start-screen {
+  background: var(--app-bg-solid) var(--playtalk-global-bg-image) center/cover fixed no-repeat !important;
+}
+
+@media (min-width: 1024px) {
+  html[data-global-radio-station="modern"] body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden),
+  html[data-global-radio-station="soft"] body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden),
+  html[data-global-radio-station="balance"] body.page-home.game-active #home-game.vocabulary-game.phase-4:not(.is-hidden) {
+    background: var(--app-bg-solid) var(--playtalk-global-bg-image) center/cover fixed no-repeat !important;
+  }
+}
+
+html[data-global-radio-station="soft"] body.page-play.play-inline-active #home-game.vocabulary-game.phase-9:not(.is-hidden) .phase-nine-key,
+html[data-global-radio-station="soft"] body.page-home.game-active #home-game.vocabulary-game.phase-9:not(.is-hidden) .phase-nine-key {
+  background: rgba(0, 0, 0, 0.8) !important;
+  color: #000000 !important;
+  border-radius: 999px !important;
+}
+
+/* Play inline should use full height with no visible header */
+body.page-play.play-inline-active #home-game[data-play-inline='true'] {
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  max-height: 100dvh !important;
+}
+
+
+.vocabulary-game *,
+.vocabulary-game *::before,
+.vocabulary-game *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+
+.vocabulary-game,
+.vocabulary-game .game-main,
+.vocabulary-game .board,
+.vocabulary-game .board-wrapper,
+.vocabulary-game .board__inner,
+.vocabulary-game .text-container,
+.vocabulary-game .choice-row,
+.vocabulary-game .progress-footer,
+.vocabulary-game .game-status,
+.vocabulary-game .phase-nine-key,
+.vocabulary-game .phase-nine-spacebar,
+.vocabulary-game .choice-btn,
+.vocabulary-game .phase-word-btn,
+.vocabulary-game .mode12-picker,
+.vocabulary-game .mode12-slide,
+.vocabulary-game .mode12-character-btn,
+.vocabulary-game .mode11-stage {
+  background: transparent !important;
+  background-image: none !important;
+  color: #000000 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+
+/* Phase 2 and 4 first-paint visibility fix */
+.vocabulary-game.phase-2 .game-main,
+.vocabulary-game.phase-4 .game-main {
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.vocabulary-game.phase-2 .board-wrapper,
+.vocabulary-game.phase-4 .board-wrapper {
+  flex: 0 1 auto !important;
+  width: min(92vw, 620px) !important;
+  min-height: 0 !important;
+  margin: 0 auto !important;
+  transform: none !important;
+}
+
+.vocabulary-game.phase-2 .board {
+  width: min(92vw, 430px) !important;
+  height: min(calc(100dvh - var(--header-height) - var(--nav-height) - 190px), 430px) !important;
+  max-width: 430px !important;
+  max-height: 430px !important;
+}
+
+.vocabulary-game.phase-2 .board__inner--grid {
+  width: 100% !important;
+  height: 100% !important;
+  grid-template-columns: repeat(2, minmax(120px, 1fr)) !important;
+  grid-auto-rows: minmax(120px, 1fr) !important;
+  gap: 14px !important;
+  padding: 8px !important;
+  box-sizing: border-box !important;
+}
+
+.vocabulary-game.phase-2 .grid-card {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.vocabulary-game.phase-4 .board {
+  width: min(92vw, 560px) !important;
+  height: min(calc(100dvh - var(--header-height) - var(--nav-height) - 240px), 360px) !important;
+  max-width: 560px !important;
+}
+
+.vocabulary-game.phase-4 .choice-row {
+  width: min(92vw, 620px) !important;
+  margin: 0 auto !important;
+  transform: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Connecting + Sequence: keep circular images visible from first paint */
+.vocabulary-game.phase-2 .board,
+.vocabulary-game.phase-2 .board__inner--grid,
+.vocabulary-game.phase-2 .grid-card,
+.vocabulary-game.phase-4 .board,
+.vocabulary-game.phase-4 .board__inner--grid,
+.vocabulary-game.phase-4 .grid-card {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.vocabulary-game.phase-2 .grid-card,
+.vocabulary-game.phase-4 .grid-card {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+.vocabulary-game.phase-2 .grid-card .image-visual,
+.vocabulary-game.phase-4 .grid-card .image-visual {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+}
+
+.vocabulary-game.phase-2 .grid-card .image-visual img,
+.vocabulary-game.phase-4 .grid-card .image-visual img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+}
+
+.vocabulary-game.phase-2 .grid-card.grid-card--enter,
+.vocabulary-game.phase-4 .grid-card.grid-card--enter {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.vocabulary-game.phase-4 .grid-card:not(.grid-card--gone) .image-visual,
+.vocabulary-game.phase-4 .grid-card:not(.grid-card--gone) .image-visual img {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Final visibility polish: typing, connecting, blocks, watching, talking, planting */
+body.page-home.game-active #home-game.vocabulary-game.phase-9:not(.is-hidden) .phase-nine-key,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-9:not(.is-hidden) .phase-nine-key,
+.vocabulary-game.phase-9 .phase-nine-key {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-9:not(.is-hidden) .text-container,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-9:not(.is-hidden) .text-container,
+.vocabulary-game.phase-9 .text-container {
+  color: #000000 !important;
+  text-shadow: none !important;
+}
+
+.vocabulary-game.phase-2 .choice-btn,
+.vocabulary-game.phase-2 .phase-word-btn,
+.vocabulary-game.phase-10 .choice-btn,
+.vocabulary-game.phase-10 .phase-word-btn,
+.vocabulary-game.phase-10 .writing-chip,
+.vocabulary-game.phase-10 .writing-chip--display {
+  background: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
+  box-shadow: none !important;
+}
+
+.vocabulary-game.phase-11 .text-container,
+.vocabulary-game.phase-12 .text-container {
+  margin-top: 6vh !important;
+}
+
+.vocabulary-game.phase-11 .text-container {
+  transform: translateY(0) !important;
+}
+
+.vocabulary-game.phase-12 .text-container {
+  transform: translateY(0) !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one,
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual,
+.vocabulary-game.phase-1 #game-visor .board__image-single--phase-one,
+.vocabulary-game.phase-1 #game-visor .image-visual {
+  width: 90% !important;
+  height: 90% !important;
+  max-width: 90% !important;
+  max-height: 90% !important;
+}
+
+/* Final polish: planting perfect circle + black buttons + stars-only feedback */
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one,
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual,
+.vocabulary-game.phase-1 #game-visor .board__image-single--phase-one,
+.vocabulary-game.phase-1 #game-visor .image-visual {
+  width: min(90%, 90%) !important;
+  height: auto !important;
+  aspect-ratio: 1 / 1 !important;
+  max-width: 90% !important;
+  max-height: 90% !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one img,
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual img,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one img,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual img,
+.vocabulary-game.phase-1 #game-visor .board__image-single--phase-one img,
+.vocabulary-game.phase-1 #game-visor .image-visual img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+}
+
+.vocabulary-game.phase-1 .choice-btn,
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) .choice-btn,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) .choice-btn {
+  background: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
+  box-shadow: none !important;
+}
+
+#home-game.vocabulary-game #game-feedback {
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0 !important;
+}
+
+#home-game.vocabulary-game #game-feedback .game-stars-shell {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+}
+
+#home-game.vocabulary-game #game-feedback .game-status--top,
+#home-game.vocabulary-game #game-feedback .game-hearts {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#home-game.vocabulary-game .game-feedback__label,
+#home-game.vocabulary-game .game-feedback__idle,
+#home-game.vocabulary-game .game-feedback__hit,
+#home-game.vocabulary-game .game-feedback__miss {
+  display: none !important;
+}
+
+#home-game.vocabulary-game .game-phase-progress--feedback {
+  display: none;
+  width: min(240px, calc(100vw - 64px));
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 10px 24px rgba(5, 20, 45, 0.22);
+}
+
+#home-game.vocabulary-game .game-phase-progress__fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #67a8ff 0%, #d7ebff 100%);
+  transition: width 220ms ease;
+}
+
+body.cards-library-launch #home-game.vocabulary-game #game-feedback .game-stars-shell {
+  display: none !important;
+}
+
+body.cards-library-launch #home-game.vocabulary-game #game-feedback .game-phase-progress--feedback {
+  display: block !important;
+}
+
+#home-game.vocabulary-game.mode12-picker-active #game-feedback .game-stars-shell {
+  display: none !important;
+}
+
+#home-game.vocabulary-game.mode12-picker-active .mode12-picker {
+  min-height: calc(100vh - var(--nav-height, 0px) - max(86px, env(safe-area-inset-top)) - 54px);
+  padding-top: 46px;
+}
+
+#home-game.vocabulary-game.mode12-picker-active .mode12-picker__viewport {
+  transform: none;
+}
+
+#home-game.vocabulary-game.mode12-picker-active .mode12-character-btn--single {
+  margin-top: 0;
+}
+
+/* Final polish: mode 11 and 12 text 30px below circular image */
+.vocabulary-game.phase-11 .text-container,
+.vocabulary-game.phase-12 .text-container {
+  margin-top: 30px !important;
+}
+
+.vocabulary-game.phase-11 .text-container {
+  transform: none !important;
+}
+
+.vocabulary-game.phase-12 .text-container {
+  transform: none !important;
+}
+
+/* Final polish: pre-game buttons + remove shadows from black game texts */
+.start-screen__button,
+.start-screen__difficulty-btn,
+#pre-game-screen .overlay-actions .btn-primary {
+  background: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border: 2px solid #000000 !important;
+  box-shadow: none !important;
+}
+
+.vocabulary-game.phase-9 .text-container,
+.vocabulary-game.phase-11 .text-container,
+.vocabulary-game.phase-12 .text-container,
+.vocabulary-game.phase-2 .choice-btn,
+.vocabulary-game.phase-2 .phase-word-btn,
+.vocabulary-game.phase-10 .choice-btn,
+.vocabulary-game.phase-10 .phase-word-btn,
+.vocabulary-game.phase-10 .writing-chip,
+.vocabulary-game.phase-10 .writing-chip--display,
+#pre-game-screen .overlay-card h1,
+#pre-game-screen .pre-game-logline {
+  text-shadow: none !important;
+}
+
+/* Final polish: planting balance + perfect simple circle + watching/talking text inside visor */
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor {
+  flex: 0 0 41.5dvh !important;
+  min-height: 41.5dvh !important;
+  max-height: 41.5dvh !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #player-input,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #player-input {
+  flex: 0 0 28.5dvh !important;
+  min-height: 28.5dvh !important;
+  max-height: 28.5dvh !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one,
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual,
+.vocabulary-game.phase-1 #game-visor .board__image-single--phase-one,
+.vocabulary-game.phase-1 #game-visor .image-visual {
+  width: auto !important;
+  height: 90% !important;
+  aspect-ratio: 1 / 1 !important;
+  max-height: 90% !important;
+  max-width: 90% !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one img,
+body.page-home.game-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual img,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .board__image-single--phase-one img,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-1:not(.is-hidden) #game-visor .image-visual img,
+.vocabulary-game.phase-1 #game-visor .board__image-single--phase-one img,
+.vocabulary-game.phase-1 #game-visor .image-visual img {
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-11:not(.is-hidden) #game-visor,
+body.page-home.game-active #home-game.vocabulary-game.phase-12:not(.is-hidden) #game-visor,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-11:not(.is-hidden) #game-visor,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-12:not(.is-hidden) #game-visor {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-11:not(.is-hidden) #game-visor .game-contnent,
+body.page-home.game-active #home-game.vocabulary-game.phase-12:not(.is-hidden) #game-visor .game-contnent,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-11:not(.is-hidden) #game-visor .game-contnent,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-12:not(.is-hidden) #game-visor .game-contnent {
+  height: 100% !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 30px !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-11:not(.is-hidden) #game-visor .board-wrapper,
+body.page-home.game-active #home-game.vocabulary-game.phase-12:not(.is-hidden) #game-visor .board-wrapper,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-11:not(.is-hidden) #game-visor .board-wrapper,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-12:not(.is-hidden) #game-visor .board-wrapper {
+  order: 1 !important;
+  margin-top: 0 !important;
+  transform: none !important;
+  flex: 0 0 auto !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game.phase-11:not(.is-hidden) #game-visor .text-container,
+body.page-home.game-active #home-game.vocabulary-game.phase-12:not(.is-hidden) #game-visor .text-container,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-11:not(.is-hidden) #game-visor .text-container,
+body.page-play.play-inline-active #home-game.vocabulary-game.phase-12:not(.is-hidden) #game-visor .text-container {
+  order: 2 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  transform: none !important;
+  position: static !important;
+  max-width: min(760px, 92vw) !important;
+  text-align: center !important;
+}
+
+/* Final polish: mode 11 and 12 subtitle attached to image stage */
+.vocabulary-game.phase-11 .mode11-stage,
+.vocabulary-game.phase-12 .mode12-stage {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 18px !important;
+  width: 100% !important;
+}
+
+.vocabulary-game .text-container--media-caption {
+  position: static !important;
+  order: 2 !important;
+  margin: 0 !important;
+  transform: none !important;
+  text-align: center !important;
+  max-width: min(760px, 92vw) !important;
+}
+

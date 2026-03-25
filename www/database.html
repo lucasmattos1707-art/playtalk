@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlayTalk | Database</title>
+  <script src="/config.js"></script>
+  <style>
+    :root{--paper:#fff9ef;--line:#dbcdb9;--text:#241d18;--muted:#73675a;--accent:#c85732}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:radial-gradient(circle at top,#fbf3e4 0,#f4ead7 45%,#eedfca 100%);color:var(--text)}
+    button,input{font:inherit}
+    button{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 14px}
+    .page{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
+    .box,.card,.summary,.story-card{background:var(--paper);border:1px solid var(--line);border-radius:18px}
+    .box{padding:16px}
+    .hero{display:grid;grid-template-columns:1.4fr .9fr;gap:16px;margin-bottom:18px}
+    .hero h1{margin:0 0 8px;font-size:clamp(32px,6vw,58px);line-height:.95}
+    .hero p{margin:0;color:var(--muted);max-width:58ch}
+    .hero-panel{padding:18px;background:linear-gradient(135deg,#fff6ea,#f3e3cb)}
+    .toolbar,.tabs,.meta,.audio-row,.stats,.avatar-row{display:flex;flex-wrap:wrap;gap:10px}
+    .toolbar{align-items:center}
+    .import-btn,.tab.is-active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+    .pill{display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);color:var(--muted);font-size:13px}
+    .tabs{margin:18px 0}
+    .tab{min-width:130px;text-transform:capitalize}
+    .tab small{display:block;font-size:11px;opacity:.8}
+    .section-head{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-bottom:14px}
+    .section-head h2{margin:0}
+    .empty{padding:28px;text-align:center;color:var(--muted)}
+    .list{display:grid;gap:14px}
+    .flashcard-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+    .card{padding:14px;display:flex;flex-direction:column;gap:12px}
+    .summary{padding:14px;display:grid;gap:12px}
+    .summary-toggle{width:100%;background:transparent;border:none;padding:0;text-align:left;display:grid;gap:12px}
+    .summary-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .eyebrow{font-size:12px;text-transform:uppercase;color:var(--muted);font-weight:700;letter-spacing:.04em}
+    .title{font-size:22px;font-weight:700}
+    .caret{font-size:24px;color:var(--muted);line-height:1}
+    .cover,.thumb,.flashcard-image{background:#efe2cd center/cover no-repeat;border:1px solid var(--line)}
+    .cover,.flashcard-image{width:92px;height:92px;border-radius:22px;flex:0 0 auto}
+    .thumb{width:88px;height:88px;border-radius:18px;align-self:center}
+    .summary-main,.flashcard-top{display:flex;gap:14px;align-items:center}
+    .avatar{width:42px;height:42px;border-radius:999px;background:#efe2cd center/cover no-repeat;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+    .story-list{display:grid;gap:12px;padding-top:6px}
+    .story-card{padding:12px;display:grid;gap:10px}
+    .story-card-head{display:flex;justify-content:space-between;gap:8px;align-items:center}
+    .labels{display:grid;gap:8px}
+    .text-block{padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:#fff}
+    .text-block small{display:block;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:6px}
+    .audio-btn.playing{background:linear-gradient(135deg,#41c26e,#1f6b3e);border-color:#1f6b3e;color:#fff}
+    @media (max-width:840px){.hero{grid-template-columns:1fr}.summary-main{align-items:flex-start}}
+    @media (max-width:560px){.flashcard-top,.summary-main{flex-direction:column;align-items:flex-start}.cover,.flashcard-image,.thumb{width:100%;height:180px;border-radius:20px}}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <div class="hero-panel box">
+        <div class="eyebrow">Database</div>
+        <h1>Importar e abrir varios JSONs de uma vez</h1>
+        <p>Mesma base de leitura do /levels, mas aqui so para visualizar, ouvir e navegar. Flashcards entram direto na lista. Cenas e filmes entram como containers-resumo antes do conteudo.</p>
+      </div>
+      <div class="hero-panel box">
+        <div class="toolbar">
+          <button id="importJsonBtn" class="import-btn" type="button">Importar JSON</button>
+          <button id="downloadEnglishBtn" type="button">Baixar ingles txt</button>
+          <span class="pill" id="importCountPill">0 arquivos</span>
+          <span class="pill" id="itemCountPill">0 itens</span>
+        </div>
+        <div class="stats" id="stats"></div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab is-active" data-tab="flashcard" type="button">Flashcards<small id="tabCountFlashcard">0 itens</small></button>
+      <button class="tab" data-tab="scenes" type="button">Cenas<small id="tabCountScenes">0 historias</small></button>
+      <button class="tab" data-tab="movies" type="button">Filmes<small id="tabCountMovies">0 filmes</small></button>
+    </div>
+    <div class="box">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow" id="sectionEyebrow">Flashcards</div>
+          <h2 id="sectionTitle">Lista completa de flashcards</h2>
+        </div>
+        <div class="pill" id="sectionCount">0 itens</div>
+      </div>
+      <div id="content"></div>
+    </div>
+  </div>
+  <input id="jsonInput" type="file" accept="application/json,.json" multiple hidden>
+  <script>
+    (() => {
+      const ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
+      const STORE = 'playtalk-database-v1';
+      const PHASE_CODE = { flashcard: '001', movies: '011', scenes: '012' };
+      const DEFAULT_SCENE_CHARACTER_IMAGE_ROOT = `${ROOT}/Niveis/200/001`;
+      const SCENE_CHARACTERS = [
+        { id: 'bella', name: 'Bella', defaultImageFile: '000002.webp' },
+        { id: 'roger', name: 'Roger', defaultImageFile: '000003.webp' },
+        { id: 'charlie', name: 'Charlie', defaultImageFile: '000004.webp' },
+        { id: 'lily', name: 'Lily', defaultImageFile: '000005.webp' },
+        { id: 'jessica', name: 'Jessica', defaultImageFile: '000006.webp' },
+        { id: 'lax', name: 'Lax', defaultImageFile: '000007.webp' },
+        { id: 'annie', name: 'Annie', defaultImageFile: '000008.webp' },
+        { id: 'nina', name: 'Nina', defaultImageFile: '000009.webp' },
+        { id: 'harry', name: 'Harry', defaultImageFile: '000010.webp' }
+      ];
+      const SCENE_CHARACTER_MAP = new Map(SCENE_CHARACTERS.map(char => [char.id, char]));
+      const $ = id => document.getElementById(id);
+      const state = { activeTab: 'flashcard', flashcards: [], scenes: [], movies: [] };
+      let currentAudio = null;
+      const pad = value => String(Math.max(1, Number.parseInt(value, 10) || 1)).padStart(3, '0');
+      const encodePath = parts => parts.filter(Boolean).map(part => encodeURIComponent(String(part))).join('/');
+      const fileNameOnly = value => String(value || '').split(/[\\/]/).pop() || '';
+      const normalizeCharacterId = value => {
+        const clean = String(value || '').trim().toLowerCase();
+        return clean === 'jessa' ? 'jessica' : clean;
+      };
+      const defaultSceneCharacterImageUrl = characterId => {
+        const character = SCENE_CHARACTER_MAP.get(normalizeCharacterId(characterId));
+        return character?.defaultImageFile ? `${DEFAULT_SCENE_CHARACTER_IMAGE_ROOT}/${character.defaultImageFile}` : '';
+      };
+      function parseCloudAssetInfo(value) {
+        const input = String(value || '').trim();
+        if (!input) return null;
+        const escapedRoot = ROOT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const match = input.match(new RegExp(`^${escapedRoot}/Niveis/(\\d{3})/(\\d{3})/([^?#]+)`, 'i'));
+        if (!match) return null;
+        return { day: Number.parseInt(match[1], 10) || 0, phaseCode: match[2], fileName: decodeURIComponent(match[3]) };
+      }
+      function cloud(day, phaseCode, file) {
+        const clean = fileNameOnly(file);
+        return clean ? `${ROOT}/${encodePath(['Niveis', pad(day), phaseCode, clean])}` : '';
+      }
+      function resolveAssetUrl(rawValue, day, mode, fallback = '') {
+        const raw = String(rawValue || '').trim();
+        if (!raw) return fallback;
+        if (/^https?:\/\//i.test(raw) || raw.startsWith('data:')) return raw;
+        return cloud(day, PHASE_CODE[mode] || PHASE_CODE.flashcard, raw);
+      }
+      function isFlashcardEntry(entry) {
+        return Boolean(
+          entry &&
+          typeof entry === 'object' &&
+          (
+            'nomePortugues' in entry ||
+            'nomeIngles' in entry ||
+            'imagem' in entry ||
+            'audio' in entry ||
+            'categoria' in entry
+          )
+        );
+      }
+      function detectModeFromJson(data) {
+        if (Array.isArray(data)) return 'flashcard';
+        if (data && typeof data === 'object') {
+          if (Array.isArray(data.characters)) return 'scenes';
+          if (Array.isArray(data.items)) {
+            const firstItem = data.items.find(item => item && typeof item === 'object');
+            if (isFlashcardEntry(firstItem)) return 'flashcard';
+            return 'movies';
+          }
+        }
+        throw new Error('JSON nao reconhecido para database.');
+      }
+      function stopAudio() {
+        if (!currentAudio) return;
+        currentAudio.audio.pause();
+        currentAudio.audio.currentTime = 0;
+        currentAudio.button.classList.remove('playing');
+        currentAudio = null;
+      }
+      function playAudio(src, button) {
+        if (!src) return;
+        stopAudio();
+        const audio = new Audio(src);
+        currentAudio = { audio, button };
+        button.classList.add('playing');
+        audio.addEventListener('ended', stopAudio);
+        audio.addEventListener('error', stopAudio);
+        audio.play().catch(stopAudio);
+      }
+      function asText(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsText(file);
+        });
+      }
+      function save() { localStorage.setItem(STORE, JSON.stringify(state)); }
+      function downloadTextFile(fileName, text) {
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      function load() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(STORE) || 'null');
+          if (!parsed || typeof parsed !== 'object') return;
+          state.activeTab = ['flashcard', 'scenes', 'movies'].includes(parsed.activeTab) ? parsed.activeTab : 'flashcard';
+          state.flashcards = Array.isArray(parsed.flashcards) ? parsed.flashcards : [];
+          state.scenes = Array.isArray(parsed.scenes) ? parsed.scenes : [];
+          state.movies = Array.isArray(parsed.movies) ? parsed.movies : [];
+        } catch {}
+      }
+      function importJsonPayload(data, fileName = '') {
+        const mode = detectModeFromJson(data);
+        if (mode === 'flashcard') {
+          const flashcardItems = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+          const imported = flashcardItems.map((entry, index) => {
+            const parsed = parseCloudAssetInfo(entry.imagem) || parseCloudAssetInfo(entry.audio);
+            const day = parsed?.day || 1;
+            return {
+              id: `${fileName || 'flashcard'}-${index}-${Date.now()}`,
+              sourceFile: fileName,
+              day,
+              pt: String(entry.nomePortugues || '').trim(),
+              en: String(entry.nomeIngles || '').trim(),
+              category: String(entry.categoria || 'flashcard').trim() || 'flashcard',
+              tense: String(entry.tense || 'present-simple').trim() || 'present-simple',
+              imageUrl: resolveAssetUrl(entry.imagem, day, 'flashcard'),
+              audioUrl: resolveAssetUrl(entry.audio, day, 'flashcard')
+            };
+          }).filter(item => item.pt || item.en || item.imageUrl || item.audioUrl);
+          state.flashcards.push(...imported);
+          return mode;
+        }
+        const phaseMode = mode === 'movies' ? 'movies' : 'scenes';
+        const items = Array.isArray(data.items) ? data.items : [];
+        const coverParsed = parseCloudAssetInfo(data.coverImage);
+        const soundtrackParsed = parseCloudAssetInfo(data.soundtrack);
+        const itemParsed = items.map(item => parseCloudAssetInfo(item.image || item.audio_portuguese || item.audio_english)).find(Boolean);
+        const day = coverParsed?.day || soundtrackParsed?.day || itemParsed?.day || 1;
+        if (mode === 'movies') {
+          state.movies.push({
+            id: `${fileName || 'movie'}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            sourceFile: fileName,
+            title: String(data.title || fileName || 'Filme sem titulo').trim() || 'Filme sem titulo',
+            day,
+            level: String(data.level || '').trim(),
+            coverImage: resolveAssetUrl(data.coverImage, day, phaseMode),
+            soundtrack: resolveAssetUrl(data.soundtrack, day, phaseMode),
+            open: false,
+            items: items.map((entry, index) => ({
+              id: `${fileName || 'movie-item'}-${index}`,
+              pt: String(entry.portuguese || '').trim(),
+              en: String(entry.english || '').trim(),
+              imageUrl: resolveAssetUrl(entry.image, day, phaseMode),
+              audioPtUrl: resolveAssetUrl(entry.audio_portuguese, day, phaseMode),
+              audioEnUrl: resolveAssetUrl(entry.audio_english, day, phaseMode)
+            }))
+          });
+          return mode;
+        }
+        const characters = Array.isArray(data.characters) ? data.characters : [];
+        state.scenes.push({
+          id: `${fileName || 'scene'}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          sourceFile: fileName,
+          title: String(data.title || fileName || 'Cena sem titulo').trim() || 'Cena sem titulo',
+          day,
+          level: String(data.level || '').trim(),
+          coverImage: resolveAssetUrl(data.coverImage, day, phaseMode),
+          soundtrack: resolveAssetUrl(data.soundtrack, day, phaseMode),
+          open: false,
+          characters: characters.map(character => {
+            const id = normalizeCharacterId(character.id || character.name);
+            return {
+              id,
+              name: String(character.name || id || 'Personagem').trim(),
+              imageUrl: resolveAssetUrl(character.image, day, phaseMode, defaultSceneCharacterImageUrl(id))
+            };
+          }),
+          items: items.map((entry, index) => ({
+            id: `${fileName || 'scene-item'}-${index}`,
+            characterId: normalizeCharacterId(entry.character),
+            pt: String(entry.portuguese || '').trim(),
+            en: String(entry.english || '').trim(),
+            audioPtUrl: resolveAssetUrl(entry.audio_portuguese, day, phaseMode),
+            audioEnUrl: resolveAssetUrl(entry.audio_english, day, phaseMode)
+          }))
+        });
+        return mode;
+      }
+      function createPill(text) {
+        const pill = document.createElement('span');
+        pill.className = 'pill';
+        pill.textContent = text;
+        return pill;
+      }
+      function createAudioButton(label, src) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'audio-btn';
+        button.textContent = label;
+        button.disabled = !src;
+        button.onclick = () => playAudio(src, button);
+        return button;
+      }
+      function createTextBlock(title, value) {
+        const block = document.createElement('div');
+        block.className = 'text-block';
+        const label = document.createElement('small');
+        label.textContent = title;
+        const text = document.createElement('div');
+        text.textContent = value || '-';
+        block.append(label, text);
+        return block;
+      }
+      function setActiveTab(tab) { state.activeTab = tab; save(); render(); }
+      function toggleOpen(type, id) {
+        const entry = state[type].find(item => item.id === id);
+        if (!entry) return;
+        entry.open = !entry.open;
+        save();
+        render();
+      }
+      function renderFlashcards(host) {
+        if (!state.flashcards.length) {
+          host.innerHTML = '<div class="empty">Nenhum flashcard importado ainda.</div>';
+          return;
+        }
+        const grid = document.createElement('div');
+        grid.className = 'flashcard-list';
+        state.flashcards.forEach((item, index) => {
+          const card = document.createElement('article');
+          card.className = 'card';
+          const top = document.createElement('div');
+          top.className = 'flashcard-top';
+          const image = document.createElement('button');
+          image.type = 'button';
+          image.className = 'flashcard-image';
+          image.style.backgroundImage = item.imageUrl ? `url("${item.imageUrl}")` : '';
+          image.onclick = () => { if (item.audioUrl) playAudio(item.audioUrl, image); };
+          const labels = document.createElement('div');
+          labels.className = 'labels';
+          const eyebrow = document.createElement('div');
+          eyebrow.className = 'eyebrow';
+          eyebrow.textContent = `Flashcard ${index + 1}`;
+          const title = document.createElement('div');
+          title.className = 'title';
+          title.style.fontSize = '18px';
+          title.textContent = item.en || item.pt || 'Sem texto';
+          const meta = document.createElement('div');
+          meta.className = 'meta';
+          meta.append(createPill(`Dia ${item.day}`), createPill(item.category || 'flashcard'), createPill(item.tense || 'present-simple'));
+          labels.append(eyebrow, title, meta);
+          top.append(image, labels);
+          const audioRow = document.createElement('div');
+          audioRow.className = 'audio-row';
+          audioRow.appendChild(createAudioButton('Ouvir', item.audioUrl));
+          card.append(top, createTextBlock('Portugues', item.pt), createTextBlock('English', item.en), audioRow);
+          grid.appendChild(card);
+        });
+        host.appendChild(grid);
+      }
+      function renderMovies(host) {
+        if (!state.movies.length) {
+          host.innerHTML = '<div class="empty">Nenhum filme importado ainda.</div>';
+          return;
+        }
+        const list = document.createElement('div');
+        list.className = 'list';
+        state.movies.forEach(movie => {
+          const summary = document.createElement('article');
+          summary.className = 'summary';
+          const toggle = document.createElement('button');
+          toggle.type = 'button';
+          toggle.className = 'summary-toggle';
+          toggle.onclick = () => toggleOpen('movies', movie.id);
+          const head = document.createElement('div');
+          head.className = 'summary-head';
+          const main = document.createElement('div');
+          main.className = 'summary-main';
+          const cover = document.createElement('div');
+          cover.className = 'cover';
+          cover.style.backgroundImage = movie.coverImage ? `url("${movie.coverImage}")` : '';
+          const text = document.createElement('div');
+          const eyebrow = document.createElement('div');
+          eyebrow.className = 'eyebrow';
+          eyebrow.textContent = 'Filme';
+          const title = document.createElement('div');
+          title.className = 'title';
+          title.textContent = movie.title;
+          const meta = document.createElement('div');
+          meta.className = 'meta';
+          meta.append(createPill(`Dia ${movie.day}`), createPill(`${movie.items.length} containers`));
+          if (movie.level) meta.appendChild(createPill(movie.level));
+          text.append(eyebrow, title, meta);
+          main.append(cover, text);
+          const caret = document.createElement('div');
+          caret.className = 'caret';
+          caret.textContent = movie.open ? '−' : '+';
+          head.append(main, caret);
+          toggle.appendChild(head);
+          summary.appendChild(toggle);
+          if (movie.open) {
+            const stories = document.createElement('div');
+            stories.className = 'story-list';
+            if (movie.soundtrack) {
+              const soundtrackRow = document.createElement('div');
+              soundtrackRow.className = 'audio-row';
+              soundtrackRow.appendChild(createAudioButton('Tocar trilha', movie.soundtrack));
+              stories.appendChild(soundtrackRow);
+            }
+            movie.items.forEach((item, index) => {
+              const card = document.createElement('div');
+              card.className = 'story-card';
+              const headRow = document.createElement('div');
+              headRow.className = 'story-card-head';
+              const eyebrow = document.createElement('div');
+              eyebrow.className = 'eyebrow';
+              eyebrow.textContent = `Container ${index + 1}`;
+              headRow.appendChild(eyebrow);
+              const body = document.createElement('div');
+              body.className = 'summary-main';
+              const thumb = document.createElement('button');
+              thumb.type = 'button';
+              thumb.className = 'thumb';
+              thumb.style.backgroundImage = item.imageUrl ? `url("${item.imageUrl}")` : '';
+              thumb.onclick = () => { const src = item.audioEnUrl || item.audioPtUrl; if (src) playAudio(src, thumb); };
+              const content = document.createElement('div');
+              content.style.flex = '1';
+              const audioRow = document.createElement('div');
+              audioRow.className = 'audio-row';
+              audioRow.append(createAudioButton('PT', item.audioPtUrl), createAudioButton('EN', item.audioEnUrl));
+              content.append(createTextBlock('Portugues', item.pt), createTextBlock('English', item.en), audioRow);
+              body.append(thumb, content);
+              card.append(headRow, body);
+              stories.appendChild(card);
+            });
+            summary.appendChild(stories);
+          }
+          list.appendChild(summary);
+        });
+        host.appendChild(list);
+      }
+      function renderScenes(host) {
+        if (!state.scenes.length) {
+          host.innerHTML = '<div class="empty">Nenhuma cena importada ainda.</div>';
+          return;
+        }
+        const list = document.createElement('div');
+        list.className = 'list';
+        state.scenes.forEach(scene => {
+          const summary = document.createElement('article');
+          summary.className = 'summary';
+          const toggle = document.createElement('button');
+          toggle.type = 'button';
+          toggle.className = 'summary-toggle';
+          toggle.onclick = () => toggleOpen('scenes', scene.id);
+          const head = document.createElement('div');
+          head.className = 'summary-head';
+          const main = document.createElement('div');
+          main.className = 'summary-main';
+          const cover = document.createElement('div');
+          cover.className = 'cover';
+          cover.style.backgroundImage = scene.coverImage ? `url("${scene.coverImage}")` : '';
+          const text = document.createElement('div');
+          const eyebrow = document.createElement('div');
+          eyebrow.className = 'eyebrow';
+          eyebrow.textContent = 'Cena';
+          const title = document.createElement('div');
+          title.className = 'title';
+          title.textContent = scene.title;
+          const meta = document.createElement('div');
+          meta.className = 'meta';
+          meta.append(createPill(`Dia ${scene.day}`), createPill(`${scene.items.length} falas`));
+          if (scene.level) meta.appendChild(createPill(scene.level));
+          const avatars = document.createElement('div');
+          avatars.className = 'avatar-row';
+          scene.characters.forEach(character => {
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.title = character.name;
+            avatar.style.backgroundImage = character.imageUrl ? `url("${character.imageUrl}")` : '';
+            avatars.appendChild(avatar);
+          });
+          text.append(eyebrow, title, meta, avatars);
+          main.append(cover, text);
+          const caret = document.createElement('div');
+          caret.className = 'caret';
+          caret.textContent = scene.open ? '−' : '+';
+          head.append(main, caret);
+          toggle.appendChild(head);
+          summary.appendChild(toggle);
+          if (scene.open) {
+            const stories = document.createElement('div');
+            stories.className = 'story-list';
+            if (scene.soundtrack) {
+              const soundtrackRow = document.createElement('div');
+              soundtrackRow.className = 'audio-row';
+              soundtrackRow.appendChild(createAudioButton('Tocar trilha', scene.soundtrack));
+              stories.appendChild(soundtrackRow);
+            }
+            scene.items.forEach((item, index) => {
+              const character = scene.characters.find(entry => entry.id === item.characterId) || null;
+              const card = document.createElement('div');
+              card.className = 'story-card';
+              const headRow = document.createElement('div');
+              headRow.className = 'story-card-head';
+              const eyebrow = document.createElement('div');
+              eyebrow.className = 'eyebrow';
+              eyebrow.textContent = `Fala ${index + 1}${character ? ` • ${character.name}` : ''}`;
+              headRow.appendChild(eyebrow);
+              const body = document.createElement('div');
+              body.className = 'summary-main';
+              const thumb = document.createElement('button');
+              thumb.type = 'button';
+              thumb.className = 'thumb';
+              thumb.style.backgroundImage = character?.imageUrl ? `url("${character.imageUrl}")` : '';
+              thumb.onclick = () => { const src = item.audioEnUrl || item.audioPtUrl; if (src) playAudio(src, thumb); };
+              const content = document.createElement('div');
+              content.style.flex = '1';
+              const audioRow = document.createElement('div');
+              audioRow.className = 'audio-row';
+              audioRow.append(createAudioButton('PT', item.audioPtUrl), createAudioButton('EN', item.audioEnUrl));
+              content.append(createTextBlock('Portugues', item.pt), createTextBlock('English', item.en), audioRow);
+              body.append(thumb, content);
+              card.append(headRow, body);
+              stories.appendChild(card);
+            });
+            summary.appendChild(stories);
+          }
+          list.appendChild(summary);
+        });
+        host.appendChild(list);
+      }
+      function updateSummary() {
+        const fileSources = new Set();
+        state.flashcards.forEach(item => { if (item.sourceFile) fileSources.add(`flashcard:${item.sourceFile}`); });
+        state.scenes.forEach(scene => { if (scene.sourceFile) fileSources.add(`scenes:${scene.sourceFile}`); });
+        state.movies.forEach(movie => { if (movie.sourceFile) fileSources.add(`movies:${movie.sourceFile}`); });
+        const fileCount = fileSources.size;
+        const totalItems = state.flashcards.length + state.scenes.reduce((sum, scene) => sum + scene.items.length, 0) + state.movies.reduce((sum, movie) => sum + movie.items.length, 0);
+        $('importCountPill').textContent = `${fileCount} arquivos`;
+        $('itemCountPill').textContent = `${totalItems} itens`;
+        $('tabCountFlashcard').textContent = `${state.flashcards.length} itens`;
+        $('tabCountScenes').textContent = `${state.scenes.length} historias`;
+        $('tabCountMovies').textContent = `${state.movies.length} filmes`;
+        const stats = $('stats');
+        stats.innerHTML = '';
+        [`Flashcards: ${state.flashcards.length}`, `Cenas: ${state.scenes.length}`, `Filmes: ${state.movies.length}`].forEach(text => stats.appendChild(createPill(text)));
+      }
+      function englishLinesByActiveTab() {
+        if (state.activeTab === 'flashcard') {
+          return state.flashcards
+            .map(item => ({ day: item.day || 1, text: String(item.en || '').trim() }))
+            .filter(entry => entry.text);
+        }
+        if (state.activeTab === 'scenes') {
+          return state.scenes.flatMap(scene =>
+            (scene.items || []).map(item => ({
+              day: scene.day || 1,
+              text: String(item.en || '').trim()
+            }))
+          ).filter(entry => entry.text);
+        }
+        return state.movies.flatMap(movie =>
+          (movie.items || []).map(item => ({
+            day: movie.day || 1,
+            text: String(item.en || '').trim()
+          }))
+        ).filter(entry => entry.text);
+      }
+      function downloadEnglishText() {
+        const entries = englishLinesByActiveTab();
+        if (!entries.length) {
+          alert('Nao encontrei frases em ingles para baixar nesta aba.');
+          return;
+        }
+        const byDay = new Map();
+        entries.forEach(entry => {
+          const day = Number.parseInt(entry.day, 10) || 1;
+          if (!byDay.has(day)) byDay.set(day, []);
+          byDay.get(day).push(entry.text);
+        });
+        const text = Array.from(byDay.entries())
+          .sort((a, b) => a[0] - b[0])
+          .map(([day, lines]) => [`Dia ${day}`, '', ...lines].join('\n'))
+          .join('\n\n');
+        downloadTextFile(`database-english-${state.activeTab}.txt`, text);
+      }
+      function render() {
+        updateSummary();
+        document.querySelectorAll('.tab').forEach(button => button.classList.toggle('is-active', button.dataset.tab === state.activeTab));
+        const host = $('content');
+        host.innerHTML = '';
+        if (state.activeTab === 'flashcard') {
+          $('sectionEyebrow').textContent = 'Flashcards';
+          $('sectionTitle').textContent = 'Lista completa de flashcards';
+          $('sectionCount').textContent = `${state.flashcards.length} itens`;
+          renderFlashcards(host);
+        } else if (state.activeTab === 'scenes') {
+          $('sectionEyebrow').textContent = 'Cenas';
+          $('sectionTitle').textContent = 'Containers de entrada antes da historia';
+          $('sectionCount').textContent = `${state.scenes.length} historias`;
+          renderScenes(host);
+        } else {
+          $('sectionEyebrow').textContent = 'Filmes';
+          $('sectionTitle').textContent = 'Containers de entrada antes do conteudo';
+          $('sectionCount').textContent = `${state.movies.length} filmes`;
+          renderMovies(host);
+        }
+      }
+      document.querySelectorAll('.tab').forEach(button => { button.onclick = () => setActiveTab(button.dataset.tab); });
+      $('importJsonBtn').onclick = () => $('jsonInput').click();
+      $('downloadEnglishBtn').onclick = () => downloadEnglishText();
+      $('jsonInput').onchange = async event => {
+        const files = Array.from(event.target.files || []);
+        event.target.value = '';
+        if (!files.length) return;
+        let importedCount = 0;
+        let lastMode = '';
+        for (const file of files) {
+          try {
+            lastMode = importJsonPayload(JSON.parse(await asText(file)), file.name) || lastMode;
+            importedCount += 1;
+          } catch (error) {
+            alert(`${file.name}: ${error.message || 'Erro ao importar JSON.'}`);
+          }
+        }
+        if (importedCount) {
+          if (lastMode) state.activeTab = lastMode;
+          save();
+          render();
+        }
+      };
+      load();
+      render();
+    })();
+  </script>
+</body>
+</html>

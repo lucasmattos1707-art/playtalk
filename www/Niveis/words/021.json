@@ -1,0 +1,645 @@
+{
+  "title": "Party",
+  "coverImage": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/Sequ%C3%AAncia%2001.00_00_00_00.Quadro001.png",
+  "items": [
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000001.webp",
+      "nomePortugues": "Festa",
+      "nomeIngles": "Party",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000002.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000003.webp",
+      "nomePortugues": "Aniversário",
+      "nomeIngles": "Birthday",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000004.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000005.webp",
+      "nomePortugues": "Bolo",
+      "nomeIngles": "Cake",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000006.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000007.webp",
+      "nomePortugues": "Bolo de aniversário",
+      "nomeIngles": "Birthday cake",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000008.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000009.webp",
+      "nomePortugues": "Velas",
+      "nomeIngles": "Candles",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000010.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000011.webp",
+      "nomePortugues": "Balões",
+      "nomeIngles": "Balloons",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000012.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000013.webp",
+      "nomePortugues": "Decoração",
+      "nomeIngles": "Decoration",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000014.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000015.webp",
+      "nomePortugues": "Confete",
+      "nomeIngles": "Confetti",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000016.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000017.webp",
+      "nomePortugues": "Serpentina",
+      "nomeIngles": "Streamers",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000018.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000019.webp",
+      "nomePortugues": "Presente",
+      "nomeIngles": "Gift",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000020.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000021.webp",
+      "nomePortugues": "Embrulho",
+      "nomeIngles": "Wrapping paper",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000022.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000023.webp",
+      "nomePortugues": "Cartão",
+      "nomeIngles": "Card",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000024.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000025.webp",
+      "nomePortugues": "Convite",
+      "nomeIngles": "Invitation",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000026.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000027.webp",
+      "nomePortugues": "Convidado",
+      "nomeIngles": "Guest",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000028.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000029.webp",
+      "nomePortugues": "Anfitrião",
+      "nomeIngles": "Host",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000030.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000031.webp",
+      "nomePortugues": "Lista de convidados",
+      "nomeIngles": "Guest list",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000032.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000033.webp",
+      "nomePortugues": "Música",
+      "nomeIngles": "Music",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000034.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000035.webp",
+      "nomePortugues": "DJ",
+      "nomeIngles": "DJ",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000036.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000037.webp",
+      "nomePortugues": "Pista de dança",
+      "nomeIngles": "Dance floor",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000038.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000039.webp",
+      "nomePortugues": "Dançar",
+      "nomeIngles": "Dance",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000040.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000041.webp",
+      "nomePortugues": "Brinde",
+      "nomeIngles": "Toast",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000042.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000043.webp",
+      "nomePortugues": "Champanhe",
+      "nomeIngles": "Champagne",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000044.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000045.webp",
+      "nomePortugues": "Vinho",
+      "nomeIngles": "Wine",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000046.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000047.webp",
+      "nomePortugues": "Cerveja",
+      "nomeIngles": "Beer",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000048.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000049.webp",
+      "nomePortugues": "Coquetel",
+      "nomeIngles": "Cocktail",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000050.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000051.webp",
+      "nomePortugues": "Bar",
+      "nomeIngles": "Bar",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000052.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000053.webp",
+      "nomePortugues": "Bartender",
+      "nomeIngles": "Bartender",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000054.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000055.webp",
+      "nomePortugues": "Petiscos",
+      "nomeIngles": "Snacks",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000056.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000057.webp",
+      "nomePortugues": "Buffet",
+      "nomeIngles": "Buffet",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000058.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000059.webp",
+      "nomePortugues": "Jantar",
+      "nomeIngles": "Dinner",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000060.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000061.webp",
+      "nomePortugues": "Sobremesa",
+      "nomeIngles": "Dessert",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000062.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000063.webp",
+      "nomePortugues": "Mesa de festa",
+      "nomeIngles": "Party table",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000064.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000065.webp",
+      "nomePortugues": "Copos",
+      "nomeIngles": "Cups",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000066.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000067.webp",
+      "nomePortugues": "Pratos",
+      "nomeIngles": "Plates",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000068.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000069.webp",
+      "nomePortugues": "Talheres",
+      "nomeIngles": "Utensils",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000070.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000071.webp",
+      "nomePortugues": "Guardanapos",
+      "nomeIngles": "Napkins",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000072.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000073.webp",
+      "nomePortugues": "Brincadeiras",
+      "nomeIngles": "Party games",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000074.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000075.webp",
+      "nomePortugues": "Karaokê",
+      "nomeIngles": "Karaoke",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000076.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000077.webp",
+      "nomePortugues": "Fotografia",
+      "nomeIngles": "Photography",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000078.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000079.webp",
+      "nomePortugues": "Foto de grupo",
+      "nomeIngles": "Group photo",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000080.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000081.webp",
+      "nomePortugues": "Selfie",
+      "nomeIngles": "Selfie",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000082.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000083.webp",
+      "nomePortugues": "Luzes",
+      "nomeIngles": "Lights",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000084.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000085.webp",
+      "nomePortugues": "Luzes coloridas",
+      "nomeIngles": "Party lights",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000086.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000087.webp",
+      "nomePortugues": "Fantasia",
+      "nomeIngles": "Costume",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000088.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000089.webp",
+      "nomePortugues": "Baile à fantasia",
+      "nomeIngles": "Costume party",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000090.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000091.webp",
+      "nomePortugues": "Máscara",
+      "nomeIngles": "Mask",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000092.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000093.webp",
+      "nomePortugues": "Chapéu de festa",
+      "nomeIngles": "Party hat",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000094.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000095.webp",
+      "nomePortugues": "Surpresa",
+      "nomeIngles": "Surprise",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000096.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000097.webp",
+      "nomePortugues": "Parabéns",
+      "nomeIngles": "Happy birthday",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000098.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000099.webp",
+      "nomePortugues": "Comemoração",
+      "nomeIngles": "Celebration",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000100.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000101.webp",
+      "nomePortugues": "Festa surpresa",
+      "nomeIngles": "Surprise party",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000102.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000103.webp",
+      "nomePortugues": "Festa de casamento",
+      "nomeIngles": "Wedding party",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000104.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000105.webp",
+      "nomePortugues": "Festa infantil",
+      "nomeIngles": "Kids party",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000106.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000107.webp",
+      "nomePortugues": "Festa na piscina",
+      "nomeIngles": "Pool party",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000108.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000109.webp",
+      "nomePortugues": "Festa na praia",
+      "nomeIngles": "Beach party",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000110.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000111.webp",
+      "nomePortugues": "Festa em casa",
+      "nomeIngles": "House party",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000112.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000113.webp",
+      "nomePortugues": "Festa ao ar livre",
+      "nomeIngles": "Outdoor party",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000114.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000115.webp",
+      "nomePortugues": "Festa elegante",
+      "nomeIngles": "Formal party",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000116.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000117.webp",
+      "nomePortugues": "Festa temática",
+      "nomeIngles": "Theme party",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000118.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000119.webp",
+      "nomePortugues": "Ano novo",
+      "nomeIngles": "New Year's party",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000120.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000121.webp",
+      "nomePortugues": "Carnaval",
+      "nomeIngles": "Carnival",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000122.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000123.webp",
+      "nomePortugues": "Halloween",
+      "nomeIngles": "Halloween",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000124.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000125.webp",
+      "nomePortugues": "Natal",
+      "nomeIngles": "Christmas",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000126.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000127.webp",
+      "nomePortugues": "Árvore de Natal",
+      "nomeIngles": "Christmas tree",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000128.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000129.webp",
+      "nomePortugues": "Fogos de artifício",
+      "nomeIngles": "Fireworks",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000130.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000131.webp",
+      "nomePortugues": "Contagem regressiva",
+      "nomeIngles": "Countdown",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000132.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000133.webp",
+      "nomePortugues": "Brindar",
+      "nomeIngles": "Celebrate",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000134.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000135.webp",
+      "nomePortugues": "Cantar",
+      "nomeIngles": "Sing",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000136.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000137.webp",
+      "nomePortugues": "Rir",
+      "nomeIngles": "Laugh",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000138.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000139.webp",
+      "nomePortugues": "Diversão",
+      "nomeIngles": "Fun",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000140.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000141.webp",
+      "nomePortugues": "Memórias",
+      "nomeIngles": "Memories",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/123/001/000142.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    }
+  ]
+}

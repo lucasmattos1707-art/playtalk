@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cronômetros de Unidades</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#f4f6fb;
+  color:#1f2937;
+  padding:24px
+}
+.app{max-width:900px;margin:0 auto}
+h1{margin:0;font-size:28px}
+
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:20px
+}
+
+.topbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+
+button{
+  border:none;
+  border-radius:12px;
+  padding:12px 18px;
+  font-size:15px;
+  font-weight:bold;
+  cursor:pointer
+}
+
+button.small{
+  padding:8px 12px;
+  font-size:12px;
+  border-radius:10px
+}
+
+.btn-add{background:#2563eb;color:white}
+.btn-export{background:#111827;color:white}
+.btn-import{background:#7c3aed;color:white}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:14px
+}
+
+.card{
+  background:white;
+  border-radius:18px;
+  padding:18px;
+  box-shadow:0 10px 25px rgba(0,0,0,.08);
+  border:2px solid transparent;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px
+}
+
+.card.running{border-color:#16a34a}
+.card.paused{border-color:#e5e7eb}
+
+.left{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  min-width:0;
+  flex:1
+}
+
+.name{
+  font-size:20px;
+  font-weight:bold;
+  min-width:0;
+  word-break:break-word
+}
+
+.units{
+  font-size:42px;
+  font-weight:bold;
+  min-width:110px;
+  text-align:right;
+  font-variant-numeric:tabular-nums
+}
+
+.actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center
+}
+
+.dot-btn{
+  width:22px;
+  height:22px;
+  min-width:22px;
+  padding:0;
+  border-radius:50%;
+  border:2px solid rgba(0,0,0,.08);
+}
+
+.dot-green{background:#16a34a}
+.dot-blue{background:#2563eb}
+.dot-red{background:#dc2626}
+.dot-yellow{background:#f59e0b}
+.dot-gray{background:#6b7280}
+
+.empty{
+  background:white;
+  border-radius:18px;
+  padding:30px;
+  text-align:center;
+  color:#6b7280;
+  box-shadow:0 10px 25px rgba(0,0,0,.05)
+}
+
+.hint{
+  font-size:12px;
+  color:#6b7280;
+  margin-top:-12px;
+  margin-bottom:18px
+}
+
+input[type="file"]{display:none}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <h1>Cronômetros de Unidades</h1>
+    <div class="topbar">
+      <button class="btn-export small" onclick="exportarDados()">Exportar</button>
+      <button class="btn-import small" onclick="document.getElementById('importFile').click()">Importar</button>
+      <input id="importFile" type="file" accept="application/json" onchange="importarDados(event)">
+    </div>
+  </div>
+
+  <div class="topbar">
+    <button class="btn-add" onclick="criarContainer()">+ Criar novo container</button>
+  </div>
+
+  <div class="hint">Salva automático no navegador. Segure a tecla G para ver a porcentagem de cada container no total.</div>
+
+  <div id="lista" class="grid"></div>
+</div>
+
+<script>
+const STORAGE_KEY = "cronometros_unidades_v1"
+const lista=document.getElementById("lista")
+const containers=[]
+let nextId=1
+let mostrarPercentual=false
+
+function criarContainer(){
+  const nome=prompt("Digite o nome do container:")
+  if(!nome||!nome.trim())return
+
+  const item={
+    id:nextId++,
+    nome:nome.trim(),
+    unidades:0,
+    rodando:false,
+    intervalo:null,
+    startedAt:null,
+    elapsedMs:0
+  }
+
+  containers.push(item)
+  salvar()
+  renderizar()
+}
+
+function play(id){
+  const item=containers.find(c=>c.id===id)
+  if(!item||item.rodando)return
+
+  item.rodando=true
+  item.startedAt=Date.now()
+  iniciarIntervalo(item)
+  salvar()
+  renderizar()
+}
+
+function pause(id){
+  const item=containers.find(c=>c.id===id)
+  if(!item||!item.rodando)return
+
+  const agora=Date.now()
+
+  if(item.startedAt){
+    item.elapsedMs = item.elapsedMs + (agora - item.startedAt)
+  }
+
+  item.unidades = Math.floor(item.elapsedMs/6000)
+
+  item.rodando=false
+  item.startedAt=null
+
+  clearInterval(item.intervalo)
+  item.intervalo=null
+
+  salvar()
+  renderizar()
+}
+
+function resetar(id){
+  const item=containers.find(c=>c.id===id)
+  if(!item)return
+
+  if(item.intervalo){
+    clearInterval(item.intervalo)
+    item.intervalo=null
+  }
+
+  item.rodando=false
+  item.unidades=0
+  item.startedAt=null
+  item.elapsedMs=0
+
+  salvar()
+  renderizar()
+}
+
+function remover(id){
+  const index=containers.findIndex(c=>c.id===id)
+  if(index===-1)return
+
+  const item=containers[index]
+  if(item.intervalo)clearInterval(item.intervalo)
+
+  containers.splice(index,1)
+  salvar()
+  renderizar()
+}
+
+function iniciarIntervalo(item){
+  if(item.intervalo)clearInterval(item.intervalo)
+
+  item.intervalo=setInterval(()=>{
+    sincronizarUnidades(item)
+    salvar()
+    renderizar()
+  },500)
+}
+
+function sincronizarUnidades(item){
+  if(!item.rodando||!item.startedAt)return
+
+  const agora=Date.now()
+  const totalMs=item.elapsedMs + (agora - item.startedAt)
+  const novasUnidades=Math.floor(totalMs/6000)
+
+  item.unidades=novasUnidades
+}
+
+function totalUnidades(){
+  return containers.reduce((soma,item)=>soma+Number(item.unidades||0),0)
+}
+
+function valorExibido(item){
+  if(!mostrarPercentual){
+    return String(item.unidades)
+  }
+
+  const total=totalUnidades()
+  if(total<=0)return "0%"
+
+  const percentual=(item.unidades/total)*100
+  return `${percentual.toFixed(1)}%`
+}
+
+function ordenarContainers(){
+  containers.sort((a,b)=>{
+    if(b.unidades!==a.unidades)return b.unidades-a.unidades
+    return a.id-b.id
+  })
+}
+
+function salvar(){
+  const dados={
+    nextId,
+    containers:containers.map(item=>{
+      let unidades=item.unidades
+      let elapsedMs=item.elapsedMs
+
+      if(item.rodando&&item.startedAt){
+        const agora=Date.now()
+        const totalMs=item.elapsedMs + (agora - item.startedAt)
+        unidades=Math.floor(totalMs/6000)
+        elapsedMs=totalMs
+      }
+
+      return {
+        id:item.id,
+        nome:item.nome,
+        unidades,
+        rodando:item.rodando,
+        startedAt:item.rodando?Date.now():null,
+        elapsedMs
+      }
+    })
+  }
+
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(dados))
+}
+
+function carregar(){
+  const bruto=localStorage.getItem(STORAGE_KEY)
+  if(!bruto)return
+
+  try{
+    const dados=JSON.parse(bruto)
+    nextId=dados.nextId||1
+
+    if(Array.isArray(dados.containers)){
+      dados.containers.forEach(c=>{
+        const item={
+          id:typeof c.id==="number"?c.id:nextId++,
+          nome:c.nome||"Sem nome",
+          unidades:Number(c.unidades)||0,
+          rodando:Boolean(c.rodando),
+          intervalo:null,
+          startedAt:c.startedAt||null,
+          elapsedMs:Number(c.elapsedMs)||0
+        }
+
+        if(item.rodando&&item.startedAt){
+          const agora=Date.now()
+          const totalMs=item.elapsedMs + (agora - item.startedAt)
+          item.elapsedMs=totalMs
+          item.unidades=Math.floor(totalMs/6000)
+          item.startedAt=Date.now()
+        }
+
+        containers.push(item)
+      })
+    }
+  }catch(e){
+    console.error("Erro ao carregar dados",e)
+  }
+}
+
+function restaurarIntervalos(){
+  containers.forEach(item=>{
+    if(item.rodando){
+      iniciarIntervalo(item)
+    }
+  })
+}
+
+function exportarDados(){
+  salvar()
+  const bruto=localStorage.getItem(STORAGE_KEY)
+  if(!bruto)return
+
+  const blob=new Blob([bruto],{type:"application/json"})
+  const url=URL.createObjectURL(blob)
+  const a=document.createElement("a")
+  a.href=url
+  a.download="cronometros-unidades.json"
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function importarDados(event){
+  const arquivo=event.target.files[0]
+  if(!arquivo)return
+
+  const leitor=new FileReader()
+  leitor.onload=function(e){
+    try{
+      const dados=JSON.parse(e.target.result)
+
+      containers.forEach(item=>{
+        if(item.intervalo)clearInterval(item.intervalo)
+      })
+      containers.length=0
+      nextId=1
+
+      if(Array.isArray(dados.containers)){
+        nextId=dados.nextId||1
+
+        dados.containers.forEach(c=>{
+          const item={
+            id:typeof c.id==="number"?c.id:nextId++,
+            nome:c.nome||"Sem nome",
+            unidades:Number(c.unidades)||0,
+            rodando:Boolean(c.rodando),
+            intervalo:null,
+            startedAt:c.rodando?Date.now():null,
+            elapsedMs:Number(c.elapsedMs)||((Number(c.unidades)||0)*6000)
+          }
+
+          containers.push(item)
+        })
+
+        salvar()
+        restaurarIntervalos()
+        renderizar()
+        alert("Dados importados com sucesso.")
+      }else{
+        alert("Arquivo inválido.")
+      }
+    }catch(err){
+      alert("Não foi possível importar esse arquivo.")
+      console.error(err)
+    }
+
+    event.target.value=""
+  }
+
+  leitor.readAsText(arquivo)
+}
+
+function botaoPrincipal(item){
+  if(item.rodando){
+    return `<button class="dot-btn dot-red" onclick="pause(${item.id})" title="Pausar" aria-label="Pausar"></button>`
+  }
+
+  if(item.unidades>0){
+    return `<button class="dot-btn dot-blue" onclick="play(${item.id})" title="Continuar" aria-label="Continuar"></button>`
+  }
+
+  return `<button class="dot-btn dot-green" onclick="play(${item.id})" title="Play" aria-label="Play"></button>`
+}
+
+function cardHTML(item){
+  return `
+  <div class="card ${item.rodando?"running":"paused"}" id="card-${item.id}">
+    <div class="left">
+      <div class="name">${escapeHtml(item.nome)}</div>
+      <div class="units">${valorExibido(item)}</div>
+    </div>
+
+    <div class="actions">
+      ${botaoPrincipal(item)}
+      <button class="dot-btn dot-yellow" onclick="resetar(${item.id})" title="Zerar" aria-label="Zerar"></button>
+      <button class="dot-btn dot-gray" onclick="remover(${item.id})" title="Remover" aria-label="Remover"></button>
+    </div>
+  </div>`
+}
+
+function renderizar(){
+  ordenarContainers()
+
+  if(containers.length===0){
+    lista.innerHTML='<div class="empty">Nenhum container criado ainda.</div>'
+    return
+  }
+
+  lista.innerHTML=containers.map(cardHTML).join("")
+}
+
+function escapeHtml(texto){
+  const div=document.createElement("div")
+  div.textContent=texto
+  return div.innerHTML
+}
+
+window.addEventListener("beforeunload",salvar)
+
+window.addEventListener("keydown",e=>{
+  if(e.key==="g"||e.key==="G"){
+    if(!mostrarPercentual){
+      mostrarPercentual=true
+      renderizar()
+    }
+  }
+})
+
+window.addEventListener("keyup",e=>{
+  if(e.key==="g"||e.key==="G"){
+    mostrarPercentual=false
+    renderizar()
+  }
+})
+
+window.addEventListener("blur",()=>{
+  if(mostrarPercentual){
+    mostrarPercentual=false
+    renderizar()
+  }
+})
+
+carregar()
+restaurarIntervalos()
+renderizar()
+</script>
+
+</body>
+</html>

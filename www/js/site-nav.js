@@ -1,31 +1,124 @@
-(function() {
+﻿(function() {
+  function ensureCosmicBackground() {
+    const body = document.body;
+    if (!body || body.querySelector('.playtalk-cosmic-bg')) {
+      return;
+    }
+
+    const background = document.createElement('div');
+    background.className = 'playtalk-cosmic-bg';
+    background.setAttribute('aria-hidden', 'true');
+    background.innerHTML = [
+      '<div class="nebula"></div>',
+      '<div class="grid-plane"></div>',
+      '<div class="stars-container">',
+      '  <div class="star-layer" data-density="48"></div>',
+      '  <div class="star-layer" data-density="36"></div>',
+      '  <div class="star-layer" data-density="24"></div>',
+      '</div>'
+    ].join('');
+
+    Array.from(background.querySelectorAll('.star-layer')).forEach((layer, layerIndex) => {
+      const density = Number(layer.getAttribute('data-density') || 0);
+      for (let i = 0; i < density; i += 1) {
+        const star = document.createElement('span');
+        const size = Math.max(1, Math.round(Math.random() * (layerIndex === 0 ? 3 : 2)));
+        star.className = 'star';
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.left = `${Math.random() * 100}%`;
+        star.style.top = `${Math.random() * 100}%`;
+        star.style.opacity = String(0.3 + Math.random() * 0.7);
+        layer.appendChild(star);
+      }
+    });
+
+    body.insertBefore(background, body.firstChild);
+  }
+
+  function syncCosmicBackgroundVisibility() {
+    const body = document.body;
+    const background = body ? body.querySelector('.playtalk-cosmic-bg') : null;
+    if (!background) {
+      return;
+    }
+    const isModern = document.documentElement.dataset.globalRadioStation === 'modern';
+    background.toggleAttribute('hidden', !isModern);
+  }
+
   function enforceNoScroll() {
     if (window.__playtalkNoScrollLocked) {
       return;
     }
     window.__playtalkNoScrollLocked = true;
 
+    const shouldAllowPageScroll = () => {
+      const body = document.body;
+      const hasCardsClass = Boolean(body && body.classList.contains('page-cards'));
+      const hasCardsPage = Boolean(document.getElementById('cards-page'));
+      const isCardsRoute = window.location.hash === '#cards' || /\/cards\.html(?:$|\?)/i.test(window.location.pathname + window.location.search);
+      return hasCardsClass || hasCardsPage || isCardsRoute;
+    };
+
+    const syncScrollLock = () => {
+      const allowScroll = shouldAllowPageScroll();
+      const overflowValue = allowScroll ? 'auto' : 'hidden';
+
+      if (document.documentElement) {
+        document.documentElement.style.setProperty('overflow-x', 'hidden', 'important');
+        document.documentElement.style.setProperty('overflow-y', overflowValue, 'important');
+        if (allowScroll) {
+          document.documentElement.style.setProperty('max-height', 'none', 'important');
+          document.documentElement.style.setProperty('overscroll-behavior-y', 'auto', 'important');
+        } else {
+          document.documentElement.style.setProperty('max-height', '100dvh', 'important');
+          document.documentElement.style.setProperty('overscroll-behavior-y', 'none', 'important');
+        }
+      }
+      if (document.body) {
+        document.body.style.setProperty('overflow-x', 'hidden', 'important');
+        document.body.style.setProperty('overflow-y', overflowValue, 'important');
+        if (allowScroll) {
+          document.body.style.setProperty('max-height', 'none', 'important');
+          document.body.style.setProperty('overscroll-behavior-y', 'auto', 'important');
+          document.body.style.setProperty('touch-action', 'pan-y', 'important');
+        } else {
+          document.body.style.setProperty('max-height', '100dvh', 'important');
+          document.body.style.setProperty('overscroll-behavior-y', 'none', 'important');
+        }
+      }
+
+      if (!allowScroll && (window.scrollX !== 0 || window.scrollY !== 0)) {
+        window.scrollTo(0, 0);
+      }
+    };
+
     const stopScroll = (event) => {
+      if (shouldAllowPageScroll()) {
+        return;
+      }
       event.preventDefault();
     };
 
     window.addEventListener('wheel', stopScroll, { passive: false });
     window.addEventListener('touchmove', stopScroll, { passive: false });
     window.addEventListener('scroll', () => {
+      if (shouldAllowPageScroll()) {
+        return;
+      }
       if (window.scrollX !== 0 || window.scrollY !== 0) {
         window.scrollTo(0, 0);
       }
     }, { passive: true });
 
-    if (document.documentElement) {
-      document.documentElement.style.overflow = 'hidden';
-    }
-    if (document.body) {
-      document.body.style.overflow = 'hidden';
-    }
+    window.__playtalkSyncScrollLock = syncScrollLock;
+    syncScrollLock();
   }
 
   enforceNoScroll();
+  ensureCosmicBackground();
+  syncCosmicBackgroundVisibility();
+  document.addEventListener('playtalk:global-radio-change', syncCosmicBackgroundVisibility);
 
   function setupPageTransitions() {
     const body = document.body;
@@ -42,17 +135,16 @@
         return aIndex - bIndex;
       });
     if (!navLinks.length) {
-      requestAnimationFrame(() => {
-        body.classList.add('page-transition-ready');
-      });
+      body.classList.add('page-transition-ready');
       return;
     }
 
     const PAGE_MANIFEST = {
       'index.html': { hash: '#home', scripts: ['js/main.js', 'js/vocabulary-game.js'], classes: ['page-home'] },
-      'fun.html': { hash: '#fun', scripts: ['js/fun-page.js'], classes: ['page-fun'] },
+      'fun.html': { hash: '#options', scripts: ['js/fun-page.js'], classes: ['page-fun'] },
       'play.html': { hash: '#play', scripts: ['js/play-modes-page.js'], classes: ['page-play'] },
-      'profile.html': { hash: '#profile', scripts: ['js/profile-page.js'], classes: ['page-profile'] }
+      'profile.html': { hash: '#profile', scripts: ['js/profile-page.js'], classes: ['page-profile'] },
+      'cards.html': { hash: '#cards', scripts: ['js/cards-page.js'], classes: ['page-cards'] }
     };
 
     const transitionClasses = new Set(['page-transition-ready', 'page-transition-leave']);
@@ -191,6 +283,9 @@
         } else {
           delete body.dataset.lensContext;
         }
+        if (typeof window.__playtalkSyncScrollLock === 'function') {
+          window.__playtalkSyncScrollLock();
+        }
         if (window.playtalkSettings && typeof window.playtalkSettings.applyVisualPreferences === 'function') {
           window.playtalkSettings.applyVisualPreferences(window.playtalkSettings.loadSettings());
         }
@@ -270,6 +365,11 @@
       const state = event.state && event.state.path ? event.state.path : initialKey;
       navigateTo(state, { pushState: false });
     });
+    window.addEventListener('playtalk:return-cards', () => {
+      ['game-active', 'pause-menu-active', 'pre-game-active', 'results-active', 'play-inline-active', 'page-return-to-play']
+        .forEach(cls => body.classList.remove(cls));
+      navigateTo('#cards', { pushState: true });
+    });
     const initialUrl = new URL(baseUrl.href);
     initialUrl.hash = initialManifest && initialManifest.hash ? initialManifest.hash : window.location.hash;
     history.replaceState({ path: currentKey }, '', initialUrl.href);
@@ -280,19 +380,16 @@
       showPage(initialHashTarget, { pushState: false });
     }
 
-    requestAnimationFrame(() => {
-      body.classList.add('page-transition-ready');
-    });
+    if (typeof window.__playtalkSyncScrollLock === 'function') {
+      window.__playtalkSyncScrollLock();
+    }
+
+    body.classList.add('page-transition-ready');
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     setupPageTransitions();
   });
 })();
-
-
-
-
-
 
 

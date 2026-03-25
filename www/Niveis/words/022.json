@@ -1,0 +1,825 @@
+{
+  "title": "People",
+  "coverImage": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/Sequ%C3%AAncia%2001.00_00_00_00.Quadro001.png",
+  "items": [
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000001.webp",
+      "nomePortugues": "Branco",
+      "nomeIngles": "White",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000002.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000003.webp",
+      "nomePortugues": "Negro",
+      "nomeIngles": "Black",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000004.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000005.webp",
+      "nomePortugues": "Moreno",
+      "nomeIngles": "Brown",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000006.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000007.webp",
+      "nomePortugues": "Loiro",
+      "nomeIngles": "Blonde",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000008.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000009.webp",
+      "nomePortugues": "Ruivo",
+      "nomeIngles": "Redhead",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000010.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000011.webp",
+      "nomePortugues": "Careca",
+      "nomeIngles": "Bald",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000012.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000013.webp",
+      "nomePortugues": "Barbudo",
+      "nomeIngles": "Bearded",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000014.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000015.webp",
+      "nomePortugues": "Alto",
+      "nomeIngles": "Tall",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000016.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000017.webp",
+      "nomePortugues": "Baixo",
+      "nomeIngles": "Short",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000018.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000019.webp",
+      "nomePortugues": "Magro",
+      "nomeIngles": "Thin",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000020.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000021.webp",
+      "nomePortugues": "Gordo",
+      "nomeIngles": "Fat",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000022.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000023.webp",
+      "nomePortugues": "Forte",
+      "nomeIngles": "Strong",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000024.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000025.webp",
+      "nomePortugues": "Fraco",
+      "nomeIngles": "Weak",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000026.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000027.webp",
+      "nomePortugues": "Musculoso",
+      "nomeIngles": "Muscular",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000028.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000029.webp",
+      "nomePortugues": "Atlético",
+      "nomeIngles": "Athletic",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000030.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000031.webp",
+      "nomePortugues": "Doente",
+      "nomeIngles": "Sick",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000032.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000033.webp",
+      "nomePortugues": "Saudável",
+      "nomeIngles": "Healthy",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000034.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000035.webp",
+      "nomePortugues": "Cansado",
+      "nomeIngles": "Tired",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000036.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000037.webp",
+      "nomePortugues": "Com sono",
+      "nomeIngles": "Sleepy",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000038.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000039.webp",
+      "nomePortugues": "Rápido",
+      "nomeIngles": "Fast",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000040.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000041.webp",
+      "nomePortugues": "Devagar",
+      "nomeIngles": "Slow",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000042.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000043.webp",
+      "nomePortugues": "Ágil",
+      "nomeIngles": "Agile",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000044.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000045.webp",
+      "nomePortugues": "Preguiçoso",
+      "nomeIngles": "Lazy",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000046.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000047.webp",
+      "nomePortugues": "Trabalhador",
+      "nomeIngles": "Hardworking",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000048.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000049.webp",
+      "nomePortugues": "Inteligente",
+      "nomeIngles": "Smart",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000050.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000051.webp",
+      "nomePortugues": "Esperto",
+      "nomeIngles": "Clever",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000052.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000053.webp",
+      "nomePortugues": "Gênio",
+      "nomeIngles": "Genius",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000054.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000055.webp",
+      "nomePortugues": "Burro",
+      "nomeIngles": "Dumb",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000056.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000057.webp",
+      "nomePortugues": "Educado",
+      "nomeIngles": "Polite",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000058.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000059.webp",
+      "nomePortugues": "Gentil",
+      "nomeIngles": "Kind",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000060.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000061.webp",
+      "nomePortugues": "Amigável",
+      "nomeIngles": "Friendly",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000062.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000063.webp",
+      "nomePortugues": "Engraçado",
+      "nomeIngles": "Funny",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000064.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000065.webp",
+      "nomePortugues": "Sério",
+      "nomeIngles": "Serious",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000066.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000067.webp",
+      "nomePortugues": "Calmo",
+      "nomeIngles": "Calm",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000068.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000069.webp",
+      "nomePortugues": "Nervoso",
+      "nomeIngles": "Nervous",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000070.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000071.webp",
+      "nomePortugues": "Bravo",
+      "nomeIngles": "Angry",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000072.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000073.webp",
+      "nomePortugues": "Feliz",
+      "nomeIngles": "Happy",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000074.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000075.webp",
+      "nomePortugues": "Triste",
+      "nomeIngles": "Sad",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000076.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000077.webp",
+      "nomePortugues": "Animado",
+      "nomeIngles": "Excited",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000078.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000079.webp",
+      "nomePortugues": "Surpreso",
+      "nomeIngles": "Surprised",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000080.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000081.webp",
+      "nomePortugues": "Confuso",
+      "nomeIngles": "Confused",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000082.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000083.webp",
+      "nomePortugues": "Preocupado",
+      "nomeIngles": "Worried",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000084.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000085.webp",
+      "nomePortugues": "Corajoso",
+      "nomeIngles": "Brave",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000086.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000087.webp",
+      "nomePortugues": "Medroso",
+      "nomeIngles": "Scared",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000088.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000089.webp",
+      "nomePortugues": "Orgulhoso",
+      "nomeIngles": "Proud",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000090.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000091.webp",
+      "nomePortugues": "Tímido",
+      "nomeIngles": "Shy",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000092.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000093.webp",
+      "nomePortugues": "Confiante",
+      "nomeIngles": "Confident",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000094.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000095.webp",
+      "nomePortugues": "Ambicioso",
+      "nomeIngles": "Ambitious",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000096.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000097.webp",
+      "nomePortugues": "Criativo",
+      "nomeIngles": "Creative",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000098.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000099.webp",
+      "nomePortugues": "Curioso",
+      "nomeIngles": "Curious",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000100.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000101.webp",
+      "nomePortugues": "Paciente",
+      "nomeIngles": "Patient",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000102.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000103.webp",
+      "nomePortugues": "Impaciente",
+      "nomeIngles": "Impatient",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000104.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000105.webp",
+      "nomePortugues": "Organizado",
+      "nomeIngles": "Organized",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000106.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000107.webp",
+      "nomePortugues": "Bagunçado",
+      "nomeIngles": "Messy",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000108.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000109.webp",
+      "nomePortugues": "Limpo",
+      "nomeIngles": "Clean",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000110.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000111.webp",
+      "nomePortugues": "Sujo",
+      "nomeIngles": "Dirty",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000112.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000113.webp",
+      "nomePortugues": "Rico",
+      "nomeIngles": "Rich",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000114.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000115.webp",
+      "nomePortugues": "Pobre",
+      "nomeIngles": "Poor",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000116.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000117.webp",
+      "nomePortugues": "Famoso",
+      "nomeIngles": "Famous",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000118.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000119.webp",
+      "nomePortugues": "Desconhecido",
+      "nomeIngles": "Unknown",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000120.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000121.webp",
+      "nomePortugues": "Popular",
+      "nomeIngles": "Popular",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000122.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000123.webp",
+      "nomePortugues": "Sozinho",
+      "nomeIngles": "Alone",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000124.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000125.webp",
+      "nomePortugues": "Acompanhado",
+      "nomeIngles": "With company",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000126.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000127.webp",
+      "nomePortugues": "Casado",
+      "nomeIngles": "Married",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000128.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000129.webp",
+      "nomePortugues": "Solteiro",
+      "nomeIngles": "Single",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000130.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000131.webp",
+      "nomePortugues": "Divorciado",
+      "nomeIngles": "Divorced",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000132.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000133.webp",
+      "nomePortugues": "Grávida",
+      "nomeIngles": "Pregnant",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000134.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000135.webp",
+      "nomePortugues": "Jovem",
+      "nomeIngles": "Young",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000136.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000137.webp",
+      "nomePortugues": "Velho",
+      "nomeIngles": "Old",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000138.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000139.webp",
+      "nomePortugues": "Adulto",
+      "nomeIngles": "Adult",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000140.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000141.webp",
+      "nomePortugues": "Idoso",
+      "nomeIngles": "Elderly",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000142.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000143.webp",
+      "nomePortugues": "Bonito",
+      "nomeIngles": "Handsome",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000144.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000145.webp",
+      "nomePortugues": "Bonita",
+      "nomeIngles": "Beautiful",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000146.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000147.webp",
+      "nomePortugues": "Feio",
+      "nomeIngles": "Ugly",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000148.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000149.webp",
+      "nomePortugues": "Elegante",
+      "nomeIngles": "Elegant",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000150.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000151.webp",
+      "nomePortugues": "Estiloso",
+      "nomeIngles": "Stylish",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000152.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000153.webp",
+      "nomePortugues": "Simples",
+      "nomeIngles": "Simple",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000154.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000155.webp",
+      "nomePortugues": "Rico de estilo",
+      "nomeIngles": "Fancy",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000156.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000157.webp",
+      "nomePortugues": "Pobre de estilo",
+      "nomeIngles": "Plain",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000158.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000159.webp",
+      "nomePortugues": "Barulhento",
+      "nomeIngles": "Loud",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000160.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000161.webp",
+      "nomePortugues": "Silencioso",
+      "nomeIngles": "Quiet",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000162.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000163.webp",
+      "nomePortugues": "Educado",
+      "nomeIngles": "Well-mannered",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000164.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000165.webp",
+      "nomePortugues": "Mal-educado",
+      "nomeIngles": "Rude",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000166.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000167.webp",
+      "nomePortugues": "Generoso",
+      "nomeIngles": "Generous",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000168.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000169.webp",
+      "nomePortugues": "Egoísta",
+      "nomeIngles": "Selfish",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000170.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000171.webp",
+      "nomePortugues": "Honesto",
+      "nomeIngles": "Honest",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000172.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000173.webp",
+      "nomePortugues": "Mentiroso",
+      "nomeIngles": "Liar",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000174.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000175.webp",
+      "nomePortugues": "Leal",
+      "nomeIngles": "Loyal",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000176.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000177.webp",
+      "nomePortugues": "Infiel",
+      "nomeIngles": "Unfaithful",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000178.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000179.webp",
+      "nomePortugues": "Responsável",
+      "nomeIngles": "Responsible",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000180.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000181.webp",
+      "nomePortugues": "Irresponsável",
+      "nomeIngles": "Irresponsible",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/120/001/000182.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    }
+  ]
+}

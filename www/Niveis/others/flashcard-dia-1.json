@@ -1,0 +1,222 @@
+{
+    "title":  "I am",
+    "coverImage":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/01.png",
+    "items":  [
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000001.webp",
+                      "nomePortugues":  "Eu ando",
+                      "nomeIngles":  "I walk",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000002.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000003.webp",
+                      "nomePortugues":  "Eu nado",
+                      "nomeIngles":  "I swim",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000004.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000005.webp",
+                      "nomePortugues":  "Eu bebo chÃ¡",
+                      "nomeIngles":  "I drink tea",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000006.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000007.webp",
+                      "nomePortugues":  "Eu amo chÃ¡",
+                      "nomeIngles":  "I love tea",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000008.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000009.webp",
+                      "nomePortugues":  "Eu quero",
+                      "nomeIngles":  "I want",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000010.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000011.webp",
+                      "nomePortugues":  "Eu como",
+                      "nomeIngles":  "I eat",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000012.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000013.webp",
+                      "nomePortugues":  "Eu leio",
+                      "nomeIngles":  "I read",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000014.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000015.webp",
+                      "nomePortugues":  "Eu brinco",
+                      "nomeIngles":  "I play",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000016.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000017.webp",
+                      "nomePortugues":  "Eu durmo",
+                      "nomeIngles":  "I sleep",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000018.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000019.webp",
+                      "nomePortugues":  "Eu cozinho",
+                      "nomeIngles":  "I cook",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000020.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000021.webp",
+                      "nomePortugues":  "Eu canto",
+                      "nomeIngles":  "I sing",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000022.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000023.webp",
+                      "nomePortugues":  "Eu corro",
+                      "nomeIngles":  "I run",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000024.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000025.webp",
+                      "nomePortugues":  "Eu pulo",
+                      "nomeIngles":  "I jump",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000026.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000027.webp",
+                      "nomePortugues":  "Eu vejo tv",
+                      "nomeIngles":  "I watch TV",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000028.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000029.webp",
+                      "nomePortugues":  "Eu desenho",
+                      "nomeIngles":  "I draw",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000030.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000031.webp",
+                      "nomePortugues":  "Eu abro",
+                      "nomeIngles":  "I open",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000032.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000033.webp",
+                      "nomePortugues":  "Eu fecho",
+                      "nomeIngles":  "I close",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000034.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000035.webp",
+                      "nomePortugues":  "Eu lavo",
+                      "nomeIngles":  "I wash",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000036.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000037.webp",
+                      "nomePortugues":  "Eu limpo",
+                      "nomeIngles":  "I clean",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000038.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000039.webp",
+                      "nomePortugues":  "Eu trabalho",
+                      "nomeIngles":  "I work",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000040.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000041.webp",
+                      "nomePortugues":  "Eu sento",
+                      "nomeIngles":  "I sit",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000042.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000043.webp",
+                      "nomePortugues":  "Eu levanto",
+                      "nomeIngles":  "I stand",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000044.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000045.webp",
+                      "nomePortugues":  "Eu escuto",
+                      "nomeIngles":  "I listen",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000046.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000047.webp",
+                      "nomePortugues":  "Eu espero",
+                      "nomeIngles":  "I wait",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/001/001/000048.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  }
+              ]
+}
