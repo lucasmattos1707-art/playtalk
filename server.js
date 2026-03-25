@@ -2778,6 +2778,38 @@ app.get('/api/rankings/flashcards', async (req, res) => {
   }
 });
 
+app.get('/api/users/flashcards', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const requestedLimit = Number.parseInt(req.query.limit, 10);
+    const limit = Number.isInteger(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, 5000)
+      : 5000;
+    const snapshot = await fetchFlashcardRankingSnapshot({
+      periodId: FLASHCARD_RANKING_PERIODS.allTime.id,
+      limit,
+      currentUserId: 0
+    });
+
+    res.json({
+      success: true,
+      users: snapshot.ranking.map((entry) => ({
+        userId: Number(entry.userId) || 0,
+        username: String(entry.username || '').trim() || 'Usuario',
+        avatarImage: String(entry.avatarImage || '').trim(),
+        flashcardsCount: Number(entry.allTimeFlashcardsCount ?? entry.flashcardsCount) || 0
+      }))
+    });
+  } catch (error) {
+    console.error('Erro ao listar usuarios com flashcards:', error);
+    res.status(500).json({ success: false, message: 'Erro ao carregar usuarios.' });
+  }
+});
+
 app.post('/api/rankings/flashcards', async (req, res) => {
   try {
     if (!pool) {
@@ -3060,8 +3092,8 @@ app.use((req, res, next) => {
     '/database/',
     '/flashcards',
     '/flashcards/',
-    '/rank',
-    '/rank/',
+    '/users',
+    '/users/',
     '/storage',
     '/storage/',
     '/storage-debug',
@@ -3158,8 +3190,12 @@ app.get(['/flashcards', '/flashcards/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'flashcards.html'));
 });
 
+app.get(['/users', '/users/'], (req, res) => {
+  res.sendFile(path.join(staticDir, 'users.html'));
+});
+
 app.get(['/rank', '/rank/'], (req, res) => {
-  res.sendFile(path.join(staticDir, 'rank.html'));
+  res.redirect(302, '/users');
 });
 
 app.get(['/storage', '/storage/'], (req, res) => {

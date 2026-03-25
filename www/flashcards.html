@@ -2199,9 +2199,9 @@
             <p id="allSectionCopy">Carregando seus flashcards...</p>
           </div>
           <div class="actions">
-            <a class="btn" id="rankLink" href="/rank">
+            <a class="btn" id="usersLink" href="/users">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v2h-1v2.5A4.5 4.5 0 0 1 12.75 13v1.55H16a1 1 0 0 1 1 1V18H7v-2.45a1 1 0 0 1 1-1h3.25V13A4.5 4.5 0 0 1 8 8.5V6H7V4zm3 2v2.5a2.5 2.5 0 1 0 5 0V6h-5zM5 5h2v2H6.5A1.5 1.5 0 0 0 5 8.5V9h2a3.93 3.93 0 0 1-.5-2V5zm12 0h2v2a3 3 0 0 1-.5 2H20v-.5A1.5 1.5 0 0 0 18.5 7H17V5z"/></svg>
-              <span class="btn__label">Ranking</span>
+              <span class="btn__label">Usuarios</span>
             </a>
             <button class="btn" id="logoutBtn" type="button">
               <span class="btn__label">Sair</span>
@@ -2378,8 +2378,9 @@
   <script src="js/gamesounds.js"></script>
   <script>
     (() => {
-      const DATA_MANIFEST_PATHS = ['data/flashcards/130/001/manifest.json', '/data/flashcards/130/001/manifest.json'];
-      const LOCAL_LEVEL_FILES_MANIFEST_PATHS = ['data/local-level-files.json', '/data/local-level-files.json'];
+      const FLASHCARDS_R2_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards';
+      const DATA_MANIFEST_PATHS = [`${FLASHCARDS_R2_ROOT}/manifest.json`, 'data/flashcards/130/001/manifest.json', '/data/flashcards/130/001/manifest.json'];
+      const LOCAL_LEVEL_FILES_MANIFEST_PATHS = [`${FLASHCARDS_R2_ROOT}/local-level-files.json`, 'data/local-level-files.json', '/data/local-level-files.json'];
       const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
       const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
@@ -2493,7 +2494,7 @@
         authModeRegister: document.getElementById('authModeRegister'),
         topbar: document.getElementById('topbar'),
         flashcardsHomeToggle: document.getElementById('flashcardsHomeToggle'),
-        rankLink: document.getElementById('rankLink'),
+        usersLink: document.getElementById('usersLink'),
         logoutBtn: document.getElementById('logoutBtn'),
         catalog: document.getElementById('catalog'),
         metrics: document.getElementById('metrics'),
@@ -3156,8 +3157,8 @@
           || ((hostname === 'localhost' || hostname === '127.0.0.1') && !port);
       }
 
-      function resolveRankHref() {
-        return isNativeRuntime() ? 'rank.html' : '/rank';
+      function resolveUsersHref() {
+        return isNativeRuntime() ? 'users.html' : '/users';
       }
 
       async function syncFlashcardRankingNow() {
@@ -5317,8 +5318,8 @@
         syncWatchControls();
         bindEvents();
         setAuthMode('login');
-        if (els.rankLink) {
-          els.rankLink.setAttribute('href', resolveRankHref());
+        if (els.usersLink) {
+          els.usersLink.setAttribute('href', resolveUsersHref());
         }
         lockFlashcardsApp(true);
         renderMetrics();

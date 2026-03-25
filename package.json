@@ -11,6 +11,7 @@
         "sync:levels": "node scripts/sync-local-level-assets.js",
         "test": "echo \"Error: no test specified\" && exit 1",
         "r2:init-content": "node scripts/init-r2-content.js",
+        "r2:flashcards": "node scripts/publish-flashcards-r2.js",
         "cap:init": "npx cap init PlayTalk com.playtalk.app --web-dir www",
         "cap:add:android": "npx cap add android",
         "cap:sync:android": "npx cap sync android",

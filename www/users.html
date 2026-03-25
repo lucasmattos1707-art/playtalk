@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PlayTalk | Liga PlayTalk</title>
+  <title>PlayTalk | Usuarios</title>
   <style>
     @font-face {
       font-family: "PlaytalkDisplay";
@@ -81,12 +81,12 @@
       font-size: 14px;
     }
 
-    .league-list {
+    .users-list {
       display: grid;
       gap: 10px;
     }
 
-    .league-row {
+    .users-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 14px;
@@ -97,7 +97,7 @@
       background: rgba(255, 255, 255, 0.03);
     }
 
-    .league-row.is-header {
+    .users-row.is-header {
       border-color: var(--line-strong);
       background: rgba(126, 208, 255, 0.08);
       color: #dff2ff;
@@ -106,19 +106,19 @@
       text-transform: uppercase;
     }
 
-    .league-row.is-empty {
+    .users-row.is-empty {
       grid-template-columns: 1fr;
       justify-items: center;
       text-align: center;
       color: var(--muted);
     }
 
-    .league-name,
-    .league-count {
+    .users-name,
+    .users-count {
       min-width: 0;
     }
 
-    .league-name {
+    .users-name {
       font-size: 18px;
       font-weight: 700;
       white-space: nowrap;
@@ -126,7 +126,7 @@
       text-overflow: ellipsis;
     }
 
-    .league-count {
+    .users-count {
       font-size: 18px;
       font-weight: 700;
       color: var(--accent);
@@ -143,12 +143,12 @@
         border-radius: 24px;
       }
 
-      .league-row {
+      .users-row {
         padding: 14px 12px;
       }
 
-      .league-name,
-      .league-count {
+      .users-name,
+      .users-count {
         font-size: 16px;
       }
     }
@@ -157,12 +157,14 @@
 <body>
   <main class="page">
     <section class="panel">
-      <h1 class="title">Liga PlayTalk</h1>
-      <p class="status" id="rankStatus">Carregando usuarios...</p>
-      <section class="league-list" id="leagueList" aria-live="polite"></section>
+      <h1 class="title">Usuarios</h1>
+      <p class="status" id="usersStatus">Carregando usuarios...</p>
+      <section class="users-list" id="usersList" aria-live="polite"></section>
     </section>
   </main>
 
-  <script src="js/rank-page.js"></script>
+  <script src="js/apk-config.js"></script>
+  <script src="js/api-config.js"></script>
+  <script src="js/users-page.js"></script>
 </body>
 </html>

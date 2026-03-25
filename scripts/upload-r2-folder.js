@@ -212,6 +212,8 @@ function buildSignedHeaders(config, method, objectKey, payloadHash, extraHeaders
 
 function getContentType(filePath) {
   switch (path.extname(filePath).toLowerCase()) {
+    case ".html":
+      return "text/html; charset=utf-8";
     case ".json":
       return "application/json; charset=utf-8";
     case ".webp":
