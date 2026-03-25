@@ -102,6 +102,95 @@ const databaseTarget = describeDatabaseTarget();
 const pool = (DATABASE_URL || DATABASE_CONFIG.host)
   ? new Pool(DATABASE_CONFIG)
   : null;
+let flashcardRankingsTableReadyPromise = null;
+
+const FLASHCARD_RANKING_ORDER_SQL = 'flashcards_count DESC, updated_at ASC, player_number ASC';
+
+const normalizeFlashcardsCount = (value) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return 0;
+  }
+  return parsed;
+};
+
+const ensureFlashcardRankingsTable = async () => {
+  if (!pool) return false;
+
+  if (!flashcardRankingsTableReadyPromise) {
+    flashcardRankingsTableReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.flashcard_rankings (
+          player_id text PRIMARY KEY,
+          player_number integer UNIQUE NOT NULL,
+          flashcards_count integer NOT NULL DEFAULT 0,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS flashcard_rankings_count_idx
+        ON public.flashcard_rankings (flashcards_count DESC, updated_at ASC, player_number ASC)
+      `);
+      return true;
+    })().catch((error) => {
+      flashcardRankingsTableReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return flashcardRankingsTableReadyPromise;
+};
+
+const upsertFlashcardRankingPlayer = async (playerId, flashcardsCount) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  await ensureFlashcardRankingsTable();
+
+  const normalizedPlayerId = typeof playerId === 'string' ? playerId.trim().slice(0, 96) : '';
+  const normalizedCount = normalizeFlashcardsCount(flashcardsCount);
+
+  if (!normalizedPlayerId) {
+    const error = new Error('playerId invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const updatedResult = await pool.query(
+    `UPDATE public.flashcard_rankings
+     SET flashcards_count = $2,
+         updated_at = now()
+     WHERE player_id = $1
+     RETURNING player_id, player_number, flashcards_count, created_at, updated_at`,
+    [normalizedPlayerId, normalizedCount]
+  );
+
+  if (updatedResult.rows.length) {
+    return updatedResult.rows[0];
+  }
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const playerNumber = Math.floor(100000 + (Math.random() * 900000));
+    try {
+      const insertedResult = await pool.query(
+        `INSERT INTO public.flashcard_rankings (player_id, player_number, flashcards_count)
+         VALUES ($1, $2, $3)
+         RETURNING player_id, player_number, flashcards_count, created_at, updated_at`,
+        [normalizedPlayerId, playerNumber, normalizedCount]
+      );
+      return insertedResult.rows[0];
+    } catch (error) {
+      if (error?.code === '23505') {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new Error('Nao foi possivel gerar um numero aleatorio para o ranking.');
+};
 
 const logDatabaseConnectionStatus = async () => {
   if (!pool) {
@@ -115,6 +204,7 @@ const logDatabaseConnectionStatus = async () => {
 
   try {
     await pool.query('SELECT 1');
+    await ensureFlashcardRankingsTable();
     console.log('Conexão com Postgres validada com sucesso.');
   } catch (error) {
     console.error('Falha ao conectar no Postgres:', {
@@ -1482,6 +1572,151 @@ window.API_CONFIG = Object.assign({}, window.API_CONFIG || {}, {
 });`);
 });
 
+app.get('/api/rankings/flashcards', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await ensureFlashcardRankingsTable();
+
+    const requestedLimit = Number.parseInt(req.query.limit, 10);
+    const limit = Number.isInteger(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, 100)
+      : 50;
+    const playerId = typeof req.query.playerId === 'string'
+      ? req.query.playerId.trim().slice(0, 96)
+      : '';
+
+    const rankingPromise = pool.query(
+      `WITH ranked AS (
+         SELECT
+           player_id,
+           player_number,
+           flashcards_count,
+           created_at,
+           updated_at,
+           ROW_NUMBER() OVER (ORDER BY ${FLASHCARD_RANKING_ORDER_SQL}) AS rank
+         FROM public.flashcard_rankings
+       )
+       SELECT
+         player_id,
+         player_number,
+         flashcards_count,
+         created_at,
+         updated_at,
+         rank
+       FROM ranked
+       ORDER BY rank
+       LIMIT $1`,
+      [limit]
+    );
+
+    const playerPromise = playerId
+      ? pool.query(
+        `WITH ranked AS (
+           SELECT
+             player_id,
+             player_number,
+             flashcards_count,
+             created_at,
+             updated_at,
+             ROW_NUMBER() OVER (ORDER BY ${FLASHCARD_RANKING_ORDER_SQL}) AS rank
+           FROM public.flashcard_rankings
+         )
+         SELECT
+           player_id,
+           player_number,
+           flashcards_count,
+           created_at,
+           updated_at,
+           rank
+         FROM ranked
+         WHERE player_id = $1
+         LIMIT 1`,
+        [playerId]
+      )
+      : Promise.resolve({ rows: [] });
+
+    const [rankingResult, playerResult] = await Promise.all([rankingPromise, playerPromise]);
+
+    res.json({
+      success: true,
+      ranking: rankingResult.rows.map((row) => ({
+        rank: Number(row.rank) || 0,
+        playerId: row.player_id,
+        playerNumber: Number(row.player_number) || 0,
+        flashcardsCount: Number(row.flashcards_count) || 0,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      })),
+      player: playerResult.rows[0]
+        ? {
+          rank: Number(playerResult.rows[0].rank) || 0,
+          playerId: playerResult.rows[0].player_id,
+          playerNumber: Number(playerResult.rows[0].player_number) || 0,
+          flashcardsCount: Number(playerResult.rows[0].flashcards_count) || 0,
+          createdAt: playerResult.rows[0].created_at,
+          updatedAt: playerResult.rows[0].updated_at
+        }
+        : null
+    });
+  } catch (error) {
+    console.error('Erro ao listar ranking de flashcards:', error);
+    res.status(500).json({ success: false, message: 'Erro ao carregar ranking de flashcards.' });
+  }
+});
+
+app.post('/api/rankings/flashcards', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const playerId = typeof req.body?.playerId === 'string'
+      ? req.body.playerId.trim().slice(0, 96)
+      : '';
+
+    if (!playerId) {
+      res.status(400).json({ success: false, message: 'playerId e obrigatorio.' });
+      return;
+    }
+
+    const record = await upsertFlashcardRankingPlayer(playerId, req.body?.flashcardsCount);
+    const playerRankResult = await pool.query(
+      `WITH ranked AS (
+         SELECT
+           player_id,
+           ROW_NUMBER() OVER (ORDER BY ${FLASHCARD_RANKING_ORDER_SQL}) AS rank
+         FROM public.flashcard_rankings
+       )
+       SELECT rank
+       FROM ranked
+       WHERE player_id = $1
+       LIMIT 1`,
+      [playerId]
+    );
+
+    res.json({
+      success: true,
+      playerId: record.player_id,
+      playerNumber: Number(record.player_number) || 0,
+      flashcardsCount: Number(record.flashcards_count) || 0,
+      updatedAt: record.updated_at,
+      rank: Number(playerRankResult.rows[0]?.rank) || 0
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao salvar ranking de flashcards:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: statusCode === 400 ? 'playerId invalido.' : 'Erro ao salvar ranking de flashcards.'
+    });
+  }
+});
+
 app.get('/api/r2-media/:objectKey(*)', async (req, res) => {
   try {
     if (!isR2FluencyConfigured()) {
@@ -1713,6 +1948,8 @@ app.use((req, res, next) => {
     '/database/',
     '/flashcards',
     '/flashcards/',
+    '/rank',
+    '/rank/',
     '/storage',
     '/storage/',
     '/storage-debug',
@@ -1805,6 +2042,10 @@ app.get(['/database', '/database/'], (req, res) => {
 
 app.get(['/flashcards', '/flashcards/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'flashcards.html'));
+});
+
+app.get(['/rank', '/rank/'], (req, res) => {
+  res.sendFile(path.join(staticDir, 'rank.html'));
 });
 
 app.get(['/storage', '/storage/'], (req, res) => {

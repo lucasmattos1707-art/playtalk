@@ -2024,6 +2024,10 @@
             <p id="allSectionCopy">Carregando seus flashcards...</p>
           </div>
           <div class="actions">
+            <a class="btn" href="/rank">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v2h-1v2.5A4.5 4.5 0 0 1 12.75 13v1.55H16a1 1 0 0 1 1 1V18H7v-2.45a1 1 0 0 1 1-1h3.25V13A4.5 4.5 0 0 1 8 8.5V6H7V4zm3 2v2.5a2.5 2.5 0 1 0 5 0V6h-5zM5 5h2v2H6.5A1.5 1.5 0 0 0 5 8.5V9h2a3.93 3.93 0 0 1-.5-2V5zm12 0h2v2a3 3 0 0 1-.5 2H20v-.5A1.5 1.5 0 0 0 18.5 7H17V5z"/></svg>
+              <span class="btn__label">Ranking</span>
+            </a>
             <button class="btn" id="watchFlashcardsBtn" type="button">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.14v13.72c0 .79.87 1.27 1.54.84l10.29-6.86a1 1 0 0 0 0-1.68L9.54 4.3A1 1 0 0 0 8 5.14z"/></svg>
               <span class="btn__label">Assistir</span>
@@ -2202,6 +2206,7 @@
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
       const TIME_OFFSET_STORAGE_KEY = 'playtalk-flashcards-time-offset-v1';
+      const RANK_PLAYER_ID_STORAGE_KEY = 'playtalk-flashcards-player-id-v1';
       const recognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
       const openAiStt = window.PlaytalkOpenAiStt || null;
       const STAR_ICON_PATH = 'SVG/codex-icons/star.svg';
@@ -2250,6 +2255,12 @@
         ownedIds: new Set(),
         stats: { playTimeMs: 0, speakings: 0, listenings: 0 },
         timeOffsetMs: 0,
+        rankPlayerId: '',
+        rankPlayerNumber: null,
+        rankSyncInFlight: false,
+        rankSyncQueued: false,
+        rankLastSyncedCount: null,
+        rankSyncTimer: 0,
         secretBuffer: '',
         game: {
           active: false,
@@ -2601,6 +2612,84 @@
         syncOwnedIdsFromProgress();
         saveOwnedIds();
         localStorage.setItem(USER_PROGRESS_STORAGE_KEY, JSON.stringify(Array.from(state.userCards.values())));
+        scheduleFlashcardRankingSync();
+      }
+
+      function buildApiUrl(path) {
+        if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
+          return window.PlaytalkApi.url(path);
+        }
+        return path;
+      }
+
+      function createAnonymousRankPlayerId() {
+        return `flash-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      }
+
+      function getOrCreateRankPlayerId() {
+        try {
+          const stored = localStorage.getItem(RANK_PLAYER_ID_STORAGE_KEY) || '';
+          if (stored.trim()) {
+            return stored.trim();
+          }
+          const created = createAnonymousRankPlayerId();
+          localStorage.setItem(RANK_PLAYER_ID_STORAGE_KEY, created);
+          return created;
+        } catch (_error) {
+          return createAnonymousRankPlayerId();
+        }
+      }
+
+      async function syncFlashcardRankingNow() {
+        if (!state.rankPlayerId) return;
+
+        if (state.rankSyncInFlight) {
+          state.rankSyncQueued = true;
+          return;
+        }
+
+        const currentCount = state.userCards.size;
+        if (state.rankLastSyncedCount === currentCount && state.rankPlayerNumber) {
+          return;
+        }
+
+        state.rankSyncInFlight = true;
+        try {
+          const response = await fetch(buildApiUrl('/api/rankings/flashcards'), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              playerId: state.rankPlayerId,
+              flashcardsCount: currentCount
+            })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Falha ao sincronizar ranking.');
+          }
+          state.rankPlayerNumber = Number(payload.playerNumber) || state.rankPlayerNumber || null;
+          state.rankLastSyncedCount = currentCount;
+        } catch (error) {
+          console.warn('Falha ao sincronizar ranking de flashcards:', error);
+        } finally {
+          state.rankSyncInFlight = false;
+          if (state.rankSyncQueued) {
+            state.rankSyncQueued = false;
+            scheduleFlashcardRankingSync(250);
+          }
+        }
+      }
+
+      function scheduleFlashcardRankingSync(delayMs = 900) {
+        if (state.rankSyncTimer) {
+          window.clearTimeout(state.rankSyncTimer);
+        }
+        state.rankSyncTimer = window.setTimeout(() => {
+          state.rankSyncTimer = 0;
+          syncFlashcardRankingNow();
+        }, Math.max(0, Number(delayMs) || 0));
       }
 
       function phaseMeta(phaseIndex) {
@@ -4717,6 +4806,7 @@
         state.stats = readUserStats();
         state.userCards = readUserProgress();
         syncOwnedIdsFromProgress();
+        state.rankPlayerId = getOrCreateRankPlayerId();
         loadSelectedGameCount();
         syncWatchControls();
         bindEvents();
@@ -4724,6 +4814,7 @@
         updateGameChips();
         renderMiniCards(els.allGrid, [], 'Carregando flashcards...');
         els.flashcardsHomeToggle.setAttribute('aria-label', 'Mostrar resumo');
+        scheduleFlashcardRankingSync(200);
 
         const gameHeadCopy = els.gameHeaderCopy?.parentElement || null;
         if (gameHeadCopy) {
