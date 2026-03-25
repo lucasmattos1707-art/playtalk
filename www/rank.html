@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PlayTalk | Ranking Flashcards</title>
+  <title>PlayTalk | Liga Playtalk</title>
   <style>
     @font-face {
       font-family: "Soopafre";
@@ -14,16 +14,15 @@
     }
 
     :root {
-      --bg-1: #071422;
-      --bg-2: #0d2340;
-      --panel: rgba(10, 24, 42, 0.84);
-      --panel-strong: rgba(9, 22, 38, 0.94);
-      --border: rgba(255, 255, 255, 0.14);
-      --text: #f6fbff;
-      --muted: #9fc1df;
-      --gold: #ffd46d;
-      --cyan: #78dcff;
-      --green: #73f1b1;
+      --bg-1: #071321;
+      --bg-2: #0d2643;
+      --panel: rgba(10, 22, 38, 0.88);
+      --line: rgba(255, 255, 255, 0.12);
+      --text: #f8fbff;
+      --muted: #9fbed9;
+      --gold: #ffd56d;
+      --cyan: #74deff;
+      --green: #74f1b3;
       --shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
       --radius: 28px;
     }
@@ -36,8 +35,8 @@
       font-family: "Soopafre", Arial, sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at top, rgba(120, 220, 255, 0.18), transparent 32%),
-        radial-gradient(circle at bottom left, rgba(115, 241, 177, 0.16), transparent 30%),
+        radial-gradient(circle at top, rgba(116, 222, 255, 0.16), transparent 32%),
+        radial-gradient(circle at bottom left, rgba(116, 241, 179, 0.12), transparent 34%),
         linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 100%);
     }
 
@@ -45,7 +44,6 @@
     body::after {
       content: "";
       position: fixed;
-      inset: auto;
       width: 180px;
       height: 180px;
       border-radius: 50%;
@@ -67,9 +65,9 @@
     }
 
     .shell {
-      width: min(1120px, calc(100vw - 32px));
+      width: min(1120px, calc(100vw - 28px));
       margin: 0 auto;
-      padding: 28px 0 40px;
+      padding: 22px 0 42px;
       position: relative;
       z-index: 1;
     }
@@ -77,57 +75,39 @@
     .hero,
     .panel {
       background: var(--panel);
-      border: 1px solid var(--border);
+      border: 1px solid var(--line);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       backdrop-filter: blur(12px);
     }
 
     .hero {
-      padding: 22px;
+      padding: 24px;
       margin-bottom: 18px;
-    }
-
-    .hero-top {
       display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 22px;
-    }
-
-    .eyebrow {
-      display: inline-flex;
       align-items: center;
-      gap: 10px;
-      padding: 8px 14px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--gold);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      font-size: 12px;
+      justify-content: space-between;
+      gap: 18px;
     }
 
-    h1 {
-      margin: 14px 0 8px;
-      font-size: clamp(34px, 6vw, 58px);
-      line-height: 0.96;
-      letter-spacing: 0.02em;
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(42px, 8vw, 64px);
+      line-height: 0.94;
+      letter-spacing: 0.03em;
     }
 
     .hero-copy {
-      margin: 0;
-      max-width: 680px;
+      margin: 10px 0 0;
       color: var(--muted);
-      font-size: 16px;
+      font-size: 18px;
       line-height: 1.5;
     }
 
     .hero-actions {
       display: flex;
-      flex-wrap: wrap;
       gap: 12px;
+      flex-wrap: wrap;
       justify-content: flex-end;
     }
 
@@ -135,7 +115,6 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
       min-height: 46px;
       padding: 12px 18px;
       border-radius: 999px;
@@ -151,7 +130,7 @@
     .btn:hover {
       transform: translateY(-1px);
       background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(255, 255, 255, 0.26);
+      border-color: rgba(255, 255, 255, 0.24);
     }
 
     .btn-primary {
@@ -160,84 +139,7 @@
       border-color: transparent;
     }
 
-    .hero-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-      gap: 16px;
-    }
-
     .panel {
-      padding: 20px;
-    }
-
-    .panel h2 {
-      margin: 0 0 12px;
-      font-size: 22px;
-      letter-spacing: 0.02em;
-    }
-
-    .summary-copy,
-    .status-copy {
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .player-card {
-      display: grid;
-      gap: 14px;
-      min-height: 100%;
-      background: linear-gradient(180deg, rgba(12, 37, 66, 0.96) 0%, rgba(8, 22, 39, 0.98) 100%);
-    }
-
-    .player-badge {
-      display: inline-flex;
-      width: fit-content;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 14px;
-      border-radius: 999px;
-      background: rgba(115, 241, 177, 0.12);
-      color: var(--green);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .player-number {
-      font-size: clamp(34px, 7vw, 56px);
-      line-height: 0.95;
-      letter-spacing: 0.04em;
-    }
-
-    .player-stats {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .stat {
-      padding: 14px;
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .stat-label {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 6px;
-    }
-
-    .stat-value {
-      font-size: 22px;
-    }
-
-    .board {
-      padding: 0;
       overflow: hidden;
     }
 
@@ -250,15 +152,27 @@
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
-    .board-head p {
+    .board-head h2 {
       margin: 0;
+      font-size: 24px;
+    }
+
+    .board-head p,
+    .board-meta {
+      margin: 6px 0 0;
       color: var(--muted);
       font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .self-slot {
+      padding: 18px 20px 0;
     }
 
     .leaderboard {
       display: grid;
       gap: 0;
+      padding-bottom: 8px;
     }
 
     .leaderboard-empty {
@@ -270,9 +184,9 @@
 
     .leaderboard-row {
       display: grid;
-      grid-template-columns: 86px minmax(0, 1fr) 170px 170px;
+      grid-template-columns: 78px 98px minmax(0, 1fr) 180px;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       padding: 16px 20px;
       border-top: 1px solid rgba(255, 255, 255, 0.07);
       transition: background 160ms ease;
@@ -286,10 +200,17 @@
       background: linear-gradient(90deg, rgba(18, 166, 255, 0.16) 0%, rgba(92, 230, 255, 0.06) 100%);
     }
 
+    .leaderboard-row.is-self {
+      border-top: 0;
+      border-radius: 22px;
+      background: linear-gradient(90deg, rgba(255, 213, 109, 0.12) 0%, rgba(18, 166, 255, 0.08) 100%);
+      margin-bottom: 12px;
+    }
+
     .rank-pill {
       display: inline-flex;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
       width: 56px;
       height: 56px;
       border-radius: 18px;
@@ -298,14 +219,55 @@
       font-size: 24px;
     }
 
+    .avatar-stack {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .avatar-box,
+    .avatar-upload {
+      width: 54px;
+      height: 54px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 20px;
+      text-transform: uppercase;
+    }
+
+    .avatar-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .avatar-upload {
+      background: rgba(116, 241, 179, 0.12);
+      color: var(--green);
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    .avatar-upload:hover {
+      transform: translateY(-1px);
+      border-color: rgba(116, 241, 179, 0.34);
+      background: rgba(116, 241, 179, 0.18);
+    }
+
     .player-line {
       display: grid;
       gap: 6px;
     }
 
     .player-line strong {
-      font-size: 20px;
-      letter-spacing: 0.04em;
+      font-size: 22px;
+      letter-spacing: 0.03em;
     }
 
     .player-line span,
@@ -313,6 +275,7 @@
     .updated-line {
       color: var(--muted);
       font-size: 14px;
+      line-height: 1.5;
     }
 
     .count-strong {
@@ -334,17 +297,21 @@
     }
 
     @media (max-width: 920px) {
-      .hero-grid {
-        grid-template-columns: 1fr;
+      .hero {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .hero-actions {
+        justify-content: flex-start;
       }
 
       .leaderboard-row {
-        grid-template-columns: 70px minmax(0, 1fr);
+        grid-template-columns: 70px 86px minmax(0, 1fr);
       }
 
-      .count-line,
-      .updated-line {
-        margin-left: 82px;
+      .count-line {
+        grid-column: 2 / -1;
       }
     }
 
@@ -359,25 +326,17 @@
         border-radius: 22px;
       }
 
-      .hero-top {
-        flex-direction: column;
-      }
-
-      .hero-actions {
-        justify-content: flex-start;
-      }
-
-      .player-stats {
-        grid-template-columns: 1fr;
-      }
-
       .leaderboard-row {
-        padding: 16px;
+        grid-template-columns: 64px 1fr;
+      }
+
+      .avatar-stack {
+        grid-column: 2;
       }
 
       .count-line,
       .updated-line {
-        margin-left: 0;
+        grid-column: 2;
       }
     }
   </style>
@@ -385,65 +344,36 @@
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="hero-top">
-        <div>
-          <span class="eyebrow">PlayTalk Flashcards Rank</span>
-          <h1>Quem juntou mais flashcards?</h1>
-          <p class="hero-copy">
-            Cada jogador ganha um identificador anonimo quando joga em <strong>/flashcards</strong>.
-            O ranking usa o total salvo no seu progresso local e sincronizado no Postgres.
-          </p>
-        </div>
-        <div class="hero-actions">
-          <a class="btn" href="/flashcards">Ir para /flashcards</a>
-          <button class="btn btn-primary" id="refreshBtn" type="button">Atualizar ranking</button>
-        </div>
+      <div>
+        <h1>Liga Playtalk</h1>
+        <p class="hero-copy" id="playerHeadline">Carregando sua posicao...</p>
       </div>
-
-      <div class="hero-grid">
-        <section class="panel">
-          <h2>Como funciona</h2>
-          <p class="summary-copy">
-            Nao precisa criar conta. Quando voce joga, o app cria um codigo anonimo local e envia
-            apenas o total dos seus flashcards para o backend. O placar mostra quem esta liderando agora.
-          </p>
-        </section>
-
-        <section class="panel player-card" id="playerCard">
-          <span class="player-badge">Seu jogador anonimo</span>
-          <div class="player-number" id="playerNumber">Carregando...</div>
-          <p class="status-copy" id="playerStatus">Buscando seu lugar no ranking.</p>
-          <div class="player-stats">
-            <div class="stat">
-              <span class="stat-label">Posicao</span>
-              <strong class="stat-value" id="playerRank">-</strong>
-            </div>
-            <div class="stat">
-              <span class="stat-label">Flashcards</span>
-              <strong class="stat-value" id="playerCount">-</strong>
-            </div>
-          </div>
-        </section>
+      <div class="hero-actions">
+        <a class="btn" href="/flashcards">Ir para /flashcards</a>
+        <button class="btn btn-primary" id="refreshBtn" type="button">Atualizar ranking</button>
       </div>
     </section>
 
-    <section class="panel board">
+    <section class="panel">
       <div class="board-head">
         <div>
-          <h2>Ranking publico</h2>
-          <p>Top jogadores de /flashcards sincronizados com o Postgres.</p>
+          <h2>Ranking de flashcards</h2>
+          <p>Os nomes aparecem conforme cada jogador entra em /flashcards e sincroniza seu total.</p>
         </div>
-        <span class="summary-copy" id="lastUpdated">Atualizando...</span>
+        <span class="board-meta" id="lastUpdated">Atualizando...</span>
       </div>
+
+      <div class="self-slot" id="selfSlot"></div>
+
       <div class="leaderboard" id="leaderboard">
         <div class="leaderboard-empty">Carregando ranking...</div>
       </div>
     </section>
 
-    <p class="footer-note">
-      Dica: jogue em /flashcards para aparecer aqui automaticamente com um numero aleatorio.
-    </p>
+    <p class="footer-note">Clique no quadrado verde ao lado da sua foto para trocar seu avatar.</p>
   </main>
+
+  <input id="avatarUploadInput" type="file" accept="image/*" hidden>
 
   <script src="js/apk-config.js"></script>
   <script src="js/api-config.js"></script>

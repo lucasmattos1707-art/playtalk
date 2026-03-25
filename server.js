@@ -103,6 +103,7 @@ const pool = (DATABASE_URL || DATABASE_CONFIG.host)
   ? new Pool(DATABASE_CONFIG)
   : null;
 let flashcardRankingsTableReadyPromise = null;
+let usersAvatarColumnReadyPromise = null;
 
 const FLASHCARD_RANKING_ORDER_SQL = 'flashcards_count DESC, updated_at ASC, player_number ASC';
 
@@ -122,11 +123,21 @@ const ensureFlashcardRankingsTable = async () => {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.flashcard_rankings (
           player_id text PRIMARY KEY,
+          user_id integer,
           player_number integer UNIQUE NOT NULL,
           flashcards_count integer NOT NULL DEFAULT 0,
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now()
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.flashcard_rankings
+        ADD COLUMN IF NOT EXISTS user_id integer
+      `);
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS flashcard_rankings_user_id_idx
+        ON public.flashcard_rankings (user_id)
+        WHERE user_id IS NOT NULL
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS flashcard_rankings_count_idx
@@ -142,18 +153,93 @@ const ensureFlashcardRankingsTable = async () => {
   return flashcardRankingsTableReadyPromise;
 };
 
-const upsertFlashcardRankingPlayer = async (playerId, flashcardsCount) => {
+const buildFlashcardRankingPlayerId = (userId) => `user:${userId}`;
+
+const ensureUsersAvatarColumn = async () => {
+  if (!pool) return false;
+
+  if (!usersAvatarColumnReadyPromise) {
+    usersAvatarColumnReadyPromise = (async () => {
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS avatar_image text
+      `);
+      return true;
+    })().catch((error) => {
+      usersAvatarColumnReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return usersAvatarColumnReadyPromise;
+};
+
+const mapPublicUser = (user) => ({
+  id: Number(user?.id) || 0,
+  username: String(user?.email || user?.username || '').trim(),
+  avatar_image: String(user?.avatar_image || '').trim(),
+  created_at: user?.created_at || null
+});
+
+const readUserById = async (userId) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    return null;
+  }
+
+  await ensureUsersAvatarColumn();
+
+  const result = await pool.query(
+    `SELECT id, email, avatar_image, created_at
+     FROM public.users
+     WHERE id = $1
+     LIMIT 1`,
+    [normalizedUserId]
+  );
+
+  return result.rows[0] || null;
+};
+
+const normalizeAvatarImage = (value) => {
+  const avatar = typeof value === 'string' ? value.trim() : '';
+  if (!avatar) return '';
+
+  const isDataImage = /^data:image\/(?:png|jpe?g|webp|gif|svg\+xml);base64,[a-z0-9+/=\s]+$/i.test(avatar);
+  const isRemoteImage = /^https?:\/\/.+/i.test(avatar);
+
+  if (!isDataImage && !isRemoteImage) {
+    const error = new Error('Avatar invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const maxLength = isDataImage ? 6_500_000 : 2048;
+  if (avatar.length > maxLength) {
+    const error = new Error('Avatar muito grande.');
+    error.statusCode = 413;
+    throw error;
+  }
+
+  return avatar;
+};
+
+const upsertFlashcardRankingForUser = async (userId, flashcardsCount) => {
   if (!pool) {
     throw new Error('DATABASE_URL nao configurada.');
   }
 
   await ensureFlashcardRankingsTable();
 
-  const normalizedPlayerId = typeof playerId === 'string' ? playerId.trim().slice(0, 96) : '';
+  const normalizedUserId = Number.parseInt(userId, 10);
   const normalizedCount = normalizeFlashcardsCount(flashcardsCount);
+  const normalizedPlayerId = buildFlashcardRankingPlayerId(normalizedUserId);
 
-  if (!normalizedPlayerId) {
-    const error = new Error('playerId invalido.');
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    const error = new Error('userId invalido.');
     error.statusCode = 400;
     throw error;
   }
@@ -161,10 +247,11 @@ const upsertFlashcardRankingPlayer = async (playerId, flashcardsCount) => {
   const updatedResult = await pool.query(
     `UPDATE public.flashcard_rankings
      SET flashcards_count = $2,
+         player_id = $3,
          updated_at = now()
-     WHERE player_id = $1
-     RETURNING player_id, player_number, flashcards_count, created_at, updated_at`,
-    [normalizedPlayerId, normalizedCount]
+     WHERE user_id = $1
+     RETURNING player_id, user_id, player_number, flashcards_count, created_at, updated_at`,
+    [normalizedUserId, normalizedCount, normalizedPlayerId]
   );
 
   if (updatedResult.rows.length) {
@@ -175,14 +262,26 @@ const upsertFlashcardRankingPlayer = async (playerId, flashcardsCount) => {
     const playerNumber = Math.floor(100000 + (Math.random() * 900000));
     try {
       const insertedResult = await pool.query(
-        `INSERT INTO public.flashcard_rankings (player_id, player_number, flashcards_count)
-         VALUES ($1, $2, $3)
-         RETURNING player_id, player_number, flashcards_count, created_at, updated_at`,
-        [normalizedPlayerId, playerNumber, normalizedCount]
+        `INSERT INTO public.flashcard_rankings (player_id, user_id, player_number, flashcards_count)
+         VALUES ($1, $2, $3, $4)
+         RETURNING player_id, user_id, player_number, flashcards_count, created_at, updated_at`,
+        [normalizedPlayerId, normalizedUserId, playerNumber, normalizedCount]
       );
       return insertedResult.rows[0];
     } catch (error) {
       if (error?.code === '23505') {
+        const retryResult = await pool.query(
+          `UPDATE public.flashcard_rankings
+           SET flashcards_count = $2,
+               player_id = $3,
+               updated_at = now()
+           WHERE user_id = $1
+           RETURNING player_id, user_id, player_number, flashcards_count, created_at, updated_at`,
+          [normalizedUserId, normalizedCount, normalizedPlayerId]
+        );
+        if (retryResult.rows.length) {
+          return retryResult.rows[0];
+        }
         continue;
       }
       throw error;
@@ -1121,6 +1220,21 @@ function clearAuthCookie(res) {
   res.setHeader('Set-Cookie', 'playtalk_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
 }
 
+async function readAuthenticatedUserFromRequest(req) {
+  const payload = getAuthenticatedUserFromRequest(req);
+  if (!payload) return null;
+  const user = await readUserById(payload.sub);
+  if (user) {
+    return user;
+  }
+  return {
+    id: Number(payload.sub) || 0,
+    email: String(payload.username || '').trim(),
+    avatar_image: '',
+    created_at: null
+  };
+}
+
 app.post('/register', async (req, res) => {
   try {
     if (!pool) {
@@ -1137,29 +1251,15 @@ app.post('/register', async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const email = buildLegacyEmailFromUsername(username);
-    const avatarImage = typeof req.body.avatar === 'string'
-      ? req.body.avatar.trim().slice(0, 255)
-      : '';
-    let result;
-    try {
-      result = await pool.query(
-        `INSERT INTO public.users (email, password_hash, avatar_image)
-         VALUES ($1, $2, $3)
-         RETURNING id, email, avatar_image, created_at`,
-        [email, passwordHash, avatarImage || null]
-      );
-    } catch (error) {
-      if (error && error.code === '42703') {
-        result = await pool.query(
-          `INSERT INTO public.users (email, password_hash)
-           VALUES ($1, $2)
-           RETURNING id, email, created_at`,
-          [email, passwordHash]
-        );
-      } else {
-        throw error;
-      }
-    }
+    const avatarImage = normalizeAvatarImage(req.body.avatar || '');
+    await ensureUsersAvatarColumn();
+
+    const result = await pool.query(
+      `INSERT INTO public.users (email, password_hash, avatar_image)
+       VALUES ($1, $2, $3)
+       RETURNING id, email, avatar_image, created_at`,
+      [email, passwordHash, avatarImage || null]
+    );
 
     const user = result.rows[0];
     const token = createAuthToken({ id: user.id, email: user.email });
@@ -1168,12 +1268,7 @@ app.post('/register', async (req, res) => {
     }
     res.status(201).json({
       success: true,
-      user: {
-        id: user.id,
-        username: user.email,
-        avatar_image: user.avatar_image || '',
-        created_at: user.created_at
-      },
+      user: mapPublicUser(user),
       token
     });
   } catch (error) {
@@ -1199,22 +1294,12 @@ app.post('/login', async (req, res) => {
       return;
     }
 
-    let result;
-    try {
-      result = await pool.query(
-        'SELECT id, email, avatar_image, password_hash, created_at FROM public.users WHERE email = $1',
-        [username]
-      );
-    } catch (error) {
-      if (error && error.code === '42703') {
-        result = await pool.query(
-          'SELECT id, email, password_hash, created_at FROM public.users WHERE email = $1',
-          [username]
-        );
-      } else {
-        throw error;
-      }
-    }
+    await ensureUsersAvatarColumn();
+
+    const result = await pool.query(
+      'SELECT id, email, avatar_image, password_hash, created_at FROM public.users WHERE email = $1',
+      [username]
+    );
     if (!result.rows.length) {
       res.status(401).json({ success: false, message: 'Nome de usuario ou senha invalidos.' });
       return;
@@ -1236,12 +1321,7 @@ app.post('/login', async (req, res) => {
     res.json({
       success: true,
       token,
-      user: {
-        id: user.id,
-        username: user.email,
-        avatar_image: user.avatar_image || '',
-        created_at: user.created_at
-      }
+      user: mapPublicUser(user)
     });
   } catch (error) {
     console.error('Erro ao autenticar usuario:', error);
@@ -1287,21 +1367,73 @@ app.post('/auth/google-quick', async (req, res) => {
       return;
     }
     setAuthCookie(res, token);
-    res.json({ success: true, token, user });
+    res.json({ success: true, token, user: mapPublicUser(user) });
   } catch (error) {
     console.error('Erro no login rapido com Google:', error);
     res.status(500).json({ success: false, message: 'Erro ao autenticar com Google.' });
   }
 });
 
-app.get('/auth/session', (req, res) => {
-  const payload = getAuthenticatedUserFromRequest(req);
-  if (!payload) {
-    res.status(401).json({ success: false, message: 'Sessão inválida ou expirada.' });
-    return;
-  }
+app.get('/auth/session', async (req, res) => {
+  try {
+    const user = await readAuthenticatedUserFromRequest(req);
+    if (!user) {
+      res.status(401).json({ success: false, message: 'SessÃ£o invÃ¡lida ou expirada.' });
+      return;
+    }
 
-  res.json({ success: true, user: { id: payload.sub, username: payload.username || '' } });
+    res.json({ success: true, user: mapPublicUser(user) });
+  } catch (error) {
+    console.error('Erro ao carregar sessao do usuario:', error);
+    res.status(500).json({ success: false, message: 'Erro ao carregar sessao.' });
+  }
+});
+
+app.patch('/auth/avatar', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessão inválida ou expirada.' });
+      return;
+    }
+
+    const avatarImage = normalizeAvatarImage(req.body?.avatar || req.body?.avatarDataUrl || '');
+
+    await ensureUsersAvatarColumn();
+
+    const result = await pool.query(
+      `UPDATE public.users
+       SET avatar_image = $2
+       WHERE id = $1
+       RETURNING id, email, avatar_image, created_at`,
+      [authUser.id, avatarImage || null]
+    );
+
+    if (!result.rows.length) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessão inválida ou expirada.' });
+      return;
+    }
+
+    res.json({ success: true, user: mapPublicUser(result.rows[0]) });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao atualizar avatar do usuario:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: statusCode === 400
+        ? 'Avatar invalido.'
+        : statusCode === 413
+          ? 'Avatar muito grande.'
+          : 'Erro ao atualizar avatar.'
+    });
+  }
 });
 
 app.post('/logout', (req, res) => {
@@ -1580,28 +1712,35 @@ app.get('/api/rankings/flashcards', async (req, res) => {
     }
 
     await ensureFlashcardRankingsTable();
+    await ensureUsersAvatarColumn();
 
     const requestedLimit = Number.parseInt(req.query.limit, 10);
     const limit = Number.isInteger(requestedLimit) && requestedLimit > 0
       ? Math.min(requestedLimit, 100)
       : 50;
-    const playerId = typeof req.query.playerId === 'string'
-      ? req.query.playerId.trim().slice(0, 96)
-      : '';
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    const currentUserId = Number(authUser?.id) || 0;
 
     const rankingPromise = pool.query(
       `WITH ranked AS (
          SELECT
-           player_id,
-           player_number,
-           flashcards_count,
-           created_at,
-           updated_at,
+           r.user_id,
+           r.player_number,
+           r.flashcards_count,
+           r.created_at,
+           r.updated_at,
+           u.email AS username,
+           COALESCE(u.avatar_image, '') AS avatar_image,
            ROW_NUMBER() OVER (ORDER BY ${FLASHCARD_RANKING_ORDER_SQL}) AS rank
-         FROM public.flashcard_rankings
+         FROM public.flashcard_rankings r
+         JOIN public.users u
+           ON u.id = r.user_id
+         WHERE r.user_id IS NOT NULL
        )
        SELECT
-         player_id,
+         user_id,
+         username,
+         avatar_image,
          player_number,
          flashcards_count,
          created_at,
@@ -1613,29 +1752,36 @@ app.get('/api/rankings/flashcards', async (req, res) => {
       [limit]
     );
 
-    const playerPromise = playerId
+    const playerPromise = currentUserId
       ? pool.query(
         `WITH ranked AS (
            SELECT
-             player_id,
-             player_number,
-             flashcards_count,
-             created_at,
-             updated_at,
+             r.user_id,
+             r.player_number,
+             r.flashcards_count,
+             r.created_at,
+             r.updated_at,
+             u.email AS username,
+             COALESCE(u.avatar_image, '') AS avatar_image,
              ROW_NUMBER() OVER (ORDER BY ${FLASHCARD_RANKING_ORDER_SQL}) AS rank
-           FROM public.flashcard_rankings
+           FROM public.flashcard_rankings r
+           JOIN public.users u
+             ON u.id = r.user_id
+           WHERE r.user_id IS NOT NULL
          )
          SELECT
-           player_id,
+           user_id,
+           username,
+           avatar_image,
            player_number,
            flashcards_count,
            created_at,
            updated_at,
            rank
          FROM ranked
-         WHERE player_id = $1
+         WHERE user_id = $1
          LIMIT 1`,
-        [playerId]
+        [currentUserId]
       )
       : Promise.resolve({ rows: [] });
 
@@ -1645,7 +1791,9 @@ app.get('/api/rankings/flashcards', async (req, res) => {
       success: true,
       ranking: rankingResult.rows.map((row) => ({
         rank: Number(row.rank) || 0,
-        playerId: row.player_id,
+        userId: Number(row.user_id) || 0,
+        username: String(row.username || '').trim(),
+        avatarImage: String(row.avatar_image || '').trim(),
         playerNumber: Number(row.player_number) || 0,
         flashcardsCount: Number(row.flashcards_count) || 0,
         createdAt: row.created_at,
@@ -1654,7 +1802,9 @@ app.get('/api/rankings/flashcards', async (req, res) => {
       player: playerResult.rows[0]
         ? {
           rank: Number(playerResult.rows[0].rank) || 0,
-          playerId: playerResult.rows[0].player_id,
+          userId: Number(playerResult.rows[0].user_id) || 0,
+          username: String(playerResult.rows[0].username || '').trim(),
+          avatarImage: String(playerResult.rows[0].avatar_image || '').trim(),
           playerNumber: Number(playerResult.rows[0].player_number) || 0,
           flashcardsCount: Number(playerResult.rows[0].flashcards_count) || 0,
           createdAt: playerResult.rows[0].created_at,
@@ -1675,33 +1825,34 @@ app.post('/api/rankings/flashcards', async (req, res) => {
       return;
     }
 
-    const playerId = typeof req.body?.playerId === 'string'
-      ? req.body.playerId.trim().slice(0, 96)
-      : '';
-
-    if (!playerId) {
-      res.status(400).json({ success: false, message: 'playerId e obrigatorio.' });
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessão inválida ou expirada.' });
       return;
     }
 
-    const record = await upsertFlashcardRankingPlayer(playerId, req.body?.flashcardsCount);
+    const record = await upsertFlashcardRankingForUser(authUser.id, req.body?.flashcardsCount);
     const playerRankResult = await pool.query(
       `WITH ranked AS (
          SELECT
-           player_id,
+           user_id,
            ROW_NUMBER() OVER (ORDER BY ${FLASHCARD_RANKING_ORDER_SQL}) AS rank
          FROM public.flashcard_rankings
+         WHERE user_id IS NOT NULL
        )
        SELECT rank
        FROM ranked
-       WHERE player_id = $1
+       WHERE user_id = $1
        LIMIT 1`,
-      [playerId]
+      [authUser.id]
     );
 
     res.json({
       success: true,
-      playerId: record.player_id,
+      userId: Number(record.user_id) || Number(authUser.id) || 0,
+      username: String(authUser.email || authUser.username || '').trim(),
+      avatarImage: String(authUser.avatar_image || '').trim(),
       playerNumber: Number(record.player_number) || 0,
       flashcardsCount: Number(record.flashcards_count) || 0,
       updatedAt: record.updated_at,
@@ -1712,7 +1863,11 @@ app.post('/api/rankings/flashcards', async (req, res) => {
     console.error('Erro ao salvar ranking de flashcards:', error);
     res.status(statusCode).json({
       success: false,
-      message: statusCode === 400 ? 'playerId invalido.' : 'Erro ao salvar ranking de flashcards.'
+      message: statusCode === 400
+        ? 'userId invalido.'
+        : statusCode === 401
+          ? 'Sessão inválida ou expirada.'
+          : 'Erro ao salvar ranking de flashcards.'
     });
   }
 });
@@ -1959,6 +2114,8 @@ app.use((req, res, next) => {
     '/login',
     '/register',
     '/logout',
+    '/auth/avatar',
+    '/auth/google-quick',
     '/auth/session',
     '/config.js'
   ]);

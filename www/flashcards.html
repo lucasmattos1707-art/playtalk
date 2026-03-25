@@ -61,6 +61,19 @@
       overflow-x: hidden;
     }
 
+    body.auth-locked {
+      background: #ffffff;
+      color: #10233d;
+      overflow: hidden;
+    }
+
+    body.auth-locked::before,
+    body.auth-locked::after,
+    body.auth-locked .shell,
+    body.auth-locked .flashcards-home-toggle {
+      display: none;
+    }
+
     body.game-open {
       overflow: hidden;
     }
@@ -153,6 +166,143 @@
       width: 26px;
       height: 26px;
       fill: #ffffff;
+    }
+
+    .auth-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 140;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: #ffffff;
+      color: #10233d;
+    }
+
+    body.auth-locked .auth-gate {
+      display: flex;
+    }
+
+    .auth-card {
+      width: min(460px, 100%);
+      display: grid;
+      gap: 18px;
+      padding: 34px 28px 30px;
+      border-radius: 30px;
+      background: #ffffff;
+      border: 1px solid rgba(16, 35, 61, 0.08);
+      box-shadow: 0 28px 80px rgba(16, 35, 61, 0.12);
+      justify-items: center;
+      text-align: center;
+    }
+
+    .auth-logo {
+      width: min(210px, 62vw);
+      height: auto;
+      object-fit: contain;
+    }
+
+    .auth-title {
+      margin: 0;
+      font-size: clamp(34px, 7vw, 48px);
+      line-height: 0.95;
+      color: #11284a;
+    }
+
+    .auth-copy {
+      margin: 0;
+      color: #55708f;
+      font-size: 15px;
+      line-height: 1.5;
+      max-width: 34ch;
+    }
+
+    .auth-switch {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      padding: 6px;
+      border-radius: 999px;
+      background: #eef5fc;
+    }
+
+    .auth-switch__btn {
+      min-height: 48px;
+      border-radius: 999px;
+      background: transparent;
+      color: #537193;
+      font-size: 16px;
+      transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+    }
+
+    .auth-switch__btn.is-active {
+      background: linear-gradient(135deg, #10233d 0%, #244875 100%);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    .auth-form {
+      width: 100%;
+      display: grid;
+      gap: 12px;
+    }
+
+    .auth-field {
+      display: grid;
+      gap: 8px;
+      text-align: left;
+      color: #173153;
+      font-size: 14px;
+    }
+
+    .auth-field input {
+      width: 100%;
+      min-height: 54px;
+      padding: 0 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(19, 49, 83, 0.12);
+      background: #f8fbff;
+      color: #10233d;
+      font: inherit;
+      outline: none;
+      transition: border-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .auth-field input:focus {
+      border-color: rgba(56, 201, 255, 0.64);
+      box-shadow: 0 0 0 4px rgba(56, 201, 255, 0.12);
+    }
+
+    .auth-submit {
+      min-height: 56px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #38c9ff 0%, #61f2a4 100%);
+      color: #06203a;
+      font-size: 18px;
+      font-weight: 700;
+      box-shadow: 0 18px 34px rgba(56, 201, 255, 0.24);
+    }
+
+    .auth-submit:disabled {
+      opacity: 0.55;
+      cursor: wait;
+    }
+
+    .auth-status {
+      min-height: 22px;
+      margin: 0;
+      font-size: 14px;
+      color: #6a819c;
+    }
+
+    .auth-status.is-error {
+      color: #d63a51;
+    }
+
+    .auth-status.is-success {
+      color: #11985b;
     }
 
     .hero,
@@ -2006,6 +2156,31 @@
   </style>
 </head>
 <body class="flashcards-home-collapsed">
+  <section class="auth-gate" id="authGate" aria-modal="true" role="dialog" aria-labelledby="authTitle">
+    <div class="auth-card">
+      <img class="auth-logo" src="SVG/logo.svg" alt="PlayTalk">
+      <div>
+        <h1 class="auth-title" id="authTitle">PlayTalk</h1>
+        <p class="auth-copy" id="authCopy">Entre com seu nome e senha para começar a jogar na Liga Playtalk.</p>
+      </div>
+      <div class="auth-switch" id="authSwitch" aria-label="Escolha entre entrar ou cadastrar">
+        <button class="auth-switch__btn is-active" id="authModeLogin" data-auth-mode="login" type="button">Entrar</button>
+        <button class="auth-switch__btn" id="authModeRegister" data-auth-mode="register" type="button">Cadastrar</button>
+      </div>
+      <form class="auth-form" id="authForm">
+        <label class="auth-field">
+          <span>Nome</span>
+          <input id="authUsername" name="username" type="text" inputmode="text" autocomplete="username" maxlength="32" placeholder="Seu nome no ranking" required>
+        </label>
+        <label class="auth-field">
+          <span>Senha</span>
+          <input id="authPassword" name="password" type="password" autocomplete="current-password" maxlength="120" placeholder="Digite sua senha" required>
+        </label>
+        <button class="auth-submit" id="authSubmitBtn" type="submit">Entrar e jogar</button>
+      </form>
+      <p class="auth-status" id="authStatus" aria-live="polite"></p>
+    </div>
+  </section>
   <button class="flashcards-home-toggle" id="flashcardsHomeToggle" type="button" aria-label="Ocultar resumo">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
   </button>
@@ -2028,6 +2203,9 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v2h-1v2.5A4.5 4.5 0 0 1 12.75 13v1.55H16a1 1 0 0 1 1 1V18H7v-2.45a1 1 0 0 1 1-1h3.25V13A4.5 4.5 0 0 1 8 8.5V6H7V4zm3 2v2.5a2.5 2.5 0 1 0 5 0V6h-5zM5 5h2v2H6.5A1.5 1.5 0 0 0 5 8.5V9h2a3.93 3.93 0 0 1-.5-2V5zm12 0h2v2a3 3 0 0 1-.5 2H20v-.5A1.5 1.5 0 0 0 18.5 7H17V5z"/></svg>
               <span class="btn__label">Ranking</span>
             </a>
+            <button class="btn" id="logoutBtn" type="button">
+              <span class="btn__label">Sair</span>
+            </button>
             <button class="btn" id="watchFlashcardsBtn" type="button">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.14v13.72c0 .79.87 1.27 1.54.84l10.29-6.86a1 1 0 0 0 0-1.68L9.54 4.3A1 1 0 0 0 8 5.14z"/></svg>
               <span class="btn__label">Assistir</span>
@@ -2207,7 +2385,7 @@
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
       const TIME_OFFSET_STORAGE_KEY = 'playtalk-flashcards-time-offset-v1';
-      const RANK_PLAYER_ID_STORAGE_KEY = 'playtalk-flashcards-player-id-v1';
+      const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
       const recognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
       const nativeSpeech = window.PlaytalkNativeSpeech || null;
       const openAiStt = window.PlaytalkOpenAiStt || null;
@@ -2257,8 +2435,8 @@
         ownedIds: new Set(),
         stats: { playTimeMs: 0, speakings: 0, listenings: 0 },
         timeOffsetMs: 0,
-        rankPlayerId: '',
-        rankPlayerNumber: null,
+        user: null,
+        authMode: 'login',
         rankSyncInFlight: false,
         rankSyncQueued: false,
         rankLastSyncedCount: null,
@@ -2305,9 +2483,19 @@
       };
 
       const els = {
+        authGate: document.getElementById('authGate'),
+        authCopy: document.getElementById('authCopy'),
+        authForm: document.getElementById('authForm'),
+        authUsername: document.getElementById('authUsername'),
+        authPassword: document.getElementById('authPassword'),
+        authSubmitBtn: document.getElementById('authSubmitBtn'),
+        authStatus: document.getElementById('authStatus'),
+        authModeLogin: document.getElementById('authModeLogin'),
+        authModeRegister: document.getElementById('authModeRegister'),
         topbar: document.getElementById('topbar'),
         flashcardsHomeToggle: document.getElementById('flashcardsHomeToggle'),
         rankLink: document.getElementById('rankLink'),
+        logoutBtn: document.getElementById('logoutBtn'),
         catalog: document.getElementById('catalog'),
         metrics: document.getElementById('metrics'),
         allGrid: document.getElementById('allGrid'),
@@ -2481,8 +2669,9 @@
       }
 
       function readOwnedIds() {
+        if (!state.user?.id) return [];
         try {
-          const parsed = JSON.parse(localStorage.getItem(OWNED_STORAGE_KEY) || '[]');
+          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(OWNED_STORAGE_KEY)) || '[]');
           return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : [];
         } catch (_error) {
           return [];
@@ -2490,7 +2679,8 @@
       }
 
       function saveOwnedIds() {
-        localStorage.setItem(OWNED_STORAGE_KEY, JSON.stringify(Array.from(state.ownedIds)));
+        if (!state.user?.id) return;
+        localStorage.setItem(userScopedStorageKey(OWNED_STORAGE_KEY), JSON.stringify(Array.from(state.ownedIds)));
       }
 
       function getNowMs() {
@@ -2532,8 +2722,11 @@
       }
 
       function readUserStats() {
+        if (!state.user?.id) {
+          return { playTimeMs: 0, speakings: 0, listenings: 0 };
+        }
         try {
-          const parsed = JSON.parse(localStorage.getItem(USER_STATS_STORAGE_KEY) || 'null') || {};
+          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(USER_STATS_STORAGE_KEY)) || 'null') || {};
           return {
             playTimeMs: Number.isFinite(Number(parsed.playTimeMs)) ? Number(parsed.playTimeMs) : 0,
             speakings: Number.isFinite(Number(parsed.speakings)) ? Number(parsed.speakings) : 0,
@@ -2545,7 +2738,8 @@
       }
 
       function saveUserStats() {
-        localStorage.setItem(USER_STATS_STORAGE_KEY, JSON.stringify({
+        if (!state.user?.id) return;
+        localStorage.setItem(userScopedStorageKey(USER_STATS_STORAGE_KEY), JSON.stringify({
           playTimeMs: Math.max(0, Math.round(Number(state.stats.playTimeMs) || 0)),
           speakings: Math.max(0, Math.round(Number(state.stats.speakings) || 0)),
           listenings: Math.max(0, Math.round(Number(state.stats.listenings) || 0))
@@ -2587,8 +2781,9 @@
       }
 
       function readUserProgress() {
+        if (!state.user?.id) return new Map();
         try {
-          const parsed = JSON.parse(localStorage.getItem(USER_PROGRESS_STORAGE_KEY) || 'null');
+          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(USER_PROGRESS_STORAGE_KEY)) || 'null');
           const records = Array.isArray(parsed) ? parsed.map(normalizeProgressRecord).filter(Boolean) : [];
           if (records.length) {
             return new Map(records.map(record => [record.cardId, record]));
@@ -2614,7 +2809,8 @@
       function saveUserProgress() {
         syncOwnedIdsFromProgress();
         saveOwnedIds();
-        localStorage.setItem(USER_PROGRESS_STORAGE_KEY, JSON.stringify(Array.from(state.userCards.values())));
+        if (!state.user?.id) return;
+        localStorage.setItem(userScopedStorageKey(USER_PROGRESS_STORAGE_KEY), JSON.stringify(Array.from(state.userCards.values())));
         scheduleFlashcardRankingSync();
       }
 
@@ -2623,6 +2819,189 @@
           return window.PlaytalkApi.url(path);
         }
         return path;
+      }
+
+      function buildAuthHeaders(extraHeaders) {
+        if (window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function') {
+          return window.PlaytalkApi.authHeaders(extraHeaders);
+        }
+        return { ...(extraHeaders || {}) };
+      }
+
+      function userScopedStorageKey(baseKey) {
+        const userId = Number(state.user?.id) || 0;
+        return userId ? `${baseKey}:${userId}` : baseKey;
+      }
+
+      function persistAuthToken(token) {
+        try {
+          if (token) {
+            localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+          } else {
+            localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+          }
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      function normalizeUser(user) {
+        if (!user || typeof user !== 'object') return null;
+        const id = Number(user.id) || 0;
+        const username = safeText(user.username);
+        if (!id || !username) return null;
+        return {
+          id,
+          username,
+          avatarImage: safeText(user.avatar_image || user.avatarImage),
+          createdAt: user.created_at || user.createdAt || null
+        };
+      }
+
+      function setAuthMode(mode) {
+        state.authMode = mode === 'register' ? 'register' : 'login';
+        const isRegister = state.authMode === 'register';
+        els.authModeLogin.classList.toggle('is-active', !isRegister);
+        els.authModeRegister.classList.toggle('is-active', isRegister);
+        els.authSubmitBtn.textContent = isRegister ? 'Cadastrar e jogar' : 'Entrar e jogar';
+        els.authPassword.setAttribute('autocomplete', isRegister ? 'new-password' : 'current-password');
+        els.authCopy.textContent = isRegister
+          ? 'Crie seu nome e sua senha para entrar na Liga Playtalk e aparecer no ranking.'
+          : 'Entre com seu nome e senha para começar a jogar na Liga Playtalk.';
+      }
+
+      function setAuthStatus(message, tone = '') {
+        els.authStatus.textContent = message || '';
+        els.authStatus.className = 'auth-status';
+        if (tone) {
+          els.authStatus.classList.add(`is-${tone}`);
+        }
+      }
+
+      function lockFlashcardsApp(locked) {
+        document.body.classList.toggle('auth-locked', locked);
+      }
+
+      async function fetchSessionUser() {
+        const response = await fetch(buildApiUrl('/auth/session'), {
+          credentials: 'include',
+          headers: buildAuthHeaders(),
+          cache: 'no-store'
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success) {
+          return null;
+        }
+        return normalizeUser(payload.user);
+      }
+
+      async function hydrateAuthenticatedApp(user, options = {}) {
+        state.user = normalizeUser(user);
+        if (!state.user) {
+          throw new Error('Sessao invalida.');
+        }
+
+        state.stats = readUserStats();
+        state.userCards = readUserProgress();
+        syncOwnedIdsFromProgress();
+        state.rankLastSyncedCount = null;
+
+        renderMetrics();
+        updateGameChips();
+        refreshLibrary();
+        lockFlashcardsApp(false);
+        setAuthStatus('');
+        els.startGameBtn.disabled = false;
+
+        if (!options.skipLoadCards) {
+          try {
+            await loadCards();
+            refreshLibrary();
+          } catch (error) {
+            console.warn('Falha ao carregar os flashcards do usuario:', error);
+            els.allSectionCopy.textContent = 'Falha ao carregar os flashcards.';
+            els.allGrid.innerHTML = `<div class="empty">${escapeHtml(error.message || 'Falha ao carregar.')}</div>`;
+            els.startGameBtn.disabled = true;
+          }
+        }
+
+        scheduleFlashcardRankingSync(200);
+      }
+
+      async function handleLoggedOutState(message) {
+        persistAuthToken('');
+        state.user = null;
+        state.userCards = new Map();
+        state.ownedIds = new Set();
+        state.stats = { playTimeMs: 0, speakings: 0, listenings: 0 };
+        state.rankLastSyncedCount = null;
+        renderMetrics();
+        updateGameChips();
+        renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
+        els.allSectionCopy.textContent = 'Entre ou crie seu nome para começar.';
+        if (state.game.active) {
+          exitGame();
+        }
+        if (state.watch.active) {
+          stopWatch();
+        }
+        lockFlashcardsApp(true);
+        setAuthStatus(message || 'Entre com seu nome e senha para jogar.');
+      }
+
+      async function submitAuthForm(event) {
+        event.preventDefault();
+
+        const username = safeText(els.authUsername.value).toLowerCase();
+        const password = String(els.authPassword.value || '').trim();
+
+        if (!username || !password) {
+          setAuthStatus('Preencha nome e senha para continuar.', 'error');
+          return;
+        }
+
+        els.authSubmitBtn.disabled = true;
+        setAuthStatus(state.authMode === 'register' ? 'Criando sua conta...' : 'Entrando na Liga...');
+
+        try {
+          const endpoint = state.authMode === 'register' ? '/register' : '/login';
+          const response = await fetch(buildApiUrl(endpoint), {
+            method: 'POST',
+            credentials: 'include',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            }),
+            body: JSON.stringify({ username, password })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Nao foi possivel autenticar agora.');
+          }
+
+          persistAuthToken(payload.token || '');
+          els.authPassword.value = '';
+          await hydrateAuthenticatedApp(payload.user);
+          setAuthStatus(state.authMode === 'register' ? 'Conta criada. Bora jogar.' : 'Entrada liberada.', 'success');
+        } catch (error) {
+          setAuthStatus(String(error.message || 'Nao foi possivel autenticar agora.'), 'error');
+        } finally {
+          els.authSubmitBtn.disabled = false;
+        }
+      }
+
+      async function logoutCurrentUser() {
+        try {
+          await fetch(buildApiUrl('/logout'), {
+            method: 'POST',
+            credentials: 'include',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            })
+          });
+        } catch (_error) {
+          // ignore
+        }
+        await handleLoggedOutState('Sessao encerrada. Entre novamente para jogar.');
       }
 
       function isNativeRuntime() {
@@ -2646,26 +3025,8 @@
         return isNativeRuntime() ? 'rank.html' : '/rank';
       }
 
-      function createAnonymousRankPlayerId() {
-        return `flash-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-      }
-
-      function getOrCreateRankPlayerId() {
-        try {
-          const stored = localStorage.getItem(RANK_PLAYER_ID_STORAGE_KEY) || '';
-          if (stored.trim()) {
-            return stored.trim();
-          }
-          const created = createAnonymousRankPlayerId();
-          localStorage.setItem(RANK_PLAYER_ID_STORAGE_KEY, created);
-          return created;
-        } catch (_error) {
-          return createAnonymousRankPlayerId();
-        }
-      }
-
       async function syncFlashcardRankingNow() {
-        if (!state.rankPlayerId) return;
+        if (!state.user?.id) return;
 
         if (state.rankSyncInFlight) {
           state.rankSyncQueued = true;
@@ -2673,7 +3034,7 @@
         }
 
         const currentCount = state.userCards.size;
-        if (state.rankLastSyncedCount === currentCount && state.rankPlayerNumber) {
+        if (state.rankLastSyncedCount === currentCount) {
           return;
         }
 
@@ -2681,19 +3042,22 @@
         try {
           const response = await fetch(buildApiUrl('/api/rankings/flashcards'), {
             method: 'POST',
-            headers: {
+            credentials: 'include',
+            headers: buildAuthHeaders({
               'Content-Type': 'application/json'
-            },
+            }),
             body: JSON.stringify({
-              playerId: state.rankPlayerId,
               flashcardsCount: currentCount
             })
           });
           const payload = await response.json().catch(() => ({}));
           if (!response.ok || !payload?.success) {
+            if (response.status === 401) {
+              await handleLoggedOutState('Sua sessao expirou. Entre novamente para continuar.');
+              return;
+            }
             throw new Error(payload?.message || 'Falha ao sincronizar ranking.');
           }
-          state.rankPlayerNumber = Number(payload.playerNumber) || state.rankPlayerNumber || null;
           state.rankLastSyncedCount = currentCount;
         } catch (error) {
           console.warn('Falha ao sincronizar ranking de flashcards:', error);
@@ -3045,8 +3409,9 @@
 
       function refreshLibrary() {
         const cards = userProgressCards().map(buildLibraryCardView);
+        const username = state.user?.username ? ` de ${state.user.username}` : '';
         els.allSectionCopy.textContent = cards.length
-          ? `${cards.length} flashcards do usuario.`
+          ? `${cards.length} flashcards${username}.`
           : 'Zero flashcards por enquanto. Ganhe o primeiro para iniciar sua biblioteca.';
         renderMiniCards(els.allGrid, cards, 'Zero flashcards aqui ainda. Jogue para ganhar o primeiro.');
         renderMetrics();
@@ -4793,6 +5158,10 @@
       }
 
       function bindEvents() {
+        els.authModeLogin.addEventListener('click', () => setAuthMode('login'));
+        els.authModeRegister.addEventListener('click', () => setAuthMode('register'));
+        els.authForm.addEventListener('submit', submitAuthForm);
+        els.logoutBtn.addEventListener('click', logoutCurrentUser);
         els.watchFlashcardsBtn.addEventListener('click', () => startWatch({ useDefaults: true }));
         els.closeWatchPopoverBtn.addEventListener('click', closeWatchPopover);
         els.startWatchBtn.addEventListener('click', startWatch);
@@ -4874,21 +5243,18 @@
 
       async function init() {
         state.timeOffsetMs = readTimeOffsetMs();
-        state.stats = readUserStats();
-        state.userCards = readUserProgress();
-        syncOwnedIdsFromProgress();
-        state.rankPlayerId = getOrCreateRankPlayerId();
         loadSelectedGameCount();
         syncWatchControls();
         bindEvents();
+        setAuthMode('login');
         if (els.rankLink) {
           els.rankLink.setAttribute('href', resolveRankHref());
         }
+        lockFlashcardsApp(true);
         renderMetrics();
         updateGameChips();
-        renderMiniCards(els.allGrid, [], 'Carregando flashcards...');
+        renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
         els.flashcardsHomeToggle.setAttribute('aria-label', 'Mostrar resumo');
-        scheduleFlashcardRankingSync(200);
 
         const gameHeadCopy = els.gameHeaderCopy?.parentElement || null;
         if (gameHeadCopy) {
@@ -4899,8 +5265,12 @@
         els.gameStarCopy.classList.add('is-hidden');
 
         try {
-          await loadCards();
-          refreshLibrary();
+          const sessionUser = await fetchSessionUser();
+          if (sessionUser) {
+            await hydrateAuthenticatedApp(sessionUser);
+          } else {
+            await handleLoggedOutState('Entre ou cadastre seu nome para liberar os flashcards.');
+          }
           if (!recognitionCtor) {
             const startGameLabel = els.startGameBtn.querySelector('.btn__label');
             if (startGameLabel) {
@@ -4910,9 +5280,8 @@
             }
           }
         } catch (error) {
-          els.allSectionCopy.textContent = 'Falha ao carregar os flashcards.';
-          els.allGrid.innerHTML = `<div class="empty">${escapeHtml(error.message || 'Falha ao carregar.')}</div>`;
-          els.startGameBtn.disabled = true;
+          console.warn('Falha ao iniciar flashcards:', error);
+          await handleLoggedOutState('Nao consegui validar sua sessao agora. Entre novamente.');
         }
       }
 
