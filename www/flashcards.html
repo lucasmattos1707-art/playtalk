@@ -61,6 +61,24 @@
       overflow-x: hidden;
     }
 
+    body.admin-user {
+      background: #000000;
+    }
+
+    body.admin-user::before,
+    body.admin-user::after {
+      display: none;
+    }
+
+    body.admin-user .panel,
+    body.admin-user .admin-tools,
+    body.admin-user .mini-card,
+    body.admin-user .catalog-pagination,
+    body.admin-user .flashcards-home-toggle {
+      background: rgba(0, 0, 0, 0.92);
+      border-color: rgba(97, 242, 164, 0.16);
+    }
+
     body.auth-locked {
       background: #ffffff;
       color: #10233d;
@@ -3022,6 +3040,10 @@
         return isAdminUsername(user?.username);
       }
 
+      function syncAdminTheme() {
+        document.body.classList.toggle('admin-user', isAdminUser());
+      }
+
       function adminReadyProgressRecord(cardId) {
         const now = getNowMs();
         return createProgressRecord(cardId, {
@@ -3224,6 +3246,8 @@
 
       async function handleLoggedOutState(message) {
         persistAuthToken('');
+        state.user = null;
+        syncAdminTheme();
         if (state.flashcardsSyncTimer) {
           window.clearTimeout(state.flashcardsSyncTimer);
           state.flashcardsSyncTimer = 0;
@@ -3856,6 +3880,7 @@
 
       function refreshLibrary() {
         const adminMode = isAdminUser();
+        syncAdminTheme();
         const cards = adminMode
           ? state.allCards.map(buildAdminLibraryCardView)
           : userProgressCards().map(buildLibraryCardView);
