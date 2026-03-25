@@ -212,7 +212,40 @@ const flashcardRankingCountAliasForPeriod = (periodId) => (
 const buildFlashcardRankingCteSql = (periodId) => {
   const countAlias = flashcardRankingCountAliasForPeriod(periodId);
   return `
-    WITH ranked_base AS (
+    WITH progress_counts AS (
+      SELECT
+        user_id,
+        COUNT(*)::int AS total
+      FROM public.user_flashcard_progress
+      GROUP BY user_id
+    ),
+    ranking_rows AS (
+      SELECT
+        player_id,
+        user_id,
+        player_number,
+        flashcards_count,
+        weekly_count,
+        monthly_count,
+        all_time_count,
+        last_progress_count,
+        weekly_period_key,
+        monthly_period_key,
+        created_at,
+        updated_at
+      FROM (
+        SELECT
+          r.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY r.user_id
+            ORDER BY r.updated_at DESC, r.created_at DESC, r.player_number ASC, r.player_id ASC
+          ) AS row_index
+        FROM public.flashcard_rankings r
+        WHERE r.user_id IS NOT NULL
+      ) deduped_rankings
+      WHERE row_index = 1
+    ),
+    ranked_base AS (
       SELECT
         u.id AS user_id,
         COALESCE(r.player_number, 0) AS player_number,
@@ -228,10 +261,12 @@ const buildFlashcardRankingCteSql = (periodId) => {
           WHEN COALESCE(r.monthly_period_key, '') = $3 THEN COALESCE(r.monthly_count, 0)
           ELSE 0
         END AS monthly_flashcards_count,
-        COALESCE(r.all_time_count, r.flashcards_count, 0) AS all_time_flashcards_count
+        COALESCE(progress_counts.total, r.flashcards_count, r.all_time_count, 0) AS all_time_flashcards_count
       FROM public.users u
-      LEFT JOIN public.flashcard_rankings r
+      LEFT JOIN ranking_rows r
         ON r.user_id = u.id
+      LEFT JOIN progress_counts
+        ON progress_counts.user_id = u.id
     ),
     ranked AS (
       SELECT
@@ -485,6 +520,38 @@ const ensureFlashcardRankingsTable = async () => {
         ADD COLUMN IF NOT EXISTS monthly_period_key text
       `);
       await pool.query(`
+        CREATE SEQUENCE IF NOT EXISTS public.flashcard_rankings_player_number_seq
+        START WITH 100000
+        INCREMENT BY 1
+        MINVALUE 100000
+      `);
+      await pool.query(`
+        WITH duplicate_rows AS (
+          SELECT
+            player_id,
+            ROW_NUMBER() OVER (
+              PARTITION BY user_id
+              ORDER BY updated_at DESC, created_at DESC, player_number ASC, player_id ASC
+            ) AS row_index
+          FROM public.flashcard_rankings
+          WHERE user_id IS NOT NULL
+        )
+        DELETE FROM public.flashcard_rankings target
+        USING duplicate_rows source
+        WHERE target.player_id = source.player_id
+          AND source.row_index > 1
+      `);
+      await pool.query(`
+        UPDATE public.flashcard_rankings
+        SET player_id = CONCAT('user:', user_id)
+        WHERE user_id IS NOT NULL
+          AND (
+            player_id IS NULL
+            OR player_id = ''
+            OR player_id !~ '^user:[0-9]+$'
+          )
+      `);
+      await pool.query(`
         UPDATE public.flashcard_rankings
         SET
           all_time_count = GREATEST(COALESCE(all_time_count, 0), COALESCE(flashcards_count, 0)),
@@ -493,6 +560,16 @@ const ensureFlashcardRankingsTable = async () => {
             ELSE COALESCE(flashcards_count, 0)
           END
         WHERE COALESCE(flashcards_count, 0) > 0
+      `);
+      await pool.query(`
+        SELECT setval(
+          'public.flashcard_rankings_player_number_seq',
+          GREATEST(
+            COALESCE((SELECT MAX(player_number) FROM public.flashcard_rankings), 99999),
+            99999
+          ),
+          true
+        )
       `);
       await pool.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS flashcard_rankings_user_id_idx
@@ -614,7 +691,7 @@ const syncFlashcardRankingForUser = async (userId, flashcardsCount) => {
          updated_at`,
       [
         normalizedUserId,
-        nextAllTimeCount,
+        normalizedCount,
         nextWeeklyCount,
         nextMonthlyCount,
         nextAllTimeCount,
@@ -707,6 +784,74 @@ const syncFlashcardRankingForUser = async (userId, flashcardsCount) => {
   throw new Error('Nao foi possivel gerar um numero aleatorio para o ranking.');
 };
 
+const syncFlashcardRankingTableFromProgressCounts = async () => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  await ensureUsersAvatarColumn();
+  await ensureFlashcardUserStateTables();
+  await ensureFlashcardRankingsTable();
+
+  const periodKeys = getFlashcardRankingPeriodKeys();
+  await pool.query(
+    `WITH progress_counts AS (
+       SELECT
+         user_id,
+         COUNT(*)::int AS total
+       FROM public.user_flashcard_progress
+       GROUP BY user_id
+     )
+     INSERT INTO public.flashcard_rankings (
+       player_id,
+       user_id,
+       player_number,
+       flashcards_count,
+       weekly_count,
+       monthly_count,
+       all_time_count,
+       last_progress_count,
+       weekly_period_key,
+       monthly_period_key
+     )
+     SELECT
+       CONCAT('user:', u.id),
+       u.id,
+       nextval('public.flashcard_rankings_player_number_seq'),
+       COALESCE(progress_counts.total, 0),
+       COALESCE(progress_counts.total, 0),
+       COALESCE(progress_counts.total, 0),
+       COALESCE(progress_counts.total, 0),
+       COALESCE(progress_counts.total, 0),
+       $1,
+       $2
+     FROM public.users u
+     LEFT JOIN progress_counts
+       ON progress_counts.user_id = u.id
+     ON CONFLICT (user_id) WHERE user_id IS NOT NULL
+     DO UPDATE SET
+       player_id = EXCLUDED.player_id,
+       flashcards_count = EXCLUDED.flashcards_count,
+       all_time_count = GREATEST(
+         COALESCE(public.flashcard_rankings.all_time_count, 0),
+         COALESCE(EXCLUDED.flashcards_count, 0),
+         COALESCE(EXCLUDED.all_time_count, 0)
+       ),
+       last_progress_count = GREATEST(
+         COALESCE(public.flashcard_rankings.last_progress_count, 0),
+         COALESCE(EXCLUDED.flashcards_count, 0),
+         COALESCE(EXCLUDED.last_progress_count, 0)
+       ),
+       updated_at = CASE
+         WHEN COALESCE(public.flashcard_rankings.flashcards_count, -1) <> COALESCE(EXCLUDED.flashcards_count, -1)
+           OR COALESCE(public.flashcard_rankings.player_id, '') <> COALESCE(EXCLUDED.player_id, '')
+         THEN now()
+         ELSE public.flashcard_rankings.updated_at
+       END`,
+    [periodKeys.weeklyKey, periodKeys.monthlyKey]
+  );
+};
+
 const fetchFlashcardRankingSnapshot = async ({
   periodId = FLASHCARD_RANKING_PERIODS.weekly.id,
   limit = 100,
@@ -716,8 +861,10 @@ const fetchFlashcardRankingSnapshot = async ({
     throw new Error('DATABASE_URL nao configurada.');
   }
 
-  await ensureFlashcardRankingsTable();
   await ensureUsersAvatarColumn();
+  await ensureFlashcardUserStateTables();
+  await ensureFlashcardRankingsTable();
+  await syncFlashcardRankingTableFromProgressCounts();
 
   const selectedPeriod = normalizeFlashcardRankingPeriod(periodId);
   const cappedLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 5000) : 5000;
@@ -2072,6 +2219,11 @@ app.post('/register', async (req, res) => {
     );
 
     const user = result.rows[0];
+    try {
+      await syncFlashcardRankingForUser(user.id, 0);
+    } catch (rankingError) {
+      console.error('Falha ao criar entrada inicial no ranking:', rankingError);
+    }
     const token = createAuthToken({ id: user.id, email: user.email });
     if (token) {
       setAuthCookie(res, token);
@@ -2120,6 +2272,11 @@ app.post('/login', async (req, res) => {
     if (!passwordOk) {
       res.status(401).json({ success: false, message: 'Nome de usuario ou senha invalidos.' });
       return;
+    }
+    try {
+      await syncFlashcardRankingFromProgressCount(user.id);
+    } catch (rankingError) {
+      console.error('Falha ao sincronizar ranking no login:', rankingError);
     }
     if (!JWT_SECRET) {
       res.status(500).json({ success: false, message: 'JWT_SECRET nao configurado.' });
@@ -2171,6 +2328,11 @@ app.post('/auth/google-quick', async (req, res) => {
     }
 
     const user = result.rows[0];
+    try {
+      await syncFlashcardRankingFromProgressCount(user.id);
+    } catch (rankingError) {
+      console.error('Falha ao sincronizar ranking no login rapido Google:', rankingError);
+    }
     const token = createAuthToken({ id: user.id, email: user.email });
     if (!token) {
       res.status(500).json({ success: false, message: 'JWT_SECRET nao configurado.' });
