@@ -1,322 +1,170 @@
 (function initPlaytalkRankPage() {
-  const REFRESH_INTERVAL_MS = 30000;
-  const MAX_AVATAR_WIDTH = 320;
-  const MAX_AVATAR_HEIGHT = 320;
-  const AVATAR_IMAGE_QUALITY = 0.88;
+  const PERIODS = [
+    { id: 'weekly', label: 'Rank Semanal' },
+    { id: 'monthly', label: 'Rank Mensal' },
+    { id: 'allTime', label: 'Rank Geral' }
+  ];
+
+  const PODIUM_STYLES = {
+    1: {
+      tone: 'is-first',
+      color: '#e7c97b',
+      glow: 'rgba(231, 201, 123, 0.24)'
+    },
+    2: {
+      tone: 'is-second',
+      color: '#cad5df',
+      glow: 'rgba(202, 213, 223, 0.2)'
+    },
+    3: {
+      tone: 'is-third',
+      color: '#bf8a65',
+      glow: 'rgba(191, 138, 101, 0.22)'
+    }
+  };
+
+  const mockRankings = {
+    weekly: {
+      subtitle: 'Confira os Top Falantes da Semana!',
+      tableLabel: 'Rank Semanal',
+      topThree: [
+        { position: 2, name: 'Bianca', number: 1088, flashcards: 7420, avatar: '/arquivos-codex/avatar/12.webp' },
+        { position: 1, name: 'Caio', number: 1042, flashcards: 8240, avatar: '/arquivos-codex/avatar/33.webp' },
+        { position: 3, name: 'Luna', number: 1165, flashcards: 7010, avatar: '/arquivos-codex/avatar/48.webp' }
+      ],
+      tableRows: [
+        { position: 4, number: 1024, flashcards: 6880 },
+        { position: 5, number: 1137, flashcards: 6610 },
+        { position: 6, number: 1192, flashcards: 6455 },
+        { position: 7, number: 1270, flashcards: 6218 },
+        { position: 8, number: 1314, flashcards: 5984 },
+        { position: 9, number: 1406, flashcards: 5760 },
+        { position: 10, number: 1491, flashcards: 5528 }
+      ]
+    },
+    monthly: {
+      subtitle: 'Os jogadores mais consistentes do mes em destaque.',
+      tableLabel: 'Rank Mensal',
+      topThree: [
+        { position: 2, name: 'Maya', number: 1216, flashcards: 22480, avatar: '/arquivos-codex/avatar/27.webp' },
+        { position: 1, name: 'Noah', number: 1007, flashcards: 23960, avatar: '/arquivos-codex/avatar/41.webp' },
+        { position: 3, name: 'Rafa', number: 1184, flashcards: 21910, avatar: '/arquivos-codex/avatar/08.webp' }
+      ],
+      tableRows: [
+        { position: 4, number: 1092, flashcards: 21460 },
+        { position: 5, number: 1178, flashcards: 20910 },
+        { position: 6, number: 1243, flashcards: 20120 },
+        { position: 7, number: 1366, flashcards: 19540 },
+        { position: 8, number: 1428, flashcards: 19075 },
+        { position: 9, number: 1502, flashcards: 18460 },
+        { position: 10, number: 1589, flashcards: 17920 }
+      ]
+    },
+    allTime: {
+      subtitle: 'Veja quem lidera o PlayTalk no ranking geral.',
+      tableLabel: 'Rank Geral',
+      topThree: [
+        { position: 2, name: 'Helena', number: 1103, flashcards: 48620, avatar: '/arquivos-codex/avatar/05.webp' },
+        { position: 1, name: 'Theo', number: 1001, flashcards: 51440, avatar: '/arquivos-codex/avatar/60.webp' },
+        { position: 3, name: 'Gael', number: 1259, flashcards: 47280, avatar: '/arquivos-codex/avatar/18.webp' }
+      ],
+      tableRows: [
+        { position: 4, number: 1064, flashcards: 46010 },
+        { position: 5, number: 1142, flashcards: 45130 },
+        { position: 6, number: 1238, flashcards: 43860 },
+        { position: 7, number: 1345, flashcards: 42690 },
+        { position: 8, number: 1451, flashcards: 41825 },
+        { position: 9, number: 1517, flashcards: 41070 },
+        { position: 10, number: 1620, flashcards: 40315 }
+      ]
+    }
+  };
 
   const els = {
-    refreshBtn: document.getElementById('refreshBtn'),
-    playerHeadline: document.getElementById('playerHeadline'),
-    selfSlot: document.getElementById('selfSlot'),
-    leaderboard: document.getElementById('leaderboard'),
-    lastUpdated: document.getElementById('lastUpdated'),
-    avatarUploadInput: document.getElementById('avatarUploadInput')
+    podium: document.getElementById('podium'),
+    rankingTableBody: document.getElementById('rankingTableBody'),
+    periodTabs: document.getElementById('periodTabs'),
+    pageSubtitle: document.querySelector('.page-subtitle'),
+    tablePeriodLabel: document.getElementById('tablePeriodLabel')
   };
 
   const state = {
-    sessionUser: null,
-    player: null,
-    ranking: [],
-    uploadingAvatar: false
+    activePeriod: 'weekly'
   };
 
-  function buildApiUrl(path) {
-    if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
-      return window.PlaytalkApi.url(path);
-    }
-    return path;
+  function formatFlashcards(value) {
+    return Number(value || 0).toLocaleString('pt-BR');
   }
 
-  function buildAuthHeaders(extraHeaders) {
-    if (window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function') {
-      return window.PlaytalkApi.authHeaders(extraHeaders);
-    }
-    return { ...(extraHeaders || {}) };
+  function normalizePeriodData(periodId) {
+    return mockRankings[periodId] || mockRankings.weekly;
   }
 
-  function safeText(value) {
-    return typeof value === 'string' ? value.trim() : '';
-  }
+  function createPodiumCard(entry) {
+    const style = PODIUM_STYLES[entry.position] || PODIUM_STYLES[3];
 
-  function escapeHtml(value) {
-    return String(value || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function normalizeUser(user) {
-    if (!user || typeof user !== 'object') return null;
-    const id = Number(user.id) || 0;
-    const username = safeText(user.username);
-    if (!id || !username) return null;
-    return {
-      id,
-      username,
-      avatarImage: safeText(user.avatarImage || user.avatar_image)
-    };
-  }
-
-  function formatCount(value) {
-    const count = Number.parseInt(value, 10) || 0;
-    return `${count.toLocaleString('pt-BR')} flashcards`;
-  }
-
-  function formatShortDate(value) {
-    if (!value) return 'agora';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'agora';
-    return date.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  function ordinalPlace(rank) {
-    const normalized = Number(rank) || 0;
-    if (!normalized) return 'fora do ranking';
-    return `${normalized}o lugar`;
-  }
-
-  function createInitials(name) {
-    const normalized = safeText(name);
-    if (!normalized) return '?';
-    return normalized.charAt(0).toUpperCase();
-  }
-
-  function avatarMarkup(user) {
-    const avatarImage = safeText(user?.avatarImage);
-    const initials = escapeHtml(createInitials(user?.username));
-    if (avatarImage) {
-      return `<div class="avatar-box"><img src="${escapeHtml(avatarImage)}" alt="${escapeHtml(user?.username || 'Avatar')}"></div>`;
-    }
-    return `<div class="avatar-box">${initials}</div>`;
-  }
-
-  function uploadButtonMarkup() {
-    if (!state.sessionUser) return '';
-    return `<button class="avatar-upload" type="button" data-action="avatar-upload" aria-label="Trocar avatar">+</button>`;
-  }
-
-  function renderHeadline(player) {
-    if (player?.rank) {
-      els.playerHeadline.textContent = `Voce esta em ${ordinalPlace(player.rank)}.`;
-      return;
-    }
-
-    if (state.sessionUser) {
-      els.playerHeadline.textContent = 'Voce ainda nao entrou no ranking. Jogue em /flashcards para aparecer aqui.';
-      return;
-    }
-
-    els.playerHeadline.textContent = 'Entre em /flashcards para ver sua posicao e aparecer no ranking.';
-  }
-
-  function renderSelfRow(player) {
-    if (!state.sessionUser) {
-      els.selfSlot.innerHTML = '';
-      return;
-    }
-
-    const displayPlayer = player || {
-      rank: 0,
-      username: state.sessionUser.username,
-      avatarImage: state.sessionUser.avatarImage,
-      flashcardsCount: 0,
-      updatedAt: null
-    };
-
-    els.selfSlot.innerHTML = `
-      <article class="leaderboard-row is-me is-self">
-        <div class="rank-pill">${displayPlayer.rank ? `#${displayPlayer.rank}` : '--'}</div>
-        <div class="avatar-stack">
-          ${avatarMarkup(displayPlayer)}
-          ${uploadButtonMarkup()}
+    return `
+      <article
+        class="podium-card ${style.tone}"
+        style="--podium-color:${style.color}; --podium-glow:${style.glow};"
+      >
+        <div class="podium-rank">${entry.position}</div>
+        <div class="podium-avatar">
+          <img src="${entry.avatar}" alt="${entry.name}">
         </div>
-        <div class="player-line">
-          <strong>${escapeHtml(displayPlayer.username)}</strong>
-          <span>${displayPlayer.rank ? `Voce esta em ${ordinalPlace(displayPlayer.rank)}.` : 'Seu lugar aparece assim que voce sincroniza seus flashcards.'}</span>
-        </div>
-        <div class="count-line">
-          <div class="count-strong">${formatCount(displayPlayer.flashcardsCount)}</div>
-          <div class="updated-line">Atualizado em ${formatShortDate(displayPlayer.updatedAt)}</div>
-        </div>
+        <p class="podium-name">${entry.name}</p>
+        <p class="podium-meta">#${entry.number}</p>
+        <p class="podium-count">
+          ${formatFlashcards(entry.flashcards)}
+          <span>Flashcards</span>
+        </p>
       </article>
     `;
   }
 
-  function renderLeaderboard(rows) {
-    if (!Array.isArray(rows) || !rows.length) {
-      els.leaderboard.innerHTML = '<div class="leaderboard-empty">Ainda nao tem jogadores sincronizados. Abre <strong>/flashcards</strong>, joga um pouco e volta aqui.</div>';
-      return;
-    }
-
-    const currentUserId = Number(state.sessionUser?.id) || 0;
-
-    els.leaderboard.innerHTML = rows.map((row) => {
-      const isMe = currentUserId && Number(row.userId) === currentUserId;
-      return `
-        <article class="leaderboard-row${isMe ? ' is-me' : ''}">
-          <div class="rank-pill">#${Number(row.rank) || 0}</div>
-          <div class="avatar-stack">
-            ${avatarMarkup(row)}
-            ${isMe ? uploadButtonMarkup() : ''}
-          </div>
-          <div class="player-line">
-            <strong>${escapeHtml(row.username || `Jogador ${row.playerNumber || ''}`)}</strong>
-            <span>${isMe ? 'Voce' : `Jogador #${String(row.playerNumber || '').padStart(6, '0')}`}</span>
-          </div>
-          <div class="count-line">
-            <div class="count-strong">${formatCount(row.flashcardsCount)}</div>
-            <div class="updated-line">Atualizado em ${formatShortDate(row.updatedAt)}</div>
-          </div>
-        </article>
-      `;
-    }).join('');
+  function createTableRow(entry) {
+    return `
+      <tr>
+        <td class="cell-position">${entry.position}</td>
+        <td class="cell-number">#${entry.number}</td>
+        <td class="cell-flashcards">${formatFlashcards(entry.flashcards)}</td>
+      </tr>
+    `;
   }
 
-  async function fetchSessionUser() {
-    const response = await fetch(buildApiUrl('/auth/session'), {
-      credentials: 'include',
-      headers: buildAuthHeaders(),
-      cache: 'no-store'
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || !payload?.success) {
-      return null;
-    }
-    return normalizeUser(payload.user);
+  function createPeriodTabs() {
+    return PERIODS.map((period) => `
+      <button
+        class="rank-tab${period.id === state.activePeriod ? ' is-active' : ''}"
+        type="button"
+        data-period="${period.id}"
+        aria-pressed="${period.id === state.activePeriod ? 'true' : 'false'}"
+      >
+        ${period.label}
+      </button>
+    `).join('');
   }
 
-  async function loadRanking() {
-    els.lastUpdated.textContent = 'Atualizando...';
-    els.refreshBtn.disabled = true;
-
-    try {
-      state.sessionUser = await fetchSessionUser();
-
-      const response = await fetch(buildApiUrl('/api/rankings/flashcards?limit=50'), {
-        credentials: 'include',
-        headers: buildAuthHeaders(),
-        cache: 'no-store'
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.success) {
-        throw new Error(payload?.message || 'Falha ao carregar ranking.');
-      }
-
-      state.player = payload.player || null;
-      state.ranking = Array.isArray(payload.ranking) ? payload.ranking : [];
-
-      if (state.sessionUser && state.player) {
-        state.player.avatarImage = safeText(state.player.avatarImage || state.sessionUser.avatarImage);
-      }
-
-      renderHeadline(state.player);
-      renderSelfRow(state.player);
-      renderLeaderboard(state.ranking);
-      els.lastUpdated.textContent = `Atualizado agora: ${new Date().toLocaleTimeString('pt-BR')}`;
-    } catch (error) {
-      renderHeadline(null);
-      renderSelfRow(null);
-      els.leaderboard.innerHTML = `<div class="leaderboard-empty">${escapeHtml(error.message || 'Falha ao carregar ranking.')}</div>`;
-      els.lastUpdated.textContent = 'Erro ao atualizar';
-    } finally {
-      els.refreshBtn.disabled = false;
-    }
+  function render() {
+    const periodData = normalizePeriodData(state.activePeriod);
+    els.pageSubtitle.textContent = periodData.subtitle;
+    els.tablePeriodLabel.textContent = periodData.tableLabel;
+    els.podium.innerHTML = periodData.topThree.map(createPodiumCard).join('');
+    els.rankingTableBody.innerHTML = periodData.tableRows.map(createTableRow).join('');
+    els.periodTabs.innerHTML = createPeriodTabs();
   }
 
-  function readFileAsDataUrl(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error('Nao consegui ler a imagem.'));
-      reader.readAsDataURL(file);
-    });
+  function handleTabClick(event) {
+    const trigger = event.target.closest('[data-period]');
+    if (!trigger) return;
+
+    const nextPeriod = trigger.getAttribute('data-period');
+    if (!nextPeriod || nextPeriod === state.activePeriod) return;
+
+    state.activePeriod = nextPeriod;
+    render();
   }
 
-  function resizeAvatarDataUrl(dataUrl) {
-    return new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => {
-        const scale = Math.min(1, MAX_AVATAR_WIDTH / image.width, MAX_AVATAR_HEIGHT / image.height);
-        const width = Math.max(1, Math.round(image.width * scale));
-        const height = Math.max(1, Math.round(image.height * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext('2d');
-        if (!context) {
-          reject(new Error('Nao consegui preparar a imagem.'));
-          return;
-        }
-        context.drawImage(image, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', AVATAR_IMAGE_QUALITY));
-      };
-      image.onerror = () => reject(new Error('Nao consegui abrir a imagem.'));
-      image.src = dataUrl;
-    });
-  }
-
-  async function uploadAvatar(file) {
-    if (!state.sessionUser) {
-      els.lastUpdated.textContent = 'Entre em /flashcards para trocar seu avatar';
-      return;
-    }
-
-    if (!file) return;
-
-    state.uploadingAvatar = true;
-    els.lastUpdated.textContent = 'Enviando avatar...';
-
-    try {
-      const rawDataUrl = await readFileAsDataUrl(file);
-      const avatarDataUrl = await resizeAvatarDataUrl(rawDataUrl);
-      const response = await fetch(buildApiUrl('/auth/avatar'), {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: buildAuthHeaders({
-          'Content-Type': 'application/json'
-        }),
-        body: JSON.stringify({ avatarDataUrl })
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.success) {
-        throw new Error(payload?.message || 'Nao consegui salvar seu avatar.');
-      }
-
-      state.sessionUser = normalizeUser(payload.user) || state.sessionUser;
-      await loadRanking();
-    } catch (error) {
-      els.lastUpdated.textContent = String(error.message || 'Falha ao enviar avatar.');
-    } finally {
-      state.uploadingAvatar = false;
-      els.avatarUploadInput.value = '';
-    }
-  }
-
-  els.refreshBtn?.addEventListener('click', loadRanking);
-  els.leaderboard?.addEventListener('click', (event) => {
-    if (state.uploadingAvatar) return;
-    const uploadTrigger = event.target.closest('[data-action="avatar-upload"]');
-    if (!uploadTrigger) return;
-    els.avatarUploadInput.click();
-  });
-  els.selfSlot?.addEventListener('click', (event) => {
-    if (state.uploadingAvatar) return;
-    const uploadTrigger = event.target.closest('[data-action="avatar-upload"]');
-    if (!uploadTrigger) return;
-    els.avatarUploadInput.click();
-  });
-  els.avatarUploadInput?.addEventListener('change', (event) => {
-    const file = event.target.files?.[0] || null;
-    uploadAvatar(file);
-  });
-
-  loadRanking();
-  window.setInterval(loadRanking, REFRESH_INTERVAL_MS);
+  els.periodTabs.addEventListener('click', handleTabClick);
+  render();
 })();

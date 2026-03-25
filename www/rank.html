@@ -3,380 +3,543 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PlayTalk | Liga Playtalk</title>
+  <title>PlayTalk | Ranking</title>
   <style>
     @font-face {
-      font-family: "Soopafre";
-      src: url("soopafre.ttf") format("truetype");
-      font-weight: 400;
+      font-family: "PlaytalkDisplay";
+      src: url("/THEBOLDFONT-FREEVERSION.otf") format("opentype");
+      font-weight: 700;
       font-style: normal;
       font-display: swap;
     }
 
     :root {
-      --bg-1: #071321;
-      --bg-2: #0d2643;
-      --panel: rgba(10, 22, 38, 0.88);
-      --line: rgba(255, 255, 255, 0.12);
-      --text: #f8fbff;
-      --muted: #9fbed9;
-      --gold: #ffd56d;
-      --cyan: #74deff;
-      --green: #74f1b3;
-      --shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
-      --radius: 28px;
+      --bg-surface: rgba(9, 22, 40, 0.8);
+      --bg-surface-strong: rgba(8, 18, 34, 0.92);
+      --line-soft: rgba(147, 197, 253, 0.12);
+      --line-strong: rgba(148, 199, 255, 0.2);
+      --text-main: #f5fbff;
+      --text-soft: #93b7d8;
+      --text-faint: #6d8ba7;
+      --accent: #73c8ff;
+      --radius-xl: 36px;
+      --radius-lg: 26px;
+      --shadow-panel: 0 30px 80px rgba(0, 0, 0, 0.42);
+      --shadow-glow: 0 0 40px rgba(56, 168, 255, 0.18);
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
+    html,
     body {
       margin: 0;
-      min-height: 100vh;
-      font-family: "Soopafre", Arial, sans-serif;
-      color: var(--text);
+      min-height: 100%;
+    }
+
+    body {
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--text-main);
       background:
-        radial-gradient(circle at top, rgba(116, 222, 255, 0.16), transparent 32%),
-        radial-gradient(circle at bottom left, rgba(116, 241, 179, 0.12), transparent 34%),
-        linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 100%);
+        radial-gradient(circle at 50% 20%, rgba(56, 168, 255, 0.2), transparent 24%),
+        radial-gradient(circle at 14% 18%, rgba(72, 134, 255, 0.14), transparent 18%),
+        radial-gradient(circle at 84% 18%, rgba(84, 212, 255, 0.12), transparent 20%),
+        linear-gradient(180deg, #061120 0%, #040914 56%, #071120 100%);
+      overflow-x: hidden;
     }
 
     body::before,
     body::after {
       content: "";
       position: fixed;
-      width: 180px;
-      height: 180px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.05);
-      filter: blur(8px);
+      inset: auto;
+      border-radius: 999px;
       pointer-events: none;
-      animation: floatOrb 18s linear infinite;
+      filter: blur(18px);
+      opacity: 0.7;
+      z-index: 0;
     }
 
     body::before {
+      width: 340px;
+      height: 340px;
       top: 8%;
-      right: 8%;
+      left: -120px;
+      background: rgba(33, 119, 215, 0.16);
+      animation: floatGlow 18s ease-in-out infinite;
     }
 
     body::after {
-      bottom: 10%;
-      left: 6%;
-      animation-duration: 24s;
+      width: 280px;
+      height: 280px;
+      right: -80px;
+      bottom: 8%;
+      background: rgba(28, 173, 255, 0.14);
+      animation: floatGlow 22s ease-in-out infinite reverse;
     }
 
-    .shell {
-      width: min(1120px, calc(100vw - 28px));
-      margin: 0 auto;
-      padding: 22px 0 42px;
+    .rank-app {
       position: relative;
       z-index: 1;
-    }
-
-    .hero,
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(12px);
-    }
-
-    .hero {
-      padding: 24px;
-      margin-bottom: 18px;
+      width: min(1120px, calc(100vw - 32px));
+      margin: 0 auto;
+      min-height: 100vh;
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-    }
-
-    .hero h1 {
-      margin: 0;
-      font-size: clamp(42px, 8vw, 64px);
-      line-height: 0.94;
-      letter-spacing: 0.03em;
-    }
-
-    .hero-copy {
-      margin: 10px 0 0;
-      color: var(--muted);
-      font-size: 18px;
-      line-height: 1.5;
-    }
-
-    .hero-actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .btn {
-      display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 46px;
-      padding: 12px 18px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      background: rgba(255, 255, 255, 0.08);
-      color: #fff;
-      text-decoration: none;
-      font: inherit;
-      cursor: pointer;
-      transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+      padding: 42px 0;
     }
 
-    .btn:hover {
-      transform: translateY(-1px);
-      background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(255, 255, 255, 0.24);
+    .rank-shell {
+      position: relative;
+      width: 100%;
+      padding: 36px;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--line-soft);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+        var(--bg-surface);
+      box-shadow: var(--shadow-panel), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(18px);
     }
 
-    .btn-primary {
-      background: linear-gradient(135deg, #12a6ff 0%, #5ce6ff 100%);
-      color: #042035;
-      border-color: transparent;
+    .rank-shell::before {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border-radius: calc(var(--radius-xl) - 8px);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      pointer-events: none;
     }
 
-    .panel {
-      overflow: hidden;
-    }
-
-    .board-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 20px 20px 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .board-head h2 {
-      margin: 0;
-      font-size: 24px;
-    }
-
-    .board-head p,
-    .board-meta {
-      margin: 6px 0 0;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .self-slot {
-      padding: 18px 20px 0;
-    }
-
-    .leaderboard {
-      display: grid;
-      gap: 0;
-      padding-bottom: 8px;
-    }
-
-    .leaderboard-empty {
-      padding: 28px 20px 34px;
-      color: var(--muted);
+    .intro {
       text-align: center;
-      line-height: 1.6;
+      margin-bottom: 34px;
     }
 
-    .leaderboard-row {
-      display: grid;
-      grid-template-columns: 78px 98px minmax(0, 1fr) 180px;
-      align-items: center;
-      gap: 14px;
-      padding: 16px 20px;
-      border-top: 1px solid rgba(255, 255, 255, 0.07);
-      transition: background 160ms ease;
-    }
-
-    .leaderboard-row:hover {
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    .leaderboard-row.is-me {
-      background: linear-gradient(90deg, rgba(18, 166, 255, 0.16) 0%, rgba(92, 230, 255, 0.06) 100%);
-    }
-
-    .leaderboard-row.is-self {
-      border-top: 0;
-      border-radius: 22px;
-      background: linear-gradient(90deg, rgba(255, 213, 109, 0.12) 0%, rgba(18, 166, 255, 0.08) 100%);
-      margin-bottom: 12px;
-    }
-
-    .rank-pill {
+    .eyebrow {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 56px;
-      height: 56px;
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--gold);
-      font-size: 24px;
-    }
-
-    .avatar-stack {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .avatar-box,
-    .avatar-upload {
-      width: 54px;
-      height: 54px;
-      border-radius: 18px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background: rgba(255, 255, 255, 0.06);
-      overflow: hidden;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 20px;
+      min-height: 32px;
+      padding: 0 14px;
+      margin-bottom: 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(115, 200, 255, 0.2);
+      background: rgba(16, 35, 61, 0.8);
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.22em;
       text-transform: uppercase;
     }
 
-    .avatar-box img {
+    .page-title {
+      margin: 0;
+      font-family: "PlaytalkDisplay", Impact, sans-serif;
+      font-size: clamp(52px, 9vw, 88px);
+      letter-spacing: 0.14em;
+      color: #f7fbff;
+      text-shadow: 0 0 24px rgba(115, 200, 255, 0.18);
+    }
+
+    .page-subtitle {
+      margin: 12px auto 0;
+      max-width: 560px;
+      font-size: clamp(17px, 2vw, 22px);
+      line-height: 1.5;
+      color: #c9e8ff;
+      text-shadow: 0 0 18px rgba(56, 168, 255, 0.14);
+    }
+
+    .board {
+      display: grid;
+      gap: 28px;
+    }
+
+    .podium {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: end;
+      gap: 20px;
+    }
+
+    .podium-card {
+      position: relative;
+      overflow: hidden;
+      padding: 28px 22px 24px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line-soft);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+        var(--bg-surface-strong);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+      isolation: isolate;
+    }
+
+    .podium-card::before {
+      content: "";
+      position: absolute;
+      inset: auto -18% -38% -18%;
+      height: 56%;
+      background: radial-gradient(circle, var(--podium-glow) 0%, transparent 70%);
+      opacity: 0.85;
+      z-index: -1;
+    }
+
+    .podium-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--line-strong);
+    }
+
+    .podium-card.is-first {
+      padding-top: 36px;
+      padding-bottom: 30px;
+      box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .podium-card.is-second {
+      transform: translateY(18px);
+    }
+
+    .podium-card.is-third {
+      transform: translateY(26px);
+    }
+
+    .podium-card:hover.is-second,
+    .podium-card:hover.is-third {
+      transform: translateY(12px);
+    }
+
+    .podium-rank {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--podium-color);
+      font-family: "PlaytalkDisplay", Impact, sans-serif;
+      font-size: 30px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .podium-card.is-first .podium-rank {
+      width: 72px;
+      height: 72px;
+      font-size: 38px;
+      border-radius: 22px;
+    }
+
+    .podium-avatar {
+      width: 92px;
+      height: 92px;
+      margin: 0 auto 18px;
+      border-radius: 50%;
+      padding: 4px;
+      background: linear-gradient(135deg, var(--podium-color), rgba(255, 255, 255, 0.28));
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+    }
+
+    .podium-card.is-first .podium-avatar {
+      width: 118px;
+      height: 118px;
+      padding: 5px;
+    }
+
+    .podium-avatar img {
+      display: block;
       width: 100%;
       height: 100%;
+      border-radius: 50%;
       object-fit: cover;
+      background: #0f2035;
     }
 
-    .avatar-upload {
-      background: rgba(116, 241, 179, 0.12);
-      color: var(--green);
-      cursor: pointer;
-      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
-    }
-
-    .avatar-upload:hover {
-      transform: translateY(-1px);
-      border-color: rgba(116, 241, 179, 0.34);
-      background: rgba(116, 241, 179, 0.18);
-    }
-
-    .player-line {
-      display: grid;
-      gap: 6px;
-    }
-
-    .player-line strong {
-      font-size: 22px;
-      letter-spacing: 0.03em;
-    }
-
-    .player-line span,
-    .count-line,
-    .updated-line {
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .count-strong {
-      color: #fff;
-      font-size: 18px;
-    }
-
-    .footer-note {
-      margin-top: 16px;
+    .podium-name {
+      margin: 0;
       text-align: center;
-      color: var(--muted);
+      font-size: clamp(20px, 2vw, 24px);
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 0.02em;
+    }
+
+    .podium-meta {
+      margin: 10px 0 0;
+      text-align: center;
+      color: var(--text-soft);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+    }
+
+    .podium-count {
+      margin: 12px 0 0;
+      text-align: center;
+      font-size: clamp(26px, 3vw, 36px);
+      font-weight: 700;
+      color: var(--podium-color);
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.04);
+    }
+
+    .podium-count span {
+      display: block;
+      margin-top: 6px;
+      color: var(--text-soft);
       font-size: 13px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
     }
 
-    @keyframes floatOrb {
-      0% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-18px) rotate(160deg); }
-      100% { transform: translateY(0) rotate(360deg); }
+    .rank-table-card {
+      padding: 14px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line-soft);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+        rgba(6, 16, 31, 0.88);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
     }
 
-    @media (max-width: 920px) {
-      .hero {
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 10px 18px;
+    }
+
+    .table-title {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #ebf7ff;
+    }
+
+    .table-caption {
+      margin: 6px 0 0;
+      color: var(--text-soft);
+      font-size: 14px;
+    }
+
+    .table-period {
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .rank-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .rank-table thead th {
+      padding: 16px 18px;
+      color: var(--text-faint);
+      text-align: left;
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .rank-table tbody tr {
+      transition: background 160ms ease;
+    }
+
+    .rank-table tbody tr:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .rank-table tbody td {
+      padding: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 15px;
+      color: var(--text-main);
+    }
+
+    .rank-table tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .cell-position {
+      font-family: "PlaytalkDisplay", Impact, sans-serif;
+      font-size: 26px;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+    }
+
+    .cell-number {
+      color: #dfefff;
+      letter-spacing: 0.08em;
+    }
+
+    .cell-flashcards {
+      font-weight: 700;
+      color: #f7fbff;
+    }
+
+    .rank-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding-top: 6px;
+    }
+
+    .rank-tab {
+      min-width: 176px;
+      min-height: 54px;
+      padding: 14px 22px;
+      border: 1px solid rgba(148, 199, 255, 0.12);
+      border-radius: 999px;
+      background: rgba(8, 18, 34, 0.82);
+      color: var(--text-soft);
+      font: inherit;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, color 160ms ease;
+    }
+
+    .rank-tab:hover {
+      transform: translateY(-2px);
+      border-color: rgba(115, 200, 255, 0.24);
+      color: #eef8ff;
+    }
+
+    .rank-tab.is-active {
+      border-color: rgba(115, 200, 255, 0.38);
+      background: linear-gradient(135deg, rgba(18, 45, 80, 0.96), rgba(10, 29, 54, 0.96));
+      color: #f7fbff;
+      box-shadow: 0 12px 30px rgba(14, 84, 144, 0.22), inset 0 0 0 1px rgba(115, 200, 255, 0.12);
+    }
+
+    .fade-in {
+      animation: fadeInUp 420ms ease both;
+    }
+
+    @keyframes floatGlow {
+      0%, 100% {
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+
+      50% {
+        transform: translate3d(18px, -22px, 0) scale(1.08);
+      }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .rank-shell {
+        padding: 28px 20px;
+      }
+
+      .podium {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .podium-card,
+      .podium-card.is-second,
+      .podium-card.is-third,
+      .podium-card:hover.is-second,
+      .podium-card:hover.is-third {
+        transform: none;
+      }
+
+      .podium-card.is-first {
+        order: -1;
+      }
+
+      .table-header {
         flex-direction: column;
         align-items: flex-start;
-      }
-
-      .hero-actions {
-        justify-content: flex-start;
-      }
-
-      .leaderboard-row {
-        grid-template-columns: 70px 86px minmax(0, 1fr);
-      }
-
-      .count-line {
-        grid-column: 2 / -1;
       }
     }
 
     @media (max-width: 640px) {
-      .shell {
-        width: min(100vw - 18px, 100%);
-        padding-top: 18px;
+      .rank-app {
+        width: min(100vw - 16px, 100%);
+        padding: 20px 0;
       }
 
-      .hero,
-      .panel {
-        border-radius: 22px;
+      .rank-shell {
+        border-radius: 28px;
       }
 
-      .leaderboard-row {
-        grid-template-columns: 64px 1fr;
+      .page-title {
+        letter-spacing: 0.08em;
       }
 
-      .avatar-stack {
-        grid-column: 2;
+      .rank-table thead th,
+      .rank-table tbody td {
+        padding-left: 12px;
+        padding-right: 12px;
       }
 
-      .count-line,
-      .updated-line {
-        grid-column: 2;
+      .rank-tab {
+        width: 100%;
       }
     }
   </style>
 </head>
 <body>
-  <main class="shell">
-    <section class="hero">
-      <div>
-        <h1>Liga Playtalk</h1>
-        <p class="hero-copy" id="playerHeadline">Carregando sua posicao...</p>
-      </div>
-      <div class="hero-actions">
-        <a class="btn" href="/flashcards">Ir para /flashcards</a>
-        <button class="btn btn-primary" id="refreshBtn" type="button">Atualizar ranking</button>
-      </div>
+  <main class="rank-app">
+    <section class="rank-shell">
+      <header class="intro fade-in">
+        <div class="eyebrow">PlayTalk Leaderboard</div>
+        <h1 class="page-title">RANKING</h1>
+        <p class="page-subtitle">Confira os Top Falantes da Semana!</p>
+      </header>
+
+      <section class="board">
+        <div class="podium fade-in" id="podium"></div>
+
+        <section class="rank-table-card fade-in" aria-labelledby="rankingTableTitle">
+          <div class="table-header">
+            <div>
+              <h2 class="table-title" id="rankingTableTitle">Top 10 PlayTalk</h2>
+              <p class="table-caption">Do 4o ao 10o lugar, com leitura limpa e foco total em performance.</p>
+            </div>
+            <div class="table-period" id="tablePeriodLabel">Rank Semanal</div>
+          </div>
+
+          <table class="rank-table" aria-describedby="rankingTableTitle">
+            <thead>
+              <tr>
+                <th scope="col">Posicao</th>
+                <th scope="col">Numero</th>
+                <th scope="col">Flashcards</th>
+              </tr>
+            </thead>
+            <tbody id="rankingTableBody"></tbody>
+          </table>
+        </section>
+
+        <nav class="rank-tabs fade-in" id="periodTabs" aria-label="Periodos do ranking"></nav>
+      </section>
     </section>
-
-    <section class="panel">
-      <div class="board-head">
-        <div>
-          <h2>Ranking de flashcards</h2>
-          <p>Os nomes aparecem conforme cada jogador entra em /flashcards e sincroniza seu total.</p>
-        </div>
-        <span class="board-meta" id="lastUpdated">Atualizando...</span>
-      </div>
-
-      <div class="self-slot" id="selfSlot"></div>
-
-      <div class="leaderboard" id="leaderboard">
-        <div class="leaderboard-empty">Carregando ranking...</div>
-      </div>
-    </section>
-
-    <p class="footer-note">Clique no quadrado verde ao lado da sua foto para trocar seu avatar.</p>
   </main>
 
-  <input id="avatarUploadInput" type="file" accept="image/*" hidden>
-
-  <script src="js/apk-config.js"></script>
-  <script src="js/api-config.js"></script>
   <script src="js/rank-page.js"></script>
 </body>
 </html>
