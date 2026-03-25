@@ -473,6 +473,12 @@
       font: inherit;
     }
 
+    .admin-tools select.report-filter {
+      background: rgba(110, 196, 255, 0.22);
+      border-color: rgba(110, 196, 255, 0.52);
+      color: #ffffff;
+    }
+
     .admin-tools__actions {
       display: flex;
       gap: 10px;
@@ -1774,6 +1780,86 @@
       z-index: 2;
     }
 
+    .game-report-trigger {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 4;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+    }
+
+    .game-report-trigger svg {
+      width: 14px;
+      height: 14px;
+      display: block;
+      fill: currentColor;
+    }
+
+    .game-report-trigger:hover,
+    .game-report-trigger:focus-visible {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .game-report-menu {
+      position: fixed;
+      inset: 0;
+      z-index: 160;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(1, 5, 12, 0.78);
+    }
+
+    .game-report-menu.is-visible {
+      display: flex;
+    }
+
+    .game-report-menu__panel {
+      width: min(420px, 100%);
+      padding: 22px;
+      border-radius: 24px;
+      background: rgba(6, 12, 22, 0.98);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: grid;
+      gap: 14px;
+    }
+
+    .game-report-menu__options {
+      display: grid;
+      gap: 10px;
+    }
+
+    .game-report-menu__option {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .mini-card__reports {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .mini-card__report-chip {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(110, 196, 255, 0.18);
+      color: #eaf8ff;
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
     .game-card.is-typing-stage .game-card__layout {
       gap: 8px;
     }
@@ -2387,6 +2473,9 @@
             <select id="adminDeckSelect" aria-label="Selecionar deck">
               <option value="">Todos os decks</option>
             </select>
+            <select id="adminReportFilter" class="report-filter" aria-label="Filtrar marcacoes">
+              <option value="">Todas as marcacoes</option>
+            </select>
             <button class="btn" id="adminAddSlotsBtn" type="button">Criar cartas</button>
             <button class="btn" id="adminCreateDeckBtn" type="button">Criar novo deck</button>
           </div>
@@ -2425,6 +2514,9 @@
         </div>
 
         <article class="game-card" id="gameCard" aria-live="polite">
+          <button class="game-report-trigger" id="gameReportTrigger" type="button" aria-label="Reportar flashcard">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 1 21h22L12 2Zm1 14h-2v2h2v-2Zm0-6h-2v5h2V10Z"/></svg>
+          </button>
           <div class="game-card__layout">
             <div class="game-card__visual" id="gameVisual"></div>
             <div class="game-card__content">
@@ -2573,6 +2665,21 @@
         </article>
       </div>
     </section>
+
+    <section class="game-report-menu" id="gameReportMenu" aria-modal="true" role="dialog">
+      <div class="game-report-menu__panel">
+        <div class="game-head">
+          <div>
+            <h2>Reportar flashcard</h2>
+            <p>Escolha o problema desse card.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-close" id="closeGameReportBtn" type="button" aria-label="Fechar">×</button>
+          </div>
+        </div>
+        <div class="game-report-menu__options" id="gameReportOptions"></div>
+      </div>
+    </section>
   </main>
   <script src="js/apk-config.js"></script>
   <script src="js/api-config.js"></script>
@@ -2585,6 +2692,7 @@
       const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
       const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
+      const USER_HIDDEN_STORAGE_KEY = 'playtalk-flashcards-hidden-v1';
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
       const TIME_OFFSET_STORAGE_KEY = 'playtalk-flashcards-time-offset-v1';
       const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
@@ -2614,6 +2722,14 @@
       const EARLY_FLASHCARD_MIN_LENGTH = 6;
       const EARLY_FLASHCARD_MAX_LENGTH = 12;
       const REVIEW_SLOT_LIMIT = 8;
+      const FLASHCARD_REPORT_TYPES = [
+        { key: 'blurred-image', label: 'Imagem borrada' },
+        { key: 'weak-association', label: 'Associacao fraca' },
+        { key: 'wrong-audio', label: 'Audio errado' },
+        { key: 'wrong-text', label: 'Texto errado' },
+        { key: 'hide-card', label: 'Nao quero ver isso' }
+      ];
+      const FLASHCARD_REPORT_LABELS = Object.fromEntries(FLASHCARD_REPORT_TYPES.map((item) => [item.key, item.label]));
       const SECRET_TIME_CODE = 'yyeua';
       const REVIEW_PHASES = {
         1: { key: 'prata', label: 'Prata', durationMs: 24 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
@@ -2633,6 +2749,7 @@
       const state = {
         allCards: [],
         userCards: new Map(),
+        hiddenCardIds: new Set(),
         ownedIds: new Set(),
         stats: { playTimeMs: 0, speakings: 0, listenings: 0 },
         timeOffsetMs: 0,
@@ -2650,7 +2767,9 @@
           error: false,
           prompt: '',
           activeCardId: '',
-          selectedDeckSource: ''
+          selectedDeckSource: '',
+          reportFilter: '',
+          reportCounts: new Map()
         },
         game: {
           active: false,
@@ -2676,7 +2795,9 @@
           canListen: false,
           recognition: null,
           typingKeyAudioPool: [],
-          typingKeyAudioIndex: 0
+          typingKeyAudioIndex: 0,
+          paused: false,
+          reportCardId: ''
         },
         watch: {
           active: false,
@@ -2712,6 +2833,7 @@
         adminBadge: document.getElementById('adminBadge'),
         adminTools: document.getElementById('adminTools'),
         adminDeckSelect: document.getElementById('adminDeckSelect'),
+        adminReportFilter: document.getElementById('adminReportFilter'),
         adminAddSlotsBtn: document.getElementById('adminAddSlotsBtn'),
         adminCreateDeckBtn: document.getElementById('adminCreateDeckBtn'),
         adminPromptInput: document.getElementById('adminPromptInput'),
@@ -2735,6 +2857,10 @@
         startGameBtn: document.getElementById('startGameBtn'),
         game: document.getElementById('game'),
         exitGameBtn: document.getElementById('exitGameBtn'),
+        gameReportTrigger: document.getElementById('gameReportTrigger'),
+        gameReportMenu: document.getElementById('gameReportMenu'),
+        gameReportOptions: document.getElementById('gameReportOptions'),
+        closeGameReportBtn: document.getElementById('closeGameReportBtn'),
         gameEnd: document.getElementById('gameEnd'),
         gameCard: document.getElementById('gameCard'),
         gameVisual: document.getElementById('gameVisual'),
@@ -3061,8 +3187,30 @@
         localStorage.setItem(userScopedStorageKey(USER_PROGRESS_STORAGE_KEY), JSON.stringify(Array.from(state.userCards.values())));
       }
 
+      function readHiddenCardIds() {
+        if (!state.user?.id) return new Set();
+        try {
+          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(USER_HIDDEN_STORAGE_KEY)) || '[]');
+          const ids = Array.isArray(parsed)
+            ? parsed.map((cardId) => safeText(cardId)).filter(Boolean)
+            : [];
+          return new Set(ids);
+        } catch (_error) {
+          return new Set();
+        }
+      }
+
+      function persistHiddenCardIdsLocally() {
+        if (!state.user?.id) return;
+        localStorage.setItem(
+          userScopedStorageKey(USER_HIDDEN_STORAGE_KEY),
+          JSON.stringify(Array.from(state.hiddenCardIds.values()))
+        );
+      }
+
       function saveUserProgress(options = {}) {
         persistUserProgressLocally();
+        persistHiddenCardIdsLocally();
         if (!options.skipCloudSync) {
           scheduleFlashcardCloudSync();
         }
@@ -3139,7 +3287,12 @@
       }
 
       function accessibleFlashcardsCount() {
-        return isAdminUser() ? state.allCards.length : state.ownedIds.size;
+        if (isAdminUser()) return state.allCards.length;
+        return userProgressCards().length;
+      }
+
+      function isCardHiddenForUser(cardId) {
+        return !isAdminUser() && state.hiddenCardIds.has(safeText(cardId));
       }
 
       function buildFlashcardCloudPayload() {
@@ -3156,7 +3309,8 @@
             createdAt: Number.isFinite(Number(record?.createdAt)) ? Number(record.createdAt) : Date.now(),
             sealImage: safeText(record?.sealImage)
           })).filter(record => record.cardId),
-          stats: normalizeStatsSnapshot(state.stats)
+          stats: normalizeStatsSnapshot(state.stats),
+          hiddenCardIds: Array.from(state.hiddenCardIds.values())
         };
       }
 
@@ -3269,6 +3423,7 @@
 
         const localStats = readUserStats();
         const localProgress = readUserProgress();
+        const localHidden = readHiddenCardIds();
         let cloudState = null;
         try {
           cloudState = await fetchFlashcardCloudState();
@@ -3291,6 +3446,9 @@
         state.userCards = hasCloudProgress
           ? new Map(cloudProgress.map(record => [record.cardId, record]))
           : localProgress;
+        state.hiddenCardIds = Array.isArray(cloudState?.meta?.hiddenCardIds)
+          ? new Set(cloudState.meta.hiddenCardIds.map((cardId) => safeText(cardId)).filter(Boolean))
+          : localHidden;
         syncOwnedIdsFromProgress();
 
         if (Number.isFinite(Number(cloudState?.serverTimeMs)) && Number(cloudState.serverTimeMs) > 0) {
@@ -3300,6 +3458,7 @@
 
         persistUserStatsLocally();
         persistUserProgressLocally();
+        persistHiddenCardIdsLocally();
 
         renderMetrics();
         updateGameChips();
@@ -3338,10 +3497,13 @@
         state.flashcardsSyncQueued = false;
         state.user = null;
         state.userCards = new Map();
+        state.hiddenCardIds = new Set();
         state.ownedIds = new Set();
         state.stats = normalizeStatsSnapshot({});
         state.libraryPage = 1;
         state.admin.selectedDeckSource = '';
+        state.admin.reportFilter = '';
+        state.admin.reportCounts = new Map();
         renderMetrics();
         updateGameChips();
         if (els.libraryTitle) {
@@ -3530,6 +3692,7 @@
           .map(record => {
             const card = state.allCards.find(item => item.id === record.cardId);
             if (!card) return null;
+            if (isCardHiddenForUser(card.id)) return null;
             return { ...card, progress: record };
           })
           .filter(Boolean)
@@ -3549,7 +3712,7 @@
           .filter(record => record.status === 'ready' && (record.phaseIndex || 0) >= 1)
           .sort((left, right) => (Number(left.returnedAt) || 0) - (Number(right.returnedAt) || 0))
           .map(record => state.allCards.find(card => card.id === record.cardId))
-          .filter(Boolean);
+          .filter(card => card && !isCardHiddenForUser(card.id));
       }
 
       function totalGameAvailableCards() {
@@ -3606,7 +3769,7 @@
         if (isAdminUser()) {
           return state.allCards.slice();
         }
-        const lockedCards = state.allCards.filter(card => !state.userCards.has(card.id));
+        const lockedCards = state.allCards.filter(card => !state.userCards.has(card.id) && !isCardHiddenForUser(card.id));
         if (state.userCards.size >= EARLY_FLASHCARD_LIMIT) {
           return lockedCards;
         }
@@ -3741,12 +3904,14 @@
         try {
           const freshCards = await refreshCardsFromNetwork();
           state.allCards = freshCards;
+          await refreshAdminReportSummary();
           saveCachedCards(freshCards);
           return;
         } catch (networkError) {
           const cachedCards = readCachedCards();
           if (cachedCards.length) {
             state.allCards = cachedCards;
+            await refreshAdminReportSummary();
             return;
           }
           throw networkError;
@@ -3788,6 +3953,7 @@
             </div>
             <p class="mini-card__word">${escapeHtml(card.displayEnglish || card.english || card.portuguese || card.deckTitle)}</p>
             <p class="mini-card__subword">${escapeHtml(card.displayPortuguese || card.portuguese || '')}</p>
+            ${card.reportsMarkup || ''}
             ${card.progressMarkup || ''}
           </article>
         `).join('');
@@ -3829,6 +3995,11 @@
 
       function buildAdminLibraryCardView(card) {
         const sealMarkup = `<img class="mini-card__seal" src="${escapeHtml(phaseMeta(5).sealPath)}" alt="${escapeHtml(phaseMeta(5).label)}">`;
+        const reportCounts = state.admin.reportCounts.get(card.id) || {};
+        const reportsMarkup = FLASHCARD_REPORT_TYPES
+          .filter((item) => Number(reportCounts?.[item.key] || 0) > 0)
+          .map((item) => `<span class="mini-card__report-chip">${escapeHtml(item.label)} (${escapeHtml(String(reportCounts[item.key]))})</span>`)
+          .join('');
         return {
           ...card,
           progress: adminReadyProgressRecord(card.id),
@@ -3837,7 +4008,8 @@
           imageStyle: '',
           loaderMarkup: '',
           progressMarkup: '',
-          sealMarkup
+          sealMarkup,
+          reportsMarkup: reportsMarkup ? `<div class="mini-card__reports">${reportsMarkup}</div>` : ''
         };
       }
 
@@ -3910,10 +4082,47 @@
 
       function currentAdminDeckCards() {
         const selectedSource = safeText(state.admin.selectedDeckSource);
-        if (!selectedSource) {
-          return state.allCards.slice();
+        const reportFilter = safeText(state.admin.reportFilter);
+        let cards = !selectedSource
+          ? state.allCards.slice()
+          : state.allCards.filter((card) => safeText(card?.source) === selectedSource);
+        if (reportFilter) {
+          cards = cards.filter((card) => Number(state.admin.reportCounts.get(card.id)?.[reportFilter] || 0) > 0);
         }
-        return state.allCards.filter((card) => safeText(card?.source) === selectedSource);
+        return cards;
+      }
+
+      function syncAdminReportFilter() {
+        if (!els.adminReportFilter) return;
+        const currentValue = safeText(state.admin.reportFilter);
+        const options = ['<option value="">Todas as marcacoes</option>']
+          .concat(FLASHCARD_REPORT_TYPES.map((item) => `<option value="${escapeHtml(item.key)}">${escapeHtml(item.label)}</option>`));
+        els.adminReportFilter.innerHTML = options.join('');
+        els.adminReportFilter.value = currentValue;
+      }
+
+      async function refreshAdminReportSummary() {
+        if (!isAdminUser()) {
+          state.admin.reportCounts = new Map();
+          syncAdminReportFilter();
+          return;
+        }
+        try {
+          const response = await fetch(buildApiUrl('/api/admin/flashcards/reports-summary'), {
+            headers: buildAuthHeaders(),
+            cache: 'no-store'
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Falha ao carregar reports.');
+          }
+          state.admin.reportCounts = new Map(
+            Object.entries(payload?.reportsByCard || {}).map(([cardId, counts]) => [cardId, counts || {}])
+          );
+        } catch (_error) {
+          state.admin.reportCounts = new Map();
+        }
+        syncAdminReportFilter();
       }
 
       function currentLibrarySourceCards() {
@@ -3959,14 +4168,20 @@
           state.admin.busy = false;
           state.admin.error = false;
           state.admin.status = 'Nenhuma acao em andamento.';
+          state.admin.reportFilter = '';
+          state.admin.reportCounts = new Map();
         }
         if (els.adminPromptInput) {
           els.adminPromptInput.value = state.admin.prompt || '';
           els.adminPromptInput.disabled = state.admin.busy || !adminMode;
         }
         syncAdminDeckSelect();
+        syncAdminReportFilter();
         if (els.adminDeckSelect) {
           els.adminDeckSelect.disabled = state.admin.busy || !adminMode;
+        }
+        if (els.adminReportFilter) {
+          els.adminReportFilter.disabled = state.admin.busy || !adminMode;
         }
         if (els.adminAddSlotsBtn) {
           els.adminAddSlotsBtn.disabled = state.admin.busy || !adminMode || !state.admin.selectedDeckSource;
@@ -3994,6 +4209,7 @@
       async function reloadCardsFromNetwork() {
         const freshCards = await refreshCardsFromNetwork();
         state.allCards = Array.isArray(freshCards) ? freshCards : [];
+        await refreshAdminReportSummary();
         saveCachedCards(state.allCards);
         refreshLibrary();
       }
@@ -4029,6 +4245,92 @@
           throw new Error(payload?.instructions || payload?.details || payload?.error || 'Falha ao executar a acao do admin.');
         }
         return payload || {};
+      }
+
+      function currentGameEntry() {
+        return state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+      }
+
+      function currentGameCard() {
+        const entry = currentGameEntry();
+        return entry ? cardById(entry.id) : null;
+      }
+
+      function buildGameReportOptions() {
+        if (!els.gameReportOptions) return;
+        els.gameReportOptions.innerHTML = FLASHCARD_REPORT_TYPES.map((item) => `
+          <button class="btn game-report-menu__option" type="button" data-report-type="${escapeHtml(item.key)}">${escapeHtml(item.label)}</button>
+        `).join('');
+        Array.from(els.gameReportOptions.querySelectorAll('[data-report-type]')).forEach((button) => {
+          button.addEventListener('click', () => {
+            submitGameReport(button.getAttribute('data-report-type'));
+          });
+        });
+      }
+
+      function openGameReportMenu() {
+        if (!state.game.active || !currentGameCard() || !els.gameReportMenu) return;
+        state.game.paused = true;
+        cleanupGameRecognition();
+        stopActiveAudio();
+        els.gameCard.classList.remove('is-listening');
+        els.gameVisual.classList.remove('is-mic-live');
+        buildGameReportOptions();
+        els.gameReportMenu.classList.add('is-visible');
+      }
+
+      function closeGameReportMenu() {
+        if (!els.gameReportMenu) return;
+        els.gameReportMenu.classList.remove('is-visible');
+        state.game.paused = false;
+      }
+
+      async function submitGameReport(reportType) {
+        const entry = currentGameEntry();
+        const card = currentGameCard();
+        if (!entry || !card || !reportType) return;
+
+        try {
+          const response = await fetch(buildApiUrl('/api/flashcards/report'), {
+            method: 'POST',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            }),
+            body: JSON.stringify({
+              cardId: card.id,
+              reportType
+            })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Falha ao reportar o flashcard.');
+          }
+
+          if (reportType === 'hide-card') {
+            const activeCountBefore = state.game.entries.size;
+            state.hiddenCardIds.add(card.id);
+            persistHiddenCardIdsLocally();
+            saveUserProgress();
+            removeGameEntry(card.id);
+            while (state.game.entries.size < activeCountBefore) {
+              if (!refillGameEntry(entry.pool, activeCountBefore)) break;
+            }
+            closeGameReportMenu();
+            refreshLibrary();
+            advanceToNextCard();
+            return;
+          }
+
+          if (isAdminUser()) {
+            await refreshAdminReportSummary();
+            refreshLibrary();
+          }
+          setGameStatus('Reporte enviado.', 'hit');
+          closeGameReportMenu();
+        } catch (error) {
+          setGameStatus(error.message || 'Falha ao enviar reporte.', 'miss');
+          closeGameReportMenu();
+        }
       }
 
       async function runAdminCardAssetDelete(kind) {
@@ -5237,7 +5539,7 @@
 
         if (entry.stage === 4) {
           window.setTimeout(() => {
-            if (state.game.currentId === entry.id && !state.game.listening) {
+            if (state.game.currentId === entry.id && !state.game.listening && !state.game.paused) {
               playPromptAudio(card);
             }
           }, 220);
@@ -5252,7 +5554,7 @@
             return;
           }
           window.setTimeout(() => {
-            if (state.game.currentId === entry.id && !state.game.listening) {
+            if (state.game.currentId === entry.id && !state.game.listening && !state.game.paused) {
               const playback = playPromptAudio(card);
               playback.finally(() => {
                 if (state.game.currentId === entry.id) {
@@ -5596,6 +5898,7 @@
         state.game.queue = [];
         state.game.currentId = null;
         state.game.listening = false;
+        state.game.paused = false;
         state.game.canListen = false;
         state.game.active = true;
         state.game.sessionStartedAt = Date.now();
@@ -5647,6 +5950,7 @@
         state.game.queue = [];
         state.game.currentId = null;
         state.game.listening = false;
+        state.game.paused = false;
         if (state.game.sessionStartedAt) {
           state.stats.playTimeMs += Date.now() - state.game.sessionStartedAt;
           state.game.sessionStartedAt = 0;
@@ -5654,6 +5958,7 @@
         }
         document.body.classList.remove('game-open');
         els.game.classList.remove('is-active');
+        closeGameReportMenu();
         await wait(180);
         els.game.classList.remove('is-visible');
         els.catalog.classList.remove('is-hidden');
@@ -5759,7 +6064,7 @@
       }
 
       async function startRecognition() {
-        if (!state.game.active || state.game.transitioning || state.game.listening) return;
+        if (!state.game.active || state.game.transitioning || state.game.listening || state.game.paused) return;
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return;
         if (entry.stage === 4) return;
@@ -5909,6 +6214,11 @@
           state.libraryPage = 1;
           refreshLibrary();
         });
+        els.adminReportFilter?.addEventListener('change', (event) => {
+          state.admin.reportFilter = safeText(event.target.value);
+          state.libraryPage = 1;
+          refreshLibrary();
+        });
         els.adminAddSlotsBtn?.addEventListener('click', runAdminAddSlots);
         els.adminCreateDeckBtn?.addEventListener('click', runAdminCreateDeck);
         els.adminPromptInput?.addEventListener('input', (event) => {
@@ -5931,7 +6241,15 @@
           if (!state.game.active) return;
           if (event.target.closest('.btn-close')) return;
           if (event.target.closest('.flashcards-typing')) return;
+          if (event.target.closest('.game-report-trigger')) return;
           startRecognition();
+        });
+        els.gameReportTrigger?.addEventListener('click', openGameReportMenu);
+        els.closeGameReportBtn?.addEventListener('click', closeGameReportMenu);
+        els.gameReportMenu?.addEventListener('click', (event) => {
+          if (event.target === els.gameReportMenu) {
+            closeGameReportMenu();
+          }
         });
         els.flashcardsHomeToggle.addEventListener('click', () => {
           document.body.classList.toggle('flashcards-home-collapsed');
@@ -5984,7 +6302,9 @@
               }
             }
           }
-          if (event.key === 'Escape' && state.game.active) {
+          if (event.key === 'Escape' && els.gameReportMenu?.classList.contains('is-visible')) {
+            closeGameReportMenu();
+          } else if (event.key === 'Escape' && state.game.active) {
             exitGame();
           } else if (event.key === 'Escape' && els.gameSetup.classList.contains('is-visible')) {
             closeGameSetup();

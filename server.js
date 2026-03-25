@@ -462,6 +462,33 @@ const ensureFlashcardUserStateTables = async () => {
           updated_at timestamptz NOT NULL DEFAULT now()
         )
       `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_hidden (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          card_id text NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, card_id)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_hidden_user_idx
+        ON public.user_flashcard_hidden (user_id, updated_at DESC)
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_reports (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          card_id text NOT NULL,
+          report_type text NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, card_id, report_type)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_reports_type_idx
+        ON public.user_flashcard_reports (report_type, updated_at DESC)
+      `);
       return true;
     })().catch((error) => {
       flashcardUserStateTablesReadyPromise = null;
@@ -1060,7 +1087,7 @@ const readFlashcardStateForUser = async (userId) => {
     throw error;
   }
 
-  const [progressResult, statsResult] = await Promise.all([
+  const [progressResult, statsResult, hiddenResult] = await Promise.all([
     pool.query(
       `SELECT
          card_id,
@@ -1084,6 +1111,13 @@ const readFlashcardStateForUser = async (userId) => {
        WHERE user_id = $1
        LIMIT 1`,
       [normalizedUserId]
+    ),
+    pool.query(
+      `SELECT card_id
+       FROM public.user_flashcard_hidden
+       WHERE user_id = $1
+       ORDER BY updated_at DESC, created_at DESC, card_id ASC`,
+      [normalizedUserId]
     )
   ]);
 
@@ -1100,7 +1134,10 @@ const readFlashcardStateForUser = async (userId) => {
       : normalizeFlashcardStats({}),
     meta: {
       hasProgress: progressResult.rows.length > 0,
-      hasStats: Boolean(statsResult.rows[0])
+      hasStats: Boolean(statsResult.rows[0]),
+      hiddenCardIds: hiddenResult.rows
+        .map((row) => typeof row?.card_id === 'string' ? row.card_id.trim() : '')
+        .filter(Boolean)
     }
   };
 };
@@ -1135,6 +1172,11 @@ const saveFlashcardStateForUser = async (userId, payload) => {
   });
   const progress = Array.from(dedupedProgress.values());
   const stats = normalizeFlashcardStats(payload?.stats);
+  const hiddenCardIds = Array.isArray(payload?.hiddenCardIds)
+    ? Array.from(new Set(payload.hiddenCardIds
+      .map((cardId) => typeof cardId === 'string' ? cardId.trim() : '')
+      .filter(Boolean)))
+    : [];
 
   const client = await pool.connect();
   try {
@@ -1201,6 +1243,43 @@ const saveFlashcardStateForUser = async (userId, payload) => {
     } else {
       await client.query(
         `DELETE FROM public.user_flashcard_progress
+         WHERE user_id = $1`,
+        [normalizedUserId]
+      );
+    }
+
+    if (hiddenCardIds.length) {
+      await client.query(
+        `DELETE FROM public.user_flashcard_hidden
+         WHERE user_id = $1
+           AND NOT (card_id = ANY($2::text[]))`,
+        [normalizedUserId, hiddenCardIds]
+      );
+
+      const hiddenValues = [];
+      const hiddenParams = [];
+      hiddenCardIds.forEach((cardId, index) => {
+        const offset = index * 2;
+        hiddenValues.push(`($${offset + 1}, $${offset + 2}, now(), now())`);
+        hiddenParams.push(normalizedUserId, cardId);
+      });
+
+      await client.query(
+        `INSERT INTO public.user_flashcard_hidden (
+           user_id,
+           card_id,
+           created_at,
+           updated_at
+         )
+         VALUES ${hiddenValues.join(', ')}
+         ON CONFLICT (user_id, card_id)
+         DO UPDATE SET
+           updated_at = now()`,
+        hiddenParams
+      );
+    } else {
+      await client.query(
+        `DELETE FROM public.user_flashcard_hidden
          WHERE user_id = $1`,
         [normalizedUserId]
       );
@@ -3156,6 +3235,109 @@ app.put('/api/flashcards/state', async (req, res) => {
         : statusCode === 413
           ? 'Quantidade de flashcards acima do limite.'
           : 'Erro ao salvar estado dos flashcards.'
+    });
+  }
+});
+
+app.post('/api/flashcards/report', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    await ensureFlashcardUserStateTables();
+
+    const cardId = typeof req.body?.cardId === 'string' ? req.body.cardId.trim() : '';
+    const reportType = typeof req.body?.reportType === 'string' ? req.body.reportType.trim().toLowerCase() : '';
+    const allowedTypes = new Set(['blurred-image', 'weak-association', 'wrong-audio', 'wrong-text', 'hide-card']);
+    if (!cardId || !allowedTypes.has(reportType)) {
+      res.status(400).json({ success: false, message: 'Reporte de flashcard invalido.' });
+      return;
+    }
+
+    const normalizedUserId = Number.parseInt(authUser.id, 10);
+    await pool.query(
+      `INSERT INTO public.user_flashcard_reports (
+         user_id,
+         card_id,
+         report_type,
+         created_at,
+         updated_at
+       )
+       VALUES ($1, $2, $3, now(), now())
+       ON CONFLICT (user_id, card_id, report_type)
+       DO UPDATE SET
+         updated_at = now()`,
+      [normalizedUserId, cardId, reportType]
+    );
+
+    let hidden = false;
+    if (reportType === 'hide-card') {
+      await pool.query(
+        `INSERT INTO public.user_flashcard_hidden (
+           user_id,
+           card_id,
+           created_at,
+           updated_at
+         )
+         VALUES ($1, $2, now(), now())
+         ON CONFLICT (user_id, card_id)
+         DO UPDATE SET
+           updated_at = now()`,
+        [normalizedUserId, cardId]
+      );
+      hidden = true;
+    }
+
+    res.json({ success: true, hidden });
+  } catch (error) {
+    console.error('Erro ao registrar reporte de flashcard:', error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Erro ao registrar reporte do flashcard.'
+    });
+  }
+});
+
+app.get('/api/admin/flashcards/reports-summary', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await requireAdminUserFromRequest(req);
+    await ensureFlashcardUserStateTables();
+
+    const result = await pool.query(
+      `SELECT card_id, report_type, COUNT(*)::int AS total
+       FROM public.user_flashcard_reports
+       GROUP BY card_id, report_type`
+    );
+
+    const reportsByCard = {};
+    result.rows.forEach((row) => {
+      const cardId = typeof row?.card_id === 'string' ? row.card_id.trim() : '';
+      const reportType = typeof row?.report_type === 'string' ? row.report_type.trim() : '';
+      const total = Number(row?.total) || 0;
+      if (!cardId || !reportType || total <= 0) return;
+      if (!reportsByCard[cardId]) reportsByCard[cardId] = {};
+      reportsByCard[cardId][reportType] = total;
+    });
+
+    res.json({ success: true, reportsByCard });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao carregar os reports dos flashcards.'
     });
   }
 });
