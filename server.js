@@ -161,8 +161,21 @@ const ensureUsersAvatarColumn = async () => {
   if (!usersAvatarColumnReadyPromise) {
     usersAvatarColumnReadyPromise = (async () => {
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.users (
+          id serial4 PRIMARY KEY,
+          email text UNIQUE NOT NULL,
+          password_hash text NOT NULL,
+          avatar_image text,
+          created_at timestamp DEFAULT now()
+        )
+      `);
+      await pool.query(`
         ALTER TABLE public.users
         ADD COLUMN IF NOT EXISTS avatar_image text
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS created_at timestamp DEFAULT now()
       `);
       return true;
     })().catch((error) => {
