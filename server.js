@@ -2055,6 +2055,16 @@ async function persistEditableFlashcardSources(sourceMap) {
   }
 }
 
+function buildEditableFlashcardItemTemplate() {
+  return {
+    nomePortugues: '',
+    nomeIngles: '',
+    imagem: '',
+    audio: '',
+    categoria: 'flashcard'
+  };
+}
+
 function buildAdminFlashcardAssetRelativePath(sourceInfo, sourceIndex, kind, extension) {
   const safeExtension = String(extension || '').replace(/^\./, '') || (kind === 'audio' ? 'mp3' : 'webp');
   return path.posix.join(
@@ -5071,6 +5081,142 @@ app.post('/api/admin/flashcards/fill-missing-audio', express.json({ limit: '2mb'
   } catch (error) {
     res.status(error.statusCode || 500).json({
       error: error.message || 'Falha ao preencher os audios vazios.',
+      ...(error.instructions ? { instructions: error.instructions } : {})
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/update-card', express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+
+    const source = typeof req.body?.source === 'string' ? req.body.source.trim() : '';
+    const sourceIndex = Number.parseInt(req.body?.sourceIndex, 10);
+    if (!source || !Number.isInteger(sourceIndex) || sourceIndex < 0) {
+      res.status(400).json({ error: 'Flashcard do admin invalido.' });
+      return;
+    }
+
+    const sourceMap = await loadEditableFlashcardSources([{ source, sourceIndex }]);
+    const sourceInfo = resolveAdminFlashcardSourceInfo(source);
+    const sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
+    const item = sourceEntry?.items?.[sourceIndex];
+    if (!item) {
+      res.status(404).json({ error: 'Flashcard nao encontrado.' });
+      return;
+    }
+
+    if (typeof req.body?.english === 'string') {
+      setFlashcardItemEnglish(item, req.body.english.trim());
+    }
+    if (typeof req.body?.portuguese === 'string') {
+      setFlashcardItemPortuguese(item, req.body.portuguese.trim());
+    }
+
+    await persistEditableFlashcardSources(sourceMap);
+    res.json({
+      success: true,
+      english: readFlashcardItemEnglish(item),
+      portuguese: readFlashcardItemPortuguese(item)
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Falha ao atualizar o flashcard.',
+      ...(error.instructions ? { instructions: error.instructions } : {})
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/delete-asset', express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+
+    const source = typeof req.body?.source === 'string' ? req.body.source.trim() : '';
+    const sourceIndex = Number.parseInt(req.body?.sourceIndex, 10);
+    const kind = typeof req.body?.kind === 'string' ? req.body.kind.trim().toLowerCase() : '';
+    if (!source || !Number.isInteger(sourceIndex) || sourceIndex < 0 || !['image', 'audio'].includes(kind)) {
+      res.status(400).json({ error: 'Solicitacao de exclusao invalida.' });
+      return;
+    }
+
+    const sourceMap = await loadEditableFlashcardSources([{ source, sourceIndex }]);
+    const sourceInfo = resolveAdminFlashcardSourceInfo(source);
+    const sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
+    const item = sourceEntry?.items?.[sourceIndex];
+    if (!item) {
+      res.status(404).json({ error: 'Flashcard nao encontrado.' });
+      return;
+    }
+
+    if (kind === 'image') {
+      setFlashcardItemImage(item, '');
+    } else {
+      setFlashcardItemAudio(item, '');
+    }
+
+    await persistEditableFlashcardSources(sourceMap);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Falha ao apagar o asset.',
+      ...(error.instructions ? { instructions: error.instructions } : {})
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/delete-card', express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+
+    const source = typeof req.body?.source === 'string' ? req.body.source.trim() : '';
+    const sourceIndex = Number.parseInt(req.body?.sourceIndex, 10);
+    if (!source || !Number.isInteger(sourceIndex) || sourceIndex < 0) {
+      res.status(400).json({ error: 'Flashcard do admin invalido.' });
+      return;
+    }
+
+    const sourceMap = await loadEditableFlashcardSources([{ source, sourceIndex }]);
+    const sourceInfo = resolveAdminFlashcardSourceInfo(source);
+    const sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
+    if (!sourceEntry?.items?.[sourceIndex]) {
+      res.status(404).json({ error: 'Flashcard nao encontrado.' });
+      return;
+    }
+
+    sourceEntry.items.splice(sourceIndex, 1);
+    await persistEditableFlashcardSources(sourceMap);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Falha ao apagar o flashcard.',
+      ...(error.instructions ? { instructions: error.instructions } : {})
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/add-slot', express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+
+    const source = typeof req.body?.source === 'string' ? req.body.source.trim() : '';
+    if (!source) {
+      res.status(400).json({ error: 'Origem do deck nao informada.' });
+      return;
+    }
+
+    const sourceInfo = resolveAdminFlashcardSourceInfo(source);
+    const payload = await readJsonFromRelativePath(sourceInfo.relativeJsonPath);
+    const items = getFlashcardPayloadItems(payload);
+    items.push(buildEditableFlashcardItemTemplate());
+    await writeJsonToRelativePath(sourceInfo.relativeJsonPath, payload);
+    if (sourceInfo.type === 'local-other') {
+      await refreshLocalLevelManifestMirror();
+    }
+
+    res.json({ success: true, sourceIndex: items.length - 1 });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Falha ao adicionar slot vazio.',
       ...(error.instructions ? { instructions: error.instructions } : {})
     });
   }
