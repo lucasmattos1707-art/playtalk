@@ -65,6 +65,12 @@
       throw new Error('Permissao de microfone negada.');
     }
 
+    try {
+      await plugin.stop();
+    } catch (_error) {
+      // ignore
+    }
+
     const response = await plugin.start({
       language: String(options.language || 'en-US'),
       maxResults: 1,

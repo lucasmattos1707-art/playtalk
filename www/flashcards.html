@@ -4028,7 +4028,12 @@
         }
         els.gameSubword.classList.toggle('is-stage-one', entry.stage === 1 && stageConfig.subtitleType === 'portuguese');
         renderStageOneWordSwap(entry, Boolean(subword));
-        state.game.canListen = entry.stage !== 4 && !stageConfig.autoAudio;
+        const nativeAndroidSpeechEnabled = Boolean(
+          nativeSpeech
+          && typeof nativeSpeech.isNativeAndroidRuntime === 'function'
+          && nativeSpeech.isNativeAndroidRuntime()
+        );
+        state.game.canListen = entry.stage !== 4 && (nativeAndroidSpeechEnabled || !stageConfig.autoAudio);
         renderGameTouchButton(stageConfig, entry);
         els.gameTouchBtn.parentElement.classList.toggle('is-hidden', entry.stage === 4 || els.gameTouchBtn.classList.contains('is-hidden'));
         els.gameTouchBtn.classList.toggle('is-busy', state.game.listening);
@@ -4052,7 +4057,7 @@
           return;
         }
 
-        if (stageConfig.autoAudio) {
+        if (stageConfig.autoAudio && !nativeAndroidSpeechEnabled) {
           if (state.game.skipAutoAudioOnce) {
             state.game.skipAutoAudioOnce = false;
             state.game.canListen = true;
@@ -4578,7 +4583,6 @@
 
       async function startRecognition() {
         if (!state.game.active || state.game.transitioning || state.game.listening) return;
-        if (!state.game.canListen) return;
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return;
         if (entry.stage === 4) return;
@@ -4598,7 +4602,9 @@
           && openAiStt.isSupported()
         );
         const shouldUseNativeSpeech = canUseNativeSpeech;
-        const shouldUseOpenAiStt = canUseOpenAiStt;
+        const shouldUseOpenAiStt = canUseOpenAiStt && !shouldUseNativeSpeech;
+
+        if (!shouldUseNativeSpeech && !state.game.canListen) return;
 
         if (!recognitionCtor && !shouldUseNativeSpeech && !shouldUseOpenAiStt) {
           setGameStatus('', 'miss');
@@ -4606,7 +4612,7 @@
         }
 
         cleanupGameRecognition();
-        fadeOutActiveAudio(1000).catch(() => {});
+        stopActiveAudio();
         state.game.listening = true;
         els.gameTouchBtn.classList.add('is-busy');
         els.gameCard.classList.add('is-listening');
