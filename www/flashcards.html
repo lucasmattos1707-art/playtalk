@@ -2395,7 +2395,7 @@
         <div class="game-head">
           <div>
             <h2>Modo jogar</h2>
-            <p id="gameHeaderCopy">Escolha 8, 16 ou 24 cartas e fale para ganhar flashcards.</p>
+            <p id="gameHeaderCopy">O jogo comeca com 3 cartas e cresce ate 12 conforme voce ganha flashcards.</p>
           </div>
           <div class="actions">
             <button class="btn btn-close" id="exitGameBtn" type="button" aria-label="Fechar">×</button>
@@ -2479,8 +2479,8 @@
       <div class="panel game-shell game-setup__shell">
         <div class="game-head">
           <div>
-            <h2>Escolha a rodada</h2>
-            <p>Selecione 8, 16 ou 24 cartas para jogar.</p>
+            <h2>Iniciar jogo</h2>
+            <p>O jogo comeca com 3 flashcards. A cada vitoria, 2 novos sobem para a mesa ate o maximo de 12.</p>
             <p id="gameSetupCountCopy" class="admin-tools__status">Calculando flashcards disponiveis...</p>
           </div>
           <div class="actions">
@@ -2488,9 +2488,7 @@
           </div>
         </div>
         <div class="game-setup__options" id="gameSetupOptions">
-          <button class="game-setup__option" type="button" data-game-count="8">8 cartas</button>
-          <button class="game-setup__option" type="button" data-game-count="16">16 cartas</button>
-          <button class="game-setup__option" type="button" data-game-count="24">24 cartas</button>
+          <button class="game-setup__option" type="button" data-game-count="3">Comecar com 3 cartas</button>
         </div>
       </div>
     </section>
@@ -2591,8 +2589,9 @@
       const BALANCE_TRACKS = ['zen1.mp3', 'zen2.mp3', 'zen3.mp3', 'zen4.mp3'];
       const BALANCE_TRACK_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas';
       const TYPING_KEY_BLUES = ['#6ebcff', '#76c3ff', '#7dc9ff', '#86ceff', '#8fd4ff', '#98d9ff'];
-      const DEFAULT_GAME_CONTEXT_LIMIT = 6;
-      const MIN_GAME_CONTEXT_LIMIT = 6;
+      const DEFAULT_GAME_CONTEXT_LIMIT = 3;
+      const MIN_GAME_CONTEXT_LIMIT = 3;
+      const GAME_ACTIVE_CARD_CAP = 12;
       const GAME_STAR_TARGET = 5;
       const EARLY_FLASHCARD_LIMIT = 200;
       const EARLY_FLASHCARD_MIN_LENGTH = 6;
@@ -3532,13 +3531,7 @@
       }
 
       function totalGameAvailableCards() {
-        if (isAdminUser()) {
-          return state.allCards.length;
-        }
-        const ids = new Set();
-        readyReviewCards().forEach(card => ids.add(card.id));
-        baseCandidateCards().forEach(card => ids.add(card.id));
-        return ids.size;
+        return state.allCards.length;
       }
 
       function syncGameSetupSummary() {
@@ -4692,7 +4685,9 @@
         els.gameActiveValue.textContent = String(state.stats.speakings || 0);
         els.gameQueueValue.textContent = String(state.stats.listenings || 0);
         els.gameOwnedValue.textContent = String(accessibleFlashcardsCount());
-        els.gameHeaderCopy.textContent = `${state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT} cartas na rodada.`;
+        const activeCount = state.game.entries.size || 0;
+        const targetCount = state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT;
+        els.gameHeaderCopy.textContent = `${activeCount}/${targetCount} cartas ativas na mesa.`;
       }
 
       function cardById(id) {
@@ -5108,19 +5103,41 @@
         }
       }
 
-      function refillGameEntry(pool = 'base') {
+      function nextGameCardForPool(pool = 'base') {
         const activeIds = new Set(Array.from(state.game.entries.keys()));
-        const sourceCards = pool === 'review'
+        const preferredSource = pool === 'review'
           ? readyReviewCards().filter(card => !activeIds.has(card.id))
           : baseCandidateCards().filter(card => !activeIds.has(card.id));
-        const nextCard = pool === 'review' ? sourceCards[0] : takeRandom(sourceCards, 1)[0];
+        const fallbackSource = pool === 'review'
+          ? baseCandidateCards().filter(card => !activeIds.has(card.id))
+          : readyReviewCards().filter(card => !activeIds.has(card.id));
+        const sourceCards = preferredSource.length ? preferredSource : fallbackSource;
+        const nextCard = (pool === 'review' && preferredSource.length)
+          ? sourceCards[0]
+          : takeRandom(sourceCards, 1)[0];
+        if (!nextCard) return null;
+        return {
+          card: nextCard,
+          pool: preferredSource.length ? pool : (pool === 'review' ? 'base' : 'review')
+        };
+      }
+
+      function refillGameEntry(pool = 'base', limit = state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT) {
+        if (state.game.entries.size >= Math.max(DEFAULT_GAME_CONTEXT_LIMIT, Number(limit) || 0)) {
+          updateGameChips();
+          return false;
+        }
+        const nextChoice = nextGameCardForPool(pool);
+        const nextCard = nextChoice?.card || null;
         if (!nextCard) {
           updateGameChips();
-          return;
+          return false;
         }
-        const entry = createGameEntry(nextCard, pool);
+        const entry = createGameEntry(nextCard, nextChoice.pool);
         state.game.entries.set(entry.id, entry);
         state.game.queue.push(entry.id);
+        updateGameChips();
+        return true;
       }
 
       function promoteCardFromWin(entry) {
@@ -5423,6 +5440,7 @@
 
         advanceReadyMemorizations();
         const roundCount = normalizeGameCount(state.game.selectedCount) || DEFAULT_GAME_CONTEXT_LIMIT;
+        state.game.contextLimit = GAME_ACTIVE_CARD_CAP;
         const reviewLimit = Math.min(REVIEW_SLOT_LIMIT, Math.floor(roundCount / 3));
         const reviewCards = readyReviewCards().slice(0, reviewLimit);
         const chosenCards = buildOrderedDeckSelection(
@@ -5452,6 +5470,7 @@
           return;
         }
 
+        updateGameChips();
         advanceToNextCard();
       }
 
@@ -5485,6 +5504,7 @@
         if (!entry) return;
 
         const expectedAnswers = expectedAnswersForEntry(entry);
+        const activeCountBeforeResolution = state.game.entries.size;
         const evaluatedStage = entry.stage;
         const { score, isHit } = evaluateAcceptedAnswers(expectedAnswers, transcript);
         const card = cardById(entry.id);
@@ -5563,7 +5583,14 @@
           if (entry._removeAfterReward) {
             entry._removeAfterReward = false;
             removeGameEntry(entry.id);
-            refillGameEntry(entry.pool);
+            const targetActiveCount = activeCountBeforeResolution >= GAME_ACTIVE_CARD_CAP
+              ? GAME_ACTIVE_CARD_CAP
+              : Math.min(GAME_ACTIVE_CARD_CAP, activeCountBeforeResolution + 1);
+            while (state.game.entries.size < targetActiveCount) {
+              if (!refillGameEntry(entry.pool, targetActiveCount)) {
+                break;
+              }
+            }
           }
           advanceToNextCard();
         }
