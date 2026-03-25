@@ -2349,7 +2349,6 @@
               <span class="admin-badge" id="adminBadge" hidden>Administrador</span>
             </div>
             <p id="allSectionCopy">Carregando seus flashcards...</p>
-            <p id="allAvailableCopy" class="admin-tools__status">Calculando flashcards disponiveis para jogo...</p>
           </div>
           <div class="actions">
             <a class="btn" id="usersLink" href="/users">
@@ -2700,7 +2699,6 @@
           adminFillImageBtn: document.getElementById('adminFillImageBtn'),
           adminFillAudioBtn: document.getElementById('adminFillAudioBtn'),
           adminToolsStatus: document.getElementById('adminToolsStatus'),
-          allAvailableCopy: document.getElementById('allAvailableCopy'),
           adminCardPopover: document.getElementById('adminCardPopover'),
           adminCardPopoverTitle: document.getElementById('adminCardPopoverTitle'),
           adminDeleteImageBtn: document.getElementById('adminDeleteImageBtn'),
@@ -3549,11 +3547,6 @@
         els.gameSetupCountCopy.textContent = total
           ? `${total} flashcards disponiveis no total para jogar agora.`
           : 'Nenhum flashcard disponivel para jogar agora.';
-        if (els.allAvailableCopy) {
-          els.allAvailableCopy.textContent = total
-            ? `Total disponivel para jogo agora: ${total} flashcards.`
-            : 'Total disponivel para jogo agora: 0 flashcards.';
-        }
       }
 
       function stopCardsRefresh() {
