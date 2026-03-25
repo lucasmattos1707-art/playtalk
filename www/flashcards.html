@@ -2024,7 +2024,7 @@
             <p id="allSectionCopy">Carregando seus flashcards...</p>
           </div>
           <div class="actions">
-            <a class="btn" href="/rank">
+            <a class="btn" id="rankLink" href="/rank">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v2h-1v2.5A4.5 4.5 0 0 1 12.75 13v1.55H16a1 1 0 0 1 1 1V18H7v-2.45a1 1 0 0 1 1-1h3.25V13A4.5 4.5 0 0 1 8 8.5V6H7V4zm3 2v2.5a2.5 2.5 0 1 0 5 0V6h-5zM5 5h2v2H6.5A1.5 1.5 0 0 0 5 8.5V9h2a3.93 3.93 0 0 1-.5-2V5zm12 0h2v2a3 3 0 0 1-.5 2H20v-.5A1.5 1.5 0 0 0 18.5 7H17V5z"/></svg>
               <span class="btn__label">Ranking</span>
             </a>
@@ -2305,6 +2305,7 @@
       const els = {
         topbar: document.getElementById('topbar'),
         flashcardsHomeToggle: document.getElementById('flashcardsHomeToggle'),
+        rankLink: document.getElementById('rankLink'),
         catalog: document.getElementById('catalog'),
         metrics: document.getElementById('metrics'),
         allGrid: document.getElementById('allGrid'),
@@ -2620,6 +2621,27 @@
           return window.PlaytalkApi.url(path);
         }
         return path;
+      }
+
+      function isNativeRuntime() {
+        try {
+          if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function') {
+            return Boolean(window.Capacitor.isNativePlatform());
+          }
+        } catch (_error) {
+          // ignore
+        }
+
+        const protocol = String(window.location?.protocol || '').toLowerCase();
+        const hostname = String(window.location?.hostname || '').toLowerCase();
+        const port = String(window.location?.port || '').trim();
+        return protocol === 'capacitor:'
+          || protocol === 'file:'
+          || ((hostname === 'localhost' || hostname === '127.0.0.1') && !port);
+      }
+
+      function resolveRankHref() {
+        return isNativeRuntime() ? 'rank.html' : '/rank';
       }
 
       function createAnonymousRankPlayerId() {
@@ -4811,6 +4833,9 @@
         loadSelectedGameCount();
         syncWatchControls();
         bindEvents();
+        if (els.rankLink) {
+          els.rankLink.setAttribute('href', resolveRankHref());
+        }
         renderMetrics();
         updateGameChips();
         renderMiniCards(els.allGrid, [], 'Carregando flashcards...');
