@@ -4578,6 +4578,7 @@
 
       async function startRecognition() {
         if (!state.game.active || state.game.transitioning || state.game.listening) return;
+        if (!state.game.canListen) return;
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return;
         if (entry.stage === 4) return;
