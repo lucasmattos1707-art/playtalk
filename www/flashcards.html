@@ -4548,17 +4548,9 @@
 
       function promoteCardFromWin(entry) {
         const currentRecord = state.userCards.get(entry.id) || null;
-        if (!currentRecord) {
-          moveCardToMemorizing(entry.id, 1);
-          return;
-        }
-        if ((currentRecord.phaseIndex || 0) >= 5 && currentRecord.status === 'ready') {
-          currentRecord.returnedAt = getNowMs();
-          state.userCards.set(entry.id, currentRecord);
-          saveUserProgress();
-          return;
-        }
-        moveCardToMemorizing(entry.id, Math.min(5, (currentRecord.phaseIndex || 0) + 1));
+        const currentPhase = Math.max(0, Math.min(5, Number(currentRecord?.phaseIndex) || 0));
+        const nextPhase = Math.max(1, Math.min(5, currentPhase + 1));
+        moveCardToMemorizing(entry.id, nextPhase);
       }
 
       function removeGameEntry(cardId) {
@@ -4965,8 +4957,6 @@
           renderImmediateHitFeedback(entry.stars);
 
           if (entry.stars >= GAME_STAR_TARGET) {
-            const currentRecord = state.userCards.get(entry.id) || null;
-            const isDiamondReady = Boolean(currentRecord && currentRecord.status === 'ready' && (currentRecord.phaseIndex || 0) >= 5);
             const rewardSealPhase = resolveRewardSealPhase(entry);
             setGameStatus('', 'hit');
             renderStars(GAME_STAR_TARGET);
@@ -4975,18 +4965,10 @@
             animateStarsCascade(GAME_STAR_TARGET);
             schedulePendingRewardSeal(entry.id, rewardSealPhase);
             setGameStatus(`${state.ownedIds.size} FlashCards`, 'flashcards-count');
-            if (isDiamondReady) {
-              entry.stars = 0;
-              entry.stage = 1;
-              entry.missesWithoutStars = 0;
-              entry.typingMistakes = 0;
-              entry._requeueAfterReward = true;
-            } else {
-              promoteCardFromWin(entry);
-              updateGameChips();
-              setGameStatus(`${state.ownedIds.size} FlashCards`, 'flashcards-count');
-              entry._removeAfterReward = true;
-            }
+            promoteCardFromWin(entry);
+            updateGameChips();
+            setGameStatus(`${state.ownedIds.size} FlashCards`, 'flashcards-count');
+            entry._removeAfterReward = true;
           } else {
             setGameStatus('', 'hit');
             state.game.queue.push(entry.id);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PlayTalk | Ranking</title>
+  <title>PlayTalk | Liga PlayTalk</title>
   <style>
     @font-face {
       font-family: "PlaytalkDisplay";
@@ -14,18 +14,15 @@
     }
 
     :root {
-      --bg-surface: rgba(9, 22, 40, 0.8);
-      --bg-surface-strong: rgba(8, 18, 34, 0.92);
-      --line-soft: rgba(147, 197, 253, 0.12);
-      --line-strong: rgba(148, 199, 255, 0.2);
-      --text-main: #f5fbff;
-      --text-soft: #93b7d8;
-      --text-faint: #6d8ba7;
-      --accent: #73c8ff;
-      --radius-xl: 36px;
-      --radius-lg: 26px;
-      --shadow-panel: 0 30px 80px rgba(0, 0, 0, 0.42);
-      --shadow-glow: 0 0 40px rgba(56, 168, 255, 0.18);
+      --bg: #07111f;
+      --panel: rgba(9, 21, 38, 0.92);
+      --line: rgba(140, 197, 255, 0.14);
+      --line-strong: rgba(140, 197, 255, 0.24);
+      --text: #f4f8ff;
+      --muted: #a5bdd8;
+      --accent: #7ed0ff;
+      --shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
+      --radius: 30px;
     }
 
     * {
@@ -40,544 +37,129 @@
 
     body {
       font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-      color: var(--text-main);
+      color: var(--text);
       background:
-        radial-gradient(circle at 50% 20%, rgba(56, 168, 255, 0.2), transparent 24%),
-        radial-gradient(circle at 14% 18%, rgba(72, 134, 255, 0.14), transparent 18%),
-        radial-gradient(circle at 84% 18%, rgba(84, 212, 255, 0.12), transparent 20%),
-        linear-gradient(180deg, #061120 0%, #040914 56%, #071120 100%);
-      overflow-x: hidden;
+        radial-gradient(circle at top, rgba(80, 170, 255, 0.18), transparent 28%),
+        linear-gradient(180deg, #081322 0%, #050b14 100%);
     }
 
-    body::before,
-    body::after {
-      content: "";
-      position: fixed;
-      inset: auto;
-      border-radius: 999px;
-      pointer-events: none;
-      filter: blur(18px);
-      opacity: 0.7;
-      z-index: 0;
-    }
-
-    body::before {
-      width: 340px;
-      height: 340px;
-      top: 8%;
-      left: -120px;
-      background: rgba(33, 119, 215, 0.16);
-      animation: floatGlow 18s ease-in-out infinite;
-    }
-
-    body::after {
-      width: 280px;
-      height: 280px;
-      right: -80px;
-      bottom: 8%;
-      background: rgba(28, 173, 255, 0.14);
-      animation: floatGlow 22s ease-in-out infinite reverse;
-    }
-
-    .rank-app {
-      position: relative;
-      z-index: 1;
-      width: min(1120px, calc(100vw - 32px));
+    .page {
+      width: min(900px, calc(100vw - 28px));
       margin: 0 auto;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 42px 0;
+      padding: 28px 0;
     }
 
-    .rank-shell {
-      position: relative;
+    .panel {
       width: 100%;
-      padding: 36px;
-      border-radius: var(--radius-xl);
-      border: 1px solid var(--line-soft);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
-        var(--bg-surface);
-      box-shadow: var(--shadow-panel), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-      backdrop-filter: blur(18px);
+      padding: 30px 22px 22px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
     }
 
-    .rank-shell::before {
-      content: "";
-      position: absolute;
-      inset: 18px;
-      border-radius: calc(var(--radius-xl) - 8px);
-      border: 1px solid rgba(255, 255, 255, 0.03);
-      pointer-events: none;
-    }
-
-    .intro {
+    .title {
+      margin: 0 0 24px;
       text-align: center;
-      margin-bottom: 34px;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 32px;
-      padding: 0 14px;
-      margin-bottom: 18px;
-      border-radius: 999px;
-      border: 1px solid rgba(115, 200, 255, 0.2);
-      background: rgba(16, 35, 61, 0.8);
-      color: var(--accent);
-      font-size: 12px;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-    }
-
-    .page-title {
-      margin: 0;
       font-family: "PlaytalkDisplay", Impact, sans-serif;
-      font-size: clamp(52px, 9vw, 88px);
-      letter-spacing: 0.14em;
-      color: #f7fbff;
-      text-shadow: 0 0 24px rgba(115, 200, 255, 0.18);
-    }
-
-    .page-subtitle {
-      margin: 12px auto 0;
-      max-width: 560px;
-      font-size: clamp(17px, 2vw, 22px);
-      line-height: 1.5;
-      color: #c9e8ff;
-      text-shadow: 0 0 18px rgba(56, 168, 255, 0.14);
-    }
-
-    .board {
-      display: grid;
-      gap: 28px;
-    }
-
-    .podium {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      align-items: end;
-      gap: 20px;
-    }
-
-    .podium-card {
-      position: relative;
-      overflow: hidden;
-      padding: 28px 22px 24px;
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--line-soft);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
-        var(--bg-surface-strong);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-      transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-      isolation: isolate;
-    }
-
-    .podium-card::before {
-      content: "";
-      position: absolute;
-      inset: auto -18% -38% -18%;
-      height: 56%;
-      background: radial-gradient(circle, var(--podium-glow) 0%, transparent 70%);
-      opacity: 0.85;
-      z-index: -1;
-    }
-
-    .podium-card:hover {
-      transform: translateY(-4px);
-      border-color: var(--line-strong);
-    }
-
-    .podium-card.is-first {
-      padding-top: 36px;
-      padding-bottom: 30px;
-      box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    }
-
-    .podium-card.is-second {
-      transform: translateY(18px);
-    }
-
-    .podium-card.is-third {
-      transform: translateY(26px);
-    }
-
-    .podium-card:hover.is-second,
-    .podium-card:hover.is-third {
-      transform: translateY(12px);
-    }
-
-    .podium-rank {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 58px;
-      height: 58px;
-      margin: 0 auto 18px;
-      border-radius: 18px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--podium-color);
-      font-family: "PlaytalkDisplay", Impact, sans-serif;
-      font-size: 30px;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    }
-
-    .podium-card.is-first .podium-rank {
-      width: 72px;
-      height: 72px;
-      font-size: 38px;
-      border-radius: 22px;
-    }
-
-    .podium-avatar {
-      width: 92px;
-      height: 92px;
-      margin: 0 auto 18px;
-      border-radius: 50%;
-      padding: 4px;
-      background: linear-gradient(135deg, var(--podium-color), rgba(255, 255, 255, 0.28));
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
-    }
-
-    .podium-card.is-first .podium-avatar {
-      width: 118px;
-      height: 118px;
-      padding: 5px;
-    }
-
-    .podium-avatar img {
-      display: block;
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      object-fit: cover;
-      background: #0f2035;
-    }
-
-    .podium-name {
-      margin: 0;
-      text-align: center;
-      font-size: clamp(20px, 2vw, 24px);
-      font-weight: 700;
+      font-size: clamp(42px, 9vw, 76px);
+      letter-spacing: 0.1em;
       color: #ffffff;
-      letter-spacing: 0.02em;
+      text-transform: uppercase;
     }
 
-    .podium-meta {
-      margin: 10px 0 0;
+    .status {
+      min-height: 24px;
+      margin: 0 0 14px;
       text-align: center;
-      color: var(--text-soft);
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-    }
-
-    .podium-count {
-      margin: 12px 0 0;
-      text-align: center;
-      font-size: clamp(26px, 3vw, 36px);
-      font-weight: 700;
-      color: var(--podium-color);
-      text-shadow: 0 0 20px rgba(255, 255, 255, 0.04);
-    }
-
-    .podium-count span {
-      display: block;
-      margin-top: 6px;
-      color: var(--text-soft);
-      font-size: 13px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-    }
-
-    .rank-table-card {
-      padding: 14px;
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--line-soft);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
-        rgba(6, 16, 31, 0.88);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-    }
-
-    .table-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 12px 10px 18px;
-    }
-
-    .table-title {
-      margin: 0;
-      font-size: 18px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #ebf7ff;
-    }
-
-    .table-caption {
-      margin: 6px 0 0;
-      color: var(--text-soft);
+      color: var(--muted);
       font-size: 14px;
     }
 
-    .table-period {
-      color: var(--accent);
-      font-size: 12px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
+    .league-list {
+      display: grid;
+      gap: 10px;
     }
 
-    .rank-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .rank-table thead th {
-      padding: 16px 18px;
-      color: var(--text-faint);
-      text-align: left;
-      font-size: 12px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      font-weight: 600;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .rank-table tbody tr {
-      transition: background 160ms ease;
-    }
-
-    .rank-table tbody tr:hover {
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    .rank-table tbody td {
-      padding: 18px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      font-size: 15px;
-      color: var(--text-main);
-    }
-
-    .rank-table tbody tr:last-child td {
-      border-bottom: 0;
-    }
-
-    .cell-position {
-      font-family: "PlaytalkDisplay", Impact, sans-serif;
-      font-size: 26px;
-      letter-spacing: 0.08em;
-      color: var(--accent);
-    }
-
-    .cell-user {
-      display: flex;
-      align-items: center;
+    .league-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
       gap: 14px;
+      align-items: center;
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .league-row.is-header {
+      border-color: var(--line-strong);
+      background: rgba(126, 208, 255, 0.08);
+      color: #dff2ff;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .league-row.is-empty {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .league-name,
+    .league-count {
       min-width: 0;
     }
 
-    .table-avatar {
-      width: 50px;
-      height: 50px;
-      border-radius: 16px;
-      object-fit: cover;
-      flex: 0 0 50px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(255, 255, 255, 0.04);
-      box-shadow: 0 10px 24px rgba(5, 12, 24, 0.26);
-    }
-
-    .table-user-copy {
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .table-user-name {
-      color: #dfefff;
-      letter-spacing: 0.04em;
+    .league-name {
+      font-size: 18px;
       font-weight: 700;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    .table-user-meta {
-      color: var(--text-faint);
-      font-size: 12px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .cell-flashcards {
+    .league-count {
+      font-size: 18px;
       font-weight: 700;
-      color: #f7fbff;
-    }
-
-    .rank-table tbody tr.is-current-player {
-      background: rgba(115, 200, 255, 0.08);
-      box-shadow: inset 0 0 0 1px rgba(115, 200, 255, 0.1);
-    }
-
-    .rank-tabs {
-      display: flex;
-      justify-content: center;
-      gap: 14px;
-      flex-wrap: wrap;
-      padding-top: 6px;
-    }
-
-    .rank-tab {
-      min-width: 176px;
-      min-height: 54px;
-      padding: 14px 22px;
-      border: 1px solid rgba(148, 199, 255, 0.12);
-      border-radius: 999px;
-      background: rgba(8, 18, 34, 0.82);
-      color: var(--text-soft);
-      font: inherit;
-      letter-spacing: 0.04em;
-      cursor: pointer;
-      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, color 160ms ease;
-    }
-
-    .rank-tab:hover {
-      transform: translateY(-2px);
-      border-color: rgba(115, 200, 255, 0.24);
-      color: #eef8ff;
-    }
-
-    .rank-tab.is-active {
-      border-color: rgba(115, 200, 255, 0.38);
-      background: linear-gradient(135deg, rgba(18, 45, 80, 0.96), rgba(10, 29, 54, 0.96));
-      color: #f7fbff;
-      box-shadow: 0 12px 30px rgba(14, 84, 144, 0.22), inset 0 0 0 1px rgba(115, 200, 255, 0.12);
-    }
-
-    .fade-in {
-      animation: fadeInUp 420ms ease both;
-    }
-
-    @keyframes floatGlow {
-      0%, 100% {
-        transform: translate3d(0, 0, 0) scale(1);
-      }
-
-      50% {
-        transform: translate3d(18px, -22px, 0) scale(1.08);
-      }
-    }
-
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(18px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @media (max-width: 900px) {
-      .rank-shell {
-        padding: 28px 20px;
-      }
-
-      .podium {
-        grid-template-columns: 1fr;
-        gap: 16px;
-      }
-
-      .podium-card,
-      .podium-card.is-second,
-      .podium-card.is-third,
-      .podium-card:hover.is-second,
-      .podium-card:hover.is-third {
-        transform: none;
-      }
-
-      .podium-card.is-first {
-        order: -1;
-      }
-
-      .table-header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
+      color: var(--accent);
     }
 
     @media (max-width: 640px) {
-      .rank-app {
+      .page {
         width: min(100vw - 16px, 100%);
-        padding: 20px 0;
+        padding: 16px 0;
       }
 
-      .rank-shell {
-        border-radius: 28px;
+      .panel {
+        padding: 22px 14px 14px;
+        border-radius: 24px;
       }
 
-      .page-title {
-        letter-spacing: 0.08em;
+      .league-row {
+        padding: 14px 12px;
       }
 
-      .rank-table thead th,
-      .rank-table tbody td {
-        padding-left: 12px;
-        padding-right: 12px;
-      }
-
-      .rank-tab {
-        width: 100%;
+      .league-name,
+      .league-count {
+        font-size: 16px;
       }
     }
   </style>
 </head>
 <body>
-  <main class="rank-app">
-    <section class="rank-shell">
-      <header class="intro fade-in">
-        <div class="eyebrow">PlayTalk Leaderboard</div>
-        <h1 class="page-title">RANKING</h1>
-        <p class="page-subtitle">Confira os Top Falantes da Semana!</p>
-      </header>
-
-      <section class="board">
-        <div class="podium fade-in" id="podium"></div>
-
-        <section class="rank-table-card fade-in" aria-labelledby="rankingTableTitle">
-          <div class="table-header">
-            <div>
-              <h2 class="table-title" id="rankingTableTitle">Top 100 PlayTalk</h2>
-              <p class="table-caption">Do 4o ao 100o lugar, com avatar, leitura limpa e vagas prontas para os proximos jogadores.</p>
-            </div>
-            <div class="table-period" id="tablePeriodLabel">Rank Semanal</div>
-          </div>
-
-          <table class="rank-table" aria-describedby="rankingTableTitle">
-            <thead>
-              <tr>
-                <th scope="col">Posicao</th>
-                <th scope="col">Usuario</th>
-                <th scope="col">Flashcards</th>
-              </tr>
-            </thead>
-            <tbody id="rankingTableBody"></tbody>
-          </table>
-        </section>
-
-        <nav class="rank-tabs fade-in" id="periodTabs" aria-label="Periodos do ranking"></nav>
-      </section>
+  <main class="page">
+    <section class="panel">
+      <h1 class="title">Liga PlayTalk</h1>
+      <p class="status" id="rankStatus">Carregando usuarios...</p>
+      <section class="league-list" id="leagueList" aria-live="polite"></section>
     </section>
   </main>
 

@@ -214,10 +214,10 @@ const buildFlashcardRankingCteSql = (periodId) => {
   return `
     WITH ranked_base AS (
       SELECT
-        r.user_id,
-        r.player_number,
-        r.created_at,
-        r.updated_at,
+        u.id AS user_id,
+        COALESCE(r.player_number, 0) AS player_number,
+        COALESCE(r.created_at, u.created_at, now()) AS created_at,
+        COALESCE(r.updated_at, u.created_at, now()) AS updated_at,
         u.email AS username,
         COALESCE(u.avatar_image, '') AS avatar_image,
         CASE
@@ -229,16 +229,15 @@ const buildFlashcardRankingCteSql = (periodId) => {
           ELSE 0
         END AS monthly_flashcards_count,
         COALESCE(r.all_time_count, r.flashcards_count, 0) AS all_time_flashcards_count
-      FROM public.flashcard_rankings r
-      JOIN public.users u
-        ON u.id = r.user_id
-      WHERE r.user_id IS NOT NULL
+      FROM public.users u
+      LEFT JOIN public.flashcard_rankings r
+        ON r.user_id = u.id
     ),
     ranked AS (
       SELECT
         *,
         ROW_NUMBER() OVER (
-          ORDER BY ${countAlias} DESC, updated_at ASC, player_number ASC
+          ORDER BY ${countAlias} DESC, updated_at ASC, player_number ASC, user_id ASC
         ) AS rank
       FROM ranked_base
     )
@@ -721,7 +720,7 @@ const fetchFlashcardRankingSnapshot = async ({
   await ensureUsersAvatarColumn();
 
   const selectedPeriod = normalizeFlashcardRankingPeriod(periodId);
-  const cappedLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 100;
+  const cappedLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 5000) : 5000;
   const periodKeys = getFlashcardRankingPeriodKeys();
   const cteSql = buildFlashcardRankingCteSql(selectedPeriod);
   const queryParams = [cappedLimit, periodKeys.weeklyKey, periodKeys.monthlyKey, currentUserId];
@@ -767,10 +766,7 @@ const fetchFlashcardRankingSnapshot = async ({
     : Promise.resolve({ rows: [] });
 
   const [rankingResult, playerResult] = await Promise.all([rankingPromise, playerPromise]);
-  const ranking = fillFlashcardRankingPlaceholders(
-    rankingResult.rows.map((row) => mapFlashcardRankingRow(row, selectedPeriod)),
-    cappedLimit
-  );
+  const ranking = rankingResult.rows.map((row) => mapFlashcardRankingRow(row, selectedPeriod));
 
   return {
     period: selectedPeriod,
@@ -2596,8 +2592,8 @@ app.get('/api/rankings/flashcards', async (req, res) => {
 
     const requestedLimit = Number.parseInt(req.query.limit, 10);
     const limit = Number.isInteger(requestedLimit) && requestedLimit > 0
-      ? Math.min(requestedLimit, 100)
-      : 100;
+      ? Math.min(requestedLimit, 5000)
+      : 5000;
     const period = normalizeFlashcardRankingPeriod(req.query.period);
     const authUser = await readAuthenticatedUserFromRequest(req);
     const currentUserId = Number(authUser?.id) || 0;
