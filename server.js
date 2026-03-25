@@ -963,6 +963,12 @@ const mapPublicUser = (user) => ({
   created_at: user?.created_at || null
 });
 
+const normalizeAdminUsername = (value) => String(value || '').trim().toLowerCase();
+
+const isAdminUsername = (value) => FLASHCARD_ADMIN_USERNAMES.has(normalizeAdminUsername(value));
+
+const isAdminUserRecord = (user) => isAdminUsername(user?.email || user?.username);
+
 const readUserById = async (userId) => {
   if (!pool) {
     throw new Error('DATABASE_URL nao configurada.');
@@ -1303,6 +1309,11 @@ const VOICES_ROOT = (() => {
   return path.join(staticDir, 'voices');
 })();
 const LOCAL_LEVELS_ROOT = path.join(__dirname, 'Niveis');
+const FLASHCARD_DATA_RELATIVE_ROOT = path.posix.join('data', 'flashcards', '130', '001');
+const ADMIN_FLASHCARD_ASSET_RELATIVE_ROOT = path.posix.join('admin', 'flashcards-assets');
+const LOCAL_LEVEL_MANIFEST_RELATIVE_PATH = path.posix.join('data', 'local-level-files.json');
+const LOCAL_LEVEL_ALLOWED_FOLDERS = ['others', 'talking', 'watching', 'words'];
+const FLASHCARD_ADMIN_USERNAMES = new Set(['admin', 'adm']);
 const SUPPORTED_IMAGE_EXTENSIONS = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp']);
 const SUPPORTED_AUDIO_EXTENSIONS = new Set(['.mp3', '.wav', '.opus', '.ogg', '.oga', '.webm']);
 const SUPPORTED_VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.ogv', '.mov', '.m4v']);
@@ -1672,6 +1683,389 @@ function contentTypeFromObjectKey(objectKey) {
 
   if (extension === '.json') return 'application/json; charset=utf-8';
   return 'application/octet-stream';
+}
+
+function normalizeMirroredRelativePath(value) {
+  return String(value || '')
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/\/+/g, '/')
+    .trim();
+}
+
+function buildMirroredWriteTargets(relativePath) {
+  const normalized = normalizeMirroredRelativePath(relativePath);
+  if (!normalized) return [];
+
+  const roots = normalized.startsWith('Niveis/')
+    ? ['', 'www', 'public', 'dist']
+    : ['www', 'public', 'dist'];
+
+  return [...new Set(roots.map((root) => (
+    root ? path.join(__dirname, root, normalized) : path.join(__dirname, normalized)
+  )))];
+}
+
+function canonicalReadPathForRelativePath(relativePath) {
+  const normalized = normalizeMirroredRelativePath(relativePath);
+  if (!normalized) {
+    throw new Error('Caminho relativo vazio.');
+  }
+  return normalized.startsWith('Niveis/')
+    ? path.join(__dirname, normalized)
+    : path.join(__dirname, 'www', normalized);
+}
+
+async function writeMirroredFile(relativePath, contents, encoding = 'utf8') {
+  const targets = buildMirroredWriteTargets(relativePath);
+  for (const target of targets) {
+    await fs.promises.mkdir(path.dirname(target), { recursive: true });
+    if (Buffer.isBuffer(contents)) {
+      await fs.promises.writeFile(target, contents);
+    } else {
+      await fs.promises.writeFile(target, contents, encoding);
+    }
+  }
+}
+
+async function removeMirroredDirectory(relativePath) {
+  const targets = buildMirroredWriteTargets(relativePath);
+  await Promise.all(targets.map((target) => fs.promises.rm(target, { recursive: true, force: true })));
+}
+
+async function readJsonFromRelativePath(relativePath) {
+  const raw = await fs.promises.readFile(canonicalReadPathForRelativePath(relativePath), 'utf8');
+  return JSON.parse(raw);
+}
+
+async function writeJsonToRelativePath(relativePath, payload) {
+  await writeMirroredFile(
+    relativePath,
+    `${JSON.stringify(payload, null, 2)}\n`,
+    'utf8'
+  );
+}
+
+function extractLocalLevelDayNumber(fileName) {
+  const match = String(fileName || '').match(/(\d+)/);
+  return match ? Number.parseInt(match[1], 10) : null;
+}
+
+async function collectLocalLevelManifestEntries() {
+  const files = [];
+
+  for (const folder of LOCAL_LEVEL_ALLOWED_FOLDERS) {
+    const folderPath = path.join(LOCAL_LEVELS_ROOT, folder);
+    let entries = [];
+
+    try {
+      entries = await fs.promises.readdir(folderPath, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        continue;
+      }
+      throw error;
+    }
+
+    entries
+      .filter((entry) => entry.isFile() && path.extname(entry.name).toLowerCase() === '.json')
+      .forEach((entry) => {
+        files.push({
+          folder,
+          name: entry.name,
+          day: extractLocalLevelDayNumber(entry.name),
+          path: `Niveis/${folder}/${entry.name}`.replace(/\\/g, '/')
+        });
+      });
+  }
+
+  return files.sort((left, right) => {
+    if (left.folder !== right.folder) {
+      return left.folder.localeCompare(right.folder, 'pt-BR');
+    }
+    const leftDay = Number.isFinite(left.day) ? left.day : Number.MAX_SAFE_INTEGER;
+    const rightDay = Number.isFinite(right.day) ? right.day : Number.MAX_SAFE_INTEGER;
+    if (leftDay !== rightDay) {
+      return leftDay - rightDay;
+    }
+    return left.name.localeCompare(right.name, 'pt-BR');
+  });
+}
+
+async function refreshLocalLevelManifestMirror() {
+  const files = await collectLocalLevelManifestEntries();
+  await writeMirroredFile(
+    LOCAL_LEVEL_MANIFEST_RELATIVE_PATH,
+    `${JSON.stringify({ generatedAt: new Date().toISOString(), files }, null, 2)}\n`,
+    'utf8'
+  );
+  return files;
+}
+
+async function requireAdminUserFromRequest(req) {
+  const user = await readAuthenticatedUserFromRequest(req);
+  if (!user) {
+    const error = new Error('Sessao expirada.');
+    error.statusCode = 401;
+    throw error;
+  }
+  if (!isAdminUserRecord(user)) {
+    const error = new Error('Acesso restrito ao administrador.');
+    error.statusCode = 403;
+    throw error;
+  }
+  return user;
+}
+
+function parseModelJsonText(text) {
+  const input = String(text || '').trim();
+  if (!input) return null;
+
+  const candidates = [input];
+  const fenced = input.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) {
+    candidates.unshift(fenced[1].trim());
+  }
+  const firstBrace = input.indexOf('{');
+  const lastBrace = input.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    candidates.push(input.slice(firstBrace, lastBrace + 1));
+  }
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch (_error) {
+      // try next
+    }
+  }
+  return null;
+}
+
+function clampGeneratedFlashcardText(value, maxChars = 30) {
+  const clean = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!clean) return '';
+  if (clean.length <= maxChars) return clean;
+  const sliced = clean.slice(0, maxChars).trim();
+  const lastSpace = sliced.lastIndexOf(' ');
+  if (lastSpace >= Math.max(4, Math.floor(maxChars * 0.55))) {
+    return sliced.slice(0, lastSpace).trim();
+  }
+  return sliced;
+}
+
+function getFlashcardPayloadItems(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+}
+
+function setPreferredFlashcardField(item, keys, value) {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(item, key)) {
+      item[key] = value;
+      return;
+    }
+  }
+  item[keys[0]] = value;
+}
+
+function readFlashcardItemEnglish(item) {
+  return typeof item?.nomeIngles === 'string'
+    ? item.nomeIngles.trim()
+    : typeof item?.english === 'string'
+      ? item.english.trim()
+      : typeof item?.word === 'string'
+        ? item.word.trim()
+        : '';
+}
+
+function readFlashcardItemPortuguese(item) {
+  return typeof item?.nomePortugues === 'string'
+    ? item.nomePortugues.trim()
+    : typeof item?.portuguese === 'string'
+      ? item.portuguese.trim()
+      : typeof item?.translation === 'string'
+        ? item.translation.trim()
+        : '';
+}
+
+function readFlashcardItemImage(item) {
+  return typeof item?.imagem === 'string'
+    ? item.imagem.trim()
+    : typeof item?.image === 'string'
+      ? item.image.trim()
+      : '';
+}
+
+function readFlashcardItemAudio(item) {
+  return typeof item?.audio === 'string'
+    ? item.audio.trim()
+    : typeof item?.audioUrl === 'string'
+      ? item.audioUrl.trim()
+      : '';
+}
+
+function setFlashcardItemEnglish(item, value) {
+  setPreferredFlashcardField(item, ['nomeIngles', 'english', 'word'], value);
+}
+
+function setFlashcardItemPortuguese(item, value) {
+  setPreferredFlashcardField(item, ['nomePortugues', 'portuguese', 'translation'], value);
+}
+
+function setFlashcardItemImage(item, value) {
+  setPreferredFlashcardField(item, ['imagem', 'image'], value);
+}
+
+function setFlashcardItemAudio(item, value) {
+  setPreferredFlashcardField(item, ['audio', 'audioUrl'], value);
+}
+
+function resolveAdminFlashcardSourceInfo(sourceValue) {
+  const normalized = normalizeMirroredRelativePath(sourceValue);
+  if (!normalized) {
+    const error = new Error('Origem do flashcard nao informada.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (/^Niveis\/others\/[^/]+\.json$/i.test(normalized)) {
+    const fileName = path.posix.basename(normalized);
+    return {
+      type: 'local-other',
+      fileName,
+      relativeJsonPath: `Niveis/others/${fileName}`,
+      assetGroup: `local-${safeGeneratedBase(fileName, 'flashcard-deck')}`
+    };
+  }
+
+  if (/^data\/flashcards\/130\/001\/[^/]+\.json$/i.test(normalized) || /^[^/]+\.json$/i.test(normalized)) {
+    const fileName = path.posix.basename(normalized);
+    return {
+      type: 'builtin',
+      fileName,
+      relativeJsonPath: path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, fileName),
+      assetGroup: `library-${safeGeneratedBase(fileName, 'flashcard-deck')}`
+    };
+  }
+
+  const error = new Error('Origem do flashcard nao suportada.');
+  error.statusCode = 400;
+  throw error;
+}
+
+async function requestOpenAiJsonPayload(prompt, options = {}) {
+  if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
+    const error = new Error('OpenAI nao configurado.');
+    error.statusCode = 503;
+    error.instructions = 'Preencha OPENAI_API_KEY no .env com a chave real da OpenAI.';
+    throw error;
+  }
+
+  const upstreamResponse = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: options.model || OPENAI_CHAT_FAST_MODEL,
+      input: prompt,
+      ...(options.maxOutputTokens ? { max_output_tokens: options.maxOutputTokens } : {})
+    })
+  });
+
+  const responseText = await upstreamResponse.text();
+  let payload = null;
+  try {
+    payload = responseText ? JSON.parse(responseText) : null;
+  } catch (_error) {
+    payload = null;
+  }
+
+  if (!upstreamResponse.ok) {
+    const error = new Error(payload?.error?.message || responseText.slice(0, 500) || 'Falha ao conectar com a OpenAI.');
+    error.statusCode = upstreamResponse.status;
+    throw error;
+  }
+
+  const outputText = extractResponseText(payload);
+  if (!outputText) {
+    const error = new Error('A OpenAI nao retornou texto utilizavel.');
+    error.statusCode = 502;
+    throw error;
+  }
+
+  const parsed = parseModelJsonText(outputText);
+  if (!parsed) {
+    const error = new Error(`A OpenAI retornou um formato inesperado: ${outputText.slice(0, 300)}`);
+    error.statusCode = 502;
+    throw error;
+  }
+
+  return { payload, parsed };
+}
+
+async function loadEditableFlashcardSources(targetCards) {
+  const sourceMap = new Map();
+
+  for (const target of targetCards) {
+    const sourceInfo = resolveAdminFlashcardSourceInfo(target?.source);
+    const sourceIndex = Number.parseInt(target?.sourceIndex, 10);
+    if (!Number.isInteger(sourceIndex) || sourceIndex < 0) {
+      const error = new Error('Indice do flashcard invalido.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    let sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
+    if (!sourceEntry) {
+      const payload = await readJsonFromRelativePath(sourceInfo.relativeJsonPath);
+      sourceEntry = {
+        sourceInfo,
+        payload,
+        items: getFlashcardPayloadItems(payload)
+      };
+      sourceMap.set(sourceInfo.relativeJsonPath, sourceEntry);
+    }
+
+    if (!sourceEntry.items[sourceIndex]) {
+      const error = new Error(`Flashcard nao encontrado em ${sourceInfo.fileName}#${sourceIndex}.`);
+      error.statusCode = 404;
+      throw error;
+    }
+  }
+
+  return sourceMap;
+}
+
+async function persistEditableFlashcardSources(sourceMap) {
+  let touchedLocalLevels = false;
+
+  for (const entry of sourceMap.values()) {
+    await writeJsonToRelativePath(entry.sourceInfo.relativeJsonPath, entry.payload);
+    if (entry.sourceInfo.type === 'local-other') {
+      touchedLocalLevels = true;
+    }
+  }
+
+  if (touchedLocalLevels) {
+    await refreshLocalLevelManifestMirror();
+  }
+}
+
+function buildAdminFlashcardAssetRelativePath(sourceInfo, sourceIndex, kind, extension) {
+  const safeExtension = String(extension || '').replace(/^\./, '') || (kind === 'audio' ? 'mp3' : 'webp');
+  return path.posix.join(
+    ADMIN_FLASHCARD_ASSET_RELATIVE_ROOT,
+    sourceInfo.assetGroup,
+    `${String(sourceIndex + 1).padStart(3, '0')}-${kind}-${Date.now()}.${safeExtension}`
+  );
+}
+
+function buildPublicAssetUrl(relativePath) {
+  return `/${normalizeMirroredRelativePath(relativePath)}`;
 }
 
 function sortFluencyObjectKeys(left, right) {
@@ -4211,6 +4605,473 @@ app.post('/api/r2/upload-level-files', express.json({ limit: '100mb' }), async (
     res.status(502).json({
       error: 'Falha ao enviar arquivos do level para o R2.',
       details: error.message
+    });
+  }
+});
+
+app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+
+    const day = Number.parseInt(req.body?.day, 10);
+    const mode = typeof req.body?.mode === 'string' ? req.body.mode.trim() : 'flashcard';
+    const files = Array.isArray(req.body?.files) ? req.body.files : [];
+
+    if (mode !== 'flashcard') {
+      res.status(400).json({ error: 'A publicacao local do admin esta liberada apenas para FlashCard.' });
+      return;
+    }
+
+    if (!Number.isInteger(day) || day < 1 || day > 200) {
+      res.status(400).json({ error: 'Dia invalido para publicar localmente.' });
+      return;
+    }
+
+    if (!files.length) {
+      res.status(400).json({ error: 'Nenhum arquivo foi enviado para publicar localmente.' });
+      return;
+    }
+
+    const decodedFiles = files
+      .map((file) => ({
+        name: path.basename(typeof file?.name === 'string' ? file.name.trim() : ''),
+        buffer: typeof file?.base64 === 'string' && file.base64.trim()
+          ? Buffer.from(file.base64.trim(), 'base64')
+          : null
+      }))
+      .filter((file) => file.name && file.buffer);
+
+    const jsonEntry = decodedFiles.find((file) => path.extname(file.name).toLowerCase() === '.json');
+    if (!jsonEntry) {
+      res.status(400).json({ error: 'O bundle precisa incluir um arquivo JSON.' });
+      return;
+    }
+
+    let jsonPayload = null;
+    try {
+      jsonPayload = JSON.parse(jsonEntry.buffer.toString('utf8'));
+    } catch (error) {
+      res.status(400).json({ error: 'O JSON enviado para publicacao local esta invalido.', details: error.message });
+      return;
+    }
+
+    const items = getFlashcardPayloadItems(jsonPayload);
+    if (!items.length) {
+      res.status(400).json({ error: 'O deck enviado nao possui flashcards validos.' });
+      return;
+    }
+
+    const dayFolder = String(day).padStart(3, '0');
+    const assetRootRelativePath = path.posix.join(
+      ADMIN_FLASHCARD_ASSET_RELATIVE_ROOT,
+      'levels',
+      `day-${dayFolder}`
+    );
+
+    await removeMirroredDirectory(assetRootRelativePath);
+
+    const assetUrlMap = new Map();
+    for (const file of decodedFiles.filter((entry) => entry !== jsonEntry)) {
+      const assetRelativePath = path.posix.join(assetRootRelativePath, file.name);
+      await writeMirroredFile(assetRelativePath, file.buffer);
+      assetUrlMap.set(file.name, buildPublicAssetUrl(assetRelativePath));
+    }
+
+    const finalPayload = {
+      title: typeof jsonPayload?.title === 'string' ? jsonPayload.title.trim() : `Flashcard dia ${day}`,
+      coverImage: typeof jsonPayload?.coverImage === 'string' ? jsonPayload.coverImage.trim() : '',
+      items: items
+        .map((item) => {
+          const imageFileName = path.basename(String(item?.imagem || item?.image || '').trim());
+          const audioFileName = path.basename(String(item?.audio || item?.audioUrl || '').trim());
+          return {
+            ...item,
+            imagem: imageFileName ? (assetUrlMap.get(imageFileName) || '') : '',
+            audio: audioFileName ? (assetUrlMap.get(audioFileName) || '') : ''
+          };
+        })
+        .filter((item) => item.imagem && readFlashcardItemPortuguese(item) && readFlashcardItemEnglish(item))
+    };
+
+    const deckRelativePath = `Niveis/others/flashcard-dia-${day}.json`;
+    await writeJsonToRelativePath(deckRelativePath, finalPayload);
+    await refreshLocalLevelManifestMirror();
+
+    res.json({
+      success: true,
+      deckPath: deckRelativePath,
+      assetRoot: buildPublicAssetUrl(assetRootRelativePath),
+      itemCount: finalPayload.items.length,
+      uploadedCount: decodedFiles.length
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Falha ao publicar o deck localmente.',
+      ...(error.instructions ? { instructions: error.instructions } : {})
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+
+    const cards = Array.isArray(req.body?.cards) ? req.body.cards.slice(0, 30) : [];
+    const basePrompt = typeof req.body?.basePrompt === 'string' ? req.body.basePrompt.trim() : '';
+    const maxChars = Math.max(6, Math.min(30, Number.parseInt(req.body?.maxChars, 10) || 30));
+
+    if (!cards.length) {
+      res.status(400).json({ error: 'Nenhum flashcard foi enviado para preencher texto.' });
+      return;
+    }
+
+    const sourceMap = await loadEditableFlashcardSources(cards);
+    const targets = cards.map((card) => {
+      const sourceInfo = resolveAdminFlashcardSourceInfo(card?.source);
+      const sourceIndex = Number.parseInt(card?.sourceIndex, 10);
+      const sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
+      const item = sourceEntry?.items?.[sourceIndex];
+      if (!item) return null;
+
+      const currentPt = readFlashcardItemPortuguese(item);
+      const currentEn = readFlashcardItemEnglish(item);
+      if (currentPt && currentEn) return null;
+
+      return {
+        id: `${sourceInfo.relativeJsonPath}#${sourceIndex}`,
+        source: sourceInfo.relativeJsonPath,
+        sourceIndex,
+        deckTitle: typeof card?.deckTitle === 'string' ? card.deckTitle.trim() : '',
+        pt: currentPt || '',
+        en: currentEn || '',
+        category: typeof card?.category === 'string' ? card.category.trim() : ''
+      };
+    }).filter(Boolean);
+
+    if (!targets.length) {
+      res.json({ success: true, updatedCount: 0, updated: [] });
+      return;
+    }
+
+    const prompt = [
+      'You fill missing flashcard text pairs for Brazilian Portuguese speakers learning English.',
+      'Return only valid JSON.',
+      `Each Portuguese and English text must have at most ${maxChars} characters, including spaces.`,
+      'Keep language simple, useful, child-safe, and natural.',
+      'If one side already exists, preserve that meaning and fill only the missing counterpart.',
+      'If both sides are empty, create a new pair that matches the deck title and the optional base prompt.',
+      'Do not add numbering, markdown, commentary, or emojis.',
+      `Optional base prompt: ${basePrompt || 'none'}.`,
+      'Output exactly this shape:',
+      '{"items":[{"id":"...","pt":"...","en":"..."}]}',
+      `Targets: ${JSON.stringify(targets)}`
+    ].join('\n');
+
+    const { payload, parsed } = await requestOpenAiJsonPayload(prompt, {
+      model: OPENAI_TEXT_MODEL,
+      maxOutputTokens: 1400
+    });
+
+    const generatedById = new Map(
+      (Array.isArray(parsed?.items) ? parsed.items : [])
+        .map((item) => ({
+          id: typeof item?.id === 'string' ? item.id.trim() : '',
+          pt: clampGeneratedFlashcardText(item?.pt, maxChars),
+          en: clampGeneratedFlashcardText(item?.en, maxChars)
+        }))
+        .filter((item) => item.id && item.pt && item.en)
+        .map((item) => [item.id, item])
+    );
+
+    const updated = [];
+    for (const target of targets) {
+      const generated = generatedById.get(target.id);
+      if (!generated) continue;
+      const sourceEntry = sourceMap.get(target.source);
+      const item = sourceEntry?.items?.[target.sourceIndex];
+      if (!item) continue;
+
+      const currentPt = readFlashcardItemPortuguese(item);
+      const currentEn = readFlashcardItemEnglish(item);
+      let changed = false;
+
+      if (!currentPt && generated.pt) {
+        setFlashcardItemPortuguese(item, generated.pt);
+        changed = true;
+      }
+      if (!currentEn && generated.en) {
+        setFlashcardItemEnglish(item, generated.en);
+        changed = true;
+      }
+
+      if (changed) {
+        updated.push({
+          source: target.source,
+          sourceIndex: target.sourceIndex,
+          pt: readFlashcardItemPortuguese(item),
+          en: readFlashcardItemEnglish(item)
+        });
+      }
+    }
+
+    if (updated.length) {
+      await persistEditableFlashcardSources(sourceMap);
+    }
+
+    res.json({
+      success: true,
+      updatedCount: updated.length,
+      updated,
+      usage: payload?.usage || null,
+      model: OPENAI_TEXT_MODEL
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Falha ao preencher os textos vazios.',
+      ...(error.instructions ? { instructions: error.instructions } : {})
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+
+    if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
+      res.status(503).json({
+        error: 'OpenAI nao configurado.',
+        instructions: 'Preencha OPENAI_API_KEY no .env com a chave real da OpenAI.'
+      });
+      return;
+    }
+
+    const cards = Array.isArray(req.body?.cards) ? req.body.cards.slice(0, 30) : [];
+    const basePrompt = typeof req.body?.basePrompt === 'string' ? req.body.basePrompt.trim() : '';
+
+    if (!cards.length) {
+      res.status(400).json({ error: 'Nenhum flashcard foi enviado para preencher imagem.' });
+      return;
+    }
+
+    const sourceMap = await loadEditableFlashcardSources(cards);
+    const targets = cards.map((card) => {
+      const sourceInfo = resolveAdminFlashcardSourceInfo(card?.source);
+      const sourceIndex = Number.parseInt(card?.sourceIndex, 10);
+      const sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
+      const item = sourceEntry?.items?.[sourceIndex];
+      if (!item || readFlashcardItemImage(item)) return null;
+
+      return {
+        sourceInfo,
+        source: sourceInfo.relativeJsonPath,
+        sourceIndex,
+        deckTitle: typeof card?.deckTitle === 'string' ? card.deckTitle.trim() : '',
+        english: readFlashcardItemEnglish(item),
+        portuguese: readFlashcardItemPortuguese(item)
+      };
+    }).filter(Boolean);
+
+    if (!targets.length) {
+      res.json({ success: true, updatedCount: 0, failedCount: 0, failed: [] });
+      return;
+    }
+
+    const failed = [];
+    const updated = [];
+
+    for (const target of targets) {
+      try {
+        const prompt = [
+          basePrompt || 'Create a clean educational flashcard illustration.',
+          target.deckTitle ? `Deck: ${target.deckTitle}.` : '',
+          target.english ? `English: ${target.english}.` : '',
+          target.portuguese ? `Portuguese: ${target.portuguese}.` : '',
+          'Square composition, clear single subject, centered framing, child-safe, bright, no text, no letters, no watermark.'
+        ].filter(Boolean).join(' ');
+
+        const upstreamResponse = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: OPENAI_IMAGE_MODEL,
+            prompt,
+            size: '1024x1024',
+            quality: 'low',
+            background: 'auto',
+            output_format: 'webp'
+          })
+        });
+
+        const responseText = await upstreamResponse.text();
+        let payload = null;
+        try {
+          payload = responseText ? JSON.parse(responseText) : null;
+        } catch (_error) {
+          payload = null;
+        }
+
+        if (!upstreamResponse.ok) {
+          throw new Error(payload?.error?.message || responseText.slice(0, 500) || 'Falha ao gerar imagem.');
+        }
+
+        const image = Array.isArray(payload?.data) ? payload.data[0] : null;
+        const b64 = image?.b64_json;
+        if (!b64) {
+          throw new Error('A OpenAI nao retornou a imagem em base64.');
+        }
+
+        const assetRelativePath = buildAdminFlashcardAssetRelativePath(target.sourceInfo, target.sourceIndex, 'image', 'webp');
+        await writeMirroredFile(assetRelativePath, Buffer.from(b64, 'base64'));
+
+        const sourceEntry = sourceMap.get(target.source);
+        const item = sourceEntry?.items?.[target.sourceIndex];
+        if (!item || readFlashcardItemImage(item)) continue;
+
+        setFlashcardItemImage(item, buildPublicAssetUrl(assetRelativePath));
+        updated.push({
+          source: target.source,
+          sourceIndex: target.sourceIndex,
+          imageUrl: readFlashcardItemImage(item)
+        });
+      } catch (error) {
+        failed.push({
+          source: target.source,
+          sourceIndex: target.sourceIndex,
+          message: error.message || 'Falha ao gerar imagem.'
+        });
+      }
+    }
+
+    if (updated.length) {
+      await persistEditableFlashcardSources(sourceMap);
+    }
+
+    res.json({
+      success: true,
+      updatedCount: updated.length,
+      updated,
+      failedCount: failed.length,
+      failed
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Falha ao preencher as imagens vazias.',
+      ...(error.instructions ? { instructions: error.instructions } : {})
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/fill-missing-audio', express.json({ limit: '2mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+
+    if (!ELEVENLABS_API_KEY || ELEVENLABS_API_KEY.includes('fake') || !ELEVENLABS_VOICE_ID_HARRY || ELEVENLABS_VOICE_ID_HARRY.includes('fake')) {
+      res.status(503).json({
+        error: 'ElevenLabs nao configurado.',
+        instructions: 'Preencha ELEVENLABS_API_KEY e ELEVENLABS_VOICE_ID_HARRY no .env com os valores reais.'
+      });
+      return;
+    }
+
+    const cards = Array.isArray(req.body?.cards) ? req.body.cards.slice(0, 30) : [];
+    if (!cards.length) {
+      res.status(400).json({ error: 'Nenhum flashcard foi enviado para preencher audio.' });
+      return;
+    }
+
+    const sourceMap = await loadEditableFlashcardSources(cards);
+    const targets = cards.map((card) => {
+      const sourceInfo = resolveAdminFlashcardSourceInfo(card?.source);
+      const sourceIndex = Number.parseInt(card?.sourceIndex, 10);
+      const sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
+      const item = sourceEntry?.items?.[sourceIndex];
+      if (!item || readFlashcardItemAudio(item)) return null;
+
+      const english = readFlashcardItemEnglish(item);
+      const portuguese = readFlashcardItemPortuguese(item);
+      const text = english || portuguese;
+      if (!text) return null;
+
+      return {
+        sourceInfo,
+        source: sourceInfo.relativeJsonPath,
+        sourceIndex,
+        text,
+        languageCode: english ? 'en' : 'pt'
+      };
+    }).filter(Boolean);
+
+    if (!targets.length) {
+      res.json({ success: true, updatedCount: 0, failedCount: 0, failed: [] });
+      return;
+    }
+
+    const failed = [];
+    const updated = [];
+
+    for (const target of targets) {
+      try {
+        const upstreamResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(ELEVENLABS_VOICE_ID_HARRY)}`, {
+          method: 'POST',
+          headers: {
+            Accept: 'audio/mpeg',
+            'Content-Type': 'application/json',
+            'xi-api-key': ELEVENLABS_API_KEY
+          },
+          body: JSON.stringify({
+            text: target.text,
+            model_id: ELEVENLABS_MODEL_ID,
+            language_code: target.languageCode,
+            output_format: 'mp3_44100_128'
+          })
+        });
+
+        if (!upstreamResponse.ok) {
+          const errorText = await upstreamResponse.text();
+          throw new Error(errorText.slice(0, 500) || 'Falha ao gerar audio na ElevenLabs.');
+        }
+
+        const audioBuffer = Buffer.from(await upstreamResponse.arrayBuffer());
+        const assetRelativePath = buildAdminFlashcardAssetRelativePath(target.sourceInfo, target.sourceIndex, 'audio', 'mp3');
+        await writeMirroredFile(assetRelativePath, audioBuffer);
+
+        const sourceEntry = sourceMap.get(target.source);
+        const item = sourceEntry?.items?.[target.sourceIndex];
+        if (!item || readFlashcardItemAudio(item)) continue;
+
+        setFlashcardItemAudio(item, buildPublicAssetUrl(assetRelativePath));
+        updated.push({
+          source: target.source,
+          sourceIndex: target.sourceIndex,
+          audioUrl: readFlashcardItemAudio(item)
+        });
+      } catch (error) {
+        failed.push({
+          source: target.source,
+          sourceIndex: target.sourceIndex,
+          message: error.message || 'Falha ao gerar audio.'
+        });
+      }
+    }
+
+    if (updated.length) {
+      await persistEditableFlashcardSources(sourceMap);
+    }
+
+    res.json({
+      success: true,
+      updatedCount: updated.length,
+      updated,
+      failedCount: failed.length,
+      failed
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Falha ao preencher os audios vazios.',
+      ...(error.instructions ? { instructions: error.instructions } : {})
     });
   }
 });

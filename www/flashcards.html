@@ -397,6 +397,61 @@
       text-transform: uppercase;
     }
 
+    .admin-tools {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding: 18px;
+      border-radius: 24px;
+      background: rgba(97, 242, 164, 0.08);
+      border: 1px solid rgba(97, 242, 164, 0.18);
+    }
+
+    .admin-tools[hidden] {
+      display: none !important;
+    }
+
+    .admin-tools__copy {
+      display: grid;
+      gap: 4px;
+    }
+
+    .admin-tools__copy strong {
+      font-size: 15px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .admin-tools__copy span,
+    .admin-tools__status {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .admin-tools__status.is-error {
+      color: #ffd6d6;
+    }
+
+    .admin-tools textarea {
+      width: 100%;
+      min-height: 84px;
+      resize: vertical;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(10, 14, 24, 0.46);
+      color: var(--text);
+      font: inherit;
+    }
+
+    .admin-tools__actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
     .actions,
     .game-chip-row {
       display: flex;
@@ -2262,6 +2317,19 @@
             </button>
           </div>
         </div>
+        <div class="admin-tools" id="adminTools" hidden>
+          <div class="admin-tools__copy">
+            <strong>Painel do Admin</strong>
+            <span>GPT, DALL-E e ElevenLabs atuam so na pagina atual. O GPT preenche apenas textos vazios com no maximo 30 caracteres.</span>
+          </div>
+          <textarea id="adminPromptInput" rows="2" maxlength="240" placeholder="Prompt base opcional para orientar a geracao das imagens e dos textos."></textarea>
+          <div class="admin-tools__actions">
+            <button class="btn" id="adminFillTextBtn" type="button">Preencher texto</button>
+            <button class="btn" id="adminFillImageBtn" type="button">Preencher imagem</button>
+            <button class="btn" id="adminFillAudioBtn" type="button">Preencher audio</button>
+            <span class="admin-tools__status" id="adminToolsStatus">Nenhuma acao em andamento.</span>
+          </div>
+        </div>
         <div class="grid" id="allGrid"></div>
         <div class="catalog-pagination" id="libraryPagination" hidden>
           <button class="btn" id="libraryPrevBtn" type="button">Anterior</button>
@@ -2424,14 +2492,12 @@
   </main>
   <script src="js/apk-config.js"></script>
   <script src="js/api-config.js"></script>
-  <script src="js/native-speech.js"></script>
-  <script src="js/openai-stt.js"></script>
   <script src="js/gamesounds.js"></script>
   <script>
     (() => {
       const FLASHCARDS_R2_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards';
-      const DATA_MANIFEST_PATHS = [`${FLASHCARDS_R2_ROOT}/manifest.json`, 'data/flashcards/130/001/manifest.json', '/data/flashcards/130/001/manifest.json'];
-      const LOCAL_LEVEL_FILES_MANIFEST_PATHS = [`${FLASHCARDS_R2_ROOT}/local-level-files.json`, 'data/local-level-files.json', '/data/local-level-files.json'];
+      const DATA_MANIFEST_PATHS = ['data/flashcards/130/001/manifest.json', '/data/flashcards/130/001/manifest.json', `${FLASHCARDS_R2_ROOT}/manifest.json`];
+      const LOCAL_LEVEL_FILES_MANIFEST_PATHS = ['data/local-level-files.json', '/data/local-level-files.json', `${FLASHCARDS_R2_ROOT}/local-level-files.json`];
       const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
       const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
@@ -2439,8 +2505,6 @@
       const TIME_OFFSET_STORAGE_KEY = 'playtalk-flashcards-time-offset-v1';
       const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
       const recognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
-      const nativeSpeech = window.PlaytalkNativeSpeech || null;
-      const openAiStt = window.PlaytalkOpenAiStt || null;
       const STAR_ICON_PATH = 'SVG/codex-icons/star.svg';
       const ENGLISH_ICON_PATH = 'SVG/codex-icons/ingles.svg';
       const PORTUGUESE_ICON_PATH = 'SVG/codex-icons/portugues.svg';
@@ -2481,8 +2545,6 @@
         4: { badge: 'Etapa 4/5', instruction: 'Escreva ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false },
         5: { badge: 'Etapa 5/5', instruction: 'Fale ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false }
       };
-      let flashcardsMicPermissionPromise = null;
-
       const state = {
         allCards: [],
         userCards: new Map(),
@@ -2496,6 +2558,12 @@
         flashcardsSyncTimer: 0,
         libraryPage: 1,
         secretBuffer: '',
+        admin: {
+          busy: false,
+          status: 'Nenhuma acao em andamento.',
+          error: false,
+          prompt: ''
+        },
         game: {
           active: false,
           entries: new Map(),
@@ -2554,6 +2622,12 @@
         metrics: document.getElementById('metrics'),
         libraryTitle: document.getElementById('libraryTitle'),
         adminBadge: document.getElementById('adminBadge'),
+        adminTools: document.getElementById('adminTools'),
+        adminPromptInput: document.getElementById('adminPromptInput'),
+        adminFillTextBtn: document.getElementById('adminFillTextBtn'),
+        adminFillImageBtn: document.getElementById('adminFillImageBtn'),
+        adminFillAudioBtn: document.getElementById('adminFillAudioBtn'),
+        adminToolsStatus: document.getElementById('adminToolsStatus'),
         allGrid: document.getElementById('allGrid'),
         allSectionCopy: document.getElementById('allSectionCopy'),
         libraryPagination: document.getElementById('libraryPagination'),
@@ -3172,6 +3246,7 @@
         renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
         els.allSectionCopy.textContent = 'Entre ou crie seu nome para começar.';
         renderLibraryPagination(0);
+        syncAdminTools();
         if (state.game.active) {
           exitGame();
         }
@@ -3637,14 +3712,154 @@
         els.libraryNextBtn.disabled = !hasPagination || state.libraryPage >= pageCount;
       }
 
+      function currentLibraryPageSlice(cards) {
+        state.libraryPage = clampLibraryPage(state.libraryPage, cards.length);
+        const startIndex = (state.libraryPage - 1) * FLASHCARDS_PAGE_SIZE;
+        return cards.slice(startIndex, startIndex + FLASHCARDS_PAGE_SIZE);
+      }
+
+      function currentLibrarySourceCards() {
+        const cards = isAdminUser()
+          ? state.allCards.slice()
+          : userProgressCards().map(card => ({ ...card }));
+        return currentLibraryPageSlice(cards);
+      }
+
+      function setAdminToolsStatus(message, isError = false) {
+        state.admin.status = message || 'Nenhuma acao em andamento.';
+        state.admin.error = Boolean(isError);
+        if (els.adminToolsStatus) {
+          els.adminToolsStatus.textContent = state.admin.status;
+          els.adminToolsStatus.classList.toggle('is-error', state.admin.error);
+        }
+      }
+
+      function syncAdminTools() {
+        const adminMode = isAdminUser();
+        if (els.adminTools) {
+          els.adminTools.hidden = !adminMode;
+        }
+        if (!adminMode) {
+          state.admin.busy = false;
+          state.admin.error = false;
+          state.admin.status = 'Nenhuma acao em andamento.';
+        }
+        if (els.adminPromptInput) {
+          els.adminPromptInput.value = state.admin.prompt || '';
+          els.adminPromptInput.disabled = state.admin.busy || !adminMode;
+        }
+        if (els.adminFillTextBtn) {
+          els.adminFillTextBtn.disabled = state.admin.busy || !adminMode;
+          els.adminFillTextBtn.textContent = state.admin.busy ? 'Processando...' : 'Preencher texto';
+        }
+        if (els.adminFillImageBtn) {
+          els.adminFillImageBtn.disabled = state.admin.busy || !adminMode;
+          els.adminFillImageBtn.textContent = state.admin.busy ? 'Processando...' : 'Preencher imagem';
+        }
+        if (els.adminFillAudioBtn) {
+          els.adminFillAudioBtn.disabled = state.admin.busy || !adminMode;
+          els.adminFillAudioBtn.textContent = state.admin.busy ? 'Processando...' : 'Preencher audio';
+        }
+        setAdminToolsStatus(state.admin.status, state.admin.error);
+      }
+
+      async function reloadCardsFromNetwork() {
+        const freshCards = await refreshCardsFromNetwork();
+        state.allCards = Array.isArray(freshCards) ? freshCards : [];
+        saveCachedCards(state.allCards);
+        refreshLibrary();
+      }
+
+      function collectAdminCurrentPageTargets(kind) {
+        return currentLibrarySourceCards().filter((card) => {
+          if (kind === 'text') {
+            return !card.english || !card.portuguese;
+          }
+          if (kind === 'image') {
+            return !card.imageUrl;
+          }
+          if (kind === 'audio') {
+            return !card.audioUrl;
+          }
+          return false;
+        });
+      }
+
+      async function postAdminFlashcardAction(endpoint, body) {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        let payload = null;
+        try {
+          payload = await response.json();
+        } catch (_error) {
+          payload = null;
+        }
+        if (!response.ok) {
+          throw new Error(payload?.instructions || payload?.details || payload?.error || 'Falha ao executar a acao do admin.');
+        }
+        return payload || {};
+      }
+
+      async function runAdminFlashcardFill(kind) {
+        if (!isAdminUser() || state.admin.busy) return;
+
+        const targets = collectAdminCurrentPageTargets(kind);
+        const label = kind === 'text' ? 'textos' : kind === 'image' ? 'imagens' : 'audios';
+        if (!targets.length) {
+          setAdminToolsStatus(`Nenhum slot vazio de ${label} nesta pagina.`, false);
+          syncAdminTools();
+          return;
+        }
+
+        const endpoint = kind === 'text'
+          ? '/api/admin/flashcards/fill-missing-text'
+          : kind === 'image'
+            ? '/api/admin/flashcards/fill-missing-images'
+            : '/api/admin/flashcards/fill-missing-audio';
+
+        state.admin.busy = true;
+        state.admin.error = false;
+        state.admin.status = `Preenchendo ${label} da pagina atual...`;
+        syncAdminTools();
+
+        try {
+          const payload = await postAdminFlashcardAction(endpoint, {
+            cards: targets.map((card) => ({
+              source: card.source,
+              sourceIndex: card.sourceIndex,
+              deckTitle: card.deckTitle,
+              english: card.english,
+              portuguese: card.portuguese,
+              category: card.category
+            })),
+            basePrompt: state.admin.prompt || '',
+            maxChars: 30
+          });
+          await reloadCardsFromNetwork();
+          const updatedCount = Number(payload?.updatedCount) || 0;
+          const failedCount = Number(payload?.failedCount) || 0;
+          state.admin.status = failedCount
+            ? `${updatedCount} ${label} preenchido(s). ${failedCount} falharam.`
+            : `${updatedCount} ${label} preenchido(s) na pagina atual.`;
+          state.admin.error = false;
+        } catch (error) {
+          state.admin.status = error.message || `Falha ao preencher ${label}.`;
+          state.admin.error = true;
+        } finally {
+          state.admin.busy = false;
+          syncAdminTools();
+        }
+      }
+
       function refreshLibrary() {
         const adminMode = isAdminUser();
         const cards = adminMode
           ? state.allCards.map(buildAdminLibraryCardView)
           : userProgressCards().map(buildLibraryCardView);
-        state.libraryPage = clampLibraryPage(state.libraryPage, cards.length);
-        const startIndex = (state.libraryPage - 1) * FLASHCARDS_PAGE_SIZE;
-        const visibleCards = cards.slice(startIndex, startIndex + FLASHCARDS_PAGE_SIZE);
+        const visibleCards = currentLibraryPageSlice(cards);
         const username = state.user?.username ? ` de ${state.user.username}` : '';
         if (els.libraryTitle) {
           els.libraryTitle.textContent = adminMode ? 'Flashcards do administrador' : 'Meus flashcards';
@@ -3667,6 +3882,7 @@
         renderLibraryPagination(cards.length);
         renderMetrics();
         updateGameChips();
+        syncAdminTools();
       }
 
       function renderStars(stars) {
@@ -4644,12 +4860,7 @@
         }
         els.gameSubword.classList.toggle('is-stage-one', entry.stage === 1 && stageConfig.subtitleType === 'portuguese');
         renderStageOneWordSwap(entry, Boolean(subword));
-        const nativeAndroidSpeechEnabled = Boolean(
-          nativeSpeech
-          && typeof nativeSpeech.isNativeAndroidRuntime === 'function'
-          && nativeSpeech.isNativeAndroidRuntime()
-        );
-        state.game.canListen = entry.stage !== 4 && (nativeAndroidSpeechEnabled || !stageConfig.autoAudio);
+        state.game.canListen = entry.stage !== 4 && !stageConfig.autoAudio;
         renderGameTouchButton(stageConfig, entry);
         els.gameTouchBtn.parentElement.classList.toggle('is-hidden', entry.stage === 4 || els.gameTouchBtn.classList.contains('is-hidden'));
         els.gameTouchBtn.classList.toggle('is-busy', state.game.listening);
@@ -4673,7 +4884,7 @@
           return;
         }
 
-        if (stageConfig.autoAudio && !nativeAndroidSpeechEnabled) {
+        if (stageConfig.autoAudio) {
           if (state.game.skipAutoAudioOnce) {
             state.game.skipAutoAudioOnce = false;
             state.game.canListen = true;
@@ -4726,33 +4937,6 @@
 
       function wait(ms) {
         return new Promise(resolve => window.setTimeout(resolve, ms));
-      }
-
-      function requestFlashcardsMicrophoneAccess() {
-        if (flashcardsMicPermissionPromise) {
-          return flashcardsMicPermissionPromise;
-        }
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          flashcardsMicPermissionPromise = Promise.resolve(false);
-          return flashcardsMicPermissionPromise;
-        }
-        flashcardsMicPermissionPromise = navigator.mediaDevices.getUserMedia({ audio: true })
-          .then((stream) => {
-            stream.getTracks().forEach((track) => track.stop());
-            return true;
-          })
-          .then((granted) => {
-            const resolved = Boolean(granted);
-            if (!resolved) {
-              flashcardsMicPermissionPromise = null;
-            }
-            return resolved;
-          })
-          .catch(() => {
-            flashcardsMicPermissionPromise = null;
-            return false;
-          });
-        return flashcardsMicPermissionPromise;
       }
 
       function applyDefaultWatchSettings() {
@@ -5185,26 +5369,9 @@
         if (!entry) return;
         if (entry.stage === 4) return;
 
-        const canUseNativeSpeech = Boolean(
-          nativeSpeech
-          && typeof nativeSpeech.isNativeAndroidRuntime === 'function'
-          && nativeSpeech.isNativeAndroidRuntime()
-          && typeof nativeSpeech.transcribeOnce === 'function'
-        );
-        const canUseOpenAiStt = Boolean(
-          openAiStt
-          && typeof openAiStt.isNativeRuntime === 'function'
-          && openAiStt.isNativeRuntime()
-          && typeof openAiStt.captureAndTranscribe === 'function'
-          && typeof openAiStt.isSupported === 'function'
-          && openAiStt.isSupported()
-        );
-        const shouldUseNativeSpeech = canUseNativeSpeech;
-        const shouldUseOpenAiStt = canUseOpenAiStt && !shouldUseNativeSpeech;
+        if (!state.game.canListen) return;
 
-        if (!shouldUseNativeSpeech && !state.game.canListen) return;
-
-        if (!recognitionCtor && !shouldUseNativeSpeech && !shouldUseOpenAiStt) {
+        if (!recognitionCtor) {
           setGameStatus('', 'miss');
           return;
         }
@@ -5218,74 +5385,6 @@
         setGameStatus('', 'live');
 
         const recognitionLanguage = entry.stage === 2 ? 'pt-BR' : 'en-US';
-
-        if (shouldUseNativeSpeech) {
-          const finishNativeSpeech = () => {
-            state.game.listening = false;
-            state.game.canListen = true;
-            els.gameTouchBtn.classList.remove('is-busy');
-            renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
-            els.gameCard.classList.remove('is-listening');
-            els.gameVisual.classList.remove('is-mic-live');
-          };
-
-          try {
-            const transcript = await nativeSpeech.transcribeOnce({
-              language: recognitionLanguage,
-              prompt: entry.stage === 2 ? 'Fale em portugues' : 'Fale em ingles'
-            });
-            finishNativeSpeech();
-            if (!transcript) {
-              setGameStatus('Toque para falar', 'live');
-              return;
-            }
-            await handleRecognitionResult(transcript);
-            return;
-          } catch (_error) {
-            finishNativeSpeech();
-            if (state.game.active && state.game.currentId === entry.id) {
-              setGameStatus('Ative o microfone para falar.', 'miss');
-            }
-            return;
-          }
-        }
-
-        const granted = await requestFlashcardsMicrophoneAccess();
-        if (!granted) {
-          setGameStatus('Ative o microfone para falar.', 'miss');
-          return;
-        }
-
-        if (shouldUseOpenAiStt) {
-          const finishOpenAiCapture = () => {
-            state.game.listening = false;
-            state.game.canListen = true;
-            els.gameTouchBtn.classList.remove('is-busy');
-            renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
-            els.gameCard.classList.remove('is-listening');
-            els.gameVisual.classList.remove('is-mic-live');
-          };
-
-          try {
-            const transcript = await openAiStt.captureAndTranscribe({
-              language: recognitionLanguage,
-              maxDurationMs: 5000
-            });
-            finishOpenAiCapture();
-            if (!transcript) {
-              setGameStatus('Toque para falar', 'live');
-              return;
-            }
-            await handleRecognitionResult(transcript);
-            return;
-          } catch (_error) {
-            finishOpenAiCapture();
-            if (state.game.active && state.game.currentId === entry.id) {
-              setGameStatus('Toque para falar', 'live');
-            }
-            return;
-          }
-        }
 
         const recognition = new recognitionCtor();
         state.game.recognition = recognition;
@@ -5410,6 +5509,12 @@
           state.libraryPage += 1;
           refreshLibrary();
         });
+        els.adminPromptInput?.addEventListener('input', (event) => {
+          state.admin.prompt = String(event.target.value || '').trim();
+        });
+        els.adminFillTextBtn?.addEventListener('click', () => runAdminFlashcardFill('text'));
+        els.adminFillImageBtn?.addEventListener('click', () => runAdminFlashcardFill('image'));
+        els.adminFillAudioBtn?.addEventListener('click', () => runAdminFlashcardFill('audio'));
         const gameShell = els.game.querySelector('.game-shell');
         gameShell?.addEventListener('click', (event) => {
           if (!state.game.active) return;
@@ -5495,6 +5600,7 @@
         renderMetrics();
         updateGameChips();
         renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
+        syncAdminTools();
         els.flashcardsHomeToggle.setAttribute('aria-label', 'Mostrar resumo');
 
         const gameHeadCopy = els.gameHeaderCopy?.parentElement || null;
