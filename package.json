@@ -1,43 +1,44 @@
-﻿{
-    "name":  "game",
-    "version":  "1.0.0",
-    "description":  "Fluency game",
-    "main":  "server.js",
-    "scripts":  {
-                    "prebuild":  "npm run sync:levels",
-                    "start":  "node server.js",
-                    "build":  "node build-static.js",
-                    "sync:levels":  "node scripts/sync-local-level-assets.js",
-                    "test":  "echo \"Error: no test specified\" \u0026\u0026 exit 1",
-                    "r2:init-content":  "node scripts/init-r2-content.js",
-                    "cap:init":  "npx cap init PlayTalk com.playtalk.app --web-dir www",
-                    "cap:add:android":  "npx cap add android",
-                    "cap:sync:android":  "npx cap sync android",
-                    "cap:open:android":  "npx cap open android",
-                    "db:reset:users":  "node scripts/reset-users-table.js",
-                    "android:update":  "npm run build \u0026\u0026 npm run cap:sync:android",
-                    "android:auto-sync":  "node scripts/android-auto-sync.js",
-                    "deploy:pages":  "npm run build \u0026\u0026 npx wrangler pages deploy dist",
-                    "android:build:debug":  "cd android \u0026\u0026 .\\gradlew.bat assembleDebug",
-                    "android:build:release":  "cd android \u0026\u0026 .\\gradlew.bat assembleRelease",
-                    "android:build:aab":  "cd android \u0026\u0026 .\\gradlew.bat bundleRelease",
-                    "android:studio":  "powershell -ExecutionPolicy Bypass -File scripts/open-android-studio.ps1",
-                    "android:refresh:studio":  "npm run android:update \u0026\u0026 npm run android:studio"
-                },
-    "engines":  {
-                    "node":  "\u003e=18"
-                },
-    "dependencies":  {
-                         "@capacitor/core":  "^7.4.3",
-                         "bcryptjs":  "^2.4.3",
-                         "cors":  "^2.8.5",
-                         "express":  "^4.19.2",
-                         "jsonwebtoken":  "^9.0.2",
-                         "pg":  "^8.12.0"
-                     },
-    "devDependencies":  {
-                            "@capacitor/android":  "^7.4.3",
-                            "@capacitor/cli":  "^7.4.3",
-                            "typescript":  "^5.9.3"
-                        }
+{
+    "name": "game",
+    "version": "1.0.0",
+    "description": "Fluency game",
+    "main": "server.js",
+    "scripts": {
+        "prebuild": "npm run sync:levels",
+        "start": "node server.js",
+        "build": "node build-static.js",
+        "sync:levels": "node scripts/sync-local-level-assets.js",
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "r2:init-content": "node scripts/init-r2-content.js",
+        "cap:init": "npx cap init PlayTalk com.playtalk.app --web-dir www",
+        "cap:add:android": "npx cap add android",
+        "cap:sync:android": "npx cap sync android",
+        "cap:open:android": "npx cap open android",
+        "db:reset:users": "node scripts/reset-users-table.js",
+        "android:update": "npm run build && npm run cap:sync:android",
+        "android:auto-sync": "node scripts/android-auto-sync.js",
+        "deploy:pages": "npm run build && npx wrangler pages deploy dist",
+        "android:build:debug": "cd android && .\\gradlew.bat assembleDebug",
+        "android:build:release": "cd android && .\\gradlew.bat assembleRelease",
+        "android:build:aab": "cd android && .\\gradlew.bat bundleRelease",
+        "android:studio": "powershell -ExecutionPolicy Bypass -File scripts/open-android-studio.ps1",
+        "android:refresh:studio": "npm run android:update && npm run android:studio"
+    },
+    "engines": {
+        "node": ">=18"
+    },
+    "dependencies": {
+        "@capacitor-community/speech-recognition": "^7.0.1",
+        "@capacitor/core": "^7.4.3",
+        "bcryptjs": "^2.4.3",
+        "cors": "^2.8.5",
+        "express": "^4.19.2",
+        "jsonwebtoken": "^9.0.2",
+        "pg": "^8.12.0"
+    },
+    "devDependencies": {
+        "@capacitor/android": "^7.4.3",
+        "@capacitor/cli": "^7.4.3",
+        "typescript": "^5.9.3"
+    }
 }
