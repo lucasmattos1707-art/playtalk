@@ -1,0 +1,195 @@
+{
+  "generatedAt": "2026-03-25T18:18:43.942Z",
+  "files": [
+    {
+      "name": "acts.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/acts.json",
+      "size": 29679
+    },
+    {
+      "name": "adjetivos.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/adjetivos.json",
+      "size": 34944
+    },
+    {
+      "name": "bandeiras.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/bandeiras.json",
+      "size": 18139
+    },
+    {
+      "name": "bebidas.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/bebidas.json",
+      "size": 29359
+    },
+    {
+      "name": "clothes.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/clothes.json",
+      "size": 36084
+    },
+    {
+      "name": "cores.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/cores.json",
+      "size": 32615
+    },
+    {
+      "name": "criancas.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/criancas.json",
+      "size": 31867
+    },
+    {
+      "name": "digital.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/digital.json",
+      "size": 31623
+    },
+    {
+      "name": "elementos.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/elementos.json",
+      "size": 31653
+    },
+    {
+      "name": "eletronicos.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/eletronicos.json",
+      "size": 33386
+    },
+    {
+      "name": "espirituralidade.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/espirituralidade.json",
+      "size": 28896
+    },
+    {
+      "name": "esportes.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/esportes.json",
+      "size": 33089
+    },
+    {
+      "name": "familia.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/familia.json",
+      "size": 17711
+    },
+    {
+      "name": "fantasia.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/fantasia.json",
+      "size": 30970
+    },
+    {
+      "name": "ferramentas.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/ferramentas.json",
+      "size": 32683
+    },
+    {
+      "name": "geografia.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/geografia.json",
+      "size": 19079
+    },
+    {
+      "name": "hobbies.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/hobbies.json",
+      "size": 29778
+    },
+    {
+      "name": "house.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/house.json",
+      "size": 26063
+    },
+    {
+      "name": "ingredientes.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/ingredientes.json",
+      "size": 34509
+    },
+    {
+      "name": "legumes-verduras.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/legumes-verduras.json",
+      "size": 33050
+    },
+    {
+      "name": "meat.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/meat.json",
+      "size": 11383
+    },
+    {
+      "name": "moveis.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/moveis.json",
+      "size": 21421
+    },
+    {
+      "name": "moves.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/moves.json",
+      "size": 34432
+    },
+    {
+      "name": "numeros.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/numeros.json",
+      "size": 38184
+    },
+    {
+      "name": "particles.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/particles.json",
+      "size": 36244
+    },
+    {
+      "name": "people.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/people.json",
+      "size": 33987
+    },
+    {
+      "name": "personalidades.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/personalidades.json",
+      "size": 21644
+    },
+    {
+      "name": "profissoes.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/profissoes.json",
+      "size": 31199
+    },
+    {
+      "name": "quarto.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/quarto.json",
+      "size": 32830
+    },
+    {
+      "name": "relationships.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/relationships.json",
+      "size": 18977
+    },
+    {
+      "name": "routine.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/routine.json",
+      "size": 29430
+    },
+    {
+      "name": "science.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/science.json",
+      "size": 17736
+    },
+    {
+      "name": "sobremesas.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/sobremesas.json",
+      "size": 15280
+    },
+    {
+      "name": "street.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/street.json",
+      "size": 24436
+    },
+    {
+      "name": "time.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/time.json",
+      "size": 24614
+    },
+    {
+      "name": "transporte.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/transporte.json",
+      "size": 18256
+    },
+    {
+      "name": "verbos.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/verbos.json",
+      "size": 30160
+    },
+    {
+      "name": "viagens.json",
+      "path": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/app_flashcards/viagens.json",
+      "size": 26984
+    }
+  ]
+}

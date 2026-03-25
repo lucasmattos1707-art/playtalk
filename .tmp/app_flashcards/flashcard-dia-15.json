@@ -1,0 +1,186 @@
+{
+    "title":  "Do you too",
+    "coverImage":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/03.png",
+    "items":  [
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000001.webp",
+                      "nomePortugues":  "beba Ã¡gua todos os dias",
+                      "nomeIngles":  "drink water every day",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000002.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000003.webp",
+                      "nomePortugues":  "lave as mÃ£os",
+                      "nomeIngles":  "wash your hands",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000004.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000005.webp",
+                      "nomePortugues":  "coma frutas",
+                      "nomeIngles":  "eat fruits",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000006.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000007.webp",
+                      "nomePortugues":  "coma legumes",
+                      "nomeIngles":  "eat vegetables",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000008.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000009.webp",
+                      "nomePortugues":  "durma bem",
+                      "nomeIngles":  "sleep well",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000010.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000011.webp",
+                      "nomePortugues":  "abra a janela",
+                      "nomeIngles":  "open the window",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000012.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000013.webp",
+                      "nomePortugues":  "respire fundo",
+                      "nomeIngles":  "breathe deeply",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000014.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000015.webp",
+                      "nomePortugues":  "use protetor solar",
+                      "nomeIngles":  "use sunscreen",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000016.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000017.webp",
+                      "nomePortugues":  "beba leite",
+                      "nomeIngles":  "drink milk",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000018.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000019.webp",
+                      "nomePortugues":  "coma pÃ£o",
+                      "nomeIngles":  "eat bread",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000020.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000021.webp",
+                      "nomePortugues":  "beba suco",
+                      "nomeIngles":  "drink juice",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000022.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000023.webp",
+                      "nomePortugues":  "plante uma Ã¡rvore",
+                      "nomeIngles":  "plant a tree",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000024.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000025.webp",
+                      "nomePortugues":  "ande no parque",
+                      "nomeIngles":  "walk in the park",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000026.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000027.webp",
+                      "nomePortugues":  "leia um livro",
+                      "nomeIngles":  "read a book",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000028.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000029.webp",
+                      "nomePortugues":  "escreva ideias",
+                      "nomeIngles":  "write ideas",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000030.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000031.webp",
+                      "nomePortugues":  "sorria hoje",
+                      "nomeIngles":  "smile today",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000032.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000033.webp",
+                      "nomePortugues":  "leia todos os dias",
+                      "nomeIngles":  "read every day",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000034.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000035.webp",
+                      "nomePortugues":  "escreva um plano",
+                      "nomeIngles":  "write a plan",
+                      "categoria":  "FlashCard",
+                      "audio":  "",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000036.webp",
+                      "nomePortugues":  "cuide da saÃºde",
+                      "nomeIngles":  "care for your health",
+                      "categoria":  "FlashCard",
+                      "audio":  "",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000037.webp",
+                      "nomePortugues":  "ajude um amigo",
+                      "nomeIngles":  "help a friend",
+                      "categoria":  "FlashCard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/015/001/000038.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  }
+              ]
+}
