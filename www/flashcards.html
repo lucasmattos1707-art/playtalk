@@ -369,10 +369,32 @@
       margin: 0;
     }
 
+    .section-copy__title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     .section-copy p,
     .game-head p {
       margin: 6px 0 0;
       color: var(--muted);
+    }
+
+    .admin-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(130, 238, 255, 0.2), rgba(97, 242, 164, 0.2));
+      border: 1px solid rgba(130, 238, 255, 0.4);
+      color: #dffaff;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     .actions,
@@ -400,6 +422,11 @@
       gap: 10px;
     }
 
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
     .btn svg {
       width: 20px;
       height: 20px;
@@ -419,6 +446,22 @@
     .grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 14px;
+    }
+
+    .catalog-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .catalog-pagination__info {
+      color: var(--muted);
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
 
     .mini-card {
@@ -2195,7 +2238,10 @@
       <div class="panel section">
         <div class="section-head">
           <div class="section-copy">
-            <h2>Meus flashcards</h2>
+            <div class="section-copy__title-row">
+              <h2 id="libraryTitle">Meus flashcards</h2>
+              <span class="admin-badge" id="adminBadge" hidden>Administrador</span>
+            </div>
             <p id="allSectionCopy">Carregando seus flashcards...</p>
           </div>
           <div class="actions">
@@ -2217,6 +2263,11 @@
           </div>
         </div>
         <div class="grid" id="allGrid"></div>
+        <div class="catalog-pagination" id="libraryPagination" hidden>
+          <button class="btn" id="libraryPrevBtn" type="button">Anterior</button>
+          <span class="catalog-pagination__info" id="libraryPageInfo">Pagina 1 de 1</span>
+          <button class="btn" id="libraryNextBtn" type="button">Proxima</button>
+        </div>
       </div>
     </section>
 
@@ -2402,6 +2453,8 @@
       const STAGE_TWO_HINT_DELAY_MS = 2000;
       const STAGE_TWO_HINT_VISIBLE_MS = 3000;
       const WATCH_SETTINGS_KEY = 'playtalk-flashcards-watch-v1';
+      const FLASHCARDS_PAGE_SIZE = 30;
+      const ADMIN_USERNAMES = new Set(['admin', 'adm']);
       const BALANCE_TRACKS = ['zen1.mp3', 'zen2.mp3', 'zen3.mp3', 'zen4.mp3'];
       const BALANCE_TRACK_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas';
       const TYPING_KEY_BLUES = ['#6ebcff', '#76c3ff', '#7dc9ff', '#86ceff', '#8fd4ff', '#98d9ff'];
@@ -2441,6 +2494,7 @@
         flashcardsSyncInFlight: false,
         flashcardsSyncQueued: false,
         flashcardsSyncTimer: 0,
+        libraryPage: 1,
         secretBuffer: '',
         game: {
           active: false,
@@ -2498,8 +2552,14 @@
         logoutBtn: document.getElementById('logoutBtn'),
         catalog: document.getElementById('catalog'),
         metrics: document.getElementById('metrics'),
+        libraryTitle: document.getElementById('libraryTitle'),
+        adminBadge: document.getElementById('adminBadge'),
         allGrid: document.getElementById('allGrid'),
         allSectionCopy: document.getElementById('allSectionCopy'),
+        libraryPagination: document.getElementById('libraryPagination'),
+        libraryPageInfo: document.getElementById('libraryPageInfo'),
+        libraryPrevBtn: document.getElementById('libraryPrevBtn'),
+        libraryNextBtn: document.getElementById('libraryNextBtn'),
         watchFlashcardsBtn: document.getElementById('watchFlashcardsBtn'),
         startGameBtn: document.getElementById('startGameBtn'),
         game: document.getElementById('game'),
@@ -2880,6 +2940,32 @@
         };
       }
 
+      function isAdminUsername(value) {
+        return ADMIN_USERNAMES.has(safeText(value).toLowerCase());
+      }
+
+      function isAdminUser(user = state.user) {
+        return isAdminUsername(user?.username);
+      }
+
+      function adminReadyProgressRecord(cardId) {
+        const now = getNowMs();
+        return createProgressRecord(cardId, {
+          phaseIndex: 5,
+          targetPhaseIndex: 5,
+          status: 'ready',
+          memorizingStartedAt: 0,
+          memorizingDurationMs: 0,
+          availableAt: now,
+          returnedAt: now,
+          createdAt: now
+        });
+      }
+
+      function accessibleFlashcardsCount() {
+        return isAdminUser() ? state.allCards.length : state.ownedIds.size;
+      }
+
       function buildFlashcardCloudPayload() {
         return {
           progress: Array.from(state.userCards.values()).map(record => ({
@@ -3002,6 +3088,7 @@
         if (!state.user) {
           throw new Error('Sessao invalida.');
         }
+        state.libraryPage = 1;
 
         const localStats = readUserStats();
         const localProgress = readUserProgress();
@@ -3073,10 +3160,18 @@
         state.userCards = new Map();
         state.ownedIds = new Set();
         state.stats = normalizeStatsSnapshot({});
+        state.libraryPage = 1;
         renderMetrics();
         updateGameChips();
+        if (els.libraryTitle) {
+          els.libraryTitle.textContent = 'Meus flashcards';
+        }
+        if (els.adminBadge) {
+          els.adminBadge.hidden = true;
+        }
         renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
         els.allSectionCopy.textContent = 'Entre ou crie seu nome para começar.';
+        renderLibraryPagination(0);
         if (state.game.active) {
           exitGame();
         }
@@ -3242,6 +3337,12 @@
       }
 
       function userProgressCards() {
+        if (isAdminUser()) {
+          return state.allCards.map((card) => ({
+            ...card,
+            progress: adminReadyProgressRecord(card.id)
+          }));
+        }
         advanceReadyMemorizations();
         return Array.from(state.userCards.values())
           .map(record => {
@@ -3258,6 +3359,9 @@
       }
 
       function readyReviewCards() {
+        if (isAdminUser()) {
+          return [];
+        }
         advanceReadyMemorizations();
         return Array.from(state.userCards.values())
           .filter(record => record.status === 'ready' && (record.phaseIndex || 0) >= 1)
@@ -3282,6 +3386,9 @@
       }
 
       function baseCandidateCards() {
+        if (isAdminUser()) {
+          return state.allCards.slice();
+        }
         const lockedCards = state.allCards.filter(card => !state.userCards.has(card.id));
         if (state.userCards.size >= EARLY_FLASHCARD_LIMIT) {
           return lockedCards;
@@ -3432,9 +3539,9 @@
       }
 
       function renderMetrics() {
-        const userCount = state.userCards.size;
+        const userCount = accessibleFlashcardsCount();
         const metrics = [
-          { label: 'Meus flashcards', value: userCount },
+          { label: isAdminUser() ? 'Flashcards liberados' : 'Meus flashcards', value: userCount },
           { label: 'Tempo jogado', value: formatDuration(state.stats.playTimeMs) },
           { label: 'Speakings', value: state.stats.speakings },
           { label: 'Listenings', value: state.stats.listenings }
@@ -3496,13 +3603,68 @@
         };
       }
 
+      function buildAdminLibraryCardView(card) {
+        const sealMarkup = `<img class="mini-card__seal" src="${escapeHtml(phaseMeta(5).sealPath)}" alt="${escapeHtml(phaseMeta(5).label)}">`;
+        return {
+          ...card,
+          progress: adminReadyProgressRecord(card.id),
+          displayEnglish: card.english || card.portuguese || card.deckTitle,
+          displayPortuguese: card.portuguese || '',
+          imageStyle: '',
+          loaderMarkup: '',
+          progressMarkup: '',
+          sealMarkup
+        };
+      }
+
+      function clampLibraryPage(page, totalCards) {
+        const pageCount = Math.max(1, Math.ceil(Math.max(0, totalCards) / FLASHCARDS_PAGE_SIZE));
+        return Math.max(1, Math.min(pageCount, Number.parseInt(page, 10) || 1));
+      }
+
+      function renderLibraryPagination(totalCards) {
+        if (!els.libraryPagination || !els.libraryPageInfo || !els.libraryPrevBtn || !els.libraryNextBtn) {
+          return;
+        }
+        const pageCount = Math.max(1, Math.ceil(Math.max(0, totalCards) / FLASHCARDS_PAGE_SIZE));
+        const hasPagination = totalCards > FLASHCARDS_PAGE_SIZE;
+        state.libraryPage = clampLibraryPage(state.libraryPage, totalCards);
+        els.libraryPagination.hidden = !hasPagination;
+        els.libraryPageInfo.textContent = totalCards
+          ? `Pagina ${state.libraryPage} de ${pageCount}`
+          : 'Sem paginas';
+        els.libraryPrevBtn.disabled = !hasPagination || state.libraryPage <= 1;
+        els.libraryNextBtn.disabled = !hasPagination || state.libraryPage >= pageCount;
+      }
+
       function refreshLibrary() {
-        const cards = userProgressCards().map(buildLibraryCardView);
+        const adminMode = isAdminUser();
+        const cards = adminMode
+          ? state.allCards.map(buildAdminLibraryCardView)
+          : userProgressCards().map(buildLibraryCardView);
+        state.libraryPage = clampLibraryPage(state.libraryPage, cards.length);
+        const startIndex = (state.libraryPage - 1) * FLASHCARDS_PAGE_SIZE;
+        const visibleCards = cards.slice(startIndex, startIndex + FLASHCARDS_PAGE_SIZE);
         const username = state.user?.username ? ` de ${state.user.username}` : '';
+        if (els.libraryTitle) {
+          els.libraryTitle.textContent = adminMode ? 'Flashcards do administrador' : 'Meus flashcards';
+        }
+        if (els.adminBadge) {
+          els.adminBadge.hidden = !adminMode;
+        }
         els.allSectionCopy.textContent = cards.length
-          ? `${cards.length} flashcards${username}.`
+          ? adminMode
+            ? `${cards.length} flashcards${username} com acesso total e selo Diamante.`
+            : `${cards.length} flashcards${username}.`
           : 'Zero flashcards por enquanto. Ganhe o primeiro para iniciar sua biblioteca.';
-        renderMiniCards(els.allGrid, cards, 'Zero flashcards aqui ainda. Jogue para ganhar o primeiro.');
+        renderMiniCards(
+          els.allGrid,
+          visibleCards,
+          adminMode
+            ? 'Nenhum flashcard foi carregado para o administrador ainda.'
+            : 'Zero flashcards aqui ainda. Jogue para ganhar o primeiro.'
+        );
+        renderLibraryPagination(cards.length);
         renderMetrics();
         updateGameChips();
       }
@@ -4110,7 +4272,7 @@
       function updateGameChips() {
         els.gameActiveValue.textContent = String(state.stats.speakings || 0);
         els.gameQueueValue.textContent = String(state.stats.listenings || 0);
-        els.gameOwnedValue.textContent = String(state.ownedIds.size);
+        els.gameOwnedValue.textContent = String(accessibleFlashcardsCount());
         els.gameHeaderCopy.textContent = `${state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT} cartas na rodada.`;
       }
 
@@ -4965,10 +5127,10 @@
             triggerWinFlash();
             animateStarsCascade(GAME_STAR_TARGET);
             schedulePendingRewardSeal(entry.id, rewardSealPhase);
-            setGameStatus(`${state.ownedIds.size} FlashCards`, 'flashcards-count');
+            setGameStatus(`${accessibleFlashcardsCount()} FlashCards`, 'flashcards-count');
             promoteCardFromWin(entry);
             updateGameChips();
-            setGameStatus(`${state.ownedIds.size} FlashCards`, 'flashcards-count');
+            setGameStatus(`${accessibleFlashcardsCount()} FlashCards`, 'flashcards-count');
             entry._removeAfterReward = true;
           } else {
             setGameStatus('', 'hit');
@@ -5240,6 +5402,14 @@
         els.stopWatchBtn.addEventListener('click', stopWatch);
         els.startGameBtn.addEventListener('click', openGameSetup);
         els.exitGameBtn.addEventListener('click', exitGame);
+        els.libraryPrevBtn?.addEventListener('click', () => {
+          state.libraryPage -= 1;
+          refreshLibrary();
+        });
+        els.libraryNextBtn?.addEventListener('click', () => {
+          state.libraryPage += 1;
+          refreshLibrary();
+        });
         const gameShell = els.game.querySelector('.game-shell');
         gameShell?.addEventListener('click', (event) => {
           if (!state.game.active) return;
