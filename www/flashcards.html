@@ -2481,6 +2481,7 @@
           <div>
             <h2>Escolha a rodada</h2>
             <p>Selecione 8, 16 ou 24 cartas para jogar.</p>
+            <p id="gameSetupCountCopy" class="admin-tools__status">Calculando flashcards disponiveis...</p>
           </div>
           <div class="actions">
             <button class="btn btn-close" id="closeGameSetupBtn" type="button" aria-label="Fechar">Ã—</button>
@@ -2621,10 +2622,11 @@
         timeOffsetMs: 0,
         user: null,
         authMode: 'login',
-        flashcardsSyncInFlight: false,
-        flashcardsSyncQueued: false,
-        flashcardsSyncTimer: 0,
-        libraryPage: 1,
+          flashcardsSyncInFlight: false,
+          flashcardsSyncQueued: false,
+          flashcardsSyncTimer: 0,
+          cardsRefreshTimer: 0,
+          libraryPage: 1,
         secretBuffer: '',
         admin: {
           busy: false,
@@ -2732,10 +2734,11 @@
         gameOwnedChip: document.getElementById('gameOwnedChip'),
         gameOwnedValue: document.getElementById('gameOwnedValue'),
         gameStarCopy: document.getElementById('gameStarCopy'),
-        gameSetup: document.getElementById('gameSetup'),
-        gameSetupOptions: document.getElementById('gameSetupOptions'),
-        closeGameSetupBtn: document.getElementById('closeGameSetupBtn'),
-        watchPopover: document.getElementById('watchPopover'),
+          gameSetup: document.getElementById('gameSetup'),
+          gameSetupOptions: document.getElementById('gameSetupOptions'),
+          closeGameSetupBtn: document.getElementById('closeGameSetupBtn'),
+          gameSetupCountCopy: document.getElementById('gameSetupCountCopy'),
+          watchPopover: document.getElementById('watchPopover'),
         closeWatchPopoverBtn: document.getElementById('closeWatchPopoverBtn'),
         startWatchBtn: document.getElementById('startWatchBtn'),
         watchGapSelect: document.getElementById('watchGapSelect'),
@@ -3241,6 +3244,7 @@
         if (!state.user) {
           throw new Error('Sessao invalida.');
         }
+        scheduleCardsRefresh();
         state.libraryPage = 1;
 
         const localStats = readUserStats();
@@ -3305,6 +3309,7 @@
         persistAuthToken('');
         state.user = null;
         syncAdminTheme();
+        stopCardsRefresh();
         if (state.flashcardsSyncTimer) {
           window.clearTimeout(state.flashcardsSyncTimer);
           state.flashcardsSyncTimer = 0;
@@ -3526,6 +3531,47 @@
           .filter(Boolean);
       }
 
+      function totalGameAvailableCards() {
+        if (isAdminUser()) {
+          return state.allCards.length;
+        }
+        const ids = new Set();
+        readyReviewCards().forEach(card => ids.add(card.id));
+        baseCandidateCards().forEach(card => ids.add(card.id));
+        return ids.size;
+      }
+
+      function syncGameSetupSummary() {
+        if (!els.gameSetupCountCopy) return;
+        const total = totalGameAvailableCards();
+        els.gameSetupCountCopy.textContent = total
+          ? `${total} flashcards disponiveis no total para jogar agora.`
+          : 'Nenhum flashcard disponivel para jogar agora.';
+      }
+
+      function stopCardsRefresh() {
+        if (state.cardsRefreshTimer) {
+          window.clearTimeout(state.cardsRefreshTimer);
+          state.cardsRefreshTimer = 0;
+        }
+      }
+
+      function scheduleCardsRefresh(delayMs = 20000) {
+        stopCardsRefresh();
+        if (!state.user) return;
+        state.cardsRefreshTimer = window.setTimeout(async () => {
+          state.cardsRefreshTimer = 0;
+          if (!state.user) return;
+          try {
+            await reloadCardsFromNetwork();
+          } catch (_error) {
+            // ignore transient refresh failures
+          } finally {
+            scheduleCardsRefresh(delayMs);
+          }
+        }, delayMs);
+      }
+
       function countFlashcardLetters(text) {
         return safeText(text)
           .replace(/[^A-Za-zÀ-ÿ0-9]/g, '')
@@ -3677,21 +3723,19 @@
       }
 
       async function loadCards() {
-        const cachedCards = readCachedCards();
-        if (cachedCards.length) {
-          state.allCards = cachedCards;
-          refreshCardsFromNetwork().then((freshCards) => {
-            if (!Array.isArray(freshCards) || !freshCards.length) return;
-            state.allCards = freshCards;
-            saveCachedCards(freshCards);
-            refreshLibrary();
-          }).catch(() => {});
+        try {
+          const freshCards = await refreshCardsFromNetwork();
+          state.allCards = freshCards;
+          saveCachedCards(freshCards);
           return;
+        } catch (networkError) {
+          const cachedCards = readCachedCards();
+          if (cachedCards.length) {
+            state.allCards = cachedCards;
+            return;
+          }
+          throw networkError;
         }
-
-        const freshCards = await refreshCardsFromNetwork();
-        state.allCards = freshCards;
-        saveCachedCards(freshCards);
       }
 
       function renderMetrics() {
@@ -4040,6 +4084,7 @@
         renderLibraryPagination(cards.length);
         renderMetrics();
         updateGameChips();
+        syncGameSetupSummary();
         syncAdminTools();
       }
 
@@ -5747,6 +5792,14 @@
           } else if (event.key === 'Escape' && state.watch.active) {
             stopWatch();
           }
+        });
+        window.addEventListener('focus', () => {
+          if (!state.user) return;
+          reloadCardsFromNetwork().catch(() => {});
+        });
+        document.addEventListener('visibilitychange', () => {
+          if (!state.user || document.hidden) return;
+          reloadCardsFromNetwork().catch(() => {});
         });
         els.gameTouchBtn.addEventListener('click', (event) => {
           event.stopPropagation();
