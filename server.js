@@ -106,7 +106,42 @@ let flashcardRankingsTableReadyPromise = null;
 let usersAvatarColumnReadyPromise = null;
 let flashcardUserStateTablesReadyPromise = null;
 
-const FLASHCARD_RANKING_ORDER_SQL = 'flashcards_count DESC, updated_at ASC, player_number ASC';
+const FLASHCARD_RANKING_TIMEZONE = 'America/Sao_Paulo';
+const FLASHCARD_RANKING_PLACEHOLDER_NAME = 'Usuario';
+const FLASHCARD_RANKING_PLACEHOLDER_AVATAR = '/Avatar/avatar-man-person-svgrepo-com.svg';
+const FLASHCARD_RANKING_PERIODS = {
+  weekly: {
+    id: 'weekly',
+    countAlias: 'weekly_flashcards_count',
+    periodLabel: 'Rank Semanal'
+  },
+  monthly: {
+    id: 'monthly',
+    countAlias: 'monthly_flashcards_count',
+    periodLabel: 'Rank Mensal'
+  },
+  allTime: {
+    id: 'allTime',
+    countAlias: 'all_time_flashcards_count',
+    periodLabel: 'Rank Geral'
+  }
+};
+const FLASHCARD_RANKING_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  timeZone: FLASHCARD_RANKING_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  weekday: 'short'
+});
+const FLASHCARD_RANKING_WEEKDAY_INDEX = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6
+};
 const FLASHCARD_REVIEW_PHASES = {
   1: { key: 'prata', label: 'Prata', durationMs: 24 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
   2: { key: 'quartz', label: 'Quartz', durationMs: 3 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
@@ -121,6 +156,122 @@ const normalizeFlashcardsCount = (value) => {
     return 0;
   }
   return parsed;
+};
+
+const padFlashcardRankingNumber = (value) => String(value).padStart(2, '0');
+
+const formatFlashcardRankingDateKey = (date) => (
+  `${date.getUTCFullYear()}-${padFlashcardRankingNumber(date.getUTCMonth() + 1)}-${padFlashcardRankingNumber(date.getUTCDate())}`
+);
+
+const getFlashcardRankingPeriodKeys = (value = new Date()) => {
+  const parts = FLASHCARD_RANKING_DATE_FORMATTER.formatToParts(value).reduce((acc, part) => {
+    if (part.type !== 'literal') {
+      acc[part.type] = part.value;
+    }
+    return acc;
+  }, {});
+  const year = Number.parseInt(parts.year, 10);
+  const month = Number.parseInt(parts.month, 10);
+  const day = Number.parseInt(parts.day, 10);
+  const weekdayIndex = FLASHCARD_RANKING_WEEKDAY_INDEX[parts.weekday] ?? 0;
+  const localDate = new Date(Date.UTC(year, month - 1, day));
+  const mondayDate = new Date(localDate);
+  mondayDate.setUTCDate(localDate.getUTCDate() - ((weekdayIndex + 6) % 7));
+
+  return {
+    weeklyKey: formatFlashcardRankingDateKey(mondayDate),
+    monthlyKey: `${year}-${padFlashcardRankingNumber(month)}`
+  };
+};
+
+const normalizeFlashcardRankingPeriod = (value) => {
+  if (value === 'monthly') return FLASHCARD_RANKING_PERIODS.monthly.id;
+  if (value === 'all_time' || value === 'allTime' || value === 'geral') return FLASHCARD_RANKING_PERIODS.allTime.id;
+  return FLASHCARD_RANKING_PERIODS.weekly.id;
+};
+
+const flashcardRankingCountAliasForPeriod = (periodId) => (
+  FLASHCARD_RANKING_PERIODS[normalizeFlashcardRankingPeriod(periodId)]?.countAlias
+  || FLASHCARD_RANKING_PERIODS.weekly.countAlias
+);
+
+const buildFlashcardRankingCteSql = (periodId) => {
+  const countAlias = flashcardRankingCountAliasForPeriod(periodId);
+  return `
+    WITH ranked_base AS (
+      SELECT
+        r.user_id,
+        r.player_number,
+        r.created_at,
+        r.updated_at,
+        u.email AS username,
+        COALESCE(u.avatar_image, '') AS avatar_image,
+        CASE
+          WHEN COALESCE(r.weekly_period_key, '') = $2 THEN COALESCE(r.weekly_count, 0)
+          ELSE 0
+        END AS weekly_flashcards_count,
+        CASE
+          WHEN COALESCE(r.monthly_period_key, '') = $3 THEN COALESCE(r.monthly_count, 0)
+          ELSE 0
+        END AS monthly_flashcards_count,
+        COALESCE(r.all_time_count, r.flashcards_count, 0) AS all_time_flashcards_count
+      FROM public.flashcard_rankings r
+      JOIN public.users u
+        ON u.id = r.user_id
+      WHERE r.user_id IS NOT NULL
+    ),
+    ranked AS (
+      SELECT
+        *,
+        ROW_NUMBER() OVER (
+          ORDER BY ${countAlias} DESC, updated_at ASC, player_number ASC
+        ) AS rank
+      FROM ranked_base
+    )
+  `;
+};
+
+const mapFlashcardRankingRow = (row, periodId) => {
+  const selectedPeriod = normalizeFlashcardRankingPeriod(periodId);
+  const selectedAlias = flashcardRankingCountAliasForPeriod(selectedPeriod);
+  return {
+    rank: Number(row?.rank) || 0,
+    userId: Number(row?.user_id) || 0,
+    username: String(row?.username || '').trim() || FLASHCARD_RANKING_PLACEHOLDER_NAME,
+    avatarImage: String(row?.avatar_image || '').trim() || FLASHCARD_RANKING_PLACEHOLDER_AVATAR,
+    playerNumber: Number(row?.player_number) || 0,
+    flashcardsCount: Number(row?.[selectedAlias]) || 0,
+    weeklyFlashcardsCount: Number(row?.weekly_flashcards_count) || 0,
+    monthlyFlashcardsCount: Number(row?.monthly_flashcards_count) || 0,
+    allTimeFlashcardsCount: Number(row?.all_time_flashcards_count) || 0,
+    createdAt: row?.created_at || null,
+    updatedAt: row?.updated_at || null,
+    isPlaceholder: false
+  };
+};
+
+const createFlashcardRankingPlaceholder = (rank) => ({
+  rank,
+  userId: 0,
+  username: FLASHCARD_RANKING_PLACEHOLDER_NAME,
+  avatarImage: FLASHCARD_RANKING_PLACEHOLDER_AVATAR,
+  playerNumber: 0,
+  flashcardsCount: 0,
+  weeklyFlashcardsCount: 0,
+  monthlyFlashcardsCount: 0,
+  allTimeFlashcardsCount: 0,
+  createdAt: null,
+  updatedAt: null,
+  isPlaceholder: true
+});
+
+const fillFlashcardRankingPlaceholders = (rows, limit) => {
+  const ranking = rows.slice(0, limit);
+  while (ranking.length < limit) {
+    ranking.push(createFlashcardRankingPlaceholder(ranking.length + 1));
+  }
+  return ranking;
 };
 
 const clampInteger = (value, minimum, maximum, fallback) => {
@@ -283,6 +434,12 @@ const ensureFlashcardRankingsTable = async () => {
           user_id integer,
           player_number integer UNIQUE NOT NULL,
           flashcards_count integer NOT NULL DEFAULT 0,
+          weekly_count integer NOT NULL DEFAULT 0,
+          monthly_count integer NOT NULL DEFAULT 0,
+          all_time_count integer NOT NULL DEFAULT 0,
+          last_progress_count integer NOT NULL DEFAULT 0,
+          weekly_period_key text,
+          monthly_period_key text,
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now()
         )
@@ -292,6 +449,40 @@ const ensureFlashcardRankingsTable = async () => {
         ADD COLUMN IF NOT EXISTS user_id integer
       `);
       await pool.query(`
+        ALTER TABLE public.flashcard_rankings
+        ADD COLUMN IF NOT EXISTS weekly_count integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.flashcard_rankings
+        ADD COLUMN IF NOT EXISTS monthly_count integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.flashcard_rankings
+        ADD COLUMN IF NOT EXISTS all_time_count integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.flashcard_rankings
+        ADD COLUMN IF NOT EXISTS last_progress_count integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.flashcard_rankings
+        ADD COLUMN IF NOT EXISTS weekly_period_key text
+      `);
+      await pool.query(`
+        ALTER TABLE public.flashcard_rankings
+        ADD COLUMN IF NOT EXISTS monthly_period_key text
+      `);
+      await pool.query(`
+        UPDATE public.flashcard_rankings
+        SET
+          all_time_count = GREATEST(COALESCE(all_time_count, 0), COALESCE(flashcards_count, 0)),
+          last_progress_count = CASE
+            WHEN COALESCE(last_progress_count, 0) > 0 THEN last_progress_count
+            ELSE COALESCE(flashcards_count, 0)
+          END
+        WHERE COALESCE(flashcards_count, 0) > 0
+      `);
+      await pool.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS flashcard_rankings_user_id_idx
         ON public.flashcard_rankings (user_id)
         WHERE user_id IS NOT NULL
@@ -299,6 +490,18 @@ const ensureFlashcardRankingsTable = async () => {
       await pool.query(`
         CREATE INDEX IF NOT EXISTS flashcard_rankings_count_idx
         ON public.flashcard_rankings (flashcards_count DESC, updated_at ASC, player_number ASC)
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS flashcard_rankings_weekly_idx
+        ON public.flashcard_rankings (weekly_period_key, weekly_count DESC, updated_at ASC, player_number ASC)
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS flashcard_rankings_monthly_idx
+        ON public.flashcard_rankings (monthly_period_key, monthly_count DESC, updated_at ASC, player_number ASC)
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS flashcard_rankings_all_time_idx
+        ON public.flashcard_rankings (all_time_count DESC, updated_at ASC, player_number ASC)
       `);
       return true;
     })().catch((error) => {
@@ -311,6 +514,259 @@ const ensureFlashcardRankingsTable = async () => {
 };
 
 const buildFlashcardRankingPlayerId = (userId) => `user:${userId}`;
+
+const syncFlashcardRankingForUser = async (userId, flashcardsCount) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  await ensureFlashcardRankingsTable();
+
+  const normalizedUserId = Number.parseInt(userId, 10);
+  const normalizedCount = normalizeFlashcardsCount(flashcardsCount);
+  const normalizedPlayerId = buildFlashcardRankingPlayerId(normalizedUserId);
+  const periodKeys = getFlashcardRankingPeriodKeys();
+
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    const error = new Error('userId invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const existingResult = await pool.query(
+    `SELECT
+       player_id,
+       user_id,
+       player_number,
+       flashcards_count,
+       weekly_count,
+       monthly_count,
+       all_time_count,
+       last_progress_count,
+       weekly_period_key,
+       monthly_period_key,
+       created_at,
+       updated_at
+     FROM public.flashcard_rankings
+     WHERE user_id = $1
+     LIMIT 1`,
+    [normalizedUserId]
+  );
+
+  if (existingResult.rows.length) {
+    const existing = existingResult.rows[0];
+    const legacyCount = Math.max(
+      normalizeFlashcardsCount(existing.flashcards_count),
+      normalizeFlashcardsCount(existing.all_time_count),
+      normalizeFlashcardsCount(existing.last_progress_count)
+    );
+    const lastProgressCount = normalizeFlashcardsCount(
+      Number(existing.last_progress_count) > 0 ? existing.last_progress_count : legacyCount
+    );
+    const delta = Math.max(0, normalizedCount - lastProgressCount);
+    const weeklyBase = String(existing.weekly_period_key || '') === periodKeys.weeklyKey
+      ? normalizeFlashcardsCount(existing.weekly_count)
+      : 0;
+    const monthlyBase = String(existing.monthly_period_key || '') === periodKeys.monthlyKey
+      ? normalizeFlashcardsCount(existing.monthly_count)
+      : 0;
+    const allTimeBase = Math.max(normalizeFlashcardsCount(existing.all_time_count), legacyCount);
+    const nextWeeklyCount = weeklyBase + delta;
+    const nextMonthlyCount = monthlyBase + delta;
+    const nextAllTimeCount = allTimeBase + delta;
+
+    const updatedResult = await pool.query(
+      `UPDATE public.flashcard_rankings
+       SET flashcards_count = $2,
+           weekly_count = $3,
+           monthly_count = $4,
+           all_time_count = $5,
+           last_progress_count = $6,
+           weekly_period_key = $7,
+           monthly_period_key = $8,
+           player_id = $9,
+           updated_at = now()
+       WHERE user_id = $1
+       RETURNING
+         player_id,
+         user_id,
+         player_number,
+         flashcards_count,
+         weekly_count,
+         monthly_count,
+         all_time_count,
+         last_progress_count,
+         weekly_period_key,
+         monthly_period_key,
+         created_at,
+         updated_at`,
+      [
+        normalizedUserId,
+        nextAllTimeCount,
+        nextWeeklyCount,
+        nextMonthlyCount,
+        nextAllTimeCount,
+        normalizedCount,
+        periodKeys.weeklyKey,
+        periodKeys.monthlyKey,
+        normalizedPlayerId
+      ]
+    );
+
+    if (updatedResult.rows.length) {
+      return updatedResult.rows[0];
+    }
+  }
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const playerNumber = Math.floor(100000 + (Math.random() * 900000));
+    try {
+      const insertedResult = await pool.query(
+        `INSERT INTO public.flashcard_rankings (
+           player_id,
+           user_id,
+           player_number,
+           flashcards_count,
+           weekly_count,
+           monthly_count,
+           all_time_count,
+           last_progress_count,
+           weekly_period_key,
+           monthly_period_key
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING
+           player_id,
+           user_id,
+           player_number,
+           flashcards_count,
+           weekly_count,
+           monthly_count,
+           all_time_count,
+           last_progress_count,
+           weekly_period_key,
+           monthly_period_key,
+           created_at,
+           updated_at`,
+        [
+          normalizedPlayerId,
+          normalizedUserId,
+          playerNumber,
+          normalizedCount,
+          normalizedCount,
+          normalizedCount,
+          normalizedCount,
+          normalizedCount,
+          periodKeys.weeklyKey,
+          periodKeys.monthlyKey
+        ]
+      );
+      return insertedResult.rows[0];
+    } catch (error) {
+      if (error?.code === '23505') {
+        const retryResult = await pool.query(
+          `SELECT
+             player_id,
+             user_id,
+             player_number,
+             flashcards_count,
+             weekly_count,
+             monthly_count,
+             all_time_count,
+             last_progress_count,
+             weekly_period_key,
+             monthly_period_key,
+             created_at,
+             updated_at
+           FROM public.flashcard_rankings
+           WHERE user_id = $1
+           LIMIT 1`,
+          [normalizedUserId]
+        );
+        if (retryResult.rows.length) {
+          return syncFlashcardRankingForUser(normalizedUserId, normalizedCount);
+        }
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new Error('Nao foi possivel gerar um numero aleatorio para o ranking.');
+};
+
+const fetchFlashcardRankingSnapshot = async ({
+  periodId = FLASHCARD_RANKING_PERIODS.weekly.id,
+  limit = 100,
+  currentUserId = 0
+} = {}) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  await ensureFlashcardRankingsTable();
+  await ensureUsersAvatarColumn();
+
+  const selectedPeriod = normalizeFlashcardRankingPeriod(periodId);
+  const cappedLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 100;
+  const periodKeys = getFlashcardRankingPeriodKeys();
+  const cteSql = buildFlashcardRankingCteSql(selectedPeriod);
+  const queryParams = [cappedLimit, periodKeys.weeklyKey, periodKeys.monthlyKey, currentUserId];
+
+  const rankingPromise = pool.query(
+    `${cteSql}
+     SELECT
+       user_id,
+       username,
+       avatar_image,
+       player_number,
+       weekly_flashcards_count,
+       monthly_flashcards_count,
+       all_time_flashcards_count,
+       created_at,
+       updated_at,
+       rank
+     FROM ranked
+     ORDER BY rank
+     LIMIT $1`,
+    queryParams
+  );
+
+  const playerPromise = currentUserId
+    ? pool.query(
+      `${cteSql}
+       SELECT
+         user_id,
+         username,
+         avatar_image,
+         player_number,
+         weekly_flashcards_count,
+         monthly_flashcards_count,
+         all_time_flashcards_count,
+         created_at,
+         updated_at,
+         rank
+       FROM ranked
+       WHERE user_id = $4
+       LIMIT 1`,
+      queryParams
+    )
+    : Promise.resolve({ rows: [] });
+
+  const [rankingResult, playerResult] = await Promise.all([rankingPromise, playerPromise]);
+  const ranking = fillFlashcardRankingPlaceholders(
+    rankingResult.rows.map((row) => mapFlashcardRankingRow(row, selectedPeriod)),
+    cappedLimit
+  );
+
+  return {
+    period: selectedPeriod,
+    periodLabel: FLASHCARD_RANKING_PERIODS[selectedPeriod]?.periodLabel || FLASHCARD_RANKING_PERIODS.weekly.periodLabel,
+    ranking,
+    player: playerResult.rows[0] ? mapFlashcardRankingRow(playerResult.rows[0], selectedPeriod) : null,
+    periodKeys
+  };
+};
 
 const ensureUsersAvatarColumn = async () => {
   if (!pool) return false;
@@ -397,70 +853,6 @@ const normalizeAvatarImage = (value) => {
   return avatar;
 };
 
-const upsertFlashcardRankingForUser = async (userId, flashcardsCount) => {
-  if (!pool) {
-    throw new Error('DATABASE_URL nao configurada.');
-  }
-
-  await ensureFlashcardRankingsTable();
-
-  const normalizedUserId = Number.parseInt(userId, 10);
-  const normalizedCount = normalizeFlashcardsCount(flashcardsCount);
-  const normalizedPlayerId = buildFlashcardRankingPlayerId(normalizedUserId);
-
-  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
-    const error = new Error('userId invalido.');
-    error.statusCode = 400;
-    throw error;
-  }
-
-  const updatedResult = await pool.query(
-    `UPDATE public.flashcard_rankings
-     SET flashcards_count = $2,
-         player_id = $3,
-         updated_at = now()
-     WHERE user_id = $1
-     RETURNING player_id, user_id, player_number, flashcards_count, created_at, updated_at`,
-    [normalizedUserId, normalizedCount, normalizedPlayerId]
-  );
-
-  if (updatedResult.rows.length) {
-    return updatedResult.rows[0];
-  }
-
-  for (let attempt = 0; attempt < 12; attempt += 1) {
-    const playerNumber = Math.floor(100000 + (Math.random() * 900000));
-    try {
-      const insertedResult = await pool.query(
-        `INSERT INTO public.flashcard_rankings (player_id, user_id, player_number, flashcards_count)
-         VALUES ($1, $2, $3, $4)
-         RETURNING player_id, user_id, player_number, flashcards_count, created_at, updated_at`,
-        [normalizedPlayerId, normalizedUserId, playerNumber, normalizedCount]
-      );
-      return insertedResult.rows[0];
-    } catch (error) {
-      if (error?.code === '23505') {
-        const retryResult = await pool.query(
-          `UPDATE public.flashcard_rankings
-           SET flashcards_count = $2,
-               player_id = $3,
-               updated_at = now()
-           WHERE user_id = $1
-           RETURNING player_id, user_id, player_number, flashcards_count, created_at, updated_at`,
-          [normalizedUserId, normalizedCount, normalizedPlayerId]
-        );
-        if (retryResult.rows.length) {
-          return retryResult.rows[0];
-        }
-        continue;
-      }
-      throw error;
-    }
-  }
-
-  throw new Error('Nao foi possivel gerar um numero aleatorio para o ranking.');
-};
-
 const readFlashcardProgressCountForUser = async (userId) => {
   if (!pool) {
     throw new Error('DATABASE_URL nao configurada.');
@@ -487,7 +879,7 @@ const readFlashcardProgressCountForUser = async (userId) => {
 
 const syncFlashcardRankingFromProgressCount = async (userId) => {
   const count = await readFlashcardProgressCountForUser(userId);
-  return upsertFlashcardRankingForUser(userId, count);
+  return syncFlashcardRankingForUser(userId, count);
 };
 
 const readFlashcardStateForUser = async (userId) => {
@@ -531,9 +923,7 @@ const readFlashcardStateForUser = async (userId) => {
     )
   ]);
 
-  if (progressResult.rows.length) {
-    await upsertFlashcardRankingForUser(normalizedUserId, progressResult.rows.length);
-  }
+  await syncFlashcardRankingForUser(normalizedUserId, progressResult.rows.length);
 
   return {
     progress: progressResult.rows.map(mapStoredFlashcardProgressRow).filter((item) => item.cardId),
@@ -683,7 +1073,7 @@ const saveFlashcardStateForUser = async (userId, payload) => {
     client.release();
   }
 
-  const rankingRecord = await upsertFlashcardRankingForUser(normalizedUserId, progress.length);
+  const rankingRecord = await syncFlashcardRankingForUser(normalizedUserId, progress.length);
   return {
     progressCount: progress.length,
     stats,
@@ -2182,106 +2572,25 @@ app.get('/api/rankings/flashcards', async (req, res) => {
       return;
     }
 
-    await ensureFlashcardRankingsTable();
-    await ensureUsersAvatarColumn();
-
     const requestedLimit = Number.parseInt(req.query.limit, 10);
     const limit = Number.isInteger(requestedLimit) && requestedLimit > 0
       ? Math.min(requestedLimit, 100)
-      : 50;
+      : 100;
+    const period = normalizeFlashcardRankingPeriod(req.query.period);
     const authUser = await readAuthenticatedUserFromRequest(req);
     const currentUserId = Number(authUser?.id) || 0;
-
-    const rankingPromise = pool.query(
-      `WITH ranked AS (
-         SELECT
-           r.user_id,
-           r.player_number,
-           r.flashcards_count,
-           r.created_at,
-           r.updated_at,
-           u.email AS username,
-           COALESCE(u.avatar_image, '') AS avatar_image,
-           ROW_NUMBER() OVER (ORDER BY ${FLASHCARD_RANKING_ORDER_SQL}) AS rank
-         FROM public.flashcard_rankings r
-         JOIN public.users u
-           ON u.id = r.user_id
-         WHERE r.user_id IS NOT NULL
-       )
-       SELECT
-         user_id,
-         username,
-         avatar_image,
-         player_number,
-         flashcards_count,
-         created_at,
-         updated_at,
-         rank
-       FROM ranked
-       ORDER BY rank
-       LIMIT $1`,
-      [limit]
-    );
-
-    const playerPromise = currentUserId
-      ? pool.query(
-        `WITH ranked AS (
-           SELECT
-             r.user_id,
-             r.player_number,
-             r.flashcards_count,
-             r.created_at,
-             r.updated_at,
-             u.email AS username,
-             COALESCE(u.avatar_image, '') AS avatar_image,
-             ROW_NUMBER() OVER (ORDER BY ${FLASHCARD_RANKING_ORDER_SQL}) AS rank
-           FROM public.flashcard_rankings r
-           JOIN public.users u
-             ON u.id = r.user_id
-           WHERE r.user_id IS NOT NULL
-         )
-         SELECT
-           user_id,
-           username,
-           avatar_image,
-           player_number,
-           flashcards_count,
-           created_at,
-           updated_at,
-           rank
-         FROM ranked
-         WHERE user_id = $1
-         LIMIT 1`,
-        [currentUserId]
-      )
-      : Promise.resolve({ rows: [] });
-
-    const [rankingResult, playerResult] = await Promise.all([rankingPromise, playerPromise]);
+    const snapshot = await fetchFlashcardRankingSnapshot({
+      periodId: period,
+      limit,
+      currentUserId
+    });
 
     res.json({
       success: true,
-      ranking: rankingResult.rows.map((row) => ({
-        rank: Number(row.rank) || 0,
-        userId: Number(row.user_id) || 0,
-        username: String(row.username || '').trim(),
-        avatarImage: String(row.avatar_image || '').trim(),
-        playerNumber: Number(row.player_number) || 0,
-        flashcardsCount: Number(row.flashcards_count) || 0,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at
-      })),
-      player: playerResult.rows[0]
-        ? {
-          rank: Number(playerResult.rows[0].rank) || 0,
-          userId: Number(playerResult.rows[0].user_id) || 0,
-          username: String(playerResult.rows[0].username || '').trim(),
-          avatarImage: String(playerResult.rows[0].avatar_image || '').trim(),
-          playerNumber: Number(playerResult.rows[0].player_number) || 0,
-          flashcardsCount: Number(playerResult.rows[0].flashcards_count) || 0,
-          createdAt: playerResult.rows[0].created_at,
-          updatedAt: playerResult.rows[0].updated_at
-        }
-        : null
+      period: snapshot.period,
+      periodLabel: snapshot.periodLabel,
+      ranking: snapshot.ranking,
+      player: snapshot.player
     });
   } catch (error) {
     console.error('Erro ao listar ranking de flashcards:', error);
@@ -2299,35 +2608,32 @@ app.post('/api/rankings/flashcards', async (req, res) => {
     const authUser = await readAuthenticatedUserFromRequest(req);
     if (!authUser?.id) {
       clearAuthCookie(res);
-      res.status(401).json({ success: false, message: 'Sessão inválida ou expirada.' });
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
       return;
     }
 
+    const period = normalizeFlashcardRankingPeriod(req.query.period);
     const record = await syncFlashcardRankingFromProgressCount(authUser.id);
-    const playerRankResult = await pool.query(
-      `WITH ranked AS (
-         SELECT
-           user_id,
-           ROW_NUMBER() OVER (ORDER BY ${FLASHCARD_RANKING_ORDER_SQL}) AS rank
-         FROM public.flashcard_rankings
-         WHERE user_id IS NOT NULL
-       )
-       SELECT rank
-       FROM ranked
-       WHERE user_id = $1
-       LIMIT 1`,
-      [authUser.id]
-    );
+    const snapshot = await fetchFlashcardRankingSnapshot({
+      periodId: period,
+      limit: 100,
+      currentUserId: Number(authUser.id) || 0
+    });
+    const player = snapshot.player;
 
     res.json({
       success: true,
+      period: snapshot.period,
       userId: Number(record.user_id) || Number(authUser.id) || 0,
       username: String(authUser.email || authUser.username || '').trim(),
       avatarImage: String(authUser.avatar_image || '').trim(),
       playerNumber: Number(record.player_number) || 0,
-      flashcardsCount: Number(record.flashcards_count) || 0,
+      flashcardsCount: player?.flashcardsCount || 0,
+      weeklyFlashcardsCount: Number(record.weekly_count) || 0,
+      monthlyFlashcardsCount: Number(record.monthly_count) || 0,
+      allTimeFlashcardsCount: Number(record.all_time_count) || 0,
       updatedAt: record.updated_at,
-      rank: Number(playerRankResult.rows[0]?.rank) || 0
+      rank: Number(player?.rank) || 0
     });
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
@@ -2337,7 +2643,7 @@ app.post('/api/rankings/flashcards', async (req, res) => {
       message: statusCode === 400
         ? 'userId invalido.'
         : statusCode === 401
-          ? 'Sessão inválida ou expirada.'
+          ? 'Sessao invalida ou expirada.'
           : 'Erro ao salvar ranking de flashcards.'
     });
   }

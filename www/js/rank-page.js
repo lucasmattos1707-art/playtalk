@@ -1,9 +1,27 @@
 (function initPlaytalkRankPage() {
   const PERIODS = [
-    { id: 'weekly', label: 'Rank Semanal' },
-    { id: 'monthly', label: 'Rank Mensal' },
-    { id: 'allTime', label: 'Rank Geral' }
+    {
+      id: 'weekly',
+      label: 'Rank Semanal',
+      subtitle: 'Confira os Top Falantes da Semana!'
+    },
+    {
+      id: 'monthly',
+      label: 'Rank Mensal',
+      subtitle: 'Os jogadores mais consistentes do mes em destaque.'
+    },
+    {
+      id: 'allTime',
+      label: 'Rank Geral',
+      subtitle: 'Veja quem lidera o PlayTalk no ranking geral.'
+    }
   ];
+  const PERIOD_MAP = PERIODS.reduce((acc, period) => {
+    acc[period.id] = period;
+    return acc;
+  }, {});
+  const DEFAULT_AVATAR = '/Avatar/avatar-man-person-svgrepo-com.svg';
+  const PLACEHOLDER_NAME = 'Usuario';
 
   const PODIUM_STYLES = {
     1: {
@@ -23,99 +41,150 @@
     }
   };
 
-  const mockRankings = {
-    weekly: {
-      subtitle: 'Confira os Top Falantes da Semana!',
-      tableLabel: 'Rank Semanal',
-      topThree: [
-        { position: 2, name: 'Bianca', number: 1088, flashcards: 7420, avatar: '/arquivos-codex/avatar/12.webp' },
-        { position: 1, name: 'Caio', number: 1042, flashcards: 8240, avatar: '/arquivos-codex/avatar/33.webp' },
-        { position: 3, name: 'Luna', number: 1165, flashcards: 7010, avatar: '/arquivos-codex/avatar/48.webp' }
-      ],
-      tableRows: [
-        { position: 4, number: 1024, flashcards: 6880 },
-        { position: 5, number: 1137, flashcards: 6610 },
-        { position: 6, number: 1192, flashcards: 6455 },
-        { position: 7, number: 1270, flashcards: 6218 },
-        { position: 8, number: 1314, flashcards: 5984 },
-        { position: 9, number: 1406, flashcards: 5760 },
-        { position: 10, number: 1491, flashcards: 5528 }
-      ]
-    },
-    monthly: {
-      subtitle: 'Os jogadores mais consistentes do mes em destaque.',
-      tableLabel: 'Rank Mensal',
-      topThree: [
-        { position: 2, name: 'Maya', number: 1216, flashcards: 22480, avatar: '/arquivos-codex/avatar/27.webp' },
-        { position: 1, name: 'Noah', number: 1007, flashcards: 23960, avatar: '/arquivos-codex/avatar/41.webp' },
-        { position: 3, name: 'Rafa', number: 1184, flashcards: 21910, avatar: '/arquivos-codex/avatar/08.webp' }
-      ],
-      tableRows: [
-        { position: 4, number: 1092, flashcards: 21460 },
-        { position: 5, number: 1178, flashcards: 20910 },
-        { position: 6, number: 1243, flashcards: 20120 },
-        { position: 7, number: 1366, flashcards: 19540 },
-        { position: 8, number: 1428, flashcards: 19075 },
-        { position: 9, number: 1502, flashcards: 18460 },
-        { position: 10, number: 1589, flashcards: 17920 }
-      ]
-    },
-    allTime: {
-      subtitle: 'Veja quem lidera o PlayTalk no ranking geral.',
-      tableLabel: 'Rank Geral',
-      topThree: [
-        { position: 2, name: 'Helena', number: 1103, flashcards: 48620, avatar: '/arquivos-codex/avatar/05.webp' },
-        { position: 1, name: 'Theo', number: 1001, flashcards: 51440, avatar: '/arquivos-codex/avatar/60.webp' },
-        { position: 3, name: 'Gael', number: 1259, flashcards: 47280, avatar: '/arquivos-codex/avatar/18.webp' }
-      ],
-      tableRows: [
-        { position: 4, number: 1064, flashcards: 46010 },
-        { position: 5, number: 1142, flashcards: 45130 },
-        { position: 6, number: 1238, flashcards: 43860 },
-        { position: 7, number: 1345, flashcards: 42690 },
-        { position: 8, number: 1451, flashcards: 41825 },
-        { position: 9, number: 1517, flashcards: 41070 },
-        { position: 10, number: 1620, flashcards: 40315 }
-      ]
-    }
-  };
-
   const els = {
     podium: document.getElementById('podium'),
     rankingTableBody: document.getElementById('rankingTableBody'),
     periodTabs: document.getElementById('periodTabs'),
     pageSubtitle: document.querySelector('.page-subtitle'),
-    tablePeriodLabel: document.getElementById('tablePeriodLabel')
+    tablePeriodLabel: document.getElementById('tablePeriodLabel'),
+    tableTitle: document.getElementById('rankingTableTitle')
   };
 
   const state = {
-    activePeriod: 'weekly'
+    activePeriod: 'weekly',
+    currentUserId: 0,
+    cache: new Map(),
+    loading: false,
+    error: '',
+    requestId: 0
   };
 
   function formatFlashcards(value) {
     return Number(value || 0).toLocaleString('pt-BR');
   }
 
-  function normalizePeriodData(periodId) {
-    return mockRankings[periodId] || mockRankings.weekly;
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, (char) => (
+      {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        '\'': '&#39;'
+      }[char] || char
+    ));
+  }
+
+  function createPlaceholderEntry(rank) {
+    return {
+      rank,
+      username: PLACEHOLDER_NAME,
+      avatarImage: DEFAULT_AVATAR,
+      flashcardsCount: 0,
+      userId: 0,
+      isPlaceholder: true
+    };
+  }
+
+  function buildPlaceholderRanking(limit) {
+    return Array.from({ length: limit }, (_, index) => createPlaceholderEntry(index + 1));
+  }
+
+  function fallbackPayload(periodId) {
+    const period = PERIOD_MAP[periodId] || PERIOD_MAP.weekly;
+    return {
+      period: period.id,
+      periodLabel: period.label,
+      ranking: buildPlaceholderRanking(100),
+      player: null
+    };
+  }
+
+  function normalizeRankingPayload(periodId, payload) {
+    const period = PERIOD_MAP[periodId] || PERIOD_MAP.weekly;
+    const ranking = Array.isArray(payload?.ranking) ? payload.ranking : [];
+    const normalizedRanking = buildPlaceholderRanking(100).map((placeholder, index) => {
+      const entry = ranking[index];
+      if (!entry || typeof entry !== 'object') {
+        return placeholder;
+      }
+      return {
+        rank: Number(entry.rank) || (index + 1),
+        username: String(entry.username || PLACEHOLDER_NAME).trim() || PLACEHOLDER_NAME,
+        avatarImage: String(entry.avatarImage || DEFAULT_AVATAR).trim() || DEFAULT_AVATAR,
+        flashcardsCount: Number(entry.flashcardsCount) || 0,
+        userId: Number(entry.userId) || 0,
+        isPlaceholder: Boolean(entry.isPlaceholder)
+      };
+    });
+
+    return {
+      period: period.id,
+      periodLabel: String(payload?.periodLabel || period.label),
+      ranking: normalizedRanking,
+      player: payload?.player && typeof payload.player === 'object'
+        ? {
+          userId: Number(payload.player.userId) || 0,
+          rank: Number(payload.player.rank) || 0
+        }
+        : null
+    };
+  }
+
+  async function fetchRanking(periodId) {
+    const response = await fetch(`/api/rankings/flashcards?period=${encodeURIComponent(periodId)}&limit=100`, {
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success) {
+      throw new Error(payload?.message || 'Falha ao carregar ranking.');
+    }
+    return normalizeRankingPayload(periodId, payload);
+  }
+
+  function getActivePayload() {
+    return state.cache.get(state.activePeriod) || fallbackPayload(state.activePeriod);
+  }
+
+  function buildPodiumEntries(ranking) {
+    const first = ranking[0] || createPlaceholderEntry(1);
+    const second = ranking[1] || createPlaceholderEntry(2);
+    const third = ranking[2] || createPlaceholderEntry(3);
+    return [second, first, third];
+  }
+
+  function resolveAvatar(entry) {
+    return entry && entry.avatarImage ? entry.avatarImage : DEFAULT_AVATAR;
+  }
+
+  function buildTableMeta(entry) {
+    return entry && !entry.isPlaceholder && entry.userId
+      ? 'Jogador PlayTalk'
+      : 'Vaga pronta para novo jogador';
   }
 
   function createPodiumCard(entry) {
-    const style = PODIUM_STYLES[entry.position] || PODIUM_STYLES[3];
+    const style = PODIUM_STYLES[entry.rank] || PODIUM_STYLES[3];
+    const avatar = resolveAvatar(entry);
+    const username = escapeHtml(entry.username || PLACEHOLDER_NAME);
+    const meta = entry && !entry.isPlaceholder && entry.userId
+      ? 'Jogador em destaque'
+      : 'Aguardando jogador';
 
     return `
       <article
         class="podium-card ${style.tone}"
         style="--podium-color:${style.color}; --podium-glow:${style.glow};"
       >
-        <div class="podium-rank">${entry.position}</div>
+        <div class="podium-rank">${entry.rank}</div>
         <div class="podium-avatar">
-          <img src="${entry.avatar}" alt="${entry.name}">
+          <img src="${avatar}" alt="${username}" onerror="this.onerror=null;this.src='${DEFAULT_AVATAR}';">
         </div>
-        <p class="podium-name">${entry.name}</p>
-        <p class="podium-meta">#${entry.number}</p>
+        <p class="podium-name">${username}</p>
+        <p class="podium-meta">${meta}</p>
         <p class="podium-count">
-          ${formatFlashcards(entry.flashcards)}
+          ${formatFlashcards(entry.flashcardsCount)}
           <span>Flashcards</span>
         </p>
       </article>
@@ -123,11 +192,22 @@
   }
 
   function createTableRow(entry) {
+    const avatar = resolveAvatar(entry);
+    const isCurrentPlayer = state.currentUserId && entry.userId === state.currentUserId;
+    const username = escapeHtml(entry.username || PLACEHOLDER_NAME);
     return `
-      <tr>
-        <td class="cell-position">${entry.position}</td>
-        <td class="cell-number">#${entry.number}</td>
-        <td class="cell-flashcards">${formatFlashcards(entry.flashcards)}</td>
+      <tr class="${isCurrentPlayer ? 'is-current-player' : ''}">
+        <td class="cell-position">${entry.rank}</td>
+        <td>
+          <div class="cell-user">
+            <img class="table-avatar" src="${avatar}" alt="${username}" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_AVATAR}';">
+            <div class="table-user-copy">
+              <span class="table-user-name">${username}</span>
+              <span class="table-user-meta">${buildTableMeta(entry)}</span>
+            </div>
+          </div>
+        </td>
+        <td class="cell-flashcards">${formatFlashcards(entry.flashcardsCount)}</td>
       </tr>
     `;
   }
@@ -146,12 +226,49 @@
   }
 
   function render() {
-    const periodData = normalizePeriodData(state.activePeriod);
-    els.pageSubtitle.textContent = periodData.subtitle;
-    els.tablePeriodLabel.textContent = periodData.tableLabel;
-    els.podium.innerHTML = periodData.topThree.map(createPodiumCard).join('');
-    els.rankingTableBody.innerHTML = periodData.tableRows.map(createTableRow).join('');
+    const period = PERIOD_MAP[state.activePeriod] || PERIOD_MAP.weekly;
+    const payload = getActivePayload();
+    const ranking = Array.isArray(payload.ranking) ? payload.ranking : buildPlaceholderRanking(100);
+    const subtitleSuffix = state.error ? ' Exibindo vagas padrao por enquanto.' : state.loading ? ' Atualizando ranking...' : '';
+
+    state.currentUserId = Number(payload?.player?.userId) || 0;
+    els.pageSubtitle.textContent = `${period.subtitle}${subtitleSuffix}`;
+    els.tableTitle.textContent = 'Top 100 PlayTalk';
+    els.tablePeriodLabel.textContent = payload.periodLabel || period.label;
+    els.podium.innerHTML = buildPodiumEntries(ranking).map(createPodiumCard).join('');
+    els.rankingTableBody.innerHTML = ranking.slice(3).map(createTableRow).join('');
     els.periodTabs.innerHTML = createPeriodTabs();
+  }
+
+  async function loadPeriod(periodId) {
+    const nextPeriod = PERIOD_MAP[periodId] ? periodId : 'weekly';
+    state.activePeriod = nextPeriod;
+
+    if (state.cache.has(nextPeriod)) {
+      state.error = '';
+      render();
+      return;
+    }
+
+    const requestId = state.requestId + 1;
+    state.requestId = requestId;
+    state.loading = true;
+    state.error = '';
+    render();
+
+    try {
+      const payload = await fetchRanking(nextPeriod);
+      if (requestId !== state.requestId) return;
+      state.cache.set(nextPeriod, payload);
+    } catch (_error) {
+      if (requestId !== state.requestId) return;
+      state.cache.set(nextPeriod, fallbackPayload(nextPeriod));
+      state.error = 'fallback';
+    } finally {
+      if (requestId !== state.requestId) return;
+      state.loading = false;
+      render();
+    }
   }
 
   function handleTabClick(event) {
@@ -161,10 +278,10 @@
     const nextPeriod = trigger.getAttribute('data-period');
     if (!nextPeriod || nextPeriod === state.activePeriod) return;
 
-    state.activePeriod = nextPeriod;
-    render();
+    loadPeriod(nextPeriod);
   }
 
   els.periodTabs.addEventListener('click', handleTabClick);
   render();
+  loadPeriod(state.activePeriod);
 })();
