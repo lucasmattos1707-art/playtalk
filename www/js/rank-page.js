@@ -100,6 +100,13 @@
     };
   }
 
+  function buildApiUrl(path) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
+      return window.PlaytalkApi.url(path);
+    }
+    return path;
+  }
+
   function normalizeRankingPayload(periodId, payload) {
     const period = PERIOD_MAP[periodId] || PERIOD_MAP.weekly;
     const ranking = Array.isArray(payload?.ranking) ? payload.ranking : [];
@@ -132,8 +139,7 @@
   }
 
   async function fetchRanking(periodId) {
-    const response = await fetch(`/api/rankings/flashcards?period=${encodeURIComponent(periodId)}&limit=100`, {
-      credentials: 'include',
+    const response = await fetch(buildApiUrl(`/api/rankings/flashcards?period=${encodeURIComponent(periodId)}&limit=100`), {
       cache: 'no-store'
     });
     const payload = await response.json().catch(() => ({}));

@@ -6,7 +6,20 @@ const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const app = express();
-app.use(cors());
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    callback(null, true);
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '100mb' }));
 const PORT = process.env.PORT || 3000;
 const env = (value) => (typeof value === 'string' ? value.trim() : value);
@@ -1977,11 +1990,20 @@ function parseCookies(req) {
   }, {});
 }
 
+function readBearerToken(req) {
+  const header = req.headers?.authorization;
+  if (typeof header !== 'string') return '';
+  const trimmed = header.trim();
+  if (!trimmed) return '';
+  const match = trimmed.match(/^Bearer\s+(.+)$/i);
+  return String(match?.[1] || '').trim();
+}
+
 function getAuthenticatedUserFromRequest(req) {
   if (!JWT_SECRET) return null;
 
   const cookies = parseCookies(req);
-  const token = cookies.playtalk_token;
+  const token = cookies.playtalk_token || readBearerToken(req);
   if (!token) return null;
 
   try {

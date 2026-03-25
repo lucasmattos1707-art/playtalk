@@ -2899,7 +2899,6 @@
 
       async function fetchFlashcardCloudState() {
         const response = await fetch(buildApiUrl('/api/flashcards/state'), {
-          credentials: 'include',
           headers: buildAuthHeaders(),
           cache: 'no-store'
         });
@@ -2924,7 +2923,6 @@
         try {
           const response = await fetch(buildApiUrl('/api/flashcards/state'), {
             method: 'PUT',
-            credentials: 'include',
             headers: buildAuthHeaders({
               'Content-Type': 'application/json'
             }),
@@ -2988,7 +2986,6 @@
 
       async function fetchSessionUser() {
         const response = await fetch(buildApiUrl('/auth/session'), {
-          credentials: 'include',
           headers: buildAuthHeaders(),
           cache: 'no-store'
         });
@@ -3107,7 +3104,6 @@
           const endpoint = state.authMode === 'register' ? '/register' : '/login';
           const response = await fetch(buildApiUrl(endpoint), {
             method: 'POST',
-            credentials: 'include',
             headers: buildAuthHeaders({
               'Content-Type': 'application/json'
             }),
@@ -3133,7 +3129,6 @@
         try {
           await fetch(buildApiUrl('/logout'), {
             method: 'POST',
-            credentials: 'include',
             headers: buildAuthHeaders({
               'Content-Type': 'application/json'
             })
