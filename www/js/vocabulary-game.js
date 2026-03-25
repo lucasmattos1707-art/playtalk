@@ -1249,6 +1249,11 @@
   function setMicControlAction(action) {
     currentMicAction = typeof action === 'function' ? action : null;
     setMicControlEnabled(Boolean(currentMicAction));
+    if (!currentMicAction) {
+      clearMicAutoStartTimer();
+      return;
+    }
+    scheduleMicAutoStart();
   }
 
   function setMicControlActive(active) {
@@ -1260,7 +1265,9 @@
     micContinuousMode = Boolean(enabled);
     if (micContinuousMode) {
       primeMicrophonePermission();
+      scheduleMicAutoStart();
     } else {
+      clearMicAutoStartTimer();
       setMicControlActive(false);
     }
     updateControlButtons();
@@ -1274,6 +1281,7 @@
     }
     micPersistentEnabled = Boolean(enabled);
     if (!micPersistentEnabled) {
+      clearMicAutoStartTimer();
       setMicControlActive(false);
       if (recognition && typeof recognition.stop === 'function') {
         try {
@@ -1284,6 +1292,7 @@
       }
     } else {
       primeMicrophonePermission();
+      scheduleMicAutoStart();
     }
     updateControlButtons();
   }
@@ -1469,6 +1478,7 @@
   let micControlActive = false;
   let micPersistentEnabled = false;
   let micContinuousMode = false;
+  let micAutoStartTimer = null;
   let currentMicAction = null;
   let pendingAdvanceCycle = false;
   let openPauseOnResume = false;
@@ -5185,8 +5195,48 @@
     return window.SpeechRecognition || window.webkitSpeechRecognition || null;
   }
 
+  function getNativeSpeechRecognition() {
+    const nativeSpeech = window.PlaytalkNativeSpeech;
+    if (!nativeSpeech) return null;
+    if (typeof nativeSpeech.captureOnce !== 'function') return null;
+    if (
+      typeof nativeSpeech.isNativeAndroidRuntime === 'function'
+      && !nativeSpeech.isNativeAndroidRuntime()
+    ) {
+      return null;
+    }
+    return nativeSpeech;
+  }
+
   function getRecognitionLanguage(targetPhase = phase) {
     return isTalkingPhase(targetPhase) ? getMode12RecognitionLanguage() : 'en-US';
+  }
+
+  function clearMicAutoStartTimer() {
+    if (!micAutoStartTimer) return;
+    window.clearTimeout(micAutoStartTimer);
+    micAutoStartTimer = null;
+  }
+
+  function shouldAutoStartMicAction() {
+    return Boolean(
+      micContinuousMode
+      && micPersistentEnabled
+      && !awaiting
+      && !isGamePaused
+      && !isTalkingPhase()
+      && typeof currentMicAction === 'function'
+    );
+  }
+
+  function scheduleMicAutoStart(delayMs = 220) {
+    clearMicAutoStartTimer();
+    if (!shouldAutoStartMicAction()) return;
+    micAutoStartTimer = window.setTimeout(() => {
+      micAutoStartTimer = null;
+      if (!shouldAutoStartMicAction()) return;
+      currentMicAction();
+    }, Math.max(0, Number(delayMs) || 0));
   }
 
   function primeMicrophonePermission() {
@@ -5207,6 +5257,11 @@
         });
       return micPermissionPromise;
     };
+
+    const nativeSpeech = getNativeSpeechRecognition();
+    if (nativeSpeech && typeof nativeSpeech.ensurePermissions === 'function') {
+      return rememberPermissionAttempt(nativeSpeech.ensurePermissions());
+    }
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       micPermissionPromise = null;
@@ -5230,6 +5285,9 @@
 
   function requestMicrophoneAccess() {
     if (isGamePaused) return Promise.resolve(false);
+    if (getNativeSpeechRecognition()) {
+      return primeMicrophonePermission().catch(() => false);
+    }
     if (!recognition) return Promise.resolve(true);
     return primeMicrophonePermission().catch(() => false);
   }
@@ -7349,6 +7407,20 @@
       .then((permissionReady) => {
         if (permissionReady === false) {
           cancelSpeechAttempt(options.permissionErrorText || 'Ative o microfone para continuar.');
+          return;
+        }
+        const nativeSpeech = getNativeSpeechRecognition();
+        if (nativeSpeech) {
+          nativeSpeech.captureOnce({
+            language: getRecognitionLanguage(),
+            prompt: getRecognitionLanguage().toLowerCase().startsWith('pt') ? 'Fale em portugues' : 'Fale em ingles',
+            maxResults: captureSettings.maxResults,
+            maxDurationMs: listenLimitMs
+          })
+            .then(onResult)
+            .catch(() => {
+              cancelSpeechAttempt(options.micErrorText || 'Nao foi possivel abrir o microfone.');
+            });
           return;
         }
         if (recognition) {
