@@ -4566,8 +4566,9 @@
           && typeof openAiStt.isSupported === 'function'
           && openAiStt.isSupported()
         );
+        const shouldUseOpenAiStt = canUseOpenAiStt;
 
-        if (!recognitionCtor && !canUseOpenAiStt) {
+        if (!recognitionCtor && !shouldUseOpenAiStt) {
           setGameStatus('', 'miss');
           return;
         }
@@ -4587,7 +4588,7 @@
 
         const recognitionLanguage = entry.stage === 2 ? 'pt-BR' : 'en-US';
 
-        if (!recognitionCtor && canUseOpenAiStt) {
+        if (shouldUseOpenAiStt) {
           const finishOpenAiCapture = () => {
             state.game.listening = false;
             state.game.canListen = true;
