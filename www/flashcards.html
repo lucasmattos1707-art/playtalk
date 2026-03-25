@@ -5250,7 +5250,10 @@
       }
 
       function openGameSetup() {
-        beginGame();
+        syncGameSetupSummary();
+        els.gameSetup.classList.add('is-visible');
+        window.requestAnimationFrame(() => els.gameSetup.classList.add('is-active'));
+        document.body.classList.add('game-open');
       }
 
       function closeGameSetup() {
