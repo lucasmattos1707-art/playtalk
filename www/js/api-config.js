@@ -1,5 +1,5 @@
 (function initPlaytalkApiConfig() {
-  const LEGACY_RENDER_URL = 'https://playtalk-ae8z.onrender.com';
+  const LEGACY_RENDER_URL = 'https://playtalk-dvv5.onrender.com';
   const API_BASE_URL_STORAGE_KEY = 'playtalk_api_base_url';
 
   function isNativeRuntime() {
