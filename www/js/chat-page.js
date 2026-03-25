@@ -8,6 +8,14 @@
   const MAX_INPUT_CHARS = 120;
   const MAX_OUTPUT_CHARS = 140;
   const chatHistory = [];
+  const openAiStt = window.PlaytalkOpenAiStt || null;
+
+  function buildApiUrl(path) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
+      return window.PlaytalkApi.url(path);
+    }
+    return path;
+  }
 
   let mediaRecorder = null;
   let mediaStream = null;
@@ -16,15 +24,6 @@
 
   function updateCount() {
     count.textContent = `${input.value.length}/${MAX_INPUT_CHARS}`;
-  }
-
-  function blobToDataUrl(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error('Nao foi possivel ler o audio gravado.'));
-      reader.readAsDataURL(blob);
-    });
   }
 
   async function animateText(element, text) {
@@ -63,7 +62,7 @@
     feed.scrollTop = feed.scrollHeight;
 
     try {
-      const response = await fetch('/api/chat/openai', {
+      const response = await fetch(buildApiUrl('/api/chat/openai'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -101,29 +100,12 @@
   }
 
   async function transcribeAudio(blob) {
-    const response = await fetch('/api/stt/openai', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        audioDataUrl: await blobToDataUrl(blob),
-        language: 'pt'
-      })
-    });
-
-    let payload = null;
-    try {
-      payload = await response.json();
-    } catch (_error) {
-      payload = null;
+    if (!openAiStt || typeof openAiStt.transcribeBlob !== 'function') {
+      throw new Error('Reconhecimento de voz indisponivel neste dispositivo.');
     }
 
-    if (!response.ok) {
-      throw new Error(payload?.instructions || payload?.details || payload?.error || 'Erro na transcricao.');
-    }
-
-    return String(payload?.text || '').trim().slice(0, MAX_INPUT_CHARS);
+    const result = await openAiStt.transcribeBlob(blob, { language: 'pt' });
+    return String(result?.text || '').trim().slice(0, MAX_INPUT_CHARS);
   }
 
   function setRecordingState(recording) {

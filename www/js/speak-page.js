@@ -35,6 +35,14 @@
   let isRecording = false;
   let lastAssistantReply = '';
   const chatHistory = [];
+  const openAiStt = window.PlaytalkOpenAiStt || null;
+
+  function buildApiUrl(path) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
+      return window.PlaytalkApi.url(path);
+    }
+    return path;
+  }
 
   function updateCharCount() {
     const total = textInput.value.length;
@@ -61,15 +69,6 @@
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '') || 'texto';
     return `${stem}-${voice}-${Date.now()}.mp3`;
-  }
-
-  function blobToDataUrl(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error('Nao foi possivel ler o audio gravado.'));
-      reader.readAsDataURL(blob);
-    });
   }
 
   function appendChatMessage(role, content) {
@@ -105,7 +104,7 @@
 
     try {
       const fileName = buildFileName(voice, text);
-      const response = await fetch('/api/tts/openai', {
+      const response = await fetch(buildApiUrl('/api/tts/openai'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -152,34 +151,15 @@
 
   async function transcribeAudio(blob) {
     setStatus('Enviando gravacao para transcricao...', 'loading');
-
-    const response = await fetch('/api/stt/openai', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        audioDataUrl: await blobToDataUrl(blob),
-        language: 'pt'
-      })
-    });
-
-    let payload = null;
-    try {
-      payload = await response.json();
-    } catch (_error) {
-      payload = null;
-    }
-
-    if (!response.ok) {
-      throw new Error(payload?.instructions || payload?.details || payload?.error || 'Erro ao transcrever audio.');
-    }
-
-    if (!payload?.text) {
+    const result = openAiStt && typeof openAiStt.transcribeBlob === 'function'
+      ? await openAiStt.transcribeBlob(blob, { language: 'pt' })
+      : null;
+    const text = result ? result.text : '';
+    if (!text) {
       throw new Error('A transcricao veio vazia.');
     }
 
-    textInput.value = payload.text;
+    textInput.value = text;
     updateCharCount();
     setStatus('Texto preenchido pela sua voz.', 'success');
   }
@@ -253,7 +233,7 @@
     chatInput.value = '';
 
     try {
-      const response = await fetch('/api/chat/openai', {
+      const response = await fetch(buildApiUrl('/api/chat/openai'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

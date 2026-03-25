@@ -7385,6 +7385,25 @@
           }
           return;
         }
+        const openAiStt = window.PlaytalkOpenAiStt;
+        if (
+          openAiStt
+          && typeof openAiStt.isNativeRuntime === 'function'
+          && openAiStt.isNativeRuntime()
+          && typeof openAiStt.captureAndTranscribe === 'function'
+          && typeof openAiStt.isSupported === 'function'
+          && openAiStt.isSupported()
+        ) {
+          openAiStt.captureAndTranscribe({
+            language: getRecognitionLanguage(),
+            maxDurationMs: listenLimitMs
+          })
+            .then(onResult)
+            .catch(() => {
+              cancelSpeechAttempt(options.micErrorText || 'Nao foi possivel abrir o microfone.');
+            });
+          return;
+        }
         const typed = window.prompt('Diga o nome em inglÃƒÂªs:') || '';
         onResult(typed);
       });

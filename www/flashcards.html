@@ -2189,6 +2189,9 @@
       </div>
     </section>
   </main>
+  <script src="js/apk-config.js"></script>
+  <script src="js/api-config.js"></script>
+  <script src="js/openai-stt.js"></script>
   <script src="js/gamesounds.js"></script>
   <script>
     (() => {
@@ -2200,6 +2203,7 @@
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
       const TIME_OFFSET_STORAGE_KEY = 'playtalk-flashcards-time-offset-v1';
       const recognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+      const openAiStt = window.PlaytalkOpenAiStt || null;
       const STAR_ICON_PATH = 'SVG/codex-icons/star.svg';
       const ENGLISH_ICON_PATH = 'SVG/codex-icons/ingles.svg';
       const PORTUGUESE_ICON_PATH = 'SVG/codex-icons/portugues.svg';
@@ -4465,7 +4469,16 @@
         if (!entry) return;
         if (entry.stage === 4) return;
 
-        if (!recognitionCtor) {
+        const canUseOpenAiStt = Boolean(
+          openAiStt
+          && typeof openAiStt.isNativeRuntime === 'function'
+          && openAiStt.isNativeRuntime()
+          && typeof openAiStt.captureAndTranscribe === 'function'
+          && typeof openAiStt.isSupported === 'function'
+          && openAiStt.isSupported()
+        );
+
+        if (!recognitionCtor && !canUseOpenAiStt) {
           setGameStatus('', 'miss');
           return;
         }
@@ -4483,6 +4496,39 @@
         els.gameVisual.classList.add('is-mic-live');
         setGameStatus('', 'live');
 
+        const recognitionLanguage = entry.stage === 2 ? 'pt-BR' : 'en-US';
+
+        if (!recognitionCtor && canUseOpenAiStt) {
+          const finishOpenAiCapture = () => {
+            state.game.listening = false;
+            state.game.canListen = true;
+            els.gameTouchBtn.classList.remove('is-busy');
+            renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
+            els.gameCard.classList.remove('is-listening');
+            els.gameVisual.classList.remove('is-mic-live');
+          };
+
+          try {
+            const transcript = await openAiStt.captureAndTranscribe({
+              language: recognitionLanguage,
+              maxDurationMs: 5000
+            });
+            finishOpenAiCapture();
+            if (!transcript) {
+              setGameStatus('Toque para falar', 'live');
+              return;
+            }
+            await handleRecognitionResult(transcript);
+            return;
+          } catch (_error) {
+            finishOpenAiCapture();
+            if (state.game.active && state.game.currentId === entry.id) {
+              setGameStatus('Toque para falar', 'live');
+            }
+            return;
+          }
+        }
+
         const recognition = new recognitionCtor();
         state.game.recognition = recognition;
         let finished = false;
@@ -4490,7 +4536,6 @@
         let hadError = false;
         let retryTimer = 0;
         let partialTranscript = '';
-        const recognitionLanguage = entry.stage === 2 ? 'pt-BR' : 'en-US';
         const resolveRecognitionTranscript = (results) => Array.from(results || []).reduce((best, result) => {
           const transcript = Array.from(result || []).reduce((candidate, alternative) => {
             const nextTranscript = safeText(alternative?.transcript || '');
