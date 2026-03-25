@@ -470,6 +470,39 @@
       align-items: center;
     }
 
+    .admin-card-popover {
+      position: fixed;
+      inset: 0;
+      z-index: 130;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(1, 5, 12, 0.72);
+      backdrop-filter: blur(8px);
+    }
+
+    .admin-card-popover.is-visible {
+      display: flex;
+    }
+
+    .admin-card-popover__panel {
+      width: min(420px, 100%);
+      display: grid;
+      gap: 14px;
+      padding: 22px;
+      border-radius: 26px;
+      background: rgba(8, 28, 54, 0.96);
+      border: 1px solid rgba(97, 242, 164, 0.2);
+      box-shadow: var(--shadow);
+    }
+
+    .admin-card-popover__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
     .actions,
     .game-chip-row {
       display: flex;
@@ -2425,6 +2458,23 @@
       </div>
     </section>
 
+    <div class="admin-card-popover" id="adminCardPopover" aria-hidden="true">
+      <div class="admin-card-popover__panel">
+        <div>
+          <strong id="adminCardPopoverTitle">Acoes do flashcard</strong>
+          <div class="admin-tools__status">Apague imagem, audio ou o container inteiro.</div>
+        </div>
+        <div class="admin-card-popover__actions">
+          <button class="btn" id="adminDeleteImageBtn" type="button">Apagar foto</button>
+          <button class="btn" id="adminDeleteAudioBtn" type="button">Apagar audio</button>
+          <button class="btn" id="adminDeleteCardBtn" type="button">Apagar container</button>
+        </div>
+        <div class="admin-card-popover__actions" style="justify-content:flex-end">
+          <button class="btn" id="adminClosePopoverBtn" type="button">Fechar</button>
+        </div>
+      </div>
+    </div>
+
     <section class="game game-setup" id="gameSetup" aria-modal="true" role="dialog">
       <div class="panel game-shell game-setup__shell">
         <div class="game-head">
@@ -2580,7 +2630,8 @@
           busy: false,
           status: 'Nenhuma acao em andamento.',
           error: false,
-          prompt: ''
+          prompt: '',
+          activeCardId: ''
         },
         game: {
           active: false,
@@ -2641,12 +2692,18 @@
         libraryTitle: document.getElementById('libraryTitle'),
         adminBadge: document.getElementById('adminBadge'),
         adminTools: document.getElementById('adminTools'),
-        adminPromptInput: document.getElementById('adminPromptInput'),
-        adminFillTextBtn: document.getElementById('adminFillTextBtn'),
-        adminFillImageBtn: document.getElementById('adminFillImageBtn'),
-        adminFillAudioBtn: document.getElementById('adminFillAudioBtn'),
-        adminToolsStatus: document.getElementById('adminToolsStatus'),
-        allGrid: document.getElementById('allGrid'),
+          adminPromptInput: document.getElementById('adminPromptInput'),
+          adminFillTextBtn: document.getElementById('adminFillTextBtn'),
+          adminFillImageBtn: document.getElementById('adminFillImageBtn'),
+          adminFillAudioBtn: document.getElementById('adminFillAudioBtn'),
+          adminToolsStatus: document.getElementById('adminToolsStatus'),
+          adminCardPopover: document.getElementById('adminCardPopover'),
+          adminCardPopoverTitle: document.getElementById('adminCardPopoverTitle'),
+          adminDeleteImageBtn: document.getElementById('adminDeleteImageBtn'),
+          adminDeleteAudioBtn: document.getElementById('adminDeleteAudioBtn'),
+          adminDeleteCardBtn: document.getElementById('adminDeleteCardBtn'),
+          adminClosePopoverBtn: document.getElementById('adminClosePopoverBtn'),
+          allGrid: document.getElementById('allGrid'),
         allSectionCopy: document.getElementById('allSectionCopy'),
         libraryPagination: document.getElementById('libraryPagination'),
         libraryPageInfo: document.getElementById('libraryPageInfo'),
@@ -3660,9 +3717,10 @@
           return;
         }
 
+        const adminMode = isAdminUser();
         target.innerHTML = cards.map(card => `
-          <article class="mini-card">
-            <div class="mini-card__image">
+          <article class="mini-card" data-card-id="${escapeHtml(card.id)}">
+            <div class="mini-card__image" ${adminMode ? `data-admin-image="${escapeHtml(card.id)}"` : ''}>
               ${card.imageUrl
                 ? `<img src="${escapeHtml(card.imageUrl)}" alt="${escapeHtml(card.english || card.portuguese || card.deckTitle)}" style="${escapeHtml(card.imageStyle || '')}">`
                 : `<div class="mini-card__fallback">${escapeHtml(card.deckTitle)}</div>`}
@@ -3674,6 +3732,14 @@
             ${card.progressMarkup || ''}
           </article>
         `).join('');
+        if (adminMode) {
+          Array.from(target.querySelectorAll('[data-admin-image]')).forEach((node) => {
+            node.addEventListener('click', () => {
+              const card = cardById(node.getAttribute('data-admin-image'));
+              openAdminCardPopover(card);
+            });
+          });
+        }
       }
 
       function buildLibraryCardView(card) {
@@ -3758,6 +3824,24 @@
         }
       }
 
+      function closeAdminCardPopover() {
+        state.admin.activeCardId = '';
+        if (els.adminCardPopover) {
+          els.adminCardPopover.classList.remove('is-visible');
+          els.adminCardPopover.setAttribute('aria-hidden', 'true');
+        }
+      }
+
+      function openAdminCardPopover(card) {
+        if (!isAdminUser() || !card || !els.adminCardPopover) return;
+        state.admin.activeCardId = card.id;
+        if (els.adminCardPopoverTitle) {
+          els.adminCardPopoverTitle.textContent = `Acoes do flashcard ${card.deckTitle || card.english || card.portuguese || card.id}`;
+        }
+        els.adminCardPopover.classList.add('is-visible');
+        els.adminCardPopover.setAttribute('aria-hidden', 'false');
+      }
+
       function syncAdminTools() {
         const adminMode = isAdminUser();
         if (els.adminTools) {
@@ -3825,6 +3909,55 @@
           throw new Error(payload?.instructions || payload?.details || payload?.error || 'Falha ao executar a acao do admin.');
         }
         return payload || {};
+      }
+
+      async function runAdminCardAssetDelete(kind) {
+        const card = cardById(state.admin.activeCardId);
+        if (!card || state.admin.busy) return;
+        state.admin.busy = true;
+        state.admin.status = `Apagando ${kind === 'image' ? 'foto' : 'audio'}...`;
+        state.admin.error = false;
+        syncAdminTools();
+        try {
+          await postAdminFlashcardAction('/api/admin/flashcards/delete-asset', {
+            source: card.source,
+            sourceIndex: card.sourceIndex,
+            kind
+          });
+          closeAdminCardPopover();
+          await reloadCardsFromNetwork();
+          state.admin.status = `${kind === 'image' ? 'Foto' : 'Audio'} apagado.`;
+        } catch (error) {
+          state.admin.status = error.message || 'Falha ao apagar asset.';
+          state.admin.error = true;
+        } finally {
+          state.admin.busy = false;
+          syncAdminTools();
+        }
+      }
+
+      async function runAdminCardDelete() {
+        const card = cardById(state.admin.activeCardId);
+        if (!card || state.admin.busy) return;
+        state.admin.busy = true;
+        state.admin.status = 'Apagando container...';
+        state.admin.error = false;
+        syncAdminTools();
+        try {
+          await postAdminFlashcardAction('/api/admin/flashcards/delete-card', {
+            source: card.source,
+            sourceIndex: card.sourceIndex
+          });
+          closeAdminCardPopover();
+          await reloadCardsFromNetwork();
+          state.admin.status = 'Container apagado.';
+        } catch (error) {
+          state.admin.status = error.message || 'Falha ao apagar container.';
+          state.admin.error = true;
+        } finally {
+          state.admin.busy = false;
+          syncAdminTools();
+        }
       }
 
       async function runAdminFlashcardFill(kind) {
@@ -5540,6 +5673,15 @@
         els.adminFillTextBtn?.addEventListener('click', () => runAdminFlashcardFill('text'));
         els.adminFillImageBtn?.addEventListener('click', () => runAdminFlashcardFill('image'));
         els.adminFillAudioBtn?.addEventListener('click', () => runAdminFlashcardFill('audio'));
+        els.adminDeleteImageBtn?.addEventListener('click', () => runAdminCardAssetDelete('image'));
+        els.adminDeleteAudioBtn?.addEventListener('click', () => runAdminCardAssetDelete('audio'));
+        els.adminDeleteCardBtn?.addEventListener('click', runAdminCardDelete);
+        els.adminClosePopoverBtn?.addEventListener('click', closeAdminCardPopover);
+        els.adminCardPopover?.addEventListener('click', (event) => {
+          if (event.target === els.adminCardPopover) {
+            closeAdminCardPopover();
+          }
+        });
         const gameShell = els.game.querySelector('.game-shell');
         gameShell?.addEventListener('click', (event) => {
           if (!state.game.active) return;
