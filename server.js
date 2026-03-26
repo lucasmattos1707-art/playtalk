@@ -2011,13 +2011,16 @@ function resolveAdminFlashcardSourceInfo(sourceValue) {
     throw error;
   }
 
-  if (/^Niveis\/others\/[^/]+\.json$/i.test(normalized)) {
-    const fileName = path.posix.basename(normalized);
+  const localLevelMatch = normalized.match(/^Niveis\/([^/]+)\/([^/]+\.json)$/i);
+  if (localLevelMatch && LOCAL_LEVEL_ALLOWED_FOLDERS.includes(String(localLevelMatch[1] || '').toLowerCase())) {
+    const folder = String(localLevelMatch[1] || '').toLowerCase();
+    const fileName = path.posix.basename(localLevelMatch[2]);
     return {
-      type: 'local-other',
+      type: 'local-level',
+      folder,
       fileName,
-      relativeJsonPath: `Niveis/others/${fileName}`,
-      assetGroup: `local-${safeGeneratedBase(fileName, 'flashcard-deck')}`
+      relativeJsonPath: `Niveis/${folder}/${fileName}`,
+      assetGroup: `local-${safeGeneratedBase(`${folder}-${fileName}`, 'flashcard-deck')}`
     };
   }
 
@@ -2126,7 +2129,7 @@ async function persistEditableFlashcardSources(sourceMap) {
 
   for (const entry of sourceMap.values()) {
     await writeJsonToRelativePath(entry.sourceInfo.relativeJsonPath, entry.payload);
-    if (entry.sourceInfo.type === 'local-other') {
+    if (entry.sourceInfo.type === 'local-level') {
       touchedLocalLevels = true;
     }
   }
@@ -2146,13 +2149,12 @@ async function listAdminFlashcardDecks() {
     builtinFiles = [];
   }
 
-  let localOtherFiles = [];
+  let localLevelFiles = [];
   try {
     const localManifest = await readJsonFromRelativePath(LOCAL_LEVEL_MANIFEST_RELATIVE_PATH);
-    const files = Array.isArray(localManifest?.files) ? localManifest.files : [];
-    localOtherFiles = files.filter((file) => String(file?.folder || '').toLowerCase() === 'others');
+    localLevelFiles = Array.isArray(localManifest?.files) ? localManifest.files : [];
   } catch (_error) {
-    localOtherFiles = [];
+    localLevelFiles = [];
   }
 
   const sources = [
@@ -2160,7 +2162,7 @@ async function listAdminFlashcardDecks() {
       source: path.posix.basename(String(file?.name || file?.path || '')),
       relativeJsonPath: path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, path.posix.basename(String(file?.name || file?.path || '')))
     })),
-    ...localOtherFiles.map((file) => ({
+    ...localLevelFiles.map((file) => ({
       source: String(file?.path || file?.name || '').replace(/\\/g, '/'),
       relativeJsonPath: String(file?.path || file?.name || '').replace(/\\/g, '/')
     }))

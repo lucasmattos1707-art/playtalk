@@ -2547,8 +2547,6 @@
             <select id="adminReportFilter" class="report-filter" aria-label="Filtrar marcacoes">
               <option value="">Todas as marcacoes</option>
             </select>
-            <button class="btn" id="adminAddSlotsBtn" type="button">Criar cartas</button>
-            <button class="btn" id="adminCreateDeckBtn" type="button">Criar novo deck</button>
           </div>
           <textarea id="adminPromptInput" rows="2" maxlength="240" placeholder="Prompt base opcional para orientar a geracao das imagens e dos textos."></textarea>
           <div class="admin-tools__actions">
@@ -2906,8 +2904,6 @@
         adminTools: document.getElementById('adminTools'),
         adminDeckSelect: document.getElementById('adminDeckSelect'),
         adminReportFilter: document.getElementById('adminReportFilter'),
-        adminAddSlotsBtn: document.getElementById('adminAddSlotsBtn'),
-        adminCreateDeckBtn: document.getElementById('adminCreateDeckBtn'),
         adminPromptInput: document.getElementById('adminPromptInput'),
           adminFillTextBtn: document.getElementById('adminFillTextBtn'),
           adminFillImageBtn: document.getElementById('adminFillImageBtn'),
@@ -3940,20 +3936,18 @@
           saveTimeOffsetMs();
         }
         const manifestFiles = Array.isArray(manifest?.files) ? manifest.files : [];
-        let localOtherFiles = [];
+        let localLevelFiles = [];
         try {
           const localLevelsPayload = await fetchFirstWorkingJson(LOCAL_LEVEL_FILES_MANIFEST_PATHS);
           const localFiles = Array.isArray(localLevelsPayload?.data?.files) ? localLevelsPayload.data.files : [];
-          localOtherFiles = localFiles
-            .filter((file) => safeText(file?.folder).toLowerCase() === 'others')
-            .map((file) => ({
-              name: file.name || file.path,
-              path: file.path,
-              sourceKey: safeText(file.path) || safeText(file.name),
-              idSource: `others-${safeText(file.path) || safeText(file.name)}`
-            }));
+          localLevelFiles = localFiles.map((file) => ({
+            name: file.name || file.path,
+            path: file.path,
+            sourceKey: safeText(file.path) || safeText(file.name),
+            idSource: `${safeText(file.folder) || 'local'}-${safeText(file.path) || safeText(file.name)}`
+          }));
         } catch (_error) {
-          localOtherFiles = [];
+          localLevelFiles = [];
         }
         const files = [
           ...manifestFiles.map((file) => ({
@@ -3962,7 +3956,7 @@
             sourceKey: file.name || file.path,
             idSource: file.name || file.path
           })),
-          ...localOtherFiles
+          ...localLevelFiles
         ];
         const responses = await Promise.all(files.map(async (file) => {
           const filePath = normalizeFlashcardsDataPath(file.path);
@@ -4314,14 +4308,6 @@
         if (els.adminReportFilter) {
           els.adminReportFilter.disabled = state.admin.busy || !adminMode;
         }
-        if (els.adminAddSlotsBtn) {
-          els.adminAddSlotsBtn.disabled = state.admin.busy || !adminMode || !state.admin.selectedDeckSource;
-          els.adminAddSlotsBtn.textContent = state.admin.busy ? 'Processando...' : 'Criar cartas';
-        }
-        if (els.adminCreateDeckBtn) {
-          els.adminCreateDeckBtn.disabled = state.admin.busy || !adminMode;
-          els.adminCreateDeckBtn.textContent = state.admin.busy ? 'Processando...' : 'Criar novo deck';
-        }
         if (els.adminFillTextBtn) {
           els.adminFillTextBtn.disabled = state.admin.busy || !adminMode;
           els.adminFillTextBtn.textContent = state.admin.busy ? 'Processando...' : 'Preencher texto';
@@ -4525,82 +4511,6 @@
           state.admin.error = true;
         } finally {
           state.admin.busy = false;
-          syncAdminTools();
-        }
-      }
-
-      async function runAdminAddSlots() {
-        if (!isAdminUser() || state.admin.busy) return;
-        const source = safeText(state.admin.selectedDeckSource);
-        if (!source) {
-          setAdminToolsStatus('Selecione um deck antes de criar cartas.', true);
-          syncAdminTools();
-          return;
-        }
-        const rawCount = window.prompt('Quantas cartas vazias deseja criar nesse deck? Maximo 100.', '10');
-        if (rawCount === null) return;
-        const parsedCount = Number.parseInt(rawCount, 10);
-        if (!Number.isInteger(parsedCount) || parsedCount < 1) {
-          setAdminToolsStatus('Quantidade invalida para criar cartas.', true);
-          syncAdminTools();
-          return;
-        }
-        const count = Math.min(100, parsedCount);
-
-        state.admin.busy = true;
-        state.admin.error = false;
-        state.admin.status = `Criando ${count} carta(s) vazia(s)...`;
-        syncAdminTools();
-        try {
-          await postAdminFlashcardAction('/api/admin/flashcards/add-slot', { source, count });
-          await reloadCardsFromNetwork();
-          state.libraryPage = 1;
-          state.admin.status = `${count} carta(s) vazia(s) criada(s) no deck selecionado.`;
-        } catch (error) {
-          state.admin.status = error.message || 'Falha ao criar cartas.';
-          state.admin.error = true;
-        } finally {
-          state.admin.busy = false;
-          refreshLibrary();
-          syncAdminTools();
-        }
-      }
-
-      async function runAdminCreateDeck() {
-        if (!isAdminUser() || state.admin.busy) return;
-        const deckTitle = safeText(window.prompt('Nome do novo deck:', '')).trim();
-        if (!deckTitle) return;
-        const coverImage = safeText(window.prompt('Link pub da foto de capa do deck (opcional):', '')).trim();
-        const rawCount = window.prompt('Quantas cartas vazias o novo deck deve abrir? Pode ser 0. Maximo 100.', '12');
-        if (rawCount === null) return;
-        const parsedCount = Number.parseInt(rawCount, 10);
-        if (!Number.isInteger(parsedCount) || parsedCount < 0) {
-          setAdminToolsStatus('Quantidade invalida para o novo deck.', true);
-          syncAdminTools();
-          return;
-        }
-        const slotCount = Math.min(100, parsedCount);
-
-        state.admin.busy = true;
-        state.admin.error = false;
-        state.admin.status = `Criando deck ${deckTitle}...`;
-        syncAdminTools();
-        try {
-          const payload = await postAdminFlashcardAction('/api/admin/flashcards/create-deck', {
-            deckTitle,
-            coverImage,
-            slotCount
-          });
-          await reloadCardsFromNetwork();
-          state.admin.selectedDeckSource = safeText(payload?.source);
-          state.libraryPage = 1;
-          state.admin.status = `Deck ${deckTitle} criado com ${slotCount} carta(s).`;
-        } catch (error) {
-          state.admin.status = error.message || 'Falha ao criar o deck.';
-          state.admin.error = true;
-        } finally {
-          state.admin.busy = false;
-          refreshLibrary();
           syncAdminTools();
         }
       }
@@ -6376,8 +6286,6 @@
           state.libraryPage = 1;
           refreshLibrary();
         });
-        els.adminAddSlotsBtn?.addEventListener('click', runAdminAddSlots);
-        els.adminCreateDeckBtn?.addEventListener('click', runAdminCreateDeck);
         els.adminPromptInput?.addEventListener('input', (event) => {
           state.admin.prompt = String(event.target.value || '').trim();
         });
