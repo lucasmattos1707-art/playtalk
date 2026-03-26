@@ -5,6 +5,13 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
+const {
+  S3Client,
+  ListObjectsV2Command,
+  GetObjectCommand,
+  PutObjectCommand,
+  DeleteObjectCommand
+} = require('@aws-sdk/client-s3');
 const app = express();
 
 const corsOptions = {
@@ -1409,6 +1416,7 @@ const R2_SECRET_ACCESS_KEY = env(process.env.R2_SECRET_ACCESS_KEY);
 const R2_ENDPOINT = env(process.env.R2_ENDPOINT);
 const R2_CONTENT_ROOT = env(process.env.R2_CONTENT_ROOT) || 'contnent';
 const R2_REGION = 'auto';
+let r2Client = null;
 const DEFAULT_FLASHCARDS_R2_PUBLIC_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
 const FLASHCARDS_R2_PUBLIC_ROOT = (() => {
   const configured = env(process.env.FLASHCARDS_R2_PUBLIC_ROOT) || env(process.env.PLAYTALK_R2_PUBLIC_ROOT);
@@ -1486,6 +1494,67 @@ function extractLevelFromRelativePath(relativePath) {
 
 function isR2FluencyConfigured() {
   return Boolean(R2_BUCKET_NAME && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY && R2_ENDPOINT);
+}
+
+function getR2Client() {
+  if (!isR2FluencyConfigured()) {
+    const error = new Error('R2 nao configurado.');
+    error.statusCode = 503;
+    throw error;
+  }
+
+  if (!r2Client) {
+    r2Client = new S3Client({
+      region: R2_REGION,
+      endpoint: R2_ENDPOINT,
+      forcePathStyle: true,
+      credentials: {
+        accessKeyId: R2_ACCESS_KEY_ID,
+        secretAccessKey: R2_SECRET_ACCESS_KEY
+      }
+    });
+  }
+
+  return r2Client;
+}
+
+async function readR2BodyAsBuffer(body) {
+  if (!body) {
+    return Buffer.alloc(0);
+  }
+
+  if (typeof body.transformToByteArray === 'function') {
+    const bytes = await body.transformToByteArray();
+    return Buffer.from(bytes);
+  }
+
+  if (typeof body.transformToString === 'function') {
+    return Buffer.from(await body.transformToString(), 'utf8');
+  }
+
+  if (Buffer.isBuffer(body)) {
+    return body;
+  }
+
+  const chunks = [];
+  for await (const chunk of body) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
+function describeR2Error(error, operation = 'operacao') {
+  const rawMessage = String(error?.message || error?.Code || error || '').trim();
+  if (/SignatureDoesNotMatch/i.test(rawMessage)) {
+    return `R2 ${operation} falhou: as credenciais S3 configuradas nao batem com este bucket/endpoint. Revise R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY e R2_ENDPOINT.`;
+  }
+  if (/InvalidAccessKeyId/i.test(rawMessage)) {
+    return `R2 ${operation} falhou: o R2_ACCESS_KEY_ID configurado nao foi reconhecido.`;
+  }
+  if (/AccessDenied|Unauthorized/i.test(rawMessage)) {
+    return `R2 ${operation} falhou: acesso negado. Revise as permissoes da chave do R2.`;
+  }
+  return `R2 ${operation} falhou: ${rawMessage || 'erro desconhecido.'}`;
 }
 
 function encodeRfc3986(value) {
@@ -1683,26 +1752,19 @@ async function requestR2(method, pathName, queryParams = {}) {
 }
 
 async function putR2Object(objectKey, bodyBuffer, contentType = 'application/octet-stream') {
-  const objectPath = `/${encodeRfc3986(R2_BUCKET_NAME)}/${encodeR2ObjectKey(objectKey)}`;
   const payloadBuffer = Buffer.isBuffer(bodyBuffer) ? bodyBuffer : Buffer.from(bodyBuffer || []);
-  const request = buildR2SignedRequest('PUT', objectPath, {}, {
-    payloadHash: sha256HexBuffer(payloadBuffer)
-  });
-  const response = await fetch(request.url, {
-    method: 'PUT',
-    headers: {
-      ...request.headers,
-      'content-type': contentType
-    },
-    body: payloadBuffer
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`R2 PUT ${objectKey} falhou: ${response.status} ${response.statusText} ${body}`.trim());
+  try {
+    await getR2Client().send(new PutObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: objectKey,
+      Body: payloadBuffer,
+      ContentType: contentType
+    }));
+    return true;
+  } catch (error) {
+    const details = error?.message || error?.Code || String(error);
+    throw new Error(`R2 PUT ${objectKey} falhou: ${details}`.trim());
   }
-
-  return true;
 }
 
 function safeZipObjectName(name, fallback = 'playtalk-levels.zip') {
@@ -1775,18 +1837,17 @@ function contentTypeFromObjectKey(objectKey) {
 }
 
 async function deleteR2Object(objectKey) {
-  const objectPath = `/${encodeRfc3986(R2_BUCKET_NAME)}/${encodeR2ObjectKey(objectKey)}`;
-  const request = buildR2SignedRequest('DELETE', objectPath, {}, {
-    payloadHash: EMPTY_R2_PAYLOAD_HASH
-  });
-  const response = await fetch(request.url, {
-    method: 'DELETE',
-    headers: request.headers
-  });
-
-  if (!response.ok && response.status !== 404) {
-    const body = await response.text();
-    throw new Error(`R2 DELETE ${objectKey} falhou: ${response.status} ${response.statusText} ${body}`.trim());
+  try {
+    await getR2Client().send(new DeleteObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: objectKey
+    }));
+  } catch (error) {
+    const status = Number(error?.$metadata?.httpStatusCode || 0);
+    if (status !== 404 && error?.Code !== 'NoSuchKey') {
+      const details = error?.message || error?.Code || String(error);
+      throw new Error(`R2 DELETE ${objectKey} falhou: ${details}`.trim());
+    }
   }
 }
 
@@ -2747,13 +2808,20 @@ function sortFluencyObjectKeys(left, right) {
 }
 
 async function listR2ObjectKeys(prefix) {
-  const response = await requestR2('GET', `/${encodeRfc3986(R2_BUCKET_NAME)}`, {
-    'list-type': 2,
-    prefix,
-    'max-keys': 1000
-  });
-  const xmlText = await response.text();
-  return parseR2ObjectKeys(xmlText);
+  try {
+    const response = await getR2Client().send(new ListObjectsV2Command({
+      Bucket: R2_BUCKET_NAME,
+      Prefix: prefix,
+      MaxKeys: 1000
+    }));
+    const contents = Array.isArray(response?.Contents) ? response.Contents : [];
+    return contents
+      .map(entry => String(entry?.Key || '').trim())
+      .filter(Boolean);
+  } catch (error) {
+    const details = error?.message || error?.Code || String(error);
+    throw new Error(`R2 LIST ${prefix} falhou: ${details}`.trim());
+  }
 }
 
 async function listAllR2ObjectKeys(prefix) {
@@ -2761,21 +2829,29 @@ async function listAllR2ObjectKeys(prefix) {
   let continuationToken = '';
 
   while (true) {
-    const response = await requestR2('GET', `/${encodeRfc3986(R2_BUCKET_NAME)}`, {
-      'list-type': 2,
-      prefix,
-      'max-keys': 1000,
-      'continuation-token': continuationToken || undefined
-    });
-    const xmlText = await response.text();
-    const payload = parseR2ListResponse(xmlText);
-    allKeys.push(...payload.keys);
+    try {
+      const response = await getR2Client().send(new ListObjectsV2Command({
+        Bucket: R2_BUCKET_NAME,
+        Prefix: prefix,
+        MaxKeys: 1000,
+        ContinuationToken: continuationToken || undefined
+      }));
+      const contents = Array.isArray(response?.Contents) ? response.Contents : [];
+      allKeys.push(
+        ...contents
+          .map(entry => String(entry?.Key || '').trim())
+          .filter(Boolean)
+      );
 
-    if (!payload.isTruncated || !payload.nextContinuationToken) {
-      break;
+      if (!response?.IsTruncated || !response?.NextContinuationToken) {
+        break;
+      }
+
+      continuationToken = response.NextContinuationToken;
+    } catch (error) {
+      const details = error?.message || error?.Code || String(error);
+      throw new Error(`R2 LIST ${prefix} falhou: ${details}`.trim());
     }
-
-    continuationToken = payload.nextContinuationToken;
   }
 
   return allKeys;
@@ -2798,17 +2874,42 @@ async function resolveFluencyPhaseObjectKey(dayNumber, phaseNumber) {
 }
 
 async function fetchR2JsonObject(objectKey) {
-  const objectPath = `/${encodeRfc3986(R2_BUCKET_NAME)}/${encodeR2ObjectKey(objectKey)}`;
-  const response = await requestR2('GET', objectPath);
-  const raw = await response.text();
-  return JSON.parse(raw);
+  try {
+    const response = await getR2Client().send(new GetObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: objectKey
+    }));
+    const raw = (await readR2BodyAsBuffer(response?.Body)).toString('utf8');
+    return JSON.parse(raw);
+  } catch (error) {
+    const status = Number(error?.$metadata?.httpStatusCode || 0);
+    if (status === 404 || error?.Code === 'NoSuchKey') {
+      const notFound = new Error(`R2 GET ${objectKey} falhou: 404 Not Found`);
+      notFound.status = 404;
+      throw notFound;
+    }
+    const details = error?.message || error?.Code || String(error);
+    throw new Error(`R2 GET ${objectKey} falhou: ${details}`.trim());
+  }
 }
 
 async function fetchR2ObjectBuffer(objectKey) {
-  const objectPath = `/${encodeRfc3986(R2_BUCKET_NAME)}/${encodeR2ObjectKey(objectKey)}`;
-  const response = await requestR2('GET', objectPath);
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  try {
+    const response = await getR2Client().send(new GetObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: objectKey
+    }));
+    return readR2BodyAsBuffer(response?.Body);
+  } catch (error) {
+    const status = Number(error?.$metadata?.httpStatusCode || 0);
+    if (status === 404 || error?.Code === 'NoSuchKey') {
+      const notFound = new Error(`R2 GET ${objectKey} falhou: 404 Not Found`);
+      notFound.status = 404;
+      throw notFound;
+    }
+    const details = error?.message || error?.Code || String(error);
+    throw new Error(`R2 GET ${objectKey} falhou: ${details}`.trim());
+  }
 }
 
 function buildStorageTreeFromObjectKeys(objectKeys, rootLabel = 'Niveis') {
