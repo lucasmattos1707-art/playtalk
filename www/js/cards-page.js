@@ -12,28 +12,7 @@
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/02.png',
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/03.png'
   ];
-  const JOURNEY_FLASHCARD_DECKS = [
-    { day: 1, filePath: 'Niveis/others/flashcard-dia-1.json', title: 'I am' },
-    { day: 2, filePath: 'Niveis/others/flashcard-dia-2.json', title: 'The world' },
-    { day: 3, filePath: 'Niveis/others/flashcard-dia-3.json', title: 'You are' },
-    { day: 4, filePath: 'Niveis/others/flashcard-dia-4.json', title: 'My life' },
-    { day: 5, filePath: 'Niveis/others/flashcard-dia-5.json', title: 'Do not' },
-    { day: 6, filePath: 'Niveis/others/flashcard-dia-6.json', title: 'We are' },
-    { day: 7, filePath: 'Niveis/others/flashcard-dia-7.json', title: 'We are not' },
-    { day: 8, filePath: 'Niveis/others/flashcard-dia-8.json', title: 'She and He' },
-    { day: 9, filePath: 'Niveis/others/flashcard-dia-9.json', title: 'I wonder why' },
-    { day: 10, filePath: 'Niveis/others/flashcard-dia-10.json', title: 'I did it' },
-    { day: 11, filePath: 'Niveis/others/flashcard-dia-11.json', title: 'I remember' },
-    { day: 12, filePath: 'Niveis/others/flashcard-dia-12.json', title: 'Good life' },
-    { day: 13, filePath: 'Niveis/others/flashcard-dia-13.json', title: 'Adjectives' },
-    { day: 14, filePath: 'Niveis/others/flashcard-dia-14.json', title: 'Life in action' },
-    { day: 15, filePath: 'Niveis/others/flashcard-dia-15.json', title: 'Do you too' }
-  ].map((deck, index) => ({
-    ...deck,
-    id: `journey-${deck.day}`,
-    badge: `Dia ${deck.day}`,
-    image: FLASHCARD_DECK_IMAGE_POOL[index % FLASHCARD_DECK_IMAGE_POOL.length]
-  }));
+  const JOURNEY_FLASHCARD_DECKS = [];
   const WORDS_DECKS = Array.from({ length: 25 }, (_, index) => {
     const deckNumber = String(index + 1).padStart(3, '0');
     return {

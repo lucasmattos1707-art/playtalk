@@ -4477,7 +4477,7 @@
 
   function buildLevelPhasePaths(dayNumber, phaseNumber) {
     const folderName = getLocalLevelsFolderFromPhaseNumber(phaseNumber);
-    const fileName = `flashcard-dia-${dayNumber}.json`;
+    const fileName = `day-${dayNumber}.json`;
     return [
       `Niveis/${folderName}/${fileName}`,
       LOCAL_LEVEL_API_PATH

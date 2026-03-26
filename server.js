@@ -2472,7 +2472,7 @@ function getLocalLevelsFolderFromPhaseNumber(phaseNumber) {
 }
 
 function getLocalLevelJsonFileName(dayNumber) {
-  return `flashcard-dia-${dayNumber}.json`;
+  return `day-${dayNumber}.json`;
 }
 
 function resolveLocalLevelJsonPath(dayNumber, phaseNumber) {
@@ -5055,7 +5055,7 @@ app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), as
         .filter((item) => item.imagem && readFlashcardItemPortuguese(item) && readFlashcardItemEnglish(item))
     };
 
-    const deckRelativePath = `Niveis/others/flashcard-dia-${day}.json`;
+    const deckRelativePath = `Niveis/others/day-${day}.json`;
     await writeJsonToRelativePath(deckRelativePath, finalPayload);
     await refreshLocalLevelManifestMirror();
 

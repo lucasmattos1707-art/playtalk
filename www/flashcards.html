@@ -4168,12 +4168,6 @@
         };
       }
 
-      function adminDeckIsHidden(deck) {
-        const title = normalizeText(deck?.title || '');
-        const source = normalizeText(deck?.source || '');
-        return title.includes('misterio') || source.includes('flashcard-dia');
-      }
-
       function buildAdminDraftCard(card) {
         const draft = state.admin.draftCards.get(card.id);
         if (!draft) return { ...card };
@@ -4231,9 +4225,7 @@
       }
 
       function adminDeckOptions() {
-        return Array.isArray(state.admin.decks)
-          ? state.admin.decks.filter((deck) => !adminDeckIsHidden(deck))
-          : [];
+        return Array.isArray(state.admin.decks) ? state.admin.decks.slice() : [];
       }
 
       function selectedAdminDeckMeta() {
@@ -4261,11 +4253,11 @@
         const selectedSource = safeText(state.admin.selectedDeckSource);
         const reportFilter = safeText(state.admin.reportFilter);
         let cards = !selectedSource
-          ? state.allCards.filter((card) => !adminDeckIsHidden({ title: card?.deckTitle, source: card?.source }))
+          ? state.allCards.slice()
           : state.allCards.filter((card) => safeText(card?.source) === selectedSource);
         cards = cards.map(buildAdminDraftCard);
         const pendingCards = !selectedSource
-          ? state.admin.pendingNewCards.filter((card) => !adminDeckIsHidden({ title: card?.deckTitle, source: card?.source }))
+          ? state.admin.pendingNewCards.slice()
           : state.admin.pendingNewCards.filter((card) => safeText(card?.source) === selectedSource);
         cards = cards.concat(pendingCards.map((card) => ({ ...card })));
         if (reportFilter) {
