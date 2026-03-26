@@ -2551,7 +2551,9 @@
             <button class="btn" id="adminCreateCardsBtn" type="button">Criar cartas</button>
           </div>
           <textarea id="adminPromptInput" rows="2" maxlength="240" placeholder="Prompt base opcional para orientar a geracao das imagens e dos textos."></textarea>
+          <textarea id="adminPasteInput" rows="6" maxlength="12000" placeholder="Cole um texto aqui. Cada linha preenche um campo vazio de texto, seguindo a ordem dos containers vazios visiveis na pagina."></textarea>
           <div class="admin-tools__actions">
+            <button class="btn" id="adminPasteTextBtn" type="button">Colar texto</button>
             <button class="btn" id="adminFillTextBtn" type="button">Preencher texto</button>
             <button class="btn" id="adminFillImageBtn" type="button">Preencher imagem</button>
             <button class="btn" id="adminFillAudioBtn" type="button">Preencher audio</button>
@@ -2911,6 +2913,8 @@
         adminSaveBtn: document.getElementById('adminSaveBtn'),
         adminCreateCardsBtn: document.getElementById('adminCreateCardsBtn'),
         adminPromptInput: document.getElementById('adminPromptInput'),
+        adminPasteInput: document.getElementById('adminPasteInput'),
+        adminPasteTextBtn: document.getElementById('adminPasteTextBtn'),
           adminFillTextBtn: document.getElementById('adminFillTextBtn'),
           adminFillImageBtn: document.getElementById('adminFillImageBtn'),
           adminFillAudioBtn: document.getElementById('adminFillAudioBtn'),
@@ -3544,7 +3548,11 @@
         if (!options.skipLoadCards) {
           try {
             await loadCards();
+            const prunedUnavailable = pruneUnavailableUserProgress();
             refreshLibrary();
+            if (prunedUnavailable) {
+              await syncFlashcardCloudNow();
+            }
           } catch (error) {
             console.warn('Falha ao carregar os flashcards do usuario:', error);
             els.allSectionCopy.textContent = 'Falha ao carregar os flashcards.';
@@ -3778,6 +3786,27 @@
             const rightPin = right.progress.status === 'memorizing' ? Number(right.progress.availableAt) || 0 : Number(right.progress.returnedAt || right.progress.createdAt) || 0;
             return rightPin - leftPin;
           });
+      }
+
+      function pruneUnavailableUserProgress() {
+        if (isAdminUser()) return false;
+        const validCardIds = new Set(state.allCards.map((card) => safeText(card?.id)).filter(Boolean));
+        let changed = false;
+        const nextUserCards = new Map();
+        state.userCards.forEach((record, cardId) => {
+          const normalizedCardId = safeText(cardId);
+          if (!normalizedCardId || !validCardIds.has(normalizedCardId)) {
+            changed = true;
+            return;
+          }
+          nextUserCards.set(normalizedCardId, record);
+        });
+        if (changed) {
+          state.userCards = nextUserCards;
+          syncOwnedIdsFromProgress();
+          persistUserProgressLocally();
+        }
+        return changed;
       }
 
       function readyReviewCards() {
@@ -4178,6 +4207,10 @@
         };
       }
 
+      function currentAdminDraftAwarePageCards() {
+        return currentLibrarySourceCards().map((card) => ({ ...card }));
+      }
+
       function stageAdminCardDraft(cardId, patch = {}) {
         const pendingCardIndex = state.admin.pendingNewCards.findIndex((card) => card.id === cardId);
         if (pendingCardIndex >= 0) {
@@ -4196,6 +4229,19 @@
           ...(Object.prototype.hasOwnProperty.call(patch, 'portuguese') ? { portuguese: clampAdminEditableText(patch.portuguese) } : {}),
           ...(Object.prototype.hasOwnProperty.call(patch, 'english') ? { english: clampAdminEditableText(patch.english) } : {})
         });
+      }
+
+      function collectAdminEmptyTextSlotsFromCurrentPage() {
+        const slots = [];
+        currentAdminDraftAwarePageCards().forEach((card) => {
+          if (!safeText(card?.portuguese)) {
+            slots.push({ cardId: card.id, field: 'portuguese' });
+          }
+          if (!safeText(card?.english)) {
+            slots.push({ cardId: card.id, field: 'english' });
+          }
+        });
+        return slots;
       }
 
       function clampLibraryPage(page, totalCards) {
@@ -4371,6 +4417,9 @@
           els.adminPromptInput.value = state.admin.prompt || '';
           els.adminPromptInput.disabled = state.admin.busy || !adminMode;
         }
+        if (els.adminPasteInput) {
+          els.adminPasteInput.disabled = state.admin.busy || !adminMode;
+        }
         syncAdminDeckSelect();
         syncAdminReportFilter();
         if (els.adminDeckSelect) {
@@ -4386,6 +4435,10 @@
         if (els.adminFillTextBtn) {
           els.adminFillTextBtn.disabled = state.admin.busy || !adminMode;
           els.adminFillTextBtn.textContent = state.admin.busy ? 'Processando...' : 'Preencher texto';
+        }
+        if (els.adminPasteTextBtn) {
+          els.adminPasteTextBtn.disabled = state.admin.busy || !adminMode;
+          els.adminPasteTextBtn.textContent = state.admin.busy ? 'Processando...' : 'Colar texto';
         }
         if (els.adminCreateCardsBtn) {
           els.adminCreateCardsBtn.disabled = state.admin.busy || !adminMode || !safeText(state.admin.selectedDeckSource);
@@ -4508,6 +4561,48 @@
           state.admin.busy = false;
           syncAdminTools();
         }
+      }
+
+      function runAdminPasteText() {
+        if (!isAdminUser() || state.admin.busy) return;
+        const pasted = String(els.adminPasteInput?.value || '');
+        const lines = pasted
+          .split(/\r?\n/)
+          .map((line) => clampAdminEditableText(line))
+          .filter(Boolean);
+
+        if (!lines.length) {
+          setAdminToolsStatus('Cole pelo menos uma linha de texto.', true);
+          syncAdminTools();
+          return;
+        }
+
+        const emptySlots = collectAdminEmptyTextSlotsFromCurrentPage();
+        if (!emptySlots.length) {
+          setAdminToolsStatus('Nao ha campos de texto vazios na pagina atual.', false);
+          syncAdminTools();
+          return;
+        }
+
+        let appliedCount = 0;
+        for (let index = 0; index < emptySlots.length && index < lines.length; index += 1) {
+          const slot = emptySlots[index];
+          const line = lines[index];
+          if (!slot || !line) continue;
+          stageAdminCardDraft(
+            slot.cardId,
+            slot.field === 'portuguese' ? { portuguese: line } : { english: line }
+          );
+          appliedCount += 1;
+        }
+
+        refreshLibrary();
+        setAdminToolsStatus(
+          appliedCount
+            ? `${appliedCount} campo(s) vazio(s) preenchido(s) no rascunho. Clique em Salvar para publicar.`
+            : 'Nenhuma linha foi aplicada.'
+        );
+        syncAdminTools();
       }
 
       async function runAdminCreateCards() {
@@ -6496,6 +6591,7 @@
         els.adminPromptInput?.addEventListener('input', (event) => {
           state.admin.prompt = String(event.target.value || '').trim();
         });
+        els.adminPasteTextBtn?.addEventListener('click', runAdminPasteText);
         els.adminSaveBtn?.addEventListener('click', runAdminSaveDrafts);
         els.adminCreateCardsBtn?.addEventListener('click', runAdminCreateCards);
         els.adminFillTextBtn?.addEventListener('click', () => runAdminFlashcardFill('text'));
