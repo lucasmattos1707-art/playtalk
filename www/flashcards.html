@@ -1219,6 +1219,85 @@
       gap: 12px;
     }
 
+    .watch-decks {
+      display: grid;
+      gap: 14px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(125, 203, 255, 0.14);
+    }
+
+    .watch-decks__head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .watch-decks__head h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .watch-decks__head p,
+    .watch-decks__summary {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .watch-decks__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    .watch-deck-toggle {
+      display: grid;
+      gap: 6px;
+      width: 100%;
+      padding: 16px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(122, 215, 255, 0.2);
+      background:
+        linear-gradient(145deg, rgba(136, 214, 255, 0.24), rgba(97, 188, 255, 0.16));
+      color: #d9f6ff;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, color 160ms ease;
+    }
+
+    .watch-deck-toggle:hover {
+      transform: translateY(-1px);
+      border-color: rgba(122, 215, 255, 0.34);
+    }
+
+    .watch-deck-toggle.is-active {
+      border-color: rgba(94, 214, 255, 0.58);
+      background:
+        linear-gradient(145deg, rgba(40, 196, 255, 0.92), rgba(12, 112, 238, 0.82));
+      box-shadow: 0 18px 34px rgba(8, 88, 180, 0.22);
+      color: #f8fdff;
+    }
+
+    .watch-deck-toggle__title {
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .watch-deck-toggle__meta {
+      font-size: 0.82rem;
+      opacity: 0.92;
+    }
+
+    .watch-decks__empty {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px dashed rgba(122, 215, 255, 0.22);
+      color: var(--muted);
+      text-align: center;
+    }
+
     .watch-field {
       display: grid;
       gap: 6px;
@@ -2785,6 +2864,16 @@
             </select>
           </label>
         </div>
+        <section class="watch-decks" aria-labelledby="watchDecksTitle">
+          <div class="watch-decks__head">
+            <div>
+              <h3 id="watchDecksTitle">Decks do assistir</h3>
+              <p>Toque para ativar ou desativar os decks antes de iniciar.</p>
+            </div>
+            <p class="watch-decks__summary" id="watchDeckSummary"></p>
+          </div>
+          <div class="watch-decks__grid" id="watchDeckGrid"></div>
+        </section>
         <div class="actions">
           <button class="btn btn-primary" id="startWatchBtn" type="button">Começar</button>
         </div>
@@ -2973,6 +3062,7 @@
           scope: 'all',
           gapMs: 3000,
           music: 'on',
+          selectedSources: [],
           queue: [],
           sourceCards: [],
           currentCardId: null,
@@ -3067,6 +3157,8 @@
         watchGapSelect: document.getElementById('watchGapSelect'),
         watchScopeSelect: document.getElementById('watchScopeSelect'),
         watchMusicSelect: document.getElementById('watchMusicSelect'),
+        watchDeckGrid: document.getElementById('watchDeckGrid'),
+        watchDeckSummary: document.getElementById('watchDeckSummary'),
         watch: document.getElementById('watch'),
         exitWatchBtn: document.getElementById('exitWatchBtn'),
         stopWatchBtn: document.getElementById('stopWatchBtn'),
@@ -6306,6 +6398,98 @@
         els.watchMusicSelect.value = settings.music;
       }
 
+      function uniqueCardsById(cards) {
+        const seen = new Set();
+        const unique = [];
+        (Array.isArray(cards) ? cards : []).forEach((card) => {
+          const cardId = safeText(card?.id);
+          if (!cardId || seen.has(cardId)) return;
+          seen.add(cardId);
+          unique.push({ ...card });
+        });
+        return unique;
+      }
+
+      function buildWatchSourceCards() {
+        const sourceCards = state.watch.scope === 'mine'
+          ? userProgressCards().map(card => ({ ...card }))
+          : uniqueCardsById([
+              ...baseCandidateCards(),
+              ...readyReviewCards()
+            ]);
+        return sourceCards.filter(card => card.audioUrl);
+      }
+
+      function buildWatchDeckOptions(cards) {
+        const groups = new Map();
+        cards.forEach((card) => {
+          const source = safeText(card?.source) || safeText(card?.deckTitle) || safeText(card?.id);
+          if (!source) return;
+          const current = groups.get(source) || {
+            source,
+            title: safeText(card?.deckTitle) || source,
+            count: 0
+          };
+          current.count += 1;
+          groups.set(source, current);
+        });
+        return Array.from(groups.values())
+          .sort((left, right) => left.title.localeCompare(right.title, 'pt-BR', { sensitivity: 'base' }));
+      }
+
+      function syncWatchDeckSelection(options) {
+        const validSources = new Set(options.map(option => option.source));
+        const current = Array.isArray(state.watch.selectedSources)
+          ? state.watch.selectedSources.filter(source => validSources.has(source))
+          : [];
+        state.watch.selectedSources = current.length
+          ? current
+          : options.map(option => option.source);
+      }
+
+      function renderWatchDeckPicker() {
+        if (!els.watchDeckGrid || !els.watchDeckSummary) return;
+        const sourceCards = buildWatchSourceCards();
+        const options = buildWatchDeckOptions(sourceCards);
+        syncWatchDeckSelection(options);
+        const selectedSources = new Set(state.watch.selectedSources);
+        const selectedCardCount = sourceCards.filter(card => selectedSources.has(safeText(card?.source) || safeText(card?.deckTitle) || safeText(card?.id))).length;
+
+        if (!options.length) {
+          els.watchDeckGrid.innerHTML = '<div class="watch-decks__empty">Nenhum deck com audio esta disponivel neste filtro.</div>';
+          els.watchDeckSummary.textContent = '0 decks ativos';
+          if (els.startWatchBtn) els.startWatchBtn.disabled = true;
+          return;
+        }
+
+        els.watchDeckGrid.innerHTML = options.map((option) => {
+          const active = selectedSources.has(option.source);
+          return `
+            <button class="watch-deck-toggle ${active ? 'is-active' : ''}" type="button" data-watch-source="${escapeHtml(option.source)}" aria-pressed="${active ? 'true' : 'false'}">
+              <span class="watch-deck-toggle__title">${escapeHtml(option.title)}</span>
+              <span class="watch-deck-toggle__meta">${option.count} carta${option.count === 1 ? '' : 's'} com audio</span>
+            </button>
+          `;
+        }).join('');
+        els.watchDeckSummary.textContent = `${selectedSources.size} deck${selectedSources.size === 1 ? '' : 's'} ativo${selectedSources.size === 1 ? '' : 's'} • ${selectedCardCount} carta${selectedCardCount === 1 ? '' : 's'}`;
+        if (els.startWatchBtn) {
+          els.startWatchBtn.disabled = !selectedSources.size || !selectedCardCount;
+        }
+      }
+
+      function toggleWatchDeckSource(source) {
+        const normalized = safeText(source);
+        if (!normalized) return;
+        const next = new Set(state.watch.selectedSources);
+        if (next.has(normalized)) {
+          next.delete(normalized);
+        } else {
+          next.add(normalized);
+        }
+        state.watch.selectedSources = Array.from(next);
+        renderWatchDeckPicker();
+      }
+
       function buildWatchQueue(cards) {
         const source = cards.slice();
         if (source.length > 1 && state.watch.currentCardId) {
@@ -6360,6 +6544,7 @@
 
       function openWatchPopover() {
         syncWatchControls();
+        renderWatchDeckPicker();
         els.watchPopover.classList.add('is-visible');
         window.requestAnimationFrame(() => els.watchPopover.classList.add('is-active'));
         document.body.classList.add('game-open');
@@ -6389,9 +6574,13 @@
       }
 
       function pickWatchCards() {
-        return state.watch.scope === 'mine'
-          ? userProgressCards().map(card => ({ ...card }))
-          : state.allCards.slice();
+        const selectedSources = new Set(
+          Array.isArray(state.watch.selectedSources) ? state.watch.selectedSources.map(source => safeText(source)).filter(Boolean) : []
+        );
+        return buildWatchSourceCards().filter((card) => {
+          const source = safeText(card?.source) || safeText(card?.deckTitle) || safeText(card?.id);
+          return selectedSources.has(source);
+        });
       }
 
       function playWatchMusic() {
@@ -6496,9 +6685,9 @@
         state.watch.scope = els.watchScopeSelect.value === 'mine' ? 'mine' : 'all';
         state.watch.music = els.watchMusicSelect.value === 'off' ? 'off' : 'on';
         saveWatchSettings();
-        state.watch.sourceCards = pickWatchCards().filter(card => card.audioUrl);
+        state.watch.sourceCards = pickWatchCards();
         if (!state.watch.sourceCards.length) {
-          window.alert(state.watch.scope === 'mine' ? 'Nenhum flashcard em Meus flashcards tem audio para assistir.' : 'Nenhum flashcard com audio foi encontrado.');
+          window.alert('Nenhum flashcard com audio foi encontrado nos decks ativados.');
           return;
         }
         state.watch.queue = buildWatchQueue(state.watch.sourceCards);
@@ -6837,9 +7026,18 @@
         els.authModeRegister.addEventListener('click', () => setAuthMode('register'));
         els.authForm.addEventListener('submit', submitAuthForm);
         els.logoutBtn.addEventListener('click', logoutCurrentUser);
-        els.watchFlashcardsBtn.addEventListener('click', () => startWatch({ useDefaults: true }));
+        els.watchFlashcardsBtn.addEventListener('click', openWatchPopover);
         els.closeWatchPopoverBtn.addEventListener('click', closeWatchPopover);
         els.startWatchBtn.addEventListener('click', startWatch);
+        els.watchScopeSelect?.addEventListener('change', (event) => {
+          state.watch.scope = event.target.value === 'mine' ? 'mine' : 'all';
+          renderWatchDeckPicker();
+        });
+        els.watchDeckGrid?.addEventListener('click', (event) => {
+          const toggle = event.target.closest('[data-watch-source]');
+          if (!toggle) return;
+          toggleWatchDeckSource(toggle.dataset.watchSource || '');
+        });
         els.exitWatchBtn.addEventListener('click', stopWatch);
         els.stopWatchBtn.addEventListener('click', stopWatch);
         els.startGameBtn.addEventListener('click', openGameSetup);
