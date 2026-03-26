@@ -1,0 +1,188 @@
+﻿Diagnose log at 2026-03-26T18:34:13Z
+
+AppPath: C:\Program Files\Git\mingw64\bin\git-credential-manager.exe
+InstallDir: C:\Program Files\Git\mingw64\bin\
+Version: 2.7.0+d1dd8a4ded75a2b1faae653157ac1699609442ad
+
+------------
+Diagnostic: Environment
+Skipped: False
+Success: True
+Exception: None
+Log:
+OSType: Windows
+OSVersion: 10.0 (build 19045)
+Reading environment variables... OK
+ Variables:
+OneDriveConsumer=C:\Users\Lucas\OneDrive
+ProgramFiles(x86)=C:\Program Files (x86)
+MSYSTEM=MINGW64
+ProgramW6432=C:\Program Files
+PAGER=more.com
+PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 165 Stepping 5, GenuineIntel
+TMP=C:\Users\Lucas\AppData\Local\Temp
+CODEX_INTERNAL_ORIGINATOR_OVERRIDE=Codex Desktop
+DriverData=C:\Windows\System32\Drivers\DriverData
+Path=C:\Users\Lucas\.codex\tmp\arg0\codex-arg0rbWU7H;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\NVIDIA Corporation\NVIDIA App\NvDLISR;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\dotnet\;C:\Program Files\nodejs\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Program Files\Git\cmd;C:\Users\Lucas\AppData\Local\Microsoft\WindowsApps;C:\Users\Lucas\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\Lucas\AppData\Roaming\npm;C:\flutter\bin;C:\Program Files\Android\Android Studio\jbr\bin;C:\Users\Lucas\AppData\Local\OpenAI\Codex\bin;C:\Program Files\WindowsApps\OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0\app\resources
+SystemRoot=C:\WINDOWS
+ProgramData=C:\ProgramData
+RUST_LOG=warn
+PROCESSOR_REVISION=a505
+TEMP=C:\Users\Lucas\AppData\Local\Temp
+USERPROFILE=C:\Users\Lucas
+LOGONSERVER=\\DESKTOP-MGMNADL
+TERM=xterm-256color
+USERNAME=Lucas
+SHELL=C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe
+CHROME_CRASHPAD_PIPE_NAME=\\.\pipe\crashpad_43940_GIYFIMIQQPEHBAIN
+CODEX_THREAD_ID=019d2ad2-bf18-7302-874f-80b5edccd45f
+PLINK_PROTOCOL=ssh
+LESS=
+OneDrive=C:\Users\Lucas\OneDrive
+PROCESSOR_ARCHITECTURE=AMD64
+PATH=C:/Program Files/Git/mingw64/libexec/git-core;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Users\Lucas\bin;C:\Users\Lucas\.codex\tmp\arg0\codex-arg0rbWU7H;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\NVIDIA Corporation\NVIDIA App\NvDLISR;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\dotnet\;C:\Program Files\nodejs\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Program Files\Git\cmd;C:\Users\Lucas\AppData\Local\Microsoft\WindowsApps;C:\Users\Lucas\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\Lucas\AppData\Roaming\npm;C:\flutter\bin;C:\Program Files\Android\Android Studio\jbr\bin;C:\Users\Lucas\AppData\Local\OpenAI\Codex\bin;C:\Program Files\WindowsApps\OpenAI.Codex_26.313.5234.0_x64__2p2nqsd0c76g0\app\resources
+CommonProgramFiles=C:\Program Files\Common Files
+windir=C:\WINDOWS
+CODEX_SANDBOX_NETWORK_DISABLED=1
+PROCESSOR_LEVEL=6
+CODEX_SHELL=1
+GIT_CONFIG_KEY_0=safe.directory
+LC_CTYPE=C.UTF-8
+ZSH_TMUX_AUTOSTART=false
+HOMEPATH=\Users\Lucas
+GIT_CONFIG_VALUE_0=P:\playtalk-main
+ALLUSERSPROFILE=C:\ProgramData
+CommonProgramW6432=C:\Program Files\Common Files
+GIT_EXEC_PATH=C:/Program Files/Git/mingw64/libexec/git-core
+GIT_CONFIG_COUNT=1
+CommonProgramFiles(x86)=C:\Program Files (x86)\Common Files
+HOMEDRIVE=C:
+DISABLE_AUTO_UPDATE=true
+GIT_TRACE2_PARENT_SID=9c742e85-a577-46de-9ee2-90928a88d8fe
+SystemDrive=C:
+NUMBER_OF_PROCESSORS=20
+OS=Windows_NT
+ProgramFiles=C:\Program Files
+ComSpec=C:\WINDOWS\system32\cmd.exe
+USERDOMAIN_ROAMINGPROFILE=DESKTOP-MGMNADL
+PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.CPL
+HOME=C:\Users\Lucas
+JAVA_HOME=C:\Program Files\Android\Android Studio\jbr
+PSModulePath=C:\Users\Lucas\Documents\WindowsPowerShell\Modules;C:\Program Files\WindowsPowerShell\Modules;C:\WINDOWS\system32\WindowsPowerShell\v1.0\Modules
+TMPDIR=C:\Users\Lucas\AppData\Local\Temp
+APPDATA=C:\Users\Lucas\AppData\Roaming
+USERDOMAIN=DESKTOP-MGMNADL
+COMPUTERNAME=DESKTOP-MGMNADL
+CAPACITOR_ANDROID_STUDIO_PATH=C:\Program Files\Android\Android Studio\bin\studio64.exe
+LOCALAPPDATA=C:\Users\Lucas\AppData\Local
+ZSH_TMUX_AUTOSTARTED=true
+GIT_PAGER=more.com
+COLORTERM=truecolor
+PUBLIC=C:\Users\Public
+
+
+------------
+Diagnostic: File system
+Skipped: False
+Success: True
+Exception: None
+Log:
+Temporary directory is 'C:\Users\Lucas\AppData\Local\Temp\'...
+Checking basic file I/O...
+Writing to temporary file 'C:\Users\Lucas\AppData\Local\Temp\ab0942dea140cdd20832bfa7'... OK
+Reading from temporary file 'C:\Users\Lucas\AppData\Local\Temp\ab0942dea140cdd20832bfa7'... OK
+Deleting temporary file 'C:\Users\Lucas\AppData\Local\Temp\ab0942dea140cdd20832bfa7'... OK
+Testing IFileSystem instance...
+UserHomePath: C:\Users\CodexSandboxOffline
+UserDataDirectoryPath: C:\Users\CodexSandboxOffline\.gcm
+GetCurrentDirectory(): P:\playtalk-main
+
+------------
+Diagnostic: Networking
+Skipped: False
+Success: False
+Exception:
+System.Net.Http.HttpRequestException: Ocorreu um erro ao enviar a solicitação. ---> System.Net.WebException: A conexão subjacente estava fechada: Erro inesperado em um recebimento. ---> System.ComponentModel.Win32Exception: Credenciais não disponíveis no pacote de segurança
+   em System.Net.SSPIWrapper.AcquireCredentialsHandle(SSPIInterface SecModule, String package, CredentialUse intent, SecureCredential2 scc)
+   em System.Net.Security.SecureChannel.AcquireCredentialsHandle(CredentialUse credUsage, SecureCredential2& secureCredential)
+   em System.Net.Security.SecureChannel.AcquireCredentialsHandle(CredentialUse credUsage, X509Certificate2 selectedCert, Flags flags)
+   em System.Net.Security.SecureChannel.AcquireClientCredentials(Byte[]& thumbPrint)
+   em System.Net.Security.SecureChannel.GenerateToken(Byte[] input, Int32 offset, Int32 count, Byte[]& output)
+   em System.Net.Security.SecureChannel.NextMessage(Byte[] incoming, Int32 offset, Int32 count)
+   em System.Net.Security.SslState.StartSendBlob(Byte[] incoming, Int32 count, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   em System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   em System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   em System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   em System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   em System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   em System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   em System.Net.TlsStream.BeginWrite(Byte[] buffer, Int32 offset, Int32 size, AsyncCallback asyncCallback, Object asyncState)
+   em System.Net.ConnectStream.WriteHeaders(Boolean async)
+   --- Fim do rastreamento de pilha de exceções internas ---
+   em System.Net.HttpWebRequest.EndGetResponse(IAsyncResult asyncResult)
+   em System.Net.Http.HttpClientHandler.GetResponseCallback(IAsyncResult ar)
+   --- Fim do rastreamento de pilha de exceções internas ---
+   em System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   em System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   em GitCredentialManager.Diagnostics.NetworkingDiagnostic.<RunInternalAsync>d__4.MoveNext()
+--- Fim do rastreamento de pilha do local anterior onde a exceção foi gerada ---
+   em System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   em System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   em GitCredentialManager.Diagnostics.Diagnostic.<RunAsync>d__6.MoveNext()
+Log:
+Checking networking and HTTP stack...
+Creating HTTP client... OK
+IsNetworkAvailable: True
+Sending HEAD request to http://example.com...Sending HEAD request to https://example.com...
+------------
+Diagnostic: Git
+Skipped: False
+Success: True
+Exception: None
+Log:
+Getting Git version... OK
+Git version is '2.53.0.windows.1'
+Locating current repository...Git repository at 'P:/playtalk-main/.git'
+ OK
+Listing all Git configuration... OK
+Git configuration:
+file:C:/Program Files/Git/etc/gitconfig	diff.astextplain.textconv=astextplain
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.clean=git-lfs clean -- %f
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.smudge=git-lfs smudge -- %f
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.process=git-lfs filter-process
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.required=true
+file:C:/Program Files/Git/etc/gitconfig	http.sslbackend=schannel
+file:C:/Program Files/Git/etc/gitconfig	core.autocrlf=true
+file:C:/Program Files/Git/etc/gitconfig	core.fscache=true
+file:C:/Program Files/Git/etc/gitconfig	core.symlinks=true
+file:C:/Program Files/Git/etc/gitconfig	pull.rebase=false
+file:C:/Program Files/Git/etc/gitconfig	credential.helper=manager
+file:C:/Program Files/Git/etc/gitconfig	credential.https://dev.azure.com.usehttppath=true
+file:C:/Program Files/Git/etc/gitconfig	init.defaultbranch=master
+file:C:/Users/Lucas/.gitconfig	safe.directory=C:/Users/Lucas/Desktop/Turma do Printy Database
+file:C:/Users/Lucas/.gitconfig	safe.directory=P:/playtalk-main
+file:.git/config	core.repositoryformatversion=0
+file:.git/config	core.filemode=false
+file:.git/config	core.bare=false
+file:.git/config	core.logallrefupdates=true
+file:.git/config	core.ignorecase=true
+file:.git/config	user.name=Codex Local
+file:.git/config	user.email=codex-local@example.com
+file:.git/config	remote.origin.url=https://github.com/lucasmattos1707-art/playtalk.git
+file:.git/config	remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+file:.git/config	branch.main.remote=origin
+file:.git/config	branch.main.merge=refs/heads/main
+command line:	safe.directory=P:\playtalk-main
+
+
+------------
+Diagnostic: Credential storage
+Skipped: False
+Success: True
+Exception: None
+Log:
+ICredentialStore instance is of type: CredentialStore
+Writing test credential... OK
+Reading test credential... OK
+Deleting test credential... OK
+

@@ -1409,6 +1409,15 @@ const R2_SECRET_ACCESS_KEY = env(process.env.R2_SECRET_ACCESS_KEY);
 const R2_ENDPOINT = env(process.env.R2_ENDPOINT);
 const R2_CONTENT_ROOT = env(process.env.R2_CONTENT_ROOT) || 'contnent';
 const R2_REGION = 'auto';
+const DEFAULT_FLASHCARDS_R2_PUBLIC_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
+const FLASHCARDS_R2_PUBLIC_ROOT = (() => {
+  const configured = env(process.env.FLASHCARDS_R2_PUBLIC_ROOT) || env(process.env.PLAYTALK_R2_PUBLIC_ROOT);
+  if (configured && /^https?:\/\//i.test(configured)) {
+    return configured.replace(/\/+$/g, '');
+  }
+  return DEFAULT_FLASHCARDS_R2_PUBLIC_ROOT;
+})();
+const FLASHCARDS_R2_PREFIX = 'FlashCards';
 const DEFAULT_GAME_SOUNDS_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/gamesounds';
 const GAME_SOUNDS_BASE_URL = (process.env.GAME_SOUNDS_BASE_URL || DEFAULT_GAME_SOUNDS_BASE_URL).trim();
 const EMPTY_R2_PAYLOAD_HASH = require('crypto').createHash('sha256').update('').digest('hex');
@@ -1763,6 +1772,169 @@ function contentTypeFromObjectKey(objectKey) {
 
   if (extension === '.json') return 'application/json; charset=utf-8';
   return 'application/octet-stream';
+}
+
+async function deleteR2Object(objectKey) {
+  const objectPath = `/${encodeRfc3986(R2_BUCKET_NAME)}/${encodeR2ObjectKey(objectKey)}`;
+  const request = buildR2SignedRequest('DELETE', objectPath, {}, {
+    payloadHash: EMPTY_R2_PAYLOAD_HASH
+  });
+  const response = await fetch(request.url, {
+    method: 'DELETE',
+    headers: request.headers
+  });
+
+  if (!response.ok && response.status !== 404) {
+    const body = await response.text();
+    throw new Error(`R2 DELETE ${objectKey} falhou: ${response.status} ${response.statusText} ${body}`.trim());
+  }
+}
+
+async function deleteR2Prefix(prefix) {
+  const objectKeys = await listAllR2ObjectKeys(prefix);
+  for (const objectKey of objectKeys) {
+    await deleteR2Object(objectKey);
+  }
+  return objectKeys.length;
+}
+
+function encodePublicUrlPath(pathValue) {
+  return String(pathValue || '')
+    .split('/')
+    .filter(segment => segment !== '')
+    .map(segment => encodeURIComponent(segment))
+    .join('/');
+}
+
+function buildFlashcardsR2PublicUrl(objectKey) {
+  return `${FLASHCARDS_R2_PUBLIC_ROOT}/${encodePublicUrlPath(objectKey)}`;
+}
+
+function normalizeFlashcardsDeckSegment(value, fallback = 'deck') {
+  const cleaned = String(value || '')
+    .replace(/[\\\/]+/g, '-')
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned || fallback;
+}
+
+function sanitizeFlashcardsFileBase(value, fallback = 'deck') {
+  const cleaned = String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\\\/]+/g, '-')
+    .replace(/[^a-zA-Z0-9 _.-]+/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^[_\-. ]+|[_\-. ]+$/g, '')
+    .trim();
+  return cleaned || fallback;
+}
+
+function normalizeFlashcardsItemFileStem(deckTitle, index) {
+  return `${sanitizeFlashcardsFileBase(deckTitle, 'deck')}_${String(index + 1).padStart(3, '0')}`;
+}
+
+function buildFlashcardsRemoteDeckInfo(payload, fallbackName = 'deck.json') {
+  const deckTitle = typeof payload?.title === 'string' && payload.title.trim()
+    ? payload.title.trim()
+    : path.posix.basename(String(fallbackName || 'deck.json'), path.extname(String(fallbackName || 'deck.json'))) || 'Deck';
+  const deckFolder = normalizeFlashcardsDeckSegment(deckTitle, 'Deck');
+  return {
+    deckTitle,
+    deckFolder,
+    deckPrefix: `${FLASHCARDS_R2_PREFIX}/${deckFolder}`,
+    jsonFolder: `${FLASHCARDS_R2_PREFIX}/${deckFolder}/.json`,
+    audioFolder: `${FLASHCARDS_R2_PREFIX}/${deckFolder}/audio`,
+    imagesFolder: `${FLASHCARDS_R2_PREFIX}/${deckFolder}/imagens`,
+    jsonFileName: `${deckFolder}.json`
+  };
+}
+
+function tryExtractFlashcardsR2ObjectKey(rawValue) {
+  const trimmed = String(rawValue || '').trim();
+  if (!trimmed) return '';
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      return String(parsed.pathname || '').replace(/^\/+/, '');
+    } catch (_error) {
+      return '';
+    }
+  }
+
+  const proxyMatch = trimmed.match(/^\/?api\/r2-media\/(.+)$/i);
+  if (proxyMatch) {
+    return String(proxyMatch[1] || '').replace(/^\/+/, '');
+  }
+
+  return '';
+}
+
+async function fetchGenericRemoteBuffer(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Falha ao baixar asset remoto: ${response.status} ${response.statusText}`);
+  }
+  return {
+    buffer: Buffer.from(await response.arrayBuffer()),
+    contentType: response.headers.get('content-type') || ''
+  };
+}
+
+async function readFlashcardAssetBuffer(assetValue) {
+  const rawValue = String(assetValue || '').trim();
+  if (!rawValue) return null;
+
+  const r2ObjectKey = tryExtractFlashcardsR2ObjectKey(rawValue);
+  if (r2ObjectKey) {
+    return {
+      buffer: await fetchR2ObjectBuffer(r2ObjectKey),
+      contentType: contentTypeFromObjectKey(r2ObjectKey)
+    };
+  }
+
+  if (/^https?:\/\//i.test(rawValue)) {
+    return fetchGenericRemoteBuffer(rawValue);
+  }
+
+  const normalizedRelativePath = normalizeMirroredRelativePath(rawValue);
+  if (!normalizedRelativePath) return null;
+
+  const absolutePath = normalizedRelativePath.startsWith('Niveis/')
+    ? path.join(__dirname, normalizedRelativePath)
+    : path.join(__dirname, 'www', normalizedRelativePath);
+
+  const buffer = await fs.promises.readFile(absolutePath);
+  return {
+    buffer,
+    contentType: contentTypeFromObjectKey(absolutePath)
+  };
+}
+
+function normalizeFlashcardManifestEntrySortKey(entry) {
+  return String(entry?.title || entry?.name || entry?.source || '').trim().toLowerCase();
+}
+
+function upsertFlashcardsManifestEntry(files, nextEntry) {
+  const safeFiles = Array.isArray(files) ? files.slice() : [];
+  const sourceKey = String(nextEntry?.source || '').trim().toLowerCase();
+  const filtered = safeFiles.filter((entry) => {
+    const entrySource = String(entry?.source || '').trim().toLowerCase();
+    if (sourceKey && entrySource) {
+      return entrySource !== sourceKey;
+    }
+    return String(entry?.path || '').trim() !== String(nextEntry?.path || '').trim();
+  });
+  filtered.push(nextEntry);
+  filtered.sort((left, right) => normalizeFlashcardManifestEntrySortKey(left).localeCompare(
+    normalizeFlashcardManifestEntrySortKey(right),
+    'pt-BR',
+    { sensitivity: 'base', numeric: true }
+  ));
+  return filtered;
 }
 
 function normalizeMirroredRelativePath(value) {
@@ -2225,6 +2397,154 @@ async function persistEditableFlashcardSources(sourceMap) {
   if (touchedLocalLevels) {
     await refreshLocalLevelManifestMirror();
   }
+}
+
+async function readOptionalR2JsonObject(objectKey) {
+  try {
+    return await fetchR2JsonObject(objectKey);
+  } catch (error) {
+    if (/404/i.test(String(error?.message || ''))) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function publishFlashcardDeckToR2FromSource(sourceInfo, payload) {
+  if (!isR2FluencyConfigured()) {
+    const error = new Error('R2 nao configurado para publicar decks de flashcards.');
+    error.statusCode = 503;
+    throw error;
+  }
+
+  const remoteDeck = buildFlashcardsRemoteDeckInfo(payload, sourceInfo?.fileName || 'deck.json');
+  const publishedPayload = {
+    title: remoteDeck.deckTitle,
+    coverImage: '',
+    items: []
+  };
+  const items = getFlashcardPayloadItems(payload);
+
+  await deleteR2Prefix(`${remoteDeck.deckPrefix}/`);
+
+  if (typeof payload?.coverImage === 'string' && payload.coverImage.trim()) {
+    const coverAsset = await readFlashcardAssetBuffer(payload.coverImage.trim());
+    if (coverAsset?.buffer?.length) {
+      const coverExtension = path.extname(String(payload.coverImage || '')).toLowerCase() || '.webp';
+      const coverFileName = `${sanitizeFlashcardsFileBase(remoteDeck.deckFolder, 'deck')}_cover${coverExtension}`;
+      const coverObjectKey = `${remoteDeck.imagesFolder}/${coverFileName}`;
+      await putR2Object(coverObjectKey, coverAsset.buffer, coverAsset.contentType || contentTypeFromObjectKey(coverObjectKey));
+      publishedPayload.coverImage = buildFlashcardsR2PublicUrl(coverObjectKey);
+    }
+  }
+
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
+    const nextItem = JSON.parse(JSON.stringify(item || {}));
+    const imageValue = readFlashcardItemImage(item);
+    const audioValue = readFlashcardItemAudio(item);
+
+    if (imageValue) {
+      const imageAsset = await readFlashcardAssetBuffer(imageValue);
+      if (imageAsset?.buffer?.length) {
+        const imageExtension = path.extname(String(imageValue || '')).toLowerCase() || '.webp';
+        const imageFileName = `${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${imageExtension}`;
+        const imageObjectKey = `${remoteDeck.imagesFolder}/${imageFileName}`;
+        await putR2Object(imageObjectKey, imageAsset.buffer, imageAsset.contentType || contentTypeFromObjectKey(imageObjectKey));
+        setFlashcardItemImage(nextItem, buildFlashcardsR2PublicUrl(imageObjectKey));
+      }
+    }
+
+    if (audioValue) {
+      const audioAsset = await readFlashcardAssetBuffer(audioValue);
+      if (audioAsset?.buffer?.length) {
+        const audioExtension = path.extname(String(audioValue || '')).toLowerCase() || '.mp3';
+        const audioFileName = `${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${audioExtension}`;
+        const audioObjectKey = `${remoteDeck.audioFolder}/${audioFileName}`;
+        await putR2Object(audioObjectKey, audioAsset.buffer, audioAsset.contentType || contentTypeFromObjectKey(audioObjectKey));
+        setFlashcardItemAudio(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey));
+      }
+    }
+
+    publishedPayload.items.push(nextItem);
+  }
+
+  const jsonObjectKey = `${remoteDeck.jsonFolder}/${remoteDeck.jsonFileName}`;
+  await putR2Object(
+    jsonObjectKey,
+    Buffer.from(`${JSON.stringify(publishedPayload, null, 2)}\n`, 'utf8'),
+    'application/json; charset=utf-8'
+  );
+
+  return {
+    source: sourceInfo.relativeJsonPath,
+    title: remoteDeck.deckTitle,
+    deckFolder: remoteDeck.deckFolder,
+    jsonObjectKey,
+    jsonUrl: buildFlashcardsR2PublicUrl(jsonObjectKey),
+    count: publishedPayload.items.length,
+    type: sourceInfo.type,
+    localFolder: sourceInfo.folder || ''
+  };
+}
+
+async function publishFlashcardsManifestEntryToR2(sourceInfo, publishedDeck) {
+  const manifestObjectKey = sourceInfo.type === 'local-level'
+    ? `${FLASHCARDS_R2_PREFIX}/local-level-files.json`
+    : `${FLASHCARDS_R2_PREFIX}/manifest.json`;
+  const manifestPayload = (await readOptionalR2JsonObject(manifestObjectKey)) || { generatedAt: '', files: [] };
+  const existingFiles = Array.isArray(manifestPayload?.files) ? manifestPayload.files : [];
+  const nextEntry = sourceInfo.type === 'local-level'
+    ? {
+        folder: sourceInfo.folder || 'others',
+        name: `${publishedDeck.deckFolder}.json`,
+        title: publishedDeck.title,
+        day: extractLocalLevelDayNumber(sourceInfo.fileName),
+        source: sourceInfo.relativeJsonPath,
+        path: publishedDeck.jsonUrl
+      }
+    : {
+        name: `${publishedDeck.deckFolder}.json`,
+        title: publishedDeck.title,
+        slug: publishedDeck.deckFolder,
+        source: sourceInfo.relativeJsonPath,
+        path: publishedDeck.jsonUrl,
+        count: publishedDeck.count
+      };
+
+  const nextPayload = {
+    generatedAt: new Date().toISOString(),
+    files: upsertFlashcardsManifestEntry(existingFiles, nextEntry)
+  };
+
+  await putR2Object(
+    manifestObjectKey,
+    Buffer.from(`${JSON.stringify(nextPayload, null, 2)}\n`, 'utf8'),
+    'application/json; charset=utf-8'
+  );
+
+  return nextEntry;
+}
+
+async function publishFlashcardSourcesToR2(sourceInfos) {
+  const publishedDecks = [];
+  const seenSources = new Set();
+
+  for (const sourceInfo of sourceInfos) {
+    if (!sourceInfo?.relativeJsonPath || seenSources.has(sourceInfo.relativeJsonPath)) {
+      continue;
+    }
+    seenSources.add(sourceInfo.relativeJsonPath);
+    const payload = await readJsonFromRelativePath(sourceInfo.relativeJsonPath);
+    const publishedDeck = await publishFlashcardDeckToR2FromSource(sourceInfo, payload);
+    const manifestEntry = await publishFlashcardsManifestEntryToR2(sourceInfo, publishedDeck);
+    publishedDecks.push({
+      ...publishedDeck,
+      manifestEntry
+    });
+  }
+
+  return publishedDecks;
 }
 
 async function listAdminFlashcardDecks() {
@@ -5360,8 +5680,20 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
       }
     }
 
+    let publishedDecks = [];
     if (persist && updated.length) {
       await persistEditableFlashcardSources(sourceMap);
+      publishedDecks = await publishFlashcardSourcesToR2(
+        updated
+          .map((entry) => {
+            try {
+              return resolveAdminFlashcardSourceInfo(entry.source);
+            } catch (_error) {
+              return null;
+            }
+          })
+          .filter(Boolean)
+      );
     }
 
     res.json({
@@ -5371,7 +5703,8 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
       failedCount: failed.length,
       failed,
       usage: payload?.usage || null,
-      model: OPENAI_FLASHCARD_ADMIN_TEXT_MODEL
+      model: OPENAI_FLASHCARD_ADMIN_TEXT_MODEL,
+      publishedDecks
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({
@@ -5459,14 +5792,27 @@ app.post('/api/admin/flashcards/save-drafts', express.json({ limit: '2mb' }), as
       touchedSources.add(relativeJsonPath);
     }
 
+    let publishedDecks = [];
     if (touchedSources.size) {
       await persistEditableFlashcardSources(sourceMap);
+      publishedDecks = await publishFlashcardSourcesToR2(
+        Array.from(touchedSources)
+          .map((relativeJsonPath) => {
+            try {
+              return resolveAdminFlashcardSourceInfo(relativeJsonPath);
+            } catch (_error) {
+              return null;
+            }
+          })
+          .filter(Boolean)
+      );
     }
 
     res.json({
       success: true,
       updatedCount,
-      createdCount
+      createdCount,
+      publishedDecks
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({
@@ -5588,8 +5934,20 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
       }
     }
 
+    let publishedDecks = [];
     if (updated.length) {
       await persistEditableFlashcardSources(sourceMap);
+      publishedDecks = await publishFlashcardSourcesToR2(
+        updated
+          .map((entry) => {
+            try {
+              return resolveAdminFlashcardSourceInfo(entry.source);
+            } catch (_error) {
+              return null;
+            }
+          })
+          .filter(Boolean)
+      );
     }
 
     res.json({
@@ -5598,7 +5956,8 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
       updated,
       failedCount: failed.length,
       failed,
-      model: OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL
+      model: OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL,
+      publishedDecks
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({
@@ -5701,8 +6060,20 @@ app.post('/api/admin/flashcards/fill-missing-audio', express.json({ limit: '2mb'
       }
     }
 
+    let publishedDecks = [];
     if (updated.length) {
       await persistEditableFlashcardSources(sourceMap);
+      publishedDecks = await publishFlashcardSourcesToR2(
+        updated
+          .map((entry) => {
+            try {
+              return resolveAdminFlashcardSourceInfo(entry.source);
+            } catch (_error) {
+              return null;
+            }
+          })
+          .filter(Boolean)
+      );
     }
 
     res.json({
@@ -5710,7 +6081,8 @@ app.post('/api/admin/flashcards/fill-missing-audio', express.json({ limit: '2mb'
       updatedCount: updated.length,
       updated,
       failedCount: failed.length,
-      failed
+      failed,
+      publishedDecks
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({
@@ -5748,10 +6120,12 @@ app.post('/api/admin/flashcards/update-card', express.json({ limit: '1mb' }), as
     }
 
     await persistEditableFlashcardSources(sourceMap);
+    const publishedDecks = await publishFlashcardSourcesToR2([sourceInfo]);
     res.json({
       success: true,
       english: readFlashcardItemEnglish(item),
-      portuguese: readFlashcardItemPortuguese(item)
+      portuguese: readFlashcardItemPortuguese(item),
+      publishedDecks
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({
@@ -5789,7 +6163,8 @@ app.post('/api/admin/flashcards/delete-asset', express.json({ limit: '1mb' }), a
     }
 
     await persistEditableFlashcardSources(sourceMap);
-    res.json({ success: true });
+    const publishedDecks = await publishFlashcardSourcesToR2([sourceInfo]);
+    res.json({ success: true, publishedDecks });
   } catch (error) {
     res.status(error.statusCode || 500).json({
       error: error.message || 'Falha ao apagar o asset.',
@@ -5819,7 +6194,8 @@ app.post('/api/admin/flashcards/delete-card', express.json({ limit: '1mb' }), as
 
     sourceEntry.items.splice(sourceIndex, 1);
     await persistEditableFlashcardSources(sourceMap);
-    res.json({ success: true });
+    const publishedDecks = await publishFlashcardSourcesToR2([sourceInfo]);
+    res.json({ success: true, publishedDecks });
   } catch (error) {
     res.status(error.statusCode || 500).json({
       error: error.message || 'Falha ao apagar o flashcard.',
@@ -5846,11 +6222,12 @@ app.post('/api/admin/flashcards/add-slot', express.json({ limit: '1mb' }), async
       items.push(buildEditableFlashcardItemTemplate());
     }
     await writeJsonToRelativePath(sourceInfo.relativeJsonPath, payload);
-    if (sourceInfo.type === 'local-other') {
+    if (sourceInfo.type === 'local-level') {
       await refreshLocalLevelManifestMirror();
     }
+    const publishedDecks = await publishFlashcardSourcesToR2([sourceInfo]);
 
-    res.json({ success: true, addedCount: count, sourceIndex: items.length - 1 });
+    res.json({ success: true, addedCount: count, sourceIndex: items.length - 1, publishedDecks });
   } catch (error) {
     res.status(error.statusCode || 500).json({
       error: error.message || 'Falha ao adicionar slot vazio.',
@@ -5881,6 +6258,8 @@ app.post('/api/admin/flashcards/create-deck', express.json({ limit: '1mb' }), as
 
     await writeJsonToRelativePath(relativeJsonPath, payload);
     await refreshFlashcardManifestMirror();
+    const sourceInfo = resolveAdminFlashcardSourceInfo(relativeJsonPath);
+    const publishedDecks = await publishFlashcardSourcesToR2([sourceInfo]);
 
     res.json({
       success: true,
@@ -5888,7 +6267,8 @@ app.post('/api/admin/flashcards/create-deck', express.json({ limit: '1mb' }), as
       fileName,
       title: payload.title,
       coverImage: payload.coverImage,
-      slotCount
+      slotCount,
+      publishedDecks
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({
