@@ -4153,8 +4153,34 @@
         throw new Error('Nao consegui abrir o manifesto dos flashcards.');
       }
 
+      async function fetchRemoteManifestOrEmpty(path) {
+        const normalized = normalizeFlashcardsDataPath(path);
+        if (!normalized) {
+          return {
+            data: { generatedAt: new Date().toISOString(), files: [] },
+            response: null
+          };
+        }
+        try {
+          const response = await fetch(normalized, { cache: 'no-store' });
+          if (response.ok) {
+            const data = await response.json();
+            return { data, response };
+          }
+          if (response.status === 404) {
+            return {
+              data: { generatedAt: new Date().toISOString(), files: [] },
+              response
+            };
+          }
+        } catch (_error) {
+          // fall through
+        }
+        throw new Error('Nao consegui abrir o manifesto dos flashcards.');
+      }
+
       async function refreshCardsFromNetwork() {
-        const manifestPayload = await fetchFirstWorkingJson([DATA_MANIFEST_REMOTE_PATH]);
+        const manifestPayload = await fetchRemoteManifestOrEmpty(DATA_MANIFEST_REMOTE_PATH);
         const manifest = manifestPayload?.data || {};
         const serverDateHeader = manifestPayload?.response?.headers?.get('date') || '';
         const serverNow = Date.parse(serverDateHeader) || Date.parse(String(manifest?.generatedAt || '')) || 0;
