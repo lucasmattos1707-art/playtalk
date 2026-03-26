@@ -2538,7 +2538,7 @@ async function publishFlashcardDeckToR2FromSource(sourceInfo, payload) {
   );
 
   return {
-    source: sourceInfo.relativeJsonPath,
+    source: jsonObjectKey,
     title: remoteDeck.deckTitle,
     deckFolder: remoteDeck.deckFolder,
     jsonObjectKey,
@@ -2557,7 +2557,7 @@ async function publishFlashcardsManifestEntryToR2(sourceInfo, publishedDeck) {
     name: `${publishedDeck.deckFolder}.json`,
     title: publishedDeck.title,
     slug: publishedDeck.deckFolder,
-    source: sourceInfo.relativeJsonPath,
+    source: publishedDeck.source,
     path: publishedDeck.jsonUrl,
     count: publishedDeck.count
   };

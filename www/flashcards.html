@@ -2706,6 +2706,7 @@
           <textarea id="adminPasteInput" rows="6" maxlength="12000" placeholder="Cole um texto aqui. Cada linha preenche um campo vazio de texto, seguindo a ordem dos containers vazios visiveis na pagina."></textarea>
           <div class="admin-tools__actions">
             <button class="btn" id="adminPasteTextBtn" type="button">Colar texto</button>
+            <button class="btn btn-primary" id="adminSubmitPasteBtn" type="button">Enviar</button>
             <button class="btn" id="adminFillTextBtn" type="button">Preencher texto</button>
             <button class="btn" id="adminFillImageBtn" type="button">Preencher imagem</button>
             <button class="btn" id="adminFillAudioBtn" type="button">Preencher audio</button>
@@ -3096,6 +3097,7 @@
         adminPromptInput: document.getElementById('adminPromptInput'),
         adminPasteInput: document.getElementById('adminPasteInput'),
         adminPasteTextBtn: document.getElementById('adminPasteTextBtn'),
+        adminSubmitPasteBtn: document.getElementById('adminSubmitPasteBtn'),
           adminFillTextBtn: document.getElementById('adminFillTextBtn'),
           adminFillImageBtn: document.getElementById('adminFillImageBtn'),
           adminFillAudioBtn: document.getElementById('adminFillAudioBtn'),
@@ -4671,6 +4673,10 @@
         if (els.adminPasteTextBtn) {
           els.adminPasteTextBtn.disabled = state.admin.busy || !adminMode;
           els.adminPasteTextBtn.textContent = state.admin.busy ? 'Processando...' : 'Colar texto';
+        }
+        if (els.adminSubmitPasteBtn) {
+          els.adminSubmitPasteBtn.disabled = state.admin.busy || !adminMode;
+          els.adminSubmitPasteBtn.textContent = state.admin.busy ? 'Enviando...' : 'Enviar';
         }
         if (els.adminCreateCardsBtn) {
           els.adminCreateCardsBtn.disabled = state.admin.busy || !adminMode || !safeText(state.admin.selectedDeckSource);
@@ -7033,6 +7039,7 @@
           state.admin.prompt = String(event.target.value || '').trim();
         });
         els.adminPasteTextBtn?.addEventListener('click', runAdminPasteText);
+        els.adminSubmitPasteBtn?.addEventListener('click', runAdminPasteText);
         els.adminCreateDeckBtn?.addEventListener('click', runAdminCreateDeck);
         els.adminSaveBtn?.addEventListener('click', runAdminSaveDrafts);
         els.adminCreateCardsBtn?.addEventListener('click', runAdminCreateCards);

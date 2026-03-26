@@ -240,11 +240,13 @@ function writeDeckJsonToBundle(sourcePath, originalName, config, flashcardsRootU
 
   const targetJsonPath = path.join(jsonDir, originalName);
   writeJson(targetJsonPath, rewritten.payload);
+  const remoteJsonKey = `${config.prefix}/${deckFolder}/json/${originalName}`.replace(/\\/g, '/');
 
   return {
     deckFolder,
     jsonPath: `${flashcardsRootUrl}/${deckFolder}/json/${encodeURIComponent(originalName)}`,
-    source: String(sourceRelativePath || '').replace(/\\/g, '/').replace(/^\/+/, ''),
+    source: remoteJsonKey,
+    localSource: String(sourceRelativePath || '').replace(/\\/g, '/').replace(/^\/+/, ''),
     copiedImages: rewritten.copied.images,
     copiedAudios: rewritten.copied.audios,
     count: Array.isArray(rewritten.payload?.items) ? rewritten.payload.items.length : 0,
