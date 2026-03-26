@@ -2489,13 +2489,19 @@ async function publishFlashcardDeckToR2FromSource(sourceInfo, payload) {
   await deleteR2Prefix(`${remoteDeck.deckPrefix}/`);
 
   if (typeof payload?.coverImage === 'string' && payload.coverImage.trim()) {
-    const coverAsset = await readFlashcardAssetBuffer(payload.coverImage.trim());
-    if (coverAsset?.buffer?.length) {
-      const coverExtension = path.extname(String(payload.coverImage || '')).toLowerCase() || '.webp';
-      const coverFileName = `${sanitizeFlashcardsFileBase(remoteDeck.deckFolder, 'deck')}_cover${coverExtension}`;
-      const coverObjectKey = `${remoteDeck.imagesFolder}/${coverFileName}`;
-      await putR2Object(coverObjectKey, coverAsset.buffer, coverAsset.contentType || contentTypeFromObjectKey(coverObjectKey));
-      publishedPayload.coverImage = buildFlashcardsR2PublicUrl(coverObjectKey);
+    try {
+      const coverAsset = await readFlashcardAssetBuffer(payload.coverImage.trim());
+      if (coverAsset?.buffer?.length) {
+        const coverExtension = path.extname(String(payload.coverImage || '')).toLowerCase() || '.webp';
+        const coverFileName = `${sanitizeFlashcardsFileBase(remoteDeck.deckFolder, 'deck')}_cover${coverExtension}`;
+        const coverObjectKey = `${remoteDeck.imagesFolder}/${coverFileName}`;
+        await putR2Object(coverObjectKey, coverAsset.buffer, coverAsset.contentType || contentTypeFromObjectKey(coverObjectKey));
+        publishedPayload.coverImage = buildFlashcardsR2PublicUrl(coverObjectKey);
+      }
+    } catch (error) {
+      console.warn(
+        `Ignorando coverImage legado ao publicar ${remoteDeck.deckFolder}: ${error?.message || error}`
+      );
     }
   }
 
