@@ -3785,7 +3785,7 @@
           .filter(record => record.status === 'ready' && (record.phaseIndex || 0) >= 1)
           .sort((left, right) => (Number(left.returnedAt) || 0) - (Number(right.returnedAt) || 0))
           .map(record => state.allCards.find(card => card.id === record.cardId))
-          .filter(card => card && !isCardHiddenForUser(card.id));
+          .filter(card => card && !isCardHiddenForUser(card.id) && hasCoreFlashcardText(card));
       }
 
       function totalGameAvailableCards() {
@@ -3843,10 +3843,11 @@
           return state.allCards.slice();
         }
         const lockedCards = state.allCards.filter(card => !state.userCards.has(card.id) && !isCardHiddenForUser(card.id));
+        const playableLockedCards = lockedCards.filter(hasCoreFlashcardText);
         if (state.userCards.size >= EARLY_FLASHCARD_LIMIT) {
-          return lockedCards;
+          return playableLockedCards;
         }
-        return lockedCards.filter(isEarlyFlashcardLengthEligible);
+        return playableLockedCards.filter(isEarlyFlashcardLengthEligible);
       }
 
       function formatDuration(ms) {
@@ -3899,7 +3900,11 @@
             audioUrl: safeText(item?.audio || item?.audioUrl),
             category: repairDisplayText(item?.categoria || title)
           };
-        }).filter(item => item.english || item.portuguese || item.imageUrl);
+        });
+      }
+
+      function hasCoreFlashcardText(card) {
+        return Boolean(safeText(card?.english) && safeText(card?.portuguese));
       }
 
       function normalizeFlashcardsDataPath(path) {
