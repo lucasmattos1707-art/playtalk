@@ -2607,24 +2607,10 @@ async function listAdminFlashcardDecks() {
     builtinFiles = [];
   }
 
-  let localLevelFiles = [];
-  try {
-    const localManifest = await readJsonFromRelativePath(LOCAL_LEVEL_MANIFEST_RELATIVE_PATH);
-    localLevelFiles = Array.isArray(localManifest?.files) ? localManifest.files : [];
-  } catch (_error) {
-    localLevelFiles = [];
-  }
-
-  const sources = [
-    ...builtinFiles.map((file) => ({
-      source: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || '')),
-      relativeJsonPath: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || ''))
-    })),
-    ...localLevelFiles.map((file) => ({
-      source: String(file?.path || file?.name || '').replace(/\\/g, '/'),
-      relativeJsonPath: String(file?.path || file?.name || '').replace(/\\/g, '/')
-    }))
-  ].filter((entry) => entry.source && entry.relativeJsonPath);
+  const sources = builtinFiles.map((file) => ({
+    source: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || '')),
+    relativeJsonPath: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || ''))
+  })).filter((entry) => entry.source && entry.relativeJsonPath);
 
   const decks = [];
   for (const entry of sources) {
@@ -2665,24 +2651,10 @@ async function listAdminFlashcardDeckEntries() {
     builtinFiles = [];
   }
 
-  let localLevelFiles = [];
-  try {
-    const localManifest = await readJsonFromRelativePath(LOCAL_LEVEL_MANIFEST_RELATIVE_PATH);
-    localLevelFiles = Array.isArray(localManifest?.files) ? localManifest.files : [];
-  } catch (_error) {
-    localLevelFiles = [];
-  }
-
-  return [
-    ...builtinFiles.map((file) => ({
-      source: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || '')),
-      relativeJsonPath: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || ''))
-    })),
-    ...localLevelFiles.map((file) => ({
-      source: String(file?.path || file?.name || '').replace(/\\/g, '/'),
-      relativeJsonPath: String(file?.path || file?.name || '').replace(/\\/g, '/')
-    }))
-  ].filter((entry) => entry.source && entry.relativeJsonPath);
+  return builtinFiles.map((file) => ({
+    source: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || '')),
+    relativeJsonPath: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || ''))
+  })).filter((entry) => entry.source && entry.relativeJsonPath);
 }
 
 function adminDeckGroupKeyFromSourceInfo(sourceInfo) {
