@@ -1,0 +1,1166 @@
+{
+  "title": "Números",
+  "coverImage": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/Sequ%C3%AAncia%2001.00_00_00_00.Quadro001.png",
+  "items": [
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000001.webp",
+      "nomePortugues": "Um",
+      "nomeIngles": "One",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000002.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "1"
+      ],
+      "acceptedEnglish": [
+        "1"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000003.webp",
+      "nomePortugues": "Dois",
+      "nomeIngles": "Two",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000004.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "2"
+      ],
+      "acceptedEnglish": [
+        "2"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000005.webp",
+      "nomePortugues": "Três",
+      "nomeIngles": "Three",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000006.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "3"
+      ],
+      "acceptedEnglish": [
+        "3"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000007.webp",
+      "nomePortugues": "Quatro",
+      "nomeIngles": "Four",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000008.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "4"
+      ],
+      "acceptedEnglish": [
+        "4"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000009.webp",
+      "nomePortugues": "Cinco",
+      "nomeIngles": "Five",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000010.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "5"
+      ],
+      "acceptedEnglish": [
+        "5"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000011.webp",
+      "nomePortugues": "Seis",
+      "nomeIngles": "Six",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000012.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "6"
+      ],
+      "acceptedEnglish": [
+        "6"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000013.webp",
+      "nomePortugues": "Sete",
+      "nomeIngles": "Seven",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000014.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "7"
+      ],
+      "acceptedEnglish": [
+        "7"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000015.webp",
+      "nomePortugues": "Oito",
+      "nomeIngles": "Eight",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000016.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "8"
+      ],
+      "acceptedEnglish": [
+        "8"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000017.webp",
+      "nomePortugues": "Nove",
+      "nomeIngles": "Nine",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000018.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "9"
+      ],
+      "acceptedEnglish": [
+        "9"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000019.webp",
+      "nomePortugues": "Dez",
+      "nomeIngles": "Ten",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000020.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "10"
+      ],
+      "acceptedEnglish": [
+        "10"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000021.webp",
+      "nomePortugues": "Onze",
+      "nomeIngles": "Eleven",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000022.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "11"
+      ],
+      "acceptedEnglish": [
+        "11"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000023.webp",
+      "nomePortugues": "Doze",
+      "nomeIngles": "Twelve",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000024.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "12"
+      ],
+      "acceptedEnglish": [
+        "12"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000025.webp",
+      "nomePortugues": "Treze",
+      "nomeIngles": "Thirteen",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000026.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "13"
+      ],
+      "acceptedEnglish": [
+        "13"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000027.webp",
+      "nomePortugues": "Quatorze",
+      "nomeIngles": "Fourteen",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000028.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "14"
+      ],
+      "acceptedEnglish": [
+        "14"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000029.webp",
+      "nomePortugues": "Quinze",
+      "nomeIngles": "Fifteen",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000030.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "15"
+      ],
+      "acceptedEnglish": [
+        "15"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000031.webp",
+      "nomePortugues": "Dezesseis",
+      "nomeIngles": "Sixteen",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000032.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "16"
+      ],
+      "acceptedEnglish": [
+        "16"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000033.webp",
+      "nomePortugues": "Dezessete",
+      "nomeIngles": "Seventeen",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000034.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "17"
+      ],
+      "acceptedEnglish": [
+        "17"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000035.webp",
+      "nomePortugues": "Dezoito",
+      "nomeIngles": "Eighteen",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000036.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "18"
+      ],
+      "acceptedEnglish": [
+        "18"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000037.webp",
+      "nomePortugues": "Dezenove",
+      "nomeIngles": "Nineteen",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000038.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "19"
+      ],
+      "acceptedEnglish": [
+        "19"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000039.webp",
+      "nomePortugues": "Vinte",
+      "nomeIngles": "Twenty",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000040.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "20"
+      ],
+      "acceptedEnglish": [
+        "20"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000041.webp",
+      "nomePortugues": "Vinte e um",
+      "nomeIngles": "Twenty-one",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000042.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "21"
+      ],
+      "acceptedEnglish": [
+        "21"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000043.webp",
+      "nomePortugues": "Vinte e dois",
+      "nomeIngles": "Twenty-two",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000044.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "22"
+      ],
+      "acceptedEnglish": [
+        "22"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000045.webp",
+      "nomePortugues": "Vinte e três",
+      "nomeIngles": "Twenty-three",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000046.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "23"
+      ],
+      "acceptedEnglish": [
+        "23"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000047.webp",
+      "nomePortugues": "Vinte e quatro",
+      "nomeIngles": "Twenty-four",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000048.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "24"
+      ],
+      "acceptedEnglish": [
+        "24"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000049.webp",
+      "nomePortugues": "Vinte e cinco",
+      "nomeIngles": "Twenty-five",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000050.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "25"
+      ],
+      "acceptedEnglish": [
+        "25"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000051.webp",
+      "nomePortugues": "Vinte e seis",
+      "nomeIngles": "Twenty-six",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000052.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "26"
+      ],
+      "acceptedEnglish": [
+        "26"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000053.webp",
+      "nomePortugues": "Vinte e sete",
+      "nomeIngles": "Twenty-seven",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000054.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "27"
+      ],
+      "acceptedEnglish": [
+        "27"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000055.webp",
+      "nomePortugues": "Vinte e oito",
+      "nomeIngles": "Twenty-eight",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000056.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "28"
+      ],
+      "acceptedEnglish": [
+        "28"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000057.webp",
+      "nomePortugues": "Vinte e nove",
+      "nomeIngles": "Twenty-nine",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000058.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "29"
+      ],
+      "acceptedEnglish": [
+        "29"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000059.webp",
+      "nomePortugues": "Trinta",
+      "nomeIngles": "Thirty",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000060.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "30"
+      ],
+      "acceptedEnglish": [
+        "30"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000061.webp",
+      "nomePortugues": "Quarenta",
+      "nomeIngles": "Forty",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000062.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "40"
+      ],
+      "acceptedEnglish": [
+        "40"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000063.webp",
+      "nomePortugues": "Quarenta e dois",
+      "nomeIngles": "Forty-two",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000064.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "42"
+      ],
+      "acceptedEnglish": [
+        "42"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000065.webp",
+      "nomePortugues": "Cinquenta",
+      "nomeIngles": "Fifty",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000066.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "50"
+      ],
+      "acceptedEnglish": [
+        "50"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000067.webp",
+      "nomePortugues": "Cinquenta e três",
+      "nomeIngles": "Fifty-three",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000068.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "53"
+      ],
+      "acceptedEnglish": [
+        "53"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000069.webp",
+      "nomePortugues": "Cinquenta e quatro",
+      "nomeIngles": "Fifty-four",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000070.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "54"
+      ],
+      "acceptedEnglish": [
+        "54"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000071.webp",
+      "nomePortugues": "Sessenta e seis",
+      "nomeIngles": "Sixty-six",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000072.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "66"
+      ],
+      "acceptedEnglish": [
+        "66"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000073.webp",
+      "nomePortugues": "Setenta e cinco",
+      "nomeIngles": "Seventy-five",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000074.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "75"
+      ],
+      "acceptedEnglish": [
+        "75"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000075.webp",
+      "nomePortugues": "Oitenta e quatro",
+      "nomeIngles": "Eighty-four",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000076.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "84"
+      ],
+      "acceptedEnglish": [
+        "84"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000077.webp",
+      "nomePortugues": "Noventa e sete",
+      "nomeIngles": "Ninety-seven",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000078.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "97"
+      ],
+      "acceptedEnglish": [
+        "97"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000079.webp",
+      "nomePortugues": "Cem",
+      "nomeIngles": "One hundred",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000080.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "100"
+      ],
+      "acceptedEnglish": [
+        "100"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000081.webp",
+      "nomePortugues": "Cento e dez",
+      "nomeIngles": "One hundred ten",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000082.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "110"
+      ],
+      "acceptedEnglish": [
+        "110"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000083.webp",
+      "nomePortugues": "Cento e quarenta",
+      "nomeIngles": "One hundred forty",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000084.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "140"
+      ],
+      "acceptedEnglish": [
+        "140"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000085.webp",
+      "nomePortugues": "Mil",
+      "nomeIngles": "One thousand",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000086.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "1000"
+      ],
+      "acceptedEnglish": [
+        "1000"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000087.webp",
+      "nomePortugues": "Mil e quarenta",
+      "nomeIngles": "One thousand forty",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000088.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "1040"
+      ],
+      "acceptedEnglish": [
+        "1040"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000089.webp",
+      "nomePortugues": "Mil e duzentos",
+      "nomeIngles": "One thousand two hundred",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000090.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "1200"
+      ],
+      "acceptedEnglish": [
+        "1200"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000091.webp",
+      "nomePortugues": "Mil duzentos e quarenta",
+      "nomeIngles": "One thousand two hundred forty",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000092.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "1240"
+      ],
+      "acceptedEnglish": [
+        "1240"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000093.webp",
+      "nomePortugues": "Mil duzentos e quarenta e quatro",
+      "nomeIngles": "One thousand two hundred forty-four",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000094.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "1244"
+      ],
+      "acceptedEnglish": [
+        "1244"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000095.webp",
+      "nomePortugues": "Mil trezentos e setenta e quatro",
+      "nomeIngles": "One thousand three hundred seventy-four",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000096.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "1374"
+      ],
+      "acceptedEnglish": [
+        "1374"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000097.webp",
+      "nomePortugues": "Mais",
+      "nomeIngles": "Plus",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000098.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "+"
+      ],
+      "acceptedEnglish": [
+        "+"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000099.webp",
+      "nomePortugues": "Menos",
+      "nomeIngles": "Minus",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000100.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "-"
+      ],
+      "acceptedEnglish": [
+        "-"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000101.webp",
+      "nomePortugues": "Igual",
+      "nomeIngles": "Equals",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000102.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "="
+      ],
+      "acceptedEnglish": [
+        "="
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000103.webp",
+      "nomePortugues": "Metade",
+      "nomeIngles": "Half",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000104.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "1/2"
+      ],
+      "acceptedEnglish": [
+        "1/2"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000105.webp",
+      "nomePortugues": "Um terço",
+      "nomeIngles": "One third",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000106.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "1/3"
+      ],
+      "acceptedEnglish": [
+        "1/3"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000107.webp",
+      "nomePortugues": "Um quarto",
+      "nomeIngles": "One quarter",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000108.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "1/4"
+      ],
+      "acceptedEnglish": [
+        "1/4"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000109.webp",
+      "nomePortugues": "Três quartos",
+      "nomeIngles": "Three quarters",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000110.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "3/4"
+      ],
+      "acceptedEnglish": [
+        "3/4"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000111.webp",
+      "nomePortugues": "Um décimo",
+      "nomeIngles": "One tenth",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000112.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "1/10"
+      ],
+      "acceptedEnglish": [
+        "1/10"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000113.webp",
+      "nomePortugues": "Dez por cento",
+      "nomeIngles": "Ten percent",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000114.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "10 por cento",
+        "10%"
+      ],
+      "acceptedEnglish": [
+        "10 percent",
+        "10%"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000115.webp",
+      "nomePortugues": "Vinte por cento",
+      "nomeIngles": "Twenty percent",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000116.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "20 por cento",
+        "20%"
+      ],
+      "acceptedEnglish": [
+        "20 percent",
+        "20%"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000117.webp",
+      "nomePortugues": "Cinquenta por cento",
+      "nomeIngles": "Fifty percent",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000118.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "50 por cento",
+        "50%"
+      ],
+      "acceptedEnglish": [
+        "50 percent",
+        "50%"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000119.webp",
+      "nomePortugues": "Cem por cento",
+      "nomeIngles": "One hundred percent",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000120.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "100 por cento",
+        "100%"
+      ],
+      "acceptedEnglish": [
+        "100 percent",
+        "100%"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000121.webp",
+      "nomePortugues": "Preço",
+      "nomeIngles": "Price",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000122.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000123.webp",
+      "nomePortugues": "Custo",
+      "nomeIngles": "Cost",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000124.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000125.webp",
+      "nomePortugues": "Troco",
+      "nomeIngles": "Change",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000126.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000127.webp",
+      "nomePortugues": "Total",
+      "nomeIngles": "Total",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000128.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000129.webp",
+      "nomePortugues": "Dinheiro",
+      "nomeIngles": "Cash",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000130.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000131.webp",
+      "nomePortugues": "Moeda",
+      "nomeIngles": "Coin",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000132.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000133.webp",
+      "nomePortugues": "Nota",
+      "nomeIngles": "Bill",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000134.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000135.webp",
+      "nomePortugues": "Um dólar",
+      "nomeIngles": "One dollar",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000136.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "1 dolar"
+      ],
+      "acceptedEnglish": [
+        "1 dollar"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000137.webp",
+      "nomePortugues": "Cinco dólares",
+      "nomeIngles": "Five dollars",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000138.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "5 dolares"
+      ],
+      "acceptedEnglish": [
+        "5 dollars"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000139.webp",
+      "nomePortugues": "Dez dólares",
+      "nomeIngles": "Ten dollars",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000140.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "10 dolares"
+      ],
+      "acceptedEnglish": [
+        "10 dollars"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000141.webp",
+      "nomePortugues": "Vinte dólares",
+      "nomeIngles": "Twenty dollars",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000142.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "20 dolares"
+      ],
+      "acceptedEnglish": [
+        "20 dollars"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000143.webp",
+      "nomePortugues": "Cinquenta dólares",
+      "nomeIngles": "Fifty dollars",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000144.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "50 dolares"
+      ],
+      "acceptedEnglish": [
+        "50 dollars"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000145.webp",
+      "nomePortugues": "Cem dólares",
+      "nomeIngles": "One hundred dollars",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000146.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "100 dolares"
+      ],
+      "acceptedEnglish": [
+        "100 dollars"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000147.webp",
+      "nomePortugues": "Um euro",
+      "nomeIngles": "One euro",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000148.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "1 euro"
+      ],
+      "acceptedEnglish": [
+        "1 euro"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000149.webp",
+      "nomePortugues": "Cinco euros",
+      "nomeIngles": "Five euros",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000150.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "5 euros"
+      ],
+      "acceptedEnglish": [
+        "5 euros"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000151.webp",
+      "nomePortugues": "Dez euros",
+      "nomeIngles": "Ten euros",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000152.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "10 euros"
+      ],
+      "acceptedEnglish": [
+        "10 euros"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000153.webp",
+      "nomePortugues": "Centavo",
+      "nomeIngles": "Cent",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000154.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000155.webp",
+      "nomePortugues": "Cinquenta centavos",
+      "nomeIngles": "Fifty cents",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000156.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "50 centavos"
+      ],
+      "acceptedEnglish": [
+        "50 cents"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000157.webp",
+      "nomePortugues": "Vinte e cinco centavos",
+      "nomeIngles": "Twenty-five cents",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000158.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "25 centavos"
+      ],
+      "acceptedEnglish": [
+        "25 cents"
+      ]
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000159.webp",
+      "nomePortugues": "Dez centavos",
+      "nomeIngles": "Ten cents",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/115/001/000160.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative",
+      "acceptedPortuguese": [
+        "10 centavos"
+      ],
+      "acceptedEnglish": [
+        "10 cents"
+      ]
+    }
+  ]
+}

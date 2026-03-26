@@ -1,48 +1,6 @@
-const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-
-const EMPTY_PAYLOAD_HASH = crypto.createHash("sha256").update("").digest("hex");
-
-function loadDotEnv() {
-  const envPath = path.join(__dirname, "..", ".env");
-  if (!fs.existsSync(envPath)) {
-    return;
-  }
-
-  const lines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-
-    const separatorIndex = trimmed.indexOf("=");
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const key = trimmed.slice(0, separatorIndex).trim();
-    if (!key || process.env[key] !== undefined) {
-      continue;
-    }
-
-    let value = trimmed.slice(separatorIndex + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"'))
-      || (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-
-    process.env[key] = value;
-  }
-}
-
-function getEnv(name, fallback = "") {
-  const value = process.env[name];
-  return typeof value === "string" ? value.trim() : fallback;
-}
+const { spawnSync } = require("child_process");
 
 function parseInteger(value, fallback) {
   const parsed = Number.parseInt(value, 10);
@@ -53,7 +11,7 @@ function parseArgs(argv) {
   const options = {
     source: "",
     prefix: "",
-    concurrency: 6,
+    concurrency: 1,
     dryRun: false
   };
 
@@ -81,50 +39,9 @@ function parseArgs(argv) {
   return options;
 }
 
-function encodeRfc3986(segment) {
-  return encodeURIComponent(segment).replace(/[!'()*]/g, char =>
-    `%${char.charCodeAt(0).toString(16).toUpperCase()}`
-  );
-}
-
-function encodeObjectKey(key) {
-  return key
-    .split("/")
-    .map(segment => encodeRfc3986(segment))
-    .join("/");
-}
-
-function hmac(key, value, encoding) {
-  return crypto.createHmac("sha256", key).update(value, "utf8").digest(encoding);
-}
-
-function sha256(value, encoding) {
-  return crypto.createHash("sha256").update(value, "utf8").digest(encoding);
-}
-
-function getSignatureKey(secretAccessKey, dateStamp, region, service) {
-  const dateKey = hmac(`AWS4${secretAccessKey}`, dateStamp);
-  const dateRegionKey = hmac(dateKey, region);
-  const dateRegionServiceKey = hmac(dateRegionKey, service);
-  return hmac(dateRegionServiceKey, "aws4_request");
-}
-
-function toAmzDate(date = new Date()) {
-  return date.toISOString().replace(/[:-]|\.\d{3}/g, "");
-}
-
 function loadConfig(options) {
-  const accountId = getEnv("CLOUDFLARE_ACCOUNT_ID");
-  const endpoint = getEnv("R2_ENDPOINT") || (accountId
-    ? `https://${accountId}.r2.cloudflarestorage.com`
-    : "");
-
   return {
-    bucket: getEnv("R2_BUCKET_NAME"),
-    accessKeyId: getEnv("R2_ACCESS_KEY_ID"),
-    secretAccessKey: getEnv("R2_SECRET_ACCESS_KEY"),
-    endpoint,
-    region: "auto",
+    bucket: String(process.env.R2_BUCKET_NAME || "").trim() || "playtalk-media",
     source: path.resolve(options.source || "."),
     prefix: options.prefix,
     concurrency: options.concurrency,
@@ -133,81 +50,13 @@ function loadConfig(options) {
 }
 
 function validateConfig(config) {
-  const missing = [];
-  if (!config.bucket) missing.push("R2_BUCKET_NAME");
-  if (!config.endpoint) missing.push("R2_ENDPOINT");
-  if (!config.accessKeyId) missing.push("R2_ACCESS_KEY_ID");
-  if (!config.secretAccessKey) missing.push("R2_SECRET_ACCESS_KEY");
-
-  if (missing.length) {
-    throw new Error(`Faltam variaveis obrigatorias: ${missing.join(", ")}`);
+  if (!config.bucket) {
+    throw new Error("Falta a variavel R2_BUCKET_NAME.");
   }
 
   if (!fs.existsSync(config.source) || !fs.statSync(config.source).isDirectory()) {
     throw new Error(`Pasta de origem invalida: ${config.source}`);
   }
-}
-
-function buildSignedHeaders(config, method, objectKey, payloadHash, extraHeaders = {}) {
-  const endpoint = new URL(config.endpoint);
-  const canonicalUri = `/${encodeRfc3986(config.bucket)}/${encodeObjectKey(objectKey)}`;
-  const amzDate = toAmzDate();
-  const dateStamp = amzDate.slice(0, 8);
-
-  const headers = {
-    host: endpoint.host,
-    "x-amz-content-sha256": payloadHash,
-    "x-amz-date": amzDate,
-    ...extraHeaders
-  };
-
-  const canonicalHeaders = Object.entries(headers)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}:${String(value).trim()}`)
-    .join("\n");
-
-  const signedHeaders = Object.keys(headers)
-    .sort((a, b) => a.localeCompare(b))
-    .join(";");
-
-  const canonicalRequest = [
-    method,
-    canonicalUri,
-    "",
-    `${canonicalHeaders}\n`,
-    signedHeaders,
-    payloadHash
-  ].join("\n");
-
-  const credentialScope = `${dateStamp}/${config.region}/s3/aws4_request`;
-  const stringToSign = [
-    "AWS4-HMAC-SHA256",
-    amzDate,
-    credentialScope,
-    sha256(canonicalRequest, "hex")
-  ].join("\n");
-
-  const signingKey = getSignatureKey(
-    config.secretAccessKey,
-    dateStamp,
-    config.region,
-    "s3"
-  );
-
-  const signature = hmac(signingKey, stringToSign, "hex");
-  const authorization = [
-    `AWS4-HMAC-SHA256 Credential=${config.accessKeyId}/${credentialScope}`,
-    `SignedHeaders=${signedHeaders}`,
-    `Signature=${signature}`
-  ].join(", ");
-
-  return {
-    url: `${endpoint.origin}${canonicalUri}`,
-    headers: {
-      ...headers,
-      authorization
-    }
-  };
 }
 
 function getContentType(filePath) {
@@ -256,43 +105,55 @@ function toObjectKey(config, filePath) {
   return config.prefix ? `${config.prefix}/${relativePath}` : relativePath;
 }
 
-async function headObject(config, objectKey) {
-  const requestConfig = buildSignedHeaders(config, "HEAD", objectKey, EMPTY_PAYLOAD_HASH);
-  const response = await fetch(requestConfig.url, {
-    method: "HEAD",
-    headers: requestConfig.headers
+function putObjectWithWrangler(config, objectKey, filePath, contentType) {
+  const target = `${config.bucket}/${objectKey}`;
+  const command = process.platform === "win32"
+    ? {
+        file: "cmd.exe",
+        args: [
+          "/d",
+          "/s",
+          "/c",
+          "wrangler",
+          "r2",
+          "object",
+          "put",
+          target,
+          "--file",
+          filePath,
+          "--content-type",
+          contentType,
+          "--remote"
+        ]
+      }
+    : {
+        file: "wrangler",
+        args: [
+          "r2",
+          "object",
+          "put",
+          target,
+          "--file",
+          filePath,
+          "--content-type",
+          contentType,
+          "--remote"
+        ]
+      };
+
+  const result = spawnSync(command.file, command.args, {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    stdio: "pipe"
   });
 
-  if (response.status === 404) {
-    return null;
-  }
-
-  if (!response.ok) {
-    const message = await response.text().catch(() => "");
-    throw new Error(`HEAD ${objectKey} falhou: ${response.status} ${response.statusText} ${message}`.trim());
-  }
-
-  return {
-    etag: String(response.headers.get("etag") || "").replace(/"/g, ""),
-    contentLength: Number.parseInt(response.headers.get("content-length") || "", 10)
-  };
-}
-
-async function putObject(config, objectKey, buffer, contentType) {
-  const payloadHash = crypto.createHash("sha256").update(buffer).digest("hex");
-  const requestConfig = buildSignedHeaders(config, "PUT", objectKey, payloadHash, {
-    "content-type": contentType
-  });
-
-  const response = await fetch(requestConfig.url, {
-    method: "PUT",
-    headers: requestConfig.headers,
-    body: buffer
-  });
-
-  if (!response.ok) {
-    const message = await response.text().catch(() => "");
-    throw new Error(`PUT ${objectKey} falhou: ${response.status} ${response.statusText} ${message}`.trim());
+  if (result.error || result.status !== 0) {
+    const details = [result.stdout, result.stderr]
+      .map(value => String(value || "").trim())
+      .filter(Boolean)
+      .join("\n");
+    const errorText = result.error ? `\n${result.error.message}` : "";
+    throw new Error(`Falha ao enviar ${target}.${errorText}${details ? `\n${details}` : ""}`.trim());
   }
 }
 
@@ -310,7 +171,6 @@ async function runWithConcurrency(items, concurrency, worker) {
 }
 
 async function main() {
-  loadDotEnv();
   const options = parseArgs(process.argv.slice(2));
   const config = loadConfig(options);
   validateConfig(config);
@@ -321,39 +181,30 @@ async function main() {
   console.log(`Bucket: ${config.bucket}`);
   console.log(`Prefixo destino: ${config.prefix || "(raiz)"}`);
 
-  const summary = {
-    uploaded: 0,
-    skipped: 0
-  };
+  let uploaded = 0;
 
   await runWithConcurrency(files, config.concurrency, async filePath => {
     const objectKey = toObjectKey(config, filePath);
-    const buffer = await fs.promises.readFile(filePath);
-    const localHash = crypto.createHash("md5").update(buffer).digest("hex");
-    const remote = await headObject(config, objectKey);
-
-    if (remote && remote.etag && remote.etag.toLowerCase() === localHash.toLowerCase()) {
-      summary.skipped += 1;
-      if (summary.skipped % 250 === 0) { console.log(`SKIP ${summary.skipped}`); }
-      return;
-    }
 
     if (config.dryRun) {
-      summary.uploaded += 1;
-      if (summary.uploaded % 250 === 0) { console.log(`DRY ${summary.uploaded}`); }
+      uploaded += 1;
+      if (uploaded % 50 === 0) {
+        console.log(`DRY ${uploaded}`);
+      }
       return;
     }
 
-    await putObject(config, objectKey, buffer, getContentType(filePath));
-    summary.uploaded += 1;
-    if (summary.uploaded % 50 === 0) { console.log(`PUT ${summary.uploaded}`); }
+    putObjectWithWrangler(config, objectKey, filePath, getContentType(filePath));
+    uploaded += 1;
+    if (uploaded % 10 === 0) {
+      console.log(`PUT ${uploaded}`);
+    }
   });
 
-  console.log(`Concluido. Uploads: ${summary.uploaded}. Pulados: ${summary.skipped}.`);
+  console.log(`Concluido. Uploads: ${uploaded}.`);
 }
 
 main().catch(error => {
-  console.error(error.message || error);
+  console.error(error?.stack || error?.message || error);
   process.exitCode = 1;
 });
-

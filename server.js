@@ -1391,7 +1391,7 @@ const VOICES_ROOT = (() => {
 })();
 const LOCAL_LEVELS_ROOT = path.join(__dirname, 'Niveis');
 const FLASHCARD_DATA_RELATIVE_ROOT = path.posix.join('data', 'flashcards', '130', '001');
-const ADMIN_FLASHCARD_ASSET_RELATIVE_ROOT = path.posix.join('admin', 'flashcards-assets');
+const ADMIN_FLASHCARD_ASSET_RELATIVE_ROOT = path.posix.join('admin', 'FlashCards');
 const LOCAL_LEVEL_MANIFEST_RELATIVE_PATH = path.posix.join('data', 'local-level-files.json');
 const LOCAL_LEVEL_ALLOWED_FOLDERS = ['others', 'talking', 'watching', 'words'];
 const FLASHCARD_ADMIN_USERNAMES = new Set(['admin', 'adm']);
@@ -1677,15 +1677,14 @@ async function putR2Object(objectKey, bodyBuffer, contentType = 'application/oct
   const objectPath = `/${encodeRfc3986(R2_BUCKET_NAME)}/${encodeR2ObjectKey(objectKey)}`;
   const payloadBuffer = Buffer.isBuffer(bodyBuffer) ? bodyBuffer : Buffer.from(bodyBuffer || []);
   const request = buildR2SignedRequest('PUT', objectPath, {}, {
-    payloadHash: sha256HexBuffer(payloadBuffer),
-    extraHeaders: {
-      'content-type': contentType,
-      'content-length': String(payloadBuffer.length)
-    }
+    payloadHash: sha256HexBuffer(payloadBuffer)
   });
   const response = await fetch(request.url, {
     method: 'PUT',
-    headers: request.headers,
+    headers: {
+      ...request.headers,
+      'content-type': contentType
+    },
     body: payloadBuffer
   });
 
@@ -1815,7 +1814,7 @@ async function removeMirroredDirectory(relativePath) {
 }
 
 async function readJsonFromRelativePath(relativePath) {
-  const raw = await fs.promises.readFile(canonicalReadPathForRelativePath(relativePath), 'utf8');
+  const raw = (await fs.promises.readFile(canonicalReadPathForRelativePath(relativePath), 'utf8')).replace(/^\uFEFF/, '');
   return JSON.parse(raw);
 }
 
@@ -1877,6 +1876,82 @@ async function refreshLocalLevelManifestMirror() {
   const files = await collectLocalLevelManifestEntries();
   await writeMirroredFile(
     LOCAL_LEVEL_MANIFEST_RELATIVE_PATH,
+    `${JSON.stringify({ generatedAt: new Date().toISOString(), files }, null, 2)}\n`,
+    'utf8'
+  );
+  return files;
+}
+
+async function collectBuiltinFlashcardManifestEntries() {
+  const rootPath = canonicalReadPathForRelativePath(FLASHCARD_DATA_RELATIVE_ROOT);
+  const entries = [];
+
+  async function walk(directoryPath) {
+    let dirEntries = [];
+    try {
+      dirEntries = await fs.promises.readdir(directoryPath, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === 'ENOENT') return;
+      throw error;
+    }
+
+    for (const entry of dirEntries) {
+      const fullPath = path.join(directoryPath, entry.name);
+      if (entry.isDirectory()) {
+        await walk(fullPath);
+        continue;
+      }
+      if (!entry.isFile() || path.extname(entry.name).toLowerCase() !== '.json') {
+        continue;
+      }
+      if (entry.name.toLowerCase() === 'manifest.json') {
+        continue;
+      }
+
+      const relativePath = path.relative(rootPath, fullPath).replace(/\\/g, '/');
+      const normalizedRelativeJsonPath = path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, relativePath);
+      let payload = null;
+      let count = 0;
+      let title = path.posix.basename(relativePath);
+      try {
+        payload = await readJsonFromRelativePath(normalizedRelativeJsonPath);
+        count = getFlashcardPayloadItems(payload).length;
+        title = typeof payload?.title === 'string' && payload.title.trim()
+          ? payload.title.trim()
+          : title;
+      } catch (_error) {
+        payload = null;
+      }
+
+      const normalizedDir = path.posix.dirname(relativePath);
+      const slug = normalizedDir !== '.'
+        ? normalizedDir.split('/')[0]
+        : safeGeneratedBase(path.posix.basename(relativePath, '.json'), 'deck');
+
+      entries.push({
+        name: path.posix.basename(relativePath),
+        title,
+        slug,
+        source: normalizedRelativeJsonPath,
+        path: `/${normalizedRelativeJsonPath}`,
+        size: (await fs.promises.stat(fullPath)).size,
+        count
+      });
+    }
+  }
+
+  await walk(rootPath);
+
+  return entries.sort((left, right) => left.title.localeCompare(right.title, 'pt-BR', {
+    sensitivity: 'base',
+    numeric: true
+  }));
+}
+
+async function refreshFlashcardManifestMirror() {
+  const files = await collectBuiltinFlashcardManifestEntries();
+  await writeMirroredFile(
+    path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, 'manifest.json'),
     `${JSON.stringify({ generatedAt: new Date().toISOString(), files }, null, 2)}\n`,
     'utf8'
   );
@@ -2030,7 +2105,20 @@ function resolveAdminFlashcardSourceInfo(sourceValue) {
       type: 'builtin',
       fileName,
       relativeJsonPath: path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, fileName),
-      assetGroup: `library-${safeGeneratedBase(fileName, 'flashcard-deck')}`
+      assetGroup: `library-${safeGeneratedBase(fileName, 'flashcard-deck')}`,
+      deckRelativeRoot: ''
+    };
+  }
+
+  if (/^data\/flashcards\/130\/001\/.+\/json\/[^/]+\.json$/i.test(normalized)) {
+    const fileName = path.posix.basename(normalized);
+    const deckRelativeRoot = path.posix.dirname(path.posix.dirname(normalized));
+    return {
+      type: 'builtin-structured',
+      fileName,
+      relativeJsonPath: normalized,
+      assetGroup: `library-${safeGeneratedBase(deckRelativeRoot, 'flashcard-deck')}`,
+      deckRelativeRoot
     };
   }
 
@@ -2159,8 +2247,8 @@ async function listAdminFlashcardDecks() {
 
   const sources = [
     ...builtinFiles.map((file) => ({
-      source: path.posix.basename(String(file?.name || file?.path || '')),
-      relativeJsonPath: path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, path.posix.basename(String(file?.name || file?.path || '')))
+      source: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || '')),
+      relativeJsonPath: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || ''))
     })),
     ...localLevelFiles.map((file) => ({
       source: String(file?.path || file?.name || '').replace(/\\/g, '/'),
@@ -2217,8 +2305,8 @@ async function listAdminFlashcardDeckEntries() {
 
   return [
     ...builtinFiles.map((file) => ({
-      source: path.posix.basename(String(file?.name || file?.path || '')),
-      relativeJsonPath: path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, path.posix.basename(String(file?.name || file?.path || '')))
+      source: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || '')),
+      relativeJsonPath: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || ''))
     })),
     ...localLevelFiles.map((file) => ({
       source: String(file?.path || file?.name || '').replace(/\\/g, '/'),
@@ -2303,9 +2391,18 @@ function createEditableFlashcardDeckPayload(title, coverImage = '', slotCount = 
 
 function buildAdminFlashcardAssetRelativePath(sourceInfo, sourceIndex, kind, extension) {
   const safeExtension = String(extension || '').replace(/^\./, '') || (kind === 'audio' ? 'mp3' : 'webp');
+  const assetFolder = kind === 'audio' ? 'audios' : 'imagens';
+  if (sourceInfo?.type === 'builtin-structured' && sourceInfo.deckRelativeRoot) {
+    return path.posix.join(
+      sourceInfo.deckRelativeRoot,
+      assetFolder,
+      `${String(sourceIndex + 1).padStart(3, '0')}-${kind}-${Date.now()}.${safeExtension}`
+    );
+  }
   return path.posix.join(
     ADMIN_FLASHCARD_ASSET_RELATIVE_ROOT,
     sourceInfo.assetGroup,
+    assetFolder,
     `${String(sourceIndex + 1).padStart(3, '0')}-${kind}-${Date.now()}.${safeExtension}`
   );
 }
@@ -5778,12 +5875,12 @@ app.post('/api/admin/flashcards/create-deck', express.json({ limit: '1mb' }), as
     }
 
     const baseName = safeGeneratedBase(deckTitle, 'novo-deck');
-    const fileName = `${baseName}-${Date.now()}.json`;
-    const relativeJsonPath = `Niveis/others/${fileName}`;
+    const fileName = `${baseName}.json`;
+    const relativeJsonPath = path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, baseName, 'json', fileName);
     const payload = createEditableFlashcardDeckPayload(deckTitle, coverImage, slotCount);
 
     await writeJsonToRelativePath(relativeJsonPath, payload);
-    await refreshLocalLevelManifestMirror();
+    await refreshFlashcardManifestMirror();
 
     res.json({
       success: true,
