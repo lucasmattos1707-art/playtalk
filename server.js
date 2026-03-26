@@ -64,7 +64,7 @@ const ELEVENLABS_MODEL_ID = env(process.env.ELEVENLABS_MODEL_ID) || 'eleven_mult
 const OPENAI_API_KEY = env(process.env.OPENAI_API_KEY);
 const OPENAI_IMAGE_MODEL = env(process.env.OPENAI_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_TEXT_MODEL = env(process.env.OPENAI_TEXT_MODEL) || 'gpt-5-mini';
-const OPENAI_FLASHCARD_ADMIN_TEXT_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_TEXT_MODEL) || 'gpt-5.3-instant';
+const OPENAI_FLASHCARD_ADMIN_TEXT_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_TEXT_MODEL) || 'gpt-5-nano';
 const OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_STORY_MODEL = env(process.env.OPENAI_STORY_MODEL) || 'gpt-5';
 const OPENAI_TTS_MODEL = env(process.env.OPENAI_TTS_MODEL) || 'gpt-4o-mini-tts';
@@ -5080,6 +5080,7 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
 
     const cards = Array.isArray(req.body?.cards) ? req.body.cards.slice(0, 30) : [];
     const basePrompt = typeof req.body?.basePrompt === 'string' ? req.body.basePrompt.trim() : '';
+    const persist = req.body?.persist !== false;
     const maxChars = Math.max(6, Math.min(32, Number.parseInt(req.body?.maxChars, 10) || 32));
 
     if (!cards.length) {
@@ -5087,10 +5088,28 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
       return;
     }
 
-    const sourceMap = await loadEditableFlashcardSources(cards);
-    const targets = cards.map((card) => {
+    const sourceMap = persist ? await loadEditableFlashcardSources(cards.filter((card) => Number.isInteger(Number.parseInt(card?.sourceIndex, 10)) && Number.parseInt(card?.sourceIndex, 10) >= 0)) : null;
+    const targets = cards.map((card, index) => {
       const sourceInfo = resolveAdminFlashcardSourceInfo(card?.source);
       const sourceIndex = Number.parseInt(card?.sourceIndex, 10);
+
+      if (!persist || !Number.isInteger(sourceIndex) || sourceIndex < 0) {
+        const currentPt = clampGeneratedFlashcardText(card?.portuguese, maxChars);
+        const currentEn = clampGeneratedFlashcardText(card?.english, maxChars);
+        if (currentPt && currentEn) return null;
+        return {
+          id: typeof card?.id === 'string' && card.id.trim()
+            ? card.id.trim()
+            : `${sourceInfo.relativeJsonPath}#draft-${index}`,
+          source: sourceInfo.relativeJsonPath,
+          sourceIndex: Number.isInteger(sourceIndex) ? sourceIndex : -1,
+          deckTitle: typeof card?.deckTitle === 'string' ? card.deckTitle.trim() : '',
+          pt: currentPt || '',
+          en: currentEn || '',
+          category: typeof card?.category === 'string' ? card.category.trim() : ''
+        };
+      }
+
       const sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
       const item = sourceEntry?.items?.[sourceIndex];
       if (!item) return null;
@@ -5100,7 +5119,9 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
       if (currentPt && currentEn) return null;
 
       return {
-        id: `${sourceInfo.relativeJsonPath}#${sourceIndex}`,
+        id: typeof card?.id === 'string' && card.id.trim()
+          ? card.id.trim()
+          : `${sourceInfo.relativeJsonPath}#${sourceIndex}`,
         source: sourceInfo.relativeJsonPath,
         sourceIndex,
         deckTitle: typeof card?.deckTitle === 'string' ? card.deckTitle.trim() : '',
@@ -5111,7 +5132,7 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
     }).filter(Boolean);
 
     if (!targets.length) {
-      res.json({ success: true, updatedCount: 0, updated: [] });
+      res.json({ success: true, updatedCount: 0, updated: [], failedCount: 0, failed: [] });
       return;
     }
 
@@ -5178,30 +5199,46 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
       const generated = generatedById.get(target.id);
       if (!generated) {
         failed.push({
+          id: target.id,
           source: target.source,
           sourceIndex: target.sourceIndex,
           message: 'A IA nao retornou um par valido para este container.'
         });
         continue;
       }
-      const sourceEntry = sourceMap.get(target.source);
-      const item = sourceEntry?.items?.[target.sourceIndex];
-      if (!item) continue;
-
-      const currentPt = readFlashcardItemPortuguese(item);
-      const currentEn = readFlashcardItemEnglish(item);
       const sourceInfo = resolveAdminFlashcardSourceInfo(target.source);
       const groupKey = adminDeckGroupKeyFromSourceInfo(sourceInfo);
       const groupContext = contextByGroup.get(groupKey);
       const pairKey = `${generated.pt.toLowerCase()}|||${generated.en.toLowerCase()}`;
       if (groupContext?.existingPairKeys?.has(pairKey) || generatedPairKeys.has(pairKey)) {
         failed.push({
+          id: target.id,
           source: target.source,
           sourceIndex: target.sourceIndex,
           message: 'A IA sugeriu um texto repetido no mesmo grupo de decks.'
         });
         continue;
       }
+
+      if (!persist || !Number.isInteger(target.sourceIndex) || target.sourceIndex < 0) {
+        generatedPairKeys.add(pairKey);
+        groupContext?.existingPairKeys?.add(pairKey);
+        updated.push({
+          id: target.id,
+          source: target.source,
+          sourceIndex: target.sourceIndex,
+          pt: generated.pt,
+          en: generated.en
+        });
+        continue;
+      }
+
+      const sourceEntry = sourceMap.get(target.source);
+      const item = sourceEntry?.items?.[target.sourceIndex];
+      if (!item) continue;
+
+      const currentPt = readFlashcardItemPortuguese(item);
+      const currentEn = readFlashcardItemEnglish(item);
       let changed = false;
 
       if (!currentPt && generated.pt) {
@@ -5217,6 +5254,7 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
         generatedPairKeys.add(pairKey);
         groupContext?.existingPairKeys?.add(pairKey);
         updated.push({
+          id: target.id,
           source: target.source,
           sourceIndex: target.sourceIndex,
           pt: readFlashcardItemPortuguese(item),
@@ -5225,7 +5263,7 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
       }
     }
 
-    if (updated.length) {
+    if (persist && updated.length) {
       await persistEditableFlashcardSources(sourceMap);
     }
 
@@ -5241,6 +5279,101 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
   } catch (error) {
     res.status(error.statusCode || 500).json({
       error: error.message || 'Falha ao preencher os textos vazios.',
+      ...(error.instructions ? { instructions: error.instructions } : {})
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/save-drafts', express.json({ limit: '2mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+
+    const updates = Array.isArray(req.body?.updates) ? req.body.updates.slice(0, 500) : [];
+    const newCards = Array.isArray(req.body?.newCards) ? req.body.newCards.slice(0, 500) : [];
+
+    const existingTargets = updates.map((entry) => ({
+      source: typeof entry?.source === 'string' ? entry.source.trim() : '',
+      sourceIndex: Number.parseInt(entry?.sourceIndex, 10)
+    })).filter((entry) => entry.source && Number.isInteger(entry.sourceIndex) && entry.sourceIndex >= 0);
+
+    const sourceMap = existingTargets.length ? await loadEditableFlashcardSources(existingTargets) : new Map();
+    const touchedSources = new Set();
+    let updatedCount = 0;
+    let createdCount = 0;
+
+    for (const entry of updates) {
+      const source = typeof entry?.source === 'string' ? entry.source.trim() : '';
+      const sourceIndex = Number.parseInt(entry?.sourceIndex, 10);
+      if (!source || !Number.isInteger(sourceIndex) || sourceIndex < 0) continue;
+
+      const sourceInfo = resolveAdminFlashcardSourceInfo(source);
+      const sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
+      const item = sourceEntry?.items?.[sourceIndex];
+      if (!item) continue;
+
+      if (typeof entry?.portuguese === 'string') {
+        setFlashcardItemPortuguese(item, clampGeneratedFlashcardText(entry.portuguese, 32));
+      }
+      if (typeof entry?.english === 'string') {
+        setFlashcardItemEnglish(item, clampGeneratedFlashcardText(entry.english, 32));
+      }
+
+      touchedSources.add(sourceInfo.relativeJsonPath);
+      updatedCount += 1;
+    }
+
+    const newCardsBySource = new Map();
+    for (const entry of newCards) {
+      const source = typeof entry?.source === 'string' ? entry.source.trim() : '';
+      if (!source) continue;
+      const sourceInfo = resolveAdminFlashcardSourceInfo(source);
+      let sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
+      if (!sourceEntry) {
+        const payload = await readJsonFromRelativePath(sourceInfo.relativeJsonPath);
+        sourceEntry = {
+          sourceInfo,
+          payload,
+          items: getFlashcardPayloadItems(payload)
+        };
+        sourceMap.set(sourceInfo.relativeJsonPath, sourceEntry);
+      }
+
+      let queued = newCardsBySource.get(sourceInfo.relativeJsonPath);
+      if (!queued) {
+        queued = [];
+        newCardsBySource.set(sourceInfo.relativeJsonPath, queued);
+      }
+      queued.push(entry);
+    }
+
+    for (const [relativeJsonPath, entries] of newCardsBySource.entries()) {
+      const sourceEntry = sourceMap.get(relativeJsonPath);
+      if (!sourceEntry) continue;
+      for (const entry of entries) {
+        const item = buildEditableFlashcardItemTemplate();
+        setFlashcardItemPortuguese(item, clampGeneratedFlashcardText(entry?.portuguese, 32));
+        setFlashcardItemEnglish(item, clampGeneratedFlashcardText(entry?.english, 32));
+        if (typeof entry?.category === 'string' && entry.category.trim()) {
+          item.categoria = entry.category.trim();
+        }
+        sourceEntry.items.push(item);
+        createdCount += 1;
+      }
+      touchedSources.add(relativeJsonPath);
+    }
+
+    if (touchedSources.size) {
+      await persistEditableFlashcardSources(sourceMap);
+    }
+
+    res.json({
+      success: true,
+      updatedCount,
+      createdCount
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Falha ao salvar os rascunhos do admin.',
       ...(error.instructions ? { instructions: error.instructions } : {})
     });
   }

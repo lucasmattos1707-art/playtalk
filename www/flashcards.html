@@ -2547,6 +2547,7 @@
             <select id="adminReportFilter" class="report-filter" aria-label="Filtrar marcacoes">
               <option value="">Todas as marcacoes</option>
             </select>
+            <button class="btn btn-primary" id="adminSaveBtn" type="button">Salvar</button>
             <button class="btn" id="adminCreateCardsBtn" type="button">Criar cartas</button>
           </div>
           <textarea id="adminPromptInput" rows="2" maxlength="240" placeholder="Prompt base opcional para orientar a geracao das imagens e dos textos."></textarea>
@@ -2840,7 +2841,9 @@
           selectedDeckSource: '',
           decks: [],
           reportFilter: '',
-          reportCounts: new Map()
+          reportCounts: new Map(),
+          draftCards: new Map(),
+          pendingNewCards: []
         },
         game: {
           active: false,
@@ -2905,6 +2908,7 @@
         adminTools: document.getElementById('adminTools'),
         adminDeckSelect: document.getElementById('adminDeckSelect'),
         adminReportFilter: document.getElementById('adminReportFilter'),
+        adminSaveBtn: document.getElementById('adminSaveBtn'),
         adminCreateCardsBtn: document.getElementById('adminCreateCardsBtn'),
         adminPromptInput: document.getElementById('adminPromptInput'),
           adminFillTextBtn: document.getElementById('adminFillTextBtn'),
@@ -3575,6 +3579,8 @@
         state.admin.decks = [];
         state.admin.reportFilter = '';
         state.admin.reportCounts = new Map();
+        state.admin.draftCards = new Map();
+        state.admin.pendingNewCards = [];
         renderMetrics();
         updateGameChips();
         if (els.libraryTitle) {
@@ -4066,13 +4072,9 @@
               }
               try {
                 node.setAttribute('data-original-value', nextValue);
-                await updateAdminCardText(cardId, field, nextValue);
-                const liveCard = cardById(cardId);
-                if (liveCard) {
-                  if (field === 'english') liveCard.english = nextValue;
-                  if (field === 'portuguese') liveCard.portuguese = nextValue;
-                }
+                stageAdminCardDraft(cardId, field === 'english' ? { english: nextValue } : { portuguese: nextValue });
                 refreshLibrary();
+                syncAdminTools();
               } catch (_error) {
                 node.textContent = originalValue || (field === 'english' ? 'Ingles' : 'Portugues');
               }
@@ -4146,6 +4148,62 @@
         return sliced;
       }
 
+      function adminHasPendingChanges() {
+        return state.admin.draftCards.size > 0 || state.admin.pendingNewCards.length > 0;
+      }
+
+      function createAdminDraftCard(source, deckTitle, category) {
+        const randomKey = Math.random().toString(36).slice(2, 8);
+        return {
+          id: `draft-${Date.now()}-${randomKey}`,
+          source: safeText(source),
+          sourceIndex: -1,
+          deckTitle: safeText(deckTitle) || 'Deck',
+          imageUrl: '',
+          english: '',
+          portuguese: '',
+          audioUrl: '',
+          category: safeText(category) || safeText(deckTitle) || 'flashcard',
+          isDraftNew: true
+        };
+      }
+
+      function adminDeckIsHidden(deck) {
+        const title = normalizeText(deck?.title || '');
+        const source = normalizeText(deck?.source || '');
+        return title.includes('misterio') || source.includes('flashcard-dia');
+      }
+
+      function buildAdminDraftCard(card) {
+        const draft = state.admin.draftCards.get(card.id);
+        if (!draft) return { ...card };
+        return {
+          ...card,
+          portuguese: typeof draft.portuguese === 'string' ? draft.portuguese : card.portuguese,
+          english: typeof draft.english === 'string' ? draft.english : card.english
+        };
+      }
+
+      function stageAdminCardDraft(cardId, patch = {}) {
+        const pendingCardIndex = state.admin.pendingNewCards.findIndex((card) => card.id === cardId);
+        if (pendingCardIndex >= 0) {
+          const current = state.admin.pendingNewCards[pendingCardIndex];
+          state.admin.pendingNewCards[pendingCardIndex] = {
+            ...current,
+            ...(Object.prototype.hasOwnProperty.call(patch, 'portuguese') ? { portuguese: clampAdminEditableText(patch.portuguese) } : {}),
+            ...(Object.prototype.hasOwnProperty.call(patch, 'english') ? { english: clampAdminEditableText(patch.english) } : {})
+          };
+          return;
+        }
+
+        const current = state.admin.draftCards.get(cardId) || {};
+        state.admin.draftCards.set(cardId, {
+          ...current,
+          ...(Object.prototype.hasOwnProperty.call(patch, 'portuguese') ? { portuguese: clampAdminEditableText(patch.portuguese) } : {}),
+          ...(Object.prototype.hasOwnProperty.call(patch, 'english') ? { english: clampAdminEditableText(patch.english) } : {})
+        });
+      }
+
       function clampLibraryPage(page, totalCards) {
         const pageCount = Math.max(1, Math.ceil(Math.max(0, totalCards) / FLASHCARDS_PAGE_SIZE));
         return Math.max(1, Math.min(pageCount, Number.parseInt(page, 10) || 1));
@@ -4173,7 +4231,9 @@
       }
 
       function adminDeckOptions() {
-        return Array.isArray(state.admin.decks) ? state.admin.decks.slice() : [];
+        return Array.isArray(state.admin.decks)
+          ? state.admin.decks.filter((deck) => !adminDeckIsHidden(deck))
+          : [];
       }
 
       function selectedAdminDeckMeta() {
@@ -4201,8 +4261,13 @@
         const selectedSource = safeText(state.admin.selectedDeckSource);
         const reportFilter = safeText(state.admin.reportFilter);
         let cards = !selectedSource
-          ? state.allCards.slice()
+          ? state.allCards.filter((card) => !adminDeckIsHidden({ title: card?.deckTitle, source: card?.source }))
           : state.allCards.filter((card) => safeText(card?.source) === selectedSource);
+        cards = cards.map(buildAdminDraftCard);
+        const pendingCards = !selectedSource
+          ? state.admin.pendingNewCards.filter((card) => !adminDeckIsHidden({ title: card?.deckTitle, source: card?.source }))
+          : state.admin.pendingNewCards.filter((card) => safeText(card?.source) === selectedSource);
+        cards = cards.concat(pendingCards.map((card) => ({ ...card })));
         if (reportFilter) {
           cards = cards.filter((card) => Number(state.admin.reportCounts.get(card.id)?.[reportFilter] || 0) > 0);
         }
@@ -4322,6 +4387,10 @@
         if (els.adminReportFilter) {
           els.adminReportFilter.disabled = state.admin.busy || !adminMode;
         }
+        if (els.adminSaveBtn) {
+          els.adminSaveBtn.disabled = state.admin.busy || !adminMode || !adminHasPendingChanges();
+          els.adminSaveBtn.textContent = state.admin.busy ? 'Salvando...' : 'Salvar';
+        }
         if (els.adminFillTextBtn) {
           els.adminFillTextBtn.disabled = state.admin.busy || !adminMode;
           els.adminFillTextBtn.textContent = state.admin.busy ? 'Processando...' : 'Preencher texto';
@@ -4399,6 +4468,56 @@
         await postAdminFlashcardAction('/api/admin/flashcards/update-card', payload);
       }
 
+      async function runAdminSaveDrafts() {
+        if (!isAdminUser() || state.admin.busy || !adminHasPendingChanges()) return;
+
+        const updates = Array.from(state.admin.draftCards.entries()).map(([cardId, draft]) => {
+          const card = state.allCards.find((entry) => entry.id === cardId);
+          if (!card) return null;
+          return {
+            source: card.source,
+            sourceIndex: card.sourceIndex,
+            portuguese: typeof draft.portuguese === 'string' ? draft.portuguese : card.portuguese,
+            english: typeof draft.english === 'string' ? draft.english : card.english
+          };
+        }).filter(Boolean);
+
+        const newCards = state.admin.pendingNewCards.map((card) => ({
+          source: card.source,
+          deckTitle: card.deckTitle,
+          category: card.category,
+          portuguese: card.portuguese,
+          english: card.english
+        }));
+
+        state.admin.busy = true;
+        state.admin.error = false;
+        state.admin.status = 'Salvando alteracoes do admin...';
+        syncAdminTools();
+
+        try {
+          const payload = await postAdminFlashcardAction('/api/admin/flashcards/save-drafts', {
+            updates,
+            newCards
+          });
+          state.admin.draftCards = new Map();
+          state.admin.pendingNewCards = [];
+          await reloadCardsFromNetwork();
+          const updatedCount = Number(payload?.updatedCount) || 0;
+          const createdCount = Number(payload?.createdCount) || 0;
+          state.admin.status = createdCount || updatedCount
+            ? `Salvo. ${createdCount} carta(s) nova(s) e ${updatedCount} alteracao(oes) publicadas.`
+            : 'Nenhuma alteracao pendente para salvar.';
+          state.admin.error = false;
+        } catch (error) {
+          state.admin.status = error.message || 'Falha ao salvar as alteracoes.';
+          state.admin.error = true;
+        } finally {
+          state.admin.busy = false;
+          syncAdminTools();
+        }
+      }
+
       async function runAdminCreateCards() {
         if (!isAdminUser() || state.admin.busy) return;
         const selectedDeck = selectedAdminDeckMeta();
@@ -4420,18 +4539,16 @@
 
         state.admin.busy = true;
         state.admin.error = false;
-        state.admin.status = `Criando ${count} container(es) vazio(s)...`;
+        state.admin.status = `Criando ${count} container(es) vazio(s) no rascunho...`;
         syncAdminTools();
 
         try {
-          await postAdminFlashcardAction('/api/admin/flashcards/add-slot', {
-            source: selectedDeck.source,
-            count
-          });
-          await reloadCardsFromNetwork();
+          for (let index = 0; index < count; index += 1) {
+            state.admin.pendingNewCards.push(createAdminDraftCard(selectedDeck.source, selectedDeck.title, selectedDeck.title));
+          }
           state.libraryPage = Math.max(1, Math.ceil(currentAdminDeckCards().length / FLASHCARDS_PAGE_SIZE));
           refreshLibrary();
-          state.admin.status = `${count} container(es) vazio(s) criado(s) em ${selectedDeck.title}.`;
+          state.admin.status = `${count} container(es) vazio(s) criado(s) em rascunho. Clique em Salvar para publicar.`;
           state.admin.error = false;
         } catch (error) {
           state.admin.status = error.message || 'Falha ao criar containers vazios.';
@@ -4531,6 +4648,11 @@
       async function runAdminCardAssetDelete(kind) {
         const card = cardById(state.admin.activeCardId);
         if (!card || state.admin.busy) return;
+        if (adminHasPendingChanges()) {
+          setAdminToolsStatus('Salve os rascunhos antes de apagar foto ou audio.', true);
+          syncAdminTools();
+          return;
+        }
         state.admin.busy = true;
         state.admin.status = `Apagando ${kind === 'image' ? 'foto' : 'audio'}...`;
         state.admin.error = false;
@@ -4556,6 +4678,11 @@
       async function runAdminCardDelete() {
         const card = cardById(state.admin.activeCardId);
         if (!card || state.admin.busy) return;
+        if (adminHasPendingChanges()) {
+          setAdminToolsStatus('Salve os rascunhos antes de apagar containers.', true);
+          syncAdminTools();
+          return;
+        }
         state.admin.busy = true;
         state.admin.status = 'Apagando container...';
         state.admin.error = false;
@@ -4579,6 +4706,11 @@
 
       async function runAdminFlashcardFill(kind) {
         if (!isAdminUser() || state.admin.busy) return;
+        if (kind !== 'text' && adminHasPendingChanges()) {
+          setAdminToolsStatus('Salve os rascunhos antes de preencher imagem ou audio.', true);
+          syncAdminTools();
+          return;
+        }
 
         const targets = collectAdminCurrentPageTargets(kind);
         const label = kind === 'text' ? 'textos' : kind === 'image' ? 'imagens' : 'audios';
@@ -4602,6 +4734,7 @@
         try {
           const payload = await postAdminFlashcardAction(endpoint, {
             cards: targets.map((card) => ({
+              id: card.id,
               source: card.source,
               sourceIndex: card.sourceIndex,
               deckTitle: card.deckTitle,
@@ -4610,11 +4743,28 @@
               category: card.category
             })),
             basePrompt: state.admin.prompt || '',
-            maxChars: 30
+            maxChars: 32,
+            ...(kind === 'text' ? { persist: false } : {})
           });
-          await reloadCardsFromNetwork();
           const updatedCount = Number(payload?.updatedCount) || 0;
           const failedCount = Number(payload?.failedCount) || 0;
+          if (kind === 'text') {
+            const updatedItems = Array.isArray(payload?.updated) ? payload.updated : [];
+            updatedItems.forEach((entry) => {
+              if (!entry?.id) return;
+              stageAdminCardDraft(entry.id, {
+                portuguese: entry.pt || '',
+                english: entry.en || ''
+              });
+            });
+            refreshLibrary();
+            state.admin.status = failedCount
+              ? `${updatedCount} textos preparados no rascunho. ${failedCount} falharam.`
+              : `${updatedCount} textos preparados. Clique em Salvar para publicar.`;
+            state.admin.error = false;
+            return;
+          }
+          await reloadCardsFromNetwork();
           state.admin.status = failedCount
             ? `${updatedCount} ${label} preenchido(s). ${failedCount} falharam.`
             : `${updatedCount} ${label} preenchido(s) na pagina atual.`;
@@ -5284,7 +5434,10 @@
       }
 
       function cardById(id) {
-        return state.allCards.find(card => card.id === id) || null;
+        const pendingCard = state.admin.pendingNewCards.find(card => card.id === id);
+        if (pendingCard) return pendingCard;
+        const card = state.allCards.find(entry => entry.id === id);
+        return card ? buildAdminDraftCard(card) : null;
       }
 
       function createGameEntry(card, pool = 'base') {
@@ -6351,6 +6504,7 @@
         els.adminPromptInput?.addEventListener('input', (event) => {
           state.admin.prompt = String(event.target.value || '').trim();
         });
+        els.adminSaveBtn?.addEventListener('click', runAdminSaveDrafts);
         els.adminCreateCardsBtn?.addEventListener('click', runAdminCreateCards);
         els.adminFillTextBtn?.addEventListener('click', () => runAdminFlashcardFill('text'));
         els.adminFillImageBtn?.addEventListener('click', () => runAdminFlashcardFill('image'));
