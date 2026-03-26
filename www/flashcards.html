@@ -4136,12 +4136,19 @@
         return cleaned.replace(/^\/+/, '');
       }
 
+      function withNoCacheUrl(path) {
+        const normalized = normalizeFlashcardsDataPath(path);
+        if (!normalized) return '';
+        const separator = normalized.includes('?') ? '&' : '?';
+        return `${normalized}${separator}_pt=${Date.now()}`;
+      }
+
       async function fetchFirstWorkingJson(paths) {
         for (const path of paths) {
           const normalized = normalizeFlashcardsDataPath(path);
           if (!normalized) continue;
           try {
-            const response = await fetch(normalized, { cache: 'no-store' });
+            const response = await fetch(withNoCacheUrl(normalized), { cache: 'no-store' });
             if (response.ok) {
               const data = await response.json();
               return { data, response };
@@ -4162,7 +4169,7 @@
           };
         }
         try {
-          const response = await fetch(normalized, { cache: 'no-store' });
+          const response = await fetch(withNoCacheUrl(normalized), { cache: 'no-store' });
           if (response.ok) {
             const data = await response.json();
             return { data, response };
@@ -4198,7 +4205,7 @@
         const responses = await Promise.all(files.map(async (file) => {
           const filePath = normalizeFlashcardsDataPath(file.path);
           if (!filePath) return [];
-          const response = await fetch(filePath, { cache: 'no-store' });
+          const response = await fetch(withNoCacheUrl(filePath), { cache: 'no-store' });
           if (!response.ok) return [];
           const payload = await response.json();
           return flattenPayload(file.name || file.path, payload, {
@@ -4728,6 +4735,22 @@
         refreshLibrary();
       }
 
+      async function reloadCardsFromNetworkWithRetry(maxAttempts = 5, delayMs = 900) {
+        let lastError = null;
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+          try {
+            await reloadCardsFromNetwork();
+            return true;
+          } catch (error) {
+            lastError = error;
+            if (attempt < maxAttempts) {
+              await wait(delayMs);
+            }
+          }
+        }
+        throw lastError || new Error('Nao consegui abrir o manifesto dos flashcards.');
+      }
+
       function currentVisibleAdminCards() {
         if (!isAdminUser() || !els.allGrid) {
           return currentLibrarySourceCards();
@@ -4890,7 +4913,7 @@
           });
           state.admin.draftCards = new Map();
           state.admin.pendingNewCards = [];
-          await reloadCardsFromNetwork();
+          await reloadCardsFromNetworkWithRetry();
           const updatedCount = Number(payload?.updatedCount) || 0;
           const createdCount = Number(payload?.createdCount) || 0;
           state.admin.status = createdCount || updatedCount
@@ -4933,7 +4956,7 @@
             waitingMessage: `Publicando "${deckTitle}" no R2...`,
             successMessage: `Deck "${deckTitle}" criado.`
           });
-          await reloadCardsFromNetwork();
+          await reloadCardsFromNetworkWithRetry();
           state.admin.selectedDeckSource = safeText(payload?.source);
           state.libraryPage = 1;
           refreshLibrary();
