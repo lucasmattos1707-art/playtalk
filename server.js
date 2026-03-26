@@ -1906,7 +1906,7 @@ function buildFlashcardsRemoteDeckInfo(payload, fallbackName = 'deck.json') {
     deckTitle,
     deckFolder,
     deckPrefix: `${FLASHCARDS_R2_PREFIX}/${deckFolder}`,
-    jsonFolder: `${FLASHCARDS_R2_PREFIX}/${deckFolder}/.json`,
+    jsonFolder: `${FLASHCARDS_R2_PREFIX}/${deckFolder}/json`,
     audioFolder: `${FLASHCARDS_R2_PREFIX}/${deckFolder}/audio`,
     imagesFolder: `${FLASHCARDS_R2_PREFIX}/${deckFolder}/imagens`,
     jsonFileName: `${deckFolder}.json`
@@ -2550,28 +2550,17 @@ async function publishFlashcardDeckToR2FromSource(sourceInfo, payload) {
 }
 
 async function publishFlashcardsManifestEntryToR2(sourceInfo, publishedDeck) {
-  const manifestObjectKey = sourceInfo.type === 'local-level'
-    ? `${FLASHCARDS_R2_PREFIX}/local-level-files.json`
-    : `${FLASHCARDS_R2_PREFIX}/manifest.json`;
+  const manifestObjectKey = `${FLASHCARDS_R2_PREFIX}/manifest.json`;
   const manifestPayload = (await readOptionalR2JsonObject(manifestObjectKey)) || { generatedAt: '', files: [] };
   const existingFiles = Array.isArray(manifestPayload?.files) ? manifestPayload.files : [];
-  const nextEntry = sourceInfo.type === 'local-level'
-    ? {
-        folder: sourceInfo.folder || 'others',
-        name: `${publishedDeck.deckFolder}.json`,
-        title: publishedDeck.title,
-        day: extractLocalLevelDayNumber(sourceInfo.fileName),
-        source: sourceInfo.relativeJsonPath,
-        path: publishedDeck.jsonUrl
-      }
-    : {
-        name: `${publishedDeck.deckFolder}.json`,
-        title: publishedDeck.title,
-        slug: publishedDeck.deckFolder,
-        source: sourceInfo.relativeJsonPath,
-        path: publishedDeck.jsonUrl,
-        count: publishedDeck.count
-      };
+  const nextEntry = {
+    name: `${publishedDeck.deckFolder}.json`,
+    title: publishedDeck.title,
+    slug: publishedDeck.deckFolder,
+    source: sourceInfo.relativeJsonPath,
+    path: publishedDeck.jsonUrl,
+    count: publishedDeck.count
+  };
 
   const nextPayload = {
     generatedAt: new Date().toISOString(),

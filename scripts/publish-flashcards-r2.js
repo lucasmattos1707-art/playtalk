@@ -99,7 +99,6 @@ function buildConfig(options) {
     outputDir,
     manifestPath: path.join(projectRoot, 'www', 'data', 'flashcards', '130', '001', 'manifest.json'),
     flashcardsSourceDir: path.join(projectRoot, 'www', 'data', 'flashcards', '130', '001'),
-    localLevelsManifestPath: path.join(projectRoot, 'www', 'data', 'local-level-files.json'),
     staticRoot: path.join(projectRoot, 'www'),
     dryRun: options.dryRun,
     skipUpload: options.skipUpload
@@ -188,12 +187,12 @@ function rewriteDeckAssetsForBundle(payload, options) {
 
     const extension = path.extname(localAssetPath) || (kind === 'audio' ? '.mp3' : '.webp');
     const baseName = `${prefixLabel}${extension}`;
-    const targetDir = kind === 'audio' ? options.audiosDir : options.imagesDir;
+    const targetDir = kind === 'audio' ? options.audioDir : options.imagesDir;
     const destinationPath = path.join(targetDir, baseName);
     ensureParentDir(destinationPath);
     copyFileOrThrow(localAssetPath, destinationPath);
     copied[kind === 'audio' ? 'audios' : 'images'] += 1;
-    return `${options.flashcardsRootUrl}/${options.deckFolder}/${kind === 'audio' ? 'audios' : 'imagens'}/${encodeURIComponent(baseName)}`;
+    return `${options.flashcardsRootUrl}/${options.deckFolder}/${kind === 'audio' ? 'audio' : 'imagens'}/${encodeURIComponent(baseName)}`;
   };
 
   if (typeof nextPayload?.coverImage === 'string' && nextPayload.coverImage.trim()) {
@@ -225,18 +224,18 @@ function writeDeckJsonToBundle(sourcePath, originalName, config, flashcardsRootU
   const deckRootDir = path.join(config.outputDir, deckFolder);
   const jsonDir = path.join(deckRootDir, 'json');
   const imagesDir = path.join(deckRootDir, 'imagens');
-  const audiosDir = path.join(deckRootDir, 'audios');
+  const audioDir = path.join(deckRootDir, 'audio');
 
   ensureDir(jsonDir);
   ensureDir(imagesDir);
-  ensureDir(audiosDir);
+  ensureDir(audioDir);
 
   const rewritten = rewriteDeckAssetsForBundle(payload, {
     config,
     deckFolder,
     flashcardsRootUrl,
     imagesDir,
-    audiosDir
+    audioDir
   });
 
   const targetJsonPath = path.join(jsonDir, originalName);
@@ -289,8 +288,6 @@ function buildIndexHtml({ generatedAt, manifestCount, localCount, flashcardsRoot
 function prepareBundle(config) {
   const manifest = readJson(config.manifestPath);
   const manifestFiles = Array.isArray(manifest?.files) ? manifest.files : [];
-  const localLevels = readJson(config.localLevelsManifestPath);
-  const localLevelFiles = Array.isArray(localLevels?.files) ? localLevels.files : [];
 
   resetOutputDir(config.outputDir);
 
@@ -319,37 +316,7 @@ function prepareBundle(config) {
       path: deckBundle.jsonPath,
       size: fs.statSync(path.join(config.outputDir, deckBundle.deckFolder, 'json', name)).size,
       count: deckBundle.count,
-      audiosPath: `${config.flashcardsRootUrl}/${deckBundle.deckFolder}/audios/`,
-      imagensPath: `${config.flashcardsRootUrl}/${deckBundle.deckFolder}/imagens/`
-    };
-  });
-
-  const packagedOtherFiles = localLevelFiles.map((entry) => {
-    const originalPath = String(entry?.path || '').trim().replace(/^\/+/, '');
-    const name = path.basename(String(entry?.name || originalPath).trim());
-    if (!name) {
-      throw new Error('Manifesto local de flashcards contem um item "others" sem nome.');
-    }
-
-    const sourcePath = path.join(config.staticRoot, ...originalPath.split('/'));
-    const deckBundle = writeDeckJsonToBundle(
-      sourcePath,
-      name,
-      config,
-      config.flashcardsRootUrl,
-      entry?.title || entry?.name || name,
-      originalPath.replace(/\\/g, '/')
-    );
-
-    return {
-      folder: String(entry?.folder || '').trim() || 'flashcards',
-      name,
-      title: deckBundle.title,
-      slug: deckBundle.deckFolder,
-      day: Number(entry?.day) || 0,
-      source: deckBundle.source,
-      path: deckBundle.jsonPath,
-      audiosPath: `${config.flashcardsRootUrl}/${deckBundle.deckFolder}/audios/`,
+      audioPath: `${config.flashcardsRootUrl}/${deckBundle.deckFolder}/audio/`,
       imagensPath: `${config.flashcardsRootUrl}/${deckBundle.deckFolder}/imagens/`
     };
   });
@@ -359,16 +326,12 @@ function prepareBundle(config) {
     generatedAt,
     files: packagedManifestFiles
   });
-  writeJson(path.join(config.outputDir, 'local-level-files.json'), {
-    generatedAt,
-    files: packagedOtherFiles
-  });
   fs.writeFileSync(
     path.join(config.outputDir, 'index.html'),
     buildIndexHtml({
       generatedAt,
       manifestCount: packagedManifestFiles.length,
-      localCount: packagedOtherFiles.length,
+      localCount: 0,
       flashcardsRootUrl: config.flashcardsRootUrl,
       prefixLabel: config.prefix
     }),
@@ -378,7 +341,7 @@ function prepareBundle(config) {
   return {
     generatedAt,
     manifestCount: packagedManifestFiles.length,
-    localCount: packagedOtherFiles.length,
+    localCount: 0,
     outputDir: config.outputDir
   };
 }

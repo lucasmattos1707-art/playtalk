@@ -2932,10 +2932,7 @@
   <script>
     (() => {
       const FLASHCARDS_R2_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/FlashCards';
-      const DATA_MANIFEST_LOCAL_PATHS = ['data/flashcards/130/001/manifest.json', '/data/flashcards/130/001/manifest.json'];
-      const DATA_MANIFEST_REMOTE_PATHS = [`${FLASHCARDS_R2_ROOT}/manifest.json`];
-      const LOCAL_LEVEL_FILES_LOCAL_PATHS = ['data/local-level-files.json', '/data/local-level-files.json'];
-      const LOCAL_LEVEL_FILES_REMOTE_PATHS = [`${FLASHCARDS_R2_ROOT}/local-level-files.json`];
+      const DATA_MANIFEST_REMOTE_PATH = `${FLASHCARDS_R2_ROOT}/manifest.json`;
       const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
       const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
@@ -4137,18 +4134,6 @@
         return cleaned.replace(/^\/+/, '');
       }
 
-      function dataManifestPaths() {
-        return isAdminUser()
-          ? DATA_MANIFEST_LOCAL_PATHS.concat(DATA_MANIFEST_REMOTE_PATHS)
-          : DATA_MANIFEST_REMOTE_PATHS.concat(DATA_MANIFEST_LOCAL_PATHS);
-      }
-
-      function localLevelManifestPaths() {
-        return isAdminUser()
-          ? LOCAL_LEVEL_FILES_LOCAL_PATHS.concat(LOCAL_LEVEL_FILES_REMOTE_PATHS)
-          : LOCAL_LEVEL_FILES_REMOTE_PATHS.concat(LOCAL_LEVEL_FILES_LOCAL_PATHS);
-      }
-
       async function fetchFirstWorkingJson(paths) {
         for (const path of paths) {
           const normalized = normalizeFlashcardsDataPath(path);
@@ -4167,7 +4152,7 @@
       }
 
       async function refreshCardsFromNetwork() {
-        const manifestPayload = await fetchFirstWorkingJson(dataManifestPaths());
+        const manifestPayload = await fetchFirstWorkingJson([DATA_MANIFEST_REMOTE_PATH]);
         const manifest = manifestPayload?.data || {};
         const serverDateHeader = manifestPayload?.response?.headers?.get('date') || '';
         const serverNow = Date.parse(serverDateHeader) || Date.parse(String(manifest?.generatedAt || '')) || 0;
@@ -4176,28 +4161,12 @@
           saveTimeOffsetMs();
         }
         const manifestFiles = Array.isArray(manifest?.files) ? manifest.files : [];
-        let localLevelFiles = [];
-        try {
-          const localLevelsPayload = await fetchFirstWorkingJson(localLevelManifestPaths());
-          const localFiles = Array.isArray(localLevelsPayload?.data?.files) ? localLevelsPayload.data.files : [];
-          localLevelFiles = localFiles.map((file) => ({
-            name: file.name || file.path,
-            path: file.path,
-            sourceKey: safeText(file.source) || safeText(file.path) || safeText(file.name),
-            idSource: safeText(file.source) || `${safeText(file.folder) || 'local'}-${safeText(file.path) || safeText(file.name)}`
-          }));
-        } catch (_error) {
-          localLevelFiles = [];
-        }
-        const files = [
-          ...manifestFiles.map((file) => ({
-            name: file.name || file.path,
-            path: file.path,
-            sourceKey: file.source || file.name || file.path,
-            idSource: file.source || file.name || file.path
-          })),
-          ...localLevelFiles
-        ];
+        const files = manifestFiles.map((file) => ({
+          name: file.name || file.path,
+          path: file.path,
+          sourceKey: file.source || file.name || file.path,
+          idSource: file.source || file.name || file.path
+        }));
         const responses = await Promise.all(files.map(async (file) => {
           const filePath = normalizeFlashcardsDataPath(file.path);
           if (!filePath) return [];
