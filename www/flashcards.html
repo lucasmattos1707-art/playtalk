@@ -2702,7 +2702,7 @@
             <button class="btn btn-primary" id="adminSaveBtn" type="button">Salvar</button>
             <button class="btn" id="adminCreateCardsBtn" type="button">Criar cartas</button>
           </div>
-          <textarea id="adminPromptInput" rows="2" maxlength="240" placeholder="Prompt base opcional para orientar a geracao das imagens e dos textos."></textarea>
+          <textarea id="adminPromptInput" rows="2" maxlength="240" placeholder="Digite o prompt manual. Nada sera acrescentado automaticamente na geracao da imagem."></textarea>
           <textarea id="adminPasteInput" rows="6" maxlength="12000" placeholder="Cole um texto aqui. Cada linha preenche um campo vazio de texto, seguindo a ordem dos containers vazios visiveis na pagina."></textarea>
           <div class="admin-tools__actions">
             <button class="btn" id="adminPasteTextBtn" type="button">Colar texto</button>
@@ -4702,16 +4702,34 @@
         refreshLibrary();
       }
 
+      function currentVisibleAdminCards() {
+        if (!isAdminUser() || !els.allGrid) {
+          return currentLibrarySourceCards();
+        }
+        const cardIds = Array.from(els.allGrid.querySelectorAll('[data-card-id]'))
+          .map((node) => safeText(node.getAttribute('data-card-id')))
+          .filter(Boolean);
+        const seen = new Set();
+        return cardIds
+          .map((cardId) => cardById(cardId))
+          .filter((card) => {
+            const cardId = safeText(card?.id);
+            if (!cardId || seen.has(cardId)) return false;
+            seen.add(cardId);
+            return true;
+          });
+      }
+
       function collectAdminCurrentPageTargets(kind) {
-        return currentLibrarySourceCards().filter((card) => {
+        return currentVisibleAdminCards().filter((card) => {
           if (kind === 'text') {
-            return !card.english || !card.portuguese;
+            return !safeText(card?.english) || !safeText(card?.portuguese);
           }
           if (kind === 'image') {
-            return !card.imageUrl;
+            return !safeText(card?.imageUrl);
           }
           if (kind === 'audio') {
-            return !card.audioUrl;
+            return !safeText(card?.audioUrl);
           }
           return false;
         });
@@ -5136,6 +5154,11 @@
         if (!isAdminUser() || state.admin.busy) return;
         if (kind !== 'text' && adminHasPendingChanges()) {
           setAdminToolsStatus('Salve os rascunhos antes de preencher imagem ou audio.', true);
+          syncAdminTools();
+          return;
+        }
+        if (kind === 'image' && !safeText(state.admin.prompt)) {
+          setAdminToolsStatus('Digite o prompt manual antes de preencher imagens.', true);
           syncAdminTools();
           return;
         }

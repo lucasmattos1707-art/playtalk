@@ -5909,6 +5909,10 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
       res.status(400).json({ error: 'Nenhum flashcard foi enviado para preencher imagem.' });
       return;
     }
+    if (!basePrompt) {
+      res.status(400).json({ error: 'Digite um prompt no campo de texto antes de preencher imagens.' });
+      return;
+    }
 
     const sourceMap = await loadEditableFlashcardSources(cards);
     const targets = cards.map((card) => {
@@ -5938,13 +5942,7 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
 
     for (const target of targets) {
       try {
-        const prompt = [
-          basePrompt || 'Create a clean educational flashcard illustration.',
-          target.deckTitle ? `Deck: ${target.deckTitle}.` : '',
-          target.english ? `English: ${target.english}.` : '',
-          target.portuguese ? `Portuguese: ${target.portuguese}.` : '',
-          'Square composition, clear single subject, centered framing, child-safe, bright, no text, no letters, no watermark.'
-        ].filter(Boolean).join(' ');
+        const prompt = basePrompt;
 
         const upstreamResponse = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
