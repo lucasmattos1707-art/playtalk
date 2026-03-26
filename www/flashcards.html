@@ -721,6 +721,17 @@
       text-align: center;
     }
 
+    .mini-card__editable {
+      width: 100%;
+      outline: none;
+      cursor: text;
+    }
+
+    .mini-card__editable:focus {
+      border-color: rgba(110, 196, 255, 0.52);
+      box-shadow: 0 0 0 2px rgba(110, 196, 255, 0.14);
+    }
+
     .mini-card__progress {
       margin-top: 10px;
       width: 100%;
@@ -2828,6 +2839,7 @@
           prompt: '',
           activeCardId: '',
           selectedDeckSource: '',
+          decks: [],
           reportFilter: '',
           reportCounts: new Map()
         },
@@ -3562,6 +3574,7 @@
         state.stats = normalizeStatsSnapshot({});
         state.libraryPage = 1;
         state.admin.selectedDeckSource = '';
+        state.admin.decks = [];
         state.admin.reportFilter = '';
         state.admin.reportCounts = new Map();
         renderMetrics();
@@ -3964,6 +3977,7 @@
         try {
           const freshCards = await refreshCardsFromNetwork();
           state.allCards = freshCards;
+          await refreshAdminDecks();
           await refreshAdminReportSummary();
           saveCachedCards(freshCards);
           return;
@@ -3971,6 +3985,7 @@
           const cachedCards = readCachedCards();
           if (cachedCards.length) {
             state.allCards = cachedCards;
+            await refreshAdminDecks();
             await refreshAdminReportSummary();
             return;
           }
@@ -4032,6 +4047,36 @@
               playAdminCardAudio(card);
             });
           });
+          Array.from(target.querySelectorAll('[data-admin-edit-field]')).forEach((node) => {
+            node.addEventListener('keydown', (event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                node.blur();
+              }
+            });
+            node.addEventListener('blur', async () => {
+              const cardId = node.getAttribute('data-card-id');
+              const field = node.getAttribute('data-admin-edit-field');
+              const nextValue = safeText(node.textContent);
+              const originalValue = safeText(node.getAttribute('data-original-value'));
+              if (!cardId || !field || nextValue === originalValue) {
+                node.textContent = nextValue || (field === 'english' ? 'Ingles' : 'Portugues');
+                return;
+              }
+              try {
+                node.setAttribute('data-original-value', nextValue);
+                await updateAdminCardText(cardId, field, nextValue);
+                const liveCard = cardById(cardId);
+                if (liveCard) {
+                  if (field === 'english') liveCard.english = nextValue;
+                  if (field === 'portuguese') liveCard.portuguese = nextValue;
+                }
+                refreshLibrary();
+              } catch (_error) {
+                node.textContent = originalValue || (field === 'english' ? 'Ingles' : 'Portugues');
+              }
+            });
+          });
         }
       }
 
@@ -4083,12 +4128,8 @@
           imageFallbackMarkup: isEmptySlot
             ? '<div class="mini-card__fallback is-empty-slot">Vazio</div>'
             : `<div class="mini-card__fallback">${escapeHtml(card.deckTitle)}</div>`,
-          wordMarkup: card.english
-            ? `<p class="mini-card__word">${escapeHtml(card.english)}</p>`
-            : '<div class="mini-card__empty-field">Ingles</div>',
-          subwordMarkup: card.portuguese
-            ? `<p class="mini-card__subword">${escapeHtml(card.portuguese)}</p>`
-            : '<div class="mini-card__empty-field">Portugues</div>'
+          wordMarkup: `<div class="mini-card__empty-field mini-card__editable" contenteditable="plaintext-only" spellcheck="false" data-card-id="${escapeHtml(card.id)}" data-admin-edit-field="english" data-original-value="${escapeHtml(card.english || '')}">${escapeHtml(card.english || 'Ingles')}</div>`,
+          subwordMarkup: `<div class="mini-card__empty-field mini-card__editable" contenteditable="plaintext-only" spellcheck="false" data-card-id="${escapeHtml(card.id)}" data-admin-edit-field="portuguese" data-original-value="${escapeHtml(card.portuguese || '')}">${escapeHtml(card.portuguese || 'Portugues')}</div>`
         };
       }
 
@@ -4119,23 +4160,7 @@
       }
 
       function adminDeckOptions() {
-        const deckMap = new Map();
-        state.allCards.forEach((card) => {
-          const source = safeText(card?.source);
-          if (!source || deckMap.has(source)) return;
-          deckMap.set(source, {
-            source,
-            title: safeText(card?.deckTitle) || safeText(card?.source) || 'Deck',
-            count: 0
-          });
-        });
-        state.allCards.forEach((card) => {
-          const source = safeText(card?.source);
-          if (!source || !deckMap.has(source)) return;
-          deckMap.get(source).count += 1;
-        });
-        return Array.from(deckMap.values())
-          .sort((left, right) => left.title.localeCompare(right.title, 'pt-BR', { sensitivity: 'base' }));
+        return Array.isArray(state.admin.decks) ? state.admin.decks.slice() : [];
       }
 
       function selectedAdminDeckMeta() {
@@ -4202,6 +4227,28 @@
           state.admin.reportCounts = new Map();
         }
         syncAdminReportFilter();
+      }
+
+      async function refreshAdminDecks() {
+        if (!isAdminUser()) {
+          state.admin.decks = [];
+          syncAdminDeckSelect();
+          return;
+        }
+        try {
+          const response = await fetch(buildApiUrl('/api/admin/flashcards/decks'), {
+            headers: buildAuthHeaders(),
+            cache: 'no-store'
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Falha ao carregar decks.');
+          }
+          state.admin.decks = Array.isArray(payload?.decks) ? payload.decks : [];
+        } catch (_error) {
+          state.admin.decks = [];
+        }
+        syncAdminDeckSelect();
       }
 
       function currentLibrarySourceCards() {
@@ -4288,6 +4335,7 @@
       async function reloadCardsFromNetwork() {
         const freshCards = await refreshCardsFromNetwork();
         state.allCards = Array.isArray(freshCards) ? freshCards : [];
+        await refreshAdminDecks();
         await refreshAdminReportSummary();
         saveCachedCards(state.allCards);
         refreshLibrary();
@@ -4324,6 +4372,21 @@
           throw new Error(payload?.instructions || payload?.details || payload?.error || 'Falha ao executar a acao do admin.');
         }
         return payload || {};
+      }
+
+      async function updateAdminCardText(cardId, field, value) {
+        const card = cardById(cardId);
+        if (!card) return;
+        const payload = {
+          source: card.source,
+          sourceIndex: card.sourceIndex
+        };
+        if (field === 'english') {
+          payload.english = value;
+        } else {
+          payload.portuguese = value;
+        }
+        await postAdminFlashcardAction('/api/admin/flashcards/update-card', payload);
       }
 
       function currentGameEntry() {
@@ -4503,10 +4566,10 @@
         const deckTitle = safeText(window.prompt('Nome do novo deck:', '')).trim();
         if (!deckTitle) return;
         const coverImage = safeText(window.prompt('Link pub da foto de capa do deck (opcional):', '')).trim();
-        const rawCount = window.prompt('Quantas cartas vazias o novo deck deve abrir? Maximo 100.', '12');
+        const rawCount = window.prompt('Quantas cartas vazias o novo deck deve abrir? Pode ser 0. Maximo 100.', '12');
         if (rawCount === null) return;
         const parsedCount = Number.parseInt(rawCount, 10);
-        if (!Number.isInteger(parsedCount) || parsedCount < 1) {
+        if (!Number.isInteger(parsedCount) || parsedCount < 0) {
           setAdminToolsStatus('Quantidade invalida para o novo deck.', true);
           syncAdminTools();
           return;

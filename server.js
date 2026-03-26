@@ -2136,6 +2136,65 @@ async function persistEditableFlashcardSources(sourceMap) {
   }
 }
 
+async function listAdminFlashcardDecks() {
+  const manifestPath = path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, 'manifest.json');
+  let builtinFiles = [];
+  try {
+    const manifest = await readJsonFromRelativePath(manifestPath);
+    builtinFiles = Array.isArray(manifest?.files) ? manifest.files : [];
+  } catch (_error) {
+    builtinFiles = [];
+  }
+
+  let localOtherFiles = [];
+  try {
+    const localManifest = await readJsonFromRelativePath(LOCAL_LEVEL_MANIFEST_RELATIVE_PATH);
+    const files = Array.isArray(localManifest?.files) ? localManifest.files : [];
+    localOtherFiles = files.filter((file) => String(file?.folder || '').toLowerCase() === 'others');
+  } catch (_error) {
+    localOtherFiles = [];
+  }
+
+  const sources = [
+    ...builtinFiles.map((file) => ({
+      source: path.posix.basename(String(file?.name || file?.path || '')),
+      relativeJsonPath: path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, path.posix.basename(String(file?.name || file?.path || '')))
+    })),
+    ...localOtherFiles.map((file) => ({
+      source: String(file?.path || file?.name || '').replace(/\\/g, '/'),
+      relativeJsonPath: String(file?.path || file?.name || '').replace(/\\/g, '/')
+    }))
+  ].filter((entry) => entry.source && entry.relativeJsonPath);
+
+  const decks = [];
+  for (const entry of sources) {
+    try {
+      const payload = await readJsonFromRelativePath(entry.relativeJsonPath);
+      const items = getFlashcardPayloadItems(payload);
+      decks.push({
+        source: entry.source,
+        title: typeof payload?.title === 'string' && payload.title.trim()
+          ? payload.title.trim()
+          : path.posix.basename(entry.relativeJsonPath),
+        coverImage: typeof payload?.coverImage === 'string' ? payload.coverImage.trim() : '',
+        count: items.length
+      });
+    } catch (_error) {
+      decks.push({
+        source: entry.source,
+        title: path.posix.basename(entry.relativeJsonPath),
+        coverImage: '',
+        count: 0
+      });
+    }
+  }
+
+  return decks.sort((left, right) => left.title.localeCompare(right.title, 'pt-BR', {
+    sensitivity: 'base',
+    numeric: true
+  }));
+}
+
 function buildEditableFlashcardItemTemplate() {
   return {
     nomePortugues: '',
@@ -2147,7 +2206,10 @@ function buildEditableFlashcardItemTemplate() {
 }
 
 function createEditableFlashcardDeckPayload(title, coverImage = '', slotCount = 1) {
-  const normalizedCount = Math.max(1, Math.min(100, Number.parseInt(slotCount, 10) || 1));
+  const parsedCount = Number.parseInt(slotCount, 10);
+  const normalizedCount = Number.isInteger(parsedCount)
+    ? Math.max(0, Math.min(100, parsedCount))
+    : 0;
   return {
     title: String(title || '').trim() || 'Novo deck',
     coverImage: String(coverImage || '').trim(),
@@ -3338,6 +3400,19 @@ app.get('/api/admin/flashcards/reports-summary', async (req, res) => {
     res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Falha ao carregar os reports dos flashcards.'
+    });
+  }
+});
+
+app.get('/api/admin/flashcards/decks', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const decks = await listAdminFlashcardDecks();
+    res.json({ success: true, decks });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao carregar os decks de flashcards.'
     });
   }
 });
@@ -5425,7 +5500,10 @@ app.post('/api/admin/flashcards/create-deck', express.json({ limit: '1mb' }), as
 
     const deckTitle = typeof req.body?.deckTitle === 'string' ? req.body.deckTitle.trim() : '';
     const coverImage = typeof req.body?.coverImage === 'string' ? req.body.coverImage.trim() : '';
-    const slotCount = Math.max(1, Math.min(100, Number.parseInt(req.body?.slotCount, 10) || 1));
+    const parsedSlotCount = Number.parseInt(req.body?.slotCount, 10);
+    const slotCount = Number.isInteger(parsedSlotCount)
+      ? Math.max(0, Math.min(100, parsedSlotCount))
+      : 0;
     if (!deckTitle) {
       res.status(400).json({ error: 'Informe o nome do deck.' });
       return;
