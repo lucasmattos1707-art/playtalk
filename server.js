@@ -64,7 +64,7 @@ const ELEVENLABS_MODEL_ID = env(process.env.ELEVENLABS_MODEL_ID) || 'eleven_mult
 const OPENAI_API_KEY = env(process.env.OPENAI_API_KEY);
 const OPENAI_IMAGE_MODEL = env(process.env.OPENAI_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_TEXT_MODEL = env(process.env.OPENAI_TEXT_MODEL) || 'gpt-5-mini';
-const OPENAI_FLASHCARD_ADMIN_TEXT_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_TEXT_MODEL) || 'gpt-5-nano';
+const OPENAI_FLASHCARD_ADMIN_TEXT_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_TEXT_MODEL) || 'gpt-5.3-instant';
 const OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_STORY_MODEL = env(process.env.OPENAI_STORY_MODEL) || 'gpt-5';
 const OPENAI_TTS_MODEL = env(process.env.OPENAI_TTS_MODEL) || 'gpt-4o-mini-tts';
@@ -1923,7 +1923,7 @@ function parseModelJsonText(text) {
   return null;
 }
 
-function clampGeneratedFlashcardText(value, maxChars = 30) {
+function clampGeneratedFlashcardText(value, maxChars = 32) {
   const clean = String(value || '').replace(/\s+/g, ' ').trim();
   if (!clean) return '';
   if (clean.length <= maxChars) return clean;
@@ -2195,6 +2195,88 @@ async function listAdminFlashcardDecks() {
     sensitivity: 'base',
     numeric: true
   }));
+}
+
+async function listAdminFlashcardDeckEntries() {
+  const manifestPath = path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, 'manifest.json');
+  let builtinFiles = [];
+  try {
+    const manifest = await readJsonFromRelativePath(manifestPath);
+    builtinFiles = Array.isArray(manifest?.files) ? manifest.files : [];
+  } catch (_error) {
+    builtinFiles = [];
+  }
+
+  let localLevelFiles = [];
+  try {
+    const localManifest = await readJsonFromRelativePath(LOCAL_LEVEL_MANIFEST_RELATIVE_PATH);
+    localLevelFiles = Array.isArray(localManifest?.files) ? localManifest.files : [];
+  } catch (_error) {
+    localLevelFiles = [];
+  }
+
+  return [
+    ...builtinFiles.map((file) => ({
+      source: path.posix.basename(String(file?.name || file?.path || '')),
+      relativeJsonPath: path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, path.posix.basename(String(file?.name || file?.path || '')))
+    })),
+    ...localLevelFiles.map((file) => ({
+      source: String(file?.path || file?.name || '').replace(/\\/g, '/'),
+      relativeJsonPath: String(file?.path || file?.name || '').replace(/\\/g, '/')
+    }))
+  ].filter((entry) => entry.source && entry.relativeJsonPath);
+}
+
+function adminDeckGroupKeyFromSourceInfo(sourceInfo) {
+  if (!sourceInfo) return 'unknown';
+  if (sourceInfo.type === 'local-level') {
+    return `local-level:${sourceInfo.folder}`;
+  }
+  return `builtin:${FLASHCARD_DATA_RELATIVE_ROOT}`;
+}
+
+async function buildAdminDeckContextByGroup() {
+  const entries = await listAdminFlashcardDeckEntries();
+  const groups = new Map();
+
+  for (const entry of entries) {
+    try {
+      const sourceInfo = resolveAdminFlashcardSourceInfo(entry.source);
+      const payload = await readJsonFromRelativePath(entry.relativeJsonPath);
+      const items = getFlashcardPayloadItems(payload);
+      const groupKey = adminDeckGroupKeyFromSourceInfo(sourceInfo);
+      const title = typeof payload?.title === 'string' && payload.title.trim()
+        ? payload.title.trim()
+        : path.posix.basename(entry.relativeJsonPath);
+
+      let group = groups.get(groupKey);
+      if (!group) {
+        group = {
+          groupKey,
+          titles: [],
+          existingPairKeys: new Set(),
+          samplePairs: []
+        };
+        groups.set(groupKey, group);
+      }
+
+      group.titles.push(title);
+      for (const item of items) {
+        const pt = clampGeneratedFlashcardText(readFlashcardItemPortuguese(item), 32);
+        const en = clampGeneratedFlashcardText(readFlashcardItemEnglish(item), 32);
+        if (!pt || !en) continue;
+        const pairKey = `${pt.toLowerCase()}|||${en.toLowerCase()}`;
+        group.existingPairKeys.add(pairKey);
+        if (group.samplePairs.length < 200) {
+          group.samplePairs.push({ pt, en, deckTitle: title });
+        }
+      }
+    } catch (_error) {
+      // ignore unreadable decks
+    }
+  }
+
+  return groups;
 }
 
 function buildEditableFlashcardItemTemplate() {
@@ -4998,7 +5080,7 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
 
     const cards = Array.isArray(req.body?.cards) ? req.body.cards.slice(0, 30) : [];
     const basePrompt = typeof req.body?.basePrompt === 'string' ? req.body.basePrompt.trim() : '';
-    const maxChars = Math.max(6, Math.min(30, Number.parseInt(req.body?.maxChars, 10) || 30));
+    const maxChars = Math.max(6, Math.min(32, Number.parseInt(req.body?.maxChars, 10) || 32));
 
     if (!cards.length) {
       res.status(400).json({ error: 'Nenhum flashcard foi enviado para preencher texto.' });
@@ -5033,18 +5115,44 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
       return;
     }
 
+    const contextByGroup = await buildAdminDeckContextByGroup();
+    const promptTargets = targets.map((target) => {
+      const sourceInfo = resolveAdminFlashcardSourceInfo(target.source);
+      const groupKey = adminDeckGroupKeyFromSourceInfo(sourceInfo);
+      const group = contextByGroup.get(groupKey);
+      return {
+        ...target,
+        groupKey,
+        contextDeckTitles: Array.isArray(group?.titles) ? group.titles.slice(0, 60) : []
+      };
+    });
+
+    const promptContext = Object.fromEntries(
+      Array.from(contextByGroup.entries()).map(([groupKey, group]) => [
+        groupKey,
+        {
+          deckTitles: group.titles.slice(0, 60),
+          existingPairs: group.samplePairs
+        }
+      ])
+    );
+
     const prompt = [
       'You fill missing flashcard text pairs for Brazilian Portuguese speakers learning English.',
       'Return only valid JSON.',
+      'For each flashcard, the first field is Portuguese and the second field is English.',
       `Each Portuguese and English text must have at most ${maxChars} characters, including spaces.`,
-      'Keep language simple, useful, child-safe, and natural.',
+      'Keep language simple, useful, child-safe, natural, and aligned with the selected deck.',
+      'Read the sibling deck context from the same deck group before creating new text.',
+      'Avoid repeating any existing pair or near-duplicate idea from that same group.',
       'If one side already exists, preserve that meaning and fill only the missing counterpart.',
-      'If both sides are empty, create a new pair that matches the deck title and the optional base prompt.',
+      'If both sides are empty, create a new pair that matches the deck title, category, optional base prompt, and sibling deck context.',
       'Do not add numbering, markdown, commentary, or emojis.',
       `Optional base prompt: ${basePrompt || 'none'}.`,
       'Output exactly this shape:',
       '{"items":[{"id":"...","pt":"...","en":"..."}]}',
-      `Targets: ${JSON.stringify(targets)}`
+      `Deck group context: ${JSON.stringify(promptContext)}`,
+      `Targets: ${JSON.stringify(promptTargets)}`
     ].join('\n');
 
     const { payload, parsed } = await requestOpenAiJsonPayload(prompt, {
@@ -5064,15 +5172,36 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
     );
 
     const updated = [];
+    const failed = [];
+    const generatedPairKeys = new Set();
     for (const target of targets) {
       const generated = generatedById.get(target.id);
-      if (!generated) continue;
+      if (!generated) {
+        failed.push({
+          source: target.source,
+          sourceIndex: target.sourceIndex,
+          message: 'A IA nao retornou um par valido para este container.'
+        });
+        continue;
+      }
       const sourceEntry = sourceMap.get(target.source);
       const item = sourceEntry?.items?.[target.sourceIndex];
       if (!item) continue;
 
       const currentPt = readFlashcardItemPortuguese(item);
       const currentEn = readFlashcardItemEnglish(item);
+      const sourceInfo = resolveAdminFlashcardSourceInfo(target.source);
+      const groupKey = adminDeckGroupKeyFromSourceInfo(sourceInfo);
+      const groupContext = contextByGroup.get(groupKey);
+      const pairKey = `${generated.pt.toLowerCase()}|||${generated.en.toLowerCase()}`;
+      if (groupContext?.existingPairKeys?.has(pairKey) || generatedPairKeys.has(pairKey)) {
+        failed.push({
+          source: target.source,
+          sourceIndex: target.sourceIndex,
+          message: 'A IA sugeriu um texto repetido no mesmo grupo de decks.'
+        });
+        continue;
+      }
       let changed = false;
 
       if (!currentPt && generated.pt) {
@@ -5085,6 +5214,8 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
       }
 
       if (changed) {
+        generatedPairKeys.add(pairKey);
+        groupContext?.existingPairKeys?.add(pairKey);
         updated.push({
           source: target.source,
           sourceIndex: target.sourceIndex,
@@ -5102,6 +5233,8 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
       success: true,
       updatedCount: updated.length,
       updated,
+      failedCount: failed.length,
+      failed,
       usage: payload?.usage || null,
       model: OPENAI_FLASHCARD_ADMIN_TEXT_MODEL
     });
@@ -5378,10 +5511,10 @@ app.post('/api/admin/flashcards/update-card', express.json({ limit: '1mb' }), as
     }
 
     if (typeof req.body?.english === 'string') {
-      setFlashcardItemEnglish(item, req.body.english.trim());
+      setFlashcardItemEnglish(item, clampGeneratedFlashcardText(req.body.english, 32));
     }
     if (typeof req.body?.portuguese === 'string') {
-      setFlashcardItemPortuguese(item, req.body.portuguese.trim());
+      setFlashcardItemPortuguese(item, clampGeneratedFlashcardText(req.body.portuguese, 32));
     }
 
     await persistEditableFlashcardSources(sourceMap);

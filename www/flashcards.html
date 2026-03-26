@@ -2538,7 +2538,7 @@
         <div class="admin-tools" id="adminTools" hidden>
           <div class="admin-tools__copy">
             <strong>Painel do Admin</strong>
-            <span>Selecione um deck .json para editar so aquele grupo. Textos vazios usam GPT nano, imagens usam o modelo mais barato da OpenAI e tudo salvo aqui fica disponivel para todos os jogadores.</span>
+            <span>Selecione um deck .json para editar so aquele grupo. Textos vazios usam o modelo instant mais rapido configurado, sempre em Portugues depois Ingles, com ate 32 caracteres por campo.</span>
           </div>
           <div class="admin-tools__actions">
             <select id="adminDeckSelect" aria-label="Selecionar deck">
@@ -2547,6 +2547,7 @@
             <select id="adminReportFilter" class="report-filter" aria-label="Filtrar marcacoes">
               <option value="">Todas as marcacoes</option>
             </select>
+            <button class="btn" id="adminCreateCardsBtn" type="button">Criar cartas</button>
           </div>
           <textarea id="adminPromptInput" rows="2" maxlength="240" placeholder="Prompt base opcional para orientar a geracao das imagens e dos textos."></textarea>
           <div class="admin-tools__actions">
@@ -2904,6 +2905,7 @@
         adminTools: document.getElementById('adminTools'),
         adminDeckSelect: document.getElementById('adminDeckSelect'),
         adminReportFilter: document.getElementById('adminReportFilter'),
+        adminCreateCardsBtn: document.getElementById('adminCreateCardsBtn'),
         adminPromptInput: document.getElementById('adminPromptInput'),
           adminFillTextBtn: document.getElementById('adminFillTextBtn'),
           adminFillImageBtn: document.getElementById('adminFillImageBtn'),
@@ -4056,7 +4058,7 @@
             node.addEventListener('blur', async () => {
               const cardId = node.getAttribute('data-card-id');
               const field = node.getAttribute('data-admin-edit-field');
-              const nextValue = safeText(node.textContent);
+              const nextValue = clampAdminEditableText(node.textContent);
               const originalValue = safeText(node.getAttribute('data-original-value'));
               if (!cardId || !field || nextValue === originalValue) {
                 node.textContent = nextValue || (field === 'english' ? 'Ingles' : 'Portugues');
@@ -4127,9 +4129,21 @@
           imageFallbackMarkup: isEmptySlot
             ? '<div class="mini-card__fallback is-empty-slot">Vazio</div>'
             : `<div class="mini-card__fallback">${escapeHtml(card.deckTitle)}</div>`,
-          wordMarkup: `<div class="mini-card__empty-field mini-card__editable" contenteditable="plaintext-only" spellcheck="false" data-card-id="${escapeHtml(card.id)}" data-admin-edit-field="english" data-original-value="${escapeHtml(card.english || '')}">${escapeHtml(card.english || 'Ingles')}</div>`,
-          subwordMarkup: `<div class="mini-card__empty-field mini-card__editable" contenteditable="plaintext-only" spellcheck="false" data-card-id="${escapeHtml(card.id)}" data-admin-edit-field="portuguese" data-original-value="${escapeHtml(card.portuguese || '')}">${escapeHtml(card.portuguese || 'Portugues')}</div>`
+          wordMarkup: `<div class="mini-card__empty-field mini-card__editable" contenteditable="plaintext-only" spellcheck="false" data-card-id="${escapeHtml(card.id)}" data-admin-edit-field="portuguese" data-original-value="${escapeHtml(card.portuguese || '')}">${escapeHtml(card.portuguese || 'Portugues')}</div>`,
+          subwordMarkup: `<div class="mini-card__empty-field mini-card__editable" contenteditable="plaintext-only" spellcheck="false" data-card-id="${escapeHtml(card.id)}" data-admin-edit-field="english" data-original-value="${escapeHtml(card.english || '')}">${escapeHtml(card.english || 'Ingles')}</div>`
         };
+      }
+
+      function clampAdminEditableText(value, maxChars = 32) {
+        const clean = safeText(value).replace(/\s+/g, ' ').trim();
+        if (!clean) return '';
+        if (clean.length <= maxChars) return clean;
+        const sliced = clean.slice(0, maxChars).trim();
+        const lastSpace = sliced.lastIndexOf(' ');
+        if (lastSpace >= Math.max(4, Math.floor(maxChars * 0.55))) {
+          return sliced.slice(0, lastSpace).trim();
+        }
+        return sliced;
       }
 
       function clampLibraryPage(page, totalCards) {
@@ -4312,6 +4326,10 @@
           els.adminFillTextBtn.disabled = state.admin.busy || !adminMode;
           els.adminFillTextBtn.textContent = state.admin.busy ? 'Processando...' : 'Preencher texto';
         }
+        if (els.adminCreateCardsBtn) {
+          els.adminCreateCardsBtn.disabled = state.admin.busy || !adminMode || !safeText(state.admin.selectedDeckSource);
+          els.adminCreateCardsBtn.textContent = state.admin.busy ? 'Processando...' : 'Criar cartas';
+        }
         if (els.adminFillImageBtn) {
           els.adminFillImageBtn.disabled = state.admin.busy || !adminMode;
           els.adminFillImageBtn.textContent = state.admin.busy ? 'Processando...' : 'Preencher imagem';
@@ -4368,16 +4386,60 @@
       async function updateAdminCardText(cardId, field, value) {
         const card = cardById(cardId);
         if (!card) return;
+        const nextValue = clampAdminEditableText(value);
         const payload = {
           source: card.source,
           sourceIndex: card.sourceIndex
         };
         if (field === 'english') {
-          payload.english = value;
+          payload.english = nextValue;
         } else {
-          payload.portuguese = value;
+          payload.portuguese = nextValue;
         }
         await postAdminFlashcardAction('/api/admin/flashcards/update-card', payload);
+      }
+
+      async function runAdminCreateCards() {
+        if (!isAdminUser() || state.admin.busy) return;
+        const selectedDeck = selectedAdminDeckMeta();
+        if (!selectedDeck?.source) {
+          setAdminToolsStatus('Selecione um deck antes de criar cartas.', true);
+          syncAdminTools();
+          return;
+        }
+
+        const typed = window.prompt(`Quantos containers vazios voce quer criar no deck "${selectedDeck.title}"?`, '1');
+        if (typed === null) return;
+
+        const count = Number.parseInt(String(typed).trim(), 10);
+        if (!Number.isInteger(count) || count < 1 || count > 100) {
+          setAdminToolsStatus('Digite um numero inteiro entre 1 e 100.', true);
+          syncAdminTools();
+          return;
+        }
+
+        state.admin.busy = true;
+        state.admin.error = false;
+        state.admin.status = `Criando ${count} container(es) vazio(s)...`;
+        syncAdminTools();
+
+        try {
+          await postAdminFlashcardAction('/api/admin/flashcards/add-slot', {
+            source: selectedDeck.source,
+            count
+          });
+          await reloadCardsFromNetwork();
+          state.libraryPage = Math.max(1, Math.ceil(currentAdminDeckCards().length / FLASHCARDS_PAGE_SIZE));
+          refreshLibrary();
+          state.admin.status = `${count} container(es) vazio(s) criado(s) em ${selectedDeck.title}.`;
+          state.admin.error = false;
+        } catch (error) {
+          state.admin.status = error.message || 'Falha ao criar containers vazios.';
+          state.admin.error = true;
+        } finally {
+          state.admin.busy = false;
+          syncAdminTools();
+        }
       }
 
       function currentGameEntry() {
@@ -6289,6 +6351,7 @@
         els.adminPromptInput?.addEventListener('input', (event) => {
           state.admin.prompt = String(event.target.value || '').trim();
         });
+        els.adminCreateCardsBtn?.addEventListener('click', runAdminCreateCards);
         els.adminFillTextBtn?.addEventListener('click', () => runAdminFlashcardFill('text'));
         els.adminFillImageBtn?.addEventListener('click', () => runAdminFlashcardFill('image'));
         els.adminFillAudioBtn?.addEventListener('click', () => runAdminFlashcardFill('audio'));
