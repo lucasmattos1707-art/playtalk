@@ -2704,37 +2704,6 @@
             </button>
           </div>
         </div>
-        <div class="admin-tools" id="adminTools" hidden>
-          <div class="admin-tools__copy">
-            <strong>Painel do Admin</strong>
-            <span>Selecione um deck .json para editar so aquele grupo. Textos vazios usam o modelo instant mais rapido configurado, sempre em Portugues depois Ingles, com ate 32 caracteres por campo.</span>
-          </div>
-          <div class="admin-tools__actions">
-            <select id="adminDeckSelect" aria-label="Selecionar deck">
-              <option value="">Todos os decks</option>
-            </select>
-            <select id="adminReportFilter" class="report-filter" aria-label="Filtrar marcacoes">
-              <option value="">Todas as marcacoes</option>
-            </select>
-            <button class="btn" id="adminCreateDeckBtn" type="button">Novo deck vazio</button>
-            <button class="btn btn-primary" id="adminSaveBtn" type="button">Salvar</button>
-            <button class="btn" id="adminCreateCardsBtn" type="button">Criar cartas</button>
-          </div>
-          <textarea id="adminPromptInput" rows="2" maxlength="240" placeholder="Digite o prompt manual. Nada sera acrescentado automaticamente na geracao da imagem."></textarea>
-          <textarea id="adminPasteInput" rows="6" maxlength="12000" placeholder="Cole um texto aqui. Cada linha preenche um campo vazio de texto, seguindo a ordem dos containers vazios visiveis na pagina."></textarea>
-          <div class="admin-tools__actions">
-            <button class="btn" id="adminPasteTextBtn" type="button">Colar texto</button>
-            <button class="btn btn-primary" id="adminSubmitPasteBtn" type="button">Enviar</button>
-            <button class="btn" id="adminFillTextBtn" type="button">Preencher texto</button>
-            <button class="btn" id="adminFillImageBtn" type="button">Preencher imagem</button>
-            <button class="btn btn-magic" id="adminMagicBtn" type="button">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.5 2.78 5.63 6.22.9-4.5 4.39 1.06 6.2L12 16.7 6.44 19.62l1.06-6.2L3 9.03l6.22-.9L12 2.5Z"/></svg>
-              <span class="btn__label">Magic</span>
-            </button>
-            <button class="btn" id="adminFillAudioBtn" type="button">Preencher audio</button>
-            <span class="admin-tools__status" id="adminToolsStatus">Nenhuma acao em andamento.</span>
-          </div>
-        </div>
         <div class="grid" id="allGrid"></div>
         <div class="catalog-pagination" id="libraryPagination" hidden>
           <button class="btn" id="libraryPrevBtn" type="button">Anterior</button>
@@ -2814,23 +2783,6 @@
         </section>
       </div>
     </section>
-
-    <div class="admin-card-popover" id="adminCardPopover" aria-hidden="true">
-      <div class="admin-card-popover__panel">
-        <div>
-          <strong id="adminCardPopoverTitle">Acoes do flashcard</strong>
-          <div class="admin-tools__status">Apague imagem, audio ou o container inteiro.</div>
-        </div>
-        <div class="admin-card-popover__actions">
-          <button class="btn" id="adminDeleteImageBtn" type="button">Apagar foto</button>
-          <button class="btn" id="adminDeleteAudioBtn" type="button">Apagar audio</button>
-          <button class="btn" id="adminDeleteCardBtn" type="button">Apagar container</button>
-        </div>
-        <div class="admin-card-popover__actions" style="justify-content:flex-end">
-          <button class="btn" id="adminClosePopoverBtn" type="button">Fechar</button>
-        </div>
-      </div>
-    </div>
 
     <section class="game game-setup" id="gameSetup" aria-modal="true" role="dialog">
       <div class="panel game-shell game-setup__shell">
@@ -3581,7 +3533,7 @@
       }
 
       function accessibleFlashcardsCount() {
-        if (isAdminUser()) return state.allCards.length;
+        if (isAdminUser()) return userProgressCards().length;
         return userProgressCards().length;
       }
 
@@ -3983,10 +3935,12 @@
 
       function userProgressCards() {
         if (isAdminUser()) {
-          return state.allCards.map((card) => ({
+          return state.allCards
+            .filter((card) => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card))
+            .map((card) => ({
             ...card,
             progress: adminReadyProgressRecord(card.id)
-          }));
+            }));
         }
         advanceReadyMemorizations();
         return Array.from(state.userCards.values())
@@ -4040,7 +3994,7 @@
 
       function totalGameAvailableCards() {
         if (isAdminUser()) {
-          return state.allCards.length;
+          return userProgressCards().length;
         }
         return uniqueCardsById([
           ...baseCandidateCards(),
@@ -4096,7 +4050,7 @@
 
       function baseCandidateCards() {
         if (isAdminUser()) {
-          return state.allCards.slice();
+          return state.allCards.filter((card) => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
         }
         const lockedCards = state.allCards.filter(card => !state.userCards.has(card.id) && !isCardHiddenForUser(card.id));
         const playableLockedCards = lockedCards.filter(card => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
@@ -4342,7 +4296,7 @@
           return;
         }
 
-        const adminMode = isAdminUser();
+        const adminMode = isAdminUser() && Boolean(els.adminTools);
         target.innerHTML = cards.map(card => `
           <article class="mini-card" data-card-id="${escapeHtml(card.id)}">
             <div class="mini-card__image" ${adminMode ? `data-admin-image="${escapeHtml(card.id)}"` : ''}>
@@ -5476,15 +5430,12 @@
       function refreshLibrary() {
         const adminMode = isAdminUser();
         syncAdminTheme();
-        const cards = adminMode
-          ? currentAdminDeckCards().map(buildAdminLibraryCardView)
-          : userProgressCards().map(buildLibraryCardView);
+        const cards = userProgressCards().map(buildLibraryCardView);
         const visibleCards = currentLibraryPageSlice(cards);
         const username = state.user?.username ? ` de ${state.user.username}` : '';
-        const selectedDeck = adminMode ? selectedAdminDeckMeta() : null;
         if (els.libraryTitle) {
           els.libraryTitle.textContent = adminMode
-            ? (selectedDeck ? `Deck: ${selectedDeck.title}` : 'Flashcards do administrador')
+            ? 'Todos os flashcards'
             : 'Meus flashcards';
         }
         if (els.adminBadge) {
@@ -5492,14 +5443,14 @@
         }
         els.allSectionCopy.textContent = cards.length
           ? adminMode
-            ? `${cards.length} flashcards${username} com acesso total e selo Diamante.`
+            ? `${cards.length} flashcards${username} disponiveis no catalogo completo.`
             : `${cards.length} flashcards${username}.`
           : 'Zero flashcards por enquanto. Ganhe o primeiro para iniciar sua biblioteca.';
         renderMiniCards(
           els.allGrid,
           visibleCards,
           adminMode
-            ? 'Nenhum flashcard foi carregado para o administrador ainda.'
+            ? 'Nenhum flashcard disponivel no catalogo ainda.'
             : 'Zero flashcards aqui ainda. Jogue para ganhar o primeiro.'
         );
         renderLibraryPagination(cards.length);
