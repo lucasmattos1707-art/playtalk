@@ -4500,6 +4500,7 @@ app.post('/api/premium/redeem', async (req, res) => {
     res.json({
       success: true,
       message: `Premium liberado por ${matched.label}.`,
+      accessType: matched.key,
       user: mapPublicUser(user),
       premium: resolvePremiumState(user)
     });

@@ -3193,19 +3193,18 @@
     }
 
     .premium-gate__code {
-      min-height: 62px;
+      min-height: 92px;
       width: 100%;
       border-radius: 22px;
       border: 2px solid rgba(21, 126, 251, 0.12);
       background: #f8fbff;
-      display: grid;
-      place-items: center;
-      font-size: clamp(24px, 5vw, 34px);
-      font-weight: 900;
-      letter-spacing: 0.28em;
-      color: #157efb;
-      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
       transition: opacity 500ms ease, transform 500ms ease;
+      flex-wrap: wrap;
     }
 
     .premium-gate.is-visible .premium-gate__code,
@@ -3266,6 +3265,46 @@
       height: 100%;
       object-fit: cover;
       display: block;
+    }
+
+    .premium-gate__code-slot {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      border: 2px dashed rgba(21, 126, 251, 0.16);
+      display: grid;
+      place-items: center;
+      background: rgba(21, 126, 251, 0.03);
+      overflow: hidden;
+    }
+
+    .premium-gate__code-slot span {
+      color: #94a3b8;
+      font-weight: 800;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .premium-gate__code-slot img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .premium-gate__code-slot.is-flash {
+      animation: premium-slot-flash 260ms ease-in-out 2;
+    }
+
+    @keyframes premium-slot-flash {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(21, 126, 251, 0);
+      }
+      50% {
+        transform: scale(1.08);
+        box-shadow: 0 0 0 8px rgba(21, 126, 251, 0.18);
+      }
     }
 
     .premium-gate__status {
@@ -3601,7 +3640,7 @@
           <h2>Premium</h2>
           <p>Voce chegou em 8 cartas. Toque nas 16 imagens para digitar uma chave secreta de 7 letras.</p>
         </div>
-        <div class="premium-gate__code" id="premiumCodeValue">• • • • • • •</div>
+        <div class="premium-gate__code" id="premiumCodeValue"></div>
         <p class="premium-gate__status" id="premiumStatus">Toque nas imagens na ordem certa para digitar a chave.</p>
         <div class="premium-gate__grid" id="premiumGrid">
           <button class="premium-gate__tile" type="button" data-letter="A"><img src="/accesskey/a.png" alt="A"></button>
@@ -3701,8 +3740,14 @@
       const AUTH_GATE_FORM_REVEAL_MS = 1200;
       const WELCOME_COPY_ROTATION_MS = 2000;
       const WELCOME_COPY_MESSAGES = ['Flu\u00eancia f\u00e1cil', 'Toque para come\u00e7ar'];
-      const ACCESS_KEY_GRID_LETTERS = 'ABCDEFGHIJKLMNOP'.split('');
       const ACCESS_KEY_AUDIO_LIMIT_PATH = '/accesskey/limit.mp3';
+      const ACCESS_KEY_AUDIO_MESSAGE_PATH = '/accesskey/message.wav';
+      const ACCESS_KEY_AUDIO_INVALID_PATH = '/accesskey/invalidkey2.mp3';
+      const ACCESS_KEY_AUDIO_SUCCESS_PATHS = {
+        semana: '/accesskey/week.mp3',
+        mes: '/accesskey/month.mp3',
+        ano: '/accesskey/year.mp3'
+      };
       const FLASHCARD_REPORT_TYPES = [
         { key: 'blurred-image', label: 'Imagem borrada' },
         { key: 'weak-association', label: 'Associacao fraca' },
@@ -3846,7 +3891,8 @@
           premiumCode: '',
           premiumStatus: '',
           premiumBusy: false,
-          premiumAudioPlayed: false
+          premiumAudioPlayed: false,
+          premiumAudio: null
         }
       };
 
@@ -4835,8 +4881,14 @@
 
       function renderPremiumCode() {
         if (els.premiumCodeValue) {
-          const masked = state.ui.premiumCode.padEnd(7, '•').slice(0, 7).split('').join(' ');
-          els.premiumCodeValue.textContent = masked;
+          const slots = Array.from({ length: 7 }, (_, index) => {
+            const letter = state.ui.premiumCode[index] || '';
+            if (!letter) {
+              return '<div class="premium-gate__code-slot"><span>•</span></div>';
+            }
+            return                             `<div class="premium-gate__code-slot" data-filled-slot="${index}"><img src="/accesskey/${letter.toLowerCase()}.png" alt="${escapeHtml(letter)}"></div>`;
+          });
+          els.premiumCodeValue.innerHTML = slots.join('');
         }
         if (els.premiumStatus) {
           els.premiumStatus.textContent = state.ui.premiumStatus || 'Toque nas imagens na ordem certa para digitar a chave.';
@@ -4854,11 +4906,47 @@
         renderPremiumCode();
       }
 
+      function stopPremiumAudio() {
+        if (!state.ui.premiumAudio) return;
+        try {
+          state.ui.premiumAudio.pause();
+          state.ui.premiumAudio.currentTime = 0;
+        } catch (_error) {
+          // ignore
+        }
+        state.ui.premiumAudio = null;
+      }
+
+      function playPremiumAudio(src, { allowReplay = false } = {}) {
+        if (!src) return;
+        if (!allowReplay && state.ui.premiumAudio && state.ui.premiumAudio.src.endsWith(src)) {
+          return;
+        }
+        stopPremiumAudio();
+        const audio = new Audio(src);
+        state.ui.premiumAudio = audio;
+        const clearCurrent = () => {
+          if (state.ui.premiumAudio === audio) {
+            state.ui.premiumAudio = null;
+          }
+        };
+        audio.addEventListener('ended', clearCurrent, { once: true });
+        audio.addEventListener('error', clearCurrent, { once: true });
+        audio.play().catch(clearCurrent);
+      }
+
       function playPremiumLimitAudio() {
         if (state.ui.premiumAudioPlayed) return;
         state.ui.premiumAudioPlayed = true;
-        const audio = new Audio(ACCESS_KEY_AUDIO_LIMIT_PATH);
-        audio.play().catch(() => {});
+        playPremiumAudio(ACCESS_KEY_AUDIO_LIMIT_PATH);
+      }
+
+      function flashPremiumCodeSlots() {
+        els.premiumCodeValue?.querySelectorAll('.premium-gate__code-slot[data-filled-slot]').forEach((slot) => {
+          slot.classList.remove('is-flash');
+          void slot.offsetWidth;
+          slot.classList.add('is-flash');
+        });
       }
 
       function closePremiumGate(force = false) {
@@ -4910,12 +4998,15 @@
           if (updatedUser) {
             state.user = updatedUser;
           }
+          flashPremiumCodeSlots();
+          playPremiumAudio(ACCESS_KEY_AUDIO_SUCCESS_PATHS[payload?.accessType] || ACCESS_KEY_AUDIO_LIMIT_PATH, { allowReplay: true });
           state.ui.premiumCode = '';
           setPremiumStatus(payload?.message || 'Premium liberado com sucesso.');
           renderProfilePanel();
           renderMetrics();
           closePremiumGate(true);
         } catch (error) {
+          playPremiumAudio(ACCESS_KEY_AUDIO_INVALID_PATH, { allowReplay: true });
           state.ui.premiumCode = '';
           setPremiumStatus(error?.message || 'Chave invalida.');
         } finally {
@@ -4929,6 +5020,7 @@
         const normalized = safeText(letter).toUpperCase().replace(/[^A-P]/g, '');
         if (!normalized || state.ui.premiumCode.length >= 7) return;
         state.ui.premiumCode = `${state.ui.premiumCode}${normalized}`.slice(0, 7);
+        playPremiumAudio(ACCESS_KEY_AUDIO_MESSAGE_PATH, { allowReplay: true });
         renderPremiumCode();
         if (state.ui.premiumCode.length === 7) {
           void redeemPremiumAccessCode();
@@ -4936,6 +5028,7 @@
       }
 
       function syncPremiumGateVisibility() {
+
         if (shouldGatePremiumAccess()) {
           if (state.game.active) {
             void exitGame();
