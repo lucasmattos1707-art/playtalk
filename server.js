@@ -1885,6 +1885,12 @@ function isFlashcardPlaceholderImageValue(rawValue) {
   return extractedObjectKey === FLASHCARD_CAMERA_OBJECT_KEY;
 }
 
+function isFlashcardMagicImageSlotValue(rawValue) {
+  const trimmed = String(rawValue || '').trim();
+  if (!trimmed) return true;
+  return isFlashcardPlaceholderImageValue(trimmed);
+}
+
 function buildMagicFlashcardImagePrompt(target) {
   const english = String(target?.english || '').trim();
   const portuguese = String(target?.portuguese || '').trim();
@@ -5962,7 +5968,7 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
       const currentImage = readFlashcardItemImage(item);
       if (!item) return null;
       if (magicMode) {
-        if (!isFlashcardPlaceholderImageValue(currentImage)) return null;
+        if (!isFlashcardMagicImageSlotValue(currentImage)) return null;
       } else if (currentImage && !isFlashcardPlaceholderImageValue(currentImage)) {
         return null;
       }
@@ -6040,7 +6046,7 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
         const currentImage = readFlashcardItemImage(item);
         if (!item) continue;
         if (magicMode) {
-          if (!isFlashcardPlaceholderImageValue(currentImage)) continue;
+          if (!isFlashcardMagicImageSlotValue(currentImage)) continue;
         } else if (currentImage && !isFlashcardPlaceholderImageValue(currentImage)) {
           continue;
         }

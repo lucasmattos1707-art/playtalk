@@ -4190,6 +4190,10 @@
         return Boolean(imageUrl && !isFlashcardPlaceholderImageUrl(imageUrl));
       }
 
+      function isAdminMagicImageSlot(card) {
+        return !hasPlayableFlashcardImage(card);
+      }
+
       function adminCardDisplayImageUrl(card) {
         const imageUrl = safeText(card?.imageUrl);
         if (imageUrl && !isFlashcardPlaceholderImageUrl(imageUrl)) {
@@ -4914,7 +4918,7 @@
             return !hasPlayableFlashcardImage(card) && safeText(card?.english) && safeText(card?.portuguese);
           }
           if (kind === 'magic') {
-            return isFlashcardPlaceholderImageUrl(card?.imageUrl) && safeText(card?.english) && safeText(card?.portuguese);
+            return isAdminMagicImageSlot(card) && safeText(card?.english) && safeText(card?.portuguese);
           }
           if (kind === 'audio') {
             return !safeText(card?.audioUrl);
@@ -5399,13 +5403,13 @@
             }
           }
           if (kind === 'magic') {
-            const cardsWithCamera = currentVisibleAdminCards().filter((card) => isFlashcardPlaceholderImageUrl(card?.imageUrl));
+            const cardsWithCamera = currentVisibleAdminCards().filter((card) => isAdminMagicImageSlot(card));
             if (cardsWithCamera.length) {
-              setAdminToolsStatus('Preencha Portugues e Ingles dos cards com camera.webp antes de usar o Magic.', true);
+              setAdminToolsStatus('Preencha Portugues e Ingles dos cards sem imagem real antes de usar o Magic.', true);
               syncAdminTools();
               return;
             }
-            setAdminToolsStatus('Nenhuma imagem camera.webp nesta pagina para o Magic.', false);
+            setAdminToolsStatus('Nenhum slot vazio de imagem nesta pagina para o Magic.', false);
             syncAdminTools();
             return;
           }
