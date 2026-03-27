@@ -1982,13 +1982,27 @@
       transition: filter 260ms ease;
     }
 
+    @property --flashcards-mic-progress {
+      syntax: '<number>';
+      inherits: false;
+      initial-value: 0;
+    }
+
     .game-card__visual.is-mic-live::before {
       content: "";
       position: absolute;
       inset: 0;
       border-radius: 50%;
+      --flashcards-mic-progress: 0;
       padding: 15px;
-      background: linear-gradient(135deg, #ffb347 0%, #ff8c1a 52%, #ff6a00 100%);
+      background:
+        conic-gradient(
+          from -90deg,
+          #ffb347 0turn,
+          #ff8c1a calc(var(--flashcards-mic-progress) * 0.62turn),
+          #ff6a00 calc(var(--flashcards-mic-progress) * 1turn),
+          rgba(255, 157, 43, 0.14) 0turn
+        );
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
@@ -1996,6 +2010,14 @@
       transform-origin: center center;
       pointer-events: none;
       z-index: 5;
+      animation: flashcardsMicRingFill 500ms ease-out forwards;
+    }
+
+    .star.is-lost {
+      opacity: 0.22;
+      filter: saturate(0.25) brightness(0.88);
+      transform: translateY(2px) scale(0.96);
+      transition: opacity 220ms ease, filter 220ms ease, transform 220ms ease;
     }
 
     .game-card.is-listening {
@@ -2698,6 +2720,17 @@
       100% {
         opacity: 1;
         transform: scale(1.03);
+      }
+    }
+
+    @keyframes flashcardsMicRingFill {
+      0% {
+        --flashcards-mic-progress: 0;
+        opacity: 0.45;
+      }
+      100% {
+        --flashcards-mic-progress: 1;
+        opacity: 1;
       }
     }
 
@@ -3434,6 +3467,7 @@
       const SUCCESS_SOUND_PATH = 'gamesounds/success.mp3';
       const FOUR_STARS_SOUND_PATH = 'newsongs/4stars.mp3';
       const FIVE_STARS_SOUND_PATH = 'newsongs/5stars.mp3';
+      const LESS_SOUND_PATH = 'svgnovo/less.wav';
       const REPORT_SOUND_PATH = 'thesongs/report.wav';
       const TYPING_KEY_SOUND_PATH = 'sounds/type.mp3';
       const TYPING_KEY_FLASH_MS = 500;
@@ -4401,6 +4435,7 @@
       function shouldShowWelcomeGate() {
         if (state.entry.authRequired || state.game.active || state.watch.active || isAdminUser()) return false;
         if (state.game.tutorial.completed) return false;
+        if (hasTutorialPlanetUnlocked()) return false;
         return !state.entry.cardsReady || Boolean(findTutorialPlanetCard());
       }
 
@@ -4618,6 +4653,11 @@
         }
         if (state.watch.active && nextView !== 'play') {
           stopWatch();
+        }
+        if (nextView !== 'play') {
+          closeGameSetup();
+          closeWatchPopover();
+          document.body.classList.remove('game-open');
         }
         if (nextView === 'play') {
           switchMainView('play');
@@ -5079,6 +5119,12 @@
         }) || null;
       }
 
+      function hasTutorialPlanetUnlocked() {
+        const tutorialCard = findTutorialPlanetCard();
+        if (!tutorialCard) return false;
+        return state.userCards.has(tutorialCard.id) || state.ownedIds.has(tutorialCard.id);
+      }
+
       function isTutorialPlanetCard(cardOrId) {
         const tutorialCard = findTutorialPlanetCard();
         const card = typeof cardOrId === 'string' ? cardById(cardOrId) : cardOrId;
@@ -5090,7 +5136,12 @@
       }
 
       function canOfferTutorialMode() {
-        return Boolean(!isAdminUser() && !state.game.tutorial.completed && findTutorialPlanetCard());
+        return Boolean(
+          !isAdminUser()
+          && !state.game.tutorial.completed
+          && !hasTutorialPlanetUnlocked()
+          && findTutorialPlanetCard()
+        );
       }
 
       function syncTutorialSetupButton() {
@@ -6946,6 +6997,21 @@
         }
       }
 
+      function renderStarsLossState(initialStars, lostCount) {
+        els.gameStars.innerHTML = '';
+        const safeInitialStars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(initialStars) || 0));
+        const safeLostCount = Math.max(0, Math.min(safeInitialStars, Number(lostCount) || 0));
+        for (let index = 0; index < GAME_STAR_TARGET; index += 1) {
+          const star = document.createElement('img');
+          const isEarned = index < safeInitialStars;
+          const isLost = isEarned && index >= (safeInitialStars - safeLostCount);
+          star.className = `star${isEarned ? ' is-on' : ''}${isLost ? ' is-lost' : ''}`;
+          star.src = STAR_ICON_PATH;
+          star.alt = '';
+          els.gameStars.appendChild(star);
+        }
+      }
+
       function clearGameLanguageSwapTimer() {
         if (state.game.languageSwapTimer) {
           window.clearInterval(state.game.languageSwapTimer);
@@ -7299,6 +7365,24 @@
           // ignore
         }
         playAudioWithSoftEnd(audio).catch?.(() => {});
+      }
+
+      function playLessAudio() {
+        const resolved = resolveInlineMediaUrl(LESS_SOUND_PATH);
+        if (!resolved) return;
+        if (!state.game.milestoneAudios.has(resolved)) {
+          const audio = new Audio(resolved);
+          audio.preload = 'auto';
+          state.game.milestoneAudios.set(resolved, audio);
+        }
+        const audio = state.game.milestoneAudios.get(resolved);
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+        } catch (_error) {
+          // ignore
+        }
+        audio.play().catch(() => {});
       }
 
       function triggerFourStarGlow() {
@@ -7667,6 +7751,23 @@
 
       function renderImmediateHitFeedback(stars) {
         renderStars(stars);
+      }
+
+      async function animateStarLossSequence(stars, card) {
+        const totalStars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(stars) || 0));
+        if (!totalStars) {
+          renderStars(0);
+          return;
+        }
+        renderStarsLossState(totalStars, 0);
+        const voicePlayback = Promise.resolve(playPromptAudio(card, { rate: 0.7 })).catch(() => false);
+        for (let lostCount = 1; lostCount <= totalStars; lostCount += 1) {
+          await wait(750);
+          playLessAudio();
+          renderStarsLossState(totalStars, lostCount);
+        }
+        await voicePlayback;
+        renderStars(0);
       }
 
       function shouldUseLongChipLayout(text) {
@@ -8593,12 +8694,14 @@
             showStageTwoPortugueseHint(card);
           }
           if (entry.stars > 0) {
+            const starsBeforeMiss = entry.stars;
             entry.stars = 0;
             entry.stage = 1;
             entry.missesWithoutStars = 0;
             entry.typingMistakes = 0;
             setGameStatus('', 'miss');
             state.game.queue.push(entry.id);
+            await animateStarLossSequence(starsBeforeMiss, card);
           } else {
             entry.missesWithoutStars += 1;
             if (entry.missesWithoutStars >= 3) {
@@ -8655,7 +8758,7 @@
         }
 
         cleanupGameRecognition();
-        await fadeOutActiveAudio(500);
+        stopActiveAudio();
         state.game.listening = true;
         els.gameTouchBtn.classList.add('is-busy');
         els.gameCard.classList.add('is-listening');
