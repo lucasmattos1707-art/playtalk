@@ -1426,6 +1426,7 @@ const FLASHCARDS_R2_PUBLIC_ROOT = (() => {
   return DEFAULT_FLASHCARDS_R2_PUBLIC_ROOT;
 })();
 const FLASHCARDS_R2_PREFIX = 'FlashCards';
+const FLASHCARD_CAMERA_OBJECT_KEY = `${FLASHCARDS_R2_PREFIX}/camera.webp`;
 const DEFAULT_GAME_SOUNDS_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/gamesounds';
 const GAME_SOUNDS_BASE_URL = (process.env.GAME_SOUNDS_BASE_URL || DEFAULT_GAME_SOUNDS_BASE_URL).trim();
 const EMPTY_R2_PAYLOAD_HASH = require('crypto').createHash('sha256').update('').digest('hex');
@@ -1869,6 +1870,19 @@ function encodePublicUrlPath(pathValue) {
 
 function buildFlashcardsR2PublicUrl(objectKey) {
   return `${FLASHCARDS_R2_PUBLIC_ROOT}/${encodePublicUrlPath(objectKey)}`;
+}
+
+function getFlashcardPlaceholderImageUrl() {
+  return buildFlashcardsR2PublicUrl(FLASHCARD_CAMERA_OBJECT_KEY);
+}
+
+function isFlashcardPlaceholderImageValue(rawValue) {
+  const trimmed = String(rawValue || '').trim();
+  if (!trimmed) return false;
+  if (trimmed === FLASHCARD_CAMERA_OBJECT_KEY) return true;
+  if (trimmed === getFlashcardPlaceholderImageUrl()) return true;
+  const extractedObjectKey = tryExtractFlashcardsR2ObjectKey(trimmed);
+  return extractedObjectKey === FLASHCARD_CAMERA_OBJECT_KEY;
 }
 
 function normalizeFlashcardsDeckSegment(value, fallback = 'deck') {
@@ -2512,13 +2526,17 @@ async function publishFlashcardDeckToR2FromSource(sourceInfo, payload) {
     const audioValue = readFlashcardItemAudio(item);
 
     if (imageValue) {
-      const imageAsset = await readFlashcardAssetBuffer(imageValue);
-      if (imageAsset?.buffer?.length) {
-        const imageExtension = path.extname(String(imageValue || '')).toLowerCase() || '.webp';
-        const imageFileName = `${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${imageExtension}`;
-        const imageObjectKey = `${remoteDeck.imagesFolder}/${imageFileName}`;
-        await putR2Object(imageObjectKey, imageAsset.buffer, imageAsset.contentType || contentTypeFromObjectKey(imageObjectKey));
-        setFlashcardItemImage(nextItem, buildFlashcardsR2PublicUrl(imageObjectKey));
+      if (isFlashcardPlaceholderImageValue(imageValue)) {
+        setFlashcardItemImage(nextItem, getFlashcardPlaceholderImageUrl());
+      } else {
+        const imageAsset = await readFlashcardAssetBuffer(imageValue);
+        if (imageAsset?.buffer?.length) {
+          const imageExtension = path.extname(String(imageValue || '')).toLowerCase() || '.webp';
+          const imageFileName = `${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${imageExtension}`;
+          const imageObjectKey = `${remoteDeck.imagesFolder}/${imageFileName}`;
+          await putR2Object(imageObjectKey, imageAsset.buffer, imageAsset.contentType || contentTypeFromObjectKey(imageObjectKey));
+          setFlashcardItemImage(nextItem, buildFlashcardsR2PublicUrl(imageObjectKey));
+        }
       }
     }
 
@@ -2719,7 +2737,7 @@ function buildEditableFlashcardItemTemplate() {
   return {
     nomePortugues: '',
     nomeIngles: '',
-    imagem: '',
+    imagem: getFlashcardPlaceholderImageUrl(),
     audio: '',
     categoria: 'flashcard'
   };
@@ -5851,6 +5869,9 @@ app.post('/api/admin/flashcards/save-drafts', express.json({ limit: '2mb' }), as
         const item = buildEditableFlashcardItemTemplate();
         setFlashcardItemPortuguese(item, clampGeneratedFlashcardText(entry?.portuguese, 32));
         setFlashcardItemEnglish(item, clampGeneratedFlashcardText(entry?.english, 32));
+        if (typeof entry?.imageUrl === 'string' && entry.imageUrl.trim()) {
+          setFlashcardItemImage(item, entry.imageUrl.trim());
+        }
         if (typeof entry?.category === 'string' && entry.category.trim()) {
           item.categoria = entry.category.trim();
         }
@@ -5920,7 +5941,8 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
       const sourceIndex = Number.parseInt(card?.sourceIndex, 10);
       const sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
       const item = sourceEntry?.items?.[sourceIndex];
-      if (!item || readFlashcardItemImage(item)) return null;
+      const currentImage = readFlashcardItemImage(item);
+      if (!item || (currentImage && !isFlashcardPlaceholderImageValue(currentImage))) return null;
       const english = readFlashcardItemEnglish(item);
       const portuguese = readFlashcardItemPortuguese(item);
       if (!english || !portuguese) return null;
@@ -5990,7 +6012,8 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
 
         const sourceEntry = sourceMap.get(target.source);
         const item = sourceEntry?.items?.[target.sourceIndex];
-        if (!item || readFlashcardItemImage(item)) continue;
+        const currentImage = readFlashcardItemImage(item);
+        if (!item || (currentImage && !isFlashcardPlaceholderImageValue(currentImage))) continue;
 
         setFlashcardItemImage(item, buildPublicAssetUrl(assetRelativePath));
         updated.push({
@@ -6230,7 +6253,7 @@ app.post('/api/admin/flashcards/delete-asset', express.json({ limit: '1mb' }), a
     }
 
     if (kind === 'image') {
-      setFlashcardItemImage(item, '');
+      setFlashcardItemImage(item, getFlashcardPlaceholderImageUrl());
     } else {
       setFlashcardItemAudio(item, '');
     }

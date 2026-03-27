@@ -2944,6 +2944,8 @@
   <script>
     (() => {
       const FLASHCARDS_R2_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/FlashCards';
+      const FLASHCARD_CAMERA_OBJECT_KEY = 'FlashCards/camera.webp';
+      const FLASHCARD_CAMERA_IMAGE_URL = `${FLASHCARDS_R2_ROOT}/camera.webp`;
       const DATA_MANIFEST_REMOTE_PATH = `${FLASHCARDS_R2_ROOT}/manifest.json`;
       const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
       const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
@@ -3980,6 +3982,7 @@
             const card = state.allCards.find(item => item.id === record.cardId);
             if (!card) return null;
             if (isCardHiddenForUser(card.id)) return null;
+            if (!hasCoreFlashcardText(card) || !hasPlayableFlashcardImage(card)) return null;
             return { ...card, progress: record };
           })
           .filter(Boolean)
@@ -4020,11 +4023,17 @@
           .filter(record => record.status === 'ready' && (record.phaseIndex || 0) >= 1)
           .sort((left, right) => (Number(left.returnedAt) || 0) - (Number(right.returnedAt) || 0))
           .map(record => state.allCards.find(card => card.id === record.cardId))
-          .filter(card => card && !isCardHiddenForUser(card.id) && hasCoreFlashcardText(card));
+          .filter(card => card && !isCardHiddenForUser(card.id) && hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
       }
 
       function totalGameAvailableCards() {
-        return state.allCards.length;
+        if (isAdminUser()) {
+          return state.allCards.length;
+        }
+        return uniqueCardsById([
+          ...baseCandidateCards(),
+          ...readyReviewCards()
+        ]).length;
       }
 
       function syncGameSetupSummary() {
@@ -4078,7 +4087,7 @@
           return state.allCards.slice();
         }
         const lockedCards = state.allCards.filter(card => !state.userCards.has(card.id) && !isCardHiddenForUser(card.id));
-        const playableLockedCards = lockedCards.filter(hasCoreFlashcardText);
+        const playableLockedCards = lockedCards.filter(card => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
         if (state.userCards.size >= EARLY_FLASHCARD_LIMIT) {
           return playableLockedCards;
         }
@@ -4140,6 +4149,41 @@
 
       function hasCoreFlashcardText(card) {
         return Boolean(safeText(card?.english) && safeText(card?.portuguese));
+      }
+
+      function normalizeFlashcardImageSource(value) {
+        const text = safeText(value);
+        if (!text) return '';
+        if (/^https?:\/\//i.test(text)) {
+          try {
+            const parsed = new URL(text);
+            return String(parsed.pathname || '').replace(/^\/+/, '');
+          } catch (_error) {
+            return text.replace(/^\/+/, '');
+          }
+        }
+        const proxyMatch = text.match(/^\/?api\/r2-media\/(.+)$/i);
+        if (proxyMatch) {
+          return safeText(proxyMatch[1]);
+        }
+        return text.replace(/^\/+/, '');
+      }
+
+      function isFlashcardPlaceholderImageUrl(value) {
+        return normalizeFlashcardImageSource(value) === FLASHCARD_CAMERA_OBJECT_KEY;
+      }
+
+      function hasPlayableFlashcardImage(card) {
+        const imageUrl = safeText(card?.imageUrl);
+        return Boolean(imageUrl && !isFlashcardPlaceholderImageUrl(imageUrl));
+      }
+
+      function adminCardDisplayImageUrl(card) {
+        const imageUrl = safeText(card?.imageUrl);
+        if (imageUrl && !isFlashcardPlaceholderImageUrl(imageUrl)) {
+          return imageUrl;
+        }
+        return FLASHCARD_CAMERA_IMAGE_URL;
       }
 
       function normalizeFlashcardsDataPath(path) {
@@ -4286,8 +4330,8 @@
         target.innerHTML = cards.map(card => `
           <article class="mini-card" data-card-id="${escapeHtml(card.id)}">
             <div class="mini-card__image" ${adminMode ? `data-admin-image="${escapeHtml(card.id)}"` : ''}>
-              ${card.imageUrl
-                ? `<img src="${escapeHtml(card.imageUrl)}" alt="${escapeHtml(card.english || card.portuguese || card.deckTitle)}" style="${escapeHtml(card.imageStyle || '')}">`
+              ${safeText(card.imageDisplayUrl || card.imageUrl)
+                ? `<img src="${escapeHtml(card.imageDisplayUrl || card.imageUrl)}" alt="${escapeHtml(card.english || card.portuguese || card.deckTitle)}" style="${escapeHtml(card.imageStyle || '')}">`
                 : (card.imageFallbackMarkup || `<div class="mini-card__fallback">${escapeHtml(card.deckTitle)}</div>`)}
               ${card.sealMarkup || ''}
               ${card.loaderMarkup || ''}
@@ -4369,19 +4413,9 @@
       }
 
       function buildAdminLibraryCardView(card) {
-        const isEmptySlot = !card.imageUrl;
+        const isEmptySlot = !hasPlayableFlashcardImage(card);
         const sealOpacity = card.audioUrl ? 1 : (isEmptySlot ? 0.3 : 0.2);
         const sealMarkup = `<button class="mini-card__seal-btn" type="button" data-admin-audio="${escapeHtml(card.id)}" aria-label="Ouvir audio do flashcard" ${card.audioUrl ? '' : 'disabled'}><img class="mini-card__seal" src="${escapeHtml(phaseMeta(5).sealPath)}" alt="${escapeHtml(phaseMeta(5).label)}" style="--seal-opacity:${escapeHtml(String(sealOpacity))}"></button>`;
-        const emptyImageSlotMarkup = `
-          <div class="mini-card__fallback is-empty-slot" aria-hidden="true">
-            <span class="mini-card__fallback-icon">
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M7.75 6.5h8.5c.7 0 1.29.44 1.53 1.06l.27.69h.95a2.5 2.5 0 0 1 2.5 2.5v5.5a2.5 2.5 0 0 1-2.5 2.5H5a2.5 2.5 0 0 1-2.5-2.5v-5.5a2.5 2.5 0 0 1 2.5-2.5h.95l.27-.69A1.64 1.64 0 0 1 7.75 6.5Z" fill="rgba(255,255,255,0.18)" stroke="white" stroke-width="1.4"/>
-                <circle cx="9" cy="11" r="1.75" fill="white"/>
-                <path d="M6.8 17.2l3.05-3.12a1.1 1.1 0 0 1 1.6.03l1.64 1.79 1.84-2.04a1.1 1.1 0 0 1 1.63-.02l2.64 2.82" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-          </div>`;
         const reportCounts = state.admin.reportCounts.get(card.id) || {};
         const reportsMarkup = FLASHCARD_REPORT_TYPES
           .filter((item) => Number(reportCounts?.[item.key] || 0) > 0)
@@ -4392,14 +4426,13 @@
           progress: adminReadyProgressRecord(card.id),
           displayEnglish: card.english || card.portuguese || card.deckTitle,
           displayPortuguese: card.portuguese || '',
+          imageDisplayUrl: adminCardDisplayImageUrl(card),
           imageStyle: '',
           loaderMarkup: '',
           progressMarkup: '',
           sealMarkup,
           reportsMarkup: reportsMarkup ? `<div class="mini-card__reports">${reportsMarkup}</div>` : '',
-          imageFallbackMarkup: isEmptySlot
-            ? emptyImageSlotMarkup
-            : `<div class="mini-card__fallback">${escapeHtml(card.deckTitle)}</div>`,
+          imageFallbackMarkup: `<div class="mini-card__fallback">${escapeHtml(card.deckTitle)}</div>`,
           wordMarkup: `<div class="mini-card__empty-field mini-card__editable" contenteditable="plaintext-only" spellcheck="false" data-card-id="${escapeHtml(card.id)}" data-admin-edit-field="portuguese" data-original-value="${escapeHtml(card.portuguese || '')}">${escapeHtml(card.portuguese || 'Portugues')}</div>`,
           subwordMarkup: `<div class="mini-card__empty-field mini-card__editable" contenteditable="plaintext-only" spellcheck="false" data-card-id="${escapeHtml(card.id)}" data-admin-edit-field="english" data-original-value="${escapeHtml(card.english || '')}">${escapeHtml(card.english || 'Ingles')}</div>`
         };
@@ -4428,7 +4461,7 @@
           source: safeText(source),
           sourceIndex: -1,
           deckTitle: safeText(deckTitle) || 'Deck',
-          imageUrl: '',
+          imageUrl: FLASHCARD_CAMERA_IMAGE_URL,
           english: '',
           portuguese: '',
           audioUrl: '',
@@ -4821,7 +4854,7 @@
             return !safeText(card?.english) || !safeText(card?.portuguese);
           }
           if (kind === 'image') {
-            return !safeText(card?.imageUrl) && safeText(card?.english) && safeText(card?.portuguese);
+            return !hasPlayableFlashcardImage(card) && safeText(card?.english) && safeText(card?.portuguese);
           }
           if (kind === 'audio') {
             return !safeText(card?.audioUrl);
@@ -4939,6 +4972,7 @@
           source: card.source,
           deckTitle: card.deckTitle,
           category: card.category,
+          imageUrl: card.imageUrl,
           portuguese: card.portuguese,
           english: card.english
         }));
@@ -5291,7 +5325,7 @@
         const label = kind === 'text' ? 'textos' : kind === 'image' ? 'imagens' : 'audios';
         if (!targets.length) {
           if (kind === 'image') {
-            const cardsMissingImage = currentVisibleAdminCards().filter((card) => !safeText(card?.imageUrl));
+            const cardsMissingImage = currentVisibleAdminCards().filter((card) => !hasPlayableFlashcardImage(card));
             if (cardsMissingImage.length) {
               setAdminToolsStatus('Preencha Portugues e Ingles dos cards vazios antes de gerar imagens.', true);
               syncAdminTools();

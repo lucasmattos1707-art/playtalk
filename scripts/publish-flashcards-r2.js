@@ -4,6 +4,7 @@ const { spawnSync } = require('child_process');
 
 const DEFAULT_R2_PUBLIC_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
 const DEFAULT_PREFIX = 'FlashCards';
+const FLASHCARD_CAMERA_OBJECT_KEY = `${DEFAULT_PREFIX}/camera.webp`;
 
 function loadDotEnv() {
   const envPath = path.join(__dirname, '..', '.env');
@@ -80,6 +81,28 @@ function parseArgs(argv) {
 function normalizePublicRoot(value) {
   const normalized = String(value || '').trim().replace(/\/+$/g, '');
   return normalized || DEFAULT_R2_PUBLIC_ROOT;
+}
+
+function buildFlashcardCameraUrl(publicRoot) {
+  return `${normalizePublicRoot(publicRoot)}/${FLASHCARD_CAMERA_OBJECT_KEY}`;
+}
+
+function normalizeFlashcardImageSource(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (/^https?:\/\//i.test(text)) {
+    try {
+      const parsed = new URL(text);
+      return String(parsed.pathname || '').replace(/^\/+/, '');
+    } catch (_error) {
+      return text.replace(/^\/+/, '');
+    }
+  }
+  return text.replace(/^\/+/, '');
+}
+
+function isFlashcardCameraPlaceholder(value) {
+  return normalizeFlashcardImageSource(value) === FLASHCARD_CAMERA_OBJECT_KEY;
 }
 
 function buildConfig(options) {
@@ -180,6 +203,9 @@ function rewriteDeckAssetsForBundle(payload, options) {
   };
 
   const copyAssetForDeck = (rawValue, kind, prefixLabel) => {
+    if (kind === 'image' && isFlashcardCameraPlaceholder(rawValue)) {
+      return buildFlashcardCameraUrl(options.config.publicRoot);
+    }
     const localAssetPath = tryResolveLocalAssetPath(rawValue, options.config);
     if (!localAssetPath) {
       return String(rawValue || '').trim();
