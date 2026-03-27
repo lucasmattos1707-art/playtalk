@@ -1885,6 +1885,23 @@ function isFlashcardPlaceholderImageValue(rawValue) {
   return extractedObjectKey === FLASHCARD_CAMERA_OBJECT_KEY;
 }
 
+function buildMagicFlashcardImagePrompt(target) {
+  const english = String(target?.english || '').trim();
+  const portuguese = String(target?.portuguese || '').trim();
+  const deckTitle = String(target?.deckTitle || '').trim();
+  const literalText = english || portuguese || deckTitle || 'flashcard';
+  const bilingualHint = english && portuguese
+    ? ` (${portuguese} in Portuguese)`
+    : '';
+  return [
+    'Create a photorealistic image for a language-learning app.',
+    `Represent the sentence directly and literally: "${literalText}"${bilingualHint}.`,
+    deckTitle ? `Deck context: "${deckTitle}".` : '',
+    'Real-life scene, realistic textures, believable materials, natural lighting, adult people only when people are needed, no children, no text, no letters, no captions.',
+    'Square composition, simple background, direct and easy to understand at a glance.'
+  ].filter(Boolean).join(' ');
+}
+
 function normalizeFlashcardsDeckSegment(value, fallback = 'deck') {
   const cleaned = String(value || '')
     .replace(/[\\\/]+/g, '-')
@@ -5925,12 +5942,13 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
 
     const cards = Array.isArray(req.body?.cards) ? req.body.cards.slice(0, 30) : [];
     const basePrompt = typeof req.body?.basePrompt === 'string' ? req.body.basePrompt.trim() : '';
+    const magicMode = req.body?.magicMode === true;
 
     if (!cards.length) {
       res.status(400).json({ error: 'Nenhum flashcard foi enviado para preencher imagem.' });
       return;
     }
-    if (!basePrompt) {
+    if (!magicMode && !basePrompt) {
       res.status(400).json({ error: 'Digite um prompt no campo de texto antes de preencher imagens.' });
       return;
     }
@@ -5942,7 +5960,12 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
       const sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
       const item = sourceEntry?.items?.[sourceIndex];
       const currentImage = readFlashcardItemImage(item);
-      if (!item || (currentImage && !isFlashcardPlaceholderImageValue(currentImage))) return null;
+      if (!item) return null;
+      if (magicMode) {
+        if (!isFlashcardPlaceholderImageValue(currentImage)) return null;
+      } else if (currentImage && !isFlashcardPlaceholderImageValue(currentImage)) {
+        return null;
+      }
       const english = readFlashcardItemEnglish(item);
       const portuguese = readFlashcardItemPortuguese(item);
       if (!english || !portuguese) return null;
@@ -5967,11 +5990,13 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
 
     for (const target of targets) {
       try {
-        const prompt = [
-          basePrompt,
-          `Portuguese: ${target.portuguese}`,
-          `English: ${target.english}`
-        ].filter(Boolean).join('\n');
+        const prompt = magicMode
+          ? buildMagicFlashcardImagePrompt(target)
+          : [
+              basePrompt,
+              `Portuguese: ${target.portuguese}`,
+              `English: ${target.english}`
+            ].filter(Boolean).join('\n');
 
         const upstreamResponse = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
@@ -6013,7 +6038,12 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
         const sourceEntry = sourceMap.get(target.source);
         const item = sourceEntry?.items?.[target.sourceIndex];
         const currentImage = readFlashcardItemImage(item);
-        if (!item || (currentImage && !isFlashcardPlaceholderImageValue(currentImage))) continue;
+        if (!item) continue;
+        if (magicMode) {
+          if (!isFlashcardPlaceholderImageValue(currentImage)) continue;
+        } else if (currentImage && !isFlashcardPlaceholderImageValue(currentImage)) {
+          continue;
+        }
 
         setFlashcardItemImage(item, buildPublicAssetUrl(assetRelativePath));
         updated.push({

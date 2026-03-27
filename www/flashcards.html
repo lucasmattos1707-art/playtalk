@@ -637,6 +637,13 @@
       border-color: rgba(97, 242, 164, 0.38);
     }
 
+    .btn-magic {
+      color: #ffffff;
+      background: linear-gradient(135deg, #7d36ff 0%, #b34dff 52%, #ff63c3 100%);
+      border-color: rgba(205, 129, 255, 0.72);
+      box-shadow: 0 14px 28px rgba(92, 33, 184, 0.28);
+    }
+
     .grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 14px;
@@ -2720,6 +2727,10 @@
             <button class="btn btn-primary" id="adminSubmitPasteBtn" type="button">Enviar</button>
             <button class="btn" id="adminFillTextBtn" type="button">Preencher texto</button>
             <button class="btn" id="adminFillImageBtn" type="button">Preencher imagem</button>
+            <button class="btn btn-magic" id="adminMagicBtn" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.5 2.78 5.63 6.22.9-4.5 4.39 1.06 6.2L12 16.7 6.44 19.62l1.06-6.2L3 9.03l6.22-.9L12 2.5Z"/></svg>
+              <span class="btn__label">Magic</span>
+            </button>
             <button class="btn" id="adminFillAudioBtn" type="button">Preencher audio</button>
             <span class="admin-tools__status" id="adminToolsStatus">Nenhuma acao em andamento.</span>
           </div>
@@ -3114,6 +3125,7 @@
         adminSubmitPasteBtn: document.getElementById('adminSubmitPasteBtn'),
           adminFillTextBtn: document.getElementById('adminFillTextBtn'),
           adminFillImageBtn: document.getElementById('adminFillImageBtn'),
+          adminMagicBtn: document.getElementById('adminMagicBtn'),
           adminFillAudioBtn: document.getElementById('adminFillAudioBtn'),
           adminToolsStatus: document.getElementById('adminToolsStatus'),
           adminCardPopover: document.getElementById('adminCardPopover'),
@@ -4624,6 +4636,25 @@
           syncAdminDeckSelect();
           return;
         }
+        const catalogDecks = Array.isArray(state.deckCatalog)
+          ? state.deckCatalog
+            .map((deck) => ({
+              source: safeText(deck?.source),
+              title: safeText(deck?.title) || safeText(deck?.source) || 'Deck',
+              coverImage: '',
+              count: Number.isFinite(Number(deck?.count)) ? Math.max(0, Number(deck.count)) : 0
+            }))
+            .filter((deck) => deck.source)
+            .sort((left, right) => safeText(left?.title).localeCompare(safeText(right?.title), 'pt-BR', {
+              sensitivity: 'base',
+              numeric: true
+            }))
+          : [];
+        if (catalogDecks.length) {
+          state.admin.decks = catalogDecks;
+          syncAdminDeckSelect();
+          return;
+        }
         try {
           const response = await fetch(buildApiUrl('/api/admin/flashcards/decks'), {
             headers: buildAuthHeaders(),
@@ -4785,6 +4816,13 @@
           els.adminFillImageBtn.disabled = state.admin.busy || !adminMode;
           els.adminFillImageBtn.textContent = state.admin.busy ? 'Processando...' : 'Preencher imagem';
         }
+        if (els.adminMagicBtn) {
+          els.adminMagicBtn.disabled = state.admin.busy || !adminMode;
+          const magicLabel = els.adminMagicBtn.querySelector('.btn__label');
+          if (magicLabel) {
+            magicLabel.textContent = state.admin.busy ? 'Processando...' : 'Magic';
+          }
+        }
         if (els.adminFillAudioBtn) {
           els.adminFillAudioBtn.disabled = state.admin.busy || !adminMode;
           els.adminFillAudioBtn.textContent = state.admin.busy ? 'Processando...' : 'Preencher audio';
@@ -4855,6 +4893,9 @@
           }
           if (kind === 'image') {
             return !hasPlayableFlashcardImage(card) && safeText(card?.english) && safeText(card?.portuguese);
+          }
+          if (kind === 'magic') {
+            return isFlashcardPlaceholderImageUrl(card?.imageUrl) && safeText(card?.english) && safeText(card?.portuguese);
           }
           if (kind === 'audio') {
             return !safeText(card?.audioUrl);
@@ -5040,12 +5081,18 @@
             waitingMessage: `Publicando "${deckTitle}" no R2...`,
             successMessage: `Deck "${deckTitle}" criado.`
           });
+          const publishedDeckEntry = Array.isArray(payload?.publishedDecks) ? payload.publishedDecks[0] : null;
+          const remoteSource = safeText(
+            publishedDeckEntry?.manifestEntry?.source
+            || publishedDeckEntry?.source
+            || payload?.source
+          );
           const refreshed = await tryRefreshPublishedFlashcards();
           if (!refreshed) {
             state.admin.decks = [
-              ...state.admin.decks.filter((deck) => safeText(deck?.source) !== safeText(payload?.source)),
+              ...state.admin.decks.filter((deck) => safeText(deck?.source) !== remoteSource),
               {
-                source: safeText(payload?.source),
+                source: remoteSource,
                 title: safeText(payload?.title) || deckTitle,
                 coverImage: safeText(payload?.coverImage),
                 count: 0
@@ -5056,7 +5103,7 @@
             }));
             syncAdminDeckSelect();
           }
-          state.admin.selectedDeckSource = safeText(payload?.source);
+          state.admin.selectedDeckSource = remoteSource;
           state.libraryPage = 1;
           refreshLibrary();
           state.admin.status = refreshed
@@ -5302,7 +5349,7 @@
 
       async function runAdminFlashcardFill(kind) {
         if (!isAdminUser() || state.admin.busy) return;
-        if (kind !== 'text' && kind !== 'image' && adminHasPendingChanges()) {
+        if (kind !== 'text' && kind !== 'image' && kind !== 'magic' && adminHasPendingChanges()) {
           setAdminToolsStatus('Salve os rascunhos antes de preencher imagem ou audio.', true);
           syncAdminTools();
           return;
@@ -5312,7 +5359,7 @@
           syncAdminTools();
           return;
         }
-        if (kind === 'image' && adminHasPendingChanges()) {
+        if ((kind === 'image' || kind === 'magic') && adminHasPendingChanges()) {
           setAdminToolsStatus('Salvando os rascunhos antes de gerar imagens...', false);
           syncAdminTools();
           const saved = await runAdminSaveDrafts();
@@ -5322,7 +5369,13 @@
         }
 
         const targets = collectAdminCurrentPageTargets(kind);
-        const label = kind === 'text' ? 'textos' : kind === 'image' ? 'imagens' : 'audios';
+        const label = kind === 'text'
+          ? 'textos'
+          : kind === 'image'
+            ? 'imagens'
+            : kind === 'magic'
+              ? 'imagens magic'
+              : 'audios';
         if (!targets.length) {
           if (kind === 'image') {
             const cardsMissingImage = currentVisibleAdminCards().filter((card) => !hasPlayableFlashcardImage(card));
@@ -5332,6 +5385,17 @@
               return;
             }
           }
+          if (kind === 'magic') {
+            const cardsWithCamera = currentVisibleAdminCards().filter((card) => isFlashcardPlaceholderImageUrl(card?.imageUrl));
+            if (cardsWithCamera.length) {
+              setAdminToolsStatus('Preencha Portugues e Ingles dos cards com camera.webp antes de usar o Magic.', true);
+              syncAdminTools();
+              return;
+            }
+            setAdminToolsStatus('Nenhuma imagem camera.webp nesta pagina para o Magic.', false);
+            syncAdminTools();
+            return;
+          }
           setAdminToolsStatus(`Nenhum slot vazio de ${label} nesta pagina.`, false);
           syncAdminTools();
           return;
@@ -5339,7 +5403,7 @@
 
         const endpoint = kind === 'text'
           ? '/api/admin/flashcards/fill-missing-text'
-          : kind === 'image'
+          : (kind === 'image' || kind === 'magic')
             ? '/api/admin/flashcards/fill-missing-images'
             : '/api/admin/flashcards/fill-missing-audio';
 
@@ -5356,10 +5420,11 @@
               sourceIndex: card.sourceIndex,
               deckTitle: card.deckTitle,
               english: card.english,
-              portuguese: card.portuguese,
-              category: card.category
-            })),
+            portuguese: card.portuguese,
+            category: card.category
+          })),
             basePrompt: state.admin.prompt || '',
+            magicMode: kind === 'magic',
             maxChars: 32,
             ...(kind === 'text' ? { persist: false } : {})
           });
@@ -7243,6 +7308,7 @@
         els.adminCreateCardsBtn?.addEventListener('click', runAdminCreateCards);
         els.adminFillTextBtn?.addEventListener('click', () => runAdminFlashcardFill('text'));
         els.adminFillImageBtn?.addEventListener('click', () => runAdminFlashcardFill('image'));
+        els.adminMagicBtn?.addEventListener('click', () => runAdminFlashcardFill('magic'));
         els.adminFillAudioBtn?.addEventListener('click', () => runAdminFlashcardFill('audio'));
         els.adminDeleteImageBtn?.addEventListener('click', () => runAdminCardAssetDelete('image'));
         els.adminDeleteAudioBtn?.addEventListener('click', () => runAdminCardAssetDelete('audio'));
