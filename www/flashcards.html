@@ -710,13 +710,24 @@
       height: calc(100% - 26px);
       margin: 13px auto;
       background:
-        radial-gradient(circle at 30% 30%, rgba(181, 240, 255, 0.98), rgba(95, 201, 255, 0.8) 28%, rgba(17, 96, 214, 0.92) 72%, rgba(5, 43, 112, 0.96) 100%);
+        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.14), transparent 24%),
+        linear-gradient(180deg, rgba(116, 128, 145, 0.94), rgba(64, 73, 88, 0.96));
       color: #ffffff;
-      font-family: "TheBoldFont", "LemonMilkMedium", sans-serif;
-      font-size: clamp(18px, 3.2vw, 28px);
-      letter-spacing: 0.04em;
-      text-transform: none;
-      box-shadow: inset 0 0 24px rgba(255, 255, 255, 0.2), 0 18px 40px rgba(4, 18, 46, 0.34);
+      box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.1), 0 18px 40px rgba(4, 18, 46, 0.28);
+    }
+
+    .mini-card__fallback-icon {
+      width: clamp(44px, 8vw, 62px);
+      height: clamp(44px, 8vw, 62px);
+      display: block;
+      opacity: 0.96;
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.16));
+    }
+
+    .mini-card__fallback-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
 
     .mini-card__word {
@@ -4358,9 +4369,19 @@
       }
 
       function buildAdminLibraryCardView(card) {
-        const isEmptySlot = !card.english && !card.portuguese && !card.imageUrl && !card.audioUrl;
+        const isEmptySlot = !card.imageUrl;
         const sealOpacity = card.audioUrl ? 1 : (isEmptySlot ? 0.3 : 0.2);
         const sealMarkup = `<button class="mini-card__seal-btn" type="button" data-admin-audio="${escapeHtml(card.id)}" aria-label="Ouvir audio do flashcard" ${card.audioUrl ? '' : 'disabled'}><img class="mini-card__seal" src="${escapeHtml(phaseMeta(5).sealPath)}" alt="${escapeHtml(phaseMeta(5).label)}" style="--seal-opacity:${escapeHtml(String(sealOpacity))}"></button>`;
+        const emptyImageSlotMarkup = `
+          <div class="mini-card__fallback is-empty-slot" aria-hidden="true">
+            <span class="mini-card__fallback-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M7.75 6.5h8.5c.7 0 1.29.44 1.53 1.06l.27.69h.95a2.5 2.5 0 0 1 2.5 2.5v5.5a2.5 2.5 0 0 1-2.5 2.5H5a2.5 2.5 0 0 1-2.5-2.5v-5.5a2.5 2.5 0 0 1 2.5-2.5h.95l.27-.69A1.64 1.64 0 0 1 7.75 6.5Z" fill="rgba(255,255,255,0.18)" stroke="white" stroke-width="1.4"/>
+                <circle cx="9" cy="11" r="1.75" fill="white"/>
+                <path d="M6.8 17.2l3.05-3.12a1.1 1.1 0 0 1 1.6.03l1.64 1.79 1.84-2.04a1.1 1.1 0 0 1 1.63-.02l2.64 2.82" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </div>`;
         const reportCounts = state.admin.reportCounts.get(card.id) || {};
         const reportsMarkup = FLASHCARD_REPORT_TYPES
           .filter((item) => Number(reportCounts?.[item.key] || 0) > 0)
@@ -4377,7 +4398,7 @@
           sealMarkup,
           reportsMarkup: reportsMarkup ? `<div class="mini-card__reports">${reportsMarkup}</div>` : '',
           imageFallbackMarkup: isEmptySlot
-            ? '<div class="mini-card__fallback is-empty-slot">Vazio</div>'
+            ? emptyImageSlotMarkup
             : `<div class="mini-card__fallback">${escapeHtml(card.deckTitle)}</div>`,
           wordMarkup: `<div class="mini-card__empty-field mini-card__editable" contenteditable="plaintext-only" spellcheck="false" data-card-id="${escapeHtml(card.id)}" data-admin-edit-field="portuguese" data-original-value="${escapeHtml(card.portuguese || '')}">${escapeHtml(card.portuguese || 'Portugues')}</div>`,
           subwordMarkup: `<div class="mini-card__empty-field mini-card__editable" contenteditable="plaintext-only" spellcheck="false" data-card-id="${escapeHtml(card.id)}" data-admin-edit-field="english" data-original-value="${escapeHtml(card.english || '')}">${escapeHtml(card.english || 'Ingles')}</div>`
@@ -4800,7 +4821,7 @@
             return !safeText(card?.english) || !safeText(card?.portuguese);
           }
           if (kind === 'image') {
-            return !safeText(card?.imageUrl);
+            return !safeText(card?.imageUrl) && safeText(card?.english) && safeText(card?.portuguese);
           }
           if (kind === 'audio') {
             return !safeText(card?.audioUrl);
@@ -5259,6 +5280,14 @@
         const targets = collectAdminCurrentPageTargets(kind);
         const label = kind === 'text' ? 'textos' : kind === 'image' ? 'imagens' : 'audios';
         if (!targets.length) {
+          if (kind === 'image') {
+            const cardsMissingImage = currentVisibleAdminCards().filter((card) => !safeText(card?.imageUrl));
+            if (cardsMissingImage.length) {
+              setAdminToolsStatus('Preencha Portugues e Ingles dos cards vazios antes de gerar imagens.', true);
+              syncAdminTools();
+              return;
+            }
+          }
           setAdminToolsStatus(`Nenhum slot vazio de ${label} nesta pagina.`, false);
           syncAdminTools();
           return;

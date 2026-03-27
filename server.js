@@ -5921,14 +5921,17 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
       const sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
       const item = sourceEntry?.items?.[sourceIndex];
       if (!item || readFlashcardItemImage(item)) return null;
+      const english = readFlashcardItemEnglish(item);
+      const portuguese = readFlashcardItemPortuguese(item);
+      if (!english || !portuguese) return null;
 
       return {
         sourceInfo,
         source: sourceInfo.relativeJsonPath,
         sourceIndex,
         deckTitle: typeof card?.deckTitle === 'string' ? card.deckTitle.trim() : '',
-        english: readFlashcardItemEnglish(item),
-        portuguese: readFlashcardItemPortuguese(item)
+        english,
+        portuguese
       };
     }).filter(Boolean);
 
@@ -5942,7 +5945,11 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
 
     for (const target of targets) {
       try {
-        const prompt = basePrompt;
+        const prompt = [
+          basePrompt,
+          `Portuguese: ${target.portuguese}`,
+          `English: ${target.english}`
+        ].filter(Boolean).join('\n');
 
         const upstreamResponse = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
