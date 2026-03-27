@@ -1396,6 +1396,7 @@ const VOICES_ROOT = (() => {
   }
   return path.join(staticDir, 'voices');
 })();
+const ALLCARDS_ROOT = path.join(__dirname, 'allcards');
 const LOCAL_LEVELS_ROOT = path.join(__dirname, 'Niveis');
 const FLASHCARD_DATA_RELATIVE_ROOT = path.posix.join('data', 'flashcards', '130', '001');
 const ADMIN_FLASHCARD_ASSET_RELATIVE_ROOT = path.posix.join('admin', 'FlashCards');
@@ -2211,6 +2212,52 @@ async function collectBuiltinFlashcardManifestEntries() {
   }
 
   await walk(rootPath);
+
+  return entries.sort((left, right) => left.title.localeCompare(right.title, 'pt-BR', {
+    sensitivity: 'base',
+    numeric: true
+  }));
+}
+
+async function collectAllcardsManifestEntries() {
+  let dirEntries = [];
+  try {
+    dirEntries = await fs.promises.readdir(ALLCARDS_ROOT, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  }
+
+  const entries = [];
+  for (const entry of dirEntries) {
+    if (!entry.isFile() || path.extname(entry.name).toLowerCase() !== '.json') {
+      continue;
+    }
+
+    const filePath = path.join(ALLCARDS_ROOT, entry.name);
+    let title = entry.name;
+    let count = 0;
+
+    try {
+      const raw = (await fs.promises.readFile(filePath, 'utf8')).replace(/^\uFEFF/, '');
+      const payload = JSON.parse(raw);
+      title = typeof payload?.title === 'string' && payload.title.trim()
+        ? payload.title.trim()
+        : title;
+      count = getFlashcardPayloadItems(payload).length;
+    } catch (_error) {
+      // keep fallback metadata when a deck cannot be parsed here
+    }
+
+    entries.push({
+      name: entry.name,
+      title,
+      source: `allcards/${entry.name}`,
+      path: `/allcards/${encodeURIComponent(entry.name)}`,
+      size: (await fs.promises.stat(filePath)).size,
+      count
+    });
+  }
 
   return entries.sort((left, right) => left.title.localeCompare(right.title, 'pt-BR', {
     sensitivity: 'base',
@@ -4027,6 +4074,24 @@ app.get('/api/admin/flashcards/decks', async (req, res) => {
   }
 });
 
+app.get('/api/flashcards/manifest', async (req, res) => {
+  try {
+    const files = await collectAllcardsManifestEntries();
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      success: true,
+      generatedAt: new Date().toISOString(),
+      files
+    });
+  } catch (error) {
+    console.error('Erro ao montar manifesto de allcards:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao carregar os decks em allcards.'
+    });
+  }
+});
+
 app.get('/api/rankings/flashcards', async (req, res) => {
   try {
     if (!pool) {
@@ -4457,6 +4522,11 @@ app.get('/', (req, res) => {
 });
 
 app.use(express.static(staticDir));
+app.use('/allcards', express.static(ALLCARDS_ROOT, {
+  setHeaders(res) {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+}));
 app.use('/eventos', express.static(path.join(__dirname, 'musicas')));
 
 app.get(['/eventos', '/eventos/'], (req, res) => {

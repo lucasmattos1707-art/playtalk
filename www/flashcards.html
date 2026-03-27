@@ -2907,12 +2907,10 @@
   <script>
     (() => {
       const FLASHCARDS_R2_PUBLIC_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
-      const FLASHCARDS_R2_SOURCE_PREFIX = 'Star';
-      const FLASHCARDS_R2_SOURCE_ROOT = `${FLASHCARDS_R2_PUBLIC_ROOT}/${FLASHCARDS_R2_SOURCE_PREFIX}`;
+      const FLASHCARDS_LOCAL_SOURCE_PREFIX = 'allcards';
       const FLASHCARD_CAMERA_OBJECT_KEY = 'FlashCards/camera.webp';
       const FLASHCARD_CAMERA_IMAGE_URL = `${FLASHCARDS_R2_PUBLIC_ROOT}/${FLASHCARD_CAMERA_OBJECT_KEY}`;
-      const DATA_MANIFEST_REMOTE_PATH = `${FLASHCARDS_R2_SOURCE_ROOT}/manifest.json`;
-      const FLASHCARDS_SOURCE_TREE_API_PATH = `/api/r2/storage-tree?prefix=${encodeURIComponent(`${FLASHCARDS_R2_SOURCE_PREFIX}/`)}`;
+      const DATA_MANIFEST_REMOTE_PATH = '/api/flashcards/manifest';
       const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
       const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
@@ -4162,7 +4160,10 @@
       function normalizeFlashcardsDataPath(path) {
         const cleaned = safeText(path);
         if (!cleaned) return '';
-        return cleaned.replace(/^\/+/, '');
+        if (/^https?:\/\//i.test(cleaned)) {
+          return cleaned;
+        }
+        return `/${cleaned.replace(/^\/+/, '')}`;
       }
 
       function withNoCacheUrl(path) {
@@ -4182,26 +4183,29 @@
 
       function buildFlashcardsPublicUrl(objectKey) {
         const encodedKey = encodePublicObjectKey(objectKey);
-        return encodedKey ? `${FLASHCARDS_R2_PUBLIC_ROOT}/${encodedKey}` : '';
+        return encodedKey ? `/${FLASHCARDS_LOCAL_SOURCE_PREFIX}/${encodedKey}` : '';
       }
 
-      function isFlashcardsDeckRemoteUrl(value) {
+      function isFlashcardsDeckPath(value) {
         const text = safeText(value);
-        if (!/^https?:\/\//i.test(text)) return false;
-        try {
-          const parsed = new URL(text);
-          const allowedRoot = new URL(`${FLASHCARDS_R2_SOURCE_ROOT}/`);
-          const parsedPath = decodeURIComponent(String(parsed.pathname || ''));
-          const allowedPath = String(allowedRoot.pathname || '');
-          return parsed.origin === allowedRoot.origin
-            && parsedPath.toLowerCase().endsWith('.json')
-            && parsedPath.startsWith(allowedPath);
-        } catch (_error) {
-          return false;
+        if (!text) return false;
+        if (/^https?:\/\//i.test(text)) {
+          try {
+            const parsed = new URL(text);
+            const parsedPath = decodeURIComponent(String(parsed.pathname || '')).replace(/^\/+/, '');
+            return parsed.origin === window.location.origin
+              && parsedPath.toLowerCase().endsWith('.json')
+              && parsedPath.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`);
+          } catch (_error) {
+            return false;
+          }
         }
+        const normalized = text.replace(/^\/+/, '');
+        return normalized.toLowerCase().endsWith('.json')
+          && normalized.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`);
       }
 
-      function resolveManifestDeckRemotePath(file) {
+      function resolveManifestDeckPath(file) {
         const fallbackName = safeText(file?.name) || safeText(file?.title) || 'deck.json';
         const candidates = [
           safeText(file?.path),
@@ -4210,20 +4214,23 @@
         ].filter(Boolean);
 
         for (const candidate of candidates) {
-          if (isFlashcardsDeckRemoteUrl(candidate)) {
-            return candidate;
+          if (isFlashcardsDeckPath(candidate)) {
+            if (/^https?:\/\//i.test(candidate)) {
+              return candidate;
+            }
+            return `/${candidate.replace(/^\/+/, '')}`;
           }
 
           const normalized = candidate.replace(/^\/+/, '');
-          if (normalized.startsWith(`${FLASHCARDS_R2_SOURCE_PREFIX}/`) && normalized.toLowerCase().endsWith('.json')) {
+          if (/^[^/]+\.json$/i.test(normalized)) {
             return buildFlashcardsPublicUrl(normalized);
           }
-          if (/^[^/]+\.json$/i.test(normalized)) {
-            return buildFlashcardsPublicUrl(`${FLASHCARDS_R2_SOURCE_PREFIX}/${normalized}`);
+          if (normalized.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`) && normalized.toLowerCase().endsWith('.json')) {
+            return `/${normalized}`;
           }
         }
 
-        throw new Error(`O deck "${fallbackName}" precisa apontar para ${FLASHCARDS_R2_SOURCE_PREFIX}/ no R2.`);
+        throw new Error(`O deck "${fallbackName}" precisa apontar para ${FLASHCARDS_LOCAL_SOURCE_PREFIX}/.`);
       }
 
       function sortDeckCatalogEntries(entries) {
@@ -4237,29 +4244,6 @@
 
       function normalizeDeckFileName(file) {
         return safeText(file?.name) || safeText(file?.path).split('/').pop() || 'deck.json';
-      }
-
-      async function fetchDeckFilesFromSourcePrefix() {
-        const response = await fetch(withNoCacheUrl(FLASHCARDS_SOURCE_TREE_API_PATH), { cache: 'no-store' });
-        if (!response.ok) {
-          throw new Error('Nao consegui listar os decks de flashcards no R2.');
-        }
-
-        const payload = await response.json();
-        const keys = Array.isArray(payload?.keys) ? payload.keys : [];
-        return keys
-          .filter((key) => (
-            safeText(key).startsWith(`${FLASHCARDS_R2_SOURCE_PREFIX}/`)
-            && safeText(key).toLowerCase().endsWith('.json')
-            && !/\/manifest\.json$/i.test(safeText(key))
-          ))
-          .sort((left, right) => left.localeCompare(right, 'pt-BR', { sensitivity: 'base', numeric: true }))
-          .map((key) => ({
-            name: safeText(key).split('/').pop() || key,
-            path: buildFlashcardsPublicUrl(key),
-            sourceKey: key,
-            idSource: key
-          }));
       }
 
       function buildDeckCatalogEntry(file, payload, cards) {
@@ -4326,10 +4310,10 @@
         }
         const manifestFiles = Array.isArray(manifest?.files) ? manifest.files : [];
         if (!manifestFiles.length) {
-          throw new Error(`O manifesto de ${FLASHCARDS_R2_SOURCE_PREFIX} nao possui decks publicados.`);
+          throw new Error(`A pasta ${FLASHCARDS_LOCAL_SOURCE_PREFIX} nao possui decks publicados.`);
         }
         const files = manifestFiles.map((file) => {
-          const resolvedPath = resolveManifestDeckRemotePath(file);
+          const resolvedPath = resolveManifestDeckPath(file);
           const sourceKey = safeText(file?.source || file?.name || resolvedPath) || resolvedPath;
           return {
             name: file.name || file.path || file.source || resolvedPath,
@@ -4347,7 +4331,7 @@
           }
           const response = await fetch(withNoCacheUrl(filePath), { cache: 'no-store' });
           if (!response.ok) {
-            throw new Error(`Nao consegui abrir o deck "${safeText(file?.name) || 'deck.json'}" em ${FLASHCARDS_R2_SOURCE_PREFIX}.`);
+            throw new Error(`Nao consegui abrir o deck "${safeText(file?.name) || 'deck.json'}" em ${FLASHCARDS_LOCAL_SOURCE_PREFIX}.`);
           }
           const payload = await response.json();
           const cards = flattenPayload(file.name || file.path, payload, {

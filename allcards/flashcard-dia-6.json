@@ -1,0 +1,114 @@
+{
+    "title":  "We are",
+    "coverImage":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/03.png",
+    "items":  [
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000001.webp",
+                      "nomePortugues":  "Estamos juntos",
+                      "nomeIngles":  "We are together",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000002.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000003.webp",
+                      "nomePortugues":  "NÃ³s jantamos",
+                      "nomeIngles":  "We eat dinner",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000004.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000005.webp",
+                      "nomePortugues":  "NÃ³s vamos pra casa",
+                      "nomeIngles":  "We walk home",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000006.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000007.webp",
+                      "nomePortugues":  "A gente lÃª um livro",
+                      "nomeIngles":  "We read a book",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000008.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000009.webp",
+                      "nomePortugues":  "NÃ³s jogamos bola",
+                      "nomeIngles":  "We play soccer",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000010.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000011.webp",
+                      "nomePortugues":  "NÃ³s cantamos juntos",
+                      "nomeIngles":  "We sing together",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000012.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000013.webp",
+                      "nomePortugues":  "Ajudamos os amigos",
+                      "nomeIngles":  "We help friends",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000014.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000015.webp",
+                      "nomePortugues":  "NÃ³s vemos TV agora",
+                      "nomeIngles":  "We watch TV now",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000016.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000017.webp",
+                      "nomePortugues":  "Cozinhamos juntos",
+                      "nomeIngles":  "We cook together",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000018.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000019.webp",
+                      "nomePortugues":  "NÃ³s andamos de bike",
+                      "nomeIngles":  "We ride bikes",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000020.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000021.webp",
+                      "nomePortugues":  "Estamos estudando",
+                      "nomeIngles":  "We study now",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000022.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  },
+                  {
+                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000023.webp",
+                      "nomePortugues":  "NÃ³s tiramos fotos",
+                      "nomeIngles":  "We take photos",
+                      "categoria":  "flashcard",
+                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/006/001/000024.mp3",
+                      "tense":  "present-simple",
+                      "sentenceForm":  "affirmative"
+                  }
+              ]
+}
