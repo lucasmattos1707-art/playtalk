@@ -952,10 +952,8 @@
       align-items: center;
       justify-content: center;
       padding: 5vh 5vw;
-      background:
-        radial-gradient(circle at top, rgba(55, 190, 255, 0.22), transparent 34%),
-        rgba(2, 10, 20, 0.74);
-      backdrop-filter: blur(12px);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(243, 244, 246, 0.98) 100%);
+      backdrop-filter: none;
       opacity: 0;
       transform: scale(0.98);
       transition: opacity 260ms ease, transform 260ms ease;
@@ -2080,14 +2078,14 @@
 
     .game-report-trigger {
       position: absolute;
-      top: 12px;
-      right: 12px;
+      top: 10px;
+      right: 10px;
       z-index: 4;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 28px;
-      height: 28px;
+      width: 36px;
+      height: 36px;
       padding: 0;
       border: 0;
       background: transparent;
@@ -2095,8 +2093,8 @@
     }
 
     .game-report-trigger img {
-      width: 18px;
-      height: 18px;
+      width: 31px;
+      height: 31px;
       display: block;
       opacity: 0.55;
       transition: opacity 160ms ease, transform 160ms ease;
@@ -2981,24 +2979,35 @@
 
     .embedded-panel,
     .profile-panel {
-      min-height: 72vh;
+      min-height: calc(100vh - 8vh);
+      width: 100vw;
+      margin-left: calc(50% - 50vw);
+      margin-right: calc(50% - 50vw);
+      max-width: none;
+      border-radius: 0;
+      padding: 0;
+      border: 0;
+      box-shadow: none;
+      backdrop-filter: none;
     }
 
     .embedded-panel__frame {
       width: 100%;
-      min-height: 72vh;
+      min-height: calc(100vh - 8vh);
       border: 0;
-      border-radius: 24px;
+      border-radius: 0;
       background: #fff;
     }
 
     .profile-panel__form {
       width: min(100%, 440px);
+      min-height: calc(100vh - 8vh);
       margin: 0 auto;
       display: grid;
       justify-items: center;
+      align-content: center;
       gap: 18px;
-      padding: 12px 0;
+      padding: 24px 0;
     }
 
     .profile-panel__avatar {
@@ -3201,7 +3210,7 @@
             <p id="gameHeaderCopy">O jogo comeca com 3 cartas e cresce ate 12 conforme voce ganha flashcards.</p>
           </div>
           <div class="actions">
-            <button class="btn btn-close" id="exitGameBtn" type="button" aria-label="Fechar">×</button>
+            <button class="btn btn-close" id="exitGameBtn" type="button" aria-label="Fechar" hidden>×</button>
           </div>
         </div>
 
@@ -4600,6 +4609,24 @@
           renderProfilePanel();
         }
         syncFooterNav();
+      }
+
+      async function navigateToMainView(view) {
+        const nextView = ['cards', 'users', 'profile', 'play'].includes(view) ? view : 'cards';
+        if (state.game.active && nextView !== 'play') {
+          await exitGame();
+        }
+        if (state.watch.active && nextView !== 'play') {
+          stopWatch();
+        }
+        if (nextView === 'play') {
+          switchMainView('play');
+          if (!state.game.active) {
+            openGameSetup();
+          }
+          return;
+        }
+        switchMainView(nextView);
       }
 
       async function fileToDataUrl(file) {
@@ -7909,7 +7936,7 @@
         }
         els.gameSubword.classList.toggle('is-stage-one', entry.stage === 1 && stageConfig.subtitleType === 'portuguese');
         renderStageOneWordSwap(entry, Boolean(subword));
-        state.game.canListen = entry.stage !== 4 && !stageConfig.autoAudio;
+        state.game.canListen = entry.stage !== 4;
         renderGameTouchButton(stageConfig, entry);
         els.gameTouchBtn.parentElement.classList.toggle('is-hidden', entry.stage === 4 || els.gameTouchBtn.classList.contains('is-hidden'));
         els.gameTouchBtn.classList.toggle('is-busy', state.game.listening);
@@ -8502,12 +8529,9 @@
         closeGameReportMenu();
         await wait(180);
         els.game.classList.remove('is-visible');
-        els.catalog.classList.remove('is-hidden');
+        els.catalog.classList.add('is-hidden');
         els.topbar.classList.add('is-hidden');
         refreshLibrary();
-        if (state.ui.activeView === 'play') {
-          switchMainView('cards');
-        }
         syncWelcomeGate();
       }
 
@@ -8625,15 +8649,13 @@
         if (!entry) return;
         if (entry.stage === 4) return;
 
-        if (!state.game.canListen) return;
-
         if (!recognitionCtor) {
           setGameStatus('', 'miss');
           return;
         }
 
         cleanupGameRecognition();
-        stopActiveAudio();
+        await fadeOutActiveAudio(500);
         state.game.listening = true;
         els.gameTouchBtn.classList.add('is-busy');
         els.gameCard.classList.add('is-listening');
@@ -8902,12 +8924,17 @@
           startRecognition();
         });
         els.footerPlayBtn?.addEventListener('click', () => {
-          switchMainView('play');
-          openGameSetup();
+          void navigateToMainView('play');
         });
-        els.footerCardsBtn?.addEventListener('click', () => switchMainView('cards'));
-        els.footerUsersBtn?.addEventListener('click', () => switchMainView('users'));
-        els.footerProfileBtn?.addEventListener('click', () => switchMainView('profile'));
+        els.footerCardsBtn?.addEventListener('click', () => {
+          void navigateToMainView('cards');
+        });
+        els.footerUsersBtn?.addEventListener('click', () => {
+          void navigateToMainView('users');
+        });
+        els.footerProfileBtn?.addEventListener('click', () => {
+          void navigateToMainView('profile');
+        });
         els.profileForm?.addEventListener('submit', submitProfileForm);
         els.profileLogoutBtn?.addEventListener('click', logoutCurrentUser);
         els.profileAvatarInput?.addEventListener('change', async (event) => {
