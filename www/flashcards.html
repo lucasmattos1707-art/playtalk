@@ -4922,7 +4922,7 @@
       }
 
       async function runAdminSaveDrafts() {
-        if (!isAdminUser() || state.admin.busy || !adminHasPendingChanges()) return;
+        if (!isAdminUser() || state.admin.busy || !adminHasPendingChanges()) return null;
 
         const updates = Array.from(state.admin.draftCards.entries()).map(([cardId, draft]) => {
           const card = state.allCards.find((entry) => entry.id === cardId);
@@ -4968,9 +4968,11 @@
               : `Salvo. ${createdCount} carta(s) nova(s) e ${updatedCount} alteracao(oes) publicadas. A lista pode levar alguns segundos para atualizar.`)
             : 'Nenhuma alteracao pendente para salvar.';
           state.admin.error = false;
+          return payload;
         } catch (error) {
           state.admin.status = error.message || 'Falha ao salvar as alteracoes.';
           state.admin.error = true;
+          return null;
         } finally {
           state.admin.busy = false;
           syncAdminTools();
@@ -5266,7 +5268,7 @@
 
       async function runAdminFlashcardFill(kind) {
         if (!isAdminUser() || state.admin.busy) return;
-        if (kind !== 'text' && adminHasPendingChanges()) {
+        if (kind !== 'text' && kind !== 'image' && adminHasPendingChanges()) {
           setAdminToolsStatus('Salve os rascunhos antes de preencher imagem ou audio.', true);
           syncAdminTools();
           return;
@@ -5275,6 +5277,14 @@
           setAdminToolsStatus('Digite o prompt manual antes de preencher imagens.', true);
           syncAdminTools();
           return;
+        }
+        if (kind === 'image' && adminHasPendingChanges()) {
+          setAdminToolsStatus('Salvando os rascunhos antes de gerar imagens...', false);
+          syncAdminTools();
+          const saved = await runAdminSaveDrafts();
+          if (!saved || state.admin.error) {
+            return;
+          }
         }
 
         const targets = collectAdminCurrentPageTargets(kind);
