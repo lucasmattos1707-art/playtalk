@@ -4626,7 +4626,7 @@
         const showCatalog = nextView === 'cards';
         const showUsers = nextView === 'users';
         const showProfile = nextView === 'profile';
-        const showTopbar = nextView === 'users';
+        const showTopbar = false;
 
         if (els.catalog) {
           els.catalog.hidden = !showCatalog;
@@ -4640,6 +4640,10 @@
         if (els.topbar) {
           els.topbar.hidden = !showTopbar;
           els.topbar.classList.toggle('is-hidden', !showTopbar);
+        }
+        if (els.usersPanel) {
+          els.usersPanel.classList.toggle('section', !showUsers);
+          els.usersPanel.classList.toggle('panel', !showUsers);
         }
         if (showProfile) {
           renderProfilePanel();
