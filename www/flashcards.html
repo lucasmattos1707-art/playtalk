@@ -2084,6 +2084,27 @@
       z-index: 6;
     }
 
+    .game-card__seal.is-tutorial-seal-flash {
+      animation: flashcardsTutorialSealFlash 400ms ease-out forwards;
+      transform-origin: center center;
+    }
+
+    .game-card__seal.is-tutorial-seal-soft {
+      transition: opacity 500ms ease, transform 500ms ease;
+    }
+
+    .game-card__tutorial-showcase {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      animation: flashcardsTutorialShowcaseFade 200ms ease forwards;
+      z-index: 4;
+      pointer-events: none;
+    }
+
     .game-card__phase-flag {
       opacity: 1;
       -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.82) 34%, rgba(0, 0, 0, 0.45) 68%, transparent 100%);
@@ -3185,6 +3206,9 @@
       const TUTORIAL_PLANET_IMAGE_NAME = 'planet.webp';
       const TUTORIAL_PLANET_ENGLISH = 'planet';
       const TUTORIAL_PLANET_PORTUGUESE = 'planeta';
+      const TUTORIAL_FINALE_IMAGE_COUNT = 30;
+      const TUTORIAL_FINALE_IMAGE_STEP_MS = 200;
+      const TUTORIAL_FINALE_SEAL_FLASH_MS = 400;
       const GUEST_FLASHCARD_LOGIN_THRESHOLD = 6;
       const GUEST_FLASHCARD_LOGIN_DELAY_MS = 5000;
       const AUTH_GATE_FORM_REVEAL_MS = 1200;
@@ -3225,7 +3249,18 @@
           sequenceToken: 0,
           timers: [],
           currentCardId: '',
-          finishing: false
+          finishing: false,
+          finale: {
+            active: false,
+            cardId: '',
+            sealPhase: 0,
+            sealFlash: false,
+            sealSoft: false,
+            showcaseImages: [],
+            showcaseIndex: -1,
+            showcaseImageUrl: '',
+            showcaseVisible: false
+          }
         };
       }
 
@@ -4669,6 +4704,51 @@
         );
       }
 
+      function tutorialFinaleState() {
+        return state.game.tutorial?.finale || createTutorialState().finale;
+      }
+
+      function setTutorialFinaleState(patch = {}) {
+        state.game.tutorial.finale = {
+          ...tutorialFinaleState(),
+          ...patch
+        };
+        const finaleCardId = safeText(state.game.tutorial.finale.cardId);
+        if (!finaleCardId || state.game.currentId === finaleCardId) {
+          renderCurrentCard();
+        }
+      }
+
+      function preloadTutorialFinaleImages() {
+        const pool = shuffle(
+          state.allCards.filter((card) => (
+            card
+            && safeText(card.imageUrl)
+            && hasPlayableFlashcardImage(card)
+            && !isTutorialPlanetCard(card)
+          ))
+        );
+        const chosen = pool.slice(0, TUTORIAL_FINALE_IMAGE_COUNT);
+        chosen.forEach((card) => preloadCardImage(card));
+        return chosen.map((card) => safeText(card.imageUrl)).filter(Boolean);
+      }
+
+      function flashTutorialFinaleSeal(phase, cardId) {
+        setTutorialFinaleState({
+          active: true,
+          cardId,
+          sealPhase: phase,
+          sealFlash: true,
+          sealSoft: false
+        });
+        window.setTimeout(() => {
+          if (!state.game.tutorial.active) return;
+          const finale = tutorialFinaleState();
+          if (!finale.active || finale.cardId !== cardId || finale.sealPhase !== phase) return;
+          setTutorialFinaleState({ sealFlash: false });
+        }, TUTORIAL_FINALE_SEAL_FLASH_MS);
+      }
+
       function resetTutorialVisualState() {
         const gameShell = els.game.querySelector('.game-shell');
         gameShell?.classList.remove('is-tutorial-intro', 'is-tutorial-reveal');
@@ -4839,10 +4919,86 @@
       }
 
       async function finishTutorialAndStartNormalGame() {
-        const token = startTutorialSequence(state.game.currentId || state.game.tutorial.currentCardId);
+        const cardId = state.game.currentId || state.game.tutorial.currentCardId;
+        const token = startTutorialSequence(cardId);
         state.game.tutorial.finishing = true;
         setTutorialInteractionLocked(true);
-        await playTutorialAudio(6);
+        clearPendingRewardSeal(cardId);
+        const showcaseImages = preloadTutorialFinaleImages();
+        setTutorialFinaleState({
+          active: true,
+          cardId,
+          sealPhase: 0,
+          sealFlash: false,
+          sealSoft: false,
+          showcaseImages,
+          showcaseIndex: -1,
+          showcaseImageUrl: '',
+          showcaseVisible: false
+        });
+
+        queueTutorialTimer(token, 6000, () => {
+          if (!isTutorialSequenceCurrent(token, cardId)) return;
+          setTutorialFinaleState({ sealPhase: 1, sealFlash: false, sealSoft: false });
+        });
+
+        queueTutorialTimer(token, 9100, () => {
+          if (!isTutorialSequenceCurrent(token, cardId)) return;
+          flashTutorialFinaleSeal(2, cardId);
+        });
+
+        queueTutorialTimer(token, 10000, () => {
+          if (!isTutorialSequenceCurrent(token, cardId)) return;
+          flashTutorialFinaleSeal(3, cardId);
+        });
+
+        queueTutorialTimer(token, 11000, () => {
+          if (!isTutorialSequenceCurrent(token, cardId)) return;
+          flashTutorialFinaleSeal(4, cardId);
+        });
+
+        queueTutorialTimer(token, 12000, () => {
+          if (!isTutorialSequenceCurrent(token, cardId)) return;
+          flashTutorialFinaleSeal(5, cardId);
+        });
+
+        queueTutorialTimer(token, 14000, () => {
+          if (!isTutorialSequenceCurrent(token, cardId)) return;
+          setTutorialFinaleState({ sealPhase: 1, sealFlash: false, sealSoft: true });
+        });
+
+        showcaseImages.forEach((imageUrl, index) => {
+          queueTutorialTimer(token, 16000 + (index * TUTORIAL_FINALE_IMAGE_STEP_MS), () => {
+            if (!isTutorialSequenceCurrent(token, cardId)) return;
+            setTutorialFinaleState({
+              showcaseVisible: true,
+              showcaseIndex: index,
+              showcaseImageUrl: imageUrl
+            });
+          });
+        });
+
+        const resolved = resolveInlineMediaUrl(tutorialAudioPath(6));
+        if (!resolved) {
+          throw new Error('Nao consegui abrir o audio final do tutorial.');
+        }
+        stopActiveAudio();
+        const audio = new Audio(resolved);
+        audio.preload = 'auto';
+        state.game.activeAudio = { type: 'audio', instance: audio };
+        await new Promise((resolve) => {
+          const finish = () => {
+            audio.removeEventListener('ended', finish);
+            audio.removeEventListener('error', finish);
+            if (state.game.activeAudio?.instance === audio) {
+              state.game.activeAudio = null;
+            }
+            resolve();
+          };
+          audio.addEventListener('ended', finish, { once: true });
+          audio.addEventListener('error', finish, { once: true });
+          audio.play().catch(finish);
+        });
         if (state.game.tutorial.sequenceToken !== token || !state.game.active) return;
         setTutorialCompleted(true);
         resetTutorialRuntime({ preserveCompletion: true });
@@ -7056,13 +7212,24 @@
           imageMarkup += `<img class="${overlayClassName}" src="${escapeHtml(stageConfig.overlayFlag)}" alt="">`;
         }
         const record = state.userCards.get(card.id) || null;
+        const tutorialFinale = tutorialFinaleState();
+        const hasTutorialFinale = Boolean(
+          state.game.tutorial.active
+          && tutorialFinale.active
+          && tutorialFinale.cardId === card.id
+        );
         const rewardSeal = state.game.pendingRewardSeal && state.game.pendingRewardSeal.cardId === card.id
           ? state.game.pendingRewardSeal
           : null;
-        const displayedSeal = rewardSeal ? rewardSeal.phase : activeSealPhase(record);
+        const displayedSeal = hasTutorialFinale
+          ? Math.max(0, Number(tutorialFinale.sealPhase) || 0)
+          : (rewardSeal ? rewardSeal.phase : activeSealPhase(record));
         const sealMarkup = displayedSeal
-          ? `<img class="mini-card__seal game-card__seal${rewardSeal ? ' game-card__reward-seal' : ''}" src="${escapeHtml(phaseMeta(displayedSeal).sealPath)}" alt="${escapeHtml(phaseMeta(displayedSeal).label)}">`
+          ? `<img class="mini-card__seal game-card__seal${rewardSeal ? ' game-card__reward-seal' : ''}${hasTutorialFinale && tutorialFinale.sealFlash ? ' is-tutorial-seal-flash' : ''}${hasTutorialFinale && tutorialFinale.sealSoft ? ' is-tutorial-seal-soft' : ''}" src="${escapeHtml(phaseMeta(displayedSeal).sealPath)}" alt="${escapeHtml(phaseMeta(displayedSeal).label)}">`
           : '';
+        if (hasTutorialFinale && tutorialFinale.showcaseVisible && safeText(tutorialFinale.showcaseImageUrl)) {
+          imageMarkup += `<img class="game-card__tutorial-showcase" src="${escapeHtml(tutorialFinale.showcaseImageUrl)}" alt="">`;
+        }
         const visualClasses = ['game-card__visual'];
         if (stageConfig.blurImage) visualClasses.push('is-stage-two');
         if (stageConfig.revealOnHit) visualClasses.push('is-stage-three');
