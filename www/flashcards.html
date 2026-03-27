@@ -93,10 +93,18 @@
       overflow: hidden;
     }
 
+    body.welcome-active {
+      overflow: hidden;
+    }
+
     body.auth-locked::before,
     body.auth-locked::after,
     body.auth-locked .shell,
     body.auth-locked .flashcards-home-toggle {
+      display: none;
+    }
+
+    body.welcome-active .flashcards-home-toggle {
       display: none;
     }
 
@@ -194,20 +202,94 @@
       fill: #ffffff;
     }
 
+    .welcome-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 130;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 420ms ease, visibility 420ms ease;
+      visibility: hidden;
+      background:
+        radial-gradient(circle at center, rgba(6, 24, 48, 0.16), rgba(4, 19, 33, 0.82)),
+        linear-gradient(180deg, rgba(6, 20, 36, 0.12), rgba(6, 20, 36, 0.42));
+      backdrop-filter: blur(12px);
+    }
+
+    .welcome-gate.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+      visibility: visible;
+    }
+
+    .welcome-gate__touch {
+      width: min(680px, 100%);
+      min-height: min(72vh, 720px);
+      display: grid;
+      place-items: center;
+      padding: 32px 20px;
+      background: transparent;
+      text-align: center;
+    }
+
+    .welcome-gate__stack {
+      display: grid;
+      justify-items: center;
+      gap: 22px;
+      width: min(360px, 100%);
+    }
+
+    .welcome-gate__logo {
+      width: min(240px, 62vw);
+      height: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 22px 44px rgba(0, 7, 16, 0.32));
+    }
+
+    .welcome-gate__copy {
+      margin: 0;
+      min-height: 2.8em;
+      display: grid;
+      place-items: center;
+      color: #ffffff;
+      font-size: clamp(22px, 4.6vw, 34px);
+      line-height: 1.2;
+      letter-spacing: 0.04em;
+      text-shadow: 0 14px 28px rgba(0, 7, 16, 0.32);
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 320ms ease, transform 320ms ease;
+    }
+
+    .welcome-gate__copy.is-changing {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
     .auth-gate {
       position: fixed;
       inset: 0;
       z-index: 140;
-      display: none;
+      display: flex;
       align-items: center;
       justify-content: center;
       padding: 24px;
       background: #ffffff;
       color: #10233d;
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+      transition: opacity 320ms ease, visibility 320ms ease;
     }
 
     body.auth-locked .auth-gate {
-      display: flex;
+      opacity: 1;
+      pointer-events: auto;
+      visibility: visible;
     }
 
     .auth-card {
@@ -221,6 +303,24 @@
       box-shadow: 0 28px 80px rgba(16, 35, 61, 0.12);
       justify-items: center;
       text-align: center;
+    }
+
+    .auth-card__body {
+      width: 100%;
+      display: grid;
+      gap: 18px;
+      opacity: 0;
+      max-height: 0;
+      overflow: hidden;
+      transform: translateY(18px);
+      transition: opacity 320ms ease, transform 320ms ease, max-height 320ms ease;
+    }
+
+    .auth-gate.is-form-visible .auth-card__body {
+      opacity: 1;
+      max-height: 520px;
+      overflow: visible;
+      transform: translateY(0);
     }
 
     .auth-logo {
@@ -2762,18 +2862,27 @@
   </style>
 </head>
 <body class="flashcards-home-collapsed">
+  <section class="welcome-gate is-visible" id="welcomeGate" aria-label="Entrada do PlayTalk">
+    <button class="welcome-gate__touch" id="welcomeTouch" type="button" aria-label="Toque para iniciar o tutorial">
+      <div class="welcome-gate__stack">
+        <img class="welcome-gate__logo" src="SVG/logo.png" alt="PlayTalk">
+        <p class="welcome-gate__copy" id="welcomeCopy">Flu&#234;ncia f&#225;cil</p>
+      </div>
+    </button>
+  </section>
   <section class="auth-gate" id="authGate" aria-modal="true" role="dialog" aria-labelledby="authTitle">
-    <div class="auth-card">
+    <div class="auth-card" id="authCard">
       <img class="auth-logo" src="SVG/logo.svg" alt="PlayTalk">
       <div>
         <h1 class="auth-title" id="authTitle">PlayTalk</h1>
         <p class="auth-copy" id="authCopy">Entre com seu nome e senha para começar a jogar na Liga Playtalk.</p>
       </div>
-      <div class="auth-switch" id="authSwitch" aria-label="Escolha entre entrar ou cadastrar">
+      <div class="auth-card__body" id="authBody">
+        <div class="auth-switch" id="authSwitch" aria-label="Escolha entre entrar ou cadastrar">
         <button class="auth-switch__btn is-active" id="authModeLogin" data-auth-mode="login" type="button">Entrar</button>
         <button class="auth-switch__btn" id="authModeRegister" data-auth-mode="register" type="button">Cadastrar</button>
-      </div>
-      <form class="auth-form" id="authForm">
+        </div>
+        <form class="auth-form" id="authForm">
         <label class="auth-field">
           <span>Nome</span>
           <input id="authUsername" name="username" type="text" inputmode="text" autocomplete="username" maxlength="32" placeholder="Seu nome no ranking" required>
@@ -2782,9 +2891,10 @@
           <span>Senha</span>
           <input id="authPassword" name="password" type="password" autocomplete="current-password" maxlength="120" placeholder="Digite sua senha" required>
         </label>
-        <button class="auth-submit" id="authSubmitBtn" type="submit">Entrar e jogar</button>
-      </form>
-      <p class="auth-status" id="authStatus" aria-live="polite"></p>
+          <button class="auth-submit" id="authSubmitBtn" type="submit">Entrar e jogar</button>
+        </form>
+        <p class="auth-status" id="authStatus" aria-live="polite"></p>
+      </div>
     </div>
   </section>
   <button class="flashcards-home-toggle" id="flashcardsHomeToggle" type="button" aria-label="Ocultar resumo">
@@ -3075,6 +3185,11 @@
       const TUTORIAL_PLANET_IMAGE_NAME = 'planet.webp';
       const TUTORIAL_PLANET_ENGLISH = 'planet';
       const TUTORIAL_PLANET_PORTUGUESE = 'planeta';
+      const GUEST_FLASHCARD_LOGIN_THRESHOLD = 6;
+      const GUEST_FLASHCARD_LOGIN_DELAY_MS = 5000;
+      const AUTH_GATE_FORM_REVEAL_MS = 1200;
+      const WELCOME_COPY_ROTATION_MS = 2000;
+      const WELCOME_COPY_MESSAGES = ['Flu\u00eancia f\u00e1cil', 'Toque para come\u00e7ar'];
       const FLASHCARD_REPORT_TYPES = [
         { key: 'blurred-image', label: 'Imagem borrada' },
         { key: 'weak-association', label: 'Associacao fraca' },
@@ -3124,12 +3239,23 @@
         timeOffsetMs: 0,
         user: null,
         authMode: 'login',
+        authReason: 'optional',
           flashcardsSyncInFlight: false,
           flashcardsSyncQueued: false,
           flashcardsSyncTimer: 0,
           cardsRefreshTimer: 0,
           libraryPage: 1,
         secretBuffer: '',
+        entry: {
+          cardsReady: false,
+          welcomeVisible: true,
+          welcomeIndex: 0,
+          welcomeTimer: 0,
+          pendingTutorialStart: false,
+          authRequired: false,
+          authDelayTimer: 0,
+          authRevealTimer: 0
+        },
         admin: {
           busy: false,
           status: 'Nenhuma acao em andamento.',
@@ -3196,7 +3322,12 @@
       };
 
       const els = {
+        welcomeGate: document.getElementById('welcomeGate'),
+        welcomeTouch: document.getElementById('welcomeTouch'),
+        welcomeCopy: document.getElementById('welcomeCopy'),
         authGate: document.getElementById('authGate'),
+        authCard: document.getElementById('authCard'),
+        authBody: document.getElementById('authBody'),
         authCopy: document.getElementById('authCopy'),
         authForm: document.getElementById('authForm'),
         authUsername: document.getElementById('authUsername'),
@@ -3427,18 +3558,44 @@
         state.game.contextLimit = normalized;
       }
 
-      function readTutorialProgress() {
-        if (!state.user?.id) return false;
+      function storageKeyForUser(baseKey, userId = state.user?.id) {
+        const normalizedUserId = Number(userId) || 0;
+        return normalizedUserId ? `${baseKey}:${normalizedUserId}` : baseKey;
+      }
+
+      function userScopedStorageKey(baseKey) {
+        return storageKeyForUser(baseKey, state.user?.id);
+      }
+
+      function readScopedStorage(baseKey, fallback, userId = state.user?.id) {
         try {
-          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(TUTORIAL_PROGRESS_STORAGE_KEY)) || 'null');
-          return Boolean(parsed?.completed || parsed === true);
+          const raw = localStorage.getItem(storageKeyForUser(baseKey, userId));
+          if (raw == null) return fallback;
+          const parsed = JSON.parse(raw);
+          return parsed == null ? fallback : parsed;
         } catch (_error) {
-          return false;
+          return fallback;
         }
       }
 
+      function removeScopedStorage(baseKey, userId = state.user?.id) {
+        try {
+          localStorage.removeItem(storageKeyForUser(baseKey, userId));
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      function readTutorialProgressForUser(userId = state.user?.id) {
+        const parsed = readScopedStorage(TUTORIAL_PROGRESS_STORAGE_KEY, null, userId);
+        return Boolean(parsed?.completed || parsed === true);
+      }
+
+      function readTutorialProgress() {
+        return readTutorialProgressForUser(state.user?.id);
+      }
+
       function persistTutorialProgressLocally() {
-        if (!state.user?.id) return;
         localStorage.setItem(userScopedStorageKey(TUTORIAL_PROGRESS_STORAGE_KEY), JSON.stringify({
           completed: Boolean(state.game.tutorial.completed)
         }));
@@ -3448,20 +3605,19 @@
         state.game.tutorial.completed = Boolean(completed);
         persistTutorialProgressLocally();
         syncTutorialSetupButton();
+        syncWelcomeGate();
+      }
+
+      function readOwnedIdsForUser(userId = state.user?.id) {
+        const parsed = readScopedStorage(OWNED_STORAGE_KEY, [], userId);
+        return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : [];
       }
 
       function readOwnedIds() {
-        if (!state.user?.id) return [];
-        try {
-          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(OWNED_STORAGE_KEY)) || '[]');
-          return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : [];
-        } catch (_error) {
-          return [];
-        }
+        return readOwnedIdsForUser(state.user?.id);
       }
 
       function persistOwnedIdsLocally() {
-        if (!state.user?.id) return;
         localStorage.setItem(userScopedStorageKey(OWNED_STORAGE_KEY), JSON.stringify(Array.from(state.ownedIds)));
       }
 
@@ -3516,20 +3672,16 @@
         return stats.playTimeMs > 0 || stats.speakings > 0 || stats.listenings > 0;
       }
 
+      function readUserStatsForUser(userId = state.user?.id) {
+        const parsed = readScopedStorage(USER_STATS_STORAGE_KEY, {}, userId);
+        return normalizeStatsSnapshot(parsed);
+      }
+
       function readUserStats() {
-        if (!state.user?.id) {
-          return normalizeStatsSnapshot({});
-        }
-        try {
-          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(USER_STATS_STORAGE_KEY)) || 'null') || {};
-          return normalizeStatsSnapshot(parsed);
-        } catch (_error) {
-          return normalizeStatsSnapshot({});
-        }
+        return readUserStatsForUser(state.user?.id);
       }
 
       function persistUserStatsLocally() {
-        if (!state.user?.id) return;
         localStorage.setItem(userScopedStorageKey(USER_STATS_STORAGE_KEY), JSON.stringify({
           playTimeMs: Math.max(0, Math.round(Number(state.stats.playTimeMs) || 0)),
           speakings: Math.max(0, Math.round(Number(state.stats.speakings) || 0)),
@@ -3578,19 +3730,14 @@
         });
       }
 
-      function readUserProgress() {
-        if (!state.user?.id) return new Map();
-        try {
-          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(USER_PROGRESS_STORAGE_KEY)) || 'null');
-          const records = Array.isArray(parsed) ? parsed.map(normalizeProgressRecord).filter(Boolean) : [];
-          if (records.length) {
-            return new Map(records.map(record => [record.cardId, record]));
-          }
-        } catch (_error) {
-          // ignore
+      function readUserProgressForUser(userId = state.user?.id) {
+        const parsed = readScopedStorage(USER_PROGRESS_STORAGE_KEY, null, userId);
+        const records = Array.isArray(parsed) ? parsed.map(normalizeProgressRecord).filter(Boolean) : [];
+        if (records.length) {
+          return new Map(records.map(record => [record.cardId, record]));
         }
 
-        const legacyOwnedIds = readOwnedIds();
+        const legacyOwnedIds = readOwnedIdsForUser(userId);
         const now = Date.now();
         return new Map(legacyOwnedIds.map((cardId, index) => [cardId, createProgressRecord(cardId, {
           phaseIndex: 1,
@@ -3604,28 +3751,29 @@
         })]));
       }
 
+      function readUserProgress() {
+        return readUserProgressForUser(state.user?.id);
+      }
+
       function persistUserProgressLocally() {
         syncOwnedIdsFromProgress();
         persistOwnedIdsLocally();
-        if (!state.user?.id) return;
         localStorage.setItem(userScopedStorageKey(USER_PROGRESS_STORAGE_KEY), JSON.stringify(Array.from(state.userCards.values())));
       }
 
+      function readHiddenCardIdsForUser(userId = state.user?.id) {
+        const parsed = readScopedStorage(USER_HIDDEN_STORAGE_KEY, [], userId);
+        const ids = Array.isArray(parsed)
+          ? parsed.map((cardId) => safeText(cardId)).filter(Boolean)
+          : [];
+        return new Set(ids);
+      }
+
       function readHiddenCardIds() {
-        if (!state.user?.id) return new Set();
-        try {
-          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(USER_HIDDEN_STORAGE_KEY)) || '[]');
-          const ids = Array.isArray(parsed)
-            ? parsed.map((cardId) => safeText(cardId)).filter(Boolean)
-            : [];
-          return new Set(ids);
-        } catch (_error) {
-          return new Set();
-        }
+        return readHiddenCardIdsForUser(state.user?.id);
       }
 
       function persistHiddenCardIdsLocally() {
-        if (!state.user?.id) return;
         localStorage.setItem(
           userScopedStorageKey(USER_HIDDEN_STORAGE_KEY),
           JSON.stringify(Array.from(state.hiddenCardIds.values()))
@@ -3654,11 +3802,6 @@
         return { ...(extraHeaders || {}) };
       }
 
-      function userScopedStorageKey(baseKey) {
-        const userId = Number(state.user?.id) || 0;
-        return userId ? `${baseKey}:${userId}` : baseKey;
-      }
-
       function persistAuthToken(token) {
         try {
           if (token) {
@@ -3682,6 +3825,107 @@
           avatarImage: safeText(user.avatar_image || user.avatarImage),
           createdAt: user.created_at || user.createdAt || null
         };
+      }
+
+      function progressRank(record) {
+        if (!record) {
+          return { phase: 0, ready: 0, availableAt: 0, createdAt: 0 };
+        }
+        const phase = Math.max(
+          0,
+          Math.min(5, Number(record.status === 'ready' ? record.phaseIndex : Math.max(record.phaseIndex || 0, record.targetPhaseIndex || 0)) || 0)
+        );
+        return {
+          phase,
+          ready: record.status === 'ready' ? 1 : 0,
+          availableAt: Number(record.availableAt) || 0,
+          createdAt: Number(record.createdAt) || 0
+        };
+      }
+
+      function pickMoreAdvancedProgress(leftRecord, rightRecord) {
+        const left = normalizeProgressRecord(leftRecord);
+        const right = normalizeProgressRecord(rightRecord);
+        if (!left) return right;
+        if (!right) return left;
+        const leftRank = progressRank(left);
+        const rightRank = progressRank(right);
+        if (rightRank.phase !== leftRank.phase) {
+          return rightRank.phase > leftRank.phase ? right : left;
+        }
+        if (rightRank.ready !== leftRank.ready) {
+          return rightRank.ready > leftRank.ready ? right : left;
+        }
+        if (rightRank.availableAt !== leftRank.availableAt) {
+          return rightRank.availableAt > leftRank.availableAt ? right : left;
+        }
+        return rightRank.createdAt >= leftRank.createdAt ? right : left;
+      }
+
+      function captureGuestSnapshot() {
+        return {
+          progress: readUserProgressForUser(0),
+          stats: readUserStatsForUser(0),
+          hiddenCardIds: readHiddenCardIdsForUser(0),
+          tutorialCompleted: readTutorialProgressForUser(0)
+        };
+      }
+
+      function guestSnapshotHasData(snapshot) {
+        return Boolean(
+          snapshot
+          && (
+            snapshot.progress?.size
+            || snapshot.hiddenCardIds?.size
+            || snapshot.tutorialCompleted
+            || hasMeaningfulStats(snapshot.stats)
+          )
+        );
+      }
+
+      function clearGuestLocalState() {
+        [
+          TUTORIAL_PROGRESS_STORAGE_KEY,
+          OWNED_STORAGE_KEY,
+          USER_STATS_STORAGE_KEY,
+          USER_PROGRESS_STORAGE_KEY,
+          USER_HIDDEN_STORAGE_KEY
+        ].forEach((storageKey) => removeScopedStorage(storageKey, 0));
+      }
+
+      async function migrateGuestProgressToAuthenticatedUser() {
+        if (!state.user?.id) return false;
+        const guestSnapshot = captureGuestSnapshot();
+        if (!guestSnapshotHasData(guestSnapshot)) return false;
+
+        const mergedProgress = new Map(state.userCards);
+        guestSnapshot.progress.forEach((record, cardId) => {
+          mergedProgress.set(cardId, pickMoreAdvancedProgress(mergedProgress.get(cardId), record));
+        });
+        state.userCards = mergedProgress;
+        state.hiddenCardIds = new Set([
+          ...Array.from(state.hiddenCardIds.values()),
+          ...Array.from(guestSnapshot.hiddenCardIds.values())
+        ]);
+        state.stats = normalizeStatsSnapshot({
+          playTimeMs: Number(state.stats.playTimeMs || 0) + Number(guestSnapshot.stats?.playTimeMs || 0),
+          speakings: Number(state.stats.speakings || 0) + Number(guestSnapshot.stats?.speakings || 0),
+          listenings: Number(state.stats.listenings || 0) + Number(guestSnapshot.stats?.listenings || 0)
+        });
+        if (guestSnapshot.tutorialCompleted) {
+          state.game.tutorial.completed = true;
+        }
+
+        persistUserStatsLocally();
+        persistUserProgressLocally();
+        persistHiddenCardIdsLocally();
+        persistTutorialProgressLocally();
+        clearGuestLocalState();
+        syncOwnedIdsFromProgress();
+        refreshLibrary();
+        syncWelcomeGate();
+        await syncFlashcardCloudNow();
+        return true;
       }
 
       function isAdminUsername(value) {
@@ -3801,6 +4045,18 @@
         }, Math.max(0, Number(delayMs) || 0));
       }
 
+      function authCopyText() {
+        const isRegister = state.authMode === 'register';
+        if (state.authReason === 'progress') {
+          return isRegister
+            ? 'Crie sua conta para salvar seus 6 flashcards e continuar jogando.'
+            : 'Voce ja liberou 6 flashcards. Entre agora para continuar sem perder seu progresso.';
+        }
+        return isRegister
+          ? 'Crie seu nome e sua senha para entrar na Liga Playtalk e aparecer no ranking.'
+          : 'Entre com seu nome e senha para comeÃ§ar a jogar na Liga Playtalk.';
+      }
+
       function setAuthMode(mode) {
         state.authMode = mode === 'register' ? 'register' : 'login';
         const isRegister = state.authMode === 'register';
@@ -3808,9 +4064,7 @@
         els.authModeRegister.classList.toggle('is-active', isRegister);
         els.authSubmitBtn.textContent = isRegister ? 'Cadastrar e jogar' : 'Entrar e jogar';
         els.authPassword.setAttribute('autocomplete', isRegister ? 'new-password' : 'current-password');
-        els.authCopy.textContent = isRegister
-          ? 'Crie seu nome e sua senha para entrar na Liga Playtalk e aparecer no ranking.'
-          : 'Entre com seu nome e senha para começar a jogar na Liga Playtalk.';
+        els.authCopy.textContent = authCopyText();
       }
 
       function setAuthStatus(message, tone = '') {
@@ -3821,8 +4075,163 @@
         }
       }
 
+      function clearWelcomeRotation() {
+        if (!state.entry.welcomeTimer) return;
+        window.clearInterval(state.entry.welcomeTimer);
+        state.entry.welcomeTimer = 0;
+      }
+
+      function setWelcomeCopy(text, animate = false) {
+        if (!els.welcomeCopy) return;
+        const nextText = safeText(text) || WELCOME_COPY_MESSAGES[0];
+        if (!animate || els.welcomeCopy.textContent === nextText) {
+          els.welcomeCopy.textContent = nextText;
+          els.welcomeCopy.classList.remove('is-changing');
+          return;
+        }
+        els.welcomeCopy.classList.add('is-changing');
+        window.setTimeout(() => {
+          els.welcomeCopy.textContent = nextText;
+          els.welcomeCopy.classList.remove('is-changing');
+        }, 160);
+      }
+
+      function shouldShowWelcomeGate() {
+        if (state.entry.authRequired || state.game.active || state.watch.active || isAdminUser()) return false;
+        if (state.game.tutorial.completed) return false;
+        return !state.entry.cardsReady || Boolean(findTutorialPlanetCard());
+      }
+
+      function syncWelcomeGate() {
+        const visible = shouldShowWelcomeGate();
+        state.entry.welcomeVisible = visible;
+        document.body.classList.toggle('welcome-active', visible);
+        els.welcomeGate?.classList.toggle('is-visible', visible);
+        if (!visible) {
+          clearWelcomeRotation();
+          return;
+        }
+        if (state.entry.pendingTutorialStart) {
+          setWelcomeCopy('Preparando tutorial...');
+          return;
+        }
+        setWelcomeCopy(WELCOME_COPY_MESSAGES[state.entry.welcomeIndex % WELCOME_COPY_MESSAGES.length]);
+        if (state.entry.welcomeTimer) return;
+        state.entry.welcomeTimer = window.setInterval(() => {
+          if (!shouldShowWelcomeGate() || state.entry.pendingTutorialStart) return;
+          state.entry.welcomeIndex = (state.entry.welcomeIndex + 1) % WELCOME_COPY_MESSAGES.length;
+          setWelcomeCopy(WELCOME_COPY_MESSAGES[state.entry.welcomeIndex], true);
+        }, WELCOME_COPY_ROTATION_MS);
+      }
+
+      function hideWelcomeGate() {
+        state.entry.pendingTutorialStart = false;
+        state.entry.welcomeVisible = false;
+        document.body.classList.remove('welcome-active');
+        els.welcomeGate?.classList.remove('is-visible');
+        clearWelcomeRotation();
+      }
+
+      function tryStartPendingTutorial() {
+        if (!state.entry.pendingTutorialStart || !state.entry.cardsReady) return false;
+        if (!findTutorialPlanetCard()) {
+          state.entry.pendingTutorialStart = false;
+          syncWelcomeGate();
+          return false;
+        }
+        hideWelcomeGate();
+        beginTutorialGame();
+        return true;
+      }
+
+      function requestWelcomeTutorialStart() {
+        if (state.entry.authRequired) return;
+        state.entry.pendingTutorialStart = true;
+        setWelcomeCopy('Preparando tutorial...');
+        tryStartPendingTutorial();
+      }
+
+      function clearGuestAuthDelay() {
+        if (!state.entry.authDelayTimer) return;
+        window.clearTimeout(state.entry.authDelayTimer);
+        state.entry.authDelayTimer = 0;
+      }
+
+      function shouldRequireGuestAuth() {
+        return !state.user?.id
+          && !isAdminUser()
+          && accessibleFlashcardsCount() >= GUEST_FLASHCARD_LOGIN_THRESHOLD;
+      }
+
+      function clearAuthRevealTimer() {
+        if (!state.entry.authRevealTimer) return;
+        window.clearTimeout(state.entry.authRevealTimer);
+        state.entry.authRevealTimer = 0;
+      }
+
       function lockFlashcardsApp(locked) {
         document.body.classList.toggle('auth-locked', locked);
+      }
+
+      function hideAuthGate() {
+        state.entry.authRequired = false;
+        state.authReason = 'optional';
+        clearAuthRevealTimer();
+        els.authGate?.classList.remove('is-form-visible');
+        lockFlashcardsApp(false);
+        setAuthStatus('');
+      }
+
+      function showAuthGate({ reason = 'optional', statusMessage = '' } = {}) {
+        state.entry.authRequired = true;
+        state.authReason = reason;
+        clearAuthRevealTimer();
+        lockFlashcardsApp(true);
+        els.authGate?.classList.remove('is-form-visible');
+        setAuthMode('login');
+        els.authCopy.textContent = authCopyText();
+        setAuthStatus(statusMessage);
+        state.entry.authRevealTimer = window.setTimeout(() => {
+          state.entry.authRevealTimer = 0;
+          els.authGate?.classList.add('is-form-visible');
+          els.authUsername?.focus({ preventScroll: true });
+        }, AUTH_GATE_FORM_REVEAL_MS);
+      }
+
+      async function enforceGuestAuthGate() {
+        clearGuestAuthDelay();
+        if (!shouldRequireGuestAuth()) return false;
+        hideWelcomeGate();
+        if (state.watch.active) {
+          stopWatch();
+        }
+        if (state.game.active) {
+          await exitGame();
+        }
+        showAuthGate({
+          reason: 'progress',
+          statusMessage: 'Voce liberou 6 flashcards. Entre para continuar.'
+        });
+        return true;
+      }
+
+      function scheduleGuestAuthRequirement({ immediate = false } = {}) {
+        if (!shouldRequireGuestAuth()) {
+          clearGuestAuthDelay();
+          return false;
+        }
+        if (state.entry.authRequired || state.entry.authDelayTimer) {
+          return true;
+        }
+        if (immediate) {
+          void enforceGuestAuthGate();
+          return true;
+        }
+        state.entry.authDelayTimer = window.setTimeout(() => {
+          state.entry.authDelayTimer = 0;
+          void enforceGuestAuthGate();
+        }, GUEST_FLASHCARD_LOGIN_DELAY_MS);
+        return true;
       }
 
       async function fetchSessionUser() {
@@ -3842,6 +4251,7 @@
         if (!state.user) {
           throw new Error('Sessao invalida.');
         }
+        clearGuestAuthDelay();
         scheduleCardsRefresh();
         state.libraryPage = 1;
 
@@ -3888,8 +4298,7 @@
         renderMetrics();
         updateGameChips();
         refreshLibrary();
-        lockFlashcardsApp(false);
-        setAuthStatus('');
+        hideAuthGate();
         els.startGameBtn.disabled = false;
 
         if (!options.skipLoadCards) {
@@ -3908,13 +4317,24 @@
           }
         }
 
+        await migrateGuestProgressToAuthenticatedUser();
+
         if ((!hasCloudProgress && localProgress.size > 0) || (!hasCloudStats && hasMeaningfulStats(localStats))) {
           await syncFlashcardCloudNow();
         }
+        syncWelcomeGate();
+        tryStartPendingTutorial();
       }
 
       async function handleLoggedOutState(message) {
+        if (state.game.active) {
+          await exitGame();
+        }
+        if (state.watch.active) {
+          stopWatch();
+        }
         persistAuthToken('');
+        clearGuestAuthDelay();
         state.user = null;
         syncAdminTheme();
         stopCardsRefresh();
@@ -3924,11 +4344,9 @@
         }
         state.flashcardsSyncInFlight = false;
         state.flashcardsSyncQueued = false;
-        state.user = null;
-        state.userCards = new Map();
-        state.hiddenCardIds = new Set();
-        state.ownedIds = new Set();
-        state.stats = normalizeStatsSnapshot({});
+        state.userCards = readUserProgressForUser(0);
+        state.hiddenCardIds = readHiddenCardIdsForUser(0);
+        state.stats = readUserStatsForUser(0);
         state.libraryPage = 1;
         state.admin.selectedDeckSource = '';
         state.admin.decks = [];
@@ -3937,26 +4355,23 @@
         state.admin.draftCards = new Map();
         state.admin.pendingNewCards = [];
         resetTutorialRuntime({ preserveCompletion: false });
+        state.game.tutorial.completed = readTutorialProgressForUser(0);
+        syncOwnedIdsFromProgress();
         renderMetrics();
         updateGameChips();
-        if (els.libraryTitle) {
-          els.libraryTitle.textContent = 'Meus flashcards';
+        refreshLibrary();
+        hideAuthGate();
+        els.startGameBtn.disabled = false;
+        syncWelcomeGate();
+        tryStartPendingTutorial();
+        if (shouldRequireGuestAuth()) {
+          showAuthGate({
+            reason: 'progress',
+            statusMessage: message || 'Entre com seu nome e senha para continuar.'
+          });
+          return;
         }
-        if (els.adminBadge) {
-          els.adminBadge.hidden = true;
-        }
-        renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
-        els.allSectionCopy.textContent = 'Entre ou crie seu nome para começar.';
-        renderLibraryPagination(0);
-        syncAdminTools();
-        if (state.game.active) {
-          exitGame();
-        }
-        if (state.watch.active) {
-          stopWatch();
-        }
-        lockFlashcardsApp(true);
-        setAuthStatus(message || 'Entre com seu nome e senha para jogar.');
+        setAuthStatus('');
       }
 
       async function submitAuthForm(event) {
@@ -4219,7 +4634,7 @@
       }
 
       function canOfferTutorialMode() {
-        return Boolean(state.user && !isAdminUser() && !state.game.tutorial.completed && findTutorialPlanetCard());
+        return Boolean(!isAdminUser() && !state.game.tutorial.completed && findTutorialPlanetCard());
       }
 
       function syncTutorialSetupButton() {
@@ -5955,6 +6370,12 @@
         if (els.adminBadge) {
           els.adminBadge.hidden = !adminMode;
         }
+        if (els.logoutBtn) {
+          els.logoutBtn.hidden = !state.user;
+        }
+        if (els.usersLink) {
+          els.usersLink.hidden = !state.user;
+        }
         els.allSectionCopy.textContent = cards.length
           ? adminMode
             ? `${cards.length} flashcards${username} disponiveis no catalogo completo.`
@@ -7281,6 +7702,10 @@
       }
 
       function openGameSetup() {
+        if (canOfferTutorialMode()) {
+          beginTutorialGame();
+          return;
+        }
         syncGameSetupSummary();
         els.gameSetup.classList.add('is-visible');
         window.requestAnimationFrame(() => els.gameSetup.classList.add('is-active'));
@@ -7445,6 +7870,7 @@
       }
 
       function beginGame() {
+        hideWelcomeGate();
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
@@ -7500,6 +7926,7 @@
         const tutorialCard = findTutorialPlanetCard();
         if (!tutorialCard) return;
 
+        hideWelcomeGate();
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
@@ -7559,6 +7986,7 @@
         els.catalog.classList.remove('is-hidden');
         els.topbar.classList.remove('is-hidden');
         refreshLibrary();
+        syncWelcomeGate();
       }
 
       async function handleRecognitionResult(transcript, inputMode = 'speech') {
@@ -7567,6 +7995,7 @@
 
         const expectedAnswers = expectedAnswersForEntry(entry);
         const activeCountBeforeResolution = state.game.entries.size;
+        const accessibleCountBeforeResolution = accessibleFlashcardsCount();
         const evaluatedStage = entry.stage;
         const { score, isHit } = evaluateAcceptedAnswers(expectedAnswers, transcript);
         const card = cardById(entry.id);
@@ -7602,6 +8031,11 @@
             setGameStatus(`${accessibleFlashcardsCount()} FlashCards`, 'flashcards-count');
             promoteCardFromWin(entry);
             updateGameChips();
+            if (!state.user?.id
+              && accessibleCountBeforeResolution < GUEST_FLASHCARD_LOGIN_THRESHOLD
+              && accessibleFlashcardsCount() >= GUEST_FLASHCARD_LOGIN_THRESHOLD) {
+              scheduleGuestAuthRequirement();
+            }
             setGameStatus(`${accessibleFlashcardsCount()} FlashCards`, 'flashcards-count');
             entry._removeAfterReward = true;
           } else {
@@ -7790,8 +8224,15 @@
       }
 
       function bindEvents() {
-        els.authModeLogin.addEventListener('click', () => setAuthMode('login'));
-        els.authModeRegister.addEventListener('click', () => setAuthMode('register'));
+        els.welcomeTouch?.addEventListener('click', requestWelcomeTutorialStart);
+        els.authModeLogin.addEventListener('click', () => {
+          setAuthMode('login');
+          els.authCopy.textContent = authCopyText();
+        });
+        els.authModeRegister.addEventListener('click', () => {
+          setAuthMode('register');
+          els.authCopy.textContent = authCopyText();
+        });
         els.authForm.addEventListener('submit', submitAuthForm);
         els.logoutBtn.addEventListener('click', logoutCurrentUser);
         els.watchFlashcardsBtn.addEventListener('click', openWatchPopover);
@@ -7946,10 +8387,12 @@
         syncWatchControls();
         bindEvents();
         setAuthMode('login');
+        els.authCopy.textContent = authCopyText();
         if (els.usersLink) {
           els.usersLink.setAttribute('href', resolveUsersHref());
         }
-        lockFlashcardsApp(true);
+        hideAuthGate();
+        syncWelcomeGate();
         renderMetrics();
         updateGameChips();
         renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
@@ -7966,11 +8409,23 @@
         els.gameStarCopy.classList.add('is-hidden');
 
         try {
+          try {
+            await loadCards();
+          } catch (cardsError) {
+            console.warn('Falha ao carregar os decks na inicializacao:', cardsError);
+            state.allCards = readCachedCards();
+            state.deckCatalog = [];
+          } finally {
+            state.entry.cardsReady = true;
+            refreshLibrary();
+            syncWelcomeGate();
+            tryStartPendingTutorial();
+          }
           const sessionUser = await fetchSessionUser();
           if (sessionUser) {
-            await hydrateAuthenticatedApp(sessionUser);
+            await hydrateAuthenticatedApp(sessionUser, { skipLoadCards: true });
           } else {
-            await handleLoggedOutState('Entre ou cadastre seu nome para liberar os flashcards.');
+            await handleLoggedOutState('');
           }
           if (!recognitionCtor) {
             const startGameLabel = els.startGameBtn.querySelector('.btn__label');
@@ -7982,7 +8437,8 @@
           }
         } catch (error) {
           console.warn('Falha ao iniciar flashcards:', error);
-          await handleLoggedOutState('Nao consegui validar sua sessao agora. Entre novamente.');
+          state.entry.cardsReady = true;
+          await handleLoggedOutState('');
         }
       }
 
