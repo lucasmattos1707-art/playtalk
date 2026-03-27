@@ -2100,14 +2100,14 @@
 
     .game-report-trigger {
       position: absolute;
-      top: 10px;
-      right: 10px;
+      top: 4px;
+      right: 6px;
       z-index: 4;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 36px;
-      height: 36px;
+      width: 40px;
+      height: 40px;
       padding: 0;
       border: 0;
       background: transparent;
@@ -2115,8 +2115,8 @@
     }
 
     .game-report-trigger img {
-      width: 31px;
-      height: 31px;
+      width: 34px;
+      height: 34px;
       display: block;
       opacity: 0.55;
       transition: opacity 160ms ease, transform 160ms ease;
@@ -3409,9 +3409,6 @@
             <h2>Reportar flashcard</h2>
             <p>Escolha o problema desse card.</p>
           </div>
-          <div class="actions">
-            <button class="btn btn-close" id="closeGameReportBtn" type="button" aria-label="Fechar">×</button>
-          </div>
         </div>
         <div class="game-report-menu__options" id="gameReportOptions"></div>
       </div>
@@ -4626,21 +4623,25 @@
       function switchMainView(view) {
         const nextView = ['cards', 'users', 'profile', 'play'].includes(view) ? view : 'cards';
         state.ui.activeView = nextView === 'play' ? 'play' : nextView;
+        const showCatalog = nextView === 'cards';
+        const showUsers = nextView === 'users';
+        const showProfile = nextView === 'profile';
+        const showTopbar = nextView === 'users';
 
         if (els.catalog) {
-          els.catalog.hidden = nextView !== 'cards';
+          els.catalog.hidden = !showCatalog;
         }
         if (els.usersPanel) {
-          els.usersPanel.hidden = nextView !== 'users';
+          els.usersPanel.hidden = !showUsers;
         }
         if (els.profilePanel) {
-          els.profilePanel.hidden = nextView !== 'profile';
+          els.profilePanel.hidden = !showProfile;
         }
         if (els.topbar) {
-          els.topbar.hidden = true;
-          els.topbar.classList.add('is-hidden');
+          els.topbar.hidden = !showTopbar;
+          els.topbar.classList.toggle('is-hidden', !showTopbar);
         }
-        if (nextView === 'profile') {
+        if (showProfile) {
           renderProfilePanel();
         }
         syncFooterNav();
