@@ -4559,6 +4559,43 @@
         return Array.isArray(state.admin.decks) ? state.admin.decks.slice() : [];
       }
 
+      function adminEditableSource(card) {
+        return safeText(card?.adminSource || card?.source);
+      }
+
+      function normalizeDeckTitleKey(value) {
+        return normalizeText(value).toLocaleLowerCase('pt-BR');
+      }
+
+      function reconcileAdminCardSources() {
+        const decks = adminDeckOptions();
+        if (!decks.length || !Array.isArray(state.allCards) || !state.allCards.length) {
+          return;
+        }
+        const titleToSource = new Map();
+        decks.forEach((deck) => {
+          const titleKey = normalizeDeckTitleKey(deck?.title);
+          const source = safeText(deck?.source);
+          if (!titleKey || !source) return;
+          if (titleToSource.has(titleKey) && titleToSource.get(titleKey) !== source) {
+            titleToSource.set(titleKey, '');
+            return;
+          }
+          titleToSource.set(titleKey, source);
+        });
+        state.allCards = state.allCards.map((card) => {
+          const titleKey = normalizeDeckTitleKey(card?.deckTitle);
+          const matchedSource = titleToSource.get(titleKey);
+          if (!matchedSource) {
+            return { ...card };
+          }
+          return {
+            ...card,
+            adminSource: matchedSource
+          };
+        });
+      }
+
       function selectedAdminDeckMeta() {
         const selectedSource = safeText(state.admin.selectedDeckSource);
         if (!selectedSource) return null;
@@ -4585,11 +4622,11 @@
         const reportFilter = safeText(state.admin.reportFilter);
         let cards = !selectedSource
           ? state.allCards.slice()
-          : state.allCards.filter((card) => safeText(card?.source) === selectedSource);
+          : state.allCards.filter((card) => adminEditableSource(card) === selectedSource);
         cards = cards.map(buildAdminDraftCard);
         const pendingCards = !selectedSource
           ? state.admin.pendingNewCards.slice()
-          : state.admin.pendingNewCards.filter((card) => safeText(card?.source) === selectedSource);
+          : state.admin.pendingNewCards.filter((card) => adminEditableSource(card) === selectedSource);
         cards = cards.concat(pendingCards.map((card) => ({ ...card })));
         if (reportFilter) {
           cards = cards.filter((card) => Number(state.admin.reportCounts.get(card.id)?.[reportFilter] || 0) > 0);
@@ -4636,25 +4673,6 @@
           syncAdminDeckSelect();
           return;
         }
-        const catalogDecks = Array.isArray(state.deckCatalog)
-          ? state.deckCatalog
-            .map((deck) => ({
-              source: safeText(deck?.source),
-              title: safeText(deck?.title) || safeText(deck?.source) || 'Deck',
-              coverImage: '',
-              count: Number.isFinite(Number(deck?.count)) ? Math.max(0, Number(deck.count)) : 0
-            }))
-            .filter((deck) => deck.source)
-            .sort((left, right) => safeText(left?.title).localeCompare(safeText(right?.title), 'pt-BR', {
-              sensitivity: 'base',
-              numeric: true
-            }))
-          : [];
-        if (catalogDecks.length) {
-          state.admin.decks = catalogDecks;
-          syncAdminDeckSelect();
-          return;
-        }
         try {
           const response = await fetch(buildApiUrl('/api/admin/flashcards/decks'), {
             headers: buildAuthHeaders(),
@@ -4668,6 +4686,7 @@
         } catch (_error) {
           state.admin.decks = [];
         }
+        reconcileAdminCardSources();
         syncAdminDeckSelect();
       }
 
@@ -4984,7 +5003,7 @@
         if (!card) return;
         const nextValue = clampAdminEditableText(value);
         const payload = {
-          source: card.source,
+          source: adminEditableSource(card),
           sourceIndex: card.sourceIndex
         };
         if (field === 'english') {
@@ -5002,7 +5021,7 @@
           const card = state.allCards.find((entry) => entry.id === cardId);
           if (!card) return null;
           return {
-            source: card.source,
+            source: adminEditableSource(card),
             sourceIndex: card.sourceIndex,
             portuguese: typeof draft.portuguese === 'string' ? draft.portuguese : card.portuguese,
             english: typeof draft.english === 'string' ? draft.english : card.english
@@ -5081,18 +5100,12 @@
             waitingMessage: `Publicando "${deckTitle}" no R2...`,
             successMessage: `Deck "${deckTitle}" criado.`
           });
-          const publishedDeckEntry = Array.isArray(payload?.publishedDecks) ? payload.publishedDecks[0] : null;
-          const remoteSource = safeText(
-            publishedDeckEntry?.manifestEntry?.source
-            || publishedDeckEntry?.source
-            || payload?.source
-          );
           const refreshed = await tryRefreshPublishedFlashcards();
           if (!refreshed) {
             state.admin.decks = [
-              ...state.admin.decks.filter((deck) => safeText(deck?.source) !== remoteSource),
+              ...state.admin.decks.filter((deck) => safeText(deck?.source) !== safeText(payload?.source)),
               {
-                source: remoteSource,
+                source: safeText(payload?.source),
                 title: safeText(payload?.title) || deckTitle,
                 coverImage: safeText(payload?.coverImage),
                 count: 0
@@ -5103,7 +5116,7 @@
             }));
             syncAdminDeckSelect();
           }
-          state.admin.selectedDeckSource = remoteSource;
+          state.admin.selectedDeckSource = safeText(payload?.source);
           state.libraryPage = 1;
           refreshLibrary();
           state.admin.status = refreshed
@@ -5302,7 +5315,7 @@
         syncAdminTools();
         try {
           await postAdminFlashcardAction('/api/admin/flashcards/delete-asset', {
-            source: card.source,
+            source: adminEditableSource(card),
             sourceIndex: card.sourceIndex,
             kind
           });
@@ -5332,7 +5345,7 @@
         syncAdminTools();
         try {
           await postAdminFlashcardAction('/api/admin/flashcards/delete-card', {
-            source: card.source,
+            source: adminEditableSource(card),
             sourceIndex: card.sourceIndex
           });
           closeAdminCardPopover();
@@ -5416,7 +5429,7 @@
           const payload = await postAdminFlashcardAction(endpoint, {
             cards: targets.map((card) => ({
               id: card.id,
-              source: card.source,
+              source: adminEditableSource(card),
               sourceIndex: card.sourceIndex,
               deckTitle: card.deckTitle,
               english: card.english,
