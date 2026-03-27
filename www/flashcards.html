@@ -2638,6 +2638,127 @@
         transform: scale(1.03);
       }
     }
+
+    @keyframes flashcardsTutorialReveal {
+      0% {
+        opacity: 0;
+        transform: translateY(24px) scale(0.98);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes flashcardsTutorialMicFlash {
+      0% {
+        opacity: 0.52;
+        filter: drop-shadow(0 0 0 rgba(255, 156, 43, 0));
+      }
+      50% {
+        opacity: 1;
+        filter: drop-shadow(0 0 28px rgba(255, 156, 43, 0.9));
+      }
+      100% {
+        opacity: 0.9;
+        filter: drop-shadow(0 0 0 rgba(255, 156, 43, 0));
+      }
+    }
+
+    .game-shell {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-setup__option--tutorial {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, #ff8c1a 0%, #ffbf69 100%);
+      border-color: rgba(255, 228, 196, 0.7);
+      color: #2a1400;
+      box-shadow: 0 18px 44px rgba(255, 140, 26, 0.28);
+    }
+
+    .game-setup__option--tutorial:disabled {
+      opacity: 0.62;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .game-shell__tutorial-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at center, rgba(7, 20, 37, 0.35) 0%, rgba(4, 19, 33, 0.88) 66%, rgba(4, 19, 33, 0.96) 100%);
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    .game-shell.is-tutorial-intro .game-shell__tutorial-overlay {
+      display: flex;
+    }
+
+    .game-shell__tutorial-logo {
+      width: min(280px, 60vw);
+      height: auto;
+      opacity: 0;
+      transform: scale(0.88);
+      transition: opacity 1000ms ease, transform 1000ms ease;
+      filter: drop-shadow(0 20px 36px rgba(0, 0, 0, 0.34));
+    }
+
+    .game-shell__tutorial-logo.is-visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .game-shell__tutorial-logo.is-fading-out {
+      opacity: 0;
+      transform: scale(1.08);
+    }
+
+    #gameHeadCopy,
+    #gameStarsWrap,
+    #gameCard,
+    #gameStatusSlot,
+    #gameChipRow {
+      transition: opacity 280ms ease, transform 280ms ease;
+    }
+
+    .game-shell.is-tutorial-intro #gameHeadCopy,
+    .game-shell.is-tutorial-intro #gameStarsWrap,
+    .game-shell.is-tutorial-intro #gameCard,
+    .game-shell.is-tutorial-intro #gameStatusSlot,
+    .game-shell.is-tutorial-intro #gameChipRow {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(18px);
+    }
+
+    .game-shell.is-tutorial-reveal #gameHeadCopy,
+    .game-shell.is-tutorial-reveal #gameStarsWrap,
+    .game-shell.is-tutorial-reveal #gameCard,
+    .game-shell.is-tutorial-reveal #gameStatusSlot,
+    .game-shell.is-tutorial-reveal #gameChipRow {
+      visibility: visible;
+      animation: flashcardsTutorialReveal 1500ms ease forwards;
+    }
+
+    .game-card__visual.is-mic-live::before {
+      opacity: 0.92;
+      transition: opacity 600ms ease;
+    }
+
+    .game-card__visual.is-tutorial-mic-fade::before {
+      opacity: 0;
+    }
+
+    .game-card__visual.is-tutorial-mic-flash::before {
+      animation: flashcardsTutorialMicFlash 520ms ease-out;
+    }
   </style>
 </head>
 <body class="flashcards-home-collapsed">
@@ -2716,7 +2837,7 @@
     <section class="game" id="game" aria-modal="true" role="dialog">
       <div class="panel game-shell">
         <div class="game-head">
-          <div>
+          <div id="gameHeadCopy">
             <h2>Modo jogar</h2>
             <p id="gameHeaderCopy">O jogo comeca com 3 cartas e cresce ate 12 conforme voce ganha flashcards.</p>
           </div>
@@ -2725,7 +2846,7 @@
           </div>
         </div>
 
-        <div class="stars-wrap">
+        <div class="stars-wrap" id="gameStarsWrap">
           <div class="stars" id="gameStars" aria-label="Estrelas do card"></div>
           <p id="gameStarCopy" class="game-star-copy">Cada acerto libera uma estrela. Cinco estrelas ganham o card.</p>
         </div>
@@ -2753,11 +2874,11 @@
           </div>
         </article>
 
-        <div class="game-status-slot" aria-live="polite" aria-atomic="true">
+        <div class="game-status-slot" id="gameStatusSlot" aria-live="polite" aria-atomic="true">
           <p class="game-status" id="gameStatus">Carregando rodada...</p>
         </div>
 
-        <div class="game-chip-row">
+        <div class="game-chip-row" id="gameChipRow">
           <div class="game-chip" id="gameActiveChip">
             <img src="selos/speakings.svg" alt="">
             <span class="game-chip__label">Speakings</span>
@@ -2781,6 +2902,9 @@
             <p>Voce ja ganhou todos os cards carregados, ou ainda nao existem cartas suficientes fora de Meus flashcards para montar a rodada.</p>
           </div>
         </section>
+        <div class="game-shell__tutorial-overlay" id="gameTutorialOverlay" aria-hidden="true">
+          <img class="game-shell__tutorial-logo" id="gameTutorialLogo" src="SVG/logo.png" alt="PlayTalk">
+        </div>
       </div>
     </section>
 
@@ -2798,6 +2922,7 @@
         </div>
         <div class="game-setup__options" id="gameSetupOptions">
           <button class="game-setup__option" type="button" data-game-count="3">Comecar com 3 cartas</button>
+          <button class="game-setup__option game-setup__option--tutorial" id="startTutorialBtn" type="button" hidden>Iniciar Modo Tutorial</button>
         </div>
       </div>
     </section>
@@ -2916,6 +3041,7 @@
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
       const USER_HIDDEN_STORAGE_KEY = 'playtalk-flashcards-hidden-v1';
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
+      const TUTORIAL_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-tutorial-v1';
       const TIME_OFFSET_STORAGE_KEY = 'playtalk-flashcards-time-offset-v1';
       const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
       const recognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -2944,6 +3070,11 @@
       const EARLY_FLASHCARD_MIN_LENGTH = 6;
       const EARLY_FLASHCARD_MAX_LENGTH = 12;
       const REVIEW_SLOT_LIMIT = 8;
+      const TUTORIAL_AUDIO_ROOT = 'audiostuto';
+      const TUTORIAL_NORMAL_GAME_COUNT = 3;
+      const TUTORIAL_PLANET_IMAGE_NAME = 'planet.webp';
+      const TUTORIAL_PLANET_ENGLISH = 'planet';
+      const TUTORIAL_PLANET_PORTUGUESE = 'planeta';
       const FLASHCARD_REPORT_TYPES = [
         { key: 'blurred-image', label: 'Imagem borrada' },
         { key: 'weak-association', label: 'Associacao fraca' },
@@ -2968,6 +3099,21 @@
         4: { badge: 'Etapa 4/5', instruction: 'Escreva ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false },
         5: { badge: 'Etapa 5/5', instruction: 'Fale ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false }
       };
+
+      function createTutorialState() {
+        return {
+          active: false,
+          completed: false,
+          interactionLocked: false,
+          introPlayed: false,
+          explainedStars: -1,
+          sequenceToken: 0,
+          timers: [],
+          currentCardId: '',
+          finishing: false
+        };
+      }
+
       const state = {
         allCards: [],
         deckCatalog: [],
@@ -3031,7 +3177,8 @@
           typingKeyAudioPool: [],
           typingKeyAudioIndex: 0,
           paused: false,
-          reportCardId: ''
+          reportCardId: '',
+          tutorial: createTutorialState()
         },
         watch: {
           active: false,
@@ -3117,6 +3264,10 @@
         gameLanguageBtn: document.getElementById('gameLanguageBtn'),
         gameTouchBtn: document.getElementById('gameTouchBtn'),
         gameTypingKeyboard: document.getElementById('gameTypingKeyboard'),
+        gameHeadCopy: document.getElementById('gameHeadCopy'),
+        gameStarsWrap: document.getElementById('gameStarsWrap'),
+        gameStatusSlot: document.getElementById('gameStatusSlot'),
+        gameChipRow: document.getElementById('gameChipRow'),
         gameHeaderCopy: document.getElementById('gameHeaderCopy'),
         gameActiveChip: document.getElementById('gameActiveChip'),
         gameActiveValue: document.getElementById('gameActiveValue'),
@@ -3129,6 +3280,7 @@
           gameSetupOptions: document.getElementById('gameSetupOptions'),
           closeGameSetupBtn: document.getElementById('closeGameSetupBtn'),
           gameSetupCountCopy: document.getElementById('gameSetupCountCopy'),
+          startTutorialBtn: document.getElementById('startTutorialBtn'),
           watchPopover: document.getElementById('watchPopover'),
         closeWatchPopoverBtn: document.getElementById('closeWatchPopoverBtn'),
         startWatchBtn: document.getElementById('startWatchBtn'),
@@ -3143,7 +3295,9 @@
         watchVisual: document.getElementById('watchVisual'),
         watchWord: document.getElementById('watchWord'),
         watchSubword: document.getElementById('watchSubword'),
-        watchStars: document.getElementById('watchStars')
+        watchStars: document.getElementById('watchStars'),
+        gameTutorialOverlay: document.getElementById('gameTutorialOverlay'),
+        gameTutorialLogo: document.getElementById('gameTutorialLogo')
       };
 
       function safeText(value) {
@@ -3271,6 +3425,29 @@
         const normalized = normalizeGameCount(value) || DEFAULT_GAME_CONTEXT_LIMIT;
         state.game.selectedCount = normalized;
         state.game.contextLimit = normalized;
+      }
+
+      function readTutorialProgress() {
+        if (!state.user?.id) return false;
+        try {
+          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(TUTORIAL_PROGRESS_STORAGE_KEY)) || 'null');
+          return Boolean(parsed?.completed || parsed === true);
+        } catch (_error) {
+          return false;
+        }
+      }
+
+      function persistTutorialProgressLocally() {
+        if (!state.user?.id) return;
+        localStorage.setItem(userScopedStorageKey(TUTORIAL_PROGRESS_STORAGE_KEY), JSON.stringify({
+          completed: Boolean(state.game.tutorial.completed)
+        }));
+      }
+
+      function setTutorialCompleted(completed) {
+        state.game.tutorial.completed = Boolean(completed);
+        persistTutorialProgressLocally();
+        syncTutorialSetupButton();
       }
 
       function readOwnedIds() {
@@ -3696,6 +3873,7 @@
         state.hiddenCardIds = Array.isArray(cloudState?.meta?.hiddenCardIds)
           ? new Set(cloudState.meta.hiddenCardIds.map((cardId) => safeText(cardId)).filter(Boolean))
           : localHidden;
+        state.game.tutorial.completed = readTutorialProgress();
         syncOwnedIdsFromProgress();
 
         if (Number.isFinite(Number(cloudState?.serverTimeMs)) && Number(cloudState.serverTimeMs) > 0) {
@@ -3758,6 +3936,7 @@
         state.admin.reportCounts = new Map();
         state.admin.draftCards = new Map();
         state.admin.pendingNewCards = [];
+        resetTutorialRuntime({ preserveCompletion: false });
         renderMetrics();
         updateGameChips();
         if (els.libraryTitle) {
@@ -4009,6 +4188,247 @@
         els.gameSetupCountCopy.textContent = total
           ? `${total} flashcards disponiveis no total para jogar agora.`
           : 'Nenhum flashcard disponivel para jogar agora.';
+        syncTutorialSetupButton();
+      }
+
+      function tutorialAudioPath(index) {
+        return `${TUTORIAL_AUDIO_ROOT}/tuto${index}.mp3`;
+      }
+
+      function findTutorialPlanetCard() {
+        return state.allCards.find((card) => {
+          const english = normalizeText(card?.english);
+          const portuguese = normalizeText(card?.portuguese);
+          const imageUrl = safeText(card?.imageUrl).toLowerCase();
+          return (
+            (english === TUTORIAL_PLANET_ENGLISH && portuguese === TUTORIAL_PLANET_PORTUGUESE)
+            || imageUrl.includes(`/${TUTORIAL_PLANET_IMAGE_NAME}`)
+            || imageUrl.endsWith(TUTORIAL_PLANET_IMAGE_NAME)
+          );
+        }) || null;
+      }
+
+      function isTutorialPlanetCard(cardOrId) {
+        const tutorialCard = findTutorialPlanetCard();
+        const card = typeof cardOrId === 'string' ? cardById(cardOrId) : cardOrId;
+        return Boolean(tutorialCard && card && tutorialCard.id === card.id);
+      }
+
+      function canOfferTutorialMode() {
+        return Boolean(state.user && !isAdminUser() && !state.game.tutorial.completed && findTutorialPlanetCard());
+      }
+
+      function syncTutorialSetupButton() {
+        if (!els.startTutorialBtn) return;
+        const available = canOfferTutorialMode();
+        els.startTutorialBtn.hidden = !available;
+        els.startTutorialBtn.disabled = !available;
+      }
+
+      function clearTutorialTimers() {
+        const timers = Array.isArray(state.game.tutorial.timers) ? state.game.tutorial.timers : [];
+        timers.forEach((timerId) => window.clearTimeout(timerId));
+        state.game.tutorial.timers = [];
+      }
+
+      function queueTutorialTimer(token, delayMs, callback) {
+        const timerId = window.setTimeout(() => {
+          state.game.tutorial.timers = state.game.tutorial.timers.filter((currentId) => currentId !== timerId);
+          if (state.game.tutorial.sequenceToken !== token) return;
+          callback();
+        }, Math.max(0, Number(delayMs) || 0));
+        state.game.tutorial.timers.push(timerId);
+        return timerId;
+      }
+
+      function isTutorialSequenceCurrent(token, cardId = state.game.currentId) {
+        return Boolean(
+          state.game.active
+          && state.game.tutorial.active
+          && state.game.tutorial.sequenceToken === token
+          && (!cardId || state.game.currentId === cardId)
+        );
+      }
+
+      function resetTutorialVisualState() {
+        const gameShell = els.game.querySelector('.game-shell');
+        gameShell?.classList.remove('is-tutorial-intro', 'is-tutorial-reveal');
+        els.gameTutorialLogo?.classList.remove('is-visible', 'is-fading-out');
+        els.gameVisual.classList.remove('is-mic-live', 'is-tutorial-mic-fade', 'is-tutorial-mic-flash');
+      }
+
+      function setTutorialTypingDisabled(disabled) {
+        Array.from(els.gameTypingKeyboard.querySelectorAll('.flashcards-typing__grid')).forEach((grid) => {
+          setTypingKeysDisabled(grid, disabled);
+        });
+      }
+
+      function setTutorialInteractionLocked(locked) {
+        const nextLocked = Boolean(locked);
+        state.game.tutorial.interactionLocked = nextLocked;
+        state.game.paused = nextLocked;
+        if (nextLocked) {
+          state.game.canListen = false;
+          cleanupGameRecognition();
+        }
+        els.gameTouchBtn.disabled = nextLocked;
+        if (els.gameLanguageBtn) {
+          els.gameLanguageBtn.disabled = nextLocked;
+        }
+        if (els.gameReportTrigger) {
+          els.gameReportTrigger.disabled = nextLocked;
+        }
+        setTutorialTypingDisabled(nextLocked);
+      }
+
+      function resetTutorialRuntime({ preserveCompletion = true } = {}) {
+        clearTutorialTimers();
+        resetTutorialVisualState();
+        state.game.paused = false;
+        state.game.canListen = false;
+        state.game.tutorial.sequenceToken += 1;
+        const completed = preserveCompletion ? Boolean(state.game.tutorial.completed) : false;
+        state.game.tutorial = {
+          ...createTutorialState(),
+          completed
+        };
+        els.gameTouchBtn.disabled = false;
+        if (els.gameLanguageBtn) {
+          els.gameLanguageBtn.disabled = false;
+        }
+        if (els.gameReportTrigger) {
+          els.gameReportTrigger.disabled = false;
+        }
+      }
+
+      function startTutorialSequence(entryId) {
+        clearTutorialTimers();
+        resetTutorialVisualState();
+        state.game.tutorial.sequenceToken += 1;
+        state.game.tutorial.currentCardId = safeText(entryId);
+        return state.game.tutorial.sequenceToken;
+      }
+
+      function playTutorialAudio(index) {
+        const resolved = resolveInlineMediaUrl(tutorialAudioPath(index));
+        if (!resolved) return Promise.resolve(false);
+        stopActiveAudio();
+        const audio = new Audio(resolved);
+        audio.preload = 'auto';
+        return playAudioWithSoftEnd(audio, { registerAsActive: true });
+      }
+
+      function triggerTutorialMicFlash() {
+        els.gameVisual.classList.remove('is-tutorial-mic-flash');
+        void els.gameVisual.offsetWidth;
+        els.gameVisual.classList.add('is-tutorial-mic-flash');
+      }
+
+      function beginTutorialIntroSequence(entry) {
+        const token = startTutorialSequence(entry.id);
+        const gameShell = els.game.querySelector('.game-shell');
+        state.game.tutorial.introPlayed = true;
+        state.game.tutorial.explainedStars = Math.max(state.game.tutorial.explainedStars, 0);
+        gameShell?.classList.add('is-tutorial-intro');
+        setTutorialInteractionLocked(true);
+        setGameStatus('', '');
+        playTutorialAudio(1).catch?.(() => {});
+
+        queueTutorialTimer(token, 1000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          els.gameTutorialLogo?.classList.add('is-visible');
+        });
+
+        queueTutorialTimer(token, 4000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          els.gameTutorialLogo?.classList.remove('is-visible');
+          els.gameTutorialLogo?.classList.add('is-fading-out');
+        });
+
+        queueTutorialTimer(token, 6000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          gameShell?.classList.remove('is-tutorial-intro');
+          gameShell?.classList.add('is-tutorial-reveal');
+          queueTutorialTimer(token, 1700, () => {
+            if (!isTutorialSequenceCurrent(token, entry.id)) return;
+            gameShell?.classList.remove('is-tutorial-reveal');
+          });
+        });
+
+        queueTutorialTimer(token, 9000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          els.gameVisual.classList.remove('is-tutorial-mic-fade');
+          els.gameVisual.classList.add('is-mic-live');
+        });
+
+        queueTutorialTimer(token, 10000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          triggerTutorialMicFlash();
+        });
+
+        queueTutorialTimer(token, 11000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          triggerTutorialMicFlash();
+        });
+
+        queueTutorialTimer(token, 12000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          els.gameVisual.classList.add('is-tutorial-mic-fade');
+          queueTutorialTimer(token, 700, () => {
+            if (!isTutorialSequenceCurrent(token, entry.id)) return;
+            els.gameVisual.classList.remove('is-mic-live', 'is-tutorial-mic-flash', 'is-tutorial-mic-fade');
+          });
+        });
+
+        queueTutorialTimer(token, 15000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          triggerWinFlash();
+        });
+
+        queueTutorialTimer(token, 19000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          setTutorialInteractionLocked(false);
+          state.game.canListen = true;
+          renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
+          setGameStatus('Toque para falar', 'live');
+        });
+      }
+
+      async function beginTutorialHintSequence(entry, audioIndex) {
+        const token = startTutorialSequence(entry.id);
+        state.game.tutorial.explainedStars = Math.max(state.game.tutorial.explainedStars, Number(entry.stars) || 0);
+        setTutorialInteractionLocked(true);
+        await playTutorialAudio(audioIndex);
+        if (!isTutorialSequenceCurrent(token, entry.id)) return;
+        setTutorialInteractionLocked(false);
+        renderCurrentCard();
+      }
+
+      function maybeRunTutorialSequence(entry, card) {
+        if (!state.game.tutorial.active || state.game.tutorial.finishing || !isTutorialPlanetCard(card)) {
+          return false;
+        }
+        if (Number(entry.stars) === 0 && !state.game.tutorial.introPlayed) {
+          beginTutorialIntroSequence(entry);
+          return true;
+        }
+        if (entry.stars >= 1 && entry.stars <= 4 && state.game.tutorial.explainedStars < entry.stars) {
+          beginTutorialHintSequence(entry, entry.stars + 1);
+          return true;
+        }
+        return false;
+      }
+
+      async function finishTutorialAndStartNormalGame() {
+        const token = startTutorialSequence(state.game.currentId || state.game.tutorial.currentCardId);
+        state.game.tutorial.finishing = true;
+        setTutorialInteractionLocked(true);
+        await playTutorialAudio(6);
+        if (state.game.tutorial.sequenceToken !== token || !state.game.active) return;
+        setTutorialCompleted(true);
+        resetTutorialRuntime({ preserveCompletion: true });
+        saveSelectedGameCount(TUTORIAL_NORMAL_GAME_COUNT);
+        beginGame();
       }
 
       function stopCardsRefresh() {
@@ -5280,6 +5700,7 @@
       }
 
       function openGameReportMenu() {
+        if (state.game.tutorial.interactionLocked) return;
         if (!state.game.active || !currentGameCard() || !els.gameReportMenu) return;
         state.game.paused = true;
         cleanupGameRecognition();
@@ -6459,7 +6880,7 @@
           key.setAttribute('aria-label', `Letra ${letter}`);
           key.style.setProperty('--typing-key-bg', typingPalette[index % typingPalette.length]);
           key.addEventListener('click', async () => {
-            if (!state.game.active || state.game.listening || state.game.currentId !== entry.id) return;
+            if (!state.game.active || state.game.paused || state.game.listening || state.game.currentId !== entry.id) return;
             playTypingKeyAudio();
             const expectedLetter = target[typed.length];
             if (letter !== expectedLetter) {
@@ -6553,6 +6974,9 @@
         els.gameStarCopy.textContent = '';
         updateGameChips();
         scheduleStageTwoHintLoop(entry);
+        if (maybeRunTutorialSequence(entry, card)) {
+          return;
+        }
 
         if (entry.stage === 4) {
           window.setTimeout(() => {
@@ -7005,7 +7429,9 @@
         await wait(180);
         state.game.currentId = state.game.queue.shift();
         renderCurrentCard();
-        playReportAudio();
+        if (!state.game.tutorial.active) {
+          playReportAudio();
+        }
         await wait(30);
         els.gameCard.classList.remove('is-transitioning');
         state.game.transitioning = false;
@@ -7017,6 +7443,7 @@
         clearGameLanguageSwapTimer();
         clearStageTwoHintTimer();
         clearPendingRewardSeal();
+        resetTutorialRuntime({ preserveCompletion: true });
         state.game.entries.clear();
         state.game.queue = [];
         state.game.currentId = null;
@@ -7062,12 +7489,50 @@
         advanceToNextCard();
       }
 
+      function beginTutorialGame() {
+        const tutorialCard = findTutorialPlanetCard();
+        if (!tutorialCard) return;
+
+        cleanupGameRecognition();
+        stopActiveAudio();
+        clearGameLanguageSwapTimer();
+        clearStageTwoHintTimer();
+        clearPendingRewardSeal();
+        resetTutorialRuntime({ preserveCompletion: true });
+        state.game.entries.clear();
+        state.game.queue = [];
+        state.game.currentId = null;
+        state.game.listening = false;
+        state.game.paused = false;
+        state.game.canListen = false;
+        state.game.active = true;
+        state.game.transitioning = false;
+        state.game.sessionStartedAt = Date.now();
+        state.game.tutorial.active = true;
+        state.game.tutorial.currentCardId = tutorialCard.id;
+
+        const entry = createGameEntry(tutorialCard, 'tutorial');
+        state.game.entries.set(entry.id, entry);
+        state.game.queue.push(entry.id);
+
+        els.topbar.classList.add('is-hidden');
+        els.catalog.classList.add('is-hidden');
+        closeGameSetup();
+        document.body.classList.add('game-open');
+        els.game.classList.add('is-visible');
+        window.requestAnimationFrame(() => els.game.classList.add('is-active'));
+
+        updateGameChips();
+        advanceToNextCard();
+      }
+
       async function exitGame() {
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
         clearStageTwoHintTimer();
         clearPendingRewardSeal();
+        resetTutorialRuntime({ preserveCompletion: true });
         state.game.active = false;
         state.game.entries.clear();
         state.game.queue = [];
@@ -7165,6 +7630,11 @@
         }
         await playStageResponseSequence(evaluatedStage, card);
         await wait(entry._removeAfterReward || entry._requeueAfterReward ? 1500 : (evaluatedStage === 3 ? 120 : 1200));
+        if (state.game.active && state.game.tutorial.active && isTutorialPlanetCard(entry.id) && entry._removeAfterReward) {
+          entry._removeAfterReward = false;
+          await finishTutorialAndStartNormalGame();
+          return;
+        }
         if (state.game.active) {
           if (entry._requeueAfterReward) {
             entry._requeueAfterReward = false;
@@ -7395,6 +7865,7 @@
           );
         });
         els.closeGameSetupBtn.addEventListener('click', closeGameSetup);
+        els.startTutorialBtn?.addEventListener('click', beginTutorialGame);
         Array.from(els.gameSetupOptions.querySelectorAll('[data-game-count]')).forEach((button) => {
           button.addEventListener('click', () => {
             const count = normalizeGameCount(button.getAttribute('data-game-count'));

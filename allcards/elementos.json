@@ -11,6 +11,16 @@
       "tense": "present-simple",
       "sentenceForm": "affirmative"
     },
+   {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/136/001/planet.webp",
+      "nomePortugues": "planeta",
+      "nomeIngles": "planet",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/136/001/000002.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+ 
     {
       "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/136/001/000003.webp",
       "nomePortugues": "ar",
