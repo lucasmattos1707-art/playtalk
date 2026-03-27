@@ -1425,8 +1425,8 @@ const FLASHCARDS_R2_PUBLIC_ROOT = (() => {
   }
   return DEFAULT_FLASHCARDS_R2_PUBLIC_ROOT;
 })();
-const FLASHCARDS_R2_PREFIX = 'FlashCards';
-const FLASHCARD_CAMERA_OBJECT_KEY = `${FLASHCARDS_R2_PREFIX}/camera.webp`;
+const FLASHCARDS_R2_PREFIX = 'Star';
+const FLASHCARD_CAMERA_OBJECT_KEY = 'FlashCards/camera.webp';
 const DEFAULT_GAME_SOUNDS_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/gamesounds';
 const GAME_SOUNDS_BASE_URL = (process.env.GAME_SOUNDS_BASE_URL || DEFAULT_GAME_SOUNDS_BASE_URL).trim();
 const EMPTY_R2_PAYLOAD_HASH = require('crypto').createHash('sha256').update('').digest('hex');
@@ -4490,7 +4490,7 @@ app.get(['/database', '/database/'], (req, res) => {
 });
 
 app.get(['/flashcards', '/flashcards/'], (req, res) => {
-  res.sendFile(path.join(staticDir, 'flashcards.html'));
+  res.sendFile(path.join(__dirname, 'www', 'flashcards.html'));
 });
 
 app.get(['/users', '/users/'], (req, res) => {

@@ -3,8 +3,8 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const DEFAULT_R2_PUBLIC_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
-const DEFAULT_PREFIX = 'FlashCards';
-const FLASHCARD_CAMERA_OBJECT_KEY = `${DEFAULT_PREFIX}/camera.webp`;
+const DEFAULT_PREFIX = 'Star';
+const FLASHCARD_CAMERA_OBJECT_KEY = 'FlashCards/camera.webp';
 
 function loadDotEnv() {
   const envPath = path.join(__dirname, '..', '.env');

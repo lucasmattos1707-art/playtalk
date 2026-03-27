@@ -4185,6 +4185,47 @@
         return encodedKey ? `${FLASHCARDS_R2_PUBLIC_ROOT}/${encodedKey}` : '';
       }
 
+      function isFlashcardsDeckRemoteUrl(value) {
+        const text = safeText(value);
+        if (!/^https?:\/\//i.test(text)) return false;
+        try {
+          const parsed = new URL(text);
+          const allowedRoot = new URL(`${FLASHCARDS_R2_SOURCE_ROOT}/`);
+          const parsedPath = decodeURIComponent(String(parsed.pathname || ''));
+          const allowedPath = String(allowedRoot.pathname || '');
+          return parsed.origin === allowedRoot.origin
+            && parsedPath.toLowerCase().endsWith('.json')
+            && parsedPath.startsWith(allowedPath);
+        } catch (_error) {
+          return false;
+        }
+      }
+
+      function resolveManifestDeckRemotePath(file) {
+        const fallbackName = safeText(file?.name) || safeText(file?.title) || 'deck.json';
+        const candidates = [
+          safeText(file?.path),
+          safeText(file?.source),
+          safeText(file?.name)
+        ].filter(Boolean);
+
+        for (const candidate of candidates) {
+          if (isFlashcardsDeckRemoteUrl(candidate)) {
+            return candidate;
+          }
+
+          const normalized = candidate.replace(/^\/+/, '');
+          if (normalized.startsWith(`${FLASHCARDS_R2_SOURCE_PREFIX}/`) && normalized.toLowerCase().endsWith('.json')) {
+            return buildFlashcardsPublicUrl(normalized);
+          }
+          if (/^[^/]+\.json$/i.test(normalized)) {
+            return buildFlashcardsPublicUrl(`${FLASHCARDS_R2_SOURCE_PREFIX}/${normalized}`);
+          }
+        }
+
+        throw new Error(`O deck "${fallbackName}" precisa apontar para ${FLASHCARDS_R2_SOURCE_PREFIX}/ no R2.`);
+      }
+
       function sortDeckCatalogEntries(entries) {
         return entries.sort((left, right) => (
           safeText(left?.title).localeCompare(safeText(right?.title), 'pt-BR', {
@@ -4284,24 +4325,29 @@
           saveTimeOffsetMs();
         }
         const manifestFiles = Array.isArray(manifest?.files) ? manifest.files : [];
-        const files = manifestFiles.length
-          ? manifestFiles.map((file) => ({
-              name: file.name || file.path,
-              title: file.title || '',
-              path: file.path,
-              sourceKey: file.source || file.name || file.path,
-              idSource: file.source || file.name || file.path,
-              count: file.count
-            }))
-          : await fetchDeckFilesFromSourcePrefix();
+        if (!manifestFiles.length) {
+          throw new Error(`O manifesto de ${FLASHCARDS_R2_SOURCE_PREFIX} nao possui decks publicados.`);
+        }
+        const files = manifestFiles.map((file) => {
+          const resolvedPath = resolveManifestDeckRemotePath(file);
+          const sourceKey = safeText(file?.source || file?.name || resolvedPath) || resolvedPath;
+          return {
+            name: file.name || file.path || file.source || resolvedPath,
+            title: file.title || '',
+            path: resolvedPath,
+            sourceKey,
+            idSource: sourceKey,
+            count: file.count
+          };
+        });
         const responses = await Promise.all(files.map(async (file) => {
           const filePath = normalizeFlashcardsDataPath(file.path);
           if (!filePath) {
-            return { cards: [], deck: buildDeckCatalogEntry(file, null, []) };
+            throw new Error(`O deck "${safeText(file?.name) || 'deck.json'}" nao possui URL valida no manifesto.`);
           }
           const response = await fetch(withNoCacheUrl(filePath), { cache: 'no-store' });
           if (!response.ok) {
-            return { cards: [], deck: buildDeckCatalogEntry(file, null, []) };
+            throw new Error(`Nao consegui abrir o deck "${safeText(file?.name) || 'deck.json'}" em ${FLASHCARDS_R2_SOURCE_PREFIX}.`);
           }
           const payload = await response.json();
           const cards = flattenPayload(file.name || file.path, payload, {
@@ -4324,25 +4370,12 @@
       }
 
       async function loadCards() {
-        try {
-          const freshPayload = await refreshCardsFromNetwork();
-          state.allCards = Array.isArray(freshPayload?.cards) ? freshPayload.cards : [];
-          state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
-          await refreshAdminDecks();
-          await refreshAdminReportSummary();
-          saveCachedCards(state.allCards);
-          return;
-        } catch (networkError) {
-          const cachedCards = readCachedCards();
-          if (cachedCards.length) {
-            state.allCards = cachedCards;
-            state.deckCatalog = [];
-            await refreshAdminDecks();
-            await refreshAdminReportSummary();
-            return;
-          }
-          throw networkError;
-        }
+        const freshPayload = await refreshCardsFromNetwork();
+        state.allCards = Array.isArray(freshPayload?.cards) ? freshPayload.cards : [];
+        state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
+        await refreshAdminDecks();
+        await refreshAdminReportSummary();
+        saveCachedCards(state.allCards);
       }
 
       function renderMetrics() {
