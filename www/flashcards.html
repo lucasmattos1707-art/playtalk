@@ -4214,6 +4214,10 @@
         return Boolean(tutorialCard && card && tutorialCard.id === card.id);
       }
 
+      function shouldSuppressTutorialCardAudio(card) {
+        return Boolean(state.game.tutorial.active && isTutorialPlanetCard(card));
+      }
+
       function canOfferTutorialMode() {
         return Boolean(state.user && !isAdminUser() && !state.game.tutorial.completed && findTutorialPlanetCard());
       }
@@ -6267,6 +6271,9 @@
       }
 
       function playPromptAudio(card, options = {}) {
+        if (shouldSuppressTutorialCardAudio(card)) {
+          return Promise.resolve(false);
+        }
         const rate = Number(options?.rate) > 0 ? Number(options.rate) : 1;
         stopActiveAudio();
         if (card.audioUrl) {
