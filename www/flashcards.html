@@ -4892,21 +4892,17 @@
       }
 
       function currentVisibleAdminCards() {
-        if (!isAdminUser() || !els.allGrid) {
+        if (!isAdminUser()) {
           return currentLibrarySourceCards();
         }
-        const cardIds = Array.from(els.allGrid.querySelectorAll('[data-card-id]'))
-          .map((node) => safeText(node.getAttribute('data-card-id')))
-          .filter(Boolean);
+        const cards = currentLibraryPageSlice(currentAdminDeckCards());
         const seen = new Set();
-        return cardIds
-          .map((cardId) => cardById(cardId))
-          .filter((card) => {
-            const cardId = safeText(card?.id);
-            if (!cardId || seen.has(cardId)) return false;
-            seen.add(cardId);
-            return true;
-          });
+        return cards.filter((card) => {
+          const cardId = safeText(card?.id);
+          if (!cardId || seen.has(cardId)) return false;
+          seen.add(cardId);
+          return true;
+        });
       }
 
       function collectAdminCurrentPageTargets(kind) {
