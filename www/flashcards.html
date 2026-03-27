@@ -3638,7 +3638,7 @@
       <div class="premium-gate__card">
         <div class="premium-gate__copy">
           <h2>Premium</h2>
-          <p>Voce chegou em 8 cartas. Toque nas 16 imagens para digitar uma chave secreta de 7 letras.</p>
+          <p>Voce chegou em 8 cartas. Toque nas 16 imagens para digitar uma chave secreta de 6 letras.</p>
         </div>
         <div class="premium-gate__code" id="premiumCodeValue"></div>
         <p class="premium-gate__status" id="premiumStatus">Toque nas imagens na ordem certa para digitar a chave.</p>
@@ -4881,7 +4881,7 @@
 
       function renderPremiumCode() {
         if (els.premiumCodeValue) {
-          const slots = Array.from({ length: 7 }, (_, index) => {
+          const slots = Array.from({ length: 6 }, (_, index) => {
             const letter = state.ui.premiumCode[index] || '';
             if (!letter) {
               return '<div class="premium-gate__code-slot"><span>•</span></div>';
@@ -4974,7 +4974,7 @@
           setPremiumStatus('Entre na sua conta para ativar a chave premium.');
           return;
         }
-        if (state.ui.premiumCode.length !== 7 || state.ui.premiumBusy) {
+        if (state.ui.premiumCode.length !== 6 || state.ui.premiumBusy) {
           return;
         }
 
@@ -5018,11 +5018,11 @@
       function appendPremiumCodeLetter(letter) {
         if (!state.ui.premiumGateOpen || state.ui.premiumBusy) return;
         const normalized = safeText(letter).toUpperCase().replace(/[^A-P]/g, '');
-        if (!normalized || state.ui.premiumCode.length >= 7) return;
-        state.ui.premiumCode = `${state.ui.premiumCode}${normalized}`.slice(0, 7);
+        if (!normalized || state.ui.premiumCode.length >= 6) return;
+        state.ui.premiumCode = `${state.ui.premiumCode}${normalized}`.slice(0, 6);
         playPremiumAudio(ACCESS_KEY_AUDIO_MESSAGE_PATH, { allowReplay: true });
         renderPremiumCode();
-        if (state.ui.premiumCode.length === 7) {
+        if (state.ui.premiumCode.length === 6) {
           void redeemPremiumAccessCode();
         }
       }
@@ -9547,7 +9547,9 @@
       }
 
       async function init() {
-        const requestedView = new URLSearchParams(window.location.search).get('view');
+        const searchParams = new URLSearchParams(window.location.search);
+        const requestedView = searchParams.get('view');
+        const requestedPremiumOpen = searchParams.get('premium') === '1';
         state.timeOffsetMs = readTimeOffsetMs();
         loadSelectedGameCount();
         syncWatchControls();
@@ -9613,7 +9615,10 @@
           await handleLoggedOutState('');
         }
 
-        if (requestedView === 'play') {
+        if (requestedPremiumOpen) {
+          switchMainView('cards');
+          openPremiumGate();
+        } else if (requestedView === 'play') {
           switchMainView('play');
           openGameSetup();
         } else {

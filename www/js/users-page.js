@@ -1,4 +1,6 @@
-(function initPlaytalkUsersPage() {
+﻿(function initPlaytalkUsersPage() {
+  const GUEST_ID_KEY = 'playtalk_guest_rank_id';
+  const GUEST_PROGRESS_KEY = 'playtalk-flashcards-progress-v3';
   const els = {
     usersList: document.getElementById('usersList'),
     usersStatus: document.getElementById('usersStatus')
@@ -6,7 +8,8 @@
 
   const state = {
     currentUser: null,
-    busyUserId: 0
+    busyUserId: 0,
+    viewer: null
   };
 
   function buildApiUrl(path) {
@@ -28,22 +31,36 @@
     ));
   }
 
-  function formatFlashcards(value) {
-    return Number(value || 0).toLocaleString('pt-BR');
+  function safeText(value) {
+    return typeof value === 'string' ? value.trim() : '';
   }
 
-  function formatPremium(entry) {
-    if (!entry?.premiumActive) return 'Sem premium';
-    if (!entry?.premiumUntil) return 'Premium ativo';
-    const date = new Date(entry.premiumUntil);
-    if (Number.isNaN(date.getTime())) return 'Premium ativo';
-    return `Premium ate ${date.toLocaleDateString('pt-BR')}`;
+  function readGuestName() {
+    try {
+      let id = localStorage.getItem(GUEST_ID_KEY);
+      if (!id) {
+        id = String(Math.floor(100000 + Math.random() * 900000));
+        localStorage.setItem(GUEST_ID_KEY, id);
+      }
+      return `#user${id}`;
+    } catch (_error) {
+      return '#user000000';
+    }
+  }
+
+  function readGuestFlashcardsCount() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(GUEST_PROGRESS_KEY) || '[]');
+      return Array.isArray(parsed) ? parsed.length : 0;
+    } catch (_error) {
+      return 0;
+    }
   }
 
   function normalizeUser(user) {
     if (!user || typeof user !== 'object') return null;
     const id = Number(user.id) || 0;
-    const username = String(user.username || '').trim();
+    const username = safeText(user.username);
     if (!id || !username) return null;
     return {
       id,
@@ -56,12 +73,37 @@
     const users = Array.isArray(payload?.users) ? payload.users : [];
     return users.map((entry) => ({
       userId: Number(entry?.userId) || 0,
-      username: String(entry?.username || 'Usuario').trim() || 'Usuario',
+      username: safeText(entry?.username || 'Usuario') || 'Usuario',
+      rank: Number(entry?.rank) || 0,
       flashcardsCount: Number(entry?.flashcardsCount) || 0,
-      premiumFullAccess: Boolean(entry?.premiumFullAccess),
       premiumUntil: entry?.premiumUntil || null,
       premiumActive: Boolean(entry?.premiumActive)
     }));
+  }
+
+  function normalizeViewer(entry) {
+    if (!entry || typeof entry !== 'object') return null;
+    return {
+      userId: Number(entry?.userId) || 0,
+      username: safeText(entry?.username || 'Usuario') || 'Usuario',
+      rank: Number(entry?.rank) || 0,
+      flashcardsCount: Number(entry?.flashcardsCount) || 0
+    };
+  }
+
+  function currentViewerEntry(rows) {
+    if (state.currentUser?.id) {
+      return state.viewer || rows.find((entry) => entry.userId === state.currentUser.id) || null;
+    }
+    const guestCount = readGuestFlashcardsCount();
+    const higherCount = rows.filter((entry) => entry.flashcardsCount > guestCount).length;
+    return {
+      userId: 0,
+      username: readGuestName(),
+      rank: higherCount + 1,
+      flashcardsCount: guestCount,
+      premiumActive: false
+    };
   }
 
   function renderRows(rows) {
@@ -75,31 +117,35 @@
     }
 
     const isAdmin = Boolean(state.currentUser?.isAdmin);
-    const headerMarkup = `
-      <div class="users-row is-header">
-        <span>Usuario</span>
-        <span>Flashcards</span>
-        <span>Premium</span>
-        ${isAdmin ? '<span>Acoes</span>' : ''}
-      </div>
-    `;
+    const displayRows = rows.slice(0, 50);
+    if (!state.currentUser?.id) {
+      const guestEntry = currentViewerEntry(rows);
+      const alreadyShown = displayRows.some((entry) => entry.rank === guestEntry.rank && entry.username === guestEntry.username);
+      if (!alreadyShown) {
+        displayRows.push(guestEntry);
+      }
+    }
+    displayRows.sort((left, right) => (left.rank || 999999) - (right.rank || 999999));
 
-    const rowMarkup = rows.map((entry) => `
+    const rowMarkup = displayRows.map((entry) => `
       <div class="users-row" data-user-id="${entry.userId}">
-        <span class="users-name">${escapeHtml(entry.username)}</span>
-        <span class="users-count">${escapeHtml(formatFlashcards(entry.flashcardsCount))}</span>
-        <span class="users-premium ${entry.premiumActive ? 'is-active' : ''}">${escapeHtml(formatPremium(entry))}</span>
+        <div class="users-rank">${escapeHtml(`${entry.rank || 0}º`)}</div>
+        <div class="users-avatar"><img src="Avatar/avatar-man-person-svgrepo-com.svg" alt=""></div>
+        <div class="users-main">
+          <span class="users-name">${escapeHtml(entry.username)}</span>
+          <span class="users-sub">${escapeHtml(`${entry.flashcardsCount} flashcards`)}</span>
+        </div>
         ${isAdmin ? `
           <div class="users-actions">
-            <button class="users-action" type="button" data-plan="semana" ${state.busyUserId === entry.userId ? 'disabled' : ''}>Atribuir 1 semana</button>
-            <button class="users-action" type="button" data-plan="mes" ${state.busyUserId === entry.userId ? 'disabled' : ''}>Atribuir 1 mes</button>
-            <button class="users-action" type="button" data-plan="ano" ${state.busyUserId === entry.userId ? 'disabled' : ''}>Atribuir 1 ano</button>
+            <button class="users-action" type="button" data-plan="semana" ${state.busyUserId === entry.userId ? 'disabled' : ''}>1 semana</button>
+            <button class="users-action" type="button" data-plan="mes" ${state.busyUserId === entry.userId ? 'disabled' : ''}>1 mes</button>
+            <button class="users-action" type="button" data-plan="ano" ${state.busyUserId === entry.userId ? 'disabled' : ''}>1 ano</button>
           </div>
         ` : ''}
       </div>
     `).join('');
 
-    els.usersList.innerHTML = `${headerMarkup}${rowMarkup}`;
+    els.usersList.innerHTML = rowMarkup;
   }
 
   async function fetchSessionUser() {
@@ -110,36 +156,35 @@
   }
 
   async function loadUsers(message) {
-    els.usersStatus.textContent = message || 'Carregando usuarios...';
+    els.usersStatus.textContent = message || 'Carregando ranking...';
 
     try {
-      const response = await fetch(buildApiUrl('/api/users/flashcards'), {
+      const response = await fetch(buildApiUrl('/api/users/flashcards?limit=50'), {
         cache: 'no-store',
         credentials: 'include'
       });
       const payload = await response.json().catch(() => ({}));
-
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.message || 'Falha ao carregar usuarios.');
       }
 
       const users = normalizeUsers(payload);
+      state.viewer = normalizeViewer(payload.viewer);
       renderRows(users);
-      els.usersStatus.textContent = users.length
-        ? `${users.length} usuarios cadastrados no PlayTalk`
-        : 'Sem usuarios por enquanto.';
+      const viewer = currentViewerEntry(users);
+      els.usersStatus.textContent = viewer?.rank
+        ? `Voce esta em ${viewer.rank}º lugar`
+        : 'Ranking carregado.';
     } catch (_error) {
       renderRows([]);
-      els.usersStatus.textContent = 'Nao consegui carregar os usuarios agora.';
+      els.usersStatus.textContent = 'Nao consegui carregar o ranking agora.';
     }
   }
 
   async function assignPremium(userId, plan) {
     if (!state.currentUser?.isAdmin || !userId || !plan) return;
-
     state.busyUserId = userId;
     await loadUsers('Liberando premium...');
-
     try {
       const response = await fetch(buildApiUrl(`/api/admin/users/${userId}/premium`), {
         method: 'POST',
@@ -164,7 +209,7 @@
     if (!button) return;
     const row = button.closest('.users-row');
     const userId = Number(row?.dataset?.userId) || 0;
-    const plan = String(button.dataset.plan || '').trim();
+    const plan = safeText(button.dataset.plan);
     void assignPremium(userId, plan);
   });
 
@@ -173,3 +218,5 @@
     await loadUsers();
   })();
 })();
+
+

@@ -6,6 +6,9 @@
     avatarPreview: document.getElementById('accountAvatarPreview'),
     avatarFallback: document.getElementById('accountAvatarFallback'),
     nameInput: document.getElementById('accountNameInput'),
+    premiumLevel: document.getElementById('accountPremiumLevel'),
+    premiumUntil: document.getElementById('accountPremiumUntil'),
+    premiumBtn: document.getElementById('accountPremiumBtn'),
     saveBtn: document.getElementById('accountSaveBtn'),
     logoutBtn: document.getElementById('accountLogoutBtn'),
     status: document.getElementById('accountStatus')
@@ -63,8 +66,31 @@
     return {
       id,
       username,
-      avatarImage: safeText(user.avatar_image || user.avatarImage)
+      avatarImage: safeText(user.avatar_image || user.avatarImage),
+      premiumFullAccess: Boolean(user.premium_full_access),
+      premiumUntil: user.premium_until || user.premiumUntil || null
     };
+  }
+
+  function isPremiumActive(user = state.user) {
+    if (!user) return false;
+    if (user.premiumFullAccess) return true;
+    const time = Date.parse(user.premiumUntil || '');
+    return Number.isFinite(time) && time > Date.now();
+  }
+
+  function renderPremiumStatus() {
+    if (!els.premiumLevel || !els.premiumUntil) return;
+    if (isPremiumActive()) {
+      els.premiumLevel.textContent = 'Nivel de acesso: Premium';
+      const until = Date.parse(state.user?.premiumUntil || '');
+      els.premiumUntil.textContent = Number.isFinite(until)
+        ? `Ativo ate ${new Date(until).toLocaleDateString('pt-BR')}.`
+        : 'Premium ativo.';
+      return;
+    }
+    els.premiumLevel.textContent = 'Nivel de acesso: Free';
+    els.premiumUntil.textContent = 'Sem premium ativo no momento.';
   }
 
   function renderUser() {
@@ -78,6 +104,7 @@
     els.avatarFallback.style.display = hasAvatar ? 'none' : 'grid';
     els.saveBtn.disabled = !state.user;
     els.logoutBtn.hidden = !state.user;
+    renderPremiumStatus();
   }
 
   async function fileToDataUrl(file) {
@@ -179,6 +206,9 @@
     }
     renderUser();
     els.form?.addEventListener('submit', submitForm);
+    els.premiumBtn?.addEventListener('click', () => {
+      window.location.href = '/flashcards?premium=1&view=cards';
+    });
     els.logoutBtn?.addEventListener('click', logout);
     els.avatarInput?.addEventListener('change', async (event) => {
       const file = event.target?.files?.[0];

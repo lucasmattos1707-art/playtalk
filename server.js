@@ -1092,7 +1092,7 @@ const loadAccessKeyDefinitions = async ({ force = false } = {}) => {
       const keys = Array.isArray(parsed?.keys) ? parsed.keys : Array.isArray(parsed) ? parsed : [];
       keys.forEach((entry) => {
         const code = normalizeAccessKeyCode(typeof entry === 'string' ? entry : entry?.code);
-        if (code.length !== 7) return;
+        if (code.length !== 6) return;
         nextMap.set(code, config);
       });
     } catch (error) {
@@ -4393,40 +4393,86 @@ app.get('/api/users/flashcards', async (req, res) => {
 
     const requestedLimit = Number.parseInt(req.query.limit, 10);
     const limit = Number.isInteger(requestedLimit) && requestedLimit > 0
-      ? Math.min(requestedLimit, 5000)
-      : 5000;
-    const result = await pool.query(
-      `SELECT
-         u.id,
-         u.email,
-         COALESCE(u.avatar_image, '') AS avatar_image,
-         u.created_at,
-         u.premium_full_access,
-         u.premium_until,
-         COALESCE(progress.total, 0) AS flashcards_count
-       FROM public.users u
-       LEFT JOIN (
+      ? Math.min(requestedLimit, 50)
+      : 50;
+    const rankingSql = `WITH ranked_users AS (
          SELECT
-           user_id,
-           COUNT(*)::int AS total
-         FROM public.user_flashcard_progress
-         GROUP BY user_id
-       ) progress
-         ON progress.user_id = u.id
-       ORDER BY
-         COALESCE(progress.total, 0) DESC,
-         COALESCE(u.created_at, now()) ASC,
-         u.id ASC
-       LIMIT $1`,
-      [limit]
-    );
+           u.id,
+           u.email,
+           COALESCE(u.avatar_image, '') AS avatar_image,
+           u.created_at,
+           u.premium_full_access,
+           u.premium_until,
+           COALESCE(progress.total, 0) AS flashcards_count,
+           ROW_NUMBER() OVER (
+             ORDER BY
+               COALESCE(progress.total, 0) DESC,
+               COALESCE(u.created_at, now()) ASC,
+               u.id ASC
+           )::int AS rank_position
+         FROM public.users u
+         LEFT JOIN (
+           SELECT
+             user_id,
+             COUNT(*)::int AS total
+           FROM public.user_flashcard_progress
+           GROUP BY user_id
+         ) progress
+           ON progress.user_id = u.id
+       )
+       SELECT *
+       FROM ranked_users
+       ORDER BY rank_position
+       LIMIT $1`;
+    const result = await pool.query(rankingSql, [limit]);
+    const viewerResult = authUser?.id
+      ? await pool.query(
+        `WITH ranked_users AS (
+           SELECT
+             u.id,
+             u.email,
+             COALESCE(u.avatar_image, '') AS avatar_image,
+             u.created_at,
+             u.premium_full_access,
+             u.premium_until,
+             COALESCE(progress.total, 0) AS flashcards_count,
+             ROW_NUMBER() OVER (
+               ORDER BY
+                 COALESCE(progress.total, 0) DESC,
+                 COALESCE(u.created_at, now()) ASC,
+                 u.id ASC
+             )::int AS rank_position
+           FROM public.users u
+           LEFT JOIN (
+             SELECT
+               user_id,
+               COUNT(*)::int AS total
+             FROM public.user_flashcard_progress
+             GROUP BY user_id
+           ) progress
+             ON progress.user_id = u.id
+         )
+         SELECT *
+         FROM ranked_users
+         WHERE id = $1
+         LIMIT 1`,
+        [authUser.id]
+      )
+      : { rows: [] };
 
     res.json({
       success: true,
+      viewer: viewerResult.rows[0] ? {
+        userId: Number(viewerResult.rows[0].id) || 0,
+        username: String(viewerResult.rows[0].email || '').trim() || 'Usuario',
+        rank: Number(viewerResult.rows[0].rank_position) || 0,
+        flashcardsCount: Number(viewerResult.rows[0].flashcards_count) || 0
+      } : null,
       users: result.rows.map((entry) => ({
         userId: Number(entry.id) || 0,
         username: String(entry.email || '').trim() || 'Usuario',
         avatarImage: String(entry.avatar_image || '').trim(),
+        rank: Number(entry.rank_position) || 0,
         flashcardsCount: Number(entry.flashcards_count) || 0,
         premiumFullAccess: Boolean(entry.premium_full_access),
         premiumUntil: entry.premium_until || null,
@@ -4479,8 +4525,8 @@ app.post('/api/premium/redeem', async (req, res) => {
     }
 
     const code = normalizeAccessKeyCode(req.body?.code);
-    if (code.length !== 7) {
-      res.status(400).json({ success: false, message: 'A chave precisa ter 7 letras.' });
+    if (code.length !== 6) {
+      res.status(400).json({ success: false, message: 'A chave precisa ter 6 letras.' });
       return;
     }
 

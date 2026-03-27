@@ -155,6 +155,41 @@
       text-align: center;
     }
 
+    .account-premium {
+      width: 100%;
+      display: grid;
+      gap: 10px;
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: center;
+    }
+
+    .account-premium strong {
+      font-size: 18px;
+      color: #ffffff;
+    }
+
+    .account-premium span {
+      color: #d8e6ff;
+    }
+
+    .account-button--premium {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #6d28d9 0%, #a855f7 55%, #7c3aed 100%);
+      color: #ffffff;
+      box-shadow: 0 18px 40px rgba(124, 58, 237, 0.28);
+    }
+
+    .account-button__crown {
+      font-size: 20px;
+      line-height: 1;
+    }
+
     .account-status.is-success {
       color: #4ade80;
     }
@@ -230,6 +265,14 @@
           <span>Nome do usuario</span>
           <input id="accountNameInput" type="text" maxlength="32" placeholder="Seu nome">
         </label>
+        <div class="account-premium">
+          <strong id="accountPremiumLevel">Nivel de acesso: Free</strong>
+          <span id="accountPremiumUntil">Sem premium ativo no momento.</span>
+        </div>
+        <button class="account-button account-button--premium" id="accountPremiumBtn" type="button">
+          <span class="account-button__crown" aria-hidden="true">👑</span>
+          <span>Comprar premium!</span>
+        </button>
         <button class="account-button account-button--primary" id="accountSaveBtn" type="submit">Salvar perfil</button>
         <button class="account-button account-button--secondary" id="accountLogoutBtn" type="button">Sair da conta</button>
         <p class="account-status" id="accountStatus" aria-live="polite"></p>
