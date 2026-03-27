@@ -2993,6 +2993,7 @@
       };
       const state = {
         allCards: [],
+        deckCatalog: [],
         userCards: new Map(),
         hiddenCardIds: new Set(),
         ownedIds: new Set(),
@@ -4196,6 +4197,12 @@
           saveTimeOffsetMs();
         }
         const manifestFiles = Array.isArray(manifest?.files) ? manifest.files : [];
+        const deckCatalog = manifestFiles.map((file) => ({
+          source: file.source || file.name || file.path,
+          title: safeText(file.title) || safeText(file.name) || safeText(file.path) || 'Deck',
+          path: file.path || '',
+          count: Number.isFinite(Number(file?.count)) ? Math.max(0, Number(file.count)) : 0
+        }));
         const files = manifestFiles.map((file) => ({
           name: file.name || file.path,
           path: file.path,
@@ -4213,21 +4220,26 @@
             idSource: file.idSource
           });
         }));
-        return responses.flat();
+        return {
+          cards: responses.flat(),
+          deckCatalog
+        };
       }
 
       async function loadCards() {
         try {
-          const freshCards = await refreshCardsFromNetwork();
-          state.allCards = freshCards;
+          const freshPayload = await refreshCardsFromNetwork();
+          state.allCards = Array.isArray(freshPayload?.cards) ? freshPayload.cards : [];
+          state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
           await refreshAdminDecks();
           await refreshAdminReportSummary();
-          saveCachedCards(freshCards);
+          saveCachedCards(state.allCards);
           return;
         } catch (networkError) {
           const cachedCards = readCachedCards();
           if (cachedCards.length) {
             state.allCards = cachedCards;
+            state.deckCatalog = [];
             await refreshAdminDecks();
             await refreshAdminReportSummary();
             return;
@@ -4727,8 +4739,9 @@
       }
 
       async function reloadCardsFromNetwork() {
-        const freshCards = await refreshCardsFromNetwork();
-        state.allCards = Array.isArray(freshCards) ? freshCards : [];
+        const freshPayload = await refreshCardsFromNetwork();
+        state.allCards = Array.isArray(freshPayload?.cards) ? freshPayload.cards : [];
+        state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
         await refreshAdminDecks();
         await refreshAdminReportSummary();
         saveCachedCards(state.allCards);
@@ -4749,6 +4762,18 @@
           }
         }
         throw lastError || new Error('Nao consegui abrir o manifesto dos flashcards.');
+      }
+
+      async function tryRefreshPublishedFlashcards(options = {}) {
+        try {
+          await reloadCardsFromNetworkWithRetry(
+            Number.isInteger(options.maxAttempts) ? options.maxAttempts : 5,
+            Number.isFinite(options.delayMs) ? options.delayMs : 900
+          );
+          return true;
+        } catch (_error) {
+          return false;
+        }
       }
 
       function currentVisibleAdminCards() {
@@ -4913,11 +4938,13 @@
           });
           state.admin.draftCards = new Map();
           state.admin.pendingNewCards = [];
-          await reloadCardsFromNetworkWithRetry();
+          const refreshed = await tryRefreshPublishedFlashcards();
           const updatedCount = Number(payload?.updatedCount) || 0;
           const createdCount = Number(payload?.createdCount) || 0;
           state.admin.status = createdCount || updatedCount
-            ? `Salvo. ${createdCount} carta(s) nova(s) e ${updatedCount} alteracao(oes) publicadas.`
+            ? (refreshed
+              ? `Salvo. ${createdCount} carta(s) nova(s) e ${updatedCount} alteracao(oes) publicadas.`
+              : `Salvo. ${createdCount} carta(s) nova(s) e ${updatedCount} alteracao(oes) publicadas. A lista pode levar alguns segundos para atualizar.`)
             : 'Nenhuma alteracao pendente para salvar.';
           state.admin.error = false;
         } catch (error) {
@@ -4956,11 +4983,28 @@
             waitingMessage: `Publicando "${deckTitle}" no R2...`,
             successMessage: `Deck "${deckTitle}" criado.`
           });
-          await reloadCardsFromNetworkWithRetry();
+          const refreshed = await tryRefreshPublishedFlashcards();
+          if (!refreshed) {
+            state.admin.decks = [
+              ...state.admin.decks.filter((deck) => safeText(deck?.source) !== safeText(payload?.source)),
+              {
+                source: safeText(payload?.source),
+                title: safeText(payload?.title) || deckTitle,
+                coverImage: safeText(payload?.coverImage),
+                count: 0
+              }
+            ].sort((left, right) => safeText(left?.title).localeCompare(safeText(right?.title), 'pt-BR', {
+              sensitivity: 'base',
+              numeric: true
+            }));
+            syncAdminDeckSelect();
+          }
           state.admin.selectedDeckSource = safeText(payload?.source);
           state.libraryPage = 1;
           refreshLibrary();
-          state.admin.status = `Deck "${deckTitle}" criado e publicado no R2.`;
+          state.admin.status = refreshed
+            ? `Deck "${deckTitle}" criado e publicado no R2.`
+            : `Deck "${deckTitle}" criado e publicado no R2. A lista pode levar alguns segundos para atualizar.`;
           state.admin.error = false;
         } catch (error) {
           state.admin.status = error.message || 'Falha ao criar o deck vazio.';
@@ -6468,7 +6512,16 @@
       }
 
       function buildWatchDeckOptions(cards) {
-        const groups = new Map();
+        const groups = new Map(
+          (Array.isArray(state.deckCatalog) ? state.deckCatalog : []).map((deck) => [
+            safeText(deck?.source),
+            {
+              source: safeText(deck?.source),
+              title: safeText(deck?.title) || safeText(deck?.source) || 'Deck',
+              count: 0
+            }
+          ]).filter(([source]) => source)
+        );
         cards.forEach((card) => {
           const source = safeText(card?.source) || safeText(card?.deckTitle) || safeText(card?.id);
           if (!source) return;
