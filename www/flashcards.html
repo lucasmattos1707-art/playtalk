@@ -1573,6 +1573,11 @@
     }
 
     @media (min-width: 981px) {
+      .game-card {
+        --flashcards-image-shift: 0px;
+        --flashcards-image-scale: 1;
+      }
+
       .game-card__layout {
         grid-template-columns: 300px minmax(0, 1fr);
         align-items: center;
@@ -1584,6 +1589,15 @@
         height: 300px;
         aspect-ratio: auto;
         margin: 0 auto;
+      }
+
+      .game-card__visual > img:not(.game-card__seal),
+      .game-card__visual .mini-card__fallback,
+      .game-card__visual .game-card__placeholder,
+      .game-card__visual .game-card__reveal-image {
+        border-radius: 30px;
+        object-fit: contain;
+        clip-path: inset(0 round 30px);
       }
     }
 
