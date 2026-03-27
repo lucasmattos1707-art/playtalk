@@ -4527,6 +4527,7 @@ app.use('/allcards', express.static(ALLCARDS_ROOT, {
     res.setHeader('Cache-Control', 'no-store');
   }
 }));
+app.use('/audiostuto', express.static(path.join(__dirname, 'audiostuto')));
 app.use('/eventos', express.static(path.join(__dirname, 'musicas')));
 
 app.get(['/eventos', '/eventos/'], (req, res) => {
