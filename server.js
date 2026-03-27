@@ -3621,6 +3621,59 @@ app.patch('/auth/avatar', async (req, res) => {
   }
 });
 
+app.patch('/auth/profile', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const username = normalizeUsername(req.body?.username || req.body?.email);
+    if (!isValidUsername(username)) {
+      res.status(400).json({ success: false, message: 'Nome de usuario invalido.' });
+      return;
+    }
+
+    await ensureUsersAvatarColumn();
+
+    const result = await pool.query(
+      `UPDATE public.users
+       SET email = $2
+       WHERE id = $1
+       RETURNING id, email, avatar_image, created_at`,
+      [authUser.id, buildLegacyEmailFromUsername(username)]
+    );
+
+    if (!result.rows.length) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const user = result.rows[0];
+    const token = createAuthToken({ id: user.id, email: user.email });
+    if (token) {
+      setAuthCookie(res, token);
+    }
+
+    res.json({ success: true, user: mapPublicUser(user), token });
+  } catch (error) {
+    if (error.code === '23505') {
+      res.status(409).json({ success: false, message: 'Nome de usuario ja cadastrado.' });
+      return;
+    }
+    console.error('Erro ao atualizar perfil do usuario:', error);
+    res.status(500).json({ success: false, message: 'Erro ao atualizar perfil.' });
+  }
+});
+
 app.post('/logout', (req, res) => {
   clearAuthCookie(res);
   res.json({ success: true });

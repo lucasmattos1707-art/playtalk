@@ -1722,47 +1722,7 @@
 
     .game {
       overflow: hidden;
-      background:
-        linear-gradient(rgba(34, 20, 88, 0.3), rgba(34, 20, 88, 0.3)),
-        linear-gradient(to left, #8f94fb, #4e54c8);
-    }
-
-    .game::before,
-    .game::after {
-      content: "";
-      position: absolute;
-      inset: auto;
-      background: rgba(255, 255, 255, 0.16);
-      animation: flashcardsAmbientFloat 24s linear infinite;
-      pointer-events: none;
-    }
-
-    .game::before {
-      left: 12%;
-      bottom: -120px;
-      width: 120px;
-      height: 120px;
-    }
-
-    .game::after {
-      right: 10%;
-      bottom: -160px;
-      width: 170px;
-      height: 170px;
-      animation-duration: 18s;
-    }
-
-    @keyframes flashcardsAmbientFloat {
-      0% {
-        transform: translateY(0) rotate(0deg);
-        opacity: 1;
-        border-radius: 0;
-      }
-      100% {
-        transform: translateY(-1000px) rotate(720deg);
-        opacity: 0;
-        border-radius: 50%;
-      }
+      background: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
     }
 
     .game-shell {
@@ -2126,25 +2086,31 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 22px;
-      height: 22px;
+      width: 28px;
+      height: 28px;
       padding: 0;
       border: 0;
       background: transparent;
-      color: rgba(255, 255, 255, 0.5);
       cursor: pointer;
     }
 
-    .game-report-trigger svg {
-      width: 14px;
-      height: 14px;
+    .game-report-trigger img {
+      width: 18px;
+      height: 18px;
       display: block;
-      fill: currentColor;
+      opacity: 0.55;
+      transition: opacity 160ms ease, transform 160ms ease;
     }
 
     .game-report-trigger:hover,
     .game-report-trigger:focus-visible {
-      color: rgba(255, 255, 255, 0.85);
+      background: transparent;
+    }
+
+    .game-report-trigger:hover img,
+    .game-report-trigger:focus-visible img {
+      opacity: 0.9;
+      transform: scale(1.04);
     }
 
     .game-report-menu {
@@ -2857,6 +2823,286 @@
     .game-card__visual.is-tutorial-mic-flash::before {
       animation: flashcardsTutorialMicFlash 520ms ease-out;
     }
+
+    @media (min-width: 981px) {
+      .game-card {
+        width: 100%;
+        min-height: min(70vh, 760px);
+      }
+
+      .game-card__layout,
+      .game-card:not(.is-typing-stage) .game-card__layout {
+        width: 100%;
+        grid-template-columns: 1fr;
+        justify-items: center;
+        align-content: start;
+        gap: 28px;
+      }
+
+      .game-card__visual,
+      .game-card.is-typing-stage .game-card__visual,
+      .game-card:not(.is-typing-stage) .game-card__visual {
+        width: 320px;
+        max-width: 320px;
+        height: 320px;
+        aspect-ratio: 1 / 1;
+        margin: 0 auto;
+        border: 14px solid #ff941f;
+        border-radius: 50%;
+        overflow: hidden;
+        transform: none;
+        animation: none;
+        box-shadow: 0 18px 42px rgba(16, 35, 61, 0.16);
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      .game-card__content,
+      .game-card:not(.is-typing-stage) .game-card__content {
+        width: min(100%, 560px);
+        transform: none;
+        display: grid;
+        justify-items: center;
+        align-content: start;
+        gap: 18px;
+        padding: 0;
+        margin-top: 40px;
+      }
+
+      .game-card__content > div:first-child {
+        display: grid;
+        justify-items: center;
+        gap: 14px;
+        width: 100%;
+      }
+
+      .game-card__visual > img:not(.game-card__seal),
+      .game-card__visual .mini-card__fallback,
+      .game-card__visual .game-card__placeholder,
+      .game-card__visual .game-card__reveal-image {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        clip-path: circle(50% at 50% 50%);
+      }
+
+      .game-card__visual > img:not(.game-card__seal),
+      .game-card__visual .game-card__placeholder,
+      .game-card__visual .game-card__reveal-image {
+        transform: none;
+      }
+
+      .game-card:not(.is-typing-stage) .game-word.is-chip,
+      .game-card:not(.is-typing-stage) .game-subword.is-chip {
+        margin: 0;
+      }
+
+      .game-word.is-chip,
+      .game-subword.is-chip {
+        width: min(315px, 100%);
+        justify-content: flex-start;
+        text-align: left;
+        border-radius: 20px;
+        padding: 16px 20px 16px 62px;
+      }
+
+      .game-word.is-chip::before,
+      .game-subword.is-chip::before {
+        display: block;
+        left: 20px;
+        width: 42px;
+        transform: translate(-50%, -50%);
+      }
+
+      .game-controls {
+        justify-content: center;
+      }
+    }
+
+    .shell {
+      padding-bottom: 12vh;
+    }
+
+    .section-head {
+      justify-content: center;
+    }
+
+    .section-copy {
+      width: 100%;
+      text-align: center;
+    }
+
+    .section-copy__title-row {
+      justify-content: center;
+    }
+
+    #libraryTitle {
+      width: 100%;
+      margin: 0;
+      text-align: center;
+    }
+
+    #allSectionCopy {
+      margin: 8px 0 0;
+      color: #6b7280;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .catalog-pagination {
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .catalog-pagination__nav {
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 100%);
+      color: #10233d;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .catalog-pagination__nav:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .catalog-pagination__nav svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+
+    .embedded-panel,
+    .profile-panel {
+      min-height: 72vh;
+    }
+
+    .embedded-panel__frame {
+      width: 100%;
+      min-height: 72vh;
+      border: 0;
+      border-radius: 24px;
+      background: #fff;
+    }
+
+    .profile-panel__form {
+      width: min(100%, 440px);
+      margin: 0 auto;
+      display: grid;
+      justify-items: center;
+      gap: 18px;
+      padding: 12px 0;
+    }
+
+    .profile-panel__avatar {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #f9fafb 0%, #e5e7eb 100%);
+      border: 6px solid #d1d5db;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .profile-panel__avatar img,
+    .profile-panel__avatar span {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      object-fit: cover;
+      font-size: 58px;
+      font-weight: 800;
+      color: #475569;
+    }
+
+    .profile-panel__field {
+      width: 100%;
+      display: grid;
+      gap: 8px;
+      color: #475569;
+      font-weight: 700;
+    }
+
+    .profile-panel__field input {
+      width: 100%;
+      min-height: 56px;
+      border: 1px solid #d1d5db;
+      border-radius: 18px;
+      padding: 0 16px;
+      font-size: 18px;
+    }
+
+    .profile-panel__save,
+    .profile-panel__logout {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .profile-panel__status {
+      min-height: 24px;
+      margin: 0;
+      color: #64748b;
+      text-align: center;
+    }
+
+    .profile-panel__status.is-success {
+      color: #16a34a;
+    }
+
+    .profile-panel__status.is-error {
+      color: #dc2626;
+    }
+
+    .flashcards-footer-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 8vh;
+      min-height: 62px;
+      background: #157efb;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: stretch;
+      z-index: 40;
+      box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.12);
+    }
+
+    .flashcards-footer-nav__item {
+      border: 0;
+      background: transparent;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      opacity: 0.78;
+    }
+
+    .flashcards-footer-nav__item.is-active {
+      background: rgba(255, 255, 255, 0.14);
+      opacity: 1;
+    }
+
+    .flashcards-footer-nav__item img,
+    .flashcards-footer-nav__item svg {
+      width: 28px;
+      height: 28px;
+      display: block;
+    }
+
+    .flashcards-footer-nav__item svg {
+      fill: #ffffff;
+    }
   </style>
 </head>
 <body class="flashcards-home-collapsed">
@@ -2895,11 +3141,11 @@
       </div>
     </div>
   </section>
-  <button class="flashcards-home-toggle" id="flashcardsHomeToggle" type="button" aria-label="Ocultar resumo">
+  <button class="flashcards-home-toggle" id="flashcardsHomeToggle" type="button" aria-label="Ocultar resumo" hidden>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
   </button>
   <main class="shell">
-    <section class="topbar" id="topbar">
+    <section class="topbar" id="topbar" hidden>
       <div class="panel hero">
         <div class="metrics" id="metrics"></div>
       </div>
@@ -2909,37 +3155,42 @@
       <div class="panel section">
         <div class="section-head">
           <div class="section-copy">
-            <div class="section-copy__title-row">
-              <h2 id="libraryTitle">Meus flashcards</h2>
-              <span class="admin-badge" id="adminBadge" hidden>Administrador</span>
-            </div>
-            <p id="allSectionCopy">Carregando seus flashcards...</p>
-          </div>
-          <div class="actions">
-            <a class="btn" id="usersLink" href="/users">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v2h-1v2.5A4.5 4.5 0 0 1 12.75 13v1.55H16a1 1 0 0 1 1 1V18H7v-2.45a1 1 0 0 1 1-1h3.25V13A4.5 4.5 0 0 1 8 8.5V6H7V4zm3 2v2.5a2.5 2.5 0 1 0 5 0V6h-5zM5 5h2v2H6.5A1.5 1.5 0 0 0 5 8.5V9h2a3.93 3.93 0 0 1-.5-2V5zm12 0h2v2a3 3 0 0 1-.5 2H20v-.5A1.5 1.5 0 0 0 18.5 7H17V5z"/></svg>
-              <span class="btn__label">Usuarios</span>
-            </a>
-            <button class="btn" id="logoutBtn" type="button">
-              <span class="btn__label">Sair</span>
-            </button>
-            <button class="btn" id="watchFlashcardsBtn" type="button">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.14v13.72c0 .79.87 1.27 1.54.84l10.29-6.86a1 1 0 0 0 0-1.68L9.54 4.3A1 1 0 0 0 8 5.14z"/></svg>
-              <span class="btn__label">Assistir</span>
-            </button>
-            <button class="btn btn-primary" id="startGameBtn" type="button">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h10a4 4 0 0 1 3.8 2.76l1.08 3.24A2 2 0 0 1 20 16.63h-1.17A3 3 0 0 1 16 18.5a3 3 0 0 1-2.83-1.87h-2.34A3 3 0 0 1 8 18.5a3 3 0 0 1-2.83-1.87H4a2 2 0 0 1-1.88-2.63l1.08-3.24A4 4 0 0 1 7 8zm0 1.5a2.5 2.5 0 0 0-2.37 1.72L3.55 14.5H5.5v.63A1.5 1.5 0 0 0 7 16.63a1.5 1.5 0 0 0 1.5-1.5v-.63h7v.63a1.5 1.5 0 0 0 3 0v-.63h1.95l-1.08-3.28A2.5 2.5 0 0 0 17 9.5H7zm1 1.25v1.5H6.5v1.5H8v1.5h1.5v-1.5H11v-1.5H9.5v-1.5H8zm7 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm2.75.75a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
-              <span class="btn__label">Jogar</span>
-            </button>
+            <h2 id="libraryTitle">FlashCards</h2>
+            <p id="allSectionCopy">0</p>
           </div>
         </div>
         <div class="grid" id="allGrid"></div>
         <div class="catalog-pagination" id="libraryPagination" hidden>
-          <button class="btn" id="libraryPrevBtn" type="button">Anterior</button>
+          <button class="catalog-pagination__nav" id="libraryPrevBtn" type="button" aria-label="Pagina anterior">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 5.4 8.8 12l6.6 6.6-1.4 1.4L6 12l8-8z"/></svg>
+          </button>
           <span class="catalog-pagination__info" id="libraryPageInfo">Pagina 1 de 1</span>
-          <button class="btn" id="libraryNextBtn" type="button">Proxima</button>
+          <button class="catalog-pagination__nav" id="libraryNextBtn" type="button" aria-label="Proxima pagina">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.6 18.6 6.6-6.6-6.6-6.6L10 4l8 8-8 8z"/></svg>
+          </button>
         </div>
       </div>
+    </section>
+
+    <section class="panel section embedded-panel" id="usersPanel" hidden>
+      <iframe class="embedded-panel__frame" id="usersFrame" src="/users" title="Usuarios PlayTalk" loading="lazy"></iframe>
+    </section>
+
+    <section class="panel section profile-panel" id="profilePanel" hidden>
+      <form class="profile-panel__form" id="profileForm">
+        <label class="profile-panel__avatar" for="profileAvatarInput">
+          <img id="profileAvatarPreview" src="Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar do usuario">
+          <span id="profileAvatarFallback">P</span>
+          <input id="profileAvatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
+        </label>
+        <label class="profile-panel__field">
+          <span>Nome do usuario</span>
+          <input id="profileNameInput" type="text" maxlength="32" placeholder="Seu nome">
+        </label>
+        <button class="btn btn-primary profile-panel__save" id="profileSaveBtn" type="submit">Salvar perfil</button>
+        <button class="btn profile-panel__logout" id="profileLogoutBtn" type="button">Sair da conta</button>
+        <p class="profile-panel__status" id="profileStatus" aria-live="polite"></p>
+      </form>
     </section>
 
     <section class="game" id="game" aria-modal="true" role="dialog">
@@ -2961,7 +3212,7 @@
 
         <article class="game-card" id="gameCard" aria-live="polite">
           <button class="game-report-trigger" id="gameReportTrigger" type="button" aria-label="Reportar flashcard">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 1 21h22L12 2Zm1 14h-2v2h2v-2Zm0-6h-2v5h2V10Z"/></svg>
+            <img src="svgnovo/report.svg" alt="">
           </button>
           <div class="game-card__layout">
             <div class="game-card__visual" id="gameVisual"></div>
@@ -3134,6 +3385,21 @@
       <div class="admin-publish-bar__copy" id="adminPublishCopy">Preparando...</div>
     </div>
   </main>
+
+  <nav class="flashcards-footer-nav" id="flashcardsFooterNav" aria-label="Navegacao do flashcards">
+    <button class="flashcards-footer-nav__item is-active" id="footerPlayBtn" type="button" data-view="play" aria-label="Jogar">
+      <img src="svgnovo/play.svg" alt="">
+    </button>
+    <button class="flashcards-footer-nav__item" id="footerCardsBtn" type="button" data-view="cards" aria-label="Flashcards">
+      <img src="svgnovo/cards.svg" alt="">
+    </button>
+    <button class="flashcards-footer-nav__item" id="footerUsersBtn" type="button" data-view="users" aria-label="Usuarios">
+      <img src="svgnovo/cup.svg" alt="">
+    </button>
+    <button class="flashcards-footer-nav__item" id="footerProfileBtn" type="button" data-view="profile" aria-label="Perfil">
+      <img src="svgnovo/profile.svg" alt="">
+    </button>
+  </nav>
   <script src="js/apk-config.js"></script>
   <script src="js/api-config.js"></script>
   <script src="js/gamesounds.js"></script>
@@ -3324,6 +3590,10 @@
           voiceAudio: null,
           musicAudio: null,
           timer: null
+        },
+        ui: {
+          activeView: 'cards',
+          profileAvatarDraft: ''
         }
       };
 
@@ -3435,6 +3705,23 @@
         watchStars: document.getElementById('watchStars'),
         gameTutorialOverlay: document.getElementById('gameTutorialOverlay'),
         gameTutorialLogo: document.getElementById('gameTutorialLogo')
+        ,
+        usersPanel: document.getElementById('usersPanel'),
+        usersFrame: document.getElementById('usersFrame'),
+        profilePanel: document.getElementById('profilePanel'),
+        profileForm: document.getElementById('profileForm'),
+        profileAvatarInput: document.getElementById('profileAvatarInput'),
+        profileAvatarPreview: document.getElementById('profileAvatarPreview'),
+        profileAvatarFallback: document.getElementById('profileAvatarFallback'),
+        profileNameInput: document.getElementById('profileNameInput'),
+        profileSaveBtn: document.getElementById('profileSaveBtn'),
+        profileLogoutBtn: document.getElementById('profileLogoutBtn'),
+        profileStatus: document.getElementById('profileStatus'),
+        footerPlayBtn: document.getElementById('footerPlayBtn'),
+        footerCardsBtn: document.getElementById('footerCardsBtn'),
+        footerUsersBtn: document.getElementById('footerUsersBtn'),
+        footerProfileBtn: document.getElementById('footerProfileBtn'),
+        flashcardsFooterNav: document.getElementById('flashcardsFooterNav')
       };
 
       function safeText(value) {
@@ -4252,6 +4539,131 @@
         return normalizeUser(payload.user);
       }
 
+      function setProfileStatus(message, tone = '') {
+        if (!els.profileStatus) return;
+        els.profileStatus.textContent = message || '';
+        els.profileStatus.className = 'profile-panel__status';
+        if (tone) {
+          els.profileStatus.classList.add(`is-${tone}`);
+        }
+      }
+
+      function syncFooterNav() {
+        const activeView = state.ui.activeView;
+        [els.footerPlayBtn, els.footerCardsBtn, els.footerUsersBtn, els.footerProfileBtn].forEach((button) => {
+          if (!button) return;
+          button.classList.toggle('is-active', button.dataset.view === activeView);
+        });
+      }
+
+      function renderProfilePanel() {
+        const username = safeText(state.user?.username) || 'Jogador';
+        const avatar = state.ui.profileAvatarDraft || safeText(state.user?.avatar) || safeText(state.user?.avatar_image);
+        const hasAvatar = Boolean(avatar);
+        if (els.profileNameInput) {
+          els.profileNameInput.value = username;
+        }
+        if (els.profileAvatarPreview) {
+          els.profileAvatarPreview.src = hasAvatar ? avatar : 'Avatar/avatar-man-person-svgrepo-com.svg';
+          els.profileAvatarPreview.style.display = hasAvatar ? 'block' : 'none';
+        }
+        if (els.profileAvatarFallback) {
+          els.profileAvatarFallback.textContent = username.charAt(0).toUpperCase() || 'P';
+          els.profileAvatarFallback.style.display = hasAvatar ? 'none' : 'grid';
+        }
+        if (els.profileSaveBtn) {
+          els.profileSaveBtn.disabled = !state.user;
+        }
+        if (els.profileLogoutBtn) {
+          els.profileLogoutBtn.hidden = !state.user;
+        }
+      }
+
+      function switchMainView(view) {
+        const nextView = ['cards', 'users', 'profile', 'play'].includes(view) ? view : 'cards';
+        state.ui.activeView = nextView === 'play' ? 'play' : nextView;
+
+        if (els.catalog) {
+          els.catalog.hidden = nextView !== 'cards';
+        }
+        if (els.usersPanel) {
+          els.usersPanel.hidden = nextView !== 'users';
+        }
+        if (els.profilePanel) {
+          els.profilePanel.hidden = nextView !== 'profile';
+        }
+        if (els.topbar) {
+          els.topbar.hidden = true;
+          els.topbar.classList.add('is-hidden');
+        }
+        if (nextView === 'profile') {
+          renderProfilePanel();
+        }
+        syncFooterNav();
+      }
+
+      async function fileToDataUrl(file) {
+        return await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(reader.error || new Error('Falha ao ler a imagem.'));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function submitProfileForm(event) {
+        event?.preventDefault?.();
+        if (!state.user?.id) {
+          setProfileStatus('Entre na conta para editar o perfil.', 'error');
+          return;
+        }
+
+        const nextUsername = safeText(els.profileNameInput?.value);
+        if (!nextUsername) {
+          setProfileStatus('Digite um nome de usuario.', 'error');
+          return;
+        }
+
+        setProfileStatus('Salvando perfil...');
+        try {
+          const profileResponse = await fetch(buildApiUrl('/auth/profile'), {
+            method: 'PATCH',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            }),
+            body: JSON.stringify({ username: nextUsername })
+          });
+          const profilePayload = await profileResponse.json().catch(() => ({}));
+          if (!profileResponse.ok || !profilePayload?.success) {
+            throw new Error(profilePayload?.message || 'Nao foi possivel salvar o perfil.');
+          }
+
+          let updatedUser = normalizeUser(profilePayload.user) || state.user;
+          if (state.ui.profileAvatarDraft) {
+            const avatarResponse = await fetch(buildApiUrl('/auth/avatar'), {
+              method: 'PATCH',
+              headers: buildAuthHeaders({
+                'Content-Type': 'application/json'
+              }),
+              body: JSON.stringify({ avatar: state.ui.profileAvatarDraft })
+            });
+            const avatarPayload = await avatarResponse.json().catch(() => ({}));
+            if (!avatarResponse.ok || !avatarPayload?.success) {
+              throw new Error(avatarPayload?.message || 'Nao foi possivel salvar a foto.');
+            }
+            updatedUser = normalizeUser(avatarPayload.user) || updatedUser;
+          }
+
+          state.user = updatedUser;
+          state.ui.profileAvatarDraft = '';
+          renderProfilePanel();
+          refreshLibrary();
+          setProfileStatus('Perfil atualizado com sucesso.', 'success');
+        } catch (error) {
+          setProfileStatus(error?.message || 'Nao foi possivel salvar o perfil.', 'error');
+        }
+      }
+
       async function hydrateAuthenticatedApp(user, options = {}) {
         state.user = normalizeUser(user);
         if (!state.user) {
@@ -4304,8 +4716,12 @@
         renderMetrics();
         updateGameChips();
         refreshLibrary();
+        renderProfilePanel();
         hideAuthGate();
-        els.startGameBtn.disabled = false;
+        if (els.startGameBtn) {
+          els.startGameBtn.disabled = false;
+        }
+        switchMainView(state.ui.activeView === 'play' ? 'cards' : state.ui.activeView);
 
         if (!options.skipLoadCards) {
           try {
@@ -4319,7 +4735,9 @@
             console.warn('Falha ao carregar os flashcards do usuario:', error);
             els.allSectionCopy.textContent = 'Falha ao carregar os flashcards.';
             els.allGrid.innerHTML = `<div class="empty">${escapeHtml(error.message || 'Falha ao carregar.')}</div>`;
-            els.startGameBtn.disabled = true;
+            if (els.startGameBtn) {
+              els.startGameBtn.disabled = true;
+            }
           }
         }
 
@@ -4366,8 +4784,13 @@
         renderMetrics();
         updateGameChips();
         refreshLibrary();
+        state.ui.profileAvatarDraft = '';
+        renderProfilePanel();
         hideAuthGate();
-        els.startGameBtn.disabled = false;
+        if (els.startGameBtn) {
+          els.startGameBtn.disabled = false;
+        }
+        switchMainView('cards');
         syncWelcomeGate();
         tryStartPendingTutorial();
         if (shouldRequireGuestAuth()) {
@@ -5538,7 +5961,7 @@
         els.libraryPagination.hidden = !hasPagination;
         els.libraryPageInfo.textContent = totalCards
           ? `Pagina ${state.libraryPage} de ${pageCount}`
-          : 'Sem paginas';
+          : '0';
         els.libraryPrevBtn.disabled = !hasPagination || state.libraryPage <= 1;
         els.libraryNextBtn.disabled = !hasPagination || state.libraryPage >= pageCount;
       }
@@ -6469,32 +6892,14 @@
         syncAdminTheme();
         const cards = userProgressCards().map(buildLibraryCardView);
         const visibleCards = currentLibraryPageSlice(cards);
-        const username = state.user?.username ? ` de ${state.user.username}` : '';
         if (els.libraryTitle) {
-          els.libraryTitle.textContent = adminMode
-            ? 'Todos os flashcards'
-            : 'Meus flashcards';
+          els.libraryTitle.textContent = 'FlashCards';
         }
-        if (els.adminBadge) {
-          els.adminBadge.hidden = !adminMode;
-        }
-        if (els.logoutBtn) {
-          els.logoutBtn.hidden = !state.user;
-        }
-        if (els.usersLink) {
-          els.usersLink.hidden = !state.user;
-        }
-        els.allSectionCopy.textContent = cards.length
-          ? adminMode
-            ? `${cards.length} flashcards${username} disponiveis no catalogo completo.`
-            : `${cards.length} flashcards${username}.`
-          : 'Zero flashcards por enquanto. Ganhe o primeiro para iniciar sua biblioteca.';
+        els.allSectionCopy.textContent = String(cards.length || 0);
         renderMiniCards(
           els.allGrid,
           visibleCards,
-          adminMode
-            ? 'Nenhum flashcard disponivel no catalogo ainda.'
-            : 'Zero flashcards aqui ainda. Jogue para ganhar o primeiro.'
+          '0'
         );
         renderLibraryPagination(cards.length);
         renderMetrics();
@@ -7822,10 +8227,8 @@
           beginTutorialGame();
           return;
         }
-        syncGameSetupSummary();
-        els.gameSetup.classList.add('is-visible');
-        window.requestAnimationFrame(() => els.gameSetup.classList.add('is-active'));
-        document.body.classList.add('game-open');
+        state.game.selectedCount = DEFAULT_GAME_CONTEXT_LIMIT;
+        beginGame();
       }
 
       function closeGameSetup() {
@@ -8100,8 +8503,11 @@
         await wait(180);
         els.game.classList.remove('is-visible');
         els.catalog.classList.remove('is-hidden');
-        els.topbar.classList.remove('is-hidden');
+        els.topbar.classList.add('is-hidden');
         refreshLibrary();
+        if (state.ui.activeView === 'play') {
+          switchMainView('cards');
+        }
         syncWelcomeGate();
       }
 
@@ -8350,10 +8756,10 @@
           els.authCopy.textContent = authCopyText();
         });
         els.authForm.addEventListener('submit', submitAuthForm);
-        els.logoutBtn.addEventListener('click', logoutCurrentUser);
-        els.watchFlashcardsBtn.addEventListener('click', openWatchPopover);
-        els.closeWatchPopoverBtn.addEventListener('click', closeWatchPopover);
-        els.startWatchBtn.addEventListener('click', startWatch);
+        els.logoutBtn?.addEventListener('click', logoutCurrentUser);
+        els.watchFlashcardsBtn?.addEventListener('click', openWatchPopover);
+        els.closeWatchPopoverBtn?.addEventListener('click', closeWatchPopover);
+        els.startWatchBtn?.addEventListener('click', startWatch);
         els.watchScopeSelect?.addEventListener('change', (event) => {
           state.watch.scope = event.target.value === 'mine' ? 'mine' : 'all';
           renderWatchDeckPicker();
@@ -8363,9 +8769,9 @@
           if (!toggle) return;
           toggleWatchDeckSource(toggle.dataset.watchSource || '');
         });
-        els.exitWatchBtn.addEventListener('click', stopWatch);
-        els.stopWatchBtn.addEventListener('click', stopWatch);
-        els.startGameBtn.addEventListener('click', openGameSetup);
+        els.exitWatchBtn?.addEventListener('click', stopWatch);
+        els.stopWatchBtn?.addEventListener('click', stopWatch);
+        els.startGameBtn?.addEventListener('click', openGameSetup);
         els.exitGameBtn.addEventListener('click', exitGame);
         els.libraryPrevBtn?.addEventListener('click', () => {
           state.libraryPage -= 1;
@@ -8495,6 +8901,26 @@
           event.stopPropagation();
           startRecognition();
         });
+        els.footerPlayBtn?.addEventListener('click', () => {
+          switchMainView('play');
+          openGameSetup();
+        });
+        els.footerCardsBtn?.addEventListener('click', () => switchMainView('cards'));
+        els.footerUsersBtn?.addEventListener('click', () => switchMainView('users'));
+        els.footerProfileBtn?.addEventListener('click', () => switchMainView('profile'));
+        els.profileForm?.addEventListener('submit', submitProfileForm);
+        els.profileLogoutBtn?.addEventListener('click', logoutCurrentUser);
+        els.profileAvatarInput?.addEventListener('change', async (event) => {
+          const file = event.target?.files?.[0];
+          if (!file) return;
+          try {
+            state.ui.profileAvatarDraft = await fileToDataUrl(file);
+            renderProfilePanel();
+            setProfileStatus('');
+          } catch (error) {
+            setProfileStatus(error?.message || 'Nao foi possivel ler a imagem.', 'error');
+          }
+        });
       }
 
       async function init() {
@@ -8511,11 +8937,13 @@
         preloadTutorialFinaleSeals();
         syncWelcomeGate();
         renderMetrics();
+        renderProfilePanel();
         updateGameChips();
         renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
         syncAdminTools();
         renderAdminPublishBar();
         els.flashcardsHomeToggle.setAttribute('aria-label', 'Mostrar resumo');
+        switchMainView('cards');
 
         const gameHeadCopy = els.gameHeaderCopy?.parentElement || null;
         if (gameHeadCopy) {
@@ -8545,11 +8973,13 @@
             await handleLoggedOutState('');
           }
           if (!recognitionCtor) {
-            const startGameLabel = els.startGameBtn.querySelector('.btn__label');
-            if (startGameLabel) {
-              startGameLabel.textContent = 'Jogar sem mic';
-            } else {
-              els.startGameBtn.textContent = 'Jogar sem mic';
+            if (els.startGameBtn) {
+              const startGameLabel = els.startGameBtn.querySelector('.btn__label');
+              if (startGameLabel) {
+                startGameLabel.textContent = 'Jogar sem mic';
+              } else {
+                els.startGameBtn.textContent = 'Jogar sem mic';
+              }
             }
           }
         } catch (error) {
