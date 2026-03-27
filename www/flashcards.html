@@ -9038,10 +9038,10 @@
           void navigateToMainView('cards');
         });
         els.footerUsersBtn?.addEventListener('click', () => {
-          void navigateToMainView('users');
+          window.location.href = '/users';
         });
         els.footerProfileBtn?.addEventListener('click', () => {
-          void navigateToMainView('profile');
+          window.location.href = '/account';
         });
         els.profileForm?.addEventListener('submit', submitProfileForm);
         els.profileLogoutBtn?.addEventListener('click', logoutCurrentUser);
@@ -9059,6 +9059,7 @@
       }
 
       async function init() {
+        const requestedView = new URLSearchParams(window.location.search).get('view');
         state.timeOffsetMs = readTimeOffsetMs();
         loadSelectedGameCount();
         syncWatchControls();
@@ -9121,6 +9122,13 @@
           console.warn('Falha ao iniciar flashcards:', error);
           state.entry.cardsReady = true;
           await handleLoggedOutState('');
+        }
+
+        if (requestedView === 'play') {
+          switchMainView('play');
+          openGameSetup();
+        } else {
+          switchMainView('cards');
         }
       }
 

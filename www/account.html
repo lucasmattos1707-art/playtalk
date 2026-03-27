@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PlayTalk | Usuarios</title>
+  <title>PlayTalk | Conta</title>
   <style>
     @font-face {
       font-family: "PlaytalkDisplay";
@@ -17,10 +17,8 @@
       --bg: #07111f;
       --panel: rgba(9, 21, 38, 0.92);
       --line: rgba(140, 197, 255, 0.14);
-      --line-strong: rgba(140, 197, 255, 0.24);
       --text: #f4f8ff;
       --muted: #a5bdd8;
-      --accent: #7ed0ff;
       --shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
       --radius: 30px;
       --footer-height: max(62px, 8vh);
@@ -51,17 +49,6 @@
       padding: 14px 0 calc(var(--footer-height) + 20px);
     }
 
-    .panel {
-      width: 100%;
-      padding: 30px 22px 22px;
-      border-radius: 0 0 var(--radius) var(--radius);
-      border: 1px solid var(--line);
-      border-top: 0;
-      background: var(--panel);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(16px);
-    }
-
     .panel-head {
       padding: 26px 22px 18px;
       border-radius: var(--radius) var(--radius) 0 0;
@@ -80,63 +67,100 @@
       text-transform: uppercase;
     }
 
-    .status {
-      min-height: 24px;
-      margin: 0 0 14px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .users-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .users-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 14px;
-      align-items: center;
-      padding: 16px 18px;
-      border-radius: 18px;
+    .panel {
+      padding: 26px 22px 22px;
+      border-radius: 0 0 var(--radius) var(--radius);
       border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.03);
+      border-top: 0;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
     }
 
-    .users-row.is-header {
-      border-color: var(--line-strong);
-      background: rgba(126, 208, 255, 0.08);
-      color: #dff2ff;
-      font-size: 13px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .users-row.is-empty {
-      grid-template-columns: 1fr;
+    .account-form {
+      width: min(100%, 440px);
+      margin: 0 auto;
+      display: grid;
       justify-items: center;
-      text-align: center;
-      color: var(--muted);
+      gap: 18px;
     }
 
-    .users-name,
-    .users-count {
-      min-width: 0;
-    }
-
-    .users-name {
-      font-size: 18px;
-      font-weight: 700;
-      white-space: nowrap;
+    .account-avatar {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #f9fafb 0%, #e5e7eb 100%);
+      border: 6px solid #d1d5db;
       overflow: hidden;
-      text-overflow: ellipsis;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      position: relative;
     }
 
-    .users-count {
-      font-size: 18px;
+    .account-avatar img,
+    .account-avatar span {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      object-fit: cover;
+      font-size: 58px;
+      font-weight: 800;
+      color: #475569;
+    }
+
+    .account-field {
+      width: 100%;
+      display: grid;
+      gap: 8px;
+      color: #dbeafe;
       font-weight: 700;
-      color: var(--accent);
+    }
+
+    .account-field input {
+      width: 100%;
+      min-height: 56px;
+      border: 1px solid #d1d5db;
+      border-radius: 18px;
+      padding: 0 16px;
+      font-size: 18px;
+    }
+
+    .account-button {
+      width: 100%;
+      min-height: 54px;
+      border: 0;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 17px;
+    }
+
+    .account-button--primary {
+      background: linear-gradient(180deg, #ffffff 0%, #dbeafe 100%);
+      color: #10233d;
+    }
+
+    .account-button--secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .account-status {
+      min-height: 24px;
+      margin: 0;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .account-status.is-success {
+      color: #4ade80;
+    }
+
+    .account-status.is-error {
+      color: #f87171;
     }
 
     .flashcards-footer-nav {
@@ -187,26 +211,29 @@
       .panel {
         padding: 22px 14px 14px;
       }
-
-      .users-row {
-        padding: 14px 12px;
-      }
-
-      .users-name,
-      .users-count {
-        font-size: 16px;
-      }
     }
   </style>
 </head>
 <body>
   <main class="page">
     <section class="panel-head">
-      <h1 class="title">Usuarios</h1>
+      <h1 class="title">Conta</h1>
     </section>
     <section class="panel">
-      <p class="status" id="usersStatus">Carregando usuarios...</p>
-      <section class="users-list" id="usersList" aria-live="polite"></section>
+      <form class="account-form" id="accountForm">
+        <label class="account-avatar" for="accountAvatarInput">
+          <img id="accountAvatarPreview" src="Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar do usuario">
+          <span id="accountAvatarFallback">P</span>
+          <input id="accountAvatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
+        </label>
+        <label class="account-field">
+          <span>Nome do usuario</span>
+          <input id="accountNameInput" type="text" maxlength="32" placeholder="Seu nome">
+        </label>
+        <button class="account-button account-button--primary" id="accountSaveBtn" type="submit">Salvar perfil</button>
+        <button class="account-button account-button--secondary" id="accountLogoutBtn" type="button">Sair da conta</button>
+        <p class="account-status" id="accountStatus" aria-live="polite"></p>
+      </form>
     </section>
   </main>
 
@@ -217,16 +244,16 @@
     <a class="flashcards-footer-nav__item" href="/flashcards?view=cards" aria-label="Flashcards">
       <img src="svgnovo/cards.svg" alt="">
     </a>
-    <a class="flashcards-footer-nav__item is-active" href="/users" aria-label="Usuarios">
+    <a class="flashcards-footer-nav__item" href="/users" aria-label="Usuarios">
       <img src="svgnovo/cup.svg" alt="">
     </a>
-    <a class="flashcards-footer-nav__item" href="/account" aria-label="Perfil">
+    <a class="flashcards-footer-nav__item is-active" href="/account" aria-label="Perfil">
       <img src="svgnovo/profile.svg" alt="">
     </a>
   </nav>
 
   <script src="js/apk-config.js"></script>
   <script src="js/api-config.js"></script>
-  <script src="js/users-page.js"></script>
+  <script src="js/account-page.js"></script>
 </body>
 </html>

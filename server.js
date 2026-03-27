@@ -4621,6 +4621,10 @@ app.get(['/users', '/users/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'users.html'));
 });
 
+app.get(['/account', '/account/'], (req, res) => {
+  res.sendFile(path.join(staticDir, 'account.html'));
+});
+
 app.get(['/rank', '/rank/'], (req, res) => {
   res.redirect(302, '/users');
 });
