@@ -17,6 +17,7 @@
         "cap:sync:android": "npx cap sync android",
         "cap:open:android": "npx cap open android",
         "db:reset:users": "node scripts/reset-users-table.js",
+        "keys:generate": "node scripts/generate-access-keys.js",
         "android:update": "npm run build && npm run cap:sync:android",
         "android:auto-sync": "node scripts/android-auto-sync.js",
         "deploy:pages": "npm run build && npx wrangler pages deploy dist",

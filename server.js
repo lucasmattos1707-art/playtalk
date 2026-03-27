@@ -127,6 +127,7 @@ const pool = (DATABASE_URL || DATABASE_CONFIG.host)
 let flashcardRankingsTableReadyPromise = null;
 let usersAvatarColumnReadyPromise = null;
 let flashcardUserStateTablesReadyPromise = null;
+let premiumAccessTablesReadyPromise = null;
 
 const FLASHCARD_RANKING_TIMEZONE = 'America/Sao_Paulo';
 const FLASHCARD_RANKING_PLACEHOLDER_NAME = 'Usuario';
@@ -504,6 +505,46 @@ const ensureFlashcardUserStateTables = async () => {
   }
 
   return flashcardUserStateTablesReadyPromise;
+};
+
+const ensurePremiumAccessTables = async () => {
+  if (!pool) return false;
+
+  await ensureUsersAvatarColumn();
+
+  if (!premiumAccessTablesReadyPromise) {
+    premiumAccessTablesReadyPromise = (async () => {
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS premium_full_access boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS premium_until timestamptz
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_access_keys (
+          access_code text PRIMARY KEY,
+          access_type text NOT NULL,
+          duration_days integer NOT NULL,
+          source_file text NOT NULL DEFAULT '',
+          redeemed_by_user_id integer REFERENCES public.users(id) ON DELETE SET NULL,
+          redeemed_at timestamptz,
+          created_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_access_keys_redeemed_idx
+        ON public.user_access_keys (redeemed_by_user_id, redeemed_at DESC)
+      `);
+      return true;
+    })().catch((error) => {
+      premiumAccessTablesReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return premiumAccessTablesReadyPromise;
 };
 
 const ensureFlashcardRankingsTable = async () => {
@@ -996,7 +1037,10 @@ const mapPublicUser = (user) => ({
   id: Number(user?.id) || 0,
   username: String(user?.email || user?.username || '').trim(),
   avatar_image: String(user?.avatar_image || '').trim(),
-  created_at: user?.created_at || null
+  created_at: user?.created_at || null,
+  is_admin: isAdminUserRecord(user),
+  premium_full_access: Boolean(user?.premium_full_access),
+  premium_until: user?.premium_until || null
 });
 
 const normalizeAdminUsername = (value) => String(value || '').trim().toLowerCase();
@@ -1004,6 +1048,64 @@ const normalizeAdminUsername = (value) => String(value || '').trim().toLowerCase
 const isAdminUsername = (value) => FLASHCARD_ADMIN_USERNAMES.has(normalizeAdminUsername(value));
 
 const isAdminUserRecord = (user) => isAdminUsername(user?.email || user?.username);
+
+const normalizeAccessKeyCode = (value) => String(value || '')
+  .trim()
+  .toUpperCase()
+  .replace(/[^A-P]/g, '');
+
+const isPremiumActiveFromUser = (user) => {
+  if (Boolean(user?.premium_full_access)) return true;
+  const premiumUntilTime = Date.parse(user?.premium_until || '');
+  return Number.isFinite(premiumUntilTime) && premiumUntilTime > Date.now();
+};
+
+const resolvePremiumState = (user) => ({
+  fullAccess: isPremiumActiveFromUser(user),
+  premiumUntil: user?.premium_until || null
+});
+
+const accessKeyCache = {
+  loadedAt: 0,
+  map: new Map()
+};
+
+const buildAccessKeyFilePath = (typeKey) => {
+  const config = ACCESS_KEY_TYPES[typeKey];
+  return config ? path.join(ACCESSKEY_ROOT, config.fileName) : '';
+};
+
+const loadAccessKeyDefinitions = async ({ force = false } = {}) => {
+  const now = Date.now();
+  if (!force && accessKeyCache.loadedAt && (now - accessKeyCache.loadedAt) < 60_000 && accessKeyCache.map.size) {
+    return accessKeyCache.map;
+  }
+
+  const nextMap = new Map();
+  await fs.promises.mkdir(ACCESSKEY_ROOT, { recursive: true });
+
+  for (const [typeKey, config] of Object.entries(ACCESS_KEY_TYPES)) {
+    const filePath = buildAccessKeyFilePath(typeKey);
+    try {
+      const raw = await fs.promises.readFile(filePath, 'utf8');
+      const parsed = JSON.parse(raw);
+      const keys = Array.isArray(parsed?.keys) ? parsed.keys : Array.isArray(parsed) ? parsed : [];
+      keys.forEach((entry) => {
+        const code = normalizeAccessKeyCode(typeof entry === 'string' ? entry : entry?.code);
+        if (code.length !== 7) return;
+        nextMap.set(code, config);
+      });
+    } catch (error) {
+      if (error?.code !== 'ENOENT') {
+        console.error(`Falha ao carregar chaves ${config.fileName}:`, error);
+      }
+    }
+  }
+
+  accessKeyCache.loadedAt = now;
+  accessKeyCache.map = nextMap;
+  return nextMap;
+};
 
 const readUserById = async (userId) => {
   if (!pool) {
@@ -1016,9 +1118,10 @@ const readUserById = async (userId) => {
   }
 
   await ensureUsersAvatarColumn();
+  await ensurePremiumAccessTables();
 
   const result = await pool.query(
-    `SELECT id, email, avatar_image, created_at
+    `SELECT id, email, avatar_image, created_at, premium_full_access, premium_until
      FROM public.users
      WHERE id = $1
      LIMIT 1`,
@@ -1073,6 +1176,90 @@ const readFlashcardProgressCountForUser = async (userId) => {
   );
 
   return Number(result.rows[0]?.total) || 0;
+};
+
+const extendUserPremiumAccess = async (userId, durationDays, options = {}) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  await ensurePremiumAccessTables();
+
+  const normalizedUserId = Number.parseInt(userId, 10);
+  const normalizedDurationDays = Math.max(1, Number.parseInt(durationDays, 10) || 0);
+  const accessType = String(options.accessType || '').trim().toLowerCase() || 'manual';
+  const accessCode = normalizeAccessKeyCode(options.accessCode);
+  const sourceFile = String(options.sourceFile || '').trim();
+
+  if (!normalizedUserId || !normalizedDurationDays) {
+    const error = new Error('Parametros de premium invalidos.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (accessCode) {
+      const existing = await client.query(
+        `SELECT redeemed_by_user_id
+         FROM public.user_access_keys
+         WHERE access_code = $1
+         LIMIT 1`,
+        [accessCode]
+      );
+      const alreadyRedeemedBy = Number(existing.rows[0]?.redeemed_by_user_id) || 0;
+      if (alreadyRedeemedBy) {
+        const error = new Error('Essa chave ja foi usada.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      await client.query(
+        `INSERT INTO public.user_access_keys (
+           access_code,
+           access_type,
+           duration_days,
+           source_file,
+           redeemed_by_user_id,
+           redeemed_at
+         )
+         VALUES ($1, $2, $3, $4, $5, now())
+         ON CONFLICT (access_code)
+         DO UPDATE SET
+           access_type = EXCLUDED.access_type,
+           duration_days = EXCLUDED.duration_days,
+           source_file = EXCLUDED.source_file,
+           redeemed_by_user_id = EXCLUDED.redeemed_by_user_id,
+           redeemed_at = EXCLUDED.redeemed_at`,
+        [accessCode, accessType, normalizedDurationDays, sourceFile, normalizedUserId]
+      );
+    }
+
+    const result = await client.query(
+      `UPDATE public.users
+       SET premium_full_access = true,
+           premium_until = GREATEST(COALESCE(premium_until, now()), now()) + ($2::text || ' days')::interval
+       WHERE id = $1
+       RETURNING id, email, avatar_image, created_at, premium_full_access, premium_until`,
+      [normalizedUserId, normalizedDurationDays]
+    );
+
+    if (!result.rows.length) {
+      const error = new Error('Usuario nao encontrado.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 const syncFlashcardRankingFromProgressCount = async (userId) => {
@@ -1397,12 +1584,20 @@ const VOICES_ROOT = (() => {
   return path.join(staticDir, 'voices');
 })();
 const ALLCARDS_ROOT = path.join(__dirname, 'allcards');
+const ACCESSKEY_ROOT = path.join(__dirname, 'accesskey');
 const LOCAL_LEVELS_ROOT = path.join(__dirname, 'Niveis');
 const FLASHCARD_DATA_RELATIVE_ROOT = path.posix.join('data', 'flashcards', '130', '001');
 const ADMIN_FLASHCARD_ASSET_RELATIVE_ROOT = path.posix.join('admin', 'FlashCards');
 const LOCAL_LEVEL_MANIFEST_RELATIVE_PATH = path.posix.join('data', 'local-level-files.json');
 const LOCAL_LEVEL_ALLOWED_FOLDERS = ['others', 'talking', 'watching', 'words'];
 const FLASHCARD_ADMIN_USERNAMES = new Set(['admin', 'adm']);
+const ACCESS_KEY_TYPES = {
+  semana: { key: 'semana', label: '1 semana', durationDays: 7, fileName: 'semana.json' },
+  mes: { key: 'mes', label: '1 mes', durationDays: 30, fileName: 'mes.json' },
+  ano: { key: 'ano', label: '1 ano', durationDays: 365, fileName: 'ano.json' }
+};
+const ACCESS_KEY_ALPHABET = 'ABCDEFGHIJKLMNOP';
+const FLASHCARD_FREE_LIMIT = 8;
 const SUPPORTED_IMAGE_EXTENSIONS = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp']);
 const SUPPORTED_AUDIO_EXTENSIONS = new Set(['.mp3', '.wav', '.opus', '.ogg', '.oga', '.webm']);
 const SUPPORTED_VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.ogv', '.mov', '.m4v']);
@@ -3423,11 +3618,12 @@ app.post('/register', async (req, res) => {
     const email = buildLegacyEmailFromUsername(username);
     const avatarImage = normalizeAvatarImage(req.body.avatar || '');
     await ensureUsersAvatarColumn();
+    await ensurePremiumAccessTables();
 
     const result = await pool.query(
       `INSERT INTO public.users (email, password_hash, avatar_image)
        VALUES ($1, $2, $3)
-       RETURNING id, email, avatar_image, created_at`,
+       RETURNING id, email, avatar_image, created_at, premium_full_access, premium_until`,
       [email, passwordHash, avatarImage || null]
     );
 
@@ -3470,9 +3666,10 @@ app.post('/login', async (req, res) => {
     }
 
     await ensureUsersAvatarColumn();
+    await ensurePremiumAccessTables();
 
     const result = await pool.query(
-      'SELECT id, email, avatar_image, password_hash, created_at FROM public.users WHERE email = $1',
+      'SELECT id, email, avatar_image, password_hash, created_at, premium_full_access, premium_until FROM public.users WHERE email = $1',
       [username]
     );
     if (!result.rows.length) {
@@ -3526,7 +3723,7 @@ app.post('/auth/google-quick', async (req, res) => {
     }
 
     let result = await pool.query(
-      'SELECT id, email, created_at FROM public.users WHERE email = $1',
+      'SELECT id, email, created_at, premium_full_access, premium_until FROM public.users WHERE email = $1',
       [email]
     );
 
@@ -3535,7 +3732,7 @@ app.post('/auth/google-quick', async (req, res) => {
       result = await pool.query(
         `INSERT INTO public.users (email, password_hash)
          VALUES ($1, $2)
-         RETURNING id, email, created_at`,
+         RETURNING id, email, created_at, premium_full_access, premium_until`,
         [email, generatedPasswordHash]
       );
     }
@@ -3561,6 +3758,7 @@ app.post('/auth/google-quick', async (req, res) => {
 
 app.get('/auth/session', async (req, res) => {
   try {
+    await ensurePremiumAccessTables();
     const user = await readAuthenticatedUserFromRequest(req);
     if (!user) {
       res.status(401).json({ success: false, message: 'SessÃ£o invÃ¡lida ou expirada.' });
@@ -3591,12 +3789,13 @@ app.patch('/auth/avatar', async (req, res) => {
     const avatarImage = normalizeAvatarImage(req.body?.avatar || req.body?.avatarDataUrl || '');
 
     await ensureUsersAvatarColumn();
+    await ensurePremiumAccessTables();
 
     const result = await pool.query(
       `UPDATE public.users
        SET avatar_image = $2
        WHERE id = $1
-       RETURNING id, email, avatar_image, created_at`,
+       RETURNING id, email, avatar_image, created_at, premium_full_access, premium_until`,
       [authUser.id, avatarImage || null]
     );
 
@@ -3642,12 +3841,13 @@ app.patch('/auth/profile', async (req, res) => {
     }
 
     await ensureUsersAvatarColumn();
+    await ensurePremiumAccessTables();
 
     const result = await pool.query(
       `UPDATE public.users
        SET email = $2
        WHERE id = $1
-       RETURNING id, email, avatar_image, created_at`,
+       RETURNING id, email, avatar_image, created_at, premium_full_access, premium_until`,
       [authUser.id, buildLegacyEmailFromUsername(username)]
     );
 
@@ -4187,6 +4387,9 @@ app.get('/api/users/flashcards', async (req, res) => {
 
     await ensureUsersAvatarColumn();
     await ensureFlashcardUserStateTables();
+    await ensurePremiumAccessTables();
+    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
+    const requesterIsAdmin = isAdminUserRecord(authUser);
 
     const requestedLimit = Number.parseInt(req.query.limit, 10);
     const limit = Number.isInteger(requestedLimit) && requestedLimit > 0
@@ -4198,6 +4401,8 @@ app.get('/api/users/flashcards', async (req, res) => {
          u.email,
          COALESCE(u.avatar_image, '') AS avatar_image,
          u.created_at,
+         u.premium_full_access,
+         u.premium_until,
          COALESCE(progress.total, 0) AS flashcards_count
        FROM public.users u
        LEFT JOIN (
@@ -4222,12 +4427,145 @@ app.get('/api/users/flashcards', async (req, res) => {
         userId: Number(entry.id) || 0,
         username: String(entry.email || '').trim() || 'Usuario',
         avatarImage: String(entry.avatar_image || '').trim(),
-        flashcardsCount: Number(entry.flashcards_count) || 0
+        flashcardsCount: Number(entry.flashcards_count) || 0,
+        premiumFullAccess: Boolean(entry.premium_full_access),
+        premiumUntil: entry.premium_until || null,
+        premiumActive: requesterIsAdmin ? isPremiumActiveFromUser(entry) : undefined
       }))
     });
   } catch (error) {
     console.error('Erro ao listar usuarios com flashcards:', error);
     res.status(500).json({ success: false, message: 'Erro ao carregar usuarios.' });
+  }
+});
+
+app.get('/api/premium/status', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await ensurePremiumAccessTables();
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const currentUser = await readUserById(authUser.id);
+    const premium = resolvePremiumState(currentUser || authUser);
+    res.json({ success: true, premium });
+  } catch (error) {
+    console.error('Erro ao carregar status premium:', error);
+    res.status(500).json({ success: false, message: 'Erro ao carregar premium.' });
+  }
+});
+
+app.post('/api/premium/redeem', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await ensurePremiumAccessTables();
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const code = normalizeAccessKeyCode(req.body?.code);
+    if (code.length !== 7) {
+      res.status(400).json({ success: false, message: 'A chave precisa ter 7 letras.' });
+      return;
+    }
+
+    const accessKeys = await loadAccessKeyDefinitions();
+    const matched = accessKeys.get(code);
+    if (!matched) {
+      res.status(404).json({ success: false, message: 'Chave invalida.' });
+      return;
+    }
+
+    const user = await extendUserPremiumAccess(authUser.id, matched.durationDays, {
+      accessType: matched.key,
+      accessCode: code,
+      sourceFile: matched.fileName
+    });
+
+    res.json({
+      success: true,
+      message: `Premium liberado por ${matched.label}.`,
+      user: mapPublicUser(user),
+      premium: resolvePremiumState(user)
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao resgatar chave premium:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: statusCode === 409
+        ? 'Essa chave ja foi usada.'
+        : statusCode === 404
+          ? 'Usuario nao encontrado.'
+          : error?.message || 'Erro ao resgatar chave.'
+    });
+  }
+});
+
+app.post('/api/admin/users/:userId/premium', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await ensurePremiumAccessTables();
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    if (!isAdminUserRecord(authUser)) {
+      res.status(403).json({ success: false, message: 'Apenas admin pode liberar premium.' });
+      return;
+    }
+
+    const durationMap = {
+      semana: ACCESS_KEY_TYPES.semana.durationDays,
+      mes: ACCESS_KEY_TYPES.mes.durationDays,
+      ano: ACCESS_KEY_TYPES.ano.durationDays
+    };
+    const plan = String(req.body?.plan || '').trim().toLowerCase();
+    const durationDays = durationMap[plan];
+    if (!durationDays) {
+      res.status(400).json({ success: false, message: 'Plano premium invalido.' });
+      return;
+    }
+
+    const updatedUser = await extendUserPremiumAccess(req.params.userId, durationDays, {
+      accessType: `admin:${plan}`,
+      sourceFile: 'admin'
+    });
+
+    res.json({
+      success: true,
+      message: `Premium ${ACCESS_KEY_TYPES[plan].label} atribuido com sucesso.`,
+      user: mapPublicUser(updatedUser),
+      premium: resolvePremiumState(updatedUser)
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao atribuir premium pelo admin:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Erro ao atribuir premium.'
+    });
   }
 });
 
@@ -4580,6 +4918,22 @@ app.use('/allcards', express.static(ALLCARDS_ROOT, {
     res.setHeader('Cache-Control', 'no-store');
   }
 }));
+app.get('/accesskey/:fileName', async (req, res) => {
+  try {
+    const requestedName = path.basename(String(req.params.fileName || ''));
+    const ext = path.extname(requestedName).toLowerCase();
+    if (!requestedName || (!SUPPORTED_IMAGE_EXTENSIONS.has(ext) && !SUPPORTED_AUDIO_EXTENSIONS.has(ext))) {
+      res.status(404).send('Arquivo nao encontrado.');
+      return;
+    }
+
+    const assetPath = path.join(ACCESSKEY_ROOT, requestedName);
+    await fs.promises.access(assetPath, fs.constants.F_OK);
+    res.sendFile(assetPath);
+  } catch (_error) {
+    res.status(404).send('Arquivo nao encontrado.');
+  }
+});
 app.use('/audiostuto', express.static(path.join(__dirname, 'audiostuto')));
 app.use('/eventos', express.static(path.join(__dirname, 'musicas')));
 

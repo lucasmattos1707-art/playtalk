@@ -95,7 +95,7 @@
 
     .users-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1.2fr) auto minmax(140px, 180px) minmax(0, 1.4fr);
       gap: 14px;
       align-items: center;
       padding: 16px 18px;
@@ -121,7 +121,8 @@
     }
 
     .users-name,
-    .users-count {
+    .users-count,
+    .users-premium {
       min-width: 0;
     }
 
@@ -137,6 +138,39 @@
       font-size: 18px;
       font-weight: 700;
       color: var(--accent);
+    }
+
+    .users-premium {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .users-premium.is-active {
+      color: #95f0ae;
+      font-weight: 700;
+    }
+
+    .users-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .users-action {
+      border: 1px solid rgba(126, 208, 255, 0.22);
+      background: rgba(126, 208, 255, 0.08);
+      color: #f4f8ff;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .users-action:disabled {
+      opacity: 0.45;
+      cursor: wait;
     }
 
     .flashcards-footer-nav {
@@ -189,12 +223,18 @@
       }
 
       .users-row {
+        grid-template-columns: 1fr;
         padding: 14px 12px;
       }
 
       .users-name,
-      .users-count {
+      .users-count,
+      .users-premium {
         font-size: 16px;
+      }
+
+      .users-actions {
+        justify-content: flex-start;
       }
     }
   </style>

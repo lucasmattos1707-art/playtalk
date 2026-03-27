@@ -3145,6 +3145,176 @@
     .flashcards-footer-nav__item svg {
       fill: #ffffff;
     }
+
+    .premium-gate {
+      position: fixed;
+      inset: 0 0 calc(8vh) 0;
+      background: rgba(255, 255, 255, 0.98);
+      z-index: 39;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 420ms ease;
+      overflow: auto;
+    }
+
+    .premium-gate.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .premium-gate__shell {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 28px 16px 24px;
+    }
+
+    .premium-gate__card {
+      width: min(520px, 100%);
+      display: grid;
+      gap: 18px;
+      justify-items: center;
+    }
+
+    .premium-gate__copy {
+      text-align: center;
+      color: #0f172a;
+    }
+
+    .premium-gate__copy h2 {
+      margin: 0 0 8px;
+      font-size: clamp(30px, 7vw, 44px);
+    }
+
+    .premium-gate__copy p {
+      margin: 0;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    .premium-gate__code {
+      min-height: 62px;
+      width: 100%;
+      border-radius: 22px;
+      border: 2px solid rgba(21, 126, 251, 0.12);
+      background: #f8fbff;
+      display: grid;
+      place-items: center;
+      font-size: clamp(24px, 5vw, 34px);
+      font-weight: 900;
+      letter-spacing: 0.28em;
+      color: #157efb;
+      text-transform: uppercase;
+      transition: opacity 500ms ease, transform 500ms ease;
+    }
+
+    .premium-gate.is-visible .premium-gate__code,
+    .premium-gate.is-visible .premium-gate__tile {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .premium-gate__grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, 80px);
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .premium-gate__tile {
+      width: 80px;
+      height: 80px;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      border-radius: 18px;
+      overflow: hidden;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 700ms ease, transform 700ms ease, box-shadow 160ms ease, scale 160ms ease;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    .premium-gate__tile:nth-child(1) { transition-delay: 40ms; }
+    .premium-gate__tile:nth-child(2) { transition-delay: 70ms; }
+    .premium-gate__tile:nth-child(3) { transition-delay: 100ms; }
+    .premium-gate__tile:nth-child(4) { transition-delay: 130ms; }
+    .premium-gate__tile:nth-child(5) { transition-delay: 160ms; }
+    .premium-gate__tile:nth-child(6) { transition-delay: 190ms; }
+    .premium-gate__tile:nth-child(7) { transition-delay: 220ms; }
+    .premium-gate__tile:nth-child(8) { transition-delay: 250ms; }
+    .premium-gate__tile:nth-child(9) { transition-delay: 280ms; }
+    .premium-gate__tile:nth-child(10) { transition-delay: 310ms; }
+    .premium-gate__tile:nth-child(11) { transition-delay: 340ms; }
+    .premium-gate__tile:nth-child(12) { transition-delay: 370ms; }
+    .premium-gate__tile:nth-child(13) { transition-delay: 400ms; }
+    .premium-gate__tile:nth-child(14) { transition-delay: 430ms; }
+    .premium-gate__tile:nth-child(15) { transition-delay: 460ms; }
+    .premium-gate__tile:nth-child(16) { transition-delay: 490ms; }
+
+    .premium-gate__tile:hover,
+    .premium-gate__tile:focus-visible {
+      scale: 1.04;
+      box-shadow: 0 18px 32px rgba(21, 126, 251, 0.18);
+      outline: none;
+    }
+
+    .premium-gate__tile img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .premium-gate__status {
+      min-height: 22px;
+      margin: 0;
+      color: #475569;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .premium-gate__actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .premium-gate__btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 18px;
+      background: #157efb;
+      color: #fff;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .premium-gate__btn.is-secondary {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    body.premium-gate-open .topbar,
+    body.premium-gate-open .catalog,
+    body.premium-gate-open .game,
+    body.premium-gate-open .watch,
+    body.premium-gate-open .profile-panel,
+    body.premium-gate-open .embedded-panel,
+    body.premium-gate-open .game-report-menu,
+    body.premium-gate-open .admin-publish-bar {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    @media (max-width: 520px) {
+      .premium-gate__grid {
+        gap: 10px;
+      }
+    }
   </style>
 </head>
 <body class="flashcards-home-collapsed">
@@ -3424,6 +3594,41 @@
       <div class="admin-publish-bar__copy" id="adminPublishCopy">Preparando...</div>
     </div>
   </main>
+  <section class="premium-gate" id="premiumGate" aria-modal="true" role="dialog" aria-label="Liberar premium">
+    <div class="premium-gate__shell">
+      <div class="premium-gate__card">
+        <div class="premium-gate__copy">
+          <h2>Premium</h2>
+          <p>Voce chegou em 8 cartas. Toque nas 16 imagens para digitar uma chave secreta de 7 letras.</p>
+        </div>
+        <div class="premium-gate__code" id="premiumCodeValue">• • • • • • •</div>
+        <p class="premium-gate__status" id="premiumStatus">Toque nas imagens na ordem certa para digitar a chave.</p>
+        <div class="premium-gate__grid" id="premiumGrid">
+          <button class="premium-gate__tile" type="button" data-letter="A"><img src="/accesskey/a.png" alt="A"></button>
+          <button class="premium-gate__tile" type="button" data-letter="B"><img src="/accesskey/b.png" alt="B"></button>
+          <button class="premium-gate__tile" type="button" data-letter="C"><img src="/accesskey/c.png" alt="C"></button>
+          <button class="premium-gate__tile" type="button" data-letter="D"><img src="/accesskey/d.png" alt="D"></button>
+          <button class="premium-gate__tile" type="button" data-letter="E"><img src="/accesskey/e.png" alt="E"></button>
+          <button class="premium-gate__tile" type="button" data-letter="F"><img src="/accesskey/f.png" alt="F"></button>
+          <button class="premium-gate__tile" type="button" data-letter="G"><img src="/accesskey/g.png" alt="G"></button>
+          <button class="premium-gate__tile" type="button" data-letter="H"><img src="/accesskey/h.png" alt="H"></button>
+          <button class="premium-gate__tile" type="button" data-letter="I"><img src="/accesskey/i.png" alt="I"></button>
+          <button class="premium-gate__tile" type="button" data-letter="J"><img src="/accesskey/j.png" alt="J"></button>
+          <button class="premium-gate__tile" type="button" data-letter="K"><img src="/accesskey/k.png" alt="K"></button>
+          <button class="premium-gate__tile" type="button" data-letter="L"><img src="/accesskey/l.png" alt="L"></button>
+          <button class="premium-gate__tile" type="button" data-letter="M"><img src="/accesskey/m.png" alt="M"></button>
+          <button class="premium-gate__tile" type="button" data-letter="N"><img src="/accesskey/n.png" alt="N"></button>
+          <button class="premium-gate__tile" type="button" data-letter="O"><img src="/accesskey/o.png" alt="O"></button>
+          <button class="premium-gate__tile" type="button" data-letter="P"><img src="/accesskey/p.png" alt="P"></button>
+        </div>
+        <div class="premium-gate__actions">
+          <button class="premium-gate__btn is-secondary" id="premiumBackspaceBtn" type="button">Apagar ultima</button>
+          <button class="premium-gate__btn is-secondary" id="premiumClearBtn" type="button">Limpar tudo</button>
+          <button class="premium-gate__btn is-secondary" id="premiumCloseBtn" type="button">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <nav class="flashcards-footer-nav" id="flashcardsFooterNav" aria-label="Navegacao do flashcards">
     <button class="flashcards-footer-nav__item is-active" id="footerPlayBtn" type="button" data-view="play" aria-label="Jogar">
@@ -3491,10 +3696,13 @@
       const TUTORIAL_PLANET_PORTUGUESE = 'planeta';
       const TUTORIAL_FINALE_SEAL_FLASH_MS = 400;
       const GUEST_FLASHCARD_LOGIN_THRESHOLD = 6;
+      const FLASHCARD_PREMIUM_GATE_LIMIT = 8;
       const GUEST_FLASHCARD_LOGIN_DELAY_MS = 5000;
       const AUTH_GATE_FORM_REVEAL_MS = 1200;
       const WELCOME_COPY_ROTATION_MS = 2000;
       const WELCOME_COPY_MESSAGES = ['Flu\u00eancia f\u00e1cil', 'Toque para come\u00e7ar'];
+      const ACCESS_KEY_GRID_LETTERS = 'ABCDEFGHIJKLMNOP'.split('');
+      const ACCESS_KEY_AUDIO_LIMIT_PATH = '/accesskey/limit.mp3';
       const FLASHCARD_REPORT_TYPES = [
         { key: 'blurred-image', label: 'Imagem borrada' },
         { key: 'weak-association', label: 'Associacao fraca' },
@@ -3633,7 +3841,12 @@
         },
         ui: {
           activeView: 'cards',
-          profileAvatarDraft: ''
+          profileAvatarDraft: '',
+          premiumGateOpen: false,
+          premiumCode: '',
+          premiumStatus: '',
+          premiumBusy: false,
+          premiumAudioPlayed: false
         }
       };
 
@@ -3761,7 +3974,14 @@
         footerCardsBtn: document.getElementById('footerCardsBtn'),
         footerUsersBtn: document.getElementById('footerUsersBtn'),
         footerProfileBtn: document.getElementById('footerProfileBtn'),
-        flashcardsFooterNav: document.getElementById('flashcardsFooterNav')
+        flashcardsFooterNav: document.getElementById('flashcardsFooterNav'),
+        premiumGate: document.getElementById('premiumGate'),
+        premiumCodeValue: document.getElementById('premiumCodeValue'),
+        premiumStatus: document.getElementById('premiumStatus'),
+        premiumClearBtn: document.getElementById('premiumClearBtn'),
+        premiumBackspaceBtn: document.getElementById('premiumBackspaceBtn'),
+        premiumCloseBtn: document.getElementById('premiumCloseBtn'),
+        premiumGrid: document.getElementById('premiumGrid')
       };
 
       function safeText(value) {
@@ -4156,7 +4376,10 @@
           id,
           username,
           avatarImage: safeText(user.avatar_image || user.avatarImage),
-          createdAt: user.created_at || user.createdAt || null
+          createdAt: user.created_at || user.createdAt || null,
+          isAdmin: Boolean(user.is_admin),
+          premiumFullAccess: Boolean(user.premium_full_access),
+          premiumUntil: user.premium_until || user.premiumUntil || null
         };
       }
 
@@ -4266,7 +4489,20 @@
       }
 
       function isAdminUser(user = state.user) {
-        return isAdminUsername(user?.username);
+        return Boolean(user?.isAdmin) || isAdminUsername(user?.username);
+      }
+
+      function isPremiumUser(user = state.user) {
+        if (!user) return false;
+        if (Boolean(user.premiumFullAccess)) return true;
+        const premiumUntilTime = Date.parse(user?.premiumUntil || '');
+        return Number.isFinite(premiumUntilTime) && premiumUntilTime > Date.now();
+      }
+
+      function shouldGatePremiumAccess() {
+        return !isAdminUser()
+          && !isPremiumUser()
+          && accessibleFlashcardsCount() >= FLASHCARD_PREMIUM_GATE_LIMIT;
       }
 
       function syncAdminTheme() {
@@ -4595,6 +4831,120 @@
           if (!button) return;
           button.classList.toggle('is-active', button.dataset.view === activeView);
         });
+      }
+
+      function renderPremiumCode() {
+        if (els.premiumCodeValue) {
+          const masked = state.ui.premiumCode.padEnd(7, '•').slice(0, 7).split('').join(' ');
+          els.premiumCodeValue.textContent = masked;
+        }
+        if (els.premiumStatus) {
+          els.premiumStatus.textContent = state.ui.premiumStatus || 'Toque nas imagens na ordem certa para digitar a chave.';
+        }
+        if (els.premiumClearBtn) {
+          els.premiumClearBtn.disabled = state.ui.premiumBusy || !state.ui.premiumCode;
+        }
+        if (els.premiumBackspaceBtn) {
+          els.premiumBackspaceBtn.disabled = state.ui.premiumBusy || !state.ui.premiumCode;
+        }
+      }
+
+      function setPremiumStatus(message) {
+        state.ui.premiumStatus = safeText(message);
+        renderPremiumCode();
+      }
+
+      function playPremiumLimitAudio() {
+        if (state.ui.premiumAudioPlayed) return;
+        state.ui.premiumAudioPlayed = true;
+        const audio = new Audio(ACCESS_KEY_AUDIO_LIMIT_PATH);
+        audio.play().catch(() => {});
+      }
+
+      function closePremiumGate(force = false) {
+        if (!els.premiumGate) return;
+        if (!force && shouldGatePremiumAccess()) return;
+        state.ui.premiumGateOpen = false;
+        document.body.classList.remove('premium-gate-open');
+        els.premiumGate.classList.remove('is-visible');
+      }
+
+      function openPremiumGate(message) {
+        if (!els.premiumGate) return;
+        state.ui.premiumGateOpen = true;
+        state.ui.premiumCode = '';
+        state.ui.premiumBusy = false;
+        state.ui.premiumAudioPlayed = false;
+        document.body.classList.add('premium-gate-open');
+        els.premiumGate.classList.add('is-visible');
+        playPremiumLimitAudio();
+        setPremiumStatus(message || 'Voce chegou ao limite de 8 cartas. Digite uma chave premium.');
+      }
+
+      async function redeemPremiumAccessCode() {
+        if (!state.user?.id) {
+          setPremiumStatus('Entre na sua conta para ativar a chave premium.');
+          return;
+        }
+        if (state.ui.premiumCode.length !== 7 || state.ui.premiumBusy) {
+          return;
+        }
+
+        state.ui.premiumBusy = true;
+        setPremiumStatus('Validando chave...');
+
+        try {
+          const response = await fetch(buildApiUrl('/api/premium/redeem'), {
+            method: 'POST',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            }),
+            body: JSON.stringify({ code: state.ui.premiumCode })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Nao foi possivel validar a chave.');
+          }
+
+          const updatedUser = normalizeUser(payload.user);
+          if (updatedUser) {
+            state.user = updatedUser;
+          }
+          state.ui.premiumCode = '';
+          setPremiumStatus(payload?.message || 'Premium liberado com sucesso.');
+          renderProfilePanel();
+          renderMetrics();
+          closePremiumGate(true);
+        } catch (error) {
+          state.ui.premiumCode = '';
+          setPremiumStatus(error?.message || 'Chave invalida.');
+        } finally {
+          state.ui.premiumBusy = false;
+          renderPremiumCode();
+        }
+      }
+
+      function appendPremiumCodeLetter(letter) {
+        if (!state.ui.premiumGateOpen || state.ui.premiumBusy) return;
+        const normalized = safeText(letter).toUpperCase().replace(/[^A-P]/g, '');
+        if (!normalized || state.ui.premiumCode.length >= 7) return;
+        state.ui.premiumCode = `${state.ui.premiumCode}${normalized}`.slice(0, 7);
+        renderPremiumCode();
+        if (state.ui.premiumCode.length === 7) {
+          void redeemPremiumAccessCode();
+        }
+      }
+
+      function syncPremiumGateVisibility() {
+        if (shouldGatePremiumAccess()) {
+          if (state.game.active) {
+            void exitGame();
+          }
+          openPremiumGate();
+          return true;
+        }
+        closePremiumGate(true);
+        return false;
       }
 
       function renderProfilePanel() {
@@ -6971,7 +7321,6 @@
       }
 
       function refreshLibrary() {
-        const adminMode = isAdminUser();
         syncAdminTheme();
         const cards = userProgressCards().map(buildLibraryCardView);
         const visibleCards = currentLibraryPageSlice(cards);
@@ -6989,6 +7338,7 @@
         updateGameChips();
         syncGameSetupSummary();
         syncAdminTools();
+        syncPremiumGateVisibility();
       }
 
       function renderStars(stars) {
@@ -8356,6 +8706,10 @@
       }
 
       function openGameSetup() {
+        if (shouldGatePremiumAccess()) {
+          openPremiumGate();
+          return;
+        }
         if (canOfferTutorialMode()) {
           beginTutorialGame();
           return;
@@ -8688,6 +9042,9 @@
               && accessibleFlashcardsCount() >= GUEST_FLASHCARD_LOGIN_THRESHOLD) {
               scheduleGuestAuthRequirement();
             }
+            if (shouldGatePremiumAccess()) {
+              setPremiumStatus('Voce chegou em 8 cartas. Digite uma chave premium.');
+            }
             setGameStatus(`${accessibleFlashcardsCount()} FlashCards`, 'flashcards-count');
             entry._removeAfterReward = true;
           } else {
@@ -8738,6 +9095,11 @@
           if (entry._removeAfterReward) {
             entry._removeAfterReward = false;
             removeGameEntry(entry.id);
+            if (shouldGatePremiumAccess()) {
+              openPremiumGate();
+              await exitGame();
+              return;
+            }
             const targetActiveCount = activeCountBeforeResolution >= GAME_ACTIVE_CARD_CAP
               ? GAME_ACTIVE_CARD_CAP
               : Math.min(GAME_ACTIVE_CARD_CAP, activeCountBeforeResolution + 1);
@@ -8994,7 +9356,38 @@
             stopWatch();
           }
         });
+        els.premiumGrid?.addEventListener('click', (event) => {
+          const tile = event.target.closest('[data-letter]');
+          if (!tile) return;
+          appendPremiumCodeLetter(tile.getAttribute('data-letter'));
+        });
+        els.premiumBackspaceBtn?.addEventListener('click', () => {
+          if (state.ui.premiumBusy) return;
+          state.ui.premiumCode = state.ui.premiumCode.slice(0, -1);
+          renderPremiumCode();
+        });
+        els.premiumClearBtn?.addEventListener('click', () => {
+          if (state.ui.premiumBusy) return;
+          state.ui.premiumCode = '';
+          setPremiumStatus('Toque nas imagens na ordem certa para digitar a chave.');
+        });
+        els.premiumCloseBtn?.addEventListener('click', () => {
+          closePremiumGate();
+        });
         window.addEventListener('keydown', (event) => {
+          if (state.ui.premiumGateOpen && event.key === 'Backspace') {
+            event.preventDefault();
+            if (!state.ui.premiumBusy) {
+              state.ui.premiumCode = state.ui.premiumCode.slice(0, -1);
+              renderPremiumCode();
+            }
+            return;
+          }
+          if (state.ui.premiumGateOpen && /^[a-p]$/i.test(event.key || '')) {
+            event.preventDefault();
+            appendPremiumCodeLetter(event.key);
+            return;
+          }
           if (event.key && event.key.length === 1) {
             state.secretBuffer = `${state.secretBuffer}${event.key.toLowerCase()}`.slice(-SECRET_TIME_CODE.length);
             if (state.secretBuffer === SECRET_TIME_CODE) {
@@ -9009,7 +9402,9 @@
               }
             }
           }
-          if (event.key === 'Escape' && els.gameReportMenu?.classList.contains('is-visible')) {
+          if (event.key === 'Escape' && state.ui.premiumGateOpen) {
+            closePremiumGate();
+          } else if (event.key === 'Escape' && els.gameReportMenu?.classList.contains('is-visible')) {
             closeGameReportMenu();
           } else if (event.key === 'Escape' && state.game.active) {
             exitGame();
@@ -9074,6 +9469,7 @@
         syncWelcomeGate();
         renderMetrics();
         renderProfilePanel();
+        renderPremiumCode();
         updateGameChips();
         renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
         syncAdminTools();
