@@ -1,22 +1,4 @@
 ﻿(function() {
-  function ensureWaveBackground() {
-    const body = document.body;
-    if (!body || body.querySelector('.playtalk-wave-bg')) {
-      return;
-    }
-
-    const background = document.createElement('div');
-    background.className = 'playtalk-wave-bg';
-    background.setAttribute('aria-hidden', 'true');
-    background.innerHTML = [
-      '<div class="wave"></div>',
-      '<div class="wave"></div>',
-      '<div class="wave"></div>'
-    ].join('');
-
-    body.insertBefore(background, body.firstChild);
-  }
-
   function ensureCosmicBackground() {
     const body = document.body;
     if (!body || body.querySelector('.playtalk-cosmic-bg')) {
@@ -134,7 +116,6 @@
   }
 
   enforceNoScroll();
-  ensureWaveBackground();
   ensureCosmicBackground();
   syncCosmicBackgroundVisibility();
   document.addEventListener('playtalk:global-radio-change', syncCosmicBackgroundVisibility);

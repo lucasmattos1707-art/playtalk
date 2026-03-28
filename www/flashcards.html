@@ -62,71 +62,13 @@
     body {
       font-family: "Soopafre", Arial, sans-serif;
       color: #10233d;
-      background: transparent;
+      background: linear-gradient(180deg, #ffffff 0%, #edf8fc 36%, #d4edf7 68%, #228ebf 100%);
       position: relative;
       overflow: auto;
     }
 
-    @keyframes flashcardsGradient {
-      0% { background-position: 0% 0%; }
-      50% { background-position: 100% 100%; }
-      100% { background-position: 0% 0%; }
-    }
-
-    .playtalk-wave-bg {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      pointer-events: none;
-      z-index: 0;
-      background: linear-gradient(315deg, rgba(101, 0, 94, 1) 3%, rgba(60, 132, 206, 1) 38%, rgba(48, 238, 226, 1) 68%, rgba(255, 25, 25, 1) 98%);
-      animation: flashcardsGradient 15s ease infinite;
-      background-size: 400% 400%;
-      background-attachment: fixed;
-    }
-
-    .playtalk-wave-bg .wave {
-      background: rgb(255 255 255 / 25%);
-      border-radius: 1000% 1000% 0 0;
-      position: fixed;
-      width: 200%;
-      height: 12em;
-      animation: flashcardsWave 10s -3s linear infinite;
-      transform: translate3d(0, 0, 0);
-      opacity: 0.8;
-      bottom: 0;
-      left: 0;
-    }
-
-    .playtalk-wave-bg .wave:nth-of-type(2) {
-      bottom: -1.25em;
-      animation: flashcardsWave 18s linear reverse infinite;
-      opacity: 0.8;
-    }
-
-    .playtalk-wave-bg .wave:nth-of-type(3) {
-      bottom: -2.5em;
-      animation: flashcardsWave 20s -1s reverse infinite;
-      opacity: 0.9;
-    }
-
-    @keyframes flashcardsWave {
-      2% { transform: translateX(1px); }
-      25% { transform: translateX(-25%); }
-      50% { transform: translateX(-50%); }
-      75% { transform: translateX(-25%); }
-      100% { transform: translateX(1px); }
-    }
-
-    body > :not(.playtalk-wave-bg) {
-      position: relative;
-      z-index: 1;
-    }
-
     body.admin-user {
-      background: transparent;
+      background: linear-gradient(180deg, #ffffff 0%, #edf8fc 36%, #d4edf7 68%, #228ebf 100%);
     }
 
     body.admin-user .panel,
@@ -3387,8 +3329,10 @@
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       align-items: stretch;
-      z-index: 40;
+      z-index: 200;
       box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.12);
+      visibility: visible;
+      opacity: 1;
     }
 
     .flashcards-footer-nav__item {
@@ -3877,11 +3821,6 @@
   </style>
 </head>
 <body class="flashcards-home-collapsed">
-  <div class="playtalk-wave-bg" aria-hidden="true">
-    <div class="wave"></div>
-    <div class="wave"></div>
-    <div class="wave"></div>
-  </div>
   <section class="welcome-gate is-visible" id="welcomeGate" aria-label="Entrada do PlayTalk">
     <button class="welcome-gate__touch" id="welcomeTouch" type="button" aria-label="Toque para iniciar o tutorial">
       <div class="welcome-gate__stack">
@@ -4261,16 +4200,16 @@
 
   <nav class="flashcards-footer-nav" id="flashcardsFooterNav" aria-label="Navegacao do flashcards">
     <button class="flashcards-footer-nav__item is-active" id="footerPlayBtn" type="button" data-view="play" aria-label="Jogar">
-      <img src="svgnovo/play.svg" alt="">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.36a1 1 0 0 0 0-1.72l-10-6.36A1 1 0 0 0 8 5.14Z"/></svg>
     </button>
     <button class="flashcards-footer-nav__item" id="footerCardsBtn" type="button" data-view="cards" aria-label="Flashcards">
-      <img src="svgnovo/cards.svg" alt="">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.6 2.5c.33 2.34 2.12 3.25 3.48 4.86 1.34 1.59 2 3.22 2 5.35 0 4.3-2.96 8.79-7.58 8.79-3.36 0-5.58-2.4-5.58-5.34 0-2.21 1.12-3.85 2.97-5.78 1.38-1.44 2.94-3.14 4.71-7.88Z"/></svg>
     </button>
     <button class="flashcards-footer-nav__item" id="footerUsersBtn" type="button" data-view="users" aria-label="Usuarios">
-      <img src="svgnovo/cup.svg" alt="">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 3h10v2h2a2 2 0 0 1 2 2c0 3.32-2.47 6-5.57 6.4A5.99 5.99 0 0 1 13 17.83V20h4v2H7v-2h4v-2.17A5.99 5.99 0 0 1 8.57 13.4C5.47 13 3 10.32 3 7a2 2 0 0 1 2-2h2V3Zm-2 4c0 2.1 1.45 3.82 3.4 4.28A6 6 0 0 1 7 7V7H5Zm14 0h-2a6 6 0 0 1-1.4 4.28C17.55 10.82 19 9.1 19 7Z"/></svg>
     </button>
     <button class="flashcards-footer-nav__item" id="footerProfileBtn" type="button" data-view="profile" aria-label="Perfil">
-      <img src="svgnovo/profile.svg" alt="">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2c-4.42 0-8 2.46-8 5.5 0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5 0-3.04-3.58-5.5-8-5.5Z"/></svg>
     </button>
   </nav>
   <script src="js/apk-config.js"></script>

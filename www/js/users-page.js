@@ -76,6 +76,7 @@
       username: safeText(entry?.username || 'Usuario') || 'Usuario',
       rank: Number(entry?.rank) || 0,
       flashcardsCount: Number(entry?.flashcardsCount) || 0,
+      avatarImage: safeText(entry?.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg') || 'Avatar/avatar-man-person-svgrepo-com.svg',
       premiumUntil: entry?.premiumUntil || null,
       premiumActive: Boolean(entry?.premiumActive)
     }));
@@ -130,7 +131,7 @@
     const rowMarkup = displayRows.map((entry) => `
       <div class="users-row" data-user-id="${entry.userId}">
         <div class="users-rank">${escapeHtml(`${entry.rank || 0}º`)}</div>
-        <div class="users-avatar"><img src="Avatar/avatar-man-person-svgrepo-com.svg" alt=""></div>
+        <div class="users-avatar"><img src="${escapeHtml(entry.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg')}" alt="${escapeHtml(entry.username)}"></div>
         <div class="users-main">
           <span class="users-name">${escapeHtml(entry.username)}</span>
           <span class="users-sub">${escapeHtml(`${entry.flashcardsCount} flashcards`)}</span>
