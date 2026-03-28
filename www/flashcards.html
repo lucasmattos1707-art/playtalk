@@ -4249,6 +4249,8 @@
       const GAME_SESSION_STORAGE_KEY = 'playtalk-flashcards-game-session-v1';
       const TIME_OFFSET_STORAGE_KEY = 'playtalk-flashcards-time-offset-v1';
       const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
+      const SOUND_TEST_COMPLETED_STORAGE_KEY = 'playtalk-soundcheck-completed';
+      const SOUND_TEST_LAUNCH_TARGET_STORAGE_KEY = 'playtalk-soundcheck-launch-target';
       const recognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
       const STAR_ICON_PATH = 'SVG/codex-icons/star.svg';
       const ENGLISH_ICON_PATH = 'SVG/codex-icons/ingles.svg';
@@ -5386,6 +5388,46 @@
         }
       }
 
+      function readSoundTestCompletedFlag() {
+        try {
+          return sessionStorage.getItem(SOUND_TEST_COMPLETED_STORAGE_KEY) === '1';
+        } catch (_error) {
+          return false;
+        }
+      }
+
+      function persistSoundTestCompletedFlag(value) {
+        try {
+          if (value) {
+            sessionStorage.setItem(SOUND_TEST_COMPLETED_STORAGE_KEY, '1');
+          } else {
+            sessionStorage.removeItem(SOUND_TEST_COMPLETED_STORAGE_KEY);
+          }
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      function launchSoundCheck(launchTarget = '') {
+        try {
+          sessionStorage.setItem(SOUND_TEST_LAUNCH_TARGET_STORAGE_KEY, safeText(launchTarget));
+          sessionStorage.removeItem(SOUND_TEST_COMPLETED_STORAGE_KEY);
+        } catch (_error) {
+          // ignore
+        }
+        window.location.href = `/somcheck?return=${encodeURIComponent('/flashcards')}`;
+      }
+
+      function consumeSoundCheckLaunchTarget() {
+        try {
+          const value = safeText(sessionStorage.getItem(SOUND_TEST_LAUNCH_TARGET_STORAGE_KEY));
+          sessionStorage.removeItem(SOUND_TEST_LAUNCH_TARGET_STORAGE_KEY);
+          return value;
+        } catch (_error) {
+          return '';
+        }
+      }
+
       function clearWelcomeRotation() {
         if (!state.entry.welcomeTimer) return;
         window.clearInterval(state.entry.welcomeTimer);
@@ -5624,6 +5666,7 @@
         const target = state.ui.soundTestTargetLetters.slice().sort().join('');
         if (selected === target) {
           state.entry.soundTestCompleted = true;
+          persistSoundTestCompletedFlag(true);
           setSoundTestStatus('Perfeito. Som ok, vamos jogar.');
           renderSoundTestGate();
           await wait(420);
@@ -5715,7 +5758,7 @@
       function requestWelcomeTutorialStart(skipSoundTest = false) {
         if (state.entry.authRequired) return;
         if (!skipSoundTest) {
-          openSoundTestGate('welcome');
+          launchSoundCheck('welcome');
           return;
         }
         if (hasTutorialPlanetUnlocked()) {
@@ -5726,6 +5769,23 @@
         state.entry.pendingTutorialStart = true;
         setWelcomeCopy('Preparando tutorial...');
         tryStartPendingTutorial();
+      }
+
+      function resumePendingSoundCheckFlow() {
+        state.entry.soundTestCompleted = readSoundTestCompletedFlag();
+        const launchTarget = consumeSoundCheckLaunchTarget();
+        if (!state.entry.soundTestCompleted || !launchTarget) {
+          return false;
+        }
+        if (launchTarget === 'welcome') {
+          requestWelcomeTutorialStart(true);
+          return true;
+        }
+        if (launchTarget === 'tutorial-setup') {
+          beginTutorialGame();
+          return true;
+        }
+        return false;
       }
 
       function clearGuestAuthDelay() {
@@ -10269,7 +10329,7 @@
         }
         if (canOfferTutorialMode()) {
           if (!state.entry.soundTestCompleted) {
-            openSoundTestGate('tutorial-setup');
+            launchSoundCheck('tutorial-setup');
             return;
           }
           beginTutorialGame();
@@ -11119,6 +11179,7 @@
         const searchParams = new URLSearchParams(window.location.search);
         const requestedView = searchParams.get('view');
         const requestedPremiumOpen = searchParams.get('premium') === '1';
+        state.entry.soundTestCompleted = readSoundTestCompletedFlag();
         state.timeOffsetMs = readTimeOffsetMs();
         loadSelectedGameCount();
         syncWatchControls();
@@ -11188,6 +11249,10 @@
           await maybeOpenOnboardingGate();
         } catch (error) {
           console.warn('Falha ao verificar onboarding de identidade:', error);
+        }
+
+        if (resumePendingSoundCheckFlow()) {
+          return;
         }
 
         if (requestedPremiumOpen) {

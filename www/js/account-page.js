@@ -11,6 +11,8 @@
     premiumLevel: document.getElementById('accountPremiumLevel'),
     premiumUntil: document.getElementById('accountPremiumUntil'),
     premiumBtn: document.getElementById('accountPremiumBtn'),
+    premiumIcon: document.getElementById('accountPremiumIcon'),
+    premiumLabel: document.getElementById('accountPremiumLabel'),
     saveBtn: document.getElementById('accountSaveBtn'),
     logoutBtn: document.getElementById('accountLogoutBtn'),
     status: document.getElementById('accountStatus')
@@ -125,6 +127,14 @@
     els.premiumUntil.textContent = 'Sem premium ativo no momento.';
   }
 
+  function renderPremiumButton() {
+    if (!els.premiumBtn || !els.premiumLabel || !els.premiumIcon) return;
+    const isLoggedIn = Boolean(state.user?.id);
+    els.premiumLabel.textContent = isLoggedIn ? 'Comprar premium!' : 'Entrar';
+    els.premiumIcon.hidden = !isLoggedIn;
+    els.premiumBtn.setAttribute('aria-label', isLoggedIn ? 'Comprar premium' : 'Entrar');
+  }
+
   function renderUser() {
     const sourceProfile = state.user || state.localProfile || {};
     const username = safeText(sourceProfile.username) || 'Jogador';
@@ -147,6 +157,7 @@
     }
     els.logoutBtn.hidden = !state.user;
     renderPremiumStatus();
+    renderPremiumButton();
   }
 
   async function fileToDataUrl(file) {
@@ -339,6 +350,52 @@
     }
   }
 
+  async function loginFromAccount() {
+    const username = safeText(els.nameInput?.value).toLowerCase();
+    const password = safeText(els.passwordInput?.value);
+
+    if (!username || !password) {
+      setStatus('Preencha nome e senha para entrar.', 'error');
+      return;
+    }
+
+    if (els.premiumBtn) els.premiumBtn.disabled = true;
+    setStatus('Entrando na sua conta...');
+
+    try {
+      const response = await fetch(buildApiUrl('/login'), {
+        method: 'POST',
+        headers: buildAuthHeaders({
+          'Content-Type': 'application/json'
+        }),
+        body: JSON.stringify({ username, password })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Nao foi possivel entrar agora.');
+      }
+
+      if (payload?.token) {
+        persistAuthToken(payload.token);
+      }
+      state.user = normalizeUser(payload.user);
+      state.localProfile = {
+        username: state.user?.username || username,
+        avatarImage: state.user?.avatarImage || safeText(state.avatarDraft || state.localProfile?.avatarImage)
+      };
+      patchLocalPlayerProfile(state.localProfile);
+      if (els.passwordInput) {
+        els.passwordInput.value = '';
+      }
+      renderUser();
+      setStatus('Entrada liberada com sucesso.', 'success');
+    } catch (error) {
+      setStatus(error?.message || 'Nao foi possivel entrar agora.', 'error');
+    } finally {
+      if (els.premiumBtn) els.premiumBtn.disabled = false;
+    }
+  }
+
   async function logout() {
     try {
       await fetch(buildApiUrl('/logout'), {
@@ -363,6 +420,10 @@
     }
     els.form?.addEventListener('submit', submitForm);
     els.premiumBtn?.addEventListener('click', () => {
+      if (!state.user?.id) {
+        void loginFromAccount();
+        return;
+      }
       window.location.href = '/flashcards?premium=1&view=cards';
     });
     els.logoutBtn?.addEventListener('click', logout);

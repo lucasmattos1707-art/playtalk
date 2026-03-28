@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <title>SomCheck | PlayTalk</title>
+  <meta name="description" content="Verificacao de som do PlayTalk.">
+  <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      align-items: center;
+      padding: 24px;
+      font-family: "Open Sans", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(115, 213, 255, 0.22), rgba(255, 255, 255, 0) 36%),
+        linear-gradient(180deg, #ffffff 0%, #f6fbff 100%);
+      color: #10233d;
+    }
+
+    .soundcheck-shell {
+      width: min(100%, 1120px);
+      margin: 0 auto;
+      display: grid;
+      gap: 24px;
+      justify-items: center;
+    }
+
+    .soundcheck-header {
+      display: grid;
+      gap: 10px;
+      text-align: center;
+      justify-items: center;
+    }
+
+    .soundcheck-header p {
+      margin: 0;
+      color: #2aa8ff;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .soundcheck-header h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      line-height: 1.05;
+    }
+
+    .soundcheck-subtitle {
+      margin: 0;
+      min-height: 1.5em;
+      color: #53708f;
+      font-size: clamp(1rem, 2.8vw, 1.24rem);
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    .soundcheck-subtitle.is-changing {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    .soundcheck-slots {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      width: min(100%, 520px);
+    }
+
+    .soundcheck-slot {
+      min-height: 108px;
+      border-radius: 28px;
+      border: 2px dashed rgba(42, 168, 255, 0.24);
+      background: linear-gradient(180deg, #f8fcff 0%, #eef8ff 100%);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    .soundcheck-slot img {
+      width: min(100%, 92px);
+      height: auto;
+      object-fit: contain;
+    }
+
+    .soundcheck-slot span {
+      color: #8aa3bc;
+      font-size: 1.8rem;
+      line-height: 1;
+    }
+
+    .soundcheck-status {
+      margin: 0;
+      max-width: 700px;
+      text-align: center;
+      color: #4c6682;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .soundcheck-status.is-error {
+      color: #d94d4d;
+    }
+
+    .soundcheck-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .soundcheck-btn {
+      min-width: 168px;
+      min-height: 54px;
+      border: 0;
+      border-radius: 999px;
+      padding: 0 22px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      color: #ffffff;
+      background: linear-gradient(180deg, #2fb4ff 0%, #1788ff 100%);
+      box-shadow: 0 16px 34px rgba(23, 136, 255, 0.18);
+    }
+
+    .soundcheck-btn.is-secondary {
+      color: #215079;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(33, 80, 121, 0.12);
+      box-shadow: none;
+    }
+
+    .soundcheck-btn:disabled {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    .soundcheck-grid {
+      width: min(100%, 1040px);
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .soundcheck-tile {
+      border: 0;
+      border-radius: 28px;
+      background: linear-gradient(180deg, #f8fcff 0%, #e8f4ff 100%);
+      padding: 14px;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 12px 28px rgba(41, 103, 168, 0.12);
+      transition: transform 160ms ease, box-shadow 160ms ease, outline-color 160ms ease;
+      outline: 3px solid transparent;
+    }
+
+    .soundcheck-tile:hover,
+    .soundcheck-tile:focus-visible {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 34px rgba(41, 103, 168, 0.16);
+    }
+
+    .soundcheck-tile.is-selected {
+      outline-color: #28a7ff;
+      background: linear-gradient(180deg, #ebf8ff 0%, #d9efff 100%);
+    }
+
+    .soundcheck-tile img {
+      width: min(100%, 120px);
+      height: auto;
+      object-fit: contain;
+    }
+
+    @media (max-width: 720px) {
+      .soundcheck-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      body {
+        padding: 18px 14px;
+      }
+
+      .soundcheck-slots {
+        gap: 10px;
+      }
+
+      .soundcheck-slot {
+        min-height: 82px;
+        border-radius: 22px;
+      }
+
+      .soundcheck-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="soundcheck-shell">
+    <header class="soundcheck-header">
+      <p>PlayTalk</p>
+      <h1>Teste de som</h1>
+      <p class="soundcheck-subtitle" id="soundcheckSubtitle">Toque no que est&aacute; ouvindo</p>
+    </header>
+
+    <div class="soundcheck-slots" id="soundcheckSlots" aria-label="Escolhas do teste de som"></div>
+    <p class="soundcheck-status" id="soundcheckStatus">Ou&ccedil;a os 3 sons e toque nas 3 imagens correspondentes. A ordem n&atilde;o importa.</p>
+
+    <div class="soundcheck-actions">
+      <button class="soundcheck-btn" id="soundcheckReplayBtn" type="button">Ouvir de novo</button>
+      <button class="soundcheck-btn is-secondary" id="soundcheckClearBtn" type="button">Limpar sele&ccedil;&atilde;o</button>
+    </div>
+
+    <div class="soundcheck-grid" id="soundcheckGrid">
+      <button class="soundcheck-tile" type="button" data-letter="A"><img src="/accesskey/teclas/Imagens/A.png" alt="A"></button>
+      <button class="soundcheck-tile" type="button" data-letter="B"><img src="/accesskey/teclas/Imagens/B.png" alt="B"></button>
+      <button class="soundcheck-tile" type="button" data-letter="C"><img src="/accesskey/teclas/Imagens/C.png" alt="C"></button>
+      <button class="soundcheck-tile" type="button" data-letter="D"><img src="/accesskey/teclas/Imagens/D.png" alt="D"></button>
+      <button class="soundcheck-tile" type="button" data-letter="E"><img src="/accesskey/teclas/Imagens/E.png" alt="E"></button>
+      <button class="soundcheck-tile" type="button" data-letter="F"><img src="/accesskey/teclas/Imagens/F.png" alt="F"></button>
+      <button class="soundcheck-tile" type="button" data-letter="G"><img src="/accesskey/teclas/Imagens/G.png" alt="G"></button>
+      <button class="soundcheck-tile" type="button" data-letter="H"><img src="/accesskey/teclas/Imagens/H.png" alt="H"></button>
+      <button class="soundcheck-tile" type="button" data-letter="I"><img src="/accesskey/teclas/Imagens/I.png" alt="I"></button>
+      <button class="soundcheck-tile" type="button" data-letter="J"><img src="/accesskey/teclas/Imagens/J.png" alt="J"></button>
+      <button class="soundcheck-tile" type="button" data-letter="K"><img src="/accesskey/teclas/Imagens/K.png" alt="K"></button>
+      <button class="soundcheck-tile" type="button" data-letter="L"><img src="/accesskey/teclas/Imagens/L.png" alt="L"></button>
+      <button class="soundcheck-tile" type="button" data-letter="M"><img src="/accesskey/teclas/Imagens/M.png" alt="M"></button>
+      <button class="soundcheck-tile" type="button" data-letter="N"><img src="/accesskey/teclas/Imagens/N.png" alt="N"></button>
+      <button class="soundcheck-tile" type="button" data-letter="O"><img src="/accesskey/teclas/Imagens/O.png" alt="O"></button>
+      <button class="soundcheck-tile" type="button" data-letter="P"><img src="/accesskey/teclas/Imagens/P.png" alt="P"></button>
+    </div>
+  </main>
+
+  <script>
+    (function initPlaytalkSoundCheckPage() {
+      const SOUND_TEST_COMPLETED_STORAGE_KEY = 'playtalk-soundcheck-completed';
+      const SOUND_TEST_COPY_ROTATION_MS = 1500;
+      const SOUND_TEST_SUBTITLE_MESSAGES = ['Toque no que esta ouvindo', 'Ajuste o volume'];
+      const SOUND_TEST_SELECTION_COUNT = 3;
+      const ACCESS_KEY_LETTERS = 'ABCDEFGHIJKLMNOP'.split('');
+
+      const els = {
+        subtitle: document.getElementById('soundcheckSubtitle'),
+        slots: document.getElementById('soundcheckSlots'),
+        status: document.getElementById('soundcheckStatus'),
+        replayBtn: document.getElementById('soundcheckReplayBtn'),
+        clearBtn: document.getElementById('soundcheckClearBtn'),
+        grid: document.getElementById('soundcheckGrid')
+      };
+
+      const state = {
+        open: true,
+        busy: false,
+        status: '',
+        statusError: false,
+        subtitleIndex: 0,
+        subtitleTimer: 0,
+        audio: null,
+        selectedLetters: [],
+        targetLetters: [],
+        playbackToken: 0
+      };
+
+      function safeText(value) {
+        return typeof value === 'string' ? value.trim() : '';
+      }
+
+      function wait(ms) {
+        return new Promise((resolve) => window.setTimeout(resolve, ms));
+      }
+
+      function shuffleArray(items) {
+        const copy = Array.isArray(items) ? items.slice() : [];
+        for (let index = copy.length - 1; index > 0; index -= 1) {
+          const randomIndex = Math.floor(Math.random() * (index + 1));
+          [copy[index], copy[randomIndex]] = [copy[randomIndex], copy[index]];
+        }
+        return copy;
+      }
+
+      function getAccessKeyImagePath(letter) {
+        const normalized = safeText(letter).toUpperCase().replace(/[^A-P]/g, '');
+        return normalized ? `/accesskey/teclas/Imagens/${normalized}.png` : '';
+      }
+
+      function getAccessKeySoundPath(letter) {
+        const normalized = safeText(letter).toUpperCase().replace(/[^A-P]/g, '');
+        return normalized ? `/accesskey/teclas/Teclas/${normalized}.mp3` : '';
+      }
+
+      function buildRandomLetters() {
+        return shuffleArray(ACCESS_KEY_LETTERS).slice(0, SOUND_TEST_SELECTION_COUNT);
+      }
+
+      function stopAudio() {
+        const current = state.audio;
+        if (!current) return;
+        try {
+          current.pause();
+          current.currentTime = 0;
+        } catch (_error) {
+          // ignore
+        }
+        state.audio = null;
+      }
+
+      function clearSubtitleRotation() {
+        if (!state.subtitleTimer) return;
+        window.clearInterval(state.subtitleTimer);
+        state.subtitleTimer = 0;
+      }
+
+      function setSubtitle(text, animate) {
+        if (!els.subtitle) return;
+        const nextText = safeText(text) || SOUND_TEST_SUBTITLE_MESSAGES[0];
+        if (!animate || els.subtitle.textContent === nextText) {
+          els.subtitle.textContent = nextText;
+          els.subtitle.classList.remove('is-changing');
+          return;
+        }
+        els.subtitle.classList.add('is-changing');
+        window.setTimeout(() => {
+          els.subtitle.textContent = nextText;
+          els.subtitle.classList.remove('is-changing');
+        }, 140);
+      }
+
+      function startSubtitleRotation() {
+        clearSubtitleRotation();
+        state.subtitleIndex = 0;
+        setSubtitle(SOUND_TEST_SUBTITLE_MESSAGES[0], false);
+        state.subtitleTimer = window.setInterval(() => {
+          if (!state.open) return;
+          state.subtitleIndex = (state.subtitleIndex + 1) % SOUND_TEST_SUBTITLE_MESSAGES.length;
+          setSubtitle(SOUND_TEST_SUBTITLE_MESSAGES[state.subtitleIndex], true);
+        }, SOUND_TEST_COPY_ROTATION_MS);
+      }
+
+      function setStatus(message, isError) {
+        state.status = safeText(message);
+        state.statusError = Boolean(isError);
+        if (!els.status) return;
+        els.status.textContent = state.status || 'Ouça os 3 sons e toque nas 3 imagens correspondentes. A ordem não importa.';
+        els.status.classList.toggle('is-error', state.statusError);
+      }
+
+      function renderSlots() {
+        if (!els.slots) return;
+        els.slots.innerHTML = Array.from({ length: SOUND_TEST_SELECTION_COUNT }, (_, index) => {
+          const letter = state.selectedLetters[index] || '';
+          if (!letter) {
+            return '<div class="soundcheck-slot"><span>?</span></div>';
+          }
+          return `<div class="soundcheck-slot"><img src="${getAccessKeyImagePath(letter)}" alt="${letter}"></div>`;
+        }).join('');
+      }
+
+      function renderGrid() {
+        els.grid?.querySelectorAll('[data-letter]').forEach((button) => {
+          const letter = safeText(button.getAttribute('data-letter')).toUpperCase();
+          button.classList.toggle('is-selected', state.selectedLetters.includes(letter));
+          button.disabled = state.busy;
+        });
+        if (els.replayBtn) {
+          els.replayBtn.disabled = state.busy || !state.targetLetters.length;
+        }
+        if (els.clearBtn) {
+          els.clearBtn.disabled = state.busy || !state.selectedLetters.length;
+        }
+      }
+
+      function render() {
+        renderSlots();
+        renderGrid();
+        setStatus(state.status, state.statusError);
+      }
+
+      function clearSelection(keepStatus) {
+        state.selectedLetters = [];
+        if (!keepStatus) {
+          setStatus('Ouça os 3 sons e toque nas 3 imagens correspondentes. A ordem não importa.', false);
+        }
+        render();
+      }
+
+      function playSingleLetter(letter) {
+        return new Promise((resolve) => {
+          const src = getAccessKeySoundPath(letter);
+          if (!src) {
+            resolve();
+            return;
+          }
+          stopAudio();
+          const audio = new Audio(src);
+          audio.preload = 'auto';
+          state.audio = audio;
+          const finish = () => {
+            if (state.audio === audio) {
+              state.audio = null;
+            }
+            resolve();
+          };
+          audio.addEventListener('ended', finish, { once: true });
+          audio.addEventListener('error', finish, { once: true });
+          audio.play().catch(finish);
+        });
+      }
+
+      async function playSequence() {
+        const letters = state.targetLetters.slice();
+        if (!letters.length) return;
+        const token = Date.now();
+        state.playbackToken = token;
+        state.busy = true;
+        setStatus('Ouvindo os sons...', false);
+        render();
+        for (const letter of letters) {
+          if (!state.open || state.playbackToken !== token) {
+            state.busy = false;
+            render();
+            return;
+          }
+          await playSingleLetter(letter);
+          if (!state.open || state.playbackToken !== token) {
+            state.busy = false;
+            render();
+            return;
+          }
+          await wait(260);
+        }
+        if (state.playbackToken === token) {
+          state.busy = false;
+          setStatus('Agora toque nas 3 imagens correspondentes. A ordem não importa.', false);
+          render();
+        }
+      }
+
+      function resolveReturnPath() {
+        const params = new URLSearchParams(window.location.search);
+        const requested = safeText(params.get('return'));
+        return requested || '/flashcards';
+      }
+
+      function finishSuccess() {
+        try {
+          sessionStorage.setItem(SOUND_TEST_COMPLETED_STORAGE_KEY, '1');
+        } catch (_error) {
+          // ignore
+        }
+        window.location.href = resolveReturnPath();
+      }
+
+      async function validateSelection() {
+        if (state.selectedLetters.length !== SOUND_TEST_SELECTION_COUNT || state.busy) return;
+        const selected = state.selectedLetters.slice().sort().join('');
+        const target = state.targetLetters.slice().sort().join('');
+        if (selected === target) {
+          setStatus('Perfeito. Som ok, vamos jogar.', false);
+          render();
+          await wait(420);
+          finishSuccess();
+          return;
+        }
+        setStatus('Ainda não bateu. Vou repetir os 3 sons para você tentar de novo.', true);
+        state.selectedLetters = [];
+        render();
+        await wait(500);
+        if (state.open) {
+          void playSequence();
+        }
+      }
+
+      function toggleLetter(letter) {
+        if (!state.open || state.busy) return;
+        const normalized = safeText(letter).toUpperCase().replace(/[^A-P]/g, '');
+        if (!normalized) return;
+        if (state.selectedLetters.includes(normalized)) {
+          state.selectedLetters = state.selectedLetters.filter((item) => item !== normalized);
+          setStatus('Seleção atualizada. Complete com 3 imagens.', false);
+          render();
+          return;
+        }
+        if (state.selectedLetters.length >= SOUND_TEST_SELECTION_COUNT) return;
+        state.selectedLetters = state.selectedLetters.concat(normalized);
+        setStatus(
+          state.selectedLetters.length >= SOUND_TEST_SELECTION_COUNT
+            ? 'Validando sua resposta...'
+            : 'Boa. Continue até escolher 3 imagens.',
+          false
+        );
+        render();
+        if (state.selectedLetters.length >= SOUND_TEST_SELECTION_COUNT) {
+          void validateSelection();
+        }
+      }
+
+      els.replayBtn?.addEventListener('click', () => {
+        if (state.busy) return;
+        void playSequence();
+      });
+
+      els.clearBtn?.addEventListener('click', () => {
+        if (state.busy) return;
+        clearSelection(false);
+      });
+
+      els.grid?.addEventListener('click', (event) => {
+        const tile = event.target.closest('[data-letter]');
+        if (!tile) return;
+        toggleLetter(tile.getAttribute('data-letter') || '');
+      });
+
+      state.targetLetters = buildRandomLetters();
+      startSubtitleRotation();
+      clearSelection(false);
+      window.setTimeout(() => {
+        void playSequence();
+      }, 120);
+    })();
+  </script>
+</body>
+</html>
