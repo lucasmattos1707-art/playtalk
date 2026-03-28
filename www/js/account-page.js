@@ -158,6 +158,49 @@
     });
   }
 
+  async function fileToSquareWebpDataUrl(file, size = 500) {
+    const sourceDataUrl = await fileToDataUrl(file);
+    return await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const context = canvas.getContext('2d');
+          if (!context) {
+            reject(new Error('Nao foi possivel preparar a imagem.'));
+            return;
+          }
+
+          const sourceWidth = image.naturalWidth || image.width;
+          const sourceHeight = image.naturalHeight || image.height;
+          const sourceSide = Math.min(sourceWidth, sourceHeight);
+          const sourceX = Math.max(0, Math.round((sourceWidth - sourceSide) / 2));
+          const sourceY = Math.max(0, Math.round((sourceHeight - sourceSide) / 2));
+
+          context.clearRect(0, 0, size, size);
+          context.drawImage(
+            image,
+            sourceX,
+            sourceY,
+            sourceSide,
+            sourceSide,
+            0,
+            0,
+            size,
+            size
+          );
+          resolve(canvas.toDataURL('image/webp', 0.92));
+        } catch (error) {
+          reject(error);
+        }
+      };
+      image.onerror = () => reject(new Error('Nao foi possivel abrir a foto.'));
+      image.src = sourceDataUrl;
+    });
+  }
+
   async function fetchSessionUser() {
     const response = await fetch(buildApiUrl('/auth/session'), {
       headers: buildAuthHeaders(),
@@ -326,7 +369,7 @@
         state.avatarGenerating = true;
         els.saveBtn.disabled = true;
         setStatus('Transformando foto em desenho...');
-        const sourceDataUrl = await fileToDataUrl(file);
+        const sourceDataUrl = await fileToSquareWebpDataUrl(file, 500);
         state.avatarDraft = sourceDataUrl;
         renderUser();
         const cartoonDataUrl = await createCartoonAvatar(sourceDataUrl);

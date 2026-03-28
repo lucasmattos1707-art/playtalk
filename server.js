@@ -5460,7 +5460,14 @@ app.post('/api/images/openai/avatar-cartoon', async (req, res) => {
     return;
   }
 
-  const stylePrompt = customPrompt || 'cinematic 3D animated scene, close-up of a teenage boy with tousled brown hair and bright blue eyes, wearing a casual plaid shirt, smiling slightly while looking to the side, a small toy cowboy character sitting on his shoulder, warm golden sunlight, soft global illumination, shallow depth of field, background blurred with green trees, highly detailed textures, subsurface scattering skin, soft shadows, vibrant colors, premium family animation movie quality, ultra realistic render, 4k';
+  const stylePrompt = customPrompt || [
+    'Analyze the uploaded user photo and recreate the same person as a high-end animated portrait.',
+    'Preserve identity, facial proportions, hairstyle, skin tone, age impression, gaze direction, and overall expression.',
+    'Render it as a polished child-friendly 3D animated movie character with cinematic lighting, soft shadows, vibrant colors, detailed textures, gentle depth of field, and premium 4k animation quality.',
+    'Keep the composition close to the original photo and use only the uploaded photo as reference.',
+    'Do not invent props, toys, shoulder characters, extra accessories, extra people, text, logos, or watermarks.',
+    'Use a simple clean background with soft blur and warm atmosphere.'
+  ].join(' ');
 
   try {
     const extension = extensionFromMimeType(parsedImage.mimeType);
