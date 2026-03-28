@@ -7256,30 +7256,24 @@
 
   function startMode12MicCapture(item) {
     if (!mode12CurrentNeedsUserLine || isGamePaused || !item) return;
-    const expected = mode12SpeechMode === 'portuguese'
-      ? (getEntryPortugueseSentence(item) || getEntrySentence(item))
-      : (getEntrySentence(item) || getEntryPortugueseSentence(item));
-    if (!expected) {
-      applyCorrectOutcome({ awardCoins: false });
-      updateProgressBar();
-      awaiting = false;
-      advanceCycle();
-      return;
-    }
-
-    const speakerName = getMode12CharacterNameById(getMode12CharacterId(item));
-    const defaultText = textContainer ? textContainer.textContent || '' : '';
-    const errorText = `${speakerName}: tente novamente.`;
-    setMicPersistentEnabled(true);
-    updateRecognitionLanguage(12);
-
-    handleSpeechChallenge(expected, () => startMode12MicCapture(item), {
-      entry: item,
-      listenLimitMs: 12000,
-      strictSequence: false,
-      errorTextTarget: textContainer,
-      errorText,
-      defaultText
+    awaiting = true;
+    setMicPersistentEnabled(false, { force: true });
+    armManualSpeechReview({
+      resolve: (wasCorrect) => {
+        clearManualSpeechReview({ keepHandler: false });
+        if (isGamePaused || !mode12CurrentNeedsUserLine) return;
+        if (wasCorrect) {
+          applyCorrectOutcome({ awardCoins: false });
+        } else {
+          registerErrorAndCheckReset();
+          applyIncorrectOutcome();
+        }
+        updateProgressBar();
+        window.setTimeout(() => {
+          awaiting = false;
+          advanceCycle();
+        }, getAdvanceDelay(0));
+      }
     });
   }
 
@@ -7292,7 +7286,7 @@
     const speakerId = getMode12CharacterId(item);
     const isUserLine = Boolean(mode12SelectedCharacterId) && speakerId === mode12SelectedCharacterId;
     mode12CurrentNeedsUserLine = isUserLine;
-    setMicControlAction(isUserLine ? () => startMode12MicCapture(item) : null);
+    setMicControlAction(null);
 
     const imageEntry = buildMode12ImageEntry(item);
     const stage = document.createElement('div');
