@@ -240,10 +240,16 @@
     <section class="cards-selection" aria-live="polite" aria-label="Sessao selecionada">
       <div id="cards-section-dynamic" class="cards-section-dynamic">
         <div id="title-section" class="cards-layout-box title-section">
-          <h2 id="cards-selected-title" class="cards-selection__title">MyCards</h2>
+          <button id="cards-back-button" class="cards-back-button" type="button" hidden>Voltar aos decks</button>
+          <h2 id="cards-selected-title" class="cards-selection__title">FlashCards</h2>
         </div>
         <div id="description-section" class="cards-layout-box description-section">
-          <p id="cards-selected-copy" class="cards-selection__copy">Cartas conquistadas no jogo com o selo atual e o status real de cada uma.</p>
+          <p id="cards-selected-copy" class="cards-selection__copy">Conteudo conquistado na Jornada da Fluencia.</p>
+        </div>
+        <div id="cards-selected-spotlight" class="cards-selected-spotlight" hidden>
+          <div id="cards-selected-cover" class="cards-selected-spotlight__cover"></div>
+          <p id="cards-selected-block-title" class="cards-selected-spotlight__title"></p>
+          <button id="cards-selected-action" class="cards-action-button" type="button" hidden></button>
         </div>
         <div class="mycards-summary" id="mycards-summary">
           <div class="mycards-stat">
