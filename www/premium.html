@@ -295,6 +295,13 @@
         return path;
       }
 
+      function buildAuthHeaders(extraHeaders) {
+        if (window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function') {
+          return window.PlaytalkApi.authHeaders(extraHeaders);
+        }
+        return { ...(extraHeaders || {}) };
+      }
+
       function escapeHtml(value) {
         return String(value || '').replace(/[&<>\"']/g, (char) => (
           {
@@ -342,7 +349,7 @@
         try {
           const response = await fetch(buildApiUrl('/api/premium/redeem'), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
             credentials: 'include',
             body: JSON.stringify({ code: state.code })
           });
