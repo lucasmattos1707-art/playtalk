@@ -1,14 +1,16 @@
 ﻿(() => {
-      const FLASHCARDS_R2_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/FlashCards';
-      const DATA_MANIFEST_LOCAL_PATHS = ['data/flashcards/130/001/manifest.json', '/data/flashcards/130/001/manifest.json'];
-      const DATA_MANIFEST_REMOTE_PATHS = [`${FLASHCARDS_R2_ROOT}/manifest.json`];
-      const LOCAL_LEVEL_FILES_LOCAL_PATHS = ['data/local-level-files.json', '/data/local-level-files.json'];
-      const LOCAL_LEVEL_FILES_REMOTE_PATHS = [`${FLASHCARDS_R2_ROOT}/local-level-files.json`];
+      const FLASHCARDS_R2_PUBLIC_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
+      const FLASHCARDS_LOCAL_SOURCE_PREFIX = 'allcards';
+      const FLASHCARD_CAMERA_OBJECT_KEY = 'FlashCards/camera.webp';
+      const FLASHCARD_CAMERA_IMAGE_URL = `${FLASHCARDS_R2_PUBLIC_ROOT}/${FLASHCARD_CAMERA_OBJECT_KEY}`;
+      const DATA_MANIFEST_REMOTE_PATH = '/api/flashcards/manifest';
       const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
       const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
       const USER_HIDDEN_STORAGE_KEY = 'playtalk-flashcards-hidden-v1';
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
+      const TUTORIAL_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-tutorial-v1';
+      const GAME_SESSION_STORAGE_KEY = 'playtalk-flashcards-game-session-v1';
       const TIME_OFFSET_STORAGE_KEY = 'playtalk-flashcards-time-offset-v1';
       const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
       const recognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -18,6 +20,7 @@
       const SUCCESS_SOUND_PATH = 'gamesounds/success.mp3';
       const FOUR_STARS_SOUND_PATH = 'newsongs/4stars.mp3';
       const FIVE_STARS_SOUND_PATH = 'newsongs/5stars.mp3';
+      const LESS_SOUND_PATH = 'svgnovo/less.wav';
       const REPORT_SOUND_PATH = 'thesongs/report.wav';
       const TYPING_KEY_SOUND_PATH = 'sounds/type.mp3';
       const TYPING_KEY_FLASH_MS = 500;
@@ -37,6 +40,27 @@
       const EARLY_FLASHCARD_MIN_LENGTH = 6;
       const EARLY_FLASHCARD_MAX_LENGTH = 12;
       const REVIEW_SLOT_LIMIT = 8;
+      const TUTORIAL_AUDIO_ROOT = 'audiostuto';
+      const TUTORIAL_NORMAL_GAME_COUNT = 3;
+      const TUTORIAL_PLANET_IMAGE_NAME = 'planet.webp';
+      const TUTORIAL_PLANET_ENGLISH = 'planet';
+      const TUTORIAL_PLANET_PORTUGUESE = 'planeta';
+      const TUTORIAL_FINALE_SEAL_FLASH_MS = 400;
+      const GUEST_FLASHCARD_LOGIN_THRESHOLD = 6;
+      const FLASHCARD_PREMIUM_GATE_LIMIT = 8;
+      const GUEST_FLASHCARD_LOGIN_DELAY_MS = 5000;
+      const AUTH_GATE_FORM_REVEAL_MS = 1200;
+      const WELCOME_COPY_ROTATION_MS = 2000;
+      const WELCOME_COPY_MESSAGES = ['Flu\u00eancia f\u00e1cil', 'Toque para come\u00e7ar'];
+      const ACCESS_KEY_AUDIO_LIMIT_PATH = '/accesskey/limit.mp3';
+      const ACCESS_KEY_AUDIO_MESSAGE_PATH = '/accesskey/message.wav';
+      const ACCESS_KEY_AUDIO_INVALID_PATH = '/accesskey/invalidkey2.mp3';
+      const ACCESS_KEY_AUDIO_SUCCESS_PATHS = {
+        semana: '/accesskey/week.mp3',
+        mes: '/accesskey/month.mp3',
+        ano: '/accesskey/year.mp3',
+        'monthly-magic': '/accesskey/month.mp3'
+      };
       const FLASHCARD_REPORT_TYPES = [
         { key: 'blurred-image', label: 'Imagem borrada' },
         { key: 'weak-association', label: 'Associacao fraca' },
@@ -61,8 +85,31 @@
         4: { badge: 'Etapa 4/5', instruction: 'Escreva ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false },
         5: { badge: 'Etapa 5/5', instruction: 'Fale ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false }
       };
+
+      function createTutorialState() {
+        return {
+          active: false,
+          completed: false,
+          interactionLocked: false,
+          introPlayed: false,
+          explainedStars: -1,
+          sequenceToken: 0,
+          timers: [],
+          currentCardId: '',
+          finishing: false,
+          finale: {
+            active: false,
+            cardId: '',
+            sealPhase: 0,
+            sealFlash: false,
+            sealSoft: false
+          }
+        };
+      }
+
       const state = {
         allCards: [],
+        deckCatalog: [],
         userCards: new Map(),
         hiddenCardIds: new Set(),
         ownedIds: new Set(),
@@ -70,12 +117,23 @@
         timeOffsetMs: 0,
         user: null,
         authMode: 'login',
+        authReason: 'optional',
           flashcardsSyncInFlight: false,
           flashcardsSyncQueued: false,
           flashcardsSyncTimer: 0,
           cardsRefreshTimer: 0,
           libraryPage: 1,
         secretBuffer: '',
+        entry: {
+          cardsReady: false,
+          welcomeVisible: true,
+          welcomeIndex: 0,
+          welcomeTimer: 0,
+          pendingTutorialStart: false,
+          authRequired: false,
+          authDelayTimer: 0,
+          authRevealTimer: 0
+        },
         admin: {
           busy: false,
           status: 'Nenhuma acao em andamento.',
@@ -123,24 +181,41 @@
           typingKeyAudioPool: [],
           typingKeyAudioIndex: 0,
           paused: false,
-          reportCardId: ''
+          reportCardId: '',
+          tutorial: createTutorialState()
         },
         watch: {
           active: false,
           scope: 'all',
           gapMs: 3000,
           music: 'on',
+          selectedSources: [],
           queue: [],
           sourceCards: [],
           currentCardId: null,
           voiceAudio: null,
           musicAudio: null,
           timer: null
+        },
+        ui: {
+          activeView: 'cards',
+          profileAvatarDraft: '',
+          premiumGateOpen: false,
+          premiumCode: '',
+          premiumStatus: '',
+          premiumBusy: false,
+          premiumAudioPlayed: false,
+          premiumAudio: null
         }
       };
 
       const els = {
+        welcomeGate: document.getElementById('welcomeGate'),
+        welcomeTouch: document.getElementById('welcomeTouch'),
+        welcomeCopy: document.getElementById('welcomeCopy'),
         authGate: document.getElementById('authGate'),
+        authCard: document.getElementById('authCard'),
+        authBody: document.getElementById('authBody'),
         authCopy: document.getElementById('authCopy'),
         authForm: document.getElementById('authForm'),
         authUsername: document.getElementById('authUsername'),
@@ -166,8 +241,10 @@
         adminPromptInput: document.getElementById('adminPromptInput'),
         adminPasteInput: document.getElementById('adminPasteInput'),
         adminPasteTextBtn: document.getElementById('adminPasteTextBtn'),
+        adminSubmitPasteBtn: document.getElementById('adminSubmitPasteBtn'),
           adminFillTextBtn: document.getElementById('adminFillTextBtn'),
           adminFillImageBtn: document.getElementById('adminFillImageBtn'),
+          adminMagicBtn: document.getElementById('adminMagicBtn'),
           adminFillAudioBtn: document.getElementById('adminFillAudioBtn'),
           adminToolsStatus: document.getElementById('adminToolsStatus'),
           adminCardPopover: document.getElementById('adminCardPopover'),
@@ -206,6 +283,10 @@
         gameLanguageBtn: document.getElementById('gameLanguageBtn'),
         gameTouchBtn: document.getElementById('gameTouchBtn'),
         gameTypingKeyboard: document.getElementById('gameTypingKeyboard'),
+        gameHeadCopy: document.getElementById('gameHeadCopy'),
+        gameStarsWrap: document.getElementById('gameStarsWrap'),
+        gameStatusSlot: document.getElementById('gameStatusSlot'),
+        gameChipRow: document.getElementById('gameChipRow'),
         gameHeaderCopy: document.getElementById('gameHeaderCopy'),
         gameActiveChip: document.getElementById('gameActiveChip'),
         gameActiveValue: document.getElementById('gameActiveValue'),
@@ -218,19 +299,48 @@
           gameSetupOptions: document.getElementById('gameSetupOptions'),
           closeGameSetupBtn: document.getElementById('closeGameSetupBtn'),
           gameSetupCountCopy: document.getElementById('gameSetupCountCopy'),
+          startTutorialBtn: document.getElementById('startTutorialBtn'),
           watchPopover: document.getElementById('watchPopover'),
         closeWatchPopoverBtn: document.getElementById('closeWatchPopoverBtn'),
         startWatchBtn: document.getElementById('startWatchBtn'),
         watchGapSelect: document.getElementById('watchGapSelect'),
         watchScopeSelect: document.getElementById('watchScopeSelect'),
         watchMusicSelect: document.getElementById('watchMusicSelect'),
+        watchDeckGrid: document.getElementById('watchDeckGrid'),
+        watchDeckSummary: document.getElementById('watchDeckSummary'),
         watch: document.getElementById('watch'),
         exitWatchBtn: document.getElementById('exitWatchBtn'),
         stopWatchBtn: document.getElementById('stopWatchBtn'),
         watchVisual: document.getElementById('watchVisual'),
         watchWord: document.getElementById('watchWord'),
         watchSubword: document.getElementById('watchSubword'),
-        watchStars: document.getElementById('watchStars')
+        watchStars: document.getElementById('watchStars'),
+        gameTutorialOverlay: document.getElementById('gameTutorialOverlay'),
+        gameTutorialLogo: document.getElementById('gameTutorialLogo')
+        ,
+        usersPanel: document.getElementById('usersPanel'),
+        usersFrame: document.getElementById('usersFrame'),
+        profilePanel: document.getElementById('profilePanel'),
+        profileForm: document.getElementById('profileForm'),
+        profileAvatarInput: document.getElementById('profileAvatarInput'),
+        profileAvatarPreview: document.getElementById('profileAvatarPreview'),
+        profileAvatarFallback: document.getElementById('profileAvatarFallback'),
+        profileNameInput: document.getElementById('profileNameInput'),
+        profileSaveBtn: document.getElementById('profileSaveBtn'),
+        profileLogoutBtn: document.getElementById('profileLogoutBtn'),
+        profileStatus: document.getElementById('profileStatus'),
+        footerPlayBtn: document.getElementById('footerPlayBtn'),
+        footerCardsBtn: document.getElementById('footerCardsBtn'),
+        footerUsersBtn: document.getElementById('footerUsersBtn'),
+        footerProfileBtn: document.getElementById('footerProfileBtn'),
+        flashcardsFooterNav: document.getElementById('flashcardsFooterNav'),
+        premiumGate: document.getElementById('premiumGate'),
+        premiumCodeValue: document.getElementById('premiumCodeValue'),
+        premiumStatus: document.getElementById('premiumStatus'),
+        premiumClearBtn: document.getElementById('premiumClearBtn'),
+        premiumBackspaceBtn: document.getElementById('premiumBackspaceBtn'),
+        premiumCloseBtn: document.getElementById('premiumCloseBtn'),
+        premiumGrid: document.getElementById('premiumGrid')
       };
 
       function safeText(value) {
@@ -360,18 +470,129 @@
         state.game.contextLimit = normalized;
       }
 
-      function readOwnedIds() {
-        if (!state.user?.id) return [];
+      function storageKeyForUser(baseKey, userId = state.user?.id) {
+        const normalizedUserId = Number(userId) || 0;
+        return normalizedUserId ? `${baseKey}:${normalizedUserId}` : baseKey;
+      }
+
+      function userScopedStorageKey(baseKey) {
+        return storageKeyForUser(baseKey, state.user?.id);
+      }
+
+      function readScopedStorage(baseKey, fallback, userId = state.user?.id) {
         try {
-          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(OWNED_STORAGE_KEY)) || '[]');
-          return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : [];
+          const raw = localStorage.getItem(storageKeyForUser(baseKey, userId));
+          if (raw == null) return fallback;
+          const parsed = JSON.parse(raw);
+          return parsed == null ? fallback : parsed;
         } catch (_error) {
-          return [];
+          return fallback;
         }
       }
 
+      function removeScopedStorage(baseKey, userId = state.user?.id) {
+        try {
+          localStorage.removeItem(storageKeyForUser(baseKey, userId));
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      function readTutorialProgressForUser(userId = state.user?.id) {
+        const parsed = readScopedStorage(TUTORIAL_PROGRESS_STORAGE_KEY, null, userId);
+        return Boolean(parsed?.completed || parsed === true);
+      }
+
+      function readTutorialProgress() {
+        return readTutorialProgressForUser(state.user?.id);
+      }
+
+      function persistTutorialProgressLocally() {
+        localStorage.setItem(userScopedStorageKey(TUTORIAL_PROGRESS_STORAGE_KEY), JSON.stringify({
+          completed: Boolean(state.game.tutorial.completed)
+        }));
+      }
+
+      function normalizeSavedGameEntry(raw) {
+        const id = safeText(raw?.id);
+        if (!id) return null;
+        return {
+          id,
+          stars: Math.max(0, Math.min(4, Number.parseInt(raw?.stars, 10) || 0)),
+          stage: Math.max(1, Math.min(4, Number.parseInt(raw?.stage, 10) || 1)),
+          missesWithoutStars: Math.max(0, Number.parseInt(raw?.missesWithoutStars, 10) || 0),
+          typingMistakes: Math.max(0, Number.parseInt(raw?.typingMistakes, 10) || 0),
+          pool: raw?.pool === 'review' ? 'review' : 'base'
+        };
+      }
+
+      function serializeCurrentGameState() {
+        const entries = Array.from(state.game.entries.values())
+          .map(normalizeSavedGameEntry)
+          .filter((entry) => entry && cardById(entry.id));
+        if (!entries.length || state.game.tutorial.active) return null;
+        const validIds = new Set(entries.map((entry) => entry.id));
+        return {
+          entries,
+          queue: state.game.queue.filter((id) => validIds.has(id)),
+          currentId: validIds.has(state.game.currentId) ? state.game.currentId : '',
+          selectedCount: normalizeGameCount(state.game.selectedCount) || DEFAULT_GAME_CONTEXT_LIMIT,
+          contextLimit: Math.max(DEFAULT_GAME_CONTEXT_LIMIT, Number(state.game.contextLimit) || DEFAULT_GAME_CONTEXT_LIMIT)
+        };
+      }
+
+      function persistGameSessionLocally() {
+        try {
+          const snapshot = serializeCurrentGameState();
+          if (!snapshot) {
+            removeScopedStorage(GAME_SESSION_STORAGE_KEY);
+            return;
+          }
+          localStorage.setItem(userScopedStorageKey(GAME_SESSION_STORAGE_KEY), JSON.stringify(snapshot));
+        } catch (_error) {
+          // ignore storage issues
+        }
+      }
+
+      function clearGameSessionLocally(userId = state.user?.id) {
+        removeScopedStorage(GAME_SESSION_STORAGE_KEY, userId);
+      }
+
+      function readGameSessionForUser(userId = state.user?.id) {
+        const parsed = readScopedStorage(GAME_SESSION_STORAGE_KEY, null, userId);
+        const entries = Array.isArray(parsed?.entries)
+          ? parsed.entries.map(normalizeSavedGameEntry).filter((entry) => entry && cardById(entry.id))
+          : [];
+        if (!entries.length) return null;
+        const validIds = new Set(entries.map((entry) => entry.id));
+        return {
+          entries,
+          queue: Array.isArray(parsed?.queue)
+            ? parsed.queue.map((id) => safeText(id)).filter((id) => validIds.has(id))
+            : [],
+          currentId: validIds.has(parsed?.currentId) ? safeText(parsed.currentId) : '',
+          selectedCount: normalizeGameCount(parsed?.selectedCount) || DEFAULT_GAME_CONTEXT_LIMIT,
+          contextLimit: Math.max(DEFAULT_GAME_CONTEXT_LIMIT, Math.min(GAME_ACTIVE_CARD_CAP, Number(parsed?.contextLimit) || GAME_ACTIVE_CARD_CAP))
+        };
+      }
+
+      function setTutorialCompleted(completed) {
+        state.game.tutorial.completed = Boolean(completed);
+        persistTutorialProgressLocally();
+        syncTutorialSetupButton();
+        syncWelcomeGate();
+      }
+
+      function readOwnedIdsForUser(userId = state.user?.id) {
+        const parsed = readScopedStorage(OWNED_STORAGE_KEY, [], userId);
+        return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : [];
+      }
+
+      function readOwnedIds() {
+        return readOwnedIdsForUser(state.user?.id);
+      }
+
       function persistOwnedIdsLocally() {
-        if (!state.user?.id) return;
         localStorage.setItem(userScopedStorageKey(OWNED_STORAGE_KEY), JSON.stringify(Array.from(state.ownedIds)));
       }
 
@@ -426,20 +647,16 @@
         return stats.playTimeMs > 0 || stats.speakings > 0 || stats.listenings > 0;
       }
 
+      function readUserStatsForUser(userId = state.user?.id) {
+        const parsed = readScopedStorage(USER_STATS_STORAGE_KEY, {}, userId);
+        return normalizeStatsSnapshot(parsed);
+      }
+
       function readUserStats() {
-        if (!state.user?.id) {
-          return normalizeStatsSnapshot({});
-        }
-        try {
-          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(USER_STATS_STORAGE_KEY)) || 'null') || {};
-          return normalizeStatsSnapshot(parsed);
-        } catch (_error) {
-          return normalizeStatsSnapshot({});
-        }
+        return readUserStatsForUser(state.user?.id);
       }
 
       function persistUserStatsLocally() {
-        if (!state.user?.id) return;
         localStorage.setItem(userScopedStorageKey(USER_STATS_STORAGE_KEY), JSON.stringify({
           playTimeMs: Math.max(0, Math.round(Number(state.stats.playTimeMs) || 0)),
           speakings: Math.max(0, Math.round(Number(state.stats.speakings) || 0)),
@@ -488,19 +705,14 @@
         });
       }
 
-      function readUserProgress() {
-        if (!state.user?.id) return new Map();
-        try {
-          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(USER_PROGRESS_STORAGE_KEY)) || 'null');
-          const records = Array.isArray(parsed) ? parsed.map(normalizeProgressRecord).filter(Boolean) : [];
-          if (records.length) {
-            return new Map(records.map(record => [record.cardId, record]));
-          }
-        } catch (_error) {
-          // ignore
+      function readUserProgressForUser(userId = state.user?.id) {
+        const parsed = readScopedStorage(USER_PROGRESS_STORAGE_KEY, null, userId);
+        const records = Array.isArray(parsed) ? parsed.map(normalizeProgressRecord).filter(Boolean) : [];
+        if (records.length) {
+          return new Map(records.map(record => [record.cardId, record]));
         }
 
-        const legacyOwnedIds = readOwnedIds();
+        const legacyOwnedIds = readOwnedIdsForUser(userId);
         const now = Date.now();
         return new Map(legacyOwnedIds.map((cardId, index) => [cardId, createProgressRecord(cardId, {
           phaseIndex: 1,
@@ -514,28 +726,29 @@
         })]));
       }
 
+      function readUserProgress() {
+        return readUserProgressForUser(state.user?.id);
+      }
+
       function persistUserProgressLocally() {
         syncOwnedIdsFromProgress();
         persistOwnedIdsLocally();
-        if (!state.user?.id) return;
         localStorage.setItem(userScopedStorageKey(USER_PROGRESS_STORAGE_KEY), JSON.stringify(Array.from(state.userCards.values())));
       }
 
+      function readHiddenCardIdsForUser(userId = state.user?.id) {
+        const parsed = readScopedStorage(USER_HIDDEN_STORAGE_KEY, [], userId);
+        const ids = Array.isArray(parsed)
+          ? parsed.map((cardId) => safeText(cardId)).filter(Boolean)
+          : [];
+        return new Set(ids);
+      }
+
       function readHiddenCardIds() {
-        if (!state.user?.id) return new Set();
-        try {
-          const parsed = JSON.parse(localStorage.getItem(userScopedStorageKey(USER_HIDDEN_STORAGE_KEY)) || '[]');
-          const ids = Array.isArray(parsed)
-            ? parsed.map((cardId) => safeText(cardId)).filter(Boolean)
-            : [];
-          return new Set(ids);
-        } catch (_error) {
-          return new Set();
-        }
+        return readHiddenCardIdsForUser(state.user?.id);
       }
 
       function persistHiddenCardIdsLocally() {
-        if (!state.user?.id) return;
         localStorage.setItem(
           userScopedStorageKey(USER_HIDDEN_STORAGE_KEY),
           JSON.stringify(Array.from(state.hiddenCardIds.values()))
@@ -564,11 +777,6 @@
         return { ...(extraHeaders || {}) };
       }
 
-      function userScopedStorageKey(baseKey) {
-        const userId = Number(state.user?.id) || 0;
-        return userId ? `${baseKey}:${userId}` : baseKey;
-      }
-
       function persistAuthToken(token) {
         try {
           if (token) {
@@ -590,8 +798,112 @@
           id,
           username,
           avatarImage: safeText(user.avatar_image || user.avatarImage),
-          createdAt: user.created_at || user.createdAt || null
+          createdAt: user.created_at || user.createdAt || null,
+          isAdmin: Boolean(user.is_admin),
+          premiumFullAccess: Boolean(user.premium_full_access),
+          premiumUntil: user.premium_until || user.premiumUntil || null
         };
+      }
+
+      function progressRank(record) {
+        if (!record) {
+          return { phase: 0, ready: 0, availableAt: 0, createdAt: 0 };
+        }
+        const phase = Math.max(
+          0,
+          Math.min(5, Number(record.status === 'ready' ? record.phaseIndex : Math.max(record.phaseIndex || 0, record.targetPhaseIndex || 0)) || 0)
+        );
+        return {
+          phase,
+          ready: record.status === 'ready' ? 1 : 0,
+          availableAt: Number(record.availableAt) || 0,
+          createdAt: Number(record.createdAt) || 0
+        };
+      }
+
+      function pickMoreAdvancedProgress(leftRecord, rightRecord) {
+        const left = normalizeProgressRecord(leftRecord);
+        const right = normalizeProgressRecord(rightRecord);
+        if (!left) return right;
+        if (!right) return left;
+        const leftRank = progressRank(left);
+        const rightRank = progressRank(right);
+        if (rightRank.phase !== leftRank.phase) {
+          return rightRank.phase > leftRank.phase ? right : left;
+        }
+        if (rightRank.ready !== leftRank.ready) {
+          return rightRank.ready > leftRank.ready ? right : left;
+        }
+        if (rightRank.availableAt !== leftRank.availableAt) {
+          return rightRank.availableAt > leftRank.availableAt ? right : left;
+        }
+        return rightRank.createdAt >= leftRank.createdAt ? right : left;
+      }
+
+      function captureGuestSnapshot() {
+        return {
+          progress: readUserProgressForUser(0),
+          stats: readUserStatsForUser(0),
+          hiddenCardIds: readHiddenCardIdsForUser(0),
+          tutorialCompleted: readTutorialProgressForUser(0)
+        };
+      }
+
+      function guestSnapshotHasData(snapshot) {
+        return Boolean(
+          snapshot
+          && (
+            snapshot.progress?.size
+            || snapshot.hiddenCardIds?.size
+            || snapshot.tutorialCompleted
+            || hasMeaningfulStats(snapshot.stats)
+          )
+        );
+      }
+
+      function clearGuestLocalState() {
+        [
+          TUTORIAL_PROGRESS_STORAGE_KEY,
+          OWNED_STORAGE_KEY,
+          USER_STATS_STORAGE_KEY,
+          USER_PROGRESS_STORAGE_KEY,
+          USER_HIDDEN_STORAGE_KEY
+        ].forEach((storageKey) => removeScopedStorage(storageKey, 0));
+      }
+
+      async function migrateGuestProgressToAuthenticatedUser() {
+        if (!state.user?.id) return false;
+        const guestSnapshot = captureGuestSnapshot();
+        if (!guestSnapshotHasData(guestSnapshot)) return false;
+
+        const mergedProgress = new Map(state.userCards);
+        guestSnapshot.progress.forEach((record, cardId) => {
+          mergedProgress.set(cardId, pickMoreAdvancedProgress(mergedProgress.get(cardId), record));
+        });
+        state.userCards = mergedProgress;
+        state.hiddenCardIds = new Set([
+          ...Array.from(state.hiddenCardIds.values()),
+          ...Array.from(guestSnapshot.hiddenCardIds.values())
+        ]);
+        state.stats = normalizeStatsSnapshot({
+          playTimeMs: Number(state.stats.playTimeMs || 0) + Number(guestSnapshot.stats?.playTimeMs || 0),
+          speakings: Number(state.stats.speakings || 0) + Number(guestSnapshot.stats?.speakings || 0),
+          listenings: Number(state.stats.listenings || 0) + Number(guestSnapshot.stats?.listenings || 0)
+        });
+        if (guestSnapshot.tutorialCompleted) {
+          state.game.tutorial.completed = true;
+        }
+
+        persistUserStatsLocally();
+        persistUserProgressLocally();
+        persistHiddenCardIdsLocally();
+        persistTutorialProgressLocally();
+        clearGuestLocalState();
+        syncOwnedIdsFromProgress();
+        refreshLibrary();
+        syncWelcomeGate();
+        await syncFlashcardCloudNow();
+        return true;
       }
 
       function isAdminUsername(value) {
@@ -599,7 +911,20 @@
       }
 
       function isAdminUser(user = state.user) {
-        return isAdminUsername(user?.username);
+        return Boolean(user?.isAdmin) || isAdminUsername(user?.username);
+      }
+
+      function isPremiumUser(user = state.user) {
+        if (!user) return false;
+        if (Boolean(user.premiumFullAccess)) return true;
+        const premiumUntilTime = Date.parse(user?.premiumUntil || '');
+        return Number.isFinite(premiumUntilTime) && premiumUntilTime > Date.now();
+      }
+
+      function shouldGatePremiumAccess() {
+        return !isAdminUser()
+          && !isPremiumUser()
+          && accessibleFlashcardsCount() >= FLASHCARD_PREMIUM_GATE_LIMIT;
       }
 
       function syncAdminTheme() {
@@ -621,7 +946,7 @@
       }
 
       function accessibleFlashcardsCount() {
-        if (isAdminUser()) return state.allCards.length;
+        if (isAdminUser()) return userProgressCards().length;
         return userProgressCards().length;
       }
 
@@ -711,6 +1036,18 @@
         }, Math.max(0, Number(delayMs) || 0));
       }
 
+      function authCopyText() {
+        const isRegister = state.authMode === 'register';
+        if (state.authReason === 'progress') {
+          return isRegister
+            ? 'Crie sua conta para salvar seus 6 flashcards e continuar jogando.'
+            : 'Voce ja liberou 6 flashcards. Entre agora para continuar sem perder seu progresso.';
+        }
+        return isRegister
+          ? 'Crie seu nome e sua senha para entrar na Liga Playtalk e aparecer no ranking.'
+          : 'Entre com seu nome e senha para comeÃƒÂ§ar a jogar na Liga Playtalk.';
+      }
+
       function setAuthMode(mode) {
         state.authMode = mode === 'register' ? 'register' : 'login';
         const isRegister = state.authMode === 'register';
@@ -718,9 +1055,7 @@
         els.authModeRegister.classList.toggle('is-active', isRegister);
         els.authSubmitBtn.textContent = isRegister ? 'Cadastrar e jogar' : 'Entrar e jogar';
         els.authPassword.setAttribute('autocomplete', isRegister ? 'new-password' : 'current-password');
-        els.authCopy.textContent = isRegister
-          ? 'Crie seu nome e sua senha para entrar na Liga Playtalk e aparecer no ranking.'
-          : 'Entre com seu nome e senha para comeÃ§ar a jogar na Liga Playtalk.';
+        els.authCopy.textContent = authCopyText();
       }
 
       function setAuthStatus(message, tone = '') {
@@ -731,8 +1066,169 @@
         }
       }
 
+      function clearWelcomeRotation() {
+        if (!state.entry.welcomeTimer) return;
+        window.clearInterval(state.entry.welcomeTimer);
+        state.entry.welcomeTimer = 0;
+      }
+
+      function setWelcomeCopy(text, animate = false) {
+        if (!els.welcomeCopy) return;
+        const nextText = safeText(text) || WELCOME_COPY_MESSAGES[0];
+        if (!animate || els.welcomeCopy.textContent === nextText) {
+          els.welcomeCopy.textContent = nextText;
+          els.welcomeCopy.classList.remove('is-changing');
+          return;
+        }
+        els.welcomeCopy.classList.add('is-changing');
+        window.setTimeout(() => {
+          els.welcomeCopy.textContent = nextText;
+          els.welcomeCopy.classList.remove('is-changing');
+        }, 160);
+      }
+
+      function shouldShowWelcomeGate() {
+        if (state.entry.authRequired || state.game.active || state.watch.active || isAdminUser()) return false;
+        if (state.game.tutorial.completed) return false;
+        if (hasTutorialPlanetUnlocked()) return false;
+        return !state.entry.cardsReady || Boolean(findTutorialPlanetCard());
+      }
+
+      function syncWelcomeGate() {
+        const visible = shouldShowWelcomeGate();
+        state.entry.welcomeVisible = visible;
+        document.body.classList.toggle('welcome-active', visible);
+        els.welcomeGate?.classList.toggle('is-visible', visible);
+        if (!visible) {
+          clearWelcomeRotation();
+          return;
+        }
+        if (state.entry.pendingTutorialStart) {
+          setWelcomeCopy('Preparando tutorial...');
+          return;
+        }
+        setWelcomeCopy(WELCOME_COPY_MESSAGES[state.entry.welcomeIndex % WELCOME_COPY_MESSAGES.length]);
+        if (state.entry.welcomeTimer) return;
+        state.entry.welcomeTimer = window.setInterval(() => {
+          if (!shouldShowWelcomeGate() || state.entry.pendingTutorialStart) return;
+          state.entry.welcomeIndex = (state.entry.welcomeIndex + 1) % WELCOME_COPY_MESSAGES.length;
+          setWelcomeCopy(WELCOME_COPY_MESSAGES[state.entry.welcomeIndex], true);
+        }, WELCOME_COPY_ROTATION_MS);
+      }
+
+      function hideWelcomeGate() {
+        state.entry.pendingTutorialStart = false;
+        state.entry.welcomeVisible = false;
+        document.body.classList.remove('welcome-active');
+        els.welcomeGate?.classList.remove('is-visible');
+        clearWelcomeRotation();
+      }
+
+      function tryStartPendingTutorial() {
+        if (!state.entry.pendingTutorialStart || !state.entry.cardsReady) return false;
+        if (!findTutorialPlanetCard()) {
+          state.entry.pendingTutorialStart = false;
+          syncWelcomeGate();
+          return false;
+        }
+        hideWelcomeGate();
+        beginTutorialGame();
+        return true;
+      }
+
+      function requestWelcomeTutorialStart() {
+        if (state.entry.authRequired) return;
+        if (hasTutorialPlanetUnlocked()) {
+          hideWelcomeGate();
+          beginGame();
+          return;
+        }
+        state.entry.pendingTutorialStart = true;
+        setWelcomeCopy('Preparando tutorial...');
+        tryStartPendingTutorial();
+      }
+
+      function clearGuestAuthDelay() {
+        if (!state.entry.authDelayTimer) return;
+        window.clearTimeout(state.entry.authDelayTimer);
+        state.entry.authDelayTimer = 0;
+      }
+
+      function shouldRequireGuestAuth() {
+        return !state.user?.id
+          && !isAdminUser()
+          && accessibleFlashcardsCount() >= GUEST_FLASHCARD_LOGIN_THRESHOLD;
+      }
+
+      function clearAuthRevealTimer() {
+        if (!state.entry.authRevealTimer) return;
+        window.clearTimeout(state.entry.authRevealTimer);
+        state.entry.authRevealTimer = 0;
+      }
+
       function lockFlashcardsApp(locked) {
         document.body.classList.toggle('auth-locked', locked);
+      }
+
+      function hideAuthGate() {
+        state.entry.authRequired = false;
+        state.authReason = 'optional';
+        clearAuthRevealTimer();
+        els.authGate?.classList.remove('is-form-visible');
+        lockFlashcardsApp(false);
+        setAuthStatus('');
+      }
+
+      function showAuthGate({ reason = 'optional', statusMessage = '' } = {}) {
+        state.entry.authRequired = true;
+        state.authReason = reason;
+        clearAuthRevealTimer();
+        lockFlashcardsApp(true);
+        els.authGate?.classList.remove('is-form-visible');
+        setAuthMode('login');
+        els.authCopy.textContent = authCopyText();
+        setAuthStatus(statusMessage);
+        state.entry.authRevealTimer = window.setTimeout(() => {
+          state.entry.authRevealTimer = 0;
+          els.authGate?.classList.add('is-form-visible');
+          els.authUsername?.focus({ preventScroll: true });
+        }, AUTH_GATE_FORM_REVEAL_MS);
+      }
+
+      async function enforceGuestAuthGate() {
+        clearGuestAuthDelay();
+        if (!shouldRequireGuestAuth()) return false;
+        hideWelcomeGate();
+        if (state.watch.active) {
+          stopWatch();
+        }
+        if (state.game.active) {
+          await exitGame();
+        }
+        showAuthGate({
+          reason: 'progress',
+          statusMessage: 'Voce liberou 6 flashcards. Entre para continuar.'
+        });
+        return true;
+      }
+
+      function scheduleGuestAuthRequirement({ immediate = false } = {}) {
+        if (!shouldRequireGuestAuth()) {
+          clearGuestAuthDelay();
+          return false;
+        }
+        if (state.entry.authRequired || state.entry.authDelayTimer) {
+          return true;
+        }
+        if (immediate) {
+          void enforceGuestAuthGate();
+          return true;
+        }
+        state.entry.authDelayTimer = window.setTimeout(() => {
+          state.entry.authDelayTimer = 0;
+          void enforceGuestAuthGate();
+        }, GUEST_FLASHCARD_LOGIN_DELAY_MS);
+        return true;
       }
 
       async function fetchSessionUser() {
@@ -747,11 +1243,329 @@
         return normalizeUser(payload.user);
       }
 
+      function setProfileStatus(message, tone = '') {
+        if (!els.profileStatus) return;
+        els.profileStatus.textContent = message || '';
+        els.profileStatus.className = 'profile-panel__status';
+        if (tone) {
+          els.profileStatus.classList.add(`is-${tone}`);
+        }
+      }
+
+      function syncFooterNav() {
+        const activeView = state.ui.activeView;
+        [els.footerPlayBtn, els.footerCardsBtn, els.footerUsersBtn, els.footerProfileBtn].forEach((button) => {
+          if (!button) return;
+          button.classList.toggle('is-active', button.dataset.view === activeView);
+        });
+      }
+
+      function renderPremiumCode() {
+        if (els.premiumCodeValue) {
+          const slots = Array.from({ length: 6 }, (_, index) => {
+            const letter = state.ui.premiumCode[index] || '';
+            if (!letter) {
+              return '<div class="premium-gate__code-slot"><span>â€¢</span></div>';
+            }
+            return                             `<div class="premium-gate__code-slot" data-filled-slot="${index}"><img src="/accesskey/${letter.toLowerCase()}.png" alt="${escapeHtml(letter)}"></div>`;
+          });
+          els.premiumCodeValue.innerHTML = slots.join('');
+        }
+        if (els.premiumStatus) {
+          els.premiumStatus.textContent = state.ui.premiumStatus || 'Toque nas imagens na ordem certa para digitar a chave.';
+        }
+        if (els.premiumClearBtn) {
+          els.premiumClearBtn.disabled = state.ui.premiumBusy || !state.ui.premiumCode;
+        }
+        if (els.premiumBackspaceBtn) {
+          els.premiumBackspaceBtn.disabled = state.ui.premiumBusy || !state.ui.premiumCode;
+        }
+      }
+
+      function setPremiumStatus(message) {
+        state.ui.premiumStatus = safeText(message);
+        renderPremiumCode();
+      }
+
+      function stopPremiumAudio() {
+        if (!state.ui.premiumAudio) return;
+        try {
+          state.ui.premiumAudio.pause();
+          state.ui.premiumAudio.currentTime = 0;
+        } catch (_error) {
+          // ignore
+        }
+        state.ui.premiumAudio = null;
+      }
+
+      function playPremiumAudio(src, { allowReplay = false } = {}) {
+        if (!src) return;
+        if (!allowReplay && state.ui.premiumAudio && state.ui.premiumAudio.src.endsWith(src)) {
+          return;
+        }
+        stopPremiumAudio();
+        const audio = new Audio(src);
+        state.ui.premiumAudio = audio;
+        const clearCurrent = () => {
+          if (state.ui.premiumAudio === audio) {
+            state.ui.premiumAudio = null;
+          }
+        };
+        audio.addEventListener('ended', clearCurrent, { once: true });
+        audio.addEventListener('error', clearCurrent, { once: true });
+        audio.play().catch(clearCurrent);
+      }
+
+      function playPremiumLimitAudio() {
+        if (state.ui.premiumAudioPlayed) return;
+        state.ui.premiumAudioPlayed = true;
+        playPremiumAudio(ACCESS_KEY_AUDIO_LIMIT_PATH);
+      }
+
+      function flashPremiumCodeSlots() {
+        els.premiumCodeValue?.querySelectorAll('.premium-gate__code-slot[data-filled-slot]').forEach((slot) => {
+          slot.classList.remove('is-flash');
+          void slot.offsetWidth;
+          slot.classList.add('is-flash');
+        });
+      }
+
+      function closePremiumGate(force = false) {
+        if (!els.premiumGate) return;
+        if (!force && shouldGatePremiumAccess()) return;
+        state.ui.premiumGateOpen = false;
+        document.body.classList.remove('premium-gate-open');
+        els.premiumGate.classList.remove('is-visible');
+      }
+
+      function openPremiumGate(message) {
+        if (!els.premiumGate) return;
+        state.ui.premiumGateOpen = true;
+        state.ui.premiumCode = '';
+        state.ui.premiumBusy = false;
+        state.ui.premiumAudioPlayed = false;
+        document.body.classList.add('premium-gate-open');
+        els.premiumGate.classList.add('is-visible');
+        playPremiumLimitAudio();
+        setPremiumStatus(message || 'Voce chegou ao limite de 8 cartas. Digite uma chave premium.');
+      }
+
+      async function redeemPremiumAccessCode() {
+        if (!state.user?.id) {
+          setPremiumStatus('Entre na sua conta para ativar a chave premium.');
+          return;
+        }
+        if (state.ui.premiumCode.length !== 6 || state.ui.premiumBusy) {
+          return;
+        }
+
+        state.ui.premiumBusy = true;
+        setPremiumStatus('Validando chave...');
+
+        try {
+          const response = await fetch(buildApiUrl('/api/premium/redeem'), {
+            method: 'POST',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            }),
+            body: JSON.stringify({ code: state.ui.premiumCode })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Nao foi possivel validar a chave.');
+          }
+
+          const updatedUser = normalizeUser(payload.user);
+          if (updatedUser) {
+            state.user = updatedUser;
+          }
+          flashPremiumCodeSlots();
+          playPremiumAudio(ACCESS_KEY_AUDIO_SUCCESS_PATHS[payload?.accessType] || ACCESS_KEY_AUDIO_LIMIT_PATH, { allowReplay: true });
+          state.ui.premiumCode = '';
+          setPremiumStatus(payload?.message || 'Premium liberado com sucesso.');
+          renderProfilePanel();
+          renderMetrics();
+          closePremiumGate(true);
+        } catch (error) {
+          playPremiumAudio(ACCESS_KEY_AUDIO_INVALID_PATH, { allowReplay: true });
+          state.ui.premiumCode = '';
+          setPremiumStatus(error?.message || 'Chave invalida.');
+        } finally {
+          state.ui.premiumBusy = false;
+          renderPremiumCode();
+        }
+      }
+
+      function appendPremiumCodeLetter(letter) {
+        if (!state.ui.premiumGateOpen || state.ui.premiumBusy) return;
+        const normalized = safeText(letter).toUpperCase().replace(/[^A-P]/g, '');
+        if (!normalized || state.ui.premiumCode.length >= 6) return;
+        state.ui.premiumCode = `${state.ui.premiumCode}${normalized}`.slice(0, 6);
+        playPremiumAudio(ACCESS_KEY_AUDIO_MESSAGE_PATH, { allowReplay: true });
+        renderPremiumCode();
+        if (state.ui.premiumCode.length === 6) {
+          void redeemPremiumAccessCode();
+        }
+      }
+
+      function syncPremiumGateVisibility() {
+
+        if (shouldGatePremiumAccess()) {
+          if (state.game.active) {
+            void exitGame();
+          }
+          openPremiumGate();
+          return true;
+        }
+        closePremiumGate(true);
+        return false;
+      }
+
+      function renderProfilePanel() {
+        const username = safeText(state.user?.username) || 'Jogador';
+        const avatar = state.ui.profileAvatarDraft || safeText(state.user?.avatar) || safeText(state.user?.avatar_image);
+        const hasAvatar = Boolean(avatar);
+        if (els.profileNameInput) {
+          els.profileNameInput.value = username;
+        }
+        if (els.profileAvatarPreview) {
+          els.profileAvatarPreview.src = hasAvatar ? avatar : 'Avatar/avatar-man-person-svgrepo-com.svg';
+          els.profileAvatarPreview.style.display = hasAvatar ? 'block' : 'none';
+        }
+        if (els.profileAvatarFallback) {
+          els.profileAvatarFallback.textContent = username.charAt(0).toUpperCase() || 'P';
+          els.profileAvatarFallback.style.display = hasAvatar ? 'none' : 'grid';
+        }
+        if (els.profileSaveBtn) {
+          els.profileSaveBtn.disabled = !state.user;
+        }
+        if (els.profileLogoutBtn) {
+          els.profileLogoutBtn.hidden = !state.user;
+        }
+      }
+
+      function switchMainView(view) {
+        const nextView = ['cards', 'users', 'profile', 'play'].includes(view) ? view : 'cards';
+        state.ui.activeView = nextView === 'play' ? 'play' : nextView;
+        const showCatalog = nextView === 'cards';
+        const showUsers = nextView === 'users';
+        const showProfile = nextView === 'profile';
+        const showTopbar = false;
+
+        if (els.catalog) {
+          els.catalog.hidden = !showCatalog;
+        }
+        if (els.usersPanel) {
+          els.usersPanel.hidden = !showUsers;
+        }
+        if (els.profilePanel) {
+          els.profilePanel.hidden = !showProfile;
+        }
+        if (els.topbar) {
+          els.topbar.hidden = !showTopbar;
+          els.topbar.classList.toggle('is-hidden', !showTopbar);
+        }
+        if (els.usersPanel) {
+          els.usersPanel.classList.toggle('section', !showUsers);
+          els.usersPanel.classList.toggle('panel', !showUsers);
+        }
+        if (showProfile) {
+          renderProfilePanel();
+        }
+        syncFooterNav();
+      }
+
+      async function navigateToMainView(view) {
+        const nextView = ['cards', 'users', 'profile', 'play'].includes(view) ? view : 'cards';
+        if (state.game.active && nextView !== 'play') {
+          await exitGame();
+        }
+        if (state.watch.active && nextView !== 'play') {
+          stopWatch();
+        }
+        if (nextView !== 'play') {
+          closeGameSetup();
+          closeWatchPopover();
+          document.body.classList.remove('game-open');
+        }
+        if (nextView === 'play') {
+          switchMainView('play');
+          if (!state.game.active) {
+            openGameSetup();
+          }
+          return;
+        }
+        switchMainView(nextView);
+      }
+
+      async function fileToDataUrl(file) {
+        return await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(reader.error || new Error('Falha ao ler a imagem.'));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function submitProfileForm(event) {
+        event?.preventDefault?.();
+        if (!state.user?.id) {
+          setProfileStatus('Entre na conta para editar o perfil.', 'error');
+          return;
+        }
+
+        const nextUsername = safeText(els.profileNameInput?.value);
+        if (!nextUsername) {
+          setProfileStatus('Digite um nome de usuario.', 'error');
+          return;
+        }
+
+        setProfileStatus('Salvando perfil...');
+        try {
+          const profileResponse = await fetch(buildApiUrl('/auth/profile'), {
+            method: 'PATCH',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            }),
+            body: JSON.stringify({ username: nextUsername })
+          });
+          const profilePayload = await profileResponse.json().catch(() => ({}));
+          if (!profileResponse.ok || !profilePayload?.success) {
+            throw new Error(profilePayload?.message || 'Nao foi possivel salvar o perfil.');
+          }
+
+          let updatedUser = normalizeUser(profilePayload.user) || state.user;
+          if (state.ui.profileAvatarDraft) {
+            const avatarResponse = await fetch(buildApiUrl('/auth/avatar'), {
+              method: 'PATCH',
+              headers: buildAuthHeaders({
+                'Content-Type': 'application/json'
+              }),
+              body: JSON.stringify({ avatar: state.ui.profileAvatarDraft })
+            });
+            const avatarPayload = await avatarResponse.json().catch(() => ({}));
+            if (!avatarResponse.ok || !avatarPayload?.success) {
+              throw new Error(avatarPayload?.message || 'Nao foi possivel salvar a foto.');
+            }
+            updatedUser = normalizeUser(avatarPayload.user) || updatedUser;
+          }
+
+          state.user = updatedUser;
+          state.ui.profileAvatarDraft = '';
+          renderProfilePanel();
+          refreshLibrary();
+          setProfileStatus('Perfil atualizado com sucesso.', 'success');
+        } catch (error) {
+          setProfileStatus(error?.message || 'Nao foi possivel salvar o perfil.', 'error');
+        }
+      }
+
       async function hydrateAuthenticatedApp(user, options = {}) {
         state.user = normalizeUser(user);
         if (!state.user) {
           throw new Error('Sessao invalida.');
         }
+        clearGuestAuthDelay();
         scheduleCardsRefresh();
         state.libraryPage = 1;
 
@@ -783,6 +1597,7 @@
         state.hiddenCardIds = Array.isArray(cloudState?.meta?.hiddenCardIds)
           ? new Set(cloudState.meta.hiddenCardIds.map((cardId) => safeText(cardId)).filter(Boolean))
           : localHidden;
+        state.game.tutorial.completed = readTutorialProgress();
         syncOwnedIdsFromProgress();
 
         if (Number.isFinite(Number(cloudState?.serverTimeMs)) && Number(cloudState.serverTimeMs) > 0) {
@@ -797,9 +1612,12 @@
         renderMetrics();
         updateGameChips();
         refreshLibrary();
-        lockFlashcardsApp(false);
-        setAuthStatus('');
-        els.startGameBtn.disabled = false;
+        renderProfilePanel();
+        hideAuthGate();
+        if (els.startGameBtn) {
+          els.startGameBtn.disabled = false;
+        }
+        switchMainView(state.ui.activeView === 'play' ? 'cards' : state.ui.activeView);
 
         if (!options.skipLoadCards) {
           try {
@@ -813,17 +1631,30 @@
             console.warn('Falha ao carregar os flashcards do usuario:', error);
             els.allSectionCopy.textContent = 'Falha ao carregar os flashcards.';
             els.allGrid.innerHTML = `<div class="empty">${escapeHtml(error.message || 'Falha ao carregar.')}</div>`;
-            els.startGameBtn.disabled = true;
+            if (els.startGameBtn) {
+              els.startGameBtn.disabled = true;
+            }
           }
         }
+
+        await migrateGuestProgressToAuthenticatedUser();
 
         if ((!hasCloudProgress && localProgress.size > 0) || (!hasCloudStats && hasMeaningfulStats(localStats))) {
           await syncFlashcardCloudNow();
         }
+        syncWelcomeGate();
+        tryStartPendingTutorial();
       }
 
       async function handleLoggedOutState(message) {
+        if (state.game.active) {
+          await exitGame();
+        }
+        if (state.watch.active) {
+          stopWatch();
+        }
         persistAuthToken('');
+        clearGuestAuthDelay();
         state.user = null;
         syncAdminTheme();
         stopCardsRefresh();
@@ -833,11 +1664,9 @@
         }
         state.flashcardsSyncInFlight = false;
         state.flashcardsSyncQueued = false;
-        state.user = null;
-        state.userCards = new Map();
-        state.hiddenCardIds = new Set();
-        state.ownedIds = new Set();
-        state.stats = normalizeStatsSnapshot({});
+        state.userCards = readUserProgressForUser(0);
+        state.hiddenCardIds = readHiddenCardIdsForUser(0);
+        state.stats = readUserStatsForUser(0);
         state.libraryPage = 1;
         state.admin.selectedDeckSource = '';
         state.admin.decks = [];
@@ -845,26 +1674,29 @@
         state.admin.reportCounts = new Map();
         state.admin.draftCards = new Map();
         state.admin.pendingNewCards = [];
+        resetTutorialRuntime({ preserveCompletion: false });
+        state.game.tutorial.completed = readTutorialProgressForUser(0);
+        syncOwnedIdsFromProgress();
         renderMetrics();
         updateGameChips();
-        if (els.libraryTitle) {
-          els.libraryTitle.textContent = 'Meus flashcards';
+        refreshLibrary();
+        state.ui.profileAvatarDraft = '';
+        renderProfilePanel();
+        hideAuthGate();
+        if (els.startGameBtn) {
+          els.startGameBtn.disabled = false;
         }
-        if (els.adminBadge) {
-          els.adminBadge.hidden = true;
+        switchMainView('cards');
+        syncWelcomeGate();
+        tryStartPendingTutorial();
+        if (shouldRequireGuestAuth()) {
+          showAuthGate({
+            reason: 'progress',
+            statusMessage: message || 'Entre com seu nome e senha para continuar.'
+          });
+          return;
         }
-        renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
-        els.allSectionCopy.textContent = 'Entre ou crie seu nome para comeÃ§ar.';
-        renderLibraryPagination(0);
-        syncAdminTools();
-        if (state.game.active) {
-          exitGame();
-        }
-        if (state.watch.active) {
-          stopWatch();
-        }
-        lockFlashcardsApp(true);
-        setAuthStatus(message || 'Entre com seu nome e senha para jogar.');
+        setAuthStatus('');
       }
 
       async function submitAuthForm(event) {
@@ -1023,10 +1855,12 @@
 
       function userProgressCards() {
         if (isAdminUser()) {
-          return state.allCards.map((card) => ({
+          return state.allCards
+            .filter((card) => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card))
+            .map((card) => ({
             ...card,
             progress: adminReadyProgressRecord(card.id)
-          }));
+            }));
         }
         advanceReadyMemorizations();
         return Array.from(state.userCards.values())
@@ -1034,6 +1868,7 @@
             const card = state.allCards.find(item => item.id === record.cardId);
             if (!card) return null;
             if (isCardHiddenForUser(card.id)) return null;
+            if (!hasCoreFlashcardText(card) || !hasPlayableFlashcardImage(card)) return null;
             return { ...card, progress: record };
           })
           .filter(Boolean)
@@ -1074,11 +1909,17 @@
           .filter(record => record.status === 'ready' && (record.phaseIndex || 0) >= 1)
           .sort((left, right) => (Number(left.returnedAt) || 0) - (Number(right.returnedAt) || 0))
           .map(record => state.allCards.find(card => card.id === record.cardId))
-          .filter(card => card && !isCardHiddenForUser(card.id) && hasCoreFlashcardText(card));
+          .filter(card => card && !isCardHiddenForUser(card.id) && hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
       }
 
       function totalGameAvailableCards() {
-        return state.allCards.length;
+        if (isAdminUser()) {
+          return userProgressCards().length;
+        }
+        return uniqueCardsById([
+          ...baseCandidateCards(),
+          ...readyReviewCards()
+        ]).length;
       }
 
       function syncGameSetupSummary() {
@@ -1087,6 +1928,365 @@
         els.gameSetupCountCopy.textContent = total
           ? `${total} flashcards disponiveis no total para jogar agora.`
           : 'Nenhum flashcard disponivel para jogar agora.';
+        syncTutorialSetupButton();
+      }
+
+      function tutorialAudioPath(index) {
+        return `/${TUTORIAL_AUDIO_ROOT}/tuto${index}.mp3`;
+      }
+
+      function findTutorialPlanetCard() {
+        return state.allCards.find((card) => {
+          const english = normalizeText(card?.english);
+          const portuguese = normalizeText(card?.portuguese);
+          const imageUrl = safeText(card?.imageUrl).toLowerCase();
+          return (
+            (english === TUTORIAL_PLANET_ENGLISH && portuguese === TUTORIAL_PLANET_PORTUGUESE)
+            || imageUrl.includes(`/${TUTORIAL_PLANET_IMAGE_NAME}`)
+            || imageUrl.endsWith(TUTORIAL_PLANET_IMAGE_NAME)
+          );
+        }) || null;
+      }
+
+      function hasTutorialPlanetUnlocked() {
+        const tutorialCard = findTutorialPlanetCard();
+        if (!tutorialCard) return false;
+        return state.userCards.has(tutorialCard.id) || state.ownedIds.has(tutorialCard.id);
+      }
+
+      function isTutorialPlanetCard(cardOrId) {
+        const tutorialCard = findTutorialPlanetCard();
+        const card = typeof cardOrId === 'string' ? cardById(cardOrId) : cardOrId;
+        return Boolean(tutorialCard && card && tutorialCard.id === card.id);
+      }
+
+      function shouldSuppressTutorialCardAudio(card) {
+        return Boolean(state.game.tutorial.active && isTutorialPlanetCard(card));
+      }
+
+      function canOfferTutorialMode() {
+        return Boolean(
+          !isAdminUser()
+          && !state.game.tutorial.completed
+          && !hasTutorialPlanetUnlocked()
+          && findTutorialPlanetCard()
+        );
+      }
+
+      function syncTutorialSetupButton() {
+        if (!els.startTutorialBtn) return;
+        const available = canOfferTutorialMode();
+        els.startTutorialBtn.hidden = !available;
+        els.startTutorialBtn.disabled = !available;
+      }
+
+      function clearTutorialTimers() {
+        const timers = Array.isArray(state.game.tutorial.timers) ? state.game.tutorial.timers : [];
+        timers.forEach((timerId) => window.clearTimeout(timerId));
+        state.game.tutorial.timers = [];
+      }
+
+      function queueTutorialTimer(token, delayMs, callback) {
+        const timerId = window.setTimeout(() => {
+          state.game.tutorial.timers = state.game.tutorial.timers.filter((currentId) => currentId !== timerId);
+          if (state.game.tutorial.sequenceToken !== token) return;
+          callback();
+        }, Math.max(0, Number(delayMs) || 0));
+        state.game.tutorial.timers.push(timerId);
+        return timerId;
+      }
+
+      function isTutorialSequenceCurrent(token, cardId = state.game.currentId) {
+        return Boolean(
+          state.game.active
+          && state.game.tutorial.active
+          && state.game.tutorial.sequenceToken === token
+          && (!cardId || state.game.currentId === cardId)
+        );
+      }
+
+      function tutorialFinaleState() {
+        return state.game.tutorial?.finale || createTutorialState().finale;
+      }
+
+      function setTutorialFinaleState(patch = {}) {
+        state.game.tutorial.finale = {
+          ...tutorialFinaleState(),
+          ...patch
+        };
+        const finaleCardId = safeText(state.game.tutorial.finale.cardId);
+        if (!finaleCardId || state.game.currentId === finaleCardId) {
+          renderCurrentCard();
+        }
+      }
+
+      function preloadTutorialFinaleSeals() {
+        Object.values(REVIEW_PHASES).forEach((phase) => {
+          const src = safeText(phase?.sealPath);
+          if (!src || state.game.preloadImages.has(src)) return;
+          const image = new Image();
+          image.src = src;
+          state.game.preloadImages.set(src, image);
+        });
+      }
+
+      function flashTutorialFinaleSeal(phase, cardId) {
+        setTutorialFinaleState({
+          active: true,
+          cardId,
+          sealPhase: phase,
+          sealFlash: true,
+          sealSoft: true
+        });
+        window.setTimeout(() => {
+          if (!state.game.tutorial.active) return;
+          const finale = tutorialFinaleState();
+          if (!finale.active || finale.cardId !== cardId || finale.sealPhase !== phase) return;
+          setTutorialFinaleState({ sealFlash: false });
+        }, TUTORIAL_FINALE_SEAL_FLASH_MS);
+      }
+
+      function resetTutorialVisualState() {
+        const gameShell = els.game.querySelector('.game-shell');
+        gameShell?.classList.remove('is-tutorial-intro', 'is-tutorial-reveal');
+        els.gameTutorialLogo?.classList.remove('is-visible', 'is-fading-out');
+        els.gameVisual.classList.remove('is-mic-live', 'is-tutorial-mic-fade', 'is-tutorial-mic-flash');
+      }
+
+      function setTutorialTypingDisabled(disabled) {
+        Array.from(els.gameTypingKeyboard.querySelectorAll('.flashcards-typing__grid')).forEach((grid) => {
+          setTypingKeysDisabled(grid, disabled);
+        });
+      }
+
+      function setTutorialInteractionLocked(locked) {
+        const nextLocked = Boolean(locked);
+        state.game.tutorial.interactionLocked = nextLocked;
+        state.game.paused = nextLocked;
+        if (nextLocked) {
+          state.game.canListen = false;
+          cleanupGameRecognition();
+        }
+        els.gameTouchBtn.disabled = nextLocked;
+        if (els.gameLanguageBtn) {
+          els.gameLanguageBtn.disabled = nextLocked;
+        }
+        if (els.gameReportTrigger) {
+          els.gameReportTrigger.disabled = nextLocked;
+        }
+        setTutorialTypingDisabled(nextLocked);
+      }
+
+      function resetTutorialRuntime({ preserveCompletion = true } = {}) {
+        clearTutorialTimers();
+        resetTutorialVisualState();
+        state.game.paused = false;
+        state.game.canListen = false;
+        state.game.tutorial.sequenceToken += 1;
+        const completed = preserveCompletion ? Boolean(state.game.tutorial.completed) : false;
+        state.game.tutorial = {
+          ...createTutorialState(),
+          completed
+        };
+        els.gameTouchBtn.disabled = false;
+        if (els.gameLanguageBtn) {
+          els.gameLanguageBtn.disabled = false;
+        }
+        if (els.gameReportTrigger) {
+          els.gameReportTrigger.disabled = false;
+        }
+      }
+
+      function startTutorialSequence(entryId) {
+        clearTutorialTimers();
+        resetTutorialVisualState();
+        state.game.tutorial.sequenceToken += 1;
+        state.game.tutorial.currentCardId = safeText(entryId);
+        return state.game.tutorial.sequenceToken;
+      }
+
+      function playTutorialAudio(index) {
+        const resolved = resolveInlineMediaUrl(tutorialAudioPath(index));
+        if (!resolved) return Promise.resolve(false);
+        stopActiveAudio();
+        const audio = new Audio(resolved);
+        audio.preload = 'auto';
+        return playAudioWithSoftEnd(audio, { registerAsActive: true });
+      }
+
+      function triggerTutorialMicFlash() {
+        els.gameVisual.classList.remove('is-tutorial-mic-flash');
+        void els.gameVisual.offsetWidth;
+        els.gameVisual.classList.add('is-tutorial-mic-flash');
+      }
+
+      function beginTutorialIntroSequence(entry) {
+        const token = startTutorialSequence(entry.id);
+        const gameShell = els.game.querySelector('.game-shell');
+        state.game.tutorial.introPlayed = true;
+        state.game.tutorial.explainedStars = Math.max(state.game.tutorial.explainedStars, 0);
+        gameShell?.classList.add('is-tutorial-intro');
+        setTutorialInteractionLocked(true);
+        setGameStatus('', '');
+        playTutorialAudio(1).catch?.(() => {});
+
+        queueTutorialTimer(token, 1000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          els.gameTutorialLogo?.classList.add('is-visible');
+        });
+
+        queueTutorialTimer(token, 4000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          els.gameTutorialLogo?.classList.remove('is-visible');
+          els.gameTutorialLogo?.classList.add('is-fading-out');
+        });
+
+        queueTutorialTimer(token, 6000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          gameShell?.classList.remove('is-tutorial-intro');
+          gameShell?.classList.add('is-tutorial-reveal');
+          queueTutorialTimer(token, 1700, () => {
+            if (!isTutorialSequenceCurrent(token, entry.id)) return;
+            gameShell?.classList.remove('is-tutorial-reveal');
+          });
+        });
+
+        queueTutorialTimer(token, 9000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          els.gameVisual.classList.remove('is-tutorial-mic-fade');
+          els.gameVisual.classList.add('is-mic-live');
+        });
+
+        queueTutorialTimer(token, 10000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          triggerTutorialMicFlash();
+        });
+
+        queueTutorialTimer(token, 11000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          triggerTutorialMicFlash();
+        });
+
+        queueTutorialTimer(token, 12000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          els.gameVisual.classList.add('is-tutorial-mic-fade');
+          queueTutorialTimer(token, 700, () => {
+            if (!isTutorialSequenceCurrent(token, entry.id)) return;
+            els.gameVisual.classList.remove('is-mic-live', 'is-tutorial-mic-flash', 'is-tutorial-mic-fade');
+          });
+        });
+
+        queueTutorialTimer(token, 15000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          triggerWinFlash();
+        });
+
+        queueTutorialTimer(token, 19000, () => {
+          if (!isTutorialSequenceCurrent(token, entry.id)) return;
+          setTutorialInteractionLocked(false);
+          state.game.canListen = true;
+          renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
+          setGameStatus('Toque para falar', 'live');
+        });
+      }
+
+      async function beginTutorialHintSequence(entry, audioIndex) {
+        const token = startTutorialSequence(entry.id);
+        state.game.tutorial.explainedStars = Math.max(state.game.tutorial.explainedStars, Number(entry.stars) || 0);
+        setTutorialInteractionLocked(true);
+        await playTutorialAudio(audioIndex);
+        if (!isTutorialSequenceCurrent(token, entry.id)) return;
+        setTutorialInteractionLocked(false);
+        renderCurrentCard();
+      }
+
+      function maybeRunTutorialSequence(entry, card) {
+        if (!state.game.tutorial.active || state.game.tutorial.finishing || !isTutorialPlanetCard(card)) {
+          return false;
+        }
+        if (Number(entry.stars) === 0 && !state.game.tutorial.introPlayed) {
+          beginTutorialIntroSequence(entry);
+          return true;
+        }
+        if (entry.stars >= 1 && entry.stars <= 4 && state.game.tutorial.explainedStars < entry.stars) {
+          beginTutorialHintSequence(entry, entry.stars + 1);
+          return true;
+        }
+        return false;
+      }
+
+      async function finishTutorialAndStartNormalGame() {
+        const cardId = state.game.currentId || state.game.tutorial.currentCardId;
+        const token = startTutorialSequence(cardId);
+        state.game.tutorial.finishing = true;
+        setTutorialInteractionLocked(true);
+        clearPendingRewardSeal(cardId);
+        preloadTutorialFinaleSeals();
+        setTutorialFinaleState({
+          active: true,
+          cardId,
+          sealPhase: 0,
+          sealFlash: false,
+          sealSoft: false
+        });
+
+        queueTutorialTimer(token, 6000, () => {
+          if (!isTutorialSequenceCurrent(token, cardId)) return;
+          flashTutorialFinaleSeal(1, cardId);
+        });
+
+        queueTutorialTimer(token, 9100, () => {
+          if (!isTutorialSequenceCurrent(token, cardId)) return;
+          flashTutorialFinaleSeal(2, cardId);
+        });
+
+        queueTutorialTimer(token, 10000, () => {
+          if (!isTutorialSequenceCurrent(token, cardId)) return;
+          flashTutorialFinaleSeal(3, cardId);
+        });
+
+        queueTutorialTimer(token, 11000, () => {
+          if (!isTutorialSequenceCurrent(token, cardId)) return;
+          flashTutorialFinaleSeal(4, cardId);
+        });
+
+        queueTutorialTimer(token, 12000, () => {
+          if (!isTutorialSequenceCurrent(token, cardId)) return;
+          flashTutorialFinaleSeal(5, cardId);
+        });
+
+        queueTutorialTimer(token, 14000, () => {
+          if (!isTutorialSequenceCurrent(token, cardId)) return;
+          flashTutorialFinaleSeal(1, cardId);
+        });
+
+        const resolved = resolveInlineMediaUrl(tutorialAudioPath(6));
+        if (!resolved) {
+          throw new Error('Nao consegui abrir o audio final do tutorial.');
+        }
+        stopActiveAudio();
+        const audio = new Audio(resolved);
+        audio.preload = 'auto';
+        state.game.activeAudio = { type: 'audio', instance: audio };
+        await new Promise((resolve) => {
+          const finish = () => {
+            audio.removeEventListener('ended', finish);
+            audio.removeEventListener('error', finish);
+            if (state.game.activeAudio?.instance === audio) {
+              state.game.activeAudio = null;
+            }
+            resolve();
+          };
+          audio.addEventListener('ended', finish, { once: true });
+          audio.addEventListener('error', finish, { once: true });
+          audio.play().catch(finish);
+        });
+        if (state.game.tutorial.sequenceToken !== token || !state.game.active) return;
+        setTutorialCompleted(true);
+        resetTutorialRuntime({ preserveCompletion: true });
+        clearGameSessionLocally();
+        saveSelectedGameCount(TUTORIAL_NORMAL_GAME_COUNT);
+        beginGame();
       }
 
       function stopCardsRefresh() {
@@ -1129,10 +2329,10 @@
 
       function baseCandidateCards() {
         if (isAdminUser()) {
-          return state.allCards.slice();
+          return state.allCards.filter((card) => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
         }
         const lockedCards = state.allCards.filter(card => !state.userCards.has(card.id) && !isCardHiddenForUser(card.id));
-        const playableLockedCards = lockedCards.filter(hasCoreFlashcardText);
+        const playableLockedCards = lockedCards.filter(card => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
         if (state.userCards.size >= EARLY_FLASHCARD_LIMIT) {
           return playableLockedCards;
         }
@@ -1196,22 +2396,142 @@
         return Boolean(safeText(card?.english) && safeText(card?.portuguese));
       }
 
+      function normalizeFlashcardImageSource(value) {
+        const text = safeText(value);
+        if (!text) return '';
+        if (/^https?:\/\//i.test(text)) {
+          try {
+            const parsed = new URL(text);
+            return String(parsed.pathname || '').replace(/^\/+/, '');
+          } catch (_error) {
+            return text.replace(/^\/+/, '');
+          }
+        }
+        const proxyMatch = text.match(/^\/?api\/r2-media\/(.+)$/i);
+        if (proxyMatch) {
+          return safeText(proxyMatch[1]);
+        }
+        return text.replace(/^\/+/, '');
+      }
+
+      function isFlashcardPlaceholderImageUrl(value) {
+        return normalizeFlashcardImageSource(value) === FLASHCARD_CAMERA_OBJECT_KEY;
+      }
+
+      function hasPlayableFlashcardImage(card) {
+        const imageUrl = safeText(card?.imageUrl);
+        return Boolean(imageUrl && !isFlashcardPlaceholderImageUrl(imageUrl));
+      }
+
+      function isAdminMagicImageSlot(card) {
+        return !hasPlayableFlashcardImage(card);
+      }
+
+      function adminCardDisplayImageUrl(card) {
+        const imageUrl = safeText(card?.imageUrl);
+        if (imageUrl && !isFlashcardPlaceholderImageUrl(imageUrl)) {
+          return imageUrl;
+        }
+        return FLASHCARD_CAMERA_IMAGE_URL;
+      }
+
       function normalizeFlashcardsDataPath(path) {
         const cleaned = safeText(path);
         if (!cleaned) return '';
-        return cleaned.replace(/^\/+/, '');
+        if (/^https?:\/\//i.test(cleaned)) {
+          return cleaned;
+        }
+        return `/${cleaned.replace(/^\/+/, '')}`;
       }
 
-      function dataManifestPaths() {
-        return isAdminUser()
-          ? DATA_MANIFEST_LOCAL_PATHS.concat(DATA_MANIFEST_REMOTE_PATHS)
-          : DATA_MANIFEST_REMOTE_PATHS.concat(DATA_MANIFEST_LOCAL_PATHS);
+      function withNoCacheUrl(path) {
+        const normalized = normalizeFlashcardsDataPath(path);
+        if (!normalized) return '';
+        const separator = normalized.includes('?') ? '&' : '?';
+        return `${normalized}${separator}_pt=${Date.now()}`;
       }
 
-      function localLevelManifestPaths() {
-        return isAdminUser()
-          ? LOCAL_LEVEL_FILES_LOCAL_PATHS.concat(LOCAL_LEVEL_FILES_REMOTE_PATHS)
-          : LOCAL_LEVEL_FILES_REMOTE_PATHS.concat(LOCAL_LEVEL_FILES_LOCAL_PATHS);
+      function encodePublicObjectKey(objectKey) {
+        return safeText(objectKey)
+          .split('/')
+          .filter(Boolean)
+          .map((segment) => encodeURIComponent(segment))
+          .join('/');
+      }
+
+      function buildFlashcardsPublicUrl(objectKey) {
+        const encodedKey = encodePublicObjectKey(objectKey);
+        return encodedKey ? `/${FLASHCARDS_LOCAL_SOURCE_PREFIX}/${encodedKey}` : '';
+      }
+
+      function isFlashcardsDeckPath(value) {
+        const text = safeText(value);
+        if (!text) return false;
+        if (/^https?:\/\//i.test(text)) {
+          try {
+            const parsed = new URL(text);
+            const parsedPath = decodeURIComponent(String(parsed.pathname || '')).replace(/^\/+/, '');
+            return parsed.origin === window.location.origin
+              && parsedPath.toLowerCase().endsWith('.json')
+              && parsedPath.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`);
+          } catch (_error) {
+            return false;
+          }
+        }
+        const normalized = text.replace(/^\/+/, '');
+        return normalized.toLowerCase().endsWith('.json')
+          && normalized.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`);
+      }
+
+      function resolveManifestDeckPath(file) {
+        const fallbackName = safeText(file?.name) || safeText(file?.title) || 'deck.json';
+        const candidates = [
+          safeText(file?.path),
+          safeText(file?.source),
+          safeText(file?.name)
+        ].filter(Boolean);
+
+        for (const candidate of candidates) {
+          if (isFlashcardsDeckPath(candidate)) {
+            if (/^https?:\/\//i.test(candidate)) {
+              return candidate;
+            }
+            return `/${candidate.replace(/^\/+/, '')}`;
+          }
+
+          const normalized = candidate.replace(/^\/+/, '');
+          if (/^[^/]+\.json$/i.test(normalized)) {
+            return buildFlashcardsPublicUrl(normalized);
+          }
+          if (normalized.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`) && normalized.toLowerCase().endsWith('.json')) {
+            return `/${normalized}`;
+          }
+        }
+
+        throw new Error(`O deck "${fallbackName}" precisa apontar para ${FLASHCARDS_LOCAL_SOURCE_PREFIX}/.`);
+      }
+
+      function sortDeckCatalogEntries(entries) {
+        return entries.sort((left, right) => (
+          safeText(left?.title).localeCompare(safeText(right?.title), 'pt-BR', {
+            sensitivity: 'base',
+            numeric: true
+          })
+        ));
+      }
+
+      function normalizeDeckFileName(file) {
+        return safeText(file?.name) || safeText(file?.path).split('/').pop() || 'deck.json';
+      }
+
+      function buildDeckCatalogEntry(file, payload, cards) {
+        const defaultTitle = normalizeDeckFileName(file).replace(/\.json$/i, '') || 'Deck';
+        return {
+          source: safeText(file?.sourceKey || file?.name || file?.path),
+          title: repairDisplayText(payload?.title) || safeText(file?.title) || defaultTitle,
+          path: safeText(file?.path),
+          count: Array.isArray(cards) ? cards.length : (Number.isFinite(Number(file?.count)) ? Math.max(0, Number(file.count)) : 0)
+        };
       }
 
       async function fetchFirstWorkingJson(paths) {
@@ -1219,7 +2539,7 @@
           const normalized = normalizeFlashcardsDataPath(path);
           if (!normalized) continue;
           try {
-            const response = await fetch(normalized, { cache: 'no-store' });
+            const response = await fetch(withNoCacheUrl(normalized), { cache: 'no-store' });
             if (response.ok) {
               const data = await response.json();
               return { data, response };
@@ -1231,8 +2551,34 @@
         throw new Error('Nao consegui abrir o manifesto dos flashcards.');
       }
 
+      async function fetchRemoteManifestOrEmpty(path) {
+        const normalized = normalizeFlashcardsDataPath(path);
+        if (!normalized) {
+          return {
+            data: { generatedAt: new Date().toISOString(), files: [] },
+            response: null
+          };
+        }
+        try {
+          const response = await fetch(withNoCacheUrl(normalized), { cache: 'no-store' });
+          if (response.ok) {
+            const data = await response.json();
+            return { data, response };
+          }
+          if (response.status === 404) {
+            return {
+              data: { generatedAt: new Date().toISOString(), files: [] },
+              response
+            };
+          }
+        } catch (_error) {
+          // fall through
+        }
+        throw new Error('Nao consegui abrir o manifesto dos flashcards.');
+      }
+
       async function refreshCardsFromNetwork() {
-        const manifestPayload = await fetchFirstWorkingJson(dataManifestPaths());
+        const manifestPayload = await fetchRemoteManifestOrEmpty(DATA_MANIFEST_REMOTE_PATH);
         const manifest = manifestPayload?.data || {};
         const serverDateHeader = manifestPayload?.response?.headers?.get('date') || '';
         const serverNow = Date.parse(serverDateHeader) || Date.parse(String(manifest?.generatedAt || '')) || 0;
@@ -1241,60 +2587,57 @@
           saveTimeOffsetMs();
         }
         const manifestFiles = Array.isArray(manifest?.files) ? manifest.files : [];
-        let localLevelFiles = [];
-        try {
-          const localLevelsPayload = await fetchFirstWorkingJson(localLevelManifestPaths());
-          const localFiles = Array.isArray(localLevelsPayload?.data?.files) ? localLevelsPayload.data.files : [];
-          localLevelFiles = localFiles.map((file) => ({
-            name: file.name || file.path,
-            path: file.path,
-            sourceKey: safeText(file.source) || safeText(file.path) || safeText(file.name),
-            idSource: safeText(file.source) || `${safeText(file.folder) || 'local'}-${safeText(file.path) || safeText(file.name)}`
-          }));
-        } catch (_error) {
-          localLevelFiles = [];
+        if (!manifestFiles.length) {
+          throw new Error(`A pasta ${FLASHCARDS_LOCAL_SOURCE_PREFIX} nao possui decks publicados.`);
         }
-        const files = [
-          ...manifestFiles.map((file) => ({
-            name: file.name || file.path,
-            path: file.path,
-            sourceKey: file.source || file.name || file.path,
-            idSource: file.source || file.name || file.path
-          })),
-          ...localLevelFiles
-        ];
+        const files = manifestFiles.map((file) => {
+          const resolvedPath = resolveManifestDeckPath(file);
+          const sourceKey = safeText(file?.source || file?.name || resolvedPath) || resolvedPath;
+          return {
+            name: file.name || file.path || file.source || resolvedPath,
+            title: file.title || '',
+            path: resolvedPath,
+            sourceKey,
+            idSource: sourceKey,
+            count: file.count
+          };
+        });
         const responses = await Promise.all(files.map(async (file) => {
           const filePath = normalizeFlashcardsDataPath(file.path);
-          if (!filePath) return [];
-          const response = await fetch(filePath, { cache: 'no-store' });
-          if (!response.ok) return [];
+          if (!filePath) {
+            throw new Error(`O deck "${safeText(file?.name) || 'deck.json'}" nao possui URL valida no manifesto.`);
+          }
+          const response = await fetch(withNoCacheUrl(filePath), { cache: 'no-store' });
+          if (!response.ok) {
+            throw new Error(`Nao consegui abrir o deck "${safeText(file?.name) || 'deck.json'}" em ${FLASHCARDS_LOCAL_SOURCE_PREFIX}.`);
+          }
           const payload = await response.json();
-          return flattenPayload(file.name || file.path, payload, {
+          const cards = flattenPayload(file.name || file.path, payload, {
             sourceKey: file.sourceKey,
             idSource: file.idSource
           });
+          return {
+            cards,
+            deck: buildDeckCatalogEntry(file, payload, cards)
+          };
         }));
-        return responses.flat();
+        return {
+          cards: responses.flatMap((entry) => Array.isArray(entry?.cards) ? entry.cards : []),
+          deckCatalog: sortDeckCatalogEntries(
+            responses
+              .map((entry) => entry?.deck)
+              .filter((deck) => safeText(deck?.source))
+          )
+        };
       }
 
       async function loadCards() {
-        try {
-          const freshCards = await refreshCardsFromNetwork();
-          state.allCards = freshCards;
-          await refreshAdminDecks();
-          await refreshAdminReportSummary();
-          saveCachedCards(freshCards);
-          return;
-        } catch (networkError) {
-          const cachedCards = readCachedCards();
-          if (cachedCards.length) {
-            state.allCards = cachedCards;
-            await refreshAdminDecks();
-            await refreshAdminReportSummary();
-            return;
-          }
-          throw networkError;
-        }
+        const freshPayload = await refreshCardsFromNetwork();
+        state.allCards = Array.isArray(freshPayload?.cards) ? freshPayload.cards : [];
+        state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
+        await refreshAdminDecks();
+        await refreshAdminReportSummary();
+        saveCachedCards(state.allCards);
       }
 
       function renderMetrics() {
@@ -1320,12 +2663,12 @@
           return;
         }
 
-        const adminMode = isAdminUser();
+        const adminMode = isAdminUser() && Boolean(els.adminTools);
         target.innerHTML = cards.map(card => `
           <article class="mini-card" data-card-id="${escapeHtml(card.id)}">
             <div class="mini-card__image" ${adminMode ? `data-admin-image="${escapeHtml(card.id)}"` : ''}>
-              ${card.imageUrl
-                ? `<img src="${escapeHtml(card.imageUrl)}" alt="${escapeHtml(card.english || card.portuguese || card.deckTitle)}" style="${escapeHtml(card.imageStyle || '')}">`
+              ${safeText(card.imageDisplayUrl || card.imageUrl)
+                ? `<img src="${escapeHtml(card.imageDisplayUrl || card.imageUrl)}" alt="${escapeHtml(card.english || card.portuguese || card.deckTitle)}" style="${escapeHtml(card.imageStyle || '')}">`
                 : (card.imageFallbackMarkup || `<div class="mini-card__fallback">${escapeHtml(card.deckTitle)}</div>`)}
               ${card.sealMarkup || ''}
               ${card.loaderMarkup || ''}
@@ -1407,7 +2750,7 @@
       }
 
       function buildAdminLibraryCardView(card) {
-        const isEmptySlot = !card.english && !card.portuguese && !card.imageUrl && !card.audioUrl;
+        const isEmptySlot = !hasPlayableFlashcardImage(card);
         const sealOpacity = card.audioUrl ? 1 : (isEmptySlot ? 0.3 : 0.2);
         const sealMarkup = `<button class="mini-card__seal-btn" type="button" data-admin-audio="${escapeHtml(card.id)}" aria-label="Ouvir audio do flashcard" ${card.audioUrl ? '' : 'disabled'}><img class="mini-card__seal" src="${escapeHtml(phaseMeta(5).sealPath)}" alt="${escapeHtml(phaseMeta(5).label)}" style="--seal-opacity:${escapeHtml(String(sealOpacity))}"></button>`;
         const reportCounts = state.admin.reportCounts.get(card.id) || {};
@@ -1420,14 +2763,13 @@
           progress: adminReadyProgressRecord(card.id),
           displayEnglish: card.english || card.portuguese || card.deckTitle,
           displayPortuguese: card.portuguese || '',
+          imageDisplayUrl: adminCardDisplayImageUrl(card),
           imageStyle: '',
           loaderMarkup: '',
           progressMarkup: '',
           sealMarkup,
           reportsMarkup: reportsMarkup ? `<div class="mini-card__reports">${reportsMarkup}</div>` : '',
-          imageFallbackMarkup: isEmptySlot
-            ? '<div class="mini-card__fallback is-empty-slot">Vazio</div>'
-            : `<div class="mini-card__fallback">${escapeHtml(card.deckTitle)}</div>`,
+          imageFallbackMarkup: `<div class="mini-card__fallback">${escapeHtml(card.deckTitle)}</div>`,
           wordMarkup: `<div class="mini-card__empty-field mini-card__editable" contenteditable="plaintext-only" spellcheck="false" data-card-id="${escapeHtml(card.id)}" data-admin-edit-field="portuguese" data-original-value="${escapeHtml(card.portuguese || '')}">${escapeHtml(card.portuguese || 'Portugues')}</div>`,
           subwordMarkup: `<div class="mini-card__empty-field mini-card__editable" contenteditable="plaintext-only" spellcheck="false" data-card-id="${escapeHtml(card.id)}" data-admin-edit-field="english" data-original-value="${escapeHtml(card.english || '')}">${escapeHtml(card.english || 'Ingles')}</div>`
         };
@@ -1456,7 +2798,7 @@
           source: safeText(source),
           sourceIndex: -1,
           deckTitle: safeText(deckTitle) || 'Deck',
-          imageUrl: '',
+          imageUrl: FLASHCARD_CAMERA_IMAGE_URL,
           english: '',
           portuguese: '',
           audioUrl: '',
@@ -1527,7 +2869,7 @@
         els.libraryPagination.hidden = !hasPagination;
         els.libraryPageInfo.textContent = totalCards
           ? `Pagina ${state.libraryPage} de ${pageCount}`
-          : 'Sem paginas';
+          : '0';
         els.libraryPrevBtn.disabled = !hasPagination || state.libraryPage <= 1;
         els.libraryNextBtn.disabled = !hasPagination || state.libraryPage >= pageCount;
       }
@@ -1540,6 +2882,43 @@
 
       function adminDeckOptions() {
         return Array.isArray(state.admin.decks) ? state.admin.decks.slice() : [];
+      }
+
+      function adminEditableSource(card) {
+        return safeText(card?.adminSource || card?.source);
+      }
+
+      function normalizeDeckTitleKey(value) {
+        return normalizeText(value).toLocaleLowerCase('pt-BR');
+      }
+
+      function reconcileAdminCardSources() {
+        const decks = adminDeckOptions();
+        if (!decks.length || !Array.isArray(state.allCards) || !state.allCards.length) {
+          return;
+        }
+        const titleToSource = new Map();
+        decks.forEach((deck) => {
+          const titleKey = normalizeDeckTitleKey(deck?.title);
+          const source = safeText(deck?.source);
+          if (!titleKey || !source) return;
+          if (titleToSource.has(titleKey) && titleToSource.get(titleKey) !== source) {
+            titleToSource.set(titleKey, '');
+            return;
+          }
+          titleToSource.set(titleKey, source);
+        });
+        state.allCards = state.allCards.map((card) => {
+          const titleKey = normalizeDeckTitleKey(card?.deckTitle);
+          const matchedSource = titleToSource.get(titleKey);
+          if (!matchedSource) {
+            return { ...card };
+          }
+          return {
+            ...card,
+            adminSource: matchedSource
+          };
+        });
       }
 
       function selectedAdminDeckMeta() {
@@ -1568,11 +2947,11 @@
         const reportFilter = safeText(state.admin.reportFilter);
         let cards = !selectedSource
           ? state.allCards.slice()
-          : state.allCards.filter((card) => safeText(card?.source) === selectedSource);
+          : state.allCards.filter((card) => adminEditableSource(card) === selectedSource);
         cards = cards.map(buildAdminDraftCard);
         const pendingCards = !selectedSource
           ? state.admin.pendingNewCards.slice()
-          : state.admin.pendingNewCards.filter((card) => safeText(card?.source) === selectedSource);
+          : state.admin.pendingNewCards.filter((card) => adminEditableSource(card) === selectedSource);
         cards = cards.concat(pendingCards.map((card) => ({ ...card })));
         if (reportFilter) {
           cards = cards.filter((card) => Number(state.admin.reportCounts.get(card.id)?.[reportFilter] || 0) > 0);
@@ -1632,6 +3011,7 @@
         } catch (_error) {
           state.admin.decks = [];
         }
+        reconcileAdminCardSources();
         syncAdminDeckSelect();
       }
 
@@ -1768,6 +3148,10 @@
           els.adminPasteTextBtn.disabled = state.admin.busy || !adminMode;
           els.adminPasteTextBtn.textContent = state.admin.busy ? 'Processando...' : 'Colar texto';
         }
+        if (els.adminSubmitPasteBtn) {
+          els.adminSubmitPasteBtn.disabled = state.admin.busy || !adminMode;
+          els.adminSubmitPasteBtn.textContent = state.admin.busy ? 'Enviando...' : 'Enviar';
+        }
         if (els.adminCreateCardsBtn) {
           els.adminCreateCardsBtn.disabled = state.admin.busy || !adminMode || !safeText(state.admin.selectedDeckSource);
           els.adminCreateCardsBtn.textContent = state.admin.busy ? 'Processando...' : 'Criar cartas';
@@ -1775,6 +3159,13 @@
         if (els.adminFillImageBtn) {
           els.adminFillImageBtn.disabled = state.admin.busy || !adminMode;
           els.adminFillImageBtn.textContent = state.admin.busy ? 'Processando...' : 'Preencher imagem';
+        }
+        if (els.adminMagicBtn) {
+          els.adminMagicBtn.disabled = state.admin.busy || !adminMode;
+          const magicLabel = els.adminMagicBtn.querySelector('.btn__label');
+          if (magicLabel) {
+            magicLabel.textContent = state.admin.busy ? 'Processando...' : 'Magic';
+          }
         }
         if (els.adminFillAudioBtn) {
           els.adminFillAudioBtn.disabled = state.admin.busy || !adminMode;
@@ -1784,24 +3175,70 @@
       }
 
       async function reloadCardsFromNetwork() {
-        const freshCards = await refreshCardsFromNetwork();
-        state.allCards = Array.isArray(freshCards) ? freshCards : [];
+        const freshPayload = await refreshCardsFromNetwork();
+        state.allCards = Array.isArray(freshPayload?.cards) ? freshPayload.cards : [];
+        state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
         await refreshAdminDecks();
         await refreshAdminReportSummary();
         saveCachedCards(state.allCards);
         refreshLibrary();
       }
 
+      async function reloadCardsFromNetworkWithRetry(maxAttempts = 5, delayMs = 900) {
+        let lastError = null;
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+          try {
+            await reloadCardsFromNetwork();
+            return true;
+          } catch (error) {
+            lastError = error;
+            if (attempt < maxAttempts) {
+              await wait(delayMs);
+            }
+          }
+        }
+        throw lastError || new Error('Nao consegui abrir o manifesto dos flashcards.');
+      }
+
+      async function tryRefreshPublishedFlashcards(options = {}) {
+        try {
+          await reloadCardsFromNetworkWithRetry(
+            Number.isInteger(options.maxAttempts) ? options.maxAttempts : 5,
+            Number.isFinite(options.delayMs) ? options.delayMs : 900
+          );
+          return true;
+        } catch (_error) {
+          return false;
+        }
+      }
+
+      function currentVisibleAdminCards() {
+        if (!isAdminUser()) {
+          return currentLibrarySourceCards();
+        }
+        const cards = currentLibraryPageSlice(currentAdminDeckCards());
+        const seen = new Set();
+        return cards.filter((card) => {
+          const cardId = safeText(card?.id);
+          if (!cardId || seen.has(cardId)) return false;
+          seen.add(cardId);
+          return true;
+        });
+      }
+
       function collectAdminCurrentPageTargets(kind) {
-        return currentLibrarySourceCards().filter((card) => {
+        return currentVisibleAdminCards().filter((card) => {
           if (kind === 'text') {
-            return !card.english || !card.portuguese;
+            return !safeText(card?.english) || !safeText(card?.portuguese);
           }
           if (kind === 'image') {
-            return !card.imageUrl;
+            return !hasPlayableFlashcardImage(card) && safeText(card?.english) && safeText(card?.portuguese);
+          }
+          if (kind === 'magic') {
+            return isAdminMagicImageSlot(card) && safeText(card?.english) && safeText(card?.portuguese);
           }
           if (kind === 'audio') {
-            return !card.audioUrl;
+            return !safeText(card?.audioUrl);
           }
           return false;
         });
@@ -1887,7 +3324,7 @@
         if (!card) return;
         const nextValue = clampAdminEditableText(value);
         const payload = {
-          source: card.source,
+          source: adminEditableSource(card),
           sourceIndex: card.sourceIndex
         };
         if (field === 'english') {
@@ -1899,13 +3336,13 @@
       }
 
       async function runAdminSaveDrafts() {
-        if (!isAdminUser() || state.admin.busy || !adminHasPendingChanges()) return;
+        if (!isAdminUser() || state.admin.busy || !adminHasPendingChanges()) return null;
 
         const updates = Array.from(state.admin.draftCards.entries()).map(([cardId, draft]) => {
           const card = state.allCards.find((entry) => entry.id === cardId);
           if (!card) return null;
           return {
-            source: card.source,
+            source: adminEditableSource(card),
             sourceIndex: card.sourceIndex,
             portuguese: typeof draft.portuguese === 'string' ? draft.portuguese : card.portuguese,
             english: typeof draft.english === 'string' ? draft.english : card.english
@@ -1916,6 +3353,7 @@
           source: card.source,
           deckTitle: card.deckTitle,
           category: card.category,
+          imageUrl: card.imageUrl,
           portuguese: card.portuguese,
           english: card.english
         }));
@@ -1936,16 +3374,20 @@
           });
           state.admin.draftCards = new Map();
           state.admin.pendingNewCards = [];
-          await reloadCardsFromNetwork();
+          const refreshed = await tryRefreshPublishedFlashcards();
           const updatedCount = Number(payload?.updatedCount) || 0;
           const createdCount = Number(payload?.createdCount) || 0;
           state.admin.status = createdCount || updatedCount
-            ? `Salvo. ${createdCount} carta(s) nova(s) e ${updatedCount} alteracao(oes) publicadas.`
+            ? (refreshed
+              ? `Salvo. ${createdCount} carta(s) nova(s) e ${updatedCount} alteracao(oes) publicadas.`
+              : `Salvo. ${createdCount} carta(s) nova(s) e ${updatedCount} alteracao(oes) publicadas. A lista pode levar alguns segundos para atualizar.`)
             : 'Nenhuma alteracao pendente para salvar.';
           state.admin.error = false;
+          return payload;
         } catch (error) {
           state.admin.status = error.message || 'Falha ao salvar as alteracoes.';
           state.admin.error = true;
+          return null;
         } finally {
           state.admin.busy = false;
           syncAdminTools();
@@ -1979,11 +3421,28 @@
             waitingMessage: `Publicando "${deckTitle}" no R2...`,
             successMessage: `Deck "${deckTitle}" criado.`
           });
-          await reloadCardsFromNetwork();
+          const refreshed = await tryRefreshPublishedFlashcards();
+          if (!refreshed) {
+            state.admin.decks = [
+              ...state.admin.decks.filter((deck) => safeText(deck?.source) !== safeText(payload?.source)),
+              {
+                source: safeText(payload?.source),
+                title: safeText(payload?.title) || deckTitle,
+                coverImage: safeText(payload?.coverImage),
+                count: 0
+              }
+            ].sort((left, right) => safeText(left?.title).localeCompare(safeText(right?.title), 'pt-BR', {
+              sensitivity: 'base',
+              numeric: true
+            }));
+            syncAdminDeckSelect();
+          }
           state.admin.selectedDeckSource = safeText(payload?.source);
           state.libraryPage = 1;
           refreshLibrary();
-          state.admin.status = `Deck "${deckTitle}" criado e publicado no R2.`;
+          state.admin.status = refreshed
+            ? `Deck "${deckTitle}" criado e publicado no R2.`
+            : `Deck "${deckTitle}" criado e publicado no R2. A lista pode levar alguns segundos para atualizar.`;
           state.admin.error = false;
         } catch (error) {
           state.admin.status = error.message || 'Falha ao criar o deck vazio.';
@@ -2099,6 +3558,7 @@
       }
 
       function openGameReportMenu() {
+        if (state.game.tutorial.interactionLocked) return;
         if (!state.game.active || !currentGameCard() || !els.gameReportMenu) return;
         state.game.paused = true;
         cleanupGameRecognition();
@@ -2177,7 +3637,7 @@
         syncAdminTools();
         try {
           await postAdminFlashcardAction('/api/admin/flashcards/delete-asset', {
-            source: card.source,
+            source: adminEditableSource(card),
             sourceIndex: card.sourceIndex,
             kind
           });
@@ -2207,7 +3667,7 @@
         syncAdminTools();
         try {
           await postAdminFlashcardAction('/api/admin/flashcards/delete-card', {
-            source: card.source,
+            source: adminEditableSource(card),
             sourceIndex: card.sourceIndex
           });
           closeAdminCardPopover();
@@ -2224,15 +3684,53 @@
 
       async function runAdminFlashcardFill(kind) {
         if (!isAdminUser() || state.admin.busy) return;
-        if (kind !== 'text' && adminHasPendingChanges()) {
+        if (kind !== 'text' && kind !== 'image' && kind !== 'magic' && adminHasPendingChanges()) {
           setAdminToolsStatus('Salve os rascunhos antes de preencher imagem ou audio.', true);
           syncAdminTools();
           return;
         }
+        if (kind === 'image' && !safeText(state.admin.prompt)) {
+          setAdminToolsStatus('Digite o prompt manual antes de preencher imagens.', true);
+          syncAdminTools();
+          return;
+        }
+        if ((kind === 'image' || kind === 'magic') && adminHasPendingChanges()) {
+          setAdminToolsStatus('Salvando os rascunhos antes de gerar imagens...', false);
+          syncAdminTools();
+          const saved = await runAdminSaveDrafts();
+          if (!saved || state.admin.error) {
+            return;
+          }
+        }
 
         const targets = collectAdminCurrentPageTargets(kind);
-        const label = kind === 'text' ? 'textos' : kind === 'image' ? 'imagens' : 'audios';
+        const label = kind === 'text'
+          ? 'textos'
+          : kind === 'image'
+            ? 'imagens'
+            : kind === 'magic'
+              ? 'imagens magic'
+              : 'audios';
         if (!targets.length) {
+          if (kind === 'image') {
+            const cardsMissingImage = currentVisibleAdminCards().filter((card) => !hasPlayableFlashcardImage(card));
+            if (cardsMissingImage.length) {
+              setAdminToolsStatus('Preencha Portugues e Ingles dos cards vazios antes de gerar imagens.', true);
+              syncAdminTools();
+              return;
+            }
+          }
+          if (kind === 'magic') {
+            const cardsWithCamera = currentVisibleAdminCards().filter((card) => isAdminMagicImageSlot(card));
+            if (cardsWithCamera.length) {
+              setAdminToolsStatus('Preencha Portugues e Ingles dos cards sem imagem real antes de usar o Magic.', true);
+              syncAdminTools();
+              return;
+            }
+            setAdminToolsStatus('Nenhum slot vazio de imagem nesta pagina para o Magic.', false);
+            syncAdminTools();
+            return;
+          }
           setAdminToolsStatus(`Nenhum slot vazio de ${label} nesta pagina.`, false);
           syncAdminTools();
           return;
@@ -2240,7 +3738,7 @@
 
         const endpoint = kind === 'text'
           ? '/api/admin/flashcards/fill-missing-text'
-          : kind === 'image'
+          : (kind === 'image' || kind === 'magic')
             ? '/api/admin/flashcards/fill-missing-images'
             : '/api/admin/flashcards/fill-missing-audio';
 
@@ -2253,14 +3751,15 @@
           const payload = await postAdminFlashcardAction(endpoint, {
             cards: targets.map((card) => ({
               id: card.id,
-              source: card.source,
+              source: adminEditableSource(card),
               sourceIndex: card.sourceIndex,
               deckTitle: card.deckTitle,
               english: card.english,
-              portuguese: card.portuguese,
-              category: card.category
-            })),
+            portuguese: card.portuguese,
+            category: card.category
+          })),
             basePrompt: state.admin.prompt || '',
+            magicMode: kind === 'magic',
             maxChars: 32,
             ...(kind === 'text' ? { persist: false } : {})
           });
@@ -2297,39 +3796,24 @@
       }
 
       function refreshLibrary() {
-        const adminMode = isAdminUser();
         syncAdminTheme();
-        const cards = adminMode
-          ? currentAdminDeckCards().map(buildAdminLibraryCardView)
-          : userProgressCards().map(buildLibraryCardView);
+        const cards = userProgressCards().map(buildLibraryCardView);
         const visibleCards = currentLibraryPageSlice(cards);
-        const username = state.user?.username ? ` de ${state.user.username}` : '';
-        const selectedDeck = adminMode ? selectedAdminDeckMeta() : null;
         if (els.libraryTitle) {
-          els.libraryTitle.textContent = adminMode
-            ? (selectedDeck ? `Deck: ${selectedDeck.title}` : 'Flashcards do administrador')
-            : 'Meus flashcards';
+          els.libraryTitle.textContent = 'FlashCards';
         }
-        if (els.adminBadge) {
-          els.adminBadge.hidden = !adminMode;
-        }
-        els.allSectionCopy.textContent = cards.length
-          ? adminMode
-            ? `${cards.length} flashcards${username} com acesso total e selo Diamante.`
-            : `${cards.length} flashcards${username}.`
-          : 'Zero flashcards por enquanto. Ganhe o primeiro para iniciar sua biblioteca.';
+        els.allSectionCopy.textContent = String(cards.length || 0);
         renderMiniCards(
           els.allGrid,
           visibleCards,
-          adminMode
-            ? 'Nenhum flashcard foi carregado para o administrador ainda.'
-            : 'Zero flashcards aqui ainda. Jogue para ganhar o primeiro.'
+          '0'
         );
         renderLibraryPagination(cards.length);
         renderMetrics();
         updateGameChips();
         syncGameSetupSummary();
         syncAdminTools();
+        syncPremiumGateVisibility();
       }
 
       function renderStars(stars) {
@@ -2337,6 +3821,21 @@
         for (let index = 0; index < GAME_STAR_TARGET; index += 1) {
           const star = document.createElement('img');
           star.className = `star${index < stars ? ' is-on' : ''}`;
+          star.src = STAR_ICON_PATH;
+          star.alt = '';
+          els.gameStars.appendChild(star);
+        }
+      }
+
+      function renderStarsLossState(initialStars, lostCount) {
+        els.gameStars.innerHTML = '';
+        const safeInitialStars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(initialStars) || 0));
+        const safeLostCount = Math.max(0, Math.min(safeInitialStars, Number(lostCount) || 0));
+        for (let index = 0; index < GAME_STAR_TARGET; index += 1) {
+          const star = document.createElement('img');
+          const isEarned = index < safeInitialStars;
+          const isLost = isEarned && index >= (safeInitialStars - safeLostCount);
+          star.className = `star${isEarned ? ' is-on' : ''}${isLost ? ' is-lost' : ''}`;
           star.src = STAR_ICON_PATH;
           star.alt = '';
           els.gameStars.appendChild(star);
@@ -2629,6 +4128,9 @@
       }
 
       function playPromptAudio(card, options = {}) {
+        if (shouldSuppressTutorialCardAudio(card)) {
+          return Promise.resolve(false);
+        }
         const rate = Number(options?.rate) > 0 ? Number(options.rate) : 1;
         stopActiveAudio();
         if (card.audioUrl) {
@@ -2693,6 +4195,24 @@
           // ignore
         }
         playAudioWithSoftEnd(audio).catch?.(() => {});
+      }
+
+      function playLessAudio() {
+        const resolved = resolveInlineMediaUrl(LESS_SOUND_PATH);
+        if (!resolved) return;
+        if (!state.game.milestoneAudios.has(resolved)) {
+          const audio = new Audio(resolved);
+          audio.preload = 'auto';
+          state.game.milestoneAudios.set(resolved, audio);
+        }
+        const audio = state.game.milestoneAudios.get(resolved);
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+        } catch (_error) {
+          // ignore
+        }
+        audio.play().catch(() => {});
       }
 
       function triggerFourStarGlow() {
@@ -2962,6 +4482,44 @@
         return { id: card.id, stars: 0, stage: 1, missesWithoutStars: 0, typingMistakes: 0, pool };
       }
 
+      function applyGameSessionSnapshot(snapshot, { addFreshCard = false } = {}) {
+        if (!snapshot || !state.entry.cardsReady || state.game.tutorial.active) return false;
+        const entries = Array.isArray(snapshot.entries) ? snapshot.entries : [];
+        if (!entries.length) return false;
+
+        resetTutorialRuntime({ preserveCompletion: true });
+        state.game.entries.clear();
+        state.game.queue = [];
+        state.game.currentId = null;
+        state.game.listening = false;
+        state.game.paused = false;
+        state.game.canListen = false;
+        state.game.transitioning = false;
+        state.game.active = true;
+        state.game.sessionStartedAt = Date.now();
+        state.game.selectedCount = snapshot.selectedCount || DEFAULT_GAME_CONTEXT_LIMIT;
+        state.game.contextLimit = snapshot.contextLimit || GAME_ACTIVE_CARD_CAP;
+
+        entries.forEach((entry) => {
+          if (!cardById(entry.id)) return;
+          state.game.entries.set(entry.id, { ...entry });
+        });
+        state.game.queue = (Array.isArray(snapshot.queue) ? snapshot.queue : [])
+          .filter((id) => state.game.entries.has(id));
+        state.game.currentId = state.game.entries.has(snapshot.currentId) ? snapshot.currentId : null;
+
+        if (!state.game.currentId) {
+          state.game.currentId = state.game.queue.shift() || Array.from(state.game.entries.keys())[0] || null;
+        }
+
+        if (addFreshCard && state.game.entries.size < GAME_ACTIVE_CARD_CAP) {
+          refillGameEntry('base', Math.min(GAME_ACTIVE_CARD_CAP, state.game.entries.size + 1));
+        }
+
+        persistGameSessionLocally();
+        return state.game.entries.size > 0 && Boolean(state.game.currentId);
+      }
+
       function buildOrderedDeckSelection(cards, limit) {
         const normalizedLimit = Math.max(0, Number(limit) || 0);
         if (!normalizedLimit || !cards.length) return [];
@@ -2990,12 +4548,20 @@
           imageMarkup += `<img class="${overlayClassName}" src="${escapeHtml(stageConfig.overlayFlag)}" alt="">`;
         }
         const record = state.userCards.get(card.id) || null;
+        const tutorialFinale = tutorialFinaleState();
+        const hasTutorialFinale = Boolean(
+          state.game.tutorial.active
+          && tutorialFinale.active
+          && tutorialFinale.cardId === card.id
+        );
         const rewardSeal = state.game.pendingRewardSeal && state.game.pendingRewardSeal.cardId === card.id
           ? state.game.pendingRewardSeal
           : null;
-        const displayedSeal = rewardSeal ? rewardSeal.phase : activeSealPhase(record);
+        const displayedSeal = hasTutorialFinale
+          ? Math.max(0, Number(tutorialFinale.sealPhase) || 0)
+          : (rewardSeal ? rewardSeal.phase : activeSealPhase(record));
         const sealMarkup = displayedSeal
-          ? `<img class="mini-card__seal game-card__seal${rewardSeal ? ' game-card__reward-seal' : ''}" src="${escapeHtml(phaseMeta(displayedSeal).sealPath)}" alt="${escapeHtml(phaseMeta(displayedSeal).label)}">`
+          ? `<img class="mini-card__seal game-card__seal${rewardSeal ? ' game-card__reward-seal' : ''}${hasTutorialFinale && tutorialFinale.sealFlash ? ' is-tutorial-seal-flash' : ''}${hasTutorialFinale && tutorialFinale.sealSoft ? ' is-tutorial-seal-soft' : ''}" src="${escapeHtml(phaseMeta(displayedSeal).sealPath)}" alt="${escapeHtml(phaseMeta(displayedSeal).label)}">`
           : '';
         const visualClasses = ['game-card__visual'];
         if (stageConfig.blurImage) visualClasses.push('is-stage-two');
@@ -3053,6 +4619,23 @@
 
       function renderImmediateHitFeedback(stars) {
         renderStars(stars);
+      }
+
+      async function animateStarLossSequence(stars, card) {
+        const totalStars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(stars) || 0));
+        if (!totalStars) {
+          renderStars(0);
+          return;
+        }
+        renderStarsLossState(totalStars, 0);
+        const voicePlayback = Promise.resolve(playPromptAudio(card, { rate: 0.7 })).catch(() => false);
+        for (let lostCount = 1; lostCount <= totalStars; lostCount += 1) {
+          await wait(750);
+          playLessAudio();
+          renderStarsLossState(totalStars, lostCount);
+        }
+        await voicePlayback;
+        renderStars(0);
       }
 
       function shouldUseLongChipLayout(text) {
@@ -3242,7 +4825,7 @@
           key.setAttribute('aria-label', `Letra ${letter}`);
           key.style.setProperty('--typing-key-bg', typingPalette[index % typingPalette.length]);
           key.addEventListener('click', async () => {
-            if (!state.game.active || state.game.listening || state.game.currentId !== entry.id) return;
+            if (!state.game.active || state.game.paused || state.game.listening || state.game.currentId !== entry.id) return;
             playTypingKeyAudio();
             const expectedLetter = target[typed.length];
             if (letter !== expectedLetter) {
@@ -3281,11 +4864,14 @@
           els.gameCard.classList.remove('is-typing-stage');
           updateGameChips();
           if (!state.game.entries.size) {
+            clearGameSessionLocally();
             els.gameCard.style.display = 'none';
             els.gameEnd.classList.add('is-visible');
           }
           return;
         }
+
+        persistGameSessionLocally();
 
         const card = cardById(entry.id);
         const stageConfig = resolveGameStageConfig(entry);
@@ -3322,7 +4908,7 @@
         }
         els.gameSubword.classList.toggle('is-stage-one', entry.stage === 1 && stageConfig.subtitleType === 'portuguese');
         renderStageOneWordSwap(entry, Boolean(subword));
-        state.game.canListen = entry.stage !== 4 && !stageConfig.autoAudio;
+        state.game.canListen = entry.stage !== 4;
         renderGameTouchButton(stageConfig, entry);
         els.gameTouchBtn.parentElement.classList.toggle('is-hidden', entry.stage === 4 || els.gameTouchBtn.classList.contains('is-hidden'));
         els.gameTouchBtn.classList.toggle('is-busy', state.game.listening);
@@ -3336,6 +4922,9 @@
         els.gameStarCopy.textContent = '';
         updateGameChips();
         scheduleStageTwoHintLoop(entry);
+        if (maybeRunTutorialSequence(entry, card)) {
+          return;
+        }
 
         if (entry.stage === 4) {
           window.setTimeout(() => {
@@ -3400,6 +4989,7 @@
         const entry = createGameEntry(nextCard, nextChoice.pool);
         state.game.entries.set(entry.id, entry);
         state.game.queue.push(entry.id);
+        persistGameSessionLocally();
         updateGameChips();
         return true;
       }
@@ -3417,6 +5007,7 @@
         if (state.game.currentId === cardId) {
           state.game.currentId = null;
         }
+        persistGameSessionLocally();
       }
 
       function wait(ms) {
@@ -3461,6 +5052,107 @@
         els.watchGapSelect.value = String(settings.gapMs);
         els.watchScopeSelect.value = settings.scope;
         els.watchMusicSelect.value = settings.music;
+      }
+
+      function uniqueCardsById(cards) {
+        const seen = new Set();
+        const unique = [];
+        (Array.isArray(cards) ? cards : []).forEach((card) => {
+          const cardId = safeText(card?.id);
+          if (!cardId || seen.has(cardId)) return;
+          seen.add(cardId);
+          unique.push({ ...card });
+        });
+        return unique;
+      }
+
+      function buildWatchSourceCards() {
+        const sourceCards = state.watch.scope === 'mine'
+          ? userProgressCards().map(card => ({ ...card }))
+          : uniqueCardsById([
+              ...baseCandidateCards(),
+              ...readyReviewCards()
+            ]);
+        return sourceCards.filter(card => card.audioUrl);
+      }
+
+      function buildWatchDeckOptions(cards) {
+        const groups = new Map(
+          (Array.isArray(state.deckCatalog) ? state.deckCatalog : []).map((deck) => [
+            safeText(deck?.source),
+            {
+              source: safeText(deck?.source),
+              title: safeText(deck?.title) || safeText(deck?.source) || 'Deck',
+              count: 0
+            }
+          ]).filter(([source]) => source)
+        );
+        cards.forEach((card) => {
+          const source = safeText(card?.source) || safeText(card?.deckTitle) || safeText(card?.id);
+          if (!source) return;
+          const current = groups.get(source) || {
+            source,
+            title: safeText(card?.deckTitle) || source,
+            count: 0
+          };
+          current.count += 1;
+          groups.set(source, current);
+        });
+        return Array.from(groups.values())
+          .sort((left, right) => left.title.localeCompare(right.title, 'pt-BR', { sensitivity: 'base' }));
+      }
+
+      function syncWatchDeckSelection(options) {
+        const validSources = new Set(options.map(option => option.source));
+        const current = Array.isArray(state.watch.selectedSources)
+          ? state.watch.selectedSources.filter(source => validSources.has(source))
+          : [];
+        state.watch.selectedSources = current.length
+          ? current
+          : options.map(option => option.source);
+      }
+
+      function renderWatchDeckPicker() {
+        if (!els.watchDeckGrid || !els.watchDeckSummary) return;
+        const sourceCards = buildWatchSourceCards();
+        const options = buildWatchDeckOptions(sourceCards);
+        syncWatchDeckSelection(options);
+        const selectedSources = new Set(state.watch.selectedSources);
+        const selectedCardCount = sourceCards.filter(card => selectedSources.has(safeText(card?.source) || safeText(card?.deckTitle) || safeText(card?.id))).length;
+
+        if (!options.length) {
+          els.watchDeckGrid.innerHTML = '<div class="watch-decks__empty">Nenhum deck com audio esta disponivel neste filtro.</div>';
+          els.watchDeckSummary.textContent = '0 decks ativos';
+          if (els.startWatchBtn) els.startWatchBtn.disabled = true;
+          return;
+        }
+
+        els.watchDeckGrid.innerHTML = options.map((option) => {
+          const active = selectedSources.has(option.source);
+          return `
+            <button class="watch-deck-toggle ${active ? 'is-active' : ''}" type="button" data-watch-source="${escapeHtml(option.source)}" aria-pressed="${active ? 'true' : 'false'}">
+              <span class="watch-deck-toggle__title">${escapeHtml(option.title)}</span>
+              <span class="watch-deck-toggle__meta">${option.count} carta${option.count === 1 ? '' : 's'} com audio</span>
+            </button>
+          `;
+        }).join('');
+        els.watchDeckSummary.textContent = `${selectedSources.size} deck${selectedSources.size === 1 ? '' : 's'} ativo${selectedSources.size === 1 ? '' : 's'} â€¢ ${selectedCardCount} carta${selectedCardCount === 1 ? '' : 's'}`;
+        if (els.startWatchBtn) {
+          els.startWatchBtn.disabled = !selectedSources.size || !selectedCardCount;
+        }
+      }
+
+      function toggleWatchDeckSource(source) {
+        const normalized = safeText(source);
+        if (!normalized) return;
+        const next = new Set(state.watch.selectedSources);
+        if (next.has(normalized)) {
+          next.delete(normalized);
+        } else {
+          next.add(normalized);
+        }
+        state.watch.selectedSources = Array.from(next);
+        renderWatchDeckPicker();
       }
 
       function buildWatchQueue(cards) {
@@ -3517,6 +5209,7 @@
 
       function openWatchPopover() {
         syncWatchControls();
+        renderWatchDeckPicker();
         els.watchPopover.classList.add('is-visible');
         window.requestAnimationFrame(() => els.watchPopover.classList.add('is-active'));
         document.body.classList.add('game-open');
@@ -3531,10 +5224,16 @@
       }
 
       function openGameSetup() {
-        syncGameSetupSummary();
-        els.gameSetup.classList.add('is-visible');
-        window.requestAnimationFrame(() => els.gameSetup.classList.add('is-active'));
-        document.body.classList.add('game-open');
+        if (shouldGatePremiumAccess()) {
+          openPremiumGate();
+          return;
+        }
+        if (canOfferTutorialMode()) {
+          beginTutorialGame();
+          return;
+        }
+        state.game.selectedCount = DEFAULT_GAME_CONTEXT_LIMIT;
+        beginGame();
       }
 
       function closeGameSetup() {
@@ -3546,9 +5245,13 @@
       }
 
       function pickWatchCards() {
-        return state.watch.scope === 'mine'
-          ? userProgressCards().map(card => ({ ...card }))
-          : state.allCards.slice();
+        const selectedSources = new Set(
+          Array.isArray(state.watch.selectedSources) ? state.watch.selectedSources.map(source => safeText(source)).filter(Boolean) : []
+        );
+        return buildWatchSourceCards().filter((card) => {
+          const source = safeText(card?.source) || safeText(card?.deckTitle) || safeText(card?.id);
+          return selectedSources.has(source);
+        });
       }
 
       function playWatchMusic() {
@@ -3653,9 +5356,9 @@
         state.watch.scope = els.watchScopeSelect.value === 'mine' ? 'mine' : 'all';
         state.watch.music = els.watchMusicSelect.value === 'off' ? 'off' : 'on';
         saveWatchSettings();
-        state.watch.sourceCards = pickWatchCards().filter(card => card.audioUrl);
+        state.watch.sourceCards = pickWatchCards();
         if (!state.watch.sourceCards.length) {
-          window.alert(state.watch.scope === 'mine' ? 'Nenhum flashcard em Meus flashcards tem audio para assistir.' : 'Nenhum flashcard com audio foi encontrado.');
+          window.alert('Nenhum flashcard com audio foi encontrado nos decks ativados.');
           return;
         }
         state.watch.queue = buildWatchQueue(state.watch.sourceCards);
@@ -3681,47 +5384,59 @@
         els.gameCard.classList.add('is-transitioning');
         await wait(180);
         state.game.currentId = state.game.queue.shift();
+        persistGameSessionLocally();
         renderCurrentCard();
-        playReportAudio();
+        if (!state.game.tutorial.active) {
+          playReportAudio();
+        }
         await wait(30);
         els.gameCard.classList.remove('is-transitioning');
         state.game.transitioning = false;
       }
 
       function beginGame() {
+        hideWelcomeGate();
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
         clearStageTwoHintTimer();
         clearPendingRewardSeal();
-        state.game.entries.clear();
-        state.game.queue = [];
-        state.game.currentId = null;
-        state.game.listening = false;
-        state.game.paused = false;
-        state.game.canListen = false;
-        state.game.active = true;
-        state.game.sessionStartedAt = Date.now();
-
         advanceReadyMemorizations();
-        const roundCount = normalizeGameCount(state.game.selectedCount) || DEFAULT_GAME_CONTEXT_LIMIT;
-        state.game.contextLimit = GAME_ACTIVE_CARD_CAP;
-        const reviewLimit = Math.min(REVIEW_SLOT_LIMIT, Math.floor(roundCount / 3));
-        const reviewCards = readyReviewCards().slice(0, reviewLimit);
-        const chosenCards = buildOrderedDeckSelection(
-          baseCandidateCards(),
-          Math.max(0, roundCount - reviewCards.length)
-        );
-        chosenCards.forEach(card => {
-          const entry = createGameEntry(card, 'base');
-          state.game.entries.set(entry.id, entry);
-          state.game.queue.push(entry.id);
-        });
-        reviewCards.forEach(card => {
-          const entry = createGameEntry(card, 'review');
-          state.game.entries.set(entry.id, entry);
-          state.game.queue.push(entry.id);
-        });
+        if (!hasTutorialPlanetUnlocked()) {
+          clearGameSessionLocally();
+        }
+        const restored = hasTutorialPlanetUnlocked() && applyGameSessionSnapshot(readGameSessionForUser(), { addFreshCard: true });
+        if (!restored) {
+          resetTutorialRuntime({ preserveCompletion: true });
+          state.game.entries.clear();
+          state.game.queue = [];
+          state.game.currentId = null;
+          state.game.listening = false;
+          state.game.paused = false;
+          state.game.canListen = false;
+          state.game.active = true;
+          state.game.sessionStartedAt = Date.now();
+
+          const roundCount = normalizeGameCount(state.game.selectedCount) || DEFAULT_GAME_CONTEXT_LIMIT;
+          state.game.contextLimit = GAME_ACTIVE_CARD_CAP;
+          const reviewLimit = Math.min(REVIEW_SLOT_LIMIT, Math.floor(roundCount / 3));
+          const reviewCards = readyReviewCards().slice(0, reviewLimit);
+          const chosenCards = buildOrderedDeckSelection(
+            baseCandidateCards(),
+            Math.max(0, roundCount - reviewCards.length)
+          );
+          chosenCards.forEach(card => {
+            const entry = createGameEntry(card, 'base');
+            state.game.entries.set(entry.id, entry);
+            state.game.queue.push(entry.id);
+          });
+          reviewCards.forEach(card => {
+            const entry = createGameEntry(card, 'review');
+            state.game.entries.set(entry.id, entry);
+            state.game.queue.push(entry.id);
+          });
+          persistGameSessionLocally();
+        }
 
         els.topbar.classList.add('is-hidden');
         els.catalog.classList.add('is-hidden');
@@ -3739,12 +5454,55 @@
         advanceToNextCard();
       }
 
-      async function exitGame() {
+      function beginTutorialGame() {
+        const tutorialCard = findTutorialPlanetCard();
+        if (!tutorialCard) return;
+
+        hideWelcomeGate();
+        clearGameSessionLocally();
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
         clearStageTwoHintTimer();
         clearPendingRewardSeal();
+        resetTutorialRuntime({ preserveCompletion: true });
+        state.game.entries.clear();
+        state.game.queue = [];
+        state.game.currentId = null;
+        state.game.listening = false;
+        state.game.paused = false;
+        state.game.canListen = false;
+        state.game.active = true;
+        state.game.transitioning = false;
+        state.game.sessionStartedAt = Date.now();
+        state.game.tutorial.active = true;
+        state.game.tutorial.currentCardId = tutorialCard.id;
+
+        const entry = createGameEntry(tutorialCard, 'tutorial');
+        state.game.entries.set(entry.id, entry);
+        state.game.queue.push(entry.id);
+
+        els.topbar.classList.add('is-hidden');
+        els.catalog.classList.add('is-hidden');
+        closeGameSetup();
+        document.body.classList.add('game-open');
+        els.game.classList.add('is-visible');
+        window.requestAnimationFrame(() => els.game.classList.add('is-active'));
+
+        updateGameChips();
+        advanceToNextCard();
+      }
+
+      async function exitGame() {
+        if (state.game.active && !state.game.tutorial.active && state.game.entries.size) {
+          persistGameSessionLocally();
+        }
+        cleanupGameRecognition();
+        stopActiveAudio();
+        clearGameLanguageSwapTimer();
+        clearStageTwoHintTimer();
+        clearPendingRewardSeal();
+        resetTutorialRuntime({ preserveCompletion: true });
         state.game.active = false;
         state.game.entries.clear();
         state.game.queue = [];
@@ -3761,9 +5519,10 @@
         closeGameReportMenu();
         await wait(180);
         els.game.classList.remove('is-visible');
-        els.catalog.classList.remove('is-hidden');
-        els.topbar.classList.remove('is-hidden');
+        els.catalog.classList.add('is-hidden');
+        els.topbar.classList.add('is-hidden');
         refreshLibrary();
+        syncWelcomeGate();
       }
 
       async function handleRecognitionResult(transcript, inputMode = 'speech') {
@@ -3772,6 +5531,7 @@
 
         const expectedAnswers = expectedAnswersForEntry(entry);
         const activeCountBeforeResolution = state.game.entries.size;
+        const accessibleCountBeforeResolution = accessibleFlashcardsCount();
         const evaluatedStage = entry.stage;
         const { score, isHit } = evaluateAcceptedAnswers(expectedAnswers, transcript);
         const card = cardById(entry.id);
@@ -3807,6 +5567,14 @@
             setGameStatus(`${accessibleFlashcardsCount()} FlashCards`, 'flashcards-count');
             promoteCardFromWin(entry);
             updateGameChips();
+            if (!state.user?.id
+              && accessibleCountBeforeResolution < GUEST_FLASHCARD_LOGIN_THRESHOLD
+              && accessibleFlashcardsCount() >= GUEST_FLASHCARD_LOGIN_THRESHOLD) {
+              scheduleGuestAuthRequirement();
+            }
+            if (shouldGatePremiumAccess()) {
+              setPremiumStatus('Voce chegou em 8 cartas. Digite uma chave premium.');
+            }
             setGameStatus(`${accessibleFlashcardsCount()} FlashCards`, 'flashcards-count');
             entry._removeAfterReward = true;
           } else {
@@ -3818,12 +5586,14 @@
             showStageTwoPortugueseHint(card);
           }
           if (entry.stars > 0) {
+            const starsBeforeMiss = entry.stars;
             entry.stars = 0;
             entry.stage = 1;
             entry.missesWithoutStars = 0;
             entry.typingMistakes = 0;
             setGameStatus('', 'miss');
             state.game.queue.push(entry.id);
+            await animateStarLossSequence(starsBeforeMiss, card);
           } else {
             entry.missesWithoutStars += 1;
             if (entry.missesWithoutStars >= 3) {
@@ -3842,6 +5612,11 @@
         }
         await playStageResponseSequence(evaluatedStage, card);
         await wait(entry._removeAfterReward || entry._requeueAfterReward ? 1500 : (evaluatedStage === 3 ? 120 : 1200));
+        if (state.game.active && state.game.tutorial.active && isTutorialPlanetCard(entry.id) && entry._removeAfterReward) {
+          entry._removeAfterReward = false;
+          await finishTutorialAndStartNormalGame();
+          return;
+        }
         if (state.game.active) {
           if (entry._requeueAfterReward) {
             entry._requeueAfterReward = false;
@@ -3850,6 +5625,11 @@
           if (entry._removeAfterReward) {
             entry._removeAfterReward = false;
             removeGameEntry(entry.id);
+            if (shouldGatePremiumAccess()) {
+              openPremiumGate();
+              await exitGame();
+              return;
+            }
             const targetActiveCount = activeCountBeforeResolution >= GAME_ACTIVE_CARD_CAP
               ? GAME_ACTIVE_CARD_CAP
               : Math.min(GAME_ACTIVE_CARD_CAP, activeCountBeforeResolution + 1);
@@ -3868,8 +5648,6 @@
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return;
         if (entry.stage === 4) return;
-
-        if (!state.game.canListen) return;
 
         if (!recognitionCtor) {
           setGameStatus('', 'miss');
@@ -3990,16 +5768,32 @@
       }
 
       function bindEvents() {
-        els.authModeLogin.addEventListener('click', () => setAuthMode('login'));
-        els.authModeRegister.addEventListener('click', () => setAuthMode('register'));
+        els.welcomeTouch?.addEventListener('click', requestWelcomeTutorialStart);
+        els.authModeLogin.addEventListener('click', () => {
+          setAuthMode('login');
+          els.authCopy.textContent = authCopyText();
+        });
+        els.authModeRegister.addEventListener('click', () => {
+          setAuthMode('register');
+          els.authCopy.textContent = authCopyText();
+        });
         els.authForm.addEventListener('submit', submitAuthForm);
-        els.logoutBtn.addEventListener('click', logoutCurrentUser);
-        els.watchFlashcardsBtn.addEventListener('click', () => startWatch({ useDefaults: true }));
-        els.closeWatchPopoverBtn.addEventListener('click', closeWatchPopover);
-        els.startWatchBtn.addEventListener('click', startWatch);
-        els.exitWatchBtn.addEventListener('click', stopWatch);
-        els.stopWatchBtn.addEventListener('click', stopWatch);
-        els.startGameBtn.addEventListener('click', openGameSetup);
+        els.logoutBtn?.addEventListener('click', logoutCurrentUser);
+        els.watchFlashcardsBtn?.addEventListener('click', openWatchPopover);
+        els.closeWatchPopoverBtn?.addEventListener('click', closeWatchPopover);
+        els.startWatchBtn?.addEventListener('click', startWatch);
+        els.watchScopeSelect?.addEventListener('change', (event) => {
+          state.watch.scope = event.target.value === 'mine' ? 'mine' : 'all';
+          renderWatchDeckPicker();
+        });
+        els.watchDeckGrid?.addEventListener('click', (event) => {
+          const toggle = event.target.closest('[data-watch-source]');
+          if (!toggle) return;
+          toggleWatchDeckSource(toggle.dataset.watchSource || '');
+        });
+        els.exitWatchBtn?.addEventListener('click', stopWatch);
+        els.stopWatchBtn?.addEventListener('click', stopWatch);
+        els.startGameBtn?.addEventListener('click', openGameSetup);
         els.exitGameBtn.addEventListener('click', exitGame);
         els.libraryPrevBtn?.addEventListener('click', () => {
           state.libraryPage -= 1;
@@ -4023,11 +5817,13 @@
           state.admin.prompt = String(event.target.value || '').trim();
         });
         els.adminPasteTextBtn?.addEventListener('click', runAdminPasteText);
+        els.adminSubmitPasteBtn?.addEventListener('click', runAdminPasteText);
         els.adminCreateDeckBtn?.addEventListener('click', runAdminCreateDeck);
         els.adminSaveBtn?.addEventListener('click', runAdminSaveDrafts);
         els.adminCreateCardsBtn?.addEventListener('click', runAdminCreateCards);
         els.adminFillTextBtn?.addEventListener('click', () => runAdminFlashcardFill('text'));
         els.adminFillImageBtn?.addEventListener('click', () => runAdminFlashcardFill('image'));
+        els.adminMagicBtn?.addEventListener('click', () => runAdminFlashcardFill('magic'));
         els.adminFillAudioBtn?.addEventListener('click', () => runAdminFlashcardFill('audio'));
         els.adminDeleteImageBtn?.addEventListener('click', () => runAdminCardAssetDelete('image'));
         els.adminDeleteAudioBtn?.addEventListener('click', () => runAdminCardAssetDelete('audio'));
@@ -4061,6 +5857,7 @@
           );
         });
         els.closeGameSetupBtn.addEventListener('click', closeGameSetup);
+        els.startTutorialBtn?.addEventListener('click', beginTutorialGame);
         Array.from(els.gameSetupOptions.querySelectorAll('[data-game-count]')).forEach((button) => {
           button.addEventListener('click', () => {
             const count = normalizeGameCount(button.getAttribute('data-game-count'));
@@ -4089,7 +5886,38 @@
             stopWatch();
           }
         });
+        els.premiumGrid?.addEventListener('click', (event) => {
+          const tile = event.target.closest('[data-letter]');
+          if (!tile) return;
+          appendPremiumCodeLetter(tile.getAttribute('data-letter'));
+        });
+        els.premiumBackspaceBtn?.addEventListener('click', () => {
+          if (state.ui.premiumBusy) return;
+          state.ui.premiumCode = state.ui.premiumCode.slice(0, -1);
+          renderPremiumCode();
+        });
+        els.premiumClearBtn?.addEventListener('click', () => {
+          if (state.ui.premiumBusy) return;
+          state.ui.premiumCode = '';
+          setPremiumStatus('Toque nas imagens na ordem certa para digitar a chave.');
+        });
+        els.premiumCloseBtn?.addEventListener('click', () => {
+          closePremiumGate();
+        });
         window.addEventListener('keydown', (event) => {
+          if (state.ui.premiumGateOpen && event.key === 'Backspace') {
+            event.preventDefault();
+            if (!state.ui.premiumBusy) {
+              state.ui.premiumCode = state.ui.premiumCode.slice(0, -1);
+              renderPremiumCode();
+            }
+            return;
+          }
+          if (state.ui.premiumGateOpen && /^[a-p]$/i.test(event.key || '')) {
+            event.preventDefault();
+            appendPremiumCodeLetter(event.key);
+            return;
+          }
           if (event.key && event.key.length === 1) {
             state.secretBuffer = `${state.secretBuffer}${event.key.toLowerCase()}`.slice(-SECRET_TIME_CODE.length);
             if (state.secretBuffer === SECRET_TIME_CODE) {
@@ -4104,7 +5932,9 @@
               }
             }
           }
-          if (event.key === 'Escape' && els.gameReportMenu?.classList.contains('is-visible')) {
+          if (event.key === 'Escape' && state.ui.premiumGateOpen) {
+            closePremiumGate();
+          } else if (event.key === 'Escape' && els.gameReportMenu?.classList.contains('is-visible')) {
             closeGameReportMenu();
           } else if (event.key === 'Escape' && state.game.active) {
             exitGame();
@@ -4126,24 +5956,58 @@
           event.stopPropagation();
           startRecognition();
         });
+        els.footerPlayBtn?.addEventListener('click', () => {
+          void navigateToMainView('play');
+        });
+        els.footerCardsBtn?.addEventListener('click', () => {
+          window.location.href = '/mycards';
+        });
+        els.footerUsersBtn?.addEventListener('click', () => {
+          window.location.href = '/users';
+        });
+        els.footerProfileBtn?.addEventListener('click', () => {
+          window.location.href = '/account';
+        });
+        els.profileForm?.addEventListener('submit', submitProfileForm);
+        els.profileLogoutBtn?.addEventListener('click', logoutCurrentUser);
+        els.profileAvatarInput?.addEventListener('change', async (event) => {
+          const file = event.target?.files?.[0];
+          if (!file) return;
+          try {
+            state.ui.profileAvatarDraft = await fileToDataUrl(file);
+            renderProfilePanel();
+            setProfileStatus('');
+          } catch (error) {
+            setProfileStatus(error?.message || 'Nao foi possivel ler a imagem.', 'error');
+          }
+        });
       }
 
       async function init() {
+        const searchParams = new URLSearchParams(window.location.search);
+        const requestedView = searchParams.get('view');
+        const requestedPremiumOpen = searchParams.get('premium') === '1';
         state.timeOffsetMs = readTimeOffsetMs();
         loadSelectedGameCount();
         syncWatchControls();
         bindEvents();
         setAuthMode('login');
+        els.authCopy.textContent = authCopyText();
         if (els.usersLink) {
           els.usersLink.setAttribute('href', resolveUsersHref());
         }
-        lockFlashcardsApp(true);
+        hideAuthGate();
+        preloadTutorialFinaleSeals();
+        syncWelcomeGate();
         renderMetrics();
+        renderProfilePanel();
+        renderPremiumCode();
         updateGameChips();
         renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
         syncAdminTools();
         renderAdminPublishBar();
         els.flashcardsHomeToggle.setAttribute('aria-label', 'Mostrar resumo');
+        switchMainView('cards');
 
         const gameHeadCopy = els.gameHeaderCopy?.parentElement || null;
         if (gameHeadCopy) {
@@ -4154,25 +6018,51 @@
         els.gameStarCopy.classList.add('is-hidden');
 
         try {
+          try {
+            await loadCards();
+          } catch (cardsError) {
+            console.warn('Falha ao carregar os decks na inicializacao:', cardsError);
+            state.allCards = readCachedCards();
+            state.deckCatalog = [];
+          } finally {
+            state.entry.cardsReady = true;
+            refreshLibrary();
+            syncWelcomeGate();
+            tryStartPendingTutorial();
+          }
           const sessionUser = await fetchSessionUser();
           if (sessionUser) {
-            await hydrateAuthenticatedApp(sessionUser);
+            await hydrateAuthenticatedApp(sessionUser, { skipLoadCards: true });
           } else {
-            await handleLoggedOutState('Entre ou cadastre seu nome para liberar os flashcards.');
+            await handleLoggedOutState('');
           }
           if (!recognitionCtor) {
-            const startGameLabel = els.startGameBtn.querySelector('.btn__label');
-            if (startGameLabel) {
-              startGameLabel.textContent = 'Jogar sem mic';
-            } else {
-              els.startGameBtn.textContent = 'Jogar sem mic';
+            if (els.startGameBtn) {
+              const startGameLabel = els.startGameBtn.querySelector('.btn__label');
+              if (startGameLabel) {
+                startGameLabel.textContent = 'Jogar sem mic';
+              } else {
+                els.startGameBtn.textContent = 'Jogar sem mic';
+              }
             }
           }
         } catch (error) {
           console.warn('Falha ao iniciar flashcards:', error);
-          await handleLoggedOutState('Nao consegui validar sua sessao agora. Entre novamente.');
+          state.entry.cardsReady = true;
+          await handleLoggedOutState('');
+        }
+
+        if (requestedPremiumOpen) {
+          switchMainView('cards');
+          openPremiumGate();
+        } else if (requestedView === 'play') {
+          switchMainView('play');
+          openGameSetup();
+        } else {
+          switchMainView('cards');
         }
       }
 
       init();
     })();
+  

@@ -183,9 +183,9 @@
       transition: opacity 420ms ease, visibility 420ms ease;
       visibility: hidden;
       background:
-        radial-gradient(circle at center, rgba(6, 24, 48, 0.16), rgba(4, 19, 33, 0.82)),
-        linear-gradient(180deg, rgba(6, 20, 36, 0.12), rgba(6, 20, 36, 0.42));
-      backdrop-filter: blur(12px);
+        radial-gradient(circle at 50% 18%, rgba(115, 213, 255, 0.22), rgba(255, 255, 255, 0) 36%),
+        linear-gradient(180deg, #ffffff 0%, #f6fbff 100%);
+      backdrop-filter: blur(8px);
     }
 
     .welcome-gate.is-visible {
@@ -215,7 +215,7 @@
       width: min(240px, 62vw);
       height: auto;
       object-fit: contain;
-      filter: drop-shadow(0 22px 44px rgba(0, 7, 16, 0.32));
+      filter: drop-shadow(0 18px 34px rgba(34, 148, 255, 0.18));
     }
 
     .welcome-gate__copy {
@@ -223,11 +223,11 @@
       min-height: 2.8em;
       display: grid;
       place-items: center;
-      color: #ffffff;
+      color: #2aa8ff;
       font-size: clamp(22px, 4.6vw, 34px);
       line-height: 1.2;
       letter-spacing: 0.04em;
-      text-shadow: 0 14px 28px rgba(0, 7, 16, 0.32);
+      text-shadow: 0 10px 24px rgba(90, 188, 255, 0.18);
       opacity: 1;
       transform: translateY(0);
       transition: opacity 320ms ease, transform 320ms ease;
@@ -3699,6 +3699,7 @@
       const USER_HIDDEN_STORAGE_KEY = 'playtalk-flashcards-hidden-v1';
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
       const TUTORIAL_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-tutorial-v1';
+      const GAME_SESSION_STORAGE_KEY = 'playtalk-flashcards-game-session-v1';
       const TIME_OFFSET_STORAGE_KEY = 'playtalk-flashcards-time-offset-v1';
       const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
       const recognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -4199,6 +4200,69 @@
         localStorage.setItem(userScopedStorageKey(TUTORIAL_PROGRESS_STORAGE_KEY), JSON.stringify({
           completed: Boolean(state.game.tutorial.completed)
         }));
+      }
+
+      function normalizeSavedGameEntry(raw) {
+        const id = safeText(raw?.id);
+        if (!id) return null;
+        return {
+          id,
+          stars: Math.max(0, Math.min(4, Number.parseInt(raw?.stars, 10) || 0)),
+          stage: Math.max(1, Math.min(4, Number.parseInt(raw?.stage, 10) || 1)),
+          missesWithoutStars: Math.max(0, Number.parseInt(raw?.missesWithoutStars, 10) || 0),
+          typingMistakes: Math.max(0, Number.parseInt(raw?.typingMistakes, 10) || 0),
+          pool: raw?.pool === 'review' ? 'review' : 'base'
+        };
+      }
+
+      function serializeCurrentGameState() {
+        const entries = Array.from(state.game.entries.values())
+          .map(normalizeSavedGameEntry)
+          .filter((entry) => entry && cardById(entry.id));
+        if (!entries.length || state.game.tutorial.active) return null;
+        const validIds = new Set(entries.map((entry) => entry.id));
+        return {
+          entries,
+          queue: state.game.queue.filter((id) => validIds.has(id)),
+          currentId: validIds.has(state.game.currentId) ? state.game.currentId : '',
+          selectedCount: normalizeGameCount(state.game.selectedCount) || DEFAULT_GAME_CONTEXT_LIMIT,
+          contextLimit: Math.max(DEFAULT_GAME_CONTEXT_LIMIT, Number(state.game.contextLimit) || DEFAULT_GAME_CONTEXT_LIMIT)
+        };
+      }
+
+      function persistGameSessionLocally() {
+        try {
+          const snapshot = serializeCurrentGameState();
+          if (!snapshot) {
+            removeScopedStorage(GAME_SESSION_STORAGE_KEY);
+            return;
+          }
+          localStorage.setItem(userScopedStorageKey(GAME_SESSION_STORAGE_KEY), JSON.stringify(snapshot));
+        } catch (_error) {
+          // ignore storage issues
+        }
+      }
+
+      function clearGameSessionLocally(userId = state.user?.id) {
+        removeScopedStorage(GAME_SESSION_STORAGE_KEY, userId);
+      }
+
+      function readGameSessionForUser(userId = state.user?.id) {
+        const parsed = readScopedStorage(GAME_SESSION_STORAGE_KEY, null, userId);
+        const entries = Array.isArray(parsed?.entries)
+          ? parsed.entries.map(normalizeSavedGameEntry).filter((entry) => entry && cardById(entry.id))
+          : [];
+        if (!entries.length) return null;
+        const validIds = new Set(entries.map((entry) => entry.id));
+        return {
+          entries,
+          queue: Array.isArray(parsed?.queue)
+            ? parsed.queue.map((id) => safeText(id)).filter((id) => validIds.has(id))
+            : [],
+          currentId: validIds.has(parsed?.currentId) ? safeText(parsed.currentId) : '',
+          selectedCount: normalizeGameCount(parsed?.selectedCount) || DEFAULT_GAME_CONTEXT_LIMIT,
+          contextLimit: Math.max(DEFAULT_GAME_CONTEXT_LIMIT, Math.min(GAME_ACTIVE_CARD_CAP, Number(parsed?.contextLimit) || GAME_ACTIVE_CARD_CAP))
+        };
       }
 
       function setTutorialCompleted(completed) {
@@ -4763,6 +4827,11 @@
 
       function requestWelcomeTutorialStart() {
         if (state.entry.authRequired) return;
+        if (hasTutorialPlanetUnlocked()) {
+          hideWelcomeGate();
+          beginGame();
+          return;
+        }
         state.entry.pendingTutorialStart = true;
         setWelcomeCopy('Preparando tutorial...');
         tryStartPendingTutorial();
@@ -5904,6 +5973,7 @@
         if (state.game.tutorial.sequenceToken !== token || !state.game.active) return;
         setTutorialCompleted(true);
         resetTutorialRuntime({ preserveCompletion: true });
+        clearGameSessionLocally();
         saveSelectedGameCount(TUTORIAL_NORMAL_GAME_COUNT);
         beginGame();
       }
@@ -8101,6 +8171,44 @@
         return { id: card.id, stars: 0, stage: 1, missesWithoutStars: 0, typingMistakes: 0, pool };
       }
 
+      function applyGameSessionSnapshot(snapshot, { addFreshCard = false } = {}) {
+        if (!snapshot || !state.entry.cardsReady || state.game.tutorial.active) return false;
+        const entries = Array.isArray(snapshot.entries) ? snapshot.entries : [];
+        if (!entries.length) return false;
+
+        resetTutorialRuntime({ preserveCompletion: true });
+        state.game.entries.clear();
+        state.game.queue = [];
+        state.game.currentId = null;
+        state.game.listening = false;
+        state.game.paused = false;
+        state.game.canListen = false;
+        state.game.transitioning = false;
+        state.game.active = true;
+        state.game.sessionStartedAt = Date.now();
+        state.game.selectedCount = snapshot.selectedCount || DEFAULT_GAME_CONTEXT_LIMIT;
+        state.game.contextLimit = snapshot.contextLimit || GAME_ACTIVE_CARD_CAP;
+
+        entries.forEach((entry) => {
+          if (!cardById(entry.id)) return;
+          state.game.entries.set(entry.id, { ...entry });
+        });
+        state.game.queue = (Array.isArray(snapshot.queue) ? snapshot.queue : [])
+          .filter((id) => state.game.entries.has(id));
+        state.game.currentId = state.game.entries.has(snapshot.currentId) ? snapshot.currentId : null;
+
+        if (!state.game.currentId) {
+          state.game.currentId = state.game.queue.shift() || Array.from(state.game.entries.keys())[0] || null;
+        }
+
+        if (addFreshCard && state.game.entries.size < GAME_ACTIVE_CARD_CAP) {
+          refillGameEntry('base', Math.min(GAME_ACTIVE_CARD_CAP, state.game.entries.size + 1));
+        }
+
+        persistGameSessionLocally();
+        return state.game.entries.size > 0 && Boolean(state.game.currentId);
+      }
+
       function buildOrderedDeckSelection(cards, limit) {
         const normalizedLimit = Math.max(0, Number(limit) || 0);
         if (!normalizedLimit || !cards.length) return [];
@@ -8445,11 +8553,14 @@
           els.gameCard.classList.remove('is-typing-stage');
           updateGameChips();
           if (!state.game.entries.size) {
+            clearGameSessionLocally();
             els.gameCard.style.display = 'none';
             els.gameEnd.classList.add('is-visible');
           }
           return;
         }
+
+        persistGameSessionLocally();
 
         const card = cardById(entry.id);
         const stageConfig = resolveGameStageConfig(entry);
@@ -8567,6 +8678,7 @@
         const entry = createGameEntry(nextCard, nextChoice.pool);
         state.game.entries.set(entry.id, entry);
         state.game.queue.push(entry.id);
+        persistGameSessionLocally();
         updateGameChips();
         return true;
       }
@@ -8584,6 +8696,7 @@
         if (state.game.currentId === cardId) {
           state.game.currentId = null;
         }
+        persistGameSessionLocally();
       }
 
       function wait(ms) {
@@ -8960,6 +9073,7 @@
         els.gameCard.classList.add('is-transitioning');
         await wait(180);
         state.game.currentId = state.game.queue.shift();
+        persistGameSessionLocally();
         renderCurrentCard();
         if (!state.game.tutorial.active) {
           playReportAudio();
@@ -8976,35 +9090,42 @@
         clearGameLanguageSwapTimer();
         clearStageTwoHintTimer();
         clearPendingRewardSeal();
-        resetTutorialRuntime({ preserveCompletion: true });
-        state.game.entries.clear();
-        state.game.queue = [];
-        state.game.currentId = null;
-        state.game.listening = false;
-        state.game.paused = false;
-        state.game.canListen = false;
-        state.game.active = true;
-        state.game.sessionStartedAt = Date.now();
-
         advanceReadyMemorizations();
-        const roundCount = normalizeGameCount(state.game.selectedCount) || DEFAULT_GAME_CONTEXT_LIMIT;
-        state.game.contextLimit = GAME_ACTIVE_CARD_CAP;
-        const reviewLimit = Math.min(REVIEW_SLOT_LIMIT, Math.floor(roundCount / 3));
-        const reviewCards = readyReviewCards().slice(0, reviewLimit);
-        const chosenCards = buildOrderedDeckSelection(
-          baseCandidateCards(),
-          Math.max(0, roundCount - reviewCards.length)
-        );
-        chosenCards.forEach(card => {
-          const entry = createGameEntry(card, 'base');
-          state.game.entries.set(entry.id, entry);
-          state.game.queue.push(entry.id);
-        });
-        reviewCards.forEach(card => {
-          const entry = createGameEntry(card, 'review');
-          state.game.entries.set(entry.id, entry);
-          state.game.queue.push(entry.id);
-        });
+        if (!hasTutorialPlanetUnlocked()) {
+          clearGameSessionLocally();
+        }
+        const restored = hasTutorialPlanetUnlocked() && applyGameSessionSnapshot(readGameSessionForUser(), { addFreshCard: true });
+        if (!restored) {
+          resetTutorialRuntime({ preserveCompletion: true });
+          state.game.entries.clear();
+          state.game.queue = [];
+          state.game.currentId = null;
+          state.game.listening = false;
+          state.game.paused = false;
+          state.game.canListen = false;
+          state.game.active = true;
+          state.game.sessionStartedAt = Date.now();
+
+          const roundCount = normalizeGameCount(state.game.selectedCount) || DEFAULT_GAME_CONTEXT_LIMIT;
+          state.game.contextLimit = GAME_ACTIVE_CARD_CAP;
+          const reviewLimit = Math.min(REVIEW_SLOT_LIMIT, Math.floor(roundCount / 3));
+          const reviewCards = readyReviewCards().slice(0, reviewLimit);
+          const chosenCards = buildOrderedDeckSelection(
+            baseCandidateCards(),
+            Math.max(0, roundCount - reviewCards.length)
+          );
+          chosenCards.forEach(card => {
+            const entry = createGameEntry(card, 'base');
+            state.game.entries.set(entry.id, entry);
+            state.game.queue.push(entry.id);
+          });
+          reviewCards.forEach(card => {
+            const entry = createGameEntry(card, 'review');
+            state.game.entries.set(entry.id, entry);
+            state.game.queue.push(entry.id);
+          });
+          persistGameSessionLocally();
+        }
 
         els.topbar.classList.add('is-hidden');
         els.catalog.classList.add('is-hidden');
@@ -9019,6 +9140,10 @@
         }
 
         updateGameChips();
+        if (restored && state.game.currentId) {
+          renderCurrentCard();
+          return;
+        }
         advanceToNextCard();
       }
 
@@ -9027,6 +9152,7 @@
         if (!tutorialCard) return;
 
         hideWelcomeGate();
+        clearGameSessionLocally();
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
@@ -9061,6 +9187,9 @@
       }
 
       async function exitGame() {
+        if (state.game.active && !state.game.tutorial.active && state.game.entries.size) {
+          persistGameSessionLocally();
+        }
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
