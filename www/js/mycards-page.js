@@ -2,13 +2,12 @@
   const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
   const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
   const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
-  const PAGE_SIZE = 30;
   const REVIEW_PHASES = {
-    1: { key: 'prata', label: 'Prata', durationMs: 24 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
-    2: { key: 'quartz', label: 'Quartz', durationMs: 3 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
-    3: { key: 'gold', label: 'Gold', durationMs: 7 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/ouro.png' },
-    4: { key: 'platina', label: 'Platina', durationMs: 12 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/platina.png' },
-    5: { key: 'diamante', label: 'Diamante', durationMs: 30 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/diamante.png' }
+    1: { durationMs: 24 * 60 * 60 * 1000 },
+    2: { durationMs: 3 * 24 * 60 * 60 * 1000 },
+    3: { durationMs: 7 * 24 * 60 * 60 * 1000 },
+    4: { durationMs: 12 * 24 * 60 * 60 * 1000 },
+    5: { durationMs: 30 * 24 * 60 * 60 * 1000 }
   };
 
   const els = {
@@ -16,17 +15,12 @@
     empty: document.getElementById('cards-empty-state'),
     total: document.getElementById('mycards-total'),
     ready: document.getElementById('mycards-ready'),
-    memorizing: document.getElementById('mycards-memorizing'),
-    pagination: document.getElementById('mycards-pagination'),
-    prev: document.getElementById('mycards-prev'),
-    next: document.getElementById('mycards-next'),
-    pageLabel: document.getElementById('mycards-page-label')
+    memorizing: document.getElementById('mycards-memorizing')
   };
 
   const state = {
     userId: 0,
-    cards: [],
-    currentPage: 1
+    cards: []
   };
 
   function safeText(value) {
@@ -78,12 +72,15 @@
   function normalizeProgressRecord(raw) {
     const cardId = String(raw?.cardId || '').trim();
     if (!cardId) return null;
+    const targetPhaseIndex = Math.max(1, Math.min(5, Number.parseInt(raw?.targetPhaseIndex, 10) || 1));
     return createProgressRecord(cardId, {
       phaseIndex: Math.max(0, Math.min(5, Number.parseInt(raw?.phaseIndex, 10) || 0)),
-      targetPhaseIndex: Math.max(1, Math.min(5, Number.parseInt(raw?.targetPhaseIndex, 10) || 1)),
+      targetPhaseIndex,
       status: raw?.status === 'ready' ? 'ready' : 'memorizing',
       memorizingStartedAt: Number.isFinite(Number(raw?.memorizingStartedAt)) ? Number(raw.memorizingStartedAt) : getNowMs(),
-      memorizingDurationMs: Number.isFinite(Number(raw?.memorizingDurationMs)) ? Number(raw.memorizingDurationMs) : REVIEW_PHASES[1].durationMs,
+      memorizingDurationMs: Number.isFinite(Number(raw?.memorizingDurationMs))
+        ? Number(raw.memorizingDurationMs)
+        : (REVIEW_PHASES[targetPhaseIndex]?.durationMs || REVIEW_PHASES[1].durationMs),
       availableAt: Number.isFinite(Number(raw?.availableAt)) ? Number(raw.availableAt) : getNowMs(),
       returnedAt: Number.isFinite(Number(raw?.returnedAt)) ? Number(raw.returnedAt) : 0,
       createdAt: Number.isFinite(Number(raw?.createdAt)) ? Number(raw.createdAt) : getNowMs()
@@ -123,19 +120,6 @@
     })]));
   }
 
-  function phaseMeta(phaseIndex) {
-    return REVIEW_PHASES[Math.max(1, Math.min(5, Number(phaseIndex) || 1))] || REVIEW_PHASES[1];
-  }
-
-  function activeSealPhase(record) {
-    if (!record) return 0;
-    if (record.status === 'memorizing') {
-      return Math.max(1, Math.min(5, Number(record.targetPhaseIndex) || Number(record.phaseIndex) || 1));
-    }
-    if ((record.phaseIndex || 0) >= 1) return record.phaseIndex;
-    return 0;
-  }
-
   function progressPercent(record) {
     if (!record || record.status !== 'memorizing') return 100;
     const total = Math.max(1, Number(record.memorizingDurationMs) || 1);
@@ -147,29 +131,9 @@
     return safeText(card?.imageDisplayUrl || card?.imageUrl || card?.imagem || card?.image);
   }
 
-  function resolveCardEnglish(card) {
-    return safeText(card?.english || card?.nomeIngles);
-  }
-
-  function resolveCardPortuguese(card) {
-    return safeText(card?.portuguese || card?.nomePortugues);
-  }
-
-  function formatStatus(record) {
-    if (!record) {
-      return { label: 'Sem status', className: '' };
-    }
-    if (record.status === 'ready') {
-      return {
-        label: 'Liberado pra fila',
-        className: 'is-ready'
-      };
-    }
-    const percent = progressPercent(record);
-    return {
-      label: `Memorizing ${percent.toFixed(0)}%`,
-      className: 'is-memorizing'
-    };
+  function fallbackLetter(card) {
+    const source = safeText(card?.english || card?.nomeIngles || card?.portuguese || card?.nomePortugues || 'C');
+    return source.charAt(0).toUpperCase() || 'C';
   }
 
   function hydrateCards() {
@@ -213,50 +177,27 @@
       els.grid.innerHTML = '';
       els.empty.hidden = false;
       els.empty.textContent = 'Nenhuma carta conquistada ainda.';
-      if (els.pagination) els.pagination.hidden = true;
       return;
     }
 
     els.empty.hidden = true;
-    const totalPages = Math.max(1, Math.ceil(state.cards.length / PAGE_SIZE));
-    state.currentPage = Math.max(1, Math.min(totalPages, state.currentPage));
-    const start = (state.currentPage - 1) * PAGE_SIZE;
-    const visibleCards = state.cards.slice(start, start + PAGE_SIZE);
-
-    els.grid.innerHTML = visibleCards.map((card) => {
+    els.grid.innerHTML = state.cards.map((card) => {
       const imageUrl = resolveCardImage(card);
-      const english = resolveCardEnglish(card);
-      const portuguese = resolveCardPortuguese(card);
-      const sealPhase = activeSealPhase(card.progress);
-      const seal = sealPhase ? phaseMeta(sealPhase) : null;
-      const status = formatStatus(card.progress);
+      const progress = Math.max(0, Math.min(100, progressPercent(card.progress)));
+      const isMemorizing = card.progress?.status === 'memorizing';
       return `
-        <article class="mycards-card" role="listitem">
-          <div class="mycards-card__image">
-            ${imageUrl
-              ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(english || portuguese || 'Carta')}">`
-              : ''}
-            ${seal ? `<img class="mycards-card__seal" src="${escapeHtml(seal.sealPath)}" alt="${escapeHtml(seal.label)}">` : ''}
-            <div class="mycards-card__status ${escapeHtml(status.className)}">${escapeHtml(status.label)}</div>
+        <article class="mycards-item" role="listitem">
+          <div class="mycards-card ${isMemorizing ? 'is-memorizing' : 'is-ready'}" style="--progress:${escapeHtml((progress * 3.6).toFixed(1))}deg;">
+            <div class="mycards-card__image">
+              ${imageUrl
+                ? `<img src="${escapeHtml(imageUrl)}" alt="Carta">`
+                : `<div class="mycards-card__fallback">${escapeHtml(fallbackLetter(card))}</div>`}
+              ${isMemorizing ? '<div class="mycards-card__status">memorizing</div>' : ''}
+            </div>
           </div>
-          <p class="mycards-card__title">${escapeHtml(english || portuguese || 'Carta')}</p>
-          <p class="mycards-card__sub">${escapeHtml(portuguese || (seal ? seal.label : ''))}</p>
         </article>
       `;
     }).join('');
-
-    if (els.pagination) {
-      els.pagination.hidden = totalPages <= 1;
-    }
-    if (els.pageLabel) {
-      els.pageLabel.textContent = `Página ${state.currentPage} de ${totalPages}`;
-    }
-    if (els.prev) {
-      els.prev.disabled = state.currentPage <= 1;
-    }
-    if (els.next) {
-      els.next.disabled = state.currentPage >= totalPages;
-    }
   }
 
   async function resolveSessionUserId() {
@@ -278,17 +219,7 @@
     hydrateCards();
     updateSummary();
     renderCardsPage();
-
-    els.prev?.addEventListener('click', () => {
-      state.currentPage = Math.max(1, state.currentPage - 1);
-      renderCardsPage();
-    });
-
-    els.next?.addEventListener('click', () => {
-      const totalPages = Math.max(1, Math.ceil(state.cards.length / PAGE_SIZE));
-      state.currentPage = Math.min(totalPages, state.currentPage + 1);
-      renderCardsPage();
-    });
+    window.setInterval(renderCardsPage, 1000);
   }
 
   init();

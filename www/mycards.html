@@ -22,148 +22,133 @@
       padding-bottom: calc(var(--footer-height) + 18px);
     }
 
-    .cards-tabs {
-      display: none;
+    .mycards-page {
+      width: min(1080px, calc(100vw - 22px));
+      margin: 0 auto;
+      padding: 14px 0 24px;
     }
 
     .mycards-summary {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 18px;
+      gap: 10px;
+      margin: 0 0 20px;
     }
 
     .mycards-stat {
-      padding: 16px 14px;
-      border-radius: 22px;
-      background: rgba(8, 21, 40, 0.88);
+      min-height: 72px;
+      padding: 12px 10px;
+      border-radius: 24px;
+      background: rgba(8, 21, 40, 0.18);
       border: 1px solid rgba(126, 208, 255, 0.18);
-      text-align: center;
+      backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .mycards-stat svg {
+      width: 25px;
+      height: 25px;
+      color: #ffffff;
+      flex: 0 0 auto;
     }
 
     .mycards-stat strong {
       display: block;
       font-size: 24px;
+      line-height: 1;
       color: #ffffff;
-    }
-
-    .mycards-stat span {
-      display: block;
-      margin-top: 6px;
-      font-size: 13px;
-      color: #b8d8ff;
     }
 
     .mycards-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px 14px;
+    }
+
+    .mycards-empty {
+      margin: 0;
+      padding: 18px 12px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.88);
+      font-weight: 700;
+    }
+
+    .mycards-item {
+      display: flex;
+      justify-content: center;
     }
 
     .mycards-card {
-      padding: 12px;
-      border-radius: 22px;
-      background: rgba(8, 21, 40, 0.88);
-      border: 1px solid rgba(126, 208, 255, 0.18);
+      position: relative;
+      width: min(100%, 170px);
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      --progress: 360deg;
+      background: conic-gradient(#2be06a var(--progress), rgba(43, 224, 106, 0.18) 0deg);
+      box-shadow: 0 18px 34px rgba(7, 17, 31, 0.18);
+      isolation: isolate;
+    }
+
+    .mycards-card::before {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(4px);
+      z-index: 0;
     }
 
     .mycards-card__image {
       position: relative;
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      border-radius: 18px;
+      z-index: 1;
+      width: calc(100% - 16px);
+      height: calc(100% - 16px);
+      border-radius: 50%;
       overflow: hidden;
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.08);
     }
 
-    .mycards-card__image img {
+    .mycards-card__image img,
+    .mycards-card__fallback {
       width: 100%;
       height: 100%;
-      object-fit: cover;
       display: block;
+      object-fit: cover;
     }
 
-    .mycards-card__seal {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 34px;
-      height: 34px;
-      object-fit: contain;
-      filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.28));
+    .mycards-card__fallback {
+      display: grid;
+      place-items: center;
+      color: #ffffff;
+      font-size: 32px;
+      font-weight: 900;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
+    }
+
+    .mycards-card.is-memorizing .mycards-card__image {
+      animation: mycards-memorizing-pulse 3000ms ease-in-out infinite;
     }
 
     .mycards-card__status {
       position: absolute;
-      left: 8px;
-      right: 8px;
-      bottom: 8px;
-      padding: 7px 9px;
-      border-radius: 999px;
-      background: rgba(4, 10, 18, 0.72);
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2;
       color: #ffffff;
-      font-size: 11px;
-      font-weight: 700;
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.02em;
       text-align: center;
-      backdrop-filter: blur(8px);
-    }
-
-    .mycards-card__status.is-memorizing {
-      background: rgba(16, 88, 168, 0.78);
-    }
-
-    .mycards-card__status.is-ready {
-      background: rgba(29, 130, 77, 0.82);
-    }
-
-    .mycards-card__title {
-      margin: 12px 0 4px;
-      font-size: 15px;
-      font-weight: 800;
-      color: #ffffff;
-      text-align: center;
-    }
-
-    .mycards-card__sub {
-      margin: 0;
-      font-size: 12px;
-      color: #b8d8ff;
-      text-align: center;
-      min-height: 32px;
-    }
-
-    .mycards-pagination {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .mycards-pagination[hidden] {
-      display: none;
-    }
-
-    .mycards-pagination__button {
-      min-width: 110px;
-      min-height: 42px;
-      border: 0;
-      border-radius: 999px;
-      background: #157efb;
-      color: #fff;
-      font-weight: 800;
-      cursor: pointer;
-    }
-
-    .mycards-pagination__button:disabled {
-      opacity: 0.45;
-      cursor: default;
-    }
-
-    .mycards-pagination__label {
-      color: #d9ecff;
-      font-size: 13px;
-      font-weight: 700;
+      text-transform: lowercase;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+      pointer-events: none;
     }
 
     .flashcards-footer-nav {
@@ -204,13 +189,26 @@
       color: #ffffff;
     }
 
-    @media (max-width: 720px) {
-      .mycards-summary {
-        grid-template-columns: 1fr;
+    @keyframes mycards-memorizing-pulse {
+      0% {
+        opacity: 0.7;
       }
+      50% {
+        opacity: 0.35;
+      }
+      100% {
+        opacity: 0.7;
+      }
+    }
 
+    @media (max-width: 720px) {
       .mycards-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px 12px;
+      }
+
+      .mycards-card {
+        width: min(100%, 150px);
       }
     }
   </style>
@@ -233,51 +231,31 @@
     </div>
     <div class="site-header__slot site-header__slot--right">
       <div class="site-header__coins" aria-label="Moedas">
-        <span class="site-header__coins-icon" aria-hidden="true">◉</span>
+        <span class="site-header__coins-icon" aria-hidden="true">&#9673;</span>
         <span id="global-header-coins">0</span>
       </div>
     </div>
   </header>
 
-  <main id="cards-page" class="cards-page" data-page-transition data-cards-active-tab="flashcards">
-    <section class="cards-selection" aria-live="polite" aria-label="Sessao selecionada">
-      <div id="cards-section-dynamic" class="cards-section-dynamic">
-        <div id="title-section" class="cards-layout-box title-section">
-          <button id="cards-back-button" class="cards-back-button" type="button" hidden>Voltar aos decks</button>
-          <h2 id="cards-selected-title" class="cards-selection__title">FlashCards</h2>
-        </div>
-        <div id="description-section" class="cards-layout-box description-section">
-          <p id="cards-selected-copy" class="cards-selection__copy">Conteudo conquistado na Jornada da Fluencia.</p>
-        </div>
-        <div id="cards-selected-spotlight" class="cards-selected-spotlight" hidden>
-          <div id="cards-selected-cover" class="cards-selected-spotlight__cover"></div>
-          <p id="cards-selected-block-title" class="cards-selected-spotlight__title"></p>
-          <button id="cards-selected-action" class="cards-action-button" type="button" hidden></button>
-        </div>
-        <div class="mycards-summary" id="mycards-summary">
-          <div class="mycards-stat">
-            <strong id="mycards-total">0</strong>
-            <span>Total de cartas</span>
-          </div>
-          <div class="mycards-stat">
-            <strong id="mycards-ready">0</strong>
-            <span>Liberadas para fila</span>
-          </div>
-          <div class="mycards-stat">
-            <strong id="mycards-memorizing">0</strong>
-            <span>Em memorizing</span>
-          </div>
-        </div>
-        <div id="content-section" class="cards-layout-box content-section">
-          <div id="cards-collection-grid" class="mycards-grid" role="list"></div>
-          <p id="cards-empty-state" class="cards-empty-state" hidden></p>
-          <div class="mycards-pagination" id="mycards-pagination" hidden>
-            <button class="mycards-pagination__button" id="mycards-prev" type="button">Anterior</button>
-            <span class="mycards-pagination__label" id="mycards-page-label">Página 1</span>
-            <button class="mycards-pagination__button" id="mycards-next" type="button">Próxima</button>
-          </div>
-        </div>
+  <main class="mycards-page" aria-live="polite">
+    <section class="mycards-summary" id="mycards-summary">
+      <div class="mycards-stat" aria-label="Total de cartas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 4.5A2.5 2.5 0 0 1 7.5 2h9A2.5 2.5 0 0 1 19 4.5v11A2.5 2.5 0 0 1 16.5 18h-9A2.5 2.5 0 0 1 5 15.5v-11Zm2.5-.5a.5.5 0 0 0-.5.5v11a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5v-11a.5.5 0 0 0-.5-.5h-9ZM8 7h8v2H8V7Zm0 4h8v2H8v-2Zm0 4h5v2H8v-2Z"/></svg>
+        <strong id="mycards-total">0</strong>
       </div>
+      <div class="mycards-stat" aria-label="Liberadas para fila">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 3 7v4c0 5.25 3.84 10.74 9 12 5.16-1.26 9-6.75 9-12V7l-9-5Zm-1 14-4-4 1.41-1.41L11 13.17l4.59-4.58L17 10l-6 6Z"/></svg>
+        <strong id="mycards-ready">0</strong>
+      </div>
+      <div class="mycards-stat" aria-label="Em memorizing">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13 2v8h7A8 8 0 1 1 9.05 3.45L10.5 4.9A6 6 0 1 0 18 12h-7V2h2Z"/></svg>
+        <strong id="mycards-memorizing">0</strong>
+      </div>
+    </section>
+
+    <section>
+      <div id="cards-collection-grid" class="mycards-grid" role="list"></div>
+      <p id="cards-empty-state" class="mycards-empty" hidden></p>
     </section>
   </main>
 
