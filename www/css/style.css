@@ -199,7 +199,79 @@ body {
   font-family: var(--app-font-family, 'Open Sans', sans-serif);
   color: var(--app-text-color, #ffffff);
   position: relative;
-  background: #ffffff var(--playtalk-global-bg-image) center/cover fixed no-repeat;
+  overflow: auto;
+  background: var(--app-background-gradient);
+  animation: playtalkGradientShift 15s ease infinite;
+  background-size: 400% 400%;
+  background-attachment: fixed;
+}
+
+@keyframes playtalkGradientShift {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+.playtalk-wave-bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.playtalk-wave-bg .wave {
+  background: rgb(255 255 255 / 25%);
+  border-radius: 1000% 1000% 0 0;
+  position: fixed;
+  width: 200%;
+  height: 12em;
+  animation: playtalkWaveDrift 10s -3s linear infinite;
+  transform: translate3d(0, 0, 0);
+  opacity: 0.8;
+  bottom: 0;
+  left: 0;
+}
+
+.playtalk-wave-bg .wave:nth-of-type(2) {
+  bottom: -1.25em;
+  animation: playtalkWaveDrift 18s linear reverse infinite;
+  opacity: 0.8;
+}
+
+.playtalk-wave-bg .wave:nth-of-type(3) {
+  bottom: -2.5em;
+  animation: playtalkWaveDrift 20s -1s reverse infinite;
+  opacity: 0.9;
+}
+
+@keyframes playtalkWaveDrift {
+  2% {
+    transform: translateX(1px);
+  }
+  25% {
+    transform: translateX(-25%);
+  }
+  50% {
+    transform: translateX(-50%);
+  }
+  75% {
+    transform: translateX(-25%);
+  }
+  100% {
+    transform: translateX(1px);
+  }
+}
+
+body > :not(.playtalk-wave-bg) {
+  position: relative;
+  z-index: 1;
 }
 
 body.has-custom-text-color {

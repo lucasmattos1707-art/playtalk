@@ -37,9 +37,64 @@
     body {
       font-family: "Trebuchet MS", "Segoe UI", sans-serif;
       color: var(--text);
-      background:
-        radial-gradient(circle at top, rgba(80, 170, 255, 0.18), transparent 28%),
-        linear-gradient(180deg, #081322 0%, #050b14 100%);
+      position: relative;
+      overflow: auto;
+      background: linear-gradient(315deg, rgba(101, 0, 94, 1) 3%, rgba(60, 132, 206, 1) 38%, rgba(48, 238, 226, 1) 68%, rgba(255, 25, 25, 1) 98%);
+      animation: accountGradient 15s ease infinite;
+      background-size: 400% 400%;
+      background-attachment: fixed;
+    }
+
+    @keyframes accountGradient {
+      0% { background-position: 0% 0%; }
+      50% { background-position: 100% 100%; }
+      100% { background-position: 0% 0%; }
+    }
+
+    .playtalk-wave-bg {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wave {
+      background: rgb(255 255 255 / 25%);
+      border-radius: 1000% 1000% 0 0;
+      position: fixed;
+      width: 200%;
+      height: 12em;
+      animation: accountWave 10s -3s linear infinite;
+      transform: translate3d(0, 0, 0);
+      opacity: 0.8;
+      bottom: 0;
+      left: 0;
+    }
+
+    .wave:nth-of-type(2) {
+      bottom: -1.25em;
+      animation: accountWave 18s linear reverse infinite;
+      opacity: 0.8;
+    }
+
+    .wave:nth-of-type(3) {
+      bottom: -2.5em;
+      animation: accountWave 20s -1s reverse infinite;
+      opacity: 0.9;
+    }
+
+    @keyframes accountWave {
+      2% { transform: translateX(1px); }
+      25% { transform: translateX(-25%); }
+      50% { transform: translateX(-50%); }
+      75% { transform: translateX(-25%); }
+      100% { transform: translateX(1px); }
+    }
+
+    body > :not(.playtalk-wave-bg) {
+      position: relative;
+      z-index: 1;
     }
 
     .page {
@@ -250,6 +305,11 @@
   </style>
 </head>
 <body>
+  <div class="playtalk-wave-bg" aria-hidden="true">
+    <div class="wave"></div>
+    <div class="wave"></div>
+    <div class="wave"></div>
+  </div>
   <main class="page">
     <section class="panel-head">
       <h1 class="title">Conta</h1>
