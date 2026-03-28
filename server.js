@@ -3559,11 +3559,14 @@ function normalizeUsername(raw) {
 
 function isValidUsername(username) {
   if (!username) return false;
-  return /^[a-zA-Z0-9._-]{3,32}$/.test(username);
+  return /^[a-zA-Z0-9._ -]{3,32}$/.test(username);
 }
 
 function buildLegacyEmailFromUsername(username) {
-  return String(username || '').trim().toLowerCase();
+  return String(username || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .toLowerCase();
 }
 
 function buildRandomUserSuffix(length = 8) {

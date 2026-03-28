@@ -3355,7 +3355,9 @@
       display: none;
       align-items: center;
       justify-content: center;
-      padding: 24px 18px 120px;
+      width: 100vw;
+      height: 100vh;
+      padding: 0;
       background: rgba(7, 16, 34, 0.78);
       backdrop-filter: blur(16px);
       z-index: 140;
@@ -3366,12 +3368,17 @@
     }
 
     .identity-gate__card {
-      width: min(100%, 460px);
-      border-radius: 28px;
+      width: 100%;
+      height: 100%;
+      border-radius: 0;
       background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(239,246,255,0.98));
-      box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
-      padding: 26px 20px 22px;
+      box-shadow: none;
+      padding: 28px 20px 36px;
       text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
 
     .identity-gate__card h2 {
@@ -3389,7 +3396,8 @@
 
     .identity-gate__name-display {
       min-height: 62px;
-      margin: 22px 0 16px;
+      width: min(100%, 360px);
+      margin: 26px 0 22px;
       border-radius: 20px;
       border: 2px solid rgba(37, 99, 235, 0.14);
       background: rgba(255, 255, 255, 0.96);
@@ -3408,6 +3416,7 @@
     }
 
     .identity-gate__keyboard {
+      width: min(100%, 390px);
       margin-top: 12px;
     }
 
@@ -3418,18 +3427,19 @@
     .identity-gate__key,
     .identity-gate__action {
       border: 0;
-      border-radius: 18px;
-      min-height: 52px;
+      border-radius: 16px;
+      min-height: 56px;
       background: linear-gradient(180deg, #2563eb, #1d4ed8);
       color: #fff;
       font-size: 18px;
       font-weight: 800;
       cursor: pointer;
       box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
+      transition: opacity 280ms ease, transform 280ms ease, box-shadow 220ms ease;
     }
 
-    .identity-gate__key.is-wide {
-      grid-column: span 4;
+    .identity-gate__key {
+      aspect-ratio: 1 / 1;
     }
 
     .identity-gate__key.is-secondary,
@@ -3441,9 +3451,34 @@
       background: linear-gradient(180deg, #22c55e, #16a34a);
     }
 
+    .identity-gate__space-row {
+      width: min(100%, 390px);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .identity-gate__space-btn {
+      min-height: 62px;
+      border-radius: 18px;
+      border: 0;
+      background: linear-gradient(180deg, #38bdf8, #2563eb);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
+    }
+
+    .identity-gate__continue {
+      width: min(100%, 300px);
+      margin-top: 34px;
+    }
+
     .identity-gate__status {
       min-height: 22px;
-      margin: 14px 0 0;
+      margin: 16px 0 0;
       color: #2563eb;
       font-weight: 700;
     }
@@ -3455,13 +3490,15 @@
     .identity-gate__photo-shell {
       display: grid;
       gap: 16px;
-      margin-top: 18px;
+      margin-top: 24px;
       justify-items: center;
+      width: 100%;
     }
 
     .identity-gate__photo-circle {
-      width: 220px;
-      height: 220px;
+      position: relative;
+      width: min(70vw, 280px);
+      height: min(70vw, 280px);
       border-radius: 999px;
       border: 0;
       padding: 0;
@@ -3480,6 +3517,43 @@
       display: block;
     }
 
+    .identity-gate__photo-circle.is-flash::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: rgba(255,255,255,0.82);
+      animation: identity-photo-flash 620ms ease-out;
+      pointer-events: none;
+    }
+
+    .identity-gate__photo-circle.is-busy .identity-gate__photo-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: inherit;
+      opacity: 0.72;
+    }
+
+    .identity-gate__photo-circle.is-busy .identity-gate__photo-layer--1 {
+      filter: blur(3px);
+      transform: scale(1.02);
+    }
+
+    .identity-gate__photo-circle.is-busy .identity-gate__photo-layer--2 {
+      filter: blur(7px);
+      transform: scale(1.06);
+      opacity: 0.46;
+    }
+
+    .identity-gate__photo-circle.is-busy .identity-gate__photo-layer--3 {
+      filter: blur(12px);
+      transform: scale(1.1);
+      opacity: 0.3;
+    }
+
     .identity-gate__photo-circle svg {
       width: 84px;
       height: 84px;
@@ -3495,8 +3569,20 @@
     .identity-gate__photo-actions {
       width: 100%;
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr);
       gap: 12px;
+      transition: opacity 320ms ease, transform 320ms ease;
+    }
+
+    .identity-gate__photo-actions.is-hidden {
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+    }
+
+    @keyframes identity-photo-flash {
+      from { opacity: 1; }
+      to { opacity: 0; }
     }
 
     body.identity-gate-open .flashcards-footer-nav {
@@ -3510,12 +3596,12 @@
       }
 
       .identity-gate__card {
-        padding: 22px 16px 18px;
+        padding: 22px 16px 26px;
       }
 
       .identity-gate__photo-circle {
-        width: 180px;
-        height: 180px;
+        width: min(74vw, 240px);
+        height: min(74vw, 240px);
       }
     }
   </style>
@@ -3836,10 +3922,12 @@
   <section class="identity-gate" id="nameGate" aria-modal="true" role="dialog" aria-label="Escolha um nome">
     <div class="identity-gate__card">
       <h2>Escolha um nome</h2>
-      <p>Seu nome vai aparecer no perfil, no account e no ranking.</p>
       <div class="identity-gate__name-display" id="nameGateDisplay">&nbsp;</div>
       <div class="identity-gate__keyboard" id="nameGateKeyboard"></div>
-      <button class="identity-gate__action is-success" id="nameGateContinueBtn" type="button">Avancar</button>
+      <div class="identity-gate__space-row">
+        <button class="identity-gate__space-btn" id="nameGateSpaceBtn" type="button">Espaco</button>
+      </div>
+      <button class="identity-gate__action is-success identity-gate__continue" id="nameGateContinueBtn" type="button">Avancar</button>
       <p class="identity-gate__status" id="nameGateStatus" aria-live="polite"></p>
     </div>
   </section>
@@ -3855,7 +3943,7 @@
         <input id="photoGateInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
         <p class="identity-gate__photo-copy" id="photoGateStatus">Toque no circulo azul para enviar sua foto.</p>
         <p class="identity-gate__status" id="photoGateLoadingCopy" aria-live="polite"></p>
-        <div class="identity-gate__photo-actions">
+        <div class="identity-gate__photo-actions" id="photoGateActions">
           <button class="identity-gate__action is-success" id="photoGateContinueBtn" type="button" disabled>Avancar</button>
           <button class="identity-gate__action is-secondary" id="photoGateRegenerateBtn" type="button" disabled>Gerar nova</button>
         </div>
@@ -3941,6 +4029,7 @@
       const ONBOARDING_USERNAME_AUDIO_PATH = '/accesskey/username.mp3';
       const ONBOARDING_PHOTO_AUDIO_PATH = '/accesskey/photo.mp3';
       const ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH = '/accesskey/photorecieve.mp3';
+      const ONBOARDING_IMAGE_READY_AUDIO_PATH = '/accesskey/imageready.mp3';
       const ACCESS_KEY_AUDIO_SUCCESS_PATHS = {
         semana: '/accesskey/week.mp3',
         mes: '/accesskey/month.mp3',
@@ -3950,7 +4039,7 @@
       const ONBOARDING_PHOTO_THRESHOLD = 5;
       const ONBOARDING_MIN_NAME_LENGTH = 3;
       const ONBOARDING_MAX_PHOTO_GENERATIONS = 5;
-      const ONBOARDING_KEYBOARD_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWX'.split('');
+      const ONBOARDING_KEYBOARD_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUV'.split('');
       const ONBOARDING_LOADING_MESSAGES = [
         'Analisando a imagem enviada...',
         'Detectando estrutura facial e proporcoes...',
@@ -4105,7 +4194,8 @@
           identityAudio: null,
           nameGateOpen: false,
           nameDraft: '',
-          nameKeyboardShifted: false,
+          nameKeyboardVariantIndex: 0,
+          nameKeyboardTimer: 0,
           nameGateBusy: false,
           photoGateOpen: false,
           photoGateBusy: false,
@@ -4116,6 +4206,7 @@
           photoLoadingTimer: 0,
           photoLoadingMessageIndex: 0,
           photoSwipeStartX: 0,
+          photoFlashTimer: 0,
           premiumGateOpen: false,
           premiumCode: '',
           premiumStatus: '',
@@ -4260,6 +4351,7 @@
         nameGate: document.getElementById('nameGate'),
         nameGateDisplay: document.getElementById('nameGateDisplay'),
         nameGateKeyboard: document.getElementById('nameGateKeyboard'),
+        nameGateSpaceBtn: document.getElementById('nameGateSpaceBtn'),
         nameGateContinueBtn: document.getElementById('nameGateContinueBtn'),
         nameGateStatus: document.getElementById('nameGateStatus'),
         photoGate: document.getElementById('photoGate'),
@@ -4267,6 +4359,7 @@
         photoGateInput: document.getElementById('photoGateInput'),
         photoGateStatus: document.getElementById('photoGateStatus'),
         photoGateLoadingCopy: document.getElementById('photoGateLoadingCopy'),
+        photoGateActions: document.getElementById('photoGateActions'),
         photoGateContinueBtn: document.getElementById('photoGateContinueBtn'),
         photoGateRegenerateBtn: document.getElementById('photoGateRegenerateBtn')
       };
@@ -5502,10 +5595,40 @@
         state.ui.identityAudio = null;
       }
 
+      function fadeOutIdentityAudio(durationMs = 1000) {
+        const activeAudio = state.ui.identityAudio;
+        if (!activeAudio) return Promise.resolve(false);
+        return new Promise((resolve) => {
+          const startVolume = Number(activeAudio.volume) || 1;
+          const steps = Math.max(1, Math.round(durationMs / 50));
+          let currentStep = 0;
+          const timer = window.setInterval(() => {
+            currentStep += 1;
+            const ratio = Math.max(0, 1 - (currentStep / steps));
+            activeAudio.volume = startVolume * ratio;
+            if (currentStep >= steps) {
+              window.clearInterval(timer);
+              try {
+                activeAudio.pause();
+                activeAudio.currentTime = 0;
+                activeAudio.volume = 1;
+              } catch (_error) {
+                // ignore
+              }
+              if (state.ui.identityAudio === activeAudio) {
+                state.ui.identityAudio = null;
+              }
+              resolve(true);
+            }
+          }, 50);
+        });
+      }
+
       function playIdentityAudio(src) {
         if (!src) return;
         stopIdentityAudio();
         const audio = new Audio(src);
+        audio.volume = 1;
         state.ui.identityAudio = audio;
         audio.addEventListener('ended', () => {
           if (state.ui.identityAudio === audio) state.ui.identityAudio = null;
@@ -5569,11 +5692,11 @@
 
       function renderNameKeyboard() {
         if (!els.nameGateKeyboard) return;
-        const letters = ONBOARDING_KEYBOARD_LETTERS.slice();
-        if (state.ui.nameKeyboardShifted) {
-          letters[22] = 'Y';
-          letters[23] = 'Z';
-        }
+        const letters = [
+          ...ONBOARDING_KEYBOARD_LETTERS,
+          ['W', 'X'][state.ui.nameKeyboardVariantIndex % 2],
+          ['X', 'Z'][state.ui.nameKeyboardVariantIndex % 2]
+        ];
         els.nameGateKeyboard.innerHTML = '';
         for (let rowIndex = 0; rowIndex < 4; rowIndex += 1) {
           const row = document.createElement('div');
@@ -5593,44 +5716,31 @@
           });
           els.nameGateKeyboard.appendChild(row);
         }
-        const bottomRow = document.createElement('div');
-        bottomRow.className = 'identity-gate__keyboard-row';
-        const clearKey = document.createElement('button');
-        clearKey.type = 'button';
-        clearKey.className = 'identity-gate__key is-wide';
-        clearKey.textContent = 'Limpar';
-        clearKey.addEventListener('click', () => {
-          if (state.ui.nameGateBusy) return;
-          state.ui.nameDraft = '';
-          renderNameGate();
-        });
-        const backspaceKey = document.createElement('button');
-        backspaceKey.type = 'button';
-        backspaceKey.className = 'identity-gate__key is-secondary';
-        backspaceKey.textContent = 'Apagar';
-        backspaceKey.addEventListener('click', () => {
-          if (state.ui.nameGateBusy || !state.ui.nameDraft) return;
-          state.ui.nameDraft = state.ui.nameDraft.slice(0, -1);
-          renderNameGate();
-        });
-        const shiftKey = document.createElement('button');
-        shiftKey.type = 'button';
-        shiftKey.className = 'identity-gate__key is-secondary';
-        shiftKey.textContent = state.ui.nameKeyboardShifted ? 'ABC' : 'YZ';
-        shiftKey.addEventListener('click', () => {
-          if (state.ui.nameGateBusy) return;
-          state.ui.nameKeyboardShifted = !state.ui.nameKeyboardShifted;
+      }
+
+      function startNameKeyboardTicker() {
+        if (state.ui.nameKeyboardTimer) {
+          window.clearInterval(state.ui.nameKeyboardTimer);
+        }
+        state.ui.nameKeyboardTimer = window.setInterval(() => {
+          state.ui.nameKeyboardVariantIndex = (state.ui.nameKeyboardVariantIndex + 1) % 2;
           renderNameKeyboard();
-        });
-        bottomRow.append(clearKey, backspaceKey, shiftKey);
-        els.nameGateKeyboard.appendChild(bottomRow);
+        }, 1200);
+      }
+
+      function stopNameKeyboardTicker() {
+        if (!state.ui.nameKeyboardTimer) return;
+        window.clearInterval(state.ui.nameKeyboardTimer);
+        state.ui.nameKeyboardTimer = 0;
       }
 
       function openNameGate() {
         state.ui.nameGateOpen = true;
         state.ui.photoGateOpen = false;
         state.ui.nameDraft = safeText(state.user?.onboardingNameCompleted ? state.user?.username : state.user?.username || '');
+        state.ui.nameKeyboardVariantIndex = 0;
         renderNameKeyboard();
+        startNameKeyboardTicker();
         renderNameGate();
         setNameGateStatus('');
         setIdentityGateVisibility();
@@ -5639,6 +5749,7 @@
 
       function closeNameGate() {
         state.ui.nameGateOpen = false;
+        stopNameKeyboardTicker();
         setIdentityGateVisibility();
       }
 
@@ -5710,9 +5821,19 @@
       function renderPhotoGate() {
         const currentVersion = currentPhotoVersion();
         if (els.photoGateCircle) {
-          els.photoGateCircle.innerHTML = currentVersion?.image
-            ? `<img src="${escapeHtml(currentVersion.image)}" alt="Foto ilustrada do usuario">`
-            : '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>';
+          if (state.ui.photoGateBusy && state.ui.photoSourceDataUrl) {
+            const safeSource = escapeHtml(state.ui.photoSourceDataUrl);
+            els.photoGateCircle.innerHTML = `
+              <img class="identity-gate__photo-layer identity-gate__photo-layer--3" src="${safeSource}" alt="">
+              <img class="identity-gate__photo-layer identity-gate__photo-layer--2" src="${safeSource}" alt="">
+              <img class="identity-gate__photo-layer identity-gate__photo-layer--1" src="${safeSource}" alt="">
+            `;
+          } else {
+            els.photoGateCircle.innerHTML = currentVersion?.image
+              ? `<img src="${escapeHtml(currentVersion.image)}" alt="Foto ilustrada do usuario">`
+              : '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>';
+          }
+          els.photoGateCircle.classList.toggle('is-busy', state.ui.photoGateBusy && Boolean(state.ui.photoSourceDataUrl));
         }
         if (els.photoGateStatus) {
           if (state.ui.photoGateBusy) {
@@ -5728,6 +5849,9 @@
         }
         if (els.photoGateRegenerateBtn) {
           els.photoGateRegenerateBtn.disabled = state.ui.photoGateBusy || state.ui.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS || !state.ui.photoSourceDataUrl;
+        }
+        if (els.photoGateActions) {
+          els.photoGateActions.classList.toggle('is-hidden', state.ui.photoGateBusy);
         }
       }
 
@@ -5749,6 +5873,20 @@
         state.ui.photoGateOpen = false;
         stopPhotoLoadingCopy();
         setIdentityGateVisibility();
+      }
+
+      function flashPhotoGateResult() {
+        if (!els.photoGateCircle) return;
+        els.photoGateCircle.classList.remove('is-flash');
+        void els.photoGateCircle.offsetWidth;
+        els.photoGateCircle.classList.add('is-flash');
+        if (state.ui.photoFlashTimer) {
+          window.clearTimeout(state.ui.photoFlashTimer);
+        }
+        state.ui.photoFlashTimer = window.setTimeout(() => {
+          els.photoGateCircle?.classList.remove('is-flash');
+          state.ui.photoFlashTimer = 0;
+        }, 700);
       }
 
       async function persistPhotoGateProfile() {
@@ -5793,6 +5931,9 @@
           playIdentityAudio(ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH);
           startPhotoLoadingCopy();
           const cartoonDataUrl = await createCartoonAvatar(sourceDataUrl);
+          if (state.ui.identityAudio?.src?.endsWith('photorecieve.mp3')) {
+            await fadeOutIdentityAudio(1000);
+          }
           stopPhotoLoadingCopy();
           if (els.photoGateLoadingCopy) {
             els.photoGateLoadingCopy.textContent = '';
@@ -5805,6 +5946,8 @@
           });
           state.ui.photoVersions = state.ui.photoVersions.slice(-ONBOARDING_MAX_PHOTO_GENERATIONS);
           state.ui.photoVersionIndex = state.ui.photoVersions.length - 1;
+          playIdentityAudio(ONBOARDING_IMAGE_READY_AUDIO_PATH);
+          flashPhotoGateResult();
           renderPhotoGate();
         } catch (error) {
           stopPhotoLoadingCopy();
@@ -10324,6 +10467,11 @@
         });
         els.nameGateContinueBtn?.addEventListener('click', () => {
           void submitNameGate();
+        });
+        els.nameGateSpaceBtn?.addEventListener('click', () => {
+          if (state.ui.nameGateBusy || !state.ui.nameDraft || state.ui.nameDraft.endsWith(' ') || state.ui.nameDraft.length >= 24) return;
+          state.ui.nameDraft = `${state.ui.nameDraft} `;
+          renderNameGate();
         });
         els.photoGateCircle?.addEventListener('click', () => {
           if (state.ui.photoGateBusy) return;
