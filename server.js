@@ -5178,16 +5178,21 @@ app.use('/allcards', express.static(ALLCARDS_ROOT, {
     res.setHeader('Cache-Control', 'no-store');
   }
 }));
-app.get('/accesskey/:fileName', async (req, res) => {
+app.get(/^\/accesskey\/(.+)$/, async (req, res) => {
   try {
-    const requestedName = path.basename(String(req.params.fileName || ''));
-    const ext = path.extname(requestedName).toLowerCase();
-    if (!requestedName || (!SUPPORTED_IMAGE_EXTENSIONS.has(ext) && !SUPPORTED_AUDIO_EXTENSIONS.has(ext))) {
+    const relativePath = String(req.params?.[0] || '').replace(/\\/g, '/').replace(/^\/+/, '');
+    const normalizedRelativePath = path.posix.normalize(relativePath);
+    const ext = path.extname(normalizedRelativePath).toLowerCase();
+    if (!normalizedRelativePath || normalizedRelativePath.startsWith('..') || (!SUPPORTED_IMAGE_EXTENSIONS.has(ext) && !SUPPORTED_AUDIO_EXTENSIONS.has(ext))) {
       res.status(404).send('Arquivo nao encontrado.');
       return;
     }
 
-    const assetPath = path.join(ACCESSKEY_ROOT, requestedName);
+    const assetPath = path.resolve(ACCESSKEY_ROOT, normalizedRelativePath);
+    if (!assetPath.startsWith(path.resolve(ACCESSKEY_ROOT))) {
+      res.status(404).send('Arquivo nao encontrado.');
+      return;
+    }
     await fs.promises.access(assetPath, fs.constants.F_OK);
     res.sendFile(assetPath);
   } catch (_error) {
