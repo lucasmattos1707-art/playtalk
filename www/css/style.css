@@ -200,10 +200,7 @@ body {
   color: var(--app-text-color, #ffffff);
   position: relative;
   overflow: auto;
-  background: var(--app-background-gradient);
-  animation: playtalkGradientShift 15s ease infinite;
-  background-size: 400% 400%;
-  background-attachment: fixed;
+  background: transparent;
 }
 
 @keyframes playtalkGradientShift {
@@ -221,9 +218,15 @@ body {
 .playtalk-wave-bg {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
+  background: var(--app-background-gradient);
+  animation: playtalkGradientShift 15s ease infinite;
+  background-size: 400% 400%;
+  background-attachment: fixed;
 }
 
 .playtalk-wave-bg .wave {

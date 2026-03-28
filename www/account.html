@@ -39,10 +39,7 @@
       color: var(--text);
       position: relative;
       overflow: auto;
-      background: linear-gradient(315deg, rgba(101, 0, 94, 1) 3%, rgba(60, 132, 206, 1) 38%, rgba(48, 238, 226, 1) 68%, rgba(255, 25, 25, 1) 98%);
-      animation: accountGradient 15s ease infinite;
-      background-size: 400% 400%;
-      background-attachment: fixed;
+      background: transparent;
     }
 
     @keyframes accountGradient {
@@ -54,9 +51,15 @@
     .playtalk-wave-bg {
       position: fixed;
       inset: 0;
+      width: 100vw;
+      height: 100vh;
       overflow: hidden;
       pointer-events: none;
       z-index: 0;
+      background: linear-gradient(315deg, rgba(101, 0, 94, 1) 3%, rgba(60, 132, 206, 1) 38%, rgba(48, 238, 226, 1) 68%, rgba(255, 25, 25, 1) 98%);
+      animation: accountGradient 15s ease infinite;
+      background-size: 400% 400%;
+      background-attachment: fixed;
     }
 
     .wave {
