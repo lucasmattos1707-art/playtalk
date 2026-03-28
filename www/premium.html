@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlayTalk | Premium</title>
+  <style>
+    @font-face {
+      font-family: "PlaytalkDisplay";
+      src: url("/THEBOLDFONT-FREEVERSION.otf") format("opentype");
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --footer-height: max(62px, 8vh);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #8ad8f5 0%, #5dbce3 42%, #228ebf 100%);
+      color: #ffffff;
+    }
+
+    .page {
+      min-height: 100vh;
+      padding: 20px 16px calc(var(--footer-height) + 24px);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .premium-shell {
+      width: min(720px, 100%);
+      padding-top: 10px;
+    }
+
+    .premium-card {
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 34px;
+      padding: 26px 18px 22px;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 28px 60px rgba(6, 19, 41, 0.18);
+    }
+
+    .premium-copy {
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    .premium-copy h1 {
+      margin: 0 0 10px;
+      font-family: "PlaytalkDisplay", Impact, sans-serif;
+      font-size: clamp(34px, 8vw, 56px);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .premium-copy p {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.92);
+    }
+
+    .premium-code {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .premium-code-slot {
+      min-height: 56px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(7, 17, 31, 0.18);
+      display: grid;
+      place-items: center;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+    }
+
+    .premium-code-slot.is-empty {
+      color: rgba(255, 255, 255, 0.44);
+    }
+
+    .premium-status {
+      min-height: 24px;
+      margin: 0 0 18px;
+      text-align: center;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.96);
+    }
+
+    .premium-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .premium-tile {
+      border: 0;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 22px;
+      padding: 10px;
+      cursor: pointer;
+      transition: transform 140ms ease, background 140ms ease;
+      min-height: 88px;
+      display: grid;
+      place-items: center;
+    }
+
+    .premium-tile:hover,
+    .premium-tile:focus-visible {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.18);
+      outline: none;
+    }
+
+    .premium-tile img {
+      width: 100%;
+      max-width: 84px;
+      aspect-ratio: 1 / 1;
+      object-fit: contain;
+      display: block;
+    }
+
+    .premium-actions {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .premium-btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      color: #0b2340;
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .flashcards-footer-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: var(--footer-height);
+      background: #157efb;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: stretch;
+      z-index: 200;
+      box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.12);
+    }
+
+    .flashcards-footer-nav__item {
+      border: 0;
+      background: transparent;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      opacity: 0.78;
+      text-decoration: none;
+    }
+
+    .flashcards-footer-nav__item.is-active {
+      background: rgba(255, 255, 255, 0.14);
+      opacity: 1;
+    }
+
+    .flashcards-footer-nav__item svg {
+      width: 28px;
+      height: 28px;
+      display: block;
+      color: #ffffff;
+    }
+
+    @media (max-width: 640px) {
+      .premium-card {
+        border-radius: 28px;
+        padding: 22px 14px 18px;
+      }
+
+      .premium-grid {
+        gap: 10px;
+      }
+
+      .premium-tile {
+        min-height: 74px;
+        border-radius: 18px;
+      }
+
+      .premium-code-slot {
+        min-height: 50px;
+        font-size: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="premium-shell">
+      <div class="premium-card">
+        <div class="premium-copy">
+          <h1>Premium</h1>
+          <p>Toque nas imagens na ordem certa para montar a chave.</p>
+        </div>
+
+        <div class="premium-code" id="premiumCodeValue" aria-live="polite"></div>
+        <p class="premium-status" id="premiumStatus">Preencha os 6 espacos com as letras correspondentes.</p>
+
+        <div class="premium-grid" id="premiumGrid">
+          <button class="premium-tile" type="button" data-letter="A"><img src="/accesskey/teclas/Imagens/A.png" alt="A"></button>
+          <button class="premium-tile" type="button" data-letter="B"><img src="/accesskey/teclas/Imagens/B.png" alt="B"></button>
+          <button class="premium-tile" type="button" data-letter="C"><img src="/accesskey/teclas/Imagens/C.png" alt="C"></button>
+          <button class="premium-tile" type="button" data-letter="D"><img src="/accesskey/teclas/Imagens/D.png" alt="D"></button>
+          <button class="premium-tile" type="button" data-letter="E"><img src="/accesskey/teclas/Imagens/E.png" alt="E"></button>
+          <button class="premium-tile" type="button" data-letter="F"><img src="/accesskey/teclas/Imagens/F.png" alt="F"></button>
+          <button class="premium-tile" type="button" data-letter="G"><img src="/accesskey/teclas/Imagens/G.png" alt="G"></button>
+          <button class="premium-tile" type="button" data-letter="H"><img src="/accesskey/teclas/Imagens/H.png" alt="H"></button>
+          <button class="premium-tile" type="button" data-letter="I"><img src="/accesskey/teclas/Imagens/I.png" alt="I"></button>
+          <button class="premium-tile" type="button" data-letter="J"><img src="/accesskey/teclas/Imagens/J.png" alt="J"></button>
+          <button class="premium-tile" type="button" data-letter="K"><img src="/accesskey/teclas/Imagens/K.png" alt="K"></button>
+          <button class="premium-tile" type="button" data-letter="L"><img src="/accesskey/teclas/Imagens/L.png" alt="L"></button>
+          <button class="premium-tile" type="button" data-letter="M"><img src="/accesskey/teclas/Imagens/M.png" alt="M"></button>
+          <button class="premium-tile" type="button" data-letter="N"><img src="/accesskey/teclas/Imagens/N.png" alt="N"></button>
+          <button class="premium-tile" type="button" data-letter="O"><img src="/accesskey/teclas/Imagens/O.png" alt="O"></button>
+          <button class="premium-tile" type="button" data-letter="P"><img src="/accesskey/teclas/Imagens/P.png" alt="P"></button>
+        </div>
+
+        <div class="premium-actions">
+          <button class="premium-btn" id="premiumBackspaceBtn" type="button">Apagar ultima</button>
+          <button class="premium-btn" id="premiumClearBtn" type="button">Limpar</button>
+          <button class="premium-btn" id="premiumRedeemBtn" type="button">Ativar</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="flashcards-footer-nav" aria-label="Navegacao do flashcards">
+    <a class="flashcards-footer-nav__item" href="/flashcards?view=play" aria-label="Jogar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.36a1 1 0 0 0 0-1.72l-10-6.36A1 1 0 0 0 8 5.14Z"/></svg>
+    </a>
+    <a class="flashcards-footer-nav__item" href="/mycards" aria-label="Flashcards">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.6 2.5c.33 2.34 2.12 3.25 3.48 4.86 1.34 1.59 2 3.22 2 5.35 0 4.3-2.96 8.79-7.58 8.79-3.36 0-5.58-2.4-5.58-5.34 0-2.21 1.12-3.85 2.97-5.78 1.38-1.44 2.94-3.14 4.71-7.88Z"/></svg>
+    </a>
+    <a class="flashcards-footer-nav__item is-active" href="/premium" aria-label="Premium">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 3h10v2h2a2 2 0 0 1 2 2c0 3.32-2.47 6-5.57 6.4A5.99 5.99 0 0 1 13 17.83V20h4v2H7v-2h4v-2.17A5.99 5.99 0 0 1 8.57 13.4C5.47 13 3 10.32 3 7a2 2 0 0 1 2-2h2V3Zm-2 4c0 2.1 1.45 3.82 3.4 4.28A6 6 0 0 1 7 7V7H5Zm14 0h-2a6 6 0 0 1-1.4 4.28C17.55 10.82 19 9.1 19 7Z"/></svg>
+    </a>
+    <a class="flashcards-footer-nav__item" href="/account" aria-label="Perfil">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2c-4.42 0-8 2.46-8 5.5 0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5 0-3.04-3.58-5.5-8-5.5Z"/></svg>
+    </a>
+  </nav>
+
+  <script src="js/apk-config.js"></script>
+  <script src="js/api-config.js"></script>
+  <script>
+    (function initPremiumPage() {
+      const els = {
+        premiumCodeValue: document.getElementById('premiumCodeValue'),
+        premiumStatus: document.getElementById('premiumStatus'),
+        premiumGrid: document.getElementById('premiumGrid'),
+        premiumBackspaceBtn: document.getElementById('premiumBackspaceBtn'),
+        premiumClearBtn: document.getElementById('premiumClearBtn'),
+        premiumRedeemBtn: document.getElementById('premiumRedeemBtn')
+      };
+
+      const state = {
+        code: '',
+        busy: false
+      };
+
+      function buildApiUrl(path) {
+        if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
+          return window.PlaytalkApi.url(path);
+        }
+        return path;
+      }
+
+      function escapeHtml(value) {
+        return String(value || '').replace(/[&<>\"']/g, (char) => (
+          {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            '\'': '&#39;'
+          }[char] || char
+        ));
+      }
+
+      function renderCode() {
+        if (!els.premiumCodeValue) return;
+        const slots = Array.from({ length: 6 }, (_value, index) => {
+          const letter = state.code[index] || '';
+          if (!letter) {
+            return '<div class="premium-code-slot is-empty">•</div>';
+          }
+          return `<div class="premium-code-slot">${escapeHtml(letter)}</div>`;
+        });
+        els.premiumCodeValue.innerHTML = slots.join('');
+        if (els.premiumBackspaceBtn) {
+          els.premiumBackspaceBtn.disabled = state.busy || !state.code;
+        }
+        if (els.premiumClearBtn) {
+          els.premiumClearBtn.disabled = state.busy || !state.code;
+        }
+        if (els.premiumRedeemBtn) {
+          els.premiumRedeemBtn.disabled = state.busy || state.code.length !== 6;
+        }
+      }
+
+      function setStatus(message) {
+        if (els.premiumStatus) {
+          els.premiumStatus.textContent = String(message || '').trim() || 'Preencha os 6 espacos com as letras correspondentes.';
+        }
+      }
+
+      async function redeemCode() {
+        if (state.busy || state.code.length !== 6) return;
+        state.busy = true;
+        renderCode();
+        setStatus('Validando chave...');
+        try {
+          const response = await fetch(buildApiUrl('/api/premium/redeem'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ code: state.code })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Nao foi possivel validar a chave.');
+          }
+          state.code = '';
+          setStatus(payload?.message || 'Premium liberado com sucesso.');
+        } catch (error) {
+          state.code = '';
+          setStatus(error?.message || 'Chave invalida.');
+        } finally {
+          state.busy = false;
+          renderCode();
+        }
+      }
+
+      function appendLetter(letter) {
+        if (state.busy) return;
+        const normalized = String(letter || '').trim().toUpperCase().replace(/[^A-P]/g, '');
+        if (!normalized || state.code.length >= 6) return;
+        state.code = `${state.code}${normalized}`.slice(0, 6);
+        setStatus('Preencha os 6 espacos com as letras correspondentes.');
+        renderCode();
+      }
+
+      els.premiumGrid?.addEventListener('click', (event) => {
+        const tile = event.target.closest('.premium-tile');
+        if (!tile) return;
+        appendLetter(tile.getAttribute('data-letter'));
+      });
+
+      els.premiumBackspaceBtn?.addEventListener('click', () => {
+        if (state.busy) return;
+        state.code = state.code.slice(0, -1);
+        renderCode();
+      });
+
+      els.premiumClearBtn?.addEventListener('click', () => {
+        if (state.busy) return;
+        state.code = '';
+        setStatus('Preencha os 6 espacos com as letras correspondentes.');
+        renderCode();
+      });
+
+      els.premiumRedeemBtn?.addEventListener('click', () => {
+        void redeemCode();
+      });
+
+      window.addEventListener('keydown', (event) => {
+        if (event.key === 'Backspace') {
+          if (state.busy) return;
+          state.code = state.code.slice(0, -1);
+          renderCode();
+          return;
+        }
+        if (/^[a-p]$/i.test(event.key || '')) {
+          appendLetter(event.key);
+          return;
+        }
+        if (event.key === 'Enter' && state.code.length === 6) {
+          void redeemCode();
+        }
+      });
+
+      renderCode();
+    })();
+  </script>
+</body>
+</html>

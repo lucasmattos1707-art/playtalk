@@ -8,7 +8,6 @@
 
   const state = {
     currentUser: null,
-    busyUserId: 0,
     viewer: null
   };
 
@@ -77,6 +76,7 @@
       rank: Number(entry?.rank) || 0,
       flashcardsCount: Number(entry?.flashcardsCount) || 0,
       avatarImage: safeText(entry?.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg') || 'Avatar/avatar-man-person-svgrepo-com.svg',
+      isAdmin: Boolean(entry?.isAdmin),
       premiumUntil: entry?.premiumUntil || null,
       premiumActive: Boolean(entry?.premiumActive)
     }));
@@ -117,32 +117,30 @@
       return;
     }
 
-    const isAdmin = Boolean(state.currentUser?.isAdmin);
-    const displayRows = rows.slice(0, 50);
-    if (!state.currentUser?.id) {
-      const guestEntry = currentViewerEntry(rows);
-      const alreadyShown = displayRows.some((entry) => entry.rank === guestEntry.rank && entry.username === guestEntry.username);
-      if (!alreadyShown) {
-        displayRows.push(guestEntry);
-      }
+    const displayRows = rows
+      .filter((entry) => entry.isAdmin)
+      .slice(0, 50)
+      .sort((left, right) => (left.rank || 999999) - (right.rank || 999999));
+
+    if (!displayRows.length) {
+      els.usersList.innerHTML = `
+        <div class="users-row is-empty">
+          <span>O perfil do admin ainda nao apareceu no ranking.</span>
+        </div>
+      `;
+      return;
     }
-    displayRows.sort((left, right) => (left.rank || 999999) - (right.rank || 999999));
 
     const rowMarkup = displayRows.map((entry) => `
       <div class="users-row" data-user-id="${entry.userId}">
-        <div class="users-rank">${escapeHtml(`${entry.rank || 0}º`)}</div>
-        <div class="users-avatar"><img src="${escapeHtml(entry.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg')}" alt="${escapeHtml(entry.username)}"></div>
+        <div class="users-avatar">
+          <img src="${escapeHtml(entry.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg')}" alt="${escapeHtml(entry.username)}">
+          <span class="users-rank-badge">${escapeHtml(entry.rank || 0)}</span>
+        </div>
         <div class="users-main">
           <span class="users-name">${escapeHtml(entry.username)}</span>
-          <span class="users-sub">${escapeHtml(`${entry.flashcardsCount} flashcards`)}</span>
         </div>
-        ${isAdmin ? `
-          <div class="users-actions">
-            <button class="users-action" type="button" data-plan="semana" ${state.busyUserId === entry.userId ? 'disabled' : ''}>1 semana</button>
-            <button class="users-action" type="button" data-plan="mes" ${state.busyUserId === entry.userId ? 'disabled' : ''}>1 mes</button>
-            <button class="users-action" type="button" data-plan="ano" ${state.busyUserId === entry.userId ? 'disabled' : ''}>1 ano</button>
-          </div>
-        ` : ''}
+        <div class="users-count">${escapeHtml(entry.flashcardsCount || 0)}</div>
       </div>
     `).join('');
 
@@ -174,45 +172,13 @@
       renderRows(users);
       const viewer = currentViewerEntry(users);
       els.usersStatus.textContent = viewer?.rank
-        ? `Voce esta em ${viewer.rank}º lugar`
+        ? `Voce esta em ${viewer.rank} lugar`
         : 'Ranking carregado.';
     } catch (_error) {
       renderRows([]);
       els.usersStatus.textContent = 'Nao consegui carregar o ranking agora.';
     }
   }
-
-  async function assignPremium(userId, plan) {
-    if (!state.currentUser?.isAdmin || !userId || !plan) return;
-    state.busyUserId = userId;
-    await loadUsers('Liberando premium...');
-    try {
-      const response = await fetch(buildApiUrl(`/api/admin/users/${userId}/premium`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
-        credentials: 'include'
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.success) {
-        throw new Error(payload?.message || 'Nao foi possivel liberar premium.');
-      }
-      await loadUsers(payload.message || 'Premium liberado.');
-    } catch (error) {
-      await loadUsers(error?.message || 'Nao foi possivel liberar premium.');
-    } finally {
-      state.busyUserId = 0;
-    }
-  }
-
-  els.usersList?.addEventListener('click', (event) => {
-    const button = event.target.closest('.users-action');
-    if (!button) return;
-    const row = button.closest('.users-row');
-    const userId = Number(row?.dataset?.userId) || 0;
-    const plan = safeText(button.dataset.plan);
-    void assignPremium(userId, plan);
-  });
 
   (async () => {
     state.currentUser = await fetchSessionUser();

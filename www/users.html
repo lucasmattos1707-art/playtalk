@@ -83,23 +83,25 @@
 
     .status {
       min-height: 24px;
-      margin: 0 0 14px;
+      margin: 12px 0 0;
       text-align: center;
-      color: var(--muted);
-      font-size: 14px;
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 900;
     }
 
     .users-list {
       display: grid;
-      gap: 12px;
+      gap: 10px;
     }
 
     .users-row {
       display: grid;
-      grid-template-columns: auto auto minmax(0, 1fr) auto;
-      gap: 14px;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 12px;
       align-items: center;
-      padding: 14px 16px;
+      min-height: 74px;
+      padding: 10px 14px;
       border-radius: 22px;
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.04);
@@ -112,22 +114,15 @@
       color: var(--muted);
     }
 
-    .users-rank {
-      min-width: 42px;
-      font-size: 26px;
-      font-weight: 900;
-      color: var(--accent);
-      text-align: left;
-    }
-
     .users-avatar {
-      width: 58px;
-      height: 58px;
-      border-radius: 50%;
+      width: 64px;
+      height: 64px;
+      border-radius: 22px;
       display: grid;
       place-items: center;
       background: linear-gradient(180deg, #f8fafc 0%, #cbd5e1 100%);
       overflow: hidden;
+      position: relative;
     }
 
     .users-avatar img {
@@ -137,10 +132,26 @@
       object-fit: cover;
     }
 
+    .users-rank-badge {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(7, 17, 31, 0.88);
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.16);
+    }
+
     .users-main {
       min-width: 0;
       display: grid;
-      gap: 4px;
+      gap: 2px;
     }
 
     .users-name {
@@ -151,32 +162,12 @@
       text-overflow: ellipsis;
     }
 
-    .users-sub {
-      font-size: 14px;
-      color: var(--muted);
-    }
-
-    .users-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: flex-end;
-    }
-
-    .users-action {
-      border: 1px solid rgba(126, 208, 255, 0.22);
-      background: rgba(126, 208, 255, 0.08);
-      color: #f4f8ff;
-      border-radius: 999px;
-      padding: 8px 12px;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .users-action:disabled {
-      opacity: 0.45;
-      cursor: wait;
+    .users-count {
+      min-width: 42px;
+      text-align: right;
+      font-size: 24px;
+      font-weight: 900;
+      color: #ffffff;
     }
 
     .flashcards-footer-nav {
@@ -232,17 +223,8 @@
       }
 
       .users-row {
-        grid-template-columns: 1fr;
-        padding: 14px 12px;
-      }
-
-      .users-rank {
-        min-width: 0;
-        font-size: 22px;
-      }
-
-      .users-actions {
-        justify-content: flex-start;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        padding: 10px 12px;
       }
     }
   </style>
@@ -252,8 +234,8 @@
     <section class="panel-head">
       <h1 class="title">Usuarios</h1>
     </section>
+    <p class="status" id="usersStatus">Carregando usuarios...</p>
     <section class="panel">
-      <p class="status" id="usersStatus">Carregando usuarios...</p>
       <section class="users-list" id="usersList" aria-live="polite"></section>
     </section>
   </main>

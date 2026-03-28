@@ -4612,6 +4612,7 @@ app.get('/api/users/flashcards', async (req, res) => {
            COALESCE(NULLIF(u.username, ''), u.email) AS username,
            COALESCE(u.avatar_image, '') AS avatar_image,
            u.created_at,
+           COALESCE(u.is_admin, false) AS is_admin,
            u.premium_full_access,
            u.premium_until,
            COALESCE(progress.total, 0) AS flashcards_count,
@@ -4644,6 +4645,7 @@ app.get('/api/users/flashcards', async (req, res) => {
              COALESCE(NULLIF(u.username, ''), u.email) AS username,
              COALESCE(u.avatar_image, '') AS avatar_image,
              u.created_at,
+             COALESCE(u.is_admin, false) AS is_admin,
              u.premium_full_access,
              u.premium_until,
              COALESCE(progress.total, 0) AS flashcards_count,
@@ -4683,6 +4685,7 @@ app.get('/api/users/flashcards', async (req, res) => {
         userId: Number(entry.id) || 0,
         username: String(entry.username || '').trim() || 'Usuario',
         avatarImage: String(entry.avatar_image || '').trim(),
+        isAdmin: Boolean(entry.is_admin),
         rank: Number(entry.rank_position) || 0,
         flashcardsCount: Number(entry.flashcards_count) || 0,
         premiumFullAccess: Boolean(entry.premium_full_access),
@@ -5110,6 +5113,8 @@ app.use((req, res, next) => {
     '/database/',
     '/flashcards',
     '/flashcards/',
+    '/premium',
+    '/premium/',
     '/users',
     '/users/',
     '/account',
@@ -5235,6 +5240,10 @@ app.get(['/database', '/database/'], (req, res) => {
 
 app.get(['/flashcards', '/flashcards/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'www', 'flashcards.html'));
+});
+
+app.get(['/premium', '/premium/'], (req, res) => {
+  res.sendFile(path.join(staticDir, 'premium.html'));
 });
 
 app.get(['/mycards', '/mycards/', '/mycards.html'], (req, res) => {
