@@ -6,6 +6,8 @@
     avatarPreview: document.getElementById('accountAvatarPreview'),
     avatarFallback: document.getElementById('accountAvatarFallback'),
     nameInput: document.getElementById('accountNameInput'),
+    passwordField: document.getElementById('accountPasswordField'),
+    passwordInput: document.getElementById('accountPasswordInput'),
     premiumLevel: document.getElementById('accountPremiumLevel'),
     premiumUntil: document.getElementById('accountPremiumUntil'),
     premiumBtn: document.getElementById('accountPremiumBtn'),
@@ -16,7 +18,9 @@
 
   const state = {
     user: null,
-    avatarDraft: ''
+    localProfile: null,
+    avatarDraft: '',
+    avatarGenerating: false
   };
 
   function buildApiUrl(path) {
@@ -72,6 +76,34 @@
     };
   }
 
+  function readLocalPlayerProfile() {
+    try {
+      if (window.playtalkPlayerState && typeof window.playtalkPlayerState.get === 'function') {
+        const player = window.playtalkPlayerState.get() || {};
+        return {
+          username: safeText(player.username),
+          avatarImage: safeText(player.avatar)
+        };
+      }
+    } catch (_error) {
+      // ignore
+    }
+    return { username: '', avatarImage: '' };
+  }
+
+  function patchLocalPlayerProfile(nextProfile = {}) {
+    try {
+      if (window.playtalkPlayerState && typeof window.playtalkPlayerState.patch === 'function') {
+        window.playtalkPlayerState.patch({
+          username: safeText(nextProfile.username),
+          avatar: safeText(nextProfile.avatarImage)
+        });
+      }
+    } catch (_error) {
+      // ignore
+    }
+  }
+
   function isPremiumActive(user = state.user) {
     if (!user) return false;
     if (user.premiumFullAccess) return true;
@@ -94,15 +126,25 @@
   }
 
   function renderUser() {
-    const username = safeText(state.user?.username) || 'Jogador';
-    const avatar = safeText(state.avatarDraft || state.user?.avatarImage);
+    const sourceProfile = state.user || state.localProfile || {};
+    const username = safeText(sourceProfile.username) || 'Jogador';
+    const avatar = safeText(state.avatarDraft || sourceProfile.avatarImage);
     const hasAvatar = Boolean(avatar);
     els.nameInput.value = username;
     els.avatarPreview.src = hasAvatar ? avatar : 'Avatar/avatar-man-person-svgrepo-com.svg';
     els.avatarPreview.style.display = hasAvatar ? 'block' : 'none';
     els.avatarFallback.textContent = username.charAt(0).toUpperCase() || 'P';
     els.avatarFallback.style.display = hasAvatar ? 'none' : 'grid';
-    els.saveBtn.disabled = !state.user;
+    if (els.passwordField) {
+      els.passwordField.hidden = Boolean(state.user?.id);
+    }
+    if (els.passwordInput && state.user?.id) {
+      els.passwordInput.value = '';
+    }
+    if (els.saveBtn) {
+      els.saveBtn.textContent = state.user?.id ? 'Salvar perfil' : 'Criar conta';
+      els.saveBtn.disabled = state.avatarGenerating;
+    }
     els.logoutBtn.hidden = !state.user;
     renderPremiumStatus();
   }
@@ -128,22 +170,82 @@
     return normalizeUser(payload.user);
   }
 
+  async function createCartoonAvatar(imageDataUrl) {
+    const response = await fetch(buildApiUrl('/api/images/openai/avatar-cartoon'), {
+      method: 'POST',
+      headers: buildAuthHeaders({
+        'Content-Type': 'application/json'
+      }),
+      body: JSON.stringify({
+        imageDataUrl
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.dataUrl) {
+      throw new Error(payload?.message || payload?.error || 'Nao foi possivel transformar a foto em desenho.');
+    }
+    return String(payload.dataUrl);
+  }
+
+  function isValidPassword(password) {
+    return typeof password === 'string' && password.trim().length >= 6;
+  }
+
   async function submitForm(event) {
     event.preventDefault();
-    if (!state.user?.id) {
-      setStatus('Entre na conta para editar o perfil.', 'error');
-      return;
-    }
-
     const nextUsername = safeText(els.nameInput.value);
     if (!nextUsername) {
       setStatus('Digite um nome de usuario.', 'error');
       return;
     }
 
+    const nextAvatar = safeText(state.avatarDraft || state.user?.avatarImage || state.localProfile?.avatarImage);
+    const nextPassword = safeText(els.passwordInput?.value);
+    const shouldCreateAccount = !state.user?.id;
+    if (shouldCreateAccount && !isValidPassword(nextPassword)) {
+      setStatus('Defina uma senha com pelo menos 6 caracteres.', 'error');
+      return;
+    }
+
     els.saveBtn.disabled = true;
-    setStatus('Salvando perfil...');
+    setStatus(shouldCreateAccount ? 'Criando conta...' : 'Salvando perfil...');
     try {
+      if (shouldCreateAccount) {
+        const registerResponse = await fetch(buildApiUrl('/register'), {
+          method: 'POST',
+          headers: buildAuthHeaders({
+            'Content-Type': 'application/json'
+          }),
+          body: JSON.stringify({
+            username: nextUsername,
+            password: nextPassword,
+            avatar: nextAvatar
+          })
+        });
+        const registerPayload = await registerResponse.json().catch(() => ({}));
+        if (!registerResponse.ok || !registerPayload?.success) {
+          throw new Error(registerPayload?.message || 'Nao foi possivel criar a conta.');
+        }
+        if (registerPayload?.token) {
+          persistAuthToken(registerPayload.token);
+        }
+        state.user = normalizeUser(registerPayload.user);
+        state.localProfile = {
+          username: nextUsername,
+          avatarImage: nextAvatar
+        };
+        patchLocalPlayerProfile({
+          username: nextUsername,
+          avatarImage: nextAvatar
+        });
+        if (els.passwordInput) {
+          els.passwordInput.value = '';
+        }
+        renderUser();
+        setStatus('Conta criada com sucesso.', 'success');
+        return;
+      }
+
       const profileResponse = await fetch(buildApiUrl('/auth/profile'), {
         method: 'PATCH',
         headers: buildAuthHeaders({
@@ -173,13 +275,20 @@
       }
 
       state.user = updatedUser;
+      state.localProfile = {
+        username: updatedUser.username,
+        avatarImage: updatedUser.avatarImage
+      };
+      patchLocalPlayerProfile(state.localProfile);
       state.avatarDraft = '';
       renderUser();
       setStatus('Perfil atualizado com sucesso.', 'success');
     } catch (error) {
       setStatus(error?.message || 'Nao foi possivel salvar o perfil.', 'error');
     } finally {
-      els.saveBtn.disabled = !state.user;
+      if (els.saveBtn) {
+        els.saveBtn.disabled = state.avatarGenerating;
+      }
     }
   }
 
@@ -200,11 +309,11 @@
 
   async function init() {
     state.user = await fetchSessionUser();
-    if (!state.user) {
-      window.location.href = '/auth.html';
-      return;
-    }
+    state.localProfile = readLocalPlayerProfile();
     renderUser();
+    if (!state.user?.id) {
+      setStatus('Defina uma senha e salve para criar sua conta real.', null);
+    }
     els.form?.addEventListener('submit', submitForm);
     els.premiumBtn?.addEventListener('click', () => {
       window.location.href = '/flashcards?premium=1&view=cards';
@@ -214,11 +323,23 @@
       const file = event.target?.files?.[0];
       if (!file) return;
       try {
-        state.avatarDraft = await fileToDataUrl(file);
+        state.avatarGenerating = true;
+        els.saveBtn.disabled = true;
+        setStatus('Transformando foto em desenho...');
+        const sourceDataUrl = await fileToDataUrl(file);
+        state.avatarDraft = sourceDataUrl;
         renderUser();
-        setStatus('');
+        const cartoonDataUrl = await createCartoonAvatar(sourceDataUrl);
+        state.avatarDraft = cartoonDataUrl;
+        renderUser();
+        setStatus('Desenho gerado com sucesso.', 'success');
       } catch (error) {
-        setStatus(error?.message || 'Nao foi possivel ler a imagem.', 'error');
+        setStatus(error?.message || 'Nao foi possivel transformar a imagem.', 'error');
+      } finally {
+        state.avatarGenerating = false;
+        if (els.saveBtn) {
+          els.saveBtn.disabled = false;
+        }
       }
     });
   }

@@ -259,11 +259,15 @@
         <label class="account-avatar" for="accountAvatarInput">
           <img id="accountAvatarPreview" src="Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar do usuario">
           <span id="accountAvatarFallback">P</span>
-          <input id="accountAvatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
+          <input id="accountAvatarInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
         </label>
         <label class="account-field">
           <span>Nome do usuario</span>
           <input id="accountNameInput" type="text" maxlength="32" placeholder="Seu nome">
+        </label>
+        <label class="account-field" id="accountPasswordField">
+          <span>Senha</span>
+          <input id="accountPasswordInput" type="password" maxlength="64" placeholder="Defina uma senha">
         </label>
         <div class="account-premium">
           <strong id="accountPremiumLevel">Nivel de acesso: Free</strong>

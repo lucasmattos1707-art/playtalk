@@ -70,6 +70,7 @@ const ELEVENLABS_VOICE_ID_HARRY = env(process.env.ELEVENLABS_VOICE_ID_HARRY);
 const ELEVENLABS_MODEL_ID = env(process.env.ELEVENLABS_MODEL_ID) || 'eleven_multilingual_v2';
 const OPENAI_API_KEY = env(process.env.OPENAI_API_KEY);
 const OPENAI_IMAGE_MODEL = env(process.env.OPENAI_IMAGE_MODEL) || 'gpt-image-1-mini';
+const OPENAI_AVATAR_IMAGE_MODEL = env(process.env.OPENAI_AVATAR_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_TEXT_MODEL = env(process.env.OPENAI_TEXT_MODEL) || 'gpt-5-mini';
 const OPENAI_FLASHCARD_ADMIN_TEXT_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_TEXT_MODEL) || 'gpt-5-nano';
 const OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL) || 'gpt-image-1-mini';
@@ -1822,6 +1823,10 @@ function parseBase64DataUrl(dataUrl) {
 
 function extensionFromMimeType(mimeType) {
   const normalized = String(mimeType || '').toLowerCase();
+  if (normalized.includes('png')) return 'png';
+  if (normalized.includes('jpeg') || normalized.includes('jpg')) return 'jpg';
+  if (normalized.includes('webp')) return 'webp';
+  if (normalized.includes('gif')) return 'gif';
   if (normalized.includes('webm')) return 'webm';
   if (normalized.includes('ogg')) return 'ogg';
   if (normalized.includes('wav')) return 'wav';
@@ -5415,6 +5420,101 @@ app.post('/api/images/openai', async (req, res) => {
     res.json({
       success: true,
       fileName: finalFileName,
+      dataUrl: `data:${mimeType};base64,${b64}`,
+      usage: payload?.usage || null
+    });
+  } catch (error) {
+    res.status(502).json({
+      error: 'Erro ao conectar com a OpenAI.',
+      details: error.message
+    });
+  }
+});
+
+app.post('/api/images/openai/avatar-cartoon', async (req, res) => {
+  const imageDataUrl = typeof req.body?.imageDataUrl === 'string'
+    ? req.body.imageDataUrl.trim()
+    : (typeof req.body?.avatar === 'string' ? req.body.avatar.trim() : '');
+  const customPrompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
+  const fileNameHint = typeof req.body?.fileName === 'string' ? req.body.fileName.trim() : 'playtalk-avatar-cartoon';
+  const size = typeof req.body?.size === 'string' ? req.body.size.trim() : '1024x1024';
+  const quality = typeof req.body?.quality === 'string' ? req.body.quality.trim() : 'low';
+  const outputFormat = typeof req.body?.outputFormat === 'string' ? req.body.outputFormat.trim() : 'webp';
+  const parsedImage = parseBase64DataUrl(imageDataUrl);
+
+  if (!parsedImage?.buffer?.length || !/^image\//i.test(parsedImage.mimeType || '')) {
+    res.status(400).json({ error: 'Imagem invalida para transformar em desenho.' });
+    return;
+  }
+
+  if (parsedImage.buffer.length > 8 * 1024 * 1024) {
+    res.status(413).json({ error: 'Imagem muito grande. Envie uma foto menor que 8 MB.' });
+    return;
+  }
+
+  if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
+    res.status(503).json({
+      error: 'OpenAI nao configurado.',
+      instructions: 'Preencha OPENAI_API_KEY no .env com a chave real da OpenAI.'
+    });
+    return;
+  }
+
+  const stylePrompt = customPrompt || 'cinematic 3D animated scene, close-up of a teenage boy with tousled brown hair and bright blue eyes, wearing a casual plaid shirt, smiling slightly while looking to the side, a small toy cowboy character sitting on his shoulder, warm golden sunlight, soft global illumination, shallow depth of field, background blurred with green trees, highly detailed textures, subsurface scattering skin, soft shadows, vibrant colors, premium family animation movie quality, ultra realistic render, 4k';
+
+  try {
+    const extension = extensionFromMimeType(parsedImage.mimeType);
+    const fileName = `avatar-source.${extension}`;
+    const imageBlob = new Blob([parsedImage.buffer], { type: parsedImage.mimeType });
+    const formData = new FormData();
+    formData.append('model', OPENAI_AVATAR_IMAGE_MODEL);
+    formData.append('prompt', stylePrompt);
+    formData.append('image', imageBlob, fileName);
+    formData.append('size', size);
+    formData.append('quality', quality);
+    formData.append('output_format', outputFormat);
+
+    const upstreamResponse = await fetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`
+      },
+      body: formData
+    });
+
+    const responseText = await upstreamResponse.text();
+    let payload = null;
+    try {
+      payload = responseText ? JSON.parse(responseText) : null;
+    } catch (_error) {
+      payload = null;
+    }
+
+    if (!upstreamResponse.ok) {
+      res.status(upstreamResponse.status).json({
+        error: 'Falha ao transformar avatar na OpenAI.',
+        details: payload?.error?.message || responseText.slice(0, 500)
+      });
+      return;
+    }
+
+    const image = Array.isArray(payload?.data) ? payload.data[0] : null;
+    const b64 = image?.b64_json;
+    if (!b64) {
+      res.status(502).json({
+        error: 'A OpenAI nao retornou a imagem editada em base64.'
+      });
+      return;
+    }
+
+    const safeExt = outputFormat === 'jpeg' ? 'jpg' : outputFormat === 'png' ? 'png' : 'webp';
+    const mimeType = safeExt === 'jpg' ? 'image/jpeg' : safeExt === 'png' ? 'image/png' : 'image/webp';
+    const finalFileName = `${safeGeneratedBase(fileNameHint)}-${Date.now()}.${safeExt}`;
+
+    res.json({
+      success: true,
+      fileName: finalFileName,
+      model: OPENAI_AVATAR_IMAGE_MODEL,
       dataUrl: `data:${mimeType};base64,${b64}`,
       usage: payload?.usage || null
     });
