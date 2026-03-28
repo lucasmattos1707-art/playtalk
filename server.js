@@ -4535,23 +4535,18 @@ app.post('/api/premium/redeem', async (req, res) => {
       return;
     }
 
-    const accessKeys = await loadAccessKeyDefinitions();
-    const matched = accessKeys.get(code);
-    if (!matched) {
-      res.status(404).json({ success: false, message: 'Chave invalida.' });
-      return;
-    }
-
-    const user = await extendUserPremiumAccess(authUser.id, matched.durationDays, {
-      accessType: matched.key,
+    const durationDays = 30;
+    const accessType = 'monthly-magic';
+    const user = await extendUserPremiumAccess(authUser.id, durationDays, {
+      accessType,
       accessCode: code,
-      sourceFile: matched.fileName
+      sourceFile: 'magic-sequence'
     });
 
     res.json({
       success: true,
-      message: `Premium liberado por ${matched.label}.`,
-      accessType: matched.key,
+      message: 'Premium mensal liberado por 30 dias.',
+      accessType,
       user: mapPublicUser(user),
       premium: resolvePremiumState(user)
     });
@@ -4905,6 +4900,8 @@ app.use((req, res, next) => {
     '/flashcards/',
     '/users',
     '/users/',
+    '/account',
+    '/account/',
     '/storage',
     '/storage/',
     '/storage-debug',
