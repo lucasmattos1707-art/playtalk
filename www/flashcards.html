@@ -238,6 +238,218 @@
       transform: translateY(10px);
     }
 
+    .sound-test-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 135;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+      transition: opacity 280ms ease, visibility 280ms ease;
+      background: #ffffff;
+      color: #10233d;
+    }
+
+    .sound-test-gate.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+      visibility: visible;
+    }
+
+    .sound-test-gate__shell {
+      width: min(100%, 1120px);
+      min-height: min(100vh - 48px, 960px);
+      display: grid;
+      align-content: start;
+      gap: 24px;
+      padding: clamp(24px, 4vw, 44px);
+    }
+
+    .sound-test-gate__header {
+      display: grid;
+      gap: 10px;
+      text-align: center;
+      justify-items: center;
+    }
+
+    .sound-test-gate__eyebrow {
+      margin: 0;
+      color: #2aa8ff;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .sound-test-gate__title {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      line-height: 1.05;
+      color: #10233d;
+    }
+
+    .sound-test-gate__subtitle {
+      margin: 0;
+      min-height: 1.5em;
+      color: #53708f;
+      font-size: clamp(1rem, 2.8vw, 1.24rem);
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    .sound-test-gate__subtitle.is-changing {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    .sound-test-gate__slots {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      width: min(100%, 520px);
+      margin: 0 auto;
+    }
+
+    .sound-test-gate__slot {
+      min-height: 108px;
+      border-radius: 28px;
+      border: 2px dashed rgba(42, 168, 255, 0.24);
+      background: linear-gradient(180deg, #f8fcff 0%, #eef8ff 100%);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    .sound-test-gate__slot img {
+      width: min(100%, 92px);
+      height: auto;
+      object-fit: contain;
+    }
+
+    .sound-test-gate__slot span {
+      color: #8aa3bc;
+      font-size: 1.8rem;
+      line-height: 1;
+    }
+
+    .sound-test-gate__status {
+      margin: 0;
+      min-height: 1.5em;
+      text-align: center;
+      color: #53708f;
+      font-size: 1rem;
+    }
+
+    .sound-test-gate__status.is-error {
+      color: #c44c4c;
+    }
+
+    .sound-test-gate__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .sound-test-gate__btn {
+      min-width: 150px;
+      border: none;
+      border-radius: 999px;
+      padding: 14px 22px;
+      background: linear-gradient(135deg, #2aa8ff, #59c07a);
+      color: #ffffff;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      box-shadow: 0 18px 36px rgba(42, 168, 255, 0.18);
+    }
+
+    .sound-test-gate__btn.is-secondary {
+      background: #eef5fb;
+      color: #35516f;
+      box-shadow: none;
+    }
+
+    .sound-test-gate__btn:disabled {
+      opacity: 0.55;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    .sound-test-gate__grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: clamp(12px, 1.8vw, 18px);
+      width: min(100%, 760px);
+      margin: 0 auto;
+    }
+
+    .sound-test-gate__tile {
+      aspect-ratio: 1 / 1;
+      border: 2px solid rgba(16, 35, 61, 0.08);
+      border-radius: 30px;
+      background: linear-gradient(180deg, #ffffff 0%, #f4f9ff 100%);
+      display: grid;
+      place-items: center;
+      padding: 12px;
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+      box-shadow: 0 18px 34px rgba(16, 35, 61, 0.08);
+    }
+
+    .sound-test-gate__tile:hover,
+    .sound-test-gate__tile:focus-visible {
+      transform: translateY(-2px);
+      border-color: rgba(42, 168, 255, 0.28);
+      box-shadow: 0 22px 42px rgba(42, 168, 255, 0.12);
+    }
+
+    .sound-test-gate__tile.is-selected {
+      background: linear-gradient(180deg, #f0f9ff 0%, #e2f4ff 100%);
+      border-color: rgba(42, 168, 255, 0.52);
+      box-shadow: 0 0 0 1px rgba(42, 168, 255, 0.16), 0 18px 34px rgba(42, 168, 255, 0.14);
+    }
+
+    .sound-test-gate__tile img {
+      width: min(100%, 108px);
+      height: auto;
+      object-fit: contain;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    @media (max-width: 720px) {
+      .sound-test-gate {
+        padding: 12px;
+      }
+
+      .sound-test-gate__shell {
+        min-height: calc(100vh - 24px);
+        gap: 18px;
+        padding: 20px 14px 24px;
+      }
+
+      .sound-test-gate__slots {
+        gap: 10px;
+      }
+
+      .sound-test-gate__slot {
+        min-height: 84px;
+        border-radius: 22px;
+      }
+
+      .sound-test-gate__grid {
+        gap: 10px;
+      }
+
+      .sound-test-gate__tile {
+        border-radius: 22px;
+        padding: 10px;
+      }
+    }
+
     .auth-gate {
       position: fixed;
       inset: 0;
@@ -3615,6 +3827,39 @@
       </div>
     </button>
   </section>
+  <section class="sound-test-gate" id="soundTestGate" aria-modal="true" role="dialog" aria-label="Teste de som">
+    <div class="sound-test-gate__shell">
+      <div class="sound-test-gate__header">
+        <p class="sound-test-gate__eyebrow">PlayTalk</p>
+        <h2 class="sound-test-gate__title">Teste de som</h2>
+        <p class="sound-test-gate__subtitle" id="soundTestSubtitle">Toque no que est&aacute; ouvindo</p>
+      </div>
+      <div class="sound-test-gate__slots" id="soundTestSlots" aria-label="Escolhas do teste de som"></div>
+      <p class="sound-test-gate__status" id="soundTestStatus">Ou&ccedil;a os 3 sons e toque nas 3 imagens correspondentes. A ordem n&atilde;o importa.</p>
+      <div class="sound-test-gate__actions">
+        <button class="sound-test-gate__btn" id="soundTestReplayBtn" type="button">Ouvir de novo</button>
+        <button class="sound-test-gate__btn is-secondary" id="soundTestClearBtn" type="button">Limpar sele&ccedil;&atilde;o</button>
+      </div>
+      <div class="sound-test-gate__grid" id="soundTestGrid">
+        <button class="sound-test-gate__tile" type="button" data-letter="A"><img src="/accesskey/A.png" alt="A"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="B"><img src="/accesskey/B.png" alt="B"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="C"><img src="/accesskey/C.png" alt="C"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="D"><img src="/accesskey/D.png" alt="D"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="E"><img src="/accesskey/E.png" alt="E"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="F"><img src="/accesskey/F.png" alt="F"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="G"><img src="/accesskey/G.png" alt="G"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="H"><img src="/accesskey/H.png" alt="H"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="I"><img src="/accesskey/I.png" alt="I"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="J"><img src="/accesskey/J.png" alt="J"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="K"><img src="/accesskey/K.png" alt="K"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="L"><img src="/accesskey/L.png" alt="L"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="M"><img src="/accesskey/M.png" alt="M"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="N"><img src="/accesskey/N.png" alt="N"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="O"><img src="/accesskey/O.png" alt="O"></button>
+        <button class="sound-test-gate__tile" type="button" data-letter="P"><img src="/accesskey/P.png" alt="P"></button>
+      </div>
+    </div>
+  </section>
   <section class="auth-gate" id="authGate" aria-modal="true" role="dialog" aria-labelledby="authTitle">
     <div class="auth-card" id="authCard">
       <img class="auth-logo" src="SVG/logo.svg" alt="PlayTalk">
@@ -3893,22 +4138,22 @@
         <div class="premium-gate__code" id="premiumCodeValue"></div>
         <p class="premium-gate__status" id="premiumStatus">Toque nas imagens na ordem certa para montar a chave.</p>
         <div class="premium-gate__grid" id="premiumGrid">
-          <button class="premium-gate__tile" type="button" data-letter="A"><img src="/accesskey/a.png" alt="A"></button>
-          <button class="premium-gate__tile" type="button" data-letter="B"><img src="/accesskey/b.png" alt="B"></button>
-          <button class="premium-gate__tile" type="button" data-letter="C"><img src="/accesskey/c.png" alt="C"></button>
-          <button class="premium-gate__tile" type="button" data-letter="D"><img src="/accesskey/d.png" alt="D"></button>
-          <button class="premium-gate__tile" type="button" data-letter="E"><img src="/accesskey/e.png" alt="E"></button>
-          <button class="premium-gate__tile" type="button" data-letter="F"><img src="/accesskey/f.png" alt="F"></button>
-          <button class="premium-gate__tile" type="button" data-letter="G"><img src="/accesskey/g.png" alt="G"></button>
-          <button class="premium-gate__tile" type="button" data-letter="H"><img src="/accesskey/h.png" alt="H"></button>
-          <button class="premium-gate__tile" type="button" data-letter="I"><img src="/accesskey/i.png" alt="I"></button>
-          <button class="premium-gate__tile" type="button" data-letter="J"><img src="/accesskey/j.png" alt="J"></button>
-          <button class="premium-gate__tile" type="button" data-letter="K"><img src="/accesskey/k.png" alt="K"></button>
-          <button class="premium-gate__tile" type="button" data-letter="L"><img src="/accesskey/l.png" alt="L"></button>
-          <button class="premium-gate__tile" type="button" data-letter="M"><img src="/accesskey/m.png" alt="M"></button>
-          <button class="premium-gate__tile" type="button" data-letter="N"><img src="/accesskey/n.png" alt="N"></button>
-          <button class="premium-gate__tile" type="button" data-letter="O"><img src="/accesskey/o.png" alt="O"></button>
-          <button class="premium-gate__tile" type="button" data-letter="P"><img src="/accesskey/p.png" alt="P"></button>
+          <button class="premium-gate__tile" type="button" data-letter="A"><img src="/accesskey/A.png" alt="A"></button>
+          <button class="premium-gate__tile" type="button" data-letter="B"><img src="/accesskey/B.png" alt="B"></button>
+          <button class="premium-gate__tile" type="button" data-letter="C"><img src="/accesskey/C.png" alt="C"></button>
+          <button class="premium-gate__tile" type="button" data-letter="D"><img src="/accesskey/D.png" alt="D"></button>
+          <button class="premium-gate__tile" type="button" data-letter="E"><img src="/accesskey/E.png" alt="E"></button>
+          <button class="premium-gate__tile" type="button" data-letter="F"><img src="/accesskey/F.png" alt="F"></button>
+          <button class="premium-gate__tile" type="button" data-letter="G"><img src="/accesskey/G.png" alt="G"></button>
+          <button class="premium-gate__tile" type="button" data-letter="H"><img src="/accesskey/H.png" alt="H"></button>
+          <button class="premium-gate__tile" type="button" data-letter="I"><img src="/accesskey/I.png" alt="I"></button>
+          <button class="premium-gate__tile" type="button" data-letter="J"><img src="/accesskey/J.png" alt="J"></button>
+          <button class="premium-gate__tile" type="button" data-letter="K"><img src="/accesskey/K.png" alt="K"></button>
+          <button class="premium-gate__tile" type="button" data-letter="L"><img src="/accesskey/L.png" alt="L"></button>
+          <button class="premium-gate__tile" type="button" data-letter="M"><img src="/accesskey/M.png" alt="M"></button>
+          <button class="premium-gate__tile" type="button" data-letter="N"><img src="/accesskey/N.png" alt="N"></button>
+          <button class="premium-gate__tile" type="button" data-letter="O"><img src="/accesskey/O.png" alt="O"></button>
+          <button class="premium-gate__tile" type="button" data-letter="P"><img src="/accesskey/P.png" alt="P"></button>
         </div>
         <div class="premium-gate__actions">
           <button class="premium-gate__btn is-secondary" id="premiumBackspaceBtn" type="button">Apagar ultima</button>
@@ -4023,6 +4268,10 @@
       const AUTH_GATE_FORM_REVEAL_MS = 1200;
       const WELCOME_COPY_ROTATION_MS = 2000;
       const WELCOME_COPY_MESSAGES = ['Flu\u00eancia f\u00e1cil', 'Toque para come\u00e7ar'];
+      const SOUND_TEST_COPY_ROTATION_MS = 1500;
+      const SOUND_TEST_SUBTITLE_MESSAGES = ['Toque no que est\u00e1 ouvindo', 'Ajuste o volume'];
+      const SOUND_TEST_SELECTION_COUNT = 3;
+      const ACCESS_KEY_LETTERS = 'ABCDEFGHIJKLMNOP'.split('');
       const ACCESS_KEY_AUDIO_LIMIT_PATH = '/accesskey/limit.mp3';
       const ACCESS_KEY_AUDIO_MESSAGE_PATH = '/accesskey/message.wav';
       const ACCESS_KEY_AUDIO_INVALID_PATH = '/accesskey/invalidkey2.mp3';
@@ -4120,6 +4369,7 @@
           welcomeVisible: true,
           welcomeIndex: 0,
           welcomeTimer: 0,
+          launchAfterSoundTest: '',
           pendingTutorialStart: false,
           authRequired: false,
           authDelayTimer: 0,
@@ -4212,7 +4462,17 @@
           premiumStatus: '',
           premiumBusy: false,
           premiumAudioPlayed: false,
-          premiumAudio: null
+          premiumAudio: null,
+          soundTestOpen: false,
+          soundTestBusy: false,
+          soundTestStatus: '',
+          soundTestStatusError: false,
+          soundTestSubtitleIndex: 0,
+          soundTestSubtitleTimer: 0,
+          soundTestAudio: null,
+          soundTestSelectedLetters: [],
+          soundTestTargetLetters: [],
+          soundTestPlaybackToken: 0
         }
       };
 
@@ -4220,6 +4480,13 @@
         welcomeGate: document.getElementById('welcomeGate'),
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeCopy: document.getElementById('welcomeCopy'),
+        soundTestGate: document.getElementById('soundTestGate'),
+        soundTestSubtitle: document.getElementById('soundTestSubtitle'),
+        soundTestSlots: document.getElementById('soundTestSlots'),
+        soundTestStatus: document.getElementById('soundTestStatus'),
+        soundTestReplayBtn: document.getElementById('soundTestReplayBtn'),
+        soundTestClearBtn: document.getElementById('soundTestClearBtn'),
+        soundTestGrid: document.getElementById('soundTestGrid'),
         authGate: document.getElementById('authGate'),
         authCard: document.getElementById('authCard'),
         authBody: document.getElementById('authBody'),
@@ -5118,6 +5385,253 @@
         }, 160);
       }
 
+      function getAccessKeyImagePath(letter) {
+        const normalized = safeText(letter).toUpperCase().replace(/[^A-P]/g, '');
+        return normalized ? `/accesskey/${normalized}.png` : '';
+      }
+
+      function getAccessKeySoundPath(letter) {
+        const normalized = safeText(letter).toUpperCase().replace(/[^A-P]/g, '');
+        return normalized ? `/accesskey/teclas/${normalized}.mp3` : '';
+      }
+
+      function stopSoundTestAudio() {
+        const current = state.ui.soundTestAudio;
+        if (!current) return;
+        try {
+          current.pause();
+          current.currentTime = 0;
+        } catch (_error) {
+          // ignore
+        }
+        state.ui.soundTestAudio = null;
+      }
+
+      function clearSoundTestSubtitleRotation() {
+        if (!state.ui.soundTestSubtitleTimer) return;
+        window.clearInterval(state.ui.soundTestSubtitleTimer);
+        state.ui.soundTestSubtitleTimer = 0;
+      }
+
+      function setSoundTestSubtitle(text, animate = false) {
+        if (!els.soundTestSubtitle) return;
+        const nextText = safeText(text) || SOUND_TEST_SUBTITLE_MESSAGES[0];
+        if (!animate || els.soundTestSubtitle.textContent === nextText) {
+          els.soundTestSubtitle.textContent = nextText;
+          els.soundTestSubtitle.classList.remove('is-changing');
+          return;
+        }
+        els.soundTestSubtitle.classList.add('is-changing');
+        window.setTimeout(() => {
+          if (!els.soundTestSubtitle) return;
+          els.soundTestSubtitle.textContent = nextText;
+          els.soundTestSubtitle.classList.remove('is-changing');
+        }, 140);
+      }
+
+      function startSoundTestSubtitleRotation() {
+        clearSoundTestSubtitleRotation();
+        state.ui.soundTestSubtitleIndex = 0;
+        setSoundTestSubtitle(SOUND_TEST_SUBTITLE_MESSAGES[0]);
+        state.ui.soundTestSubtitleTimer = window.setInterval(() => {
+          if (!state.ui.soundTestOpen) return;
+          state.ui.soundTestSubtitleIndex = (state.ui.soundTestSubtitleIndex + 1) % SOUND_TEST_SUBTITLE_MESSAGES.length;
+          setSoundTestSubtitle(SOUND_TEST_SUBTITLE_MESSAGES[state.ui.soundTestSubtitleIndex], true);
+        }, SOUND_TEST_COPY_ROTATION_MS);
+      }
+
+      function setSoundTestStatus(message, isError = false) {
+        state.ui.soundTestStatus = safeText(message);
+        state.ui.soundTestStatusError = Boolean(isError);
+        if (!els.soundTestStatus) return;
+        els.soundTestStatus.textContent = state.ui.soundTestStatus || 'Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.';
+        els.soundTestStatus.classList.toggle('is-error', state.ui.soundTestStatusError);
+      }
+
+      function renderSoundTestSlots() {
+        if (!els.soundTestSlots) return;
+        els.soundTestSlots.innerHTML = Array.from({ length: SOUND_TEST_SELECTION_COUNT }, (_, index) => {
+          const letter = state.ui.soundTestSelectedLetters[index] || '';
+          if (!letter) {
+            return '<div class="sound-test-gate__slot"><span>?</span></div>';
+          }
+          return `<div class="sound-test-gate__slot"><img src="${escapeHtml(getAccessKeyImagePath(letter))}" alt="${escapeHtml(letter)}"></div>`;
+        }).join('');
+      }
+
+      function renderSoundTestGrid() {
+        els.soundTestGrid?.querySelectorAll('[data-letter]').forEach((button) => {
+          const letter = safeText(button.getAttribute('data-letter')).toUpperCase();
+          button.classList.toggle('is-selected', state.ui.soundTestSelectedLetters.includes(letter));
+          button.disabled = state.ui.soundTestBusy;
+        });
+        if (els.soundTestReplayBtn) {
+          els.soundTestReplayBtn.disabled = state.ui.soundTestBusy || !state.ui.soundTestTargetLetters.length;
+        }
+        if (els.soundTestClearBtn) {
+          els.soundTestClearBtn.disabled = state.ui.soundTestBusy || !state.ui.soundTestSelectedLetters.length;
+        }
+      }
+
+      function renderSoundTestGate() {
+        renderSoundTestSlots();
+        renderSoundTestGrid();
+        setSoundTestStatus(state.ui.soundTestStatus, state.ui.soundTestStatusError);
+      }
+
+      function clearSoundTestSelection({ keepStatus = false } = {}) {
+        state.ui.soundTestSelectedLetters = [];
+        if (!keepStatus) {
+          setSoundTestStatus('Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.');
+        }
+        renderSoundTestGate();
+      }
+
+      function shuffleArray(items) {
+        const copy = Array.isArray(items) ? items.slice() : [];
+        for (let index = copy.length - 1; index > 0; index -= 1) {
+          const randomIndex = Math.floor(Math.random() * (index + 1));
+          [copy[index], copy[randomIndex]] = [copy[randomIndex], copy[index]];
+        }
+        return copy;
+      }
+
+      function buildRandomSoundTestLetters() {
+        return shuffleArray(ACCESS_KEY_LETTERS).slice(0, SOUND_TEST_SELECTION_COUNT);
+      }
+
+      function playSingleSoundTestLetter(letter) {
+        return new Promise((resolve) => {
+          const src = getAccessKeySoundPath(letter);
+          if (!src) {
+            resolve();
+            return;
+          }
+          stopSoundTestAudio();
+          const audio = new Audio(src);
+          audio.preload = 'auto';
+          state.ui.soundTestAudio = audio;
+          const finish = () => {
+            if (state.ui.soundTestAudio === audio) {
+              state.ui.soundTestAudio = null;
+            }
+            resolve();
+          };
+          audio.addEventListener('ended', finish, { once: true });
+          audio.addEventListener('error', finish, { once: true });
+          audio.play().catch(finish);
+        });
+      }
+
+      async function playSoundTestSequence() {
+        const letters = state.ui.soundTestTargetLetters.slice();
+        if (!letters.length) return;
+        const token = Date.now();
+        state.ui.soundTestPlaybackToken = token;
+        state.ui.soundTestBusy = true;
+        setSoundTestStatus('Ouvindo os sons...');
+        renderSoundTestGate();
+        for (const letter of letters) {
+          if (!state.ui.soundTestOpen || state.ui.soundTestPlaybackToken !== token) {
+            state.ui.soundTestBusy = false;
+            renderSoundTestGate();
+            return;
+          }
+          await playSingleSoundTestLetter(letter);
+          if (!state.ui.soundTestOpen || state.ui.soundTestPlaybackToken !== token) {
+            state.ui.soundTestBusy = false;
+            renderSoundTestGate();
+            return;
+          }
+          await wait(260);
+        }
+        if (state.ui.soundTestPlaybackToken === token) {
+          state.ui.soundTestBusy = false;
+          setSoundTestStatus('Agora toque nas 3 imagens correspondentes. A ordem nao importa.');
+          renderSoundTestGate();
+        }
+      }
+
+      function continueFromSoundTest() {
+        const launchTarget = state.entry.launchAfterSoundTest;
+        state.entry.launchAfterSoundTest = '';
+        if (launchTarget === 'welcome') {
+          requestWelcomeTutorialStart(true);
+        }
+      }
+
+      function closeSoundTestGate() {
+        state.ui.soundTestOpen = false;
+        state.ui.soundTestBusy = false;
+        state.ui.soundTestPlaybackToken = 0;
+        stopSoundTestAudio();
+        clearSoundTestSubtitleRotation();
+        els.soundTestGate?.classList.remove('is-visible');
+      }
+
+      function openSoundTestGate(launchTarget = '') {
+        if (!els.soundTestGate) return;
+        state.entry.launchAfterSoundTest = safeText(launchTarget);
+        state.ui.soundTestOpen = true;
+        state.ui.soundTestBusy = false;
+        state.ui.soundTestSelectedLetters = [];
+        state.ui.soundTestTargetLetters = buildRandomSoundTestLetters();
+        state.ui.soundTestPlaybackToken = 0;
+        els.soundTestGate.classList.add('is-visible');
+        startSoundTestSubtitleRotation();
+        setSoundTestStatus('Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.');
+        renderSoundTestGate();
+        window.setTimeout(() => {
+          if (state.ui.soundTestOpen) {
+            void playSoundTestSequence();
+          }
+        }, 120);
+      }
+
+      async function validateSoundTestSelection() {
+        if (state.ui.soundTestSelectedLetters.length !== SOUND_TEST_SELECTION_COUNT || state.ui.soundTestBusy) return;
+        const selected = state.ui.soundTestSelectedLetters.slice().sort().join('');
+        const target = state.ui.soundTestTargetLetters.slice().sort().join('');
+        if (selected === target) {
+          setSoundTestStatus('Perfeito. Som ok, vamos jogar.');
+          renderSoundTestGate();
+          await wait(420);
+          closeSoundTestGate();
+          continueFromSoundTest();
+          return;
+        }
+        setSoundTestStatus('Ainda nao bateu. Vou repetir os 3 sons para voce tentar de novo.', true);
+        state.ui.soundTestSelectedLetters = [];
+        renderSoundTestGate();
+        await wait(500);
+        if (state.ui.soundTestOpen) {
+          void playSoundTestSequence();
+        }
+      }
+
+      function toggleSoundTestLetter(letter) {
+        if (!state.ui.soundTestOpen || state.ui.soundTestBusy) return;
+        const normalized = safeText(letter).toUpperCase().replace(/[^A-P]/g, '');
+        if (!normalized) return;
+        if (state.ui.soundTestSelectedLetters.includes(normalized)) {
+          state.ui.soundTestSelectedLetters = state.ui.soundTestSelectedLetters.filter((item) => item !== normalized);
+          setSoundTestStatus('Selecao atualizada. Complete com 3 imagens.');
+          renderSoundTestGate();
+          return;
+        }
+        if (state.ui.soundTestSelectedLetters.length >= SOUND_TEST_SELECTION_COUNT) return;
+        state.ui.soundTestSelectedLetters = state.ui.soundTestSelectedLetters.concat(normalized);
+        setSoundTestStatus(
+          state.ui.soundTestSelectedLetters.length >= SOUND_TEST_SELECTION_COUNT
+            ? 'Validando sua resposta...'
+            : 'Boa. Continue ate escolher 3 imagens.'
+        );
+        renderSoundTestGate();
+        if (state.ui.soundTestSelectedLetters.length >= SOUND_TEST_SELECTION_COUNT) {
+          void validateSoundTestSelection();
+        }
+      }
+
       function shouldShowWelcomeGate() {
         if (state.entry.authRequired || state.game.active || state.watch.active || isAdminUser()) return false;
         if (state.game.tutorial.completed) return false;
@@ -5167,8 +5681,12 @@
         return true;
       }
 
-      function requestWelcomeTutorialStart() {
+      function requestWelcomeTutorialStart(skipSoundTest = false) {
         if (state.entry.authRequired) return;
+        if (!skipSoundTest) {
+          openSoundTestGate('welcome');
+          return;
+        }
         if (hasTutorialPlanetUnlocked()) {
           hideWelcomeGate();
           beginGame();
@@ -5298,7 +5816,7 @@
             if (!letter) {
               return '<div class="premium-gate__code-slot"><span>•</span></div>';
             }
-            return                             `<div class="premium-gate__code-slot" data-filled-slot="${index}"><img src="/accesskey/${letter.toLowerCase()}.png" alt="${escapeHtml(letter)}"></div>`;
+            return                             `<div class="premium-gate__code-slot" data-filled-slot="${index}"><img src="/accesskey/${letter}.png" alt="${escapeHtml(letter)}"></div>`;
           });
           els.premiumCodeValue.innerHTML = slots.join('');
         }
@@ -10266,6 +10784,19 @@
 
       function bindEvents() {
         els.welcomeTouch?.addEventListener('click', requestWelcomeTutorialStart);
+        els.soundTestReplayBtn?.addEventListener('click', () => {
+          if (state.ui.soundTestBusy || !state.ui.soundTestOpen) return;
+          void playSoundTestSequence();
+        });
+        els.soundTestClearBtn?.addEventListener('click', () => {
+          if (state.ui.soundTestBusy || !state.ui.soundTestOpen) return;
+          clearSoundTestSelection();
+        });
+        els.soundTestGrid?.addEventListener('click', (event) => {
+          const tile = event.target.closest('[data-letter]');
+          if (!tile) return;
+          toggleSoundTestLetter(tile.getAttribute('data-letter') || '');
+        });
         els.authModeLogin.addEventListener('click', () => {
           setAuthMode('login');
           els.authCopy.textContent = authCopyText();
@@ -10402,6 +10933,17 @@
           closePremiumGate();
         });
         window.addEventListener('keydown', (event) => {
+          if (state.ui.soundTestOpen) {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              return;
+            }
+            if (/^[a-p]$/i.test(event.key || '')) {
+              event.preventDefault();
+              toggleSoundTestLetter(event.key);
+              return;
+            }
+          }
           if (state.ui.premiumGateOpen && event.key === 'Backspace') {
             event.preventDefault();
             if (!state.ui.premiumBusy) {
