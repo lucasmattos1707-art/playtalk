@@ -62,13 +62,13 @@
     body {
       font-family: "Soopafre", Arial, sans-serif;
       color: #10233d;
-      background: linear-gradient(180deg, #ffffff 0%, #edf8fc 36%, #d4edf7 68%, #228ebf 100%);
+      background: linear-gradient(180deg, #8ad8f5 0%, #5dbce3 42%, #228ebf 100%);
       position: relative;
       overflow: auto;
     }
 
     body.admin-user {
-      background: linear-gradient(180deg, #ffffff 0%, #edf8fc 36%, #d4edf7 68%, #228ebf 100%);
+      background: linear-gradient(180deg, #8ad8f5 0%, #5dbce3 42%, #228ebf 100%);
     }
 
     body.admin-user .panel,
@@ -5574,6 +5574,10 @@
       function openSoundTestGate(launchTarget = '') {
         if (!els.soundTestGate) return;
         state.entry.launchAfterSoundTest = safeText(launchTarget);
+        state.entry.welcomeVisible = false;
+        clearWelcomeRotation();
+        document.body.classList.remove('welcome-active');
+        els.welcomeGate?.classList.remove('is-visible');
         state.ui.soundTestOpen = true;
         state.ui.soundTestBusy = false;
         state.ui.soundTestSelectedLetters = [];
@@ -6058,8 +6062,7 @@
         });
       }
 
-      async function fileToSquareWebpDataUrl(file, size = 500) {
-        const sourceDataUrl = await fileToDataUrl(file);
+      async function dataUrlToSquareWebpDataUrl(sourceDataUrl, size = 400) {
         return await new Promise((resolve, reject) => {
           const image = new Image();
           image.onload = () => {
@@ -6087,6 +6090,11 @@
           image.onerror = () => reject(new Error('Nao foi possivel abrir a foto.'));
           image.src = sourceDataUrl;
         });
+      }
+
+      async function fileToSquareWebpDataUrl(file, size = 400) {
+        const sourceDataUrl = await fileToDataUrl(file);
+        return dataUrlToSquareWebpDataUrl(sourceDataUrl, size);
       }
 
       async function createCartoonAvatar(imageDataUrl) {
@@ -6446,11 +6454,12 @@
         state.ui.photoGateBusy = true;
         renderPhotoGate();
         try {
-          const sourceDataUrl = await fileToSquareWebpDataUrl(file, 500);
+          const sourceDataUrl = await fileToSquareWebpDataUrl(file, 400);
           state.ui.photoSourceDataUrl = sourceDataUrl;
           playIdentityAudio(ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH);
           startPhotoLoadingCopy();
           const cartoonDataUrl = await createCartoonAvatar(sourceDataUrl);
+          const optimizedCartoonDataUrl = await dataUrlToSquareWebpDataUrl(cartoonDataUrl, 400);
           if (state.ui.identityAudio?.src?.endsWith('photorecieve.mp3')) {
             await fadeOutIdentityAudio(1000);
           }
@@ -6460,7 +6469,7 @@
           }
           state.ui.photoGenerationCount += 1;
           state.ui.photoVersions.push({
-            image: cartoonDataUrl,
+            image: optimizedCartoonDataUrl,
             source: sourceDataUrl,
             createdAt: new Date().toISOString()
           });

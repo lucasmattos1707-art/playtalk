@@ -158,8 +158,7 @@
     });
   }
 
-  async function fileToSquareWebpDataUrl(file, size = 500) {
-    const sourceDataUrl = await fileToDataUrl(file);
+  async function dataUrlToSquareWebpDataUrl(sourceDataUrl, size = 400) {
     return await new Promise((resolve, reject) => {
       const image = new Image();
       image.onload = () => {
@@ -199,6 +198,11 @@
       image.onerror = () => reject(new Error('Nao foi possivel abrir a foto.'));
       image.src = sourceDataUrl;
     });
+  }
+
+  async function fileToSquareWebpDataUrl(file, size = 400) {
+    const sourceDataUrl = await fileToDataUrl(file);
+    return dataUrlToSquareWebpDataUrl(sourceDataUrl, size);
   }
 
   async function fetchSessionUser() {
@@ -369,11 +373,11 @@
         state.avatarGenerating = true;
         els.saveBtn.disabled = true;
         setStatus('Transformando foto em desenho...');
-        const sourceDataUrl = await fileToSquareWebpDataUrl(file, 500);
+        const sourceDataUrl = await fileToSquareWebpDataUrl(file, 400);
         state.avatarDraft = sourceDataUrl;
         renderUser();
         const cartoonDataUrl = await createCartoonAvatar(sourceDataUrl);
-        state.avatarDraft = cartoonDataUrl;
+        state.avatarDraft = await dataUrlToSquareWebpDataUrl(cartoonDataUrl, 400);
         renderUser();
         setStatus('Desenho gerado com sucesso.', 'success');
       } catch (error) {

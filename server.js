@@ -3597,10 +3597,11 @@ async function uploadUserAvatarToR2(user, imageDataUrl, label = 'avatar') {
   if (!isR2FluencyConfigured()) {
     return '';
   }
-  const extension = extensionFromMimeType(parsedImage.mimeType);
+  const extension = 'webp';
+  const contentType = 'image/webp';
   const usernameFolder = safeGeneratedBase(user?.username || user?.email || `user-${user?.id || 'anon'}`, 'user');
   const objectKey = `${usernameFolder}/${safeGeneratedBase(label, 'avatar')}-${Date.now()}.${extension}`;
-  await putR2Object(objectKey, parsedImage.buffer, parsedImage.mimeType);
+  await putR2Object(objectKey, parsedImage.buffer, contentType);
   return buildFlashcardsR2PublicUrl(objectKey);
 }
 
