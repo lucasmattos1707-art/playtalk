@@ -931,13 +931,60 @@
       transform: scale(1.02);
     }
 
-    .board__image-speech--evaluating {
-      opacity: 1;
-    }
+.board__image-speech--evaluating {
+  opacity: 1;
+}
 
-    .vocabulary-game.phase-8 .image-ring-accuracy {
-      display: none;
-    }
+.manual-speech-review {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(18px, 6vw, 44px);
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.manual-speech-review__button {
+  border: none;
+  border-radius: 999px;
+  min-width: 132px;
+  padding: 14px 22px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+}
+
+.manual-speech-review__button--correct {
+  background: linear-gradient(135deg, #2ecc71, #1f9d57);
+}
+
+.manual-speech-review__button--wrong {
+  background: linear-gradient(135deg, #ff5a5f, #c62828);
+}
+
+@media (max-width: 768px) {
+  .manual-speech-review {
+    width: calc(100% - 32px);
+    gap: 10px;
+  }
+
+  .manual-speech-review__button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 13px 18px;
+    font-size: 16px;
+  }
+}
+
+.vocabulary-game.phase-8 .image-ring-accuracy {
+  display: none;
+}
 
     .vocabulary-game.phase-8 .board,
     .vocabulary-game.phase-9 .board,
