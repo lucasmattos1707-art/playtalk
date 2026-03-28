@@ -288,18 +288,9 @@
 
     .sound-test-gate__header {
       display: grid;
-      gap: 10px;
+      gap: 6px;
       text-align: center;
       justify-items: center;
-    }
-
-    .sound-test-gate__eyebrow {
-      margin: 0;
-      color: #2aa8ff;
-      font-size: 0.88rem;
-      font-weight: 700;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
     }
 
     .sound-test-gate__title {
@@ -325,14 +316,14 @@
     .sound-test-gate__slots {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      width: min(100%, 520px);
+      gap: 8px;
+      width: min(100%, 260px);
       margin: 0 auto;
     }
 
     .sound-test-gate__slot {
-      min-height: 108px;
-      border-radius: 28px;
+      min-height: 54px;
+      border-radius: 16px;
       border: 2px dashed rgba(42, 168, 255, 0.24);
       background: linear-gradient(180deg, #f8fcff 0%, #eef8ff 100%);
       display: grid;
@@ -342,14 +333,14 @@
     }
 
     .sound-test-gate__slot img {
-      width: min(100%, 92px);
+      width: min(100%, 46px);
       height: auto;
       object-fit: contain;
     }
 
     .sound-test-gate__slot span {
       color: #8aa3bc;
-      font-size: 1.8rem;
+      font-size: 0.9rem;
       line-height: 1;
     }
 
@@ -449,12 +440,12 @@
       }
 
       .sound-test-gate__slots {
-        gap: 10px;
+        gap: 8px;
       }
 
       .sound-test-gate__slot {
-        min-height: 84px;
-        border-radius: 22px;
+        min-height: 42px;
+        border-radius: 14px;
       }
 
       .sound-test-gate__grid {
@@ -509,7 +500,7 @@
       opacity: 0;
       max-height: 0;
       overflow: hidden;
-      transform: translateY(18px);
+      transform: translateY(0);
       transition: opacity 320ms ease, transform 320ms ease, max-height 320ms ease;
     }
 
@@ -2282,6 +2273,18 @@
       z-index: 6;
     }
 
+    .game-card__seal.is-tutorial-finale {
+      right: 3%;
+      bottom: calc(3% - 40px);
+      top: auto;
+      width: clamp(106px, 28.75%, 172px);
+      height: clamp(106px, 28.75%, 172px);
+      object-fit: contain;
+      transform: scale(1.15);
+      transform-origin: center center;
+      filter: drop-shadow(0 0 16px rgba(255, 245, 178, 0.82));
+    }
+
     .game-card__seal.is-tutorial-seal-flash {
       animation: flashcardsTutorialSealFlash 400ms ease-out forwards;
       transform-origin: center center;
@@ -2912,6 +2915,13 @@
       100% { transform: translate(0, 0) scale(1); opacity: 1; }
     }
 
+    @keyframes flashcardsTutorialSealFlash {
+      0% { opacity: 0; transform: translate(12px, 20px) scale(0.78); filter: brightness(1) drop-shadow(0 0 16px rgba(255, 245, 178, 0.8)); }
+      35% { opacity: 1; transform: translate(-2px, -1px) scale(1.2); filter: brightness(2) drop-shadow(0 0 30px rgba(255, 255, 255, 1)); }
+      70% { opacity: 1; transform: translate(1px, 2px) scale(1.12); filter: brightness(1.18) drop-shadow(0 0 20px rgba(255, 245, 178, 0.92)); }
+      100% { opacity: 1; transform: translate(0, 0) scale(1.15); filter: brightness(1) drop-shadow(0 0 16px rgba(255, 245, 178, 0.82)); }
+    }
+
     @keyframes flashcardsTypingKeyFlash {
       0% { transform: scale(1); filter: brightness(1); }
       50% { transform: scale(1.08); filter: brightness(1.35) drop-shadow(0 0 18px rgba(255, 255, 255, 0.82)); }
@@ -2966,7 +2976,7 @@
     @keyframes flashcardsTutorialReveal {
       0% {
         opacity: 0;
-        transform: translateY(24px) scale(0.98);
+        transform: translateY(0) scale(1);
       }
       100% {
         opacity: 1;
@@ -3015,8 +3025,7 @@
       align-items: center;
       justify-content: center;
       padding: 24px;
-      background:
-        radial-gradient(circle at center, rgba(7, 20, 37, 0.35) 0%, rgba(4, 19, 33, 0.88) 66%, rgba(4, 19, 33, 0.96) 100%);
+      background: transparent;
       z-index: 15;
       pointer-events: none;
     }
@@ -3816,7 +3825,8 @@
       to { opacity: 0; }
     }
 
-    body.identity-gate-open .flashcards-footer-nav {
+    body.identity-gate-open .flashcards-footer-nav,
+    body.sound-test-open .flashcards-footer-nav {
       opacity: 0 !important;
       pointer-events: none !important;
     }
@@ -3848,9 +3858,8 @@
     </div>
   </section>
   <section class="sound-test-gate" id="soundTestGate" aria-modal="true" role="dialog" aria-label="Teste de som">
-    <div class="sound-test-gate__shell">
+      <div class="sound-test-gate__shell">
       <div class="sound-test-gate__header">
-        <p class="sound-test-gate__eyebrow">PlayTalk</p>
         <h2 class="sound-test-gate__title">Teste de som</h2>
         <p class="sound-test-gate__subtitle" id="soundTestSubtitle">Toque no que est&aacute; ouvindo</p>
       </div>
@@ -3858,7 +3867,6 @@
       <p class="sound-test-gate__status" id="soundTestStatus">Ou&ccedil;a os 3 sons e toque nas 3 imagens correspondentes. A ordem n&atilde;o importa.</p>
       <div class="sound-test-gate__actions">
         <button class="sound-test-gate__btn" id="soundTestReplayBtn" type="button">Ouvir de novo</button>
-        <button class="sound-test-gate__btn is-secondary" id="soundTestClearBtn" type="button">Limpar sele&ccedil;&atilde;o</button>
       </div>
       <div class="sound-test-gate__grid" id="soundTestGrid">
         <button class="sound-test-gate__tile" type="button" data-letter="A"><img src="/accesskey/teclas/Imagens/A.png" alt="A"></button>
@@ -4509,7 +4517,6 @@
         soundTestSlots: document.getElementById('soundTestSlots'),
         soundTestStatus: document.getElementById('soundTestStatus'),
         soundTestReplayBtn: document.getElementById('soundTestReplayBtn'),
-        soundTestClearBtn: document.getElementById('soundTestClearBtn'),
         soundTestGrid: document.getElementById('soundTestGrid'),
         authGate: document.getElementById('authGate'),
         authCard: document.getElementById('authCard'),
@@ -5532,9 +5539,6 @@
         if (els.soundTestReplayBtn) {
           els.soundTestReplayBtn.disabled = state.ui.soundTestBusy || !state.ui.soundTestTargetLetters.length;
         }
-        if (els.soundTestClearBtn) {
-          els.soundTestClearBtn.disabled = state.ui.soundTestBusy || !state.ui.soundTestSelectedLetters.length;
-        }
       }
 
       function renderSoundTestGate() {
@@ -5611,7 +5615,7 @@
         }
         if (state.ui.soundTestPlaybackToken === token) {
           state.ui.soundTestBusy = false;
-          setSoundTestStatus('Agora toque nas 3 imagens correspondentes. A ordem nao importa.');
+          setSoundTestStatus('');
           renderSoundTestGate();
         }
       }
@@ -5634,6 +5638,7 @@
         state.ui.soundTestPlaybackToken = 0;
         stopSoundTestAudio();
         clearSoundTestSubtitleRotation();
+        document.body.classList.remove('sound-test-open');
         els.soundTestGate?.classList.remove('is-visible');
       }
 
@@ -5649,6 +5654,7 @@
         state.ui.soundTestSelectedLetters = [];
         state.ui.soundTestTargetLetters = buildRandomSoundTestLetters();
         state.ui.soundTestPlaybackToken = 0;
+        document.body.classList.add('sound-test-open');
         els.soundTestGate.classList.add('is-visible');
         startSoundTestSubtitleRotation();
         setSoundTestStatus('Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.');
@@ -9660,7 +9666,7 @@
           ? Math.max(0, Number(tutorialFinale.sealPhase) || 0)
           : (rewardSeal ? rewardSeal.phase : activeSealPhase(record));
         const sealMarkup = displayedSeal
-          ? `<img class="mini-card__seal game-card__seal${rewardSeal ? ' game-card__reward-seal' : ''}${hasTutorialFinale && tutorialFinale.sealFlash ? ' is-tutorial-seal-flash' : ''}${hasTutorialFinale && tutorialFinale.sealSoft ? ' is-tutorial-seal-soft' : ''}" src="${escapeHtml(phaseMeta(displayedSeal).sealPath)}" alt="${escapeHtml(phaseMeta(displayedSeal).label)}">`
+          ? `<img class="mini-card__seal game-card__seal${rewardSeal ? ' game-card__reward-seal' : ''}${hasTutorialFinale ? ' is-tutorial-finale' : ''}${hasTutorialFinale && tutorialFinale.sealFlash ? ' is-tutorial-seal-flash' : ''}${hasTutorialFinale && tutorialFinale.sealSoft ? ' is-tutorial-seal-soft' : ''}" src="${escapeHtml(phaseMeta(displayedSeal).sealPath)}" alt="${escapeHtml(phaseMeta(displayedSeal).label)}">`
           : '';
         const visualClasses = ['game-card__visual'];
         if (stageConfig.blurImage) visualClasses.push('is-stage-two');
@@ -10890,10 +10896,6 @@
         els.soundTestReplayBtn?.addEventListener('click', () => {
           if (state.ui.soundTestBusy || !state.ui.soundTestOpen) return;
           void playSoundTestSequence();
-        });
-        els.soundTestClearBtn?.addEventListener('click', () => {
-          if (state.ui.soundTestBusy || !state.ui.soundTestOpen) return;
-          clearSoundTestSelection();
         });
         els.soundTestGrid?.addEventListener('click', (event) => {
           const tile = event.target.closest('[data-letter]');

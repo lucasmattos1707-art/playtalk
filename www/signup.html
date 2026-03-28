@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <title>Entrar | PlayTalk</title>
-  <meta name="description" content="Entre na sua conta PlayTalk.">
+  <meta name="description" content="Entre ou crie sua conta PlayTalk para continuar sua jornada.">
   <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
   <script src="js/api-config.js"></script>
   <style>
@@ -20,49 +20,223 @@
 
     body {
       min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 24px;
+      padding: 20px;
       font-family: "Open Sans", Arial, sans-serif;
-      background:
-        radial-gradient(circle at top, rgba(114, 208, 255, 0.28), rgba(255, 255, 255, 0) 34%),
-        linear-gradient(180deg, #ffffff 0%, #f3f9ff 48%, #e7f3ff 100%);
       color: #10233d;
+      background:
+        radial-gradient(circle at top left, rgba(59, 193, 255, 0.28), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(84, 205, 134, 0.2), transparent 28%),
+        linear-gradient(180deg, #f8fcff 0%, #eef6ff 48%, #e4efff 100%);
     }
 
-    .signup-shell {
-      width: min(100%, 420px);
-      padding: 28px 22px 24px;
-      border-radius: 28px;
-      background: rgba(255, 255, 255, 0.94);
-      border: 1px solid rgba(42, 168, 255, 0.16);
-      box-shadow: 0 22px 60px rgba(17, 50, 89, 0.14);
+    .signup-page {
+      width: min(1160px, 100%);
+      min-height: calc(100vh - 40px);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(360px, 430px);
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .signup-hero,
+    .signup-panel {
+      border-radius: 36px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .signup-hero {
+      padding: clamp(28px, 5vw, 56px);
+      background:
+        radial-gradient(circle at 16% 16%, rgba(255, 255, 255, 0.58), transparent 20%),
+        linear-gradient(145deg, rgba(18, 132, 255, 0.96), rgba(27, 178, 255, 0.9) 48%, rgba(63, 194, 141, 0.9));
+      color: #ffffff;
+      display: grid;
+      align-content: space-between;
+      box-shadow: 0 28px 70px rgba(26, 88, 160, 0.18);
+      min-height: 720px;
+    }
+
+    .signup-hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -8% -18% auto;
+      width: 360px;
+      height: 360px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 68%);
+      pointer-events: none;
+    }
+
+    .signup-hero__top {
+      display: grid;
+      gap: 22px;
+      max-width: 560px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .signup-badge {
+      width: fit-content;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      backdrop-filter: blur(12px);
     }
 
     .signup-brand {
-      display: grid;
-      justify-items: center;
-      gap: 14px;
-      margin-bottom: 22px;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 16px;
     }
 
     .signup-brand img {
-      width: min(210px, 60vw);
-      height: auto;
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.12);
+      padding: 8px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
     }
 
-    .signup-brand h1 {
-      margin: 0;
-      font-size: 28px;
-      line-height: 1.05;
+    .signup-brand__text {
+      display: grid;
+      gap: 4px;
     }
 
-    .signup-brand p {
+    .signup-brand__text strong {
+      font-size: clamp(34px, 5vw, 54px);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+    }
+
+    .signup-brand__text span {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .signup-hero h1 {
       margin: 0;
-      color: #617892;
+      font-size: clamp(34px, 5vw, 62px);
+      line-height: 0.94;
+      letter-spacing: -0.05em;
+      max-width: 10ch;
+    }
+
+    .signup-hero p {
+      margin: 0;
+      max-width: 46ch;
+      font-size: clamp(16px, 1.8vw, 19px);
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.88);
+    }
+
+    .signup-hero__cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .signup-hero__card {
+      padding: 18px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(12px);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    }
+
+    .signup-hero__card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    .signup-hero__card span {
+      display: block;
+      color: rgba(255, 255, 255, 0.76);
       font-size: 14px;
       line-height: 1.5;
+    }
+
+    .signup-panel {
+      padding: 26px;
+      display: grid;
+      align-content: center;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(42, 168, 255, 0.14);
+      box-shadow: 0 24px 70px rgba(16, 35, 61, 0.12);
+      backdrop-filter: blur(16px);
+    }
+
+    .signup-panel__inner {
+      display: grid;
+      gap: 22px;
+    }
+
+    .signup-panel__head {
+      display: grid;
+      gap: 10px;
+    }
+
+    .signup-panel__eyebrow {
+      margin: 0;
+      color: #1e96ff;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .signup-panel__head h2 {
+      margin: 0;
+      font-size: 34px;
+      line-height: 0.98;
+      letter-spacing: -0.04em;
+    }
+
+    .signup-panel__head p {
+      margin: 0;
+      color: #5e7894;
+      line-height: 1.55;
+      font-size: 15px;
+    }
+
+    .signup-switch {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      padding: 6px;
+      border-radius: 20px;
+      background: #edf5ff;
+      border: 1px solid rgba(30, 150, 255, 0.08);
+    }
+
+    .signup-switch__btn {
+      min-height: 48px;
+      border: 0;
+      border-radius: 15px;
+      background: transparent;
+      color: #51708f;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .signup-switch__btn.is-active {
+      background: linear-gradient(180deg, #2fb4ff 0%, #1788ff 100%);
+      color: #ffffff;
+      box-shadow: 0 14px 24px rgba(23, 136, 255, 0.22);
     }
 
     .signup-form {
@@ -78,49 +252,81 @@
     .signup-field span {
       font-size: 13px;
       font-weight: 700;
-      color: #45607d;
+      color: #44617d;
+    }
+
+    .signup-input-wrap {
+      position: relative;
     }
 
     .signup-field input {
       width: 100%;
-      min-height: 52px;
-      border-radius: 16px;
-      border: 1px solid rgba(60, 128, 194, 0.2);
-      padding: 0 16px;
+      min-height: 56px;
+      border-radius: 18px;
+      border: 1px solid rgba(60, 128, 194, 0.18);
+      padding: 0 18px;
       font: inherit;
+      font-size: 16px;
       color: #10233d;
       background: #f8fbff;
       outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
     }
 
     .signup-field input:focus {
-      border-color: rgba(42, 168, 255, 0.7);
+      border-color: rgba(42, 168, 255, 0.76);
       box-shadow: 0 0 0 4px rgba(42, 168, 255, 0.12);
+      background: #ffffff;
+    }
+
+    .signup-password-toggle {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      min-width: 74px;
+      min-height: 40px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(23, 136, 255, 0.08);
+      color: #197fe8;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .signup-hint {
+      margin: -2px 0 0;
+      color: #7188a0;
+      font-size: 13px;
+      line-height: 1.45;
     }
 
     .signup-submit {
-      min-height: 54px;
+      min-height: 56px;
       border: 0;
-      border-radius: 18px;
-      background: linear-gradient(180deg, #2fb4ff 0%, #1788ff 100%);
+      border-radius: 20px;
+      background: linear-gradient(135deg, #2fb4ff 0%, #1788ff 55%, #19b98a 100%);
       color: #ffffff;
       font: inherit;
+      font-size: 16px;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 16px 34px rgba(23, 136, 255, 0.24);
+      box-shadow: 0 20px 38px rgba(23, 136, 255, 0.24);
     }
 
     .signup-submit:disabled {
-      opacity: 0.75;
+      opacity: 0.78;
       cursor: wait;
     }
 
     .signup-status {
-      min-height: 1.4em;
+      min-height: 1.5em;
       margin: 2px 0 0;
       text-align: center;
       font-size: 14px;
-      color: #617892;
+      color: #6a8198;
     }
 
     .signup-status.is-error {
@@ -128,48 +334,159 @@
     }
 
     .signup-status.is-success {
-      color: #1f8f53;
+      color: #17814b;
     }
 
-    .signup-back {
-      display: block;
-      margin-top: 16px;
-      text-align: center;
-      color: #71849b;
+    .signup-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 6px;
+    }
+
+    .signup-link {
+      color: #5e7894;
       text-decoration: none;
       font-size: 14px;
+      font-weight: 600;
     }
 
-    .signup-back:hover,
-    .signup-back:focus-visible {
+    .signup-link:hover,
+    .signup-link:focus-visible {
       text-decoration: underline;
+    }
+
+    .signup-footnote {
+      margin: 0;
+      color: #7a90a7;
+      font-size: 12px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .signup-page {
+        grid-template-columns: 1fr;
+      }
+
+      .signup-hero {
+        min-height: auto;
+        gap: 32px;
+      }
+
+      .signup-hero h1 {
+        max-width: none;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 12px;
+      }
+
+      .signup-page {
+        min-height: calc(100vh - 24px);
+        gap: 14px;
+      }
+
+      .signup-hero,
+      .signup-panel {
+        border-radius: 28px;
+      }
+
+      .signup-hero {
+        padding: 24px 20px;
+      }
+
+      .signup-hero__cards {
+        grid-template-columns: 1fr;
+      }
+
+      .signup-panel {
+        padding: 22px 18px;
+      }
+
+      .signup-panel__head h2 {
+        font-size: 30px;
+      }
     }
   </style>
 </head>
 <body>
-  <main class="signup-shell">
-    <div class="signup-brand">
-      <img src="SVG/logo.png" alt="PlayTalk">
-      <h1>J&aacute; tenho conta</h1>
-      <p>Entre com seu nome e senha para voltar ao PlayTalk.</p>
-    </div>
+  <main class="signup-page">
+    <section class="signup-hero" aria-label="Apresentacao PlayTalk">
+      <div class="signup-hero__top">
+        <div class="signup-badge">Liga PlayTalk</div>
+        <div class="signup-brand">
+          <img src="SVG/logo.png" alt="PlayTalk">
+          <div class="signup-brand__text">
+            <strong>PlayTalk</strong>
+            <span>Entrar, continuar e evoluir</span>
+          </div>
+        </div>
+        <h1>Entre na sua conta e continue exatamente de onde parou.</h1>
+        <p>Esta tela usa a autenticação real da plataforma e conversa direto com os dados do seu usuário no banco Postgres já configurado no projeto.</p>
+      </div>
 
-    <form class="signup-form" id="signupForm">
-      <label class="signup-field">
-        <span>Nome</span>
-        <input id="signupUsername" name="username" type="text" autocomplete="username" maxlength="32" required>
-      </label>
+      <div class="signup-hero__cards">
+        <article class="signup-hero__card">
+          <strong>Conta real</strong>
+          <span>Login e cadastro usam os endpoints oficiais já conectados à tabela `users`.</span>
+        </article>
+        <article class="signup-hero__card">
+          <strong>Progressos preservados</strong>
+          <span>Ao entrar, o sistema recupera a sessão e leva você de volta para a plataforma.</span>
+        </article>
+        <article class="signup-hero__card">
+          <strong>Fluxo simples</strong>
+          <span>Mesma página para entrar ou criar conta, sem desviar o usuário da jornada.</span>
+        </article>
+      </div>
+    </section>
 
-      <label class="signup-field">
-        <span>Senha</span>
-        <input id="signupPassword" name="password" type="password" autocomplete="current-password" maxlength="120" required>
-      </label>
+    <section class="signup-panel" aria-label="Acesso da conta">
+      <div class="signup-panel__inner">
+        <div class="signup-panel__head">
+          <p class="signup-panel__eyebrow">Sua conta</p>
+          <h2 id="authTitle">Entrar</h2>
+          <p id="authCopy">Use seu nome e sua senha para acessar a plataforma.</p>
+        </div>
 
-      <button class="signup-submit" id="signupSubmit" type="submit">Entrar</button>
-      <p class="signup-status" id="signupStatus" aria-live="polite"></p>
-    </form>
+        <div class="signup-switch" role="tablist" aria-label="Escolha entre entrar e cadastrar">
+          <button class="signup-switch__btn is-active" id="loginTab" type="button" data-mode="login">Entrar</button>
+          <button class="signup-switch__btn" id="registerTab" type="button" data-mode="register">Criar conta</button>
+        </div>
 
-    <a class="signup-back" href="/flashcards">Voltar</a>
+        <form class="signup-form" id="signupForm">
+          <label class="signup-field">
+            <span>Nome de usuário</span>
+            <input id="signupUsername" name="username" type="text" inputmode="text" autocomplete="username" maxlength="32" placeholder="Ex.: Lucas, Ana Silva, player_01" required>
+          </label>
+
+          <label class="signup-field">
+            <span>Senha</span>
+            <div class="signup-input-wrap">
+              <input id="signupPassword" name="password" type="password" autocomplete="current-password" maxlength="120" placeholder="Digite sua senha" required>
+              <button class="signup-password-toggle" id="passwordToggle" type="button" aria-label="Mostrar ou ocultar senha">Mostrar</button>
+            </div>
+          </label>
+
+          <p class="signup-hint" id="signupHint">Seu nome pode ter letras, números, espaço, ponto, traço e underline. Mínimo de 3 caracteres.</p>
+
+          <button class="signup-submit" id="signupSubmit" type="submit">Entrar na plataforma</button>
+          <p class="signup-status" id="signupStatus" aria-live="polite"></p>
+        </form>
+
+        <div class="signup-links">
+          <a class="signup-link" id="backLink" href="/flashcards">Voltar ao PlayTalk</a>
+          <a class="signup-link" href="/auth.html">Abrir jornada principal</a>
+        </div>
+
+        <p class="signup-footnote">Ao entrar ou criar conta, a sessão é salva no token local e também no cookie da aplicação.</p>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -179,12 +496,42 @@
       const passwordInput = document.getElementById('signupPassword');
       const submitButton = document.getElementById('signupSubmit');
       const statusEl = document.getElementById('signupStatus');
+      const authTitle = document.getElementById('authTitle');
+      const authCopy = document.getElementById('authCopy');
+      const signupHint = document.getElementById('signupHint');
+      const passwordToggle = document.getElementById('passwordToggle');
+      const backLink = document.getElementById('backLink');
+      const modeButtons = Array.from(document.querySelectorAll('[data-mode]'));
+      const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
+      const urlParams = new URLSearchParams(window.location.search);
+      const requestedMode = String(urlParams.get('mode') || '').trim().toLowerCase();
+      const requestedReturn = String(urlParams.get('return') || '').trim();
+      const fallbackReturn = '/flashcards';
+      let authMode = requestedMode === 'register' ? 'register' : 'login';
 
       function buildApiUrl(path) {
         if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
           return window.PlaytalkApi.url(path);
         }
         return path;
+      }
+
+      function authHeaders(extraHeaders) {
+        if (window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function') {
+          return window.PlaytalkApi.authHeaders(extraHeaders);
+        }
+        return { ...(extraHeaders || {}) };
+      }
+
+      function safeInternalReturnPath(value) {
+        if (!value) return fallbackReturn;
+        if (!value.startsWith('/')) return fallbackReturn;
+        if (value.startsWith('//')) return fallbackReturn;
+        return value;
+      }
+
+      function targetAfterAuth() {
+        return safeInternalReturnPath(requestedReturn || fallbackReturn);
       }
 
       function setStatus(message, tone) {
@@ -195,64 +542,139 @@
         }
       }
 
+      function setMode(mode) {
+        authMode = mode === 'register' ? 'register' : 'login';
+        const isRegister = authMode === 'register';
+        modeButtons.forEach((button) => {
+          button.classList.toggle('is-active', button.dataset.mode === authMode);
+        });
+        authTitle.textContent = isRegister ? 'Criar conta' : 'Entrar';
+        authCopy.textContent = isRegister
+          ? 'Crie sua conta para salvar progresso, jogar e aparecer no ranking.'
+          : 'Use seu nome e sua senha para acessar a plataforma.';
+        signupHint.textContent = isRegister
+          ? 'Sua senha pode ser simples por agora, mas o ideal é usar pelo menos 6 caracteres.'
+          : 'Se sua conta já existe no banco, este login vai autenticar você e restaurar sua sessão.';
+        submitButton.textContent = isRegister ? 'Criar conta e entrar' : 'Entrar na plataforma';
+        passwordInput.setAttribute('autocomplete', isRegister ? 'new-password' : 'current-password');
+        passwordInput.setAttribute('placeholder', isRegister ? 'Crie uma senha' : 'Digite sua senha');
+        setStatus('');
+      }
+
       async function redirectIfLoggedIn() {
         try {
           const response = await fetch(buildApiUrl('/auth/session'), {
-            headers: window.PlaytalkApi?.authHeaders ? window.PlaytalkApi.authHeaders() : {},
-            cache: 'no-store'
+            headers: authHeaders(),
+            cache: 'no-store',
+            credentials: 'include'
           });
           const payload = await response.json().catch(() => ({}));
-          if (response.ok && payload?.success) {
-            window.location.replace('/flashcards');
+          if (response.ok && payload?.success && payload?.user?.id) {
+            window.location.replace(targetAfterAuth());
           }
         } catch (_error) {
           // ignore
         }
       }
 
+      function storeToken(token) {
+        if (!token) return;
+        try {
+          window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      function normalizeUsername(value) {
+        return String(value || '').trim().slice(0, 32);
+      }
+
+      function isValidUsername(value) {
+        return /^[a-zA-Z0-9._ -]{3,32}$/.test(value);
+      }
+
+      function isValidPassword(value) {
+        return typeof value === 'string' && value.trim().length >= 1;
+      }
+
+      function validateForm(username, password) {
+        if (!username || !password) {
+          return 'Preencha nome e senha para continuar.';
+        }
+        if (!isValidUsername(username)) {
+          return 'Use um nome com 3 a 32 caracteres. Pode ter letras, números, espaço, ponto, traço e underline.';
+        }
+        if (!isValidPassword(password)) {
+          return 'Digite uma senha válida.';
+        }
+        if (authMode === 'register' && password.trim().length < 6) {
+          return 'Para criar conta, use pelo menos 6 caracteres na senha.';
+        }
+        return '';
+      }
+
+      modeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          setMode(button.dataset.mode || 'login');
+        });
+      });
+
+      passwordToggle?.addEventListener('click', () => {
+        const nextType = passwordInput.type === 'password' ? 'text' : 'password';
+        passwordInput.type = nextType;
+        passwordToggle.textContent = nextType === 'password' ? 'Mostrar' : 'Ocultar';
+      });
+
+      backLink.href = targetAfterAuth();
+
       form?.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        const username = String(usernameInput.value || '').trim().toLowerCase();
-        const password = String(passwordInput.value || '').trim();
+        const username = normalizeUsername(usernameInput.value);
+        const password = String(passwordInput.value || '');
+        const validationMessage = validateForm(username, password);
 
-        if (!username || !password) {
-          setStatus('Preencha nome e senha para entrar.', 'error');
+        if (validationMessage) {
+          setStatus(validationMessage, 'error');
           return;
         }
 
         submitButton.disabled = true;
-        setStatus('Entrando na sua conta...');
+        setStatus(authMode === 'register' ? 'Criando sua conta...' : 'Entrando na sua conta...');
 
         try {
-          const response = await fetch(buildApiUrl('/login'), {
+          const endpoint = authMode === 'register' ? '/register' : '/login';
+          const response = await fetch(buildApiUrl(endpoint), {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(window.PlaytalkApi?.authHeaders ? window.PlaytalkApi.authHeaders() : {})
-            },
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            credentials: 'include',
             body: JSON.stringify({ username, password })
           });
           const payload = await response.json().catch(() => ({}));
           if (!response.ok || !payload?.success) {
-            throw new Error(payload?.message || 'Nao foi possivel entrar agora.');
+            throw new Error(payload?.message || 'Não foi possível autenticar agora.');
           }
 
-          if (payload.token) {
-            localStorage.setItem('playtalk_auth_token', payload.token);
-          }
+          storeToken(payload.token);
           passwordInput.value = '';
-          setStatus('Entrada liberada. Redirecionando...', 'success');
+          setStatus(
+            authMode === 'register'
+              ? 'Conta criada com sucesso. Redirecionando...'
+              : 'Login concluído. Redirecionando...',
+            'success'
+          );
           window.setTimeout(() => {
-            window.location.href = '/flashcards';
-          }, 220);
+            window.location.href = targetAfterAuth();
+          }, 260);
         } catch (error) {
-          setStatus(String(error.message || 'Nao foi possivel entrar agora.'), 'error');
+          setStatus(String(error.message || 'Não foi possível autenticar agora.'), 'error');
         } finally {
           submitButton.disabled = false;
         }
       });
 
+      setMode(authMode);
       redirectIfLoggedIn();
     })();
   </script>
