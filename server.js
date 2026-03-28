@@ -5240,6 +5240,10 @@ app.get(['/flashcards', '/flashcards/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'www', 'flashcards.html'));
 });
 
+app.get(['/signup', '/signup/'], (req, res) => {
+  res.sendFile(path.join(staticDir, 'signup.html'));
+});
+
 app.get(['/premium', '/premium/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'premium.html'));
 });

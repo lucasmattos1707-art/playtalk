@@ -238,6 +238,23 @@
       transform: translateY(10px);
     }
 
+    .welcome-gate__account-link {
+      border: 0;
+      background: transparent;
+      padding: 6px 10px 0;
+      color: rgba(88, 102, 122, 0.9);
+      font-size: 14px;
+      line-height: 1.2;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .welcome-gate__account-link:hover,
+    .welcome-gate__account-link:focus-visible {
+      color: rgba(57, 73, 95, 0.98);
+      text-decoration: underline;
+    }
+
     .sound-test-gate {
       position: fixed;
       inset: 0;
@@ -3822,12 +3839,13 @@
 </head>
 <body class="flashcards-home-collapsed">
   <section class="welcome-gate is-visible" id="welcomeGate" aria-label="Entrada do PlayTalk">
-    <button class="welcome-gate__touch" id="welcomeTouch" type="button" aria-label="Toque para iniciar o tutorial">
-      <div class="welcome-gate__stack">
+    <div class="welcome-gate__stack">
+      <button class="welcome-gate__touch" id="welcomeTouch" type="button" aria-label="Toque para iniciar o tutorial">
         <img class="welcome-gate__logo" src="SVG/logo.png" alt="PlayTalk">
         <p class="welcome-gate__copy" id="welcomeCopy">Flu&#234;ncia f&#225;cil</p>
-      </div>
-    </button>
+      </button>
+      <a class="welcome-gate__account-link" id="welcomeAccountLink" href="/signup">J&aacute; tenho conta</a>
+    </div>
   </section>
   <section class="sound-test-gate" id="soundTestGate" aria-modal="true" role="dialog" aria-label="Teste de som">
     <div class="sound-test-gate__shell">
@@ -4372,6 +4390,7 @@
           welcomeIndex: 0,
           welcomeTimer: 0,
           launchAfterSoundTest: '',
+          soundTestCompleted: false,
           pendingTutorialStart: false,
           authRequired: false,
           authDelayTimer: 0,
@@ -4482,6 +4501,7 @@
         welcomeGate: document.getElementById('welcomeGate'),
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeCopy: document.getElementById('welcomeCopy'),
+        welcomeAccountLink: document.getElementById('welcomeAccountLink'),
         soundTestGate: document.getElementById('soundTestGate'),
         soundTestSubtitle: document.getElementById('soundTestSubtitle'),
         soundTestSlots: document.getElementById('soundTestSlots'),
@@ -5559,6 +5579,10 @@
         state.entry.launchAfterSoundTest = '';
         if (launchTarget === 'welcome') {
           requestWelcomeTutorialStart(true);
+          return;
+        }
+        if (launchTarget === 'tutorial-setup') {
+          beginTutorialGame();
         }
       }
 
@@ -5599,6 +5623,7 @@
         const selected = state.ui.soundTestSelectedLetters.slice().sort().join('');
         const target = state.ui.soundTestTargetLetters.slice().sort().join('');
         if (selected === target) {
+          state.entry.soundTestCompleted = true;
           setSoundTestStatus('Perfeito. Som ok, vamos jogar.');
           renderSoundTestGate();
           await wait(420);
@@ -10243,6 +10268,10 @@
           return;
         }
         if (canOfferTutorialMode()) {
+          if (!state.entry.soundTestCompleted) {
+            openSoundTestGate('tutorial-setup');
+            return;
+          }
           beginTutorialGame();
           return;
         }
@@ -10795,6 +10824,9 @@
 
       function bindEvents() {
         els.welcomeTouch?.addEventListener('click', requestWelcomeTutorialStart);
+        els.welcomeAccountLink?.addEventListener('click', (event) => {
+          event.stopPropagation();
+        });
         els.soundTestReplayBtn?.addEventListener('click', () => {
           if (state.ui.soundTestBusy || !state.ui.soundTestOpen) return;
           void playSoundTestSequence();

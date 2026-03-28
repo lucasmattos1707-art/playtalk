@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <title>Entrar | PlayTalk</title>
+  <meta name="description" content="Entre na sua conta PlayTalk.">
+  <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
+  <script src="js/api-config.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      font-family: "Open Sans", Arial, sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(114, 208, 255, 0.28), rgba(255, 255, 255, 0) 34%),
+        linear-gradient(180deg, #ffffff 0%, #f3f9ff 48%, #e7f3ff 100%);
+      color: #10233d;
+    }
+
+    .signup-shell {
+      width: min(100%, 420px);
+      padding: 28px 22px 24px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(42, 168, 255, 0.16);
+      box-shadow: 0 22px 60px rgba(17, 50, 89, 0.14);
+    }
+
+    .signup-brand {
+      display: grid;
+      justify-items: center;
+      gap: 14px;
+      margin-bottom: 22px;
+      text-align: center;
+    }
+
+    .signup-brand img {
+      width: min(210px, 60vw);
+      height: auto;
+    }
+
+    .signup-brand h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.05;
+    }
+
+    .signup-brand p {
+      margin: 0;
+      color: #617892;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .signup-form {
+      display: grid;
+      gap: 14px;
+    }
+
+    .signup-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .signup-field span {
+      font-size: 13px;
+      font-weight: 700;
+      color: #45607d;
+    }
+
+    .signup-field input {
+      width: 100%;
+      min-height: 52px;
+      border-radius: 16px;
+      border: 1px solid rgba(60, 128, 194, 0.2);
+      padding: 0 16px;
+      font: inherit;
+      color: #10233d;
+      background: #f8fbff;
+      outline: none;
+    }
+
+    .signup-field input:focus {
+      border-color: rgba(42, 168, 255, 0.7);
+      box-shadow: 0 0 0 4px rgba(42, 168, 255, 0.12);
+    }
+
+    .signup-submit {
+      min-height: 54px;
+      border: 0;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #2fb4ff 0%, #1788ff 100%);
+      color: #ffffff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 16px 34px rgba(23, 136, 255, 0.24);
+    }
+
+    .signup-submit:disabled {
+      opacity: 0.75;
+      cursor: wait;
+    }
+
+    .signup-status {
+      min-height: 1.4em;
+      margin: 2px 0 0;
+      text-align: center;
+      font-size: 14px;
+      color: #617892;
+    }
+
+    .signup-status.is-error {
+      color: #c64242;
+    }
+
+    .signup-status.is-success {
+      color: #1f8f53;
+    }
+
+    .signup-back {
+      display: block;
+      margin-top: 16px;
+      text-align: center;
+      color: #71849b;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .signup-back:hover,
+    .signup-back:focus-visible {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <main class="signup-shell">
+    <div class="signup-brand">
+      <img src="SVG/logo.png" alt="PlayTalk">
+      <h1>J&aacute; tenho conta</h1>
+      <p>Entre com seu nome e senha para voltar ao PlayTalk.</p>
+    </div>
+
+    <form class="signup-form" id="signupForm">
+      <label class="signup-field">
+        <span>Nome</span>
+        <input id="signupUsername" name="username" type="text" autocomplete="username" maxlength="32" required>
+      </label>
+
+      <label class="signup-field">
+        <span>Senha</span>
+        <input id="signupPassword" name="password" type="password" autocomplete="current-password" maxlength="120" required>
+      </label>
+
+      <button class="signup-submit" id="signupSubmit" type="submit">Entrar</button>
+      <p class="signup-status" id="signupStatus" aria-live="polite"></p>
+    </form>
+
+    <a class="signup-back" href="/flashcards">Voltar</a>
+  </main>
+
+  <script>
+    (function initPlaytalkSignupPage() {
+      const form = document.getElementById('signupForm');
+      const usernameInput = document.getElementById('signupUsername');
+      const passwordInput = document.getElementById('signupPassword');
+      const submitButton = document.getElementById('signupSubmit');
+      const statusEl = document.getElementById('signupStatus');
+
+      function buildApiUrl(path) {
+        if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
+          return window.PlaytalkApi.url(path);
+        }
+        return path;
+      }
+
+      function setStatus(message, tone) {
+        statusEl.textContent = message || '';
+        statusEl.className = 'signup-status';
+        if (tone) {
+          statusEl.classList.add(`is-${tone}`);
+        }
+      }
+
+      async function redirectIfLoggedIn() {
+        try {
+          const response = await fetch(buildApiUrl('/auth/session'), {
+            headers: window.PlaytalkApi?.authHeaders ? window.PlaytalkApi.authHeaders() : {},
+            cache: 'no-store'
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (response.ok && payload?.success) {
+            window.location.replace('/flashcards');
+          }
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      form?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const username = String(usernameInput.value || '').trim().toLowerCase();
+        const password = String(passwordInput.value || '').trim();
+
+        if (!username || !password) {
+          setStatus('Preencha nome e senha para entrar.', 'error');
+          return;
+        }
+
+        submitButton.disabled = true;
+        setStatus('Entrando na sua conta...');
+
+        try {
+          const response = await fetch(buildApiUrl('/login'), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(window.PlaytalkApi?.authHeaders ? window.PlaytalkApi.authHeaders() : {})
+            },
+            body: JSON.stringify({ username, password })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Nao foi possivel entrar agora.');
+          }
+
+          if (payload.token) {
+            localStorage.setItem('playtalk_auth_token', payload.token);
+          }
+          passwordInput.value = '';
+          setStatus('Entrada liberada. Redirecionando...', 'success');
+          window.setTimeout(() => {
+            window.location.href = '/flashcards';
+          }, 220);
+        } catch (error) {
+          setStatus(String(error.message || 'Nao foi possivel entrar agora.'), 'error');
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+
+      redirectIfLoggedIn();
+    })();
+  </script>
+</body>
+</html>
