@@ -3349,9 +3349,173 @@
       pointer-events: none !important;
     }
 
+    .identity-gate {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 18px 120px;
+      background: rgba(7, 16, 34, 0.78);
+      backdrop-filter: blur(16px);
+      z-index: 140;
+    }
+
+    .identity-gate.is-visible {
+      display: flex;
+    }
+
+    .identity-gate__card {
+      width: min(100%, 460px);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(239,246,255,0.98));
+      box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+      padding: 26px 20px 22px;
+      text-align: center;
+    }
+
+    .identity-gate__card h2 {
+      margin: 0 0 10px;
+      color: #0f172a;
+      font-size: 30px;
+      line-height: 1.05;
+    }
+
+    .identity-gate__card p {
+      margin: 0;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    .identity-gate__name-display {
+      min-height: 62px;
+      margin: 22px 0 16px;
+      border-radius: 20px;
+      border: 2px solid rgba(37, 99, 235, 0.14);
+      background: rgba(255, 255, 255, 0.96);
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: 0.04em;
+    }
+
+    .identity-gate__keyboard,
+    .identity-gate__keyboard-row {
+      display: grid;
+      gap: 10px;
+    }
+
+    .identity-gate__keyboard {
+      margin-top: 12px;
+    }
+
+    .identity-gate__keyboard-row {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .identity-gate__key,
+    .identity-gate__action {
+      border: 0;
+      border-radius: 18px;
+      min-height: 52px;
+      background: linear-gradient(180deg, #2563eb, #1d4ed8);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
+    }
+
+    .identity-gate__key.is-wide {
+      grid-column: span 4;
+    }
+
+    .identity-gate__key.is-secondary,
+    .identity-gate__action.is-secondary {
+      background: linear-gradient(180deg, #38bdf8, #2563eb);
+    }
+
+    .identity-gate__action.is-success {
+      background: linear-gradient(180deg, #22c55e, #16a34a);
+    }
+
+    .identity-gate__status {
+      min-height: 22px;
+      margin: 14px 0 0;
+      color: #2563eb;
+      font-weight: 700;
+    }
+
+    .identity-gate__status.is-error {
+      color: #dc2626;
+    }
+
+    .identity-gate__photo-shell {
+      display: grid;
+      gap: 16px;
+      margin-top: 18px;
+      justify-items: center;
+    }
+
+    .identity-gate__photo-circle {
+      width: 220px;
+      height: 220px;
+      border-radius: 999px;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, #0ea5e9, #2563eb 55%, #1d4ed8);
+      box-shadow: 0 20px 44px rgba(29, 78, 216, 0.28);
+    }
+
+    .identity-gate__photo-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .identity-gate__photo-circle svg {
+      width: 84px;
+      height: 84px;
+      fill: #ffffff;
+    }
+
+    .identity-gate__photo-copy {
+      min-height: 28px;
+      color: #0f172a;
+      font-weight: 700;
+    }
+
+    .identity-gate__photo-actions {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    body.identity-gate-open .flashcards-footer-nav {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
     @media (max-width: 520px) {
       .premium-gate__grid {
         gap: 10px;
+      }
+
+      .identity-gate__card {
+        padding: 22px 16px 18px;
+      }
+
+      .identity-gate__photo-circle {
+        width: 180px;
+        height: 180px;
       }
     }
   </style>
@@ -3638,10 +3802,10 @@
       <div class="premium-gate__card">
         <div class="premium-gate__copy">
           <h2>Premium</h2>
-          <p>Voce chegou em 8 cartas. Toque nas 16 imagens para digitar uma chave secreta de 6 letras.</p>
+          <p>Voce chegou em 8 cartas. Toque nas 16 imagens na ordem certa para montar sua chave secreta.</p>
         </div>
         <div class="premium-gate__code" id="premiumCodeValue"></div>
-        <p class="premium-gate__status" id="premiumStatus">Toque nas imagens na ordem certa para digitar a chave.</p>
+        <p class="premium-gate__status" id="premiumStatus">Toque nas imagens na ordem certa para montar a chave.</p>
         <div class="premium-gate__grid" id="premiumGrid">
           <button class="premium-gate__tile" type="button" data-letter="A"><img src="/accesskey/a.png" alt="A"></button>
           <button class="premium-gate__tile" type="button" data-letter="B"><img src="/accesskey/b.png" alt="B"></button>
@@ -3664,6 +3828,36 @@
           <button class="premium-gate__btn is-secondary" id="premiumBackspaceBtn" type="button">Apagar ultima</button>
           <button class="premium-gate__btn is-secondary" id="premiumClearBtn" type="button">Limpar tudo</button>
           <button class="premium-gate__btn is-secondary" id="premiumCloseBtn" type="button">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="identity-gate" id="nameGate" aria-modal="true" role="dialog" aria-label="Escolha um nome">
+    <div class="identity-gate__card">
+      <h2>Escolha um nome</h2>
+      <p>Seu nome vai aparecer no perfil, no account e no ranking.</p>
+      <div class="identity-gate__name-display" id="nameGateDisplay">&nbsp;</div>
+      <div class="identity-gate__keyboard" id="nameGateKeyboard"></div>
+      <button class="identity-gate__action is-success" id="nameGateContinueBtn" type="button">Avancar</button>
+      <p class="identity-gate__status" id="nameGateStatus" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="identity-gate" id="photoGate" aria-modal="true" role="dialog" aria-label="Escolha uma bela foto">
+    <div class="identity-gate__card">
+      <h2>Escolha uma bela foto</h2>
+      <p>Envie uma foto para continuar. Vamos transformar sua imagem em desenho.</p>
+      <div class="identity-gate__photo-shell">
+        <button class="identity-gate__photo-circle" id="photoGateCircle" type="button" aria-label="Enviar foto">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
+        </button>
+        <input id="photoGateInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+        <p class="identity-gate__photo-copy" id="photoGateStatus">Toque no circulo azul para enviar sua foto.</p>
+        <p class="identity-gate__status" id="photoGateLoadingCopy" aria-live="polite"></p>
+        <div class="identity-gate__photo-actions">
+          <button class="identity-gate__action is-success" id="photoGateContinueBtn" type="button" disabled>Avancar</button>
+          <button class="identity-gate__action is-secondary" id="photoGateRegenerateBtn" type="button" disabled>Gerar nova</button>
         </div>
       </div>
     </div>
@@ -3744,12 +3938,31 @@
       const ACCESS_KEY_AUDIO_LIMIT_PATH = '/accesskey/limit.mp3';
       const ACCESS_KEY_AUDIO_MESSAGE_PATH = '/accesskey/message.wav';
       const ACCESS_KEY_AUDIO_INVALID_PATH = '/accesskey/invalidkey2.mp3';
+      const ONBOARDING_USERNAME_AUDIO_PATH = '/accesskey/username.mp3';
+      const ONBOARDING_PHOTO_AUDIO_PATH = '/accesskey/photo.mp3';
+      const ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH = '/accesskey/photorecieve.mp3';
       const ACCESS_KEY_AUDIO_SUCCESS_PATHS = {
         semana: '/accesskey/week.mp3',
         mes: '/accesskey/month.mp3',
-        ano: '/accesskey/year.mp3',
-        'monthly-magic': '/accesskey/month.mp3'
+        ano: '/accesskey/year.mp3'
       };
+      const ONBOARDING_NAME_THRESHOLD = 3;
+      const ONBOARDING_PHOTO_THRESHOLD = 5;
+      const ONBOARDING_MIN_NAME_LENGTH = 3;
+      const ONBOARDING_MAX_PHOTO_GENERATIONS = 5;
+      const ONBOARDING_KEYBOARD_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWX'.split('');
+      const ONBOARDING_LOADING_MESSAGES = [
+        'Analisando a imagem enviada...',
+        'Detectando estrutura facial e proporcoes...',
+        'Identificando olhos e expressao...',
+        'Analisando cabelo, textura e volume...',
+        'Extraindo cores principais e iluminacao...',
+        'Interpretando expressao e vibe emocional...',
+        'Simplificando tracos para estilo ilustrado...',
+        'Aplicando caracteristicas animadas...',
+        'Ajustando luz, profundidade e foco...',
+        'Renderizando sua versao fiel...'
+      ];
       const FLASHCARD_REPORT_TYPES = [
         { key: 'blurred-image', label: 'Imagem borrada' },
         { key: 'weak-association', label: 'Associacao fraca' },
@@ -3889,6 +4102,20 @@
         ui: {
           activeView: 'cards',
           profileAvatarDraft: '',
+          identityAudio: null,
+          nameGateOpen: false,
+          nameDraft: '',
+          nameKeyboardShifted: false,
+          nameGateBusy: false,
+          photoGateOpen: false,
+          photoGateBusy: false,
+          photoSourceDataUrl: '',
+          photoVersions: [],
+          photoVersionIndex: 0,
+          photoGenerationCount: 0,
+          photoLoadingTimer: 0,
+          photoLoadingMessageIndex: 0,
+          photoSwipeStartX: 0,
           premiumGateOpen: false,
           premiumCode: '',
           premiumStatus: '',
@@ -4029,7 +4256,19 @@
         premiumClearBtn: document.getElementById('premiumClearBtn'),
         premiumBackspaceBtn: document.getElementById('premiumBackspaceBtn'),
         premiumCloseBtn: document.getElementById('premiumCloseBtn'),
-        premiumGrid: document.getElementById('premiumGrid')
+        premiumGrid: document.getElementById('premiumGrid'),
+        nameGate: document.getElementById('nameGate'),
+        nameGateDisplay: document.getElementById('nameGateDisplay'),
+        nameGateKeyboard: document.getElementById('nameGateKeyboard'),
+        nameGateContinueBtn: document.getElementById('nameGateContinueBtn'),
+        nameGateStatus: document.getElementById('nameGateStatus'),
+        photoGate: document.getElementById('photoGate'),
+        photoGateCircle: document.getElementById('photoGateCircle'),
+        photoGateInput: document.getElementById('photoGateInput'),
+        photoGateStatus: document.getElementById('photoGateStatus'),
+        photoGateLoadingCopy: document.getElementById('photoGateLoadingCopy'),
+        photoGateContinueBtn: document.getElementById('photoGateContinueBtn'),
+        photoGateRegenerateBtn: document.getElementById('photoGateRegenerateBtn')
       };
 
       function safeText(value) {
@@ -4487,6 +4726,16 @@
           id,
           username,
           avatarImage: safeText(user.avatar_image || user.avatarImage),
+          avatarVersions: Array.isArray(user.avatar_versions || user.avatarVersions)
+            ? (user.avatar_versions || user.avatarVersions).map((entry) => ({
+              image: safeText(entry?.image || entry?.url),
+              source: safeText(entry?.source),
+              createdAt: entry?.createdAt || entry?.created_at || null
+            })).filter((entry) => entry.image)
+            : [],
+          avatarGenerationCount: Math.max(0, Number.parseInt(user.avatar_generation_count || user.avatarGenerationCount, 10) || 0),
+          onboardingNameCompleted: Boolean(user.onboarding_name_completed || user.onboardingNameCompleted),
+          onboardingPhotoCompleted: Boolean(user.onboarding_photo_completed || user.onboardingPhotoCompleted),
           createdAt: user.created_at || user.createdAt || null,
           isAdmin: Boolean(user.is_admin),
           premiumFullAccess: Boolean(user.premium_full_access),
@@ -4961,7 +5210,7 @@
           els.premiumCodeValue.innerHTML = slots.join('');
         }
         if (els.premiumStatus) {
-          els.premiumStatus.textContent = state.ui.premiumStatus || 'Toque nas imagens na ordem certa para digitar a chave.';
+          els.premiumStatus.textContent = state.ui.premiumStatus || 'Toque nas imagens na ordem certa para montar a chave.';
         }
         if (els.premiumClearBtn) {
           els.premiumClearBtn.disabled = state.ui.premiumBusy || !state.ui.premiumCode;
@@ -5036,7 +5285,7 @@
         document.body.classList.add('premium-gate-open');
         els.premiumGate.classList.add('is-visible');
         playPremiumLimitAudio();
-        setPremiumStatus(message || 'Voce chegou ao limite de 8 cartas. Digite uma chave premium.');
+        setPremiumStatus(message || 'Voce chegou ao limite de 8 cartas. Monte sua chave premium tocando nas imagens.');
       }
 
       async function redeemPremiumAccessCode() {
@@ -5194,6 +5443,410 @@
           reader.onerror = () => reject(reader.error || new Error('Falha ao ler a imagem.'));
           reader.readAsDataURL(file);
         });
+      }
+
+      async function fileToSquareWebpDataUrl(file, size = 500) {
+        const sourceDataUrl = await fileToDataUrl(file);
+        return await new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = size;
+              canvas.height = size;
+              const context = canvas.getContext('2d');
+              if (!context) {
+                reject(new Error('Nao foi possivel preparar a imagem.'));
+                return;
+              }
+              const sourceWidth = image.naturalWidth || image.width;
+              const sourceHeight = image.naturalHeight || image.height;
+              const sourceSide = Math.min(sourceWidth, sourceHeight);
+              const sourceX = Math.max(0, Math.round((sourceWidth - sourceSide) / 2));
+              const sourceY = Math.max(0, Math.round((sourceHeight - sourceSide) / 2));
+              context.clearRect(0, 0, size, size);
+              context.drawImage(image, sourceX, sourceY, sourceSide, sourceSide, 0, 0, size, size);
+              resolve(canvas.toDataURL('image/webp', 0.92));
+            } catch (error) {
+              reject(error);
+            }
+          };
+          image.onerror = () => reject(new Error('Nao foi possivel abrir a foto.'));
+          image.src = sourceDataUrl;
+        });
+      }
+
+      async function createCartoonAvatar(imageDataUrl) {
+        const response = await fetch(buildApiUrl('/api/images/openai/avatar-cartoon'), {
+          method: 'POST',
+          headers: buildAuthHeaders({
+            'Content-Type': 'application/json'
+          }),
+          body: JSON.stringify({ imageDataUrl })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success || !payload?.dataUrl) {
+          throw new Error(payload?.message || payload?.error || 'Nao foi possivel transformar a foto em desenho.');
+        }
+        return String(payload.dataUrl);
+      }
+
+      function stopIdentityAudio() {
+        if (!state.ui.identityAudio) return;
+        try {
+          state.ui.identityAudio.pause();
+          state.ui.identityAudio.currentTime = 0;
+        } catch (_error) {
+          // ignore
+        }
+        state.ui.identityAudio = null;
+      }
+
+      function playIdentityAudio(src) {
+        if (!src) return;
+        stopIdentityAudio();
+        const audio = new Audio(src);
+        state.ui.identityAudio = audio;
+        audio.addEventListener('ended', () => {
+          if (state.ui.identityAudio === audio) state.ui.identityAudio = null;
+        }, { once: true });
+        audio.addEventListener('error', () => {
+          if (state.ui.identityAudio === audio) state.ui.identityAudio = null;
+        }, { once: true });
+        audio.play().catch(() => {
+          if (state.ui.identityAudio === audio) state.ui.identityAudio = null;
+        });
+      }
+
+      function setIdentityGateVisibility() {
+        const open = state.ui.nameGateOpen || state.ui.photoGateOpen;
+        document.body.classList.toggle('identity-gate-open', open);
+        els.nameGate?.classList.toggle('is-visible', state.ui.nameGateOpen);
+        els.photoGate?.classList.toggle('is-visible', state.ui.photoGateOpen);
+      }
+
+      async function ensureProvisionedUser() {
+        if (state.user?.id) return state.user;
+        const response = await fetch(buildApiUrl('/auth/provision-temp'), {
+          method: 'POST',
+          headers: buildAuthHeaders({
+            'Content-Type': 'application/json'
+          })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success) {
+          throw new Error(payload?.message || 'Nao foi possivel preparar o usuario.');
+        }
+        const user = normalizeUser(payload.user);
+        if (!user) {
+          throw new Error('Nao foi possivel preparar o perfil.');
+        }
+        state.user = user;
+        renderProfilePanel();
+        renderMetrics();
+        return user;
+      }
+
+      function setNameGateStatus(message, tone = '') {
+        if (!els.nameGateStatus) return;
+        els.nameGateStatus.textContent = message || '';
+        els.nameGateStatus.className = 'identity-gate__status';
+        if (tone) els.nameGateStatus.classList.add(`is-${tone}`);
+      }
+
+      function formatOnboardingName(value) {
+        return safeText(value).slice(0, 24);
+      }
+
+      function renderNameGate() {
+        if (els.nameGateDisplay) {
+          els.nameGateDisplay.textContent = formatOnboardingName(state.ui.nameDraft) || '\u00A0';
+        }
+        if (els.nameGateContinueBtn) {
+          els.nameGateContinueBtn.disabled = state.ui.nameGateBusy || formatOnboardingName(state.ui.nameDraft).length < ONBOARDING_MIN_NAME_LENGTH;
+        }
+      }
+
+      function renderNameKeyboard() {
+        if (!els.nameGateKeyboard) return;
+        const letters = ONBOARDING_KEYBOARD_LETTERS.slice();
+        if (state.ui.nameKeyboardShifted) {
+          letters[22] = 'Y';
+          letters[23] = 'Z';
+        }
+        els.nameGateKeyboard.innerHTML = '';
+        for (let rowIndex = 0; rowIndex < 4; rowIndex += 1) {
+          const row = document.createElement('div');
+          row.className = 'identity-gate__keyboard-row';
+          letters.slice(rowIndex * 6, rowIndex * 6 + 6).forEach((letter) => {
+            const key = document.createElement('button');
+            key.type = 'button';
+            key.className = 'identity-gate__key';
+            key.textContent = letter;
+            key.addEventListener('click', () => {
+              if (state.ui.nameGateBusy || state.ui.nameDraft.length >= 24) return;
+              state.ui.nameDraft = `${state.ui.nameDraft}${letter}`;
+              setNameGateStatus('');
+              renderNameGate();
+            });
+            row.appendChild(key);
+          });
+          els.nameGateKeyboard.appendChild(row);
+        }
+        const bottomRow = document.createElement('div');
+        bottomRow.className = 'identity-gate__keyboard-row';
+        const clearKey = document.createElement('button');
+        clearKey.type = 'button';
+        clearKey.className = 'identity-gate__key is-wide';
+        clearKey.textContent = 'Limpar';
+        clearKey.addEventListener('click', () => {
+          if (state.ui.nameGateBusy) return;
+          state.ui.nameDraft = '';
+          renderNameGate();
+        });
+        const backspaceKey = document.createElement('button');
+        backspaceKey.type = 'button';
+        backspaceKey.className = 'identity-gate__key is-secondary';
+        backspaceKey.textContent = 'Apagar';
+        backspaceKey.addEventListener('click', () => {
+          if (state.ui.nameGateBusy || !state.ui.nameDraft) return;
+          state.ui.nameDraft = state.ui.nameDraft.slice(0, -1);
+          renderNameGate();
+        });
+        const shiftKey = document.createElement('button');
+        shiftKey.type = 'button';
+        shiftKey.className = 'identity-gate__key is-secondary';
+        shiftKey.textContent = state.ui.nameKeyboardShifted ? 'ABC' : 'YZ';
+        shiftKey.addEventListener('click', () => {
+          if (state.ui.nameGateBusy) return;
+          state.ui.nameKeyboardShifted = !state.ui.nameKeyboardShifted;
+          renderNameKeyboard();
+        });
+        bottomRow.append(clearKey, backspaceKey, shiftKey);
+        els.nameGateKeyboard.appendChild(bottomRow);
+      }
+
+      function openNameGate() {
+        state.ui.nameGateOpen = true;
+        state.ui.photoGateOpen = false;
+        state.ui.nameDraft = safeText(state.user?.onboardingNameCompleted ? state.user?.username : state.user?.username || '');
+        renderNameKeyboard();
+        renderNameGate();
+        setNameGateStatus('');
+        setIdentityGateVisibility();
+        playIdentityAudio(ONBOARDING_USERNAME_AUDIO_PATH);
+      }
+
+      function closeNameGate() {
+        state.ui.nameGateOpen = false;
+        setIdentityGateVisibility();
+      }
+
+      async function submitNameGate() {
+        const nextUsername = formatOnboardingName(state.ui.nameDraft);
+        if (nextUsername.length < ONBOARDING_MIN_NAME_LENGTH) {
+          setNameGateStatus('Escolha um nome com pelo menos 3 caracteres.', 'error');
+          return;
+        }
+        state.ui.nameGateBusy = true;
+        renderNameGate();
+        setNameGateStatus('Salvando nome...');
+        try {
+          const response = await fetch(buildApiUrl('/auth/profile'), {
+            method: 'PATCH',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            }),
+            body: JSON.stringify({ username: nextUsername })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Nao foi possivel salvar o nome.');
+          }
+          const user = normalizeUser(payload.user);
+          if (user) {
+            state.user = user;
+          }
+          closeNameGate();
+          renderProfilePanel();
+          renderMetrics();
+          await maybeOpenOnboardingGate();
+        } catch (error) {
+          setNameGateStatus(error?.message || 'Nao foi possivel salvar o nome.', 'error');
+        } finally {
+          state.ui.nameGateBusy = false;
+          renderNameGate();
+        }
+      }
+
+      function currentPhotoVersion() {
+        return state.ui.photoVersions[state.ui.photoVersionIndex] || null;
+      }
+
+      function stopPhotoLoadingCopy() {
+        if (state.ui.photoLoadingTimer) {
+          window.clearInterval(state.ui.photoLoadingTimer);
+          state.ui.photoLoadingTimer = 0;
+        }
+      }
+
+      function startPhotoLoadingCopy() {
+        stopPhotoLoadingCopy();
+        state.ui.photoLoadingMessageIndex = 0;
+        if (els.photoGateLoadingCopy) {
+          els.photoGateLoadingCopy.textContent = ONBOARDING_LOADING_MESSAGES[0];
+        }
+        state.ui.photoLoadingTimer = window.setInterval(() => {
+          state.ui.photoLoadingMessageIndex += 1;
+          if (!els.photoGateLoadingCopy) return;
+          if (state.ui.photoLoadingMessageIndex >= ONBOARDING_LOADING_MESSAGES.length) {
+            els.photoGateLoadingCopy.textContent = 'Finalizando';
+            return;
+          }
+          els.photoGateLoadingCopy.textContent = ONBOARDING_LOADING_MESSAGES[state.ui.photoLoadingMessageIndex];
+        }, 2000);
+      }
+
+      function renderPhotoGate() {
+        const currentVersion = currentPhotoVersion();
+        if (els.photoGateCircle) {
+          els.photoGateCircle.innerHTML = currentVersion?.image
+            ? `<img src="${escapeHtml(currentVersion.image)}" alt="Foto ilustrada do usuario">`
+            : '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>';
+        }
+        if (els.photoGateStatus) {
+          if (state.ui.photoGateBusy) {
+            els.photoGateStatus.textContent = 'Transformando sua foto em desenho...';
+          } else if (currentVersion?.image) {
+            els.photoGateStatus.textContent = `Versao ${state.ui.photoVersionIndex + 1} de ${state.ui.photoVersions.length}.`;
+          } else {
+            els.photoGateStatus.textContent = 'Toque no circulo azul para enviar sua foto.';
+          }
+        }
+        if (els.photoGateContinueBtn) {
+          els.photoGateContinueBtn.disabled = state.ui.photoGateBusy || !currentVersion?.image;
+        }
+        if (els.photoGateRegenerateBtn) {
+          els.photoGateRegenerateBtn.disabled = state.ui.photoGateBusy || state.ui.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS || !state.ui.photoSourceDataUrl;
+        }
+      }
+
+      function openPhotoGate() {
+        state.ui.photoGateOpen = true;
+        state.ui.nameGateOpen = false;
+        state.ui.photoVersions = Array.isArray(state.user?.avatarVersions) ? state.user.avatarVersions.slice(0, 5) : [];
+        state.ui.photoVersionIndex = Math.max(0, state.ui.photoVersions.length - 1);
+        state.ui.photoGenerationCount = Math.max(state.ui.photoVersions.length, Number(state.user?.avatarGenerationCount || 0));
+        if (els.photoGateLoadingCopy) {
+          els.photoGateLoadingCopy.textContent = '';
+        }
+        renderPhotoGate();
+        setIdentityGateVisibility();
+        playIdentityAudio(ONBOARDING_PHOTO_AUDIO_PATH);
+      }
+
+      function closePhotoGate() {
+        state.ui.photoGateOpen = false;
+        stopPhotoLoadingCopy();
+        setIdentityGateVisibility();
+      }
+
+      async function persistPhotoGateProfile() {
+        const currentVersion = currentPhotoVersion();
+        if (!currentVersion?.image) return;
+        const response = await fetch(buildApiUrl('/auth/avatar'), {
+          method: 'PATCH',
+          headers: buildAuthHeaders({
+            'Content-Type': 'application/json'
+          }),
+          body: JSON.stringify({
+            avatar: currentVersion.image,
+            avatarVersions: state.ui.photoVersions,
+            avatarGenerationCount: state.ui.photoGenerationCount,
+            onboardingPhotoCompleted: true
+          })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success) {
+          throw new Error(payload?.message || 'Nao foi possivel salvar a foto.');
+        }
+        const user = normalizeUser(payload.user);
+        if (user) {
+          state.user = user;
+        }
+        renderProfilePanel();
+      }
+
+      async function generatePhotoVersionFromFile(file) {
+        if (!file) return;
+        if (state.ui.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS) {
+          if (els.photoGateLoadingCopy) {
+            els.photoGateLoadingCopy.textContent = 'Voce chegou ao limite de 5 geracoes.';
+          }
+          return;
+        }
+        state.ui.photoGateBusy = true;
+        renderPhotoGate();
+        try {
+          const sourceDataUrl = await fileToSquareWebpDataUrl(file, 500);
+          state.ui.photoSourceDataUrl = sourceDataUrl;
+          playIdentityAudio(ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH);
+          startPhotoLoadingCopy();
+          const cartoonDataUrl = await createCartoonAvatar(sourceDataUrl);
+          stopPhotoLoadingCopy();
+          if (els.photoGateLoadingCopy) {
+            els.photoGateLoadingCopy.textContent = '';
+          }
+          state.ui.photoGenerationCount += 1;
+          state.ui.photoVersions.push({
+            image: cartoonDataUrl,
+            source: sourceDataUrl,
+            createdAt: new Date().toISOString()
+          });
+          state.ui.photoVersions = state.ui.photoVersions.slice(-ONBOARDING_MAX_PHOTO_GENERATIONS);
+          state.ui.photoVersionIndex = state.ui.photoVersions.length - 1;
+          renderPhotoGate();
+        } catch (error) {
+          stopPhotoLoadingCopy();
+          if (els.photoGateLoadingCopy) {
+            els.photoGateLoadingCopy.textContent = error?.message || 'Nao foi possivel gerar o desenho.';
+          }
+        } finally {
+          state.ui.photoGateBusy = false;
+          renderPhotoGate();
+        }
+      }
+
+      function showPreviousPhotoVersion() {
+        if (state.ui.photoVersionIndex <= 0) return;
+        state.ui.photoVersionIndex -= 1;
+        renderPhotoGate();
+      }
+
+      function showNextPhotoVersion() {
+        if (state.ui.photoVersionIndex >= state.ui.photoVersions.length - 1) return;
+        state.ui.photoVersionIndex += 1;
+        renderPhotoGate();
+      }
+
+      async function maybeOpenOnboardingGate() {
+        const total = accessibleFlashcardsCount();
+        if (shouldGatePremiumAccess()) return false;
+        if (total >= ONBOARDING_NAME_THRESHOLD) {
+          const user = await ensureProvisionedUser();
+          if (!user?.onboardingNameCompleted) {
+            openNameGate();
+            return true;
+          }
+        }
+        if (total >= ONBOARDING_PHOTO_THRESHOLD) {
+          const user = await ensureProvisionedUser();
+          if (!user?.onboardingPhotoCompleted) {
+            openPhotoGate();
+            return true;
+          }
+        }
+        return false;
       }
 
       async function submitProfileForm(event) {
@@ -9265,8 +9918,16 @@
               && accessibleFlashcardsCount() >= GUEST_FLASHCARD_LOGIN_THRESHOLD) {
               scheduleGuestAuthRequirement();
             }
+            if (accessibleCountBeforeResolution < ONBOARDING_PHOTO_THRESHOLD
+              && accessibleFlashcardsCount() >= ONBOARDING_NAME_THRESHOLD) {
+              window.setTimeout(() => {
+                maybeOpenOnboardingGate().catch((error) => {
+                  console.warn('Falha ao abrir onboarding de identidade:', error);
+                });
+              }, 320);
+            }
             if (shouldGatePremiumAccess()) {
-              setPremiumStatus('Voce chegou em 8 cartas. Digite uma chave premium.');
+              setPremiumStatus('Voce chegou em 8 cartas. Monte uma chave premium tocando nas imagens.');
             }
             setGameStatus(`${accessibleFlashcardsCount()} FlashCards`, 'flashcards-count');
             entry._removeAfterReward = true;
@@ -9661,6 +10322,51 @@
         els.footerProfileBtn?.addEventListener('click', () => {
           window.location.href = '/account';
         });
+        els.nameGateContinueBtn?.addEventListener('click', () => {
+          void submitNameGate();
+        });
+        els.photoGateCircle?.addEventListener('click', () => {
+          if (state.ui.photoGateBusy) return;
+          els.photoGateInput?.click();
+        });
+        els.photoGateRegenerateBtn?.addEventListener('click', () => {
+          if (state.ui.photoGateBusy || state.ui.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS) return;
+          els.photoGateInput?.click();
+        });
+        els.photoGateContinueBtn?.addEventListener('click', async () => {
+          if (state.ui.photoGateBusy) return;
+          try {
+            state.ui.photoGateBusy = true;
+            renderPhotoGate();
+            await persistPhotoGateProfile();
+            closePhotoGate();
+          } catch (error) {
+            if (els.photoGateLoadingCopy) {
+              els.photoGateLoadingCopy.textContent = error?.message || 'Nao foi possivel salvar a foto.';
+            }
+          } finally {
+            state.ui.photoGateBusy = false;
+            renderPhotoGate();
+          }
+        });
+        els.photoGateInput?.addEventListener('change', async (event) => {
+          const file = event.target?.files?.[0];
+          event.target.value = '';
+          if (!file) return;
+          await generatePhotoVersionFromFile(file);
+        });
+        els.photoGateCircle?.addEventListener('pointerdown', (event) => {
+          state.ui.photoSwipeStartX = Number(event.clientX) || 0;
+        });
+        els.photoGateCircle?.addEventListener('pointerup', (event) => {
+          const delta = (Number(event.clientX) || 0) - Number(state.ui.photoSwipeStartX || 0);
+          if (Math.abs(delta) < 40) return;
+          if (delta > 0) {
+            showPreviousPhotoVersion();
+          } else {
+            showNextPhotoVersion();
+          }
+        });
         els.profileForm?.addEventListener('submit', submitProfileForm);
         els.profileLogoutBtn?.addEventListener('click', logoutCurrentUser);
         els.profileAvatarInput?.addEventListener('change', async (event) => {
@@ -9743,6 +10449,12 @@
           console.warn('Falha ao iniciar flashcards:', error);
           state.entry.cardsReady = true;
           await handleLoggedOutState('');
+        }
+
+        try {
+          await maybeOpenOnboardingGate();
+        } catch (error) {
+          console.warn('Falha ao verificar onboarding de identidade:', error);
         }
 
         if (requestedPremiumOpen) {

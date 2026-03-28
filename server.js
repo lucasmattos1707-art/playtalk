@@ -262,7 +262,7 @@ const buildFlashcardRankingCteSql = (periodId) => {
         COALESCE(r.player_number, 0) AS player_number,
         COALESCE(r.created_at, u.created_at, now()) AS created_at,
         COALESCE(r.updated_at, u.created_at, now()) AS updated_at,
-        u.email AS username,
+        COALESCE(NULLIF(u.username, ''), u.email) AS username,
         COALESCE(u.avatar_image, '') AS avatar_image,
         CASE
           WHEN COALESCE(r.weekly_period_key, '') = $2 THEN COALESCE(r.weekly_count, 0)
@@ -1024,6 +1024,30 @@ const ensureUsersAvatarColumn = async () => {
         ALTER TABLE public.users
         ADD COLUMN IF NOT EXISTS created_at timestamp DEFAULT now()
       `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS username text
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS avatar_versions jsonb NOT NULL DEFAULT '[]'::jsonb
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS avatar_generation_count integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS onboarding_name_completed boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS onboarding_photo_completed boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
+        UPDATE public.users
+        SET username = COALESCE(NULLIF(username, ''), email)
+      `);
       return true;
     })().catch((error) => {
       usersAvatarColumnReadyPromise = null;
@@ -1036,8 +1060,12 @@ const ensureUsersAvatarColumn = async () => {
 
 const mapPublicUser = (user) => ({
   id: Number(user?.id) || 0,
-  username: String(user?.email || user?.username || '').trim(),
+  username: String(user?.username || user?.email || '').trim(),
   avatar_image: String(user?.avatar_image || '').trim(),
+  avatar_versions: Array.isArray(user?.avatar_versions) ? user.avatar_versions : [],
+  avatar_generation_count: Math.max(0, Number.parseInt(user?.avatar_generation_count, 10) || 0),
+  onboarding_name_completed: Boolean(user?.onboarding_name_completed),
+  onboarding_photo_completed: Boolean(user?.onboarding_photo_completed),
   created_at: user?.created_at || null,
   is_admin: isAdminUserRecord(user),
   premium_full_access: Boolean(user?.premium_full_access),
@@ -1122,7 +1150,9 @@ const readUserById = async (userId) => {
   await ensurePremiumAccessTables();
 
   const result = await pool.query(
-    `SELECT id, email, avatar_image, created_at, premium_full_access, premium_until
+    `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+            onboarding_name_completed, onboarding_photo_completed, created_at,
+            premium_full_access, premium_until
      FROM public.users
      WHERE id = $1
      LIMIT 1`,
@@ -1243,7 +1273,9 @@ const extendUserPremiumAccess = async (userId, durationDays, options = {}) => {
        SET premium_full_access = true,
            premium_until = GREATEST(COALESCE(premium_until, now()), now()) + ($2::text || ' days')::interval
        WHERE id = $1
-       RETURNING id, email, avatar_image, created_at, premium_full_access, premium_until`,
+       RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                 onboarding_name_completed, onboarding_photo_completed,
+                 created_at, premium_full_access, premium_until`,
       [normalizedUserId, normalizedDurationDays]
     );
 
@@ -3534,6 +3566,41 @@ function buildLegacyEmailFromUsername(username) {
   return String(username || '').trim().toLowerCase();
 }
 
+function buildRandomUserSuffix(length = 8) {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  return Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+}
+
+async function generateAvailableUsername(basePrefix = 'USER') {
+  await ensureUsersAvatarColumn();
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const username = `${basePrefix}${buildRandomUserSuffix(8)}`;
+    const existing = await pool.query(
+      'SELECT 1 FROM public.users WHERE email = $1 OR username = $2 LIMIT 1',
+      [buildLegacyEmailFromUsername(username), username]
+    );
+    if (!existing.rows.length) {
+      return username;
+    }
+  }
+  throw new Error('Nao foi possivel gerar um nome automatico.');
+}
+
+async function uploadUserAvatarToR2(user, imageDataUrl, label = 'avatar') {
+  const parsedImage = parseBase64DataUrl(imageDataUrl);
+  if (!parsedImage?.buffer?.length || !/^image\//i.test(parsedImage.mimeType || '')) {
+    return '';
+  }
+  if (!isR2FluencyConfigured()) {
+    return '';
+  }
+  const extension = extensionFromMimeType(parsedImage.mimeType);
+  const usernameFolder = safeGeneratedBase(user?.username || user?.email || `user-${user?.id || 'anon'}`, 'user');
+  const objectKey = `${usernameFolder}/${safeGeneratedBase(label, 'avatar')}-${Date.now()}.${extension}`;
+  await putR2Object(objectKey, parsedImage.buffer, parsedImage.mimeType);
+  return buildFlashcardsR2PublicUrl(objectKey);
+}
+
 function parseCookies(req) {
   const header = req.headers.cookie;
   if (!header) return {};
@@ -3600,7 +3667,12 @@ async function readAuthenticatedUserFromRequest(req) {
   return {
     id: Number(payload.sub) || 0,
     email: String(payload.username || '').trim(),
+    username: String(payload.username || '').trim(),
     avatar_image: '',
+    avatar_versions: [],
+    avatar_generation_count: 0,
+    onboarding_name_completed: false,
+    onboarding_photo_completed: false,
     created_at: null
   };
 }
@@ -3626,10 +3698,15 @@ app.post('/register', async (req, res) => {
     await ensurePremiumAccessTables();
 
     const result = await pool.query(
-      `INSERT INTO public.users (email, password_hash, avatar_image)
-       VALUES ($1, $2, $3)
-       RETURNING id, email, avatar_image, created_at, premium_full_access, premium_until`,
-      [email, passwordHash, avatarImage || null]
+      `INSERT INTO public.users (
+         email, username, password_hash, avatar_image,
+         onboarding_name_completed, onboarding_photo_completed
+       )
+       VALUES ($1, $2, $3, $4, true, $5)
+       RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                 onboarding_name_completed, onboarding_photo_completed,
+                 created_at, premium_full_access, premium_until`,
+      [email, username, passwordHash, avatarImage || null, Boolean(avatarImage)]
     );
 
     const user = result.rows[0];
@@ -3657,6 +3734,47 @@ app.post('/register', async (req, res) => {
   }
 });
 
+app.post('/auth/provision-temp', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await ensureUsersAvatarColumn();
+    await ensurePremiumAccessTables();
+
+    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
+    if (authUser?.id) {
+      res.json({ success: true, user: mapPublicUser(authUser), token: null });
+      return;
+    }
+
+    const generatedUsername = await generateAvailableUsername('USER');
+    const email = buildLegacyEmailFromUsername(generatedUsername);
+    const passwordHash = await bcrypt.hash(`temp:${generatedUsername}:${Date.now()}:${Math.random()}`, 10);
+    const result = await pool.query(
+      `INSERT INTO public.users (
+         email, username, password_hash, onboarding_name_completed, onboarding_photo_completed
+       )
+       VALUES ($1, $2, $3, false, false)
+       RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                 onboarding_name_completed, onboarding_photo_completed,
+                 created_at, premium_full_access, premium_until`,
+      [email, generatedUsername, passwordHash]
+    );
+    const user = result.rows[0];
+    const token = createAuthToken({ id: user.id, email: user.email, username: user.username });
+    if (token) {
+      setAuthCookie(res, token);
+    }
+    res.status(201).json({ success: true, user: mapPublicUser(user), token });
+  } catch (error) {
+    console.error('Erro ao provisionar usuario temporario:', error);
+    res.status(500).json({ success: false, message: 'Nao foi possivel preparar o usuario.' });
+  }
+});
+
 app.post('/login', async (req, res) => {
   try {
     if (!pool) {
@@ -3674,8 +3792,12 @@ app.post('/login', async (req, res) => {
     await ensurePremiumAccessTables();
 
     const result = await pool.query(
-      'SELECT id, email, avatar_image, password_hash, created_at, premium_full_access, premium_until FROM public.users WHERE email = $1',
-      [username]
+      `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+              onboarding_name_completed, onboarding_photo_completed,
+              password_hash, created_at, premium_full_access, premium_until
+       FROM public.users
+       WHERE email = $1`,
+      [buildLegacyEmailFromUsername(username)]
     );
     if (!result.rows.length) {
       res.status(401).json({ success: false, message: 'Nome de usuario ou senha invalidos.' });
@@ -3728,16 +3850,22 @@ app.post('/auth/google-quick', async (req, res) => {
     }
 
     let result = await pool.query(
-      'SELECT id, email, created_at, premium_full_access, premium_until FROM public.users WHERE email = $1',
+      `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+              onboarding_name_completed, onboarding_photo_completed,
+              created_at, premium_full_access, premium_until
+       FROM public.users
+       WHERE email = $1`,
       [email]
     );
 
     if (!result.rows.length) {
       const generatedPasswordHash = await bcrypt.hash(`google-quick:${email}:${Date.now()}`, 10);
       result = await pool.query(
-        `INSERT INTO public.users (email, password_hash)
-         VALUES ($1, $2)
-         RETURNING id, email, created_at, premium_full_access, premium_until`,
+        `INSERT INTO public.users (email, username, password_hash)
+         VALUES ($1, $1, $2)
+         RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                   onboarding_name_completed, onboarding_photo_completed,
+                   created_at, premium_full_access, premium_until`,
         [email, generatedPasswordHash]
       );
     }
@@ -3791,17 +3919,87 @@ app.patch('/auth/avatar', async (req, res) => {
       return;
     }
 
-    const avatarImage = normalizeAvatarImage(req.body?.avatar || req.body?.avatarDataUrl || '');
+    const avatarInput = normalizeAvatarImage(req.body?.avatar || req.body?.avatarDataUrl || '');
+    const avatarVersionsInput = Array.isArray(req.body?.avatarVersions) ? req.body.avatarVersions : null;
+    const requestedGenerationCount = Number.parseInt(req.body?.avatarGenerationCount, 10);
+    const onboardingPhotoCompleted = req.body?.onboardingPhotoCompleted === true;
+
+    const nextAvatarVersions = avatarVersionsInput
+      ? avatarVersionsInput
+        .map((entry) => ({
+          image: normalizeAvatarImage(entry?.image || entry?.url || ''),
+          source: normalizeAvatarImage(entry?.source || ''),
+          createdAt: entry?.createdAt || new Date().toISOString()
+        }))
+        .filter((entry) => entry.image)
+        .slice(0, 5)
+      : null;
 
     await ensureUsersAvatarColumn();
     await ensurePremiumAccessTables();
 
+    const currentUser = await readUserById(authUser.id);
+    if (!currentUser) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    let avatarImage = avatarInput;
+    const avatarVersionPayload = nextAvatarVersions || (Array.isArray(currentUser.avatar_versions) ? currentUser.avatar_versions : []);
+    if (avatarImage && !/^https?:\/\//i.test(avatarImage)) {
+      const uploadedUrl = await uploadUserAvatarToR2({
+        id: currentUser.id,
+        email: currentUser.email,
+        username: currentUser.username
+      }, avatarImage, 'avatar-current');
+      if (uploadedUrl) {
+        avatarImage = uploadedUrl;
+      }
+    }
+
+    const persistedAvatarVersions = [];
+    for (let index = 0; index < avatarVersionPayload.length; index += 1) {
+      const entry = avatarVersionPayload[index];
+      const imageValue = String(entry?.image || '').trim();
+      const sourceValue = String(entry?.source || '').trim();
+      let nextImage = imageValue;
+      let nextSource = sourceValue;
+      if (nextImage && !/^https?:\/\//i.test(nextImage)) {
+        const uploadedUrl = await uploadUserAvatarToR2(currentUser, nextImage, `avatar-version-${index + 1}`);
+        if (uploadedUrl) nextImage = uploadedUrl;
+      }
+      if (nextSource && !/^https?:\/\//i.test(nextSource)) {
+        const uploadedSourceUrl = await uploadUserAvatarToR2(currentUser, nextSource, `avatar-source-${index + 1}`);
+        if (uploadedSourceUrl) nextSource = uploadedSourceUrl;
+      }
+      persistedAvatarVersions.push({
+        image: nextImage,
+        source: nextSource,
+        createdAt: entry?.createdAt || new Date().toISOString()
+      });
+    }
+
     const result = await pool.query(
       `UPDATE public.users
-       SET avatar_image = $2
+       SET avatar_image = $2,
+           avatar_versions = COALESCE($3::jsonb, avatar_versions),
+           avatar_generation_count = CASE
+             WHEN $4::int > 0 THEN $4::int
+             ELSE avatar_generation_count
+           END,
+           onboarding_photo_completed = onboarding_photo_completed OR $5::boolean
        WHERE id = $1
-       RETURNING id, email, avatar_image, created_at, premium_full_access, premium_until`,
-      [authUser.id, avatarImage || null]
+       RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                 onboarding_name_completed, onboarding_photo_completed,
+                 created_at, premium_full_access, premium_until`,
+      [
+        authUser.id,
+        avatarImage || null,
+        nextAvatarVersions ? JSON.stringify(persistedAvatarVersions) : null,
+        Number.isFinite(requestedGenerationCount) ? requestedGenerationCount : 0,
+        onboardingPhotoCompleted
+      ]
     );
 
     if (!result.rows.length) {
@@ -3850,10 +4048,14 @@ app.patch('/auth/profile', async (req, res) => {
 
     const result = await pool.query(
       `UPDATE public.users
-       SET email = $2
+       SET email = $2,
+           username = $3,
+           onboarding_name_completed = true
        WHERE id = $1
-       RETURNING id, email, avatar_image, created_at, premium_full_access, premium_until`,
-      [authUser.id, buildLegacyEmailFromUsername(username)]
+       RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                 onboarding_name_completed, onboarding_photo_completed,
+                 created_at, premium_full_access, premium_until`,
+      [authUser.id, buildLegacyEmailFromUsername(username), username]
     );
 
     if (!result.rows.length) {
@@ -4403,7 +4605,7 @@ app.get('/api/users/flashcards', async (req, res) => {
     const rankingSql = `WITH ranked_users AS (
          SELECT
            u.id,
-           u.email,
+           COALESCE(NULLIF(u.username, ''), u.email) AS username,
            COALESCE(u.avatar_image, '') AS avatar_image,
            u.created_at,
            u.premium_full_access,
@@ -4435,7 +4637,7 @@ app.get('/api/users/flashcards', async (req, res) => {
         `WITH ranked_users AS (
            SELECT
              u.id,
-             u.email,
+             COALESCE(NULLIF(u.username, ''), u.email) AS username,
              COALESCE(u.avatar_image, '') AS avatar_image,
              u.created_at,
              u.premium_full_access,
@@ -4469,13 +4671,13 @@ app.get('/api/users/flashcards', async (req, res) => {
       success: true,
       viewer: viewerResult.rows[0] ? {
         userId: Number(viewerResult.rows[0].id) || 0,
-        username: String(viewerResult.rows[0].email || '').trim() || 'Usuario',
+        username: String(viewerResult.rows[0].username || '').trim() || 'Usuario',
         rank: Number(viewerResult.rows[0].rank_position) || 0,
         flashcardsCount: Number(viewerResult.rows[0].flashcards_count) || 0
       } : null,
       users: result.rows.map((entry) => ({
         userId: Number(entry.id) || 0,
-        username: String(entry.email || '').trim() || 'Usuario',
+        username: String(entry.username || '').trim() || 'Usuario',
         avatarImage: String(entry.avatar_image || '').trim(),
         rank: Number(entry.rank_position) || 0,
         flashcardsCount: Number(entry.flashcards_count) || 0,
@@ -4531,21 +4733,27 @@ app.post('/api/premium/redeem', async (req, res) => {
 
     const code = normalizeAccessKeyCode(req.body?.code);
     if (code.length !== 6) {
-      res.status(400).json({ success: false, message: 'A chave precisa ter 6 letras.' });
+      res.status(400).json({ success: false, message: 'A chave precisa ter 6 toques validos.' });
       return;
     }
 
-    const durationDays = 30;
-    const accessType = 'monthly-magic';
-    const user = await extendUserPremiumAccess(authUser.id, durationDays, {
+    const accessKeyDefinitions = await loadAccessKeyDefinitions();
+    const matchedConfig = accessKeyDefinitions.get(code);
+    if (!matchedConfig) {
+      res.status(400).json({ success: false, message: 'Chave invalida.' });
+      return;
+    }
+
+    const accessType = matchedConfig.key;
+    const user = await extendUserPremiumAccess(authUser.id, matchedConfig.durationDays, {
       accessType,
       accessCode: code,
-      sourceFile: 'magic-sequence'
+      sourceFile: matchedConfig.fileName
     });
 
     res.json({
       success: true,
-      message: 'Premium mensal liberado por 30 dias.',
+      message: `Premium ${matchedConfig.label} liberado com sucesso.`,
       accessType,
       user: mapPublicUser(user),
       premium: resolvePremiumState(user)
@@ -4643,7 +4851,7 @@ app.post('/api/rankings/flashcards', async (req, res) => {
       success: true,
       period: snapshot.period,
       userId: Number(record.user_id) || Number(authUser.id) || 0,
-      username: String(authUser.email || authUser.username || '').trim(),
+      username: String(authUser.username || authUser.email || '').trim(),
       avatarImage: String(authUser.avatar_image || '').trim(),
       playerNumber: Number(record.player_number) || 0,
       flashcardsCount: player?.flashcardsCount || 0,
