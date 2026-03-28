@@ -118,18 +118,8 @@
     }
 
     const displayRows = rows
-      .filter((entry) => entry.isAdmin)
       .slice(0, 50)
       .sort((left, right) => (left.rank || 999999) - (right.rank || 999999));
-
-    if (!displayRows.length) {
-      els.usersList.innerHTML = `
-        <div class="users-row is-empty">
-          <span>O perfil do admin ainda nao apareceu no ranking.</span>
-        </div>
-      `;
-      return;
-    }
 
     const rowMarkup = displayRows.map((entry) => `
       <div class="users-row" data-user-id="${entry.userId}">
