@@ -6,7 +6,6 @@
   <title>MyCards | PlayTalk</title>
   <meta name="description" content="Flashcards conquistados pelo usuario no PlayTalk.">
   <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script src="js/player-state.js"></script>
   <script src="js/settings.js"></script>
@@ -14,18 +13,33 @@
   <script src="js/lens.js"></script>
   <script src="js/site-nav.js"></script>
   <style>
+    @font-face {
+      font-family: "Soopafre";
+      src: url("soopafre.ttf") format("truetype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
     :root {
       --footer-height: max(62px, 8vh);
     }
 
+    html:has(body.page-cards),
     body.page-cards {
       padding-bottom: calc(var(--footer-height) + 18px);
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      overscroll-behavior-x: auto !important;
+      overscroll-behavior-y: auto !important;
+      touch-action: pan-x pan-y !important;
+      -webkit-overflow-scrolling: touch;
     }
 
     .mycards-page {
       width: min(1080px, calc(100vw - 22px));
       margin: 0 auto;
-      padding: 14px 0 24px;
+      padding: 18px 0 24px;
     }
 
     .mycards-summary {
@@ -66,6 +80,8 @@
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 18px 14px;
+      overflow: visible;
+      touch-action: pan-x pan-y;
     }
 
     .mycards-empty {
@@ -112,6 +128,7 @@
       border-radius: 50%;
       overflow: hidden;
       background: rgba(255, 255, 255, 0.08);
+      touch-action: pan-x pan-y;
     }
 
     .mycards-card__image img,
@@ -131,6 +148,11 @@
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
     }
 
+    .mycards-card.is-memorizing .mycards-card__image img {
+      filter: blur(14px);
+      transform: scale(1.14);
+    }
+
     .mycards-card.is-memorizing .mycards-card__image {
       animation: mycards-memorizing-pulse 3000ms ease-in-out infinite;
     }
@@ -141,13 +163,15 @@
       top: 50%;
       transform: translate(-50%, -50%);
       z-index: 2;
+      width: calc(100% - 28px);
+      font-family: "Soopafre", Arial, sans-serif;
       color: #ffffff;
-      font-size: 18px;
-      font-weight: 900;
+      font-size: clamp(20px, 4vw, 28px);
+      font-weight: 400;
       letter-spacing: 0.02em;
       text-align: center;
-      text-transform: lowercase;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+      text-transform: none;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.72);
       pointer-events: none;
     }
 
@@ -214,29 +238,6 @@
   </style>
 </head>
 <body class="page-cards" data-lens-context="menus">
-  <header class="site-header site-header--app" id="global-header">
-    <div class="site-header__slot site-header__slot--left">
-      <button type="button" class="site-header__avatar-button" aria-label="Perfil do jogador">
-        <img id="global-header-avatar-image" class="site-header__avatar" src="Avatar/avatar-boy-male-svgrepo-com.svg" alt="Avatar do jogador">
-        <span id="global-header-avatar-fallback" class="site-header__avatar-fallback">P</span>
-      </button>
-    </div>
-    <div class="site-header__slot site-header__slot--center">
-      <button id="global-header-menu" type="button" class="site-header__menu-button" aria-label="Menu principal">
-        <span class="site-header__menu-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" role="img" focusable="false"><path d="M4 7h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
-        </span>
-        <span id="global-header-menu-label" class="site-header__menu-label">PlayTalk</span>
-      </button>
-    </div>
-    <div class="site-header__slot site-header__slot--right">
-      <div class="site-header__coins" aria-label="Moedas">
-        <span class="site-header__coins-icon" aria-hidden="true">&#9673;</span>
-        <span id="global-header-coins">0</span>
-      </div>
-    </div>
-  </header>
-
   <main class="mycards-page" aria-live="polite">
     <section class="mycards-summary" id="mycards-summary">
       <div class="mycards-stat" aria-label="Total de cartas">

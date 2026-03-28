@@ -192,7 +192,7 @@
               ${imageUrl
                 ? `<img src="${escapeHtml(imageUrl)}" alt="Carta">`
                 : `<div class="mycards-card__fallback">${escapeHtml(fallbackLetter(card))}</div>`}
-              ${isMemorizing ? '<div class="mycards-card__status">memorizing</div>' : ''}
+              ${isMemorizing ? '<div class="mycards-card__status">Memorizing</div>' : ''}
             </div>
           </div>
         </article>
