@@ -5018,6 +5018,10 @@ app.get(['/flashcards', '/flashcards/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'www', 'flashcards.html'));
 });
 
+app.get(['/mycards', '/mycards/', '/mycards.html'], (req, res) => {
+  res.sendFile(path.join(staticDir, 'mycards.html'));
+});
+
 app.get(['/users', '/users/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'users.html'));
 });

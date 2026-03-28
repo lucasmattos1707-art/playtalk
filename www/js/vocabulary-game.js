@@ -177,7 +177,6 @@
   const AUDIO_LISTENED_STORAGE_KEY = 'playtalk-phase-audio-listened';
   const DEVICE_STORAGE_KEY = 'playtalk-device-selection';
   const CUSTOM_JSON_HOLD_MS = 2000;
-  const MANUAL_SPEECH_REVIEW_HOLD_MS = 500;
   const FLASHCARD_STATS_STORAGE_KEY = 'playtalk-flashcard-stats';
   const FLASHCARD_PRONUNCIATION_LIMIT = 6;
   const FLASHCARD_METRIC_LIMIT = 10;
@@ -1262,145 +1261,6 @@
     updateControlButtons();
   }
 
-  function isCoarsePointerDevice() {
-    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
-      return true;
-    }
-    return Number(navigator.maxTouchPoints || 0) > 0;
-  }
-
-  function isTypingTarget(node) {
-    if (!node || !(node instanceof Element)) return false;
-    return Boolean(node.closest('input, textarea, select, [contenteditable="true"]'));
-  }
-
-  function clearManualSpeechReviewHoldTimer() {
-    if (manualSpeechReviewHoldTimer) {
-      window.clearTimeout(manualSpeechReviewHoldTimer);
-      manualSpeechReviewHoldTimer = null;
-    }
-  }
-
-  function hideManualSpeechReviewPrompt() {
-    clearManualSpeechReviewHoldTimer();
-    manualSpeechReviewPointerId = null;
-    const state = manualSpeechReviewState;
-    if (!state) return;
-    if (state.prompt && state.prompt.parentNode) {
-      state.prompt.parentNode.removeChild(state.prompt);
-    }
-    manualSpeechReviewState = {
-      ...state,
-      prompt: null
-    };
-  }
-
-  function clearManualSpeechReview(options = {}) {
-    clearManualSpeechReviewHoldTimer();
-    manualSpeechReviewPointerId = null;
-    const { keepHandler = false } = options;
-    if (!keepHandler) {
-      manualSpeechReviewState = null;
-      return;
-    }
-    hideManualSpeechReviewPrompt();
-  }
-
-  function completeManualSpeechReview(wasCorrect) {
-    const state = manualSpeechReviewState;
-    if (!state || typeof state.resolve !== 'function') return;
-    hideManualSpeechReviewPrompt();
-    state.resolve(Boolean(wasCorrect));
-  }
-
-  function showManualSpeechReviewPrompt() {
-    const state = manualSpeechReviewState;
-    if (!state || state.prompt || !boardInner) return;
-    const prompt = document.createElement('div');
-    prompt.className = 'manual-speech-review';
-
-    const correctButton = document.createElement('button');
-    correctButton.type = 'button';
-    correctButton.className = 'manual-speech-review__button manual-speech-review__button--correct';
-    correctButton.textContent = 'Correto';
-    correctButton.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      completeManualSpeechReview(true);
-    });
-
-    const wrongButton = document.createElement('button');
-    wrongButton.type = 'button';
-    wrongButton.className = 'manual-speech-review__button manual-speech-review__button--wrong';
-    wrongButton.textContent = 'Errado';
-    wrongButton.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      completeManualSpeechReview(false);
-    });
-
-    prompt.appendChild(correctButton);
-    prompt.appendChild(wrongButton);
-    boardInner.appendChild(prompt);
-    manualSpeechReviewState = {
-      ...state,
-      prompt
-    };
-  }
-
-  function armManualSpeechReview(state) {
-    clearManualSpeechReview({ keepHandler: false });
-    manualSpeechReviewState = {
-      ...state,
-      prompt: null
-    };
-  }
-
-  function canUseManualSpeechReview() {
-    return Boolean(
-      manualSpeechReviewState
-      && awaiting
-      && !isGamePaused
-      && isTalkingPhase()
-      && mode12CurrentNeedsUserLine
-    );
-  }
-
-  function setupManualSpeechReviewControls() {
-    const handlePointerDown = (event) => {
-      if (!canUseManualSpeechReview() || !isCoarsePointerDevice()) return;
-      if (event.pointerType && event.pointerType !== 'touch') return;
-      if (manualSpeechReviewState && manualSpeechReviewState.prompt) return;
-      if (isTypingTarget(event.target)) return;
-      clearManualSpeechReviewHoldTimer();
-      manualSpeechReviewPointerId = event.pointerId;
-      manualSpeechReviewHoldTimer = window.setTimeout(() => {
-        if (!canUseManualSpeechReview()) return;
-        showManualSpeechReviewPrompt();
-      }, MANUAL_SPEECH_REVIEW_HOLD_MS);
-    };
-
-    const clearPointerHold = (event) => {
-      if (manualSpeechReviewPointerId === null) return;
-      if (event && manualSpeechReviewPointerId !== event.pointerId) return;
-      clearManualSpeechReviewHoldTimer();
-      manualSpeechReviewPointerId = null;
-    };
-
-    document.addEventListener('pointerdown', handlePointerDown, true);
-    document.addEventListener('pointerup', clearPointerHold, true);
-    document.addEventListener('pointercancel', clearPointerHold, true);
-    document.addEventListener('pointerleave', clearPointerHold, true);
-    document.addEventListener('keydown', (event) => {
-      if (!canUseManualSpeechReview()) return;
-      if (isTypingTarget(event.target)) return;
-      const key = String(event.key || '').toLowerCase();
-      if (key !== 'k' && key !== 'j') return;
-      event.preventDefault();
-      completeManualSpeechReview(key === 'k');
-    }, true);
-  }
-
   function setMicContinuousMode(enabled) {
     micContinuousMode = Boolean(enabled);
     if (micContinuousMode) {
@@ -1513,7 +1373,6 @@
       pauseOverlayTimer = null;
     }
     if (isGamePaused) {
-      clearManualSpeechReview({ keepHandler: true });
       clearPlayerIdleAutoPause();
       stopLiveStatsPulseLoop();
       gameRoot.classList.add('pause-dissolving');
@@ -1621,9 +1480,6 @@
   let micContinuousMode = false;
   let micAutoStartTimer = null;
   let currentMicAction = null;
-  let manualSpeechReviewState = null;
-  let manualSpeechReviewHoldTimer = null;
-  let manualSpeechReviewPointerId = null;
   let pendingAdvanceCycle = false;
   let openPauseOnResume = false;
   let pauseOverlayTimer = null;
@@ -5637,7 +5493,6 @@
     phaseNarrationToken += 1;
     clearPhaseEightTimeout();
     clearWritingState();
-    clearManualSpeechReview({ keepHandler: false });
     mode12BackAction = null;
     mode12AdvanceAction = null;
     setMicPersistentEnabled(false);
@@ -7256,24 +7111,30 @@
 
   function startMode12MicCapture(item) {
     if (!mode12CurrentNeedsUserLine || isGamePaused || !item) return;
-    awaiting = true;
-    setMicPersistentEnabled(false, { force: true });
-    armManualSpeechReview({
-      resolve: (wasCorrect) => {
-        clearManualSpeechReview({ keepHandler: false });
-        if (isGamePaused || !mode12CurrentNeedsUserLine) return;
-        if (wasCorrect) {
-          applyCorrectOutcome({ awardCoins: false });
-        } else {
-          registerErrorAndCheckReset();
-          applyIncorrectOutcome();
-        }
-        updateProgressBar();
-        window.setTimeout(() => {
-          awaiting = false;
-          advanceCycle();
-        }, getAdvanceDelay(0));
-      }
+    const expected = mode12SpeechMode === 'portuguese'
+      ? (getEntryPortugueseSentence(item) || getEntrySentence(item))
+      : (getEntrySentence(item) || getEntryPortugueseSentence(item));
+    if (!expected) {
+      applyCorrectOutcome({ awardCoins: false });
+      updateProgressBar();
+      awaiting = false;
+      advanceCycle();
+      return;
+    }
+
+    const speakerName = getMode12CharacterNameById(getMode12CharacterId(item));
+    const defaultText = textContainer ? textContainer.textContent || '' : '';
+    const errorText = `${speakerName}: tente novamente.`;
+    setMicPersistentEnabled(true);
+    updateRecognitionLanguage(12);
+
+    handleSpeechChallenge(expected, () => startMode12MicCapture(item), {
+      entry: item,
+      listenLimitMs: 12000,
+      strictSequence: false,
+      errorTextTarget: textContainer,
+      errorText,
+      defaultText
     });
   }
 
@@ -7286,7 +7147,7 @@
     const speakerId = getMode12CharacterId(item);
     const isUserLine = Boolean(mode12SelectedCharacterId) && speakerId === mode12SelectedCharacterId;
     mode12CurrentNeedsUserLine = isUserLine;
-    setMicControlAction(null);
+    setMicControlAction(isUserLine ? () => startMode12MicCapture(item) : null);
 
     const imageEntry = buildMode12ImageEntry(item);
     const stage = document.createElement('div');
@@ -7384,18 +7245,34 @@
     const captureSettings = getSpeechCaptureSettings(expected);
     let resolved = false;
     let listenTimeout = null;
-    const finishEvaluation = async ({
-      spoken,
-      success,
-      percent,
-      countSpeakingSend = true
-    }) => {
+    const cancelSpeechAttempt = (message) => {
       if (resolved) return;
       resolved = true;
-      if (countSpeakingSend) {
-        registerPhaseSpeakingSend();
+      if (listenTimeout) {
+        window.clearTimeout(listenTimeout);
+        listenTimeout = null;
       }
-      clearManualSpeechReview({ keepHandler: false });
+      setMicControlActive(false);
+      if (recognition && typeof recognition.stop === 'function') {
+        try {
+          recognition.stop();
+        } catch (error) {
+          // ignore
+        }
+      }
+      if (typeof onListeningEnd === 'function') {
+        onListeningEnd();
+      }
+      if (errorTextTarget && typeof message === 'string' && message) {
+        errorTextTarget.textContent = message;
+        scheduleButtonTextFit(errorTextTarget, 18);
+      }
+      awaiting = false;
+    };
+    const onResult = async (spoken) => {
+      if (resolved) return;
+      resolved = true;
+      registerPhaseSpeakingSend();
       if (listenTimeout) {
         window.clearTimeout(listenTimeout);
         listenTimeout = null;
@@ -7409,6 +7286,7 @@
         }
       }
       const spokenSample = Array.isArray(spoken) ? (spoken.find(Boolean) || '') : spoken;
+      const { success, percent } = isSpokenCorrect(expected, spoken, options);
       registerPhasePronunciation(percent);
       const entry = options.entry || currentItem;
 
@@ -7523,50 +7401,6 @@
         advanceCycle();
       }, getAdvanceDelay(0));
     };
-    const cancelSpeechAttempt = (message) => {
-      if (resolved) return;
-      resolved = true;
-      clearManualSpeechReview({ keepHandler: false });
-      if (listenTimeout) {
-        window.clearTimeout(listenTimeout);
-        listenTimeout = null;
-      }
-      setMicControlActive(false);
-      if (recognition && typeof recognition.stop === 'function') {
-        try {
-          recognition.stop();
-        } catch (error) {
-          // ignore
-        }
-      }
-      if (typeof onListeningEnd === 'function') {
-        onListeningEnd();
-      }
-      if (errorTextTarget && typeof message === 'string' && message) {
-        errorTextTarget.textContent = message;
-        scheduleButtonTextFit(errorTextTarget, 18);
-      }
-      awaiting = false;
-    };
-    const onResult = async (spoken) => {
-      const { success, percent } = isSpokenCorrect(expected, spoken, options);
-      await finishEvaluation({
-        spoken,
-        success,
-        percent
-      });
-    };
-
-    armManualSpeechReview({
-      resolve: (wasCorrect) => {
-        finishEvaluation({
-          spoken: wasCorrect ? expected : '',
-          success: Boolean(wasCorrect),
-          percent: wasCorrect ? 100 : 0,
-          countSpeakingSend: false
-        }).catch(() => {});
-      }
-    });
 
     Promise.resolve(primeMicrophonePermission())
       .catch(() => false)
@@ -8848,7 +8682,6 @@
     updatePhaseLabel();
     setupSpeechRecognition();
     setupGameControls();
-    setupManualSpeechReviewControls();
     syncGlobalRadioMuteState();
     syncGameRuntimeState();
     document.addEventListener('playtalk:global-radio-change', (event) => {

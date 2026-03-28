@@ -64,7 +64,16 @@
 
     const route = getCurrentRoute();
     const activeView = route.endsWith('/index.html') ? getActiveIndexView() : '';
-    if (route.endsWith('/fun.html') || route.endsWith('/play.html') || route.endsWith('/cards.html') || activeView === 'options' || activeView === 'play' || activeView === 'cards') {
+    if (
+      route.endsWith('/fun.html')
+      || route.endsWith('/play.html')
+      || route.endsWith('/cards.html')
+      || route.endsWith('/mycards')
+      || route.endsWith('/mycards.html')
+      || activeView === 'options'
+      || activeView === 'play'
+      || activeView === 'cards'
+    ) {
       return true;
     }
 
