@@ -6,7 +6,6 @@
   <title>AllCards | PlayTalk</title>
   <meta name="description" content="Flashcards do usuario no PlayTalk.">
   <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
-  <link rel="stylesheet" href="css/style.css">
   <script src="js/player-state.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/global-radio.js"></script>
@@ -92,6 +91,13 @@
       margin: 0 auto;
       min-height: 100vh;
       padding: 26px 0 calc(var(--footer-height) + 32px);
+      font-family: "Open Sans", "Arial Black", "Segoe UI", Arial, sans-serif;
+      font-weight: 700;
+    }
+
+    .allcards-page,
+    .allcards-page * {
+      color: #ffffff;
       font-family: "Open Sans", "Arial Black", "Segoe UI", Arial, sans-serif;
       font-weight: 700;
     }
@@ -259,6 +265,11 @@
       height: 28px;
       display: block;
       color: #ffffff;
+      fill: currentColor;
+    }
+
+    .flashcards-footer-nav__item svg path {
+      fill: currentColor;
     }
 
     @media (min-width: 900px) {
