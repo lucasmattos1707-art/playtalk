@@ -368,22 +368,26 @@
       const progress = Math.max(0, Math.min(100, progressPercent(card.progress)));
       const isMemorizing = card.progress?.status === 'memorizing';
       const statusLabel = isMemorizing ? 'Memorizing' : (card.english || card.portuguese || card.deckTitle);
-      const detailLabel = isMemorizing ? `${progress.toFixed(2)}% Complete` : (card.portuguese || '');
+      const detailLabel = isMemorizing ? `${progress.toFixed(2)}%` : (card.portuguese || '');
       const sealImage = resolveSealImage(card.progress);
       const progressMarkup = isMemorizing
-        ? `<div class="mycards-card__progress" aria-hidden="true"><span style="width:${escapeHtml(progress.toFixed(2))}%"></span></div>`
+        ? `<div class="mini-card__progress" aria-hidden="true"><span style="width:${escapeHtml(progress.toFixed(2))}%"></span></div>`
+        : '';
+      const loaderMarkup = isMemorizing
+        ? '<div class="mini-card__loader" aria-hidden="true"><span></span><span></span><span></span><span></span></div>'
         : '';
       return `
         <article class="mycards-item" role="listitem">
-          <div class="mycards-card ${isMemorizing ? 'is-memorizing' : 'is-ready'}" style="--progress:${escapeHtml((progress * 3.6).toFixed(1))}deg;">
-            <div class="mycards-card__image">
+          <div class="mini-card ${isMemorizing ? 'is-memorizing' : 'is-ready'}">
+            <div class="mini-card__image">
               ${imageUrl
                 ? `<img src="${escapeHtml(imageUrl)}" alt="Carta">`
-                : `<div class="mycards-card__fallback">${escapeHtml(fallbackLetter(card))}</div>`}
-              ${sealImage ? `<img class="mycards-card__seal" src="${escapeHtml(sealImage)}" alt="">` : ''}
+                : `<div class="mini-card__fallback">${escapeHtml(fallbackLetter(card))}</div>`}
+              ${loaderMarkup}
+              ${sealImage ? `<img class="mini-card__seal" src="${escapeHtml(sealImage)}" alt="">` : ''}
             </div>
-            <p class="mycards-card__word">${escapeHtml(statusLabel)}</p>
-            <p class="mycards-card__subword">${escapeHtml(detailLabel)}</p>
+            <p class="mini-card__word">${escapeHtml(statusLabel)}</p>
+            <p class="mini-card__subword">${escapeHtml(detailLabel)}</p>
             ${progressMarkup}
           </div>
         </article>
