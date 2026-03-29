@@ -1515,14 +1515,13 @@
       align-items: center;
       justify-content: center;
       padding: 5vh 5vw;
-      background: #74C390;
+      background: #ffffff;
       backdrop-filter: none;
       opacity: 0;
       transform: scale(0.98);
       transition: opacity 260ms ease, transform 260ms ease;
       overflow: hidden;
       isolation: isolate;
-      animation: flashcardsGameTheme 21s linear infinite;
     }
 
     .game.is-visible { display: flex; }
@@ -1532,27 +1531,26 @@
     .game::after {
       content: "";
       display: block;
-      position: absolute;
+      position: fixed;
       z-index: 0;
       top: 0;
-      width: 100vw;
-      height: 100vh;
-      width: 100vmax;
-      height: 100vmax;
-      background: rgba(0, 0, 0, 0.05);
-      animation: flashcardsGameBackground 90s linear infinite;
+      right: -50%;
+      bottom: 0;
+      left: -50%;
+      background-image: linear-gradient(-60deg, #6c3 50%, #09f 50%);
+      opacity: 0.5;
+      animation: flashcardsGameSlide 3s ease-in-out infinite alternate;
       pointer-events: none;
-      border-radius: 28%;
+      will-change: transform;
     }
 
     .game::after {
-      left: 15vw;
+      animation-direction: alternate-reverse;
+      animation-duration: 4s;
     }
 
     .game::before {
-      right: 15vw;
-      animation-delay: -30s;
-      animation-direction: reverse;
+      animation-duration: 5s;
     }
 
     .game-shell {
@@ -1563,6 +1561,21 @@
       display: grid;
       gap: 16px;
       padding: 18px;
+    }
+
+    .game-shell::before {
+      content: "";
+      position: fixed;
+      z-index: 0;
+      top: 0;
+      right: -50%;
+      bottom: 0;
+      left: -50%;
+      background-image: linear-gradient(-60deg, #6c3 50%, #09f 50%);
+      opacity: 0.5;
+      animation: flashcardsGameSlide 5s ease-in-out infinite alternate;
+      pointer-events: none;
+      will-change: transform;
     }
 
     .game-chip {
@@ -1624,6 +1637,10 @@
     }
 
     .game-card.is-sliding-next {
+      opacity: 1;
+    }
+
+    .game-card.is-sliding-next .game-card__layout {
       animation: flashcardsNextCardSlide 320ms ease-out both;
     }
 
@@ -1803,13 +1820,11 @@
     .game-status.is-miss { color: var(--red); }
     .game-status.is-live { color: var(--blue); }
     .game-status.is-flashcards-count {
-      background: linear-gradient(180deg, #a6e4ff 0%, #42bbff 48%, #0d6dff 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      -webkit-text-fill-color: transparent;
-      text-shadow: none;
-      filter: drop-shadow(0 8px 18px rgba(32, 132, 255, 0.24));
+      background: none;
+      color: #ffffff;
+      -webkit-text-fill-color: #ffffff;
+      text-shadow: 0 6px 18px rgba(15, 23, 42, 0.28);
+      filter: none;
       margin-top: 50px;
       font-size: clamp(28px, 5vw, 38px);
       font-family: "PlaytalkDisplay", "LemonMilkMedium", "Soopafre", Arial, sans-serif;
@@ -3379,43 +3394,13 @@
       }
     }
 
-    @keyframes flashcardsGameTheme {
+    @keyframes flashcardsGameSlide {
       0% {
-        background: #74C390;
-      }
-
-      16% {
-        background: #5DBDB6;
-      }
-
-      33% {
-        background: #59D4E1;
-      }
-
-      50% {
-        background: #51BCE8;
-      }
-
-      66% {
-        background: #FA5374;
-      }
-
-      83% {
-        background: #E46653;
+        transform: translateX(-25%);
       }
 
       100% {
-        background: #74C390;
-      }
-    }
-
-    @keyframes flashcardsGameBackground {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
+        transform: translateX(25%);
       }
     }
 
@@ -11424,13 +11409,14 @@
         state.game.currentId = state.game.queue.shift();
         persistGameSessionLocally();
         renderCurrentCard();
+        els.gameCard.classList.remove('is-transitioning');
         playStatusCueAudio(NEXT_CARD_WOOSH_AUDIO_PATH);
         els.gameCard.classList.add('is-sliding-next');
         if (!state.game.tutorial.active) {
           playReportAudio();
         }
         await wait(320);
-        els.gameCard.classList.remove('is-transitioning', 'is-sliding-next');
+        els.gameCard.classList.remove('is-sliding-next');
         state.game.transitioning = false;
       }
 
