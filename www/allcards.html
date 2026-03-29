@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <title>AllCards | PlayTalk</title>
-  <meta name="description" content="Flashcards do usuario no PlayTalk em paginas de 30 cards.">
+  <meta name="description" content="Flashcards do usuario no PlayTalk.">
   <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
   <link rel="stylesheet" href="css/style.css">
   <script src="js/player-state.js"></script>
@@ -13,248 +13,163 @@
   <script src="js/lens.js"></script>
   <script src="js/site-nav.js"></script>
   <style>
-    @font-face {
-      font-family: "Soopafre";
-      src: url("soopafre.ttf") format("truetype");
-      font-weight: 400;
-      font-style: normal;
-      font-display: swap;
-    }
-
     :root {
       --footer-height: max(62px, 8vh);
+      --page-max-width: 1240px;
+      --card-width-mobile: 80vw;
+      --card-gap: 24px;
+      --panel-bg: rgba(255, 255, 255, 0.12);
+      --panel-line: rgba(255, 255, 255, 0.2);
+      --progress-track: rgba(255, 255, 255, 0.18);
+      --progress-fill: linear-gradient(90deg, #5cff88 0%, #1eba5f 100%);
     }
 
-    html:has(body.page-cards),
-    body.page-cards {
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
       min-height: 100%;
-      padding-bottom: calc(var(--footer-height) + 18px);
-      overflow-y: auto !important;
-      overflow-x: hidden !important;
+    }
+
+    body {
+      font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
       background: linear-gradient(180deg, #79afea 0%, #5f95e1 46%, #4d79db 100%);
-      touch-action: pan-x pan-y !important;
-      -webkit-overflow-scrolling: touch;
+      color: #ffffff;
+      overflow-x: hidden;
     }
 
-    .mycards-page {
-      width: min(1080px, calc(100vw - 22px));
+    .allcards-page {
+      width: min(var(--page-max-width), calc(100vw - 24px));
       margin: 0 auto;
-      padding: 20px 0 28px;
+      padding: 26px 0 calc(var(--footer-height) + 32px);
     }
 
-    .mycards-head {
+    .allcards-head {
       display: grid;
       justify-items: center;
-      gap: 8px;
-      margin-bottom: 18px;
+      gap: 6px;
+      margin-bottom: 24px;
+      text-align: center;
     }
 
-    .mycards-title {
+    .allcards-title {
       margin: 0;
-      color: #ffffff;
-      font-family: "Soopafre", "Open Sans", Arial, sans-serif;
-      font-size: clamp(36px, 8vw, 54px);
-      letter-spacing: 0.04em;
-      text-shadow: 0 10px 24px rgba(16, 42, 102, 0.2);
-    }
-
-    .mycards-total {
-      margin: 0;
-      color: rgba(255, 255, 255, 0.92);
-      font-size: 16px;
+      font-size: clamp(32px, 6vw, 48px);
       font-weight: 800;
+      color: #ffffff;
+      letter-spacing: 0.03em;
+    }
+
+    .allcards-total {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.88);
     }
 
-    .mycards-grid {
+    .allcards-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 18px 14px;
-      overflow: visible;
-      touch-action: pan-x pan-y;
-      margin-bottom: 18px;
+      grid-template-columns: 1fr;
+      justify-items: center;
+      gap: var(--card-gap);
     }
 
-    .mycards-empty {
-      margin: 0;
-      padding: 22px 12px;
+    .allcards-empty {
+      width: min(80vw, 520px);
+      margin: 12px auto 0;
+      padding: 22px 18px;
       text-align: center;
-      color: rgba(255, 255, 255, 0.92);
+      font-size: 14px;
       font-weight: 700;
-    }
-
-    .mycards-item,
-    .mini-card,
-    .mycards-card {
-      display: flex;
-      justify-content: center;
-    }
-
-    .mini-card,
-    .mycards-card {
-      width: min(100%, 190px);
-      padding: 12px 12px 14px;
+      color: rgba(255, 255, 255, 0.92);
       border-radius: 28px;
-      background: rgba(255, 255, 255, 0.12);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      box-shadow: 0 18px 34px rgba(20, 47, 114, 0.18);
+      border: 1px solid var(--panel-line);
+      background: var(--panel-bg);
+      box-shadow: 0 18px 34px rgba(20, 47, 114, 0.16);
       backdrop-filter: blur(12px);
     }
 
-    .mini-card__image,
-    .mycards-card__image {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      border-radius: 26px;
-      overflow: visible;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      isolation: isolate;
-      margin-bottom: 12px;
+    .allcards-card {
+      width: var(--card-width-mobile);
+      display: grid;
+      gap: 10px;
+      justify-items: stretch;
     }
 
-    .mini-card__image > img:not(.mini-card__seal),
-    .mycards-card__image > img:not(.mycards-card__seal),
-    .mini-card__fallback,
-    .mycards-card__fallback {
+    .allcards-card__frame {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      padding: 12px;
+      border-radius: 32px;
+      border: 1px solid var(--panel-line);
+      background: var(--panel-bg);
+      box-shadow: 0 18px 34px rgba(20, 47, 114, 0.16);
+      backdrop-filter: blur(12px);
+    }
+
+    .allcards-card__image {
+      width: 100%;
+      height: 100%;
+      border-radius: 26px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .allcards-card__image img,
+    .allcards-card__fallback {
       width: 100%;
       height: 100%;
       display: block;
       object-fit: cover;
-      clip-path: inset(8% 8% 8% 8% round 14px);
     }
 
-    .mini-card__fallback,
-    .mycards-card__fallback {
+    .allcards-card__fallback {
       display: grid;
       place-items: center;
+      padding: 18px;
       text-align: center;
-      padding: 12px;
-      color: #ffffff;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      font-size: 12px;
-      background:
-        linear-gradient(135deg, rgba(83, 213, 255, 0.12), transparent),
-        rgba(255, 255, 255, 0.02);
-    }
-
-    .mini-card.is-memorizing .mini-card__image > img:not(.mini-card__seal),
-    .mycards-card.is-memorizing .mycards-card__image > img:not(.mycards-card__seal) {
-      filter: blur(7px);
-    }
-
-    .mini-card__seal,
-    .mycards-card__seal {
-      position: absolute;
-      right: -10px;
-      bottom: -10px;
-      top: auto;
-      width: clamp(56px, 34%, 82px);
-      height: clamp(56px, 34%, 82px);
-      object-fit: contain;
-      transform: none;
-      pointer-events: none;
-      z-index: 4;
-      filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.28));
-    }
-
-    .mini-card__word,
-    .mycards-card__word {
-      margin: 10px 0 0;
-      color: #ffffff;
-      font-size: 17px;
-      font-weight: 700;
-      text-align: center;
-      word-break: break-word;
-    }
-
-    .mini-card__subword,
-    .mycards-card__subword {
-      margin: 4px 0 0;
-      min-height: 18px;
-      color: rgba(255, 255, 255, 0.88);
       font-size: 14px;
-      text-align: center;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #ffffff;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
+        rgba(255, 255, 255, 0.06);
     }
 
-    .mini-card__progress,
-    .mycards-card__progress {
+    .allcards-card__status {
+      min-height: 18px;
+      margin: 0;
+      text-align: center;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.4;
+      letter-spacing: 0;
+      font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+    }
+
+    .allcards-card__progress {
       width: 100%;
       height: 8px;
-      border-radius: 999px;
       overflow: hidden;
-      background: rgba(255, 255, 255, 0.1);
-      margin-top: 10px;
+      border-radius: 999px;
+      background: var(--progress-track);
     }
 
-    .mini-card__progress span,
-    .mycards-card__progress span {
+    .allcards-card__progress span {
       display: block;
       height: 100%;
       border-radius: inherit;
-      background: linear-gradient(90deg, #5cff88, #1eba5f);
-    }
-
-    .mini-card__loader {
-      position: absolute;
-      inset: 50% auto auto 50%;
-      width: 50px;
-      height: 50px;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      background: linear-gradient(#ee280e, #15a0f7, #6ed15a);
-      animation: animate7712 1.2s linear infinite;
-      pointer-events: none;
-      z-index: 2;
-    }
-
-    .mini-card__loader span {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      background: linear-gradient(#ee280e, #15a0f7, #5ad15a);
-    }
-
-    .mini-card__loader:after {
-      content: '';
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      right: 10px;
-      bottom: 10px;
-      background: #333;
-      border: solid #333 10px;
-      border-radius: 50%;
-    }
-
-    .mini-card__loader span:nth-child(1) {
-      filter: blur(5px);
-    }
-
-    .mini-card__loader span:nth-child(2) {
-      filter: blur(10px);
-    }
-
-    .mini-card__loader span:nth-child(3) {
-      filter: blur(25px);
-    }
-
-    .mini-card__loader span:nth-child(4) {
-      filter: blur(50px);
-    }
-
-    @keyframes animate7712 {
-      0% {
-        transform: translate(-50%, -50%) rotate(0deg);
-      }
-
-      100% {
-        transform: translate(-50%, -50%) rotate(360deg);
-      }
+      background: var(--progress-fill);
+      transition: width 220ms ease;
     }
 
     .flashcards-footer-nav {
@@ -295,97 +210,28 @@
       color: #ffffff;
     }
 
-    .catalog-pagination {
-      width: min(100%, 420px);
-      margin: 0 auto;
-      padding: 12px 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.16);
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      box-shadow: 0 12px 28px rgba(20, 47, 114, 0.16);
-      backdrop-filter: blur(12px);
-    }
-
-    .catalog-pagination[hidden] {
-      display: none;
-    }
-
-    .catalog-pagination__nav {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255, 255, 255, 0.14);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      color: #ffffff;
-      transition: transform 160ms ease, opacity 160ms ease, background 160ms ease;
-    }
-
-    .catalog-pagination__nav:disabled {
-      opacity: 0.42;
-      cursor: default;
-      transform: none;
-    }
-
-    .catalog-pagination__nav:not(:disabled):active {
-      transform: scale(0.96);
-      background: rgba(255, 255, 255, 0.22);
-    }
-
-    .catalog-pagination__nav svg {
-      width: 22px;
-      height: 22px;
-      fill: currentColor;
-    }
-
-    .catalog-pagination__info {
-      min-width: 138px;
-      text-align: center;
-      color: #ffffff;
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    @media (max-width: 720px) {
-      .mycards-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 16px 12px;
+    @media (min-width: 900px) {
+      .allcards-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: start;
       }
 
-      .mini-card,
-      .mycards-card {
-        width: min(100%, 176px);
+      .allcards-card {
+        width: min(100%, 340px);
       }
     }
   </style>
 </head>
-<body class="page-cards" data-lens-context="menus">
-  <main class="mycards-page" aria-live="polite">
-    <header class="mycards-head">
-      <h1 class="mycards-title">FlashCards</h1>
-      <p class="mycards-total" id="mycards-total">0 FlashCards</p>
+<body data-lens-context="menus">
+  <main class="allcards-page" aria-live="polite">
+    <header class="allcards-head">
+      <h1 class="allcards-title">AllCards</h1>
+      <p class="allcards-total" id="allcards-total">0 FlashCards</p>
     </header>
 
     <section>
-      <div id="cards-collection-grid" class="mycards-grid" role="list"></div>
-      <p id="cards-empty-state" class="mycards-empty" hidden></p>
-      <div class="catalog-pagination" id="cards-pagination" hidden>
-        <button class="catalog-pagination__nav" id="cards-prev-btn" type="button" aria-label="Pagina anterior">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-        </button>
-        <span class="catalog-pagination__info" id="cards-page-info">Pagina 1 de 1</span>
-        <button class="catalog-pagination__nav" id="cards-next-btn" type="button" aria-label="Proxima pagina">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.59 16.59 1.41 1.41 6-6-6-6-1.41 1.41L13.17 12z"/></svg>
-        </button>
-      </div>
+      <div id="allcards-grid" class="allcards-grid" role="list"></div>
+      <p id="allcards-empty" class="allcards-empty" hidden></p>
     </section>
   </main>
 
@@ -404,6 +250,6 @@
     </a>
   </nav>
 
-  <script src="js/mycards-page.js" defer></script>
+  <script src="js/allcards-page.js" defer></script>
 </body>
 </html>

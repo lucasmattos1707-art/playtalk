@@ -109,6 +109,15 @@
       display: none;
     }
 
+    .flashcards-home-toggle,
+    .topbar,
+    .catalog,
+    .embedded-panel,
+    .profile-panel,
+    .flashcards-footer-nav {
+      display: none !important;
+    }
+
     button { font: inherit; color: inherit; cursor: pointer; border: 0; }
     img { display: block; max-width: 100%; }
 
@@ -4469,7 +4478,7 @@
           timer: null
         },
         ui: {
-          activeView: 'cards',
+          activeView: 'play',
           profileAvatarDraft: '',
           identityAudio: null,
           nameGateOpen: false,
@@ -6090,11 +6099,11 @@
       }
 
       function switchMainView(view) {
-        const nextView = ['cards', 'users', 'profile', 'play'].includes(view) ? view : 'cards';
-        state.ui.activeView = nextView === 'play' ? 'play' : nextView;
-        const showCatalog = nextView === 'cards';
-        const showUsers = nextView === 'users';
-        const showProfile = nextView === 'profile';
+        const nextView = 'play';
+        state.ui.activeView = nextView;
+        const showCatalog = false;
+        const showUsers = false;
+        const showProfile = false;
         const showTopbar = false;
 
         if (els.catalog) {
@@ -6114,14 +6123,11 @@
           els.usersPanel.classList.toggle('section', !showUsers);
           els.usersPanel.classList.toggle('panel', !showUsers);
         }
-        if (showProfile) {
-          renderProfilePanel();
-        }
         syncFooterNav();
       }
 
       async function navigateToMainView(view) {
-        const nextView = ['cards', 'users', 'profile', 'play'].includes(view) ? view : 'cards';
+        const nextView = 'play';
         if (state.game.active && nextView !== 'play') {
           await exitGame();
         }
@@ -6721,7 +6727,7 @@
         if (els.startGameBtn) {
           els.startGameBtn.disabled = false;
         }
-        switchMainView(state.ui.activeView === 'play' ? 'cards' : state.ui.activeView);
+        switchMainView('play');
 
         if (!options.skipLoadCards) {
           try {
@@ -6790,7 +6796,7 @@
         if (els.startGameBtn) {
           els.startGameBtn.disabled = false;
         }
-        switchMainView('cards');
+        switchMainView('play');
         syncWelcomeGate();
         tryStartPendingTutorial();
         if (shouldRequireGuestAuth()) {
@@ -11186,8 +11192,8 @@
         renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
         syncAdminTools();
         renderAdminPublishBar();
-        els.flashcardsHomeToggle.setAttribute('aria-label', 'Mostrar resumo');
-        switchMainView('cards');
+        els.flashcardsHomeToggle?.setAttribute('aria-label', 'Mostrar resumo');
+        switchMainView('play');
 
         const gameHeadCopy = els.gameHeaderCopy?.parentElement || null;
         if (gameHeadCopy) {
@@ -11243,13 +11249,13 @@
         }
 
         if (requestedPremiumOpen) {
-          switchMainView('cards');
+          switchMainView('play');
           openPremiumGate();
         } else if (requestedView === 'play') {
           switchMainView('play');
           openGameSetup();
         } else {
-          switchMainView('cards');
+          switchMainView('play');
         }
       }
 
