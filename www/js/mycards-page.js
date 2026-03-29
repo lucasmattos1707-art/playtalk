@@ -2,6 +2,8 @@
   const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
   const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
   const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
+  const DATA_MANIFEST_REMOTE_PATH = '/api/flashcards/manifest';
+  const FLASHCARDS_LOCAL_SOURCE_PREFIX = 'allcards';
   const REVIEW_PHASES = {
     1: { durationMs: 24 * 60 * 60 * 1000 },
     2: { durationMs: 3 * 24 * 60 * 60 * 1000 },
@@ -25,6 +27,20 @@
 
   function safeText(value) {
     return typeof value === 'string' ? value.trim() : '';
+  }
+
+  function buildApiUrl(path) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
+      return window.PlaytalkApi.url(path);
+    }
+    return path;
+  }
+
+  function buildAuthHeaders(extraHeaders) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function') {
+      return window.PlaytalkApi.authHeaders(extraHeaders);
+    }
+    return { ...(extraHeaders || {}) };
   }
 
   function escapeHtml(value) {
@@ -51,6 +67,17 @@
       return Array.isArray(parsed?.cards) ? parsed.cards : [];
     } catch (_error) {
       return [];
+    }
+  }
+
+  function saveCardsCache(cards) {
+    try {
+      localStorage.setItem(CARDS_CACHE_STORAGE_KEY, JSON.stringify({
+        savedAt: Date.now(),
+        cards: Array.isArray(cards) ? cards : []
+      }));
+    } catch (_error) {
+      // ignore
     }
   }
 
@@ -120,6 +147,23 @@
     })]));
   }
 
+  function saveUserProgressForUser(userId, progressMap) {
+    const normalizedUserId = Number(userId) || 0;
+    if (!normalizedUserId) return;
+    try {
+      localStorage.setItem(
+        storageKeyForUser(USER_PROGRESS_STORAGE_KEY, normalizedUserId),
+        JSON.stringify(Array.from(progressMap.values()))
+      );
+      localStorage.setItem(
+        storageKeyForUser(OWNED_STORAGE_KEY, normalizedUserId),
+        JSON.stringify(Array.from(progressMap.keys()))
+      );
+    } catch (_error) {
+      // ignore
+    }
+  }
+
   function progressPercent(record) {
     if (!record || record.status !== 'memorizing') return 100;
     const total = Math.max(1, Number(record.memorizingDurationMs) || 1);
@@ -136,12 +180,12 @@
     return source.charAt(0).toUpperCase() || 'C';
   }
 
-  function hydrateCards() {
+  function hydrateCards(progressMap) {
     const cache = readCardsCache();
     const cardMap = new Map(cache.map((card) => [safeText(card?.id), card]));
-    const progressMap = readUserProgressForUser(state.userId);
+    const records = progressMap instanceof Map ? progressMap : readUserProgressForUser(state.userId);
 
-    state.cards = Array.from(progressMap.values())
+    state.cards = Array.from(records.values())
       .map((progress) => {
         const card = cardMap.get(progress.cardId);
         if (!card) return null;
@@ -160,6 +204,141 @@
           : Number(right.progress.returnedAt || right.progress.createdAt) || 0;
         return rightPin - leftPin;
       });
+  }
+
+  function unresolvedProgressCount(progressMap) {
+    const cache = readCardsCache();
+    const cardIds = new Set(cache.map((card) => safeText(card?.id)).filter(Boolean));
+    return Array.from(progressMap.values()).filter((progress) => !cardIds.has(progress.cardId)).length;
+  }
+
+  function normalizeText(value) {
+    return safeText(value)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s'/%+=-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function slug(value) {
+    return normalizeText(value).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'card';
+  }
+
+  function flattenPayload(fileName, payload, options = {}) {
+    const title = safeText(payload?.title) || fileName.replace(/\.json$/i, '');
+    const sourceKey = safeText(options.sourceKey || fileName) || fileName;
+    const idSource = safeText(options.idSource || fileName) || fileName;
+    const items = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.items)
+        ? payload.items
+        : [];
+
+    return items.map((item, index) => ({
+      id: `${slug(idSource)}-${slug(title)}-${index}`,
+      source: sourceKey,
+      sourceIndex: index,
+      deckTitle: title,
+      imageUrl: safeText(item?.imagem || item?.image),
+      english: safeText(item?.nomeIngles || item?.english || item?.word),
+      portuguese: safeText(item?.nomePortugues || item?.portuguese || item?.translation),
+      audioUrl: safeText(item?.audio || item?.audioUrl),
+      category: safeText(item?.categoria || title)
+    }));
+  }
+
+  function normalizeFlashcardsDataPath(value) {
+    const cleaned = safeText(value);
+    if (!cleaned) return '';
+    if (/^https?:\/\//i.test(cleaned)) return cleaned;
+    return `/${cleaned.replace(/^\/+/, '')}`;
+  }
+
+  function withNoCacheUrl(value) {
+    const normalized = normalizeFlashcardsDataPath(value);
+    if (!normalized) return '';
+    const separator = normalized.includes('?') ? '&' : '?';
+    return `${normalized}${separator}_pt=${Date.now()}`;
+  }
+
+  function buildFlashcardsPublicUrl(objectKey) {
+    const encodedKey = safeText(objectKey)
+      .split('/')
+      .filter(Boolean)
+      .map((segment) => encodeURIComponent(segment))
+      .join('/');
+    return encodedKey ? `/${FLASHCARDS_LOCAL_SOURCE_PREFIX}/${encodedKey}` : '';
+  }
+
+  function isFlashcardsDeckPath(value) {
+    const text = safeText(value);
+    if (!text) return false;
+    if (/^https?:\/\//i.test(text)) {
+      try {
+        const parsed = new URL(text);
+        const parsedPath = decodeURIComponent(String(parsed.pathname || '')).replace(/^\/+/, '');
+        return parsedPath.toLowerCase().endsWith('.json')
+          && parsedPath.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`);
+      } catch (_error) {
+        return false;
+      }
+    }
+    const normalized = text.replace(/^\/+/, '');
+    return normalized.toLowerCase().endsWith('.json')
+      && normalized.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`);
+  }
+
+  function resolveManifestDeckPath(file) {
+    const fallbackName = safeText(file?.name) || safeText(file?.title) || 'deck.json';
+    const candidates = [safeText(file?.path), safeText(file?.source), safeText(file?.name)].filter(Boolean);
+
+    for (const candidate of candidates) {
+      if (isFlashcardsDeckPath(candidate)) {
+        return /^https?:\/\//i.test(candidate) ? candidate : `/${candidate.replace(/^\/+/, '')}`;
+      }
+      const normalized = candidate.replace(/^\/+/, '');
+      if (/^[^/]+\.json$/i.test(normalized)) {
+        return buildFlashcardsPublicUrl(normalized);
+      }
+      if (normalized.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`) && normalized.toLowerCase().endsWith('.json')) {
+        return `/${normalized}`;
+      }
+    }
+
+    return buildFlashcardsPublicUrl(fallbackName);
+  }
+
+  async function fetchRemoteCardsCatalog() {
+    const response = await fetch(withNoCacheUrl(buildApiUrl(DATA_MANIFEST_REMOTE_PATH)), { cache: 'no-store' });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !Array.isArray(payload?.data?.files)) {
+      throw new Error(payload?.message || 'Nao consegui abrir o manifesto dos flashcards.');
+    }
+
+    const files = payload.data.files.map((file) => ({
+      name: file.name || file.path || file.source || 'deck.json',
+      path: resolveManifestDeckPath(file),
+      sourceKey: safeText(file?.source || file?.name || file?.path),
+      idSource: safeText(file?.source || file?.name || file?.path)
+    }));
+
+    const responses = await Promise.all(files.map(async (file) => {
+      const deckResponse = await fetch(withNoCacheUrl(file.path), { cache: 'no-store' });
+      if (!deckResponse.ok) {
+        throw new Error(`Nao consegui abrir o deck "${safeText(file.name) || 'deck.json'}".`);
+      }
+      const deckPayload = await deckResponse.json();
+      return flattenPayload(file.name, deckPayload, {
+        sourceKey: file.sourceKey,
+        idSource: file.idSource
+      });
+    }));
+
+    const cards = responses.flatMap((entry) => Array.isArray(entry) ? entry : []);
+    saveCardsCache(cards);
+    return cards;
   }
 
   function updateSummary() {
@@ -202,8 +381,8 @@
 
   async function resolveSessionUserId() {
     try {
-      const response = await fetch(window.PlaytalkApi?.url ? window.PlaytalkApi.url('/auth/session') : '/auth/session', {
-        headers: window.PlaytalkApi?.authHeaders ? window.PlaytalkApi.authHeaders() : {},
+      const response = await fetch(buildApiUrl('/auth/session'), {
+        headers: buildAuthHeaders(),
         cache: 'no-store'
       });
       const payload = await response.json().catch(() => ({}));
@@ -214,9 +393,48 @@
     }
   }
 
+  async function fetchCloudProgressForUser() {
+    if (!state.userId) {
+      return new Map();
+    }
+    try {
+      const response = await fetch(buildApiUrl('/api/flashcards/state'), {
+        headers: buildAuthHeaders(),
+        cache: 'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        return new Map();
+      }
+      const records = Array.isArray(payload?.progress)
+        ? payload.progress.map(normalizeProgressRecord).filter(Boolean)
+        : [];
+      const progressMap = new Map(records.map((record) => [record.cardId, record]));
+      if (progressMap.size) {
+        saveUserProgressForUser(state.userId, progressMap);
+      }
+      return progressMap;
+    } catch (_error) {
+      return new Map();
+    }
+  }
+
   async function init() {
     state.userId = await resolveSessionUserId();
-    hydrateCards();
+    let progressMap = await fetchCloudProgressForUser();
+    if (!progressMap.size) {
+      progressMap = readUserProgressForUser(state.userId);
+    }
+
+    if (progressMap.size && (!readCardsCache().length || unresolvedProgressCount(progressMap) > 0)) {
+      try {
+        await fetchRemoteCardsCatalog();
+      } catch (_error) {
+        // keep local cache fallback
+      }
+    }
+
+    hydrateCards(progressMap);
     updateSummary();
     renderCardsPage();
     window.setInterval(renderCardsPage, 1000);
