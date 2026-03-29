@@ -402,9 +402,7 @@
       place-items: center;
       padding: clamp(32px, 6vw, 48px);
       margin: 0;
-      background:
-        radial-gradient(circle at top, rgba(203, 255, 64, 0.42) 0%, rgba(203, 255, 64, 0) 38%),
-        linear-gradient(180deg, #ffe860 0%, #d8ff3f 100%);
+      background: #ffffff;
       text-align: center;
       overflow: hidden;
     }
@@ -432,6 +430,118 @@
       font-size: clamp(18px, 3.6vw, 28px);
       line-height: 1.2;
       text-shadow: 0 2px 0 rgba(255, 255, 255, 0.34);
+    }
+
+    .soundcheck-shell {
+      width: min(100%, 1120px);
+      margin: 0 auto;
+      display: grid;
+      gap: 24px;
+      justify-items: center;
+      color: #164300;
+    }
+
+    .soundcheck-header {
+      display: grid;
+      gap: 10px;
+      text-align: center;
+      justify-items: center;
+    }
+
+    .soundcheck-header h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      line-height: 1.05;
+    }
+
+    .soundcheck-subtitle {
+      margin: 0;
+      min-height: 1.5em;
+      color: #111111;
+      font-size: clamp(1rem, 2.8vw, 1.24rem);
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    .soundcheck-subtitle.is-changing {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    .soundcheck-status {
+      display: none;
+    }
+
+    .soundcheck-status.is-error {
+      color: inherit;
+    }
+
+    .soundcheck-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .soundcheck-btn {
+      min-width: 168px;
+      min-height: 54px;
+      border: 0;
+      border-radius: 999px;
+      padding: 0 22px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      color: #ffffff;
+      background: linear-gradient(180deg, #1a1a1a 0%, #000000 100%);
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.18);
+    }
+
+    .soundcheck-btn.is-secondary {
+      color: #222222;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      box-shadow: none;
+    }
+
+    .soundcheck-btn:disabled {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    .soundcheck-grid {
+      width: min(100%, 1040px);
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .soundcheck-tile {
+      border: 0;
+      border-radius: 28px;
+      background: transparent;
+      padding: 14px;
+      display: grid;
+      place-items: center;
+      box-shadow: none;
+      transition: transform 160ms ease, box-shadow 160ms ease, outline-color 160ms ease;
+      outline: 3px solid transparent;
+    }
+
+    .soundcheck-tile:hover,
+    .soundcheck-tile:focus-visible {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .soundcheck-tile.is-selected {
+      outline-color: #222222;
+      background: transparent;
+    }
+
+    .soundcheck-tile img {
+      width: min(100%, 120px);
+      height: auto;
+      object-fit: contain;
     }
 
     .sound-test-gate {
@@ -4049,6 +4159,7 @@
         width: min(74vw, 240px);
         height: min(74vw, 240px);
       }
+
     }
   </style>
 </head>
@@ -4065,42 +4176,36 @@
     </div>
   </section>
   <section class="robotcheck" id="robotcheck" aria-label="Robot check">
-    <button class="robotcheck__touch" id="robotcheckTouch" type="button" aria-label="Toque para iniciar o jogo">
-      <div class="robotcheck__content">
-        <h2 class="robotcheck__title">Robot Check</h2>
-        <p class="robotcheck__copy">Toque em qualquer lugar da tela para iniciar o jogo.</p>
-      </div>
-    </button>
-  </section>
-  <section class="sound-test-gate" id="soundTestGate" aria-modal="true" role="dialog" aria-label="Teste de som">
-      <div class="sound-test-gate__shell">
-      <div class="sound-test-gate__header">
-        <h2 class="sound-test-gate__title">Teste de som</h2>
-        <p class="sound-test-gate__subtitle" id="soundTestSubtitle">Toque no que est&aacute; ouvindo</p>
-      </div>
-      <div class="sound-test-gate__slots" id="soundTestSlots" aria-label="Escolhas do teste de som"></div>
-      <p class="sound-test-gate__status" id="soundTestStatus">Ou&ccedil;a os 3 sons e toque nas 3 imagens correspondentes. A ordem n&atilde;o importa.</p>
-      <div class="sound-test-gate__actions">
-        <button class="sound-test-gate__btn" id="soundTestReplayBtn" type="button">Ouvir de novo</button>
-      </div>
-      <div class="sound-test-gate__grid" id="soundTestGrid">
-        <button class="sound-test-gate__tile" type="button" data-letter="A"><img src="/accesskey/teclas/Imagens/A.png" alt="A"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="B"><img src="/accesskey/teclas/Imagens/B.png" alt="B"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="C"><img src="/accesskey/teclas/Imagens/C.png" alt="C"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="D"><img src="/accesskey/teclas/Imagens/D.png" alt="D"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="E"><img src="/accesskey/teclas/Imagens/E.png" alt="E"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="F"><img src="/accesskey/teclas/Imagens/F.png" alt="F"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="G"><img src="/accesskey/teclas/Imagens/G.png" alt="G"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="H"><img src="/accesskey/teclas/Imagens/H.png" alt="H"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="I"><img src="/accesskey/teclas/Imagens/I.png" alt="I"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="J"><img src="/accesskey/teclas/Imagens/J.png" alt="J"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="K"><img src="/accesskey/teclas/Imagens/K.png" alt="K"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="L"><img src="/accesskey/teclas/Imagens/L.png" alt="L"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="M"><img src="/accesskey/teclas/Imagens/M.png" alt="M"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="N"><img src="/accesskey/teclas/Imagens/N.png" alt="N"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="O"><img src="/accesskey/teclas/Imagens/O.png" alt="O"></button>
-        <button class="sound-test-gate__tile" type="button" data-letter="P"><img src="/accesskey/teclas/Imagens/P.png" alt="P"></button>
-      </div>
+    <div class="robotcheck__touch" aria-label="Teste de som do PlayTalk">
+      <main class="soundcheck-shell">
+        <header class="soundcheck-header">
+          <p class="soundcheck-subtitle" id="soundTestSubtitle">Toque nas imagens</p>
+        </header>
+
+        <div class="soundcheck-actions">
+          <button class="soundcheck-btn" id="soundTestReplayBtn" type="button">Ouvir de novo</button>
+          <button class="soundcheck-btn is-secondary" id="soundTestClearBtn" type="button">Limpar sele&ccedil;&atilde;o</button>
+        </div>
+
+        <div class="soundcheck-grid" id="soundTestGrid">
+          <button class="soundcheck-tile" type="button" data-letter="A"><img src="/accesskey/teclas/Imagens/A.png" alt="A"></button>
+          <button class="soundcheck-tile" type="button" data-letter="B"><img src="/accesskey/teclas/Imagens/B.png" alt="B"></button>
+          <button class="soundcheck-tile" type="button" data-letter="C"><img src="/accesskey/teclas/Imagens/C.png" alt="C"></button>
+          <button class="soundcheck-tile" type="button" data-letter="D"><img src="/accesskey/teclas/Imagens/D.png" alt="D"></button>
+          <button class="soundcheck-tile" type="button" data-letter="E"><img src="/accesskey/teclas/Imagens/E.png" alt="E"></button>
+          <button class="soundcheck-tile" type="button" data-letter="F"><img src="/accesskey/teclas/Imagens/F.png" alt="F"></button>
+          <button class="soundcheck-tile" type="button" data-letter="G"><img src="/accesskey/teclas/Imagens/G.png" alt="G"></button>
+          <button class="soundcheck-tile" type="button" data-letter="H"><img src="/accesskey/teclas/Imagens/H.png" alt="H"></button>
+          <button class="soundcheck-tile" type="button" data-letter="I"><img src="/accesskey/teclas/Imagens/I.png" alt="I"></button>
+          <button class="soundcheck-tile" type="button" data-letter="J"><img src="/accesskey/teclas/Imagens/J.png" alt="J"></button>
+          <button class="soundcheck-tile" type="button" data-letter="K"><img src="/accesskey/teclas/Imagens/K.png" alt="K"></button>
+          <button class="soundcheck-tile" type="button" data-letter="L"><img src="/accesskey/teclas/Imagens/L.png" alt="L"></button>
+          <button class="soundcheck-tile" type="button" data-letter="M"><img src="/accesskey/teclas/Imagens/M.png" alt="M"></button>
+          <button class="soundcheck-tile" type="button" data-letter="N"><img src="/accesskey/teclas/Imagens/N.png" alt="N"></button>
+          <button class="soundcheck-tile" type="button" data-letter="O"><img src="/accesskey/teclas/Imagens/O.png" alt="O"></button>
+          <button class="soundcheck-tile" type="button" data-letter="P"><img src="/accesskey/teclas/Imagens/P.png" alt="P"></button>
+        </div>
+      </main>
     </div>
   </section>
   <section class="auth-gate" id="authGate" aria-modal="true" role="dialog" aria-labelledby="authTitle">
@@ -4516,7 +4621,7 @@
       const WELCOME_COPY_ROTATION_MS = 2000;
       const WELCOME_COPY_MESSAGES = ['Flu\u00eancia f\u00e1cil', 'Toque para come\u00e7ar'];
       const SOUND_TEST_COPY_ROTATION_MS = 1500;
-      const SOUND_TEST_SUBTITLE_MESSAGES = ['Toque no que est\u00e1 ouvindo', 'Ajuste o volume'];
+      const SOUND_TEST_SUBTITLE_MESSAGES = ['Toque nas imagens'];
       const SOUND_TEST_SELECTION_COUNT = 3;
       const ACCESS_KEY_LETTERS = 'ABCDEFGHIJKLMNOP'.split('');
       const ACCESS_KEY_AUDIO_LIMIT_PATH = '/accesskey/limit.mp3';
@@ -4733,13 +4838,10 @@
         welcomeStartBtn: document.getElementById('welcomeStartBtn'),
         welcomeAccountLink: document.getElementById('welcomeAccountLink'),
         robotcheck: document.getElementById('robotcheck'),
-        robotcheckTouch: document.getElementById('robotcheckTouch'),
         appShell: document.querySelector('main.shell'),
-        soundTestGate: document.getElementById('soundTestGate'),
         soundTestSubtitle: document.getElementById('soundTestSubtitle'),
-        soundTestSlots: document.getElementById('soundTestSlots'),
-        soundTestStatus: document.getElementById('soundTestStatus'),
         soundTestReplayBtn: document.getElementById('soundTestReplayBtn'),
+        soundTestClearBtn: document.getElementById('soundTestClearBtn'),
         soundTestGrid: document.getElementById('soundTestGrid'),
         authGate: document.getElementById('authGate'),
         authCard: document.getElementById('authCard'),
@@ -5666,19 +5768,36 @@
         state.entry.welcomeTimer = 0;
       }
 
-      function openRobotCheck() {
+      function openRobotCheck(launchTarget = 'welcome') {
         state.entry.welcomeVisible = false;
+        state.entry.launchAfterSoundTest = safeText(launchTarget);
         clearWelcomeRotation();
+        stopSoundTestAudio();
+        clearSoundTestSubtitleRotation();
         document.documentElement.classList.add('robotcheck-open');
         document.body.classList.remove('welcome-active');
-        document.body.classList.add('robotcheck-open');
+        document.body.classList.add('robotcheck-open', 'sound-test-open');
         els.welcomeGate?.classList.remove('is-visible');
         els.robotcheck?.classList.add('is-visible');
+        state.ui.soundTestOpen = true;
+        state.ui.soundTestBusy = false;
+        state.ui.soundTestStatus = '';
+        state.ui.soundTestStatusError = false;
+        state.ui.soundTestSelectedLetters = [];
+        state.ui.soundTestTargetLetters = buildRandomSoundTestLetters();
+        state.ui.soundTestPlaybackToken = 0;
+        startSoundTestSubtitleRotation();
+        renderSoundTestGate();
+        window.setTimeout(() => {
+          if (state.ui.soundTestOpen) {
+            void playSoundTestSequence();
+          }
+        }, 120);
       }
 
       function closeRobotCheck() {
         document.documentElement.classList.remove('robotcheck-open');
-        document.body.classList.remove('robotcheck-open');
+        document.body.classList.remove('robotcheck-open', 'sound-test-open');
         els.robotcheck?.classList.remove('is-visible');
       }
 
@@ -5755,20 +5874,6 @@
       function setSoundTestStatus(message, isError = false) {
         state.ui.soundTestStatus = safeText(message);
         state.ui.soundTestStatusError = Boolean(isError);
-        if (!els.soundTestStatus) return;
-        els.soundTestStatus.textContent = state.ui.soundTestStatus || 'Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.';
-        els.soundTestStatus.classList.toggle('is-error', state.ui.soundTestStatusError);
-      }
-
-      function renderSoundTestSlots() {
-        if (!els.soundTestSlots) return;
-        els.soundTestSlots.innerHTML = Array.from({ length: SOUND_TEST_SELECTION_COUNT }, (_, index) => {
-          const letter = state.ui.soundTestSelectedLetters[index] || '';
-          if (!letter) {
-            return '<div class="sound-test-gate__slot"><span>?</span></div>';
-          }
-          return `<div class="sound-test-gate__slot"><img src="${escapeHtml(getAccessKeyImagePath(letter))}" alt="${escapeHtml(letter)}"></div>`;
-        }).join('');
       }
 
       function renderSoundTestGrid() {
@@ -5780,19 +5885,18 @@
         if (els.soundTestReplayBtn) {
           els.soundTestReplayBtn.disabled = state.ui.soundTestBusy || !state.ui.soundTestTargetLetters.length;
         }
+        if (els.soundTestClearBtn) {
+          els.soundTestClearBtn.disabled = state.ui.soundTestBusy || !state.ui.soundTestSelectedLetters.length;
+        }
       }
 
       function renderSoundTestGate() {
-        renderSoundTestSlots();
         renderSoundTestGrid();
-        setSoundTestStatus(state.ui.soundTestStatus, state.ui.soundTestStatusError);
       }
 
       function clearSoundTestSelection({ keepStatus = false } = {}) {
         state.ui.soundTestSelectedLetters = [];
-        if (!keepStatus) {
-          setSoundTestStatus('Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.');
-        }
+        if (!keepStatus) setSoundTestStatus('');
         renderSoundTestGate();
       }
 
@@ -5865,16 +5969,33 @@
         const launchTarget = state.entry.launchAfterSoundTest;
         state.entry.launchAfterSoundTest = '';
         if (launchTarget === 'welcome') {
-          requestWelcomeTutorialStart(true);
+          void beginTutorialGameWhenReady();
           return;
         }
         if (launchTarget === 'tutorial-setup') {
-          beginTutorialGame();
+          void beginTutorialGameWhenReady();
           return;
         }
         if (launchTarget === 'play-ready-check') {
           syncWelcomeGate();
         }
+      }
+
+      async function beginTutorialGameWhenReady() {
+        const maxAttempts = 20;
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+          if (state.entry.cardsReady && findTutorialPlanetCard()) {
+            beginTutorialGame();
+            return true;
+          }
+          await wait(250);
+        }
+        if (state.entry.cardsReady && !findTutorialPlanetCard()) {
+          syncWelcomeGate();
+          return false;
+        }
+        requestWelcomeTutorialStart(true);
+        return false;
       }
 
       function closeSoundTestGate() {
@@ -5883,33 +6004,17 @@
         state.ui.soundTestPlaybackToken = 0;
         stopSoundTestAudio();
         clearSoundTestSubtitleRotation();
-        document.body.classList.remove('sound-test-open');
-        els.soundTestGate?.classList.remove('is-visible');
+        closeRobotCheck();
       }
 
       function openSoundTestGate(launchTarget = '') {
-        if (!els.soundTestGate) return;
-        closeRobotCheck();
-        state.entry.launchAfterSoundTest = safeText(launchTarget);
-        state.entry.welcomeVisible = false;
-        clearWelcomeRotation();
-        document.body.classList.remove('welcome-active');
-        els.welcomeGate?.classList.remove('is-visible');
-        state.ui.soundTestOpen = true;
-        state.ui.soundTestBusy = false;
+        openRobotCheck(launchTarget || 'welcome');
+      }
+
+      function clearSoundTestSelection(keepStatus = false) {
         state.ui.soundTestSelectedLetters = [];
-        state.ui.soundTestTargetLetters = buildRandomSoundTestLetters();
-        state.ui.soundTestPlaybackToken = 0;
-        document.body.classList.add('sound-test-open');
-        els.soundTestGate.classList.add('is-visible');
-        startSoundTestSubtitleRotation();
-        setSoundTestStatus('Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.');
+        if (!keepStatus) setSoundTestStatus('');
         renderSoundTestGate();
-        window.setTimeout(() => {
-          if (state.ui.soundTestOpen) {
-            void playSoundTestSequence();
-          }
-        }, 120);
       }
 
       async function validateSoundTestSelection() {
@@ -5919,14 +6024,14 @@
         if (selected === target) {
           state.entry.soundTestCompleted = true;
           persistSoundTestCompletedFlag(true);
-          setSoundTestStatus('Perfeito. Som ok, vamos jogar.');
           renderSoundTestGate();
-          await wait(420);
+          playSuccessAudio();
+          await wait(2000);
           closeSoundTestGate();
           continueFromSoundTest();
           return;
         }
-        setSoundTestStatus('Ainda nao bateu. Vou repetir os 3 sons para voce tentar de novo.', true);
+        setSoundTestStatus('');
         state.ui.soundTestSelectedLetters = [];
         renderSoundTestGate();
         await wait(500);
@@ -11225,13 +11330,13 @@
         els.welcomeAccountLink?.addEventListener('click', (event) => {
           event.stopPropagation();
         });
-        els.robotcheckTouch?.addEventListener('click', () => {
-          closeRobotCheck();
-          requestWelcomeTutorialStart(true);
-        });
         els.soundTestReplayBtn?.addEventListener('click', () => {
           if (state.ui.soundTestBusy || !state.ui.soundTestOpen) return;
           void playSoundTestSequence();
+        });
+        els.soundTestClearBtn?.addEventListener('click', () => {
+          if (state.ui.soundTestBusy || !state.ui.soundTestOpen) return;
+          clearSoundTestSelection();
         });
         els.soundTestGrid?.addEventListener('click', (event) => {
           const tile = event.target.closest('[data-letter]');
