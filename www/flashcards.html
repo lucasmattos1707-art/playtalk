@@ -5716,6 +5716,10 @@
         }
         if (launchTarget === 'tutorial-setup') {
           beginTutorialGame();
+          return;
+        }
+        if (launchTarget === 'play-ready-check') {
+          syncWelcomeGate();
         }
       }
 
@@ -10504,9 +10508,15 @@
           openPremiumGate();
           return;
         }
+        if (accessibleFlashcardsCount() < 1) {
+          if (!state.entry.soundTestCompleted) {
+            openSoundTestGate('play-ready-check');
+          }
+          return;
+        }
         if (canOfferTutorialMode()) {
           if (!state.entry.soundTestCompleted) {
-            launchSoundCheck('tutorial-setup');
+            openSoundTestGate('tutorial-setup');
             return;
           }
           beginTutorialGame();
@@ -11422,7 +11432,6 @@
           openPremiumGate();
         } else if (requestedView === 'play') {
           switchMainView('play');
-          openGameSetup();
         } else {
           switchMainView('play');
         }

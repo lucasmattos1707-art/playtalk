@@ -374,13 +374,27 @@
     els.grid.innerHTML = state.cards.map((card) => {
       const imageUrl = resolveCardImage(card);
       const progress = Math.max(0, Math.min(100, progressPercent(card.progress)));
+      const memorizing = card.progress?.status === 'memorizing';
+      const loaderMarkup = memorizing
+        ? `
+          <div class="allcards-card__loader" aria-hidden="true">
+            <div class="loader">
+              <div class="box box-1"><div class="side-left"></div><div class="side-right"></div><div class="side-top"></div></div>
+              <div class="box box-2"><div class="side-left"></div><div class="side-right"></div><div class="side-top"></div></div>
+              <div class="box box-3"><div class="side-left"></div><div class="side-right"></div><div class="side-top"></div></div>
+              <div class="box box-4"><div class="side-left"></div><div class="side-right"></div><div class="side-top"></div></div>
+            </div>
+          </div>
+        `
+        : '';
       return `
         <article class="allcards-card" role="listitem">
           <div class="allcards-card__frame">
-            <div class="allcards-card__image">
+            <div class="allcards-card__image${memorizing ? ' is-memorizing' : ''}">
               ${imageUrl
                 ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(fallbackLabel(card))}">`
                 : `<div class="allcards-card__fallback">${escapeHtml(fallbackLabel(card))}</div>`}
+              ${loaderMarkup}
             </div>
           </div>
           <p class="allcards-card__status">${escapeHtml(statusText(card))}</p>
