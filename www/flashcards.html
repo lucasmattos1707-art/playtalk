@@ -402,7 +402,9 @@
       place-items: center;
       padding: clamp(32px, 6vw, 48px);
       margin: 0;
-      background: #ffffff;
+      background:
+        radial-gradient(circle at top, rgba(203, 255, 64, 0.42) 0%, rgba(203, 255, 64, 0) 38%),
+        linear-gradient(180deg, #ffe860 0%, #d8ff3f 100%);
       text-align: center;
       overflow: hidden;
     }
@@ -448,6 +450,15 @@
       justify-items: center;
     }
 
+    .soundcheck-header p {
+      margin: 0;
+      color: #3e6c00;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
     .soundcheck-header h1 {
       margin: 0;
       font-size: clamp(2rem, 5vw, 3.2rem);
@@ -457,7 +468,7 @@
     .soundcheck-subtitle {
       margin: 0;
       min-height: 1.5em;
-      color: #111111;
+      color: #426400;
       font-size: clamp(1rem, 2.8vw, 1.24rem);
       transition: opacity 220ms ease, transform 220ms ease;
     }
@@ -467,12 +478,47 @@
       transform: translateY(8px);
     }
 
+    .soundcheck-slots {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      width: min(100%, 520px);
+    }
+
+    .soundcheck-slot {
+      min-height: 108px;
+      border-radius: 28px;
+      border: 2px dashed rgba(62, 108, 0, 0.24);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(248, 255, 210, 0.72) 100%);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    .soundcheck-slot img {
+      width: min(100%, 92px);
+      height: auto;
+      object-fit: contain;
+    }
+
+    .soundcheck-slot span {
+      color: #87a95b;
+      font-size: 1.8rem;
+      line-height: 1;
+    }
+
     .soundcheck-status {
-      display: none;
+      margin: 0;
+      max-width: 700px;
+      text-align: center;
+      color: #355100;
+      font-size: 1rem;
+      line-height: 1.6;
     }
 
     .soundcheck-status.is-error {
-      color: inherit;
+      color: #aa2f2f;
     }
 
     .soundcheck-actions {
@@ -492,14 +538,14 @@
       font-weight: 700;
       cursor: pointer;
       color: #ffffff;
-      background: linear-gradient(180deg, #1a1a1a 0%, #000000 100%);
-      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.18);
+      background: linear-gradient(180deg, #5d8f00 0%, #3d6500 100%);
+      box-shadow: 0 16px 34px rgba(61, 101, 0, 0.18);
     }
 
     .soundcheck-btn.is-secondary {
-      color: #222222;
+      color: #315000;
       background: rgba(255, 255, 255, 0.86);
-      border: 1px solid rgba(0, 0, 0, 0.12);
+      border: 1px solid rgba(49, 80, 0, 0.12);
       box-shadow: none;
     }
 
@@ -518,11 +564,11 @@
     .soundcheck-tile {
       border: 0;
       border-radius: 28px;
-      background: transparent;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(243, 255, 195, 0.92) 100%);
       padding: 14px;
       display: grid;
       place-items: center;
-      box-shadow: none;
+      box-shadow: 0 12px 28px rgba(61, 101, 0, 0.12);
       transition: transform 160ms ease, box-shadow 160ms ease, outline-color 160ms ease;
       outline: 3px solid transparent;
     }
@@ -530,12 +576,12 @@
     .soundcheck-tile:hover,
     .soundcheck-tile:focus-visible {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 18px 34px rgba(61, 101, 0, 0.16);
     }
 
     .soundcheck-tile.is-selected {
-      outline-color: #222222;
-      background: transparent;
+      outline-color: #5d8f00;
+      background: linear-gradient(180deg, #f8ffd8 0%, #e8f7b5 100%);
     }
 
     .soundcheck-tile img {
@@ -4179,8 +4225,13 @@
     <div class="robotcheck__touch" aria-label="Teste de som do PlayTalk">
       <main class="soundcheck-shell">
         <header class="soundcheck-header">
-          <p class="soundcheck-subtitle" id="soundTestSubtitle">Toque nas imagens</p>
+          <p>PlayTalk</p>
+          <h1>Teste de som</h1>
+          <p class="soundcheck-subtitle" id="soundTestSubtitle">Toque no que est&aacute; ouvindo</p>
         </header>
+
+        <div class="soundcheck-slots" id="soundTestSlots" aria-label="Escolhas do teste de som"></div>
+        <p class="soundcheck-status" id="soundTestStatus">Ou&ccedil;a os 3 sons e toque nas 3 imagens correspondentes. A ordem n&atilde;o importa.</p>
 
         <div class="soundcheck-actions">
           <button class="soundcheck-btn" id="soundTestReplayBtn" type="button">Ouvir de novo</button>
@@ -4621,7 +4672,7 @@
       const WELCOME_COPY_ROTATION_MS = 2000;
       const WELCOME_COPY_MESSAGES = ['Flu\u00eancia f\u00e1cil', 'Toque para come\u00e7ar'];
       const SOUND_TEST_COPY_ROTATION_MS = 1500;
-      const SOUND_TEST_SUBTITLE_MESSAGES = ['Toque nas imagens'];
+      const SOUND_TEST_SUBTITLE_MESSAGES = ['Toque no que est\u00e1 ouvindo', 'Ajuste o volume'];
       const SOUND_TEST_SELECTION_COUNT = 3;
       const ACCESS_KEY_LETTERS = 'ABCDEFGHIJKLMNOP'.split('');
       const ACCESS_KEY_AUDIO_LIMIT_PATH = '/accesskey/limit.mp3';
@@ -4840,6 +4891,8 @@
         robotcheck: document.getElementById('robotcheck'),
         appShell: document.querySelector('main.shell'),
         soundTestSubtitle: document.getElementById('soundTestSubtitle'),
+        soundTestSlots: document.getElementById('soundTestSlots'),
+        soundTestStatus: document.getElementById('soundTestStatus'),
         soundTestReplayBtn: document.getElementById('soundTestReplayBtn'),
         soundTestClearBtn: document.getElementById('soundTestClearBtn'),
         soundTestGrid: document.getElementById('soundTestGrid'),
@@ -5787,6 +5840,7 @@
         state.ui.soundTestTargetLetters = buildRandomSoundTestLetters();
         state.ui.soundTestPlaybackToken = 0;
         startSoundTestSubtitleRotation();
+        setSoundTestStatus('Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.');
         renderSoundTestGate();
         window.setTimeout(() => {
           if (state.ui.soundTestOpen) {
@@ -5874,6 +5928,20 @@
       function setSoundTestStatus(message, isError = false) {
         state.ui.soundTestStatus = safeText(message);
         state.ui.soundTestStatusError = Boolean(isError);
+        if (!els.soundTestStatus) return;
+        els.soundTestStatus.textContent = state.ui.soundTestStatus || 'Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.';
+        els.soundTestStatus.classList.toggle('is-error', state.ui.soundTestStatusError);
+      }
+
+      function renderSoundTestSlots() {
+        if (!els.soundTestSlots) return;
+        els.soundTestSlots.innerHTML = Array.from({ length: SOUND_TEST_SELECTION_COUNT }, (_, index) => {
+          const letter = state.ui.soundTestSelectedLetters[index] || '';
+          if (!letter) {
+            return '<div class="soundcheck-slot"><span>?</span></div>';
+          }
+          return `<div class="soundcheck-slot"><img src="${escapeHtml(getAccessKeyImagePath(letter))}" alt="${escapeHtml(letter)}"></div>`;
+        }).join('');
       }
 
       function renderSoundTestGrid() {
@@ -5891,12 +5959,16 @@
       }
 
       function renderSoundTestGate() {
+        renderSoundTestSlots();
         renderSoundTestGrid();
+        setSoundTestStatus(state.ui.soundTestStatus, state.ui.soundTestStatusError);
       }
 
       function clearSoundTestSelection({ keepStatus = false } = {}) {
         state.ui.soundTestSelectedLetters = [];
-        if (!keepStatus) setSoundTestStatus('');
+        if (!keepStatus) {
+          setSoundTestStatus('Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.');
+        }
         renderSoundTestGate();
       }
 
@@ -6013,7 +6085,9 @@
 
       function clearSoundTestSelection(keepStatus = false) {
         state.ui.soundTestSelectedLetters = [];
-        if (!keepStatus) setSoundTestStatus('');
+        if (!keepStatus) {
+          setSoundTestStatus('Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.');
+        }
         renderSoundTestGate();
       }
 
@@ -6024,14 +6098,14 @@
         if (selected === target) {
           state.entry.soundTestCompleted = true;
           persistSoundTestCompletedFlag(true);
+          setSoundTestStatus('Perfeito. Som ok, vamos jogar.');
           renderSoundTestGate();
-          playSuccessAudio();
-          await wait(2000);
+          await wait(420);
           closeSoundTestGate();
           continueFromSoundTest();
           return;
         }
-        setSoundTestStatus('');
+        setSoundTestStatus('Ainda nao bateu. Vou repetir os 3 sons para voce tentar de novo.', true);
         state.ui.soundTestSelectedLetters = [];
         renderSoundTestGate();
         await wait(500);
@@ -11326,7 +11400,9 @@
       }
 
       function bindEvents() {
-        els.welcomeStartBtn?.addEventListener('click', openRobotCheck);
+        els.welcomeStartBtn?.addEventListener('click', () => {
+          requestWelcomeTutorialStart(true);
+        });
         els.welcomeAccountLink?.addEventListener('click', (event) => {
           event.stopPropagation();
         });
