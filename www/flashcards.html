@@ -6013,12 +6013,6 @@
 
       function requestWelcomeTutorialStart(skipSoundTest = false) {
         if (state.entry.authRequired) return;
-        if (!skipSoundTest) {
-          state.entry.soundTestCompleted = false;
-          persistSoundTestCompletedFlag(false);
-          openSoundTestGate('welcome');
-          return;
-        }
         if (hasTutorialPlanetUnlocked()) {
           hideWelcomeGate();
           beginGame();
@@ -10670,16 +10664,9 @@
           return;
         }
         if (accessibleFlashcardsCount() < 1) {
-          if (!state.entry.soundTestCompleted) {
-            openSoundTestGate('play-ready-check');
-          }
           return;
         }
         if (canOfferTutorialMode()) {
-          if (!state.entry.soundTestCompleted) {
-            openSoundTestGate('tutorial-setup');
-            return;
-          }
           beginTutorialGame();
           return;
         }
