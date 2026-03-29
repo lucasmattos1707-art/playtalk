@@ -454,7 +454,7 @@
       function resolveReturnPath() {
         const params = new URLSearchParams(window.location.search);
         const requested = safeText(params.get('return'));
-        return requested || '/flashcards';
+        return requested && requested.startsWith('/') ? requested : '';
       }
 
       function finishSuccess() {
@@ -463,7 +463,14 @@
         } catch (_error) {
           // ignore
         }
-        window.location.href = resolveReturnPath();
+        const returnPath = resolveReturnPath();
+        if (returnPath) {
+          window.location.href = returnPath;
+          return;
+        }
+        setStatus('Perfeito. Som ok. Essa tela pode ficar aberta para novo teste.', false);
+        state.busy = false;
+        render();
       }
 
       async function validateSelection() {

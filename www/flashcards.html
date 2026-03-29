@@ -132,6 +132,16 @@
       overflow: hidden;
     }
 
+    html.robotcheck-open,
+    body.robotcheck-open {
+      overflow: hidden !important;
+      height: 100% !important;
+    }
+
+    body.robotcheck-open > *:not(#robotcheck) {
+      visibility: hidden !important;
+    }
+
     body.auth-locked::before,
     body.auth-locked::after,
     body.auth-locked .shell,
@@ -340,36 +350,63 @@
     }
 
     .robotcheck {
-      position: fixed;
-      inset: 0;
-      z-index: 132;
-      display: flex;
+      position: fixed !important;
+      top: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      inset: 0 !important;
+      z-index: 99999 !important;
+      display: none;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      width: 100vw !important;
+      min-width: 100vw !important;
+      max-width: none !important;
+      height: 100vh !important;
+      min-height: 100vh !important;
+      height: 100dvh !important;
+      min-height: 100dvh !important;
+      max-height: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
       opacity: 0;
       pointer-events: none;
       visibility: hidden;
       transition: opacity 260ms ease, visibility 260ms ease;
-      background:
-        radial-gradient(circle at top, rgba(203, 255, 64, 0.42) 0%, rgba(203, 255, 64, 0) 38%),
-        linear-gradient(180deg, #ffe860 0%, #d8ff3f 100%);
+      background: transparent !important;
+      overflow: hidden !important;
     }
 
     .robotcheck.is-visible {
+      display: flex;
       opacity: 1;
       pointer-events: auto;
       visibility: visible;
     }
 
     .robotcheck__touch {
-      width: min(100%, 760px);
-      min-height: min(78vh, 860px);
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: 100vw;
+      min-width: 100vw;
+      max-width: none;
+      height: 100vh;
+      min-height: 100vh;
+      height: 100dvh;
+      min-height: 100dvh;
       display: grid;
       place-items: center;
       padding: clamp(32px, 6vw, 48px);
-      background: transparent;
+      margin: 0;
+      background:
+        radial-gradient(circle at top, rgba(203, 255, 64, 0.42) 0%, rgba(203, 255, 64, 0) 38%),
+        linear-gradient(180deg, #ffe860 0%, #d8ff3f 100%);
       text-align: center;
+      overflow: hidden;
     }
 
     .robotcheck__content {
@@ -5632,12 +5669,16 @@
       function openRobotCheck() {
         state.entry.welcomeVisible = false;
         clearWelcomeRotation();
+        document.documentElement.classList.add('robotcheck-open');
         document.body.classList.remove('welcome-active');
+        document.body.classList.add('robotcheck-open');
         els.welcomeGate?.classList.remove('is-visible');
         els.robotcheck?.classList.add('is-visible');
       }
 
       function closeRobotCheck() {
+        document.documentElement.classList.remove('robotcheck-open');
+        document.body.classList.remove('robotcheck-open');
         els.robotcheck?.classList.remove('is-visible');
       }
 
