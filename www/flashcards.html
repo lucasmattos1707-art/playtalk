@@ -233,10 +233,8 @@
       pointer-events: none;
       transition: opacity 420ms ease, visibility 420ms ease;
       visibility: hidden;
-      background:
-        radial-gradient(circle at 50% 18%, rgba(115, 213, 255, 0.22), rgba(255, 255, 255, 0) 36%),
-        linear-gradient(180deg, #ffffff 0%, #f6fbff 100%);
-      backdrop-filter: blur(8px);
+      background: transparent;
+      backdrop-filter: none;
     }
 
     .welcome-gate.is-visible {
@@ -274,11 +272,11 @@
       min-height: 2.8em;
       display: grid;
       place-items: center;
-      color: #2aa8ff;
-      font-size: clamp(22px, 4.6vw, 34px);
+      color: #ffffff;
+      font-size: clamp(18px, 3.9vw, 29px);
       line-height: 1.2;
       letter-spacing: 0.04em;
-      text-shadow: 0 10px 24px rgba(90, 188, 255, 0.18);
+      text-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
       opacity: 1;
       transform: translateY(0);
       transition: opacity 320ms ease, transform 320ms ease;
@@ -293,8 +291,8 @@
       border: 0;
       background: transparent;
       padding: 6px 10px 0;
-      color: rgba(88, 102, 122, 0.9);
-      font-size: 14px;
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 12px;
       line-height: 1.2;
       text-decoration: none;
       cursor: pointer;
@@ -302,7 +300,7 @@
 
     .welcome-gate__account-link:hover,
     .welcome-gate__account-link:focus-visible {
-      color: rgba(57, 73, 95, 0.98);
+      color: #ffffff;
       text-decoration: underline;
     }
 
@@ -3420,6 +3418,7 @@
       place-items: center;
       cursor: pointer;
       opacity: 0.78;
+      color: #ffffff;
     }
 
     .flashcards-footer-nav__item.is-active {
@@ -3435,7 +3434,12 @@
     }
 
     .flashcards-footer-nav__item svg {
-      fill: #ffffff;
+      color: #ffffff;
+      fill: currentColor;
+    }
+
+    .flashcards-footer-nav__item svg path {
+      fill: currentColor;
     }
 
     .premium-gate {
@@ -3645,14 +3649,15 @@
       position: fixed;
       inset: 0;
       display: none;
-      align-items: center;
-      justify-content: center;
+      align-items: flex-start;
+      justify-content: flex-start;
       width: 100vw;
-      height: 100vh;
+      height: 100dvh;
       padding: 0;
       background: rgba(7, 16, 34, 0.78);
       backdrop-filter: blur(16px);
       z-index: 140;
+      overflow-y: auto;
     }
 
     .identity-gate.is-visible {
@@ -3661,16 +3666,17 @@
 
     .identity-gate__card {
       width: 100%;
-      height: 100%;
+      min-height: 100dvh;
       border-radius: 0;
       background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(239,246,255,0.98));
       box-shadow: none;
-      padding: 28px 20px 36px;
+      padding: 22px 20px 36px;
       text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
+      overflow-y: auto;
     }
 
     .identity-gate__card h2 {
@@ -3684,6 +3690,10 @@
       margin: 0;
       color: #475569;
       line-height: 1.5;
+    }
+
+    .identity-gate__card p:empty {
+      display: none;
     }
 
     .identity-gate__name-display {
@@ -3777,6 +3787,18 @@
 
     .identity-gate__status.is-error {
       color: #dc2626;
+    }
+
+    .onboarding-transition-target {
+      transition: opacity 2000ms ease, transform 2000ms ease, filter 2000ms ease;
+      will-change: opacity, transform, filter;
+    }
+
+    .onboarding-transition-target.is-onboarding-exiting {
+      opacity: 0 !important;
+      transform: translateY(-26px) scale(0.985);
+      filter: blur(12px);
+      pointer-events: none !important;
     }
 
     .identity-gate__photo-shell {
@@ -4262,13 +4284,13 @@
   <section class="identity-gate" id="photoGate" aria-modal="true" role="dialog" aria-label="Escolha uma bela foto">
     <div class="identity-gate__card">
       <h2>Escolha uma bela foto</h2>
-      <p>Envie uma foto para continuar. Vamos transformar sua imagem em desenho.</p>
+      <p aria-hidden="true"></p>
       <div class="identity-gate__photo-shell">
         <button class="identity-gate__photo-circle" id="photoGateCircle" type="button" aria-label="Enviar foto">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
         </button>
         <input id="photoGateInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
-        <p class="identity-gate__photo-copy" id="photoGateStatus">Toque no circulo azul para enviar sua foto.</p>
+        <p class="identity-gate__photo-copy" id="photoGateStatus"></p>
         <p class="identity-gate__status" id="photoGateLoadingCopy" aria-live="polite"></p>
         <div class="identity-gate__photo-actions" id="photoGateActions">
           <button class="identity-gate__action is-success" id="photoGateContinueBtn" type="button" disabled>Avancar</button>
@@ -4326,6 +4348,7 @@
       const TYPING_KEY_FLASH_MS = 500;
       const STAGE_TWO_HINT_DELAY_MS = 2000;
       const STAGE_TWO_HINT_VISIBLE_MS = 3000;
+      const ONBOARDING_GATE_TRANSITION_MS = 2000;
       const WATCH_SETTINGS_KEY = 'playtalk-flashcards-watch-v1';
       const FLASHCARDS_PAGE_SIZE = 30;
       const ADMIN_USERNAMES = new Set(['admin', 'adm']);
@@ -4541,6 +4564,7 @@
           photoLoadingMessageIndex: 0,
           photoSwipeStartX: 0,
           photoFlashTimer: 0,
+          onboardingTransitionActive: false,
           premiumGateOpen: false,
           premiumCode: '',
           premiumStatus: '',
@@ -4565,6 +4589,7 @@
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeCopy: document.getElementById('welcomeCopy'),
         welcomeAccountLink: document.getElementById('welcomeAccountLink'),
+        appShell: document.querySelector('main.shell'),
         soundTestGate: document.getElementById('soundTestGate'),
         soundTestSubtitle: document.getElementById('soundTestSubtitle'),
         soundTestSlots: document.getElementById('soundTestSlots'),
@@ -4705,7 +4730,9 @@
         nameGateSpaceBtn: document.getElementById('nameGateSpaceBtn'),
         nameGateContinueBtn: document.getElementById('nameGateContinueBtn'),
         nameGateStatus: document.getElementById('nameGateStatus'),
+        nameGateCard: document.querySelector('#nameGate .identity-gate__card'),
         photoGate: document.getElementById('photoGate'),
+        photoGateCard: document.querySelector('#photoGate .identity-gate__card'),
         photoGateCircle: document.getElementById('photoGateCircle'),
         photoGateInput: document.getElementById('photoGateInput'),
         photoGateStatus: document.getElementById('photoGateStatus'),
@@ -6317,6 +6344,34 @@
         els.photoGate?.classList.toggle('is-visible', state.ui.photoGateOpen);
       }
 
+      function wait(ms) {
+        return new Promise((resolve) => {
+          window.setTimeout(resolve, ms);
+        });
+      }
+
+      function getOnboardingTransitionTargets() {
+        if (state.ui.nameGateOpen && els.nameGateCard) {
+          return [els.nameGateCard];
+        }
+        if (state.ui.photoGateOpen && els.photoGateCard) {
+          return [els.photoGateCard];
+        }
+        return els.appShell ? [els.appShell] : [];
+      }
+
+      async function runOnboardingGateTransition() {
+        const targets = getOnboardingTransitionTargets().filter(Boolean);
+        if (!targets.length) return;
+        stopActiveAudio();
+        stopIdentityAudio();
+        stopPremiumAudio();
+        stopSoundTestAudio();
+        targets.forEach((target) => target.classList.add('onboarding-transition-target', 'is-onboarding-exiting'));
+        await wait(ONBOARDING_GATE_TRANSITION_MS);
+        targets.forEach((target) => target.classList.remove('is-onboarding-exiting', 'onboarding-transition-target'));
+      }
+
       async function ensureProvisionedUser() {
         if (state.user?.id) return state.user;
         const response = await fetch(buildApiUrl('/auth/provision-temp'), {
@@ -6403,17 +6458,24 @@
         state.ui.nameKeyboardTimer = 0;
       }
 
-      function openNameGate() {
-        state.ui.nameGateOpen = true;
-        state.ui.photoGateOpen = false;
-        state.ui.nameDraft = safeText(state.user?.onboardingNameCompleted ? state.user?.username : state.user?.username || '');
-        state.ui.nameKeyboardVariantIndex = 0;
-        renderNameKeyboard();
-        startNameKeyboardTicker();
-        renderNameGate();
-        setNameGateStatus('');
-        setIdentityGateVisibility();
-        playIdentityAudio(ONBOARDING_USERNAME_AUDIO_PATH);
+      async function openNameGate() {
+        if (state.ui.onboardingTransitionActive) return;
+        state.ui.onboardingTransitionActive = true;
+        try {
+          await runOnboardingGateTransition();
+          state.ui.nameGateOpen = true;
+          state.ui.photoGateOpen = false;
+          state.ui.nameDraft = safeText(state.user?.onboardingNameCompleted ? state.user?.username : state.user?.username || '');
+          state.ui.nameKeyboardVariantIndex = 0;
+          renderNameKeyboard();
+          startNameKeyboardTicker();
+          renderNameGate();
+          setNameGateStatus('');
+          setIdentityGateVisibility();
+          playIdentityAudio(ONBOARDING_USERNAME_AUDIO_PATH);
+        } finally {
+          state.ui.onboardingTransitionActive = false;
+        }
       }
 
       function closeNameGate() {
@@ -6447,10 +6509,12 @@
           if (user) {
             state.user = user;
           }
-          closeNameGate();
           renderProfilePanel();
           renderMetrics();
-          await maybeOpenOnboardingGate();
+          const openedNextGate = await maybeOpenOnboardingGate();
+          if (!openedNextGate) {
+            closeNameGate();
+          }
         } catch (error) {
           setNameGateStatus(error?.message || 'Nao foi possivel salvar o nome.', 'error');
         } finally {
@@ -6507,10 +6571,8 @@
         if (els.photoGateStatus) {
           if (state.ui.photoGateBusy) {
             els.photoGateStatus.textContent = 'Transformando sua foto em desenho...';
-          } else if (currentVersion?.image) {
-            els.photoGateStatus.textContent = `Versao ${state.ui.photoVersionIndex + 1} de ${state.ui.photoVersions.length}.`;
           } else {
-            els.photoGateStatus.textContent = 'Toque no circulo azul para enviar sua foto.';
+            els.photoGateStatus.textContent = '';
           }
         }
         if (els.photoGateContinueBtn) {
@@ -6524,18 +6586,25 @@
         }
       }
 
-      function openPhotoGate() {
-        state.ui.photoGateOpen = true;
-        state.ui.nameGateOpen = false;
-        state.ui.photoVersions = Array.isArray(state.user?.avatarVersions) ? state.user.avatarVersions.slice(0, 5) : [];
-        state.ui.photoVersionIndex = Math.max(0, state.ui.photoVersions.length - 1);
-        state.ui.photoGenerationCount = Math.max(state.ui.photoVersions.length, Number(state.user?.avatarGenerationCount || 0));
-        if (els.photoGateLoadingCopy) {
-          els.photoGateLoadingCopy.textContent = '';
+      async function openPhotoGate() {
+        if (state.ui.onboardingTransitionActive) return;
+        state.ui.onboardingTransitionActive = true;
+        try {
+          await runOnboardingGateTransition();
+          state.ui.photoGateOpen = true;
+          state.ui.nameGateOpen = false;
+          state.ui.photoVersions = Array.isArray(state.user?.avatarVersions) ? state.user.avatarVersions.slice(0, 5) : [];
+          state.ui.photoVersionIndex = Math.max(0, state.ui.photoVersions.length - 1);
+          state.ui.photoGenerationCount = Math.max(state.ui.photoVersions.length, Number(state.user?.avatarGenerationCount || 0));
+          if (els.photoGateLoadingCopy) {
+            els.photoGateLoadingCopy.textContent = '';
+          }
+          renderPhotoGate();
+          setIdentityGateVisibility();
+          playIdentityAudio(ONBOARDING_PHOTO_AUDIO_PATH);
+        } finally {
+          state.ui.onboardingTransitionActive = false;
         }
-        renderPhotoGate();
-        setIdentityGateVisibility();
-        playIdentityAudio(ONBOARDING_PHOTO_AUDIO_PATH);
       }
 
       function closePhotoGate() {
@@ -6648,14 +6717,14 @@
         if (total >= ONBOARDING_NAME_THRESHOLD) {
           const user = await ensureProvisionedUser();
           if (!user?.onboardingNameCompleted) {
-            openNameGate();
+            await openNameGate();
             return true;
           }
         }
         if (total >= ONBOARDING_PHOTO_THRESHOLD) {
           const user = await ensureProvisionedUser();
           if (!user?.onboardingPhotoCompleted) {
-            openPhotoGate();
+            await openPhotoGate();
             return true;
           }
         }
@@ -11140,7 +11209,7 @@
           void navigateToMainView('play');
         });
         els.footerCardsBtn?.addEventListener('click', () => {
-          window.location.href = '/mycards';
+          window.location.href = 'https://playtalk-dvv5.onrender.com/allcards';
         });
         els.footerUsersBtn?.addEventListener('click', () => {
           window.location.href = '/users';
