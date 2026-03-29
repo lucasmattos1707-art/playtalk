@@ -1769,10 +1769,16 @@
     .game-status.is-miss { color: var(--red); }
     .game-status.is-live { color: var(--blue); }
     .game-status.is-flashcards-count {
-      color: #ffffff;
+      background: linear-gradient(180deg, #a6e4ff 0%, #42bbff 48%, #0d6dff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      text-shadow: none;
+      filter: drop-shadow(0 8px 18px rgba(32, 132, 255, 0.24));
       margin-top: 50px;
       font-size: clamp(28px, 5vw, 38px);
-      font-family: "LemonMilkMedium", "Soopafre", Arial, sans-serif;
+      font-family: "PlaytalkDisplay", "LemonMilkMedium", "Soopafre", Arial, sans-serif;
       letter-spacing: 0;
       text-align: center;
       animation: flashcardsCountFlash 650ms ease-out forwards;
@@ -9757,10 +9763,12 @@
           if (!response.ok || !payload?.success) {
             throw new Error(payload?.message || 'Falha ao carregar ranking.');
           }
-          return Math.max(0, Number(payload?.rank) || 0);
+          const nextRank = Math.max(0, Number(payload?.rank) || 0);
+          state.ui.librarySummaryRank = nextRank;
+          return nextRank;
         } catch (error) {
           console.warn('Falha ao atualizar posicao do jogador:', error);
-          return 0;
+          return Math.max(0, Number(state.ui.librarySummaryRank) || 0);
         }
       }
 
@@ -9774,8 +9782,12 @@
           state.ui.gameStatusRankTimer = 0;
           if (token !== state.ui.gameStatusRankToken || !state.game.active) return;
           const rank = await refreshCurrentPlayerRank();
-          if (token !== state.ui.gameStatusRankToken || !state.game.active || !rank) return;
-          setGameStatus(`${rank}\u00ba Lugar`, 'flashcards-count');
+          if (token !== state.ui.gameStatusRankToken || !state.game.active) return;
+          if (rank > 0) {
+            setGameStatus(`${rank}\u00ba Lugar`, 'flashcards-count');
+          } else {
+            setGameStatus('Atualizando posicao...', 'flashcards-count');
+          }
         }, LIBRARY_RANK_SWAP_DELAY_MS);
       }
 
