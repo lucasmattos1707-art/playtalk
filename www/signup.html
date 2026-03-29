@@ -506,7 +506,7 @@
       const urlParams = new URLSearchParams(window.location.search);
       const requestedMode = String(urlParams.get('mode') || '').trim().toLowerCase();
       const requestedReturn = String(urlParams.get('return') || '').trim();
-      const fallbackReturn = '/flashcards';
+      const fallbackReturn = '/signup';
       let authMode = requestedMode === 'register' ? 'register' : 'login';
 
       function buildApiUrl(path) {
@@ -649,7 +649,12 @@
             'success'
           );
           window.setTimeout(() => {
-            window.location.href = targetAfterAuth();
+            const nextTarget = targetAfterAuth();
+            if (nextTarget && nextTarget !== '/signup') {
+              window.location.href = nextTarget;
+              return;
+            }
+            window.location.href = '/signup';
           }, 260);
         } catch (error) {
           setStatus(String(error.message || 'Não foi possível autenticar agora.'), 'error');
