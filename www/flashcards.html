@@ -7258,7 +7258,6 @@
           await syncFlashcardCloudNow();
         }
         syncWelcomeGate();
-        tryStartPendingTutorial();
       }
 
       async function handleLoggedOutState(message) {
@@ -7303,7 +7302,6 @@
         }
         switchMainView('play');
         syncWelcomeGate();
-        tryStartPendingTutorial();
         if (shouldRequireGuestAuth()) {
           showAuthGate({
             reason: 'progress',
@@ -11727,7 +11725,6 @@
             state.entry.cardsReady = true;
             refreshLibrary();
             syncWelcomeGate();
-            tryStartPendingTutorial();
           }
           const sessionUser = await fetchSessionUser();
           if (sessionUser) {
