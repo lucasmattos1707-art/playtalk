@@ -29,6 +29,14 @@
       font-display: swap;
     }
 
+    @font-face {
+      font-family: "PlaytalkDisplay";
+      src: url("playtalk.otf") format("opentype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
     :root {
       --bg: #041321;
       --panel: rgba(8, 28, 54, 0.9);
@@ -3544,9 +3552,24 @@
 
     #allSectionCopy {
       margin: 8px 0 0;
-      color: #6b7280;
-      font-weight: 700;
+      font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: clamp(28px, 5vw, 46px);
+      line-height: 1;
+      letter-spacing: 0.03em;
+      font-weight: 400;
       text-align: center;
+      background: linear-gradient(180deg, #8ed8ff 0%, #3ea8ff 48%, #0b67ff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 10px 26px rgba(37, 125, 255, 0.16);
+      transition: transform 220ms ease, opacity 220ms ease, filter 220ms ease;
+    }
+
+    #allSectionCopy.is-updating {
+      transform: translateY(-2px) scale(1.04);
+      filter: drop-shadow(0 10px 24px rgba(35, 137, 255, 0.26));
     }
 
     .catalog-pagination {
@@ -4671,6 +4694,7 @@
       const SOUND_TEST_SUBTITLE_MESSAGES = ['Toque no que est\u00e1 ouvindo', 'Ajuste o volume'];
       const SOUND_TEST_SELECTION_COUNT = 3;
       const ACCESS_KEY_LETTERS = 'ABCDEFGHIJKLMNOP'.split('');
+      const LIBRARY_RANK_SWAP_DELAY_MS = 1200;
       const ACCESS_KEY_AUDIO_LIMIT_PATH = '/accesskey/limit.mp3';
       const ACCESS_KEY_AUDIO_MESSAGE_PATH = '/accesskey/message.wav';
       const ACCESS_KEY_AUDIO_INVALID_PATH = '/accesskey/invalidkey2.mp3';
@@ -4839,6 +4863,11 @@
         },
         ui: {
           activeView: 'play',
+          librarySummaryTimer: 0,
+          librarySummaryFlashTimer: 0,
+          librarySummaryMode: 'count',
+          librarySummaryRank: 0,
+          librarySummaryToken: 0,
           profileAvatarDraft: '',
           identityAudio: null,
           nameGateOpen: false,
@@ -7246,6 +7275,7 @@
         renderMetrics();
         updateGameChips();
         refreshLibrary();
+        void refreshLibraryRanking();
         renderProfilePanel();
         hideAuthGate();
         if (els.startGameBtn) {
@@ -7307,6 +7337,10 @@
         state.admin.reportCounts = new Map();
         state.admin.draftCards = new Map();
         state.admin.pendingNewCards = [];
+        clearLibrarySummaryTimer();
+        clearLibrarySummaryFlashTimer();
+        state.ui.librarySummaryMode = 'count';
+        state.ui.librarySummaryRank = 0;
         resetTutorialRuntime({ preserveCompletion: false });
         state.game.tutorial.completed = readTutorialProgressForUser(0);
         syncOwnedIdsFromProgress();
@@ -9427,6 +9461,91 @@
         }
       }
 
+      function clearLibrarySummaryTimer() {
+        if (!state.ui.librarySummaryTimer) return;
+        window.clearTimeout(state.ui.librarySummaryTimer);
+        state.ui.librarySummaryTimer = 0;
+      }
+
+      function clearLibrarySummaryFlashTimer() {
+        if (!state.ui.librarySummaryFlashTimer) return;
+        window.clearTimeout(state.ui.librarySummaryFlashTimer);
+        state.ui.librarySummaryFlashTimer = 0;
+      }
+
+      function flashLibrarySummary() {
+        if (!els.allSectionCopy) return;
+        clearLibrarySummaryFlashTimer();
+        els.allSectionCopy.classList.remove('is-updating');
+        void els.allSectionCopy.offsetWidth;
+        els.allSectionCopy.classList.add('is-updating');
+        state.ui.librarySummaryFlashTimer = window.setTimeout(() => {
+          els.allSectionCopy?.classList.remove('is-updating');
+          state.ui.librarySummaryFlashTimer = 0;
+        }, 260);
+      }
+
+      function formatLibrarySummaryCount(count = accessibleFlashcardsCount()) {
+        return `${Math.max(0, Number(count) || 0)} FlashCards`;
+      }
+
+      function formatLibrarySummaryRank(rank = state.ui.librarySummaryRank) {
+        const normalizedRank = Math.max(0, Number(rank) || 0);
+        return normalizedRank ? `${normalizedRank}\u00ba Lugar` : '';
+      }
+
+      function renderLibrarySummary(count = accessibleFlashcardsCount()) {
+        if (!els.allSectionCopy) return;
+        const nextText = state.ui.librarySummaryMode === 'rank'
+          ? (formatLibrarySummaryRank() || formatLibrarySummaryCount(count))
+          : formatLibrarySummaryCount(count);
+        els.allSectionCopy.textContent = nextText;
+      }
+
+      async function refreshLibraryRanking() {
+        if (!state.user?.id) {
+          state.ui.librarySummaryRank = 0;
+          return 0;
+        }
+        try {
+          const response = await fetch(buildApiUrl('/api/rankings/flashcards'), {
+            method: 'POST',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            }),
+            cache: 'no-store'
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Falha ao carregar ranking.');
+          }
+          state.ui.librarySummaryRank = Math.max(0, Number(payload?.rank) || 0);
+          return state.ui.librarySummaryRank;
+        } catch (error) {
+          console.warn('Falha ao atualizar ranking da home:', error);
+          return state.ui.librarySummaryRank;
+        }
+      }
+
+      function triggerLibrarySummaryRankSwap() {
+        const nextCount = accessibleFlashcardsCount();
+        state.ui.librarySummaryMode = 'count';
+        state.ui.librarySummaryToken += 1;
+        const token = state.ui.librarySummaryToken;
+        clearLibrarySummaryTimer();
+        renderLibrarySummary(nextCount);
+        flashLibrarySummary();
+        state.ui.librarySummaryTimer = window.setTimeout(async () => {
+          state.ui.librarySummaryTimer = 0;
+          if (token !== state.ui.librarySummaryToken) return;
+          const rank = await refreshLibraryRanking();
+          if (token !== state.ui.librarySummaryToken || !rank) return;
+          state.ui.librarySummaryMode = 'rank';
+          renderLibrarySummary(nextCount);
+          flashLibrarySummary();
+        }, LIBRARY_RANK_SWAP_DELAY_MS);
+      }
+
       function refreshLibrary() {
         syncAdminTheme();
         const cards = userProgressCards().map(buildLibraryCardView);
@@ -9434,7 +9553,7 @@
         if (els.libraryTitle) {
           els.libraryTitle.textContent = 'FlashCards';
         }
-        els.allSectionCopy.textContent = String(cards.length || 0);
+        renderLibrarySummary(cards.length);
         renderMiniCards(
           els.allGrid,
           visibleCards,
@@ -11227,6 +11346,7 @@
               setPremiumStatus('Voce chegou em 30 cartas. Monte uma chave premium tocando nas imagens.');
             }
             setGameStatus(`${accessibleFlashcardsCount()} FlashCards`, 'flashcards-count');
+            triggerLibrarySummaryRankSwap();
             entry._removeAfterReward = true;
           } else {
             setGameStatus('', 'hit');
