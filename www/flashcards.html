@@ -4901,6 +4901,8 @@
           onboardingTransitionActive: false,
           onboardingGateTimer: 0,
           onboardingGateQueued: false,
+          gameStatusRankTimer: 0,
+          gameStatusRankToken: 0,
           premiumGateOpen: false,
           premiumCode: '',
           premiumStatus: '',
@@ -7323,6 +7325,7 @@
       }
 
       async function handleLoggedOutState(message) {
+        clearGameStatusRankTimer();
         if (state.game.active) {
           await exitGame();
         }
@@ -9733,6 +9736,49 @@
         }
       }
 
+      function clearGameStatusRankTimer() {
+        if (!state.ui.gameStatusRankTimer) return;
+        window.clearTimeout(state.ui.gameStatusRankTimer);
+        state.ui.gameStatusRankTimer = 0;
+      }
+
+      async function refreshCurrentPlayerRank() {
+        try {
+          await ensureProvisionedUser();
+          await syncFlashcardCloudNow();
+          const response = await fetch(buildApiUrl('/api/rankings/flashcards'), {
+            method: 'POST',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            }),
+            cache: 'no-store'
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Falha ao carregar ranking.');
+          }
+          return Math.max(0, Number(payload?.rank) || 0);
+        } catch (error) {
+          console.warn('Falha ao atualizar posicao do jogador:', error);
+          return 0;
+        }
+      }
+
+      function showRewardGameStatus() {
+        const flashcardsCount = accessibleFlashcardsCount();
+        state.ui.gameStatusRankToken += 1;
+        const token = state.ui.gameStatusRankToken;
+        clearGameStatusRankTimer();
+        setGameStatus(`${flashcardsCount} FlashCards`, 'flashcards-count');
+        state.ui.gameStatusRankTimer = window.setTimeout(async () => {
+          state.ui.gameStatusRankTimer = 0;
+          if (token !== state.ui.gameStatusRankToken || !state.game.active) return;
+          const rank = await refreshCurrentPlayerRank();
+          if (token !== state.ui.gameStatusRankToken || !state.game.active || !rank) return;
+          setGameStatus(`${rank}\u00ba Lugar`, 'flashcards-count');
+        }, LIBRARY_RANK_SWAP_DELAY_MS);
+      }
+
       function resolveInlineMediaUrl(path) {
         const cleaned = safeText(path);
         if (!cleaned) return '';
@@ -10660,6 +10706,7 @@
         cleanupGameRecognition();
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) {
+          clearGameStatusRankTimer();
           clearGameLanguageSwapTimer();
           clearStageTwoHintTimer();
           els.gameCard.classList.remove('is-typing-stage');
@@ -11314,6 +11361,7 @@
       }
 
       async function exitGame() {
+        clearGameStatusRankTimer();
         if (state.game.active && !state.game.tutorial.active && state.game.entries.size) {
           persistGameSessionLocally();
         }
@@ -11385,7 +11433,6 @@
             triggerWinFlash();
             animateStarsCascade(GAME_STAR_TARGET);
             schedulePendingRewardSeal(entry.id, rewardSealPhase);
-            setGameStatus(`${accessibleFlashcardsCount()} FlashCards`, 'flashcards-count');
             promoteCardFromWin(entry);
             if (!state.user?.onboardingNameCompleted
               && accessibleCountBeforeResolution < 4
@@ -11405,7 +11452,7 @@
             if (shouldGatePremiumAccess()) {
               setPremiumStatus('Voce chegou em 30 cartas. Monte uma chave premium tocando nas imagens.');
             }
-            setGameStatus(`${accessibleFlashcardsCount()} FlashCards`, 'flashcards-count');
+            showRewardGameStatus();
             triggerLibrarySummaryRankSwap();
             entry._removeAfterReward = true;
           } else {
