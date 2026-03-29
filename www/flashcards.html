@@ -4353,6 +4353,7 @@
       const STAGE_TWO_HINT_DELAY_MS = 2000;
       const STAGE_TWO_HINT_VISIBLE_MS = 3000;
       const ONBOARDING_GATE_TRANSITION_MS = 2000;
+      const ONBOARDING_GATE_OPEN_DELAY_MS = 4000;
       const WATCH_SETTINGS_KEY = 'playtalk-flashcards-watch-v1';
       const FLASHCARDS_PAGE_SIZE = 30;
       const ADMIN_USERNAMES = new Set(['admin', 'adm']);
@@ -4569,6 +4570,7 @@
           photoSwipeStartX: 0,
           photoFlashTimer: 0,
           onboardingTransitionActive: false,
+          onboardingGateTimer: 0,
           onboardingGateQueued: false,
           premiumGateOpen: false,
           premiumCode: '',
@@ -6370,6 +6372,24 @@
         }
       }
 
+      function clearScheduledOnboardingGate() {
+        if (!state.ui.onboardingGateTimer) return;
+        window.clearTimeout(state.ui.onboardingGateTimer);
+        state.ui.onboardingGateTimer = 0;
+      }
+
+      function scheduleOnboardingGateOpen(delayMs = ONBOARDING_GATE_OPEN_DELAY_MS) {
+        clearScheduledOnboardingGate();
+        state.ui.onboardingGateQueued = true;
+        state.ui.onboardingGateTimer = window.setTimeout(() => {
+          state.ui.onboardingGateTimer = 0;
+          maybeOpenOnboardingGate().catch((error) => {
+            state.ui.onboardingGateQueued = false;
+            console.warn('Falha ao abrir onboarding de identidade:', error);
+          });
+        }, Math.max(0, Number(delayMs) || 0));
+      }
+
       function wait(ms) {
         return new Promise((resolve) => {
           window.setTimeout(resolve, ms);
@@ -6486,6 +6506,7 @@
 
       async function openNameGate() {
         if (state.ui.onboardingTransitionActive) return;
+        clearScheduledOnboardingGate();
         state.ui.onboardingTransitionActive = true;
         try {
           await runOnboardingGateTransition();
@@ -6615,6 +6636,7 @@
 
       async function openPhotoGate() {
         if (state.ui.onboardingTransitionActive) return;
+        clearScheduledOnboardingGate();
         state.ui.onboardingTransitionActive = true;
         try {
           await runOnboardingGateTransition();
@@ -10656,6 +10678,7 @@
 
       function beginGame() {
         hideWelcomeGate();
+        clearScheduledOnboardingGate();
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
@@ -10723,6 +10746,7 @@
         if (!tutorialCard) return;
 
         hideWelcomeGate();
+        clearScheduledOnboardingGate();
         clearGameSessionLocally();
         cleanupGameRecognition();
         stopActiveAudio();
@@ -10761,6 +10785,7 @@
         if (state.game.active && !state.game.tutorial.active && state.game.entries.size) {
           persistGameSessionLocally();
         }
+        clearScheduledOnboardingGate();
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
@@ -10838,15 +10863,7 @@
             }
             if (accessibleCountBeforeResolution < ONBOARDING_PHOTO_THRESHOLD
               && accessibleFlashcardsCount() >= ONBOARDING_NAME_THRESHOLD) {
-              state.ui.onboardingGateQueued = true;
-              state.game.paused = true;
-              window.setTimeout(() => {
-                maybeOpenOnboardingGate().catch((error) => {
-                  state.ui.onboardingGateQueued = false;
-                  state.game.paused = false;
-                  console.warn('Falha ao abrir onboarding de identidade:', error);
-                });
-              }, 320);
+              scheduleOnboardingGateOpen();
             }
             if (shouldGatePremiumAccess()) {
               setPremiumStatus('Voce chegou em 8 cartas. Monte uma chave premium tocando nas imagens.');
@@ -10915,7 +10932,7 @@
               }
             }
           }
-          if (state.ui.onboardingGateQueued || state.ui.onboardingTransitionActive || state.ui.nameGateOpen || state.ui.photoGateOpen) {
+          if (state.ui.onboardingTransitionActive || state.ui.nameGateOpen || state.ui.photoGateOpen) {
             state.game.currentId = null;
             return;
           }
