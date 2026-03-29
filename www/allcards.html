@@ -32,18 +32,25 @@
     body {
       margin: 0;
       min-height: 100%;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch;
     }
 
     body {
       font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
       background: linear-gradient(180deg, #79afea 0%, #5f95e1 46%, #4d79db 100%);
       color: #ffffff;
-      overflow-x: hidden;
+      position: relative;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      touch-action: pan-y pan-x;
     }
 
     .allcards-page {
       width: min(var(--page-max-width), calc(100vw - 24px));
       margin: 0 auto;
+      min-height: 100vh;
       padding: 26px 0 calc(var(--footer-height) + 32px);
     }
 
@@ -77,6 +84,8 @@
       grid-template-columns: 1fr;
       justify-items: center;
       gap: var(--card-gap);
+      overflow: visible;
+      touch-action: pan-y pan-x;
     }
 
     .allcards-empty {
@@ -218,6 +227,12 @@
 
       .allcards-card {
         width: min(100%, 340px);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .allcards-page {
+        width: calc(100vw - 16px);
       }
     }
   </style>
