@@ -5855,7 +5855,9 @@
       function requestWelcomeTutorialStart(skipSoundTest = false) {
         if (state.entry.authRequired) return;
         if (!skipSoundTest) {
-          launchSoundCheck('welcome');
+          state.entry.soundTestCompleted = false;
+          persistSoundTestCompletedFlag(false);
+          openSoundTestGate('welcome');
           return;
         }
         if (hasTutorialPlanetUnlocked()) {
