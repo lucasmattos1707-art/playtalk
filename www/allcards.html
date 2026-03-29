@@ -6,11 +6,6 @@
   <title>AllCards | PlayTalk</title>
   <meta name="description" content="Flashcards do usuario no PlayTalk.">
   <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
-  <script src="js/player-state.js"></script>
-  <script src="js/settings.js"></script>
-  <script src="js/global-radio.js"></script>
-  <script src="js/lens.js"></script>
-  <script src="js/site-nav.js"></script>
   <style>
     :root {
       --footer-height: max(62px, 8vh);
@@ -78,7 +73,8 @@
       position: relative;
       overflow-y: auto !important;
       overflow-x: hidden !important;
-      touch-action: pan-y pan-x;
+      touch-action: auto !important;
+      overscroll-behavior-y: auto;
     }
 
     body > *:not(.container) {
@@ -93,6 +89,8 @@
       padding: 26px 0 calc(var(--footer-height) + 32px);
       font-family: "Open Sans", "Arial Black", "Segoe UI", Arial, sans-serif;
       font-weight: 700;
+      overflow: visible;
+      touch-action: auto !important;
     }
 
     .allcards-page,
@@ -133,7 +131,7 @@
       justify-items: center;
       gap: var(--card-gap);
       overflow: visible;
-      touch-action: pan-y pan-x;
+      touch-action: auto !important;
     }
 
     .allcards-empty {
