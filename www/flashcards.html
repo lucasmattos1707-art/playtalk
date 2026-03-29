@@ -251,7 +251,8 @@
       width: min(680px, 100%);
       min-height: min(72vh, 720px);
       display: grid;
-      place-items: center;
+      justify-items: center;
+      align-content: center;
       padding: 32px 20px;
       background: transparent;
       text-align: center;
@@ -260,7 +261,7 @@
     .welcome-gate__stack {
       display: grid;
       justify-items: center;
-      gap: 22px;
+      gap: 18px;
       width: min(360px, 100%);
     }
 
@@ -276,6 +277,7 @@
       min-height: 2.8em;
       display: grid;
       place-items: center;
+      margin-top: 30px;
       color: #ffffff;
       font-size: clamp(18px, 3.9vw, 29px);
       line-height: 1.2;
@@ -291,10 +293,39 @@
       transform: translateY(10px);
     }
 
+    .welcome-gate__start-btn {
+      width: min(280px, 100%);
+      min-height: 58px;
+      padding: 16px 28px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #0e7fff 0%, #b6ff2a 100%);
+      color: #ffffff;
+      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: clamp(20px, 4vw, 26px);
+      line-height: 1;
+      letter-spacing: 0.04em;
+      box-shadow:
+        0 18px 36px rgba(17, 107, 255, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+      text-shadow:
+        0 2px 0 rgba(8, 35, 93, 0.62),
+        0 8px 16px rgba(10, 50, 121, 0.34);
+      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+    }
+
+    .welcome-gate__start-btn:hover,
+    .welcome-gate__start-btn:focus-visible {
+      transform: translateY(-2px) scale(1.01);
+      box-shadow:
+        0 22px 42px rgba(17, 107, 255, 0.34),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45);
+      filter: saturate(1.08);
+    }
+
     .welcome-gate__account-link {
       border: 0;
       background: transparent;
-      padding: 6px 10px 0;
+      padding: 2px 10px 0;
       color: rgba(255, 255, 255, 0.92);
       font-size: 12px;
       line-height: 1.2;
@@ -306,6 +337,64 @@
     .welcome-gate__account-link:focus-visible {
       color: #ffffff;
       text-decoration: underline;
+    }
+
+    .robotcheck {
+      position: fixed;
+      inset: 0;
+      z-index: 132;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+      transition: opacity 260ms ease, visibility 260ms ease;
+      background:
+        radial-gradient(circle at top, rgba(203, 255, 64, 0.42) 0%, rgba(203, 255, 64, 0) 38%),
+        linear-gradient(180deg, #ffe860 0%, #d8ff3f 100%);
+    }
+
+    .robotcheck.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+      visibility: visible;
+    }
+
+    .robotcheck__touch {
+      width: min(100%, 760px);
+      min-height: min(78vh, 860px);
+      display: grid;
+      place-items: center;
+      padding: clamp(32px, 6vw, 48px);
+      background: transparent;
+      text-align: center;
+    }
+
+    .robotcheck__content {
+      display: grid;
+      gap: 16px;
+      justify-items: center;
+      color: #164300;
+    }
+
+    .robotcheck__title {
+      margin: 0;
+      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: clamp(40px, 9vw, 88px);
+      line-height: 0.92;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-shadow: 0 3px 0 rgba(255, 255, 255, 0.55);
+    }
+
+    .robotcheck__copy {
+      margin: 0;
+      max-width: 460px;
+      font-size: clamp(18px, 3.6vw, 28px);
+      line-height: 1.2;
+      text-shadow: 0 2px 0 rgba(255, 255, 255, 0.34);
     }
 
     .sound-test-gate {
@@ -3930,12 +4019,21 @@
   <div class="container" aria-hidden="true"></div>
   <section class="welcome-gate is-visible" id="welcomeGate" aria-label="Entrada do PlayTalk">
     <div class="welcome-gate__stack">
-      <button class="welcome-gate__touch" id="welcomeTouch" type="button" aria-label="Toque para iniciar o tutorial">
+      <div class="welcome-gate__touch" id="welcomeTouch">
         <img class="welcome-gate__logo" src="SVG/logo.png" alt="PlayTalk">
         <p class="welcome-gate__copy" id="welcomeCopy">Flu&#234;ncia f&#225;cil</p>
-      </button>
+        <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button">Iniciar jogo</button>
+      </div>
       <a class="welcome-gate__account-link" id="welcomeAccountLink" href="/signup">J&aacute; tenho conta</a>
     </div>
+  </section>
+  <section class="robotcheck" id="robotcheck" aria-label="Robot check">
+    <button class="robotcheck__touch" id="robotcheckTouch" type="button" aria-label="Toque para iniciar o jogo">
+      <div class="robotcheck__content">
+        <h2 class="robotcheck__title">Robot Check</h2>
+        <p class="robotcheck__copy">Toque em qualquer lugar da tela para iniciar o jogo.</p>
+      </div>
+    </button>
   </section>
   <section class="sound-test-gate" id="soundTestGate" aria-modal="true" role="dialog" aria-label="Teste de som">
       <div class="sound-test-gate__shell">
@@ -4595,7 +4693,10 @@
         welcomeGate: document.getElementById('welcomeGate'),
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeCopy: document.getElementById('welcomeCopy'),
+        welcomeStartBtn: document.getElementById('welcomeStartBtn'),
         welcomeAccountLink: document.getElementById('welcomeAccountLink'),
+        robotcheck: document.getElementById('robotcheck'),
+        robotcheckTouch: document.getElementById('robotcheckTouch'),
         appShell: document.querySelector('main.shell'),
         soundTestGate: document.getElementById('soundTestGate'),
         soundTestSubtitle: document.getElementById('soundTestSubtitle'),
@@ -5528,6 +5629,18 @@
         state.entry.welcomeTimer = 0;
       }
 
+      function openRobotCheck() {
+        state.entry.welcomeVisible = false;
+        clearWelcomeRotation();
+        document.body.classList.remove('welcome-active');
+        els.welcomeGate?.classList.remove('is-visible');
+        els.robotcheck?.classList.add('is-visible');
+      }
+
+      function closeRobotCheck() {
+        els.robotcheck?.classList.remove('is-visible');
+      }
+
       function setWelcomeCopy(text, animate = false) {
         if (!els.welcomeCopy) return;
         const nextText = safeText(text) || WELCOME_COPY_MESSAGES[0];
@@ -5735,6 +5848,7 @@
 
       function openSoundTestGate(launchTarget = '') {
         if (!els.soundTestGate) return;
+        closeRobotCheck();
         state.entry.launchAfterSoundTest = safeText(launchTarget);
         state.entry.welcomeVisible = false;
         clearWelcomeRotation();
@@ -5815,6 +5929,9 @@
         state.entry.welcomeVisible = visible;
         document.body.classList.toggle('welcome-active', visible);
         els.welcomeGate?.classList.toggle('is-visible', visible);
+        if (visible) {
+          closeRobotCheck();
+        }
         if (!visible) {
           clearWelcomeRotation();
           return;
@@ -5837,6 +5954,7 @@
         state.entry.welcomeVisible = false;
         document.body.classList.remove('welcome-active');
         els.welcomeGate?.classList.remove('is-visible');
+        closeRobotCheck();
         clearWelcomeRotation();
       }
 
@@ -11075,9 +11193,13 @@
       }
 
       function bindEvents() {
-        els.welcomeTouch?.addEventListener('click', requestWelcomeTutorialStart);
+        els.welcomeStartBtn?.addEventListener('click', openRobotCheck);
         els.welcomeAccountLink?.addEventListener('click', (event) => {
           event.stopPropagation();
+        });
+        els.robotcheckTouch?.addEventListener('click', () => {
+          closeRobotCheck();
+          requestWelcomeTutorialStart(true);
         });
         els.soundTestReplayBtn?.addEventListener('click', () => {
           if (state.ui.soundTestBusy || !state.ui.soundTestOpen) return;
