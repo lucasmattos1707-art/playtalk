@@ -15,7 +15,7 @@
 
     :root {
       --bg: #07111f;
-      --panel: rgba(9, 21, 38, 0.22);
+      --panel: transparent;
       --line: rgba(140, 197, 255, 0.18);
       --text: #f4f8ff;
       --muted: #c7daef;
@@ -91,10 +91,10 @@
       min-height: calc(100vh - 40px);
       padding: 22px 18px 28px;
       border-radius: 0 0 30px 30px;
-      border: 1px solid var(--line);
+      border: 1px solid transparent;
       background: var(--panel);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(16px);
+      box-shadow: none;
+      backdrop-filter: none;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -167,15 +167,24 @@
       background: linear-gradient(180deg, var(--key-blue-1), var(--key-blue-2));
     }
 
-    .identity-space-row {
+    .identity-actions-row {
       width: min(100%, 392px);
       margin-top: 14px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 74px;
+      gap: 10px;
     }
 
     .identity-space-btn {
-      width: 100%;
       min-height: 62px;
       background: linear-gradient(180deg, var(--space-blue-1), var(--space-blue-2));
+    }
+
+    .identity-delete-btn {
+      min-height: 62px;
+      background: linear-gradient(180deg, #ff5454, #e12626);
+      font-size: 16px;
+      letter-spacing: 0.01em;
     }
 
     .identity-continue {
@@ -218,8 +227,9 @@
       <h1>Escolha um nome</h1>
       <div class="identity-name-display" id="nameDisplay">&nbsp;</div>
       <div class="identity-keyboard" id="nameKeyboard"></div>
-      <div class="identity-space-row">
+      <div class="identity-actions-row">
         <button class="identity-action identity-space-btn" id="spaceBtn" type="button">Espaco</button>
+        <button class="identity-action identity-delete-btn" id="deleteBtn" type="button">Apagar</button>
       </div>
       <button class="identity-action identity-continue" id="continueBtn" type="button">Avancar</button>
       <p class="identity-status" id="status" aria-live="polite"></p>
@@ -234,6 +244,7 @@
       nameDisplay: document.getElementById('nameDisplay'),
       nameKeyboard: document.getElementById('nameKeyboard'),
       spaceBtn: document.getElementById('spaceBtn'),
+      deleteBtn: document.getElementById('deleteBtn'),
       continueBtn: document.getElementById('continueBtn'),
       status: document.getElementById('status')
     };
@@ -254,7 +265,7 @@
     }
     function nextAfterUsername(user) {
       const returnPath = getReturnPath();
-      return user?.onboardingPhotoCompleted ? returnPath : `/avataradd?return=${encodeURIComponent(returnPath)}`;
+      return `/avataradd?return=${encodeURIComponent(returnPath)}`;
     }
     function setStatus(message, tone = '') {
       els.status.textContent = message || '';
@@ -389,8 +400,8 @@
     async function init() {
       setStatus('Preparando perfil...');
       try {
-        const user = await ensureProvisionedUser();
-        state.nameDraft = safeText(user?.username || '');
+        await ensureProvisionedUser();
+        state.nameDraft = '';
         renderKeyboard();
         startKeyboardTicker();
         renderName();
@@ -403,6 +414,12 @@
     els.spaceBtn.addEventListener('click', () => {
       if (state.nameGateBusy || !state.nameDraft || state.nameDraft.endsWith(' ') || state.nameDraft.length >= 24) return;
       state.nameDraft = `${state.nameDraft} `;
+      setStatus('');
+      renderName();
+    });
+    els.deleteBtn.addEventListener('click', () => {
+      if (state.nameGateBusy || !state.nameDraft) return;
+      state.nameDraft = state.nameDraft.slice(0, -1);
       setStatus('');
       renderName();
     });

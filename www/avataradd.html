@@ -361,6 +361,10 @@
       const raw = safeText(new URLSearchParams(window.location.search).get('return'));
       return raw && raw.startsWith('/') ? raw : '/flashcards';
     }
+
+    function nextAfterAvatar() {
+      return `/password?return=${encodeURIComponent(getReturnPath())}`;
+    }
     function currentPhotoVersion() { return state.photoVersions[state.photoVersionIndex] || null; }
     function setStatus(message, tone = '', target = els.photoStatus) {
       target.textContent = message || '';
@@ -701,7 +705,7 @@
         setStatus('Salvando foto...');
         try {
           await persistPhotoGateProfile();
-          window.location.href = getReturnPath();
+          window.location.href = nextAfterAvatar();
         } catch (error) {
           setStatus(error?.message || 'Nao foi possivel salvar a foto.', 'error');
         }

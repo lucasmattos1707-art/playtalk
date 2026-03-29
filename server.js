@@ -5218,6 +5218,8 @@ app.use((req, res, next) => {
     '/username/',
     '/avataradd',
     '/avataradd/',
+    '/password',
+    '/password/',
     '/mycards',
     '/mycards/',
     '/mycards.html',
@@ -5361,6 +5363,10 @@ app.get(['/username', '/username/'], (req, res) => {
 
 app.get(['/avataradd', '/avataradd/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'www', 'avataradd.html'));
+});
+
+app.get(['/password', '/password/'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'www', 'password.html'));
 });
 
 app.get(['/somcheck', '/somcheck/'], (req, res) => {
