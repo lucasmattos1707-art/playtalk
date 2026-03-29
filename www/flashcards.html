@@ -2943,6 +2943,19 @@
       display: flex;
     }
 
+    .flashcards-typing.is-portuguese .flashcards-typing__key {
+      background:
+        linear-gradient(135deg, rgba(21, 186, 85, 0.92) 0%, rgba(56, 234, 130, 0.88) 100%),
+        url("SVG/codex-icons/portugues.svg");
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+      text-shadow:
+        0 2px 0 rgba(8, 95, 42, 0.98),
+        0 6px 12px rgba(8, 95, 42, 0.42);
+    }
+
     .flashcards-typing__display {
       min-height: 28px;
       color: #ffffff;
@@ -4742,9 +4755,9 @@
 
       const STAGES = {
         1: { badge: 'Etapa 1/5', instruction: 'Fale ingles', showImage: true, showWord: true, wordType: 'english', subtitleType: 'portuguese', expected: 'english', autoAudio: true },
-        2: { badge: 'Etapa 2/5', instruction: 'Fale portugues', showImage: true, showWord: true, wordType: 'english', subtitleType: 'none', expected: 'portuguese', autoAudio: true },
+        2: { badge: 'Etapa 2/5', instruction: 'Escreva portugues', showImage: true, showWord: true, wordType: 'english', subtitleType: 'none', expected: 'portuguese', autoAudio: false, inputMode: 'typing', typingMode: 'portuguese' },
         3: { badge: 'Etapa 3/5', instruction: 'Fale ingles', showImage: false, showWord: false, wordType: 'portuguese', subtitleType: 'none', expected: 'english', autoAudio: false, placeholderUsesPortuguese: true, revealOnHit: true },
-        4: { badge: 'Etapa 4/5', instruction: 'Escreva ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false },
+        4: { badge: 'Etapa 4/5', instruction: 'Escreva ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false, inputMode: 'typing', typingMode: 'english' },
         5: { badge: 'Etapa 5/5', instruction: 'Fale ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false }
       };
 
@@ -9612,7 +9625,7 @@
 
       function scheduleStageTwoHintLoop(entry) {
         clearStageTwoHintTimer();
-        if (!entry || entry.stage !== 2 || state.game.currentId !== entry.id) return;
+        if (!entry || entry.stage !== 2 || state.game.currentId !== entry.id || isTypingStage(entry)) return;
 
         const showHint = () => {
           if (!state.game.active || state.game.currentId !== entry.id || entry.stage !== 2) {
@@ -10459,10 +10472,43 @@
         }).join('');
       }
 
-      function revealTypingAnswer(card) {
+      function normalizeTypingSource(rawText) {
+        return safeText(rawText)
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toUpperCase()
+          .replace(/[^A-Z\s]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      function isTypingStage(entry) {
+        const stageConfig = STAGES[entry?.stage] || STAGES[1];
+        return stageConfig.inputMode === 'typing';
+      }
+
+      function resolveTypingStageState(entry, card) {
+        const stageConfig = STAGES[entry?.stage] || STAGES[1];
+        const typingMode = stageConfig.typingMode === 'portuguese' ? 'portuguese' : 'english';
+        const sourceText = typingMode === 'portuguese'
+          ? (card?.portuguese || card?.english || card?.deckTitle || '')
+          : (card?.english || card?.portuguese || card?.deckTitle || '');
+        const normalizedTarget = normalizeTypingSource(sourceText);
+        return {
+          typingMode,
+          sourceText,
+          normalizedTarget,
+          acceptedAnswer: typingMode === 'portuguese'
+            ? (card?.portuguese || '')
+            : (card?.english || '')
+        };
+      }
+
+      function revealTypingAnswer(entry, card) {
         const display = els.gameVisual.querySelector('.flashcards-typing__display--visual');
         if (!display) return;
-        display.textContent = safeText(card?.english).toUpperCase() || '\u00A0';
+        const typingState = resolveTypingStageState(entry, card);
+        display.textContent = typingState.normalizedTarget || '\u00A0';
       }
 
       function clearTypingAnswer() {
@@ -10518,7 +10564,7 @@
       async function handleTypingMistake(entry, card, grid) {
         entry.typingMistakes = (entry.typingMistakes || 0) + 1;
         setTypingKeysDisabled(grid, true);
-        revealTypingAnswer(card);
+        revealTypingAnswer(entry, card);
         await Promise.allSettled([playPromptAudio(card, { rate: 0.8 }), wait(2000)]);
         if (!state.game.active || state.game.currentId !== entry.id) return true;
         if (entry.typingMistakes < 2) {
@@ -10540,19 +10586,22 @@
       }
 
       function renderTypingKeyboard(entry, card) {
-        if (entry.stage !== 4 || !card) {
+        if (!isTypingStage(entry) || !card) {
           els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
           els.gameTypingKeyboard.innerHTML = '';
           els.gameTypingKeyboard.classList.remove('is-visible');
+          els.gameTypingKeyboard.classList.remove('is-portuguese');
           els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
           return;
         }
 
-        const target = safeText(card.english).toUpperCase().replace(/[^A-Z]/g, '');
+        const typingState = resolveTypingStageState(entry, card);
+        const target = typingState.normalizedTarget.replace(/\s/g, '');
         if (!target) {
           els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
           els.gameTypingKeyboard.innerHTML = '';
           els.gameTypingKeyboard.classList.remove('is-visible');
+          els.gameTypingKeyboard.classList.remove('is-portuguese');
           els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
           return;
         }
@@ -10561,7 +10610,7 @@
         const display = document.createElement('div');
         display.className = 'flashcards-typing__display flashcards-typing__display--visual';
         const renderTyped = () => {
-          display.textContent = formatTypingDisplay(card.english || '', typed) || '\u00A0';
+          display.textContent = formatTypingDisplay(typingState.normalizedTarget, typed) || '\u00A0';
         };
         renderTyped();
 
@@ -10592,7 +10641,7 @@
             renderTyped();
             if (typed.length === target.length) {
               setTypingKeysDisabled(grid, true);
-              await handleRecognitionResult(card.english || '', 'typing');
+              await handleRecognitionResult(typingState.acceptedAnswer || typingState.sourceText || '', 'typing');
             }
           });
           grid.appendChild(key);
@@ -10603,6 +10652,7 @@
         els.gameTypingKeyboard.innerHTML = '';
         els.gameTypingKeyboard.appendChild(grid);
         els.gameTypingKeyboard.classList.add('is-visible');
+        els.gameTypingKeyboard.classList.toggle('is-portuguese', typingState.typingMode === 'portuguese');
         els.gameTypingKeyboard.setAttribute('aria-hidden', 'false');
       }
 
@@ -10613,6 +10663,10 @@
           clearGameLanguageSwapTimer();
           clearStageTwoHintTimer();
           els.gameCard.classList.remove('is-typing-stage');
+          els.gameTypingKeyboard.classList.remove('is-portuguese', 'is-visible');
+          els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
+          els.gameTypingKeyboard.innerHTML = '';
+          els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
           updateGameChips();
           if (!state.game.entries.size) {
             clearGameSessionLocally();
@@ -10626,8 +10680,9 @@
 
         const card = cardById(entry.id);
         const stageConfig = resolveGameStageConfig(entry);
+        const typingStage = isTypingStage(entry);
         els.gameCard.style.display = '';
-        els.gameCard.classList.toggle('is-typing-stage', entry.stage === 4);
+        els.gameCard.classList.toggle('is-typing-stage', typingStage);
         els.gameEnd.classList.remove('is-visible');
         if (!state.game.pendingRewardSeal || state.game.pendingRewardSeal.cardId !== entry.id) {
           setGameStatus('', '');
@@ -10659,12 +10714,17 @@
         }
         els.gameSubword.classList.toggle('is-stage-one', entry.stage === 1 && stageConfig.subtitleType === 'portuguese');
         renderStageOneWordSwap(entry, Boolean(subword));
-        state.game.canListen = entry.stage !== 4;
+        state.game.canListen = !typingStage;
         renderGameTouchButton(stageConfig, entry);
-        els.gameTouchBtn.parentElement.classList.toggle('is-hidden', entry.stage === 4 || els.gameTouchBtn.classList.contains('is-hidden'));
+        els.gameTouchBtn.parentElement.classList.toggle('is-hidden', typingStage || els.gameTouchBtn.classList.contains('is-hidden'));
         els.gameTouchBtn.classList.toggle('is-busy', state.game.listening);
         renderTypingKeyboard(entry, card);
-        if (!(entry.stage === 1 && subword)) {
+        if (typingStage) {
+          els.gameWord.classList.add('is-hidden');
+          els.gameSubword.classList.add('is-hidden');
+          els.gameSubword.style.display = 'none';
+        }
+        if (!typingStage && !(entry.stage === 1 && subword)) {
           els.gameWord.classList.toggle('is-hidden', stageConfig.showWord === false);
           els.gameSubword.classList.toggle('is-hidden', !subword);
           els.gameSubword.style.display = subword ? '' : 'none';
@@ -10677,7 +10737,7 @@
           return;
         }
 
-        if (entry.stage === 4) {
+        if (typingStage) {
           window.setTimeout(() => {
             if (state.game.currentId === entry.id && !state.game.listening && !state.game.paused) {
               playPromptAudio(card);
@@ -11427,7 +11487,7 @@
         if (!state.game.active || state.game.transitioning || state.game.listening || state.game.paused) return;
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return;
-        if (entry.stage === 4) return;
+        if (isTypingStage(entry)) return;
 
         if (!recognitionCtor) {
           setGameStatus('', 'miss');
