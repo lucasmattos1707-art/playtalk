@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Escolha um nome</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg-top: rgba(255,255,255,0.98);
+      --bg-bottom: rgba(239,246,255,0.98);
+      --panel-border: rgba(37, 99, 235, 0.14);
+      --key-blue-1: #376df0;
+      --key-blue-2: #2553d4;
+      --space-blue-1: #47bcff;
+      --space-blue-2: #2b6ae8;
+      --green-1: #2bc057;
+      --green-2: #1fae4d;
+      --text-main: #0f172a;
+      --text-soft: #475569;
+      --danger: #dc2626;
+      --shadow-soft: 0 20px 40px rgba(37, 99, 235, 0.18);
+      font-family: Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+      color: var(--text-main);
+    }
+    .identity-page {
+      min-height: 100vh;
+      padding: 18px 16px 28px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .identity-card {
+      width: min(100%, 420px);
+      min-height: calc(100vh - 36px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding-top: 4px;
+    }
+    h1 {
+      margin: 0 0 18px;
+      font-size: 30px;
+      line-height: 1.05;
+      font-weight: 900;
+    }
+    .identity-name-display {
+      min-height: 62px;
+      width: min(100%, 360px);
+      margin: 18px 0 22px;
+      border-radius: 20px;
+      border: 2px solid var(--panel-border);
+      background: rgba(255, 255, 255, 0.96);
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      padding: 8px 16px;
+      box-shadow: 0 8px 22px rgba(37, 99, 235, 0.08);
+    }
+    .identity-keyboard {
+      display: grid;
+      gap: 10px;
+      width: min(100%, 392px);
+    }
+    .identity-keyboard-row {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .identity-key,
+    .identity-action {
+      border: 0;
+      border-radius: 16px;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
+      box-shadow: var(--shadow-soft);
+    }
+    .identity-key:hover,
+    .identity-action:hover {
+      filter: brightness(1.03);
+    }
+    .identity-key:active,
+    .identity-action:active {
+      transform: translateY(1px) scale(0.99);
+    }
+    .identity-key {
+      min-height: 58px;
+      background: linear-gradient(180deg, var(--key-blue-1), var(--key-blue-2));
+    }
+    .identity-space-row {
+      width: min(100%, 392px);
+      margin-top: 14px;
+    }
+    .identity-space-btn {
+      width: 100%;
+      min-height: 62px;
+      background: linear-gradient(180deg, var(--space-blue-1), var(--space-blue-2));
+    }
+    .identity-continue {
+      width: min(100%, 300px);
+      min-height: 54px;
+      margin-top: 36px;
+      background: linear-gradient(180deg, var(--green-1), var(--green-2));
+    }
+    .identity-action[disabled] {
+      cursor: not-allowed;
+      opacity: 0.55;
+      box-shadow: none;
+    }
+    .identity-status {
+      min-height: 24px;
+      margin: 16px 0 0;
+      color: var(--text-soft);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+    .identity-status.is-error {
+      color: var(--danger);
+      font-weight: 700;
+    }
+    .identity-hint {
+      margin: 12px 0 0;
+      color: var(--text-soft);
+      font-size: 14px;
+    }
+    @media (max-width: 520px) {
+      .identity-page { padding-inline: 12px; }
+      h1 { font-size: 28px; }
+      .identity-name-display { font-size: 22px; }
+      .identity-key,
+      .identity-space-btn { min-height: 56px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="identity-page">
+    <section class="identity-card" aria-label="Escolha um nome">
+      <h1>Escolha um nome</h1>
+      <div class="identity-name-display" id="nameDisplay">&nbsp;</div>
+      <div class="identity-keyboard" id="nameKeyboard"></div>
+      <div class="identity-space-row">
+        <button class="identity-action identity-space-btn" id="spaceBtn" type="button">Espaco</button>
+      </div>
+      <button class="identity-action identity-continue" id="continueBtn" type="button">Avancar</button>
+      <p class="identity-status" id="status" aria-live="polite"></p>
+      <p class="identity-hint">Tela isolada, sem o rodape azul, com o audio de nome.</p>
+    </section>
+  </main>
+  <script>
+    const ONBOARDING_USERNAME_AUDIO_PATH = '/accesskey/username.mp3';
+    const ONBOARDING_MIN_NAME_LENGTH = 3;
+    const ONBOARDING_KEYBOARD_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUV'.split('');
+    const state = { user: null, nameDraft: '', nameGateBusy: false, nameKeyboardVariantIndex: 0, nameKeyboardTimer: 0, identityAudio: null, audioRetryBound: false };
+    const els = {
+      nameDisplay: document.getElementById('nameDisplay'),
+      nameKeyboard: document.getElementById('nameKeyboard'),
+      spaceBtn: document.getElementById('spaceBtn'),
+      continueBtn: document.getElementById('continueBtn'),
+      status: document.getElementById('status')
+    };
+
+    function safeText(value) { return typeof value === 'string' ? value.trim() : ''; }
+    function buildApiUrl(path) { return window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function' ? window.PlaytalkApi.url(path) : path; }
+    function buildAuthHeaders(extraHeaders) { return window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function' ? window.PlaytalkApi.authHeaders(extraHeaders) : { ...(extraHeaders || {}) }; }
+    function normalizeUser(user) {
+      if (!user || typeof user !== 'object') return null;
+      const id = Number(user.id) || 0;
+      const username = safeText(user.username);
+      if (!id || !username) return null;
+      return { id, username, onboardingPhotoCompleted: Boolean(user.onboarding_photo_completed || user.onboardingPhotoCompleted) };
+    }
+    function getReturnPath() {
+      const raw = safeText(new URLSearchParams(window.location.search).get('return'));
+      return raw && raw.startsWith('/') ? raw : '/flashcards';
+    }
+    function nextAfterUsername(user) {
+      const returnPath = getReturnPath();
+      return user?.onboardingPhotoCompleted ? returnPath : `/avataradd?return=${encodeURIComponent(returnPath)}`;
+    }
+    function setStatus(message, tone = '') {
+      els.status.textContent = message || '';
+      els.status.className = 'identity-status';
+      if (tone) els.status.classList.add(`is-${tone}`);
+    }
+    function formatOnboardingName(value) { return safeText(value).slice(0, 24); }
+    function renderName() {
+      els.nameDisplay.textContent = formatOnboardingName(state.nameDraft) || '\u00A0';
+      els.continueBtn.disabled = state.nameGateBusy || formatOnboardingName(state.nameDraft).length < ONBOARDING_MIN_NAME_LENGTH;
+    }
+    function renderKeyboard() {
+      const letters = [...ONBOARDING_KEYBOARD_LETTERS, ['W', 'X'][state.nameKeyboardVariantIndex % 2], ['X', 'Z'][state.nameKeyboardVariantIndex % 2]];
+      els.nameKeyboard.innerHTML = '';
+      for (let rowIndex = 0; rowIndex < 4; rowIndex += 1) {
+        const row = document.createElement('div');
+        row.className = 'identity-keyboard-row';
+        letters.slice(rowIndex * 6, rowIndex * 6 + 6).forEach((letter) => {
+          const key = document.createElement('button');
+          key.type = 'button';
+          key.className = 'identity-key';
+          key.textContent = letter;
+          key.addEventListener('click', () => {
+            if (state.nameGateBusy || state.nameDraft.length >= 24) return;
+            state.nameDraft = `${state.nameDraft}${letter}`;
+            setStatus('');
+            renderName();
+          });
+          row.appendChild(key);
+        });
+        els.nameKeyboard.appendChild(row);
+      }
+    }
+    function startKeyboardTicker() {
+      stopKeyboardTicker();
+      state.nameKeyboardTimer = window.setInterval(() => {
+        state.nameKeyboardVariantIndex = (state.nameKeyboardVariantIndex + 1) % 2;
+        renderKeyboard();
+      }, 1200);
+    }
+    function stopKeyboardTicker() {
+      if (!state.nameKeyboardTimer) return;
+      window.clearInterval(state.nameKeyboardTimer);
+      state.nameKeyboardTimer = 0;
+    }
+    function stopIdentityAudio() {
+      if (!state.identityAudio) return;
+      try {
+        state.identityAudio.pause();
+        state.identityAudio.currentTime = 0;
+      } catch (_error) {}
+      state.identityAudio = null;
+    }
+    function bindAudioRetry(src) {
+      if (state.audioRetryBound) return;
+      state.audioRetryBound = true;
+      const retry = () => {
+        playIdentityAudio(src, false);
+        document.removeEventListener('pointerdown', retry);
+        document.removeEventListener('keydown', retry);
+        state.audioRetryBound = false;
+      };
+      document.addEventListener('pointerdown', retry, { once: true });
+      document.addEventListener('keydown', retry, { once: true });
+    }
+    function playIdentityAudio(src, allowRetry = true) {
+      if (!src) return;
+      stopIdentityAudio();
+      const audio = new Audio(src);
+      audio.volume = 1;
+      state.identityAudio = audio;
+      audio.addEventListener('ended', () => { if (state.identityAudio === audio) state.identityAudio = null; }, { once: true });
+      audio.addEventListener('error', () => { if (state.identityAudio === audio) state.identityAudio = null; }, { once: true });
+      audio.play().catch(() => {
+        if (state.identityAudio === audio) state.identityAudio = null;
+        if (allowRetry) bindAudioRetry(src);
+      });
+    }
+    async function getSessionUser() {
+      const response = await fetch(buildApiUrl('/auth/session'), { cache: 'no-store', credentials: 'include' });
+      if (!response.ok) return null;
+      const payload = await response.json().catch(() => ({}));
+      return normalizeUser(payload?.user);
+    }
+    async function ensureProvisionedUser() {
+      const sessionUser = await getSessionUser().catch(() => null);
+      if (sessionUser?.id) {
+        state.user = sessionUser;
+        return sessionUser;
+      }
+      const response = await fetch(buildApiUrl('/auth/provision-temp'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) throw new Error(payload?.message || 'Nao foi possivel preparar o usuario.');
+      const user = normalizeUser(payload.user);
+      if (!user) throw new Error('Nao foi possivel preparar o perfil.');
+      state.user = user;
+      return user;
+    }
+    async function submitName() {
+      const nextUsername = formatOnboardingName(state.nameDraft);
+      if (nextUsername.length < ONBOARDING_MIN_NAME_LENGTH) {
+        setStatus('Escolha um nome com pelo menos 3 caracteres.', 'error');
+        return;
+      }
+      state.nameGateBusy = true;
+      renderName();
+      setStatus('Salvando nome...');
+      try {
+        const response = await fetch(buildApiUrl('/auth/profile'), {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ username: nextUsername })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success) throw new Error(payload?.message || 'Nao foi possivel salvar o nome.');
+        const user = normalizeUser(payload.user);
+        if (!user) throw new Error('Nao foi possivel atualizar o usuario.');
+        state.user = user;
+        window.location.href = nextAfterUsername(user);
+      } catch (error) {
+        setStatus(error?.message || 'Nao foi possivel salvar o nome.', 'error');
+      } finally {
+        state.nameGateBusy = false;
+        renderName();
+      }
+    }
+    async function init() {
+      setStatus('Preparando perfil...');
+      try {
+        const user = await ensureProvisionedUser();
+        state.nameDraft = safeText(user?.username || '');
+        renderKeyboard();
+        startKeyboardTicker();
+        renderName();
+        setStatus('');
+        playIdentityAudio(ONBOARDING_USERNAME_AUDIO_PATH);
+      } catch (error) {
+        setStatus(error?.message || 'Nao foi possivel abrir a tela de nome.', 'error');
+      }
+    }
+    els.spaceBtn.addEventListener('click', () => {
+      if (state.nameGateBusy || !state.nameDraft || state.nameDraft.endsWith(' ') || state.nameDraft.length >= 24) return;
+      state.nameDraft = `${state.nameDraft} `;
+      setStatus('');
+      renderName();
+    });
+    els.continueBtn.addEventListener('click', () => { void submitName(); });
+    window.addEventListener('beforeunload', () => {
+      stopKeyboardTicker();
+      stopIdentityAudio();
+    });
+    void init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Escolha uma bela foto</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg-top: rgba(255,255,255,0.98);
+      --bg-bottom: rgba(239,246,255,0.98);
+      --green-1: #2bc057;
+      --green-2: #1fae4d;
+      --blue-1: #376df0;
+      --blue-2: #2553d4;
+      --text-main: #0f172a;
+      --text-soft: #475569;
+      --danger: #dc2626;
+      --shadow-soft: 0 20px 40px rgba(37, 99, 235, 0.18);
+      font-family: Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+      color: var(--text-main);
+    }
+    .identity-page {
+      min-height: 100vh;
+      padding: 18px 16px 28px;
+      display: flex;
+      justify-content: center;
+    }
+    .identity-card {
+      width: min(100%, 420px);
+      min-height: calc(100vh - 36px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding-top: 4px;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: 30px;
+      line-height: 1.05;
+      font-weight: 900;
+    }
+    .photo-copy {
+      margin: 0;
+      color: var(--text-soft);
+      line-height: 1.5;
+      max-width: 320px;
+    }
+    .photo-shell {
+      display: grid;
+      justify-items: center;
+      gap: 18px;
+      width: 100%;
+      margin-top: 26px;
+    }
+    .photo-circle {
+      position: relative;
+      width: min(72vw, 280px);
+      height: min(72vw, 280px);
+      border: 0;
+      border-radius: 50%;
+      background: linear-gradient(180deg, rgba(37, 99, 235, 0.12), rgba(59, 130, 246, 0.22));
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      padding: 0;
+    }
+    .photo-circle img,
+    .photo-circle svg {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .photo-circle svg {
+      padding: 74px;
+      color: #2563eb;
+      opacity: 0.9;
+    }
+    .photo-circle::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.35);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .photo-circle.is-flash::after {
+      animation: photoFlash 700ms ease-out forwards;
+    }
+    .photo-circle.is-busy .photo-layer {
+      position: absolute;
+      inset: 0;
+      opacity: 0.8;
+      animation: pulsePhoto 1400ms ease-in-out infinite;
+    }
+    .photo-circle.is-busy .photo-layer--1 { transform: scale(1); }
+    .photo-circle.is-busy .photo-layer--2 { transform: scale(0.93); animation-delay: 120ms; }
+    .photo-circle.is-busy .photo-layer--3 { transform: scale(0.86); animation-delay: 240ms; }
+    .identity-status {
+      min-height: 24px;
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+    .identity-status.is-error {
+      color: var(--danger);
+      font-weight: 700;
+    }
+    .photo-actions {
+      display: grid;
+      gap: 12px;
+      width: min(100%, 300px);
+      margin-top: 8px;
+    }
+    .photo-actions.is-hidden {
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .identity-action {
+      min-height: 54px;
+      border: 0;
+      border-radius: 16px;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: var(--shadow-soft);
+      transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
+    }
+    .identity-action:hover { filter: brightness(1.03); }
+    .identity-action:active { transform: translateY(1px) scale(0.99); }
+    .identity-action.is-success { background: linear-gradient(180deg, var(--green-1), var(--green-2)); }
+    .identity-action.is-secondary { background: linear-gradient(180deg, var(--blue-1), var(--blue-2)); }
+    .identity-action[disabled] {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .identity-hint {
+      margin: 10px 0 0;
+      color: var(--text-soft);
+      font-size: 14px;
+    }
+    @keyframes photoFlash {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    @keyframes pulsePhoto {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 0.82; }
+    }
+    @media (max-width: 520px) {
+      h1 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="identity-page">
+    <section class="identity-card" aria-label="Escolha uma bela foto">
+      <h1>Escolha uma bela foto</h1>
+      <p class="photo-copy">Toque no circulo para enviar sua foto e transformar em desenho.</p>
+      <div class="photo-shell">
+        <button class="photo-circle" id="photoCircle" type="button" aria-label="Enviar foto">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
+        </button>
+        <input id="photoInput" type="file" accept="image/*" hidden>
+        <p class="identity-status" id="photoStatus"></p>
+        <p class="identity-status" id="loadingCopy" aria-live="polite"></p>
+        <div class="photo-actions" id="photoActions">
+          <button class="identity-action is-success" id="continueBtn" type="button" disabled>Avancar</button>
+          <button class="identity-action is-secondary" id="regenerateBtn" type="button" disabled>Gerar nova</button>
+        </div>
+        <p class="identity-hint">Tela isolada, sem rodape azul, com o fluxo de avatar.</p>
+      </div>
+    </section>
+  </main>
+  <script>
+    const ONBOARDING_PHOTO_AUDIO_PATH = '/accesskey/photo.mp3';
+    const ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH = '/accesskey/photorecieve.mp3';
+    const ONBOARDING_IMAGE_READY_AUDIO_PATH = '/accesskey/imageready.mp3';
+    const ONBOARDING_MAX_PHOTO_GENERATIONS = 5;
+    const ONBOARDING_LOADING_MESSAGES = [
+      'Analisando a imagem enviada...',
+      'Detectando estrutura facial e proporcoes...',
+      'Identificando olhos e expressoes...',
+      'Analisando cabelo, textura e volume...',
+      'Extraindo cores principais e iluminacao...',
+      'Interpretando expressao e vibe emocional...',
+      'Simplificando tracos para estilo ilustrado...',
+      'Aplicando caracteristicas animadas...',
+      'Ajustando luz, profundidade e foco...',
+      'Renderizando sua versao fiel...'
+    ];
+    const state = {
+      user: null,
+      identityAudio: null,
+      photoGateBusy: false,
+      photoSourceDataUrl: '',
+      photoVersions: [],
+      photoVersionIndex: 0,
+      photoGenerationCount: 0,
+      photoLoadingTimer: 0,
+      photoLoadingMessageIndex: 0,
+      photoFlashTimer: 0,
+      audioRetryBound: false
+    };
+    const els = {
+      photoCircle: document.getElementById('photoCircle'),
+      photoInput: document.getElementById('photoInput'),
+      photoStatus: document.getElementById('photoStatus'),
+      loadingCopy: document.getElementById('loadingCopy'),
+      photoActions: document.getElementById('photoActions'),
+      continueBtn: document.getElementById('continueBtn'),
+      regenerateBtn: document.getElementById('regenerateBtn')
+    };
+
+    function safeText(value) { return typeof value === 'string' ? value.trim() : ''; }
+    function buildApiUrl(path) { return window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function' ? window.PlaytalkApi.url(path) : path; }
+    function buildAuthHeaders(extraHeaders) { return window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function' ? window.PlaytalkApi.authHeaders(extraHeaders) : { ...(extraHeaders || {}) }; }
+    function normalizeUser(user) {
+      if (!user || typeof user !== 'object') return null;
+      const id = Number(user.id) || 0;
+      const username = safeText(user.username);
+      if (!id || !username) return null;
+      return {
+        id,
+        username,
+        avatarVersions: Array.isArray(user.avatar_versions || user.avatarVersions)
+          ? (user.avatar_versions || user.avatarVersions).map((entry) => ({
+            image: safeText(entry?.image || entry?.url),
+            source: safeText(entry?.source),
+            createdAt: entry?.createdAt || entry?.created_at || null
+          })).filter((entry) => entry.image)
+          : [],
+        avatarGenerationCount: Math.max(0, Number.parseInt(user.avatar_generation_count || user.avatarGenerationCount, 10) || 0)
+      };
+    }
+    function getReturnPath() {
+      const raw = safeText(new URLSearchParams(window.location.search).get('return'));
+      return raw && raw.startsWith('/') ? raw : '/flashcards';
+    }
+    function currentPhotoVersion() { return state.photoVersions[state.photoVersionIndex] || null; }
+    function setStatus(message, tone = '', target = els.photoStatus) {
+      target.textContent = message || '';
+      target.className = 'identity-status';
+      if (tone) target.classList.add(`is-${tone}`);
+    }
+    function stopIdentityAudio() {
+      if (!state.identityAudio) return;
+      try {
+        state.identityAudio.pause();
+        state.identityAudio.currentTime = 0;
+      } catch (_error) {}
+      state.identityAudio = null;
+    }
+    function fadeOutIdentityAudio(durationMs = 1000) {
+      const activeAudio = state.identityAudio;
+      if (!activeAudio) return Promise.resolve(false);
+      return new Promise((resolve) => {
+        const startVolume = Number(activeAudio.volume) || 1;
+        const steps = Math.max(1, Math.round(durationMs / 50));
+        let currentStep = 0;
+        const timer = window.setInterval(() => {
+          currentStep += 1;
+          const ratio = Math.max(0, 1 - (currentStep / steps));
+          activeAudio.volume = startVolume * ratio;
+          if (currentStep >= steps) {
+            window.clearInterval(timer);
+            try {
+              activeAudio.pause();
+              activeAudio.currentTime = 0;
+              activeAudio.volume = 1;
+            } catch (_error) {}
+            if (state.identityAudio === activeAudio) state.identityAudio = null;
+            resolve(true);
+          }
+        }, 50);
+      });
+    }
+    function bindAudioRetry(src) {
+      if (state.audioRetryBound) return;
+      state.audioRetryBound = true;
+      const retry = () => {
+        playIdentityAudio(src, false);
+        document.removeEventListener('pointerdown', retry);
+        document.removeEventListener('keydown', retry);
+        state.audioRetryBound = false;
+      };
+      document.addEventListener('pointerdown', retry, { once: true });
+      document.addEventListener('keydown', retry, { once: true });
+    }
+    function playIdentityAudio(src, allowRetry = true) {
+      if (!src) return;
+      stopIdentityAudio();
+      const audio = new Audio(src);
+      audio.volume = 1;
+      state.identityAudio = audio;
+      audio.addEventListener('ended', () => { if (state.identityAudio === audio) state.identityAudio = null; }, { once: true });
+      audio.addEventListener('error', () => { if (state.identityAudio === audio) state.identityAudio = null; }, { once: true });
+      audio.play().catch(() => {
+        if (state.identityAudio === audio) state.identityAudio = null;
+        if (allowRetry) bindAudioRetry(src);
+      });
+    }
+    function stopPhotoLoadingCopy() {
+      if (!state.photoLoadingTimer) return;
+      window.clearInterval(state.photoLoadingTimer);
+      state.photoLoadingTimer = 0;
+    }
+    function startPhotoLoadingCopy() {
+      stopPhotoLoadingCopy();
+      state.photoLoadingMessageIndex = 0;
+      els.loadingCopy.textContent = ONBOARDING_LOADING_MESSAGES[0];
+      state.photoLoadingTimer = window.setInterval(() => {
+        state.photoLoadingMessageIndex += 1;
+        els.loadingCopy.textContent = state.photoLoadingMessageIndex >= ONBOARDING_LOADING_MESSAGES.length
+          ? 'Finalizando'
+          : ONBOARDING_LOADING_MESSAGES[state.photoLoadingMessageIndex];
+      }, 2000);
+    }
+    function flashPhotoResult() {
+      els.photoCircle.classList.remove('is-flash');
+      void els.photoCircle.offsetWidth;
+      els.photoCircle.classList.add('is-flash');
+      if (state.photoFlashTimer) window.clearTimeout(state.photoFlashTimer);
+      state.photoFlashTimer = window.setTimeout(() => {
+        els.photoCircle.classList.remove('is-flash');
+        state.photoFlashTimer = 0;
+      }, 700);
+    }
+    function renderPhoto() {
+      const currentVersion = currentPhotoVersion();
+      if (state.photoGateBusy && state.photoSourceDataUrl) {
+        const safeSource = state.photoSourceDataUrl;
+        els.photoCircle.innerHTML = `
+          <img class="photo-layer photo-layer--3" src="${safeSource}" alt="">
+          <img class="photo-layer photo-layer--2" src="${safeSource}" alt="">
+          <img class="photo-layer photo-layer--1" src="${safeSource}" alt="">
+        `;
+      } else if (currentVersion?.image) {
+        els.photoCircle.innerHTML = `<img src="${currentVersion.image}" alt="Foto ilustrada do usuario">`;
+      } else {
+        els.photoCircle.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>';
+      }
+      els.photoCircle.classList.toggle('is-busy', state.photoGateBusy && Boolean(state.photoSourceDataUrl));
+      els.continueBtn.disabled = state.photoGateBusy || !currentPhotoVersion()?.image;
+      els.regenerateBtn.disabled = state.photoGateBusy || state.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS || !state.photoSourceDataUrl;
+      els.photoActions.classList.toggle('is-hidden', state.photoGateBusy);
+      if (state.photoGateBusy) {
+        setStatus('Transformando sua foto em desenho...');
+      } else if (!els.photoStatus.classList.contains('is-error')) {
+        setStatus('');
+      }
+    }
+    async function fileToDataUrl(file) {
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(reader.error || new Error('Falha ao ler a imagem.'));
+        reader.readAsDataURL(file);
+      });
+    }
+    async function dataUrlToSquareWebpDataUrl(sourceDataUrl, size = 400) {
+      return await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const context = canvas.getContext('2d');
+            if (!context) return reject(new Error('Nao foi possivel preparar a imagem.'));
+            const sourceWidth = image.naturalWidth || image.width;
+            const sourceHeight = image.naturalHeight || image.height;
+            const sourceSide = Math.min(sourceWidth, sourceHeight);
+            const sourceX = Math.max(0, Math.round((sourceWidth - sourceSide) / 2));
+            const sourceY = Math.max(0, Math.round((sourceHeight - sourceSide) / 2));
+            context.clearRect(0, 0, size, size);
+            context.drawImage(image, sourceX, sourceY, sourceSide, sourceSide, 0, 0, size, size);
+            resolve(canvas.toDataURL('image/webp', 0.92));
+          } catch (error) {
+            reject(error);
+          }
+        };
+        image.onerror = () => reject(new Error('Nao foi possivel abrir a foto.'));
+        image.src = sourceDataUrl;
+      });
+    }
+    async function fileToSquareWebpDataUrl(file, size = 400) {
+      const sourceDataUrl = await fileToDataUrl(file);
+      return dataUrlToSquareWebpDataUrl(sourceDataUrl, size);
+    }
+    async function createCartoonAvatar(imageDataUrl) {
+      const response = await fetch(buildApiUrl('/api/images/openai/avatar-cartoon'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ imageDataUrl })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.dataUrl) throw new Error(payload?.message || payload?.error || 'Nao foi possivel transformar a foto em desenho.');
+      return String(payload.dataUrl);
+    }
+    async function getSessionUser() {
+      const response = await fetch(buildApiUrl('/auth/session'), { cache: 'no-store', credentials: 'include' });
+      if (!response.ok) return null;
+      const payload = await response.json().catch(() => ({}));
+      return normalizeUser(payload?.user);
+    }
+    async function ensureProvisionedUser() {
+      const sessionUser = await getSessionUser().catch(() => null);
+      if (sessionUser?.id) {
+        state.user = sessionUser;
+        return sessionUser;
+      }
+      const response = await fetch(buildApiUrl('/auth/provision-temp'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) throw new Error(payload?.message || 'Nao foi possivel preparar o usuario.');
+      const user = normalizeUser(payload.user);
+      if (!user) throw new Error('Nao foi possivel preparar o perfil.');
+      state.user = user;
+      return user;
+    }
+    async function persistPhotoGateProfile() {
+      const currentVersion = currentPhotoVersion();
+      if (!currentVersion?.image) return;
+      const response = await fetch(buildApiUrl('/auth/avatar'), {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          avatar: currentVersion.image,
+          avatarVersions: state.photoVersions,
+          avatarGenerationCount: state.photoGenerationCount,
+          onboardingPhotoCompleted: true
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) throw new Error(payload?.message || 'Nao foi possivel salvar a foto.');
+      const user = normalizeUser(payload.user);
+      if (!user) throw new Error('Nao foi possivel atualizar o usuario.');
+      state.user = user;
+      return user;
+    }
+    async function generatePhotoVersionFromFile(file) {
+      if (!file) return;
+      if (state.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS) {
+        setStatus('Voce chegou ao limite de 5 geracoes.', 'error', els.loadingCopy);
+        return;
+      }
+      state.photoGateBusy = true;
+      setStatus('');
+      renderPhoto();
+      try {
+        const sourceDataUrl = await fileToSquareWebpDataUrl(file, 400);
+        state.photoSourceDataUrl = sourceDataUrl;
+        playIdentityAudio(ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH);
+        startPhotoLoadingCopy();
+        const cartoonDataUrl = await createCartoonAvatar(sourceDataUrl);
+        const optimizedCartoonDataUrl = await dataUrlToSquareWebpDataUrl(cartoonDataUrl, 400);
+        await fadeOutIdentityAudio(1000);
+        stopPhotoLoadingCopy();
+        els.loadingCopy.textContent = '';
+        state.photoGenerationCount += 1;
+        state.photoVersions.push({ image: optimizedCartoonDataUrl, source: sourceDataUrl, createdAt: new Date().toISOString() });
+        state.photoVersions = state.photoVersions.slice(-ONBOARDING_MAX_PHOTO_GENERATIONS);
+        state.photoVersionIndex = state.photoVersions.length - 1;
+        playIdentityAudio(ONBOARDING_IMAGE_READY_AUDIO_PATH);
+        flashPhotoResult();
+        renderPhoto();
+      } catch (error) {
+        stopPhotoLoadingCopy();
+        setStatus(error?.message || 'Nao foi possivel gerar o desenho.', 'error', els.loadingCopy);
+      } finally {
+        state.photoGateBusy = false;
+        renderPhoto();
+      }
+    }
+    async function regenerateFromLastSource() {
+      const blob = await fetch(state.photoSourceDataUrl).then((response) => response.blob());
+      const file = new File([blob], 'avatar.webp', { type: blob.type || 'image/webp' });
+      await generatePhotoVersionFromFile(file);
+    }
+    async function init() {
+      setStatus('Preparando perfil...');
+      try {
+        const user = await ensureProvisionedUser();
+        state.photoVersions = Array.isArray(user?.avatarVersions) ? user.avatarVersions.slice(0, 5) : [];
+        state.photoVersionIndex = Math.max(0, state.photoVersions.length - 1);
+        state.photoGenerationCount = Math.max(state.photoVersions.length, Number(user?.avatarGenerationCount || 0));
+        renderPhoto();
+        setStatus('');
+        playIdentityAudio(ONBOARDING_PHOTO_AUDIO_PATH);
+      } catch (error) {
+        setStatus(error?.message || 'Nao foi possivel abrir a tela de avatar.', 'error');
+      }
+    }
+    els.photoCircle.addEventListener('click', () => {
+      if (state.photoGateBusy) return;
+      els.photoInput.click();
+    });
+    els.photoInput.addEventListener('change', (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      void generatePhotoVersionFromFile(file);
+      event.target.value = '';
+    });
+    els.regenerateBtn.addEventListener('click', () => {
+      if (state.photoGateBusy || state.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS || !state.photoSourceDataUrl) return;
+      void regenerateFromLastSource();
+    });
+    els.continueBtn.addEventListener('click', () => {
+      void (async () => {
+        setStatus('Salvando foto...');
+        try {
+          await persistPhotoGateProfile();
+          window.location.href = getReturnPath();
+        } catch (error) {
+          setStatus(error?.message || 'Nao foi possivel salvar a foto.', 'error');
+        }
+      })();
+    });
+    window.addEventListener('beforeunload', () => {
+      stopPhotoLoadingCopy();
+      stopIdentityAudio();
+    });
+    void init();
+  </script>
+</body>
+</html>
