@@ -13,7 +13,6 @@ codex-write-test.txt
 .env
 .env.*
 !.env.example
-accesskey/*.json
 
 # Android build/cache artifacts
 android/.gradle/

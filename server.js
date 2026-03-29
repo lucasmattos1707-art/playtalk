@@ -1222,6 +1222,7 @@ const extendUserPremiumAccess = async (userId, durationDays, options = {}) => {
   const accessType = String(options.accessType || '').trim().toLowerCase() || 'manual';
   const accessCode = normalizeAccessKeyCode(options.accessCode);
   const sourceFile = String(options.sourceFile || '').trim();
+  const grantFullAccess = Boolean(options.grantFullAccess);
 
   if (!normalizedUserId || !normalizedDurationDays) {
     const error = new Error('Parametros de premium invalidos.');
@@ -1271,13 +1272,19 @@ const extendUserPremiumAccess = async (userId, durationDays, options = {}) => {
 
     const result = await client.query(
       `UPDATE public.users
-       SET premium_full_access = true,
-           premium_until = GREATEST(COALESCE(premium_until, now()), now()) + ($2::text || ' days')::interval
+       SET premium_full_access = CASE
+             WHEN $3::boolean THEN true
+             ELSE premium_full_access
+           END,
+           premium_until = CASE
+             WHEN $3::boolean THEN premium_until
+             ELSE GREATEST(COALESCE(premium_until, now()), now()) + ($2::text || ' days')::interval
+           END
        WHERE id = $1
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                  onboarding_name_completed, onboarding_photo_completed,
                  created_at, premium_full_access, premium_until`,
-      [normalizedUserId, normalizedDurationDays]
+      [normalizedUserId, normalizedDurationDays, grantFullAccess]
     );
 
     if (!result.rows.length) {
