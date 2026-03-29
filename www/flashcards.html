@@ -40,9 +40,9 @@
       --red: #ff7d8d;
       --shadow: 0 22px 60px rgba(0, 8, 18, 0.38);
       --radius: 28px;
-      --flashcards-visual-drop: 80px;
-      --flashcards-chip-drop: 80px;
-      --flashcards-typing-visual-drop: 66px;
+      --flashcards-visual-drop: -60px;
+      --flashcards-chip-drop: -60px;
+      --flashcards-typing-visual-drop: 6px;
       --flashcards-typing-display-drop: 22px;
       --flashcards-image-shift: 80px;
       --flashcards-image-scale: 0.88;
@@ -2758,6 +2758,7 @@
       width: min(420px, calc(100vw - 52px));
       margin-top: 0;
       gap: 0;
+      transform: translateY(-60px);
     }
 
     .game-card__content.is-stage-three {
@@ -2941,6 +2942,7 @@
       font-size: 20px;
       letter-spacing: 0.04em;
       text-align: center;
+      text-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
     }
 
     .flashcards-typing__display--visual {
@@ -2953,7 +2955,8 @@
       font-size: 26px;
       font-weight: 700;
       line-height: 1.05;
-      text-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+      font-family: "Soopafre", Arial, sans-serif;
+      text-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
       letter-spacing: 0.01em;
       white-space: pre-wrap;
     }
