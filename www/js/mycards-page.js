@@ -4,6 +4,7 @@
   const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
   const DATA_MANIFEST_REMOTE_PATH = '/api/flashcards/manifest';
   const FLASHCARDS_LOCAL_SOURCE_PREFIX = 'allcards';
+  const PAGE_SIZE = 30;
   const REVIEW_PHASES = {
     1: { durationMs: 6 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
     2: { durationMs: 3 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
@@ -15,12 +16,17 @@
   const els = {
     grid: document.getElementById('cards-collection-grid'),
     empty: document.getElementById('cards-empty-state'),
-    total: document.getElementById('mycards-total')
+    total: document.getElementById('mycards-total'),
+    pagination: document.getElementById('cards-pagination'),
+    prevBtn: document.getElementById('cards-prev-btn'),
+    nextBtn: document.getElementById('cards-next-btn'),
+    pageInfo: document.getElementById('cards-page-info')
   };
 
   const state = {
     userId: 0,
-    cards: []
+    cards: [],
+    page: 1
   };
 
   function safeText(value) {
@@ -353,17 +359,52 @@
     }
   }
 
+  function getPageCount() {
+    return Math.max(1, Math.ceil(Math.max(0, state.cards.length) / PAGE_SIZE));
+  }
+
+  function clampPage(page) {
+    return Math.max(1, Math.min(getPageCount(), Number.parseInt(page, 10) || 1));
+  }
+
+  function pageCards() {
+    const startIndex = (state.page - 1) * PAGE_SIZE;
+    return state.cards.slice(startIndex, startIndex + PAGE_SIZE);
+  }
+
+  function updatePagination() {
+    const total = state.cards.length;
+    const pageCount = getPageCount();
+    state.page = clampPage(state.page);
+    const hasPagination = total > PAGE_SIZE;
+
+    if (els.pagination) {
+      els.pagination.hidden = !hasPagination;
+    }
+    if (els.pageInfo) {
+      els.pageInfo.textContent = `Pagina ${state.page} de ${pageCount}`;
+    }
+    if (els.prevBtn) {
+      els.prevBtn.disabled = !hasPagination || state.page <= 1;
+    }
+    if (els.nextBtn) {
+      els.nextBtn.disabled = !hasPagination || state.page >= pageCount;
+    }
+  }
+
   function renderCardsPage() {
     if (!els.grid || !els.empty) return;
     if (!state.cards.length) {
       els.grid.innerHTML = '';
       els.empty.hidden = false;
       els.empty.textContent = 'Nenhuma carta conquistada ainda.';
+      updatePagination();
       return;
     }
 
     els.empty.hidden = true;
-    els.grid.innerHTML = state.cards.map((card) => {
+    updatePagination();
+    els.grid.innerHTML = pageCards().map((card) => {
       const imageUrl = resolveCardImage(card);
       const progress = Math.max(0, Math.min(100, progressPercent(card.progress)));
       const isMemorizing = card.progress?.status === 'memorizing';
@@ -373,6 +414,9 @@
       const progressMarkup = isMemorizing
         ? `<div class="mycards-card__progress" aria-hidden="true"><span style="width:${escapeHtml(progress.toFixed(2))}%"></span></div>`
         : '';
+      const loaderMarkup = isMemorizing
+        ? '<div class="mini-card__loader" aria-hidden="true"><span></span><span></span><span></span><span></span></div>'
+        : '';
       return `
         <article class="mycards-item" role="listitem">
           <div class="mycards-card ${isMemorizing ? 'is-memorizing' : 'is-ready'}" style="--progress:${escapeHtml((progress * 3.6).toFixed(1))}deg;">
@@ -380,6 +424,7 @@
               ${imageUrl
                 ? `<img src="${escapeHtml(imageUrl)}" alt="Carta">`
                 : `<div class="mycards-card__fallback">${escapeHtml(fallbackLetter(card))}</div>`}
+              ${loaderMarkup}
               ${sealImage ? `<img class="mycards-card__seal" src="${escapeHtml(sealImage)}" alt="">` : ''}
             </div>
             <p class="mycards-card__word">${escapeHtml(statusLabel)}</p>
@@ -450,6 +495,20 @@
     updateSummary();
     renderCardsPage();
     window.setInterval(renderCardsPage, 1000);
+  }
+
+  if (els.prevBtn) {
+    els.prevBtn.addEventListener('click', () => {
+      state.page = clampPage(state.page - 1);
+      renderCardsPage();
+    });
+  }
+
+  if (els.nextBtn) {
+    els.nextBtn.addEventListener('click', () => {
+      state.page = clampPage(state.page + 1);
+      renderCardsPage();
+    });
   }
 
   init();

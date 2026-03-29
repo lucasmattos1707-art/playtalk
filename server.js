@@ -5154,6 +5154,8 @@ app.use((req, res, next) => {
     '/',
     '/index.html',
     '/auth.html',
+    '/allcards',
+    '/allcards/',
     '/speak',
     '/speak/',
     '/levels',
@@ -5233,6 +5235,9 @@ app.get('/', (req, res) => {
 });
 
 app.use(express.static(staticDir));
+app.get(['/allcards', '/allcards/'], (req, res) => {
+  res.sendFile(path.join(staticDir, 'allcards.html'));
+});
 app.use('/allcards', express.static(ALLCARDS_ROOT, {
   setHeaders(res) {
     res.setHeader('Cache-Control', 'no-store');
