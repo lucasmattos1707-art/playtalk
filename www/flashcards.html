@@ -1515,15 +1515,45 @@
       align-items: center;
       justify-content: center;
       padding: 5vh 5vw;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(243, 244, 246, 0.98) 100%);
+      background: #74C390;
       backdrop-filter: none;
       opacity: 0;
       transform: scale(0.98);
       transition: opacity 260ms ease, transform 260ms ease;
+      overflow: hidden;
+      isolation: isolate;
+      animation: flashcardsGameTheme 21s linear infinite;
     }
 
     .game.is-visible { display: flex; }
     .game.is-active { opacity: 1; transform: scale(1); }
+
+    .game::before,
+    .game::after {
+      content: "";
+      display: block;
+      position: absolute;
+      z-index: 0;
+      top: 0;
+      width: 100vw;
+      height: 100vh;
+      width: 100vmax;
+      height: 100vmax;
+      background: rgba(0, 0, 0, 0.05);
+      animation: flashcardsGameBackground 90s linear infinite;
+      pointer-events: none;
+      border-radius: 28%;
+    }
+
+    .game::after {
+      left: 15vw;
+    }
+
+    .game::before {
+      right: 15vw;
+      animation-delay: -30s;
+      animation-direction: reverse;
+    }
 
     .game-shell {
       width: 100vw;
@@ -1591,6 +1621,10 @@
 
     .game-card.is-transitioning {
       opacity: 0;
+    }
+
+    .game-card.is-sliding-next {
+      animation: flashcardsNextCardSlide 320ms ease-out both;
     }
 
     .game-card.is-listening {
@@ -2289,7 +2323,7 @@
 
     .game {
       overflow: hidden;
-      background: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
+      background: transparent;
     }
 
     .game-shell {
@@ -2917,6 +2951,31 @@
       pointer-events: none;
     }
 
+    .game-status-wrap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      min-height: 30px;
+    }
+
+    .game-status-icon {
+      width: 30px;
+      height: 30px;
+      object-fit: contain;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(6px) scale(0.92);
+      transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease;
+      filter: drop-shadow(0 8px 16px rgba(15, 23, 42, 0.24));
+    }
+
+    .game-status-icon.is-visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0) scale(1);
+    }
+
     .game-status.is-visible {
       display: block !important;
       min-height: 22px;
@@ -3306,6 +3365,57 @@
       100% {
         opacity: 0;
         transform: scale(1.18);
+      }
+    }
+
+    @keyframes flashcardsNextCardSlide {
+      0% {
+        opacity: 0;
+        transform: translateX(54px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes flashcardsGameTheme {
+      0% {
+        background: #74C390;
+      }
+
+      16% {
+        background: #5DBDB6;
+      }
+
+      33% {
+        background: #59D4E1;
+      }
+
+      50% {
+        background: #51BCE8;
+      }
+
+      66% {
+        background: #FA5374;
+      }
+
+      83% {
+        background: #E46653;
+      }
+
+      100% {
+        background: #74C390;
+      }
+    }
+
+    @keyframes flashcardsGameBackground {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
       }
     }
 
@@ -4417,7 +4527,10 @@
         </article>
 
         <div class="game-status-slot" id="gameStatusSlot" aria-live="polite" aria-atomic="true">
-          <p class="game-status" id="gameStatus">Carregando rodada...</p>
+          <div class="game-status-wrap">
+            <img class="game-status-icon" id="gameStatusIcon" alt="">
+            <p class="game-status" id="gameStatus">Carregando rodada...</p>
+          </div>
         </div>
 
         <div class="game-chip-row" id="gameChipRow">
@@ -4714,6 +4827,14 @@
       const SOUND_TEST_SELECTION_COUNT = 3;
       const ACCESS_KEY_LETTERS = 'ABCDEFGHIJKLMNOP'.split('');
       const LIBRARY_RANK_SWAP_DELAY_MS = 1200;
+      const REWARD_RANK_VISIBLE_MS = 3000;
+      const REWARD_STATUS_ICON_PATHS = {
+        same: '/accesskey/same.svg',
+        up: '/accesskey/up.svg',
+        down: '/accesskey/down.svg'
+      };
+      const REWARD_STATUS_UP_AUDIO_PATH = '/accesskey/up.mp3';
+      const NEXT_CARD_WOOSH_AUDIO_PATH = '/accesskey/woosh.mp3';
       const ACCESS_KEY_AUDIO_LIMIT_PATH = '/accesskey/limit.mp3';
       const ACCESS_KEY_AUDIO_MESSAGE_PATH = '/accesskey/message.wav';
       const ACCESS_KEY_AUDIO_INVALID_PATH = '/accesskey/invalidkey2.mp3';
@@ -4909,6 +5030,7 @@
           onboardingGateQueued: false,
           gameStatusRankTimer: 0,
           gameStatusRankToken: 0,
+          gameStatusPreviousRank: 0,
           premiumGateOpen: false,
           premiumCode: '',
           premiumStatus: '',
@@ -5008,6 +5130,7 @@
         gameSubword: document.getElementById('gameSubword'),
         gameStep: document.getElementById('gameStep'),
         gameStatus: document.getElementById('gameStatus'),
+        gameStatusIcon: document.getElementById('gameStatusIcon'),
         gameStars: document.getElementById('gameStars'),
         gameLanguageBtn: document.getElementById('gameLanguageBtn'),
         gameTouchBtn: document.getElementById('gameTouchBtn'),
@@ -9731,9 +9854,39 @@
         els.gameTouchBtn.disabled = true;
       }
 
-      function setGameStatus(text, tone) {
+      function playStatusCueAudio(path) {
+        const resolved = resolveInlineMediaUrl(path);
+        if (!resolved) return;
+        try {
+          const audio = new Audio(resolved);
+          audio.preload = 'auto';
+          audio.play().catch(() => {});
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      function resolveRewardTrend(previousRank, nextRank) {
+        const previous = Math.max(0, Number(previousRank) || 0);
+        const current = Math.max(0, Number(nextRank) || 0);
+        if (!previous || previous === current) return 'same';
+        return current < previous ? 'up' : 'down';
+      }
+
+      function setGameStatus(text, tone, options = {}) {
         els.gameStatus.textContent = text || '';
         els.gameStatus.className = 'game-status';
+        if (els.gameStatusIcon) {
+          const iconPath = safeText(options.iconPath);
+          els.gameStatusIcon.className = 'game-status-icon';
+          els.gameStatusIcon.removeAttribute('src');
+          els.gameStatusIcon.alt = '';
+          if (iconPath) {
+            els.gameStatusIcon.src = iconPath;
+            els.gameStatusIcon.alt = safeText(options.iconLabel) || '';
+            els.gameStatusIcon.classList.add('is-visible');
+          }
+        }
         if (tone) {
           els.gameStatus.classList.add(`is-${tone}`);
         }
@@ -9790,7 +9943,15 @@
           if (token !== state.ui.gameStatusRankToken || !state.game.active) return;
           const rank = await refreshCurrentPlayerRank();
           if (token !== state.ui.gameStatusRankToken || !state.game.active || rank <= 0) return;
-          setGameStatus(`${rank}\u00ba Lugar`, 'flashcards-count');
+          const trend = resolveRewardTrend(state.ui.gameStatusPreviousRank, rank);
+          state.ui.gameStatusPreviousRank = rank;
+          setGameStatus(`${rank}\u00ba Lugar`, 'flashcards-count', {
+            iconPath: REWARD_STATUS_ICON_PATHS[trend] || '',
+            iconLabel: trend
+          });
+          if (trend === 'up') {
+            playStatusCueAudio(REWARD_STATUS_UP_AUDIO_PATH);
+          }
         }, LIBRARY_RANK_SWAP_DELAY_MS);
       }
 
@@ -11258,15 +11419,18 @@
 
         state.game.transitioning = true;
         els.gameCard.classList.add('is-transitioning');
+        els.gameCard.classList.remove('is-sliding-next');
         await wait(180);
         state.game.currentId = state.game.queue.shift();
         persistGameSessionLocally();
         renderCurrentCard();
+        playStatusCueAudio(NEXT_CARD_WOOSH_AUDIO_PATH);
+        els.gameCard.classList.add('is-sliding-next');
         if (!state.game.tutorial.active) {
           playReportAudio();
         }
-        await wait(30);
-        els.gameCard.classList.remove('is-transitioning');
+        await wait(320);
+        els.gameCard.classList.remove('is-transitioning', 'is-sliding-next');
         state.game.transitioning = false;
       }
 
@@ -11504,7 +11668,9 @@
           state.game.skipAutoAudioOnce = true;
         }
         await playStageResponseSequence(evaluatedStage, card);
-        await wait(entry._removeAfterReward || entry._requeueAfterReward ? 1500 : (evaluatedStage === 3 ? 120 : 1200));
+        await wait(entry._removeAfterReward || entry._requeueAfterReward
+          ? (LIBRARY_RANK_SWAP_DELAY_MS + REWARD_RANK_VISIBLE_MS)
+          : (evaluatedStage === 3 ? 120 : 1200));
         if (state.game.active && state.game.tutorial.active && isTutorialPlanetCard(entry.id) && entry._removeAfterReward) {
           entry._removeAfterReward = false;
           await finishTutorialAndStartNormalGame();
