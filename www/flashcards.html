@@ -9751,21 +9751,30 @@
       async function refreshCurrentPlayerRank() {
         try {
           await ensureProvisionedUser();
-          await syncFlashcardCloudNow();
-          const response = await fetch(buildApiUrl('/api/rankings/flashcards'), {
-            method: 'POST',
-            headers: buildAuthHeaders({
-              'Content-Type': 'application/json'
-            }),
-            cache: 'no-store'
-          });
-          const payload = await response.json().catch(() => ({}));
-          if (!response.ok || !payload?.success) {
-            throw new Error(payload?.message || 'Falha ao carregar ranking.');
+          const maxAttempts = 4;
+          for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+            await syncFlashcardCloudNow();
+            const response = await fetch(buildApiUrl('/api/rankings/flashcards'), {
+              method: 'POST',
+              headers: buildAuthHeaders({
+                'Content-Type': 'application/json'
+              }),
+              cache: 'no-store'
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload?.success) {
+              throw new Error(payload?.message || 'Falha ao carregar ranking.');
+            }
+            const nextRank = Math.max(0, Number(payload?.rank) || 0);
+            if (nextRank > 0) {
+              state.ui.librarySummaryRank = nextRank;
+              return nextRank;
+            }
+            if (attempt < (maxAttempts - 1)) {
+              await wait(350);
+            }
           }
-          const nextRank = Math.max(0, Number(payload?.rank) || 0);
-          state.ui.librarySummaryRank = nextRank;
-          return nextRank;
+          return Math.max(0, Number(state.ui.librarySummaryRank) || 0);
         } catch (error) {
           console.warn('Falha ao atualizar posicao do jogador:', error);
           return Math.max(0, Number(state.ui.librarySummaryRank) || 0);
@@ -9782,12 +9791,8 @@
           state.ui.gameStatusRankTimer = 0;
           if (token !== state.ui.gameStatusRankToken || !state.game.active) return;
           const rank = await refreshCurrentPlayerRank();
-          if (token !== state.ui.gameStatusRankToken || !state.game.active) return;
-          if (rank > 0) {
-            setGameStatus(`${rank}\u00ba Lugar`, 'flashcards-count');
-          } else {
-            setGameStatus('Atualizando posicao...', 'flashcards-count');
-          }
+          if (token !== state.ui.gameStatusRankToken || !state.game.active || rank <= 0) return;
+          setGameStatus(`${rank}\u00ba Lugar`, 'flashcards-count');
         }, LIBRARY_RANK_SWAP_DELAY_MS);
       }
 
