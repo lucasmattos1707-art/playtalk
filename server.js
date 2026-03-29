@@ -5111,6 +5111,8 @@ app.use((req, res, next) => {
     '/database/',
     '/flashcards',
     '/flashcards/',
+    '/signup',
+    '/signup/',
     '/premium',
     '/premium/',
     '/users',
