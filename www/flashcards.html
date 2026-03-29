@@ -6133,8 +6133,12 @@
       function shouldShowWelcomeGate() {
         if (state.entry.authRequired || state.game.active || state.watch.active || isAdminUser()) return false;
         if (state.game.tutorial.completed) return false;
-        if (hasTutorialPlanetUnlocked()) return false;
         return !state.entry.cardsReady || Boolean(findTutorialPlanetCard());
+      }
+
+      function syncWelcomeStartButton() {
+        if (!els.welcomeStartBtn) return;
+        els.welcomeStartBtn.textContent = hasTutorialPlanetUnlocked() ? 'JOGAR AGORA' : 'Iniciar jogo';
       }
 
       function syncWelcomeGate() {
@@ -6142,6 +6146,7 @@
         state.entry.welcomeVisible = visible;
         document.body.classList.toggle('welcome-active', visible);
         els.welcomeGate?.classList.toggle('is-visible', visible);
+        syncWelcomeStartButton();
         if (visible) {
           closeRobotCheck();
         }
@@ -6187,6 +6192,8 @@
         if (state.entry.authRequired) return;
         if (hasTutorialPlanetUnlocked()) {
           hideWelcomeGate();
+          saveSelectedGameCount(6);
+          state.game.selectedCount = 6;
           beginGame();
           return;
         }
@@ -6550,7 +6557,8 @@
         if (nextView === 'play') {
           switchMainView('play');
           if (!state.game.active) {
-            openGameSetup();
+            closeGameSetup();
+            syncWelcomeGate();
           }
           return;
         }
