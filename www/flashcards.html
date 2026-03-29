@@ -4083,6 +4083,34 @@
       display: flex;
     }
 
+    #photoGate {
+      transition: background 700ms ease, opacity 320ms ease, visibility 320ms ease;
+      background: rgba(255, 255, 255, 0);
+      overflow: hidden;
+    }
+
+    #photoGate.is-generating {
+      background:
+        linear-gradient(315deg, rgba(101,0,94,1) 3%, rgba(60,132,206,1) 38%, rgba(48,238,226,1) 68%, rgba(255,25,25,1) 98%);
+      background-size: 400% 400%;
+      background-attachment: fixed;
+      animation: identityGateGradient 15s ease infinite;
+    }
+
+    .identity-gate__ai-background {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 700ms ease;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    #photoGate.is-generating .identity-gate__ai-background {
+      opacity: 1;
+    }
+
     .identity-gate__card {
       width: 100%;
       min-height: 100dvh;
@@ -4096,6 +4124,14 @@
       align-items: center;
       justify-content: flex-start;
       overflow-y: auto;
+      position: relative;
+      z-index: 1;
+      transition: background 700ms ease, color 700ms ease;
+    }
+
+    #photoGate.is-generating .identity-gate__card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+      backdrop-filter: blur(10px);
     }
 
     .identity-gate__card h2 {
@@ -4103,6 +4139,18 @@
       color: #0f172a;
       font-size: 30px;
       line-height: 1.05;
+      display: grid;
+      justify-items: center;
+      gap: 2px;
+      font-family: "PlaytalkDisplay", "Soopafre", Arial, sans-serif;
+      font-size: clamp(44px, 9vw, 68px);
+      line-height: 0.9;
+      letter-spacing: 0.01em;
+      text-align: center;
+    }
+
+    .identity-gate__card h2 span {
+      display: block;
     }
 
     .identity-gate__card p {
@@ -4202,6 +4250,8 @@
       margin: 16px 0 0;
       color: #2563eb;
       font-weight: 700;
+      white-space: pre-line;
+      text-align: center;
     }
 
     .identity-gate__status.is-error {
@@ -4241,6 +4291,8 @@
       place-items: center;
       background: linear-gradient(145deg, #0ea5e9, #2563eb 55%, #1d4ed8);
       box-shadow: 0 20px 44px rgba(29, 78, 216, 0.28);
+      margin-top: 30px;
+      transition: transform 320ms ease, box-shadow 320ms ease;
     }
 
     .identity-gate__photo-circle img {
@@ -4299,6 +4351,22 @@
       font-weight: 700;
     }
 
+    #photoGateLoadingCopy {
+      width: min(100%, 420px);
+      min-height: 3.2em;
+      font-family: "PlaytalkDisplay", "Soopafre", Arial, sans-serif;
+      font-size: clamp(24px, 5.7vw, 40px);
+      line-height: 0.92;
+      letter-spacing: 0.01em;
+      color: #0f172a;
+    }
+
+    #photoGate.is-generating #photoGateLoadingCopy,
+    #photoGate.is-generating .identity-gate__card h2 {
+      color: #ffffff;
+      text-shadow: 0 10px 28px rgba(15, 23, 42, 0.28);
+    }
+
     .identity-gate__photo-actions {
       width: 100%;
       display: grid;
@@ -4316,6 +4384,46 @@
     @keyframes identity-photo-flash {
       from { opacity: 1; }
       to { opacity: 0; }
+    }
+
+    .identity-gate__ai-wave {
+      background: rgb(255 255 255 / 25%);
+      border-radius: 1000% 1000% 0 0;
+      position: absolute;
+      width: 200%;
+      height: 12em;
+      animation: identityGateWave 10s -3s linear infinite;
+      transform: translate3d(0, 0, 0);
+      opacity: 0.8;
+      bottom: 0;
+      left: 0;
+      z-index: 0;
+    }
+
+    .identity-gate__ai-wave:nth-of-type(2) {
+      bottom: -1.25em;
+      animation: identityGateWave 18s linear reverse infinite;
+      opacity: 0.8;
+    }
+
+    .identity-gate__ai-wave:nth-of-type(3) {
+      bottom: -2.5em;
+      animation: identityGateWave 20s -1s reverse infinite;
+      opacity: 0.9;
+    }
+
+    @keyframes identityGateGradient {
+      0% { background-position: 0% 0%; }
+      50% { background-position: 100% 100%; }
+      100% { background-position: 0% 0%; }
+    }
+
+    @keyframes identityGateWave {
+      2% { transform: translateX(1px); }
+      25% { transform: translateX(-25%); }
+      50% { transform: translateX(-50%); }
+      75% { transform: translateX(-25%); }
+      100% { transform: translateX(1px); }
     }
 
     body.identity-gate-open .flashcards-footer-nav,
@@ -4713,8 +4821,13 @@
   </section>
 
   <section class="identity-gate" id="photoGate" aria-modal="true" role="dialog" aria-label="Escolha uma bela foto">
+    <div class="identity-gate__ai-background" aria-hidden="true">
+      <div class="identity-gate__ai-wave"></div>
+      <div class="identity-gate__ai-wave"></div>
+      <div class="identity-gate__ai-wave"></div>
+    </div>
     <div class="identity-gate__card">
-      <h2>Escolha uma bela foto</h2>
+      <h2><span>Escolha uma</span><span>bela foto</span></h2>
       <p aria-hidden="true"></p>
       <div class="identity-gate__photo-shell">
         <button class="identity-gate__photo-circle" id="photoGateCircle" type="button" aria-label="Enviar foto">
@@ -7096,11 +7209,32 @@
         }
       }
 
+      function formatOnboardingLoadingMessage(message) {
+        const words = String(message || '').trim().split(/\s+/).filter(Boolean);
+        if (words.length <= 2) {
+          return words.join(' ');
+        }
+
+        let bestIndex = 1;
+        let bestScore = Number.POSITIVE_INFINITY;
+        for (let index = 1; index < words.length; index += 1) {
+          const firstLine = words.slice(0, index).join(' ');
+          const secondLine = words.slice(index).join(' ');
+          const score = Math.abs(firstLine.length - secondLine.length);
+          if (score < bestScore) {
+            bestScore = score;
+            bestIndex = index;
+          }
+        }
+
+        return `${words.slice(0, bestIndex).join(' ')}\n${words.slice(bestIndex).join(' ')}`;
+      }
+
       function startPhotoLoadingCopy() {
         stopPhotoLoadingCopy();
         state.ui.photoLoadingMessageIndex = 0;
         if (els.photoGateLoadingCopy) {
-          els.photoGateLoadingCopy.textContent = ONBOARDING_LOADING_MESSAGES[0];
+          els.photoGateLoadingCopy.textContent = formatOnboardingLoadingMessage(ONBOARDING_LOADING_MESSAGES[0]);
         }
         state.ui.photoLoadingTimer = window.setInterval(() => {
           state.ui.photoLoadingMessageIndex += 1;
@@ -7109,12 +7243,13 @@
             els.photoGateLoadingCopy.textContent = 'Finalizando';
             return;
           }
-          els.photoGateLoadingCopy.textContent = ONBOARDING_LOADING_MESSAGES[state.ui.photoLoadingMessageIndex];
+          els.photoGateLoadingCopy.textContent = formatOnboardingLoadingMessage(ONBOARDING_LOADING_MESSAGES[state.ui.photoLoadingMessageIndex]);
         }, 2000);
       }
 
       function renderPhotoGate() {
         const currentVersion = currentPhotoVersion();
+        els.photoGate?.classList.toggle('is-generating', Boolean(state.ui.photoGateBusy));
         if (els.photoGateCircle) {
           if (state.ui.photoGateBusy && state.ui.photoSourceDataUrl) {
             const safeSource = escapeHtml(state.ui.photoSourceDataUrl);
@@ -7131,11 +7266,7 @@
           els.photoGateCircle.classList.toggle('is-busy', state.ui.photoGateBusy && Boolean(state.ui.photoSourceDataUrl));
         }
         if (els.photoGateStatus) {
-          if (state.ui.photoGateBusy) {
-            els.photoGateStatus.textContent = 'Transformando sua foto em desenho...';
-          } else {
-            els.photoGateStatus.textContent = '';
-          }
+          els.photoGateStatus.textContent = '';
         }
         if (els.photoGateContinueBtn) {
           els.photoGateContinueBtn.disabled = state.ui.photoGateBusy || !currentVersion?.image;
@@ -7567,6 +7698,29 @@
 
       function resolveUsersHref() {
         return isNativeRuntime() ? 'users.html' : '/users';
+      }
+
+      function resolveNativeRenderPageHref(view) {
+        const nativeBaseUrl = (() => {
+          try {
+            return String(window.PlaytalkApi?.baseUrl || window.PLAYTALK_NATIVE_API_BASE_URL || 'https://playtalk-dvv5.onrender.com').trim().replace(/\/+$/, '');
+          } catch (_error) {
+            return 'https://playtalk-dvv5.onrender.com';
+          }
+        })();
+
+        switch (String(view || '').toLowerCase()) {
+          case 'play':
+            return `${nativeBaseUrl}/flashcards`;
+          case 'cards':
+            return `${nativeBaseUrl}/allcards`;
+          case 'users':
+            return `${nativeBaseUrl}/users`;
+          case 'profile':
+            return `${nativeBaseUrl}/account`;
+          default:
+            return `${nativeBaseUrl}/flashcards`;
+        }
       }
 
       async function syncFlashcardRankingNow() {
@@ -12026,16 +12180,26 @@
           startRecognition();
         });
         els.footerPlayBtn?.addEventListener('click', () => {
+          if (isNativeRuntime()) {
+            window.location.href = resolveNativeRenderPageHref('play');
+            return;
+          }
           void navigateToMainView('play');
         });
         els.footerCardsBtn?.addEventListener('click', () => {
-          window.location.href = 'https://playtalk-dvv5.onrender.com/allcards';
+          window.location.href = isNativeRuntime()
+            ? resolveNativeRenderPageHref('cards')
+            : 'https://playtalk-dvv5.onrender.com/allcards';
         });
         els.footerUsersBtn?.addEventListener('click', () => {
-          window.location.href = '/users';
+          window.location.href = isNativeRuntime()
+            ? resolveNativeRenderPageHref('users')
+            : '/users';
         });
         els.footerProfileBtn?.addEventListener('click', () => {
-          window.location.href = '/account';
+          window.location.href = isNativeRuntime()
+            ? resolveNativeRenderPageHref('profile')
+            : '/account';
         });
         els.nameGateContinueBtn?.addEventListener('click', () => {
           void submitNameGate();
