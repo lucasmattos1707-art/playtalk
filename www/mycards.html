@@ -23,12 +23,14 @@
 
     :root {
       --footer-height: max(62px, 8vh);
+      --footer-safe-bottom: env(safe-area-inset-bottom, 0px);
+      --footer-total-height: calc(var(--footer-height) + var(--footer-safe-bottom));
     }
 
     html:has(body.page-cards),
     body.page-cards {
       min-height: 100%;
-      padding-bottom: calc(var(--footer-height) + 18px);
+      padding-bottom: calc(var(--footer-total-height) + 18px);
       overflow-y: auto !important;
       overflow-x: hidden !important;
       background: linear-gradient(180deg, #79afea 0%, #5f95e1 46%, #4d79db 100%);
@@ -258,19 +260,21 @@
     }
 
     .flashcards-footer-nav {
-      position: fixed;
+      position: fixed !important;
       left: 0;
       right: 0;
       bottom: 0;
+      bottom: var(--footer-safe-bottom);
       height: var(--footer-height);
       background: #157efb;
-      display: grid;
+      display: grid !important;
       grid-template-columns: repeat(4, 1fr);
       align-items: stretch;
       z-index: 200;
       box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.12);
       visibility: visible;
       opacity: 1;
+      pointer-events: auto;
     }
 
     .flashcards-footer-nav__item {
