@@ -34,6 +34,7 @@
       overscroll-behavior-y: auto !important;
       touch-action: pan-x pan-y !important;
       -webkit-overflow-scrolling: touch;
+      background: linear-gradient(180deg, #79afea 0%, #5f95e1 46%, #4d79db 100%);
     }
 
     .mycards-page {
@@ -42,38 +43,19 @@
       padding: 18px 0 24px;
     }
 
-    .mycards-summary {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
+    .mycards-title {
       margin: 0 0 20px;
-    }
-
-    .mycards-stat {
-      min-height: 72px;
-      padding: 12px 10px;
-      border-radius: 24px;
-      background: rgba(8, 21, 40, 0.18);
-      border: 1px solid rgba(126, 208, 255, 0.18);
-      backdrop-filter: blur(14px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .mycards-stat svg {
-      width: 25px;
-      height: 25px;
+      text-align: center;
       color: #ffffff;
-      flex: 0 0 auto;
+      font-size: clamp(32px, 7vw, 54px);
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: none;
+      text-shadow: 0 10px 26px rgba(22, 41, 102, 0.2);
     }
 
-    .mycards-stat strong {
-      display: block;
-      font-size: 24px;
-      line-height: 1;
-      color: #ffffff;
+    .mycards-stage {
+      padding: 6px 0 10px;
     }
 
     .mycards-grid {
@@ -88,7 +70,7 @@
       margin: 0;
       padding: 18px 12px;
       text-align: center;
-      color: rgba(255, 255, 255, 0.88);
+      color: #ffffff;
       font-weight: 700;
     }
 
@@ -175,6 +157,31 @@
       pointer-events: none;
     }
 
+    .mycards-card__status-text {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      animation: mycards-status-switch 4.6s ease-in-out infinite;
+    }
+
+    .mycards-card__status-text.is-secondary {
+      opacity: 0;
+      animation-delay: 2.3s;
+    }
+
+    .mycards-card__seal {
+      position: absolute;
+      right: 8px;
+      bottom: 10px;
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+      z-index: 3;
+      filter: drop-shadow(0 4px 10px rgba(13, 24, 61, 0.28));
+      pointer-events: none;
+    }
+
     .flashcards-footer-nav {
       position: fixed;
       left: 0;
@@ -225,6 +232,18 @@
       }
     }
 
+    @keyframes mycards-status-switch {
+      0%, 42% {
+        opacity: 1;
+      }
+      50%, 92% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+
     @media (max-width: 720px) {
       .mycards-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -239,22 +258,8 @@
 </head>
 <body class="page-cards" data-lens-context="menus">
   <main class="mycards-page" aria-live="polite">
-    <section class="mycards-summary" id="mycards-summary">
-      <div class="mycards-stat" aria-label="Total de cartas">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 4.5A2.5 2.5 0 0 1 7.5 2h9A2.5 2.5 0 0 1 19 4.5v11A2.5 2.5 0 0 1 16.5 18h-9A2.5 2.5 0 0 1 5 15.5v-11Zm2.5-.5a.5.5 0 0 0-.5.5v11a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5v-11a.5.5 0 0 0-.5-.5h-9ZM8 7h8v2H8V7Zm0 4h8v2H8v-2Zm0 4h5v2H8v-2Z"/></svg>
-        <strong id="mycards-total">0</strong>
-      </div>
-      <div class="mycards-stat" aria-label="Liberadas para fila">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 3 7v4c0 5.25 3.84 10.74 9 12 5.16-1.26 9-6.75 9-12V7l-9-5Zm-1 14-4-4 1.41-1.41L11 13.17l4.59-4.58L17 10l-6 6Z"/></svg>
-        <strong id="mycards-ready">0</strong>
-      </div>
-      <div class="mycards-stat" aria-label="Em memorizing">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13 2v8h7A8 8 0 1 1 9.05 3.45L10.5 4.9A6 6 0 1 0 18 12h-7V2h2Z"/></svg>
-        <strong id="mycards-memorizing">0</strong>
-      </div>
-    </section>
-
-    <section>
+    <h1 class="mycards-title">FlashCards</h1>
+    <section class="mycards-stage">
       <div id="cards-collection-grid" class="mycards-grid" role="list"></div>
       <p id="cards-empty-state" class="mycards-empty" hidden></p>
     </section>

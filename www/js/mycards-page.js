@@ -5,11 +5,11 @@
   const DATA_MANIFEST_REMOTE_PATH = '/api/flashcards/manifest';
   const FLASHCARDS_LOCAL_SOURCE_PREFIX = 'allcards';
   const REVIEW_PHASES = {
-    1: { durationMs: 24 * 60 * 60 * 1000 },
-    2: { durationMs: 3 * 24 * 60 * 60 * 1000 },
-    3: { durationMs: 7 * 24 * 60 * 60 * 1000 },
-    4: { durationMs: 12 * 24 * 60 * 60 * 1000 },
-    5: { durationMs: 30 * 24 * 60 * 60 * 1000 }
+    1: { durationMs: 6 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
+    2: { durationMs: 3 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
+    3: { durationMs: 7 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/ouro.png' },
+    4: { durationMs: 12 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
+    5: { durationMs: 30 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/diamante.png' }
   };
 
   const els = {
@@ -92,6 +92,7 @@
       availableAt: getNowMs() + REVIEW_PHASES[1].durationMs,
       returnedAt: 0,
       createdAt: getNowMs(),
+      sealImage: safeText(REVIEW_PHASES[1].sealImage),
       ...overrides
     };
   }
@@ -110,7 +111,8 @@
         : (REVIEW_PHASES[targetPhaseIndex]?.durationMs || REVIEW_PHASES[1].durationMs),
       availableAt: Number.isFinite(Number(raw?.availableAt)) ? Number(raw.availableAt) : getNowMs(),
       returnedAt: Number.isFinite(Number(raw?.returnedAt)) ? Number(raw.returnedAt) : 0,
-      createdAt: Number.isFinite(Number(raw?.createdAt)) ? Number(raw.createdAt) : getNowMs()
+      createdAt: Number.isFinite(Number(raw?.createdAt)) ? Number(raw.createdAt) : getNowMs(),
+      sealImage: safeText(raw?.sealImage || REVIEW_PHASES[targetPhaseIndex]?.sealImage || REVIEW_PHASES[1].sealImage)
     });
   }
 
@@ -173,6 +175,11 @@
 
   function resolveCardImage(card) {
     return safeText(card?.imageDisplayUrl || card?.imageUrl || card?.imagem || card?.image);
+  }
+
+  function resolveSealImage(progress) {
+    const phaseIndex = Math.max(1, Math.min(5, Number(progress?.targetPhaseIndex || progress?.phaseIndex) || 1));
+    return safeText(progress?.sealImage || REVIEW_PHASES[phaseIndex]?.sealImage || REVIEW_PHASES[1].sealImage);
   }
 
   function fallbackLetter(card) {
@@ -364,6 +371,8 @@
       const imageUrl = resolveCardImage(card);
       const progress = Math.max(0, Math.min(100, progressPercent(card.progress)));
       const isMemorizing = card.progress?.status === 'memorizing';
+      const statusLabel = isMemorizing ? `${Math.round(progress)}% Complete` : 'Ready';
+      const sealImage = resolveSealImage(card.progress);
       return `
         <article class="mycards-item" role="listitem">
           <div class="mycards-card ${isMemorizing ? 'is-memorizing' : 'is-ready'}" style="--progress:${escapeHtml((progress * 3.6).toFixed(1))}deg;">
@@ -371,7 +380,8 @@
               ${imageUrl
                 ? `<img src="${escapeHtml(imageUrl)}" alt="Carta">`
                 : `<div class="mycards-card__fallback">${escapeHtml(fallbackLetter(card))}</div>`}
-              ${isMemorizing ? '<div class="mycards-card__status">Memorizing</div>' : ''}
+              ${isMemorizing ? `<div class="mycards-card__status"><span class="mycards-card__status-text">Memorizing</span><span class="mycards-card__status-text is-secondary">${escapeHtml(statusLabel)}</span></div>` : ''}
+              ${sealImage ? `<img class="mycards-card__seal" src="${escapeHtml(sealImage)}" alt="">` : ''}
             </div>
           </div>
         </article>

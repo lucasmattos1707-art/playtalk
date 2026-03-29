@@ -167,7 +167,7 @@ const FLASHCARD_RANKING_WEEKDAY_INDEX = {
   Sat: 6
 };
 const FLASHCARD_REVIEW_PHASES = {
-  1: { key: 'prata', label: 'Prata', durationMs: 24 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
+  1: { key: 'prata', label: 'Prata', durationMs: 6 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
   2: { key: 'quartz', label: 'Quartz', durationMs: 3 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
   3: { key: 'gold', label: 'Gold', durationMs: 7 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/ouro.png' },
   4: { key: 'platina', label: 'Platina', durationMs: 12 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
@@ -1068,6 +1068,7 @@ const mapPublicUser = (user) => ({
   onboarding_photo_completed: Boolean(user?.onboarding_photo_completed),
   created_at: user?.created_at || null,
   is_admin: isAdminUserRecord(user),
+  has_password: Boolean(user?.password_hash),
   premium_full_access: Boolean(user?.premium_full_access),
   premium_until: user?.premium_until || null
 });
@@ -1151,7 +1152,7 @@ const readUserById = async (userId) => {
 
   const result = await pool.query(
     `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
-            onboarding_name_completed, onboarding_photo_completed, created_at,
+            onboarding_name_completed, onboarding_photo_completed, created_at, password_hash,
             premium_full_access, premium_until
      FROM public.users
      WHERE id = $1
@@ -3709,7 +3710,7 @@ app.post('/register', async (req, res) => {
        VALUES ($1, $2, $3, $4, true, $5)
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                  onboarding_name_completed, onboarding_photo_completed,
-                 created_at, premium_full_access, premium_until`,
+                 created_at, password_hash, premium_full_access, premium_until`,
       [email, username, passwordHash, avatarImage || null, Boolean(avatarImage)]
     );
 
@@ -3996,7 +3997,7 @@ app.patch('/auth/avatar', async (req, res) => {
        WHERE id = $1
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                  onboarding_name_completed, onboarding_photo_completed,
-                 created_at, premium_full_access, premium_until`,
+                 created_at, password_hash, premium_full_access, premium_until`,
       [
         authUser.id,
         avatarImage || null,
@@ -4058,7 +4059,7 @@ app.patch('/auth/profile', async (req, res) => {
        WHERE id = $1
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                  onboarding_name_completed, onboarding_photo_completed,
-                 created_at, premium_full_access, premium_until`,
+                 created_at, password_hash, premium_full_access, premium_until`,
       [authUser.id, buildLegacyEmailFromUsername(username), username]
     );
 
@@ -4082,6 +4083,56 @@ app.patch('/auth/profile', async (req, res) => {
     }
     console.error('Erro ao atualizar perfil do usuario:', error);
     res.status(500).json({ success: false, message: 'Erro ao atualizar perfil.' });
+  }
+});
+
+app.patch('/auth/password', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const password = typeof req.body?.password === 'string' ? req.body.password.trim() : '';
+    if (password.length < 6) {
+      res.status(400).json({ success: false, message: 'Use pelo menos 6 caracteres na senha.' });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      `UPDATE public.users
+       SET password_hash = $2
+       WHERE id = $1
+       RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                 onboarding_name_completed, onboarding_photo_completed,
+                 created_at, password_hash, premium_full_access, premium_until`,
+      [authUser.id, passwordHash]
+    );
+
+    if (!result.rows.length) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const user = result.rows[0];
+    const token = createAuthToken({ id: user.id, email: user.email });
+    if (token) {
+      setAuthCookie(res, token);
+    }
+
+    res.json({ success: true, user: mapPublicUser(user), token });
+  } catch (error) {
+    console.error('Erro ao atualizar senha do usuario:', error);
+    res.status(500).json({ success: false, message: 'Erro ao atualizar senha.' });
   }
 });
 

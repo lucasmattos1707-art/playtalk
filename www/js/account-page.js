@@ -1,5 +1,6 @@
 (function initPlaytalkAccountPage() {
   const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
+  const AUTO_SAVE_DELAY_MS = 700;
   const els = {
     form: document.getElementById('accountForm'),
     avatarInput: document.getElementById('accountAvatarInput'),
@@ -8,12 +9,12 @@
     nameInput: document.getElementById('accountNameInput'),
     passwordField: document.getElementById('accountPasswordField'),
     passwordInput: document.getElementById('accountPasswordInput'),
+    passwordBtn: document.getElementById('accountPasswordBtn'),
     premiumLevel: document.getElementById('accountPremiumLevel'),
     premiumUntil: document.getElementById('accountPremiumUntil'),
     premiumBtn: document.getElementById('accountPremiumBtn'),
     premiumIcon: document.getElementById('accountPremiumIcon'),
     premiumLabel: document.getElementById('accountPremiumLabel'),
-    saveBtn: document.getElementById('accountSaveBtn'),
     logoutBtn: document.getElementById('accountLogoutBtn'),
     status: document.getElementById('accountStatus')
   };
@@ -22,7 +23,12 @@
     user: null,
     localProfile: null,
     avatarDraft: '',
-    avatarGenerating: false
+    avatarGenerating: false,
+    autoSaveTimer: 0,
+    saveInFlight: false,
+    pendingSave: false,
+    lastSavedUsername: '',
+    lastSavedAvatar: ''
   };
 
   function buildApiUrl(path) {
@@ -74,7 +80,8 @@
       username,
       avatarImage: safeText(user.avatar_image || user.avatarImage),
       premiumFullAccess: Boolean(user.premium_full_access),
-      premiumUntil: user.premium_until || user.premiumUntil || null
+      premiumUntil: user.premium_until || user.premiumUntil || null,
+      hasPassword: Boolean(user.has_password || user.hasPassword)
     };
   }
 
@@ -132,7 +139,18 @@
     const isLoggedIn = Boolean(state.user?.id);
     els.premiumLabel.textContent = isLoggedIn ? 'Comprar premium!' : 'Entrar';
     els.premiumIcon.hidden = !isLoggedIn;
-    els.premiumBtn.setAttribute('aria-label', isLoggedIn ? 'Comprar premium' : 'Entrar');
+  }
+
+  function snapshotCurrentProfile() {
+    return {
+      username: safeText(els.nameInput?.value || state.user?.username || state.localProfile?.username),
+      avatarImage: safeText(state.avatarDraft || state.user?.avatarImage || state.localProfile?.avatarImage)
+    };
+  }
+
+  function syncSavedSnapshot(user = state.user) {
+    state.lastSavedUsername = safeText(user?.username || state.localProfile?.username);
+    state.lastSavedAvatar = safeText(user?.avatarImage || state.localProfile?.avatarImage);
   }
 
   function renderUser() {
@@ -140,21 +158,25 @@
     const username = safeText(sourceProfile.username) || 'Jogador';
     const avatar = safeText(state.avatarDraft || sourceProfile.avatarImage);
     const hasAvatar = Boolean(avatar);
-    els.nameInput.value = username;
+    if (document.activeElement !== els.nameInput) {
+      els.nameInput.value = username;
+    }
     els.avatarPreview.src = hasAvatar ? avatar : 'Avatar/avatar-man-person-svgrepo-com.svg';
     els.avatarPreview.style.display = hasAvatar ? 'block' : 'none';
     els.avatarFallback.textContent = username.charAt(0).toUpperCase() || 'P';
     els.avatarFallback.style.display = hasAvatar ? 'none' : 'grid';
+
+    const shouldHidePasswordField = Boolean(state.user?.id && state.user?.hasPassword);
     if (els.passwordField) {
-      els.passwordField.hidden = Boolean(state.user?.id);
+      els.passwordField.hidden = shouldHidePasswordField;
     }
-    if (els.passwordInput && state.user?.id) {
+    if (els.passwordBtn) {
+      els.passwordBtn.hidden = !shouldHidePasswordField;
+    }
+    if (shouldHidePasswordField && els.passwordInput) {
       els.passwordInput.value = '';
     }
-    if (els.saveBtn) {
-      els.saveBtn.textContent = state.user?.id ? 'Salvar perfil' : 'Criar conta';
-      els.saveBtn.disabled = state.avatarGenerating;
-    }
+
     els.logoutBtn.hidden = !state.user;
     renderPremiumStatus();
     renderPremiumButton();
@@ -190,17 +212,7 @@
           const sourceY = Math.max(0, Math.round((sourceHeight - sourceSide) / 2));
 
           context.clearRect(0, 0, size, size);
-          context.drawImage(
-            image,
-            sourceX,
-            sourceY,
-            sourceSide,
-            sourceSide,
-            0,
-            0,
-            size,
-            size
-          );
+          context.drawImage(image, sourceX, sourceY, sourceSide, sourceSide, 0, 0, size, size);
           resolve(canvas.toDataURL('image/webp', 0.92));
         } catch (error) {
           reject(error);
@@ -231,12 +243,8 @@
   async function createCartoonAvatar(imageDataUrl) {
     const response = await fetch(buildApiUrl('/api/images/openai/avatar-cartoon'), {
       method: 'POST',
-      headers: buildAuthHeaders({
-        'Content-Type': 'application/json'
-      }),
-      body: JSON.stringify({
-        imageDataUrl
-      })
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ imageDataUrl })
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload?.success || !payload?.dataUrl) {
@@ -245,71 +253,43 @@
     return String(payload.dataUrl);
   }
 
+  function clearAutoSaveTimer() {
+    if (!state.autoSaveTimer) return;
+    window.clearTimeout(state.autoSaveTimer);
+    state.autoSaveTimer = 0;
+  }
+
   function isValidPassword(password) {
     return typeof password === 'string' && password.trim().length >= 6;
   }
 
-  async function submitForm(event) {
-    event.preventDefault();
-    const nextUsername = safeText(els.nameInput.value);
-    if (!nextUsername) {
+  async function persistProfileNow() {
+    if (!state.user?.id) return false;
+    const nextProfile = snapshotCurrentProfile();
+    if (!nextProfile.username) {
       setStatus('Digite um nome de usuario.', 'error');
-      return;
+      return false;
+    }
+    if (
+      nextProfile.username === state.lastSavedUsername
+      && nextProfile.avatarImage === state.lastSavedAvatar
+      && !state.avatarDraft
+    ) {
+      return true;
+    }
+    if (state.avatarGenerating) return false;
+    if (state.saveInFlight) {
+      state.pendingSave = true;
+      return false;
     }
 
-    const nextAvatar = safeText(state.avatarDraft || state.user?.avatarImage || state.localProfile?.avatarImage);
-    const nextPassword = safeText(els.passwordInput?.value);
-    const shouldCreateAccount = !state.user?.id;
-    if (shouldCreateAccount && !isValidPassword(nextPassword)) {
-      setStatus('Defina uma senha com pelo menos 6 caracteres.', 'error');
-      return;
-    }
-
-    els.saveBtn.disabled = true;
-    setStatus(shouldCreateAccount ? 'Criando conta...' : 'Salvando perfil...');
+    state.saveInFlight = true;
+    setStatus('Salvando perfil...');
     try {
-      if (shouldCreateAccount) {
-        const registerResponse = await fetch(buildApiUrl('/register'), {
-          method: 'POST',
-          headers: buildAuthHeaders({
-            'Content-Type': 'application/json'
-          }),
-          body: JSON.stringify({
-            username: nextUsername,
-            password: nextPassword,
-            avatar: nextAvatar
-          })
-        });
-        const registerPayload = await registerResponse.json().catch(() => ({}));
-        if (!registerResponse.ok || !registerPayload?.success) {
-          throw new Error(registerPayload?.message || 'Nao foi possivel criar a conta.');
-        }
-        if (registerPayload?.token) {
-          persistAuthToken(registerPayload.token);
-        }
-        state.user = normalizeUser(registerPayload.user);
-        state.localProfile = {
-          username: nextUsername,
-          avatarImage: nextAvatar
-        };
-        patchLocalPlayerProfile({
-          username: nextUsername,
-          avatarImage: nextAvatar
-        });
-        if (els.passwordInput) {
-          els.passwordInput.value = '';
-        }
-        renderUser();
-        setStatus('Conta criada com sucesso.', 'success');
-        return;
-      }
-
       const profileResponse = await fetch(buildApiUrl('/auth/profile'), {
         method: 'PATCH',
-        headers: buildAuthHeaders({
-          'Content-Type': 'application/json'
-        }),
-        body: JSON.stringify({ username: nextUsername })
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ username: nextProfile.username })
       });
       const profilePayload = await profileResponse.json().catch(() => ({}));
       if (!profileResponse.ok || !profilePayload?.success) {
@@ -317,12 +297,14 @@
       }
 
       let updatedUser = normalizeUser(profilePayload.user) || state.user;
+      if (profilePayload?.token) {
+        persistAuthToken(profilePayload.token);
+      }
+
       if (state.avatarDraft) {
         const avatarResponse = await fetch(buildApiUrl('/auth/avatar'), {
           method: 'PATCH',
-          headers: buildAuthHeaders({
-            'Content-Type': 'application/json'
-          }),
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ avatar: state.avatarDraft })
         });
         const avatarPayload = await avatarResponse.json().catch(() => ({}));
@@ -339,14 +321,110 @@
       };
       patchLocalPlayerProfile(state.localProfile);
       state.avatarDraft = '';
+      syncSavedSnapshot(updatedUser);
       renderUser();
-      setStatus('Perfil atualizado com sucesso.', 'success');
+      setStatus('Perfil salvo automaticamente.', 'success');
+      return true;
     } catch (error) {
       setStatus(error?.message || 'Nao foi possivel salvar o perfil.', 'error');
+      return false;
     } finally {
-      if (els.saveBtn) {
-        els.saveBtn.disabled = state.avatarGenerating;
+      state.saveInFlight = false;
+      if (state.pendingSave) {
+        state.pendingSave = false;
+        scheduleAutoSave(250);
       }
+    }
+  }
+
+  function scheduleAutoSave(delayMs = AUTO_SAVE_DELAY_MS) {
+    if (!state.user?.id) return;
+    clearAutoSaveTimer();
+    state.autoSaveTimer = window.setTimeout(() => {
+      state.autoSaveTimer = 0;
+      void persistProfileNow();
+    }, delayMs);
+  }
+
+  async function createAccountFromForm() {
+    const nextUsername = safeText(els.nameInput.value);
+    const nextPassword = safeText(els.passwordInput?.value);
+    const nextAvatar = safeText(state.avatarDraft || state.localProfile?.avatarImage);
+
+    if (!nextUsername) {
+      setStatus('Digite um nome de usuario.', 'error');
+      return;
+    }
+    if (!isValidPassword(nextPassword)) {
+      setStatus('Defina uma senha com pelo menos 6 caracteres.', 'error');
+      return;
+    }
+
+    setStatus('Criando conta...');
+    try {
+      const registerResponse = await fetch(buildApiUrl('/register'), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          username: nextUsername,
+          password: nextPassword,
+          avatar: nextAvatar
+        })
+      });
+      const registerPayload = await registerResponse.json().catch(() => ({}));
+      if (!registerResponse.ok || !registerPayload?.success) {
+        throw new Error(registerPayload?.message || 'Nao foi possivel criar a conta.');
+      }
+      if (registerPayload?.token) {
+        persistAuthToken(registerPayload.token);
+      }
+      state.user = normalizeUser(registerPayload.user);
+      state.localProfile = {
+        username: nextUsername,
+        avatarImage: nextAvatar
+      };
+      patchLocalPlayerProfile(state.localProfile);
+      state.avatarDraft = '';
+      syncSavedSnapshot(state.user);
+      if (els.passwordInput) {
+        els.passwordInput.value = '';
+      }
+      renderUser();
+      setStatus('Conta criada com sucesso.', 'success');
+    } catch (error) {
+      setStatus(error?.message || 'Nao foi possivel criar a conta.', 'error');
+    }
+  }
+
+  async function promptForPassword() {
+    if (!state.user?.id) return;
+    const typed = window.prompt('Digite a nova senha (minimo de 6 caracteres):', '');
+    const password = safeText(typed);
+    if (!password) return;
+    if (!isValidPassword(password)) {
+      setStatus('Use pelo menos 6 caracteres na senha.', 'error');
+      return;
+    }
+
+    setStatus('Salvando nova senha...');
+    try {
+      const response = await fetch(buildApiUrl('/auth/password'), {
+        method: 'PATCH',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ password })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Nao foi possivel salvar a senha.');
+      }
+      if (payload?.token) {
+        persistAuthToken(payload.token);
+      }
+      state.user = normalizeUser(payload.user) || state.user;
+      renderUser();
+      setStatus('Senha criada com sucesso.', 'success');
+    } catch (error) {
+      setStatus(error?.message || 'Nao foi possivel salvar a senha.', 'error');
     }
   }
 
@@ -365,9 +443,7 @@
     try {
       const response = await fetch(buildApiUrl('/login'), {
         method: 'POST',
-        headers: buildAuthHeaders({
-          'Content-Type': 'application/json'
-        }),
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ username, password })
       });
       const payload = await response.json().catch(() => ({}));
@@ -384,6 +460,7 @@
         avatarImage: state.user?.avatarImage || safeText(state.avatarDraft || state.localProfile?.avatarImage)
       };
       patchLocalPlayerProfile(state.localProfile);
+      syncSavedSnapshot(state.user);
       if (els.passwordInput) {
         els.passwordInput.value = '';
       }
@@ -400,9 +477,7 @@
     try {
       await fetch(buildApiUrl('/logout'), {
         method: 'POST',
-        headers: buildAuthHeaders({
-          'Content-Type': 'application/json'
-        })
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' })
       });
     } catch (_error) {
       // ignore
@@ -414,11 +489,30 @@
   async function init() {
     state.user = await fetchSessionUser();
     state.localProfile = readLocalPlayerProfile();
+    syncSavedSnapshot(state.user || state.localProfile);
     renderUser();
     if (!state.user?.id) {
-      setStatus('Defina uma senha e salve para criar sua conta real.', null);
+      setStatus('Defina uma senha e pressione Enter para criar sua conta real.', null);
     }
-    els.form?.addEventListener('submit', submitForm);
+
+    els.form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (state.user?.id) {
+        await persistProfileNow();
+        return;
+      }
+      await createAccountFromForm();
+    });
+
+    els.nameInput?.addEventListener('input', () => {
+      setStatus('');
+      scheduleAutoSave();
+    });
+
+    els.passwordBtn?.addEventListener('click', () => {
+      void promptForPassword();
+    });
+
     els.premiumBtn?.addEventListener('click', () => {
       if (!state.user?.id) {
         void loginFromAccount();
@@ -426,13 +520,14 @@
       }
       window.location.href = '/flashcards?premium=1&view=cards';
     });
+
     els.logoutBtn?.addEventListener('click', logout);
+
     els.avatarInput?.addEventListener('change', async (event) => {
       const file = event.target?.files?.[0];
       if (!file) return;
       try {
         state.avatarGenerating = true;
-        els.saveBtn.disabled = true;
         setStatus('Transformando foto em desenho...');
         const sourceDataUrl = await fileToSquareWebpDataUrl(file, 400);
         state.avatarDraft = sourceDataUrl;
@@ -441,13 +536,11 @@
         state.avatarDraft = await dataUrlToSquareWebpDataUrl(cartoonDataUrl, 400);
         renderUser();
         setStatus('Desenho gerado com sucesso.', 'success');
+        scheduleAutoSave(120);
       } catch (error) {
         setStatus(error?.message || 'Nao foi possivel transformar a imagem.', 'error');
       } finally {
         state.avatarGenerating = false;
-        if (els.saveBtn) {
-          els.saveBtn.disabled = false;
-        }
       }
     });
   }

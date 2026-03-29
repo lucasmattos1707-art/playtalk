@@ -46,33 +46,13 @@
       width: min(900px, calc(100vw - 28px));
       margin: 0 auto;
       min-height: 100vh;
-      padding: 14px 0 calc(var(--footer-height) + 20px);
-    }
-
-    .panel-head {
-      padding: 26px 22px 18px;
-      border-radius: var(--radius) var(--radius) 0 0;
-      border: 1px solid var(--line);
-      border-bottom: 0;
-      background: rgba(255, 255, 255, 0.16);
-      backdrop-filter: blur(18px);
-    }
-
-    .title {
-      margin: 0;
-      text-align: center;
-      font-family: "PlaytalkDisplay", Impact, sans-serif;
-      font-size: clamp(36px, 8vw, 64px);
-      letter-spacing: 0.1em;
-      color: #ffffff;
-      text-transform: uppercase;
+      padding: 0 0 calc(var(--footer-height) + 20px);
     }
 
     .panel {
       padding: 26px 22px 22px;
       border-radius: 0 0 var(--radius) var(--radius);
       border: 1px solid var(--line);
-      border-top: 0;
       background: rgba(9, 21, 38, 0.18);
       box-shadow: var(--shadow);
       backdrop-filter: blur(16px);
@@ -147,6 +127,11 @@
       background: rgba(255, 255, 255, 0.08);
       color: #ffffff;
       border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .account-button--password {
+      background: #12326b;
+      color: #ffffff;
     }
 
     .account-status {
@@ -243,10 +228,6 @@
         padding-top: 0;
       }
 
-      .panel-head {
-        padding: 22px 14px 16px;
-      }
-
       .panel {
         padding: 22px 14px 14px;
       }
@@ -255,9 +236,6 @@
 </head>
 <body>
   <main class="page">
-    <section class="panel-head">
-      <h1 class="title">Conta</h1>
-    </section>
     <section class="panel">
       <form class="account-form" id="accountForm">
         <label class="account-avatar" for="accountAvatarInput">
@@ -273,6 +251,7 @@
           <span>Senha</span>
           <input id="accountPasswordInput" type="password" maxlength="64" placeholder="Defina uma senha">
         </label>
+        <button class="account-button account-button--password" id="accountPasswordBtn" type="button" hidden>Criar uma senha</button>
         <div class="account-premium">
           <strong id="accountPremiumLevel">Nivel de acesso: Free</strong>
           <span id="accountPremiumUntil">Sem premium ativo no momento.</span>
@@ -281,7 +260,6 @@
           <span class="account-button__crown" id="accountPremiumIcon" aria-hidden="true">👑</span>
           <span id="accountPremiumLabel">Comprar premium!</span>
         </button>
-        <button class="account-button account-button--primary" id="accountSaveBtn" type="submit">Salvar perfil</button>
         <button class="account-button account-button--secondary" id="accountLogoutBtn" type="button">Sair da conta</button>
         <p class="account-status" id="accountStatus" aria-live="polite"></p>
       </form>
