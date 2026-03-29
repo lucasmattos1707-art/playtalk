@@ -27,35 +27,44 @@
 
     html:has(body.page-cards),
     body.page-cards {
+      min-height: 100%;
       padding-bottom: calc(var(--footer-height) + 18px);
       overflow-y: auto !important;
       overflow-x: hidden !important;
-      overscroll-behavior-x: auto !important;
-      overscroll-behavior-y: auto !important;
+      background: linear-gradient(180deg, #79afea 0%, #5f95e1 46%, #4d79db 100%);
       touch-action: pan-x pan-y !important;
       -webkit-overflow-scrolling: touch;
-      background: linear-gradient(180deg, #79afea 0%, #5f95e1 46%, #4d79db 100%);
     }
 
     .mycards-page {
       width: min(1080px, calc(100vw - 22px));
       margin: 0 auto;
-      padding: 18px 0 24px;
+      padding: 20px 0 28px;
+    }
+
+    .mycards-head {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
     }
 
     .mycards-title {
-      margin: 0 0 20px;
-      text-align: center;
+      margin: 0;
       color: #ffffff;
-      font-size: clamp(32px, 7vw, 54px);
-      font-weight: 900;
+      font-family: "Soopafre", "Open Sans", Arial, sans-serif;
+      font-size: clamp(36px, 8vw, 54px);
       letter-spacing: 0.04em;
-      text-transform: none;
-      text-shadow: 0 10px 26px rgba(22, 41, 102, 0.2);
+      text-shadow: 0 10px 24px rgba(16, 42, 102, 0.2);
     }
 
-    .mycards-stage {
-      padding: 6px 0 10px;
+    .mycards-total {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     .mycards-grid {
@@ -68,9 +77,9 @@
 
     .mycards-empty {
       margin: 0;
-      padding: 18px 12px;
+      padding: 22px 12px;
       text-align: center;
-      color: #ffffff;
+      color: rgba(255, 255, 255, 0.92);
       font-weight: 700;
     }
 
@@ -80,37 +89,23 @@
     }
 
     .mycards-card {
-      position: relative;
-      width: min(100%, 170px);
-      aspect-ratio: 1 / 1;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      --progress: 360deg;
-      background: conic-gradient(#2be06a var(--progress), rgba(43, 224, 106, 0.18) 0deg);
-      box-shadow: 0 18px 34px rgba(7, 17, 31, 0.18);
-      isolation: isolate;
-    }
-
-    .mycards-card::before {
-      content: "";
-      position: absolute;
-      inset: 8px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(4px);
-      z-index: 0;
+      width: min(100%, 190px);
+      padding: 12px 12px 14px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 18px 34px rgba(20, 47, 114, 0.18);
+      backdrop-filter: blur(12px);
     }
 
     .mycards-card__image {
       position: relative;
-      z-index: 1;
-      width: calc(100% - 16px);
-      height: calc(100% - 16px);
-      border-radius: 50%;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 26px;
       overflow: hidden;
-      background: rgba(255, 255, 255, 0.08);
-      touch-action: pan-x pan-y;
+      background: rgba(255, 255, 255, 0.12);
+      margin-bottom: 12px;
     }
 
     .mycards-card__image img,
@@ -130,56 +125,57 @@
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
     }
 
-    .mycards-card.is-memorizing .mycards-card__image img {
-      filter: blur(14px);
-      transform: scale(1.14);
-    }
-
-    .mycards-card.is-memorizing .mycards-card__image {
-      animation: mycards-memorizing-pulse 3000ms ease-in-out infinite;
-    }
-
-    .mycards-card__status {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 2;
-      width: calc(100% - 28px);
-      font-family: "Soopafre", Arial, sans-serif;
-      color: #ffffff;
-      font-size: clamp(20px, 4vw, 28px);
-      font-weight: 400;
-      letter-spacing: 0.02em;
-      text-align: center;
-      text-transform: none;
-      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.72);
-      pointer-events: none;
-    }
-
-    .mycards-card__status-text {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      animation: mycards-status-switch 4.6s ease-in-out infinite;
-    }
-
-    .mycards-card__status-text.is-secondary {
-      opacity: 0;
-      animation-delay: 2.3s;
+    .mycards-card.is-memorizing .mycards-card__image > img {
+      filter: blur(7px);
+      transform: scale(1.05);
     }
 
     .mycards-card__seal {
       position: absolute;
       right: 8px;
-      bottom: 10px;
+      top: 8px;
       width: 44px;
       height: 44px;
       object-fit: contain;
-      z-index: 3;
-      filter: drop-shadow(0 4px 10px rgba(13, 24, 61, 0.28));
+      z-index: 2;
       pointer-events: none;
+      filter: drop-shadow(0 4px 10px rgba(12, 26, 68, 0.28));
+    }
+
+    .mycards-card__word {
+      margin: 0;
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 1.15;
+      text-align: center;
+      word-break: break-word;
+    }
+
+    .mycards-card__subword {
+      margin: 6px 0 0;
+      min-height: 22px;
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 14px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .mycards-card__progress {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.2);
+      margin-top: 10px;
+    }
+
+    .mycards-card__progress span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #3ed66b 0%, #7af28d 100%);
+      box-shadow: 0 0 14px rgba(62, 214, 107, 0.42);
     }
 
     .flashcards-footer-nav {
@@ -220,30 +216,6 @@
       color: #ffffff;
     }
 
-    @keyframes mycards-memorizing-pulse {
-      0% {
-        opacity: 0.7;
-      }
-      50% {
-        opacity: 0.35;
-      }
-      100% {
-        opacity: 0.7;
-      }
-    }
-
-    @keyframes mycards-status-switch {
-      0%, 42% {
-        opacity: 1;
-      }
-      50%, 92% {
-        opacity: 0;
-      }
-      100% {
-        opacity: 1;
-      }
-    }
-
     @media (max-width: 720px) {
       .mycards-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -251,15 +223,19 @@
       }
 
       .mycards-card {
-        width: min(100%, 150px);
+        width: min(100%, 176px);
       }
     }
   </style>
 </head>
 <body class="page-cards" data-lens-context="menus">
   <main class="mycards-page" aria-live="polite">
-    <h1 class="mycards-title">FlashCards</h1>
-    <section class="mycards-stage">
+    <header class="mycards-head">
+      <h1 class="mycards-title">FlashCards</h1>
+      <p class="mycards-total" id="mycards-total">0 FlashCards</p>
+    </header>
+
+    <section>
       <div id="cards-collection-grid" class="mycards-grid" role="list"></div>
       <p id="cards-empty-state" class="mycards-empty" hidden></p>
     </section>

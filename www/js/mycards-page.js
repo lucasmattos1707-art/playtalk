@@ -15,9 +15,7 @@
   const els = {
     grid: document.getElementById('cards-collection-grid'),
     empty: document.getElementById('cards-empty-state'),
-    total: document.getElementById('mycards-total'),
-    ready: document.getElementById('mycards-ready'),
-    memorizing: document.getElementById('mycards-memorizing')
+    total: document.getElementById('mycards-total')
   };
 
   const state = {
@@ -350,11 +348,9 @@
 
   function updateSummary() {
     const total = state.cards.length;
-    const ready = state.cards.filter((card) => card.progress?.status === 'ready').length;
-    const memorizing = total - ready;
-    if (els.total) els.total.textContent = String(total);
-    if (els.ready) els.ready.textContent = String(ready);
-    if (els.memorizing) els.memorizing.textContent = String(memorizing);
+    if (els.total) {
+      els.total.textContent = `${total} FlashCards`;
+    }
   }
 
   function renderCardsPage() {
@@ -371,8 +367,12 @@
       const imageUrl = resolveCardImage(card);
       const progress = Math.max(0, Math.min(100, progressPercent(card.progress)));
       const isMemorizing = card.progress?.status === 'memorizing';
-      const statusLabel = isMemorizing ? `${Math.round(progress)}% Complete` : 'Ready';
+      const statusLabel = isMemorizing ? 'Memorizing' : (card.english || card.portuguese || card.deckTitle);
+      const detailLabel = isMemorizing ? `${progress.toFixed(2)}% Complete` : (card.portuguese || '');
       const sealImage = resolveSealImage(card.progress);
+      const progressMarkup = isMemorizing
+        ? `<div class="mycards-card__progress" aria-hidden="true"><span style="width:${escapeHtml(progress.toFixed(2))}%"></span></div>`
+        : '';
       return `
         <article class="mycards-item" role="listitem">
           <div class="mycards-card ${isMemorizing ? 'is-memorizing' : 'is-ready'}" style="--progress:${escapeHtml((progress * 3.6).toFixed(1))}deg;">
@@ -380,9 +380,11 @@
               ${imageUrl
                 ? `<img src="${escapeHtml(imageUrl)}" alt="Carta">`
                 : `<div class="mycards-card__fallback">${escapeHtml(fallbackLetter(card))}</div>`}
-              ${isMemorizing ? `<div class="mycards-card__status"><span class="mycards-card__status-text">Memorizing</span><span class="mycards-card__status-text is-secondary">${escapeHtml(statusLabel)}</span></div>` : ''}
               ${sealImage ? `<img class="mycards-card__seal" src="${escapeHtml(sealImage)}" alt="">` : ''}
             </div>
+            <p class="mycards-card__word">${escapeHtml(statusLabel)}</p>
+            <p class="mycards-card__subword">${escapeHtml(detailLabel)}</p>
+            ${progressMarkup}
           </div>
         </article>
       `;
