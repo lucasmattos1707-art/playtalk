@@ -165,12 +165,12 @@
       display: none;
     }
 
-    .flashcards-home-toggle,
-    .topbar,
-    .catalog,
-    .embedded-panel,
-    .profile-panel,
-    .flashcards-footer-nav {
+    .flashcards-home-toggle[hidden],
+    .topbar[hidden],
+    .catalog[hidden],
+    .embedded-panel[hidden],
+    .profile-panel[hidden],
+    .flashcards-footer-nav[hidden] {
       display: none !important;
     }
 
@@ -6133,15 +6133,20 @@
         }
       }
 
+      function hasWelcomePlayAccess() {
+        return hasTutorialPlanetUnlocked() || state.game.tutorial.completed;
+      }
+
       function shouldShowWelcomeGate() {
         if (state.entry.authRequired || state.game.active || state.watch.active || isAdminUser()) return false;
-        if (state.game.tutorial.completed) return false;
-        return !state.entry.cardsReady || Boolean(findTutorialPlanetCard());
+        if (!state.entry.cardsReady) return true;
+        if (hasWelcomePlayAccess()) return true;
+        return Boolean(findTutorialPlanetCard());
       }
 
       function syncWelcomeStartButton() {
         if (!els.welcomeStartBtn) return;
-        els.welcomeStartBtn.textContent = hasTutorialPlanetUnlocked() ? 'JOGAR AGORA' : 'Iniciar jogo';
+        els.welcomeStartBtn.textContent = hasWelcomePlayAccess() ? 'JOGUE AGORA' : 'INICIAR JOGO';
       }
 
       function syncWelcomeGate() {
@@ -6193,7 +6198,7 @@
 
       function requestWelcomeTutorialStart(skipSoundTest = false) {
         if (state.entry.authRequired) return;
-        if (hasTutorialPlanetUnlocked()) {
+        if (hasWelcomePlayAccess()) {
           hideWelcomeGate();
           saveSelectedGameCount(6);
           state.game.selectedCount = 6;
@@ -6519,10 +6524,10 @@
       function switchMainView(view) {
         const nextView = 'play';
         state.ui.activeView = nextView;
-        const showCatalog = false;
+        const showCatalog = nextView === 'play';
         const showUsers = false;
         const showProfile = false;
-        const showTopbar = false;
+        const showTopbar = nextView === 'play';
 
         if (els.catalog) {
           els.catalog.hidden = !showCatalog;
