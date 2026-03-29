@@ -147,6 +147,10 @@
       overflow: hidden;
     }
 
+    body.identity-gate-open {
+      overflow: hidden !important;
+    }
+
     body.game-open .flashcards-home-toggle {
       display: none;
     }
@@ -3656,7 +3660,7 @@
       padding: 0;
       background: rgba(7, 16, 34, 0.78);
       backdrop-filter: blur(16px);
-      z-index: 140;
+      z-index: 520;
       overflow-y: auto;
     }
 
@@ -4565,6 +4569,7 @@
           photoSwipeStartX: 0,
           photoFlashTimer: 0,
           onboardingTransitionActive: false,
+          onboardingGateQueued: false,
           premiumGateOpen: false,
           premiumCode: '',
           premiumStatus: '',
@@ -6342,6 +6347,27 @@
         document.body.classList.toggle('identity-gate-open', open);
         els.nameGate?.classList.toggle('is-visible', state.ui.nameGateOpen);
         els.photoGate?.classList.toggle('is-visible', state.ui.photoGateOpen);
+        if (open) {
+          state.ui.onboardingGateQueued = false;
+          state.game.paused = true;
+          cleanupGameRecognition();
+          stopActiveAudio();
+          try {
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+          } catch (_error) {
+            window.scrollTo(0, 0);
+          }
+          document.documentElement.scrollTop = 0;
+          document.body.scrollTop = 0;
+          return;
+        }
+        if (state.game.active) {
+          state.game.paused = false;
+          const currentEntryExists = state.game.currentId && state.game.entries.has(state.game.currentId);
+          if (!currentEntryExists && state.game.entries.size) {
+            advanceToNextCard();
+          }
+        }
       }
 
       function wait(ms) {
@@ -6463,6 +6489,7 @@
         state.ui.onboardingTransitionActive = true;
         try {
           await runOnboardingGateTransition();
+          state.ui.onboardingGateQueued = false;
           state.ui.nameGateOpen = true;
           state.ui.photoGateOpen = false;
           state.ui.nameDraft = safeText(state.user?.onboardingNameCompleted ? state.user?.username : state.user?.username || '');
@@ -6591,6 +6618,7 @@
         state.ui.onboardingTransitionActive = true;
         try {
           await runOnboardingGateTransition();
+          state.ui.onboardingGateQueued = false;
           state.ui.photoGateOpen = true;
           state.ui.nameGateOpen = false;
           state.ui.photoVersions = Array.isArray(state.user?.avatarVersions) ? state.user.avatarVersions.slice(0, 5) : [];
@@ -6713,7 +6741,10 @@
 
       async function maybeOpenOnboardingGate() {
         const total = accessibleFlashcardsCount();
-        if (shouldGatePremiumAccess()) return false;
+        if (shouldGatePremiumAccess()) {
+          state.ui.onboardingGateQueued = false;
+          return false;
+        }
         if (total >= ONBOARDING_NAME_THRESHOLD) {
           const user = await ensureProvisionedUser();
           if (!user?.onboardingNameCompleted) {
@@ -6728,6 +6759,7 @@
             return true;
           }
         }
+        state.ui.onboardingGateQueued = false;
         return false;
       }
 
@@ -10806,8 +10838,12 @@
             }
             if (accessibleCountBeforeResolution < ONBOARDING_PHOTO_THRESHOLD
               && accessibleFlashcardsCount() >= ONBOARDING_NAME_THRESHOLD) {
+              state.ui.onboardingGateQueued = true;
+              state.game.paused = true;
               window.setTimeout(() => {
                 maybeOpenOnboardingGate().catch((error) => {
+                  state.ui.onboardingGateQueued = false;
+                  state.game.paused = false;
                   console.warn('Falha ao abrir onboarding de identidade:', error);
                 });
               }, 320);
@@ -10878,6 +10914,10 @@
                 break;
               }
             }
+          }
+          if (state.ui.onboardingGateQueued || state.ui.onboardingTransitionActive || state.ui.nameGateOpen || state.ui.photoGateOpen) {
+            state.game.currentId = null;
+            return;
           }
           advanceToNextCard();
         }
