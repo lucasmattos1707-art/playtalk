@@ -6758,6 +6758,17 @@
         targets.forEach((target) => target.classList.remove('is-onboarding-exiting', 'onboarding-transition-target'));
       }
 
+      async function redirectToUsernameOnFourthFlashcard() {
+        if (state.ui.onboardingTransitionActive) return;
+        state.ui.onboardingTransitionActive = true;
+        try {
+          await runOnboardingGateTransition();
+          window.location.href = `/username?return=${encodeURIComponent('/flashcards')}`;
+        } finally {
+          state.ui.onboardingTransitionActive = false;
+        }
+      }
+
       async function ensureProvisionedUser() {
         if (state.user?.id) return state.user;
         const response = await fetch(buildApiUrl('/auth/provision-temp'), {
@@ -11192,6 +11203,11 @@
             schedulePendingRewardSeal(entry.id, rewardSealPhase);
             setGameStatus(`${accessibleFlashcardsCount()} FlashCards`, 'flashcards-count');
             promoteCardFromWin(entry);
+            if (!state.user?.onboardingNameCompleted
+              && accessibleCountBeforeResolution < 4
+              && accessibleFlashcardsCount() >= 4) {
+              entry._redirectToUsername = true;
+            }
             updateGameChips();
             if (!state.user?.id
               && accessibleCountBeforeResolution < GUEST_FLASHCARD_LOGIN_THRESHOLD
@@ -11245,6 +11261,11 @@
         if (state.game.active && state.game.tutorial.active && isTutorialPlanetCard(entry.id) && entry._removeAfterReward) {
           entry._removeAfterReward = false;
           await finishTutorialAndStartNormalGame();
+          return;
+        }
+        if (entry._redirectToUsername) {
+          entry._redirectToUsername = false;
+          await redirectToUsernameOnFourthFlashcard();
           return;
         }
         if (state.game.active) {
