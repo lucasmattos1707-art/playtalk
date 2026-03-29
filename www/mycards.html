@@ -84,12 +84,14 @@
     }
 
     .mycards-item,
-    .mini-card {
+    .mini-card,
+    .mycards-card {
       display: flex;
       justify-content: center;
     }
 
-    .mini-card {
+    .mini-card,
+    .mycards-card {
       width: min(100%, 190px);
       padding: 12px 12px 14px;
       border-radius: 28px;
@@ -99,7 +101,8 @@
       backdrop-filter: blur(12px);
     }
 
-    .mini-card__image {
+    .mini-card__image,
+    .mycards-card__image {
       position: relative;
       width: 100%;
       aspect-ratio: 1 / 1;
@@ -112,7 +115,9 @@
     }
 
     .mini-card__image > img:not(.mini-card__seal),
-    .mini-card__fallback {
+    .mycards-card__image > img:not(.mycards-card__seal),
+    .mini-card__fallback,
+    .mycards-card__fallback {
       width: 100%;
       height: 100%;
       display: block;
@@ -120,7 +125,8 @@
       clip-path: inset(8% 8% 8% 8% round 14px);
     }
 
-    .mini-card__fallback {
+    .mini-card__fallback,
+    .mycards-card__fallback {
       display: grid;
       place-items: center;
       text-align: center;
@@ -134,11 +140,13 @@
         rgba(255, 255, 255, 0.02);
     }
 
-    .mini-card.is-memorizing .mini-card__image > img:not(.mini-card__seal) {
+    .mini-card.is-memorizing .mini-card__image > img:not(.mini-card__seal),
+    .mycards-card.is-memorizing .mycards-card__image > img:not(.mycards-card__seal) {
       filter: blur(7px);
     }
 
-    .mini-card__seal {
+    .mini-card__seal,
+    .mycards-card__seal {
       position: absolute;
       right: -10px;
       bottom: -10px;
@@ -152,7 +160,8 @@
       filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.28));
     }
 
-    .mini-card__word {
+    .mini-card__word,
+    .mycards-card__word {
       margin: 10px 0 0;
       color: #ffffff;
       font-size: 17px;
@@ -161,7 +170,8 @@
       word-break: break-word;
     }
 
-    .mini-card__subword {
+    .mini-card__subword,
+    .mycards-card__subword {
       margin: 4px 0 0;
       min-height: 18px;
       color: rgba(255, 255, 255, 0.88);
@@ -169,7 +179,8 @@
       text-align: center;
     }
 
-    .mini-card__progress {
+    .mini-card__progress,
+    .mycards-card__progress {
       width: 100%;
       height: 8px;
       border-radius: 999px;
@@ -178,7 +189,8 @@
       margin-top: 10px;
     }
 
-    .mini-card__progress span {
+    .mini-card__progress span,
+    .mycards-card__progress span {
       display: block;
       height: 100%;
       border-radius: inherit;
@@ -288,7 +300,8 @@
         gap: 16px 12px;
       }
 
-      .mini-card {
+      .mini-card,
+      .mycards-card {
         width: min(100%, 176px);
       }
     }
