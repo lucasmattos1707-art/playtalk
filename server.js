@@ -2116,6 +2116,27 @@ function buildFlashcardsR2PublicUrl(objectKey) {
   return `${FLASHCARDS_R2_PUBLIC_ROOT}/${encodePublicUrlPath(objectKey)}`;
 }
 
+function getR2ObjectKeyFromPublicUrl(rawUrl) {
+  const trimmed = String(rawUrl || '').trim();
+  if (!trimmed) return '';
+  try {
+    const parsedUrl = new URL(trimmed);
+    const publicRootUrl = new URL(`${FLASHCARDS_R2_PUBLIC_ROOT}/`);
+    if (parsedUrl.origin !== publicRootUrl.origin) return '';
+    const normalizedPublicBasePath = publicRootUrl.pathname.replace(/\/+$/g, '');
+    const targetPath = parsedUrl.pathname || '';
+    if (!targetPath.startsWith(normalizedPublicBasePath)) return '';
+    const relativePath = targetPath.slice(normalizedPublicBasePath.length).replace(/^\/+/g, '');
+    return relativePath
+      .split('/')
+      .filter(Boolean)
+      .map((segment) => decodeURIComponent(segment))
+      .join('/');
+  } catch (_error) {
+    return '';
+  }
+}
+
 function getFlashcardPlaceholderImageUrl() {
   return buildFlashcardsR2PublicUrl(FLASHCARD_CAMERA_OBJECT_KEY);
 }
@@ -3993,6 +4014,25 @@ app.patch('/auth/avatar', async (req, res) => {
         source: nextSource,
         createdAt: entry?.createdAt || new Date().toISOString()
       });
+    }
+
+    if (onboardingPhotoCompleted) {
+      const remoteSourceKeys = new Set();
+      const currentAvatarVersions = Array.isArray(currentUser.avatar_versions) ? currentUser.avatar_versions : [];
+      currentAvatarVersions.forEach((entry) => {
+        const objectKey = getR2ObjectKeyFromPublicUrl(entry?.source || '');
+        if (objectKey) remoteSourceKeys.add(objectKey);
+      });
+      persistedAvatarVersions.forEach((entry) => {
+        entry.source = '';
+      });
+      for (const objectKey of remoteSourceKeys) {
+        try {
+          await deleteR2Object(objectKey);
+        } catch (cleanupError) {
+          console.warn(`Falha ao apagar source antigo do avatar ${objectKey}:`, cleanupError);
+        }
+      }
     }
 
     const result = await pool.query(

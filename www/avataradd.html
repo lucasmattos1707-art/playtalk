@@ -5,175 +5,279 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Escolha uma bela foto</title>
   <style>
+    @font-face {
+      font-family: "PlaytalkDisplay";
+      src: url("/THEBOLDFONT-FREEVERSION.otf") format("opentype");
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
     :root {
-      color-scheme: light;
-      --bg-top: rgba(255,255,255,0.98);
-      --bg-bottom: rgba(239,246,255,0.98);
+      --bg: #07111f;
+      --panel: rgba(9, 21, 38, 0.22);
+      --line: rgba(140, 197, 255, 0.18);
+      --text: #f4f8ff;
+      --muted: #c7daef;
+      --shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
       --green-1: #2bc057;
       --green-2: #1fae4d;
       --blue-1: #376df0;
       --blue-2: #2553d4;
-      --text-main: #0f172a;
-      --text-soft: #475569;
-      --danger: #dc2626;
-      --shadow-soft: 0 20px 40px rgba(37, 99, 235, 0.18);
-      font-family: Arial, sans-serif;
+      --ring-track: rgba(255,255,255,0.12);
     }
+
     * { box-sizing: border-box; }
-    body {
+
+    html, body {
       margin: 0;
-      min-height: 100vh;
-      background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
-      color: var(--text-main);
+      min-height: 100%;
     }
+
+    body {
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--text);
+      position: relative;
+      overflow: auto;
+      background: transparent;
+    }
+
+    body > *:not(.container) {
+      position: relative;
+      z-index: 1;
+    }
+
+    .container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: lightblue;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background:
+        radial-gradient(circle, #3498db 10%, transparent 20%),
+        radial-gradient(circle, transparent 10%, #3498db 20%);
+      background-size: 30px 30px;
+      animation: moveBackground 8s linear infinite;
+    }
+
+    @keyframes moveBackground {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(20%, 20%); }
+    }
+
     .identity-page {
       min-height: 100vh;
-      padding: 18px 16px 28px;
+      padding: 20px 14px 28px;
       display: flex;
       justify-content: center;
+      align-items: flex-start;
     }
+
     .identity-card {
-      width: min(100%, 420px);
-      min-height: calc(100vh - 36px);
+      width: min(100%, 430px);
+      min-height: calc(100vh - 40px);
+      padding: 22px 18px 28px;
+      border-radius: 0 0 30px 30px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      padding-top: 4px;
     }
+
     h1 {
-      margin: 0 0 12px;
-      font-size: 30px;
-      line-height: 1.05;
-      font-weight: 900;
+      margin: 0 0 18px;
+      color: #fff;
+      font-family: "PlaytalkDisplay", "Trebuchet MS", sans-serif;
+      font-size: clamp(30px, 6vw, 40px);
+      letter-spacing: 0.02em;
+      line-height: 0.95;
+      text-transform: uppercase;
     }
-    .photo-copy {
-      margin: 0;
-      color: var(--text-soft);
-      line-height: 1.5;
-      max-width: 320px;
-    }
+
     .photo-shell {
       display: grid;
       justify-items: center;
       gap: 18px;
       width: 100%;
-      margin-top: 26px;
+      margin-top: 8px;
     }
+
+    .photo-ring {
+      --progress-angle: 0deg;
+      width: min(78vw, 306px);
+      height: min(78vw, 306px);
+      padding: 8px;
+      border-radius: 50%;
+      background: conic-gradient(#39d353 0deg, #39d353 var(--progress-angle), var(--ring-track) var(--progress-angle), var(--ring-track) 360deg);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.22);
+      transition: background 180ms linear;
+    }
+
+    .photo-ring.is-hidden-progress {
+      background: conic-gradient(var(--ring-track) 0deg, var(--ring-track) 360deg);
+    }
+
     .photo-circle {
       position: relative;
-      width: min(72vw, 280px);
-      height: min(72vw, 280px);
+      width: 100%;
+      height: 100%;
       border: 0;
       border-radius: 50%;
-      background: linear-gradient(180deg, rgba(37, 99, 235, 0.12), rgba(59, 130, 246, 0.22));
-      box-shadow: var(--shadow-soft);
+      background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
       overflow: hidden;
       cursor: pointer;
       display: grid;
       place-items: center;
       padding: 0;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
     }
+
     .photo-circle img,
     .photo-circle svg {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
+
     .photo-circle svg {
-      padding: 74px;
-      color: #2563eb;
-      opacity: 0.9;
+      padding: 72px;
+      color: rgba(255,255,255,0.88);
+      opacity: 0.95;
     }
+
     .photo-circle::after {
       content: '';
       position: absolute;
       inset: 0;
       border-radius: 50%;
-      background: rgba(255,255,255,0.35);
+      background: rgba(255,255,255,0.28);
       opacity: 0;
       pointer-events: none;
     }
+
     .photo-circle.is-flash::after {
       animation: photoFlash 700ms ease-out forwards;
     }
-    .photo-circle.is-busy .photo-layer {
+
+    .photo-preview,
+    .photo-result {
       position: absolute;
       inset: 0;
-      opacity: 0.8;
-      animation: pulsePhoto 1400ms ease-in-out infinite;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
-    .photo-circle.is-busy .photo-layer--1 { transform: scale(1); }
-    .photo-circle.is-busy .photo-layer--2 { transform: scale(0.93); animation-delay: 120ms; }
-    .photo-circle.is-busy .photo-layer--3 { transform: scale(0.86); animation-delay: 240ms; }
+
+    .photo-preview {
+      opacity: 0;
+      transition: opacity 420ms ease, filter 900ms ease;
+      transform: scale(1.02);
+    }
+
+    .photo-circle.is-busy .photo-preview,
+    .photo-circle.has-preview .photo-preview {
+      opacity: 1;
+    }
+
+    .photo-result {
+      opacity: 0;
+      transition: opacity 650ms ease;
+    }
+
+    .photo-circle.has-result .photo-result {
+      opacity: 1;
+    }
+
+    .photo-circle.has-result .photo-preview {
+      opacity: 0;
+    }
+
     .identity-status {
       min-height: 24px;
       margin: 0;
-      color: var(--text-soft);
+      color: var(--muted);
       font-size: 15px;
       line-height: 1.45;
     }
+
     .identity-status.is-error {
-      color: var(--danger);
+      color: #ffd1d1;
       font-weight: 700;
     }
+
     .photo-actions {
       display: grid;
       gap: 12px;
       width: min(100%, 300px);
       margin-top: 8px;
     }
+
     .photo-actions.is-hidden {
       visibility: hidden;
       pointer-events: none;
     }
+
     .identity-action {
-      min-height: 54px;
+      min-height: 56px;
       border: 0;
-      border-radius: 16px;
+      border-radius: 18px;
       color: #fff;
       font-size: 18px;
       font-weight: 800;
       cursor: pointer;
-      box-shadow: var(--shadow-soft);
+      box-shadow: 0 18px 36px rgba(20, 48, 118, 0.34);
       transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
     }
+
     .identity-action:hover { filter: brightness(1.03); }
     .identity-action:active { transform: translateY(1px) scale(0.99); }
     .identity-action.is-success { background: linear-gradient(180deg, var(--green-1), var(--green-2)); }
     .identity-action.is-secondary { background: linear-gradient(180deg, var(--blue-1), var(--blue-2)); }
+
     .identity-action[disabled] {
       opacity: 0.55;
       cursor: not-allowed;
       box-shadow: none;
     }
-    .identity-hint {
-      margin: 10px 0 0;
-      color: var(--text-soft);
-      font-size: 14px;
-    }
+
     @keyframes photoFlash {
       from { opacity: 1; }
       to { opacity: 0; }
     }
-    @keyframes pulsePhoto {
-      0%, 100% { opacity: 0.2; }
-      50% { opacity: 0.82; }
-    }
+
     @media (max-width: 520px) {
-      h1 { font-size: 28px; }
+      .identity-page { padding-inline: 10px; }
+      .identity-card { padding-inline: 14px; }
     }
   </style>
 </head>
 <body>
+  <div class="container" aria-hidden="true"></div>
   <main class="identity-page">
     <section class="identity-card" aria-label="Escolha uma bela foto">
       <h1>Escolha uma bela foto</h1>
-      <p class="photo-copy">Toque no circulo para enviar sua foto e transformar em desenho.</p>
       <div class="photo-shell">
-        <button class="photo-circle" id="photoCircle" type="button" aria-label="Enviar foto">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
-        </button>
+        <div class="photo-ring is-hidden-progress" id="photoRing">
+          <button class="photo-circle" id="photoCircle" type="button" aria-label="Enviar foto">
+            <svg id="photoPlaceholder" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
+          </button>
+        </div>
         <input id="photoInput" type="file" accept="image/*" hidden>
         <p class="identity-status" id="photoStatus"></p>
         <p class="identity-status" id="loadingCopy" aria-live="polite"></p>
@@ -181,7 +285,6 @@
           <button class="identity-action is-success" id="continueBtn" type="button" disabled>Avancar</button>
           <button class="identity-action is-secondary" id="regenerateBtn" type="button" disabled>Gerar nova</button>
         </div>
-        <p class="identity-hint">Tela isolada, sem rodape azul, com o fluxo de avatar.</p>
       </div>
     </section>
   </main>
@@ -202,6 +305,8 @@
       'Ajustando luz, profundidade e foco...',
       'Renderizando sua versao fiel...'
     ];
+    const PROGRESS_DURATION_MS = 20000;
+    const BLUR_SEQUENCE = [0.7, 0.6, 0.5, 0.4];
     const state = {
       user: null,
       identityAudio: null,
@@ -213,10 +318,16 @@
       photoLoadingTimer: 0,
       photoLoadingMessageIndex: 0,
       photoFlashTimer: 0,
+      photoProgressTimer: 0,
+      photoProgressStartedAt: 0,
+      blurTimer: 0,
+      blurIndex: 0,
       audioRetryBound: false
     };
     const els = {
+      photoRing: document.getElementById('photoRing'),
       photoCircle: document.getElementById('photoCircle'),
+      photoPlaceholder: document.getElementById('photoPlaceholder'),
       photoInput: document.getElementById('photoInput'),
       photoStatus: document.getElementById('photoStatus'),
       loadingCopy: document.getElementById('loadingCopy'),
@@ -329,6 +440,46 @@
           : ONBOARDING_LOADING_MESSAGES[state.photoLoadingMessageIndex];
       }, 2000);
     }
+    function stopProgressRing() {
+      if (state.photoProgressTimer) {
+        window.clearInterval(state.photoProgressTimer);
+        state.photoProgressTimer = 0;
+      }
+      state.photoProgressStartedAt = 0;
+      els.photoRing.style.setProperty('--progress-angle', '0deg');
+      els.photoRing.classList.add('is-hidden-progress');
+    }
+    function startProgressRing() {
+      stopProgressRing();
+      state.photoProgressStartedAt = Date.now();
+      els.photoRing.classList.remove('is-hidden-progress');
+      const update = () => {
+        const elapsed = Date.now() - state.photoProgressStartedAt;
+        const ratio = Math.max(0, Math.min(1, elapsed / PROGRESS_DURATION_MS));
+        els.photoRing.style.setProperty('--progress-angle', `${Math.round(ratio * 360)}deg`);
+      };
+      update();
+      state.photoProgressTimer = window.setInterval(update, 100);
+    }
+    function stopBlurAnimation() {
+      if (state.blurTimer) {
+        window.clearInterval(state.blurTimer);
+        state.blurTimer = 0;
+      }
+    }
+    function applyPreviewBlur() {
+      const preview = els.photoCircle.querySelector('.photo-preview');
+      if (!preview) return;
+      const blurLevel = BLUR_SEQUENCE[state.blurIndex % BLUR_SEQUENCE.length];
+      preview.style.filter = `blur(${Math.round(blurLevel * 20)}px) saturate(1.04)`;
+      state.blurIndex += 1;
+    }
+    function startBlurAnimation() {
+      stopBlurAnimation();
+      state.blurIndex = 0;
+      applyPreviewBlur();
+      state.blurTimer = window.setInterval(applyPreviewBlur, 1000);
+    }
     function flashPhotoResult() {
       els.photoCircle.classList.remove('is-flash');
       void els.photoCircle.offsetWidth;
@@ -341,26 +492,32 @@
     }
     function renderPhoto() {
       const currentVersion = currentPhotoVersion();
-      if (state.photoGateBusy && state.photoSourceDataUrl) {
-        const safeSource = state.photoSourceDataUrl;
-        els.photoCircle.innerHTML = `
-          <img class="photo-layer photo-layer--3" src="${safeSource}" alt="">
-          <img class="photo-layer photo-layer--2" src="${safeSource}" alt="">
-          <img class="photo-layer photo-layer--1" src="${safeSource}" alt="">
-        `;
-      } else if (currentVersion?.image) {
-        els.photoCircle.innerHTML = `<img src="${currentVersion.image}" alt="Foto ilustrada do usuario">`;
-      } else {
-        els.photoCircle.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>';
+      const parts = [];
+      if (state.photoSourceDataUrl) {
+        parts.push(`<img class="photo-preview" src="${state.photoSourceDataUrl}" alt="Preview desfocado da foto enviada">`);
       }
+      if (currentVersion?.image) {
+        parts.push(`<img class="photo-result" src="${currentVersion.image}" alt="Foto ilustrada do usuario">`);
+      }
+      if (!state.photoSourceDataUrl && !currentVersion?.image) {
+        parts.push('<svg id="photoPlaceholder" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>');
+      }
+      els.photoCircle.innerHTML = parts.join('');
       els.photoCircle.classList.toggle('is-busy', state.photoGateBusy && Boolean(state.photoSourceDataUrl));
-      els.continueBtn.disabled = state.photoGateBusy || !currentPhotoVersion()?.image;
+      els.photoCircle.classList.toggle('has-preview', Boolean(state.photoSourceDataUrl));
+      els.photoCircle.classList.toggle('has-result', Boolean(currentVersion?.image) && !state.photoGateBusy);
+      els.continueBtn.disabled = state.photoGateBusy || !currentVersion?.image;
       els.regenerateBtn.disabled = state.photoGateBusy || state.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS || !state.photoSourceDataUrl;
       els.photoActions.classList.toggle('is-hidden', state.photoGateBusy);
       if (state.photoGateBusy) {
         setStatus('Transformando sua foto em desenho...');
       } else if (!els.photoStatus.classList.contains('is-error')) {
         setStatus('');
+      }
+      if (state.photoGateBusy && state.photoSourceDataUrl) {
+        startBlurAnimation();
+      } else {
+        stopBlurAnimation();
       }
     }
     async function fileToDataUrl(file) {
@@ -388,7 +545,7 @@
             const sourceY = Math.max(0, Math.round((sourceHeight - sourceSide) / 2));
             context.clearRect(0, 0, size, size);
             context.drawImage(image, sourceX, sourceY, sourceSide, sourceSide, 0, 0, size, size);
-            resolve(canvas.toDataURL('image/webp', 0.92));
+            resolve(canvas.toDataURL('image/webp', 0.86));
           } catch (error) {
             reject(error);
           }
@@ -436,6 +593,13 @@
       state.user = user;
       return user;
     }
+    function sanitizedAvatarVersions() {
+      return state.photoVersions.map((entry) => ({
+        image: entry.image,
+        source: '',
+        createdAt: entry.createdAt || new Date().toISOString()
+      }));
+    }
     async function persistPhotoGateProfile() {
       const currentVersion = currentPhotoVersion();
       if (!currentVersion?.image) return;
@@ -445,7 +609,7 @@
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           avatar: currentVersion.image,
-          avatarVersions: state.photoVersions,
+          avatarVersions: sanitizedAvatarVersions(),
           avatarGenerationCount: state.photoGenerationCount,
           onboardingPhotoCompleted: true
         })
@@ -466,29 +630,33 @@
       state.photoGateBusy = true;
       setStatus('');
       renderPhoto();
+      startProgressRing();
       try {
         const sourceDataUrl = await fileToSquareWebpDataUrl(file, 400);
         state.photoSourceDataUrl = sourceDataUrl;
+        renderPhoto();
         playIdentityAudio(ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH);
         startPhotoLoadingCopy();
         const cartoonDataUrl = await createCartoonAvatar(sourceDataUrl);
         const optimizedCartoonDataUrl = await dataUrlToSquareWebpDataUrl(cartoonDataUrl, 400);
         await fadeOutIdentityAudio(1000);
         stopPhotoLoadingCopy();
+        stopProgressRing();
         els.loadingCopy.textContent = '';
         state.photoGenerationCount += 1;
-        state.photoVersions.push({ image: optimizedCartoonDataUrl, source: sourceDataUrl, createdAt: new Date().toISOString() });
+        state.photoVersions.push({ image: optimizedCartoonDataUrl, source: '', createdAt: new Date().toISOString() });
         state.photoVersions = state.photoVersions.slice(-ONBOARDING_MAX_PHOTO_GENERATIONS);
         state.photoVersionIndex = state.photoVersions.length - 1;
-        playIdentityAudio(ONBOARDING_IMAGE_READY_AUDIO_PATH);
-        flashPhotoResult();
-        renderPhoto();
-      } catch (error) {
-        stopPhotoLoadingCopy();
-        setStatus(error?.message || 'Nao foi possivel gerar o desenho.', 'error', els.loadingCopy);
-      } finally {
         state.photoGateBusy = false;
         renderPhoto();
+        playIdentityAudio(ONBOARDING_IMAGE_READY_AUDIO_PATH);
+        flashPhotoResult();
+      } catch (error) {
+        stopPhotoLoadingCopy();
+        stopProgressRing();
+        state.photoGateBusy = false;
+        renderPhoto();
+        setStatus(error?.message || 'Nao foi possivel gerar o desenho.', 'error', els.loadingCopy);
       }
     }
     async function regenerateFromLastSource() {
@@ -500,7 +668,11 @@
       setStatus('Preparando perfil...');
       try {
         const user = await ensureProvisionedUser();
-        state.photoVersions = Array.isArray(user?.avatarVersions) ? user.avatarVersions.slice(0, 5) : [];
+        state.photoVersions = Array.isArray(user?.avatarVersions) ? user.avatarVersions.slice(0, 5).map((entry) => ({
+          image: entry.image,
+          source: '',
+          createdAt: entry.createdAt
+        })) : [];
         state.photoVersionIndex = Math.max(0, state.photoVersions.length - 1);
         state.photoGenerationCount = Math.max(state.photoVersions.length, Number(user?.avatarGenerationCount || 0));
         renderPhoto();
@@ -537,6 +709,8 @@
     });
     window.addEventListener('beforeunload', () => {
       stopPhotoLoadingCopy();
+      stopProgressRing();
+      stopBlurAnimation();
       stopIdentityAudio();
     });
     void init();
