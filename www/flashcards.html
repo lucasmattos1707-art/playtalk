@@ -4241,7 +4241,7 @@
       <div class="premium-gate__card">
         <div class="premium-gate__copy">
           <h2>Premium</h2>
-          <p>Voce chegou em 8 cartas. Toque nas 16 imagens na ordem certa para montar sua chave secreta.</p>
+          <p>Voce chegou em 30 cartas. Toque nas 16 imagens na ordem certa para montar sua chave secreta.</p>
         </div>
         <div class="premium-gate__code" id="premiumCodeValue"></div>
         <p class="premium-gate__status" id="premiumStatus">Toque nas imagens na ordem certa para montar a chave.</p>
@@ -4374,8 +4374,8 @@
       const TUTORIAL_PLANET_ENGLISH = 'planet';
       const TUTORIAL_PLANET_PORTUGUESE = 'planeta';
       const TUTORIAL_FINALE_SEAL_FLASH_MS = 400;
-      const GUEST_FLASHCARD_LOGIN_THRESHOLD = 6;
-      const FLASHCARD_PREMIUM_GATE_LIMIT = 8;
+      const GUEST_FLASHCARD_LOGIN_THRESHOLD = 999999;
+      const FLASHCARD_PREMIUM_GATE_LIMIT = 30;
       const GUEST_FLASHCARD_LOGIN_DELAY_MS = 5000;
       const AUTH_GATE_FORM_REVEAL_MS = 1200;
       const WELCOME_COPY_ROTATION_MS = 2000;
@@ -4396,8 +4396,8 @@
         mes: '/accesskey/month.mp3',
         ano: '/accesskey/year.mp3'
       };
-      const ONBOARDING_NAME_THRESHOLD = 3;
-      const ONBOARDING_PHOTO_THRESHOLD = 5;
+      const ONBOARDING_NAME_THRESHOLD = 999999;
+      const ONBOARDING_PHOTO_THRESHOLD = 999999;
       const ONBOARDING_MIN_NAME_LENGTH = 3;
       const ONBOARDING_MAX_PHOTO_GENERATIONS = 5;
       const ONBOARDING_KEYBOARD_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUV'.split('');
@@ -5888,9 +5888,7 @@
       }
 
       function shouldRequireGuestAuth() {
-        return !state.user?.id
-          && !isAdminUser()
-          && accessibleFlashcardsCount() >= GUEST_FLASHCARD_LOGIN_THRESHOLD;
+        return false;
       }
 
       function clearAuthRevealTimer() {
@@ -6080,7 +6078,7 @@
         document.body.classList.add('premium-gate-open');
         els.premiumGate.classList.add('is-visible');
         playPremiumLimitAudio();
-        setPremiumStatus(message || 'Voce chegou ao limite de 8 cartas. Monte sua chave premium tocando nas imagens.');
+        setPremiumStatus(message || 'Voce chegou ao limite de 30 cartas. Monte sua chave premium tocando nas imagens.');
       }
 
       async function redeemPremiumAccessCode() {
@@ -10866,7 +10864,7 @@
               scheduleOnboardingGateOpen();
             }
             if (shouldGatePremiumAccess()) {
-              setPremiumStatus('Voce chegou em 8 cartas. Monte uma chave premium tocando nas imagens.');
+              setPremiumStatus('Voce chegou em 30 cartas. Monte uma chave premium tocando nas imagens.');
             }
             setGameStatus(`${accessibleFlashcardsCount()} FlashCards`, 'flashcards-count');
             entry._removeAfterReward = true;

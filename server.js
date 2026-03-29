@@ -1637,8 +1637,11 @@ const ACCESS_KEY_TYPES = {
   mes: { key: 'mes', label: '1 mes', durationDays: 30, fileName: 'mes.json' },
   ano: { key: 'ano', label: '1 ano', durationDays: 365, fileName: 'ano.json' }
 };
+const BONUS_ACCESS_KEYS = new Map([
+  ['GGGGGG', { key: 'bonus3dias', label: '3 dias gratis', durationDays: 3, fileName: 'bonus-manual' }]
+]);
 const ACCESS_KEY_ALPHABET = 'ABCDEFGHIJKLMNOP';
-const FLASHCARD_FREE_LIMIT = 8;
+const FLASHCARD_FREE_LIMIT = 30;
 const SUPPORTED_IMAGE_EXTENSIONS = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp']);
 const SUPPORTED_AUDIO_EXTENSIONS = new Set(['.mp3', '.wav', '.opus', '.ogg', '.oga', '.webm']);
 const SUPPORTED_VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.ogv', '.mov', '.m4v']);
@@ -4801,7 +4804,7 @@ app.post('/api/premium/redeem', async (req, res) => {
     }
 
     const accessKeyDefinitions = await loadAccessKeyDefinitions();
-    const matchedConfig = accessKeyDefinitions.get(code);
+    const matchedConfig = BONUS_ACCESS_KEYS.get(code) || accessKeyDefinitions.get(code);
     if (!matchedConfig) {
       res.status(400).json({ success: false, message: 'Chave invalida.' });
       return;
@@ -5306,6 +5309,14 @@ app.get(['/database', '/database/'], (req, res) => {
 
 app.get(['/flashcards', '/flashcards/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'www', 'flashcards.html'));
+});
+
+app.get(['/username', '/username/'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'www', 'username.html'));
+});
+
+app.get(['/avataradd', '/avataradd/'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'www', 'avataradd.html'));
 });
 
 app.get(['/somcheck', '/somcheck/'], (req, res) => {
