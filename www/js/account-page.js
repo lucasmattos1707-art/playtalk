@@ -49,6 +49,18 @@
     return typeof value === 'string' ? value.trim() : '';
   }
 
+  function navigateTo(target, options = {}) {
+    if (window.PlaytalkNative && typeof window.PlaytalkNative.navigate === 'function') {
+      window.PlaytalkNative.navigate(target, options);
+      return;
+    }
+    if (options.replace) {
+      window.location.replace(target);
+      return;
+    }
+    window.location.href = target;
+  }
+
   function setStatus(message, tone) {
     if (!els.status) return;
     els.status.textContent = message || '';
@@ -485,7 +497,7 @@
       // ignore
     }
     persistAuthToken('');
-    window.location.href = '/auth.html';
+    navigateTo(window.PlaytalkNative ? '/flashcards' : '/auth.html', { replace: true });
   }
 
   async function init() {
@@ -520,7 +532,7 @@
         void loginFromAccount();
         return;
       }
-      window.location.href = '/premium';
+      navigateTo('/premium');
     });
 
     els.logoutBtn?.addEventListener('click', logout);

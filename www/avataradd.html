@@ -449,6 +449,9 @@
       </div>
     </section>
   </main>
+  <script src="js/android-config.js"></script>
+  <script src="js/api-config.js"></script>
+  <script src="js/android-shell.js"></script>
   <script>
     const ONBOARDING_PHOTO_AUDIO_PATH = '/accesskey/photo.mp3';
     const ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH = '/accesskey/photorecieve.mp3';
@@ -521,6 +524,13 @@
     function getReturnPath() {
       const raw = safeText(new URLSearchParams(window.location.search).get('return'));
       return raw && raw.startsWith('/') ? raw : '/flashcards';
+    }
+    function navigateTo(target, options) {
+      if (window.PlaytalkNative && typeof window.PlaytalkNative.navigate === 'function') {
+        window.PlaytalkNative.navigate(target, options || {});
+        return;
+      }
+      window.location.href = target;
     }
 
     function nextAfterAvatar() {
@@ -924,7 +934,7 @@
         setStatus('Salvando foto...');
         try {
           await persistPhotoGateProfile();
-          window.location.href = nextAfterAvatar();
+          navigateTo(nextAfterAvatar());
         } catch (error) {
           setStatus(error?.message || 'Nao foi possivel salvar a foto.', 'error');
         }

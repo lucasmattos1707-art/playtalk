@@ -235,6 +235,9 @@
       <p class="identity-status" id="status" aria-live="polite"></p>
     </section>
   </main>
+  <script src="js/android-config.js"></script>
+  <script src="js/api-config.js"></script>
+  <script src="js/android-shell.js"></script>
   <script>
     const ONBOARDING_USERNAME_AUDIO_PATH = '/accesskey/username.mp3';
     const ONBOARDING_MIN_NAME_LENGTH = 3;
@@ -262,6 +265,13 @@
     function getReturnPath() {
       const raw = safeText(new URLSearchParams(window.location.search).get('return'));
       return raw && raw.startsWith('/') ? raw : '/flashcards';
+    }
+    function navigateTo(target, options) {
+      if (window.PlaytalkNative && typeof window.PlaytalkNative.navigate === 'function') {
+        window.PlaytalkNative.navigate(target, options || {});
+        return;
+      }
+      window.location.href = target;
     }
     function nextAfterUsername(user) {
       const returnPath = getReturnPath();
@@ -389,7 +399,7 @@
         const user = normalizeUser(payload.user);
         if (!user) throw new Error('Nao foi possivel atualizar o usuario.');
         state.user = user;
-        window.location.href = nextAfterUsername(user);
+        navigateTo(nextAfterUsername(user));
       } catch (error) {
         setStatus(error?.message || 'Nao foi possivel salvar o nome.', 'error');
       } finally {

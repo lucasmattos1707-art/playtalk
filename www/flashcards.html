@@ -4888,7 +4888,9 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2c-4.42 0-8 2.46-8 5.5 0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5 0-3.04-3.58-5.5-8-5.5Z"/></svg>
     </button>
   </nav>
+  <script src="js/android-config.js"></script>
   <script src="js/api-config.js"></script>
+  <script src="js/android-shell.js"></script>
   <script src="js/gamesounds.js"></script>
   <script>
     (() => {
@@ -5055,6 +5057,8 @@
         secretBuffer: '',
         entry: {
           cardsReady: false,
+          cardsLoadFailed: false,
+          cardsReloading: false,
           welcomeVisible: true,
           welcomeIndex: 0,
           welcomeTimer: 0,
@@ -6438,6 +6442,13 @@
         return hasTutorialPlanetUnlocked() || state.game.tutorial.completed;
       }
 
+      function hasWelcomeCatalogAvailable() {
+        if (Array.isArray(state.allCards) && state.allCards.some((card) => safeText(card?.id))) {
+          return true;
+        }
+        return Array.isArray(state.deckCatalog) && state.deckCatalog.length > 0;
+      }
+
       function readOptimisticWelcomeProgressCount() {
         const candidateKeys = [USER_PROGRESS_STORAGE_KEY, OWNED_STORAGE_KEY];
         let bestCount = 0;
@@ -6463,13 +6474,26 @@
       function shouldShowWelcomeGate() {
         if (state.entry.authRequired || state.game.active || state.watch.active || isAdminUser()) return false;
         if (!state.entry.cardsReady) return true;
+        if (!hasWelcomeCatalogAvailable()) return true;
         if (hasWelcomePlayAccess()) return true;
-        return Boolean(findTutorialPlanetCard());
+        if (findTutorialPlanetCard()) return true;
+        return true;
       }
 
       function syncWelcomeStartButton() {
         if (!els.welcomeStartBtn) return;
+        if (!state.entry.cardsReady || state.entry.cardsReloading) {
+          els.welcomeStartBtn.textContent = 'CARREGANDO...';
+          els.welcomeStartBtn.disabled = true;
+          return;
+        }
+        if (!hasWelcomeCatalogAvailable()) {
+          els.welcomeStartBtn.textContent = state.entry.cardsLoadFailed ? 'TENTAR DE NOVO' : 'CONECTANDO...';
+          els.welcomeStartBtn.disabled = !state.entry.cardsLoadFailed;
+          return;
+        }
         els.welcomeStartBtn.textContent = hasInstantWelcomePlayAccess() ? 'JOGAR AGORA' : 'INICIAR JOGO';
+        els.welcomeStartBtn.disabled = false;
       }
 
       function syncWelcomeAccountLink() {
@@ -6499,6 +6523,14 @@
         }
         if (state.entry.pendingPlayStart) {
           setWelcomeCopy('Preparando jogo...');
+          return;
+        }
+        if (!state.entry.cardsReady || state.entry.cardsReloading) {
+          setWelcomeCopy('Carregando flashcards...');
+          return;
+        }
+        if (!hasWelcomeCatalogAvailable()) {
+          setWelcomeCopy(state.entry.cardsLoadFailed ? 'Nao conectei os flashcards. Toque para tentar de novo.' : 'Conectando os flashcards...');
           return;
         }
         setWelcomeCopy(WELCOME_COPY_MESSAGES[state.entry.welcomeIndex % WELCOME_COPY_MESSAGES.length]);
@@ -6544,6 +6576,13 @@
 
       function requestWelcomeTutorialStart(skipSoundTest = false) {
         if (state.entry.authRequired) return;
+        if (!state.entry.cardsReady || state.entry.cardsReloading) return;
+        if (!hasWelcomeCatalogAvailable()) {
+          if (state.entry.cardsLoadFailed) {
+            void retryWelcomeCatalogLoad();
+          }
+          return;
+        }
         if (hasInstantWelcomePlayAccess()) {
           if (!state.entry.cardsReady) {
             state.entry.pendingPlayStart = true;
@@ -6560,6 +6599,29 @@
         state.entry.pendingTutorialStart = true;
         setWelcomeCopy('Preparando tutorial...');
         tryStartPendingTutorial();
+      }
+
+      async function retryWelcomeCatalogLoad() {
+        if (state.entry.cardsReloading) return false;
+        state.entry.cardsReloading = true;
+        state.entry.cardsLoadFailed = false;
+        syncWelcomeGate();
+        try {
+          await reloadCardsFromNetworkWithRetry(3, 900);
+          state.entry.cardsReady = true;
+          state.entry.cardsLoadFailed = !hasWelcomeCatalogAvailable();
+          refreshLibrary();
+          syncWelcomeGate();
+          return hasWelcomeCatalogAvailable();
+        } catch (_error) {
+          state.entry.cardsReady = true;
+          state.entry.cardsLoadFailed = true;
+          syncWelcomeGate();
+          return false;
+        } finally {
+          state.entry.cardsReloading = false;
+          syncWelcomeGate();
+        }
       }
 
       function resumePendingSoundCheckFlow() {
@@ -7769,10 +7831,25 @@
       }
 
       function resolveUsersHref() {
+        if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
+          return window.PlaytalkNative.resolveRouteHref('/users');
+        }
         return isNativeRuntime() ? 'users.html' : '/users';
       }
 
       function resolveNativeRenderPageHref(view) {
+        const nativeRouteMap = {
+          play: '/flashcards?view=play',
+          cards: '/allcards',
+          users: '/users',
+          profile: '/account',
+          premium: '/premium'
+        };
+        const mappedTarget = nativeRouteMap[String(view || '').toLowerCase()] || '/flashcards';
+        if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
+          return window.PlaytalkNative.resolveRouteHref(mappedTarget);
+        }
+
         const nativeBaseUrl = (() => {
           try {
             return String(window.PlaytalkApi?.baseUrl || 'https://playtalk-dvv5.onrender.com').trim().replace(/\/+$/, '');
@@ -8657,6 +8734,7 @@
         const freshPayload = await refreshCardsFromNetwork();
         state.allCards = Array.isArray(freshPayload?.cards) ? freshPayload.cards : [];
         state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
+        state.entry.cardsLoadFailed = false;
         await refreshAdminDecks();
         await refreshAdminReportSummary();
         saveCachedCards(state.allCards);
@@ -9200,6 +9278,7 @@
         const freshPayload = await refreshCardsFromNetwork();
         state.allCards = Array.isArray(freshPayload?.cards) ? freshPayload.cards : [];
         state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
+        state.entry.cardsLoadFailed = false;
         await refreshAdminDecks();
         await refreshAdminReportSummary();
         saveCachedCards(state.allCards);
@@ -12427,6 +12506,7 @@
             console.warn('Falha ao carregar os decks na inicializacao:', cardsError);
             state.allCards = readCachedCards();
             state.deckCatalog = [];
+            state.entry.cardsLoadFailed = !hasWelcomeCatalogAvailable();
           } finally {
             state.entry.cardsReady = true;
             refreshLibrary();
