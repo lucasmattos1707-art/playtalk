@@ -5820,11 +5820,15 @@ app.post('/api/images/openai/avatar-cartoon', async (req, res) => {
 
   const stylePrompt = customPrompt || [
     'Analyze the uploaded user photo and recreate the same person as a high-end animated portrait.',
-    'Preserve identity, facial proportions, hairstyle, skin tone, age impression, gaze direction, and overall expression.',
-    'Render it as a polished child-friendly 3D animated movie character with cinematic lighting, soft shadows, vibrant colors, detailed textures, gentle depth of field, and premium 4k animation quality.',
+    'Preserve identity, facial proportions, hairstyle, skin tone, gaze direction, and overall expression.',
+    'Make the person look naturally a bit fitter, healthier, more alive, happier, and lighter in aura, with cleaner skin and flattering presentation while keeping them recognizably the same person.',
+    'If the subject appears slightly overweight, reduce it only subtly and tastefully while preserving identity and realism.',
+    'If the subject is clearly an adult and appears over about 40 years old, make them look only a little younger, around five years younger, while preserving realism and identity.',
+    'Render it as a polished child-friendly 3D animated movie character with cinematic lighting, soft shadows, vibrant colors, detailed textures, gentle depth of field, premium 4k animation quality, and a beautiful cinematic background.',
+    'Use attractive background settings such as beach scenery, blue sky, sunny daylight, late afternoon light, or elegant night scenes, varying naturally while keeping the subject as the main focus.',
     'Keep the composition close to the original photo and use only the uploaded photo as reference.',
     'Do not invent props, toys, shoulder characters, extra accessories, extra people, text, logos, or watermarks.',
-    'Use a simple clean background with soft blur and warm atmosphere.'
+    'Keep the final image clean, premium, warm, and visually uplifting.'
   ].join(' ');
 
   try {
