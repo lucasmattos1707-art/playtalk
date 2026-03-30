@@ -3070,6 +3070,28 @@
       white-space: pre-wrap;
     }
 
+    .flashcards-typing__display--visual.is-star-phase-copy {
+      font-family: "PlaytalkDisplay", "Soopafre", Arial, sans-serif;
+      font-weight: 400;
+      text-shadow: 0 6px 16px rgba(15, 23, 42, 0.24);
+      text-transform: none;
+    }
+
+    .flashcards-typing__display-letter {
+      display: inline-block;
+      min-width: 0.32em;
+    }
+
+    .flashcards-typing__display-letter.is-hint {
+      background: linear-gradient(135deg, #00b854 0%, #7affb6 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      text-shadow: none;
+      filter: drop-shadow(0 4px 10px rgba(24, 155, 83, 0.22));
+    }
+
     .flashcards-typing__grid {
       width: calc(100% - 60px);
       display: grid;
@@ -4978,19 +5000,19 @@
       ];
       const FLASHCARD_REPORT_LABELS = Object.fromEntries(FLASHCARD_REPORT_TYPES.map((item) => [item.key, item.label]));
       const REVIEW_PHASES = {
-        1: { key: 'prata', label: 'Prata', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
-        2: { key: 'quartz', label: 'Quartz', durationMs: 3 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
-        3: { key: 'gold', label: 'Gold', durationMs: 7 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/ouro.png' },
-        4: { key: 'platina', label: 'Platina', durationMs: 12 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/platina.png' },
-        5: { key: 'diamante', label: 'Diamante', durationMs: 30 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/diamante.png' }
+        1: { key: 'first-star', label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
+        2: { key: 'second-star', label: 'Second star', durationMs: 3 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
+        3: { key: 'third-star', label: 'Third star', durationMs: 7 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/ouro.png' },
+        4: { key: 'fourth-star', label: 'Fourth star', durationMs: 12 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/platina.png' },
+        5: { key: 'fifth-star', label: 'Fifth star', durationMs: 30 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/diamante.png' }
       };
 
       const STAGES = {
-        1: { badge: 'Etapa 1/5', instruction: 'Fale ingles', showImage: true, showWord: true, wordType: 'english', subtitleType: 'portuguese', expected: 'english', autoAudio: true },
-        2: { badge: 'Etapa 2/5', instruction: 'Escreva portugues', showImage: true, showWord: true, wordType: 'english', subtitleType: 'none', expected: 'portuguese', autoAudio: false, inputMode: 'typing', typingMode: 'portuguese' },
-        3: { badge: 'Etapa 3/5', instruction: 'Fale ingles', showImage: false, showWord: false, wordType: 'portuguese', subtitleType: 'none', expected: 'english', autoAudio: false, placeholderUsesPortuguese: true, revealOnHit: true },
-        4: { badge: 'Etapa 4/5', instruction: 'Escreva ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false, inputMode: 'typing', typingMode: 'english' },
-        5: { badge: 'Etapa 5/5', instruction: 'Fale ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false }
+        1: { key: 'first-star', badge: 'First star', instruction: 'Fale ingles', showImage: true, showWord: true, wordType: 'english', subtitleType: 'portuguese', expected: 'english', autoAudio: true },
+        2: { key: 'second-star', badge: 'Second star', instruction: 'Escreva portugues', showImage: true, showWord: true, wordType: 'english', subtitleType: 'none', expected: 'portuguese', autoAudio: false, inputMode: 'typing', typingMode: 'portuguese' },
+        3: { key: 'third-star', badge: 'Third star', instruction: 'Fale ingles', showImage: false, showWord: false, wordType: 'portuguese', subtitleType: 'none', expected: 'english', autoAudio: false, placeholderUsesPortuguese: true, revealOnHit: true },
+        4: { key: 'fourth-star', badge: 'Fourth star', instruction: 'Escreva ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false, inputMode: 'typing', typingMode: 'english' },
+        5: { key: 'fifth-star', badge: 'Fifth star', instruction: 'Fale ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false }
       };
 
       function createTutorialState() {
@@ -7046,7 +7068,7 @@
         state.ui.onboardingTransitionActive = true;
         try {
           await runOnboardingGateTransition();
-          window.location.href = `/username?return=${encodeURIComponent('/flashcards')}`;
+          window.location.href = `https://playtalk-dvv5.onrender.com/username?return=${encodeURIComponent('https://playtalk-dvv5.onrender.com/flashcards')}`;
         } finally {
           state.ui.onboardingTransitionActive = false;
         }
@@ -10358,12 +10380,14 @@
         });
       }
 
-      async function playStageResponseSequence(stageNumber, card) {
+      async function playStageResponseSequence(stageNumber, card, options = {}) {
         if (!card) return;
         if (stageNumber === 2) {
           triggerStageTwoFocusReveal(card);
           await wait(500);
-          await playPromptAudio(card);
+          if (!options.skipPromptAudio) {
+            await playPromptAudio(card);
+          }
           return;
         }
         if (stageNumber === 3) {
@@ -10819,18 +10843,6 @@
         return pool.slice(0, total).sort();
       }
 
-      function formatTypingDisplay(rawText, typedLetters) {
-        const source = safeText(rawText).toUpperCase();
-        const typed = String(typedLetters || '').toUpperCase();
-        let pointer = 0;
-        return source.split('').map((char) => {
-          if (!/[A-Z]/.test(char)) return char;
-          const next = typed[pointer] || '';
-          pointer += 1;
-          return next;
-        }).join('');
-      }
-
       function normalizeTypingSource(rawText) {
         return safeText(rawText)
           .normalize('NFD')
@@ -10863,17 +10875,65 @@
         };
       }
 
-      function revealTypingAnswer(entry, card) {
+      function isPlaytalkStarTypingStage(entry) {
+        return Boolean(entry && (entry.stage === 2 || entry.stage === 4));
+      }
+
+      function formatTypingDisplayText(rawText) {
+        const source = safeText(rawText).trim();
+        if (!source) return '';
+        return source.charAt(0).toLocaleUpperCase('pt-BR') + source.slice(1).toLocaleLowerCase('pt-BR');
+      }
+
+      function buildTypingDisplayMarkup(typingState, typedLetters, options = {}) {
+        const displayText = formatTypingDisplayText(typingState?.sourceText || typingState?.acceptedAnswer || '');
+        if (!displayText) return '&nbsp;';
+
+        const typed = String(typedLetters || '').toUpperCase();
+        const revealAll = Boolean(options.revealAll);
+        const hintStart = Math.max(0, Number(options.hintStart) || 0);
+        const hintLength = Math.max(0, Number(options.hintLength) || 0);
+        let normalizedLetterIndex = 0;
+
+        return displayText.split('').map((char) => {
+          const normalizedChar = normalizeTypingSource(char);
+          if (!normalizedChar) {
+            return char === ' ' ? '&nbsp;' : escapeHtml(char);
+          }
+
+          const isHint = normalizedLetterIndex >= hintStart && normalizedLetterIndex < (hintStart + hintLength);
+          const typedChar = typed[normalizedLetterIndex] || '';
+          const visibleChar = revealAll
+            ? char
+            : (typedChar
+              ? (char === char.toLocaleUpperCase('pt-BR') ? typedChar : typedChar.toLocaleLowerCase('pt-BR'))
+              : '\u00A0');
+
+          normalizedLetterIndex += 1;
+          return `<span class="flashcards-typing__display-letter${isHint ? ' is-hint' : ''}">${escapeHtml(visibleChar)}</span>`;
+        }).join('');
+      }
+
+      function renderTypingDisplay(display, typingState, typedLetters, options = {}) {
+        if (!display) return;
+        display.innerHTML = buildTypingDisplayMarkup(typingState, typedLetters, options);
+      }
+
+      function revealTypingAnswer(entry, card, options = {}) {
         const display = els.gameVisual.querySelector('.flashcards-typing__display--visual');
         if (!display) return;
         const typingState = resolveTypingStageState(entry, card);
-        display.textContent = typingState.normalizedTarget || '\u00A0';
+        renderTypingDisplay(display, typingState, '', {
+          revealAll: true,
+          hintStart: options.hintStart,
+          hintLength: options.hintLength
+        });
       }
 
       function clearTypingAnswer() {
         const display = els.gameVisual.querySelector('.flashcards-typing__display--visual');
         if (!display) return;
-        display.textContent = '\u00A0';
+        display.innerHTML = '&nbsp;';
       }
 
       function setTypingKeysDisabled(grid, disabled) {
@@ -10920,16 +10980,21 @@
         }, TYPING_KEY_FLASH_MS);
       }
 
-      async function handleTypingMistake(entry, card, grid) {
+      async function handleTypingMistake(entry, card, grid, typedLength = 0) {
         entry.typingMistakes = (entry.typingMistakes || 0) + 1;
         setTypingKeysDisabled(grid, true);
-        revealTypingAnswer(entry, card);
-        await Promise.allSettled([playPromptAudio(card, { rate: 0.8 }), wait(2000)]);
+        revealTypingAnswer(entry, card, { hintStart: typedLength, hintLength: 2 });
+        const shouldResolveImmediately = entry.stage === 2;
+        const playbackRate = entry.stage === 2 ? 0.75 : 0.8;
+        await Promise.allSettled([playPromptAudio(card, { rate: playbackRate }), wait(2000)]);
         if (!state.game.active || state.game.currentId !== entry.id) return true;
-        if (entry.typingMistakes < 2) {
+        if (!shouldResolveImmediately && entry.typingMistakes < 2) {
           clearTypingAnswer();
           setTypingKeysDisabled(grid, false);
           return false;
+        }
+        if (entry.stage === 2) {
+          entry._skipStageTwoResponseAudio = true;
         }
         await handleRecognitionResult('', 'typing');
         return true;
@@ -10968,8 +11033,9 @@
         let typed = '';
         const display = document.createElement('div');
         display.className = 'flashcards-typing__display flashcards-typing__display--visual';
+        display.classList.toggle('is-star-phase-copy', isPlaytalkStarTypingStage(entry));
         const renderTyped = () => {
-          display.textContent = formatTypingDisplay(typingState.normalizedTarget, typed) || '\u00A0';
+          renderTypingDisplay(display, typingState, typed);
         };
         renderTyped();
 
@@ -10988,8 +11054,9 @@
             playTypingKeyAudio();
             const expectedLetter = target[typed.length];
             if (letter !== expectedLetter) {
+              const typedLengthBeforeReset = typed.length;
               typed = '';
-              const finished = await handleTypingMistake(entry, card, grid);
+              const finished = await handleTypingMistake(entry, card, grid, typedLengthBeforeReset);
               if (!finished) {
                 renderTyped();
               }
@@ -11777,9 +11844,6 @@
             state.game.queue.push(entry.id);
           }
         } else {
-          if (evaluatedStage === 2) {
-            showStageTwoPortugueseHint(card);
-          }
           if (entry.stars > 0) {
             const starsBeforeMiss = entry.stars;
             entry.stars = 0;
@@ -11805,7 +11869,9 @@
         if (evaluatedStage === 3) {
           state.game.skipAutoAudioOnce = true;
         }
-        await playStageResponseSequence(evaluatedStage, card);
+        const skipPromptAudio = Boolean(entry._skipStageTwoResponseAudio);
+        entry._skipStageTwoResponseAudio = false;
+        await playStageResponseSequence(evaluatedStage, card, { skipPromptAudio });
         await wait(entry._removeAfterReward || entry._requeueAfterReward
           ? (LIBRARY_RANK_SWAP_DELAY_MS + REWARD_RANK_VISIBLE_MS)
           : (evaluatedStage === 3 ? 120 : 1200));

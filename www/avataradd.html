@@ -611,15 +611,8 @@
     }
     function playIdentityAudio(src, allowRetry = true) {
       if (!src) return;
-      const currentAudio = state.identityAudio;
-      const currentSrc = safeText(currentAudio?.src || currentAudio?.currentSrc || '');
-      if (currentAudio && currentSrc.endsWith(src) && !currentAudio.paused) {
-        return;
-      }
       stopIdentityAudio();
       const audio = new Audio(src);
-      audio.preload = 'auto';
-      audio.playsInline = true;
       audio.volume = 1;
       state.identityAudio = audio;
       audio.addEventListener('ended', () => { if (state.identityAudio === audio) state.identityAudio = null; }, { once: true });
@@ -886,7 +879,6 @@
     }
     async function init() {
       setStatus('');
-      playIdentityAudio(ONBOARDING_PHOTO_AUDIO_PATH);
       try {
         const user = await ensureProvisionedUser();
         state.photoVersions = Array.isArray(user?.avatarVersions) ? user.avatarVersions.slice(0, 5).map((entry) => ({
@@ -943,14 +935,6 @@
       stopProgressRing();
       stopBlurAnimation();
       stopIdentityAudio();
-    });
-    window.addEventListener('pageshow', () => {
-      playIdentityAudio(ONBOARDING_PHOTO_AUDIO_PATH);
-    });
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && !state.photoGateBusy) {
-        playIdentityAudio(ONBOARDING_PHOTO_AUDIO_PATH);
-      }
     });
     void init();
   </script>

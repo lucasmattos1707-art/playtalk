@@ -5196,16 +5196,7 @@
   }
 
   function getNativeSpeechRecognition() {
-    const nativeSpeech = window.PlaytalkNativeSpeech;
-    if (!nativeSpeech) return null;
-    if (typeof nativeSpeech.captureOnce !== 'function') return null;
-    if (
-      typeof nativeSpeech.isNativeAndroidRuntime === 'function'
-      && !nativeSpeech.isNativeAndroidRuntime()
-    ) {
-      return null;
-    }
-    return nativeSpeech;
+    return null;
   }
 
   function getSilentOpenAiSpeechCapture() {
@@ -5222,7 +5213,7 @@
   }
 
   function getPreferredSpeechCapture() {
-    return getSilentOpenAiSpeechCapture() || getNativeSpeechRecognition();
+    return getSilentOpenAiSpeechCapture();
   }
 
   function getRecognitionLanguage(targetPhase = phase) {

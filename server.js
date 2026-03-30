@@ -167,11 +167,11 @@ const FLASHCARD_RANKING_WEEKDAY_INDEX = {
   Sat: 6
 };
 const FLASHCARD_REVIEW_PHASES = {
-  1: { key: 'prata', label: 'Prata', durationMs: 6 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
-  2: { key: 'quartz', label: 'Quartz', durationMs: 3 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
-  3: { key: 'gold', label: 'Gold', durationMs: 7 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/ouro.png' },
-  4: { key: 'platina', label: 'Platina', durationMs: 12 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
-  5: { key: 'diamante', label: 'Diamante', durationMs: 30 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/diamante.png' }
+  1: { key: 'first-star', label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
+  2: { key: 'second-star', label: 'Second star', durationMs: 3 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
+  3: { key: 'third-star', label: 'Third star', durationMs: 7 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/ouro.png' },
+  4: { key: 'fourth-star', label: 'Fourth star', durationMs: 12 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
+  5: { key: 'fifth-star', label: 'Fifth star', durationMs: 30 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/diamante.png' }
 };
 
 const normalizeFlashcardsCount = (value) => {
