@@ -1187,6 +1187,10 @@ const buildPremiumReturnUrl = (req, search) => {
   return `${baseUrl}/premium${search}`;
 };
 
+const isValidEmailAddress = (value) => (
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim())
+);
+
 const encodeStripeFormBody = (value, prefix = '') => {
   const parts = [];
   if (Array.isArray(value)) {
@@ -5142,7 +5146,7 @@ app.post('/api/premium/checkout', async (req, res) => {
       'metadata[user_id]': String(authUser.id),
       'metadata[plan_key]': plan.key
     };
-    if (currentUser?.email) {
+    if (isValidEmailAddress(currentUser?.email)) {
       checkoutPayload.customer_email = currentUser.email;
     }
 
