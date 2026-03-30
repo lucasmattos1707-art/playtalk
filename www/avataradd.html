@@ -183,7 +183,7 @@
       --progress-angle: 0deg;
       width: min(78vw, 306px);
       height: min(78vw, 306px);
-      margin-top: -40px;
+      margin-top: 0;
       padding: 8px;
       border-radius: 50%;
       background: conic-gradient(#39d353 0deg, #39d353 var(--progress-angle), var(--ring-track) var(--progress-angle), var(--ring-track) 360deg);
@@ -292,7 +292,7 @@
     #loadingCopy {
       width: min(100%, 420px);
       min-height: 3.2em;
-      margin-top: 20px;
+      margin-top: 60px;
       font-family: "PlaytalkDisplay", "Trebuchet MS", sans-serif;
       font-size: clamp(24px, 5.8vw, 40px);
       line-height: 0.92;
@@ -611,8 +611,15 @@
     }
     function playIdentityAudio(src, allowRetry = true) {
       if (!src) return;
+      const currentAudio = state.identityAudio;
+      const currentSrc = safeText(currentAudio?.src || currentAudio?.currentSrc || '');
+      if (currentAudio && currentSrc.endsWith(src) && !currentAudio.paused) {
+        return;
+      }
       stopIdentityAudio();
       const audio = new Audio(src);
+      audio.preload = 'auto';
+      audio.playsInline = true;
       audio.volume = 1;
       state.identityAudio = audio;
       audio.addEventListener('ended', () => { if (state.identityAudio === audio) state.identityAudio = null; }, { once: true });
@@ -879,6 +886,7 @@
     }
     async function init() {
       setStatus('');
+      playIdentityAudio(ONBOARDING_PHOTO_AUDIO_PATH);
       try {
         const user = await ensureProvisionedUser();
         state.photoVersions = Array.isArray(user?.avatarVersions) ? user.avatarVersions.slice(0, 5).map((entry) => ({
@@ -935,6 +943,14 @@
       stopProgressRing();
       stopBlurAnimation();
       stopIdentityAudio();
+    });
+    window.addEventListener('pageshow', () => {
+      playIdentityAudio(ONBOARDING_PHOTO_AUDIO_PATH);
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !state.photoGateBusy) {
+        playIdentityAudio(ONBOARDING_PHOTO_AUDIO_PATH);
+      }
     });
     void init();
   </script>
