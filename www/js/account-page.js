@@ -520,7 +520,7 @@
         void loginFromAccount();
         return;
       }
-      window.location.href = '/flashcards?premium=1&view=cards';
+      window.location.href = '/premium';
     });
 
     els.logoutBtn?.addEventListener('click', logout);

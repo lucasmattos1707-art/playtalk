@@ -4487,7 +4487,7 @@
       <div class="welcome-gate__touch" id="welcomeTouch">
         <img class="welcome-gate__logo" src="SVG/logo.png" alt="PlayTalk">
         <p class="welcome-gate__copy" id="welcomeCopy">Flu&#234;ncia f&#225;cil</p>
-        <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button">INICIAR JOGO</button>
+        <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button">JOGAR AGORA</button>
       </div>
       <a class="welcome-gate__account-link" id="welcomeAccountLink" href="/signup">J&aacute; tenho conta</a>
     </div>
@@ -5060,6 +5060,7 @@
           welcomeTimer: 0,
           launchAfterSoundTest: '',
           soundTestCompleted: false,
+          pendingPlayStart: false,
           pendingTutorialStart: false,
           authRequired: false,
           authDelayTimer: 0,
@@ -6437,6 +6438,28 @@
         return hasTutorialPlanetUnlocked() || state.game.tutorial.completed;
       }
 
+      function readOptimisticWelcomeProgressCount() {
+        const candidateKeys = [USER_PROGRESS_STORAGE_KEY, OWNED_STORAGE_KEY];
+        let bestCount = 0;
+        try {
+          for (let index = 0; index < localStorage.length; index += 1) {
+            const key = localStorage.key(index);
+            if (!key || !candidateKeys.some((baseKey) => key === baseKey || key.startsWith(`${baseKey}:`))) continue;
+            const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+            const count = Array.isArray(parsed) ? parsed.length : 0;
+            if (count > bestCount) bestCount = count;
+          }
+        } catch (_error) {
+          return 0;
+        }
+        return bestCount;
+      }
+
+      function hasInstantWelcomePlayAccess() {
+        if (hasWelcomePlayAccess()) return true;
+        return readOptimisticWelcomeProgressCount() >= 1;
+      }
+
       function shouldShowWelcomeGate() {
         if (state.entry.authRequired || state.game.active || state.watch.active || isAdminUser()) return false;
         if (!state.entry.cardsReady) return true;
@@ -6446,7 +6469,7 @@
 
       function syncWelcomeStartButton() {
         if (!els.welcomeStartBtn) return;
-        els.welcomeStartBtn.textContent = hasWelcomePlayAccess() ? 'JOGAR AGORA' : 'INICIAR JOGO';
+        els.welcomeStartBtn.textContent = hasInstantWelcomePlayAccess() ? 'JOGAR AGORA' : 'INICIAR JOGO';
       }
 
       function syncWelcomeAccountLink() {
@@ -6474,6 +6497,10 @@
           setWelcomeCopy('Preparando tutorial...');
           return;
         }
+        if (state.entry.pendingPlayStart) {
+          setWelcomeCopy('Preparando jogo...');
+          return;
+        }
         setWelcomeCopy(WELCOME_COPY_MESSAGES[state.entry.welcomeIndex % WELCOME_COPY_MESSAGES.length]);
         if (state.entry.welcomeTimer) return;
         state.entry.welcomeTimer = window.setInterval(() => {
@@ -6484,12 +6511,23 @@
       }
 
       function hideWelcomeGate() {
+        state.entry.pendingPlayStart = false;
         state.entry.pendingTutorialStart = false;
         state.entry.welcomeVisible = false;
         document.body.classList.remove('welcome-active');
         els.welcomeGate?.classList.remove('is-visible');
         closeRobotCheck();
         clearWelcomeRotation();
+      }
+
+      function tryStartPendingWelcomePlay() {
+        if (!state.entry.pendingPlayStart || !state.entry.cardsReady) return false;
+        state.entry.pendingPlayStart = false;
+        hideWelcomeGate();
+        saveSelectedGameCount(6);
+        state.game.selectedCount = 6;
+        beginGame();
+        return true;
       }
 
       function tryStartPendingTutorial() {
@@ -6506,7 +6544,13 @@
 
       function requestWelcomeTutorialStart(skipSoundTest = false) {
         if (state.entry.authRequired) return;
-        if (hasWelcomePlayAccess()) {
+        if (hasInstantWelcomePlayAccess()) {
+          if (!state.entry.cardsReady) {
+            state.entry.pendingPlayStart = true;
+            state.entry.pendingTutorialStart = false;
+            setWelcomeCopy('Preparando jogo...');
+            return;
+          }
           hideWelcomeGate();
           saveSelectedGameCount(6);
           state.game.selectedCount = 6;
@@ -12386,6 +12430,8 @@
           } finally {
             state.entry.cardsReady = true;
             refreshLibrary();
+            tryStartPendingWelcomePlay();
+            tryStartPendingTutorial();
             syncWelcomeGate();
           }
           const sessionUser = await fetchSessionUser();

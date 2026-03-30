@@ -27,7 +27,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
-app.use(express.json({ limit: '100mb' }));
 const PORT = process.env.PORT || 3000;
 const env = (value) => (typeof value === 'string' ? value.trim() : value);
 
@@ -78,6 +77,9 @@ const OPENAI_STORY_MODEL = env(process.env.OPENAI_STORY_MODEL) || 'gpt-5';
 const OPENAI_TTS_MODEL = env(process.env.OPENAI_TTS_MODEL) || 'gpt-4o-mini-tts';
 const OPENAI_STT_MODEL = env(process.env.OPENAI_STT_MODEL) || 'gpt-4o-mini-transcribe';
 const OPENAI_CHAT_FAST_MODEL = env(process.env.OPENAI_CHAT_FAST_MODEL) || 'gpt-5-mini';
+const PLAYTALK_PUBLIC_BASE_URL = env(process.env.PLAYTALK_PUBLIC_BASE_URL);
+const STRIPE_SECRET_KEY = env(process.env.STRIPE_SECRET_KEY);
+const STRIPE_PUBLISHABLE_KEY = env(process.env.STRIPE_PUBLISHABLE_KEY);
 
 const DATABASE_CONFIG = DATABASE_URL
   ? {
@@ -173,6 +175,28 @@ const FLASHCARD_REVIEW_PHASES = {
   4: { key: 'fourth-star', label: 'Fourth star', durationMs: 12 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
   5: { key: 'fifth-star', label: 'Fifth star', durationMs: 30 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/diamante.png' }
 };
+const PREMIUM_BILLING_PLANS = {
+  semana: {
+    key: 'semana',
+    label: '1 semana',
+    durationDays: 7,
+    priceEnvKey: 'STRIPE_PRICE_ID_PREMIUM_SEMANA'
+  },
+  mes: {
+    key: 'mes',
+    label: '1 mes',
+    durationDays: 30,
+    priceEnvKey: 'STRIPE_PRICE_ID_PREMIUM_MES'
+  },
+  ano: {
+    key: 'ano',
+    label: '1 ano',
+    durationDays: 365,
+    priceEnvKey: 'STRIPE_PRICE_ID_PREMIUM_ANO'
+  }
+};
+
+app.use(express.json({ limit: '100mb' }));
 
 const normalizeFlashcardsCount = (value) => {
   const parsed = Number.parseInt(value, 10);
@@ -537,6 +561,22 @@ const ensurePremiumAccessTables = async () => {
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_access_keys_redeemed_idx
         ON public.user_access_keys (redeemed_by_user_id, redeemed_at DESC)
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.premium_checkout_sessions (
+          stripe_session_id text PRIMARY KEY,
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          plan_key text NOT NULL,
+          duration_days integer NOT NULL,
+          payment_status text NOT NULL DEFAULT 'pending',
+          premium_granted_at timestamptz,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS premium_checkout_sessions_user_idx
+        ON public.premium_checkout_sessions (user_id, created_at DESC)
       `);
       return true;
     })().catch((error) => {
@@ -1103,6 +1143,228 @@ const resolvePremiumState = (user) => ({
   premiumUntil: user?.premium_until || null
 });
 
+const getPremiumBillingPlan = (planKey) => {
+  const normalized = String(planKey || '').trim().toLowerCase();
+  const plan = PREMIUM_BILLING_PLANS[normalized];
+  if (!plan) return null;
+  const priceId = env(process.env[plan.priceEnvKey]);
+  if (!priceId) return null;
+  return {
+    ...plan,
+    priceId
+  };
+};
+
+const listAvailablePremiumBillingPlans = () => (
+  Object.keys(PREMIUM_BILLING_PLANS)
+    .map((planKey) => getPremiumBillingPlan(planKey))
+    .filter(Boolean)
+    .map((plan) => ({
+      key: plan.key,
+      label: plan.label,
+      durationDays: plan.durationDays
+    }))
+);
+
+const getRequestBaseUrl = (req) => {
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  const forwardedHost = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim();
+  const protocol = forwardedProto || req.protocol || 'https';
+  const host = forwardedHost || req.get('host') || '';
+  if (!host) {
+    return PLAYTALK_PUBLIC_BASE_URL || '';
+  }
+  return `${protocol}://${host}`.replace(/\/+$/g, '');
+};
+
+const buildPremiumReturnUrl = (req, search) => {
+  const baseUrl = (PLAYTALK_PUBLIC_BASE_URL || getRequestBaseUrl(req) || '').replace(/\/+$/g, '');
+  if (!baseUrl) {
+    const error = new Error('PLAYTALK_PUBLIC_BASE_URL nao configurada.');
+    error.statusCode = 500;
+    throw error;
+  }
+  return `${baseUrl}/premium${search}`;
+};
+
+const encodeStripeFormBody = (value, prefix = '') => {
+  const parts = [];
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => {
+      const nextPrefix = `${prefix}[${index}]`;
+      parts.push(...encodeStripeFormBody(entry, nextPrefix));
+    });
+    return parts;
+  }
+
+  if (value && typeof value === 'object') {
+    Object.entries(value).forEach(([key, entry]) => {
+      const nextPrefix = prefix ? `${prefix}[${key}]` : key;
+      parts.push(...encodeStripeFormBody(entry, nextPrefix));
+    });
+    return parts;
+  }
+
+  if (!prefix) return parts;
+  parts.push([prefix, value == null ? '' : String(value)]);
+  return parts;
+};
+
+const callStripeApi = async (method, endpoint, payload) => {
+  if (!STRIPE_SECRET_KEY) {
+    const error = new Error('STRIPE_SECRET_KEY nao configurada.');
+    error.statusCode = 503;
+    throw error;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${STRIPE_SECRET_KEY}`
+  };
+  const requestInit = { method, headers };
+
+  if (payload && method !== 'GET') {
+    const params = new URLSearchParams();
+    encodeStripeFormBody(payload).forEach(([key, value]) => {
+      params.append(key, value);
+    });
+    headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    requestInit.body = params.toString();
+  }
+
+  const response = await fetch(`https://api.stripe.com/v1${endpoint}`, requestInit);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(body?.error?.message || 'Falha ao falar com o Stripe.');
+    error.statusCode = response.status;
+    error.details = body;
+    throw error;
+  }
+  return body;
+};
+
+const readPremiumCheckoutSession = async (sessionId) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  await ensurePremiumAccessTables();
+
+  const normalizedSessionId = String(sessionId || '').trim();
+  if (!normalizedSessionId) return null;
+
+  const result = await pool.query(
+    `SELECT stripe_session_id, user_id, plan_key, duration_days, payment_status,
+            premium_granted_at, created_at, updated_at
+     FROM public.premium_checkout_sessions
+     WHERE stripe_session_id = $1
+     LIMIT 1`,
+    [normalizedSessionId]
+  );
+  return result.rows[0] || null;
+};
+
+const createPremiumCheckoutSessionRecord = async ({ sessionId, userId, plan }) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  await ensurePremiumAccessTables();
+
+  await pool.query(
+    `INSERT INTO public.premium_checkout_sessions (
+       stripe_session_id,
+       user_id,
+       plan_key,
+       duration_days,
+       payment_status
+     )
+     VALUES ($1, $2, $3, $4, 'pending')
+     ON CONFLICT (stripe_session_id)
+     DO UPDATE SET
+       user_id = EXCLUDED.user_id,
+       plan_key = EXCLUDED.plan_key,
+       duration_days = EXCLUDED.duration_days,
+       updated_at = now()`,
+    [String(sessionId || '').trim(), Number(userId), plan.key, plan.durationDays]
+  );
+};
+
+const fulfillPremiumCheckoutSession = async ({ sessionId, paymentStatus }) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  await ensurePremiumAccessTables();
+
+  const normalizedSessionId = String(sessionId || '').trim();
+  if (!normalizedSessionId) {
+    const error = new Error('Sessao de pagamento invalida.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const sessionResult = await client.query(
+      `SELECT stripe_session_id, user_id, plan_key, duration_days, payment_status, premium_granted_at
+       FROM public.premium_checkout_sessions
+       WHERE stripe_session_id = $1
+       FOR UPDATE`,
+      [normalizedSessionId]
+    );
+    const session = sessionResult.rows[0];
+    if (!session) {
+      const error = new Error('Sessao de pagamento nao encontrada.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (paymentStatus) {
+      await client.query(
+        `UPDATE public.premium_checkout_sessions
+         SET payment_status = $2,
+             updated_at = now()
+         WHERE stripe_session_id = $1`,
+        [normalizedSessionId, String(paymentStatus)]
+      );
+      session.payment_status = String(paymentStatus);
+    }
+
+    if (session.premium_granted_at) {
+      await client.query('COMMIT');
+      return readUserById(session.user_id);
+    }
+
+    if (String(session.payment_status).toLowerCase() !== 'paid') {
+      const error = new Error('Pagamento ainda nao confirmado.');
+      error.statusCode = 409;
+      throw error;
+    }
+
+    const user = await extendUserPremiumAccess(session.user_id, session.duration_days, {
+      accessType: `stripe:${session.plan_key}`,
+      sourceFile: normalizedSessionId
+    });
+
+    await client.query(
+      `UPDATE public.premium_checkout_sessions
+       SET premium_granted_at = now(),
+           updated_at = now()
+       WHERE stripe_session_id = $1`,
+      [normalizedSessionId]
+    );
+
+    await client.query('COMMIT');
+    return user;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 const accessKeyCache = {
   loadedAt: 0,
   map: new Map()
@@ -1641,9 +1903,9 @@ const LOCAL_LEVEL_MANIFEST_RELATIVE_PATH = path.posix.join('data', 'local-level-
 const LOCAL_LEVEL_ALLOWED_FOLDERS = ['others', 'talking', 'watching', 'words'];
 const FLASHCARD_ADMIN_USERNAMES = new Set(['admin', 'adm']);
 const ACCESS_KEY_TYPES = {
-  semana: { key: 'semana', label: '1 semana', durationDays: 7, fileName: 'semana.json' },
-  mes: { key: 'mes', label: '1 mes', durationDays: 30, fileName: 'mes.json' },
-  ano: { key: 'ano', label: '1 ano', durationDays: 365, fileName: 'ano.json' }
+  semana: { ...PREMIUM_BILLING_PLANS.semana, fileName: 'semana.json' },
+  mes: { ...PREMIUM_BILLING_PLANS.mes, fileName: 'mes.json' },
+  ano: { ...PREMIUM_BILLING_PLANS.ano, fileName: 'ano.json' }
 };
 const BONUS_ACCESS_KEYS = new Map([
   ['GGGGGG', { key: 'bonus3dias', label: '3 dias gratis', durationDays: 3, fileName: 'bonus-manual' }]
@@ -4830,6 +5092,141 @@ app.get('/api/premium/status', async (req, res) => {
   } catch (error) {
     console.error('Erro ao carregar status premium:', error);
     res.status(500).json({ success: false, message: 'Erro ao carregar premium.' });
+  }
+});
+
+app.get('/api/premium/plans', (_req, res) => {
+  res.json({
+    success: true,
+    stripeEnabled: Boolean(STRIPE_SECRET_KEY),
+    publishableKey: STRIPE_PUBLISHABLE_KEY || null,
+    plans: listAvailablePremiumBillingPlans()
+  });
+});
+
+app.post('/api/premium/checkout', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await ensurePremiumAccessTables();
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Entre na sua conta para comprar premium.' });
+      return;
+    }
+
+    const currentUser = await readUserById(authUser.id);
+    if (isPremiumActiveFromUser(currentUser || authUser)) {
+      res.status(409).json({ success: false, message: 'Sua conta ja esta com premium ativo.' });
+      return;
+    }
+
+    const plan = getPremiumBillingPlan(req.body?.plan);
+    if (!plan) {
+      res.status(400).json({ success: false, message: 'Plano premium invalido ou nao configurado.' });
+      return;
+    }
+
+    const successUrl = buildPremiumReturnUrl(req, '?checkout=success&session_id={CHECKOUT_SESSION_ID}');
+    const cancelUrl = buildPremiumReturnUrl(req, '?checkout=cancel');
+    const checkoutPayload = {
+      mode: 'payment',
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      'line_items[0][price]': plan.priceId,
+      'line_items[0][quantity]': 1,
+      'metadata[user_id]': String(authUser.id),
+      'metadata[plan_key]': plan.key
+    };
+    if (currentUser?.email) {
+      checkoutPayload.customer_email = currentUser.email;
+    }
+
+    const stripeSession = await callStripeApi('POST', '/checkout/sessions', checkoutPayload);
+
+    await createPremiumCheckoutSessionRecord({
+      sessionId: stripeSession.id,
+      userId: authUser.id,
+      plan
+    });
+
+    res.status(201).json({
+      success: true,
+      plan: { key: plan.key, label: plan.label, durationDays: plan.durationDays },
+      sessionId: stripeSession.id,
+      checkoutUrl: stripeSession.url || null
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao criar checkout premium:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel iniciar o pagamento premium.'
+    });
+  }
+});
+
+app.post('/api/premium/checkout/confirm', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await ensurePremiumAccessTables();
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const sessionId = String(req.body?.sessionId || '').trim();
+    if (!sessionId) {
+      res.status(400).json({ success: false, message: 'Sessao de pagamento invalida.' });
+      return;
+    }
+
+    const localSession = await readPremiumCheckoutSession(sessionId);
+    if (!localSession) {
+      res.status(404).json({ success: false, message: 'Sessao de pagamento nao encontrada.' });
+      return;
+    }
+    if (Number(localSession.user_id) !== Number(authUser.id)) {
+      res.status(403).json({ success: false, message: 'Essa sessao nao pertence ao usuario atual.' });
+      return;
+    }
+
+    const stripeSession = await callStripeApi('GET', `/checkout/sessions/${encodeURIComponent(sessionId)}`);
+    const paymentStatus = String(stripeSession?.payment_status || '').trim().toLowerCase();
+    if (paymentStatus !== 'paid') {
+      res.status(409).json({
+        success: false,
+        message: paymentStatus === 'unpaid' ? 'Pagamento ainda nao foi concluido.' : 'Pagamento ainda nao confirmado.',
+        paymentStatus
+      });
+      return;
+    }
+
+    const user = await fulfillPremiumCheckoutSession({ sessionId, paymentStatus });
+    res.json({
+      success: true,
+      message: 'Premium liberado com sucesso.',
+      paymentStatus,
+      user: mapPublicUser(user),
+      premium: resolvePremiumState(user)
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao confirmar checkout premium:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel confirmar o pagamento premium.'
+    });
   }
 });
 

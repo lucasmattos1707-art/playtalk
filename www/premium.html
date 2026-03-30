@@ -17,95 +17,210 @@
       --footer-height: max(62px, 8vh);
       --footer-safe-bottom: env(safe-area-inset-bottom, 0px);
       --footer-total-height: calc(var(--footer-height) + var(--footer-safe-bottom));
+      --bg-top: #071b34;
+      --bg-mid: #0f4e84;
+      --bg-bottom: #4ec9ff;
+      --card-bg: rgba(10, 20, 39, 0.58);
+      --card-border: rgba(255, 255, 255, 0.16);
+      --text-main: #f8fcff;
+      --text-soft: rgba(248, 252, 255, 0.74);
+      --accent: #ffd34f;
+      --accent-strong: #ffb300;
+      --button-text: #08213f;
+      --success: #92ffbe;
+      --danger: #ffd1d1;
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      margin: 0;
-      min-height: 100%;
-    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
 
     body {
       font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-      background: linear-gradient(180deg, #8ad8f5 0%, #5dbce3 42%, #228ebf 100%);
-      color: #ffffff;
+      color: var(--text-main);
+      background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.18), transparent 28%),
+        linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 45%, var(--bg-bottom) 100%);
     }
 
     .page {
       min-height: 100vh;
-      padding: 20px 16px calc(var(--footer-total-height) + 24px);
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
+      padding: 22px 16px calc(var(--footer-total-height) + 28px);
     }
 
     .premium-shell {
-      width: min(720px, 100%);
-      padding-top: 10px;
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
     }
 
-    .premium-card {
-      background: rgba(255, 255, 255, 0.16);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 34px;
-      padding: 26px 18px 22px;
-      backdrop-filter: blur(18px);
-      box-shadow: 0 28px 60px rgba(6, 19, 41, 0.18);
+    .hero,
+    .redeem-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 32px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 24px 64px rgba(2, 8, 23, 0.24);
     }
 
-    .premium-copy {
-      text-align: center;
-      margin-bottom: 18px;
+    .hero {
+      padding: 28px 22px;
+      display: grid;
+      gap: 20px;
     }
 
-    .premium-copy h1 {
-      margin: 0 0 10px;
+    .hero-copy h1 {
+      margin: 0 0 12px;
       font-family: "PlaytalkDisplay", Impact, sans-serif;
-      font-size: clamp(34px, 8vw, 56px);
+      font-size: clamp(38px, 8vw, 72px);
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
 
-    .premium-copy p {
+    .hero-copy p {
       margin: 0;
-      font-size: 16px;
+      max-width: 720px;
+      font-size: 17px;
+      line-height: 1.5;
+      color: var(--text-soft);
       font-weight: 700;
-      color: rgba(255, 255, 255, 0.92);
+    }
+
+    .premium-status {
+      min-height: 24px;
+      margin: 0;
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .premium-status.is-error { color: var(--danger); }
+    .premium-status.is-success { color: var(--success); }
+
+    .plans {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .plan-card {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 28px;
+      padding: 20px 18px;
+      display: grid;
+      gap: 14px;
+      min-height: 260px;
+    }
+
+    .plan-card.is-featured {
+      border-color: rgba(255, 211, 79, 0.6);
+      background: linear-gradient(180deg, rgba(255, 211, 79, 0.18), rgba(255, 255, 255, 0.08));
+      transform: translateY(-4px);
+    }
+
+    .plan-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: fit-content;
+      border-radius: 999px;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.12);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .plan-card h2 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .plan-card p {
+      margin: 0;
+      color: var(--text-soft);
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .plan-card ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text-main);
+      display: grid;
+      gap: 8px;
+      font-weight: 700;
+    }
+
+    .plan-buy-btn,
+    .premium-btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 18px;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 140ms ease, opacity 140ms ease, background 140ms ease;
+    }
+
+    .plan-buy-btn {
+      margin-top: auto;
+      color: var(--button-text);
+      background: linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%);
+    }
+
+    .plan-buy-btn:hover,
+    .premium-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .plan-buy-btn:disabled,
+    .premium-btn:disabled {
+      opacity: 0.6;
+      cursor: wait;
+      transform: none;
+    }
+
+    .redeem-card {
+      padding: 24px 20px 20px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .redeem-header h2 {
+      margin: 0 0 8px;
+      font-size: 30px;
+    }
+
+    .redeem-header p {
+      margin: 0;
+      color: var(--text-soft);
+      font-weight: 700;
     }
 
     .premium-code {
       display: grid;
       grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 10px;
-      margin-bottom: 14px;
     }
 
     .premium-code-slot {
       min-height: 56px;
       border-radius: 18px;
-      border: 1px solid rgba(255, 255, 255, 0.28);
-      background: rgba(7, 17, 31, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08);
       display: grid;
       place-items: center;
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 900;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.08em;
     }
 
     .premium-code-slot.is-empty {
-      color: rgba(255, 255, 255, 0.44);
-    }
-
-    .premium-status {
-      min-height: 24px;
-      margin: 0 0 18px;
-      text-align: center;
-      font-weight: 800;
-      color: rgba(255, 255, 255, 0.96);
+      color: rgba(255, 255, 255, 0.34);
     }
 
     .premium-grid {
@@ -116,20 +231,20 @@
 
     .premium-tile {
       border: 0;
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.08);
       border-radius: 22px;
       padding: 10px;
       cursor: pointer;
-      transition: transform 140ms ease, background 140ms ease;
       min-height: 88px;
       display: grid;
       place-items: center;
+      transition: transform 140ms ease, background 140ms ease;
     }
 
     .premium-tile:hover,
     .premium-tile:focus-visible {
+      background: rgba(255, 255, 255, 0.16);
       transform: translateY(-2px);
-      background: rgba(255, 255, 255, 0.18);
       outline: none;
     }
 
@@ -145,18 +260,11 @@
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
-      margin-top: 18px;
     }
 
     .premium-btn {
-      border: 0;
-      border-radius: 999px;
-      padding: 12px 14px;
-      font-size: 14px;
-      font-weight: 800;
-      cursor: pointer;
-      color: #0b2340;
-      background: rgba(255, 255, 255, 0.92);
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.14);
     }
 
     .flashcards-footer-nav {
@@ -199,35 +307,69 @@
       color: #ffffff;
     }
 
+    @media (max-width: 900px) {
+      .plans { grid-template-columns: 1fr; }
+      .plan-card.is-featured { transform: none; }
+    }
+
     @media (max-width: 640px) {
-      .premium-card {
-        border-radius: 28px;
-        padding: 22px 14px 18px;
-      }
-
-      .premium-grid {
-        gap: 10px;
-      }
-
-      .premium-tile {
-        min-height: 74px;
-        border-radius: 18px;
-      }
-
-      .premium-code-slot {
-        min-height: 50px;
-        font-size: 22px;
-      }
+      .hero, .redeem-card { border-radius: 28px; }
+      .premium-grid { gap: 10px; }
+      .premium-tile { min-height: 74px; border-radius: 18px; }
+      .premium-code-slot { min-height: 50px; font-size: 22px; }
     }
   </style>
 </head>
 <body>
   <main class="page">
     <section class="premium-shell">
-      <div class="premium-card">
-        <div class="premium-copy">
+      <section class="hero">
+        <div class="hero-copy">
           <h1>Premium</h1>
-          <p>Toque nas imagens na ordem certa para montar a chave.</p>
+          <p>Libere o PlayTalk completo com pagamento internacional via Stripe. Se voce ja tiver uma chave premium, pode resgatar aqui embaixo do mesmo jeito.</p>
+        </div>
+        <p class="premium-status" id="premiumBillingStatus">Escolha um plano para abrir o checkout seguro.</p>
+        <div class="plans" id="premiumPlans">
+          <article class="plan-card">
+            <span class="plan-badge">Sprint</span>
+            <h2>1 semana</h2>
+            <p>Entrada rapida para testar tudo sem travar a evolucao.</p>
+            <ul>
+              <li>Liberacao imediata apos pagamento</li>
+              <li>Acesso completo aos flashcards premium</li>
+              <li>Compra segura no checkout do Stripe</li>
+            </ul>
+            <button class="plan-buy-btn" type="button" data-plan="semana">Comprar 1 semana</button>
+          </article>
+          <article class="plan-card is-featured">
+            <span class="plan-badge">Mais pedido</span>
+            <h2>1 mes</h2>
+            <p>Plano equilibrado para crescer de verdade no app sem pressa.</p>
+            <ul>
+              <li>Melhor para uso continuo</li>
+              <li>Mesmo acesso premium completo</li>
+              <li>Checkout com cartao internacional</li>
+            </ul>
+            <button class="plan-buy-btn" type="button" data-plan="mes">Comprar 1 mes</button>
+          </article>
+          <article class="plan-card">
+            <span class="plan-badge">Global</span>
+            <h2>1 ano</h2>
+            <p>Feito para quem quer mergulhar no PlayTalk por muito tempo.</p>
+            <ul>
+              <li>Plano longo para expansao global</li>
+              <li>Ativacao automatica apos confirmar o pagamento</li>
+              <li>Base pronta para escalar</li>
+            </ul>
+            <button class="plan-buy-btn" type="button" data-plan="ano">Comprar 1 ano</button>
+          </article>
+        </div>
+      </section>
+
+      <section class="redeem-card">
+        <div class="redeem-header">
+          <h2>Tenho uma chave premium</h2>
+          <p>Toque nas imagens na ordem certa para montar a chave de 6 letras.</p>
         </div>
 
         <div class="premium-code" id="premiumCodeValue" aria-live="polite"></div>
@@ -257,7 +399,7 @@
           <button class="premium-btn" id="premiumClearBtn" type="button">Limpar</button>
           <button class="premium-btn" id="premiumRedeemBtn" type="button">Ativar</button>
         </div>
-      </div>
+      </section>
     </section>
   </main>
 
@@ -285,12 +427,15 @@
         premiumGrid: document.getElementById('premiumGrid'),
         premiumBackspaceBtn: document.getElementById('premiumBackspaceBtn'),
         premiumClearBtn: document.getElementById('premiumClearBtn'),
-        premiumRedeemBtn: document.getElementById('premiumRedeemBtn')
+        premiumRedeemBtn: document.getElementById('premiumRedeemBtn'),
+        billingStatus: document.getElementById('premiumBillingStatus'),
+        buyButtons: Array.from(document.querySelectorAll('.plan-buy-btn'))
       };
 
       const state = {
         code: '',
-        busy: false
+        redeemBusy: false,
+        checkoutBusy: false
       };
 
       function buildApiUrl(path) {
@@ -309,14 +454,26 @@
 
       function escapeHtml(value) {
         return String(value || '').replace(/[&<>\"']/g, (char) => (
-          {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            '\'': '&#39;'
-          }[char] || char
+          { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[char] || char
         ));
+      }
+
+      function setBillingStatus(message, tone) {
+        if (!els.billingStatus) return;
+        els.billingStatus.textContent = String(message || '').trim() || 'Escolha um plano para abrir o checkout seguro.';
+        els.billingStatus.className = 'premium-status';
+        if (tone) {
+          els.billingStatus.classList.add(`is-${tone}`);
+        }
+      }
+
+      function setRedeemStatus(message, tone) {
+        if (!els.premiumStatus) return;
+        els.premiumStatus.textContent = String(message || '').trim() || 'Preencha os 6 espacos com as letras correspondentes.';
+        els.premiumStatus.className = 'premium-status';
+        if (tone) {
+          els.premiumStatus.classList.add(`is-${tone}`);
+        }
       }
 
       function renderCode() {
@@ -324,33 +481,30 @@
         const slots = Array.from({ length: 6 }, (_value, index) => {
           const letter = state.code[index] || '';
           if (!letter) {
-            return '<div class="premium-code-slot is-empty">•</div>';
+            return '<div class="premium-code-slot is-empty">&#8226;</div>';
           }
           return `<div class="premium-code-slot">${escapeHtml(letter)}</div>`;
         });
         els.premiumCodeValue.innerHTML = slots.join('');
         if (els.premiumBackspaceBtn) {
-          els.premiumBackspaceBtn.disabled = state.busy || !state.code;
+          els.premiumBackspaceBtn.disabled = state.redeemBusy || !state.code;
         }
         if (els.premiumClearBtn) {
-          els.premiumClearBtn.disabled = state.busy || !state.code;
+          els.premiumClearBtn.disabled = state.redeemBusy || !state.code;
         }
         if (els.premiumRedeemBtn) {
-          els.premiumRedeemBtn.disabled = state.busy || state.code.length !== 6;
+          els.premiumRedeemBtn.disabled = state.redeemBusy || state.code.length !== 6;
         }
-      }
-
-      function setStatus(message) {
-        if (els.premiumStatus) {
-          els.premiumStatus.textContent = String(message || '').trim() || 'Preencha os 6 espacos com as letras correspondentes.';
-        }
+        els.buyButtons.forEach((button) => {
+          button.disabled = state.checkoutBusy;
+        });
       }
 
       async function redeemCode() {
-        if (state.busy || state.code.length !== 6) return;
-        state.busy = true;
+        if (state.redeemBusy || state.code.length !== 6) return;
+        state.redeemBusy = true;
         renderCode();
-        setStatus('Validando chave...');
+        setRedeemStatus('Validando chave...');
         try {
           const response = await fetch(buildApiUrl('/api/premium/redeem'), {
             method: 'POST',
@@ -363,23 +517,90 @@
             throw new Error(payload?.message || 'Nao foi possivel validar a chave.');
           }
           state.code = '';
-          setStatus(payload?.message || 'Premium liberado com sucesso.');
+          setRedeemStatus(payload?.message || 'Premium liberado com sucesso.', 'success');
+          setBillingStatus('Sua conta ja pode usar o premium agora mesmo.', 'success');
         } catch (error) {
           state.code = '';
-          setStatus(error?.message || 'Chave invalida.');
+          setRedeemStatus(error?.message || 'Chave invalida.', 'error');
         } finally {
-          state.busy = false;
+          state.redeemBusy = false;
           renderCode();
         }
       }
 
       function appendLetter(letter) {
-        if (state.busy) return;
+        if (state.redeemBusy) return;
         const normalized = String(letter || '').trim().toUpperCase().replace(/[^A-P]/g, '');
         if (!normalized || state.code.length >= 6) return;
         state.code = `${state.code}${normalized}`.slice(0, 6);
-        setStatus('Preencha os 6 espacos com as letras correspondentes.');
+        setRedeemStatus('Preencha os 6 espacos com as letras correspondentes.');
         renderCode();
+      }
+
+      async function startCheckout(plan) {
+        if (state.checkoutBusy) return;
+        state.checkoutBusy = true;
+        renderCode();
+        setBillingStatus('Abrindo checkout seguro...');
+        try {
+          const response = await fetch(buildApiUrl('/api/premium/checkout'), {
+            method: 'POST',
+            headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+            credentials: 'include',
+            body: JSON.stringify({ plan })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success || !payload?.checkoutUrl) {
+            throw new Error(payload?.message || 'Nao foi possivel abrir o checkout.');
+          }
+          window.location.href = payload.checkoutUrl;
+        } catch (error) {
+          state.checkoutBusy = false;
+          renderCode();
+          setBillingStatus(error?.message || 'Nao foi possivel abrir o checkout.', 'error');
+        }
+      }
+
+      async function confirmCheckoutIfNeeded() {
+        const searchParams = new URLSearchParams(window.location.search);
+        const checkoutState = searchParams.get('checkout');
+        const sessionId = searchParams.get('session_id');
+
+        if (checkoutState === 'cancel') {
+          setBillingStatus('Pagamento cancelado. Quando quiser, e so tentar de novo.', 'error');
+          searchParams.delete('checkout');
+          const nextUrl = `${window.location.pathname}${searchParams.toString() ? `?${searchParams}` : ''}`;
+          window.history.replaceState({}, '', nextUrl);
+          return;
+        }
+
+        if (checkoutState !== 'success' || !sessionId) {
+          return;
+        }
+
+        state.checkoutBusy = true;
+        renderCode();
+        setBillingStatus('Confirmando pagamento e liberando premium...');
+        try {
+          const response = await fetch(buildApiUrl('/api/premium/checkout/confirm'), {
+            method: 'POST',
+            headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+            credentials: 'include',
+            body: JSON.stringify({ sessionId })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Nao foi possivel confirmar o pagamento.');
+          }
+          setBillingStatus(payload?.message || 'Premium liberado com sucesso.', 'success');
+          const nextUrl = window.location.pathname;
+          window.history.replaceState({}, '', nextUrl);
+        } catch (error) {
+          setBillingStatus(error?.message || 'Nao foi possivel confirmar o pagamento.', 'error');
+        } finally {
+          state.checkoutBusy = false;
+          renderCode();
+        }
       }
 
       els.premiumGrid?.addEventListener('click', (event) => {
@@ -389,15 +610,15 @@
       });
 
       els.premiumBackspaceBtn?.addEventListener('click', () => {
-        if (state.busy) return;
+        if (state.redeemBusy) return;
         state.code = state.code.slice(0, -1);
         renderCode();
       });
 
       els.premiumClearBtn?.addEventListener('click', () => {
-        if (state.busy) return;
+        if (state.redeemBusy) return;
         state.code = '';
-        setStatus('Preencha os 6 espacos com as letras correspondentes.');
+        setRedeemStatus('Preencha os 6 espacos com as letras correspondentes.');
         renderCode();
       });
 
@@ -405,9 +626,15 @@
         void redeemCode();
       });
 
+      els.buyButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          void startCheckout(button.getAttribute('data-plan'));
+        });
+      });
+
       window.addEventListener('keydown', (event) => {
         if (event.key === 'Backspace') {
-          if (state.busy) return;
+          if (state.redeemBusy) return;
           state.code = state.code.slice(0, -1);
           renderCode();
           return;
@@ -422,6 +649,7 @@
       });
 
       renderCode();
+      void confirmCheckoutIfNeeded();
     })();
   </script>
 </body>
