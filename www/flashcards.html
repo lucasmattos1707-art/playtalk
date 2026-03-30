@@ -4487,7 +4487,7 @@
       <div class="welcome-gate__touch" id="welcomeTouch">
         <img class="welcome-gate__logo" src="SVG/logo.png" alt="PlayTalk">
         <p class="welcome-gate__copy" id="welcomeCopy">Flu&#234;ncia f&#225;cil</p>
-        <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button">Iniciar jogo</button>
+        <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button">INICIAR JOGO</button>
       </div>
       <a class="welcome-gate__account-link" id="welcomeAccountLink" href="/signup">J&aacute; tenho conta</a>
     </div>
@@ -6446,7 +6446,14 @@
 
       function syncWelcomeStartButton() {
         if (!els.welcomeStartBtn) return;
-        els.welcomeStartBtn.textContent = hasWelcomePlayAccess() ? 'JOGUE AGORA' : 'INICIAR JOGO';
+        els.welcomeStartBtn.textContent = hasWelcomePlayAccess() ? 'JOGAR AGORA' : 'INICIAR JOGO';
+      }
+
+      function syncWelcomeAccountLink() {
+        if (!els.welcomeAccountLink) return;
+        const isLoggedIn = Boolean(state.user?.id);
+        els.welcomeAccountLink.textContent = isLoggedIn ? 'Sair da conta' : 'Já tenho conta';
+        els.welcomeAccountLink.setAttribute('href', isLoggedIn ? '#' : '/signup');
       }
 
       function syncWelcomeGate() {
@@ -6455,6 +6462,7 @@
         document.body.classList.toggle('welcome-active', visible);
         els.welcomeGate?.classList.toggle('is-visible', visible);
         syncWelcomeStartButton();
+        syncWelcomeAccountLink();
         if (visible) {
           closeRobotCheck();
         }
@@ -12044,6 +12052,10 @@
         });
         els.welcomeAccountLink?.addEventListener('click', (event) => {
           event.stopPropagation();
+          if (state.user?.id) {
+            event.preventDefault();
+            void logoutCurrentUser();
+          }
         });
         els.soundTestReplayBtn?.addEventListener('click', () => {
           if (state.ui.soundTestBusy || !state.ui.soundTestOpen) return;

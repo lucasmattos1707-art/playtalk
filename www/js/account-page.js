@@ -166,12 +166,14 @@
     els.avatarFallback.textContent = username.charAt(0).toUpperCase() || 'P';
     els.avatarFallback.style.display = hasAvatar ? 'none' : 'grid';
 
-    const shouldHidePasswordField = Boolean(state.user?.id && state.user?.hasPassword);
+    const isLoggedIn = Boolean(state.user?.id);
+    const shouldHidePasswordField = isLoggedIn;
     if (els.passwordField) {
       els.passwordField.hidden = shouldHidePasswordField;
     }
     if (els.passwordBtn) {
-      els.passwordBtn.hidden = !shouldHidePasswordField;
+      els.passwordBtn.hidden = !isLoggedIn;
+      els.passwordBtn.textContent = 'Trocar senha';
     }
     if (shouldHidePasswordField && els.passwordInput) {
       els.passwordInput.value = '';
@@ -422,7 +424,7 @@
       }
       state.user = normalizeUser(payload.user) || state.user;
       renderUser();
-      setStatus('Senha criada com sucesso.', 'success');
+      setStatus('Senha alterada com sucesso.', 'success');
     } catch (error) {
       setStatus(error?.message || 'Nao foi possivel salvar a senha.', 'error');
     }
