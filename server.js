@@ -1079,6 +1079,14 @@ const isAdminUsername = (value) => FLASHCARD_ADMIN_USERNAMES.has(normalizeAdminU
 
 const isAdminUserRecord = (user) => isAdminUsername(user?.email || user?.username);
 
+const buildPublicUsersVisibilityWhereClause = (requesterIsAdmin = false, usernameColumn = `COALESCE(NULLIF(u.username, ''), u.email)`) => {
+  if (requesterIsAdmin) return '';
+  return `WHERE NOT (
+    LOWER(${usernameColumn}) IN ('admin', 'adm')
+    OR UPPER(${usernameColumn}) LIKE '%USER%'
+  )`;
+};
+
 const normalizeAccessKeyCode = (value) => String(value || '')
   .trim()
   .toUpperCase()
@@ -4707,6 +4715,7 @@ app.get('/api/users/flashcards', async (req, res) => {
     const limit = Number.isInteger(requestedLimit) && requestedLimit > 0
       ? Math.min(requestedLimit, 50)
       : 50;
+    const visibilityWhereClause = buildPublicUsersVisibilityWhereClause(requesterIsAdmin);
     const rankingSql = `WITH ranked_users AS (
          SELECT
            u.id,
@@ -4731,6 +4740,7 @@ app.get('/api/users/flashcards', async (req, res) => {
            GROUP BY user_id
          ) progress
            ON progress.user_id = u.id
+         ${visibilityWhereClause}
        )
        SELECT *
        FROM ranked_users
@@ -4763,6 +4773,7 @@ app.get('/api/users/flashcards', async (req, res) => {
              GROUP BY user_id
            ) progress
              ON progress.user_id = u.id
+           ${visibilityWhereClause}
          )
          SELECT *
          FROM ranked_users
