@@ -1,0 +1,366 @@
+{
+  "title": "WillFuture",
+  "coverImage": "willings",
+  "items": [
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000001.webp",
+      "nomePortugues": "Eu vou te ligar",
+      "nomeIngles": "I will call you",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000002.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000003.webp",
+      "nomePortugues": "Eu vou te ajudar",
+      "nomeIngles": "I will help you",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000004.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000005.webp",
+      "nomePortugues": "Eu vou fazer isso",
+      "nomeIngles": "I will do it",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000006.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000007.webp",
+      "nomePortugues": "Eu vou tentar",
+      "nomeIngles": "I will try",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000008.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000009.webp",
+      "nomePortugues": "Eu vou ver isso",
+      "nomeIngles": "I will see",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000010.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000011.webp",
+      "nomePortugues": "Eu vou resolver isso",
+      "nomeIngles": "I will fix it",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000012.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000013.webp",
+      "nomePortugues": "Eu vou mandar mensagem",
+      "nomeIngles": "I will text you",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000014.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000015.webp",
+      "nomePortugues": "Eu vou te avisar",
+      "nomeIngles": "I will let you know",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000016.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000017.webp",
+      "nomePortugues": "Eu vou lembrar",
+      "nomeIngles": "I will remember",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000018.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000019.webp",
+      "nomePortugues": "Eu vou explicar",
+      "nomeIngles": "I will explain",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000020.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000021.webp",
+      "nomePortugues": "Eu vou falar com ele",
+      "nomeIngles": "I will talk to him",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000022.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000023.webp",
+      "nomePortugues": "Eu vou falar com ela",
+      "nomeIngles": "I will talk to her",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000024.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000025.webp",
+      "nomePortugues": "Eu vou esperar",
+      "nomeIngles": "I will wait",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000026.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000027.webp",
+      "nomePortugues": "Eu vou voltar",
+      "nomeIngles": "I will come back",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000028.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000029.webp",
+      "nomePortugues": "Eu vou chegar cedo",
+      "nomeIngles": "I will arrive early",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000030.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000031.webp",
+      "nomePortugues": "Eu vou chegar tarde",
+      "nomeIngles": "I will arrive late",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000032.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000033.webp",
+      "nomePortugues": "Eu vou sair agora",
+      "nomeIngles": "I will leave now",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000034.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000035.webp",
+      "nomePortugues": "Eu vou ficar",
+      "nomeIngles": "I will stay",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000036.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000037.webp",
+      "nomePortugues": "Eu vou embora",
+      "nomeIngles": "I will leave",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000038.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000039.webp",
+      "nomePortugues": "Eu vou pagar",
+      "nomeIngles": "I will pay",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000040.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000041.webp",
+      "nomePortugues": "Eu vou comprar isso",
+      "nomeIngles": "I will buy this",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000042.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000043.webp",
+      "nomePortugues": "Eu vou pegar isso",
+      "nomeIngles": "I will take this",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000044.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000045.webp",
+      "nomePortugues": "Eu vou usar isso",
+      "nomeIngles": "I will use this",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000046.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000047.webp",
+      "nomePortugues": "Eu vou estudar",
+      "nomeIngles": "I will study",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000048.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000049.webp",
+      "nomePortugues": "Eu vou trabalhar",
+      "nomeIngles": "I will work",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000050.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000051.webp",
+      "nomePortugues": "Eu vou descansar",
+      "nomeIngles": "I will rest",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000052.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000053.webp",
+      "nomePortugues": "Eu vou tentar de novo",
+      "nomeIngles": "I will try again",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000054.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000055.webp",
+      "nomePortugues": "Eu vou pensar nisso",
+      "nomeIngles": "I will think about it",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000056.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000057.webp",
+      "nomePortugues": "Eu vou verificar",
+      "nomeIngles": "I will check",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000058.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000059.webp",
+      "nomePortugues": "Eu vou te encontrar",
+      "nomeIngles": "I will meet you",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000060.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000061.webp",
+      "nomePortugues": "Eu vou confiar em você",
+      "nomeIngles": "I will trust you",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000062.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000063.webp",
+      "nomePortugues": "Eu vou ficar bem",
+      "nomeIngles": "I will be fine",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000064.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000065.webp",
+      "nomePortugues": "Eu vou melhorar",
+      "nomeIngles": "I will improve",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000066.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000067.webp",
+      "nomePortugues": "Eu vou aprender",
+      "nomeIngles": "I will learn",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000068.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000069.webp",
+      "nomePortugues": "Eu vou começar",
+      "nomeIngles": "I will start",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000070.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000071.webp",
+      "nomePortugues": "Eu vou terminar",
+      "nomeIngles": "I will finish",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000072.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000073.webp",
+      "nomePortugues": "Eu vou continuar",
+      "nomeIngles": "I will continue",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000074.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000075.webp",
+      "nomePortugues": "Eu vou mudar",
+      "nomeIngles": "I will change",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000076.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000077.webp",
+      "nomePortugues": "Eu vou tentar ajudar",
+      "nomeIngles": "I will try to help",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000078.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000079.webp",
+      "nomePortugues": "Eu vou descobrir",
+      "nomeIngles": "I will find out",
+      "categoria": "PlayTalk",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/174/001/000080.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    }
+  ]
+}

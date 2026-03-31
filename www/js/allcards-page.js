@@ -314,11 +314,14 @@
   async function fetchRemoteCardsCatalog() {
     const response = await fetch(withNoCacheUrl(buildApiUrl(DATA_MANIFEST_REMOTE_PATH)), { cache: 'no-store' });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok || !Array.isArray(payload?.data?.files)) {
+    const manifestFiles = Array.isArray(payload?.files)
+      ? payload.files
+      : (Array.isArray(payload?.data?.files) ? payload.data.files : []);
+    if (!response.ok || !manifestFiles.length) {
       throw new Error(payload?.message || 'Nao consegui abrir o manifesto dos flashcards.');
     }
 
-    const files = payload.data.files.map((file) => ({
+    const files = manifestFiles.map((file) => ({
       name: file.name || file.path || file.source || 'deck.json',
       path: resolveManifestDeckPath(file),
       sourceKey: safeText(file?.source || file?.name || file?.path),
