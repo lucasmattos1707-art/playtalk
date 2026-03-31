@@ -4891,6 +4891,7 @@
   <script src="js/android-config.js"></script>
   <script src="js/api-config.js"></script>
   <script src="js/android-shell.js"></script>
+  <script src="js/openai-stt.js"></script>
   <script src="js/android-speech.js"></script>
   <script src="js/gamesounds.js"></script>
   <script>
@@ -4921,8 +4922,20 @@
         return nativeSpeech;
       }
 
+      function getOpenAiSpeechRecognition() {
+        const openAiSpeech = window.PlaytalkOpenAiStt;
+        if (!openAiSpeech) return null;
+        if (typeof openAiSpeech.isSupported === 'function' && !openAiSpeech.isSupported()) {
+          return null;
+        }
+        if (typeof openAiSpeech.captureAndTranscribe !== 'function') {
+          return null;
+        }
+        return openAiSpeech;
+      }
+
       function hasSpeechRecognitionSupport() {
-        return Boolean(recognitionCtor || getNativeSpeechRecognition());
+        return Boolean(recognitionCtor || getNativeSpeechRecognition() || getOpenAiSpeechRecognition());
       }
       const STAR_ICON_PATH = 'SVG/codex-icons/star.svg';
       const ENGLISH_ICON_PATH = 'SVG/codex-icons/ingles.svg';
@@ -4952,7 +4965,7 @@
       const EARLY_FLASHCARD_MIN_LENGTH = 6;
       const EARLY_FLASHCARD_MAX_LENGTH = 12;
       const REVIEW_SLOT_LIMIT = 8;
-      const TUTORIAL_AUDIO_ROOT = 'audiostuto';
+      const TUTORIAL_AUDIO_ROOT = `${FLASHCARDS_R2_PUBLIC_ROOT}/audiostuto`;
       const TUTORIAL_NORMAL_GAME_COUNT = 3;
       const TUTORIAL_PLANET_IMAGE_NAME = 'planet.webp';
       const TUTORIAL_PLANET_ENGLISH = 'planet';
@@ -7987,7 +8000,7 @@
       }
 
       function tutorialAudioPath(index) {
-        return `/${TUTORIAL_AUDIO_ROOT}/tuto${index}.mp3`;
+        return `${TUTORIAL_AUDIO_ROOT}/tuto${index}.mp3`;
       }
 
       function findTutorialPlanetCard() {
@@ -11226,7 +11239,7 @@
         }
         els.gameSubword.classList.toggle('is-stage-one', entry.stage === 1 && stageConfig.subtitleType === 'portuguese');
         renderStageOneWordSwap(entry, Boolean(subword));
-        state.game.canListen = !typingStage;
+        state.game.canListen = !typingStage && !stageConfig.autoAudio;
         renderGameTouchButton(stageConfig, entry);
         els.gameTouchBtn.parentElement.classList.toggle('is-hidden', typingStage || els.gameTouchBtn.classList.contains('is-hidden'));
         els.gameTouchBtn.classList.toggle('is-busy', state.game.listening);
@@ -12004,16 +12017,18 @@
         if (!state.game.active || state.game.transitioning || state.game.listening || state.game.paused) return;
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return;
-        if (isTypingStage(entry)) return;
+        if (isTypingStage(entry) || !state.game.canListen) return;
 
         const nativeSpeech = getNativeSpeechRecognition();
+        const openAiSpeech = getOpenAiSpeechRecognition();
 
-        if (!nativeSpeech && !recognitionCtor) {
-          setGameStatus('', 'miss');
+        if (!nativeSpeech && !recognitionCtor && !openAiSpeech) {
+          setGameStatus('Microfone indisponivel neste aparelho.', 'live');
           return;
         }
 
         cleanupGameRecognition();
+        stopActiveAudio();
         state.game.listening = true;
         els.gameTouchBtn.classList.add('is-busy');
         els.gameCard.classList.add('is-listening');
@@ -12028,6 +12043,13 @@
         let hadError = false;
         let retryTimer = 0;
         let partialTranscript = '';
+        const restoreIdleState = (statusText = 'Toque para falar') => {
+          if (state.game.active && state.game.currentId === entry.id) {
+            state.game.canListen = true;
+            renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
+            setGameStatus(statusText, 'live');
+          }
+        };
         const resolveRecognitionTranscript = (results) => Array.from(results || []).reduce((best, result) => {
           const transcript = Array.from(result || []).reduce((candidate, alternative) => {
             const nextTranscript = safeText(alternative?.transcript || '');
@@ -12051,6 +12073,62 @@
           renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
           els.gameCard.classList.remove('is-listening');
           els.gameVisual.classList.remove('is-mic-live');
+        };
+        const tryOpenAiFallback = async (reason = '') => {
+          if (!openAiSpeech) return false;
+
+          const fallbackCapture = {
+            aborted: false,
+            abort() {
+              this.aborted = true;
+            }
+          };
+          activeRecognition = fallbackCapture;
+          state.game.recognition = fallbackCapture;
+
+          try {
+            const hasFallbackMicAccess = typeof openAiSpeech.requestMicrophoneAccess === 'function'
+              ? await openAiSpeech.requestMicrophoneAccess()
+              : true;
+            if (!hasFallbackMicAccess) {
+              finish();
+              restoreIdleState('Ative o microfone para falar.');
+              return true;
+            }
+
+            const transcript = await openAiSpeech.captureAndTranscribe({
+              language: recognitionLanguage,
+              maxDurationMs: 5000,
+              onRecordingStart: () => {
+                if (fallbackCapture.aborted || !state.game.active || state.game.currentId !== entry.id) return;
+                setGameStatus('Ouvindo...', 'live');
+              },
+              onRecordingStop: () => {
+                if (fallbackCapture.aborted || !state.game.active || state.game.currentId !== entry.id) return;
+                setGameStatus('Analisando...', 'live');
+              }
+            });
+
+            if (fallbackCapture.aborted) {
+              finish();
+              return true;
+            }
+
+            finish();
+            if (transcript) {
+              gotResult = true;
+              await handleRecognitionResult(transcript);
+              return true;
+            }
+
+            restoreIdleState();
+            return true;
+          } catch (error) {
+            console.warn('[flashcards][speech-fallback]', reason || 'openai-stt', error);
+            finish();
+            restoreIdleState('Toque para tentar de novo');
+            return false;
+          }
         };
 
         if (nativeSpeech) {
@@ -12115,6 +12193,18 @@
             finish();
 
             if (
+              openAiSpeech
+              && errorCode !== 'permission_denied'
+              && errorCode !== 'cancelled'
+              && errorCode !== 'app_paused'
+              && errorCode !== 'busy'
+              && errorCode !== 'client'
+              && await tryOpenAiFallback(`native:${errorCode || 'unknown'}`)
+            ) {
+              return;
+            }
+
+            if (
               errorCode === 'no_match'
               || errorCode === 'speech_timeout'
               || errorCode === 'cancelled'
@@ -12123,21 +12213,18 @@
               || errorCode === 'busy'
               || errorCode === 'client'
             ) {
-              if (state.game.active && state.game.currentId === entry.id) {
-                state.game.canListen = true;
-                renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
-                setGameStatus('Toque para falar', 'live');
-              }
+              restoreIdleState(errorCode === 'permission_denied' ? 'Ative o microfone para falar.' : 'Toque para falar');
               return;
             }
 
-            setGameStatus('', 'miss');
-            state.game.queue.push(entry.id);
-            window.setTimeout(() => {
-              if (state.game.active) advanceToNextCard();
-            }, 900);
+            restoreIdleState('Nao consegui abrir o microfone. Tente de novo');
             return;
           }
+        }
+
+        if (!recognitionCtor) {
+          await tryOpenAiFallback('no-web-recognition');
+          return;
         }
 
         const recognition = new recognitionCtor();
@@ -12171,18 +12258,11 @@
             return;
           }
           if (errorCode === 'no-speech' || errorCode === 'audio-capture') {
-            if (state.game.active && state.game.currentId === entry.id) {
-              state.game.canListen = true;
-              renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
-              setGameStatus('Toque para falar', 'live');
-            }
+            restoreIdleState();
             return;
           }
-          setGameStatus('', 'miss');
-          state.game.queue.push(entry.id);
-          window.setTimeout(() => {
-            if (state.game.active) advanceToNextCard();
-          }, 900);
+          if (await tryOpenAiFallback(`web:${errorCode || 'unknown'}`)) return;
+          restoreIdleState('Toque para tentar de novo');
         };
 
         recognition.onend = async () => {
@@ -12193,8 +12273,7 @@
             return;
           }
           if (!gotResult && !hadError && state.game.active && state.game.currentId === entry.id) {
-            state.game.canListen = true;
-            renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
+            restoreIdleState();
           }
         };
 
@@ -12203,15 +12282,12 @@
           retryTimer = window.setTimeout(() => {
             if (finished) return;
             finish();
-            if (state.game.active && state.game.currentId === entry.id) {
-              state.game.canListen = true;
-              renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
-              setGameStatus('', 'live');
-            }
+            restoreIdleState();
           }, 10000);
         } catch (_error) {
           finish();
-          setGameStatus('', 'miss');
+          if (await tryOpenAiFallback('web:start-failed')) return;
+          restoreIdleState('Toque para tentar de novo');
         }
       }
 
