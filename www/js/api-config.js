@@ -1,6 +1,7 @@
 (function initPlaytalkApiConfig() {
   const LEGACY_RENDER_URL = 'https://playtalk-dvv5.onrender.com';
   const API_BASE_URL_STORAGE_KEY = 'playtalk_api_base_url';
+  const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
 
   function normalizeBaseUrl(value) {
     if (typeof value !== 'string') return '';
@@ -53,7 +54,25 @@
   }
 
   function getAuthToken() {
-    return localStorage.getItem('playtalk_auth_token') || '';
+    try {
+      return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || '';
+    } catch (_error) {
+      return '';
+    }
+  }
+
+  function setAuthToken(token) {
+    try {
+      const normalized = typeof token === 'string' ? token.trim() : '';
+      if (normalized) {
+        localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, normalized);
+      } else {
+        localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+      }
+      return true;
+    } catch (_error) {
+      return false;
+    }
   }
 
   function buildAuthHeaders(extraHeaders) {
@@ -73,6 +92,7 @@
     },
     url: buildApiUrl,
     getAuthToken,
+    setAuthToken,
     authHeaders: buildAuthHeaders,
     setBaseUrl(nextBaseUrl) {
       const normalized = normalizeBaseUrl(nextBaseUrl);

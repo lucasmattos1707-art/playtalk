@@ -255,6 +255,19 @@
     function safeText(value) { return typeof value === 'string' ? value.trim() : ''; }
     function buildApiUrl(path) { return window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function' ? window.PlaytalkApi.url(path) : path; }
     function buildAuthHeaders(extraHeaders) { return window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function' ? window.PlaytalkApi.authHeaders(extraHeaders) : { ...(extraHeaders || {}) }; }
+    function persistAuthToken(token) {
+      if (window.PlaytalkApi && typeof window.PlaytalkApi.setAuthToken === 'function') {
+        window.PlaytalkApi.setAuthToken(token || '');
+        return;
+      }
+      try {
+        if (token) {
+          window.localStorage.setItem('playtalk_auth_token', token);
+        } else {
+          window.localStorage.removeItem('playtalk_auth_token');
+        }
+      } catch (_error) {}
+    }
     function normalizeUser(user) {
       if (!user || typeof user !== 'object') return null;
       const id = Number(user.id) || 0;
@@ -355,7 +368,11 @@
       });
     }
     async function getSessionUser() {
-      const response = await fetch(buildApiUrl('/auth/session'), { cache: 'no-store', credentials: 'include' });
+      const response = await fetch(buildApiUrl('/auth/session'), {
+        cache: 'no-store',
+        credentials: 'include',
+        headers: buildAuthHeaders()
+      });
       if (!response.ok) return null;
       const payload = await response.json().catch(() => ({}));
       return normalizeUser(payload?.user);
@@ -373,6 +390,7 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) throw new Error(payload?.message || 'Nao foi possivel preparar o usuario.');
+      if (payload?.token) persistAuthToken(payload.token);
       const user = normalizeUser(payload.user);
       if (!user) throw new Error('Nao foi possivel preparar o perfil.');
       state.user = user;
@@ -396,6 +414,7 @@
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload?.success) throw new Error(payload?.message || 'Nao foi possivel salvar o nome.');
+        if (payload?.token) persistAuthToken(payload.token);
         const user = normalizeUser(payload.user);
         if (!user) throw new Error('Nao foi possivel atualizar o usuario.');
         state.user = user;
