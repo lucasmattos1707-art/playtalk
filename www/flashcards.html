@@ -3141,6 +3141,24 @@
       white-space: pre-wrap;
     }
 
+    .flashcards-typing__display--visual.is-answer-image {
+      width: min(46vw, 188px);
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.16);
+      box-shadow:
+        0 12px 28px rgba(15, 23, 42, 0.26),
+        0 0 0 4px rgba(255, 255, 255, 0.3);
+    }
+
+    .flashcards-typing__answer-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
     .flashcards-typing__display--visual.is-star-phase-copy {
       font-family: "PlaytalkDisplay", "Soopafre", Arial, sans-serif;
       font-weight: 400;
@@ -4979,7 +4997,6 @@
       const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
       const USER_HIDDEN_STORAGE_KEY = 'playtalk-flashcards-hidden-v1';
-      const USER_TYPE_PORTUGUESE_STORAGE_KEY = 'playtalk-flashcards-type-portuguese-v1';
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
       const TUTORIAL_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-tutorial-v1';
       const GAME_SESSION_STORAGE_KEY = 'playtalk-flashcards-game-session-v1';
@@ -5154,9 +5171,8 @@
         deckCatalog: [],
         userCards: new Map(),
         hiddenCardIds: new Set(),
-        typePortugueseCardIds: new Set(),
         ownedIds: new Set(),
-        stats: { playTimeMs: 0, speakings: 0, listenings: 0 },
+        stats: { playTimeMs: 0, speakings: 0, listenings: 0, secondStarErrorHeard: false },
         timeOffsetMs: 0,
         user: null,
         authMode: 'login',
@@ -5750,7 +5766,8 @@
         return {
           playTimeMs: Math.max(0, Math.round(Number(raw?.playTimeMs) || 0)),
           speakings: Math.max(0, Math.round(Number(raw?.speakings) || 0)),
-          listenings: Math.max(0, Math.round(Number(raw?.listenings) || 0))
+          listenings: Math.max(0, Math.round(Number(raw?.listenings) || 0)),
+          secondStarErrorHeard: Boolean(raw?.secondStarErrorHeard || raw?.second_star_error_heard)
         };
       }
 
@@ -5862,21 +5879,6 @@
         return readHiddenCardIdsForUser(state.user?.id);
       }
 
-      function readTypePortugueseCardIdsForUser(userId = state.user?.id) {
-        const parsed = readScopedStorage(USER_TYPE_PORTUGUESE_STORAGE_KEY, [], userId);
-        const ids = Array.isArray(parsed)
-          ? parsed.map((cardId) => safeText(cardId)).filter(Boolean)
-          : [];
-        return new Set(ids);
-      }
-
-      function persistTypePortugueseCardIdsLocally() {
-        localStorage.setItem(
-          userScopedStorageKey(USER_TYPE_PORTUGUESE_STORAGE_KEY),
-          JSON.stringify(Array.from(state.typePortugueseCardIds.values()))
-        );
-      }
-
       function persistHiddenCardIdsLocally() {
         localStorage.setItem(
           userScopedStorageKey(USER_HIDDEN_STORAGE_KEY),
@@ -5887,7 +5889,6 @@
       function saveUserProgress(options = {}) {
         persistUserProgressLocally();
         persistHiddenCardIdsLocally();
-        persistTypePortugueseCardIdsLocally();
         if (!options.skipCloudSync) {
           scheduleFlashcardCloudSync();
         }
@@ -5985,7 +5986,6 @@
           progress: readUserProgressForUser(0),
           stats: readUserStatsForUser(0),
           hiddenCardIds: readHiddenCardIdsForUser(0),
-          typePortugueseCardIds: readTypePortugueseCardIdsForUser(0),
           tutorialCompleted: readTutorialProgressForUser(0)
         };
       }
@@ -5996,7 +5996,6 @@
           && (
             snapshot.progress?.size
             || snapshot.hiddenCardIds?.size
-            || snapshot.typePortugueseCardIds?.size
             || snapshot.tutorialCompleted
             || hasMeaningfulStats(snapshot.stats)
           )
@@ -6009,8 +6008,7 @@
           OWNED_STORAGE_KEY,
           USER_STATS_STORAGE_KEY,
           USER_PROGRESS_STORAGE_KEY,
-          USER_HIDDEN_STORAGE_KEY,
-          USER_TYPE_PORTUGUESE_STORAGE_KEY
+          USER_HIDDEN_STORAGE_KEY
         ].forEach((storageKey) => removeScopedStorage(storageKey, 0));
       }
 
@@ -6028,14 +6026,11 @@
           ...Array.from(state.hiddenCardIds.values()),
           ...Array.from(guestSnapshot.hiddenCardIds.values())
         ]);
-        state.typePortugueseCardIds = new Set([
-          ...Array.from(state.typePortugueseCardIds.values()),
-          ...Array.from(guestSnapshot.typePortugueseCardIds.values())
-        ]);
         state.stats = normalizeStatsSnapshot({
           playTimeMs: Number(state.stats.playTimeMs || 0) + Number(guestSnapshot.stats?.playTimeMs || 0),
           speakings: Number(state.stats.speakings || 0) + Number(guestSnapshot.stats?.speakings || 0),
-          listenings: Number(state.stats.listenings || 0) + Number(guestSnapshot.stats?.listenings || 0)
+          listenings: Number(state.stats.listenings || 0) + Number(guestSnapshot.stats?.listenings || 0),
+          secondStarErrorHeard: Boolean(state.stats.secondStarErrorHeard || guestSnapshot.stats?.secondStarErrorHeard)
         });
         if (guestSnapshot.tutorialCompleted) {
           state.game.tutorial.completed = true;
@@ -6044,7 +6039,6 @@
         persistUserStatsLocally();
         persistUserProgressLocally();
         persistHiddenCardIdsLocally();
-        persistTypePortugueseCardIdsLocally();
         persistTutorialProgressLocally();
         clearGuestLocalState();
         syncOwnedIdsFromProgress();
@@ -6118,8 +6112,7 @@
             sealImage: safeText(record?.sealImage)
           })).filter(record => record.cardId),
           stats: normalizeStatsSnapshot(state.stats),
-          hiddenCardIds: Array.from(state.hiddenCardIds.values()),
-          typePortugueseCardIds: Array.from(state.typePortugueseCardIds.values())
+          hiddenCardIds: Array.from(state.hiddenCardIds.values())
         };
       }
 
@@ -7707,8 +7700,6 @@
           : [];
         const hasCloudProgress = Boolean(cloudState?.meta?.hasProgress);
         const hasCloudStats = Boolean(cloudState?.meta?.hasStats);
-        const localTypePortuguese = readTypePortugueseCardIdsForUser(state.user?.id);
-
         state.stats = hasCloudStats
           ? normalizeStatsSnapshot(cloudState?.stats)
           : localStats;
@@ -7718,9 +7709,6 @@
         state.hiddenCardIds = Array.isArray(cloudState?.meta?.hiddenCardIds)
           ? new Set(cloudState.meta.hiddenCardIds.map((cardId) => safeText(cardId)).filter(Boolean))
           : localHidden;
-        state.typePortugueseCardIds = Array.isArray(cloudState?.meta?.typePortugueseCardIds)
-          ? new Set(cloudState.meta.typePortugueseCardIds.map((cardId) => safeText(cardId)).filter(Boolean))
-          : localTypePortuguese;
         state.game.tutorial.completed = readTutorialProgress();
         syncOwnedIdsFromProgress();
 
@@ -7732,7 +7720,6 @@
         persistUserStatsLocally();
         persistUserProgressLocally();
         persistHiddenCardIdsLocally();
-        persistTypePortugueseCardIdsLocally();
 
         renderMetrics();
         updateGameChips();
@@ -7792,7 +7779,6 @@
         state.flashcardsSyncQueued = false;
         state.userCards = readUserProgressForUser(0);
         state.hiddenCardIds = readHiddenCardIdsForUser(0);
-        state.typePortugueseCardIds = readTypePortugueseCardIdsForUser(0);
         state.stats = readUserStatsForUser(0);
         state.libraryPage = 1;
         state.admin.selectedDeckSource = '';
@@ -9711,15 +9697,13 @@
       }
 
       function hasTypePortugueseHint(cardId) {
-        return state.typePortugueseCardIds.has(safeText(cardId));
+        return Boolean(state.stats.secondStarErrorHeard);
       }
 
       function markTypePortugueseHint(cardId) {
-        const normalizedCardId = safeText(cardId);
-        if (!normalizedCardId) return;
-        if (state.typePortugueseCardIds.has(normalizedCardId)) return;
-        state.typePortugueseCardIds.add(normalizedCardId);
-        saveUserProgress();
+        if (state.stats.secondStarErrorHeard) return;
+        state.stats.secondStarErrorHeard = true;
+        saveUserStats();
       }
 
       function playCueAudio(src) {
@@ -11173,6 +11157,7 @@
       function revealTypingAnswer(entry, card, options = {}) {
         const display = els.gameVisual.querySelector('.flashcards-typing__display--visual');
         if (!display) return;
+        display.classList.remove('is-answer-image');
         const typingState = resolveTypingStageState(entry, card);
         renderTypingDisplay(display, typingState, '', {
           revealAll: true,
@@ -11181,9 +11166,19 @@
         });
       }
 
+      function revealTypingAnswerImage(card) {
+        const display = els.gameVisual.querySelector('.flashcards-typing__display--visual');
+        const imageUrl = safeText(card?.imageUrl);
+        if (!display || !imageUrl) return false;
+        display.classList.add('is-answer-image');
+        display.innerHTML = `<img class="flashcards-typing__answer-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(capitalizeWords(card?.english || card?.portuguese || 'Resposta correta'))}">`;
+        return true;
+      }
+
       function clearTypingAnswer() {
         const display = els.gameVisual.querySelector('.flashcards-typing__display--visual');
         if (!display) return;
+        display.classList.remove('is-answer-image');
         display.innerHTML = '&nbsp;';
       }
 
@@ -11234,8 +11229,10 @@
       async function handleTypingMistake(entry, card, grid, typedLength = 0) {
         entry.typingMistakes = (entry.typingMistakes || 0) + 1;
         setTypingKeysDisabled(grid, true);
-        revealTypingAnswer(entry, card, { hintStart: typedLength, hintLength: 2 });
         if (entry.stage === 2) {
+          if (!revealTypingAnswerImage(card)) {
+            revealTypingAnswer(entry, card, { hintStart: typedLength, hintLength: 2 });
+          }
           const shouldUseTypePortuguese = hasTypePortugueseHint(entry.id);
           const cuePath = shouldUseTypePortuguese ? TYPE_PORTUGUESE_SOUND_PATH : SECOND_STAR_ERROR_SOUND_PATH;
           if (!shouldUseTypePortuguese) {
@@ -11243,10 +11240,15 @@
           }
           await Promise.allSettled([playCueAudio(cuePath), wait(1850)]);
           if (!state.game.active || state.game.currentId !== entry.id) return true;
-          clearTypingAnswer();
-          setTypingKeysDisabled(grid, false);
-          return false;
+          if (entry.typingMistakes < 2) {
+            clearTypingAnswer();
+            setTypingKeysDisabled(grid, false);
+            return false;
+          }
+          await handleRecognitionResult('', 'typing');
+          return true;
         }
+        revealTypingAnswer(entry, card, { hintStart: typedLength, hintLength: 2 });
         await Promise.allSettled([playPromptAudio(card, { rate: 0.8 }), wait(2000)]);
         if (!state.game.active || state.game.currentId !== entry.id) return true;
         if (entry.typingMistakes < 2) {

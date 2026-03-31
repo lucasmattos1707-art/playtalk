@@ -369,7 +369,8 @@ const normalizeFlashcardStatus = (value) => (value === 'ready' ? 'ready' : 'memo
 const normalizeFlashcardStats = (value) => ({
   playTimeMs: Math.max(0, Math.round(Number(value?.playTimeMs) || 0)),
   speakings: Math.max(0, Math.round(Number(value?.speakings) || 0)),
-  listenings: Math.max(0, Math.round(Number(value?.listenings) || 0))
+  listenings: Math.max(0, Math.round(Number(value?.listenings) || 0)),
+  secondStarErrorHeard: Boolean(value?.secondStarErrorHeard || value?.second_star_error_heard)
 });
 
 const flashcardTimestampFromMillis = (value) => {
@@ -499,8 +500,13 @@ const ensureFlashcardUserStateTables = async () => {
           play_time_ms bigint NOT NULL DEFAULT 0,
           speakings integer NOT NULL DEFAULT 0,
           listenings integer NOT NULL DEFAULT 0,
+          second_star_error_heard boolean NOT NULL DEFAULT false,
           updated_at timestamptz NOT NULL DEFAULT now()
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS second_star_error_heard boolean NOT NULL DEFAULT false
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_hidden (
@@ -1616,7 +1622,7 @@ const readFlashcardStateForUser = async (userId) => {
     throw error;
   }
 
-  const [progressResult, statsResult, hiddenResult, typePortugueseResult] = await Promise.all([
+  const [progressResult, statsResult, hiddenResult] = await Promise.all([
     pool.query(
       `SELECT
          card_id,
@@ -1636,22 +1642,16 @@ const readFlashcardStateForUser = async (userId) => {
       [normalizedUserId]
     ),
     pool.query(
-      `SELECT play_time_ms, speakings, listenings, updated_at
+      `SELECT play_time_ms, speakings, listenings, second_star_error_heard, updated_at
        FROM public.user_flashcard_stats
        WHERE user_id = $1
        LIMIT 1`,
       [normalizedUserId]
-    ),
+    )
+    ,
     pool.query(
       `SELECT card_id
        FROM public.user_flashcard_hidden
-       WHERE user_id = $1
-       ORDER BY updated_at DESC, created_at DESC, card_id ASC`,
-      [normalizedUserId]
-    ),
-    pool.query(
-      `SELECT card_id
-       FROM public.user_flashcard_type_portuguese
        WHERE user_id = $1
        ORDER BY updated_at DESC, created_at DESC, card_id ASC`,
       [normalizedUserId]
@@ -1666,16 +1666,14 @@ const readFlashcardStateForUser = async (userId) => {
       ? normalizeFlashcardStats({
         playTimeMs: statsResult.rows[0].play_time_ms,
         speakings: statsResult.rows[0].speakings,
-        listenings: statsResult.rows[0].listenings
+        listenings: statsResult.rows[0].listenings,
+        secondStarErrorHeard: statsResult.rows[0].second_star_error_heard
       })
       : normalizeFlashcardStats({}),
     meta: {
       hasProgress: progressResult.rows.length > 0,
       hasStats: Boolean(statsResult.rows[0]),
       hiddenCardIds: hiddenResult.rows
-        .map((row) => typeof row?.card_id === 'string' ? row.card_id.trim() : '')
-        .filter(Boolean),
-      typePortugueseCardIds: typePortugueseResult.rows
         .map((row) => typeof row?.card_id === 'string' ? row.card_id.trim() : '')
         .filter(Boolean)
     }
@@ -1717,12 +1715,6 @@ const saveFlashcardStateForUser = async (userId, payload) => {
       .map((cardId) => typeof cardId === 'string' ? cardId.trim() : '')
       .filter(Boolean)))
     : [];
-  const typePortugueseCardIds = Array.isArray(payload?.typePortugueseCardIds)
-    ? Array.from(new Set(payload.typePortugueseCardIds
-      .map((cardId) => typeof cardId === 'string' ? cardId.trim() : '')
-      .filter(Boolean)))
-    : [];
-
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -1833,63 +1825,29 @@ const saveFlashcardStateForUser = async (userId, payload) => {
       );
     }
 
-    if (typePortugueseCardIds.length) {
-      await client.query(
-        `DELETE FROM public.user_flashcard_type_portuguese
-         WHERE user_id = $1
-           AND NOT (card_id = ANY($2::text[]))`,
-        [normalizedUserId, typePortugueseCardIds]
-      );
-
-      const typePortugueseValues = [];
-      const typePortugueseParams = [];
-      typePortugueseCardIds.forEach((cardId, index) => {
-        const offset = index * 2;
-        typePortugueseValues.push(`($${offset + 1}, $${offset + 2}, now(), now())`);
-        typePortugueseParams.push(normalizedUserId, cardId);
-      });
-
-      await client.query(
-        `INSERT INTO public.user_flashcard_type_portuguese (
-           user_id,
-           card_id,
-           created_at,
-           updated_at
-         )
-         VALUES ${typePortugueseValues.join(', ')}
-         ON CONFLICT (user_id, card_id)
-         DO UPDATE SET
-           updated_at = now()`,
-        typePortugueseParams
-      );
-    } else {
-      await client.query(
-        `DELETE FROM public.user_flashcard_type_portuguese
-         WHERE user_id = $1`,
-        [normalizedUserId]
-      );
-    }
-
     await client.query(
       `INSERT INTO public.user_flashcard_stats (
          user_id,
          play_time_ms,
          speakings,
          listenings,
+         second_star_error_heard,
          updated_at
        )
-       VALUES ($1, $2, $3, $4, now())
+       VALUES ($1, $2, $3, $4, $5, now())
        ON CONFLICT (user_id)
        DO UPDATE SET
          play_time_ms = EXCLUDED.play_time_ms,
          speakings = EXCLUDED.speakings,
          listenings = EXCLUDED.listenings,
+         second_star_error_heard = EXCLUDED.second_star_error_heard,
          updated_at = now()`,
       [
         normalizedUserId,
         stats.playTimeMs,
         stats.speakings,
-        stats.listenings
+        stats.listenings,
+        stats.secondStarErrorHeard
       ]
     );
 
