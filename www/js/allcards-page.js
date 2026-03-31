@@ -254,7 +254,7 @@
     const cleaned = safeText(value);
     if (!cleaned) return '';
     if (/^https?:\/\//i.test(cleaned)) return cleaned;
-    return `/${cleaned.replace(/^\/+/, '')}`;
+    return buildApiUrl(`/${cleaned.replace(/^\/+/, '')}`);
   }
 
   function withNoCacheUrl(value) {
@@ -270,7 +270,7 @@
       .filter(Boolean)
       .map((segment) => encodeURIComponent(segment))
       .join('/');
-    return encodedKey ? `/${FLASHCARDS_LOCAL_SOURCE_PREFIX}/${encodedKey}` : '';
+    return encodedKey ? buildApiUrl(`/${FLASHCARDS_LOCAL_SOURCE_PREFIX}/${encodedKey}`) : '';
   }
 
   function isFlashcardsDeckPath(value) {
@@ -410,7 +410,8 @@
     try {
       const response = await fetch(buildApiUrl('/auth/session'), {
         headers: buildAuthHeaders(),
-        cache: 'no-store'
+        cache: 'no-store',
+        credentials: 'include'
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) return 0;
@@ -421,13 +422,11 @@
   }
 
   async function fetchCloudProgressForUser() {
-    if (!state.userId) {
-      return new Map();
-    }
     try {
       const response = await fetch(buildApiUrl('/api/flashcards/state'), {
         headers: buildAuthHeaders(),
-        cache: 'no-store'
+        cache: 'no-store',
+        credentials: 'include'
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) {
