@@ -7151,7 +7151,12 @@
         state.ui.onboardingTransitionActive = true;
         try {
           await runOnboardingGateTransition();
-          window.location.href = `https://playtalk-dvv5.onrender.com/username?return=${encodeURIComponent('https://playtalk-dvv5.onrender.com/flashcards')}`;
+          const nextHref = resolveRewardUsernameHref();
+          if (window.PlaytalkNative && typeof window.PlaytalkNative.navigate === 'function') {
+            window.PlaytalkNative.navigate(nextHref);
+            return;
+          }
+          window.location.href = nextHref;
         } finally {
           state.ui.onboardingTransitionActive = false;
         }
@@ -7806,6 +7811,14 @@
         return isNativeRuntime() ? 'users.html' : '/users';
       }
 
+      function resolveRewardUsernameHref() {
+        const target = '/username?return=%2Fflashcards';
+        if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
+          return window.PlaytalkNative.resolveRouteHref(target);
+        }
+        return target;
+      }
+
       function resolveNativeRenderPageHref(view) {
         const nativeRouteMap = {
           play: '/flashcards?view=play',
@@ -8354,6 +8367,7 @@
         resetTutorialRuntime({ preserveCompletion: true });
         clearGameSessionLocally();
         saveSelectedGameCount(TUTORIAL_NORMAL_GAME_COUNT);
+        switchMainView('play');
         beginGame();
       }
 
@@ -11928,7 +11942,7 @@
               scheduleGuestAuthRequirement();
             }
             if (accessibleCountBeforeResolution < ONBOARDING_PHOTO_THRESHOLD
-              && accessibleFlashcardsCount() >= ONBOARDING_NAME_THRESHOLD) {
+              && accessibleFlashcardsCount() >= ONBOARDING_PHOTO_THRESHOLD) {
               scheduleOnboardingGateOpen();
             }
             if (shouldGatePremiumAccess()) {
