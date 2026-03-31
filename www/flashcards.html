@@ -4963,9 +4963,6 @@
       const MIN_GAME_CONTEXT_LIMIT = 3;
       const GAME_ACTIVE_CARD_CAP = 12;
       const GAME_STAR_TARGET = 5;
-      const EARLY_FLASHCARD_LIMIT = 200;
-      const EARLY_FLASHCARD_MIN_LENGTH = 6;
-      const EARLY_FLASHCARD_MAX_LENGTH = 12;
       const REVIEW_SLOT_LIMIT = 8;
       const TUTORIAL_AUDIO_ROOT = AUDIOSTUTO_PUBLIC_ROOT;
       const TUTORIAL_NORMAL_GAME_COUNT = 3;
@@ -8385,10 +8382,7 @@
         }
         const lockedCards = state.allCards.filter(card => !state.userCards.has(card.id) && !isCardHiddenForUser(card.id));
         const playableLockedCards = lockedCards.filter(card => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
-        if (state.userCards.size >= EARLY_FLASHCARD_LIMIT) {
-          return playableLockedCards;
-        }
-        return playableLockedCards.filter(isEarlyFlashcardLengthEligible);
+        return playableLockedCards;
       }
 
       function formatDuration(ms) {

@@ -2582,6 +2582,17 @@ function normalizeMirroredRelativePath(value) {
     .trim();
 }
 
+function normalizeLevelFolderKey(value) {
+  const normalized = String(value ?? '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
+  return normalized || '1';
+}
+
 function buildMirroredWriteTargets(relativePath) {
   const normalized = normalizeMirroredRelativePath(relativePath);
   if (!normalized) return [];
@@ -6910,7 +6921,10 @@ app.post('/api/r2/upload-zip', express.raw({ type: 'application/zip', limit: '50
 });
 
 app.post('/api/r2/upload-level-files', express.json({ limit: '100mb' }), async (req, res) => {
-  const day = Number.parseInt(req.body?.day, 10);
+  const dayKeyInput = typeof req.body?.day === 'string' || typeof req.body?.day === 'number'
+    ? req.body.day
+    : '';
+  const dayKey = normalizeLevelFolderKey(dayKeyInput);
   const mode = typeof req.body?.mode === 'string' ? req.body.mode.trim() : 'flashcard';
   const files = Array.isArray(req.body?.files) ? req.body.files : [];
 
@@ -6919,8 +6933,8 @@ app.post('/api/r2/upload-level-files', express.json({ limit: '100mb' }), async (
     return;
   }
 
-  if (!Number.isFinite(day) || day < 1 || day > 200) {
-    res.status(400).json({ error: 'Dia invalido para envio ao R2.' });
+  if (!dayKey) {
+    res.status(400).json({ error: 'Pasta invalida para envio ao R2.' });
     return;
   }
 
@@ -6929,9 +6943,8 @@ app.post('/api/r2/upload-level-files', express.json({ limit: '100mb' }), async (
     return;
   }
 
-  const dayFolder = String(day).padStart(3, '0');
   const phaseFolder = levelPhaseCodeFromMode(mode);
-  const prefix = `Niveis/${dayFolder}/${phaseFolder}`;
+  const prefix = `Niveis/${dayKey}/${phaseFolder}`;
 
   try {
     const uploaded = [];
@@ -6972,7 +6985,10 @@ app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), as
   try {
     await requireAdminUserFromRequest(req);
 
-    const day = Number.parseInt(req.body?.day, 10);
+    const dayKeyInput = typeof req.body?.day === 'string' || typeof req.body?.day === 'number'
+      ? req.body.day
+      : '';
+    const dayKey = normalizeLevelFolderKey(dayKeyInput);
     const mode = typeof req.body?.mode === 'string' ? req.body.mode.trim() : 'flashcard';
     const files = Array.isArray(req.body?.files) ? req.body.files : [];
 
@@ -6981,8 +6997,8 @@ app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), as
       return;
     }
 
-    if (!Number.isInteger(day) || day < 1 || day > 200) {
-      res.status(400).json({ error: 'Dia invalido para publicar localmente.' });
+    if (!dayKey) {
+      res.status(400).json({ error: 'Pasta invalida para publicar localmente.' });
       return;
     }
 
@@ -7020,11 +7036,10 @@ app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), as
       return;
     }
 
-    const dayFolder = String(day).padStart(3, '0');
     const assetRootRelativePath = path.posix.join(
       ADMIN_FLASHCARD_ASSET_RELATIVE_ROOT,
       'levels',
-      `day-${dayFolder}`
+      `day-${dayKey}`
     );
 
     await removeMirroredDirectory(assetRootRelativePath);
@@ -7037,7 +7052,7 @@ app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), as
     }
 
     const finalPayload = {
-      title: typeof jsonPayload?.title === 'string' ? jsonPayload.title.trim() : `Flashcard dia ${day}`,
+      title: typeof jsonPayload?.title === 'string' ? jsonPayload.title.trim() : `Flashcard ${dayKey}`,
       coverImage: typeof jsonPayload?.coverImage === 'string' ? jsonPayload.coverImage.trim() : '',
       items: items
         .map((item) => {
@@ -7052,7 +7067,7 @@ app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), as
         .filter((item) => item.imagem && readFlashcardItemPortuguese(item) && readFlashcardItemEnglish(item))
     };
 
-    const deckRelativePath = `Niveis/others/day-${day}.json`;
+    const deckRelativePath = `Niveis/others/day-${dayKey}.json`;
     await writeJsonToRelativePath(deckRelativePath, finalPayload);
     await refreshLocalLevelManifestMirror();
 
