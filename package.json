@@ -15,6 +15,8 @@
         "test": "echo \"Error: no test specified\" && exit 1",
         "r2:init-content": "node scripts/init-r2-content.js",
         "r2:flashcards": "node scripts/publish-flashcards-r2.js",
+        "r2:accesskey": "node scripts/upload-r2-folder.js --source=accesskey --prefix=accesskey --concurrency=4",
+        "r2:audiostuto": "node scripts/upload-r2-folder.js --source=audiostuto --prefix=audiostuto --concurrency=4",
         "db:reset:users": "node scripts/reset-users-table.js",
         "keys:generate": "node scripts/generate-access-keys.js",
         "deploy:pages": "npm run build && npx wrangler pages deploy dist"

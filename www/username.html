@@ -239,7 +239,9 @@
   <script src="js/api-config.js"></script>
   <script src="js/android-shell.js"></script>
   <script>
-    const ONBOARDING_USERNAME_AUDIO_PATH = '/accesskey/username.mp3';
+    const ONBOARDING_USERNAME_AUDIO_PATH = window.PlaytalkApi && typeof window.PlaytalkApi.accesskeyUrl === 'function'
+      ? window.PlaytalkApi.accesskeyUrl('username.mp3')
+      : '/accesskey/username.mp3';
     const ONBOARDING_MIN_NAME_LENGTH = 3;
     const ONBOARDING_KEYBOARD_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUV'.split('');
     const state = { user: null, nameDraft: '', nameGateBusy: false, nameKeyboardVariantIndex: 0, nameKeyboardTimer: 0, identityAudio: null, audioRetryBound: false };

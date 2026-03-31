@@ -5842,10 +5842,6 @@ app.get(['/password', '/password/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'www', 'password.html'));
 });
 
-app.get(['/somcheck', '/somcheck/'], (req, res) => {
-  res.sendFile(path.join(staticDir, 'somcheck.html'));
-});
-
 app.get(['/signup', '/signup/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'signup.html'));
 });

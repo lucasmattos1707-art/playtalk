@@ -453,9 +453,15 @@
   <script src="js/api-config.js"></script>
   <script src="js/android-shell.js"></script>
   <script>
-    const ONBOARDING_PHOTO_AUDIO_PATH = '/accesskey/photo.mp3';
-    const ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH = '/accesskey/photorecieve.mp3';
-    const ONBOARDING_IMAGE_READY_AUDIO_PATH = '/accesskey/imageready.mp3';
+    const ONBOARDING_PHOTO_AUDIO_PATH = window.PlaytalkApi && typeof window.PlaytalkApi.accesskeyUrl === 'function'
+      ? window.PlaytalkApi.accesskeyUrl('photo.mp3')
+      : '/accesskey/photo.mp3';
+    const ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH = window.PlaytalkApi && typeof window.PlaytalkApi.accesskeyUrl === 'function'
+      ? window.PlaytalkApi.accesskeyUrl('photorecieve.mp3')
+      : '/accesskey/photorecieve.mp3';
+    const ONBOARDING_IMAGE_READY_AUDIO_PATH = window.PlaytalkApi && typeof window.PlaytalkApi.accesskeyUrl === 'function'
+      ? window.PlaytalkApi.accesskeyUrl('imageready.mp3')
+      : '/accesskey/imageready.mp3';
     const ONBOARDING_MAX_PHOTO_GENERATIONS = 5;
     const ONBOARDING_LOADING_MESSAGES = [
       'Analisando a imagem enviada...',

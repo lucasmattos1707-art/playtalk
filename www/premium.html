@@ -440,6 +440,10 @@
         checkoutBusy: false
       };
 
+      if (window.PlaytalkApi && typeof window.PlaytalkApi.rewritePublicAssetSources === 'function') {
+        window.PlaytalkApi.rewritePublicAssetSources(document);
+      }
+
       function buildApiUrl(path) {
         if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
           return window.PlaytalkApi.url(path);

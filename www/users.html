@@ -23,6 +23,7 @@
       --accent: #7ed0ff;
       --shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
       --radius: 30px;
+      --native-top-offset: 0px;
       --footer-height: max(62px, 8vh);
       --footer-safe-bottom: env(safe-area-inset-bottom, 0px);
       --footer-total-height: calc(var(--footer-height) + var(--footer-safe-bottom));
@@ -81,6 +82,10 @@
       background: transparent;
     }
 
+    body.is-native-runtime {
+      --native-top-offset: 50px;
+    }
+
     body > *:not(.container) {
       position: relative;
       z-index: 1;
@@ -90,7 +95,7 @@
       width: min(900px, calc(100vw - 28px));
       margin: 0 auto;
       min-height: 100vh;
-      padding: 14px 0 calc(var(--footer-total-height) + 20px);
+      padding: calc(14px + var(--native-top-offset)) 0 calc(var(--footer-total-height) + 20px);
     }
 
     .panel {
@@ -417,6 +422,11 @@
   <script src="js/android-config.js"></script>
   <script src="js/api-config.js"></script>
   <script src="js/android-shell.js"></script>
+  <script>
+    if (window.PlaytalkNative && typeof window.PlaytalkNative.isNativeRuntime === 'function' && window.PlaytalkNative.isNativeRuntime()) {
+      document.body.classList.add('is-native-runtime');
+    }
+  </script>
   <script src="js/users-page.js"></script>
 </body>
 </html>

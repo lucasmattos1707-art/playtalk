@@ -16,6 +16,14 @@ const rootStaticDirectories = [
     destination: 'eventos'
   },
   {
+    source: 'accesskey',
+    destination: 'accesskey'
+  },
+  {
+    source: 'audiostuto',
+    destination: 'audiostuto'
+  },
+  {
     source: 'selos',
     destination: 'selos'
   },

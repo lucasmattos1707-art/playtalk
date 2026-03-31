@@ -2,10 +2,29 @@
   const LEGACY_RENDER_URL = 'https://playtalk-dvv5.onrender.com';
   const API_BASE_URL_STORAGE_KEY = 'playtalk_api_base_url';
   const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
+  const DEFAULT_PUBLIC_ASSETS_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
 
   function normalizeBaseUrl(value) {
     if (typeof value !== 'string') return '';
     return value.trim().replace(/\/+$/, '');
+  }
+
+  function joinPublicAssetUrl(baseUrl, relativePath = '') {
+    const normalizedBase = normalizeBaseUrl(baseUrl);
+    const cleanedPath = String(relativePath || '')
+      .trim()
+      .replace(/^\/+|\/+$/g, '');
+
+    if (!normalizedBase) return cleanedPath ? `/${cleanedPath}` : '';
+    if (!cleanedPath) return normalizedBase;
+
+    const encodedPath = cleanedPath
+      .split('/')
+      .filter(Boolean)
+      .map((segment) => encodeURIComponent(segment))
+      .join('/');
+
+    return `${normalizedBase}/${encodedPath}`;
   }
 
   function readStoredBaseUrl() {
@@ -18,6 +37,14 @@
 
   function readGlobalBaseUrl() {
     return normalizeBaseUrl(window.PLAYTALK_API_BASE_URL || '');
+  }
+
+  function readGlobalAssetsBaseUrl() {
+    return normalizeBaseUrl(
+      window.PLAYTALK_ASSET_PUBLIC_ROOT
+      || window.PLAYTALK_R2_PUBLIC_ROOT
+      || ''
+    );
   }
 
   function detectApiBaseUrl() {
@@ -43,6 +70,7 @@
   }
 
   let apiBaseUrl = detectApiBaseUrl();
+  const publicAssetsRoot = readGlobalAssetsBaseUrl() || DEFAULT_PUBLIC_ASSETS_ROOT;
 
   function normalizePath(path) {
     if (!path) return '/';
@@ -86,14 +114,46 @@
     return headers;
   }
 
+  function buildAccesskeyUrl(relativePath = '') {
+    return joinPublicAssetUrl(publicAssetsRoot, `accesskey/${relativePath}`);
+  }
+
+  function buildAudiostutoUrl(relativePath = '') {
+    return joinPublicAssetUrl(publicAssetsRoot, `audiostuto/${relativePath}`);
+  }
+
+  function rewritePublicAssetSources(root) {
+    const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
+    const elements = Array.from(scope.querySelectorAll('[src]'));
+    elements.forEach((element) => {
+      const current = String(element.getAttribute('src') || '').trim();
+      if (!current) return;
+
+      if (current.startsWith('/accesskey/')) {
+        element.setAttribute('src', buildAccesskeyUrl(current.slice('/accesskey/'.length)));
+        return;
+      }
+
+      if (current.startsWith('/audiostuto/')) {
+        element.setAttribute('src', buildAudiostutoUrl(current.slice('/audiostuto/'.length)));
+      }
+    });
+  }
+
   window.PlaytalkApi = {
     get baseUrl() {
       return apiBaseUrl;
+    },
+    get publicAssetsRoot() {
+      return publicAssetsRoot;
     },
     url: buildApiUrl,
     getAuthToken,
     setAuthToken,
     authHeaders: buildAuthHeaders,
+    accesskeyUrl: buildAccesskeyUrl,
+    audiostutoUrl: buildAudiostutoUrl,
+    rewritePublicAssetSources,
     setBaseUrl(nextBaseUrl) {
       const normalized = normalizeBaseUrl(nextBaseUrl);
       try {

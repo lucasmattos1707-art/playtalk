@@ -4896,7 +4896,9 @@
   <script src="js/gamesounds.js"></script>
   <script>
     (() => {
-      const FLASHCARDS_R2_PUBLIC_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
+      const FLASHCARDS_R2_PUBLIC_ROOT = window.PlaytalkApi?.publicAssetsRoot || 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
+      const ACCESSKEY_PUBLIC_ROOT = window.PlaytalkApi?.accesskeyUrl('') || `${FLASHCARDS_R2_PUBLIC_ROOT}/accesskey`;
+      const AUDIOSTUTO_PUBLIC_ROOT = window.PlaytalkApi?.audiostutoUrl('') || `${FLASHCARDS_R2_PUBLIC_ROOT}/audiostuto`;
       const FLASHCARDS_LOCAL_SOURCE_PREFIX = 'allcards';
       const FLASHCARD_CAMERA_OBJECT_KEY = 'FlashCards/camera.webp';
       const FLASHCARD_CAMERA_IMAGE_URL = `${FLASHCARDS_R2_PUBLIC_ROOT}/${FLASHCARD_CAMERA_OBJECT_KEY}`;
@@ -4965,7 +4967,7 @@
       const EARLY_FLASHCARD_MIN_LENGTH = 6;
       const EARLY_FLASHCARD_MAX_LENGTH = 12;
       const REVIEW_SLOT_LIMIT = 8;
-      const TUTORIAL_AUDIO_ROOT = `${FLASHCARDS_R2_PUBLIC_ROOT}/audiostuto`;
+      const TUTORIAL_AUDIO_ROOT = AUDIOSTUTO_PUBLIC_ROOT;
       const TUTORIAL_NORMAL_GAME_COUNT = 3;
       const TUTORIAL_PLANET_IMAGE_NAME = 'planet.webp';
       const TUTORIAL_PLANET_ENGLISH = 'planet';
@@ -4984,23 +4986,23 @@
       const LIBRARY_RANK_SWAP_DELAY_MS = 1200;
       const REWARD_RANK_VISIBLE_MS = 3000;
       const REWARD_STATUS_ICON_PATHS = {
-        same: '/accesskey/same.svg',
-        up: '/accesskey/up.svg',
-        down: '/accesskey/down.svg'
+        same: `${ACCESSKEY_PUBLIC_ROOT}/same.svg`,
+        up: `${ACCESSKEY_PUBLIC_ROOT}/up.svg`,
+        down: `${ACCESSKEY_PUBLIC_ROOT}/down.svg`
       };
-      const REWARD_STATUS_UP_AUDIO_PATH = '/accesskey/up.mp3';
-      const NEXT_CARD_WOOSH_AUDIO_PATH = '/accesskey/woosh.mp3';
-      const ACCESS_KEY_AUDIO_LIMIT_PATH = '/accesskey/limit.mp3';
-      const ACCESS_KEY_AUDIO_MESSAGE_PATH = '/accesskey/message.wav';
-      const ACCESS_KEY_AUDIO_INVALID_PATH = '/accesskey/invalidkey2.mp3';
-      const ONBOARDING_USERNAME_AUDIO_PATH = '/accesskey/username.mp3';
-      const ONBOARDING_PHOTO_AUDIO_PATH = '/accesskey/photo.mp3';
-      const ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH = '/accesskey/photorecieve.mp3';
-      const ONBOARDING_IMAGE_READY_AUDIO_PATH = '/accesskey/imageready.mp3';
+      const REWARD_STATUS_UP_AUDIO_PATH = `${ACCESSKEY_PUBLIC_ROOT}/up.mp3`;
+      const NEXT_CARD_WOOSH_AUDIO_PATH = `${ACCESSKEY_PUBLIC_ROOT}/woosh.mp3`;
+      const ACCESS_KEY_AUDIO_LIMIT_PATH = `${ACCESSKEY_PUBLIC_ROOT}/limit.mp3`;
+      const ACCESS_KEY_AUDIO_MESSAGE_PATH = `${ACCESSKEY_PUBLIC_ROOT}/message.wav`;
+      const ACCESS_KEY_AUDIO_INVALID_PATH = `${ACCESSKEY_PUBLIC_ROOT}/invalidkey2.mp3`;
+      const ONBOARDING_USERNAME_AUDIO_PATH = `${ACCESSKEY_PUBLIC_ROOT}/username.mp3`;
+      const ONBOARDING_PHOTO_AUDIO_PATH = `${ACCESSKEY_PUBLIC_ROOT}/photo.mp3`;
+      const ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH = `${ACCESSKEY_PUBLIC_ROOT}/photorecieve.mp3`;
+      const ONBOARDING_IMAGE_READY_AUDIO_PATH = `${ACCESSKEY_PUBLIC_ROOT}/imageready.mp3`;
       const ACCESS_KEY_AUDIO_SUCCESS_PATHS = {
-        semana: '/accesskey/week.mp3',
-        mes: '/accesskey/month.mp3',
-        ano: '/accesskey/year.mp3'
+        semana: `${ACCESSKEY_PUBLIC_ROOT}/week.mp3`,
+        mes: `${ACCESSKEY_PUBLIC_ROOT}/month.mp3`,
+        ano: `${ACCESSKEY_PUBLIC_ROOT}/year.mp3`
       };
       const ONBOARDING_NAME_THRESHOLD = 2;
       const ONBOARDING_PHOTO_THRESHOLD = 999999;
@@ -5062,6 +5064,10 @@
             sealSoft: false
           }
         };
+      }
+
+      if (window.PlaytalkApi && typeof window.PlaytalkApi.rewritePublicAssetSources === 'function') {
+        window.PlaytalkApi.rewritePublicAssetSources(document);
       }
 
       const state = {
@@ -6103,43 +6109,19 @@
       }
 
       function readSoundTestCompletedFlag() {
-        try {
-          return sessionStorage.getItem(SOUND_TEST_COMPLETED_STORAGE_KEY) === '1';
-        } catch (_error) {
-          return false;
-        }
+        return true;
       }
 
-      function persistSoundTestCompletedFlag(value) {
-        try {
-          if (value) {
-            sessionStorage.setItem(SOUND_TEST_COMPLETED_STORAGE_KEY, '1');
-          } else {
-            sessionStorage.removeItem(SOUND_TEST_COMPLETED_STORAGE_KEY);
-          }
-        } catch (_error) {
-          // ignore
-        }
+      function persistSoundTestCompletedFlag(_value) {
       }
 
       function launchSoundCheck(launchTarget = '') {
-        try {
-          sessionStorage.setItem(SOUND_TEST_LAUNCH_TARGET_STORAGE_KEY, safeText(launchTarget));
-          sessionStorage.removeItem(SOUND_TEST_COMPLETED_STORAGE_KEY);
-        } catch (_error) {
-          // ignore
-        }
-        window.location.href = `/somcheck?return=${encodeURIComponent('/flashcards')}`;
+        state.entry.launchAfterSoundTest = safeText(launchTarget);
+        continueFromSoundTest();
       }
 
       function consumeSoundCheckLaunchTarget() {
-        try {
-          const value = safeText(sessionStorage.getItem(SOUND_TEST_LAUNCH_TARGET_STORAGE_KEY));
-          sessionStorage.removeItem(SOUND_TEST_LAUNCH_TARGET_STORAGE_KEY);
-          return value;
-        } catch (_error) {
-          return '';
-        }
+        return '';
       }
 
       function clearWelcomeRotation() {
@@ -6199,12 +6181,12 @@
 
       function getAccessKeyImagePath(letter) {
         const normalized = safeText(letter).toUpperCase().replace(/[^A-P]/g, '');
-        return normalized ? `/accesskey/teclas/Imagens/${normalized}.png` : '';
+        return normalized ? `${ACCESSKEY_PUBLIC_ROOT}/teclas/Imagens/${normalized}.png` : '';
       }
 
       function getAccessKeySoundPath(letter) {
         const normalized = safeText(letter).toUpperCase().replace(/[^A-P]/g, '');
-        return normalized ? `/accesskey/teclas/Teclas/${normalized}.mp3` : '';
+        return normalized ? `${ACCESSKEY_PUBLIC_ROOT}/teclas/Teclas/${normalized}.mp3` : '';
       }
 
       function stopSoundTestAudio() {
@@ -6407,7 +6389,8 @@
       }
 
       function openSoundTestGate(launchTarget = '') {
-        openRobotCheck(launchTarget || 'welcome');
+        state.entry.launchAfterSoundTest = safeText(launchTarget || 'welcome');
+        continueFromSoundTest();
       }
 
       function clearSoundTestSelection(keepStatus = false) {
@@ -6594,19 +6577,6 @@
       }
 
       function resumePendingSoundCheckFlow() {
-        state.entry.soundTestCompleted = readSoundTestCompletedFlag();
-        const launchTarget = consumeSoundCheckLaunchTarget();
-        if (!state.entry.soundTestCompleted || !launchTarget) {
-          return false;
-        }
-        if (launchTarget === 'welcome') {
-          requestWelcomeTutorialStart(true);
-          return true;
-        }
-        if (launchTarget === 'tutorial-setup') {
-          beginTutorialGame();
-          return true;
-        }
         return false;
       }
 
@@ -11984,17 +11954,21 @@
         const skipPromptAudio = Boolean(entry._skipStageTwoResponseAudio);
         entry._skipStageTwoResponseAudio = false;
         await playStageResponseSequence(evaluatedStage, card, { skipPromptAudio });
-        await wait(entry._removeAfterReward || entry._requeueAfterReward
-          ? (LIBRARY_RANK_SWAP_DELAY_MS + REWARD_RANK_VISIBLE_MS)
-          : (evaluatedStage === 3 ? 120 : 1200));
+        const redirectingToUsername = Boolean(entry._redirectToUsername);
+        await wait(redirectingToUsername
+          ? 180
+          : entry._removeAfterReward || entry._requeueAfterReward
+            ? (LIBRARY_RANK_SWAP_DELAY_MS + REWARD_RANK_VISIBLE_MS)
+            : (evaluatedStage === 3 ? 120 : 1200));
+        if (entry._redirectToUsername) {
+          entry._redirectToUsername = false;
+          entry._removeAfterReward = false;
+          await redirectToUsernameOnRewardThreshold();
+          return;
+        }
         if (state.game.active && state.game.tutorial.active && isTutorialPlanetCard(entry.id) && entry._removeAfterReward) {
           entry._removeAfterReward = false;
           await finishTutorialAndStartNormalGame();
-          return;
-        }
-        if (entry._redirectToUsername) {
-          entry._redirectToUsername = false;
-          await redirectToUsernameOnRewardThreshold();
           return;
         }
         if (state.game.active) {
