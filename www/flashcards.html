@@ -1422,6 +1422,16 @@
       pointer-events: auto;
     }
 
+    .flashcards-footer-nav.is-stage-guarded {
+      opacity: 0.1;
+      box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.04);
+    }
+
+    .flashcards-footer-nav.is-stage-guarded.is-stage-guarded-primed {
+      opacity: 1;
+      box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.18);
+    }
+
     .mini-card__empty-field {
       margin: 6px 0 0;
       min-height: 18px;
@@ -1619,6 +1629,10 @@
       color: #d7ebff;
       border-radius: 999px;
       transform: translateY(20px);
+    }
+
+    #exitGameBtn {
+      display: none !important;
     }
 
     .game-card {
@@ -2723,7 +2737,7 @@
 
     .game-report-trigger {
       position: absolute;
-      top: 4px;
+      top: -16px;
       right: 6px;
       z-index: 4;
       display: inline-flex;
@@ -2779,16 +2793,64 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
       display: grid;
       gap: 14px;
+      color: #ffffff;
+    }
+
+    .game-report-menu__panel h2,
+    .game-report-menu__panel p {
+      color: #ffffff;
     }
 
     .game-report-menu__options {
       display: grid;
-      gap: 10px;
+      gap: 12px;
     }
 
     .game-report-menu__option {
       width: 100%;
       justify-content: flex-start;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(125, 203, 255, 0.2);
+      background: linear-gradient(135deg, rgba(34, 74, 126, 0.92), rgba(8, 22, 44, 0.96));
+      color: #ffffff;
+      text-align: left;
+    }
+
+    .game-report-menu__option:hover,
+    .game-report-menu__option:focus-visible {
+      border-color: rgba(125, 203, 255, 0.46);
+      background: linear-gradient(135deg, rgba(43, 97, 168, 0.96), rgba(10, 28, 58, 0.98));
+    }
+
+    .game-report-menu__icon {
+      width: 22px;
+      height: 22px;
+      flex: 0 0 auto;
+      color: #8fe3ff;
+    }
+
+    .game-report-menu__icon path,
+    .game-report-menu__icon circle,
+    .game-report-menu__icon line {
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .game-report-menu__icon--fill path {
+      fill: currentColor;
+      stroke: none;
+    }
+
+    .game-report-menu__label {
+      flex: 1 1 auto;
+      font-weight: 700;
+      letter-spacing: 0.01em;
     }
 
     .mini-card__reports {
@@ -2886,29 +2948,38 @@
 
     .game-word.is-chip.is-long,
     .game-subword.is-chip.is-long {
-      min-height: 96px;
-      padding: 18px 20px;
+      width: fit-content;
+      max-width: min(400px, calc(100vw - 40px));
+      min-height: 82px;
+      margin-inline: auto;
+      padding: 12px 18px;
       border-radius: 18px;
       justify-content: center;
       text-align: center;
-      line-height: 0.92;
-      font-size: clamp(21px, 4vw, 29px);
+      line-height: 0.98;
+      font-size: clamp(22px, 4vw, 30px);
       letter-spacing: 0;
-      background-position: left center;
-      background-repeat: no-repeat;
-      background-size: cover;
+      background-position: center center, center center;
+      background-repeat: no-repeat, no-repeat;
+      background-size: cover, 112px 112px;
     }
 
     .game-word.is-chip.is-long {
       background-image:
-        linear-gradient(90deg, rgba(33, 146, 255, 0.94) 0%, rgba(71, 195, 255, 0.8) 100%),
+        linear-gradient(90deg, rgba(33, 146, 255, 0.84) 0%, rgba(71, 195, 255, 0.78) 100%),
         url("SVG/codex-icons/ingles.svg");
+      text-shadow:
+        0 2px 0 rgba(8, 43, 102, 0.72),
+        0 10px 18px rgba(8, 43, 102, 0.28);
     }
 
     .game-subword.is-chip.is-long {
       background-image:
-        linear-gradient(90deg, rgba(0, 184, 84, 0.94) 0%, rgba(56, 234, 130, 0.8) 100%),
+        linear-gradient(90deg, rgba(0, 184, 84, 0.84) 0%, rgba(56, 234, 130, 0.78) 100%),
         url("SVG/codex-icons/portugues.svg");
+      text-shadow:
+        0 2px 0 rgba(6, 74, 38, 0.78),
+        0 10px 18px rgba(6, 74, 38, 0.28);
     }
 
     .game-word.is-chip {
@@ -3858,6 +3929,7 @@
       visibility: visible;
       opacity: 1;
       pointer-events: auto;
+      transition: opacity 180ms ease, box-shadow 180ms ease;
     }
 
     .flashcards-footer-nav__item {
@@ -4907,6 +4979,7 @@
       const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
       const USER_HIDDEN_STORAGE_KEY = 'playtalk-flashcards-hidden-v1';
+      const USER_TYPE_PORTUGUESE_STORAGE_KEY = 'playtalk-flashcards-type-portuguese-v1';
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
       const TUTORIAL_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-tutorial-v1';
       const GAME_SESSION_STORAGE_KEY = 'playtalk-flashcards-game-session-v1';
@@ -4945,6 +5018,8 @@
       const SUCCESS_SOUND_PATH = 'gamesounds/success.mp3';
       const FOUR_STARS_SOUND_PATH = 'newsongs/4stars.mp3';
       const FIVE_STARS_SOUND_PATH = 'newsongs/5stars.mp3';
+      const SECOND_STAR_ERROR_SOUND_PATH = 'flashcard-audio-cues/second-star-error.mp3';
+      const TYPE_PORTUGUESE_SOUND_PATH = 'flashcard-audio-cues/typeportuguese.mp3';
       const LESS_SOUND_PATH = 'svgnovo/less.wav';
       const REPORT_SOUND_PATH = 'thesongs/report.wav';
       const TYPING_KEY_SOUND_PATH = 'sounds/type.mp3';
@@ -5026,6 +5101,13 @@
         { key: 'hide-card', label: 'Nao quero ver isso' }
       ];
       const FLASHCARD_REPORT_LABELS = Object.fromEntries(FLASHCARD_REPORT_TYPES.map((item) => [item.key, item.label]));
+      const FLASHCARD_REPORT_ICONS = {
+        'blurred-image': '<svg class="game-report-menu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v10H4z"></path><circle cx="9" cy="11" r="1.8"></circle><path d="M12 15l2.5-2.5L18 16"></path></svg>',
+        'weak-association': '<svg class="game-report-menu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7l-2 2a3 3 0 0 0 0 4 3 3 0 0 0 4 0l2-2"></path><path d="M14 17l2-2a3 3 0 0 0 0-4 3 3 0 0 0-4 0l-2 2"></path><line x1="9" y1="15" x2="15" y2="9"></line></svg>',
+        'wrong-audio': '<svg class="game-report-menu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10h4l5-4v12l-5-4H5z"></path><line x1="17" y1="9" x2="21" y2="15"></line><line x1="21" y1="9" x2="17" y2="15"></line></svg>',
+        'wrong-text': '<svg class="game-report-menu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14"></path><path d="M5 12h8"></path><path d="M5 18h6"></path><line x1="16" y1="11" x2="21" y2="16"></line><line x1="21" y1="11" x2="16" y2="16"></line></svg>',
+        'hide-card': '<svg class="game-report-menu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"></path><line x1="4" y1="4" x2="20" y2="20"></line></svg>'
+      };
       const REVIEW_PHASES = {
         1: { key: 'first-star', label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
         2: { key: 'second-star', label: 'Second star', durationMs: 3 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
@@ -5072,6 +5154,7 @@
         deckCatalog: [],
         userCards: new Map(),
         hiddenCardIds: new Set(),
+        typePortugueseCardIds: new Set(),
         ownedIds: new Set(),
         stats: { playTimeMs: 0, speakings: 0, listenings: 0 },
         timeOffsetMs: 0,
@@ -5123,6 +5206,8 @@
           entries: new Map(),
           queue: [],
           currentId: null,
+          footerNavPrimed: false,
+          footerNavPrimeKey: '',
           listening: false,
           languageSwapTimer: 0,
           stageTwoHintTimer: 0,
@@ -5708,6 +5793,7 @@
           phaseIndex: 0,
           targetPhaseIndex: 1,
           status: 'memorizing',
+          typePortuguese: false,
           memorizingStartedAt: getNowMs(),
           memorizingDurationMs: REVIEW_PHASES[1].durationMs,
           availableAt: getNowMs() + REVIEW_PHASES[1].durationMs,
@@ -5724,6 +5810,7 @@
           phaseIndex: Math.max(0, Math.min(5, Number.parseInt(raw?.phaseIndex, 10) || 0)),
           targetPhaseIndex: Math.max(1, Math.min(5, Number.parseInt(raw?.targetPhaseIndex, 10) || 1)),
           status: raw?.status === 'ready' ? 'ready' : 'memorizing',
+          typePortuguese: Boolean(raw?.typePortuguese || raw?.type_portuguese),
           memorizingStartedAt: Number.isFinite(Number(raw?.memorizingStartedAt)) ? Number(raw.memorizingStartedAt) : getNowMs(),
           memorizingDurationMs: Number.isFinite(Number(raw?.memorizingDurationMs)) ? Number(raw.memorizingDurationMs) : REVIEW_PHASES[1].durationMs,
           availableAt: Number.isFinite(Number(raw?.availableAt)) ? Number(raw.availableAt) : getNowMs(),
@@ -5775,6 +5862,21 @@
         return readHiddenCardIdsForUser(state.user?.id);
       }
 
+      function readTypePortugueseCardIdsForUser(userId = state.user?.id) {
+        const parsed = readScopedStorage(USER_TYPE_PORTUGUESE_STORAGE_KEY, [], userId);
+        const ids = Array.isArray(parsed)
+          ? parsed.map((cardId) => safeText(cardId)).filter(Boolean)
+          : [];
+        return new Set(ids);
+      }
+
+      function persistTypePortugueseCardIdsLocally() {
+        localStorage.setItem(
+          userScopedStorageKey(USER_TYPE_PORTUGUESE_STORAGE_KEY),
+          JSON.stringify(Array.from(state.typePortugueseCardIds.values()))
+        );
+      }
+
       function persistHiddenCardIdsLocally() {
         localStorage.setItem(
           userScopedStorageKey(USER_HIDDEN_STORAGE_KEY),
@@ -5785,6 +5887,7 @@
       function saveUserProgress(options = {}) {
         persistUserProgressLocally();
         persistHiddenCardIdsLocally();
+        persistTypePortugueseCardIdsLocally();
         if (!options.skipCloudSync) {
           scheduleFlashcardCloudSync();
         }
@@ -5882,6 +5985,7 @@
           progress: readUserProgressForUser(0),
           stats: readUserStatsForUser(0),
           hiddenCardIds: readHiddenCardIdsForUser(0),
+          typePortugueseCardIds: readTypePortugueseCardIdsForUser(0),
           tutorialCompleted: readTutorialProgressForUser(0)
         };
       }
@@ -5892,6 +5996,7 @@
           && (
             snapshot.progress?.size
             || snapshot.hiddenCardIds?.size
+            || snapshot.typePortugueseCardIds?.size
             || snapshot.tutorialCompleted
             || hasMeaningfulStats(snapshot.stats)
           )
@@ -5904,7 +6009,8 @@
           OWNED_STORAGE_KEY,
           USER_STATS_STORAGE_KEY,
           USER_PROGRESS_STORAGE_KEY,
-          USER_HIDDEN_STORAGE_KEY
+          USER_HIDDEN_STORAGE_KEY,
+          USER_TYPE_PORTUGUESE_STORAGE_KEY
         ].forEach((storageKey) => removeScopedStorage(storageKey, 0));
       }
 
@@ -5922,6 +6028,10 @@
           ...Array.from(state.hiddenCardIds.values()),
           ...Array.from(guestSnapshot.hiddenCardIds.values())
         ]);
+        state.typePortugueseCardIds = new Set([
+          ...Array.from(state.typePortugueseCardIds.values()),
+          ...Array.from(guestSnapshot.typePortugueseCardIds.values())
+        ]);
         state.stats = normalizeStatsSnapshot({
           playTimeMs: Number(state.stats.playTimeMs || 0) + Number(guestSnapshot.stats?.playTimeMs || 0),
           speakings: Number(state.stats.speakings || 0) + Number(guestSnapshot.stats?.speakings || 0),
@@ -5934,6 +6044,7 @@
         persistUserStatsLocally();
         persistUserProgressLocally();
         persistHiddenCardIdsLocally();
+        persistTypePortugueseCardIdsLocally();
         persistTutorialProgressLocally();
         clearGuestLocalState();
         syncOwnedIdsFromProgress();
@@ -5998,6 +6109,7 @@
             phaseIndex: Math.max(0, Math.min(5, Number.parseInt(record?.phaseIndex, 10) || 0)),
             targetPhaseIndex: Math.max(1, Math.min(5, Number.parseInt(record?.targetPhaseIndex, 10) || 1)),
             status: record?.status === 'ready' ? 'ready' : 'memorizing',
+            typePortuguese: Boolean(record?.typePortuguese),
             memorizingStartedAt: Number.isFinite(Number(record?.memorizingStartedAt)) ? Number(record.memorizingStartedAt) : 0,
             memorizingDurationMs: Math.max(0, Math.round(Number(record?.memorizingDurationMs) || 0)),
             availableAt: Number.isFinite(Number(record?.availableAt)) ? Number(record.availableAt) : 0,
@@ -6006,7 +6118,8 @@
             sealImage: safeText(record?.sealImage)
           })).filter(record => record.cardId),
           stats: normalizeStatsSnapshot(state.stats),
-          hiddenCardIds: Array.from(state.hiddenCardIds.values())
+          hiddenCardIds: Array.from(state.hiddenCardIds.values()),
+          typePortugueseCardIds: Array.from(state.typePortugueseCardIds.values())
         };
       }
 
@@ -7594,6 +7707,7 @@
           : [];
         const hasCloudProgress = Boolean(cloudState?.meta?.hasProgress);
         const hasCloudStats = Boolean(cloudState?.meta?.hasStats);
+        const localTypePortuguese = readTypePortugueseCardIdsForUser(state.user?.id);
 
         state.stats = hasCloudStats
           ? normalizeStatsSnapshot(cloudState?.stats)
@@ -7604,6 +7718,9 @@
         state.hiddenCardIds = Array.isArray(cloudState?.meta?.hiddenCardIds)
           ? new Set(cloudState.meta.hiddenCardIds.map((cardId) => safeText(cardId)).filter(Boolean))
           : localHidden;
+        state.typePortugueseCardIds = Array.isArray(cloudState?.meta?.typePortugueseCardIds)
+          ? new Set(cloudState.meta.typePortugueseCardIds.map((cardId) => safeText(cardId)).filter(Boolean))
+          : localTypePortuguese;
         state.game.tutorial.completed = readTutorialProgress();
         syncOwnedIdsFromProgress();
 
@@ -7615,6 +7732,7 @@
         persistUserStatsLocally();
         persistUserProgressLocally();
         persistHiddenCardIdsLocally();
+        persistTypePortugueseCardIdsLocally();
 
         renderMetrics();
         updateGameChips();
@@ -7674,6 +7792,7 @@
         state.flashcardsSyncQueued = false;
         state.userCards = readUserProgressForUser(0);
         state.hiddenCardIds = readHiddenCardIdsForUser(0);
+        state.typePortugueseCardIds = readTypePortugueseCardIdsForUser(0);
         state.stats = readUserStatsForUser(0);
         state.libraryPage = 1;
         state.admin.selectedDeckSource = '';
@@ -9591,10 +9710,64 @@
         return entry ? cardById(entry.id) : null;
       }
 
+      function hasTypePortugueseHint(cardId) {
+        return state.typePortugueseCardIds.has(safeText(cardId));
+      }
+
+      function markTypePortugueseHint(cardId) {
+        const normalizedCardId = safeText(cardId);
+        if (!normalizedCardId) return;
+        if (state.typePortugueseCardIds.has(normalizedCardId)) return;
+        state.typePortugueseCardIds.add(normalizedCardId);
+        saveUserProgress();
+      }
+
+      function playCueAudio(src) {
+        const resolved = resolveInlineMediaUrl(src);
+        if (!resolved) return Promise.resolve(false);
+        if (!state.game.milestoneAudios.has(resolved)) {
+          const audio = new Audio(resolved);
+          audio.preload = 'auto';
+          state.game.milestoneAudios.set(resolved, audio);
+        }
+        const audio = state.game.milestoneAudios.get(resolved);
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+        } catch (_error) {
+          // ignore
+        }
+        return audio.play().catch(() => false);
+      }
+
+      function isFooterGuardStage(entry = currentGameEntry()) {
+        return Boolean(state.game.active && entry && (entry.stage === 2 || entry.stage === 4));
+      }
+
+      function syncFooterGuardState(entry = currentGameEntry()) {
+        if (!els.flashcardsFooterNav) return;
+        const guardActive = isFooterGuardStage(entry);
+        els.flashcardsFooterNav.classList.toggle('is-stage-guarded', guardActive);
+        els.flashcardsFooterNav.classList.toggle('is-stage-guarded-primed', !guardActive || state.game.footerNavPrimed);
+      }
+
+      function primeFooterNavigation(event) {
+        if (!isFooterGuardStage()) return false;
+        if (state.game.footerNavPrimed) return false;
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
+        state.game.footerNavPrimed = true;
+        syncFooterGuardState();
+        return true;
+      }
+
       function buildGameReportOptions() {
         if (!els.gameReportOptions) return;
         els.gameReportOptions.innerHTML = FLASHCARD_REPORT_TYPES.map((item) => `
-          <button class="btn game-report-menu__option" type="button" data-report-type="${escapeHtml(item.key)}">${escapeHtml(item.label)}</button>
+          <button class="btn game-report-menu__option" type="button" data-report-type="${escapeHtml(item.key)}">
+            ${FLASHCARD_REPORT_ICONS[item.key] || ''}
+            <span class="game-report-menu__label">${escapeHtml(item.label)}</span>
+          </button>
         `).join('');
         Array.from(els.gameReportOptions.querySelectorAll('[data-report-type]')).forEach((button) => {
           button.addEventListener('click', () => {
@@ -10714,6 +10887,8 @@
         state.game.entries.clear();
         state.game.queue = [];
         state.game.currentId = null;
+        state.game.footerNavPrimed = false;
+        state.game.footerNavPrimeKey = '';
         state.game.listening = false;
         state.game.paused = false;
         state.game.canListen = false;
@@ -11060,17 +11235,24 @@
         entry.typingMistakes = (entry.typingMistakes || 0) + 1;
         setTypingKeysDisabled(grid, true);
         revealTypingAnswer(entry, card, { hintStart: typedLength, hintLength: 2 });
-        const shouldResolveImmediately = entry.stage === 2;
-        const playbackRate = entry.stage === 2 ? 0.75 : 0.8;
-        await Promise.allSettled([playPromptAudio(card, { rate: playbackRate }), wait(2000)]);
-        if (!state.game.active || state.game.currentId !== entry.id) return true;
-        if (!shouldResolveImmediately && entry.typingMistakes < 2) {
+        if (entry.stage === 2) {
+          const shouldUseTypePortuguese = hasTypePortugueseHint(entry.id);
+          const cuePath = shouldUseTypePortuguese ? TYPE_PORTUGUESE_SOUND_PATH : SECOND_STAR_ERROR_SOUND_PATH;
+          if (!shouldUseTypePortuguese) {
+            markTypePortugueseHint(entry.id);
+          }
+          await Promise.allSettled([playCueAudio(cuePath), wait(1850)]);
+          if (!state.game.active || state.game.currentId !== entry.id) return true;
           clearTypingAnswer();
           setTypingKeysDisabled(grid, false);
           return false;
         }
-        if (entry.stage === 2) {
-          entry._skipStageTwoResponseAudio = true;
+        await Promise.allSettled([playPromptAudio(card, { rate: 0.8 }), wait(2000)]);
+        if (!state.game.active || state.game.currentId !== entry.id) return true;
+        if (entry.typingMistakes < 2) {
+          clearTypingAnswer();
+          setTypingKeysDisabled(grid, false);
+          return false;
         }
         await handleRecognitionResult('', 'typing');
         return true;
@@ -11165,6 +11347,9 @@
           clearGameStatusRankTimer();
           clearGameLanguageSwapTimer();
           clearStageTwoHintTimer();
+          state.game.footerNavPrimed = false;
+          state.game.footerNavPrimeKey = '';
+          syncFooterGuardState(null);
           els.gameCard.classList.remove('is-typing-stage');
           els.gameTypingKeyboard.classList.remove('is-portuguese', 'is-visible');
           els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
@@ -11180,6 +11365,13 @@
         }
 
         persistGameSessionLocally();
+
+        const footerPrimeKey = `${entry.id}:${entry.stage}`;
+        if (state.game.footerNavPrimeKey !== footerPrimeKey) {
+          state.game.footerNavPrimeKey = footerPrimeKey;
+          state.game.footerNavPrimed = false;
+        }
+        syncFooterGuardState(entry);
 
         const card = cardById(entry.id);
         const stageConfig = resolveGameStageConfig(entry);
@@ -11844,6 +12036,7 @@
           saveUserStats();
         }
         document.body.classList.remove('game-open');
+        syncFooterGuardState(null);
         els.game.classList.remove('is-active');
         closeGameReportMenu();
         await wait(180);
@@ -12322,7 +12515,7 @@
         els.exitWatchBtn?.addEventListener('click', stopWatch);
         els.stopWatchBtn?.addEventListener('click', stopWatch);
         els.startGameBtn?.addEventListener('click', openGameSetup);
-        els.exitGameBtn.addEventListener('click', exitGame);
+        els.exitGameBtn?.addEventListener('click', exitGame);
         els.libraryPrevBtn?.addEventListener('click', () => {
           state.libraryPage -= 1;
           refreshLibrary();
@@ -12481,24 +12674,28 @@
           event.stopPropagation();
           startRecognition();
         });
-        els.footerPlayBtn?.addEventListener('click', () => {
+        els.footerPlayBtn?.addEventListener('click', (event) => {
+          if (primeFooterNavigation(event)) return;
           if (isNativeRuntime()) {
             window.location.href = resolveNativeRenderPageHref('play');
             return;
           }
           void navigateToMainView('play');
         });
-        els.footerCardsBtn?.addEventListener('click', () => {
+        els.footerCardsBtn?.addEventListener('click', (event) => {
+          if (primeFooterNavigation(event)) return;
           window.location.href = isNativeRuntime()
             ? resolveNativeRenderPageHref('cards')
             : 'https://playtalk-dvv5.onrender.com/allcards';
         });
-        els.footerUsersBtn?.addEventListener('click', () => {
+        els.footerUsersBtn?.addEventListener('click', (event) => {
+          if (primeFooterNavigation(event)) return;
           window.location.href = isNativeRuntime()
             ? resolveNativeRenderPageHref('users')
             : '/users';
         });
-        els.footerProfileBtn?.addEventListener('click', () => {
+        els.footerProfileBtn?.addEventListener('click', (event) => {
+          if (primeFooterNavigation(event)) return;
           window.location.href = isNativeRuntime()
             ? resolveNativeRenderPageHref('profile')
             : '/account';

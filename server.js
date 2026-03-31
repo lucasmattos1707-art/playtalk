@@ -416,6 +416,7 @@ const normalizeFlashcardProgressRecord = (raw) => {
     phaseIndex,
     targetPhaseIndex,
     status,
+    typePortuguese: Boolean(raw?.typePortuguese || raw?.type_portuguese),
     memorizingStartedAt: status === 'memorizing' ? memorizingStartedAtMs || Date.now() : 0,
     memorizingDurationMs,
     availableAt: status === 'memorizing'
@@ -436,6 +437,7 @@ const mapStoredFlashcardProgressRow = (row) => {
     phaseIndex: clampInteger(row?.phase_index, 0, 5, 0),
     targetPhaseIndex: clampInteger(row?.target_phase_index, 1, 5, 1),
     status: normalizeFlashcardStatus(row?.status),
+    typePortuguese: Boolean(row?.type_portuguese),
     memorizingStartedAt: flashcardMillisFromTimestamp(row?.memorizing_started_at),
     memorizingDurationMs: Math.max(0, Math.round(Number(row?.memorizing_duration_ms) || 0)),
     availableAt: flashcardMillisFromTimestamp(row?.available_at),
@@ -468,6 +470,7 @@ const ensureFlashcardUserStateTables = async () => {
           phase_index integer NOT NULL DEFAULT 0,
           target_phase_index integer NOT NULL DEFAULT 1,
           status text NOT NULL DEFAULT 'memorizing',
+          type_portuguese boolean NOT NULL DEFAULT false,
           memorizing_started_at timestamptz,
           memorizing_duration_ms integer NOT NULL DEFAULT 0,
           available_at timestamptz,
@@ -481,6 +484,10 @@ const ensureFlashcardUserStateTables = async () => {
       await pool.query(`
         ALTER TABLE public.user_flashcard_progress
         ADD COLUMN IF NOT EXISTS seal_image text NOT NULL DEFAULT ''
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_progress
+        ADD COLUMN IF NOT EXISTS type_portuguese boolean NOT NULL DEFAULT false
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_flashcard_progress_user_idx
@@ -507,6 +514,19 @@ const ensureFlashcardUserStateTables = async () => {
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_flashcard_hidden_user_idx
         ON public.user_flashcard_hidden (user_id, updated_at DESC)
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_type_portuguese (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          card_id text NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, card_id)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_type_portuguese_user_idx
+        ON public.user_flashcard_type_portuguese (user_id, updated_at DESC)
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_reports (
@@ -1596,13 +1616,14 @@ const readFlashcardStateForUser = async (userId) => {
     throw error;
   }
 
-  const [progressResult, statsResult, hiddenResult] = await Promise.all([
+  const [progressResult, statsResult, hiddenResult, typePortugueseResult] = await Promise.all([
     pool.query(
       `SELECT
          card_id,
          phase_index,
          target_phase_index,
          status,
+         type_portuguese,
          memorizing_started_at,
          memorizing_duration_ms,
          available_at,
@@ -1627,6 +1648,13 @@ const readFlashcardStateForUser = async (userId) => {
        WHERE user_id = $1
        ORDER BY updated_at DESC, created_at DESC, card_id ASC`,
       [normalizedUserId]
+    ),
+    pool.query(
+      `SELECT card_id
+       FROM public.user_flashcard_type_portuguese
+       WHERE user_id = $1
+       ORDER BY updated_at DESC, created_at DESC, card_id ASC`,
+      [normalizedUserId]
     )
   ]);
 
@@ -1645,6 +1673,9 @@ const readFlashcardStateForUser = async (userId) => {
       hasProgress: progressResult.rows.length > 0,
       hasStats: Boolean(statsResult.rows[0]),
       hiddenCardIds: hiddenResult.rows
+        .map((row) => typeof row?.card_id === 'string' ? row.card_id.trim() : '')
+        .filter(Boolean),
+      typePortugueseCardIds: typePortugueseResult.rows
         .map((row) => typeof row?.card_id === 'string' ? row.card_id.trim() : '')
         .filter(Boolean)
     }
@@ -1686,6 +1717,11 @@ const saveFlashcardStateForUser = async (userId, payload) => {
       .map((cardId) => typeof cardId === 'string' ? cardId.trim() : '')
       .filter(Boolean)))
     : [];
+  const typePortugueseCardIds = Array.isArray(payload?.typePortugueseCardIds)
+    ? Array.from(new Set(payload.typePortugueseCardIds
+      .map((cardId) => typeof cardId === 'string' ? cardId.trim() : '')
+      .filter(Boolean)))
+    : [];
 
   const client = await pool.connect();
   try {
@@ -1703,14 +1739,15 @@ const saveFlashcardStateForUser = async (userId, payload) => {
       const values = [];
       const params = [];
       progress.forEach((item, index) => {
-        const offset = index * 11;
-        values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, now())`);
+        const offset = index * 12;
+        values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, now())`);
         params.push(
           normalizedUserId,
           item.cardId,
           item.phaseIndex,
           item.targetPhaseIndex,
           item.status,
+          Boolean(item.typePortuguese),
           flashcardTimestampFromMillis(item.memorizingStartedAt),
           item.memorizingDurationMs,
           flashcardTimestampFromMillis(item.availableAt),
@@ -1727,6 +1764,7 @@ const saveFlashcardStateForUser = async (userId, payload) => {
            phase_index,
            target_phase_index,
            status,
+           type_portuguese,
            memorizing_started_at,
            memorizing_duration_ms,
            available_at,
@@ -1741,6 +1779,7 @@ const saveFlashcardStateForUser = async (userId, payload) => {
            phase_index = EXCLUDED.phase_index,
            target_phase_index = EXCLUDED.target_phase_index,
            status = EXCLUDED.status,
+           type_portuguese = EXCLUDED.type_portuguese,
            memorizing_started_at = EXCLUDED.memorizing_started_at,
            memorizing_duration_ms = EXCLUDED.memorizing_duration_ms,
            available_at = EXCLUDED.available_at,
@@ -1789,6 +1828,43 @@ const saveFlashcardStateForUser = async (userId, payload) => {
     } else {
       await client.query(
         `DELETE FROM public.user_flashcard_hidden
+         WHERE user_id = $1`,
+        [normalizedUserId]
+      );
+    }
+
+    if (typePortugueseCardIds.length) {
+      await client.query(
+        `DELETE FROM public.user_flashcard_type_portuguese
+         WHERE user_id = $1
+           AND NOT (card_id = ANY($2::text[]))`,
+        [normalizedUserId, typePortugueseCardIds]
+      );
+
+      const typePortugueseValues = [];
+      const typePortugueseParams = [];
+      typePortugueseCardIds.forEach((cardId, index) => {
+        const offset = index * 2;
+        typePortugueseValues.push(`($${offset + 1}, $${offset + 2}, now(), now())`);
+        typePortugueseParams.push(normalizedUserId, cardId);
+      });
+
+      await client.query(
+        `INSERT INTO public.user_flashcard_type_portuguese (
+           user_id,
+           card_id,
+           created_at,
+           updated_at
+         )
+         VALUES ${typePortugueseValues.join(', ')}
+         ON CONFLICT (user_id, card_id)
+         DO UPDATE SET
+           updated_at = now()`,
+        typePortugueseParams
+      );
+    } else {
+      await client.query(
+        `DELETE FROM public.user_flashcard_type_portuguese
          WHERE user_id = $1`,
         [normalizedUserId]
       );
@@ -5388,6 +5464,7 @@ app.delete('/api/admin/users/:userId', async (req, res) => {
       await client.query('DELETE FROM public.user_access_keys WHERE redeemed_by_user_id = $1', [userId]);
       await client.query('DELETE FROM public.user_flashcard_reports WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.user_flashcard_hidden WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_flashcard_type_portuguese WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.user_flashcard_stats WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.user_flashcard_progress WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.flashcard_rankings WHERE user_id = $1', [userId]);
@@ -5805,6 +5882,7 @@ app.get(/^\/accesskey\/(.+)$/, async (req, res) => {
   }
 });
 app.use('/audiostuto', express.static(path.join(__dirname, 'audiostuto')));
+app.use('/flashcard-audio-cues', express.static(path.join(__dirname, 'Nova pasta')));
 app.use('/eventos', express.static(path.join(__dirname, 'musicas')));
 
 app.get(['/eventos', '/eventos/'], (req, res) => {
