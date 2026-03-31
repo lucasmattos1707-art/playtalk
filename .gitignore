@@ -16,7 +16,12 @@ codex-write-test.txt
 
 # Android build/cache artifacts
 android/.gradle/
+android/.gradle-user/
 android/.idea/
+android/.android-user/
 android/local.properties
 android/**/build/
 android/captures/
+android/key.properties
+*.keystore
+*.jks

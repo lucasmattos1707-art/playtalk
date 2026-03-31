@@ -1,6 +1,7 @@
 ﻿(function initPlaytalkUsersPage() {
   const GUEST_ID_KEY = 'playtalk_guest_rank_id';
   const GUEST_PROGRESS_KEY = 'playtalk-flashcards-progress-v3';
+  const GUEST_OWNED_KEY = 'playtalk-flashcards-owned-v2';
   const els = {
     usersList: document.getElementById('usersList'),
     usersStatus: document.getElementById('usersStatus'),
@@ -28,6 +29,13 @@
       return window.PlaytalkApi.url(path);
     }
     return path;
+  }
+
+  function buildAuthHeaders(extraHeaders) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function') {
+      return window.PlaytalkApi.authHeaders(extraHeaders);
+    }
+    return { ...(extraHeaders || {}) };
   }
 
   function escapeHtml(value) {
@@ -60,12 +68,20 @@
   }
 
   function readGuestFlashcardsCount() {
+    const candidateKeys = [GUEST_PROGRESS_KEY, GUEST_OWNED_KEY];
+    let bestCount = 0;
     try {
-      const parsed = JSON.parse(localStorage.getItem(GUEST_PROGRESS_KEY) || '[]');
-      return Array.isArray(parsed) ? parsed.length : 0;
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key || !candidateKeys.some((baseKey) => key === baseKey || key.startsWith(`${baseKey}:`))) continue;
+        const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+        const count = Array.isArray(parsed) ? parsed.length : 0;
+        if (count > bestCount) bestCount = count;
+      }
     } catch (_error) {
-      return 0;
+      return bestCount;
     }
+    return bestCount;
   }
 
   function normalizeUser(user) {
@@ -198,7 +214,11 @@
   }
 
   async function fetchSessionUser() {
-    const response = await fetch(buildApiUrl('/auth/session'), { cache: 'no-store', credentials: 'include' });
+    const response = await fetch(buildApiUrl('/auth/session'), {
+      headers: buildAuthHeaders(),
+      cache: 'no-store',
+      credentials: 'include'
+    });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload?.success) return null;
     return normalizeUser(payload.user);
@@ -209,6 +229,7 @@
 
     try {
       const response = await fetch(buildApiUrl('/api/users/flashcards?limit=50'), {
+        headers: buildAuthHeaders(),
         cache: 'no-store',
         credentials: 'include'
       });
@@ -241,7 +262,7 @@
       const response = await fetch(buildApiUrl(`/api/admin/users/${state.selectedUser.userId}/premium`), {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ durationDays })
       });
       const payload = await response.json().catch(() => ({}));
@@ -268,6 +289,7 @@
     try {
       const response = await fetch(buildApiUrl(`/api/admin/users/${state.selectedUser.userId}`), {
         method: 'DELETE',
+        headers: buildAuthHeaders(),
         credentials: 'include'
       });
       const payload = await response.json().catch(() => ({}));
