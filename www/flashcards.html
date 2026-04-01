@@ -37,6 +37,14 @@
       font-display: swap;
     }
 
+    @font-face {
+      font-family: "PlaytalkP2";
+      src: url("/accesskey/p2.TTF") format("truetype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
     :root {
       --bg: #041321;
       --panel: rgba(8, 28, 54, 0.9);
@@ -52,7 +60,7 @@
       --flashcards-chip-drop: 0px;
       --flashcards-visual-phase-drop: 0px;
       --flashcards-chip-phase-drop: 0px;
-      --flashcards-stars-drop: 90px;
+      --flashcards-stars-drop: 140px;
       --flashcards-typing-visual-drop: 66px;
       --flashcards-typing-display-drop: 82px;
       --flashcards-image-shift: 80px;
@@ -1780,6 +1788,7 @@
       line-height: 0.95;
       word-break: break-word;
       text-transform: capitalize;
+      transition: opacity 250ms ease, filter 250ms ease;
     }
 
     .game-subword,
@@ -1794,12 +1803,44 @@
       font-size: 23px;
       min-height: 48px;
       text-transform: capitalize;
+      transition: opacity 250ms ease, filter 250ms ease;
     }
 
     .game-subword.is-stage-one {
       color: #f4ff3f;
       text-shadow: 0 0 14px rgba(244, 255, 63, 0.35);
       font-weight: 700;
+    }
+
+    .game-card__content > div.is-stage-one-swap {
+      position: relative;
+      display: grid;
+      justify-items: center;
+      align-content: start;
+      min-height: 150px;
+      width: 100%;
+    }
+
+    .game-card__content > div.is-stage-one-swap .game-step {
+      position: relative;
+      z-index: 2;
+    }
+
+    .game-card__content > div.is-stage-one-swap .game-word,
+    .game-card__content > div.is-stage-one-swap .game-subword {
+      position: absolute;
+      left: 50%;
+      top: calc(50% + 18px);
+      transform: translate(-50%, -50%);
+      width: min(420px, calc(100vw - 52px));
+      margin: 0;
+    }
+
+    .game-word.is-stage-swap-hidden,
+    .game-subword.is-stage-swap-hidden {
+      opacity: 0;
+      filter: blur(8px);
+      pointer-events: none;
     }
 
     .stars-wrap {
@@ -3175,6 +3216,23 @@
       white-space: pre-wrap;
     }
 
+    .game[data-phase-key="second-star"] .flashcards-typing__display--visual,
+    .game[data-phase-key="second-star"] .flashcards-typing__key,
+    .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual,
+    .game[data-phase-key="fourth-star"] .flashcards-typing__key {
+      font-family: "PlaytalkP2", "Soopafre", Arial, sans-serif;
+    }
+
+    .game[data-phase-key="second-star"] .flashcards-typing__display--visual {
+      width: min(74%, 250px);
+      min-height: min(74vw, 250px);
+      display: grid;
+      place-items: center;
+      align-content: center;
+      text-align: center;
+      line-height: 1.18;
+    }
+
     .flashcards-typing__display--visual.is-answer-image {
       width: min(46vw, 188px);
       aspect-ratio: 1 / 1;
@@ -3203,6 +3261,24 @@
     .flashcards-typing__display-letter {
       display: inline-block;
       min-width: 0.32em;
+    }
+
+    .flashcards-typing__display-line {
+      display: block;
+      width: 100%;
+      text-align: center;
+    }
+
+    .flashcards-typing__display-letter.is-dimmed {
+      opacity: 0.6;
+    }
+
+    .flashcards-typing__display-letter.is-filled {
+      color: #fff1a8;
+      opacity: 1;
+      text-shadow:
+        0 0 8px rgba(255, 241, 168, 0.35),
+        0 4px 12px rgba(120, 86, 0, 0.32);
     }
 
     .flashcards-typing__display-letter.is-hint {
@@ -5100,6 +5176,7 @@
       const FIVE_STARS_SOUND_PATH = 'newsongs/5stars.mp3';
       const SECOND_STAR_ERROR_SOUND_PATH = 'flashcard-audio-cues/second-star-error.mp3';
       const TYPE_PORTUGUESE_SOUND_PATH = 'flashcard-audio-cues/typeportuguese.mp3';
+      const ACCESSKEY_ERROR_SOUND_PATH = `${ACCESSKEY_PUBLIC_ROOT}/error.mp3`;
       const LESS_SOUND_PATH = 'svgnovo/less.wav';
       const REPORT_SOUND_PATH = 'thesongs/report.wav';
       const TYPING_KEY_SOUND_PATH = 'sounds/type.mp3';
@@ -5304,6 +5381,7 @@
           transitioning: false,
           sessionStartedAt: 0,
           canListen: false,
+          typingPromptLoopTimer: 0,
           recognition: null,
           typingKeyAudioPool: [],
           typingKeyAudioIndex: 0,
@@ -10164,6 +10242,12 @@
         state.game.stageOneSwapShowsPortuguese = false;
       }
 
+      function clearTypingPromptLoop() {
+        if (!state.game.typingPromptLoopTimer) return;
+        window.clearInterval(state.game.typingPromptLoopTimer);
+        state.game.typingPromptLoopTimer = 0;
+      }
+
       function clearStageTwoHintTimer() {
         if (state.game.stageTwoHintTimer) {
           window.clearTimeout(state.game.stageTwoHintTimer);
@@ -10248,9 +10332,8 @@
 
         const applyStageOneVisibility = () => {
           const showsPortuguese = state.game.stageOneSwapShowsPortuguese;
-          els.gameWord.classList.toggle('is-hidden', showsPortuguese);
-          els.gameSubword.classList.toggle('is-hidden', !showsPortuguese);
-          els.gameSubword.style.display = showsPortuguese ? '' : 'none';
+          els.gameWord.classList.toggle('is-stage-swap-hidden', showsPortuguese);
+          els.gameSubword.classList.toggle('is-stage-swap-hidden', !showsPortuguese);
         };
 
         applyStageOneVisibility();
@@ -10261,7 +10344,7 @@
           }
           state.game.stageOneSwapShowsPortuguese = !state.game.stageOneSwapShowsPortuguese;
           applyStageOneVisibility();
-        }, 1500);
+        }, 1000);
       }
 
       function renderGameTouchButton(stageConfig, entry) {
@@ -11146,6 +11229,20 @@
         return source.charAt(0).toLocaleUpperCase('pt-BR') + source.slice(1).toLocaleLowerCase('pt-BR');
       }
 
+      function splitTypingDisplayText(text) {
+        const source = safeText(text).trim();
+        if (!source) return [''];
+        const compactLength = source.replace(/\s+/g, '').length;
+        if (compactLength <= 12) return [source];
+        const words = source.split(/\s+/).filter(Boolean);
+        if (words.length >= 2) {
+          const midpoint = Math.ceil(words.length / 2);
+          return [words.slice(0, midpoint).join(' '), words.slice(midpoint).join(' ')].filter(Boolean);
+        }
+        const middle = Math.ceil(source.length / 2);
+        return [source.slice(0, middle), source.slice(middle)].filter(Boolean);
+      }
+
       function buildTypingDisplayMarkup(typingState, typedLetters, options = {}) {
         const displayText = formatTypingDisplayText(typingState?.sourceText || typingState?.acceptedAnswer || '');
         if (!displayText) return '&nbsp;';
@@ -11154,24 +11251,33 @@
         const revealAll = Boolean(options.revealAll);
         const hintStart = Math.max(0, Number(options.hintStart) || 0);
         const hintLength = Math.max(0, Number(options.hintLength) || 0);
+        const alwaysVisible = Boolean(options.alwaysVisible);
         let normalizedLetterIndex = 0;
 
-        return displayText.split('').map((char) => {
-          const normalizedChar = normalizeTypingSource(char);
-          if (!normalizedChar) {
-            return char === ' ' ? '&nbsp;' : escapeHtml(char);
-          }
+        return splitTypingDisplayText(displayText).map((line) => {
+          const lineMarkup = line.split('').map((char) => {
+            const normalizedChar = normalizeTypingSource(char);
+            if (!normalizedChar) {
+              return char === ' ' ? '&nbsp;' : escapeHtml(char);
+            }
 
-          const isHint = normalizedLetterIndex >= hintStart && normalizedLetterIndex < (hintStart + hintLength);
-          const typedChar = typed[normalizedLetterIndex] || '';
-          const visibleChar = revealAll
-            ? char
-            : (typedChar
-              ? (char === char.toLocaleUpperCase('pt-BR') ? typedChar : typedChar.toLocaleLowerCase('pt-BR'))
-              : '\u00A0');
+            const isHint = normalizedLetterIndex >= hintStart && normalizedLetterIndex < (hintStart + hintLength);
+            const typedChar = typed[normalizedLetterIndex] || '';
+            const visibleChar = revealAll || alwaysVisible
+              ? char
+              : (typedChar
+                ? (char === char.toLocaleUpperCase('pt-BR') ? typedChar : typedChar.toLocaleLowerCase('pt-BR'))
+                : '\u00A0');
 
-          normalizedLetterIndex += 1;
-          return `<span class="flashcards-typing__display-letter${isHint ? ' is-hint' : ''}">${escapeHtml(visibleChar)}</span>`;
+            const classNames = ['flashcards-typing__display-letter'];
+            if (alwaysVisible) classNames.push('is-dimmed');
+            if (typedChar) classNames.push('is-filled');
+            if (isHint) classNames.push('is-hint');
+
+            normalizedLetterIndex += 1;
+            return `<span class="${classNames.join(' ')}">${escapeHtml(visibleChar)}</span>`;
+          }).join('');
+          return `<span class="flashcards-typing__display-line">${lineMarkup}</span>`;
         }).join('');
       }
 
@@ -11254,24 +11360,11 @@
 
       async function handleTypingMistake(entry, card, grid, typedLength = 0) {
         entry.typingMistakes = (entry.typingMistakes || 0) + 1;
-        setTypingKeysDisabled(grid, true);
         if (entry.stage === 2) {
-          revealTypingAnswer(entry, card);
-          const shouldUseTypePortuguese = hasTypePortugueseHint(entry.id);
-          const cuePath = shouldUseTypePortuguese ? TYPE_PORTUGUESE_SOUND_PATH : SECOND_STAR_ERROR_SOUND_PATH;
-          if (!shouldUseTypePortuguese) {
-            markTypePortugueseHint(entry.id);
-          }
-          await Promise.allSettled([playCueAudio(cuePath), wait(1850)]);
-          if (!state.game.active || state.game.currentId !== entry.id) return true;
-          if (entry.typingMistakes < 2) {
-            clearTypingAnswer();
-            setTypingKeysDisabled(grid, false);
-            return false;
-          }
-          await handleRecognitionResult('', 'typing');
-          return true;
+          playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
+          return false;
         }
+        setTypingKeysDisabled(grid, true);
         revealTypingAnswer(entry, card, { hintStart: typedLength, hintLength: 2 });
         await Promise.allSettled([playPromptAudio(card, { rate: 0.8 }), wait(2000)]);
         if (!state.game.active || state.game.currentId !== entry.id) return true;
@@ -11293,8 +11386,23 @@
         renderChipText(els.gameSubword, portuguese);
       }
 
+      function startTypingPromptLoop(entry, card) {
+        clearTypingPromptLoop();
+        if (!entry || entry.stage !== 2 || !card) return;
+        const replayPrompt = () => {
+          if (!state.game.active || state.game.paused || state.game.currentId !== entry.id || entry.stage !== 2) {
+            clearTypingPromptLoop();
+            return;
+          }
+          playPromptAudio(card).catch?.(() => {});
+        };
+        window.setTimeout(replayPrompt, 220);
+        state.game.typingPromptLoopTimer = window.setInterval(replayPrompt, 2200);
+      }
+
       function renderTypingKeyboard(entry, card) {
         if (!isTypingStage(entry) || !card) {
+          clearTypingPromptLoop();
           els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
           els.gameTypingKeyboard.innerHTML = '';
           els.gameTypingKeyboard.classList.remove('is-visible');
@@ -11306,6 +11414,7 @@
         const typingState = resolveTypingStageState(entry, card);
         const target = typingState.normalizedTarget.replace(/\s/g, '');
         if (!target) {
+          clearTypingPromptLoop();
           els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
           els.gameTypingKeyboard.innerHTML = '';
           els.gameTypingKeyboard.classList.remove('is-visible');
@@ -11319,7 +11428,7 @@
         display.className = 'flashcards-typing__display flashcards-typing__display--visual';
         display.classList.toggle('is-star-phase-copy', isPlaytalkStarTypingStage(entry));
         const renderTyped = () => {
-          renderTypingDisplay(display, typingState, typed);
+          renderTypingDisplay(display, typingState, typed, entry.stage === 2 ? { alwaysVisible: true } : {});
         };
         renderTyped();
 
@@ -11339,7 +11448,6 @@
             const expectedLetter = target[typed.length];
             if (letter !== expectedLetter) {
               const typedLengthBeforeReset = typed.length;
-              typed = '';
               const finished = await handleTypingMistake(entry, card, grid, typedLengthBeforeReset);
               if (!finished) {
                 renderTyped();
@@ -11364,6 +11472,11 @@
         els.gameTypingKeyboard.classList.add('is-visible');
         els.gameTypingKeyboard.classList.toggle('is-portuguese', typingState.typingMode === 'portuguese');
         els.gameTypingKeyboard.setAttribute('aria-hidden', 'false');
+        if (entry.stage === 2) {
+          startTypingPromptLoop(entry, card);
+        } else {
+          clearTypingPromptLoop();
+        }
       }
 
       function renderCurrentCard() {
@@ -11373,6 +11486,7 @@
           els.game.removeAttribute('data-phase-key');
           clearGameStatusRankTimer();
           clearGameLanguageSwapTimer();
+          clearTypingPromptLoop();
           clearStageTwoHintTimer();
           state.game.footerNavPrimed = false;
           state.game.footerNavPrimeKey = '';
@@ -11426,18 +11540,23 @@
         } else if (stageConfig.subtitleType === 'english') {
           subword = capitalizeWords(card.english || '');
         }
+        const stageOneSwapActive = entry.stage === 1 && Boolean(subword);
         els.gameStep.textContent = stageConfig.badge;
         els.gameWord.className = `game-word${stageConfig.showWord === false ? ' is-hidden' : ' is-chip'}`;
         els.gameSubword.className = `game-subword${subword ? ' is-chip' : ' is-hidden'}`;
-        if (entry.stage === 1 && subword) {
-          els.gameWord.classList.add('is-hidden');
-          els.gameSubword.classList.remove('is-hidden');
+        els.gameWord.classList.remove('is-stage-swap-hidden');
+        els.gameSubword.classList.remove('is-stage-swap-hidden');
+        els.gameWord.parentElement?.classList.toggle('is-stage-one-swap', stageOneSwapActive);
+        if (stageOneSwapActive) {
+          els.gameWord.className = 'game-word is-chip';
+          els.gameSubword.className = 'game-subword is-chip';
+          els.gameWord.style.display = '';
           els.gameSubword.style.display = '';
         }
         renderChipText(els.gameWord, stageConfig.showWord === false ? '' : word);
         renderChipText(els.gameSubword, subword);
         els.gameCard.querySelector('.game-card__content')?.classList.toggle('is-stage-three', entry.stage === 3);
-        if (subword) {
+        if (subword && !stageOneSwapActive) {
           els.gameSubword.classList.remove('is-hidden');
         }
         els.gameSubword.classList.toggle('is-stage-one', entry.stage === 1 && stageConfig.subtitleType === 'portuguese');
@@ -11452,7 +11571,7 @@
           els.gameSubword.classList.add('is-hidden');
           els.gameSubword.style.display = 'none';
         }
-        if (!typingStage && !(entry.stage === 1 && subword)) {
+        if (!typingStage && !stageOneSwapActive) {
           els.gameWord.classList.toggle('is-hidden', stageConfig.showWord === false);
           els.gameSubword.classList.toggle('is-hidden', !subword);
           els.gameSubword.style.display = subword ? '' : 'none';
@@ -11468,7 +11587,9 @@
         if (typingStage) {
           window.setTimeout(() => {
             if (state.game.currentId === entry.id && !state.game.listening && !state.game.paused) {
-              playPromptAudio(card);
+              if (entry.stage !== 2) {
+                playPromptAudio(card);
+              }
             }
           }, 220);
           return;
@@ -11816,6 +11937,7 @@
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
+        clearTypingPromptLoop();
         clearStageTwoHintTimer();
         clearPendingRewardSeal();
         closeGameReportMenu();
@@ -11990,6 +12112,7 @@
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
+        clearTypingPromptLoop();
         clearStageTwoHintTimer();
         clearPendingRewardSeal();
         advanceReadyMemorizations();
@@ -12060,6 +12183,7 @@
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
+        clearTypingPromptLoop();
         clearStageTwoHintTimer();
         clearPendingRewardSeal();
         resetTutorialRuntime({ preserveCompletion: true });
@@ -12100,6 +12224,7 @@
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
+        clearTypingPromptLoop();
         clearStageTwoHintTimer();
         clearPendingRewardSeal();
         resetTutorialRuntime({ preserveCompletion: true });
