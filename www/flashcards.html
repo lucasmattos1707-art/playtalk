@@ -3342,6 +3342,10 @@
       text-transform: none;
     }
 
+    .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-star-phase-copy {
+      font-family: "Soopafre", Arial, sans-serif;
+    }
+
     .flashcards-typing__display-letter {
       display: inline-block;
       min-width: 0.32em;
@@ -3357,12 +3361,16 @@
       opacity: 1;
     }
 
+    .flashcards-typing__display-letter.is-hidden-unfilled {
+      opacity: 0;
+    }
+
     .flashcards-typing__display-letter.is-filled {
-      color: #5dff8a;
+      color: #ffffff;
       opacity: 1;
       text-shadow:
-        0 0 8px rgba(93, 255, 138, 0.35),
-        0 4px 12px rgba(8, 95, 42, 0.32);
+        0 0 8px rgba(255, 255, 255, 0.35),
+        0 4px 12px rgba(0, 0, 0, 0.32);
     }
 
     .flashcards-typing__display-letter.is-hint {
@@ -3373,6 +3381,13 @@
       -webkit-text-fill-color: transparent;
       text-shadow: none;
       filter: drop-shadow(0 4px 10px rgba(24, 155, 83, 0.22));
+    }
+
+    .flashcards-typing__display-prompt {
+      display: inline-block;
+      opacity: 0.95;
+      color: #f0f8ff;
+      text-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
     }
 
     .flashcards-typing__grid {
@@ -3514,10 +3529,11 @@
       justify-content: center;
       border: 1px solid #ffe100;
       background: transparent;
-      color: #b33500;
+      color: #ffffff;
       font-family: "Soopafre", Arial, sans-serif;
       font-size: clamp(18px, 2.8vw, 24px);
       line-height: 1;
+      text-shadow: 0 4px 10px rgba(0, 0, 0, 0.32);
     }
 
     .game[data-phase-key="first-star"] .circlescreen .game-card__layout,
@@ -3695,10 +3711,47 @@
       padding: 8px 14px;
     }
 
-    .game[data-phase-key="first-star"] .textscreen .game-status-wrap,
+    .game[data-phase-key="first-star"] .textscreen .game-status-wrap {
+      display: none;
+    }
+
     .game[data-phase-key="third-star"] .textscreen .game-status-wrap,
     .game[data-phase-key="fifth-star"] .textscreen .game-status-wrap {
-      display: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: min(92vw, 760px);
+      margin: 0 auto;
+      color: #ffffff;
+      font-family: "Soopafre", Arial, sans-serif;
+    }
+
+    .game[data-phase-key="fifth-star"] .textscreen .game-status {
+      color: #ffffff !important;
+      font-family: "Soopafre", Arial, sans-serif;
+      font-size: clamp(20px, 3.2vw, 34px);
+      line-height: 1.08;
+      text-align: center;
+      text-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+      white-space: nowrap;
+    }
+
+    .game[data-phase-key="third-star"] .textscreen .game-status {
+      color: #ffffff !important;
+      font-family: "Soopafre", Arial, sans-serif;
+      font-size: clamp(20px, 3.2vw, 34px);
+      line-height: 1.08;
+      text-align: center;
+      text-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+      white-space: nowrap;
+    }
+
+    .game[data-phase-key="fifth-star"] .textscreen .game-status-icon {
+      display: none !important;
+    }
+
+    .game[data-phase-key="third-star"] .textscreen .game-status-icon {
+      display: none !important;
     }
 
     .game[data-phase-key="third-star"] .textscreen .game-phase-word {
@@ -4130,6 +4183,10 @@
       font-size: clamp(49px, 15.84vw, 97px);
       line-height: 0.82;
       font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
       background-image:
         linear-gradient(rgba(8, 56, 31, 0.3), rgba(8, 56, 31, 0.3)),
         url("images/euatype.png");
@@ -4180,14 +4237,15 @@
       filter: brightness(1.2) drop-shadow(0 0 16px rgba(255, 255, 255, 0.75));
     }
 
-    .flashcards-typing__grid.is-error .flashcards-typing__key {
-      background:
-        linear-gradient(135deg, rgba(214, 58, 81, 0.96) 0%, rgba(255, 123, 141, 0.92) 100%);
+    .game[data-phase-key="second-star"] .flashcards-typing__grid.is-error .flashcards-typing__key,
+    .game[data-phase-key="fourth-star"] .flashcards-typing__grid.is-error .flashcards-typing__key {
+      background: #d63a51 !important;
+      background-image: none !important;
       color: #fff5f7;
       text-shadow:
         0 2px 0 rgba(119, 18, 33, 0.92),
         0 6px 12px rgba(119, 18, 33, 0.32);
-      animation: flashcardsTypingErrorShake 320ms ease-in-out;
+      animation: flashcardsTypingErrorShake 1000ms ease-in-out;
     }
 
     .game-language-btn,
@@ -6089,8 +6147,11 @@
       const SOUND_TEST_SUBTITLE_MESSAGES = ['Toque no que est\u00e1 ouvindo', 'Ajuste o volume'];
       const SOUND_TEST_SELECTION_COUNT = 3;
       const ACCESS_KEY_LETTERS = 'ABCDEFGHIJKLMNOP'.split('');
-      const LIBRARY_RANK_SWAP_DELAY_MS = 1200;
-      const REWARD_RANK_VISIBLE_MS = 3000;
+      const LIBRARY_RANK_SWAP_DELAY_MS = 2000;
+      const REWARD_RANK_VISIBLE_MS = 2000;
+      const FIFTH_STAR_HINT_ROTATION_MS = 1500;
+      const FIFTH_STAR_HINT_MESSAGES = ['Toque para ligar o microfone', 'Fale inglês'];
+      const THIRD_STAR_HINT_MESSAGES = ['Fale em inglês', 'Toque e ligue o microfone'];
       const REWARD_STATUS_ICON_PATHS = {
         same: `${ACCESSKEY_PUBLIC_ROOT}/same.svg`,
         up: `${ACCESSKEY_PUBLIC_ROOT}/up.svg`,
@@ -6153,7 +6214,7 @@
       const STAGES = {
         1: { key: 'first-star', badge: 'First star', instruction: 'Fale ingles', showImage: true, showWord: true, wordType: 'english', subtitleType: 'portuguese', expected: 'english', autoAudio: true },
         2: { key: 'second-star', badge: 'Second star', instruction: 'Escreva portugues', showImage: true, showWord: true, wordType: 'english', subtitleType: 'none', expected: 'portuguese', autoAudio: false, inputMode: 'typing', typingMode: 'portuguese' },
-        3: { key: 'third-star', badge: 'Third star', instruction: 'Fale ingles', showImage: false, showWord: false, wordType: 'portuguese', subtitleType: 'none', expected: 'english', autoAudio: false, placeholderUsesPortuguese: true, revealOnHit: true },
+        3: { key: 'third-star', badge: 'Third star', instruction: 'Fale ingles', showImage: true, showWord: false, wordType: 'portuguese', subtitleType: 'none', expected: 'english', autoAudio: false, placeholderUsesPortuguese: false, revealOnHit: false },
         4: { key: 'fourth-star', badge: 'Fourth star', instruction: 'Escreva ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false, inputMode: 'typing', typingMode: 'english' },
         5: { key: 'fifth-star', badge: 'Fifth star', instruction: 'Fale ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false }
       };
@@ -6276,6 +6337,9 @@
           recognition: null,
           typingKeyAudioPool: [],
           typingKeyAudioIndex: 0,
+          stageHintTimer: 0,
+          stageHintIndex: 0,
+          fifthStarHintDismissed: false,
           paused: false,
           reportCardId: '',
           tutorial: createTutorialState()
@@ -11339,6 +11403,84 @@
         }
       }
 
+      function updateGuestFirstStarResultsBanner(entry, micActive = false) {
+        if (!els.gameResultsScreen) return;
+        const isFirstStar = Boolean(entry && Number(entry.stage) === 1);
+        const isGuest = !state.user?.id;
+        if (!isFirstStar || !isGuest) {
+          els.gameResultsScreen.style.display = 'none';
+          els.gameResultsScreen.textContent = '';
+          els.gameResultsScreen.setAttribute('aria-hidden', 'true');
+          return;
+        }
+        els.gameResultsScreen.style.display = 'flex';
+        els.gameResultsScreen.textContent = micActive
+          ? 'Microfone ligado'
+          : 'Toque para ligar o microfone';
+        els.gameResultsScreen.setAttribute('aria-hidden', 'false');
+      }
+
+      function clearStageHintLoop({ clearStatus = false } = {}) {
+        if (state.game.stageHintTimer) {
+          window.clearInterval(state.game.stageHintTimer);
+          state.game.stageHintTimer = 0;
+        }
+        state.game.stageHintIndex = 0;
+        if (clearStatus) {
+          const phaseKey = safeText(els.game?.dataset?.phaseKey);
+          if (phaseKey === 'third-star' || phaseKey === 'fifth-star') {
+            setGameStatus('', '');
+          }
+        }
+      }
+
+      function isFifthStarEntry(entry) {
+        return Boolean(entry && Number(entry.stage) === 5);
+      }
+
+      function shouldShowStageHintLoop(entry) {
+        if (!entry || !state.game.active || state.game.listening) return false;
+        const stage = Number(entry.stage) || 0;
+        if (stage === 3) {
+          return !state.user?.id;
+        }
+        if (stage === 5) {
+          return !state.game.fifthStarHintDismissed;
+        }
+        return false;
+      }
+
+      function stageHintMessagesForEntry(entry) {
+        const stage = Number(entry?.stage) || 0;
+        if (stage === 3) return THIRD_STAR_HINT_MESSAGES;
+        if (stage === 5) return FIFTH_STAR_HINT_MESSAGES;
+        return [];
+      }
+
+      function startStageHintLoop(entry) {
+        if (!shouldShowStageHintLoop(entry)) {
+          clearStageHintLoop();
+          return;
+        }
+        clearStageHintLoop();
+        const applyMessage = () => {
+          if (!shouldShowStageHintLoop(entry) || state.game.currentId !== entry.id) {
+            clearStageHintLoop();
+            return;
+          }
+          const messages = stageHintMessagesForEntry(entry);
+          if (!messages.length) {
+            clearStageHintLoop();
+            return;
+          }
+          const message = messages[state.game.stageHintIndex % messages.length];
+          state.game.stageHintIndex = (state.game.stageHintIndex + 1) % messages.length;
+          setGameStatus(message, 'live');
+        };
+        applyMessage();
+        state.game.stageHintTimer = window.setInterval(applyMessage, FIFTH_STAR_HINT_ROTATION_MS);
+      }
+
       function clearGameStatusRankTimer() {
         if (!state.ui.gameStatusRankTimer) return;
         window.clearTimeout(state.ui.gameStatusRankTimer);
@@ -11377,6 +11519,7 @@
       }
 
       function showRewardGameStatus() {
+        clearStageHintLoop();
         const flashcardsCount = accessibleFlashcardsCount();
         state.ui.gameStatusRankToken += 1;
         const token = state.ui.gameStatusRankToken;
@@ -12194,13 +12337,18 @@
 
       function buildTypingDisplayMarkup(typingState, typedLetters, options = {}) {
         const displayText = formatTypingDisplayText(typingState?.sourceText || typingState?.acceptedAnswer || '');
+        const typed = String(typedLetters || '').toUpperCase();
+        const promptText = safeText(options.promptText);
+        if (promptText && !typed) {
+          return `<span class="flashcards-typing__display-prompt">${escapeHtml(promptText)}</span>`;
+        }
         if (!displayText) return '&nbsp;';
 
-        const typed = String(typedLetters || '').toUpperCase();
         const revealAll = Boolean(options.revealAll);
         const hintStart = Math.max(0, Number(options.hintStart) || 0);
         const hintLength = Math.max(0, Number(options.hintLength) || 0);
         const alwaysVisible = Boolean(options.alwaysVisible);
+        const hideUnfilled = Boolean(options.hideUnfilled);
         let normalizedLetterIndex = 0;
 
         return splitTypingDisplayText(displayText).map((line) => {
@@ -12220,6 +12368,7 @@
 
             const classNames = ['flashcards-typing__display-letter'];
             if (alwaysVisible) classNames.push('is-dimmed');
+            if (!typedChar && hideUnfilled && !revealAll && !alwaysVisible) classNames.push('is-hidden-unfilled');
             if (typedChar) classNames.push('is-filled');
             if (isHint) classNames.push('is-hint');
 
@@ -12325,6 +12474,10 @@
           playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
           await wait(1000);
           if (!state.game.active || state.game.currentId !== entry.id) return true;
+          if (entry.typingMistakes >= 2) {
+            await handleRecognitionResult('', 'typing');
+            return true;
+          }
           setTypingKeysDisabled(grid, false);
           return false;
         }
@@ -12412,7 +12565,14 @@
         display.className = 'flashcards-typing__display flashcards-typing__display--visual';
         display.classList.toggle('is-star-phase-copy', isPlaytalkStarTypingStage(entry));
         const renderTyped = () => {
-          renderTypingDisplay(display, typingState, typed, entry.stage === 2 ? { alwaysVisible: true } : {});
+          renderTypingDisplay(
+            display,
+            typingState,
+            typed,
+            entry.stage === 2
+              ? { hideUnfilled: true, promptText: 'Digite em português' }
+              : {}
+          );
         };
         renderTyped();
 
@@ -12487,6 +12647,7 @@
           clearGameLanguageSwapTimer();
           clearTypingPromptLoop();
           clearStageTwoHintTimer();
+          clearStageHintLoop({ clearStatus: true });
           state.game.footerNavPrimed = false;
           state.game.footerNavPrimeKey = '';
           syncFooterGuardState(null);
@@ -12509,6 +12670,7 @@
             els.gameCard.style.display = 'none';
             els.gameEnd.classList.add('is-visible');
           }
+          updateGuestFirstStarResultsBanner(null, false);
           state.game.currentCardTrainingId = '';
           state.game.currentCardTrainingStartedAt = 0;
           return;
@@ -12530,6 +12692,9 @@
           || stageConfig.key === 'third-star'
           || stageConfig.key === 'fifth-star';
         const typingStage = isTypingStage(entry);
+        if (typingStage) {
+          entry.typingMistakes = 0;
+        }
         els.game.dataset.phaseKey = stageConfig.key || '';
         syncGamePhaseWordHost(stageConfig.key || '');
         els.gameCard.style.display = '';
@@ -12634,8 +12799,14 @@
           els.gameSubword.classList.toggle('is-hidden', !subword);
           els.gameSubword.style.display = subword ? '' : 'none';
         }
+        if (shouldShowStageHintLoop(entry)) {
+          startStageHintLoop(entry);
+        } else {
+          clearStageHintLoop();
+        }
         renderStars(entry.stars);
         els.gameStarCopy.textContent = '';
+        updateGuestFirstStarResultsBanner(entry, false);
         updateGameChips();
         scheduleStageTwoHintLoop(entry);
         if (maybeRunTutorialSequence(entry, card)) {
@@ -12677,6 +12848,7 @@
       function nextGameCardForPool(pool = 'base') {
         const activeIds = new Set(Array.from(state.game.entries.keys()));
         const earlyRestricted = shouldRestrictEarlyFlashcards();
+        const shouldForcePlanetFirst = pool === 'base' && state.game.entries.size === 0 && !hasTutorialPlanetUnlocked();
         let preferredSource = pool === 'review'
           ? readyReviewCards().filter(card => !activeIds.has(card.id))
           : baseCandidateCards().filter(card => !activeIds.has(card.id));
@@ -12695,7 +12867,7 @@
         let nextCard = (pool === 'review' && preferredSource.length)
           ? sourceCards[0]
           : takeRandom(sourceCards, 1)[0];
-        if (pool === 'base' && state.game.entries.size === 0) {
+        if (shouldForcePlanetFirst) {
           const tutorialCard = findTutorialPlanetCard();
           if (tutorialCard && sourceCards.some((card) => card.id === tutorialCard.id)) {
             nextCard = tutorialCard;
@@ -13015,6 +13187,7 @@
         clearGameLanguageSwapTimer();
         clearTypingPromptLoop();
         clearStageTwoHintTimer();
+        clearStageHintLoop({ clearStatus: true });
         clearPendingRewardSeal();
         closeGameReportMenu();
         state.game.paused = true;
@@ -13191,6 +13364,8 @@
         clearGameLanguageSwapTimer();
         clearTypingPromptLoop();
         clearStageTwoHintTimer();
+        clearStageHintLoop({ clearStatus: true });
+        state.game.fifthStarHintDismissed = false;
         clearPendingRewardSeal();
         advanceReadyMemorizations();
         if (!hasTutorialPlanetUnlocked()) {
@@ -13212,7 +13387,8 @@
           state.game.contextLimit = GAME_ACTIVE_CARD_CAP;
           const reviewLimit = Math.min(REVIEW_SLOT_LIMIT, Math.floor(roundCount / 3));
           const reviewCards = readyReviewCards().slice(0, reviewLimit);
-          const tutorialCard = findTutorialPlanetCard();
+          const shouldForcePlanetFirst = !hasTutorialPlanetUnlocked();
+          const tutorialCard = shouldForcePlanetFirst ? findTutorialPlanetCard() : null;
           const basePool = applyEarlyFlashcardFilter(baseCandidateCards());
           const chosenCards = [];
           if (tutorialCard && basePool.some((card) => card.id === tutorialCard.id)) {
@@ -13267,6 +13443,8 @@
         clearGameLanguageSwapTimer();
         clearTypingPromptLoop();
         clearStageTwoHintTimer();
+        clearStageHintLoop({ clearStatus: true });
+        state.game.fifthStarHintDismissed = false;
         clearPendingRewardSeal();
         resetTutorialRuntime({ preserveCompletion: true });
         state.game.entries.clear();
@@ -13310,6 +13488,8 @@
         clearGameLanguageSwapTimer();
         clearTypingPromptLoop();
         clearStageTwoHintTimer();
+        clearStageHintLoop({ clearStatus: true });
+        state.game.fifthStarHintDismissed = false;
         clearPendingRewardSeal();
         resetTutorialRuntime({ preserveCompletion: true });
         state.game.active = false;
@@ -13355,6 +13535,9 @@
         updateGameChips();
 
         if (isHit) {
+          if (evaluatedStage === 5) {
+        clearStageHintLoop({ clearStatus: true });
+          }
           entry.stars += 1;
           entry.stage = Math.min(entry.stars + 1, GAME_STAR_TARGET);
           entry.missesWithoutStars = 0;
@@ -13415,7 +13598,8 @@
             await animateStarLossSequence(starsBeforeMiss, card);
           } else {
             entry.missesWithoutStars += 1;
-            if (entry.missesWithoutStars >= 3) {
+            const missLimit = evaluatedStage === 1 ? 1 : 3;
+            if (entry.missesWithoutStars >= missLimit) {
               setGameStatus('', 'miss');
               removeGameEntry(entry.id);
               refillGameEntry(entry.pool);
@@ -13494,6 +13678,10 @@
         }
 
         cleanupGameRecognition();
+        clearStageHintLoop({ clearStatus: true });
+        if (isFifthStarEntry(entry)) {
+          state.game.fifthStarHintDismissed = true;
+        }
         if (entry.stage !== 1) {
           stopActiveAudio();
         }
@@ -13502,6 +13690,7 @@
         els.gameCard.classList.add('is-listening');
         els.gameVisual.classList.add('is-mic-live');
         setGameStatus('', 'live');
+        updateGuestFirstStarResultsBanner(entry, true);
 
         const recognitionLanguage = entry.stage === 2 ? 'pt-BR' : 'en-US';
 
@@ -13515,7 +13704,12 @@
           if (state.game.active && state.game.currentId === entry.id) {
             state.game.canListen = true;
             renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
-            setGameStatus(statusText, 'live');
+            if (shouldShowStageHintLoop(entry) && statusText === 'Toque para falar') {
+              startStageHintLoop(entry);
+            } else {
+              setGameStatus(statusText, 'live');
+            }
+            updateGuestFirstStarResultsBanner(entry, false);
           }
         };
         const resolveRecognitionTranscript = (results) => Array.from(results || []).reduce((best, result) => {
@@ -13541,6 +13735,8 @@
           renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
           els.gameCard.classList.remove('is-listening');
           els.gameVisual.classList.remove('is-mic-live');
+          clearStageHintLoop();
+          updateGuestFirstStarResultsBanner(entry, false);
         };
         const tryOpenAiFallback = async (reason = '') => {
           if (!openAiSpeech) return false;
