@@ -50,6 +50,9 @@
       --radius: 28px;
       --flashcards-visual-drop: -60px;
       --flashcards-chip-drop: -60px;
+      --flashcards-visual-phase-drop: 0px;
+      --flashcards-chip-phase-drop: 0px;
+      --flashcards-stars-drop: 50px;
       --flashcards-typing-visual-drop: 6px;
       --flashcards-typing-display-drop: 22px;
       --flashcards-image-shift: 80px;
@@ -73,24 +76,16 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      background: lightblue;
+      background: #041226 url('/accesskey/quantum-gradient.svg') center/cover no-repeat;
       overflow: hidden;
       pointer-events: none;
       z-index: 0;
     }
 
     .container::before {
-      content: "";
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background:
-        radial-gradient(circle, #3498db 10%, transparent 20%),
-        radial-gradient(circle, transparent 10%, #3498db 20%);
-      background-size: 30px 30px;
-      animation: moveBackground 8s linear infinite;
+      content: none;
+      animation: none;
+      background: none;
     }
 
     @keyframes moveBackground {
@@ -345,7 +340,7 @@
       background: transparent;
       padding: 2px 10px 0;
       color: rgba(255, 255, 255, 0.92);
-      font-size: 12px;
+      font-size: 19px;
       line-height: 1.2;
       text-decoration: none;
       cursor: pointer;
@@ -2450,12 +2445,12 @@
     }
 
     .game-card:not(.is-typing-stage) .game-card__visual {
-      transform: translateY(var(--flashcards-visual-drop));
+      transform: translateY(calc(var(--flashcards-visual-drop) + var(--flashcards-visual-phase-drop)));
     }
 
     .game-card:not(.is-typing-stage) .game-card__content {
       width: 100%;
-      transform: translateY(var(--flashcards-chip-drop));
+      transform: translateY(calc(var(--flashcards-chip-drop) + var(--flashcards-chip-phase-drop)));
     }
 
     .game-card__visual > img:not(.game-card__seal),
@@ -2898,6 +2893,7 @@
     .stars-wrap {
       order: 2;
       margin-top: 6px;
+      transform: translateY(var(--flashcards-stars-drop));
     }
 
     .game-word,
@@ -3206,6 +3202,33 @@
       text-transform: uppercase;
       cursor: pointer;
       transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
+    }
+
+    .game[data-phase-key="fourth-star"] .flashcards-typing__key {
+      background:
+        linear-gradient(145deg, rgba(2, 12, 38, 0.96) 0%, rgba(10, 33, 92, 0.94) 54%, rgba(4, 18, 56, 0.98) 100%),
+        url('SVG/codex-icons/ingles.svg'),
+        radial-gradient(circle at 50% 20%, rgba(72, 178, 255, 0.42), rgba(72, 178, 255, 0) 62%);
+      background-repeat: no-repeat, no-repeat, no-repeat;
+      background-position: center, center, center;
+      background-size: cover, 58%, 100%;
+      color: #8fd9ff;
+      text-shadow: 0 0 10px rgba(92, 201, 255, 0.9), 0 0 22px rgba(31, 118, 255, 0.55);
+      box-shadow:
+        inset 0 0 0 1px rgba(105, 207, 255, 0.22),
+        inset 0 0 24px rgba(37, 118, 255, 0.18),
+        0 0 16px rgba(24, 125, 255, 0.24);
+    }
+
+    .game[data-phase-key="fourth-star"] .flashcards-typing__key:hover {
+      filter: brightness(1.08) drop-shadow(0 0 14px rgba(69, 183, 255, 0.46));
+    }
+
+    .game[data-phase-key="first-star"],
+    .game[data-phase-key="third-star"],
+    .game[data-phase-key="fifth-star"] {
+      --flashcards-visual-phase-drop: 100px;
+      --flashcards-chip-phase-drop: 100px;
     }
 
     .flashcards-typing__key:hover {
@@ -4579,7 +4602,7 @@
         <p class="welcome-gate__copy" id="welcomeCopy">Flu&#234;ncia f&#225;cil</p>
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button">JOGAR AGORA</button>
       </div>
-      <a class="welcome-gate__account-link" id="welcomeAccountLink" href="/signup">J&aacute; tenho conta</a>
+      <a class="welcome-gate__account-link" id="welcomeAccountLink" href="/accounts">Entrar com minha conta</a>
     </div>
   </section>
   <section class="robotcheck" id="robotcheck" aria-label="Robot check">
@@ -6533,8 +6556,8 @@
       function syncWelcomeAccountLink() {
         if (!els.welcomeAccountLink) return;
         const isLoggedIn = Boolean(state.user?.id);
-        els.welcomeAccountLink.textContent = isLoggedIn ? 'Sair da conta' : 'Já tenho conta';
-        els.welcomeAccountLink.setAttribute('href', isLoggedIn ? '#' : '/signup');
+        els.welcomeAccountLink.textContent = isLoggedIn ? 'Sair da conta' : 'Entrar com minha conta';
+        els.welcomeAccountLink.setAttribute('href', isLoggedIn ? '#' : '/accounts');
       }
 
       function syncWelcomeGate() {
@@ -11306,6 +11329,7 @@
         cleanupGameRecognition();
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) {
+          els.game.removeAttribute('data-phase-key');
           clearGameStatusRankTimer();
           clearGameLanguageSwapTimer();
           clearStageTwoHintTimer();
@@ -11338,6 +11362,7 @@
         const card = cardById(entry.id);
         const stageConfig = resolveGameStageConfig(entry);
         const typingStage = isTypingStage(entry);
+        els.game.dataset.phaseKey = stageConfig.key || '';
         els.gameCard.style.display = '';
         els.gameCard.classList.toggle('is-typing-stage', typingStage);
         els.gameEnd.classList.remove('is-visible');

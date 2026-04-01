@@ -5750,6 +5750,8 @@ app.use((req, res, next) => {
     '/users/',
     '/account',
     '/account/',
+    '/accounts',
+    '/accounts/',
     '/storage',
     '/storage/',
     '/storage-debug',
@@ -5890,7 +5892,7 @@ app.get(['/password', '/password/'], (req, res) => {
 });
 
 app.get(['/signup', '/signup/'], (req, res) => {
-  res.sendFile(path.join(staticDir, 'signup.html'));
+  res.redirect(302, '/accounts');
 });
 
 app.get(['/premium', '/premium/'], (req, res) => {
@@ -5905,7 +5907,7 @@ app.get(['/users', '/users/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'users.html'));
 });
 
-app.get(['/account', '/account/'], (req, res) => {
+app.get(['/account', '/account/', '/accounts', '/accounts/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'account.html'));
 });
 
