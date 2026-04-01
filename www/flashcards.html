@@ -3369,7 +3369,13 @@
     }
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-star-phase-copy {
-      font-family: "Soopafre", Arial, sans-serif;
+      font-family: "Pltay", "Soopafre", Arial, sans-serif;
+      font-size: clamp(39px, 12.7vw, 78px);
+    }
+
+    .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual.is-star-phase-copy {
+      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: clamp(39px, 12.7vw, 78px);
     }
 
     .flashcards-typing__display-letter {
@@ -6179,6 +6185,9 @@
       const FIFTH_STAR_HINT_ROTATION_MS = 1500;
       const FIFTH_STAR_HINT_MESSAGES = ['Toque para ligar o microfone', 'Fale inglês'];
       const THIRD_STAR_HINT_MESSAGES = ['Fale em inglês', 'Toque e ligue o microfone'];
+      const SECOND_STAR_IDLE_HINT_DELAY_MS = 4000;
+      const SECOND_STAR_IDLE_HINT_ROTATION_MS = 750;
+      const SECOND_STAR_IDLE_HINT_MESSAGES = ['Digite Português', 'Type portuguese'];
       const REWARD_STATUS_ICON_PATHS = {
         same: `${ACCESSKEY_PUBLIC_ROOT}/same.svg`,
         up: `${ACCESSKEY_PUBLIC_ROOT}/up.svg`,
@@ -6361,6 +6370,9 @@
           currentCardTrainingStartedAt: 0,
           canListen: false,
           typingPromptLoopTimer: 0,
+          secondStarIdleHintDelayTimer: 0,
+          secondStarIdleHintRotateTimer: 0,
+          secondStarIdleHintIndex: 0,
           recognition: null,
           typingKeyAudioPool: [],
           typingKeyAudioIndex: 0,
@@ -11236,10 +11248,24 @@
       }
 
       function clearTypingPromptLoop() {
-        if (!state.game.typingPromptLoopTimer) return;
-        window.clearTimeout(state.game.typingPromptLoopTimer);
-        window.clearInterval(state.game.typingPromptLoopTimer);
-        state.game.typingPromptLoopTimer = 0;
+        if (state.game.typingPromptLoopTimer) {
+          window.clearTimeout(state.game.typingPromptLoopTimer);
+          window.clearInterval(state.game.typingPromptLoopTimer);
+          state.game.typingPromptLoopTimer = 0;
+        }
+        clearSecondStarIdleHintTimers();
+      }
+
+      function clearSecondStarIdleHintTimers() {
+        if (state.game.secondStarIdleHintDelayTimer) {
+          window.clearTimeout(state.game.secondStarIdleHintDelayTimer);
+          state.game.secondStarIdleHintDelayTimer = 0;
+        }
+        if (state.game.secondStarIdleHintRotateTimer) {
+          window.clearInterval(state.game.secondStarIdleHintRotateTimer);
+          state.game.secondStarIdleHintRotateTimer = 0;
+        }
+        state.game.secondStarIdleHintIndex = 0;
       }
 
       function clearStageTwoHintTimer() {
@@ -12564,6 +12590,7 @@
           : (els.gameControlsProxy || els.gameTypingKeyboard.parentElement);
         if (!isTypingStage(entry) || !card) {
           clearTypingPromptLoop();
+          clearSecondStarIdleHintTimers();
           els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
           els.gameTypingKeyboard.innerHTML = '';
           els.gameTypingKeyboard.classList.remove('is-visible');
@@ -12579,6 +12606,7 @@
         const target = typingState.normalizedTarget.replace(/\s/g, '');
         if (!target) {
           clearTypingPromptLoop();
+          clearSecondStarIdleHintTimers();
           els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
           els.gameTypingKeyboard.innerHTML = '';
           els.gameTypingKeyboard.classList.remove('is-visible');
@@ -12600,11 +12628,37 @@
             typingState,
             typed,
             entry.stage === 2
-              ? { hideUnfilled: true, promptText: 'Digite em português' }
+              ? { hideUnfilled: true }
               : {}
           );
         };
         renderTyped();
+
+        const startSecondStarIdleHintRotation = () => {
+          if (entry.stage !== 2) return;
+          clearSecondStarIdleHintTimers();
+          state.game.secondStarIdleHintDelayTimer = window.setTimeout(() => {
+            if (!state.game.active || state.game.currentId !== entry.id || entry.stage !== 2 || typed.length > 0) return;
+            const renderHint = () => {
+              if (!state.game.active || state.game.currentId !== entry.id || entry.stage !== 2 || typed.length > 0) {
+                clearSecondStarIdleHintTimers();
+                renderTyped();
+                return;
+              }
+              const promptText = SECOND_STAR_IDLE_HINT_MESSAGES[
+                state.game.secondStarIdleHintIndex % SECOND_STAR_IDLE_HINT_MESSAGES.length
+              ];
+              state.game.secondStarIdleHintIndex = (state.game.secondStarIdleHintIndex + 1) % SECOND_STAR_IDLE_HINT_MESSAGES.length;
+              renderTypingDisplay(display, typingState, '', { hideUnfilled: true, promptText });
+            };
+            renderHint();
+            state.game.secondStarIdleHintRotateTimer = window.setInterval(renderHint, SECOND_STAR_IDLE_HINT_ROTATION_MS);
+          }, SECOND_STAR_IDLE_HINT_DELAY_MS);
+        };
+
+        if (entry.stage === 2) {
+          startSecondStarIdleHintRotation();
+        }
 
         const grid = document.createElement('div');
         grid.className = 'flashcards-typing__grid';
@@ -12618,6 +12672,9 @@
           key.style.setProperty('--typing-key-bg', typingPalette[index % typingPalette.length]);
           key.addEventListener('click', async () => {
             if (!state.game.active || state.game.paused || state.game.listening || state.game.currentId !== entry.id) return;
+            if (entry.stage === 2) {
+              clearSecondStarIdleHintTimers();
+            }
             playTypingKeyAudio();
             const expectedLetter = target[typed.length];
             if (letter !== expectedLetter) {
@@ -12625,6 +12682,9 @@
               const finished = await handleTypingMistake(entry, card, grid, typedLengthBeforeReset);
               if (!finished) {
                 renderTyped();
+                if (entry.stage === 2 && typed.length === 0) {
+                  startSecondStarIdleHintRotation();
+                }
               }
               return;
             }
@@ -12634,6 +12694,7 @@
             if (typed.length === target.length) {
               setTypingKeysDisabled(grid, true);
               await handleRecognitionResult(typingState.acceptedAnswer || typingState.sourceText || '', 'typing');
+              return;
             }
           });
           grid.appendChild(key);
@@ -12653,6 +12714,7 @@
           startTypingPromptLoop(entry, card);
         } else {
           clearTypingPromptLoop();
+          clearSecondStarIdleHintTimers();
         }
       }
 
