@@ -9,6 +9,7 @@
   const FLUENCY_JOURNEY_BADGE_SRC = 'SVG/game-context/rocket.svg';
   const SINGLE_GAME_BADGE_SRC = 'SVG/game-context/play.svg';
   const FOOTER_HOME_ROCKET_ICON = 'SVG/game-context/rocket.svg';
+  let memoryState = null;
 
   const DEFAULT_STATE = {
     avatar: DEFAULT_AVATAR,
@@ -180,22 +181,15 @@
   }
 
   function read() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { ...DEFAULT_STATE };
-      return sanitizeState(JSON.parse(raw));
-    } catch (_error) {
-      return { ...DEFAULT_STATE };
+    if (!memoryState) {
+      memoryState = sanitizeState({ ...DEFAULT_STATE });
     }
+    return { ...memoryState };
   }
 
   function write(nextState) {
     const safe = sanitizeState(nextState);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(safe));
-    } catch (_error) {
-      // ignore write failure
-    }
+    memoryState = { ...safe };
     document.dispatchEvent(new CustomEvent('playtalk:player-state-change', {
       detail: { state: safe }
     }));
@@ -242,12 +236,7 @@
   }
 
   function readJsonStorage(key) {
-    try {
-      const raw = JSON.parse(localStorage.getItem(key) || '{}');
-      return raw && typeof raw === 'object' ? raw : {};
-    } catch (_error) {
-      return {};
-    }
+    return {};
   }
 
   function readJourneyProgressPercent() {
@@ -289,8 +278,7 @@
   }
 
   function readJourneyDay() {
-    const stored = Number.parseInt(localStorage.getItem('vocabulary-level') || '', 10);
-    return Number.isFinite(stored) && stored > 0 ? stored : 1;
+    return 1;
   }
 
   function renderHeader(state = read()) {
@@ -364,6 +352,12 @@
   };
 
   window.playtalkPlayerState = api;
+
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (_error) {
+    // ignore cleanup failure
+  }
 
   document.addEventListener('playtalk:view-change', () => {
     api.renderHeader();

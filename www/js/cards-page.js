@@ -156,7 +156,7 @@
       if (window.playtalkPlayerState && typeof window.playtalkPlayerState.get === 'function') {
         return window.playtalkPlayerState.get() || {};
       }
-      return JSON.parse(localStorage.getItem(PLAYER_STORAGE_KEY) || '{}') || {};
+      return {};
     } catch (_error) {
       return {};
     }

@@ -5607,23 +5607,43 @@
         return storageKeyForUser(baseKey, state.user?.id);
       }
 
-      function readScopedStorage(baseKey, fallback, userId = state.user?.id) {
+      function clearFlashcardsLocalStorage() {
+        const scopedKeys = [
+          OWNED_STORAGE_KEY,
+          USER_PROGRESS_STORAGE_KEY,
+          USER_HIDDEN_STORAGE_KEY,
+          USER_STATS_STORAGE_KEY,
+          TUTORIAL_PROGRESS_STORAGE_KEY,
+          GAME_SESSION_STORAGE_KEY
+        ];
+        const directKeys = [
+          CARDS_CACHE_STORAGE_KEY,
+          TIME_OFFSET_STORAGE_KEY,
+          SOUND_TEST_COMPLETED_STORAGE_KEY,
+          SOUND_TEST_LAUNCH_TARGET_STORAGE_KEY,
+          WATCH_SETTINGS_KEY,
+          'playtalk_player_profile',
+          'playtalk-player-state'
+        ];
         try {
-          const raw = localStorage.getItem(storageKeyForUser(baseKey, userId));
-          if (raw == null) return fallback;
-          const parsed = JSON.parse(raw);
-          return parsed == null ? fallback : parsed;
+          scopedKeys.forEach((baseKey) => {
+            localStorage.removeItem(baseKey);
+            for (let userId = 0; userId <= 999; userId += 1) {
+              localStorage.removeItem(storageKeyForUser(baseKey, userId));
+            }
+          });
+          directKeys.forEach((key) => localStorage.removeItem(key));
         } catch (_error) {
-          return fallback;
+          // ignore storage cleanup failures
         }
       }
 
+      function readScopedStorage(baseKey, fallback, userId = state.user?.id) {
+        return fallback;
+      }
+
       function removeScopedStorage(baseKey, userId = state.user?.id) {
-        try {
-          localStorage.removeItem(storageKeyForUser(baseKey, userId));
-        } catch (_error) {
-          // ignore
-        }
+        return undefined;
       }
 
       function readTutorialProgressForUser(userId = state.user?.id) {
@@ -5636,9 +5656,7 @@
       }
 
       function persistTutorialProgressLocally() {
-        localStorage.setItem(userScopedStorageKey(TUTORIAL_PROGRESS_STORAGE_KEY), JSON.stringify({
-          completed: Boolean(state.game.tutorial.completed)
-        }));
+        return undefined;
       }
 
       function normalizeSavedGameEntry(raw) {
@@ -5670,16 +5688,7 @@
       }
 
       function persistGameSessionLocally() {
-        try {
-          const snapshot = serializeCurrentGameState();
-          if (!snapshot) {
-            removeScopedStorage(GAME_SESSION_STORAGE_KEY);
-            return;
-          }
-          localStorage.setItem(userScopedStorageKey(GAME_SESSION_STORAGE_KEY), JSON.stringify(snapshot));
-        } catch (_error) {
-          // ignore storage issues
-        }
+        return undefined;
       }
 
       function clearGameSessionLocally(userId = state.user?.id) {
@@ -5687,21 +5696,7 @@
       }
 
       function readGameSessionForUser(userId = state.user?.id) {
-        const parsed = readScopedStorage(GAME_SESSION_STORAGE_KEY, null, userId);
-        const entries = Array.isArray(parsed?.entries)
-          ? parsed.entries.map(normalizeSavedGameEntry).filter((entry) => entry && cardById(entry.id))
-          : [];
-        if (!entries.length) return null;
-        const validIds = new Set(entries.map((entry) => entry.id));
-        return {
-          entries,
-          queue: Array.isArray(parsed?.queue)
-            ? parsed.queue.map((id) => safeText(id)).filter((id) => validIds.has(id))
-            : [],
-          currentId: validIds.has(parsed?.currentId) ? safeText(parsed.currentId) : '',
-          selectedCount: normalizeGameCount(parsed?.selectedCount) || DEFAULT_GAME_CONTEXT_LIMIT,
-          contextLimit: Math.max(DEFAULT_GAME_CONTEXT_LIMIT, Math.min(GAME_ACTIVE_CARD_CAP, Number(parsed?.contextLimit) || GAME_ACTIVE_CARD_CAP))
-        };
+        return null;
       }
 
       function setTutorialCompleted(completed) {
@@ -5721,7 +5716,7 @@
       }
 
       function persistOwnedIdsLocally() {
-        localStorage.setItem(userScopedStorageKey(OWNED_STORAGE_KEY), JSON.stringify(Array.from(state.ownedIds)));
+        return undefined;
       }
 
       function getNowMs() {
@@ -5729,37 +5724,19 @@
       }
 
       function readTimeOffsetMs() {
-        try {
-          const parsed = Number(localStorage.getItem(TIME_OFFSET_STORAGE_KEY) || '0');
-          return Number.isFinite(parsed) ? parsed : 0;
-        } catch (_error) {
-          return 0;
-        }
+        return 0;
       }
 
       function saveTimeOffsetMs() {
-        localStorage.setItem(TIME_OFFSET_STORAGE_KEY, String(Number(state.timeOffsetMs) || 0));
+        return undefined;
       }
 
       function readCachedCards() {
-        try {
-          const parsed = JSON.parse(localStorage.getItem(CARDS_CACHE_STORAGE_KEY) || 'null');
-          const cards = Array.isArray(parsed?.cards) ? parsed.cards : [];
-          return cards.filter((card) => card && typeof card === 'object' && safeText(card.id));
-        } catch (_error) {
-          return [];
-        }
+        return [];
       }
 
       function saveCachedCards(cards) {
-        try {
-          localStorage.setItem(CARDS_CACHE_STORAGE_KEY, JSON.stringify({
-            savedAt: Date.now(),
-            cards: Array.isArray(cards) ? cards : []
-          }));
-        } catch (_error) {
-          // ignore storage quota issues
-        }
+        return undefined;
       }
 
       function normalizeStatsSnapshot(raw) {
@@ -5786,11 +5763,7 @@
       }
 
       function persistUserStatsLocally() {
-        localStorage.setItem(userScopedStorageKey(USER_STATS_STORAGE_KEY), JSON.stringify({
-          playTimeMs: Math.max(0, Math.round(Number(state.stats.playTimeMs) || 0)),
-          speakings: Math.max(0, Math.round(Number(state.stats.speakings) || 0)),
-          listenings: Math.max(0, Math.round(Number(state.stats.listenings) || 0))
-        }));
+        return undefined;
       }
 
       function saveUserStats(options = {}) {
@@ -5837,24 +5810,7 @@
       }
 
       function readUserProgressForUser(userId = state.user?.id) {
-        const parsed = readScopedStorage(USER_PROGRESS_STORAGE_KEY, null, userId);
-        const records = Array.isArray(parsed) ? parsed.map(normalizeProgressRecord).filter(Boolean) : [];
-        if (records.length) {
-          return new Map(records.map(record => [record.cardId, record]));
-        }
-
-        const legacyOwnedIds = readOwnedIdsForUser(userId);
-        const now = Date.now();
-        return new Map(legacyOwnedIds.map((cardId, index) => [cardId, createProgressRecord(cardId, {
-          phaseIndex: 1,
-          targetPhaseIndex: 1,
-          status: 'ready',
-          memorizingStartedAt: 0,
-          memorizingDurationMs: 0,
-          availableAt: now - 1,
-          returnedAt: now + index,
-          createdAt: now + index
-        })]));
+        return new Map();
       }
 
       function readUserProgress() {
@@ -5863,8 +5819,7 @@
 
       function persistUserProgressLocally() {
         syncOwnedIdsFromProgress();
-        persistOwnedIdsLocally();
-        localStorage.setItem(userScopedStorageKey(USER_PROGRESS_STORAGE_KEY), JSON.stringify(Array.from(state.userCards.values())));
+        return undefined;
       }
 
       function readHiddenCardIdsForUser(userId = state.user?.id) {
@@ -5880,10 +5835,7 @@
       }
 
       function persistHiddenCardIdsLocally() {
-        localStorage.setItem(
-          userScopedStorageKey(USER_HIDDEN_STORAGE_KEY),
-          JSON.stringify(Array.from(state.hiddenCardIds.values()))
-        );
+        return undefined;
       }
 
       function saveUserProgress(options = {}) {
@@ -6557,20 +6509,7 @@
       }
 
       function readOptimisticWelcomeProgressCount() {
-        const candidateKeys = [USER_PROGRESS_STORAGE_KEY, OWNED_STORAGE_KEY];
-        let bestCount = 0;
-        try {
-          for (let index = 0; index < localStorage.length; index += 1) {
-            const key = localStorage.key(index);
-            if (!key || !candidateKeys.some((baseKey) => key === baseKey || key.startsWith(`${baseKey}:`))) continue;
-            const parsed = JSON.parse(localStorage.getItem(key) || 'null');
-            const count = Array.isArray(parsed) ? parsed.length : 0;
-            if (count > bestCount) bestCount = count;
-          }
-        } catch (_error) {
-          return 0;
-        }
-        return bestCount;
+        return 0;
       }
 
       function hasInstantWelcomePlayAccess() {
@@ -11553,24 +11492,11 @@
       }
 
       function readWatchSettings() {
-        try {
-          const parsed = JSON.parse(localStorage.getItem(WATCH_SETTINGS_KEY) || 'null');
-          return {
-            gapMs: [3000, 5000, 10000, 30000, 60000].includes(Number(parsed?.gapMs)) ? Number(parsed.gapMs) : 3000,
-            scope: parsed?.scope === 'mine' ? 'mine' : 'all',
-            music: parsed?.music === 'off' ? 'off' : 'on'
-          };
-        } catch (_error) {
-          return { gapMs: 3000, scope: 'all', music: 'on' };
-        }
+        return { gapMs: 3000, scope: 'all', music: 'on' };
       }
 
       function saveWatchSettings() {
-        localStorage.setItem(WATCH_SETTINGS_KEY, JSON.stringify({
-          gapMs: state.watch.gapMs,
-          scope: state.watch.scope,
-          music: state.watch.music
-        }));
+        return undefined;
       }
 
       function syncWatchControls() {
@@ -12792,6 +12718,7 @@
         const searchParams = new URLSearchParams(window.location.search);
         const requestedView = searchParams.get('view');
         const requestedPremiumOpen = searchParams.get('premium') === '1';
+        clearFlashcardsLocalStorage();
         state.entry.soundTestCompleted = readSoundTestCompletedFlag();
         state.timeOffsetMs = readTimeOffsetMs();
         loadSelectedGameCount();
