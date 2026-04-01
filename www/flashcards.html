@@ -1236,6 +1236,28 @@
       flex-wrap: wrap;
     }
 
+    .game-nav-actions {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .game-phase-word {
+      display: none;
+      margin: 0;
+      text-align: center;
+      font-family: "Soopafre", Arial, sans-serif;
+      font-size: clamp(30px, 6vw, 56px);
+      line-height: 0.95;
+      color: #ffffff;
+    }
+
+    .game-phase-word.is-visible {
+      display: block;
+    }
+
     .actions { justify-content: flex-end; }
 
     .btn,
@@ -3451,6 +3473,12 @@
       gap: 8px;
     }
 
+    .game[data-phase-key="first-star"] .starscreen #gameStarCopy,
+    .game[data-phase-key="third-star"] .starscreen #gameStarCopy,
+    .game[data-phase-key="fifth-star"] .starscreen #gameStarCopy {
+      display: none !important;
+    }
+
     .game[data-phase-key="first-star"] .circlescreen,
     .game[data-phase-key="third-star"] .circlescreen,
     .game[data-phase-key="fifth-star"] .circlescreen {
@@ -3463,6 +3491,21 @@
       padding: 8px 12px;
       margin: 0;
       position: relative;
+    }
+
+    .game[data-phase-key="first-star"] .circlescreen .game-card__layout,
+    .game[data-phase-key="third-star"] .circlescreen .game-card__layout,
+    .game[data-phase-key="fifth-star"] .circlescreen .game-card__layout,
+    .game[data-phase-key="first-star"] .circlescreen .game-card__visual,
+    .game[data-phase-key="third-star"] .circlescreen .game-card__visual,
+    .game[data-phase-key="fifth-star"] .circlescreen .game-card__visual {
+      display: contents !important;
+    }
+
+    .game[data-phase-key="first-star"] .circlescreen .game-card__content,
+    .game[data-phase-key="third-star"] .circlescreen .game-card__content,
+    .game[data-phase-key="fifth-star"] .circlescreen .game-card__content {
+      display: none !important;
     }
 
     .game[data-phase-key="first-star"] .circlescreen .game-card__layout,
@@ -3488,6 +3531,12 @@
       align-content: center;
       justify-content: center;
       margin: 0 auto;
+      width: 300px;
+      height: 300px;
+      max-width: 300px;
+      max-height: 300px;
+      border-radius: 50%;
+      overflow: hidden;
     }
 
     .game[data-phase-key="first-star"] .game-card__content,
@@ -3582,6 +3631,12 @@
     .game[data-phase-key="fifth-star"] #gameVisual .game-card__reveal-image {
       transform: none !important;
       margin: 0 auto;
+      width: 300px;
+      height: 300px;
+      max-width: 300px;
+      max-height: 300px;
+      border-radius: 50%;
+      object-fit: cover;
     }
 
     .game[data-phase-key="first-star"] .textscreen,
@@ -3603,6 +3658,13 @@
       display: none;
     }
 
+    .game[data-phase-key="first-star"] .textscreen .game-phase-word,
+    .game[data-phase-key="third-star"] .textscreen .game-phase-word,
+    .game[data-phase-key="fifth-star"] .textscreen .game-phase-word {
+      display: block;
+      width: min(92vw, 760px);
+    }
+
     .game[data-phase-key="first-star"] .navbarscreen,
     .game[data-phase-key="third-star"] .navbarscreen,
     .game[data-phase-key="fifth-star"] .navbarscreen {
@@ -3614,6 +3676,15 @@
       width: 100%;
       gap: 8px;
       padding: 0 8px;
+    }
+
+    .game[data-phase-key="first-star"] #gameNavActions,
+    .game[data-phase-key="third-star"] #gameNavActions,
+    .game[data-phase-key="fifth-star"] #gameNavActions {
+      display: flex;
+      max-width: min(420px, calc(100vw - 28px));
+      justify-content: space-evenly;
+      align-items: center;
     }
 
     .game[data-phase-key="first-star"] .navbarscreen .game-chip,
@@ -3862,11 +3933,26 @@
         font-size: 34px;
       }
 
-      .stars-wrap,
-      .game-card,
-      .game-status-slot,
-      .game-chip-row {
+      .game:not([data-phase-key="first-star"]):not([data-phase-key="third-star"]):not([data-phase-key="fifth-star"]) .stars-wrap,
+      .game:not([data-phase-key="first-star"]):not([data-phase-key="third-star"]):not([data-phase-key="fifth-star"]) .game-card,
+      .game:not([data-phase-key="first-star"]):not([data-phase-key="third-star"]):not([data-phase-key="fifth-star"]) .game-status-slot,
+      .game:not([data-phase-key="first-star"]):not([data-phase-key="third-star"]):not([data-phase-key="fifth-star"]) .game-chip-row {
         transform: translateY(-35px);
+      }
+
+      .game[data-phase-key="first-star"] .starscreen,
+      .game[data-phase-key="first-star"] .circlescreen,
+      .game[data-phase-key="first-star"] .textscreen,
+      .game[data-phase-key="first-star"] .navbarscreen,
+      .game[data-phase-key="third-star"] .starscreen,
+      .game[data-phase-key="third-star"] .circlescreen,
+      .game[data-phase-key="third-star"] .textscreen,
+      .game[data-phase-key="third-star"] .navbarscreen,
+      .game[data-phase-key="fifth-star"] .starscreen,
+      .game[data-phase-key="fifth-star"] .circlescreen,
+      .game[data-phase-key="fifth-star"] .textscreen,
+      .game[data-phase-key="fifth-star"] .navbarscreen {
+        transform: none;
       }
     }
 
@@ -5209,18 +5295,13 @@
                 <h3 class="game-word" id="gameWord">Preparando...</h3>
                 <p class="game-subword" id="gameSubword"></p>
               </div>
-              <div class="game-controls">
-                <button class="game-language-btn" id="gameLanguageBtn" type="button" tabindex="-1" aria-hidden="true">
-                  <img src="SVG/codex-icons/ingles.svg" alt="">
-                </button>
-                <button class="game-touch" id="gameTouchBtn" type="button">Fale ingles</button>
-              </div>
               <div class="flashcards-typing" id="gameTypingKeyboard" aria-hidden="true"></div>
             </div>
           </div>
         </article>
 
         <div class="game-status-slot textscreen" id="gameStatusSlot" aria-live="polite" aria-atomic="true">
+          <h3 class="game-phase-word" id="gamePhaseWord" aria-live="polite"></h3>
           <div class="game-status-wrap">
             <img class="game-status-icon" id="gameStatusIcon" alt="">
             <p class="game-status" id="gameStatus">Carregando rodada...</p>
@@ -5228,6 +5309,12 @@
         </div>
 
         <div class="game-chip-row navbarscreen" id="gameChipRow">
+          <div class="game-nav-actions" id="gameNavActions">
+            <button class="game-language-btn" id="gameLanguageBtn" type="button" tabindex="-1" aria-hidden="true">
+              <img src="SVG/codex-icons/ingles.svg" alt="">
+            </button>
+            <button class="game-touch" id="gameTouchBtn" type="button">Fale ingles</button>
+          </div>
           <div class="game-chip" id="gameActiveChip">
             <img src="selos/speakings.svg" alt="">
             <span class="game-chip__label">Speakings</span>
@@ -5887,6 +5974,7 @@
         gameVisual: document.getElementById('gameVisual'),
         gameWord: document.getElementById('gameWord'),
         gameSubword: document.getElementById('gameSubword'),
+        gamePhaseWord: document.getElementById('gamePhaseWord'),
         gameStep: document.getElementById('gameStep'),
         gameStatus: document.getElementById('gameStatus'),
         gameStatusIcon: document.getElementById('gameStatusIcon'),
@@ -11950,6 +12038,10 @@
           els.gameWord.parentElement?.classList.remove('is-stage-one-swap');
           els.gameWord.classList.remove('is-stage-swap-hidden');
           els.gameSubword.classList.remove('is-stage-swap-hidden');
+          if (els.gamePhaseWord) {
+            els.gamePhaseWord.textContent = '';
+            els.gamePhaseWord.classList.remove('is-visible');
+          }
           els.gameCard.classList.remove('is-typing-stage');
           els.gameTypingKeyboard.classList.remove('is-portuguese', 'is-visible');
           els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
@@ -11978,6 +12070,9 @@
 
         const card = cardById(entry.id);
         const stageConfig = resolveGameStageConfig(entry);
+        const isSimpleStarPhase = stageConfig.key === 'first-star'
+          || stageConfig.key === 'third-star'
+          || stageConfig.key === 'fifth-star';
         const typingStage = isTypingStage(entry);
         els.game.dataset.phaseKey = stageConfig.key || '';
         els.gameCard.style.display = '';
@@ -12002,7 +12097,16 @@
         } else if (stageConfig.subtitleType === 'english') {
           subword = capitalizeWords(card.english || '');
         }
-        const stageOneSwapActive = entry.stage === 1 && Boolean(subword);
+        const stageOneSwapActive = !isSimpleStarPhase && entry.stage === 1 && Boolean(subword);
+        if (els.gamePhaseWord) {
+          if (isSimpleStarPhase) {
+            renderChipText(els.gamePhaseWord, capitalizeWords(card.english || card.portuguese || card.deckTitle || ''));
+            els.gamePhaseWord.classList.add('is-visible');
+          } else {
+            els.gamePhaseWord.textContent = '';
+            els.gamePhaseWord.classList.remove('is-visible');
+          }
+        }
         els.gameStep.textContent = stageConfig.badge;
         els.gameWord.className = `game-word${stageConfig.showWord === false ? ' is-hidden' : ' is-chip'}`;
         els.gameSubword.className = `game-subword${subword ? ' is-chip' : ' is-hidden'}`;
@@ -12025,12 +12129,23 @@
           els.gameSubword.classList.remove('is-hidden');
         }
         els.gameSubword.classList.toggle('is-stage-one', entry.stage === 1 && stageConfig.subtitleType === 'portuguese');
-        renderStageOneWordSwap(entry, Boolean(subword));
+        if (!isSimpleStarPhase) {
+          renderStageOneWordSwap(entry, Boolean(subword));
+        }
         state.game.canListen = !typingStage && (!stageConfig.autoAudio || entry.stage === 1);
         renderGameTouchButton(stageConfig, entry);
         els.gameTouchBtn.parentElement.classList.toggle('is-hidden', typingStage || els.gameTouchBtn.classList.contains('is-hidden'));
         els.gameTouchBtn.classList.toggle('is-busy', state.game.listening);
         renderTypingKeyboard(entry, card);
+        if (isSimpleStarPhase) {
+          els.gameWord.parentElement?.classList.remove('is-stage-one-swap');
+          els.gameWord.classList.remove('is-stage-swap-hidden');
+          els.gameSubword.classList.remove('is-stage-swap-hidden');
+          els.gameWord.classList.add('is-hidden');
+          els.gameSubword.classList.add('is-hidden');
+          els.gameWord.style.display = 'none';
+          els.gameSubword.style.display = 'none';
+        }
         if (typingStage) {
           els.gameWord.parentElement?.classList.remove('is-stage-one-swap');
           els.gameWord.classList.remove('is-stage-swap-hidden');
@@ -12040,7 +12155,7 @@
           els.gameWord.style.display = 'none';
           els.gameSubword.style.display = 'none';
         }
-        if (!typingStage && !stageOneSwapActive) {
+        if (!isSimpleStarPhase && !typingStage && !stageOneSwapActive) {
           els.gameWord.classList.toggle('is-hidden', stageConfig.showWord === false);
           els.gameSubword.classList.toggle('is-hidden', !subword);
           els.gameSubword.style.display = subword ? '' : 'none';
