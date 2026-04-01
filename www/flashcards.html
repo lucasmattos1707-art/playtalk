@@ -1832,9 +1832,10 @@
       left: 50%;
       top: calc(50% + 18px);
       transform: translate(-50%, -50%);
-      width: fit-content;
-      max-width: min(420px, calc(100vw - 52px));
+      width: auto;
+      max-width: min(360px, calc(100vw - 72px));
       margin: 0;
+      padding-right: 18px;
       justify-self: center;
       text-align: center;
     }
@@ -2986,7 +2987,7 @@
 
     .game-card:not(.is-typing-stage) .game-word.is-chip,
     .game-card:not(.is-typing-stage) .game-subword.is-chip {
-      margin-left: 15px;
+      margin-left: 0;
       margin-top: -15px;
     }
 
@@ -3227,8 +3228,18 @@
     }
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual {
-      width: min(74%, 250px);
-      min-height: min(74vw, 250px);
+      width: min(70%, 232px);
+      min-height: min(70vw, 232px);
+      display: grid;
+      place-items: center;
+      align-content: center;
+      text-align: center;
+      line-height: 1.18;
+    }
+
+    .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual {
+      width: min(70%, 232px);
+      min-height: min(70vw, 232px);
       display: grid;
       place-items: center;
       align-content: center;
