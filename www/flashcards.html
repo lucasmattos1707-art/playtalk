@@ -48,13 +48,13 @@
       --red: #ff7d8d;
       --shadow: 0 22px 60px rgba(0, 8, 18, 0.38);
       --radius: 28px;
-      --flashcards-visual-drop: -60px;
-      --flashcards-chip-drop: -60px;
+      --flashcards-visual-drop: 0px;
+      --flashcards-chip-drop: 0px;
       --flashcards-visual-phase-drop: 0px;
       --flashcards-chip-phase-drop: 0px;
       --flashcards-stars-drop: 50px;
-      --flashcards-typing-visual-drop: 6px;
-      --flashcards-typing-display-drop: 22px;
+      --flashcards-typing-visual-drop: 66px;
+      --flashcards-typing-display-drop: 82px;
       --flashcards-image-shift: 80px;
       --flashcards-image-scale: 0.88;
       --flashcards-typing-image-shift: 0px;
@@ -166,6 +166,10 @@
 
     body.game-open .flashcards-home-toggle {
       display: none;
+    }
+
+    body.gameplay-active .flashcards-footer-nav {
+      display: none !important;
     }
 
     .flashcards-home-toggle[hidden],
@@ -1520,7 +1524,7 @@
       align-items: center;
       justify-content: center;
       padding: 5vh 5vw;
-      background: #ffffff;
+      background: transparent;
       backdrop-filter: none;
       opacity: 0;
       transform: scale(0.98);
@@ -1549,6 +1553,19 @@
       will-change: transform;
     }
 
+    body.gameplay-active #game::before,
+    body.gameplay-active #game::after {
+      right: 0;
+      left: 0;
+      background: #041226 url('/accesskey/quantum-gradient.svg') center/cover no-repeat;
+      opacity: 1;
+      animation: none;
+    }
+
+    body.gameplay-active #game::after {
+      display: none;
+    }
+
     .game::after {
       animation-direction: alternate-reverse;
       animation-duration: 4s;
@@ -1568,6 +1585,10 @@
       padding: 18px;
     }
 
+    body.gameplay-active #game .game-shell {
+      background: transparent;
+    }
+
     .game-shell::before {
       content: "";
       position: fixed;
@@ -1581,6 +1602,10 @@
       animation: flashcardsGameSlide 5s ease-in-out infinite alternate;
       pointer-events: none;
       will-change: transform;
+    }
+
+    body.gameplay-active #game .game-shell::before {
+      display: none;
     }
 
     .game-chip {
@@ -2878,7 +2903,7 @@
       width: min(420px, calc(100vw - 52px));
       margin-top: 0;
       gap: 0;
-      transform: translateY(-60px);
+      transform: translateY(0);
     }
 
     .game-card__content.is-stage-three {
@@ -5317,6 +5342,9 @@
           onboardingTransitionActive: false,
           onboardingGateTimer: 0,
           onboardingGateQueued: false,
+          gameSwipeStartX: 0,
+          gameSwipeStartY: 0,
+          gameSwipeTriggeredAt: 0,
           gameStatusRankTimer: 0,
           gameStatusRankToken: 0,
           gameStatusPreviousRank: 0,
@@ -11733,6 +11761,39 @@
         }
       }
 
+      function resetGameSwipeTracking() {
+        state.ui.gameSwipeStartX = 0;
+        state.ui.gameSwipeStartY = 0;
+      }
+
+      function beginGameSwipeTracking(event) {
+        if (!state.game.active) return;
+        state.ui.gameSwipeStartX = Number(event.clientX) || 0;
+        state.ui.gameSwipeStartY = Number(event.clientY) || 0;
+      }
+
+      function finishGameSwipeTracking(event) {
+        if (!state.game.active) {
+          resetGameSwipeTracking();
+          return;
+        }
+        const startX = Number(state.ui.gameSwipeStartX) || 0;
+        const startY = Number(state.ui.gameSwipeStartY) || 0;
+        const endX = Number(event.clientX) || 0;
+        const endY = Number(event.clientY) || 0;
+        resetGameSwipeTracking();
+        if (!startY && !startX) return;
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+        if (absY < 70 || absY <= absX || deltaY >= -40) return;
+        state.ui.gameSwipeTriggeredAt = Date.now();
+        event.preventDefault?.();
+        event.stopPropagation?.();
+        void exitGame();
+      }
+
       function pickWatchCards() {
         const selectedSources = new Set(
           Array.isArray(state.watch.selectedSources) ? state.watch.selectedSources.map(source => safeText(source)).filter(Boolean) : []
@@ -11936,6 +11997,7 @@
         els.catalog.classList.add('is-hidden');
         closeGameSetup();
         document.body.classList.add('game-open');
+        document.body.classList.add('gameplay-active');
         els.game.classList.add('is-visible');
         window.requestAnimationFrame(() => els.game.classList.add('is-active'));
 
@@ -11985,6 +12047,7 @@
         els.catalog.classList.add('is-hidden');
         closeGameSetup();
         document.body.classList.add('game-open');
+        document.body.classList.add('gameplay-active');
         els.game.classList.add('is-visible');
         window.requestAnimationFrame(() => els.game.classList.add('is-active'));
 
@@ -12016,6 +12079,8 @@
           saveUserStats();
         }
         document.body.classList.remove('game-open');
+        document.body.classList.remove('gameplay-active');
+        resetGameSwipeTracking();
         syncFooterGuardState(null);
         els.game.classList.remove('is-active');
         closeGameReportMenu();
@@ -12536,8 +12601,12 @@
           }
         });
         const gameShell = els.game.querySelector('.game-shell');
+        gameShell?.addEventListener('pointerdown', beginGameSwipeTracking);
+        gameShell?.addEventListener('pointerup', finishGameSwipeTracking);
+        gameShell?.addEventListener('pointercancel', resetGameSwipeTracking);
         gameShell?.addEventListener('click', (event) => {
           if (!state.game.active) return;
+          if (Date.now() - (Number(state.ui.gameSwipeTriggeredAt) || 0) < 400) return;
           if (event.target.closest('.btn-close')) return;
           if (event.target.closest('.flashcards-typing')) return;
           if (event.target.closest('.game-report-trigger')) return;
