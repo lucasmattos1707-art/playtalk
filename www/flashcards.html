@@ -2997,15 +2997,37 @@
 
     .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-word.is-chip,
     .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-subword.is-chip {
+      display: inline-flex;
       width: fit-content;
       min-width: 0;
-      max-width: min(320px, calc(100vw - 88px));
+      max-width: min(292px, calc(100vw - 104px));
       margin: 0;
-      padding: 14px 18px 14px 54px;
+      padding: 14px 14px 14px 58px;
       border-radius: 20px;
       justify-content: center;
       text-align: center;
       white-space: nowrap;
+    }
+
+    .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-word.is-chip.is-short,
+    .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-subword.is-chip.is-short,
+    .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-word.is-chip.is-long,
+    .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-subword.is-chip.is-long {
+      display: inline-flex;
+      width: fit-content;
+      max-width: min(292px, calc(100vw - 104px));
+      min-height: auto;
+      margin: 0;
+      padding: 14px 14px 14px 58px;
+      line-height: 1.05;
+      background-size: cover, 185% 185%;
+    }
+
+    .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-word.is-chip::before,
+    .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-subword.is-chip::before {
+      left: 18px;
+      width: 44px;
+      transform: translateY(-50%);
     }
 
     .game-word.is-chip,
@@ -3382,7 +3404,7 @@
     }
 
     .flashcards-typing__key.is-disabled {
-      opacity: 0.45;
+      opacity: 1;
       pointer-events: none;
     }
 
@@ -3928,11 +3950,30 @@
 
       .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-word.is-chip,
       .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-subword.is-chip {
+        display: inline-flex;
         width: fit-content;
-        max-width: min(300px, calc(100vw - 96px));
-        padding: 14px 18px 14px 54px;
+        max-width: min(276px, calc(100vw - 108px));
+        padding: 13px 12px 13px 54px;
         justify-content: center;
         text-align: center;
+      }
+
+      .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-word.is-chip.is-short,
+      .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-subword.is-chip.is-short,
+      .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-word.is-chip.is-long,
+      .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-subword.is-chip.is-long {
+        display: inline-flex;
+        width: fit-content;
+        max-width: min(276px, calc(100vw - 108px));
+        min-height: auto;
+        padding: 13px 12px 13px 54px;
+        background-size: cover, 180% 180%;
+      }
+
+      .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-word.is-chip::before,
+      .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-subword.is-chip::before {
+        left: 16px;
+        width: 40px;
       }
 
       .game-word.is-chip,
@@ -5236,7 +5277,7 @@
       const FIVE_STARS_SOUND_PATH = 'newsongs/5stars.mp3';
       const SECOND_STAR_ERROR_SOUND_PATH = 'flashcard-audio-cues/second-star-error.mp3';
       const TYPE_PORTUGUESE_SOUND_PATH = 'flashcard-audio-cues/typeportuguese.mp3';
-      const ACCESSKEY_ERROR_SOUND_PATH = `${ACCESSKEY_PUBLIC_ROOT}/error.mp3`;
+      const ACCESSKEY_ERROR_SOUND_PATH = 'https://playtalk-dvv5.onrender.com/error.mp3';
       const LESS_SOUND_PATH = 'svgnovo/less.wav';
       const REPORT_SOUND_PATH = 'thesongs/report.wav';
       const TYPING_KEY_SOUND_PATH = 'sounds/type.mp3';
@@ -11535,6 +11576,8 @@
           return false;
         }
         setTypingKeysDisabled(grid, true);
+        triggerTypingMistakeFeedback(grid);
+        playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
         revealTypingAnswer(entry, card, { hintStart: typedLength, hintLength: 2 });
         await Promise.allSettled([playPromptAudio(card, { rate: 0.8 }), wait(2000)]);
         if (!state.game.active || state.game.currentId !== entry.id) return true;
