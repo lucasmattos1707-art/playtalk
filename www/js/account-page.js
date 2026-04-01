@@ -12,6 +12,10 @@
     passwordInput: document.getElementById('accountPasswordInput'),
     passwordBtn: document.getElementById('accountPasswordBtn'),
     premiumCard: document.querySelector('.account-premium'),
+    metrics: document.getElementById('accountMetrics'),
+    pronunciationMetric: document.getElementById('accountPronunciationMetric'),
+    speedMetric: document.getElementById('accountSpeedMetric'),
+    trainingMetric: document.getElementById('accountTrainingMetric'),
     premiumLevel: document.getElementById('accountPremiumLevel'),
     premiumUntil: document.getElementById('accountPremiumUntil'),
     premiumBtn: document.getElementById('accountPremiumBtn'),
@@ -31,7 +35,9 @@
     pendingSave: false,
     lastSavedUsername: '',
     lastSavedAvatar: '',
-    passwordEditMode: false
+    passwordEditMode: false,
+    flashcardStats: null,
+    flashcardsCount: 0
   };
 
   function buildApiUrl(path) {
@@ -71,6 +77,32 @@
     if (tone) {
       els.status.classList.add(`is-${tone}`);
     }
+  }
+
+  function formatTrainingTime(trainingTimeMs) {
+    const totalMinutes = Math.max(0, Math.floor((Number(trainingTimeMs) || 0) / 60000));
+    if (totalMinutes >= 60) {
+      const hours = totalMinutes / 60;
+      const rounded = hours >= 10 ? Math.round(hours) : Math.round(hours * 10) / 10;
+      return `${String(rounded).replace(/\.0$/, '')} h`;
+    }
+    return `${totalMinutes} min`;
+  }
+
+  function renderAccountMetrics() {
+    if (!els.metrics || !els.pronunciationMetric || !els.speedMetric || !els.trainingMetric) return;
+    const isLoggedIn = Boolean(state.user?.id);
+    els.metrics.hidden = !isLoggedIn;
+    if (!isLoggedIn) return;
+
+    const stats = state.flashcardStats || {};
+    const pronunciationPercent = Math.max(0, Math.min(100, Math.round(Number(stats.pronunciationPercent) || 0)));
+    const speedFlashcardsPerHour = Math.max(0, Number(stats.speedFlashcardsPerHour) || 0);
+    const trainingTimeMs = Math.max(0, Number(stats.trainingTimeMs) || 0);
+
+    els.pronunciationMetric.textContent = `${pronunciationPercent}%`;
+    els.speedMetric.textContent = speedFlashcardsPerHour.toFixed(1);
+    els.trainingMetric.textContent = formatTrainingTime(trainingTimeMs);
   }
 
   function persistAuthToken(token) {
@@ -216,6 +248,7 @@
     els.logoutBtn.hidden = !state.user;
     renderPremiumStatus();
     renderPremiumButton();
+    renderAccountMetrics();
   }
 
   async function fileToDataUrl(file) {
@@ -274,6 +307,32 @@
       return null;
     }
     return normalizeUser(payload.user);
+  }
+
+  async function fetchFlashcardMetrics() {
+    if (!state.user?.id) {
+      state.flashcardStats = null;
+      state.flashcardsCount = 0;
+      renderAccountMetrics();
+      return;
+    }
+
+    try {
+      const response = await fetch(buildApiUrl('/api/flashcards/state'), {
+        headers: buildAuthHeaders(),
+        cache: 'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Nao foi possivel carregar as estatisticas.');
+      }
+      state.flashcardStats = payload.stats || null;
+      state.flashcardsCount = Array.isArray(payload.progress) ? payload.progress.length : 0;
+    } catch (_error) {
+      state.flashcardStats = null;
+      state.flashcardsCount = 0;
+    }
+    renderAccountMetrics();
   }
 
   async function createCartoonAvatar(imageDataUrl) {
@@ -426,6 +485,7 @@
         els.passwordInput.value = '';
       }
       renderUser();
+      await fetchFlashcardMetrics();
       setStatus('Conta criada com sucesso.', 'success');
     } catch (error) {
       setStatus(error?.message || 'Nao foi possivel criar a conta.', 'error');
@@ -507,6 +567,7 @@
         els.passwordInput.value = '';
       }
       renderUser();
+      await fetchFlashcardMetrics();
       setStatus('Entrada liberada com sucesso.', 'success');
     } catch (error) {
       setStatus(error?.message || 'Nao foi possivel entrar agora.', 'error');
@@ -533,6 +594,7 @@
     state.localProfile = readLocalPlayerProfile();
     syncSavedSnapshot(state.user || state.localProfile);
     renderUser();
+    await fetchFlashcardMetrics();
 
     els.form?.addEventListener('submit', async (event) => {
       event.preventDefault();

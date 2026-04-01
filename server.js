@@ -366,12 +366,61 @@ const clampInteger = (value, minimum, maximum, fallback) => {
 
 const normalizeFlashcardStatus = (value) => (value === 'ready' ? 'ready' : 'memorizing');
 
-const normalizeFlashcardStats = (value) => ({
-  playTimeMs: Math.max(0, Math.round(Number(value?.playTimeMs) || 0)),
-  speakings: Math.max(0, Math.round(Number(value?.speakings) || 0)),
-  listenings: Math.max(0, Math.round(Number(value?.listenings) || 0)),
-  secondStarErrorHeard: Boolean(value?.secondStarErrorHeard || value?.second_star_error_heard)
-});
+const FLASHCARD_PRONUNCIATION_SAMPLE_LIMIT = 200;
+
+const normalizeFlashcardPronunciationSamples = (value) => {
+  const source = Array.isArray(value)
+    ? value
+    : Array.isArray(value?.pronunciationSamples)
+      ? value.pronunciationSamples
+      : Array.isArray(value?.pronunciation_samples)
+        ? value.pronunciation_samples
+        : [];
+  return source
+    .map((sample) => Math.max(0, Math.min(100, Math.round(Number(sample) || 0))))
+    .filter((sample) => Number.isFinite(sample))
+    .slice(-FLASHCARD_PRONUNCIATION_SAMPLE_LIMIT);
+};
+
+const getFlashcardPronunciationPercent = (samples) => {
+  if (!Array.isArray(samples) || !samples.length) {
+    return 0;
+  }
+  const average = samples.reduce((sum, sample) => sum + sample, 0) / samples.length;
+  return Math.max(0, Math.min(100, Math.round(average + 5)));
+};
+
+const getFlashcardSpeedPerHour = (flashcardsCount, trainingTimeMs) => {
+  const normalizedCount = Math.max(0, Number(flashcardsCount) || 0);
+  const normalizedTrainingTimeMs = Math.max(0, Number(trainingTimeMs) || 0);
+  if (!normalizedCount || normalizedTrainingTimeMs <= 0) {
+    return 0;
+  }
+  const perHour = normalizedCount * (60 * 60 * 1000) / normalizedTrainingTimeMs;
+  return Math.max(0, Math.round(perHour * 10) / 10);
+};
+
+const decorateFlashcardStats = (value, flashcardsCount = 0) => {
+  const pronunciationSamples = normalizeFlashcardPronunciationSamples(value);
+  const trainingTimeMs = Math.max(
+    0,
+    Math.round(
+      Number(value?.trainingTimeMs ?? value?.training_time_ms) || 0
+    )
+  );
+  return {
+    playTimeMs: Math.max(0, Math.round(Number(value?.playTimeMs) || 0)),
+    speakings: Math.max(0, Math.round(Number(value?.speakings) || 0)),
+    listenings: Math.max(0, Math.round(Number(value?.listenings) || 0)),
+    secondStarErrorHeard: Boolean(value?.secondStarErrorHeard || value?.second_star_error_heard),
+    trainingTimeMs,
+    pronunciationSamples,
+    pronunciationPercent: getFlashcardPronunciationPercent(pronunciationSamples),
+    speedFlashcardsPerHour: getFlashcardSpeedPerHour(flashcardsCount, trainingTimeMs)
+  };
+};
+
+const normalizeFlashcardStats = (value, flashcardsCount = 0) => decorateFlashcardStats(value, flashcardsCount);
 
 const flashcardTimestampFromMillis = (value) => {
   const parsed = Number(value);
@@ -500,6 +549,8 @@ const ensureFlashcardUserStateTables = async () => {
           play_time_ms bigint NOT NULL DEFAULT 0,
           speakings integer NOT NULL DEFAULT 0,
           listenings integer NOT NULL DEFAULT 0,
+          training_time_ms bigint NOT NULL DEFAULT 0,
+          pronunciation_samples jsonb NOT NULL DEFAULT '[]'::jsonb,
           second_star_error_heard boolean NOT NULL DEFAULT false,
           updated_at timestamptz NOT NULL DEFAULT now()
         )
@@ -507,6 +558,14 @@ const ensureFlashcardUserStateTables = async () => {
       await pool.query(`
         ALTER TABLE public.user_flashcard_stats
         ADD COLUMN IF NOT EXISTS second_star_error_heard boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS training_time_ms bigint NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS pronunciation_samples jsonb NOT NULL DEFAULT '[]'::jsonb
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_hidden (
@@ -1642,7 +1701,8 @@ const readFlashcardStateForUser = async (userId) => {
       [normalizedUserId]
     ),
     pool.query(
-      `SELECT play_time_ms, speakings, listenings, second_star_error_heard, updated_at
+      `SELECT play_time_ms, speakings, listenings, training_time_ms, pronunciation_samples,
+              second_star_error_heard, updated_at
        FROM public.user_flashcard_stats
        WHERE user_id = $1
        LIMIT 1`,
@@ -1667,9 +1727,11 @@ const readFlashcardStateForUser = async (userId) => {
         playTimeMs: statsResult.rows[0].play_time_ms,
         speakings: statsResult.rows[0].speakings,
         listenings: statsResult.rows[0].listenings,
+        trainingTimeMs: statsResult.rows[0].training_time_ms,
+        pronunciationSamples: statsResult.rows[0].pronunciation_samples,
         secondStarErrorHeard: statsResult.rows[0].second_star_error_heard
-      })
-      : normalizeFlashcardStats({}),
+      }, progressResult.rows.length)
+      : normalizeFlashcardStats({}, progressResult.rows.length),
     meta: {
       hasProgress: progressResult.rows.length > 0,
       hasStats: Boolean(statsResult.rows[0]),
@@ -1709,7 +1771,7 @@ const saveFlashcardStateForUser = async (userId, payload) => {
     }
   });
   const progress = Array.from(dedupedProgress.values());
-  const stats = normalizeFlashcardStats(payload?.stats);
+  const stats = normalizeFlashcardStats(payload?.stats, progress.length);
   const hiddenCardIds = Array.isArray(payload?.hiddenCardIds)
     ? Array.from(new Set(payload.hiddenCardIds
       .map((cardId) => typeof cardId === 'string' ? cardId.trim() : '')
@@ -1718,6 +1780,22 @@ const saveFlashcardStateForUser = async (userId, payload) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    const existingStatsResult = await client.query(
+      `SELECT training_time_ms, pronunciation_samples
+       FROM public.user_flashcard_stats
+       WHERE user_id = $1
+       LIMIT 1`,
+      [normalizedUserId]
+    );
+    const existingProgressCountResult = await client.query(
+      `SELECT COUNT(*)::int AS total
+       FROM public.user_flashcard_progress
+       WHERE user_id = $1`,
+      [normalizedUserId]
+    );
+    const existingProgressCount = Math.max(0, Number(existingProgressCountResult.rows[0]?.total) || 0);
+    const shouldPersistPerformanceStats = progress.length > existingProgressCount;
 
     if (progress.length) {
       const cardIds = progress.map((item) => item.cardId);
@@ -1831,15 +1909,25 @@ const saveFlashcardStateForUser = async (userId, payload) => {
          play_time_ms,
          speakings,
          listenings,
+         training_time_ms,
+         pronunciation_samples,
          second_star_error_heard,
          updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, now())
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, now())
        ON CONFLICT (user_id)
        DO UPDATE SET
          play_time_ms = EXCLUDED.play_time_ms,
          speakings = EXCLUDED.speakings,
          listenings = EXCLUDED.listenings,
+         training_time_ms = CASE
+           WHEN $8::boolean THEN EXCLUDED.training_time_ms
+           ELSE public.user_flashcard_stats.training_time_ms
+         END,
+         pronunciation_samples = CASE
+           WHEN $8::boolean THEN EXCLUDED.pronunciation_samples
+           ELSE public.user_flashcard_stats.pronunciation_samples
+         END,
          second_star_error_heard = EXCLUDED.second_star_error_heard,
          updated_at = now()`,
       [
@@ -1847,7 +1935,16 @@ const saveFlashcardStateForUser = async (userId, payload) => {
         stats.playTimeMs,
         stats.speakings,
         stats.listenings,
-        stats.secondStarErrorHeard
+        shouldPersistPerformanceStats
+          ? stats.trainingTimeMs
+          : Math.max(0, Number(existingStatsResult.rows[0]?.training_time_ms) || 0),
+        JSON.stringify(
+          shouldPersistPerformanceStats
+            ? stats.pronunciationSamples
+            : normalizeFlashcardPronunciationSamples(existingStatsResult.rows[0]?.pronunciation_samples)
+        ),
+        stats.secondStarErrorHeard,
+        shouldPersistPerformanceStats
       ]
     );
 

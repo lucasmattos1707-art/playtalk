@@ -234,6 +234,44 @@
       display: none !important;
     }
 
+    .account-metrics {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      align-items: center;
+    }
+
+    .account-metrics[hidden] {
+      display: none !important;
+    }
+
+    .account-metric {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 0;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 16px;
+      white-space: nowrap;
+    }
+
+    .account-metric img {
+      width: 18px;
+      height: 18px;
+      display: block;
+      filter: brightness(0) invert(1);
+      flex: 0 0 auto;
+    }
+
+    .account-metric span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .account-button--premium {
       display: inline-flex;
       align-items: center;
@@ -306,6 +344,20 @@
       .panel {
         padding: 22px 14px 14px;
       }
+
+      .account-metrics {
+        gap: 8px;
+      }
+
+      .account-metric {
+        font-size: 14px;
+        gap: 6px;
+      }
+
+      .account-metric img {
+        width: 16px;
+        height: 16px;
+      }
     }
   </style>
 </head>
@@ -331,6 +383,20 @@
         <div class="account-premium">
           <strong id="accountPremiumLevel">Nivel de acesso: Free</strong>
           <span id="accountPremiumUntil">Sem premium ativo no momento.</span>
+        </div>
+        <div class="account-metrics" id="accountMetrics" hidden>
+          <div class="account-metric">
+            <img src="/SVG/codex-icons/microfone.svg" alt="">
+            <span id="accountPronunciationMetric">0%</span>
+          </div>
+          <div class="account-metric">
+            <img src="/SVG/codex-icons/lightning.svg" alt="">
+            <span id="accountSpeedMetric">0.0</span>
+          </div>
+          <div class="account-metric">
+            <img src="/SVG/codex-icons/post-results/clock.svg" alt="">
+            <span id="accountTrainingMetric">0 min</span>
+          </div>
         </div>
         <button class="account-button account-button--premium" id="accountPremiumBtn" type="button">
           <span class="account-button__crown" id="accountPremiumIcon" aria-hidden="true">👑</span>

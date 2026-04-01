@@ -5198,6 +5198,8 @@
       const TUTORIAL_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-tutorial-v1';
       const GAME_SESSION_STORAGE_KEY = 'playtalk-flashcards-game-session-v1';
       const TIME_OFFSET_STORAGE_KEY = 'playtalk-flashcards-time-offset-v1';
+      const TRAINING_TIME_PER_CARD_LIMIT_MS = 10000;
+      const PRONUNCIATION_SAMPLE_LIMIT = 200;
       const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
       const SOUND_TEST_COMPLETED_STORAGE_KEY = 'playtalk-soundcheck-completed';
       const SOUND_TEST_LAUNCH_TARGET_STORAGE_KEY = 'playtalk-soundcheck-launch-target';
@@ -5370,7 +5372,16 @@
         userCards: new Map(),
         hiddenCardIds: new Set(),
         ownedIds: new Set(),
-        stats: { playTimeMs: 0, speakings: 0, listenings: 0, secondStarErrorHeard: false },
+        stats: {
+          playTimeMs: 0,
+          speakings: 0,
+          listenings: 0,
+          secondStarErrorHeard: false,
+          trainingTimeMs: 0,
+          pronunciationSamples: [],
+          pronunciationPercent: 0,
+          speedFlashcardsPerHour: 0
+        },
         timeOffsetMs: 0,
         user: null,
         authMode: 'login',
@@ -5438,6 +5449,8 @@
           skipAutoAudioOnce: false,
           transitioning: false,
           sessionStartedAt: 0,
+          currentCardTrainingId: '',
+          currentCardTrainingStartedAt: 0,
           canListen: false,
           typingPromptLoopTimer: 0,
           recognition: null,
@@ -5942,17 +5955,50 @@
       }
 
       function normalizeStatsSnapshot(raw) {
+        const pronunciationSamples = Array.isArray(raw?.pronunciationSamples)
+          ? raw.pronunciationSamples
+          : Array.isArray(raw?.pronunciation_samples)
+            ? raw.pronunciation_samples
+            : [];
+        const normalizedPronunciationSamples = pronunciationSamples
+          .map((value) => Math.max(0, Math.min(100, Math.round(Number(value) || 0))))
+          .filter((value) => Number.isFinite(value))
+          .slice(-PRONUNCIATION_SAMPLE_LIMIT);
+        const trainingTimeMs = Math.max(
+          0,
+          Math.round(Number(raw?.trainingTimeMs ?? raw?.training_time_ms) || 0)
+        );
+        const pronunciationPercent = normalizedPronunciationSamples.length
+          ? Math.max(
+              0,
+              Math.min(
+                100,
+                Math.round(
+                  normalizedPronunciationSamples.reduce((sum, value) => sum + value, 0) / normalizedPronunciationSamples.length + 5
+                )
+              )
+            )
+          : 0;
+        const speedFlashcardsPerHour = Math.max(0, Number(raw?.speedFlashcardsPerHour ?? raw?.speed_flashcards_per_hour) || 0);
         return {
           playTimeMs: Math.max(0, Math.round(Number(raw?.playTimeMs) || 0)),
           speakings: Math.max(0, Math.round(Number(raw?.speakings) || 0)),
           listenings: Math.max(0, Math.round(Number(raw?.listenings) || 0)),
-          secondStarErrorHeard: Boolean(raw?.secondStarErrorHeard || raw?.second_star_error_heard)
+          secondStarErrorHeard: Boolean(raw?.secondStarErrorHeard || raw?.second_star_error_heard),
+          trainingTimeMs,
+          pronunciationSamples: normalizedPronunciationSamples,
+          pronunciationPercent,
+          speedFlashcardsPerHour: Math.round(speedFlashcardsPerHour * 10) / 10
         };
       }
 
       function hasMeaningfulStats(raw) {
         const stats = normalizeStatsSnapshot(raw);
-        return stats.playTimeMs > 0 || stats.speakings > 0 || stats.listenings > 0;
+        return stats.playTimeMs > 0
+          || stats.speakings > 0
+          || stats.listenings > 0
+          || stats.trainingTimeMs > 0
+          || stats.pronunciationSamples.length > 0;
       }
 
       function readUserStatsForUser(userId = state.user?.id) {
@@ -5973,6 +6019,52 @@
         if (!options.skipCloudSync) {
           scheduleFlashcardCloudSync();
         }
+      }
+
+      function pushPronunciationSample(percent) {
+        const numeric = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+        const currentSamples = Array.isArray(state.stats.pronunciationSamples)
+          ? state.stats.pronunciationSamples.slice(-PRONUNCIATION_SAMPLE_LIMIT + 1)
+          : [];
+        currentSamples.push(numeric);
+        state.stats = normalizeStatsSnapshot({
+          ...state.stats,
+          pronunciationSamples: currentSamples
+        });
+      }
+
+      function commitCurrentCardTrainingTime() {
+        const startedAt = Number(state.game.currentCardTrainingStartedAt) || 0;
+        if (!startedAt) {
+          state.game.currentCardTrainingId = '';
+          state.game.currentCardTrainingStartedAt = 0;
+          return;
+        }
+        const elapsedMs = Math.max(0, Date.now() - startedAt);
+        const creditedMs = Math.min(TRAINING_TIME_PER_CARD_LIMIT_MS, elapsedMs);
+        if (creditedMs > 0) {
+          state.stats = normalizeStatsSnapshot({
+            ...state.stats,
+            trainingTimeMs: Number(state.stats.trainingTimeMs || 0) + creditedMs
+          });
+          saveUserStats({ skipCloudSync: true });
+        }
+        state.game.currentCardTrainingId = '';
+        state.game.currentCardTrainingStartedAt = 0;
+      }
+
+      function startCurrentCardTrainingTime() {
+        const currentId = safeText(state.game.currentId);
+        if (!state.game.active || !currentId || state.game.paused) {
+          state.game.currentCardTrainingId = '';
+          state.game.currentCardTrainingStartedAt = 0;
+          return;
+        }
+        if (state.game.currentCardTrainingId === currentId && state.game.currentCardTrainingStartedAt) {
+          return;
+        }
+        state.game.currentCardTrainingId = currentId;
+        state.game.currentCardTrainingStartedAt = Date.now();
       }
 
       function syncOwnedIdsFromProgress() {
@@ -6185,6 +6277,11 @@
           playTimeMs: Number(state.stats.playTimeMs || 0) + Number(guestSnapshot.stats?.playTimeMs || 0),
           speakings: Number(state.stats.speakings || 0) + Number(guestSnapshot.stats?.speakings || 0),
           listenings: Number(state.stats.listenings || 0) + Number(guestSnapshot.stats?.listenings || 0),
+          trainingTimeMs: Number(state.stats.trainingTimeMs || 0) + Number(guestSnapshot.stats?.trainingTimeMs || 0),
+          pronunciationSamples: [
+            ...(Array.isArray(state.stats.pronunciationSamples) ? state.stats.pronunciationSamples : []),
+            ...(Array.isArray(guestSnapshot.stats?.pronunciationSamples) ? guestSnapshot.stats.pronunciationSamples : [])
+          ].slice(-PRONUNCIATION_SAMPLE_LIMIT),
           secondStarErrorHeard: Boolean(state.stats.secondStarErrorHeard || guestSnapshot.stats?.secondStarErrorHeard)
         });
         if (guestSnapshot.tutorialCompleted) {
@@ -9865,7 +9962,7 @@
       function markTypePortugueseHint(cardId) {
         if (state.stats.secondStarErrorHeard) return;
         state.stats.secondStarErrorHeard = true;
-        saveUserStats();
+        saveUserStats({ skipCloudSync: true });
       }
 
       function playCueAudio(src) {
@@ -10684,7 +10781,7 @@
           audio.defaultPlaybackRate = rate;
           audio.preservesPitch = true;
           state.stats.listenings += 1;
-          saveUserStats();
+          saveUserStats({ skipCloudSync: true });
           updateGameChips();
           return playAudioWithSoftEnd(audio, { registerAsActive: true });
         }
@@ -11578,10 +11675,13 @@
             els.gameCard.style.display = 'none';
             els.gameEnd.classList.add('is-visible');
           }
+          state.game.currentCardTrainingId = '';
+          state.game.currentCardTrainingStartedAt = 0;
           return;
         }
 
         persistGameSessionLocally();
+        startCurrentCardTrainingTime();
 
         const footerPrimeKey = `${entry.id}:${entry.stage}`;
         if (state.game.footerNavPrimeKey !== footerPrimeKey) {
@@ -11738,6 +11838,9 @@
       }
 
       function promoteCardFromWin(entry) {
+        if (state.game.currentId === entry.id) {
+          commitCurrentCardTrainingTime();
+        }
         const currentRecord = state.userCards.get(entry.id) || null;
         const currentPhase = Math.max(0, Math.min(5, Number(currentRecord?.phaseIndex) || 0));
         const nextPhase = Math.max(1, Math.min(5, currentPhase + 1));
@@ -11745,6 +11848,9 @@
       }
 
       function removeGameEntry(cardId) {
+        if (state.game.currentId === cardId) {
+          commitCurrentCardTrainingTime();
+        }
         state.game.entries.delete(cardId);
         state.game.queue = state.game.queue.filter(id => id !== cardId);
         if (state.game.currentId === cardId) {
@@ -12018,6 +12124,7 @@
       function pauseGameToLibrary() {
         if (!state.game.active) return;
         cleanupGameRecognition();
+        commitCurrentCardTrainingTime();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
         clearTypingPromptLoop();
@@ -12067,7 +12174,7 @@
         audio.preservesPitch = true;
         state.watch.voiceAudio = audio;
         state.stats.listenings += 1;
-        saveUserStats();
+        saveUserStats({ skipCloudSync: true });
         try {
           await audio.play();
         } catch (_error) {
@@ -12163,6 +12270,7 @@
       async function advanceToNextCard() {
         if (!state.game.active) return;
         cleanupGameRecognition();
+        commitCurrentCardTrainingTime();
         clearPendingRewardSeal();
         clearStageTwoHintTimer();
         if (!state.game.queue.length) {
@@ -12300,6 +12408,7 @@
 
       async function exitGame() {
         clearGameStatusRankTimer();
+        commitCurrentCardTrainingTime();
         if (state.game.active && !state.game.tutorial.active && state.game.entries.size) {
           persistGameSessionLocally();
         }
@@ -12320,7 +12429,7 @@
         if (state.game.sessionStartedAt) {
           state.stats.playTimeMs += Date.now() - state.game.sessionStartedAt;
           state.game.sessionStartedAt = 0;
-          saveUserStats();
+          saveUserStats({ skipCloudSync: true });
         }
         document.body.classList.remove('game-open');
         document.body.classList.remove('gameplay-active');
@@ -12348,7 +12457,8 @@
         const card = cardById(entry.id);
         if (inputMode === 'speech') {
           state.stats.speakings += 1;
-          saveUserStats();
+          pushPronunciationSample(score);
+          saveUserStats({ skipCloudSync: true });
         }
         updateGameChips();
 
