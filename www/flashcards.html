@@ -12940,7 +12940,6 @@
       function nextGameCardForPool(pool = 'base') {
         const activeIds = new Set(Array.from(state.game.entries.keys()));
         const earlyRestricted = shouldRestrictEarlyFlashcards();
-        const shouldForcePlanetFirst = pool === 'base' && state.game.entries.size === 0 && !hasTutorialPlanetUnlocked();
         let preferredSource = pool === 'review'
           ? readyReviewCards().filter(card => !activeIds.has(card.id))
           : baseCandidateCards().filter(card => !activeIds.has(card.id));
@@ -12959,12 +12958,6 @@
         let nextCard = (pool === 'review' && preferredSource.length)
           ? sourceCards[0]
           : takeRandom(sourceCards, 1)[0];
-        if (shouldForcePlanetFirst) {
-          const tutorialCard = findTutorialPlanetCard();
-          if (tutorialCard && sourceCards.some((card) => card.id === tutorialCard.id)) {
-            nextCard = tutorialCard;
-          }
-        }
         if (!nextCard) return null;
         return {
           card: nextCard,
@@ -13479,16 +13472,11 @@
           state.game.contextLimit = GAME_ACTIVE_CARD_CAP;
           const reviewLimit = Math.min(REVIEW_SLOT_LIMIT, Math.floor(roundCount / 3));
           const reviewCards = readyReviewCards().slice(0, reviewLimit);
-          const shouldForcePlanetFirst = !hasTutorialPlanetUnlocked();
-          const tutorialCard = shouldForcePlanetFirst ? findTutorialPlanetCard() : null;
           const basePool = applyEarlyFlashcardFilter(baseCandidateCards());
-          const chosenCards = [];
-          if (tutorialCard && basePool.some((card) => card.id === tutorialCard.id)) {
-            chosenCards.push(tutorialCard);
-          }
-          const remainingBaseCards = basePool.filter((card) => !chosenCards.some((picked) => picked.id === card.id));
-          const remainingLimit = Math.max(0, roundCount - reviewCards.length - chosenCards.length);
-          chosenCards.push(...buildOrderedDeckSelection(remainingBaseCards, remainingLimit));
+          const chosenCards = buildOrderedDeckSelection(
+            basePool,
+            Math.max(0, roundCount - reviewCards.length)
+          );
           chosenCards.forEach(card => {
             const entry = createGameEntry(card, 'base');
             state.game.entries.set(entry.id, entry);
