@@ -115,6 +115,176 @@
       text-align: center;
     }
 
+    .banner-carousel {
+      margin: 0 auto 18px;
+      width: min(100%, 1000px);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      overflow: clip;
+      background: rgba(3, 12, 24, 0.45);
+      box-shadow: 0 16px 34px rgba(8, 20, 36, 0.28);
+      backdrop-filter: blur(8px);
+    }
+
+    .banner-carousel__viewport {
+      overflow: hidden;
+    }
+
+    .banner-carousel__track {
+      display: flex;
+      width: 400%;
+      animation: bannersSlide 14s infinite;
+    }
+
+    .banner-carousel__item {
+      width: 25%;
+      min-height: 220px;
+      padding: 12px 10px 12px;
+      display: grid;
+      align-content: start;
+      justify-items: stretch;
+      gap: 10px;
+      text-align: center;
+      background: linear-gradient(140deg, rgba(12, 56, 112, 0.72), rgba(24, 88, 162, 0.68));
+      user-select: none;
+      position: relative;
+    }
+
+    .banner-carousel__media {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: linear-gradient(140deg, rgba(27, 88, 161, 0.92), rgba(36, 112, 199, 0.9));
+    }
+
+    .banner-carousel__item:nth-child(2) .banner-carousel__media {
+      background: linear-gradient(140deg, rgba(16, 116, 138, 0.92), rgba(30, 148, 172, 0.9));
+    }
+
+    .banner-carousel__item:nth-child(3) .banner-carousel__media {
+      background: linear-gradient(140deg, rgba(41, 96, 159, 0.92), rgba(75, 133, 198, 0.9));
+    }
+
+    .banner-carousel__item:nth-child(4) .banner-carousel__media {
+      background: linear-gradient(140deg, rgba(13, 95, 173, 0.92), rgba(38, 127, 214, 0.9));
+    }
+
+    .banner-carousel__media-image {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: calc(100% + var(--banner-size-adjust, 0px));
+      height: calc(100% + var(--banner-size-adjust, 0px));
+      object-fit: cover;
+      transform: translate(
+        calc(-50% + var(--banner-offset-x, 0px)),
+        calc(-50% + var(--banner-offset-y, 0px))
+      );
+      transition: transform 120ms ease, width 120ms ease, height 120ms ease, opacity 220ms ease;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .banner-carousel__item.has-image .banner-carousel__media-image {
+      opacity: 1;
+    }
+
+    .banner-carousel__placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 8px;
+      background: linear-gradient(120deg, rgba(6, 18, 34, 0.1), rgba(255, 255, 255, 0.06));
+      text-shadow: 0 6px 20px rgba(0, 0, 0, 0.24);
+    }
+
+    .banner-carousel__item.has-image .banner-carousel__placeholder {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .banner-carousel__title {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 40px);
+      font-weight: 900;
+      letter-spacing: 0.03em;
+      color: #ffffff;
+    }
+
+    .banner-carousel__resolution {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.94);
+    }
+
+    .banner-carousel__status {
+      margin: 0;
+      min-height: 18px;
+      padding: 4px 10px 10px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: rgba(226, 242, 255, 0.95);
+    }
+
+    body.is-admin-banner .banner-carousel__item {
+      cursor: pointer;
+    }
+
+    body.is-admin-banner .banner-carousel__item:hover .banner-carousel__media {
+      border-color: rgba(255, 255, 255, 0.7);
+    }
+
+    .banner-carousel__item.is-editing .banner-carousel__media {
+      box-shadow: inset 0 0 0 2px rgba(125, 255, 175, 0.9);
+    }
+
+    .banner-carousel__item.is-busy::after {
+      content: "Gerando...";
+      position: absolute;
+      inset: 12px 10px auto;
+      min-height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #ffffff;
+      background: rgba(8, 24, 44, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.26);
+    }
+
+    @keyframes bannersSlide {
+      0%, 20% {
+        transform: translateX(0);
+      }
+
+      25%, 45% {
+        transform: translateX(-25%);
+      }
+
+      50%, 70% {
+        transform: translateX(-50%);
+      }
+
+      75%, 95% {
+        transform: translateX(-75%);
+      }
+
+      100% {
+        transform: translateX(0);
+      }
+    }
+
     .allcards-title {
       margin: 0;
       font-size: clamp(32px, 6vw, 48px);
@@ -301,6 +471,50 @@
 <body data-lens-context="menus">
   <div class="container" aria-hidden="true"></div>
   <main class="allcards-page" aria-live="polite">
+    <section class="banner-carousel" data-banner-carousel aria-label="Carrossel de banners">
+      <div class="banner-carousel__viewport">
+        <div class="banner-carousel__track">
+          <article class="banner-carousel__item" data-banner-slot="1">
+            <div class="banner-carousel__media">
+              <img class="banner-carousel__media-image" alt="Banner 1" loading="lazy">
+              <div class="banner-carousel__placeholder">
+                <h2 class="banner-carousel__title">Banner 1</h2>
+              </div>
+            </div>
+            <p class="banner-carousel__resolution">Resolucao ideal: 1600 x 900 px</p>
+          </article>
+          <article class="banner-carousel__item" data-banner-slot="2">
+            <div class="banner-carousel__media">
+              <img class="banner-carousel__media-image" alt="Banner 2" loading="lazy">
+              <div class="banner-carousel__placeholder">
+                <h2 class="banner-carousel__title">Banner 2</h2>
+              </div>
+            </div>
+            <p class="banner-carousel__resolution">Resolucao ideal: 1600 x 900 px</p>
+          </article>
+          <article class="banner-carousel__item" data-banner-slot="3">
+            <div class="banner-carousel__media">
+              <img class="banner-carousel__media-image" alt="Banner 3" loading="lazy">
+              <div class="banner-carousel__placeholder">
+                <h2 class="banner-carousel__title">Banner 3</h2>
+              </div>
+            </div>
+            <p class="banner-carousel__resolution">Resolucao ideal: 1600 x 900 px</p>
+          </article>
+          <article class="banner-carousel__item" data-banner-slot="4">
+            <div class="banner-carousel__media">
+              <img class="banner-carousel__media-image" alt="Banner 4" loading="lazy">
+              <div class="banner-carousel__placeholder">
+                <h2 class="banner-carousel__title">Banner 4</h2>
+              </div>
+            </div>
+            <p class="banner-carousel__resolution">Resolucao ideal: 1600 x 900 px</p>
+          </article>
+        </div>
+      </div>
+      <p class="banner-carousel__status" aria-live="polite"></p>
+    </section>
+
     <header class="allcards-head">
       <h1 class="allcards-title">AllCards</h1>
       <p class="allcards-total" id="allcards-total">0 FlashCards</p>
@@ -329,6 +543,7 @@
 
   <script src="js/android-config.js"></script>
   <script src="js/api-config.js"></script>
+  <script src="js/banner-carousel-admin.js"></script>
   <script src="js/android-shell.js"></script>
   <script>
     if (window.PlaytalkNative && typeof window.PlaytalkNative.isNativeRuntime === 'function' && window.PlaytalkNative.isNativeRuntime()) {

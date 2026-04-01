@@ -2034,6 +2034,19 @@ const ACCESSKEY_ROOT = path.join(__dirname, 'accesskey');
 const LOCAL_LEVELS_ROOT = path.join(__dirname, 'Niveis');
 const FLASHCARD_DATA_RELATIVE_ROOT = path.posix.join('data', 'flashcards', '130', '001');
 const ADMIN_FLASHCARD_ASSET_RELATIVE_ROOT = path.posix.join('admin', 'FlashCards');
+const ADMIN_BANNER_RELATIVE_ROOT = path.posix.join('admin', 'banners');
+const ADMIN_BANNER_MANIFEST_RELATIVE_PATH = path.posix.join(ADMIN_BANNER_RELATIVE_ROOT, 'manifest.json');
+const ADMIN_BANNER_MANIFEST_OBJECT_KEY = path.posix.join(ADMIN_BANNER_RELATIVE_ROOT, 'manifest.json');
+const ADMIN_BANNER_IMAGE_OBJECT_PREFIX = path.posix.join(ADMIN_BANNER_RELATIVE_ROOT, 'images');
+const ADMIN_BANNER_SLOT_COUNT = 4;
+const ADMIN_BANNER_RESOLUTION_LABEL = '1600 x 900 px';
+const ADMIN_BANNER_DEFAULT_PROMPT = [
+  'Create a premium website hero banner.',
+  'Landscape 16:9 composition, cinematic lighting, realistic style, clean and modern.',
+  'No text, no logos, no watermark, no extra frames.',
+  'Keep the main subject centered so crop and reposition remain safe.',
+  'Use vibrant but elegant colors and high contrast details.'
+].join(' ');
 const LOCAL_LEVEL_MANIFEST_RELATIVE_PATH = path.posix.join('data', 'local-level-files.json');
 const LOCAL_LEVEL_ALLOWED_FOLDERS = ['others', 'talking', 'watching', 'words'];
 const FLASHCARD_ADMIN_USERNAMES = new Set(['admin', 'adm']);
@@ -3525,6 +3538,108 @@ function buildAdminFlashcardAssetRelativePath(sourceInfo, sourceIndex, kind, ext
 
 function buildPublicAssetUrl(relativePath) {
   return `/${normalizeMirroredRelativePath(relativePath)}`;
+}
+
+function normalizeAdminBannerSlot(value) {
+  const slot = Number.parseInt(value, 10);
+  if (!Number.isInteger(slot) || slot < 1 || slot > ADMIN_BANNER_SLOT_COUNT) {
+    return 0;
+  }
+  return slot;
+}
+
+function normalizeAdminBannerOffset(value) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed)) return 0;
+  return Math.max(-2000, Math.min(2000, parsed));
+}
+
+function normalizeAdminBannerSizeAdjust(value) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed)) return 0;
+  return Math.max(-1200, Math.min(2400, parsed));
+}
+
+function createDefaultAdminBannerManifest() {
+  return {
+    generatedAt: new Date().toISOString(),
+    updatedAt: null,
+    banners: Array.from({ length: ADMIN_BANNER_SLOT_COUNT }, (_, index) => ({
+      slot: index + 1,
+      imageUrl: '',
+      objectKey: '',
+      prompt: '',
+      offsetX: 0,
+      offsetY: 0,
+      sizeAdjustPx: 0,
+      updatedAt: null
+    }))
+  };
+}
+
+function normalizeAdminBannerEntry(entry, slotNumber) {
+  const slot = normalizeAdminBannerSlot(entry?.slot) || slotNumber;
+  return {
+    slot,
+    imageUrl: typeof entry?.imageUrl === 'string' ? entry.imageUrl.trim() : '',
+    objectKey: typeof entry?.objectKey === 'string' ? entry.objectKey.trim() : '',
+    prompt: typeof entry?.prompt === 'string' ? entry.prompt.trim() : '',
+    offsetX: normalizeAdminBannerOffset(entry?.offsetX),
+    offsetY: normalizeAdminBannerOffset(entry?.offsetY),
+    sizeAdjustPx: normalizeAdminBannerSizeAdjust(entry?.sizeAdjustPx),
+    updatedAt: entry?.updatedAt || null
+  };
+}
+
+function normalizeAdminBannerManifest(payload) {
+  const base = createDefaultAdminBannerManifest();
+  const source = Array.isArray(payload?.banners) ? payload.banners : [];
+  const map = new Map();
+  for (const rawEntry of source) {
+    const normalized = normalizeAdminBannerEntry(rawEntry, normalizeAdminBannerSlot(rawEntry?.slot));
+    if (!normalized.slot) continue;
+    map.set(normalized.slot, normalized);
+  }
+  base.banners = Array.from({ length: ADMIN_BANNER_SLOT_COUNT }, (_, index) => {
+    const slot = index + 1;
+    return map.get(slot) || normalizeAdminBannerEntry({}, slot);
+  });
+  base.generatedAt = payload?.generatedAt || base.generatedAt;
+  base.updatedAt = payload?.updatedAt || null;
+  return base;
+}
+
+async function readLocalAdminBannerManifest() {
+  try {
+    const payload = await readJsonFromRelativePath(ADMIN_BANNER_MANIFEST_RELATIVE_PATH);
+    return normalizeAdminBannerManifest(payload);
+  } catch (_error) {
+    return createDefaultAdminBannerManifest();
+  }
+}
+
+async function loadAdminBannerManifest() {
+  if (isR2FluencyConfigured()) {
+    try {
+      const payload = await fetchR2JsonObject(ADMIN_BANNER_MANIFEST_OBJECT_KEY);
+      return normalizeAdminBannerManifest(payload);
+    } catch (error) {
+      if (Number(error?.status) !== 404) {
+        throw error;
+      }
+    }
+  }
+  return readLocalAdminBannerManifest();
+}
+
+async function persistAdminBannerManifest(payload) {
+  const normalized = normalizeAdminBannerManifest(payload);
+  const serialized = `${JSON.stringify(normalized, null, 2)}\n`;
+  await writeMirroredFile(ADMIN_BANNER_MANIFEST_RELATIVE_PATH, serialized, 'utf8');
+  if (isR2FluencyConfigured()) {
+    await putR2Object(ADMIN_BANNER_MANIFEST_OBJECT_KEY, Buffer.from(serialized, 'utf8'), 'application/json');
+  }
+  return normalized;
 }
 
 function sortFluencyObjectKeys(left, right) {
@@ -6511,6 +6626,200 @@ app.post('/api/images/openai/avatar-cartoon', async (req, res) => {
   } catch (error) {
     res.status(502).json({
       error: 'Erro ao conectar com a OpenAI.',
+      details: error.message
+    });
+  }
+});
+
+app.get('/api/public/banners', async (_req, res) => {
+  try {
+    const manifest = await loadAdminBannerManifest();
+    res.json({
+      success: true,
+      slotCount: ADMIN_BANNER_SLOT_COUNT,
+      resolutionLabel: ADMIN_BANNER_RESOLUTION_LABEL,
+      defaultPrompt: ADMIN_BANNER_DEFAULT_PROMPT,
+      banners: manifest.banners
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Falha ao carregar banners.',
+      details: error.message
+    });
+  }
+});
+
+app.post('/api/admin/banners/generate', express.json({ limit: '2mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  const slot = normalizeAdminBannerSlot(req.body?.slot);
+  const customPrompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
+  const size = typeof req.body?.size === 'string' ? req.body.size.trim() : '1536x1024';
+  const quality = typeof req.body?.quality === 'string' ? req.body.quality.trim() : 'medium';
+  const outputFormat = typeof req.body?.outputFormat === 'string' ? req.body.outputFormat.trim() : 'webp';
+
+  if (!slot) {
+    res.status(400).json({ error: 'Slot de banner invalido.' });
+    return;
+  }
+
+  if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
+    res.status(503).json({
+      error: 'OpenAI nao configurado.',
+      instructions: 'Preencha OPENAI_API_KEY no .env com a chave real da OpenAI.'
+    });
+    return;
+  }
+
+  const prompt = customPrompt || ADMIN_BANNER_DEFAULT_PROMPT;
+  const promptWithGuidance = `${prompt} Keep a safe central framing for website crop and repositioning.`;
+
+  try {
+    const upstreamResponse = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: OPENAI_AVATAR_IMAGE_MODEL,
+        prompt: promptWithGuidance,
+        size,
+        quality,
+        output_format: outputFormat
+      })
+    });
+
+    const responseText = await upstreamResponse.text();
+    let payload = null;
+    try {
+      payload = responseText ? JSON.parse(responseText) : null;
+    } catch (_error) {
+      payload = null;
+    }
+
+    if (!upstreamResponse.ok) {
+      res.status(upstreamResponse.status).json({
+        error: 'Falha ao gerar banner na OpenAI.',
+        details: payload?.error?.message || responseText.slice(0, 500)
+      });
+      return;
+    }
+
+    const image = Array.isArray(payload?.data) ? payload.data[0] : null;
+    const b64 = image?.b64_json;
+    if (!b64) {
+      res.status(502).json({ error: 'A OpenAI nao retornou a imagem em base64.' });
+      return;
+    }
+
+    const safeExt = outputFormat === 'jpeg' ? 'jpg' : outputFormat === 'png' ? 'png' : 'webp';
+    const mimeType = safeExt === 'jpg' ? 'image/jpeg' : safeExt === 'png' ? 'image/png' : 'image/webp';
+
+    res.json({
+      success: true,
+      slot,
+      model: OPENAI_AVATAR_IMAGE_MODEL,
+      promptUsed: prompt,
+      dataUrl: `data:${mimeType};base64,${b64}`,
+      usage: payload?.usage || null
+    });
+  } catch (error) {
+    res.status(502).json({
+      error: 'Erro ao conectar com a OpenAI.',
+      details: error.message
+    });
+  }
+});
+
+app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  if (!isR2FluencyConfigured()) {
+    res.status(503).json({ error: 'R2 nao configurado para salvar banner.' });
+    return;
+  }
+
+  const slot = normalizeAdminBannerSlot(req.body?.slot);
+  const imageDataUrl = typeof req.body?.imageDataUrl === 'string' ? req.body.imageDataUrl.trim() : '';
+  const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
+  const offsetX = normalizeAdminBannerOffset(req.body?.offsetX);
+  const offsetY = normalizeAdminBannerOffset(req.body?.offsetY);
+  const sizeAdjustPx = normalizeAdminBannerSizeAdjust(req.body?.sizeAdjustPx);
+
+  if (!slot) {
+    res.status(400).json({ error: 'Slot de banner invalido.' });
+    return;
+  }
+
+  const parsedImage = parseBase64DataUrl(imageDataUrl);
+  if (!parsedImage?.buffer?.length || !/^image\//i.test(parsedImage.mimeType || '')) {
+    res.status(400).json({ error: 'Imagem de banner invalida.' });
+    return;
+  }
+
+  if (parsedImage.buffer.length > 15 * 1024 * 1024) {
+    res.status(413).json({ error: 'Imagem muito grande. Limite de 15 MB.' });
+    return;
+  }
+
+  const extension = extensionFromMimeType(parsedImage.mimeType);
+  const safeExtension = ['png', 'jpg', 'webp'].includes(extension) ? extension : 'webp';
+  const mimeType = safeExtension === 'jpg' ? 'image/jpeg' : safeExtension === 'png' ? 'image/png' : 'image/webp';
+  const objectKey = path.posix.join(
+    ADMIN_BANNER_IMAGE_OBJECT_PREFIX,
+    `banner-${slot}-${Date.now()}.${safeExtension}`
+  );
+
+  try {
+    await putR2Object(objectKey, parsedImage.buffer, mimeType);
+    const publicUrl = buildFlashcardsR2PublicUrl(objectKey);
+    const manifest = await loadAdminBannerManifest();
+    const previousEntry = manifest.banners.find((entry) => entry.slot === slot) || null;
+
+    manifest.banners = manifest.banners.map((entry) => {
+      if (entry.slot !== slot) return entry;
+      return {
+        ...entry,
+        slot,
+        imageUrl: publicUrl,
+        objectKey,
+        prompt: prompt || entry.prompt || ADMIN_BANNER_DEFAULT_PROMPT,
+        offsetX,
+        offsetY,
+        sizeAdjustPx,
+        updatedAt: new Date().toISOString()
+      };
+    });
+    manifest.updatedAt = new Date().toISOString();
+    const savedManifest = await persistAdminBannerManifest(manifest);
+    const savedEntry = savedManifest.banners.find((entry) => entry.slot === slot) || null;
+
+    if (previousEntry?.objectKey && previousEntry.objectKey !== objectKey) {
+      deleteR2Object(previousEntry.objectKey).catch(() => {});
+    }
+
+    res.json({
+      success: true,
+      slot,
+      banner: savedEntry
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Falha ao salvar banner no R2.',
       details: error.message
     });
   }
