@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -3403,18 +3403,19 @@
     }
 
     .game[data-phase-key="fourth-star"] .flashcards-typing__key {
+      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
       background:
-        linear-gradient(145deg, rgba(2, 12, 38, 0.96) 0%, rgba(10, 33, 92, 0.94) 54%, rgba(4, 18, 56, 0.98) 100%),
-        url('SVG/codex-icons/ingles.svg'),
-        radial-gradient(circle at 50% 20%, rgba(72, 178, 255, 0.42), rgba(72, 178, 255, 0) 62%);
-      background-repeat: no-repeat, no-repeat, no-repeat;
-      background-position: center, center, center;
-      background-size: cover, 58%, 100%;
-      color: #8fd9ff;
-      text-shadow: 0 0 10px rgba(92, 201, 255, 0.9), 0 0 22px rgba(31, 118, 255, 0.55);
+        linear-gradient(rgba(8, 56, 31, 0.3), rgba(8, 56, 31, 0.3)),
+        url("images/euatype.png");
+      background-repeat: no-repeat, no-repeat;
+      background-position: center, center;
+      background-size: cover, cover;
+      color: #f7fff8;
+      text-shadow:
+        0 2px 0 rgba(7, 34, 20, 0.95),
+        0 8px 14px rgba(0, 0, 0, 0.35);
       box-shadow:
-        inset 0 0 0 1px rgba(105, 207, 255, 0.22),
-        inset 0 0 24px rgba(37, 118, 255, 0.18),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.2),
         0 0 16px rgba(24, 125, 255, 0.24);
     }
 
@@ -3732,12 +3733,12 @@
 
     .game[data-phase-key="first-star"] #gameVisual,
     .game[data-phase-key="third-star"] #gameVisual {
-      width: 370px;
-      height: 370px;
-      min-width: 370px;
-      min-height: 370px;
-      max-width: 370px;
-      max-height: 370px;
+      width: 315px;
+      height: 315px;
+      min-width: 315px;
+      min-height: 315px;
+      max-width: 315px;
+      max-height: 315px;
       aspect-ratio: 1 / 1;
       border-radius: 50%;
       overflow: hidden;
@@ -4110,13 +4111,28 @@
       width: min(433px, calc((100vw - 32px) * 0.88));
     }
 
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__key,
-    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key {
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__key {
       font-size: clamp(49px, 15.84vw, 97px);
       line-height: 0.82;
       background-image:
         linear-gradient(rgba(8, 56, 31, 0.4), rgba(8, 56, 31, 0.4)),
         url("images/bgtype.png");
+      background-position: center, center;
+      background-repeat: no-repeat, no-repeat;
+      background-size: cover, cover;
+      color: #f7fff8;
+      text-shadow:
+        0 2px 0 rgba(7, 34, 20, 0.95),
+        0 8px 14px rgba(0, 0, 0, 0.35);
+    }
+
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key {
+      font-size: clamp(49px, 15.84vw, 97px);
+      line-height: 0.82;
+      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+      background-image:
+        linear-gradient(rgba(8, 56, 31, 0.3), rgba(8, 56, 31, 0.3)),
+        url("images/euatype.png");
       background-position: center, center;
       background-repeat: no-repeat, no-repeat;
       background-size: cover, cover;
@@ -5631,7 +5647,7 @@
       <img class="auth-logo" src="SVG/logo.svg" alt="PlayTalk">
       <div>
         <h1 class="auth-title" id="authTitle">PlayTalk</h1>
-        <p class="auth-copy" id="authCopy">Entre com seu nome e senha para começar a jogar na Liga Playtalk.</p>
+        <p class="auth-copy" id="authCopy">Entre com seu nome e senha para comeÃ§ar a jogar na Liga Playtalk.</p>
       </div>
       <div class="auth-card__body" id="authBody">
         <div class="auth-switch" id="authSwitch" aria-label="Escolha entre entrar ou cadastrar">
@@ -5713,7 +5729,7 @@
             <p id="gameHeaderCopy">O jogo comeca com 3 cartas e cresce ate 12 conforme voce ganha flashcards.</p>
           </div>
           <div class="actions">
-            <button class="btn btn-close" id="exitGameBtn" type="button" aria-label="Fechar" hidden>×</button>
+            <button class="btn btn-close" id="exitGameBtn" type="button" aria-label="Fechar" hidden>Ã—</button>
           </div>
         </div>
 
@@ -5773,12 +5789,12 @@
       <div class="panel game-shell game-setup__shell">
         <div class="game-head">
           <div>
-            <h2>Iniciar jogo</h2>
+            <h2>Jogar agora</h2>
             <p>O jogo comeca com 3 flashcards. A cada vitoria, 2 novos sobem para a mesa ate o maximo de 12.</p>
             <p id="gameSetupCountCopy" class="admin-tools__status">Calculando flashcards disponiveis...</p>
           </div>
           <div class="actions">
-            <button class="btn btn-close" id="closeGameSetupBtn" type="button" aria-label="Fechar">Ã—</button>
+            <button class="btn btn-close" id="closeGameSetupBtn" type="button" aria-label="Fechar">Ãƒâ€”</button>
           </div>
         </div>
         <div class="game-setup__options" id="gameSetupOptions">
@@ -5796,12 +5812,12 @@
             <p>Escolha como quer ouvir.</p>
           </div>
           <div class="actions">
-            <button class="btn btn-close" id="closeWatchPopoverBtn" type="button" aria-label="Fechar">×</button>
+            <button class="btn btn-close" id="closeWatchPopoverBtn" type="button" aria-label="Fechar">Ã—</button>
           </div>
         </div>
         <div class="watch-options">
           <label class="watch-field">
-            <span>Espaço de repetição</span>
+            <span>EspaÃ§o de repetiÃ§Ã£o</span>
             <select id="watchGapSelect">
               <option value="3000">3 segundos</option>
               <option value="5000">5 segundos</option>
@@ -5836,7 +5852,7 @@
           <div class="watch-decks__grid" id="watchDeckGrid"></div>
         </section>
         <div class="actions">
-          <button class="btn btn-primary" id="startWatchBtn" type="button">Começar</button>
+          <button class="btn btn-primary" id="startWatchBtn" type="button">ComeÃ§ar</button>
         </div>
       </div>
     </section>
@@ -5844,7 +5860,7 @@
     <section class="watch" id="watch" aria-modal="true" role="dialog">
       <div class="watch-shell">
         <div class="watch-head">
-          <button class="btn btn-close" id="exitWatchBtn" type="button" aria-label="Fechar">×</button>
+          <button class="btn btn-close" id="exitWatchBtn" type="button" aria-label="Fechar">Ã—</button>
         </div>
         <article class="watch-card">
           <div class="watch-card__layout">
@@ -6048,17 +6064,19 @@
       const BALANCE_TRACKS = ['zen1.mp3', 'zen2.mp3', 'zen3.mp3', 'zen4.mp3'];
       const BALANCE_TRACK_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas';
       const TYPING_KEY_BLUES = ['#6ebcff', '#76c3ff', '#7dc9ff', '#86ceff', '#8fd4ff', '#98d9ff'];
-      const DEFAULT_GAME_CONTEXT_LIMIT = 3;
-      const MIN_GAME_CONTEXT_LIMIT = 3;
+      const DEFAULT_GAME_CONTEXT_LIMIT = 1;
+      const MIN_GAME_CONTEXT_LIMIT = 1;
       const GAME_ACTIVE_CARD_CAP = 12;
       const GAME_STAR_TARGET = 5;
       const REVIEW_SLOT_LIMIT = 8;
       const TUTORIAL_AUDIO_ROOT = AUDIOSTUTO_PUBLIC_ROOT;
-      const TUTORIAL_NORMAL_GAME_COUNT = 3;
+      const TUTORIAL_NORMAL_GAME_COUNT = 1;
       const TUTORIAL_PLANET_IMAGE_NAME = 'planet.jpg';
       const TUTORIAL_PLANET_IMAGE_URL = '/accesskey/planet.jpg';
       const TUTORIAL_PLANET_ENGLISH = 'planet';
       const TUTORIAL_PLANET_PORTUGUESE = 'planeta';
+      const EARLY_FLASHCARD_PLAYER_LIMIT = 20;
+      const EARLY_FLASHCARD_MAX_CHARACTERS = 12;
       const TUTORIAL_FINALE_SEAL_FLASH_MS = 400;
       const TUTORIAL_LAUNCH_SESSION_KEY = 'playtalk-flashcards-launch-tutorial-consumed';
       const GUEST_FLASHCARD_LOGIN_THRESHOLD = 999999;
@@ -6501,7 +6519,7 @@
       function fixMojibake(value) {
         const text = safeText(value);
         if (!text) return '';
-        if (!/[ÃÂ]/.test(text)) return text;
+        if (!/[ÃÂâï¿½]/.test(text)) return text;
         try {
           return decodeURIComponent(escape(text));
         } catch (_error) {
@@ -6513,7 +6531,7 @@
         let text = fixMojibake(value);
         if (!text) return '';
         for (let attempt = 0; attempt < 2; attempt += 1) {
-          if (!/[ÃÂ�]/.test(text)) break;
+          if (!/[ÃÂâï¿½]/.test(text)) break;
           try {
             const decoded = decodeURIComponent(escape(text));
             if (!decoded || decoded === text) break;
@@ -6522,12 +6540,27 @@
             break;
           }
         }
-        return text
-          .replace(/Ã—/g, '×')
-          .replace(/â€”/g, '-')
-          .replace(/â€“/g, '-')
-          .replace(/â€˜|â€™/g, "'")
-          .replace(/â€œ|â€�/g, '"');
+        const replacements = [
+          ['Ã¡', 'á'], ['Ãà', 'à'], ['Ãâ', 'â'], ['Ãã', 'ã'], ['Ãä', 'ä'],
+          ['Ãé', 'é'], ['Ãè', 'è'], ['Ãê', 'ê'], ['Ãë', 'ë'],
+          ['Ãí', 'í'], ['Ãì', 'ì'], ['Ãî', 'î'], ['Ãï', 'ï'],
+          ['Ãó', 'ó'], ['Ãò', 'ò'], ['Ãô', 'ô'], ['Ãõ', 'õ'], ['Ãö', 'ö'],
+          ['Ãú', 'ú'], ['Ãù', 'ù'], ['Ãû', 'û'], ['Ãü', 'ü'],
+          ['Ãç', 'ç'], ['Ãñ', 'ñ'],
+          ['ÃÁ', 'Á'], ['ÃÀ', 'À'], ['ÃÂ', 'Â'], ['ÃÃ', 'Ã'], ['ÃÄ', 'Ä'],
+          ['ÃÉ', 'É'], ['ÃÈ', 'È'], ['ÃÊ', 'Ê'], ['ÃË', 'Ë'],
+          ['ÃÍ', 'Í'], ['ÃÌ', 'Ì'], ['ÃÎ', 'Î'], ['ÃÏ', 'Ï'],
+          ['ÃÓ', 'Ó'], ['ÃÒ', 'Ò'], ['ÃÔ', 'Ô'], ['ÃÕ', 'Õ'], ['ÃÖ', 'Ö'],
+          ['ÃÚ', 'Ú'], ['ÃÙ', 'Ù'], ['ÃÛ', 'Û'], ['ÃÜ', 'Ü'],
+          ['ÃÇ', 'Ç'], ['Ã‘', 'Ñ'],
+          ['â€”', '-'], ['â€“', '-'], ['â€˜', "'"], ['â€™', "'"], ['â€œ', '"'], ['â€', '"'],
+          ['Âº', 'º'], ['Âª', 'ª'], ['Â°', '°'], ['Â', '']
+        ];
+        let repaired = text;
+        replacements.forEach(([from, to]) => {
+          repaired = repaired.split(from).join(to);
+        });
+        return repaired.replace(/\uFFFD/g, '').trim();
       }
 
       function normalizeText(value) {
@@ -6607,7 +6640,7 @@
 
       function normalizeGameCount(value) {
         const parsed = Number.parseInt(String(value || '').trim(), 10);
-        return parsed >= 3 ? parsed : null;
+        return parsed >= MIN_GAME_CONTEXT_LIMIT ? parsed : null;
       }
 
       function loadSelectedGameCount() {
@@ -7251,7 +7284,7 @@
         }
         return isRegister
           ? 'Crie seu nome e sua senha para entrar na Liga Playtalk e aparecer no ranking.'
-          : 'Entre com seu nome e senha para comeÃ§ar a jogar na Liga Playtalk.';
+          : 'Entre com seu nome e senha para comeÃƒÂ§ar a jogar na Liga Playtalk.';
       }
 
       function setAuthMode(mode) {
@@ -7621,7 +7654,7 @@
 
       function syncWelcomeStartButton() {
         if (!els.welcomeStartBtn) return;
-        els.welcomeStartBtn.textContent = hasInstantWelcomePlayAccess() ? 'JOGAR AGORA' : 'INICIAR JOGO';
+        els.welcomeStartBtn.textContent = 'JOGAR AGORA';
         els.welcomeStartBtn.disabled = false;
       }
 
@@ -7678,8 +7711,8 @@
         if (!state.entry.pendingPlayStart || !state.entry.cardsReady) return false;
         state.entry.pendingPlayStart = false;
         hideWelcomeGate();
-        saveSelectedGameCount(6);
-        state.game.selectedCount = 6;
+        saveSelectedGameCount(DEFAULT_GAME_CONTEXT_LIMIT);
+        state.game.selectedCount = DEFAULT_GAME_CONTEXT_LIMIT;
         beginGame();
         return true;
       }
@@ -7702,8 +7735,8 @@
           return;
         }
         hideWelcomeGate();
-        saveSelectedGameCount(6);
-        state.game.selectedCount = 6;
+        saveSelectedGameCount(DEFAULT_GAME_CONTEXT_LIMIT);
+        state.game.selectedCount = DEFAULT_GAME_CONTEXT_LIMIT;
         beginGame();
       }
 
@@ -7826,7 +7859,7 @@
           const slots = Array.from({ length: 6 }, (_, index) => {
             const letter = state.ui.premiumCode[index] || '';
             if (!letter) {
-              return '<div class="premium-gate__code-slot"><span>•</span></div>';
+              return '<div class="premium-gate__code-slot"><span>â€¢</span></div>';
             }
             return                             `<div class="premium-gate__code-slot" data-filled-slot="${index}"><img src="${escapeHtml(getAccessKeyImagePath(letter))}" alt="${escapeHtml(letter)}"></div>`;
           });
@@ -9421,19 +9454,28 @@
         }, delayMs);
       }
 
-      function countFlashcardLetters(text) {
+      function countFlashcardCharacters(text) {
         return safeText(text)
-          .replace(/[^A-Za-zÀ-ÿ0-9]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim()
           .length;
       }
 
       function isEarlyFlashcardLengthEligible(card) {
-        const englishLength = countFlashcardLetters(card?.english);
-        const portugueseLength = countFlashcardLetters(card?.portuguese);
-        return englishLength >= EARLY_FLASHCARD_MIN_LENGTH
-          && englishLength <= EARLY_FLASHCARD_MAX_LENGTH
-          && portugueseLength >= EARLY_FLASHCARD_MIN_LENGTH
-          && portugueseLength <= EARLY_FLASHCARD_MAX_LENGTH;
+        const englishLength = countFlashcardCharacters(card?.english);
+        const portugueseLength = countFlashcardCharacters(card?.portuguese);
+        if (!englishLength || !portugueseLength) return false;
+        return englishLength <= EARLY_FLASHCARD_MAX_CHARACTERS
+          && portugueseLength <= EARLY_FLASHCARD_MAX_CHARACTERS;
+      }
+
+      function shouldRestrictEarlyFlashcards() {
+        return !isAdminUser() && accessibleFlashcardsCount() < EARLY_FLASHCARD_PLAYER_LIMIT;
+      }
+
+      function applyEarlyFlashcardFilter(cards) {
+        if (!shouldRestrictEarlyFlashcards()) return Array.isArray(cards) ? cards : [];
+        return (Array.isArray(cards) ? cards : []).filter(isEarlyFlashcardLengthEligible);
       }
 
       function baseCandidateCards() {
@@ -12634,16 +12676,31 @@
 
       function nextGameCardForPool(pool = 'base') {
         const activeIds = new Set(Array.from(state.game.entries.keys()));
-        const preferredSource = pool === 'review'
+        const earlyRestricted = shouldRestrictEarlyFlashcards();
+        let preferredSource = pool === 'review'
           ? readyReviewCards().filter(card => !activeIds.has(card.id))
           : baseCandidateCards().filter(card => !activeIds.has(card.id));
-        const fallbackSource = pool === 'review'
+        let fallbackSource = pool === 'review'
           ? baseCandidateCards().filter(card => !activeIds.has(card.id))
           : readyReviewCards().filter(card => !activeIds.has(card.id));
+        if (earlyRestricted) {
+          if (pool === 'base') {
+            preferredSource = preferredSource.filter(isEarlyFlashcardLengthEligible);
+            fallbackSource = fallbackSource.filter(isEarlyFlashcardLengthEligible);
+          } else {
+            fallbackSource = fallbackSource.filter(isEarlyFlashcardLengthEligible);
+          }
+        }
         const sourceCards = preferredSource.length ? preferredSource : fallbackSource;
-        const nextCard = (pool === 'review' && preferredSource.length)
+        let nextCard = (pool === 'review' && preferredSource.length)
           ? sourceCards[0]
           : takeRandom(sourceCards, 1)[0];
+        if (pool === 'base' && state.game.entries.size === 0) {
+          const tutorialCard = findTutorialPlanetCard();
+          if (tutorialCard && sourceCards.some((card) => card.id === tutorialCard.id)) {
+            nextCard = tutorialCard;
+          }
+        }
         if (!nextCard) return null;
         return {
           card: nextCard,
@@ -12805,7 +12862,7 @@
             </button>
           `;
         }).join('');
-        els.watchDeckSummary.textContent = `${selectedSources.size} deck${selectedSources.size === 1 ? '' : 's'} ativo${selectedSources.size === 1 ? '' : 's'} • ${selectedCardCount} carta${selectedCardCount === 1 ? '' : 's'}`;
+        els.watchDeckSummary.textContent = `${selectedSources.size} deck${selectedSources.size === 1 ? '' : 's'} ativo${selectedSources.size === 1 ? '' : 's'} â€¢ ${selectedCardCount} carta${selectedCardCount === 1 ? '' : 's'}`;
         if (els.startWatchBtn) {
           els.startWatchBtn.disabled = !selectedSources.size || !selectedCardCount;
         }
@@ -13155,10 +13212,15 @@
           state.game.contextLimit = GAME_ACTIVE_CARD_CAP;
           const reviewLimit = Math.min(REVIEW_SLOT_LIMIT, Math.floor(roundCount / 3));
           const reviewCards = readyReviewCards().slice(0, reviewLimit);
-          const chosenCards = buildOrderedDeckSelection(
-            baseCandidateCards(),
-            Math.max(0, roundCount - reviewCards.length)
-          );
+          const tutorialCard = findTutorialPlanetCard();
+          const basePool = applyEarlyFlashcardFilter(baseCandidateCards());
+          const chosenCards = [];
+          if (tutorialCard && basePool.some((card) => card.id === tutorialCard.id)) {
+            chosenCards.push(tutorialCard);
+          }
+          const remainingBaseCards = basePool.filter((card) => !chosenCards.some((picked) => picked.id === card.id));
+          const remainingLimit = Math.max(0, roundCount - reviewCards.length - chosenCards.length);
+          chosenCards.push(...buildOrderedDeckSelection(remainingBaseCards, remainingLimit));
           chosenCards.forEach(card => {
             const entry = createGameEntry(card, 'base');
             state.game.entries.set(entry.id, entry);
@@ -13402,7 +13464,7 @@
             }
             const targetActiveCount = activeCountBeforeResolution >= GAME_ACTIVE_CARD_CAP
               ? GAME_ACTIVE_CARD_CAP
-              : Math.min(GAME_ACTIVE_CARD_CAP, activeCountBeforeResolution + 1);
+              : Math.min(GAME_ACTIVE_CARD_CAP, activeCountBeforeResolution + 2);
             while (state.game.entries.size < targetActiveCount) {
               if (!refillGameEntry(entry.pool, targetActiveCount)) {
                 break;
@@ -14127,3 +14189,4 @@
   </script>
 </body>
 </html>
+
