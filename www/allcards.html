@@ -116,14 +116,12 @@
     }
 
     .banner-carousel {
-      margin: 0 auto 18px;
-      width: min(100%, 1000px);
-      border-radius: 24px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      overflow: clip;
-      background: rgba(3, 12, 24, 0.45);
-      box-shadow: 0 16px 34px rgba(8, 20, 36, 0.28);
-      backdrop-filter: blur(8px);
+      width: 100vw;
+      margin: 0 0 8px;
+      margin-left: calc(50% - 50vw);
+      margin-right: calc(50% - 50vw);
+      overflow: hidden;
+      background: transparent;
     }
 
     .banner-carousel__viewport {
@@ -143,14 +141,14 @@
 
     .banner-carousel__item {
       width: 25%;
-      min-height: 220px;
-      padding: 12px 10px 12px;
+      min-height: 0;
+      padding: 0;
       display: grid;
       align-content: start;
       justify-items: stretch;
-      gap: 10px;
+      gap: 0;
       text-align: center;
-      background: linear-gradient(140deg, rgba(12, 56, 112, 0.72), rgba(24, 88, 162, 0.68));
+      background: transparent;
       user-select: none;
       position: relative;
     }
@@ -159,9 +157,8 @@
       position: relative;
       width: 100%;
       aspect-ratio: 16 / 9;
-      border-radius: 14px;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      border: 0;
       background: linear-gradient(140deg, rgba(27, 88, 161, 0.92), rgba(36, 112, 199, 0.9));
     }
 
@@ -197,54 +194,8 @@
       opacity: 1;
     }
 
-    .banner-carousel__placeholder {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      padding: 8px;
-      background: linear-gradient(120deg, rgba(6, 18, 34, 0.1), rgba(255, 255, 255, 0.06));
-      text-shadow: 0 6px 20px rgba(0, 0, 0, 0.24);
-    }
-
-    .banner-carousel__item.has-image .banner-carousel__placeholder {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .banner-carousel__title {
-      margin: 0;
-      font-size: clamp(26px, 4vw, 40px);
-      font-weight: 900;
-      letter-spacing: 0.03em;
-      color: #ffffff;
-    }
-
-    .banner-carousel__resolution {
-      margin: 0;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.94);
-    }
-
-    .banner-carousel__status {
-      margin: 0;
-      min-height: 18px;
-      padding: 4px 10px 10px;
-      text-align: center;
-      font-size: 12px;
-      font-weight: 700;
-      color: rgba(226, 242, 255, 0.95);
-    }
-
     body.is-admin-banner .banner-carousel__item {
       cursor: pointer;
-    }
-
-    body.is-admin-banner .banner-carousel__item:hover .banner-carousel__media {
-      border-color: rgba(255, 255, 255, 0.7);
     }
 
     .banner-carousel__item.is-editing .banner-carousel__media {
@@ -475,51 +426,34 @@
 </head>
 <body data-lens-context="menus">
   <div class="container" aria-hidden="true"></div>
-  <main class="allcards-page" aria-live="polite">
-    <section class="banner-carousel" data-banner-carousel aria-label="Carrossel de banners">
-      <div class="banner-carousel__viewport">
-        <div class="banner-carousel__track">
-          <article class="banner-carousel__item" data-banner-slot="1">
-            <div class="banner-carousel__media">
-              <img class="banner-carousel__media-image" alt="Banner 1" loading="lazy">
-              <div class="banner-carousel__placeholder">
-                <h2 class="banner-carousel__title">Banner 1</h2>
-              </div>
-            </div>
-            <p class="banner-carousel__resolution">Resolucao ideal: 1600 x 900 px</p>
-          </article>
-          <article class="banner-carousel__item" data-banner-slot="2">
-            <div class="banner-carousel__media">
-              <img class="banner-carousel__media-image" alt="Banner 2" loading="lazy">
-              <div class="banner-carousel__placeholder">
-                <h2 class="banner-carousel__title">Banner 2</h2>
-              </div>
-            </div>
-            <p class="banner-carousel__resolution">Resolucao ideal: 1600 x 900 px</p>
-          </article>
-          <article class="banner-carousel__item" data-banner-slot="3">
-            <div class="banner-carousel__media">
-              <img class="banner-carousel__media-image" alt="Banner 3" loading="lazy">
-              <div class="banner-carousel__placeholder">
-                <h2 class="banner-carousel__title">Banner 3</h2>
-              </div>
-            </div>
-            <p class="banner-carousel__resolution">Resolucao ideal: 1600 x 900 px</p>
-          </article>
-          <article class="banner-carousel__item" data-banner-slot="4">
-            <div class="banner-carousel__media">
-              <img class="banner-carousel__media-image" alt="Banner 4" loading="lazy">
-              <div class="banner-carousel__placeholder">
-                <h2 class="banner-carousel__title">Banner 4</h2>
-              </div>
-            </div>
-            <p class="banner-carousel__resolution">Resolucao ideal: 1600 x 900 px</p>
-          </article>
-        </div>
+  <section class="banner-carousel" data-banner-carousel aria-label="Carrossel de banners">
+    <div class="banner-carousel__viewport">
+      <div class="banner-carousel__track">
+        <article class="banner-carousel__item" data-banner-slot="1">
+          <div class="banner-carousel__media">
+            <img class="banner-carousel__media-image" alt="Banner 1" loading="lazy">
+          </div>
+        </article>
+        <article class="banner-carousel__item" data-banner-slot="2">
+          <div class="banner-carousel__media">
+            <img class="banner-carousel__media-image" alt="Banner 2" loading="lazy">
+          </div>
+        </article>
+        <article class="banner-carousel__item" data-banner-slot="3">
+          <div class="banner-carousel__media">
+            <img class="banner-carousel__media-image" alt="Banner 3" loading="lazy">
+          </div>
+        </article>
+        <article class="banner-carousel__item" data-banner-slot="4">
+          <div class="banner-carousel__media">
+            <img class="banner-carousel__media-image" alt="Banner 4" loading="lazy">
+          </div>
+        </article>
       </div>
-      <p class="banner-carousel__status" aria-live="polite"></p>
-    </section>
+    </div>
+  </section>
 
+  <main class="allcards-page" aria-live="polite">
     <header class="allcards-head">
       <h1 class="allcards-title">AllCards</h1>
       <p class="allcards-total" id="allcards-total">0 FlashCards</p>
