@@ -136,6 +136,11 @@
       animation: bannersSlide 14s infinite;
     }
 
+    body.is-admin-banner .banner-carousel.is-admin-paused .banner-carousel__track {
+      animation-play-state: paused;
+      transform: translateX(calc(var(--admin-focus-index, 0) * -25%));
+    }
+
     .banner-carousel__item {
       width: 25%;
       min-height: 220px;

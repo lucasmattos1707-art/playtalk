@@ -6,6 +6,8 @@
     isAdmin: false,
     busy: false,
     activeEditSlot: 0,
+    focusedSlot: 0,
+    inactivityTimerId: 0,
     defaultPrompt: '',
     banners: new Map()
   };
@@ -64,6 +66,44 @@
     slotElements(slot).forEach((item) => {
       item.classList.toggle('is-busy', Boolean(isBusy));
     });
+  }
+
+  function clearInactivityTimer() {
+    if (state.inactivityTimerId) {
+      window.clearTimeout(state.inactivityTimerId);
+      state.inactivityTimerId = 0;
+    }
+  }
+
+  function resumeCarouselRotation() {
+    clearInactivityTimer();
+    state.focusedSlot = 0;
+    carousels.forEach((carousel) => {
+      carousel.classList.remove('is-admin-paused');
+      carousel.style.removeProperty('--admin-focus-index');
+    });
+  }
+
+  function pauseCarouselOnSlot(slot) {
+    const normalizedSlot = Math.max(1, toInteger(slot, 1));
+    state.focusedSlot = normalizedSlot;
+    carousels.forEach((carousel) => {
+      carousel.classList.add('is-admin-paused');
+      carousel.style.setProperty('--admin-focus-index', String(normalizedSlot - 1));
+    });
+  }
+
+  function registerAdminActivity(slot) {
+    if (!state.isAdmin) return;
+    if (slot > 0) {
+      pauseCarouselOnSlot(slot);
+    } else if (state.focusedSlot > 0) {
+      pauseCarouselOnSlot(state.focusedSlot);
+    }
+    clearInactivityTimer();
+    state.inactivityTimerId = window.setTimeout(() => {
+      resumeCarouselRotation();
+    }, 30000);
   }
 
   function syncEditingClass() {
@@ -144,6 +184,7 @@
 
   async function generateBanner(slot, prompt) {
     state.busy = true;
+    registerAdminActivity(slot);
     state.activeEditSlot = 0;
     syncEditingClass();
     setSlotBusy(slot, true);
@@ -172,6 +213,7 @@
       state.banners.set(slot, nextEntry);
       applyBannerToDom(slot, nextEntry);
       state.activeEditSlot = slot;
+      registerAdminActivity(slot);
       syncEditingClass();
       setCarouselStatus(`Banner ${slot} pronto. Use +, -, setas e espaco para salvar.`);
     } catch (error) {
@@ -185,6 +227,7 @@
   async function saveActiveBanner() {
     const slot = state.activeEditSlot;
     if (!slot || state.busy) return;
+    registerAdminActivity(slot);
     const entry = getBannerEntry(slot);
     if (!entry.imageUrl || !entry.imageUrl.startsWith('data:image/')) {
       setCarouselStatus('Gere uma imagem antes de salvar.');
@@ -225,6 +268,7 @@
       state.banners.set(slot, nextEntry);
       applyBannerToDom(slot, nextEntry);
       state.activeEditSlot = 0;
+      registerAdminActivity(slot);
       syncEditingClass();
       setCarouselStatus(`Banner ${slot} salvo no R2.`);
     } catch (error) {
@@ -238,6 +282,7 @@
   function adjustActiveBanner(patch) {
     const slot = state.activeEditSlot;
     if (!slot || state.busy) return;
+    registerAdminActivity(slot);
     const current = getBannerEntry(slot);
     const nextEntry = {
       ...current,
@@ -251,6 +296,7 @@
 
   function onBannerClick(slot) {
     if (!state.isAdmin || state.busy) return;
+    registerAdminActivity(slot);
     const current = getBannerEntry(slot);
     const defaultPrompt = current.prompt || state.defaultPrompt;
     const typedPrompt = window.prompt(`Prompt do Banner ${slot}`, defaultPrompt);
