@@ -5939,6 +5939,8 @@ app.use((req, res, next) => {
     '/allcards/',
     '/speak',
     '/speak/',
+    '/speaking',
+    '/speaking/',
     '/levels',
     '/levels/',
     '/database',
@@ -6155,6 +6157,10 @@ app.get(['/edu', '/edu/'], (req, res) => {
 
 app.get(['/speak', '/speak/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'speak.html'));
+});
+
+app.get(['/speaking', '/speaking/'], (req, res) => {
+  res.sendFile(path.join(staticDir, 'speaking.html'));
 });
 
 app.post('/api/tts/openai', async (req, res) => {

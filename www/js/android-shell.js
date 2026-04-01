@@ -8,6 +8,8 @@
     avataradd: { webPath: '/avataradd', localPath: '/avataradd.html' },
     password: { webPath: '/password', localPath: '/password.html' },
     premium: { webPath: '/premium', localPath: '/premium.html' }
+    ,
+    speaking: { webPath: '/speaking', localPath: '/speaking.html' }
   };
 
   const FILE_TO_ROUTE_KEY = {
@@ -19,6 +21,8 @@
     'avataradd.html': 'avataradd',
     'password.html': 'password',
     'premium.html': 'premium'
+    ,
+    'speaking.html': 'speaking'
   };
 
   let backButtonListenerBound = false;
