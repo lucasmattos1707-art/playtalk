@@ -12,21 +12,14 @@
     (function () {
       var pathName = window.location.pathname.replace(/\/+$/, '') || '/';
       var isRootEntry = pathName === '/' || pathName === '/index.html';
-      var protocol = String(window.location.protocol || '').toLowerCase();
-      var hostname = String(window.location.hostname || '').toLowerCase();
-      var shouldUseDirectFlashcardsFile =
-        protocol === 'file:'
-        || hostname === 'localhost'
-        || hostname === '127.0.0.1';
       if (isRootEntry && !window.location.hash && !window.location.search) {
-        window.location.replace(shouldUseDirectFlashcardsFile ? '/flashcards.html' : '/flashcards');
-        return;
+        window.location.hash = '#home';
       }
 
       try {
         var params = new URLSearchParams(window.location.search);
         var source = String(params.get('source') || '').toLowerCase();
-        var shouldShowLaunch = source === 'play' || source === 'cards' || !window.location.hash;
+        var shouldShowLaunch = source === 'cards' || (!window.location.hash && source !== 'play');
         if (shouldShowLaunch) {
           document.documentElement.classList.add('play-launch-pending');
           var raw = sessionStorage.getItem('playtalk-play-launch');
@@ -90,7 +83,7 @@
             return;
           }
 
-          var bgUrl = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/images/Twinkling%20stars%20above%20soft%20clouds.png';
+          var bgUrl = '/accesskey/quantum-gradient.svg';
           var iconSrc = 'SVG/logo.png';
           if (typeof window.__playLaunchIconSrc === 'string' && window.__playLaunchIconSrc) {
             iconSrc = window.__playLaunchIconSrc;

@@ -5830,6 +5830,8 @@ app.use((req, res, next) => {
     '/database/',
     '/flashcards',
     '/flashcards/',
+    '/fast',
+    '/fast/',
     '/username',
     '/username/',
     '/avataradd',
@@ -5974,6 +5976,10 @@ app.get(['/database', '/database/'], (req, res) => {
 
 app.get(['/flashcards', '/flashcards/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'www', 'flashcards.html'));
+});
+
+app.get(['/fast', '/fast/'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'www', 'fast.html'));
 });
 
 app.get(['/username', '/username/'], (req, res) => {

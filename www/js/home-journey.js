@@ -627,15 +627,34 @@
     if (!window.playtalkGame) return;
     resolveUnlockedCompletion();
 
-    const fromPlayQuery = (() => {
+    const playLaunchTarget = (() => {
       try {
-        return new URLSearchParams(window.location.search).get('source') === 'play';
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('source') !== 'play') return null;
+        const phaseFromQuery = Number.parseInt(params.get('phase') || '', 10);
+        const dayFromQuery = Number.parseInt(params.get('day') || '', 10);
+        if (Number.isFinite(phaseFromQuery) && phaseFromQuery >= 1 && phaseFromQuery <= 12) {
+          return {
+            phase: phaseFromQuery,
+            day: Number.isFinite(dayFromQuery) && dayFromQuery > 0 ? dayFromQuery : null
+          };
+        }
+        const raw = sessionStorage.getItem('playtalk-play-launch');
+        if (!raw) return null;
+        const payload = JSON.parse(raw);
+        const phase = Number.parseInt(payload && payload.phase, 10);
+        const day = Number.parseInt(payload && payload.day, 10);
+        if (!Number.isFinite(phase) || phase < 1 || phase > 12) return null;
+        return {
+          phase,
+          day: Number.isFinite(day) && day > 0 ? day : null
+        };
       } catch (error) {
-        return false;
+        return null;
       }
     })();
 
-    if (fromPlayQuery) {
+    if (playLaunchTarget) {
       try {
         const next = new URL(window.location.href);
         next.search = '';
@@ -644,8 +663,14 @@
       } catch (error) {
         // no-op
       }
-      showHome();
-      return;
+      showGame();
+      if (typeof window.playtalkGame.startSinglePhase === 'function') {
+        window.playtalkGame.startSinglePhase(playLaunchTarget.phase, {
+          day: playLaunchTarget.day || undefined,
+          returnToPlay: true
+        });
+        return;
+      }
     }
 
     showGame();

@@ -177,7 +177,8 @@
     }
 
     body.gameplay-active .flashcards-footer-nav {
-      display: flex !important;
+      display: grid !important;
+      grid-template-columns: repeat(4, 1fr);
     }
 
     .flashcards-home-toggle[hidden],
@@ -295,6 +296,8 @@
       height: auto;
       object-fit: contain;
       filter: drop-shadow(0 18px 34px rgba(34, 148, 255, 0.18));
+      cursor: pointer;
+      touch-action: manipulation;
     }
 
     .welcome-gate__copy {
@@ -1258,6 +1261,22 @@
       display: block;
     }
 
+    .game-phase-word.is-fading {
+      opacity: 0;
+    }
+
+    .results-screen {
+      display: none;
+    }
+
+    .game-translation-slot {
+      display: none;
+    }
+
+    .game-controls-proxy {
+      display: none !important;
+    }
+
     .actions { justify-content: flex-end; }
 
     .btn,
@@ -1576,9 +1595,9 @@
       right: -50%;
       bottom: 0;
       left: -50%;
-      background-image: linear-gradient(-60deg, #6c3 50%, #09f 50%);
-      opacity: 0.5;
-      animation: flashcardsGameSlide 3s ease-in-out infinite alternate;
+      background: #041226 url('/accesskey/quantum-gradient.svg') center/cover no-repeat;
+      opacity: 1;
+      animation: none;
       pointer-events: none;
       will-change: transform;
     }
@@ -1621,18 +1640,7 @@
     }
 
     .game-shell::before {
-      content: "";
-      position: fixed;
-      z-index: 0;
-      top: 0;
-      right: -50%;
-      bottom: 0;
-      left: -50%;
-      background-image: linear-gradient(-60deg, #6c3 50%, #09f 50%);
-      opacity: 0.5;
-      animation: flashcardsGameSlide 5s ease-in-out infinite alternate;
-      pointer-events: none;
-      will-change: transform;
+      content: none;
     }
 
     body.gameplay-active #game .game-shell::before {
@@ -3464,6 +3472,7 @@
     .game[data-phase-key="first-star"] .starscreen,
     .game[data-phase-key="third-star"] .starscreen,
     .game[data-phase-key="fifth-star"] .starscreen {
+      order: 1;
       flex: 0 0 12%;
       height: 12%;
       margin-top: 0;
@@ -3482,6 +3491,7 @@
     .game[data-phase-key="first-star"] .circlescreen,
     .game[data-phase-key="third-star"] .circlescreen,
     .game[data-phase-key="fifth-star"] .circlescreen {
+      order: 2;
       flex: 0 0 54%;
       height: 54%;
       min-height: 0;
@@ -3493,13 +3503,30 @@
       position: relative;
     }
 
+    .game[data-phase-key="first-star"] .resultsscreen {
+      order: 2;
+      flex: 0 0 8%;
+      height: 8%;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #ffe100;
+      background: transparent;
+      color: #b33500;
+      font-family: "Soopafre", Arial, sans-serif;
+      font-size: clamp(18px, 2.8vw, 24px);
+      line-height: 1;
+    }
+
     .game[data-phase-key="first-star"] .circlescreen .game-card__layout,
     .game[data-phase-key="third-star"] .circlescreen .game-card__layout,
-    .game[data-phase-key="fifth-star"] .circlescreen .game-card__layout,
-    .game[data-phase-key="first-star"] .circlescreen .game-card__visual,
-    .game[data-phase-key="third-star"] .circlescreen .game-card__visual,
-    .game[data-phase-key="fifth-star"] .circlescreen .game-card__visual {
-      display: contents !important;
+    .game[data-phase-key="fifth-star"] .circlescreen .game-card__layout {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
     }
 
     .game[data-phase-key="first-star"] .circlescreen .game-card__content,
@@ -3514,11 +3541,9 @@
       width: 100%;
       height: 100%;
       min-height: 0;
-      align-content: center;
-      justify-items: center;
-      grid-template-columns: 1fr;
-      display: grid;
-      place-items: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .game[data-phase-key="first-star"] #gameVisual,
@@ -3535,8 +3560,14 @@
       height: 300px;
       max-width: 300px;
       max-height: 300px;
+      min-width: 300px;
+      min-height: 300px;
+      flex: 0 0 300px;
       border-radius: 50%;
       overflow: hidden;
+      --flashcards-active-image-shift: 0px;
+      --flashcards-active-image-scale: 1;
+      transform: none !important;
     }
 
     .game[data-phase-key="first-star"] .game-card__content,
@@ -3631,17 +3662,28 @@
     .game[data-phase-key="fifth-star"] #gameVisual .game-card__reveal-image {
       transform: none !important;
       margin: 0 auto;
-      width: 300px;
-      height: 300px;
-      max-width: 300px;
-      max-height: 300px;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
       border-radius: 50%;
+      clip-path: circle(50% at 50% 50%);
       object-fit: cover;
+    }
+
+    .game[data-phase-key="first-star"] #gameVisual.is-mic-live::before,
+    .game[data-phase-key="third-star"] #gameVisual.is-mic-live::before,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-mic-live::before {
+      inset: 0;
+      padding: 8px;
+      transform: none !important;
+      animation: none;
     }
 
     .game[data-phase-key="first-star"] .textscreen,
     .game[data-phase-key="third-star"] .textscreen,
     .game[data-phase-key="fifth-star"] .textscreen {
+      order: 3;
       flex: 0 0 22%;
       height: 22%;
       position: relative;
@@ -3658,16 +3700,128 @@
       display: none;
     }
 
-    .game[data-phase-key="first-star"] .textscreen .game-phase-word,
-    .game[data-phase-key="third-star"] .textscreen .game-phase-word,
-    .game[data-phase-key="fifth-star"] .textscreen .game-phase-word {
+    .game[data-phase-key="third-star"] .textscreen .game-phase-word {
       display: block;
       width: min(92vw, 760px);
+    }
+
+    .game[data-phase-key="first-star"] .circlescreen,
+    .game[data-phase-key="third-star"] .circlescreen {
+      order: 3;
+      flex: 0 0 57%;
+      height: 57%;
+    }
+
+    .game[data-phase-key="first-star"] .textscreen,
+    .game[data-phase-key="third-star"] .textscreen {
+      order: 4;
+      flex: 0 0 11%;
+      height: 11%;
+    }
+
+    .game[data-phase-key="first-star"] .game-translation-slot,
+    .game[data-phase-key="third-star"] .game-translation-slot {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .game[data-phase-key="first-star"] #gameVisual,
+    .game[data-phase-key="third-star"] #gameVisual {
+      width: 370px;
+      height: 370px;
+      min-width: 370px;
+      min-height: 370px;
+      max-width: 370px;
+      max-height: 370px;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+    }
+
+    .game[data-phase-key="first-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="first-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="first-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="first-star"] #gameVisual .game-card__reveal-image,
+    .game[data-phase-key="third-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="third-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="third-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="third-star"] #gameVisual .game-card__reveal-image {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: cover;
+      border-radius: 0;
+      clip-path: none !important;
+      display: block;
+      transform: scale(1.1) !important;
+      transform-origin: center center;
+    }
+
+    .game[data-phase-key="first-star"] #gameVisual.is-mic-live::before,
+    .game[data-phase-key="third-star"] #gameVisual.is-mic-live::before {
+      inset: 0;
+      padding: 8px;
+      border-radius: 50%;
+      aspect-ratio: 1 / 1;
+      transform: none !important;
+    }
+
+    .game[data-phase-key="first-star"] .game-translation-slot .game-phase-word,
+    .game[data-phase-key="third-star"] .game-translation-slot .game-phase-word {
+      width: max-content;
+      max-width: calc(100% - 30px);
+      margin: 0 auto;
+      padding: 12px 15px;
+      border-radius: 18px;
+      font-family: "Soopafre", Arial, sans-serif;
+      text-align: center;
+      white-space: normal;
+      line-height: 1;
+      color: #ffffff;
+      background-repeat: no-repeat, no-repeat;
+      background-position: center, center;
+      background-size: cover, cover;
+      transition: opacity 300ms ease;
+      box-shadow: 0 10px 26px rgba(4, 10, 24, 0.26);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transform: translateY(clamp(112px, 16vw, 152px));
+    }
+
+    .game[data-phase-key="first-star"] .game-translation-slot .game-phase-word.is-visible,
+    .game[data-phase-key="third-star"] .game-translation-slot .game-phase-word.is-visible {
+      display: inline-flex;
+    }
+
+    .game[data-phase-key="first-star"] .game-translation-slot .game-phase-word.is-english,
+    .game[data-phase-key="third-star"] .game-translation-slot .game-phase-word.is-english {
+      background-image:
+        linear-gradient(90deg, rgba(7, 24, 84, 1) 0%, rgba(7, 24, 84, 0.15) 100%),
+        linear-gradient(135deg, rgba(8, 20, 58, 0.88) 0%, rgba(12, 36, 98, 0.84) 100%),
+        url('/accesskey/ingles.png');
+    }
+
+    .game[data-phase-key="first-star"] .game-translation-slot .game-phase-word.is-portuguese,
+    .game[data-phase-key="third-star"] .game-translation-slot .game-phase-word.is-portuguese {
+      background-image:
+        linear-gradient(90deg, rgba(8, 58, 28, 1) 0%, rgba(8, 58, 28, 0.15) 100%),
+        linear-gradient(135deg, rgba(8, 60, 28, 0.88) 0%, rgba(18, 102, 42, 0.84) 100%),
+        url('/accesskey/portugues.jpg');
     }
 
     .game[data-phase-key="first-star"] .navbarscreen,
     .game[data-phase-key="third-star"] .navbarscreen,
     .game[data-phase-key="fifth-star"] .navbarscreen {
+      order: 4;
       flex: 0 0 12%;
       height: 12%;
       display: flex;
@@ -3676,15 +3830,18 @@
       width: 100%;
       gap: 8px;
       padding: 0 8px;
+      margin-top: auto;
+    }
+
+    .game[data-phase-key="first-star"] .navbarscreen,
+    .game[data-phase-key="third-star"] .navbarscreen {
+      order: 5;
     }
 
     .game[data-phase-key="first-star"] #gameNavActions,
     .game[data-phase-key="third-star"] #gameNavActions,
     .game[data-phase-key="fifth-star"] #gameNavActions {
-      display: flex;
-      max-width: min(420px, calc(100vw - 28px));
-      justify-content: space-evenly;
-      align-items: center;
+      display: none !important;
     }
 
     .game[data-phase-key="first-star"] .navbarscreen .game-chip,
@@ -3712,6 +3869,284 @@
     .game[data-phase-key="fifth-star"] .game-word.is-chip,
     .game[data-phase-key="fifth-star"] .game-subword.is-chip {
       display: inline-flex !important;
+    }
+
+    .keyboardscreen-host {
+      display: none;
+      width: 100%;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .game[data-phase-key="second-star"] .game-shell,
+    .game[data-phase-key="fourth-star"] .game-shell {
+      width: 100vw;
+      height: 100dvh;
+      max-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .game[data-phase-key="second-star"],
+    .game[data-phase-key="fourth-star"] {
+      align-items: stretch;
+      justify-content: stretch;
+      padding: 0;
+    }
+
+    .game[data-phase-key="second-star"] .game-head,
+    .game[data-phase-key="fourth-star"] .game-head {
+      display: none;
+    }
+
+    .game[data-phase-key="second-star"] .starscreen,
+    .game[data-phase-key="second-star"] .circlescreen,
+    .game[data-phase-key="second-star"] .textscreen,
+    .game[data-phase-key="second-star"] .navbarscreen,
+    .game[data-phase-key="fourth-star"] .starscreen,
+    .game[data-phase-key="fourth-star"] .circlescreen,
+    .game[data-phase-key="fourth-star"] .textscreen,
+    .game[data-phase-key="fourth-star"] .navbarscreen {
+      width: 100vw;
+      max-width: 100vw;
+      min-height: 0;
+      box-sizing: border-box;
+      border: 1px solid #ffffff;
+      border-radius: 0;
+      transform: none;
+    }
+
+    .game[data-phase-key="second-star"] .starscreen,
+    .game[data-phase-key="fourth-star"] .starscreen {
+      order: 1;
+      flex: 0 0 12%;
+      height: 12%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 0;
+    }
+
+    .game[data-phase-key="second-star"] .starscreen.stars-wrap,
+    .game[data-phase-key="fourth-star"] .starscreen.stars-wrap {
+      margin-top: 0;
+      gap: 8px;
+      align-content: center;
+    }
+
+    .game[data-phase-key="second-star"] .starscreen #gameStarCopy,
+    .game[data-phase-key="fourth-star"] .starscreen #gameStarCopy {
+      display: none !important;
+    }
+
+    .game[data-phase-key="second-star"] .circlescreen,
+    .game[data-phase-key="fourth-star"] .circlescreen {
+      order: 2;
+      flex: 0 0 32%;
+      height: 32%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 12px;
+      margin: 0;
+      position: relative;
+    }
+
+    .game[data-phase-key="second-star"] .circlescreen,
+    .game[data-phase-key="fourth-star"] .circlescreen {
+      flex: 0 0 40%;
+      height: 40%;
+      padding: 0;
+    }
+
+    .game[data-phase-key="second-star"] .circlescreen .game-card__layout,
+    .game[data-phase-key="fourth-star"] .circlescreen .game-card__layout {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .game[data-phase-key="second-star"] .circlescreen .game-card__content,
+    .game[data-phase-key="fourth-star"] .circlescreen .game-card__content {
+      display: none !important;
+    }
+
+    .game[data-phase-key="second-star"] #gameVisual,
+    .game[data-phase-key="fourth-star"] #gameVisual {
+      width: 300px;
+      height: 300px;
+      max-width: 300px;
+      max-height: 300px;
+      min-width: 300px;
+      min-height: 300px;
+      border-radius: 50%;
+      overflow: hidden;
+      transform: none !important;
+      --flashcards-active-image-shift: 0px;
+      --flashcards-active-image-scale: 1;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      justify-items: center;
+    }
+
+    .game[data-phase-key="second-star"] #gameVisual,
+    .game[data-phase-key="fourth-star"] #gameVisual {
+      width: auto;
+      height: 95%;
+      max-width: 95%;
+      max-height: 95%;
+      min-width: 0;
+      min-height: 0;
+      aspect-ratio: 1 / 1;
+    }
+
+    .game[data-phase-key="second-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="second-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="second-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="second-star"] #gameVisual .game-card__reveal-image,
+    .game[data-phase-key="fourth-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="fourth-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="fourth-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="fourth-star"] #gameVisual .game-card__reveal-image {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 50%;
+      clip-path: circle(50% at 50% 50%);
+      object-fit: cover;
+      transform: none !important;
+    }
+
+    .game[data-phase-key="second-star"] .flashcards-typing__display--visual,
+    .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual {
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(76%, 240px);
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      line-height: 1.08;
+      text-align: center;
+    }
+
+    .game[data-phase-key="second-star"] .textscreen,
+    .game[data-phase-key="fourth-star"] .textscreen {
+      order: 3;
+      flex: 0 0 44%;
+      height: 44%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 10px;
+      margin: 0;
+      pointer-events: auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    .game[data-phase-key="second-star"] .textscreen,
+    .game[data-phase-key="fourth-star"] .textscreen {
+      flex: 0 0 45%;
+      height: 45%;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .game-status-wrap,
+    .game[data-phase-key="second-star"] .textscreen .game-phase-word,
+    .game[data-phase-key="fourth-star"] .textscreen .game-status-wrap,
+    .game[data-phase-key="fourth-star"] .textscreen .game-phase-word {
+      display: none !important;
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .keyboardscreen-host,
+    .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
+      display: flex;
+      pointer-events: auto;
+      position: relative;
+      z-index: 3;
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .keyboardscreen-host,
+    .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing {
+      width: min(492px, calc(100vw - 32px));
+      max-width: 100%;
+      transform: none;
+      pointer-events: auto;
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing {
+      width: min(433px, calc((100vw - 32px) * 0.88));
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid {
+      width: min(492px, calc(100vw - 32px));
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid {
+      width: min(433px, calc((100vw - 32px) * 0.88));
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__key,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key {
+      font-size: clamp(49px, 15.84vw, 97px);
+      line-height: 0.82;
+      background-image:
+        linear-gradient(rgba(8, 56, 31, 0.4), rgba(8, 56, 31, 0.4)),
+        url("images/bgtype.png");
+      background-position: center, center;
+      background-repeat: no-repeat, no-repeat;
+      background-size: cover, cover;
+      color: #f7fff8;
+      text-shadow:
+        0 2px 0 rgba(7, 34, 20, 0.95),
+        0 8px 14px rgba(0, 0, 0, 0.35);
+    }
+
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key:hover {
+      filter: brightness(1.06);
+    }
+
+    .game[data-phase-key="second-star"] .navbarscreen,
+    .game[data-phase-key="fourth-star"] .navbarscreen {
+      order: 4;
+      flex: 0 0 12%;
+      height: 12%;
+      display: block;
+      margin-top: auto;
+    }
+
+    .game[data-phase-key="second-star"] .navbarscreen,
+    .game[data-phase-key="fourth-star"] .navbarscreen {
+      display: none;
+      flex: 0 0 0;
+      height: 0;
+      border: 0;
+      margin: 0;
+      padding: 0;
     }
 
     .flashcards-typing__key:hover {
@@ -3933,14 +4368,15 @@
         font-size: 34px;
       }
 
-      .game:not([data-phase-key="first-star"]):not([data-phase-key="third-star"]):not([data-phase-key="fifth-star"]) .stars-wrap,
-      .game:not([data-phase-key="first-star"]):not([data-phase-key="third-star"]):not([data-phase-key="fifth-star"]) .game-card,
-      .game:not([data-phase-key="first-star"]):not([data-phase-key="third-star"]):not([data-phase-key="fifth-star"]) .game-status-slot,
-      .game:not([data-phase-key="first-star"]):not([data-phase-key="third-star"]):not([data-phase-key="fifth-star"]) .game-chip-row {
+      .game:not([data-phase-key="first-star"]):not([data-phase-key="second-star"]):not([data-phase-key="third-star"]):not([data-phase-key="fourth-star"]):not([data-phase-key="fifth-star"]) .stars-wrap,
+      .game:not([data-phase-key="first-star"]):not([data-phase-key="second-star"]):not([data-phase-key="third-star"]):not([data-phase-key="fourth-star"]):not([data-phase-key="fifth-star"]) .game-card,
+      .game:not([data-phase-key="first-star"]):not([data-phase-key="second-star"]):not([data-phase-key="third-star"]):not([data-phase-key="fourth-star"]):not([data-phase-key="fifth-star"]) .game-status-slot,
+      .game:not([data-phase-key="first-star"]):not([data-phase-key="second-star"]):not([data-phase-key="third-star"]):not([data-phase-key="fourth-star"]):not([data-phase-key="fifth-star"]) .game-chip-row {
         transform: translateY(-35px);
       }
 
       .game[data-phase-key="first-star"] .starscreen,
+      .game[data-phase-key="first-star"] .resultsscreen,
       .game[data-phase-key="first-star"] .circlescreen,
       .game[data-phase-key="first-star"] .textscreen,
       .game[data-phase-key="first-star"] .navbarscreen,
@@ -5145,7 +5581,7 @@
   <section class="welcome-gate is-visible" id="welcomeGate" aria-label="Entrada do PlayTalk">
     <div class="welcome-gate__stack">
       <div class="welcome-gate__touch" id="welcomeTouch">
-        <img class="welcome-gate__logo" src="SVG/logo.png" alt="PlayTalk">
+        <img class="welcome-gate__logo" id="welcomeLogo" src="SVG/logo.png" alt="PlayTalk">
         <p class="welcome-gate__copy" id="welcomeCopy">Flu&#234;ncia f&#225;cil</p>
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button">JOGAR AGORA</button>
       </div>
@@ -5286,9 +5722,12 @@
           <p id="gameStarCopy" class="game-star-copy">Cada acerto libera uma estrela. Cinco estrelas ganham o card.</p>
         </div>
 
+        <div class="results-screen resultsscreen" id="gameResultsScreen" aria-hidden="true"></div>
+
         <article class="game-card circlescreen" id="gameCard" aria-live="polite">
           <div class="game-card__layout">
             <div class="game-card__visual" id="gameVisual"></div>
+            <div class="game-translation-slot" id="gameTranslationSlot" aria-hidden="true"></div>
             <div class="game-card__content">
               <div>
                 <div class="game-step" id="gameStep">Etapa 1/5</div>
@@ -5301,35 +5740,21 @@
         </article>
 
         <div class="game-status-slot textscreen" id="gameStatusSlot" aria-live="polite" aria-atomic="true">
-          <h3 class="game-phase-word" id="gamePhaseWord" aria-live="polite"></h3>
+          <h3 class="game-phase-word container-translations" id="gamePhaseWord" aria-live="polite"></h3>
           <div class="game-status-wrap">
             <img class="game-status-icon" id="gameStatusIcon" alt="">
             <p class="game-status" id="gameStatus">Carregando rodada...</p>
           </div>
+          <div class="keyboardscreen-host" id="gameKeyboardHost"></div>
         </div>
 
-        <div class="game-chip-row navbarscreen" id="gameChipRow">
-          <div class="game-nav-actions" id="gameNavActions">
-            <button class="game-language-btn" id="gameLanguageBtn" type="button" tabindex="-1" aria-hidden="true">
-              <img src="SVG/codex-icons/ingles.svg" alt="">
-            </button>
-            <button class="game-touch" id="gameTouchBtn" type="button">Fale ingles</button>
-          </div>
-          <div class="game-chip" id="gameActiveChip">
-            <img src="selos/speakings.svg" alt="">
-            <span class="game-chip__label">Speakings</span>
-            <span class="game-chip__value" id="gameActiveValue">0</span>
-          </div>
-          <div class="game-chip" id="gameQueueChip">
-            <img src="selos/listenings.svg" alt="">
-            <span class="game-chip__label">Listenings</span>
-            <span class="game-chip__value" id="gameQueueValue">0</span>
-          </div>
-          <div class="game-chip" id="gameOwnedChip">
-            <img src="selos/flashcards.svg" alt="">
-            <span class="game-chip__label">Ganhos</span>
-            <span class="game-chip__value" id="gameOwnedValue">0</span>
-          </div>
+        <div class="navbarscreen" id="gameFooterSlot" aria-hidden="true"></div>
+
+        <div class="game-controls-proxy" id="gameControlsProxy" aria-hidden="true" hidden>
+          <button class="game-language-btn" id="gameLanguageBtn" type="button" tabindex="-1" aria-hidden="true">
+            <img src="SVG/codex-icons/ingles.svg" alt="">
+          </button>
+          <button class="game-touch" id="gameTouchBtn" type="button">Fale ingles</button>
         </div>
 
         <section class="game-end" id="gameEnd">
@@ -5612,6 +6037,7 @@
       const REPORT_SOUND_PATH = 'thesongs/report.wav';
       const TYPING_KEY_SOUND_PATH = 'sounds/type.mp3';
       const TYPING_KEY_FLASH_MS = 500;
+      const TYPING_PROMPT_REPEAT_DELAY_MS = 2000;
       const STAGE_TWO_HINT_DELAY_MS = 2000;
       const STAGE_TWO_HINT_VISIBLE_MS = 3000;
       const ONBOARDING_GATE_TRANSITION_MS = 2000;
@@ -5629,10 +6055,12 @@
       const REVIEW_SLOT_LIMIT = 8;
       const TUTORIAL_AUDIO_ROOT = AUDIOSTUTO_PUBLIC_ROOT;
       const TUTORIAL_NORMAL_GAME_COUNT = 3;
-      const TUTORIAL_PLANET_IMAGE_NAME = 'planet.webp';
+      const TUTORIAL_PLANET_IMAGE_NAME = 'planet.jpg';
+      const TUTORIAL_PLANET_IMAGE_URL = '/accesskey/planet.jpg';
       const TUTORIAL_PLANET_ENGLISH = 'planet';
       const TUTORIAL_PLANET_PORTUGUESE = 'planeta';
       const TUTORIAL_FINALE_SEAL_FLASH_MS = 400;
+      const TUTORIAL_LAUNCH_SESSION_KEY = 'playtalk-flashcards-launch-tutorial-consumed';
       const GUEST_FLASHCARD_LOGIN_THRESHOLD = 999999;
       const FLASHCARD_PREMIUM_GATE_LIMIT = 30;
       const GUEST_FLASHCARD_LOGIN_DELAY_MS = 5000;
@@ -5722,6 +6150,7 @@
           sequenceToken: 0,
           timers: [],
           currentCardId: '',
+          muteNarration: false,
           finishing: false,
           finale: {
             active: false,
@@ -5772,6 +6201,7 @@
           soundTestCompleted: false,
           pendingPlayStart: false,
           pendingTutorialStart: false,
+          pendingTutorialMuteNarration: false,
           authRequired: false,
           authDelayTimer: 0,
           authRevealTimer: 0
@@ -5806,6 +6236,7 @@
           footerNavPrimeKey: '',
           listening: false,
           languageSwapTimer: 0,
+          languageSwapFadeTimer: 0,
           stageTwoHintTimer: 0,
           stageOneSwapShowsPortuguese: false,
           activeAudio: null,
@@ -5899,6 +6330,7 @@
       const els = {
         welcomeGate: document.getElementById('welcomeGate'),
         welcomeTouch: document.getElementById('welcomeTouch'),
+        welcomeLogo: document.getElementById('welcomeLogo'),
         welcomeCopy: document.getElementById('welcomeCopy'),
         welcomeStartBtn: document.getElementById('welcomeStartBtn'),
         welcomeAccountLink: document.getElementById('welcomeAccountLink'),
@@ -5984,7 +6416,11 @@
         gameTypingKeyboard: document.getElementById('gameTypingKeyboard'),
         gameHeadCopy: document.getElementById('gameHeadCopy'),
         gameStarsWrap: document.getElementById('gameStarsWrap'),
+        gameTranslationSlot: document.getElementById('gameTranslationSlot'),
+        gameResultsScreen: document.getElementById('gameResultsScreen'),
         gameStatusSlot: document.getElementById('gameStatusSlot'),
+        gameKeyboardHost: document.getElementById('gameKeyboardHost'),
+        gameControlsProxy: document.getElementById('gameControlsProxy'),
         gameChipRow: document.getElementById('gameChipRow'),
         gameHeaderCopy: document.getElementById('gameHeaderCopy'),
         gameActiveChip: document.getElementById('gameActiveChip'),
@@ -7078,11 +7514,11 @@
         const launchTarget = state.entry.launchAfterSoundTest;
         state.entry.launchAfterSoundTest = '';
         if (launchTarget === 'welcome') {
-          void beginTutorialGameWhenReady();
+          requestWelcomeTutorialStart(true);
           return;
         }
         if (launchTarget === 'tutorial-setup') {
-          void beginTutorialGameWhenReady();
+          requestWelcomeTutorialStart(true);
           return;
         }
         if (launchTarget === 'play-ready-check') {
@@ -7090,21 +7526,9 @@
         }
       }
 
-      async function beginTutorialGameWhenReady() {
-        const maxAttempts = 20;
-        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-          if (state.entry.cardsReady && findTutorialPlanetCard()) {
-            beginTutorialGame();
-            return true;
-          }
-          await wait(250);
-        }
-        if (state.entry.cardsReady && !findTutorialPlanetCard()) {
-          syncWelcomeGate();
-          return false;
-        }
-        requestWelcomeTutorialStart(true);
-        return false;
+      async function beginTutorialGameWhenReady(options = {}) {
+        requestWelcomeTutorialStart(true, options);
+        return true;
       }
 
       function closeSoundTestGate() {
@@ -7242,6 +7666,7 @@
       function hideWelcomeGate() {
         state.entry.pendingPlayStart = false;
         state.entry.pendingTutorialStart = false;
+        state.entry.pendingTutorialMuteNarration = false;
         state.entry.welcomeVisible = false;
         document.body.classList.remove('welcome-active');
         els.welcomeGate?.classList.remove('is-visible');
@@ -7260,35 +7685,26 @@
       }
 
       function tryStartPendingTutorial() {
-        if (!state.entry.pendingTutorialStart || !state.entry.cardsReady) return false;
-        if (!findTutorialPlanetCard()) {
-          state.entry.pendingTutorialStart = false;
-          syncWelcomeGate();
-          return false;
-        }
-        hideWelcomeGate();
-        beginTutorialGame();
-        return true;
+        if (!state.entry.pendingTutorialStart) return false;
+        state.entry.pendingTutorialStart = false;
+        state.entry.pendingTutorialMuteNarration = false;
+        syncWelcomeGate();
+        return false;
       }
 
-      function requestWelcomeTutorialStart(skipSoundTest = false) {
+      function requestWelcomeTutorialStart(skipSoundTest = false, options = {}) {
         if (state.entry.authRequired) return;
-        if (hasInstantWelcomePlayAccess()) {
-          if (!state.entry.cardsReady) {
-            state.entry.pendingPlayStart = true;
-            state.entry.pendingTutorialStart = false;
-            setWelcomeCopy('Preparando jogo...');
-            return;
-          }
-          hideWelcomeGate();
-          saveSelectedGameCount(6);
-          state.game.selectedCount = 6;
-          beginGame();
+        if (!state.entry.cardsReady) {
+          state.entry.pendingPlayStart = true;
+          state.entry.pendingTutorialStart = false;
+          state.entry.pendingTutorialMuteNarration = false;
+          setWelcomeCopy('Preparando jogo...');
           return;
         }
-        state.entry.pendingTutorialStart = true;
-        setWelcomeCopy('Preparando tutorial...');
-        tryStartPendingTutorial();
+        hideWelcomeGate();
+        saveSelectedGameCount(6);
+        state.game.selectedCount = 6;
+        beginGame();
       }
 
       function resumePendingSoundCheckFlow() {
@@ -8705,13 +9121,31 @@
         return `${TUTORIAL_AUDIO_ROOT}/tuto${index}.mp3`;
       }
 
+      function isTutorialPlanetByText(card) {
+        const english = normalizeText(card?.english);
+        const portuguese = normalizeText(card?.portuguese);
+        return english === TUTORIAL_PLANET_ENGLISH && portuguese === TUTORIAL_PLANET_PORTUGUESE;
+      }
+
+      function applyTutorialPlanetCardDefaults(card) {
+        if (!card) return card;
+        const imageUrl = safeText(card.imageUrl).toLowerCase();
+        const matchesPlanet = isTutorialPlanetByText(card)
+          || imageUrl.includes('/planet.')
+          || imageUrl.endsWith('planet.jpg')
+          || imageUrl.endsWith('planet.webp');
+        if (!matchesPlanet) return card;
+        return {
+          ...card,
+          imageUrl: TUTORIAL_PLANET_IMAGE_URL
+        };
+      }
+
       function findTutorialPlanetCard() {
         return state.allCards.find((card) => {
-          const english = normalizeText(card?.english);
-          const portuguese = normalizeText(card?.portuguese);
           const imageUrl = safeText(card?.imageUrl).toLowerCase();
           return (
-            (english === TUTORIAL_PLANET_ENGLISH && portuguese === TUTORIAL_PLANET_PORTUGUESE)
+            isTutorialPlanetByText(card)
             || imageUrl.includes(`/${TUTORIAL_PLANET_IMAGE_NAME}`)
             || imageUrl.endsWith(TUTORIAL_PLANET_IMAGE_NAME)
           );
@@ -8727,6 +9161,10 @@
       function reconcileTutorialProgress() {
         if (isAdminUser()) return true;
         const unlocked = hasTutorialPlanetUnlocked();
+        if (unlocked && !state.game.tutorial.completed) {
+          state.game.tutorial.completed = true;
+          persistTutorialProgressLocally();
+        }
         if (!unlocked && state.game.tutorial.completed) {
           state.game.tutorial.completed = false;
           removeScopedStorage(TUTORIAL_PROGRESS_STORAGE_KEY);
@@ -8741,15 +9179,15 @@
       }
 
       function shouldSuppressTutorialCardAudio(card) {
-        return Boolean(state.game.tutorial.active && isTutorialPlanetCard(card));
+        return Boolean(
+          state.game.tutorial.active
+          && !state.game.tutorial?.muteNarration
+          && isTutorialPlanetCard(card)
+        );
       }
 
       function canOfferTutorialMode() {
-        return Boolean(
-          !isAdminUser()
-          && !reconcileTutorialProgress()
-          && findTutorialPlanetCard()
-        );
+        return false;
       }
 
       function syncFlashcardsFooterVisibility() {
@@ -8890,12 +9328,7 @@
       }
 
       function playTutorialAudio(index) {
-        const resolved = resolveInlineMediaUrl(tutorialAudioPath(index));
-        if (!resolved) return Promise.resolve(false);
-        stopActiveAudio();
-        const audio = new Audio(resolved);
-        audio.preload = 'auto';
-        return playAudioWithSoftEnd(audio, { registerAsActive: true });
+        return Promise.resolve(false);
       }
 
       function triggerTutorialMicFlash() {
@@ -8909,69 +9342,19 @@
         const gameShell = els.game.querySelector('.game-shell');
         state.game.tutorial.introPlayed = true;
         state.game.tutorial.explainedStars = Math.max(state.game.tutorial.explainedStars, 0);
-        gameShell?.classList.add('is-tutorial-intro');
         setTutorialInteractionLocked(true);
         setGameStatus('', '');
-        playTutorialAudio(1).catch?.(() => {});
+        gameShell?.classList.remove('is-tutorial-intro', 'is-tutorial-reveal');
+        els.gameTutorialLogo?.classList.remove('is-visible', 'is-fading-out');
+        els.gameVisual.classList.remove('is-tutorial-mic-fade');
+        els.gameVisual.classList.add('is-mic-live');
+        triggerTutorialMicFlash();
 
-        queueTutorialTimer(token, 1000, () => {
-          if (!isTutorialSequenceCurrent(token, entry.id)) return;
-          els.gameTutorialLogo?.classList.add('is-visible');
-        });
-
-        queueTutorialTimer(token, 4000, () => {
-          if (!isTutorialSequenceCurrent(token, entry.id)) return;
-          els.gameTutorialLogo?.classList.remove('is-visible');
-          els.gameTutorialLogo?.classList.add('is-fading-out');
-        });
-
-        queueTutorialTimer(token, 6000, () => {
-          if (!isTutorialSequenceCurrent(token, entry.id)) return;
-          gameShell?.classList.remove('is-tutorial-intro');
-          gameShell?.classList.add('is-tutorial-reveal');
-          queueTutorialTimer(token, 1700, () => {
-            if (!isTutorialSequenceCurrent(token, entry.id)) return;
-            gameShell?.classList.remove('is-tutorial-reveal');
-          });
-        });
-
-        queueTutorialTimer(token, 9000, () => {
-          if (!isTutorialSequenceCurrent(token, entry.id)) return;
-          els.gameVisual.classList.remove('is-tutorial-mic-fade');
-          els.gameVisual.classList.add('is-mic-live');
-        });
-
-        queueTutorialTimer(token, 10000, () => {
-          if (!isTutorialSequenceCurrent(token, entry.id)) return;
-          triggerTutorialMicFlash();
-        });
-
-        queueTutorialTimer(token, 11000, () => {
-          if (!isTutorialSequenceCurrent(token, entry.id)) return;
-          triggerTutorialMicFlash();
-        });
-
-        queueTutorialTimer(token, 12000, () => {
-          if (!isTutorialSequenceCurrent(token, entry.id)) return;
-          els.gameVisual.classList.add('is-tutorial-mic-fade');
-          queueTutorialTimer(token, 700, () => {
-            if (!isTutorialSequenceCurrent(token, entry.id)) return;
-            els.gameVisual.classList.remove('is-mic-live', 'is-tutorial-mic-flash', 'is-tutorial-mic-fade');
-          });
-        });
-
-        queueTutorialTimer(token, 15000, () => {
-          if (!isTutorialSequenceCurrent(token, entry.id)) return;
-          triggerWinFlash();
-        });
-
-        queueTutorialTimer(token, 19000, () => {
-          if (!isTutorialSequenceCurrent(token, entry.id)) return;
-          setTutorialInteractionLocked(false);
-          state.game.canListen = true;
-          renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
-          setGameStatus('Toque para falar', 'live');
-        });
+        if (!isTutorialSequenceCurrent(token, entry.id)) return;
+        setTutorialInteractionLocked(false);
+        state.game.canListen = true;
+        renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
+        setGameStatus('Toque para falar', 'live');
       }
 
       async function beginTutorialHintSequence(entry, audioIndex) {
@@ -9005,66 +9388,7 @@
         state.game.tutorial.finishing = true;
         setTutorialInteractionLocked(true);
         clearPendingRewardSeal(cardId);
-        preloadTutorialFinaleSeals();
-        setTutorialFinaleState({
-          active: true,
-          cardId,
-          sealPhase: 0,
-          sealFlash: false,
-          sealSoft: false
-        });
 
-        queueTutorialTimer(token, 6000, () => {
-          if (!isTutorialSequenceCurrent(token, cardId)) return;
-          flashTutorialFinaleSeal(1, cardId);
-        });
-
-        queueTutorialTimer(token, 9100, () => {
-          if (!isTutorialSequenceCurrent(token, cardId)) return;
-          flashTutorialFinaleSeal(2, cardId);
-        });
-
-        queueTutorialTimer(token, 10000, () => {
-          if (!isTutorialSequenceCurrent(token, cardId)) return;
-          flashTutorialFinaleSeal(3, cardId);
-        });
-
-        queueTutorialTimer(token, 11000, () => {
-          if (!isTutorialSequenceCurrent(token, cardId)) return;
-          flashTutorialFinaleSeal(4, cardId);
-        });
-
-        queueTutorialTimer(token, 12000, () => {
-          if (!isTutorialSequenceCurrent(token, cardId)) return;
-          flashTutorialFinaleSeal(5, cardId);
-        });
-
-        queueTutorialTimer(token, 14000, () => {
-          if (!isTutorialSequenceCurrent(token, cardId)) return;
-          flashTutorialFinaleSeal(1, cardId);
-        });
-
-        const resolved = resolveInlineMediaUrl(tutorialAudioPath(6));
-        if (!resolved) {
-          throw new Error('Nao consegui abrir o audio final do tutorial.');
-        }
-        stopActiveAudio();
-        const audio = new Audio(resolved);
-        audio.preload = 'auto';
-        state.game.activeAudio = { type: 'audio', instance: audio };
-        await new Promise((resolve) => {
-          const finish = () => {
-            audio.removeEventListener('ended', finish);
-            audio.removeEventListener('error', finish);
-            if (state.game.activeAudio?.instance === audio) {
-              state.game.activeAudio = null;
-            }
-            resolve();
-          };
-          audio.addEventListener('ended', finish, { once: true });
-          audio.addEventListener('error', finish, { once: true });
-          audio.play().catch(finish);
-        });
         if (state.game.tutorial.sequenceToken !== token || !state.game.active) return;
         setTutorialCompleted(true);
         resetTutorialRuntime({ preserveCompletion: true });
@@ -9415,7 +9739,9 @@
 
       async function loadCards() {
         const freshPayload = await refreshCardsFromNetwork();
-        state.allCards = Array.isArray(freshPayload?.cards) ? freshPayload.cards : [];
+        state.allCards = Array.isArray(freshPayload?.cards)
+          ? freshPayload.cards.map((card) => applyTutorialPlanetCardDefaults(card))
+          : [];
         state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
         await refreshAdminDecks();
         await refreshAdminReportSummary();
@@ -10766,11 +11092,19 @@
           window.clearInterval(state.game.languageSwapTimer);
           state.game.languageSwapTimer = 0;
         }
+        if (state.game.languageSwapFadeTimer) {
+          window.clearTimeout(state.game.languageSwapFadeTimer);
+          state.game.languageSwapFadeTimer = 0;
+        }
+        if (els.gamePhaseWord) {
+          els.gamePhaseWord.classList.remove('is-fading');
+        }
         state.game.stageOneSwapShowsPortuguese = false;
       }
 
       function clearTypingPromptLoop() {
         if (!state.game.typingPromptLoopTimer) return;
+        window.clearTimeout(state.game.typingPromptLoopTimer);
         window.clearInterval(state.game.typingPromptLoopTimer);
         state.game.typingPromptLoopTimer = 0;
       }
@@ -10872,6 +11206,46 @@
           state.game.stageOneSwapShowsPortuguese = !state.game.stageOneSwapShowsPortuguese;
           applyStageOneVisibility();
         }, 1000);
+      }
+
+      function renderFirstStarPhaseWordSwap(entry, card) {
+        clearGameLanguageSwapTimer();
+        if (!els.gamePhaseWord || !entry || entry.stage !== 1 || !card) return;
+
+        const english = capitalizeWords(card.english || card.portuguese || card.deckTitle || '');
+        const portuguese = capitalizeWords(card.portuguese || card.english || card.deckTitle || '');
+        const hasPortuguese = Boolean(safeText(card.portuguese || ''));
+
+        const applyPhaseWord = () => {
+          const showsPortuguese = state.game.stageOneSwapShowsPortuguese && hasPortuguese;
+          const nextText = showsPortuguese ? portuguese : english;
+          renderChipText(els.gamePhaseWord, nextText);
+          els.gamePhaseWord.classList.toggle('is-english', !showsPortuguese);
+          els.gamePhaseWord.classList.toggle('is-portuguese', showsPortuguese);
+        };
+
+        state.game.stageOneSwapShowsPortuguese = false;
+        els.gamePhaseWord.classList.remove('is-fading');
+        applyPhaseWord();
+
+        if (!hasPortuguese) return;
+
+        state.game.languageSwapTimer = window.setInterval(() => {
+          if (!state.game.active || state.game.currentId !== entry.id || entry.stage !== 1) {
+            clearGameLanguageSwapTimer();
+            return;
+          }
+          els.gamePhaseWord.classList.add('is-fading');
+          if (state.game.languageSwapFadeTimer) {
+            window.clearTimeout(state.game.languageSwapFadeTimer);
+          }
+          state.game.languageSwapFadeTimer = window.setTimeout(() => {
+            state.game.stageOneSwapShowsPortuguese = !state.game.stageOneSwapShowsPortuguese;
+            applyPhaseWord();
+            els.gamePhaseWord.classList.remove('is-fading');
+            state.game.languageSwapFadeTimer = 0;
+          }, 300);
+        }, 1200);
       }
 
       function renderGameTouchButton(stageConfig, entry) {
@@ -11479,9 +11853,15 @@
       }
 
       function updateGameChips() {
-        els.gameActiveValue.textContent = String(state.stats.speakings || 0);
-        els.gameQueueValue.textContent = String(state.stats.listenings || 0);
-        els.gameOwnedValue.textContent = String(accessibleFlashcardsCount());
+        if (els.gameActiveValue) {
+          els.gameActiveValue.textContent = String(state.stats.speakings || 0);
+        }
+        if (els.gameQueueValue) {
+          els.gameQueueValue.textContent = String(state.stats.listenings || 0);
+        }
+        if (els.gameOwnedValue) {
+          els.gameOwnedValue.textContent = String(accessibleFlashcardsCount());
+        }
         const activeCount = state.game.entries.size || 0;
         const targetCount = state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT;
         els.gameHeaderCopy.textContent = `${activeCount}/${targetCount} cartas ativas na mesa.`;
@@ -11938,13 +12318,25 @@
             clearTypingPromptLoop();
             return;
           }
-          playPromptAudio(card, { rate: 0.8 }).catch?.(() => {});
+          Promise.resolve(playPromptAudio(card, { rate: 0.8 }))
+            .catch(() => {})
+            .finally(() => {
+              if (!state.game.active || state.game.paused || state.game.currentId !== entry.id || entry.stage !== 2) {
+                clearTypingPromptLoop();
+                return;
+              }
+              state.game.typingPromptLoopTimer = window.setTimeout(replayPrompt, TYPING_PROMPT_REPEAT_DELAY_MS);
+            });
         };
-        window.setTimeout(replayPrompt, 220);
-        state.game.typingPromptLoopTimer = window.setInterval(replayPrompt, 3000);
+        state.game.typingPromptLoopTimer = window.setTimeout(replayPrompt, 220);
       }
 
       function renderTypingKeyboard(entry, card) {
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        const isTypingLayoutPhase = phaseKey === 'second-star' || phaseKey === 'fourth-star';
+        const keyboardTarget = isTypingLayoutPhase && els.gameKeyboardHost
+          ? els.gameKeyboardHost
+          : (els.gameControlsProxy || els.gameTypingKeyboard.parentElement);
         if (!isTypingStage(entry) || !card) {
           clearTypingPromptLoop();
           els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
@@ -11952,6 +12344,9 @@
           els.gameTypingKeyboard.classList.remove('is-visible');
           els.gameTypingKeyboard.classList.remove('is-portuguese');
           els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
+          if (keyboardTarget && els.gameTypingKeyboard.parentElement !== keyboardTarget) {
+            keyboardTarget.appendChild(els.gameTypingKeyboard);
+          }
           return;
         }
 
@@ -11964,6 +12359,9 @@
           els.gameTypingKeyboard.classList.remove('is-visible');
           els.gameTypingKeyboard.classList.remove('is-portuguese');
           els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
+          if (keyboardTarget && els.gameTypingKeyboard.parentElement !== keyboardTarget) {
+            keyboardTarget.appendChild(els.gameTypingKeyboard);
+          }
           return;
         }
 
@@ -12011,6 +12409,9 @@
 
         els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
         els.gameVisual.appendChild(display);
+        if (keyboardTarget && els.gameTypingKeyboard.parentElement !== keyboardTarget) {
+          keyboardTarget.appendChild(els.gameTypingKeyboard);
+        }
         els.gameTypingKeyboard.innerHTML = '';
         els.gameTypingKeyboard.appendChild(grid);
         els.gameTypingKeyboard.classList.add('is-visible');
@@ -12021,6 +12422,18 @@
         } else {
           clearTypingPromptLoop();
         }
+      }
+
+      function syncGamePhaseWordHost(phaseKey) {
+        if (!els.gamePhaseWord || !els.gameStatusSlot) return;
+        const useVisualSlot = (phaseKey === 'first-star' || phaseKey === 'third-star') && !!els.gameTranslationSlot;
+        const target = useVisualSlot ? els.gameTranslationSlot : els.gameStatusSlot;
+        if (!target || els.gamePhaseWord.parentElement === target) return;
+        if (target === els.gameStatusSlot) {
+          els.gameStatusSlot.prepend(els.gamePhaseWord);
+          return;
+        }
+        target.appendChild(els.gamePhaseWord);
       }
 
       function renderCurrentCard() {
@@ -12042,6 +12455,7 @@
             els.gamePhaseWord.textContent = '';
             els.gamePhaseWord.classList.remove('is-visible');
           }
+          syncGamePhaseWordHost('');
           els.gameCard.classList.remove('is-typing-stage');
           els.gameTypingKeyboard.classList.remove('is-portuguese', 'is-visible');
           els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
@@ -12075,6 +12489,7 @@
           || stageConfig.key === 'fifth-star';
         const typingStage = isTypingStage(entry);
         els.game.dataset.phaseKey = stageConfig.key || '';
+        syncGamePhaseWordHost(stageConfig.key || '');
         els.gameCard.style.display = '';
         els.gameCard.classList.toggle('is-typing-stage', typingStage);
         els.gameEnd.classList.remove('is-visible');
@@ -12100,11 +12515,28 @@
         const stageOneSwapActive = !isSimpleStarPhase && entry.stage === 1 && Boolean(subword);
         if (els.gamePhaseWord) {
           if (isSimpleStarPhase) {
-            renderChipText(els.gamePhaseWord, capitalizeWords(card.english || card.portuguese || card.deckTitle || ''));
-            els.gamePhaseWord.classList.add('is-visible');
+            if (stageConfig.key === 'first-star') {
+              renderFirstStarPhaseWordSwap(entry, card);
+              els.gamePhaseWord.classList.add('is-visible');
+            } else if (stageConfig.key === 'third-star') {
+              clearGameLanguageSwapTimer();
+              renderChipText(els.gamePhaseWord, capitalizeWords(card.portuguese || card.english || card.deckTitle || ''));
+              els.gamePhaseWord.classList.remove('is-english', 'is-fading');
+              els.gamePhaseWord.classList.add('is-portuguese', 'is-visible');
+            } else if (stageConfig.key === 'fifth-star') {
+              clearGameLanguageSwapTimer();
+              els.gamePhaseWord.textContent = '';
+              els.gamePhaseWord.classList.remove('is-visible', 'is-english', 'is-portuguese', 'is-fading');
+            } else {
+              clearGameLanguageSwapTimer();
+              renderChipText(els.gamePhaseWord, capitalizeWords(card.english || card.portuguese || card.deckTitle || ''));
+              els.gamePhaseWord.classList.remove('is-english', 'is-portuguese', 'is-fading');
+              els.gamePhaseWord.classList.add('is-visible');
+            }
           } else {
+            clearGameLanguageSwapTimer();
             els.gamePhaseWord.textContent = '';
-            els.gamePhaseWord.classList.remove('is-visible');
+            els.gamePhaseWord.classList.remove('is-visible', 'is-english', 'is-portuguese', 'is-fading');
           }
         }
         els.gameStep.textContent = stageConfig.badge;
@@ -12468,10 +12900,6 @@
         if (accessibleFlashcardsCount() < 1) {
           return;
         }
-        if (canOfferTutorialMode()) {
-          beginTutorialGame();
-          return;
-        }
         state.game.selectedCount = DEFAULT_GAME_CONTEXT_LIMIT;
         beginGame();
       }
@@ -12765,7 +13193,7 @@
         advanceToNextCard();
       }
 
-      function beginTutorialGame() {
+      function beginTutorialGame(options = {}) {
         const tutorialCard = findTutorialPlanetCard();
         if (!tutorialCard) return;
 
@@ -12789,6 +13217,7 @@
         state.game.transitioning = false;
         state.game.sessionStartedAt = Date.now();
         state.game.tutorial.active = true;
+        state.game.tutorial.muteNarration = Boolean(options?.muteNarration);
         state.game.tutorial.currentCardId = tutorialCard.id;
 
         const entry = createGameEntry(tutorialCard, 'tutorial');
@@ -13272,6 +13701,9 @@
         els.welcomeStartBtn?.addEventListener('click', () => {
           requestWelcomeTutorialStart(true);
         });
+        els.welcomeLogo?.addEventListener('click', () => {
+          requestWelcomeTutorialStart(true);
+        });
         els.welcomeAccountLink?.addEventListener('click', (event) => {
           event.stopPropagation();
           if (state.user?.id) {
@@ -13384,7 +13816,10 @@
           );
         });
         els.closeGameSetupBtn.addEventListener('click', closeGameSetup);
-        els.startTutorialBtn?.addEventListener('click', beginTutorialGame);
+        els.startTutorialBtn?.addEventListener('click', () => {
+          state.game.selectedCount = DEFAULT_GAME_CONTEXT_LIMIT;
+          beginGame();
+        });
         Array.from(els.gameSetupOptions.querySelectorAll('[data-game-count]')).forEach((button) => {
           button.addEventListener('click', () => {
             const count = normalizeGameCount(button.getAttribute('data-game-count'));
@@ -13574,6 +14009,26 @@
       async function init() {
         const searchParams = new URLSearchParams(window.location.search);
         const requestedView = searchParams.get('view');
+        const requestedLaunch = safeText(searchParams.get('launch')).toLowerCase();
+        let requestedTutorialLaunch = requestedLaunch === 'tutorial';
+        if (requestedTutorialLaunch) {
+          try {
+            if (sessionStorage.getItem(TUTORIAL_LAUNCH_SESSION_KEY) === '1') {
+              requestedTutorialLaunch = false;
+            } else {
+              sessionStorage.setItem(TUTORIAL_LAUNCH_SESSION_KEY, '1');
+            }
+          } catch (_error) {
+            // ignore session storage failures
+          }
+
+          searchParams.delete('launch');
+          const nextSearch = searchParams.toString();
+          const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash || ''}`;
+          if (typeof window.history?.replaceState === 'function') {
+            window.history.replaceState(null, '', nextUrl);
+          }
+        }
         const requestedPremiumOpen = searchParams.get('premium') === '1';
         clearFlashcardsLocalStorage();
         state.entry.soundTestCompleted = readSoundTestCompletedFlag();
@@ -13647,6 +14102,10 @@
           await maybeOpenOnboardingGate();
         } catch (error) {
           console.warn('Falha ao verificar onboarding de identidade:', error);
+        }
+
+        if (requestedTutorialLaunch) {
+          requestWelcomeTutorialStart(true, { forceTutorial: true });
         }
 
         if (resumePendingSoundCheckFlow()) {
