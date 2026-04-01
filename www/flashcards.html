@@ -1595,6 +1595,7 @@
 
     body.gameplay-active #game .game-shell {
       background: transparent;
+      overflow: visible;
     }
 
     .game-shell::before {
@@ -2475,6 +2476,7 @@
       min-height: min(56vh, 460px);
       order: 2;
       flex: 0 0 auto;
+      overflow: visible;
     }
 
     .game-card.is-typing-stage {
@@ -3374,6 +3376,27 @@
       filter: brightness(1.2) drop-shadow(0 0 16px rgba(255, 255, 255, 0.75));
     }
 
+    .flashcards-typing__grid.is-error .flashcards-typing__key {
+      background:
+        linear-gradient(135deg, rgba(214, 58, 81, 0.96) 0%, rgba(255, 123, 141, 0.92) 100%);
+      color: #fff5f7;
+      text-shadow:
+        0 2px 0 rgba(119, 18, 33, 0.92),
+        0 6px 12px rgba(119, 18, 33, 0.32);
+      animation: flashcardsTypingErrorShake 320ms ease-in-out;
+    }
+
+    .flashcards-typing__display--visual.is-error {
+      animation: flashcardsTypingErrorShake 320ms ease-in-out;
+    }
+
+    .flashcards-typing__display--visual.is-error .flashcards-typing__display-letter {
+      color: #ffd9df;
+      text-shadow:
+        0 2px 0 rgba(119, 18, 33, 0.78),
+        0 6px 12px rgba(119, 18, 33, 0.28);
+    }
+
     .game-language-btn,
     .game-touch {
       border-radius: 20px;
@@ -3696,6 +3719,14 @@
         opacity: 1;
         transform: translateY(var(--flashcards-active-image-shift, var(--flashcards-image-shift))) scale(calc(var(--flashcards-active-image-scale, var(--flashcards-image-scale)) * 1.02));
       }
+    }
+
+    @keyframes flashcardsTypingErrorShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-4px); }
+      40% { transform: translateX(4px); }
+      60% { transform: translateX(-3px); }
+      80% { transform: translateX(3px); }
     }
 
     @keyframes flashcardsTutorialReveal {
@@ -11372,10 +11403,29 @@
         }, TYPING_KEY_FLASH_MS);
       }
 
+      function triggerTypingMistakeFeedback(grid) {
+        if (!grid) return;
+        const display = els.gameVisual.querySelector('.flashcards-typing__display--visual');
+        grid.classList.remove('is-error');
+        display?.classList.remove('is-error');
+        void grid.offsetWidth;
+        grid.classList.add('is-error');
+        display?.classList.add('is-error');
+        window.setTimeout(() => {
+          grid.classList.remove('is-error');
+          display?.classList.remove('is-error');
+        }, 1000);
+      }
+
       async function handleTypingMistake(entry, card, grid, typedLength = 0) {
         entry.typingMistakes = (entry.typingMistakes || 0) + 1;
         if (entry.stage === 2) {
+          setTypingKeysDisabled(grid, true);
+          triggerTypingMistakeFeedback(grid);
           playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
+          await wait(1000);
+          if (!state.game.active || state.game.currentId !== entry.id) return true;
+          setTypingKeysDisabled(grid, false);
           return false;
         }
         setTypingKeysDisabled(grid, true);
