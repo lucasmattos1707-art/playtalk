@@ -52,7 +52,7 @@
       --flashcards-chip-drop: 0px;
       --flashcards-visual-phase-drop: 0px;
       --flashcards-chip-phase-drop: 0px;
-      --flashcards-stars-drop: 50px;
+      --flashcards-stars-drop: 90px;
       --flashcards-typing-visual-drop: 66px;
       --flashcards-typing-display-drop: 82px;
       --flashcards-image-shift: 80px;
@@ -2647,7 +2647,7 @@
       border-radius: 50%;
       --flashcards-mic-progress: 0;
       padding: 22px;
-      background: #2192ff;
+      background: #ff8a1f;
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
@@ -2655,6 +2655,7 @@
       transform-origin: center center;
       pointer-events: none;
       z-index: 5;
+      filter: drop-shadow(0 0 16px rgba(255, 138, 31, 0.42));
       animation: flashcardsMicRingFill 500ms ease-out forwards;
     }
 
@@ -2985,16 +2986,19 @@
       letter-spacing: 0;
       background-position: center center, center center;
       background-repeat: no-repeat, no-repeat;
-      background-size: cover, 165% 165%;
+      background-size: cover, 265% 265%;
       box-shadow:
-        0 20px 38px rgba(23, 9, 68, 0.24),
+        0 20px 38px rgba(23, 9, 68, 0.18),
         inset 0 0 0 1px rgba(255, 255, 255, 0.14);
     }
 
     .game-word.is-chip.is-long {
       background-image:
-        linear-gradient(90deg, rgba(18, 115, 235, 0.96) 0%, rgba(58, 185, 255, 0.92) 100%),
+        linear-gradient(90deg, rgba(18, 115, 235, 0.81) 0%, rgba(58, 185, 255, 0.77) 100%),
         url("SVG/codex-icons/ingles.svg");
+      box-shadow:
+        0 22px 42px rgba(7, 34, 112, 0.34),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14);
       text-shadow:
         0 2px 0 rgba(8, 43, 102, 0.72),
         0 10px 18px rgba(8, 43, 102, 0.28);
@@ -3002,8 +3006,11 @@
 
     .game-subword.is-chip.is-long {
       background-image:
-        linear-gradient(90deg, rgba(0, 155, 72, 0.96) 0%, rgba(38, 224, 113, 0.92) 100%),
+        linear-gradient(90deg, rgba(0, 155, 72, 0.81) 0%, rgba(38, 224, 113, 0.77) 100%),
         url("SVG/codex-icons/portugues.svg");
+      box-shadow:
+        0 22px 42px rgba(6, 74, 38, 0.34),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14);
       text-shadow:
         0 2px 0 rgba(6, 74, 38, 0.78),
         0 10px 18px rgba(6, 74, 38, 0.28);
@@ -3592,10 +3599,12 @@
       0% {
         --flashcards-mic-progress: 0;
         opacity: 0.45;
+        transform: translateY(var(--flashcards-active-image-shift, var(--flashcards-image-shift))) scale(calc(var(--flashcards-active-image-scale, var(--flashcards-image-scale)) * 0.92));
       }
       100% {
         --flashcards-mic-progress: 1;
         opacity: 1;
+        transform: translateY(var(--flashcards-active-image-shift, var(--flashcards-image-shift))) scale(calc(var(--flashcards-active-image-scale, var(--flashcards-image-scale)) * 1.02));
       }
     }
 
@@ -10235,7 +10244,7 @@
       function renderStageOneWordSwap(entry, hasSubword) {
         clearGameLanguageSwapTimer();
         if (entry.stage !== 1 || !hasSubword) return;
-        state.game.stageOneSwapShowsPortuguese = entry.stars === 0;
+        state.game.stageOneSwapShowsPortuguese = true;
 
         const applyStageOneVisibility = () => {
           const showsPortuguese = state.game.stageOneSwapShowsPortuguese;
@@ -11247,9 +11256,7 @@
         entry.typingMistakes = (entry.typingMistakes || 0) + 1;
         setTypingKeysDisabled(grid, true);
         if (entry.stage === 2) {
-          if (!revealTypingAnswerImage(card)) {
-            revealTypingAnswer(entry, card, { hintStart: typedLength, hintLength: 2 });
-          }
+          revealTypingAnswer(entry, card);
           const shouldUseTypePortuguese = hasTypePortugueseHint(entry.id);
           const cuePath = shouldUseTypePortuguese ? TYPE_PORTUGUESE_SOUND_PATH : SECOND_STAR_ERROR_SOUND_PATH;
           if (!shouldUseTypePortuguese) {
@@ -11422,6 +11429,11 @@
         els.gameStep.textContent = stageConfig.badge;
         els.gameWord.className = `game-word${stageConfig.showWord === false ? ' is-hidden' : ' is-chip'}`;
         els.gameSubword.className = `game-subword${subword ? ' is-chip' : ' is-hidden'}`;
+        if (entry.stage === 1 && subword) {
+          els.gameWord.classList.add('is-hidden');
+          els.gameSubword.classList.remove('is-hidden');
+          els.gameSubword.style.display = '';
+        }
         renderChipText(els.gameWord, stageConfig.showWord === false ? '' : word);
         renderChipText(els.gameSubword, subword);
         els.gameCard.querySelector('.game-card__content')?.classList.toggle('is-stage-three', entry.stage === 3);
@@ -11430,7 +11442,7 @@
         }
         els.gameSubword.classList.toggle('is-stage-one', entry.stage === 1 && stageConfig.subtitleType === 'portuguese');
         renderStageOneWordSwap(entry, Boolean(subword));
-        state.game.canListen = !typingStage && !stageConfig.autoAudio;
+        state.game.canListen = !typingStage && (!stageConfig.autoAudio || entry.stage === 1);
         renderGameTouchButton(stageConfig, entry);
         els.gameTouchBtn.parentElement.classList.toggle('is-hidden', typingStage || els.gameTouchBtn.classList.contains('is-hidden'));
         els.gameTouchBtn.classList.toggle('is-busy', state.game.listening);
@@ -11777,6 +11789,11 @@
           resetGameSwipeTracking();
           return;
         }
+        const isTouchGesture = event.pointerType === 'touch' || navigator.maxTouchPoints > 0;
+        if (!isTouchGesture) {
+          resetGameSwipeTracking();
+          return;
+        }
         const startX = Number(state.ui.gameSwipeStartX) || 0;
         const startY = Number(state.ui.gameSwipeStartY) || 0;
         const endX = Number(event.clientX) || 0;
@@ -11791,7 +11808,26 @@
         state.ui.gameSwipeTriggeredAt = Date.now();
         event.preventDefault?.();
         event.stopPropagation?.();
-        void exitGame();
+        pauseGameToLibrary();
+      }
+
+      function pauseGameToLibrary() {
+        if (!state.game.active) return;
+        cleanupGameRecognition();
+        stopActiveAudio();
+        clearGameLanguageSwapTimer();
+        clearStageTwoHintTimer();
+        clearPendingRewardSeal();
+        closeGameReportMenu();
+        state.game.paused = true;
+        persistGameSessionLocally();
+        document.body.classList.remove('game-open');
+        document.body.classList.remove('gameplay-active');
+        els.game.classList.remove('is-active', 'is-visible');
+        els.catalog.classList.remove('is-hidden');
+        els.topbar.classList.remove('is-hidden');
+        refreshLibrary();
+        switchMainView('play');
       }
 
       function pickWatchCards() {
@@ -12248,7 +12284,9 @@
         }
 
         cleanupGameRecognition();
-        stopActiveAudio();
+        if (entry.stage !== 1) {
+          stopActiveAudio();
+        }
         state.game.listening = true;
         els.gameTouchBtn.classList.add('is-busy');
         els.gameCard.classList.add('is-listening');
@@ -12288,7 +12326,7 @@
             state.game.recognition = null;
           }
           state.game.listening = false;
-          state.game.canListen = entry.stage === 1 ? Boolean(gotResult) : true;
+          state.game.canListen = true;
           els.gameTouchBtn.classList.remove('is-busy');
           renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
           els.gameCard.classList.remove('is-listening');
