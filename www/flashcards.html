@@ -2945,24 +2945,30 @@
     .game-word.is-chip.is-long,
     .game-subword.is-chip.is-long {
       width: fit-content;
-      max-width: min(400px, calc(100vw - 40px));
-      min-height: 82px;
+      max-width: min(520px, calc(100vw - 32px));
+      min-height: 74px;
       margin-inline: auto;
-      padding: 12px 18px;
-      border-radius: 18px;
+      padding: 10px 24px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
       justify-content: center;
+      overflow: hidden;
       text-align: center;
-      line-height: 0.98;
-      font-size: clamp(22px, 4vw, 30px);
+      line-height: 1;
+      font-size: clamp(29px, 5.2vw, 39px);
       letter-spacing: 0;
       background-position: center center, center center;
       background-repeat: no-repeat, no-repeat;
-      background-size: cover, 112px 112px;
+      background-size: cover, 165% 165%;
+      box-shadow:
+        0 20px 38px rgba(23, 9, 68, 0.24),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14);
     }
 
     .game-word.is-chip.is-long {
       background-image:
-        linear-gradient(90deg, rgba(33, 146, 255, 0.84) 0%, rgba(71, 195, 255, 0.78) 100%),
+        linear-gradient(90deg, rgba(18, 115, 235, 0.96) 0%, rgba(58, 185, 255, 0.92) 100%),
         url("SVG/codex-icons/ingles.svg");
       text-shadow:
         0 2px 0 rgba(8, 43, 102, 0.72),
@@ -2971,7 +2977,7 @@
 
     .game-subword.is-chip.is-long {
       background-image:
-        linear-gradient(90deg, rgba(0, 184, 84, 0.84) 0%, rgba(56, 234, 130, 0.78) 100%),
+        linear-gradient(90deg, rgba(0, 155, 72, 0.96) 0%, rgba(38, 224, 113, 0.92) 100%),
         url("SVG/codex-icons/portugues.svg");
       text-shadow:
         0 2px 0 rgba(6, 74, 38, 0.78),
