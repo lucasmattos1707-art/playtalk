@@ -60,7 +60,7 @@
       --flashcards-chip-drop: 0px;
       --flashcards-visual-phase-drop: 0px;
       --flashcards-chip-phase-drop: 0px;
-      --flashcards-stars-drop: 140px;
+      --flashcards-stars-drop: 190px;
       --flashcards-typing-visual-drop: 66px;
       --flashcards-typing-display-drop: 82px;
       --flashcards-image-shift: 80px;
@@ -1832,8 +1832,11 @@
       left: 50%;
       top: calc(50% + 18px);
       transform: translate(-50%, -50%);
-      width: min(420px, calc(100vw - 52px));
+      width: fit-content;
+      max-width: min(420px, calc(100vw - 52px));
       margin: 0;
+      justify-self: center;
+      text-align: center;
     }
 
     .game-word.is-stage-swap-hidden,
@@ -3270,15 +3273,15 @@
     }
 
     .flashcards-typing__display-letter.is-dimmed {
-      opacity: 0.6;
+      opacity: 1;
     }
 
     .flashcards-typing__display-letter.is-filled {
-      color: #fff1a8;
+      color: #5dff8a;
       opacity: 1;
       text-shadow:
-        0 0 8px rgba(255, 241, 168, 0.35),
-        0 4px 12px rgba(120, 86, 0, 0.32);
+        0 0 8px rgba(93, 255, 138, 0.35),
+        0 4px 12px rgba(8, 95, 42, 0.32);
     }
 
     .flashcards-typing__display-letter.is-hint {
@@ -11394,10 +11397,10 @@
             clearTypingPromptLoop();
             return;
           }
-          playPromptAudio(card).catch?.(() => {});
+          playPromptAudio(card, { rate: 0.8 }).catch?.(() => {});
         };
         window.setTimeout(replayPrompt, 220);
-        state.game.typingPromptLoopTimer = window.setInterval(replayPrompt, 2200);
+        state.game.typingPromptLoopTimer = window.setInterval(replayPrompt, 3000);
       }
 
       function renderTypingKeyboard(entry, card) {
@@ -11491,6 +11494,9 @@
           state.game.footerNavPrimed = false;
           state.game.footerNavPrimeKey = '';
           syncFooterGuardState(null);
+          els.gameWord.parentElement?.classList.remove('is-stage-one-swap');
+          els.gameWord.classList.remove('is-stage-swap-hidden');
+          els.gameSubword.classList.remove('is-stage-swap-hidden');
           els.gameCard.classList.remove('is-typing-stage');
           els.gameTypingKeyboard.classList.remove('is-portuguese', 'is-visible');
           els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
@@ -11552,6 +11558,9 @@
           els.gameSubword.className = 'game-subword is-chip';
           els.gameWord.style.display = '';
           els.gameSubword.style.display = '';
+        } else {
+          els.gameWord.style.display = '';
+          els.gameSubword.style.display = subword ? '' : 'none';
         }
         renderChipText(els.gameWord, stageConfig.showWord === false ? '' : word);
         renderChipText(els.gameSubword, subword);
@@ -11567,8 +11576,12 @@
         els.gameTouchBtn.classList.toggle('is-busy', state.game.listening);
         renderTypingKeyboard(entry, card);
         if (typingStage) {
+          els.gameWord.parentElement?.classList.remove('is-stage-one-swap');
+          els.gameWord.classList.remove('is-stage-swap-hidden');
+          els.gameSubword.classList.remove('is-stage-swap-hidden');
           els.gameWord.classList.add('is-hidden');
           els.gameSubword.classList.add('is-hidden');
+          els.gameWord.style.display = 'none';
           els.gameSubword.style.display = 'none';
         }
         if (!typingStage && !stageOneSwapActive) {
