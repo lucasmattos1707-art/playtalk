@@ -3430,10 +3430,12 @@
     .game[data-phase-key="fifth-star"] .circlescreen,
     .game[data-phase-key="fifth-star"] .textscreen,
     .game[data-phase-key="fifth-star"] .navbarscreen {
-      width: 100%;
+      width: 100vw;
+      max-width: 100vw;
       min-height: 0;
       box-sizing: border-box;
       border: 1px solid #ffffff;
+      border-radius: 0;
       transform: none;
     }
 
@@ -3460,6 +3462,7 @@
       justify-content: center;
       padding: 8px 12px;
       margin: 0;
+      position: relative;
     }
 
     .game[data-phase-key="first-star"] .circlescreen .game-card__layout,
@@ -3471,15 +3474,85 @@
       align-content: center;
       justify-items: center;
       grid-template-columns: 1fr;
+      display: grid;
+      place-items: center;
     }
 
-    .game[data-phase-key="first-star"] .circlescreen .game-card__content,
-    .game[data-phase-key="third-star"] .circlescreen .game-card__content,
-    .game[data-phase-key="fifth-star"] .circlescreen .game-card__content,
-    .game[data-phase-key="first-star"] .circlescreen .game-card__content > div.is-stage-one-swap,
-    .game[data-phase-key="third-star"] .circlescreen .game-card__content > div.is-stage-one-swap,
-    .game[data-phase-key="fifth-star"] .circlescreen .game-card__content > div.is-stage-one-swap {
-      display: none !important;
+    .game[data-phase-key="first-star"] #gameVisual,
+    .game[data-phase-key="third-star"] #gameVisual,
+    .game[data-phase-key="fifth-star"] #gameVisual {
+      display: grid;
+      place-items: center;
+      align-items: center;
+      justify-items: center;
+      align-content: center;
+      justify-content: center;
+      margin: 0 auto;
+    }
+
+    .game[data-phase-key="first-star"] .game-card__content,
+    .game[data-phase-key="third-star"] .game-card__content,
+    .game[data-phase-key="fifth-star"] .game-card__content {
+      display: flex !important;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      position: fixed !important;
+      left: 0;
+      right: 0;
+      top: calc(12dvh + 54dvh);
+      height: 22dvh;
+      padding: 8px 14px;
+      margin-top: 0;
+      width: 100vw;
+      z-index: 80;
+      max-width: 100vw;
+      transform: none !important;
+      pointer-events: auto;
+    }
+
+    .game[data-phase-key="first-star"] .game-card__content > div.is-stage-one-swap,
+    .game[data-phase-key="third-star"] .game-card__content > div.is-stage-one-swap,
+    .game[data-phase-key="fifth-star"] .game-card__content > div.is-stage-one-swap {
+      position: static;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: min(100%, calc(100% - 12px));
+      min-height: 0;
+      margin: 0;
+      gap: 10px;
+      padding: 0;
+    }
+
+    .game[data-phase-key="first-star"] .game-card__content > div:first-child,
+    .game[data-phase-key="third-star"] .game-card__content > div:first-child,
+    .game[data-phase-key="fifth-star"] .game-card__content > div:first-child {
+      display: flex !important;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .game[data-phase-key="first-star"] .game-card__content > div.is-stage-one-swap .game-word,
+    .game[data-phase-key="first-star"] .game-card__content > div.is-stage-one-swap .game-subword,
+    .game[data-phase-key="third-star"] .game-card__content > div.is-stage-one-swap .game-word,
+    .game[data-phase-key="third-star"] .game-card__content > div.is-stage-one-swap .game-subword,
+    .game[data-phase-key="fifth-star"] .game-card__content > div.is-stage-one-swap .game-word,
+    .game[data-phase-key="fifth-star"] .game-card__content > div.is-stage-one-swap .game-subword {
+      position: static;
+      left: auto;
+      top: auto;
+      transform: none;
+      width: fit-content;
+      max-width: min(92vw, 700px);
+      margin: 0;
+      padding-right: 0;
+      text-align: center;
     }
 
     .game[data-phase-key="first-star"] .circlescreen .game-card__visual,
@@ -3491,6 +3564,24 @@
       aspect-ratio: 1 / 1;
       height: auto;
       transform: none;
+      align-self: center;
+      justify-self: center;
+    }
+
+    .game[data-phase-key="first-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="first-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="first-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="first-star"] #gameVisual .game-card__reveal-image,
+    .game[data-phase-key="third-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="third-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="third-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="third-star"] #gameVisual .game-card__reveal-image,
+    .game[data-phase-key="fifth-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="fifth-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="fifth-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="fifth-star"] #gameVisual .game-card__reveal-image {
+      transform: none !important;
+      margin: 0 auto;
     }
 
     .game[data-phase-key="first-star"] .textscreen,
@@ -3498,6 +3589,7 @@
     .game[data-phase-key="fifth-star"] .textscreen {
       flex: 0 0 22%;
       height: 22%;
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -3508,8 +3600,7 @@
     .game[data-phase-key="first-star"] .textscreen .game-status-wrap,
     .game[data-phase-key="third-star"] .textscreen .game-status-wrap,
     .game[data-phase-key="fifth-star"] .textscreen .game-status-wrap {
-      width: 100%;
-      justify-items: center;
+      display: none;
     }
 
     .game[data-phase-key="first-star"] .navbarscreen,
@@ -3529,6 +3620,27 @@
     .game[data-phase-key="third-star"] .navbarscreen .game-chip,
     .game[data-phase-key="fifth-star"] .navbarscreen .game-chip {
       display: none !important;
+    }
+
+    .game[data-phase-key="first-star"] .game-language-btn,
+    .game[data-phase-key="third-star"] .game-language-btn,
+    .game[data-phase-key="fifth-star"] .game-language-btn {
+      display: inline-flex !important;
+      width: 56px;
+      min-width: 56px;
+      height: 56px;
+      min-height: 56px;
+      padding: 0;
+      border-radius: 50%;
+    }
+
+    .game[data-phase-key="first-star"] .game-word.is-chip,
+    .game[data-phase-key="first-star"] .game-subword.is-chip,
+    .game[data-phase-key="third-star"] .game-word.is-chip,
+    .game[data-phase-key="third-star"] .game-subword.is-chip,
+    .game[data-phase-key="fifth-star"] .game-word.is-chip,
+    .game[data-phase-key="fifth-star"] .game-subword.is-chip {
+      display: inline-flex !important;
     }
 
     .flashcards-typing__key:hover {
