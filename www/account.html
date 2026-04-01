@@ -91,10 +91,10 @@
     .panel {
       padding: 26px 22px 22px;
       border-radius: 0 0 var(--radius) var(--radius);
-      border: 1px solid var(--line);
-      background: rgba(9, 21, 38, 0.18);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(16px);
+      border: 1px solid transparent;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
     }
 
     .panel.is-guest {
@@ -162,6 +162,10 @@
       gap: 8px;
       color: #dbeafe;
       font-weight: 700;
+    }
+
+    .account-field[hidden] {
+      display: none !important;
     }
 
     .account-field input {

@@ -1833,11 +1833,13 @@
       left: 50%;
       top: calc(50% + 18px);
       transform: translate(-50%, -50%);
-      width: auto;
-      max-width: min(360px, calc(100vw - 72px));
+      width: fit-content;
+      min-width: 0;
+      max-width: min(320px, calc(100vw - 88px));
       margin: 0;
-      padding-right: 18px;
+      padding-right: 12px;
       justify-self: center;
+      justify-content: center;
       text-align: center;
     }
 
@@ -2993,6 +2995,19 @@
       margin-top: -15px;
     }
 
+    .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-word.is-chip,
+    .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-subword.is-chip {
+      width: fit-content;
+      min-width: 0;
+      max-width: min(320px, calc(100vw - 88px));
+      margin: 0;
+      padding: 14px 18px 14px 54px;
+      border-radius: 20px;
+      justify-content: center;
+      text-align: center;
+      white-space: nowrap;
+    }
+
     .game-word.is-chip,
     .game-subword.is-chip {
       position: relative;
@@ -3384,17 +3399,6 @@
         0 2px 0 rgba(119, 18, 33, 0.92),
         0 6px 12px rgba(119, 18, 33, 0.32);
       animation: flashcardsTypingErrorShake 320ms ease-in-out;
-    }
-
-    .flashcards-typing__display--visual.is-error {
-      animation: flashcardsTypingErrorShake 320ms ease-in-out;
-    }
-
-    .flashcards-typing__display--visual.is-error .flashcards-typing__display-letter {
-      color: #ffd9df;
-      text-shadow:
-        0 2px 0 rgba(119, 18, 33, 0.78),
-        0 6px 12px rgba(119, 18, 33, 0.28);
     }
 
     .game-language-btn,
@@ -3920,6 +3924,15 @@
       .game-card:not(.is-typing-stage) .game-word.is-chip,
       .game-card:not(.is-typing-stage) .game-subword.is-chip {
         margin: 0;
+      }
+
+      .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-word.is-chip,
+      .game-card:not(.is-typing-stage) .game-card__content > div.is-stage-one-swap .game-subword.is-chip {
+        width: fit-content;
+        max-width: min(300px, calc(100vw - 96px));
+        padding: 14px 18px 14px 54px;
+        justify-content: center;
+        text-align: center;
       }
 
       .game-word.is-chip,
@@ -11405,15 +11418,11 @@
 
       function triggerTypingMistakeFeedback(grid) {
         if (!grid) return;
-        const display = els.gameVisual.querySelector('.flashcards-typing__display--visual');
         grid.classList.remove('is-error');
-        display?.classList.remove('is-error');
         void grid.offsetWidth;
         grid.classList.add('is-error');
-        display?.classList.add('is-error');
         window.setTimeout(() => {
           grid.classList.remove('is-error');
-          display?.classList.remove('is-error');
         }, 1000);
       }
 
