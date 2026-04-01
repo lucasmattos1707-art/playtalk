@@ -1207,7 +1207,7 @@ const isAdminUserRecord = (user) => isAdminUsername(user?.email || user?.usernam
 const buildPublicUsersVisibilityWhereClause = (requesterIsAdmin = false, usernameColumn = `COALESCE(NULLIF(u.username, ''), u.email)`) => {
   if (requesterIsAdmin) return '';
   return `WHERE NOT (
-    LOWER(${usernameColumn}) IN ('admin', 'adm')
+    LOWER(${usernameColumn}) IN ('admin', 'adm', 'adminst')
     OR UPPER(${usernameColumn}) LIKE '%USER%'
   )`;
 };
@@ -2049,7 +2049,7 @@ const ADMIN_BANNER_DEFAULT_PROMPT = [
 ].join(' ');
 const LOCAL_LEVEL_MANIFEST_RELATIVE_PATH = path.posix.join('data', 'local-level-files.json');
 const LOCAL_LEVEL_ALLOWED_FOLDERS = ['others', 'talking', 'watching', 'words'];
-const FLASHCARD_ADMIN_USERNAMES = new Set(['admin', 'adm']);
+const FLASHCARD_ADMIN_USERNAMES = new Set(['admin', 'adm', 'adminst']);
 const ACCESS_KEY_TYPES = {
   semana: { ...PREMIUM_BILLING_PLANS.semana, fileName: 'semana.json' },
   mes: { ...PREMIUM_BILLING_PLANS.mes, fileName: 'mes.json' },

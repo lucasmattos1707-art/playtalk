@@ -979,7 +979,7 @@
       });
     }
 
-    if (username.trim().toLowerCase() === 'adm') {
+    if (['adm', 'admin', 'adminst'].includes(username.trim().toLowerCase())) {
       writeNumericStorage(LAST_COMPLETED_DAY_STORAGE_KEY, 1);
     }
 

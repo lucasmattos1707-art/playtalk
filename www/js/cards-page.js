@@ -167,7 +167,7 @@
     const username = safeText(player?.username).toLowerCase();
     const storedDay = Number(localStorage.getItem(LAST_COMPLETED_DAY_STORAGE_KEY));
     const completedDay = Number.isFinite(storedDay) && storedDay > 0 ? storedDay : 0;
-    if (username === 'adm') {
+    if (username === 'adm' || username === 'admin' || username === 'adminst') {
       return Math.max(1, completedDay);
     }
     return completedDay;

@@ -2226,7 +2226,7 @@
   function isAdminPlayer() {
     const player = getPlayerStateSnapshot();
     const username = player && typeof player.username === 'string' ? player.username.trim().toLowerCase() : '';
-    return username === 'adm';
+    return username === 'adm' || username === 'admin' || username === 'adminst';
   }
 
   function rebuildDayEntriesFromPhases() {

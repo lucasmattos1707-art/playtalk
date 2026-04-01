@@ -339,7 +339,7 @@
     try {
       const sessionUser = await fetchSessionUser();
       const identity = String(sessionUser?.username || sessionUser?.email || '').trim().toLowerCase();
-      state.isAdmin = Boolean(sessionUser?.is_admin) || identity === 'admin' || identity === 'adm';
+      state.isAdmin = Boolean(sessionUser?.is_admin) || identity === 'admin' || identity === 'adm' || identity === 'adminst';
       if (state.isAdmin) {
         enableAdminUi();
       }

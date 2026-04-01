@@ -302,7 +302,7 @@
       const $=id=>document.getElementById(id),state={mode:'flashcard',day:'1',title:'',levelKey:'',coverFile:'',coverDataUrl:'',soundFile:'',soundDataUrl:'',flashcardCoverUrl:'',items:[],chars:[],paste:false,testOnline:false,voiceMode:false,imageAiHint:'',sceneCharactersOpen:false};
       const sceneStoryDraft={selectedIds:[],shares:{},topic:'',lineCount:8};
       const movieStoryDraft={topic:'',itemCount:8};
-      const ADMIN_USERNAMES=new Set(['admin','adm']);
+      const ADMIN_USERNAMES=new Set(['admin','adm','adminst']);
       const adminStudio={checked:false,enabled:false,username:'',search:'',selectMode:false,selected:new Set(),status:'Aguardando sessao do administrador.',statusError:false,publishTimer:0,publishBusy:false,publishQueued:false,activeMenuIndex:null};
       let pendingImage=null,pendingAudio=null,currentAudio=null,audioBatchTargets={pt:false,en:false},aiBatchBusy=false,aiTextBusy=false,zipBusy=false,elevenBusy=false,r2UploadBusy=false,publishLocalBusy=false;
       let watchRuntime=null,watchVoiceAudio=null,watchMusicAudio=null,watchLibraryCache=null;
