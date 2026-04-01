@@ -105,6 +105,13 @@
       backdrop-filter: blur(16px);
     }
 
+    .panel.is-guest {
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+
     .account-form {
       width: min(100%, 440px);
       margin: 0 auto;
@@ -126,6 +133,17 @@
       position: relative;
     }
 
+    .account-avatar.is-message {
+      width: 100%;
+      height: auto;
+      min-height: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      cursor: default;
+      padding: 8px 0;
+    }
+
     .account-avatar img,
     .account-avatar span {
       width: 100%;
@@ -136,6 +154,14 @@
       font-size: 58px;
       font-weight: 800;
       color: #475569;
+    }
+
+    .account-avatar.is-message span {
+      height: auto;
+      color: #ffffff;
+      font-size: 32px;
+      line-height: 1.1;
+      text-align: center;
     }
 
     .account-field {
@@ -206,6 +232,10 @@
 
     .account-premium span {
       color: #d8e6ff;
+    }
+
+    .account-premium[hidden] {
+      display: none !important;
     }
 
     .account-button--premium {
@@ -299,7 +329,7 @@
         </label>
         <label class="account-field" id="accountPasswordField" hidden>
           <span>Senha</span>
-          <input id="accountPasswordInput" type="password" maxlength="64" placeholder="Defina uma senha">
+          <input id="accountPasswordInput" type="password" maxlength="64" placeholder="Senha">
         </label>
         <button class="account-button account-button--password" id="accountPasswordBtn" type="button" hidden>Trocar senha</button>
         <div class="account-premium">

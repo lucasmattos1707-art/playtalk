@@ -2,6 +2,7 @@
   const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
   const AUTO_SAVE_DELAY_MS = 700;
   const els = {
+    panel: document.querySelector('.panel'),
     form: document.getElementById('accountForm'),
     avatarInput: document.getElementById('accountAvatarInput'),
     avatarPreview: document.getElementById('accountAvatarPreview'),
@@ -10,6 +11,7 @@
     passwordField: document.getElementById('accountPasswordField'),
     passwordInput: document.getElementById('accountPasswordInput'),
     passwordBtn: document.getElementById('accountPasswordBtn'),
+    premiumCard: document.querySelector('.account-premium'),
     premiumLevel: document.getElementById('accountPremiumLevel'),
     premiumUntil: document.getElementById('accountPremiumUntil'),
     premiumBtn: document.getElementById('accountPremiumBtn'),
@@ -28,7 +30,8 @@
     saveInFlight: false,
     pendingSave: false,
     lastSavedUsername: '',
-    lastSavedAvatar: ''
+    lastSavedAvatar: '',
+    passwordEditMode: false
   };
 
   function buildApiUrl(path) {
@@ -133,7 +136,14 @@
   }
 
   function renderPremiumStatus() {
-    if (!els.premiumLevel || !els.premiumUntil) return;
+    if (!els.premiumLevel || !els.premiumUntil || !els.premiumCard) return;
+    const isLoggedIn = Boolean(state.user?.id);
+    els.premiumCard.hidden = !isLoggedIn;
+    if (!isLoggedIn) {
+      els.premiumLevel.textContent = '';
+      els.premiumUntil.textContent = '';
+      return;
+    }
     if (isPremiumActive()) {
       els.premiumLevel.textContent = 'Nivel de acesso: Premium';
       const until = Date.parse(state.user?.premiumUntil || '');
@@ -170,22 +180,34 @@
     const username = safeText(sourceProfile.username) || 'Jogador';
     const avatar = safeText(state.avatarDraft || sourceProfile.avatarImage);
     const hasAvatar = Boolean(avatar);
+    const isLoggedIn = Boolean(state.user?.id);
     if (document.activeElement !== els.nameInput) {
       els.nameInput.value = username;
     }
     els.avatarPreview.src = hasAvatar ? avatar : 'Avatar/avatar-man-person-svgrepo-com.svg';
-    els.avatarPreview.style.display = hasAvatar ? 'block' : 'none';
-    els.avatarFallback.textContent = username.charAt(0).toUpperCase() || 'P';
-    els.avatarFallback.style.display = hasAvatar ? 'none' : 'grid';
+    els.avatarPreview.style.display = isLoggedIn && hasAvatar ? 'block' : 'none';
+    els.avatarFallback.textContent = isLoggedIn ? (username.charAt(0).toUpperCase() || 'P') : 'Entre com sua conta';
+    els.avatarFallback.style.display = isLoggedIn && hasAvatar ? 'none' : 'grid';
+    els.avatarInput.disabled = !isLoggedIn;
+    els.avatarInput.value = '';
+    els.avatarPreview.alt = isLoggedIn ? 'Avatar do usuario' : '';
+    if (els.panel) {
+      els.panel.classList.toggle('is-guest', !isLoggedIn);
+    }
+    if (els.avatarPreview?.parentElement) {
+      els.avatarPreview.parentElement.classList.toggle('is-message', !isLoggedIn);
+    }
 
-    const isLoggedIn = Boolean(state.user?.id);
-    const shouldHidePasswordField = isLoggedIn;
+    const shouldHidePasswordField = isLoggedIn ? !state.passwordEditMode : false;
     if (els.passwordField) {
       els.passwordField.hidden = shouldHidePasswordField;
     }
+    if (els.passwordInput) {
+      els.passwordInput.placeholder = isLoggedIn ? 'Nova senha' : 'Senha';
+    }
     if (els.passwordBtn) {
       els.passwordBtn.hidden = !isLoggedIn;
-      els.passwordBtn.textContent = 'Trocar senha';
+      els.passwordBtn.textContent = state.passwordEditMode ? 'Cancelar' : 'Trocar senha';
     }
     if (shouldHidePasswordField && els.passwordInput) {
       els.passwordInput.value = '';
@@ -411,13 +433,12 @@
   }
 
   async function promptForPassword() {
-    if (!state.user?.id) return;
-    const typed = window.prompt('Digite a nova senha (minimo de 6 caracteres):', '');
-    const password = safeText(typed);
+    if (!state.user?.id) return false;
+    const password = safeText(els.passwordInput?.value);
     if (!password) return;
     if (!isValidPassword(password)) {
       setStatus('Use pelo menos 6 caracteres na senha.', 'error');
-      return;
+      return false;
     }
 
     setStatus('Salvando nova senha...');
@@ -435,10 +456,16 @@
         persistAuthToken(payload.token);
       }
       state.user = normalizeUser(payload.user) || state.user;
+      state.passwordEditMode = false;
+      if (els.passwordInput) {
+        els.passwordInput.value = '';
+      }
       renderUser();
       setStatus('Senha alterada com sucesso.', 'success');
+      return true;
     } catch (error) {
       setStatus(error?.message || 'Nao foi possivel salvar a senha.', 'error');
+      return false;
     }
   }
 
@@ -474,6 +501,7 @@
         avatarImage: state.user?.avatarImage || safeText(state.avatarDraft || state.localProfile?.avatarImage)
       };
       patchLocalPlayerProfile(state.localProfile);
+      state.passwordEditMode = false;
       syncSavedSnapshot(state.user);
       if (els.passwordInput) {
         els.passwordInput.value = '';
@@ -505,17 +533,18 @@
     state.localProfile = readLocalPlayerProfile();
     syncSavedSnapshot(state.user || state.localProfile);
     renderUser();
-    if (!state.user?.id) {
-      setStatus('Defina uma senha e pressione Enter para criar sua conta real.', null);
-    }
 
     els.form?.addEventListener('submit', async (event) => {
       event.preventDefault();
       if (state.user?.id) {
+        if (state.passwordEditMode && safeText(els.passwordInput?.value)) {
+          await promptForPassword();
+          return;
+        }
         await persistProfileNow();
         return;
       }
-      await createAccountFromForm();
+      await loginFromAccount();
     });
 
     els.nameInput?.addEventListener('input', () => {
@@ -524,7 +553,17 @@
     });
 
     els.passwordBtn?.addEventListener('click', () => {
-      void promptForPassword();
+      state.passwordEditMode = !state.passwordEditMode;
+      if (!state.passwordEditMode && els.passwordInput) {
+        els.passwordInput.value = '';
+      }
+      renderUser();
+      if (state.passwordEditMode) {
+        setStatus('Digite a nova senha e pressione Enter.', null);
+        els.passwordInput?.focus();
+      } else {
+        setStatus('');
+      }
     });
 
     els.premiumBtn?.addEventListener('click', () => {
@@ -538,6 +577,7 @@
     els.logoutBtn?.addEventListener('click', logout);
 
     els.avatarInput?.addEventListener('change', async (event) => {
+      if (!state.user?.id) return;
       const file = event.target?.files?.[0];
       if (!file) return;
       try {

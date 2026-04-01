@@ -5939,6 +5939,7 @@
           avatarGenerationCount: Math.max(0, Number.parseInt(user.avatar_generation_count || user.avatarGenerationCount, 10) || 0),
           onboardingNameCompleted: Boolean(user.onboarding_name_completed || user.onboardingNameCompleted),
           onboardingPhotoCompleted: Boolean(user.onboarding_photo_completed || user.onboardingPhotoCompleted),
+          hasPassword: Boolean(user.has_password || user.hasPassword),
           createdAt: user.created_at || user.createdAt || null,
           isAdmin: Boolean(user.is_admin),
           premiumFullAccess: Boolean(user.premium_full_access),
@@ -6042,6 +6043,7 @@
         persistTutorialProgressLocally();
         clearGuestLocalState();
         syncOwnedIdsFromProgress();
+        reconcileTutorialProgress();
         refreshLibrary();
         syncWelcomeGate();
         await syncFlashcardCloudNow();
@@ -6551,7 +6553,7 @@
       }
 
       function hasWelcomePlayAccess() {
-        return hasTutorialPlanetUnlocked() || state.game.tutorial.completed;
+        return isAdminUser() || hasTutorialPlanetUnlocked();
       }
 
       function readOptimisticWelcomeProgressCount() {
@@ -6975,6 +6977,7 @@
         if (els.profileLogoutBtn) {
           els.profileLogoutBtn.hidden = !state.user;
         }
+        syncFlashcardsFooterVisibility();
       }
 
       function switchMainView(view) {
@@ -7711,6 +7714,7 @@
           : localHidden;
         state.game.tutorial.completed = readTutorialProgress();
         syncOwnedIdsFromProgress();
+        reconcileTutorialProgress();
 
         if (Number.isFinite(Number(cloudState?.serverTimeMs)) && Number(cloudState.serverTimeMs) > 0) {
           state.timeOffsetMs = Math.round(Number(cloudState.serverTimeMs) - Date.now());
@@ -7726,6 +7730,7 @@
         refreshLibrary();
         void refreshLibraryRanking();
         renderProfilePanel();
+        syncFlashcardsFooterVisibility();
         hideAuthGate();
         if (els.startGameBtn) {
           els.startGameBtn.disabled = false;
@@ -7794,11 +7799,13 @@
         resetTutorialRuntime({ preserveCompletion: false });
         state.game.tutorial.completed = readTutorialProgressForUser(0);
         syncOwnedIdsFromProgress();
+        reconcileTutorialProgress();
         renderMetrics();
         updateGameChips();
         refreshLibrary();
         state.ui.profileAvatarDraft = '';
         renderProfilePanel();
+        syncFlashcardsFooterVisibility();
         hideAuthGate();
         if (els.startGameBtn) {
           els.startGameBtn.disabled = false;
@@ -8107,6 +8114,16 @@
         return state.userCards.has(tutorialCard.id) || state.ownedIds.has(tutorialCard.id);
       }
 
+      function reconcileTutorialProgress() {
+        if (isAdminUser()) return true;
+        const unlocked = hasTutorialPlanetUnlocked();
+        if (!unlocked && state.game.tutorial.completed) {
+          state.game.tutorial.completed = false;
+          removeScopedStorage(TUTORIAL_PROGRESS_STORAGE_KEY);
+        }
+        return unlocked;
+      }
+
       function isTutorialPlanetCard(cardOrId) {
         const tutorialCard = findTutorialPlanetCard();
         const card = typeof cardOrId === 'string' ? cardById(cardOrId) : cardOrId;
@@ -8120,10 +8137,14 @@
       function canOfferTutorialMode() {
         return Boolean(
           !isAdminUser()
-          && !state.game.tutorial.completed
-          && !hasTutorialPlanetUnlocked()
+          && !reconcileTutorialProgress()
           && findTutorialPlanetCard()
         );
+      }
+
+      function syncFlashcardsFooterVisibility() {
+        if (!els.flashcardsFooterNav) return;
+        els.flashcardsFooterNav.hidden = !Boolean(state.user?.hasPassword);
       }
 
       function syncTutorialSetupButton() {
