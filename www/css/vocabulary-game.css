@@ -5861,3 +5861,36 @@ body.page-play.play-inline-active #home-game.vocabulary-game.phase-12:not(.is-hi
   max-width: min(760px, 92vw) !important;
 }
 
+/* Stars HUD: keep visible on desktop and lower on mobile */
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden):not(.mode12-picker-active) #game-feedback .game-stars-shell,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden):not(.mode12-picker-active) #game-feedback .game-stars-shell,
+body.vocabulary-game:not(.mode12-picker-active) .game-stars-shell {
+  position: fixed !important;
+  top: calc(var(--header-height, 82px) + 8px) !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translateX(-50%) !important;
+  z-index: 40 !important;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+}
+
+body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden):not(.mode12-picker-active) #game-feedback .game-hearts,
+body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden):not(.mode12-picker-active) #game-feedback .game-hearts,
+body.vocabulary-game:not(.mode12-picker-active) .game-hearts {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+@media (max-width: 900px) {
+  body.page-home.game-active #home-game.vocabulary-game:not(.is-hidden):not(.mode12-picker-active) #game-feedback .game-stars-shell,
+  body.page-play.play-inline-active #home-game.vocabulary-game:not(.is-hidden):not(.mode12-picker-active) #game-feedback .game-stars-shell,
+  body.vocabulary-game:not(.mode12-picker-active) .game-stars-shell {
+    top: calc(var(--header-height, 82px) + 68px) !important;
+  }
+}
+
