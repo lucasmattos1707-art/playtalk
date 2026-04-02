@@ -34,10 +34,23 @@
       min-height: 100%;
       font-family: "Segoe UI", "Trebuchet MS", sans-serif;
       color: var(--text);
-      background:
-        radial-gradient(1200px 600px at 10% -20%, #1b3d54 0%, transparent 65%),
-        radial-gradient(900px 500px at 90% 5%, #214936 0%, transparent 65%),
-        linear-gradient(160deg, var(--bg-1), var(--bg-2));
+      background: transparent;
+    }
+
+    .container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: #041226 url('/accesskey/quantum-gradient.svg') center/cover no-repeat;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body > *:not(.container) {
+      position: relative;
+      z-index: 1;
     }
 
     .speaking-shell {
@@ -47,12 +60,12 @@
     }
 
     .speaking-card {
-      background: var(--card);
+      background: transparent;
       border: 1px solid var(--line);
       border-radius: 18px;
       padding: 16px;
       backdrop-filter: blur(8px);
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+      box-shadow: none;
     }
 
     .home-title {
@@ -160,29 +173,83 @@
       font-weight: 700;
     }
 
-    .card-image-wrap {
-      width: 100%;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.05);
-      min-height: 200px;
+    .duel-avatars {
       display: flex;
+      gap: 26px;
+      align-items: center;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
-      margin-bottom: 12px;
+      margin: 14px 0 14px;
     }
 
-    .card-image-wrap img {
-      width: 100%;
-      max-height: 320px;
+    .duel-avatar {
+      display: grid;
+      justify-items: center;
+      gap: 6px;
+      min-width: 116px;
+    }
+
+    .duel-avatar__ring {
+      --percent: 0;
+      --ring-a: #61f2a4;
+      --ring-b: #2c7f50;
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      background:
+        conic-gradient(var(--ring-a) calc(var(--percent) * 1%), rgba(255,255,255,0.16) 0%);
+      display: grid;
+      place-items: center;
+      animation: ringPulse 1600ms ease-in-out infinite;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.24);
+    }
+
+    .duel-avatar__ring.enemy {
+      --ring-a: #ffb25e;
+      --ring-b: #ff8d4a;
+    }
+
+    .duel-avatar__ring::after {
+      content: "";
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      background: rgba(6, 20, 34, 0.8);
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .duel-avatar__ring img {
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
       object-fit: cover;
-      display: block;
+      position: relative;
+      z-index: 1;
+      border: 2px solid rgba(255,255,255,0.64);
     }
 
-    .card-fallback {
-      color: #c7ddd1;
+    .duel-avatar__name {
+      margin: 0;
+      font-size: 13px;
+      color: #d0e7da;
       font-weight: 700;
-      letter-spacing: 0.3px;
+      text-align: center;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .duel-avatar__percent {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 800;
+      color: #b9f7cd;
+    }
+
+    .duel-avatar__percent.enemy {
+      color: #ffbc71;
     }
 
     .card-word {
@@ -269,6 +336,11 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    @keyframes ringPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+    }
+
     @media (max-width: 640px) {
       .home-title { font-size: 24px; }
       .card-word { font-size: 24px; }
@@ -277,6 +349,7 @@
   </style>
 </head>
 <body>
+  <div class="container" aria-hidden="true"></div>
   <main class="speaking-shell">
     <section class="speaking-card" id="speakingHome">
       <h1 class="home-title">Speaking Mode</h1>
@@ -309,8 +382,21 @@
       </div>
       <p class="progress-copy" id="progressLabel">0/0 concluidas</p>
 
-      <div class="card-image-wrap" id="cardImageWrap">
-        <div class="card-fallback">Carregando carta...</div>
+      <div class="duel-avatars" id="duelAvatarsWrap">
+        <article class="duel-avatar">
+          <div class="duel-avatar__ring" id="mePronRing">
+            <img id="meAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Seu avatar">
+          </div>
+          <p class="duel-avatar__name" id="meAvatarName">Voce</p>
+          <p class="duel-avatar__percent" id="meAvatarPercent">0%</p>
+        </article>
+        <article class="duel-avatar">
+          <div class="duel-avatar__ring enemy" id="enemyPronRing">
+            <img id="enemyAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar do adversario">
+          </div>
+          <p class="duel-avatar__name" id="enemyAvatarName">Adversario</p>
+          <p class="duel-avatar__percent enemy" id="enemyAvatarPercent">0%</p>
+        </article>
       </div>
       <h2 class="card-word" id="cardEnglishWord">-</h2>
       <p class="card-subword" id="cardPortugueseWord">-</p>

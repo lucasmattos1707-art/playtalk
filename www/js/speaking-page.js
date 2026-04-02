@@ -16,7 +16,15 @@
     enemyProgressWrap: document.getElementById('enemyProgressWrap'),
     enemyProgressBar: document.getElementById('enemyProgressBar'),
     progressLabel: document.getElementById('progressLabel'),
-    cardImageWrap: document.getElementById('cardImageWrap'),
+    duelAvatarsWrap: document.getElementById('duelAvatarsWrap'),
+    mePronRing: document.getElementById('mePronRing'),
+    enemyPronRing: document.getElementById('enemyPronRing'),
+    meAvatar: document.getElementById('meAvatar'),
+    enemyAvatar: document.getElementById('enemyAvatar'),
+    meAvatarName: document.getElementById('meAvatarName'),
+    enemyAvatarName: document.getElementById('enemyAvatarName'),
+    meAvatarPercent: document.getElementById('meAvatarPercent'),
+    enemyAvatarPercent: document.getElementById('enemyAvatarPercent'),
     cardEnglishWord: document.getElementById('cardEnglishWord'),
     cardPortugueseWord: document.getElementById('cardPortugueseWord'),
     listenCardBtn: document.getElementById('listenCardBtn'),
@@ -40,10 +48,13 @@
       sessionId: readSessionId(),
       enabled: false,
       meFinished: false,
+      mePercent: 0,
       rivalProgress: 0,
       rivalPercent: 0,
-      rivalGeneralPercent: 0,
       rivalName: 'Adversario',
+      meName: 'Voce',
+      meAvatar: '/Avatar/avatar-man-person-svgrepo-com.svg',
+      rivalAvatar: '/Avatar/avatar-man-person-svgrepo-com.svg',
       pollTimer: 0,
       pingTimer: 0
     }
@@ -213,18 +224,62 @@
   }
 
   function updateTopPercents() {
+    const sessionAvg = state.scores.length
+      ? Math.round(state.scores.reduce((acc, value) => acc + value, 0) / state.scores.length)
+      : 0;
     const sessionSum = state.scores.reduce((acc, value) => acc + value, 0);
     const sessionCount = state.scores.length;
     const totalSum = state.speakingStats.sum + sessionSum;
     const totalCount = state.speakingStats.count + sessionCount;
     const myPercent = totalCount > 0 ? Math.round(totalSum / totalCount) : 0;
-    els.speakingPercent.textContent = `Speaking ${myPercent}%`;
+
     if (state.duel.enabled) {
-      els.enemySpeakingPercent.textContent = `Speaking rival ${Math.round(state.duel.rivalGeneralPercent || state.duel.rivalPercent || 0)}%`;
+      const duelMyPercent = Math.max(0, Math.min(100, Number(state.duel.mePercent || sessionAvg) || 0));
+      const duelRivalPercent = Math.max(0, Math.min(100, Number(state.duel.rivalPercent) || 0));
+      els.speakingPercent.textContent = `Sua pronuncia ${duelMyPercent}%`;
+      els.enemySpeakingPercent.textContent = `Speaking ${duelRivalPercent}%`;
       els.enemyProgressWrap.hidden = false;
+      if (els.duelAvatarsWrap) els.duelAvatarsWrap.hidden = false;
     } else {
+      els.speakingPercent.textContent = `Speaking ${myPercent}%`;
       els.enemySpeakingPercent.textContent = 'Modo: first-star';
       els.enemyProgressWrap.hidden = true;
+      if (els.duelAvatarsWrap) els.duelAvatarsWrap.hidden = true;
+    }
+    updateDuelAvatarRings();
+  }
+
+  function updateDuelAvatarRings() {
+    const myPercent = state.duel.enabled
+      ? Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0))
+      : 0;
+    const rivalPercent = state.duel.enabled
+      ? Math.max(0, Math.min(100, Number(state.duel.rivalPercent) || 0))
+      : 0;
+
+    if (els.mePronRing) {
+      els.mePronRing.style.setProperty('--percent', String(myPercent));
+    }
+    if (els.enemyPronRing) {
+      els.enemyPronRing.style.setProperty('--percent', String(rivalPercent));
+    }
+    if (els.meAvatarPercent) {
+      els.meAvatarPercent.textContent = `${myPercent}%`;
+    }
+    if (els.enemyAvatarPercent) {
+      els.enemyAvatarPercent.textContent = `${rivalPercent}%`;
+    }
+    if (els.meAvatarName) {
+      els.meAvatarName.textContent = state.duel.meName || 'Voce';
+    }
+    if (els.enemyAvatarName) {
+      els.enemyAvatarName.textContent = state.duel.rivalName || 'Adversario';
+    }
+    if (els.meAvatar && state.duel.meAvatar) {
+      els.meAvatar.src = state.duel.meAvatar;
+    }
+    if (els.enemyAvatar && state.duel.rivalAvatar) {
+      els.enemyAvatar.src = state.duel.rivalAvatar;
     }
   }
 
@@ -249,12 +304,6 @@
       return;
     }
     const card = state.activeCards[state.currentIndex];
-    const imageUrl = safeText(card?.imageUrl);
-    if (imageUrl) {
-      els.cardImageWrap.innerHTML = `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(card?.english || 'Flashcard')}">`;
-    } else {
-      els.cardImageWrap.innerHTML = '<div class="card-fallback">Sem imagem nesta carta</div>';
-    }
     els.cardEnglishWord.textContent = card?.english || '-';
     els.cardPortugueseWord.textContent = card?.portuguese || '';
     if (!state.duel.enabled) {
@@ -305,11 +354,15 @@
   function syncDuelView(session) {
     const meRole = safeText(session?.meRole);
     const isChallenger = meRole === 'challenger';
+    const me = isChallenger ? session?.challenger : session?.opponent;
     const rival = isChallenger ? session?.opponent : session?.challenger;
+    state.duel.meName = safeText(me?.username || 'Voce') || 'Voce';
+    state.duel.meAvatar = safeText(me?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg') || '/Avatar/avatar-man-person-svgrepo-com.svg';
     state.duel.rivalName = safeText(rival?.username || 'Adversario') || 'Adversario';
+    state.duel.rivalAvatar = safeText(rival?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg') || '/Avatar/avatar-man-person-svgrepo-com.svg';
+    state.duel.mePercent = Math.max(0, Number(session?.mePercent) || 0);
     state.duel.rivalProgress = Math.max(0, Number(session?.rivalProgress) || 0);
     state.duel.rivalPercent = Math.max(0, Number(session?.rivalPercent) || 0);
-    state.duel.rivalGeneralPercent = Math.max(0, Number(session?.rivalGeneralPercent) || 0);
     state.duel.meFinished = Boolean(session?.meFinished);
     updateTopPercents();
     updateProgressBars();
@@ -325,9 +378,13 @@
     if (!state.duel.enabled || !state.duel.sessionId) return;
     const total = Math.max(1, state.activeCards.length);
     const completed = Math.min(state.currentIndex, total);
-    const sessionAvg = state.scores.length
-      ? Math.round(state.scores.reduce((acc, value) => acc + value, 0) / state.scores.length)
-      : 0;
+    const sessionAvg = state.duel.enabled
+      ? Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0))
+      : (
+        state.scores.length
+          ? Math.round(state.scores.reduce((acc, value) => acc + value, 0) / state.scores.length)
+          : 0
+      );
     try {
       await fetch(buildApiUrl(`/api/speaking/sessions/${encodeURIComponent(state.duel.sessionId)}/progress`), {
         method: 'POST',
@@ -442,8 +499,14 @@
       const transcript = safeText(await captureSpeechFast('en-US'));
       const score = calculateSpeechMatchPercent(card.english, transcript);
       await playSuccessSound();
+      const previousCount = Math.max(0, Number(state.currentIndex) || 0);
       state.scores.push(score);
       state.currentIndex += 1;
+      if (state.duel.enabled) {
+        const nextCount = previousCount + 1;
+        const weighted = ((Number(state.duel.mePercent) || 0) * previousCount) + score;
+        state.duel.mePercent = nextCount > 0 ? Math.round(weighted / nextCount) : score;
+      }
       updateTopPercents();
       updateProgressBars();
       setGameStatus(`Pronuncia: ${score}%`, 'is-score');
@@ -461,10 +524,15 @@
     const sessionCount = state.scores.length;
     const sessionSum = state.scores.reduce((acc, value) => acc + value, 0);
     const finalPercent = sessionCount ? Math.round(sessionSum / sessionCount) : 0;
-    state.speakingStats.sum += sessionSum;
-    state.speakingStats.count += sessionCount;
-    state.speakingStats.sessions += 1;
-    saveSpeakingStats();
+    if (!state.duel.enabled) {
+      state.speakingStats.sum += sessionSum;
+      state.speakingStats.count += sessionCount;
+      state.speakingStats.sessions += 1;
+      saveSpeakingStats();
+    }
+    if (state.duel.enabled) {
+      state.duel.mePercent = finalPercent;
+    }
     updateTopPercents();
     els.finalResultBox.textContent = `${finalPercent}% seu resultado final`;
     els.finalResultBox.classList.add('is-visible');
@@ -511,6 +579,10 @@
       state.currentIndex = 0;
       state.scores = [];
       state.duel.enabled = false;
+      state.duel.meName = 'Voce';
+      state.duel.rivalName = 'Adversario';
+      state.duel.mePercent = 0;
+      state.duel.rivalPercent = 0;
       els.home.hidden = true;
       els.game.classList.add('is-active');
       els.finalResultBox.classList.remove('is-visible');
