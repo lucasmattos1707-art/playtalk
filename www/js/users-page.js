@@ -103,6 +103,8 @@
   function setRankingLabel(label) {
     if (!els.rankingLabel) return;
     els.rankingLabel.textContent = `Ranking: ${safeText(label) || 'Flashcards'}`;
+    els.rankingLabel.style.color = '#ffffff';
+    els.rankingLabel.style.opacity = '1';
   }
 
   function metricByKey(metricKey) {
@@ -125,7 +127,7 @@
     if (metricKey === 'speed') {
       return `${value.toFixed(1)}${metricValueLabel || ''}`;
     }
-    return `${Math.round(value)}${metricValueLabel || ''}`;
+    return `${Math.max(0, Math.round(value))}${metricValueLabel || ''}`;
   }
 
   function readGuestName() {
