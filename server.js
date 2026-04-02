@@ -7993,6 +7993,7 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
   const slot = normalizeAdminBannerSlot(req.body?.slot);
   const variant = normalizeAdminBannerVariant(req.body?.variant) || 'desktop';
   const imageDataUrl = typeof req.body?.imageDataUrl === 'string' ? req.body.imageDataUrl.trim() : '';
+  const imageUrl = typeof req.body?.imageUrl === 'string' ? req.body.imageUrl.trim() : '';
   const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
   const offsetX = normalizeAdminBannerOffset(req.body?.offsetX);
   const offsetY = normalizeAdminBannerOffset(req.body?.offsetY);
@@ -8005,18 +8006,68 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
     return;
   }
 
-  const parsedImage = parseBase64DataUrl(imageDataUrl);
-  if (!parsedImage?.buffer?.length || !/^image\//i.test(parsedImage.mimeType || '')) {
-    res.status(400).json({ error: 'Imagem de banner invalida.' });
-    return;
-  }
-
-  if (parsedImage.buffer.length > 15 * 1024 * 1024) {
-    res.status(413).json({ error: 'Imagem muito grande. Limite de 15 MB.' });
-    return;
-  }
-
   try {
+    let parsedImage = null;
+    if (imageDataUrl) {
+      parsedImage = parseBase64DataUrl(imageDataUrl);
+    } else if (imageUrl) {
+      let sourceUrl = imageUrl;
+      if (sourceUrl.startsWith('/')) {
+        const baseUrl = getRequestBaseUrl(req);
+        if (!baseUrl) {
+          res.status(400).json({ error: 'URL local de banner invalida.' });
+          return;
+        }
+        sourceUrl = `${baseUrl}${sourceUrl}`;
+      }
+
+      let parsedSourceUrl = null;
+      try {
+        parsedSourceUrl = new URL(sourceUrl);
+      } catch (_error) {
+        parsedSourceUrl = null;
+      }
+      if (!parsedSourceUrl || !/^https?:$/i.test(parsedSourceUrl.protocol)) {
+        res.status(400).json({ error: 'URL de imagem invalida para salvar banner.' });
+        return;
+      }
+
+      const allowedHosts = new Set();
+      try {
+        allowedHosts.add(new URL(FLASHCARDS_R2_PUBLIC_ROOT).host.toLowerCase());
+      } catch (_error) {
+        // ignore
+      }
+      const requestHost = String(req.get('host') || '').trim().toLowerCase();
+      if (requestHost) allowedHosts.add(requestHost);
+      if (!allowedHosts.has(parsedSourceUrl.host.toLowerCase())) {
+        res.status(400).json({ error: 'Host da imagem nao permitido para salvar banner.' });
+        return;
+      }
+
+      const upstream = await fetch(sourceUrl, { method: 'GET' });
+      if (!upstream.ok) {
+        res.status(400).json({ error: 'Nao consegui baixar a imagem atual para salvar novamente.' });
+        return;
+      }
+      const contentType = String(upstream.headers.get('content-type') || '').trim().toLowerCase();
+      const arrayBuffer = await upstream.arrayBuffer();
+      parsedImage = {
+        mimeType: /^image\//i.test(contentType) ? contentType : 'image/webp',
+        buffer: Buffer.from(arrayBuffer)
+      };
+    }
+
+    if (!parsedImage?.buffer?.length || !/^image\//i.test(parsedImage.mimeType || '')) {
+      res.status(400).json({ error: 'Imagem de banner invalida.' });
+      return;
+    }
+
+    if (parsedImage.buffer.length > 15 * 1024 * 1024) {
+      res.status(413).json({ error: 'Imagem muito grande. Limite de 15 MB.' });
+      return;
+    }
+
     const renderSize = getAdminBannerRenderSize(variant);
     const hasPreviewDimensions = Number.isFinite(previewWidth) && Number.isFinite(previewHeight) && previewWidth > 0 && previewHeight > 0;
     const scaleX = hasPreviewDimensions ? (renderSize.width / previewWidth) : 1;
@@ -8045,11 +8096,13 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
     const mimeType = 'image/webp';
     const objectKey = path.posix.join(
       ADMIN_BANNER_IMAGE_OBJECT_PREFIX,
-      `banner-${slot}-${variant}-${Date.now()}.${safeExtension}`
+      `banner-${slot}-${variant}.${safeExtension}`
     );
 
     await putR2Object(objectKey, optimizedBuffer, mimeType);
+    const cacheBuster = Date.now();
     const publicUrl = buildFlashcardsR2PublicUrl(objectKey);
+    const versionedPublicUrl = `${publicUrl}?v=${cacheBuster}`;
     const manifest = await loadAdminBannerManifest();
     const previousEntry = manifest.banners.find((entry) => entry.slot === slot) || null;
     const previousObjectKey = variant === 'mobile'
@@ -8062,7 +8115,7 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
         return {
           ...entry,
           slot,
-          imageUrlMobile: publicUrl,
+          imageUrlMobile: versionedPublicUrl,
           objectKeyMobile: objectKey,
           promptMobile: prompt || entry.promptMobile || entry.prompt || ADMIN_BANNER_DEFAULT_PROMPT,
           offsetXMobile: 0,
@@ -8074,14 +8127,14 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
       return {
         ...entry,
         slot,
-        imageUrlDesktop: publicUrl,
+        imageUrlDesktop: versionedPublicUrl,
         objectKeyDesktop: objectKey,
         promptDesktop: prompt || entry.promptDesktop || entry.prompt || ADMIN_BANNER_DEFAULT_PROMPT,
         offsetXDesktop: 0,
         offsetYDesktop: 0,
         sizeAdjustPxDesktop: 0,
         // Legacy aliases to keep old readers functional.
-        imageUrl: publicUrl,
+        imageUrl: versionedPublicUrl,
         objectKey,
         prompt: prompt || entry.promptDesktop || entry.prompt || ADMIN_BANNER_DEFAULT_PROMPT,
         offsetX: 0,

@@ -460,7 +460,11 @@
     const entry = getBannerEntry(slot);
     const selected = entryForVariant(entry, variant);
     const preview = getPreviewDimensionsForSlot(slot);
-    if (!selected.imageUrl || !selected.imageUrl.startsWith('data:image/')) {
+    if (!selected.imageUrl || (
+      !selected.imageUrl.startsWith('data:image/')
+      && !/^https?:\/\//i.test(selected.imageUrl)
+      && !selected.imageUrl.startsWith('/')
+    )) {
       setCarouselStatus(`Selecione ou gere uma imagem (${variant}) antes de aprovar.`);
       return;
     }
@@ -477,7 +481,8 @@
         body: JSON.stringify({
           slot,
           variant,
-          imageDataUrl: selected.imageUrl,
+          imageDataUrl: selected.imageUrl.startsWith('data:image/') ? selected.imageUrl : '',
+          imageUrl: selected.imageUrl.startsWith('data:image/') ? '' : selected.imageUrl,
           prompt: selected.prompt || state.defaultPrompt,
           offsetX: toInteger(selected.offsetX, 0),
           offsetY: toInteger(selected.offsetY, 0),
