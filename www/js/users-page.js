@@ -60,6 +60,7 @@
     currentMetricKey: 'flashcards',
     currentMetricLabel: 'Flashcards',
     currentMetricValueLabel: '',
+    bannerTrack: null,
     activeBannerSlot: 0,
     bannerClockStartedAtMs: Date.now(),
     loadRequestId: 0
@@ -129,6 +130,13 @@
       return `${value.toFixed(1)}${metricValueLabel || ''}`;
     }
     return `${Math.max(0, Math.round(value))}${metricValueLabel || ''}`;
+  }
+
+  function resolveBannerTrackElement() {
+    if (state.bannerTrack && state.bannerTrack.isConnected) return state.bannerTrack;
+    const track = document.querySelector('.banner-carousel__track');
+    state.bannerTrack = track || null;
+    return state.bannerTrack;
   }
 
   function readGuestName() {
@@ -330,15 +338,16 @@
         </div>
         <div
           class="users-count"
-          style="color:#0d3f86 !important;-webkit-text-fill-color:#0d3f86 !important;opacity:1 !important;visibility:visible !important;text-shadow:none;"
+          style="color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:1 !important;visibility:visible !important;text-shadow:0 2px 10px rgba(6,20,42,.65);background:transparent;"
         >${escapeHtml(formatMetricValue(entry, state.currentMetricKey, state.currentMetricValueLabel))}</div>
       </div>
     `).join('');
 
     els.usersList.innerHTML = rowMarkup;
     Array.from(els.usersList.querySelectorAll('.users-count')).forEach((countEl) => {
-      countEl.style.color = '#0d3f86';
-      countEl.style.webkitTextFillColor = '#0d3f86';
+      countEl.style.color = '#ffffff';
+      countEl.style.webkitTextFillColor = '#ffffff';
+      countEl.style.background = 'transparent';
       countEl.style.opacity = '1';
       countEl.style.visibility = 'visible';
     });
@@ -412,6 +421,27 @@
   }
 
   function currentBannerSlot() {
+    const track = resolveBannerTrackElement();
+    if (track) {
+      const computedStyle = window.getComputedStyle(track);
+      const transform = computedStyle?.transform || '';
+      if (transform && transform !== 'none') {
+        const matrix3dMatch = transform.match(/^matrix3d\((.+)\)$/);
+        const matrix2dMatch = transform.match(/^matrix\((.+)\)$/);
+        let translateX = 0;
+        if (matrix3dMatch) {
+          const parts = matrix3dMatch[1].split(',').map((part) => Number(part.trim()));
+          translateX = Number(parts[12]) || 0;
+        } else if (matrix2dMatch) {
+          const parts = matrix2dMatch[1].split(',').map((part) => Number(part.trim()));
+          translateX = Number(parts[4]) || 0;
+        }
+        const trackWidth = Math.max(1, track.getBoundingClientRect().width || 1);
+        const progress = Math.max(0, Math.min(3, Math.round((-translateX / trackWidth) * 4)));
+        return progress + 1;
+      }
+    }
+
     const elapsed = Math.max(0, Date.now() - state.bannerClockStartedAtMs);
     const cycleProgress = elapsed % BANNER_CYCLE_MS;
     return Math.floor(cycleProgress / BANNER_SLOT_MS) + 1;
