@@ -233,9 +233,11 @@
     const style = document.createElement('style');
     style.id = 'globalChallengePopupStyles';
     style.textContent = `
-      .global-challenge-modal{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:10px;background:rgba(2,11,24,.72);backdrop-filter:blur(8px)}
+      html.global-challenge-locked,
+      body.global-challenge-locked{overflow:hidden !important;overscroll-behavior:none !important}
+      .global-challenge-modal{position:fixed !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;width:100vw !important;height:100dvh !important;max-width:none !important;max-height:none !important;z-index:2147483647 !important;display:none;align-items:center;justify-content:center;padding:clamp(10px,2.5vw,20px);background:rgba(2,11,24,.72);backdrop-filter:blur(8px);margin:0 !important;transform:none !important}
       .global-challenge-modal.is-visible{display:flex}
-      .global-challenge-card{width:min(95vw,980px);height:95vh;max-height:95vh;border-radius:28px;border:1px solid rgba(124,192,255,.38);background:radial-gradient(circle at 15% 10%,rgba(160,220,255,.24),transparent 34%),radial-gradient(circle at 90% 90%,rgba(95,176,255,.22),transparent 30%),linear-gradient(145deg,rgba(28,92,156,.96),rgba(18,70,127,.95));color:#eff7ff;padding:20px;box-shadow:0 24px 52px rgba(2,14,29,.46);text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px}
+      .global-challenge-card{width:min(95vw,980px);height:min(95dvh,980px);max-height:min(95dvh,980px);border-radius:28px;border:1px solid rgba(124,192,255,.38);background:radial-gradient(circle at 15% 10%,rgba(160,220,255,.24),transparent 34%),radial-gradient(circle at 90% 90%,rgba(95,176,255,.22),transparent 30%),linear-gradient(145deg,rgba(28,92,156,.96),rgba(18,70,127,.95));color:#eff7ff;padding:20px;box-shadow:0 24px 52px rgba(2,14,29,.46);text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px}
       .global-challenge-avatar{width:124px;height:124px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.68);box-shadow:0 10px 22px rgba(2,12,29,.34)}
       .global-challenge-title{margin:0 0 8px;font-size:clamp(28px,5vw,42px);letter-spacing:.02em}
       .global-challenge-copy{margin:0 0 14px;color:rgba(232,244,255,.94);line-height:1.45;font-size:clamp(16px,2.5vw,22px);max-width:760px}
@@ -261,7 +263,7 @@
         </div>
       </div>
     `;
-    document.body.appendChild(incoming);
+    document.documentElement.appendChild(incoming);
 
     const outgoing = document.createElement('div');
     outgoing.id = 'globalOutgoingChallenge';
@@ -276,7 +278,7 @@
         </div>
       </div>
     `;
-    document.body.appendChild(outgoing);
+    document.documentElement.appendChild(outgoing);
     outgoing.querySelector('#globalOutgoingCloseBtn')?.addEventListener('click', () => {
       outgoing.classList.remove('is-visible');
     });
@@ -287,6 +289,14 @@
     incoming.querySelector('#globalIncomingRejectBtn')?.addEventListener('click', () => {
       void respondToIncoming('reject');
     });
+  }
+
+  function syncChallengeViewportLock() {
+    const incomingVisible = document.getElementById('globalIncomingChallenge')?.classList.contains('is-visible');
+    const outgoingVisible = document.getElementById('globalOutgoingChallenge')?.classList.contains('is-visible');
+    const shouldLock = Boolean(incomingVisible || outgoingVisible);
+    document.documentElement.classList.toggle('global-challenge-locked', shouldLock);
+    document.body?.classList.toggle('global-challenge-locked', shouldLock);
   }
 
   function openIncomingPopup(challenge) {
@@ -300,11 +310,13 @@
     if (name) name.textContent = challenge?.challenger?.username || 'Usuario';
     if (copy) copy.textContent = `${challenge?.challenger?.username || 'Usuario'} te desafiou pra um speaking`;
     modal.classList.add('is-visible');
+    syncChallengeViewportLock();
   }
 
   function closeIncomingPopup() {
     document.getElementById('globalIncomingChallenge')?.classList.remove('is-visible');
     challengeRuntime.incomingId = 0;
+    syncChallengeViewportLock();
   }
 
   function openOutgoingPopup(copy, avatar, title) {
@@ -317,11 +329,13 @@
     if (avatarEl) avatarEl.src = avatar || '/Avatar/avatar-man-person-svgrepo-com.svg';
     if (titleEl) titleEl.textContent = title || 'Desafio speaking';
     modal.classList.add('is-visible');
+    syncChallengeViewportLock();
   }
 
   function closeOutgoingPopup() {
     document.getElementById('globalOutgoingChallenge')?.classList.remove('is-visible');
     challengeRuntime.outgoingId = 0;
+    syncChallengeViewportLock();
   }
 
   async function respondToIncoming(action) {
