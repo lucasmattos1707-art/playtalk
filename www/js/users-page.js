@@ -43,6 +43,7 @@
     challengeTarget: null,
     challengeBusy: false,
     outgoingChallengeId: 0,
+    outgoingTerminalNoticeKey: '',
     incomingChallengeId: 0,
     redirectedByChallenge: false
   };
@@ -409,7 +410,10 @@
       }
 
       const outgoing = payload.outgoingChallenge || null;
-      if (!outgoing) return;
+      if (!outgoing) {
+        state.outgoingTerminalNoticeKey = '';
+        return;
+      }
       state.outgoingChallengeId = Number(outgoing.challengeId) || 0;
       if (outgoing.status === 'accepted' && outgoing.sessionId && !state.redirectedByChallenge) {
         state.redirectedByChallenge = true;
@@ -417,10 +421,19 @@
         return;
       }
       if (outgoing.status === 'rejected') {
-        setUsersStatus('Usuario recusou seu pedido.');
+        const noticeKey = `${state.outgoingChallengeId}:rejected`;
+        if (state.outgoingTerminalNoticeKey !== noticeKey) {
+          state.outgoingTerminalNoticeKey = noticeKey;
+          setUsersStatus('Usuario recusou seu pedido.');
+        }
       } else if (outgoing.status === 'expired') {
-        setUsersStatus('Seu desafio expirou.');
+        const noticeKey = `${state.outgoingChallengeId}:expired`;
+        if (state.outgoingTerminalNoticeKey !== noticeKey) {
+          state.outgoingTerminalNoticeKey = noticeKey;
+          setUsersStatus('Seu desafio expirou.');
+        }
       } else if (outgoing.status === 'pending') {
+        state.outgoingTerminalNoticeKey = '';
         const opponentName = outgoing?.opponent?.username || 'Usuario';
         setUsersStatus(`Aguardando resposta de ${opponentName}...`);
       }
