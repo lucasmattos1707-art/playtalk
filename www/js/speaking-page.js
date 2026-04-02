@@ -1,6 +1,7 @@
 (function initPlaytalkSpeakingPage() {
   const SPEAKING_STATS_KEY = 'playtalk-speaking-general-v1';
   const FINAL_BOX_DURATION_MS = 10000;
+  const DUEL_WINNER_DURATION_MS = 5000;
   const DUEL_POLL_MS = 2000;
   const PRESENCE_PING_MS = 15000;
   const WORD_SWAP_MS = 1000;
@@ -41,6 +42,8 @@
     winnerCard: document.getElementById('winnerCard'),
     winnerAvatar: document.getElementById('winnerAvatar'),
     winnerName: document.getElementById('winnerName'),
+    winnerReveal: document.getElementById('winnerReveal'),
+    winnerRevealAvatar: document.getElementById('winnerRevealAvatar'),
     successAudio: document.getElementById('successAudio')
   };
 
@@ -62,8 +65,8 @@
       mePercent: 0,
       rivalProgress: 0,
       rivalPercent: 0,
-      rivalName: 'Adversario',
-      meName: 'Voce',
+      rivalName: 'Adversário',
+      meName: 'Você',
       meAvatar: '/Avatar/avatar-man-person-svgrepo-com.svg',
       rivalAvatar: '/Avatar/avatar-man-person-svgrepo-com.svg',
       pollTimer: 0,
@@ -115,8 +118,9 @@
   }
 
   function setGameStatus(text, tone) {
+    if (!els.gameStatus) return;
     els.gameStatus.textContent = text || '';
-    els.gameStatus.className = tone ? `status ${tone}` : 'status';
+    els.gameStatus.className = tone ? `mic-trigger-feedback ${tone}` : 'mic-trigger-feedback';
   }
 
   function readSpeakingStats() {
@@ -143,7 +147,6 @@
   function setMicLiveVisual(active) {
     if (!els.sendSpeakingBtn) return;
     els.sendSpeakingBtn.classList.toggle('is-mic-live', Boolean(active));
-    els.sendSpeakingBtn.textContent = active ? 'Fale agora' : 'Ligar microfone';
   }
 
   function stopWordTicker() {
@@ -217,14 +220,14 @@
     if (els.enemyPronRing) els.enemyPronRing.style.setProperty('--percent', String(rivalPercent));
     if (els.meAvatarPercent) els.meAvatarPercent.textContent = `${myPercent}%`;
     if (els.enemyAvatarPercent) els.enemyAvatarPercent.textContent = `${rivalPercent}%`;
-    if (els.meAvatarName) els.meAvatarName.textContent = state.duel.meName || 'Voce';
-    if (els.enemyAvatarName) els.enemyAvatarName.textContent = state.duel.rivalName || 'Adversario';
+    if (els.meAvatarName) els.meAvatarName.textContent = state.duel.meName || 'Você';
+    if (els.enemyAvatarName) els.enemyAvatarName.textContent = state.duel.rivalName || 'Adversário';
     if (els.meAvatar) els.meAvatar.src = state.duel.meAvatar || '/Avatar/avatar-man-person-svgrepo-com.svg';
     if (els.enemyAvatar) els.enemyAvatar.src = state.duel.rivalAvatar || '/Avatar/avatar-man-person-svgrepo-com.svg';
     if (els.duelIntroMeAvatar) els.duelIntroMeAvatar.src = state.duel.meAvatar || '/Avatar/avatar-man-person-svgrepo-com.svg';
     if (els.duelIntroEnemyAvatar) els.duelIntroEnemyAvatar.src = state.duel.rivalAvatar || '/Avatar/avatar-man-person-svgrepo-com.svg';
-    if (els.duelIntroMeName) els.duelIntroMeName.textContent = state.duel.meName || 'Voce';
-    if (els.duelIntroEnemyName) els.duelIntroEnemyName.textContent = state.duel.rivalName || 'Adversario';
+    if (els.duelIntroMeName) els.duelIntroMeName.textContent = state.duel.meName || 'Você';
+    if (els.duelIntroEnemyName) els.duelIntroEnemyName.textContent = state.duel.rivalName || 'Adversário';
   }
 
   function clearDuelIntroTimer() {
@@ -265,7 +268,7 @@
     for (let remaining = DUEL_INTRO_COUNTDOWN_SECONDS; remaining >= 1; remaining -= 1) {
       if (!state.duel.enabled || state.duel.completed) break;
       if (els.duelIntroCountdown) {
-        els.duelIntroCountdown.textContent = `O desafio vai comecar em ${remaining}...`;
+        els.duelIntroCountdown.textContent = `O desafio vai começar em ${remaining}...`;
       }
       await waitMs(1000);
     }
@@ -306,11 +309,6 @@
       if (els.enemyProgressBar) {
         els.enemyProgressBar.style.width = `${((rivalCompleted / total) * 100).toFixed(2)}%`;
       }
-      if (els.progressLabel) {
-        els.progressLabel.textContent = `Voce ${completed}/${total} • Rival ${rivalCompleted}/${total}`;
-      }
-    } else if (els.progressLabel) {
-      els.progressLabel.textContent = `${completed}/${total} concluidas`;
     }
   }
 
@@ -336,7 +334,7 @@
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload?.success || !Array.isArray(payload.cards) || !payload.cards.length) {
-      throw new Error(payload?.message || 'Nao foi possivel carregar as cartas de speaking.');
+      throw new Error(payload?.message || 'Não foi possível carregar as cartas de speaking.');
     }
     return payload.cards;
   }
@@ -362,7 +360,7 @@
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload?.success || !payload?.session) {
-      throw new Error(payload?.message || 'Nao consegui carregar a sessao do duelo.');
+      throw new Error(payload?.message || 'Não consegui carregar a sessão do duelo.');
     }
     return payload.session;
   }
@@ -372,9 +370,9 @@
     const isChallenger = meRole === 'challenger';
     const me = isChallenger ? session?.challenger : session?.opponent;
     const rival = isChallenger ? session?.opponent : session?.challenger;
-    state.duel.meName = safeText(me?.username || 'Voce') || 'Voce';
+    state.duel.meName = safeText(me?.username || 'Você') || 'Você';
     state.duel.meAvatar = safeText(me?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg') || '/Avatar/avatar-man-person-svgrepo-com.svg';
-    state.duel.rivalName = safeText(rival?.username || 'Adversario') || 'Adversario';
+    state.duel.rivalName = safeText(rival?.username || 'Adversário') || 'Adversário';
     state.duel.rivalAvatar = safeText(rival?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg') || '/Avatar/avatar-man-person-svgrepo-com.svg';
     state.duel.mePercent = Math.max(0, Number(session?.mePercent) || 0);
     state.duel.rivalProgress = Math.max(0, Number(session?.rivalProgress) || 0);
@@ -383,16 +381,24 @@
     updateTopPercents();
     updateProgressBars();
 
-    if (session?.winner?.userId) {
-      if (els.winnerName) els.winnerName.textContent = `Vencedor ${session.winner.username || 'Usuario'}`;
-      if (els.winnerAvatar) els.winnerAvatar.src = session.winner.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg';
-      if (els.winnerCard) els.winnerCard.classList.add('is-visible');
-    }
-
     if (safeText(session?.status) === 'completed' && !state.duel.completed) {
       state.duel.completed = true;
+      showWinnerReveal(session?.winner);
       scheduleDuelReturnToUsers();
     }
+  }
+
+  function showWinnerReveal(winner) {
+    if (!els.game) return;
+    const avatarImage = safeText(winner?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg') || '/Avatar/avatar-man-person-svgrepo-com.svg';
+    if (els.winnerRevealAvatar) {
+      els.winnerRevealAvatar.src = avatarImage;
+    }
+    if (els.winnerReveal) {
+      els.winnerReveal.hidden = false;
+      els.winnerReveal.classList.add('is-visible');
+    }
+    els.game.classList.add('is-winner');
   }
 
   function stopDuelLoops() {
@@ -424,6 +430,11 @@
     state.activeCards = [];
     state.currentIndex = 0;
     state.scores = [];
+    if (els.winnerReveal) {
+      els.winnerReveal.hidden = true;
+      els.winnerReveal.classList.remove('is-visible');
+    }
+    if (els.game) els.game.classList.remove('is-winner');
     if (els.finalResultBox) els.finalResultBox.classList.remove('is-visible');
     if (els.winnerCard) els.winnerCard.classList.remove('is-visible');
     if (els.game) els.game.classList.remove('is-active');
@@ -432,19 +443,17 @@
     if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = false;
     setMicLiveVisual(false);
     setDuelIntroVisible(false);
-    setHomeStatus('Escolha quantas cartas voce quer jogar.', '');
-    setGameStatus('', '');
+    setHomeStatus('Escolha quantas cartas você quer jogar.', '');
     updateTopPercents();
     updateProgressBars();
   }
 
   function scheduleDuelReturnToUsers() {
     if (state.duel.completedRedirectTimer) return;
-    setGameStatus('Batalha encerrada. Voltando para usuarios em 10 segundos...', 'is-score');
     state.duel.completedRedirectTimer = window.setTimeout(() => {
       resetSpeakingToOfflineMode();
       window.location.replace('/users');
-    }, FINAL_BOX_DURATION_MS);
+    }, DUEL_WINNER_DURATION_MS);
   }
 
   async function syncDuelProgress(forceFinished) {
@@ -501,16 +510,16 @@
   function mapWebSpeechError(errorCode) {
     const code = String(errorCode || '').toLowerCase();
     if (code === 'not-allowed' || code === 'service-not-allowed') {
-      return 'Permissao de microfone negada.';
+      return 'Permissão de microfone negada.';
     }
     if (code === 'audio-capture') {
-      return 'Nenhum microfone disponivel.';
+      return 'Nenhum microfone disponível.';
     }
     if (code === 'network') {
       return 'Falha de rede no reconhecimento de voz.';
     }
     if (code === 'no-speech') {
-      return 'Nao detectei sua fala. Tente novamente.';
+      return 'Não detectei sua fala. Tente novamente.';
     }
     return 'Falha no reconhecimento de voz.';
   }
@@ -518,7 +527,7 @@
   function captureSpeechWithWebSpeech(options = {}) {
     const RecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (typeof RecognitionCtor !== 'function') {
-      return Promise.reject(new Error('Reconhecimento de voz nao disponivel neste navegador.'));
+      return Promise.reject(new Error('Reconhecimento de voz não disponível neste navegador.'));
     }
 
     const language = safeText(options.language) || 'en-US';
@@ -575,7 +584,7 @@
             }
           }
           if (!transcript) {
-            reject(new Error('Transcricao vazia.'));
+            reject(new Error('Transcrição vazia.'));
             return;
           }
           resolve(transcript);
@@ -630,7 +639,7 @@
               // ignore
             }
           }
-          reject(new Error('Nao foi possivel iniciar o reconhecimento de voz.'));
+          reject(new Error('Não foi possível iniciar o reconhecimento de voz.'));
         });
       }
     });
@@ -684,7 +693,7 @@
       await syncDuelProgress(false);
       window.setTimeout(renderCard, 220);
     } catch (error) {
-      setGameStatus(error?.message || 'Falha no envio de speaking.', 'is-error');
+      setGameStatus(error?.message || '', 'is-error');
     } finally {
       if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = false;
       setMicLiveVisual(false);
@@ -716,11 +725,11 @@
 
     if (state.duel.enabled) {
       state.duel.meFinished = true;
-      setGameStatus('Voce concluiu suas cartas. Aguardando resultado final...', 'is-score');
+      setGameStatus('', '');
       return;
     }
 
-    setGameStatus('Sessao concluida. Resultado final exibido por 10 segundos.', 'is-score');
+    setGameStatus('', '');
     if (state.finalTimer) {
       window.clearTimeout(state.finalTimer);
       state.finalTimer = 0;
@@ -732,7 +741,7 @@
       if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = false;
       if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = false;
       setMicLiveVisual(false);
-      setHomeStatus('Sessao finalizada. Escolha outra quantidade e jogue de novo.', '');
+      setHomeStatus('Sessão finalizada. Escolha outra quantidade e jogue de novo.', '');
       setGameStatus('', '');
       stopWordTicker();
       state.activeCards = [];
@@ -756,8 +765,8 @@
       state.duel.enabled = false;
       state.duel.mePercent = 0;
       state.duel.rivalPercent = 0;
-      state.duel.meName = 'Voce';
-      state.duel.rivalName = 'Adversario';
+      state.duel.meName = 'Você';
+      state.duel.rivalName = 'Adversário';
       if (els.home) els.home.hidden = true;
       if (els.game) els.game.classList.add('is-active');
       if (els.finalResultBox) els.finalResultBox.classList.remove('is-visible');
@@ -767,7 +776,7 @@
       setHomeStatus('', '');
       renderCard();
     } catch (error) {
-      setHomeStatus(error?.message || 'Nao foi possivel iniciar speaking.', 'is-error');
+      setHomeStatus(error?.message || 'Não foi possível iniciar speaking.', 'is-error');
       if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = false;
     } finally {
       state.loading = false;
@@ -781,7 +790,12 @@
     if (els.game) els.game.classList.add('is-active');
     if (els.finalResultBox) els.finalResultBox.classList.remove('is-visible');
     if (els.winnerCard) els.winnerCard.classList.remove('is-visible');
-    setGameStatus('Carregando duelo...', '');
+    if (els.winnerReveal) {
+      els.winnerReveal.hidden = true;
+      els.winnerReveal.classList.remove('is-visible');
+    }
+    if (els.game) els.game.classList.remove('is-winner');
+    setGameStatus('', '');
     await pingPresence();
     const session = await fetchDuelSession();
     state.activeCards = Array.isArray(session.cards) ? session.cards : [];
@@ -824,7 +838,7 @@
       try {
         await startDuelMode();
       } catch (error) {
-        setHomeStatus(error?.message || 'Nao foi possivel abrir a sessao de duelo.', 'is-error');
+        setHomeStatus(error?.message || 'Não foi possível abrir a sessão de duelo.', 'is-error');
         if (els.home) els.home.hidden = false;
         if (els.game) els.game.classList.remove('is-active');
       }
@@ -839,3 +853,4 @@
     void init();
   }
 })();
+
