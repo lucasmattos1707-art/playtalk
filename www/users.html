@@ -87,7 +87,8 @@
     }
 
     body > *:not(.container) {
-      z-index: 1;
+      position: relative;
+      z-index: 2;
     }
 
     .page {
@@ -265,6 +266,8 @@
       text-align: center;
       opacity: 1 !important;
       visibility: visible !important;
+      position: relative;
+      z-index: 9;
     }
 
     .ranking-label__text {
@@ -299,6 +302,8 @@
       border-radius: 22px;
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.04);
+      position: relative;
+      z-index: 7;
     }
 
     .users-row.is-empty {
@@ -386,6 +391,8 @@
       text-shadow: none;
       opacity: 1 !important;
       visibility: visible !important;
+      position: relative;
+      z-index: 10;
     }
 
     .users-meta {
