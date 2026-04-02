@@ -131,6 +131,22 @@
     return matchedRoute ? matchedRoute[0] : '';
   }
 
+  function isCurrentSpeakingSession(sessionId) {
+    const normalizedSessionId = String(sessionId || '').trim();
+    if (!normalizedSessionId) return false;
+
+    const parsedUrl = parseUrl(window.location.href);
+    if (!parsedUrl) return false;
+
+    const normalizedPath = normalizePathname(parsedUrl.pathname);
+    if (normalizedPath !== '/speaking' && normalizedPath !== '/speaking.html') {
+      return false;
+    }
+
+    const currentSessionId = String(parsedUrl.searchParams.get('session') || '').trim();
+    return currentSessionId === normalizedSessionId;
+  }
+
   function rewriteAnchors(root) {
     if (!isNativeRuntime()) return;
     const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
@@ -420,8 +436,14 @@
           openOutgoingPopup('Seu desafio expirou.', outgoing?.opponent?.avatarImage, 'Desafio expirou');
         }
       } else if (outgoing.status === 'accepted' && outgoing.sessionId) {
-        challengeRuntime.redirecting = true;
-        window.location.href = `/speaking?session=${encodeURIComponent(outgoing.sessionId)}`;
+        const acceptedSessionId = String(outgoing.sessionId || '').trim();
+        if (acceptedSessionId && !isCurrentSpeakingSession(acceptedSessionId)) {
+          challengeRuntime.redirecting = true;
+          window.location.href = `/speaking?session=${encodeURIComponent(acceptedSessionId)}`;
+        } else {
+          challengeRuntime.outgoingTerminalNoticeKey = '';
+          closeOutgoingPopup();
+        }
       } else if (outgoing.status === 'completed') {
         challengeRuntime.outgoingTerminalNoticeKey = '';
         closeOutgoingPopup();

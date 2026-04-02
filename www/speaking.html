@@ -118,6 +118,84 @@
 
     .speaking-game { display: none; margin-top: 12px; }
     .speaking-game.is-active { display: block; }
+    .speaking-game.is-prestart .progress-wrap,
+    .speaking-game.is-prestart .progress-copy,
+    .speaking-game.is-prestart .duel-avatars,
+    .speaking-game.is-prestart .card-word,
+    .speaking-game.is-prestart .card-subword,
+    .speaking-game.is-prestart .actions,
+    .speaking-game.is-prestart .status,
+    .speaking-game.is-prestart .final-result,
+    .speaking-game.is-prestart .winner-card {
+      display: none !important;
+    }
+
+    .duel-intro {
+      display: none;
+      margin: 8px 0 10px;
+      padding: 18px 12px 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(124, 192, 150, 0.5);
+      background: radial-gradient(circle at 30% 20%, rgba(168, 221, 182, 0.2), transparent 42%), rgba(4, 20, 34, 0.75);
+      text-align: center;
+    }
+
+    .duel-intro.is-visible {
+      display: block;
+      animation: fadeIn 220ms ease;
+    }
+
+    .duel-intro__avatars {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .duel-intro__vs {
+      font-size: 26px;
+      font-weight: 900;
+      color: #b8f5cc;
+      text-shadow: 0 0 14px rgba(124, 192, 150, 0.45);
+      letter-spacing: 1px;
+    }
+
+    .duel-intro__player {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      min-width: 140px;
+    }
+
+    .duel-intro__avatar {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid rgba(255, 255, 255, 0.7);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
+      background: rgba(8, 24, 38, 0.8);
+    }
+
+    .duel-intro__name {
+      margin: 0;
+      max-width: 180px;
+      font-size: 16px;
+      font-weight: 800;
+      color: #dff8eb;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .duel-intro__countdown {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 900;
+      color: #bff7d0;
+    }
 
     .duel-head {
       display: none;
@@ -366,6 +444,13 @@
       .home-title { font-size: 24px; }
       .card-word { font-size: 24px; }
       .enemy-speaking { font-size: 18px; }
+      .duel-intro__avatar {
+        width: 124px;
+        height: 124px;
+      }
+      .duel-intro__countdown {
+        font-size: 19px;
+      }
     }
   </style>
 </head>
@@ -390,6 +475,21 @@
     </section>
 
     <section class="speaking-card speaking-game" id="speakingGame">
+      <section class="duel-intro" id="duelIntro" hidden>
+        <div class="duel-intro__avatars">
+          <article class="duel-intro__player">
+            <img class="duel-intro__avatar" id="duelIntroMeAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Seu avatar grande">
+            <p class="duel-intro__name" id="duelIntroMeName">Voce</p>
+          </article>
+          <span class="duel-intro__vs">VS</span>
+          <article class="duel-intro__player">
+            <img class="duel-intro__avatar" id="duelIntroEnemyAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar grande do adversario">
+            <p class="duel-intro__name" id="duelIntroEnemyName">Adversario</p>
+          </article>
+        </div>
+        <p class="duel-intro__countdown" id="duelIntroCountdown">O desafio vai comecar em 5...</p>
+      </section>
+
       <div class="duel-head">
         <div class="speaking-percent" id="speakingPercent">Speaking 0%</div>
         <div class="enemy-speaking" id="enemySpeakingPercent">Speaking rival 0%</div>
