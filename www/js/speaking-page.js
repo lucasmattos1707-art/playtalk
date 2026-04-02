@@ -11,6 +11,8 @@
     home: document.getElementById('speakingHome'),
     game: document.getElementById('speakingGame'),
     duelIntro: document.getElementById('duelIntro'),
+    duelIntroMePlayer: document.getElementById('duelIntroMePlayer'),
+    duelIntroEnemyPlayer: document.getElementById('duelIntroEnemyPlayer'),
     duelIntroMeAvatar: document.getElementById('duelIntroMeAvatar'),
     duelIntroEnemyAvatar: document.getElementById('duelIntroEnemyAvatar'),
     duelIntroMeName: document.getElementById('duelIntroMeName'),
@@ -44,7 +46,8 @@
     winnerName: document.getElementById('winnerName'),
     winnerReveal: document.getElementById('winnerReveal'),
     winnerRevealAvatar: document.getElementById('winnerRevealAvatar'),
-    successAudio: document.getElementById('successAudio')
+    successAudio: document.getElementById('successAudio'),
+    battleIntroAudio: document.getElementById('battleIntroAudio')
   };
 
   const state = {
@@ -297,6 +300,46 @@
     }
   }
 
+  function stopBattleIntroAudio() {
+    if (!els.battleIntroAudio) return;
+    try {
+      els.battleIntroAudio.pause();
+      els.battleIntroAudio.currentTime = 0;
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  async function playBattleIntroAudio() {
+    if (!els.battleIntroAudio) return;
+    try {
+      els.battleIntroAudio.currentTime = 0;
+      await els.battleIntroAudio.play();
+    } catch (_error) {
+      // ignore autoplay restrictions
+    }
+  }
+
+  function resetDuelIntroPlayersVisual() {
+    if (els.duelIntroMePlayer) els.duelIntroMePlayer.classList.remove('is-entered');
+    if (els.duelIntroEnemyPlayer) els.duelIntroEnemyPlayer.classList.remove('is-entered');
+    if (els.duelIntroMeAvatar) els.duelIntroMeAvatar.classList.remove('is-flash');
+    if (els.duelIntroEnemyAvatar) els.duelIntroEnemyAvatar.classList.remove('is-flash');
+  }
+
+  function animateDuelIntroEntry(playerEl, avatarEl) {
+    if (playerEl) {
+      playerEl.classList.remove('is-entered');
+      void playerEl.offsetWidth;
+      playerEl.classList.add('is-entered');
+    }
+    if (avatarEl) {
+      avatarEl.classList.remove('is-flash');
+      void avatarEl.offsetWidth;
+      avatarEl.classList.add('is-flash');
+    }
+  }
+
   function setDuelIntroVisible(visible) {
     const isVisible = Boolean(visible);
     if (els.duelIntro) {
@@ -325,14 +368,22 @@
     if (!state.duel.enabled) return;
     setDuelIntroVisible(true);
     updateTopPercents();
+    resetDuelIntroPlayersVisual();
+    void playBattleIntroAudio();
+    animateDuelIntroEntry(els.duelIntroMePlayer, els.duelIntroMeAvatar);
+
     for (let remaining = DUEL_INTRO_COUNTDOWN_SECONDS; remaining >= 1; remaining -= 1) {
       if (!state.duel.enabled || state.duel.completed) break;
+      if (remaining === DUEL_INTRO_COUNTDOWN_SECONDS - 1) {
+        animateDuelIntroEntry(els.duelIntroEnemyPlayer, els.duelIntroEnemyAvatar);
+      }
       if (els.duelIntroCountdown) {
         els.duelIntroCountdown.textContent = `O desafio vai começar em ${remaining}...`;
       }
       await waitMs(1000);
     }
     if (!state.duel.enabled || state.duel.completed) {
+      stopBattleIntroAudio();
       setDuelIntroVisible(false);
       return;
     }
@@ -340,6 +391,7 @@
       els.duelIntroCountdown.textContent = 'Valendo!';
     }
     await waitMs(500);
+    stopBattleIntroAudio();
     setDuelIntroVisible(false);
   }
 
@@ -477,6 +529,7 @@
   function resetSpeakingToOfflineMode() {
     stopDuelLoops();
     clearDuelIntroTimer();
+    stopBattleIntroAudio();
     stopWordTicker();
     state.duel.enabled = false;
     state.duel.sessionId = '';
@@ -888,6 +941,7 @@
     window.addEventListener('beforeunload', () => {
       stopDuelLoops();
       clearDuelIntroTimer();
+      stopBattleIntroAudio();
       stopWordTicker();
     });
   }
