@@ -205,7 +205,222 @@
     }, true);
   }
 
+  const challengeRuntime = {
+    started: false,
+    pollTimer: 0,
+    pingTimer: 0,
+    redirecting: false,
+    incomingId: 0,
+    outgoingId: 0
+  };
+
+  function buildApiUrl(path) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
+      return window.PlaytalkApi.url(path);
+    }
+    return path;
+  }
+
+  function buildAuthHeaders(extraHeaders) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function') {
+      return window.PlaytalkApi.authHeaders(extraHeaders);
+    }
+    return { ...(extraHeaders || {}) };
+  }
+
+  function ensureChallengePopupUi() {
+    if (document.getElementById('globalChallengePopupStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'globalChallengePopupStyles';
+    style.textContent = `
+      .global-challenge-modal{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:10px;background:rgba(2,11,24,.72);backdrop-filter:blur(8px)}
+      .global-challenge-modal.is-visible{display:flex}
+      .global-challenge-card{width:min(95vw,980px);height:95vh;max-height:95vh;border-radius:28px;border:1px solid rgba(124,192,255,.38);background:radial-gradient(circle at 15% 10%,rgba(160,220,255,.24),transparent 34%),radial-gradient(circle at 90% 90%,rgba(95,176,255,.22),transparent 30%),linear-gradient(145deg,rgba(28,92,156,.96),rgba(18,70,127,.95));color:#eff7ff;padding:20px;box-shadow:0 24px 52px rgba(2,14,29,.46);text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px}
+      .global-challenge-avatar{width:124px;height:124px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.68);box-shadow:0 10px 22px rgba(2,12,29,.34)}
+      .global-challenge-title{margin:0 0 8px;font-size:clamp(28px,5vw,42px);letter-spacing:.02em}
+      .global-challenge-copy{margin:0 0 14px;color:rgba(232,244,255,.94);line-height:1.45;font-size:clamp(16px,2.5vw,22px);max-width:760px}
+      .global-challenge-actions{display:grid;gap:14px;width:min(520px,100%);margin-top:12px}
+      .global-challenge-btn{border:0;border-radius:16px;padding:14px 14px;font-size:clamp(16px,2.3vw,22px);font-weight:800;letter-spacing:.01em;cursor:pointer;color:#08315e;background:linear-gradient(140deg,#b4dcff,#8cc8ff)}
+      .global-challenge-btn.is-secondary{color:#ecf4ff;background:rgba(12,43,82,.68);border:1px solid rgba(174,214,255,.24)}
+      .global-challenge-btn:disabled{cursor:not-allowed;opacity:.6}
+    `;
+    document.head.appendChild(style);
+
+    const incoming = document.createElement('div');
+    incoming.id = 'globalIncomingChallenge';
+    incoming.className = 'global-challenge-modal';
+    incoming.innerHTML = `
+      <div class="global-challenge-card">
+        <img class="global-challenge-avatar" id="globalIncomingAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar">
+        <h2 class="global-challenge-title">Voce recebeu um desafio</h2>
+        <h2 class="global-challenge-title" id="globalIncomingName">Usuario</h2>
+        <p class="global-challenge-copy" id="globalIncomingCopy">Usuario te desafiou pra um speaking</p>
+        <div class="global-challenge-actions">
+          <button class="global-challenge-btn" id="globalIncomingAcceptBtn" type="button">Aceitar</button>
+          <button class="global-challenge-btn is-secondary" id="globalIncomingRejectBtn" type="button">Recusar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(incoming);
+
+    const outgoing = document.createElement('div');
+    outgoing.id = 'globalOutgoingChallenge';
+    outgoing.className = 'global-challenge-modal';
+    outgoing.innerHTML = `
+      <div class="global-challenge-card">
+        <img class="global-challenge-avatar" id="globalOutgoingAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar">
+        <h2 class="global-challenge-title" id="globalOutgoingTitle">Desafio speaking</h2>
+        <p class="global-challenge-copy" id="globalOutgoingCopy"></p>
+        <div class="global-challenge-actions">
+          <button class="global-challenge-btn is-secondary" id="globalOutgoingCloseBtn" type="button">Fechar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(outgoing);
+    outgoing.querySelector('#globalOutgoingCloseBtn')?.addEventListener('click', () => {
+      outgoing.classList.remove('is-visible');
+    });
+
+    incoming.querySelector('#globalIncomingAcceptBtn')?.addEventListener('click', () => {
+      void respondToIncoming('accept');
+    });
+    incoming.querySelector('#globalIncomingRejectBtn')?.addEventListener('click', () => {
+      void respondToIncoming('reject');
+    });
+  }
+
+  function openIncomingPopup(challenge) {
+    const modal = document.getElementById('globalIncomingChallenge');
+    if (!modal) return;
+    challengeRuntime.incomingId = Number(challenge?.challengeId) || 0;
+    const avatar = document.getElementById('globalIncomingAvatar');
+    const name = document.getElementById('globalIncomingName');
+    const copy = document.getElementById('globalIncomingCopy');
+    if (avatar) avatar.src = challenge?.challenger?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg';
+    if (name) name.textContent = challenge?.challenger?.username || 'Usuario';
+    if (copy) copy.textContent = `${challenge?.challenger?.username || 'Usuario'} te desafiou pra um speaking`;
+    modal.classList.add('is-visible');
+  }
+
+  function closeIncomingPopup() {
+    document.getElementById('globalIncomingChallenge')?.classList.remove('is-visible');
+    challengeRuntime.incomingId = 0;
+  }
+
+  function openOutgoingPopup(copy, avatar, title) {
+    const modal = document.getElementById('globalOutgoingChallenge');
+    if (!modal) return;
+    const copyEl = document.getElementById('globalOutgoingCopy');
+    const avatarEl = document.getElementById('globalOutgoingAvatar');
+    const titleEl = document.getElementById('globalOutgoingTitle');
+    if (copyEl) copyEl.textContent = copy || '';
+    if (avatarEl) avatarEl.src = avatar || '/Avatar/avatar-man-person-svgrepo-com.svg';
+    if (titleEl) titleEl.textContent = title || 'Desafio speaking';
+    modal.classList.add('is-visible');
+  }
+
+  function closeOutgoingPopup() {
+    document.getElementById('globalOutgoingChallenge')?.classList.remove('is-visible');
+    challengeRuntime.outgoingId = 0;
+  }
+
+  async function respondToIncoming(action) {
+    const challengeId = Number(challengeRuntime.incomingId) || 0;
+    if (!challengeId) return;
+    try {
+      const response = await fetch(buildApiUrl('/api/speaking/challenges/respond'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ challengeId, action })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) return;
+      closeIncomingPopup();
+      if (action === 'accept' && payload?.sessionId) {
+        challengeRuntime.redirecting = true;
+        window.location.href = `/speaking?session=${encodeURIComponent(payload.sessionId)}`;
+      }
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  async function pingChallengePresence() {
+    try {
+      await fetch(buildApiUrl('/api/speaking/presence/ping'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: '{}'
+      });
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  async function pollChallengeState() {
+    if (challengeRuntime.redirecting) return;
+    try {
+      const response = await fetch(buildApiUrl('/api/speaking/challenges/poll'), {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: buildAuthHeaders()
+      });
+      if (response.status === 401) {
+        closeIncomingPopup();
+        closeOutgoingPopup();
+        return;
+      }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) return;
+
+      const incoming = payload.incomingChallenge;
+      if (incoming && incoming.status === 'pending') {
+        openIncomingPopup(incoming);
+      } else {
+        closeIncomingPopup();
+      }
+
+      const outgoing = payload.outgoingChallenge;
+      if (!outgoing) {
+        closeOutgoingPopup();
+        return;
+      }
+      challengeRuntime.outgoingId = Number(outgoing.challengeId) || 0;
+      if (outgoing.status === 'pending') {
+        openOutgoingPopup(`Aguardando resposta de ${outgoing?.opponent?.username || 'Usuario'}...`, outgoing?.opponent?.avatarImage, 'Desafio enviado');
+      } else if (outgoing.status === 'rejected') {
+        openOutgoingPopup('Usuario recusou seu pedido.', outgoing?.opponent?.avatarImage, 'Desafio recusado');
+      } else if (outgoing.status === 'expired') {
+        openOutgoingPopup('Seu desafio expirou.', outgoing?.opponent?.avatarImage, 'Desafio expirou');
+      } else if (outgoing.status === 'accepted' && outgoing.sessionId) {
+        challengeRuntime.redirecting = true;
+        window.location.href = `/speaking?session=${encodeURIComponent(outgoing.sessionId)}`;
+      } else if (outgoing.status === 'completed') {
+        closeOutgoingPopup();
+      }
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  function startGlobalChallengePopups() {
+    if (challengeRuntime.started) return;
+    challengeRuntime.started = true;
+    ensureChallengePopupUi();
+    void pingChallengePresence();
+    void pollChallengeState();
+    challengeRuntime.pingTimer = window.setInterval(() => {
+      void pingChallengePresence();
+    }, 15000);
+    challengeRuntime.pollTimer = window.setInterval(() => {
+      void pollChallengeState();
+    }, 2500);
+  }
+
   function init() {
+    startGlobalChallengePopups();
     if (!isNativeRuntime()) return;
     rewriteAnchors(document);
     syncFooterNav();
@@ -219,6 +434,11 @@
     navigate,
     rewriteAnchors,
     syncFooterNav
+  };
+  window.PlaytalkChallengePopups = {
+    forcePoll() {
+      void pollChallengeState();
+    }
   };
 
   if (document.readyState === 'loading') {

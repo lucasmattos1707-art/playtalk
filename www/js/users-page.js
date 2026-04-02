@@ -5,6 +5,7 @@
   const PRESENCE_PING_MS = 15000;
   const USERS_REFRESH_MS = 15000;
   const CHALLENGE_POLL_MS = 2500;
+  const HAS_GLOBAL_CHALLENGE_POPUPS = Boolean(window.PlaytalkChallengePopups);
 
   const els = {
     usersList: document.getElementById('usersList'),
@@ -340,6 +341,7 @@
   }
 
   function openIncomingModal(challenge) {
+    if (HAS_GLOBAL_CHALLENGE_POPUPS) return;
     const challengeId = Number(challenge?.challengeId) || 0;
     if (!challengeId || state.incomingChallengeId === challengeId) return;
     state.incomingChallengeId = challengeId;
@@ -357,6 +359,7 @@
   }
 
   async function respondIncomingChallenge(action) {
+    if (HAS_GLOBAL_CHALLENGE_POPUPS) return;
     if (!state.incomingChallengeId) return;
     const challengeId = state.incomingChallengeId;
     els.incomingAcceptBtn.disabled = true;
@@ -387,6 +390,7 @@
   }
 
   async function pollChallenges() {
+    if (HAS_GLOBAL_CHALLENGE_POPUPS) return;
     if (!state.currentUser?.id || state.redirectedByChallenge) return;
     try {
       const response = await fetch(buildApiUrl('/api/speaking/challenges/poll'), {
@@ -445,7 +449,11 @@
       }
       setChallengeStatus('Desafio enviado. Aguardando resposta...');
       closeChallengeModal();
-      await pollChallenges();
+      if (window.PlaytalkChallengePopups && typeof window.PlaytalkChallengePopups.forcePoll === 'function') {
+        window.PlaytalkChallengePopups.forcePoll();
+      } else {
+        await pollChallenges();
+      }
     } catch (error) {
       setChallengeStatus(error?.message || 'Nao foi possivel enviar o desafio.');
       if (els.challengeActionBtn) els.challengeActionBtn.disabled = false;
@@ -513,16 +521,20 @@
     window.setInterval(() => {
       void loadUsers();
     }, USERS_REFRESH_MS);
-    window.setInterval(() => {
-      void pollChallenges();
-    }, CHALLENGE_POLL_MS);
+    if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
+      window.setInterval(() => {
+        void pollChallenges();
+      }, CHALLENGE_POLL_MS);
+    }
   }
 
   (async () => {
     state.currentUser = await fetchSessionUser();
     await pingPresence();
     await loadUsers();
-    await pollChallenges();
+    if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
+      await pollChallenges();
+    }
     startBackgroundLoops();
   })();
 
