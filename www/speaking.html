@@ -179,6 +179,22 @@
       justify-items: center;
       gap: 8px;
       min-width: 140px;
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+      transition: opacity 260ms ease, transform 260ms ease;
+    }
+
+    .duel-intro__player.is-entered {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .duel-intro__player--me {
+      transform: translateX(-30px) scale(0.95);
+    }
+
+    .duel-intro__player--enemy {
+      transform: translateX(30px) scale(0.95);
     }
 
     .duel-intro__avatar {
@@ -189,6 +205,10 @@
       border: 4px solid rgba(255, 255, 255, 0.7);
       box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
       background: rgba(8, 24, 38, 0.8);
+    }
+
+    .duel-intro__avatar.is-flash {
+      animation: introAvatarFlash 360ms ease;
     }
 
     .duel-intro__name {
@@ -271,6 +291,10 @@
       margin: 14px 0 14px;
     }
 
+    .duel-avatars.is-offline .duel-avatar--enemy {
+      display: none;
+    }
+
     .duel-avatar {
       display: grid;
       justify-items: center;
@@ -302,9 +326,11 @@
     .duel-avatar__ring img {
       width: 100%;
       height: 100%;
+      aspect-ratio: 1 / 1;
       border-radius: 50%;
       object-fit: cover;
       border: 0;
+      clip-path: circle(50%);
     }
 
     .duel-avatar__name {
@@ -332,7 +358,7 @@
 
     .card-word {
       margin: 0;
-      font-size: 30px;
+      font-size: 34.5px;
       font-weight: 800;
       line-height: 1.1;
       text-align: center;
@@ -358,42 +384,48 @@
     }
 
     .mic-trigger {
-      width: min(180px, 42vw);
-      height: 15vh;
-      min-height: 100px;
-      max-height: 180px;
+      width: auto;
+      height: auto;
+      min-height: 0;
+      max-height: none;
       border: 0;
-      border-radius: 26px;
-      background: radial-gradient(circle at 30% 20%, rgba(123, 191, 150, 0.34), transparent 45%), rgba(19, 58, 78, 0.58);
+      border-radius: 0;
+      background: transparent;
+      padding: 0;
       color: #d9ffeb;
       display: grid;
       place-items: center;
       cursor: pointer;
-      transition: transform 220ms ease, box-shadow 220ms ease, background 220ms ease;
-      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+      transition: transform 220ms ease, color 220ms ease;
+      box-shadow: none;
     }
 
     .mic-trigger svg {
-      width: 72%;
-      height: 72%;
+      width: min(180px, 42vw);
+      height: auto;
+      min-height: 100px;
+      max-height: 180px;
       display: block;
       filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.28));
     }
 
     .mic-trigger:hover {
       transform: translateY(-1px) scale(1.02);
-      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.32);
     }
 
-    .mic-trigger:disabled {
+    .mic-trigger:disabled:not(.is-mic-live) {
       opacity: 0.52;
       cursor: not-allowed;
       transform: none;
       box-shadow: none;
     }
 
+    .mic-trigger.is-mic-live:disabled {
+      opacity: 1;
+    }
+
     .mic-trigger.is-mic-live {
-      background: radial-gradient(circle at 30% 20%, rgba(82, 168, 255, 0.34), transparent 46%), rgba(25, 78, 136, 0.64);
+      color: #ff3b30;
       animation: micPulse 900ms ease-in-out infinite;
     }
 
@@ -533,9 +565,15 @@
       50% { filter: brightness(1.18); }
     }
 
+    @keyframes introAvatarFlash {
+      0% { filter: brightness(1) saturate(1); }
+      45% { filter: brightness(1.8) saturate(1.2); }
+      100% { filter: brightness(1) saturate(1); }
+    }
+
     @media (max-width: 640px) {
       .home-title { font-size: 24px; }
-      .card-word { font-size: 24px; }
+      .card-word { font-size: 27.6px; }
       .enemy-speaking { font-size: 18px; }
       .duel-intro__avatar {
         width: 124px;
@@ -551,7 +589,7 @@
       .duel-avatar__percent {
         font-size: 20px;
       }
-      .mic-trigger {
+      .mic-trigger svg {
         width: min(210px, 64vw);
       }
     }
@@ -580,12 +618,12 @@
     <section class="speaking-card speaking-game" id="speakingGame">
       <section class="duel-intro" id="duelIntro" hidden>
         <div class="duel-intro__avatars">
-          <article class="duel-intro__player">
+          <article class="duel-intro__player duel-intro__player--me" id="duelIntroMePlayer">
             <img class="duel-intro__avatar" id="duelIntroMeAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Seu avatar grande">
             <p class="duel-intro__name" id="duelIntroMeName">Você</p>
           </article>
           <span class="duel-intro__vs">VS</span>
-          <article class="duel-intro__player">
+          <article class="duel-intro__player duel-intro__player--enemy" id="duelIntroEnemyPlayer">
             <img class="duel-intro__avatar" id="duelIntroEnemyAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar grande do adversario">
             <p class="duel-intro__name" id="duelIntroEnemyName">Adversário</p>
           </article>
@@ -607,14 +645,14 @@
       <p class="progress-copy" id="progressLabel" hidden></p>
 
       <div class="duel-avatars" id="duelAvatarsWrap">
-        <article class="duel-avatar">
+        <article class="duel-avatar duel-avatar--me">
           <div class="duel-avatar__ring" id="mePronRing">
             <img id="meAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Seu avatar">
           </div>
           <p class="duel-avatar__name" id="meAvatarName">Você</p>
           <p class="duel-avatar__percent" id="meAvatarPercent">0%</p>
         </article>
-        <article class="duel-avatar">
+        <article class="duel-avatar duel-avatar--enemy">
           <div class="duel-avatar__ring enemy" id="enemyPronRing">
             <img id="enemyAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar do adversario">
           </div>
@@ -645,6 +683,7 @@
   </main>
 
   <audio id="successAudio" src="gamesounds/success.mp3" preload="auto"></audio>
+  <audio id="battleIntroAudio" src="/battle/battle-intro.mp3" preload="auto"></audio>
   <script src="js/speaking-page.js"></script>
 </body>
 </html>

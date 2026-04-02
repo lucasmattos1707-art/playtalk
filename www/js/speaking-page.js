@@ -49,6 +49,7 @@
 
   const state = {
     loading: false,
+    gameMode: 'offline-game',
     activeCards: [],
     currentIndex: 0,
     scores: [],
@@ -96,6 +97,63 @@
   function readSessionId() {
     const params = new URLSearchParams(window.location.search || '');
     return safeText(params.get('session'));
+  }
+
+  function readLocalPlayerProfile() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('playtalk_player_profile') || 'null');
+      if (!raw || typeof raw !== 'object') return { username: '', avatar: '' };
+      return {
+        username: safeText(raw.username),
+        avatar: safeText(raw.avatar || raw.avatarImage)
+      };
+    } catch (_error) {
+      return { username: '', avatar: '' };
+    }
+  }
+
+  function readCurrentPlayerIdentity() {
+    let username = '';
+    let avatar = '';
+    if (window.playtalkPlayerState && typeof window.playtalkPlayerState.get === 'function') {
+      const player = window.playtalkPlayerState.get() || {};
+      username = safeText(player.username);
+      avatar = safeText(player.avatar);
+    }
+    if (!username || !avatar) {
+      const localProfile = readLocalPlayerProfile();
+      username = username || localProfile.username;
+      avatar = avatar || localProfile.avatar;
+    }
+    return {
+      username: username || 'Você',
+      avatar: avatar || '/Avatar/avatar-man-person-svgrepo-com.svg'
+    };
+  }
+
+  function getOfflineAveragePercent() {
+    if (!state.scores.length) return 0;
+    const total = state.scores.reduce((acc, value) => acc + (Number(value) || 0), 0);
+    return Math.max(0, Math.min(100, Math.round(total / state.scores.length)));
+  }
+
+  function applyOfflineIdentity() {
+    const identity = readCurrentPlayerIdentity();
+    state.duel.meName = identity.username;
+    state.duel.meAvatar = identity.avatar;
+    state.duel.rivalName = 'Adversário';
+    state.duel.rivalAvatar = '/Avatar/avatar-man-person-svgrepo-com.svg';
+  }
+
+  function setGameMode(mode) {
+    const normalized = mode === 'battle-mode' ? 'battle-mode' : 'offline-game';
+    state.gameMode = normalized;
+    if (els.game) {
+      els.game.dataset.mode = normalized;
+    }
+    if (els.duelAvatarsWrap) {
+      els.duelAvatarsWrap.classList.toggle('is-offline', normalized === 'offline-game');
+    }
   }
 
   function buildApiUrl(path) {
@@ -213,7 +271,9 @@
   }
 
   function updateDuelAvatarRings() {
-    const myPercent = state.duel.enabled ? Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0)) : 0;
+    const myPercent = state.duel.enabled
+      ? Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0))
+      : getOfflineAveragePercent();
     const rivalPercent = state.duel.enabled ? Math.max(0, Math.min(100, Number(state.duel.rivalPercent) || 0)) : 0;
 
     if (els.mePronRing) els.mePronRing.style.setProperty('--percent', String(myPercent));
@@ -284,16 +344,18 @@
   }
 
   function updateTopPercents() {
-    if (state.duel.enabled) {
+    const isBattleMode = state.gameMode === 'battle-mode';
+    if (isBattleMode) {
       if (els.speakingPercent) els.speakingPercent.textContent = '';
       if (els.enemySpeakingPercent) els.enemySpeakingPercent.textContent = '';
       if (els.enemyProgressWrap) els.enemyProgressWrap.hidden = false;
       if (els.duelAvatarsWrap) els.duelAvatarsWrap.hidden = false;
     } else {
-      if (els.speakingPercent) els.speakingPercent.textContent = '';
+      const offlinePercent = getOfflineAveragePercent();
+      if (els.speakingPercent) els.speakingPercent.textContent = `Speaking ${offlinePercent}%`;
       if (els.enemySpeakingPercent) els.enemySpeakingPercent.textContent = '';
       if (els.enemyProgressWrap) els.enemyProgressWrap.hidden = true;
-      if (els.duelAvatarsWrap) els.duelAvatarsWrap.hidden = true;
+      if (els.duelAvatarsWrap) els.duelAvatarsWrap.hidden = false;
     }
     updateDuelAvatarRings();
   }
@@ -430,6 +492,8 @@
     state.activeCards = [];
     state.currentIndex = 0;
     state.scores = [];
+    setGameMode('offline-game');
+    applyOfflineIdentity();
     if (els.winnerReveal) {
       els.winnerReveal.hidden = true;
       els.winnerReveal.classList.remove('is-visible');
@@ -683,11 +747,9 @@
       const previousCount = Math.max(0, Number(state.currentIndex) || 0);
       state.scores.push(score);
       state.currentIndex += 1;
-      if (state.duel.enabled) {
-        const nextCount = previousCount + 1;
-        const weighted = ((Number(state.duel.mePercent) || 0) * previousCount) + score;
-        state.duel.mePercent = nextCount > 0 ? Math.round(weighted / nextCount) : score;
-      }
+      const nextCount = previousCount + 1;
+      const weighted = ((Number(state.duel.mePercent) || 0) * previousCount) + score;
+      state.duel.mePercent = nextCount > 0 ? Math.round(weighted / nextCount) : score;
       updateTopPercents();
       updateProgressBars();
       await syncDuelProgress(false);
@@ -765,8 +827,8 @@
       state.duel.enabled = false;
       state.duel.mePercent = 0;
       state.duel.rivalPercent = 0;
-      state.duel.meName = 'Você';
-      state.duel.rivalName = 'Adversário';
+      setGameMode('offline-game');
+      applyOfflineIdentity();
       if (els.home) els.home.hidden = true;
       if (els.game) els.game.classList.add('is-active');
       if (els.finalResultBox) els.finalResultBox.classList.remove('is-visible');
@@ -784,6 +846,7 @@
   }
 
   async function startDuelMode() {
+    setGameMode('battle-mode');
     state.duel.enabled = true;
     state.duel.completed = false;
     if (els.home) els.home.hidden = true;
@@ -831,6 +894,8 @@
 
   async function init() {
     bindEvents();
+    setGameMode(state.duel.sessionId ? 'battle-mode' : 'offline-game');
+    applyOfflineIdentity();
     updateTopPercents();
     updateProgressBars();
     setMicLiveVisual(false);
