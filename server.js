@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const sharp = require('sharp');
 const {
   S3Client,
   ListObjectsV2Command,
@@ -2150,6 +2151,8 @@ const ADMIN_BANNER_MANIFEST_OBJECT_KEY = path.posix.join(ADMIN_BANNER_RELATIVE_R
 const ADMIN_BANNER_IMAGE_OBJECT_PREFIX = path.posix.join(ADMIN_BANNER_RELATIVE_ROOT, 'images');
 const ADMIN_BANNER_SLOT_COUNT = 4;
 const ADMIN_BANNER_RESOLUTION_LABEL = '1600 x 900 px';
+const ADMIN_BANNER_DESKTOP_RENDER_SIZE = Object.freeze({ width: 1600, height: 540 });
+const ADMIN_BANNER_MOBILE_RENDER_SIZE = Object.freeze({ width: 1600, height: 900 });
 const ADMIN_BANNER_DEFAULT_PROMPT = [
   'Create a premium website hero banner.',
   'Landscape 16:9 composition, cinematic lighting, realistic style, clean and modern.',
@@ -2390,6 +2393,53 @@ function parseBase64DataUrl(dataUrl) {
     mimeType: match[1] || 'application/octet-stream',
     buffer: Buffer.from(match[2], 'base64')
   };
+}
+
+async function optimizeAdminBannerToWebp(inputBuffer, variant = 'desktop', options = {}) {
+  const renderSize = getAdminBannerRenderSize(variant);
+  const normalizedVariant = normalizeAdminBannerVariant(variant) || 'desktop';
+  const offsetX = normalizeAdminBannerOffset(options?.offsetX);
+  const offsetY = normalizeAdminBannerOffset(options?.offsetY);
+  const sizeAdjustPx = normalizeAdminBannerSizeAdjust(options?.sizeAdjustPx);
+  const placedWidth = Math.max(64, Math.min(6000, renderSize.width + sizeAdjustPx));
+  const placedHeight = Math.max(64, Math.min(6000, renderSize.height + sizeAdjustPx));
+
+  const placedImageBuffer = await sharp(inputBuffer, { failOn: 'none', animated: false })
+    .rotate()
+    .resize(placedWidth, placedHeight, {
+      fit: 'contain',
+      position: 'centre',
+      withoutEnlargement: false,
+      background: { r: 0, g: 0, b: 0, alpha: 0 }
+    })
+    .toBuffer();
+
+  const left = Math.round((renderSize.width - placedWidth) / 2 + offsetX);
+  const top = Math.round((renderSize.height - placedHeight) / 2 + offsetY);
+
+  const pipeline = sharp({
+    create: {
+      width: renderSize.width,
+      height: renderSize.height,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 }
+    }
+  })
+    .composite([
+      {
+        input: placedImageBuffer,
+        left,
+        top
+      }
+    ])
+    .flatten({ background: { r: 14, g: 44, b: 85 } })
+    .webp({
+      quality: normalizedVariant === 'mobile' ? 74 : 76,
+      effort: 5,
+      smartSubsample: true
+    });
+
+  return pipeline.toBuffer();
 }
 
 function extensionFromMimeType(mimeType) {
@@ -3870,6 +3920,12 @@ function normalizeAdminBannerVariant(value) {
   if (normalized === 'mobile') return 'mobile';
   if (normalized === 'desktop') return 'desktop';
   return '';
+}
+
+function getAdminBannerRenderSize(variant) {
+  return variant === 'mobile'
+    ? ADMIN_BANNER_MOBILE_RENDER_SIZE
+    : ADMIN_BANNER_DESKTOP_RENDER_SIZE;
 }
 
 function createDefaultAdminBannerManifest() {
@@ -7938,16 +7994,30 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
     return;
   }
 
-  const extension = extensionFromMimeType(parsedImage.mimeType);
-  const safeExtension = ['png', 'jpg', 'webp'].includes(extension) ? extension : 'webp';
-  const mimeType = safeExtension === 'jpg' ? 'image/jpeg' : safeExtension === 'png' ? 'image/png' : 'image/webp';
-  const objectKey = path.posix.join(
-    ADMIN_BANNER_IMAGE_OBJECT_PREFIX,
-    `banner-${slot}-${variant}-${Date.now()}.${safeExtension}`
-  );
-
   try {
-    await putR2Object(objectKey, parsedImage.buffer, mimeType);
+    const optimizedBuffer = await optimizeAdminBannerToWebp(parsedImage.buffer, variant, {
+      offsetX,
+      offsetY,
+      sizeAdjustPx
+    });
+    if (!optimizedBuffer?.length) {
+      res.status(422).json({ error: 'Nao foi possivel otimizar o banner para WebP.' });
+      return;
+    }
+
+    if (optimizedBuffer.length > 5 * 1024 * 1024) {
+      res.status(413).json({ error: 'Banner otimizado ainda muito grande. Limite de 5 MB.' });
+      return;
+    }
+
+    const safeExtension = 'webp';
+    const mimeType = 'image/webp';
+    const objectKey = path.posix.join(
+      ADMIN_BANNER_IMAGE_OBJECT_PREFIX,
+      `banner-${slot}-${variant}-${Date.now()}.${safeExtension}`
+    );
+
+    await putR2Object(objectKey, optimizedBuffer, mimeType);
     const publicUrl = buildFlashcardsR2PublicUrl(objectKey);
     const manifest = await loadAdminBannerManifest();
     const previousEntry = manifest.banners.find((entry) => entry.slot === slot) || null;
@@ -8001,6 +8071,13 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
       success: true,
       slot,
       variant,
+      optimization: {
+        sourceBytes: parsedImage.buffer.length,
+        outputBytes: optimizedBuffer.length,
+        format: 'webp',
+        width: getAdminBannerRenderSize(variant).width,
+        height: getAdminBannerRenderSize(variant).height
+      },
       banner: savedEntry
     });
   } catch (error) {
