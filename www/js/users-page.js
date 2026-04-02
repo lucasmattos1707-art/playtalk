@@ -327,11 +327,20 @@
           <span class="users-name">${escapeHtml(entry.username)}</span>
           <span class="users-meta">${escapeHtml(rowMetaText(entry))}</span>
         </div>
-        <div class="users-count">${escapeHtml(formatMetricValue(entry, state.currentMetricKey, state.currentMetricValueLabel))}</div>
+        <div
+          class="users-count"
+          style="color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:1 !important;visibility:visible !important;text-shadow:0 2px 10px rgba(6,20,42,.65);"
+        >${escapeHtml(formatMetricValue(entry, state.currentMetricKey, state.currentMetricValueLabel))}</div>
       </div>
     `).join('');
 
     els.usersList.innerHTML = rowMarkup;
+    Array.from(els.usersList.querySelectorAll('.users-count')).forEach((countEl) => {
+      countEl.style.color = '#ffffff';
+      countEl.style.webkitTextFillColor = '#ffffff';
+      countEl.style.opacity = '1';
+      countEl.style.visibility = 'visible';
+    });
     Array.from(els.usersList.querySelectorAll('[data-user-id]')).forEach((rowEl) => {
       rowEl.addEventListener('click', () => {
         const userId = Number(rowEl.getAttribute('data-user-id')) || 0;
