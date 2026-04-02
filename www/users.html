@@ -260,6 +260,15 @@
       font-weight: 900;
     }
 
+    .ranking-label {
+      margin: 8px 0 0;
+      text-align: center;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
     .users-list {
       display: grid;
       gap: 10px;
@@ -324,10 +333,9 @@
     }
 
     .users-rank-badge {
-      background-image: linear-gradient(180deg, #153e75 0%, #1e3a8a 45%, #2563eb 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: #ffffff;
+      -webkit-text-fill-color: #ffffff;
+      text-shadow: 0 2px 8px rgba(5, 20, 44, 0.55);
     }
 
     .users-main {
@@ -339,6 +347,7 @@
     .users-name {
       font-size: 18px;
       font-weight: 800;
+      color: #ffffff;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -353,10 +362,11 @@
     }
 
     .users-meta {
-      color: var(--muted);
+      color: #ffffff;
       font-size: 12px;
       font-weight: 700;
       line-height: 1.3;
+      opacity: 0.86;
     }
 
     .users-row.is-admin-target {
@@ -649,6 +659,7 @@
     <section class="panel-head">
       <h1 class="title">Usuarios</h1>
     </section>
+    <p class="ranking-label" id="rankingLabel">Ranking: Flashcards</p>
     <p class="status" id="usersStatus">Carregando usuarios...</p>
     <section class="panel">
       <section class="users-list" id="usersList" aria-live="polite"></section>

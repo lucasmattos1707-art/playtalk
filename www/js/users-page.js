@@ -3,13 +3,24 @@
   const GUEST_PROGRESS_KEY = 'playtalk-flashcards-progress-v3';
   const GUEST_OWNED_KEY = 'playtalk-flashcards-owned-v2';
   const PRESENCE_PING_MS = 15000;
-  const USERS_REFRESH_MS = 15000;
   const CHALLENGE_POLL_MS = 2500;
   const HAS_GLOBAL_CHALLENGE_POPUPS = Boolean(window.PlaytalkChallengePopups);
+  const BANNER_CYCLE_MS = 14000;
+  const BANNER_SLOT_COUNT = 4;
+  const BANNER_SLOT_MS = BANNER_CYCLE_MS / BANNER_SLOT_COUNT;
+  const BANNER_SLOT_CHECK_MS = 240;
+
+  const RANKING_METRICS = [
+    { slot: 1, key: 'flashcards', label: 'Flashcards', valueLabel: '' },
+    { slot: 2, key: 'pronunciation', label: 'Pronuncia', valueLabel: '%' },
+    { slot: 3, key: 'speed', label: 'Velocidade', valueLabel: '/h' },
+    { slot: 4, key: 'battle', label: 'Batalhas vencidas', valueLabel: '' }
+  ];
 
   const els = {
     usersList: document.getElementById('usersList'),
     usersStatus: document.getElementById('usersStatus'),
+    rankingLabel: document.getElementById('rankingLabel'),
     adminModal: document.getElementById('usersAdminModal'),
     adminTitle: document.getElementById('usersAdminTitle'),
     adminCopy: document.getElementById('usersAdminCopy'),
@@ -45,7 +56,13 @@
     outgoingChallengeId: 0,
     outgoingTerminalNoticeKey: '',
     incomingChallengeId: 0,
-    redirectedByChallenge: false
+    redirectedByChallenge: false,
+    currentMetricKey: 'flashcards',
+    currentMetricLabel: 'Flashcards',
+    currentMetricValueLabel: '',
+    activeBannerSlot: 0,
+    bannerClockStartedAtMs: Date.now(),
+    loadRequestId: 0
   };
 
   function buildApiUrl(path) {
@@ -81,6 +98,34 @@
   function setUsersStatus(message) {
     if (!els.usersStatus) return;
     els.usersStatus.textContent = message || '';
+  }
+
+  function setRankingLabel(label) {
+    if (!els.rankingLabel) return;
+    els.rankingLabel.textContent = `Ranking: ${safeText(label) || 'Flashcards'}`;
+  }
+
+  function metricByKey(metricKey) {
+    return RANKING_METRICS.find((metric) => metric.key === metricKey) || RANKING_METRICS[0];
+  }
+
+  function metricBySlot(slot) {
+    return RANKING_METRICS.find((metric) => metric.slot === slot) || RANKING_METRICS[0];
+  }
+
+  function metricValueFromEntry(entry, metricKey) {
+    if (metricKey === 'pronunciation') return Number(entry?.pronunciationPercent) || 0;
+    if (metricKey === 'speed') return Number(entry?.speedFlashcardsPerHour) || 0;
+    if (metricKey === 'battle') return Number(entry?.battlesWon) || 0;
+    return Number(entry?.flashcardsCount) || 0;
+  }
+
+  function formatMetricValue(entry, metricKey, metricValueLabel = '') {
+    const value = metricValueFromEntry(entry, metricKey);
+    if (metricKey === 'speed') {
+      return `${value.toFixed(1)}${metricValueLabel || ''}`;
+    }
+    return `${Math.round(value)}${metricValueLabel || ''}`;
   }
 
   function readGuestName() {
@@ -132,6 +177,10 @@
       username: safeText(entry?.username || 'Usuario') || 'Usuario',
       rank: Number(entry?.rank) || 0,
       flashcardsCount: Number(entry?.flashcardsCount) || 0,
+      pronunciationPercent: Number(entry?.pronunciationPercent) || 0,
+      speedFlashcardsPerHour: Number(entry?.speedFlashcardsPerHour) || 0,
+      battlesWon: Number(entry?.battlesWon) || 0,
+      rankingValue: Number(entry?.rankingValue) || 0,
       avatarImage: safeText(entry?.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg') || 'Avatar/avatar-man-person-svgrepo-com.svg',
       isAdmin: Boolean(entry?.isAdmin),
       premiumUntil: entry?.premiumUntil || null,
@@ -146,7 +195,11 @@
       userId: Number(entry?.userId) || 0,
       username: safeText(entry?.username || 'Usuario') || 'Usuario',
       rank: Number(entry?.rank) || 0,
-      flashcardsCount: Number(entry?.flashcardsCount) || 0
+      flashcardsCount: Number(entry?.flashcardsCount) || 0,
+      pronunciationPercent: Number(entry?.pronunciationPercent) || 0,
+      speedFlashcardsPerHour: Number(entry?.speedFlashcardsPerHour) || 0,
+      battlesWon: Number(entry?.battlesWon) || 0,
+      rankingValue: Number(entry?.rankingValue) || 0
     };
   }
 
@@ -181,7 +234,7 @@
     state.adminBusy = false;
     if (els.adminTitle) els.adminTitle.textContent = user.username;
     if (els.adminCopy) {
-      els.adminCopy.textContent = `Rank ${user.rank || 0} • ${user.flashcardsCount || 0} flashcards`;
+      els.adminCopy.textContent = `Rank ${user.rank || 0} | ${formatMetricValue(user, state.currentMetricKey, state.currentMetricValueLabel)} (${state.currentMetricLabel})`;
     }
     if (els.adminModal) els.adminModal.classList.add('is-visible');
     setAdminStatus('');
@@ -225,6 +278,11 @@
     if (state.currentUser?.id) {
       return state.viewer || rows.find((entry) => entry.userId === state.currentUser.id) || null;
     }
+
+    if (state.currentMetricKey !== 'flashcards') {
+      return null;
+    }
+
     const guestCount = readGuestFlashcardsCount();
     const higherCount = rows.filter((entry) => entry.flashcardsCount > guestCount).length;
     return {
@@ -240,7 +298,7 @@
     const parts = [];
     parts.push(entry.premiumActive ? 'Premium ativo' : 'Free');
     parts.push(entry.isOnline ? 'Online' : 'Offline');
-    return parts.join(' • ');
+    return parts.join(' | ');
   }
 
   function renderRows(rows) {
@@ -267,7 +325,7 @@
           <span class="users-name">${escapeHtml(entry.username)}</span>
           <span class="users-meta">${escapeHtml(rowMetaText(entry))}</span>
         </div>
-        <div class="users-count">${escapeHtml(entry.flashcardsCount || 0)}</div>
+        <div class="users-count">${escapeHtml(formatMetricValue(entry, state.currentMetricKey, state.currentMetricValueLabel))}</div>
       </div>
     `).join('');
 
@@ -297,18 +355,36 @@
     return normalizeUser(payload.user);
   }
 
-  async function loadUsers(message) {
-    setUsersStatus(message || 'Carregando ranking...');
+  async function loadUsers(message, options = {}) {
+    const metricKey = safeText(options.metricKey || state.currentMetricKey || 'flashcards') || 'flashcards';
+    const force = Boolean(options.force);
+    const requestId = state.loadRequestId + 1;
+    state.loadRequestId = requestId;
+
+    if (message) {
+      setUsersStatus(message);
+    } else if (force) {
+      setUsersStatus('Atualizando ranking...');
+    }
+
     try {
-      const response = await fetch(buildApiUrl('/api/users/flashcards?limit=50'), {
+      const response = await fetch(buildApiUrl(`/api/users/flashcards?limit=50&metric=${encodeURIComponent(metricKey)}`), {
         headers: buildAuthHeaders(),
         cache: 'no-store',
         credentials: 'include'
       });
       const payload = await response.json().catch(() => ({}));
+      if (requestId !== state.loadRequestId) return;
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.message || 'Falha ao carregar usuarios.');
       }
+
+      const selectedMetric = metricByKey(payload?.metric || metricKey);
+      state.currentMetricKey = selectedMetric.key;
+      state.currentMetricLabel = safeText(payload?.metricLabel || selectedMetric.label) || selectedMetric.label;
+      state.currentMetricValueLabel = safeText(payload?.metricValueLabel || selectedMetric.valueLabel || '');
+      setRankingLabel(state.currentMetricLabel);
+
       const users = normalizeUsers(payload);
       state.rows = users;
       state.viewer = normalizeViewer(payload.viewer);
@@ -316,10 +392,32 @@
       const viewer = currentViewerEntry(users);
       setUsersStatus(viewer?.rank ? `Voce esta em ${viewer.rank} lugar` : 'Ranking carregado.');
     } catch (_error) {
+      if (requestId !== state.loadRequestId) return;
       renderRows([]);
       state.rows = [];
       setUsersStatus('Nao consegui carregar o ranking agora.');
     }
+  }
+
+  function currentBannerSlot() {
+    const elapsed = Math.max(0, Date.now() - state.bannerClockStartedAtMs);
+    const cycleProgress = elapsed % BANNER_CYCLE_MS;
+    return Math.floor(cycleProgress / BANNER_SLOT_MS) + 1;
+  }
+
+  async function syncRankingWithBanner(force) {
+    const slot = currentBannerSlot();
+    const metric = metricBySlot(slot);
+    if (!metric) return;
+    if (!force && state.activeBannerSlot === slot && state.currentMetricKey === metric.key) return;
+    state.activeBannerSlot = slot;
+    await loadUsers('', { metricKey: metric.key, force: true });
+  }
+
+  function startBannerLinkedRankingLoop() {
+    window.setInterval(() => {
+      void syncRankingWithBanner(false);
+    }, BANNER_SLOT_CHECK_MS);
   }
 
   async function pingPresence() {
@@ -492,7 +590,7 @@
         throw new Error(payload?.message || 'Erro ao atribuir premium.');
       }
       setAdminStatus('Premium atualizado.');
-      await loadUsers('Atualizando ranking...');
+      await loadUsers('Atualizando ranking...', { metricKey: state.currentMetricKey, force: true });
     } catch (error) {
       setAdminStatus(error?.message || 'Erro ao atribuir premium.');
     } finally {
@@ -519,7 +617,7 @@
         throw new Error(payload?.message || 'Erro ao excluir usuario.');
       }
       closeAdminModal();
-      await loadUsers('Usuario excluido. Atualizando...');
+      await loadUsers('Usuario excluido. Atualizando...', { metricKey: state.currentMetricKey, force: true });
     } catch (error) {
       setAdminStatus(error?.message || 'Erro ao excluir usuario.');
       state.adminBusy = false;
@@ -531,9 +629,7 @@
     window.setInterval(() => {
       void pingPresence();
     }, PRESENCE_PING_MS);
-    window.setInterval(() => {
-      void loadUsers();
-    }, USERS_REFRESH_MS);
+    startBannerLinkedRankingLoop();
     if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
       window.setInterval(() => {
         void pollChallenges();
@@ -544,7 +640,7 @@
   (async () => {
     state.currentUser = await fetchSessionUser();
     await pingPresence();
-    await loadUsers();
+    await syncRankingWithBanner(true);
     if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
       await pollChallenges();
     }

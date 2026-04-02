@@ -758,6 +758,10 @@ const ensureSpeakingRealtimeTables = async () => {
         ADD COLUMN IF NOT EXISTS opponent_last_seen_at timestamptz NOT NULL DEFAULT now()
       `);
       await pool.query(`
+        ALTER TABLE public.speaking_duel_sessions
+        ADD COLUMN IF NOT EXISTS battle_counted boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS speaking_duel_sessions_challenger_idx
         ON public.speaking_duel_sessions (challenger_user_id, created_at DESC)
       `);
@@ -1270,6 +1274,10 @@ const ensureUsersAvatarColumn = async () => {
       await pool.query(`
         ALTER TABLE public.users
         ADD COLUMN IF NOT EXISTS onboarding_photo_completed boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS battle integer NOT NULL DEFAULT 0
       `);
       await pool.query(`
         UPDATE public.users
@@ -3145,6 +3153,35 @@ async function markSpeakingChallengeCompletedBySessionId(client, sessionId) {
   );
 }
 
+async function awardSpeakingBattleWin(client, sessionId, winnerUserId) {
+  const normalizedWinnerUserId = Number(winnerUserId) || 0;
+  if (!sessionId || !normalizedWinnerUserId) return false;
+
+  const sessionResult = await client.query(
+    `UPDATE public.speaking_duel_sessions
+     SET battle_counted = true,
+         updated_at = now()
+     WHERE id = $1
+       AND status = 'completed'
+       AND winner_user_id = $2
+       AND battle_counted = false
+     RETURNING id`,
+    [sessionId, normalizedWinnerUserId]
+  );
+
+  if (!sessionResult.rows.length) {
+    return false;
+  }
+
+  await client.query(
+    `UPDATE public.users
+     SET battle = COALESCE(battle, 0) + 1
+     WHERE id = $1`,
+    [normalizedWinnerUserId]
+  );
+  return true;
+}
+
 async function touchSpeakingSessionAndResolveTimeout(client, sessionId, requesterUserId) {
   const result = await client.query(
     `SELECT *
@@ -3221,6 +3258,7 @@ async function touchSpeakingSessionAndResolveTimeout(client, sessionId, requeste
   const updated = updateResult.rows[0] || session;
   if (String(updated.status || '').trim() === 'completed') {
     await markSpeakingChallengeCompletedBySessionId(client, sessionId);
+    await awardSpeakingBattleWin(client, sessionId, Number(updated.winner_user_id) || 0);
   }
   return updated;
 }
@@ -5506,8 +5544,44 @@ app.get('/api/users/flashcards', async (req, res) => {
     const limit = Number.isInteger(requestedLimit) && requestedLimit > 0
       ? Math.min(requestedLimit, 50)
       : 50;
+    const requestedMetric = String(req.query.metric || '').trim().toLowerCase();
+    const metricKey = requestedMetric === 'pronunciation'
+      ? 'pronunciation'
+      : requestedMetric === 'speed'
+        ? 'speed'
+        : requestedMetric === 'battle'
+          ? 'battle'
+          : 'flashcards';
+    const metricLabel = metricKey === 'pronunciation'
+      ? 'Pronuncia'
+      : metricKey === 'speed'
+        ? 'Velocidade'
+        : metricKey === 'battle'
+          ? 'Batalhas vencidas'
+          : 'Flashcards';
+    const metricValueLabel = metricKey === 'pronunciation'
+      ? '%'
+      : metricKey === 'speed'
+        ? '/h'
+        : '';
+
+    const rankingSortSql = metricKey === 'pronunciation'
+      ? 'pronunciation_percent DESC, flashcards_count DESC, created_at ASC, id ASC'
+      : metricKey === 'speed'
+        ? 'speed_flashcards_per_hour DESC, flashcards_count DESC, created_at ASC, id ASC'
+        : metricKey === 'battle'
+          ? 'battles_won DESC, flashcards_count DESC, created_at ASC, id ASC'
+          : 'flashcards_count DESC, created_at ASC, id ASC';
+    const metricValueSql = metricKey === 'pronunciation'
+      ? 'pronunciation_percent'
+      : metricKey === 'speed'
+        ? 'speed_flashcards_per_hour'
+        : metricKey === 'battle'
+          ? 'battles_won'
+          : 'flashcards_count';
+
     const visibilityWhereClause = buildPublicUsersVisibilityWhereClause(requesterIsAdmin);
-    const rankingSql = `WITH ranked_users AS (
+    const rankingSql = `WITH base_users AS (
          SELECT
            u.id,
            COALESCE(NULLIF(u.username, ''), u.email) AS username,
@@ -5517,12 +5591,26 @@ app.get('/api/users/flashcards', async (req, res) => {
            u.premium_until,
            COALESCE(presence.last_seen_at >= (now() - interval '${SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS} seconds'), false) AS is_online,
            COALESCE(progress.total, 0) AS flashcards_count,
-           ROW_NUMBER() OVER (
-             ORDER BY
-               COALESCE(progress.total, 0) DESC,
-               COALESCE(u.created_at, now()) ASC,
-               u.id ASC
-           )::int AS rank_position
+           COALESCE(u.battle, 0)::int AS battles_won,
+           GREATEST(
+             0,
+             LEAST(
+               100,
+               ROUND(
+                 COALESCE(
+                   (
+                     SELECT AVG(sample.value::numeric)
+                     FROM jsonb_array_elements_text(COALESCE(stats.pronunciation_samples, '[]'::jsonb)) AS sample(value)
+                   ),
+                   0
+                 ) + 5
+               )::int
+             )
+           )::int AS pronunciation_percent,
+           CASE
+             WHEN COALESCE(stats.training_time_ms, 0) <= 0 OR COALESCE(progress.total, 0) <= 0 THEN 0
+             ELSE ROUND((COALESCE(progress.total, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+           END AS speed_flashcards_per_hour
          FROM public.users u
          LEFT JOIN (
            SELECT
@@ -5532,9 +5620,20 @@ app.get('/api/users/flashcards', async (req, res) => {
            GROUP BY user_id
          ) progress
            ON progress.user_id = u.id
+         LEFT JOIN public.user_flashcard_stats stats
+           ON stats.user_id = u.id
          LEFT JOIN public.user_presence presence
            ON presence.user_id = u.id
          ${visibilityWhereClause}
+       ),
+       ranked_users AS (
+         SELECT
+           base_users.*,
+           ROW_NUMBER() OVER (
+             ORDER BY ${rankingSortSql}
+           )::int AS rank_position,
+           ${metricValueSql} AS ranking_value
+         FROM base_users
        )
        SELECT *
        FROM ranked_users
@@ -5543,7 +5642,7 @@ app.get('/api/users/flashcards', async (req, res) => {
     const result = await pool.query(rankingSql, [limit]);
     const viewerResult = authUser?.id
       ? await pool.query(
-        `WITH ranked_users AS (
+        `WITH base_users AS (
            SELECT
              u.id,
              COALESCE(NULLIF(u.username, ''), u.email) AS username,
@@ -5553,12 +5652,26 @@ app.get('/api/users/flashcards', async (req, res) => {
              u.premium_until,
              COALESCE(presence.last_seen_at >= (now() - interval '${SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS} seconds'), false) AS is_online,
              COALESCE(progress.total, 0) AS flashcards_count,
-             ROW_NUMBER() OVER (
-               ORDER BY
-                 COALESCE(progress.total, 0) DESC,
-                 COALESCE(u.created_at, now()) ASC,
-                 u.id ASC
-             )::int AS rank_position
+             COALESCE(u.battle, 0)::int AS battles_won,
+             GREATEST(
+               0,
+               LEAST(
+                 100,
+                 ROUND(
+                   COALESCE(
+                     (
+                       SELECT AVG(sample.value::numeric)
+                       FROM jsonb_array_elements_text(COALESCE(stats.pronunciation_samples, '[]'::jsonb)) AS sample(value)
+                     ),
+                     0
+                   ) + 5
+                 )::int
+               )
+             )::int AS pronunciation_percent,
+             CASE
+               WHEN COALESCE(stats.training_time_ms, 0) <= 0 OR COALESCE(progress.total, 0) <= 0 THEN 0
+               ELSE ROUND((COALESCE(progress.total, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+             END AS speed_flashcards_per_hour
            FROM public.users u
            LEFT JOIN (
              SELECT
@@ -5568,9 +5681,20 @@ app.get('/api/users/flashcards', async (req, res) => {
              GROUP BY user_id
            ) progress
              ON progress.user_id = u.id
+           LEFT JOIN public.user_flashcard_stats stats
+             ON stats.user_id = u.id
            LEFT JOIN public.user_presence presence
              ON presence.user_id = u.id
            ${visibilityWhereClause}
+         ),
+         ranked_users AS (
+           SELECT
+             base_users.*,
+             ROW_NUMBER() OVER (
+               ORDER BY ${rankingSortSql}
+             )::int AS rank_position,
+             ${metricValueSql} AS ranking_value
+           FROM base_users
          )
          SELECT *
          FROM ranked_users
@@ -5582,11 +5706,18 @@ app.get('/api/users/flashcards', async (req, res) => {
 
     res.json({
       success: true,
+      metric: metricKey,
+      metricLabel,
+      metricValueLabel,
       viewer: viewerResult.rows[0] ? {
         userId: Number(viewerResult.rows[0].id) || 0,
         username: String(viewerResult.rows[0].username || '').trim() || 'Usuario',
         rank: Number(viewerResult.rows[0].rank_position) || 0,
         flashcardsCount: Number(viewerResult.rows[0].flashcards_count) || 0,
+        pronunciationPercent: Number(viewerResult.rows[0].pronunciation_percent) || 0,
+        speedFlashcardsPerHour: Number(viewerResult.rows[0].speed_flashcards_per_hour) || 0,
+        battlesWon: Number(viewerResult.rows[0].battles_won) || 0,
+        rankingValue: Number(viewerResult.rows[0].ranking_value) || 0,
         isOnline: Boolean(viewerResult.rows[0].is_online)
       } : null,
       users: result.rows.map((entry) => ({
@@ -5596,6 +5727,10 @@ app.get('/api/users/flashcards', async (req, res) => {
         isAdmin: isAdminUserRecord(entry),
         rank: Number(entry.rank_position) || 0,
         flashcardsCount: Number(entry.flashcards_count) || 0,
+        pronunciationPercent: Number(entry.pronunciation_percent) || 0,
+        speedFlashcardsPerHour: Number(entry.speed_flashcards_per_hour) || 0,
+        battlesWon: Number(entry.battles_won) || 0,
+        rankingValue: Number(entry.ranking_value) || 0,
         isOnline: Boolean(entry.is_online),
         premiumFullAccess: Boolean(entry.premium_full_access),
         premiumUntil: entry.premium_until || null,
@@ -6264,6 +6399,7 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
       );
       if (next.status === 'completed') {
         await markSpeakingChallengeCompletedBySessionId(client, sessionId);
+        await awardSpeakingBattleWin(client, sessionId, next.winnerUserId);
       }
       await client.query('COMMIT');
 
