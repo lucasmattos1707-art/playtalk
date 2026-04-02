@@ -121,7 +121,7 @@
     .speaking-game.is-active { display: block; }
 
     .duel-head {
-      display: flex;
+      display: none;
       justify-content: space-between;
       align-items: center;
       gap: 10px;
@@ -193,8 +193,8 @@
       --percent: 0;
       --ring-a: #61f2a4;
       --ring-b: #2c7f50;
-      width: 92px;
-      height: 92px;
+      width: 124px;
+      height: 124px;
       border-radius: 50%;
       background:
         conic-gradient(var(--ring-a) calc(var(--percent) * 1%), rgba(255,255,255,0.16) 0%);
@@ -211,8 +211,8 @@
 
     .duel-avatar__ring::after {
       content: "";
-      width: 78px;
-      height: 78px;
+      width: 106px;
+      height: 106px;
       border-radius: 50%;
       background: rgba(6, 20, 34, 0.8);
       position: absolute;
@@ -220,8 +220,8 @@
     }
 
     .duel-avatar__ring img {
-      width: 74px;
-      height: 74px;
+      width: 100px;
+      height: 100px;
       border-radius: 50%;
       object-fit: cover;
       position: relative;
@@ -258,6 +258,12 @@
       font-weight: 800;
       line-height: 1.1;
       text-align: center;
+      min-height: 52px;
+      will-change: transform, opacity;
+    }
+
+    .card-word.is-slide {
+      animation: wordSlide 360ms ease;
     }
 
     .card-subword {
@@ -277,6 +283,11 @@
     .btn-secondary {
       background: #1c3f54;
       color: var(--text);
+    }
+
+    .btn.is-mic-live {
+      background: linear-gradient(135deg, #1d77ff, #52a8ff);
+      color: #ffffff;
     }
 
     .status {
@@ -341,6 +352,17 @@
       50% { transform: scale(1.03); }
     }
 
+    @keyframes wordSlide {
+      from {
+        opacity: 0.2;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     @media (max-width: 640px) {
       .home-title { font-size: 24px; }
       .card-word { font-size: 24px; }
@@ -399,11 +421,10 @@
         </article>
       </div>
       <h2 class="card-word" id="cardEnglishWord">-</h2>
-      <p class="card-subword" id="cardPortugueseWord">-</p>
+      <p class="card-subword" id="cardPortugueseWord" hidden>-</p>
 
       <div class="actions">
-        <button class="btn btn-secondary" id="listenCardBtn" type="button">Ouvir carta</button>
-        <button class="btn" id="sendSpeakingBtn" type="button">Enviar speaking</button>
+        <button class="btn" id="sendSpeakingBtn" type="button">Ligar microfone</button>
       </div>
       <p class="status" id="gameStatus" aria-live="polite"></p>
       <div class="final-result" id="finalResultBox">0% seu resultado final</div>
