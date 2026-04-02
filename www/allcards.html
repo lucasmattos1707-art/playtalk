@@ -232,25 +232,96 @@
     }
 
     @keyframes bannersSlide {
-      0%, 20% {
+      0%, 24.999% {
         transform: translateX(0);
       }
 
-      25%, 45% {
+      25%, 49.999% {
         transform: translateX(-25%);
       }
 
-      50%, 70% {
+      50%, 74.999% {
         transform: translateX(-50%);
       }
 
-      75%, 95% {
+      75%, 99.999% {
         transform: translateX(-75%);
       }
 
       100% {
-        transform: translateX(0);
+        transform: translateX(-75%);
       }
+    }
+
+    .banner-admin-controls {
+      width: 100vw;
+      height: 12vh;
+      min-height: 72px;
+      max-height: 140px;
+      margin: 0 0 10px;
+      margin-left: calc(50% - 50vw);
+      margin-right: calc(50% - 50vw);
+      padding: 8px 16px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: rgba(8, 28, 54, 0.55);
+      border-top: 1px solid rgba(255, 255, 255, 0.16);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(8px);
+    }
+
+    body.is-admin-banner .banner-admin-controls {
+      display: flex;
+    }
+
+    .banner-admin-controls__row {
+      width: min(600px, 100%);
+      display: grid;
+      grid-template-columns: repeat(5, minmax(56px, 1fr));
+      align-items: center;
+      gap: 10px;
+    }
+
+    .banner-admin-controls__btn {
+      border: 1px solid rgba(255, 255, 255, 0.26);
+      border-radius: 16px;
+      min-height: 52px;
+      background: rgba(6, 22, 44, 0.7);
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+    }
+
+    .banner-admin-controls__btn:hover {
+      transform: translateY(-1px);
+      background: rgba(21, 63, 112, 0.82);
+      border-color: rgba(255, 255, 255, 0.42);
+    }
+
+    .banner-admin-controls__btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .banner-admin-controls__btn svg {
+      width: 28px;
+      height: 28px;
+      display: block;
+    }
+
+    .banner-admin-controls__status {
+      min-width: min(320px, 100%);
+      margin: 0;
+      color: #ffffff;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     }
 
     .allcards-title {
@@ -436,6 +507,25 @@
 
       .allcards-page {
         width: calc(100vw - 16px);
+      }
+
+      .banner-admin-controls {
+        height: 12vh;
+        min-height: 66px;
+        padding: 8px 10px;
+      }
+
+      .banner-admin-controls__row {
+        gap: 8px;
+      }
+
+      .banner-admin-controls__btn {
+        min-height: 48px;
+        border-radius: 14px;
+      }
+
+      .banner-admin-controls__status {
+        font-size: 12px;
       }
     }
   </style>

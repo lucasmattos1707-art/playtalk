@@ -4060,7 +4060,7 @@ function normalizeAdminBannerManifest(payload) {
   const usersSource = payload?.bannersUsers;
   base.bannersUsers = usersSource
     ? normalizeBannerSet(usersSource)
-    : base.banners.map((entry) => ({ ...entry }));
+    : createDefaultAdminBannerSet();
   base.generatedAt = payload?.generatedAt || base.generatedAt;
   base.updatedAt = payload?.updatedAt || null;
   return base;
@@ -7892,7 +7892,7 @@ app.get('/api/public/banners', async (req, res) => {
     const surface = normalizeAdminBannerSurface(req.query?.surface);
     const manifest = await loadAdminBannerManifest();
     const selectedBanners = surface === 'users'
-      ? (Array.isArray(manifest.bannersUsers) ? manifest.bannersUsers : manifest.banners)
+      ? manifest.bannersUsers
       : manifest.banners;
     res.json({
       success: true,

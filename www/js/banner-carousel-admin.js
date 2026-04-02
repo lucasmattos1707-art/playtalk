@@ -319,18 +319,17 @@
       <p class="banner-admin-controls__status" data-banner-admin-status aria-live="polite"></p>
     `;
 
-    const reference = document.getElementById('usersStatus') || document.querySelector('.ranking-label');
-    if (reference?.parentElement) {
-      reference.insertAdjacentElement('afterend', controls);
-    } else {
-      const firstCarousel = carousels[0];
-      firstCarousel?.insertAdjacentElement('afterend', controls);
-    }
+    const firstCarousel = carousels[0];
+    firstCarousel?.insertAdjacentElement('afterend', controls);
     return controls;
   }
 
   function setupControls() {
     const root = document.getElementById('bannerAdminControls') || buildFallbackControls();
+    const firstCarousel = carousels[0];
+    if (firstCarousel && root.previousElementSibling !== firstCarousel) {
+      firstCarousel.insertAdjacentElement('afterend', root);
+    }
     state.controls.root = root;
     state.controls.modeBtn = root.querySelector('[data-banner-action="mode"]');
     state.controls.prevBtn = root.querySelector('[data-banner-action="previous"]');
