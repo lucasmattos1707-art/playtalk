@@ -368,6 +368,11 @@
       transform: scale(0.995);
     }
 
+    .users-row.is-online {
+      border-color: rgba(123, 245, 172, 0.32);
+      box-shadow: inset 0 0 0 1px rgba(123, 245, 172, 0.16);
+    }
+
     .users-admin-modal {
       position: fixed;
       inset: 0;
@@ -440,6 +445,91 @@
       font-size: 13px;
       font-weight: 700;
       text-align: center;
+    }
+
+    .users-challenge-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(2, 11, 24, 0.62);
+      z-index: 230;
+    }
+
+    .users-challenge-modal.is-visible {
+      display: flex;
+    }
+
+    .users-challenge-card {
+      width: min(460px, 100%);
+      border-radius: 24px;
+      border: 1px solid rgba(124, 192, 255, 0.38);
+      background: linear-gradient(145deg, rgba(28, 92, 156, 0.96), rgba(18, 70, 127, 0.95));
+      color: #eff7ff;
+      padding: 20px;
+      box-shadow: 0 24px 52px rgba(2, 14, 29, 0.46);
+      text-align: center;
+    }
+
+    .users-challenge-card h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      letter-spacing: 0.02em;
+    }
+
+    .users-challenge-copy {
+      margin: 0 0 14px;
+      color: rgba(232, 244, 255, 0.94);
+      line-height: 1.38;
+      font-size: 14px;
+    }
+
+    .users-challenge-actions {
+      display: grid;
+      gap: 10px;
+    }
+
+    .users-challenge-btn {
+      border: 0;
+      border-radius: 14px;
+      padding: 11px 14px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      color: #08315e;
+      background: linear-gradient(140deg, #b4dcff, #8cc8ff);
+    }
+
+    .users-challenge-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .users-challenge-btn.is-secondary {
+      color: #ecf4ff;
+      background: rgba(12, 43, 82, 0.68);
+      border: 1px solid rgba(174, 214, 255, 0.24);
+    }
+
+    .users-challenge-status {
+      min-height: 20px;
+      margin-top: 8px;
+      color: #e5f2ff;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .incoming-challenge-avatar {
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(255, 255, 255, 0.54);
+      box-shadow: 0 8px 20px rgba(2, 12, 29, 0.34);
+      margin-bottom: 8px;
     }
 
     .flashcards-footer-nav {
@@ -554,6 +644,30 @@
         <button class="users-admin-btn is-secondary" id="closeAdminModalBtn" type="button">Fechar</button>
       </div>
       <div class="users-admin-status" id="usersAdminStatus"></div>
+    </div>
+  </div>
+
+  <div class="users-challenge-modal" id="usersChallengeModal" aria-modal="true" role="dialog" aria-label="Desafiar usuario">
+    <div class="users-challenge-card">
+      <h2 id="usersChallengeName">Usuario</h2>
+      <p class="users-challenge-copy" id="usersChallengeCopy">Envie um desafio de speaking.</p>
+      <div class="users-challenge-actions">
+        <button class="users-challenge-btn" id="usersChallengeActionBtn" type="button">Desafiar</button>
+        <button class="users-challenge-btn is-secondary" id="usersChallengeCloseBtn" type="button">Fechar</button>
+      </div>
+      <div class="users-challenge-status" id="usersChallengeStatus"></div>
+    </div>
+  </div>
+
+  <div class="users-challenge-modal" id="incomingChallengeModal" aria-modal="true" role="dialog" aria-label="Convite de speaking">
+    <div class="users-challenge-card">
+      <img class="incoming-challenge-avatar" id="incomingChallengeAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar do usuario">
+      <h2>Novo desafio</h2>
+      <p class="users-challenge-copy" id="incomingChallengeCopy">Usuario te desafiou pra um speaking</p>
+      <div class="users-challenge-actions">
+        <button class="users-challenge-btn" id="incomingChallengeAcceptBtn" type="button">Aceitar</button>
+        <button class="users-challenge-btn is-secondary" id="incomingChallengeRejectBtn" type="button">Recusar</button>
+      </div>
     </div>
   </div>
 

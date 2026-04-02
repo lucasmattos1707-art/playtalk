@@ -1,7 +1,11 @@
-﻿(function initPlaytalkUsersPage() {
+(function initPlaytalkUsersPage() {
   const GUEST_ID_KEY = 'playtalk_guest_rank_id';
   const GUEST_PROGRESS_KEY = 'playtalk-flashcards-progress-v3';
   const GUEST_OWNED_KEY = 'playtalk-flashcards-owned-v2';
+  const PRESENCE_PING_MS = 15000;
+  const USERS_REFRESH_MS = 15000;
+  const CHALLENGE_POLL_MS = 2500;
+
   const els = {
     usersList: document.getElementById('usersList'),
     usersStatus: document.getElementById('usersStatus'),
@@ -13,7 +17,18 @@
     grant30Btn: document.getElementById('grant30Btn'),
     grant365Btn: document.getElementById('grant365Btn'),
     deleteUserBtn: document.getElementById('deleteUserBtn'),
-    closeAdminModalBtn: document.getElementById('closeAdminModalBtn')
+    closeAdminModalBtn: document.getElementById('closeAdminModalBtn'),
+    challengeModal: document.getElementById('usersChallengeModal'),
+    challengeName: document.getElementById('usersChallengeName'),
+    challengeCopy: document.getElementById('usersChallengeCopy'),
+    challengeActionBtn: document.getElementById('usersChallengeActionBtn'),
+    challengeCloseBtn: document.getElementById('usersChallengeCloseBtn'),
+    challengeStatus: document.getElementById('usersChallengeStatus'),
+    incomingModal: document.getElementById('incomingChallengeModal'),
+    incomingAvatar: document.getElementById('incomingChallengeAvatar'),
+    incomingCopy: document.getElementById('incomingChallengeCopy'),
+    incomingAcceptBtn: document.getElementById('incomingChallengeAcceptBtn'),
+    incomingRejectBtn: document.getElementById('incomingChallengeRejectBtn')
   };
 
   const state = {
@@ -21,7 +36,12 @@
     viewer: null,
     rows: [],
     selectedUser: null,
-    adminBusy: false
+    adminBusy: false,
+    challengeTarget: null,
+    challengeBusy: false,
+    outgoingChallengeId: 0,
+    incomingChallengeId: 0,
+    redirectedByChallenge: false
   };
 
   function buildApiUrl(path) {
@@ -52,6 +72,11 @@
 
   function safeText(value) {
     return typeof value === 'string' ? value.trim() : '';
+  }
+
+  function setUsersStatus(message) {
+    if (!els.usersStatus) return;
+    els.usersStatus.textContent = message || '';
   }
 
   function readGuestName() {
@@ -106,7 +131,8 @@
       avatarImage: safeText(entry?.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg') || 'Avatar/avatar-man-person-svgrepo-com.svg',
       isAdmin: Boolean(entry?.isAdmin),
       premiumUntil: entry?.premiumUntil || null,
-      premiumActive: Boolean(entry?.premiumActive)
+      premiumActive: Boolean(entry?.premiumActive),
+      isOnline: Boolean(entry?.isOnline)
     }));
   }
 
@@ -158,6 +184,36 @@
     syncAdminButtons();
   }
 
+  function setChallengeStatus(message) {
+    if (!els.challengeStatus) return;
+    els.challengeStatus.textContent = message || '';
+  }
+
+  function closeChallengeModal() {
+    if (els.challengeModal) els.challengeModal.classList.remove('is-visible');
+    state.challengeTarget = null;
+    state.challengeBusy = false;
+    setChallengeStatus('');
+    if (els.challengeActionBtn) els.challengeActionBtn.disabled = false;
+  }
+
+  function openChallengeModal(user) {
+    if (!user || !state.currentUser?.id || user.userId === state.currentUser.id) return;
+    state.challengeTarget = user;
+    state.challengeBusy = false;
+    if (els.challengeName) els.challengeName.textContent = user.username;
+    if (els.challengeCopy) {
+      els.challengeCopy.textContent = user.isOnline
+        ? 'Usuario online agora. Clique para enviar desafio speaking com 25 cartas.'
+        : 'Usuario offline no momento. Quando ele ficar online voce consegue desafiar.';
+    }
+    if (els.challengeActionBtn) {
+      els.challengeActionBtn.disabled = !user.isOnline;
+    }
+    setChallengeStatus('');
+    if (els.challengeModal) els.challengeModal.classList.add('is-visible');
+  }
+
   function currentViewerEntry(rows) {
     if (state.currentUser?.id) {
       return state.viewer || rows.find((entry) => entry.userId === state.currentUser.id) || null;
@@ -171,6 +227,13 @@
       flashcardsCount: guestCount,
       premiumActive: false
     };
+  }
+
+  function rowMetaText(entry) {
+    const parts = [];
+    parts.push(entry.premiumActive ? 'Premium ativo' : 'Free');
+    parts.push(entry.isOnline ? 'Online' : 'Offline');
+    return parts.join(' • ');
   }
 
   function renderRows(rows) {
@@ -188,29 +251,32 @@
       .sort((left, right) => (left.rank || 999999) - (right.rank || 999999));
 
     const rowMarkup = displayRows.map((entry) => `
-      <div class="users-row${isAdminViewer() && entry.userId !== state.currentUser?.id ? ' is-admin-target' : ''}" data-user-id="${entry.userId}">
+      <div class="users-row${entry.isOnline ? ' is-online' : ''}${isAdminViewer() && entry.userId !== state.currentUser?.id ? ' is-admin-target' : ''}" data-user-id="${entry.userId}">
         <div class="users-avatar">
           <img src="${escapeHtml(entry.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg')}" alt="${escapeHtml(entry.username)}">
           <span class="users-rank-badge">${escapeHtml(entry.rank || 0)}</span>
         </div>
         <div class="users-main">
           <span class="users-name">${escapeHtml(entry.username)}</span>
-          <span class="users-meta">${entry.premiumActive ? 'Premium ativo' : 'Free'}</span>
+          <span class="users-meta">${escapeHtml(rowMetaText(entry))}</span>
         </div>
         <div class="users-count">${escapeHtml(entry.flashcardsCount || 0)}</div>
       </div>
     `).join('');
 
     els.usersList.innerHTML = rowMarkup;
-    if (isAdminViewer()) {
-      Array.from(els.usersList.querySelectorAll('[data-user-id]')).forEach((rowEl) => {
-        rowEl.addEventListener('click', () => {
-          const userId = Number(rowEl.getAttribute('data-user-id')) || 0;
-          const user = state.rows.find((entry) => entry.userId === userId);
+    Array.from(els.usersList.querySelectorAll('[data-user-id]')).forEach((rowEl) => {
+      rowEl.addEventListener('click', () => {
+        const userId = Number(rowEl.getAttribute('data-user-id')) || 0;
+        const user = state.rows.find((entry) => entry.userId === userId);
+        if (!user || user.userId === state.currentUser?.id) return;
+        if (isAdminViewer()) {
           openAdminModal(user);
-        });
+          return;
+        }
+        openChallengeModal(user);
       });
-    }
+    });
   }
 
   async function fetchSessionUser() {
@@ -225,8 +291,7 @@
   }
 
   async function loadUsers(message) {
-    els.usersStatus.textContent = message || 'Carregando ranking...';
-
+    setUsersStatus(message || 'Carregando ranking...');
     try {
       const response = await fetch(buildApiUrl('/api/users/flashcards?limit=50'), {
         headers: buildAuthHeaders(),
@@ -237,19 +302,147 @@
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.message || 'Falha ao carregar usuarios.');
       }
-
       const users = normalizeUsers(payload);
       state.rows = users;
       state.viewer = normalizeViewer(payload.viewer);
       renderRows(users);
       const viewer = currentViewerEntry(users);
-      els.usersStatus.textContent = viewer?.rank
-        ? `Voce esta em ${viewer.rank} lugar`
-        : 'Ranking carregado.';
+      setUsersStatus(viewer?.rank ? `Voce esta em ${viewer.rank} lugar` : 'Ranking carregado.');
     } catch (_error) {
       renderRows([]);
       state.rows = [];
-      els.usersStatus.textContent = 'Nao consegui carregar o ranking agora.';
+      setUsersStatus('Nao consegui carregar o ranking agora.');
+    }
+  }
+
+  async function pingPresence() {
+    if (!state.currentUser?.id) return;
+    try {
+      await fetch(buildApiUrl('/api/speaking/presence/ping'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: '{}'
+      });
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  function closeIncomingModal() {
+    state.incomingChallengeId = 0;
+    if (els.incomingModal) els.incomingModal.classList.remove('is-visible');
+  }
+
+  function openIncomingModal(challenge) {
+    const challengeId = Number(challenge?.challengeId) || 0;
+    if (!challengeId || state.incomingChallengeId === challengeId) return;
+    state.incomingChallengeId = challengeId;
+    if (els.incomingAvatar) {
+      els.incomingAvatar.src = challenge?.challenger?.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg';
+    }
+    if (els.incomingCopy) {
+      const username = challenge?.challenger?.username || 'Usuario';
+      els.incomingCopy.textContent = `${username} te desafiou pra um speaking`;
+    }
+    if (els.incomingModal) els.incomingModal.classList.add('is-visible');
+  }
+
+  async function respondIncomingChallenge(action) {
+    if (!state.incomingChallengeId) return;
+    const challengeId = state.incomingChallengeId;
+    els.incomingAcceptBtn.disabled = true;
+    els.incomingRejectBtn.disabled = true;
+    try {
+      const response = await fetch(buildApiUrl('/api/speaking/challenges/respond'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ challengeId, action })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Falha ao responder desafio.');
+      }
+      closeIncomingModal();
+      if (action === 'accept' && payload?.sessionId) {
+        window.location.href = `/speaking?session=${encodeURIComponent(payload.sessionId)}`;
+      } else {
+        setUsersStatus('Desafio recusado.');
+      }
+    } catch (error) {
+      setUsersStatus(error?.message || 'Falha ao responder desafio.');
+    } finally {
+      els.incomingAcceptBtn.disabled = false;
+      els.incomingRejectBtn.disabled = false;
+    }
+  }
+
+  async function pollChallenges() {
+    if (!state.currentUser?.id || state.redirectedByChallenge) return;
+    try {
+      const response = await fetch(buildApiUrl('/api/speaking/challenges/poll'), {
+        headers: buildAuthHeaders(),
+        cache: 'no-store',
+        credentials: 'include'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) return;
+
+      const incoming = payload.incomingChallenge || null;
+      if (incoming && incoming.status === 'pending') {
+        openIncomingModal(incoming);
+      } else {
+        closeIncomingModal();
+      }
+
+      const outgoing = payload.outgoingChallenge || null;
+      if (!outgoing) return;
+      state.outgoingChallengeId = Number(outgoing.challengeId) || 0;
+      if (outgoing.status === 'accepted' && outgoing.sessionId && !state.redirectedByChallenge) {
+        state.redirectedByChallenge = true;
+        window.location.href = `/speaking?session=${encodeURIComponent(outgoing.sessionId)}`;
+        return;
+      }
+      if (outgoing.status === 'rejected') {
+        setUsersStatus('Usuario recusou seu pedido.');
+      } else if (outgoing.status === 'expired') {
+        setUsersStatus('Seu desafio expirou.');
+      } else if (outgoing.status === 'pending') {
+        const opponentName = outgoing?.opponent?.username || 'Usuario';
+        setUsersStatus(`Aguardando resposta de ${opponentName}...`);
+      }
+    } catch (_error) {
+      // ignore polling errors
+    }
+  }
+
+  async function sendChallenge() {
+    if (!state.challengeTarget || state.challengeBusy) return;
+    state.challengeBusy = true;
+    if (els.challengeActionBtn) els.challengeActionBtn.disabled = true;
+    setChallengeStatus('Enviando desafio...');
+    try {
+      const response = await fetch(buildApiUrl('/api/speaking/challenges/send'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          opponentUserId: state.challengeTarget.userId
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Nao foi possivel enviar o desafio.');
+      }
+      setChallengeStatus('Desafio enviado. Aguardando resposta...');
+      closeChallengeModal();
+      await pollChallenges();
+    } catch (error) {
+      setChallengeStatus(error?.message || 'Nao foi possivel enviar o desafio.');
+      if (els.challengeActionBtn) els.challengeActionBtn.disabled = false;
+    } finally {
+      state.challengeBusy = false;
     }
   }
 
@@ -305,9 +498,24 @@
     }
   }
 
+  function startBackgroundLoops() {
+    window.setInterval(() => {
+      void pingPresence();
+    }, PRESENCE_PING_MS);
+    window.setInterval(() => {
+      void loadUsers();
+    }, USERS_REFRESH_MS);
+    window.setInterval(() => {
+      void pollChallenges();
+    }, CHALLENGE_POLL_MS);
+  }
+
   (async () => {
     state.currentUser = await fetchSessionUser();
+    await pingPresence();
     await loadUsers();
+    await pollChallenges();
+    startBackgroundLoops();
   })();
 
   els.closeAdminModalBtn?.addEventListener('click', closeAdminModal);
@@ -315,6 +523,8 @@
   els.grant30Btn?.addEventListener('click', () => { void grantPremium(30); });
   els.grant365Btn?.addEventListener('click', () => { void grantPremium(365); });
   els.deleteUserBtn?.addEventListener('click', () => { void deleteUser(); });
+  els.challengeActionBtn?.addEventListener('click', () => { void sendChallenge(); });
+  els.challengeCloseBtn?.addEventListener('click', closeChallengeModal);
+  els.incomingAcceptBtn?.addEventListener('click', () => { void respondIncomingChallenge('accept'); });
+  els.incomingRejectBtn?.addEventListener('click', () => { void respondIncomingChallenge('reject'); });
 })();
-
-

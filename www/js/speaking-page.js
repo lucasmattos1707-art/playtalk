@@ -1,8 +1,8 @@
 (function initPlaytalkSpeakingPage() {
-  const DATA_MANIFEST_REMOTE_PATH = '/api/flashcards/manifest';
-  const FLASHCARDS_LOCAL_SOURCE_PREFIX = 'allcards';
   const SPEAKING_STATS_KEY = 'playtalk-speaking-general-v1';
   const FINAL_BOX_DURATION_MS = 10000;
+  const DUEL_POLL_MS = 2000;
+  const PRESENCE_PING_MS = 15000;
 
   const els = {
     home: document.getElementById('speakingHome'),
@@ -11,7 +11,10 @@
     startSpeakingBtn: document.getElementById('startSpeakingBtn'),
     homeStatus: document.getElementById('homeStatus'),
     speakingPercent: document.getElementById('speakingPercent'),
+    enemySpeakingPercent: document.getElementById('enemySpeakingPercent'),
     gameProgressBar: document.getElementById('gameProgressBar'),
+    enemyProgressWrap: document.getElementById('enemyProgressWrap'),
+    enemyProgressBar: document.getElementById('enemyProgressBar'),
     progressLabel: document.getElementById('progressLabel'),
     cardImageWrap: document.getElementById('cardImageWrap'),
     cardEnglishWord: document.getElementById('cardEnglishWord'),
@@ -20,21 +23,39 @@
     sendSpeakingBtn: document.getElementById('sendSpeakingBtn'),
     gameStatus: document.getElementById('gameStatus'),
     finalResultBox: document.getElementById('finalResultBox'),
+    winnerCard: document.getElementById('winnerCard'),
+    winnerAvatar: document.getElementById('winnerAvatar'),
+    winnerName: document.getElementById('winnerName'),
     successAudio: document.getElementById('successAudio')
   };
 
   const state = {
     loading: false,
-    allCards: [],
     activeCards: [],
     currentIndex: 0,
     scores: [],
     finalTimer: 0,
-    speakingStats: readSpeakingStats()
+    speakingStats: readSpeakingStats(),
+    duel: {
+      sessionId: readSessionId(),
+      enabled: false,
+      meFinished: false,
+      rivalProgress: 0,
+      rivalPercent: 0,
+      rivalGeneralPercent: 0,
+      rivalName: 'Adversario',
+      pollTimer: 0,
+      pingTimer: 0
+    }
   };
 
   function safeText(value) {
     return typeof value === 'string' ? value.trim() : '';
+  }
+
+  function readSessionId() {
+    const params = new URLSearchParams(window.location.search || '');
+    return safeText(params.get('session'));
   }
 
   function buildApiUrl(path) {
@@ -42,6 +63,13 @@
       return window.PlaytalkApi.url(path);
     }
     return path;
+  }
+
+  function buildAuthHeaders(extraHeaders) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function') {
+      return window.PlaytalkApi.authHeaders(extraHeaders);
+    }
+    return { ...(extraHeaders || {}) };
   }
 
   function setHomeStatus(text, tone) {
@@ -164,19 +192,6 @@
     return dp[expectedWords.length][spokenWords.length];
   }
 
-  function calculateNormalizedSpeechMatchPercent(expected, spoken) {
-    if (!expected) return 0;
-    if (expected === spoken) return 100;
-    const substringPercent = (longestCommonSubstringLength(expected, spoken) / Math.max(expected.length, 1)) * 100;
-    const expectedWords = expected.split(' ').filter(Boolean);
-    const spokenWords = spoken.split(' ').filter(Boolean);
-    const wordLcs = longestCommonWordSubsequenceLength(expectedWords, spokenWords);
-    const wordPercent = expectedWords.length ? (wordLcs / expectedWords.length) * 100 : 0;
-    const maxLen = Math.max(expected.length, spoken.length, 1);
-    const editPercent = Math.max(0, (1 - (levenshteinDistance(expected, spoken) / maxLen)) * 100);
-    return Math.max(substringPercent, wordPercent, editPercent);
-  }
-
   function calculateSpeechMatchPercent(expected, spoken) {
     const expectedCandidates = getSpeechComparisonCandidates(expected);
     const spokenCandidates = getSpeechComparisonCandidates(spoken);
@@ -184,142 +199,47 @@
     let best = 0;
     expectedCandidates.forEach((expectedCandidate) => {
       spokenCandidates.forEach((spokenCandidate) => {
-        best = Math.max(best, calculateNormalizedSpeechMatchPercent(expectedCandidate, spokenCandidate));
+        const substringPercent = (longestCommonSubstringLength(expectedCandidate, spokenCandidate) / Math.max(expectedCandidate.length, 1)) * 100;
+        const expectedWords = expectedCandidate.split(' ').filter(Boolean);
+        const spokenWords = spokenCandidate.split(' ').filter(Boolean);
+        const wordLcs = longestCommonWordSubsequenceLength(expectedWords, spokenWords);
+        const wordPercent = expectedWords.length ? (wordLcs / expectedWords.length) * 100 : 0;
+        const maxLen = Math.max(expectedCandidate.length, spokenCandidate.length, 1);
+        const editPercent = Math.max(0, (1 - (levenshteinDistance(expectedCandidate, spokenCandidate) / maxLen)) * 100);
+        best = Math.max(best, substringPercent, wordPercent, editPercent);
       });
     });
     return Math.max(0, Math.min(100, Math.round(best)));
   }
 
-  function updateSpeakingHeader() {
+  function updateTopPercents() {
     const sessionSum = state.scores.reduce((acc, value) => acc + value, 0);
     const sessionCount = state.scores.length;
     const totalSum = state.speakingStats.sum + sessionSum;
     const totalCount = state.speakingStats.count + sessionCount;
-    const percent = totalCount > 0 ? Math.round(totalSum / totalCount) : 0;
-    els.speakingPercent.textContent = `Speaking ${percent}%`;
+    const myPercent = totalCount > 0 ? Math.round(totalSum / totalCount) : 0;
+    els.speakingPercent.textContent = `Speaking ${myPercent}%`;
+    if (state.duel.enabled) {
+      els.enemySpeakingPercent.textContent = `Speaking rival ${Math.round(state.duel.rivalGeneralPercent || state.duel.rivalPercent || 0)}%`;
+      els.enemyProgressWrap.hidden = false;
+    } else {
+      els.enemySpeakingPercent.textContent = 'Modo: first-star';
+      els.enemyProgressWrap.hidden = true;
+    }
   }
 
-  function updateProgress() {
+  function updateProgressBars() {
     const total = Math.max(1, state.activeCards.length);
     const completed = Math.min(state.currentIndex, total);
-    const progress = (completed / total) * 100;
-    els.gameProgressBar.style.width = `${progress.toFixed(2)}%`;
-    els.progressLabel.textContent = `${completed}/${total} concluidas`;
-  }
-
-  function shuffle(array) {
-    const clone = array.slice();
-    for (let i = clone.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const temp = clone[i];
-      clone[i] = clone[j];
-      clone[j] = temp;
+    const myProgressPercent = (completed / total) * 100;
+    els.gameProgressBar.style.width = `${myProgressPercent.toFixed(2)}%`;
+    if (state.duel.enabled) {
+      const rivalProgressPercent = (Math.min(state.duel.rivalProgress, total) / total) * 100;
+      els.enemyProgressBar.style.width = `${rivalProgressPercent.toFixed(2)}%`;
+      els.progressLabel.textContent = `Voce ${completed}/${total} • Rival ${Math.min(state.duel.rivalProgress, total)}/${total}`;
+    } else {
+      els.progressLabel.textContent = `${completed}/${total} concluidas`;
     }
-    return clone;
-  }
-
-  function slug(value) {
-    return normalizeText(value).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'card';
-  }
-
-  function flattenPayload(fileName, payload, options) {
-    const title = safeText(payload?.title) || fileName.replace(/\.json$/i, '');
-    const sourceKey = safeText(options?.sourceKey || fileName) || fileName;
-    const idSource = safeText(options?.idSource || fileName) || fileName;
-    const items = Array.isArray(payload) ? payload : (Array.isArray(payload?.items) ? payload.items : []);
-    return items.map((item, index) => ({
-      id: `${slug(idSource)}-${slug(title)}-${index}`,
-      source: sourceKey,
-      imageUrl: safeText(item?.imagem || item?.image),
-      english: safeText(item?.nomeIngles || item?.english || item?.word),
-      portuguese: safeText(item?.nomePortugues || item?.portuguese || item?.translation),
-      audioUrl: safeText(item?.audio || item?.audioUrl)
-    }));
-  }
-
-  function buildFlashcardsPublicUrl(objectKey) {
-    const encodedKey = safeText(objectKey)
-      .split('/')
-      .filter(Boolean)
-      .map((part) => encodeURIComponent(part))
-      .join('/');
-    return encodedKey ? `/${FLASHCARDS_LOCAL_SOURCE_PREFIX}/${encodedKey}` : '';
-  }
-
-  function isFlashcardsDeckPath(value) {
-    const text = safeText(value);
-    if (!text) return false;
-    if (/^https?:\/\//i.test(text)) {
-      try {
-        const parsed = new URL(text);
-        const parsedPath = decodeURIComponent(String(parsed.pathname || '')).replace(/^\/+/, '');
-        return parsedPath.toLowerCase().endsWith('.json') && parsedPath.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`);
-      } catch (_error) {
-        return false;
-      }
-    }
-    const normalized = text.replace(/^\/+/, '');
-    return normalized.toLowerCase().endsWith('.json') && normalized.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`);
-  }
-
-  function resolveManifestDeckPath(file) {
-    const fallbackName = safeText(file?.name) || safeText(file?.title) || 'deck.json';
-    const candidates = [safeText(file?.path), safeText(file?.source), safeText(file?.name)].filter(Boolean);
-    for (const candidate of candidates) {
-      if (isFlashcardsDeckPath(candidate)) {
-        return /^https?:\/\//i.test(candidate) ? candidate : `/${candidate.replace(/^\/+/, '')}`;
-      }
-      const normalized = candidate.replace(/^\/+/, '');
-      if (/^[^/]+\.json$/i.test(normalized)) return buildFlashcardsPublicUrl(normalized);
-      if (normalized.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`) && normalized.toLowerCase().endsWith('.json')) {
-        return `/${normalized}`;
-      }
-    }
-    return buildFlashcardsPublicUrl(fallbackName);
-  }
-
-  function withNoCacheUrl(value) {
-    const normalized = safeText(value);
-    if (!normalized) return '';
-    const separator = normalized.includes('?') ? '&' : '?';
-    return `${normalized}${separator}_pt=${Date.now()}`;
-  }
-
-  async function loadAllCards() {
-    if (state.allCards.length) return state.allCards;
-    const response = await fetch(withNoCacheUrl(buildApiUrl(DATA_MANIFEST_REMOTE_PATH)), { cache: 'no-store' });
-    const payload = await response.json().catch(() => ({}));
-    const manifestFiles = Array.isArray(payload?.files)
-      ? payload.files
-      : (Array.isArray(payload?.data?.files) ? payload.data.files : []);
-    if (!response.ok || !manifestFiles.length) {
-      throw new Error(payload?.message || 'Nao foi possivel carregar o manifesto de flashcards.');
-    }
-
-    const files = manifestFiles.map((file) => ({
-      name: file.name || file.path || file.source || 'deck.json',
-      path: resolveManifestDeckPath(file),
-      sourceKey: safeText(file?.source || file?.name || file?.path),
-      idSource: safeText(file?.source || file?.name || file?.path)
-    }));
-
-    const deckResults = await Promise.allSettled(files.map(async (file) => {
-      const deckResponse = await fetch(withNoCacheUrl(buildApiUrl(file.path)), { cache: 'no-store' });
-      if (!deckResponse.ok) return [];
-      const deckPayload = await deckResponse.json().catch(() => ({}));
-      return flattenPayload(file.name, deckPayload, { sourceKey: file.sourceKey, idSource: file.idSource });
-    }));
-
-    const cards = deckResults
-      .flatMap((result) => (result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : []))
-      .filter((card) => safeText(card.english));
-
-    if (!cards.length) {
-      throw new Error('Nenhum flashcard valido foi encontrado para speaking.');
-    }
-
-    state.allCards = cards;
-    return cards;
   }
 
   function renderCard() {
@@ -328,64 +248,132 @@
       finishGame();
       return;
     }
-
     const card = state.activeCards[state.currentIndex];
-    const imageUrl = safeText(card.imageUrl);
+    const imageUrl = safeText(card?.imageUrl);
     if (imageUrl) {
-      els.cardImageWrap.innerHTML = `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(card.english || 'Flashcard')}">`;
+      els.cardImageWrap.innerHTML = `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(card?.english || 'Flashcard')}">`;
     } else {
       els.cardImageWrap.innerHTML = '<div class="card-fallback">Sem imagem nesta carta</div>';
     }
-
-    els.cardEnglishWord.textContent = card.english || '-';
-    els.cardPortugueseWord.textContent = card.portuguese || '';
-    setGameStatus(`Carta ${state.currentIndex + 1} de ${total}. Fale em ingles e envie.`, '');
-  }
-
-  function updateAfterSubmission(score, transcript) {
-    state.scores.push(score);
-    state.currentIndex += 1;
-    updateSpeakingHeader();
-    updateProgress();
-    setGameStatus(`Transcricao: "${transcript}" | Pronuncia: ${score}%`, 'is-score');
-    window.setTimeout(renderCard, 320);
-  }
-
-  function finishGame() {
-    const sessionCount = state.scores.length;
-    const sessionSum = state.scores.reduce((acc, value) => acc + value, 0);
-    const finalPercent = sessionCount ? Math.round(sessionSum / sessionCount) : 0;
-    state.speakingStats.sum += sessionSum;
-    state.speakingStats.count += sessionCount;
-    state.speakingStats.sessions += 1;
-    saveSpeakingStats();
-    updateSpeakingHeader();
-    els.finalResultBox.textContent = `${finalPercent}% seu resultado final`;
-    els.finalResultBox.classList.add('is-visible');
-    setGameStatus('Sessao concluida. Resultado final exibido por 10 segundos.', 'is-score');
-    els.sendSpeakingBtn.disabled = true;
-    els.listenCardBtn.disabled = true;
-
-    if (state.finalTimer) {
-      window.clearTimeout(state.finalTimer);
-      state.finalTimer = 0;
+    els.cardEnglishWord.textContent = card?.english || '-';
+    els.cardPortugueseWord.textContent = card?.portuguese || '';
+    if (!state.duel.enabled) {
+      setGameStatus(`Carta ${state.currentIndex + 1} de ${total}. Fale em ingles e envie.`, '');
     }
+  }
 
-    state.finalTimer = window.setTimeout(() => {
-      els.finalResultBox.classList.remove('is-visible');
-      els.game.classList.remove('is-active');
-      els.home.hidden = false;
-      els.startSpeakingBtn.disabled = false;
-      els.sendSpeakingBtn.disabled = false;
-      els.listenCardBtn.disabled = false;
-      setHomeStatus('Sessao finalizada. Escolha outra quantidade e jogue de novo.', '');
-      setGameStatus('', '');
-      state.activeCards = [];
-      state.currentIndex = 0;
-      state.scores = [];
-      updateProgress();
-      updateSpeakingHeader();
-    }, FINAL_BOX_DURATION_MS);
+  async function loadSinglePlayerCards(count) {
+    const response = await fetch(buildApiUrl(`/api/speaking/cards?count=${encodeURIComponent(String(count))}`), {
+      credentials: 'include',
+      cache: 'no-store',
+      headers: buildAuthHeaders()
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !Array.isArray(payload.cards) || !payload.cards.length) {
+      throw new Error(payload?.message || 'Nao foi possivel carregar as cartas de speaking.');
+    }
+    return payload.cards;
+  }
+
+  async function pingPresence() {
+    try {
+      await fetch(buildApiUrl('/api/speaking/presence/ping'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: '{}'
+      });
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  async function fetchDuelSession() {
+    if (!state.duel.sessionId) return null;
+    const response = await fetch(buildApiUrl(`/api/speaking/sessions/${encodeURIComponent(state.duel.sessionId)}`), {
+      credentials: 'include',
+      cache: 'no-store',
+      headers: buildAuthHeaders()
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.session) {
+      throw new Error(payload?.message || 'Nao consegui carregar a sessao do duelo.');
+    }
+    return payload.session;
+  }
+
+  function syncDuelView(session) {
+    const meRole = safeText(session?.meRole);
+    const isChallenger = meRole === 'challenger';
+    const rival = isChallenger ? session?.opponent : session?.challenger;
+    state.duel.rivalName = safeText(rival?.username || 'Adversario') || 'Adversario';
+    state.duel.rivalProgress = Math.max(0, Number(session?.rivalProgress) || 0);
+    state.duel.rivalPercent = Math.max(0, Number(session?.rivalPercent) || 0);
+    state.duel.rivalGeneralPercent = Math.max(0, Number(session?.rivalGeneralPercent) || 0);
+    state.duel.meFinished = Boolean(session?.meFinished);
+    updateTopPercents();
+    updateProgressBars();
+
+    if (session?.winner?.userId) {
+      els.winnerName.textContent = `Vencedor ${session.winner.username || 'Usuario'}`;
+      els.winnerAvatar.src = session.winner.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg';
+      els.winnerCard.classList.add('is-visible');
+    }
+  }
+
+  async function syncDuelProgress(forceFinished) {
+    if (!state.duel.enabled || !state.duel.sessionId) return;
+    const total = Math.max(1, state.activeCards.length);
+    const completed = Math.min(state.currentIndex, total);
+    const sessionAvg = state.scores.length
+      ? Math.round(state.scores.reduce((acc, value) => acc + value, 0) / state.scores.length)
+      : 0;
+    try {
+      await fetch(buildApiUrl(`/api/speaking/sessions/${encodeURIComponent(state.duel.sessionId)}/progress`), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          progress: completed,
+          percent: sessionAvg,
+          finished: Boolean(forceFinished)
+        })
+      });
+    } catch (_error) {
+      // ignore sync failures; polling reconciles
+    }
+  }
+
+  async function pollDuelSession() {
+    if (!state.duel.enabled || !state.duel.sessionId) return;
+    try {
+      const session = await fetchDuelSession();
+      syncDuelView(session);
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  function startDuelLoops() {
+    if (state.duel.pollTimer) window.clearInterval(state.duel.pollTimer);
+    if (state.duel.pingTimer) window.clearInterval(state.duel.pingTimer);
+    state.duel.pollTimer = window.setInterval(() => {
+      void pollDuelSession();
+    }, DUEL_POLL_MS);
+    state.duel.pingTimer = window.setInterval(() => {
+      void pingPresence();
+    }, PRESENCE_PING_MS);
+  }
+
+  function stopDuelLoops() {
+    if (state.duel.pollTimer) {
+      window.clearInterval(state.duel.pollTimer);
+      state.duel.pollTimer = 0;
+    }
+    if (state.duel.pingTimer) {
+      window.clearInterval(state.duel.pingTimer);
+      state.duel.pingTimer = 0;
+    }
   }
 
   async function playSuccessSound() {
@@ -406,7 +394,6 @@
       setGameStatus('Essa carta nao possui audio.', 'is-error');
       return;
     }
-
     try {
       const audio = new Audio(audioUrl);
       await audio.play();
@@ -415,28 +402,53 @@
     }
   }
 
-  async function handleSendSpeaking() {
-    if (!state.activeCards.length) return;
-    const card = state.activeCards[state.currentIndex];
-    if (!card) return;
-    const stt = window.PlaytalkOpenAiStt;
-    if (!stt || typeof stt.recordAudio !== 'function' || typeof stt.transcribeBlob !== 'function') {
-      setGameStatus('Reconhecimento de voz nao disponivel neste dispositivo.', 'is-error');
-      return;
+  async function captureSpeechFast(language) {
+    const nativeSpeech = window.PlaytalkNativeSpeech;
+    if (nativeSpeech && typeof nativeSpeech.isSupported === 'function' && nativeSpeech.isSupported()) {
+      const granted = typeof nativeSpeech.ensurePermissions === 'function'
+        ? await nativeSpeech.ensurePermissions()
+        : true;
+      if (granted && typeof nativeSpeech.captureOnce === 'function') {
+        return nativeSpeech.captureOnce({
+          language: language || 'en-US',
+          maxResults: 5,
+          maxDurationMs: 7000
+        });
+      }
     }
 
+    const openAiStt = window.PlaytalkOpenAiStt;
+    if (!openAiStt || typeof openAiStt.captureAndTranscribe !== 'function') {
+      throw new Error('Reconhecimento de voz nao disponivel neste dispositivo.');
+    }
+
+    return openAiStt.captureAndTranscribe({
+      language: 'en',
+      maxDurationMs: 3200,
+      onRecordingStart: () => setGameStatus('Ouvindo...', ''),
+      onRecordingStop: () => setGameStatus('Analisando...', '')
+    });
+  }
+
+  async function handleSendSpeaking() {
+    if (!state.activeCards.length || state.duel.meFinished) return;
+    const card = state.activeCards[state.currentIndex];
+    if (!card) return;
     els.sendSpeakingBtn.disabled = true;
     els.listenCardBtn.disabled = true;
-    setGameStatus('Gravando voz...', '');
+    setGameStatus('Ouvindo...', '');
 
     try {
-      const blob = await stt.recordAudio({ maxDurationMs: 4500 });
-      setGameStatus('Transcrevendo audio...', '');
-      const result = await stt.transcribeBlob(blob, { language: 'en' });
-      const transcript = safeText(result?.text);
+      const transcript = safeText(await captureSpeechFast('en-US'));
       const score = calculateSpeechMatchPercent(card.english, transcript);
       await playSuccessSound();
-      updateAfterSubmission(score, transcript || '(vazio)');
+      state.scores.push(score);
+      state.currentIndex += 1;
+      updateTopPercents();
+      updateProgressBars();
+      setGameStatus(`Pronuncia: ${score}%`, 'is-score');
+      await syncDuelProgress(false);
+      window.setTimeout(renderCard, 220);
     } catch (error) {
       setGameStatus(error?.message || 'Falha no envio de speaking.', 'is-error');
     } finally {
@@ -445,32 +457,91 @@
     }
   }
 
-  async function startGame() {
+  function finishGame() {
+    const sessionCount = state.scores.length;
+    const sessionSum = state.scores.reduce((acc, value) => acc + value, 0);
+    const finalPercent = sessionCount ? Math.round(sessionSum / sessionCount) : 0;
+    state.speakingStats.sum += sessionSum;
+    state.speakingStats.count += sessionCount;
+    state.speakingStats.sessions += 1;
+    saveSpeakingStats();
+    updateTopPercents();
+    els.finalResultBox.textContent = `${finalPercent}% seu resultado final`;
+    els.finalResultBox.classList.add('is-visible');
+    els.listenCardBtn.disabled = true;
+    els.sendSpeakingBtn.disabled = true;
+    void syncDuelProgress(true);
+
+    if (state.duel.enabled) {
+      state.duel.meFinished = true;
+      setGameStatus('Voce concluiu suas cartas. Aguardando resultado final...', 'is-score');
+      return;
+    }
+
+    setGameStatus('Sessao concluida. Resultado final exibido por 10 segundos.', 'is-score');
+    if (state.finalTimer) {
+      window.clearTimeout(state.finalTimer);
+      state.finalTimer = 0;
+    }
+    state.finalTimer = window.setTimeout(() => {
+      els.finalResultBox.classList.remove('is-visible');
+      els.game.classList.remove('is-active');
+      els.home.hidden = false;
+      els.startSpeakingBtn.disabled = false;
+      els.sendSpeakingBtn.disabled = false;
+      els.listenCardBtn.disabled = false;
+      setHomeStatus('Sessao finalizada. Escolha outra quantidade e jogue de novo.', '');
+      setGameStatus('', '');
+      state.activeCards = [];
+      state.currentIndex = 0;
+      state.scores = [];
+      updateProgressBars();
+      updateTopPercents();
+    }, FINAL_BOX_DURATION_MS);
+  }
+
+  async function startSinglePlayer() {
     if (state.loading) return;
     state.loading = true;
     els.startSpeakingBtn.disabled = true;
-    setHomeStatus('Carregando cartas disponiveis...', '');
-
+    setHomeStatus('Carregando cartas...', '');
     try {
       const selectedCount = Math.max(1, Number.parseInt(els.cardCountSelect.value, 10) || 10);
-      const allCards = await loadAllCards();
-      const pool = shuffle(allCards);
-      state.activeCards = pool.slice(0, Math.min(selectedCount, pool.length));
+      state.activeCards = await loadSinglePlayerCards(selectedCount);
       state.currentIndex = 0;
       state.scores = [];
-      updateSpeakingHeader();
-      updateProgress();
-      els.finalResultBox.classList.remove('is-visible');
+      state.duel.enabled = false;
       els.home.hidden = true;
       els.game.classList.add('is-active');
+      els.finalResultBox.classList.remove('is-visible');
+      els.winnerCard.classList.remove('is-visible');
+      updateTopPercents();
+      updateProgressBars();
       setHomeStatus('', '');
       renderCard();
     } catch (error) {
-      setHomeStatus(error?.message || 'Nao foi possivel iniciar o speaking.', 'is-error');
+      setHomeStatus(error?.message || 'Nao foi possivel iniciar speaking.', 'is-error');
       els.startSpeakingBtn.disabled = false;
     } finally {
       state.loading = false;
     }
+  }
+
+  async function startDuelMode() {
+    state.duel.enabled = true;
+    els.home.hidden = true;
+    els.game.classList.add('is-active');
+    els.finalResultBox.classList.remove('is-visible');
+    els.winnerCard.classList.remove('is-visible');
+    setGameStatus('Carregando duelo...', '');
+    await pingPresence();
+    const session = await fetchDuelSession();
+    state.activeCards = Array.isArray(session.cards) ? session.cards : [];
+    state.currentIndex = Math.max(0, Number(session.meProgress) || 0);
+    state.scores = [];
+    syncDuelView(session);
+    renderCard();
+    startDuelLoops();
   }
 
   function escapeHtml(value) {
@@ -484,7 +555,7 @@
 
   function bindEvents() {
     els.startSpeakingBtn?.addEventListener('click', () => {
-      void startGame();
+      void startSinglePlayer();
     });
     els.listenCardBtn?.addEventListener('click', () => {
       void handleListenCard();
@@ -492,17 +563,31 @@
     els.sendSpeakingBtn?.addEventListener('click', () => {
       void handleSendSpeaking();
     });
+    window.addEventListener('beforeunload', () => {
+      stopDuelLoops();
+    });
   }
 
-  function init() {
-    updateSpeakingHeader();
-    updateProgress();
+  async function init() {
     bindEvents();
+    updateTopPercents();
+    updateProgressBars();
+    if (state.duel.sessionId) {
+      try {
+        await startDuelMode();
+      } catch (error) {
+        setHomeStatus(error?.message || 'Nao foi possivel abrir a sessao de duelo.', 'is-error');
+        els.home.hidden = false;
+        els.game.classList.remove('is-active');
+      }
+    }
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, { once: true });
+    document.addEventListener('DOMContentLoaded', () => {
+      void init();
+    }, { once: true });
   } else {
-    init();
+    void init();
   }
 })();
