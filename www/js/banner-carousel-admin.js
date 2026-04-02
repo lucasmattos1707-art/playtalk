@@ -9,9 +9,11 @@
     focusedSlot: 1,
     slotCount: 4,
     defaultPrompt: '',
+    viewMode: 'desktop',
     banners: new Map(),
     controls: {
       root: null,
+      modeBtn: null,
       prevBtn: null,
       nextBtn: null,
       saveBtn: null,
@@ -45,6 +47,26 @@
     return Math.max(1, toInteger(state.slotCount, 4));
   }
 
+  function isMobileViewport() {
+    return window.matchMedia('(max-width: 640px)').matches;
+  }
+
+  function normalizeVariant(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    return normalized === 'mobile' ? 'mobile' : 'desktop';
+  }
+
+  function resolveDisplayVariant() {
+    if (state.isAdmin) return normalizeVariant(state.viewMode);
+    return isMobileViewport() ? 'mobile' : 'desktop';
+  }
+
+  function applyBodyVariantClass() {
+    const variant = resolveDisplayVariant();
+    document.body.classList.toggle('banner-view-desktop', variant === 'desktop');
+    document.body.classList.toggle('banner-view-mobile', variant === 'mobile');
+  }
+
   function normalizeSlot(slot, fallback = 1) {
     const total = getSlotCount();
     const normalized = toInteger(slot, fallback);
@@ -57,8 +79,7 @@
   function wrapSlot(slot) {
     const total = getSlotCount();
     const normalized = toInteger(slot, 1);
-    const wrapped = ((normalized - 1 + total) % total) + 1;
-    return wrapped;
+    return ((normalized - 1 + total) % total) + 1;
   }
 
   function slotElements(slot) {
@@ -72,11 +93,8 @@
     if (existing) return existing;
     const fallback = {
       slot,
-      imageUrl: '',
-      prompt: '',
-      offsetX: 0,
-      offsetY: 0,
-      sizeAdjustPx: 0
+      desktop: { imageUrl: '', prompt: '', offsetX: 0, offsetY: 0, sizeAdjustPx: 0 },
+      mobile: { imageUrl: '', prompt: '', offsetX: 0, offsetY: 0, sizeAdjustPx: 0 }
     };
     state.banners.set(slot, fallback);
     return fallback;
@@ -111,12 +129,22 @@
     });
   }
 
+  function entryForVariant(entry, variant) {
+    const selected = entry?.[variant] || {};
+    if (variant === 'mobile' && !String(selected.imageUrl || '').trim()) {
+      return entry?.desktop || selected;
+    }
+    return selected;
+  }
+
   function applyBannerToDom(slot, entry) {
+    const variant = resolveDisplayVariant();
+    const selected = entryForVariant(entry, variant);
     slotElements(slot).forEach((item) => {
       const image = item.querySelector('.banner-carousel__media-image');
       if (!image) return;
 
-      const imageUrl = typeof entry?.imageUrl === 'string' ? entry.imageUrl.trim() : '';
+      const imageUrl = typeof selected?.imageUrl === 'string' ? selected.imageUrl.trim() : '';
       if (imageUrl) {
         if (image.getAttribute('src') !== imageUrl) {
           image.setAttribute('src', imageUrl);
@@ -127,9 +155,15 @@
         item.classList.remove('has-image');
       }
 
-      image.style.setProperty('--banner-offset-x', `${toInteger(entry?.offsetX, 0)}px`);
-      image.style.setProperty('--banner-offset-y', `${toInteger(entry?.offsetY, 0)}px`);
-      image.style.setProperty('--banner-size-adjust', `${toInteger(entry?.sizeAdjustPx, 0)}px`);
+      image.style.setProperty('--banner-offset-x', `${toInteger(selected?.offsetX, 0)}px`);
+      image.style.setProperty('--banner-offset-y', `${toInteger(selected?.offsetY, 0)}px`);
+      image.style.setProperty('--banner-size-adjust', `${toInteger(selected?.sizeAdjustPx, 0)}px`);
+    });
+  }
+
+  function renderAllSlots() {
+    state.banners.forEach((entry, slot) => {
+      applyBannerToDom(slot, entry);
     });
   }
 
@@ -158,9 +192,39 @@
     setCarouselStatus(`Banner ${target} selecionado.`);
   }
 
+  function modeIconMarkup(mode) {
+    if (mode === 'mobile') {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8Zm3 17h2a1 1 0 1 1-2 0Z"/></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5v2h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2H6a2 2 0 0 1-2-2V5Z"/></svg>';
+  }
+
+  function syncModeButtonUi() {
+    if (!state.controls.modeBtn) return;
+    const mode = normalizeVariant(state.viewMode);
+    state.controls.modeBtn.innerHTML = modeIconMarkup(mode);
+    state.controls.modeBtn.setAttribute('aria-label', mode === 'desktop' ? 'Modo desktop ativo' : 'Modo mobile ativo');
+    state.controls.modeBtn.title = mode === 'desktop' ? 'Desktop' : 'Mobile';
+    state.controls.modeBtn.dataset.mode = mode;
+  }
+
+  function setMode(mode) {
+    state.viewMode = normalizeVariant(mode);
+    applyBodyVariantClass();
+    syncModeButtonUi();
+    renderAllSlots();
+    syncEditingClass();
+    setCarouselStatus(`Modo ${state.viewMode === 'desktop' ? 'desktop' : 'mobile'} ativo.`);
+  }
+
+  function toggleMode() {
+    if (!state.isAdmin || state.busy) return;
+    setMode(state.viewMode === 'desktop' ? 'mobile' : 'desktop');
+  }
+
   function syncControlsDisabled() {
     const disabled = !state.isAdmin || state.busy;
-    [state.controls.prevBtn, state.controls.nextBtn, state.controls.saveBtn, state.controls.uploadBtn].forEach((button) => {
+    [state.controls.modeBtn, state.controls.prevBtn, state.controls.nextBtn, state.controls.saveBtn, state.controls.uploadBtn].forEach((button) => {
       if (!button) return;
       button.disabled = disabled;
     });
@@ -177,6 +241,7 @@
     }
 
     const slot = normalizeSlot(state.focusedSlot || 1, 1);
+    const variant = normalizeVariant(state.viewMode);
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = typeof reader.result === 'string' ? reader.result : '';
@@ -189,13 +254,16 @@
       const current = getBannerEntry(slot);
       const nextEntry = {
         ...current,
-        imageUrl: dataUrl
+        [variant]: {
+          ...current[variant],
+          imageUrl: dataUrl
+        }
       };
       state.banners.set(slot, nextEntry);
       state.activeEditSlot = slot;
       applyBannerToDom(slot, nextEntry);
       syncEditingClass();
-      setCarouselStatus(`Imagem carregada no Banner ${slot}. Clique em aprovar para subir no R2.`);
+      setCarouselStatus(`Imagem carregada no Banner ${slot} (${variant}). Clique em aprovar para subir no R2.`);
       input.value = '';
     };
     reader.onerror = () => {
@@ -213,6 +281,7 @@
     controls.setAttribute('aria-label', 'Controles dos banners do admin');
     controls.innerHTML = `
       <div class="banner-admin-controls__row">
+        <button type="button" class="banner-admin-controls__btn" data-banner-action="mode" aria-label="Alternar desktop e mobile"></button>
         <button type="button" class="banner-admin-controls__btn" data-banner-action="next" aria-label="Proximo banner">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.3 5.3a1 1 0 0 1 1.4 1.4L10.41 12l5.3 5.3a1 1 0 0 1-1.42 1.4l-6-6a1 1 0 0 1 0-1.4l6-6Z"/></svg>
         </button>
@@ -243,6 +312,7 @@
   function setupControls() {
     const root = document.getElementById('bannerAdminControls') || buildFallbackControls();
     state.controls.root = root;
+    state.controls.modeBtn = root.querySelector('[data-banner-action="mode"]');
     state.controls.prevBtn = root.querySelector('[data-banner-action="previous"]');
     state.controls.nextBtn = root.querySelector('[data-banner-action="next"]');
     state.controls.saveBtn = root.querySelector('[data-banner-action="approve"]');
@@ -250,6 +320,7 @@
     state.controls.uploadInput = root.querySelector('#bannerAdminUploadInput');
     state.controls.status = root.querySelector('[data-banner-admin-status]');
 
+    state.controls.modeBtn?.addEventListener('click', toggleMode);
     state.controls.nextBtn?.addEventListener('click', () => stepSlot(1));
     state.controls.prevBtn?.addEventListener('click', () => stepSlot(-1));
     state.controls.saveBtn?.addEventListener('click', () => { void saveActiveBanner(); });
@@ -258,6 +329,7 @@
       state.controls.uploadInput.click();
     });
     state.controls.uploadInput?.addEventListener('change', onUploadFileSelected);
+    syncModeButtonUi();
   }
 
   async function fetchSessionUser() {
@@ -291,13 +363,34 @@
     for (const banner of banners) {
       const slot = toInteger(banner?.slot, 0);
       if (slot < 1) continue;
+
+      const desktopImage = typeof banner?.imageUrlDesktop === 'string'
+        ? banner.imageUrlDesktop.trim()
+        : (typeof banner?.imageUrl === 'string' ? banner.imageUrl.trim() : '');
+      const desktopPrompt = typeof banner?.promptDesktop === 'string'
+        ? banner.promptDesktop.trim()
+        : (typeof banner?.prompt === 'string' ? banner.prompt.trim() : '');
+      const desktopOffsetX = toInteger(banner?.offsetXDesktop ?? banner?.offsetX, 0);
+      const desktopOffsetY = toInteger(banner?.offsetYDesktop ?? banner?.offsetY, 0);
+      const desktopSizeAdjust = toInteger(banner?.sizeAdjustPxDesktop ?? banner?.sizeAdjustPx, 0);
+
+      const mobileImageRaw = typeof banner?.imageUrlMobile === 'string' ? banner.imageUrlMobile.trim() : '';
       const nextEntry = {
         slot,
-        imageUrl: typeof banner?.imageUrl === 'string' ? banner.imageUrl.trim() : '',
-        prompt: typeof banner?.prompt === 'string' ? banner.prompt.trim() : '',
-        offsetX: toInteger(banner?.offsetX, 0),
-        offsetY: toInteger(banner?.offsetY, 0),
-        sizeAdjustPx: toInteger(banner?.sizeAdjustPx, 0)
+        desktop: {
+          imageUrl: desktopImage,
+          prompt: desktopPrompt,
+          offsetX: desktopOffsetX,
+          offsetY: desktopOffsetY,
+          sizeAdjustPx: desktopSizeAdjust
+        },
+        mobile: {
+          imageUrl: mobileImageRaw || desktopImage,
+          prompt: typeof banner?.promptMobile === 'string' ? banner.promptMobile.trim() : '',
+          offsetX: toInteger(banner?.offsetXMobile, 0),
+          offsetY: toInteger(banner?.offsetYMobile, 0),
+          sizeAdjustPx: toInteger(banner?.sizeAdjustPxMobile, 0)
+        }
       };
       state.banners.set(slot, nextEntry);
       applyBannerToDom(slot, nextEntry);
@@ -310,7 +403,7 @@
     state.activeEditSlot = normalizeSlot(slot, 1);
     syncEditingClass();
     setSlotBusy(slot, true);
-    setCarouselStatus(`Gerando Banner ${slot}...`);
+    setCarouselStatus(`Gerando Banner ${slot} (${state.viewMode})...`);
     try {
       const response = await fetch(buildApiUrl('/api/admin/banners/generate'), {
         method: 'POST',
@@ -326,17 +419,21 @@
         throw new Error(payload?.error || payload?.details || 'Falha ao gerar banner.');
       }
 
+      const variant = normalizeVariant(state.viewMode);
       const current = getBannerEntry(slot);
       const nextEntry = {
         ...current,
-        imageUrl: typeof payload?.dataUrl === 'string' ? payload.dataUrl : '',
-        prompt: typeof payload?.promptUsed === 'string' ? payload.promptUsed : prompt
+        [variant]: {
+          ...current[variant],
+          imageUrl: typeof payload?.dataUrl === 'string' ? payload.dataUrl : '',
+          prompt: typeof payload?.promptUsed === 'string' ? payload.promptUsed : prompt
+        }
       };
       state.banners.set(slot, nextEntry);
       applyBannerToDom(slot, nextEntry);
       state.activeEditSlot = slot;
       moveToSlot(slot);
-      setCarouselStatus(`Banner ${slot} pronto. Clique em aprovar para salvar.`);
+      setCarouselStatus(`Banner ${slot} pronto no modo ${variant}. Clique em aprovar para salvar.`);
     } catch (error) {
       setCarouselStatus(error?.message || 'Falha ao gerar banner.');
     } finally {
@@ -350,16 +447,18 @@
     const slot = normalizeSlot(state.activeEditSlot || state.focusedSlot || 1, 1);
     if (!slot || state.busy) return;
 
+    const variant = normalizeVariant(state.viewMode);
     const entry = getBannerEntry(slot);
-    if (!entry.imageUrl || !entry.imageUrl.startsWith('data:image/')) {
-      setCarouselStatus('Selecione ou gere uma imagem antes de aprovar.');
+    const selected = entryForVariant(entry, variant);
+    if (!selected.imageUrl || !selected.imageUrl.startsWith('data:image/')) {
+      setCarouselStatus(`Selecione ou gere uma imagem (${variant}) antes de aprovar.`);
       return;
     }
 
     state.busy = true;
     syncControlsDisabled();
     setSlotBusy(slot, true);
-    setCarouselStatus(`Salvando Banner ${slot} no R2...`);
+    setCarouselStatus(`Salvando Banner ${slot} (${variant}) no R2...`);
     try {
       const response = await fetch(buildApiUrl('/api/admin/banners/save'), {
         method: 'POST',
@@ -367,11 +466,12 @@
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           slot,
-          imageDataUrl: entry.imageUrl,
-          prompt: entry.prompt || state.defaultPrompt,
-          offsetX: toInteger(entry.offsetX, 0),
-          offsetY: toInteger(entry.offsetY, 0),
-          sizeAdjustPx: toInteger(entry.sizeAdjustPx, 0)
+          variant,
+          imageDataUrl: selected.imageUrl,
+          prompt: selected.prompt || state.defaultPrompt,
+          offsetX: toInteger(selected.offsetX, 0),
+          offsetY: toInteger(selected.offsetY, 0),
+          sizeAdjustPx: toInteger(selected.sizeAdjustPx, 0)
         })
       });
       const payload = await response.json().catch(() => ({}));
@@ -382,17 +482,30 @@
       const saved = payload.banner;
       const nextEntry = {
         slot,
-        imageUrl: typeof saved?.imageUrl === 'string' ? saved.imageUrl.trim() : '',
-        prompt: typeof saved?.prompt === 'string' ? saved.prompt.trim() : entry.prompt,
-        offsetX: toInteger(saved?.offsetX, 0),
-        offsetY: toInteger(saved?.offsetY, 0),
-        sizeAdjustPx: toInteger(saved?.sizeAdjustPx, 0)
+        desktop: {
+          imageUrl: typeof saved?.imageUrlDesktop === 'string' ? saved.imageUrlDesktop.trim() : (typeof saved?.imageUrl === 'string' ? saved.imageUrl.trim() : ''),
+          prompt: typeof saved?.promptDesktop === 'string' ? saved.promptDesktop.trim() : (typeof saved?.prompt === 'string' ? saved.prompt.trim() : ''),
+          offsetX: toInteger(saved?.offsetXDesktop ?? saved?.offsetX, 0),
+          offsetY: toInteger(saved?.offsetYDesktop ?? saved?.offsetY, 0),
+          sizeAdjustPx: toInteger(saved?.sizeAdjustPxDesktop ?? saved?.sizeAdjustPx, 0)
+        },
+        mobile: {
+          imageUrl: typeof saved?.imageUrlMobile === 'string' ? saved.imageUrlMobile.trim() : '',
+          prompt: typeof saved?.promptMobile === 'string' ? saved.promptMobile.trim() : '',
+          offsetX: toInteger(saved?.offsetXMobile, 0),
+          offsetY: toInteger(saved?.offsetYMobile, 0),
+          sizeAdjustPx: toInteger(saved?.sizeAdjustPxMobile, 0)
+        }
       };
+      if (!nextEntry.mobile.imageUrl) {
+        nextEntry.mobile.imageUrl = nextEntry.desktop.imageUrl;
+      }
+
       state.banners.set(slot, nextEntry);
       applyBannerToDom(slot, nextEntry);
       state.activeEditSlot = slot;
       moveToSlot(slot);
-      setCarouselStatus(`Banner ${slot} aprovado e salvo no R2.`);
+      setCarouselStatus(`Banner ${slot} salvo no modo ${variant}.`);
     } catch (error) {
       setCarouselStatus(error?.message || 'Falha ao salvar banner.');
     } finally {
@@ -402,12 +515,86 @@
     }
   }
 
+  function adjustActiveBanner(patch) {
+    const slot = normalizeSlot(state.activeEditSlot || state.focusedSlot || 1, 1);
+    if (!slot || state.busy) return;
+    const variant = normalizeVariant(state.viewMode);
+    const current = getBannerEntry(slot);
+    const selected = entryForVariant(current, variant);
+    const nextEntry = {
+      ...current,
+      [variant]: {
+        ...selected,
+        offsetX: toInteger(selected.offsetX, 0) + toInteger(patch.offsetX, 0),
+        offsetY: toInteger(selected.offsetY, 0) + toInteger(patch.offsetY, 0),
+        sizeAdjustPx: toInteger(selected.sizeAdjustPx, 0) + toInteger(patch.sizeAdjustPx, 0)
+      }
+    };
+    state.banners.set(slot, nextEntry);
+    applyBannerToDom(slot, nextEntry);
+    syncEditingClass();
+  }
+
+  function onWindowKeyDown(event) {
+    if (!state.isAdmin) return;
+    if (event.target && (
+      event.target.tagName === 'INPUT'
+      || event.target.tagName === 'TEXTAREA'
+      || event.target.isContentEditable
+    )) {
+      return;
+    }
+
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      adjustActiveBanner({ offsetX: -10 });
+      return;
+    }
+
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      adjustActiveBanner({ offsetX: 10 });
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      adjustActiveBanner({ offsetY: -10 });
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      adjustActiveBanner({ offsetY: 10 });
+      return;
+    }
+
+    if (event.key === '+' || event.key === '=') {
+      event.preventDefault();
+      adjustActiveBanner({ sizeAdjustPx: 10 });
+      return;
+    }
+
+    if (event.key === '-') {
+      event.preventDefault();
+      adjustActiveBanner({ sizeAdjustPx: -10 });
+      return;
+    }
+
+    if (event.key === ' ') {
+      event.preventDefault();
+      void saveActiveBanner();
+    }
+  }
+
   function onBannerClick(slot) {
     if (!state.isAdmin || state.busy) return;
     moveToSlot(slot);
     const current = getBannerEntry(slot);
-    const defaultPrompt = current.prompt || state.defaultPrompt;
-    const typedPrompt = window.prompt(`Prompt do Banner ${slot}`, defaultPrompt);
+    const variant = normalizeVariant(state.viewMode);
+    const selected = entryForVariant(current, variant);
+    const defaultPrompt = selected.prompt || state.defaultPrompt;
+    const typedPrompt = window.prompt(`Prompt do Banner ${slot} (${variant})`, defaultPrompt);
     if (typedPrompt === null) return;
     const finalPrompt = typedPrompt.trim() || state.defaultPrompt || defaultPrompt;
     if (!finalPrompt) {
@@ -424,9 +611,10 @@
       state.controls.root.hidden = false;
     }
 
+    setMode('desktop');
     moveToSlot(1);
     syncControlsDisabled();
-    setCarouselStatus('Admin: use setas, upload e aprovar. Toque no banner para gerar com IA.');
+    setCarouselStatus('Admin: escolha desktop/mobile, use setas, upload e aprovar. Toque no banner para gerar com IA.');
 
     carousels.forEach((carousel) => {
       const items = carousel.querySelectorAll('[data-banner-slot]');
@@ -436,6 +624,7 @@
         item.addEventListener('click', () => onBannerClick(slot));
       });
     });
+    window.addEventListener('keydown', onWindowKeyDown);
   }
 
   (async () => {
@@ -449,11 +638,20 @@
       const sessionUser = await fetchSessionUser();
       const identity = String(sessionUser?.username || sessionUser?.email || '').trim().toLowerCase();
       state.isAdmin = Boolean(sessionUser?.is_admin) || identity === 'admin' || identity === 'adm' || identity === 'adminst';
+      applyBodyVariantClass();
+      renderAllSlots();
       if (state.isAdmin) {
         enableAdminUi();
+      } else {
+        window.addEventListener('resize', () => {
+          applyBodyVariantClass();
+          renderAllSlots();
+        });
       }
     } catch (_error) {
       state.isAdmin = false;
+      applyBodyVariantClass();
+      renderAllSlots();
     }
   })();
 })();

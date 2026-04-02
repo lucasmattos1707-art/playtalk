@@ -3865,18 +3865,31 @@ function normalizeAdminBannerSizeAdjust(value) {
   return Math.max(-1200, Math.min(2400, parsed));
 }
 
+function normalizeAdminBannerVariant(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'mobile') return 'mobile';
+  if (normalized === 'desktop') return 'desktop';
+  return '';
+}
+
 function createDefaultAdminBannerManifest() {
   return {
     generatedAt: new Date().toISOString(),
     updatedAt: null,
     banners: Array.from({ length: ADMIN_BANNER_SLOT_COUNT }, (_, index) => ({
       slot: index + 1,
-      imageUrl: '',
-      objectKey: '',
-      prompt: '',
-      offsetX: 0,
-      offsetY: 0,
-      sizeAdjustPx: 0,
+      imageUrlDesktop: '',
+      objectKeyDesktop: '',
+      promptDesktop: '',
+      offsetXDesktop: 0,
+      offsetYDesktop: 0,
+      sizeAdjustPxDesktop: 0,
+      imageUrlMobile: '',
+      objectKeyMobile: '',
+      promptMobile: '',
+      offsetXMobile: 0,
+      offsetYMobile: 0,
+      sizeAdjustPxMobile: 0,
       updatedAt: null
     }))
   };
@@ -3884,14 +3897,58 @@ function createDefaultAdminBannerManifest() {
 
 function normalizeAdminBannerEntry(entry, slotNumber) {
   const slot = normalizeAdminBannerSlot(entry?.slot) || slotNumber;
+  const imageUrlDesktop = typeof entry?.imageUrlDesktop === 'string'
+    ? entry.imageUrlDesktop.trim()
+    : (typeof entry?.imageUrl === 'string' ? entry.imageUrl.trim() : '');
+  const objectKeyDesktop = typeof entry?.objectKeyDesktop === 'string'
+    ? entry.objectKeyDesktop.trim()
+    : (typeof entry?.objectKey === 'string' ? entry.objectKey.trim() : '');
+  const promptDesktop = typeof entry?.promptDesktop === 'string'
+    ? entry.promptDesktop.trim()
+    : (typeof entry?.prompt === 'string' ? entry.prompt.trim() : '');
+  const offsetXDesktop = normalizeAdminBannerOffset(
+    entry?.offsetXDesktop ?? entry?.offsetX
+  );
+  const offsetYDesktop = normalizeAdminBannerOffset(
+    entry?.offsetYDesktop ?? entry?.offsetY
+  );
+  const sizeAdjustPxDesktop = normalizeAdminBannerSizeAdjust(
+    entry?.sizeAdjustPxDesktop ?? entry?.sizeAdjustPx
+  );
+  const imageUrlMobile = typeof entry?.imageUrlMobile === 'string'
+    ? entry.imageUrlMobile.trim()
+    : imageUrlDesktop;
+  const objectKeyMobile = typeof entry?.objectKeyMobile === 'string'
+    ? entry.objectKeyMobile.trim()
+    : '';
+  const promptMobile = typeof entry?.promptMobile === 'string'
+    ? entry.promptMobile.trim()
+    : '';
+  const offsetXMobile = normalizeAdminBannerOffset(entry?.offsetXMobile);
+  const offsetYMobile = normalizeAdminBannerOffset(entry?.offsetYMobile);
+  const sizeAdjustPxMobile = normalizeAdminBannerSizeAdjust(entry?.sizeAdjustPxMobile);
+
   return {
     slot,
-    imageUrl: typeof entry?.imageUrl === 'string' ? entry.imageUrl.trim() : '',
-    objectKey: typeof entry?.objectKey === 'string' ? entry.objectKey.trim() : '',
-    prompt: typeof entry?.prompt === 'string' ? entry.prompt.trim() : '',
-    offsetX: normalizeAdminBannerOffset(entry?.offsetX),
-    offsetY: normalizeAdminBannerOffset(entry?.offsetY),
-    sizeAdjustPx: normalizeAdminBannerSizeAdjust(entry?.sizeAdjustPx),
+    imageUrlDesktop,
+    objectKeyDesktop,
+    promptDesktop,
+    offsetXDesktop,
+    offsetYDesktop,
+    sizeAdjustPxDesktop,
+    imageUrlMobile,
+    objectKeyMobile,
+    promptMobile,
+    offsetXMobile,
+    offsetYMobile,
+    sizeAdjustPxMobile,
+    // Legacy aliases kept for old clients.
+    imageUrl: imageUrlDesktop,
+    objectKey: objectKeyDesktop,
+    prompt: promptDesktop,
+    offsetX: offsetXDesktop,
+    offsetY: offsetYDesktop,
+    sizeAdjustPx: sizeAdjustPxDesktop,
     updatedAt: entry?.updatedAt || null
   };
 }
@@ -7858,6 +7915,7 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
   }
 
   const slot = normalizeAdminBannerSlot(req.body?.slot);
+  const variant = normalizeAdminBannerVariant(req.body?.variant) || 'desktop';
   const imageDataUrl = typeof req.body?.imageDataUrl === 'string' ? req.body.imageDataUrl.trim() : '';
   const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
   const offsetX = normalizeAdminBannerOffset(req.body?.offsetX);
@@ -7885,7 +7943,7 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
   const mimeType = safeExtension === 'jpg' ? 'image/jpeg' : safeExtension === 'png' ? 'image/png' : 'image/webp';
   const objectKey = path.posix.join(
     ADMIN_BANNER_IMAGE_OBJECT_PREFIX,
-    `banner-${slot}-${Date.now()}.${safeExtension}`
+    `banner-${slot}-${variant}-${Date.now()}.${safeExtension}`
   );
 
   try {
@@ -7893,15 +7951,38 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
     const publicUrl = buildFlashcardsR2PublicUrl(objectKey);
     const manifest = await loadAdminBannerManifest();
     const previousEntry = manifest.banners.find((entry) => entry.slot === slot) || null;
+    const previousObjectKey = variant === 'mobile'
+      ? String(previousEntry?.objectKeyMobile || '').trim()
+      : String(previousEntry?.objectKeyDesktop || previousEntry?.objectKey || '').trim();
 
     manifest.banners = manifest.banners.map((entry) => {
       if (entry.slot !== slot) return entry;
+      if (variant === 'mobile') {
+        return {
+          ...entry,
+          slot,
+          imageUrlMobile: publicUrl,
+          objectKeyMobile: objectKey,
+          promptMobile: prompt || entry.promptMobile || entry.prompt || ADMIN_BANNER_DEFAULT_PROMPT,
+          offsetXMobile: offsetX,
+          offsetYMobile: offsetY,
+          sizeAdjustPxMobile: sizeAdjustPx,
+          updatedAt: new Date().toISOString()
+        };
+      }
       return {
         ...entry,
         slot,
+        imageUrlDesktop: publicUrl,
+        objectKeyDesktop: objectKey,
+        promptDesktop: prompt || entry.promptDesktop || entry.prompt || ADMIN_BANNER_DEFAULT_PROMPT,
+        offsetXDesktop: offsetX,
+        offsetYDesktop: offsetY,
+        sizeAdjustPxDesktop: sizeAdjustPx,
+        // Legacy aliases to keep old readers functional.
         imageUrl: publicUrl,
         objectKey,
-        prompt: prompt || entry.prompt || ADMIN_BANNER_DEFAULT_PROMPT,
+        prompt: prompt || entry.promptDesktop || entry.prompt || ADMIN_BANNER_DEFAULT_PROMPT,
         offsetX,
         offsetY,
         sizeAdjustPx,
@@ -7912,13 +7993,14 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
     const savedManifest = await persistAdminBannerManifest(manifest);
     const savedEntry = savedManifest.banners.find((entry) => entry.slot === slot) || null;
 
-    if (previousEntry?.objectKey && previousEntry.objectKey !== objectKey) {
-      deleteR2Object(previousEntry.objectKey).catch(() => {});
+    if (previousObjectKey && previousObjectKey !== objectKey) {
+      deleteR2Object(previousObjectKey).catch(() => {});
     }
 
     res.json({
       success: true,
       slot,
+      variant,
       banner: savedEntry
     });
   } catch (error) {

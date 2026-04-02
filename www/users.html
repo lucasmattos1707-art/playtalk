@@ -167,10 +167,18 @@
     .banner-carousel__media {
       position: relative;
       width: 100%;
-      aspect-ratio: 16 / 9;
+      aspect-ratio: 80 / 27;
       overflow: hidden;
       border: 0;
       background: linear-gradient(140deg, rgba(27, 88, 161, 0.92), rgba(36, 112, 199, 0.9));
+    }
+
+    body.banner-view-mobile .banner-carousel__media {
+      aspect-ratio: 16 / 9;
+    }
+
+    body.banner-view-desktop .banner-carousel__media {
+      aspect-ratio: 80 / 27;
     }
 
     .banner-carousel__item:nth-child(2) .banner-carousel__media {
@@ -313,7 +321,7 @@
     .banner-admin-controls__row {
       width: min(600px, 100%);
       display: grid;
-      grid-template-columns: repeat(4, minmax(56px, 1fr));
+      grid-template-columns: repeat(5, minmax(56px, 1fr));
       align-items: center;
       gap: 10px;
     }
@@ -711,6 +719,10 @@
     }
 
     @media (max-width: 640px) {
+      .banner-carousel__media {
+        aspect-ratio: 16 / 9;
+      }
+
       .page {
         width: calc(100vw - 16px);
         padding-top: 0;
@@ -787,6 +799,9 @@
     <p class="status" id="usersStatus">Carregando usuarios...</p>
     <section class="banner-admin-controls" id="bannerAdminControls" hidden aria-label="Controles dos banners do admin">
       <div class="banner-admin-controls__row">
+        <button type="button" class="banner-admin-controls__btn" data-banner-action="mode" aria-label="Alternar desktop e mobile">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5v2h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2H6a2 2 0 0 1-2-2V5Z"/></svg>
+        </button>
         <button type="button" class="banner-admin-controls__btn" data-banner-action="next" aria-label="Proximo banner">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.3 5.3a1 1 0 0 1 1.4 1.4L10.41 12l5.3 5.3a1 1 0 0 1-1.42 1.4l-6-6a1 1 0 0 1 0-1.4l6-6Z"/></svg>
         </button>
@@ -866,7 +881,7 @@
 
   <script src="js/android-config.js"></script>
   <script src="js/api-config.js"></script>
-  <script src="js/banner-carousel-admin.js?v=20260402b"></script>
+  <script src="js/banner-carousel-admin.js?v=20260402c"></script>
   <script src="js/android-shell.js"></script>
   <script>
     if (window.PlaytalkNative && typeof window.PlaytalkNative.isNativeRuntime === 'function' && window.PlaytalkNative.isNativeRuntime()) {
