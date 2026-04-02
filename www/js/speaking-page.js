@@ -431,6 +431,144 @@
     }
   }
 
+  function mapWebSpeechError(errorCode) {
+    const code = String(errorCode || '').toLowerCase();
+    if (code === 'not-allowed' || code === 'service-not-allowed') {
+      return 'Permissao de microfone negada.';
+    }
+    if (code === 'audio-capture') {
+      return 'Nenhum microfone disponivel.';
+    }
+    if (code === 'network') {
+      return 'Falha de rede no reconhecimento de voz.';
+    }
+    if (code === 'no-speech') {
+      return 'Nao detectei sua fala. Tente novamente.';
+    }
+    return 'Falha no reconhecimento de voz.';
+  }
+
+  function captureSpeechWithWebSpeech(options = {}) {
+    const RecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (typeof RecognitionCtor !== 'function') {
+      return Promise.reject(new Error('Reconhecimento de voz nao disponivel neste navegador.'));
+    }
+
+    const language = safeText(options.language) || 'en-US';
+    const maxDurationMs = Number.isFinite(options.maxDurationMs)
+      ? Math.max(1500, Number(options.maxDurationMs))
+      : 7000;
+
+    return new Promise((resolve, reject) => {
+      const recognition = new RecognitionCtor();
+      let finished = false;
+      let stopTimer = 0;
+
+      const finish = (handler) => {
+        if (finished) return;
+        finished = true;
+        if (stopTimer) {
+          window.clearTimeout(stopTimer);
+          stopTimer = 0;
+        }
+        try {
+          recognition.onstart = null;
+          recognition.onresult = null;
+          recognition.onerror = null;
+          recognition.onend = null;
+        } catch (_error) {
+          // ignore
+        }
+        handler();
+      };
+
+      recognition.lang = language;
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 5;
+
+      recognition.onstart = () => {
+        if (typeof options.onRecordingStart === 'function') {
+          try {
+            options.onRecordingStart();
+          } catch (_error) {
+            // ignore
+          }
+        }
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = safeText(event?.results?.[0]?.[0]?.transcript || '');
+        finish(() => {
+          if (typeof options.onRecordingStop === 'function') {
+            try {
+              options.onRecordingStop();
+            } catch (_error) {
+              // ignore
+            }
+          }
+          if (!transcript) {
+            reject(new Error('Transcricao vazia.'));
+            return;
+          }
+          resolve(transcript);
+        });
+      };
+
+      recognition.onerror = (event) => {
+        const message = mapWebSpeechError(event?.error);
+        finish(() => {
+          if (typeof options.onRecordingStop === 'function') {
+            try {
+              options.onRecordingStop();
+            } catch (_error) {
+              // ignore
+            }
+          }
+          reject(new Error(message));
+        });
+      };
+
+      recognition.onend = () => {
+        if (!finished) {
+          finish(() => {
+            if (typeof options.onRecordingStop === 'function') {
+              try {
+                options.onRecordingStop();
+              } catch (_error) {
+                // ignore
+              }
+            }
+            reject(new Error('Reconhecimento finalizado sem resultado.'));
+          });
+        }
+      };
+
+      stopTimer = window.setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch (_error) {
+          // ignore
+        }
+      }, maxDurationMs);
+
+      try {
+        recognition.start();
+      } catch (_error) {
+        finish(() => {
+          if (typeof options.onRecordingStop === 'function') {
+            try {
+              options.onRecordingStop();
+            } catch (__error) {
+              // ignore
+            }
+          }
+          reject(new Error('Nao foi possivel iniciar o reconhecimento de voz.'));
+        });
+      }
+    });
+  }
+
   async function captureSpeechFast(language) {
     const nativeSpeech = window.PlaytalkNativeSpeech;
     if (nativeSpeech && typeof nativeSpeech.isSupported === 'function' && nativeSpeech.isSupported()) {
@@ -446,14 +584,9 @@
       }
     }
 
-    const openAiStt = window.PlaytalkOpenAiStt;
-    if (!openAiStt || typeof openAiStt.captureAndTranscribe !== 'function') {
-      throw new Error('Reconhecimento de voz nao disponivel neste dispositivo.');
-    }
-
-    return openAiStt.captureAndTranscribe({
-      language: 'en',
-      maxDurationMs: 3200,
+    return captureSpeechWithWebSpeech({
+      language: language || 'en-US',
+      maxDurationMs: 7000,
       onRecordingStart: () => setMicLiveVisual(true),
       onRecordingStop: () => setMicLiveVisual(true)
     });
