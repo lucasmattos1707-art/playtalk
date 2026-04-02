@@ -3973,7 +3973,7 @@ function normalizeAdminBannerEntry(entry, slotNumber) {
   );
   const imageUrlMobile = typeof entry?.imageUrlMobile === 'string'
     ? entry.imageUrlMobile.trim()
-    : imageUrlDesktop;
+    : '';
   const objectKeyMobile = typeof entry?.objectKeyMobile === 'string'
     ? entry.objectKeyMobile.trim()
     : '';

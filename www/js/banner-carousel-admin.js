@@ -130,11 +130,7 @@
   }
 
   function entryForVariant(entry, variant) {
-    const selected = entry?.[variant] || {};
-    if (variant === 'mobile' && !String(selected.imageUrl || '').trim()) {
-      return entry?.desktop || selected;
-    }
-    return selected;
+    return entry?.[variant] || {};
   }
 
   function applyBannerToDom(slot, entry) {
@@ -385,7 +381,7 @@
           sizeAdjustPx: desktopSizeAdjust
         },
         mobile: {
-          imageUrl: mobileImageRaw || desktopImage,
+          imageUrl: mobileImageRaw,
           prompt: typeof banner?.promptMobile === 'string' ? banner.promptMobile.trim() : '',
           offsetX: toInteger(banner?.offsetXMobile, 0),
           offsetY: toInteger(banner?.offsetYMobile, 0),
@@ -497,10 +493,6 @@
           sizeAdjustPx: toInteger(saved?.sizeAdjustPxMobile, 0)
         }
       };
-      if (!nextEntry.mobile.imageUrl) {
-        nextEntry.mobile.imageUrl = nextEntry.desktop.imageUrl;
-      }
-
       state.banners.set(slot, nextEntry);
       applyBannerToDom(slot, nextEntry);
       state.activeEditSlot = slot;
