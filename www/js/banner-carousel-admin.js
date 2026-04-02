@@ -6,10 +6,19 @@
     isAdmin: false,
     busy: false,
     activeEditSlot: 0,
-    focusedSlot: 0,
-    inactivityTimerId: 0,
+    focusedSlot: 1,
+    slotCount: 4,
     defaultPrompt: '',
-    banners: new Map()
+    banners: new Map(),
+    controls: {
+      root: null,
+      prevBtn: null,
+      nextBtn: null,
+      saveBtn: null,
+      uploadBtn: null,
+      uploadInput: null,
+      status: null
+    }
   };
 
   function buildApiUrl(path) {
@@ -30,6 +39,26 @@
     const parsed = Number.parseInt(value, 10);
     if (!Number.isFinite(parsed)) return fallback;
     return parsed;
+  }
+
+  function getSlotCount() {
+    return Math.max(1, toInteger(state.slotCount, 4));
+  }
+
+  function normalizeSlot(slot, fallback = 1) {
+    const total = getSlotCount();
+    const normalized = toInteger(slot, fallback);
+    if (!Number.isFinite(normalized) || normalized < 1 || normalized > total) {
+      return Math.max(1, Math.min(total, fallback));
+    }
+    return normalized;
+  }
+
+  function wrapSlot(slot) {
+    const total = getSlotCount();
+    const normalized = toInteger(slot, 1);
+    const wrapped = ((normalized - 1 + total) % total) + 1;
+    return wrapped;
   }
 
   function slotElements(slot) {
@@ -60,6 +89,9 @@
       if (!status) return;
       status.textContent = text;
     });
+    if (state.controls.status) {
+      state.controls.status.textContent = text;
+    }
   }
 
   function setSlotBusy(slot, isBusy) {
@@ -68,51 +100,13 @@
     });
   }
 
-  function clearInactivityTimer() {
-    if (state.inactivityTimerId) {
-      window.clearTimeout(state.inactivityTimerId);
-      state.inactivityTimerId = 0;
-    }
-  }
-
-  function resumeCarouselRotation() {
-    clearInactivityTimer();
-    state.focusedSlot = 0;
-    carousels.forEach((carousel) => {
-      carousel.classList.remove('is-admin-paused');
-      carousel.style.removeProperty('--admin-focus-index');
-    });
-  }
-
-  function pauseCarouselOnSlot(slot) {
-    const normalizedSlot = Math.max(1, toInteger(slot, 1));
-    state.focusedSlot = normalizedSlot;
-    carousels.forEach((carousel) => {
-      carousel.classList.add('is-admin-paused');
-      carousel.style.setProperty('--admin-focus-index', String(normalizedSlot - 1));
-    });
-  }
-
-  function registerAdminActivity(slot) {
-    if (!state.isAdmin) return;
-    if (slot > 0) {
-      pauseCarouselOnSlot(slot);
-    } else if (state.focusedSlot > 0) {
-      pauseCarouselOnSlot(state.focusedSlot);
-    }
-    clearInactivityTimer();
-    state.inactivityTimerId = window.setTimeout(() => {
-      resumeCarouselRotation();
-    }, 30000);
-  }
-
   function syncEditingClass() {
-    const activeSlot = state.activeEditSlot;
+    const activeSlot = normalizeSlot(state.activeEditSlot || state.focusedSlot || 1, 1);
     carousels.forEach((carousel) => {
       const items = carousel.querySelectorAll('[data-banner-slot]');
       items.forEach((item) => {
         const slot = toInteger(item.getAttribute('data-banner-slot'), 0);
-        item.classList.toggle('is-editing', activeSlot > 0 && slot === activeSlot);
+        item.classList.toggle('is-editing', slot === activeSlot);
       });
     });
   }
@@ -137,6 +131,133 @@
       image.style.setProperty('--banner-offset-y', `${toInteger(entry?.offsetY, 0)}px`);
       image.style.setProperty('--banner-size-adjust', `${toInteger(entry?.sizeAdjustPx, 0)}px`);
     });
+  }
+
+  function moveToSlot(slot) {
+    const normalized = normalizeSlot(slot, 1);
+    state.focusedSlot = normalized;
+    state.activeEditSlot = normalized;
+
+    carousels.forEach((carousel) => {
+      carousel.classList.add('is-admin-paused');
+      carousel.style.setProperty('--admin-focus-index', String(normalized - 1));
+      const track = carousel.querySelector('.banner-carousel__track');
+      if (!track) return;
+      track.style.animation = 'none';
+      track.style.transform = `translateX(-${(normalized - 1) * 25}%)`;
+      track.style.transition = 'transform 220ms ease';
+    });
+
+    syncEditingClass();
+  }
+
+  function stepSlot(delta) {
+    if (!state.isAdmin || state.busy) return;
+    const target = wrapSlot((state.focusedSlot || 1) + delta);
+    moveToSlot(target);
+    setCarouselStatus(`Banner ${target} selecionado.`);
+  }
+
+  function syncControlsDisabled() {
+    const disabled = !state.isAdmin || state.busy;
+    [state.controls.prevBtn, state.controls.nextBtn, state.controls.saveBtn, state.controls.uploadBtn].forEach((button) => {
+      if (!button) return;
+      button.disabled = disabled;
+    });
+  }
+
+  function onUploadFileSelected(event) {
+    const input = event?.target;
+    const file = input?.files?.[0];
+    if (!file) return;
+    if (!/^image\//i.test(file.type || '')) {
+      setCarouselStatus('Arquivo invalido. Envie uma imagem.');
+      input.value = '';
+      return;
+    }
+
+    const slot = normalizeSlot(state.focusedSlot || 1, 1);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+      if (!dataUrl.startsWith('data:image/')) {
+        setCarouselStatus('Nao consegui ler a imagem enviada.');
+        input.value = '';
+        return;
+      }
+
+      const current = getBannerEntry(slot);
+      const nextEntry = {
+        ...current,
+        imageUrl: dataUrl
+      };
+      state.banners.set(slot, nextEntry);
+      state.activeEditSlot = slot;
+      applyBannerToDom(slot, nextEntry);
+      syncEditingClass();
+      setCarouselStatus(`Imagem carregada no Banner ${slot}. Clique em aprovar para subir no R2.`);
+      input.value = '';
+    };
+    reader.onerror = () => {
+      setCarouselStatus('Falha ao carregar imagem do dispositivo.');
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function buildFallbackControls() {
+    const controls = document.createElement('section');
+    controls.className = 'banner-admin-controls';
+    controls.id = 'bannerAdminControls';
+    controls.hidden = true;
+    controls.setAttribute('aria-label', 'Controles dos banners do admin');
+    controls.innerHTML = `
+      <div class="banner-admin-controls__row">
+        <button type="button" class="banner-admin-controls__btn" data-banner-action="next" aria-label="Proximo banner">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.3 5.3a1 1 0 0 1 1.4 1.4L10.41 12l5.3 5.3a1 1 0 0 1-1.42 1.4l-6-6a1 1 0 0 1 0-1.4l6-6Z"/></svg>
+        </button>
+        <button type="button" class="banner-admin-controls__btn" data-banner-action="previous" aria-label="Banner anterior">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.7 5.3a1 1 0 0 0-1.4 1.4L13.59 12l-5.3 5.3a1 1 0 1 0 1.42 1.4l6-6a1 1 0 0 0 0-1.4l-6-6Z"/></svg>
+        </button>
+        <button type="button" class="banner-admin-controls__btn" data-banner-action="approve" aria-label="Aprovar e salvar banner">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.55 16.2 5.8 12.45a1 1 0 1 0-1.4 1.42l4.46 4.45a1 1 0 0 0 1.41 0l9.33-9.32a1 1 0 1 0-1.41-1.42L9.55 16.2Z"/></svg>
+        </button>
+        <button type="button" class="banner-admin-controls__btn" data-banner-action="upload" aria-label="Enviar banner do dispositivo">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.29a1 1 0 1 1 1.4 1.41l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 1.4-1.41L11 12.59V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z"/></svg>
+        </button>
+      </div>
+      <input id="bannerAdminUploadInput" type="file" accept="image/*" hidden>
+      <p class="banner-admin-controls__status" data-banner-admin-status aria-live="polite"></p>
+    `;
+
+    const reference = document.getElementById('usersStatus') || document.querySelector('.ranking-label');
+    if (reference?.parentElement) {
+      reference.insertAdjacentElement('afterend', controls);
+    } else {
+      const firstCarousel = carousels[0];
+      firstCarousel?.insertAdjacentElement('afterend', controls);
+    }
+    return controls;
+  }
+
+  function setupControls() {
+    const root = document.getElementById('bannerAdminControls') || buildFallbackControls();
+    state.controls.root = root;
+    state.controls.prevBtn = root.querySelector('[data-banner-action="previous"]');
+    state.controls.nextBtn = root.querySelector('[data-banner-action="next"]');
+    state.controls.saveBtn = root.querySelector('[data-banner-action="approve"]');
+    state.controls.uploadBtn = root.querySelector('[data-banner-action="upload"]');
+    state.controls.uploadInput = root.querySelector('#bannerAdminUploadInput');
+    state.controls.status = root.querySelector('[data-banner-admin-status]');
+
+    state.controls.nextBtn?.addEventListener('click', () => stepSlot(1));
+    state.controls.prevBtn?.addEventListener('click', () => stepSlot(-1));
+    state.controls.saveBtn?.addEventListener('click', () => { void saveActiveBanner(); });
+    state.controls.uploadBtn?.addEventListener('click', () => {
+      if (!state.controls.uploadInput || state.busy) return;
+      state.controls.uploadInput.click();
+    });
+    state.controls.uploadInput?.addEventListener('change', onUploadFileSelected);
   }
 
   async function fetchSessionUser() {
@@ -164,6 +285,7 @@
     state.defaultPrompt = typeof payload?.defaultPrompt === 'string'
       ? payload.defaultPrompt.trim()
       : '';
+    state.slotCount = Math.max(1, toInteger(payload?.slotCount, 4));
 
     const banners = Array.isArray(payload?.banners) ? payload.banners : [];
     for (const banner of banners) {
@@ -184,8 +306,8 @@
 
   async function generateBanner(slot, prompt) {
     state.busy = true;
-    registerAdminActivity(slot);
-    state.activeEditSlot = 0;
+    syncControlsDisabled();
+    state.activeEditSlot = normalizeSlot(slot, 1);
     syncEditingClass();
     setSlotBusy(slot, true);
     setCarouselStatus(`Gerando Banner ${slot}...`);
@@ -213,28 +335,29 @@
       state.banners.set(slot, nextEntry);
       applyBannerToDom(slot, nextEntry);
       state.activeEditSlot = slot;
-      registerAdminActivity(slot);
-      syncEditingClass();
-      setCarouselStatus(`Banner ${slot} pronto. Use +, -, setas e espaco para salvar.`);
+      moveToSlot(slot);
+      setCarouselStatus(`Banner ${slot} pronto. Clique em aprovar para salvar.`);
     } catch (error) {
       setCarouselStatus(error?.message || 'Falha ao gerar banner.');
     } finally {
       state.busy = false;
       setSlotBusy(slot, false);
+      syncControlsDisabled();
     }
   }
 
   async function saveActiveBanner() {
-    const slot = state.activeEditSlot;
+    const slot = normalizeSlot(state.activeEditSlot || state.focusedSlot || 1, 1);
     if (!slot || state.busy) return;
-    registerAdminActivity(slot);
+
     const entry = getBannerEntry(slot);
     if (!entry.imageUrl || !entry.imageUrl.startsWith('data:image/')) {
-      setCarouselStatus('Gere uma imagem antes de salvar.');
+      setCarouselStatus('Selecione ou gere uma imagem antes de aprovar.');
       return;
     }
 
     state.busy = true;
+    syncControlsDisabled();
     setSlotBusy(slot, true);
     setCarouselStatus(`Salvando Banner ${slot} no R2...`);
     try {
@@ -267,36 +390,21 @@
       };
       state.banners.set(slot, nextEntry);
       applyBannerToDom(slot, nextEntry);
-      state.activeEditSlot = 0;
-      registerAdminActivity(slot);
-      syncEditingClass();
-      setCarouselStatus(`Banner ${slot} salvo no R2.`);
+      state.activeEditSlot = slot;
+      moveToSlot(slot);
+      setCarouselStatus(`Banner ${slot} aprovado e salvo no R2.`);
     } catch (error) {
       setCarouselStatus(error?.message || 'Falha ao salvar banner.');
     } finally {
       state.busy = false;
       setSlotBusy(slot, false);
+      syncControlsDisabled();
     }
-  }
-
-  function adjustActiveBanner(patch) {
-    const slot = state.activeEditSlot;
-    if (!slot || state.busy) return;
-    registerAdminActivity(slot);
-    const current = getBannerEntry(slot);
-    const nextEntry = {
-      ...current,
-      offsetX: toInteger(current.offsetX, 0) + toInteger(patch.offsetX, 0),
-      offsetY: toInteger(current.offsetY, 0) + toInteger(patch.offsetY, 0),
-      sizeAdjustPx: toInteger(current.sizeAdjustPx, 0) + toInteger(patch.sizeAdjustPx, 0)
-    };
-    state.banners.set(slot, nextEntry);
-    applyBannerToDom(slot, nextEntry);
   }
 
   function onBannerClick(slot) {
     if (!state.isAdmin || state.busy) return;
-    registerAdminActivity(slot);
+    moveToSlot(slot);
     const current = getBannerEntry(slot);
     const defaultPrompt = current.prompt || state.defaultPrompt;
     const typedPrompt = window.prompt(`Prompt do Banner ${slot}`, defaultPrompt);
@@ -309,61 +417,17 @@
     void generateBanner(slot, finalPrompt);
   }
 
-  function onWindowKeyDown(event) {
-    if (!state.isAdmin || !state.activeEditSlot) return;
-    if (event.target && (
-      event.target.tagName === 'INPUT'
-      || event.target.tagName === 'TEXTAREA'
-      || event.target.isContentEditable
-    )) {
-      return;
-    }
-
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      adjustActiveBanner({ offsetX: -10 });
-      return;
-    }
-
-    if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      adjustActiveBanner({ offsetX: 10 });
-      return;
-    }
-
-    if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      adjustActiveBanner({ offsetY: -10 });
-      return;
-    }
-
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      adjustActiveBanner({ offsetY: 10 });
-      return;
-    }
-
-    if (event.key === '+' || event.key === '=') {
-      event.preventDefault();
-      adjustActiveBanner({ sizeAdjustPx: 10 });
-      return;
-    }
-
-    if (event.key === '-') {
-      event.preventDefault();
-      adjustActiveBanner({ sizeAdjustPx: -10 });
-      return;
-    }
-
-    if (event.key === ' ') {
-      event.preventDefault();
-      void saveActiveBanner();
-    }
-  }
-
   function enableAdminUi() {
     document.body.classList.add('is-admin-banner');
-    setCarouselStatus('Admin: clique no banner para gerar com IA.');
+    setupControls();
+    if (state.controls.root) {
+      state.controls.root.hidden = false;
+    }
+
+    moveToSlot(1);
+    syncControlsDisabled();
+    setCarouselStatus('Admin: use setas, upload e aprovar. Toque no banner para gerar com IA.');
+
     carousels.forEach((carousel) => {
       const items = carousel.querySelectorAll('[data-banner-slot]');
       items.forEach((item) => {
@@ -372,7 +436,6 @@
         item.addEventListener('click', () => onBannerClick(slot));
       });
     });
-    window.addEventListener('keydown', onWindowKeyDown);
   }
 
   (async () => {
