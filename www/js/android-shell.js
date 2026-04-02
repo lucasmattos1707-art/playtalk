@@ -211,7 +211,8 @@
     pingTimer: 0,
     redirecting: false,
     incomingId: 0,
-    outgoingId: 0
+    outgoingId: 0,
+    outgoingTerminalNoticeKey: ''
   };
 
   function buildApiUrl(path) {
@@ -398,20 +399,31 @@
 
       const outgoing = payload.outgoingChallenge;
       if (!outgoing) {
+        challengeRuntime.outgoingTerminalNoticeKey = '';
         closeOutgoingPopup();
         return;
       }
       challengeRuntime.outgoingId = Number(outgoing.challengeId) || 0;
       if (outgoing.status === 'pending') {
+        challengeRuntime.outgoingTerminalNoticeKey = '';
         openOutgoingPopup(`Aguardando resposta de ${outgoing?.opponent?.username || 'Usuario'}...`, outgoing?.opponent?.avatarImage, 'Desafio enviado');
       } else if (outgoing.status === 'rejected') {
-        openOutgoingPopup('Usuario recusou seu pedido.', outgoing?.opponent?.avatarImage, 'Desafio recusado');
+        const noticeKey = `${challengeRuntime.outgoingId}:rejected`;
+        if (challengeRuntime.outgoingTerminalNoticeKey !== noticeKey) {
+          challengeRuntime.outgoingTerminalNoticeKey = noticeKey;
+          openOutgoingPopup('Usuario recusou seu pedido.', outgoing?.opponent?.avatarImage, 'Desafio recusado');
+        }
       } else if (outgoing.status === 'expired') {
-        openOutgoingPopup('Seu desafio expirou.', outgoing?.opponent?.avatarImage, 'Desafio expirou');
+        const noticeKey = `${challengeRuntime.outgoingId}:expired`;
+        if (challengeRuntime.outgoingTerminalNoticeKey !== noticeKey) {
+          challengeRuntime.outgoingTerminalNoticeKey = noticeKey;
+          openOutgoingPopup('Seu desafio expirou.', outgoing?.opponent?.avatarImage, 'Desafio expirou');
+        }
       } else if (outgoing.status === 'accepted' && outgoing.sessionId) {
         challengeRuntime.redirecting = true;
         window.location.href = `/speaking?session=${encodeURIComponent(outgoing.sessionId)}`;
       } else if (outgoing.status === 'completed') {
+        challengeRuntime.outgoingTerminalNoticeKey = '';
         closeOutgoingPopup();
       }
     } catch (_error) {
