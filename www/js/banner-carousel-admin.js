@@ -23,6 +23,17 @@
     }
   };
 
+  function detectBannerSurface() {
+    const bodySurface = String(document.body?.getAttribute('data-banner-surface') || '').trim().toLowerCase();
+    if (bodySurface === 'users') return 'users';
+    if (bodySurface === 'allcards') return 'allcards';
+    const pathName = String(window.location?.pathname || '').toLowerCase();
+    if (pathName.includes('/users')) return 'users';
+    return 'allcards';
+  }
+
+  state.surface = detectBannerSurface();
+
   function buildApiUrl(path) {
     if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
       return window.PlaytalkApi.url(path);
@@ -353,7 +364,7 @@
   }
 
   async function loadBannersFromApi() {
-    const response = await fetch(buildApiUrl('/api/public/banners'), {
+    const response = await fetch(buildApiUrl(`/api/public/banners?surface=${encodeURIComponent(state.surface)}`), {
       credentials: 'include',
       headers: buildAuthHeaders(),
       cache: 'no-store'
@@ -481,6 +492,7 @@
         body: JSON.stringify({
           slot,
           variant,
+          surface: state.surface,
           imageDataUrl: selected.imageUrl.startsWith('data:image/') ? selected.imageUrl : '',
           imageUrl: selected.imageUrl.startsWith('data:image/') ? '' : selected.imageUrl,
           prompt: selected.prompt || state.defaultPrompt,

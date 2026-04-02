@@ -3942,32 +3942,43 @@ function normalizeAdminBannerVariant(value) {
   return '';
 }
 
+function normalizeAdminBannerSurface(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'users') return 'users';
+  return 'allcards';
+}
+
 function getAdminBannerRenderSize(variant) {
   return variant === 'mobile'
     ? ADMIN_BANNER_MOBILE_RENDER_SIZE
     : ADMIN_BANNER_DESKTOP_RENDER_SIZE;
 }
 
+function createDefaultAdminBannerSet() {
+  return Array.from({ length: ADMIN_BANNER_SLOT_COUNT }, (_, index) => ({
+    slot: index + 1,
+    imageUrlDesktop: '',
+    objectKeyDesktop: '',
+    promptDesktop: '',
+    offsetXDesktop: 0,
+    offsetYDesktop: 0,
+    sizeAdjustPxDesktop: 0,
+    imageUrlMobile: '',
+    objectKeyMobile: '',
+    promptMobile: '',
+    offsetXMobile: 0,
+    offsetYMobile: 0,
+    sizeAdjustPxMobile: 0,
+    updatedAt: null
+  }));
+}
+
 function createDefaultAdminBannerManifest() {
   return {
     generatedAt: new Date().toISOString(),
     updatedAt: null,
-    banners: Array.from({ length: ADMIN_BANNER_SLOT_COUNT }, (_, index) => ({
-      slot: index + 1,
-      imageUrlDesktop: '',
-      objectKeyDesktop: '',
-      promptDesktop: '',
-      offsetXDesktop: 0,
-      offsetYDesktop: 0,
-      sizeAdjustPxDesktop: 0,
-      imageUrlMobile: '',
-      objectKeyMobile: '',
-      promptMobile: '',
-      offsetXMobile: 0,
-      offsetYMobile: 0,
-      sizeAdjustPxMobile: 0,
-      updatedAt: null
-    }))
+    banners: createDefaultAdminBannerSet(),
+    bannersUsers: createDefaultAdminBannerSet()
   };
 }
 
@@ -4031,17 +4042,25 @@ function normalizeAdminBannerEntry(entry, slotNumber) {
 
 function normalizeAdminBannerManifest(payload) {
   const base = createDefaultAdminBannerManifest();
-  const source = Array.isArray(payload?.banners) ? payload.banners : [];
-  const map = new Map();
-  for (const rawEntry of source) {
-    const normalized = normalizeAdminBannerEntry(rawEntry, normalizeAdminBannerSlot(rawEntry?.slot));
-    if (!normalized.slot) continue;
-    map.set(normalized.slot, normalized);
-  }
-  base.banners = Array.from({ length: ADMIN_BANNER_SLOT_COUNT }, (_, index) => {
-    const slot = index + 1;
-    return map.get(slot) || normalizeAdminBannerEntry({}, slot);
-  });
+  const normalizeBannerSet = (sourceList) => {
+    const source = Array.isArray(sourceList) ? sourceList : [];
+    const map = new Map();
+    for (const rawEntry of source) {
+      const normalized = normalizeAdminBannerEntry(rawEntry, normalizeAdminBannerSlot(rawEntry?.slot));
+      if (!normalized.slot) continue;
+      map.set(normalized.slot, normalized);
+    }
+    return Array.from({ length: ADMIN_BANNER_SLOT_COUNT }, (_, index) => {
+      const slot = index + 1;
+      return map.get(slot) || normalizeAdminBannerEntry({}, slot);
+    });
+  };
+
+  base.banners = normalizeBannerSet(payload?.banners);
+  const usersSource = payload?.bannersUsers;
+  base.bannersUsers = usersSource
+    ? normalizeBannerSet(usersSource)
+    : base.banners.map((entry) => ({ ...entry }));
   base.generatedAt = payload?.generatedAt || base.generatedAt;
   base.updatedAt = payload?.updatedAt || null;
   return base;
@@ -7868,15 +7887,20 @@ app.post('/api/images/openai/avatar-cartoon', async (req, res) => {
   }
 });
 
-app.get('/api/public/banners', async (_req, res) => {
+app.get('/api/public/banners', async (req, res) => {
   try {
+    const surface = normalizeAdminBannerSurface(req.query?.surface);
     const manifest = await loadAdminBannerManifest();
+    const selectedBanners = surface === 'users'
+      ? (Array.isArray(manifest.bannersUsers) ? manifest.bannersUsers : manifest.banners)
+      : manifest.banners;
     res.json({
       success: true,
       slotCount: ADMIN_BANNER_SLOT_COUNT,
       resolutionLabel: ADMIN_BANNER_RESOLUTION_LABEL,
       defaultPrompt: ADMIN_BANNER_DEFAULT_PROMPT,
-      banners: manifest.banners
+      surface,
+      banners: selectedBanners
     });
   } catch (error) {
     res.status(500).json({
@@ -7992,6 +8016,7 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
 
   const slot = normalizeAdminBannerSlot(req.body?.slot);
   const variant = normalizeAdminBannerVariant(req.body?.variant) || 'desktop';
+  const surface = normalizeAdminBannerSurface(req.body?.surface);
   const imageDataUrl = typeof req.body?.imageDataUrl === 'string' ? req.body.imageDataUrl.trim() : '';
   const imageUrl = typeof req.body?.imageUrl === 'string' ? req.body.imageUrl.trim() : '';
   const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
@@ -8104,12 +8129,16 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
     const publicUrl = buildFlashcardsR2PublicUrl(objectKey);
     const versionedPublicUrl = `${publicUrl}?v=${cacheBuster}`;
     const manifest = await loadAdminBannerManifest();
-    const previousEntry = manifest.banners.find((entry) => entry.slot === slot) || null;
+    const bannerCollectionKey = surface === 'users' ? 'bannersUsers' : 'banners';
+    if (!Array.isArray(manifest[bannerCollectionKey])) {
+      manifest[bannerCollectionKey] = createDefaultAdminBannerSet();
+    }
+    const previousEntry = manifest[bannerCollectionKey].find((entry) => entry.slot === slot) || null;
     const previousObjectKey = variant === 'mobile'
       ? String(previousEntry?.objectKeyMobile || '').trim()
       : String(previousEntry?.objectKeyDesktop || previousEntry?.objectKey || '').trim();
 
-    manifest.banners = manifest.banners.map((entry) => {
+    manifest[bannerCollectionKey] = manifest[bannerCollectionKey].map((entry) => {
       if (entry.slot !== slot) return entry;
       if (variant === 'mobile') {
         return {
@@ -8145,7 +8174,8 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
     });
     manifest.updatedAt = new Date().toISOString();
     const savedManifest = await persistAdminBannerManifest(manifest);
-    const savedEntry = savedManifest.banners.find((entry) => entry.slot === slot) || null;
+    const savedCollection = surface === 'users' ? savedManifest.bannersUsers : savedManifest.banners;
+    const savedEntry = savedCollection.find((entry) => entry.slot === slot) || null;
 
     if (previousObjectKey && previousObjectKey !== objectKey) {
       deleteR2Object(previousObjectKey).catch(() => {});
@@ -8155,6 +8185,7 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
       success: true,
       slot,
       variant,
+      surface,
       optimization: {
         sourceBytes: parsedImage.buffer.length,
         outputBytes: optimizedBuffer.length,
