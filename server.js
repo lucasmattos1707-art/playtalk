@@ -712,8 +712,13 @@ const ensureSpeakingRealtimeTables = async () => {
           created_at timestamptz NOT NULL DEFAULT now(),
           expires_at timestamptz NOT NULL DEFAULT (now() + interval '120 seconds'),
           responded_at timestamptz,
+          challenger_notified_at timestamptz,
           updated_at timestamptz NOT NULL DEFAULT now()
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.speaking_challenges
+        ADD COLUMN IF NOT EXISTS challenger_notified_at timestamptz
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS speaking_challenges_opponent_idx
@@ -5702,6 +5707,7 @@ app.get('/api/speaking/challenges/poll', async (req, res) => {
          c.created_at,
          c.expires_at,
          c.responded_at,
+         c.challenger_notified_at,
          c.session_id,
          COALESCE(s.status, '') AS session_status,
          u.id AS opponent_id,
@@ -5713,6 +5719,10 @@ app.get('/api/speaking/challenges/poll', async (req, res) => {
        LEFT JOIN public.speaking_duel_sessions s
          ON s.id = c.session_id
        WHERE c.challenger_user_id = $1
+         AND (
+           c.status IN ('pending', 'accepted')
+           OR (c.status IN ('rejected', 'expired') AND c.challenger_notified_at IS NULL)
+         )
        ORDER BY c.created_at DESC
        LIMIT 1`,
       [userId]
@@ -5720,6 +5730,22 @@ app.get('/api/speaking/challenges/poll', async (req, res) => {
 
     const incoming = incomingResult.rows[0] || null;
     const outgoing = outgoingResult.rows[0] || null;
+
+    if (
+      outgoing
+      && (String(outgoing.status || '').trim() === 'rejected' || String(outgoing.status || '').trim() === 'expired')
+      && !outgoing.challenger_notified_at
+    ) {
+      await pool.query(
+        `UPDATE public.speaking_challenges
+         SET challenger_notified_at = now(),
+             updated_at = now()
+         WHERE id = $1
+           AND challenger_user_id = $2
+           AND challenger_notified_at IS NULL`,
+        [Number(outgoing.id) || 0, userId]
+      );
+    }
 
     res.json({
       success: true,
