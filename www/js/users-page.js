@@ -19,6 +19,7 @@
     deleteUserBtn: document.getElementById('deleteUserBtn'),
     closeAdminModalBtn: document.getElementById('closeAdminModalBtn'),
     challengeModal: document.getElementById('usersChallengeModal'),
+    challengeAvatar: document.getElementById('usersChallengeAvatar'),
     challengeName: document.getElementById('usersChallengeName'),
     challengeCopy: document.getElementById('usersChallengeCopy'),
     challengeActionBtn: document.getElementById('usersChallengeActionBtn'),
@@ -26,6 +27,7 @@
     challengeStatus: document.getElementById('usersChallengeStatus'),
     incomingModal: document.getElementById('incomingChallengeModal'),
     incomingAvatar: document.getElementById('incomingChallengeAvatar'),
+    incomingName: document.getElementById('incomingChallengeName'),
     incomingCopy: document.getElementById('incomingChallengeCopy'),
     incomingAcceptBtn: document.getElementById('incomingChallengeAcceptBtn'),
     incomingRejectBtn: document.getElementById('incomingChallengeRejectBtn')
@@ -201,6 +203,9 @@
     if (!user || !state.currentUser?.id || user.userId === state.currentUser.id) return;
     state.challengeTarget = user;
     state.challengeBusy = false;
+    if (els.challengeAvatar) {
+      els.challengeAvatar.src = user.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg';
+    }
     if (els.challengeName) els.challengeName.textContent = user.username;
     if (els.challengeCopy) {
       els.challengeCopy.textContent = user.isOnline
@@ -340,6 +345,9 @@
     state.incomingChallengeId = challengeId;
     if (els.incomingAvatar) {
       els.incomingAvatar.src = challenge?.challenger?.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg';
+    }
+    if (els.incomingName) {
+      els.incomingName.textContent = challenge?.challenger?.username || 'Usuario';
     }
     if (els.incomingCopy) {
       const username = challenge?.challenger?.username || 'Usuario';

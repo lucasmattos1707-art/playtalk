@@ -47,6 +47,8 @@
     duel: {
       sessionId: readSessionId(),
       enabled: false,
+      completed: false,
+      completedRedirectTimer: 0,
       meFinished: false,
       mePercent: 0,
       rivalProgress: 0,
@@ -372,6 +374,50 @@
       els.winnerAvatar.src = session.winner.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg';
       els.winnerCard.classList.add('is-visible');
     }
+
+    if (safeText(session?.status) === 'completed' && !state.duel.completed) {
+      state.duel.completed = true;
+      scheduleDuelReturnToUsers();
+    }
+  }
+
+  function resetSpeakingToOfflineMode() {
+    stopDuelLoops();
+    state.duel.enabled = false;
+    state.duel.sessionId = '';
+    state.duel.completed = false;
+    if (state.duel.completedRedirectTimer) {
+      window.clearTimeout(state.duel.completedRedirectTimer);
+      state.duel.completedRedirectTimer = 0;
+    }
+    state.duel.meFinished = false;
+    state.duel.mePercent = 0;
+    state.duel.rivalProgress = 0;
+    state.duel.rivalPercent = 0;
+    state.duel.rivalName = 'Adversario';
+    state.activeCards = [];
+    state.currentIndex = 0;
+    state.scores = [];
+    els.finalResultBox.classList.remove('is-visible');
+    els.winnerCard.classList.remove('is-visible');
+    els.game.classList.remove('is-active');
+    els.home.hidden = false;
+    els.startSpeakingBtn.disabled = false;
+    els.sendSpeakingBtn.disabled = false;
+    els.listenCardBtn.disabled = false;
+    setHomeStatus('Escolha quantas cartas voce quer jogar.', '');
+    setGameStatus('', '');
+    updateTopPercents();
+    updateProgressBars();
+  }
+
+  function scheduleDuelReturnToUsers() {
+    if (state.duel.completedRedirectTimer) return;
+    setGameStatus('Batalha encerrada. Voltando para usuarios em 10 segundos...', 'is-score');
+    state.duel.completedRedirectTimer = window.setTimeout(() => {
+      resetSpeakingToOfflineMode();
+      window.location.replace('/users');
+    }, FINAL_BOX_DURATION_MS);
   }
 
   async function syncDuelProgress(forceFinished) {
@@ -601,6 +647,7 @@
 
   async function startDuelMode() {
     state.duel.enabled = true;
+    state.duel.completed = false;
     els.home.hidden = true;
     els.game.classList.add('is-active');
     els.finalResultBox.classList.remove('is-visible');
