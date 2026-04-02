@@ -144,6 +144,8 @@ const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
 const SPEAKING_DUEL_DEFAULT_CARDS = 25;
 const SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS = 20;
+const SPEAKING_DUEL_INTRO_SECONDS = 5;
+const SPEAKING_DUEL_BATTLE_SECONDS = 180;
 const SPEAKING_CARD_CACHE_TTL_MS = 60 * 1000;
 const FLASHCARD_RANKING_PLACEHOLDER_NAME = 'Usuario';
 const FLASHCARD_RANKING_PLACEHOLDER_AVATAR = '/Avatar/avatar-man-person-svgrepo-com.svg';
@@ -3252,6 +3254,23 @@ async function awardSpeakingBattleWin(client, sessionId, winnerUserId) {
   return true;
 }
 
+function computeSpeakingDuelTimeoutWinnerUserId(session) {
+  const challengerFinished = Boolean(session?.challenger_finished);
+  const opponentFinished = Boolean(session?.opponent_finished);
+  const challengerUserId = Number(session?.challenger_user_id) || 0;
+  const opponentUserId = Number(session?.opponent_user_id) || 0;
+  if (challengerFinished && !opponentFinished) return challengerUserId;
+  if (opponentFinished && !challengerFinished) return opponentUserId;
+  return 0;
+}
+
+function isSpeakingDuelBattleExpired(session) {
+  const createdAtMs = Date.parse(String(session?.created_at || '').trim());
+  if (!Number.isFinite(createdAtMs) || createdAtMs <= 0) return false;
+  const deadlineMs = createdAtMs + ((SPEAKING_DUEL_INTRO_SECONDS + SPEAKING_DUEL_BATTLE_SECONDS) * 1000);
+  return Date.now() >= deadlineMs;
+}
+
 async function touchSpeakingSessionAndResolveTimeout(client, sessionId, requesterUserId) {
   const result = await client.query(
     `SELECT *
@@ -3287,11 +3306,18 @@ async function touchSpeakingSessionAndResolveTimeout(client, sessionId, requeste
   let finishedAt = next.finished_at || null;
 
   if (status === 'active') {
+    const battleExpired = isSpeakingDuelBattleExpired(next);
+    if (battleExpired) {
+      status = 'completed';
+      winnerUserId = computeSpeakingDuelTimeoutWinnerUserId(next);
+      finishedAt = nowIso;
+    }
+
     const requesterWinsByTimeout = requesterIsChallenger
       ? (Date.now() - Date.parse(next.opponent_last_seen_at || 0)) > (SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS * 1000)
       : (Date.now() - Date.parse(next.challenger_last_seen_at || 0)) > (SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS * 1000);
 
-    if (requesterWinsByTimeout) {
+    if (!battleExpired && requesterWinsByTimeout) {
       status = 'completed';
       winnerUserId = requesterId;
       challengerFinished = requesterIsChallenger ? true : challengerFinished;
@@ -3305,7 +3331,10 @@ async function touchSpeakingSessionAndResolveTimeout(client, sessionId, requeste
      SET challenger_last_seen_at = $2,
          opponent_last_seen_at = $3,
          status = $4,
-         winner_user_id = CASE WHEN $5 > 0 THEN $5 ELSE winner_user_id END,
+         winner_user_id = CASE
+           WHEN $4 = 'completed' THEN CASE WHEN $5 > 0 THEN $5 ELSE NULL END
+           ELSE winner_user_id
+         END,
          challenger_finished = $6,
          opponent_finished = $7,
          finished_at = CASE
@@ -6389,6 +6418,12 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
       session: {
         id: session.id,
         status: String(session.status || '').trim() || 'active',
+        createdAt: session.created_at,
+        battleEndsAt: new Date(
+          Date.parse(String(session.created_at || '').trim()) + ((SPEAKING_DUEL_INTRO_SECONDS + SPEAKING_DUEL_BATTLE_SECONDS) * 1000)
+        ).toISOString(),
+        introCountdownSeconds: SPEAKING_DUEL_INTRO_SECONDS,
+        battleDurationSeconds: SPEAKING_DUEL_BATTLE_SECONDS,
         cards: cardList,
         meRole,
         meProgress: meRole === 'challenger' ? Number(session.challenger_progress) || 0 : Number(session.opponent_progress) || 0,
@@ -6445,6 +6480,7 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
     const progress = Math.max(0, Math.min(100, Number.parseInt(req.body?.progress, 10) || 0));
     const percent = Math.max(0, Math.min(100, Number.parseInt(req.body?.percent, 10) || 0));
     const finished = Boolean(req.body?.finished);
+    const timedOut = Boolean(req.body?.timedOut);
     const userId = Number(authUser.id) || 0;
 
     const client = await pool.connect();
@@ -6509,7 +6545,16 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
         next.opponentFinished = finished || normalizedProgress >= totalCards;
       }
 
-      if (next.challengerFinished && next.opponentFinished) {
+      const battleExpired = timedOut || isSpeakingDuelBattleExpired(session);
+      if (battleExpired && next.status !== 'completed') {
+        next.status = 'completed';
+        next.winnerUserId = computeSpeakingDuelTimeoutWinnerUserId({
+          challenger_finished: next.challengerFinished,
+          opponent_finished: next.opponentFinished,
+          challenger_user_id: challengerUserId,
+          opponent_user_id: opponentUserId
+        });
+      } else if (next.challengerFinished && next.opponentFinished) {
         next.status = 'completed';
         if (next.challengerPercent > next.opponentPercent) {
           next.winnerUserId = challengerUserId;
@@ -6533,7 +6578,10 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
              challenger_finished = $6,
              opponent_finished = $7,
              status = $8,
-             winner_user_id = CASE WHEN $9 > 0 THEN $9 ELSE winner_user_id END,
+             winner_user_id = CASE
+               WHEN $8 = 'completed' THEN CASE WHEN $9 > 0 THEN $9 ELSE NULL END
+               ELSE winner_user_id
+             END,
              finished_at = CASE WHEN $8 = 'completed' THEN COALESCE(finished_at, now()) ELSE finished_at END,
              updated_at = now()
          WHERE id = $1`,

@@ -6,16 +6,21 @@
   const PRESENCE_PING_MS = 15000;
   const WORD_SWAP_MS = 1000;
   const DUEL_INTRO_COUNTDOWN_SECONDS = 5;
+  const DUEL_BATTLE_DURATION_MS = 3 * 60 * 1000;
+  const DUEL_INTRO_REVEAL_DELAY_MS = 500;
 
   const els = {
     home: document.getElementById('speakingHome'),
     game: document.getElementById('speakingGame'),
     duelIntro: document.getElementById('duelIntro'),
+    duelIntroMePlayer: document.getElementById('duelIntroMePlayer'),
+    duelIntroEnemyPlayer: document.getElementById('duelIntroEnemyPlayer'),
     duelIntroMeAvatar: document.getElementById('duelIntroMeAvatar'),
     duelIntroEnemyAvatar: document.getElementById('duelIntroEnemyAvatar'),
     duelIntroMeName: document.getElementById('duelIntroMeName'),
     duelIntroEnemyName: document.getElementById('duelIntroEnemyName'),
     duelIntroCountdown: document.getElementById('duelIntroCountdown'),
+    duelTimerLabel: document.getElementById('duelTimerLabel'),
     cardCountSelect: document.getElementById('cardCountSelect'),
     startSpeakingBtn: document.getElementById('startSpeakingBtn'),
     homeStatus: document.getElementById('homeStatus'),
@@ -44,7 +49,8 @@
     winnerName: document.getElementById('winnerName'),
     winnerReveal: document.getElementById('winnerReveal'),
     winnerRevealAvatar: document.getElementById('winnerRevealAvatar'),
-    successAudio: document.getElementById('successAudio')
+    successAudio: document.getElementById('successAudio'),
+    battleIntroAudio: document.getElementById('battleIntroAudio')
   };
 
   const state = {
@@ -72,7 +78,11 @@
       rivalAvatar: '/Avatar/avatar-man-person-svgrepo-com.svg',
       pollTimer: 0,
       pingTimer: 0,
-      introTimer: 0
+      introTimer: 0,
+      introAnimationTimers: [],
+      battleDeadlineMs: 0,
+      battleTimer: 0,
+      timeoutSyncInFlight: false
     }
   };
 
@@ -297,6 +307,128 @@
     }
   }
 
+  function clearDuelIntroAnimationTimers() {
+    const timers = Array.isArray(state.duel.introAnimationTimers) ? state.duel.introAnimationTimers : [];
+    timers.forEach((timerId) => {
+      window.clearTimeout(timerId);
+    });
+    state.duel.introAnimationTimers = [];
+  }
+
+  function queueDuelIntroAnimation(callback, delayMs) {
+    const timerId = window.setTimeout(() => {
+      state.duel.introAnimationTimers = state.duel.introAnimationTimers.filter((id) => id !== timerId);
+      callback();
+    }, Math.max(0, Number(delayMs) || 0));
+    state.duel.introAnimationTimers.push(timerId);
+  }
+
+  function stopBattleIntroAudio() {
+    if (!els.battleIntroAudio) return;
+    try {
+      els.battleIntroAudio.pause();
+      els.battleIntroAudio.currentTime = 0;
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  async function playBattleIntroAudio() {
+    if (!els.battleIntroAudio) return;
+    try {
+      els.battleIntroAudio.currentTime = 0;
+      await els.battleIntroAudio.play();
+    } catch (_error) {
+      // ignore autoplay restrictions
+    }
+  }
+
+  function resetDuelIntroVisuals() {
+    if (els.duelIntroMePlayer) els.duelIntroMePlayer.classList.remove('is-visible');
+    if (els.duelIntroEnemyPlayer) els.duelIntroEnemyPlayer.classList.remove('is-visible');
+    if (els.duelIntroMeName) {
+      els.duelIntroMeName.classList.remove('is-visible');
+      els.duelIntroMeName.classList.remove('is-flash');
+    }
+    if (els.duelIntroEnemyName) {
+      els.duelIntroEnemyName.classList.remove('is-visible');
+      els.duelIntroEnemyName.classList.remove('is-flash');
+    }
+  }
+
+  function revealDuelIntroPlayer(playerEl, nameEl) {
+    if (playerEl) {
+      playerEl.classList.remove('is-visible');
+      void playerEl.offsetWidth;
+      playerEl.classList.add('is-visible');
+    }
+    queueDuelIntroAnimation(() => {
+      if (!nameEl) return;
+      nameEl.classList.add('is-visible');
+      nameEl.classList.remove('is-flash');
+      void nameEl.offsetWidth;
+      nameEl.classList.add('is-flash');
+    }, DUEL_INTRO_REVEAL_DELAY_MS);
+  }
+
+  function formatTimerMs(totalMs) {
+    const remaining = Math.max(0, Number(totalMs) || 0);
+    const minutes = Math.floor(remaining / 60000);
+    const seconds = Math.floor((remaining % 60000) / 1000);
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  function updateDuelTimerLabel() {
+    if (!els.duelTimerLabel) return;
+    if (!state.duel.enabled || !state.duel.battleDeadlineMs || state.duel.completed || els.game?.classList.contains('is-prestart')) {
+      els.duelTimerLabel.hidden = true;
+      return;
+    }
+    const remainingMs = Math.max(0, state.duel.battleDeadlineMs - Date.now());
+    els.duelTimerLabel.hidden = false;
+    els.duelTimerLabel.textContent = `Tempo restante: ${formatTimerMs(remainingMs)}`;
+  }
+
+  function stopDuelBattleTimer() {
+    if (state.duel.battleTimer) {
+      window.clearInterval(state.duel.battleTimer);
+      state.duel.battleTimer = 0;
+    }
+    if (els.duelTimerLabel) {
+      els.duelTimerLabel.hidden = true;
+    }
+  }
+
+  async function handleDuelBattleTimeout() {
+    if (!state.duel.enabled || state.duel.completed || state.duel.timeoutSyncInFlight) return;
+    state.duel.timeoutSyncInFlight = true;
+    try {
+      await syncDuelProgress(false, true);
+      await pollDuelSession();
+    } catch (_error) {
+      // ignore
+    } finally {
+      state.duel.timeoutSyncInFlight = false;
+    }
+  }
+
+  function startDuelBattleTimer() {
+    stopDuelBattleTimer();
+    if (!state.duel.enabled || !state.duel.battleDeadlineMs || state.duel.completed) return;
+    updateDuelTimerLabel();
+    state.duel.battleTimer = window.setInterval(() => {
+      if (!state.duel.enabled || state.duel.completed) {
+        stopDuelBattleTimer();
+        return;
+      }
+      updateDuelTimerLabel();
+      if (Date.now() >= state.duel.battleDeadlineMs) {
+        stopDuelBattleTimer();
+        void handleDuelBattleTimeout();
+      }
+    }, 1000);
+  }
+
   function setDuelIntroVisible(visible) {
     const isVisible = Boolean(visible);
     if (els.duelIntro) {
@@ -308,6 +440,11 @@
     }
     if (els.sendSpeakingBtn) {
       els.sendSpeakingBtn.disabled = isVisible || state.duel.meFinished;
+    }
+    if (!isVisible) {
+      clearDuelIntroAnimationTimers();
+      stopBattleIntroAudio();
+      resetDuelIntroVisuals();
     }
   }
 
@@ -325,11 +462,18 @@
     if (!state.duel.enabled) return;
     setDuelIntroVisible(true);
     updateTopPercents();
+    resetDuelIntroVisuals();
+    clearDuelIntroAnimationTimers();
+    void playBattleIntroAudio();
+    revealDuelIntroPlayer(els.duelIntroMePlayer, els.duelIntroMeName);
+    queueDuelIntroAnimation(() => {
+      revealDuelIntroPlayer(els.duelIntroEnemyPlayer, els.duelIntroEnemyName);
+    }, 2 * DUEL_INTRO_REVEAL_DELAY_MS);
 
     for (let remaining = DUEL_INTRO_COUNTDOWN_SECONDS; remaining >= 1; remaining -= 1) {
       if (!state.duel.enabled || state.duel.completed) break;
       if (els.duelIntroCountdown) {
-        els.duelIntroCountdown.textContent = `O desafio vai come�ar em ${remaining}...`;
+        els.duelIntroCountdown.textContent = `O desafio vai começar em ${remaining}...`;
       }
       await waitMs(1000);
     }
@@ -351,12 +495,14 @@
       if (els.enemySpeakingPercent) els.enemySpeakingPercent.textContent = '';
       if (els.enemyProgressWrap) els.enemyProgressWrap.hidden = false;
       if (els.duelAvatarsWrap) els.duelAvatarsWrap.hidden = false;
+      updateDuelTimerLabel();
     } else {
       const offlinePercent = getOfflineAveragePercent();
       if (els.speakingPercent) els.speakingPercent.textContent = `Speaking ${offlinePercent}%`;
       if (els.enemySpeakingPercent) els.enemySpeakingPercent.textContent = '';
       if (els.enemyProgressWrap) els.enemyProgressWrap.hidden = true;
       if (els.duelAvatarsWrap) els.duelAvatarsWrap.hidden = false;
+      if (els.duelTimerLabel) els.duelTimerLabel.hidden = true;
     }
     updateDuelAvatarRings();
   }
@@ -441,11 +587,16 @@
     state.duel.rivalProgress = Math.max(0, Number(session?.rivalProgress) || 0);
     state.duel.rivalPercent = Math.max(0, Number(session?.rivalPercent) || 0);
     state.duel.meFinished = Boolean(session?.meFinished);
+    const battleEndsAtMs = Date.parse(String(session?.battleEndsAt || '').trim());
+    if (Number.isFinite(battleEndsAtMs) && battleEndsAtMs > 0) {
+      state.duel.battleDeadlineMs = battleEndsAtMs;
+    }
     updateTopPercents();
     updateProgressBars();
 
     if (safeText(session?.status) === 'completed' && !state.duel.completed) {
       state.duel.completed = true;
+      stopDuelBattleTimer();
       showWinnerReveal(session?.winner);
       scheduleDuelReturnToUsers();
     }
@@ -453,6 +604,18 @@
 
   function showWinnerReveal(winner) {
     if (!els.game) return;
+    if (!winner || !winner.userId) {
+      if (els.winnerReveal) {
+        els.winnerReveal.hidden = true;
+        els.winnerReveal.classList.remove('is-visible');
+      }
+      if (els.finalResultBox) {
+        els.finalResultBox.textContent = 'Batalha encerrada sem vencedores';
+        els.finalResultBox.classList.add('is-visible');
+      }
+      els.game.classList.add('is-winner');
+      return;
+    }
     const avatarImage = safeText(winner?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg') || '/Avatar/avatar-man-person-svgrepo-com.svg';
     if (els.winnerRevealAvatar) {
       els.winnerRevealAvatar.src = avatarImage;
@@ -477,7 +640,10 @@
 
   function resetSpeakingToOfflineMode() {
     stopDuelLoops();
+    stopDuelBattleTimer();
     clearDuelIntroTimer();
+    clearDuelIntroAnimationTimers();
+    stopBattleIntroAudio();
     stopWordTicker();
     state.duel.enabled = false;
     state.duel.sessionId = '';
@@ -490,6 +656,8 @@
     state.duel.mePercent = 0;
     state.duel.rivalProgress = 0;
     state.duel.rivalPercent = 0;
+    state.duel.battleDeadlineMs = 0;
+    state.duel.timeoutSyncInFlight = false;
     state.activeCards = [];
     state.currentIndex = 0;
     state.scores = [];
@@ -508,7 +676,7 @@
     if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = false;
     setMicLiveVisual(false);
     setDuelIntroVisible(false);
-    setHomeStatus('Escolha quantas cartas você quer jogar.', '');
+    setHomeStatus('Escolha quantas cartas Você quer jogar.', '');
     updateTopPercents();
     updateProgressBars();
   }
@@ -521,11 +689,13 @@
     }, DUEL_WINNER_DURATION_MS);
   }
 
-  async function syncDuelProgress(forceFinished) {
+  async function syncDuelProgress(forceFinished, timedOut) {
     if (!state.duel.enabled || !state.duel.sessionId) return;
     const total = Math.max(1, state.activeCards.length);
     const completed = Math.min(state.currentIndex, total);
     const sessionAvg = Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0));
+    const isTimedOut = Boolean(timedOut);
+    const markFinished = isTimedOut ? Boolean(state.duel.meFinished) : Boolean(forceFinished);
     try {
       await fetch(buildApiUrl(`/api/speaking/sessions/${encodeURIComponent(state.duel.sessionId)}/progress`), {
         method: 'POST',
@@ -534,7 +704,8 @@
         body: JSON.stringify({
           progress: completed,
           percent: sessionAvg,
-          finished: Boolean(forceFinished)
+          finished: markFinished,
+          timedOut: isTimedOut
         })
       });
     } catch (_error) {
@@ -592,7 +763,7 @@
   function captureSpeechWithWebSpeech(options = {}) {
     const RecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (typeof RecognitionCtor !== 'function') {
-      return Promise.reject(new Error('Reconhecimento de voz não disponível neste navegador.'));
+      return Promise.reject(new Error('Reconhecimento de voz Não disponível neste navegador.'));
     }
 
     const language = safeText(options.language) || 'en-US';
@@ -804,7 +975,7 @@
       if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = false;
       if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = false;
       setMicLiveVisual(false);
-      setHomeStatus('Sessão finalizada. Escolha outra quantidade e jogue de novo.', '');
+      setHomeStatus('sessão finalizada. Escolha outra quantidade e jogue de novo.', '');
       setGameStatus('', '');
       stopWordTicker();
       state.activeCards = [];
@@ -850,6 +1021,7 @@
     setGameMode('battle-mode');
     state.duel.enabled = true;
     state.duel.completed = false;
+    state.duel.timeoutSyncInFlight = false;
     if (els.home) els.home.hidden = true;
     if (els.game) els.game.classList.add('is-active');
     if (els.finalResultBox) els.finalResultBox.classList.remove('is-visible');
@@ -865,16 +1037,25 @@
     state.activeCards = Array.isArray(session.cards) ? session.cards : [];
     state.currentIndex = Math.max(0, Number(session.meProgress) || 0);
     state.scores = [];
+    if (!state.duel.battleDeadlineMs) {
+      const createdAtMs = Date.parse(String(session?.createdAt || '').trim());
+      if (Number.isFinite(createdAtMs) && createdAtMs > 0) {
+        state.duel.battleDeadlineMs = createdAtMs + (DUEL_INTRO_COUNTDOWN_SECONDS * 1000) + DUEL_BATTLE_DURATION_MS;
+      }
+    }
     syncDuelView(session);
     if (state.duel.completed) {
+      stopDuelBattleTimer();
       startDuelLoops();
       return;
     }
     await runDuelIntroCountdown();
     if (state.duel.completed) {
+      stopDuelBattleTimer();
       startDuelLoops();
       return;
     }
+    startDuelBattleTimer();
     renderCard();
     startDuelLoops();
   }
@@ -888,7 +1069,10 @@
     });
     window.addEventListener('beforeunload', () => {
       stopDuelLoops();
+      stopDuelBattleTimer();
       clearDuelIntroTimer();
+      clearDuelIntroAnimationTimers();
+      stopBattleIntroAudio();
       stopWordTicker();
     });
   }
@@ -919,7 +1103,6 @@
     void init();
   }
 })();
-
 
 
 

@@ -10,6 +10,11 @@
   <script src="js/android-speech.js"></script>
   <script src="js/android-shell.js"></script>
   <style>
+    @font-face {
+      font-family: "Soopafre";
+      src: url("/soopafre.ttf") format("truetype");
+      font-display: swap;
+    }
     :root {
       --bg-1: #06141f;
       --bg-2: #102838;
@@ -179,6 +184,22 @@
       justify-items: center;
       gap: 8px;
       min-width: 140px;
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+      transition: transform 320ms ease, opacity 320ms ease;
+    }
+
+    .duel-intro__player--me {
+      transform: translateX(-18px) scale(0.98);
+    }
+
+    .duel-intro__player--enemy {
+      transform: translateX(18px) scale(0.98);
+    }
+
+    .duel-intro__player.is-visible {
+      opacity: 1;
+      transform: translateX(0) translateY(0) scale(1);
     }
 
     .duel-intro__avatar {
@@ -194,12 +215,26 @@
     .duel-intro__name {
       margin: 0;
       max-width: 180px;
-      font-size: 16px;
+      font-size: 19px;
       font-weight: 800;
       color: #dff8eb;
+      font-family: "Soopafre", "Trebuchet MS", "Segoe UI", sans-serif;
+      letter-spacing: 0.03em;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: transform 200ms ease, opacity 200ms ease;
+    }
+
+    .duel-intro__name.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .duel-intro__name.is-flash {
+      animation: introNameFlash 420ms ease;
     }
 
     .duel-intro__countdown {
@@ -230,6 +265,16 @@
       color: #ffb56b;
       text-align: right;
       margin-left: auto;
+    }
+
+    .duel-timer {
+      margin: 6px 0 2px;
+      text-align: center;
+      color: #fff0d2;
+      font-family: "Soopafre", "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 20px;
+      letter-spacing: 0.04em;
+      text-shadow: 0 0 12px rgba(255, 194, 110, 0.34);
     }
 
     .progress-wrap {
@@ -545,6 +590,12 @@
       50% { filter: brightness(1.18); }
     }
 
+    @keyframes introNameFlash {
+      0% { filter: brightness(1); }
+      45% { filter: brightness(1.9); }
+      100% { filter: brightness(1); }
+    }
+
     @media (max-width: 640px) {
       .home-title { font-size: 24px; }
       .card-word { font-size: 27.6px; }
@@ -592,23 +643,24 @@
     <section class="speaking-card speaking-game" id="speakingGame">
       <section class="duel-intro" id="duelIntro" hidden>
         <div class="duel-intro__avatars">
-          <article class="duel-intro__player">
+          <article class="duel-intro__player duel-intro__player--me" id="duelIntroMePlayer">
             <img class="duel-intro__avatar" id="duelIntroMeAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Seu avatar grande">
             <p class="duel-intro__name" id="duelIntroMeName">Você</p>
           </article>
           <span class="duel-intro__vs">VS</span>
-          <article class="duel-intro__player">
+          <article class="duel-intro__player duel-intro__player--enemy" id="duelIntroEnemyPlayer">
             <img class="duel-intro__avatar" id="duelIntroEnemyAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar grande do adversario">
             <p class="duel-intro__name" id="duelIntroEnemyName">Adversário</p>
           </article>
         </div>
-        <p class="duel-intro__countdown" id="duelIntroCountdown">O desafio vai come�ar em 5...</p>
+        <p class="duel-intro__countdown" id="duelIntroCountdown">O desafio vai começar em 5...</p>
       </section>
 
       <div class="duel-head">
         <div class="speaking-percent" id="speakingPercent">Speaking 0%</div>
         <div class="enemy-speaking" id="enemySpeakingPercent">Speaking rival 0%</div>
       </div>
+      <p class="duel-timer" id="duelTimerLabel" hidden>Tempo restante: 03:00</p>
 
       <div class="progress-wrap" aria-hidden="true">
         <div class="progress-bar" id="gameProgressBar"></div>
@@ -657,6 +709,7 @@
   </main>
 
   <audio id="successAudio" src="gamesounds/success.mp3" preload="auto"></audio>
+  <audio id="battleIntroAudio" src="/battle/battle-intro.mp3" preload="auto"></audio>
   <script src="js/speaking-page.js"></script>
 </body>
 </html>
