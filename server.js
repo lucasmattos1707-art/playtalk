@@ -2416,6 +2416,32 @@ async function optimizeAdminBannerToWebp(inputBuffer, variant = 'desktop', optio
 
   const left = Math.round((renderSize.width - placedWidth) / 2 + offsetX);
   const top = Math.round((renderSize.height - placedHeight) / 2 + offsetY);
+  const intersectionLeft = Math.max(0, left);
+  const intersectionTop = Math.max(0, top);
+  const intersectionRight = Math.min(renderSize.width, left + placedWidth);
+  const intersectionBottom = Math.min(renderSize.height, top + placedHeight);
+  const intersectionWidth = Math.max(0, intersectionRight - intersectionLeft);
+  const intersectionHeight = Math.max(0, intersectionBottom - intersectionTop);
+
+  const compositeList = [];
+  if (intersectionWidth > 0 && intersectionHeight > 0) {
+    const sourceLeft = Math.max(0, intersectionLeft - left);
+    const sourceTop = Math.max(0, intersectionTop - top);
+    const visiblePlacedBuffer = await sharp(placedImageBuffer)
+      .extract({
+        left: sourceLeft,
+        top: sourceTop,
+        width: intersectionWidth,
+        height: intersectionHeight
+      })
+      .toBuffer();
+
+    compositeList.push({
+      input: visiblePlacedBuffer,
+      left: intersectionLeft,
+      top: intersectionTop
+    });
+  }
 
   const pipeline = sharp({
     create: {
@@ -2425,13 +2451,7 @@ async function optimizeAdminBannerToWebp(inputBuffer, variant = 'desktop', optio
       background: { r: 0, g: 0, b: 0, alpha: 0 }
     }
   })
-    .composite([
-      {
-        input: placedImageBuffer,
-        left,
-        top
-      }
-    ])
+    .composite(compositeList)
     .flatten({ background: { r: 14, g: 44, b: 85 } })
     .webp({
       quality: normalizedVariant === 'mobile' ? 74 : 76,
