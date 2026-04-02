@@ -88,6 +88,19 @@
       .filter(Boolean);
   }
 
+  function getPreviewDimensionsForSlot(slot) {
+    const firstSlotElement = slotElements(slot)[0] || null;
+    const media = firstSlotElement?.querySelector('.banner-carousel__media');
+    if (!media) {
+      return { width: 0, height: 0 };
+    }
+    const rect = media.getBoundingClientRect();
+    return {
+      width: Math.max(0, Number(rect?.width) || 0),
+      height: Math.max(0, Number(rect?.height) || 0)
+    };
+  }
+
   function getBannerEntry(slot) {
     const existing = state.banners.get(slot);
     if (existing) return existing;
@@ -446,6 +459,7 @@
     const variant = normalizeVariant(state.viewMode);
     const entry = getBannerEntry(slot);
     const selected = entryForVariant(entry, variant);
+    const preview = getPreviewDimensionsForSlot(slot);
     if (!selected.imageUrl || !selected.imageUrl.startsWith('data:image/')) {
       setCarouselStatus(`Selecione ou gere uma imagem (${variant}) antes de aprovar.`);
       return;
@@ -467,7 +481,9 @@
           prompt: selected.prompt || state.defaultPrompt,
           offsetX: toInteger(selected.offsetX, 0),
           offsetY: toInteger(selected.offsetY, 0),
-          sizeAdjustPx: toInteger(selected.sizeAdjustPx, 0)
+          sizeAdjustPx: toInteger(selected.sizeAdjustPx, 0),
+          previewWidth: preview.width,
+          previewHeight: preview.height
         })
       });
       const payload = await response.json().catch(() => ({}));

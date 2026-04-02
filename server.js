@@ -7997,6 +7997,8 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
   const offsetX = normalizeAdminBannerOffset(req.body?.offsetX);
   const offsetY = normalizeAdminBannerOffset(req.body?.offsetY);
   const sizeAdjustPx = normalizeAdminBannerSizeAdjust(req.body?.sizeAdjustPx);
+  const previewWidth = Number.parseFloat(req.body?.previewWidth);
+  const previewHeight = Number.parseFloat(req.body?.previewHeight);
 
   if (!slot) {
     res.status(400).json({ error: 'Slot de banner invalido.' });
@@ -8015,10 +8017,19 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
   }
 
   try {
+    const renderSize = getAdminBannerRenderSize(variant);
+    const hasPreviewDimensions = Number.isFinite(previewWidth) && Number.isFinite(previewHeight) && previewWidth > 0 && previewHeight > 0;
+    const scaleX = hasPreviewDimensions ? (renderSize.width / previewWidth) : 1;
+    const scaleY = hasPreviewDimensions ? (renderSize.height / previewHeight) : 1;
+    const scaleForSize = (scaleX + scaleY) / 2;
+    const renderOffsetX = normalizeAdminBannerOffset(Math.round(offsetX * scaleX));
+    const renderOffsetY = normalizeAdminBannerOffset(Math.round(offsetY * scaleY));
+    const renderSizeAdjustPx = normalizeAdminBannerSizeAdjust(Math.round(sizeAdjustPx * scaleForSize));
+
     const optimizedBuffer = await optimizeAdminBannerToWebp(parsedImage.buffer, variant, {
-      offsetX,
-      offsetY,
-      sizeAdjustPx
+      offsetX: renderOffsetX,
+      offsetY: renderOffsetY,
+      sizeAdjustPx: renderSizeAdjustPx
     });
     if (!optimizedBuffer?.length) {
       res.status(422).json({ error: 'Nao foi possivel otimizar o banner para WebP.' });
@@ -8054,9 +8065,9 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
           imageUrlMobile: publicUrl,
           objectKeyMobile: objectKey,
           promptMobile: prompt || entry.promptMobile || entry.prompt || ADMIN_BANNER_DEFAULT_PROMPT,
-          offsetXMobile: offsetX,
-          offsetYMobile: offsetY,
-          sizeAdjustPxMobile: sizeAdjustPx,
+          offsetXMobile: 0,
+          offsetYMobile: 0,
+          sizeAdjustPxMobile: 0,
           updatedAt: new Date().toISOString()
         };
       }
@@ -8066,16 +8077,16 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
         imageUrlDesktop: publicUrl,
         objectKeyDesktop: objectKey,
         promptDesktop: prompt || entry.promptDesktop || entry.prompt || ADMIN_BANNER_DEFAULT_PROMPT,
-        offsetXDesktop: offsetX,
-        offsetYDesktop: offsetY,
-        sizeAdjustPxDesktop: sizeAdjustPx,
+        offsetXDesktop: 0,
+        offsetYDesktop: 0,
+        sizeAdjustPxDesktop: 0,
         // Legacy aliases to keep old readers functional.
         imageUrl: publicUrl,
         objectKey,
         prompt: prompt || entry.promptDesktop || entry.prompt || ADMIN_BANNER_DEFAULT_PROMPT,
-        offsetX,
-        offsetY,
-        sizeAdjustPx,
+        offsetX: 0,
+        offsetY: 0,
+        sizeAdjustPx: 0,
         updatedAt: new Date().toISOString()
       };
     });
@@ -8095,8 +8106,13 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
         sourceBytes: parsedImage.buffer.length,
         outputBytes: optimizedBuffer.length,
         format: 'webp',
-        width: getAdminBannerRenderSize(variant).width,
-        height: getAdminBannerRenderSize(variant).height
+        width: renderSize.width,
+        height: renderSize.height,
+        previewWidth: hasPreviewDimensions ? previewWidth : null,
+        previewHeight: hasPreviewDimensions ? previewHeight : null,
+        renderOffsetX,
+        renderOffsetY,
+        renderSizeAdjustPx
       },
       banner: savedEntry
     });
