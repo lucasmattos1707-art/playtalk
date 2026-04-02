@@ -142,6 +142,7 @@ const FLASHCARD_RANKING_TIMEZONE = 'America/Sao_Paulo';
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
 const SPEAKING_DUEL_DEFAULT_CARDS = 25;
+const SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS = 20;
 const SPEAKING_CARD_CACHE_TTL_MS = 60 * 1000;
 const FLASHCARD_RANKING_PLACEHOLDER_NAME = 'Usuario';
 const FLASHCARD_RANKING_PLACEHOLDER_AVATAR = '/Avatar/avatar-man-person-svgrepo-com.svg';
@@ -735,11 +736,21 @@ const ensureSpeakingRealtimeTables = async () => {
           opponent_percent integer NOT NULL DEFAULT 0,
           challenger_finished boolean NOT NULL DEFAULT false,
           opponent_finished boolean NOT NULL DEFAULT false,
+          challenger_last_seen_at timestamptz NOT NULL DEFAULT now(),
+          opponent_last_seen_at timestamptz NOT NULL DEFAULT now(),
           winner_user_id integer REFERENCES public.users(id) ON DELETE SET NULL,
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now(),
           finished_at timestamptz
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.speaking_duel_sessions
+        ADD COLUMN IF NOT EXISTS challenger_last_seen_at timestamptz NOT NULL DEFAULT now()
+      `);
+      await pool.query(`
+        ALTER TABLE public.speaking_duel_sessions
+        ADD COLUMN IF NOT EXISTS opponent_last_seen_at timestamptz NOT NULL DEFAULT now()
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS speaking_duel_sessions_challenger_idx
@@ -3115,6 +3126,98 @@ async function buildRandomSpeakingCards(count = SPEAKING_DUEL_DEFAULT_CARDS) {
 
 function buildSpeakingSessionId() {
   return crypto.randomBytes(16).toString('hex');
+}
+
+async function markSpeakingChallengeCompletedBySessionId(client, sessionId) {
+  if (!sessionId) return;
+  await client.query(
+    `UPDATE public.speaking_challenges
+     SET status = 'completed',
+         updated_at = now()
+     WHERE session_id = $1
+       AND status = 'accepted'`,
+    [sessionId]
+  );
+}
+
+async function touchSpeakingSessionAndResolveTimeout(client, sessionId, requesterUserId) {
+  const result = await client.query(
+    `SELECT *
+     FROM public.speaking_duel_sessions
+     WHERE id = $1
+     FOR UPDATE`,
+    [sessionId]
+  );
+  const session = result.rows[0] || null;
+  if (!session) return null;
+
+  const requesterId = Number(requesterUserId) || 0;
+  const challengerUserId = Number(session.challenger_user_id) || 0;
+  const opponentUserId = Number(session.opponent_user_id) || 0;
+  const requesterIsChallenger = requesterId === challengerUserId;
+  const requesterIsOpponent = requesterId === opponentUserId;
+  if (!requesterIsChallenger && !requesterIsOpponent) {
+    return session;
+  }
+
+  const nowIso = new Date().toISOString();
+  const next = { ...session };
+  if (requesterIsChallenger) {
+    next.challenger_last_seen_at = nowIso;
+  } else {
+    next.opponent_last_seen_at = nowIso;
+  }
+
+  let status = String(next.status || '').trim() || 'active';
+  let winnerUserId = Number(next.winner_user_id) || 0;
+  let challengerFinished = Boolean(next.challenger_finished);
+  let opponentFinished = Boolean(next.opponent_finished);
+  let finishedAt = next.finished_at || null;
+
+  if (status === 'active') {
+    const requesterWinsByTimeout = requesterIsChallenger
+      ? (Date.now() - Date.parse(next.opponent_last_seen_at || 0)) > (SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS * 1000)
+      : (Date.now() - Date.parse(next.challenger_last_seen_at || 0)) > (SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS * 1000);
+
+    if (requesterWinsByTimeout) {
+      status = 'completed';
+      winnerUserId = requesterId;
+      challengerFinished = requesterIsChallenger ? true : challengerFinished;
+      opponentFinished = requesterIsOpponent ? true : opponentFinished;
+      finishedAt = nowIso;
+    }
+  }
+
+  const updateResult = await client.query(
+    `UPDATE public.speaking_duel_sessions
+     SET challenger_last_seen_at = $2,
+         opponent_last_seen_at = $3,
+         status = $4,
+         winner_user_id = CASE WHEN $5 > 0 THEN $5 ELSE winner_user_id END,
+         challenger_finished = $6,
+         opponent_finished = $7,
+         finished_at = CASE
+           WHEN $4 = 'completed' THEN COALESCE(finished_at, now())
+           ELSE finished_at
+         END,
+         updated_at = now()
+     WHERE id = $1
+     RETURNING *`,
+    [
+      sessionId,
+      next.challenger_last_seen_at || session.challenger_last_seen_at,
+      next.opponent_last_seen_at || session.opponent_last_seen_at,
+      status,
+      winnerUserId,
+      challengerFinished,
+      opponentFinished
+    ]
+  );
+  const updated = updateResult.rows[0] || session;
+  if (String(updated.status || '').trim() === 'completed') {
+    await markSpeakingChallengeCompletedBySessionId(client, sessionId);
+  }
+  return updated;
 }
 
 async function refreshFlashcardManifestMirror() {
@@ -5600,12 +5703,15 @@ app.get('/api/speaking/challenges/poll', async (req, res) => {
          c.expires_at,
          c.responded_at,
          c.session_id,
+         COALESCE(s.status, '') AS session_status,
          u.id AS opponent_id,
          COALESCE(NULLIF(u.username, ''), u.email) AS opponent_name,
          COALESCE(u.avatar_image, '') AS opponent_avatar
        FROM public.speaking_challenges c
        INNER JOIN public.users u
          ON u.id = c.opponent_user_id
+       LEFT JOIN public.speaking_duel_sessions s
+         ON s.id = c.session_id
        WHERE c.challenger_user_id = $1
        ORDER BY c.created_at DESC
        LIMIT 1`,
@@ -5631,7 +5737,12 @@ app.get('/api/speaking/challenges/poll', async (req, res) => {
       } : null,
       outgoingChallenge: outgoing ? {
         challengeId: Number(outgoing.id) || 0,
-        status: String(outgoing.status || '').trim(),
+        status: (
+          String(outgoing.status || '').trim() === 'accepted'
+          && String(outgoing.session_status || '').trim() === 'completed'
+            ? 'completed'
+            : String(outgoing.status || '').trim()
+        ),
         sessionId: String(outgoing.session_id || '').trim(),
         createdAt: outgoing.created_at || null,
         expiresAt: outgoing.expires_at || null,
@@ -5884,40 +5995,62 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
       return;
     }
 
-    const sessionResult = await pool.query(
-      `SELECT
-         s.*,
-         cu.id AS challenger_id,
-         COALESCE(NULLIF(cu.username, ''), cu.email) AS challenger_name,
-         COALESCE(cu.avatar_image, '') AS challenger_avatar,
-         ou.id AS opponent_id,
-         COALESCE(NULLIF(ou.username, ''), ou.email) AS opponent_name,
-         COALESCE(ou.avatar_image, '') AS opponent_avatar,
-         wu.id AS winner_id,
-         COALESCE(NULLIF(wu.username, ''), wu.email) AS winner_name,
-         COALESCE(wu.avatar_image, '') AS winner_avatar
-       FROM public.speaking_duel_sessions s
-       INNER JOIN public.users cu ON cu.id = s.challenger_user_id
-       INNER JOIN public.users ou ON ou.id = s.opponent_user_id
-       LEFT JOIN public.users wu ON wu.id = s.winner_user_id
-       WHERE s.id = $1
-       LIMIT 1`,
-      [sessionId]
-    );
-    const session = sessionResult.rows[0];
+    const userId = Number(authUser.id);
+    const client = await pool.connect();
+    let session = null;
+    try {
+      await client.query('BEGIN');
+      const touched = await touchSpeakingSessionAndResolveTimeout(client, sessionId, userId);
+      if (!touched) {
+        await client.query('ROLLBACK');
+        res.status(404).json({ success: false, message: 'Sessao nao encontrada.' });
+        return;
+      }
+
+      const challengerUserId = Number(touched.challenger_user_id) || 0;
+      const opponentUserId = Number(touched.opponent_user_id) || 0;
+      if (userId !== challengerUserId && userId !== opponentUserId) {
+        await client.query('ROLLBACK');
+        res.status(403).json({ success: false, message: 'Voce nao participa desta sessao.' });
+        return;
+      }
+
+      const sessionResult = await client.query(
+        `SELECT
+           s.*,
+           cu.id AS challenger_id,
+           COALESCE(NULLIF(cu.username, ''), cu.email) AS challenger_name,
+           COALESCE(cu.avatar_image, '') AS challenger_avatar,
+           ou.id AS opponent_id,
+           COALESCE(NULLIF(ou.username, ''), ou.email) AS opponent_name,
+           COALESCE(ou.avatar_image, '') AS opponent_avatar,
+           wu.id AS winner_id,
+           COALESCE(NULLIF(wu.username, ''), wu.email) AS winner_name,
+           COALESCE(wu.avatar_image, '') AS winner_avatar
+         FROM public.speaking_duel_sessions s
+         INNER JOIN public.users cu ON cu.id = s.challenger_user_id
+         INNER JOIN public.users ou ON ou.id = s.opponent_user_id
+         LEFT JOIN public.users wu ON wu.id = s.winner_user_id
+         WHERE s.id = $1
+         LIMIT 1`,
+        [sessionId]
+      );
+      session = sessionResult.rows[0] || null;
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
     if (!session) {
       res.status(404).json({ success: false, message: 'Sessao nao encontrada.' });
       return;
     }
 
-    const userId = Number(authUser.id);
     const challengerUserId = Number(session.challenger_user_id) || 0;
     const opponentUserId = Number(session.opponent_user_id) || 0;
-    if (userId !== challengerUserId && userId !== opponentUserId) {
-      res.status(403).json({ success: false, message: 'Voce nao participa desta sessao.' });
-      return;
-    }
-
     const meRole = userId === challengerUserId ? 'challenger' : 'opponent';
     const rivalUserId = meRole === 'challenger' ? opponentUserId : challengerUserId;
     const cardList = Array.isArray(session.cards) ? session.cards : [];
@@ -6004,14 +6137,7 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const sessionResult = await client.query(
-        `SELECT *
-         FROM public.speaking_duel_sessions
-         WHERE id = $1
-         FOR UPDATE`,
-        [sessionId]
-      );
-      const session = sessionResult.rows[0];
+      const session = await touchSpeakingSessionAndResolveTimeout(client, sessionId, userId);
       if (!session) {
         const error = new Error('Sessao nao encontrada.');
         error.statusCode = 404;
@@ -6041,6 +6167,24 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
         status: String(session.status || '').trim() || 'active',
         winnerUserId: Number(session.winner_user_id) || 0
       };
+
+      if (next.status === 'completed') {
+        await client.query('COMMIT');
+        res.json({
+          success: true,
+          session: {
+            status: next.status,
+            winnerUserId: next.winnerUserId || 0,
+            challengerProgress: next.challengerProgress,
+            opponentProgress: next.opponentProgress,
+            challengerPercent: next.challengerPercent,
+            opponentPercent: next.opponentPercent,
+            challengerFinished: next.challengerFinished,
+            opponentFinished: next.opponentFinished
+          }
+        });
+        return;
+      }
 
       if (isChallenger) {
         next.challengerProgress = normalizedProgress;
@@ -6092,6 +6236,9 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
           next.winnerUserId
         ]
       );
+      if (next.status === 'completed') {
+        await markSpeakingChallengeCompletedBySessionId(client, sessionId);
+      }
       await client.query('COMMIT');
 
       res.json({
