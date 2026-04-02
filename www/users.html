@@ -263,12 +263,25 @@
     .ranking-label {
       margin: 8px 0 0;
       text-align: center;
-      color: #ffffff !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+
+    .ranking-label__text {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: #ffffff;
+      color: #0d3f86 !important;
+      -webkit-text-fill-color: #0d3f86 !important;
       font-size: 15px;
       font-weight: 900;
       letter-spacing: 0.02em;
-      text-shadow: 0 2px 10px rgba(6, 20, 42, 0.6);
-      opacity: 1 !important;
+      text-shadow: none;
+      border: 1px solid rgba(13, 63, 134, 0.22);
     }
 
     .users-list {
@@ -362,14 +375,15 @@
       align-items: center;
       justify-content: center;
       padding: 6px 10px;
-      border-radius: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      background: rgba(7, 20, 40, 0.52);
+      border-radius: 999px;
+      border: 1px solid rgba(13, 63, 134, 0.22);
+      background: #ffffff;
       text-align: right;
       font-size: 24px;
       font-weight: 900;
-      color: #ffffff !important;
-      text-shadow: 0 2px 10px rgba(6, 20, 42, 0.65);
+      color: #0d3f86 !important;
+      -webkit-text-fill-color: #0d3f86 !important;
+      text-shadow: none;
       opacity: 1 !important;
       visibility: visible !important;
     }
@@ -672,7 +686,7 @@
     <section class="panel-head">
       <h1 class="title">Usuarios</h1>
     </section>
-    <p class="ranking-label" id="rankingLabel">Ranking: Flashcards</p>
+    <p class="ranking-label" id="rankingLabel"><span class="ranking-label__text">Ranking: Flashcards</span></p>
     <p class="status" id="usersStatus">Carregando usuarios...</p>
     <section class="panel">
       <section class="users-list" id="usersList" aria-live="polite"></section>
@@ -737,13 +751,13 @@
 
   <script src="js/android-config.js"></script>
   <script src="js/api-config.js"></script>
-  <script src="js/banner-carousel-admin.js"></script>
+  <script src="js/banner-carousel-admin.js?v=20260402b"></script>
   <script src="js/android-shell.js"></script>
   <script>
     if (window.PlaytalkNative && typeof window.PlaytalkNative.isNativeRuntime === 'function' && window.PlaytalkNative.isNativeRuntime()) {
       document.body.classList.add('is-native-runtime');
     }
   </script>
-  <script src="js/users-page.js"></script>
+  <script src="js/users-page.js?v=20260402b"></script>
 </body>
 </html>

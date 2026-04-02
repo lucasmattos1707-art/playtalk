@@ -102,9 +102,10 @@
 
   function setRankingLabel(label) {
     if (!els.rankingLabel) return;
-    els.rankingLabel.textContent = `Ranking: ${safeText(label) || 'Flashcards'}`;
-    els.rankingLabel.style.color = '#ffffff';
+    const text = `Ranking: ${safeText(label) || 'Flashcards'}`;
+    els.rankingLabel.innerHTML = `<span class="ranking-label__text">${escapeHtml(text)}</span>`;
     els.rankingLabel.style.opacity = '1';
+    els.rankingLabel.style.visibility = 'visible';
   }
 
   function metricByKey(metricKey) {
@@ -329,15 +330,15 @@
         </div>
         <div
           class="users-count"
-          style="color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:1 !important;visibility:visible !important;text-shadow:0 2px 10px rgba(6,20,42,.65);"
+          style="color:#0d3f86 !important;-webkit-text-fill-color:#0d3f86 !important;opacity:1 !important;visibility:visible !important;text-shadow:none;"
         >${escapeHtml(formatMetricValue(entry, state.currentMetricKey, state.currentMetricValueLabel))}</div>
       </div>
     `).join('');
 
     els.usersList.innerHTML = rowMarkup;
     Array.from(els.usersList.querySelectorAll('.users-count')).forEach((countEl) => {
-      countEl.style.color = '#ffffff';
-      countEl.style.webkitTextFillColor = '#ffffff';
+      countEl.style.color = '#0d3f86';
+      countEl.style.webkitTextFillColor = '#0d3f86';
       countEl.style.opacity = '1';
       countEl.style.visibility = 'visible';
     });
