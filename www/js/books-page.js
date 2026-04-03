@@ -412,6 +412,18 @@
       .filter(Boolean);
   }
 
+  function flashShelfCard(index) {
+    const cards = getShelfCards();
+    const target = cards[Math.max(0, Math.min(cards.length - 1, Number(index) || 0))];
+    if (!target) return;
+    target.classList.remove('is-appearing');
+    void target.offsetWidth;
+    target.classList.add('is-appearing');
+    window.setTimeout(() => {
+      target.classList.remove('is-appearing');
+    }, 380);
+  }
+
   function syncShelfViewportHeight() {
     const shelf = els.shelfViewport;
     if (!shelf) return;
@@ -492,6 +504,7 @@
     const pages = getShelfPages();
     if (!shelf || !pages.length) return;
     syncShelfViewportHeight();
+    const previousIndex = state.shelfIndex;
     const nextIndex = Math.max(0, Math.min(pages.length - 1, Number(index) || 0));
     state.shelfIndex = nextIndex;
     const pageHeight = Math.max(1, shelf.clientHeight);
@@ -499,10 +512,16 @@
 
     if (animate) {
       await animateShelfScrollTo(targetScrollTop, BOOK_SNAP_DURATION_MS);
+      if (previousIndex !== nextIndex) {
+        flashShelfCard(nextIndex);
+      }
       return;
     }
     cancelShelfAnimation();
     shelf.scrollTop = targetScrollTop;
+    if (previousIndex !== nextIndex) {
+      flashShelfCard(nextIndex);
+    }
   }
 
   function updateShelfIndexFromViewport() {
@@ -766,10 +785,6 @@
       const overlay = document.createElement('span');
       overlay.className = 'books-card__overlay';
 
-      const title = document.createElement('p');
-      title.className = 'books-card__title';
-      title.textContent = safeText(book?.nome) || '-';
-
       const adminChip = document.createElement('span');
       adminChip.className = 'books-card__admin-chip';
       adminChip.textContent = 'Admin';
@@ -823,7 +838,7 @@
       processingOverlay.innerHTML = '<span class="books-card__spinner" aria-hidden="true"></span><span class="books-card__processing-label">Gerando...</span>';
 
       actions.append(uploadBtn, magicBtn, textBtn);
-      card.append(background, overlay, title, adminChip, actions, processingOverlay);
+      card.append(background, overlay, adminChip, actions, processingOverlay);
       card.addEventListener('click', () => {
         if ((Date.now() - state.shelfLastGestureAt) < 240) return;
         if (state.uploadInFlight || processingMagic) return;
