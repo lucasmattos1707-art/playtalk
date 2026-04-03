@@ -333,9 +333,9 @@
 
   function syncStorySelectWithSelectedBook() {
     if (!els.storySelect) return;
-    const selectedBook = getSelectedBook();
+    const booksAtLevel = getBooksForSelectedLevel();
     els.storySelect.innerHTML = '';
-    if (!selectedBook?.selectedStoryId) {
+    if (!booksAtLevel.length) {
       const option = document.createElement('option');
       option.value = '';
       option.textContent = 'Selecione um MiniBook...';
@@ -344,12 +344,39 @@
       return;
     }
 
-    const option = document.createElement('option');
-    option.value = selectedBook.selectedStoryId;
-    option.textContent = normalizeBookTitle(selectedBook.title) || 'MiniBook';
-    els.storySelect.appendChild(option);
-    els.storySelect.value = option.value;
-    state.selectedStoryId = option.value;
+    let selectedBook = booksAtLevel.find((book) => safeText(book?.id) === safeText(state.selectedBookId)) || null;
+    if (!selectedBook || !safeText(selectedBook?.selectedStoryId)) {
+      selectedBook = booksAtLevel.find((book) => safeText(book?.selectedStoryId)) || booksAtLevel[0];
+      state.selectedBookId = safeText(selectedBook?.id);
+    }
+
+    booksAtLevel.forEach((book) => {
+      const storyId = safeText(book?.selectedStoryId);
+      if (!storyId) return;
+      const option = document.createElement('option');
+      option.value = storyId;
+      option.textContent = normalizeBookTitle(book?.title) || 'MiniBook';
+      els.storySelect.appendChild(option);
+    });
+
+    const selectedStoryId = safeText(selectedBook?.selectedStoryId);
+    if (selectedStoryId) {
+      els.storySelect.value = selectedStoryId;
+      state.selectedStoryId = selectedStoryId;
+      return;
+    }
+
+    if (!els.storySelect.options.length) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'Selecione um MiniBook...';
+      els.storySelect.appendChild(option);
+      state.selectedStoryId = '';
+      return;
+    }
+
+    els.storySelect.selectedIndex = 0;
+    state.selectedStoryId = safeText(els.storySelect.value);
   }
 
   function applySelectedMiniBookBackground() {
@@ -1840,7 +1867,14 @@
       setHomeStatus('', '');
     });
     els.storySelect?.addEventListener('change', () => {
-      state.selectedStoryId = safeText(els.storySelect?.value || '');
+      const selectedStoryId = safeText(els.storySelect?.value || '');
+      state.selectedStoryId = selectedStoryId;
+      const matchedBook = getBooksForSelectedLevel()
+        .find((book) => safeText(book?.selectedStoryId) === selectedStoryId);
+      if (!matchedBook) return;
+      state.selectedBookId = safeText(matchedBook?.id);
+      renderMiniBooksGrid();
+      applySelectedMiniBookBackground();
     });
     els.startSpeakingBtn?.addEventListener('click', () => {
       void startSinglePlayer();

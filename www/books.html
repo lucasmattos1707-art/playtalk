@@ -4,31 +4,901 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <title>Books | PlayTalk</title>
-  <meta name="description" content="Area de books no PlayTalk.">
   <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
+  <script src="js/android-config.js"></script>
+  <script src="js/api-config.js"></script>
+  <script src="/config.js"></script>
+  <script src="js/android-speech.js"></script>
+  <script src="js/android-shell.js"></script>
   <style>
+    @font-face {
+      font-family: "Soopafre";
+      src: url("/soopafre.ttf") format("truetype");
+      font-display: swap;
+    }
     :root {
+      --bg-1: #06141f;
+      --bg-2: #102838;
+      --card: rgba(9, 32, 47, 0.88);
+      --line: rgba(124, 192, 150, 0.35);
+      --text: #e8f5ef;
+      --muted: #a8c6b6;
+      --accent: #7cc096;
+      --accent-2: #a8ddb6;
+      --enemy: #ffb25e;
+      --enemy-2: #ff8d4a;
+      --danger: #ff8f8f;
       --footer-height: max(62px, 8vh);
       --footer-safe-bottom: env(safe-area-inset-bottom, 0px);
       --footer-total-height: calc(var(--footer-height) + var(--footer-safe-bottom));
     }
 
-    * {
-      box-sizing: border-box;
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+      color: var(--text);
+      background: transparent;
     }
 
-    html,
-    body {
+    .container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: #041226 url('/accesskey/quantum-gradient.svg') center/cover no-repeat;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body.is-speaking-admin .container {
+      background: #000 !important;
+    }
+
+    body > *:not(.container) {
+      position: relative;
+      z-index: 1;
+    }
+
+    .speaking-shell {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 22px 16px calc(var(--footer-total-height) + 24px);
+    }
+
+    .speaking-card {
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      backdrop-filter: blur(8px);
+      box-shadow: none;
+    }
+
+    .home-title {
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: 0.3px;
+    }
+
+    .home-copy {
+      margin: 0 0 16px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .home-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .home-row--levels {
+      margin-bottom: 12px;
+    }
+
+    .home-row select,
+    .home-row button,
+    .btn {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .home-row select {
+      background: #17394d;
+      color: var(--text);
+      min-width: 130px;
+      outline: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .home-actions {
+      margin-top: 12px;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .mini-book {
+      border: 0;
+      border-radius: 14px;
+      cursor: pointer;
+      overflow: hidden;
+      min-height: 228px;
+      aspect-ratio: 9 / 16;
+      background: linear-gradient(160deg, #07233a 0%, #16524f 100%);
+      position: relative;
+      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.26);
+      text-align: left;
+      color: #ebfff4;
+      padding: 10px;
+      display: flex;
+      align-items: flex-end;
+      transition: transform 150ms ease, box-shadow 150ms ease;
+    }
+
+    .mini-book:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 22px rgba(0, 0, 0, 0.32);
+    }
+
+    .mini-book.is-selected {
+      outline: 2px solid #9fe0ba;
+      outline-offset: 1px;
+    }
+
+    .mini-book__bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background-position: center;
+      background-size: cover;
+      background-repeat: no-repeat;
+      opacity: 0.94;
+      filter: saturate(1.08);
+    }
+
+    .mini-book__overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: linear-gradient(to top, rgba(3, 16, 25, 0.82) 0%, rgba(3, 16, 25, 0.1) 62%, rgba(3, 16, 25, 0.06) 100%);
+    }
+
+    .mini-book__content {
+      z-index: 2;
+      width: 100%;
+    }
+
+    .mini-book__line {
       margin: 0;
-      min-height: 100%;
-      background: #000000;
+      line-height: 1.03;
+      text-transform: uppercase;
+      word-break: break-word;
+      letter-spacing: 0.03em;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+      font-weight: 900;
+    }
+
+    .mini-book__line--a {
+      font-size: clamp(15px, 2.8vw, 22px);
+    }
+
+    .mini-book__line--b {
+      font-size: clamp(12px, 2.2vw, 18px);
+      opacity: 0.92;
+    }
+
+    .mini-book__meta {
+      margin: 7px 0 0;
+      font-size: 11px;
+      color: #cbead7;
+      opacity: 0.92;
+      letter-spacing: 0.04em;
+    }
+
+    .mini-grid-empty {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .mini-editor {
+      margin-top: 14px;
+      border: 1px solid rgba(124, 192, 150, 0.35);
+      border-radius: 12px;
+      padding: 12px;
+      background: rgba(6, 26, 39, 0.65);
+      position: relative;
+    }
+
+    .mini-editor__title {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #d4f7e5;
+    }
+
+    .mini-editor__row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .mini-editor input,
+    .mini-editor textarea {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(2, 12, 20, 0.7);
+      color: #e9f8f1;
+      padding: 9px 10px;
+      font: inherit;
+    }
+
+    .mini-editor textarea {
+      min-height: 66px;
+      resize: vertical;
+    }
+
+    .mini-editor button {
+      border: 0;
+      border-radius: 9px;
+      padding: 9px 11px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #103224;
+    }
+
+    .mini-editor button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .mini-editor__upload-float {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: 1px solid rgba(168, 221, 182, 0.45);
+      background: rgba(14, 46, 36, 0.78);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+
+    .mini-editor__upload-float:hover {
+      transform: translateY(-1px) scale(1.03);
+      background: rgba(23, 74, 57, 0.88);
+      border-color: rgba(181, 237, 203, 0.75);
+    }
+
+    .mini-editor__upload-float svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+      color: #dffcf0;
+    }
+
+    .mini-editor__preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .mini-editor__preview {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      background: rgba(3, 15, 23, 0.7);
+      overflow: hidden;
+      min-height: 95px;
+    }
+
+    .mini-editor__preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .mini-editor__preview--cover {
+      aspect-ratio: 9 / 16;
+    }
+
+    .mini-editor__preview--desktop {
+      aspect-ratio: 16 / 9;
+    }
+
+    .mini-editor__preview--mobile {
+      aspect-ratio: 9 / 16;
+    }
+
+    .home-row button,
+    .btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #0f3021;
+      cursor: pointer;
+    }
+
+    .home-row button:disabled,
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .speaking-game { display: none; margin-top: 12px; }
+    .speaking-game.is-active { display: block; }
+    .speaking-game.is-prestart .progress-wrap,
+    .speaking-game.is-prestart .progress-copy,
+    .speaking-game.is-prestart .duel-avatars,
+    .speaking-game.is-prestart .card-word,
+    .speaking-game.is-prestart .card-subword,
+    .speaking-game.is-prestart .mic-trigger-wrap,
+    .speaking-game.is-prestart .final-result,
+    .speaking-game.is-prestart .winner-card {
+      display: none !important;
+    }
+
+    .speaking-game.is-winner .duel-intro,
+    .speaking-game.is-winner .duel-head,
+    .speaking-game.is-winner .progress-wrap,
+    .speaking-game.is-winner .progress-copy,
+    .speaking-game.is-winner .duel-avatars,
+    .speaking-game.is-winner .card-word,
+    .speaking-game.is-winner .card-subword,
+    .speaking-game.is-winner .mic-trigger-wrap,
+    .speaking-game.is-winner .final-result,
+    .speaking-game.is-winner .winner-card {
+      display: none !important;
+    }
+
+    .duel-intro {
+      display: none;
+      margin: 8px 0 10px;
+      padding: 18px 12px 14px;
+      border-radius: 18px;
+      border: 0;
+      background: transparent;
+      text-align: center;
+    }
+
+    .duel-intro.is-visible {
+      display: block;
+      animation: fadeIn 220ms ease;
+    }
+
+    .duel-intro__avatars {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .duel-intro__vs {
+      font-size: 26px;
+      font-weight: 900;
+      color: #b8f5cc;
+      text-shadow: 0 0 14px rgba(124, 192, 150, 0.45);
+      letter-spacing: 1px;
+    }
+
+    .duel-intro__player {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      min-width: 140px;
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+      transition: transform 320ms ease, opacity 320ms ease;
+    }
+
+    .duel-intro__player--me {
+      transform: translateX(-18px) scale(0.98);
+    }
+
+    .duel-intro__player--enemy {
+      transform: translateX(18px) scale(0.98);
+    }
+
+    .duel-intro__player.is-visible {
+      opacity: 1;
+      transform: translateX(0) translateY(0) scale(1);
+    }
+
+    .duel-intro__avatar {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid rgba(255, 255, 255, 0.7);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
+      background: rgba(8, 24, 38, 0.8);
+    }
+
+    .duel-intro__name {
+      margin: 0;
+      max-width: 180px;
+      font-size: 19px;
+      font-weight: 800;
+      color: #dff8eb;
+      font-family: "Soopafre", "Trebuchet MS", "Segoe UI", sans-serif;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: transform 200ms ease, opacity 200ms ease;
+    }
+
+    .duel-intro__name.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .duel-intro__name.is-flash {
+      animation: introNameFlash 420ms ease;
+    }
+
+    .duel-intro__countdown {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 900;
+      color: #bff7d0;
+    }
+
+    .duel-head {
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .speaking-percent {
+      font-size: 24px;
+      font-weight: 800;
+      color: #b8f5cc;
+    }
+
+    .enemy-speaking {
+      font-size: 21px;
+      font-weight: 800;
+      color: #ffb56b;
+      text-align: right;
+      margin-left: auto;
+    }
+
+    .duel-timer {
+      margin: 6px 0 2px;
+      text-align: center;
+      color: #fff0d2;
+      font-family: "Soopafre", "Trebuchet MS", "Segoe UI", sans-serif;
+      font-size: 20px;
+      letter-spacing: 0.04em;
+      text-shadow: 0 0 12px rgba(255, 194, 110, 0.34);
+    }
+
+    .progress-wrap {
+      width: 100%;
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.13);
+      overflow: hidden;
+      margin-top: 7px;
+    }
+
+    .progress-wrap.is-enemy { margin-top: 7px; }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #63c983, #a8ddb6);
+      transition: width 1000ms ease;
+    }
+
+    .progress-bar.enemy {
+      background: linear-gradient(90deg, var(--enemy), var(--enemy-2));
+    }
+
+    .progress-copy {
+      margin: 8px 0 8px;
+      text-align: left;
+      color: #cbe8d7;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .progress-footer {
+      margin-top: 10px;
+    }
+
+    .duel-avatars {
+      display: flex;
+      gap: 26px;
+      align-items: center;
+      align-items: center;
+      justify-content: center;
+      margin: 14px 0 14px;
+    }
+
+    .duel-avatars.is-offline .duel-avatar--enemy {
+      display: none;
+    }
+
+    .duel-avatar {
+      display: grid;
+      justify-items: center;
+      gap: 6px;
+      min-width: 116px;
+    }
+
+    .duel-avatar__ring {
+      --percent: 0;
+      --ring-a: #61f2a4;
+      --ring-b: #2c7f50;
+      width: 198px;
+      height: 198px;
+      padding: 6px;
+      border-radius: 50%;
+      background:
+        conic-gradient(var(--ring-a) calc(var(--percent) * 1%), rgba(255,255,255,0.16) 0%);
+      display: grid;
+      place-items: center;
+      animation: ringPulse 1600ms ease-in-out infinite;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.24);
+    }
+
+    .duel-avatar__ring.enemy {
+      --ring-a: #ffb25e;
+      --ring-b: #ff8d4a;
+    }
+
+    .duel-avatar__ring img {
+      width: 100%;
+      height: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 0;
+      clip-path: circle(50%);
+    }
+
+    .duel-avatar__name {
+      margin: 0;
+      font-size: 13px;
+      color: #d0e7da;
+      font-weight: 700;
+      text-align: center;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .duel-avatars.is-offline .duel-avatar--me .duel-avatar__name {
+      display: none;
+    }
+
+    .duel-avatar__percent {
+      margin: 0;
+      font-size: 31px;
+      font-weight: 800;
+      color: #b9f7cd;
+    }
+
+    .duel-avatar__percent.enemy {
+      color: #ffbc71;
+    }
+
+    .card-word {
+      margin: 0;
+      font-size: 41.4px;
+      font-weight: 800;
+      line-height: 1.1;
+      text-align: center;
+      min-height: 52px;
+      will-change: transform, opacity;
+    }
+
+    .card-word.is-long {
+      font-size: 36.43px;
+    }
+
+    .card-word.is-portuguese {
+      font-size: 37.26px;
+    }
+
+    .card-word.is-portuguese.is-long {
+      font-size: 32.78px;
+    }
+
+    .card-word.is-slide {
+      animation: wordSlideIn 420ms ease;
+    }
+
+    .card-word.is-two-lines {
+      display: grid;
+      gap: 4px;
+      justify-items: center;
+      align-content: center;
+      line-height: 1.06;
+    }
+
+    .card-word__line {
+      display: block;
+    }
+
+    .card-subword {
+      margin: 8px 0 12px;
+      text-align: center;
+      color: #ffd54f;
+      font-size: 31.05px;
+      font-weight: 700;
+      line-height: 1.12;
+    }
+
+    .card-subword.is-long {
+      font-size: 27.32px;
+    }
+
+    .mic-trigger-wrap {
+      display: grid;
+      justify-items: center;
+      margin: 8px 0 6px;
+      gap: 8px;
+    }
+
+    .mic-trigger {
+      width: auto;
+      height: auto;
+      min-height: 0;
+      max-height: none;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      padding: 0;
+      color: #d9ffeb;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: transform 220ms ease, color 500ms ease, filter 500ms ease;
+      box-shadow: none;
+    }
+
+    .mic-trigger svg {
+      width: min(126px, 30vw);
+      height: auto;
+      min-height: 70px;
+      max-height: 126px;
+      display: block;
+      filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.28));
+    }
+
+    .mic-trigger:hover {
+      transform: translateY(-1px) scale(1.02);
+    }
+
+    .mic-trigger:disabled:not(.is-mic-live) {
+      opacity: 0.52;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .mic-trigger.is-mic-live:disabled {
+      opacity: 1;
+    }
+
+    .mic-trigger.is-mic-live {
+      color: #ff3b30;
+      animation: micPulse 1200ms ease-in-out infinite;
+      filter: drop-shadow(0 0 10px rgba(255, 59, 48, 0.35));
+    }
+
+    .language-switch {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 2px;
+    }
+
+    .language-switch__btn {
+      border: 0;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: transform 180ms ease, opacity 180ms ease;
+    }
+
+    .language-switch__btn img {
+      width: 44px;
+      height: 44px;
+      display: block;
+      object-fit: contain;
+      filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.25));
+    }
+
+    .language-switch__btn.is-active {
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #1c3f54;
+      color: var(--text);
+    }
+
+    .btn.is-mic-live {
+      background: linear-gradient(135deg, #1d77ff, #52a8ff);
       color: #ffffff;
     }
 
-    body {
-      min-height: 100vh;
-      padding-bottom: var(--footer-total-height);
-      font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+    .status {
+      margin: 12px 0 0;
+      min-height: 22px;
+      text-align: center;
+      color: #d2ecde;
+    }
+
+    .status.is-error { color: var(--danger); }
+    .status.is-score { color: #bdf0cf; }
+
+    .final-result {
+      display: none;
+      margin-top: 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(168, 221, 182, 0.5);
+      background: rgba(28, 75, 50, 0.45);
+      text-align: center;
+      padding: 18px;
+      font-size: 26px;
+      font-weight: 800;
+      color: #d4f9df;
+      animation: fadeIn 240ms ease;
+    }
+
+    .final-result.is-visible { display: block; }
+
+    .winner-card {
+      display: none;
+      margin-top: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 179, 103, 0.6);
+      background: rgba(83, 45, 18, 0.54);
+      padding: 12px;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-weight: 800;
+      color: #ffd9b2;
+    }
+
+    .winner-card.is-visible {
+      display: flex;
+    }
+
+    .winner-card img {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(255, 218, 163, 0.76);
+    }
+
+    .winner-reveal {
+      display: none;
+      min-height: 58vh;
+      margin-top: 12px;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 14px;
+      text-align: center;
+      animation: winnerFlash 360ms ease-in-out infinite alternate;
+    }
+
+    .winner-reveal.is-visible {
+      display: flex;
+    }
+
+    .winner-reveal__avatar {
+      width: min(56vw, 280px);
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid rgba(255, 255, 255, 0.82);
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.36);
+      animation: winnerPulse 2000ms ease-in-out infinite;
+      will-change: transform;
+    }
+
+    .winner-reveal__text {
+      margin: 0;
+      font-size: clamp(34px, 9vw, 72px);
+      letter-spacing: 0.08em;
+      color: #fff3d8;
+      text-shadow: 0 0 24px rgba(255, 210, 140, 0.5);
+      font-weight: 900;
+      animation: winnerPulse 2000ms ease-in-out infinite;
+      will-change: transform;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes ringPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+    }
+
+    @keyframes wordSlide {
+      from {
+        opacity: 0.2;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes micPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+
+    @keyframes wordSlideIn {
+      0% {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes winnerPulse {
+      0%, 100% { transform: scale(0.9); }
+      50% { transform: scale(1.1); }
+    }
+
+    @keyframes winnerFlash {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.18); }
+    }
+
+    @keyframes introNameFlash {
+      0% { filter: brightness(1); }
+      45% { filter: brightness(1.9); }
+      100% { filter: brightness(1); }
     }
 
     .flashcards-footer-nav {
@@ -69,9 +939,187 @@
       display: block;
       color: #ffffff;
     }
+
+    @media (max-width: 640px) {
+      .home-title { font-size: 24px; }
+      .mini-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .card-word { font-size: 33.12px; }
+      .card-word.is-long { font-size: 29.15px; }
+      .card-subword { font-size: 24.84px; }
+      .card-subword.is-long { font-size: 21.86px; }
+      .enemy-speaking { font-size: 18px; }
+      .duel-intro__avatar {
+        width: 124px;
+        height: 124px;
+      }
+      .duel-intro__countdown {
+        font-size: 19px;
+      }
+      .duel-avatar__ring {
+        width: 174px;
+        height: 174px;
+      }
+      .duel-avatar__percent {
+        font-size: 28px;
+      }
+      .mic-trigger svg {
+        width: min(147px, 45vw);
+      }
+    }
   </style>
 </head>
 <body>
+  <div class="container" aria-hidden="true"></div>
+  <main class="speaking-shell">
+    <section class="speaking-card" id="speakingHome">
+      <h1 class="home-title">Books Mode</h1>
+      <p class="home-copy">Escolha um nivel de 1 a 10 e selecione o livro no menu suspenso para iniciar.</p>
+      <div class="home-row home-row--levels">
+        <label for="levelSelect">Nivel</label>
+        <select id="levelSelect" aria-label="Nivel dos MiniBooks">
+          <option value="1">Level 1</option>
+          <option value="2">Level 2</option>
+          <option value="3">Level 3</option>
+          <option value="4">Level 4</option>
+          <option value="5">Level 5</option>
+          <option value="6">Level 6</option>
+          <option value="7">Level 7</option>
+          <option value="8">Level 8</option>
+          <option value="9">Level 9</option>
+          <option value="10">Level 10</option>
+        </select>
+        <select id="storySelect" aria-label="Historia de batalha">
+          <option value="">Selecione um MiniBook...</option>
+        </select>
+      </div>
+      <div id="miniBooksGrid" class="mini-grid" aria-live="polite"></div>
+      <p id="miniBooksEmpty" class="mini-grid-empty" hidden>Nenhum MiniBook nesse nivel ainda.</p>
+      <div class="home-row home-actions">
+        <button id="startSpeakingBtn" type="button">Iniciar</button>
+      </div>
+      <p class="status" id="homeStatus" aria-live="polite"></p>
+
+      <section id="miniBookAdminEditor" class="mini-editor" hidden>
+        <button id="miniBookUploadCoverBtn" class="mini-editor__upload-float" type="button" aria-label="Upload manual da capa">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M19 18v2H5v-2H3v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2zM11 4.83V16h2V4.83l3.59 3.58L18 7l-6-6-6 6 1.41 1.41z"/>
+          </svg>
+        </button>
+        <input id="miniBookUploadCoverInput" type="file" accept="image/*" hidden>
+        <h3 id="miniBookAdminTitle" class="mini-editor__title">MiniBook Admin</h3>
+        <div class="mini-editor__row">
+          <input id="miniBookNameInput" type="text" placeholder="Nome do livro para o prompt da capa">
+        </div>
+        <div class="mini-editor__row">
+          <textarea id="miniBookCoverPromptInput" placeholder="Prompt da capa (opcional)"></textarea>
+        </div>
+        <div class="mini-editor__row">
+          <button id="miniBookGenerateCoverBtn" type="button">Adicionar Capa</button>
+          <button id="miniBookApproveCoverBtn" type="button" disabled>Aprovar Capa</button>
+        </div>
+        <div class="mini-editor__preview-grid">
+          <div class="mini-editor__preview mini-editor__preview--cover">
+            <img id="miniBookCoverPreview" alt="Preview da capa" hidden>
+          </div>
+        </div>
+        <div class="mini-editor__row">
+          <textarea id="miniBookBackgroundPromptInput" placeholder="Prompt do background (opcional)"></textarea>
+        </div>
+        <div class="mini-editor__row">
+          <button id="miniBookGenerateBackgroundBtn" type="button">Adicionar Backgrounds</button>
+          <button id="miniBookApproveBackgroundBtn" type="button" disabled>Aprovar Background</button>
+          <button id="miniBookCloseEditorBtn" type="button">Fechar</button>
+        </div>
+        <div class="mini-editor__preview-grid">
+          <div class="mini-editor__preview mini-editor__preview--desktop">
+            <img id="miniBookBackgroundDesktopPreview" alt="Preview background desktop" hidden>
+          </div>
+          <div class="mini-editor__preview mini-editor__preview--mobile">
+            <img id="miniBookBackgroundMobilePreview" alt="Preview background mobile" hidden>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="speaking-card speaking-game" id="speakingGame">
+      <section class="duel-intro" id="duelIntro" hidden>
+        <div class="duel-intro__avatars">
+          <article class="duel-intro__player duel-intro__player--me" id="duelIntroMePlayer">
+            <img class="duel-intro__avatar" id="duelIntroMeAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Seu avatar grande">
+            <p class="duel-intro__name" id="duelIntroMeName">Você</p>
+          </article>
+          <span class="duel-intro__vs">VS</span>
+          <article class="duel-intro__player duel-intro__player--enemy" id="duelIntroEnemyPlayer">
+            <img class="duel-intro__avatar" id="duelIntroEnemyAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar grande do adversario">
+            <p class="duel-intro__name" id="duelIntroEnemyName">Adversário</p>
+          </article>
+        </div>
+        <p class="duel-intro__countdown" id="duelIntroCountdown">O desafio vai começar em 5...</p>
+      </section>
+
+      <div class="duel-head">
+        <div class="speaking-percent" id="speakingPercent">Speaking 0%</div>
+        <div class="enemy-speaking" id="enemySpeakingPercent">Speaking rival 0%</div>
+      </div>
+      <p class="duel-timer" id="duelTimerLabel" hidden>Tempo restante: 03:00</p>
+
+      <div class="duel-avatars" id="duelAvatarsWrap">
+        <article class="duel-avatar duel-avatar--me">
+          <div class="duel-avatar__ring" id="mePronRing">
+            <img id="meAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Seu avatar">
+          </div>
+          <p class="duel-avatar__name" id="meAvatarName">Você</p>
+          <p class="duel-avatar__percent" id="meAvatarPercent">0%</p>
+        </article>
+        <article class="duel-avatar duel-avatar--enemy">
+          <div class="duel-avatar__ring enemy" id="enemyPronRing">
+            <img id="enemyAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar do adversario">
+          </div>
+          <p class="duel-avatar__name" id="enemyAvatarName">Adversário</p>
+          <p class="duel-avatar__percent enemy" id="enemyAvatarPercent">0%</p>
+        </article>
+      </div>
+      <h2 class="card-word" id="cardEnglishWord">-</h2>
+      <p class="card-subword" id="cardPortugueseWord" hidden>-</p>
+
+      <div class="mic-trigger-wrap">
+        <button class="mic-trigger" id="sendSpeakingBtn" type="button" aria-label="Ativar microfone">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-5a3.5 3.5 0 1 0-7 0v5A3.5 3.5 0 0 0 12 15m5.5-3.5a.9.9 0 1 1 1.8 0 7.3 7.3 0 0 1-6.4 7.24V21h3.1a.9.9 0 1 1 0 1.8H8a.9.9 0 0 1 0-1.8h3.1v-2.26a7.3 7.3 0 0 1-6.4-7.24.9.9 0 0 1 1.8 0 5.5 5.5 0 0 0 11 0" />
+          </svg>
+        </button>
+        <div class="language-switch" aria-label="Selecionar idioma do texto">
+          <button id="languageEnglishBtn" class="language-switch__btn is-active" type="button" aria-label="Mostrar texto em inglês" aria-pressed="true">
+            <img src="/SVG/codex-icons/ingles.svg" alt="Inglês">
+          </button>
+          <button id="languagePortugueseBtn" class="language-switch__btn" type="button" aria-label="Mostrar texto em português" aria-pressed="false">
+            <img src="/SVG/codex-icons/portugues.svg" alt="Português">
+          </button>
+        </div>
+      </div>
+      <div class="progress-footer">
+        <div class="progress-wrap" aria-hidden="true">
+          <div class="progress-bar" id="gameProgressBar"></div>
+        </div>
+        <div class="progress-wrap is-enemy" aria-hidden="true" id="enemyProgressWrap">
+          <div class="progress-bar enemy" id="enemyProgressBar"></div>
+        </div>
+        <p class="progress-copy" id="progressLabel" hidden></p>
+      </div>
+      <div class="final-result" id="finalResultBox">0% seu resultado final</div>
+      <div class="winner-card" id="winnerCard">
+        <img id="winnerAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar do vencedor">
+        <span id="winnerName">Vencedor Usuario</span>
+      </div>
+      <section class="winner-reveal" id="winnerReveal" hidden>
+        <img class="winner-reveal__avatar" id="winnerRevealAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar do vencedor">
+        <p class="winner-reveal__text">WINNER</p>
+      </section>
+    </section>
+  </main>
+
   <nav class="flashcards-footer-nav" aria-label="Navegacao do flashcards">
     <a class="flashcards-footer-nav__item" href="/flashcards?view=play" aria-label="Jogar">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.36a1 1 0 0 0 0-1.72l-10-6.36A1 1 0 0 0 8 5.14Z"/></svg>
@@ -90,8 +1138,11 @@
     </a>
   </nav>
 
-  <script src="js/android-config.js"></script>
-  <script src="js/api-config.js"></script>
-  <script src="js/android-shell.js"></script>
+  <audio id="successAudio" src="gamesounds/success.mp3" preload="auto"></audio>
+  <audio id="battleIntroAudio" src="/battle/battle-intro.mp3" preload="auto"></audio>
+  <script src="js/player-state.js"></script>
+  <script src="js/speaking-page.js"></script>
 </body>
 </html>
+
+
