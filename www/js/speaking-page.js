@@ -356,6 +356,14 @@
     const selectedBook = getSelectedBook();
     const body = document.body;
     if (!body) return;
+    if (state.isAdmin) {
+      body.style.backgroundImage = 'none';
+      body.style.backgroundSize = '';
+      body.style.backgroundPosition = '';
+      body.style.backgroundRepeat = '';
+      body.style.backgroundColor = '#000';
+      return;
+    }
     const desktopBg = safeText(selectedBook?.backgroundDesktopUrl);
     const mobileBg = safeText(selectedBook?.backgroundMobileUrl);
     const useMobile = window.matchMedia && window.matchMedia('(max-width: 800px)').matches;
@@ -364,6 +372,7 @@
     body.style.backgroundSize = selectedBackground ? 'cover' : '';
     body.style.backgroundPosition = selectedBackground ? 'center' : '';
     body.style.backgroundRepeat = selectedBackground ? 'no-repeat' : '';
+    body.style.backgroundColor = '';
   }
 
   function renderMiniBooksGrid() {
@@ -952,6 +961,7 @@
   function applyAdminVisualMode() {
     if (!document?.body?.classList) return;
     document.body.classList.toggle('is-speaking-admin', Boolean(state.isAdmin));
+    applySelectedMiniBookBackground();
   }
 
   function readAdminLocalHint() {
