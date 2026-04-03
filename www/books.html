@@ -496,8 +496,6 @@
 
     .books-mode-actions .books-magic-btn {
       width: 60vw;
-      max-width: 520px;
-      min-width: 220px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -517,12 +515,20 @@
       place-items: center;
       cursor: pointer;
       z-index: 3;
+      opacity: 1;
+      transition: opacity 2000ms ease, transform 2000ms ease;
     }
 
     .books-mode-close svg {
       width: 18px;
       height: 18px;
       display: block;
+    }
+
+    .books-mode-card.is-starting .books-mode-close {
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events: none;
     }
 
     .books-mode-loading {
