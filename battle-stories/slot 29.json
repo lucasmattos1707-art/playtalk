@@ -1,0 +1,19 @@
+﻿{
+"nome": "Money_Mindset",
+"nivel": 4,
+"money_mindset": [
+{ "pt": "dinheiro é ferramenta", "en": "money is a tool" },
+{ "pt": "não é o objetivo", "en": "not the goal" },
+{ "pt": "sem controle, dá estresse", "en": "no control brings stress" },
+{ "pt": "gaste com consciência", "en": "spend with awareness" },
+{ "pt": "economize com disciplina", "en": "save with discipline" },
+{ "pt": "evite dívidas inúteis", "en": "avoid useless debt" },
+{ "pt": "crie hábitos simples", "en": "build simple habits" },
+{ "pt": "acompanhe seu dinheiro", "en": "track your money" },
+{ "pt": "guarde e invista sempre", "en": "save and invest always" },
+{ "pt": "dinheiro apoia sua vida", "en": "money supports your life" },
+{ "pt": "não deixe ele te controlar", "en": "do not let it control you" },
+{ "pt": "paz financeira dá liberdade", "en": "financial peace gives freedom" },
+{ "pt": "liberdade pra viver bem", "en": "freedom to live well" }
+]
+}

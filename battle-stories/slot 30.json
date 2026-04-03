@@ -1,0 +1,17 @@
+﻿{
+"nome": "Growth_Mindset",
+"nivel": 4,
+"growth_mindset": [
+{ "pt": "crescer mantém a vida leve", "en": "growth keeps life fun" },
+{ "pt": "sem aprender, você trava", "en": "no learning, you feel stuck" },
+{ "pt": "aprenda com livros", "en": "learn from books" },
+{ "pt": "aprenda com pessoas", "en": "learn from people" },
+{ "pt": "aprenda com experiência", "en": "learn from experience" },
+{ "pt": "pouco por dia soma muito", "en": "small daily adds up" },
+{ "pt": "não precisa ter pressa", "en": "no need to rush" },
+{ "pt": "seja constante sempre", "en": "just stay consistent" },
+{ "pt": "aprender abre portas", "en": "learning opens doors" },
+{ "pt": "novas portas criam chances", "en": "new doors bring chances" },
+{ "pt": "chances viram oportunidades", "en": "chances become opportunities" }
+]
+}

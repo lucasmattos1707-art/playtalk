@@ -1,0 +1,19 @@
+﻿{
+  "nome": "Smart_Spending",
+  "nivel": 4,
+  "smart_spending": [
+    { "pt": "nem todo gasto é ruim", "en": "not every expense is bad" },
+    { "pt": "mas muitos são inúteis", "en": "but many are useless" },
+    { "pt": "antes de comprar, pause e pergunte", "en": "before you buy, pause and ask" },
+    { "pt": "eu preciso disso?", "en": "do i need this?" },
+    { "pt": "ou isso é só emoção?", "en": "or is this just emotion?" },
+    { "pt": "a maioria dos gastos é emocional, não lógico", "en": "most spending is emotional, not logical" },
+    { "pt": "crie uma regra simples", "en": "create a simple rule" },
+    { "pt": "espere 24 horas antes de comprar", "en": "wait 24 hours before buying" },
+    { "pt": "isso remove o impulso", "en": "this removes impulse" },
+    { "pt": "pessoas inteligentes não gastam menos", "en": "smart people don’t spend less" },
+    { "pt": "elas gastam melhor", "en": "they spend better" },
+    { "pt": "cada compra deve servir sua vida", "en": "every purchase should serve your life" },
+    { "pt": "não distraí-la", "en": "not distract it" }
+  ]
+}

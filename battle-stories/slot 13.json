@@ -1,0 +1,15 @@
+﻿{
+  "nome": "Small_Choices_Big_Changes",
+  "nivel": 3,
+  "small_choices_big_changes": [
+    { "pt": "grandes mudanças não vêm de grandes momentos", "en": "big changes don’t come from big moments" },
+    { "pt": "elas vêm de pequenas escolhas repetidas", "en": "they come from small choices, repeated" },
+    { "pt": "uma hora extra de sono", "en": "one extra hour of sleep" },
+    { "pt": "uma refeição melhor", "en": "one better meal" },
+    { "pt": "uma caminhada curta", "en": "one short walk" },
+    { "pt": "isso parece pequeno", "en": "these seem small" },
+    { "pt": "mas constroem seu futuro", "en": "but they build your future" },
+    { "pt": "cada escolha é um voto para quem você se torna", "en": "every choice is a vote for who you become" },
+    { "pt": "escolha com cuidado", "en": "choose with care" }
+  ]
+}

@@ -1,0 +1,17 @@
+﻿{
+  "nome": "Train_Your_Mind",
+  "nivel": 4,
+  "train_your_mind": [
+    { "pt": "treine sua mente", "en": "train your mind" },
+    { "pt": "sua mente pode te ajudar ou te prejudicar", "en": "your mind can help you or hurt you" },
+    { "pt": "se você não a treina, ela se torna negativa", "en": "if you don’t train it, it becomes negative" },
+    { "pt": "observe seus pensamentos", "en": "watch your thoughts" },
+    { "pt": "nem todos são verdadeiros", "en": "not all are true" },
+    { "pt": "alimente sua mente com boas coisas", "en": "feed your mind with good inputs" },
+    { "pt": "livros, ideias, silêncio", "en": "books, ideas, silence" },
+    { "pt": "reduza o barulho e as distrações", "en": "reduce noise and distraction" },
+    { "pt": "uma mente calma vê com clareza", "en": "a calm mind sees clearly" },
+    { "pt": "clareza cria melhores decisões", "en": "clarity creates better decisions" },
+    { "pt": "e melhores decisões criam uma vida melhor", "en": "and better decisions create a better life" }
+  ]
+}

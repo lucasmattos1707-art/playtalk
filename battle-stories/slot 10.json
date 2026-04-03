@@ -1,0 +1,18 @@
+﻿{
+  "nome": "Fear_Is_Not_Always_Real",
+  "nivel": 4,
+  "fear_is_not_always_real": [
+    { "pt": "o medo nem sempre é real", "en": "fear is not always real" },
+    { "pt": "muitas vezes é uma previsão", "en": "it is often a prediction" },
+    { "pt": "seu cérebro tenta te proteger", "en": "your brain tries to protect you" },
+    { "pt": "imaginando perigo", "en": "by imagining danger" },
+    { "pt": "mas ele nem sempre sabe diferenciar", "en": "but it cannot always tell the difference" },
+    { "pt": "entre o real e o possível", "en": "between real and possible" },
+    { "pt": "então seu coração acelera", "en": "so your heart races" },
+    { "pt": "mesmo quando nada está acontecendo", "en": "even when nothing is happening" },
+    { "pt": "nomeie o medo", "en": "name the fear" },
+    { "pt": "isso é apenas um pensamento", "en": "this is just a thought" },
+    { "pt": "quando você vê com clareza", "en": "when you see it clearly" },
+    { "pt": "ele fica menor", "en": "it gets smaller" }
+  ]
+}

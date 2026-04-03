@@ -1,0 +1,30 @@
+﻿{
+  "nome": "Greece_Impact",
+  "nivel": 5,
+  "greece_impact": [
+    { "pt": "a grécia antiga teve grande impacto no mundo", "en": "ancient greece had a deep impact on the world" },
+    { "pt": "suas ideias ainda vivem hoje", "en": "its ideas still live in our world today" },
+    { "pt": "a democracia nasceu na grécia", "en": "democracy was born in ancient greece" },
+    { "pt": "esse modelo mudou a política global", "en": "this model changed global politics forever" },
+
+    { "pt": "filósofos buscaram entender a vida", "en": "philosophers tried to understand life deeply" },
+    { "pt": "eles pensaram sobre verdade e razão", "en": "they thought about truth and reason" },
+    { "pt": "suas ideias influenciam até hoje", "en": "their ideas still influence us today" },
+    { "pt": "o pensamento crítico ganhou força", "en": "critical thinking became very strong there" },
+
+    { "pt": "a ciência começou a crescer ali", "en": "science started to grow in that region" },
+    { "pt": "matemática e lógica evoluíram muito", "en": "math and logic developed a great deal" },
+    { "pt": "o conhecimento virou poder real", "en": "knowledge became a form of real power" },
+    { "pt": "o mundo começou a observar e aprender", "en": "the world began to observe and learn more" },
+
+    { "pt": "arte e cultura ganharam novos níveis", "en": "art and culture reached new high levels" },
+    { "pt": "teatro e histórias moldaram a mente", "en": "theater and stories shaped human thinking" },
+    { "pt": "beleza e forma tinham grande valor", "en": "beauty and form had great value there" },
+    { "pt": "o corpo e a mente eram importantes", "en": "body and mind were both very important" },
+
+    { "pt": "hoje vemos a grécia em muitos lugares", "en": "today we see greece in many places" },
+    { "pt": "suas ideias estão nas leis e escolas", "en": "its ideas live in laws and education systems" },
+    { "pt": "seu impacto ainda guia o mundo", "en": "its influence still guides the modern world" },
+    { "pt": "a grécia ajudou a criar nossa base", "en": "greece helped build the base of our world today" }
+  ]
+}

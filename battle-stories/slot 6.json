@@ -1,0 +1,21 @@
+﻿{
+  "nome": "Breathing_and_Emotional_Control",
+  "nivel": 4,
+  "breathing_and_emotional_control": [
+    { "pt": "respiração e controle emocional", "en": "breathing and emotional control" },
+    { "pt": "sua respiração é uma ferramenta poderosa", "en": "your breath is a powerful tool" },
+    { "pt": "quando as emoções aumentam", "en": "when emotions rise" },
+    { "pt": "sua respiração muda", "en": "your breathing changes" },
+    { "pt": "rápida, superficial e tensa", "en": "fast, shallow, tense" },
+    { "pt": "se você desacelerar sua respiração", "en": "if you slow your breath" },
+    { "pt": "seu corpo se acalma", "en": "your body calms down" },
+    { "pt": "tente isto", "en": "try this" },
+    { "pt": "inspire lentamente", "en": "inhale slowly" },
+    { "pt": "segure", "en": "hold" },
+    { "pt": "depois expire por mais tempo", "en": "then exhale longer" },
+    { "pt": "isso envia um sinal de segurança para o seu cérebro", "en": "this sends a signal of safety to your brain" },
+    { "pt": "você não precisa controlar as emoções diretamente", "en": "you don’t need to control emotions directly" },
+    { "pt": "controle sua respiração e as emoções seguem", "en": "control your breath and emotions follow" },
+    { "pt": "uma respiração calma cria uma mente calma", "en": "calm breathing creates a calm mind" }
+  ]
+}

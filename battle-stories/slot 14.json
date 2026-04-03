@@ -1,0 +1,18 @@
+﻿{
+  "nome": "Emotion_and_Action",
+  "nivel": 4,
+  "emotion_and_action": [
+    { "pt": "a emoção é rápida", "en": "emotion is fast" },
+    { "pt": "a ação é uma escolha", "en": "action is a choice" },
+    { "pt": "você sente raiva, medo ou estresse", "en": "you feel anger, fear, or stress" },
+    { "pt": "isso é normal", "en": "that is normal" },
+    { "pt": "mas sentir algo não significa que você deve agir", "en": "but feeling something does not mean you must act on it" },
+    { "pt": "muitos problemas surgem quando a emoção controla a ação", "en": "many problems come when emotion controls action" },
+    { "pt": "aprenda a pausar", "en": "learn to pause" },
+    { "pt": "sinta a emoção, mas não obedeça a ela", "en": "feel the emotion, but don’t obey it" },
+    { "pt": "diga: eu sinto isso, mas escolho o que faço", "en": "say: i feel this, but i choose what i do" },
+    { "pt": "isso cria controle", "en": "this creates control" },
+    { "pt": "pessoas fortes não sentem menos", "en": "strong people don’t feel less" },
+    { "pt": "elas escolhem ações melhores", "en": "they choose better actions" }
+  ]
+}

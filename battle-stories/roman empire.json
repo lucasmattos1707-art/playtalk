@@ -1,0 +1,30 @@
+﻿{
+  "nome": "Roman_Empire",
+  "nivel": 5,
+  "roman_empire": [
+    { "pt": "o império romano foi poderoso", "en": "the roman empire was powerful" },
+    { "pt": "ele dominou grandes territórios", "en": "it ruled vast territories" },
+    { "pt": "roma era o centro do poder", "en": "rome was the center of power" },
+    { "pt": "suas leis moldaram o mundo", "en": "its laws shaped the world" },
+
+    { "pt": "o exército era forte e disciplinado", "en": "the army was strong and disciplined" },
+    { "pt": "soldados protegiam o império", "en": "soldiers protected the empire" },
+    { "pt": "estradas ligavam cidades", "en": "roads connected cities" },
+    { "pt": "o comércio crescia rápido", "en": "trade grew very fast" },
+
+    { "pt": "cultura e língua se espalharam", "en": "culture and language spread" },
+    { "pt": "o latim virou base de idiomas", "en": "latin became base of languages" },
+    { "pt": "cidades eram bem organizadas", "en": "cities were well organized" },
+    { "pt": "a vida urbana era ativa", "en": "urban life was active" },
+
+    { "pt": "mas problemas começaram a surgir", "en": "but problems began to rise" },
+    { "pt": "crises internas enfraqueceram roma", "en": "internal crises weakened rome" },
+    { "pt": "invasões pressionaram fronteiras", "en": "invasions pressed the borders" },
+    { "pt": "o controle ficou difícil", "en": "control became difficult" },
+
+    { "pt": "o império caiu com o tempo", "en": "the empire fell over time" },
+    { "pt": "mas seu legado continua vivo", "en": "but its legacy still lives" },
+    { "pt": "leis e ideias ainda influenciam", "en": "laws and ideas still influence" },
+    { "pt": "roma mudou a história para sempre", "en": "rome changed history forever" }
+  ]
+}

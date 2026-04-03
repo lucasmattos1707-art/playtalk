@@ -1,0 +1,17 @@
+﻿{
+  "nome": "Grow_Your_Income",
+  "nivel": 4,
+  "grow_your_income": [
+    { "pt": "economizar é importante", "en": "saving is important" },
+    { "pt": "mas existe um limite", "en": "but there is a limit" },
+    { "pt": "você só pode cortar até certo ponto", "en": "you can only cut so much" },
+    { "pt": "mas a renda pode crescer", "en": "but income can grow" },
+    { "pt": "aprenda habilidades", "en": "learn skills" },
+    { "pt": "melhore seu valor", "en": "improve your value" },
+    { "pt": "pergunte: como posso ganhar mais?", "en": "ask: how can i earn more?" },
+    { "pt": "uma nova habilidade pode mudar tudo", "en": "one new skill can change everything" },
+    { "pt": "foque no crescimento", "en": "focus on growth" },
+    { "pt": "não apenas na restrição", "en": "not just on restriction" },
+    { "pt": "mais renda mais controle cria poder financeiro real", "en": "more income plus control creates real financial power" }
+  ]
+}

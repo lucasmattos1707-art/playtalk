@@ -1,0 +1,32 @@
+﻿{
+  "nome": "Good_Thoughts",
+  "nivel": 2,
+  "good_thoughts": [
+    { "pt": "eu penso no meu dia", "en": "i think about my day" },
+    { "pt": "hoje eu faço o meu melhor", "en": "today i do my best" },
+    { "pt": "eu sigo com calma", "en": "i move with calm" },
+    { "pt": "eu respiro e continuo", "en": "i breathe and go on" },
+    { "pt": "eu não preciso correr", "en": "i do not need to rush" },
+    { "pt": "eu faço um passo por vez", "en": "i take one step at a time" },
+    { "pt": "eu confio no processo", "en": "i trust the process" },
+    { "pt": "eu aprendo todo dia", "en": "i learn every day" },
+
+    { "pt": "amanhã eu vou crescer", "en": "tomorrow i will grow" },
+    { "pt": "eu vou tentar de novo", "en": "i will try again" },
+    { "pt": "eu não vou desistir", "en": "i will not give up" },
+    { "pt": "eu vou seguir em frente", "en": "i will move forward" },
+    { "pt": "eu posso ser melhor", "en": "i can be better" },
+    { "pt": "eu posso mudar tudo", "en": "i can change it all" },
+    { "pt": "eu escolho o meu caminho", "en": "i choose my own path" },
+    { "pt": "eu construo meu futuro", "en": "i build my future" },
+
+    { "pt": "o futuro começa hoje", "en": "the future starts today" },
+    { "pt": "cada ação tem valor", "en": "every action has value" },
+    { "pt": "pequenas coisas importam", "en": "small things matter" },
+    { "pt": "eu faço com intenção", "en": "i act with intention" },
+    { "pt": "eu sigo com propósito", "en": "i move with purpose" },
+    { "pt": "eu acredito em mim", "en": "i believe in myself" },
+    { "pt": "eu vou até o fim", "en": "i will go to the end" },
+    { "pt": "eu vivo o agora", "en": "i live the present moment" }
+  ]
+}
