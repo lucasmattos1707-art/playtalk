@@ -147,7 +147,10 @@ const SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS = 20;
 const SPEAKING_DUEL_INTRO_SECONDS = 5;
 const SPEAKING_DUEL_BATTLE_SECONDS = 180;
 const SPEAKING_CARD_CACHE_TTL_MS = 60 * 1000;
-const BATTLE_STORIES_ROOT = path.join(__dirname, 'battle-stories');
+const BATTLE_STORIES_ROOT_CANDIDATES = Array.from(new Set([
+  path.join(__dirname, 'battle-stories'),
+  path.join(process.cwd(), 'battle-stories')
+]));
 const FLASHCARD_RANKING_PLACEHOLDER_NAME = 'Usuario';
 const FLASHCARD_RANKING_PLACEHOLDER_AVATAR = '/Avatar/avatar-man-person-svgrepo-com.svg';
 const FLASHCARD_RANKING_PERIODS = {
@@ -3168,18 +3171,23 @@ async function loadSpeakingCardPool() {
     }));
   }
 
-  let dirEntries = [];
-  try {
-    dirEntries = await fs.promises.readdir(BATTLE_STORIES_ROOT, { withFileTypes: true });
-  } catch (_error) {
-    dirEntries = [];
+  const fileEntries = [];
+  for (const root of BATTLE_STORIES_ROOT_CANDIDATES) {
+    let dirEntries = [];
+    try {
+      dirEntries = await fs.promises.readdir(root, { withFileTypes: true });
+    } catch (_error) {
+      dirEntries = [];
+    }
+    dirEntries
+      .filter((entry) => entry && entry.isFile && entry.isFile() && entry.name.toLowerCase().endsWith('.json'))
+      .forEach((entry) => {
+        fileEntries.push({
+          name: entry.name,
+          path: path.join(root, entry.name)
+        });
+      });
   }
-  const fileEntries = dirEntries
-    .filter((entry) => entry && entry.isFile && entry.isFile() && entry.name.toLowerCase().endsWith('.json'))
-    .map((entry) => ({
-      name: entry.name,
-      path: path.join(BATTLE_STORIES_ROOT, entry.name)
-    }));
 
   const stories = [];
   for (const entry of fileEntries) {
@@ -5947,6 +5955,13 @@ app.get('/api/users/flashcards', async (req, res) => {
 app.get('/api/speaking/cards', async (req, res) => {
   try {
     const cards = await buildRandomSpeakingCards();
+    if (!Array.isArray(cards) || !cards.length) {
+      res.status(404).json({
+        success: false,
+        message: `Nenhuma historia encontrada em battle-stories (.json). Verifique: ${BATTLE_STORIES_ROOT_CANDIDATES.join(' | ')}`
+      });
+      return;
+    }
     res.setHeader('Cache-Control', 'no-store');
     res.json({
       success: true,
