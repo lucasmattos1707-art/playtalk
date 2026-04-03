@@ -3158,6 +3158,30 @@ function normalizeSpeakingStoryCardItem({ item, storyName = 'story', index = 0 }
   };
 }
 
+function normalizeSpeakingStoryLevel(value) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.max(1, Math.min(10, parsed));
+}
+
+function toEnglishUnderscoreName(value, fallback) {
+  const base = String(value || fallback || '').trim();
+  if (!base) return 'Story_One';
+  const collapsed = base
+    .replace(/[^a-zA-Z0-9_ ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!collapsed) return 'Story_One';
+  return collapsed
+    .split(' ')
+    .filter(Boolean)
+    .map((chunk) => {
+      const lower = chunk.toLowerCase();
+      return `${lower.charAt(0).toUpperCase()}${lower.slice(1)}`;
+    })
+    .join('_');
+}
+
 async function loadSpeakingCardPool() {
   const now = Date.now();
   if (
@@ -3197,6 +3221,8 @@ async function loadSpeakingCardPool() {
       if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
         continue;
       }
+      const displayName = toEnglishUnderscoreName(payload.nome, path.basename(entry.name, '.json'));
+      const level = normalizeSpeakingStoryLevel(payload.nivel);
       Object.entries(payload).forEach(([storyKey, storyValue]) => {
         const items = Array.isArray(storyValue) ? storyValue : [];
         const cards = items
@@ -3207,9 +3233,13 @@ async function loadSpeakingCardPool() {
           }))
           .filter(Boolean);
         if (!cards.length) return;
+        const safeStoryKey = String(storyKey || '').trim() || 'story';
         stories.push({
+          id: `${entry.name}::${safeStoryKey}`,
           fileName: entry.name,
-          storyKey: String(storyKey || '').trim() || 'story',
+          storyKey: safeStoryKey,
+          nome: displayName,
+          nivel: level,
           cards
         });
       });
@@ -3228,9 +3258,16 @@ async function loadSpeakingCardPool() {
   }));
 }
 
-async function buildRandomSpeakingCards() {
+async function buildRandomSpeakingCards(selectedStoryId) {
   const stories = await loadSpeakingCardPool();
   if (!stories.length) return [];
+  const normalizedStoryId = String(selectedStoryId || '').trim();
+  if (normalizedStoryId) {
+    const selectedById = stories.find((story) => String(story.id || '').trim() === normalizedStoryId);
+    if (selectedById && Array.isArray(selectedById.cards)) {
+      return selectedById.cards.slice();
+    }
+  }
   const randomIndex = Math.floor(Math.random() * stories.length);
   const selected = stories[randomIndex];
   const cards = Array.isArray(selected?.cards) ? selected.cards.slice() : [];
@@ -5954,7 +5991,8 @@ app.get('/api/users/flashcards', async (req, res) => {
 
 app.get('/api/speaking/cards', async (req, res) => {
   try {
-    const cards = await buildRandomSpeakingCards();
+    const storyId = String(req.query.storyId || '').trim();
+    const cards = await buildRandomSpeakingCards(storyId);
     if (!Array.isArray(cards) || !cards.length) {
       res.status(404).json({
         success: false,
@@ -5970,6 +6008,25 @@ app.get('/api/speaking/cards', async (req, res) => {
   } catch (error) {
     console.error('Erro ao carregar cartas de speaking:', error);
     res.status(500).json({ success: false, message: 'Nao foi possivel carregar cartas de speaking.' });
+  }
+});
+
+app.get('/api/speaking/stories', async (_req, res) => {
+  try {
+    const stories = await loadSpeakingCardPool();
+    const list = stories.map((story) => ({
+      id: String(story.id || '').trim(),
+      fileName: String(story.fileName || '').trim(),
+      storyKey: String(story.storyKey || '').trim(),
+      nome: String(story.nome || '').trim() || toEnglishUnderscoreName(story.storyKey, story.fileName),
+      nivel: normalizeSpeakingStoryLevel(story.nivel),
+      count: Array.isArray(story.cards) ? story.cards.length : 0
+    }));
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, stories: list });
+  } catch (error) {
+    console.error('Erro ao listar historias de speaking:', error);
+    res.status(500).json({ success: false, message: 'Nao foi possivel carregar historias de speaking.' });
   }
 });
 

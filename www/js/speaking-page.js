@@ -21,7 +21,7 @@
     duelIntroEnemyName: document.getElementById('duelIntroEnemyName'),
     duelIntroCountdown: document.getElementById('duelIntroCountdown'),
     duelTimerLabel: document.getElementById('duelTimerLabel'),
-    cardCountSelect: document.getElementById('cardCountSelect'),
+    storySelect: document.getElementById('storySelect'),
     startSpeakingBtn: document.getElementById('startSpeakingBtn'),
     homeStatus: document.getElementById('homeStatus'),
     speakingPercent: document.getElementById('speakingPercent'),
@@ -56,6 +56,8 @@
   const state = {
     loading: false,
     gameMode: 'offline-game',
+    stories: [],
+    selectedStoryId: '',
     activeCards: [],
     currentIndex: 0,
     scores: [],
@@ -535,8 +537,10 @@
     }
   }
 
-  async function loadSinglePlayerCards(count) {
-    const response = await fetch(buildApiUrl(`/api/speaking/cards?count=${encodeURIComponent(String(count))}`), {
+  async function loadSinglePlayerCards(storyId) {
+    const queryStoryId = String(storyId || '').trim();
+    const query = queryStoryId ? `?storyId=${encodeURIComponent(queryStoryId)}` : '';
+    const response = await fetch(buildApiUrl(`/api/speaking/cards${query}`), {
       credentials: 'include',
       cache: 'no-store',
       headers: buildAuthHeaders()
@@ -546,6 +550,41 @@
       throw new Error(payload?.message || 'Não foi possível carregar as cartas de speaking.');
     }
     return payload.cards;
+  }
+
+  async function loadStoryOptions() {
+    const response = await fetch(buildApiUrl('/api/speaking/stories'), {
+      credentials: 'include',
+      cache: 'no-store',
+      headers: buildAuthHeaders()
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !Array.isArray(payload.stories)) {
+      throw new Error(payload?.message || 'Não foi possível carregar as histórias de speaking.');
+    }
+    const stories = payload.stories
+      .map((entry) => ({
+        id: safeText(entry?.id),
+        nome: safeText(entry?.nome),
+        nivel: Math.max(1, Math.min(10, Number.parseInt(entry?.nivel, 10) || 1)),
+        count: Math.max(0, Number.parseInt(entry?.count, 10) || 0)
+      }))
+      .filter((entry) => entry.id && entry.nome && entry.count > 0);
+    if (!stories.length) {
+      throw new Error('Nenhuma história disponível para speaking.');
+    }
+    state.stories = stories;
+    state.selectedStoryId = state.selectedStoryId || stories[0].id;
+
+    if (!els.storySelect) return;
+    els.storySelect.innerHTML = '';
+    stories.forEach((story) => {
+      const option = document.createElement('option');
+      option.value = story.id;
+      option.textContent = `${story.nome} (Level ${story.nivel})`;
+      els.storySelect.appendChild(option);
+    });
+    els.storySelect.value = state.selectedStoryId;
   }
 
   async function pingPresence() {
@@ -676,7 +715,7 @@
     if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = false;
     setMicLiveVisual(false);
     setDuelIntroVisible(false);
-    setHomeStatus('Escolha quantas cartas Você quer jogar.', '');
+    setHomeStatus('Escolha uma história para jogar.', '');
     updateTopPercents();
     updateProgressBars();
   }
@@ -975,7 +1014,7 @@
       if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = false;
       if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = false;
       setMicLiveVisual(false);
-      setHomeStatus('sessão finalizada. Escolha outra quantidade e jogue de novo.', '');
+      setHomeStatus('Sessão finalizada. Escolha outra história e jogue de novo.', '');
       setGameStatus('', '');
       stopWordTicker();
       state.activeCards = [];
@@ -990,10 +1029,14 @@
     if (state.loading) return;
     state.loading = true;
     if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = true;
-    setHomeStatus('Carregando cartas...', '');
+    setHomeStatus('Carregando história...', '');
     try {
-      const selectedCount = Math.max(1, Number.parseInt(els.cardCountSelect?.value, 10) || 10);
-      state.activeCards = await loadSinglePlayerCards(selectedCount);
+      const selectedStoryId = safeText(els.storySelect?.value || state.selectedStoryId);
+      if (!selectedStoryId) {
+        throw new Error('Escolha uma história antes de iniciar.');
+      }
+      state.selectedStoryId = selectedStoryId;
+      state.activeCards = await loadSinglePlayerCards(selectedStoryId);
       state.currentIndex = 0;
       state.scores = [];
       state.duel.enabled = false;
@@ -1061,6 +1104,9 @@
   }
 
   function bindEvents() {
+    els.storySelect?.addEventListener('change', () => {
+      state.selectedStoryId = safeText(els.storySelect?.value || '');
+    });
     els.startSpeakingBtn?.addEventListener('click', () => {
       void startSinglePlayer();
     });
@@ -1084,6 +1130,16 @@
     updateTopPercents();
     updateProgressBars();
     setMicLiveVisual(false);
+    if (!state.duel.sessionId) {
+      if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = true;
+      try {
+        await loadStoryOptions();
+        if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = false;
+      } catch (error) {
+        if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = true;
+        setHomeStatus(error?.message || 'Não foi possível carregar histórias.', 'is-error');
+      }
+    }
     if (state.duel.sessionId) {
       try {
         await startDuelMode();

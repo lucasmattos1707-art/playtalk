@@ -1,30 +1,18 @@
 ﻿{
-  "simple_story_day": [
-    { "pt": "eu acordo cedo", "en": "i wake up early" },
-    { "pt": "eu vejo o sol", "en": "i see the sun" },
-    { "pt": "eu bebo água", "en": "i drink some water" },
-    { "pt": "eu saio de casa", "en": "i leave my house" },
-    { "pt": "eu ando na rua", "en": "i walk on the street" },
-    { "pt": "eu vejo pessoas", "en": "i see some people" },
-    { "pt": "eu digo bom dia", "en": "i say good morning" },
-    { "pt": "eu começo o dia", "en": "i start my day" },
-
-    { "pt": "eu trabalho um pouco", "en": "i work a little" },
-    { "pt": "eu faço uma pausa", "en": "i take a short break" },
-    { "pt": "eu olho o céu", "en": "i look at the sky" },
-    { "pt": "eu respiro fundo", "en": "i take a deep breath" },
-    { "pt": "eu continuo o dia", "en": "i continue my day" },
-    { "pt": "eu aprendo algo novo", "en": "i learn something new" },
-    { "pt": "eu falo com alguém", "en": "i talk to someone" },
-    { "pt": "eu me sinto bem", "en": "i feel good" },
-
-    { "pt": "eu volto para casa", "en": "i go back home" },
-    { "pt": "eu descanso um pouco", "en": "i rest a little" },
-    { "pt": "eu penso no meu dia", "en": "i think about my day" },
-    { "pt": "eu me sinto em paz", "en": "i feel at peace" },
-    { "pt": "eu preparo comida", "en": "i prepare some food" },
-    { "pt": "eu como devagar", "en": "i eat slowly" },
-    { "pt": "eu relaxo à noite", "en": "i relax at night" },
-    { "pt": "eu durmo tranquilo", "en": "i sleep in peace" }
+  "nome": "Wakeup_Battle",
+  "nivel": 1,
+  "wakeup_battle": [
+    { "pt": "bom dia, vamos acordar", "en": "good morning, let's wake up" },
+    { "pt": "abra os olhos devagar", "en": "open your eyes slowly" },
+    { "pt": "estique os braços", "en": "stretch your arms out" },
+    { "pt": "levante da cama", "en": "get out of bed" },
+    { "pt": "beba um pouco de água", "en": "drink a little water" },
+    { "pt": "arrume a cama agora", "en": "make the bed now" },
+    { "pt": "lave o rosto", "en": "wash your face" },
+    { "pt": "escove os dentes", "en": "brush your teeth" },
+    { "pt": "vista sua roupa", "en": "put on your clothes" },
+    { "pt": "respire e sorria", "en": "breathe and smile" },
+    { "pt": "prepare o café", "en": "prepare your breakfast" },
+    { "pt": "comece seu dia", "en": "start your day" }
   ]
 }

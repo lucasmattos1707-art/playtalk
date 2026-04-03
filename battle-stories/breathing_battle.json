@@ -1,4 +1,6 @@
 ﻿{
+  "nome": "Breathing_Battle",
+  "nivel": 7,
   "breathing_battle": [
     { "pt": "respire fundo agora", "en": "breathe in deeply now" },
     { "pt": "solte o ar devagar", "en": "release air slowly" },
@@ -8,7 +10,6 @@
     { "pt": "relaxe seus ombros", "en": "relax your shoulders" },
     { "pt": "sinta o ar entrar", "en": "feel the air coming in" },
     { "pt": "sinta o ar sair", "en": "feel the air going out" },
-
     { "pt": "conte até quatro", "en": "count slowly to four" },
     { "pt": "segure o ar leve", "en": "hold your breath lightly" },
     { "pt": "respire mais lento", "en": "breathe a bit more slow" },
@@ -17,7 +18,6 @@
     { "pt": "solte o ar longo", "en": "let the air out longer" },
     { "pt": "sinta seu peito abrir", "en": "feel your chest expand" },
     { "pt": "respire sem pressa", "en": "breathe with no rush" },
-
     { "pt": "controle seu ritmo", "en": "control your breathing pace" },
     { "pt": "mantenha foco no ar", "en": "keep your focus on breath" },
     { "pt": "respire fundo e solte", "en": "breathe deep then release" },
