@@ -57,7 +57,7 @@
     }
 
     .books-level-menu.is-admin {
-      grid-template-columns: auto 1fr auto auto;
+      grid-template-columns: auto 1fr auto auto auto;
     }
 
     .books-level-title {
@@ -120,6 +120,21 @@
     .books-toggle-btn.is-on {
       background: rgba(29, 117, 210, 0.35);
       border-color: rgba(158, 210, 255, 0.7);
+    }
+
+    .books-create-btn {
+      background: linear-gradient(160deg, rgba(43, 133, 77, 0.86), rgba(43, 173, 103, 0.9));
+      border-color: rgba(162, 255, 202, 0.7);
+      color: #f7fff8;
+    }
+
+    .books-create-btn:hover:not(:disabled) {
+      background: linear-gradient(160deg, rgba(48, 150, 87, 0.9), rgba(49, 192, 114, 0.94));
+    }
+
+    .books-create-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
     }
 
     .books-avatar {
@@ -493,6 +508,133 @@
       justify-content: flex-end;
       gap: 8px;
       flex-wrap: wrap;
+    }
+
+    .books-create-card {
+      width: min(780px, 100%);
+      gap: 12px;
+    }
+
+    .books-create-helper {
+      margin: 0;
+      color: rgba(225, 235, 249, 0.9);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .books-create-editor {
+      position: relative;
+      min-height: 290px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: #030303;
+      overflow: hidden;
+    }
+
+    .books-create-preview,
+    .books-create-input {
+      width: 100%;
+      min-height: 290px;
+      margin: 0;
+      padding: 12px 14px;
+      font-family: "Consolas", "Courier New", monospace;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+      tab-size: 2;
+    }
+
+    .books-create-preview {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: auto;
+      font-size: 10px;
+    }
+
+    .books-create-input {
+      position: relative;
+      border: 0;
+      resize: vertical;
+      background: transparent;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      caret-color: #ffffff;
+      font-size: 10px;
+      outline: none;
+    }
+
+    .books-create-input::selection {
+      background: rgba(110, 174, 255, 0.36);
+    }
+
+    .books-create-editor.is-empty .books-create-input {
+      color: rgba(255, 255, 255, 0.78);
+      -webkit-text-fill-color: rgba(255, 255, 255, 0.78);
+    }
+
+    .books-create-editor.is-empty .books-create-preview {
+      opacity: 0.22;
+    }
+
+    .books-create-input::placeholder {
+      color: rgba(255, 255, 255, 0.6);
+      -webkit-text-fill-color: rgba(255, 255, 255, 0.6);
+    }
+
+    .books-create-line {
+      display: block;
+      min-height: 1.55em;
+    }
+
+    .books-create-line--title {
+      color: #4a9bff;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .books-create-line--level {
+      color: #ffd54a;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .books-create-line--tag {
+      color: #ff9b3f;
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .books-create-line--prompt {
+      color: #b9ff2f;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .books-create-line--pt {
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .books-create-line--en {
+      color: #73d3ff;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .books-create-legend {
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(6, 18, 30, 0.72);
+      font-size: 11px;
+      color: rgba(230, 242, 255, 0.92);
+      line-height: 1.42;
+      white-space: pre-line;
     }
 
     .books-mode-preview {
@@ -1107,6 +1249,7 @@
       <button class="books-arrow-btn" id="booksLevelNextBtn" type="button" aria-label="Proximo nivel">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m8.59 16.59 1.41 1.42L16.83 12 10 5.17 8.59 6.59 14 12z"/></svg>
       </button>
+      <button class="books-toggle-btn books-create-btn" id="booksCreateBookBtn" type="button" aria-label="Criar livro (admin)" hidden>Criar livro</button>
       <button class="books-toggle-btn" id="booksAdminUiToggleBtn" type="button" aria-label="Ativar ferramentas admin">Admin UI Off</button>
     </section>
 
@@ -1229,11 +1372,27 @@
     </div>
   </section>
 
+  <section class="books-magic-modal" id="booksCreateModal" aria-label="Criar livro por linhas">
+    <div class="books-magic-card books-create-card">
+      <h2 class="books-magic-title">Criar livro por linhas</h2>
+      <p class="books-create-helper">Linha 1: titulo. Linha 2: nivel. Linha 3: tag. Linha 4: prompt capa 9:16. Linha 5: prompt background 16:9. Da linha 6 em diante: portugues/ingles em pares.</p>
+      <div class="books-create-editor is-empty" id="booksCreateEditor">
+        <pre class="books-create-preview" id="booksCreatePreview" aria-hidden="true"></pre>
+        <textarea class="books-create-input" id="booksCreateInput" placeholder="Titulo do livro&#10;Nivel (1-10)&#10;story_1&#10;Prompt capa 9:16&#10;Prompt background 16:9&#10;Frase 1 em portugues&#10;Sentence 1 in english"></textarea>
+      </div>
+      <p class="books-create-legend" id="booksCreateLegend"></p>
+      <div class="books-magic-actions">
+        <button class="books-magic-btn" id="booksCreateCloseBtn" type="button">Cancelar</button>
+        <button class="books-magic-btn is-primary" id="booksCreateSubmitBtn" type="button">Criar livro</button>
+      </div>
+    </div>
+  </section>
+
   <script src="js/android-config.js"></script>
   <script src="/config.js"></script>
   <script src="js/api-config.js"></script>
   <script src="js/player-state.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/books-page.js?v=20260403n"></script>
+  <script src="js/books-page.js?v=20260403o"></script>
 </body>
 </html>

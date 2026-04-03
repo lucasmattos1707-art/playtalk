@@ -2282,6 +2282,7 @@ const MINIBOOKS_RELATIVE_ROOT = path.posix.join('minibooks');
 const MINIBOOKS_MANIFEST_RELATIVE_PATH = path.posix.join(MINIBOOKS_RELATIVE_ROOT, 'manifest.json');
 const MINIBOOKS_MANIFEST_OBJECT_KEY = path.posix.join(MINIBOOKS_RELATIVE_ROOT, 'manifest.json');
 const MINIBOOKS_IMAGE_OBJECT_PREFIX = path.posix.join(MINIBOOKS_RELATIVE_ROOT, 'images');
+const MINIBOOKS_AUDIO_OBJECT_PREFIX = path.posix.join(MINIBOOKS_RELATIVE_ROOT, 'audio');
 const MINIBOOKS_COVER_RENDER_SIZE = Object.freeze({ height: 600 });
 const MINIBOOKS_BACKGROUND_DESKTOP_RENDER_SIZE = Object.freeze({ width: 1600, height: 900 });
 const MINIBOOKS_BACKGROUND_MOBILE_RENDER_SIZE = Object.freeze({ width: 900, height: 1600 });
@@ -3276,13 +3277,15 @@ function normalizeSpeakingStoryCardItem({ item, storyName = 'story', index = 0 }
   const source = item && typeof item === 'object' ? item : {};
   const english = String(source.en || source.english || '').trim();
   const portuguese = String(source.pt || source.portuguese || '').trim();
+  const audioUrl = String(source.audio || source.audioUrl || '').trim();
   if (!english || !portuguese) return null;
   return {
     id: `${safeGeneratedBase(storyName, 'story')}-${index}`,
     english,
     portuguese,
     imageUrl: '',
-    audioUrl: ''
+    audio: audioUrl,
+    audioUrl
   };
 }
 
@@ -3374,7 +3377,8 @@ function buildMiniBookStoriesFromJsonPayload(payload, options = {}) {
         const normalizedItem = {
           ...item,
           en: normalizeMiniBookText(item.en || item.english || item.text || item.sentence),
-          pt: normalizeMiniBookText(item.pt || item.portuguese || item.translation, item.en || item.english || item.text || item.sentence)
+          pt: normalizeMiniBookText(item.pt || item.portuguese || item.translation, item.en || item.english || item.text || item.sentence),
+          audio: normalizeMiniBookText(item.audio || item.audioUrl)
         };
         return normalizeSpeakingStoryCardItem({
           item: normalizedItem,
@@ -4752,6 +4756,212 @@ function buildMiniBookObjectKey(bookId, kind) {
     return path.posix.join(MINIBOOKS_IMAGE_OBJECT_PREFIX, 'backgrounds', `${safeBookId}-mobile.webp`);
   }
   return path.posix.join(MINIBOOKS_IMAGE_OBJECT_PREFIX, 'covers', `${safeBookId}.webp`);
+}
+
+function buildMiniBookAudioObjectKey(bookId, lineIndex) {
+  const safeBookId = normalizeMiniBookId(bookId);
+  const safeIndex = Math.max(0, Number.parseInt(lineIndex, 10) || 0);
+  const fileName = `${String(safeIndex + 1).padStart(3, '0')}.mp3`;
+  return path.posix.join(MINIBOOKS_AUDIO_OBJECT_PREFIX, safeBookId, fileName);
+}
+
+function normalizeMiniBookComparableText(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+const MINI_BOOK_LEVEL_NAME_TO_VALUE = new Map([
+  ['iniciante', 1],
+  ['basico', 2],
+  ['aprendiz', 3],
+  ['estudante', 4],
+  ['leitor', 5],
+  ['intermediario', 6],
+  ['experiente', 7],
+  ['avancado', 8],
+  ['nativo', 9],
+  ['expert', 10]
+]);
+
+function parseMiniBookLevelFromCreateLine(value) {
+  const raw = String(value || '').trim();
+  const numeric = Number.parseInt(raw, 10);
+  if (Number.isFinite(numeric)) {
+    return normalizeSpeakingStoryLevel(numeric);
+  }
+  const embeddedNumber = raw.match(/\d+/);
+  if (embeddedNumber && embeddedNumber[0]) {
+    return normalizeSpeakingStoryLevel(Number.parseInt(embeddedNumber[0], 10));
+  }
+  const normalized = normalizeMiniBookComparableText(value);
+  if (!normalized) return null;
+  return MINI_BOOK_LEVEL_NAME_TO_VALUE.get(normalized) || null;
+}
+
+function parseMiniBookCreateLines(linesText) {
+  const lines = String(linesText || '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => String(line || '').trim())
+    .filter(Boolean);
+
+  if (lines.length < 7) {
+    const error = new Error('Preencha pelo menos 7 linhas para criar o livro.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const title = normalizeMiniBookText(lines[0]);
+  const level = parseMiniBookLevelFromCreateLine(lines[1]);
+  const tag = normalizeMiniBookText(lines[2], 'story_1');
+  const coverPrompt = normalizeMiniBookText(lines[3]);
+  const backgroundPrompt = normalizeMiniBookText(lines[4]);
+  const phraseLines = lines.slice(5);
+
+  if (!title) {
+    const error = new Error('Linha 1 (titulo) obrigatoria.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!level) {
+    const error = new Error('Linha 2 precisa de nivel valido (1-10 ou nome do nivel).');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!tag) {
+    const error = new Error('Linha 3 (tag) obrigatoria.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!coverPrompt || !backgroundPrompt) {
+    const error = new Error('Linhas 4 e 5 com prompts sao obrigatorias.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (phraseLines.length < 2) {
+    const error = new Error('Informe pelo menos um par portugues/ingles a partir da linha 6.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if ((phraseLines.length % 2) !== 0) {
+    const error = new Error('As frases devem estar em pares: portugues e ingles.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const pairsCount = phraseLines.length / 2;
+  if (pairsCount > 120) {
+    const error = new Error('Limite de 120 pares de frases por criacao.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const cards = [];
+  for (let index = 0; index < phraseLines.length; index += 2) {
+    const portuguese = normalizeMiniBookText(phraseLines[index]);
+    const english = normalizeMiniBookText(phraseLines[index + 1]);
+    if (!portuguese || !english) continue;
+    cards.push({
+      pt: portuguese,
+      en: english,
+      audio: ''
+    });
+  }
+
+  if (!cards.length) {
+    const error = new Error('Nenhum par valido de frases foi encontrado.');
+    error.statusCode = 422;
+    throw error;
+  }
+
+  const bookId = normalizeMiniBookId(title);
+  return {
+    title,
+    level,
+    tag,
+    storyKey: safeGeneratedBase(tag, 'story_1'),
+    coverPrompt,
+    backgroundPrompt,
+    cards,
+    bookId,
+    fileName: `${bookId}.json`
+  };
+}
+
+async function generateMiniBookSpeechWithOpenAi(text, options = {}) {
+  const input = String(text || '').trim();
+  if (!input) {
+    const error = new Error('Texto vazio para gerar audio.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
+    const error = new Error('OpenAI nao configurada.');
+    error.statusCode = 503;
+    error.instructions = 'Preencha OPENAI_API_KEY no .env com a chave real da OpenAI.';
+    throw error;
+  }
+
+  const voice = normalizeMiniBookText(options.voice, 'fable');
+
+  const upstreamResponse = await fetch('https://api.openai.com/v1/audio/speech', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: OPENAI_TTS_MODEL,
+      voice,
+      input,
+      format: 'mp3'
+    })
+  });
+
+  if (!upstreamResponse.ok) {
+    const errorText = await upstreamResponse.text();
+    const error = new Error(errorText.slice(0, 500) || 'Falha ao gerar audio na OpenAI.');
+    error.statusCode = upstreamResponse.status;
+    throw error;
+  }
+
+  const audioBuffer = Buffer.from(await upstreamResponse.arrayBuffer());
+  if (!audioBuffer.length) {
+    const error = new Error('A OpenAI nao retornou audio para a frase.');
+    error.statusCode = 502;
+    throw error;
+  }
+
+  return {
+    mimeType: 'audio/mpeg',
+    buffer: audioBuffer,
+    voice
+  };
+}
+
+function buildMiniBookJsonPayloadFromCreateInput(createInput) {
+  const payload = {
+    bookId: createInput.bookId,
+    fileName: createInput.fileName,
+    nome: createInput.title,
+    nivel: createInput.level,
+    tag: createInput.tag,
+    prompts: {
+      cover: createInput.coverPrompt,
+      background: createInput.backgroundPrompt
+    }
+  };
+  payload[createInput.storyKey] = createInput.cards.map((card) => ({
+    pt: card.pt,
+    en: card.en,
+    audio: normalizeMiniBookText(card.audio)
+  }));
+  return payload;
 }
 
 function sortFluencyObjectKeys(left, right) {
@@ -7172,6 +7382,176 @@ app.post('/api/admin/minibooks/save-json', express.json({ limit: '6mb' }), async
     res.status(500).json({
       error: 'Falha ao salvar JSON do MiniBook no Postgres.',
       details: error.message
+    });
+  }
+});
+
+app.post('/api/admin/minibooks/create-from-lines', express.json({ limit: '4mb' }), async (req, res) => {
+  let adminUser = null;
+  try {
+    adminUser = await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  if (!pool) {
+    res.status(503).json({ error: 'DATABASE_URL nao configurada.' });
+    return;
+  }
+
+  if (!isR2FluencyConfigured()) {
+    res.status(503).json({ error: 'R2 nao configurado para criar MiniBooks.' });
+    return;
+  }
+
+  try {
+    const createInput = parseMiniBookCreateLines(req.body?.linesText || req.body?.text || '');
+    const cacheBuster = Date.now();
+
+    for (let index = 0; index < createInput.cards.length; index += 1) {
+      const card = createInput.cards[index];
+      const generatedAudio = await generateMiniBookSpeechWithOpenAi(card.en, { voice: 'fable' });
+      const audioObjectKey = buildMiniBookAudioObjectKey(createInput.bookId, index);
+      await putR2Object(audioObjectKey, generatedAudio.buffer, generatedAudio.mimeType || 'audio/mpeg');
+      card.audio = `${buildFlashcardsR2PublicUrl(audioObjectKey)}?v=${cacheBuster}`;
+    }
+
+    const payload = buildMiniBookJsonPayloadFromCreateInput(createInput);
+    const parsedMiniBook = buildMiniBookStoriesFromJsonPayload(payload, {
+      bookId: createInput.bookId,
+      fileName: createInput.fileName,
+      bookTitle: createInput.title,
+      level: createInput.level
+    });
+    if (!Array.isArray(parsedMiniBook.stories) || !parsedMiniBook.stories.length) {
+      res.status(422).json({
+        error: 'As frases enviadas nao produziram historias validas para o livro.'
+      });
+      return;
+    }
+
+    await ensureMiniBookJsonTables();
+    await pool.query(
+      `INSERT INTO public.minibook_json_content (
+         book_id,
+         file_name,
+         title,
+         level,
+         payload,
+         updated_by_user_id,
+         updated_at
+       )
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6, now())
+       ON CONFLICT (book_id)
+       DO UPDATE SET
+         file_name = EXCLUDED.file_name,
+         title = EXCLUDED.title,
+         level = EXCLUDED.level,
+         payload = EXCLUDED.payload,
+         updated_by_user_id = EXCLUDED.updated_by_user_id,
+         updated_at = now()`,
+      [
+        parsedMiniBook.bookId,
+        parsedMiniBook.fileName,
+        parsedMiniBook.bookTitle,
+        parsedMiniBook.level,
+        JSON.stringify(payload),
+        Number(adminUser?.id) || null
+      ]
+    );
+    invalidateSpeakingCardsCache();
+
+    const coverPrompt = normalizeMiniBookText(createInput.coverPrompt, [
+      MINIBOOKS_DEFAULT_COVER_PROMPT,
+      `Book concept: ${createInput.title}.`
+    ].join(' '));
+    const backgroundPrompt = normalizeMiniBookText(createInput.backgroundPrompt, [
+      MINIBOOKS_DEFAULT_BACKGROUND_PROMPT,
+      `Book concept: ${createInput.title}.`
+    ].join(' '));
+
+    const [coverGenerated, desktopGenerated, mobileGenerated] = await Promise.all([
+      generateMiniBookImageWithOpenAi(coverPrompt, { size: '1024x1536', quality: 'medium' }),
+      generateMiniBookImageWithOpenAi(backgroundPrompt, { size: '1536x1024', quality: 'medium' }),
+      generateMiniBookImageWithOpenAi(backgroundPrompt, { size: '1024x1536', quality: 'medium' })
+    ]);
+
+    const [coverBuffer, desktopBuffer, mobileBuffer] = await Promise.all([
+      optimizeMiniBookAssetToWebp(coverGenerated.buffer, 'cover'),
+      optimizeMiniBookAssetToWebp(desktopGenerated.buffer, 'background-desktop'),
+      optimizeMiniBookAssetToWebp(mobileGenerated.buffer, 'background-mobile')
+    ]);
+
+    const coverObjectKey = buildMiniBookObjectKey(parsedMiniBook.bookId, 'cover');
+    const desktopObjectKey = buildMiniBookObjectKey(parsedMiniBook.bookId, 'background-desktop');
+    const mobileObjectKey = buildMiniBookObjectKey(parsedMiniBook.bookId, 'background-mobile');
+
+    await Promise.all([
+      putR2Object(coverObjectKey, coverBuffer, 'image/webp'),
+      putR2Object(desktopObjectKey, desktopBuffer, 'image/webp'),
+      putR2Object(mobileObjectKey, mobileBuffer, 'image/webp')
+    ]);
+
+    const coverImageUrl = `${buildFlashcardsR2PublicUrl(coverObjectKey)}?v=${cacheBuster}`;
+    const backgroundDesktopUrl = `${buildFlashcardsR2PublicUrl(desktopObjectKey)}?v=${cacheBuster}`;
+    const backgroundMobileUrl = `${buildFlashcardsR2PublicUrl(mobileObjectKey)}?v=${cacheBuster}`;
+
+    const manifest = await loadMiniBooksManifest();
+    const previousEntry = normalizeMiniBookEntry(parsedMiniBook.bookId, manifest.books?.[parsedMiniBook.bookId] || {});
+    manifest.books = manifest.books || {};
+    manifest.books[parsedMiniBook.bookId] = normalizeMiniBookEntry(parsedMiniBook.bookId, {
+      ...previousEntry,
+      bookId: parsedMiniBook.bookId,
+      fileName: parsedMiniBook.fileName,
+      title: parsedMiniBook.bookTitle,
+      level: parsedMiniBook.level,
+      coverImageUrl,
+      coverObjectKey,
+      coverPrompt,
+      backgroundDesktopUrl,
+      backgroundDesktopObjectKey: desktopObjectKey,
+      backgroundMobileUrl,
+      backgroundMobileObjectKey: mobileObjectKey,
+      backgroundPrompt,
+      updatedAt: new Date().toISOString()
+    });
+    manifest.updatedAt = new Date().toISOString();
+    const savedManifest = await persistMiniBooksManifest(manifest);
+    const savedEntry = normalizeMiniBookEntry(parsedMiniBook.bookId, savedManifest.books?.[parsedMiniBook.bookId] || {});
+
+    const storiesCount = parsedMiniBook.stories.length;
+    const cardsCount = parsedMiniBook.stories.reduce((total, story) => (
+      total + (Array.isArray(story.cards) ? story.cards.length : 0)
+    ), 0);
+
+    res.json({
+      success: true,
+      book: {
+        id: parsedMiniBook.bookId,
+        fileName: parsedMiniBook.fileName,
+        title: parsedMiniBook.bookTitle,
+        level: parsedMiniBook.level,
+        coverImageUrl: savedEntry.coverImageUrl || '',
+        backgroundDesktopUrl: savedEntry.backgroundDesktopUrl || '',
+        backgroundMobileUrl: savedEntry.backgroundMobileUrl || ''
+      },
+      stats: {
+        storiesCount,
+        cardsCount
+      },
+      audio: {
+        voice: 'fable',
+        count: createInput.cards.length
+      }
+    });
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 500);
+    res.status(statusCode).json({
+      error: error.message || 'Falha ao criar MiniBook por linhas.',
+      details: error.details || null,
+      instructions: error.instructions || null
     });
   }
 });

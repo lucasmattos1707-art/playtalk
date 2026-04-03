@@ -9,6 +9,8 @@
   const BOOK_SNAP_DURATION_MS = 300;
   const BOOK_SWIPE_THRESHOLD = 44;
   const LEVEL_SWIPE_THRESHOLD = 54;
+  const CREATE_MIN_LINES = 7;
+  const CREATE_MAX_PHRASE_PAIRS = 120;
   const READER_FINISH_DISSOLVE_MS = 500;
   const READER_FINISH_BOOK_ENTER_MS = 500;
   const READER_FINISH_LINE_STEP_MS = 1000;
@@ -32,6 +34,7 @@
     avatarName: document.getElementById('booksAccountName'),
     levelMenu: document.getElementById('booksLevelMenu'),
     adminUiToggleBtn: document.getElementById('booksAdminUiToggleBtn'),
+    createBookBtn: document.getElementById('booksCreateBookBtn'),
     prevLevelBtn: document.getElementById('booksLevelPrevBtn'),
     nextLevelBtn: document.getElementById('booksLevelNextBtn'),
     levelTitle: document.getElementById('booksLevelTitle'),
@@ -52,6 +55,13 @@
     jsonInput: document.getElementById('booksJsonInput'),
     jsonSaveBtn: document.getElementById('booksJsonSaveBtn'),
     jsonCloseBtn: document.getElementById('booksJsonCloseBtn'),
+    createModal: document.getElementById('booksCreateModal'),
+    createEditor: document.getElementById('booksCreateEditor'),
+    createPreview: document.getElementById('booksCreatePreview'),
+    createLegend: document.getElementById('booksCreateLegend'),
+    createInput: document.getElementById('booksCreateInput'),
+    createSubmitBtn: document.getElementById('booksCreateSubmitBtn'),
+    createCloseBtn: document.getElementById('booksCreateCloseBtn'),
     modeModal: document.getElementById('booksModeModal'),
     modeCard: document.getElementById('booksModeCard'),
     modeLoading: document.getElementById('booksModeLoading'),
@@ -94,6 +104,9 @@
     magicBookId: '',
     magicProcessingBookIds: new Set(),
     jsonBookId: '',
+    createModalOpen: false,
+    createBusy: false,
+    pendingCreateBooks: [],
     modeBookId: '',
     modeStartBusy: false,
     modeStartToken: 0,
@@ -105,6 +118,9 @@
     readerDisplayLanguage: 'english',
     readerScores: [],
     readerMicBusy: false,
+    readerAudioToken: 0,
+    readerAudioElement: null,
+    readerLastAudioKey: '',
     readerFinishing: false,
     readerFinishToken: 0,
     readerTouchStartX: 0,
@@ -135,6 +151,134 @@
 
   function lettersOnly(value) {
     return normalizeText(value).replace(/[^a-z0-9]/g, '');
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function splitCreateInputRawLines(rawValue) {
+    return String(rawValue || '')
+      .replace(/\r\n?/g, '\n')
+      .split('\n');
+  }
+
+  function getCreateLineClassName(index) {
+    if (index === 0) return 'books-create-line--title';
+    if (index === 1) return 'books-create-line--level';
+    if (index === 2) return 'books-create-line--tag';
+    if (index === 3 || index === 4) return 'books-create-line--prompt';
+    return ((index - 5) % 2 === 0) ? 'books-create-line--pt' : 'books-create-line--en';
+  }
+
+  function getCreateLegendText() {
+    return [
+      'L1 titulo (azul 14)',
+      'L2 nivel (amarelo 10)',
+      'L3 tag adicional (laranja 8)',
+      'L4 prompt capa 9:16 (verde-limao 10)',
+      'L5 prompt background 16:9 (verde-limao 10)',
+      'L6 pt branco 10 | L7 en azul-claro 10 | L8 pt | L9 en...'
+    ].join('\n');
+  }
+
+  function renderCreateInputPreview() {
+    if (!els.createPreview || !els.createInput) return;
+    const rawText = String(els.createInput.value || '');
+    const lines = splitCreateInputRawLines(rawText);
+    const html = lines
+      .map((line, index) => {
+        const className = getCreateLineClassName(index);
+        const content = line.length ? escapeHtml(line) : '&nbsp;';
+        return `<span class="books-create-line ${className}">${content}</span>`;
+      })
+      .join('');
+    els.createPreview.innerHTML = html;
+    if (els.createEditor) {
+      els.createEditor.classList.toggle('is-empty', !safeText(rawText));
+    }
+    if (els.createLegend && !safeText(els.createLegend.textContent)) {
+      els.createLegend.textContent = getCreateLegendText();
+    }
+  }
+
+  function syncCreatePreviewScroll() {
+    if (!els.createPreview || !els.createInput) return;
+    els.createPreview.scrollTop = els.createInput.scrollTop;
+    els.createPreview.scrollLeft = els.createInput.scrollLeft;
+  }
+
+  function parseLevelFromCreateInput(rawLevel) {
+    const normalizedRaw = safeText(rawLevel);
+    const asNumber = Number.parseInt(normalizedRaw, 10);
+    if (Number.isFinite(asNumber)) {
+      return normalizeLevel(asNumber);
+    }
+
+    const embeddedNumber = normalizedRaw.match(/\d+/);
+    if (embeddedNumber && embeddedNumber[0]) {
+      return normalizeLevel(Number.parseInt(embeddedNumber[0], 10));
+    }
+
+    const normalizedLevelLabel = normalizeText(normalizedRaw);
+    if (!normalizedLevelLabel) return null;
+    const index = LEVEL_DISPLAY_NAMES.findIndex((name) => normalizeText(name) === normalizedLevelLabel);
+    if (index < 0) return null;
+    return index + 1;
+  }
+
+  function parseCreateInputForSubmission(rawText) {
+    const lines = splitCreateInputRawLines(rawText)
+      .map((line) => safeText(line))
+      .filter(Boolean);
+
+    if (lines.length < CREATE_MIN_LINES) {
+      throw new Error('Preencha pelo menos 7 linhas para criar o livro.');
+    }
+
+    const title = safeText(lines[0]);
+    const levelValue = parseLevelFromCreateInput(lines[1]);
+    const tag = safeText(lines[2]);
+    const coverPrompt = safeText(lines[3]);
+    const backgroundPrompt = safeText(lines[4]);
+    const phraseLines = lines.slice(5);
+
+    if (!title) {
+      throw new Error('A linha 1 (titulo) e obrigatoria.');
+    }
+    if (!levelValue) {
+      throw new Error('A linha 2 precisa de um nivel valido (1-10 ou nome do nivel).');
+    }
+    if (!tag) {
+      throw new Error('A linha 3 (tag adicional) e obrigatoria.');
+    }
+    if (!coverPrompt || !backgroundPrompt) {
+      throw new Error('As linhas 4 e 5 (prompts de capa/background) sao obrigatorias.');
+    }
+    if (phraseLines.length < 2) {
+      throw new Error('Adicione pelo menos um par de frases (portugues e ingles).');
+    }
+    if ((phraseLines.length % 2) !== 0) {
+      throw new Error('As frases precisam estar em pares: portugues e ingles.');
+    }
+
+    const pairs = phraseLines.length / 2;
+    if (pairs > CREATE_MAX_PHRASE_PAIRS) {
+      throw new Error(`Limite de ${CREATE_MAX_PHRASE_PAIRS} pares por livro neste modo.`);
+    }
+
+    return {
+      title,
+      level: levelValue,
+      tag,
+      coverPrompt,
+      backgroundPrompt,
+      pairs
+    };
   }
 
   function splitBalancedLines(value) {
@@ -399,6 +543,7 @@
       || state.modeBookId
       || state.magicBookId
       || state.jsonBookId
+      || state.createModalOpen
     );
   }
 
@@ -642,6 +787,111 @@
     }
   }
 
+  function setCreateBusy(isBusy) {
+    state.createBusy = Boolean(isBusy);
+    if (els.createSubmitBtn) {
+      els.createSubmitBtn.disabled = state.createBusy;
+    }
+    if (els.createCloseBtn) {
+      els.createCloseBtn.disabled = state.createBusy;
+    }
+    if (els.createInput) {
+      els.createInput.disabled = state.createBusy;
+    }
+    if (els.createBookBtn) {
+      els.createBookBtn.disabled = state.createBusy;
+      els.createBookBtn.textContent = state.createBusy ? 'Criando...' : 'Criar livro';
+    }
+  }
+
+  function openCreateModal() {
+    if (!state.isAdmin || !els.createModal) return;
+    state.createModalOpen = true;
+    if (els.createLegend) {
+      els.createLegend.textContent = getCreateLegendText();
+    }
+    renderCreateInputPreview();
+    syncCreatePreviewScroll();
+    els.createModal.classList.add('is-visible');
+    if (els.createInput) {
+      window.setTimeout(() => {
+        try {
+          els.createInput.focus();
+        } catch (_error) {
+          // ignore focus issues
+        }
+      }, 25);
+    }
+  }
+
+  function closeCreateModal() {
+    state.createModalOpen = false;
+    if (els.createModal) {
+      els.createModal.classList.remove('is-visible');
+    }
+  }
+
+  function addPendingCreateBook(bookDraft) {
+    const tempId = `pending:${Date.now()}:${Math.random().toString(16).slice(2, 8)}`;
+    state.pendingCreateBooks.push({
+      tempId,
+      bookId: tempId,
+      nome: safeText(bookDraft?.title) || 'Livro',
+      nivel: normalizeLevel(bookDraft?.level),
+      isPendingCreate: true
+    });
+    return tempId;
+  }
+
+  function removePendingCreateBook(tempId) {
+    const target = safeText(tempId);
+    if (!target) return;
+    state.pendingCreateBooks = state.pendingCreateBooks.filter((entry) => safeText(entry?.tempId) !== target);
+  }
+
+  async function createBookFromLines() {
+    if (!state.isAdmin || state.createBusy) return;
+    const rawText = String(els.createInput?.value || '');
+
+    let parsedInput = null;
+    try {
+      parsedInput = parseCreateInputForSubmission(rawText);
+    } catch (error) {
+      setStatus(error?.message || 'Formato invalido para criar livro.', 'error');
+      return;
+    }
+
+    closeCreateModal();
+    const pendingTempId = addPendingCreateBook(parsedInput);
+    state.selectedLevel = normalizeLevel(parsedInput.level);
+    renderLevelMenu();
+    renderCards();
+    setCreateBusy(true);
+    setStatus(`Criando "${parsedInput.title}" com capa, background e audios...`, null);
+
+    try {
+      const payload = await postJsonWithSuccess('/api/admin/minibooks/create-from-lines', {
+        linesText: rawText
+      }, 'Nao foi possivel criar o livro.');
+
+      removePendingCreateBook(pendingTempId);
+      state.books = await fetchStories();
+      state.selectedLevel = normalizeLevel(payload?.book?.level || parsedInput.level);
+      renderLevelMenu();
+      renderCards();
+
+      const createdTitle = safeText(payload?.book?.title || parsedInput.title);
+      const cardsCount = Number(payload?.stats?.cardsCount) || parsedInput.pairs;
+      setStatus(`Livro "${createdTitle}" criado com ${cardsCount} frases e audio fable.`, 'success');
+    } catch (error) {
+      removePendingCreateBook(pendingTempId);
+      renderCards();
+      setStatus(error?.message || 'Falha ao criar livro por linhas.', 'error');
+    } finally {
+      setCreateBusy(false);
+    }
+  }
+
   function openModeModal(book) {
     if (!els.modeModal || !book) return;
     const bookId = safeText(book.bookId);
@@ -744,9 +994,13 @@
   function renderCards() {
     if (!els.cardsGrid || !els.cardsEmpty) return;
     const books = getBooksForSelectedLevel();
+    const pendingBooks = state.pendingCreateBooks
+      .filter((entry) => normalizeLevel(entry?.nivel) === state.selectedLevel)
+      .sort(sortByNome);
+    const cardsList = books.concat(pendingBooks);
     els.cardsGrid.innerHTML = '';
-    els.cardsEmpty.hidden = books.length > 0;
-    if (!books.length) {
+    els.cardsEmpty.hidden = cardsList.length > 0;
+    if (!cardsList.length) {
       state.shelfIndex = 0;
       cancelShelfAnimation();
       if (els.shelfViewport) {
@@ -757,10 +1011,11 @@
 
     const gradients = state.gradients.length ? state.gradients : ['linear-gradient(160deg, #4a5cff, #4ea5ff)'];
 
-    books.forEach((book, index) => {
+    cardsList.forEach((book, index) => {
       const gradient = gradients[index % gradients.length];
       const coverImageUrl = safeText(book?.coverImageUrl);
-      const processingMagic = isBookProcessingMagic(book?.bookId);
+      const pendingCreate = Boolean(book?.isPendingCreate);
+      const processingMagic = pendingCreate || isBookProcessingMagic(book?.bookId);
       const page = document.createElement('article');
       page.className = 'books-shelf-page';
       const card = document.createElement('button');
@@ -798,7 +1053,7 @@
       uploadBtn.className = 'books-card__upload-btn';
       uploadBtn.setAttribute('aria-label', `Enviar capa de ${safeText(book?.nome) || 'livro'}`);
       uploadBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 18v2H5v-2H3v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2zm-7-2 5-5h-3V2h-4v9H7z"/></svg>';
-      uploadBtn.disabled = state.uploadInFlight || processingMagic;
+      uploadBtn.disabled = state.uploadInFlight || processingMagic || pendingCreate;
       uploadBtn.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -810,7 +1065,7 @@
       magicBtn.className = 'books-card__magic-btn';
       magicBtn.setAttribute('aria-label', `Gerar imagens com IA para ${safeText(book?.nome) || 'livro'}`);
       magicBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m7.5 2 1.13 3.4L12 6.5l-3.37 1.1L7.5 11l-1.13-3.4L3 6.5l3.37-1.1zm9 5 1.5 4.5L22.5 13 18 14.5 16.5 19 15 14.5 10.5 13 15 11.5zm-8 7 1 3 3 1-3 1-1 3-1-3-3-1 3-1z"/></svg>';
-      magicBtn.disabled = processingMagic;
+      magicBtn.disabled = processingMagic || pendingCreate;
       magicBtn.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -827,7 +1082,7 @@
       textBtn.style.fontWeight = '800';
       textBtn.style.letterSpacing = '0.06em';
       textBtn.style.background = 'rgba(9, 36, 70, 0.9)';
-      textBtn.disabled = processingMagic;
+      textBtn.disabled = processingMagic || pendingCreate;
       textBtn.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -842,7 +1097,7 @@
       card.append(background, overlay, adminChip, actions, processingOverlay);
       card.addEventListener('click', () => {
         if ((Date.now() - state.shelfLastGestureAt) < 240) return;
-        if (state.uploadInFlight || processingMagic) return;
+        if (state.uploadInFlight || processingMagic || pendingCreate) return;
         openModeModal(book);
       });
       page.appendChild(card);
@@ -869,16 +1124,26 @@
   }
 
   function renderAdminUiToggle() {
-    if (!els.adminUiToggleBtn) return;
     const canShowToggle = Boolean(state.isAdmin);
-    els.adminUiToggleBtn.hidden = !canShowToggle;
+    if (els.adminUiToggleBtn) {
+      els.adminUiToggleBtn.hidden = !canShowToggle;
+    }
+    if (els.createBookBtn) {
+      els.createBookBtn.hidden = !canShowToggle;
+      els.createBookBtn.disabled = state.createBusy;
+    }
     if (els.levelMenu) {
       els.levelMenu.classList.toggle('is-admin', canShowToggle);
     }
     if (!canShowToggle) return;
     const isOn = isAdminUiEnabled();
-    els.adminUiToggleBtn.classList.toggle('is-on', isOn);
-    els.adminUiToggleBtn.textContent = isOn ? 'Admin UI On' : 'Admin UI Off';
+    if (els.adminUiToggleBtn) {
+      els.adminUiToggleBtn.classList.toggle('is-on', isOn);
+      els.adminUiToggleBtn.textContent = isOn ? 'Admin UI On' : 'Admin UI Off';
+    }
+    if (els.createBookBtn && !state.createBusy) {
+      els.createBookBtn.textContent = 'Criar livro';
+    }
   }
 
   function setLevel(nextLevel) {
@@ -1336,6 +1601,62 @@
     els.readerTrainingStatus.textContent = safeText(message);
   }
 
+  function stopReaderAudio() {
+    state.readerAudioToken += 1;
+    state.readerLastAudioKey = '';
+    const current = state.readerAudioElement;
+    state.readerAudioElement = null;
+    if (!current) return;
+    try {
+      current.pause();
+      current.currentTime = 0;
+      current.src = '';
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  async function playReaderCardAudio(card, index) {
+    const source = safeText(card?.audio || card?.audioUrl);
+    const english = safeText(card?.english);
+    const key = `${Number(index) || 0}::${source || english}`;
+
+    if (!source) {
+      state.readerLastAudioKey = key;
+      return;
+    }
+    if (state.readerLastAudioKey === key) {
+      return;
+    }
+
+    state.readerLastAudioKey = key;
+    const token = state.readerAudioToken + 1;
+    state.readerAudioToken = token;
+
+    const previous = state.readerAudioElement;
+    if (previous) {
+      try {
+        previous.pause();
+        previous.currentTime = 0;
+      } catch (_error) {
+        // ignore
+      }
+    }
+
+    const audio = new Audio(source);
+    audio.preload = 'auto';
+    state.readerAudioElement = audio;
+
+    try {
+      await audio.play();
+      if (token !== state.readerAudioToken) {
+        audio.pause();
+      }
+    } catch (_error) {
+      // browser may block autoplay; keep silent
+    }
+  }
+
   function updateReaderProgress(total, index) {
     if (!els.readerProgressFill) return;
     if (!total || total <= 0) {
@@ -1668,11 +1989,13 @@
     const displayTextFormatted = splitBalancedLines(displayText);
     els.readerEnglish.textContent = displayTextFormatted || 'Sem conteudo neste livro.';
     animateReaderPhrase();
+    void playReaderCardAudio(card, index);
     updateReaderProgress(total, index);
     renderReaderModeUi();
   }
 
   function closeReader() {
+    stopReaderAudio();
     state.readerFinishToken += 1;
     state.readerFinishing = false;
     resetReaderFinishUi();
@@ -1684,6 +2007,7 @@
     state.readerDisplayLanguage = 'english';
     state.readerScores = [];
     state.readerMicBusy = false;
+    state.readerLastAudioKey = '';
     setReaderTrainingStatus('');
     setReaderMicLive(false);
   }
@@ -1712,10 +2036,12 @@
       .map((entry) => {
         const english = safeText(entry?.english || entry?.en);
         const portuguese = safeText(entry?.portuguese || entry?.pt || english);
+        const audio = safeText(entry?.audio || entry?.audioUrl);
         if (!english) return null;
         return {
           english,
-          portuguese
+          portuguese,
+          audio
         };
       })
       .filter(Boolean);
@@ -1725,6 +2051,7 @@
     if (!book) return;
     try {
       const cards = Array.isArray(providedCards) ? providedCards : await fetchBookCards(book);
+      stopReaderAudio();
       applyReaderBackground(book);
       state.readerFinishToken += 1;
       state.readerFinishing = false;
@@ -1736,11 +2063,13 @@
         ? cards
         : [{
           english: 'Este livro nao tem frases em ingles ainda.',
-          portuguese: 'Este livro nao tem frases em ingles ainda.'
+          portuguese: 'Este livro nao tem frases em ingles ainda.',
+          audio: ''
         }];
       state.readerScores = [];
       state.readerDisplayLanguage = 'english';
       state.readerMicBusy = false;
+      state.readerLastAudioKey = '';
       state.readerIndex = 0;
       renderReaderAvatar();
       setReaderTrainingStatus('');
@@ -1757,6 +2086,7 @@
     const card = state.readerCards[state.readerIndex];
     if (!card || !safeText(card.english)) return;
 
+    stopReaderAudio();
     state.readerMicBusy = true;
     renderReaderModeUi();
     setReaderTrainingStatus('');
@@ -1858,6 +2188,33 @@
       }
     });
 
+    els.createBookBtn?.addEventListener('click', () => {
+      openCreateModal();
+    });
+
+    els.createSubmitBtn?.addEventListener('click', () => {
+      void createBookFromLines();
+    });
+
+    els.createCloseBtn?.addEventListener('click', () => {
+      closeCreateModal();
+    });
+
+    els.createModal?.addEventListener('click', (event) => {
+      if (event.target === els.createModal && !state.createBusy) {
+        closeCreateModal();
+      }
+    });
+
+    els.createInput?.addEventListener('input', () => {
+      renderCreateInputPreview();
+      syncCreatePreviewScroll();
+    });
+
+    els.createInput?.addEventListener('scroll', () => {
+      syncCreatePreviewScroll();
+    });
+
     els.coverUploadInput?.addEventListener('change', (event) => {
       const file = event?.target?.files?.[0];
       if (!state.isAdmin || !file || !state.uploadTargetBookId) return;
@@ -1955,6 +2312,11 @@
     }, { passive: true });
 
     window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && state.createModalOpen && !state.createBusy) {
+        event.preventDefault();
+        closeCreateModal();
+        return;
+      }
       if (!state.readerOpen) return;
       if (state.readerFinishing) return;
       if (event.key === 'ArrowRight') {
@@ -1988,6 +2350,9 @@
 
   async function init() {
     bindEvents();
+    renderCreateInputPreview();
+    syncCreatePreviewScroll();
+    setCreateBusy(false);
     state.gradients = buildGradientPool();
     state.forceAdminUi = readForceAdminUiFlag();
     renderShelfLoading();
