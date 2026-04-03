@@ -5,14 +5,31 @@
   const DUEL_POLL_MS = 2000;
   const PRESENCE_PING_MS = 15000;
   const WORD_SWAP_MS = 1000;
-  const DUEL_INTRO_COUNTDOWN_SECONDS = 5;
+  const DUEL_INTRO_COUNTDOWN_SECONDS = 6;
   const DUEL_BATTLE_DURATION_MS = 3 * 60 * 1000;
+  const DUEL_INTRO_BOOK_STAGE_SECONDS = 2;
+  const DUEL_INTRO_PLAYER_STAGE_SECONDS = 4;
+  const DUEL_INTRO_BOOK_EXIT_MS = 420;
   const DUEL_INTRO_REVEAL_DELAY_MS = 500;
+  const DUEL_INTRO_FALLBACK_GRADIENTS = [
+    'linear-gradient(160deg, #274873, #6f3f72)',
+    'linear-gradient(160deg, #1f5b57, #355f9d)',
+    'linear-gradient(160deg, #745127, #4e3e89)',
+    'linear-gradient(160deg, #2b5a44, #83506f)',
+    'linear-gradient(160deg, #1e4a66, #9b5d3c)'
+  ];
 
   const els = {
     home: document.getElementById('speakingHome'),
     game: document.getElementById('speakingGame'),
     duelIntro: document.getElementById('duelIntro'),
+    duelIntroBookStage: document.getElementById('duelIntroBookStage'),
+    duelIntroBookCard: document.getElementById('duelIntroBookCard'),
+    duelIntroBookImage: document.getElementById('duelIntroBookImage'),
+    duelIntroBookFallback: document.getElementById('duelIntroBookFallback'),
+    duelIntroBookLineA: document.getElementById('duelIntroBookLineA'),
+    duelIntroBookLineB: document.getElementById('duelIntroBookLineB'),
+    duelIntroAvatars: document.getElementById('duelIntroAvatars'),
     duelIntroMePlayer: document.getElementById('duelIntroMePlayer'),
     duelIntroEnemyPlayer: document.getElementById('duelIntroEnemyPlayer'),
     duelIntroMeAvatar: document.getElementById('duelIntroMeAvatar'),
@@ -116,6 +133,12 @@
       pingTimer: 0,
       introTimer: 0,
       introAnimationTimers: [],
+      introCountdownSeconds: DUEL_INTRO_COUNTDOWN_SECONDS,
+      introBook: {
+        id: '',
+        title: '',
+        coverImageUrl: ''
+      },
       battleDeadlineMs: 0,
       battleTimer: 0,
       timeoutSyncInFlight: false
@@ -337,6 +360,48 @@
       words.slice(0, half).join(' '),
       words.slice(half).join(' ')
     ];
+  }
+
+  function pickRandomIntroGradient() {
+    if (!DUEL_INTRO_FALLBACK_GRADIENTS.length) {
+      return 'linear-gradient(160deg, #385f7e, #8d4d80)';
+    }
+    const index = Math.floor(Math.random() * DUEL_INTRO_FALLBACK_GRADIENTS.length);
+    return DUEL_INTRO_FALLBACK_GRADIENTS[index];
+  }
+
+  function resolveDuelIntroBookFromCards() {
+    const firstCard = Array.isArray(state.activeCards) && state.activeCards.length ? state.activeCards[0] : null;
+    if (!firstCard || typeof firstCard !== 'object') {
+      return {
+        id: '',
+        title: '',
+        coverImageUrl: ''
+      };
+    }
+    return {
+      id: safeText(firstCard.battleBookId || firstCard.bookId),
+      title: normalizeBookTitle(firstCard.battleBookTitle || firstCard.bookTitle || firstCard.bookName || ''),
+      coverImageUrl: safeText(firstCard.battleBookCoverImageUrl || firstCard.coverImageUrl)
+    };
+  }
+
+  function resolveDuelIntroBookData() {
+    const fromCards = resolveDuelIntroBookFromCards();
+    if (fromCards.id || fromCards.title || fromCards.coverImageUrl) {
+      return {
+        id: fromCards.id,
+        title: fromCards.title || 'Mini Book',
+        coverImageUrl: fromCards.coverImageUrl
+      };
+    }
+
+    const selectedBook = getSelectedBook();
+    return {
+      id: safeText(selectedBook?.id),
+      title: normalizeBookTitle(selectedBook?.title || selectedBook?.fileName || '') || 'Mini Book',
+      coverImageUrl: safeText(selectedBook?.coverImageUrl)
+    };
   }
 
   function parseLevel(value) {
@@ -722,6 +787,9 @@
       els.duelIntroEnemyName.classList.remove('is-visible');
       els.duelIntroEnemyName.classList.remove('is-flash');
     }
+    if (els.duelIntroAvatars) els.duelIntroAvatars.classList.add('is-hidden');
+    if (els.duelIntroBookStage) els.duelIntroBookStage.hidden = false;
+    if (els.duelIntroBookCard) els.duelIntroBookCard.classList.remove('is-exit');
   }
 
   function revealDuelIntroPlayer(playerEl, nameEl) {
@@ -737,6 +805,61 @@
       void nameEl.offsetWidth;
       nameEl.classList.add('is-flash');
     }, DUEL_INTRO_REVEAL_DELAY_MS);
+  }
+
+  function applyDuelIntroBook() {
+    const duelBook = resolveDuelIntroBookData();
+    state.duel.introBook = duelBook;
+
+    const [lineA, lineB] = splitBookTitleLines(duelBook.title || 'Mini Book');
+    if (els.duelIntroBookLineA) els.duelIntroBookLineA.textContent = lineA || 'Mini';
+    if (els.duelIntroBookLineB) els.duelIntroBookLineB.textContent = lineB || 'Book';
+
+    const fallbackGradient = pickRandomIntroGradient();
+    if (els.duelIntroBookFallback) {
+      els.duelIntroBookFallback.style.background = fallbackGradient;
+    }
+
+    const hasCover = Boolean(duelBook.coverImageUrl);
+    if (els.duelIntroBookImage) {
+      if (hasCover) {
+        els.duelIntroBookImage.src = duelBook.coverImageUrl;
+        els.duelIntroBookImage.hidden = false;
+      } else {
+        els.duelIntroBookImage.hidden = true;
+        els.duelIntroBookImage.removeAttribute('src');
+      }
+      els.duelIntroBookImage.onerror = () => {
+        if (els.duelIntroBookImage) {
+          els.duelIntroBookImage.hidden = true;
+          els.duelIntroBookImage.removeAttribute('src');
+        }
+        if (els.duelIntroBookFallback) {
+          els.duelIntroBookFallback.hidden = false;
+        }
+      };
+    }
+    if (els.duelIntroBookFallback) {
+      els.duelIntroBookFallback.hidden = hasCover;
+    }
+  }
+
+  function revealDuelIntroPlayersAfterBook() {
+    if (els.duelIntroBookCard) {
+      els.duelIntroBookCard.classList.add('is-exit');
+    }
+    queueDuelIntroAnimation(() => {
+      if (els.duelIntroBookStage) {
+        els.duelIntroBookStage.hidden = true;
+      }
+      if (els.duelIntroAvatars) {
+        els.duelIntroAvatars.classList.remove('is-hidden');
+      }
+      revealDuelIntroPlayer(els.duelIntroMePlayer, els.duelIntroMeName);
+      queueDuelIntroAnimation(() => {
+        revealDuelIntroPlayer(els.duelIntroEnemyPlayer, els.duelIntroEnemyName);
+      }, 2 * DUEL_INTRO_REVEAL_DELAY_MS);
+    }, DUEL_INTRO_BOOK_EXIT_MS);
   }
 
   function formatTimerMs(totalMs) {

@@ -383,6 +383,74 @@
       animation: fadeIn 220ms ease;
     }
 
+    .duel-intro__book-stage {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 300px;
+      margin: 0 0 14px;
+    }
+
+    .duel-intro__book {
+      position: relative;
+      width: min(46vw, 186px);
+      aspect-ratio: 9 / 16;
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+      background: linear-gradient(160deg, #1b2d47, #314f73);
+      transform: translateX(0) scale(1);
+      opacity: 1;
+      transition: transform 420ms cubic-bezier(0.21, 0.74, 0.23, 1), opacity 320ms ease;
+    }
+
+    .duel-intro__book.is-exit {
+      transform: translateX(115%) scale(0.94);
+      opacity: 0;
+    }
+
+    .duel-intro__book-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #102033;
+    }
+
+    .duel-intro__book-fallback {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 8px;
+      padding: 18px 14px;
+      text-align: center;
+      color: #fff;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.42);
+      font-family: "Soopafre", "Trebuchet MS", "Segoe UI", sans-serif;
+      letter-spacing: 0.02em;
+      line-height: 1.12;
+      background: linear-gradient(160deg, #385f7e, #8d4d80);
+    }
+
+    .duel-intro__book-line {
+      margin: 0;
+      font-weight: 900;
+      font-size: clamp(20px, 4.8vw, 30px);
+      max-width: 100%;
+      word-break: break-word;
+    }
+
+    .duel-intro__avatars.is-hidden {
+      opacity: 0;
+      pointer-events: none;
+      max-height: 0;
+      margin-bottom: 0;
+      overflow: hidden;
+    }
+
     .duel-intro__avatars {
       display: flex;
       align-items: center;
@@ -390,6 +458,9 @@
       gap: 20px;
       flex-wrap: wrap;
       margin-bottom: 14px;
+      max-height: 400px;
+      opacity: 1;
+      transition: opacity 220ms ease;
     }
 
     .duel-intro__vs {
@@ -903,6 +974,12 @@
       .mini-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
+      .duel-intro__book-stage {
+        min-height: 250px;
+      }
+      .duel-intro__book {
+        width: min(52vw, 162px);
+      }
       .card-word { font-size: 33.12px; }
       .card-word.is-long { font-size: 29.15px; }
       .card-subword { font-size: 24.84px; }
@@ -1003,7 +1080,16 @@
 
     <section class="speaking-card speaking-game" id="speakingGame">
       <section class="duel-intro" id="duelIntro" hidden>
-        <div class="duel-intro__avatars">
+        <div class="duel-intro__book-stage" id="duelIntroBookStage">
+          <article class="duel-intro__book" id="duelIntroBookCard" aria-label="MiniBook da batalha">
+            <img class="duel-intro__book-image" id="duelIntroBookImage" alt="Capa do MiniBook" hidden>
+            <div class="duel-intro__book-fallback" id="duelIntroBookFallback" hidden>
+              <p class="duel-intro__book-line" id="duelIntroBookLineA">Mini</p>
+              <p class="duel-intro__book-line" id="duelIntroBookLineB">Book</p>
+            </div>
+          </article>
+        </div>
+        <div class="duel-intro__avatars" id="duelIntroAvatars">
           <article class="duel-intro__player duel-intro__player--me" id="duelIntroMePlayer">
             <img class="duel-intro__avatar" id="duelIntroMeAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Seu avatar grande">
             <p class="duel-intro__name" id="duelIntroMeName">Você</p>
@@ -1014,7 +1100,7 @@
             <p class="duel-intro__name" id="duelIntroEnemyName">Adversário</p>
           </article>
         </div>
-        <p class="duel-intro__countdown" id="duelIntroCountdown">O desafio vai começar em 5...</p>
+        <p class="duel-intro__countdown" id="duelIntroCountdown">O desafio vai começar em 6...</p>
       </section>
 
       <div class="duel-head">
