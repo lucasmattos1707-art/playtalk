@@ -2170,7 +2170,7 @@ const MINIBOOKS_RELATIVE_ROOT = path.posix.join('minibooks');
 const MINIBOOKS_MANIFEST_RELATIVE_PATH = path.posix.join(MINIBOOKS_RELATIVE_ROOT, 'manifest.json');
 const MINIBOOKS_MANIFEST_OBJECT_KEY = path.posix.join(MINIBOOKS_RELATIVE_ROOT, 'manifest.json');
 const MINIBOOKS_IMAGE_OBJECT_PREFIX = path.posix.join(MINIBOOKS_RELATIVE_ROOT, 'images');
-const MINIBOOKS_COVER_RENDER_SIZE = Object.freeze({ width: 900, height: 1600 });
+const MINIBOOKS_COVER_RENDER_SIZE = Object.freeze({ height: 600 });
 const MINIBOOKS_BACKGROUND_DESKTOP_RENDER_SIZE = Object.freeze({ width: 1600, height: 900 });
 const MINIBOOKS_BACKGROUND_MOBILE_RENDER_SIZE = Object.freeze({ width: 900, height: 1600 });
 const MINIBOOKS_DEFAULT_COVER_PROMPT = [
@@ -4322,13 +4322,24 @@ function getMiniBookRenderSize(kind) {
 
 async function optimizeMiniBookAssetToWebp(inputBuffer, kind = 'cover') {
   const renderSize = getMiniBookRenderSize(kind);
-  return sharp(inputBuffer, { failOn: 'none', animated: false })
-    .rotate()
-    .resize(renderSize.width, renderSize.height, {
+  const transformer = sharp(inputBuffer, { failOn: 'none', animated: false })
+    .rotate();
+
+  if (kind === 'cover') {
+    transformer.resize({
+      height: Number(renderSize.height) || 600,
+      fit: 'inside',
+      withoutEnlargement: false
+    });
+  } else {
+    transformer.resize(renderSize.width, renderSize.height, {
       fit: 'cover',
       position: 'centre',
       withoutEnlargement: false
-    })
+    });
+  }
+
+  return transformer
     .webp({
       quality: kind === 'cover' ? 82 : 78,
       effort: 5,
