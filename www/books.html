@@ -515,11 +515,50 @@
       gap: 12px;
     }
 
-    .books-create-helper {
-      margin: 0;
-      color: rgba(225, 235, 249, 0.9);
+    .books-create-toolbar {
+      display: grid;
+      grid-template-columns: 170px 1fr 118px auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .books-create-control {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .books-create-control-label {
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      color: rgba(208, 228, 255, 0.92);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .books-create-control-input {
+      width: 100%;
+      min-height: 34px;
+      padding: 0 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.06);
+      color: #f4f8ff;
       font-size: 12px;
-      line-height: 1.45;
+      outline: none;
+    }
+
+    .books-create-control-input:focus {
+      border-color: rgba(130, 193, 255, 0.8);
+      box-shadow: 0 0 0 2px rgba(89, 156, 255, 0.2);
+    }
+
+    .books-create-write-btn {
+      min-height: 34px;
+      border-radius: 10px;
+      font-size: 12px;
+      letter-spacing: 0.03em;
+      padding: 0 12px;
     }
 
     .books-create-editor {
@@ -625,16 +664,16 @@
       font-weight: 700;
     }
 
-    .books-create-legend {
-      margin: 0;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      background: rgba(6, 18, 30, 0.72);
-      font-size: 11px;
-      color: rgba(230, 242, 255, 0.92);
-      line-height: 1.42;
-      white-space: pre-line;
+    @media (max-width: 860px) {
+      .books-create-toolbar {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .books-create-toolbar {
+        grid-template-columns: 1fr;
+      }
     }
 
     .books-mode-preview {
@@ -1375,12 +1414,32 @@
   <section class="books-magic-modal" id="booksCreateModal" aria-label="Criar livro por linhas">
     <div class="books-magic-card books-create-card">
       <h2 class="books-magic-title">Criar livro por linhas</h2>
-      <p class="books-create-helper">Linha 1: titulo. Linha 2: nivel. Linha 3: tag. Linha 4: prompt capa 9:16. Linha 5: prompt background 16:9. Da linha 6 em diante: portugues/ingles em pares.</p>
+      <div class="books-create-toolbar">
+        <label class="books-create-control">
+          <span class="books-create-control-label">Voz dos audios</span>
+          <select class="books-create-control-input" id="booksCreateVoiceSelect">
+            <option value="openai:fable">OpenAI - Fable</option>
+            <option value="openai:alloy">OpenAI - Alloy</option>
+            <option value="openai:sage">OpenAI - Sage</option>
+            <option value="openai:nova">OpenAI - Nova</option>
+            <option value="openai:verse">OpenAI - Verse</option>
+            <option value="elevenlabs:harry">ElevenLabs - Harry</option>
+          </select>
+        </label>
+        <label class="books-create-control">
+          <span class="books-create-control-label">Tema para escrever</span>
+          <input class="books-create-control-input" id="booksCreateIdeaInput" type="text" placeholder="Ex.: amizade no colegio, comedia leve">
+        </label>
+        <label class="books-create-control">
+          <span class="books-create-control-label">Caracteres (0-1500)</span>
+          <input class="books-create-control-input" id="booksCreateCharsInput" type="number" min="0" max="1500" value="900">
+        </label>
+        <button class="books-magic-btn books-create-write-btn" id="booksCreateWriteBtn" type="button">Escrever livro</button>
+      </div>
       <div class="books-create-editor is-empty" id="booksCreateEditor">
         <pre class="books-create-preview" id="booksCreatePreview" aria-hidden="true"></pre>
         <textarea class="books-create-input" id="booksCreateInput" placeholder="Titulo do livro&#10;Nivel (1-10)&#10;story_1&#10;Prompt capa 9:16&#10;Prompt background 16:9&#10;Frase 1 em portugues&#10;Sentence 1 in english"></textarea>
       </div>
-      <p class="books-create-legend" id="booksCreateLegend"></p>
       <div class="books-magic-actions">
         <button class="books-magic-btn" id="booksCreateCloseBtn" type="button">Cancelar</button>
         <button class="books-magic-btn is-primary" id="booksCreateSubmitBtn" type="button">Criar livro</button>
@@ -1393,6 +1452,6 @@
   <script src="js/api-config.js"></script>
   <script src="js/player-state.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/books-page.js?v=20260403o"></script>
+  <script src="js/books-page.js?v=20260403p"></script>
 </body>
 </html>

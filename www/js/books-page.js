@@ -58,8 +58,11 @@
     createModal: document.getElementById('booksCreateModal'),
     createEditor: document.getElementById('booksCreateEditor'),
     createPreview: document.getElementById('booksCreatePreview'),
-    createLegend: document.getElementById('booksCreateLegend'),
     createInput: document.getElementById('booksCreateInput'),
+    createVoiceSelect: document.getElementById('booksCreateVoiceSelect'),
+    createIdeaInput: document.getElementById('booksCreateIdeaInput'),
+    createCharsInput: document.getElementById('booksCreateCharsInput'),
+    createWriteBtn: document.getElementById('booksCreateWriteBtn'),
     createSubmitBtn: document.getElementById('booksCreateSubmitBtn'),
     createCloseBtn: document.getElementById('booksCreateCloseBtn'),
     modeModal: document.getElementById('booksModeModal'),
@@ -106,6 +109,7 @@
     jsonBookId: '',
     createModalOpen: false,
     createBusy: false,
+    createWriteBusy: false,
     pendingCreateBooks: [],
     modeBookId: '',
     modeStartBusy: false,
@@ -175,17 +179,6 @@
     return ((index - 5) % 2 === 0) ? 'books-create-line--pt' : 'books-create-line--en';
   }
 
-  function getCreateLegendText() {
-    return [
-      'L1 titulo (azul 14)',
-      'L2 nivel (amarelo 10)',
-      'L3 tag adicional (laranja 8)',
-      'L4 prompt capa 9:16 (verde-limao 10)',
-      'L5 prompt background 16:9 (verde-limao 10)',
-      'L6 pt branco 10 | L7 en azul-claro 10 | L8 pt | L9 en...'
-    ].join('\n');
-  }
-
   function renderCreateInputPreview() {
     if (!els.createPreview || !els.createInput) return;
     const rawText = String(els.createInput.value || '');
@@ -200,9 +193,6 @@
     els.createPreview.innerHTML = html;
     if (els.createEditor) {
       els.createEditor.classList.toggle('is-empty', !safeText(rawText));
-    }
-    if (els.createLegend && !safeText(els.createLegend.textContent)) {
-      els.createLegend.textContent = getCreateLegendText();
     }
   }
 
@@ -789,29 +779,46 @@
 
   function setCreateBusy(isBusy) {
     state.createBusy = Boolean(isBusy);
+    const lockAll = state.createBusy || state.createWriteBusy;
     if (els.createSubmitBtn) {
-      els.createSubmitBtn.disabled = state.createBusy;
+      els.createSubmitBtn.disabled = lockAll;
     }
     if (els.createCloseBtn) {
-      els.createCloseBtn.disabled = state.createBusy;
+      els.createCloseBtn.disabled = lockAll;
     }
     if (els.createInput) {
-      els.createInput.disabled = state.createBusy;
+      els.createInput.disabled = lockAll;
+    }
+    if (els.createVoiceSelect) {
+      els.createVoiceSelect.disabled = lockAll;
+    }
+    if (els.createIdeaInput) {
+      els.createIdeaInput.disabled = lockAll;
+    }
+    if (els.createCharsInput) {
+      els.createCharsInput.disabled = lockAll;
+    }
+    if (els.createWriteBtn) {
+      els.createWriteBtn.disabled = lockAll;
+      els.createWriteBtn.textContent = state.createWriteBusy ? 'Escrevendo...' : 'Escrever livro';
     }
     if (els.createBookBtn) {
-      els.createBookBtn.disabled = state.createBusy;
+      els.createBookBtn.disabled = state.createBusy || state.createWriteBusy;
       els.createBookBtn.textContent = state.createBusy ? 'Criando...' : 'Criar livro';
     }
+  }
+
+  function setCreateWriteBusy(isBusy) {
+    state.createWriteBusy = Boolean(isBusy);
+    setCreateBusy(state.createBusy);
   }
 
   function openCreateModal() {
     if (!state.isAdmin || !els.createModal) return;
     state.createModalOpen = true;
-    if (els.createLegend) {
-      els.createLegend.textContent = getCreateLegendText();
-    }
     renderCreateInputPreview();
     syncCreatePreviewScroll();
+    setCreateBusy(state.createBusy);
     els.createModal.classList.add('is-visible');
     if (els.createInput) {
       window.setTimeout(() => {
@@ -821,6 +828,43 @@
           // ignore focus issues
         }
       }, 25);
+    }
+  }
+
+  function readCreateTargetChars() {
+    const parsed = Number.parseInt(els.createCharsInput?.value, 10);
+    if (!Number.isFinite(parsed)) return 900;
+    return Math.max(0, Math.min(1500, parsed));
+  }
+
+  async function writeCreateBookWithNano() {
+    if (!state.isAdmin || state.createBusy || state.createWriteBusy) return;
+    const userPrompt = safeText(els.createIdeaInput?.value || '');
+    const targetChars = readCreateTargetChars();
+    if (els.createCharsInput) {
+      els.createCharsInput.value = String(targetChars);
+    }
+
+    setCreateWriteBusy(true);
+    setStatus('Escrevendo minibook com GPT-5.4-nano...', null);
+    try {
+      const payload = await postJsonWithSuccess('/api/admin/minibooks/write-lines', {
+        userPrompt,
+        targetChars
+      }, 'Nao foi possivel escrever o livro automaticamente.');
+
+      if (els.createInput) {
+        els.createInput.value = safeText(payload?.linesText);
+      }
+      renderCreateInputPreview();
+      syncCreatePreviewScroll();
+      const pairs = Number(payload?.stats?.pairsCount) || 0;
+      const chars = Number(payload?.stats?.englishChars) || 0;
+      setStatus(`Rascunho pronto: ${pairs} pares, ${chars} chars em ingles.`, 'success');
+    } catch (error) {
+      setStatus(error?.message || 'Falha ao escrever livro com GPT-5.4-nano.', 'error');
+    } finally {
+      setCreateWriteBusy(false);
     }
   }
 
@@ -850,8 +894,9 @@
   }
 
   async function createBookFromLines() {
-    if (!state.isAdmin || state.createBusy) return;
+    if (!state.isAdmin || state.createBusy || state.createWriteBusy) return;
     const rawText = String(els.createInput?.value || '');
+    const selectedVoice = safeText(els.createVoiceSelect?.value || 'openai:fable').toLowerCase();
 
     let parsedInput = null;
     try {
@@ -871,7 +916,8 @@
 
     try {
       const payload = await postJsonWithSuccess('/api/admin/minibooks/create-from-lines', {
-        linesText: rawText
+        linesText: rawText,
+        voice: selectedVoice
       }, 'Nao foi possivel criar o livro.');
 
       removePendingCreateBook(pendingTempId);
@@ -882,7 +928,8 @@
 
       const createdTitle = safeText(payload?.book?.title || parsedInput.title);
       const cardsCount = Number(payload?.stats?.cardsCount) || parsedInput.pairs;
-      setStatus(`Livro "${createdTitle}" criado com ${cardsCount} frases e audio fable.`, 'success');
+      const voiceLabel = safeText(payload?.audio?.voiceLabel || payload?.audio?.voice || selectedVoice || 'fable');
+      setStatus(`Livro "${createdTitle}" criado com ${cardsCount} frases e audio ${voiceLabel}.`, 'success');
     } catch (error) {
       removePendingCreateBook(pendingTempId);
       renderCards();
@@ -1130,7 +1177,7 @@
     }
     if (els.createBookBtn) {
       els.createBookBtn.hidden = !canShowToggle;
-      els.createBookBtn.disabled = state.createBusy;
+      els.createBookBtn.disabled = state.createBusy || state.createWriteBusy;
     }
     if (els.levelMenu) {
       els.levelMenu.classList.toggle('is-admin', canShowToggle);
@@ -2196,12 +2243,16 @@
       void createBookFromLines();
     });
 
+    els.createWriteBtn?.addEventListener('click', () => {
+      void writeCreateBookWithNano();
+    });
+
     els.createCloseBtn?.addEventListener('click', () => {
       closeCreateModal();
     });
 
     els.createModal?.addEventListener('click', (event) => {
-      if (event.target === els.createModal && !state.createBusy) {
+      if (event.target === els.createModal && !state.createBusy && !state.createWriteBusy) {
         closeCreateModal();
       }
     });
@@ -2213,6 +2264,11 @@
 
     els.createInput?.addEventListener('scroll', () => {
       syncCreatePreviewScroll();
+    });
+
+    els.createCharsInput?.addEventListener('change', () => {
+      if (!els.createCharsInput) return;
+      els.createCharsInput.value = String(readCreateTargetChars());
     });
 
     els.coverUploadInput?.addEventListener('change', (event) => {
@@ -2312,7 +2368,7 @@
     }, { passive: true });
 
     window.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && state.createModalOpen && !state.createBusy) {
+      if (event.key === 'Escape' && state.createModalOpen && !state.createBusy && !state.createWriteBusy) {
         event.preventDefault();
         closeCreateModal();
         return;

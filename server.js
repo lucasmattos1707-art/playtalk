@@ -2295,6 +2295,17 @@ const MINIBOOKS_DEFAULT_BACKGROUND_PROMPT = [
   'Create a premium immersive reading background for an English learning app.',
   'Atmospheric, cinematic lighting, clean composition, no text, no logos, no watermark.'
 ].join(' ');
+const MINIBOOKS_WRITER_MODEL = 'gpt-5.4-nano';
+const MINIBOOKS_ALLOWED_OPENAI_VOICES = new Set(['fable', 'alloy', 'sage', 'nova', 'verse']);
+const MINIBOOKS_WRITER_BASE_PROMPT = [
+  'This GPT helps users create, outline, and write very short books ("mini books") across genres. It specializes in concise storytelling, clear structure, and fast iteration from idea to finished piece. It guides users through brainstorming, outlining chapters or sections, drafting compact narratives, and refining language for impact within a small word count.',
+  'It should proactively suggest formats like micro-fiction, children’s stories, short guides, or poetic booklets. It can generate titles, hooks, summaries, and chapter breakdowns, then expand them into polished mini books.',
+  'It keeps responses focused, practical, and creatively engaging while respecting brevity as a core principle. It can adapt tone (playful, serious, instructional) depending on the user’s intent.',
+  'When details are missing, it makes reasonable assumptions but also offers optional directions the user can choose from. It encourages iteration and provides multiple variations when helpful.',
+  'It avoids producing overly long or bloated content unless explicitly requested. It does not drift into unrelated topics.',
+  'It may ask light clarifying questions when needed, but often moves forward with suggestions to keep momentum.',
+  'It maintains a supportive, imaginative tone and helps users quickly turn ideas into finished mini books.'
+].join('\n\n');
 const LOCAL_LEVEL_MANIFEST_RELATIVE_PATH = path.posix.join('data', 'local-level-files.json');
 const LOCAL_LEVEL_ALLOWED_FOLDERS = ['others', 'talking', 'watching', 'words'];
 const FLASHCARD_ADMIN_USERNAMES = new Set(['admin', 'adm', 'adminst']);
@@ -4944,6 +4955,177 @@ async function generateMiniBookSpeechWithOpenAi(text, options = {}) {
   };
 }
 
+async function generateMiniBookSpeechWithElevenLabs(text, options = {}) {
+  const input = String(text || '').trim();
+  if (!input) {
+    const error = new Error('Texto vazio para gerar audio.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!ELEVENLABS_API_KEY || ELEVENLABS_API_KEY.includes('fake') || !ELEVENLABS_VOICE_ID_HARRY || ELEVENLABS_VOICE_ID_HARRY.includes('fake')) {
+    const error = new Error('ElevenLabs nao configurado para voz Harry.');
+    error.statusCode = 503;
+    error.instructions = 'Preencha ELEVENLABS_API_KEY e ELEVENLABS_VOICE_ID_HARRY no .env com os valores reais.';
+    throw error;
+  }
+
+  const languageCode = /^[a-z]{2}$/i.test(options.languageCode || '')
+    ? String(options.languageCode).toLowerCase()
+    : '';
+
+  const upstreamResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(ELEVENLABS_VOICE_ID_HARRY)}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'audio/mpeg',
+      'Content-Type': 'application/json',
+      'xi-api-key': ELEVENLABS_API_KEY
+    },
+    body: JSON.stringify({
+      text: input,
+      model_id: ELEVENLABS_MODEL_ID,
+      ...(languageCode ? { language_code: languageCode } : {}),
+      output_format: 'mp3_44100_128'
+    })
+  });
+
+  if (!upstreamResponse.ok) {
+    const errorText = await upstreamResponse.text();
+    const error = new Error(errorText.slice(0, 500) || 'Falha ao gerar audio na ElevenLabs.');
+    error.statusCode = upstreamResponse.status;
+    throw error;
+  }
+
+  const audioBuffer = Buffer.from(await upstreamResponse.arrayBuffer());
+  if (!audioBuffer.length) {
+    const error = new Error('A ElevenLabs nao retornou audio para a frase.');
+    error.statusCode = 502;
+    throw error;
+  }
+
+  return {
+    mimeType: 'audio/mpeg',
+    buffer: audioBuffer,
+    voice: 'harry'
+  };
+}
+
+function normalizeMiniBookSlugFromValue(value, fallback = 'mini-book') {
+  return safeGeneratedBase(value, fallback)
+    .toLowerCase()
+    .replace(/_/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '') || fallback;
+}
+
+function clampMiniBookSentenceLine(value, maxChars = 27) {
+  const clean = String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!clean) return '';
+  if (clean.length <= maxChars) return clean;
+  const sliced = clean.slice(0, maxChars).trim();
+  const lastSpace = sliced.lastIndexOf(' ');
+  if (lastSpace >= Math.max(5, Math.floor(maxChars * 0.55))) {
+    return sliced.slice(0, lastSpace).trim();
+  }
+  return sliced;
+}
+
+function parseMiniBookAudioSelection(rawValue) {
+  const normalized = String(rawValue || '').trim().toLowerCase();
+  if (normalized === 'elevenlabs:harry' || normalized === 'harry') {
+    return {
+      provider: 'elevenlabs',
+      voice: 'harry',
+      voiceLabel: 'harry'
+    };
+  }
+
+  const rawVoice = normalized.startsWith('openai:')
+    ? normalized.slice('openai:'.length)
+    : normalized;
+  const openAiVoice = MINIBOOKS_ALLOWED_OPENAI_VOICES.has(rawVoice) ? rawVoice : 'fable';
+  return {
+    provider: 'openai',
+    voice: openAiVoice,
+    voiceLabel: openAiVoice
+  };
+}
+
+function buildMiniBookLinesTextFromWriterJson(rawPayload, options = {}) {
+  const source = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
+  const requestedChars = Math.max(0, Math.min(1500, Number.parseInt(options.targetChars, 10) || 0));
+
+  const title = normalizeMiniBookText(
+    source.title || source.bookTitle || source.nome,
+    `Mini Book ${new Date().getUTCSeconds()}`
+  );
+  const level = parseMiniBookLevelFromCreateLine(source.level || source.nivel || source.englishLevel) || 1;
+  const slug = normalizeMiniBookSlugFromValue(source.slug || source.tag || source.storyKey || title, 'mini-book');
+
+  const coverPrompt = normalizeMiniBookText(
+    source.coverPrompt || source.cover || source.dalleCoverPrompt,
+    `Professional bestseller book cover, 9:16, theme "${title}", strong typography mood, modern palette, premium composition, cinematic lighting, high detail, no watermark, no logo.`
+  ).slice(0, 420);
+
+  const backgroundPrompt = normalizeMiniBookText(
+    source.backgroundPrompt || source.background || source.dalleBackgroundPrompt,
+    `Immersive cinematic background for "${title}", coherent palette, abstract or realistic, elegant depth, soft light, clean visual space for text, no watermark, no logo.`
+  ).slice(0, 420);
+
+  const rawPairs = Array.isArray(source.pairs)
+    ? source.pairs
+    : Array.isArray(source.lines)
+      ? source.lines
+      : [];
+
+  const pairs = rawPairs
+    .map((entry) => {
+      const pt = clampMiniBookSentenceLine(entry?.pt || entry?.portuguese || entry?.linePt || entry?.linhaPt || '');
+      const en = clampMiniBookSentenceLine(entry?.en || entry?.english || entry?.lineEn || entry?.linhaEn || '');
+      if (!pt || !en) return null;
+      return { pt, en };
+    })
+    .filter(Boolean);
+
+  if (!pairs.length) {
+    const fallbackPairs = [
+      { pt: 'Eu escolho aprender hoje', en: 'I choose learning today' },
+      { pt: 'Leio com calma e constancia', en: 'I read calmly every day' },
+      { pt: 'Cada pagina abre caminhos', en: 'Each page opens new paths' },
+      { pt: 'Com respeito e equilibrio', en: 'With respect and balance' }
+    ].map((entry) => ({
+      pt: clampMiniBookSentenceLine(entry.pt),
+      en: clampMiniBookSentenceLine(entry.en)
+    }));
+    pairs.push(...fallbackPairs);
+  }
+
+  const lines = [
+    title,
+    String(level),
+    slug,
+    coverPrompt,
+    backgroundPrompt
+  ];
+
+  pairs.forEach((pair) => {
+    lines.push(pair.pt, pair.en);
+  });
+
+  const englishChars = pairs.reduce((total, pair) => total + pair.en.length, 0);
+  return {
+    title,
+    level,
+    slug,
+    linesText: lines.join('\n'),
+    pairsCount: pairs.length,
+    englishChars,
+    requestedChars
+  };
+}
+
 function buildMiniBookJsonPayloadFromCreateInput(createInput) {
   const payload = {
     bookId: createInput.bookId,
@@ -7386,6 +7568,87 @@ app.post('/api/admin/minibooks/save-json', express.json({ limit: '6mb' }), async
   }
 });
 
+app.post('/api/admin/minibooks/write-lines', express.json({ limit: '2mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  try {
+    const userPrompt = normalizeMiniBookText(req.body?.userPrompt || req.body?.prompt);
+    const targetChars = Math.max(0, Math.min(1500, Number.parseInt(req.body?.targetChars, 10) || 0));
+    const englishCharsTarget = targetChars;
+    const estimatedPairs = Math.max(4, Math.min(70, Math.round((englishCharsTarget > 0 ? englishCharsTarget : 220) / 18)));
+
+    const writingPrompt = [
+      'Use the BASE PROMPT as immutable guidance:',
+      MINIBOOKS_WRITER_BASE_PROMPT,
+      '',
+      'Now generate a minibook draft and return JSON only (no markdown, no commentary).',
+      'Required JSON schema:',
+      '{',
+      '  "title": "string",',
+      '  "level": 1,',
+      '  "slug": "lowercase-hyphen-name",',
+      '  "coverPrompt": "around 250 chars prompt for DALL-E professional bestseller cover",',
+      '  "backgroundPrompt": "coherent DALL-E background prompt",',
+      '  "pairs": [',
+      '    {"pt":"Portuguese line", "en":"Faithful English translation"}',
+      '  ]',
+      '}',
+      '',
+      'Formatting constraints:',
+      '- Line 1 will be title.',
+      '- Line 2 will be english level from 1 to 10.',
+      '- Line 3 must be lowercase slug separated by hyphen.',
+      '- Line 4 cover prompt (about 250 chars).',
+      '- Line 5 background prompt.',
+      '- From line 6 onward, output pairs pt/en.',
+      '- Every pt/en sentence must have at most 27 characters.',
+      '- Keep modern clear English, lightly informal, easy to understand.',
+      '- The requested character count applies to English lines only.',
+      '',
+      `Requested English character count: ${englishCharsTarget}`,
+      `Suggested pair count target: ${estimatedPairs}`,
+      `User theme request: ${userPrompt || 'Create a balanced educational minibook that promotes respect and reading habit.'}`
+    ].join('\n');
+
+    const { payload, parsed } = await requestOpenAiJsonPayload(writingPrompt, {
+      model: MINIBOOKS_WRITER_MODEL,
+      maxOutputTokens: 3200
+    });
+
+    const writerResult = buildMiniBookLinesTextFromWriterJson(parsed, { targetChars: englishCharsTarget });
+
+    res.json({
+      success: true,
+      model: MINIBOOKS_WRITER_MODEL,
+      linesText: writerResult.linesText,
+      book: {
+        title: writerResult.title,
+        level: writerResult.level,
+        slug: writerResult.slug
+      },
+      stats: {
+        pairsCount: writerResult.pairsCount,
+        englishChars: writerResult.englishChars,
+        requestedChars: writerResult.requestedChars
+      },
+      usage: payload?.usage || null
+    });
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 500);
+    res.status(statusCode).json({
+      error: error.message || 'Falha ao escrever minibook com IA.',
+      details: error.details || null,
+      instructions: error.instructions || null
+    });
+  }
+});
+
 app.post('/api/admin/minibooks/create-from-lines', express.json({ limit: '4mb' }), async (req, res) => {
   let adminUser = null;
   try {
@@ -7408,11 +7671,14 @@ app.post('/api/admin/minibooks/create-from-lines', express.json({ limit: '4mb' }
 
   try {
     const createInput = parseMiniBookCreateLines(req.body?.linesText || req.body?.text || '');
+    const audioSelection = parseMiniBookAudioSelection(req.body?.voice);
     const cacheBuster = Date.now();
 
     for (let index = 0; index < createInput.cards.length; index += 1) {
       const card = createInput.cards[index];
-      const generatedAudio = await generateMiniBookSpeechWithOpenAi(card.en, { voice: 'fable' });
+      const generatedAudio = audioSelection.provider === 'elevenlabs'
+        ? await generateMiniBookSpeechWithElevenLabs(card.en, { languageCode: 'en' })
+        : await generateMiniBookSpeechWithOpenAi(card.en, { voice: audioSelection.voice });
       const audioObjectKey = buildMiniBookAudioObjectKey(createInput.bookId, index);
       await putR2Object(audioObjectKey, generatedAudio.buffer, generatedAudio.mimeType || 'audio/mpeg');
       card.audio = `${buildFlashcardsR2PublicUrl(audioObjectKey)}?v=${cacheBuster}`;
@@ -7542,7 +7808,9 @@ app.post('/api/admin/minibooks/create-from-lines', express.json({ limit: '4mb' }
         cardsCount
       },
       audio: {
-        voice: 'fable',
+        provider: audioSelection.provider,
+        voice: audioSelection.voice,
+        voiceLabel: audioSelection.voiceLabel,
         count: createInput.cards.length
       }
     });
