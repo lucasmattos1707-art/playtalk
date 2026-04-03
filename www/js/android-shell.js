@@ -4,6 +4,7 @@
     allcards: { webPath: '/allcards', localPath: '/allcards.html' },
     users: { webPath: '/users', localPath: '/users.html' },
     account: { webPath: '/account', localPath: '/account.html' },
+    books: { webPath: '/books', localPath: '/books.html' },
     username: { webPath: '/username', localPath: '/username.html' },
     avataradd: { webPath: '/avataradd', localPath: '/avataradd.html' },
     password: { webPath: '/password', localPath: '/password.html' },
@@ -17,6 +18,7 @@
     'allcards.html': 'allcards',
     'users.html': 'users',
     'account.html': 'account',
+    'books.html': 'books',
     'username.html': 'username',
     'avataradd.html': 'avataradd',
     'password.html': 'password',
@@ -181,7 +183,7 @@
 
       await appPlugin.addListener('backButton', async () => {
         const routeKey = currentRouteKey();
-        const rootRoutes = new Set(['flashcards', 'allcards', 'users', 'account']);
+        const rootRoutes = new Set(['flashcards', 'allcards', 'users', 'account', 'books']);
 
         if (!rootRoutes.has(routeKey) && window.history.length > 1) {
           window.history.back();

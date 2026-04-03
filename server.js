@@ -7900,6 +7900,8 @@ app.use((req, res, next) => {
     '/signup/',
     '/premium',
     '/premium/',
+    '/books',
+    '/books/',
     '/users',
     '/users/',
     '/account',
@@ -8055,6 +8057,10 @@ app.get(['/signup', '/signup/'], (req, res) => {
 
 app.get(['/premium', '/premium/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'premium.html'));
+});
+
+app.get(['/books', '/books/'], (req, res) => {
+  res.sendFile(path.join(staticDir, 'books.html'));
 });
 
 app.get(['/mycards', '/mycards/', '/mycards.html'], (req, res) => {
