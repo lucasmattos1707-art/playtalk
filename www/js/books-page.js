@@ -3,10 +3,12 @@
   const MAX_GRADIENTS = 8;
   const SESSION_ENDPOINTS = ['/auth/session', '/api/me'];
   const DEFAULT_READER_BACKGROUND = 'radial-gradient(circle at top, rgba(22, 34, 56, 0.72), #04070d 60%, #020306 100%)';
+  const FORCE_ADMIN_UI_STORAGE_KEY = 'playtalk_books_force_admin_ui_v1';
 
   const els = {
     avatarImage: document.getElementById('booksAccountAvatarImage'),
     avatarFallback: document.getElementById('booksAccountAvatarFallback'),
+    adminUiToggleBtn: document.getElementById('booksAdminUiToggleBtn'),
     prevLevelBtn: document.getElementById('booksLevelPrevBtn'),
     nextLevelBtn: document.getElementById('booksLevelNextBtn'),
     levelTitle: document.getElementById('booksLevelTitle'),
@@ -20,6 +22,11 @@
     magicBackgroundPromptInput: document.getElementById('booksMagicBackgroundPromptInput'),
     magicGenerateBtn: document.getElementById('booksMagicGenerateBtn'),
     magicCloseBtn: document.getElementById('booksMagicCloseBtn'),
+    jsonModal: document.getElementById('booksJsonModal'),
+    jsonTitle: document.getElementById('booksJsonTitle'),
+    jsonInput: document.getElementById('booksJsonInput'),
+    jsonSaveBtn: document.getElementById('booksJsonSaveBtn'),
+    jsonCloseBtn: document.getElementById('booksJsonCloseBtn'),
     reader: document.getElementById('booksReader'),
     readerBackBtn: document.getElementById('booksReaderBackBtn'),
     readerContent: document.getElementById('booksReaderContent'),
@@ -33,11 +40,13 @@
     selectedLevel: 1,
     books: [],
     isAdmin: false,
+    forceAdminUi: false,
     uploadInFlight: false,
     uploadTargetBookId: '',
     gradients: [],
     magicBookId: '',
     magicProcessingBookIds: new Set(),
+    jsonBookId: '',
     readerOpen: false,
     readerBookId: '',
     readerLines: [],
@@ -50,8 +59,32 @@
     return typeof value === 'string' ? value.trim() : '';
   }
 
+  function readForceAdminUiFlag() {
+    try {
+      return window.localStorage.getItem(FORCE_ADMIN_UI_STORAGE_KEY) === '1';
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function persistForceAdminUiFlag(enabled) {
+    try {
+      if (enabled) {
+        window.localStorage.setItem(FORCE_ADMIN_UI_STORAGE_KEY, '1');
+      } else {
+        window.localStorage.removeItem(FORCE_ADMIN_UI_STORAGE_KEY);
+      }
+    } catch (_error) {
+      // ignore
+    }
+  }
+
   function isAdminAlias(value) {
     return ADMIN_ALIASES.has(safeText(value).toLowerCase());
+  }
+
+  function isAdminUiEnabled() {
+    return Boolean(state.isAdmin || state.forceAdminUi);
   }
 
   function setStatus(message, tone) {
@@ -289,6 +322,31 @@
     }
   }
 
+  function openJsonModal(book) {
+    if (!state.isAdmin || !els.jsonModal || !book) return;
+    const bookId = safeText(book.bookId);
+    if (!bookId) return;
+    if (isBookProcessingMagic(bookId)) {
+      setStatus('Esse livro esta processando. Aguarde terminar.', null);
+      return;
+    }
+    state.jsonBookId = bookId;
+    if (els.jsonTitle) {
+      els.jsonTitle.textContent = `Salvar JSON: ${safeText(book.nome) || 'Livro'}`;
+    }
+    if (els.jsonInput) {
+      els.jsonInput.value = '';
+    }
+    els.jsonModal.classList.add('is-visible');
+  }
+
+  function closeJsonModal() {
+    state.jsonBookId = '';
+    if (els.jsonModal) {
+      els.jsonModal.classList.remove('is-visible');
+    }
+  }
+
   function renderCards() {
     if (!els.cardsGrid || !els.cardsEmpty) return;
     const books = getBooksForSelectedLevel();
@@ -307,7 +365,7 @@
       card.className = 'books-card';
       card.dataset.bookId = safeText(book?.bookId);
       card.setAttribute('aria-label', `Livro ${safeText(book?.nome) || '-'}`);
-      if (state.isAdmin) {
+      if (isAdminUiEnabled()) {
         card.classList.add('is-admin');
       }
       if (processingMagic) {
@@ -317,7 +375,7 @@
       const background = document.createElement('span');
       background.className = 'books-card__background';
       if (coverImageUrl) {
-        background.style.backgroundImage = `linear-gradient(to top, rgba(8, 10, 14, 0.46), rgba(8, 10, 14, 0.08)), url(${safeCssUrl(coverImageUrl)})`;
+        background.style.backgroundImage = `url(${safeCssUrl(coverImageUrl)})`;
       } else {
         background.style.backgroundImage = gradient;
       }
@@ -360,11 +418,28 @@
         openMagicModal(book);
       });
 
+      const textBtn = document.createElement('button');
+      textBtn.type = 'button';
+      textBtn.className = 'books-card__text-btn';
+      textBtn.setAttribute('aria-label', `Salvar JSON de ${safeText(book?.nome) || 'livro'}`);
+      textBtn.title = 'Salvar JSON';
+      textBtn.textContent = 'JSON';
+      textBtn.style.fontSize = '9px';
+      textBtn.style.fontWeight = '800';
+      textBtn.style.letterSpacing = '0.06em';
+      textBtn.style.background = 'rgba(9, 36, 70, 0.9)';
+      textBtn.disabled = processingMagic;
+      textBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openJsonModal(book);
+      });
+
       const processingOverlay = document.createElement('span');
       processingOverlay.className = 'books-card__processing';
       processingOverlay.innerHTML = '<span class="books-card__spinner" aria-hidden="true"></span><span class="books-card__processing-label">Gerando...</span>';
 
-      actions.append(uploadBtn, magicBtn);
+      actions.append(uploadBtn, magicBtn, textBtn);
       card.append(background, overlay, title, adminChip, actions, processingOverlay);
       card.addEventListener('click', () => {
         if (state.uploadInFlight || processingMagic) return;
@@ -384,6 +459,13 @@
     if (els.nextLevelBtn) {
       els.nextLevelBtn.disabled = state.selectedLevel >= 10 || state.uploadInFlight;
     }
+  }
+
+  function renderAdminUiToggle() {
+    if (!els.adminUiToggleBtn) return;
+    const isOn = isAdminUiEnabled();
+    els.adminUiToggleBtn.classList.toggle('is-on', isOn);
+    els.adminUiToggleBtn.textContent = isOn ? 'Admin UI On' : 'Admin UI Off';
   }
 
   function setLevel(nextLevel) {
@@ -602,6 +684,51 @@
     void runMagicGenerationForBook(bookId, coverPrompt, backgroundPrompt, bookName);
   }
 
+  async function saveJsonForBook() {
+    if (!state.isAdmin) return;
+    const bookId = safeText(state.jsonBookId);
+    if (!bookId) return;
+    if (isBookProcessingMagic(bookId)) {
+      setStatus('Esse livro esta processando. Aguarde terminar.', null);
+      return;
+    }
+
+    const targetBook = state.books.find((entry) => safeText(entry?.bookId) === bookId);
+    const bookName = safeText(targetBook?.nome || 'Livro');
+    const jsonText = safeText(els.jsonInput?.value || '');
+    if (!jsonText) {
+      setStatus('Cole o JSON antes de salvar.', 'error');
+      return;
+    }
+
+    try {
+      JSON.parse(jsonText);
+    } catch (_error) {
+      setStatus('JSON invalido. Revise o formato e tente novamente.', 'error');
+      return;
+    }
+
+    closeJsonModal();
+    const key = normalizeBookKey(bookId);
+    state.magicProcessingBookIds.add(key);
+    renderCards();
+
+    setStatus(`Salvando JSON de "${bookName}" no Postgres...`, null);
+    try {
+      await postJsonWithSuccess('/api/admin/minibooks/save-json', {
+        bookId,
+        jsonText
+      }, 'Nao foi possivel salvar o JSON do livro.');
+      state.books = await fetchStories();
+      setStatus(`JSON do livro "${bookName}" salvo e publicado para todos.`, 'success');
+    } catch (error) {
+      setStatus(error?.message || `Falha ao salvar JSON de "${bookName}".`, 'error');
+    } finally {
+      state.magicProcessingBookIds.delete(key);
+      renderCards();
+    }
+  }
+
   function setReaderVisible(visible) {
     state.readerOpen = Boolean(visible);
     if (els.reader) {
@@ -702,6 +829,18 @@
       setLevel(state.selectedLevel + 1);
     });
 
+    els.adminUiToggleBtn?.addEventListener('click', () => {
+      state.forceAdminUi = !state.forceAdminUi;
+      persistForceAdminUiFlag(state.forceAdminUi);
+      renderAdminUiToggle();
+      renderCards();
+      if (isAdminUiEnabled()) {
+        setStatus('Ferramentas admin visiveis. As APIs ainda validam permissao real.', null);
+      } else {
+        setStatus('', null);
+      }
+    });
+
     els.coverUploadInput?.addEventListener('change', (event) => {
       const file = event?.target?.files?.[0];
       if (!state.isAdmin || !file || !state.uploadTargetBookId) return;
@@ -719,6 +858,20 @@
     els.magicModal?.addEventListener('click', (event) => {
       if (event.target === els.magicModal) {
         closeMagicModal();
+      }
+    });
+
+    els.jsonSaveBtn?.addEventListener('click', () => {
+      void saveJsonForBook();
+    });
+
+    els.jsonCloseBtn?.addEventListener('click', () => {
+      closeJsonModal();
+    });
+
+    els.jsonModal?.addEventListener('click', (event) => {
+      if (event.target === els.jsonModal) {
+        closeJsonModal();
       }
     });
 
@@ -771,7 +924,9 @@
   async function init() {
     bindEvents();
     state.gradients = buildGradientPool();
+    state.forceAdminUi = readForceAdminUiFlag();
     renderLevelMenu();
+    renderAdminUiToggle();
     state.localProfile = readLocalPlayerProfile();
 
     const [sessionUser, books] = await Promise.all([
@@ -787,6 +942,7 @@
 
     renderAvatar();
     renderLevelMenu();
+    renderAdminUiToggle();
     renderCards();
 
     if (state.isAdmin) {
