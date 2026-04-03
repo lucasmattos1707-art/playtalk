@@ -32,6 +32,12 @@
 
     * { box-sizing: border-box; }
 
+    @property --percent {
+      syntax: "<number>";
+      inherits: false;
+      initial-value: 0;
+    }
+
     html, body {
       margin: 0;
       padding: 0;
@@ -561,12 +567,34 @@
 
     .duel-timer {
       margin: 6px 0 2px;
-      text-align: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 7px;
       color: #fff0d2;
       font-family: "Soopafre", "Trebuchet MS", "Segoe UI", sans-serif;
       font-size: 20px;
       letter-spacing: 0.04em;
       text-shadow: 0 0 12px rgba(255, 194, 110, 0.34);
+    }
+
+    .duel-timer__icon {
+      width: 18px;
+      height: 18px;
+      display: block;
+      color: #ffffff;
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.28));
+    }
+
+    .duel-timer__label {
+      color: #fff8e8;
+      font-weight: 800;
+    }
+
+    .duel-timer__value {
+      color: #fff0d2;
+      min-width: 54px;
+      text-align: left;
     }
 
     .progress-wrap {
@@ -637,6 +665,7 @@
       place-items: center;
       animation: ringPulse 1600ms ease-in-out infinite;
       box-shadow: 0 8px 18px rgba(0,0,0,0.24);
+      transition: --percent 300ms ease;
     }
 
     .duel-avatar__ring.enemy {
@@ -970,6 +999,12 @@
     }
 
     @media (max-width: 640px) {
+      .speaking-game.is-active {
+        display: flex;
+        flex-direction: column;
+        padding-bottom: 96px;
+      }
+
       .home-title { font-size: 24px; }
       .mini-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -992,15 +1027,55 @@
       .duel-intro__countdown {
         font-size: 19px;
       }
+      .duel-avatars {
+        width: 100%;
+        justify-content: space-between;
+        padding: 0 40px;
+        margin: 10px 0 10px;
+        gap: 0;
+      }
+      .duel-avatar {
+        min-width: 0;
+      }
       .duel-avatar__ring {
-        width: 174px;
-        height: 174px;
+        width: min(146px, 36vw);
+        height: min(146px, 36vw);
+      }
+      .duel-avatar__name {
+        display: none;
       }
       .duel-avatar__percent {
-        font-size: 28px;
+        font-size: 29px;
+      }
+      .mic-trigger-wrap {
+        order: 1;
+        margin: 2px 0 8px;
+      }
+      .card-word {
+        order: 2;
+      }
+      .card-subword {
+        order: 3;
+        margin-top: 2px;
       }
       .mic-trigger svg {
         width: min(147px, 45vw);
+      }
+      .progress-footer {
+        position: fixed;
+        left: 16px;
+        right: 16px;
+        bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+        margin-top: 0;
+        z-index: 35;
+        display: grid;
+        gap: 8px;
+      }
+      .progress-wrap {
+        margin-top: 0;
+      }
+      .progress-wrap.is-enemy {
+        margin-top: 0;
       }
     }
   </style>
@@ -1107,7 +1182,13 @@
         <div class="speaking-percent" id="speakingPercent">Speaking 0%</div>
         <div class="enemy-speaking" id="enemySpeakingPercent">Speaking rival 0%</div>
       </div>
-      <p class="duel-timer" id="duelTimerLabel" hidden>Tempo restante: 03:00</p>
+      <p class="duel-timer" id="duelTimerLabel" hidden>
+        <svg class="duel-timer__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path fill="currentColor" d="M12 6.4a.9.9 0 0 1 .9.9v4.22l2.69 1.56a.9.9 0 0 1-.9 1.55l-3.14-1.82a.9.9 0 0 1-.45-.78V7.3a.9.9 0 0 1 .9-.9M12 2.8a9.2 9.2 0 1 1 0 18.4 9.2 9.2 0 0 1 0-18.4m0 1.8a7.4 7.4 0 1 0 0 14.8 7.4 7.4 0 0 0 0-14.8"/>
+        </svg>
+        <span class="duel-timer__label">Tempo restante:</span>
+        <span class="duel-timer__value" id="duelTimerValue">03:00</span>
+      </p>
 
       <div class="duel-avatars" id="duelAvatarsWrap">
         <article class="duel-avatar duel-avatar--me">

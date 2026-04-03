@@ -38,6 +38,7 @@
     duelIntroEnemyName: document.getElementById('duelIntroEnemyName'),
     duelIntroCountdown: document.getElementById('duelIntroCountdown'),
     duelTimerLabel: document.getElementById('duelTimerLabel'),
+    duelTimerValue: document.getElementById('duelTimerValue'),
     levelSelect: document.getElementById('levelSelect'),
     storySelect: document.getElementById('storySelect'),
     miniBooksGrid: document.getElementById('miniBooksGrid'),
@@ -877,7 +878,12 @@
     }
     const remainingMs = Math.max(0, state.duel.battleDeadlineMs - Date.now());
     els.duelTimerLabel.hidden = false;
-    els.duelTimerLabel.textContent = `Tempo restante: ${formatTimerMs(remainingMs)}`;
+    const timerText = formatTimerMs(remainingMs);
+    if (els.duelTimerValue) {
+      els.duelTimerValue.textContent = timerText;
+    } else {
+      els.duelTimerLabel.textContent = `Tempo restante: ${timerText}`;
+    }
   }
 
   function stopDuelBattleTimer() {
