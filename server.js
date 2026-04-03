@@ -3143,8 +3143,8 @@ async function collectAllcardsManifestEntries() {
 
 function normalizeSpeakingStoryCardItem({ item, storyName = 'story', index = 0 }) {
   const source = item && typeof item === 'object' ? item : {};
-  const english = safeString(source.en || source.english).trim();
-  const portuguese = safeString(source.pt || source.portuguese).trim();
+  const english = String(source.en || source.english || '').trim();
+  const portuguese = String(source.pt || source.portuguese || '').trim();
   if (!english || !portuguese) return null;
   return {
     id: `${safeGeneratedBase(storyName, 'story')}-${index}`,
@@ -3201,7 +3201,7 @@ async function loadSpeakingCardPool() {
         if (!cards.length) return;
         stories.push({
           fileName: entry.name,
-          storyKey: safeString(storyKey) || 'story',
+          storyKey: String(storyKey || '').trim() || 'story',
           cards
         });
       });
