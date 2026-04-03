@@ -91,6 +91,10 @@
       align-items: center;
     }
 
+    .home-row--levels {
+      margin-bottom: 12px;
+    }
+
     .home-row select,
     .home-row button,
     .btn {
@@ -106,6 +110,189 @@
       color: var(--text);
       min-width: 130px;
       outline: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .home-actions {
+      margin-top: 12px;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .mini-book {
+      border: 0;
+      border-radius: 14px;
+      cursor: pointer;
+      overflow: hidden;
+      min-height: 228px;
+      aspect-ratio: 9 / 16;
+      background: linear-gradient(160deg, #07233a 0%, #16524f 100%);
+      position: relative;
+      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.26);
+      text-align: left;
+      color: #ebfff4;
+      padding: 10px;
+      display: flex;
+      align-items: flex-end;
+      transition: transform 150ms ease, box-shadow 150ms ease;
+    }
+
+    .mini-book:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 22px rgba(0, 0, 0, 0.32);
+    }
+
+    .mini-book.is-selected {
+      outline: 2px solid #9fe0ba;
+      outline-offset: 1px;
+    }
+
+    .mini-book__bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background-position: center;
+      background-size: cover;
+      background-repeat: no-repeat;
+      opacity: 0.94;
+      filter: saturate(1.08);
+    }
+
+    .mini-book__overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: linear-gradient(to top, rgba(3, 16, 25, 0.82) 0%, rgba(3, 16, 25, 0.1) 62%, rgba(3, 16, 25, 0.06) 100%);
+    }
+
+    .mini-book__content {
+      z-index: 2;
+      width: 100%;
+    }
+
+    .mini-book__line {
+      margin: 0;
+      line-height: 1.03;
+      text-transform: uppercase;
+      word-break: break-word;
+      letter-spacing: 0.03em;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+      font-weight: 900;
+    }
+
+    .mini-book__line--a {
+      font-size: clamp(15px, 2.8vw, 22px);
+    }
+
+    .mini-book__line--b {
+      font-size: clamp(12px, 2.2vw, 18px);
+      opacity: 0.92;
+    }
+
+    .mini-book__meta {
+      margin: 7px 0 0;
+      font-size: 11px;
+      color: #cbead7;
+      opacity: 0.92;
+      letter-spacing: 0.04em;
+    }
+
+    .mini-grid-empty {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .mini-editor {
+      margin-top: 14px;
+      border: 1px solid rgba(124, 192, 150, 0.35);
+      border-radius: 12px;
+      padding: 12px;
+      background: rgba(6, 26, 39, 0.65);
+    }
+
+    .mini-editor__title {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #d4f7e5;
+    }
+
+    .mini-editor__row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .mini-editor input,
+    .mini-editor textarea {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(2, 12, 20, 0.7);
+      color: #e9f8f1;
+      padding: 9px 10px;
+      font: inherit;
+    }
+
+    .mini-editor textarea {
+      min-height: 66px;
+      resize: vertical;
+    }
+
+    .mini-editor button {
+      border: 0;
+      border-radius: 9px;
+      padding: 9px 11px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #103224;
+    }
+
+    .mini-editor button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .mini-editor__preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .mini-editor__preview {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      background: rgba(3, 15, 23, 0.7);
+      overflow: hidden;
+      min-height: 95px;
+    }
+
+    .mini-editor__preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .mini-editor__preview--cover {
+      aspect-ratio: 9 / 16;
+    }
+
+    .mini-editor__preview--desktop {
+      aspect-ratio: 16 / 9;
+    }
+
+    .mini-editor__preview--mobile {
+      aspect-ratio: 9 / 16;
     }
 
     .home-row button,
@@ -604,6 +791,9 @@
 
     @media (max-width: 640px) {
       .home-title { font-size: 24px; }
+      .mini-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
       .card-word { font-size: 27.6px; }
       .card-word.is-long { font-size: 24.29px; }
       .card-subword { font-size: 24.84px; }
@@ -634,15 +824,66 @@
   <main class="speaking-shell">
     <section class="speaking-card" id="speakingHome">
       <h1 class="home-title">Speaking Mode</h1>
-      <p class="home-copy">Escolha uma historia para jogar. Cada historia tem um nivel de 1 a 10.</p>
-      <div class="home-row">
-        <label for="storySelect">Historia</label>
-        <select id="storySelect" aria-label="Historia de batalha">
-          <option value="">Carregando historias...</option>
+      <p class="home-copy">Escolha um nivel de 1 a 10. Abaixo aparecem todos os MiniBooks desse nivel.</p>
+      <div class="home-row home-row--levels">
+        <label for="levelSelect">Nivel</label>
+        <select id="levelSelect" aria-label="Nivel dos MiniBooks">
+          <option value="1">Level 1</option>
+          <option value="2">Level 2</option>
+          <option value="3">Level 3</option>
+          <option value="4">Level 4</option>
+          <option value="5">Level 5</option>
+          <option value="6">Level 6</option>
+          <option value="7">Level 7</option>
+          <option value="8">Level 8</option>
+          <option value="9">Level 9</option>
+          <option value="10">Level 10</option>
         </select>
+        <select id="storySelect" aria-label="Historia de batalha" hidden>
+          <option value="">Selecione um MiniBook...</option>
+        </select>
+      </div>
+      <div id="miniBooksGrid" class="mini-grid" aria-live="polite"></div>
+      <p id="miniBooksEmpty" class="mini-grid-empty" hidden>Nenhum MiniBook nesse nivel ainda.</p>
+      <div class="home-row home-actions">
         <button id="startSpeakingBtn" type="button">Iniciar</button>
       </div>
       <p class="status" id="homeStatus" aria-live="polite"></p>
+
+      <section id="miniBookAdminEditor" class="mini-editor" hidden>
+        <h3 id="miniBookAdminTitle" class="mini-editor__title">MiniBook Admin</h3>
+        <div class="mini-editor__row">
+          <input id="miniBookNameInput" type="text" placeholder="Nome do livro para o prompt da capa">
+        </div>
+        <div class="mini-editor__row">
+          <textarea id="miniBookCoverPromptInput" placeholder="Prompt da capa (opcional)"></textarea>
+        </div>
+        <div class="mini-editor__row">
+          <button id="miniBookGenerateCoverBtn" type="button">Gerar Capa</button>
+          <button id="miniBookApproveCoverBtn" type="button" disabled>Aprovar Capa</button>
+        </div>
+        <div class="mini-editor__preview-grid">
+          <div class="mini-editor__preview mini-editor__preview--cover">
+            <img id="miniBookCoverPreview" alt="Preview da capa" hidden>
+          </div>
+        </div>
+        <div class="mini-editor__row">
+          <textarea id="miniBookBackgroundPromptInput" placeholder="Prompt do background (opcional)"></textarea>
+        </div>
+        <div class="mini-editor__row">
+          <button id="miniBookGenerateBackgroundBtn" type="button">Adicionar Background</button>
+          <button id="miniBookApproveBackgroundBtn" type="button" disabled>Aprovar Background</button>
+          <button id="miniBookCloseEditorBtn" type="button">Fechar</button>
+        </div>
+        <div class="mini-editor__preview-grid">
+          <div class="mini-editor__preview mini-editor__preview--desktop">
+            <img id="miniBookBackgroundDesktopPreview" alt="Preview background desktop" hidden>
+          </div>
+          <div class="mini-editor__preview mini-editor__preview--mobile">
+            <img id="miniBookBackgroundMobilePreview" alt="Preview background mobile" hidden>
+          </div>
+        </div>
+      </section>
     </section>
 
     <section class="speaking-card speaking-game" id="speakingGame">

@@ -21,9 +21,25 @@
     duelIntroEnemyName: document.getElementById('duelIntroEnemyName'),
     duelIntroCountdown: document.getElementById('duelIntroCountdown'),
     duelTimerLabel: document.getElementById('duelTimerLabel'),
+    levelSelect: document.getElementById('levelSelect'),
     storySelect: document.getElementById('storySelect'),
+    miniBooksGrid: document.getElementById('miniBooksGrid'),
+    miniBooksEmpty: document.getElementById('miniBooksEmpty'),
     startSpeakingBtn: document.getElementById('startSpeakingBtn'),
     homeStatus: document.getElementById('homeStatus'),
+    miniBookAdminEditor: document.getElementById('miniBookAdminEditor'),
+    miniBookAdminTitle: document.getElementById('miniBookAdminTitle'),
+    miniBookNameInput: document.getElementById('miniBookNameInput'),
+    miniBookCoverPromptInput: document.getElementById('miniBookCoverPromptInput'),
+    miniBookGenerateCoverBtn: document.getElementById('miniBookGenerateCoverBtn'),
+    miniBookApproveCoverBtn: document.getElementById('miniBookApproveCoverBtn'),
+    miniBookCoverPreview: document.getElementById('miniBookCoverPreview'),
+    miniBookBackgroundPromptInput: document.getElementById('miniBookBackgroundPromptInput'),
+    miniBookGenerateBackgroundBtn: document.getElementById('miniBookGenerateBackgroundBtn'),
+    miniBookApproveBackgroundBtn: document.getElementById('miniBookApproveBackgroundBtn'),
+    miniBookBackgroundDesktopPreview: document.getElementById('miniBookBackgroundDesktopPreview'),
+    miniBookBackgroundMobilePreview: document.getElementById('miniBookBackgroundMobilePreview'),
+    miniBookCloseEditorBtn: document.getElementById('miniBookCloseEditorBtn'),
     speakingPercent: document.getElementById('speakingPercent'),
     enemySpeakingPercent: document.getElementById('enemySpeakingPercent'),
     gameProgressBar: document.getElementById('gameProgressBar'),
@@ -57,7 +73,19 @@
     loading: false,
     gameMode: 'offline-game',
     stories: [],
+    books: [],
+    selectedLevel: 1,
+    selectedBookId: '',
     selectedStoryId: '',
+    isAdmin: false,
+    adminEditor: {
+      open: false,
+      bookId: '',
+      coverDataUrl: '',
+      backgroundDesktopDataUrl: '',
+      backgroundMobileDataUrl: '',
+      busy: false
+    },
     activeCards: [],
     currentIndex: 0,
     scores: [],
@@ -180,6 +208,140 @@
       return window.PlaytalkApi.authHeaders(extraHeaders);
     }
     return { ...(extraHeaders || {}) };
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function normalizeBookTitle(value) {
+    return safeText(value)
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function splitBookTitleLines(value) {
+    const normalized = normalizeBookTitle(value) || 'Mini Book';
+    const words = normalized.split(' ').filter(Boolean);
+    if (words.length <= 1) return [normalized, ''];
+    if (words.length === 2) return [words[0], words[1]];
+
+    const half = Math.ceil(words.length / 2);
+    return [
+      words.slice(0, half).join(' '),
+      words.slice(half).join(' ')
+    ];
+  }
+
+  function parseLevel(value) {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isInteger(parsed)) return 1;
+    return Math.max(1, Math.min(10, parsed));
+  }
+
+  function getBooksForSelectedLevel() {
+    const selectedLevel = parseLevel(state.selectedLevel);
+    return state.books.filter((book) => parseLevel(book?.nivel) === selectedLevel);
+  }
+
+  function getSelectedBook() {
+    return state.books.find((book) => safeText(book?.id) === safeText(state.selectedBookId)) || null;
+  }
+
+  function syncStorySelectWithSelectedBook() {
+    if (!els.storySelect) return;
+    const selectedBook = getSelectedBook();
+    els.storySelect.innerHTML = '';
+    if (!selectedBook?.selectedStoryId) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'Selecione um MiniBook...';
+      els.storySelect.appendChild(option);
+      state.selectedStoryId = '';
+      return;
+    }
+
+    const option = document.createElement('option');
+    option.value = selectedBook.selectedStoryId;
+    option.textContent = normalizeBookTitle(selectedBook.title) || 'MiniBook';
+    els.storySelect.appendChild(option);
+    els.storySelect.value = option.value;
+    state.selectedStoryId = option.value;
+  }
+
+  function applySelectedMiniBookBackground() {
+    const selectedBook = getSelectedBook();
+    const body = document.body;
+    if (!body) return;
+    const desktopBg = safeText(selectedBook?.backgroundDesktopUrl);
+    const mobileBg = safeText(selectedBook?.backgroundMobileUrl);
+    const useMobile = window.matchMedia && window.matchMedia('(max-width: 800px)').matches;
+    const selectedBackground = useMobile ? (mobileBg || desktopBg) : (desktopBg || mobileBg);
+    body.style.backgroundImage = selectedBackground ? `url("${selectedBackground}")` : '';
+    body.style.backgroundSize = selectedBackground ? 'cover' : '';
+    body.style.backgroundPosition = selectedBackground ? 'center' : '';
+    body.style.backgroundRepeat = selectedBackground ? 'no-repeat' : '';
+  }
+
+  function renderMiniBooksGrid() {
+    if (!els.miniBooksGrid) return;
+    const books = getBooksForSelectedLevel();
+    els.miniBooksGrid.innerHTML = '';
+    if (els.miniBooksEmpty) {
+      els.miniBooksEmpty.hidden = books.length > 0;
+    }
+
+    if (!books.length) {
+      state.selectedBookId = '';
+      syncStorySelectWithSelectedBook();
+      if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = true;
+      applySelectedMiniBookBackground();
+      return;
+    }
+
+    const hasSelectedBookInLevel = books.some((book) => safeText(book?.id) === safeText(state.selectedBookId));
+    if (!hasSelectedBookInLevel) {
+      state.selectedBookId = safeText(books[0]?.id);
+    }
+
+    books.forEach((book) => {
+      const [lineA, lineB] = splitBookTitleLines(book?.title || book?.fileName);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `mini-book${safeText(book?.id) === safeText(state.selectedBookId) ? ' is-selected' : ''}`;
+      button.dataset.bookId = safeText(book?.id);
+      button.innerHTML = `
+        <span class="mini-book__bg"${safeText(book?.coverImageUrl) ? ` style="background-image:url('${escapeHtml(book.coverImageUrl)}')"` : ''}></span>
+        <span class="mini-book__overlay"></span>
+        <span class="mini-book__content">
+          <p class="mini-book__line mini-book__line--a">${escapeHtml(lineA)}</p>
+          <p class="mini-book__line mini-book__line--b">${escapeHtml(lineB)}</p>
+          <p class="mini-book__meta">LEVEL ${parseLevel(book?.nivel)}</p>
+        </span>
+      `;
+      button.addEventListener('click', () => {
+        state.selectedBookId = safeText(book?.id);
+        syncStorySelectWithSelectedBook();
+        renderMiniBooksGrid();
+        if (state.isAdmin) {
+          openMiniBookEditor(state.selectedBookId);
+        } else {
+          updateAdminEditorVisibility();
+        }
+        applySelectedMiniBookBackground();
+      });
+      els.miniBooksGrid.appendChild(button);
+    });
+
+    syncStorySelectWithSelectedBook();
+    if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = false;
+    applySelectedMiniBookBackground();
   }
 
   function setHomeStatus(text, tone) {
@@ -588,6 +750,11 @@
     const stories = payload.stories
       .map((entry) => ({
         id: safeText(entry?.id),
+        bookId: safeText(entry?.bookId),
+        bookTitle: normalizeBookTitle(entry?.bookTitle || entry?.nome || entry?.fileName),
+        coverImageUrl: safeText(entry?.coverImageUrl),
+        backgroundDesktopUrl: safeText(entry?.backgroundDesktopUrl),
+        backgroundMobileUrl: safeText(entry?.backgroundMobileUrl),
         nome: safeText(entry?.nome),
         nivel: Math.max(1, Math.min(10, Number.parseInt(entry?.nivel, 10) || 1)),
         count: Math.max(0, Number.parseInt(entry?.count, 10) || 0)
@@ -597,17 +764,316 @@
       throw new Error('Nenhuma história disponível para speaking.');
     }
     state.stories = stories;
-    state.selectedStoryId = state.selectedStoryId || stories[0].id;
 
-    if (!els.storySelect) return;
-    els.storySelect.innerHTML = '';
-    stories.forEach((story) => {
-      const option = document.createElement('option');
-      option.value = story.id;
-      option.textContent = `${story.nome} (Level ${story.nivel})`;
-      els.storySelect.appendChild(option);
-    });
-    els.storySelect.value = state.selectedStoryId;
+    const booksFromApi = Array.isArray(payload?.books)
+      ? payload.books
+      : [];
+
+    const books = booksFromApi
+      .map((entry) => ({
+        id: safeText(entry?.id || entry?.bookId),
+        fileName: safeText(entry?.fileName),
+        title: normalizeBookTitle(entry?.title || entry?.bookTitle || entry?.fileName),
+        nivel: Math.max(1, Math.min(10, Number.parseInt(entry?.nivel, 10) || 1)),
+        count: Math.max(0, Number.parseInt(entry?.count, 10) || 0),
+        storyIds: Array.isArray(entry?.storyIds) ? entry.storyIds.map((id) => safeText(id)).filter(Boolean) : [],
+        selectedStoryId: safeText(entry?.selectedStoryId),
+        coverImageUrl: safeText(entry?.coverImageUrl),
+        backgroundDesktopUrl: safeText(entry?.backgroundDesktopUrl),
+        backgroundMobileUrl: safeText(entry?.backgroundMobileUrl)
+      }))
+      .filter((entry) => entry.id && entry.selectedStoryId);
+
+    state.books = books.length
+      ? books
+      : stories.reduce((acc, story) => {
+        const bookId = safeText(story.bookId) || safeText(story.id);
+        if (!bookId) return acc;
+        if (!acc.some((book) => book.id === bookId)) {
+          acc.push({
+            id: bookId,
+            fileName: '',
+            title: normalizeBookTitle(story.bookTitle || story.nome),
+            nivel: story.nivel,
+            count: story.count,
+            storyIds: [story.id],
+            selectedStoryId: story.id,
+            coverImageUrl: safeText(story.coverImageUrl),
+            backgroundDesktopUrl: safeText(story.backgroundDesktopUrl),
+            backgroundMobileUrl: safeText(story.backgroundMobileUrl)
+          });
+        }
+        return acc;
+      }, []);
+
+    if (!state.books.length) {
+      throw new Error('Nenhum MiniBook disponivel para speaking.');
+    }
+
+    const firstLevelWithBooks = state.books
+      .map((book) => parseLevel(book.nivel))
+      .sort((left, right) => left - right)[0] || 1;
+    state.selectedLevel = parseLevel(state.selectedLevel || firstLevelWithBooks);
+    if (els.levelSelect) {
+      els.levelSelect.value = String(state.selectedLevel);
+    }
+
+    const booksAtLevel = getBooksForSelectedLevel();
+    state.selectedBookId = safeText(booksAtLevel[0]?.id || state.books[0]?.id);
+    renderMiniBooksGrid();
+  }
+
+  async function loadAdminFlag() {
+    try {
+      const response = await fetch(buildApiUrl('/api/me'), {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: buildAuthHeaders()
+      });
+      if (!response.ok) {
+        state.isAdmin = false;
+        return;
+      }
+      const payload = await response.json().catch(() => ({}));
+      state.isAdmin = Boolean(payload?.user?.is_admin);
+    } catch (_error) {
+      state.isAdmin = false;
+    }
+  }
+
+  function setMiniBookPreviewImage(element, dataUrl) {
+    if (!element) return;
+    const value = safeText(dataUrl);
+    if (!value) {
+      element.removeAttribute('src');
+      element.hidden = true;
+      return;
+    }
+    element.src = value;
+    element.hidden = false;
+  }
+
+  function setAdminEditorBusy(isBusy) {
+    const busy = Boolean(isBusy);
+    state.adminEditor.busy = busy;
+    if (els.miniBookGenerateCoverBtn) els.miniBookGenerateCoverBtn.disabled = busy;
+    if (els.miniBookGenerateBackgroundBtn) els.miniBookGenerateBackgroundBtn.disabled = busy;
+    if (els.miniBookApproveCoverBtn) {
+      els.miniBookApproveCoverBtn.disabled = busy || !safeText(state.adminEditor.coverDataUrl);
+    }
+    if (els.miniBookApproveBackgroundBtn) {
+      const hasBothBackgrounds = safeText(state.adminEditor.backgroundDesktopDataUrl) && safeText(state.adminEditor.backgroundMobileDataUrl);
+      els.miniBookApproveBackgroundBtn.disabled = busy || !hasBothBackgrounds;
+    }
+  }
+
+  function closeMiniBookEditor() {
+    state.adminEditor.open = false;
+    state.adminEditor.bookId = '';
+    state.adminEditor.coverDataUrl = '';
+    state.adminEditor.backgroundDesktopDataUrl = '';
+    state.adminEditor.backgroundMobileDataUrl = '';
+    if (els.miniBookAdminEditor) {
+      els.miniBookAdminEditor.hidden = true;
+    }
+    setMiniBookPreviewImage(els.miniBookCoverPreview, '');
+    setMiniBookPreviewImage(els.miniBookBackgroundDesktopPreview, '');
+    setMiniBookPreviewImage(els.miniBookBackgroundMobilePreview, '');
+    setAdminEditorBusy(false);
+  }
+
+  function openMiniBookEditor(bookId) {
+    if (!state.isAdmin) return;
+    const selectedBook = state.books.find((book) => safeText(book?.id) === safeText(bookId));
+    if (!selectedBook) return;
+    state.adminEditor.open = true;
+    state.adminEditor.bookId = safeText(selectedBook.id);
+    state.adminEditor.coverDataUrl = '';
+    state.adminEditor.backgroundDesktopDataUrl = '';
+    state.adminEditor.backgroundMobileDataUrl = '';
+    if (els.miniBookAdminEditor) {
+      els.miniBookAdminEditor.hidden = false;
+    }
+    if (els.miniBookAdminTitle) {
+      els.miniBookAdminTitle.textContent = `MiniBook Admin: ${normalizeBookTitle(selectedBook.title) || 'Book'}`;
+    }
+    if (els.miniBookNameInput) {
+      els.miniBookNameInput.value = normalizeBookTitle(selectedBook.title);
+    }
+    if (els.miniBookCoverPromptInput) {
+      els.miniBookCoverPromptInput.value = '';
+    }
+    if (els.miniBookBackgroundPromptInput) {
+      els.miniBookBackgroundPromptInput.value = '';
+    }
+    setMiniBookPreviewImage(els.miniBookCoverPreview, '');
+    setMiniBookPreviewImage(els.miniBookBackgroundDesktopPreview, '');
+    setMiniBookPreviewImage(els.miniBookBackgroundMobilePreview, '');
+    setAdminEditorBusy(false);
+  }
+
+  function updateAdminEditorVisibility() {
+    if (!state.isAdmin) {
+      closeMiniBookEditor();
+      return;
+    }
+    const selectedBook = getSelectedBook();
+    if (!selectedBook) {
+      closeMiniBookEditor();
+      return;
+    }
+    if (state.adminEditor.open && safeText(state.adminEditor.bookId) !== safeText(selectedBook.id)) {
+      openMiniBookEditor(selectedBook.id);
+    }
+  }
+
+  async function generateMiniBookCoverPreview() {
+    if (!state.isAdmin || !state.adminEditor.open || state.adminEditor.busy) return;
+    const bookId = safeText(state.adminEditor.bookId);
+    if (!bookId) return;
+    const selectedBook = getSelectedBook();
+    const nameHint = safeText(els.miniBookNameInput?.value || selectedBook?.title || '');
+    const customPrompt = safeText(els.miniBookCoverPromptInput?.value || '');
+    const prompt = customPrompt || nameHint;
+
+    setAdminEditorBusy(true);
+    setHomeStatus('Gerando capa do MiniBook...', '');
+    try {
+      const response = await fetch(buildApiUrl('/api/admin/minibooks/generate-cover'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          bookId,
+          prompt
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !safeText(payload?.dataUrl)) {
+        throw new Error(payload?.error || payload?.details || 'Nao consegui gerar a capa.');
+      }
+      state.adminEditor.coverDataUrl = safeText(payload.dataUrl);
+      setMiniBookPreviewImage(els.miniBookCoverPreview, state.adminEditor.coverDataUrl);
+      setHomeStatus('Capa gerada. Se curtir, clique em Aprovar Capa.', '');
+    } catch (error) {
+      setHomeStatus(error?.message || 'Falha ao gerar capa.', 'is-error');
+    } finally {
+      setAdminEditorBusy(false);
+    }
+  }
+
+  async function approveMiniBookCover() {
+    if (!state.isAdmin || state.adminEditor.busy) return;
+    const bookId = safeText(state.adminEditor.bookId);
+    const imageDataUrl = safeText(state.adminEditor.coverDataUrl);
+    if (!bookId || !imageDataUrl) return;
+    const prompt = safeText(els.miniBookCoverPromptInput?.value || els.miniBookNameInput?.value || '');
+
+    setAdminEditorBusy(true);
+    setHomeStatus('Salvando capa aprovada no R2...', '');
+    try {
+      const response = await fetch(buildApiUrl('/api/admin/minibooks/save-cover'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          bookId,
+          imageDataUrl,
+          prompt
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error || payload?.details || 'Nao consegui salvar a capa.');
+      }
+      await loadStoryOptions();
+      updateAdminEditorVisibility();
+      setHomeStatus('Capa aprovada e publicada com sucesso.', '');
+      state.adminEditor.coverDataUrl = '';
+      setMiniBookPreviewImage(els.miniBookCoverPreview, '');
+    } catch (error) {
+      setHomeStatus(error?.message || 'Falha ao salvar capa.', 'is-error');
+    } finally {
+      setAdminEditorBusy(false);
+    }
+  }
+
+  async function generateMiniBookBackgroundPreview() {
+    if (!state.isAdmin || !state.adminEditor.open || state.adminEditor.busy) return;
+    const bookId = safeText(state.adminEditor.bookId);
+    if (!bookId) return;
+    const selectedBook = getSelectedBook();
+    const nameHint = safeText(els.miniBookNameInput?.value || selectedBook?.title || '');
+    const customPrompt = safeText(els.miniBookBackgroundPromptInput?.value || '');
+    const prompt = customPrompt || nameHint;
+
+    setAdminEditorBusy(true);
+    setHomeStatus('Gerando backgrounds desktop/mobile...', '');
+    try {
+      const response = await fetch(buildApiUrl('/api/admin/minibooks/generate-background'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          bookId,
+          prompt
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error || payload?.details || 'Nao consegui gerar os backgrounds.');
+      }
+      state.adminEditor.backgroundDesktopDataUrl = safeText(payload.desktopDataUrl);
+      state.adminEditor.backgroundMobileDataUrl = safeText(payload.mobileDataUrl);
+      setMiniBookPreviewImage(els.miniBookBackgroundDesktopPreview, state.adminEditor.backgroundDesktopDataUrl);
+      setMiniBookPreviewImage(els.miniBookBackgroundMobilePreview, state.adminEditor.backgroundMobileDataUrl);
+      setHomeStatus('Backgrounds gerados. Clique em Aprovar Background para publicar.', '');
+    } catch (error) {
+      setHomeStatus(error?.message || 'Falha ao gerar backgrounds.', 'is-error');
+    } finally {
+      setAdminEditorBusy(false);
+    }
+  }
+
+  async function approveMiniBookBackground() {
+    if (!state.isAdmin || state.adminEditor.busy) return;
+    const bookId = safeText(state.adminEditor.bookId);
+    const desktopDataUrl = safeText(state.adminEditor.backgroundDesktopDataUrl);
+    const mobileDataUrl = safeText(state.adminEditor.backgroundMobileDataUrl);
+    if (!bookId || !desktopDataUrl || !mobileDataUrl) return;
+    const prompt = safeText(els.miniBookBackgroundPromptInput?.value || els.miniBookNameInput?.value || '');
+
+    setAdminEditorBusy(true);
+    setHomeStatus('Publicando backgrounds no R2...', '');
+    try {
+      const response = await fetch(buildApiUrl('/api/admin/minibooks/save-background'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          bookId,
+          desktopDataUrl,
+          mobileDataUrl,
+          prompt
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error || payload?.details || 'Nao consegui salvar os backgrounds.');
+      }
+      await loadStoryOptions();
+      updateAdminEditorVisibility();
+      applySelectedMiniBookBackground();
+      setHomeStatus('Backgrounds aprovados e publicados.', '');
+      state.adminEditor.backgroundDesktopDataUrl = '';
+      state.adminEditor.backgroundMobileDataUrl = '';
+      setMiniBookPreviewImage(els.miniBookBackgroundDesktopPreview, '');
+      setMiniBookPreviewImage(els.miniBookBackgroundMobilePreview, '');
+    } catch (error) {
+      setHomeStatus(error?.message || 'Falha ao salvar backgrounds.', 'is-error');
+    } finally {
+      setAdminEditorBusy(false);
+    }
   }
 
   async function pingPresence() {
@@ -738,7 +1204,7 @@
     if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = false;
     setMicLiveVisual(false);
     setDuelIntroVisible(false);
-    setHomeStatus('Escolha uma história para jogar.', '');
+    setHomeStatus('Escolha um MiniBook para jogar.', '');
     updateTopPercents();
     updateProgressBars();
   }
@@ -1037,7 +1503,7 @@
       if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = false;
       if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = false;
       setMicLiveVisual(false);
-      setHomeStatus('Sessão finalizada. Escolha outra história e jogue de novo.', '');
+      setHomeStatus('Sessão finalizada. Escolha outro MiniBook e jogue de novo.', '');
       setGameStatus('', '');
       stopWordTicker();
       state.activeCards = [];
@@ -1052,11 +1518,11 @@
     if (state.loading) return;
     state.loading = true;
     if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = true;
-    setHomeStatus('Carregando história...', '');
+    setHomeStatus('Carregando MiniBook...', '');
     try {
       const selectedStoryId = safeText(els.storySelect?.value || state.selectedStoryId);
       if (!selectedStoryId) {
-        throw new Error('Escolha uma história antes de iniciar.');
+        throw new Error('Escolha um MiniBook antes de iniciar.');
       }
       state.selectedStoryId = selectedStoryId;
       state.activeCards = await loadSinglePlayerCards(selectedStoryId);
@@ -1127,14 +1593,38 @@
   }
 
   function bindEvents() {
+    els.levelSelect?.addEventListener('change', () => {
+      state.selectedLevel = parseLevel(els.levelSelect?.value || state.selectedLevel);
+      renderMiniBooksGrid();
+      updateAdminEditorVisibility();
+      setHomeStatus('', '');
+    });
     els.storySelect?.addEventListener('change', () => {
       state.selectedStoryId = safeText(els.storySelect?.value || '');
     });
     els.startSpeakingBtn?.addEventListener('click', () => {
       void startSinglePlayer();
     });
+    els.miniBookGenerateCoverBtn?.addEventListener('click', () => {
+      void generateMiniBookCoverPreview();
+    });
+    els.miniBookApproveCoverBtn?.addEventListener('click', () => {
+      void approveMiniBookCover();
+    });
+    els.miniBookGenerateBackgroundBtn?.addEventListener('click', () => {
+      void generateMiniBookBackgroundPreview();
+    });
+    els.miniBookApproveBackgroundBtn?.addEventListener('click', () => {
+      void approveMiniBookBackground();
+    });
+    els.miniBookCloseEditorBtn?.addEventListener('click', () => {
+      closeMiniBookEditor();
+    });
     els.sendSpeakingBtn?.addEventListener('click', () => {
       void handleSendSpeaking();
+    });
+    window.addEventListener('resize', () => {
+      applySelectedMiniBookBackground();
     });
     window.addEventListener('beforeunload', () => {
       stopDuelLoops();
@@ -1156,8 +1646,11 @@
     if (!state.duel.sessionId) {
       if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = true;
       try {
+        await loadAdminFlag();
         await loadStoryOptions();
+        updateAdminEditorVisibility();
         if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = false;
+        setHomeStatus('Escolha um MiniBook para jogar.', '');
       } catch (error) {
         if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = true;
         setHomeStatus(error?.message || 'Não foi possível carregar histórias.', 'is-error');

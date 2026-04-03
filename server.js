@@ -2166,6 +2166,22 @@ const ADMIN_BANNER_DEFAULT_PROMPT = [
   'Keep the main subject centered so crop and reposition remain safe.',
   'Use vibrant but elegant colors and high contrast details.'
 ].join(' ');
+const MINIBOOKS_RELATIVE_ROOT = path.posix.join('minibooks');
+const MINIBOOKS_MANIFEST_RELATIVE_PATH = path.posix.join(MINIBOOKS_RELATIVE_ROOT, 'manifest.json');
+const MINIBOOKS_MANIFEST_OBJECT_KEY = path.posix.join(MINIBOOKS_RELATIVE_ROOT, 'manifest.json');
+const MINIBOOKS_IMAGE_OBJECT_PREFIX = path.posix.join(MINIBOOKS_RELATIVE_ROOT, 'images');
+const MINIBOOKS_COVER_RENDER_SIZE = Object.freeze({ width: 900, height: 1600 });
+const MINIBOOKS_BACKGROUND_DESKTOP_RENDER_SIZE = Object.freeze({ width: 1600, height: 900 });
+const MINIBOOKS_BACKGROUND_MOBILE_RENDER_SIZE = Object.freeze({ width: 900, height: 1600 });
+const MINIBOOKS_DEFAULT_COVER_PROMPT = [
+  'Create a vertical 9:16 premium book cover for an English micro-reading gamified app.',
+  'High-quality cinematic illustration, rich storytelling, elegant lighting.',
+  'No text, no letters, no logos, no watermark.'
+].join(' ');
+const MINIBOOKS_DEFAULT_BACKGROUND_PROMPT = [
+  'Create a premium immersive reading background for an English learning app.',
+  'Atmospheric, cinematic lighting, clean composition, no text, no logos, no watermark.'
+].join(' ');
 const LOCAL_LEVEL_MANIFEST_RELATIVE_PATH = path.posix.join('data', 'local-level-files.json');
 const LOCAL_LEVEL_ALLOWED_FOLDERS = ['others', 'talking', 'watching', 'words'];
 const FLASHCARD_ADMIN_USERNAMES = new Set(['admin', 'adm', 'adminst']);
@@ -3221,7 +3237,10 @@ async function loadSpeakingCardPool() {
       if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
         continue;
       }
-      const displayName = toEnglishUnderscoreName(payload.nome, path.basename(entry.name, '.json'));
+      const fileBaseName = path.basename(entry.name, '.json');
+      const normalizedBookTitle = normalizeMiniBookText(payload.nome, fileBaseName);
+      const displayName = toEnglishUnderscoreName(normalizedBookTitle, fileBaseName);
+      const bookId = normalizeMiniBookId(fileBaseName);
       const level = normalizeSpeakingStoryLevel(payload.nivel);
       Object.entries(payload).forEach(([storyKey, storyValue]) => {
         const items = Array.isArray(storyValue) ? storyValue : [];
@@ -3237,6 +3256,8 @@ async function loadSpeakingCardPool() {
         stories.push({
           id: `${entry.name}::${safeStoryKey}`,
           fileName: entry.name,
+          bookId,
+          bookTitle: normalizedBookTitle,
           storyKey: safeStoryKey,
           nome: displayName,
           nivel: level,
@@ -3272,6 +3293,21 @@ async function buildRandomSpeakingCards(selectedStoryId) {
   const selected = stories[randomIndex];
   const cards = Array.isArray(selected?.cards) ? selected.cards.slice() : [];
   return cards;
+}
+
+async function findSpeakingBookById(bookId) {
+  const targetBookId = normalizeMiniBookId(bookId);
+  const stories = await loadSpeakingCardPool();
+  const matches = stories.filter((story) => normalizeMiniBookId(story.bookId || story.fileName) === targetBookId);
+  if (!matches.length) return null;
+  const first = matches[0];
+  return {
+    bookId: targetBookId,
+    fileName: String(first.fileName || '').trim(),
+    title: String(first.bookTitle || first.nome || first.fileName || '').trim() || targetBookId,
+    level: normalizeSpeakingStoryLevel(first.nivel),
+    storyIds: matches.map((entry) => String(entry.id || '').trim()).filter(Boolean)
+  };
 }
 
 function buildSpeakingSessionId() {
@@ -4191,6 +4227,187 @@ async function persistAdminBannerManifest(payload) {
     await putR2Object(ADMIN_BANNER_MANIFEST_OBJECT_KEY, Buffer.from(serialized, 'utf8'), 'application/json');
   }
   return normalized;
+}
+
+function normalizeMiniBookId(value) {
+  return safeGeneratedBase(String(value || '').replace(/\.json$/i, ''), 'book');
+}
+
+function normalizeMiniBookText(value, fallback = '') {
+  const trimmed = String(value || '').trim();
+  return trimmed || String(fallback || '').trim();
+}
+
+function createDefaultMiniBooksManifest() {
+  return {
+    generatedAt: new Date().toISOString(),
+    updatedAt: null,
+    books: {}
+  };
+}
+
+function normalizeMiniBookEntry(bookId, entry = {}) {
+  const normalizedId = normalizeMiniBookId(bookId || entry?.bookId || entry?.fileName || entry?.title || 'book');
+  return {
+    bookId: normalizedId,
+    fileName: normalizeMiniBookText(entry?.fileName),
+    title: normalizeMiniBookText(entry?.title),
+    level: normalizeSpeakingStoryLevel(entry?.level),
+    coverImageUrl: normalizeMiniBookText(entry?.coverImageUrl),
+    coverObjectKey: normalizeMiniBookText(entry?.coverObjectKey),
+    coverPrompt: normalizeMiniBookText(entry?.coverPrompt),
+    backgroundDesktopUrl: normalizeMiniBookText(entry?.backgroundDesktopUrl),
+    backgroundDesktopObjectKey: normalizeMiniBookText(entry?.backgroundDesktopObjectKey),
+    backgroundMobileUrl: normalizeMiniBookText(entry?.backgroundMobileUrl),
+    backgroundMobileObjectKey: normalizeMiniBookText(entry?.backgroundMobileObjectKey),
+    backgroundPrompt: normalizeMiniBookText(entry?.backgroundPrompt),
+    updatedAt: entry?.updatedAt || null
+  };
+}
+
+function normalizeMiniBooksManifest(payload) {
+  const base = createDefaultMiniBooksManifest();
+  const books = payload?.books && typeof payload.books === 'object' && !Array.isArray(payload.books)
+    ? payload.books
+    : {};
+  const normalizedBooks = {};
+  Object.entries(books).forEach(([rawBookId, rawEntry]) => {
+    const entry = normalizeMiniBookEntry(rawBookId, rawEntry);
+    normalizedBooks[entry.bookId] = entry;
+  });
+  base.books = normalizedBooks;
+  base.generatedAt = payload?.generatedAt || base.generatedAt;
+  base.updatedAt = payload?.updatedAt || null;
+  return base;
+}
+
+async function readLocalMiniBooksManifest() {
+  try {
+    const payload = await readJsonFromRelativePath(MINIBOOKS_MANIFEST_RELATIVE_PATH);
+    return normalizeMiniBooksManifest(payload);
+  } catch (_error) {
+    return createDefaultMiniBooksManifest();
+  }
+}
+
+async function loadMiniBooksManifest() {
+  if (isR2FluencyConfigured()) {
+    try {
+      const payload = await fetchR2JsonObject(MINIBOOKS_MANIFEST_OBJECT_KEY);
+      return normalizeMiniBooksManifest(payload);
+    } catch (error) {
+      if (Number(error?.status) !== 404) {
+        throw error;
+      }
+    }
+  }
+  return readLocalMiniBooksManifest();
+}
+
+async function persistMiniBooksManifest(payload) {
+  const normalized = normalizeMiniBooksManifest(payload);
+  const serialized = `${JSON.stringify(normalized, null, 2)}\n`;
+  await writeMirroredFile(MINIBOOKS_MANIFEST_RELATIVE_PATH, serialized, 'utf8');
+  if (isR2FluencyConfigured()) {
+    await putR2Object(MINIBOOKS_MANIFEST_OBJECT_KEY, Buffer.from(serialized, 'utf8'), 'application/json');
+  }
+  return normalized;
+}
+
+function getMiniBookRenderSize(kind) {
+  if (kind === 'background-desktop') return MINIBOOKS_BACKGROUND_DESKTOP_RENDER_SIZE;
+  if (kind === 'background-mobile') return MINIBOOKS_BACKGROUND_MOBILE_RENDER_SIZE;
+  return MINIBOOKS_COVER_RENDER_SIZE;
+}
+
+async function optimizeMiniBookAssetToWebp(inputBuffer, kind = 'cover') {
+  const renderSize = getMiniBookRenderSize(kind);
+  return sharp(inputBuffer, { failOn: 'none', animated: false })
+    .rotate()
+    .resize(renderSize.width, renderSize.height, {
+      fit: 'cover',
+      position: 'centre',
+      withoutEnlargement: false
+    })
+    .webp({
+      quality: kind === 'cover' ? 82 : 78,
+      effort: 5,
+      smartSubsample: true
+    })
+    .toBuffer();
+}
+
+async function generateMiniBookImageWithOpenAi(prompt, options = {}) {
+  const promptText = String(prompt || '').trim();
+  if (!promptText) {
+    const error = new Error('Prompt vazio para gerar imagem.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
+    const error = new Error('OpenAI nao configurado.');
+    error.statusCode = 503;
+    error.instructions = 'Preencha OPENAI_API_KEY no .env com a chave real da OpenAI.';
+    throw error;
+  }
+
+  const size = String(options?.size || '1024x1536').trim() || '1024x1536';
+  const quality = String(options?.quality || 'medium').trim() || 'medium';
+  const outputFormat = 'webp';
+
+  const upstreamResponse = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: OPENAI_AVATAR_IMAGE_MODEL,
+      prompt: promptText,
+      size,
+      quality,
+      output_format: outputFormat
+    })
+  });
+
+  const responseText = await upstreamResponse.text();
+  let payload = null;
+  try {
+    payload = responseText ? JSON.parse(responseText) : null;
+  } catch (_error) {
+    payload = null;
+  }
+
+  if (!upstreamResponse.ok) {
+    const error = new Error(payload?.error?.message || responseText.slice(0, 500) || 'Falha ao gerar imagem na OpenAI.');
+    error.statusCode = upstreamResponse.status;
+    throw error;
+  }
+
+  const image = Array.isArray(payload?.data) ? payload.data[0] : null;
+  const b64 = String(image?.b64_json || '').trim();
+  if (!b64) {
+    const error = new Error('A OpenAI nao retornou imagem em base64.');
+    error.statusCode = 502;
+    throw error;
+  }
+
+  return {
+    mimeType: 'image/webp',
+    buffer: Buffer.from(b64, 'base64'),
+    usage: payload?.usage || null
+  };
+}
+
+function buildMiniBookObjectKey(bookId, kind) {
+  const safeBookId = normalizeMiniBookId(bookId);
+  if (kind === 'background-desktop') {
+    return path.posix.join(MINIBOOKS_IMAGE_OBJECT_PREFIX, 'backgrounds', `${safeBookId}-desktop.webp`);
+  }
+  if (kind === 'background-mobile') {
+    return path.posix.join(MINIBOOKS_IMAGE_OBJECT_PREFIX, 'backgrounds', `${safeBookId}-mobile.webp`);
+  }
+  return path.posix.join(MINIBOOKS_IMAGE_OBJECT_PREFIX, 'covers', `${safeBookId}.webp`);
 }
 
 function sortFluencyObjectKeys(left, right) {
@@ -6014,19 +6231,354 @@ app.get('/api/speaking/cards', async (req, res) => {
 app.get('/api/speaking/stories', async (_req, res) => {
   try {
     const stories = await loadSpeakingCardPool();
-    const list = stories.map((story) => ({
-      id: String(story.id || '').trim(),
-      fileName: String(story.fileName || '').trim(),
-      storyKey: String(story.storyKey || '').trim(),
-      nome: String(story.nome || '').trim() || toEnglishUnderscoreName(story.storyKey, story.fileName),
-      nivel: normalizeSpeakingStoryLevel(story.nivel),
-      count: Array.isArray(story.cards) ? story.cards.length : 0
+    const miniBooksManifest = await loadMiniBooksManifest().catch(() => createDefaultMiniBooksManifest());
+    const miniBooksMap = miniBooksManifest?.books && typeof miniBooksManifest.books === 'object'
+      ? miniBooksManifest.books
+      : {};
+
+    const list = stories.map((story) => {
+      const bookId = normalizeMiniBookId(story.bookId || story.fileName);
+      const manifestEntry = normalizeMiniBookEntry(bookId, miniBooksMap[bookId] || {});
+      return {
+        id: String(story.id || '').trim(),
+        fileName: String(story.fileName || '').trim(),
+        bookId,
+        bookTitle: String(story.bookTitle || '').trim() || toEnglishUnderscoreName(story.storyKey, story.fileName),
+        storyKey: String(story.storyKey || '').trim(),
+        nome: String(story.nome || '').trim() || toEnglishUnderscoreName(story.storyKey, story.fileName),
+        nivel: normalizeSpeakingStoryLevel(story.nivel),
+        count: Array.isArray(story.cards) ? story.cards.length : 0,
+        coverImageUrl: manifestEntry.coverImageUrl || '',
+        backgroundDesktopUrl: manifestEntry.backgroundDesktopUrl || '',
+        backgroundMobileUrl: manifestEntry.backgroundMobileUrl || ''
+      };
+    });
+
+    const booksMap = new Map();
+    list.forEach((story) => {
+      if (!story.bookId || !story.fileName) return;
+      const current = booksMap.get(story.bookId);
+      if (!current) {
+        booksMap.set(story.bookId, {
+          id: story.bookId,
+          fileName: story.fileName,
+          title: story.bookTitle || story.nome || story.fileName,
+          nivel: story.nivel,
+          count: story.count,
+          storyIds: [story.id],
+          selectedStoryId: story.id,
+          coverImageUrl: story.coverImageUrl || '',
+          backgroundDesktopUrl: story.backgroundDesktopUrl || '',
+          backgroundMobileUrl: story.backgroundMobileUrl || ''
+        });
+        return;
+      }
+      current.count += story.count;
+      current.storyIds.push(story.id);
+      if (!current.selectedStoryId) {
+        current.selectedStoryId = story.id;
+      }
+    });
+
+    const books = Array.from(booksMap.values()).sort((left, right) => {
+      if (left.nivel !== right.nivel) return left.nivel - right.nivel;
+      return String(left.title || '').localeCompare(String(right.title || ''), 'pt-BR', {
+        sensitivity: 'base',
+        numeric: true
+      });
+    });
+
+    const levels = Array.from({ length: 10 }, (_, index) => ({
+      level: index + 1,
+      count: books.filter((book) => book.nivel === (index + 1)).length
     }));
+
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, stories: list });
+    res.json({
+      success: true,
+      stories: list,
+      books,
+      levels
+    });
   } catch (error) {
     console.error('Erro ao listar historias de speaking:', error);
     res.status(500).json({ success: false, message: 'Nao foi possivel carregar historias de speaking.' });
+  }
+});
+
+app.post('/api/admin/minibooks/generate-cover', express.json({ limit: '2mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  try {
+    const bookId = normalizeMiniBookId(req.body?.bookId);
+    const book = await findSpeakingBookById(bookId);
+    if (!book) {
+      res.status(404).json({ error: 'MiniBook nao encontrado para esse bookId.' });
+      return;
+    }
+
+    const customPrompt = normalizeMiniBookText(req.body?.prompt);
+    const prompt = customPrompt || [
+      MINIBOOKS_DEFAULT_COVER_PROMPT,
+      `Book concept: ${book.title}.`,
+      'Focus on one iconic visual symbol of this topic.'
+    ].join(' ');
+
+    const generated = await generateMiniBookImageWithOpenAi(prompt, {
+      size: '1024x1536',
+      quality: 'medium'
+    });
+    const optimizedBuffer = await optimizeMiniBookAssetToWebp(generated.buffer, 'cover');
+    if (!optimizedBuffer?.length) {
+      res.status(422).json({ error: 'Nao foi possivel otimizar a capa em WebP.' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      model: OPENAI_AVATAR_IMAGE_MODEL,
+      book: {
+        id: book.bookId,
+        title: book.title,
+        level: book.level
+      },
+      promptUsed: prompt,
+      dataUrl: `data:image/webp;base64,${optimizedBuffer.toString('base64')}`,
+      usage: generated.usage || null
+    });
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 502);
+    res.status(statusCode).json({
+      error: 'Falha ao gerar capa do MiniBook.',
+      details: error.message,
+      instructions: error.instructions || null
+    });
+  }
+});
+
+app.post('/api/admin/minibooks/generate-background', express.json({ limit: '2mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  try {
+    const bookId = normalizeMiniBookId(req.body?.bookId);
+    const book = await findSpeakingBookById(bookId);
+    if (!book) {
+      res.status(404).json({ error: 'MiniBook nao encontrado para esse bookId.' });
+      return;
+    }
+
+    const customPrompt = normalizeMiniBookText(req.body?.prompt);
+    const prompt = customPrompt || [
+      MINIBOOKS_DEFAULT_BACKGROUND_PROMPT,
+      `Book concept: ${book.title}.`,
+      'Keep room for UI overlays and text readability.'
+    ].join(' ');
+
+    const [desktopGenerated, mobileGenerated] = await Promise.all([
+      generateMiniBookImageWithOpenAi(prompt, { size: '1536x1024', quality: 'medium' }),
+      generateMiniBookImageWithOpenAi(prompt, { size: '1024x1536', quality: 'medium' })
+    ]);
+
+    const [desktopBuffer, mobileBuffer] = await Promise.all([
+      optimizeMiniBookAssetToWebp(desktopGenerated.buffer, 'background-desktop'),
+      optimizeMiniBookAssetToWebp(mobileGenerated.buffer, 'background-mobile')
+    ]);
+
+    if (!desktopBuffer?.length || !mobileBuffer?.length) {
+      res.status(422).json({ error: 'Nao foi possivel otimizar os backgrounds em WebP.' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      model: OPENAI_AVATAR_IMAGE_MODEL,
+      book: {
+        id: book.bookId,
+        title: book.title,
+        level: book.level
+      },
+      promptUsed: prompt,
+      desktopDataUrl: `data:image/webp;base64,${desktopBuffer.toString('base64')}`,
+      mobileDataUrl: `data:image/webp;base64,${mobileBuffer.toString('base64')}`,
+      usage: {
+        desktop: desktopGenerated.usage || null,
+        mobile: mobileGenerated.usage || null
+      }
+    });
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 502);
+    res.status(statusCode).json({
+      error: 'Falha ao gerar background do MiniBook.',
+      details: error.message,
+      instructions: error.instructions || null
+    });
+  }
+});
+
+app.post('/api/admin/minibooks/save-cover', express.json({ limit: '30mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  if (!isR2FluencyConfigured()) {
+    res.status(503).json({ error: 'R2 nao configurado para salvar MiniBooks.' });
+    return;
+  }
+
+  try {
+    const bookId = normalizeMiniBookId(req.body?.bookId);
+    const imageDataUrl = normalizeMiniBookText(req.body?.imageDataUrl);
+    const prompt = normalizeMiniBookText(req.body?.prompt);
+    const book = await findSpeakingBookById(bookId);
+    if (!book) {
+      res.status(404).json({ error: 'MiniBook nao encontrado para esse bookId.' });
+      return;
+    }
+    const parsed = parseBase64DataUrl(imageDataUrl);
+    if (!parsed?.buffer?.length || !/^image\//i.test(parsed.mimeType || '')) {
+      res.status(400).json({ error: 'Imagem da capa invalida.' });
+      return;
+    }
+    const optimizedBuffer = await optimizeMiniBookAssetToWebp(parsed.buffer, 'cover');
+    if (!optimizedBuffer?.length) {
+      res.status(422).json({ error: 'Nao foi possivel otimizar a capa para WebP.' });
+      return;
+    }
+
+    const objectKey = buildMiniBookObjectKey(bookId, 'cover');
+    await putR2Object(objectKey, optimizedBuffer, 'image/webp');
+    const coverImageUrl = `${buildFlashcardsR2PublicUrl(objectKey)}?v=${Date.now()}`;
+
+    const manifest = await loadMiniBooksManifest();
+    const previousEntry = normalizeMiniBookEntry(bookId, manifest.books?.[bookId] || {});
+    manifest.books = manifest.books || {};
+    manifest.books[bookId] = normalizeMiniBookEntry(bookId, {
+      ...previousEntry,
+      bookId,
+      fileName: book.fileName,
+      title: book.title,
+      level: book.level,
+      coverImageUrl,
+      coverObjectKey: objectKey,
+      coverPrompt: prompt || previousEntry.coverPrompt || '',
+      updatedAt: new Date().toISOString()
+    });
+    manifest.updatedAt = new Date().toISOString();
+    const savedManifest = await persistMiniBooksManifest(manifest);
+    const savedEntry = normalizeMiniBookEntry(bookId, savedManifest.books?.[bookId] || {});
+
+    res.json({
+      success: true,
+      book: savedEntry
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Falha ao salvar capa do MiniBook.',
+      details: error.message
+    });
+  }
+});
+
+app.post('/api/admin/minibooks/save-background', express.json({ limit: '60mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  if (!isR2FluencyConfigured()) {
+    res.status(503).json({ error: 'R2 nao configurado para salvar MiniBooks.' });
+    return;
+  }
+
+  try {
+    const bookId = normalizeMiniBookId(req.body?.bookId);
+    const desktopDataUrl = normalizeMiniBookText(req.body?.desktopDataUrl);
+    const mobileDataUrl = normalizeMiniBookText(req.body?.mobileDataUrl);
+    const prompt = normalizeMiniBookText(req.body?.prompt);
+    const book = await findSpeakingBookById(bookId);
+    if (!book) {
+      res.status(404).json({ error: 'MiniBook nao encontrado para esse bookId.' });
+      return;
+    }
+
+    const desktopParsed = parseBase64DataUrl(desktopDataUrl);
+    const mobileParsed = parseBase64DataUrl(mobileDataUrl);
+    if (!desktopParsed?.buffer?.length || !/^image\//i.test(desktopParsed.mimeType || '')) {
+      res.status(400).json({ error: 'Background desktop invalido.' });
+      return;
+    }
+    if (!mobileParsed?.buffer?.length || !/^image\//i.test(mobileParsed.mimeType || '')) {
+      res.status(400).json({ error: 'Background mobile invalido.' });
+      return;
+    }
+
+    const [desktopBuffer, mobileBuffer] = await Promise.all([
+      optimizeMiniBookAssetToWebp(desktopParsed.buffer, 'background-desktop'),
+      optimizeMiniBookAssetToWebp(mobileParsed.buffer, 'background-mobile')
+    ]);
+    if (!desktopBuffer?.length || !mobileBuffer?.length) {
+      res.status(422).json({ error: 'Nao foi possivel otimizar os backgrounds para WebP.' });
+      return;
+    }
+
+    const desktopObjectKey = buildMiniBookObjectKey(bookId, 'background-desktop');
+    const mobileObjectKey = buildMiniBookObjectKey(bookId, 'background-mobile');
+    await Promise.all([
+      putR2Object(desktopObjectKey, desktopBuffer, 'image/webp'),
+      putR2Object(mobileObjectKey, mobileBuffer, 'image/webp')
+    ]);
+    const cacheBuster = Date.now();
+    const backgroundDesktopUrl = `${buildFlashcardsR2PublicUrl(desktopObjectKey)}?v=${cacheBuster}`;
+    const backgroundMobileUrl = `${buildFlashcardsR2PublicUrl(mobileObjectKey)}?v=${cacheBuster}`;
+
+    const manifest = await loadMiniBooksManifest();
+    const previousEntry = normalizeMiniBookEntry(bookId, manifest.books?.[bookId] || {});
+    manifest.books = manifest.books || {};
+    manifest.books[bookId] = normalizeMiniBookEntry(bookId, {
+      ...previousEntry,
+      bookId,
+      fileName: book.fileName,
+      title: book.title,
+      level: book.level,
+      backgroundDesktopUrl,
+      backgroundDesktopObjectKey: desktopObjectKey,
+      backgroundMobileUrl,
+      backgroundMobileObjectKey: mobileObjectKey,
+      backgroundPrompt: prompt || previousEntry.backgroundPrompt || '',
+      updatedAt: new Date().toISOString()
+    });
+    manifest.updatedAt = new Date().toISOString();
+    const savedManifest = await persistMiniBooksManifest(manifest);
+    const savedEntry = normalizeMiniBookEntry(bookId, savedManifest.books?.[bookId] || {});
+
+    res.json({
+      success: true,
+      book: savedEntry
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Falha ao salvar background do MiniBook.',
+      details: error.message
+    });
   }
 });
 
