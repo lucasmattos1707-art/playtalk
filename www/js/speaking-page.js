@@ -58,7 +58,6 @@
     cardEnglishWord: document.getElementById('cardEnglishWord'),
     cardPortugueseWord: document.getElementById('cardPortugueseWord'),
     sendSpeakingBtn: document.getElementById('sendSpeakingBtn'),
-    micWaveform: document.getElementById('micWaveform'),
     languageEnglishBtn: document.getElementById('languageEnglishBtn'),
     languagePortugueseBtn: document.getElementById('languagePortugueseBtn'),
     gameStatus: document.getElementById('gameStatus'),
@@ -80,7 +79,6 @@
     selectedLevel: 1,
     selectedBookId: '',
     displayLanguage: 'english',
-    micWaveTimer: 0,
     adminUsername: '',
     selectedStoryId: '',
     isAdmin: false,
@@ -199,6 +197,34 @@
     state.duel.meAvatar = identity.avatar;
     state.duel.rivalName = 'Adversário';
     state.duel.rivalAvatar = '/Avatar/avatar-man-person-svgrepo-com.svg';
+  }
+
+  async function hydrateOfflineIdentityFromSession() {
+    try {
+      const response = await fetch(buildApiUrl('/api/me'), {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: buildAuthHeaders()
+      });
+      if (!response.ok) return;
+      const payload = await response.json().catch(() => ({}));
+      const user = payload?.user || {};
+      const username = safeText(user.username || user.email);
+      const avatar = normalizeAvatarSource(
+        user.avatar_image
+        || user.avatarImage
+        || user.avatar
+      );
+      if (username) {
+        state.duel.meName = username;
+      }
+      if (avatar) {
+        state.duel.meAvatar = avatar;
+      }
+      updateDuelAvatarRings();
+    } catch (_error) {
+      // ignore and keep local fallback identity
+    }
   }
 
   function setGameMode(mode) {
@@ -415,47 +441,10 @@
     }
   }
 
-  function stopMicWaveformAnimation() {
-    if (state.micWaveTimer) {
-      window.clearInterval(state.micWaveTimer);
-      state.micWaveTimer = 0;
-    }
-    const bars = els.micWaveform?.querySelectorAll('.mic-waveform__bar');
-    if (!bars || !bars.length) return;
-    bars.forEach((bar) => {
-      bar.style.height = '8px';
-      bar.style.opacity = '0.7';
-    });
-  }
-
-  function startMicWaveformAnimation() {
-    const bars = els.micWaveform?.querySelectorAll('.mic-waveform__bar');
-    if (!bars || !bars.length) return;
-    stopMicWaveformAnimation();
-    state.micWaveTimer = window.setInterval(() => {
-      bars.forEach((bar, index) => {
-        const volume = 0.28 + (Math.random() * 0.72);
-        const waveBias = 0.25 + (Math.sin((Date.now() / 160) + (index * 0.65)) + 1) * 0.25;
-        const amplitude = Math.min(1, volume * 0.78 + waveBias);
-        const nextHeight = Math.round(6 + amplitude * 22);
-        bar.style.height = `${nextHeight}px`;
-        bar.style.opacity = `${Math.max(0.55, Math.min(1, 0.55 + amplitude * 0.55))}`;
-      });
-    }, 90);
-  }
-
   function setMicLiveVisual(active) {
     if (!els.sendSpeakingBtn) return;
     const isActive = Boolean(active);
     els.sendSpeakingBtn.classList.toggle('is-mic-live', isActive);
-    if (els.micWaveform) {
-      els.micWaveform.classList.toggle('is-active', isActive);
-    }
-    if (isActive) {
-      startMicWaveformAnimation();
-    } else {
-      stopMicWaveformAnimation();
-    }
   }
 
   function updateLanguageButtons() {
@@ -588,7 +577,9 @@
     if (els.enemyPronRing) els.enemyPronRing.style.setProperty('--percent', String(rivalPercent));
     if (els.meAvatarPercent) els.meAvatarPercent.textContent = `${myPercent}%`;
     if (els.enemyAvatarPercent) els.enemyAvatarPercent.textContent = `${rivalPercent}%`;
-    if (els.meAvatarName) els.meAvatarName.textContent = state.duel.meName || 'Você';
+    if (els.meAvatarName) {
+      els.meAvatarName.textContent = state.duel.enabled ? (state.duel.meName || 'Você') : '';
+    }
     if (els.enemyAvatarName) els.enemyAvatarName.textContent = state.duel.rivalName || 'Adversário';
     if (els.meAvatar) els.meAvatar.src = normalizeAvatarSource(state.duel.meAvatar);
     if (els.enemyAvatar) els.enemyAvatar.src = normalizeAvatarSource(state.duel.rivalAvatar);
@@ -1670,6 +1661,7 @@
     if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = true;
     setHomeStatus('Carregando MiniBook...', '');
     try {
+      await hydrateOfflineIdentityFromSession();
       const selectedStoryId = safeText(els.storySelect?.value || state.selectedStoryId);
       if (!selectedStoryId) {
         throw new Error('Escolha um MiniBook antes de iniciar.');
@@ -1789,7 +1781,6 @@
       clearDuelIntroAnimationTimers();
       stopBattleIntroAudio();
       stopWordTicker();
-      stopMicWaveformAnimation();
     });
   }
 
@@ -1798,6 +1789,7 @@
     bindAvatarFallbacks();
     setGameMode(state.duel.sessionId ? 'battle-mode' : 'offline-game');
     applyOfflineIdentity();
+    void hydrateOfflineIdentityFromSession();
     updateTopPercents();
     updateProgressBars();
     updateLanguageButtons();

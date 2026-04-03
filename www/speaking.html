@@ -522,8 +522,8 @@
       --percent: 0;
       --ring-a: #61f2a4;
       --ring-b: #2c7f50;
-      width: 165px;
-      height: 165px;
+      width: 198px;
+      height: 198px;
       padding: 6px;
       border-radius: 50%;
       background:
@@ -561,9 +561,13 @@
       white-space: nowrap;
     }
 
+    .duel-avatars.is-offline .duel-avatar--me .duel-avatar__name {
+      display: none;
+    }
+
     .duel-avatar__percent {
       margin: 0;
-      font-size: 22px;
+      font-size: 31px;
       font-weight: 800;
       color: #b9f7cd;
     }
@@ -574,7 +578,7 @@
 
     .card-word {
       margin: 0;
-      font-size: 34.5px;
+      font-size: 41.4px;
       font-weight: 800;
       line-height: 1.1;
       text-align: center;
@@ -583,15 +587,15 @@
     }
 
     .card-word.is-long {
-      font-size: 30.36px;
+      font-size: 36.43px;
     }
 
     .card-word.is-portuguese {
-      font-size: 31.05px;
+      font-size: 37.26px;
     }
 
     .card-word.is-portuguese.is-long {
-      font-size: 27.32px;
+      font-size: 32.78px;
     }
 
     .card-word.is-slide {
@@ -648,10 +652,10 @@
     }
 
     .mic-trigger svg {
-      width: min(180px, 42vw);
+      width: min(126px, 30vw);
       height: auto;
-      min-height: 100px;
-      max-height: 180px;
+      min-height: 70px;
+      max-height: 126px;
       display: block;
       filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.28));
     }
@@ -675,35 +679,6 @@
       color: #ff3b30;
       animation: micPulse 1200ms ease-in-out infinite;
       filter: drop-shadow(0 0 10px rgba(255, 59, 48, 0.35));
-    }
-
-    .mic-waveform {
-      width: min(220px, 52vw);
-      height: 30px;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      gap: 3px;
-      opacity: 0.35;
-      transition: opacity 300ms ease;
-    }
-
-    .mic-waveform.is-active {
-      opacity: 1;
-    }
-
-    .mic-waveform__bar {
-      width: 6px;
-      height: 8px;
-      border-radius: 4px;
-      background: linear-gradient(180deg, #8ef3c5 0%, #4ecf9d 100%);
-      transform-origin: center bottom;
-      transition: height 120ms linear, opacity 120ms linear;
-      opacity: 0.7;
-    }
-
-    .mic-waveform.is-active .mic-waveform__bar {
-      opacity: 1;
     }
 
     .language-switch {
@@ -894,8 +869,8 @@
       .mini-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
-      .card-word { font-size: 27.6px; }
-      .card-word.is-long { font-size: 24.29px; }
+      .card-word { font-size: 33.12px; }
+      .card-word.is-long { font-size: 29.15px; }
       .card-subword { font-size: 24.84px; }
       .card-subword.is-long { font-size: 21.86px; }
       .enemy-speaking { font-size: 18px; }
@@ -907,14 +882,14 @@
         font-size: 19px;
       }
       .duel-avatar__ring {
-        width: 145px;
-        height: 145px;
+        width: 174px;
+        height: 174px;
       }
       .duel-avatar__percent {
-        font-size: 20px;
+        font-size: 28px;
       }
       .mic-trigger svg {
-        width: min(210px, 64vw);
+        width: min(147px, 45vw);
       }
     }
   </style>
@@ -1033,20 +1008,6 @@
             <path fill="currentColor" d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-5a3.5 3.5 0 1 0-7 0v5A3.5 3.5 0 0 0 12 15m5.5-3.5a.9.9 0 1 1 1.8 0 7.3 7.3 0 0 1-6.4 7.24V21h3.1a.9.9 0 1 1 0 1.8H8a.9.9 0 0 1 0-1.8h3.1v-2.26a7.3 7.3 0 0 1-6.4-7.24.9.9 0 0 1 1.8 0 5.5 5.5 0 0 0 11 0" />
           </svg>
         </button>
-        <div id="micWaveform" class="mic-waveform" aria-hidden="true">
-          <span class="mic-waveform__bar"></span>
-          <span class="mic-waveform__bar"></span>
-          <span class="mic-waveform__bar"></span>
-          <span class="mic-waveform__bar"></span>
-          <span class="mic-waveform__bar"></span>
-          <span class="mic-waveform__bar"></span>
-          <span class="mic-waveform__bar"></span>
-          <span class="mic-waveform__bar"></span>
-          <span class="mic-waveform__bar"></span>
-          <span class="mic-waveform__bar"></span>
-          <span class="mic-waveform__bar"></span>
-          <span class="mic-waveform__bar"></span>
-        </div>
         <div class="language-switch" aria-label="Selecionar idioma do texto">
           <button id="languageEnglishBtn" class="language-switch__btn is-active" type="button" aria-label="Mostrar texto em inglês" aria-pressed="true">
             <img src="/SVG/codex-icons/ingles.svg" alt="Inglês">
