@@ -152,7 +152,7 @@ const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
 const SPEAKING_DUEL_DEFAULT_CARDS = 25;
 const SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS = 20;
-const SPEAKING_DUEL_INTRO_SECONDS = 5;
+const SPEAKING_DUEL_INTRO_SECONDS = 6;
 const SPEAKING_DUEL_BATTLE_SECONDS = 180;
 const SPEAKING_CARD_CACHE_TTL_MS = 60 * 1000;
 const BATTLE_STORIES_ROOT_CANDIDATES = Array.from(new Set([
@@ -3525,16 +3525,40 @@ async function buildRandomSpeakingCards(selectedStoryId) {
   const stories = await loadSpeakingCardPool();
   if (!stories.length) return [];
   const normalizedStoryId = String(selectedStoryId || '').trim();
+  let selected = null;
   if (normalizedStoryId) {
-    const selectedById = stories.find((story) => String(story.id || '').trim() === normalizedStoryId);
-    if (selectedById && Array.isArray(selectedById.cards)) {
-      return selectedById.cards.slice();
-    }
+    selected = stories.find((story) => String(story.id || '').trim() === normalizedStoryId) || null;
   }
-  const randomIndex = Math.floor(Math.random() * stories.length);
-  const selected = stories[randomIndex];
+  if (!selected) {
+    const randomIndex = Math.floor(Math.random() * stories.length);
+    selected = stories[randomIndex] || null;
+  }
   const cards = Array.isArray(selected?.cards) ? selected.cards.slice() : [];
-  return cards;
+  if (!cards.length || !selected) return [];
+
+  const bookId = normalizeMiniBookId(selected.bookId || selected.fileName);
+  const bookTitle = normalizeMiniBookText(selected.bookTitle || selected.nome || selected.fileName, bookId);
+  let coverImageUrl = '';
+  try {
+    const miniBooksManifest = await loadMiniBooksManifest().catch(() => createDefaultMiniBooksManifest());
+    const miniBooksMap = miniBooksManifest?.books && typeof miniBooksManifest.books === 'object'
+      ? miniBooksManifest.books
+      : {};
+    const manifestEntry = normalizeMiniBookEntry(bookId, miniBooksMap[bookId] || {});
+    coverImageUrl = normalizeMiniBookText(manifestEntry.coverImageUrl);
+  } catch (_error) {
+    coverImageUrl = '';
+  }
+
+  return cards.map((card) => {
+    const source = card && typeof card === 'object' ? card : {};
+    return {
+      ...source,
+      battleBookId: bookId,
+      battleBookTitle: bookTitle,
+      battleBookCoverImageUrl: coverImageUrl
+    };
+  });
 }
 
 async function findSpeakingBookById(bookId) {

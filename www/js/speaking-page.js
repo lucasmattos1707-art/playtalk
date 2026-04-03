@@ -951,23 +951,41 @@
 
   async function runDuelIntroCountdown() {
     if (!state.duel.enabled) return;
+    const totalCountdownSeconds = Math.max(
+      1,
+      Number.parseInt(state.duel.introCountdownSeconds, 10) || (DUEL_INTRO_BOOK_STAGE_SECONDS + DUEL_INTRO_PLAYER_STAGE_SECONDS)
+    );
+    const bookStageSeconds = Math.min(DUEL_INTRO_BOOK_STAGE_SECONDS, totalCountdownSeconds);
+    const playerStageSeconds = Math.max(0, totalCountdownSeconds - bookStageSeconds);
+
     setDuelIntroVisible(true);
     updateTopPercents();
     resetDuelIntroVisuals();
     clearDuelIntroAnimationTimers();
     void playBattleIntroAudio();
-    revealDuelIntroPlayer(els.duelIntroMePlayer, els.duelIntroMeName);
-    queueDuelIntroAnimation(() => {
-      revealDuelIntroPlayer(els.duelIntroEnemyPlayer, els.duelIntroEnemyName);
-    }, 2 * DUEL_INTRO_REVEAL_DELAY_MS);
+    applyDuelIntroBook();
 
-    for (let remaining = DUEL_INTRO_COUNTDOWN_SECONDS; remaining >= 1; remaining -= 1) {
+    for (let elapsed = 0; elapsed < bookStageSeconds; elapsed += 1) {
       if (!state.duel.enabled || state.duel.completed) break;
       if (els.duelIntroCountdown) {
-        els.duelIntroCountdown.textContent = `O desafio vai começar em ${remaining}...`;
+        const remaining = totalCountdownSeconds - elapsed;
+        els.duelIntroCountdown.textContent = `O desafio vai comecar em ${remaining}...`;
       }
       await waitMs(1000);
     }
+
+    if (playerStageSeconds > 0 && state.duel.enabled && !state.duel.completed) {
+      revealDuelIntroPlayersAfterBook();
+      for (let elapsed = bookStageSeconds; elapsed < totalCountdownSeconds; elapsed += 1) {
+        if (!state.duel.enabled || state.duel.completed) break;
+        if (els.duelIntroCountdown) {
+          const remaining = totalCountdownSeconds - elapsed;
+          els.duelIntroCountdown.textContent = `O desafio vai comecar em ${remaining}...`;
+        }
+        await waitMs(1000);
+      }
+    }
+
     if (!state.duel.enabled || state.duel.completed) {
       setDuelIntroVisible(false);
       return;
@@ -975,10 +993,9 @@
     if (els.duelIntroCountdown) {
       els.duelIntroCountdown.textContent = 'Valendo!';
     }
-    await waitMs(500);
+    await waitMs(180);
     setDuelIntroVisible(false);
   }
-
   function updateTopPercents() {
     const isBattleMode = state.gameMode === 'battle-mode';
     if (isBattleMode) {
@@ -1533,6 +1550,11 @@
     state.duel.rivalProgress = Math.max(0, Number(session?.rivalProgress) || 0);
     state.duel.rivalPercent = Math.max(0, Number(session?.rivalPercent) || 0);
     state.duel.meFinished = Boolean(session?.meFinished);
+    state.duel.introCountdownSeconds = Math.max(
+      1,
+      Number.parseInt(session?.introCountdownSeconds, 10) || DUEL_INTRO_COUNTDOWN_SECONDS
+    );
+    state.duel.introBook = resolveDuelIntroBookData();
     const battleEndsAtMs = Date.parse(String(session?.battleEndsAt || '').trim());
     if (Number.isFinite(battleEndsAtMs) && battleEndsAtMs > 0) {
       state.duel.battleDeadlineMs = battleEndsAtMs;
@@ -1602,6 +1624,12 @@
     state.duel.mePercent = 0;
     state.duel.rivalProgress = 0;
     state.duel.rivalPercent = 0;
+    state.duel.introCountdownSeconds = DUEL_INTRO_COUNTDOWN_SECONDS;
+    state.duel.introBook = {
+      id: '',
+      title: '',
+      coverImageUrl: ''
+    };
     state.duel.battleDeadlineMs = 0;
     state.duel.timeoutSyncInFlight = false;
     state.activeCards = [];
@@ -1988,10 +2016,14 @@
     state.activeCards = Array.isArray(session.cards) ? session.cards : [];
     state.currentIndex = Math.max(0, Number(session.meProgress) || 0);
     state.scores = [];
+    state.duel.introCountdownSeconds = Math.max(
+      1,
+      Number.parseInt(session?.introCountdownSeconds, 10) || DUEL_INTRO_COUNTDOWN_SECONDS
+    );
     if (!state.duel.battleDeadlineMs) {
       const createdAtMs = Date.parse(String(session?.createdAt || '').trim());
       if (Number.isFinite(createdAtMs) && createdAtMs > 0) {
-        state.duel.battleDeadlineMs = createdAtMs + (DUEL_INTRO_COUNTDOWN_SECONDS * 1000) + DUEL_BATTLE_DURATION_MS;
+        state.duel.battleDeadlineMs = createdAtMs + (state.duel.introCountdownSeconds * 1000) + DUEL_BATTLE_DURATION_MS;
       }
     }
     syncDuelView(session);
@@ -2124,6 +2156,7 @@
     void init();
   }
 })();
+
 
 
 
