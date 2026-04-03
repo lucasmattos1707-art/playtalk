@@ -37,7 +37,7 @@
     uploadTargetBookId: '',
     gradients: [],
     magicBookId: '',
-    magicBusy: false,
+    magicProcessingBookIds: new Set(),
     readerOpen: false,
     readerBookId: '',
     readerLines: [],
@@ -244,10 +244,19 @@
     return `"${String(url || '').replace(/"/g, '%22')}"`;
   }
 
+  function normalizeBookKey(bookId) {
+    return safeText(bookId).toLowerCase();
+  }
+
+  function isBookProcessingMagic(bookId) {
+    return state.magicProcessingBookIds.has(normalizeBookKey(bookId));
+  }
+
   function openUploadForBook(bookId) {
-    if (!state.isAdmin || state.uploadInFlight || state.magicBusy) return;
+    if (!state.isAdmin || state.uploadInFlight) return;
     const targetBookId = safeText(bookId);
     if (!targetBookId || !els.coverUploadInput) return;
+    if (isBookProcessingMagic(targetBookId)) return;
     state.uploadTargetBookId = targetBookId;
     els.coverUploadInput.value = '';
     els.coverUploadInput.click();
@@ -257,6 +266,10 @@
     if (!state.isAdmin || !els.magicModal || !book) return;
     state.magicBookId = safeText(book.bookId);
     if (!state.magicBookId) return;
+    if (isBookProcessingMagic(state.magicBookId)) {
+      setStatus('Esse livro ja esta gerando imagens agora.', null);
+      return;
+    }
     if (els.magicTitle) {
       els.magicTitle.textContent = `Gerar imagens: ${safeText(book.nome) || 'Livro'}`;
     }
@@ -276,17 +289,6 @@
     }
   }
 
-  function setMagicBusy(isBusy) {
-    state.magicBusy = Boolean(isBusy);
-    if (els.magicGenerateBtn) {
-      els.magicGenerateBtn.disabled = state.magicBusy;
-    }
-    if (els.magicCloseBtn) {
-      els.magicCloseBtn.disabled = state.magicBusy;
-    }
-    renderCards();
-  }
-
   function renderCards() {
     if (!els.cardsGrid || !els.cardsEmpty) return;
     const books = getBooksForSelectedLevel();
@@ -299,6 +301,7 @@
     books.forEach((book, index) => {
       const gradient = gradients[index % gradients.length];
       const coverImageUrl = safeText(book?.coverImageUrl);
+      const processingMagic = isBookProcessingMagic(book?.bookId);
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'books-card';
@@ -306,6 +309,9 @@
       card.setAttribute('aria-label', `Livro ${safeText(book?.nome) || '-'}`);
       if (state.isAdmin) {
         card.classList.add('is-admin');
+      }
+      if (processingMagic) {
+        card.classList.add('is-processing');
       }
 
       const background = document.createElement('span');
@@ -335,7 +341,7 @@
       uploadBtn.className = 'books-card__upload-btn';
       uploadBtn.setAttribute('aria-label', `Enviar capa de ${safeText(book?.nome) || 'livro'}`);
       uploadBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 18v2H5v-2H3v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2zm-7-2 5-5h-3V2h-4v9H7z"/></svg>';
-      uploadBtn.disabled = state.uploadInFlight || state.magicBusy;
+      uploadBtn.disabled = state.uploadInFlight || processingMagic;
       uploadBtn.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -347,17 +353,21 @@
       magicBtn.className = 'books-card__magic-btn';
       magicBtn.setAttribute('aria-label', `Gerar imagens com IA para ${safeText(book?.nome) || 'livro'}`);
       magicBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m7.5 2 1.13 3.4L12 6.5l-3.37 1.1L7.5 11l-1.13-3.4L3 6.5l3.37-1.1zm9 5 1.5 4.5L22.5 13 18 14.5 16.5 19 15 14.5 10.5 13 15 11.5zm-8 7 1 3 3 1-3 1-1 3-1-3-3-1 3-1z"/></svg>';
-      magicBtn.disabled = state.uploadInFlight || state.magicBusy;
+      magicBtn.disabled = processingMagic;
       magicBtn.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
         openMagicModal(book);
       });
 
+      const processingOverlay = document.createElement('span');
+      processingOverlay.className = 'books-card__processing';
+      processingOverlay.innerHTML = '<span class="books-card__spinner" aria-hidden="true"></span><span class="books-card__processing-label">Gerando...</span>';
+
       actions.append(uploadBtn, magicBtn);
-      card.append(background, overlay, title, adminChip, actions);
+      card.append(background, overlay, title, adminChip, actions, processingOverlay);
       card.addEventListener('click', () => {
-        if (state.uploadInFlight || state.magicBusy) return;
+        if (state.uploadInFlight || processingMagic) return;
         void startBookReader(book);
       });
       els.cardsGrid.appendChild(card);
@@ -369,10 +379,10 @@
       els.levelTitle.textContent = `Nivel ${state.selectedLevel}`;
     }
     if (els.prevLevelBtn) {
-      els.prevLevelBtn.disabled = state.selectedLevel <= 1 || state.uploadInFlight || state.magicBusy;
+      els.prevLevelBtn.disabled = state.selectedLevel <= 1 || state.uploadInFlight;
     }
     if (els.nextLevelBtn) {
-      els.nextLevelBtn.disabled = state.selectedLevel >= 10 || state.uploadInFlight || state.magicBusy;
+      els.nextLevelBtn.disabled = state.selectedLevel >= 10 || state.uploadInFlight;
     }
   }
 
@@ -527,22 +537,13 @@
     return payload;
   }
 
-  async function generateAndSaveMagicForBook() {
-    if (!state.isAdmin || state.magicBusy) return;
-    const bookId = safeText(state.magicBookId);
-    if (!bookId) return;
+  async function runMagicGenerationForBook(bookId, coverPrompt, backgroundPrompt, bookName) {
+    const key = normalizeBookKey(bookId);
+    if (!key || state.magicProcessingBookIds.has(key)) return;
+    state.magicProcessingBookIds.add(key);
+    renderCards();
 
-    const targetBook = state.books.find((entry) => safeText(entry?.bookId) === bookId);
-    const coverPrompt = safeText(els.magicCoverPromptInput?.value || targetBook?.nome || '');
-    const backgroundPrompt = safeText(els.magicBackgroundPromptInput?.value || targetBook?.nome || '');
-
-    if (!coverPrompt || !backgroundPrompt) {
-      setStatus('Preencha os dois campos de prompt antes de gerar.', 'error');
-      return;
-    }
-
-    setMagicBusy(true);
-    setStatus('Gerando capa e background com IA...', null);
+    setStatus(`Gerando imagens para "${bookName || 'Livro'}"...`, null);
     try {
       const coverGenerated = await postJsonWithSuccess('/api/admin/minibooks/generate-cover', {
         bookId,
@@ -568,14 +569,37 @@
       }, 'Nao foi possivel salvar o background no R2.');
 
       state.books = await fetchStories();
-      renderCards();
-      closeMagicModal();
-      setStatus('Capa e background gerados e salvos no R2 com sucesso.', 'success');
+      setStatus(`"${bookName || 'Livro'}" atualizado com capa e background no R2.`, 'success');
     } catch (error) {
-      setStatus(error?.message || 'Falha na geracao das imagens.', 'error');
+      setStatus(error?.message || `Falha na geracao do livro "${bookName || 'Livro'}".`, 'error');
     } finally {
-      setMagicBusy(false);
+      state.magicProcessingBookIds.delete(key);
+      renderCards();
     }
+  }
+
+  function generateAndSaveMagicForBook() {
+    if (!state.isAdmin) return;
+    const bookId = safeText(state.magicBookId);
+    if (!bookId) return;
+    if (isBookProcessingMagic(bookId)) {
+      setStatus('Esse livro ja esta gerando imagens agora.', null);
+      closeMagicModal();
+      return;
+    }
+
+    const targetBook = state.books.find((entry) => safeText(entry?.bookId) === bookId);
+    const bookName = safeText(targetBook?.nome || 'Livro');
+    const coverPrompt = safeText(els.magicCoverPromptInput?.value || targetBook?.nome || '');
+    const backgroundPrompt = safeText(els.magicBackgroundPromptInput?.value || targetBook?.nome || '');
+
+    if (!coverPrompt || !backgroundPrompt) {
+      setStatus('Preencha os dois campos de prompt antes de gerar.', 'error');
+      return;
+    }
+
+    closeMagicModal();
+    void runMagicGenerationForBook(bookId, coverPrompt, backgroundPrompt, bookName);
   }
 
   function setReaderVisible(visible) {
@@ -685,16 +709,14 @@
     });
 
     els.magicGenerateBtn?.addEventListener('click', () => {
-      void generateAndSaveMagicForBook();
+      generateAndSaveMagicForBook();
     });
 
     els.magicCloseBtn?.addEventListener('click', () => {
-      if (state.magicBusy) return;
       closeMagicModal();
     });
 
     els.magicModal?.addEventListener('click', (event) => {
-      if (state.magicBusy) return;
       if (event.target === els.magicModal) {
         closeMagicModal();
       }

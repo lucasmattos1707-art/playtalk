@@ -246,6 +246,50 @@
       cursor: not-allowed;
     }
 
+    .books-card__processing {
+      position: absolute;
+      inset: 0;
+      display: none;
+      z-index: 3;
+      align-content: center;
+      justify-items: center;
+      gap: 10px;
+      background: rgba(6, 12, 22, 0.58);
+      backdrop-filter: blur(2px);
+      pointer-events: none;
+    }
+
+    .books-card.is-processing .books-card__processing {
+      display: grid;
+    }
+
+    .books-card__spinner {
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      animation: books-spin 900ms linear infinite;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.34);
+    }
+
+    .books-card__processing-label {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #ffffff;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.48);
+    }
+
+    .books-card.is-processing .books-card__actions {
+      opacity: 0.45;
+    }
+
+    @keyframes books-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
     .books-empty {
       margin: 0;
       text-align: center;
@@ -474,6 +518,6 @@
   <script src="js/api-config.js"></script>
   <script src="js/player-state.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/books-page.js?v=20260403b"></script>
+  <script src="js/books-page.js?v=20260403c"></script>
 </body>
 </html>
