@@ -213,6 +213,7 @@
       border-radius: 12px;
       padding: 12px;
       background: rgba(6, 26, 39, 0.65);
+      position: relative;
     }
 
     .mini-editor__title {
@@ -259,6 +260,34 @@
     .mini-editor button:disabled {
       opacity: 0.55;
       cursor: not-allowed;
+    }
+
+    .mini-editor__upload-float {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: 1px solid rgba(168, 221, 182, 0.45);
+      background: rgba(14, 46, 36, 0.78);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+
+    .mini-editor__upload-float:hover {
+      transform: translateY(-1px) scale(1.03);
+      background: rgba(23, 74, 57, 0.88);
+      border-color: rgba(181, 237, 203, 0.75);
+    }
+
+    .mini-editor__upload-float svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+      color: #dffcf0;
     }
 
     .mini-editor__preview-grid {
@@ -926,6 +955,12 @@
       <p class="status" id="homeStatus" aria-live="polite"></p>
 
       <section id="miniBookAdminEditor" class="mini-editor" hidden>
+        <button id="miniBookUploadCoverBtn" class="mini-editor__upload-float" type="button" aria-label="Upload manual da capa">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M19 18v2H5v-2H3v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2zM11 4.83V16h2V4.83l3.59 3.58L18 7l-6-6-6 6 1.41 1.41z"/>
+          </svg>
+        </button>
+        <input id="miniBookUploadCoverInput" type="file" accept="image/*" hidden>
         <h3 id="miniBookAdminTitle" class="mini-editor__title">MiniBook Admin</h3>
         <div class="mini-editor__row">
           <input id="miniBookNameInput" type="text" placeholder="Nome do livro para o prompt da capa">

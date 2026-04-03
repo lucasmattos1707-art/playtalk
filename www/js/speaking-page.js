@@ -29,6 +29,8 @@
     homeStatus: document.getElementById('homeStatus'),
     miniBookAdminEditor: document.getElementById('miniBookAdminEditor'),
     miniBookAdminTitle: document.getElementById('miniBookAdminTitle'),
+    miniBookUploadCoverBtn: document.getElementById('miniBookUploadCoverBtn'),
+    miniBookUploadCoverInput: document.getElementById('miniBookUploadCoverInput'),
     miniBookNameInput: document.getElementById('miniBookNameInput'),
     miniBookCoverPromptInput: document.getElementById('miniBookCoverPromptInput'),
     miniBookGenerateCoverBtn: document.getElementById('miniBookGenerateCoverBtn'),
@@ -1010,6 +1012,22 @@
     element.hidden = false;
   }
 
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Nao consegui ler o arquivo de imagem.'));
+      reader.onload = () => {
+        const result = typeof reader.result === 'string' ? reader.result : '';
+        if (!result.startsWith('data:image/')) {
+          reject(new Error('Arquivo invalido. Envie uma imagem.'));
+          return;
+        }
+        resolve(result);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   function setAdminEditorBusy(isBusy) {
     const busy = Boolean(isBusy);
     state.adminEditor.busy = busy;
@@ -1230,6 +1248,46 @@
       setHomeStatus(error?.message || 'Falha ao salvar backgrounds.', 'is-error');
     } finally {
       setAdminEditorBusy(false);
+    }
+  }
+
+  async function uploadMiniBookCoverFile(file) {
+    if (!state.isAdmin || state.adminEditor.busy) return;
+    const bookId = safeText(state.adminEditor.bookId || state.selectedBookId);
+    if (!bookId) {
+      setHomeStatus('Selecione um MiniBook antes do upload da capa.', 'is-error');
+      return;
+    }
+    if (!file) return;
+    setAdminEditorBusy(true);
+    setHomeStatus('Enviando capa manual para o R2...', '');
+    try {
+      const imageDataUrl = await readFileAsDataUrl(file);
+      const prompt = safeText(els.miniBookCoverPromptInput?.value || els.miniBookNameInput?.value || 'manual-upload');
+      const response = await fetch(buildApiUrl('/api/admin/minibooks/save-cover'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          bookId,
+          imageDataUrl,
+          prompt
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error || payload?.details || 'Nao consegui salvar a capa manual.');
+      }
+      await loadStoryOptions();
+      updateAdminEditorVisibility();
+      setHomeStatus('Capa manual enviada e salva no R2 com sucesso.', '');
+    } catch (error) {
+      setHomeStatus(error?.message || 'Falha no upload da capa manual.', 'is-error');
+    } finally {
+      setAdminEditorBusy(false);
+      if (els.miniBookUploadCoverInput) {
+        els.miniBookUploadCoverInput.value = '';
+      }
     }
   }
 
@@ -1768,6 +1826,16 @@
     });
     els.languagePortugueseBtn?.addEventListener('click', () => {
       setDisplayLanguage('portuguese');
+    });
+    els.miniBookUploadCoverBtn?.addEventListener('click', () => {
+      if (!state.isAdmin) return;
+      els.miniBookUploadCoverInput?.click();
+    });
+    els.miniBookUploadCoverInput?.addEventListener('change', (event) => {
+      const input = event?.target;
+      const file = input?.files?.[0];
+      if (!file) return;
+      void uploadMiniBookCoverFile(file);
     });
     els.miniBookGenerateCoverBtn?.addEventListener('click', () => {
       void generateMiniBookCoverPreview();
