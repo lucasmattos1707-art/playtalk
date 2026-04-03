@@ -38,7 +38,16 @@
     readerBackBtn: document.getElementById('booksReaderBackBtn'),
     readerContent: document.getElementById('booksReaderContent'),
     readerEnglish: document.getElementById('booksReaderEnglish'),
-    readerCounter: document.getElementById('booksReaderCounter')
+    readerCounter: document.getElementById('booksReaderCounter'),
+    readerTraining: document.getElementById('booksReaderTraining'),
+    readerAvatarImage: document.getElementById('booksReaderAvatarImage'),
+    readerAvatarFallback: document.getElementById('booksReaderAvatarFallback'),
+    readerPronRing: document.getElementById('booksReaderPronRing'),
+    readerPronPercent: document.getElementById('booksReaderPronPercent'),
+    readerLangEnglishBtn: document.getElementById('booksReaderLangEnglishBtn'),
+    readerLangPortugueseBtn: document.getElementById('booksReaderLangPortugueseBtn'),
+    readerMicBtn: document.getElementById('booksReaderMicBtn'),
+    readerTrainingStatus: document.getElementById('booksReaderTrainingStatus')
   };
 
   const state = {
@@ -57,14 +66,32 @@
     modeBookId: '',
     readerOpen: false,
     readerBookId: '',
-    readerLines: [],
+    readerMode: 'free-read',
+    readerCards: [],
     readerIndex: 0,
+    readerDisplayLanguage: 'english',
+    readerScores: [],
+    readerMicBusy: false,
     readerTouchStartX: 0,
     readerTouchStartY: 0
   };
 
   function safeText(value) {
     return typeof value === 'string' ? value.trim() : '';
+  }
+
+  function normalizeText(value) {
+    return safeText(value)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s']/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function lettersOnly(value) {
+    return normalizeText(value).replace(/[^a-z0-9]/g, '');
   }
 
   function readForceAdminUiFlag() {
@@ -116,14 +143,6 @@
       return window.PlaytalkApi.authHeaders(extraHeaders);
     }
     return { ...(extraHeaders || {}) };
-  }
-
-  function navigateTo(target) {
-    if (window.PlaytalkNative && typeof window.PlaytalkNative.navigate === 'function') {
-      window.PlaytalkNative.navigate(target);
-      return;
-    }
-    window.location.href = target;
   }
 
   function normalizeLevel(value) {
@@ -771,18 +790,220 @@
     }
   }
 
-  function openBookInPronounceTraining(book) {
-    const bookId = safeText(book?.bookId);
-    const storyId = safeText(book?.selectedStoryId || (Array.isArray(book?.storyIds) ? book.storyIds[0] : ''));
-    if (!bookId) return;
-    const params = new URLSearchParams();
-    params.set('mode', 'pronounce-training');
-    params.set('bookId', bookId);
-    params.set('autostart', '1');
-    if (storyId) {
-      params.set('storyId', storyId);
+  function countLetterBlocksCoverage(expected, spoken) {
+    const expectedRaw = lettersOnly(expected);
+    const spokenRaw = lettersOnly(spoken);
+    if (!expectedRaw || !spokenRaw) return 0;
+
+    const ranges = [];
+    for (let start = 0; start < expectedRaw.length; start += 1) {
+      for (let end = start + 2; end <= expectedRaw.length; end += 1) {
+        const fragment = expectedRaw.slice(start, end);
+        if (fragment.length >= 2 && spokenRaw.includes(fragment)) {
+          ranges.push({ start, end, len: end - start });
+        }
+      }
     }
-    navigateTo(`/speaking?${params.toString()}`);
+
+    ranges.sort((a, b) => (b.len - a.len) || (a.start - b.start));
+    const covered = Array(expectedRaw.length).fill(false);
+    ranges.forEach((range) => {
+      let canCover = true;
+      for (let index = range.start; index < range.end; index += 1) {
+        if (covered[index]) {
+          canCover = false;
+          break;
+        }
+      }
+      if (!canCover) return;
+      for (let index = range.start; index < range.end; index += 1) {
+        covered[index] = true;
+      }
+    });
+
+    return covered.filter(Boolean).length;
+  }
+
+  function calculateSpeechMatchPercent(expected, spoken) {
+    const expectedRaw = lettersOnly(expected);
+    if (!expectedRaw) return 0;
+    const matched = countLetterBlocksCoverage(expected, spoken);
+    const baseScore = Math.max(0, Math.min(100, Math.round((matched / expectedRaw.length) * 100)));
+    return Math.max(0, Math.min(100, Math.round(baseScore * 1.1)));
+  }
+
+  function mapWebSpeechError(errorCode) {
+    const code = String(errorCode || '').toLowerCase();
+    if (code === 'not-allowed' || code === 'service-not-allowed') {
+      return 'Permissao de microfone negada.';
+    }
+    if (code === 'audio-capture') {
+      return 'Nenhum microfone disponivel.';
+    }
+    if (code === 'network') {
+      return 'Falha de rede no reconhecimento de voz.';
+    }
+    if (code === 'no-speech') {
+      return 'Nao detectei sua fala. Tente novamente.';
+    }
+    return 'Falha no reconhecimento de voz.';
+  }
+
+  function setReaderMicLive(active) {
+    if (!els.readerMicBtn) return;
+    els.readerMicBtn.classList.toggle('is-live', Boolean(active));
+  }
+
+  function captureSpeechWithWebSpeech(options = {}) {
+    const RecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (typeof RecognitionCtor !== 'function') {
+      return Promise.reject(new Error('Reconhecimento de voz nao disponivel neste navegador.'));
+    }
+
+    const language = safeText(options.language) || 'en-US';
+    const maxDurationMs = Number.isFinite(options.maxDurationMs)
+      ? Math.max(1500, Number(options.maxDurationMs))
+      : 7000;
+
+    return new Promise((resolve, reject) => {
+      const recognition = new RecognitionCtor();
+      let finished = false;
+      let stopTimer = 0;
+
+      const finish = (handler) => {
+        if (finished) return;
+        finished = true;
+        if (stopTimer) {
+          window.clearTimeout(stopTimer);
+          stopTimer = 0;
+        }
+        try {
+          recognition.onstart = null;
+          recognition.onresult = null;
+          recognition.onerror = null;
+          recognition.onend = null;
+        } catch (_error) {
+          // ignore
+        }
+        handler();
+      };
+
+      recognition.lang = language;
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 5;
+
+      recognition.onstart = () => {
+        if (typeof options.onRecordingStart === 'function') {
+          options.onRecordingStart();
+        }
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = safeText(event?.results?.[0]?.[0]?.transcript || '');
+        finish(() => {
+          if (typeof options.onRecordingStop === 'function') {
+            options.onRecordingStop();
+          }
+          if (!transcript) {
+            reject(new Error('Transcricao vazia.'));
+            return;
+          }
+          resolve(transcript);
+        });
+      };
+
+      recognition.onerror = (event) => {
+        const message = mapWebSpeechError(event?.error);
+        finish(() => {
+          if (typeof options.onRecordingStop === 'function') {
+            options.onRecordingStop();
+          }
+          reject(new Error(message));
+        });
+      };
+
+      recognition.onend = () => {
+        if (!finished) {
+          finish(() => {
+            if (typeof options.onRecordingStop === 'function') {
+              options.onRecordingStop();
+            }
+            reject(new Error('Reconhecimento finalizado sem resultado.'));
+          });
+        }
+      };
+
+      stopTimer = window.setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch (_error) {
+          // ignore
+        }
+      }, maxDurationMs);
+
+      try {
+        recognition.start();
+      } catch (_error) {
+        finish(() => {
+          if (typeof options.onRecordingStop === 'function') {
+            options.onRecordingStop();
+          }
+          reject(new Error('Nao foi possivel iniciar o reconhecimento de voz.'));
+        });
+      }
+    });
+  }
+
+  async function captureSpeechFast(language) {
+    const nativeSpeech = window.PlaytalkNativeSpeech;
+    if (nativeSpeech && typeof nativeSpeech.isSupported === 'function' && nativeSpeech.isSupported()) {
+      const granted = typeof nativeSpeech.ensurePermissions === 'function'
+        ? await nativeSpeech.ensurePermissions()
+        : true;
+      if (granted && typeof nativeSpeech.captureOnce === 'function') {
+        return nativeSpeech.captureOnce({
+          language: language || 'en-US',
+          maxResults: 5,
+          maxDurationMs: 7000
+        });
+      }
+    }
+
+    return captureSpeechWithWebSpeech({
+      language: language || 'en-US',
+      maxDurationMs: 7000,
+      onRecordingStart: () => setReaderMicLive(true),
+      onRecordingStop: () => setReaderMicLive(false)
+    });
+  }
+
+  function setReaderTrainingStatus(message) {
+    if (!els.readerTrainingStatus) return;
+    els.readerTrainingStatus.textContent = safeText(message);
+  }
+
+  function updateReaderPronPercent() {
+    const total = state.readerScores.length;
+    const avg = total
+      ? Math.max(0, Math.min(100, Math.round(state.readerScores.reduce((acc, value) => acc + value, 0) / total)))
+      : 0;
+    if (els.readerPronRing) {
+      els.readerPronRing.style.setProperty('--percent', String(avg));
+    }
+    if (els.readerPronPercent) {
+      els.readerPronPercent.textContent = `${avg}%`;
+    }
+  }
+
+  function updateReaderLanguageButtons() {
+    const showEnglish = state.readerDisplayLanguage !== 'portuguese';
+    if (els.readerLangEnglishBtn) {
+      els.readerLangEnglishBtn.classList.toggle('is-active', showEnglish);
+    }
+    if (els.readerLangPortugueseBtn) {
+      els.readerLangPortugueseBtn.classList.toggle('is-active', !showEnglish);
+    }
   }
 
   function setReaderVisible(visible) {
@@ -814,32 +1035,74 @@
     els.reader.style.background = `linear-gradient(to top, rgba(2, 5, 10, 0.78) 0%, rgba(2, 5, 10, 0.38) 60%, rgba(2, 5, 10, 0.32) 100%), url(${safeCssUrl(backgroundUrl)}) center / cover no-repeat`;
   }
 
+  function renderReaderAvatar() {
+    if (!els.readerAvatarImage || !els.readerAvatarFallback) return;
+    const profile = state.user || state.localProfile || {};
+    const avatar = safeText(profile.avatarImage);
+    const username = safeText(profile.username) || 'Jogador';
+    if (avatar) {
+      els.readerAvatarImage.src = avatar;
+      els.readerAvatarImage.hidden = false;
+      els.readerAvatarFallback.hidden = true;
+      return;
+    }
+    els.readerAvatarImage.removeAttribute('src');
+    els.readerAvatarImage.hidden = true;
+    els.readerAvatarFallback.hidden = false;
+    els.readerAvatarFallback.textContent = username.charAt(0).toUpperCase() || 'P';
+  }
+
+  function renderReaderModeUi() {
+    const isTraining = state.readerMode === 'pronounce-training';
+    if (els.readerTraining) {
+      els.readerTraining.hidden = !isTraining;
+    }
+    if (els.readerMicBtn) {
+      els.readerMicBtn.disabled = !isTraining || state.readerMicBusy;
+    }
+    updateReaderLanguageButtons();
+    updateReaderPronPercent();
+  }
+
   function renderReader() {
     if (!els.readerEnglish || !els.readerCounter) return;
-    const total = state.readerLines.length;
+    const total = state.readerCards.length;
     const index = Math.max(0, Math.min(total - 1, state.readerIndex));
     state.readerIndex = index;
-    const english = total ? safeText(state.readerLines[index]) : '';
-    els.readerEnglish.textContent = english || 'Sem conteudo em ingles neste livro.';
+    const card = total ? state.readerCards[index] : null;
+    const english = safeText(card?.english);
+    const portuguese = safeText(card?.portuguese || english);
+    const displayLanguage = state.readerMode === 'pronounce-training' && state.readerDisplayLanguage === 'portuguese'
+      ? 'portuguese'
+      : 'english';
+    const displayText = displayLanguage === 'portuguese' ? portuguese : english;
+    els.readerEnglish.textContent = displayText || 'Sem conteudo neste livro.';
     els.readerCounter.textContent = `${total ? index + 1 : 0} / ${total}`;
+    renderReaderModeUi();
   }
 
   function closeReader() {
     setReaderVisible(false);
     state.readerBookId = '';
-    state.readerLines = [];
+    state.readerMode = 'free-read';
+    state.readerCards = [];
     state.readerIndex = 0;
+    state.readerDisplayLanguage = 'english';
+    state.readerScores = [];
+    state.readerMicBusy = false;
+    setReaderTrainingStatus('');
+    setReaderMicLive(false);
   }
 
   function stepReader(delta) {
-    if (!state.readerOpen || !state.readerLines.length) return;
-    const next = Math.max(0, Math.min(state.readerLines.length - 1, state.readerIndex + delta));
+    if (!state.readerOpen || !state.readerCards.length) return;
+    const next = Math.max(0, Math.min(state.readerCards.length - 1, state.readerIndex + delta));
     if (next === state.readerIndex) return;
     state.readerIndex = next;
     renderReader();
   }
 
-  async function fetchBookLines(book) {
+  async function fetchBookCards(book) {
     const storyId = safeText(book?.selectedStoryId || (Array.isArray(book?.storyIds) ? book.storyIds[0] : ''));
     if (!storyId) return [];
     const response = await fetch(buildApiUrl(`/api/speaking/cards?storyId=${encodeURIComponent(storyId)}`), {
@@ -852,27 +1115,89 @@
       throw new Error(payload?.message || 'Nao foi possivel abrir o livro.');
     }
     return payload.cards
-      .map((entry) => safeText(entry?.english))
+      .map((entry) => {
+        const english = safeText(entry?.english || entry?.en);
+        const portuguese = safeText(entry?.portuguese || entry?.pt || english);
+        if (!english) return null;
+        return {
+          english,
+          portuguese
+        };
+      })
       .filter(Boolean);
   }
 
-  async function startBookReader(book) {
+  async function startBookByMode(book, mode) {
     if (!book) return;
     applyReaderBackground(book);
     setReaderVisible(true);
     state.readerBookId = safeText(book.bookId);
-    state.readerLines = ['Carregando frases em ingles...'];
+    state.readerMode = mode === 'pronounce-training' ? 'pronounce-training' : 'free-read';
+    state.readerCards = [{
+      english: 'Carregando frases em ingles...',
+      portuguese: 'Carregando frases em ingles...'
+    }];
+    state.readerScores = [];
+    state.readerDisplayLanguage = 'english';
+    state.readerMicBusy = false;
     state.readerIndex = 0;
+    renderReaderAvatar();
+    setReaderTrainingStatus('');
     renderReader();
     try {
-      const lines = await fetchBookLines(book);
-      state.readerLines = lines.length ? lines : ['Este livro nao tem frases em ingles ainda.'];
+      const cards = await fetchBookCards(book);
+      state.readerCards = cards.length
+        ? cards
+        : [{
+          english: 'Este livro nao tem frases em ingles ainda.',
+          portuguese: 'Este livro nao tem frases em ingles ainda.'
+        }];
       state.readerIndex = 0;
       renderReader();
       setStatus('', null);
     } catch (error) {
       closeReader();
       setStatus(error?.message || 'Nao foi possivel abrir o livro.', 'error');
+    }
+  }
+
+  async function startBookReader(book) {
+    await startBookByMode(book, 'free-read');
+  }
+
+  async function startBookPronounceTraining(book) {
+    await startBookByMode(book, 'pronounce-training');
+  }
+
+  async function handleReaderMicTraining() {
+    if (!state.readerOpen || state.readerMode !== 'pronounce-training' || state.readerMicBusy) return;
+    const card = state.readerCards[state.readerIndex];
+    if (!card || !safeText(card.english)) return;
+
+    state.readerMicBusy = true;
+    renderReaderModeUi();
+    setReaderTrainingStatus('');
+    setReaderMicLive(true);
+
+    try {
+      const transcript = safeText(await captureSpeechFast('en-US'));
+      const score = calculateSpeechMatchPercent(card.english, transcript);
+      state.readerScores.push(score);
+      updateReaderPronPercent();
+      setReaderTrainingStatus(`Pronuncia: ${score}%`);
+      if (state.readerIndex < (state.readerCards.length - 1)) {
+        window.setTimeout(() => {
+          stepReader(1);
+        }, 220);
+      } else {
+        setReaderTrainingStatus(`Pronuncia: ${score}% · fim do livro.`);
+      }
+    } catch (error) {
+      setReaderTrainingStatus(error?.message || 'Nao foi possivel capturar sua fala.');
+    } finally {
+      state.readerMicBusy = false;
+      setReaderMicLive(false);
+      renderReaderModeUi();
     }
   }
 
@@ -942,7 +1267,7 @@
       const selected = state.books.find((entry) => safeText(entry?.bookId) === safeText(state.modeBookId));
       closeModeModal();
       if (!selected) return;
-      openBookInPronounceTraining(selected);
+      void startBookPronounceTraining(selected);
     });
 
     els.modeCloseBtn?.addEventListener('click', () => {
@@ -956,6 +1281,22 @@
     });
 
     els.readerBackBtn?.addEventListener('click', closeReader);
+
+    els.readerLangEnglishBtn?.addEventListener('click', () => {
+      if (!state.readerOpen || state.readerMode !== 'pronounce-training') return;
+      state.readerDisplayLanguage = 'english';
+      renderReader();
+    });
+
+    els.readerLangPortugueseBtn?.addEventListener('click', () => {
+      if (!state.readerOpen || state.readerMode !== 'pronounce-training') return;
+      state.readerDisplayLanguage = 'portuguese';
+      renderReader();
+    });
+
+    els.readerMicBtn?.addEventListener('click', () => {
+      void handleReaderMicTraining();
+    });
 
     els.readerContent?.addEventListener('touchstart', (event) => {
       const touch = event.touches?.[0];
@@ -990,6 +1331,9 @@
       } else if (event.key === 'Escape') {
         event.preventDefault();
         closeReader();
+      } else if ((event.key === 'Enter' || event.key === ' ') && state.readerMode === 'pronounce-training') {
+        event.preventDefault();
+        void handleReaderMicTraining();
       }
     });
 

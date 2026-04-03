@@ -505,6 +505,138 @@
       letter-spacing: 0.06em;
     }
 
+    .books-reader-training {
+      width: min(760px, 100%);
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .books-reader-profile {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+    }
+
+    .books-reader-pron-ring {
+      --percent: 0;
+      width: 112px;
+      height: 112px;
+      padding: 5px;
+      border-radius: 999px;
+      background: conic-gradient(#67ccff calc(var(--percent) * 1%), rgba(255, 255, 255, 0.2) 0);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.36);
+      display: grid;
+      place-items: center;
+    }
+
+    .books-reader-pron-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 999px;
+      background: rgba(4, 10, 20, 0.88);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .books-reader-avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .books-reader-avatar-fallback {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      font-weight: 800;
+      color: #d2e8ff;
+      background: radial-gradient(circle at top, rgba(52, 102, 170, 0.9), rgba(12, 32, 58, 0.96));
+    }
+
+    .books-reader-pron-percent {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: #ffffff;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    }
+
+    .books-reader-lang {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .books-reader-lang-btn {
+      min-height: 36px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .books-reader-lang-btn svg {
+      width: 14px;
+      height: 14px;
+      display: block;
+    }
+
+    .books-reader-lang-btn.is-active {
+      background: rgba(71, 146, 255, 0.48);
+      border-color: rgba(165, 209, 255, 0.8);
+    }
+
+    .books-reader-mic-btn {
+      width: 64px;
+      height: 64px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.36);
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
+    }
+
+    .books-reader-mic-btn svg {
+      width: 26px;
+      height: 26px;
+      display: block;
+    }
+
+    .books-reader-mic-btn.is-live {
+      background: rgba(26, 173, 98, 0.42);
+      border-color: rgba(184, 255, 220, 0.9);
+    }
+
+    .books-reader-training-status {
+      margin: 0;
+      min-height: 20px;
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+    }
+
     body.books-reader-open {
       overflow: hidden;
     }
@@ -566,6 +698,31 @@
     <div class="books-reader-content" id="booksReaderContent">
       <p class="books-reader-english" id="booksReaderEnglish">Carregando...</p>
       <p class="books-reader-counter" id="booksReaderCounter">0 / 0</p>
+      <div class="books-reader-training" id="booksReaderTraining" hidden>
+        <div class="books-reader-profile">
+          <div class="books-reader-pron-ring" id="booksReaderPronRing">
+            <div class="books-reader-pron-inner">
+              <img class="books-reader-avatar-img" id="booksReaderAvatarImage" alt="Avatar do usuario" hidden>
+              <span class="books-reader-avatar-fallback" id="booksReaderAvatarFallback">P</span>
+            </div>
+          </div>
+          <p class="books-reader-pron-percent" id="booksReaderPronPercent">0%</p>
+        </div>
+        <div class="books-reader-lang">
+          <button class="books-reader-lang-btn is-active" id="booksReaderLangEnglishBtn" type="button" aria-label="Mostrar ingles">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12m9-7a7 7 0 0 1 5.6 11.2H6.4A7 7 0 0 1 12 5m0 14a6.95 6.95 0 0 1-3.6-1h7.2A6.95 6.95 0 0 1 12 19"/></svg>
+            EN
+          </button>
+          <button class="books-reader-lang-btn" id="booksReaderLangPortugueseBtn" type="button" aria-label="Mostrar portugues">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 5h16v14H4zm2 2v10h12V7zm2 2h8v2H8zm0 4h6v2H8z"/></svg>
+            PT
+          </button>
+        </div>
+        <button class="books-reader-mic-btn" id="booksReaderMicBtn" type="button" aria-label="Treinar pronuncia">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
+        </button>
+        <p class="books-reader-training-status" id="booksReaderTrainingStatus"></p>
+      </div>
     </div>
   </section>
 
@@ -605,6 +762,6 @@
   <script src="js/api-config.js"></script>
   <script src="js/player-state.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/books-page.js?v=20260403g"></script>
+  <script src="js/books-page.js?v=20260403h"></script>
 </body>
 </html>
