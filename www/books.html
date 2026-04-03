@@ -635,6 +635,13 @@
       animation: books-reader-enter 500ms ease both;
     }
 
+    .books-reader.is-finishing .books-reader-back,
+    .books-reader.is-finishing .books-reader-content,
+    .books-reader.is-finishing .books-reader-progress {
+      animation: books-reader-fade-out 500ms ease both;
+      pointer-events: none;
+    }
+
     @keyframes books-reader-enter {
       from {
         opacity: 0;
@@ -643,6 +650,19 @@
       to {
         opacity: 1;
         transform: translateY(0);
+      }
+    }
+
+    @keyframes books-reader-fade-out {
+      from {
+        opacity: 1;
+        filter: blur(0);
+        transform: scale(1);
+      }
+      to {
+        opacity: 0;
+        filter: blur(5px);
+        transform: scale(0.985);
       }
     }
 
@@ -880,6 +900,126 @@
       transition: width 220ms ease;
     }
 
+    .books-reader-finish {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 44px 18px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 260ms ease, visibility 0ms linear 260ms;
+      z-index: 4;
+      background: radial-gradient(circle at 50% 14%, rgba(124, 188, 255, 0.28), rgba(4, 8, 18, 0.82) 60%, rgba(2, 4, 10, 0.96) 100%);
+    }
+
+    .books-reader-finish.is-visible {
+      opacity: 1;
+      visibility: visible;
+      transition-delay: 0ms;
+    }
+
+    .books-reader-finish-stage {
+      width: min(440px, 94vw);
+      display: grid;
+      justify-items: center;
+      gap: 20px;
+      text-align: center;
+      perspective: 1000px;
+    }
+
+    .books-reader-finish-book {
+      width: min(240px, 62vw);
+      aspect-ratio: 9 / 16;
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      box-shadow: 0 28px 46px rgba(0, 0, 0, 0.52);
+      background: linear-gradient(155deg, #2a5bcf, #28a7d5);
+      transform: rotateY(-12deg) rotateX(7deg) translateY(12px) scale(0.9);
+      opacity: 0;
+    }
+
+    .books-reader-finish.is-visible .books-reader-finish-book {
+      animation: books-reader-finish-book-in 500ms cubic-bezier(0.2, 0.85, 0.32, 1) both;
+    }
+
+    @keyframes books-reader-finish-book-in {
+      from {
+        opacity: 0;
+        transform: rotateY(-17deg) rotateX(10deg) translateY(18px) scale(0.84);
+      }
+      to {
+        opacity: 1;
+        transform: rotateY(-9deg) rotateX(5deg) translateY(0) scale(1);
+      }
+    }
+
+    .books-reader-finish-cover {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .books-reader-finish-flash {
+      position: absolute;
+      inset: -34%;
+      opacity: 0;
+      pointer-events: none;
+      background: linear-gradient(110deg, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, 0.96) 50%, rgba(255, 255, 255, 0) 72%);
+      transform: translateX(-135%) rotate(-8deg);
+    }
+
+    .books-reader-finish-flash.is-active {
+      animation: books-reader-finish-flash 240ms ease-out;
+    }
+
+    @keyframes books-reader-finish-flash {
+      from {
+        opacity: 0;
+        transform: translateX(-135%) rotate(-8deg);
+      }
+      22% {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+        transform: translateX(135%) rotate(-8deg);
+      }
+    }
+
+    .books-reader-finish-line {
+      margin: 0;
+      min-height: 34px;
+      color: #ffffff;
+      font-size: clamp(22px, 6vw, 34px);
+      line-height: 1.08;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      text-shadow: 0 6px 20px rgba(0, 0, 0, 0.52);
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    .books-reader-finish-line.is-visible {
+      animation: books-reader-finish-line-in 260ms ease both;
+    }
+
+    @keyframes books-reader-finish-line-in {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     body.books-reader-open {
       overflow: hidden;
     }
@@ -978,6 +1118,15 @@
     <div class="books-reader-progress" aria-hidden="true">
       <span class="books-reader-progress-fill" id="booksReaderProgressFill"></span>
     </div>
+    <div class="books-reader-finish" id="booksReaderFinish" aria-live="polite" hidden>
+      <div class="books-reader-finish-stage">
+        <div class="books-reader-finish-book" id="booksReaderFinishBook">
+          <span class="books-reader-finish-cover" id="booksReaderFinishCover"></span>
+          <span class="books-reader-finish-flash" id="booksReaderFinishFlash"></span>
+        </div>
+        <p class="books-reader-finish-line" id="booksReaderFinishLine"></p>
+      </div>
+    </div>
   </section>
 
   <section class="books-magic-modal" id="booksModeModal" aria-label="Escolha o modo do livro">
@@ -1029,6 +1178,6 @@
   <script src="js/api-config.js"></script>
   <script src="js/player-state.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/books-page.js?v=20260403k"></script>
+  <script src="js/books-page.js?v=20260403l"></script>
 </body>
 </html>

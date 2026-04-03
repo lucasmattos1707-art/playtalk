@@ -8,6 +8,10 @@
   const MODE_LOADING_FADE_MS = 500;
   const BOOK_SNAP_DURATION_MS = 300;
   const BOOK_SWIPE_THRESHOLD = 44;
+  const READER_FINISH_DISSOLVE_MS = 500;
+  const READER_FINISH_BOOK_ENTER_MS = 500;
+  const READER_FINISH_LINE_STEP_MS = 1000;
+  const READER_FINISH_LINE_ENTER_MS = 260;
   const LEVEL_DISPLAY_NAMES = [
     'Iniciante',
     'Básico',
@@ -67,7 +71,11 @@
     readerLangPortugueseBtn: document.getElementById('booksReaderLangPortugueseBtn'),
     readerMicBtn: document.getElementById('booksReaderMicBtn'),
     readerTrainingStatus: document.getElementById('booksReaderTrainingStatus'),
-    readerProgressFill: document.getElementById('booksReaderProgressFill')
+    readerProgressFill: document.getElementById('booksReaderProgressFill'),
+    readerFinish: document.getElementById('booksReaderFinish'),
+    readerFinishCover: document.getElementById('booksReaderFinishCover'),
+    readerFinishFlash: document.getElementById('booksReaderFinishFlash'),
+    readerFinishLine: document.getElementById('booksReaderFinishLine')
   };
 
   const state = {
@@ -94,6 +102,8 @@
     readerDisplayLanguage: 'english',
     readerScores: [],
     readerMicBusy: false,
+    readerFinishing: false,
+    readerFinishToken: 0,
     readerTouchStartX: 0,
     readerTouchStartY: 0,
     shelfIndex: 0,
@@ -1338,9 +1348,11 @@
     const showEnglish = state.readerDisplayLanguage !== 'portuguese';
     if (els.readerLangEnglishBtn) {
       els.readerLangEnglishBtn.classList.toggle('is-active', showEnglish);
+      els.readerLangEnglishBtn.disabled = state.readerFinishing;
     }
     if (els.readerLangPortugueseBtn) {
       els.readerLangPortugueseBtn.classList.toggle('is-active', !showEnglish);
+      els.readerLangPortugueseBtn.disabled = state.readerFinishing;
     }
   }
 
@@ -1350,6 +1362,165 @@
       els.reader.classList.toggle('is-visible', state.readerOpen);
     }
     document.body.classList.toggle('books-reader-open', state.readerOpen);
+  }
+
+  function normalizeReaderPercent(value) {
+    return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+  }
+
+  function calculateReaderAverageScore() {
+    if (!Array.isArray(state.readerScores) || !state.readerScores.length) return 0;
+    const total = state.readerScores.reduce((acc, value) => acc + normalizeReaderPercent(value), 0);
+    return normalizeReaderPercent(total / state.readerScores.length);
+  }
+
+  function findActiveReaderBook() {
+    const targetBookId = safeText(state.readerBookId);
+    if (!targetBookId) return null;
+    return state.books.find((entry) => safeText(entry?.bookId) === targetBookId) || null;
+  }
+
+  function resetReaderFinishUi() {
+    if (els.reader) {
+      els.reader.classList.remove('is-finishing');
+    }
+    if (els.readerFinish) {
+      els.readerFinish.classList.remove('is-visible');
+      els.readerFinish.hidden = true;
+    }
+    if (els.readerFinishLine) {
+      els.readerFinishLine.textContent = '';
+      els.readerFinishLine.classList.remove('is-visible');
+    }
+    if (els.readerFinishFlash) {
+      els.readerFinishFlash.classList.remove('is-active');
+    }
+  }
+
+  function showReaderFinishUi(book) {
+    if (!els.readerFinish) return;
+    if (els.readerFinishCover) {
+      const coverUrl = safeText(book?.coverImageUrl);
+      els.readerFinishCover.style.backgroundImage = coverUrl
+        ? `url(${safeCssUrl(coverUrl)})`
+        : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
+    }
+    els.readerFinish.hidden = false;
+    els.readerFinish.classList.add('is-visible');
+  }
+
+  function triggerReaderFinishFlash() {
+    if (!els.readerFinishFlash) return;
+    els.readerFinishFlash.classList.remove('is-active');
+    void els.readerFinishFlash.offsetWidth;
+    els.readerFinishFlash.classList.add('is-active');
+  }
+
+  async function animateReaderFinishLine(text) {
+    if (!els.readerFinishLine) return;
+    els.readerFinishLine.classList.remove('is-visible');
+    els.readerFinishLine.textContent = safeText(text);
+    void els.readerFinishLine.offsetWidth;
+    els.readerFinishLine.classList.add('is-visible');
+    await wait(READER_FINISH_LINE_ENTER_MS);
+  }
+
+  async function postReaderBookCompletion(book, pronunciationPercent) {
+    const bookId = safeText(book?.bookId);
+    if (!bookId) {
+      return {
+        success: false,
+        message: 'Livro sem identificador para salvar progresso.',
+        stats: {
+          bookReadCount: 0,
+          generalPronunciationPercent: normalizeReaderPercent(pronunciationPercent)
+        }
+      };
+    }
+
+    try {
+      const response = await fetch(buildApiUrl('/api/books/training/complete'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          bookId,
+          pronunciationPercent: normalizeReaderPercent(pronunciationPercent)
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        return {
+          success: false,
+          message: payload?.message || 'Nao consegui salvar progresso do livro.',
+          stats: {
+            bookReadCount: 0,
+            generalPronunciationPercent: normalizeReaderPercent(pronunciationPercent)
+          }
+        };
+      }
+      return payload;
+    } catch (_error) {
+      return {
+        success: false,
+        message: 'Falha de rede ao salvar progresso do livro.',
+        stats: {
+          bookReadCount: 0,
+          generalPronunciationPercent: normalizeReaderPercent(pronunciationPercent)
+        }
+      };
+    }
+  }
+
+  async function runReaderBookCompletionSequence() {
+    if (!state.readerOpen || state.readerMode !== 'pronounce-training' || state.readerFinishing) return;
+
+    state.readerFinishing = true;
+    state.readerFinishToken += 1;
+    const token = state.readerFinishToken;
+    const activeBook = findActiveReaderBook();
+    const sessionPronunciationPercent = calculateReaderAverageScore();
+    const completionPromise = postReaderBookCompletion(activeBook, sessionPronunciationPercent);
+
+    if (els.reader) {
+      els.reader.classList.add('is-finishing');
+    }
+
+    await wait(READER_FINISH_DISSOLVE_MS);
+    if (token !== state.readerFinishToken || !state.readerOpen) return;
+
+    showReaderFinishUi(activeBook);
+    await wait(READER_FINISH_BOOK_ENTER_MS);
+    if (token !== state.readerFinishToken || !state.readerOpen) return;
+
+    triggerReaderFinishFlash();
+
+    const completionPayload = await completionPromise;
+    if (token !== state.readerFinishToken || !state.readerOpen) return;
+
+    const savedBookRead = Math.max(0, Number(completionPayload?.stats?.bookReadCount) || 0);
+    const savedGeneralPronunciation = normalizeReaderPercent(
+      completionPayload?.stats?.generalPronunciationPercent
+    );
+    const lines = [
+      `Pronuncia ${sessionPronunciationPercent}%`,
+      `${savedBookRead > 0 ? savedBookRead : '--'} Livros`,
+      `Pronuncia geral ${savedGeneralPronunciation}%`
+    ];
+
+    for (const line of lines) {
+      await animateReaderFinishLine(line);
+      await wait(READER_FINISH_LINE_STEP_MS);
+      if (token !== state.readerFinishToken || !state.readerOpen) return;
+    }
+
+    if (completionPayload?.success === false && completionPayload?.message) {
+      setStatus(completionPayload.message, 'error');
+    } else {
+      setStatus('Livro concluido! Progresso salvo.', 'success');
+    }
+
+    closeReader();
   }
 
   function chooseReaderBackgroundUrl(book) {
@@ -1453,7 +1624,7 @@
       els.readerPronPercent.hidden = !isTraining;
     }
     if (els.readerMicBtn) {
-      els.readerMicBtn.disabled = !isTraining || state.readerMicBusy;
+      els.readerMicBtn.disabled = !isTraining || state.readerMicBusy || state.readerFinishing;
     }
     updateReaderLanguageButtons();
     updateReaderPronPercent();
@@ -1479,6 +1650,9 @@
   }
 
   function closeReader() {
+    state.readerFinishToken += 1;
+    state.readerFinishing = false;
+    resetReaderFinishUi();
     setReaderVisible(false);
     state.readerBookId = '';
     state.readerMode = 'free-read';
@@ -1492,7 +1666,7 @@
   }
 
   function stepReader(delta) {
-    if (!state.readerOpen || !state.readerCards.length) return;
+    if (!state.readerOpen || !state.readerCards.length || state.readerFinishing) return;
     const next = Math.max(0, Math.min(state.readerCards.length - 1, state.readerIndex + delta));
     if (next === state.readerIndex) return;
     state.readerIndex = next;
@@ -1529,6 +1703,9 @@
     try {
       const cards = Array.isArray(providedCards) ? providedCards : await fetchBookCards(book);
       applyReaderBackground(book);
+      state.readerFinishToken += 1;
+      state.readerFinishing = false;
+      resetReaderFinishUi();
       setReaderVisible(true);
       state.readerBookId = safeText(book.bookId);
       state.readerMode = mode === 'pronounce-training' ? 'pronounce-training' : 'free-read';
@@ -1553,7 +1730,7 @@
   }
 
   async function handleReaderMicTraining() {
-    if (!state.readerOpen || state.readerMode !== 'pronounce-training' || state.readerMicBusy) return;
+    if (!state.readerOpen || state.readerMode !== 'pronounce-training' || state.readerMicBusy || state.readerFinishing) return;
     const card = state.readerCards[state.readerIndex];
     if (!card || !safeText(card.english)) return;
 
@@ -1574,6 +1751,7 @@
         }, 220);
       } else {
         setReaderTrainingStatus(`Pronuncia: ${score}% - fim do livro.`);
+        await runReaderBookCompletionSequence();
       }
     } catch (error) {
       setReaderTrainingStatus(error?.message || 'Nao foi possivel capturar sua fala.');
@@ -1703,16 +1881,19 @@
       }
     });
 
-    els.readerBackBtn?.addEventListener('click', closeReader);
+    els.readerBackBtn?.addEventListener('click', () => {
+      if (state.readerFinishing) return;
+      closeReader();
+    });
 
     els.readerLangEnglishBtn?.addEventListener('click', () => {
-      if (!state.readerOpen || state.readerMode !== 'pronounce-training') return;
+      if (!state.readerOpen || state.readerMode !== 'pronounce-training' || state.readerFinishing) return;
       state.readerDisplayLanguage = 'english';
       renderReader();
     });
 
     els.readerLangPortugueseBtn?.addEventListener('click', () => {
-      if (!state.readerOpen || state.readerMode !== 'pronounce-training') return;
+      if (!state.readerOpen || state.readerMode !== 'pronounce-training' || state.readerFinishing) return;
       state.readerDisplayLanguage = 'portuguese';
       renderReader();
     });
@@ -1729,6 +1910,7 @@
     }, { passive: true });
 
     els.readerContent?.addEventListener('touchend', (event) => {
+      if (state.readerFinishing) return;
       const touch = event.changedTouches?.[0];
       if (!touch) return;
       const endX = Number(touch.clientX) || 0;
@@ -1745,6 +1927,7 @@
 
     window.addEventListener('keydown', (event) => {
       if (!state.readerOpen) return;
+      if (state.readerFinishing) return;
       if (event.key === 'ArrowRight') {
         event.preventDefault();
         stepReader(1);

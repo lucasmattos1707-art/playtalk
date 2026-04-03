@@ -135,6 +135,7 @@ let flashcardUserStateTablesReadyPromise = null;
 let premiumAccessTablesReadyPromise = null;
 let speakingRealtimeTablesReadyPromise = null;
 let miniBookJsonTablesReadyPromise = null;
+let booksSpeakingStatsTablesReadyPromise = null;
 let speakingCardsCache = {
   stories: [],
   updatedAt: 0
@@ -194,6 +195,8 @@ const FLASHCARD_RANKING_WEEKDAY_INDEX = {
   Fri: 5,
   Sat: 6
 };
+const BOOKS_PRONUNCIATION_SAMPLE_LIMIT = 300;
+const BOOKS_PRONUNCIATION_TAG = 'speak-books';
 const FLASHCARD_REVIEW_PHASES = {
   1: { key: 'first-star', label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
   2: { key: 'second-star', label: 'Second star', durationMs: 3 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
@@ -406,6 +409,28 @@ const normalizeFlashcardPronunciationSamples = (value) => {
     .map((sample) => Math.max(0, Math.min(100, Math.round(Number(sample) || 0))))
     .filter((sample) => Number.isFinite(sample))
     .slice(-FLASHCARD_PRONUNCIATION_SAMPLE_LIMIT);
+};
+
+const normalizeBooksPronunciationSamples = (value) => {
+  const source = Array.isArray(value)
+    ? value
+    : Array.isArray(value?.pronunciationSamples)
+      ? value.pronunciationSamples
+      : Array.isArray(value?.pronunciation_samples)
+        ? value.pronunciation_samples
+        : [];
+  return source
+    .map((sample) => Math.max(0, Math.min(100, Math.round(Number(sample) || 0))))
+    .filter((sample) => Number.isFinite(sample))
+    .slice(-BOOKS_PRONUNCIATION_SAMPLE_LIMIT);
+};
+
+const getBooksPronunciationPercent = (samples) => {
+  if (!Array.isArray(samples) || !samples.length) {
+    return 0;
+  }
+  const average = samples.reduce((sum, sample) => sum + sample, 0) / samples.length;
+  return Math.max(0, Math.min(100, Math.round(average)));
 };
 
 const getFlashcardPronunciationPercent = (samples) => {
@@ -829,6 +854,48 @@ const ensureMiniBookJsonTables = async () => {
   }
 
   return miniBookJsonTablesReadyPromise;
+};
+
+const ensureBooksSpeakingStatsTable = async () => {
+  if (!pool) return false;
+
+  await ensureUsersAvatarColumn();
+
+  if (!booksSpeakingStatsTablesReadyPromise) {
+    booksSpeakingStatsTablesReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_books_speaking_stats (
+          user_id integer PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+          book_read integer NOT NULL DEFAULT 0,
+          pronunciation_tag text NOT NULL DEFAULT '${BOOKS_PRONUNCIATION_TAG}',
+          pronunciation_samples jsonb NOT NULL DEFAULT '[]'::jsonb,
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_books_speaking_stats
+        ADD COLUMN IF NOT EXISTS book_read integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_books_speaking_stats
+        ADD COLUMN IF NOT EXISTS pronunciation_tag text NOT NULL DEFAULT '${BOOKS_PRONUNCIATION_TAG}'
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_books_speaking_stats
+        ADD COLUMN IF NOT EXISTS pronunciation_samples jsonb NOT NULL DEFAULT '[]'::jsonb
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_books_speaking_stats_updated_idx
+        ON public.user_books_speaking_stats (updated_at DESC)
+      `);
+      return true;
+    })().catch((error) => {
+      booksSpeakingStatsTablesReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return booksSpeakingStatsTablesReadyPromise;
 };
 
 const ensureFlashcardRankingsTable = async () => {
@@ -6580,6 +6647,128 @@ app.get('/api/speaking/stories', async (_req, res) => {
   } catch (error) {
     console.error('Erro ao listar historias de speaking:', error);
     res.status(500).json({ success: false, message: 'Nao foi possivel carregar historias de speaking.' });
+  }
+});
+
+app.post('/api/books/training/complete', express.json({ limit: '256kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const userId = Number.parseInt(authUser.id, 10);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ success: false, message: 'Usuario invalido para salvar progresso do livro.' });
+      return;
+    }
+
+    const bookId = normalizeMiniBookId(req.body?.bookId);
+    if (!bookId) {
+      res.status(400).json({ success: false, message: 'bookId obrigatorio.' });
+      return;
+    }
+
+    const pronunciationPercent = Math.max(
+      0,
+      Math.min(100, Math.round(Number(req.body?.pronunciationPercent) || 0))
+    );
+
+    await ensureBooksSpeakingStatsTable();
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const existingResult = await client.query(
+        `SELECT user_id, book_read, pronunciation_tag, pronunciation_samples
+         FROM public.user_books_speaking_stats
+         WHERE user_id = $1
+         FOR UPDATE`,
+        [userId]
+      );
+
+      const existingRow = existingResult.rows[0] || null;
+      const existingSamples = normalizeBooksPronunciationSamples(existingRow?.pronunciation_samples);
+      const nextSamples = [...existingSamples, pronunciationPercent].slice(-BOOKS_PRONUNCIATION_SAMPLE_LIMIT);
+      const nextBookReadCount = Math.max(0, Number.parseInt(existingRow?.book_read, 10) || 0) + 1;
+
+      const upsertResult = await client.query(
+        `INSERT INTO public.user_books_speaking_stats (
+           user_id,
+           book_read,
+           pronunciation_tag,
+           pronunciation_samples,
+           updated_at
+         )
+         VALUES ($1, $2, $3, $4::jsonb, now())
+         ON CONFLICT (user_id)
+         DO UPDATE
+           SET book_read = EXCLUDED.book_read,
+               pronunciation_tag = EXCLUDED.pronunciation_tag,
+               pronunciation_samples = EXCLUDED.pronunciation_samples,
+               updated_at = now()
+         RETURNING
+           user_id,
+           book_read,
+           pronunciation_tag,
+           pronunciation_samples,
+           updated_at`,
+        [
+          userId,
+          nextBookReadCount,
+          BOOKS_PRONUNCIATION_TAG,
+          JSON.stringify(nextSamples)
+        ]
+      );
+
+      await client.query('COMMIT');
+
+      const saved = upsertResult.rows[0] || {
+        user_id: userId,
+        book_read: nextBookReadCount,
+        pronunciation_tag: BOOKS_PRONUNCIATION_TAG,
+        pronunciation_samples: nextSamples,
+        updated_at: new Date().toISOString()
+      };
+      const normalizedSamples = normalizeBooksPronunciationSamples(saved.pronunciation_samples);
+      const generalPronunciationPercent = getBooksPronunciationPercent(normalizedSamples);
+
+      res.json({
+        success: true,
+        bookId,
+        stats: {
+          bookReadCount: Math.max(0, Number(saved.book_read) || 0),
+          pronunciationTag: BOOKS_PRONUNCIATION_TAG,
+          pronunciationSamplesCount: normalizedSamples.length,
+          latestPronunciationPercent: pronunciationPercent,
+          generalPronunciationPercent,
+          updatedAt: saved.updated_at || null
+        }
+      });
+    } catch (error) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (_rollbackError) {
+        // ignore rollback error
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Erro ao salvar conclusao de treino de livro:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Nao foi possivel salvar progresso do livro agora.'
+    });
   }
 });
 
