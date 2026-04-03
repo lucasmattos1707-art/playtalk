@@ -3350,6 +3350,49 @@ async function loadMiniBookJsonOverrides() {
   return Array.isArray(result.rows) ? result.rows : [];
 }
 
+async function findLocalSpeakingBookMetadataById(bookId) {
+  const targetBookId = normalizeMiniBookId(bookId);
+  if (!targetBookId) return null;
+
+  for (const root of BATTLE_STORIES_ROOT_CANDIDATES) {
+    let dirEntries = [];
+    try {
+      dirEntries = await fs.promises.readdir(root, { withFileTypes: true });
+    } catch (_error) {
+      dirEntries = [];
+    }
+
+    for (const entry of dirEntries) {
+      if (!entry?.isFile?.() || !entry.name.toLowerCase().endsWith('.json')) continue;
+      const fileBaseName = path.basename(entry.name, '.json');
+      if (normalizeMiniBookId(fileBaseName) !== targetBookId) continue;
+
+      try {
+        const fullPath = path.join(root, entry.name);
+        const raw = (await fs.promises.readFile(fullPath, 'utf8')).replace(/^\uFEFF/, '');
+        const payload = JSON.parse(raw);
+        const normalizedBookTitle = normalizeMiniBookText(payload?.nome, fileBaseName);
+        const level = normalizeSpeakingStoryLevel(payload?.nivel);
+        return {
+          bookId: targetBookId,
+          fileName: entry.name,
+          title: normalizedBookTitle,
+          level
+        };
+      } catch (_error) {
+        return {
+          bookId: targetBookId,
+          fileName: entry.name,
+          title: fileBaseName,
+          level: 1
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
 async function loadSpeakingCardPool() {
   const now = Date.now();
   if (
@@ -3382,6 +3425,7 @@ async function loadSpeakingCardPool() {
   }
 
   const localStories = [];
+  const localBookMetadataById = new Map();
   for (const entry of fileEntries) {
     try {
       const raw = (await fs.promises.readFile(entry.path, 'utf8')).replace(/^\uFEFF/, '');
@@ -3394,6 +3438,12 @@ async function loadSpeakingCardPool() {
       const displayName = toEnglishUnderscoreName(normalizedBookTitle, fileBaseName);
       const bookId = normalizeMiniBookId(fileBaseName);
       const level = normalizeSpeakingStoryLevel(payload.nivel);
+      localBookMetadataById.set(bookId, {
+        bookId,
+        fileName: entry.name,
+        title: normalizedBookTitle,
+        level
+      });
       Object.entries(payload).forEach(([storyKey, storyValue]) => {
         const items = Array.isArray(storyValue) ? storyValue : [];
         const cards = items
@@ -3436,6 +3486,16 @@ async function loadSpeakingCardPool() {
           level: row.level
         });
         if (!Array.isArray(parsed.stories) || !parsed.stories.length) return;
+        const localMetadata = localBookMetadataById.get(normalizeMiniBookId(parsed.bookId));
+        if (localMetadata) {
+          parsed.stories = parsed.stories.map((story) => ({
+            ...story,
+            fileName: localMetadata.fileName,
+            bookTitle: localMetadata.title,
+            nome: toEnglishUnderscoreName(localMetadata.title, localMetadata.fileName),
+            nivel: normalizeSpeakingStoryLevel(localMetadata.level)
+          }));
+        }
         overriddenBookIds.add(normalizeMiniBookId(parsed.bookId));
         overrideStories.push(...parsed.stories);
       });
@@ -6791,7 +6851,20 @@ app.post('/api/admin/minibooks/save-json', express.json({ limit: '6mb' }), async
   }
 
   try {
-    const requestedBookId = normalizeMiniBookId(req.body?.bookId);
+    const rawBookId = String(req.body?.bookId || '').trim();
+    if (!rawBookId) {
+      res.status(400).json({ error: 'bookId obrigatorio para salvar JSON no livro certo.' });
+      return;
+    }
+    const requestedBookId = normalizeMiniBookId(rawBookId);
+    const existingBook = await findSpeakingBookById(requestedBookId);
+    const localBookMetadata = await findLocalSpeakingBookMetadataById(requestedBookId);
+    const metadataSource = localBookMetadata || existingBook;
+    if (!metadataSource) {
+      res.status(404).json({ error: 'Livro nao encontrado para esse bookId.' });
+      return;
+    }
+
     const jsonText = normalizeMiniBookText(req.body?.jsonText || req.body?.content || req.body?.payload);
     if (!jsonText) {
       res.status(400).json({ error: 'Cole o JSON do MiniBook antes de salvar.' });
@@ -6811,7 +6884,12 @@ app.post('/api/admin/minibooks/save-json', express.json({ limit: '6mb' }), async
       return;
     }
 
-    const parsedMiniBook = buildMiniBookStoriesFromJsonPayload(parsedPayload, { bookId: requestedBookId });
+    const parsedMiniBook = buildMiniBookStoriesFromJsonPayload(parsedPayload, {
+      bookId: requestedBookId,
+      fileName: metadataSource.fileName,
+      bookTitle: metadataSource.title,
+      level: metadataSource.level
+    });
     if (!Array.isArray(parsedMiniBook.stories) || !parsedMiniBook.stories.length) {
       res.status(422).json({
         error: 'Esse JSON nao trouxe historias validas. Use arrays com frases no formato {"en":"...","pt":"..."} ou {"english":"...","portuguese":"..."}'
@@ -6822,9 +6900,9 @@ app.post('/api/admin/minibooks/save-json', express.json({ limit: '6mb' }), async
     const normalizedPayload = {
       ...parsedPayload,
       bookId: parsedMiniBook.bookId,
-      fileName: normalizeMiniBookText(parsedPayload.fileName, parsedMiniBook.fileName),
-      nome: normalizeMiniBookText(parsedPayload.nome || parsedPayload.title, parsedMiniBook.bookTitle),
-      nivel: normalizeSpeakingStoryLevel(parsedPayload.nivel ?? parsedPayload.level ?? parsedMiniBook.level)
+      fileName: normalizeMiniBookText(parsedPayload.fileName, metadataSource.fileName),
+      nome: normalizeMiniBookText(parsedPayload.nome || parsedPayload.title, metadataSource.title),
+      nivel: normalizeSpeakingStoryLevel(parsedPayload.nivel ?? parsedPayload.level ?? metadataSource.level)
     };
 
     await ensureMiniBookJsonTables();
