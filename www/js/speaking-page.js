@@ -943,6 +943,11 @@
     return normalized === 'admin' || normalized === 'adm' || normalized === 'adminst';
   }
 
+  function applyAdminVisualMode() {
+    if (!document?.body?.classList) return;
+    document.body.classList.toggle('is-speaking-admin', Boolean(state.isAdmin));
+  }
+
   function readAdminLocalHint() {
     const fromProfile = safeText(readLocalPlayerProfile()?.username);
     if (isAdminAlias(fromProfile)) return fromProfile;
@@ -965,16 +970,19 @@
       if (!response.ok) {
         state.adminUsername = localAdminHint;
         state.isAdmin = Boolean(localAdminHint);
+        applyAdminVisualMode();
         return;
       }
       const payload = await response.json().catch(() => ({}));
       const username = safeText(payload?.user?.username || payload?.user?.email || '');
       state.adminUsername = username || localAdminHint;
       state.isAdmin = Boolean(payload?.user?.is_admin) || isAdminAlias(username) || Boolean(localAdminHint);
+      applyAdminVisualMode();
     } catch (_error) {
       const localAdminHint = readAdminLocalHint();
       state.adminUsername = localAdminHint;
       state.isAdmin = Boolean(localAdminHint);
+      applyAdminVisualMode();
     }
   }
 
@@ -1735,7 +1743,6 @@
     if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = true;
     setHomeStatus('Carregando MiniBook...', '');
     try {
-      await hydrateOfflineIdentityFromSession();
       const selectedStoryId = safeText(els.storySelect?.value || state.selectedStoryId);
       if (!selectedStoryId) {
         throw new Error('Escolha um MiniBook antes de iniciar.');
@@ -1749,6 +1756,7 @@
       state.duel.rivalPercent = 0;
       setGameMode('offline-game');
       applyOfflineIdentity();
+      await hydrateOfflineIdentityFromSession();
       if (els.home) els.home.hidden = true;
       if (els.game) els.game.classList.add('is-active');
       if (els.finalResultBox) els.finalResultBox.classList.remove('is-visible');
