@@ -223,6 +223,12 @@
       if (avatar) {
         state.duel.meAvatar = avatar;
       }
+      if (window.playtalkPlayerState && typeof window.playtalkPlayerState.patch === 'function') {
+        window.playtalkPlayerState.patch({
+          username: username || state.duel.meName,
+          avatar
+        });
+      }
       updateDuelAvatarRings();
     } catch (_error) {
       // ignore and keep local fallback identity
