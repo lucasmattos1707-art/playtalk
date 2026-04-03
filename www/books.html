@@ -390,6 +390,33 @@
       flex-wrap: wrap;
     }
 
+    .books-mode-preview {
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .books-mode-cover {
+      width: min(220px, 58vw);
+      aspect-ratio: 9 / 16;
+      border-radius: 14px;
+      background: linear-gradient(155deg, #2a5bcf, #28a7d5);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.38);
+    }
+
+    .books-mode-name {
+      margin: 0;
+      color: #ffffff;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.48);
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.02em;
+    }
+
     .books-magic-btn {
       border: 0;
       border-radius: 12px;
@@ -542,6 +569,23 @@
     </div>
   </section>
 
+  <section class="books-magic-modal" id="booksModeModal" aria-label="Escolha o modo do livro">
+    <div class="books-magic-card">
+      <h2 class="books-magic-title" id="booksModeTitle">Modo do livro</h2>
+      <div class="books-mode-preview">
+        <div class="books-mode-cover" id="booksModeCover"></div>
+        <p class="books-mode-name" id="booksModeName">Livro</p>
+      </div>
+      <div class="books-magic-actions" style="justify-content:center;">
+        <button class="books-magic-btn" id="booksModeFreeReadBtn" type="button">free-read</button>
+        <button class="books-magic-btn is-primary" id="booksModePronounceBtn" type="button">pronounce-training</button>
+      </div>
+      <div class="books-magic-actions" style="justify-content:center;">
+        <button class="books-magic-btn" id="booksModeCloseBtn" type="button">Fechar</button>
+      </div>
+    </div>
+  </section>
+
   <section class="books-magic-modal" id="booksJsonModal" aria-label="Salvar JSON do livro">
     <div class="books-magic-card">
       <h2 class="books-magic-title" id="booksJsonTitle">Salvar JSON do livro</h2>
@@ -561,6 +605,6 @@
   <script src="js/api-config.js"></script>
   <script src="js/player-state.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/books-page.js?v=20260403f"></script>
+  <script src="js/books-page.js?v=20260403g"></script>
 </body>
 </html>

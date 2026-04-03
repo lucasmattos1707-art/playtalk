@@ -145,6 +145,56 @@
     return safeText(params.get('session'));
   }
 
+  function readLaunchConfig() {
+    const params = new URLSearchParams(window.location.search || '');
+    const mode = safeText(params.get('mode'));
+    const bookId = safeText(params.get('bookId') || params.get('book'));
+    const storyId = safeText(params.get('storyId'));
+    const autoStartRaw = safeText(params.get('autostart')).toLowerCase();
+    const autoStart = autoStartRaw === '1' || autoStartRaw === 'true' || autoStartRaw === 'yes';
+    if (!bookId && !storyId) return null;
+    return {
+      mode,
+      bookId,
+      storyId,
+      autoStart
+    };
+  }
+
+  function applyLaunchConfig(launchConfig) {
+    if (!launchConfig) return false;
+    let changed = false;
+    const targetBookId = safeText(launchConfig.bookId);
+    if (targetBookId) {
+      const targetBook = state.books.find((book) => safeText(book?.id) === targetBookId);
+      if (targetBook) {
+        state.selectedLevel = parseLevel(targetBook.nivel);
+        if (els.levelSelect) {
+          els.levelSelect.value = String(state.selectedLevel);
+        }
+        state.selectedBookId = safeText(targetBook.id);
+        changed = true;
+      }
+    }
+
+    renderMiniBooksGrid();
+
+    const preferredStoryId = safeText(launchConfig.storyId);
+    if (preferredStoryId) {
+      const selectedBook = getSelectedBook();
+      const available = new Set(Array.isArray(selectedBook?.storyIds) ? selectedBook.storyIds.map((id) => safeText(id)) : []);
+      if (!available.size || available.has(preferredStoryId) || safeText(selectedBook?.selectedStoryId) === preferredStoryId) {
+        state.selectedStoryId = preferredStoryId;
+        if (els.storySelect) {
+          els.storySelect.value = preferredStoryId;
+        }
+        changed = true;
+      }
+    }
+
+    return changed;
+  }
+
   function readLocalPlayerProfile() {
     try {
       const raw = JSON.parse(localStorage.getItem('playtalk_player_profile') || 'null');
@@ -1186,7 +1236,9 @@
         throw new Error(payload?.error || payload?.details || 'Nao consegui salvar a capa.');
       }
       await loadStoryOptions();
-      updateAdminEditorVisibility();
+        const launchConfig = readLaunchConfig();
+        const launchApplied = applyLaunchConfig(launchConfig);
+        updateAdminEditorVisibility();
       setHomeStatus('Capa aprovada e publicada com sucesso.', '');
       state.adminEditor.coverDataUrl = '';
       setMiniBookPreviewImage(els.miniBookCoverPreview, '');
@@ -1261,7 +1313,9 @@
         throw new Error(payload?.error || payload?.details || 'Nao consegui salvar os backgrounds.');
       }
       await loadStoryOptions();
-      updateAdminEditorVisibility();
+        const launchConfig = readLaunchConfig();
+        const launchApplied = applyLaunchConfig(launchConfig);
+        updateAdminEditorVisibility();
       applySelectedMiniBookBackground();
       setHomeStatus('Backgrounds aprovados e publicados.', '');
       state.adminEditor.backgroundDesktopDataUrl = '';
@@ -1303,7 +1357,9 @@
         throw new Error(payload?.error || payload?.details || 'Nao consegui salvar a capa manual.');
       }
       await loadStoryOptions();
-      updateAdminEditorVisibility();
+        const launchConfig = readLaunchConfig();
+        const launchApplied = applyLaunchConfig(launchConfig);
+        updateAdminEditorVisibility();
       setHomeStatus('Capa manual enviada e salva no R2 com sucesso.', '');
     } catch (error) {
       setHomeStatus(error?.message || 'Falha no upload da capa manual.', 'is-error');
@@ -1907,9 +1963,20 @@
       try {
         await loadAdminFlag();
         await loadStoryOptions();
+        const launchConfig = readLaunchConfig();
+        const launchApplied = applyLaunchConfig(launchConfig);
         updateAdminEditorVisibility();
         if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = false;
         setHomeStatus('Escolha um MiniBook para jogar.', '');
+        if (
+          launchApplied
+          && launchConfig
+          && (safeText(launchConfig.mode).toLowerCase() === 'pronounce-training' || launchConfig.autoStart)
+        ) {
+          window.setTimeout(() => {
+            void startSinglePlayer();
+          }, 120);
+        }
       } catch (error) {
         if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = true;
         setHomeStatus(error?.message || 'Não foi possível carregar histórias.', 'is-error');
@@ -1934,6 +2001,7 @@
     void init();
   }
 })();
+
 
 
 

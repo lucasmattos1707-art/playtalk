@@ -27,6 +27,13 @@
     jsonInput: document.getElementById('booksJsonInput'),
     jsonSaveBtn: document.getElementById('booksJsonSaveBtn'),
     jsonCloseBtn: document.getElementById('booksJsonCloseBtn'),
+    modeModal: document.getElementById('booksModeModal'),
+    modeTitle: document.getElementById('booksModeTitle'),
+    modeCover: document.getElementById('booksModeCover'),
+    modeName: document.getElementById('booksModeName'),
+    modeFreeReadBtn: document.getElementById('booksModeFreeReadBtn'),
+    modePronounceBtn: document.getElementById('booksModePronounceBtn'),
+    modeCloseBtn: document.getElementById('booksModeCloseBtn'),
     reader: document.getElementById('booksReader'),
     readerBackBtn: document.getElementById('booksReaderBackBtn'),
     readerContent: document.getElementById('booksReaderContent'),
@@ -47,6 +54,7 @@
     magicBookId: '',
     magicProcessingBookIds: new Set(),
     jsonBookId: '',
+    modeBookId: '',
     readerOpen: false,
     readerBookId: '',
     readerLines: [],
@@ -108,6 +116,14 @@
       return window.PlaytalkApi.authHeaders(extraHeaders);
     }
     return { ...(extraHeaders || {}) };
+  }
+
+  function navigateTo(target) {
+    if (window.PlaytalkNative && typeof window.PlaytalkNative.navigate === 'function') {
+      window.PlaytalkNative.navigate(target);
+      return;
+    }
+    window.location.href = target;
   }
 
   function normalizeLevel(value) {
@@ -347,6 +363,32 @@
     }
   }
 
+  function openModeModal(book) {
+    if (!els.modeModal || !book) return;
+    const bookId = safeText(book.bookId);
+    if (!bookId) return;
+    state.modeBookId = bookId;
+    const bookName = safeText(book.nome || book.bookTitle || 'Livro');
+    if (els.modeTitle) {
+      els.modeTitle.textContent = `Escolha o modo: ${bookName}`;
+    }
+    if (els.modeName) {
+      els.modeName.textContent = bookName;
+    }
+    if (els.modeCover) {
+      const coverUrl = safeText(book.coverImageUrl);
+      els.modeCover.style.backgroundImage = coverUrl ? `url(${safeCssUrl(coverUrl)})` : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
+    }
+    els.modeModal.classList.add('is-visible');
+  }
+
+  function closeModeModal() {
+    state.modeBookId = '';
+    if (els.modeModal) {
+      els.modeModal.classList.remove('is-visible');
+    }
+  }
+
   function renderCards() {
     if (!els.cardsGrid || !els.cardsEmpty) return;
     const books = getBooksForSelectedLevel();
@@ -443,7 +485,7 @@
       card.append(background, overlay, title, adminChip, actions, processingOverlay);
       card.addEventListener('click', () => {
         if (state.uploadInFlight || processingMagic) return;
-        void startBookReader(book);
+        openModeModal(book);
       });
       els.cardsGrid.appendChild(card);
     });
@@ -729,6 +771,20 @@
     }
   }
 
+  function openBookInPronounceTraining(book) {
+    const bookId = safeText(book?.bookId);
+    const storyId = safeText(book?.selectedStoryId || (Array.isArray(book?.storyIds) ? book.storyIds[0] : ''));
+    if (!bookId) return;
+    const params = new URLSearchParams();
+    params.set('mode', 'pronounce-training');
+    params.set('bookId', bookId);
+    params.set('autostart', '1');
+    if (storyId) {
+      params.set('storyId', storyId);
+    }
+    navigateTo(`/speaking?${params.toString()}`);
+  }
+
   function setReaderVisible(visible) {
     state.readerOpen = Boolean(visible);
     if (els.reader) {
@@ -872,6 +928,30 @@
     els.jsonModal?.addEventListener('click', (event) => {
       if (event.target === els.jsonModal) {
         closeJsonModal();
+      }
+    });
+
+    els.modeFreeReadBtn?.addEventListener('click', () => {
+      const selected = state.books.find((entry) => safeText(entry?.bookId) === safeText(state.modeBookId));
+      closeModeModal();
+      if (!selected) return;
+      void startBookReader(selected);
+    });
+
+    els.modePronounceBtn?.addEventListener('click', () => {
+      const selected = state.books.find((entry) => safeText(entry?.bookId) === safeText(state.modeBookId));
+      closeModeModal();
+      if (!selected) return;
+      openBookInPronounceTraining(selected);
+    });
+
+    els.modeCloseBtn?.addEventListener('click', () => {
+      closeModeModal();
+    });
+
+    els.modeModal?.addEventListener('click', (event) => {
+      if (event.target === els.modeModal) {
+        closeModeModal();
       }
     });
 
