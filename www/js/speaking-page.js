@@ -941,33 +941,49 @@
     return normalized === 'admin' || normalized === 'adm' || normalized === 'adminst';
   }
 
+  function readAdminLocalHint() {
+    const fromProfile = safeText(readLocalPlayerProfile()?.username);
+    if (isAdminAlias(fromProfile)) return fromProfile;
+    if (window.playtalkPlayerState && typeof window.playtalkPlayerState.get === 'function') {
+      const player = window.playtalkPlayerState.get() || {};
+      const fromState = safeText(player.username || player.name || player.email);
+      if (isAdminAlias(fromState)) return fromState;
+    }
+    return '';
+  }
+
   async function loadAdminFlag() {
     try {
+      const localAdminHint = readAdminLocalHint();
       const response = await fetch(buildApiUrl('/api/me'), {
         credentials: 'include',
         cache: 'no-store',
         headers: buildAuthHeaders()
       });
       if (!response.ok) {
-        const localProfile = readLocalPlayerProfile();
-        const localUsername = safeText(localProfile.username);
-        state.adminUsername = localUsername;
-        state.isAdmin = isAdminAlias(localUsername);
+        state.adminUsername = localAdminHint;
+        state.isAdmin = Boolean(localAdminHint);
         return;
       }
       const payload = await response.json().catch(() => ({}));
       const username = safeText(payload?.user?.username || payload?.user?.email || '');
-      state.adminUsername = username;
-      state.isAdmin = Boolean(payload?.user?.is_admin) || isAdminAlias(username);
+      state.adminUsername = username || localAdminHint;
+      state.isAdmin = Boolean(payload?.user?.is_admin) || isAdminAlias(username) || Boolean(localAdminHint);
     } catch (_error) {
-      const localProfile = readLocalPlayerProfile();
-      const localUsername = safeText(localProfile.username);
-      state.adminUsername = localUsername;
-      state.isAdmin = isAdminAlias(localUsername);
+      const localAdminHint = readAdminLocalHint();
+      state.adminUsername = localAdminHint;
+      state.isAdmin = Boolean(localAdminHint);
     }
   }
 
   async function tryOpenMiniBookEditorForSelection(bookId) {
+    if (!state.isAdmin) {
+      const localAdminHint = readAdminLocalHint();
+      if (localAdminHint) {
+        state.isAdmin = true;
+        state.adminUsername = localAdminHint;
+      }
+    }
     if (state.isAdmin) {
       openMiniBookEditor(bookId);
       return;
