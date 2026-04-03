@@ -15,7 +15,9 @@
       margin: 0;
       width: 100%;
       min-height: 100%;
-      background: #000000;
+      background:
+        radial-gradient(circle at 22% 14%, rgba(255, 255, 255, 0.08), transparent 32%),
+        linear-gradient(145deg, #040404 0%, #111111 48%, #2f3237 100%);
       color: #ffffff;
       font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
     }
@@ -67,21 +69,22 @@
     }
 
     .books-arrow-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      background: rgba(255, 255, 255, 0.06);
+      width: auto;
+      min-width: 34px;
+      height: auto;
+      border: 0;
+      background: transparent;
       color: #ffffff;
       display: grid;
       place-items: center;
       cursor: pointer;
-      transition: transform 120ms ease, opacity 120ms ease, background 120ms ease;
+      padding: 4px;
+      transition: transform 120ms ease, opacity 120ms ease, color 120ms ease;
     }
 
     .books-arrow-btn:hover:not(:disabled) {
       transform: translateY(-1px);
-      background: rgba(255, 255, 255, 0.12);
+      color: #d7dbe4;
     }
 
     .books-arrow-btn:disabled {
@@ -1227,6 +1230,6 @@
   <script src="js/api-config.js"></script>
   <script src="js/player-state.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/books-page.js?v=20260403m"></script>
+  <script src="js/books-page.js?v=20260403n"></script>
 </body>
 </html>

@@ -8,6 +8,7 @@
   const MODE_LOADING_FADE_MS = 500;
   const BOOK_SNAP_DURATION_MS = 300;
   const BOOK_SWIPE_THRESHOLD = 44;
+  const LEVEL_SWIPE_THRESHOLD = 54;
   const READER_FINISH_DISSOLVE_MS = 500;
   const READER_FINISH_BOOK_ENTER_MS = 500;
   const READER_FINISH_LINE_STEP_MS = 1000;
@@ -1818,8 +1819,6 @@
       const dy = (Number(touch.clientY) || 0) - state.shelfTouchStartY;
       if (Math.abs(dy) > 10 || Math.abs(dx) > 10) {
         state.shelfGestureMoved = true;
-      }
-      if (Math.abs(dy) > Math.abs(dx)) {
         event.preventDefault();
       }
     }, { passive: false });
@@ -1834,6 +1833,14 @@
       const dx = endX - state.shelfTouchStartX;
       if (state.shelfGestureMoved) {
         state.shelfLastGestureAt = Date.now();
+      }
+      if (Math.abs(dx) >= LEVEL_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) {
+          setLevel(state.selectedLevel + 1);
+        } else {
+          setLevel(state.selectedLevel - 1);
+        }
+        return;
       }
       if (Math.abs(dy) < BOOK_SWIPE_THRESHOLD || Math.abs(dy) <= Math.abs(dx)) return;
       void snapShelfByStep(dy > 0 ? 1 : -1);
