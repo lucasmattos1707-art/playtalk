@@ -2,6 +2,7 @@
   const ADMIN_ALIASES = new Set(['admin', 'adm', 'adminst']);
   const MAX_GRADIENTS = 8;
   const SESSION_ENDPOINTS = ['/auth/session', '/api/me'];
+  const DEFAULT_READER_BACKGROUND = 'radial-gradient(circle at top, rgba(22, 34, 56, 0.72), #04070d 60%, #020306 100%)';
 
   const els = {
     avatarImage: document.getElementById('booksAccountAvatarImage'),
@@ -172,6 +173,7 @@
           nivel: normalizeLevel(entry?.nivel),
           coverImageUrl: safeText(entry?.coverImageUrl),
           backgroundDesktopUrl: safeText(entry?.backgroundDesktopUrl),
+          backgroundMobileUrl: safeText(entry?.backgroundMobileUrl),
           selectedStoryId: storyId,
           storyIds: storyId ? [storyId] : []
         });
@@ -184,6 +186,9 @@
       }
       if (!current.backgroundDesktopUrl && safeText(entry?.backgroundDesktopUrl)) {
         current.backgroundDesktopUrl = safeText(entry.backgroundDesktopUrl);
+      }
+      if (!current.backgroundMobileUrl && safeText(entry?.backgroundMobileUrl)) {
+        current.backgroundMobileUrl = safeText(entry.backgroundMobileUrl);
       }
       if (storyId && !current.storyIds.includes(storyId)) {
         current.storyIds.push(storyId);
@@ -581,6 +586,27 @@
     document.body.classList.toggle('books-reader-open', state.readerOpen);
   }
 
+  function chooseReaderBackgroundUrl(book) {
+    const desktop = safeText(book?.backgroundDesktopUrl);
+    const mobile = safeText(book?.backgroundMobileUrl);
+    const isMobile = Boolean(window.matchMedia && window.matchMedia('(max-width: 900px)').matches);
+    if (isMobile) {
+      return mobile || desktop;
+    }
+    return desktop || mobile;
+  }
+
+  function applyReaderBackground(book) {
+    if (!els.reader) return;
+    const backgroundUrl = chooseReaderBackgroundUrl(book);
+    if (!backgroundUrl) {
+      els.reader.style.background = DEFAULT_READER_BACKGROUND;
+      return;
+    }
+
+    els.reader.style.background = `linear-gradient(to top, rgba(2, 5, 10, 0.78) 0%, rgba(2, 5, 10, 0.38) 60%, rgba(2, 5, 10, 0.32) 100%), url(${safeCssUrl(backgroundUrl)}) center / cover no-repeat`;
+  }
+
   function renderReader() {
     if (!els.readerEnglish || !els.readerCounter) return;
     const total = state.readerLines.length;
@@ -625,6 +651,7 @@
 
   async function startBookReader(book) {
     if (!book) return;
+    applyReaderBackground(book);
     setReaderVisible(true);
     state.readerBookId = safeText(book.bookId);
     state.readerLines = ['Carregando frases em ingles...'];
@@ -709,6 +736,13 @@
         event.preventDefault();
         closeReader();
       }
+    });
+
+    window.addEventListener('resize', () => {
+      if (!state.readerOpen || !state.readerBookId) return;
+      const activeBook = state.books.find((entry) => safeText(entry?.bookId) === state.readerBookId);
+      if (!activeBook) return;
+      applyReaderBackground(activeBook);
     });
   }
 
