@@ -22,25 +22,40 @@
 
     body {
       min-height: 100vh;
-      padding: 20px;
+      padding: 0;
+      overflow: hidden;
       overflow-x: hidden;
     }
 
     .books-page {
-      width: min(1020px, 100%);
+      width: min(980px, 100%);
       margin: 0 auto;
+      min-height: 100vh;
+      padding: 12px 14px 16px;
       display: grid;
+      grid-template-rows: auto auto 1fr;
       justify-items: center;
-      gap: 14px;
+      gap: 10px;
     }
 
     .books-level-menu {
-      width: min(620px, 100%);
+      width: min(900px, 100%);
       display: grid;
-      grid-template-columns: auto 1fr auto auto;
+      grid-template-columns: auto 1fr auto;
       align-items: center;
       gap: 10px;
-      margin-top: 2px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.96), rgba(0, 0, 0, 0.86));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 10px;
+      backdrop-filter: blur(4px);
+    }
+
+    .books-level-menu.is-admin {
+      grid-template-columns: auto 1fr auto auto;
     }
 
     .books-level-title {
@@ -147,6 +162,7 @@
       text-align: center;
       font-size: 14px;
       color: #d2d2d2;
+      width: min(900px, 100%);
     }
 
     .books-status.is-error {
@@ -157,29 +173,38 @@
       color: #9bf2bc;
     }
 
-    .books-grid {
+    .books-shelf {
       width: min(900px, 100%);
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      border-radius: 20px;
+      position: relative;
+    }
+
+    .books-grid {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
       display: grid;
       grid-template-columns: 1fr;
-      gap: 14px;
+      justify-items: center;
+      gap: 18px;
+      padding: calc(50vh - min(240px, 30vh)) 0;
     }
 
     .books-card {
-      width: 100%;
+      width: min(430px, 92vw);
       aspect-ratio: 9 / 16;
       border: 0;
       border-radius: 16px;
       overflow: hidden;
       position: relative;
       text-align: left;
-      cursor: default;
+      cursor: pointer;
       padding: 0;
       background: transparent;
       box-shadow: 0 14px 28px rgba(0, 0, 0, 0.34);
-    }
-
-    .books-card.is-admin {
-      cursor: pointer;
     }
 
     .books-card.is-admin:hover {
@@ -335,6 +360,11 @@
       margin: 0;
       text-align: center;
       color: #b9b9b9;
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
     }
 
     .books-magic-modal {
@@ -843,22 +873,29 @@
       overflow: hidden;
     }
 
-    @media (min-width: 900px) {
-      .books-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+    @media (max-width: 700px) {
+      .books-page {
+        padding: 10px 10px 12px;
+      }
+
+      .books-level-menu {
+        border-radius: 12px;
+        padding: 8px;
+      }
+
+      .books-level-title {
+        font-size: clamp(18px, 5.2vw, 24px);
+      }
+
+      .books-card {
+        width: min(410px, 92vw);
       }
     }
   </style>
 </head>
 <body>
   <main class="books-page">
-    <div class="books-avatar" aria-label="Avatar do usuario">
-      <img id="booksAccountAvatarImage" alt="Avatar do usuario" hidden>
-      <span id="booksAccountAvatarFallback">P</span>
-    </div>
-    <p class="books-user-name" id="booksAccountName">Jogador</p>
-
-    <section class="books-level-menu" aria-label="Selecao de nivel">
+    <section class="books-level-menu" id="booksLevelMenu" aria-label="Selecao de nivel">
       <button class="books-arrow-btn" id="booksLevelPrevBtn" type="button" aria-label="Nivel anterior">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.41 6.59 14 5.17 7.17 12 14 18.83l1.41-1.42L10 12z"/></svg>
       </button>
@@ -871,8 +908,10 @@
 
     <p class="books-status" id="booksStatus" aria-live="polite"></p>
 
-    <section class="books-grid" id="booksCardsGrid" aria-label="Livros por nivel"></section>
-    <p class="books-empty" id="booksCardsEmpty" hidden>Nenhum arquivo neste nivel.</p>
+    <section class="books-shelf" id="booksShelfViewport" aria-label="Prateleira de livros">
+      <section class="books-grid" id="booksCardsGrid" aria-label="Livros por nivel"></section>
+      <p class="books-empty" id="booksCardsEmpty" hidden>Nenhum arquivo neste nivel.</p>
+    </section>
     <input id="booksCoverUploadInput" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/gif" hidden>
   </main>
 

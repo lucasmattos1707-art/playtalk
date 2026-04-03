@@ -6,16 +6,32 @@
   const FORCE_ADMIN_UI_STORAGE_KEY = 'playtalk_books_force_admin_ui_v1';
   const MODE_DISSOLVE_MS = 2000;
   const MODE_LOADING_FADE_MS = 500;
+  const BOOK_SNAP_DURATION_MS = 500;
+  const BOOK_SWIPE_THRESHOLD = 44;
+  const LEVEL_DISPLAY_NAMES = [
+    'Iniciante',
+    'Básico',
+    'Aprendiz',
+    'Estudante',
+    'Leitor',
+    'Intermediário',
+    'Experiente',
+    'Avançado',
+    'Nativo',
+    'Expert'
+  ];
 
   const els = {
     avatarImage: document.getElementById('booksAccountAvatarImage'),
     avatarFallback: document.getElementById('booksAccountAvatarFallback'),
     avatarName: document.getElementById('booksAccountName'),
+    levelMenu: document.getElementById('booksLevelMenu'),
     adminUiToggleBtn: document.getElementById('booksAdminUiToggleBtn'),
     prevLevelBtn: document.getElementById('booksLevelPrevBtn'),
     nextLevelBtn: document.getElementById('booksLevelNextBtn'),
     levelTitle: document.getElementById('booksLevelTitle'),
     status: document.getElementById('booksStatus'),
+    shelfViewport: document.getElementById('booksShelfViewport'),
     cardsGrid: document.getElementById('booksCardsGrid'),
     cardsEmpty: document.getElementById('booksCardsEmpty'),
     coverUploadInput: document.getElementById('booksCoverUploadInput'),
@@ -79,7 +95,13 @@
     readerScores: [],
     readerMicBusy: false,
     readerTouchStartX: 0,
-    readerTouchStartY: 0
+    readerTouchStartY: 0,
+    shelfIndex: 0,
+    shelfTouchStartX: 0,
+    shelfTouchStartY: 0,
+    shelfAnimating: false,
+    shelfAnimationFrame: 0,
+    shelfAnimationToken: 0
   };
 
   function safeText(value) {
@@ -351,6 +373,135 @@
     });
   }
 
+  function isOverlayOpen() {
+    return Boolean(
+      state.readerOpen
+      || state.modeBookId
+      || state.magicBookId
+      || state.jsonBookId
+    );
+  }
+
+  function getShelfCards() {
+    if (!els.cardsGrid) return [];
+    return Array.from(els.cardsGrid.querySelectorAll('.books-card'));
+  }
+
+  function clampShelfIndex(index) {
+    const cards = getShelfCards();
+    if (!cards.length) return 0;
+    const normalized = Number.isFinite(index) ? index : 0;
+    return Math.max(0, Math.min(cards.length - 1, Math.round(normalized)));
+  }
+
+  function easeInOutCubic(progress) {
+    const t = Math.max(0, Math.min(1, Number(progress) || 0));
+    return t < 0.5 ? (4 * t * t * t) : (1 - Math.pow(-2 * t + 2, 3) / 2);
+  }
+
+  function cancelShelfAnimation() {
+    if (state.shelfAnimationFrame) {
+      window.cancelAnimationFrame(state.shelfAnimationFrame);
+      state.shelfAnimationFrame = 0;
+    }
+    state.shelfAnimating = false;
+  }
+
+  function animateShelfScrollTo(targetScrollTop, durationMs) {
+    const shelf = els.shelfViewport;
+    if (!shelf) return Promise.resolve();
+    cancelShelfAnimation();
+    const animationToken = state.shelfAnimationToken + 1;
+    state.shelfAnimationToken = animationToken;
+    state.shelfAnimating = true;
+
+    const from = shelf.scrollTop;
+    const to = Math.max(0, Number(targetScrollTop) || 0);
+    const duration = Math.max(0, Number(durationMs) || 0);
+    if (duration <= 0 || Math.abs(to - from) < 1) {
+      shelf.scrollTop = to;
+      state.shelfAnimating = false;
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      const startedAt = performance.now();
+      const step = (now) => {
+        if (animationToken !== state.shelfAnimationToken) {
+          state.shelfAnimating = false;
+          resolve();
+          return;
+        }
+        const elapsed = now - startedAt;
+        const ratio = Math.max(0, Math.min(1, elapsed / duration));
+        const eased = easeInOutCubic(ratio);
+        shelf.scrollTop = from + ((to - from) * eased);
+        if (ratio >= 1) {
+          state.shelfAnimating = false;
+          state.shelfAnimationFrame = 0;
+          resolve();
+          return;
+        }
+        state.shelfAnimationFrame = window.requestAnimationFrame(step);
+      };
+      state.shelfAnimationFrame = window.requestAnimationFrame(step);
+    });
+  }
+
+  async function scrollShelfToIndex(index, animate) {
+    const shelf = els.shelfViewport;
+    const cards = getShelfCards();
+    if (!shelf || !cards.length) return;
+    const nextIndex = Math.max(0, Math.min(cards.length - 1, Number(index) || 0));
+    state.shelfIndex = nextIndex;
+    const card = cards[nextIndex];
+    if (!card) return;
+
+    const targetScrollTop = Math.max(
+      0,
+      card.offsetTop - ((shelf.clientHeight - card.offsetHeight) / 2)
+    );
+
+    if (animate) {
+      await animateShelfScrollTo(targetScrollTop, BOOK_SNAP_DURATION_MS);
+      return;
+    }
+    cancelShelfAnimation();
+    shelf.scrollTop = targetScrollTop;
+  }
+
+  function updateShelfIndexFromViewport() {
+    const shelf = els.shelfViewport;
+    const cards = getShelfCards();
+    if (!shelf || !cards.length) {
+      state.shelfIndex = 0;
+      return;
+    }
+    const viewportCenter = shelf.scrollTop + (shelf.clientHeight / 2);
+    let closestIndex = 0;
+    let closestDistance = Number.POSITIVE_INFINITY;
+    cards.forEach((card, index) => {
+      const center = card.offsetTop + (card.offsetHeight / 2);
+      const distance = Math.abs(center - viewportCenter);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+    state.shelfIndex = closestIndex;
+  }
+
+  async function snapShelfByStep(direction) {
+    if (isOverlayOpen() || state.shelfAnimating) return;
+    const cards = getShelfCards();
+    if (!cards.length) return;
+    updateShelfIndexFromViewport();
+    const step = Number(direction) > 0 ? 1 : -1;
+    const target = clampShelfIndex(state.shelfIndex + step);
+    if (target === state.shelfIndex) return;
+    await scrollShelfToIndex(target, true);
+  }
+
   function setModeStartBusy(isBusy) {
     state.modeStartBusy = Boolean(isBusy);
     if (els.modeFreeReadBtn) {
@@ -550,7 +701,14 @@
     const books = getBooksForSelectedLevel();
     els.cardsGrid.innerHTML = '';
     els.cardsEmpty.hidden = books.length > 0;
-    if (!books.length) return;
+    if (!books.length) {
+      state.shelfIndex = 0;
+      cancelShelfAnimation();
+      if (els.shelfViewport) {
+        els.shelfViewport.scrollTop = 0;
+      }
+      return;
+    }
 
     const gradients = state.gradients.length ? state.gradients : ['linear-gradient(160deg, #4a5cff, #4ea5ff)'];
 
@@ -645,11 +803,16 @@
       });
       els.cardsGrid.appendChild(card);
     });
+
+    state.shelfIndex = clampShelfIndex(state.shelfIndex);
+    void scrollShelfToIndex(state.shelfIndex, false);
   }
 
   function renderLevelMenu() {
     if (els.levelTitle) {
-      els.levelTitle.textContent = `Nivel ${state.selectedLevel}`;
+      const levelIndex = Math.max(0, Math.min(LEVEL_DISPLAY_NAMES.length - 1, state.selectedLevel - 1));
+      const levelName = LEVEL_DISPLAY_NAMES[levelIndex] || `Nivel ${state.selectedLevel}`;
+      els.levelTitle.textContent = `${levelName}`;
     }
     if (els.prevLevelBtn) {
       els.prevLevelBtn.disabled = state.selectedLevel <= 1 || state.uploadInFlight;
@@ -661,6 +824,12 @@
 
   function renderAdminUiToggle() {
     if (!els.adminUiToggleBtn) return;
+    const canShowToggle = Boolean(state.isAdmin);
+    els.adminUiToggleBtn.hidden = !canShowToggle;
+    if (els.levelMenu) {
+      els.levelMenu.classList.toggle('is-admin', canShowToggle);
+    }
+    if (!canShowToggle) return;
     const isOn = isAdminUiEnabled();
     els.adminUiToggleBtn.classList.toggle('is-on', isOn);
     els.adminUiToggleBtn.textContent = isOn ? 'Admin UI On' : 'Admin UI Off';
@@ -668,6 +837,7 @@
 
   function setLevel(nextLevel) {
     state.selectedLevel = normalizeLevel(nextLevel);
+    state.shelfIndex = 0;
     renderLevelMenu();
     renderCards();
   }
@@ -1410,6 +1580,44 @@
       setLevel(state.selectedLevel + 1);
     });
 
+    els.shelfViewport?.addEventListener('wheel', (event) => {
+      if (isOverlayOpen()) return;
+      const deltaY = Number(event.deltaY) || 0;
+      if (Math.abs(deltaY) < 4) return;
+      event.preventDefault();
+      void snapShelfByStep(deltaY > 0 ? 1 : -1);
+    }, { passive: false });
+
+    els.shelfViewport?.addEventListener('touchstart', (event) => {
+      const touch = event.touches?.[0];
+      if (!touch) return;
+      state.shelfTouchStartX = Number(touch.clientX) || 0;
+      state.shelfTouchStartY = Number(touch.clientY) || 0;
+    }, { passive: true });
+
+    els.shelfViewport?.addEventListener('touchmove', (event) => {
+      if (isOverlayOpen()) return;
+      const touch = event.touches?.[0];
+      if (!touch) return;
+      const dx = (Number(touch.clientX) || 0) - state.shelfTouchStartX;
+      const dy = (Number(touch.clientY) || 0) - state.shelfTouchStartY;
+      if (Math.abs(dy) > Math.abs(dx)) {
+        event.preventDefault();
+      }
+    }, { passive: false });
+
+    els.shelfViewport?.addEventListener('touchend', (event) => {
+      if (isOverlayOpen()) return;
+      const touch = event.changedTouches?.[0];
+      if (!touch) return;
+      const endY = Number(touch.clientY) || 0;
+      const endX = Number(touch.clientX) || 0;
+      const dy = state.shelfTouchStartY - endY;
+      const dx = endX - state.shelfTouchStartX;
+      if (Math.abs(dy) < BOOK_SWIPE_THRESHOLD || Math.abs(dy) <= Math.abs(dx)) return;
+      void snapShelfByStep(dy > 0 ? 1 : -1);
+    }, { passive: true });
+
     els.adminUiToggleBtn?.addEventListener('click', () => {
       state.forceAdminUi = !state.forceAdminUi;
       persistForceAdminUiFlag(state.forceAdminUi);
@@ -1532,10 +1740,15 @@
     });
 
     window.addEventListener('resize', () => {
-      if (!state.readerOpen || !state.readerBookId) return;
-      const activeBook = state.books.find((entry) => safeText(entry?.bookId) === state.readerBookId);
-      if (!activeBook) return;
-      applyReaderBackground(activeBook);
+      if (state.readerOpen && state.readerBookId) {
+        const activeBook = state.books.find((entry) => safeText(entry?.bookId) === state.readerBookId);
+        if (!activeBook) return;
+        applyReaderBackground(activeBook);
+        return;
+      }
+      if (isOverlayOpen()) return;
+      state.shelfIndex = clampShelfIndex(state.shelfIndex);
+      void scrollShelfToIndex(state.shelfIndex, false);
     });
   }
 
