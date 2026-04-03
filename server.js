@@ -135,7 +135,7 @@ let flashcardUserStateTablesReadyPromise = null;
 let premiumAccessTablesReadyPromise = null;
 let speakingRealtimeTablesReadyPromise = null;
 let speakingCardsCache = {
-  cards: [],
+  stories: [],
   updatedAt: 0
 };
 
@@ -147,6 +147,7 @@ const SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS = 20;
 const SPEAKING_DUEL_INTRO_SECONDS = 5;
 const SPEAKING_DUEL_BATTLE_SECONDS = 180;
 const SPEAKING_CARD_CACHE_TTL_MS = 60 * 1000;
+const BATTLE_STORIES_ROOT = path.join(__dirname, 'battle-stories');
 const FLASHCARD_RANKING_PLACEHOLDER_NAME = 'Usuario';
 const FLASHCARD_RANKING_PLACEHOLDER_AVATAR = '/Avatar/avatar-man-person-svgrepo-com.svg';
 const FLASHCARD_RANKING_PERIODS = {
@@ -3140,73 +3141,92 @@ async function collectAllcardsManifestEntries() {
   }));
 }
 
-function normalizeSpeakingCardItem({ item, deckName = 'deck', index = 0 }) {
-  const english = readFlashcardItemEnglish(item);
-  if (!english) return null;
+function normalizeSpeakingStoryCardItem({ item, storyName = 'story', index = 0 }) {
+  const source = item && typeof item === 'object' ? item : {};
+  const english = safeString(source.en || source.english).trim();
+  const portuguese = safeString(source.pt || source.portuguese).trim();
+  if (!english || !portuguese) return null;
   return {
-    id: `${safeGeneratedBase(deckName, 'deck')}-${index}`,
+    id: `${safeGeneratedBase(storyName, 'story')}-${index}`,
     english,
-    portuguese: readFlashcardItemPortuguese(item),
-    imageUrl: readFlashcardItemImage(item),
-    audioUrl: readFlashcardItemAudio(item)
+    portuguese,
+    imageUrl: '',
+    audioUrl: ''
   };
-}
-
-function shuffleArray(value) {
-  const list = Array.isArray(value) ? value.slice() : [];
-  for (let index = list.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    const temp = list[index];
-    list[index] = list[swapIndex];
-    list[swapIndex] = temp;
-  }
-  return list;
 }
 
 async function loadSpeakingCardPool() {
   const now = Date.now();
   if (
-    Array.isArray(speakingCardsCache.cards)
-    && speakingCardsCache.cards.length
+    Array.isArray(speakingCardsCache.stories)
+    && speakingCardsCache.stories.length
     && (now - speakingCardsCache.updatedAt) < SPEAKING_CARD_CACHE_TTL_MS
   ) {
-    return speakingCardsCache.cards.slice();
+    return speakingCardsCache.stories.map((story) => ({
+      ...story,
+      cards: Array.isArray(story.cards) ? story.cards.slice() : []
+    }));
   }
 
-  const manifest = await collectAllcardsManifestEntries();
-  const fileEntries = manifest
+  let dirEntries = [];
+  try {
+    dirEntries = await fs.promises.readdir(BATTLE_STORIES_ROOT, { withFileTypes: true });
+  } catch (_error) {
+    dirEntries = [];
+  }
+  const fileEntries = dirEntries
+    .filter((entry) => entry && entry.isFile && entry.isFile() && entry.name.toLowerCase().endsWith('.json'))
     .map((entry) => ({
-      name: String(entry?.name || '').trim(),
-      path: path.join(ALLCARDS_ROOT, String(entry?.name || '').trim())
-    }))
-    .filter((entry) => entry.name && entry.name.toLowerCase().endsWith('.json'));
+      name: entry.name,
+      path: path.join(BATTLE_STORIES_ROOT, entry.name)
+    }));
 
-  const decks = await Promise.all(fileEntries.map(async (entry) => {
+  const stories = [];
+  for (const entry of fileEntries) {
     try {
       const raw = (await fs.promises.readFile(entry.path, 'utf8')).replace(/^\uFEFF/, '');
       const payload = JSON.parse(raw);
-      const items = getFlashcardPayloadItems(payload);
-      const cards = items
-        .map((item, index) => normalizeSpeakingCardItem({ item, deckName: entry.name, index }))
-        .filter(Boolean);
-      return cards;
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        continue;
+      }
+      Object.entries(payload).forEach(([storyKey, storyValue]) => {
+        const items = Array.isArray(storyValue) ? storyValue : [];
+        const cards = items
+          .map((item, index) => normalizeSpeakingStoryCardItem({
+            item,
+            storyName: `${entry.name}-${storyKey}`,
+            index
+          }))
+          .filter(Boolean);
+        if (!cards.length) return;
+        stories.push({
+          fileName: entry.name,
+          storyKey: safeString(storyKey) || 'story',
+          cards
+        });
+      });
     } catch (_error) {
-      return [];
+      // ignore invalid story files
     }
-  }));
+  }
 
-  const cards = decks.flat().filter(Boolean);
   speakingCardsCache = {
-    cards,
+    stories,
     updatedAt: now
   };
-  return cards.slice();
+  return stories.map((story) => ({
+    ...story,
+    cards: story.cards.slice()
+  }));
 }
 
-async function buildRandomSpeakingCards(count = SPEAKING_DUEL_DEFAULT_CARDS) {
-  const normalizedCount = Math.max(1, Math.min(100, Number.parseInt(count, 10) || SPEAKING_DUEL_DEFAULT_CARDS));
-  const cards = await loadSpeakingCardPool();
-  return shuffleArray(cards).slice(0, Math.min(normalizedCount, cards.length));
+async function buildRandomSpeakingCards() {
+  const stories = await loadSpeakingCardPool();
+  if (!stories.length) return [];
+  const randomIndex = Math.floor(Math.random() * stories.length);
+  const selected = stories[randomIndex];
+  const cards = Array.isArray(selected?.cards) ? selected.cards.slice() : [];
+  return cards;
 }
 
 function buildSpeakingSessionId() {
@@ -5926,11 +5946,7 @@ app.get('/api/users/flashcards', async (req, res) => {
 
 app.get('/api/speaking/cards', async (req, res) => {
   try {
-    const requestedCount = Number.parseInt(req.query.count, 10);
-    const count = Number.isInteger(requestedCount) && requestedCount > 0
-      ? Math.min(requestedCount, 100)
-      : SPEAKING_DUEL_DEFAULT_CARDS;
-    const cards = await buildRandomSpeakingCards(count);
+    const cards = await buildRandomSpeakingCards();
     res.setHeader('Cache-Control', 'no-store');
     res.json({
       success: true,
@@ -6267,7 +6283,7 @@ app.post('/api/speaking/challenges/respond', async (req, res) => {
         return;
       }
 
-      const cards = await buildRandomSpeakingCards(SPEAKING_DUEL_DEFAULT_CARDS);
+      const cards = await buildRandomSpeakingCards();
       if (!cards.length) {
         const error = new Error('Nao foi possivel preparar as cartas do duelo.');
         error.statusCode = 500;
