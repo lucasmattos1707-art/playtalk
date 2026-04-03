@@ -224,7 +224,7 @@
     }
 
     .books-card {
-      width: min(430px, 92vw, calc(var(--books-shelf-height) * 9 / 16));
+      width: min(378px, 81vw, calc(var(--books-shelf-height) * 9 / 16 * 0.88));
       aspect-ratio: 9 / 16;
       border: 0;
       border-radius: 16px;
@@ -705,7 +705,7 @@
     }
 
     .books-mode-cover {
-      width: min(220px, 58vw);
+      width: min(194px, 51vw);
       aspect-ratio: 9 / 16;
       border-radius: 14px;
       background: linear-gradient(155deg, #2a5bcf, #28a7d5);
@@ -996,6 +996,7 @@
       text-align: center;
       white-space: pre-line;
       max-width: min(460px, 92vw);
+      display: none;
     }
 
     .books-reader-pron-inner {
@@ -1044,19 +1045,21 @@
     }
 
     .books-reader-lang-btn {
-      min-height: 36px;
-      padding: 0 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.32);
-      background: rgba(255, 255, 255, 0.1);
+      min-height: 0;
+      padding: 0;
+      border-radius: 0;
+      border: 0;
+      background: transparent;
       color: #ffffff;
       font-size: 12px;
       font-weight: 800;
       letter-spacing: 0.04em;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 0;
       cursor: pointer;
+      opacity: 0.56;
+      transition: transform 140ms ease, opacity 140ms ease;
     }
 
     .books-reader-lang-btn svg {
@@ -1066,16 +1069,16 @@
     }
 
     .books-reader-lang-btn img {
-      width: 20px;
-      height: 20px;
+      width: 42px;
+      height: 42px;
       display: block;
       object-fit: contain;
-      filter: brightness(0) saturate(100%) invert(100%);
+      filter: none;
     }
 
     .books-reader-lang-btn.is-active {
-      background: rgba(71, 146, 255, 0.48);
-      border-color: rgba(165, 209, 255, 0.8);
+      opacity: 1;
+      transform: scale(1.05);
     }
 
     .books-reader-mic-btn {
@@ -1327,7 +1330,7 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.41 6.59 14 5.17 7.17 12 14 18.83l1.41-1.42L10 12z"/></svg>
     </button>
     <div class="books-reader-content" id="booksReaderContent">
-      <div class="books-reader-profile">
+      <div class="books-reader-profile" id="booksReaderProfile">
         <div class="books-reader-pron-ring" id="booksReaderPronRing">
           <div class="books-reader-pron-inner">
             <img class="books-reader-avatar-img" id="booksReaderAvatarImage" alt="Avatar do usuario" hidden>
@@ -1338,15 +1341,15 @@
         <p class="books-reader-pron-percent" id="booksReaderPronPercent">0%</p>
       </div>
       <p class="books-reader-english" id="booksReaderEnglish">Carregando...</p>
+      <div class="books-reader-lang">
+        <button class="books-reader-lang-btn is-active" id="booksReaderLangEnglishBtn" type="button" aria-label="Mostrar ingles">
+          <img src="/arquivos-codex/icones/ingles.svg" alt="Ingles">
+        </button>
+        <button class="books-reader-lang-btn" id="booksReaderLangPortugueseBtn" type="button" aria-label="Mostrar portugues">
+          <img src="/arquivos-codex/icones/portugues.svg" alt="Portugues">
+        </button>
+      </div>
       <div class="books-reader-training" id="booksReaderTraining" hidden>
-        <div class="books-reader-lang">
-          <button class="books-reader-lang-btn is-active" id="booksReaderLangEnglishBtn" type="button" aria-label="Mostrar ingles">
-            <img src="/arquivos-codex/icones/ingles.svg" alt="Ingles">
-          </button>
-          <button class="books-reader-lang-btn" id="booksReaderLangPortugueseBtn" type="button" aria-label="Mostrar portugues">
-            <img src="/arquivos-codex/icones/portugues.svg" alt="Portugues">
-          </button>
-        </div>
         <button class="books-reader-mic-btn" id="booksReaderMicBtn" type="button" aria-label="Treinar pronuncia">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
         </button>
@@ -1452,6 +1455,6 @@
   <script src="js/api-config.js"></script>
   <script src="js/player-state.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/books-page.js?v=20260403p"></script>
+  <script src="js/books-page.js?v=20260403q"></script>
 </body>
 </html>

@@ -7649,6 +7649,263 @@ app.post('/api/admin/minibooks/write-lines', express.json({ limit: '2mb' }), asy
   }
 });
 
+const MINIBOOK_CREATE_JOBS_RETENTION_MS = 1000 * 60 * 60 * 12;
+const MINIBOOK_CREATE_JOBS_ACTIVE_RETENTION_MS = 1000 * 60 * 60 * 24;
+const miniBookCreateJobs = new Map();
+
+function normalizeMiniBookCreateJobProgress(value) {
+  return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+}
+
+function serializeMiniBookCreateJob(job) {
+  if (!job || typeof job !== 'object') return null;
+  return {
+    id: String(job.id || '').trim(),
+    requestedByUserId: Math.max(0, Number(job.requestedByUserId) || 0),
+    status: String(job.status || 'queued').trim().toLowerCase(),
+    progress: normalizeMiniBookCreateJobProgress(job.progress),
+    step: String(job.step || '').trim(),
+    createdAt: String(job.createdAt || '').trim(),
+    startedAt: String(job.startedAt || '').trim(),
+    finishedAt: String(job.finishedAt || '').trim(),
+    updatedAt: String(job.updatedAt || '').trim(),
+    errorMessage: String(job.errorMessage || '').trim(),
+    book: {
+      id: String(job?.book?.id || '').trim(),
+      fileName: String(job?.book?.fileName || '').trim(),
+      title: String(job?.book?.title || 'Livro').trim(),
+      level: normalizeSpeakingStoryLevel(job?.book?.level)
+    },
+    audio: {
+      provider: String(job?.audio?.provider || '').trim(),
+      voice: String(job?.audio?.voice || '').trim(),
+      voiceLabel: String(job?.audio?.voiceLabel || '').trim(),
+      count: Math.max(0, Number(job?.audio?.count) || 0)
+    },
+    stats: job?.stats && typeof job.stats === 'object'
+      ? {
+        storiesCount: Math.max(0, Number(job.stats.storiesCount) || 0),
+        cardsCount: Math.max(0, Number(job.stats.cardsCount) || 0)
+      }
+      : null
+  };
+}
+
+function cleanupMiniBookCreateJobs() {
+  const now = Date.now();
+  miniBookCreateJobs.forEach((job, jobId) => {
+    const serialized = serializeMiniBookCreateJob(job);
+    const updatedAtMs = Date.parse(serialized?.updatedAt || serialized?.createdAt || '') || 0;
+    if (!updatedAtMs) return;
+    const active = serialized?.status === 'queued' || serialized?.status === 'running';
+    const ttl = active ? MINIBOOK_CREATE_JOBS_ACTIVE_RETENTION_MS : MINIBOOK_CREATE_JOBS_RETENTION_MS;
+    if ((now - updatedAtMs) > ttl) {
+      miniBookCreateJobs.delete(jobId);
+    }
+  });
+}
+
+function updateMiniBookCreateJob(jobId, patch = {}) {
+  const targetId = String(jobId || '').trim();
+  if (!targetId) return null;
+  const previous = miniBookCreateJobs.get(targetId);
+  if (!previous) return null;
+  const next = {
+    ...previous,
+    ...patch,
+    progress: normalizeMiniBookCreateJobProgress(
+      patch.progress === undefined ? previous.progress : patch.progress
+    ),
+    updatedAt: new Date().toISOString()
+  };
+  miniBookCreateJobs.set(targetId, next);
+  return next;
+}
+
+async function runMiniBookCreateFromLinesPipeline({ createInput, audioSelection, adminUserId, onProgress }) {
+  const progress = typeof onProgress === 'function'
+    ? (percent, step) => onProgress(normalizeMiniBookCreateJobProgress(percent), String(step || '').trim())
+    : () => {};
+  const cacheBuster = Date.now();
+  const totalCards = Array.isArray(createInput?.cards) ? createInput.cards.length : 0;
+
+  progress(4, 'Criando job...');
+  progress(8, 'Gerando audios...');
+  for (let index = 0; index < createInput.cards.length; index += 1) {
+    const card = createInput.cards[index];
+    const generatedAudio = audioSelection.provider === 'elevenlabs'
+      ? await generateMiniBookSpeechWithElevenLabs(card.en, { languageCode: 'en' })
+      : await generateMiniBookSpeechWithOpenAi(card.en, { voice: audioSelection.voice });
+    const audioObjectKey = buildMiniBookAudioObjectKey(createInput.bookId, index);
+    await putR2Object(audioObjectKey, generatedAudio.buffer, generatedAudio.mimeType || 'audio/mpeg');
+    card.audio = `${buildFlashcardsR2PublicUrl(audioObjectKey)}?v=${cacheBuster}`;
+    const ratio = totalCards > 0 ? ((index + 1) / totalCards) : 1;
+    progress(8 + Math.round(ratio * 44), `Gerando audios ${index + 1}/${Math.max(1, totalCards)}...`);
+  }
+
+  progress(54, 'Montando JSON...');
+  const payload = buildMiniBookJsonPayloadFromCreateInput(createInput);
+  const parsedMiniBook = buildMiniBookStoriesFromJsonPayload(payload, {
+    bookId: createInput.bookId,
+    fileName: createInput.fileName,
+    bookTitle: createInput.title,
+    level: createInput.level
+  });
+  if (!Array.isArray(parsedMiniBook.stories) || !parsedMiniBook.stories.length) {
+    const error = new Error('As frases enviadas nao produziram historias validas para o livro.');
+    error.statusCode = 422;
+    throw error;
+  }
+
+  progress(62, 'Salvando no Postgres...');
+  await ensureMiniBookJsonTables();
+  await pool.query(
+    `INSERT INTO public.minibook_json_content (
+       book_id,
+       file_name,
+       title,
+       level,
+       payload,
+       updated_by_user_id,
+       updated_at
+     )
+     VALUES ($1, $2, $3, $4, $5::jsonb, $6, now())
+     ON CONFLICT (book_id)
+     DO UPDATE SET
+       file_name = EXCLUDED.file_name,
+       title = EXCLUDED.title,
+       level = EXCLUDED.level,
+       payload = EXCLUDED.payload,
+       updated_by_user_id = EXCLUDED.updated_by_user_id,
+       updated_at = now()`,
+    [
+      parsedMiniBook.bookId,
+      parsedMiniBook.fileName,
+      parsedMiniBook.bookTitle,
+      parsedMiniBook.level,
+      JSON.stringify(payload),
+      Number(adminUserId) || null
+    ]
+  );
+  invalidateSpeakingCardsCache();
+
+  const coverPrompt = normalizeMiniBookText(createInput.coverPrompt, [
+    MINIBOOKS_DEFAULT_COVER_PROMPT,
+    `Book concept: ${createInput.title}.`
+  ].join(' '));
+  const backgroundPrompt = normalizeMiniBookText(createInput.backgroundPrompt, [
+    MINIBOOKS_DEFAULT_BACKGROUND_PROMPT,
+    `Book concept: ${createInput.title}.`
+  ].join(' '));
+
+  progress(70, 'Gerando capa e backgrounds...');
+  const [coverGenerated, desktopGenerated, mobileGenerated] = await Promise.all([
+    generateMiniBookImageWithOpenAi(coverPrompt, { size: '1024x1536', quality: 'medium' }),
+    generateMiniBookImageWithOpenAi(backgroundPrompt, { size: '1536x1024', quality: 'medium' }),
+    generateMiniBookImageWithOpenAi(backgroundPrompt, { size: '1024x1536', quality: 'medium' })
+  ]);
+
+  progress(82, 'Otimizando imagens...');
+  const [coverBuffer, desktopBuffer, mobileBuffer] = await Promise.all([
+    optimizeMiniBookAssetToWebp(coverGenerated.buffer, 'cover'),
+    optimizeMiniBookAssetToWebp(desktopGenerated.buffer, 'background-desktop'),
+    optimizeMiniBookAssetToWebp(mobileGenerated.buffer, 'background-mobile')
+  ]);
+
+  const coverObjectKey = buildMiniBookObjectKey(parsedMiniBook.bookId, 'cover');
+  const desktopObjectKey = buildMiniBookObjectKey(parsedMiniBook.bookId, 'background-desktop');
+  const mobileObjectKey = buildMiniBookObjectKey(parsedMiniBook.bookId, 'background-mobile');
+
+  progress(90, 'Publicando no R2...');
+  await Promise.all([
+    putR2Object(coverObjectKey, coverBuffer, 'image/webp'),
+    putR2Object(desktopObjectKey, desktopBuffer, 'image/webp'),
+    putR2Object(mobileObjectKey, mobileBuffer, 'image/webp')
+  ]);
+
+  const coverImageUrl = `${buildFlashcardsR2PublicUrl(coverObjectKey)}?v=${cacheBuster}`;
+  const backgroundDesktopUrl = `${buildFlashcardsR2PublicUrl(desktopObjectKey)}?v=${cacheBuster}`;
+  const backgroundMobileUrl = `${buildFlashcardsR2PublicUrl(mobileObjectKey)}?v=${cacheBuster}`;
+
+  progress(96, 'Atualizando manifest...');
+  const manifest = await loadMiniBooksManifest();
+  const previousEntry = normalizeMiniBookEntry(parsedMiniBook.bookId, manifest.books?.[parsedMiniBook.bookId] || {});
+  manifest.books = manifest.books || {};
+  manifest.books[parsedMiniBook.bookId] = normalizeMiniBookEntry(parsedMiniBook.bookId, {
+    ...previousEntry,
+    bookId: parsedMiniBook.bookId,
+    fileName: parsedMiniBook.fileName,
+    title: parsedMiniBook.bookTitle,
+    level: parsedMiniBook.level,
+    coverImageUrl,
+    coverObjectKey,
+    coverPrompt,
+    backgroundDesktopUrl,
+    backgroundDesktopObjectKey: desktopObjectKey,
+    backgroundMobileUrl,
+    backgroundMobileObjectKey: mobileObjectKey,
+    backgroundPrompt,
+    updatedAt: new Date().toISOString()
+  });
+  manifest.updatedAt = new Date().toISOString();
+  const savedManifest = await persistMiniBooksManifest(manifest);
+  const savedEntry = normalizeMiniBookEntry(parsedMiniBook.bookId, savedManifest.books?.[parsedMiniBook.bookId] || {});
+
+  const storiesCount = parsedMiniBook.stories.length;
+  const cardsCount = parsedMiniBook.stories.reduce((total, story) => (
+    total + (Array.isArray(story.cards) ? story.cards.length : 0)
+  ), 0);
+
+  progress(100, 'Finalizado.');
+  return {
+    book: {
+      id: parsedMiniBook.bookId,
+      fileName: parsedMiniBook.fileName,
+      title: parsedMiniBook.bookTitle,
+      level: parsedMiniBook.level,
+      coverImageUrl: savedEntry.coverImageUrl || '',
+      backgroundDesktopUrl: savedEntry.backgroundDesktopUrl || '',
+      backgroundMobileUrl: savedEntry.backgroundMobileUrl || ''
+    },
+    stats: {
+      storiesCount,
+      cardsCount
+    },
+    audio: {
+      provider: audioSelection.provider,
+      voice: audioSelection.voice,
+      voiceLabel: audioSelection.voiceLabel,
+      count: createInput.cards.length
+    }
+  };
+}
+
+app.get('/api/admin/minibooks/create-jobs', async (req, res) => {
+  let adminUser = null;
+  try {
+    adminUser = await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  cleanupMiniBookCreateJobs();
+  const adminUserId = Number(adminUser?.id) || 0;
+  const jobs = Array.from(miniBookCreateJobs.values())
+    .map((job) => serializeMiniBookCreateJob(job))
+    .filter(Boolean)
+    .filter((job) => (Number(job.requestedByUserId || adminUserId) || 0) === adminUserId)
+    .sort((left, right) => String(right?.updatedAt || '').localeCompare(String(left?.updatedAt || '')))
+    .slice(0, 50);
+
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    success: true,
+    jobs
+  });
+});
+
 app.post('/api/admin/minibooks/create-from-lines', express.json({ limit: '4mb' }), async (req, res) => {
   let adminUser = null;
   try {
@@ -7672,147 +7929,96 @@ app.post('/api/admin/minibooks/create-from-lines', express.json({ limit: '4mb' }
   try {
     const createInput = parseMiniBookCreateLines(req.body?.linesText || req.body?.text || '');
     const audioSelection = parseMiniBookAudioSelection(req.body?.voice);
-    const cacheBuster = Date.now();
-
-    for (let index = 0; index < createInput.cards.length; index += 1) {
-      const card = createInput.cards[index];
-      const generatedAudio = audioSelection.provider === 'elevenlabs'
-        ? await generateMiniBookSpeechWithElevenLabs(card.en, { languageCode: 'en' })
-        : await generateMiniBookSpeechWithOpenAi(card.en, { voice: audioSelection.voice });
-      const audioObjectKey = buildMiniBookAudioObjectKey(createInput.bookId, index);
-      await putR2Object(audioObjectKey, generatedAudio.buffer, generatedAudio.mimeType || 'audio/mpeg');
-      card.audio = `${buildFlashcardsR2PublicUrl(audioObjectKey)}?v=${cacheBuster}`;
-    }
-
-    const payload = buildMiniBookJsonPayloadFromCreateInput(createInput);
-    const parsedMiniBook = buildMiniBookStoriesFromJsonPayload(payload, {
-      bookId: createInput.bookId,
-      fileName: createInput.fileName,
-      bookTitle: createInput.title,
-      level: createInput.level
-    });
-    if (!Array.isArray(parsedMiniBook.stories) || !parsedMiniBook.stories.length) {
-      res.status(422).json({
-        error: 'As frases enviadas nao produziram historias validas para o livro.'
-      });
-      return;
-    }
-
-    await ensureMiniBookJsonTables();
-    await pool.query(
-      `INSERT INTO public.minibook_json_content (
-         book_id,
-         file_name,
-         title,
-         level,
-         payload,
-         updated_by_user_id,
-         updated_at
-       )
-       VALUES ($1, $2, $3, $4, $5::jsonb, $6, now())
-       ON CONFLICT (book_id)
-       DO UPDATE SET
-         file_name = EXCLUDED.file_name,
-         title = EXCLUDED.title,
-         level = EXCLUDED.level,
-         payload = EXCLUDED.payload,
-         updated_by_user_id = EXCLUDED.updated_by_user_id,
-         updated_at = now()`,
-      [
-        parsedMiniBook.bookId,
-        parsedMiniBook.fileName,
-        parsedMiniBook.bookTitle,
-        parsedMiniBook.level,
-        JSON.stringify(payload),
-        Number(adminUser?.id) || null
-      ]
-    );
-    invalidateSpeakingCardsCache();
-
-    const coverPrompt = normalizeMiniBookText(createInput.coverPrompt, [
-      MINIBOOKS_DEFAULT_COVER_PROMPT,
-      `Book concept: ${createInput.title}.`
-    ].join(' '));
-    const backgroundPrompt = normalizeMiniBookText(createInput.backgroundPrompt, [
-      MINIBOOKS_DEFAULT_BACKGROUND_PROMPT,
-      `Book concept: ${createInput.title}.`
-    ].join(' '));
-
-    const [coverGenerated, desktopGenerated, mobileGenerated] = await Promise.all([
-      generateMiniBookImageWithOpenAi(coverPrompt, { size: '1024x1536', quality: 'medium' }),
-      generateMiniBookImageWithOpenAi(backgroundPrompt, { size: '1536x1024', quality: 'medium' }),
-      generateMiniBookImageWithOpenAi(backgroundPrompt, { size: '1024x1536', quality: 'medium' })
-    ]);
-
-    const [coverBuffer, desktopBuffer, mobileBuffer] = await Promise.all([
-      optimizeMiniBookAssetToWebp(coverGenerated.buffer, 'cover'),
-      optimizeMiniBookAssetToWebp(desktopGenerated.buffer, 'background-desktop'),
-      optimizeMiniBookAssetToWebp(mobileGenerated.buffer, 'background-mobile')
-    ]);
-
-    const coverObjectKey = buildMiniBookObjectKey(parsedMiniBook.bookId, 'cover');
-    const desktopObjectKey = buildMiniBookObjectKey(parsedMiniBook.bookId, 'background-desktop');
-    const mobileObjectKey = buildMiniBookObjectKey(parsedMiniBook.bookId, 'background-mobile');
-
-    await Promise.all([
-      putR2Object(coverObjectKey, coverBuffer, 'image/webp'),
-      putR2Object(desktopObjectKey, desktopBuffer, 'image/webp'),
-      putR2Object(mobileObjectKey, mobileBuffer, 'image/webp')
-    ]);
-
-    const coverImageUrl = `${buildFlashcardsR2PublicUrl(coverObjectKey)}?v=${cacheBuster}`;
-    const backgroundDesktopUrl = `${buildFlashcardsR2PublicUrl(desktopObjectKey)}?v=${cacheBuster}`;
-    const backgroundMobileUrl = `${buildFlashcardsR2PublicUrl(mobileObjectKey)}?v=${cacheBuster}`;
-
-    const manifest = await loadMiniBooksManifest();
-    const previousEntry = normalizeMiniBookEntry(parsedMiniBook.bookId, manifest.books?.[parsedMiniBook.bookId] || {});
-    manifest.books = manifest.books || {};
-    manifest.books[parsedMiniBook.bookId] = normalizeMiniBookEntry(parsedMiniBook.bookId, {
-      ...previousEntry,
-      bookId: parsedMiniBook.bookId,
-      fileName: parsedMiniBook.fileName,
-      title: parsedMiniBook.bookTitle,
-      level: parsedMiniBook.level,
-      coverImageUrl,
-      coverObjectKey,
-      coverPrompt,
-      backgroundDesktopUrl,
-      backgroundDesktopObjectKey: desktopObjectKey,
-      backgroundMobileUrl,
-      backgroundMobileObjectKey: mobileObjectKey,
-      backgroundPrompt,
-      updatedAt: new Date().toISOString()
-    });
-    manifest.updatedAt = new Date().toISOString();
-    const savedManifest = await persistMiniBooksManifest(manifest);
-    const savedEntry = normalizeMiniBookEntry(parsedMiniBook.bookId, savedManifest.books?.[parsedMiniBook.bookId] || {});
-
-    const storiesCount = parsedMiniBook.stories.length;
-    const cardsCount = parsedMiniBook.stories.reduce((total, story) => (
-      total + (Array.isArray(story.cards) ? story.cards.length : 0)
-    ), 0);
-
-    res.json({
-      success: true,
+    const nowIso = new Date().toISOString();
+    const jobId = (typeof crypto.randomUUID === 'function')
+      ? crypto.randomUUID()
+      : `mb-job-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+    const normalizedAdminUserId = Number(adminUser?.id) || 0;
+    const initialJob = {
+      id: jobId,
+      status: 'queued',
+      progress: 0,
+      step: 'Na fila...',
+      createdAt: nowIso,
+      startedAt: '',
+      finishedAt: '',
+      updatedAt: nowIso,
+      requestedByUserId: normalizedAdminUserId,
+      errorMessage: '',
       book: {
-        id: parsedMiniBook.bookId,
-        fileName: parsedMiniBook.fileName,
-        title: parsedMiniBook.bookTitle,
-        level: parsedMiniBook.level,
-        coverImageUrl: savedEntry.coverImageUrl || '',
-        backgroundDesktopUrl: savedEntry.backgroundDesktopUrl || '',
-        backgroundMobileUrl: savedEntry.backgroundMobileUrl || ''
-      },
-      stats: {
-        storiesCount,
-        cardsCount
+        id: String(createInput.bookId || '').trim(),
+        fileName: String(createInput.fileName || '').trim(),
+        title: String(createInput.title || 'Livro').trim(),
+        level: normalizeSpeakingStoryLevel(createInput.level)
       },
       audio: {
-        provider: audioSelection.provider,
-        voice: audioSelection.voice,
-        voiceLabel: audioSelection.voiceLabel,
-        count: createInput.cards.length
+        provider: String(audioSelection.provider || '').trim(),
+        voice: String(audioSelection.voice || '').trim(),
+        voiceLabel: String(audioSelection.voiceLabel || '').trim(),
+        count: Array.isArray(createInput.cards) ? createInput.cards.length : 0
+      },
+      stats: null
+    };
+    miniBookCreateJobs.set(jobId, initialJob);
+    cleanupMiniBookCreateJobs();
+
+    void (async () => {
+      try {
+        updateMiniBookCreateJob(jobId, {
+          status: 'running',
+          startedAt: new Date().toISOString(),
+          step: 'Iniciando...'
+        });
+        const result = await runMiniBookCreateFromLinesPipeline({
+          createInput,
+          audioSelection,
+          adminUserId: normalizedAdminUserId,
+          onProgress: (progress, step) => {
+            updateMiniBookCreateJob(jobId, {
+              status: 'running',
+              progress,
+              step
+            });
+          }
+        });
+        updateMiniBookCreateJob(jobId, {
+          status: 'done',
+          progress: 100,
+          step: 'Finalizado.',
+          finishedAt: new Date().toISOString(),
+          book: {
+            ...initialJob.book,
+            ...result.book
+          },
+          stats: result.stats || null,
+          audio: result.audio || initialJob.audio
+        });
+      } catch (error) {
+        updateMiniBookCreateJob(jobId, {
+          status: 'error',
+          step: 'Falha na criacao.',
+          finishedAt: new Date().toISOString(),
+          errorMessage: error?.message || 'Falha ao criar MiniBook por linhas.'
+        });
+      } finally {
+        cleanupMiniBookCreateJobs();
       }
+    })();
+
+    res.status(202).json({
+      success: true,
+      job: serializeMiniBookCreateJob(initialJob),
+      book: {
+        id: initialJob.book.id,
+        fileName: initialJob.book.fileName,
+        title: initialJob.book.title,
+        level: initialJob.book.level
+      },
+      stats: {
+        storiesCount: 0,
+        cardsCount: initialJob.audio.count
+      },
+      audio: initialJob.audio
     });
   } catch (error) {
     const statusCode = Number(error?.statusCode || 500);

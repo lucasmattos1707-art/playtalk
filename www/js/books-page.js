@@ -11,6 +11,7 @@
   const LEVEL_SWIPE_THRESHOLD = 54;
   const CREATE_MIN_LINES = 7;
   const CREATE_MAX_PHRASE_PAIRS = 120;
+  const CREATE_JOBS_POLL_MS = 2200;
   const READER_FINISH_DISSOLVE_MS = 500;
   const READER_FINISH_BOOK_ENTER_MS = 500;
   const READER_FINISH_LINE_STEP_MS = 1000;
@@ -75,6 +76,7 @@
     reader: document.getElementById('booksReader'),
     readerBackBtn: document.getElementById('booksReaderBackBtn'),
     readerContent: document.getElementById('booksReaderContent'),
+    readerProfile: document.getElementById('booksReaderProfile'),
     readerEnglish: document.getElementById('booksReaderEnglish'),
     readerTraining: document.getElementById('booksReaderTraining'),
     readerAvatarImage: document.getElementById('booksReaderAvatarImage'),
@@ -110,7 +112,10 @@
     createModalOpen: false,
     createBusy: false,
     createWriteBusy: false,
-    pendingCreateBooks: [],
+    createJobs: [],
+    createJobsPollTimer: 0,
+    createJobsPollInFlight: false,
+    createJobStatusById: new Map(),
     modeBookId: '',
     modeStartBusy: false,
     modeStartToken: 0,
@@ -803,8 +808,8 @@
       els.createWriteBtn.textContent = state.createWriteBusy ? 'Escrevendo...' : 'Escrever livro';
     }
     if (els.createBookBtn) {
-      els.createBookBtn.disabled = state.createBusy || state.createWriteBusy;
-      els.createBookBtn.textContent = state.createBusy ? 'Criando...' : 'Criar livro';
+      els.createBookBtn.disabled = state.createWriteBusy;
+      els.createBookBtn.textContent = 'Criar livro';
     }
   }
 
@@ -875,22 +880,134 @@
     }
   }
 
-  function addPendingCreateBook(bookDraft) {
-    const tempId = `pending:${Date.now()}:${Math.random().toString(16).slice(2, 8)}`;
-    state.pendingCreateBooks.push({
-      tempId,
-      bookId: tempId,
-      nome: safeText(bookDraft?.title) || 'Livro',
-      nivel: normalizeLevel(bookDraft?.level),
-      isPendingCreate: true
-    });
-    return tempId;
+  function normalizeCreateJob(job) {
+    if (!job || typeof job !== 'object') return null;
+    const id = safeText(job.id || job.jobId);
+    if (!id) return null;
+    const statusRaw = safeText(job.status).toLowerCase();
+    const status = statusRaw || 'queued';
+    const progress = Math.max(0, Math.min(100, Math.round(Number(job.progress) || 0)));
+    const step = safeText(job.step || job.message);
+    const errorMessage = safeText(job.errorMessage || job.error);
+    const book = {
+      id: safeText(job?.book?.id || job?.book?.bookId),
+      title: safeText(job?.book?.title || job?.title) || 'Livro',
+      level: normalizeLevel(job?.book?.level || job?.level),
+      fileName: safeText(job?.book?.fileName || job?.fileName)
+    };
+    const updatedAt = safeText(job.updatedAt || job.finishedAt || job.startedAt || job.createdAt);
+    return {
+      id,
+      status,
+      progress,
+      step,
+      errorMessage,
+      book,
+      updatedAt
+    };
   }
 
-  function removePendingCreateBook(tempId) {
-    const target = safeText(tempId);
-    if (!target) return;
-    state.pendingCreateBooks = state.pendingCreateBooks.filter((entry) => safeText(entry?.tempId) !== target);
+  function isCreateJobRunning(job) {
+    const status = safeText(job?.status).toLowerCase();
+    return status === 'queued' || status === 'running';
+  }
+
+  function formatCreateJobLabel(job) {
+    if (!job) return 'Criando...';
+    const progress = Math.max(0, Math.min(100, Math.round(Number(job.progress) || 0)));
+    const step = safeText(job.step);
+    if (step && progress > 0) return `${step} ${progress}%`;
+    if (step) return step;
+    if (progress > 0) return `Criando... ${progress}%`;
+    return 'Criando...';
+  }
+
+  function upsertCreateJob(job) {
+    const normalized = normalizeCreateJob(job);
+    if (!normalized) return null;
+    const next = state.createJobs.slice();
+    const index = next.findIndex((entry) => safeText(entry?.id) === normalized.id);
+    if (index >= 0) {
+      next[index] = { ...next[index], ...normalized };
+    } else {
+      next.push(normalized);
+    }
+    next.sort((left, right) => String(right?.updatedAt || '').localeCompare(String(left?.updatedAt || '')));
+    state.createJobs = next;
+    return normalized;
+  }
+
+  function hasRunningCreateJobs() {
+    return state.createJobs.some((job) => isCreateJobRunning(job));
+  }
+
+  function scheduleCreateJobsPoll(delayMs) {
+    if (!state.isAdmin) return;
+    if (state.createJobsPollTimer) {
+      window.clearTimeout(state.createJobsPollTimer);
+      state.createJobsPollTimer = 0;
+    }
+    const delay = Math.max(250, Number(delayMs) || CREATE_JOBS_POLL_MS);
+    state.createJobsPollTimer = window.setTimeout(() => {
+      state.createJobsPollTimer = 0;
+      void refreshCreateJobs();
+    }, delay);
+  }
+
+  async function refreshCreateJobs(options) {
+    if (!state.isAdmin || state.createJobsPollInFlight) return;
+    const opts = options && typeof options === 'object' ? options : {};
+    state.createJobsPollInFlight = true;
+    try {
+      const response = await fetch(buildApiUrl('/api/admin/minibooks/create-jobs'), {
+        credentials: 'include',
+        headers: buildAuthHeaders(),
+        cache: 'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !Array.isArray(payload.jobs)) {
+        throw new Error(payload?.error || payload?.message || 'Nao foi possivel carregar status de criacao.');
+      }
+
+      const previousStatusMap = state.createJobStatusById;
+      const nextStatusMap = new Map();
+      const normalizedJobs = payload.jobs
+        .map((job) => normalizeCreateJob(job))
+        .filter(Boolean);
+      const ignoreTransitions = Boolean(opts.ignoreTransitions);
+
+      let shouldReloadStories = Boolean(opts.forceStoriesReload);
+      normalizedJobs.forEach((job) => {
+        nextStatusMap.set(job.id, job.status);
+        const previousStatus = ignoreTransitions
+          ? safeText(job.status).toLowerCase()
+          : safeText(previousStatusMap.get(job.id)).toLowerCase();
+        if (job.status === 'done' && previousStatus !== 'done') {
+          shouldReloadStories = true;
+          setStatus(`Livro "${job.book.title}" criado com sucesso.`, 'success');
+        } else if (job.status === 'error' && previousStatus !== 'error') {
+          setStatus(job.errorMessage || `Falha ao criar "${job.book.title}".`, 'error');
+        }
+      });
+
+      state.createJobs = normalizedJobs;
+      state.createJobStatusById = nextStatusMap;
+
+      if (shouldReloadStories) {
+        state.books = await fetchStories();
+      }
+
+      renderCards();
+      if (hasRunningCreateJobs()) {
+        scheduleCreateJobsPoll(CREATE_JOBS_POLL_MS);
+      }
+    } catch (_error) {
+      if (hasRunningCreateJobs()) {
+        scheduleCreateJobsPoll(CREATE_JOBS_POLL_MS * 2);
+      }
+    } finally {
+      state.createJobsPollInFlight = false;
+    }
   }
 
   async function createBookFromLines() {
@@ -907,32 +1024,23 @@
     }
 
     closeCreateModal();
-    const pendingTempId = addPendingCreateBook(parsedInput);
-    state.selectedLevel = normalizeLevel(parsedInput.level);
-    renderLevelMenu();
-    renderCards();
     setCreateBusy(true);
-    setStatus(`Criando "${parsedInput.title}" com capa, background e audios...`, null);
+    setStatus(`Fila iniciada para "${parsedInput.title}". A criacao segue em background.`, null);
 
     try {
       const payload = await postJsonWithSuccess('/api/admin/minibooks/create-from-lines', {
         linesText: rawText,
         voice: selectedVoice
       }, 'Nao foi possivel criar o livro.');
-
-      removePendingCreateBook(pendingTempId);
-      state.books = await fetchStories();
-      state.selectedLevel = normalizeLevel(payload?.book?.level || parsedInput.level);
+      const job = upsertCreateJob(payload?.job);
+      state.selectedLevel = normalizeLevel(job?.book?.level || parsedInput.level);
       renderLevelMenu();
       renderCards();
-
-      const createdTitle = safeText(payload?.book?.title || parsedInput.title);
-      const cardsCount = Number(payload?.stats?.cardsCount) || parsedInput.pairs;
-      const voiceLabel = safeText(payload?.audio?.voiceLabel || payload?.audio?.voice || selectedVoice || 'fable');
-      setStatus(`Livro "${createdTitle}" criado com ${cardsCount} frases e audio ${voiceLabel}.`, 'success');
+      scheduleCreateJobsPoll(250);
+      const queuedTitle = safeText(job?.book?.title || parsedInput.title);
+      const progressLabel = formatCreateJobLabel(job);
+      setStatus(`Criacao de "${queuedTitle}" em andamento. ${progressLabel}`, 'success');
     } catch (error) {
-      removePendingCreateBook(pendingTempId);
-      renderCards();
       setStatus(error?.message || 'Falha ao criar livro por linhas.', 'error');
     } finally {
       setCreateBusy(false);
@@ -1041,8 +1149,16 @@
   function renderCards() {
     if (!els.cardsGrid || !els.cardsEmpty) return;
     const books = getBooksForSelectedLevel();
-    const pendingBooks = state.pendingCreateBooks
-      .filter((entry) => normalizeLevel(entry?.nivel) === state.selectedLevel)
+    const pendingBooks = state.createJobs
+      .filter((job) => isCreateJobRunning(job) && normalizeLevel(job?.book?.level) === state.selectedLevel)
+      .map((job) => ({
+        bookId: `job:${job.id}`,
+        jobId: job.id,
+        nome: safeText(job?.book?.title) || 'Livro',
+        nivel: normalizeLevel(job?.book?.level),
+        isPendingCreate: true,
+        pendingLabel: formatCreateJobLabel(job)
+      }))
       .sort(sortByNome);
     const cardsList = books.concat(pendingBooks);
     els.cardsGrid.innerHTML = '';
@@ -1138,7 +1254,10 @@
 
       const processingOverlay = document.createElement('span');
       processingOverlay.className = 'books-card__processing';
-      processingOverlay.innerHTML = '<span class="books-card__spinner" aria-hidden="true"></span><span class="books-card__processing-label">Gerando...</span>';
+      const processingLabel = pendingCreate
+        ? safeText(book?.pendingLabel) || 'Criando...'
+        : 'Gerando...';
+      processingOverlay.innerHTML = `<span class="books-card__spinner" aria-hidden="true"></span><span class="books-card__processing-label">${escapeHtml(processingLabel)}</span>`;
 
       actions.append(uploadBtn, magicBtn, textBtn);
       card.append(background, overlay, adminChip, actions, processingOverlay);
@@ -1177,7 +1296,7 @@
     }
     if (els.createBookBtn) {
       els.createBookBtn.hidden = !canShowToggle;
-      els.createBookBtn.disabled = state.createBusy || state.createWriteBusy;
+      els.createBookBtn.disabled = state.createWriteBusy;
     }
     if (els.levelMenu) {
       els.levelMenu.classList.toggle('is-admin', canShowToggle);
@@ -1188,7 +1307,7 @@
       els.adminUiToggleBtn.classList.toggle('is-on', isOn);
       els.adminUiToggleBtn.textContent = isOn ? 'Admin UI On' : 'Admin UI Off';
     }
-    if (els.createBookBtn && !state.createBusy) {
+    if (els.createBookBtn) {
       els.createBookBtn.textContent = 'Criar livro';
     }
   }
@@ -1905,12 +2024,6 @@
       if (token !== state.readerFinishToken || !state.readerOpen) return;
     }
 
-    if (completionPayload?.success === false && completionPayload?.message) {
-      setStatus(completionPayload.message, 'error');
-    } else {
-      setStatus('Livro concluido! Progresso salvo.', 'success');
-    }
-
     closeReader();
   }
 
@@ -2008,6 +2121,12 @@
 
   function renderReaderModeUi() {
     const isTraining = state.readerMode === 'pronounce-training';
+    if (els.readerProfile) {
+      els.readerProfile.hidden = !isTraining;
+    }
+    if (els.readerUserName) {
+      els.readerUserName.hidden = true;
+    }
     if (els.readerTraining) {
       els.readerTraining.hidden = !isTraining;
     }
@@ -2029,9 +2148,7 @@
     const card = total ? state.readerCards[index] : null;
     const english = safeText(card?.english);
     const portuguese = safeText(card?.portuguese || english);
-    const displayLanguage = state.readerMode === 'pronounce-training' && state.readerDisplayLanguage === 'portuguese'
-      ? 'portuguese'
-      : 'english';
+    const displayLanguage = state.readerDisplayLanguage === 'portuguese' ? 'portuguese' : 'english';
     const displayText = displayLanguage === 'portuguese' ? portuguese : english;
     const displayTextFormatted = splitBalancedLines(displayText);
     els.readerEnglish.textContent = displayTextFormatted || 'Sem conteudo neste livro.';
@@ -2329,13 +2446,13 @@
     });
 
     els.readerLangEnglishBtn?.addEventListener('click', () => {
-      if (!state.readerOpen || state.readerMode !== 'pronounce-training' || state.readerFinishing) return;
+      if (!state.readerOpen || state.readerFinishing) return;
       state.readerDisplayLanguage = 'english';
       renderReader();
     });
 
     els.readerLangPortugueseBtn?.addEventListener('click', () => {
-      if (!state.readerOpen || state.readerMode !== 'pronounce-training' || state.readerFinishing) return;
+      if (!state.readerOpen || state.readerFinishing) return;
       state.readerDisplayLanguage = 'portuguese';
       renderReader();
     });
@@ -2426,6 +2543,9 @@
       || isAdminAlias(sessionUser?.username)
       || isAdminAlias(state.localProfile?.username);
     state.books = Array.isArray(books) ? books : [];
+    if (state.isAdmin) {
+      await refreshCreateJobs({ ignoreTransitions: true });
+    }
 
     const firstBook = getBooksForSelectedLevel()[0];
     const firstCoverUrl = safeText(firstBook?.coverImageUrl);
@@ -2443,6 +2563,9 @@
     void scrollShelfToIndex(state.shelfIndex, false);
 
     if (state.isAdmin) {
+      if (hasRunningCreateJobs()) {
+        scheduleCreateJobsPoll(CREATE_JOBS_POLL_MS);
+      }
       if (sessionUser?.isAdmin || isAdminAlias(sessionUser?.username)) {
         setStatus('Modo admin ativo: upload e varinha disponiveis no card.', null);
       } else {
