@@ -58,6 +58,9 @@
     cardEnglishWord: document.getElementById('cardEnglishWord'),
     cardPortugueseWord: document.getElementById('cardPortugueseWord'),
     sendSpeakingBtn: document.getElementById('sendSpeakingBtn'),
+    micWaveform: document.getElementById('micWaveform'),
+    languageEnglishBtn: document.getElementById('languageEnglishBtn'),
+    languagePortugueseBtn: document.getElementById('languagePortugueseBtn'),
     gameStatus: document.getElementById('gameStatus'),
     finalResultBox: document.getElementById('finalResultBox'),
     winnerCard: document.getElementById('winnerCard'),
@@ -76,6 +79,8 @@
     books: [],
     selectedLevel: 1,
     selectedBookId: '',
+    displayLanguage: 'english',
+    micWaveTimer: 0,
     selectedStoryId: '',
     isAdmin: false,
     adminEditor: {
@@ -245,6 +250,33 @@
     return Math.max(1, Math.min(10, parsed));
   }
 
+  function splitTextInBalancedLines(value) {
+    const clean = safeText(value);
+    if (!clean) return ['', ''];
+    const words = clean.split(/\s+/).filter(Boolean);
+    if (words.length < 4) return [clean, ''];
+
+    const totalChars = words.reduce((sum, word) => sum + word.length, 0) + Math.max(0, words.length - 1);
+    let bestIndex = 0;
+    let bestDelta = Number.POSITIVE_INFINITY;
+    let leftLength = 0;
+
+    for (let index = 0; index < words.length - 1; index += 1) {
+      leftLength += words[index].length + (index > 0 ? 1 : 0);
+      const rightLength = totalChars - leftLength - 1;
+      const delta = Math.abs(leftLength - rightLength);
+      if (delta < bestDelta) {
+        bestDelta = delta;
+        bestIndex = index + 1;
+      }
+    }
+
+    const firstLine = words.slice(0, bestIndex).join(' ');
+    const secondLine = words.slice(bestIndex).join(' ');
+    if (!secondLine) return [clean, ''];
+    return [firstLine, secondLine];
+  }
+
   function getBooksForSelectedLevel() {
     const selectedLevel = parseLevel(state.selectedLevel);
     return state.books.filter((book) => parseLevel(book?.nivel) === selectedLevel);
@@ -376,9 +408,101 @@
     }
   }
 
+  function stopMicWaveformAnimation() {
+    if (state.micWaveTimer) {
+      window.clearInterval(state.micWaveTimer);
+      state.micWaveTimer = 0;
+    }
+    const bars = els.micWaveform?.querySelectorAll('.mic-waveform__bar');
+    if (!bars || !bars.length) return;
+    bars.forEach((bar) => {
+      bar.style.height = '8px';
+      bar.style.opacity = '0.7';
+    });
+  }
+
+  function startMicWaveformAnimation() {
+    const bars = els.micWaveform?.querySelectorAll('.mic-waveform__bar');
+    if (!bars || !bars.length) return;
+    stopMicWaveformAnimation();
+    state.micWaveTimer = window.setInterval(() => {
+      bars.forEach((bar, index) => {
+        const volume = 0.28 + (Math.random() * 0.72);
+        const waveBias = 0.25 + (Math.sin((Date.now() / 160) + (index * 0.65)) + 1) * 0.25;
+        const amplitude = Math.min(1, volume * 0.78 + waveBias);
+        const nextHeight = Math.round(6 + amplitude * 22);
+        bar.style.height = `${nextHeight}px`;
+        bar.style.opacity = `${Math.max(0.55, Math.min(1, 0.55 + amplitude * 0.55))}`;
+      });
+    }, 90);
+  }
+
   function setMicLiveVisual(active) {
     if (!els.sendSpeakingBtn) return;
-    els.sendSpeakingBtn.classList.toggle('is-mic-live', Boolean(active));
+    const isActive = Boolean(active);
+    els.sendSpeakingBtn.classList.toggle('is-mic-live', isActive);
+    if (els.micWaveform) {
+      els.micWaveform.classList.toggle('is-active', isActive);
+    }
+    if (isActive) {
+      startMicWaveformAnimation();
+    } else {
+      stopMicWaveformAnimation();
+    }
+  }
+
+  function updateLanguageButtons() {
+    const showEnglish = state.displayLanguage !== 'portuguese';
+    if (els.languageEnglishBtn) {
+      els.languageEnglishBtn.classList.toggle('is-active', showEnglish);
+      els.languageEnglishBtn.setAttribute('aria-pressed', showEnglish ? 'true' : 'false');
+    }
+    if (els.languagePortugueseBtn) {
+      els.languagePortugueseBtn.classList.toggle('is-active', !showEnglish);
+      els.languagePortugueseBtn.setAttribute('aria-pressed', showEnglish ? 'false' : 'true');
+    }
+  }
+
+  function setDisplayLanguage(language) {
+    state.displayLanguage = language === 'portuguese' ? 'portuguese' : 'english';
+    updateLanguageButtons();
+    renderCurrentCardLanguage();
+  }
+
+  function renderCardDisplayText(text, language) {
+    if (!els.cardEnglishWord) return;
+    const safe = safeText(text) || '-';
+    const [firstLine, secondLine] = splitTextInBalancedLines(safe);
+    els.cardEnglishWord.classList.remove('is-slide');
+    if (secondLine) {
+      els.cardEnglishWord.classList.add('is-two-lines');
+      els.cardEnglishWord.innerHTML = `
+        <span class="card-word__line">${escapeHtml(firstLine)}</span>
+        <span class="card-word__line">${escapeHtml(secondLine)}</span>
+      `;
+    } else {
+      els.cardEnglishWord.classList.remove('is-two-lines');
+      els.cardEnglishWord.textContent = firstLine || safe;
+    }
+    els.cardEnglishWord.classList.toggle('is-portuguese', language === 'portuguese');
+    const isLongText = safe.length > 22;
+    els.cardEnglishWord.classList.toggle('is-long', isLongText);
+    void els.cardEnglishWord.offsetWidth;
+    els.cardEnglishWord.classList.add('is-slide');
+  }
+
+  function renderCurrentCardLanguage() {
+    const card = state.activeCards[state.currentIndex];
+    if (!card) return;
+    const english = safeText(card?.english) || '-';
+    const portuguese = safeText(card?.portuguese) || english;
+    const language = state.displayLanguage === 'portuguese' ? 'portuguese' : 'english';
+    const text = language === 'portuguese' ? portuguese : english;
+    renderCardDisplayText(text, language);
+    if (els.cardPortugueseWord) {
+      els.cardPortugueseWord.hidden = true;
+      els.cardPortugueseWord.textContent = '';
+    }
   }
 
   function stopWordTicker() {
@@ -389,24 +513,13 @@
   }
 
   function animateWord(nextText) {
-    if (!els.cardEnglishWord) return;
-    els.cardEnglishWord.classList.remove('is-slide');
-    void els.cardEnglishWord.offsetWidth;
-    els.cardEnglishWord.textContent = nextText || '-';
-    els.cardEnglishWord.classList.add('is-slide');
+    renderCardDisplayText(nextText, state.displayLanguage === 'portuguese' ? 'portuguese' : 'english');
   }
 
   function applyCardTextSizing(english, portuguese) {
-    const englishText = safeText(english);
-    const portugueseText = safeText(portuguese);
-    const englishIsLong = englishText.length > 22;
-    const portugueseIsLong = portugueseText.length > 22;
-    if (els.cardEnglishWord) {
-      els.cardEnglishWord.classList.toggle('is-long', englishIsLong);
-    }
-    if (els.cardPortugueseWord) {
-      els.cardPortugueseWord.classList.toggle('is-long', portugueseIsLong);
-    }
+    const language = state.displayLanguage === 'portuguese' ? 'portuguese' : 'english';
+    const displayText = language === 'portuguese' ? portuguese : english;
+    renderCardDisplayText(displayText, language);
   }
 
   function startWordTicker(card) {
@@ -454,7 +567,8 @@
     const expectedRaw = lettersOnly(expected);
     if (!expectedRaw) return 0;
     const matched = countLetterBlocksCoverage(expected, spoken);
-    return Math.max(0, Math.min(100, Math.round((matched / expectedRaw.length) * 100)));
+    const baseScore = Math.max(0, Math.min(100, Math.round((matched / expectedRaw.length) * 100)));
+    return Math.max(0, Math.min(100, Math.round(baseScore * 1.1)));
   }
 
   function updateDuelAvatarRings() {
@@ -704,19 +818,8 @@
       finishGame();
       return;
     }
-    const card = state.activeCards[state.currentIndex];
-    const english = safeText(card?.english) || '-';
-    const portuguese = safeText(card?.portuguese) || english;
     stopWordTicker();
-    if (els.cardEnglishWord) {
-      els.cardEnglishWord.textContent = english;
-      els.cardEnglishWord.classList.remove('is-slide');
-    }
-    if (els.cardPortugueseWord) {
-      els.cardPortugueseWord.hidden = false;
-      els.cardPortugueseWord.textContent = portuguese;
-    }
-    applyCardTextSizing(english, portuguese);
+    renderCurrentCardLanguage();
     if (!state.duel.enabled) {
       setGameStatus('', '');
     }
@@ -1428,7 +1531,7 @@
       language: language || 'en-US',
       maxDurationMs: 7000,
       onRecordingStart: () => setMicLiveVisual(true),
-      onRecordingStop: () => setMicLiveVisual(true)
+      onRecordingStop: () => setMicLiveVisual(false)
     });
   }
 
@@ -1605,6 +1708,12 @@
     els.startSpeakingBtn?.addEventListener('click', () => {
       void startSinglePlayer();
     });
+    els.languageEnglishBtn?.addEventListener('click', () => {
+      setDisplayLanguage('english');
+    });
+    els.languagePortugueseBtn?.addEventListener('click', () => {
+      setDisplayLanguage('portuguese');
+    });
     els.miniBookGenerateCoverBtn?.addEventListener('click', () => {
       void generateMiniBookCoverPreview();
     });
@@ -1633,6 +1742,7 @@
       clearDuelIntroAnimationTimers();
       stopBattleIntroAudio();
       stopWordTicker();
+      stopMicWaveformAnimation();
     });
   }
 
@@ -1642,6 +1752,7 @@
     applyOfflineIdentity();
     updateTopPercents();
     updateProgressBars();
+    updateLanguageButtons();
     setMicLiveVisual(false);
     if (!state.duel.sessionId) {
       if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = true;
