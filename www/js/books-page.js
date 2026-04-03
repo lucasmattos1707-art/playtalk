@@ -8,6 +8,7 @@
   const els = {
     avatarImage: document.getElementById('booksAccountAvatarImage'),
     avatarFallback: document.getElementById('booksAccountAvatarFallback'),
+    avatarName: document.getElementById('booksAccountName'),
     adminUiToggleBtn: document.getElementById('booksAdminUiToggleBtn'),
     prevLevelBtn: document.getElementById('booksLevelPrevBtn'),
     nextLevelBtn: document.getElementById('booksLevelNextBtn'),
@@ -38,16 +39,17 @@
     readerBackBtn: document.getElementById('booksReaderBackBtn'),
     readerContent: document.getElementById('booksReaderContent'),
     readerEnglish: document.getElementById('booksReaderEnglish'),
-    readerCounter: document.getElementById('booksReaderCounter'),
     readerTraining: document.getElementById('booksReaderTraining'),
     readerAvatarImage: document.getElementById('booksReaderAvatarImage'),
     readerAvatarFallback: document.getElementById('booksReaderAvatarFallback'),
+    readerUserName: document.getElementById('booksReaderUserName'),
     readerPronRing: document.getElementById('booksReaderPronRing'),
     readerPronPercent: document.getElementById('booksReaderPronPercent'),
     readerLangEnglishBtn: document.getElementById('booksReaderLangEnglishBtn'),
     readerLangPortugueseBtn: document.getElementById('booksReaderLangPortugueseBtn'),
     readerMicBtn: document.getElementById('booksReaderMicBtn'),
-    readerTrainingStatus: document.getElementById('booksReaderTrainingStatus')
+    readerTrainingStatus: document.getElementById('booksReaderTrainingStatus'),
+    readerProgressFill: document.getElementById('booksReaderProgressFill')
   };
 
   const state = {
@@ -92,6 +94,30 @@
 
   function lettersOnly(value) {
     return normalizeText(value).replace(/[^a-z0-9]/g, '');
+  }
+
+  function splitBalancedLines(value) {
+    const raw = safeText(value);
+    if (!raw) return '';
+    const words = raw.split(/\s+/).filter(Boolean);
+    if (words.length <= 1) return raw;
+
+    let bestLineA = raw;
+    let bestLineB = '';
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    for (let index = 1; index < words.length; index += 1) {
+      const lineA = words.slice(0, index).join(' ');
+      const lineB = words.slice(index).join(' ');
+      const score = Math.abs(lineA.length - lineB.length);
+      if (score < bestScore) {
+        bestScore = score;
+        bestLineA = lineA;
+        bestLineB = lineB;
+      }
+    }
+
+    return bestLineB ? `${bestLineA}\n${bestLineB}` : bestLineA;
   }
 
   function readForceAdminUiFlag() {
@@ -200,6 +226,9 @@
     const username = safeText(sourceProfile.username) || 'Jogador';
     const avatar = safeText(sourceProfile.avatarImage);
     const hasAvatar = Boolean(avatar);
+    if (els.avatarName) {
+      els.avatarName.textContent = splitBalancedLines(username);
+    }
 
     if (hasAvatar) {
       els.avatarImage.src = avatar;
@@ -983,6 +1012,24 @@
     els.readerTrainingStatus.textContent = safeText(message);
   }
 
+  function updateReaderProgress(total, index) {
+    if (!els.readerProgressFill) return;
+    if (!total || total <= 0) {
+      els.readerProgressFill.style.width = '0%';
+      return;
+    }
+    const safeIndex = Math.max(0, Math.min(total - 1, index));
+    const percent = Math.round(((safeIndex + 1) / total) * 100);
+    els.readerProgressFill.style.width = `${percent}%`;
+  }
+
+  function animateReaderPhrase() {
+    if (!els.readerEnglish) return;
+    els.readerEnglish.classList.remove('is-dissolve');
+    void els.readerEnglish.offsetWidth;
+    els.readerEnglish.classList.add('is-dissolve');
+  }
+
   function updateReaderPronPercent() {
     const total = state.readerScores.length;
     const avg = total
@@ -1040,6 +1087,9 @@
     const profile = state.user || state.localProfile || {};
     const avatar = safeText(profile.avatarImage);
     const username = safeText(profile.username) || 'Jogador';
+    if (els.readerUserName) {
+      els.readerUserName.textContent = splitBalancedLines(username);
+    }
     if (avatar) {
       els.readerAvatarImage.src = avatar;
       els.readerAvatarImage.hidden = false;
@@ -1057,6 +1107,9 @@
     if (els.readerTraining) {
       els.readerTraining.hidden = !isTraining;
     }
+    if (els.readerPronPercent) {
+      els.readerPronPercent.hidden = !isTraining;
+    }
     if (els.readerMicBtn) {
       els.readerMicBtn.disabled = !isTraining || state.readerMicBusy;
     }
@@ -1065,7 +1118,7 @@
   }
 
   function renderReader() {
-    if (!els.readerEnglish || !els.readerCounter) return;
+    if (!els.readerEnglish) return;
     const total = state.readerCards.length;
     const index = Math.max(0, Math.min(total - 1, state.readerIndex));
     state.readerIndex = index;
@@ -1076,8 +1129,10 @@
       ? 'portuguese'
       : 'english';
     const displayText = displayLanguage === 'portuguese' ? portuguese : english;
-    els.readerEnglish.textContent = displayText || 'Sem conteudo neste livro.';
-    els.readerCounter.textContent = `${total ? index + 1 : 0} / ${total}`;
+    const displayTextFormatted = splitBalancedLines(displayText);
+    els.readerEnglish.textContent = displayTextFormatted || 'Sem conteudo neste livro.';
+    animateReaderPhrase();
+    updateReaderProgress(total, index);
     renderReaderModeUi();
   }
 
@@ -1190,7 +1245,7 @@
           stepReader(1);
         }, 220);
       } else {
-        setReaderTrainingStatus(`Pronuncia: ${score}% · fim do livro.`);
+        setReaderTrainingStatus(`Pronuncia: ${score}% - fim do livro.`);
       }
     } catch (error) {
       setReaderTrainingStatus(error?.message || 'Nao foi possivel capturar sua fala.');
