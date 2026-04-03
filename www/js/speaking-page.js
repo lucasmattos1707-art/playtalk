@@ -945,6 +945,11 @@
     renderMiniBooksGrid();
   }
 
+  function isAdminAlias(value) {
+    const normalized = safeText(value).toLowerCase();
+    return normalized === 'admin' || normalized === 'adm' || normalized === 'adminst';
+  }
+
   async function loadAdminFlag() {
     try {
       const response = await fetch(buildApiUrl('/api/me'), {
@@ -953,16 +958,21 @@
         headers: buildAuthHeaders()
       });
       if (!response.ok) {
-        state.isAdmin = false;
-        state.adminUsername = '';
+        const localProfile = readLocalPlayerProfile();
+        const localUsername = safeText(localProfile.username);
+        state.adminUsername = localUsername;
+        state.isAdmin = isAdminAlias(localUsername);
         return;
       }
       const payload = await response.json().catch(() => ({}));
-      state.adminUsername = safeText(payload?.user?.username || '');
-      state.isAdmin = Boolean(payload?.user?.is_admin);
+      const username = safeText(payload?.user?.username || payload?.user?.email || '');
+      state.adminUsername = username;
+      state.isAdmin = Boolean(payload?.user?.is_admin) || isAdminAlias(username);
     } catch (_error) {
-      state.isAdmin = false;
-      state.adminUsername = '';
+      const localProfile = readLocalPlayerProfile();
+      const localUsername = safeText(localProfile.username);
+      state.adminUsername = localUsername;
+      state.isAdmin = isAdminAlias(localUsername);
     }
   }
 
@@ -976,13 +986,9 @@
       openMiniBookEditor(bookId);
       return;
     }
-    const username = safeText(state.adminUsername);
-    setHomeStatus(
-      username
-        ? `Conta atual (${username}) sem permissao admin. Use admin, adm ou adminst.`
-        : 'Sessao sem permissao admin. Entre com admin, adm ou adminst para gerar imagens.',
-      'is-error'
-    );
+    if (isAdminAlias(state.adminUsername)) {
+      setHomeStatus('Conta admin detectada, mas sem permissao na sessao. Refaça login e tente de novo.', 'is-error');
+    }
   }
 
   function setMiniBookPreviewImage(element, dataUrl) {

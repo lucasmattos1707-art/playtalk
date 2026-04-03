@@ -494,6 +494,10 @@
       font-weight: 700;
     }
 
+    .progress-footer {
+      margin-top: 10px;
+    }
+
     .duel-avatars {
       display: flex;
       gap: 26px;
@@ -1004,14 +1008,6 @@
       </div>
       <p class="duel-timer" id="duelTimerLabel" hidden>Tempo restante: 03:00</p>
 
-      <div class="progress-wrap" aria-hidden="true">
-        <div class="progress-bar" id="gameProgressBar"></div>
-      </div>
-      <div class="progress-wrap is-enemy" aria-hidden="true" id="enemyProgressWrap">
-        <div class="progress-bar enemy" id="enemyProgressBar"></div>
-      </div>
-      <p class="progress-copy" id="progressLabel" hidden></p>
-
       <div class="duel-avatars" id="duelAvatarsWrap">
         <article class="duel-avatar duel-avatar--me">
           <div class="duel-avatar__ring" id="mePronRing">
@@ -1059,6 +1055,15 @@
             <img src="/SVG/codex-icons/portugues.svg" alt="Português">
           </button>
         </div>
+      </div>
+      <div class="progress-footer">
+        <div class="progress-wrap" aria-hidden="true">
+          <div class="progress-bar" id="gameProgressBar"></div>
+        </div>
+        <div class="progress-wrap is-enemy" aria-hidden="true" id="enemyProgressWrap">
+          <div class="progress-bar enemy" id="enemyProgressBar"></div>
+        </div>
+        <p class="progress-copy" id="progressLabel" hidden></p>
       </div>
       <div class="final-result" id="finalResultBox">0% seu resultado final</div>
       <div class="winner-card" id="winnerCard">
