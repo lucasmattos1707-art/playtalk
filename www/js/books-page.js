@@ -400,6 +400,7 @@
     if (!shelf) return;
     const top = shelf.getBoundingClientRect().top;
     const nextHeight = Math.max(260, Math.round(window.innerHeight - top));
+    shelf.style.setProperty('--books-shelf-height', `${nextHeight}px`);
     if (Math.abs(nextHeight - shelf.clientHeight) > 1) {
       shelf.style.height = `${nextHeight}px`;
     }
