@@ -234,6 +234,19 @@
     els.cardEnglishWord.classList.add('is-slide');
   }
 
+  function applyCardTextSizing(english, portuguese) {
+    const englishText = safeText(english);
+    const portugueseText = safeText(portuguese);
+    const englishIsLong = englishText.length > 22;
+    const portugueseIsLong = portugueseText.length > 22;
+    if (els.cardEnglishWord) {
+      els.cardEnglishWord.classList.toggle('is-long', englishIsLong);
+    }
+    if (els.cardPortugueseWord) {
+      els.cardPortugueseWord.classList.toggle('is-long', portugueseIsLong);
+    }
+  }
+
   function startWordTicker(card) {
     stopWordTicker();
     const english = safeText(card?.english) || '-';
@@ -530,8 +543,18 @@
       return;
     }
     const card = state.activeCards[state.currentIndex];
-    startWordTicker(card);
-    if (els.cardPortugueseWord) els.cardPortugueseWord.textContent = '';
+    const english = safeText(card?.english) || '-';
+    const portuguese = safeText(card?.portuguese) || english;
+    stopWordTicker();
+    if (els.cardEnglishWord) {
+      els.cardEnglishWord.textContent = english;
+      els.cardEnglishWord.classList.remove('is-slide');
+    }
+    if (els.cardPortugueseWord) {
+      els.cardPortugueseWord.hidden = false;
+      els.cardPortugueseWord.textContent = portuguese;
+    }
+    applyCardTextSizing(english, portuguese);
     if (!state.duel.enabled) {
       setGameStatus('', '');
     }

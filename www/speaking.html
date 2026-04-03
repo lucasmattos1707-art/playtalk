@@ -391,15 +391,21 @@
       will-change: transform, opacity;
     }
 
-    .card-word.is-slide {
-      animation: wordSlide 360ms ease;
+    .card-word.is-long {
+      font-size: 30.36px;
     }
 
     .card-subword {
       margin: 8px 0 12px;
       text-align: center;
-      color: var(--muted);
-      font-size: 17px;
+      color: #ffd54f;
+      font-size: 31.05px;
+      font-weight: 700;
+      line-height: 1.12;
+    }
+
+    .card-subword.is-long {
+      font-size: 27.32px;
     }
 
     .mic-trigger-wrap {
@@ -599,6 +605,9 @@
     @media (max-width: 640px) {
       .home-title { font-size: 24px; }
       .card-word { font-size: 27.6px; }
+      .card-word.is-long { font-size: 24.29px; }
+      .card-subword { font-size: 24.84px; }
+      .card-subword.is-long { font-size: 21.86px; }
       .enemy-speaking { font-size: 18px; }
       .duel-intro__avatar {
         width: 124px;
