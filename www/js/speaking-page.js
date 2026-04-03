@@ -81,6 +81,7 @@
     selectedBookId: '',
     displayLanguage: 'english',
     micWaveTimer: 0,
+    adminUsername: '',
     selectedStoryId: '',
     isAdmin: false,
     adminEditor: {
@@ -361,11 +362,7 @@
         state.selectedBookId = safeText(book?.id);
         syncStorySelectWithSelectedBook();
         renderMiniBooksGrid();
-        if (state.isAdmin) {
-          openMiniBookEditor(state.selectedBookId);
-        } else {
-          updateAdminEditorVisibility();
-        }
+        void tryOpenMiniBookEditorForSelection(state.selectedBookId);
         applySelectedMiniBookBackground();
       });
       els.miniBooksGrid.appendChild(button);
@@ -935,13 +932,35 @@
       });
       if (!response.ok) {
         state.isAdmin = false;
+        state.adminUsername = '';
         return;
       }
       const payload = await response.json().catch(() => ({}));
+      state.adminUsername = safeText(payload?.user?.username || '');
       state.isAdmin = Boolean(payload?.user?.is_admin);
     } catch (_error) {
       state.isAdmin = false;
+      state.adminUsername = '';
     }
+  }
+
+  async function tryOpenMiniBookEditorForSelection(bookId) {
+    if (state.isAdmin) {
+      openMiniBookEditor(bookId);
+      return;
+    }
+    await loadAdminFlag();
+    if (state.isAdmin) {
+      openMiniBookEditor(bookId);
+      return;
+    }
+    const username = safeText(state.adminUsername);
+    setHomeStatus(
+      username
+        ? `Conta atual (${username}) sem permissao admin. Use admin, adm ou adminst.`
+        : 'Sessao sem permissao admin. Entre com admin, adm ou adminst para gerar imagens.',
+      'is-error'
+    );
   }
 
   function setMiniBookPreviewImage(element, dataUrl) {
