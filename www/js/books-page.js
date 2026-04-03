@@ -36,6 +36,7 @@
     levelTitle: document.getElementById('booksLevelTitle'),
     status: document.getElementById('booksStatus'),
     shelfViewport: document.getElementById('booksShelfViewport'),
+    shelfLoading: document.getElementById('booksShelfLoading'),
     cardsGrid: document.getElementById('booksCardsGrid'),
     cardsEmpty: document.getElementById('booksCardsEmpty'),
     coverUploadInput: document.getElementById('booksCoverUploadInput'),
@@ -81,6 +82,7 @@
   const state = {
     user: null,
     localProfile: null,
+    initialLoading: true,
     selectedLevel: 1,
     books: [],
     isAdmin: false,
@@ -193,6 +195,11 @@
     if (tone) {
       els.status.classList.add(`is-${tone}`);
     }
+  }
+
+  function renderShelfLoading() {
+    if (!els.shelfLoading) return;
+    els.shelfLoading.hidden = !state.initialLoading;
   }
 
   function buildApiUrl(path) {
@@ -1961,6 +1968,7 @@
     bindEvents();
     state.gradients = buildGradientPool();
     state.forceAdminUi = readForceAdminUiFlag();
+    renderShelfLoading();
     renderLevelMenu();
     renderAdminUiToggle();
     state.localProfile = readLocalPlayerProfile();
@@ -1975,6 +1983,14 @@
       || isAdminAlias(sessionUser?.username)
       || isAdminAlias(state.localProfile?.username);
     state.books = Array.isArray(books) ? books : [];
+
+    const firstBook = getBooksForSelectedLevel()[0];
+    const firstCoverUrl = safeText(firstBook?.coverImageUrl);
+    if (firstCoverUrl) {
+      await preloadImageUrl(firstCoverUrl);
+    }
+    state.initialLoading = false;
+    renderShelfLoading();
 
     renderAvatar();
     renderLevelMenu();

@@ -187,8 +187,8 @@
 
     .books-grid {
       width: 100%;
-      height: 100%;
-      overflow: hidden;
+      height: auto;
+      overflow: visible;
       display: block;
       padding: 0;
       margin: 0;
@@ -376,6 +376,34 @@
       display: grid;
       place-items: center;
       pointer-events: none;
+    }
+
+    .books-empty[hidden] {
+      display: none !important;
+    }
+
+    .books-shelf-loading {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      z-index: 6;
+      background: rgba(0, 0, 0, 0.52);
+      backdrop-filter: blur(2px);
+    }
+
+    .books-shelf-loading[hidden] {
+      display: none !important;
+    }
+
+    .books-shelf-loading-spinner {
+      width: 52px;
+      height: 52px;
+      border-radius: 999px;
+      border: 3px solid rgba(255, 255, 255, 0.28);
+      border-top-color: #ffffff;
+      animation: books-spin 850ms linear infinite;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
     }
 
     .books-magic-modal {
@@ -1060,6 +1088,9 @@
     <p class="books-status" id="booksStatus" aria-live="polite"></p>
 
     <section class="books-shelf" id="booksShelfViewport" aria-label="Prateleira de livros">
+      <div class="books-shelf-loading" id="booksShelfLoading" aria-live="polite">
+        <span class="books-shelf-loading-spinner" aria-hidden="true"></span>
+      </div>
       <section class="books-grid" id="booksCardsGrid" aria-label="Livros por nivel"></section>
       <p class="books-empty" id="booksCardsEmpty" hidden>Nenhum arquivo neste nivel.</p>
     </section>
