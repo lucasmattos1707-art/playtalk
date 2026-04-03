@@ -29,6 +29,10 @@
     return typeof value === 'string' ? value.trim() : '';
   }
 
+  function isAdminAlias(value) {
+    return ADMIN_ALIASES.has(safeText(value).toLowerCase());
+  }
+
   function setStatus(message, tone) {
     if (!els.status) return;
     els.status.textContent = safeText(message);
@@ -66,7 +70,8 @@
     return {
       id,
       username,
-      avatarImage: safeText(user.avatar_image || user.avatarImage)
+      avatarImage: safeText(user.avatar_image || user.avatarImage),
+      isAdmin: Boolean(user.is_admin || user.isAdmin) || isAdminAlias(username)
     };
   }
 
@@ -222,7 +227,24 @@
       adminChip.className = 'books-card__admin-chip';
       adminChip.textContent = 'Admin';
 
-      card.append(background, overlay, title, adminChip);
+      const uploadBtn = document.createElement('button');
+      uploadBtn.type = 'button';
+      uploadBtn.className = 'books-card__upload-btn';
+      uploadBtn.setAttribute('aria-label', `Enviar capa de ${safeText(book?.nome) || 'livro'}`);
+      uploadBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 18v2H5v-2H3v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2zm-7-2 5-5h-3V2h-4v9H7z"/></svg>';
+      uploadBtn.disabled = state.uploadInFlight;
+      uploadBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!state.isAdmin || state.uploadInFlight) return;
+        const targetBookId = safeText(book?.bookId);
+        if (!targetBookId || !els.coverUploadInput) return;
+        state.uploadTargetBookId = targetBookId;
+        els.coverUploadInput.value = '';
+        els.coverUploadInput.click();
+      });
+
+      card.append(background, overlay, title, adminChip, uploadBtn);
       card.addEventListener('click', () => {
         if (!state.isAdmin || state.uploadInFlight) return;
         const targetBookId = safeText(book?.bookId);
@@ -287,27 +309,10 @@
     }
   }
 
-  async function fetchAdminFlag() {
-    try {
-      const response = await fetch(buildApiUrl('/api/me'), {
-        credentials: 'include',
-        headers: buildAuthHeaders(),
-        cache: 'no-store'
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        return false;
-      }
-      const username = safeText(payload?.user?.username).toLowerCase();
-      return Boolean(payload?.user?.is_admin) || ADMIN_ALIASES.has(username);
-    } catch (_error) {
-      return false;
-    }
-  }
-
   function setUploadBusy(isBusy) {
     state.uploadInFlight = Boolean(isBusy);
     renderLevelMenu();
+    renderCards();
   }
 
   function fileToDataUrl(file) {
@@ -406,16 +411,17 @@
     bindEvents();
     state.gradients = buildGradientPool();
     renderLevelMenu();
+    state.localProfile = readLocalPlayerProfile();
 
-    const [sessionUser, isAdmin, books] = await Promise.all([
+    const [sessionUser, books] = await Promise.all([
       fetchSessionUser(),
-      fetchAdminFlag(),
       fetchStories()
     ]);
 
-    state.localProfile = readLocalPlayerProfile();
     state.user = sessionUser;
-    state.isAdmin = Boolean(isAdmin);
+    state.isAdmin = Boolean(sessionUser?.isAdmin)
+      || isAdminAlias(sessionUser?.username)
+      || isAdminAlias(state.localProfile?.username);
     state.books = Array.isArray(books) ? books : [];
 
     renderAvatar();

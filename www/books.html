@@ -199,6 +199,43 @@
       display: inline-flex;
     }
 
+    .books-card__upload-btn {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.56);
+      background: rgba(4, 12, 26, 0.78);
+      color: #ffffff;
+      display: none;
+      place-items: center;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .books-card__upload-btn svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+    }
+
+    .books-card__upload-btn:hover:not(:disabled) {
+      background: rgba(11, 27, 52, 0.9);
+      transform: translateY(-50%) scale(1.03);
+    }
+
+    .books-card__upload-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .books-card.is-admin .books-card__upload-btn {
+      display: grid;
+    }
+
     .books-empty {
       margin: 0;
       text-align: center;
@@ -237,8 +274,10 @@
   </main>
 
   <script src="js/android-config.js"></script>
+  <script src="/config.js"></script>
   <script src="js/api-config.js"></script>
   <script src="js/player-state.js"></script>
+  <script src="js/android-shell.js"></script>
   <script src="js/books-page.js"></script>
 </body>
 </html>
