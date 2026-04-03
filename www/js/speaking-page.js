@@ -151,11 +151,16 @@
       if (!raw || typeof raw !== 'object') return { username: '', avatar: '' };
       return {
         username: safeText(raw.username),
-        avatar: safeText(raw.avatar || raw.avatarImage)
+        avatar: safeText(raw.avatar || raw.avatarImage || raw.avatar_image || raw.image)
       };
     } catch (_error) {
       return { username: '', avatar: '' };
     }
+  }
+
+  function normalizeAvatarSource(value) {
+    const avatar = safeText(value);
+    return avatar || '/Avatar/avatar-man-person-svgrepo-com.svg';
   }
 
   function readCurrentPlayerIdentity() {
@@ -163,8 +168,13 @@
     let avatar = '';
     if (window.playtalkPlayerState && typeof window.playtalkPlayerState.get === 'function') {
       const player = window.playtalkPlayerState.get() || {};
-      username = safeText(player.username);
-      avatar = safeText(player.avatar);
+      username = safeText(player.username || player.name || player.email);
+      avatar = safeText(
+        player.avatar
+        || player.avatarImage
+        || player.avatar_image
+        || player.image
+      );
     }
     if (!username || !avatar) {
       const localProfile = readLocalPlayerProfile();
@@ -173,7 +183,7 @@
     }
     return {
       username: username || 'Você',
-      avatar: avatar || '/Avatar/avatar-man-person-svgrepo-com.svg'
+      avatar: normalizeAvatarSource(avatar)
     };
   }
 
@@ -580,12 +590,24 @@
     if (els.enemyAvatarPercent) els.enemyAvatarPercent.textContent = `${rivalPercent}%`;
     if (els.meAvatarName) els.meAvatarName.textContent = state.duel.meName || 'Você';
     if (els.enemyAvatarName) els.enemyAvatarName.textContent = state.duel.rivalName || 'Adversário';
-    if (els.meAvatar) els.meAvatar.src = state.duel.meAvatar || '/Avatar/avatar-man-person-svgrepo-com.svg';
-    if (els.enemyAvatar) els.enemyAvatar.src = state.duel.rivalAvatar || '/Avatar/avatar-man-person-svgrepo-com.svg';
-    if (els.duelIntroMeAvatar) els.duelIntroMeAvatar.src = state.duel.meAvatar || '/Avatar/avatar-man-person-svgrepo-com.svg';
-    if (els.duelIntroEnemyAvatar) els.duelIntroEnemyAvatar.src = state.duel.rivalAvatar || '/Avatar/avatar-man-person-svgrepo-com.svg';
+    if (els.meAvatar) els.meAvatar.src = normalizeAvatarSource(state.duel.meAvatar);
+    if (els.enemyAvatar) els.enemyAvatar.src = normalizeAvatarSource(state.duel.rivalAvatar);
+    if (els.duelIntroMeAvatar) els.duelIntroMeAvatar.src = normalizeAvatarSource(state.duel.meAvatar);
+    if (els.duelIntroEnemyAvatar) els.duelIntroEnemyAvatar.src = normalizeAvatarSource(state.duel.rivalAvatar);
     if (els.duelIntroMeName) els.duelIntroMeName.textContent = state.duel.meName || 'Você';
     if (els.duelIntroEnemyName) els.duelIntroEnemyName.textContent = state.duel.rivalName || 'Adversário';
+  }
+
+  function bindAvatarFallbacks() {
+    const fallback = '/Avatar/avatar-man-person-svgrepo-com.svg';
+    [els.meAvatar, els.enemyAvatar, els.duelIntroMeAvatar, els.duelIntroEnemyAvatar, els.winnerAvatar, els.winnerRevealAvatar]
+      .filter(Boolean)
+      .forEach((img) => {
+        img.onerror = () => {
+          if (img.src && img.src.includes(fallback)) return;
+          img.src = fallback;
+        };
+      });
   }
 
   function clearDuelIntroTimer() {
@@ -1767,6 +1789,7 @@
 
   async function init() {
     bindEvents();
+    bindAvatarFallbacks();
     setGameMode(state.duel.sessionId ? 'battle-mode' : 'offline-game');
     applyOfflineIdentity();
     updateTopPercents();
