@@ -6,7 +6,7 @@
   const FORCE_ADMIN_UI_STORAGE_KEY = 'playtalk_books_force_admin_ui_v1';
   const MODE_DISSOLVE_MS = 2000;
   const MODE_LOADING_FADE_MS = 500;
-  const BOOK_SNAP_DURATION_MS = 500;
+  const BOOK_SNAP_DURATION_MS = 300;
   const BOOK_SWIPE_THRESHOLD = 44;
   const LEVEL_DISPLAY_NAMES = [
     'Iniciante',
@@ -99,6 +99,8 @@
     shelfIndex: 0,
     shelfTouchStartX: 0,
     shelfTouchStartY: 0,
+    shelfGestureMoved: false,
+    shelfLastGestureAt: 0,
     shelfAnimating: false,
     shelfAnimationFrame: 0,
     shelfAnimationToken: 0
@@ -382,16 +384,35 @@
     );
   }
 
-  function getShelfCards() {
+  function getShelfPages() {
     if (!els.cardsGrid) return [];
-    return Array.from(els.cardsGrid.querySelectorAll('.books-card'));
+    return Array.from(els.cardsGrid.querySelectorAll('.books-shelf-page'));
+  }
+
+  function getShelfCards() {
+    return getShelfPages()
+      .map((page) => page.querySelector('.books-card'))
+      .filter(Boolean);
+  }
+
+  function syncShelfViewportHeight() {
+    const shelf = els.shelfViewport;
+    if (!shelf) return;
+    const top = shelf.getBoundingClientRect().top;
+    const nextHeight = Math.max(260, Math.round(window.innerHeight - top));
+    if (Math.abs(nextHeight - shelf.clientHeight) > 1) {
+      shelf.style.height = `${nextHeight}px`;
+    }
+    getShelfPages().forEach((page) => {
+      page.style.height = `${nextHeight}px`;
+    });
   }
 
   function clampShelfIndex(index) {
-    const cards = getShelfCards();
-    if (!cards.length) return 0;
+    const pages = getShelfPages();
+    if (!pages.length) return 0;
     const normalized = Number.isFinite(index) ? index : 0;
-    return Math.max(0, Math.min(cards.length - 1, Math.round(normalized)));
+    return Math.max(0, Math.min(pages.length - 1, Math.round(normalized)));
   }
 
   function easeInOutCubic(progress) {
@@ -450,17 +471,13 @@
 
   async function scrollShelfToIndex(index, animate) {
     const shelf = els.shelfViewport;
-    const cards = getShelfCards();
-    if (!shelf || !cards.length) return;
-    const nextIndex = Math.max(0, Math.min(cards.length - 1, Number(index) || 0));
+    const pages = getShelfPages();
+    if (!shelf || !pages.length) return;
+    syncShelfViewportHeight();
+    const nextIndex = Math.max(0, Math.min(pages.length - 1, Number(index) || 0));
     state.shelfIndex = nextIndex;
-    const card = cards[nextIndex];
-    if (!card) return;
-
-    const targetScrollTop = Math.max(
-      0,
-      card.offsetTop - ((shelf.clientHeight - card.offsetHeight) / 2)
-    );
+    const pageHeight = Math.max(1, shelf.clientHeight);
+    const targetScrollTop = Math.max(0, nextIndex * pageHeight);
 
     if (animate) {
       await animateShelfScrollTo(targetScrollTop, BOOK_SNAP_DURATION_MS);
@@ -472,29 +489,19 @@
 
   function updateShelfIndexFromViewport() {
     const shelf = els.shelfViewport;
-    const cards = getShelfCards();
-    if (!shelf || !cards.length) {
+    const pages = getShelfPages();
+    if (!shelf || !pages.length) {
       state.shelfIndex = 0;
       return;
     }
-    const viewportCenter = shelf.scrollTop + (shelf.clientHeight / 2);
-    let closestIndex = 0;
-    let closestDistance = Number.POSITIVE_INFINITY;
-    cards.forEach((card, index) => {
-      const center = card.offsetTop + (card.offsetHeight / 2);
-      const distance = Math.abs(center - viewportCenter);
-      if (distance < closestDistance) {
-        closestDistance = distance;
-        closestIndex = index;
-      }
-    });
-    state.shelfIndex = closestIndex;
+    const pageHeight = Math.max(1, shelf.clientHeight);
+    state.shelfIndex = clampShelfIndex(Math.round(shelf.scrollTop / pageHeight));
   }
 
   async function snapShelfByStep(direction) {
     if (isOverlayOpen() || state.shelfAnimating) return;
-    const cards = getShelfCards();
-    if (!cards.length) return;
+    const pages = getShelfPages();
+    if (!pages.length) return;
     updateShelfIndexFromViewport();
     const step = Number(direction) > 0 ? 1 : -1;
     const target = clampShelfIndex(state.shelfIndex + step);
@@ -716,6 +723,8 @@
       const gradient = gradients[index % gradients.length];
       const coverImageUrl = safeText(book?.coverImageUrl);
       const processingMagic = isBookProcessingMagic(book?.bookId);
+      const page = document.createElement('article');
+      page.className = 'books-shelf-page';
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'books-card';
@@ -798,12 +807,15 @@
       actions.append(uploadBtn, magicBtn, textBtn);
       card.append(background, overlay, title, adminChip, actions, processingOverlay);
       card.addEventListener('click', () => {
+        if ((Date.now() - state.shelfLastGestureAt) < 240) return;
         if (state.uploadInFlight || processingMagic) return;
         openModeModal(book);
       });
-      els.cardsGrid.appendChild(card);
+      page.appendChild(card);
+      els.cardsGrid.appendChild(page);
     });
 
+    syncShelfViewportHeight();
     state.shelfIndex = clampShelfIndex(state.shelfIndex);
     void scrollShelfToIndex(state.shelfIndex, false);
   }
@@ -1585,6 +1597,7 @@
       const deltaY = Number(event.deltaY) || 0;
       if (Math.abs(deltaY) < 4) return;
       event.preventDefault();
+      state.shelfLastGestureAt = Date.now();
       void snapShelfByStep(deltaY > 0 ? 1 : -1);
     }, { passive: false });
 
@@ -1593,6 +1606,7 @@
       if (!touch) return;
       state.shelfTouchStartX = Number(touch.clientX) || 0;
       state.shelfTouchStartY = Number(touch.clientY) || 0;
+      state.shelfGestureMoved = false;
     }, { passive: true });
 
     els.shelfViewport?.addEventListener('touchmove', (event) => {
@@ -1601,6 +1615,9 @@
       if (!touch) return;
       const dx = (Number(touch.clientX) || 0) - state.shelfTouchStartX;
       const dy = (Number(touch.clientY) || 0) - state.shelfTouchStartY;
+      if (Math.abs(dy) > 10 || Math.abs(dx) > 10) {
+        state.shelfGestureMoved = true;
+      }
       if (Math.abs(dy) > Math.abs(dx)) {
         event.preventDefault();
       }
@@ -1614,6 +1631,9 @@
       const endX = Number(touch.clientX) || 0;
       const dy = state.shelfTouchStartY - endY;
       const dx = endX - state.shelfTouchStartX;
+      if (state.shelfGestureMoved) {
+        state.shelfLastGestureAt = Date.now();
+      }
       if (Math.abs(dy) < BOOK_SWIPE_THRESHOLD || Math.abs(dy) <= Math.abs(dx)) return;
       void snapShelfByStep(dy > 0 ? 1 : -1);
     }, { passive: true });
@@ -1740,6 +1760,7 @@
     });
 
     window.addEventListener('resize', () => {
+      syncShelfViewportHeight();
       if (state.readerOpen && state.readerBookId) {
         const activeBook = state.books.find((entry) => safeText(entry?.bookId) === state.readerBookId);
         if (!activeBook) return;
@@ -1775,6 +1796,8 @@
     renderLevelMenu();
     renderAdminUiToggle();
     renderCards();
+    syncShelfViewportHeight();
+    void scrollShelfToIndex(state.shelfIndex, false);
 
     if (state.isAdmin) {
       if (sessionUser?.isAdmin || isAdminAlias(sessionUser?.username)) {

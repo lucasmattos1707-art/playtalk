@@ -180,17 +180,26 @@
       overflow: hidden;
       border-radius: 20px;
       position: relative;
+      margin-top: 20px;
+      touch-action: pan-y;
     }
 
     .books-grid {
       width: 100%;
       height: 100%;
-      overflow: hidden;
+      overflow: visible;
+      display: block;
+      padding: 0;
+      margin: 0;
+      will-change: transform;
+    }
+
+    .books-shelf-page {
+      width: 100%;
+      height: 100%;
       display: grid;
-      grid-template-columns: 1fr;
-      justify-items: center;
-      gap: 18px;
-      padding: calc(50vh - min(240px, 30vh)) 0;
+      place-items: center;
+      padding: 8px 0;
     }
 
     .books-card {
@@ -1018,6 +1027,6 @@
   <script src="js/api-config.js"></script>
   <script src="js/player-state.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/books-page.js?v=20260403i"></script>
+  <script src="js/books-page.js?v=20260403j"></script>
 </body>
 </html>
