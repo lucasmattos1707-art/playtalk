@@ -1,6 +1,7 @@
 (function initPlaytalkBooksPage() {
   const ADMIN_ALIASES = new Set(['admin', 'adm', 'adminst']);
   const MAX_GRADIENTS = 8;
+  const SESSION_ENDPOINTS = ['/auth/session', '/api/me'];
 
   const els = {
     avatarImage: document.getElementById('booksAccountAvatarImage'),
@@ -11,7 +12,18 @@
     status: document.getElementById('booksStatus'),
     cardsGrid: document.getElementById('booksCardsGrid'),
     cardsEmpty: document.getElementById('booksCardsEmpty'),
-    coverUploadInput: document.getElementById('booksCoverUploadInput')
+    coverUploadInput: document.getElementById('booksCoverUploadInput'),
+    magicModal: document.getElementById('booksMagicModal'),
+    magicTitle: document.getElementById('booksMagicTitle'),
+    magicCoverPromptInput: document.getElementById('booksMagicCoverPromptInput'),
+    magicBackgroundPromptInput: document.getElementById('booksMagicBackgroundPromptInput'),
+    magicGenerateBtn: document.getElementById('booksMagicGenerateBtn'),
+    magicCloseBtn: document.getElementById('booksMagicCloseBtn'),
+    reader: document.getElementById('booksReader'),
+    readerBackBtn: document.getElementById('booksReaderBackBtn'),
+    readerContent: document.getElementById('booksReaderContent'),
+    readerEnglish: document.getElementById('booksReaderEnglish'),
+    readerCounter: document.getElementById('booksReaderCounter')
   };
 
   const state = {
@@ -22,7 +34,15 @@
     isAdmin: false,
     uploadInFlight: false,
     uploadTargetBookId: '',
-    gradients: []
+    gradients: [],
+    magicBookId: '',
+    magicBusy: false,
+    readerOpen: false,
+    readerBookId: '',
+    readerLines: [],
+    readerIndex: 0,
+    readerTouchStartX: 0,
+    readerTouchStartY: 0
   };
 
   function safeText(value) {
@@ -64,33 +84,45 @@
 
   function normalizeUser(user) {
     if (!user || typeof user !== 'object') return null;
-    const id = Number(user.id) || 0;
     const username = safeText(user.username);
-    if (!id || !username) return null;
+    if (!username) return null;
     return {
-      id,
+      id: Number(user.id) || 0,
       username,
       avatarImage: safeText(user.avatar_image || user.avatarImage),
       isAdmin: Boolean(user.is_admin || user.isAdmin) || isAdminAlias(username)
     };
   }
 
+  function readPersistedPlayerProfile() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('playtalk_player_profile') || 'null');
+      if (!raw || typeof raw !== 'object') {
+        return { username: '', avatarImage: '' };
+      }
+      return {
+        username: safeText(raw.username || raw.name || raw.email),
+        avatarImage: safeText(raw.avatar || raw.avatarImage)
+      };
+    } catch (_error) {
+      return { username: '', avatarImage: '' };
+    }
+  }
+
   function readLocalPlayerProfile() {
+    const persisted = readPersistedPlayerProfile();
     try {
       if (window.playtalkPlayerState && typeof window.playtalkPlayerState.get === 'function') {
         const player = window.playtalkPlayerState.get() || {};
         return {
-          username: safeText(player.username),
-          avatarImage: safeText(player.avatar)
+          username: safeText(player.username || persisted.username),
+          avatarImage: safeText(player.avatar || persisted.avatarImage)
         };
       }
     } catch (_error) {
       // ignore
     }
-    return {
-      username: '',
-      avatarImage: ''
-    };
+    return persisted;
   }
 
   function renderAvatar() {
@@ -128,17 +160,37 @@
       const fileName = safeText(entry?.fileName);
       const nome = safeText(entry?.nome);
       const bookId = safeText(entry?.bookId);
+      const storyId = safeText(entry?.id);
       if (!fileName || !nome || !bookId) return;
 
       const key = bookId.toLowerCase();
-      if (byBook.has(key)) return;
-      byBook.set(key, {
-        bookId,
-        fileName,
-        nome,
-        nivel: normalizeLevel(entry?.nivel),
-        coverImageUrl: safeText(entry?.coverImageUrl)
-      });
+      if (!byBook.has(key)) {
+        byBook.set(key, {
+          bookId,
+          fileName,
+          nome,
+          nivel: normalizeLevel(entry?.nivel),
+          coverImageUrl: safeText(entry?.coverImageUrl),
+          backgroundDesktopUrl: safeText(entry?.backgroundDesktopUrl),
+          selectedStoryId: storyId,
+          storyIds: storyId ? [storyId] : []
+        });
+        return;
+      }
+
+      const current = byBook.get(key);
+      if (!current.coverImageUrl && safeText(entry?.coverImageUrl)) {
+        current.coverImageUrl = safeText(entry.coverImageUrl);
+      }
+      if (!current.backgroundDesktopUrl && safeText(entry?.backgroundDesktopUrl)) {
+        current.backgroundDesktopUrl = safeText(entry.backgroundDesktopUrl);
+      }
+      if (storyId && !current.storyIds.includes(storyId)) {
+        current.storyIds.push(storyId);
+        if (!current.selectedStoryId) {
+          current.selectedStoryId = storyId;
+        }
+      }
     });
 
     return Array.from(byBook.values()).sort(sortByNome);
@@ -187,6 +239,49 @@
     return `"${String(url || '').replace(/"/g, '%22')}"`;
   }
 
+  function openUploadForBook(bookId) {
+    if (!state.isAdmin || state.uploadInFlight || state.magicBusy) return;
+    const targetBookId = safeText(bookId);
+    if (!targetBookId || !els.coverUploadInput) return;
+    state.uploadTargetBookId = targetBookId;
+    els.coverUploadInput.value = '';
+    els.coverUploadInput.click();
+  }
+
+  function openMagicModal(book) {
+    if (!state.isAdmin || !els.magicModal || !book) return;
+    state.magicBookId = safeText(book.bookId);
+    if (!state.magicBookId) return;
+    if (els.magicTitle) {
+      els.magicTitle.textContent = `Gerar imagens: ${safeText(book.nome) || 'Livro'}`;
+    }
+    if (els.magicCoverPromptInput && !safeText(els.magicCoverPromptInput.value)) {
+      els.magicCoverPromptInput.value = `Capa do livro ${safeText(book.nome)} com atmosfera cinematica, personagens e profundidade visual.`;
+    }
+    if (els.magicBackgroundPromptInput && !safeText(els.magicBackgroundPromptInput.value)) {
+      els.magicBackgroundPromptInput.value = `Background do livro ${safeText(book.nome)} em estilo imersivo, sem texto e sem logos.`;
+    }
+    els.magicModal.classList.add('is-visible');
+  }
+
+  function closeMagicModal() {
+    state.magicBookId = '';
+    if (els.magicModal) {
+      els.magicModal.classList.remove('is-visible');
+    }
+  }
+
+  function setMagicBusy(isBusy) {
+    state.magicBusy = Boolean(isBusy);
+    if (els.magicGenerateBtn) {
+      els.magicGenerateBtn.disabled = state.magicBusy;
+    }
+    if (els.magicCloseBtn) {
+      els.magicCloseBtn.disabled = state.magicBusy;
+    }
+    renderCards();
+  }
+
   function renderCards() {
     if (!els.cardsGrid || !els.cardsEmpty) return;
     const books = getBooksForSelectedLevel();
@@ -227,31 +322,38 @@
       adminChip.className = 'books-card__admin-chip';
       adminChip.textContent = 'Admin';
 
+      const actions = document.createElement('div');
+      actions.className = 'books-card__actions';
+
       const uploadBtn = document.createElement('button');
       uploadBtn.type = 'button';
       uploadBtn.className = 'books-card__upload-btn';
       uploadBtn.setAttribute('aria-label', `Enviar capa de ${safeText(book?.nome) || 'livro'}`);
       uploadBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 18v2H5v-2H3v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2zm-7-2 5-5h-3V2h-4v9H7z"/></svg>';
-      uploadBtn.disabled = state.uploadInFlight;
+      uploadBtn.disabled = state.uploadInFlight || state.magicBusy;
       uploadBtn.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (!state.isAdmin || state.uploadInFlight) return;
-        const targetBookId = safeText(book?.bookId);
-        if (!targetBookId || !els.coverUploadInput) return;
-        state.uploadTargetBookId = targetBookId;
-        els.coverUploadInput.value = '';
-        els.coverUploadInput.click();
+        openUploadForBook(book.bookId);
       });
 
-      card.append(background, overlay, title, adminChip, uploadBtn);
+      const magicBtn = document.createElement('button');
+      magicBtn.type = 'button';
+      magicBtn.className = 'books-card__magic-btn';
+      magicBtn.setAttribute('aria-label', `Gerar imagens com IA para ${safeText(book?.nome) || 'livro'}`);
+      magicBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m7.5 2 1.13 3.4L12 6.5l-3.37 1.1L7.5 11l-1.13-3.4L3 6.5l3.37-1.1zm9 5 1.5 4.5L22.5 13 18 14.5 16.5 19 15 14.5 10.5 13 15 11.5zm-8 7 1 3 3 1-3 1-1 3-1-3-3-1 3-1z"/></svg>';
+      magicBtn.disabled = state.uploadInFlight || state.magicBusy;
+      magicBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openMagicModal(book);
+      });
+
+      actions.append(uploadBtn, magicBtn);
+      card.append(background, overlay, title, adminChip, actions);
       card.addEventListener('click', () => {
-        if (!state.isAdmin || state.uploadInFlight) return;
-        const targetBookId = safeText(book?.bookId);
-        if (!targetBookId || !els.coverUploadInput) return;
-        state.uploadTargetBookId = targetBookId;
-        els.coverUploadInput.value = '';
-        els.coverUploadInput.click();
+        if (state.uploadInFlight || state.magicBusy) return;
+        void startBookReader(book);
       });
       els.cardsGrid.appendChild(card);
     });
@@ -262,10 +364,10 @@
       els.levelTitle.textContent = `Nivel ${state.selectedLevel}`;
     }
     if (els.prevLevelBtn) {
-      els.prevLevelBtn.disabled = state.selectedLevel <= 1 || state.uploadInFlight;
+      els.prevLevelBtn.disabled = state.selectedLevel <= 1 || state.uploadInFlight || state.magicBusy;
     }
     if (els.nextLevelBtn) {
-      els.nextLevelBtn.disabled = state.selectedLevel >= 10 || state.uploadInFlight;
+      els.nextLevelBtn.disabled = state.selectedLevel >= 10 || state.uploadInFlight || state.magicBusy;
     }
   }
 
@@ -293,20 +395,29 @@
   }
 
   async function fetchSessionUser() {
-    try {
-      const response = await fetch(buildApiUrl('/auth/session'), {
-        credentials: 'include',
-        headers: buildAuthHeaders(),
-        cache: 'no-store'
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.success) {
-        return null;
+    for (const path of SESSION_ENDPOINTS) {
+      try {
+        const response = await fetch(buildApiUrl(path), {
+          credentials: 'include',
+          headers: buildAuthHeaders(),
+          cache: 'no-store'
+        });
+        if (!response.ok) {
+          continue;
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!payload || payload.success === false) {
+          continue;
+        }
+        const normalized = normalizeUser(payload.user || payload);
+        if (normalized) {
+          return normalized;
+        }
+      } catch (_error) {
+        // try next endpoint
       }
-      return normalizeUser(payload.user);
-    } catch (_error) {
-      return null;
     }
+    return null;
   }
 
   function setUploadBusy(isBusy) {
@@ -374,6 +485,9 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Conta admin sem sessao ativa no servidor. Abra /account, faça login e tente de novo.');
+        }
         throw new Error(payload?.error || payload?.details || 'Nao foi possivel salvar a capa.');
       }
 
@@ -391,6 +505,143 @@
     }
   }
 
+  async function postJsonWithSuccess(path, body, fallbackError) {
+    const response = await fetch(buildApiUrl(path), {
+      method: 'POST',
+      credentials: 'include',
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body || {})
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Conta admin sem sessao ativa no servidor. Abra /account, faça login e tente de novo.');
+      }
+      throw new Error(payload?.error || payload?.details || payload?.message || fallbackError || 'Falha na requisicao.');
+    }
+    return payload;
+  }
+
+  async function generateAndSaveMagicForBook() {
+    if (!state.isAdmin || state.magicBusy) return;
+    const bookId = safeText(state.magicBookId);
+    if (!bookId) return;
+
+    const targetBook = state.books.find((entry) => safeText(entry?.bookId) === bookId);
+    const coverPrompt = safeText(els.magicCoverPromptInput?.value || targetBook?.nome || '');
+    const backgroundPrompt = safeText(els.magicBackgroundPromptInput?.value || targetBook?.nome || '');
+
+    if (!coverPrompt || !backgroundPrompt) {
+      setStatus('Preencha os dois campos de prompt antes de gerar.', 'error');
+      return;
+    }
+
+    setMagicBusy(true);
+    setStatus('Gerando capa e background com IA...', null);
+    try {
+      const coverGenerated = await postJsonWithSuccess('/api/admin/minibooks/generate-cover', {
+        bookId,
+        prompt: coverPrompt
+      }, 'Nao foi possivel gerar a capa.');
+
+      const backgroundGenerated = await postJsonWithSuccess('/api/admin/minibooks/generate-background', {
+        bookId,
+        prompt: backgroundPrompt
+      }, 'Nao foi possivel gerar o background.');
+
+      await postJsonWithSuccess('/api/admin/minibooks/save-cover', {
+        bookId,
+        imageDataUrl: safeText(coverGenerated?.dataUrl),
+        prompt: coverPrompt
+      }, 'Nao foi possivel salvar a capa no R2.');
+
+      await postJsonWithSuccess('/api/admin/minibooks/save-background', {
+        bookId,
+        desktopDataUrl: safeText(backgroundGenerated?.desktopDataUrl),
+        mobileDataUrl: safeText(backgroundGenerated?.mobileDataUrl),
+        prompt: backgroundPrompt
+      }, 'Nao foi possivel salvar o background no R2.');
+
+      state.books = await fetchStories();
+      renderCards();
+      closeMagicModal();
+      setStatus('Capa e background gerados e salvos no R2 com sucesso.', 'success');
+    } catch (error) {
+      setStatus(error?.message || 'Falha na geracao das imagens.', 'error');
+    } finally {
+      setMagicBusy(false);
+    }
+  }
+
+  function setReaderVisible(visible) {
+    state.readerOpen = Boolean(visible);
+    if (els.reader) {
+      els.reader.classList.toggle('is-visible', state.readerOpen);
+    }
+    document.body.classList.toggle('books-reader-open', state.readerOpen);
+  }
+
+  function renderReader() {
+    if (!els.readerEnglish || !els.readerCounter) return;
+    const total = state.readerLines.length;
+    const index = Math.max(0, Math.min(total - 1, state.readerIndex));
+    state.readerIndex = index;
+    const english = total ? safeText(state.readerLines[index]) : '';
+    els.readerEnglish.textContent = english || 'Sem conteudo em ingles neste livro.';
+    els.readerCounter.textContent = `${total ? index + 1 : 0} / ${total}`;
+  }
+
+  function closeReader() {
+    setReaderVisible(false);
+    state.readerBookId = '';
+    state.readerLines = [];
+    state.readerIndex = 0;
+  }
+
+  function stepReader(delta) {
+    if (!state.readerOpen || !state.readerLines.length) return;
+    const next = Math.max(0, Math.min(state.readerLines.length - 1, state.readerIndex + delta));
+    if (next === state.readerIndex) return;
+    state.readerIndex = next;
+    renderReader();
+  }
+
+  async function fetchBookLines(book) {
+    const storyId = safeText(book?.selectedStoryId || (Array.isArray(book?.storyIds) ? book.storyIds[0] : ''));
+    if (!storyId) return [];
+    const response = await fetch(buildApiUrl(`/api/speaking/cards?storyId=${encodeURIComponent(storyId)}`), {
+      credentials: 'include',
+      headers: buildAuthHeaders(),
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !Array.isArray(payload.cards)) {
+      throw new Error(payload?.message || 'Nao foi possivel abrir o livro.');
+    }
+    return payload.cards
+      .map((entry) => safeText(entry?.english))
+      .filter(Boolean);
+  }
+
+  async function startBookReader(book) {
+    if (!book) return;
+    setReaderVisible(true);
+    state.readerBookId = safeText(book.bookId);
+    state.readerLines = ['Carregando frases em ingles...'];
+    state.readerIndex = 0;
+    renderReader();
+    try {
+      const lines = await fetchBookLines(book);
+      state.readerLines = lines.length ? lines : ['Este livro nao tem frases em ingles ainda.'];
+      state.readerIndex = 0;
+      renderReader();
+      setStatus('', null);
+    } catch (error) {
+      closeReader();
+      setStatus(error?.message || 'Nao foi possivel abrir o livro.', 'error');
+    }
+  }
+
   function bindEvents() {
     els.prevLevelBtn?.addEventListener('click', () => {
       setLevel(state.selectedLevel - 1);
@@ -404,6 +655,60 @@
       const file = event?.target?.files?.[0];
       if (!state.isAdmin || !file || !state.uploadTargetBookId) return;
       void uploadCoverForBook(state.uploadTargetBookId, file);
+    });
+
+    els.magicGenerateBtn?.addEventListener('click', () => {
+      void generateAndSaveMagicForBook();
+    });
+
+    els.magicCloseBtn?.addEventListener('click', () => {
+      if (state.magicBusy) return;
+      closeMagicModal();
+    });
+
+    els.magicModal?.addEventListener('click', (event) => {
+      if (state.magicBusy) return;
+      if (event.target === els.magicModal) {
+        closeMagicModal();
+      }
+    });
+
+    els.readerBackBtn?.addEventListener('click', closeReader);
+
+    els.readerContent?.addEventListener('touchstart', (event) => {
+      const touch = event.touches?.[0];
+      if (!touch) return;
+      state.readerTouchStartX = Number(touch.clientX) || 0;
+      state.readerTouchStartY = Number(touch.clientY) || 0;
+    }, { passive: true });
+
+    els.readerContent?.addEventListener('touchend', (event) => {
+      const touch = event.changedTouches?.[0];
+      if (!touch) return;
+      const endX = Number(touch.clientX) || 0;
+      const endY = Number(touch.clientY) || 0;
+      const dx = endX - state.readerTouchStartX;
+      const dy = endY - state.readerTouchStartY;
+      if (Math.abs(dx) < 45 || Math.abs(dx) <= Math.abs(dy)) return;
+      if (dx < 0) {
+        stepReader(1);
+      } else {
+        stepReader(-1);
+      }
+    }, { passive: true });
+
+    window.addEventListener('keydown', (event) => {
+      if (!state.readerOpen) return;
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        stepReader(1);
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        stepReader(-1);
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        closeReader();
+      }
     });
   }
 
@@ -429,7 +734,11 @@
     renderCards();
 
     if (state.isAdmin) {
-      setStatus('Modo admin ativo: toque em um card para trocar a capa.', null);
+      if (sessionUser?.isAdmin || isAdminAlias(sessionUser?.username)) {
+        setStatus('Modo admin ativo: upload e varinha disponiveis no card.', null);
+      } else {
+        setStatus('Admin local detectado. Se o servidor bloquear upload/IA, faça login em /account e volte.', null);
+      }
     } else {
       setStatus('', null);
     }

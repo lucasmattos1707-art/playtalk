@@ -8071,6 +8071,7 @@ app.get(['/premium', '/premium/'], (req, res) => {
 });
 
 app.get(['/books', '/books/'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(staticDir, 'books.html'));
 });
 
