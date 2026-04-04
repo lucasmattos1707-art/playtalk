@@ -3506,17 +3506,41 @@ async function seedPublicFlashcardDecksFromAllcards(options = {}) {
         continue;
       }
 
-      await upsertPublicFlashcardDeck({
-        deckKey: `allcards:${encodeURIComponent(fileName.toLowerCase())}`,
-        fileName,
-        dayKey: '',
-        source: 'allcards',
-        title: typeof payload?.title === 'string' && payload.title.trim()
-          ? payload.title.trim()
-          : path.posix.basename(fileName, '.json'),
-        payload
-      });
-      seeded += 1;
+      const deckKey = `allcards:${encodeURIComponent(fileName.toLowerCase())}`;
+      const title = typeof payload?.title === 'string' && payload.title.trim()
+        ? payload.title.trim()
+        : path.posix.basename(fileName, '.json');
+      const itemCount = getFlashcardPayloadItems(payload).length;
+
+      // Important: do not overwrite existing Postgres payload/media links during seed.
+      // Seed from /allcards should only create missing rows.
+      const insertResult = await pool.query(
+        `INSERT INTO public.flashcards_public_decks (
+           deck_key,
+           file_name,
+           day_key,
+           source,
+           title,
+           item_count,
+           payload,
+           updated_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, now())
+         ON CONFLICT (deck_key) DO NOTHING
+         RETURNING id`,
+        [
+          deckKey,
+          fileName,
+          '',
+          'allcards',
+          title,
+          itemCount,
+          JSON.stringify(payload)
+        ]
+      );
+      if (insertResult.rows.length) {
+        seeded += 1;
+      }
     }
 
     return {
