@@ -72,10 +72,10 @@ const ELEVENLABS_MODEL_ID = env(process.env.ELEVENLABS_MODEL_ID) || 'eleven_mult
 const OPENAI_API_KEY = env(process.env.OPENAI_API_KEY);
 const OPENAI_IMAGE_MODEL = env(process.env.OPENAI_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_AVATAR_IMAGE_MODEL = env(process.env.OPENAI_AVATAR_IMAGE_MODEL) || 'gpt-image-1-mini';
-const OPENAI_TEXT_MODEL = env(process.env.OPENAI_TEXT_MODEL) || 'gpt-5-mini';
+const OPENAI_TEXT_MODEL = env(process.env.OPENAI_TEXT_MODEL) || 'gpt-5.4-nano';
 const OPENAI_FLASHCARD_ADMIN_TEXT_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_TEXT_MODEL) || 'gpt-5-nano';
 const OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL) || 'gpt-image-1-mini';
-const OPENAI_STORY_MODEL = env(process.env.OPENAI_STORY_MODEL) || 'gpt-5';
+const OPENAI_STORY_MODEL = env(process.env.OPENAI_STORY_MODEL) || 'gpt-5.4-nano';
 const OPENAI_TTS_MODEL = env(process.env.OPENAI_TTS_MODEL) || 'gpt-4o-mini-tts';
 const OPENAI_STT_MODEL = env(process.env.OPENAI_STT_MODEL) || 'gpt-4o-mini-transcribe';
 const OPENAI_CHAT_FAST_MODEL = env(process.env.OPENAI_CHAT_FAST_MODEL) || 'gpt-5-mini';
@@ -136,6 +136,7 @@ let premiumAccessTablesReadyPromise = null;
 let speakingRealtimeTablesReadyPromise = null;
 let miniBookJsonTablesReadyPromise = null;
 let booksSpeakingStatsTablesReadyPromise = null;
+let publicFlashcardDecksTableReadyPromise = null;
 let speakingCardsCache = {
   stories: [],
   updatedAt: 0
@@ -3282,6 +3283,188 @@ async function collectAllcardsManifestEntries() {
     sensitivity: 'base',
     numeric: true
   }));
+}
+
+function buildPublicLevelsFlashcardDeckFileName(dayKey) {
+  const normalizedDayKey = normalizeLevelFolderKey(dayKey) || '1';
+  return `levels-day-${safeGeneratedBase(normalizedDayKey, '1')}.json`;
+}
+
+async function ensurePublicFlashcardDecksTable() {
+  if (!pool) return false;
+  if (!publicFlashcardDecksTableReadyPromise) {
+    publicFlashcardDecksTableReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.flashcards_public_decks (
+          id bigserial PRIMARY KEY,
+          deck_key text NOT NULL UNIQUE,
+          file_name text NOT NULL UNIQUE,
+          day_key text NOT NULL DEFAULT '',
+          source text NOT NULL DEFAULT 'levels',
+          title text NOT NULL DEFAULT '',
+          item_count integer NOT NULL DEFAULT 0,
+          payload jsonb NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS flashcards_public_decks_source_idx
+        ON public.flashcards_public_decks (source, updated_at DESC)
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS flashcards_public_decks_title_idx
+        ON public.flashcards_public_decks (lower(title))
+      `);
+    })().catch((error) => {
+      publicFlashcardDecksTableReadyPromise = null;
+      throw error;
+    });
+  }
+  await publicFlashcardDecksTableReadyPromise;
+  return true;
+}
+
+async function upsertPublicFlashcardDeckFromLevels(dayKey, payload) {
+  if (!pool) return null;
+  await ensurePublicFlashcardDecksTable();
+
+  const normalizedDayKey = normalizeLevelFolderKey(dayKey);
+  if (!normalizedDayKey) {
+    const error = new Error('Pasta invalida para publicar deck no Postgres.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const normalizedPayload = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload
+    : { title: `Flashcard ${normalizedDayKey}`, coverImage: '', items: [] };
+  const title = typeof normalizedPayload?.title === 'string' && normalizedPayload.title.trim()
+    ? normalizedPayload.title.trim()
+    : `Flashcard ${normalizedDayKey}`;
+  const fileName = buildPublicLevelsFlashcardDeckFileName(normalizedDayKey);
+  const deckKey = `levels:${safeGeneratedBase(normalizedDayKey, '1')}`;
+  const itemCount = getFlashcardPayloadItems(normalizedPayload).length;
+
+  const result = await pool.query(
+    `INSERT INTO public.flashcards_public_decks (
+       deck_key,
+       file_name,
+       day_key,
+       source,
+       title,
+       item_count,
+       payload,
+       updated_at
+     )
+     VALUES ($1, $2, $3, 'levels', $4, $5, $6::jsonb, now())
+     ON CONFLICT (deck_key) DO UPDATE
+     SET
+       file_name = EXCLUDED.file_name,
+       day_key = EXCLUDED.day_key,
+       source = EXCLUDED.source,
+       title = EXCLUDED.title,
+       item_count = EXCLUDED.item_count,
+       payload = EXCLUDED.payload,
+       updated_at = now()
+     RETURNING file_name, title, item_count, updated_at`,
+    [
+      deckKey,
+      fileName,
+      normalizedDayKey,
+      title,
+      itemCount,
+      JSON.stringify(normalizedPayload)
+    ]
+  );
+
+  const row = result.rows[0] || {};
+  const finalFileName = String(row.file_name || fileName).trim() || fileName;
+  const finalTitle = String(row.title || title).trim() || title;
+  const finalCount = Number.isInteger(Number(row.item_count)) ? Number(row.item_count) : itemCount;
+  return {
+    source: `allcards/${finalFileName}`,
+    name: finalFileName,
+    title: finalTitle,
+    path: `/allcards/${encodeURIComponent(finalFileName)}`,
+    count: Math.max(0, finalCount),
+    updatedAt: row.updated_at || null
+  };
+}
+
+async function collectPostgresFlashcardManifestEntries() {
+  if (!pool) return [];
+  try {
+    await ensurePublicFlashcardDecksTable();
+
+    const result = await pool.query(
+      `SELECT file_name, title, item_count, payload
+       FROM public.flashcards_public_decks
+       ORDER BY lower(title) ASC, updated_at DESC`
+    );
+
+    return result.rows
+      .map((row) => {
+        const fileName = path.posix.basename(String(row?.file_name || '').trim());
+        if (!fileName || path.extname(fileName).toLowerCase() !== '.json') {
+          return null;
+        }
+        const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+        const title = String(row?.title || '').trim()
+          || String(payload?.title || '').trim()
+          || fileName;
+        const fallbackCount = getFlashcardPayloadItems(payload).length;
+        const count = Number.isInteger(Number(row?.item_count))
+          ? Math.max(0, Number(row.item_count))
+          : fallbackCount;
+        const slug = path.posix.basename(fileName, '.json');
+        return {
+          name: fileName,
+          title,
+          slug,
+          source: `allcards/${fileName}`,
+          path: `/allcards/${encodeURIComponent(fileName)}`,
+          size: Buffer.byteLength(JSON.stringify(payload), 'utf8'),
+          count
+        };
+      })
+      .filter(Boolean);
+  } catch (error) {
+    console.error('Erro ao carregar decks publicos no Postgres:', error);
+    return [];
+  }
+}
+
+async function findPostgresFlashcardDeckPayloadByFileName(fileName) {
+  if (!pool) return null;
+  await ensurePublicFlashcardDecksTable();
+
+  const normalizedFileName = path.posix.basename(String(fileName || '').trim());
+  if (!normalizedFileName || path.extname(normalizedFileName).toLowerCase() !== '.json') {
+    return null;
+  }
+
+  const result = await pool.query(
+    `SELECT payload
+     FROM public.flashcards_public_decks
+     WHERE file_name = $1
+     LIMIT 1`,
+    [normalizedFileName]
+  );
+  if (!result.rows.length) return null;
+
+  let payload = result.rows[0]?.payload;
+  if (typeof payload === 'string') {
+    try {
+      payload = JSON.parse(payload);
+    } catch (_error) {
+      payload = null;
+    }
+  }
+
+  return payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload
+    : null;
 }
 
 function normalizeSpeakingStoryCardItem({ item, storyName = 'story', index = 0 }) {
@@ -6676,7 +6859,22 @@ app.get('/api/admin/flashcards/decks', async (req, res) => {
 
 app.get('/api/flashcards/manifest', async (req, res) => {
   try {
-    const files = await collectAllcardsManifestEntries();
+    const [localFiles, postgresFiles] = await Promise.all([
+      collectAllcardsManifestEntries(),
+      collectPostgresFlashcardManifestEntries()
+    ]);
+    const mergedBySource = new Map();
+    [...localFiles, ...postgresFiles].forEach((entry) => {
+      const sourceKey = String(entry?.source || '').trim().toLowerCase();
+      if (!sourceKey) return;
+      mergedBySource.set(sourceKey, entry);
+    });
+    const files = Array.from(mergedBySource.values()).sort((left, right) => (
+      String(left?.title || '').localeCompare(String(right?.title || ''), 'pt-BR', {
+        sensitivity: 'base',
+        numeric: true
+      })
+    ));
     res.setHeader('Cache-Control', 'no-store');
     res.json({
       success: true,
@@ -9419,6 +9617,37 @@ app.use(express.static(staticDir));
 app.get(['/allcards', '/allcards/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'allcards.html'));
 });
+app.get(/^\/allcards\/([^/]+\.json)$/i, async (req, res, next) => {
+  try {
+    const encodedFileName = String(req.params?.[0] || '').trim();
+    const decodedFileName = decodeURIComponent(encodedFileName);
+    const normalizedFileName = path.posix.basename(decodedFileName);
+    if (!normalizedFileName || normalizedFileName !== decodedFileName) {
+      next();
+      return;
+    }
+
+    const localDeckPath = path.join(ALLCARDS_ROOT, normalizedFileName);
+    try {
+      await fs.promises.access(localDeckPath, fs.constants.F_OK);
+      next();
+      return;
+    } catch (_error) {
+      // fallback to Postgres hosted deck
+    }
+
+    const payload = await findPostgresFlashcardDeckPayloadByFileName(normalizedFileName);
+    if (!payload) {
+      next();
+      return;
+    }
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(payload);
+  } catch (error) {
+    next(error);
+  }
+});
 app.use('/allcards', express.static(ALLCARDS_ROOT, {
   setHeaders(res) {
     res.setHeader('Cache-Control', 'no-store');
@@ -10367,8 +10596,8 @@ app.post('/api/text/openai/flashcards', async (req, res) => {
     return;
   }
 
-  if (!Number.isFinite(count) || count < 1 || count > 24) {
-    res.status(400).json({ error: 'Quantidade invalida. Use entre 1 e 24 frases.' });
+  if (!Number.isFinite(count) || count < 1 || count > 60) {
+    res.status(400).json({ error: 'Quantidade invalida. Use entre 1 e 60 frases.' });
     return;
   }
 
@@ -11046,13 +11275,15 @@ app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), as
     const deckRelativePath = `Niveis/others/day-${dayKey}.json`;
     await writeJsonToRelativePath(deckRelativePath, finalPayload);
     await refreshLocalLevelManifestMirror();
+    const postgresDeck = await upsertPublicFlashcardDeckFromLevels(dayKey, finalPayload);
 
     res.json({
       success: true,
       deckPath: deckRelativePath,
       assetRoot: buildPublicAssetUrl(assetRootRelativePath),
       itemCount: finalPayload.items.length,
-      uploadedCount: decodedFiles.length
+      uploadedCount: decodedFiles.length,
+      postgresDeck: postgresDeck || null
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({
