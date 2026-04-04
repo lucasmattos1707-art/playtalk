@@ -428,7 +428,10 @@
   }
 
   async function fetchRemoteManifestFiles() {
-    const response = await fetch(withNoCacheUrl(buildApiUrl(DATA_MANIFEST_REMOTE_PATH)), {
+    const manifestPath = state.isAdmin
+      ? `${DATA_MANIFEST_REMOTE_PATH}?includeHidden=1`
+      : DATA_MANIFEST_REMOTE_PATH;
+    const response = await fetch(withNoCacheUrl(buildApiUrl(manifestPath)), {
       cache: 'no-store',
       headers: buildAuthHeaders(),
       credentials: 'include'

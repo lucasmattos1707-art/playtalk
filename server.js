@@ -7313,6 +7313,12 @@ app.get('/api/flashcards/manifest', async (req, res) => {
   try {
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     const requesterIsAdmin = isAdminUserRecord(authUser);
+    const includeHiddenRequested = String(req.query?.includeHidden || '').trim().toLowerCase();
+    const includeHiddenForRequester = requesterIsAdmin && (
+      includeHiddenRequested === '1'
+      || includeHiddenRequested === 'true'
+      || includeHiddenRequested === 'yes'
+    );
     const [localFiles, postgresFiles] = await Promise.all([
       collectAllcardsManifestEntries(),
       collectPostgresFlashcardManifestEntries()
@@ -7325,7 +7331,7 @@ app.get('/api/flashcards/manifest', async (req, res) => {
       mergedBySource.set(sourceKey, entry);
     });
     const files = Array.from(mergedBySource.values())
-      .filter((entry) => requesterIsAdmin || !Boolean(entry?.isHidden))
+      .filter((entry) => includeHiddenForRequester || !Boolean(entry?.isHidden))
       .sort((left, right) => (
         String(left?.title || '').localeCompare(String(right?.title || ''), 'pt-BR', {
           sensitivity: 'base',
