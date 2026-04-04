@@ -18,6 +18,7 @@
     empty: document.getElementById('allcards-empty'),
     total: document.getElementById('allcards-total'),
     adminToolbar: document.getElementById('allcards-admin-toolbar'),
+    adminHiddenToggleBtn: document.getElementById('allcards-admin-hidden-toggle-btn'),
     adminUploadBtn: document.getElementById('allcards-admin-upload-btn'),
     adminUploadInput: document.getElementById('allcards-admin-upload-input'),
     adminUploadStatus: document.getElementById('allcards-admin-upload-status')
@@ -35,6 +36,7 @@
     adminStatusBySource: Object.create(null),
     adminToolbarBusy: false,
     adminToolbarStatus: '',
+    showHiddenDecks: false,
     showPercent: false,
     refreshTimer: 0,
     swapTimer: 0
@@ -283,6 +285,10 @@
   function updateAdminToolbar() {
     if (!els.adminToolbar || !els.adminUploadBtn || !els.adminUploadStatus) return;
     els.adminToolbar.hidden = !state.isAdmin;
+    if (els.adminHiddenToggleBtn) {
+      els.adminHiddenToggleBtn.disabled = state.adminToolbarBusy;
+      els.adminHiddenToggleBtn.textContent = state.showHiddenDecks ? 'Esconder ocultos' : 'Mostrar ocultos';
+    }
     els.adminUploadBtn.disabled = state.adminToolbarBusy;
     els.adminUploadBtn.textContent = state.adminToolbarBusy ? 'Enviando decks...' : 'Enviar decks';
     els.adminUploadStatus.textContent = state.adminToolbarStatus;
@@ -453,7 +459,7 @@
 
   async function fetchRemoteManifestFiles() {
     const manifestPath = state.isAdmin
-      ? `${DATA_MANIFEST_REMOTE_PATH}?includeHidden=1`
+      ? `${DATA_MANIFEST_REMOTE_PATH}${state.showHiddenDecks ? '?includeHidden=1' : ''}`
       : DATA_MANIFEST_REMOTE_PATH;
     const response = await fetch(withNoCacheUrl(buildApiUrl(manifestPath)), {
       cache: 'no-store',
@@ -462,7 +468,7 @@
     });
     const payload = await response.json().catch(() => ({}));
     const manifestFiles = extractManifestFiles(payload);
-    if (!response.ok || !manifestFiles.length) {
+    if (!response.ok) {
       throw new Error(payload?.message || 'Nao consegui abrir o manifesto dos flashcards.');
     }
     return manifestFiles;
@@ -953,6 +959,26 @@
 
   function bindAdminToolbarEvents() {
     if (!els.adminUploadBtn || !els.adminUploadInput || els.adminUploadBtn.dataset.adminToolbarBound === '1') return;
+
+    if (els.adminHiddenToggleBtn && els.adminHiddenToggleBtn.dataset.adminHiddenToggleBound !== '1') {
+      els.adminHiddenToggleBtn.addEventListener('click', async () => {
+        if (!state.isAdmin || state.adminToolbarBusy) return;
+        const nextShowHidden = !state.showHiddenDecks;
+        state.showHiddenDecks = nextShowHidden;
+        try {
+          setAdminToolbarBusy(true);
+          setAdminToolbarStatus(nextShowHidden ? 'Exibindo decks ocultos.' : 'Mostrando apenas decks ativos.');
+          await refreshAdminDeckCatalog();
+        } catch (error) {
+          state.showHiddenDecks = !nextShowHidden;
+          setAdminToolbarStatus(error?.message || 'Falha ao alternar decks ocultos.');
+        } finally {
+          setAdminToolbarBusy(false);
+          updateAdminToolbar();
+        }
+      });
+      els.adminHiddenToggleBtn.dataset.adminHiddenToggleBound = '1';
+    }
 
     els.adminUploadBtn.addEventListener('click', () => {
       if (!state.isAdmin || state.adminToolbarBusy) return;

@@ -2262,6 +2262,7 @@ const VOICES_ROOT = (() => {
 })();
 const ALLCARDS_ROOT = path.join(__dirname, 'allcards');
 const LEGACY_FLASHCARDS_ROOT = path.join(__dirname, 'legado');
+const LOCAL_FLASHCARD_VISIBILITY_STATE_PATH = path.join(__dirname, 'data', 'local-flashcard-visibility.json');
 const ACCESSKEY_ROOT = path.join(__dirname, 'accesskey');
 const LOCAL_LEVELS_ROOT = path.join(__dirname, 'Niveis');
 const FLASHCARD_DATA_RELATIVE_ROOT = path.posix.join('data', 'flashcards', '130', '001');
@@ -3255,7 +3256,57 @@ async function collectBuiltinFlashcardManifestEntries() {
   }));
 }
 
-async function collectLegacyManifestEntriesFromRoot(rootPath, originType = 'allcards') {
+function buildLocalFlashcardSourceKey(fileName) {
+  const normalizedFileName = normalizePublicFlashcardDeckFileName(fileName, '');
+  if (!normalizedFileName) return '';
+  return `allcards/${normalizedFileName}`.toLowerCase();
+}
+
+async function readLocalFlashcardVisibilityState() {
+  try {
+    const raw = (await fs.promises.readFile(LOCAL_FLASHCARD_VISIBILITY_STATE_PATH, 'utf8')).replace(/^\uFEFF/, '');
+    const payload = JSON.parse(raw);
+    const hiddenSources = Array.isArray(payload?.hiddenSources)
+      ? payload.hiddenSources
+        .map((value) => String(value || '').trim().toLowerCase())
+        .filter(Boolean)
+      : [];
+    return { hiddenSources: new Set(hiddenSources) };
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return { hiddenSources: new Set() };
+    }
+    throw error;
+  }
+}
+
+async function writeLocalFlashcardVisibilityState(hiddenSources) {
+  const normalizedHiddenSources = Array.from(hiddenSources || [])
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter(Boolean)
+    .sort((left, right) => left.localeCompare(right, 'pt-BR', { sensitivity: 'base', numeric: true }));
+  await fs.promises.mkdir(path.dirname(LOCAL_FLASHCARD_VISIBILITY_STATE_PATH), { recursive: true });
+  await fs.promises.writeFile(
+    LOCAL_FLASHCARD_VISIBILITY_STATE_PATH,
+    `${JSON.stringify({ hiddenSources: normalizedHiddenSources }, null, 2)}\n`,
+    'utf8'
+  );
+}
+
+async function setLocalFlashcardDeckHiddenState(fileName, hidden) {
+  const sourceKey = buildLocalFlashcardSourceKey(fileName);
+  if (!sourceKey) return false;
+  const visibilityState = await readLocalFlashcardVisibilityState();
+  if (hidden) {
+    visibilityState.hiddenSources.add(sourceKey);
+  } else {
+    visibilityState.hiddenSources.delete(sourceKey);
+  }
+  await writeLocalFlashcardVisibilityState(visibilityState.hiddenSources);
+  return true;
+}
+
+async function collectLegacyManifestEntriesFromRoot(rootPath, originType = 'allcards', hiddenSources = new Set()) {
   let dirEntries = [];
   try {
     dirEntries = await fs.promises.readdir(rootPath, { withFileTypes: true });
@@ -3293,7 +3344,8 @@ async function collectLegacyManifestEntriesFromRoot(rootPath, originType = 'allc
       size: (await fs.promises.stat(filePath)).size,
       count,
       originType,
-      canDelete: false
+      canDelete: false,
+      isHidden: hiddenSources.has(buildLocalFlashcardSourceKey(entry.name))
     });
   }
 
@@ -3301,9 +3353,10 @@ async function collectLegacyManifestEntriesFromRoot(rootPath, originType = 'allc
 }
 
 async function collectAllcardsManifestEntries() {
+  const visibilityState = await readLocalFlashcardVisibilityState();
   const [allcardsEntries, legacyEntries] = await Promise.all([
-    collectLegacyManifestEntriesFromRoot(ALLCARDS_ROOT, 'allcards'),
-    collectLegacyManifestEntriesFromRoot(LEGACY_FLASHCARDS_ROOT, 'legacy')
+    collectLegacyManifestEntriesFromRoot(ALLCARDS_ROOT, 'allcards', visibilityState.hiddenSources),
+    collectLegacyManifestEntriesFromRoot(LEGACY_FLASHCARDS_ROOT, 'legacy', visibilityState.hiddenSources)
   ]);
 
   const mergedBySource = new Map();
@@ -3317,6 +3370,57 @@ async function collectAllcardsManifestEntries() {
     sensitivity: 'base',
     numeric: true
   }));
+}
+
+async function findLocalFlashcardDeckRecordByFileName(fileName) {
+  const normalizedFileName = normalizePublicFlashcardDeckFileName(fileName, '');
+  if (!normalizedFileName) return null;
+
+  const visibilityState = await readLocalFlashcardVisibilityState();
+  const candidates = [
+    { rootPath: ALLCARDS_ROOT, originType: 'allcards' },
+    { rootPath: LEGACY_FLASHCARDS_ROOT, originType: 'legacy' }
+  ];
+
+  for (const candidate of candidates) {
+    const filePath = path.join(candidate.rootPath, normalizedFileName);
+    try {
+      const stat = await fs.promises.stat(filePath);
+      if (!stat.isFile()) continue;
+
+      let title = normalizedFileName;
+      let count = 0;
+      try {
+        const raw = (await fs.promises.readFile(filePath, 'utf8')).replace(/^\uFEFF/, '');
+        const payload = JSON.parse(raw);
+        title = typeof payload?.title === 'string' && payload.title.trim()
+          ? payload.title.trim()
+          : title;
+        count = getFlashcardPayloadItems(payload).length;
+      } catch (_error) {
+        // keep fallback metadata when the file cannot be parsed here
+      }
+
+      return {
+        filePath,
+        deck: {
+          name: normalizedFileName,
+          title,
+          source: `allcards/${normalizedFileName}`,
+          path: `/allcards/${encodeURIComponent(normalizedFileName)}`,
+          size: stat.size,
+          count,
+          originType: candidate.originType,
+          canDelete: false,
+          isHidden: visibilityState.hiddenSources.has(buildLocalFlashcardSourceKey(normalizedFileName))
+        }
+      };
+    } catch (_error) {
+      // try next root
+    }
+  }
+
+  return null;
 }
 
 function buildPublicLevelsFlashcardDeckFileName(dayKey) {
@@ -7486,13 +7590,6 @@ app.post('/api/admin/flashcards/public-decks/upload-jsons', express.json({ limit
 app.post('/api/admin/flashcards/public-decks/visibility', express.json({ limit: '256kb' }), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
-    if (!pool) {
-      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
-      return;
-    }
-
-    // Visibility toggle must be side-effect free for payload/media links.
-    // Do not run seed/backfill here.
     const fileName = normalizePublicDeckSourceToFileName(req.body?.source);
     if (!fileName) {
       res.status(400).json({ success: false, message: 'Origem do deck invalida.' });
@@ -7500,24 +7597,39 @@ app.post('/api/admin/flashcards/public-decks/visibility', express.json({ limit: 
     }
 
     const hidden = req.body?.hidden === true;
-    const result = await pool.query(
-      `UPDATE public.flashcards_public_decks
-       SET is_hidden = $2,
-           hidden_at = CASE WHEN $2 THEN now() ELSE NULL END,
-           updated_at = now()
-       WHERE file_name = $1
-       RETURNING file_name, day_key, source, title, item_count, payload, is_hidden, updated_at`,
-      [fileName, hidden]
-    );
+    if (pool) {
+      // Visibility toggle must be side-effect free for payload/media links.
+      // Do not run seed/backfill here.
+      const result = await pool.query(
+        `UPDATE public.flashcards_public_decks
+         SET is_hidden = $2,
+             hidden_at = CASE WHEN $2 THEN now() ELSE NULL END,
+             updated_at = now()
+         WHERE file_name = $1
+         RETURNING file_name, day_key, source, title, item_count, payload, is_hidden, updated_at`,
+        [fileName, hidden]
+      );
 
-    if (!result.rows.length) {
-      res.status(404).json({ success: false, message: 'Deck nao encontrado no Postgres.' });
+      if (result.rows.length) {
+        res.json({
+          success: true,
+          deck: buildPublicFlashcardDeckManifestEntryFromRow(result.rows[0] || null)
+        });
+        return;
+      }
+    }
+
+    const localDeckRecord = await findLocalFlashcardDeckRecordByFileName(fileName);
+    if (!localDeckRecord) {
+      res.status(404).json({ success: false, message: 'Deck nao encontrado.' });
       return;
     }
 
+    await setLocalFlashcardDeckHiddenState(fileName, hidden);
+    const nextDeckRecord = await findLocalFlashcardDeckRecordByFileName(fileName);
     res.json({
       success: true,
-      deck: buildPublicFlashcardDeckManifestEntryFromRow(result.rows[0] || null)
+      deck: nextDeckRecord?.deck || { ...localDeckRecord.deck, isHidden: hidden }
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({
@@ -10533,19 +10645,15 @@ app.get(/^\/allcards\/([^/]+\.json)$/i, async (req, res, next) => {
       return;
     }
 
-    const localDeckPaths = [
-      path.join(ALLCARDS_ROOT, normalizedFileName),
-      path.join(LEGACY_FLASHCARDS_ROOT, normalizedFileName)
-    ];
-    for (const localDeckPath of localDeckPaths) {
-      try {
-        await fs.promises.access(localDeckPath, fs.constants.F_OK);
-        res.setHeader('Cache-Control', 'no-store');
-        res.sendFile(localDeckPath);
-        return;
-      } catch (_error) {
-        // try next local fallback
-      }
+    const localDeckRecord = await findLocalFlashcardDeckRecordByFileName(normalizedFileName);
+    if (localDeckRecord?.deck?.isHidden && !requesterIsAdmin) {
+      res.status(404).send('Deck nao encontrado.');
+      return;
+    }
+    if (localDeckRecord?.filePath) {
+      res.setHeader('Cache-Control', 'no-store');
+      res.sendFile(localDeckRecord.filePath);
+      return;
     }
 
     next();
