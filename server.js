@@ -7315,8 +7315,9 @@ app.get('/api/flashcards/manifest', async (req, res) => {
       collectAllcardsManifestEntries(),
       collectPostgresFlashcardManifestEntries()
     ]);
+    const preferredFiles = postgresFiles.length ? postgresFiles : localFiles;
     const mergedBySource = new Map();
-    [...localFiles, ...postgresFiles].forEach((entry) => {
+    preferredFiles.forEach((entry) => {
       const sourceKey = String(entry?.source || '').trim().toLowerCase();
       if (!sourceKey) return;
       mergedBySource.set(sourceKey, entry);
@@ -10087,25 +10088,26 @@ app.get(/^\/allcards\/([^/]+\.json)$/i, async (req, res, next) => {
       return;
     }
 
+    const payload = publicDeckRow?.payload && typeof publicDeckRow.payload === 'object'
+      ? publicDeckRow.payload
+      : await findPostgresFlashcardDeckPayloadByFileName(normalizedFileName);
+
+    if (payload) {
+      res.setHeader('Cache-Control', 'no-store');
+      res.json(payload);
+      return;
+    }
+
     const localDeckPath = path.join(ALLCARDS_ROOT, normalizedFileName);
     try {
       await fs.promises.access(localDeckPath, fs.constants.F_OK);
       next();
       return;
     } catch (_error) {
-      // fallback to Postgres hosted deck
+      // no local fallback
     }
 
-    const payload = publicDeckRow?.payload && typeof publicDeckRow.payload === 'object'
-      ? publicDeckRow.payload
-      : await findPostgresFlashcardDeckPayloadByFileName(normalizedFileName);
-    if (!payload) {
-      next();
-      return;
-    }
-
-    res.setHeader('Cache-Control', 'no-store');
-    res.json(payload);
+    next();
   } catch (error) {
     next(error);
   }

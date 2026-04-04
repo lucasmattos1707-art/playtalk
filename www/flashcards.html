@@ -9568,15 +9568,11 @@
       }
 
       function isEarlyFlashcardLengthEligible(card) {
-        const englishLength = countFlashcardCharacters(card?.english);
-        const portugueseLength = countFlashcardCharacters(card?.portuguese);
-        if (!englishLength || !portugueseLength) return false;
-        return englishLength <= EARLY_FLASHCARD_MAX_CHARACTERS
-          && portugueseLength <= EARLY_FLASHCARD_MAX_CHARACTERS;
+        return true;
       }
 
       function shouldRestrictEarlyFlashcards() {
-        return !isAdminUser() && accessibleFlashcardsCount() < EARLY_FLASHCARD_PLAYER_LIMIT;
+        return false;
       }
 
       function applyEarlyFlashcardFilter(cards) {
@@ -9725,8 +9721,7 @@
           try {
             const parsed = new URL(text);
             const parsedPath = decodeURIComponent(String(parsed.pathname || '')).replace(/^\/+/, '');
-            return parsed.origin === window.location.origin
-              && parsedPath.toLowerCase().endsWith('.json')
+            return parsedPath.toLowerCase().endsWith('.json')
               && parsedPath.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`);
           } catch (_error) {
             return false;
@@ -9762,7 +9757,7 @@
           }
         }
 
-        throw new Error(`O deck "${fallbackName}" precisa apontar para ${FLASHCARDS_LOCAL_SOURCE_PREFIX}/.`);
+        return buildFlashcardsPublicUrl(fallbackName);
       }
 
       function sortDeckCatalogEntries(entries) {
