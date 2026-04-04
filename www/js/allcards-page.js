@@ -428,7 +428,11 @@
   }
 
   async function fetchRemoteManifestFiles() {
-    const response = await fetch(withNoCacheUrl(buildApiUrl(DATA_MANIFEST_REMOTE_PATH)), { cache: 'no-store' });
+    const response = await fetch(withNoCacheUrl(buildApiUrl(DATA_MANIFEST_REMOTE_PATH)), {
+      cache: 'no-store',
+      headers: buildAuthHeaders(),
+      credentials: 'include'
+    });
     const payload = await response.json().catch(() => ({}));
     const manifestFiles = extractManifestFiles(payload);
     if (!response.ok || !manifestFiles.length) {
@@ -469,7 +473,11 @@
     }));
 
     const responses = await Promise.all(files.map(async (file) => {
-      const deckResponse = await fetch(withNoCacheUrl(file.path), { cache: 'no-store' });
+      const deckResponse = await fetch(withNoCacheUrl(file.path), {
+        cache: 'no-store',
+        headers: buildAuthHeaders(),
+        credentials: 'include'
+      });
       if (!deckResponse.ok) {
         throw new Error(`Nao consegui abrir o deck "${safeText(file.name) || 'deck.json'}".`);
       }
