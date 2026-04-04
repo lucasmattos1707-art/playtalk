@@ -7170,7 +7170,8 @@ app.post('/api/admin/flashcards/public-decks/visibility', express.json({ limit: 
       return;
     }
 
-    await seedPublicFlashcardDecksFromAllcards();
+    // Visibility toggle must be side-effect free for payload/media links.
+    // Do not run seed/backfill here.
     const fileName = normalizePublicDeckSourceToFileName(req.body?.source);
     if (!fileName) {
       res.status(400).json({ success: false, message: 'Origem do deck invalida.' });
@@ -7213,7 +7214,6 @@ app.post('/api/admin/flashcards/public-decks/generate-cover', express.json({ lim
       return;
     }
 
-    await seedPublicFlashcardDecksFromAllcards();
     const fileName = normalizePublicDeckSourceToFileName(req.body?.source);
     if (!fileName) {
       res.status(400).json({ success: false, message: 'Origem do deck invalida.' });
@@ -7268,7 +7268,6 @@ app.post('/api/admin/flashcards/public-decks/approve-cover', express.json({ limi
       return;
     }
 
-    await seedPublicFlashcardDecksFromAllcards();
     const fileName = normalizePublicDeckSourceToFileName(req.body?.source);
     if (!fileName) {
       res.status(400).json({ success: false, message: 'Origem do deck invalida.' });
