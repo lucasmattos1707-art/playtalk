@@ -58,6 +58,7 @@
     .story-character__bar{height:8px;border-radius:999px;background:rgba(255,255,255,.14);overflow:hidden}
     .story-character__fill{height:100%;background:linear-gradient(90deg,#ef8f1a,#c85732);border-radius:inherit}
     .watch-popover-card{width:min(520px,100%)}
+    .send-popover-card{width:min(560px,100%)}
     .json-batch-popover-card{width:min(720px,100%)}
     .json-batch-list{display:grid;gap:10px;max-height:300px;overflow:auto;padding-right:4px}
     .json-batch-item{display:grid;gap:4px;padding:12px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:rgba(255,255,255,.05)}
@@ -119,24 +120,10 @@
       <button id="watchFlashcardsBtn" class="icon-btn accent flashcardOnly" type="button" aria-label="Assistir flashcards" title="Assistir flashcards">Assistir flashcards</button>
       <span class="muted" id="hint" style="grid-column:1 / -1">Editor de FlashCards.</span>
     </div>
-    <div class="box">
-      <div class="row">
-        <div class="field"><label for="dayInput">Pasta</label><input id="dayInput" type="text" value="1" placeholder="1, 250, casa"></div>
-        <div class="field"><label for="titleInput">Titulo</label><input id="titleInput" type="text"></div>
-        <div class="field movieOnly hidden"><label for="levelInput">Level</label><input id="levelInput" type="text"></div>
-        <div class="field flashcardOnly hidden"><label for="flashcardCoverUrlInput">Link publico da capa</label><input id="flashcardCoverUrlInput" type="url" placeholder="https://..."></div>
-      </div>
-      <div class="row movieOnly hidden" id="movieTop" style="margin-top:10px">
-        <button id="coverBtn" type="button">Enviar capa</button>
-        <button id="soundBtn" type="button">Enviar trilha MP3</button>
-        <button id="clearCoverBtn" type="button">Remover capa</button>
-        <button id="clearSoundBtn" type="button">Remover trilha</button>
-      </div>
-      <div class="box" id="preview" style="margin:12px 0 0;background:rgba(255,255,255,.05);color:#fff;border-color:rgba(255,255,255,.16)">
-        <div class="mini" id="previewMode" style="color:rgba(255,255,255,.72)">FlashCard</div>
-        <h2 id="previewTitle" style="margin:8px 0 0">Biblioteca FlashCard</h2>
-        <div id="previewMeta">Pasta 1</div>
-      </div>
+    <div class="box" id="preview" style="margin:12px 0 0;background:rgba(255,255,255,.05);color:#fff;border-color:rgba(255,255,255,.16)">
+      <div class="mini" id="previewMode" style="color:rgba(255,255,255,.72)">FlashCard</div>
+      <h2 id="previewTitle" style="margin:8px 0 0">Biblioteca FlashCard</h2>
+      <div id="previewMeta">Pasta 1</div>
     </div>
     <div class="box hidden" id="charactersWrap">
       <button id="charactersToggleBtn" class="characters-panel__toggle" type="button" aria-expanded="false">
@@ -146,11 +133,6 @@
       <div id="charactersPanelBody" class="hidden">
         <div class="grid" id="characters" style="margin-top:12px"></div>
       </div>
-    </div>
-    <div class="box hidden" id="pasteWrap">
-      <div class="mini" id="pasteHelp">FlashCard usa 2 linhas por item: portugues e ingles.</div>
-      <div class="field" style="margin-top:10px"><label for="pasteArea">Texto colado</label><textarea id="pasteArea" rows="6"></textarea></div>
-      <div class="row" style="margin-top:10px"><button id="applyPasteBtn" type="button">Preencher cards</button></div>
     </div>
     <div class="box hidden flashcardOnly" id="adminStudioBar">
       <div class="admin-studio">
@@ -176,7 +158,6 @@
       </div>
     </div>
     <div class="grid" id="items"></div>
-    <div class="box" style="margin-top:18px;text-align:center"><button id="startGameBtn" type="button" style="background:#2f8f6b;color:#fff;border-color:#2f8f6b;padding:16px 28px;font-size:22px;font-weight:700;border-radius:18px;min-width:260px">iniciar jogo</button></div>
   </div>
   <input id="batchImageInput" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml" multiple hidden>
   <input id="singleImageInput" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml" hidden>
@@ -193,6 +174,23 @@
       </div>
       <div class="row" style="justify-content:space-between"><button id="audioPopoverCloseBtn" type="button">Fechar</button><button id="audioBatchConfirmBtn" class="accent" type="button">Selecionar MP3</button></div>
       <div class="mini" id="audioPopoverHint">Voce pode ativar um lado ou os dois. Quando os dois estiverem ativos, a ordem segue PT e EN por item, pulando os slots ja preenchidos.</div>
+    </div>
+  </div>
+  <div id="sendPlaytalkPopover" class="popover hidden" aria-hidden="true">
+    <div class="popover-card send-popover-card" role="dialog" aria-modal="true">
+      <div><div class="mini">Enviar para PlayTalk</div><h2 style="margin:6px 0 0">Complete os dados do deck</h2></div>
+      <div class="field"><label for="dayInput">Pasta</label><input id="dayInput" type="text" value="1" placeholder="1, 250, casa"></div>
+      <div class="field"><label for="titleInput">Titulo</label><input id="titleInput" type="text" placeholder="Nome do deck"></div>
+      <div class="field"><label for="flashcardCoverUrlInput">Link publico da capa</label><input id="flashcardCoverUrlInput" type="url" placeholder="https://..."></div>
+      <div class="row" style="justify-content:space-between"><button id="sendPlaytalkCloseBtn" type="button">Fechar</button><button id="sendPlaytalkConfirmBtn" class="accent" type="button">Enviar agora</button></div>
+    </div>
+  </div>
+  <div id="pastePopover" class="popover hidden" aria-hidden="true">
+    <div class="popover-card send-popover-card" role="dialog" aria-modal="true">
+      <div><div class="mini">Colar texto</div><h2 style="margin:6px 0 0">Preencher cards em lote</h2></div>
+      <div class="mini" id="pasteHelp">FlashCard usa 2 linhas por item: portugues e ingles.</div>
+      <div class="field"><label for="pasteArea">Texto colado</label><textarea id="pasteArea" rows="10"></textarea></div>
+      <div class="row" style="justify-content:space-between"><button id="pasteCloseBtn" type="button">Fechar</button><button id="applyPasteBtn" class="accent" type="button">Preencher cards</button></div>
     </div>
   </div>
   <div id="textPopover" class="popover hidden" aria-hidden="true">
@@ -424,6 +422,10 @@
       function syncAiButton(){const targets=aiImageMissingTargets();setButtonLabel('aiImageBtn',aiStatusLabel());$('aiImageBtn').disabled=aiBatchBusy||!targets.length}
       function syncZipButton(){setButtonLabel('exportZipBtn',zipBusy?'Montando ZIP...':'Exportar ZIP');$('exportZipBtn').disabled=zipBusy||r2UploadBusy;$('uploadR2Btn').disabled=zipBusy||r2UploadBusy;setButtonLabel('uploadR2Btn',r2UploadBusy?'Enviando R2...':'Enviar R2')}
       function closeTextPopover(){$('textPopover').classList.add('hidden');$('textPopover').setAttribute('aria-hidden','true')}
+      function openSendPlaytalkPopover(){$('dayInput').value=state.day;$('titleInput').value=state.title;$('flashcardCoverUrlInput').value=state.flashcardCoverUrl||'';$('sendPlaytalkPopover').classList.remove('hidden');$('sendPlaytalkPopover').setAttribute('aria-hidden','false')}
+      function closeSendPlaytalkPopover(){$('sendPlaytalkPopover').classList.add('hidden');$('sendPlaytalkPopover').setAttribute('aria-hidden','true')}
+      function openPastePopover(){$('pasteArea').value='';$('pastePopover').classList.remove('hidden');$('pastePopover').setAttribute('aria-hidden','false')}
+      function closePastePopover(){$('pastePopover').classList.add('hidden');$('pastePopover').setAttribute('aria-hidden','true')}
       function normalizeAiFlashcardItems(items){return items.map(item=>({pt:String(item?.pt||'').trim(),en:String(item?.en||'').trim()})).filter(item=>item.pt&&item.en)}
       function loadWatchSettings(){try{const raw=JSON.parse(localStorage.getItem(WATCH_SETTINGS_STORE)||'null');if(raw&&typeof raw==='object')return{gapMs:[3000,5000,10000,30000,60000].includes(Number(raw.gapMs))?Number(raw.gapMs):5000,scope:raw.scope==='all'?'all':'mine',music:raw.music==='on'?'on':'off'}}catch{}return{gapMs:5000,scope:'mine',music:'off'}}
       function saveWatchSettings(settings){try{localStorage.setItem(WATCH_SETTINGS_STORE,JSON.stringify(settings))}catch{}}
@@ -543,7 +545,7 @@
       function detectModeFromJson(data){if(Array.isArray(data))return'flashcard';if(data&&typeof data==='object'){if(Array.isArray(data.characters))return'scenes';if(Array.isArray(data.items)&&data.items.every(entry=>entry&&typeof entry==='object'&&('imagem' in entry||'nomePortugues' in entry||'nomeIngles' in entry)))return'flashcard';if(Array.isArray(data.items))return'movies'}throw new Error('JSON nao reconhecido para este editor.')}
       function importJsonPayload(data){state.mode=detectModeFromJson(data);state.items=[];state.chars=[];state.flashcardCoverUrl='';const importedAssets=[];const rememberDay=value=>{const parsed=parseCloudAssetInfo(value);if(parsed?.day)importedAssets.push(parsed);return parsed};if(state.mode==='flashcard'){const flashcardItems=Array.isArray(data)?data:(Array.isArray(data?.items)?data.items:[]);state.title=Array.isArray(data)?'':String(data?.title||'').trim();state.flashcardCoverUrl=Array.isArray(data)?'':String(data?.coverImage||'').trim();state.items=flashcardItems.map(entry=>{rememberDay(entry.imagem);rememberDay(entry.audio);return normalizeImportedItem({imageFile:importedFileName(entry.imagem),pt:entry.nomePortugues||'',en:entry.nomeIngles||'',category:entry.categoria||'flashcard',audioFile:importedFileName(entry.audio),tense:entry.tense||'present-simple',sentenceForm:entry.sentenceForm||'affirmative'})})}else{state.title=data.title||'';state.levelKey=data.level||defaultLevelKey();rememberDay(data.coverImage);rememberDay(data.soundtrack);state.coverFile=importedFileName(data.coverImage);state.coverDataUrl='';state.soundFile=importedFileName(data.soundtrack);state.soundDataUrl='';if(state.mode==='movies'){state.items=data.items.map(entry=>{rememberDay(entry.image);rememberDay(entry.audio_portuguese);rememberDay(entry.audio_english);return normalizeImportedItem({imageFile:importedFileName(entry.image),pt:entry.portuguese||'',en:entry.english||'',imagePrompt:entry.image_prompt||entry.imagePrompt||'',audioPtFile:importedFileName(entry.audio_portuguese),audioEnFile:importedFileName(entry.audio_english)})})}else{state.chars=normalizeSceneChars(Array.isArray(data.characters)?data.characters.map(char=>{rememberDay(char.image);return{id:char.id||'',name:char.name||'',voiceId:char.voiceId||'',imageFile:importedFileName(char.image),imageDataUrl:''}}):[]);state.items=data.items.map(entry=>{rememberDay(entry.audio_portuguese);rememberDay(entry.audio_english);return normalizeImportedItem({pt:entry.portuguese||'',en:entry.english||'',characterId:entry.character||'',audioPtFile:importedFileName(entry.audio_portuguese),audioEnFile:importedFileName(entry.audio_english)})})}}const expectedPhaseCode=PHASE_CODE[state.mode]||PHASE_CODE.flashcard;const detectedDay=(importedAssets.find(asset=>asset.phaseCode===expectedPhaseCode&&asset.day)||importedAssets.find(asset=>asset.day))?.day;if(detectedDay)state.day=sanitizeDayKey(detectedDay);save();renderAll()}
       async function generateVoiceAsset(text,fileName,voiceId='',languageCode=''){const cleanText=String(text||'').trim();if(!cleanText)throw new Error('Preencha o texto antes de gerar voz.');if(state.mode==='scenes'&&!String(voiceId||'').trim())throw new Error('Selecione um dos 9 personagens fixos antes de gerar a voz.');const response=await fetch('/api/tts/elevenlabs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:cleanText,fileName,voiceId,languageCode})});let payload=null;if(!response.ok){try{payload=await response.json()}catch{}throw new Error(payload?.instructions||payload?.error||'Erro ao gerar voz.')}const blob=await response.blob();return{fileName,dataUrl:await asDataUrl(blob)}}
-      function updateTop(){state.mode='flashcard';state.testOnline=false;state.voiceMode=false;$('hint').textContent='Editor de FlashCards.';setButtonLabel('addBtn',elevenBusy?'ElevenLabs...':'ElevenLabs');$('addBtn').disabled=elevenBusy||r2UploadBusy;document.querySelectorAll('.movieOnly').forEach(n=>n.classList.add('hidden'));document.querySelectorAll('.flashcardOnly').forEach(n=>n.classList.remove('hidden'));$('charactersWrap').classList.add('hidden');$('pasteWrap').classList.toggle('hidden',!state.paste);$('dayInput').value=state.day;$('titleInput').value=state.title;$('levelInput').value=state.levelKey;$('flashcardCoverUrlInput').value=state.flashcardCoverUrl||'';$('previewMode').textContent='FlashCards';$('previewTitle').textContent=state.title||'Projeto em FlashCards';const meta=[`Pasta ${state.day}`];if(state.flashcardCoverUrl)meta.push('capa publica');if(aiBatchBusy)meta.push('imagens IA');if(aiTextBusy)meta.push('frases IA');if(elevenBusy)meta.push('elevenlabs');if(zipBusy)meta.push('zip');if(r2UploadBusy)meta.push('r2');$('previewMeta').textContent=meta.join(' • ');$('preview').style.backgroundImage=coverImg()?`linear-gradient(rgba(0,0,0,.15), rgba(0,0,0,.55)), url("${coverImg()}")`:'';syncAudioPopover();syncAiButton();syncAiTextButton();syncZipButton()}
+      function updateTop(){state.mode='flashcard';state.testOnline=false;state.voiceMode=false;$('hint').textContent='Editor de FlashCards.';setButtonLabel('addBtn',elevenBusy?'ElevenLabs...':'ElevenLabs');$('addBtn').disabled=elevenBusy||r2UploadBusy;document.querySelectorAll('.movieOnly').forEach(n=>n.classList.add('hidden'));document.querySelectorAll('.flashcardOnly').forEach(n=>n.classList.remove('hidden'));$('charactersWrap').classList.add('hidden');$('previewMode').textContent='FlashCards';$('previewTitle').textContent=state.title||'Projeto em FlashCards';const meta=[`Pasta ${state.day}`];if(state.flashcardCoverUrl)meta.push('capa publica');if(aiBatchBusy)meta.push('imagens IA');if(aiTextBusy)meta.push('frases IA');if(elevenBusy)meta.push('elevenlabs');if(zipBusy)meta.push('zip');if(r2UploadBusy)meta.push('r2');$('previewMeta').textContent=meta.join(' • ');$('preview').style.backgroundImage=coverImg()?`linear-gradient(rgba(0,0,0,.15), rgba(0,0,0,.55)), url("${coverImg()}")`:'';syncAudioPopover();syncAiButton();syncAiTextButton();syncZipButton()}
       function textBtn(title,value,onClick){const b=document.createElement('button');b.type='button';b.className=`textbtn ${title==='Portugues'?'textbtn--pt':'textbtn--en'}`;b.textContent=value||'Clique para preencher';b.onclick=onClick;return b}
       function cameraIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l1.4 2H20a2 2 0 0 1 2 2v8a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8a2 2 0 0 1 2-2h3.6L9 4Zm3 4.5A4.5 4.5 0 1 0 16.5 13 4.5 4.5 0 0 0 12 8.5Zm0 2A2.5 2.5 0 1 1 9.5 13 2.5 2.5 0 0 1 12 10.5Z"/></svg>'}
       function audioControl(icon,labelText,has,onClick,onDelete,voiceTarget=false){const wrap=document.createElement('div');wrap.className='audio';if(voiceTarget&&state.voiceMode)wrap.classList.add('voice-target');const btn=document.createElement('button');btn.type='button';btn.className=has?'has ready':'';btn.innerHTML=`<img src="${icon}" alt="">`;const text=document.createElement('div');text.className='mini';text.textContent=has?'Ok':`${labelText} vazio`;let timer=null,held=false;btn.onpointerdown=()=>{held=false;if(!has||state.voiceMode)return;timer=setTimeout(()=>{held=true;onDelete()},2000)};['pointerup','pointerleave','pointercancel'].forEach(name=>btn.addEventListener(name,()=>{if(timer)clearTimeout(timer);timer=null}));btn.onclick=()=>{if(held){held=false;return}onClick(btn)};wrap.append(btn,text);return wrap}
@@ -556,13 +558,12 @@
       function getSceneExportData(){ensureChars();const itemEntries=state.items.filter(i=>i.pt&&i.en&&i.characterId).map((i,n)=>({id:n+1,character:i.characterId,portuguese:i.pt,english:i.en,audio_portuguese:i.audioPtFile?cloud(state.day,PHASE.scenes,i.audioPtFile):'',audio_english:i.audioEnFile?cloud(state.day,PHASE.scenes,i.audioEnFile):'',item:i}));const usedIds=new Set(itemEntries.map(entry=>entry.character));const characters=state.chars.filter(char=>{const id=String(char?.id||'').trim();const name=String(char?.name||'').trim();return id&&name&&usedIds.has(id)}).map(char=>({id:char.id.trim(),name:char.name.trim(),voiceId:char.voiceId||getSceneCharacter(char.id)?.voiceId||'',image:char.imageFile?cloud(state.day,PHASE.scenes,char.imageFile):defaultSceneCharacterImageUrl(char.id),char}));const validIds=new Set(characters.map(char=>char.id));return{characters:characters.map(({char,...entry})=>entry),items:itemEntries.filter(entry=>validIds.has(entry.character)).map(({item,...entry})=>entry),characterAssets:characters.map(entry=>entry.char)}}
       function payload(){if(state.mode==='flashcard'){validateFlashcard();return{title:state.title.trim(),coverImage:flashcardCoverPreview(),items:state.items.filter(i=>i.imageFile&&i.pt&&i.en).map(i=>({imagem:cloud(state.day,PHASE.flashcard,i.imageFile),nomePortugues:i.pt,nomeIngles:i.en,categoria:i.category||'flashcard',audio:i.audioFile?cloud(state.day,PHASE.flashcard,i.audioFile):'',tense:i.tense||'present-simple',sentenceForm:i.sentenceForm||'affirmative'}))}}validateMovie();if(state.mode==='movies')return{soundtrack:state.soundFile?cloud(state.day,PHASE.movies,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),items:state.items.filter(i=>i.imageFile&&i.pt&&i.en).map((i,n)=>({id:n+1,image:cloud(state.day,PHASE.movies,i.imageFile),portuguese:i.pt,english:i.en,image_prompt:i.imagePrompt||'',audio_portuguese:i.audioPtFile?cloud(state.day,PHASE.movies,i.audioPtFile):'',audio_english:i.audioEnFile?cloud(state.day,PHASE.movies,i.audioEnFile):''})),title:state.title.trim(),coverImage:state.coverFile?cloud(state.day,PHASE.movies,state.coverFile):''};const sceneExport=getSceneExportData();return{soundtrack:state.soundFile?cloud(state.day,PHASE.scenes,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),characters:sceneExport.characters,items:sceneExport.items,title:state.title.trim(),coverImage:state.coverFile?cloud(state.day,PHASE.scenes,state.coverFile):''}}
       const downloadJson=()=>{const blob=new Blob([JSON.stringify(payload(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=jsonFileName();document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)};
-      const startGame=()=>{const cfg=state.mode==='movies'?{mode:'watching',phase:11}:state.mode==='scenes'?{mode:'talking',phase:12}:{mode:'planting',phase:1};try{sessionStorage.setItem('playtalk-play-launch',JSON.stringify({phase:cfg.phase,day:state.day,source:'play',createdAt:Date.now()}))}catch{}window.location.href=`https://playtalk.life/play?mode=${encodeURIComponent(cfg.mode)}&day=${encodeURIComponent(String(state.day))}&source=play#home`};
       $('newBtn').onclick=()=>{if(!confirm('Apagar os itens e comecar uma grade nova?'))return;state.items=[];save();renderAll()};
       $('charactersToggleBtn').onclick=()=>{state.sceneCharactersOpen=!state.sceneCharactersOpen;save();renderAll()};
       $('addBtn').onclick=async()=>{if(elevenBusy)return;try{const done=await generateRemainingVoiceAssets();if(done&&!remainingVoiceTargets().length)alert(`${done} audio(s) gerado(s) com ElevenLabs.`)}catch(error){alert(error.message||'Erro ao gerar audio.')}}
       $('watchFlashcardsBtn').onclick=()=>openWatchPopover();
       $('uploadBtn').onclick=()=>$('batchImageInput').click();
-      $('pasteBtn').onclick=()=>{state.paste=!state.paste;save();renderAll()};
+      $('pasteBtn').onclick=()=>openPastePopover();
       $('voiceModeBtn').onclick=()=>{state.voiceMode=!state.voiceMode;save();renderAll()};
       $('aiImageBtn').onclick=async()=>{if(aiBatchBusy)return;const answer=window.prompt('Instrucao extra opcional para ajudar a IA nas imagens. Ex.: fundo branco, estilo catalogo, close-up, sem sombras fortes.',state.imageAiHint||'');if(answer===null)return;state.imageAiHint=answer.trim();save();try{await generateMissingAiImages()}catch(error){alert(error.message||'Erro ao gerar imagem.')}};
       $('translateBtn').onclick=async()=>{if(aiTextBusy)return;const targets=state.items.map((item,index)=>({index,pt:String(item?.pt||'').trim(),en:String(item?.en||'').trim()})).filter(item=>item.pt&&!item.en);if(!targets.length){alert('Nao ha campos em portugues aguardando traducao para ingles.');return}aiTextBusy=true;renderAll();try{const translations=await translatePortugueseBatch(targets);const applied=applyTranslations(translations);alert(`${applied} traducao(oes) aplicada(s) no campo English.`)}catch(error){alert(error.message||'Erro ao traduzir textos.')}finally{aiTextBusy=false;renderAll()}};
@@ -571,20 +572,18 @@
       $('exportBtn').onclick=()=>{if(!adminStudio.enabled){alert('Entre com um usuario administrador para enviar decks JSON ao PlayTalk.');return}openJsonBatchPublishPopover()};
       $('exportZipBtn').onclick=()=>{downloadBundleZip().catch(error=>alert(error.message||'Erro ao exportar ZIP.'))};
       $('uploadR2Btn').onclick=async()=>{if(zipBusy||r2UploadBusy)return;r2UploadBusy=true;renderAll();try{const bundle=await buildZipBundle({publicJsonAssets:true}),payloadFiles=bundle.files.map(file=>({name:file.name,base64:base64FromBytes(file.bytes)})),result=await uploadLevelFilesToR2(payloadFiles);alert(`${result.uploadedCount} arquivo(s) enviado(s) para ${result.prefix}`)}catch(error){alert(error.message||'Erro ao enviar arquivos para o R2.')}finally{r2UploadBusy=false;renderAll()}};
-      $('sendPlaytalkBtn').onclick=async()=>{try{const result=await publishAdminFlashcardsLocal({force:true});if(!result)throw new Error('Acesso restrito ao administrador.')}catch(error){alert(error.message||'Erro ao enviar para PlayTalk.')}};
+      $('sendPlaytalkBtn').onclick=()=>openSendPlaytalkPopover();
       $('testOnlineBtn').onclick=()=>{};
-      $('applyPasteBtn').onclick=()=>{const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),out=[];for(let i=0;i<lines.length;i+=2){const chunk=lines.slice(i,i+2);if(chunk.length<2)break;const item=defaultItem();item.pt=chunk[0]||'';item.en=chunk[1]||'';out.push(item)}state.items=out;$('pasteArea').value='';save();renderAll()};
+      $('applyPasteBtn').onclick=()=>{const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),out=[];for(let i=0;i<lines.length;i+=2){const chunk=lines.slice(i,i+2);if(chunk.length<2)break;const item=defaultItem();item.pt=chunk[0]||'';item.en=chunk[1]||'';out.push(item)}state.items=out;$('pasteArea').value='';save();renderAll();closePastePopover()};
       $('dayInput').oninput=e=>{state.day=sanitizeDayKey(e.target.value);save();renderAll()};
       $('titleInput').oninput=e=>{state.title=e.target.value;save();renderAll()};
-      $('levelInput').oninput=e=>{state.levelKey=e.target.value.trim();save();renderAll()};
       $('flashcardCoverUrlInput').oninput=e=>{state.flashcardCoverUrl=e.target.value.trim();save();renderAll()};
-      $('coverBtn').onclick=()=>{pendingImage={type:'cover'};$('singleImageInput').click()};
-      $('soundBtn').onclick=()=>{pendingAudio={type:'sound'};$('audioInput').click()};
-      $('clearCoverBtn').onclick=()=>{state.coverFile='';state.coverDataUrl='';save();renderAll()};
-      $('clearSoundBtn').onclick=()=>{state.soundFile='';state.soundDataUrl='';save();renderAll()};
       $('audioPtBtn').onclick=()=>{audioBatchTargets.pt=!audioBatchTargets.pt;syncAudioPopover()};
       $('audioEnBtn').onclick=()=>{audioBatchTargets.en=!audioBatchTargets.en;syncAudioPopover()};
       $('audioPopoverCloseBtn').onclick=()=>closeAudioPopover();
+      $('sendPlaytalkCloseBtn').onclick=()=>closeSendPlaytalkPopover();
+      $('sendPlaytalkConfirmBtn').onclick=async()=>{state.day=sanitizeDayKey($('dayInput').value);state.title=String($('titleInput').value||'').trim();state.flashcardCoverUrl=String($('flashcardCoverUrlInput').value||'').trim();save();renderAll();try{const result=await publishAdminFlashcardsLocal({force:true});if(!result)throw new Error('Acesso restrito ao administrador.');closeSendPlaytalkPopover()}catch(error){alert(error.message||'Erro ao enviar para PlayTalk.')}};
+      $('pasteCloseBtn').onclick=()=>closePastePopover();
       $('textPopoverCloseBtn').onclick=()=>closeTextPopover();
       $('watchPopoverCloseBtn').onclick=()=>closeWatchPopover();
       $('jsonBatchCloseBtn').onclick=()=>closeJsonBatchPublishPopover();
@@ -605,6 +604,8 @@
       $('textGenerateBtn').onclick=async()=>{if(aiTextBusy)return;if(state.mode==='scenes'){const topic=$('sceneStoryTopicInput').value.trim();const minChars=parseInt($('sceneStoryMinCharsInput').value,10)||0;const maxChars=parseInt($('sceneStoryMaxCharsInput').value,10)||0;const lineCount=parseInt($('sceneStoryLineCountInput').value,10)||0;sceneStoryDraft.topic=topic;sceneStoryDraft.lineCount=lineCount;if(!lineCount||lineCount<1||lineCount>80)return alert('Defina entre 1 e 80 falas para a historia.');if(!topic)return alert('Descreva o tema da historia primeiro.');if(minChars<1||maxChars<minChars)return alert('A faixa de caracteres das falas esta invalida.');const selectedIds=sceneStorySelectedIds();if(!selectedIds.length||selectedIds.length>4)return alert('Escolha entre 1 e 4 personagens.');if(lineCount<selectedIds.length)return alert('A historia precisa ter pelo menos uma fala para cada personagem selecionado.');normalizeSceneStoryShares();const characters=sceneStoryCharacterPlan(lineCount);aiTextBusy=true;renderAll();try{const items=await generateSceneStoryBatch({topic,minChars,maxChars,lineCount,characters});const applied=applySceneStory(items);closeTextPopover();alert(`${applied} fala(s) gerada(s) para a historia.`)}catch(error){alert(error.message||'Erro ao gerar historia.')}finally{aiTextBusy=false;renderAll()}return}if(state.mode==='movies'){const topic=$('movieStoryTopicInput').value.trim(),minChars=parseInt($('movieStoryMinCharsInput').value,10)||0,maxChars=parseInt($('movieStoryMaxCharsInput').value,10)||0,itemCount=parseInt($('movieStoryCountInput').value,10)||0;movieStoryDraft.topic=topic;movieStoryDraft.itemCount=itemCount;if(!topic)return alert('Descreva o contexto do filme primeiro.');if(minChars<1||maxChars<minChars)return alert('A faixa de caracteres esta invalida.');if(itemCount<1||itemCount>60)return alert('Defina entre 1 e 60 containers para o filme.');aiTextBusy=true;renderAll();try{const movie=await generateMovieStoryBatch({topic,minChars,maxChars,itemCount});if(!movie.title||!movie.items.length)throw new Error('A IA nao retornou um filme valido.');const applied=applyMovieStory(movie);closeTextPopover();alert(`${applied} container(s) criados para o filme.`)}catch(error){alert(error.message||'Erro ao gerar filme.')}finally{aiTextBusy=false;renderAll()}return}const topic=$('textTopicInput').value.trim(),minChars=parseInt($('textMinCharsInput').value,10)||0,maxChars=parseInt($('textMaxCharsInput').value,10)||0,count=parseInt($('textCountInput').value,10)||0;if(!topic)return alert('Descreva o tipo de frases primeiro.');if(minChars<1||maxChars<minChars)return alert('A faixa de caracteres esta invalida.');if(count<1||count>60)return alert('A quantidade deve ficar entre 1 e 60.');aiTextBusy=true;renderAll();try{const items=await generateFlashcardTextBatch({topic,minChars,maxChars,count});const applied=applyGeneratedFlashcards(items);closeTextPopover();alert(`${applied} frase(s) gerada(s) e preenchida(s).`)}catch(error){alert(error.message||'Erro ao gerar frases.')}finally{aiTextBusy=false;renderAll()}};
       $('audioBatchConfirmBtn').onclick=()=>{if(!audioBatchTargets.pt&&!audioBatchTargets.en)return alert('Selecione Portugues, English ou os dois.');$('audioBatchInput').click()};
       $('audioPopover').onclick=e=>{if(e.target===e.currentTarget)closeAudioPopover()};
+      $('sendPlaytalkPopover').onclick=e=>{if(e.target===e.currentTarget)closeSendPlaytalkPopover()};
+      $('pastePopover').onclick=e=>{if(e.target===e.currentTarget)closePastePopover()};
       $('textPopover').onclick=e=>{if(e.target===e.currentTarget)closeTextPopover()};
       $('watchPopover').onclick=e=>{if(e.target===e.currentTarget)closeWatchPopover()};
       $('itemAdminPopover').onclick=e=>{if(e.target===e.currentTarget)closeItemAdminPopover()};
@@ -614,7 +615,6 @@
       $('audioBatchInput').onchange=async e=>{const files=Array.from(e.target.files||[]);e.target.value='';if(!files.length)return;await importAudioBatch(files);closeAudioPopover()};
       $('jsonInput').onchange=async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{importJsonPayload(JSON.parse(await asText(file)))}catch(error){alert(error.message||'Erro ao importar JSON.')}};
       $('jsonBatchPublishInput').onchange=e=>{jsonBatchPublishState.files=Array.from(e.target.files||[]).filter(file=>/\.json$/i.test(file.name));jsonBatchPublishState.results=[];e.target.value='';syncJsonBatchPublishPopover()};
-      $('startGameBtn').onclick=()=>startGame();
       $('jsonBatchPublishPopover').onclick=e=>{if(e.target===e.currentTarget)closeJsonBatchPublishPopover()};
       load();state.mode='flashcard';renderAll();hydrateAdminStudio();
     })();
