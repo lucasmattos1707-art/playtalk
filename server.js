@@ -7311,8 +7311,6 @@ app.post('/api/admin/flashcards/public-decks/approve-cover', express.json({ limi
 
 app.get('/api/flashcards/manifest', async (req, res) => {
   try {
-    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
-    const requesterIsAdmin = isAdminUserRecord(authUser);
     const [localFiles, postgresFiles] = await Promise.all([
       collectAllcardsManifestEntries(),
       collectPostgresFlashcardManifestEntries()
@@ -7324,7 +7322,7 @@ app.get('/api/flashcards/manifest', async (req, res) => {
       mergedBySource.set(sourceKey, entry);
     });
     const files = Array.from(mergedBySource.values())
-      .filter((entry) => requesterIsAdmin || !Boolean(entry?.isHidden))
+      .filter((entry) => !Boolean(entry?.isHidden))
       .sort((left, right) => (
         String(left?.title || '').localeCompare(String(right?.title || ''), 'pt-BR', {
           sensitivity: 'base',
@@ -10083,10 +10081,8 @@ app.get(/^\/allcards\/([^/]+\.json)$/i, async (req, res, next) => {
       return;
     }
 
-    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
-    const requesterIsAdmin = isAdminUserRecord(authUser);
     const publicDeckRow = await findPublicFlashcardDeckRowByFileName(normalizedFileName);
-    if (publicDeckRow?.is_hidden && !requesterIsAdmin) {
+    if (publicDeckRow?.is_hidden) {
       res.status(404).send('Deck nao encontrado.');
       return;
     }
