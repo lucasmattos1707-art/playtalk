@@ -4404,6 +4404,82 @@ function setFlashcardItemAudio(item, value) {
   setPreferredFlashcardField(item, ['audio', 'audioUrl'], value);
 }
 
+function normalizePublicDeckAssetUrl(rawValue, options = {}) {
+  const text = String(rawValue || '').trim();
+  if (!text) return '';
+
+  if (/^https?:\/\//i.test(text)) {
+    return text;
+  }
+
+  const normalized = text.replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!normalized) return '';
+
+  if (/^(?:api\/r2-media\/|admin\/|accesskey\/|Niveis\/|allcards\/)/i.test(normalized)) {
+    return `/${normalized}`;
+  }
+
+  const dayKey = normalizeLevelFolderKey(options?.dayKey || '');
+  if (dayKey) {
+    const fileName = path.posix.basename(normalized);
+    if (fileName) {
+      const relativePath = path.posix.join(
+        ADMIN_FLASHCARD_ASSET_RELATIVE_ROOT,
+        'levels',
+        `day-${dayKey}`,
+        fileName
+      );
+      return buildPublicAssetUrl(relativePath);
+    }
+  }
+
+  return `/${normalized}`;
+}
+
+function repairPublicDeckPayloadAssets(payload, deckRow) {
+  const sourcePayload = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? JSON.parse(JSON.stringify(payload))
+    : null;
+  if (!sourcePayload) {
+    return { payload, changed: false };
+  }
+
+  const dayKey = normalizeLevelFolderKey(deckRow?.day_key || '');
+  let changed = false;
+  const items = getFlashcardPayloadItems(sourcePayload);
+
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue;
+
+    const currentImage = readFlashcardItemImage(item);
+    const nextImage = normalizePublicDeckAssetUrl(currentImage, { dayKey, kind: 'image' });
+    if (nextImage && nextImage !== currentImage) {
+      setFlashcardItemImage(item, nextImage);
+      changed = true;
+    }
+
+    const currentAudio = readFlashcardItemAudio(item);
+    const nextAudio = normalizePublicDeckAssetUrl(currentAudio, { dayKey, kind: 'audio' });
+    if (nextAudio && nextAudio !== currentAudio) {
+      setFlashcardItemAudio(item, nextAudio);
+      changed = true;
+    }
+  }
+
+  if (typeof sourcePayload.coverImage === 'string') {
+    const nextCover = normalizePublicDeckAssetUrl(sourcePayload.coverImage, { dayKey, kind: 'image' });
+    if (nextCover && nextCover !== sourcePayload.coverImage) {
+      sourcePayload.coverImage = nextCover;
+      changed = true;
+    }
+  }
+
+  return {
+    payload: changed ? sourcePayload : payload,
+    changed
+  };
+}
+
 function resolveAdminFlashcardSourceInfo(sourceValue) {
   const normalized = normalizeMirroredRelativePath(sourceValue);
   if (!normalized) {
@@ -10121,9 +10197,29 @@ app.get(/^\/allcards\/([^/]+\.json)$/i, async (req, res, next) => {
       return;
     }
 
-    const payload = publicDeckRow?.payload && typeof publicDeckRow.payload === 'object'
+    let payload = publicDeckRow?.payload && typeof publicDeckRow.payload === 'object'
       ? publicDeckRow.payload
       : await findPostgresFlashcardDeckPayloadByFileName(normalizedFileName);
+
+    if (payload && publicDeckRow) {
+      const repaired = repairPublicDeckPayloadAssets(payload, publicDeckRow);
+      if (repaired.changed) {
+        payload = repaired.payload;
+        try {
+          const nextItemCount = getFlashcardPayloadItems(payload).length;
+          await pool.query(
+            `UPDATE public.flashcards_public_decks
+             SET payload = $2::jsonb,
+                 item_count = $3,
+                 updated_at = now()
+             WHERE id = $1`,
+            [publicDeckRow.id, JSON.stringify(payload), nextItemCount]
+          );
+        } catch (error) {
+          console.warn(`Nao foi possivel persistir reparo de assets no deck ${normalizedFileName}:`, error?.message || error);
+        }
+      }
+    }
 
     if (payload) {
       res.setHeader('Cache-Control', 'no-store');
