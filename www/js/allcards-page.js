@@ -823,6 +823,21 @@
     }
   }
 
+  async function verifyAdminAccessByEndpoint() {
+    try {
+      const response = await fetch(buildApiUrl('/api/admin/flashcards/decks'), {
+        method: 'GET',
+        headers: buildAuthHeaders(),
+        cache: 'no-store',
+        credentials: 'include'
+      });
+      const payload = await response.json().catch(() => ({}));
+      return Boolean(response.ok && payload?.success);
+    } catch (_error) {
+      return false;
+    }
+  }
+
   async function backfillPublicDecksForAdmin() {
     if (!state.isAdmin) return;
     try {
@@ -878,6 +893,9 @@
     const session = await resolveSessionInfo();
     state.userId = session.userId;
     state.isAdmin = session.isAdmin;
+    if (!state.isAdmin) {
+      state.isAdmin = await verifyAdminAccessByEndpoint();
+    }
 
     if (state.isAdmin) {
       bindAdminGridEvents();
