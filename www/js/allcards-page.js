@@ -878,7 +878,7 @@
       );
       await refreshAdminDeckCatalog();
       const uploadedCount = Math.max(0, Number.parseInt(payload?.uploadedCount, 10) || files.length);
-      setAdminToolbarStatus(`${uploadedCount} deck${uploadedCount === 1 ? '' : 's'} enviado${uploadedCount === 1 ? '' : 's'} com sucesso.`);
+      setAdminToolbarStatus(`${uploadedCount} deck${uploadedCount === 1 ? '' : 's'} enviado${uploadedCount === 1 ? '' : 's'} e liberado${uploadedCount === 1 ? '' : 's'} para jogo.`);
     } catch (error) {
       setAdminToolbarStatus(error?.message || 'Falha ao enviar os decks.');
     } finally {

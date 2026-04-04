@@ -3401,7 +3401,8 @@ async function upsertPublicFlashcardDeck({
   dayKey = '',
   source = 'levels',
   title = '',
-  payload
+  payload,
+  publishVisible = false
 }) {
   if (!pool) return null;
   await ensurePublicFlashcardDecksTable();
@@ -3425,7 +3426,7 @@ async function upsertPublicFlashcardDeck({
   }
 
   const result = await pool.query(
-    `INSERT INTO public.flashcards_public_decks (
+      `INSERT INTO public.flashcards_public_decks (
        deck_key,
        file_name,
        day_key,
@@ -3444,8 +3445,10 @@ async function upsertPublicFlashcardDeck({
        title = EXCLUDED.title,
        item_count = EXCLUDED.item_count,
        payload = EXCLUDED.payload,
+       is_hidden = CASE WHEN $8 THEN false ELSE public.flashcards_public_decks.is_hidden END,
+       hidden_at = CASE WHEN $8 THEN NULL ELSE public.flashcards_public_decks.hidden_at END,
        updated_at = now()
-     RETURNING file_name, day_key, source, title, item_count, payload, updated_at`,
+     RETURNING file_name, day_key, source, title, item_count, payload, is_hidden, updated_at`,
     [
       normalizedDeckKey,
       normalizedFileName,
@@ -3453,7 +3456,8 @@ async function upsertPublicFlashcardDeck({
       normalizedSource,
       normalizedTitle,
       itemCount,
-      JSON.stringify(normalizedPayload)
+      JSON.stringify(normalizedPayload),
+      publishVisible === true
     ]
   );
 
@@ -3485,7 +3489,8 @@ async function upsertPublicFlashcardDeckFromLevels(dayKey, payload) {
     dayKey: normalizedDayKey,
     source: 'levels',
     title,
-    payload: normalizedPayload
+    payload: normalizedPayload,
+    publishVisible: true
   });
 }
 
@@ -3545,7 +3550,8 @@ async function upsertPublicFlashcardDeckFromUploadedJson(fileName, payload) {
     dayKey: '',
     source: 'admin-upload',
     title,
-    payload: normalizedPayload
+    payload: normalizedPayload,
+    publishVisible: true
   });
 }
 
