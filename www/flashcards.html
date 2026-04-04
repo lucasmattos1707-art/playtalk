@@ -7753,9 +7753,9 @@
 
       function shouldShowWelcomeGate() {
         if (state.entry.authRequired || state.game.active || state.watch.active || isAdminUser()) return false;
-        if (!state.entry.cardsReady) return true;
-        if (hasWelcomePlayAccess()) return true;
-        return Boolean(findTutorialPlanetCard());
+        // Mantem a entrada visivel para usuario comum ate ele escolher iniciar.
+        // Evita o efeito de "dissolver" para o catalogo quando a carta de tutorial nao estiver carregada.
+        return true;
       }
 
       function syncWelcomeStartButton() {
