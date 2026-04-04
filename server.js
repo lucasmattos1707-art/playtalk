@@ -137,6 +137,7 @@ let speakingRealtimeTablesReadyPromise = null;
 let miniBookJsonTablesReadyPromise = null;
 let booksSpeakingStatsTablesReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
+let publicFlashcardDecksSeedPromise = null;
 let speakingCardsCache = {
   stories: [],
   updatedAt: 0
@@ -3290,6 +3291,39 @@ function buildPublicLevelsFlashcardDeckFileName(dayKey) {
   return `levels-day-${safeGeneratedBase(normalizedDayKey, '1')}.json`;
 }
 
+function normalizePublicFlashcardDeckFileName(fileName, fallback = 'deck.json') {
+  const safeFileName = path.posix.basename(String(fileName || '').trim()) || fallback;
+  return safeFileName.toLowerCase().endsWith('.json') ? safeFileName : `${safeFileName}.json`;
+}
+
+function buildPublicFlashcardDeckManifestEntryFromRow(row) {
+  const fileName = normalizePublicFlashcardDeckFileName(row?.file_name, 'deck.json');
+  if (!fileName || path.extname(fileName).toLowerCase() !== '.json') {
+    return null;
+  }
+
+  const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+  const title = String(row?.title || '').trim()
+    || String(payload?.title || '').trim()
+    || fileName;
+  const fallbackCount = getFlashcardPayloadItems(payload).length;
+  const count = Number.isInteger(Number(row?.item_count))
+    ? Math.max(0, Number(row.item_count))
+    : fallbackCount;
+  const slug = path.posix.basename(fileName, '.json');
+
+  return {
+    name: fileName,
+    title,
+    slug,
+    source: `allcards/${fileName}`,
+    path: `/allcards/${encodeURIComponent(fileName)}`,
+    size: Buffer.byteLength(JSON.stringify(payload), 'utf8'),
+    count,
+    updatedAt: row?.updated_at || null
+  };
+}
+
 async function ensurePublicFlashcardDecksTable() {
   if (!pool) return false;
   if (!publicFlashcardDecksTableReadyPromise) {
@@ -3325,9 +3359,73 @@ async function ensurePublicFlashcardDecksTable() {
   return true;
 }
 
-async function upsertPublicFlashcardDeckFromLevels(dayKey, payload) {
+async function upsertPublicFlashcardDeck({
+  deckKey,
+  fileName,
+  dayKey = '',
+  source = 'levels',
+  title = '',
+  payload
+}) {
   if (!pool) return null;
   await ensurePublicFlashcardDecksTable();
+
+  const normalizedDeckKey = String(deckKey || '').trim();
+  const normalizedFileName = normalizePublicFlashcardDeckFileName(fileName, 'deck.json');
+  const normalizedDayKey = normalizeLevelFolderKey(dayKey);
+  const normalizedSource = String(source || '').trim() || 'levels';
+  const normalizedPayload = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload
+    : { title: String(title || '').trim() || path.posix.basename(normalizedFileName, '.json'), coverImage: '', items: [] };
+  const normalizedTitle = String(title || '').trim()
+    || String(normalizedPayload?.title || '').trim()
+    || path.posix.basename(normalizedFileName, '.json');
+  const itemCount = getFlashcardPayloadItems(normalizedPayload).length;
+
+  if (!normalizedDeckKey) {
+    const error = new Error('Chave do deck nao informada para persistencia no Postgres.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const result = await pool.query(
+    `INSERT INTO public.flashcards_public_decks (
+       deck_key,
+       file_name,
+       day_key,
+       source,
+       title,
+       item_count,
+       payload,
+       updated_at
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, now())
+     ON CONFLICT (deck_key) DO UPDATE
+     SET
+       file_name = EXCLUDED.file_name,
+       day_key = EXCLUDED.day_key,
+       source = EXCLUDED.source,
+       title = EXCLUDED.title,
+       item_count = EXCLUDED.item_count,
+       payload = EXCLUDED.payload,
+       updated_at = now()
+     RETURNING file_name, title, item_count, payload, updated_at`,
+    [
+      normalizedDeckKey,
+      normalizedFileName,
+      normalizedDayKey || '',
+      normalizedSource,
+      normalizedTitle,
+      itemCount,
+      JSON.stringify(normalizedPayload)
+    ]
+  );
+
+  return buildPublicFlashcardDeckManifestEntryFromRow(result.rows[0] || null);
+}
+
+async function upsertPublicFlashcardDeckFromLevels(dayKey, payload) {
+  if (!pool) return null;
 
   const normalizedDayKey = normalizeLevelFolderKey(dayKey);
   if (!normalizedDayKey) {
@@ -3344,90 +3442,86 @@ async function upsertPublicFlashcardDeckFromLevels(dayKey, payload) {
     : `Flashcard ${normalizedDayKey}`;
   const fileName = buildPublicLevelsFlashcardDeckFileName(normalizedDayKey);
   const deckKey = `levels:${safeGeneratedBase(normalizedDayKey, '1')}`;
-  const itemCount = getFlashcardPayloadItems(normalizedPayload).length;
 
-  const result = await pool.query(
-    `INSERT INTO public.flashcards_public_decks (
-       deck_key,
-       file_name,
-       day_key,
-       source,
-       title,
-       item_count,
-       payload,
-       updated_at
-     )
-     VALUES ($1, $2, $3, 'levels', $4, $5, $6::jsonb, now())
-     ON CONFLICT (deck_key) DO UPDATE
-     SET
-       file_name = EXCLUDED.file_name,
-       day_key = EXCLUDED.day_key,
-       source = EXCLUDED.source,
-       title = EXCLUDED.title,
-       item_count = EXCLUDED.item_count,
-       payload = EXCLUDED.payload,
-       updated_at = now()
-     RETURNING file_name, title, item_count, updated_at`,
-    [
-      deckKey,
-      fileName,
-      normalizedDayKey,
-      title,
-      itemCount,
-      JSON.stringify(normalizedPayload)
-    ]
-  );
+  return upsertPublicFlashcardDeck({
+    deckKey,
+    fileName,
+    dayKey: normalizedDayKey,
+    source: 'levels',
+    title,
+    payload: normalizedPayload
+  });
+}
 
-  const row = result.rows[0] || {};
-  const finalFileName = String(row.file_name || fileName).trim() || fileName;
-  const finalTitle = String(row.title || title).trim() || title;
-  const finalCount = Number.isInteger(Number(row.item_count)) ? Number(row.item_count) : itemCount;
-  return {
-    source: `allcards/${finalFileName}`,
-    name: finalFileName,
-    title: finalTitle,
-    path: `/allcards/${encodeURIComponent(finalFileName)}`,
-    count: Math.max(0, finalCount),
-    updatedAt: row.updated_at || null
-  };
+async function seedPublicFlashcardDecksFromAllcards(options = {}) {
+  if (!pool) return { total: 0, seeded: 0 };
+  const force = options?.force === true;
+
+  if (!force && publicFlashcardDecksSeedPromise) {
+    return publicFlashcardDecksSeedPromise;
+  }
+
+  const task = (async () => {
+    await ensurePublicFlashcardDecksTable();
+    const localEntries = await collectAllcardsManifestEntries();
+    let seeded = 0;
+
+    for (const entry of localEntries) {
+      const fileName = normalizePublicFlashcardDeckFileName(entry?.name, 'deck.json');
+      const absolutePath = path.join(ALLCARDS_ROOT, fileName);
+      let payload = null;
+      try {
+        const raw = (await fs.promises.readFile(absolutePath, 'utf8')).replace(/^\uFEFF/, '');
+        payload = JSON.parse(raw);
+      } catch (_error) {
+        continue;
+      }
+
+      await upsertPublicFlashcardDeck({
+        deckKey: `allcards:${encodeURIComponent(fileName.toLowerCase())}`,
+        fileName,
+        dayKey: '',
+        source: 'allcards',
+        title: typeof payload?.title === 'string' && payload.title.trim()
+          ? payload.title.trim()
+          : path.posix.basename(fileName, '.json'),
+        payload
+      });
+      seeded += 1;
+    }
+
+    return {
+      total: localEntries.length,
+      seeded
+    };
+  })();
+
+  publicFlashcardDecksSeedPromise = task.catch((error) => {
+    publicFlashcardDecksSeedPromise = null;
+    throw error;
+  });
+
+  const result = await publicFlashcardDecksSeedPromise;
+  if (force) {
+    publicFlashcardDecksSeedPromise = null;
+  }
+  return result;
 }
 
 async function collectPostgresFlashcardManifestEntries() {
   if (!pool) return [];
   try {
     await ensurePublicFlashcardDecksTable();
+    await seedPublicFlashcardDecksFromAllcards();
 
     const result = await pool.query(
-      `SELECT file_name, title, item_count, payload
+      `SELECT file_name, title, item_count, payload, updated_at
        FROM public.flashcards_public_decks
        ORDER BY lower(title) ASC, updated_at DESC`
     );
 
     return result.rows
-      .map((row) => {
-        const fileName = path.posix.basename(String(row?.file_name || '').trim());
-        if (!fileName || path.extname(fileName).toLowerCase() !== '.json') {
-          return null;
-        }
-        const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
-        const title = String(row?.title || '').trim()
-          || String(payload?.title || '').trim()
-          || fileName;
-        const fallbackCount = getFlashcardPayloadItems(payload).length;
-        const count = Number.isInteger(Number(row?.item_count))
-          ? Math.max(0, Number(row.item_count))
-          : fallbackCount;
-        const slug = path.posix.basename(fileName, '.json');
-        return {
-          name: fileName,
-          title,
-          slug,
-          source: `allcards/${fileName}`,
-          path: `/allcards/${encodeURIComponent(fileName)}`,
-          size: Buffer.byteLength(JSON.stringify(payload), 'utf8'),
-          count
-        };
-      })
+      .map((row) => buildPublicFlashcardDeckManifestEntryFromRow(row))
       .filter(Boolean);
   } catch (error) {
     console.error('Erro ao carregar decks publicos no Postgres:', error);
@@ -6853,6 +6947,31 @@ app.get('/api/admin/flashcards/decks', async (req, res) => {
     res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Falha ao carregar os decks de flashcards.'
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/backfill-public-decks', express.json({ limit: '256kb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const force = req.body?.force === true;
+    const summary = await seedPublicFlashcardDecksFromAllcards({ force });
+    const postgresEntries = await collectPostgresFlashcardManifestEntries();
+
+    res.json({
+      success: true,
+      summary,
+      totalAvailableDecks: postgresEntries.length
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao salvar os decks no Postgres.'
     });
   }
 });

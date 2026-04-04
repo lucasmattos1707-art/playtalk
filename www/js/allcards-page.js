@@ -21,7 +21,9 @@
 
   const state = {
     userId: 0,
+    isAdmin: false,
     cards: [],
+    decks: [],
     showPercent: false,
     refreshTimer: 0,
     swapTimer: 0
@@ -81,6 +83,13 @@
     } catch (_error) {
       // ignore
     }
+  }
+
+  function isAdminSessionUser(user) {
+    if (!user || typeof user !== 'object') return false;
+    if (user.is_admin === true || user.isAdmin === true) return true;
+    const username = safeText(user?.username || user?.email).toLowerCase();
+    return username === 'admin' || username === 'adm' || username === 'adminst';
   }
 
   function createProgressRecord(cardId, overrides = {}) {
@@ -179,6 +188,11 @@
 
   function fallbackLabel(card) {
     return safeText(card?.english || card?.portuguese || card?.deckTitle || 'FlashCard');
+  }
+
+  function deckCountLabel(count) {
+    const normalized = Math.max(0, Number.parseInt(count, 10) || 0);
+    return `${normalized} FlashCard${normalized === 1 ? '' : 's'}`;
   }
 
   function hydrateCards(progressMap) {
@@ -311,16 +325,45 @@
     return buildFlashcardsPublicUrl(fallbackName);
   }
 
-  async function fetchRemoteCardsCatalog() {
-    const response = await fetch(withNoCacheUrl(buildApiUrl(DATA_MANIFEST_REMOTE_PATH)), { cache: 'no-store' });
-    const payload = await response.json().catch(() => ({}));
-    const manifestFiles = Array.isArray(payload?.files)
+  function extractManifestFiles(payload) {
+    const files = Array.isArray(payload?.files)
       ? payload.files
       : (Array.isArray(payload?.data?.files) ? payload.data.files : []);
+    return Array.isArray(files) ? files : [];
+  }
+
+  async function fetchRemoteManifestFiles() {
+    const response = await fetch(withNoCacheUrl(buildApiUrl(DATA_MANIFEST_REMOTE_PATH)), { cache: 'no-store' });
+    const payload = await response.json().catch(() => ({}));
+    const manifestFiles = extractManifestFiles(payload);
     if (!response.ok || !manifestFiles.length) {
       throw new Error(payload?.message || 'Nao consegui abrir o manifesto dos flashcards.');
     }
+    return manifestFiles;
+  }
 
+  async function fetchRemoteDeckCatalog() {
+    const manifestFiles = await fetchRemoteManifestFiles();
+    return manifestFiles
+      .map((file) => {
+        const sourceKey = safeText(file?.source || file?.name || file?.path);
+        const title = safeText(file?.title) || safeText(file?.name || file?.path || sourceKey) || 'Deck';
+        const count = Math.max(0, Number.parseInt(file?.count, 10) || 0);
+        return {
+          source: sourceKey,
+          title,
+          count
+        };
+      })
+      .filter((deck) => safeText(deck.source))
+      .sort((left, right) => left.title.localeCompare(right.title, 'pt-BR', {
+        sensitivity: 'base',
+        numeric: true
+      }));
+  }
+
+  async function fetchRemoteCardsCatalog() {
+    const manifestFiles = await fetchRemoteManifestFiles();
     const files = manifestFiles.map((file) => ({
       name: file.name || file.path || file.source || 'deck.json',
       path: resolveManifestDeckPath(file),
@@ -358,14 +401,49 @@
   }
 
   function updateSummary() {
-    const total = state.cards.length;
+    if (state.isAdmin) {
+      const totalDecks = Array.isArray(state.decks) ? state.decks.length : 0;
+      if (els.total) {
+        els.total.textContent = `${totalDecks} Deck${totalDecks === 1 ? '' : 's'} disponiveis`;
+      }
+      return;
+    }
+
+    const totalCards = state.cards.length;
     if (els.total) {
-      els.total.textContent = `${total} FlashCards`;
+      els.total.textContent = `${totalCards} FlashCards`;
     }
   }
 
   function renderCards() {
     if (!els.grid || !els.empty) return;
+
+    if (state.isAdmin) {
+      if (!Array.isArray(state.decks) || !state.decks.length) {
+        els.grid.innerHTML = '';
+        els.empty.hidden = false;
+        els.empty.textContent = 'Nenhum deck disponivel para o admin agora.';
+        return;
+      }
+
+      els.empty.hidden = true;
+      els.grid.innerHTML = state.decks.map((deck) => `
+        <article class="allcards-card" role="listitem">
+          <div class="allcards-card__frame">
+            <div class="allcards-card__image">
+              <div class="allcards-card__fallback">${escapeHtml(deck.title)}</div>
+            </div>
+          </div>
+          <p class="allcards-card__status">${escapeHtml(deck.title)}</p>
+          <p class="allcards-card__status">${escapeHtml(deckCountLabel(deck.count))}</p>
+          <div class="allcards-card__progress" aria-hidden="true">
+            <span style="width:100%"></span>
+          </div>
+        </article>
+      `).join('');
+      return;
+    }
+
     if (!state.cards.length) {
       els.grid.innerHTML = '';
       els.empty.hidden = false;
@@ -395,7 +473,7 @@
     }).join('');
   }
 
-  async function resolveSessionUserId() {
+  async function resolveSessionInfo() {
     try {
       const response = await fetch(buildApiUrl('/auth/session'), {
         headers: buildAuthHeaders(),
@@ -403,10 +481,30 @@
         credentials: 'include'
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.success) return 0;
-      return Number(payload?.user?.id) || 0;
+      if (!response.ok || !payload?.success) {
+        return { userId: 0, isAdmin: false };
+      }
+      const user = payload?.user || null;
+      return {
+        userId: Number(user?.id) || 0,
+        isAdmin: isAdminSessionUser(user)
+      };
     } catch (_error) {
-      return 0;
+      return { userId: 0, isAdmin: false };
+    }
+  }
+
+  async function backfillPublicDecksForAdmin() {
+    if (!state.isAdmin) return;
+    try {
+      await fetch(buildApiUrl('/api/admin/flashcards/backfill-public-decks'), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify({ force: false })
+      });
+    } catch (_error) {
+      // keep page usable even if backfill fails
     }
   }
 
@@ -435,6 +533,7 @@
   }
 
   function startRefreshTimers() {
+    if (state.isAdmin) return;
     if (!state.refreshTimer) {
       state.refreshTimer = window.setInterval(renderCards, 1000);
     }
@@ -447,7 +546,22 @@
   }
 
   async function init() {
-    state.userId = await resolveSessionUserId();
+    const session = await resolveSessionInfo();
+    state.userId = session.userId;
+    state.isAdmin = session.isAdmin;
+
+    if (state.isAdmin) {
+      await backfillPublicDecksForAdmin();
+      try {
+        state.decks = await fetchRemoteDeckCatalog();
+      } catch (_error) {
+        state.decks = [];
+      }
+      updateSummary();
+      renderCards();
+      return;
+    }
+
     let progressMap = await fetchCloudProgressForUser();
     if (!progressMap.size) {
       progressMap = readUserProgressForUser(state.userId);
