@@ -16,7 +16,11 @@
   const els = {
     grid: document.getElementById('allcards-grid'),
     empty: document.getElementById('allcards-empty'),
-    total: document.getElementById('allcards-total')
+    total: document.getElementById('allcards-total'),
+    adminToolbar: document.getElementById('allcards-admin-toolbar'),
+    adminUploadBtn: document.getElementById('allcards-admin-upload-btn'),
+    adminUploadInput: document.getElementById('allcards-admin-upload-input'),
+    adminUploadStatus: document.getElementById('allcards-admin-upload-status')
   };
 
   const state = {
@@ -29,6 +33,8 @@
     adminPreviewBySource: Object.create(null),
     adminBusyBySource: Object.create(null),
     adminStatusBySource: Object.create(null),
+    adminToolbarBusy: false,
+    adminToolbarStatus: '',
     showPercent: false,
     refreshTimer: 0,
     swapTimer: 0
@@ -264,6 +270,24 @@
     state.adminStatusBySource[normalizedSource] = nextValue;
   }
 
+  function setAdminToolbarStatus(value) {
+    state.adminToolbarStatus = safeText(value);
+    updateAdminToolbar();
+  }
+
+  function setAdminToolbarBusy(value) {
+    state.adminToolbarBusy = value === true;
+    updateAdminToolbar();
+  }
+
+  function updateAdminToolbar() {
+    if (!els.adminToolbar || !els.adminUploadBtn || !els.adminUploadStatus) return;
+    els.adminToolbar.hidden = !state.isAdmin;
+    els.adminUploadBtn.disabled = state.adminToolbarBusy;
+    els.adminUploadBtn.textContent = state.adminToolbarBusy ? 'Enviando decks...' : 'Enviar decks';
+    els.adminUploadStatus.textContent = state.adminToolbarStatus;
+  }
+
   function setDeckBusy(source, busy) {
     const normalizedSource = normalizeDeckSource(source);
     if (!normalizedSource) return;
@@ -456,7 +480,10 @@
           title,
           count,
           coverImage: safeText(file?.coverImage),
-          isHidden: Boolean(file?.isHidden)
+          isHidden: Boolean(file?.isHidden),
+          canDelete: file?.canDelete !== false,
+          originType: safeText(file?.originType || 'levels'),
+          dayKey: safeText(file?.dayKey)
         };
       })
       .filter((deck) => safeText(deck.source))
@@ -543,6 +570,14 @@
     `;
   }
 
+  function renderTrashIcon() {
+    return `
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h2v8H7V9Zm4 0h2v8h-2V9Zm4 0h2v8h-2V9ZM6 21a2 2 0 0 1-2-2V8h16v11a2 2 0 0 1-2 2H6Z"/>
+      </svg>
+    `;
+  }
+
   function resolveDeckDisplayImage(deck) {
     const preview = resolveAdminDeckPreview(deck?.source);
     if (preview) return preview;
@@ -563,6 +598,11 @@
     const visibilityLabel = isHidden ? 'Mostrar album' : 'Ocultar album';
     const visibilityClass = isHidden ? 'is-active' : '';
     const canApprove = Boolean(preview) && !busy;
+    const canDelete = Boolean(deck?.canDelete);
+    const deleteDisabled = busy || !isHidden || !canDelete;
+    const deleteTitle = !canDelete
+      ? 'Esse deck nao pode ser excluido por aqui'
+      : (isHidden ? 'Excluir deck para sempre' : 'Oculte o album antes de excluir');
 
     return `
       <article class="allcards-card ${isHidden ? 'is-hidden-deck' : ''}" role="listitem" data-deck-source="${escapeHtml(source)}">
@@ -574,6 +614,9 @@
             </button>
             <button type="button" class="allcards-admin-btn ${expanded ? 'is-active' : ''}" data-action="toggle-cover-panel" data-source="${escapeHtml(source)}" title="Gerar capa IA" ${busy ? 'disabled' : ''}>
               ${renderMagicWandIcon()}
+            </button>
+            <button type="button" class="allcards-admin-btn is-danger" data-action="delete-deck" data-source="${escapeHtml(source)}" title="${escapeHtml(deleteTitle)}" ${deleteDisabled ? 'disabled' : ''}>
+              ${renderTrashIcon()}
             </button>
           </div>
         </div>
@@ -757,6 +800,95 @@
     }
   }
 
+  async function refreshAdminDeckCatalog() {
+    state.decks = await fetchRemoteDeckCatalog();
+    sortDecks();
+    updateSummary();
+    renderCards();
+  }
+
+  async function deleteDeckPermanently(source) {
+    const deckIndex = findDeckIndexBySource(source);
+    const deck = deckIndex >= 0 ? state.decks[deckIndex] : null;
+    if (!deck) return;
+    if (!deck.isHidden) {
+      setDeckStatus(source, 'Oculte o album antes da exclusao completa.');
+      renderCards();
+      return;
+    }
+    if (!deck.canDelete) {
+      setDeckStatus(source, 'Esse deck nao pode ser excluido por aqui.');
+      renderCards();
+      return;
+    }
+
+    const confirmed = window.confirm(`Excluir para sempre o deck "${deck.title}"? Essa acao apaga o deck do Postgres e os assets vinculados a ele.`);
+    if (!confirmed) return;
+
+    setDeckBusy(source, true);
+    setDeckStatus(source, 'Excluindo deck por completo...');
+    renderCards();
+    try {
+      await postAdminDeckAction(
+        '/api/admin/flashcards/public-decks/delete',
+        { source },
+        'Falha ao excluir o deck.'
+      );
+      const normalizedSource = normalizeDeckSource(source);
+      state.decks = state.decks.filter((entry) => normalizeDeckSource(entry?.source) !== normalizedSource);
+      delete state.adminPreviewBySource[normalizedSource];
+      delete state.adminPromptBySource[normalizedSource];
+      delete state.adminBusyBySource[normalizedSource];
+      delete state.adminStatusBySource[normalizedSource];
+      if (normalizeDeckSource(state.adminExpandedSource) === normalizedSource) {
+        state.adminExpandedSource = '';
+      }
+      updateSummary();
+    } catch (error) {
+      setDeckStatus(source, error?.message || 'Falha ao excluir o deck.');
+    } finally {
+      renderCards();
+    }
+  }
+
+  async function readDeckUploadFiles(fileList) {
+    const files = Array.from(fileList || []).filter((file) => /\.json$/i.test(safeText(file?.name)));
+    if (!files.length) {
+      throw new Error('Selecione pelo menos um arquivo .json.');
+    }
+    if (files.length > 100) {
+      throw new Error('O limite por envio e de 100 decks JSON.');
+    }
+
+    return Promise.all(files.map(async (file) => ({
+      name: file.name,
+      content: await file.text()
+    })));
+  }
+
+  async function uploadAdminDeckFiles(fileList) {
+    try {
+      const files = await readDeckUploadFiles(fileList);
+      setAdminToolbarBusy(true);
+      setAdminToolbarStatus(`Enviando ${files.length} deck${files.length === 1 ? '' : 's'} para o Postgres...`);
+      const payload = await postAdminDeckAction(
+        '/api/admin/flashcards/public-decks/upload-jsons',
+        { files },
+        'Falha ao enviar os decks para o Postgres.'
+      );
+      await refreshAdminDeckCatalog();
+      const uploadedCount = Math.max(0, Number.parseInt(payload?.uploadedCount, 10) || files.length);
+      setAdminToolbarStatus(`${uploadedCount} deck${uploadedCount === 1 ? '' : 's'} enviado${uploadedCount === 1 ? '' : 's'} com sucesso.`);
+    } catch (error) {
+      setAdminToolbarStatus(error?.message || 'Falha ao enviar os decks.');
+    } finally {
+      setAdminToolbarBusy(false);
+      if (els.adminUploadInput) {
+        els.adminUploadInput.value = '';
+      }
+    }
+  }
+
   function bindAdminGridEvents() {
     if (!els.grid || els.grid.dataset.adminDeckBound === '1') return;
 
@@ -807,10 +939,32 @@
       if (action === 'approve-cover') {
         event.preventDefault();
         await approveDeckCover(source);
+        return;
+      }
+
+      if (action === 'delete-deck') {
+        event.preventDefault();
+        await deleteDeckPermanently(source);
       }
     });
 
     els.grid.dataset.adminDeckBound = '1';
+  }
+
+  function bindAdminToolbarEvents() {
+    if (!els.adminUploadBtn || !els.adminUploadInput || els.adminUploadBtn.dataset.adminToolbarBound === '1') return;
+
+    els.adminUploadBtn.addEventListener('click', () => {
+      if (!state.isAdmin || state.adminToolbarBusy) return;
+      els.adminUploadInput.click();
+    });
+
+    els.adminUploadInput.addEventListener('change', async (event) => {
+      if (!state.isAdmin || state.adminToolbarBusy) return;
+      await uploadAdminDeckFiles(event.target?.files);
+    });
+
+    els.adminUploadBtn.dataset.adminToolbarBound = '1';
   }
 
   async function resolveSessionInfo() {
@@ -910,6 +1064,7 @@
 
     if (state.isAdmin) {
       bindAdminGridEvents();
+      bindAdminToolbarEvents();
       await backfillPublicDecksForAdmin();
       try {
         state.decks = await fetchRemoteDeckCatalog();
@@ -917,6 +1072,7 @@
       } catch (_error) {
         state.decks = [];
       }
+      updateAdminToolbar();
       updateSummary();
       renderCards();
       return;

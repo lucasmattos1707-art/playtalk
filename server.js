@@ -3326,6 +3326,10 @@ function buildPublicFlashcardDeckManifestEntryFromRow(row) {
     ? Math.max(0, Number(row.item_count))
     : fallbackCount;
   const slug = path.posix.basename(fileName, '.json');
+  const originType = String(row?.source || '').trim() || 'levels';
+  const rawDayKey = String(row?.day_key || '').trim();
+  const dayKey = rawDayKey ? normalizeLevelFolderKey(rawDayKey) : '';
+  const canDelete = originType !== 'allcards';
 
   return {
     name: fileName,
@@ -3336,6 +3340,9 @@ function buildPublicFlashcardDeckManifestEntryFromRow(row) {
     size: Buffer.byteLength(JSON.stringify(payload), 'utf8'),
     count,
     coverImage,
+    originType,
+    dayKey,
+    canDelete,
     isHidden: Boolean(row?.is_hidden),
     updatedAt: row?.updated_at || null
   };
@@ -3438,7 +3445,7 @@ async function upsertPublicFlashcardDeck({
        item_count = EXCLUDED.item_count,
        payload = EXCLUDED.payload,
        updated_at = now()
-     RETURNING file_name, title, item_count, payload, updated_at`,
+     RETURNING file_name, day_key, source, title, item_count, payload, updated_at`,
     [
       normalizedDeckKey,
       normalizedFileName,
@@ -3477,6 +3484,66 @@ async function upsertPublicFlashcardDeckFromLevels(dayKey, payload) {
     fileName,
     dayKey: normalizedDayKey,
     source: 'levels',
+    title,
+    payload: normalizedPayload
+  });
+}
+
+function normalizeUploadedPublicDeckPayload(fileName, payload) {
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    return payload;
+  }
+
+  const title = path.posix.basename(String(fileName || 'deck.json'), '.json') || 'Deck';
+  return {
+    title,
+    coverImage: '',
+    items: Array.isArray(payload) ? payload : []
+  };
+}
+
+function inferUploadedLevelsDayKey(fileName) {
+  const baseName = path.posix.basename(String(fileName || '').trim(), path.extname(String(fileName || '').trim()));
+  if (!baseName) return '';
+
+  const patterns = [
+    /^niveis_([^_]+)_\d+_.+$/i,
+    /^levels-day-(.+)$/i,
+    /^day-(.+)$/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = baseName.match(pattern);
+    const candidate = normalizeLevelFolderKey(match?.[1] || '');
+    if (candidate) {
+      return candidate;
+    }
+  }
+
+  return '';
+}
+
+async function upsertPublicFlashcardDeckFromUploadedJson(fileName, payload) {
+  if (!pool) return null;
+
+  const normalizedFileName = normalizePublicFlashcardDeckFileName(fileName, 'deck.json');
+  const normalizedPayload = normalizeUploadedPublicDeckPayload(normalizedFileName, payload);
+  const inferredDayKey = inferUploadedLevelsDayKey(normalizedFileName);
+
+  if (inferredDayKey) {
+    return upsertPublicFlashcardDeckFromLevels(inferredDayKey, normalizedPayload);
+  }
+
+  const title = String(normalizedPayload?.title || '').trim()
+    || path.posix.basename(normalizedFileName, '.json')
+    || 'Deck';
+  const deckBase = safeGeneratedBase(path.posix.basename(normalizedFileName, '.json'), 'deck');
+
+  return upsertPublicFlashcardDeck({
+    deckKey: `admin-upload:${deckBase}`,
+    fileName: normalizedFileName,
+    dayKey: '',
+    source: 'admin-upload',
     title,
     payload: normalizedPayload
   });
@@ -3568,7 +3635,7 @@ async function collectPostgresFlashcardManifestEntries() {
     await seedPublicFlashcardDecksFromAllcards();
 
     const result = await pool.query(
-      `SELECT file_name, title, item_count, payload, is_hidden, updated_at
+      `SELECT file_name, day_key, source, title, item_count, payload, is_hidden, updated_at
        FROM public.flashcards_public_decks
        ORDER BY lower(title) ASC, updated_at DESC`
     );
@@ -3653,6 +3720,68 @@ async function findPublicFlashcardDeckRowByFileName(fileName) {
   );
 
   return result.rows[0] || null;
+}
+
+function collectPublicDeckReferencedR2ObjectKeys(payload) {
+  const normalizedPayload = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload
+    : null;
+  if (!normalizedPayload) return [];
+
+  const objectKeys = new Set();
+  const pushKey = (value) => {
+    const objectKey = getR2ObjectKeyFromPublicUrl(value);
+    if (objectKey) {
+      objectKeys.add(objectKey);
+    }
+  };
+
+  pushKey(normalizedPayload.coverImage);
+  const items = getFlashcardPayloadItems(normalizedPayload);
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue;
+    pushKey(readFlashcardItemImage(item));
+    pushKey(readFlashcardItemAudio(item));
+  }
+
+  return Array.from(objectKeys);
+}
+
+async function deleteUploadedPublicFlashcardDeckAssets(deckRow) {
+  const summary = {
+    deletedR2Objects: 0,
+    removedMirrorPaths: []
+  };
+  const payload = deckRow?.payload && typeof deckRow.payload === 'object' ? deckRow.payload : null;
+  const r2ObjectKeys = collectPublicDeckReferencedR2ObjectKeys(payload);
+
+  for (const objectKey of r2ObjectKeys) {
+    await deleteR2Object(objectKey);
+    summary.deletedR2Objects += 1;
+  }
+
+  const sourceType = String(deckRow?.source || '').trim();
+  const dayKey = normalizeLevelFolderKey(deckRow?.day_key || '');
+  if (sourceType === 'levels' && dayKey) {
+    const levelAssetRelativePath = path.posix.join(
+      ADMIN_FLASHCARD_ASSET_RELATIVE_ROOT,
+      'levels',
+      `day-${dayKey}`
+    );
+    const levelJsonRelativePath = `Niveis/others/day-${dayKey}.json`;
+    const mirrorPaths = [levelAssetRelativePath, levelJsonRelativePath];
+    await Promise.all(mirrorPaths.map(async (relativePath) => {
+      const targets = buildMirroredWriteTargets(relativePath);
+      await Promise.all(targets.map((target) => fs.promises.rm(target, {
+        recursive: true,
+        force: true
+      })));
+    }));
+    summary.removedMirrorPaths.push(...mirrorPaths);
+    await refreshLocalLevelManifestMirror().catch(() => null);
+  }
+
+  return summary;
 }
 
 function deriveDeckCoverStorageContext(deckRow) {
@@ -7257,6 +7386,78 @@ app.post('/api/admin/flashcards/backfill-public-decks', express.json({ limit: '2
   }
 });
 
+app.post('/api/admin/flashcards/public-decks/upload-jsons', express.json({ limit: '35mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const files = Array.isArray(req.body?.files) ? req.body.files.slice(0, 100) : [];
+    if (!files.length) {
+      res.status(400).json({ success: false, message: 'Envie pelo menos um deck JSON.' });
+      return;
+    }
+    if (Array.isArray(req.body?.files) && req.body.files.length > 100) {
+      res.status(400).json({ success: false, message: 'O limite por envio e de 100 decks JSON.' });
+      return;
+    }
+
+    const uploadedDecks = [];
+    for (const file of files) {
+      const fileName = normalizePublicFlashcardDeckFileName(file?.name, '');
+      const rawContent = typeof file?.content === 'string' ? file.content.trim() : '';
+      if (!fileName || path.extname(fileName).toLowerCase() !== '.json') {
+        res.status(400).json({ success: false, message: 'Todos os arquivos enviados precisam ser .json.' });
+        return;
+      }
+      if (!rawContent) {
+        res.status(400).json({ success: false, message: `O arquivo ${fileName} chegou vazio.` });
+        return;
+      }
+
+      let payload = null;
+      try {
+        payload = JSON.parse(rawContent);
+      } catch (error) {
+        res.status(400).json({
+          success: false,
+          message: `O arquivo ${fileName} nao contem um JSON valido.`,
+          details: error.message
+        });
+        return;
+      }
+
+      const normalizedPayload = normalizeUploadedPublicDeckPayload(fileName, payload);
+      const items = getFlashcardPayloadItems(normalizedPayload);
+      if (!items.length) {
+        res.status(400).json({
+          success: false,
+          message: `O deck ${fileName} nao possui flashcards validos para publicar.`
+        });
+        return;
+      }
+
+      const deck = await upsertPublicFlashcardDeckFromUploadedJson(fileName, normalizedPayload);
+      if (deck) {
+        uploadedDecks.push(deck);
+      }
+    }
+
+    res.json({
+      success: true,
+      uploadedCount: uploadedDecks.length,
+      decks: uploadedDecks
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao enviar decks para o Postgres.'
+    });
+  }
+});
+
 app.post('/api/admin/flashcards/public-decks/visibility', express.json({ limit: '256kb' }), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -7280,7 +7481,7 @@ app.post('/api/admin/flashcards/public-decks/visibility', express.json({ limit: 
            hidden_at = CASE WHEN $2 THEN now() ELSE NULL END,
            updated_at = now()
        WHERE file_name = $1
-       RETURNING file_name, title, item_count, payload, is_hidden, updated_at`,
+       RETURNING file_name, day_key, source, title, item_count, payload, is_hidden, updated_at`,
       [fileName, hidden]
     );
 
@@ -7297,6 +7498,63 @@ app.post('/api/admin/flashcards/public-decks/visibility', express.json({ limit: 
     res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Falha ao atualizar a visibilidade do deck.'
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/public-decks/delete', express.json({ limit: '256kb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const fileName = normalizePublicDeckSourceToFileName(req.body?.source);
+    if (!fileName) {
+      res.status(400).json({ success: false, message: 'Origem do deck invalida.' });
+      return;
+    }
+
+    const deckRow = await findPublicFlashcardDeckRowByFileName(fileName);
+    if (!deckRow) {
+      res.status(404).json({ success: false, message: 'Deck nao encontrado no Postgres.' });
+      return;
+    }
+
+    const manifestEntry = buildPublicFlashcardDeckManifestEntryFromRow(deckRow);
+    if (!manifestEntry?.canDelete) {
+      res.status(400).json({
+        success: false,
+        message: 'Esse deck nao pode ser excluido por aqui.'
+      });
+      return;
+    }
+
+    if (deckRow.is_hidden !== true) {
+      res.status(400).json({
+        success: false,
+        message: 'O album precisa estar oculto antes da exclusao completa.'
+      });
+      return;
+    }
+
+    const cleanup = await deleteUploadedPublicFlashcardDeckAssets(deckRow);
+    await pool.query(
+      `DELETE FROM public.flashcards_public_decks
+       WHERE id = $1`,
+      [deckRow.id]
+    );
+
+    res.json({
+      success: true,
+      deletedSource: manifestEntry.source,
+      cleanup
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao excluir o deck.'
     });
   }
 });
@@ -7410,7 +7668,7 @@ app.post('/api/admin/flashcards/public-decks/approve-cover', express.json({ limi
            item_count = $3,
            updated_at = now()
        WHERE id = $1
-       RETURNING file_name, title, item_count, payload, is_hidden, updated_at`,
+       RETURNING file_name, day_key, source, title, item_count, payload, is_hidden, updated_at`,
       [deckRow.id, JSON.stringify(nextPayload), nextItemCount]
     );
 

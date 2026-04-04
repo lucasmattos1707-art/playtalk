@@ -115,6 +115,61 @@
       text-align: center;
     }
 
+    .allcards-admin-toolbar {
+      width: min(720px, calc(100vw - 24px));
+      margin: 0 auto 20px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(11, 34, 68, 0.42);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 16px 34px rgba(5, 15, 34, 0.18);
+      display: grid;
+      gap: 10px;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .allcards-admin-toolbar[hidden] {
+      display: none !important;
+    }
+
+    .allcards-admin-toolbar__btn {
+      min-width: min(280px, 100%);
+      min-height: 48px;
+      padding: 0 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.26);
+      background: linear-gradient(135deg, rgba(40, 138, 255, 0.95), rgba(18, 104, 219, 0.92));
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+      box-shadow: 0 14px 30px rgba(20, 76, 148, 0.28);
+    }
+
+    .allcards-admin-toolbar__btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 34px rgba(20, 76, 148, 0.32);
+    }
+
+    .allcards-admin-toolbar__btn:disabled {
+      opacity: 0.62;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .allcards-admin-toolbar__status {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.45;
+      color: rgba(255, 255, 255, 0.92);
+      font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+      font-weight: 700;
+    }
+
     .banner-carousel {
       width: 100vw;
       margin: 0 0 8px;
@@ -422,6 +477,16 @@
       border-color: rgba(255, 255, 255, 0.85);
     }
 
+    .allcards-admin-btn.is-danger {
+      background: rgba(162, 28, 49, 0.9);
+      border-color: rgba(255, 185, 198, 0.58);
+    }
+
+    .allcards-admin-btn.is-danger:disabled {
+      background: rgba(112, 33, 49, 0.42);
+      border-color: rgba(255, 185, 198, 0.22);
+    }
+
     .allcards-admin-btn:disabled {
       opacity: 0.55;
       cursor: not-allowed;
@@ -708,6 +773,12 @@
       <h1 class="allcards-title">AllCards</h1>
       <p class="allcards-total" id="allcards-total">0 FlashCards</p>
     </header>
+
+    <section id="allcards-admin-toolbar" class="allcards-admin-toolbar" hidden aria-label="Ferramentas de administrador">
+      <button id="allcards-admin-upload-btn" class="allcards-admin-toolbar__btn" type="button">Enviar decks</button>
+      <input id="allcards-admin-upload-input" type="file" accept=".json,application/json" multiple hidden>
+      <p id="allcards-admin-upload-status" class="allcards-admin-toolbar__status"></p>
+    </section>
 
     <section>
       <div id="allcards-grid" class="allcards-grid" role="list"></div>
