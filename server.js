@@ -68,6 +68,7 @@ const DATABASE_SSL = process.env.DATABASE_SSL
 const JWT_SECRET = process.env.JWT_SECRET;
 const ELEVENLABS_API_KEY = env(process.env.ELEVENLABS_API_KEY);
 const ELEVENLABS_VOICE_ID_HARRY = env(process.env.ELEVENLABS_VOICE_ID_HARRY);
+const ELEVENLABS_VOICE_ID_BURT_RAYNALDS = env(process.env.ELEVENLABS_VOICE_ID_BURT_RAYNALDS) || '4YYIPFl9wE5c4L2eu2Gb';
 const ELEVENLABS_MODEL_ID = env(process.env.ELEVENLABS_MODEL_ID) || 'eleven_multilingual_v2';
 const OPENAI_API_KEY = env(process.env.OPENAI_API_KEY);
 const OPENAI_IMAGE_MODEL = env(process.env.OPENAI_IMAGE_MODEL) || 'gpt-image-1-mini';
@@ -5829,10 +5830,17 @@ async function generateMiniBookSpeechWithElevenLabs(text, options = {}) {
     throw error;
   }
 
-  if (!ELEVENLABS_API_KEY || ELEVENLABS_API_KEY.includes('fake') || !ELEVENLABS_VOICE_ID_HARRY || ELEVENLABS_VOICE_ID_HARRY.includes('fake')) {
-    const error = new Error('ElevenLabs nao configurado para voz Harry.');
+  const requestedVoice = String(options.voice || '').trim().toLowerCase();
+  const isBurtRaynalds = requestedVoice === 'burt-raynalds' || requestedVoice === 'burt' || requestedVoice === 'burt-raynolds';
+  const voiceId = isBurtRaynalds ? ELEVENLABS_VOICE_ID_BURT_RAYNALDS : ELEVENLABS_VOICE_ID_HARRY;
+  const voiceLabel = isBurtRaynalds ? 'burt-raynalds' : 'harry';
+
+  if (!ELEVENLABS_API_KEY || ELEVENLABS_API_KEY.includes('fake') || !voiceId || voiceId.includes('fake')) {
+    const error = new Error(`ElevenLabs nao configurado para voz ${isBurtRaynalds ? 'Burt Raynalds' : 'Harry'}.`);
     error.statusCode = 503;
-    error.instructions = 'Preencha ELEVENLABS_API_KEY e ELEVENLABS_VOICE_ID_HARRY no .env com os valores reais.';
+    error.instructions = isBurtRaynalds
+      ? 'Preencha ELEVENLABS_API_KEY e ELEVENLABS_VOICE_ID_BURT_RAYNALDS no .env com os valores reais.'
+      : 'Preencha ELEVENLABS_API_KEY e ELEVENLABS_VOICE_ID_HARRY no .env com os valores reais.';
     throw error;
   }
 
@@ -5840,7 +5848,7 @@ async function generateMiniBookSpeechWithElevenLabs(text, options = {}) {
     ? String(options.languageCode).toLowerCase()
     : '';
 
-  const upstreamResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(ELEVENLABS_VOICE_ID_HARRY)}`, {
+  const upstreamResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
     method: 'POST',
     headers: {
       Accept: 'audio/mpeg',
@@ -5872,7 +5880,7 @@ async function generateMiniBookSpeechWithElevenLabs(text, options = {}) {
   return {
     mimeType: 'audio/mpeg',
     buffer: audioBuffer,
-    voice: 'harry'
+    voice: voiceLabel
   };
 }
 
@@ -5905,6 +5913,19 @@ function parseMiniBookAudioSelection(rawValue) {
       provider: 'elevenlabs',
       voice: 'harry',
       voiceLabel: 'harry'
+    };
+  }
+  if (
+    normalized === 'elevenlabs:burt-raynalds'
+    || normalized === 'burt-raynalds'
+    || normalized === 'burt'
+    || normalized === 'burt raynalds'
+    || normalized === 'elevenlabs:burt'
+  ) {
+    return {
+      provider: 'elevenlabs',
+      voice: 'burt-raynalds',
+      voiceLabel: 'burt-raynalds'
     };
   }
 
@@ -8962,7 +8983,7 @@ async function runMiniBookCreateFromLinesPipeline({ createInput, audioSelection,
   for (let index = 0; index < createInput.cards.length; index += 1) {
     const card = createInput.cards[index];
     const generatedAudio = audioSelection.provider === 'elevenlabs'
-      ? await generateMiniBookSpeechWithElevenLabs(card.en, { languageCode: 'en' })
+      ? await generateMiniBookSpeechWithElevenLabs(card.en, { languageCode: 'en', voice: audioSelection.voice })
       : await generateMiniBookSpeechWithOpenAi(card.en, { voice: audioSelection.voice });
     const audioObjectKey = buildMiniBookAudioObjectKey(createInput.bookId, index);
     await putR2Object(audioObjectKey, generatedAudio.buffer, generatedAudio.mimeType || 'audio/mpeg');
