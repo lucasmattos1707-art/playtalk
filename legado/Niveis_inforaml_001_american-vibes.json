@@ -1,0 +1,501 @@
+{
+  "title": "American Vibes",
+  "coverImage": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/Sequ%C3%AAncia%2001.00_00_00_00.Quadro001.png",
+  "items": [
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000001.webp",
+      "nomePortugues": "Fala sério, você está brincando",
+      "nomeIngles": "Come on, you are kidding",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000002.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000003.webp",
+      "nomePortugues": "Relaxa, está tudo bem agora",
+      "nomeIngles": "Relax, everything is fine now",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000004.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000005.webp",
+      "nomePortugues": "Isso faz muito sentido mesmo",
+      "nomeIngles": "That makes a lot of sense",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000006.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000007.webp",
+      "nomePortugues": "Nem acredito nisso agora",
+      "nomeIngles": "I cannot believe this right now",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000008.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000009.webp",
+      "nomePortugues": "Isso é muito legal mesmo",
+      "nomeIngles": "That is really cool",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000010.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000011.webp",
+      "nomePortugues": "Que ideia boa você teve",
+      "nomeIngles": "That is such a good idea",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000012.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000013.webp",
+      "nomePortugues": "Eu estou sem tempo agora",
+      "nomeIngles": "I am out of time right now",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000014.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000015.webp",
+      "nomePortugues": "Estou meio cansado hoje",
+      "nomeIngles": "I am kind of tired today",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000016.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000017.webp",
+      "nomePortugues": "Isso não faz sentido algum",
+      "nomeIngles": "That does not make any sense",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000018.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000019.webp",
+      "nomePortugues": "Pode deixar que eu faço",
+      "nomeIngles": "Leave it to me, I will do it",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000020.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000021.webp",
+      "nomePortugues": "Eu dou conta disso sim",
+      "nomeIngles": "I can handle this",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000022.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000023.webp",
+      "nomePortugues": "Vamos com calma nisso",
+      "nomeIngles": "Let us take it easy",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000024.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000025.webp",
+      "nomePortugues": "Espera aí um segundo",
+      "nomeIngles": "Wait there for a second",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000026.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000027.webp",
+      "nomePortugues": "Já estou chegando aí",
+      "nomeIngles": "I am already on my way",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000028.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000029.webp",
+      "nomePortugues": "Fica tranquilo com isso",
+      "nomeIngles": "Do not worry about it",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000030.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000031.webp",
+      "nomePortugues": "Isso depende da situação",
+      "nomeIngles": "That depends on the situation",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000032.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000033.webp",
+      "nomePortugues": "Eu estou dentro disso",
+      "nomeIngles": "I am in for that",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000034.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000035.webp",
+      "nomePortugues": "Pode contar comigo sempre",
+      "nomeIngles": "You can count on me always",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000036.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000037.webp",
+      "nomePortugues": "Isso não é problema nenhum",
+      "nomeIngles": "That is not a problem at all",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000038.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000039.webp",
+      "nomePortugues": "Agora ficou complicado isso",
+      "nomeIngles": "Now this got complicated",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000040.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000041.webp",
+      "nomePortugues": "Isso está meio estranho",
+      "nomeIngles": "This feels kind of weird",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000042.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000043.webp",
+      "nomePortugues": "Eu não estou entendendo nada",
+      "nomeIngles": "I am not understanding anything",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000044.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000045.webp",
+      "nomePortugues": "Você está falando sério mesmo",
+      "nomeIngles": "Are you serious right now",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000046.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000047.webp",
+      "nomePortugues": "Isso é bem diferente mesmo",
+      "nomeIngles": "This is quite different",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000048.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000049.webp",
+      "nomePortugues": "Eu gostei bastante disso",
+      "nomeIngles": "I really liked that",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000050.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000051.webp",
+      "nomePortugues": "Eu não gostei muito disso",
+      "nomeIngles": "I did not like that much",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000052.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000053.webp",
+      "nomePortugues": "Isso foi uma boa ideia",
+      "nomeIngles": "That was a good idea",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000054.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000055.webp",
+      "nomePortugues": "Isso não foi nada legal",
+      "nomeIngles": "That was not nice at all",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000056.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000057.webp",
+      "nomePortugues": "Eu estou só observando aqui",
+      "nomeIngles": "I am just watching here",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000058.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000059.webp",
+      "nomePortugues": "Eu estou tentando entender",
+      "nomeIngles": "I am trying to understand",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000060.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000061.webp",
+      "nomePortugues": "Isso ficou muito bom mesmo",
+      "nomeIngles": "That turned out really good",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000062.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000063.webp",
+      "nomePortugues": "Agora tudo faz sentido",
+      "nomeIngles": "Now everything makes sense",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000064.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000065.webp",
+      "nomePortugues": "Isso mudou tudo agora",
+      "nomeIngles": "That changed everything now",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000066.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000067.webp",
+      "nomePortugues": "Eu preciso pensar melhor",
+      "nomeIngles": "I need to think better",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000068.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000069.webp",
+      "nomePortugues": "Isso parece uma boa opção",
+      "nomeIngles": "That seems like a good option",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000070.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000071.webp",
+      "nomePortugues": "Eu estou meio confuso agora",
+      "nomeIngles": "I am a bit confused right now",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000072.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000073.webp",
+      "nomePortugues": "Isso ficou muito estranho",
+      "nomeIngles": "That got really strange",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000074.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000075.webp",
+      "nomePortugues": "Eu não esperava por isso",
+      "nomeIngles": "I did not expect that",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000076.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000077.webp",
+      "nomePortugues": "Isso foi rápido demais",
+      "nomeIngles": "That was too fast",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000078.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000079.webp",
+      "nomePortugues": "Eu estou quase pronto agora",
+      "nomeIngles": "I am almost ready now",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000080.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000081.webp",
+      "nomePortugues": "Só mais um minuto aí",
+      "nomeIngles": "Just one more minute there",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000082.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000083.webp",
+      "nomePortugues": "Já volto aqui rapidinho",
+      "nomeIngles": "I will be right back",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000084.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000085.webp",
+      "nomePortugues": "Vamos resolver isso agora",
+      "nomeIngles": "Let us solve this now",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000086.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000087.webp",
+      "nomePortugues": "Eu não tenho certeza disso",
+      "nomeIngles": "I am not sure about that",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000088.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000089.webp",
+      "nomePortugues": "Isso pode dar errado sim",
+      "nomeIngles": "That might go wrong",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000090.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000091.webp",
+      "nomePortugues": "Isso pode dar certo sim",
+      "nomeIngles": "That might work out",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000092.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000093.webp",
+      "nomePortugues": "Eu estou confiante nisso",
+      "nomeIngles": "I feel confident about this",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000094.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000095.webp",
+      "nomePortugues": "Isso está ficando melhor",
+      "nomeIngles": "This is getting better",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000096.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000097.webp",
+      "nomePortugues": "Isso está piorando agora",
+      "nomeIngles": "This is getting worse now",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000098.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000099.webp",
+      "nomePortugues": "Eu estou aprendendo rápido",
+      "nomeIngles": "I am learning fast",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000100.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000101.webp",
+      "nomePortugues": "Eu ainda estou tentando",
+      "nomeIngles": "I am still trying",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000102.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000103.webp",
+      "nomePortugues": "Isso vale muito a pena",
+      "nomeIngles": "That is really worth it",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000104.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000105.webp",
+      "nomePortugues": "Isso não vale a pena",
+      "nomeIngles": "That is not worth it",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000106.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000107.webp",
+      "nomePortugues": "Eu estou indo nessa agora",
+      "nomeIngles": "I am going for it now",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000108.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000109.webp",
+      "nomePortugues": "Eu desisto disso agora",
+      "nomeIngles": "I give up on this now",
+      "categoria": "x",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/inforaml/001/000110.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    }
+  ]
+}

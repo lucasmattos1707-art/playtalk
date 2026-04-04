@@ -2261,6 +2261,7 @@ const VOICES_ROOT = (() => {
   return path.join(staticDir, 'voices');
 })();
 const ALLCARDS_ROOT = path.join(__dirname, 'allcards');
+const LEGACY_FLASHCARDS_ROOT = path.join(__dirname, 'legado');
 const ACCESSKEY_ROOT = path.join(__dirname, 'accesskey');
 const LOCAL_LEVELS_ROOT = path.join(__dirname, 'Niveis');
 const FLASHCARD_DATA_RELATIVE_ROOT = path.posix.join('data', 'flashcards', '130', '001');
@@ -3254,10 +3255,10 @@ async function collectBuiltinFlashcardManifestEntries() {
   }));
 }
 
-async function collectAllcardsManifestEntries() {
+async function collectLegacyManifestEntriesFromRoot(rootPath, originType = 'allcards') {
   let dirEntries = [];
   try {
-    dirEntries = await fs.promises.readdir(ALLCARDS_ROOT, { withFileTypes: true });
+    dirEntries = await fs.promises.readdir(rootPath, { withFileTypes: true });
   } catch (error) {
     if (error.code === 'ENOENT') return [];
     throw error;
@@ -3269,7 +3270,7 @@ async function collectAllcardsManifestEntries() {
       continue;
     }
 
-    const filePath = path.join(ALLCARDS_ROOT, entry.name);
+    const filePath = path.join(rootPath, entry.name);
     let title = entry.name;
     let count = 0;
 
@@ -3290,11 +3291,29 @@ async function collectAllcardsManifestEntries() {
       source: `allcards/${entry.name}`,
       path: `/allcards/${encodeURIComponent(entry.name)}`,
       size: (await fs.promises.stat(filePath)).size,
-      count
+      count,
+      originType,
+      canDelete: false
     });
   }
 
-  return entries.sort((left, right) => left.title.localeCompare(right.title, 'pt-BR', {
+  return entries;
+}
+
+async function collectAllcardsManifestEntries() {
+  const [allcardsEntries, legacyEntries] = await Promise.all([
+    collectLegacyManifestEntriesFromRoot(ALLCARDS_ROOT, 'allcards'),
+    collectLegacyManifestEntriesFromRoot(LEGACY_FLASHCARDS_ROOT, 'legacy')
+  ]);
+
+  const mergedBySource = new Map();
+  [...allcardsEntries, ...legacyEntries].forEach((entry) => {
+    const sourceKey = String(entry?.source || '').trim().toLowerCase();
+    if (!sourceKey || mergedBySource.has(sourceKey)) return;
+    mergedBySource.set(sourceKey, entry);
+  });
+
+  return Array.from(mergedBySource.values()).sort((left, right) => left.title.localeCompare(right.title, 'pt-BR', {
     sensitivity: 'base',
     numeric: true
   }));
@@ -7705,9 +7724,13 @@ app.get('/api/flashcards/manifest', async (req, res) => {
       collectAllcardsManifestEntries(),
       collectPostgresFlashcardManifestEntries()
     ]);
-    const preferredFiles = postgresFiles.length ? postgresFiles : localFiles;
     const mergedBySource = new Map();
-    preferredFiles.forEach((entry) => {
+    localFiles.forEach((entry) => {
+      const sourceKey = String(entry?.source || '').trim().toLowerCase();
+      if (!sourceKey) return;
+      mergedBySource.set(sourceKey, entry);
+    });
+    postgresFiles.forEach((entry) => {
       const sourceKey = String(entry?.source || '').trim().toLowerCase();
       if (!sourceKey) return;
       mergedBySource.set(sourceKey, entry);
@@ -10510,13 +10533,19 @@ app.get(/^\/allcards\/([^/]+\.json)$/i, async (req, res, next) => {
       return;
     }
 
-    const localDeckPath = path.join(ALLCARDS_ROOT, normalizedFileName);
-    try {
-      await fs.promises.access(localDeckPath, fs.constants.F_OK);
-      next();
-      return;
-    } catch (_error) {
-      // no local fallback
+    const localDeckPaths = [
+      path.join(ALLCARDS_ROOT, normalizedFileName),
+      path.join(LEGACY_FLASHCARDS_ROOT, normalizedFileName)
+    ];
+    for (const localDeckPath of localDeckPaths) {
+      try {
+        await fs.promises.access(localDeckPath, fs.constants.F_OK);
+        res.setHeader('Cache-Control', 'no-store');
+        res.sendFile(localDeckPath);
+        return;
+      } catch (_error) {
+        // try next local fallback
+      }
     }
 
     next();
