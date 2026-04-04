@@ -4682,6 +4682,43 @@ function normalizePublicDeckAssetUrl(rawValue, options = {}) {
     return `/${normalized}`;
   }
 
+  if (
+    normalized === FLASHCARD_CAMERA_OBJECT_KEY
+    || normalized.startsWith(`${FLASHCARDS_R2_PREFIX}/`)
+    || normalized.startsWith('FlashCards/')
+  ) {
+    return buildFlashcardsR2PublicUrl(normalized);
+  }
+
+  const remoteDeck = options?.remoteDeck && typeof options.remoteDeck === 'object'
+    ? options.remoteDeck
+    : null;
+  const kind = String(options?.kind || '').trim().toLowerCase();
+  if (remoteDeck) {
+    if (/^imagens\//i.test(normalized) && remoteDeck.imagesFolder) {
+      const relativePath = normalized.replace(/^imagens\/+/i, '');
+      if (relativePath) {
+        return buildFlashcardsR2PublicUrl(path.posix.join(remoteDeck.imagesFolder, relativePath));
+      }
+    }
+
+    if (/^audio\//i.test(normalized) && remoteDeck.audioFolder) {
+      const relativePath = normalized.replace(/^audio\/+/i, '');
+      if (relativePath) {
+        return buildFlashcardsR2PublicUrl(path.posix.join(remoteDeck.audioFolder, relativePath));
+      }
+    }
+
+    if (!normalized.includes('/')) {
+      const targetFolder = kind === 'audio'
+        ? remoteDeck.audioFolder
+        : remoteDeck.imagesFolder;
+      if (targetFolder) {
+        return buildFlashcardsR2PublicUrl(path.posix.join(targetFolder, normalized));
+      }
+    }
+  }
+
   const dayKey = normalizeLevelFolderKey(options?.dayKey || '');
   if (dayKey) {
     const fileName = path.posix.basename(normalized);
@@ -4708,6 +4745,10 @@ function repairPublicDeckPayloadAssets(payload, deckRow) {
   }
 
   const dayKey = normalizeLevelFolderKey(deckRow?.day_key || '');
+  const remoteDeck = buildFlashcardsRemoteDeckInfo(
+    sourcePayload,
+    normalizePublicFlashcardDeckFileName(deckRow?.file_name, 'deck.json')
+  );
   let changed = false;
   const items = getFlashcardPayloadItems(sourcePayload);
 
@@ -4715,14 +4756,14 @@ function repairPublicDeckPayloadAssets(payload, deckRow) {
     if (!item || typeof item !== 'object') continue;
 
     const currentImage = readFlashcardItemImage(item);
-    const nextImage = normalizePublicDeckAssetUrl(currentImage, { dayKey, kind: 'image' });
+    const nextImage = normalizePublicDeckAssetUrl(currentImage, { dayKey, kind: 'image', remoteDeck });
     if (nextImage && nextImage !== currentImage) {
       setFlashcardItemImage(item, nextImage);
       changed = true;
     }
 
     const currentAudio = readFlashcardItemAudio(item);
-    const nextAudio = normalizePublicDeckAssetUrl(currentAudio, { dayKey, kind: 'audio' });
+    const nextAudio = normalizePublicDeckAssetUrl(currentAudio, { dayKey, kind: 'audio', remoteDeck });
     if (nextAudio && nextAudio !== currentAudio) {
       setFlashcardItemAudio(item, nextAudio);
       changed = true;
@@ -4730,7 +4771,11 @@ function repairPublicDeckPayloadAssets(payload, deckRow) {
   }
 
   if (typeof sourcePayload.coverImage === 'string') {
-    const nextCover = normalizePublicDeckAssetUrl(sourcePayload.coverImage, { dayKey, kind: 'image' });
+    const nextCover = normalizePublicDeckAssetUrl(sourcePayload.coverImage, {
+      dayKey,
+      kind: 'image',
+      remoteDeck
+    });
     if (nextCover && nextCover !== sourcePayload.coverImage) {
       sourcePayload.coverImage = nextCover;
       changed = true;
