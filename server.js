@@ -4480,6 +4480,25 @@ function repairPublicDeckPayloadAssets(payload, deckRow) {
   };
 }
 
+function resolvePublishedLevelAssetUrl(rawValue, assetUrlMap) {
+  const text = String(rawValue || '').trim();
+  if (!text) return '';
+
+  if (/^https?:\/\//i.test(text)) {
+    return text;
+  }
+
+  const normalized = text.replace(/\\/g, '/').trim();
+  if (!normalized) return '';
+
+  if (/^\/?(?:api\/r2-media\/|admin\/|accesskey\/|Niveis\/|allcards\/)/i.test(normalized)) {
+    return normalized.startsWith('/') ? normalized : `/${normalized}`;
+  }
+
+  const fileName = path.basename(normalized);
+  return fileName ? (assetUrlMap.get(fileName) || '') : '';
+}
+
 function resolveAdminFlashcardSourceInfo(sourceValue) {
   const normalized = normalizeMirroredRelativePath(sourceValue);
   if (!normalized) {
@@ -11854,12 +11873,12 @@ app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), as
       coverImage: typeof jsonPayload?.coverImage === 'string' ? jsonPayload.coverImage.trim() : '',
       items: items
         .map((item) => {
-          const imageFileName = path.basename(String(item?.imagem || item?.image || '').trim());
-          const audioFileName = path.basename(String(item?.audio || item?.audioUrl || '').trim());
+          const imageValue = readFlashcardItemImage(item);
+          const audioValue = readFlashcardItemAudio(item);
           return {
             ...item,
-            imagem: imageFileName ? (assetUrlMap.get(imageFileName) || '') : '',
-            audio: audioFileName ? (assetUrlMap.get(audioFileName) || '') : ''
+            imagem: resolvePublishedLevelAssetUrl(imageValue, assetUrlMap),
+            audio: resolvePublishedLevelAssetUrl(audioValue, assetUrlMap)
           };
         })
         .filter((item) => item.imagem && readFlashcardItemPortuguese(item) && readFlashcardItemEnglish(item))
