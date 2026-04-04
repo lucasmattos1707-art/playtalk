@@ -1433,7 +1433,12 @@ const normalizeAdminUsername = (value) => String(value || '').trim().toLowerCase
 
 const isAdminUsername = (value) => FLASHCARD_ADMIN_USERNAMES.has(normalizeAdminUsername(value));
 
-const isAdminUserRecord = (user) => isAdminUsername(user?.email || user?.username);
+const isAdminUserRecord = (user) => {
+  const username = normalizeAdminUsername(user?.username);
+  const email = normalizeAdminUsername(user?.email);
+  const emailLocalPart = email.includes('@') ? email.split('@')[0] : email;
+  return isAdminUsername(username) || isAdminUsername(email) || isAdminUsername(emailLocalPart);
+};
 
 const buildPublicUsersVisibilityWhereClause = (requesterIsAdmin = false, usernameColumn = `COALESCE(NULLIF(u.username, ''), u.email)`) => {
   if (requesterIsAdmin) return '';
