@@ -24,6 +24,11 @@
     isAdmin: false,
     cards: [],
     decks: [],
+    adminExpandedSource: '',
+    adminPromptBySource: Object.create(null),
+    adminPreviewBySource: Object.create(null),
+    adminBusyBySource: Object.create(null),
+    adminStatusBySource: Object.create(null),
     showPercent: false,
     refreshTimer: 0,
     swapTimer: 0
@@ -195,6 +200,96 @@
     return `${normalized} FlashCard${normalized === 1 ? '' : 's'}`;
   }
 
+  function normalizeDeckSource(value) {
+    return safeText(value).toLowerCase();
+  }
+
+  function sortDecks() {
+    state.decks = Array.isArray(state.decks) ? state.decks.slice() : [];
+    state.decks.sort((left, right) => String(left?.title || '').localeCompare(String(right?.title || ''), 'pt-BR', {
+      sensitivity: 'base',
+      numeric: true
+    }));
+  }
+
+  function findDeckIndexBySource(source) {
+    const normalizedSource = normalizeDeckSource(source);
+    if (!normalizedSource) return -1;
+    return state.decks.findIndex((deck) => normalizeDeckSource(deck?.source) === normalizedSource);
+  }
+
+  function buildDefaultDeckPrompt(deck) {
+    const title = safeText(deck?.title) || 'Deck';
+    return `Create a premium square 1:1 cover image for a language-learning flashcard deck titled "${title}". No text, no logo, no watermark.`;
+  }
+
+  function readDeckPrompt(source, fallbackDeck) {
+    const normalizedSource = normalizeDeckSource(source || fallbackDeck?.source);
+    if (!normalizedSource) return '';
+    const cachedPrompt = safeText(state.adminPromptBySource[normalizedSource]);
+    if (cachedPrompt) return cachedPrompt;
+    const defaultPrompt = buildDefaultDeckPrompt(fallbackDeck || {});
+    state.adminPromptBySource[normalizedSource] = defaultPrompt;
+    return defaultPrompt;
+  }
+
+  function upsertDeckFromServer(deckPayload) {
+    const source = safeText(deckPayload?.source);
+    if (!source) return null;
+    const mergedDeck = {
+      source,
+      title: safeText(deckPayload?.title) || 'Deck',
+      count: Math.max(0, Number.parseInt(deckPayload?.count, 10) || 0),
+      coverImage: safeText(deckPayload?.coverImage),
+      isHidden: Boolean(deckPayload?.isHidden)
+    };
+    const deckIndex = findDeckIndexBySource(source);
+    if (deckIndex >= 0) {
+      state.decks[deckIndex] = { ...state.decks[deckIndex], ...mergedDeck };
+    } else {
+      state.decks.push(mergedDeck);
+    }
+    sortDecks();
+    return mergedDeck;
+  }
+
+  function setDeckStatus(source, value) {
+    const normalizedSource = normalizeDeckSource(source);
+    if (!normalizedSource) return;
+    const nextValue = safeText(value);
+    if (!nextValue) {
+      delete state.adminStatusBySource[normalizedSource];
+      return;
+    }
+    state.adminStatusBySource[normalizedSource] = nextValue;
+  }
+
+  function setDeckBusy(source, busy) {
+    const normalizedSource = normalizeDeckSource(source);
+    if (!normalizedSource) return;
+    if (busy) {
+      state.adminBusyBySource[normalizedSource] = true;
+      return;
+    }
+    delete state.adminBusyBySource[normalizedSource];
+  }
+
+  function resolveAdminDeckPreview(source) {
+    return safeText(state.adminPreviewBySource[normalizeDeckSource(source)]);
+  }
+
+  function resolveAdminDeckStatus(deck) {
+    const source = normalizeDeckSource(deck?.source);
+    const statusTextValue = safeText(state.adminStatusBySource[source]);
+    if (statusTextValue) return statusTextValue;
+    if (deck?.isHidden) return 'Oculto para jogadores.';
+    return '';
+  }
+
+  function isDeckBusy(source) {
+    return Boolean(state.adminBusyBySource[normalizeDeckSource(source)]);
+  }
+
   function hydrateCards(progressMap) {
     const cache = readCardsCache();
     const cardMap = new Map(cache.map((card) => [safeText(card?.id), card]));
@@ -352,7 +447,9 @@
         return {
           source: sourceKey,
           title,
-          count
+          count,
+          coverImage: safeText(file?.coverImage),
+          isHidden: Boolean(file?.isHidden)
         };
       })
       .filter((deck) => safeText(deck.source))
@@ -403,8 +500,12 @@
   function updateSummary() {
     if (state.isAdmin) {
       const totalDecks = Array.isArray(state.decks) ? state.decks.length : 0;
+      const hiddenDecks = Array.isArray(state.decks)
+        ? state.decks.filter((deck) => Boolean(deck?.isHidden)).length
+        : 0;
       if (els.total) {
-        els.total.textContent = `${totalDecks} Deck${totalDecks === 1 ? '' : 's'} disponiveis`;
+        const hiddenSuffix = hiddenDecks > 0 ? ` (${hiddenDecks} oculto${hiddenDecks === 1 ? '' : 's'})` : '';
+        els.total.textContent = `${totalDecks} Deck${totalDecks === 1 ? '' : 's'} disponiveis${hiddenSuffix}`;
       }
       return;
     }
@@ -413,6 +514,82 @@
     if (els.total) {
       els.total.textContent = `${totalCards} FlashCards`;
     }
+  }
+
+  function renderEyeSlashIcon() {
+    return `
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M3.3 2.3 2 3.6l3.1 3.1A12.45 12.45 0 0 0 1 12s3.8 7 11 7c2.2 0 4.1-.6 5.7-1.5l3 3 1.3-1.3L3.3 2.3Zm8.7 6.3 3.3 3.3a4 4 0 0 1-4.7-4.7L12 8.6Zm0 8.4c-5.2 0-8.2-4.5-8.7-5 .3-.6 1.5-2.4 3.5-3.7l1.5 1.5a4 4 0 0 0 5.4 5.4l1.7 1.7a8.47 8.47 0 0 1-3.4.1Zm10-5c-.4.8-1.7 2.9-3.9 4.2l-1.5-1.5a4 4 0 0 0-5.5-5.5L9.6 7.7c.8-.4 1.5-.7 2.4-.7 5.2 0 8.2 4.5 8.7 5Z"/>
+      </svg>
+    `;
+  }
+
+  function renderMagicWandIcon() {
+    return `
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M14.6 3.2 13 6.7 9.4 8.3 13 9.9l1.6 3.5 1.6-3.5 3.5-1.6-3.5-1.6-1.6-3.5Zm-9.2 10L3.2 17l3.8-2.2L9.2 11l2.2 3.8 3.8 2.2-3.8 2.2L9.2 23l-2.2-3.8L3.2 17l2.2-3.8ZM16.2 11l-1.2 1.2 2.6 2.6-6.8 6.8L9.6 20l6.8-6.8L19 15.8l1.2-1.2-4-3.6Z"/>
+      </svg>
+    `;
+  }
+
+  function resolveDeckDisplayImage(deck) {
+    const preview = resolveAdminDeckPreview(deck?.source);
+    if (preview) return preview;
+    return safeText(deck?.coverImage);
+  }
+
+  function renderAdminDeckCard(deck) {
+    const source = safeText(deck?.source);
+    const sourceKey = normalizeDeckSource(source);
+    const expanded = normalizeDeckSource(state.adminExpandedSource) === sourceKey;
+    const busy = isDeckBusy(source);
+    const isHidden = Boolean(deck?.isHidden);
+    const prompt = readDeckPrompt(source, deck);
+    const promptId = `deck-cover-prompt-${slug(sourceKey || deck?.title || 'deck')}`;
+    const preview = resolveAdminDeckPreview(source);
+    const imageUrl = resolveDeckDisplayImage(deck);
+    const status = resolveAdminDeckStatus(deck);
+    const visibilityLabel = isHidden ? 'Mostrar album' : 'Ocultar album';
+    const visibilityClass = isHidden ? 'is-active' : '';
+    const canApprove = Boolean(preview) && !busy;
+
+    return `
+      <article class="allcards-card ${isHidden ? 'is-hidden-deck' : ''}" role="listitem" data-deck-source="${escapeHtml(source)}">
+        <div class="allcards-card__admin-head">
+          <p class="allcards-card__status">${escapeHtml(deck.title)}</p>
+          <div class="allcards-card__admin-actions">
+            <button type="button" class="allcards-admin-btn ${visibilityClass}" data-action="toggle-hidden" data-source="${escapeHtml(source)}" title="${escapeHtml(visibilityLabel)}" ${busy ? 'disabled' : ''}>
+              ${renderEyeSlashIcon()}
+            </button>
+            <button type="button" class="allcards-admin-btn ${expanded ? 'is-active' : ''}" data-action="toggle-cover-panel" data-source="${escapeHtml(source)}" title="Gerar capa IA" ${busy ? 'disabled' : ''}>
+              ${renderMagicWandIcon()}
+            </button>
+          </div>
+        </div>
+        <div class="allcards-card__frame">
+          <div class="allcards-card__image">
+            ${imageUrl
+              ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(deck.title)}">`
+              : `<div class="allcards-card__fallback">${escapeHtml(deck.title)}</div>`}
+          </div>
+        </div>
+        <p class="allcards-card__status">${escapeHtml(deckCountLabel(deck.count))}</p>
+        ${expanded ? `
+          <div class="allcards-card__admin-panel">
+            <label class="allcards-card__admin-label" for="${escapeHtml(promptId)}">Prompt da capa</label>
+            <input id="${escapeHtml(promptId)}" class="allcards-card__admin-input" type="text" value="${escapeHtml(prompt)}" data-action="cover-prompt" data-source="${escapeHtml(source)}" placeholder="Descreva a capa 1x1 do deck" ${busy ? 'disabled' : ''}>
+            <div class="allcards-card__admin-row">
+              <button type="button" class="allcards-card__admin-submit" data-action="generate-cover" data-source="${escapeHtml(source)}" ${busy ? 'disabled' : ''}>${busy ? 'Gerando...' : 'Gerar nova'}</button>
+              <button type="button" class="allcards-card__admin-submit is-secondary" data-action="approve-cover" data-source="${escapeHtml(source)}" ${canApprove ? '' : 'disabled'}>Aprovar</button>
+            </div>
+            ${status ? `<p class="allcards-card__admin-status">${escapeHtml(status)}</p>` : ''}
+          </div>
+        ` : ''}
+        <div class="allcards-card__progress" aria-hidden="true">
+          <span style="width:100%"></span>
+        </div>
+      </article>
+    `;
   }
 
   function renderCards() {
@@ -427,20 +604,7 @@
       }
 
       els.empty.hidden = true;
-      els.grid.innerHTML = state.decks.map((deck) => `
-        <article class="allcards-card" role="listitem">
-          <div class="allcards-card__frame">
-            <div class="allcards-card__image">
-              <div class="allcards-card__fallback">${escapeHtml(deck.title)}</div>
-            </div>
-          </div>
-          <p class="allcards-card__status">${escapeHtml(deck.title)}</p>
-          <p class="allcards-card__status">${escapeHtml(deckCountLabel(deck.count))}</p>
-          <div class="allcards-card__progress" aria-hidden="true">
-            <span style="width:100%"></span>
-          </div>
-        </article>
-      `).join('');
+      els.grid.innerHTML = state.decks.map((deck) => renderAdminDeckCard(deck)).join('');
       return;
     }
 
@@ -471,6 +635,171 @@
         </article>
       `;
     }).join('');
+  }
+
+  async function postAdminDeckAction(path, body, fallbackMessage) {
+    const response = await fetch(buildApiUrl(path), {
+      method: 'POST',
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+      credentials: 'include',
+      body: JSON.stringify(body || {})
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success) {
+      throw new Error(payload?.message || fallbackMessage || 'Nao foi possivel concluir a acao.');
+    }
+    return payload;
+  }
+
+  async function toggleDeckVisibility(source) {
+    const deckIndex = findDeckIndexBySource(source);
+    const currentDeck = deckIndex >= 0 ? state.decks[deckIndex] : null;
+    if (!currentDeck) return;
+
+    const nextHidden = !Boolean(currentDeck.isHidden);
+    setDeckBusy(source, true);
+    setDeckStatus(source, nextHidden ? 'Ocultando para jogadores...' : 'Reativando para jogadores...');
+    renderCards();
+    try {
+      const payload = await postAdminDeckAction(
+        '/api/admin/flashcards/public-decks/visibility',
+        { source, hidden: nextHidden },
+        'Falha ao atualizar visibilidade do deck.'
+      );
+      upsertDeckFromServer(payload?.deck);
+      setDeckStatus(source, nextHidden ? 'Deck oculto para jogadores.' : 'Deck visivel para jogadores.');
+      updateSummary();
+    } catch (error) {
+      setDeckStatus(source, error?.message || 'Falha ao atualizar visibilidade.');
+    } finally {
+      setDeckBusy(source, false);
+      renderCards();
+    }
+  }
+
+  async function generateDeckCover(source) {
+    const deckIndex = findDeckIndexBySource(source);
+    const deck = deckIndex >= 0 ? state.decks[deckIndex] : null;
+    if (!deck) return;
+
+    const prompt = safeText(readDeckPrompt(source, deck));
+    if (!prompt) {
+      setDeckStatus(source, 'Digite um prompt antes de gerar a capa.');
+      renderCards();
+      return;
+    }
+
+    setDeckBusy(source, true);
+    setDeckStatus(source, 'Gerando capa com OpenAI...');
+    renderCards();
+    try {
+      const payload = await postAdminDeckAction(
+        '/api/admin/flashcards/public-decks/generate-cover',
+        { source, prompt },
+        'Falha ao gerar capa com OpenAI.'
+      );
+      if (payload?.deck) {
+        upsertDeckFromServer(payload.deck);
+      }
+      const previewDataUrl = safeText(payload?.dataUrl);
+      if (!previewDataUrl) {
+        throw new Error('A OpenAI nao retornou uma imagem valida.');
+      }
+      state.adminPreviewBySource[normalizeDeckSource(source)] = previewDataUrl;
+      setDeckStatus(source, 'Previa pronta. Toque em Aprovar para publicar.');
+    } catch (error) {
+      setDeckStatus(source, error?.message || 'Falha ao gerar a capa.');
+    } finally {
+      setDeckBusy(source, false);
+      renderCards();
+    }
+  }
+
+  async function approveDeckCover(source) {
+    const normalizedSource = normalizeDeckSource(source);
+    const previewDataUrl = safeText(state.adminPreviewBySource[normalizedSource]);
+    if (!previewDataUrl) {
+      setDeckStatus(source, 'Gere uma previa antes de aprovar.');
+      renderCards();
+      return;
+    }
+
+    setDeckBusy(source, true);
+    setDeckStatus(source, 'Publicando capa no deck...');
+    renderCards();
+    try {
+      const payload = await postAdminDeckAction(
+        '/api/admin/flashcards/public-decks/approve-cover',
+        { source, imageDataUrl: previewDataUrl },
+        'Falha ao aprovar capa do deck.'
+      );
+      if (payload?.deck) {
+        upsertDeckFromServer(payload.deck);
+      }
+      delete state.adminPreviewBySource[normalizedSource];
+      setDeckStatus(source, 'Capa aprovada e publicada com sucesso.');
+    } catch (error) {
+      setDeckStatus(source, error?.message || 'Falha ao aprovar capa.');
+    } finally {
+      setDeckBusy(source, false);
+      renderCards();
+    }
+  }
+
+  function bindAdminGridEvents() {
+    if (!els.grid || els.grid.dataset.adminDeckBound === '1') return;
+
+    els.grid.addEventListener('input', (event) => {
+      if (!state.isAdmin) return;
+      const input = event.target.closest('[data-action="cover-prompt"]');
+      if (!input) return;
+      const source = safeText(input.dataset.source);
+      if (!source) return;
+      state.adminPromptBySource[normalizeDeckSource(source)] = safeText(input.value);
+    });
+
+    els.grid.addEventListener('click', async (event) => {
+      if (!state.isAdmin) return;
+      const button = event.target.closest('[data-action]');
+      if (!button) return;
+
+      const action = safeText(button.dataset.action);
+      const source = safeText(button.dataset.source);
+      if (!source || !action) return;
+      if (isDeckBusy(source)) return;
+
+      if (action === 'toggle-hidden') {
+        event.preventDefault();
+        await toggleDeckVisibility(source);
+        return;
+      }
+
+      if (action === 'toggle-cover-panel') {
+        event.preventDefault();
+        const normalizedSource = normalizeDeckSource(source);
+        state.adminExpandedSource = normalizeDeckSource(state.adminExpandedSource) === normalizedSource
+          ? ''
+          : source;
+        if (state.adminExpandedSource) {
+          readDeckPrompt(source, state.decks[findDeckIndexBySource(source)] || null);
+        }
+        renderCards();
+        return;
+      }
+
+      if (action === 'generate-cover') {
+        event.preventDefault();
+        await generateDeckCover(source);
+        return;
+      }
+
+      if (action === 'approve-cover') {
+        event.preventDefault();
+        await approveDeckCover(source);
+      }
+    });
+
+    els.grid.dataset.adminDeckBound = '1';
   }
 
   async function resolveSessionInfo() {
@@ -551,9 +880,11 @@
     state.isAdmin = session.isAdmin;
 
     if (state.isAdmin) {
+      bindAdminGridEvents();
       await backfillPublicDecksForAdmin();
       try {
         state.decks = await fetchRemoteDeckCatalog();
+        sortDecks();
       } catch (_error) {
         state.decks = [];
       }

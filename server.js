@@ -2902,6 +2902,20 @@ function isFlashcardMagicImageSlotValue(rawValue) {
   return isFlashcardPlaceholderImageValue(trimmed);
 }
 
+function normalizeFlashcardImageSource(rawValue) {
+  const trimmed = String(rawValue || '').trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const parsedUrl = new URL(trimmed);
+      return String(parsedUrl.pathname || '').replace(/^\/+/g, '');
+    } catch (_error) {
+      return trimmed.replace(/^\/+/g, '');
+    }
+  }
+  return trimmed.replace(/^\/+/g, '');
+}
+
 function buildMagicFlashcardImagePrompt(target) {
   const english = String(target?.english || '').trim();
   const portuguese = String(target?.portuguese || '').trim();
@@ -3303,6 +3317,7 @@ function buildPublicFlashcardDeckManifestEntryFromRow(row) {
   }
 
   const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+  const coverImage = typeof payload?.coverImage === 'string' ? payload.coverImage.trim() : '';
   const title = String(row?.title || '').trim()
     || String(payload?.title || '').trim()
     || fileName;
@@ -3320,6 +3335,8 @@ function buildPublicFlashcardDeckManifestEntryFromRow(row) {
     path: `/allcards/${encodeURIComponent(fileName)}`,
     size: Buffer.byteLength(JSON.stringify(payload), 'utf8'),
     count,
+    coverImage,
+    isHidden: Boolean(row?.is_hidden),
     updatedAt: row?.updated_at || null
   };
 }
@@ -3349,6 +3366,18 @@ async function ensurePublicFlashcardDecksTable() {
       await pool.query(`
         CREATE INDEX IF NOT EXISTS flashcards_public_decks_title_idx
         ON public.flashcards_public_decks (lower(title))
+      `);
+      await pool.query(`
+        ALTER TABLE public.flashcards_public_decks
+        ADD COLUMN IF NOT EXISTS is_hidden boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
+        ALTER TABLE public.flashcards_public_decks
+        ADD COLUMN IF NOT EXISTS hidden_at timestamptz
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS flashcards_public_decks_hidden_idx
+        ON public.flashcards_public_decks (is_hidden, updated_at DESC)
       `);
     })().catch((error) => {
       publicFlashcardDecksTableReadyPromise = null;
@@ -3515,7 +3544,7 @@ async function collectPostgresFlashcardManifestEntries() {
     await seedPublicFlashcardDecksFromAllcards();
 
     const result = await pool.query(
-      `SELECT file_name, title, item_count, payload, updated_at
+      `SELECT file_name, title, item_count, payload, is_hidden, updated_at
        FROM public.flashcards_public_decks
        ORDER BY lower(title) ASC, updated_at DESC`
     );
@@ -3559,6 +3588,139 @@ async function findPostgresFlashcardDeckPayloadByFileName(fileName) {
   return payload && typeof payload === 'object' && !Array.isArray(payload)
     ? payload
     : null;
+}
+
+function normalizePublicDeckSourceToFileName(sourceValue) {
+  const raw = String(sourceValue || '').trim();
+  if (!raw) return '';
+
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const parsed = new URL(raw);
+      const pathName = decodeURIComponent(String(parsed.pathname || ''));
+      const normalizedPath = pathName.replace(/^\/+/, '');
+      if (!normalizedPath.toLowerCase().startsWith('allcards/')) return '';
+      return normalizePublicFlashcardDeckFileName(path.posix.basename(normalizedPath), '');
+    } catch (_error) {
+      return '';
+    }
+  }
+
+  const normalizedPath = raw.replace(/^\/+/, '');
+  if (!normalizedPath.toLowerCase().startsWith('allcards/')) return '';
+  return normalizePublicFlashcardDeckFileName(path.posix.basename(normalizedPath), '');
+}
+
+async function findPublicFlashcardDeckRowByFileName(fileName) {
+  if (!pool) return null;
+  await ensurePublicFlashcardDecksTable();
+
+  const normalizedFileName = normalizePublicFlashcardDeckFileName(fileName, '');
+  if (!normalizedFileName || path.extname(normalizedFileName).toLowerCase() !== '.json') {
+    return null;
+  }
+
+  const result = await pool.query(
+    `SELECT id, deck_key, file_name, source, title, item_count, payload, is_hidden, updated_at
+     FROM public.flashcards_public_decks
+     WHERE file_name = $1
+     LIMIT 1`,
+    [normalizedFileName]
+  );
+
+  return result.rows[0] || null;
+}
+
+function deriveDeckCoverStorageContext(deckRow) {
+  const payload = deckRow?.payload && typeof deckRow.payload === 'object' ? deckRow.payload : {};
+  const fileName = normalizePublicFlashcardDeckFileName(deckRow?.file_name, 'deck.json');
+  const title = String(deckRow?.title || payload?.title || path.posix.basename(fileName, '.json')).trim();
+  const defaultDeckFolder = normalizeFlashcardsDeckSegment(title || path.posix.basename(fileName, '.json'), 'Deck');
+  const defaultImagesFolder = `${FLASHCARDS_R2_PREFIX}/${defaultDeckFolder}/imagens`;
+  const items = getFlashcardPayloadItems(payload);
+
+  for (const item of items) {
+    const imageValue = readFlashcardItemImage(item);
+    const normalizedImageSource = normalizeFlashcardImageSource(imageValue);
+    if (!normalizedImageSource) continue;
+
+    const lower = normalizedImageSource.toLowerCase();
+    const marker = '/imagens/';
+    const markerIndex = lower.indexOf(marker);
+    if (markerIndex > 0) {
+      const folder = normalizedImageSource.slice(0, markerIndex + marker.length - 1).replace(/^\/+/, '');
+      if (folder && folder.includes('/')) {
+        return {
+          imagesFolder: folder,
+          coverFileName: `${sanitizeFlashcardsFileBase(title || defaultDeckFolder, defaultDeckFolder)}_cover.webp`
+        };
+      }
+    }
+  }
+
+  return {
+    imagesFolder: defaultImagesFolder,
+    coverFileName: `${sanitizeFlashcardsFileBase(title || defaultDeckFolder, defaultDeckFolder)}_cover.webp`
+  };
+}
+
+async function generateFlashcardDeckCoverWithOpenAi(prompt) {
+  const promptText = String(prompt || '').trim();
+  if (!promptText) {
+    const error = new Error('Digite um prompt para gerar a capa do deck.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
+    const error = new Error('OpenAI nao configurado.');
+    error.statusCode = 503;
+    error.instructions = 'Preencha OPENAI_API_KEY no .env com a chave real da OpenAI.';
+    throw error;
+  }
+
+  const upstreamResponse = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: OPENAI_IMAGE_MODEL,
+      prompt: promptText,
+      size: '1024x1024',
+      quality: 'medium',
+      output_format: 'webp'
+    })
+  });
+
+  const responseText = await upstreamResponse.text();
+  let payload = null;
+  try {
+    payload = responseText ? JSON.parse(responseText) : null;
+  } catch (_error) {
+    payload = null;
+  }
+
+  if (!upstreamResponse.ok) {
+    const error = new Error(payload?.error?.message || responseText.slice(0, 500) || 'Falha ao gerar capa na OpenAI.');
+    error.statusCode = upstreamResponse.status;
+    throw error;
+  }
+
+  const image = Array.isArray(payload?.data) ? payload.data[0] : null;
+  const b64 = String(image?.b64_json || '').trim();
+  if (!b64) {
+    const error = new Error('A OpenAI nao retornou imagem em base64 para a capa.');
+    error.statusCode = 502;
+    throw error;
+  }
+
+  return {
+    mimeType: 'image/webp',
+    buffer: Buffer.from(b64, 'base64'),
+    usage: payload?.usage || null,
+    model: OPENAI_IMAGE_MODEL
+  };
 }
 
 function normalizeSpeakingStoryCardItem({ item, storyName = 'story', index = 0 }) {
@@ -6976,8 +7138,181 @@ app.post('/api/admin/flashcards/backfill-public-decks', express.json({ limit: '2
   }
 });
 
+app.post('/api/admin/flashcards/public-decks/visibility', express.json({ limit: '256kb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await seedPublicFlashcardDecksFromAllcards();
+    const fileName = normalizePublicDeckSourceToFileName(req.body?.source);
+    if (!fileName) {
+      res.status(400).json({ success: false, message: 'Origem do deck invalida.' });
+      return;
+    }
+
+    const hidden = req.body?.hidden === true;
+    const result = await pool.query(
+      `UPDATE public.flashcards_public_decks
+       SET is_hidden = $2,
+           hidden_at = CASE WHEN $2 THEN now() ELSE NULL END,
+           updated_at = now()
+       WHERE file_name = $1
+       RETURNING file_name, title, item_count, payload, is_hidden, updated_at`,
+      [fileName, hidden]
+    );
+
+    if (!result.rows.length) {
+      res.status(404).json({ success: false, message: 'Deck nao encontrado no Postgres.' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      deck: buildPublicFlashcardDeckManifestEntryFromRow(result.rows[0] || null)
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao atualizar a visibilidade do deck.'
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/public-decks/generate-cover', express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await seedPublicFlashcardDecksFromAllcards();
+    const fileName = normalizePublicDeckSourceToFileName(req.body?.source);
+    if (!fileName) {
+      res.status(400).json({ success: false, message: 'Origem do deck invalida.' });
+      return;
+    }
+
+    const deckRow = await findPublicFlashcardDeckRowByFileName(fileName);
+    if (!deckRow) {
+      res.status(404).json({ success: false, message: 'Deck nao encontrado no Postgres.' });
+      return;
+    }
+
+    const userPrompt = String(req.body?.prompt || '').trim();
+    if (!userPrompt) {
+      res.status(400).json({ success: false, message: 'Digite um prompt para gerar a capa.' });
+      return;
+    }
+
+    const prompt = [
+      userPrompt,
+      'Create a square 1:1 cover image for a language-learning flashcard deck.',
+      'No text, no logos, no watermark, no letters, no labels.',
+      'Cinematic, premium visual style, clean composition, centered subject.'
+    ].join(' ');
+
+    const generated = await generateFlashcardDeckCoverWithOpenAi(prompt);
+    res.json({
+      success: true,
+      model: generated.model || OPENAI_IMAGE_MODEL,
+      usage: generated.usage || null,
+      dataUrl: `data:${generated.mimeType || 'image/webp'};base64,${generated.buffer.toString('base64')}`,
+      deck: buildPublicFlashcardDeckManifestEntryFromRow(deckRow)
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao gerar capa com OpenAI.',
+      ...(error.instructions ? { instructions: error.instructions } : {})
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/public-decks/approve-cover', express.json({ limit: '15mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    if (!isR2FluencyConfigured()) {
+      res.status(503).json({ success: false, message: 'R2 nao configurado para salvar a capa.' });
+      return;
+    }
+
+    await seedPublicFlashcardDecksFromAllcards();
+    const fileName = normalizePublicDeckSourceToFileName(req.body?.source);
+    if (!fileName) {
+      res.status(400).json({ success: false, message: 'Origem do deck invalida.' });
+      return;
+    }
+
+    const deckRow = await findPublicFlashcardDeckRowByFileName(fileName);
+    if (!deckRow) {
+      res.status(404).json({ success: false, message: 'Deck nao encontrado no Postgres.' });
+      return;
+    }
+
+    const imageDataUrl = String(req.body?.imageDataUrl || '').trim();
+    const parsedImage = parseBase64DataUrl(imageDataUrl);
+    if (!parsedImage?.buffer?.length) {
+      res.status(400).json({ success: false, message: 'Imagem da capa invalida.' });
+      return;
+    }
+
+    const optimizedBuffer = await sharp(parsedImage.buffer)
+      .resize(1024, 1024, { fit: 'cover', position: 'centre' })
+      .webp({ quality: 82, effort: 5, smartSubsample: true })
+      .toBuffer();
+
+    if (!optimizedBuffer?.length) {
+      res.status(422).json({ success: false, message: 'Nao foi possivel otimizar a capa para WebP.' });
+      return;
+    }
+
+    const storageContext = deriveDeckCoverStorageContext(deckRow);
+    const coverObjectKey = `${storageContext.imagesFolder}/${storageContext.coverFileName}`.replace(/\/+/g, '/');
+    await putR2Object(coverObjectKey, optimizedBuffer, 'image/webp');
+    const coverPublicUrl = buildFlashcardsR2PublicUrl(coverObjectKey);
+
+    const payload = deckRow?.payload && typeof deckRow.payload === 'object' ? deckRow.payload : {};
+    const nextPayload = {
+      ...payload,
+      coverImage: coverPublicUrl
+    };
+    const nextItemCount = getFlashcardPayloadItems(nextPayload).length;
+
+    const updateResult = await pool.query(
+      `UPDATE public.flashcards_public_decks
+       SET payload = $2::jsonb,
+           item_count = $3,
+           updated_at = now()
+       WHERE id = $1
+       RETURNING file_name, title, item_count, payload, is_hidden, updated_at`,
+      [deckRow.id, JSON.stringify(nextPayload), nextItemCount]
+    );
+
+    res.json({
+      success: true,
+      coverImage: coverPublicUrl,
+      deck: buildPublicFlashcardDeckManifestEntryFromRow(updateResult.rows[0] || null)
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao aprovar a capa do deck.'
+    });
+  }
+});
+
 app.get('/api/flashcards/manifest', async (req, res) => {
   try {
+    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
+    const requesterIsAdmin = isAdminUserRecord(authUser);
     const [localFiles, postgresFiles] = await Promise.all([
       collectAllcardsManifestEntries(),
       collectPostgresFlashcardManifestEntries()
@@ -6988,12 +7323,14 @@ app.get('/api/flashcards/manifest', async (req, res) => {
       if (!sourceKey) return;
       mergedBySource.set(sourceKey, entry);
     });
-    const files = Array.from(mergedBySource.values()).sort((left, right) => (
-      String(left?.title || '').localeCompare(String(right?.title || ''), 'pt-BR', {
-        sensitivity: 'base',
-        numeric: true
-      })
-    ));
+    const files = Array.from(mergedBySource.values())
+      .filter((entry) => requesterIsAdmin || !Boolean(entry?.isHidden))
+      .sort((left, right) => (
+        String(left?.title || '').localeCompare(String(right?.title || ''), 'pt-BR', {
+          sensitivity: 'base',
+          numeric: true
+        })
+      ));
     res.setHeader('Cache-Control', 'no-store');
     res.json({
       success: true,
@@ -9746,6 +10083,14 @@ app.get(/^\/allcards\/([^/]+\.json)$/i, async (req, res, next) => {
       return;
     }
 
+    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
+    const requesterIsAdmin = isAdminUserRecord(authUser);
+    const publicDeckRow = await findPublicFlashcardDeckRowByFileName(normalizedFileName);
+    if (publicDeckRow?.is_hidden && !requesterIsAdmin) {
+      res.status(404).send('Deck nao encontrado.');
+      return;
+    }
+
     const localDeckPath = path.join(ALLCARDS_ROOT, normalizedFileName);
     try {
       await fs.promises.access(localDeckPath, fs.constants.F_OK);
@@ -9755,7 +10100,9 @@ app.get(/^\/allcards\/([^/]+\.json)$/i, async (req, res, next) => {
       // fallback to Postgres hosted deck
     }
 
-    const payload = await findPostgresFlashcardDeckPayloadByFileName(normalizedFileName);
+    const payload = publicDeckRow?.payload && typeof publicDeckRow.payload === 'object'
+      ? publicDeckRow.payload
+      : await findPostgresFlashcardDeckPayloadByFileName(normalizedFileName);
     if (!payload) {
       next();
       return;

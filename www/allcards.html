@@ -370,6 +370,62 @@
       display: grid;
       gap: 10px;
       justify-items: stretch;
+      transition: opacity 180ms ease;
+    }
+
+    .allcards-card.is-hidden-deck {
+      opacity: 0.5;
+    }
+
+    .allcards-card__admin-head {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .allcards-card__admin-actions {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .allcards-admin-btn {
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      background: rgba(15, 44, 89, 0.68);
+      border-radius: 12px;
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      padding: 0;
+      transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+    }
+
+    .allcards-admin-btn svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+    }
+
+    .allcards-admin-btn:hover {
+      transform: translateY(-1px);
+      background: rgba(34, 87, 162, 0.86);
+      border-color: rgba(255, 255, 255, 0.65);
+    }
+
+    .allcards-admin-btn.is-active {
+      background: rgba(58, 119, 207, 0.9);
+      border-color: rgba(255, 255, 255, 0.85);
+    }
+
+    .allcards-admin-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
     }
 
     .allcards-card__frame {
@@ -442,6 +498,88 @@
       border-radius: inherit;
       background: var(--progress-fill);
       transition: width 220ms ease;
+    }
+
+    .allcards-card__admin-panel {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(13, 44, 90, 0.72);
+      box-shadow: 0 8px 18px rgba(12, 29, 74, 0.25);
+    }
+
+    .allcards-card__admin-label {
+      margin: 0;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.88);
+      font-weight: 800;
+    }
+
+    .allcards-card__admin-input {
+      width: 100%;
+      min-height: 40px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(7, 23, 46, 0.66);
+      color: #ffffff;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      outline: none;
+    }
+
+    .allcards-card__admin-input:focus {
+      border-color: rgba(123, 227, 255, 0.95);
+      box-shadow: 0 0 0 2px rgba(96, 196, 245, 0.2);
+    }
+
+    .allcards-card__admin-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .allcards-card__admin-submit {
+      min-height: 38px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(44, 120, 255, 0.9);
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+    }
+
+    .allcards-card__admin-submit:hover {
+      transform: translateY(-1px);
+      background: rgba(61, 138, 255, 0.95);
+      border-color: rgba(255, 255, 255, 0.75);
+    }
+
+    .allcards-card__admin-submit.is-secondary {
+      background: rgba(21, 73, 142, 0.86);
+    }
+
+    .allcards-card__admin-submit:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .allcards-card__admin-status {
+      margin: 2px 0 0;
+      font-size: 12px;
+      line-height: 1.35;
+      color: rgba(255, 255, 255, 0.92);
+      text-align: left;
+      font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+      font-weight: 700;
     }
 
     .flashcards-footer-nav {
@@ -526,6 +664,12 @@
 
       .banner-admin-controls__status {
         font-size: 12px;
+      }
+
+      .allcards-admin-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
       }
     }
   </style>
