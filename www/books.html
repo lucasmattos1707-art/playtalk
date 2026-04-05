@@ -19,7 +19,7 @@
         radial-gradient(circle at 22% 14%, rgba(255, 255, 255, 0.08), transparent 32%),
         linear-gradient(145deg, #040404 0%, #111111 48%, #2f3237 100%);
       color: #ffffff;
-      font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+      font-family: "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
     }
 
     body {
@@ -49,11 +49,11 @@
       position: sticky;
       top: 0;
       z-index: 50;
-      background: linear-gradient(180deg, rgba(0, 0, 0, 0.96), rgba(0, 0, 0, 0.86));
+      background: rgba(0, 0, 0, 0.02);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 14px;
       padding: 10px;
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(7px);
     }
 
     .books-level-menu.is-admin {
@@ -64,8 +64,16 @@
       margin: 0;
       text-align: center;
       font-size: clamp(20px, 5vw, 30px);
-      font-weight: 800;
-      letter-spacing: 0.02em;
+      font-weight: 300;
+      letter-spacing: 0.01em;
+      transition: opacity 260ms ease, transform 380ms ease, filter 380ms ease;
+      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.34);
+    }
+
+    .books-level-title.is-sliding {
+      opacity: 0.7;
+      filter: blur(1px);
+      transform: translateX(16px);
     }
 
     .books-arrow-btn {
@@ -201,6 +209,7 @@
       position: relative;
       margin-top: 15px;
       touch-action: pan-y;
+      perspective: 1300px;
     }
 
     .books-grid {
@@ -211,6 +220,22 @@
       padding: 0;
       margin: 0;
       will-change: transform;
+      transition: transform 460ms cubic-bezier(0.22, 1, 0.36, 1), opacity 360ms ease, filter 360ms ease;
+      transform: translateX(0);
+      opacity: 1;
+      filter: blur(0);
+    }
+
+    .books-grid.is-level-sliding-out {
+      opacity: 0.18;
+      filter: blur(7px);
+      transform: translateX(-44px);
+    }
+
+    .books-grid.is-level-sliding-in {
+      opacity: 0.42;
+      filter: blur(4px);
+      transform: translateX(44px);
     }
 
     .books-shelf-page {
@@ -235,6 +260,8 @@
       padding: 0;
       background: transparent;
       box-shadow: 0 14px 28px rgba(0, 0, 0, 0.34);
+      transform-origin: center center;
+      transition: transform 260ms ease, box-shadow 260ms ease;
     }
 
     .books-card.is-admin:hover {
@@ -684,16 +711,24 @@
     }
 
     .books-mode-card {
-      width: min(760px, 100%);
-      padding: 18px 16px 22px;
+      width: 100%;
+      min-height: 100dvh;
+      border-radius: 0;
+      border: 0;
+      padding: 28px 16px 30px;
       justify-items: center;
+      align-content: center;
+      background:
+        radial-gradient(circle at 50% 16%, rgba(113, 170, 255, 0.18), transparent 28%),
+        linear-gradient(180deg, rgba(5, 10, 18, 0.98), rgba(3, 6, 12, 0.99));
+      box-shadow: none;
     }
 
     .books-mode-main {
       width: 100%;
       display: grid;
       justify-items: center;
-      gap: 14px;
+      gap: 20px;
       opacity: 1;
       filter: blur(0);
       transition: opacity 2000ms ease, filter 2000ms ease;
@@ -705,14 +740,33 @@
     }
 
     .books-mode-cover {
-      width: min(194px, 51vw);
+      width: min(230px, 52vw);
       aspect-ratio: 9 / 16;
       border-radius: 14px;
       background: linear-gradient(155deg, #2a5bcf, #28a7d5);
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.38);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow:
+        0 26px 44px rgba(0, 0, 0, 0.48),
+        18px 0 24px rgba(0, 0, 0, 0.18);
+      transform: perspective(1300px) rotateY(-16deg) rotateX(7deg) translateY(0);
+      transform-style: preserve-3d;
+      position: relative;
+    }
+
+    .books-mode-cover::after {
+      content: "";
+      position: absolute;
+      top: 2%;
+      bottom: 2%;
+      right: -10px;
+      width: 12px;
+      border-radius: 0 12px 12px 0;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(0, 0, 0, 0.3));
+      filter: blur(0.2px);
+      opacity: 0.8;
     }
 
     .books-mode-name {
@@ -727,13 +781,9 @@
     .books-mode-option {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-    }
-
-    .books-mode-option svg {
-      width: 16px;
-      height: 16px;
-      display: block;
+      justify-content: center;
+      gap: 0;
+      font-size: 1.1em;
     }
 
     .books-magic-btn {
@@ -762,14 +812,18 @@
       width: 100%;
       display: grid;
       justify-items: center;
-      gap: 10px;
+      gap: 14px;
     }
 
     .books-mode-actions .books-magic-btn {
-      width: 60vw;
+      width: min(42vw, 280px);
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      min-height: 42px;
+      font-size: 15.5px;
+      letter-spacing: 0.01em;
+      transform: translateY(0);
     }
 
     .books-mode-close {
@@ -910,6 +964,8 @@
       display: grid;
       place-items: center;
       cursor: pointer;
+      z-index: 8;
+      backdrop-filter: blur(8px);
     }
 
     .books-reader-back svg {
@@ -930,6 +986,55 @@
       touch-action: pan-y;
     }
 
+    .books-reader-book-hero {
+      width: min(270px, 48vw);
+      height: 40vh;
+      min-height: 250px;
+      max-height: 430px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      perspective: 1300px;
+    }
+
+    .books-reader-book-cover {
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      background: linear-gradient(155deg, #2a5bcf, #28a7d5);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow:
+        0 30px 50px rgba(0, 0, 0, 0.52),
+        20px 0 26px rgba(0, 0, 0, 0.16);
+      transform: perspective(1300px) rotateY(-16deg) rotateX(7deg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .books-reader-book-cover::after {
+      content: "";
+      position: absolute;
+      top: 2%;
+      bottom: 2%;
+      right: -10px;
+      width: 12px;
+      border-radius: 0 12px 12px 0;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(0, 0, 0, 0.32));
+      opacity: 0.78;
+    }
+
+    .books-reader-text-panel {
+      width: min(920px, 100%);
+      min-height: 25vh;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: 14px;
+    }
+
     .books-reader-english {
       margin: 0;
       color: #ffffff;
@@ -940,6 +1045,7 @@
       max-width: 900px;
       white-space: pre-line;
       opacity: 1;
+      font-weight: 600;
     }
 
     .books-reader-english.is-dissolve {
@@ -1257,6 +1363,73 @@
       overflow: hidden;
     }
 
+    .books-reader[data-reader-mode="free-read"] .books-reader-book-hero {
+      display: flex;
+      animation: books-reader-book-hero-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .books-reader[data-reader-mode="free-read"] .books-reader-profile {
+      display: none;
+    }
+
+    .books-reader[data-reader-mode="free-read"] .books-reader-text-panel {
+      min-height: 25vh;
+    }
+
+    .books-reader[data-reader-mode="free-read"] .books-reader-training {
+      display: none !important;
+    }
+
+    @keyframes books-reader-book-hero-in {
+      from {
+        opacity: 0;
+        transform: translateY(28px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    #booksModeModal.is-visible .books-mode-cover {
+      animation: books-mode-cover-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    #booksModeModal.is-visible .books-mode-actions .books-magic-btn {
+      opacity: 0;
+      animation: books-mode-button-in 540ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    #booksModeModal.is-visible .books-mode-actions .books-magic-btn:nth-child(1) {
+      animation-delay: 120ms;
+    }
+
+    #booksModeModal.is-visible .books-mode-actions .books-magic-btn:nth-child(2) {
+      animation-delay: 210ms;
+    }
+
+    @keyframes books-mode-cover-in {
+      from {
+        opacity: 0;
+        transform: perspective(1300px) rotateY(-22deg) rotateX(10deg) translateX(-22px) translateY(18px) scale(0.92);
+      }
+      to {
+        opacity: 1;
+        transform: perspective(1300px) rotateY(-16deg) rotateX(7deg) translateX(0) translateY(0) scale(1);
+      }
+    }
+
+    @keyframes books-mode-button-in {
+      from {
+        opacity: 0;
+        transform: translateY(26px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     @media (max-width: 700px) {
       .books-page {
         padding: 10px 10px 12px;
@@ -1276,7 +1449,16 @@
       }
 
       .books-card {
-        width: min(410px, 92vw);
+        width: min(360px, 80vw);
+      }
+
+      .books-mode-actions .books-magic-btn {
+        width: min(58vw, 250px);
+      }
+
+      .books-reader-book-hero {
+        width: min(220px, 50vw);
+        height: 40vh;
       }
     }
   </style>
@@ -1326,10 +1508,13 @@
   </section>
 
   <section class="books-reader" id="booksReader" aria-label="Leitor do livro">
-    <button class="books-reader-back" id="booksReaderBackBtn" type="button" aria-label="Voltar">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.41 6.59 14 5.17 7.17 12 14 18.83l1.41-1.42L10 12z"/></svg>
+    <button class="books-reader-back" id="booksReaderBackBtn" type="button" aria-label="Voltar para livros">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.2 3 10v10.8h6.2v-6.4h5.6v6.4H21V10zm7.2 16H16v-6.4a1.2 1.2 0 0 0-1.2-1.2H9.2A1.2 1.2 0 0 0 8 12.8v6.4H4.8v-8.4L12 5.6l7.2 5.2z"/></svg>
     </button>
     <div class="books-reader-content" id="booksReaderContent">
+      <div class="books-reader-book-hero" id="booksReaderBookHero" hidden>
+        <div class="books-reader-book-cover" id="booksReaderBookCover"></div>
+      </div>
       <div class="books-reader-profile" id="booksReaderProfile">
         <div class="books-reader-pron-ring" id="booksReaderPronRing">
           <div class="books-reader-pron-inner">
@@ -1340,20 +1525,22 @@
         <p class="books-reader-user-name" id="booksReaderUserName">Jogador</p>
         <p class="books-reader-pron-percent" id="booksReaderPronPercent">0%</p>
       </div>
-      <p class="books-reader-english" id="booksReaderEnglish">Carregando...</p>
-      <div class="books-reader-lang">
-        <button class="books-reader-lang-btn is-active" id="booksReaderLangEnglishBtn" type="button" aria-label="Mostrar ingles">
-          <img src="/arquivos-codex/icones/ingles.svg" alt="Ingles">
-        </button>
-        <button class="books-reader-lang-btn" id="booksReaderLangPortugueseBtn" type="button" aria-label="Mostrar portugues">
-          <img src="/arquivos-codex/icones/portugues.svg" alt="Portugues">
-        </button>
-      </div>
-      <div class="books-reader-training" id="booksReaderTraining" hidden>
-        <button class="books-reader-mic-btn" id="booksReaderMicBtn" type="button" aria-label="Treinar pronuncia">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
-        </button>
-        <p class="books-reader-training-status" id="booksReaderTrainingStatus"></p>
+      <div class="books-reader-text-panel" id="booksReaderTextPanel">
+        <p class="books-reader-english" id="booksReaderEnglish">Carregando...</p>
+        <div class="books-reader-lang">
+          <button class="books-reader-lang-btn is-active" id="booksReaderLangEnglishBtn" type="button" aria-label="Mostrar ingles">
+            <img src="/arquivos-codex/icones/ingles.svg" alt="Ingles">
+          </button>
+          <button class="books-reader-lang-btn" id="booksReaderLangPortugueseBtn" type="button" aria-label="Mostrar portugues">
+            <img src="/arquivos-codex/icones/portugues.svg" alt="Portugues">
+          </button>
+        </div>
+        <div class="books-reader-training" id="booksReaderTraining" hidden>
+          <button class="books-reader-mic-btn" id="booksReaderMicBtn" type="button" aria-label="Treinar pronuncia">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
+          </button>
+          <p class="books-reader-training-status" id="booksReaderTrainingStatus"></p>
+        </div>
       </div>
     </div>
     <div class="books-reader-progress" aria-hidden="true">
@@ -1381,16 +1568,10 @@
         </div>
         <div class="books-mode-actions">
           <button class="books-magic-btn" id="booksModeFreeReadBtn" type="button">
-            <span class="books-mode-option">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16.5H6.5A2.5 2.5 0 0 0 4 22zm2.5-.5A1.5 1.5 0 0 0 5 6.5v12A3.5 3.5 0 0 1 6.5 18H19V5z"/></svg>
-              <span>Leitura livre</span>
-            </span>
+            <span class="books-mode-option">Leitura livre</span>
           </button>
           <button class="books-magic-btn is-primary" id="booksModePronounceBtn" type="button">
-            <span class="books-mode-option">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 13h2v-2H3zm4 4h2V7H7zm4 3h2V4h-2zm4-4h2V8h-2zm4 2h2v-6h-2z"/></svg>
-              <span>Treinar pronuncia</span>
-            </span>
+            <span class="books-mode-option">Treinar pronuncia</span>
           </button>
         </div>
       </div>

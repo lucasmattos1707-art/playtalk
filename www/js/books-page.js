@@ -7,6 +7,7 @@
   const MODE_DISSOLVE_MS = 2000;
   const MODE_LOADING_FADE_MS = 500;
   const BOOK_SNAP_DURATION_MS = 300;
+  const LEVEL_SLIDE_DURATION_MS = 420;
   const BOOK_SWIPE_THRESHOLD = 44;
   const LEVEL_SWIPE_THRESHOLD = 54;
   const CREATE_MIN_LINES = 7;
@@ -76,6 +77,8 @@
     reader: document.getElementById('booksReader'),
     readerBackBtn: document.getElementById('booksReaderBackBtn'),
     readerContent: document.getElementById('booksReaderContent'),
+    readerBookHero: document.getElementById('booksReaderBookHero'),
+    readerBookCover: document.getElementById('booksReaderBookCover'),
     readerProfile: document.getElementById('booksReaderProfile'),
     readerEnglish: document.getElementById('booksReaderEnglish'),
     readerTraining: document.getElementById('booksReaderTraining'),
@@ -530,6 +533,31 @@
     return new Promise((resolve) => {
       window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
     });
+  }
+
+  async function animateLevelChangeTransition() {
+    if (els.cardsGrid) {
+      els.cardsGrid.classList.remove('is-level-sliding-in');
+      els.cardsGrid.classList.add('is-level-sliding-out');
+    }
+    if (els.levelTitle) {
+      els.levelTitle.classList.add('is-sliding');
+    }
+    await wait(Math.round(LEVEL_SLIDE_DURATION_MS * 0.42));
+  }
+
+  async function settleLevelChangeTransition() {
+    if (els.cardsGrid) {
+      els.cardsGrid.classList.remove('is-level-sliding-out');
+      els.cardsGrid.classList.add('is-level-sliding-in');
+    }
+    if (els.levelTitle) {
+      els.levelTitle.classList.remove('is-sliding');
+    }
+    await wait(32);
+    if (els.cardsGrid) {
+      els.cardsGrid.classList.remove('is-level-sliding-in');
+    }
   }
 
   function isOverlayOpen() {
@@ -1312,11 +1340,15 @@
     }
   }
 
-  function setLevel(nextLevel) {
-    state.selectedLevel = normalizeLevel(nextLevel);
+  async function setLevel(nextLevel) {
+    const normalizedLevel = normalizeLevel(nextLevel);
+    if (normalizedLevel === state.selectedLevel) return;
+    await animateLevelChangeTransition();
+    state.selectedLevel = normalizedLevel;
     state.shelfIndex = 0;
     renderLevelMenu();
     renderCards();
+    await settleLevelChangeTransition();
   }
 
   async function fetchStories() {
@@ -2099,6 +2131,14 @@
     els.reader.style.background = `linear-gradient(to top, rgba(2, 5, 10, 0.78) 0%, rgba(2, 5, 10, 0.38) 60%, rgba(2, 5, 10, 0.32) 100%), url(${safeCssUrl(backgroundUrl)}) center / cover no-repeat`;
   }
 
+  function renderReaderBookCover(book) {
+    if (!els.readerBookCover) return;
+    const coverUrl = safeText(book?.coverImageUrl);
+    els.readerBookCover.style.backgroundImage = coverUrl
+      ? `url(${safeCssUrl(coverUrl)})`
+      : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
+  }
+
   function renderReaderAvatar() {
     if (!els.readerAvatarImage || !els.readerAvatarFallback) return;
     const profile = state.user || state.localProfile || {};
@@ -2121,6 +2161,16 @@
 
   function renderReaderModeUi() {
     const isTraining = state.readerMode === 'pronounce-training';
+    const activeBook = findActiveReaderBook();
+    if (els.reader) {
+      els.reader.dataset.readerMode = isTraining ? 'pronounce-training' : 'free-read';
+    }
+    if (els.readerBookHero) {
+      els.readerBookHero.hidden = isTraining;
+    }
+    if (!isTraining) {
+      renderReaderBookCover(activeBook);
+    }
     if (els.readerProfile) {
       els.readerProfile.hidden = !isTraining;
     }
@@ -2236,6 +2286,7 @@
       state.readerLastAudioKey = '';
       state.readerIndex = 0;
       renderReaderAvatar();
+      renderReaderBookCover(book);
       setReaderTrainingStatus('');
       renderReader();
       setStatus('', null);
@@ -2281,11 +2332,11 @@
 
   function bindEvents() {
     els.prevLevelBtn?.addEventListener('click', () => {
-      setLevel(state.selectedLevel - 1);
+      void setLevel(state.selectedLevel - 1);
     });
 
     els.nextLevelBtn?.addEventListener('click', () => {
-      setLevel(state.selectedLevel + 1);
+      void setLevel(state.selectedLevel + 1);
     });
 
     els.shelfViewport?.addEventListener('wheel', (event) => {
@@ -2330,9 +2381,9 @@
       }
       if (Math.abs(dx) >= LEVEL_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
         if (dx < 0) {
-          setLevel(state.selectedLevel + 1);
+          void setLevel(state.selectedLevel + 1);
         } else {
-          setLevel(state.selectedLevel - 1);
+          void setLevel(state.selectedLevel - 1);
         }
         return;
       }
