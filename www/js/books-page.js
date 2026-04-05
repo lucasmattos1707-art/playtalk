@@ -17,6 +17,8 @@
   const READER_FINISH_BOOK_ENTER_MS = 500;
   const READER_FINISH_LINE_STEP_MS = 1000;
   const READER_FINISH_LINE_ENTER_MS = 260;
+  const READER_FREE_READ_MIN_VIEW_MS = 3000;
+  const READER_BLOCKED_FLASH_MS = 750;
   const LEVEL_DISPLAY_NAMES = [
     'Iniciante',
     'Básico',
@@ -133,6 +135,8 @@
     readerAudioToken: 0,
     readerAudioElement: null,
     readerLastAudioKey: '',
+    readerCardShownAt: 0,
+    readerRenderedCardIndex: -1,
     readerFinishing: false,
     readerFinishToken: 0,
     readerTouchStartX: 0,
@@ -1962,6 +1966,26 @@
     els.readerFinishFlash.classList.add('is-active');
   }
 
+  function triggerReaderBlockedBookFlash() {
+    if (!els.readerBookCover) return;
+    els.readerBookCover.classList.remove('is-blocked-flash');
+    void els.readerBookCover.offsetWidth;
+    els.readerBookCover.classList.add('is-blocked-flash');
+    window.setTimeout(() => {
+      els.readerBookCover?.classList.remove('is-blocked-flash');
+    }, READER_BLOCKED_FLASH_MS + 40);
+  }
+
+  function triggerReaderSuccessBookFlash() {
+    if (!els.readerBookCover) return;
+    els.readerBookCover.classList.remove('is-success-flash');
+    void els.readerBookCover.offsetWidth;
+    els.readerBookCover.classList.add('is-success-flash');
+    window.setTimeout(() => {
+      els.readerBookCover?.classList.remove('is-success-flash');
+    }, READER_BLOCKED_FLASH_MS + 40);
+  }
+
   async function animateReaderFinishLine(text) {
     if (!els.readerFinishLine) return;
     els.readerFinishLine.classList.remove('is-visible');
@@ -2060,6 +2084,33 @@
       if (token !== state.readerFinishToken || !state.readerOpen) return;
     }
 
+    closeReader();
+  }
+
+  async function runFreeReadCompletionSequence() {
+    if (!state.readerOpen || state.readerMode !== 'free-read' || state.readerFinishing) return;
+
+    state.readerFinishing = true;
+    state.readerFinishToken += 1;
+    const token = state.readerFinishToken;
+    const activeBook = findActiveReaderBook();
+    const completionPromise = postReaderBookCompletion(activeBook, 0);
+
+    triggerReaderSuccessBookFlash();
+    if (els.reader) {
+      els.reader.classList.add('is-finishing');
+    }
+
+    await wait(READER_FINISH_DISSOLVE_MS);
+    if (token !== state.readerFinishToken || !state.readerOpen) return;
+
+    const completionPayload = await completionPromise;
+    if (token !== state.readerFinishToken || !state.readerOpen) return;
+
+    const savedBookRead = Math.max(0, Number(completionPayload?.stats?.bookReadCount) || 0);
+    if (savedBookRead > 0) {
+      setStatus(`${savedBookRead} livros lidos.`, 'success');
+    }
     closeReader();
   }
 
@@ -2205,6 +2256,10 @@
     const displayLanguage = state.readerDisplayLanguage === 'portuguese' ? 'portuguese' : 'english';
     const displayText = displayLanguage === 'portuguese' ? portuguese : english;
     const displayTextFormatted = splitBalancedLines(displayText);
+    if (state.readerRenderedCardIndex !== index) {
+      state.readerRenderedCardIndex = index;
+      state.readerCardShownAt = Date.now();
+    }
     els.readerEnglish.textContent = displayTextFormatted || 'Sem conteudo neste livro.';
     animateReaderPhrase();
     void playReaderCardAudio(card, index);
@@ -2226,14 +2281,29 @@
     state.readerScores = [];
     state.readerMicBusy = false;
     state.readerLastAudioKey = '';
+    state.readerCardShownAt = 0;
+    state.readerRenderedCardIndex = -1;
     setReaderTrainingStatus('');
     setReaderMicLive(false);
   }
 
   function stepReader(delta) {
     if (!state.readerOpen || !state.readerCards.length || state.readerFinishing) return;
+    const isForward = Number(delta) > 0;
+    if (state.readerMode === 'free-read' && isForward) {
+      const elapsed = Date.now() - (Number(state.readerCardShownAt) || 0);
+      if (elapsed < READER_FREE_READ_MIN_VIEW_MS) {
+        triggerReaderBlockedBookFlash();
+        return;
+      }
+    }
     const next = Math.max(0, Math.min(state.readerCards.length - 1, state.readerIndex + delta));
-    if (next === state.readerIndex) return;
+    if (next === state.readerIndex) {
+      if (state.readerMode === 'free-read' && isForward && state.readerIndex >= (state.readerCards.length - 1)) {
+        void runFreeReadCompletionSequence();
+      }
+      return;
+    }
     state.readerIndex = next;
     renderReader();
   }
@@ -2288,6 +2358,8 @@
       state.readerDisplayLanguage = 'english';
       state.readerMicBusy = false;
       state.readerLastAudioKey = '';
+      state.readerCardShownAt = 0;
+      state.readerRenderedCardIndex = -1;
       state.readerIndex = 0;
       renderReaderAvatar();
       renderReaderBookCover(book);
