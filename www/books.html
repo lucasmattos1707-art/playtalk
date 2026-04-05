@@ -325,6 +325,10 @@
       touch-action: pan-y;
     }
 
+    .books-home-viewport.is-book-resetting .books-home-screen {
+      transition: none !important;
+    }
+
     .books-home-screen {
       position: absolute;
       inset: 0;
@@ -362,8 +366,8 @@
     }
 
     .books-home-cover-wrap {
-      width: min(320px, 56vw);
-      height: min(55vh, 100%);
+      width: auto;
+      height: min(55vh, calc(100vh - 240px));
       max-height: 100%;
       aspect-ratio: 9 / 16;
       display: flex;
@@ -375,12 +379,12 @@
     .books-home-cover {
       width: 100%;
       height: 100%;
-      border-radius: 22px;
+      border-radius: 0;
       background: linear-gradient(155deg, #2a5bcf, #28a7d5);
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      border: 3px solid rgba(255, 255, 255, 0.16);
+      border: 0;
       box-shadow:
         0 32px 64px rgba(0, 0, 0, 0.54),
         16px 0 24px rgba(0, 0, 0, 0.18);
@@ -396,7 +400,6 @@
       bottom: 1.5%;
       right: -12px;
       width: 14px;
-      border-radius: 0 12px 12px 0;
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(0, 0, 0, 0.34));
       border-right: 2px solid rgba(255, 255, 255, 0.18);
       opacity: 0.9;
@@ -406,8 +409,7 @@
       content: "";
       position: absolute;
       inset: 0;
-      border-radius: 18px;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
       pointer-events: none;
     }
 
@@ -434,8 +436,8 @@
       text-align: center;
       white-space: pre-line;
       font-family: "BooksReading", "Georgia", serif;
-      font-size: clamp(20px, 3.5vw, 31px);
-      line-height: 1.22;
+      font-size: clamp(24px, 4.2vw, 37px);
+      line-height: 1.14;
       letter-spacing: 0.01em;
       color: rgba(248, 249, 252, 0.98);
       transition: opacity 260ms ease, transform 260ms ease, border-color 260ms ease;
@@ -462,19 +464,19 @@
       align-items: center;
       gap: 14px;
       padding: 14px 16px;
-      border-radius: 999px;
-      background: rgba(11, 18, 31, 0.78);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.24);
+      border-radius: 0;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
     }
 
     .books-home-play-btn {
       width: 52px;
       height: 52px;
-      border-radius: 999px;
+      border-radius: 0;
       border: 0;
-      background: linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(222, 231, 255, 0.86));
-      color: #101726;
+      background: transparent;
+      color: #ffffff;
       display: grid;
       place-items: center;
       cursor: pointer;
@@ -538,21 +540,20 @@
 
     .books-home-control-btn {
       min-height: 54px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background: rgba(255, 255, 255, 0.06);
+      border-radius: 0;
+      border: 0;
+      background: transparent;
       color: #ffffff;
       display: grid;
       place-items: center;
       cursor: pointer;
-      backdrop-filter: blur(6px);
-      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
-      transition: transform 160ms ease, background 160ms ease, opacity 160ms ease, border-color 160ms ease;
+      backdrop-filter: none;
+      box-shadow: none;
+      transition: transform 160ms ease, opacity 160ms ease;
     }
 
     .books-home-control-btn:hover {
       transform: translateY(-1px);
-      background: rgba(255, 255, 255, 0.1);
     }
 
     .books-home-control-btn svg,
@@ -569,8 +570,7 @@
     }
 
     .books-home-control-btn.is-on {
-      background: rgba(72, 166, 255, 0.16);
-      border-color: rgba(157, 214, 255, 0.58);
+      opacity: 1;
     }
 
     @keyframes books-home-shell-in {
@@ -1927,7 +1927,7 @@
       }
 
       .books-home-cover-wrap {
-        width: min(300px, 72vw);
+        width: auto;
         height: 100%;
         max-height: 100%;
       }
@@ -1935,7 +1935,7 @@
       .books-home-text-panel {
         height: 100%;
         max-height: none;
-        font-size: clamp(18px, 5vw, 24px);
+        font-size: clamp(22px, 6vw, 29px);
         padding: 14px 16px;
       }
 

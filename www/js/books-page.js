@@ -667,7 +667,7 @@
   function renderHomeTextPanel(element, text) {
     if (!element) return;
     const value = safeText(text);
-    element.textContent = value;
+    element.textContent = value ? splitBalancedLines(sanitizeReaderDisplayText(value)) : '';
     element.classList.toggle('is-empty', !value);
   }
 
@@ -1012,14 +1012,22 @@
     await wait(HOME_BOOK_TRANSITION_MS);
     if (!state.homeSleepActive || token !== state.homePlaybackToken) {
       els.homeViewport.classList.remove('is-book-transitioning');
+      els.homeViewport.classList.remove('is-book-resetting');
       state.homeTransitioning = false;
       return;
     }
-    els.homeViewport.classList.remove('is-book-transitioning');
+    els.homeViewport.classList.add('is-book-resetting');
     setActiveHomeSession(nextSession);
+    renderHomePanel();
+    void els.homeViewport.offsetWidth;
+    els.homeViewport.classList.remove('is-book-transitioning');
+    void els.homeViewport.offsetWidth;
     state.homeNextSession = null;
     state.homeSkipRequested = false;
     state.homeTransitioning = false;
+    renderHomePanel();
+    void els.homeViewport.offsetWidth;
+    els.homeViewport.classList.remove('is-book-resetting');
     renderHomePanel();
   }
 
