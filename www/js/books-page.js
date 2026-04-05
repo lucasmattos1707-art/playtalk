@@ -23,6 +23,7 @@
   const HOME_SPEED_OPTIONS = [1, 1.25, 1.5, 0.75];
   const HOME_BOOK_TRANSITION_MS = 760;
   const HOME_SWIPE_UP_THRESHOLD = 70;
+  const MAX_BOOK_LEVEL = 10;
   const HOME_MUSIC_PLAYLIST = [
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen1.mp3',
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen2.mp3',
@@ -39,6 +40,7 @@
     'Experiente',
     'Avançado',
     'Nativo',
+    'Fluente',
     'Expert'
   ];
 
@@ -577,7 +579,7 @@
   function normalizeBrowseLevel(value) {
     const parsed = Number.parseInt(value, 10);
     if (!Number.isFinite(parsed)) return 0;
-    return Math.max(0, Math.min(LEVEL_DISPLAY_NAMES.length - 1, parsed));
+    return Math.max(0, Math.min(MAX_BOOK_LEVEL, parsed));
   }
 
   function isHomeLevel() {
@@ -2038,7 +2040,7 @@
 
   function renderLevelMenu() {
     if (els.levelTitle) {
-      const levelIndex = Math.max(0, Math.min(LEVEL_DISPLAY_NAMES.length - 1, state.selectedLevel));
+      const levelIndex = Math.max(0, Math.min(MAX_BOOK_LEVEL, state.selectedLevel));
       const levelName = LEVEL_DISPLAY_NAMES[levelIndex] || `Nivel ${state.selectedLevel}`;
       els.levelTitle.textContent = `${levelName}`;
     }
@@ -2046,7 +2048,7 @@
       els.prevLevelBtn.disabled = state.selectedLevel <= 0 || state.uploadInFlight;
     }
     if (els.nextLevelBtn) {
-      els.nextLevelBtn.disabled = state.selectedLevel >= (LEVEL_DISPLAY_NAMES.length - 1) || state.uploadInFlight;
+      els.nextLevelBtn.disabled = state.selectedLevel >= MAX_BOOK_LEVEL || state.uploadInFlight;
     }
   }
 
