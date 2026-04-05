@@ -97,7 +97,12 @@
     readerFinish: document.getElementById('booksReaderFinish'),
     readerFinishCover: document.getElementById('booksReaderFinishCover'),
     readerFinishFlash: document.getElementById('booksReaderFinishFlash'),
-    readerFinishLine: document.getElementById('booksReaderFinishLine')
+    readerFinishLine: document.getElementById('booksReaderFinishLine'),
+    readerAdminAudioModal: document.getElementById('booksReaderAdminAudioModal'),
+    readerAdminAudioTextInput: document.getElementById('booksReaderAdminAudioTextInput'),
+    readerAdminAudioVoiceSelect: document.getElementById('booksReaderAdminAudioVoiceSelect'),
+    readerAdminAudioCloseBtn: document.getElementById('booksReaderAdminAudioCloseBtn'),
+    readerAdminAudioSubmitBtn: document.getElementById('booksReaderAdminAudioSubmitBtn')
   };
 
   const state = {
@@ -137,6 +142,9 @@
     readerLastAudioKey: '',
     readerCardShownAt: 0,
     readerRenderedCardIndex: -1,
+    readerInlineEditing: false,
+    readerInlineEditTouchStartY: 0,
+    readerAdminAudioBusy: false,
     readerFinishing: false,
     readerFinishToken: 0,
     readerTouchStartX: 0,
@@ -1815,6 +1823,157 @@
     els.readerTrainingStatus.textContent = safeText(message);
   }
 
+  function isReaderAdminEditingEnabled() {
+    return Boolean(state.isAdmin && state.readerOpen && !state.readerFinishing);
+  }
+
+  function getActiveReaderCard() {
+    if (!Array.isArray(state.readerCards) || !state.readerCards.length) return null;
+    const index = Math.max(0, Math.min(state.readerCards.length - 1, state.readerIndex));
+    return state.readerCards[index] || null;
+  }
+
+  function syncReaderAdminVoiceOptions() {
+    if (!els.readerAdminAudioVoiceSelect || !els.createVoiceSelect) return;
+    els.readerAdminAudioVoiceSelect.innerHTML = els.createVoiceSelect.innerHTML;
+    els.readerAdminAudioVoiceSelect.value = safeText(els.createVoiceSelect.value || 'openai:fable') || 'openai:fable';
+  }
+
+  function setReaderAdminAudioBusy(isBusy) {
+    state.readerAdminAudioBusy = Boolean(isBusy);
+    if (els.readerAdminAudioSubmitBtn) {
+      els.readerAdminAudioSubmitBtn.disabled = state.readerAdminAudioBusy;
+      els.readerAdminAudioSubmitBtn.textContent = state.readerAdminAudioBusy ? 'Enviando...' : 'Enviar';
+    }
+    if (els.readerAdminAudioCloseBtn) {
+      els.readerAdminAudioCloseBtn.disabled = state.readerAdminAudioBusy;
+    }
+    if (els.readerAdminAudioTextInput) {
+      els.readerAdminAudioTextInput.disabled = state.readerAdminAudioBusy;
+    }
+    if (els.readerAdminAudioVoiceSelect) {
+      els.readerAdminAudioVoiceSelect.disabled = state.readerAdminAudioBusy;
+    }
+  }
+
+  function openReaderAdminAudioModal() {
+    if (!isReaderAdminEditingEnabled() || !els.readerAdminAudioModal) return;
+    const card = getActiveReaderCard();
+    if (!card) return;
+    syncReaderAdminVoiceOptions();
+    if (els.readerAdminAudioTextInput) {
+      const seedText = state.readerDisplayLanguage === 'portuguese'
+        ? safeText(card.portuguese || card.english)
+        : safeText(card.english);
+      els.readerAdminAudioTextInput.value = seedText;
+    }
+    setReaderAdminAudioBusy(false);
+    els.readerAdminAudioModal.classList.add('is-visible');
+  }
+
+  function closeReaderAdminAudioModal(force) {
+    if (!els.readerAdminAudioModal) return;
+    if (state.readerAdminAudioBusy && !force) return;
+    els.readerAdminAudioModal.classList.remove('is-visible');
+  }
+
+  async function saveReaderCardEdit(payload) {
+    const activeBook = findActiveReaderBook();
+    const activeCard = getActiveReaderCard();
+    if (!activeBook || !activeCard) {
+      throw new Error('Card ativo nao encontrado para editar.');
+    }
+    const response = await postJsonWithSuccess('/api/admin/minibooks/update-card', {
+      bookId: activeBook.bookId,
+      storyId: activeCard.storyId,
+      storyKey: activeCard.storyKey,
+      cardIndex: activeCard.cardIndex,
+      ...payload
+    }, 'Nao foi possivel atualizar o card do livro.');
+    const nextCard = response?.card && typeof response.card === 'object' ? response.card : {};
+    Object.assign(activeCard, {
+      english: safeText(nextCard.english || activeCard.english),
+      portuguese: safeText(nextCard.portuguese || activeCard.portuguese),
+      audio: safeText(nextCard.audio || activeCard.audio),
+      highlight: Boolean(nextCard.highlight)
+    });
+    state.readerLastAudioKey = '';
+    return activeCard;
+  }
+
+  function stopInlineReaderEditing() {
+    state.readerInlineEditing = false;
+    if (!els.readerEnglish) return;
+    els.readerEnglish.contentEditable = 'false';
+    els.readerEnglish.classList.remove('is-inline-editing');
+  }
+
+  function startInlineReaderEditing() {
+    if (!isReaderAdminEditingEnabled() || !els.readerEnglish) return;
+    state.readerInlineEditing = true;
+    els.readerEnglish.contentEditable = 'true';
+    els.readerEnglish.classList.add('is-inline-editing');
+    try {
+      els.readerEnglish.focus({ preventScroll: true });
+    } catch (_error) {
+      // ignore
+    }
+    const selection = window.getSelection ? window.getSelection() : null;
+    if (selection && document.createRange) {
+      const range = document.createRange();
+      range.selectNodeContents(els.readerEnglish);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  }
+
+  async function submitInlineReaderEditing() {
+    if (!state.readerInlineEditing || !els.readerEnglish) return;
+    const editedText = safeText(els.readerEnglish.textContent || '');
+    if (!editedText) {
+      setStatus('O texto do card nao pode ficar vazio.', 'error');
+      return;
+    }
+    stopInlineReaderEditing();
+    const payload = state.readerDisplayLanguage === 'portuguese'
+      ? { portuguese: editedText }
+      : { english: editedText };
+    try {
+      await saveReaderCardEdit(payload);
+      renderReader();
+      setStatus('Texto do card atualizado.', 'success');
+    } catch (error) {
+      renderReader();
+      setStatus(error?.message || 'Falha ao atualizar o texto do card.', 'error');
+    }
+  }
+
+  async function submitReaderAdminAudioModal() {
+    if (!isReaderAdminEditingEnabled() || state.readerAdminAudioBusy) return;
+    const audioText = safeText(els.readerAdminAudioTextInput?.value || '');
+    const voice = safeText(els.readerAdminAudioVoiceSelect?.value || els.createVoiceSelect?.value || 'openai:fable');
+    if (!audioText) {
+      setStatus('Preencha o texto antes de gerar o audio.', 'error');
+      return;
+    }
+    setReaderAdminAudioBusy(true);
+    try {
+      await saveReaderCardEdit({
+        audioText,
+        voice
+      });
+      setReaderAdminAudioBusy(false);
+      closeReaderAdminAudioModal(true);
+      setStatus('Audio do card atualizado com sucesso.', 'success');
+      renderReader();
+    } catch (error) {
+      setStatus(error?.message || 'Falha ao atualizar o audio do card.', 'error');
+    } finally {
+      setReaderAdminAudioBusy(false);
+    }
+  }
+
   function stopReaderAudio() {
     state.readerAudioToken += 1;
     state.readerLastAudioKey = '';
@@ -2224,9 +2383,11 @@
 
   function renderReaderModeUi() {
     const isTraining = state.readerMode === 'pronounce-training';
+    const isAdminEditor = Boolean(state.isAdmin);
     const activeBook = findActiveReaderBook();
     if (els.reader) {
       els.reader.dataset.readerMode = isTraining ? 'pronounce-training' : 'free-read';
+      els.reader.classList.toggle('is-admin-reader', isAdminEditor);
     }
     if (els.readerBookHero) {
       els.readerBookHero.hidden = isTraining;
@@ -2241,13 +2402,16 @@
       els.readerUserName.hidden = true;
     }
     if (els.readerTraining) {
-      els.readerTraining.hidden = !isTraining;
+      els.readerTraining.hidden = !(isTraining || isAdminEditor);
     }
     if (els.readerPronPercent) {
       els.readerPronPercent.hidden = !isTraining;
     }
     if (els.readerMicBtn) {
-      els.readerMicBtn.disabled = !isTraining || state.readerMicBusy || state.readerFinishing;
+      els.readerMicBtn.disabled = (!(isTraining || isAdminEditor)) || state.readerMicBusy || state.readerFinishing || state.readerAdminAudioBusy;
+    }
+    if (els.readerEnglish) {
+      els.readerEnglish.classList.toggle('is-admin-editable', isAdminEditor);
     }
     updateReaderLanguageButtons();
     updateReaderPronPercent();
@@ -2279,6 +2443,8 @@
 
   function closeReader() {
     stopReaderAudio();
+    stopInlineReaderEditing();
+    closeReaderAdminAudioModal(true);
     state.readerFinishToken += 1;
     state.readerFinishing = false;
     resetReaderFinishUi();
@@ -2293,12 +2459,14 @@
     state.readerLastAudioKey = '';
     state.readerCardShownAt = 0;
     state.readerRenderedCardIndex = -1;
+    state.readerAdminAudioBusy = false;
     setReaderTrainingStatus('');
     setReaderMicLive(false);
   }
 
   function stepReader(delta) {
-    if (!state.readerOpen || !state.readerCards.length || state.readerFinishing) return;
+    if (!state.readerOpen || !state.readerCards.length || state.readerFinishing || state.readerInlineEditing) return;
+    if (els.readerAdminAudioModal?.classList.contains('is-visible')) return;
     const isForward = Number(delta) > 0;
     if (state.readerMode === 'free-read' && isForward) {
       const elapsed = Date.now() - (Number(state.readerCardShownAt) || 0);
@@ -2340,7 +2508,11 @@
           english,
           portuguese,
           audio,
-          highlight: Boolean(entry?.highlight)
+          highlight: Boolean(entry?.highlight),
+          storyId: safeText(entry?.battleStoryId),
+          storyKey: safeText(entry?.battleStoryKey),
+          cardIndex: Number.parseInt(entry?.battleCardIndex, 10) || 0,
+          bookId: safeText(entry?.battleBookId)
         };
       })
       .filter(Boolean);
@@ -2384,7 +2556,12 @@
   }
 
   async function handleReaderMicTraining() {
-    if (!state.readerOpen || state.readerMode !== 'pronounce-training' || state.readerMicBusy || state.readerFinishing) return;
+    if (!state.readerOpen || state.readerMicBusy || state.readerFinishing) return;
+    if (state.isAdmin) {
+      openReaderAdminAudioModal();
+      return;
+    }
+    if (state.readerMode !== 'pronounce-training') return;
     const card = state.readerCards[state.readerIndex];
     if (!card || !safeText(card.english)) return;
 
@@ -2578,6 +2755,20 @@
       }
     });
 
+    els.readerAdminAudioCloseBtn?.addEventListener('click', () => {
+      closeReaderAdminAudioModal();
+    });
+
+    els.readerAdminAudioSubmitBtn?.addEventListener('click', () => {
+      void submitReaderAdminAudioModal();
+    });
+
+    els.readerAdminAudioModal?.addEventListener('click', (event) => {
+      if (event.target === els.readerAdminAudioModal) {
+        closeReaderAdminAudioModal();
+      }
+    });
+
     els.readerBackBtn?.addEventListener('click', () => {
       if (state.readerFinishing) return;
       closeReader();
@@ -2598,6 +2789,41 @@
     els.readerMicBtn?.addEventListener('click', () => {
       void handleReaderMicTraining();
     });
+
+    els.readerEnglish?.addEventListener('click', () => {
+      if (!isReaderAdminEditingEnabled() || state.readerInlineEditing) return;
+      startInlineReaderEditing();
+    });
+
+    els.readerEnglish?.addEventListener('keydown', (event) => {
+      if (!state.readerInlineEditing) return;
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        void submitInlineReaderEditing();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        renderReader();
+        stopInlineReaderEditing();
+      }
+    });
+
+    els.readerEnglish?.addEventListener('touchstart', (event) => {
+      if (!state.readerInlineEditing) return;
+      const touch = event.touches?.[0];
+      if (!touch) return;
+      state.readerInlineEditTouchStartY = Number(touch.clientY) || 0;
+    }, { passive: true });
+
+    els.readerEnglish?.addEventListener('touchend', (event) => {
+      if (!state.readerInlineEditing) return;
+      const touch = event.changedTouches?.[0];
+      if (!touch) return;
+      const endY = Number(touch.clientY) || 0;
+      const dy = state.readerInlineEditTouchStartY - endY;
+      if (dy >= 48) {
+        void submitInlineReaderEditing();
+      }
+    }, { passive: true });
 
     els.readerContent?.addEventListener('touchstart', (event) => {
       const touch = event.touches?.[0];
@@ -2623,6 +2849,11 @@
     }, { passive: true });
 
     window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && els.readerAdminAudioModal?.classList.contains('is-visible')) {
+        event.preventDefault();
+        closeReaderAdminAudioModal();
+        return;
+      }
       if (event.key === 'Escape' && state.createModalOpen && !state.createBusy && !state.createWriteBusy) {
         event.preventDefault();
         closeCreateModal();

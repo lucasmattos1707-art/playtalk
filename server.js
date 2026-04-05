@@ -4161,6 +4161,59 @@ async function loadMiniBookJsonOverrides() {
   return Array.isArray(result.rows) ? result.rows : [];
 }
 
+async function loadEditableMiniBookSource(bookId) {
+  const normalizedBookId = normalizeMiniBookId(bookId);
+  if (!normalizedBookId || !pool) return null;
+
+  await ensureMiniBookJsonTables();
+  const overrideResult = await pool.query(
+    `SELECT book_id, file_name, title, level, payload
+     FROM public.minibook_json_content
+     WHERE book_id = $1
+     LIMIT 1`,
+    [normalizedBookId]
+  );
+  const overrideRow = overrideResult.rows[0] || null;
+  if (overrideRow?.payload && typeof overrideRow.payload === 'object' && !Array.isArray(overrideRow.payload)) {
+    return {
+      bookId: normalizedBookId,
+      fileName: normalizeMiniBookText(overrideRow.file_name, `${normalizedBookId}.json`),
+      title: normalizeMiniBookText(overrideRow.title, normalizedBookId),
+      level: normalizeSpeakingStoryLevel(overrideRow.level),
+      payload: overrideRow.payload
+    };
+  }
+
+  for (const root of BATTLE_STORIES_ROOT_CANDIDATES) {
+    let dirEntries = [];
+    try {
+      dirEntries = await fs.promises.readdir(root, { withFileTypes: true });
+    } catch (_error) {
+      dirEntries = [];
+    }
+
+    for (const entry of dirEntries) {
+      if (!entry?.isFile?.() || !entry.name.toLowerCase().endsWith('.json')) continue;
+      const fileBaseName = path.basename(entry.name, '.json');
+      if (normalizeMiniBookId(fileBaseName) !== normalizedBookId) continue;
+
+      const fullPath = path.join(root, entry.name);
+      const raw = (await fs.promises.readFile(fullPath, 'utf8')).replace(/^\uFEFF/, '');
+      const payload = JSON.parse(raw);
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) continue;
+      return {
+        bookId: normalizedBookId,
+        fileName: entry.name,
+        title: normalizeMiniBookText(payload.nome || payload.title, fileBaseName),
+        level: normalizeSpeakingStoryLevel(payload.nivel ?? payload.level),
+        payload
+      };
+    }
+  }
+
+  return null;
+}
+
 async function findLocalSpeakingBookMetadataById(bookId) {
   const targetBookId = normalizeMiniBookId(bookId);
   if (!targetBookId) return null;
@@ -4361,10 +4414,13 @@ async function buildRandomSpeakingCards(selectedStoryId) {
     coverImageUrl = '';
   }
 
-  return cards.map((card) => {
+  return cards.map((card, index) => {
     const source = card && typeof card === 'object' ? card : {};
     return {
       ...source,
+      battleStoryId: String(selected.id || '').trim(),
+      battleStoryKey: String(selected.storyKey || '').trim(),
+      battleCardIndex: index,
       battleBookId: bookId,
       battleBookTitle: bookTitle,
       battleBookCoverImageUrl: coverImageUrl
@@ -5643,6 +5699,77 @@ function buildMiniBookAudioObjectKey(bookId, lineIndex) {
   const safeIndex = Math.max(0, Number.parseInt(lineIndex, 10) || 0);
   const fileName = `${String(safeIndex + 1).padStart(3, '0')}.mp3`;
   return path.posix.join(MINIBOOKS_AUDIO_OBJECT_PREFIX, safeBookId, fileName);
+}
+
+function extractMiniBookStoryKeyFromStoryId(storyId) {
+  const raw = String(storyId || '').trim();
+  if (!raw) return '';
+  const separatorIndex = raw.lastIndexOf('::');
+  if (separatorIndex < 0) return '';
+  return String(raw.slice(separatorIndex + 2) || '').trim();
+}
+
+function extractMiniBookEditableText(rawValue, fallbackHighlight = false) {
+  const raw = String(rawValue || '').trim();
+  const highlight = raw.startsWith('#') ? true : Boolean(fallbackHighlight);
+  const text = normalizeMiniBookText(raw.startsWith('#') ? raw.slice(1) : raw);
+  return {
+    text,
+    highlight
+  };
+}
+
+function resolveMiniBookStoryItemsReference(payload, storyKey) {
+  const source = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : null;
+  const normalizedStoryKey = String(storyKey || '').trim();
+  if (!source || !normalizedStoryKey) return null;
+
+  if (Array.isArray(source[normalizedStoryKey])) {
+    return {
+      items: source[normalizedStoryKey],
+      assign(nextItems) {
+        source[normalizedStoryKey] = nextItems;
+      }
+    };
+  }
+
+  if (source.stories && typeof source.stories === 'object' && !Array.isArray(source.stories) && Array.isArray(source.stories[normalizedStoryKey])) {
+    return {
+      items: source.stories[normalizedStoryKey],
+      assign(nextItems) {
+        source.stories[normalizedStoryKey] = nextItems;
+      }
+    };
+  }
+
+  if (Array.isArray(source.stories)) {
+    const storyIndex = source.stories.findIndex((entry) => {
+      if (!entry || typeof entry !== 'object') return false;
+      const candidateKey = String(entry.storyKey || entry.key || entry.name || entry.title || '').trim();
+      return candidateKey === normalizedStoryKey;
+    });
+    if (storyIndex >= 0) {
+      const storyEntry = source.stories[storyIndex];
+      if (Array.isArray(storyEntry.cards)) {
+        return {
+          items: storyEntry.cards,
+          assign(nextItems) {
+            storyEntry.cards = nextItems;
+          }
+        };
+      }
+      if (Array.isArray(storyEntry.items)) {
+        return {
+          items: storyEntry.items,
+          assign(nextItems) {
+            storyEntry.items = nextItems;
+          }
+        };
+      }
+    }
+  }
+
+  return null;
 }
 
 function normalizeMiniBookComparableText(value) {
@@ -9279,6 +9406,167 @@ app.post('/api/admin/minibooks/create-from-lines', express.json({ limit: '4mb' }
     const statusCode = Number(error?.statusCode || 500);
     res.status(statusCode).json({
       error: error.message || 'Falha ao criar MiniBook por linhas.',
+      details: error.details || null,
+      instructions: error.instructions || null
+    });
+  }
+});
+
+app.post('/api/admin/minibooks/update-card', express.json({ limit: '2mb' }), async (req, res) => {
+  let adminUser = null;
+  try {
+    adminUser = await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  if (!pool) {
+    res.status(503).json({ error: 'DATABASE_URL nao configurada.' });
+    return;
+  }
+
+  try {
+    const bookId = normalizeMiniBookId(req.body?.bookId || '');
+    const storyKey = normalizeMiniBookText(
+      req.body?.storyKey || extractMiniBookStoryKeyFromStoryId(req.body?.storyId || ''),
+      ''
+    );
+    const cardIndex = Math.max(0, Number.parseInt(req.body?.cardIndex, 10) || 0);
+    if (!bookId || !storyKey) {
+      res.status(400).json({ error: 'bookId e storyId/storyKey sao obrigatorios.' });
+      return;
+    }
+
+    const source = await loadEditableMiniBookSource(bookId);
+    if (!source?.payload) {
+      res.status(404).json({ error: 'MiniBook nao encontrado para edicao.' });
+      return;
+    }
+
+    const storyRef = resolveMiniBookStoryItemsReference(source.payload, storyKey);
+    if (!storyRef || !Array.isArray(storyRef.items) || cardIndex >= storyRef.items.length) {
+      res.status(404).json({ error: 'Card nao encontrado para essa historia.' });
+      return;
+    }
+
+    const targetItem = storyRef.items[cardIndex] && typeof storyRef.items[cardIndex] === 'object'
+      ? { ...storyRef.items[cardIndex] }
+      : {};
+
+    let changed = false;
+    if (typeof req.body?.english === 'string') {
+      const editedEnglish = extractMiniBookEditableText(req.body.english, targetItem.highlight);
+      if (!editedEnglish.text) {
+        res.status(400).json({ error: 'Texto em ingles nao pode ficar vazio.' });
+        return;
+      }
+      targetItem.en = editedEnglish.text;
+      targetItem.english = editedEnglish.text;
+      targetItem.highlight = editedEnglish.highlight;
+      changed = true;
+    }
+
+    if (typeof req.body?.portuguese === 'string') {
+      const editedPortuguese = normalizeMiniBookText(req.body.portuguese);
+      if (!editedPortuguese) {
+        res.status(400).json({ error: 'Texto em portugues nao pode ficar vazio.' });
+        return;
+      }
+      targetItem.pt = editedPortuguese;
+      targetItem.portuguese = editedPortuguese;
+      changed = true;
+    }
+
+    let nextAudioUrl = normalizeMiniBookText(targetItem.audio || targetItem.audioUrl);
+    const requestedAudioText = typeof req.body?.audioText === 'string' ? req.body.audioText : '';
+    const requestedVoice = typeof req.body?.voice === 'string' ? req.body.voice : '';
+    if (requestedAudioText.trim()) {
+      if (!isR2FluencyConfigured()) {
+        res.status(503).json({ error: 'R2 nao configurado para editar o audio do MiniBook.' });
+        return;
+      }
+      const audioSelection = parseMiniBookAudioSelection(requestedVoice);
+      const generatedAudio = audioSelection.provider === 'elevenlabs'
+        ? await generateMiniBookSpeechWithElevenLabs(requestedAudioText, { languageCode: 'en', voice: audioSelection.voice })
+        : await generateMiniBookSpeechWithOpenAi(requestedAudioText, { voice: audioSelection.voice });
+      const audioObjectKey = buildMiniBookAudioObjectKey(bookId, cardIndex);
+      await putR2Object(audioObjectKey, generatedAudio.buffer, generatedAudio.mimeType || 'audio/mpeg');
+      nextAudioUrl = `${buildFlashcardsR2PublicUrl(audioObjectKey)}?v=${Date.now()}`;
+      targetItem.audio = nextAudioUrl;
+      targetItem.audioUrl = nextAudioUrl;
+      changed = true;
+    }
+
+    if (!changed) {
+      res.status(400).json({ error: 'Nenhuma alteracao valida foi enviada para esse card.' });
+      return;
+    }
+
+    const nextItems = storyRef.items.slice();
+    nextItems[cardIndex] = targetItem;
+    storyRef.assign(nextItems);
+
+    const normalizedPayload = {
+      ...source.payload,
+      bookId: source.bookId,
+      fileName: normalizeMiniBookText(source.payload.fileName, source.fileName),
+      nome: normalizeMiniBookText(source.payload.nome || source.payload.title, source.title),
+      nivel: normalizeSpeakingStoryLevel(source.payload.nivel ?? source.payload.level ?? source.level)
+    };
+
+    const parsedMiniBook = buildMiniBookStoriesFromJsonPayload(normalizedPayload, {
+      bookId: source.bookId,
+      fileName: source.fileName,
+      bookTitle: source.title,
+      level: source.level
+    });
+
+    await ensureMiniBookJsonTables();
+    await pool.query(
+      `INSERT INTO public.minibook_json_content (
+         book_id,
+         file_name,
+         title,
+         level,
+         payload,
+         updated_by_user_id,
+         updated_at
+       )
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6, now())
+       ON CONFLICT (book_id)
+       DO UPDATE SET
+         file_name = EXCLUDED.file_name,
+         title = EXCLUDED.title,
+         level = EXCLUDED.level,
+         payload = EXCLUDED.payload,
+         updated_by_user_id = EXCLUDED.updated_by_user_id,
+         updated_at = now()`,
+      [
+        source.bookId,
+        parsedMiniBook.fileName,
+        parsedMiniBook.bookTitle,
+        parsedMiniBook.level,
+        JSON.stringify(normalizedPayload),
+        Number(adminUser?.id) || null
+      ]
+    );
+
+    invalidateSpeakingCardsCache();
+
+    res.json({
+      success: true,
+      card: {
+        english: normalizeMiniBookText(targetItem.en || targetItem.english),
+        portuguese: normalizeMiniBookText(targetItem.pt || targetItem.portuguese),
+        audio: nextAudioUrl,
+        highlight: Boolean(targetItem.highlight)
+      }
+    });
+  } catch (error) {
+    res.status(Number(error?.statusCode || 500)).json({
+      error: error.message || 'Falha ao atualizar card do MiniBook.',
       details: error.details || null,
       instructions: error.instructions || null
     });

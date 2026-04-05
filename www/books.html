@@ -1116,6 +1116,16 @@
       text-shadow: 0 2px 10px rgba(54, 40, 0, 0.42);
     }
 
+    .books-reader-english.is-admin-editable {
+      cursor: text;
+    }
+
+    .books-reader-english.is-inline-editing {
+      opacity: 0.75;
+      caret-color: transparent;
+      outline: none;
+    }
+
     .books-reader-english.is-dissolve {
       animation: books-reader-dissolve 380ms ease both;
     }
@@ -1290,6 +1300,18 @@
       font-family: "BooksReading", "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
       font-weight: 700;
       text-align: center;
+    }
+
+    .books-reader.is-admin-reader[data-reader-mode="free-read"] .books-reader-training {
+      display: grid !important;
+    }
+
+    .books-reader.is-admin-reader[data-reader-mode="free-read"] .books-reader-training-status {
+      display: none;
+    }
+
+    .books-admin-audio-card {
+      width: min(560px, 100%);
     }
 
     .books-reader-progress {
@@ -1651,6 +1673,24 @@
       </div>
       <div class="books-mode-loading" id="booksModeLoading" aria-hidden="true">
         <span class="books-mode-loading-loop" aria-hidden="true"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="books-magic-modal" id="booksReaderAdminAudioModal" aria-label="Atualizar audio do card">
+    <div class="books-magic-card books-admin-audio-card">
+      <h2 class="books-magic-title">Atualizar audio do card</h2>
+      <label class="books-magic-field">
+        <span class="books-magic-label">Texto para narrar</span>
+        <textarea class="books-magic-input" id="booksReaderAdminAudioTextInput" placeholder="Texto do audio"></textarea>
+      </label>
+      <label class="books-magic-field">
+        <span class="books-magic-label">Voz</span>
+        <select class="books-create-control-input" id="booksReaderAdminAudioVoiceSelect"></select>
+      </label>
+      <div class="books-magic-actions">
+        <button class="books-magic-btn" id="booksReaderAdminAudioCloseBtn" type="button">Cancelar</button>
+        <button class="books-magic-btn is-primary" id="booksReaderAdminAudioSubmitBtn" type="button">Enviar</button>
       </div>
     </div>
   </section>
