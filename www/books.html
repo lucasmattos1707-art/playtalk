@@ -49,14 +49,21 @@
     }
 
     .books-page.is-home-immersive {
+      position: fixed;
+      inset: 0;
       width: 100%;
       max-width: none;
       margin: 0;
+      min-height: 100vh;
+      grid-template-rows: 0 0 minmax(0, 1fr);
       padding: 0;
       gap: 0;
+      z-index: 79;
     }
 
     .books-page.is-home-immersive .books-shelf {
+      position: fixed;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       min-height: 100vh;
@@ -238,6 +245,7 @@
 
     .books-page.is-home-immersive .books-level-menu,
     .books-page.is-home-immersive .books-status {
+      display: none !important;
       opacity: 0;
       filter: blur(12px);
       transform: translateY(-20px);

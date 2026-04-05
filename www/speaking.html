@@ -378,13 +378,13 @@
       display: none;
       margin: 8px 0 10px;
       min-height: 58vh;
-      padding: 24px 12px 18px;
+      padding: 26px 14px 18px;
       border-radius: 28px;
       border: 1px solid rgba(185, 229, 255, 0.16);
       background:
         radial-gradient(circle at 50% 10%, rgba(143, 214, 255, 0.14), transparent 36%),
         radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.09), transparent 22%),
-        linear-gradient(180deg, rgba(5, 16, 31, 0.16), rgba(5, 16, 31, 0));
+        linear-gradient(180deg, rgba(5, 16, 31, 0.28), rgba(5, 16, 31, 0.08));
       text-align: center;
       overflow: hidden;
     }
@@ -394,111 +394,10 @@
       animation: fadeIn 220ms ease;
     }
 
-    .duel-intro__book-stage {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 300px;
-      margin: 0 0 14px;
-      perspective: 1400px;
-    }
-
-    .duel-intro__book {
-      position: relative;
-      width: min(46vw, 198px);
-      aspect-ratio: 9 / 16;
-      border-radius: 22px;
-      overflow: hidden;
-      border: 2px solid rgba(221, 242, 255, 0.62);
-      box-shadow:
-        0 28px 60px rgba(0, 0, 0, 0.52),
-        14px 0 0 rgba(125, 176, 214, 0.2),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.18);
-      background: linear-gradient(160deg, #1b2d47, #314f73);
-      transform: rotateY(-72deg) rotateX(9deg) translateY(24px) scale(0.86);
-      transform-style: preserve-3d;
-      opacity: 0;
-      transition: transform 600ms cubic-bezier(0.2, 0.76, 0.16, 1), opacity 360ms ease, box-shadow 320ms ease;
-    }
-
-    .duel-intro__book::before {
-      content: "";
-      position: absolute;
-      inset: 10px 12px auto auto;
-      width: 44%;
-      height: 18%;
-      border-radius: 999px;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0));
-      opacity: 0;
-      pointer-events: none;
-      mix-blend-mode: screen;
-    }
-
-    .duel-intro__book::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      right: -10px;
-      width: 12px;
-      height: 100%;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(17, 35, 57, 0.6));
-      transform: rotateY(90deg);
-      transform-origin: right center;
-      opacity: 0.9;
-      pointer-events: none;
-    }
-
-    .duel-intro__book.is-visible {
-      opacity: 1;
-      transform: rotateY(0deg) rotateX(0deg) translateY(0) scale(1);
-    }
-
-    .duel-intro__book.is-flash::before {
-      animation: duelBookFlash 520ms ease;
-    }
-
-    .duel-intro__book.is-exit {
-      transform: rotateY(24deg) translateX(18%) scale(0.96);
-      opacity: 0;
-    }
-
-    .duel-intro__book-image {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      background: #102033;
-    }
-
-    .duel-intro__book-fallback {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      align-content: center;
-      gap: 8px;
-      padding: 18px 14px;
-      text-align: center;
-      color: #fff;
-      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.42);
-      font-family: "Soopafre", "Trebuchet MS", "Segoe UI", sans-serif;
-      letter-spacing: 0.02em;
-      line-height: 1.12;
-      background: linear-gradient(160deg, #385f7e, #8d4d80);
-    }
-
-    .duel-intro__book-line {
-      margin: 0;
-      font-weight: 900;
-      font-size: clamp(20px, 4.8vw, 30px);
-      max-width: 100%;
-      word-break: break-word;
-    }
-
     .duel-intro__avatars.is-hidden {
       opacity: 0;
       pointer-events: none;
+      transform: translateY(-18px);
       max-height: 0;
       margin-bottom: 0;
       overflow: hidden;
@@ -506,18 +405,19 @@
 
     .duel-intro__avatars {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
-      gap: 34px;
+      gap: 26px;
       flex-wrap: wrap;
-      margin-bottom: 14px;
+      margin-bottom: 20px;
       max-height: 520px;
       opacity: 1;
-      transition: opacity 320ms ease;
+      transition: opacity 320ms ease, transform 320ms ease;
     }
 
     .duel-intro__avatars.is-visible {
       opacity: 1;
+      transform: translateY(0);
     }
 
     .duel-intro__avatars.is-leaving {
@@ -525,6 +425,8 @@
     }
 
     .duel-intro__vs {
+      align-self: center;
+      margin-top: 36px;
       font-size: clamp(28px, 5vw, 40px);
       font-weight: 900;
       color: #b8f5cc;
@@ -555,17 +457,9 @@
       transition: transform 420ms cubic-bezier(0.2, 0.76, 0.18, 1), opacity 340ms ease, filter 300ms ease;
     }
 
-    .duel-intro__player--me {
-      transform: translateX(-76px) scale(0.96);
-    }
-
-    .duel-intro__player--enemy {
-      transform: translateX(76px) scale(0.96);
-    }
-
     .duel-intro__player.is-visible {
       opacity: 1;
-      transform: translateX(0) translateY(0) scale(1);
+      transform: translateY(0) scale(1);
     }
 
     .duel-intro__player.is-flash {
@@ -578,14 +472,14 @@
     }
 
     .duel-intro__avatar {
-      width: min(36vw, 220px);
-      height: min(36vw, 220px);
+      width: min(34vw, 186px);
+      height: min(34vw, 186px);
       border-radius: 50%;
       object-fit: cover;
-      border: 5px solid rgba(255, 255, 255, 0.76);
+      border: 5px solid rgba(255, 255, 255, 0.82);
       box-shadow:
         0 20px 44px rgba(0, 0, 0, 0.42),
-        0 0 0 10px rgba(153, 221, 255, 0.08);
+        0 0 0 12px rgba(153, 221, 255, 0.08);
       background: rgba(8, 24, 38, 0.8);
     }
 
@@ -619,8 +513,121 @@
       transform: translateY(-8px);
     }
 
-    .duel-intro__countdown {
+    .duel-intro__book-stage {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
       margin: 0;
+    }
+
+    .duel-intro__book {
+      position: relative;
+      width: min(100%, 760px);
+      min-height: 280px;
+      border-radius: 26px;
+      overflow: hidden;
+      border: 1px solid rgba(221, 242, 255, 0.28);
+      box-shadow:
+        0 26px 64px rgba(0, 0, 0, 0.42),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      background: linear-gradient(160deg, #1b2d47, #314f73);
+      transform: translateY(20px) scale(0.97);
+      opacity: 0;
+      transition: transform 420ms cubic-bezier(0.2, 0.76, 0.16, 1), opacity 320ms ease, box-shadow 320ms ease;
+    }
+
+    .duel-intro__book::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(5, 16, 31, 0.15) 0%, rgba(5, 16, 31, 0.28) 38%, rgba(5, 16, 31, 0.88) 100%),
+        radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.16), transparent 28%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .duel-intro__book::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .duel-intro__book.is-visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .duel-intro__book.is-flash::before {
+      animation: duelBookFlash 520ms ease;
+    }
+
+    .duel-intro__book-image {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #102033;
+      filter: saturate(1.02) contrast(1.04);
+    }
+
+    .duel-intro__book-fallback {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background: linear-gradient(160deg, #385f7e, #8d4d80);
+    }
+
+    .duel-intro__book-copy {
+      position: relative;
+      z-index: 2;
+      min-height: 280px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 24px 22px 22px;
+      text-align: left;
+    }
+
+    .duel-intro__book-kicker {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(224, 247, 232, 0.84);
+    }
+
+    .duel-intro__book-title {
+      margin: 0;
+      max-width: 100%;
+      font-size: clamp(28px, 5.5vw, 44px);
+      font-weight: 900;
+      line-height: 1.02;
+      color: #ffffff;
+      text-shadow: 0 6px 22px rgba(0, 0, 0, 0.38);
+      word-break: break-word;
+    }
+
+    .duel-intro__book-subtitle {
+      margin: 0;
+      max-width: min(100%, 540px);
+      font-size: clamp(15px, 2.6vw, 20px);
+      font-weight: 700;
+      color: rgba(220, 244, 255, 0.9);
+      text-shadow: 0 2px 16px rgba(0, 0, 0, 0.34);
+    }
+
+    .duel-intro__countdown {
+      margin: 8px 0 0;
       font-size: clamp(22px, 3.8vw, 32px);
       font-weight: 900;
       color: #bff7d0;
@@ -1107,32 +1114,40 @@
       .mini-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
-      .duel-intro__book-stage {
-        min-height: 250px;
-      }
-      .duel-intro__book {
-        width: min(52vw, 162px);
-      }
       .card-word { font-size: 33.12px; }
       .card-word.is-long { font-size: 29.15px; }
       .card-subword { font-size: 24.84px; }
       .card-subword.is-long { font-size: 21.86px; }
       .enemy-speaking { font-size: 18px; }
       .duel-intro__avatar {
-        width: min(38vw, 152px);
-        height: min(38vw, 152px);
+        width: min(34vw, 126px);
+        height: min(34vw, 126px);
       }
       .duel-intro__countdown {
         font-size: 19px;
       }
       .duel-intro__player {
-        min-width: 128px;
+        min-width: 108px;
       }
       .duel-intro__avatars {
-        gap: 16px;
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+      .duel-intro__vs {
+        margin-top: 18px;
       }
       .duel-intro__book {
-        width: min(52vw, 180px);
+        min-height: 228px;
+      }
+      .duel-intro__book-copy {
+        min-height: 228px;
+        padding: 18px 16px 18px;
+      }
+      .duel-intro__book-title {
+        font-size: clamp(22px, 7vw, 30px);
+      }
+      .duel-intro__book-subtitle {
+        font-size: 14px;
       }
       .duel-avatars {
         width: 100%;
@@ -1262,12 +1277,26 @@
 
     <section class="speaking-card speaking-game" id="speakingGame">
       <section class="duel-intro" id="duelIntro" hidden>
+        <div class="duel-intro__avatars" id="duelIntroAvatars">
+          <article class="duel-intro__player duel-intro__player--me" id="duelIntroMePlayer">
+            <img class="duel-intro__avatar" id="duelIntroMeAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Seu avatar grande">
+            <p class="duel-intro__name" id="duelIntroMeName">Voce</p>
+          </article>
+          <span class="duel-intro__vs" id="duelIntroVs">VS</span>
+          <article class="duel-intro__player duel-intro__player--enemy" id="duelIntroEnemyPlayer">
+            <img class="duel-intro__avatar" id="duelIntroEnemyAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar grande do adversario">
+            <p class="duel-intro__name" id="duelIntroEnemyName">Adversario</p>
+          </article>
+        </div>
         <div class="duel-intro__book-stage" id="duelIntroBookStage">
           <article class="duel-intro__book" id="duelIntroBookCard" aria-label="MiniBook da batalha">
             <img class="duel-intro__book-image" id="duelIntroBookImage" alt="Capa do MiniBook" hidden>
-            <div class="duel-intro__book-fallback" id="duelIntroBookFallback" hidden>
-              <p class="duel-intro__book-line" id="duelIntroBookLineA">Mini</p>
-              <p class="duel-intro__book-line" id="duelIntroBookLineB">Book</p>
+            <div class="duel-intro__book-fallback" id="duelIntroBookFallback" hidden></div>
+            <div class="duel-intro__book-copy">
+              <p class="duel-intro__book-kicker" id="duelIntroBookKicker">JSON da batalha</p>
+              <p class="duel-intro__book-title" id="duelIntroBookTitle">minibook.json</p>
+              <p class="duel-intro__book-subtitle" id="duelIntroBookSubtitle">Mini Book escolhido para o duelo</p>
+              <p class="duel-intro__countdown" id="duelIntroCountdown">O desafio vai comecar em 10...</p>
             </div>
           </article>
         </div>
