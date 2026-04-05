@@ -49,8 +49,8 @@
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(0, 0, 0, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: transparent;
+      border: 1px solid transparent;
       border-radius: 14px;
       padding: 10px;
       backdrop-filter: blur(7px);
@@ -232,10 +232,18 @@
       transform: translateX(-44px);
     }
 
+    .books-grid.is-level-sliding-out.is-reverse {
+      transform: translateX(44px);
+    }
+
     .books-grid.is-level-sliding-in {
       opacity: 0.42;
       filter: blur(4px);
       transform: translateX(44px);
+    }
+
+    .books-grid.is-level-sliding-in.is-reverse {
+      transform: translateX(-44px);
     }
 
     .books-shelf-page {
@@ -728,7 +736,7 @@
       width: 100%;
       display: grid;
       justify-items: center;
-      gap: 20px;
+      gap: 28px;
       opacity: 1;
       filter: blur(0);
       transition: opacity 2000ms ease, filter 2000ms ease;
@@ -740,7 +748,7 @@
     }
 
     .books-mode-cover {
-      width: min(230px, 52vw);
+      width: min(258px, 58vw);
       aspect-ratio: 9 / 16;
       border-radius: 14px;
       background: linear-gradient(155deg, #2a5bcf, #28a7d5);
@@ -816,12 +824,12 @@
     }
 
     .books-mode-actions .books-magic-btn {
-      width: min(42vw, 280px);
+      width: min(46vw, 308px);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 42px;
-      font-size: 15.5px;
+      min-height: 46px;
+      font-size: 17px;
       letter-spacing: 0.01em;
       transform: translateY(0);
     }
@@ -977,9 +985,10 @@
     .books-reader-content {
       min-height: 100vh;
       display: grid;
-      align-content: start;
+      grid-template-rows: auto auto 1fr;
+      align-content: stretch;
       justify-items: center;
-      padding: 72px 20px 42px;
+      padding: 72px 20px 20px;
       gap: 12px;
       text-align: center;
       user-select: none;
@@ -987,10 +996,10 @@
     }
 
     .books-reader-book-hero {
-      width: min(270px, 48vw);
+      width: min(324px, 58vw);
       height: 40vh;
-      min-height: 250px;
-      max-height: 430px;
+      min-height: 300px;
+      max-height: 520px;
       display: none;
       align-items: center;
       justify-content: center;
@@ -1028,11 +1037,13 @@
 
     .books-reader-text-panel {
       width: min(920px, 100%);
-      min-height: 25vh;
+      min-height: 0;
+      height: 100%;
       display: grid;
-      align-content: center;
+      grid-template-rows: 1fr auto;
+      align-content: stretch;
       justify-items: center;
-      gap: 14px;
+      gap: 8px;
     }
 
     .books-reader-english {
@@ -1148,6 +1159,8 @@
       gap: 8px;
       flex-wrap: wrap;
       justify-content: center;
+      align-self: end;
+      margin-bottom: 20px;
     }
 
     .books-reader-lang-btn {
@@ -1457,7 +1470,7 @@
       }
 
       .books-reader-book-hero {
-        width: min(220px, 50vw);
+        width: min(264px, 62vw);
         height: 40vh;
       }
     }

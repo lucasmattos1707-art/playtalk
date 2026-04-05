@@ -535,8 +535,10 @@
     });
   }
 
-  async function animateLevelChangeTransition() {
+  async function animateLevelChangeTransition(direction) {
+    const isReverse = Number(direction) < 0;
     if (els.cardsGrid) {
+      els.cardsGrid.classList.toggle('is-reverse', isReverse);
       els.cardsGrid.classList.remove('is-level-sliding-in');
       els.cardsGrid.classList.add('is-level-sliding-out');
     }
@@ -557,6 +559,7 @@
     await wait(32);
     if (els.cardsGrid) {
       els.cardsGrid.classList.remove('is-level-sliding-in');
+      els.cardsGrid.classList.remove('is-reverse');
     }
   }
 
@@ -1343,7 +1346,8 @@
   async function setLevel(nextLevel) {
     const normalizedLevel = normalizeLevel(nextLevel);
     if (normalizedLevel === state.selectedLevel) return;
-    await animateLevelChangeTransition();
+    const direction = normalizedLevel > state.selectedLevel ? 1 : -1;
+    await animateLevelChangeTransition(direction);
     state.selectedLevel = normalizedLevel;
     state.shelfIndex = 0;
     renderLevelMenu();
