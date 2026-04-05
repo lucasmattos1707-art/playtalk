@@ -5,12 +5,11 @@
   const DUEL_POLL_MS = 2000;
   const PRESENCE_PING_MS = 15000;
   const WORD_SWAP_MS = 1000;
-  const DUEL_INTRO_COUNTDOWN_SECONDS = 6;
+  const DUEL_INTRO_COUNTDOWN_SECONDS = 10;
   const DUEL_BATTLE_DURATION_MS = 3 * 60 * 1000;
-  const DUEL_INTRO_BOOK_STAGE_SECONDS = 2;
-  const DUEL_INTRO_PLAYER_STAGE_SECONDS = 4;
-  const DUEL_INTRO_BOOK_EXIT_MS = 420;
-  const DUEL_INTRO_REVEAL_DELAY_MS = 500;
+  const DUEL_INTRO_BOOK_APPEAR_AT_SECONDS = 8;
+  const DUEL_INTRO_PLAYERS_APPEAR_AT_SECONDS = 5;
+  const DUEL_INTRO_PLAYERS_EXIT_AT_SECONDS = 2;
   const DUEL_INTRO_FALLBACK_GRADIENTS = [
     'linear-gradient(160deg, #274873, #6f3f72)',
     'linear-gradient(160deg, #1f5b57, #355f9d)',
@@ -30,6 +29,7 @@
     duelIntroBookLineA: document.getElementById('duelIntroBookLineA'),
     duelIntroBookLineB: document.getElementById('duelIntroBookLineB'),
     duelIntroAvatars: document.getElementById('duelIntroAvatars'),
+    duelIntroVs: document.getElementById('duelIntroVs'),
     duelIntroMePlayer: document.getElementById('duelIntroMePlayer'),
     duelIntroEnemyPlayer: document.getElementById('duelIntroEnemyPlayer'),
     duelIntroMeAvatar: document.getElementById('duelIntroMeAvatar'),
@@ -140,6 +140,7 @@
         title: '',
         coverImageUrl: ''
       },
+      preloadedIntroAudio: null,
       battleDeadlineMs: 0,
       battleTimer: 0,
       timeoutSyncInFlight: false
@@ -778,34 +779,44 @@
   }
 
   function resetDuelIntroVisuals() {
+    if (els.duelIntro) els.duelIntro.classList.remove('is-book-stage', 'is-player-stage');
+    if (els.duelIntroAvatars) {
+      els.duelIntroAvatars.classList.add('is-hidden');
+      els.duelIntroAvatars.classList.remove('is-visible', 'is-leaving');
+    }
+    if (els.duelIntroVs) els.duelIntroVs.classList.remove('is-visible', 'is-leaving');
+    if (els.duelIntroBookStage) els.duelIntroBookStage.hidden = true;
+    if (els.duelIntroBookCard) {
+      els.duelIntroBookCard.classList.remove('is-visible', 'is-exit', 'is-flash');
+    }
     if (els.duelIntroMePlayer) els.duelIntroMePlayer.classList.remove('is-visible');
     if (els.duelIntroEnemyPlayer) els.duelIntroEnemyPlayer.classList.remove('is-visible');
+    if (els.duelIntroMePlayer) els.duelIntroMePlayer.classList.remove('is-leaving', 'is-flash');
+    if (els.duelIntroEnemyPlayer) els.duelIntroEnemyPlayer.classList.remove('is-leaving', 'is-flash');
     if (els.duelIntroMeName) {
-      els.duelIntroMeName.classList.remove('is-visible');
-      els.duelIntroMeName.classList.remove('is-flash');
+      els.duelIntroMeName.classList.remove('is-visible', 'is-flash', 'is-leaving');
     }
     if (els.duelIntroEnemyName) {
-      els.duelIntroEnemyName.classList.remove('is-visible');
-      els.duelIntroEnemyName.classList.remove('is-flash');
+      els.duelIntroEnemyName.classList.remove('is-visible', 'is-flash', 'is-leaving');
     }
-    if (els.duelIntroAvatars) els.duelIntroAvatars.classList.add('is-hidden');
-    if (els.duelIntroBookStage) els.duelIntroBookStage.hidden = false;
-    if (els.duelIntroBookCard) els.duelIntroBookCard.classList.remove('is-exit');
+    if (els.duelIntroCountdown) {
+      els.duelIntroCountdown.textContent = `O desafio vai comecar em ${DUEL_INTRO_COUNTDOWN_SECONDS}...`;
+    }
   }
 
   function revealDuelIntroPlayer(playerEl, nameEl) {
     if (playerEl) {
       playerEl.classList.remove('is-visible');
+      playerEl.classList.remove('is-leaving', 'is-flash');
       void playerEl.offsetWidth;
       playerEl.classList.add('is-visible');
+      playerEl.classList.add('is-flash');
     }
-    queueDuelIntroAnimation(() => {
-      if (!nameEl) return;
-      nameEl.classList.add('is-visible');
-      nameEl.classList.remove('is-flash');
-      void nameEl.offsetWidth;
-      nameEl.classList.add('is-flash');
-    }, DUEL_INTRO_REVEAL_DELAY_MS);
+    if (!nameEl) return;
+    nameEl.classList.add('is-visible');
+    nameEl.classList.remove('is-flash', 'is-leaving');
+    void nameEl.offsetWidth;
+    nameEl.classList.add('is-flash');
   }
 
   function applyDuelIntroBook() {
@@ -845,22 +856,72 @@
     }
   }
 
+  function revealDuelIntroBook() {
+    if (els.duelIntro) {
+      els.duelIntro.classList.add('is-book-stage');
+      els.duelIntro.classList.remove('is-player-stage');
+    }
+    if (els.duelIntroBookStage) {
+      els.duelIntroBookStage.hidden = false;
+    }
+    if (els.duelIntroBookCard) {
+      els.duelIntroBookCard.classList.remove('is-exit', 'is-visible', 'is-flash');
+      void els.duelIntroBookCard.offsetWidth;
+      els.duelIntroBookCard.classList.add('is-visible', 'is-flash');
+    }
+  }
+
   function revealDuelIntroPlayersAfterBook() {
     if (els.duelIntroBookCard) {
       els.duelIntroBookCard.classList.add('is-exit');
     }
     queueDuelIntroAnimation(() => {
+      if (els.duelIntro) {
+        els.duelIntro.classList.remove('is-book-stage');
+        els.duelIntro.classList.add('is-player-stage');
+      }
       if (els.duelIntroBookStage) {
         els.duelIntroBookStage.hidden = true;
       }
       if (els.duelIntroAvatars) {
         els.duelIntroAvatars.classList.remove('is-hidden');
+        els.duelIntroAvatars.classList.add('is-visible');
+        els.duelIntroAvatars.classList.remove('is-leaving');
+      }
+      if (els.duelIntroVs) {
+        els.duelIntroVs.classList.remove('is-leaving');
+        els.duelIntroVs.classList.add('is-visible');
       }
       revealDuelIntroPlayer(els.duelIntroMePlayer, els.duelIntroMeName);
-      queueDuelIntroAnimation(() => {
-        revealDuelIntroPlayer(els.duelIntroEnemyPlayer, els.duelIntroEnemyName);
-      }, 2 * DUEL_INTRO_REVEAL_DELAY_MS);
-    }, DUEL_INTRO_BOOK_EXIT_MS);
+      revealDuelIntroPlayer(els.duelIntroEnemyPlayer, els.duelIntroEnemyName);
+    }, 280);
+  }
+
+  function fadeOutDuelIntroPlayers() {
+    if (els.duelIntroAvatars) {
+      els.duelIntroAvatars.classList.add('is-leaving');
+    }
+    if (els.duelIntroVs) {
+      els.duelIntroVs.classList.add('is-leaving');
+    }
+    [els.duelIntroMePlayer, els.duelIntroEnemyPlayer, els.duelIntroMeName, els.duelIntroEnemyName]
+      .filter(Boolean)
+      .forEach((element) => element.classList.add('is-leaving'));
+  }
+
+  function preloadFirstDuelCardAudio() {
+    try {
+      const firstCard = Array.isArray(state.activeCards) && state.activeCards.length ? state.activeCards[0] : null;
+      const audioUrl = safeText(firstCard?.audioUrl || firstCard?.audio);
+      if (!audioUrl) return;
+      const audio = new Audio();
+      audio.preload = 'auto';
+      audio.src = audioUrl;
+      audio.load();
+      state.duel.preloadedIntroAudio = audio;
+    } catch (_error) {
+      state.duel.preloadedIntroAudio = null;
+    }
   }
 
   function formatTimerMs(totalMs) {
@@ -957,12 +1018,7 @@
 
   async function runDuelIntroCountdown() {
     if (!state.duel.enabled) return;
-    const totalCountdownSeconds = Math.max(
-      1,
-      Number.parseInt(state.duel.introCountdownSeconds, 10) || (DUEL_INTRO_BOOK_STAGE_SECONDS + DUEL_INTRO_PLAYER_STAGE_SECONDS)
-    );
-    const bookStageSeconds = Math.min(DUEL_INTRO_BOOK_STAGE_SECONDS, totalCountdownSeconds);
-    const playerStageSeconds = Math.max(0, totalCountdownSeconds - bookStageSeconds);
+    const totalCountdownSeconds = Math.max(1, Number.parseInt(state.duel.introCountdownSeconds, 10) || DUEL_INTRO_COUNTDOWN_SECONDS);
 
     setDuelIntroVisible(true);
     updateTopPercents();
@@ -970,26 +1026,23 @@
     clearDuelIntroAnimationTimers();
     void playBattleIntroAudio();
     applyDuelIntroBook();
+    preloadFirstDuelCardAudio();
 
-    for (let elapsed = 0; elapsed < bookStageSeconds; elapsed += 1) {
+    for (let remaining = totalCountdownSeconds; remaining >= 1; remaining -= 1) {
       if (!state.duel.enabled || state.duel.completed) break;
+      if (remaining === DUEL_INTRO_BOOK_APPEAR_AT_SECONDS) {
+        revealDuelIntroBook();
+      }
+      if (remaining === DUEL_INTRO_PLAYERS_APPEAR_AT_SECONDS) {
+        revealDuelIntroPlayersAfterBook();
+      }
+      if (remaining === DUEL_INTRO_PLAYERS_EXIT_AT_SECONDS) {
+        fadeOutDuelIntroPlayers();
+      }
       if (els.duelIntroCountdown) {
-        const remaining = totalCountdownSeconds - elapsed;
         els.duelIntroCountdown.textContent = `O desafio vai comecar em ${remaining}...`;
       }
       await waitMs(1000);
-    }
-
-    if (playerStageSeconds > 0 && state.duel.enabled && !state.duel.completed) {
-      revealDuelIntroPlayersAfterBook();
-      for (let elapsed = bookStageSeconds; elapsed < totalCountdownSeconds; elapsed += 1) {
-        if (!state.duel.enabled || state.duel.completed) break;
-        if (els.duelIntroCountdown) {
-          const remaining = totalCountdownSeconds - elapsed;
-          els.duelIntroCountdown.textContent = `O desafio vai comecar em ${remaining}...`;
-        }
-        await waitMs(1000);
-      }
     }
 
     if (!state.duel.enabled || state.duel.completed) {
@@ -1626,6 +1679,16 @@
       window.clearTimeout(state.duel.completedRedirectTimer);
       state.duel.completedRedirectTimer = 0;
     }
+    if (state.duel.preloadedIntroAudio) {
+      try {
+        state.duel.preloadedIntroAudio.pause();
+        state.duel.preloadedIntroAudio.removeAttribute('src');
+        state.duel.preloadedIntroAudio.load();
+      } catch (_error) {
+        // ignore
+      }
+      state.duel.preloadedIntroAudio = null;
+    }
     state.duel.meFinished = false;
     state.duel.mePercent = 0;
     state.duel.rivalProgress = 0;
@@ -1636,6 +1699,7 @@
       title: '',
       coverImageUrl: ''
     };
+    state.duel.preloadedIntroAudio = null;
     state.duel.battleDeadlineMs = 0;
     state.duel.timeoutSyncInFlight = false;
     state.activeCards = [];
