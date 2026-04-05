@@ -134,6 +134,7 @@
       introTimer: 0,
       introAnimationTimers: [],
       introCountdownSeconds: DUEL_INTRO_COUNTDOWN_SECONDS,
+      battleDurationMs: DUEL_BATTLE_DURATION_MS,
       introBook: {
         id: '',
         title: '',
@@ -933,6 +934,14 @@
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 
+  function resolveDuelBattleDurationMs(session) {
+    const seconds = Number.parseInt(session?.battleDurationSeconds, 10);
+    if (Number.isFinite(seconds) && seconds > 0) {
+      return seconds * 1000;
+    }
+    return DUEL_BATTLE_DURATION_MS;
+  }
+
   function updateDuelTimerLabel() {
     if (!els.duelTimerLabel) return;
     if (!state.duel.enabled || !state.duel.battleDeadlineMs || state.duel.completed || els.game?.classList.contains('is-prestart')) {
@@ -1612,10 +1621,16 @@
       1,
       Number.parseInt(session?.introCountdownSeconds, 10) || DUEL_INTRO_COUNTDOWN_SECONDS
     );
+    state.duel.battleDurationMs = resolveDuelBattleDurationMs(session);
     state.duel.introBook = resolveDuelIntroBookData();
     const battleEndsAtMs = Date.parse(String(session?.battleEndsAt || '').trim());
     if (Number.isFinite(battleEndsAtMs) && battleEndsAtMs > 0) {
       state.duel.battleDeadlineMs = battleEndsAtMs;
+    } else {
+      const createdAtMs = Date.parse(String(session?.createdAt || '').trim());
+      if (Number.isFinite(createdAtMs) && createdAtMs > 0) {
+        state.duel.battleDeadlineMs = createdAtMs + (state.duel.introCountdownSeconds * 1000) + state.duel.battleDurationMs;
+      }
     }
     updateTopPercents();
     updateProgressBars();
@@ -1693,6 +1708,7 @@
     state.duel.rivalProgress = 0;
     state.duel.rivalPercent = 0;
     state.duel.introCountdownSeconds = DUEL_INTRO_COUNTDOWN_SECONDS;
+    state.duel.battleDurationMs = DUEL_BATTLE_DURATION_MS;
     state.duel.introBook = {
       id: '',
       title: '',
@@ -2089,10 +2105,11 @@
       1,
       Number.parseInt(session?.introCountdownSeconds, 10) || DUEL_INTRO_COUNTDOWN_SECONDS
     );
+    state.duel.battleDurationMs = resolveDuelBattleDurationMs(session);
     if (!state.duel.battleDeadlineMs) {
       const createdAtMs = Date.parse(String(session?.createdAt || '').trim());
       if (Number.isFinite(createdAtMs) && createdAtMs > 0) {
-        state.duel.battleDeadlineMs = createdAtMs + (state.duel.introCountdownSeconds * 1000) + DUEL_BATTLE_DURATION_MS;
+        state.duel.battleDeadlineMs = createdAtMs + (state.duel.introCountdownSeconds * 1000) + state.duel.battleDurationMs;
       }
     }
     syncDuelView(session);
