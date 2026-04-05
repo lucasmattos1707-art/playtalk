@@ -837,6 +837,7 @@
     const audio = new Audio(source);
     audio.preload = 'auto';
     audio.loop = false;
+    audio.volume = 0.3;
     state.homeMusicAudioElement = audio;
     audio.onended = () => {
       if (!state.homeMusicEnabled || token !== state.homePlaybackToken) return;
