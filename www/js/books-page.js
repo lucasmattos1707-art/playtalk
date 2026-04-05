@@ -19,8 +19,15 @@
   const READER_FINISH_LINE_ENTER_MS = 260;
   const READER_FREE_READ_MIN_VIEW_MS = 3000;
   const READER_BLOCKED_FLASH_MS = 750;
+  const HOME_REPEAT_OPTIONS = [1, 2, 3, 5, 7, 10];
+  const HOME_MUSIC_PLAYLIST = [
+    'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen1.mp3',
+    'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen2.mp3',
+    'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen3.mp3',
+    'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen4.mp3'
+  ];
   const LEVEL_DISPLAY_NAMES = [
-    'Iniciante',
+    'Home',
     'Básico',
     'Aprendiz',
     'Estudante',
@@ -45,6 +52,14 @@
     status: document.getElementById('booksStatus'),
     shelfViewport: document.getElementById('booksShelfViewport'),
     shelfLoading: document.getElementById('booksShelfLoading'),
+    homePanel: document.getElementById('booksHomePanel'),
+    homeStartBtn: document.getElementById('booksHomeStartBtn'),
+    homeCoverWrap: document.getElementById('booksHomeCoverWrap'),
+    homeCover: document.getElementById('booksHomeCover'),
+    homeControls: document.getElementById('booksHomeControls'),
+    homeRepeatBtn: document.getElementById('booksHomeRepeatBtn'),
+    homeRepeatLabel: document.getElementById('booksHomeRepeatLabel'),
+    homeMusicBtn: document.getElementById('booksHomeMusicBtn'),
     cardsGrid: document.getElementById('booksCardsGrid'),
     cardsEmpty: document.getElementById('booksCardsEmpty'),
     coverUploadInput: document.getElementById('booksCoverUploadInput'),
@@ -109,7 +124,7 @@
     user: null,
     localProfile: null,
     initialLoading: true,
-    selectedLevel: 1,
+    selectedLevel: 0,
     books: [],
     isAdmin: false,
     forceAdminUi: false,
@@ -156,7 +171,17 @@
     shelfLastGestureAt: 0,
     shelfAnimating: false,
     shelfAnimationFrame: 0,
-    shelfAnimationToken: 0
+    shelfAnimationToken: 0,
+    homeSleepActive: false,
+    homeIntroDismissed: false,
+    homePlaybackToken: 0,
+    homeAudioElement: null,
+    homeCurrentBookId: '',
+    homeCurrentBookCover: '',
+    homeRepeatIndex: 0,
+    homeMusicEnabled: false,
+    homeMusicAudioElement: null,
+    homeMusicIndex: 0
   };
 
   function safeText(value) {
@@ -237,8 +262,8 @@
     const normalizedLevelLabel = normalizeText(normalizedRaw);
     if (!normalizedLevelLabel) return null;
     const index = LEVEL_DISPLAY_NAMES.findIndex((name) => normalizeText(name) === normalizedLevelLabel);
-    if (index < 0) return null;
-    return index + 1;
+    if (index <= 0) return null;
+    return index;
   }
 
   function parseCreateInputForSubmission(rawText) {
@@ -507,9 +532,26 @@
   }
 
   function getBooksForSelectedLevel() {
+    if (state.selectedLevel <= 0) {
+      return [];
+    }
     return state.books
       .filter((entry) => normalizeLevel(entry?.nivel) === state.selectedLevel)
       .sort(sortByNome);
+  }
+
+  function normalizeBrowseLevel(value) {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.max(0, Math.min(LEVEL_DISPLAY_NAMES.length - 1, parsed));
+  }
+
+  function isHomeLevel() {
+    return state.selectedLevel === 0;
+  }
+
+  function getHomeRepeatSeconds() {
+    return HOME_REPEAT_OPTIONS[Math.max(0, Math.min(HOME_REPEAT_OPTIONS.length - 1, state.homeRepeatIndex))] || 1;
   }
 
   function randomInt(max) {
@@ -553,6 +595,195 @@
     return new Promise((resolve) => {
       window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
     });
+  }
+
+  function renderHomePanel() {
+    if (!els.homePanel) return;
+    const visible = isHomeLevel();
+    els.homePanel.classList.toggle('is-visible', visible);
+    if (els.homeStartBtn) {
+      els.homeStartBtn.classList.toggle('is-hidden', state.homeIntroDismissed);
+    }
+    if (els.homeCoverWrap) {
+      const showCover = state.homeIntroDismissed && Boolean(state.homeCurrentBookCover);
+      els.homeCoverWrap.hidden = !showCover;
+      els.homeCoverWrap.classList.toggle('is-visible', showCover);
+    }
+    if (els.homeCover) {
+      els.homeCover.style.backgroundImage = state.homeCurrentBookCover
+        ? `url(${safeCssUrl(state.homeCurrentBookCover)})`
+        : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
+    }
+    if (els.homeControls) {
+      const showControls = state.homeIntroDismissed;
+      els.homeControls.hidden = !showControls;
+      els.homeControls.classList.toggle('is-visible', showControls);
+    }
+    if (els.homeRepeatLabel) {
+      els.homeRepeatLabel.textContent = `${getHomeRepeatSeconds()}s`;
+    }
+    if (els.homeMusicBtn) {
+      els.homeMusicBtn.classList.toggle('is-on', state.homeMusicEnabled);
+    }
+    if (els.cardsGrid) {
+      els.cardsGrid.hidden = visible;
+    }
+    if (visible && els.cardsEmpty) {
+      els.cardsEmpty.hidden = true;
+    }
+  }
+
+  function stopHomeAudioPlayback() {
+    state.homePlaybackToken += 1;
+    const current = state.homeAudioElement;
+    state.homeAudioElement = null;
+    if (!current) return;
+    try {
+      current.pause();
+      current.currentTime = 0;
+      current.src = '';
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  function stopHomeMusicLoop() {
+    state.homeMusicEnabled = false;
+    const current = state.homeMusicAudioElement;
+    state.homeMusicAudioElement = null;
+    if (!current) {
+      renderHomePanel();
+      return;
+    }
+    try {
+      current.pause();
+      current.currentTime = 0;
+      current.src = '';
+    } catch (_error) {
+      // ignore
+    }
+    renderHomePanel();
+  }
+
+  async function playHomeMusicTrack(token) {
+    if (!state.homeMusicEnabled || !HOME_MUSIC_PLAYLIST.length) return;
+    const source = HOME_MUSIC_PLAYLIST[Math.max(0, Math.min(HOME_MUSIC_PLAYLIST.length - 1, state.homeMusicIndex))];
+    if (!source) return;
+    const audio = new Audio(source);
+    audio.preload = 'auto';
+    audio.loop = false;
+    state.homeMusicAudioElement = audio;
+    audio.onended = () => {
+      if (!state.homeMusicEnabled || token !== state.homePlaybackToken) return;
+      state.homeMusicIndex = (state.homeMusicIndex + 1) % HOME_MUSIC_PLAYLIST.length;
+      void playHomeMusicTrack(token);
+    };
+    try {
+      await audio.play();
+    } catch (_error) {
+      state.homeMusicEnabled = false;
+      state.homeMusicAudioElement = null;
+      renderHomePanel();
+    }
+  }
+
+  function startHomeMusicLoop() {
+    if (state.homeMusicEnabled) return;
+    state.homeMusicEnabled = true;
+    renderHomePanel();
+    void playHomeMusicTrack(state.homePlaybackToken);
+  }
+
+  function toggleHomeMusicLoop() {
+    if (state.homeMusicEnabled) {
+      stopHomeMusicLoop();
+      return;
+    }
+    startHomeMusicLoop();
+  }
+
+  async function playHomeAudioSource(source, token) {
+    if (!source) return;
+    const audio = new Audio(source);
+    audio.preload = 'auto';
+    state.homeAudioElement = audio;
+    await new Promise((resolve) => {
+      const finish = () => {
+        audio.onended = null;
+        audio.onerror = null;
+        resolve();
+      };
+      audio.onended = finish;
+      audio.onerror = finish;
+      audio.play().catch(() => finish());
+    });
+    if (token !== state.homePlaybackToken) {
+      try {
+        audio.pause();
+      } catch (_error) {
+        // ignore
+      }
+    }
+  }
+
+  async function runHomePlaybackLoop(token) {
+    while (state.homeSleepActive && token === state.homePlaybackToken) {
+      const candidates = Array.isArray(state.books) ? state.books.slice() : [];
+      const filtered = candidates.filter((book) => safeText(book?.selectedStoryId));
+      if (!filtered.length) {
+        await wait(1000);
+        continue;
+      }
+      const available = filtered.filter((book) => safeText(book.bookId) !== state.homeCurrentBookId);
+      const pool = available.length ? available : filtered;
+      const nextBook = pool[Math.floor(Math.random() * pool.length)] || filtered[0];
+      if (!nextBook) return;
+      state.homeCurrentBookId = safeText(nextBook.bookId);
+      state.homeCurrentBookCover = safeText(nextBook.coverImageUrl);
+      renderHomePanel();
+      let cards = [];
+      try {
+        cards = await fetchBookCards(nextBook);
+      } catch (_error) {
+        await wait(600);
+        continue;
+      }
+      const playableCards = cards.filter((card) => safeText(card?.audio));
+      for (const card of playableCards) {
+        if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
+        await playHomeAudioSource(safeText(card.audio), token);
+        if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
+        await wait(getHomeRepeatSeconds() * 1000);
+      }
+      if (!playableCards.length) {
+        await wait(800);
+      }
+    }
+  }
+
+  function startHomeSleepPlayback() {
+    if (state.homeSleepActive) return;
+    state.homeIntroDismissed = true;
+    state.homeSleepActive = true;
+    state.homePlaybackToken += 1;
+    renderHomePanel();
+    if (state.homeMusicEnabled) {
+      void playHomeMusicTrack(state.homePlaybackToken);
+    }
+    void runHomePlaybackLoop(state.homePlaybackToken);
+  }
+
+  function stopHomeSleepPlayback(options = {}) {
+    const keepIntro = Boolean(options.keepIntro);
+    state.homeSleepActive = false;
+    if (!keepIntro) {
+      state.homeIntroDismissed = false;
+      state.homeCurrentBookCover = '';
+      state.homeCurrentBookId = '';
+    }
+    stopHomeAudioPlayback();
+    stopHomeMusicLoop();
+    renderHomePanel();
   }
 
   async function animateLevelChangeTransition(direction) {
@@ -1199,6 +1430,17 @@
 
   function renderCards() {
     if (!els.cardsGrid || !els.cardsEmpty) return;
+    if (isHomeLevel()) {
+      els.cardsGrid.innerHTML = '';
+      els.cardsGrid.hidden = true;
+      els.cardsEmpty.hidden = true;
+      if (els.shelfViewport) {
+        els.shelfViewport.scrollTop = 0;
+      }
+      renderHomePanel();
+      return;
+    }
+    renderHomePanel();
     const books = getBooksForSelectedLevel();
     const pendingBooks = state.createJobs
       .filter((job) => isCreateJobRunning(job) && normalizeLevel(job?.book?.level) === state.selectedLevel)
@@ -1328,15 +1570,15 @@
 
   function renderLevelMenu() {
     if (els.levelTitle) {
-      const levelIndex = Math.max(0, Math.min(LEVEL_DISPLAY_NAMES.length - 1, state.selectedLevel - 1));
+      const levelIndex = Math.max(0, Math.min(LEVEL_DISPLAY_NAMES.length - 1, state.selectedLevel));
       const levelName = LEVEL_DISPLAY_NAMES[levelIndex] || `Nivel ${state.selectedLevel}`;
       els.levelTitle.textContent = `${levelName}`;
     }
     if (els.prevLevelBtn) {
-      els.prevLevelBtn.disabled = state.selectedLevel <= 1 || state.uploadInFlight;
+      els.prevLevelBtn.disabled = state.selectedLevel <= 0 || state.uploadInFlight;
     }
     if (els.nextLevelBtn) {
-      els.nextLevelBtn.disabled = state.selectedLevel >= 10 || state.uploadInFlight;
+      els.nextLevelBtn.disabled = state.selectedLevel >= (LEVEL_DISPLAY_NAMES.length - 1) || state.uploadInFlight;
     }
   }
 
@@ -1364,10 +1606,13 @@
   }
 
   async function setLevel(nextLevel) {
-    const normalizedLevel = normalizeLevel(nextLevel);
+    const normalizedLevel = normalizeBrowseLevel(nextLevel);
     if (normalizedLevel === state.selectedLevel) return;
     const direction = normalizedLevel > state.selectedLevel ? 1 : -1;
     await animateLevelChangeTransition(direction);
+    if (state.selectedLevel === 0 && normalizedLevel !== 0) {
+      stopHomeSleepPlayback();
+    }
     state.selectedLevel = normalizedLevel;
     state.shelfIndex = 0;
     renderLevelMenu();
@@ -2671,6 +2916,19 @@
       openCreateModal();
     });
 
+    els.homeStartBtn?.addEventListener('click', () => {
+      startHomeSleepPlayback();
+    });
+
+    els.homeRepeatBtn?.addEventListener('click', () => {
+      state.homeRepeatIndex = (state.homeRepeatIndex + 1) % HOME_REPEAT_OPTIONS.length;
+      renderHomePanel();
+    });
+
+    els.homeMusicBtn?.addEventListener('click', () => {
+      toggleHomeMusicLoop();
+    });
+
     els.createSubmitBtn?.addEventListener('click', () => {
       void createBookFromLines();
     });
@@ -2878,6 +3136,7 @@
 
     window.addEventListener('resize', () => {
       syncShelfViewportHeight();
+      renderHomePanel();
       if (state.readerOpen && state.readerBookId) {
         const activeBook = state.books.find((entry) => safeText(entry?.bookId) === state.readerBookId);
         if (!activeBook) return;
@@ -2897,6 +3156,7 @@
     setCreateBusy(false);
     state.gradients = buildGradientPool();
     state.forceAdminUi = readForceAdminUiFlag();
+    renderHomePanel();
     renderShelfLoading();
     renderLevelMenu();
     renderAdminUiToggle();
