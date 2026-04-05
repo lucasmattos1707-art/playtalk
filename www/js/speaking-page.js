@@ -7,6 +7,7 @@
   const WORD_SWAP_MS = 1000;
   const DUEL_INTRO_COUNTDOWN_SECONDS = 10;
   const DUEL_BATTLE_DURATION_MS = 3 * 60 * 1000;
+  const DUEL_INTRO_SWITCH_TO_PLAYERS_SECONDS = 6;
   const DUEL_INTRO_FALLBACK_GRADIENTS = [
     'linear-gradient(160deg, #274873, #6f3f72)',
     'linear-gradient(160deg, #1f5b57, #355f9d)',
@@ -891,10 +892,23 @@
       els.duelIntroBookStage.hidden = false;
     }
     if (els.duelIntroBookCard) {
-      els.duelIntroBookCard.classList.remove('is-visible', 'is-flash');
+      els.duelIntroBookCard.classList.remove('is-exit', 'is-visible', 'is-flash');
       void els.duelIntroBookCard.offsetWidth;
       els.duelIntroBookCard.classList.add('is-visible', 'is-flash');
     }
+  }
+
+  function transitionDuelIntroFromBookToPlayers() {
+    if (els.duelIntroBookCard) {
+      els.duelIntroBookCard.classList.remove('is-visible');
+      els.duelIntroBookCard.classList.add('is-exit');
+    }
+    queueDuelIntroAnimation(() => {
+      if (els.duelIntroBookStage) {
+        els.duelIntroBookStage.hidden = true;
+      }
+      revealDuelIntroPlayers();
+    }, 360);
   }
 
   function preloadFirstDuelCardAudio() {
@@ -1007,6 +1021,7 @@
   async function runDuelIntroCountdown() {
     if (!state.duel.enabled) return;
     const totalCountdownSeconds = Math.max(1, Number.parseInt(state.duel.introCountdownSeconds, 10) || DUEL_INTRO_COUNTDOWN_SECONDS);
+    let switchedToPlayers = false;
 
     setDuelIntroVisible(true);
     updateTopPercents();
@@ -1015,13 +1030,14 @@
     void playBattleIntroAudio();
     applyDuelIntroBook();
     preloadFirstDuelCardAudio();
-    revealDuelIntroPlayers();
-    queueDuelIntroAnimation(() => {
-      revealDuelIntroBook();
-    }, 140);
+    revealDuelIntroBook();
 
     for (let remaining = totalCountdownSeconds; remaining >= 1; remaining -= 1) {
       if (!state.duel.enabled || state.duel.completed) break;
+      if (!switchedToPlayers && remaining <= DUEL_INTRO_SWITCH_TO_PLAYERS_SECONDS) {
+        switchedToPlayers = true;
+        transitionDuelIntroFromBookToPlayers();
+      }
       if (els.duelIntroCountdown) {
         els.duelIntroCountdown.textContent = `O desafio vai comecar em ${remaining}...`;
       }

@@ -350,6 +350,13 @@
 
     .speaking-game { display: none; margin-top: 12px; }
     .speaking-game.is-active { display: block; }
+    .speaking-game.is-prestart {
+      margin-top: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      backdrop-filter: none;
+    }
     .speaking-game.is-prestart .progress-wrap,
     .speaking-game.is-prestart .progress-copy,
     .speaking-game.is-prestart .duel-avatars,
@@ -376,21 +383,27 @@
 
     .duel-intro {
       display: none;
-      margin: 8px 0 10px;
-      min-height: 58vh;
-      padding: 26px 14px 18px;
-      border-radius: 28px;
-      border: 1px solid rgba(185, 229, 255, 0.16);
+      position: relative;
+      width: 100vw;
+      height: 100dvh;
+      min-height: 100dvh;
+      margin: 0 0 0 calc(50% - 50vw);
+      padding: 28px 18px 34px;
+      border-radius: 0;
+      border: 0;
       background:
-        radial-gradient(circle at 50% 10%, rgba(143, 214, 255, 0.14), transparent 36%),
-        radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.09), transparent 22%),
-        linear-gradient(180deg, rgba(5, 16, 31, 0.28), rgba(5, 16, 31, 0.08));
+        radial-gradient(circle at 50% 10%, rgba(143, 214, 255, 0.12), transparent 34%),
+        linear-gradient(180deg, rgba(5, 16, 31, 0.82), rgba(5, 16, 31, 0.56));
       text-align: center;
       overflow: hidden;
     }
 
     .duel-intro.is-visible {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(16px, 3vh, 28px);
       animation: fadeIn 220ms ease;
     }
 
@@ -407,9 +420,10 @@
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      gap: 26px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
+      gap: min(5vw, 26px);
+      flex-wrap: nowrap;
+      width: min(100%, 560px);
+      margin: 0;
       max-height: 520px;
       opacity: 1;
       transition: opacity 320ms ease, transform 320ms ease;
@@ -425,33 +439,15 @@
     }
 
     .duel-intro__vs {
-      align-self: center;
-      margin-top: 36px;
-      font-size: clamp(28px, 5vw, 40px);
-      font-weight: 900;
-      color: #b8f5cc;
-      text-shadow: 0 0 14px rgba(124, 192, 150, 0.45);
-      letter-spacing: 1px;
-      opacity: 0;
-      transform: scale(0.86);
-      transition: transform 320ms ease, opacity 320ms ease;
-    }
-
-    .duel-intro__vs.is-visible {
-      opacity: 1;
-      transform: scale(1);
-    }
-
-    .duel-intro__vs.is-leaving {
-      opacity: 0;
-      transform: scale(0.92);
+      display: none;
     }
 
     .duel-intro__player {
       display: grid;
       justify-items: center;
       gap: 12px;
-      min-width: 180px;
+      min-width: 0;
+      flex: 1 1 0;
       opacity: 0;
       transform: translateY(14px) scale(0.96);
       transition: transform 420ms cubic-bezier(0.2, 0.76, 0.18, 1), opacity 340ms ease, filter 300ms ease;
@@ -472,8 +468,8 @@
     }
 
     .duel-intro__avatar {
-      width: min(34vw, 186px);
-      height: min(34vw, 186px);
+      width: min(36vw, 186px);
+      height: min(36vw, 186px);
       border-radius: 50%;
       object-fit: cover;
       border: 5px solid rgba(255, 255, 255, 0.82);
@@ -516,24 +512,27 @@
     .duel-intro__book-stage {
       display: flex;
       justify-content: center;
-      align-items: stretch;
+      align-items: center;
+      width: 100%;
       margin: 0;
     }
 
     .duel-intro__book {
       position: relative;
-      width: min(100%, 760px);
-      min-height: 280px;
-      border-radius: 26px;
+      width: min(44vw, 280px);
+      aspect-ratio: 9 / 16;
+      min-height: 0;
+      border-radius: 0;
       overflow: hidden;
-      border: 1px solid rgba(221, 242, 255, 0.28);
+      border: 0;
       box-shadow:
-        0 26px 64px rgba(0, 0, 0, 0.42),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+        0 28px 64px rgba(0, 0, 0, 0.48),
+        0 0 0 1px rgba(255, 255, 255, 0.08);
       background: linear-gradient(160deg, #1b2d47, #314f73);
-      transform: translateY(20px) scale(0.97);
+      transform: translate3d(28px, 20px, 0) rotateY(-18deg) rotateX(7deg) scale(0.94);
+      transform-style: preserve-3d;
       opacity: 0;
-      transition: transform 420ms cubic-bezier(0.2, 0.76, 0.16, 1), opacity 320ms ease, box-shadow 320ms ease;
+      transition: transform 520ms cubic-bezier(0.2, 0.76, 0.16, 1), opacity 360ms ease, box-shadow 320ms ease;
     }
 
     .duel-intro__book::before {
@@ -541,7 +540,7 @@
       position: absolute;
       inset: 0;
       background:
-        linear-gradient(180deg, rgba(5, 16, 31, 0.15) 0%, rgba(5, 16, 31, 0.28) 38%, rgba(5, 16, 31, 0.88) 100%),
+        linear-gradient(180deg, rgba(5, 16, 31, 0.08) 0%, rgba(5, 16, 31, 0.12) 34%, rgba(5, 16, 31, 0.42) 100%),
         radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.16), transparent 28%);
       z-index: 1;
       pointer-events: none;
@@ -559,11 +558,16 @@
 
     .duel-intro__book.is-visible {
       opacity: 1;
-      transform: translateY(0) scale(1);
+      transform: translate3d(0, 0, 0) rotateY(0deg) rotateX(0deg) scale(1);
     }
 
     .duel-intro__book.is-flash::before {
       animation: duelBookFlash 520ms ease;
+    }
+
+    .duel-intro__book.is-exit {
+      opacity: 0;
+      transform: translate3d(-32px, 8px, 0) rotateY(18deg) rotateX(-4deg) scale(0.92);
     }
 
     .duel-intro__book-image {
@@ -585,16 +589,7 @@
     }
 
     .duel-intro__book-copy {
-      position: relative;
-      z-index: 2;
-      min-height: 280px;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
-      align-items: flex-start;
-      gap: 8px;
-      padding: 24px 22px 22px;
-      text-align: left;
+      display: none;
     }
 
     .duel-intro__book-kicker {
@@ -636,7 +631,7 @@
     }
 
     .duel-intro > .duel-intro__countdown {
-      display: none;
+      display: block;
     }
 
     .duel-head {
@@ -1118,40 +1113,32 @@
       .mini-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
+      .duel-intro {
+        padding: 24px 14px 30px;
+      }
       .card-word { font-size: 33.12px; }
       .card-word.is-long { font-size: 29.15px; }
       .card-subword { font-size: 24.84px; }
       .card-subword.is-long { font-size: 21.86px; }
       .enemy-speaking { font-size: 18px; }
       .duel-intro__avatar {
-        width: min(34vw, 126px);
-        height: min(34vw, 126px);
+        width: min(40vw, 144px);
+        height: min(40vw, 144px);
       }
       .duel-intro__countdown {
         font-size: 19px;
+        padding: 0 16px;
       }
       .duel-intro__player {
-        min-width: 108px;
+        min-width: 0;
       }
       .duel-intro__avatars {
-        gap: 14px;
-        margin-bottom: 16px;
-      }
-      .duel-intro__vs {
-        margin-top: 18px;
+        width: 100%;
+        gap: 12px;
+        padding: 0 10px;
       }
       .duel-intro__book {
-        min-height: 228px;
-      }
-      .duel-intro__book-copy {
-        min-height: 228px;
-        padding: 18px 16px 18px;
-      }
-      .duel-intro__book-title {
-        font-size: clamp(22px, 7vw, 30px);
-      }
-      .duel-intro__book-subtitle {
-        font-size: 14px;
+        width: min(72vw, 280px);
       }
       .duel-avatars {
         width: 100%;
@@ -1300,18 +1287,18 @@
               <p class="duel-intro__book-kicker" id="duelIntroBookKicker">JSON da batalha</p>
               <p class="duel-intro__book-title" id="duelIntroBookTitle">minibook.json</p>
               <p class="duel-intro__book-subtitle" id="duelIntroBookSubtitle">Mini Book escolhido para o duelo</p>
-              <p class="duel-intro__countdown" id="duelIntroCountdown">O desafio vai comecar em 10...</p>
+              <p class="duel-intro__countdown" id="duelIntroCountdownCard" hidden aria-hidden="true">O desafio vai comecar em 10...</p>
             </div>
           </article>
         </div>
         <div class="duel-intro__avatars" hidden aria-hidden="true">
-          <article class="duel-intro__player duel-intro__player--me" id="duelIntroMePlayer">
-            <img class="duel-intro__avatar" id="duelIntroMeAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Seu avatar grande">
+          <article class="duel-intro__player duel-intro__player--me" id="duelIntroMePlayerLegacy">
+            <img class="duel-intro__avatar" id="duelIntroMeAvatarLegacy" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Seu avatar grande">
             <p class="duel-intro__name" id="duelIntroMeName">Você</p>
           </article>
-          <span class="duel-intro__vs" id="duelIntroVs">VS</span>
-          <article class="duel-intro__player duel-intro__player--enemy" id="duelIntroEnemyPlayer">
-            <img class="duel-intro__avatar" id="duelIntroEnemyAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar grande do adversario">
+          <span class="duel-intro__vs" id="duelIntroVsLegacy">VS</span>
+          <article class="duel-intro__player duel-intro__player--enemy" id="duelIntroEnemyPlayerLegacy">
+            <img class="duel-intro__avatar" id="duelIntroEnemyAvatarLegacy" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar grande do adversario">
             <p class="duel-intro__name" id="duelIntroEnemyName">Adversário</p>
           </article>
         </div>
