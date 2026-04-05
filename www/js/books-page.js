@@ -307,6 +307,14 @@
     return bestLineB ? `${bestLineA}\n${bestLineB}` : bestLineA;
   }
 
+  function sanitizeReaderDisplayText(value) {
+    return String(value || '')
+      .replace(/,;/g, '')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
   function readForceAdminUiFlag() {
     try {
       return window.localStorage.getItem(FORCE_ADMIN_UI_STORAGE_KEY) === '1';
@@ -2256,7 +2264,7 @@
     const highlight = Boolean(card?.highlight);
     const displayLanguage = state.readerDisplayLanguage === 'portuguese' ? 'portuguese' : 'english';
     const displayText = displayLanguage === 'portuguese' ? portuguese : english;
-    const displayTextFormatted = splitBalancedLines(displayText);
+    const displayTextFormatted = splitBalancedLines(sanitizeReaderDisplayText(displayText));
     if (state.readerRenderedCardIndex !== index) {
       state.readerRenderedCardIndex = index;
       state.readerCardShownAt = Date.now();
