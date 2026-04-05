@@ -417,6 +417,21 @@
       animation: fadeIn 220ms ease;
     }
 
+    .duel-intro.is-player-stage {
+      justify-content: center;
+      gap: 18px;
+    }
+
+    .duel-intro.is-player-stage .duel-intro__avatars {
+      align-items: center;
+      min-height: 0;
+      transform: translateY(0);
+    }
+
+    .duel-intro.is-player-stage > .duel-intro__countdown {
+      margin-top: 10px;
+    }
+
     .duel-intro__avatars.is-hidden {
       opacity: 0;
       pointer-events: none;
@@ -1244,7 +1259,6 @@
       .duel-intro__avatar {
         width: min(40vw, 144px);
         height: min(40vw, 144px);
-        margin-top: 40px;
       }
       .duel-intro__countdown {
         font-size: 19px;
@@ -1265,6 +1279,9 @@
       .duel-intro__book-stage {
         min-height: min(44vh, 380px);
         transform: translateY(-66px);
+      }
+      .duel-intro.is-player-stage {
+        gap: 14px;
       }
       .duel-avatars {
         width: 100%;

@@ -859,6 +859,10 @@
   }
 
   function revealDuelIntroPlayers() {
+    if (els.duelIntro) {
+      els.duelIntro.classList.remove('is-book-stage');
+      els.duelIntro.classList.add('is-player-stage');
+    }
     if (els.duelIntroAvatars) {
       els.duelIntroAvatars.classList.remove('is-hidden', 'is-leaving');
       els.duelIntroAvatars.classList.add('is-visible');
@@ -979,6 +983,10 @@
   }
 
   function revealDuelIntroBook() {
+    if (els.duelIntro) {
+      els.duelIntro.classList.remove('is-player-stage');
+      els.duelIntro.classList.add('is-book-stage');
+    }
     if (els.duelIntroBookStage) {
       els.duelIntroBookStage.hidden = false;
     }
@@ -1000,6 +1008,16 @@
       }
       revealDuelIntroPlayers();
     }, 360);
+  }
+
+  function dissolveDuelIntroPlayers() {
+    if (els.duelIntroAvatars) {
+      els.duelIntroAvatars.classList.add('is-leaving');
+    }
+    if (els.duelIntroMePlayer) els.duelIntroMePlayer.classList.add('is-leaving');
+    if (els.duelIntroEnemyPlayer) els.duelIntroEnemyPlayer.classList.add('is-leaving');
+    if (els.duelIntroMeName) els.duelIntroMeName.classList.add('is-leaving');
+    if (els.duelIntroEnemyName) els.duelIntroEnemyName.classList.add('is-leaving');
   }
 
   function preloadFirstDuelCardAudio() {
@@ -1122,6 +1140,7 @@
     if (!state.duel.enabled) return;
     const totalCountdownSeconds = Math.max(1, Number.parseInt(state.duel.introCountdownSeconds, 10) || DUEL_INTRO_COUNTDOWN_SECONDS);
     let switchedToPlayers = false;
+    let playersDissolving = false;
 
     setDuelIntroVisible(true);
     updateTopPercents();
@@ -1138,6 +1157,10 @@
       if (!switchedToPlayers && remaining <= DUEL_INTRO_SWITCH_TO_PLAYERS_SECONDS) {
         switchedToPlayers = true;
         transitionDuelIntroFromBookToPlayers();
+      }
+      if (switchedToPlayers && !playersDissolving && remaining <= 1) {
+        playersDissolving = true;
+        dissolveDuelIntroPlayers();
       }
       if (els.duelIntroCountdown) {
         els.duelIntroCountdown.textContent = `O desafio vai comecar em ${remaining}...`;
