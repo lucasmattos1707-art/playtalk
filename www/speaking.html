@@ -490,6 +490,11 @@
       background: rgba(8, 24, 38, 0.8);
     }
 
+    .duel-intro__avatar.is-pending {
+      opacity: 0.7;
+      animation: introAvatarLoader 1.5s ease-in-out infinite;
+    }
+
     .duel-intro__name {
       margin: 0;
       max-width: 220px;
@@ -589,8 +594,8 @@
     }
 
     .duel-intro__book-spine,
-    .duel-intro__book-pages,
-    .duel-intro__book-flash {
+    .duel-intro__book-flash,
+    .duel-intro__book-loader {
       position: absolute;
       pointer-events: none;
     }
@@ -608,24 +613,6 @@
         inset -8px 0 16px rgba(0, 0, 0, 0.24);
     }
 
-    .duel-intro__book-pages {
-      top: 10px;
-      right: 0;
-      bottom: 10px;
-      width: 12px;
-      z-index: 3;
-      background:
-        repeating-linear-gradient(
-          180deg,
-          rgba(246, 239, 221, 0.98) 0 3px,
-          rgba(224, 217, 198, 0.96) 3px 6px
-        );
-      box-shadow:
-        inset 1px 0 0 rgba(90, 70, 50, 0.16),
-        inset 0 0 10px rgba(130, 111, 86, 0.18);
-      opacity: 0.95;
-    }
-
     .duel-intro__book-flash {
       inset: -18%;
       z-index: 4;
@@ -637,6 +624,33 @@
 
     .duel-intro__book.is-flash .duel-intro__book-flash {
       animation: duelBookCoverFlash 760ms cubic-bezier(0.24, 0.84, 0.18, 1) both;
+    }
+
+    .duel-intro__book-loader {
+      inset: 0;
+      z-index: 4;
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      transition: opacity 180ms ease;
+      background:
+        radial-gradient(circle at 50% 38%, rgba(173, 226, 255, 0.14), transparent 34%),
+        linear-gradient(180deg, rgba(8, 20, 34, 0.02), rgba(8, 20, 34, 0.2));
+    }
+
+    .duel-intro__book.is-loading .duel-intro__book-loader {
+      opacity: 1;
+    }
+
+    .duel-intro__book-loader-ring {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, 0.16);
+      border-top-color: rgba(195, 240, 255, 0.95);
+      border-right-color: rgba(103, 198, 255, 0.64);
+      box-shadow: 0 0 18px rgba(114, 214, 255, 0.2);
+      animation: duelBookLoaderSpin 1.15s linear infinite;
     }
 
     .duel-intro__book-image {
@@ -1179,6 +1193,26 @@
       }
     }
 
+    @keyframes duelBookLoaderSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes introAvatarLoader {
+      0%, 100% {
+        box-shadow:
+          0 20px 44px rgba(0, 0, 0, 0.42),
+          0 0 0 12px rgba(153, 221, 255, 0.08);
+        filter: brightness(0.92);
+      }
+      50% {
+        box-shadow:
+          0 20px 44px rgba(0, 0, 0, 0.42),
+          0 0 0 12px rgba(153, 221, 255, 0.14);
+        filter: brightness(1.08);
+      }
+    }
+
     @keyframes duelPlayerFlash {
       0% { filter: brightness(1); }
       45% { filter: brightness(1.85); }
@@ -1210,6 +1244,7 @@
       .duel-intro__avatar {
         width: min(40vw, 144px);
         height: min(40vw, 144px);
+        margin-top: 40px;
       }
       .duel-intro__countdown {
         font-size: 19px;
@@ -1229,6 +1264,7 @@
       }
       .duel-intro__book-stage {
         min-height: min(44vh, 380px);
+        transform: translateY(-66px);
       }
       .duel-avatars {
         width: 100%;
@@ -1372,8 +1408,10 @@
         <div class="duel-intro__book-stage" id="duelIntroBookStage">
           <article class="duel-intro__book" id="duelIntroBookCard" aria-label="MiniBook da batalha">
             <span class="duel-intro__book-spine" aria-hidden="true"></span>
-            <span class="duel-intro__book-pages" aria-hidden="true"></span>
             <span class="duel-intro__book-flash" aria-hidden="true"></span>
+            <span class="duel-intro__book-loader" aria-hidden="true">
+              <span class="duel-intro__book-loader-ring"></span>
+            </span>
             <img class="duel-intro__book-image" id="duelIntroBookImage" alt="Capa do MiniBook" hidden>
             <div class="duel-intro__book-fallback" id="duelIntroBookFallback" hidden></div>
             <div class="duel-intro__book-copy">

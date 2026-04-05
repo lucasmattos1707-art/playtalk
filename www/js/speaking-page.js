@@ -133,6 +133,7 @@
       pingTimer: 0,
       introTimer: 0,
       introAnimationTimers: [],
+      introAssetToken: 0,
       introCountdownSeconds: DUEL_INTRO_COUNTDOWN_SECONDS,
       battleDurationMs: DUEL_BATTLE_DURATION_MS,
       introBook: {
@@ -760,6 +761,40 @@
     state.duel.introAnimationTimers = [];
   }
 
+  function preloadImage(url) {
+    const normalizedUrl = safeText(url);
+    if (!normalizedUrl) {
+      return Promise.resolve({ ok: false, url: '' });
+    }
+    return new Promise((resolve) => {
+      const image = new Image();
+      image.decoding = 'async';
+      image.onload = () => resolve({ ok: true, url: normalizedUrl });
+      image.onerror = () => resolve({ ok: false, url: '' });
+      image.src = normalizedUrl;
+    });
+  }
+
+  async function preloadImageWithFallback(url, fallbackUrl) {
+    const primary = await preloadImage(url);
+    if (primary.ok) return primary;
+    const normalizedFallback = safeText(fallbackUrl);
+    if (normalizedFallback && normalizedFallback !== safeText(url)) {
+      return preloadImage(normalizedFallback);
+    }
+    return primary;
+  }
+
+  function setDuelIntroBookLoading(active) {
+    if (!els.duelIntroBookCard) return;
+    els.duelIntroBookCard.classList.toggle('is-loading', Boolean(active));
+  }
+
+  function setDuelIntroAvatarPending(imageEl, pending) {
+    if (!imageEl) return;
+    imageEl.classList.toggle('is-pending', Boolean(pending));
+  }
+
   function queueDuelIntroAnimation(callback, delayMs) {
     const timerId = window.setTimeout(() => {
       state.duel.introAnimationTimers = state.duel.introAnimationTimers.filter((id) => id !== timerId);
@@ -797,7 +832,7 @@
     if (els.duelIntroVs) els.duelIntroVs.classList.remove('is-visible', 'is-leaving');
     if (els.duelIntroBookStage) els.duelIntroBookStage.hidden = true;
     if (els.duelIntroBookCard) {
-      els.duelIntroBookCard.classList.remove('is-visible', 'is-exit', 'is-flash');
+      els.duelIntroBookCard.classList.remove('is-visible', 'is-exit', 'is-flash', 'is-loading');
     }
     if (els.duelIntroMePlayer) els.duelIntroMePlayer.classList.remove('is-visible');
     if (els.duelIntroEnemyPlayer) els.duelIntroEnemyPlayer.classList.remove('is-visible');
@@ -812,6 +847,15 @@
     if (els.duelIntroCountdown) {
       els.duelIntroCountdown.textContent = `O desafio vai comecar em ${DUEL_INTRO_COUNTDOWN_SECONDS}...`;
     }
+    if (els.duelIntroBookImage) {
+      els.duelIntroBookImage.hidden = true;
+      els.duelIntroBookImage.removeAttribute('src');
+    }
+    if (els.duelIntroBookFallback) {
+      els.duelIntroBookFallback.hidden = false;
+    }
+    setDuelIntroAvatarPending(els.duelIntroMeAvatar, false);
+    setDuelIntroAvatarPending(els.duelIntroEnemyAvatar, false);
   }
 
   function revealDuelIntroPlayers() {
@@ -866,26 +910,72 @@
 
     const hasCover = Boolean(duelBook.coverImageUrl);
     if (els.duelIntroBookImage) {
-      if (hasCover) {
-        els.duelIntroBookImage.src = duelBook.coverImageUrl;
+      els.duelIntroBookImage.hidden = true;
+      els.duelIntroBookImage.removeAttribute('src');
+    }
+    if (els.duelIntroBookFallback) {
+      els.duelIntroBookFallback.hidden = false;
+    }
+    setDuelIntroBookLoading(hasCover);
+  }
+
+  function primeDuelIntroAssets() {
+    const token = (Number(state.duel.introAssetToken) || 0) + 1;
+    state.duel.introAssetToken = token;
+
+    const duelBook = state.duel.introBook?.id || state.duel.introBook?.coverImageUrl
+      ? state.duel.introBook
+      : resolveDuelIntroBookData();
+    const bookUrl = safeText(duelBook?.coverImageUrl);
+    const fallbackAvatar = '/Avatar/avatar-man-person-svgrepo-com.svg';
+    const introAvatars = [
+      { element: els.duelIntroMeAvatar, url: normalizeAvatarSource(state.duel.meAvatar) },
+      { element: els.duelIntroEnemyAvatar, url: normalizeAvatarSource(state.duel.rivalAvatar) }
+    ];
+
+    introAvatars.forEach(({ element }) => {
+      setDuelIntroAvatarPending(element, true);
+    });
+
+    introAvatars.forEach(({ element, url }) => {
+      void preloadImageWithFallback(url, fallbackAvatar).then((result) => {
+        if (token !== state.duel.introAssetToken || !element) return;
+        element.src = result.ok && result.url ? result.url : fallbackAvatar;
+        setDuelIntroAvatarPending(element, false);
+      });
+    });
+
+    if (!bookUrl) {
+      setDuelIntroBookLoading(false);
+      return;
+    }
+
+    if (els.duelIntroBookImage) {
+      els.duelIntroBookImage.hidden = true;
+      els.duelIntroBookImage.removeAttribute('src');
+    }
+    if (els.duelIntroBookFallback) {
+      els.duelIntroBookFallback.hidden = false;
+    }
+    setDuelIntroBookLoading(true);
+
+    void preloadImage(bookUrl).then((result) => {
+      if (token !== state.duel.introAssetToken) return;
+      if (result.ok && result.url && els.duelIntroBookImage) {
+        els.duelIntroBookImage.src = result.url;
         els.duelIntroBookImage.hidden = false;
-      } else {
+        if (els.duelIntroBookFallback) {
+          els.duelIntroBookFallback.hidden = true;
+        }
+      } else if (els.duelIntroBookImage) {
         els.duelIntroBookImage.hidden = true;
         els.duelIntroBookImage.removeAttribute('src');
-      }
-      els.duelIntroBookImage.onerror = () => {
-        if (els.duelIntroBookImage) {
-          els.duelIntroBookImage.hidden = true;
-          els.duelIntroBookImage.removeAttribute('src');
-        }
         if (els.duelIntroBookFallback) {
           els.duelIntroBookFallback.hidden = false;
         }
-      };
-    }
-    if (els.duelIntroBookFallback) {
-      els.duelIntroBookFallback.hidden = hasCover;
-    }
+      }
+      setDuelIntroBookLoading(false);
+    });
   }
 
   function revealDuelIntroBook() {
@@ -1013,6 +1103,7 @@
     if (!isVisible) {
       clearDuelIntroAnimationTimers();
       stopBattleIntroAudio();
+      state.duel.introAssetToken = (Number(state.duel.introAssetToken) || 0) + 1;
       resetDuelIntroVisuals();
     }
   }
@@ -1038,6 +1129,7 @@
     clearDuelIntroAnimationTimers();
     void playBattleIntroAudio();
     applyDuelIntroBook();
+    primeDuelIntroAssets();
     preloadFirstDuelCardAudio();
     revealDuelIntroBook();
 
@@ -1685,6 +1777,7 @@
     clearDuelIntroTimer();
     clearDuelIntroAnimationTimers();
     stopBattleIntroAudio();
+    state.duel.introAssetToken = (Number(state.duel.introAssetToken) || 0) + 1;
     stopWordTicker();
     state.duel.enabled = false;
     state.duel.sessionId = '';
