@@ -12,6 +12,28 @@
     (function () {
       var pathName = window.location.pathname.replace(/\/+$/, '') || '/';
       var isRootEntry = pathName === '/' || pathName === '/index.html';
+      var isNativeRuntime = false;
+
+      try {
+        if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function') {
+          isNativeRuntime = Boolean(window.Capacitor.isNativePlatform());
+        }
+      } catch (error) {
+        isNativeRuntime = false;
+      }
+
+      if (!isNativeRuntime) {
+        var protocol = String(window.location.protocol || '').toLowerCase();
+        var hostname = String(window.location.hostname || '').toLowerCase();
+        var port = String(window.location.port || '').trim();
+        isNativeRuntime = protocol === 'file:' || ((hostname === 'localhost' || hostname === '127.0.0.1') && !port);
+      }
+
+      if (isNativeRuntime && isRootEntry && !window.location.search && !window.location.hash) {
+        window.location.replace('/flashcards.html?view=play');
+        return;
+      }
+
       if (isRootEntry && !window.location.hash && !window.location.search) {
         window.location.hash = '#home';
       }
