@@ -2253,6 +2253,7 @@
     const card = total ? state.readerCards[index] : null;
     const english = safeText(card?.english);
     const portuguese = safeText(card?.portuguese || english);
+    const highlight = Boolean(card?.highlight);
     const displayLanguage = state.readerDisplayLanguage === 'portuguese' ? 'portuguese' : 'english';
     const displayText = displayLanguage === 'portuguese' ? portuguese : english;
     const displayTextFormatted = splitBalancedLines(displayText);
@@ -2261,6 +2262,7 @@
       state.readerCardShownAt = Date.now();
     }
     els.readerEnglish.textContent = displayTextFormatted || 'Sem conteudo neste livro.';
+    els.readerEnglish.classList.toggle('is-highlight', highlight && displayLanguage === 'english');
     animateReaderPhrase();
     void playReaderCardAudio(card, index);
     updateReaderProgress(total, index);
@@ -2329,7 +2331,8 @@
         return {
           english,
           portuguese,
-          audio
+          audio,
+          highlight: Boolean(entry?.highlight)
         };
       })
       .filter(Boolean);

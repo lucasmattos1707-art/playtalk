@@ -4016,6 +4016,7 @@ function normalizeSpeakingStoryCardItem({ item, storyName = 'story', index = 0 }
   const english = String(source.en || source.english || '').trim();
   const portuguese = String(source.pt || source.portuguese || '').trim();
   const audioUrl = String(source.audio || source.audioUrl || '').trim();
+  const highlight = Boolean(source.highlight);
   if (!english || !portuguese) return null;
   return {
     id: `${safeGeneratedBase(storyName, 'story')}-${index}`,
@@ -4023,7 +4024,8 @@ function normalizeSpeakingStoryCardItem({ item, storyName = 'story', index = 0 }
     portuguese,
     imageUrl: '',
     audio: audioUrl,
-    audioUrl
+    audioUrl,
+    highlight
   };
 }
 
@@ -5742,12 +5744,15 @@ function parseMiniBookCreateLines(linesText) {
   const cards = [];
   for (let index = 0; index < phraseLines.length; index += 2) {
     const portuguese = normalizeMiniBookText(phraseLines[index]);
-    const english = normalizeMiniBookText(phraseLines[index + 1]);
+    const rawEnglishLine = String(phraseLines[index + 1] || '').trim();
+    const highlight = rawEnglishLine.startsWith('#');
+    const english = normalizeMiniBookText(highlight ? rawEnglishLine.slice(1) : rawEnglishLine);
     if (!portuguese || !english) continue;
     cards.push({
       pt: portuguese,
       en: english,
-      audio: ''
+      audio: '',
+      highlight
     });
   }
 
@@ -6028,7 +6033,8 @@ function buildMiniBookJsonPayloadFromCreateInput(createInput) {
   payload[createInput.storyKey] = createInput.cards.map((card) => ({
     pt: card.pt,
     en: card.en,
-    audio: normalizeMiniBookText(card.audio)
+    audio: normalizeMiniBookText(card.audio),
+    highlight: Boolean(card.highlight)
   }));
   return payload;
 }
