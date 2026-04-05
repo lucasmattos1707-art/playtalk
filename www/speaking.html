@@ -635,6 +635,10 @@
       text-shadow: 0 0 14px rgba(123, 235, 192, 0.22);
     }
 
+    .duel-intro > .duel-intro__countdown {
+      display: none;
+    }
+
     .duel-head {
       display: none;
       justify-content: space-between;
@@ -1300,7 +1304,7 @@
             </div>
           </article>
         </div>
-        <div class="duel-intro__avatars" id="duelIntroAvatars">
+        <div class="duel-intro__avatars" hidden aria-hidden="true">
           <article class="duel-intro__player duel-intro__player--me" id="duelIntroMePlayer">
             <img class="duel-intro__avatar" id="duelIntroMeAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Seu avatar grande">
             <p class="duel-intro__name" id="duelIntroMeName">Você</p>
