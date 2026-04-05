@@ -311,6 +311,7 @@
 
     .books-home-viewport {
       position: relative;
+      height: 100%;
       min-height: 0;
       overflow: hidden;
       border-radius: 28px;
@@ -1908,23 +1909,39 @@
 
       .books-home-shell {
         width: min(100%, 520px);
-        grid-template-rows: minmax(0, 1fr) auto;
-        gap: 14px;
+        height: 100%;
+        grid-template-rows: minmax(0, 3fr) minmax(0, 1fr);
+        gap: 12px;
+      }
+
+      .books-home-screen {
+        grid-template-rows: minmax(0, 2fr) minmax(0, 1fr);
+        gap: 12px;
       }
 
       .books-home-cover-wrap {
-        width: min(286px, 68vw);
-        height: min(50vh, 100%);
+        width: min(300px, 70vw);
+        height: 100%;
+        max-height: 100%;
       }
 
       .books-home-text-panel {
-        max-height: 24vh;
+        height: 100%;
+        max-height: none;
         font-size: clamp(18px, 5vw, 24px);
         padding: 14px 16px;
       }
 
+      .books-home-footer {
+        height: 100%;
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+        align-content: stretch;
+        gap: 10px;
+      }
+
       .books-home-player {
-        min-height: 58px;
+        min-height: 0;
+        height: 100%;
         gap: 12px;
         padding: 12px 14px;
       }
@@ -1939,11 +1956,15 @@
       }
 
       .books-home-toolbar {
+        min-height: 0;
+        height: 100%;
+        align-items: stretch;
         gap: 8px;
       }
 
       .books-home-control-btn {
-        min-height: 48px;
+        min-height: 0;
+        height: 100%;
       }
 
       .books-home-control-btn span {
