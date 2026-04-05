@@ -20,6 +20,9 @@
   const READER_FREE_READ_MIN_VIEW_MS = 3000;
   const READER_BLOCKED_FLASH_MS = 750;
   const HOME_REPEAT_OPTIONS = [1, 2, 3, 5, 7, 10];
+  const HOME_SPEED_OPTIONS = [1, 1.25, 1.5, 0.75];
+  const HOME_BOOK_TRANSITION_MS = 760;
+  const HOME_SWIPE_UP_THRESHOLD = 70;
   const HOME_MUSIC_PLAYLIST = [
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen1.mp3',
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen2.mp3',
@@ -40,6 +43,7 @@
   ];
 
   const els = {
+    page: document.querySelector('.books-page'),
     avatarImage: document.getElementById('booksAccountAvatarImage'),
     avatarFallback: document.getElementById('booksAccountAvatarFallback'),
     avatarName: document.getElementById('booksAccountName'),
@@ -53,13 +57,25 @@
     shelfViewport: document.getElementById('booksShelfViewport'),
     shelfLoading: document.getElementById('booksShelfLoading'),
     homePanel: document.getElementById('booksHomePanel'),
+    homeShell: document.getElementById('booksHomeShell'),
+    homeViewport: document.getElementById('booksHomeViewport'),
     homeStartBtn: document.getElementById('booksHomeStartBtn'),
-    homeCoverWrap: document.getElementById('booksHomeCoverWrap'),
     homeCover: document.getElementById('booksHomeCover'),
+    homeNextCover: document.getElementById('booksHomeNextCover'),
+    homeTextPanel: document.getElementById('booksHomeTextPanel'),
+    homeNextTextPanel: document.getElementById('booksHomeNextTextPanel'),
     homeControls: document.getElementById('booksHomeControls'),
+    homePlayPauseBtn: document.getElementById('booksHomePlayPauseBtn'),
+    homeProgressLabel: document.getElementById('booksHomeProgressLabel'),
+    homeProgressValue: document.getElementById('booksHomeProgressValue'),
+    homeProgressFill: document.getElementById('booksHomeProgressFill'),
     homeRepeatBtn: document.getElementById('booksHomeRepeatBtn'),
     homeRepeatLabel: document.getElementById('booksHomeRepeatLabel'),
     homeMusicBtn: document.getElementById('booksHomeMusicBtn'),
+    homeSpeedBtn: document.getElementById('booksHomeSpeedBtn'),
+    homeSpeedLabel: document.getElementById('booksHomeSpeedLabel'),
+    homeLanguageBtn: document.getElementById('booksHomeLanguageBtn'),
+    homeLanguageIcon: document.getElementById('booksHomeLanguageIcon'),
     cardsGrid: document.getElementById('booksCardsGrid'),
     cardsEmpty: document.getElementById('booksCardsEmpty'),
     coverUploadInput: document.getElementById('booksCoverUploadInput'),
@@ -178,6 +194,24 @@
     homeAudioElement: null,
     homeCurrentBookId: '',
     homeCurrentBookCover: '',
+    homeCurrentBookName: '',
+    homeCurrentSession: null,
+    homeNextSession: null,
+    homeCurrentCards: [],
+    homeCurrentCardIndex: 0,
+    homeCurrentCardText: '',
+    homeCurrentCardTextPt: '',
+    homeTextMode: 'none',
+    homeSpeedIndex: 0,
+    homeProgressRatio: 0,
+    homeProgressLabel: '',
+    homePaused: false,
+    homeAudioResolver: null,
+    homeAudioInterrupted: false,
+    homeSkipRequested: false,
+    homeTransitioning: false,
+    homeTouchStartX: 0,
+    homeTouchStartY: 0,
     homeRepeatIndex: 0,
     homeMusicEnabled: false,
     homeMusicAudioElement: null,
@@ -554,6 +588,15 @@
     return HOME_REPEAT_OPTIONS[Math.max(0, Math.min(HOME_REPEAT_OPTIONS.length - 1, state.homeRepeatIndex))] || 1;
   }
 
+  function getHomePlaybackRate() {
+    return HOME_SPEED_OPTIONS[Math.max(0, Math.min(HOME_SPEED_OPTIONS.length - 1, state.homeSpeedIndex))] || 1;
+  }
+
+  function formatHomeSpeedLabel(rate) {
+    const value = Number(rate) || 1;
+    return `${value.toFixed(2)}x`;
+  }
+
   function randomInt(max) {
     return Math.floor(Math.random() * Math.max(1, max));
   }
@@ -597,27 +640,92 @@
     });
   }
 
-  function renderHomePanel() {
-    if (!els.homePanel) return;
-    const visible = isHomeLevel();
-    els.homePanel.classList.toggle('is-visible', visible);
-    if (els.homeStartBtn) {
-      els.homeStartBtn.classList.toggle('is-hidden', state.homeIntroDismissed);
+  function getHomeBooksPool() {
+    return (Array.isArray(state.books) ? state.books : [])
+      .filter((book) => safeText(book?.selectedStoryId));
+  }
+
+  function getHomeLanguageIconMeta() {
+    if (state.homeTextMode === 'english') {
+      return {
+        src: '/arquivos-codex/icones/portugues.svg',
+        alt: 'Portugues'
+      };
     }
-    if (els.homeCoverWrap) {
-      const showCover = state.homeIntroDismissed && Boolean(state.homeCurrentBookCover);
-      els.homeCoverWrap.hidden = !showCover;
-      els.homeCoverWrap.classList.toggle('is-visible', showCover);
+    if (state.homeTextMode === 'portuguese') {
+      return {
+        src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M6 12h12" stroke="%239aa3b2" stroke-width="2.4" stroke-linecap="round"/></svg>',
+        alt: 'Ocultar texto'
+      };
     }
-    if (els.homeCover) {
-      els.homeCover.style.backgroundImage = state.homeCurrentBookCover
-        ? `url(${safeCssUrl(state.homeCurrentBookCover)})`
+    return {
+      src: '/arquivos-codex/icones/ingles.svg',
+      alt: 'Ingles'
+    };
+  }
+
+  function renderHomeTextPanel(element, text) {
+    if (!element) return;
+    const value = safeText(text);
+    element.textContent = value;
+    element.classList.toggle('is-empty', !value);
+  }
+
+  function getHomeSessionText(session, cardIndex) {
+    const cards = Array.isArray(session?.cards) ? session.cards : [];
+    const safeIndex = Math.max(0, Math.min(cards.length - 1, Number(cardIndex) || 0));
+    const card = cards[safeIndex] || cards[0] || null;
+    return {
+      english: safeText(card?.english),
+      portuguese: safeText(card?.portuguese || card?.english)
+    };
+  }
+
+  function getHomeVisibleTextForMode(english, portuguese) {
+    if (state.homeTextMode === 'english') {
+      return safeText(english);
+    }
+    if (state.homeTextMode === 'portuguese') {
+      return safeText(portuguese || english);
+    }
+    return '';
+  }
+
+  function renderHomeScreen(coverElement, textElement, session, cardIndex) {
+    const coverUrl = safeText(session?.coverImageUrl);
+    if (coverElement) {
+      coverElement.style.backgroundImage = coverUrl
+        ? `url(${safeCssUrl(coverUrl)})`
         : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
     }
-    if (els.homeControls) {
-      const showControls = state.homeIntroDismissed;
-      els.homeControls.hidden = !showControls;
-      els.homeControls.classList.toggle('is-visible', showControls);
+    const textPayload = getHomeSessionText(session, cardIndex);
+    renderHomeTextPanel(
+      textElement,
+      getHomeVisibleTextForMode(textPayload.english, textPayload.portuguese)
+    );
+  }
+
+  function renderHomeProgressUi() {
+    const ratio = Math.max(0, Math.min(1, Number(state.homeProgressRatio) || 0));
+    if (els.homeProgressFill) {
+      els.homeProgressFill.style.width = `${Math.round(ratio * 1000) / 10}%`;
+    }
+    if (els.homeProgressLabel) {
+      els.homeProgressLabel.textContent = safeText(state.homeProgressLabel) || 'Livro';
+    }
+    if (els.homeProgressValue) {
+      els.homeProgressValue.textContent = `${Math.round(ratio * 100)}%`;
+    }
+  }
+
+  function renderHomeTransportUi() {
+    if (els.homePlayPauseBtn) {
+      const icon = state.homePaused
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l9.8-6.86a1 1 0 0 0 0-1.72L9.5 4.28A1 1 0 0 0 8 5.14Z"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5h3v14H8zm5 0h3v14h-3z"/></svg>';
+      els.homePlayPauseBtn.innerHTML = icon;
+      els.homePlayPauseBtn.disabled = !state.homeIntroDismissed;
+      els.homePlayPauseBtn.setAttribute('aria-label', state.homePaused ? 'Retomar reproducao' : 'Pausar reproducao');
     }
     if (els.homeRepeatLabel) {
       els.homeRepeatLabel.textContent = `${getHomeRepeatSeconds()}s`;
@@ -625,6 +733,53 @@
     if (els.homeMusicBtn) {
       els.homeMusicBtn.classList.toggle('is-on', state.homeMusicEnabled);
     }
+    if (els.homeSpeedLabel) {
+      els.homeSpeedLabel.textContent = formatHomeSpeedLabel(getHomePlaybackRate());
+    }
+    if (els.homeLanguageIcon) {
+      const icon = getHomeLanguageIconMeta();
+      els.homeLanguageIcon.src = icon.src;
+      els.homeLanguageIcon.alt = icon.alt;
+    }
+  }
+
+  function applyHomeAudioPlaybackRate(audio) {
+    if (!audio) return;
+    const rate = getHomePlaybackRate();
+    audio.playbackRate = rate;
+    audio.defaultPlaybackRate = rate;
+    audio.preservesPitch = true;
+    audio.mozPreservesPitch = true;
+    audio.webkitPreservesPitch = true;
+  }
+
+  function updateCurrentHomeAudioRate() {
+    applyHomeAudioPlaybackRate(state.homeAudioElement);
+  }
+
+  function renderHomePanel() {
+    if (!els.homePanel) return;
+    const visible = isHomeLevel();
+    els.homePanel.classList.toggle('is-visible', visible);
+    els.homePanel.classList.toggle('is-immersive', visible && state.homeIntroDismissed);
+    if (els.page) {
+      els.page.classList.toggle('is-home-immersive', visible && state.homeIntroDismissed);
+    }
+    if (els.homeStartBtn) {
+      els.homeStartBtn.classList.toggle('is-hidden', state.homeIntroDismissed);
+    }
+    if (els.homeShell) {
+      const showShell = state.homeIntroDismissed;
+      els.homeShell.hidden = !showShell;
+      els.homeShell.classList.toggle('is-visible', showShell);
+    }
+    if (els.homeControls) {
+      els.homeControls.hidden = !state.homeIntroDismissed;
+    }
+    renderHomeScreen(els.homeCover, els.homeTextPanel, state.homeCurrentSession, state.homeCurrentCardIndex);
+    renderHomeScreen(els.homeNextCover, els.homeNextTextPanel, state.homeNextSession, 0);
+    renderHomeProgressUi();
+    renderHomeTransportUi();
     if (els.cardsGrid) {
       els.cardsGrid.hidden = visible;
     }
@@ -633,17 +788,27 @@
     }
   }
 
-  function stopHomeAudioPlayback() {
-    state.homePlaybackToken += 1;
+  function setHomeProgress(label, ratio) {
+    state.homeProgressLabel = safeText(label) || 'Livro';
+    state.homeProgressRatio = Math.max(0, Math.min(1, Number(ratio) || 0));
+    renderHomeProgressUi();
+  }
+
+  function interruptHomeAudioPlayback() {
     const current = state.homeAudioElement;
+    const resolver = state.homeAudioResolver;
     state.homeAudioElement = null;
-    if (!current) return;
+    state.homeAudioResolver = null;
     try {
-      current.pause();
-      current.currentTime = 0;
-      current.src = '';
+      if (current) {
+        current.pause();
+        current.src = '';
+      }
     } catch (_error) {
       // ignore
+    }
+    if (typeof resolver === 'function') {
+      resolver();
     }
   }
 
@@ -678,6 +843,9 @@
       state.homeMusicIndex = (state.homeMusicIndex + 1) % HOME_MUSIC_PLAYLIST.length;
       void playHomeMusicTrack(token);
     };
+    if (state.homePaused) {
+      return;
+    }
     try {
       await audio.play();
     } catch (_error) {
@@ -702,62 +870,329 @@
     startHomeMusicLoop();
   }
 
-  async function playHomeAudioSource(source, token) {
-    if (!source) return;
-    const audio = new Audio(source);
-    audio.preload = 'auto';
-    state.homeAudioElement = audio;
-    await new Promise((resolve) => {
-      const finish = () => {
-        audio.onended = null;
-        audio.onerror = null;
-        resolve();
-      };
-      audio.onended = finish;
-      audio.onerror = finish;
-      audio.play().catch(() => finish());
-    });
-    if (token !== state.homePlaybackToken) {
-      try {
-        audio.pause();
-      } catch (_error) {
-        // ignore
-      }
+  function pauseHomeMusicIfNeeded() {
+    const current = state.homeMusicAudioElement;
+    if (!current) return;
+    try {
+      current.pause();
+    } catch (_error) {
+      // ignore
     }
   }
 
+  async function resumeHomeMusicIfNeeded() {
+    if (!state.homeMusicEnabled) return;
+    const current = state.homeMusicAudioElement;
+    if (!current) {
+      await playHomeMusicTrack(state.homePlaybackToken);
+      return;
+    }
+    try {
+      await current.play();
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  async function waitWhileHomePaused(token) {
+    while (state.homePaused && state.homeSleepActive && token === state.homePlaybackToken) {
+      await wait(120);
+    }
+  }
+
+  async function waitHomeDelay(ms, token) {
+    const total = Math.max(0, Number(ms) || 0);
+    const startedAt = Date.now();
+    while (state.homeSleepActive && token === state.homePlaybackToken && !state.homeSkipRequested) {
+      await waitWhileHomePaused(token);
+      if (!state.homeSleepActive || token !== state.homePlaybackToken || state.homeSkipRequested) return false;
+      const elapsed = Date.now() - startedAt;
+      if (elapsed >= total) {
+        return true;
+      }
+      await wait(Math.min(120, total - elapsed));
+    }
+    return false;
+  }
+
+  function setActiveHomeSession(session) {
+    state.homeCurrentSession = session || null;
+    state.homeCurrentCards = Array.isArray(session?.cards) ? session.cards.slice() : [];
+    state.homeCurrentBookId = safeText(session?.bookId);
+    state.homeCurrentBookCover = safeText(session?.coverImageUrl);
+    state.homeCurrentBookName = safeText(session?.title);
+    state.homeCurrentCardIndex = 0;
+    state.homeCurrentCardText = safeText(session?.cards?.[0]?.english);
+    state.homeCurrentCardTextPt = safeText(session?.cards?.[0]?.portuguese || session?.cards?.[0]?.english);
+    setHomeProgress(state.homeCurrentBookName || 'Livro', 0);
+  }
+
+  async function loadHomeSessionForBook(book) {
+    if (!book) return null;
+    const cards = await fetchBookCards(book);
+    const playableCards = cards.filter((card) => safeText(card?.audio));
+    if (!playableCards.length) return null;
+    const coverImageUrl = safeText(book?.coverImageUrl);
+    if (coverImageUrl) {
+      await preloadImageUrl(coverImageUrl);
+    }
+    return {
+      bookId: safeText(book?.bookId),
+      title: safeText(book?.nome) || 'Livro',
+      coverImageUrl,
+      book,
+      cards: playableCards
+    };
+  }
+
+  function pickRandomHomeBook(excludedIds = []) {
+    const excludeSet = new Set(
+      (Array.isArray(excludedIds) ? excludedIds : [])
+        .map((value) => safeText(value))
+        .filter(Boolean)
+    );
+    const candidates = getHomeBooksPool().filter((book) => !excludeSet.has(safeText(book?.bookId)));
+    const pool = candidates.length ? candidates : getHomeBooksPool();
+    if (!pool.length) return null;
+    return pool[Math.floor(Math.random() * pool.length)] || pool[0] || null;
+  }
+
+  async function prepareRandomHomeSession(token, extraExcludedIds = []) {
+    const tried = new Set(
+      (Array.isArray(extraExcludedIds) ? extraExcludedIds : [])
+        .map((value) => safeText(value))
+        .filter(Boolean)
+    );
+    const attempts = Math.max(4, getHomeBooksPool().length || 0);
+    for (let index = 0; index < attempts; index += 1) {
+      if (!state.homeSleepActive || token !== state.homePlaybackToken) return null;
+      const book = pickRandomHomeBook(Array.from(tried));
+      const bookId = safeText(book?.bookId);
+      if (!book || !bookId) break;
+      tried.add(bookId);
+      try {
+        const session = await loadHomeSessionForBook(book);
+        if (session) {
+          return session;
+        }
+      } catch (_error) {
+        // try another book
+      }
+    }
+    return null;
+  }
+
+  async function ensureHomeNextSession(token, force = false) {
+    if (!state.homeSleepActive || token !== state.homePlaybackToken) return null;
+    if (state.homeNextSession && !force) {
+      return state.homeNextSession;
+    }
+    const excludedIds = [
+      safeText(state.homeCurrentSession?.bookId),
+      safeText(state.homeNextSession?.bookId)
+    ];
+    const session = await prepareRandomHomeSession(token, excludedIds);
+    if (!state.homeSleepActive || token !== state.homePlaybackToken) return null;
+    state.homeNextSession = session;
+    renderHomePanel();
+    return session;
+  }
+
+  async function animateHomeSessionTransition(nextSession, token) {
+    if (!nextSession || !els.homeViewport) {
+      setActiveHomeSession(nextSession);
+      renderHomePanel();
+      return;
+    }
+    state.homeTransitioning = true;
+    state.homeNextSession = nextSession;
+    renderHomePanel();
+    els.homeViewport.classList.add('is-book-transitioning');
+    await wait(HOME_BOOK_TRANSITION_MS);
+    if (!state.homeSleepActive || token !== state.homePlaybackToken) {
+      els.homeViewport.classList.remove('is-book-transitioning');
+      state.homeTransitioning = false;
+      return;
+    }
+    els.homeViewport.classList.remove('is-book-transitioning');
+    setActiveHomeSession(nextSession);
+    state.homeNextSession = null;
+    state.homeSkipRequested = false;
+    state.homeTransitioning = false;
+    renderHomePanel();
+  }
+
+  function toggleHomeTextMode() {
+    if (state.homeTextMode === 'none') {
+      state.homeTextMode = 'english';
+    } else if (state.homeTextMode === 'english') {
+      state.homeTextMode = 'portuguese';
+    } else {
+      state.homeTextMode = 'none';
+    }
+    renderHomePanel();
+  }
+
+  async function toggleHomePausePlayback() {
+    if (!state.homeIntroDismissed) return;
+    state.homePaused = !state.homePaused;
+    if (state.homePaused) {
+      try {
+        state.homeAudioElement?.pause();
+      } catch (_error) {
+        // ignore
+      }
+      pauseHomeMusicIfNeeded();
+      renderHomeTransportUi();
+      return;
+    }
+    try {
+      if (state.homeAudioElement) {
+        applyHomeAudioPlaybackRate(state.homeAudioElement);
+        await state.homeAudioElement.play();
+      }
+    } catch (_error) {
+      // ignore
+    }
+    await resumeHomeMusicIfNeeded();
+    renderHomeTransportUi();
+  }
+
+  function cycleHomeSpeed() {
+    state.homeSpeedIndex = (state.homeSpeedIndex + 1) % HOME_SPEED_OPTIONS.length;
+    updateCurrentHomeAudioRate();
+    renderHomeTransportUi();
+  }
+
+  async function requestHomeNextBook() {
+    if (!state.homeSleepActive || state.homeTransitioning) return;
+    const token = state.homePlaybackToken;
+    state.homeSkipRequested = true;
+    void ensureHomeNextSession(token);
+    interruptHomeAudioPlayback();
+  }
+
+  async function playHomeAudioSource(source, token, meta = {}) {
+    if (!source) return;
+    await waitWhileHomePaused(token);
+    if (!state.homeSleepActive || token !== state.homePlaybackToken || state.homeSkipRequested) {
+      return 'interrupted';
+    }
+    const audio = new Audio(source);
+    audio.preload = 'auto';
+    audio.loop = false;
+    applyHomeAudioPlaybackRate(audio);
+    state.homeAudioElement = audio;
+    state.homeCurrentCardIndex = Math.max(0, Number(meta.cardIndex) || 0);
+    state.homeCurrentCardText = safeText(meta.english);
+    state.homeCurrentCardTextPt = safeText(meta.portuguese || meta.english);
+    state.homeAudioInterrupted = false;
+    renderHomePanel();
+    const reason = await new Promise((resolve) => {
+      let finished = false;
+      const totalCards = Math.max(1, Number(meta.totalCards) || 1);
+      const baseIndex = Math.max(0, Number(meta.cardIndex) || 0);
+      const finish = (reason) => {
+        if (finished) return;
+        finished = true;
+        audio.onended = null;
+        audio.onerror = null;
+        audio.ontimeupdate = null;
+        audio.onloadedmetadata = null;
+        state.homeAudioResolver = null;
+        if (state.homeAudioElement === audio) {
+          state.homeAudioElement = null;
+        }
+        resolve(reason);
+      };
+      const syncProgress = () => {
+        const duration = Number(audio.duration);
+        const currentTime = Number(audio.currentTime) || 0;
+        const ratioWithinCard = duration > 0 ? Math.max(0, Math.min(1, currentTime / duration)) : 0;
+        setHomeProgress(
+          state.homeCurrentBookName || safeText(meta.bookTitle) || 'Livro',
+          (baseIndex + ratioWithinCard) / totalCards
+        );
+      };
+      state.homeAudioResolver = () => {
+        state.homeAudioInterrupted = true;
+        finish('interrupted');
+      };
+      audio.onloadedmetadata = syncProgress;
+      audio.ontimeupdate = syncProgress;
+      audio.onended = () => {
+        setHomeProgress(
+          state.homeCurrentBookName || safeText(meta.bookTitle) || 'Livro',
+          (baseIndex + 1) / totalCards
+        );
+        finish('ended');
+      };
+      audio.onerror = () => finish('error');
+      if (state.homePaused) {
+        syncProgress();
+        return;
+      }
+      audio.play().catch(() => finish('error'));
+    });
+    return reason;
+  }
+
   async function runHomePlaybackLoop(token) {
+    const initialSession = state.homeCurrentSession || await prepareRandomHomeSession(token);
+    if (!initialSession) {
+      renderHomePanel();
+      return;
+    }
+    setActiveHomeSession(initialSession);
+    renderHomePanel();
+
     while (state.homeSleepActive && token === state.homePlaybackToken) {
-      const candidates = Array.isArray(state.books) ? state.books.slice() : [];
-      const filtered = candidates.filter((book) => safeText(book?.selectedStoryId));
-      if (!filtered.length) {
-        await wait(1000);
+      const session = state.homeCurrentSession;
+      const cards = Array.isArray(session?.cards) ? session.cards : [];
+      if (!session || !cards.length) {
+        const fallback = await prepareRandomHomeSession(token, [safeText(session?.bookId)]);
+        if (!fallback) {
+          await wait(800);
+          continue;
+        }
+        setActiveHomeSession(fallback);
+        renderHomePanel();
         continue;
       }
-      const available = filtered.filter((book) => safeText(book.bookId) !== state.homeCurrentBookId);
-      const pool = available.length ? available : filtered;
-      const nextBook = pool[Math.floor(Math.random() * pool.length)] || filtered[0];
-      if (!nextBook) return;
-      state.homeCurrentBookId = safeText(nextBook.bookId);
-      state.homeCurrentBookCover = safeText(nextBook.coverImageUrl);
-      renderHomePanel();
-      let cards = [];
-      try {
-        cards = await fetchBookCards(nextBook);
-      } catch (_error) {
+
+      void ensureHomeNextSession(token);
+
+      for (let index = 0; index < cards.length; index += 1) {
+        const card = cards[index];
+        if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
+        if (state.homeSkipRequested) break;
+        const result = await playHomeAudioSource(safeText(card.audio), token, {
+          cardIndex: index,
+          totalCards: cards.length,
+          english: safeText(card.english),
+          portuguese: safeText(card.portuguese || card.english),
+          bookTitle: session.title
+        });
+        if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
+        if (state.homeSkipRequested) break;
+        if (result === 'interrupted') {
+          break;
+        }
+        const waited = await waitHomeDelay(getHomeRepeatSeconds() * 1000, token);
+        if (!waited || state.homeSkipRequested) {
+          break;
+        }
+      }
+
+      if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
+      const nextSession = state.homeNextSession || await ensureHomeNextSession(token, true);
+      if (!nextSession) {
+        state.homeSkipRequested = false;
         await wait(600);
         continue;
       }
-      const playableCards = cards.filter((card) => safeText(card?.audio));
-      for (const card of playableCards) {
-        if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
-        await playHomeAudioSource(safeText(card.audio), token);
-        if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
-        await wait(getHomeRepeatSeconds() * 1000);
-      }
-      if (!playableCards.length) {
-        await wait(800);
-      }
+      await animateHomeSessionTransition(nextSession, token);
+      void ensureHomeNextSession(token);
     }
   }
 
@@ -765,7 +1200,16 @@
     if (state.homeSleepActive) return;
     state.homeIntroDismissed = true;
     state.homeSleepActive = true;
+    state.homePaused = false;
+    state.homeSkipRequested = false;
     state.homePlaybackToken += 1;
+    state.homeCurrentSession = null;
+    state.homeNextSession = null;
+    state.homeCurrentCards = [];
+    state.homeCurrentCardIndex = 0;
+    state.homeCurrentCardText = '';
+    state.homeCurrentCardTextPt = '';
+    state.homeTransitioning = false;
     renderHomePanel();
     if (state.homeMusicEnabled) {
       void playHomeMusicTrack(state.homePlaybackToken);
@@ -775,13 +1219,28 @@
 
   function stopHomeSleepPlayback(options = {}) {
     const keepIntro = Boolean(options.keepIntro);
+    state.homePlaybackToken += 1;
     state.homeSleepActive = false;
+    state.homePaused = false;
+    state.homeSkipRequested = false;
+    state.homeTransitioning = false;
+    if (els.homeViewport) {
+      els.homeViewport.classList.remove('is-book-transitioning');
+    }
     if (!keepIntro) {
       state.homeIntroDismissed = false;
       state.homeCurrentBookCover = '';
       state.homeCurrentBookId = '';
+      state.homeCurrentBookName = '';
+      state.homeCurrentSession = null;
+      state.homeNextSession = null;
+      state.homeCurrentCards = [];
+      state.homeCurrentCardIndex = 0;
+      state.homeCurrentCardText = '';
+      state.homeCurrentCardTextPt = '';
+      setHomeProgress('Livro', 0);
     }
-    stopHomeAudioPlayback();
+    interruptHomeAudioPlayback();
     stopHomeMusicLoop();
     renderHomePanel();
   }
@@ -2849,6 +3308,7 @@
     });
 
     els.shelfViewport?.addEventListener('wheel', (event) => {
+      if (isHomeLevel() && state.homeIntroDismissed) return;
       if (isOverlayOpen()) return;
       const deltaY = Number(event.deltaY) || 0;
       if (Math.abs(deltaY) < 4) return;
@@ -2858,6 +3318,7 @@
     }, { passive: false });
 
     els.shelfViewport?.addEventListener('touchstart', (event) => {
+      if (isHomeLevel() && state.homeIntroDismissed) return;
       const touch = event.touches?.[0];
       if (!touch) return;
       state.shelfTouchStartX = Number(touch.clientX) || 0;
@@ -2866,6 +3327,7 @@
     }, { passive: true });
 
     els.shelfViewport?.addEventListener('touchmove', (event) => {
+      if (isHomeLevel() && state.homeIntroDismissed) return;
       if (isOverlayOpen()) return;
       const touch = event.touches?.[0];
       if (!touch) return;
@@ -2878,6 +3340,7 @@
     }, { passive: false });
 
     els.shelfViewport?.addEventListener('touchend', (event) => {
+      if (isHomeLevel() && state.homeIntroDismissed) return;
       if (isOverlayOpen()) return;
       const touch = event.changedTouches?.[0];
       if (!touch) return;
@@ -2920,14 +3383,45 @@
       startHomeSleepPlayback();
     });
 
+    els.homePlayPauseBtn?.addEventListener('click', () => {
+      void toggleHomePausePlayback();
+    });
+
     els.homeRepeatBtn?.addEventListener('click', () => {
       state.homeRepeatIndex = (state.homeRepeatIndex + 1) % HOME_REPEAT_OPTIONS.length;
-      renderHomePanel();
+      renderHomeTransportUi();
     });
 
     els.homeMusicBtn?.addEventListener('click', () => {
       toggleHomeMusicLoop();
     });
+
+    els.homeSpeedBtn?.addEventListener('click', () => {
+      cycleHomeSpeed();
+    });
+
+    els.homeLanguageBtn?.addEventListener('click', () => {
+      toggleHomeTextMode();
+    });
+
+    els.homeViewport?.addEventListener('touchstart', (event) => {
+      if (!state.homeIntroDismissed) return;
+      const touch = event.touches?.[0];
+      if (!touch) return;
+      state.homeTouchStartX = Number(touch.clientX) || 0;
+      state.homeTouchStartY = Number(touch.clientY) || 0;
+    }, { passive: true });
+
+    els.homeViewport?.addEventListener('touchend', (event) => {
+      if (!state.homeIntroDismissed) return;
+      const touch = event.changedTouches?.[0];
+      if (!touch) return;
+      const dx = (Number(touch.clientX) || 0) - state.homeTouchStartX;
+      const dy = state.homeTouchStartY - (Number(touch.clientY) || 0);
+      if (dy >= HOME_SWIPE_UP_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
+        void requestHomeNextBook();
+      }
+    }, { passive: true });
 
     els.createSubmitBtn?.addEventListener('click', () => {
       void createBookFromLines();

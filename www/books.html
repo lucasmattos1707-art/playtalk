@@ -220,6 +220,15 @@
       perspective: 1300px;
     }
 
+    .books-page.is-home-immersive .books-level-menu,
+    .books-page.is-home-immersive .books-status {
+      opacity: 0;
+      filter: blur(12px);
+      transform: translateY(-20px);
+      pointer-events: none;
+      transition: opacity 520ms ease, filter 520ms ease, transform 620ms ease;
+    }
+
     .books-home {
       position: absolute;
       inset: 0;
@@ -232,6 +241,21 @@
 
     .books-home.is-visible {
       display: flex;
+    }
+
+    .books-home.is-immersive {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      padding:
+        max(18px, env(safe-area-inset-top))
+        clamp(16px, 3vw, 28px)
+        max(18px, env(safe-area-inset-bottom))
+        clamp(16px, 3vw, 28px);
+      background:
+        radial-gradient(circle at 50% 0%, rgba(88, 137, 255, 0.14), transparent 34%),
+        linear-gradient(180deg, rgba(5, 9, 17, 0.98) 0%, rgba(5, 8, 14, 0.96) 100%);
+      backdrop-filter: blur(14px);
     }
 
     .books-home-stage {
@@ -270,33 +294,89 @@
       pointer-events: none;
     }
 
-    .books-home-cover-wrap {
-      width: min(270px, 48vw);
-      aspect-ratio: 9 / 16;
+    .books-home-shell {
+      width: min(680px, 100%);
+      height: 100%;
+      min-height: 0;
       display: none;
+      grid-template-rows: minmax(0, 4fr) minmax(126px, 1fr);
+      gap: clamp(14px, 2.5vh, 24px);
+      align-self: stretch;
+    }
+
+    .books-home-shell.is-visible {
+      display: grid;
+      animation: books-home-shell-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .books-home-viewport {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+      border-radius: 28px;
+      touch-action: pan-y;
+    }
+
+    .books-home-screen {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 55fr) minmax(0, 25fr);
+      gap: clamp(12px, 2vh, 18px);
+      transform: translateY(0%);
+      opacity: 1;
+      transition: transform 760ms cubic-bezier(0.22, 1, 0.36, 1), opacity 760ms ease;
+      will-change: transform, opacity;
+    }
+
+    .books-home-screen--next {
+      transform: translateY(100%);
+      opacity: 0.98;
+      pointer-events: none;
+    }
+
+    .books-home-viewport.is-book-transitioning .books-home-screen--current {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+
+    .books-home-viewport.is-book-transitioning .books-home-screen--next {
+      transform: translateY(0%);
+      opacity: 1;
+    }
+
+    .books-home-book-slot {
+      min-height: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: clamp(8px, 1.8vh, 18px);
+    }
+
+    .books-home-cover-wrap {
+      width: min(300px, 53vw);
+      height: min(55vh, 100%);
+      max-height: 100%;
+      aspect-ratio: 9 / 16;
+      display: flex;
       align-items: center;
       justify-content: center;
       perspective: 1300px;
     }
 
-    .books-home-cover-wrap.is-visible {
-      display: flex;
-      animation: books-home-cover-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-
     .books-home-cover {
       width: 100%;
       height: 100%;
-      border-radius: 18px;
+      border-radius: 22px;
       background: linear-gradient(155deg, #2a5bcf, #28a7d5);
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      border: 3px solid rgba(255, 255, 255, 0.24);
+      border: 3px solid rgba(255, 255, 255, 0.16);
       box-shadow:
-        0 28px 46px rgba(0, 0, 0, 0.52),
-        18px 0 24px rgba(0, 0, 0, 0.18);
-      transform: perspective(1300px) rotateY(-14deg) rotateX(6deg);
+        0 32px 64px rgba(0, 0, 0, 0.54),
+        16px 0 24px rgba(0, 0, 0, 0.18);
+      transform: perspective(1300px) rotateY(-12deg) rotateX(5deg);
       position: relative;
       overflow: hidden;
     }
@@ -318,66 +398,177 @@
       content: "";
       position: absolute;
       inset: 0;
-      border-radius: 14px;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+      border-radius: 18px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
       pointer-events: none;
     }
 
-    .books-home-controls {
-      position: absolute;
-      right: 12px;
-      bottom: 14px;
-      display: none;
-      grid-auto-flow: row;
-      gap: 10px;
-      justify-items: end;
+    .books-home-text-slot {
+      min-height: 0;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
     }
 
-    .books-home-controls.is-visible {
+    .books-home-text-panel {
+      width: 100%;
+      min-height: 0;
+      max-height: 25vh;
+      border-radius: 24px;
+      padding: clamp(14px, 2.4vh, 22px);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      white-space: pre-line;
+      font-family: "BooksReading", "Georgia", serif;
+      font-size: clamp(20px, 3.5vw, 31px);
+      line-height: 1.22;
+      letter-spacing: 0.01em;
+      color: rgba(248, 249, 252, 0.98);
+      transition: opacity 260ms ease, transform 260ms ease, border-color 260ms ease;
+    }
+
+    .books-home-text-panel.is-empty {
+      opacity: 0.46;
+      transform: translateY(6px);
+      border-color: rgba(255, 255, 255, 0.06);
+    }
+
+    .books-home-footer {
+      min-height: 0;
       display: grid;
+      align-content: end;
+      gap: 12px;
+      padding-bottom: clamp(4px, 1vh, 10px);
     }
 
-    .books-home-control-btn {
-      width: 48px;
-      height: 48px;
+    .books-home-player {
+      min-height: 62px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
       border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.24);
-      background: rgba(255, 255, 255, 0.08);
-      color: #ffffff;
+      background: rgba(11, 18, 31, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.24);
+    }
+
+    .books-home-play-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 999px;
+      border: 0;
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(222, 231, 255, 0.86));
+      color: #101726;
       display: grid;
       place-items: center;
       cursor: pointer;
-      backdrop-filter: blur(6px);
-      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.28);
-      transition: transform 160ms ease, background 160ms ease, opacity 160ms ease;
+      transition: transform 160ms ease, opacity 160ms ease;
     }
 
-    .books-home-control-btn:hover {
+    .books-home-play-btn:hover:not(:disabled) {
       transform: translateY(-1px);
-      background: rgba(255, 255, 255, 0.14);
     }
 
-    .books-home-control-btn svg {
+    .books-home-play-btn:disabled {
+      opacity: 0.55;
+      cursor: wait;
+    }
+
+    .books-home-play-btn svg {
       width: 22px;
       height: 22px;
       display: block;
     }
 
-    .books-home-control-btn span {
+    .books-home-progress {
+      min-width: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .books-home-progress-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
       font-size: 12px;
+      color: rgba(233, 239, 255, 0.72);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .books-home-progress-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.09);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .books-home-progress-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #9fd2ff 0%, #ffffff 100%);
+      transition: width 120ms linear;
+    }
+
+    .books-home-toolbar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .books-home-control-btn {
+      min-height: 54px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
+      transition: transform 160ms ease, background 160ms ease, opacity 160ms ease, border-color 160ms ease;
+    }
+
+    .books-home-control-btn:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .books-home-control-btn svg,
+    .books-home-control-btn img {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .books-home-control-btn span {
+      font-size: 13px;
       font-weight: 800;
       letter-spacing: 0.02em;
     }
 
     .books-home-control-btn.is-on {
-      background: rgba(72, 166, 255, 0.22);
-      border-color: rgba(157, 214, 255, 0.72);
+      background: rgba(72, 166, 255, 0.16);
+      border-color: rgba(157, 214, 255, 0.58);
     }
 
-    @keyframes books-home-cover-in {
+    @keyframes books-home-shell-in {
       from {
         opacity: 0;
-        transform: translateY(18px);
+        transform: translateY(14px);
       }
       to {
         opacity: 1;
@@ -1715,6 +1906,50 @@
         width: min(360px, 80vw);
       }
 
+      .books-home-shell {
+        width: min(100%, 520px);
+        grid-template-rows: minmax(0, 1fr) auto;
+        gap: 14px;
+      }
+
+      .books-home-cover-wrap {
+        width: min(286px, 68vw);
+        height: min(50vh, 100%);
+      }
+
+      .books-home-text-panel {
+        max-height: 24vh;
+        font-size: clamp(18px, 5vw, 24px);
+        padding: 14px 16px;
+      }
+
+      .books-home-player {
+        min-height: 58px;
+        gap: 12px;
+        padding: 12px 14px;
+      }
+
+      .books-home-play-btn {
+        width: 48px;
+        height: 48px;
+      }
+
+      .books-home-progress-meta {
+        font-size: 11px;
+      }
+
+      .books-home-toolbar {
+        gap: 8px;
+      }
+
+      .books-home-control-btn {
+        min-height: 48px;
+      }
+
+      .books-home-control-btn span {
+        font-size: 12px;
+      }
+
       .books-mode-actions .books-magic-btn {
         width: min(58vw, 250px);
       }
@@ -1753,16 +1988,59 @@
           <button class="books-home-start" id="booksHomeStartBtn" type="button" aria-label="Iniciar home books">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3.5A2.5 2.5 0 0 1 7.5 1H20v18.5H7.5A2.5 2.5 0 0 0 5 22zm2.5-.5A1.5 1.5 0 0 0 6 4.5v12A3.5 3.5 0 0 1 7.5 16H19V3zM8 6h8v2H8zm0 4h8v2H8z"/></svg>
           </button>
-          <div class="books-home-cover-wrap" id="booksHomeCoverWrap" hidden>
-            <div class="books-home-cover" id="booksHomeCover"></div>
-          </div>
-          <div class="books-home-controls" id="booksHomeControls" hidden>
-            <button class="books-home-control-btn" id="booksHomeRepeatBtn" type="button" aria-label="Intervalo entre repeticoes">
-              <span id="booksHomeRepeatLabel">1s</span>
-            </button>
-            <button class="books-home-control-btn" id="booksHomeMusicBtn" type="button" aria-label="Musica zen">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V8.72l6-1.64V14.5a4 4 0 1 0 2 3.46V4.5z"/></svg>
-            </button>
+          <div class="books-home-shell" id="booksHomeShell" hidden>
+            <div class="books-home-viewport" id="booksHomeViewport">
+              <div class="books-home-screen books-home-screen--current" id="booksHomeCurrentScreen">
+                <div class="books-home-book-slot">
+                  <div class="books-home-cover-wrap">
+                    <div class="books-home-cover" id="booksHomeCover"></div>
+                  </div>
+                </div>
+                <div class="books-home-text-slot">
+                  <div class="books-home-text-panel is-empty" id="booksHomeTextPanel"></div>
+                </div>
+              </div>
+              <div class="books-home-screen books-home-screen--next" id="booksHomeNextScreen" aria-hidden="true">
+                <div class="books-home-book-slot">
+                  <div class="books-home-cover-wrap">
+                    <div class="books-home-cover" id="booksHomeNextCover"></div>
+                  </div>
+                </div>
+                <div class="books-home-text-slot">
+                  <div class="books-home-text-panel is-empty" id="booksHomeNextTextPanel"></div>
+                </div>
+              </div>
+            </div>
+            <div class="books-home-footer" id="booksHomeControls">
+              <div class="books-home-player">
+                <button class="books-home-play-btn" id="booksHomePlayPauseBtn" type="button" aria-label="Pausar ou retomar reproducao">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5h3v14H8zm5 0h3v14h-3z"/></svg>
+                </button>
+                <div class="books-home-progress">
+                  <div class="books-home-progress-meta">
+                    <span id="booksHomeProgressLabel">Livro</span>
+                    <span id="booksHomeProgressValue">0%</span>
+                  </div>
+                  <div class="books-home-progress-track" aria-hidden="true">
+                    <div class="books-home-progress-fill" id="booksHomeProgressFill"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="books-home-toolbar">
+                <button class="books-home-control-btn" id="booksHomeRepeatBtn" type="button" aria-label="Intervalo entre repeticoes">
+                  <span id="booksHomeRepeatLabel">1s</span>
+                </button>
+                <button class="books-home-control-btn" id="booksHomeMusicBtn" type="button" aria-label="Musica zen">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V8.72l6-1.64V14.5a4 4 0 1 0 2 3.46V4.5z"/></svg>
+                </button>
+                <button class="books-home-control-btn" id="booksHomeSpeedBtn" type="button" aria-label="Velocidade do audio">
+                  <span id="booksHomeSpeedLabel">1.00x</span>
+                </button>
+                <button class="books-home-control-btn" id="booksHomeLanguageBtn" type="button" aria-label="Mostrar ou ocultar texto">
+                  <img id="booksHomeLanguageIcon" src="/arquivos-codex/icones/ingles.svg" alt="Ingles">
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
