@@ -3360,13 +3360,14 @@ async function collectLegacyManifestEntriesFromRoot(rootPath, originType = 'allc
 
 async function collectAllcardsManifestEntries() {
   const visibilityState = await readLocalFlashcardVisibilityState();
-  const [allcardsEntries, legacyEntries] = await Promise.all([
-    collectLegacyManifestEntriesFromRoot(ALLCARDS_ROOT, 'allcards', visibilityState.hiddenSources),
-    collectLegacyManifestEntriesFromRoot(LEGACY_FLASHCARDS_ROOT, 'legacy', visibilityState.hiddenSources)
-  ]);
+  const allcardsEntries = await collectLegacyManifestEntriesFromRoot(
+    ALLCARDS_ROOT,
+    'allcards',
+    visibilityState.hiddenSources
+  );
 
   const mergedBySource = new Map();
-  [...allcardsEntries, ...legacyEntries].forEach((entry) => {
+  allcardsEntries.forEach((entry) => {
     const sourceKey = String(entry?.source || '').trim().toLowerCase();
     if (!sourceKey || mergedBySource.has(sourceKey)) return;
     mergedBySource.set(sourceKey, entry);
@@ -3662,19 +3663,13 @@ async function upsertPublicFlashcardDeckFromUploadedJson(fileName, payload) {
 
   const normalizedFileName = normalizePublicFlashcardDeckFileName(fileName, 'deck.json');
   const normalizedPayload = normalizeUploadedPublicDeckPayload(normalizedFileName, payload);
-  const inferredDayKey = inferUploadedLevelsDayKey(normalizedFileName);
-
-  if (inferredDayKey) {
-    return upsertPublicFlashcardDeckFromLevels(inferredDayKey, normalizedPayload);
-  }
 
   const title = String(normalizedPayload?.title || '').trim()
     || path.posix.basename(normalizedFileName, '.json')
     || 'Deck';
-  const deckBase = safeGeneratedBase(path.posix.basename(normalizedFileName, '.json'), 'deck');
 
   return upsertPublicFlashcardDeck({
-    deckKey: `admin-upload:${deckBase}`,
+    deckKey: `admin-upload:${encodeURIComponent(normalizedFileName.toLowerCase())}`,
     fileName: normalizedFileName,
     dayKey: '',
     source: 'admin-upload',
@@ -3767,11 +3762,11 @@ async function collectPostgresFlashcardManifestEntries() {
   if (!pool) return [];
   try {
     await ensurePublicFlashcardDecksTable();
-    await seedPublicFlashcardDecksFromAllcards();
 
     const result = await pool.query(
       `SELECT file_name, day_key, source, title, item_count, payload, is_hidden, updated_at
        FROM public.flashcards_public_decks
+       WHERE source <> 'allcards'
        ORDER BY lower(title) ASC, updated_at DESC`
     );
 
@@ -7727,13 +7722,9 @@ app.post('/api/admin/flashcards/public-decks/upload-jsons', express.json({ limit
       return;
     }
 
-    const files = Array.isArray(req.body?.files) ? req.body.files.slice(0, 100) : [];
+    const files = Array.isArray(req.body?.files) ? req.body.files.slice() : [];
     if (!files.length) {
       res.status(400).json({ success: false, message: 'Envie pelo menos um deck JSON.' });
-      return;
-    }
-    if (Array.isArray(req.body?.files) && req.body.files.length > 100) {
-      res.status(400).json({ success: false, message: 'O limite por envio e de 100 decks JSON.' });
       return;
     }
 
@@ -8036,22 +8027,8 @@ app.get('/api/flashcards/manifest', async (req, res) => {
       || includeHiddenRequested === 'true'
       || includeHiddenRequested === 'yes'
     );
-    const [localFiles, postgresFiles] = await Promise.all([
-      collectAllcardsManifestEntries(),
-      collectPostgresFlashcardManifestEntries()
-    ]);
-    const mergedBySource = new Map();
-    localFiles.forEach((entry) => {
-      const sourceKey = String(entry?.source || '').trim().toLowerCase();
-      if (!sourceKey) return;
-      mergedBySource.set(sourceKey, entry);
-    });
-    postgresFiles.forEach((entry) => {
-      const sourceKey = String(entry?.source || '').trim().toLowerCase();
-      if (!sourceKey) return;
-      mergedBySource.set(sourceKey, entry);
-    });
-    const files = Array.from(mergedBySource.values())
+    const postgresFiles = await collectPostgresFlashcardManifestEntries();
+    const files = postgresFiles
       .filter((entry) => includeHiddenForRequester || !Boolean(entry?.isHidden))
       .sort((left, right) => (
         String(left?.title || '').localeCompare(String(right?.title || ''), 'pt-BR', {
