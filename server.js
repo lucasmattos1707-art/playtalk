@@ -1319,7 +1319,7 @@ const fetchFlashcardRankingSnapshot = async ({
      FROM ranked
      ORDER BY rank
      LIMIT $1`,
-    queryParams
+    queryParams.slice(0, 3)
   );
 
   const playerPromise = currentUserId
@@ -3379,6 +3379,37 @@ async function collectAllcardsManifestEntries() {
   }));
 }
 
+async function collectLegacyDefaultPublicDeckIdentifiers() {
+  let dirEntries = [];
+  try {
+    dirEntries = await fs.promises.readdir(LEGACY_FLASHCARDS_ROOT, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return { fileNames: new Set(), dayKeys: new Set() };
+    }
+    throw error;
+  }
+
+  const fileNames = new Set();
+  const dayKeys = new Set();
+  for (const entry of dirEntries) {
+    if (!entry.isFile() || path.extname(entry.name).toLowerCase() !== '.json') {
+      continue;
+    }
+
+    const normalizedFileName = normalizePublicFlashcardDeckFileName(entry.name, '');
+    if (!normalizedFileName) continue;
+    fileNames.add(normalizedFileName);
+
+    const inferredDayKey = inferUploadedLevelsDayKey(normalizedFileName);
+    if (!inferredDayKey) continue;
+    dayKeys.add(inferredDayKey);
+    fileNames.add(buildPublicLevelsFlashcardDeckFileName(inferredDayKey));
+  }
+
+  return { fileNames, dayKeys };
+}
+
 async function findLocalFlashcardDeckRecordByFileName(fileName) {
   const normalizedFileName = normalizePublicFlashcardDeckFileName(fileName, '');
   if (!normalizedFileName) return null;
@@ -3567,8 +3598,9 @@ async function upsertPublicFlashcardDeck({
        updated_at
      )
      VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, now())
-     ON CONFLICT (deck_key) DO UPDATE
+     ON CONFLICT (file_name) DO UPDATE
      SET
+       deck_key = EXCLUDED.deck_key,
        file_name = EXCLUDED.file_name,
        day_key = EXCLUDED.day_key,
        source = EXCLUDED.source,
@@ -3762,15 +3794,31 @@ async function collectPostgresFlashcardManifestEntries() {
   if (!pool) return [];
   try {
     await ensurePublicFlashcardDecksTable();
+    const legacyDefaults = await collectLegacyDefaultPublicDeckIdentifiers();
 
     const result = await pool.query(
       `SELECT file_name, day_key, source, title, item_count, payload, is_hidden, updated_at
        FROM public.flashcards_public_decks
-       WHERE source <> 'allcards'
        ORDER BY lower(title) ASC, updated_at DESC`
     );
 
     return result.rows
+      .filter((row) => {
+        const source = String(row?.source || '').trim();
+        if (source === 'allcards') {
+          return false;
+        }
+
+        if (source === 'levels') {
+          const normalizedFileName = normalizePublicFlashcardDeckFileName(row?.file_name, '');
+          const normalizedDayKey = normalizeLevelFolderKey(row?.day_key || '');
+          if (legacyDefaults.fileNames.has(normalizedFileName) || legacyDefaults.dayKeys.has(normalizedDayKey)) {
+            return false;
+          }
+        }
+
+        return true;
+      })
       .map((row) => buildPublicFlashcardDeckManifestEntryFromRow(row))
       .filter(Boolean);
   } catch (error) {
