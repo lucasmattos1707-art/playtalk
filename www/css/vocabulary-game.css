@@ -3413,6 +3413,29 @@ body.pause-menu-active .vocabulary-game.phase-1 .game-contnent {
   transition: opacity 200ms ease, stroke-dashoffset 500ms linear !important;
 }
 
+.vocabulary-game .board__image-speech--listening ~ .image-ring-accuracy,
+.vocabulary-game .image-visual:has(.board__image-speech--listening) .image-ring-accuracy {
+  filter: drop-shadow(0 0 14px rgba(24, 255, 133, 0.72)) drop-shadow(0 0 22px rgba(24, 255, 133, 0.5)) !important;
+}
+
+.vocabulary-game .board__image-speech--listening ~ .image-ring-accuracy .image-ring-accuracy__track,
+.vocabulary-game .board__image-speech--listening ~ .image-ring-accuracy .image-ring-accuracy__progress,
+.vocabulary-game .image-visual:has(.board__image-speech--listening) .image-ring-accuracy__track,
+.vocabulary-game .image-visual:has(.board__image-speech--listening) .image-ring-accuracy__progress {
+  stroke-width: 11px !important;
+}
+
+.vocabulary-game .board__image-speech--listening ~ .image-ring-accuracy .image-ring-accuracy__track,
+.vocabulary-game .image-visual:has(.board__image-speech--listening) .image-ring-accuracy__track {
+  stroke: rgba(20, 104, 56, 0.42) !important;
+}
+
+.vocabulary-game .board__image-speech--listening ~ .image-ring-accuracy .image-ring-accuracy__progress,
+.vocabulary-game .image-visual:has(.board__image-speech--listening) .image-ring-accuracy__progress {
+  stroke: #1aff85 !important;
+  filter: drop-shadow(0 0 10px rgba(26, 255, 133, 0.95)) drop-shadow(0 0 18px rgba(128, 255, 86, 0.8)) !important;
+}
+
 
 
 
@@ -5751,6 +5774,39 @@ body.cards-library-launch #home-game.vocabulary-game #game-feedback .game-phase-
 #pre-game-screen .overlay-card h1,
 #pre-game-screen .pre-game-logline {
   text-shadow: none !important;
+}
+
+.vocabulary-game .board__image-text {
+  text-shadow: 0 3px 10px rgba(5, 56, 22, 0.9), 0 1px 0 rgba(2, 20, 8, 0.95) !important;
+}
+
+.vocabulary-game.phase-9 .phase-nine-keyboard,
+.vocabulary-game.phase-9 .phase-nine-keyboard__grid {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.vocabulary-game.phase-9 .phase-nine-key,
+.vocabulary-game.phase-9 .phase-nine-spacebar,
+.vocabulary-game.phase-9 .writing-undo {
+  background: #040404 !important;
+  background-image: none !important;
+  color: #ffe66d !important;
+  border: 2px solid #38ff8b !important;
+  box-shadow:
+    0 0 10px rgba(56, 255, 139, 0.72),
+    0 0 18px rgba(255, 196, 57, 0.55),
+    inset 0 0 10px rgba(56, 255, 139, 0.18) !important;
+  text-shadow:
+    0 0 6px rgba(255, 212, 74, 0.75),
+    0 0 12px rgba(56, 255, 139, 0.45) !important;
+}
+
+.vocabulary-game.phase-9 .phase-nine-key:hover,
+.vocabulary-game.phase-9 .phase-nine-spacebar:hover,
+.vocabulary-game.phase-9 .writing-undo:hover {
+  filter: brightness(1.08) saturate(1.08) !important;
+  transform: translateY(-1px);
 }
 
 /* Final polish: planting balance + perfect simple circle + watching/talking text inside visor */

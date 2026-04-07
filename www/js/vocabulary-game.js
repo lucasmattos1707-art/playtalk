@@ -6017,9 +6017,14 @@
   }
 
   function splitBalancedText(text) {
-    const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+    const normalizedText = String(text || '').trim();
+    const compactLength = normalizedText.replace(/\s+/g, ' ').trim().length;
+    const words = normalizedText.split(/\s+/).filter(Boolean);
+    if (compactLength < 14) {
+      return [normalizedText, ''];
+    }
     if (words.length <= 1) {
-      return [text, ''];
+      return [normalizedText, ''];
     }
     let bestSplit = 1;
     let smallestDiff = Infinity;

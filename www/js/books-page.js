@@ -1190,6 +1190,16 @@
     return state.selectedLevel === UI_LEVEL_STATS;
   }
 
+  function syncBooksInjectedFooterVisibility() {
+    const shouldShow = isHomeLevel()
+      && !state.readerOpen
+      && !state.modeBookId
+      && !state.magicBookId
+      && !state.jsonBookId
+      && !state.createModalOpen;
+    document.body.classList.toggle('books-home-footer-visible', shouldShow);
+  }
+
   function getHomeRepeatSeconds() {
     return HOME_REPEAT_OPTIONS[Math.max(0, Math.min(HOME_REPEAT_OPTIONS.length - 1, state.homeRepeatIndex))] || 1;
   }
@@ -1535,6 +1545,7 @@
   function renderHomePanel() {
     if (!els.homePanel) return;
     const visible = isHomeLevel();
+    syncBooksInjectedFooterVisibility();
     els.homePanel.classList.toggle('is-visible', visible);
     els.homePanel.classList.toggle('is-immersive', visible && state.homeIntroDismissed);
     if (els.page) {

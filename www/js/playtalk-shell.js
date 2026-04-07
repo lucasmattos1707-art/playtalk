@@ -37,6 +37,7 @@
     if (document.querySelector('.flashcards-footer-nav')) return;
     const nav = document.createElement('nav');
     nav.className = 'flashcards-footer-nav';
+    nav.dataset.shellPage = path === '/books' ? 'books' : 'default';
     nav.setAttribute('aria-label', 'Navegacao do flashcards');
     nav.innerHTML = [
       buildFooterItem('play', '/flashcards?view=play', 'Jogar', '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.36a1 1 0 0 0 0-1.72l-10-6.36A1 1 0 0 0 8 5.14Z"/></svg>'),

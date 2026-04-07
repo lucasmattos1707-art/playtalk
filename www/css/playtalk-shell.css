@@ -129,6 +129,14 @@ body.playtalk-cosmic-shell .container::after {
   fill: currentColor !important;
 }
 
+.flashcards-footer-nav[data-shell-page="books"] {
+  display: none !important;
+}
+
+body.books-home-footer-visible .flashcards-footer-nav[data-shell-page="books"] {
+  display: grid !important;
+}
+
 body.books-reader-open .flashcards-footer-nav,
 body.gameplay-active .flashcards-footer-nav,
 body.game-open .flashcards-footer-nav,
