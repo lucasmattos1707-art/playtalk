@@ -438,6 +438,108 @@ const getBooksPronunciationPercent = (samples) => {
   return Math.max(0, Math.min(100, Math.round(average)));
 };
 
+const buildBooksPronunciationStatsPayload = (row, fallbackUserId = 0) => {
+  const normalizedSamples = normalizeBooksPronunciationSamples(row?.pronunciation_samples);
+  const generalPronunciationPercent = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        Number(row?.general_pronunciation_percent)
+        || getBooksPronunciationPercent(normalizedSamples)
+      )
+    )
+  );
+
+  return {
+    userId: Math.max(0, Number.parseInt(row?.user_id, 10) || Math.max(0, Number(fallbackUserId) || 0)),
+    bookReadCount: Math.max(0, Number.parseInt(row?.book_read, 10) || 0),
+    pronunciationTag: typeof row?.pronunciation_tag === 'string'
+      ? (row.pronunciation_tag.trim() || BOOKS_PRONUNCIATION_TAG)
+      : BOOKS_PRONUNCIATION_TAG,
+    pronunciationSamples: normalizedSamples,
+    pronunciationSamplesCount: normalizedSamples.length,
+    generalPronunciationPercent,
+    updatedAt: row?.updated_at || null
+  };
+};
+
+const upsertBooksPronunciationStats = async (client, userId, options = {}) => {
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    throw new Error('Usuario invalido para sincronizar pronuncia de livros.');
+  }
+
+  const incomingSamples = normalizeBooksPronunciationSamples(options.pronunciationSamples);
+  const bookReadIncrement = Math.max(0, Number.parseInt(options.bookReadIncrement, 10) || 0);
+
+  const existingResult = await client.query(
+    `SELECT user_id, book_read, pronunciation_tag, pronunciation_samples, general_pronunciation_percent, updated_at
+     FROM public.user_books_speaking_stats
+     WHERE user_id = $1
+     FOR UPDATE`,
+    [normalizedUserId]
+  );
+
+  const existingRow = existingResult.rows[0] || null;
+  const existingSamples = normalizeBooksPronunciationSamples(existingRow?.pronunciation_samples);
+  const nextSamples = [...existingSamples, ...incomingSamples].slice(-BOOKS_PRONUNCIATION_SAMPLE_LIMIT);
+  const nextBookReadCount = Math.max(0, Number.parseInt(existingRow?.book_read, 10) || 0) + bookReadIncrement;
+  const nextGeneralPronunciationPercent = getBooksPronunciationPercent(nextSamples);
+
+  const upsertResult = await client.query(
+    `INSERT INTO public.user_books_speaking_stats (
+       user_id,
+       book_read,
+       pronunciation_tag,
+       pronunciation_samples,
+       general_pronunciation_percent,
+       updated_at
+     )
+     VALUES ($1, $2, $3, $4::jsonb, $5, now())
+     ON CONFLICT (user_id)
+     DO UPDATE
+       SET book_read = EXCLUDED.book_read,
+           pronunciation_tag = EXCLUDED.pronunciation_tag,
+           pronunciation_samples = EXCLUDED.pronunciation_samples,
+           general_pronunciation_percent = EXCLUDED.general_pronunciation_percent,
+           updated_at = now()
+     RETURNING
+       user_id,
+       book_read,
+       pronunciation_tag,
+       pronunciation_samples,
+       general_pronunciation_percent,
+       updated_at`,
+    [
+      normalizedUserId,
+      nextBookReadCount,
+      BOOKS_PRONUNCIATION_TAG,
+      JSON.stringify(nextSamples),
+      nextGeneralPronunciationPercent
+    ]
+  );
+
+  return buildBooksPronunciationStatsPayload(upsertResult.rows[0], normalizedUserId);
+};
+
+const touchUserPresence = async (client, userId) => {
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    return;
+  }
+
+  await client.query(
+    `INSERT INTO public.user_presence (user_id, last_seen_at, updated_at)
+     VALUES ($1, now(), now())
+     ON CONFLICT (user_id)
+     DO UPDATE SET
+       last_seen_at = now(),
+       updated_at = now()`,
+    [normalizedUserId]
+  );
+};
+
 const normalizeBookCompletionMode = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
   if (normalized === 'listening-training') return 'listening-training';
@@ -895,6 +997,24 @@ const ensureBooksSpeakingStatsTable = async () => {
       await pool.query(`
         ALTER TABLE public.user_books_speaking_stats
         ADD COLUMN IF NOT EXISTS pronunciation_samples jsonb NOT NULL DEFAULT '[]'::jsonb
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_books_speaking_stats
+        ADD COLUMN IF NOT EXISTS general_pronunciation_percent integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        UPDATE public.user_books_speaking_stats
+        SET general_pronunciation_percent = COALESCE((
+          SELECT ROUND(AVG((sample.value)::numeric))::int
+          FROM jsonb_array_elements_text(COALESCE(pronunciation_samples, '[]'::jsonb)) AS sample(value)
+        ), 0)
+        WHERE (
+          general_pronunciation_percent IS NULL
+          OR (
+            general_pronunciation_percent = 0
+            AND jsonb_array_length(COALESCE(pronunciation_samples, '[]'::jsonb)) > 0
+          )
+        )
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_books_speaking_stats_updated_idx
@@ -8726,70 +8846,23 @@ app.post('/api/books/training/complete', express.json({ limit: '256kb' }), async
     try {
       await client.query('BEGIN');
 
-      const existingResult = await client.query(
-        `SELECT user_id, book_read, pronunciation_tag, pronunciation_samples
-         FROM public.user_books_speaking_stats
-         WHERE user_id = $1
-         FOR UPDATE`,
-        [userId]
-      );
-
-      const existingRow = existingResult.rows[0] || null;
-      const existingSamples = normalizeBooksPronunciationSamples(existingRow?.pronunciation_samples);
-      const nextSamples = [...existingSamples, pronunciationPercent].slice(-BOOKS_PRONUNCIATION_SAMPLE_LIMIT);
-      const nextBookReadCount = Math.max(0, Number.parseInt(existingRow?.book_read, 10) || 0) + 1;
-
-      const upsertResult = await client.query(
-        `INSERT INTO public.user_books_speaking_stats (
-           user_id,
-           book_read,
-           pronunciation_tag,
-           pronunciation_samples,
-           updated_at
-         )
-         VALUES ($1, $2, $3, $4::jsonb, now())
-         ON CONFLICT (user_id)
-         DO UPDATE
-           SET book_read = EXCLUDED.book_read,
-               pronunciation_tag = EXCLUDED.pronunciation_tag,
-               pronunciation_samples = EXCLUDED.pronunciation_samples,
-               updated_at = now()
-         RETURNING
-           user_id,
-           book_read,
-           pronunciation_tag,
-           pronunciation_samples,
-           updated_at`,
-        [
-          userId,
-          nextBookReadCount,
-          BOOKS_PRONUNCIATION_TAG,
-          JSON.stringify(nextSamples)
-        ]
-      );
+      const saved = await upsertBooksPronunciationStats(client, userId, {
+        pronunciationSamples: [pronunciationPercent],
+        bookReadIncrement: 1
+      });
 
       await client.query('COMMIT');
-
-      const saved = upsertResult.rows[0] || {
-        user_id: userId,
-        book_read: nextBookReadCount,
-        pronunciation_tag: BOOKS_PRONUNCIATION_TAG,
-        pronunciation_samples: nextSamples,
-        updated_at: new Date().toISOString()
-      };
-      const normalizedSamples = normalizeBooksPronunciationSamples(saved.pronunciation_samples);
-      const generalPronunciationPercent = getBooksPronunciationPercent(normalizedSamples);
 
       res.json({
         success: true,
         bookId,
         stats: {
-          bookReadCount: Math.max(0, Number(saved.book_read) || 0),
-          pronunciationTag: BOOKS_PRONUNCIATION_TAG,
-          pronunciationSamplesCount: normalizedSamples.length,
+          bookReadCount: saved.bookReadCount,
+          pronunciationTag: saved.pronunciationTag,
+          pronunciationSamplesCount: saved.pronunciationSamplesCount,
           latestPronunciationPercent: pronunciationPercent,
-          generalPronunciationPercent,
-          updatedAt: saved.updated_at || null
+          generalPronunciationPercent: saved.generalPronunciationPercent,
+          updatedAt: saved.updatedAt
         }
       });
     } catch (error) {
@@ -8838,6 +8911,7 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
 
     await ensureUserBooksLibraryStatsTable();
     await ensureUserBooksConsumptionStatsTable();
+    await ensureBooksSpeakingStatsTable();
     const book = await findSpeakingBookById(bookId);
 
     const client = await pool.connect();
@@ -8902,6 +8976,14 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
         );
       }
 
+      const shouldTrackPronunciation = mode === 'speaking-training' || mode === 'listening-training';
+      const pronunciationStats = shouldTrackPronunciation
+        ? await upsertBooksPronunciationStats(client, userId, {
+          pronunciationSamples: [scorePercent],
+          bookReadIncrement: 1
+        })
+        : null;
+
       const totalsResult = await client.query(
         `SELECT COALESCE(SUM(reads_completed), 0)::int AS total_reads
          FROM public.user_books_library_stats
@@ -8916,7 +8998,8 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
         mode,
         stats: {
           bookReadCount: Math.max(0, Number(totalsResult.rows[0]?.total_reads) || 0),
-          generalPronunciationPercent: mode === 'speaking-training' || mode === 'listening-training' ? scorePercent : 0,
+          generalPronunciationPercent: pronunciationStats?.generalPronunciationPercent || 0,
+          pronunciationSamplesCount: pronunciationStats?.pronunciationSamplesCount || 0,
           book: {
             readsCompleted: nextReadsCompleted,
             listenedSeconds: nextListenedSeconds,
@@ -8938,6 +9021,82 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
   } catch (error) {
     console.error('Erro ao salvar conclusao de livro:', error);
     res.status(500).json({ success: false, message: 'Nao foi possivel salvar a leitura do livro agora.' });
+  }
+});
+
+app.post('/api/books/pronunciation/sync', express.json({ limit: '256kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const userId = Number.parseInt(authUser.id, 10);
+    const pronunciationSamples = normalizeBooksPronunciationSamples(req.body?.pronunciationSamples);
+    const touchPresenceRequested = req.body?.touchPresence !== false;
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ success: false, message: 'Usuario invalido.' });
+      return;
+    }
+    if (!pronunciationSamples.length && !touchPresenceRequested) {
+      res.json({ success: true, stats: null });
+      return;
+    }
+
+    await ensureBooksSpeakingStatsTable();
+    if (touchPresenceRequested) {
+      await ensureSpeakingRealtimeTables();
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const pronunciationStats = pronunciationSamples.length
+        ? await upsertBooksPronunciationStats(client, userId, {
+          pronunciationSamples
+        })
+        : null;
+
+      if (touchPresenceRequested) {
+        await touchUserPresence(client, userId);
+      }
+
+      await client.query('COMMIT');
+
+      res.json({
+        success: true,
+        stats: pronunciationStats
+          ? {
+            pronunciationTag: pronunciationStats.pronunciationTag,
+            pronunciationSamplesCount: pronunciationStats.pronunciationSamplesCount,
+            generalPronunciationPercent: pronunciationStats.generalPronunciationPercent,
+            updatedAt: pronunciationStats.updatedAt
+          }
+          : null
+      });
+    } catch (error) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (_rollbackError) {
+        // ignore
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Erro ao sincronizar pronuncia de livros:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Nao foi possivel sincronizar a pronuncia dos livros agora.'
+    });
   }
 });
 
@@ -8973,7 +9132,7 @@ app.get('/api/books/stats', async (req, res) => {
         [userId]
       ),
       pool.query(
-        `SELECT pronunciation_samples
+        `SELECT pronunciation_samples, general_pronunciation_percent
          FROM public.user_books_speaking_stats
          WHERE user_id = $1
          ORDER BY updated_at DESC
@@ -8990,7 +9149,16 @@ app.get('/api/books/stats', async (req, res) => {
     ]);
 
     const samples = normalizeBooksPronunciationSamples(speakingStatsResult.rows[0]?.pronunciation_samples);
-    const generalPronunciationPercent = getBooksPronunciationPercent(samples);
+    const generalPronunciationPercent = Math.max(
+      0,
+      Math.min(
+        100,
+        Math.round(
+          Number(speakingStatsResult.rows[0]?.general_pronunciation_percent)
+          || getBooksPronunciationPercent(samples)
+        )
+      )
+    );
     const consumption = consumptionResult.rows[0] || {};
 
     res.json({
@@ -8998,6 +9166,7 @@ app.get('/api/books/stats', async (req, res) => {
       stats: {
         bookReadCount: Math.max(0, Number(totalsResult.rows[0]?.total_reads) || 0),
         generalPronunciationPercent,
+        pronunciationSamplesCount: samples.length,
         speakingChars: Math.max(0, Number(consumption.speaking_chars) || 0),
         listeningChars: Math.max(0, Number(consumption.listening_chars) || 0),
         practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0)
