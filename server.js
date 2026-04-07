@@ -2297,13 +2297,18 @@ const MINIBOOKS_COVER_RENDER_SIZE = Object.freeze({ height: 600 });
 const MINIBOOKS_BACKGROUND_DESKTOP_RENDER_SIZE = Object.freeze({ width: 1600, height: 900 });
 const MINIBOOKS_BACKGROUND_MOBILE_RENDER_SIZE = Object.freeze({ width: 900, height: 1600 });
 const MINIBOOKS_DEFAULT_COVER_PROMPT = [
-  'Create a vertical 9:16 premium book cover for an English micro-reading gamified app.',
-  'High-quality cinematic illustration, rich storytelling, elegant lighting.',
-  'No text, no letters, no logos, no watermark.'
+  'Create a vertical 9:16 premium book cover for a minibook.',
+  'The cover title and logline must be in Portuguese, using typography harmonized with the theme like top editorial book designers.',
+  'Use a high-quality visual direction that matches the theme: it may be colorful, blue, tech, neon, minimalist, painterly, abstract, or another fitting style.',
+  'Keep the composition elegant, creative, clear, and visually premium.',
+  'No watermark, no random letters, no extra logos.'
 ].join(' ');
 const MINIBOOKS_DEFAULT_BACKGROUND_PROMPT = [
-  'Create a premium immersive reading background for an English learning app.',
-  'Atmospheric, cinematic lighting, clean composition, no text, no logos, no watermark.'
+  'Create a premium immersive reading background for a minibook.',
+  'Choose bright, creative, high-quality imagery that harmonizes with the theme.',
+  'It may be abstract when the theme suggests it, and should use colors that fit the concept such as colorful, blue, tech, neon, minimalist, or painterly moods.',
+  'Preserve clean visual space for overlays and readability.',
+  'No text, no logos, no watermark.'
 ].join(' ');
 const MINIBOOKS_WRITER_MODEL = 'gpt-5.4-nano';
 const MINIBOOKS_ALLOWED_OPENAI_VOICES = new Set(['fable', 'alloy', 'sage', 'nova', 'verse']);
@@ -6128,12 +6133,12 @@ function buildMiniBookLinesTextFromWriterJson(rawPayload, options = {}) {
 
   const coverPrompt = normalizeMiniBookText(
     source.coverPrompt || source.cover || source.dalleCoverPrompt,
-    `Professional bestseller book cover, 9:16, theme "${title}", strong typography mood, modern palette, premium composition, cinematic lighting, high detail, no watermark, no logo.`
+    `Professional bestseller book cover, 9:16, theme "${title}", title and logline in Portuguese, typography harmonized with the theme, premium editorial design, creative high-quality composition, colors and style aligned to the theme, no watermark, no extra logo.`
   ).slice(0, 420);
 
   const backgroundPrompt = normalizeMiniBookText(
     source.backgroundPrompt || source.background || source.dalleBackgroundPrompt,
-    `Immersive cinematic background for "${title}", coherent palette, abstract or realistic, elegant depth, soft light, clean visual space for text, no watermark, no logo.`
+    `Bright creative high-quality background for "${title}", coherent palette, abstract if the theme fits, elegant depth, clear visual space for overlays, colors and mood aligned with the theme, no watermark, no logo.`
   ).slice(0, 420);
 
   const rawPairs = Array.isArray(source.pairs)
@@ -9000,8 +9005,8 @@ app.post('/api/admin/minibooks/write-lines', express.json({ limit: '2mb' }), asy
       '  "title": "string",',
       '  "level": 1,',
       '  "slug": "lowercase-hyphen-name",',
-      '  "coverPrompt": "around 250 chars prompt for DALL-E professional bestseller cover",',
-      '  "backgroundPrompt": "coherent DALL-E background prompt",',
+      '  "coverPrompt": "around 250 chars prompt for a professional bestseller-style cover with title/logline in Portuguese and typography harmonized with the theme",',
+      '  "backgroundPrompt": "bright, creative, coherent high-quality background prompt aligned with the theme",',
       '  "pairs": [',
       '    {"pt":"Portuguese line", "en":"Faithful English translation"}',
       '  ]',
@@ -9013,6 +9018,9 @@ app.post('/api/admin/minibooks/write-lines', express.json({ limit: '2mb' }), asy
       '- Line 3 must be lowercase slug separated by hyphen.',
       '- Line 4 cover prompt (about 250 chars).',
       '- Line 5 background prompt.',
+      '- The cover prompt must ask for title and logline in Portuguese.',
+      '- The cover style must harmonize typography, palette, and mood with the theme like premium editorial book design.',
+      '- The background prompt must prefer bright, creative, high-quality imagery and may be abstract when the theme suggests it.',
       '- From line 6 onward, output pairs pt/en.',
       '- Every pt/en sentence must have at most 27 characters.',
       '- Keep modern clear English, lightly informal, easy to understand.',
