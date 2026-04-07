@@ -414,6 +414,44 @@
       transition: opacity 420ms ease, transform 520ms ease, filter 420ms ease;
     }
 
+    /* Home login card: expand to full screen. */
+    #booksHomeStartPanel {
+      inset: 0;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      border-radius: 0;
+      padding: 42px 22px 28px;
+      transform: none;
+      align-content: center;
+    }
+
+    #booksHomeStartPanel.is-logged-in .books-home-start-title,
+    #booksHomeStartPanel.is-logged-in .books-home-start-tagline,
+    #booksHomeStartPanel.is-logged-in .books-home-start-auth-title,
+    #booksHomeStartPanel.is-logged-in #booksHomeAuthForm,
+    #booksHomeStartPanel.is-logged-in #booksHomeAuthStatus {
+      display: none !important;
+    }
+
+    .books-home-logout {
+      border: 0;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+      padding: 10px 12px;
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      cursor: pointer;
+    }
+
     .books-home-start-visual {
       width: min(140px, 34vw);
       height: min(140px, 34vw);
@@ -625,7 +663,7 @@
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      padding-top: 40px;
+      padding-top: 90px;
     }
 
     .books-home-cover-wrap {
@@ -718,7 +756,7 @@
       text-align: center;
       white-space: pre-line;
       font-family: "BooksReading", "Georgia", serif;
-      font-size: clamp(26px, 4.4vw, 39px);
+      font-size: clamp(30px, 5.1vw, 45px);
       line-height: 1.14;
       letter-spacing: 0.01em;
       color: #ffffff;
@@ -856,6 +894,36 @@
       font-size: 12px;
       font-weight: 800;
       letter-spacing: 0.02em;
+    }
+
+    .books-home-corner-btn {
+      position: absolute;
+      top: 20px;
+      width: 44px;
+      height: 44px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      z-index: 10;
+      filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.45));
+    }
+
+    .books-home-corner-btn svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .books-home-corner-btn--left {
+      left: 20px;
+    }
+
+    .books-home-corner-btn--right {
+      right: 20px;
     }
 
     .books-home-control-btn.is-on {
@@ -2294,7 +2362,7 @@
         min-height: 13vh;
         height: 13vh;
         max-height: 13vh;
-        font-size: clamp(24px, 6.1vw, 31px);
+        font-size: clamp(28px, 7vw, 36px);
         padding: 10px 12px;
       }
 
@@ -2420,19 +2488,24 @@
               <p class="books-home-start-auth-title">Entre ou cadastre-se</p>
               <form class="books-home-auth-form" id="booksHomeAuthForm">
                 <label class="books-home-auth-field">
-                  <span class="books-home-auth-label">login:</span>
                   <input class="books-home-auth-input" id="booksHomeLoginInput" type="text" autocomplete="username" placeholder="seu login">
                 </label>
                 <label class="books-home-auth-field">
-                  <span class="books-home-auth-label">senha:</span>
                   <input class="books-home-auth-input" id="booksHomePasswordInput" type="password" autocomplete="current-password" placeholder="sua senha">
                 </label>
                 <button class="books-home-auth-submit" id="booksHomeStartBtn" type="submit">Entrar e começar</button>
                 <p class="books-home-auth-status" id="booksHomeAuthStatus"></p>
               </form>
+              <button class="books-home-logout" id="booksHomeLogoutBtn" type="button" hidden>Sair da conta</button>
             </div>
           <div class="books-home-shell" id="booksHomeShell" hidden>
             <div class="books-home-viewport" id="booksHomeViewport">
+              <button class="books-home-corner-btn books-home-corner-btn--left" id="booksHomeCornerHomeBtn" type="button" aria-label="Voltar para inicio" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.2 3 10v10.8h6.2v-6.4h5.6v6.4H21V10zm7.2 16H16v-6.4a1.2 1.2 0 0 0-1.2-1.2H9.2A1.2 1.2 0 0 0 8 12.8v6.4H4.8v-8.4L12 5.6l7.2 5.2z"/></svg>
+              </button>
+              <button class="books-home-corner-btn books-home-corner-btn--right" id="booksHomeCornerPlayBtn" type="button" aria-label="Play ou pause" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72L19 12 8 5.14z"/></svg>
+              </button>
               <div class="books-home-screen books-home-screen--current" id="booksHomeCurrentScreen">
                 <div class="books-home-book-slot">
                   <div class="books-home-cover-wrap">

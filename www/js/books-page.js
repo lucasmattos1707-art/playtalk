@@ -96,11 +96,14 @@
     homePasswordInput: document.getElementById('booksHomePasswordInput'),
     homeAuthStatus: document.getElementById('booksHomeAuthStatus'),
     homeStartBtn: document.getElementById('booksHomeStartBtn'),
+    homeLogoutBtn: document.getElementById('booksHomeLogoutBtn'),
     homeCover: document.getElementById('booksHomeCover'),
     homeNextCover: document.getElementById('booksHomeNextCover'),
     homeTextPanel: document.getElementById('booksHomeTextPanel'),
     homeNextTextPanel: document.getElementById('booksHomeNextTextPanel'),
     homeControls: document.getElementById('booksHomeControls'),
+    homeCornerHomeBtn: document.getElementById('booksHomeCornerHomeBtn'),
+    homeCornerPlayBtn: document.getElementById('booksHomeCornerPlayBtn'),
     playerBooksProgressTime: document.getElementById('playerBooksProgressTime'),
     playerBooksProgressTrack: document.getElementById('playerBooksProgressTrack'),
     playerBooksProgressFill: document.getElementById('playerBooksProgressFill'),
@@ -809,6 +812,9 @@
 
   function renderHomeAuthUi() {
     const isLoggedIn = Boolean(state.user?.id);
+    if (els.homeStartPanel) {
+      els.homeStartPanel.classList.toggle('is-logged-in', isLoggedIn);
+    }
     if (els.homeStartBtn) {
       els.homeStartBtn.disabled = state.homeAuthBusy;
       els.homeStartBtn.textContent = isLoggedIn ? 'Continuar agora' : (state.homeAuthBusy ? 'Entrando...' : 'Entrar e começar');
@@ -830,6 +836,9 @@
     }
     if (isLoggedIn) {
       setHomeAuthStatus(`Conta ativa: ${safeText(state.user?.username)}.`, 'success');
+    }
+    if (els.homeLogoutBtn) {
+      els.homeLogoutBtn.hidden = !isLoggedIn;
     }
   }
 
@@ -880,6 +889,29 @@
       state.homeAuthBusy = false;
       renderHomeAuthUi();
     }
+  }
+
+  async function logoutFromBooksHome() {
+    try {
+      await fetch(buildApiUrl('/logout'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' })
+      });
+    } catch (_error) {
+      // ignore network errors; we'll still clear local state
+    }
+
+    persistAuthToken('');
+    state.user = null;
+    state.isAdmin = false;
+    state.homeAuthBusy = false;
+    // Return to the login screen and stop audio.
+    stopHomeSleepPlayback({ keepIntro: false });
+    renderAvatar();
+    renderAdminUiToggle();
+    renderHomeAuthUi();
+    setHomeAuthStatus('', null);
   }
 
   function renderAvatar() {
@@ -1261,6 +1293,15 @@
       const icon = getHomeLanguageIconMeta();
       els.homeLanguageIcon.src = icon.src;
       els.homeLanguageIcon.alt = icon.alt;
+    }
+    if (els.homeCornerHomeBtn) {
+      els.homeCornerHomeBtn.hidden = !state.homeIntroDismissed;
+    }
+    if (els.homeCornerPlayBtn) {
+      els.homeCornerPlayBtn.hidden = !state.homeIntroDismissed;
+      els.homeCornerPlayBtn.innerHTML = state.homePaused
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72L19 12 8 5.14z"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5h3v14H8zm5 0h3v14h-3z"/></svg>';
     }
   }
 
@@ -3072,6 +3113,10 @@
   }
 
   function renderLevelMenu() {
+    if (els.levelMenu) {
+      // Hide the top navigation UI on the Home/login screen, but keep swipe navigation working.
+      els.levelMenu.hidden = isHomeLevel();
+    }
     if (els.levelTitle) {
       els.levelTitle.textContent = `${getUiLevelDisplayName(state.selectedLevel)}`;
     }
@@ -4053,7 +4098,11 @@
       if (token !== state.readerFinishToken || !state.readerOpen) return;
     }
 
+    const finishedBook = activeBook;
     closeReader();
+    if (finishedBook && safeText(finishedBook?.bookId)) {
+      openPreBookModal(finishedBook);
+    }
   }
 
   async function runFreeReadCompletionSequence() {
@@ -4537,6 +4586,24 @@
       void toggleHomePausePlayback();
     });
 
+    els.homeLogoutBtn?.addEventListener('click', () => {
+      void logoutFromBooksHome();
+    });
+
+    els.homeCornerHomeBtn?.addEventListener('click', () => {
+      // Back to the Home/login screen.
+      stopHomeSleepPlayback({ keepIntro: false });
+      renderHomeAuthUi();
+      renderLevelMenu();
+      renderCards();
+    });
+
+    els.homeCornerPlayBtn?.addEventListener('click', () => {
+      if (!state.homeIntroDismissed) return;
+      // Toggle play/pause of the voice audio. Music stays on.
+      void toggleHomePausePlayback();
+    });
+
     // Tapping the current book cover in the Home player opens the pre-book overlay (paused + blurred).
     els.homeCover?.addEventListener('click', () => {
       if (!isHomeLevel() || !state.homeIntroDismissed) return;
@@ -4861,6 +4928,12 @@
     renderCards();
     syncShelfViewportHeight();
     void scrollShelfToIndex(state.shelfIndex, false);
+
+    // If the player is already logged in, skip the login UI and start the Home player immediately.
+    if (state.user?.id && isHomeLevel() && !state.homeIntroDismissed) {
+      startHomeSleepPlayback();
+      renderLevelMenu();
+    }
 
     if (state.isAdmin) {
       if (hasRunningCreateJobs()) {
