@@ -383,6 +383,8 @@
         0 0 64px rgba(53, 136, 255, 0.12),
         inset 0 0 0 1px rgba(255, 255, 255, 0.05);
       backdrop-filter: blur(18px);
+      contain: layout paint;
+      isolation: isolate;
       align-content: center;
       gap: 26px;
     }
@@ -390,14 +392,8 @@
     .books-stats-icon-shell {
       width: min(330px, 62vw);
       height: min(330px, 62vw);
-      border-radius: 36px;
-      border: 1px solid rgba(114, 226, 255, 0.42);
-      background: rgba(255, 255, 255, 0.01);
       display: grid;
       place-items: center;
-      box-shadow:
-        inset 0 0 30px rgba(88, 211, 255, 0.05),
-        0 0 28px rgba(68, 203, 255, 0.14);
     }
 
     .books-stats-icon {
@@ -408,7 +404,9 @@
         drop-shadow(0 0 10px rgba(107, 230, 255, 0.95))
         drop-shadow(0 0 24px rgba(107, 230, 255, 0.52))
         drop-shadow(0 0 44px rgba(77, 132, 255, 0.34));
-      transition: opacity 200ms ease, transform 240ms ease, filter 240ms ease;
+      transition: opacity 160ms ease;
+      transform: translateZ(0);
+      backface-visibility: hidden;
     }
 
     .books-stats-icon svg {
@@ -419,6 +417,7 @@
 
     .books-stats-tag {
       margin: 0;
+      min-height: 1.25em;
       color: rgba(225, 251, 255, 0.96);
       font-size: clamp(26px, 5vw, 38px);
       font-weight: 800;
@@ -432,6 +431,11 @@
 
     .books-stats-value {
       margin: 0;
+      min-height: 1.15em;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: #ffffff;
       font-size: clamp(56px, 13vw, 122px);
       font-weight: 900;

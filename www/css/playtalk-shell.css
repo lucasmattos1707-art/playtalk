@@ -10,6 +10,41 @@
   --playtalk-footer-active: linear-gradient(180deg, rgba(66, 183, 255, 0.22), rgba(37, 116, 255, 0.12));
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+[role="button"],
+[tabindex]:not(input):not(textarea):not(select):not([contenteditable="true"]) {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+button:not(input):not(textarea):not(select),
+a,
+[role="button"],
+[tabindex]:not(input):not(textarea):not(select):not([contenteditable="true"]) {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button:focus,
+a:focus,
+[role="button"]:focus,
+[tabindex]:not(input):not(textarea):not(select):not([contenteditable="true"]):focus {
+  outline: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:not(input):not(textarea):not(select):not([contenteditable="true"]):focus-visible {
+  outline: 2px solid rgba(119, 210, 255, 0.55);
+  outline-offset: 3px;
+}
+
 body.playtalk-cosmic-shell {
   background: var(--playtalk-shell-bg) !important;
 }
