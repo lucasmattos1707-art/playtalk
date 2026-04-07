@@ -53,6 +53,7 @@
 
   const els = {
     page: document.querySelector('.books-page'),
+    homeBookBackground: document.getElementById('booksHomeBookBackground'),
     avatarImage: document.getElementById('booksAccountAvatarImage'),
     avatarFallback: document.getElementById('booksAccountAvatarFallback'),
     avatarName: document.getElementById('booksAccountName'),
@@ -923,6 +924,18 @@
     applyHomeAudioPlaybackRate(state.homeAudioElement);
   }
 
+  function applyHomeBookBackground(session = state.homeCurrentSession) {
+    if (!els.homeBookBackground) return;
+    const backgroundUrl = chooseReaderBackgroundUrl(session?.book || session || null);
+    if (!backgroundUrl) {
+      els.homeBookBackground.style.backgroundImage = 'none';
+      els.homeBookBackground.classList.remove('is-visible');
+      return;
+    }
+    els.homeBookBackground.style.backgroundImage = `url(${safeCssUrl(backgroundUrl)})`;
+    els.homeBookBackground.classList.add('is-visible');
+  }
+
   function renderHomePanel() {
     if (!els.homePanel) return;
     const visible = isHomeLevel();
@@ -942,6 +955,7 @@
     if (els.homeControls) {
       els.homeControls.hidden = !state.homeIntroDismissed;
     }
+    applyHomeBookBackground(state.homeCurrentSession);
     renderHomeScreen(els.homeCover, els.homeTextPanel, state.homeCurrentSession, state.homeCurrentCardIndex);
     renderHomeScreen(els.homeNextCover, els.homeNextTextPanel, state.homeNextSession, 0);
     renderHomeProgressUi();
