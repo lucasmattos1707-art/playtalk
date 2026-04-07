@@ -49,6 +49,7 @@
     { id: 'stars2', count: 200 },
     { id: 'stars3', count: 100 }
   ];
+  const HOME_AUDIO_DURATION_CACHE = new Map();
 
   const els = {
     page: document.querySelector('.books-page'),
@@ -73,6 +74,7 @@
     homeTextPanel: document.getElementById('booksHomeTextPanel'),
     homeNextTextPanel: document.getElementById('booksHomeNextTextPanel'),
     homeControls: document.getElementById('booksHomeControls'),
+    playerBooksProgressTime: document.getElementById('playerBooksProgressTime'),
     playerBooksProgressTrack: document.getElementById('playerBooksProgressTrack'),
     playerBooksProgressFill: document.getElementById('playerBooksProgressFill'),
     homeRepeatBtn: document.getElementById('booksHomeRepeatBtn'),
@@ -211,10 +213,13 @@
     homeSpeedIndex: 3,
     homeProgressRatio: 0,
     homeProgressLabel: '',
+    homeProgressElapsedSeconds: 0,
+    homeProgressTotalSeconds: 0,
     homePaused: false,
     homeAudioResolver: null,
     homeAudioInterrupted: false,
     homeSkipRequested: false,
+    homeSeekTarget: null,
     homeTransitioning: false,
     homeTouchStartX: 0,
     homeTouchStartY: 0,
@@ -242,6 +247,95 @@
       if (!layer) return;
       layer.style.setProperty('--star-shadow', buildStarShadowMap(count));
     });
+  }
+
+  function formatHomeClock(totalSeconds) {
+    const normalized = Math.max(0, Math.round(Number(totalSeconds) || 0));
+    const minutes = Math.floor(normalized / 60);
+    const seconds = normalized % 60;
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  function getHomeCardDurationSeconds(card) {
+    return Math.max(0, Number(card?.audioDurationSeconds) || 0);
+  }
+
+  function getHomeGapSeconds() {
+    return Math.max(0, Number(getHomeRepeatSeconds()) || 0);
+  }
+
+  function getHomeSessionTotalSeconds(session = state.homeCurrentSession) {
+    const cards = Array.isArray(session?.cards) ? session.cards : [];
+    if (!cards.length) return 0;
+    const audioSeconds = cards.reduce((total, card) => total + getHomeCardDurationSeconds(card), 0);
+    return audioSeconds + (cards.length * getHomeGapSeconds());
+  }
+
+  function getHomeElapsedSecondsForPosition(cardIndex, timeWithinCardSeconds, session = state.homeCurrentSession) {
+    const cards = Array.isArray(session?.cards) ? session.cards : [];
+    if (!cards.length) return 0;
+    const safeIndex = Math.max(0, Math.min(cards.length - 1, Number(cardIndex) || 0));
+    const gapSeconds = getHomeGapSeconds();
+    let elapsed = 0;
+    for (let index = 0; index < safeIndex; index += 1) {
+      elapsed += getHomeCardDurationSeconds(cards[index]) + gapSeconds;
+    }
+    elapsed += Math.max(0, Number(timeWithinCardSeconds) || 0);
+    return elapsed;
+  }
+
+  function updateHomeProgressTimeline(elapsedSeconds, totalSeconds, label = state.homeCurrentBookName || 'Livro') {
+    const normalizedTotal = Math.max(0, Number(totalSeconds) || 0);
+    const normalizedElapsed = Math.max(0, Math.min(normalizedTotal || Number.MAX_SAFE_INTEGER, Number(elapsedSeconds) || 0));
+    state.homeProgressLabel = safeText(label) || 'Livro';
+    state.homeProgressElapsedSeconds = normalizedElapsed;
+    state.homeProgressTotalSeconds = normalizedTotal;
+    state.homeProgressRatio = normalizedTotal > 0 ? Math.max(0, Math.min(1, normalizedElapsed / normalizedTotal)) : 0;
+    renderHomeProgressUi();
+  }
+
+  function refreshHomeProgressFromPlayback() {
+    const session = state.homeCurrentSession;
+    const totalSeconds = getHomeSessionTotalSeconds(session);
+    const elapsedSeconds = getHomeElapsedSecondsForPosition(
+      state.homeCurrentCardIndex,
+      Number(state.homeAudioElement?.currentTime) || 0,
+      session
+    );
+    updateHomeProgressTimeline(elapsedSeconds, totalSeconds, state.homeCurrentBookName || safeText(session?.title) || 'Livro');
+  }
+
+  function loadHomeAudioDurationSeconds(source) {
+    const normalizedSource = safeText(source);
+    if (!normalizedSource) return Promise.resolve(0);
+    if (HOME_AUDIO_DURATION_CACHE.has(normalizedSource)) {
+      return HOME_AUDIO_DURATION_CACHE.get(normalizedSource);
+    }
+    const promise = new Promise((resolve) => {
+      const audio = new Audio();
+      let settled = false;
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        audio.onloadedmetadata = null;
+        audio.onerror = null;
+        resolve(Math.max(0, Number(value) || 0));
+      };
+      audio.preload = 'metadata';
+      audio.onloadedmetadata = () => finish(audio.duration);
+      audio.onerror = () => finish(0);
+      audio.src = normalizedSource;
+    });
+    HOME_AUDIO_DURATION_CACHE.set(normalizedSource, promise);
+    return promise;
+  }
+
+  async function hydrateHomeCardDurations(cards) {
+    const list = Array.isArray(cards) ? cards : [];
+    await Promise.all(list.map(async (card) => {
+      card.audioDurationSeconds = await loadHomeAudioDurationSeconds(card?.audio);
+    }));
+    return list;
   }
 
   function normalizeText(value) {
@@ -738,21 +832,56 @@
     if (els.playerBooksProgressFill) {
       els.playerBooksProgressFill.style.width = `${Math.round(ratio * 1000) / 10}%`;
     }
+    if (els.playerBooksProgressTime) {
+      els.playerBooksProgressTime.textContent = `${formatHomeClock(state.homeProgressElapsedSeconds)} / ${formatHomeClock(state.homeProgressTotalSeconds)}`;
+    }
     if (els.playerBooksProgressTrack) {
       els.playerBooksProgressTrack.setAttribute('aria-valuenow', String(Math.round(ratio * 100)));
     }
   }
 
   function seekHomeProgressFromRatio(rawRatio) {
-    const audio = state.homeAudioElement;
-    const duration = Number(audio?.duration);
+    const session = state.homeCurrentSession;
     const ratio = Math.max(0, Math.min(1, Number(rawRatio) || 0));
-    if (!audio || !Number.isFinite(duration) || duration <= 0) return;
-    audio.currentTime = duration * ratio;
-    setHomeProgress(
-      state.homeCurrentBookName || 'Livro',
-      ((Math.max(0, Number(state.homeCurrentCardIndex) || 0)) + ratio) / Math.max(1, Number(state.homeCurrentCards?.length) || 1)
-    );
+    const cards = Array.isArray(session?.cards) ? session.cards : [];
+    if (!session || !cards.length) return;
+    const totalSeconds = getHomeSessionTotalSeconds(session);
+    const targetSeconds = ratio * totalSeconds;
+    const gapSeconds = getHomeGapSeconds();
+    let cursor = 0;
+    for (let index = 0; index < cards.length; index += 1) {
+      const durationSeconds = getHomeCardDurationSeconds(cards[index]);
+      if (targetSeconds <= (cursor + durationSeconds) || index === (cards.length - 1)) {
+        const targetTime = Math.max(0, Math.min(durationSeconds, targetSeconds - cursor));
+        if (state.homeCurrentCardIndex === index && state.homeAudioElement) {
+          state.homeAudioElement.currentTime = targetTime;
+          refreshHomeProgressFromPlayback();
+          return;
+        }
+        state.homeSeekTarget = {
+          bookId: safeText(session?.bookId),
+          cardIndex: index,
+          startAtSeconds: targetTime
+        };
+        state.homeSkipRequested = true;
+        interruptHomeAudioPlayback();
+        updateHomeProgressTimeline(targetSeconds, totalSeconds, state.homeCurrentBookName || safeText(session?.title) || 'Livro');
+        return;
+      }
+      cursor += durationSeconds;
+      if (targetSeconds <= (cursor + gapSeconds)) {
+        state.homeSeekTarget = {
+          bookId: safeText(session?.bookId),
+          cardIndex: Math.min(cards.length - 1, index + 1),
+          startAtSeconds: 0
+        };
+        state.homeSkipRequested = true;
+        interruptHomeAudioPlayback();
+        updateHomeProgressTimeline(targetSeconds, totalSeconds, state.homeCurrentBookName || safeText(session?.title) || 'Livro');
+        return;
+      }
+      cursor += gapSeconds;
+    }
   }
 
   function seekHomeProgressFromClientX(clientX) {
@@ -826,9 +955,13 @@
   }
 
   function setHomeProgress(label, ratio) {
-    state.homeProgressLabel = safeText(label) || 'Livro';
-    state.homeProgressRatio = Math.max(0, Math.min(1, Number(ratio) || 0));
-    renderHomeProgressUi();
+    const normalizedLabel = safeText(label) || 'Livro';
+    const totalSeconds = getHomeSessionTotalSeconds(state.homeCurrentSession);
+    updateHomeProgressTimeline(
+      Math.max(0, Math.min(1, Number(ratio) || 0)) * totalSeconds,
+      totalSeconds,
+      normalizedLabel
+    );
   }
 
   function interruptHomeAudioPlayback() {
@@ -938,13 +1071,16 @@
     }
   }
 
-  async function waitHomeDelay(ms, token) {
+  async function waitHomeDelay(ms, token, onTick) {
     const total = Math.max(0, Number(ms) || 0);
     const startedAt = Date.now();
     while (state.homeSleepActive && token === state.homePlaybackToken && !state.homeSkipRequested) {
       await waitWhileHomePaused(token);
       if (!state.homeSleepActive || token !== state.homePlaybackToken || state.homeSkipRequested) return false;
       const elapsed = Date.now() - startedAt;
+      if (typeof onTick === 'function') {
+        onTick(elapsed, total);
+      }
       if (elapsed >= total) {
         return true;
       }
@@ -970,6 +1106,7 @@
     const cards = await fetchBookCards(book);
     const playableCards = cards.filter((card) => safeText(card?.audio));
     if (!playableCards.length) return null;
+    await hydrateHomeCardDurations(playableCards);
     const coverImageUrl = safeText(book?.coverImageUrl);
     if (coverImageUrl) {
       await preloadImageUrl(coverImageUrl);
@@ -1152,23 +1289,35 @@
       const syncProgress = () => {
         const duration = Number(audio.duration);
         const currentTime = Number(audio.currentTime) || 0;
-        const ratioWithinCard = duration > 0 ? Math.max(0, Math.min(1, currentTime / duration)) : 0;
-        setHomeProgress(
-          state.homeCurrentBookName || safeText(meta.bookTitle) || 'Livro',
-          (baseIndex + ratioWithinCard) / totalCards
+        const totalSeconds = getHomeSessionTotalSeconds(state.homeCurrentSession);
+        const elapsedSeconds = getHomeElapsedSecondsForPosition(
+          baseIndex,
+          Math.min(currentTime, duration > 0 ? duration : currentTime),
+          state.homeCurrentSession
         );
+        updateHomeProgressTimeline(elapsedSeconds, totalSeconds, state.homeCurrentBookName || safeText(meta.bookTitle) || 'Livro');
       };
       state.homeAudioResolver = () => {
         state.homeAudioInterrupted = true;
         finish('interrupted');
       };
-      audio.onloadedmetadata = syncProgress;
+      audio.onloadedmetadata = () => {
+        const duration = Number(audio.duration);
+        const requestedStartAt = Math.max(0, Number(meta.startAtSeconds) || 0);
+        if (requestedStartAt > 0 && Number.isFinite(duration) && duration > 0) {
+          audio.currentTime = Math.min(duration, requestedStartAt);
+        }
+        syncProgress();
+      };
       audio.ontimeupdate = syncProgress;
       audio.onended = () => {
-        setHomeProgress(
-          state.homeCurrentBookName || safeText(meta.bookTitle) || 'Livro',
-          (baseIndex + 1) / totalCards
+        const totalSeconds = getHomeSessionTotalSeconds(state.homeCurrentSession);
+        const elapsedSeconds = getHomeElapsedSecondsForPosition(
+          baseIndex,
+          getHomeCardDurationSeconds(state.homeCurrentCards[baseIndex]),
+          state.homeCurrentSession
         );
+        updateHomeProgressTimeline(elapsedSeconds, totalSeconds, state.homeCurrentBookName || safeText(meta.bookTitle) || 'Livro');
         finish('ended');
       };
       audio.onerror = () => finish('error');
@@ -1207,22 +1356,53 @@
       void ensureHomeNextSession(token);
 
       for (let index = 0; index < cards.length; index += 1) {
+        let startAtSeconds = 0;
+        if (state.homeSeekTarget && state.homeSeekTarget.bookId === safeText(session?.bookId)) {
+          index = Math.max(0, Math.min(cards.length - 1, Number(state.homeSeekTarget.cardIndex) || 0));
+          startAtSeconds = Math.max(0, Number(state.homeSeekTarget.startAtSeconds) || 0);
+          state.homeSeekTarget = null;
+          state.homeSkipRequested = false;
+        }
         const card = cards[index];
         if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
         if (state.homeSkipRequested) break;
         const result = await playHomeAudioSource(safeText(card.audio), token, {
           cardIndex: index,
           totalCards: cards.length,
+          startAtSeconds,
           english: safeText(card.english),
           portuguese: safeText(card.portuguese || card.english),
           bookTitle: session.title
         });
         if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
+        if (state.homeSeekTarget && state.homeSeekTarget.bookId === safeText(session?.bookId)) {
+          index -= 1;
+          continue;
+        }
         if (state.homeSkipRequested) break;
         if (result === 'interrupted') {
           break;
         }
-        const waited = await waitHomeDelay(getHomeRepeatSeconds() * 1000, token);
+        const gapDelayMs = getHomeRepeatSeconds() * 1000;
+        const gapStartedAt = Date.now();
+        const baseElapsedSeconds = getHomeElapsedSecondsForPosition(
+          index,
+          getHomeCardDurationSeconds(cards[index]),
+          state.homeCurrentSession
+        );
+        const totalTimelineSeconds = getHomeSessionTotalSeconds(state.homeCurrentSession);
+        const waited = await waitHomeDelay(gapDelayMs, token, () => {
+          const gapElapsedSeconds = Math.max(0, Math.min(gapDelayMs, Date.now() - gapStartedAt)) / 1000;
+          updateHomeProgressTimeline(
+            baseElapsedSeconds + gapElapsedSeconds,
+            totalTimelineSeconds,
+            state.homeCurrentBookName || safeText(session?.title) || 'Livro'
+          );
+        });
+        if (state.homeSeekTarget && state.homeSeekTarget.bookId === safeText(session?.bookId)) {
+          index -= 1;
+          continue;
+        }
         if (!waited || state.homeSkipRequested) {
           break;
         }
@@ -3427,6 +3607,7 @@
     els.homeRepeatBtn?.addEventListener('click', () => {
       state.homeRepeatIndex = (state.homeRepeatIndex + 1) % HOME_REPEAT_OPTIONS.length;
       renderHomeTransportUi();
+      refreshHomeProgressFromPlayback();
     });
 
     els.homeMusicBtn?.addEventListener('click', () => {
