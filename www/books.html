@@ -402,13 +402,14 @@
       grid-row: 1;
       width: 100%;
       height: 100%;
-      min-height: 0;
+      min-height: 100vh;
       display: none;
-      grid-template-rows: minmax(0, 4fr) minmax(126px, 1fr);
+      grid-template-rows: minmax(0, 1fr) auto;
       gap: 0;
       align-self: stretch;
       justify-self: stretch;
       position: relative;
+      background: transparent;
     }
 
     .books-home-shell.is-visible {
@@ -563,10 +564,9 @@
       gap: 2px;
       padding: 0 20px 0;
       transform: none;
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      width: 100%;
+      margin-top: auto;
+      background: transparent;
     }
 
     .player-books {
@@ -2005,7 +2005,8 @@
       .books-home-shell {
         width: 100%;
         height: 100%;
-        grid-template-rows: minmax(0, 3fr) minmax(0, 1fr);
+        min-height: 100vh;
+        grid-template-rows: minmax(0, 1fr) auto;
         gap: 0;
       }
 
@@ -2029,7 +2030,7 @@
       }
 
       .books-home-footer {
-        height: 100%;
+        height: auto;
         grid-template-rows: minmax(0, calc(3vh + 14px)) minmax(0, 58px);
         align-content: stretch;
         gap: 2px;

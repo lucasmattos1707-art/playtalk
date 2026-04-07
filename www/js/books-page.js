@@ -3533,6 +3533,25 @@
     }
   }
 
+  function handleHomeSwipeStart(event) {
+    if (!state.homeIntroDismissed) return;
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    state.homeTouchStartX = Number(touch.clientX) || 0;
+    state.homeTouchStartY = Number(touch.clientY) || 0;
+  }
+
+  function handleHomeSwipeEnd(event) {
+    if (!state.homeIntroDismissed) return;
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    const dx = (Number(touch.clientX) || 0) - state.homeTouchStartX;
+    const dy = state.homeTouchStartY - (Number(touch.clientY) || 0);
+    if (dy >= HOME_SWIPE_UP_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
+      void requestHomeNextBook();
+    }
+  }
+
   function bindEvents() {
     els.prevLevelBtn?.addEventListener('click', () => {
       void setLevel(state.selectedLevel - 1);
@@ -3662,24 +3681,10 @@
       seekHomeProgressFromRatio(current + (event.key === 'ArrowRight' ? 0.05 : -0.05));
     });
 
-    els.homeViewport?.addEventListener('touchstart', (event) => {
-      if (!state.homeIntroDismissed) return;
-      const touch = event.touches?.[0];
-      if (!touch) return;
-      state.homeTouchStartX = Number(touch.clientX) || 0;
-      state.homeTouchStartY = Number(touch.clientY) || 0;
-    }, { passive: true });
-
-    els.homeViewport?.addEventListener('touchend', (event) => {
-      if (!state.homeIntroDismissed) return;
-      const touch = event.changedTouches?.[0];
-      if (!touch) return;
-      const dx = (Number(touch.clientX) || 0) - state.homeTouchStartX;
-      const dy = state.homeTouchStartY - (Number(touch.clientY) || 0);
-      if (dy >= HOME_SWIPE_UP_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
-        void requestHomeNextBook();
-      }
-    }, { passive: true });
+    els.homeViewport?.addEventListener('touchstart', handleHomeSwipeStart, { passive: true });
+    els.homeViewport?.addEventListener('touchend', handleHomeSwipeEnd, { passive: true });
+    els.homeShell?.addEventListener('touchstart', handleHomeSwipeStart, { passive: true });
+    els.homeShell?.addEventListener('touchend', handleHomeSwipeEnd, { passive: true });
 
     els.createSubmitBtn?.addEventListener('click', () => {
       void createBookFromLines();
