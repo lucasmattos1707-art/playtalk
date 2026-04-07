@@ -803,7 +803,7 @@
       window.requestAnimationFrame(() => {
         element.classList.remove('is-fading');
       });
-    }, 140);
+    }, 500);
   }
 
   function getHomeSessionText(session, cardIndex) {
@@ -1188,6 +1188,12 @@
     }, Math.max(0, Number(delay) || 0));
   }
 
+  function hideHomeTextForBookChange() {
+    state.homeTextRevealToken += 1;
+    state.homeTextVisible = false;
+    renderHomePanel();
+  }
+
   function normalizeHomeUpcomingSessions() {
     const seen = new Set([safeText(state.homeCurrentSession?.bookId)].filter(Boolean));
     state.homeUpcomingSessions = (Array.isArray(state.homeUpcomingSessions) ? state.homeUpcomingSessions : [])
@@ -1408,6 +1414,7 @@
     const token = state.homePlaybackToken;
     state.homePendingSession = null;
     state.homePendingDirection = 'next';
+    hideHomeTextForBookChange();
     state.homeSkipRequested = true;
     void ensureHomeNextSession(token);
     interruptHomeAudioPlayback();
@@ -1420,6 +1427,7 @@
     state.homeSessionHistory = state.homeSessionHistory.slice(1);
     state.homePendingSession = previousSession;
     state.homePendingDirection = 'previous';
+    hideHomeTextForBookChange();
     state.homeSkipRequested = true;
     interruptHomeAudioPlayback();
   }
