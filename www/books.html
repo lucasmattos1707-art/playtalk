@@ -1330,7 +1330,8 @@
     }
 
     .pre-book-card {
-      width: 100%;
+      width: 100vw;
+      height: 100dvh;
       min-height: 100dvh;
       border-radius: 0;
       border: 0;
@@ -1344,7 +1345,7 @@
     }
 
     .pre-book-main {
-      width: 100%;
+      width: min(100%, 560px);
       display: grid;
       justify-items: center;
       gap: 28px;
@@ -1435,7 +1436,7 @@
     }
 
     .pre-book-actions .books-magic-btn {
-      width: min(46vw, 308px);
+      width: min(88vw, 360px);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -1443,6 +1444,65 @@
       font-size: 17px;
       letter-spacing: 0.01em;
       transform: translateY(0);
+    }
+
+    .pre-book-insights {
+      width: min(92vw, 420px);
+      min-height: 88px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+      padding: 14px 15px;
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 10px;
+      align-items: center;
+      box-shadow: 0 14px 26px rgba(0, 0, 0, 0.35);
+      opacity: 1;
+      transition: opacity 220ms ease;
+    }
+
+    .pre-book-insights.is-fading {
+      opacity: 0.2;
+    }
+
+    .pre-book-insight-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.14);
+      display: grid;
+      place-items: center;
+      color: #f4f8ff;
+    }
+
+    .pre-book-insight-icon svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+    }
+
+    .pre-book-insight-copy {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+    }
+
+    .pre-book-insight-label {
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: rgba(231, 239, 255, 0.82);
+      text-shadow: 0 1px 7px rgba(0, 0, 0, 0.35);
+    }
+
+    .pre-book-insight-value {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
     }
 
     .pre-book-close {
@@ -2063,6 +2123,12 @@
       display: none !important;
     }
 
+    #booksPreBookModal {
+      padding: 0;
+      place-items: stretch;
+      background: rgba(0, 0, 0, 0.86);
+    }
+
     .pre-book-actions[data-pre-book-step="training"] .pre-book-action-root {
       display: none;
     }
@@ -2394,9 +2460,6 @@
           <div class="pre-book-cover" id="booksPreBookCover"></div>
         </div>
         <div class="pre-book-actions" id="booksPreBookActions" data-pre-book-step="root">
-          <button class="books-magic-btn pre-book-action-root" id="booksPreBookFreeReadBtn" type="button">
-            <span class="pre-book-option">Leitura livre</span>
-          </button>
           <button class="books-magic-btn is-primary pre-book-action-root" id="booksPreBookPronounceBtn" type="button">
             <span class="pre-book-option">Treinar pronuncia</span>
           </button>
@@ -2406,6 +2469,13 @@
           <button class="books-magic-btn is-primary pre-book-action-training" id="booksPreBookSpeakingBtn" type="button">
             <span class="pre-book-option">Speaking</span>
           </button>
+        </div>
+        <div class="pre-book-insights" id="booksPreBookInsights" aria-live="polite">
+          <span class="pre-book-insight-icon" id="booksPreBookInsightIcon" aria-hidden="true"></span>
+          <div class="pre-book-insight-copy">
+            <p class="pre-book-insight-label" id="booksPreBookInsightLabel"></p>
+            <p class="pre-book-insight-value" id="booksPreBookInsightValue"></p>
+          </div>
         </div>
       </div>
       <div class="pre-book-loading" id="booksPreBookLoading" aria-hidden="true">
@@ -2488,6 +2558,8 @@
   <script src="js/api-config.js"></script>
   <script src="js/player-state.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/books-page.js?v=20260403q"></script>
+  <script src="js/android-speech.js?v=20260407a"></script>
+  <script src="js/openai-stt.js?v=20260407a"></script>
+  <script src="js/books-page.js?v=20260407a"></script>
 </body>
 </html>

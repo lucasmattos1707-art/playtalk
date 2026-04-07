@@ -7017,6 +7017,169 @@ app.post('/login', async (req, res) => {
   }
 });
 
+app.post('/api/books/home-auth', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const username = normalizeUsername(req.body.username || req.body.email).toLowerCase();
+    const password = typeof req.body.password === 'string' ? req.body.password : '';
+    if (!isValidUsername(username) || !password) {
+      res.status(400).json({ success: false, message: 'Login e senha sao obrigatorios.' });
+      return;
+    }
+
+    await ensureUsersAvatarColumn();
+    await ensurePremiumAccessTables();
+
+    const email = buildLegacyEmailFromUsername(username);
+    const selectSql = `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                              onboarding_name_completed, onboarding_photo_completed,
+                              password_hash, created_at, premium_full_access, premium_until
+                       FROM public.users
+                       WHERE email = $1
+                       LIMIT 1`;
+
+    let user = null;
+    let created = false;
+
+    const existing = await pool.query(selectSql, [email]);
+    if (existing.rows.length) {
+      user = existing.rows[0];
+      const passwordOk = await bcrypt.compare(password, user.password_hash);
+      if (!passwordOk) {
+        res.status(401).json({ success: false, message: 'Nome de usuario ou senha invalidos.' });
+        return;
+      }
+    } else {
+      const passwordHash = await bcrypt.hash(password, 10);
+      try {
+        const inserted = await pool.query(
+          `INSERT INTO public.users (
+             email, username, password_hash, onboarding_name_completed, onboarding_photo_completed
+           )
+           VALUES ($1, $2, $3, true, false)
+           RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                     onboarding_name_completed, onboarding_photo_completed,
+                     password_hash, created_at, premium_full_access, premium_until`,
+          [email, username, passwordHash]
+        );
+        user = inserted.rows[0] || null;
+        created = true;
+      } catch (insertError) {
+        if (insertError?.code !== '23505') {
+          throw insertError;
+        }
+        const raced = await pool.query(selectSql, [email]);
+        if (!raced.rows.length) {
+          throw insertError;
+        }
+        user = raced.rows[0];
+        const passwordOk = await bcrypt.compare(password, user.password_hash);
+        if (!passwordOk) {
+          res.status(401).json({ success: false, message: 'Nome de usuario ou senha invalidos.' });
+          return;
+        }
+      }
+    }
+
+    if (!user) {
+      res.status(500).json({ success: false, message: 'Nao foi possivel autenticar agora.' });
+      return;
+    }
+
+    try {
+      await syncFlashcardRankingFromProgressCount(user.id);
+    } catch (rankingError) {
+      console.error('Falha ao sincronizar ranking no login da area books:', rankingError);
+    }
+
+    const token = createAuthToken({ id: user.id, email: user.email });
+    if (!token) {
+      res.status(500).json({ success: false, message: 'JWT_SECRET nao configurado.' });
+      return;
+    }
+
+    setAuthCookie(res, token);
+    res.json({
+      success: true,
+      created,
+      token,
+      user: mapPublicUser(user)
+    });
+  } catch (error) {
+    console.error('Erro no login/criacao da area books:', error);
+    res.status(500).json({ success: false, message: 'Erro ao autenticar na area books.' });
+  }
+});
+
+app.get('/api/books/prebook-insights', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(200).json({
+        success: true,
+        stats: {
+          bestListeningPercent: 0,
+          bestReadingPercent: 0,
+          totalReads: 0
+        }
+      });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
+    const userId = Number(authUser?.id) || 0;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Sessao nao encontrada.' });
+      return;
+    }
+
+    await ensureBooksSpeakingStatsTable();
+    await ensureUserBooksLibraryStatsTable();
+
+    const [libraryResult, speakingResult] = await Promise.all([
+      pool.query(
+        `SELECT
+           COALESCE(MAX(best_listening_percent), 0)::int AS best_listening_percent,
+           COALESCE(MAX(best_speaking_percent), 0)::int AS best_reading_percent,
+           COALESCE(SUM(reads_completed), 0)::bigint AS total_reads
+         FROM public.user_books_library_stats
+         WHERE user_id = $1`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT COALESCE(book_read, 0)::int AS book_read
+         FROM public.user_books_speaking_stats
+         WHERE user_id = $1
+         LIMIT 1`,
+        [userId]
+      )
+    ]);
+
+    const row = libraryResult.rows[0] || {};
+    const speakingRow = speakingResult.rows[0] || {};
+
+    const bestListeningPercent = Math.max(0, Math.min(100, Number(row.best_listening_percent) || 0));
+    const bestReadingPercent = Math.max(0, Math.min(100, Number(row.best_reading_percent) || 0));
+    const readsFromLibrary = Math.max(0, Number(row.total_reads) || 0);
+    const readsFromSpeaking = Math.max(0, Number(speakingRow.book_read) || 0);
+
+    res.json({
+      success: true,
+      stats: {
+        bestListeningPercent,
+        bestReadingPercent,
+        totalReads: Math.max(readsFromLibrary, readsFromSpeaking)
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao carregar insights do pre-book:', error);
+    res.status(500).json({ success: false, message: 'Nao foi possivel carregar os insights do pre-book.' });
+  }
+});
+
 app.post('/auth/google-quick', async (req, res) => {
   try {
     if (!pool) {

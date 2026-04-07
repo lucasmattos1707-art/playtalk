@@ -6,6 +6,8 @@
   const FORCE_ADMIN_UI_STORAGE_KEY = 'playtalk_books_force_admin_ui_v1';
   const MODE_DISSOLVE_MS = 2000;
   const MODE_LOADING_FADE_MS = 500;
+  const PREBOOK_INSIGHT_ROTATE_MS = 1500;
+  const PREBOOK_INSIGHT_FADE_MS = 180;
   const BOOK_SNAP_DURATION_MS = 300;
   const LEVEL_SLIDE_DURATION_MS = 420;
   const BOOK_SWIPE_THRESHOLD = 44;
@@ -122,10 +124,13 @@
     preBookActions: document.getElementById('booksPreBookActions'),
     preBookLoading: document.getElementById('booksPreBookLoading'),
     preBookCover: document.getElementById('booksPreBookCover'),
-    preBookFreeReadBtn: document.getElementById('booksPreBookFreeReadBtn'),
     preBookPronounceBtn: document.getElementById('booksPreBookPronounceBtn'),
     preBookListeningBtn: document.getElementById('booksPreBookListeningBtn'),
     preBookSpeakingBtn: document.getElementById('booksPreBookSpeakingBtn'),
+    preBookInsights: document.getElementById('booksPreBookInsights'),
+    preBookInsightIcon: document.getElementById('booksPreBookInsightIcon'),
+    preBookInsightLabel: document.getElementById('booksPreBookInsightLabel'),
+    preBookInsightValue: document.getElementById('booksPreBookInsightValue'),
     preBookCloseBtn: document.getElementById('booksPreBookCloseBtn'),
     reader: document.getElementById('booksReader'),
     readerBackBtn: document.getElementById('booksReaderBackBtn'),
@@ -180,6 +185,10 @@
     createJobStatusById: new Map(),
     modeBookId: '',
     preBookStep: 'root',
+    preBookInsightsRotationTimer: 0,
+    preBookInsightsIndex: 0,
+    preBookInsightsData: [],
+    preBookInsightsFetchToken: 0,
     modeStartBusy: false,
     modeStartToken: 0,
     readerOpen: false,
@@ -699,7 +708,7 @@
     renderHomeAuthUi();
     setHomeAuthStatus('Entrando na sua conta...', null);
     try {
-      const response = await fetch(buildApiUrl('/login'), {
+      const response = await fetch(buildApiUrl('/api/books/home-auth'), {
         method: 'POST',
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ username, password })
@@ -719,7 +728,7 @@
       persistLocalPlayerProfile(state.localProfile);
       renderAvatar();
       renderHomeAuthUi();
-      setHomeAuthStatus('Entrada liberada com sucesso.', 'success');
+      setHomeAuthStatus(payload?.created ? 'Conta criada e entrada liberada.' : 'Entrada liberada com sucesso.', 'success');
       startHomeSleepPlayback();
     } catch (error) {
       setHomeAuthStatus(error?.message || 'Nao foi possivel entrar agora.', 'error');
@@ -1971,9 +1980,6 @@
 
   function setModeStartBusy(isBusy) {
     state.modeStartBusy = Boolean(isBusy);
-    if (els.preBookFreeReadBtn) {
-      els.preBookFreeReadBtn.disabled = state.modeStartBusy;
-    }
     if (els.preBookPronounceBtn) {
       els.preBookPronounceBtn.disabled = state.modeStartBusy;
     }
@@ -2355,6 +2361,17 @@
       els.preBookCover.style.backgroundImage = coverUrl ? `url(${safeCssUrl(coverUrl)})` : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
     }
     els.preBookModal.classList.add('is-visible');
+    state.preBookInsightsData = buildPreBookInsights({
+      bestListeningPercent: 0,
+      bestReadingPercent: 0,
+      totalReads: 0
+    });
+    state.preBookInsightsIndex = 0;
+    void renderActivePreBookInsight(true);
+    startPreBookInsightsRotation();
+    const fetchToken = state.preBookInsightsFetchToken + 1;
+    state.preBookInsightsFetchToken = fetchToken;
+    void refreshPreBookInsights(fetchToken);
   }
 
   function closePreBookModal(options) {
@@ -2363,11 +2380,103 @@
       state.modeStartToken += 1;
     }
     state.modeBookId = '';
+    state.preBookInsightsFetchToken += 1;
+    stopPreBookInsightsRotation();
     setPreBookStep('root');
     setModeStartBusy(false);
     resetModeTransitionUi();
     if (els.preBookModal) {
       els.preBookModal.classList.remove('is-visible');
+    }
+  }
+
+  function getPreBookInsightIcon(kind) {
+    if (kind === 'listening') {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 14h2.3l1.6-4.1L9.6 18l2.1-5.3H14l1.5-3.3L17 14h4v2h-5.2l-1-2.2-1.5 3.2h-2.9l-1.8 4.4-2.7-8L6.7 16H3z"/></svg>';
+    }
+    if (kind === 'reading') {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 4.5C4 3.7 4.7 3 5.5 3h5.1c1.4 0 2.7.6 3.6 1.6c.9-1 2.2-1.6 3.6-1.6h.7c.8 0 1.5.7 1.5 1.5v14.8c0 .9-.8 1.6-1.7 1.4c-1.2-.2-2.4-.1-3.5.4l-1 .5c-.4.2-.8.2-1.2 0l-1-.5c-1.1-.5-2.3-.6-3.5-.4c-.9.2-1.7-.5-1.7-1.4zm2 1v13.9c1.8-.2 3.6.1 5.2.9V6.1c-.6-.6-1.5-1.1-2.5-1.1zm7.2.6v14.2c1.6-.8 3.4-1.1 5.2-.9V5h-.7c-1 0-1.8.4-2.5 1.1"/></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 19h16v2H4zm2-2h3v-6H6zm5 0h3V7h-3zm5 0h3V11h-3z"/></svg>';
+  }
+
+  function buildPreBookInsights(stats) {
+    const listening = Math.max(0, Math.min(100, Number(stats?.bestListeningPercent) || 0));
+    const reading = Math.max(0, Math.min(100, Number(stats?.bestReadingPercent) || 0));
+    const totalReads = Math.max(0, Math.round(Number(stats?.totalReads) || 0));
+    return [
+      {
+        kind: 'listening',
+        label: 'Melhor listening',
+        value: `Nota ${formatReaderScoreValue(listening)}`
+      },
+      {
+        kind: 'reading',
+        label: 'Melhor reading',
+        value: `Nota ${formatReaderScoreValue(reading)}`
+      },
+      {
+        kind: 'stats',
+        label: 'Leituras totais',
+        value: `${totalReads}`
+      }
+    ];
+  }
+
+  function stopPreBookInsightsRotation() {
+    if (state.preBookInsightsRotationTimer) {
+      window.clearInterval(state.preBookInsightsRotationTimer);
+      state.preBookInsightsRotationTimer = 0;
+    }
+  }
+
+  async function renderActivePreBookInsight(immediate) {
+    const entries = Array.isArray(state.preBookInsightsData) ? state.preBookInsightsData : [];
+    if (!entries.length || !els.preBookInsightIcon || !els.preBookInsightLabel || !els.preBookInsightValue) return;
+    const index = Math.max(0, Math.min(entries.length - 1, state.preBookInsightsIndex));
+    const entry = entries[index] || entries[0];
+    if (!entry) return;
+
+    if (els.preBookInsights && !immediate) {
+      els.preBookInsights.classList.add('is-fading');
+      await wait(PREBOOK_INSIGHT_FADE_MS);
+    }
+    els.preBookInsightIcon.innerHTML = getPreBookInsightIcon(entry.kind);
+    els.preBookInsightLabel.textContent = safeText(entry.label);
+    els.preBookInsightValue.textContent = safeText(entry.value);
+    if (els.preBookInsights) {
+      els.preBookInsights.classList.remove('is-fading');
+    }
+  }
+
+  function startPreBookInsightsRotation() {
+    stopPreBookInsightsRotation();
+    state.preBookInsightsRotationTimer = window.setInterval(() => {
+      if (!els.preBookModal?.classList.contains('is-visible')) return;
+      const entries = Array.isArray(state.preBookInsightsData) ? state.preBookInsightsData : [];
+      if (entries.length <= 1) return;
+      state.preBookInsightsIndex = (state.preBookInsightsIndex + 1) % entries.length;
+      void renderActivePreBookInsight(false);
+    }, PREBOOK_INSIGHT_ROTATE_MS);
+  }
+
+  async function refreshPreBookInsights(fetchToken) {
+    try {
+      const response = await fetch(buildApiUrl('/api/books/prebook-insights'), {
+        method: 'GET',
+        headers: buildAuthHeaders(),
+        credentials: 'include'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        return;
+      }
+      if (fetchToken !== state.preBookInsightsFetchToken) return;
+      state.preBookInsightsData = buildPreBookInsights(payload.stats || {});
+      state.preBookInsightsIndex = 0;
+      void renderActivePreBookInsight(false);
+    } catch (_error) {
+      // keep fallback values
     }
   }
 
@@ -3054,25 +3163,58 @@
 
   async function captureSpeechFast(language) {
     const nativeSpeech = window.PlaytalkNativeSpeech;
+    const normalizedLanguage = language || 'en-US';
     if (nativeSpeech && typeof nativeSpeech.isSupported === 'function' && nativeSpeech.isSupported()) {
       const granted = typeof nativeSpeech.ensurePermissions === 'function'
         ? await nativeSpeech.ensurePermissions()
         : true;
-      if (granted && typeof nativeSpeech.captureOnce === 'function') {
-        return nativeSpeech.captureOnce({
-          language: language || 'en-US',
-          maxResults: 5,
-          maxDurationMs: 7000
-        });
+      if (!granted) {
+        throw new Error('Permissao de microfone negada.');
+      }
+      if (typeof nativeSpeech.captureOnce === 'function') {
+        try {
+          return await nativeSpeech.captureOnce({
+            language: normalizedLanguage,
+            maxResults: 5,
+            maxDurationMs: 7000
+          });
+        } catch (nativeError) {
+          const nativeCode = String(nativeError?.code || '').toUpperCase();
+          if (nativeCode === 'PERMISSION_DENIED') {
+            throw new Error('Permissao de microfone negada.');
+          }
+        }
       }
     }
 
-    return captureSpeechWithWebSpeech({
-      language: language || 'en-US',
-      maxDurationMs: 7000,
-      onRecordingStart: () => setReaderMicLive(true),
-      onRecordingStop: () => setReaderMicLive(false)
-    });
+    const RecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (typeof RecognitionCtor === 'function') {
+      try {
+        return await captureSpeechWithWebSpeech({
+          language: normalizedLanguage,
+          maxDurationMs: 7000,
+          onRecordingStart: () => setReaderMicLive(true),
+          onRecordingStop: () => setReaderMicLive(false)
+        });
+      } catch (webError) {
+        const webMessage = safeText(webError?.message || '').toLowerCase();
+        if (!webMessage.includes('permissao') && !webMessage.includes('negada')) {
+          throw webError;
+        }
+      }
+    }
+
+    const openAiStt = window.PlaytalkOpenAiStt;
+    if (openAiStt && typeof openAiStt.captureAndTranscribe === 'function' && openAiStt.isSupported?.()) {
+      return openAiStt.captureAndTranscribe({
+        language: normalizedLanguage,
+        maxDurationMs: 7000,
+        onRecordingStart: () => setReaderMicLive(true),
+        onRecordingStop: () => setReaderMicLive(false)
+      });
+    }
+
+    throw new Error('Microfone indisponivel neste dispositivo.');
   }
 
   function setReaderTrainingStatus(message) {
@@ -4129,10 +4271,6 @@
       if (event.target === els.jsonModal) {
         closeJsonModal();
       }
-    });
-
-    els.preBookFreeReadBtn?.addEventListener('click', () => {
-      void startBookFromPreBookModal('free-read');
     });
 
     els.preBookPronounceBtn?.addEventListener('click', () => {
