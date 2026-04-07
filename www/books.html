@@ -804,6 +804,12 @@
       pointer-events: none;
     }
 
+    body.books-prebook-open .books-home-footer {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
     .books-home-text-panel {
       width: 100%;
       min-height: 13vh;
@@ -851,6 +857,7 @@
       width: 100%;
       margin-top: auto;
       background: transparent;
+      transition: opacity 260ms ease, visibility 0ms linear 260ms;
     }
 
     .player-books {
@@ -1640,6 +1647,20 @@
       transform: translateY(0);
     }
 
+    #booksPreBookListeningBtn {
+      background: linear-gradient(135deg, rgba(70, 160, 255, 0.96), rgba(42, 110, 255, 0.92));
+      color: #ffffff;
+      box-shadow: 0 0 20px rgba(75, 160, 255, 0.26);
+    }
+
+    #booksPreBookSpeakingBtn {
+      background: linear-gradient(135deg, rgba(255, 169, 59, 0.98), rgba(255, 102, 24, 0.94));
+      color: #fffaf2;
+      box-shadow:
+        0 0 18px rgba(255, 150, 40, 0.42),
+        0 0 34px rgba(255, 110, 25, 0.24);
+    }
+
     .pre-book-insights {
       width: min(92vw, 420px);
       min-height: 88px;
@@ -2028,8 +2049,11 @@
       height: 220px;
       padding: 6px;
       border-radius: 999px;
-      background: conic-gradient(#67ccff var(--reader-progress-angle), rgba(255, 255, 255, 0.2) 0);
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.36);
+      background: conic-gradient(#48ff9f var(--reader-progress-angle), rgba(255, 255, 255, 0.14) 0);
+      box-shadow:
+        0 0 22px rgba(72, 255, 159, 0.42),
+        0 0 46px rgba(72, 255, 159, 0.22),
+        0 18px 32px rgba(0, 0, 0, 0.36);
       display: grid;
       place-items: center;
       transition: --reader-progress-angle 340ms ease;
@@ -2090,61 +2114,73 @@
 
     .books-reader-pron-percent {
       margin: 0;
-      font-size: 18px;
+      font-size: 42px;
       font-weight: 800;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.01em;
       color: #ffffff;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+      text-shadow: 0 3px 16px rgba(0, 0, 0, 0.45);
+      line-height: 1;
+    }
+
+    .books-reader-pron-percent.is-whole {
+      font-size: 48.3px;
     }
 
     .books-reader-lang {
-      display: grid;
-      gap: 4px;
-      justify-items: center;
-      align-self: end;
-      margin-bottom: 20px;
+      display: none;
     }
 
     .books-reader-score-label {
-      margin: 0;
-      color: rgba(255, 255, 255, 0.82);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
+      display: none;
     }
 
     .books-reader-current-score {
       margin: 0;
-      min-height: 18px;
+      min-height: 52px;
       color: #ffffff;
-      font-size: 11px;
+      font-size: 52px;
       font-weight: 800;
-      letter-spacing: 0.04em;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.42);
+      letter-spacing: 0.01em;
+      text-shadow: 0 3px 16px rgba(0, 0, 0, 0.42);
+      line-height: 1;
+    }
+
+    .books-reader-current-score.is-whole {
+      font-size: 59.8px;
     }
 
     .books-reader-mic-btn {
-      width: 64px;
-      height: 64px;
+      width: 128px;
+      height: 128px;
       border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.36);
-      background: rgba(255, 255, 255, 0.12);
+      border: 2px solid rgba(135, 255, 196, 0.82);
+      background: radial-gradient(circle at 32% 28%, rgba(110, 255, 184, 0.28), rgba(4, 20, 14, 0.88) 72%);
       color: #ffffff;
       display: grid;
       place-items: center;
       cursor: pointer;
-      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
+      box-shadow:
+        0 0 18px rgba(72, 255, 159, 0.58),
+        0 0 42px rgba(72, 255, 159, 0.3),
+        inset 0 0 18px rgba(72, 255, 159, 0.14),
+        0 14px 28px rgba(0, 0, 0, 0.4);
     }
 
     .books-reader-mic-btn svg {
-      width: 26px;
-      height: 26px;
+      width: 52px;
+      height: 52px;
       display: block;
+      filter: drop-shadow(0 0 10px rgba(180, 255, 214, 0.5));
     }
 
     .books-reader-mic-btn.is-live {
-      background: rgba(26, 173, 98, 0.42);
-      border-color: rgba(184, 255, 220, 0.9);
+      background: radial-gradient(circle at 32% 28%, rgba(118, 255, 187, 0.44), rgba(2, 24, 16, 0.94) 72%);
+      border-color: rgba(207, 255, 228, 0.98);
+      box-shadow:
+        0 0 24px rgba(72, 255, 159, 0.9),
+        0 0 54px rgba(72, 255, 159, 0.42),
+        inset 0 0 20px rgba(72, 255, 159, 0.22),
+        0 18px 34px rgba(0, 0, 0, 0.44);
     }
 
     .books-reader-training-status {
@@ -2695,14 +2731,11 @@
         </div>
         <div class="books-reader-text-panel" id="booksReaderTextPanel">
           <p class="books-reader-english" id="booksReaderEnglish">Carregando...</p>
-          <div class="books-reader-lang">
-            <p class="books-reader-score-label">Nota atual</p>
-            <p class="books-reader-current-score" id="booksReaderCurrentScore">-</p>
-          </div>
           <div class="books-reader-training" id="booksReaderTraining" hidden>
             <button class="books-reader-mic-btn" id="booksReaderMicBtn" type="button" aria-label="Treinar pronuncia">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
           </button>
+          <p class="books-reader-current-score" id="booksReaderCurrentScore">-</p>
           <p class="books-reader-training-status" id="booksReaderTrainingStatus"></p>
         </div>
       </div>

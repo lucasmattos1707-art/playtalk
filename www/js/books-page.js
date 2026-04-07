@@ -2987,16 +2987,25 @@
     const listening = Math.max(0, Math.min(100, Number(stats?.bestListeningPercent) || 0));
     const reading = Math.max(0, Math.min(100, Number(stats?.bestReadingPercent) || 0));
     const totalReads = Math.max(0, Math.round(Number(stats?.totalReads) || 0));
+    if (totalReads <= 0) {
+      return [
+        {
+          kind: 'stats',
+          label: '',
+          value: 'Voce ainda nao leu esse livro'
+        }
+      ];
+    }
     return [
       {
         kind: 'listening',
         label: 'Melhor listening',
-        value: `Nota ${formatReaderScoreValue(listening)}`
+        value: `Nota ${formatReaderScoreValue(listening).text}`
       },
       {
         kind: 'reading',
         label: 'Melhor reading',
-        value: `Nota ${formatReaderScoreValue(reading)}`
+        value: `Nota ${formatReaderScoreValue(reading).text}`
       },
       {
         kind: 'stats',
@@ -3026,6 +3035,7 @@
     }
     els.preBookInsightIcon.innerHTML = getPreBookInsightIcon(entry.kind);
     els.preBookInsightLabel.textContent = safeText(entry.label);
+    els.preBookInsightLabel.hidden = !safeText(entry.label);
     els.preBookInsightValue.textContent = safeText(entry.value);
     if (els.preBookInsights) {
       els.preBookInsights.classList.remove('is-fading');
@@ -4096,15 +4106,21 @@
     const avg = total
       ? Math.max(0, Math.min(100, Math.round(state.readerScores.reduce((acc, value) => acc + value, 0) / total)))
       : 0;
+    const avgDisplay = formatReaderScoreValue(avg);
+    const roundDisplay = state.readerCurrentScore == null
+      ? { text: '-', isWhole: false }
+      : formatReaderScoreValue(state.readerCurrentScore);
     if (els.readerPronRing) {
       els.readerPronRing.style.setProperty('--percent', String(avg));
       els.readerPronRing.style.setProperty('--reader-progress-angle', `${avg * 3.6}deg`);
     }
     if (els.readerPronPercent) {
-      els.readerPronPercent.textContent = formatReaderScoreValue(avg);
+      els.readerPronPercent.textContent = avgDisplay.text;
+      els.readerPronPercent.classList.toggle('is-whole', avgDisplay.isWhole);
     }
     if (els.readerCurrentScore) {
-      els.readerCurrentScore.textContent = state.readerCurrentScore == null ? '-' : formatReaderScoreValue(state.readerCurrentScore);
+      els.readerCurrentScore.textContent = roundDisplay.text;
+      els.readerCurrentScore.classList.toggle('is-whole', roundDisplay.isWhole);
     }
   }
 
@@ -4124,9 +4140,18 @@
     return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
   }
 
+  function applyReaderSentenceBonus(value) {
+    return Math.max(0, Math.min(100, normalizeReaderPercent(value) + 10));
+  }
+
   function formatReaderScoreValue(value) {
     const normalized = Math.max(0, Math.min(100, Number(value) || 0));
-    return (normalized / 10).toFixed(1);
+    const scaled = normalized / 10;
+    const isWhole = Math.abs(scaled - Math.round(scaled)) < 0.0001;
+    return {
+      text: isWhole ? `${Math.round(scaled)}` : scaled.toFixed(1),
+      isWhole
+    };
   }
 
   function isReaderTrainingMode(mode = state.readerMode) {
@@ -4309,9 +4334,9 @@
       completionPayload?.stats?.generalPronunciationPercent
     );
     const lines = [
-      `${state.readerMode === 'listening-training' ? 'Listening' : 'Speaking'} ${formatReaderScoreValue(sessionPronunciationPercent)}`,
+      `${formatReaderScoreValue(sessionPronunciationPercent).text}`,
       `${savedBookRead > 0 ? savedBookRead : '--'} Livros`,
-      `Nota geral ${formatReaderScoreValue(savedGeneralPronunciation)}`
+      `Nota geral ${formatReaderScoreValue(savedGeneralPronunciation).text}`
     ];
 
     for (const line of lines) {
@@ -4663,18 +4688,18 @@
         if (transcript) {
           state.readerSessionSpokenChars += transcript.length;
         }
-        const score = calculateSpeechMatchPercent(card.english, transcript);
+        const score = applyReaderSentenceBonus(calculateSpeechMatchPercent(card.english, transcript));
         state.readerScores.push(score);
         addPendingPronunciationSample(score);
         state.readerCurrentScore = score;
         updateReaderPronPercent();
-        setReaderTrainingStatus(`${state.readerMode === 'listening-training' ? 'Listening' : 'Speaking'}: ${formatReaderScoreValue(score)}`);
+        setReaderTrainingStatus('');
         if (state.readerIndex < (state.readerCards.length - 1)) {
         window.setTimeout(() => {
           stepReader(1);
         }, 220);
         } else {
-          setReaderTrainingStatus(`${state.readerMode === 'listening-training' ? 'Listening' : 'Speaking'}: ${formatReaderScoreValue(score)} - fim do livro.`);
+          setReaderTrainingStatus('');
           await runReaderBookCompletionSequence();
         }
     } catch (error) {
