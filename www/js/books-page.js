@@ -215,6 +215,7 @@
     preBookInsightsIndex: 0,
     preBookInsightsData: [],
     preBookInsightsFetchToken: 0,
+    preBookHiddenCardId: '',
     modeStartBusy: false,
     modeStartToken: 0,
     readerOpen: false,
@@ -850,7 +851,7 @@
   async function loginFromBooksHome() {
     if (state.homeAuthBusy) return;
     if (state.user?.id) {
-      startHomeSleepPlayback();
+      setHomeAuthStatus('Conta ativa. Toque em Iniciar para abrir o player.', 'success');
       return;
     }
     const username = safeText(els.homeLoginInput?.value).toLowerCase();
@@ -887,7 +888,6 @@
       void refreshStatsFromServer().then(() => renderStatsPanel());
       renderHomeAuthUi();
       setHomeAuthStatus(payload?.created ? 'Conta criada e entrada liberada.' : 'Entrada liberada com sucesso.', 'success');
-      startHomeSleepPlayback();
     } catch (error) {
       setHomeAuthStatus(error?.message || 'Nao foi possivel entrar agora.', 'error');
     } finally {
@@ -2740,6 +2740,7 @@
       }
     } else {
       setPreBookOverlayOpen(true);
+      hideShelfBookForPreBook(bookId);
     }
 
     state.modeBookId = bookId;
@@ -2781,6 +2782,7 @@
 
     // Start restoring the paused home UI immediately (text/book fade back + background blur back).
     setPreBookOverlayOpen(false);
+    restoreShelfBookFromPreBook();
 
     // Restore voice volume (so resuming isn't silent) and optionally resume playback.
     const voice = state.homeAudioElement;
@@ -2922,6 +2924,34 @@
     const targetBookId = safeText(state.modeBookId);
     if (!targetBookId) return null;
     return state.books.find((entry) => safeText(entry?.bookId) === targetBookId) || null;
+  }
+
+  function getShelfBookCard(bookId) {
+    const normalizedBookId = safeText(bookId);
+    if (!normalizedBookId) return null;
+    return document.querySelector(`.books-card[data-book-id="${CSS.escape(normalizedBookId)}"]`);
+  }
+
+  function hideShelfBookForPreBook(bookId) {
+    const normalizedBookId = safeText(bookId);
+    if (!normalizedBookId) return;
+    if (state.preBookHiddenCardId && state.preBookHiddenCardId !== normalizedBookId) {
+      restoreShelfBookFromPreBook();
+    }
+    const card = getShelfBookCard(normalizedBookId);
+    if (!card) return;
+    state.preBookHiddenCardId = normalizedBookId;
+    card.classList.add('is-prebook-opening');
+  }
+
+  function restoreShelfBookFromPreBook() {
+    const hiddenBookId = safeText(state.preBookHiddenCardId);
+    if (!hiddenBookId) return;
+    const card = getShelfBookCard(hiddenBookId);
+    if (card) {
+      card.classList.remove('is-prebook-opening');
+    }
+    state.preBookHiddenCardId = '';
   }
 
   function trackPromiseState(promise) {
@@ -4615,7 +4645,7 @@
     });
 
     els.homeLaunchBtn?.addEventListener('click', () => {
-      void startFirstBookFromHome();
+      startHomeSleepPlayback();
     });
 
     els.homeRepeatBtn?.addEventListener('click', () => {
@@ -4657,12 +4687,6 @@
       const current = state.homeCurrentSession?.book || null;
       if (!current || !safeText(current?.bookId)) return;
       openPreBookModal(current);
-    });
-
-    els.homeCover?.addEventListener('click', () => {
-      const activeBook = state.homeCurrentSession?.book || state.homeCurrentSession || null;
-      if (!activeBook || !safeText(activeBook.bookId)) return;
-      openPreBookModal(activeBook);
     });
 
     els.homeSpeedBtn?.addEventListener('click', () => {
