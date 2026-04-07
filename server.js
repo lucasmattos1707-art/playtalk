@@ -1522,7 +1522,7 @@ const isAdminUserRecord = (user) => {
 const buildPublicUsersVisibilityWhereClause = (requesterIsAdmin = false, usernameColumn = `COALESCE(NULLIF(u.username, ''), u.email)`) => {
   if (requesterIsAdmin) return '';
   return `WHERE NOT (
-    LOWER(${usernameColumn}) IN ('admin', 'adm', 'adminst')
+    LOWER(${usernameColumn}) IN ('admin', 'adm', 'adminst', 'admin2')
     OR UPPER(${usernameColumn}) LIKE '%USER%'
   )`;
 };
@@ -2401,7 +2401,7 @@ const MINIBOOKS_WRITER_BASE_PROMPT = [
 ].join('\n\n');
 const LOCAL_LEVEL_MANIFEST_RELATIVE_PATH = path.posix.join('data', 'local-level-files.json');
 const LOCAL_LEVEL_ALLOWED_FOLDERS = ['others', 'talking', 'watching', 'words'];
-const FLASHCARD_ADMIN_USERNAMES = new Set(['admin', 'adm', 'adminst']);
+const FLASHCARD_ADMIN_USERNAMES = new Set(['admin', 'adm', 'adminst', 'admin2']);
 const ACCESS_KEY_TYPES = {
   semana: { ...PREMIUM_BILLING_PLANS.semana, fileName: 'semana.json' },
   mes: { ...PREMIUM_BILLING_PLANS.mes, fileName: 'mes.json' },
