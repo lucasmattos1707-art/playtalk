@@ -23,9 +23,7 @@
       margin: 0;
       width: 100%;
       min-height: 100%;
-      background:
-        radial-gradient(circle at 22% 14%, rgba(255, 255, 255, 0.08), transparent 32%),
-        linear-gradient(145deg, #040404 0%, #111111 48%, #2f3237 100%);
+      background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
       color: #ffffff;
       font-family: "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
     }
@@ -35,6 +33,62 @@
       padding: 0;
       overflow: hidden;
       overflow-x: hidden;
+      position: relative;
+    }
+
+    .books-stars {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .books-stars__layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: transparent;
+      box-shadow: var(--star-shadow);
+      animation: books-star-rise var(--star-duration) linear infinite;
+    }
+
+    .books-stars__layer::after {
+      content: "";
+      position: absolute;
+      top: 2000px;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      box-shadow: var(--star-shadow);
+    }
+
+    #stars {
+      width: 1px;
+      height: 1px;
+      --star-duration: 50s;
+    }
+
+    #stars2 {
+      width: 2px;
+      height: 2px;
+      --star-duration: 100s;
+    }
+
+    #stars3 {
+      width: 3px;
+      height: 3px;
+      --star-duration: 150s;
+    }
+
+    @keyframes books-star-rise {
+      from {
+        transform: translateY(0);
+      }
+      to {
+        transform: translateY(-2000px);
+      }
     }
 
     .books-page {
@@ -46,6 +100,8 @@
       grid-template-rows: auto auto 1fr;
       justify-items: center;
       gap: 10px;
+      position: relative;
+      z-index: 1;
     }
 
     .books-page.is-home-immersive {
@@ -443,7 +499,7 @@
       display: flex;
       align-items: stretch;
       justify-content: center;
-      padding-top: 30px;
+      padding-top: 40px;
     }
 
     .books-home-text-panel {
@@ -467,12 +523,17 @@
       line-height: 1.14;
       letter-spacing: 0.01em;
       color: rgba(248, 249, 252, 0.98);
-      transition: opacity 260ms ease, transform 260ms ease, border-color 260ms ease;
+      transition: opacity 320ms ease, transform 320ms ease;
     }
 
     .books-home-text-panel.is-empty {
       opacity: 0.46;
       transform: translateY(6px);
+    }
+
+    .books-home-text-panel.is-fading {
+      opacity: 0;
+      transform: translateY(10px);
     }
 
     .books-home-footer {
@@ -512,6 +573,8 @@
       overflow: hidden;
       position: relative;
       border: 0;
+      cursor: pointer;
+      touch-action: none;
     }
 
     .player-books__progress-fill {
@@ -529,8 +592,8 @@
     }
 
     .books-home-control-btn {
-      min-height: 44px;
-      padding: 8px 10px;
+      min-height: 58px;
+      padding: 10px 13px;
       border-radius: 0;
       border: 0;
       background: transparent;
@@ -1933,7 +1996,7 @@
 
       .books-home-footer {
         height: 100%;
-        grid-template-rows: minmax(0, 3vh) minmax(0, 44px);
+        grid-template-rows: minmax(0, 3vh) minmax(0, 58px);
         align-content: stretch;
         gap: 2px;
         padding: 0 16px 0;
@@ -1975,6 +2038,11 @@
   </style>
 </head>
 <body>
+  <div class="books-stars" aria-hidden="true">
+    <div class="books-stars__layer" id="stars"></div>
+    <div class="books-stars__layer" id="stars2"></div>
+    <div class="books-stars__layer" id="stars3"></div>
+  </div>
   <main class="books-page">
     <section class="books-level-menu" id="booksLevelMenu" aria-label="Selecao de nivel">
       <button class="books-arrow-btn" id="booksLevelPrevBtn" type="button" aria-label="Nivel anterior">
@@ -2025,7 +2093,7 @@
             <div class="books-home-footer" id="booksHomeControls">
               <div class="player-books">
                 <div class="player-books__progress">
-                  <div class="player-books__progress-track" aria-hidden="true">
+                  <div class="player-books__progress-track" id="playerBooksProgressTrack" aria-label="Linha do tempo do livro" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
                     <div class="player-books__progress-fill" id="playerBooksProgressFill"></div>
                   </div>
                 </div>

@@ -43,6 +43,12 @@
     'Fluente',
     'Expert'
   ];
+  const STARFIELD_RANGE = 2000;
+  const STARFIELD_CONFIG = [
+    { id: 'stars', count: 700 },
+    { id: 'stars2', count: 200 },
+    { id: 'stars3', count: 100 }
+  ];
 
   const els = {
     page: document.querySelector('.books-page'),
@@ -67,6 +73,7 @@
     homeTextPanel: document.getElementById('booksHomeTextPanel'),
     homeNextTextPanel: document.getElementById('booksHomeNextTextPanel'),
     homeControls: document.getElementById('booksHomeControls'),
+    playerBooksProgressTrack: document.getElementById('playerBooksProgressTrack'),
     playerBooksProgressFill: document.getElementById('playerBooksProgressFill'),
     homeRepeatBtn: document.getElementById('booksHomeRepeatBtn'),
     homeRepeatLabel: document.getElementById('booksHomeRepeatLabel'),
@@ -219,6 +226,22 @@
 
   function safeText(value) {
     return typeof value === 'string' ? value.trim() : '';
+  }
+
+  function buildStarShadowMap(count, color = '#FFF') {
+    return Array.from({ length: Math.max(0, Number(count) || 0) }, () => {
+      const x = Math.floor(Math.random() * STARFIELD_RANGE) + 1;
+      const y = Math.floor(Math.random() * STARFIELD_RANGE) + 1;
+      return `${x}px ${y}px ${color}`;
+    }).join(', ');
+  }
+
+  function initializeBooksStarfield() {
+    STARFIELD_CONFIG.forEach(({ id, count }) => {
+      const layer = document.getElementById(id);
+      if (!layer) return;
+      layer.style.setProperty('--star-shadow', buildStarShadowMap(count));
+    });
   }
 
   function normalizeText(value) {
@@ -660,8 +683,20 @@
   function renderHomeTextPanel(element, text) {
     if (!element) return;
     const value = safeText(text);
-    element.textContent = value ? splitBalancedLines(sanitizeReaderDisplayText(value)) : '';
-    element.classList.toggle('is-empty', !value);
+    const nextText = value ? splitBalancedLines(sanitizeReaderDisplayText(value)) : '';
+    if (element.dataset.renderedText === nextText) {
+      element.classList.toggle('is-empty', !nextText);
+      return;
+    }
+    element.dataset.renderedText = nextText;
+    element.classList.add('is-fading');
+    window.setTimeout(() => {
+      element.textContent = nextText;
+      element.classList.toggle('is-empty', !nextText);
+      window.requestAnimationFrame(() => {
+        element.classList.remove('is-fading');
+      });
+    }, 140);
   }
 
   function getHomeSessionText(session, cardIndex) {
@@ -703,6 +738,29 @@
     if (els.playerBooksProgressFill) {
       els.playerBooksProgressFill.style.width = `${Math.round(ratio * 1000) / 10}%`;
     }
+    if (els.playerBooksProgressTrack) {
+      els.playerBooksProgressTrack.setAttribute('aria-valuenow', String(Math.round(ratio * 100)));
+    }
+  }
+
+  function seekHomeProgressFromRatio(rawRatio) {
+    const audio = state.homeAudioElement;
+    const duration = Number(audio?.duration);
+    const ratio = Math.max(0, Math.min(1, Number(rawRatio) || 0));
+    if (!audio || !Number.isFinite(duration) || duration <= 0) return;
+    audio.currentTime = duration * ratio;
+    setHomeProgress(
+      state.homeCurrentBookName || 'Livro',
+      ((Math.max(0, Number(state.homeCurrentCardIndex) || 0)) + ratio) / Math.max(1, Number(state.homeCurrentCards?.length) || 1)
+    );
+  }
+
+  function seekHomeProgressFromClientX(clientX) {
+    const track = els.playerBooksProgressTrack;
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    if (!rect.width) return;
+    seekHomeProgressFromRatio((Number(clientX) - rect.left) / rect.width);
   }
 
   function renderHomeTransportUi() {
@@ -2055,9 +2113,6 @@
     if (normalizedLevel === state.selectedLevel) return;
     const direction = normalizedLevel > state.selectedLevel ? 1 : -1;
     await animateLevelChangeTransition(direction);
-    if (state.selectedLevel === 0 && normalizedLevel !== 0) {
-      stopHomeSleepPlayback();
-    }
     state.selectedLevel = normalizedLevel;
     state.shelfIndex = 0;
     renderLevelMenu();
@@ -3386,6 +3441,32 @@
       toggleHomeTextMode();
     });
 
+    els.playerBooksProgressTrack?.addEventListener('click', (event) => {
+      seekHomeProgressFromClientX(event.clientX);
+    });
+
+    els.playerBooksProgressTrack?.addEventListener('touchstart', (event) => {
+      const touch = event.touches?.[0];
+      if (!touch) return;
+      seekHomeProgressFromClientX(touch.clientX);
+      event.preventDefault();
+    }, { passive: false });
+
+    els.playerBooksProgressTrack?.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'Home' && event.key !== 'End') return;
+      event.preventDefault();
+      const current = Math.max(0, Math.min(1, Number(state.homeProgressRatio) || 0));
+      if (event.key === 'Home') {
+        seekHomeProgressFromRatio(0);
+        return;
+      }
+      if (event.key === 'End') {
+        seekHomeProgressFromRatio(1);
+        return;
+      }
+      seekHomeProgressFromRatio(current + (event.key === 'ArrowRight' ? 0.05 : -0.05));
+    });
+
     els.homeViewport?.addEventListener('touchstart', (event) => {
       if (!state.homeIntroDismissed) return;
       const touch = event.touches?.[0];
@@ -3626,6 +3707,7 @@
   }
 
   async function init() {
+    initializeBooksStarfield();
     bindEvents();
     renderCreateInputPreview();
     syncCreatePreviewScroll();
