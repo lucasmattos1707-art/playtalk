@@ -862,9 +862,6 @@
     if (!files.length) {
       throw new Error('Selecione pelo menos um arquivo .json.');
     }
-    if (files.length > 100) {
-      throw new Error('O limite por envio e de 100 decks JSON.');
-    }
 
     return Promise.all(files.map(async (file) => ({
       name: file.name,
