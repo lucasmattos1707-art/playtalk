@@ -925,15 +925,31 @@
   }
 
   function applyHomeBookBackground(session = state.homeCurrentSession) {
-    if (!els.homeBookBackground) return;
     const backgroundUrl = chooseReaderBackgroundUrl(session?.book || session || null);
     if (!backgroundUrl) {
-      els.homeBookBackground.style.backgroundImage = 'none';
-      els.homeBookBackground.classList.remove('is-visible');
+      if (els.homeBookBackground) {
+        els.homeBookBackground.style.backgroundImage = 'none';
+        els.homeBookBackground.classList.remove('is-visible');
+      }
+      if (els.homePanel) {
+        els.homePanel.style.background = 'transparent';
+      }
+      if (els.homeShell) {
+        els.homeShell.style.background = 'transparent';
+      }
       return;
     }
-    els.homeBookBackground.style.backgroundImage = `url(${safeCssUrl(backgroundUrl)})`;
-    els.homeBookBackground.classList.add('is-visible');
+    const homeBackground = `linear-gradient(to bottom, rgba(2, 5, 10, 0) 0%, rgba(2, 5, 10, 0) 18%, rgba(2, 5, 10, 0.78) 50%, rgba(2, 5, 10, 0.96) 100%), url(${safeCssUrl(backgroundUrl)}) center / cover no-repeat`;
+    if (els.homeBookBackground) {
+      els.homeBookBackground.style.backgroundImage = `url(${safeCssUrl(backgroundUrl)})`;
+      els.homeBookBackground.classList.add('is-visible');
+    }
+    if (els.homePanel) {
+      els.homePanel.style.background = homeBackground;
+    }
+    if (els.homeShell) {
+      els.homeShell.style.background = 'transparent';
+    }
   }
 
   function renderHomePanel() {
