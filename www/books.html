@@ -379,28 +379,140 @@
       left: 50%;
       top: 50%;
       z-index: 3;
-      width: min(180px, 42vw);
-      aspect-ratio: 1 / 1;
-      border: 0;
-      background: transparent;
-      color: rgba(255, 255, 255, 0.92);
-      cursor: pointer;
+      width: min(360px, calc(100vw - 40px));
+      padding: 24px 20px 22px;
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: linear-gradient(180deg, rgba(8, 20, 34, 0.58), rgba(5, 14, 26, 0.3));
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(16px);
+      color: rgba(255, 255, 255, 0.96);
+      display: grid;
+      justify-items: center;
+      gap: 14px;
+      transform: translate(-50%, calc(-50% - 80px));
+      transition: opacity 420ms ease, transform 520ms ease, filter 420ms ease;
+    }
+
+    .books-home-start-visual {
+      width: min(140px, 34vw);
+      height: min(140px, 34vw);
       display: grid;
       place-items: center;
-      transform: translate(-50%, -50%);
-      transition: opacity 420ms ease, transform 520ms ease, filter 420ms ease;
     }
 
     .books-home-start svg {
       width: 100%;
       height: 100%;
       display: block;
-      filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.42));
+      filter:
+        drop-shadow(0 0 10px rgba(112, 214, 255, 0.85))
+        drop-shadow(0 0 24px rgba(112, 214, 255, 0.48))
+        drop-shadow(0 14px 30px rgba(0, 0, 0, 0.34));
+    }
+
+    .books-home-start-title {
+      margin: 0;
+      color: #f7fbff;
+      font-family: "BooksReading", "Georgia", serif;
+      font-size: clamp(24px, 6vw, 32px);
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      text-align: center;
+      text-shadow: 0 3px 14px rgba(0, 0, 0, 0.34);
+    }
+
+    .books-home-start-auth-title {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-align: center;
+    }
+
+    .books-home-auth-form {
+      width: 100%;
+      display: grid;
+      gap: 10px;
+    }
+
+    .books-home-auth-field {
+      width: 100%;
+      display: grid;
+      gap: 6px;
+    }
+
+    .books-home-auth-label {
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: lowercase;
+    }
+
+    .books-home-auth-input {
+      width: 100%;
+      min-height: 46px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      outline: none;
+      font-size: 15px;
+      transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    }
+
+    .books-home-auth-input::placeholder {
+      color: rgba(255, 255, 255, 0.42);
+    }
+
+    .books-home-auth-input:focus {
+      border-color: rgba(129, 220, 255, 0.7);
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 0 3px rgba(103, 204, 255, 0.18);
+    }
+
+    .books-home-auth-submit {
+      width: 100%;
+      min-height: 48px;
+      border: 0;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(112, 214, 255, 0.96), rgba(166, 240, 255, 0.96));
+      color: #062034;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      box-shadow: 0 14px 34px rgba(82, 184, 255, 0.22);
+    }
+
+    .books-home-auth-submit:disabled {
+      opacity: 0.72;
+      cursor: wait;
+    }
+
+    .books-home-auth-status {
+      min-height: 18px;
+      margin: 0;
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .books-home-auth-status.is-error {
+      color: #ffd5d5;
+    }
+
+    .books-home-auth-status.is-success {
+      color: #dfffe7;
     }
 
     .books-home-start.is-hidden {
       opacity: 0;
-      transform: translate(-50%, -50%) scale(0.92);
+      transform: translate(-50%, calc(-50% - 80px)) scale(0.92);
       filter: blur(8px);
       pointer-events: none;
     }
@@ -2130,9 +2242,25 @@
       </div>
       <section class="books-home" id="booksHomePanel" aria-label="Home books">
         <div class="books-home-stage">
-          <button class="books-home-start" id="booksHomeStartBtn" type="button" aria-label="Iniciar home books">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3.5A2.5 2.5 0 0 1 7.5 1H20v18.5H7.5A2.5 2.5 0 0 0 5 22zm2.5-.5A1.5 1.5 0 0 0 6 4.5v12A3.5 3.5 0 0 1 7.5 16H19V3zM8 6h8v2H8zm0 4h8v2H8z"/></svg>
-          </button>
+            <div class="books-home-start" id="booksHomeStartPanel" aria-label="Comece no SmartBooks">
+              <div class="books-home-start-visual" aria-hidden="true">
+                <svg viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M10 16.5C10 12.36 13.36 9 17.5 9H54v38H17.5A7.5 7.5 0 0 0 10 54.5zm7.5-4A4.5 4.5 0 0 0 13 17v26.05A10.4 10.4 0 0 1 17.5 42H51V12.5zM21 19h22v4H21zm0 9h22v4H21zM21 37h15v4H21z"/></svg>
+              </div>
+              <p class="books-home-start-title">SmartBooks | Comece agora</p>
+              <p class="books-home-start-auth-title">Entre ou cadastre-se</p>
+              <form class="books-home-auth-form" id="booksHomeAuthForm">
+                <label class="books-home-auth-field">
+                  <span class="books-home-auth-label">login:</span>
+                  <input class="books-home-auth-input" id="booksHomeLoginInput" type="text" autocomplete="username" placeholder="seu login">
+                </label>
+                <label class="books-home-auth-field">
+                  <span class="books-home-auth-label">senha:</span>
+                  <input class="books-home-auth-input" id="booksHomePasswordInput" type="password" autocomplete="current-password" placeholder="sua senha">
+                </label>
+                <button class="books-home-auth-submit" id="booksHomeStartBtn" type="submit">Entrar e começar</button>
+                <p class="books-home-auth-status" id="booksHomeAuthStatus"></p>
+              </form>
+            </div>
           <div class="books-home-shell" id="booksHomeShell" hidden>
             <div class="books-home-viewport" id="booksHomeViewport">
               <div class="books-home-screen books-home-screen--current" id="booksHomeCurrentScreen">

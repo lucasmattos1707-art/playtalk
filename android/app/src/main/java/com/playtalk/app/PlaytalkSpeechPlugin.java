@@ -1,6 +1,7 @@
 package com.playtalk.app;
 
 import android.Manifest;
+import android.content.pm.PackageManager;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -9,6 +10,7 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
@@ -64,7 +66,7 @@ public class PlaytalkSpeechPlugin extends Plugin {
 
     @PluginMethod
     public void ensurePermissions(PluginCall call) {
-        if (getPermissionState(AUDIO_PERMISSION_ALIAS) == PermissionState.GRANTED) {
+        if (hasAudioPermission()) {
             JSObject result = new JSObject();
             result.put("granted", true);
             call.resolve(result);
@@ -76,7 +78,7 @@ public class PlaytalkSpeechPlugin extends Plugin {
     @PermissionCallback
     private void permissionCallback(PluginCall call) {
         JSObject result = new JSObject();
-        boolean granted = getPermissionState(AUDIO_PERMISSION_ALIAS) == PermissionState.GRANTED;
+        boolean granted = hasAudioPermission();
         result.put("granted", granted);
         if (granted) {
             call.resolve(result);
@@ -91,7 +93,7 @@ public class PlaytalkSpeechPlugin extends Plugin {
             call.unavailable("Reconhecimento de voz indisponivel neste aparelho.");
             return;
         }
-        if (getPermissionState(AUDIO_PERMISSION_ALIAS) != PermissionState.GRANTED) {
+        if (!hasAudioPermission()) {
             requestPermissionForAlias(AUDIO_PERMISSION_ALIAS, call, "capturePermissionCallback");
             return;
         }
@@ -100,11 +102,19 @@ public class PlaytalkSpeechPlugin extends Plugin {
 
     @PermissionCallback
     private void capturePermissionCallback(PluginCall call) {
-        if (getPermissionState(AUDIO_PERMISSION_ALIAS) == PermissionState.GRANTED) {
+        if (hasAudioPermission()) {
             startCapture(call);
             return;
         }
         call.reject("Permissao de microfone negada.", "PERMISSION_DENIED");
+    }
+
+    private boolean hasAudioPermission() {
+        if (getContext() == null) {
+            return getPermissionState(AUDIO_PERMISSION_ALIAS) == PermissionState.GRANTED;
+        }
+        return ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO)
+            == PackageManager.PERMISSION_GRANTED;
     }
 
     @PluginMethod

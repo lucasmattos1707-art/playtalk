@@ -71,6 +71,11 @@
     homePanel: document.getElementById('booksHomePanel'),
     homeShell: document.getElementById('booksHomeShell'),
     homeViewport: document.getElementById('booksHomeViewport'),
+    homeStartPanel: document.getElementById('booksHomeStartPanel'),
+    homeAuthForm: document.getElementById('booksHomeAuthForm'),
+    homeLoginInput: document.getElementById('booksHomeLoginInput'),
+    homePasswordInput: document.getElementById('booksHomePasswordInput'),
+    homeAuthStatus: document.getElementById('booksHomeAuthStatus'),
     homeStartBtn: document.getElementById('booksHomeStartBtn'),
     homeCover: document.getElementById('booksHomeCover'),
     homeNextCover: document.getElementById('booksHomeNextCover'),
@@ -209,6 +214,7 @@
     shelfAnimationToken: 0,
     homeSleepActive: false,
     homeIntroDismissed: false,
+    homeAuthBusy: false,
     homePlaybackToken: 0,
     homeAudioElement: null,
     homeCurrentBookId: '',
@@ -623,6 +629,106 @@
     return persisted;
   }
 
+  function persistLocalPlayerProfile(profile) {
+    try {
+      const nextProfile = {
+        username: safeText(profile?.username),
+        avatarImage: safeText(profile?.avatarImage)
+      };
+      localStorage.setItem('playtalk_player_profile', JSON.stringify(nextProfile));
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  function persistAuthToken(token) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.setAuthToken === 'function') {
+      window.PlaytalkApi.setAuthToken(token || '');
+    }
+  }
+
+  function setHomeAuthStatus(message, tone) {
+    if (!els.homeAuthStatus) return;
+    els.homeAuthStatus.textContent = safeText(message);
+    els.homeAuthStatus.className = 'books-home-auth-status';
+    if (tone) {
+      els.homeAuthStatus.classList.add(`is-${tone}`);
+    }
+  }
+
+  function renderHomeAuthUi() {
+    const isLoggedIn = Boolean(state.user?.id);
+    if (els.homeStartBtn) {
+      els.homeStartBtn.disabled = state.homeAuthBusy;
+      els.homeStartBtn.textContent = isLoggedIn ? 'Continuar agora' : (state.homeAuthBusy ? 'Entrando...' : 'Entrar e começar');
+    }
+    if (els.homeLoginInput) {
+      els.homeLoginInput.disabled = state.homeAuthBusy || isLoggedIn;
+      if (isLoggedIn && !safeText(els.homeLoginInput.value)) {
+        els.homeLoginInput.value = safeText(state.user?.username || state.localProfile?.username);
+      }
+    }
+    if (els.homePasswordInput) {
+      els.homePasswordInput.disabled = state.homeAuthBusy || isLoggedIn;
+      if (isLoggedIn) {
+        els.homePasswordInput.value = '';
+        els.homePasswordInput.placeholder = 'sessao ativa';
+      } else {
+        els.homePasswordInput.placeholder = 'sua senha';
+      }
+    }
+    if (isLoggedIn) {
+      setHomeAuthStatus(`Conta ativa: ${safeText(state.user?.username)}.`, 'success');
+    }
+  }
+
+  async function loginFromBooksHome() {
+    if (state.homeAuthBusy) return;
+    if (state.user?.id) {
+      startHomeSleepPlayback();
+      return;
+    }
+    const username = safeText(els.homeLoginInput?.value).toLowerCase();
+    const password = safeText(els.homePasswordInput?.value);
+    if (!username || !password) {
+      setHomeAuthStatus('Preencha login e senha para entrar.', 'error');
+      return;
+    }
+
+    state.homeAuthBusy = true;
+    renderHomeAuthUi();
+    setHomeAuthStatus('Entrando na sua conta...', null);
+    try {
+      const response = await fetch(buildApiUrl('/login'), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ username, password })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Nao foi possivel entrar agora.');
+      }
+      if (payload?.token) {
+        persistAuthToken(payload.token);
+      }
+      state.user = normalizeUser(payload.user);
+      state.localProfile = {
+        username: state.user?.username || username,
+        avatarImage: state.user?.avatarImage || safeText(state.localProfile?.avatarImage)
+      };
+      persistLocalPlayerProfile(state.localProfile);
+      renderAvatar();
+      renderHomeAuthUi();
+      setHomeAuthStatus('Entrada liberada com sucesso.', 'success');
+      startHomeSleepPlayback();
+    } catch (error) {
+      setHomeAuthStatus(error?.message || 'Nao foi possivel entrar agora.', 'error');
+    } finally {
+      state.homeAuthBusy = false;
+      renderHomeAuthUi();
+    }
+  }
+
   function renderAvatar() {
     if (!els.avatarImage || !els.avatarFallback) return;
     const sourceProfile = state.user || state.localProfile || {};
@@ -1019,8 +1125,8 @@
     if (els.page) {
       els.page.classList.toggle('is-home-immersive', visible && state.homeIntroDismissed);
     }
-    if (els.homeStartBtn) {
-      els.homeStartBtn.classList.toggle('is-hidden', state.homeIntroDismissed);
+    if (els.homeStartPanel) {
+      els.homeStartPanel.classList.toggle('is-hidden', state.homeIntroDismissed);
     }
     if (els.homeShell) {
       const showShell = state.homeIntroDismissed;
@@ -3883,8 +3989,9 @@
       openCreateModal();
     });
 
-    els.homeStartBtn?.addEventListener('click', () => {
-      startHomeSleepPlayback();
+    els.homeAuthForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      void loginFromBooksHome();
     });
 
     els.homeRepeatBtn?.addEventListener('click', () => {
@@ -4229,6 +4336,7 @@
     } else {
       setStatus('', null);
     }
+    renderHomeAuthUi();
   }
 
   init();
