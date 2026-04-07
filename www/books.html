@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <title>Books | PlayTalk</title>
   <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
+  <link rel="stylesheet" href="css/playtalk-shell.css">
   <style>
     @font-face {
       font-family: "BooksReading";
@@ -426,6 +427,10 @@
       padding: 42px 22px 28px;
       transform: none;
       align-content: center;
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
     }
 
     #booksHomeStartPanel.is-logged-in .books-home-start-title,
@@ -433,6 +438,10 @@
     #booksHomeStartPanel.is-logged-in .books-home-start-auth-title,
     #booksHomeStartPanel.is-logged-in #booksHomeAuthForm,
     #booksHomeStartPanel.is-logged-in #booksHomeAuthStatus {
+      display: none !important;
+    }
+
+    #booksHomeStartPanel:not(.is-logged-in) #booksHomeLaunchBtn {
       display: none !important;
     }
 
@@ -560,6 +569,38 @@
 
     .books-home-auth-submit:disabled {
       opacity: 0.72;
+      cursor: wait;
+    }
+
+    .books-home-launch-btn {
+      width: min(320px, calc(100vw - 54px));
+      min-height: 54px;
+      border: 1px solid rgba(163, 239, 255, 0.72);
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(111, 225, 255, 0.98), rgba(72, 173, 255, 0.96));
+      color: #02203d;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      box-shadow:
+        0 0 18px rgba(102, 232, 255, 0.45),
+        0 0 34px rgba(67, 157, 255, 0.3),
+        0 20px 42px rgba(18, 73, 125, 0.2);
+    }
+
+    .books-home-launch-btn svg {
+      width: 22px;
+      height: 22px;
+      display: block;
+      filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.55));
+    }
+
+    .books-home-launch-btn[disabled] {
+      opacity: 0.7;
       cursor: wait;
     }
 
@@ -702,6 +743,30 @@
       transform: perspective(1400px) rotateY(-10deg) rotateX(4deg);
       position: relative;
       overflow: hidden;
+    }
+
+    .books-home-cover.is-loading,
+    .pre-book-cover.is-loading {
+      position: relative;
+    }
+
+    .books-home-cover.is-loading::before,
+    .pre-book-cover.is-loading::before {
+      content: "";
+      position: absolute;
+      inset: 50%;
+      width: 60px;
+      height: 60px;
+      margin: -30px 0 0 -30px;
+      border-radius: 999px;
+      border: 2px solid rgba(145, 231, 255, 0.22);
+      border-top-color: rgba(153, 245, 255, 0.98);
+      border-right-color: rgba(85, 169, 255, 0.98);
+      box-shadow:
+        0 0 16px rgba(138, 234, 255, 0.54),
+        0 0 28px rgba(79, 152, 255, 0.34);
+      animation: books-neon-spin 850ms linear infinite, books-neon-pulse 900ms ease-in-out infinite;
+      z-index: 2;
     }
 
     .books-home-cover::after {
@@ -1963,6 +2028,16 @@
       transition: --reader-progress-angle 340ms ease;
     }
 
+    @keyframes books-neon-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes books-neon-pulse {
+      0%, 100% { opacity: 0.42; scale: 0.9; }
+      50% { opacity: 1; scale: 1; }
+    }
+
     .books-reader-user-name {
       margin: 0;
       color: #ffffff;
@@ -2494,7 +2569,6 @@
               </div>
               <p class="books-home-start-title">Fluency LevelUp</p>
               <p class="books-home-start-tagline">Comece agora</p>
-              <p class="books-home-start-auth-title">Entre ou cadastre-se</p>
               <form class="books-home-auth-form" id="booksHomeAuthForm">
                 <label class="books-home-auth-field">
                   <input class="books-home-auth-input" id="booksHomeLoginInput" type="text" autocomplete="username" placeholder="seu login">
@@ -2505,6 +2579,10 @@
                 <button class="books-home-auth-submit" id="booksHomeStartBtn" type="submit">Entrar e começar</button>
                 <p class="books-home-auth-status" id="booksHomeAuthStatus"></p>
               </form>
+              <button class="books-home-launch-btn" id="booksHomeLaunchBtn" type="button" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.36a1 1 0 0 0 0-1.72l-10-6.36A1 1 0 0 0 8 5.14Z"/></svg>
+                <span>Iniciar</span>
+              </button>
               <button class="books-home-logout" id="booksHomeLogoutBtn" type="button" hidden>Sair da conta</button>
             </div>
           <div class="books-home-shell" id="booksHomeShell" hidden>
@@ -2743,6 +2821,7 @@
   <script src="/config.js"></script>
   <script src="js/api-config.js"></script>
   <script src="js/player-state.js"></script>
+  <script src="js/playtalk-shell.js"></script>
   <script src="js/android-shell.js"></script>
   <script src="js/android-speech.js?v=20260407a"></script>
   <script src="js/openai-stt.js?v=20260407a"></script>
