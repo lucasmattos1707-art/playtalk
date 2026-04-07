@@ -21,8 +21,9 @@
   const READER_BLOCKED_FLASH_MS = 750;
   const HOME_REPEAT_OPTIONS = [1, 2, 3, 5, 7, 10];
   const HOME_SPEED_OPTIONS = [0.7, 0.8, 0.9, 1, 1.25, 1.5, 2];
-  const HOME_BOOK_TRANSITION_MS = 760;
+  const HOME_BOOK_TRANSITION_MS = 600;
   const HOME_SWIPE_UP_THRESHOLD = 70;
+  const HOME_SWIPE_DOWN_THRESHOLD = 70;
   const MAX_BOOK_LEVEL = 10;
   const HOME_MUSIC_PLAYLIST = [
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen1.mp3',
@@ -81,6 +82,7 @@
     homeRepeatBtn: document.getElementById('booksHomeRepeatBtn'),
     homeRepeatLabel: document.getElementById('booksHomeRepeatLabel'),
     homeMusicBtn: document.getElementById('booksHomeMusicBtn'),
+    homePauseBtn: document.getElementById('booksHomePauseBtn'),
     homeSpeedBtn: document.getElementById('booksHomeSpeedBtn'),
     homeSpeedLabel: document.getElementById('booksHomeSpeedLabel'),
     homeLanguageBtn: document.getElementById('booksHomeLanguageBtn'),
@@ -206,10 +208,16 @@
     homeCurrentBookName: '',
     homeCurrentSession: null,
     homeNextSession: null,
+    homeUpcomingSessions: [],
+    homeSessionHistory: [],
+    homePendingSession: null,
+    homePendingDirection: 'next',
     homeCurrentCards: [],
     homeCurrentCardIndex: 0,
     homeCurrentCardText: '',
     homeCurrentCardTextPt: '',
+    homeTextVisible: true,
+    homeTextRevealToken: 0,
     homeTextMode: 'english',
     homeSpeedIndex: 3,
     homeProgressRatio: 0,
@@ -814,7 +822,7 @@
     return '';
   }
 
-  function renderHomeScreen(coverElement, textElement, session, cardIndex) {
+  function renderHomeScreen(coverElement, textElement, session, cardIndex, options = {}) {
     const coverUrl = safeText(session?.coverImageUrl);
     if (coverElement) {
       coverElement.style.backgroundImage = coverUrl
@@ -824,7 +832,7 @@
     const textPayload = getHomeSessionText(session, cardIndex);
     renderHomeTextPanel(
       textElement,
-      getHomeVisibleTextForMode(textPayload.english, textPayload.portuguese)
+      options.hideText ? '' : getHomeVisibleTextForMode(textPayload.english, textPayload.portuguese)
     );
   }
 
@@ -900,6 +908,13 @@
     if (els.homeMusicBtn) {
       els.homeMusicBtn.classList.toggle('is-on', state.homeMusicEnabled);
     }
+    if (els.homePauseBtn) {
+      els.homePauseBtn.classList.toggle('is-on', state.homePaused);
+      els.homePauseBtn.setAttribute('aria-label', state.homePaused ? 'Retomar reproducao' : 'Pausar reproducao');
+      els.homePauseBtn.innerHTML = state.homePaused
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72L19 12 8 5.14z"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5h3v14H8zm5 0h3v14h-3z"/></svg>';
+    }
     if (els.homeSpeedLabel) {
       els.homeSpeedLabel.textContent = formatHomeSpeedLabel(getHomePlaybackRate());
     }
@@ -939,7 +954,7 @@
       }
       return;
     }
-    const homeBackground = `linear-gradient(to bottom, rgba(2, 5, 10, 0) 0%, rgba(2, 5, 10, 0) 18%, rgba(2, 5, 10, 0.78) 50%, rgba(2, 5, 10, 0.96) 100%), url(${safeCssUrl(backgroundUrl)}) center / cover no-repeat`;
+    const homeBackground = `url(${safeCssUrl(backgroundUrl)}) center / cover no-repeat`;
     if (els.homeBookBackground) {
       els.homeBookBackground.style.backgroundImage = `url(${safeCssUrl(backgroundUrl)})`;
       els.homeBookBackground.classList.add('is-visible');
@@ -972,8 +987,12 @@
       els.homeControls.hidden = !state.homeIntroDismissed;
     }
     applyHomeBookBackground(state.homeCurrentSession);
-    renderHomeScreen(els.homeCover, els.homeTextPanel, state.homeCurrentSession, state.homeCurrentCardIndex);
-    renderHomeScreen(els.homeNextCover, els.homeNextTextPanel, state.homeNextSession, 0);
+    renderHomeScreen(els.homeCover, els.homeTextPanel, state.homeCurrentSession, state.homeCurrentCardIndex, {
+      hideText: !state.homeTextVisible
+    });
+    renderHomeScreen(els.homeNextCover, els.homeNextTextPanel, state.homeNextSession, 0, {
+      hideText: true
+    });
     renderHomeProgressUi();
     renderHomeTransportUi();
     if (els.cardsGrid) {
@@ -1119,7 +1138,47 @@
     return false;
   }
 
-  function setActiveHomeSession(session) {
+  function queueHomeTextReveal(delay = HOME_BOOK_TRANSITION_MS) {
+    state.homeTextRevealToken += 1;
+    const token = state.homeTextRevealToken;
+    state.homeTextVisible = false;
+    renderHomePanel();
+    window.setTimeout(() => {
+      if (token !== state.homeTextRevealToken) return;
+      state.homeTextVisible = true;
+      renderHomePanel();
+    }, Math.max(0, Number(delay) || 0));
+  }
+
+  function normalizeHomeUpcomingSessions() {
+    const seen = new Set([safeText(state.homeCurrentSession?.bookId)].filter(Boolean));
+    state.homeUpcomingSessions = (Array.isArray(state.homeUpcomingSessions) ? state.homeUpcomingSessions : [])
+      .filter((session) => {
+        const bookId = safeText(session?.bookId);
+        if (!bookId || seen.has(bookId)) return false;
+        seen.add(bookId);
+        return true;
+      });
+    state.homeNextSession = state.homeUpcomingSessions[0] || null;
+  }
+
+  function rememberHomeSession(session) {
+    const bookId = safeText(session?.bookId);
+    if (!bookId) return;
+    state.homeSessionHistory = [session]
+      .concat(state.homeSessionHistory.filter((entry) => safeText(entry?.bookId) !== bookId))
+      .slice(0, 10);
+  }
+
+  function recycleHomeSessionToUpcoming(session) {
+    const bookId = safeText(session?.bookId);
+    if (!bookId || bookId === safeText(state.homeCurrentSession?.bookId)) return;
+    state.homeUpcomingSessions = [session]
+      .concat((Array.isArray(state.homeUpcomingSessions) ? state.homeUpcomingSessions : []).filter((entry) => safeText(entry?.bookId) !== bookId));
+    normalizeHomeUpcomingSessions();
+  }
+
+  function setActiveHomeSession(session, options = {}) {
     state.homeCurrentSession = session || null;
     state.homeCurrentCards = Array.isArray(session?.cards) ? session.cards.slice() : [];
     state.homeCurrentBookId = safeText(session?.bookId);
@@ -1128,6 +1187,8 @@
     state.homeCurrentCardIndex = 0;
     state.homeCurrentCardText = safeText(session?.cards?.[0]?.english);
     state.homeCurrentCardTextPt = safeText(session?.cards?.[0]?.portuguese || session?.cards?.[0]?.english);
+    state.homeTextVisible = !options.hideText;
+    normalizeHomeUpcomingSessions();
     setHomeProgress(state.homeCurrentBookName || 'Livro', 0);
   }
 
@@ -1138,9 +1199,11 @@
     if (!playableCards.length) return null;
     await hydrateHomeCardDurations(playableCards);
     const coverImageUrl = safeText(book?.coverImageUrl);
-    if (coverImageUrl) {
-      await preloadImageUrl(coverImageUrl);
-    }
+    const backgroundUrl = chooseReaderBackgroundUrl(book);
+    await Promise.all([
+      coverImageUrl ? preloadImageUrl(coverImageUrl) : Promise.resolve(false),
+      backgroundUrl ? preloadImageUrl(backgroundUrl) : Promise.resolve(false)
+    ]);
     return {
       bookId: safeText(book?.bookId),
       title: safeText(book?.nome) || 'Livro',
@@ -1189,49 +1252,76 @@
 
   async function ensureHomeNextSession(token, force = false) {
     if (!state.homeSleepActive || token !== state.homePlaybackToken) return null;
-    if (state.homeNextSession && !force) {
+    normalizeHomeUpcomingSessions();
+    if (!force && state.homeUpcomingSessions.length >= 2) {
       return state.homeNextSession;
     }
-    const excludedIds = [
+    const excludedIds = new Set([
       safeText(state.homeCurrentSession?.bookId),
-      safeText(state.homeNextSession?.bookId)
-    ];
-    const session = await prepareRandomHomeSession(token, excludedIds);
-    if (!state.homeSleepActive || token !== state.homePlaybackToken) return null;
-    state.homeNextSession = session;
+      ...state.homeUpcomingSessions.map((session) => safeText(session?.bookId))
+    ].filter(Boolean));
+    while (state.homeUpcomingSessions.length < 2) {
+      const session = await prepareRandomHomeSession(token, Array.from(excludedIds));
+      if (!state.homeSleepActive || token !== state.homePlaybackToken || !session) break;
+      const bookId = safeText(session?.bookId);
+      if (!bookId || excludedIds.has(bookId)) break;
+      excludedIds.add(bookId);
+      state.homeUpcomingSessions.push(session);
+    }
+    normalizeHomeUpcomingSessions();
     renderHomePanel();
-    return session;
+    return state.homeNextSession;
   }
 
-  async function animateHomeSessionTransition(nextSession, token) {
+  async function animateHomeSessionTransition(nextSession, token, direction = 'next') {
     if (!nextSession || !els.homeViewport) {
-      setActiveHomeSession(nextSession);
+      const previousSession = state.homeCurrentSession;
+      if (direction === 'next') {
+        rememberHomeSession(previousSession);
+      } else if (direction === 'previous') {
+        recycleHomeSessionToUpcoming(previousSession);
+      }
+      setActiveHomeSession(nextSession, { hideText: true });
+      queueHomeTextReveal();
       renderHomePanel();
       return;
     }
+    const previousSession = state.homeCurrentSession;
     state.homeTransitioning = true;
     state.homeNextSession = nextSession;
+    els.homeViewport.classList.toggle('is-reverse', direction === 'previous');
     renderHomePanel();
     els.homeViewport.classList.add('is-book-transitioning');
     await wait(HOME_BOOK_TRANSITION_MS);
     if (!state.homeSleepActive || token !== state.homePlaybackToken) {
       els.homeViewport.classList.remove('is-book-transitioning');
       els.homeViewport.classList.remove('is-book-resetting');
+      els.homeViewport.classList.remove('is-reverse');
       state.homeTransitioning = false;
       return;
     }
     els.homeViewport.classList.add('is-book-resetting');
-    setActiveHomeSession(nextSession);
+    if (direction === 'next') {
+      rememberHomeSession(previousSession);
+      state.homeUpcomingSessions = state.homeUpcomingSessions.filter((session) => safeText(session?.bookId) !== safeText(nextSession?.bookId));
+    } else if (direction === 'previous') {
+      recycleHomeSessionToUpcoming(previousSession);
+    }
+    setActiveHomeSession(nextSession, { hideText: true });
     renderHomePanel();
     void els.homeViewport.offsetWidth;
     els.homeViewport.classList.remove('is-book-transitioning');
     void els.homeViewport.offsetWidth;
-    state.homeNextSession = null;
+    els.homeViewport.classList.remove('is-reverse');
     state.homeSkipRequested = false;
     state.homeTransitioning = false;
+    state.homePendingSession = null;
+    state.homePendingDirection = 'next';
+    normalizeHomeUpcomingSessions();
     renderHomePanel();
     void els.homeViewport.offsetWidth;
     els.homeViewport.classList.remove('is-book-resetting');
+    queueHomeTextReveal();
     renderHomePanel();
   }
 
@@ -1278,8 +1368,21 @@
   async function requestHomeNextBook() {
     if (!state.homeSleepActive || state.homeTransitioning) return;
     const token = state.homePlaybackToken;
+    state.homePendingSession = null;
+    state.homePendingDirection = 'next';
     state.homeSkipRequested = true;
     void ensureHomeNextSession(token);
+    interruptHomeAudioPlayback();
+  }
+
+  async function requestHomePreviousBook() {
+    if (!state.homeSleepActive || state.homeTransitioning) return;
+    const previousSession = state.homeSessionHistory[0] || null;
+    if (!previousSession) return;
+    state.homeSessionHistory = state.homeSessionHistory.slice(1);
+    state.homePendingSession = previousSession;
+    state.homePendingDirection = 'previous';
+    state.homeSkipRequested = true;
     interruptHomeAudioPlayback();
   }
 
@@ -1366,7 +1469,8 @@
       renderHomePanel();
       return;
     }
-    setActiveHomeSession(initialSession);
+    setActiveHomeSession(initialSession, { hideText: true });
+    queueHomeTextReveal();
     renderHomePanel();
 
     while (state.homeSleepActive && token === state.homePlaybackToken) {
@@ -1378,7 +1482,8 @@
           await wait(800);
           continue;
         }
-        setActiveHomeSession(fallback);
+        setActiveHomeSession(fallback, { hideText: true });
+        queueHomeTextReveal();
         renderHomePanel();
         continue;
       }
@@ -1439,13 +1544,18 @@
       }
 
       if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
-      const nextSession = state.homeNextSession || await ensureHomeNextSession(token, true);
+      const transitionDirection = state.homePendingDirection === 'previous' && state.homePendingSession ? 'previous' : 'next';
+      const nextSession = transitionDirection === 'previous'
+        ? state.homePendingSession
+        : (state.homeNextSession || await ensureHomeNextSession(token, true));
       if (!nextSession) {
         state.homeSkipRequested = false;
+        state.homePendingSession = null;
+        state.homePendingDirection = 'next';
         await wait(600);
         continue;
       }
-      await animateHomeSessionTransition(nextSession, token);
+      await animateHomeSessionTransition(nextSession, token, transitionDirection);
       void ensureHomeNextSession(token);
     }
   }
@@ -1459,10 +1569,16 @@
     state.homePlaybackToken += 1;
     state.homeCurrentSession = null;
     state.homeNextSession = null;
+    state.homeUpcomingSessions = [];
+    state.homeSessionHistory = [];
+    state.homePendingSession = null;
+    state.homePendingDirection = 'next';
     state.homeCurrentCards = [];
     state.homeCurrentCardIndex = 0;
     state.homeCurrentCardText = '';
     state.homeCurrentCardTextPt = '';
+    state.homeTextVisible = true;
+    state.homeTextRevealToken = 0;
     state.homeTransitioning = false;
     renderHomePanel();
     if (state.homeMusicEnabled) {
@@ -1480,6 +1596,8 @@
     state.homeTransitioning = false;
     if (els.homeViewport) {
       els.homeViewport.classList.remove('is-book-transitioning');
+      els.homeViewport.classList.remove('is-book-resetting');
+      els.homeViewport.classList.remove('is-reverse');
     }
     if (!keepIntro) {
       state.homeIntroDismissed = false;
@@ -1488,10 +1606,16 @@
       state.homeCurrentBookName = '';
       state.homeCurrentSession = null;
       state.homeNextSession = null;
+      state.homeUpcomingSessions = [];
+      state.homeSessionHistory = [];
+      state.homePendingSession = null;
+      state.homePendingDirection = 'next';
       state.homeCurrentCards = [];
       state.homeCurrentCardIndex = 0;
       state.homeCurrentCardText = '';
       state.homeCurrentCardTextPt = '';
+      state.homeTextVisible = true;
+      state.homeTextRevealToken = 0;
       setHomeProgress('Livro', 0);
     }
     interruptHomeAudioPlayback();
@@ -3565,6 +3689,10 @@
     const dy = state.homeTouchStartY - (Number(touch.clientY) || 0);
     if (dy >= HOME_SWIPE_UP_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
       void requestHomeNextBook();
+      return;
+    }
+    if (dy <= -HOME_SWIPE_DOWN_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
+      void requestHomePreviousBook();
     }
   }
 
@@ -3661,6 +3789,10 @@
 
     els.homeMusicBtn?.addEventListener('click', () => {
       toggleHomeMusicLoop();
+    });
+
+    els.homePauseBtn?.addEventListener('click', () => {
+      void toggleHomePausePlayback();
     });
 
     els.homeSpeedBtn?.addEventListener('click', () => {
