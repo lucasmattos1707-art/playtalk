@@ -112,13 +112,16 @@
     createWriteBtn: document.getElementById('booksCreateWriteBtn'),
     createSubmitBtn: document.getElementById('booksCreateSubmitBtn'),
     createCloseBtn: document.getElementById('booksCreateCloseBtn'),
-    modeModal: document.getElementById('booksModeModal'),
-    modeCard: document.getElementById('booksModeCard'),
-    modeLoading: document.getElementById('booksModeLoading'),
-    modeCover: document.getElementById('booksModeCover'),
-    modeFreeReadBtn: document.getElementById('booksModeFreeReadBtn'),
-    modePronounceBtn: document.getElementById('booksModePronounceBtn'),
-    modeCloseBtn: document.getElementById('booksModeCloseBtn'),
+    preBookModal: document.getElementById('booksPreBookModal'),
+    preBookCard: document.getElementById('booksPreBookCard'),
+    preBookActions: document.getElementById('booksPreBookActions'),
+    preBookLoading: document.getElementById('booksPreBookLoading'),
+    preBookCover: document.getElementById('booksPreBookCover'),
+    preBookFreeReadBtn: document.getElementById('booksPreBookFreeReadBtn'),
+    preBookPronounceBtn: document.getElementById('booksPreBookPronounceBtn'),
+    preBookListeningBtn: document.getElementById('booksPreBookListeningBtn'),
+    preBookSpeakingBtn: document.getElementById('booksPreBookSpeakingBtn'),
+    preBookCloseBtn: document.getElementById('booksPreBookCloseBtn'),
     reader: document.getElementById('booksReader'),
     readerBackBtn: document.getElementById('booksReaderBackBtn'),
     readerContent: document.getElementById('booksReaderContent'),
@@ -132,6 +135,7 @@
     readerUserName: document.getElementById('booksReaderUserName'),
     readerPronRing: document.getElementById('booksReaderPronRing'),
     readerPronPercent: document.getElementById('booksReaderPronPercent'),
+    readerCurrentScore: document.getElementById('booksReaderCurrentScore'),
     readerLangEnglishBtn: document.getElementById('booksReaderLangEnglishBtn'),
     readerLangPortugueseBtn: document.getElementById('booksReaderLangPortugueseBtn'),
     readerMicBtn: document.getElementById('booksReaderMicBtn'),
@@ -170,6 +174,7 @@
     createJobsPollInFlight: false,
     createJobStatusById: new Map(),
     modeBookId: '',
+    preBookStep: 'root',
     modeStartBusy: false,
     modeStartToken: 0,
     readerOpen: false,
@@ -179,6 +184,8 @@
     readerIndex: 0,
     readerDisplayLanguage: 'english',
     readerScores: [],
+    readerCurrentScore: null,
+    readerSessionListenedMs: 0,
     readerMicBusy: false,
     readerAudioToken: 0,
     readerAudioElement: null,
@@ -1858,26 +1865,39 @@
 
   function setModeStartBusy(isBusy) {
     state.modeStartBusy = Boolean(isBusy);
-    if (els.modeFreeReadBtn) {
-      els.modeFreeReadBtn.disabled = state.modeStartBusy;
+    if (els.preBookFreeReadBtn) {
+      els.preBookFreeReadBtn.disabled = state.modeStartBusy;
     }
-    if (els.modePronounceBtn) {
-      els.modePronounceBtn.disabled = state.modeStartBusy;
+    if (els.preBookPronounceBtn) {
+      els.preBookPronounceBtn.disabled = state.modeStartBusy;
+    }
+    if (els.preBookListeningBtn) {
+      els.preBookListeningBtn.disabled = state.modeStartBusy;
+    }
+    if (els.preBookSpeakingBtn) {
+      els.preBookSpeakingBtn.disabled = state.modeStartBusy;
+    }
+  }
+
+  function setPreBookStep(step) {
+    state.preBookStep = step === 'training' ? 'training' : 'root';
+    if (els.preBookActions) {
+      els.preBookActions.dataset.preBookStep = state.preBookStep;
     }
   }
 
   function resetModeTransitionUi() {
-    if (els.modeCard) {
-      els.modeCard.classList.remove('is-starting');
+    if (els.preBookCard) {
+      els.preBookCard.classList.remove('is-starting');
     }
-    if (els.modeLoading) {
-      els.modeLoading.classList.remove('is-visible');
+    if (els.preBookLoading) {
+      els.preBookLoading.classList.remove('is-visible');
     }
   }
 
   async function hideModeLoadingSmoothly() {
-    if (!els.modeLoading || !els.modeLoading.classList.contains('is-visible')) return;
-    els.modeLoading.classList.remove('is-visible');
+    if (!els.preBookLoading || !els.preBookLoading.classList.contains('is-visible')) return;
+    els.preBookLoading.classList.remove('is-visible');
     await wait(MODE_LOADING_FADE_MS);
   }
 
@@ -2216,30 +2236,32 @@
     }
   }
 
-  function openModeModal(book) {
-    if (!els.modeModal || !book) return;
+  function openPreBookModal(book) {
+    if (!els.preBookModal || !book) return;
     const bookId = safeText(book.bookId);
     if (!bookId) return;
     state.modeBookId = bookId;
+    setPreBookStep('root');
     resetModeTransitionUi();
     setModeStartBusy(false);
-    if (els.modeCover) {
+    if (els.preBookCover) {
       const coverUrl = safeText(book.coverImageUrl);
-      els.modeCover.style.backgroundImage = coverUrl ? `url(${safeCssUrl(coverUrl)})` : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
+      els.preBookCover.style.backgroundImage = coverUrl ? `url(${safeCssUrl(coverUrl)})` : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
     }
-    els.modeModal.classList.add('is-visible');
+    els.preBookModal.classList.add('is-visible');
   }
 
-  function closeModeModal(options) {
+  function closePreBookModal(options) {
     const shouldCancelStart = !options || options.cancelStart !== false;
     if (shouldCancelStart) {
       state.modeStartToken += 1;
     }
     state.modeBookId = '';
+    setPreBookStep('root');
     setModeStartBusy(false);
     resetModeTransitionUi();
-    if (els.modeModal) {
-      els.modeModal.classList.remove('is-visible');
+    if (els.preBookModal) {
+      els.preBookModal.classList.remove('is-visible');
     }
   }
 
@@ -2272,7 +2294,7 @@
     return cards;
   }
 
-  async function startBookFromModeModal(mode) {
+  async function startBookFromPreBookModal(mode) {
     if (state.modeStartBusy) return;
     const selected = findModeSelectedBook();
     if (!selected) return;
@@ -2280,16 +2302,16 @@
     const startToken = state.modeStartToken + 1;
     state.modeStartToken = startToken;
     setModeStartBusy(true);
-    if (els.modeCard) {
-      els.modeCard.classList.add('is-starting');
+    if (els.preBookCard) {
+      els.preBookCard.classList.add('is-starting');
     }
 
     const trackedPreparation = trackPromiseState(prepareReaderData(selected));
     await wait(MODE_DISSOLVE_MS);
     if (startToken !== state.modeStartToken) return;
 
-    if (!trackedPreparation.settled && els.modeLoading) {
-      els.modeLoading.classList.add('is-visible');
+    if (!trackedPreparation.settled && els.preBookLoading) {
+      els.preBookLoading.classList.add('is-visible');
       await wait(MODE_LOADING_FADE_MS);
       if (startToken !== state.modeStartToken) return;
     }
@@ -2301,8 +2323,8 @@
       await hideModeLoadingSmoothly();
       if (startToken !== state.modeStartToken) return;
       setModeStartBusy(false);
-      if (els.modeCard) {
-        els.modeCard.classList.remove('is-starting');
+      if (els.preBookCard) {
+        els.preBookCard.classList.remove('is-starting');
       }
       setStatus(error?.message || 'Nao foi possivel abrir o livro.', 'error');
       return;
@@ -2311,7 +2333,7 @@
     await hideModeLoadingSmoothly();
     if (startToken !== state.modeStartToken) return;
 
-    closeModeModal({ cancelStart: false });
+    closePreBookModal({ cancelStart: false });
     await startBookByMode(selected, mode, cards);
   }
 
@@ -2444,7 +2466,7 @@
       card.addEventListener('click', () => {
         if ((Date.now() - state.shelfLastGestureAt) < 240) return;
         if (state.uploadInFlight || processingMagic || pendingCreate) return;
-        openModeModal(book);
+        openPreBookModal(book);
       });
       page.appendChild(card);
       els.cardsGrid.appendChild(page);
@@ -3147,6 +3169,10 @@
 
     const audio = new Audio(source);
     audio.preload = 'auto';
+    audio.onended = () => {
+      if (token !== state.readerAudioToken) return;
+      state.readerSessionListenedMs += Math.max(0, Math.round((Number(audio.duration) || 0) * 1000));
+    };
     state.readerAudioElement = audio;
 
     try {
@@ -3184,22 +3210,18 @@
       : 0;
     if (els.readerPronRing) {
       els.readerPronRing.style.setProperty('--percent', String(avg));
+      els.readerPronRing.style.setProperty('--reader-progress-angle', `${avg * 3.6}deg`);
     }
     if (els.readerPronPercent) {
-      els.readerPronPercent.textContent = `${avg}%`;
+      els.readerPronPercent.textContent = formatReaderScoreValue(avg);
+    }
+    if (els.readerCurrentScore) {
+      els.readerCurrentScore.textContent = state.readerCurrentScore == null ? '-' : formatReaderScoreValue(state.readerCurrentScore);
     }
   }
 
   function updateReaderLanguageButtons() {
-    const showEnglish = state.readerDisplayLanguage !== 'portuguese';
-    if (els.readerLangEnglishBtn) {
-      els.readerLangEnglishBtn.classList.toggle('is-active', showEnglish);
-      els.readerLangEnglishBtn.disabled = state.readerFinishing;
-    }
-    if (els.readerLangPortugueseBtn) {
-      els.readerLangPortugueseBtn.classList.toggle('is-active', !showEnglish);
-      els.readerLangPortugueseBtn.disabled = state.readerFinishing;
-    }
+    // language is mode-locked in the current reader flow
   }
 
   function setReaderVisible(visible) {
@@ -3212,6 +3234,19 @@
 
   function normalizeReaderPercent(value) {
     return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+  }
+
+  function formatReaderScoreValue(value) {
+    const normalized = Math.max(0, Math.min(100, Number(value) || 0));
+    return (normalized / 10).toFixed(1);
+  }
+
+  function isReaderTrainingMode(mode = state.readerMode) {
+    return mode === 'listening-training' || mode === 'speaking-training';
+  }
+
+  function getReaderLockedLanguage(mode = state.readerMode) {
+    return mode === 'listening-training' ? 'portuguese' : 'english';
   }
 
   function calculateReaderAverageScore() {
@@ -3291,27 +3326,32 @@
     await wait(READER_FINISH_LINE_ENTER_MS);
   }
 
-  async function postReaderBookCompletion(book, pronunciationPercent) {
+  async function postReaderBookCompletion(book, options = {}) {
     const bookId = safeText(book?.bookId);
+    const mode = safeText(options.mode) || 'free-read';
+    const scorePercent = normalizeReaderPercent(options.scorePercent);
+    const listenedSeconds = Math.max(0, Math.round(Number(options.listenedSeconds) || 0));
     if (!bookId) {
       return {
         success: false,
         message: 'Livro sem identificador para salvar progresso.',
         stats: {
           bookReadCount: 0,
-          generalPronunciationPercent: normalizeReaderPercent(pronunciationPercent)
+          generalPronunciationPercent: scorePercent
         }
       };
     }
 
     try {
-      const response = await fetch(buildApiUrl('/api/books/training/complete'), {
+      const response = await fetch(buildApiUrl('/api/books/complete'), {
         method: 'POST',
         credentials: 'include',
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           bookId,
-          pronunciationPercent: normalizeReaderPercent(pronunciationPercent)
+          mode,
+          scorePercent,
+          listenedSeconds
         })
       });
       const payload = await response.json().catch(() => ({}));
@@ -3321,7 +3361,7 @@
           message: payload?.message || 'Nao consegui salvar progresso do livro.',
           stats: {
             bookReadCount: 0,
-            generalPronunciationPercent: normalizeReaderPercent(pronunciationPercent)
+            generalPronunciationPercent: scorePercent
           }
         };
       }
@@ -3332,21 +3372,25 @@
         message: 'Falha de rede ao salvar progresso do livro.',
         stats: {
           bookReadCount: 0,
-          generalPronunciationPercent: normalizeReaderPercent(pronunciationPercent)
+          generalPronunciationPercent: scorePercent
         }
       };
     }
   }
 
   async function runReaderBookCompletionSequence() {
-    if (!state.readerOpen || state.readerMode !== 'pronounce-training' || state.readerFinishing) return;
+    if (!state.readerOpen || !isReaderTrainingMode() || state.readerFinishing) return;
 
     state.readerFinishing = true;
     state.readerFinishToken += 1;
     const token = state.readerFinishToken;
     const activeBook = findActiveReaderBook();
     const sessionPronunciationPercent = calculateReaderAverageScore();
-    const completionPromise = postReaderBookCompletion(activeBook, sessionPronunciationPercent);
+    const completionPromise = postReaderBookCompletion(activeBook, {
+      mode: state.readerMode,
+      scorePercent: sessionPronunciationPercent,
+      listenedSeconds: Math.round(state.readerSessionListenedMs / 1000)
+    });
 
     if (els.reader) {
       els.reader.classList.add('is-finishing');
@@ -3369,9 +3413,9 @@
       completionPayload?.stats?.generalPronunciationPercent
     );
     const lines = [
-      `Pronuncia ${sessionPronunciationPercent}%`,
+      `${state.readerMode === 'listening-training' ? 'Listening' : 'Speaking'} ${formatReaderScoreValue(sessionPronunciationPercent)}`,
       `${savedBookRead > 0 ? savedBookRead : '--'} Livros`,
-      `Pronuncia geral ${savedGeneralPronunciation}%`
+      `Nota geral ${formatReaderScoreValue(savedGeneralPronunciation)}`
     ];
 
     for (const line of lines) {
@@ -3390,7 +3434,11 @@
     state.readerFinishToken += 1;
     const token = state.readerFinishToken;
     const activeBook = findActiveReaderBook();
-    const completionPromise = postReaderBookCompletion(activeBook, 0);
+    const completionPromise = postReaderBookCompletion(activeBook, {
+      mode: 'free-read',
+      scorePercent: 0,
+      listenedSeconds: Math.round(state.readerSessionListenedMs / 1000)
+    });
 
     triggerReaderSuccessBookFlash();
     if (els.reader) {
@@ -3511,11 +3559,11 @@
   }
 
   function renderReaderModeUi() {
-    const isTraining = state.readerMode === 'pronounce-training';
+    const isTraining = isReaderTrainingMode();
     const isAdminEditor = Boolean(state.isAdmin);
     const activeBook = findActiveReaderBook();
     if (els.reader) {
-      els.reader.dataset.readerMode = isTraining ? 'pronounce-training' : 'free-read';
+      els.reader.dataset.readerMode = state.readerMode || 'free-read';
       els.reader.classList.toggle('is-admin-reader', isAdminEditor);
     }
     if (els.readerBookHero) {
@@ -3555,12 +3603,15 @@
     const english = safeText(card?.english);
     const portuguese = safeText(card?.portuguese || english);
     const highlight = Boolean(card?.highlight);
-    const displayLanguage = state.readerDisplayLanguage === 'portuguese' ? 'portuguese' : 'english';
+    const displayLanguage = isReaderTrainingMode() ? getReaderLockedLanguage() : 'english';
     const displayText = displayLanguage === 'portuguese' ? portuguese : english;
     const displayTextFormatted = splitBalancedLines(sanitizeReaderDisplayText(displayText));
     if (state.readerRenderedCardIndex !== index) {
       state.readerRenderedCardIndex = index;
       state.readerCardShownAt = Date.now();
+      if (isReaderTrainingMode()) {
+        state.readerCurrentScore = null;
+      }
     }
     els.readerEnglish.textContent = displayTextFormatted || 'Sem conteudo neste livro.';
     els.readerEnglish.classList.toggle('is-highlight', highlight && displayLanguage === 'english');
@@ -3584,6 +3635,8 @@
     state.readerIndex = 0;
     state.readerDisplayLanguage = 'english';
     state.readerScores = [];
+    state.readerCurrentScore = null;
+    state.readerSessionListenedMs = 0;
     state.readerMicBusy = false;
     state.readerLastAudioKey = '';
     state.readerCardShownAt = 0;
@@ -3658,7 +3711,7 @@
       resetReaderFinishUi();
       setReaderVisible(true);
       state.readerBookId = safeText(book.bookId);
-      state.readerMode = mode === 'pronounce-training' ? 'pronounce-training' : 'free-read';
+      state.readerMode = ['listening-training', 'speaking-training', 'free-read'].includes(mode) ? mode : 'free-read';
       state.readerCards = cards.length
         ? cards
         : [{
@@ -3667,6 +3720,8 @@
           audio: ''
         }];
       state.readerScores = [];
+      state.readerCurrentScore = null;
+      state.readerSessionListenedMs = 0;
       state.readerDisplayLanguage = 'english';
       state.readerMicBusy = false;
       state.readerLastAudioKey = '';
@@ -3690,7 +3745,7 @@
       openReaderAdminAudioModal();
       return;
     }
-    if (state.readerMode !== 'pronounce-training') return;
+      if (!isReaderTrainingMode()) return;
     const card = state.readerCards[state.readerIndex];
     if (!card || !safeText(card.english)) return;
 
@@ -3700,20 +3755,21 @@
     setReaderTrainingStatus('');
     setReaderMicLive(true);
 
-    try {
-      const transcript = safeText(await captureSpeechFast('en-US'));
-      const score = calculateSpeechMatchPercent(card.english, transcript);
-      state.readerScores.push(score);
-      updateReaderPronPercent();
-      setReaderTrainingStatus(`Pronuncia: ${score}%`);
-      if (state.readerIndex < (state.readerCards.length - 1)) {
+      try {
+        const transcript = safeText(await captureSpeechFast('en-US'));
+        const score = calculateSpeechMatchPercent(card.english, transcript);
+        state.readerScores.push(score);
+        state.readerCurrentScore = score;
+        updateReaderPronPercent();
+        setReaderTrainingStatus(`${state.readerMode === 'listening-training' ? 'Listening' : 'Speaking'}: ${formatReaderScoreValue(score)}`);
+        if (state.readerIndex < (state.readerCards.length - 1)) {
         window.setTimeout(() => {
           stepReader(1);
         }, 220);
-      } else {
-        setReaderTrainingStatus(`Pronuncia: ${score}% - fim do livro.`);
-        await runReaderBookCompletionSequence();
-      }
+        } else {
+          setReaderTrainingStatus(`${state.readerMode === 'listening-training' ? 'Listening' : 'Speaking'}: ${formatReaderScoreValue(score)} - fim do livro.`);
+          await runReaderBookCompletionSequence();
+        }
     } catch (error) {
       setReaderTrainingStatus(error?.message || 'Nao foi possivel capturar sua fala.');
     } finally {
@@ -3845,6 +3901,12 @@
       void toggleHomePausePlayback();
     });
 
+    els.homeCover?.addEventListener('click', () => {
+      const activeBook = state.homeCurrentSession?.book || state.homeCurrentSession || null;
+      if (!activeBook || !safeText(activeBook.bookId)) return;
+      openPreBookModal(activeBook);
+    });
+
     els.homeSpeedBtn?.addEventListener('click', () => {
       cycleHomeSpeed();
     });
@@ -3962,21 +4024,29 @@
       }
     });
 
-    els.modeFreeReadBtn?.addEventListener('click', () => {
-      void startBookFromModeModal('free-read');
+    els.preBookFreeReadBtn?.addEventListener('click', () => {
+      void startBookFromPreBookModal('free-read');
     });
 
-    els.modePronounceBtn?.addEventListener('click', () => {
-      void startBookFromModeModal('pronounce-training');
+    els.preBookPronounceBtn?.addEventListener('click', () => {
+      setPreBookStep('training');
     });
 
-    els.modeCloseBtn?.addEventListener('click', () => {
-      closeModeModal();
+    els.preBookListeningBtn?.addEventListener('click', () => {
+      void startBookFromPreBookModal('listening-training');
     });
 
-    els.modeModal?.addEventListener('click', (event) => {
-      if (event.target === els.modeModal) {
-        closeModeModal();
+    els.preBookSpeakingBtn?.addEventListener('click', () => {
+      void startBookFromPreBookModal('speaking-training');
+    });
+
+    els.preBookCloseBtn?.addEventListener('click', () => {
+      closePreBookModal();
+    });
+
+    els.preBookModal?.addEventListener('click', (event) => {
+      if (event.target === els.preBookModal) {
+        closePreBookModal();
       }
     });
 
@@ -3997,18 +4067,6 @@
     els.readerBackBtn?.addEventListener('click', () => {
       if (state.readerFinishing) return;
       closeReader();
-    });
-
-    els.readerLangEnglishBtn?.addEventListener('click', () => {
-      if (!state.readerOpen || state.readerFinishing) return;
-      state.readerDisplayLanguage = 'english';
-      renderReader();
-    });
-
-    els.readerLangPortugueseBtn?.addEventListener('click', () => {
-      if (!state.readerOpen || state.readerFinishing) return;
-      state.readerDisplayLanguage = 'portuguese';
-      renderReader();
     });
 
     els.readerMicBtn?.addEventListener('click', () => {
@@ -4095,10 +4153,10 @@
       } else if (event.key === 'Escape') {
         event.preventDefault();
         closeReader();
-      } else if ((event.key === 'Enter' || event.key === ' ') && state.readerMode === 'pronounce-training') {
-        event.preventDefault();
-        void handleReaderMicTraining();
-      }
+        } else if ((event.key === 'Enter' || event.key === ' ') && isReaderTrainingMode()) {
+          event.preventDefault();
+          void handleReaderMicTraining();
+        }
     });
 
     window.addEventListener('resize', () => {

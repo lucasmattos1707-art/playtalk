@@ -14,6 +14,12 @@
       font-display: block;
     }
 
+    @property --reader-progress-angle {
+      syntax: "<angle>";
+      inherits: false;
+      initial-value: 0deg;
+    }
+
     * {
       box-sizing: border-box;
     }
@@ -1204,14 +1210,14 @@
       }
     }
 
-    .books-mode-preview {
+    .pre-book-preview {
       display: grid;
       justify-items: center;
       gap: 10px;
       text-align: center;
     }
 
-    .books-mode-card {
+    .pre-book-card {
       width: 100%;
       min-height: 100dvh;
       border-radius: 0;
@@ -1225,7 +1231,7 @@
       box-shadow: none;
     }
 
-    .books-mode-main {
+    .pre-book-main {
       width: 100%;
       display: grid;
       justify-items: center;
@@ -1235,12 +1241,12 @@
       transition: opacity 2000ms ease, filter 2000ms ease;
     }
 
-    .books-mode-card.is-starting .books-mode-main {
+    .pre-book-card.is-starting .pre-book-main {
       opacity: 0;
       filter: blur(7px);
     }
 
-    .books-mode-cover {
+    .pre-book-cover {
       width: min(258px, 58vw);
       aspect-ratio: 9 / 16;
       border-radius: 14px;
@@ -1257,7 +1263,7 @@
       position: relative;
     }
 
-    .books-mode-cover::after {
+    .pre-book-cover::after {
       content: "";
       position: absolute;
       top: 2%;
@@ -1270,7 +1276,7 @@
       opacity: 0.8;
     }
 
-    .books-mode-name {
+    .pre-book-name {
       margin: 0;
       color: #ffffff;
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.48);
@@ -1279,7 +1285,7 @@
       letter-spacing: 0.02em;
     }
 
-    .books-mode-option {
+    .pre-book-option {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -1309,14 +1315,14 @@
       cursor: not-allowed;
     }
 
-    .books-mode-actions {
+    .pre-book-actions {
       width: 100%;
       display: grid;
       justify-items: center;
       gap: 14px;
     }
 
-    .books-mode-actions .books-magic-btn {
+    .pre-book-actions .books-magic-btn {
       width: min(46vw, 308px);
       display: inline-flex;
       align-items: center;
@@ -1327,7 +1333,7 @@
       transform: translateY(0);
     }
 
-    .books-mode-close {
+    .pre-book-close {
       position: absolute;
       top: 10px;
       right: 10px;
@@ -1345,19 +1351,19 @@
       transition: opacity 2000ms ease, transform 2000ms ease;
     }
 
-    .books-mode-close svg {
+    .pre-book-close svg {
       width: 18px;
       height: 18px;
       display: block;
     }
 
-    .books-mode-card.is-starting .books-mode-close {
+    .pre-book-card.is-starting .pre-book-close {
       opacity: 0;
       transform: translateY(-6px);
       pointer-events: none;
     }
 
-    .books-mode-loading {
+    .pre-book-loading {
       position: absolute;
       inset: 0;
       display: grid;
@@ -1370,29 +1376,29 @@
       z-index: 2;
     }
 
-    .books-mode-loading.is-visible {
+    .pre-book-loading.is-visible {
       opacity: 1;
       visibility: visible;
       transition-delay: 0ms;
     }
 
-    .books-mode-loading-loop {
+    .pre-book-loading-loop {
       width: 58px;
       height: 58px;
       border-radius: 999px;
       border: 2px solid rgba(255, 255, 255, 0.3);
       border-top-color: rgba(255, 255, 255, 0.98);
       border-right-color: rgba(255, 255, 255, 0.98);
-      animation: books-mode-spin 950ms linear infinite, books-mode-pulse 950ms ease-in-out infinite;
+      animation: pre-book-spin 950ms linear infinite, pre-book-pulse 950ms ease-in-out infinite;
       filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5));
     }
 
-    @keyframes books-mode-spin {
+    @keyframes pre-book-spin {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
 
-    @keyframes books-mode-pulse {
+    @keyframes pre-book-pulse {
       0%, 100% {
         opacity: 0.4;
         transform: scale(0.9);
@@ -1644,14 +1650,16 @@
 
     .books-reader-pron-ring {
       --percent: 0;
+      --reader-progress-angle: 0deg;
       width: 220px;
       height: 220px;
       padding: 6px;
       border-radius: 999px;
-      background: conic-gradient(#67ccff calc(var(--percent) * 1%), rgba(255, 255, 255, 0.2) 0);
+      background: conic-gradient(#67ccff var(--reader-progress-angle), rgba(255, 255, 255, 0.2) 0);
       box-shadow: 0 10px 20px rgba(0, 0, 0, 0.36);
       display: grid;
       place-items: center;
+      transition: --reader-progress-angle 340ms ease;
     }
 
     .books-reader-user-name {
@@ -1699,7 +1707,7 @@
 
     .books-reader-pron-percent {
       margin: 0;
-      font-size: 13px;
+      font-size: 18px;
       font-weight: 800;
       letter-spacing: 0.05em;
       color: #ffffff;
@@ -1707,49 +1715,29 @@
     }
 
     .books-reader-lang {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: center;
+      display: grid;
+      gap: 4px;
+      justify-items: center;
       align-self: end;
       margin-bottom: 20px;
     }
 
-    .books-reader-lang-btn {
-      min-height: 0;
-      padding: 0;
-      border-radius: 0;
-      border: 0;
-      background: transparent;
-      color: #ffffff;
-      font-size: 12px;
+    .books-reader-score-label {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 11px;
       font-weight: 800;
       letter-spacing: 0.04em;
-      display: inline-flex;
-      align-items: center;
-      gap: 0;
-      cursor: pointer;
-      opacity: 0.56;
-      transition: transform 140ms ease, opacity 140ms ease;
     }
 
-    .books-reader-lang-btn svg {
-      width: 14px;
-      height: 14px;
-      display: block;
-    }
-
-    .books-reader-lang-btn img {
-      width: 42px;
-      height: 42px;
-      display: block;
-      object-fit: contain;
-      filter: none;
-    }
-
-    .books-reader-lang-btn.is-active {
-      opacity: 1;
-      transform: scale(1.05);
+    .books-reader-current-score {
+      margin: 0;
+      min-height: 18px;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.42);
     }
 
     .books-reader-mic-btn {
@@ -1963,6 +1951,14 @@
       display: none !important;
     }
 
+    .pre-book-actions[data-pre-book-step="training"] .pre-book-action-root {
+      display: none;
+    }
+
+    .pre-book-actions[data-pre-book-step="root"] .pre-book-action-training {
+      display: none;
+    }
+
     @keyframes books-reader-book-hero-in {
       from {
         opacity: 0;
@@ -1974,24 +1970,24 @@
       }
     }
 
-    #booksModeModal.is-visible .books-mode-cover {
-      animation: books-mode-cover-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    #booksPreBookModal.is-visible .pre-book-cover {
+      animation: pre-book-cover-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
-    #booksModeModal.is-visible .books-mode-actions .books-magic-btn {
+    #booksPreBookModal.is-visible .pre-book-actions .books-magic-btn {
       opacity: 0;
-      animation: books-mode-button-in 540ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      animation: pre-book-button-in 540ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
     }
 
-    #booksModeModal.is-visible .books-mode-actions .books-magic-btn:nth-child(1) {
+    #booksPreBookModal.is-visible .pre-book-actions .books-magic-btn:nth-child(1) {
       animation-delay: 120ms;
     }
 
-    #booksModeModal.is-visible .books-mode-actions .books-magic-btn:nth-child(2) {
+    #booksPreBookModal.is-visible .pre-book-actions .books-magic-btn:nth-child(2) {
       animation-delay: 210ms;
     }
 
-    @keyframes books-mode-cover-in {
+    @keyframes pre-book-cover-in {
       from {
         opacity: 0;
         transform: perspective(1300px) rotateY(-22deg) rotateX(10deg) translateX(-22px) translateY(18px) scale(0.92);
@@ -2002,7 +1998,7 @@
       }
     }
 
-    @keyframes books-mode-button-in {
+    @keyframes pre-book-button-in {
       from {
         opacity: 0;
         transform: translateY(26px);
@@ -2092,7 +2088,7 @@
         font-size: 12px;
       }
 
-      .books-mode-actions .books-magic-btn {
+      .pre-book-actions .books-magic-btn {
         width: min(58vw, 250px);
       }
 
@@ -2230,20 +2226,16 @@
           </div>
         </div>
         <p class="books-reader-user-name" id="booksReaderUserName">Jogador</p>
-        <p class="books-reader-pron-percent" id="booksReaderPronPercent">0%</p>
-      </div>
-      <div class="books-reader-text-panel" id="booksReaderTextPanel">
-        <p class="books-reader-english" id="booksReaderEnglish">Carregando...</p>
-        <div class="books-reader-lang">
-          <button class="books-reader-lang-btn is-active" id="booksReaderLangEnglishBtn" type="button" aria-label="Mostrar ingles">
-            <img src="/arquivos-codex/icones/ingles.svg" alt="Ingles">
-          </button>
-          <button class="books-reader-lang-btn" id="booksReaderLangPortugueseBtn" type="button" aria-label="Mostrar portugues">
-            <img src="/arquivos-codex/icones/portugues.svg" alt="Portugues">
-          </button>
+          <p class="books-reader-pron-percent" id="booksReaderPronPercent">0.0</p>
         </div>
-        <div class="books-reader-training" id="booksReaderTraining" hidden>
-          <button class="books-reader-mic-btn" id="booksReaderMicBtn" type="button" aria-label="Treinar pronuncia">
+        <div class="books-reader-text-panel" id="booksReaderTextPanel">
+          <p class="books-reader-english" id="booksReaderEnglish">Carregando...</p>
+          <div class="books-reader-lang">
+            <p class="books-reader-score-label">Nota atual</p>
+            <p class="books-reader-current-score" id="booksReaderCurrentScore">-</p>
+          </div>
+          <div class="books-reader-training" id="booksReaderTraining" hidden>
+            <button class="books-reader-mic-btn" id="booksReaderMicBtn" type="button" aria-label="Treinar pronuncia">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
           </button>
           <p class="books-reader-training-status" id="booksReaderTrainingStatus"></p>
@@ -2264,26 +2256,32 @@
     </div>
   </section>
 
-  <section class="books-magic-modal" id="booksModeModal" aria-label="Escolha o modo do livro">
-    <div class="books-magic-card books-mode-card" id="booksModeCard">
-      <button class="books-mode-close" id="booksModeCloseBtn" type="button" aria-label="Fechar">
+  <section class="books-magic-modal" id="booksPreBookModal" aria-label="Escolha o modo do livro">
+    <div class="books-magic-card pre-book-card" id="booksPreBookCard">
+      <button class="pre-book-close" id="booksPreBookCloseBtn" type="button" aria-label="Fechar">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.3 5.71 12 12l6.3 6.29-1.42 1.42L10.59 13.4 4.29 19.71 2.88 18.3 9.17 12 2.88 5.71 4.29 4.29l6.3 6.3 6.29-6.3z"/></svg>
       </button>
-      <div class="books-mode-main" id="booksModeMain">
-        <div class="books-mode-preview">
-          <div class="books-mode-cover" id="booksModeCover"></div>
+      <div class="pre-book-main" id="booksPreBookMain">
+        <div class="pre-book-preview">
+          <div class="pre-book-cover" id="booksPreBookCover"></div>
         </div>
-        <div class="books-mode-actions">
-          <button class="books-magic-btn" id="booksModeFreeReadBtn" type="button">
-            <span class="books-mode-option">Leitura livre</span>
+        <div class="pre-book-actions" id="booksPreBookActions" data-pre-book-step="root">
+          <button class="books-magic-btn pre-book-action-root" id="booksPreBookFreeReadBtn" type="button">
+            <span class="pre-book-option">Leitura livre</span>
           </button>
-          <button class="books-magic-btn is-primary" id="booksModePronounceBtn" type="button">
-            <span class="books-mode-option">Treinar pronuncia</span>
+          <button class="books-magic-btn is-primary pre-book-action-root" id="booksPreBookPronounceBtn" type="button">
+            <span class="pre-book-option">Treinar pronuncia</span>
+          </button>
+          <button class="books-magic-btn pre-book-action-training" id="booksPreBookListeningBtn" type="button">
+            <span class="pre-book-option">Listening</span>
+          </button>
+          <button class="books-magic-btn is-primary pre-book-action-training" id="booksPreBookSpeakingBtn" type="button">
+            <span class="pre-book-option">Speaking</span>
           </button>
         </div>
       </div>
-      <div class="books-mode-loading" id="booksModeLoading" aria-hidden="true">
-        <span class="books-mode-loading-loop" aria-hidden="true"></span>
+      <div class="pre-book-loading" id="booksPreBookLoading" aria-hidden="true">
+        <span class="pre-book-loading-loop" aria-hidden="true"></span>
       </div>
     </div>
   </section>

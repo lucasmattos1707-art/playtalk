@@ -137,6 +137,7 @@ let premiumAccessTablesReadyPromise = null;
 let speakingRealtimeTablesReadyPromise = null;
 let miniBookJsonTablesReadyPromise = null;
 let booksSpeakingStatsTablesReadyPromise = null;
+let userBooksLibraryStatsReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
 let speakingCardsCache = {
@@ -434,6 +435,13 @@ const getBooksPronunciationPercent = (samples) => {
   }
   const average = samples.reduce((sum, sample) => sum + sample, 0) / samples.length;
   return Math.max(0, Math.min(100, Math.round(average)));
+};
+
+const normalizeBookCompletionMode = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'listening-training') return 'listening-training';
+  if (normalized === 'speaking-training') return 'speaking-training';
+  return 'free-read';
 };
 
 const getFlashcardPronunciationPercent = (samples) => {
@@ -899,6 +907,43 @@ const ensureBooksSpeakingStatsTable = async () => {
   }
 
   return booksSpeakingStatsTablesReadyPromise;
+};
+
+const ensureUserBooksLibraryStatsTable = async () => {
+  if (!pool) return false;
+
+  await ensureUsersAvatarColumn();
+
+  if (!userBooksLibraryStatsReadyPromise) {
+    userBooksLibraryStatsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_books_library_stats (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          book_id text NOT NULL,
+          book_title text NOT NULL DEFAULT '',
+          cover_image_url text NOT NULL DEFAULT '',
+          background_desktop_url text NOT NULL DEFAULT '',
+          reads_completed integer NOT NULL DEFAULT 0,
+          listened_seconds bigint NOT NULL DEFAULT 0,
+          best_speaking_percent integer,
+          best_listening_percent integer,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, book_id)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_books_library_stats_user_idx
+        ON public.user_books_library_stats (user_id, updated_at DESC)
+      `);
+      return true;
+    })().catch((error) => {
+      userBooksLibraryStatsReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return userBooksLibraryStatsReadyPromise;
 };
 
 const ensureFlashcardRankingsTable = async () => {
@@ -8573,6 +8618,121 @@ app.post('/api/books/training/complete', express.json({ limit: '256kb' }), async
       success: false,
       message: 'Nao foi possivel salvar progresso do livro agora.'
     });
+  }
+});
+
+app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const userId = Number.parseInt(authUser.id, 10);
+    const bookId = normalizeMiniBookId(req.body?.bookId);
+    const mode = normalizeBookCompletionMode(req.body?.mode);
+    const scorePercent = Math.max(0, Math.min(100, Math.round(Number(req.body?.scorePercent) || 0)));
+    const listenedSeconds = Math.max(0, Math.round(Number(req.body?.listenedSeconds) || 0));
+    if (!Number.isInteger(userId) || userId <= 0 || !bookId) {
+      res.status(400).json({ success: false, message: 'Dados invalidos para salvar leitura do livro.' });
+      return;
+    }
+
+    await ensureUserBooksLibraryStatsTable();
+    const book = await findSpeakingBookById(bookId);
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const existingResult = await client.query(
+        `SELECT reads_completed, listened_seconds, best_speaking_percent, best_listening_percent
+         FROM public.user_books_library_stats
+         WHERE user_id = $1 AND book_id = $2
+         FOR UPDATE`,
+        [userId, bookId]
+      );
+      const existing = existingResult.rows[0] || null;
+      const nextReadsCompleted = Math.max(0, Number(existing?.reads_completed) || 0) + 1;
+      const nextListenedSeconds = Math.max(0, Number(existing?.listened_seconds) || 0) + listenedSeconds;
+      const nextBestSpeaking = mode === 'speaking-training'
+        ? Math.max(scorePercent, Math.max(0, Number(existing?.best_speaking_percent) || 0))
+        : (existing?.best_speaking_percent == null ? null : Math.max(0, Number(existing.best_speaking_percent) || 0));
+      const nextBestListening = mode === 'listening-training'
+        ? Math.max(scorePercent, Math.max(0, Number(existing?.best_listening_percent) || 0))
+        : (existing?.best_listening_percent == null ? null : Math.max(0, Number(existing.best_listening_percent) || 0));
+
+      await client.query(
+        `INSERT INTO public.user_books_library_stats (
+           user_id, book_id, book_title, cover_image_url, background_desktop_url,
+           reads_completed, listened_seconds, best_speaking_percent, best_listening_percent, updated_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
+         ON CONFLICT (user_id, book_id)
+         DO UPDATE
+           SET book_title = EXCLUDED.book_title,
+               cover_image_url = EXCLUDED.cover_image_url,
+               background_desktop_url = EXCLUDED.background_desktop_url,
+               reads_completed = EXCLUDED.reads_completed,
+               listened_seconds = EXCLUDED.listened_seconds,
+               best_speaking_percent = EXCLUDED.best_speaking_percent,
+               best_listening_percent = EXCLUDED.best_listening_percent,
+               updated_at = now()`,
+        [
+          userId,
+          bookId,
+          normalizeMiniBookText(book?.title || book?.nome || ''),
+          normalizeMiniBookText(book?.coverImageUrl || ''),
+          normalizeMiniBookText(book?.backgroundDesktopUrl || ''),
+          nextReadsCompleted,
+          nextListenedSeconds,
+          nextBestSpeaking,
+          nextBestListening
+        ]
+      );
+
+      const totalsResult = await client.query(
+        `SELECT COALESCE(SUM(reads_completed), 0)::int AS total_reads
+         FROM public.user_books_library_stats
+         WHERE user_id = $1`,
+        [userId]
+      );
+      await client.query('COMMIT');
+
+      res.json({
+        success: true,
+        bookId,
+        mode,
+        stats: {
+          bookReadCount: Math.max(0, Number(totalsResult.rows[0]?.total_reads) || 0),
+          generalPronunciationPercent: mode === 'speaking-training' || mode === 'listening-training' ? scorePercent : 0,
+          book: {
+            readsCompleted: nextReadsCompleted,
+            listenedSeconds: nextListenedSeconds,
+            bestSpeakingPercent: nextBestSpeaking,
+            bestListeningPercent: nextBestListening
+          }
+        }
+      });
+    } catch (error) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (_rollbackError) {
+        // ignore
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Erro ao salvar conclusao de livro:', error);
+    res.status(500).json({ success: false, message: 'Nao foi possivel salvar a leitura do livro agora.' });
   }
 });
 
