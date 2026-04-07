@@ -173,6 +173,7 @@
     readerLangEnglishBtn: document.getElementById('booksReaderLangEnglishBtn'),
     readerLangPortugueseBtn: document.getElementById('booksReaderLangPortugueseBtn'),
     readerMicBtn: document.getElementById('booksReaderMicBtn'),
+    readerMicScore: document.getElementById('booksReaderMicScore'),
     readerTrainingStatus: document.getElementById('booksReaderTrainingStatus'),
     readerProgressFill: document.getElementById('booksReaderProgressFill'),
     readerFinish: document.getElementById('booksReaderFinish'),
@@ -232,6 +233,7 @@
     readerSessionListenedMs: 0,
     readerSessionSpokenChars: 0,
     readerMicBusy: false,
+    readerMicScoreTimer: 0,
     readerAudioToken: 0,
     readerAudioElement: null,
     readerLastAudioKey: '',
@@ -3709,6 +3711,39 @@
     els.readerMicBtn.classList.toggle('is-live', Boolean(active));
   }
 
+  function clearReaderMicScoreDisplay() {
+    if (state.readerMicScoreTimer) {
+      window.clearTimeout(state.readerMicScoreTimer);
+      state.readerMicScoreTimer = 0;
+    }
+    if (els.readerMicBtn) {
+      els.readerMicBtn.classList.remove('is-showing-score');
+    }
+    if (els.readerMicScore) {
+      els.readerMicScore.textContent = '';
+      els.readerMicScore.classList.remove('is-whole');
+    }
+  }
+
+  function showReaderMicScore(value) {
+    if (!els.readerMicBtn || !els.readerMicScore) return;
+    const display = formatReaderScoreValue(value);
+    clearReaderMicScoreDisplay();
+    els.readerMicScore.textContent = display.text;
+    els.readerMicScore.classList.toggle('is-whole', display.isWhole);
+    els.readerMicBtn.classList.add('is-showing-score');
+    state.readerMicScoreTimer = window.setTimeout(() => {
+      if (els.readerMicBtn) {
+        els.readerMicBtn.classList.remove('is-showing-score');
+      }
+      if (els.readerMicScore) {
+        els.readerMicScore.textContent = '';
+        els.readerMicScore.classList.remove('is-whole');
+      }
+      state.readerMicScoreTimer = 0;
+    }, 1200);
+  }
+
   function captureSpeechWithWebSpeech(options = {}) {
     const RecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (typeof RecognitionCtor !== 'function') {
@@ -4107,9 +4142,6 @@
       ? Math.max(0, Math.min(100, Math.round(state.readerScores.reduce((acc, value) => acc + value, 0) / total)))
       : 0;
     const avgDisplay = formatReaderScoreValue(avg);
-    const roundDisplay = state.readerCurrentScore == null
-      ? { text: '-', isWhole: false }
-      : formatReaderScoreValue(state.readerCurrentScore);
     if (els.readerPronRing) {
       els.readerPronRing.style.setProperty('--percent', String(avg));
       els.readerPronRing.style.setProperty('--reader-progress-angle', `${avg * 3.6}deg`);
@@ -4117,10 +4149,6 @@
     if (els.readerPronPercent) {
       els.readerPronPercent.textContent = avgDisplay.text;
       els.readerPronPercent.classList.toggle('is-whole', avgDisplay.isWhole);
-    }
-    if (els.readerCurrentScore) {
-      els.readerCurrentScore.textContent = roundDisplay.text;
-      els.readerCurrentScore.classList.toggle('is-whole', roundDisplay.isWhole);
     }
   }
 
@@ -4570,6 +4598,7 @@
     state.readerRenderedCardIndex = -1;
     state.readerAdminAudioBusy = false;
     setReaderTrainingStatus('');
+    clearReaderMicScoreDisplay();
     setReaderMicLive(false);
   }
 
@@ -4693,6 +4722,7 @@
         addPendingPronunciationSample(score);
         state.readerCurrentScore = score;
         updateReaderPronPercent();
+        showReaderMicScore(score);
         setReaderTrainingStatus('');
         if (state.readerIndex < (state.readerCards.length - 1)) {
         window.setTimeout(() => {

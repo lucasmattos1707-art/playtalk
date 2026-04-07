@@ -2033,13 +2033,14 @@
       display: grid;
       justify-items: center;
       gap: 12px;
-      margin-top: 8px;
+      margin-top: 38px;
     }
 
     .books-reader-profile {
       display: grid;
       justify-items: center;
       gap: 10px;
+      transform: translateY(-30px);
     }
 
     .books-reader-pron-ring {
@@ -2135,42 +2136,65 @@
     }
 
     .books-reader-current-score {
-      margin: 0;
-      min-height: 52px;
-      color: #ffffff;
-      font-size: 52px;
-      font-weight: 800;
-      letter-spacing: 0.01em;
-      text-shadow: 0 3px 16px rgba(0, 0, 0, 0.42);
-      line-height: 1;
-    }
-
-    .books-reader-current-score.is-whole {
-      font-size: 59.8px;
+      display: none;
     }
 
     .books-reader-mic-btn {
       width: 128px;
       height: 128px;
       border-radius: 999px;
-      border: 2px solid rgba(135, 255, 196, 0.82);
-      background: radial-gradient(circle at 32% 28%, rgba(110, 255, 184, 0.28), rgba(4, 20, 14, 0.88) 72%);
+      border: 2px solid rgba(89, 149, 255, 0.78);
+      background: radial-gradient(circle at 32% 28%, rgba(74, 121, 255, 0.24), rgba(6, 17, 44, 0.9) 72%);
       color: #ffffff;
       display: grid;
       place-items: center;
       cursor: pointer;
       box-shadow:
-        0 0 18px rgba(72, 255, 159, 0.58),
-        0 0 42px rgba(72, 255, 159, 0.3),
-        inset 0 0 18px rgba(72, 255, 159, 0.14),
+        0 0 18px rgba(59, 108, 255, 0.58),
+        0 0 42px rgba(28, 64, 182, 0.34),
+        inset 0 0 18px rgba(73, 129, 255, 0.14),
         0 14px 28px rgba(0, 0, 0, 0.4);
+      position: relative;
+      overflow: hidden;
+      transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
     }
 
-    .books-reader-mic-btn svg {
+    .books-reader-mic-btn svg,
+    .books-reader-mic-icon {
       width: 52px;
       height: 52px;
       display: block;
-      filter: drop-shadow(0 0 10px rgba(180, 255, 214, 0.5));
+      filter: drop-shadow(0 0 10px rgba(132, 181, 255, 0.56));
+      transition: opacity 140ms ease, transform 140ms ease;
+    }
+
+    .books-reader-mic-score {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 42px;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 3px 16px rgba(0, 0, 0, 0.42);
+      opacity: 0;
+      transform: scale(0.9);
+      transition: opacity 140ms ease, transform 140ms ease;
+      pointer-events: none;
+    }
+
+    .books-reader-mic-score.is-whole {
+      font-size: 48.3px;
+    }
+
+    .books-reader-mic-btn.is-showing-score .books-reader-mic-icon {
+      opacity: 0;
+      transform: scale(0.82);
+    }
+
+    .books-reader-mic-btn.is-showing-score .books-reader-mic-score {
+      opacity: 1;
+      transform: scale(1);
     }
 
     .books-reader-mic-btn.is-live {
@@ -2181,6 +2205,10 @@
         0 0 54px rgba(72, 255, 159, 0.42),
         inset 0 0 20px rgba(72, 255, 159, 0.22),
         0 18px 34px rgba(0, 0, 0, 0.44);
+    }
+
+    .books-reader-mic-btn.is-live .books-reader-mic-icon {
+      filter: drop-shadow(0 0 10px rgba(180, 255, 214, 0.5));
     }
 
     .books-reader-training-status {
@@ -2733,7 +2761,8 @@
           <p class="books-reader-english" id="booksReaderEnglish">Carregando...</p>
           <div class="books-reader-training" id="booksReaderTraining" hidden>
             <button class="books-reader-mic-btn" id="booksReaderMicBtn" type="button" aria-label="Treinar pronuncia">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
+            <svg class="books-reader-mic-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
+            <span class="books-reader-mic-score" id="booksReaderMicScore" aria-hidden="true">0</span>
           </button>
           <p class="books-reader-current-score" id="booksReaderCurrentScore">-</p>
           <p class="books-reader-training-status" id="booksReaderTrainingStatus"></p>
