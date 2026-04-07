@@ -481,7 +481,7 @@
       transform: translateY(-20px);
     }
 
-    .books-home-player {
+    .player-books {
       min-height: 62px;
       display: grid;
       grid-template-columns: auto 1fr;
@@ -490,15 +490,15 @@
       padding: 14px 16px;
       border-radius: 0;
       background: transparent;
-      border: 0;
+      border: 1px solid rgba(255, 255, 255, 0.94);
       box-shadow: none;
     }
 
-    .books-home-play-btn {
+    .player-books__play-btn {
       width: 52px;
       height: 52px;
       border-radius: 0;
-      border: 0;
+      border: 1px solid rgba(255, 255, 255, 0.94);
       background: transparent;
       color: #ffffff;
       display: grid;
@@ -507,28 +507,30 @@
       transition: transform 160ms ease, opacity 160ms ease;
     }
 
-    .books-home-play-btn:hover:not(:disabled) {
+    .player-books__play-btn:hover:not(:disabled) {
       transform: translateY(-1px);
     }
 
-    .books-home-play-btn:disabled {
+    .player-books__play-btn:disabled {
       opacity: 0.55;
       cursor: wait;
     }
 
-    .books-home-play-btn svg {
+    .player-books__play-btn svg {
       width: 22px;
       height: 22px;
       display: block;
     }
 
-    .books-home-progress {
+    .player-books__progress {
       min-width: 0;
       display: grid;
       gap: 8px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.94);
     }
 
-    .books-home-progress-meta {
+    .player-books__progress-meta {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -539,16 +541,17 @@
       text-transform: uppercase;
     }
 
-    .books-home-progress-track {
+    .player-books__progress-track {
       width: 100%;
       height: 8px;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.09);
       overflow: hidden;
       position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.94);
     }
 
-    .books-home-progress-fill {
+    .player-books__progress-fill {
       width: 0%;
       height: 100%;
       border-radius: inherit;
@@ -565,7 +568,7 @@
     .books-home-control-btn {
       min-height: 54px;
       border-radius: 0;
-      border: 0;
+      border: 1px solid rgba(255, 255, 255, 0.94);
       background: transparent;
       color: #ffffff;
       display: grid;
@@ -1971,19 +1974,19 @@
         padding: 0 16px 16px;
       }
 
-      .books-home-player {
+      .player-books {
         min-height: 0;
         height: 100%;
         gap: 12px;
         padding: 12px 14px;
       }
 
-      .books-home-play-btn {
+      .player-books__play-btn {
         width: 48px;
         height: 48px;
       }
 
-      .books-home-progress-meta {
+      .player-books__progress-meta {
         font-size: 11px;
       }
 
@@ -2065,17 +2068,17 @@
               </div>
             </div>
             <div class="books-home-footer" id="booksHomeControls">
-              <div class="books-home-player">
-                <button class="books-home-play-btn" id="booksHomePlayPauseBtn" type="button" aria-label="Pausar ou retomar reproducao">
+              <div class="player-books">
+                <button class="player-books__play-btn" id="playerBooksPlayPauseBtn" type="button" aria-label="Pausar ou retomar reproducao">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5h3v14H8zm5 0h3v14h-3z"/></svg>
                 </button>
-                <div class="books-home-progress">
-                  <div class="books-home-progress-meta">
-                    <span id="booksHomeProgressLabel">Livro</span>
-                    <span id="booksHomeProgressValue">0%</span>
+                <div class="player-books__progress">
+                  <div class="player-books__progress-meta">
+                    <span id="playerBooksProgressLabel">Livro</span>
+                    <span id="playerBooksProgressValue">0%</span>
                   </div>
-                  <div class="books-home-progress-track" aria-hidden="true">
-                    <div class="books-home-progress-fill" id="booksHomeProgressFill"></div>
+                  <div class="player-books__progress-track" aria-hidden="true">
+                    <div class="player-books__progress-fill" id="playerBooksProgressFill"></div>
                   </div>
                 </div>
               </div>

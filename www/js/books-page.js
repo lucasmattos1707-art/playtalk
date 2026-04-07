@@ -67,10 +67,10 @@
     homeTextPanel: document.getElementById('booksHomeTextPanel'),
     homeNextTextPanel: document.getElementById('booksHomeNextTextPanel'),
     homeControls: document.getElementById('booksHomeControls'),
-    homePlayPauseBtn: document.getElementById('booksHomePlayPauseBtn'),
-    homeProgressLabel: document.getElementById('booksHomeProgressLabel'),
-    homeProgressValue: document.getElementById('booksHomeProgressValue'),
-    homeProgressFill: document.getElementById('booksHomeProgressFill'),
+    playerBooksPlayPauseBtn: document.getElementById('playerBooksPlayPauseBtn'),
+    playerBooksProgressLabel: document.getElementById('playerBooksProgressLabel'),
+    playerBooksProgressValue: document.getElementById('playerBooksProgressValue'),
+    playerBooksProgressFill: document.getElementById('playerBooksProgressFill'),
     homeRepeatBtn: document.getElementById('booksHomeRepeatBtn'),
     homeRepeatLabel: document.getElementById('booksHomeRepeatLabel'),
     homeMusicBtn: document.getElementById('booksHomeMusicBtn'),
@@ -709,25 +709,25 @@
 
   function renderHomeProgressUi() {
     const ratio = Math.max(0, Math.min(1, Number(state.homeProgressRatio) || 0));
-    if (els.homeProgressFill) {
-      els.homeProgressFill.style.width = `${Math.round(ratio * 1000) / 10}%`;
+    if (els.playerBooksProgressFill) {
+      els.playerBooksProgressFill.style.width = `${Math.round(ratio * 1000) / 10}%`;
     }
-    if (els.homeProgressLabel) {
-      els.homeProgressLabel.textContent = safeText(state.homeProgressLabel) || 'Livro';
+    if (els.playerBooksProgressLabel) {
+      els.playerBooksProgressLabel.textContent = safeText(state.homeProgressLabel) || 'Livro';
     }
-    if (els.homeProgressValue) {
-      els.homeProgressValue.textContent = `${Math.round(ratio * 100)}%`;
+    if (els.playerBooksProgressValue) {
+      els.playerBooksProgressValue.textContent = `${Math.round(ratio * 100)}%`;
     }
   }
 
   function renderHomeTransportUi() {
-    if (els.homePlayPauseBtn) {
+    if (els.playerBooksPlayPauseBtn) {
       const icon = state.homePaused
         ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l9.8-6.86a1 1 0 0 0 0-1.72L9.5 4.28A1 1 0 0 0 8 5.14Z"/></svg>'
         : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5h3v14H8zm5 0h3v14h-3z"/></svg>';
-      els.homePlayPauseBtn.innerHTML = icon;
-      els.homePlayPauseBtn.disabled = !state.homeIntroDismissed;
-      els.homePlayPauseBtn.setAttribute('aria-label', state.homePaused ? 'Retomar reproducao' : 'Pausar reproducao');
+      els.playerBooksPlayPauseBtn.innerHTML = icon;
+      els.playerBooksPlayPauseBtn.disabled = !state.homeIntroDismissed;
+      els.playerBooksPlayPauseBtn.setAttribute('aria-label', state.homePaused ? 'Retomar reproducao' : 'Pausar reproducao');
     }
     if (els.homeRepeatLabel) {
       els.homeRepeatLabel.textContent = `${getHomeRepeatSeconds()}s`;
@@ -3394,7 +3394,7 @@
       startHomeSleepPlayback();
     });
 
-    els.homePlayPauseBtn?.addEventListener('click', () => {
+    els.playerBooksPlayPauseBtn?.addEventListener('click', () => {
       void toggleHomePausePlayback();
     });
 
