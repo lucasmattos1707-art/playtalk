@@ -451,6 +451,30 @@
     writeStoredInt(PRACTICE_SECONDS_TOTAL_KEY, state.practiceSecondsTotal);
   }
 
+  function reconcileLocalConsumptionTotals(stats) {
+    if (!stats || typeof stats !== 'object') return;
+
+    const serverListeningChars = Math.max(0, Math.round(Number(stats.listeningChars) || 0));
+    const serverPracticeSeconds = Math.max(0, Math.round(Number(stats.practiceSeconds) || 0));
+    const nextListeningTotal = Math.max(
+      serverListeningChars + Math.max(0, Number(state.listeningCharsPending) || 0),
+      Math.max(0, Number(state.listeningCharsTotal) || 0)
+    );
+    const nextPracticeTotal = Math.max(
+      serverPracticeSeconds + Math.max(0, Number(state.practiceSecondsPending) || 0),
+      Math.max(0, Number(state.practiceSecondsTotal) || 0)
+    );
+
+    if (
+      nextListeningTotal !== state.listeningCharsTotal
+      || nextPracticeTotal !== state.practiceSecondsTotal
+    ) {
+      state.listeningCharsTotal = nextListeningTotal;
+      state.practiceSecondsTotal = nextPracticeTotal;
+      persistLocalConsumptionCounters();
+    }
+  }
+
   function loadLocalPronunciationCounters() {
     state.booksPronunciationPending = readStoredArray(BOOKS_PRONUNCIATION_PENDING_KEY)
       .map((sample) => normalizePercent(sample))
@@ -491,6 +515,7 @@
   }
 
   function setStatsState(stats) {
+    reconcileLocalConsumptionTotals(stats);
     state.stats = mergeStatsWithPendingPronunciation(stats);
     return state.stats;
   }
