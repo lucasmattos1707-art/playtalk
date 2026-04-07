@@ -11,7 +11,7 @@
 }
 
 body.playtalk-cosmic-shell {
-  background: #070b12 !important;
+  background: var(--playtalk-shell-bg) !important;
 }
 
 body.playtalk-cosmic-shell .container {

@@ -96,6 +96,7 @@
     homePasswordInput: document.getElementById('booksHomePasswordInput'),
     homeAuthStatus: document.getElementById('booksHomeAuthStatus'),
     homeStartBtn: document.getElementById('booksHomeStartBtn'),
+    homeLaunchBtn: document.getElementById('booksHomeLaunchBtn'),
     homeLogoutBtn: document.getElementById('booksHomeLogoutBtn'),
     homeCover: document.getElementById('booksHomeCover'),
     homeNextCover: document.getElementById('booksHomeNextCover'),
@@ -817,7 +818,11 @@
     }
     if (els.homeStartBtn) {
       els.homeStartBtn.disabled = state.homeAuthBusy;
-      els.homeStartBtn.textContent = isLoggedIn ? 'Continuar agora' : (state.homeAuthBusy ? 'Entrando...' : 'Entrar e começar');
+      els.homeStartBtn.textContent = state.homeAuthBusy ? 'Entrando...' : 'Entrar e começar';
+    }
+    if (els.homeLaunchBtn) {
+      els.homeLaunchBtn.hidden = !isLoggedIn;
+      els.homeLaunchBtn.disabled = state.homeAuthBusy;
     }
     if (els.homeLoginInput) {
       els.homeLoginInput.disabled = state.homeAuthBusy || isLoggedIn;
@@ -912,6 +917,32 @@
     renderAdminUiToggle();
     renderHomeAuthUi();
     setHomeAuthStatus('', null);
+  }
+
+  function getFirstHomeBook() {
+    const pool = getHomeBooksPool();
+    if (!pool.length) return null;
+    return pool
+      .slice()
+      .sort((left, right) => {
+        const levelDelta = normalizeLevel(left?.nivel) - normalizeLevel(right?.nivel);
+        if (levelDelta !== 0) return levelDelta;
+        return sortByNome(left, right);
+      })[0] || null;
+  }
+
+  async function startFirstBookFromHome() {
+    const firstBook = getFirstHomeBook();
+    if (!firstBook) {
+      setHomeAuthStatus('Nenhum MiniBook disponível para iniciar agora.', 'error');
+      return;
+    }
+    try {
+      const cards = await prepareReaderData(firstBook);
+      await startBookByMode(firstBook, 'free-read', cards);
+    } catch (error) {
+      setHomeAuthStatus(error?.message || 'Não consegui abrir o primeiro livro agora.', 'error');
+    }
   }
 
   function renderAvatar() {
@@ -1182,6 +1213,7 @@
   function renderHomeScreen(coverElement, textElement, session, cardIndex, options = {}) {
     const coverUrl = safeText(session?.coverImageUrl);
     if (coverElement) {
+      coverElement.classList.toggle('is-loading', Boolean(options.isLoading));
       coverElement.style.backgroundImage = coverUrl
         ? `url(${safeCssUrl(coverUrl)})`
         : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
@@ -1388,10 +1420,12 @@
     const backgroundSession = (state.homeTransitioning && state.homeNextSession) ? state.homeNextSession : state.homeCurrentSession;
     applyHomeBookBackground(backgroundSession);
     renderHomeScreen(els.homeCover, els.homeTextPanel, state.homeCurrentSession, state.homeCurrentCardIndex, {
-      hideText: !state.homeTextVisible
+      hideText: !state.homeTextVisible,
+      isLoading: !state.homeCurrentSession
     });
     renderHomeScreen(els.homeNextCover, els.homeNextTextPanel, state.homeNextSession, 0, {
-      hideText: true
+      hideText: true,
+      isLoading: !state.homeNextSession
     });
     renderHomeProgressUi();
     renderHomeTransportUi();
@@ -2714,7 +2748,15 @@
     setModeStartBusy(false);
     if (els.preBookCover) {
       const coverUrl = safeText(book.coverImageUrl);
+      els.preBookCover.classList.add('is-loading');
       els.preBookCover.style.backgroundImage = coverUrl ? `url(${safeCssUrl(coverUrl)})` : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
+      if (coverUrl) {
+        void preloadImageUrl(coverUrl).finally(() => {
+          els.preBookCover?.classList.remove('is-loading');
+        });
+      } else {
+        els.preBookCover.classList.remove('is-loading');
+      }
     }
     els.preBookModal.classList.add('is-visible');
     state.preBookInsightsData = buildPreBookInsights({
@@ -4572,6 +4614,10 @@
       void loginFromBooksHome();
     });
 
+    els.homeLaunchBtn?.addEventListener('click', () => {
+      void startFirstBookFromHome();
+    });
+
     els.homeRepeatBtn?.addEventListener('click', () => {
       state.homeRepeatIndex = (state.homeRepeatIndex + 1) % HOME_REPEAT_OPTIONS.length;
       renderHomeTransportUi();
@@ -4928,12 +4974,6 @@
     renderCards();
     syncShelfViewportHeight();
     void scrollShelfToIndex(state.shelfIndex, false);
-
-    // If the player is already logged in, skip the login UI and start the Home player immediately.
-    if (state.user?.id && isHomeLevel() && !state.homeIntroDismissed) {
-      startHomeSleepPlayback();
-      renderLevelMenu();
-    }
 
     if (state.isAdmin) {
       if (hasRunningCreateJobs()) {
