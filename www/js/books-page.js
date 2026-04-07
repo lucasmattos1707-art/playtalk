@@ -20,7 +20,7 @@
   const READER_FREE_READ_MIN_VIEW_MS = 3000;
   const READER_BLOCKED_FLASH_MS = 750;
   const HOME_REPEAT_OPTIONS = [1, 2, 3, 5, 7, 10];
-  const HOME_SPEED_OPTIONS = [1, 1.25, 1.5, 0.75];
+  const HOME_SPEED_OPTIONS = [0.7, 0.8, 0.9, 1, 1.25, 1.5, 2];
   const HOME_BOOK_TRANSITION_MS = 760;
   const HOME_SWIPE_UP_THRESHOLD = 70;
   const MAX_BOOK_LEVEL = 10;
@@ -201,7 +201,7 @@
     homeCurrentCardText: '',
     homeCurrentCardTextPt: '',
     homeTextMode: 'english',
-    homeSpeedIndex: 0,
+    homeSpeedIndex: 3,
     homeProgressRatio: 0,
     homeProgressLabel: '',
     homePaused: false,
