@@ -27,13 +27,27 @@
   const HOME_SWIPE_UP_THRESHOLD = 70;
   const HOME_SWIPE_DOWN_THRESHOLD = 70;
   const MAX_BOOK_LEVEL = 10;
+  // UI levels:
+  // 0 = Home
+  // 1 = Estatísticas
+  // 2..(MAX_BOOK_LEVEL+1) map to book levels 1..MAX_BOOK_LEVEL
+  const MAX_UI_LEVEL = MAX_BOOK_LEVEL + 1;
+  const UI_LEVEL_HOME = 0;
+  const UI_LEVEL_STATS = 1;
+  const UI_FIRST_BOOK_LEVEL = 2;
+
+  const LISTENING_CHARS_PENDING_KEY = 'playtalk_books_listening_chars_pending_v1';
+  const LISTENING_CHARS_TOTAL_KEY = 'playtalk_books_listening_chars_total_v1';
+  const PRACTICE_SECONDS_PENDING_KEY = 'playtalk_books_practice_seconds_pending_v1';
+  const PRACTICE_SECONDS_TOTAL_KEY = 'playtalk_books_practice_seconds_total_v1';
   const HOME_MUSIC_PLAYLIST = [
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen1.mp3',
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen2.mp3',
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen3.mp3',
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen4.mp3'
   ];
-  const LEVEL_DISPLAY_NAMES = [
+  // Book-only display names (index = book level). Keep this stable because admin create parsing relies on it.
+  const BOOK_LEVEL_DISPLAY_NAMES = [
     'Home',
     'Básico',
     'Aprendiz',
@@ -70,6 +84,8 @@
     status: document.getElementById('booksStatus'),
     shelfViewport: document.getElementById('booksShelfViewport'),
     shelfLoading: document.getElementById('booksShelfLoading'),
+    statsPanel: document.getElementById('booksStatsPanel'),
+    statsLine: document.getElementById('booksStatsLine'),
     homePanel: document.getElementById('booksHomePanel'),
     homeShell: document.getElementById('booksHomeShell'),
     homeViewport: document.getElementById('booksHomeViewport'),
@@ -167,6 +183,11 @@
     localProfile: null,
     initialLoading: true,
     selectedLevel: 0,
+    stats: null,
+    statsRotationTimer: 0,
+    statsRotationIndex: 0,
+    statsLastRenderedLine: '',
+    statsFetchInFlight: false,
     books: [],
     isAdmin: false,
     forceAdminUi: false,
@@ -200,6 +221,7 @@
     readerScores: [],
     readerCurrentScore: null,
     readerSessionListenedMs: 0,
+    readerSessionSpokenChars: 0,
     readerMicBusy: false,
     readerAudioToken: 0,
     readerAudioElement: null,
@@ -261,11 +283,49 @@
     homeRepeatIndex: 0,
     homeMusicEnabled: false,
     homeMusicAudioElement: null,
-    homeMusicIndex: 0
+    homeMusicIndex: 0,
+    listeningCharsPending: 0,
+    listeningCharsTotal: 0,
+    practiceSecondsPending: 0,
+    practiceSecondsTotal: 0,
+    listeningFlushInFlight: false
   };
 
   function safeText(value) {
     return typeof value === 'string' ? value.trim() : '';
+  }
+
+  function readStoredInt(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      const parsed = Number.parseInt(raw || '0', 10);
+      return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+    } catch (_error) {
+      return 0;
+    }
+  }
+
+  function writeStoredInt(key, value) {
+    try {
+      localStorage.setItem(key, String(Math.max(0, Math.round(Number(value) || 0))));
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  function formatCountCompact(value) {
+    const normalized = Math.max(0, Number(value) || 0);
+    if (normalized >= 1_000_000) return `${Math.round((normalized / 1_000_000) * 10) / 10}m`;
+    if (normalized >= 1_000) return `${Math.round((normalized / 1_000) * 10) / 10}k`;
+    return `${Math.round(normalized)}`;
+  }
+
+  function formatDurationCompact(totalSeconds) {
+    const seconds = Math.max(0, Math.round(Number(totalSeconds) || 0));
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+    return `${minutes}m`;
   }
 
   function buildStarShadowMap(count, color = '#FFF') {
@@ -338,6 +398,85 @@
       session
     );
     updateHomeProgressTimeline(elapsedSeconds, totalSeconds, state.homeCurrentBookName || safeText(session?.title) || 'Livro');
+  }
+
+  function loadLocalConsumptionCounters() {
+    state.listeningCharsPending = readStoredInt(LISTENING_CHARS_PENDING_KEY);
+    state.listeningCharsTotal = readStoredInt(LISTENING_CHARS_TOTAL_KEY);
+    state.practiceSecondsPending = readStoredInt(PRACTICE_SECONDS_PENDING_KEY);
+    state.practiceSecondsTotal = readStoredInt(PRACTICE_SECONDS_TOTAL_KEY);
+  }
+
+  function persistLocalConsumptionCounters() {
+    writeStoredInt(LISTENING_CHARS_PENDING_KEY, state.listeningCharsPending);
+    writeStoredInt(LISTENING_CHARS_TOTAL_KEY, state.listeningCharsTotal);
+    writeStoredInt(PRACTICE_SECONDS_PENDING_KEY, state.practiceSecondsPending);
+    writeStoredInt(PRACTICE_SECONDS_TOTAL_KEY, state.practiceSecondsTotal);
+  }
+
+  function addListeningProgress(englishText, practiceSecondsDelta = 0) {
+    const english = safeText(englishText);
+    const charsDelta = english ? english.length : 0;
+    const secondsDelta = Math.max(0, Math.round(Number(practiceSecondsDelta) || 0));
+
+    if (charsDelta > 0) {
+      state.listeningCharsPending += charsDelta;
+      state.listeningCharsTotal += charsDelta;
+    }
+    if (secondsDelta > 0) {
+      state.practiceSecondsPending += secondsDelta;
+      state.practiceSecondsTotal += secondsDelta;
+    }
+
+    persistLocalConsumptionCounters();
+    renderStatsPanel();
+    void flushListeningProgressIfNeeded();
+  }
+
+  async function flushListeningProgressIfNeeded(force = false) {
+    if (!state.user?.id) return false;
+    if (state.listeningFlushInFlight) return false;
+    const pendingChars = Math.max(0, Number(state.listeningCharsPending) || 0);
+    const pendingSeconds = Math.max(0, Number(state.practiceSecondsPending) || 0);
+    const chunkChars = force ? pendingChars : (Math.floor(pendingChars / 1000) * 1000);
+    if (!chunkChars && !force) return false;
+    if (!chunkChars && force && pendingSeconds <= 0) return false;
+
+    state.listeningFlushInFlight = true;
+    const sendChars = Math.max(0, Math.round(chunkChars) || 0);
+    const sendSeconds = Math.max(0, Math.round(pendingSeconds) || 0);
+    try {
+      const response = await fetch(buildApiUrl('/api/books/listening-progress'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          listeningCharsDelta: sendChars,
+          practiceSecondsDelta: sendSeconds
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        return false;
+      }
+      state.listeningCharsPending = Math.max(0, state.listeningCharsPending - sendChars);
+      state.practiceSecondsPending = 0;
+      persistLocalConsumptionCounters();
+      if (payload?.stats) {
+        state.stats = { ...(state.stats || {}), ...(payload.stats || {}) };
+        if (state.user?.id && (state.stats.bookReadCount == null || state.stats.generalPronunciationPercent == null)) {
+          void refreshStatsFromServer();
+        }
+      } else {
+        void refreshStatsFromServer();
+      }
+      renderStatsPanel();
+      return true;
+    } catch (_error) {
+      return false;
+    } finally {
+      state.listeningFlushInFlight = false;
+    }
   }
 
   function loadHomeAudioDurationSeconds(source) {
@@ -446,7 +585,7 @@
 
     const normalizedLevelLabel = normalizeText(normalizedRaw);
     if (!normalizedLevelLabel) return null;
-    const index = LEVEL_DISPLAY_NAMES.findIndex((name) => normalizeText(name) === normalizedLevelLabel);
+    const index = BOOK_LEVEL_DISPLAY_NAMES.findIndex((name) => normalizeText(name) === normalizedLevelLabel);
     if (index <= 0) return null;
     return index;
   }
@@ -727,6 +866,8 @@
       };
       persistLocalPlayerProfile(state.localProfile);
       renderAvatar();
+      void flushListeningProgressIfNeeded(true);
+      void refreshStatsFromServer().then(() => renderStatsPanel());
       renderHomeAuthUi();
       setHomeAuthStatus(payload?.created ? 'Conta criada e entrada liberada.' : 'Entrada liberada com sucesso.', 'success');
       startHomeSleepPlayback();
@@ -816,23 +957,37 @@
     return Array.from(byBook.values()).sort(sortByNome);
   }
 
+  function uiLevelToBookLevel(level) {
+    const parsed = Number.parseInt(level, 10);
+    if (!Number.isFinite(parsed)) return null;
+    if (parsed < UI_FIRST_BOOK_LEVEL) return null;
+    return normalizeLevel(parsed - 1);
+  }
+
+  function bookLevelToUiLevel(level) {
+    return normalizeLevel(level) + 1;
+  }
+
   function getBooksForSelectedLevel() {
-    if (state.selectedLevel <= 0) {
-      return [];
-    }
+    const bookLevel = uiLevelToBookLevel(state.selectedLevel);
+    if (!bookLevel) return [];
     return state.books
-      .filter((entry) => normalizeLevel(entry?.nivel) === state.selectedLevel)
+      .filter((entry) => normalizeLevel(entry?.nivel) === bookLevel)
       .sort(sortByNome);
   }
 
   function normalizeBrowseLevel(value) {
     const parsed = Number.parseInt(value, 10);
     if (!Number.isFinite(parsed)) return 0;
-    return Math.max(0, Math.min(MAX_BOOK_LEVEL, parsed));
+    return Math.max(0, Math.min(MAX_UI_LEVEL, parsed));
   }
 
   function isHomeLevel() {
-    return state.selectedLevel === 0;
+    return state.selectedLevel === UI_LEVEL_HOME;
+  }
+
+  function isStatsLevel() {
+    return state.selectedLevel === UI_LEVEL_STATS;
   }
 
   function getHomeRepeatSeconds() {
@@ -1160,6 +1315,93 @@
     }
     if (visible && els.cardsEmpty) {
       els.cardsEmpty.hidden = true;
+    }
+  }
+
+  async function refreshStatsFromServer() {
+    if (!state.user?.id || state.statsFetchInFlight) return null;
+    state.statsFetchInFlight = true;
+    try {
+      const response = await fetch(buildApiUrl('/api/books/stats'), {
+        credentials: 'include',
+        headers: buildAuthHeaders(),
+        cache: 'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        return null;
+      }
+      state.stats = payload.stats || null;
+      return state.stats;
+    } catch (_error) {
+      return null;
+    } finally {
+      state.statsFetchInFlight = false;
+    }
+  }
+
+  function buildStatsRotationItems() {
+    if (!state.user?.id) {
+      return [
+        'Entre para ver estatisticas.',
+        `Listening ${formatCountCompact(state.listeningCharsTotal)}`,
+        `Tempo de pratica ${formatDurationCompact(state.practiceSecondsTotal)}`
+      ];
+    }
+
+    const stats = state.stats || {};
+    const booksRead = Math.max(0, Number(stats.bookReadCount) || 0);
+    const pronAvg = Math.max(0, Math.min(100, Math.round(Number(stats.generalPronunciationPercent) || 0)));
+    const speakingChars = Math.max(0, Number(stats.speakingChars) || 0);
+    // Prefer local totals because they include pending (not-yet-flushed) progress.
+    const listeningChars = Math.max(0, Number(state.listeningCharsTotal) || 0);
+    const practiceSeconds = Math.max(0, Number(state.practiceSecondsTotal) || 0);
+
+    return [
+      `${booksRead} Livros lidos`,
+      `Pronuncia media ${pronAvg}%`,
+      `Tempo de pratica ${formatDurationCompact(practiceSeconds)}`,
+      `Speaking ${formatCountCompact(speakingChars)}`,
+      `Listening ${formatCountCompact(listeningChars)}`
+    ];
+  }
+
+  function stopStatsRotation() {
+    if (!state.statsRotationTimer) return;
+    window.clearInterval(state.statsRotationTimer);
+    state.statsRotationTimer = 0;
+  }
+
+  function startStatsRotation() {
+    if (state.statsRotationTimer) return;
+    state.statsRotationTimer = window.setInterval(() => {
+      state.statsRotationIndex = (state.statsRotationIndex + 1) % 1000000;
+      renderStatsPanel();
+    }, 2500);
+  }
+
+  function renderStatsPanel() {
+    if (!els.statsPanel) return;
+    const visible = isStatsLevel();
+    els.statsPanel.classList.toggle('is-visible', visible);
+    if (!visible) {
+      stopStatsRotation();
+      return;
+    }
+
+    startStatsRotation();
+    if (state.user?.id && !state.stats) {
+      void refreshStatsFromServer().then(() => renderStatsPanel());
+    }
+
+    const items = buildStatsRotationItems();
+    const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
+    const line = safeItems.length
+      ? safeText(safeItems[state.statsRotationIndex % safeItems.length])
+      : 'Carregando...';
+    if (els.statsLine && line && state.statsLastRenderedLine !== line) {
+      state.statsLastRenderedLine = line;
+      els.statsLine.textContent = line;
     }
   }
 
@@ -1612,6 +1854,14 @@
       };
       audio.ontimeupdate = syncProgress;
       audio.onended = () => {
+        // Listening stats: count english chars heard and practice seconds for the SmartBooks (home) player.
+        const rawDuration = Number(audio.duration);
+        const startAt = Math.max(0, Number(meta.startAtSeconds) || 0);
+        const fallbackDuration = getHomeCardDurationSeconds(state.homeCurrentCards[baseIndex]);
+        const effectiveDuration = (Number.isFinite(rawDuration) && rawDuration > 0) ? rawDuration : fallbackDuration;
+        const listenedSeconds = Math.max(0, effectiveDuration - startAt);
+        addListeningProgress(meta.english, listenedSeconds);
+
         const totalSeconds = getHomeSessionTotalSeconds(state.homeCurrentSession);
         const elapsedSeconds = getHomeElapsedSecondsForPosition(
           baseIndex,
@@ -2334,7 +2584,7 @@
         voice: selectedVoice
       }, 'Nao foi possivel criar o livro.');
       const job = upsertCreateJob(payload?.job);
-      state.selectedLevel = normalizeLevel(job?.book?.level || parsedInput.level);
+      state.selectedLevel = bookLevelToUiLevel(job?.book?.level || parsedInput.level);
       renderLevelMenu();
       renderCards();
       scheduleCreateJobsPoll(250);
@@ -2562,12 +2812,26 @@
         els.shelfViewport.scrollTop = 0;
       }
       renderHomePanel();
+      renderStatsPanel();
+      return;
+    }
+    if (isStatsLevel()) {
+      els.cardsGrid.innerHTML = '';
+      els.cardsGrid.hidden = true;
+      els.cardsEmpty.hidden = true;
+      if (els.shelfViewport) {
+        els.shelfViewport.scrollTop = 0;
+      }
+      renderHomePanel();
+      renderStatsPanel();
       return;
     }
     renderHomePanel();
+    renderStatsPanel();
     const books = getBooksForSelectedLevel();
+    const bookLevel = uiLevelToBookLevel(state.selectedLevel);
     const pendingBooks = state.createJobs
-      .filter((job) => isCreateJobRunning(job) && normalizeLevel(job?.book?.level) === state.selectedLevel)
+      .filter((job) => Boolean(bookLevel) && isCreateJobRunning(job) && normalizeLevel(job?.book?.level) === bookLevel)
       .map((job) => ({
         bookId: `job:${job.id}`,
         jobId: job.id,
@@ -2692,17 +2956,25 @@
     void scrollShelfToIndex(state.shelfIndex, false);
   }
 
+  function getUiLevelDisplayName(level) {
+    const parsed = Number.parseInt(level, 10);
+    if (!Number.isFinite(parsed)) return 'Home';
+    if (parsed === UI_LEVEL_HOME) return 'Home';
+    if (parsed === UI_LEVEL_STATS) return 'Estatísticas';
+    const bookLevel = uiLevelToBookLevel(parsed);
+    if (!bookLevel) return `Nivel ${parsed}`;
+    return BOOK_LEVEL_DISPLAY_NAMES[bookLevel] || `Nivel ${bookLevel}`;
+  }
+
   function renderLevelMenu() {
     if (els.levelTitle) {
-      const levelIndex = Math.max(0, Math.min(MAX_BOOK_LEVEL, state.selectedLevel));
-      const levelName = LEVEL_DISPLAY_NAMES[levelIndex] || `Nivel ${state.selectedLevel}`;
-      els.levelTitle.textContent = `${levelName}`;
+      els.levelTitle.textContent = `${getUiLevelDisplayName(state.selectedLevel)}`;
     }
     if (els.prevLevelBtn) {
       els.prevLevelBtn.disabled = state.selectedLevel <= 0 || state.uploadInFlight;
     }
     if (els.nextLevelBtn) {
-      els.nextLevelBtn.disabled = state.selectedLevel >= MAX_BOOK_LEVEL || state.uploadInFlight;
+      els.nextLevelBtn.disabled = state.selectedLevel >= MAX_UI_LEVEL || state.uploadInFlight;
     }
   }
 
@@ -3420,6 +3692,7 @@
     audio.onended = () => {
       if (token !== state.readerAudioToken) return;
       state.readerSessionListenedMs += Math.max(0, Math.round((Number(audio.duration) || 0) * 1000));
+      addListeningProgress(english, 0);
     };
     state.readerAudioElement = audio;
 
@@ -3579,6 +3852,7 @@
     const mode = safeText(options.mode) || 'free-read';
     const scorePercent = normalizeReaderPercent(options.scorePercent);
     const listenedSeconds = Math.max(0, Math.round(Number(options.listenedSeconds) || 0));
+    const speakingChars = Math.max(0, Math.round(Number(options.speakingChars) || 0));
     if (!bookId) {
       return {
         success: false,
@@ -3599,7 +3873,8 @@
           bookId,
           mode,
           scorePercent,
-          listenedSeconds
+          listenedSeconds,
+          speakingChars
         })
       });
       const payload = await response.json().catch(() => ({}));
@@ -3637,7 +3912,8 @@
     const completionPromise = postReaderBookCompletion(activeBook, {
       mode: state.readerMode,
       scorePercent: sessionPronunciationPercent,
-      listenedSeconds: Math.round(state.readerSessionListenedMs / 1000)
+      listenedSeconds: Math.round(state.readerSessionListenedMs / 1000),
+      speakingChars: state.readerSessionSpokenChars
     });
 
     if (els.reader) {
@@ -3685,7 +3961,8 @@
     const completionPromise = postReaderBookCompletion(activeBook, {
       mode: 'free-read',
       scorePercent: 0,
-      listenedSeconds: Math.round(state.readerSessionListenedMs / 1000)
+      listenedSeconds: Math.round(state.readerSessionListenedMs / 1000),
+      speakingChars: 0
     });
 
     triggerReaderSuccessBookFlash();
@@ -3885,6 +4162,7 @@
     state.readerScores = [];
     state.readerCurrentScore = null;
     state.readerSessionListenedMs = 0;
+    state.readerSessionSpokenChars = 0;
     state.readerMicBusy = false;
     state.readerLastAudioKey = '';
     state.readerCardShownAt = 0;
@@ -3970,6 +4248,7 @@
       state.readerScores = [];
       state.readerCurrentScore = null;
       state.readerSessionListenedMs = 0;
+      state.readerSessionSpokenChars = 0;
       state.readerDisplayLanguage = 'english';
       state.readerMicBusy = false;
       state.readerLastAudioKey = '';
@@ -4005,6 +4284,9 @@
 
       try {
         const transcript = safeText(await captureSpeechFast('en-US'));
+        if (transcript) {
+          state.readerSessionSpokenChars += transcript.length;
+        }
         const score = calculateSpeechMatchPercent(card.english, transcript);
         state.readerScores.push(score);
         state.readerCurrentScore = score;
@@ -4060,7 +4342,7 @@
     });
 
     els.shelfViewport?.addEventListener('wheel', (event) => {
-      if (isHomeLevel() && state.homeIntroDismissed) return;
+      if ((isHomeLevel() && state.homeIntroDismissed) || isStatsLevel()) return;
       if (isOverlayOpen()) return;
       const deltaY = Number(event.deltaY) || 0;
       if (Math.abs(deltaY) < 4) return;
@@ -4070,7 +4352,7 @@
     }, { passive: false });
 
     els.shelfViewport?.addEventListener('touchstart', (event) => {
-      if (isHomeLevel() && state.homeIntroDismissed) return;
+      if ((isHomeLevel() && state.homeIntroDismissed) || isStatsLevel()) return;
       const touch = event.touches?.[0];
       if (!touch) return;
       state.shelfTouchStartX = Number(touch.clientX) || 0;
@@ -4079,7 +4361,7 @@
     }, { passive: true });
 
     els.shelfViewport?.addEventListener('touchmove', (event) => {
-      if (isHomeLevel() && state.homeIntroDismissed) return;
+      if ((isHomeLevel() && state.homeIntroDismissed) || isStatsLevel()) return;
       if (isOverlayOpen()) return;
       const touch = event.touches?.[0];
       if (!touch) return;
@@ -4092,7 +4374,7 @@
     }, { passive: false });
 
     els.shelfViewport?.addEventListener('touchend', (event) => {
-      if (isHomeLevel() && state.homeIntroDismissed) return;
+      if ((isHomeLevel() && state.homeIntroDismissed) || isStatsLevel()) return;
       if (isOverlayOpen()) return;
       const touch = event.changedTouches?.[0];
       if (!touch) return;
@@ -4428,10 +4710,13 @@
     state.gradients = buildGradientPool();
     state.forceAdminUi = readForceAdminUiFlag();
     renderHomePanel();
+    renderStatsPanel();
     renderShelfLoading();
     renderLevelMenu();
     renderAdminUiToggle();
     state.localProfile = readLocalPlayerProfile();
+    loadLocalConsumptionCounters();
+    renderStatsPanel();
 
     const [sessionUser, books] = await Promise.all([
       fetchSessionUser(),
@@ -4439,6 +4724,7 @@
     ]);
 
     state.user = sessionUser;
+    void refreshStatsFromServer().then(() => renderStatsPanel());
     state.isAdmin = Boolean(sessionUser?.isAdmin)
       || isAdminAlias(sessionUser?.username)
       || isAdminAlias(state.localProfile?.username);

@@ -138,6 +138,7 @@ let speakingRealtimeTablesReadyPromise = null;
 let miniBookJsonTablesReadyPromise = null;
 let booksSpeakingStatsTablesReadyPromise = null;
 let userBooksLibraryStatsReadyPromise = null;
+let userBooksConsumptionStatsReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
 let speakingCardsCache = {
@@ -944,6 +945,38 @@ const ensureUserBooksLibraryStatsTable = async () => {
   }
 
   return userBooksLibraryStatsReadyPromise;
+};
+
+const ensureUserBooksConsumptionStatsTable = async () => {
+  if (!pool) return false;
+
+  await ensureUsersAvatarColumn();
+
+  if (!userBooksConsumptionStatsReadyPromise) {
+    userBooksConsumptionStatsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_books_consumption_stats (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          speaking_chars bigint NOT NULL DEFAULT 0,
+          listening_chars bigint NOT NULL DEFAULT 0,
+          practice_seconds bigint NOT NULL DEFAULT 0,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_books_consumption_stats_updated_idx
+        ON public.user_books_consumption_stats (updated_at DESC)
+      `);
+      return true;
+    })().catch((error) => {
+      userBooksConsumptionStatsReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return userBooksConsumptionStatsReadyPromise;
 };
 
 const ensureFlashcardRankingsTable = async () => {
@@ -8803,12 +8836,14 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
     const mode = normalizeBookCompletionMode(req.body?.mode);
     const scorePercent = Math.max(0, Math.min(100, Math.round(Number(req.body?.scorePercent) || 0)));
     const listenedSeconds = Math.max(0, Math.round(Number(req.body?.listenedSeconds) || 0));
+    const speakingChars = Math.max(0, Math.round(Number(req.body?.speakingChars) || 0));
     if (!Number.isInteger(userId) || userId <= 0 || !bookId) {
       res.status(400).json({ success: false, message: 'Dados invalidos para salvar leitura do livro.' });
       return;
     }
 
     await ensureUserBooksLibraryStatsTable();
+    await ensureUserBooksConsumptionStatsTable();
     const book = await findSpeakingBookById(bookId);
 
     const client = await pool.connect();
@@ -8860,6 +8895,19 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
         ]
       );
 
+      if (speakingChars > 0) {
+        await client.query(
+          `INSERT INTO public.user_books_consumption_stats (
+             user_id, speaking_chars, listening_chars, practice_seconds, updated_at
+           ) VALUES ($1, $2, 0, 0, now())
+           ON CONFLICT (user_id)
+           DO UPDATE
+             SET speaking_chars = public.user_books_consumption_stats.speaking_chars + EXCLUDED.speaking_chars,
+                 updated_at = now()`,
+          [userId, speakingChars]
+        );
+      }
+
       const totalsResult = await client.query(
         `SELECT COALESCE(SUM(reads_completed), 0)::int AS total_reads
          FROM public.user_books_library_stats
@@ -8896,6 +8944,129 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
   } catch (error) {
     console.error('Erro ao salvar conclusao de livro:', error);
     res.status(500).json({ success: false, message: 'Nao foi possivel salvar a leitura do livro agora.' });
+  }
+});
+
+app.get('/api/books/stats', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const userId = Number.parseInt(authUser.id, 10);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ success: false, message: 'Usuario invalido.' });
+      return;
+    }
+
+    await ensureUserBooksLibraryStatsTable();
+    await ensureBooksSpeakingStatsTable();
+    await ensureUserBooksConsumptionStatsTable();
+
+    const [totalsResult, speakingStatsResult, consumptionResult] = await Promise.all([
+      pool.query(
+        `SELECT COALESCE(SUM(reads_completed), 0)::int AS total_reads
+         FROM public.user_books_library_stats
+         WHERE user_id = $1`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT pronunciation_samples
+         FROM public.user_books_speaking_stats
+         WHERE user_id = $1
+         ORDER BY updated_at DESC
+         LIMIT 1`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT speaking_chars, listening_chars, practice_seconds
+         FROM public.user_books_consumption_stats
+         WHERE user_id = $1
+         LIMIT 1`,
+        [userId]
+      )
+    ]);
+
+    const samples = normalizeBooksPronunciationSamples(speakingStatsResult.rows[0]?.pronunciation_samples);
+    const generalPronunciationPercent = getBooksPronunciationPercent(samples);
+    const consumption = consumptionResult.rows[0] || {};
+
+    res.json({
+      success: true,
+      stats: {
+        bookReadCount: Math.max(0, Number(totalsResult.rows[0]?.total_reads) || 0),
+        generalPronunciationPercent,
+        speakingChars: Math.max(0, Number(consumption.speaking_chars) || 0),
+        listeningChars: Math.max(0, Number(consumption.listening_chars) || 0),
+        practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0)
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao carregar estatisticas de livros:', error);
+    res.status(500).json({ success: false, message: 'Nao foi possivel carregar estatisticas agora.' });
+  }
+});
+
+app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const userId = Number.parseInt(authUser.id, 10);
+    const listeningCharsDelta = Math.max(0, Math.round(Number(req.body?.listeningCharsDelta) || 0));
+    const practiceSecondsDelta = Math.max(0, Math.round(Number(req.body?.practiceSecondsDelta) || 0));
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ success: false, message: 'Usuario invalido.' });
+      return;
+    }
+    if (!listeningCharsDelta && !practiceSecondsDelta) {
+      res.json({ success: true, stats: null });
+      return;
+    }
+
+    await ensureUserBooksConsumptionStatsTable();
+
+    const result = await pool.query(
+      `INSERT INTO public.user_books_consumption_stats (
+         user_id, speaking_chars, listening_chars, practice_seconds, updated_at
+       ) VALUES ($1, 0, $2, $3, now())
+       ON CONFLICT (user_id)
+       DO UPDATE
+         SET listening_chars = public.user_books_consumption_stats.listening_chars + EXCLUDED.listening_chars,
+             practice_seconds = public.user_books_consumption_stats.practice_seconds + EXCLUDED.practice_seconds,
+             updated_at = now()
+       RETURNING speaking_chars, listening_chars, practice_seconds`,
+      [userId, listeningCharsDelta, practiceSecondsDelta]
+    );
+
+    res.json({
+      success: true,
+      stats: {
+        speakingChars: Math.max(0, Number(result.rows[0]?.speaking_chars) || 0),
+        listeningChars: Math.max(0, Number(result.rows[0]?.listening_chars) || 0),
+        practiceSeconds: Math.max(0, Number(result.rows[0]?.practice_seconds) || 0)
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao salvar listening progress:', error);
+    res.status(500).json({ success: false, message: 'Nao foi possivel salvar listening agora.' });
   }
 });
 
