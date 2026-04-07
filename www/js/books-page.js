@@ -21,6 +21,8 @@
   const READER_FINISH_LINE_ENTER_MS = 260;
   const READER_FREE_READ_MIN_VIEW_MS = 3000;
   const READER_BLOCKED_FLASH_MS = 750;
+  const BOOKS_STATS_SYNC_MS = 5 * 60 * 1000;
+  const BOOKS_PRONUNCIATION_SAMPLE_LIMIT = 300;
   const PREBOOK_OVERLAY_MS = 1000;
   const HOME_REPEAT_OPTIONS = [1, 2, 3, 5, 7, 10];
   const HOME_SPEED_OPTIONS = [0.7, 0.8, 0.9, 1, 1.25, 1.5, 2];
@@ -41,6 +43,7 @@
   const LISTENING_CHARS_TOTAL_KEY = 'playtalk_books_listening_chars_total_v1';
   const PRACTICE_SECONDS_PENDING_KEY = 'playtalk_books_practice_seconds_pending_v1';
   const PRACTICE_SECONDS_TOTAL_KEY = 'playtalk_books_practice_seconds_total_v1';
+  const BOOKS_PRONUNCIATION_PENDING_KEY = 'playtalk_books_pronunciation_pending_v1';
   const HOME_MUSIC_PLAYLIST = [
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen1.mp3',
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen2.mp3',
@@ -296,7 +299,10 @@
     listeningCharsTotal: 0,
     practiceSecondsPending: 0,
     practiceSecondsTotal: 0,
-    listeningFlushInFlight: false
+    listeningFlushInFlight: false,
+    booksPronunciationPending: [],
+    booksPronunciationFlushInFlight: false,
+    booksSyncTimer: 0
   };
 
   function safeText(value) {
@@ -316,6 +322,27 @@
   function writeStoredInt(key, value) {
     try {
       localStorage.setItem(key, String(Math.max(0, Math.round(Number(value) || 0))));
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  function normalizePercent(value) {
+    return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+  }
+
+  function readStoredArray(key) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(key) || '[]');
+      return Array.isArray(raw) ? raw : [];
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  function writeStoredArray(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value : []));
     } catch (_error) {
       // ignore
     }
@@ -422,6 +449,61 @@
     writeStoredInt(PRACTICE_SECONDS_TOTAL_KEY, state.practiceSecondsTotal);
   }
 
+  function loadLocalPronunciationCounters() {
+    state.booksPronunciationPending = readStoredArray(BOOKS_PRONUNCIATION_PENDING_KEY)
+      .map((sample) => normalizePercent(sample))
+      .filter((sample) => Number.isFinite(sample))
+      .slice(-BOOKS_PRONUNCIATION_SAMPLE_LIMIT);
+  }
+
+  function persistLocalPronunciationCounters() {
+    writeStoredArray(BOOKS_PRONUNCIATION_PENDING_KEY, state.booksPronunciationPending);
+  }
+
+  function mergeStatsWithPendingPronunciation(stats) {
+    const nextStats = stats && typeof stats === 'object'
+      ? { ...stats }
+      : {};
+    const pendingSamples = Array.isArray(state.booksPronunciationPending)
+      ? state.booksPronunciationPending
+      : [];
+
+    if (!pendingSamples.length) {
+      nextStats.pronunciationSamplesCount = Math.max(0, Number(nextStats.pronunciationSamplesCount) || 0);
+      nextStats.generalPronunciationPercent = normalizePercent(nextStats.generalPronunciationPercent);
+      return nextStats;
+    }
+
+    const savedCount = Math.max(0, Number(nextStats.pronunciationSamplesCount) || 0);
+    const savedAverage = normalizePercent(nextStats.generalPronunciationPercent);
+    const pendingSum = pendingSamples.reduce((total, sample) => total + normalizePercent(sample), 0);
+    const mergedCount = savedCount + pendingSamples.length;
+    const mergedAverage = mergedCount > 0
+      ? Math.round(((savedAverage * savedCount) + pendingSum) / mergedCount)
+      : 0;
+
+    nextStats.pronunciationSamplesCount = mergedCount;
+    nextStats.generalPronunciationPercent = mergedAverage;
+    nextStats.latestPronunciationPercent = pendingSamples[pendingSamples.length - 1];
+    return nextStats;
+  }
+
+  function setStatsState(stats) {
+    state.stats = mergeStatsWithPendingPronunciation(stats);
+    return state.stats;
+  }
+
+  function addPendingPronunciationSample(percent) {
+    const normalized = normalizePercent(percent);
+    state.booksPronunciationPending = [
+      ...(Array.isArray(state.booksPronunciationPending) ? state.booksPronunciationPending : []),
+      normalized
+    ].slice(-BOOKS_PRONUNCIATION_SAMPLE_LIMIT);
+    persistLocalPronunciationCounters();
+    setStatsState(state.stats || {});
+    renderStatsPanel();
+  }
+
   function addListeningProgress(englishText, practiceSecondsDelta = 0) {
     const english = safeText(englishText);
     const charsDelta = english ? english.length : 0;
@@ -442,7 +524,7 @@
   }
 
   async function flushListeningProgressIfNeeded(force = false) {
-    if (!state.user?.id) return false;
+    if (!state.user?.id || navigator.onLine === false) return false;
     if (state.listeningFlushInFlight) return false;
     const pendingChars = Math.max(0, Number(state.listeningCharsPending) || 0);
     const pendingSeconds = Math.max(0, Number(state.practiceSecondsPending) || 0);
@@ -471,7 +553,7 @@
       state.practiceSecondsPending = 0;
       persistLocalConsumptionCounters();
       if (payload?.stats) {
-        state.stats = { ...(state.stats || {}), ...(payload.stats || {}) };
+        setStatsState({ ...(state.stats || {}), ...(payload.stats || {}) });
         if (state.user?.id && (state.stats.bookReadCount == null || state.stats.generalPronunciationPercent == null)) {
           void refreshStatsFromServer();
         }
@@ -485,6 +567,58 @@
     } finally {
       state.listeningFlushInFlight = false;
     }
+  }
+
+  async function flushBooksPronunciationIfNeeded(force = false) {
+    if (!state.user?.id || navigator.onLine === false) return false;
+    if (state.booksPronunciationFlushInFlight) return false;
+
+    const pendingSamples = Array.isArray(state.booksPronunciationPending)
+      ? state.booksPronunciationPending.slice(-BOOKS_PRONUNCIATION_SAMPLE_LIMIT)
+      : [];
+    if (!pendingSamples.length) return false;
+    if (!force && pendingSamples.length < 1) return false;
+
+    state.booksPronunciationFlushInFlight = true;
+    try {
+      const response = await fetch(buildApiUrl('/api/books/training/complete'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          bookId: safeText(state.readerBookId || state.modeBookId || ''),
+          pronunciationPercents: pendingSamples
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        return false;
+      }
+      state.booksPronunciationPending = [];
+      persistLocalPronunciationCounters();
+      setStatsState({ ...(state.stats || {}), ...(payload.stats || {}) });
+      renderStatsPanel();
+      return true;
+    } catch (_error) {
+      return false;
+    } finally {
+      state.booksPronunciationFlushInFlight = false;
+    }
+  }
+
+  async function flushBooksSyncIfNeeded(force = false) {
+    await Promise.allSettled([
+      flushListeningProgressIfNeeded(force),
+      flushBooksPronunciationIfNeeded(force)
+    ]);
+  }
+
+  function startBooksSyncTimer() {
+    if (state.booksSyncTimer) return;
+    state.booksSyncTimer = window.setInterval(() => {
+      if (!state.user?.id || navigator.onLine === false) return;
+      void flushBooksSyncIfNeeded(true);
+    }, BOOKS_STATS_SYNC_MS);
   }
 
   function loadHomeAudioDurationSeconds(source) {
@@ -1450,7 +1584,7 @@
       if (!response.ok || !payload?.success) {
         return null;
       }
-      state.stats = payload.stats || null;
+      setStatsState(payload.stats || null);
       return state.stats;
     } catch (_error) {
       return null;
@@ -4131,12 +4265,7 @@
     const token = state.readerFinishToken;
     const activeBook = findActiveReaderBook();
     const sessionPronunciationPercent = calculateReaderAverageScore();
-    const completionPromise = postReaderBookCompletion(activeBook, {
-      mode: state.readerMode,
-      scorePercent: sessionPronunciationPercent,
-      listenedSeconds: Math.round(state.readerSessionListenedMs / 1000),
-      speakingChars: state.readerSessionSpokenChars
-    });
+    let completionPromise = null;
 
     if (els.reader) {
       els.reader.classList.add('is-finishing');
@@ -4150,6 +4279,16 @@
     if (token !== state.readerFinishToken || !state.readerOpen) return;
 
     triggerReaderFinishFlash();
+
+    await flushBooksPronunciationIfNeeded(true);
+    if (token !== state.readerFinishToken || !state.readerOpen) return;
+
+    completionPromise = postReaderBookCompletion(activeBook, {
+      mode: state.readerMode,
+      scorePercent: sessionPronunciationPercent,
+      listenedSeconds: Math.round(state.readerSessionListenedMs / 1000),
+      speakingChars: state.readerSessionSpokenChars
+    });
 
     const completionPayload = await completionPromise;
     if (token !== state.readerFinishToken || !state.readerOpen) return;
@@ -4515,6 +4654,7 @@
         }
         const score = calculateSpeechMatchPercent(card.english, transcript);
         state.readerScores.push(score);
+        addPendingPronunciationSample(score);
         state.readerCurrentScore = score;
         updateReaderPronPercent();
         setReaderTrainingStatus(`${state.readerMode === 'listening-training' ? 'Listening' : 'Speaking'}: ${formatReaderScoreValue(score)}`);
@@ -4950,6 +5090,20 @@
       state.shelfIndex = clampShelfIndex(state.shelfIndex);
       void scrollShelfToIndex(state.shelfIndex, false);
     });
+
+    window.addEventListener('online', () => {
+      void flushBooksSyncIfNeeded(true);
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        void flushBooksSyncIfNeeded(true);
+      }
+    });
+
+    window.addEventListener('pagehide', () => {
+      void flushBooksSyncIfNeeded(true);
+    });
   }
 
   async function init() {
@@ -4967,6 +5121,7 @@
     renderAdminUiToggle();
     state.localProfile = readLocalPlayerProfile();
     loadLocalConsumptionCounters();
+    loadLocalPronunciationCounters();
     renderStatsPanel();
 
     const [sessionUser, books] = await Promise.all([
@@ -4975,6 +5130,7 @@
     ]);
 
     state.user = sessionUser;
+    startBooksSyncTimer();
     void refreshStatsFromServer().then(() => renderStatsPanel());
     state.isAdmin = Boolean(sessionUser?.isAdmin)
       || isAdminAlias(sessionUser?.username)
