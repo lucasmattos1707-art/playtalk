@@ -398,6 +398,7 @@
       align-items: center;
       justify-content: center;
       perspective: 1300px;
+      margin-top: 30px;
     }
 
     .books-home-cover {
@@ -408,7 +409,7 @@
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      border: 0;
+      border: 1px solid rgba(255, 255, 255, 0.94);
       box-shadow:
         0 34px 70px rgba(0, 0, 0, 0.54),
         18px 0 28px rgba(0, 0, 0, 0.16);
@@ -442,16 +443,18 @@
       display: flex;
       align-items: stretch;
       justify-content: center;
+      padding-top: 30px;
     }
 
     .books-home-text-panel {
       width: 100%;
-      min-height: 0;
-      max-height: 25vh;
+      min-height: 13vh;
+      height: 13vh;
+      max-height: 13vh;
       border-radius: 0;
-      padding: clamp(14px, 2.4vh, 22px);
+      padding: clamp(10px, 1.6vh, 14px);
       background: transparent;
-      border: 0;
+      border: 1px solid rgba(255, 255, 255, 0.94);
       box-shadow: none;
       overflow: auto;
       display: flex;
@@ -460,7 +463,7 @@
       text-align: center;
       white-space: pre-line;
       font-family: "BooksReading", "Georgia", serif;
-      font-size: clamp(24px, 4.2vw, 37px);
+      font-size: clamp(20px, 3.4vw, 30px);
       line-height: 1.14;
       letter-spacing: 0.01em;
       color: rgba(248, 249, 252, 0.98);
@@ -476,75 +479,35 @@
       min-height: 0;
       display: grid;
       align-content: end;
-      gap: 12px;
-      padding: 0 20px 20px;
-      transform: translateY(-20px);
+      gap: 2px;
+      padding: 0 20px 14px;
+      transform: none;
     }
 
     .player-books {
-      min-height: 62px;
-      display: grid;
-      grid-template-columns: auto 1fr;
+      min-height: 3vh;
+      height: 3vh;
+      display: block;
       align-items: center;
-      gap: 14px;
-      padding: 14px 16px;
+      padding: 2px 4px;
       border-radius: 0;
       background: transparent;
       border: 1px solid rgba(255, 255, 255, 0.94);
       box-shadow: none;
     }
 
-    .player-books__play-btn {
-      width: 52px;
-      height: 52px;
-      border-radius: 0;
-      border: 1px solid rgba(255, 255, 255, 0.94);
-      background: transparent;
-      color: #ffffff;
-      display: grid;
-      place-items: center;
-      cursor: pointer;
-      transition: transform 160ms ease, opacity 160ms ease;
-    }
-
-    .player-books__play-btn:hover:not(:disabled) {
-      transform: translateY(-1px);
-    }
-
-    .player-books__play-btn:disabled {
-      opacity: 0.55;
-      cursor: wait;
-    }
-
-    .player-books__play-btn svg {
-      width: 22px;
-      height: 22px;
-      display: block;
-    }
-
     .player-books__progress {
+      width: 100%;
+      height: 100%;
       min-width: 0;
-      display: grid;
-      gap: 8px;
-      padding: 10px 12px;
-      border: 1px solid rgba(255, 255, 255, 0.94);
-    }
-
-    .player-books__progress-meta {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      font-size: 12px;
-      color: rgba(233, 239, 255, 0.72);
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
+      padding: 0;
+      border: 0;
     }
 
     .player-books__progress-track {
       width: 100%;
-      height: 8px;
-      border-radius: 999px;
+      height: 100%;
+      border-radius: 0;
       background: rgba(255, 255, 255, 0.09);
       overflow: hidden;
       position: relative;
@@ -562,11 +525,12 @@
     .books-home-toolbar {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
+      gap: 6px;
     }
 
     .books-home-control-btn {
-      min-height: 54px;
+      min-height: 22px;
+      padding: 4px 6px;
       border-radius: 0;
       border: 1px solid rgba(255, 255, 255, 0.94);
       background: transparent;
@@ -585,13 +549,13 @@
 
     .books-home-control-btn svg,
     .books-home-control-btn img {
-      width: 24px;
-      height: 24px;
+      width: 14px;
+      height: 14px;
       display: block;
     }
 
     .books-home-control-btn span {
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 800;
       letter-spacing: 0.02em;
     }
@@ -1960,41 +1924,32 @@
       }
 
       .books-home-text-panel {
-        height: 100%;
-        max-height: none;
-        font-size: clamp(22px, 6vw, 29px);
-        padding: 14px 16px;
+        min-height: 13vh;
+        height: 13vh;
+        max-height: 13vh;
+        font-size: clamp(18px, 4.8vw, 24px);
+        padding: 10px 12px;
       }
 
       .books-home-footer {
         height: 100%;
-        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-rows: minmax(0, 3vh) minmax(0, 22px);
         align-content: stretch;
-        gap: 10px;
-        padding: 0 16px 16px;
+        gap: 2px;
+        padding: 0 16px 12px;
       }
 
       .player-books {
-        min-height: 0;
-        height: 100%;
-        gap: 12px;
-        padding: 12px 14px;
-      }
-
-      .player-books__play-btn {
-        width: 48px;
-        height: 48px;
-      }
-
-      .player-books__progress-meta {
-        font-size: 11px;
+        min-height: 3vh;
+        height: 3vh;
+        padding: 2px 4px;
       }
 
       .books-home-toolbar {
         min-height: 0;
         height: 100%;
         align-items: stretch;
-        gap: 8px;
+        gap: 6px;
       }
 
       .books-home-control-btn {
@@ -2069,14 +2024,7 @@
             </div>
             <div class="books-home-footer" id="booksHomeControls">
               <div class="player-books">
-                <button class="player-books__play-btn" id="playerBooksPlayPauseBtn" type="button" aria-label="Pausar ou retomar reproducao">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5h3v14H8zm5 0h3v14h-3z"/></svg>
-                </button>
                 <div class="player-books__progress">
-                  <div class="player-books__progress-meta">
-                    <span id="playerBooksProgressLabel">Livro</span>
-                    <span id="playerBooksProgressValue">0%</span>
-                  </div>
                   <div class="player-books__progress-track" aria-hidden="true">
                     <div class="player-books__progress-fill" id="playerBooksProgressFill"></div>
                   </div>
@@ -2093,7 +2041,7 @@
                   <span id="booksHomeSpeedLabel">1.00x</span>
                 </button>
                 <button class="books-home-control-btn" id="booksHomeLanguageBtn" type="button" aria-label="Mostrar ou ocultar texto">
-                  <img id="booksHomeLanguageIcon" src="/arquivos-codex/icones/ingles.svg" alt="Ingles">
+                  <img id="booksHomeLanguageIcon" src="/arquivos-codex/icones/portugues.svg" alt="Portugues">
                 </button>
               </div>
             </div>

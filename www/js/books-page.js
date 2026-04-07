@@ -67,9 +67,6 @@
     homeTextPanel: document.getElementById('booksHomeTextPanel'),
     homeNextTextPanel: document.getElementById('booksHomeNextTextPanel'),
     homeControls: document.getElementById('booksHomeControls'),
-    playerBooksPlayPauseBtn: document.getElementById('playerBooksPlayPauseBtn'),
-    playerBooksProgressLabel: document.getElementById('playerBooksProgressLabel'),
-    playerBooksProgressValue: document.getElementById('playerBooksProgressValue'),
     playerBooksProgressFill: document.getElementById('playerBooksProgressFill'),
     homeRepeatBtn: document.getElementById('booksHomeRepeatBtn'),
     homeRepeatLabel: document.getElementById('booksHomeRepeatLabel'),
@@ -203,7 +200,7 @@
     homeCurrentCardIndex: 0,
     homeCurrentCardText: '',
     homeCurrentCardTextPt: '',
-    homeTextMode: 'none',
+    homeTextMode: 'english',
     homeSpeedIndex: 0,
     homeProgressRatio: 0,
     homeProgressLabel: '',
@@ -654,12 +651,6 @@
         alt: 'Portugues'
       };
     }
-    if (state.homeTextMode === 'portuguese') {
-      return {
-        src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M6 12h12" stroke="%239aa3b2" stroke-width="2.4" stroke-linecap="round"/></svg>',
-        alt: 'Ocultar texto'
-      };
-    }
     return {
       src: '/arquivos-codex/icones/ingles.svg',
       alt: 'Ingles'
@@ -712,23 +703,9 @@
     if (els.playerBooksProgressFill) {
       els.playerBooksProgressFill.style.width = `${Math.round(ratio * 1000) / 10}%`;
     }
-    if (els.playerBooksProgressLabel) {
-      els.playerBooksProgressLabel.textContent = safeText(state.homeProgressLabel) || 'Livro';
-    }
-    if (els.playerBooksProgressValue) {
-      els.playerBooksProgressValue.textContent = `${Math.round(ratio * 100)}%`;
-    }
   }
 
   function renderHomeTransportUi() {
-    if (els.playerBooksPlayPauseBtn) {
-      const icon = state.homePaused
-        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l9.8-6.86a1 1 0 0 0 0-1.72L9.5 4.28A1 1 0 0 0 8 5.14Z"/></svg>'
-        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5h3v14H8zm5 0h3v14h-3z"/></svg>';
-      els.playerBooksPlayPauseBtn.innerHTML = icon;
-      els.playerBooksPlayPauseBtn.disabled = !state.homeIntroDismissed;
-      els.playerBooksPlayPauseBtn.setAttribute('aria-label', state.homePaused ? 'Retomar reproducao' : 'Pausar reproducao');
-    }
     if (els.homeRepeatLabel) {
       els.homeRepeatLabel.textContent = `${getHomeRepeatSeconds()}s`;
     }
@@ -1034,12 +1011,10 @@
   }
 
   function toggleHomeTextMode() {
-    if (state.homeTextMode === 'none') {
-      state.homeTextMode = 'english';
-    } else if (state.homeTextMode === 'english') {
+    if (state.homeTextMode === 'english') {
       state.homeTextMode = 'portuguese';
     } else {
-      state.homeTextMode = 'none';
+      state.homeTextMode = 'english';
     }
     renderHomePanel();
   }
@@ -3392,10 +3367,6 @@
 
     els.homeStartBtn?.addEventListener('click', () => {
       startHomeSleepPlayback();
-    });
-
-    els.playerBooksPlayPauseBtn?.addEventListener('click', () => {
-      void toggleHomePausePlayback();
     });
 
     els.homeRepeatBtn?.addEventListener('click', () => {
