@@ -53,7 +53,11 @@
       opacity: 0;
       pointer-events: none;
       z-index: 1;
-      transition: opacity 320ms ease, background-image 320ms ease;
+      transition: opacity 1000ms ease;
+    }
+
+    .books-home-book-bg.is-top {
+      z-index: 2;
     }
 
     .books-home-book-bg.is-visible {
@@ -572,7 +576,7 @@
       align-content: end;
       gap: 2px;
       padding: 0 20px 0;
-      transform: translateY(-56px);
+      transform: translateY(-66px);
       width: 100%;
       margin-top: auto;
       background: transparent;
@@ -617,7 +621,7 @@
       height: 100%;
       border-radius: 0;
       background: rgba(255, 255, 255, 0.09);
-      overflow: hidden;
+      overflow: visible;
       position: relative;
       border: 0;
       cursor: pointer;
@@ -630,6 +634,20 @@
       border-radius: inherit;
       background: linear-gradient(90deg, #9fd2ff 0%, #ffffff 100%);
       transition: width 120ms linear;
+      position: relative;
+    }
+
+    .player-books__progress-thumb {
+      position: absolute;
+      top: 50%;
+      right: 0;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #ffffff;
+      box-shadow: 0 0 0 1px rgba(159, 210, 255, 0.3);
+      transform: translate(50%, -50%);
+      pointer-events: none;
     }
 
     .books-home-toolbar {
@@ -2085,9 +2103,10 @@
     }
   </style>
 </head>
-<body>
-  <div class="books-home-book-bg" id="booksHomeBookBackground" aria-hidden="true"></div>
-  <div class="books-stars" aria-hidden="true">
+  <body>
+    <div class="books-home-book-bg books-home-book-bg--primary is-top" id="booksHomeBookBackgroundPrimary" aria-hidden="true"></div>
+    <div class="books-home-book-bg books-home-book-bg--secondary" id="booksHomeBookBackgroundSecondary" aria-hidden="true"></div>
+    <div class="books-stars" aria-hidden="true">
     <div class="books-stars__layer" id="stars"></div>
     <div class="books-stars__layer" id="stars2"></div>
     <div class="books-stars__layer" id="stars3"></div>
@@ -2142,10 +2161,10 @@
             <div class="books-home-footer" id="booksHomeControls">
               <div class="player-books">
                 <div class="player-books__progress">
-                  <div class="player-books__progress-track" id="playerBooksProgressTrack" aria-label="Linha do tempo do livro" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
-                    <div class="player-books__progress-fill" id="playerBooksProgressFill"></div>
-                    <div class="player-books__time" id="playerBooksProgressTime">0:00 / 0:00</div>
-                  </div>
+                    <div class="player-books__progress-track" id="playerBooksProgressTrack" aria-label="Linha do tempo do livro" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+                      <div class="player-books__progress-fill" id="playerBooksProgressFill"><span class="player-books__progress-thumb" aria-hidden="true"></span></div>
+                      <div class="player-books__time" id="playerBooksProgressTime">0:00 / 0:00</div>
+                    </div>
                 </div>
               </div>
               <div class="books-home-toolbar">

@@ -54,7 +54,8 @@
 
   const els = {
     page: document.querySelector('.books-page'),
-    homeBookBackground: document.getElementById('booksHomeBookBackground'),
+    homeBookBackgroundPrimary: document.getElementById('booksHomeBookBackgroundPrimary'),
+    homeBookBackgroundSecondary: document.getElementById('booksHomeBookBackgroundSecondary'),
     avatarImage: document.getElementById('booksAccountAvatarImage'),
     avatarFallback: document.getElementById('booksAccountAvatarFallback'),
     avatarName: document.getElementById('booksAccountName'),
@@ -225,11 +226,14 @@
     homeProgressElapsedSeconds: 0,
     homeProgressTotalSeconds: 0,
     homePaused: false,
+    homeProgressDragging: false,
     homeAudioResolver: null,
     homeAudioInterrupted: false,
     homeSkipRequested: false,
     homeSeekTarget: null,
     homeTransitioning: false,
+    homeBackgroundUrl: '',
+    homeBackgroundLayer: 'primary',
     homeTouchStartX: 0,
     homeTouchStartY: 0,
     homeRepeatIndex: 0,
@@ -901,6 +905,20 @@
     seekHomeProgressFromRatio((Number(clientX) - rect.left) / rect.width);
   }
 
+  function startHomeProgressDrag(clientX) {
+    state.homeProgressDragging = true;
+    seekHomeProgressFromClientX(clientX);
+  }
+
+  function updateHomeProgressDrag(clientX) {
+    if (!state.homeProgressDragging) return;
+    seekHomeProgressFromClientX(clientX);
+  }
+
+  function stopHomeProgressDrag() {
+    state.homeProgressDragging = false;
+  }
+
   function renderHomeTransportUi() {
     if (els.homeRepeatLabel) {
       els.homeRepeatLabel.textContent = `${getHomeRepeatSeconds()}s`;
@@ -941,10 +959,16 @@
 
   function applyHomeBookBackground(session = state.homeCurrentSession) {
     const backgroundUrl = chooseReaderBackgroundUrl(session?.book || session || null);
+    const primary = els.homeBookBackgroundPrimary;
+    const secondary = els.homeBookBackgroundSecondary;
     if (!backgroundUrl) {
-      if (els.homeBookBackground) {
-        els.homeBookBackground.style.backgroundImage = 'none';
-        els.homeBookBackground.classList.remove('is-visible');
+      [primary, secondary].forEach((layer) => {
+        if (!layer) return;
+        layer.style.backgroundImage = 'none';
+        layer.classList.remove('is-visible', 'is-top');
+      });
+      if (primary) {
+        primary.classList.add('is-top');
       }
       if (els.homePanel) {
         els.homePanel.style.background = 'transparent';
@@ -955,9 +979,22 @@
       return;
     }
     const homeBackground = `url(${safeCssUrl(backgroundUrl)}) center / cover no-repeat`;
-    if (els.homeBookBackground) {
-      els.homeBookBackground.style.backgroundImage = `url(${safeCssUrl(backgroundUrl)})`;
-      els.homeBookBackground.classList.add('is-visible');
+    const backgroundCss = `url(${safeCssUrl(backgroundUrl)})`;
+    if (primary && secondary) {
+      if (state.homeBackgroundUrl !== backgroundUrl) {
+        const activeLayer = state.homeBackgroundLayer === 'secondary' ? secondary : primary;
+        const nextLayer = state.homeBackgroundLayer === 'secondary' ? primary : secondary;
+        nextLayer.style.backgroundImage = backgroundCss;
+        nextLayer.classList.add('is-top', 'is-visible');
+        activeLayer.classList.remove('is-top');
+        activeLayer.classList.remove('is-visible');
+        state.homeBackgroundLayer = state.homeBackgroundLayer === 'secondary' ? 'primary' : 'secondary';
+        state.homeBackgroundUrl = backgroundUrl;
+      } else {
+        const activeLayer = state.homeBackgroundLayer === 'secondary' ? secondary : primary;
+        activeLayer.style.backgroundImage = backgroundCss;
+        activeLayer.classList.add('is-top', 'is-visible');
+      }
     }
     if (els.homePanel) {
       els.homePanel.style.background = homeBackground;
@@ -986,7 +1023,8 @@
     if (els.homeControls) {
       els.homeControls.hidden = !state.homeIntroDismissed;
     }
-    applyHomeBookBackground(state.homeCurrentSession);
+    const backgroundSession = (state.homeTransitioning && state.homeNextSession) ? state.homeNextSession : state.homeCurrentSession;
+    applyHomeBookBackground(backgroundSession);
     renderHomeScreen(els.homeCover, els.homeTextPanel, state.homeCurrentSession, state.homeCurrentCardIndex, {
       hideText: !state.homeTextVisible
     });
@@ -1579,6 +1617,8 @@
     state.homeCurrentCardTextPt = '';
     state.homeTextVisible = true;
     state.homeTextRevealToken = 0;
+    state.homeBackgroundUrl = '';
+    state.homeBackgroundLayer = 'primary';
     state.homeTransitioning = false;
     renderHomePanel();
     if (state.homeMusicEnabled) {
@@ -1616,6 +1656,8 @@
       state.homeCurrentCardTextPt = '';
       state.homeTextVisible = true;
       state.homeTextRevealToken = 0;
+      state.homeBackgroundUrl = '';
+      state.homeBackgroundLayer = 'primary';
       setHomeProgress('Livro', 0);
     }
     interruptHomeAudioPlayback();
@@ -3803,16 +3845,28 @@
       toggleHomeTextMode();
     });
 
-    els.playerBooksProgressTrack?.addEventListener('click', (event) => {
-      seekHomeProgressFromClientX(event.clientX);
+    els.playerBooksProgressTrack?.addEventListener('pointerdown', (event) => {
+      if (typeof event.button === 'number' && event.button !== 0) return;
+      startHomeProgressDrag(event.clientX);
+      try {
+        els.playerBooksProgressTrack?.setPointerCapture(event.pointerId);
+      } catch (_error) {
+        // ignore
+      }
+      event.preventDefault();
     });
 
-    els.playerBooksProgressTrack?.addEventListener('touchstart', (event) => {
-      const touch = event.touches?.[0];
-      if (!touch) return;
-      seekHomeProgressFromClientX(touch.clientX);
-      event.preventDefault();
-    }, { passive: false });
+    window.addEventListener('pointermove', (event) => {
+      updateHomeProgressDrag(event.clientX);
+    });
+
+    window.addEventListener('pointerup', () => {
+      stopHomeProgressDrag();
+    });
+
+    window.addEventListener('pointercancel', () => {
+      stopHomeProgressDrag();
+    });
 
     els.playerBooksProgressTrack?.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'Home' && event.key !== 'End') return;
