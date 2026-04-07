@@ -89,6 +89,9 @@
     shelfViewport: document.getElementById('booksShelfViewport'),
     shelfLoading: document.getElementById('booksShelfLoading'),
     statsPanel: document.getElementById('booksStatsPanel'),
+    statsIcon: document.getElementById('booksStatsIcon'),
+    statsLabel: document.getElementById('booksStatsLabel'),
+    statsValue: document.getElementById('booksStatsValue'),
     statsLine: document.getElementById('booksStatsLine'),
     homePanel: document.getElementById('booksHomePanel'),
     homeShell: document.getElementById('booksHomeShell'),
@@ -363,6 +366,44 @@
     const minutes = Math.floor((seconds % 3600) / 60);
     if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m`;
     return `${minutes}m`;
+  }
+
+  function getStatsMetricIconMarkup(kind) {
+    switch (safeText(kind)) {
+      case 'books':
+        return `
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" d="M12 16.5c0-2.49 2.01-4.5 4.5-4.5H31v39H16.5A4.5 4.5 0 0 1 12 46.5zm40 0c0-2.49-2.01-4.5-4.5-4.5H33v39h14.5a4.5 4.5 0 0 0 4.5-4.5zM31 15h2"/>
+          </svg>
+        `;
+      case 'listening':
+        return `
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M8 35c4.5 0 4.5-16 9-16s4.5 26 9 26s4.5-34 9-34s4.5 42 9 42s4.5-18 9-18"/>
+          </svg>
+        `;
+      case 'speaking':
+        return `
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M32 40a8 8 0 0 0 8-8V19a8 8 0 1 0-16 0v13a8 8 0 0 0 8 8zm13-9a13 13 0 0 1-26 0M32 44v10m-8 0h16"/>
+          </svg>
+        `;
+      case 'pronunciation':
+        return `
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M18 34l9 9 19-21"/>
+            <circle cx="32" cy="32" r="22" fill="none" stroke="currentColor" stroke-width="3.4"/>
+          </svg>
+        `;
+      case 'practice-time':
+      default:
+        return `
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="21" fill="none" stroke="currentColor" stroke-width="3.4"/>
+            <path fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M32 20v13l8 5M24 8h16"/>
+          </svg>
+        `;
+    }
   }
 
   function buildStarShadowMap(count, color = '#FFF') {
@@ -1634,9 +1675,24 @@
   function buildStatsRotationItems() {
     if (!state.user?.id) {
       return [
-        'Entre para ver estatisticas.',
-        `Listening ${formatCountCompact(state.listeningCharsTotal)}`,
-        `Tempo de pratica ${formatDurationCompact(state.practiceSecondsTotal)}`
+        {
+          kind: 'practice-time',
+          label: 'Estatisticas',
+          value: '--',
+          hint: 'Entre para ver suas metricas.'
+        },
+        {
+          kind: 'listening',
+          label: 'Listening',
+          value: formatCountCompact(state.listeningCharsTotal),
+          hint: 'Contador local do aparelho.'
+        },
+        {
+          kind: 'practice-time',
+          label: 'Tempo de pratica',
+          value: formatDurationCompact(state.practiceSecondsTotal),
+          hint: 'Tempo acumulado localmente.'
+        }
       ];
     }
 
@@ -1649,11 +1705,36 @@
     const practiceSeconds = Math.max(0, Number(state.practiceSecondsTotal) || 0);
 
     return [
-      `${booksRead} Livros lidos`,
-      `Pronuncia media ${pronAvg}%`,
-      `Tempo de pratica ${formatDurationCompact(practiceSeconds)}`,
-      `Speaking ${formatCountCompact(speakingChars)}`,
-      `Listening ${formatCountCompact(listeningChars)}`
+      {
+        kind: 'practice-time',
+        label: 'Tempo de pratica',
+        value: formatDurationCompact(practiceSeconds),
+        hint: 'Quanto voce treinou no total.'
+      },
+      {
+        kind: 'books',
+        label: 'Livros lidos',
+        value: `${booksRead}`,
+        hint: 'Livros concluidos no Books.'
+      },
+      {
+        kind: 'listening',
+        label: 'Listening',
+        value: formatCountCompact(listeningChars),
+        hint: 'Caracteres ouvidos no Books.'
+      },
+      {
+        kind: 'speaking',
+        label: 'Speaking',
+        value: formatCountCompact(speakingChars),
+        hint: 'Caracteres falados no treino.'
+      },
+      {
+        kind: 'pronunciation',
+        label: 'Pronuncia media',
+        value: `${pronAvg}%`,
+        hint: 'Media geral das ultimas avaliacoes.'
+      }
     ];
   }
 
@@ -1687,12 +1768,27 @@
 
     const items = buildStatsRotationItems();
     const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
-    const line = safeItems.length
-      ? safeText(safeItems[state.statsRotationIndex % safeItems.length])
-      : 'Carregando...';
-    if (els.statsLine && line && state.statsLastRenderedLine !== line) {
-      state.statsLastRenderedLine = line;
-      els.statsLine.textContent = line;
+    const metric = safeItems.length
+      ? safeItems[state.statsRotationIndex % safeItems.length]
+      : null;
+    const label = safeText(metric?.label) || 'Estatisticas';
+    const value = safeText(metric?.value) || '...';
+    const hint = safeText(metric?.hint) || 'Carregando...';
+    const signature = `${safeText(metric?.kind)}|${label}|${value}|${hint}`;
+    if (state.statsLastRenderedLine !== signature) {
+      state.statsLastRenderedLine = signature;
+      if (els.statsIcon) {
+        els.statsIcon.innerHTML = getStatsMetricIconMarkup(metric?.kind);
+      }
+      if (els.statsLabel) {
+        els.statsLabel.textContent = label;
+      }
+      if (els.statsValue) {
+        els.statsValue.textContent = value;
+      }
+      if (els.statsLine) {
+        els.statsLine.textContent = hint;
+      }
     }
   }
 

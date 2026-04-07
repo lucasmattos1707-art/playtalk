@@ -371,6 +371,89 @@
       display: flex;
     }
 
+    .books-stats-card {
+      width: min(680px, calc(100vw - 32px));
+      min-height: min(720px, calc(100vh - 48px));
+      padding: 42px 28px 46px;
+      border-radius: 40px;
+      border: 1.5px solid rgba(124, 228, 255, 0.7);
+      background: rgba(7, 15, 27, 0.04);
+      box-shadow:
+        0 0 24px rgba(91, 218, 255, 0.18),
+        0 0 64px rgba(53, 136, 255, 0.12),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(18px);
+      align-content: center;
+      gap: 26px;
+    }
+
+    .books-stats-icon-shell {
+      width: min(330px, 62vw);
+      height: min(330px, 62vw);
+      border-radius: 36px;
+      border: 1px solid rgba(114, 226, 255, 0.42);
+      background: rgba(255, 255, 255, 0.01);
+      display: grid;
+      place-items: center;
+      box-shadow:
+        inset 0 0 30px rgba(88, 211, 255, 0.05),
+        0 0 28px rgba(68, 203, 255, 0.14);
+    }
+
+    .books-stats-icon {
+      width: 72%;
+      height: 72%;
+      color: #8cecff;
+      filter:
+        drop-shadow(0 0 10px rgba(107, 230, 255, 0.95))
+        drop-shadow(0 0 24px rgba(107, 230, 255, 0.52))
+        drop-shadow(0 0 44px rgba(77, 132, 255, 0.34));
+      transition: opacity 200ms ease, transform 240ms ease, filter 240ms ease;
+    }
+
+    .books-stats-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .books-stats-tag {
+      margin: 0;
+      color: rgba(225, 251, 255, 0.96);
+      font-size: clamp(26px, 5vw, 38px);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-align: center;
+      text-shadow:
+        0 0 16px rgba(95, 221, 255, 0.38),
+        0 0 30px rgba(62, 141, 255, 0.22);
+    }
+
+    .books-stats-value {
+      margin: 0;
+      color: #ffffff;
+      font-size: clamp(56px, 13vw, 122px);
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      text-align: center;
+      text-shadow:
+        0 0 12px rgba(255, 255, 255, 0.28),
+        0 0 32px rgba(106, 215, 255, 0.18);
+      word-break: break-word;
+    }
+
+    .books-stats-hint {
+      margin: 0;
+      min-height: 20px;
+      color: rgba(199, 221, 233, 0.82);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-align: center;
+    }
+
     .books-home.is-immersive {
       position: fixed;
       inset: 0;
@@ -1519,6 +1602,20 @@
       }
     }
 
+    @media (max-width: 640px) {
+      .books-stats-card {
+        min-height: min(620px, calc(100vh - 28px));
+        padding: 30px 20px 34px;
+        border-radius: 30px;
+      }
+
+      .books-stats-icon-shell {
+        width: min(250px, 64vw);
+        height: min(250px, 64vw);
+        border-radius: 28px;
+      }
+    }
+
     .pre-book-preview {
       display: grid;
       justify-items: center;
@@ -2593,14 +2690,17 @@
       </div>
       <section class="books-stats" id="booksStatsPanel" aria-label="Estatísticas" aria-live="polite">
         <div class="books-home-stage">
-          <div class="books-home-start" id="booksStatsCard" aria-label="Estatísticas do usuario">
-            <div class="books-home-start-visual" aria-hidden="true">
-              <svg viewBox="0 0 64 64" aria-hidden="true">
-                <path fill="currentColor" d="M32 6c10.5 0 19 8.5 19 19S42.5 44 32 44 13 35.5 13 25 21.5 6 32 6m0 6c-7.18 0-13 5.82-13 13s5.82 13 13 13 13-5.82 13-13-5.82-13-13-13zm0 34c13.25 0 24 6.27 24 14v4H8v-4c0-7.73 10.75-14 24-14z"/>
-              </svg>
+          <div class="books-home-start books-stats-card" id="booksStatsCard" aria-label="Estatísticas do usuario">
+            <div class="books-stats-icon-shell" aria-hidden="true">
+              <div class="books-stats-icon" id="booksStatsIcon">
+                <svg viewBox="0 0 64 64" aria-hidden="true">
+                  <path fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" d="M17 11v10m15-10v18m15-18v28M11 49h42"/>
+                </svg>
+              </div>
             </div>
-            <p class="books-home-start-title">Estatísticas</p>
-            <p class="books-home-auth-status" id="booksStatsLine">Carregando...</p>
+            <p class="books-stats-tag" id="booksStatsLabel">Estatísticas</p>
+            <p class="books-stats-value" id="booksStatsValue">...</p>
+            <p class="books-stats-hint" id="booksStatsLine">Carregando...</p>
           </div>
         </div>
       </section>
