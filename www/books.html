@@ -49,6 +49,7 @@
       overflow: hidden;
       pointer-events: none;
       z-index: 2;
+      contain: strict;
     }
 
     .books-home-book-bg {
@@ -84,6 +85,9 @@
       background: transparent;
       box-shadow: var(--star-shadow);
       animation: books-star-rise var(--star-duration) linear infinite;
+      will-change: transform;
+      transform: translate3d(0, 0, 0);
+      backface-visibility: hidden;
     }
 
     .books-stars__layer::after {
@@ -363,7 +367,7 @@
       display: none;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 0;
       z-index: 2;
     }
 
@@ -372,17 +376,24 @@
     }
 
     .books-stats-card {
-      width: min(680px, calc(100vw - 32px));
-      min-height: min(720px, calc(100vh - 48px));
+      inset: 0;
+      left: 0;
+      top: 0;
+      width: 100vw;
+      max-width: none;
+      min-height: 100dvh;
+      height: 100dvh;
       padding: 42px 28px 46px;
-      border-radius: 40px;
+      border-radius: 0;
       border: 1.5px solid rgba(124, 228, 255, 0.7);
-      background: rgba(7, 15, 27, 0.04);
+      background:
+        radial-gradient(circle at 50% 16%, rgba(88, 190, 255, 0.06), transparent 22%),
+        linear-gradient(180deg, rgba(7, 15, 27, 0.2), rgba(4, 9, 18, 0.22));
       box-shadow:
         0 0 24px rgba(91, 218, 255, 0.18),
         0 0 64px rgba(53, 136, 255, 0.12),
         inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(18px);
+      transform: none;
       contain: layout paint;
       isolation: isolate;
       align-content: center;
@@ -446,6 +457,25 @@
         0 0 12px rgba(255, 255, 255, 0.28),
         0 0 32px rgba(106, 215, 255, 0.18);
       word-break: break-word;
+    }
+
+    .books-decimal-value {
+      display: inline-flex;
+      align-items: flex-start;
+      justify-content: center;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .books-decimal-value__main {
+      display: inline-block;
+    }
+
+    .books-decimal-value__fraction {
+      display: inline-block;
+      font-size: 0.88em;
+      line-height: 1.08;
+      padding-top: 0.12em;
     }
 
     .books-stats-hint {
@@ -1608,9 +1638,7 @@
 
     @media (max-width: 640px) {
       .books-stats-card {
-        min-height: min(620px, calc(100vh - 28px));
         padding: 30px 20px 34px;
-        border-radius: 30px;
       }
 
       .books-stats-icon-shell {
@@ -2224,10 +2252,6 @@
       line-height: 1;
     }
 
-    .books-reader-pron-percent.is-whole {
-      font-size: 48.3px;
-    }
-
     .books-reader-lang {
       display: none;
     }
@@ -2282,10 +2306,6 @@
       transform: scale(0.9);
       transition: opacity 140ms ease, transform 140ms ease;
       pointer-events: none;
-    }
-
-    .books-reader-mic-score.is-whole {
-      font-size: 48.3px;
     }
 
     .books-reader-mic-btn.is-showing-score .books-reader-mic-icon {
@@ -2461,6 +2481,14 @@
       text-shadow: 0 6px 20px rgba(0, 0, 0, 0.52);
       opacity: 0;
       transform: translateY(8px);
+    }
+
+    .books-reader-finish-line .books-decimal-value__fraction,
+    .books-reader-pron-percent .books-decimal-value__fraction,
+    .books-reader-mic-score .books-decimal-value__fraction,
+    .books-stats-value .books-decimal-value__fraction {
+      font-size: 0.88em;
+      padding-top: 0.1em;
     }
 
     .books-reader-finish-line.is-visible {

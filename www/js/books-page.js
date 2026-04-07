@@ -23,6 +23,7 @@
   const READER_BLOCKED_FLASH_MS = 750;
   const BOOKS_STATS_SYNC_MS = 5 * 60 * 1000;
   const BOOKS_PRONUNCIATION_SAMPLE_LIMIT = 300;
+  const SCORE_ANIMATION_MS = 1000;
   const PREBOOK_OVERLAY_MS = 1000;
   const HOME_REPEAT_OPTIONS = [1, 2, 3, 5, 7, 10];
   const HOME_SPEED_OPTIONS = [0.7, 0.8, 0.9, 1, 1.25, 1.5, 2];
@@ -71,6 +72,7 @@
     { id: 'stars3', count: 100 }
   ];
   const HOME_AUDIO_DURATION_CACHE = new Map();
+  const NUMBER_ANIMATION_HANDLES = new WeakMap();
 
   const els = {
     page: document.querySelector('.books-page'),
@@ -366,6 +368,79 @@
     const minutes = Math.floor((seconds % 3600) / 60);
     if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m`;
     return `${minutes}m`;
+  }
+
+  function cancelAnimatedNumber(element) {
+    if (!element) return;
+    const frameId = NUMBER_ANIMATION_HANDLES.get(element);
+    if (frameId) {
+      window.cancelAnimationFrame(frameId);
+      NUMBER_ANIMATION_HANDLES.delete(element);
+    }
+  }
+
+  function buildDecimalMarkup(value, options = {}) {
+    const decimals = Math.max(0, Math.min(4, Math.round(Number(options.decimals) || 0)));
+    const suffix = safeText(options.suffix || '');
+    const prefix = safeText(options.prefix || '');
+    const normalized = Number.isFinite(Number(value)) ? Number(value) : 0;
+    const fixed = normalized.toFixed(decimals);
+    const decimalIndex = fixed.indexOf('.');
+    const main = decimalIndex >= 0 ? fixed.slice(0, decimalIndex) : fixed;
+    const fraction = decimalIndex >= 0 ? fixed.slice(decimalIndex) : '';
+    const numberMarkup = `
+      <span class="books-decimal-value">
+        <span class="books-decimal-value__main">${main}</span>
+        ${fraction ? `<span class="books-decimal-value__fraction">${fraction}${suffix}</span>` : `${suffix ? `<span class="books-decimal-value__fraction">${suffix}</span>` : ''}`}
+      </span>
+    `;
+    return prefix ? `${prefix} ${numberMarkup}` : numberMarkup;
+  }
+
+  function setAnimatedDecimalMarkup(element, value, options = {}) {
+    if (!element) return;
+    const numericValue = Number.isFinite(Number(value)) ? Number(value) : 0;
+    element.innerHTML = buildDecimalMarkup(numericValue, options);
+    element.dataset.displayValue = String(numericValue);
+  }
+
+  function animateDecimalMarkup(element, value, options = {}) {
+    if (!element) return Promise.resolve();
+    const targetValue = Number.isFinite(Number(value)) ? Number(value) : 0;
+    const decimals = Math.max(0, Math.min(4, Math.round(Number(options.decimals) || 0)));
+    const factor = 10 ** decimals;
+    const duration = Math.max(0, Number(options.duration) || SCORE_ANIMATION_MS);
+    const rawStartValue = Number(element.dataset.displayValue);
+    const configuredStartValue = Number(options.startValue);
+    const startValue = Number.isFinite(rawStartValue)
+      ? rawStartValue
+      : (Number.isFinite(configuredStartValue) ? configuredStartValue : targetValue);
+    if (duration <= 0 || Math.abs(startValue - targetValue) < (1 / factor)) {
+      cancelAnimatedNumber(element);
+      setAnimatedDecimalMarkup(element, targetValue, options);
+      return Promise.resolve();
+    }
+
+    cancelAnimatedNumber(element);
+
+    return new Promise((resolve) => {
+      const startedAt = performance.now();
+      const step = (now) => {
+        const progress = Math.max(0, Math.min(1, (now - startedAt) / duration));
+        const interpolated = startValue + ((targetValue - startValue) * progress);
+        const rounded = Math.round(interpolated * factor) / factor;
+        setAnimatedDecimalMarkup(element, progress >= 1 ? targetValue : rounded, options);
+        if (progress >= 1) {
+          NUMBER_ANIMATION_HANDLES.delete(element);
+          resolve();
+          return;
+        }
+        const nextFrame = window.requestAnimationFrame(step);
+        NUMBER_ANIMATION_HANDLES.set(element, nextFrame);
+      };
+      const frameId = window.requestAnimationFrame(step);
+      NUMBER_ANIMATION_HANDLES.set(element, frameId);
+    });
   }
 
   function getStatsMetricIconMarkup(kind) {
@@ -1732,7 +1807,8 @@
       {
         kind: 'pronunciation',
         label: 'Pronuncia media',
-        value: `${pronAvg}%`,
+        value: `${formatReaderScoreValue(pronAvg).text}`,
+        scoreValue: formatReaderScoreValue(pronAvg).scaledValue,
         hint: 'Media geral das ultimas avaliacoes.'
       }
     ];
@@ -1774,17 +1850,31 @@
     const label = safeText(metric?.label) || 'Estatisticas';
     const value = safeText(metric?.value) || '...';
     const hint = safeText(metric?.hint) || 'Carregando...';
-    const signature = `${safeText(metric?.kind)}|${label}|${value}|${hint}`;
+    const signature = `${safeText(metric?.kind)}|${label}|${value}|${hint}|${Number(metric?.scoreValue) || 0}`;
     if (state.statsLastRenderedLine !== signature) {
       state.statsLastRenderedLine = signature;
       if (els.statsIcon) {
-        els.statsIcon.innerHTML = getStatsMetricIconMarkup(metric?.kind);
+        const iconKind = safeText(metric?.kind) || 'practice-time';
+        if (els.statsIcon.dataset.kind !== iconKind) {
+          els.statsIcon.dataset.kind = iconKind;
+          els.statsIcon.innerHTML = getStatsMetricIconMarkup(iconKind);
+        }
       }
       if (els.statsLabel) {
         els.statsLabel.textContent = label;
       }
       if (els.statsValue) {
-        els.statsValue.textContent = value;
+        if (metric?.kind === 'pronunciation' && Number.isFinite(Number(metric?.scoreValue))) {
+          void animateDecimalMarkup(els.statsValue, Number(metric.scoreValue), {
+            decimals: 2,
+            duration: SCORE_ANIMATION_MS,
+            startValue: 0
+          });
+        } else {
+          cancelAnimatedNumber(els.statsValue);
+          els.statsValue.textContent = value;
+          delete els.statsValue.dataset.displayValue;
+        }
       }
       if (els.statsLine) {
         els.statsLine.textContent = hint;
@@ -3837,29 +3927,37 @@
       window.clearTimeout(state.readerMicScoreTimer);
       state.readerMicScoreTimer = 0;
     }
+    cancelAnimatedNumber(els.readerMicScore);
     if (els.readerMicBtn) {
       els.readerMicBtn.classList.remove('is-showing-score');
     }
     if (els.readerMicScore) {
-      els.readerMicScore.textContent = '';
-      els.readerMicScore.classList.remove('is-whole');
+      els.readerMicScore.innerHTML = '';
+      delete els.readerMicScore.dataset.displayValue;
     }
   }
 
   function showReaderMicScore(value) {
     if (!els.readerMicBtn || !els.readerMicScore) return;
     const display = formatReaderScoreValue(value);
+    const previousDisplayValue = Number(els.readerMicScore.dataset.displayValue);
     clearReaderMicScoreDisplay();
-    els.readerMicScore.textContent = display.text;
-    els.readerMicScore.classList.toggle('is-whole', display.isWhole);
+    const startDisplayValue = Number.isFinite(previousDisplayValue) ? previousDisplayValue : 0;
+    setAnimatedDecimalMarkup(els.readerMicScore, startDisplayValue, { decimals: 2 });
     els.readerMicBtn.classList.add('is-showing-score');
+    void animateDecimalMarkup(els.readerMicScore, display.scaledValue, {
+      decimals: 2,
+      duration: SCORE_ANIMATION_MS,
+      startValue: 0
+    });
     state.readerMicScoreTimer = window.setTimeout(() => {
       if (els.readerMicBtn) {
         els.readerMicBtn.classList.remove('is-showing-score');
       }
       if (els.readerMicScore) {
-        els.readerMicScore.textContent = '';
-        els.readerMicScore.classList.remove('is-whole');
+        cancelAnimatedNumber(els.readerMicScore);
+        els.readerMicScore.innerHTML = '';
+        delete els.readerMicScore.dataset.displayValue;
       }
       state.readerMicScoreTimer = 0;
     }, 1200);
@@ -4260,7 +4358,7 @@
   function updateReaderPronPercent() {
     const total = state.readerScores.length;
     const avg = total
-      ? Math.max(0, Math.min(100, Math.round(state.readerScores.reduce((acc, value) => acc + value, 0) / total)))
+      ? Math.max(0, Math.min(100, state.readerScores.reduce((acc, value) => acc + value, 0) / total))
       : 0;
     const avgDisplay = formatReaderScoreValue(avg);
     if (els.readerPronRing) {
@@ -4268,8 +4366,11 @@
       els.readerPronRing.style.setProperty('--reader-progress-angle', `${avg * 3.6}deg`);
     }
     if (els.readerPronPercent) {
-      els.readerPronPercent.textContent = avgDisplay.text;
-      els.readerPronPercent.classList.toggle('is-whole', avgDisplay.isWhole);
+      void animateDecimalMarkup(els.readerPronPercent, avgDisplay.scaledValue, {
+        decimals: 2,
+        duration: SCORE_ANIMATION_MS,
+        startValue: 0
+      });
     }
   }
 
@@ -4296,10 +4397,9 @@
   function formatReaderScoreValue(value) {
     const normalized = Math.max(0, Math.min(100, Number(value) || 0));
     const scaled = normalized / 10;
-    const isWhole = Math.abs(scaled - Math.round(scaled)) < 0.0001;
     return {
-      text: isWhole ? `${Math.round(scaled)}` : scaled.toFixed(1),
-      isWhole
+      text: scaled.toFixed(2),
+      scaledValue: scaled
     };
   }
 
@@ -4379,12 +4479,44 @@
     }, READER_BLOCKED_FLASH_MS + 40);
   }
 
-  async function animateReaderFinishLine(text) {
+  function setReaderFinishLineContent(line) {
     if (!els.readerFinishLine) return;
+    if (line && typeof line === 'object' && Number.isFinite(Number(line.scoreValue))) {
+      const initialValue = Number.isFinite(Number(line.initialScoreValue))
+        ? Number(line.initialScoreValue)
+        : Number(line.scoreValue);
+      els.readerFinishLine.innerHTML = buildDecimalMarkup(initialValue, {
+        decimals: 2,
+        prefix: safeText(line.prefix || ''),
+        suffix: safeText(line.suffix || '')
+      });
+      els.readerFinishLine.dataset.displayValue = String(initialValue);
+      return;
+    }
+    els.readerFinishLine.textContent = safeText(line);
+    delete els.readerFinishLine.dataset.displayValue;
+  }
+
+  async function animateReaderFinishLine(line) {
+    if (!els.readerFinishLine) return;
+    cancelAnimatedNumber(els.readerFinishLine);
     els.readerFinishLine.classList.remove('is-visible');
-    els.readerFinishLine.textContent = safeText(text);
+    setReaderFinishLineContent(line);
     void els.readerFinishLine.offsetWidth;
     els.readerFinishLine.classList.add('is-visible');
+    if (line && typeof line === 'object' && Number.isFinite(Number(line.scoreValue))) {
+      setReaderFinishLineContent({
+        ...line,
+        initialScoreValue: 0
+      });
+      void animateDecimalMarkup(els.readerFinishLine, Number(line.scoreValue), {
+        decimals: 2,
+        duration: SCORE_ANIMATION_MS,
+        startValue: 0,
+        prefix: safeText(line.prefix || ''),
+        suffix: safeText(line.suffix || '')
+      });
+    }
     await wait(READER_FINISH_LINE_ENTER_MS);
   }
 
@@ -4483,9 +4615,14 @@
       completionPayload?.stats?.generalPronunciationPercent
     );
     const lines = [
-      `${formatReaderScoreValue(sessionPronunciationPercent).text}`,
+      {
+        scoreValue: formatReaderScoreValue(sessionPronunciationPercent).scaledValue
+      },
       `${savedBookRead > 0 ? savedBookRead : '--'} Livros`,
-      `Nota geral ${formatReaderScoreValue(savedGeneralPronunciation).text}`
+      {
+        prefix: 'Nota geral',
+        scoreValue: formatReaderScoreValue(savedGeneralPronunciation).scaledValue
+      }
     ];
 
     for (const line of lines) {
