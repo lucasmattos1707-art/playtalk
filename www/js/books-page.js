@@ -21,6 +21,7 @@
   const READER_FINISH_LINE_ENTER_MS = 260;
   const READER_FREE_READ_MIN_VIEW_MS = 3000;
   const READER_BLOCKED_FLASH_MS = 750;
+  const PREBOOK_OVERLAY_MS = 1000;
   const HOME_REPEAT_OPTIONS = [1, 2, 3, 5, 7, 10];
   const HOME_SPEED_OPTIONS = [0.7, 0.8, 0.9, 1, 1.25, 1.5, 2];
   const HOME_BOOK_TRANSITION_MS = 600;
@@ -284,6 +285,8 @@
     homeMusicEnabled: false,
     homeMusicAudioElement: null,
     homeMusicIndex: 0,
+    homePreBookPausedBefore: false,
+    homePreBookVoiceVolumeBefore: 1,
     listeningCharsPending: 0,
     listeningCharsTotal: 0,
     practiceSecondsPending: 0,
@@ -1046,6 +1049,47 @@
     });
   }
 
+  function setPreBookOverlayOpen(isOpen) {
+    document.body.classList.toggle('books-prebook-open', Boolean(isOpen));
+  }
+
+  function isPreBookOverlayOpen() {
+    return Boolean(document.body.classList.contains('books-prebook-open'));
+  }
+
+  async function fadeOutAudioElement(audio, ms = PREBOOK_OVERLAY_MS) {
+    if (!audio) return;
+    const duration = Math.max(0, Number(ms) || 0);
+    const startVolume = Math.max(0, Math.min(1, Number(audio.volume)));
+    if (duration <= 0 || startVolume <= 0) {
+      try {
+        audio.volume = 0;
+      } catch (_error) {
+        // ignore
+      }
+      return;
+    }
+
+    const startedAt = performance.now();
+    await new Promise((resolve) => {
+      const step = (now) => {
+        const ratio = Math.max(0, Math.min(1, (now - startedAt) / duration));
+        const next = startVolume * (1 - ratio);
+        try {
+          audio.volume = Math.max(0, Math.min(1, next));
+        } catch (_error) {
+          // ignore
+        }
+        if (ratio >= 1) {
+          resolve(true);
+          return;
+        }
+        window.requestAnimationFrame(step);
+      };
+      window.requestAnimationFrame(step);
+    });
+  }
+
   function getHomeBooksPool() {
     return (Array.isArray(state.books) ? state.books : [])
       .filter((book) => safeText(book?.selectedStoryId));
@@ -1751,7 +1795,6 @@
       } catch (_error) {
         // ignore
       }
-      pauseHomeMusicIfNeeded();
       renderHomeTransportUi();
       return;
     }
@@ -2602,6 +2645,28 @@
     if (!els.preBookModal || !book) return;
     const bookId = safeText(book.bookId);
     if (!bookId) return;
+
+    // If this comes from the Home player, pause voice + blur background while we show the pre-book overlay.
+    if (isHomeLevel() && state.homeIntroDismissed) {
+      setPreBookOverlayOpen(true);
+      state.homePreBookPausedBefore = Boolean(state.homePaused);
+      state.homePreBookVoiceVolumeBefore = Math.max(0, Math.min(1, Number(state.homeAudioElement?.volume ?? 1) || 1));
+      state.homePaused = true;
+      renderHomeTransportUi();
+      const voice = state.homeAudioElement;
+      if (voice && !voice.paused) {
+        void fadeOutAudioElement(voice, PREBOOK_OVERLAY_MS).then(() => {
+          try {
+            voice.pause();
+          } catch (_error) {
+            // ignore
+          }
+        });
+      }
+    } else {
+      setPreBookOverlayOpen(true);
+    }
+
     state.modeBookId = bookId;
     setPreBookStep('root');
     resetModeTransitionUi();
@@ -2625,19 +2690,57 @@
   }
 
   function closePreBookModal(options) {
+    const animate = !options || options.animate !== false;
     const shouldCancelStart = !options || options.cancelStart !== false;
     if (shouldCancelStart) {
       state.modeStartToken += 1;
     }
-    state.modeBookId = '';
-    state.preBookInsightsFetchToken += 1;
-    stopPreBookInsightsRotation();
-    setPreBookStep('root');
-    setModeStartBusy(false);
-    resetModeTransitionUi();
-    if (els.preBookModal) {
-      els.preBookModal.classList.remove('is-visible');
+
+    // Start restoring the paused home UI immediately (text/book fade back + background blur back).
+    setPreBookOverlayOpen(false);
+
+    // Restore voice volume (so resuming isn't silent) and optionally resume playback.
+    const voice = state.homeAudioElement;
+    if (voice) {
+      try {
+        voice.volume = Math.max(0, Math.min(1, Number(state.homePreBookVoiceVolumeBefore) || 1));
+      } catch (_error) {
+        // ignore
+      }
     }
+    // If the home player was playing before opening pre-book, resume it after the overlay dissolve.
+    const resumeHomeAfter = isHomeLevel() && state.homeIntroDismissed && !state.homePreBookPausedBefore;
+
+    const finalizeClose = () => {
+      state.modeBookId = '';
+      state.preBookInsightsFetchToken += 1;
+      stopPreBookInsightsRotation();
+      setPreBookStep('root');
+      setModeStartBusy(false);
+      resetModeTransitionUi();
+      if (els.preBookModal) {
+        els.preBookModal.classList.remove('is-visible');
+        els.preBookModal.classList.remove('is-closing');
+      }
+      if (resumeHomeAfter) {
+        state.homePaused = false;
+        // Resume current voice audio (it is paused mid-track), and keep the music always on.
+        try {
+          void voice?.play();
+        } catch (_error) {
+          // ignore
+        }
+        renderHomeTransportUi();
+      }
+    };
+
+    if (els.preBookModal && animate) {
+      els.preBookModal.classList.add('is-closing');
+      window.setTimeout(finalizeClose, PREBOOK_OVERLAY_MS);
+      return;
+    }
+
+    finalizeClose();
   }
 
   function getPreBookInsightIcon(kind) {
@@ -2712,7 +2815,9 @@
 
   async function refreshPreBookInsights(fetchToken) {
     try {
-      const response = await fetch(buildApiUrl('/api/books/prebook-insights'), {
+      const bookId = safeText(state.modeBookId);
+      const url = bookId ? `/api/books/prebook-insights?bookId=${encodeURIComponent(bookId)}` : '/api/books/prebook-insights';
+      const response = await fetch(buildApiUrl(url), {
         method: 'GET',
         headers: buildAuthHeaders(),
         credentials: 'include'
@@ -2798,7 +2903,7 @@
     await hideModeLoadingSmoothly();
     if (startToken !== state.modeStartToken) return;
 
-    closePreBookModal({ cancelStart: false });
+    closePreBookModal({ cancelStart: false, animate: false });
     await startBookByMode(selected, mode, cards);
   }
 
@@ -4432,6 +4537,15 @@
       void toggleHomePausePlayback();
     });
 
+    // Tapping the current book cover in the Home player opens the pre-book overlay (paused + blurred).
+    els.homeCover?.addEventListener('click', () => {
+      if (!isHomeLevel() || !state.homeIntroDismissed) return;
+      if (els.preBookModal?.classList.contains('is-visible')) return;
+      const current = state.homeCurrentSession?.book || null;
+      if (!current || !safeText(current?.bookId)) return;
+      openPreBookModal(current);
+    });
+
     els.homeCover?.addEventListener('click', () => {
       const activeBook = state.homeCurrentSession?.book || state.homeCurrentSession || null;
       if (!activeBook || !safeText(activeBook.bookId)) return;
@@ -4568,12 +4682,12 @@
     });
 
     els.preBookCloseBtn?.addEventListener('click', () => {
-      closePreBookModal();
+      closePreBookModal({ animate: true });
     });
 
     els.preBookModal?.addEventListener('click', (event) => {
       if (event.target === els.preBookModal) {
-        closePreBookModal();
+        closePreBookModal({ animate: true });
       }
     });
 

@@ -57,9 +57,10 @@
       background-repeat: no-repeat;
       background-size: cover;
       opacity: 0;
+      filter: blur(0px);
       pointer-events: none;
       z-index: 1;
-      transition: opacity 1000ms ease;
+      transition: opacity 1000ms ease, filter 1000ms ease;
     }
 
     .books-home-book-bg.is-top {
@@ -68,6 +69,11 @@
 
     .books-home-book-bg.is-visible {
       opacity: 1;
+    }
+
+    /* When the pre-book overlay is open, blur the background image behind the paused home screen. */
+    body.books-prebook-open .books-home-book-bg.is-visible {
+      filter: blur(14px);
     }
 
     .books-stars__layer {
@@ -619,7 +625,7 @@
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      padding-top: 20px;
+      padding-top: 40px;
     }
 
     .books-home-cover-wrap {
@@ -631,7 +637,16 @@
       align-items: center;
       justify-content: center;
       perspective: 1300px;
-      margin-top: 30px;
+      margin-top: 0;
+      transform: scale(0.88);
+      transform-origin: top center;
+      transition: opacity 1000ms ease, filter 1000ms ease;
+    }
+
+    body.books-prebook-open .books-home-cover-wrap {
+      opacity: 0;
+      filter: blur(7px);
+      pointer-events: none;
     }
 
     .books-home-cover {
@@ -677,6 +692,13 @@
       align-items: stretch;
       justify-content: center;
       padding-top: 50px;
+      transition: opacity 1000ms ease, filter 1000ms ease;
+    }
+
+    body.books-prebook-open .books-home-text-slot {
+      opacity: 0;
+      filter: blur(7px);
+      pointer-events: none;
     }
 
     .books-home-text-panel {
@@ -732,19 +754,11 @@
       min-height: 5px;
       display: block;
       align-items: end;
-      padding: 2px 4px;
+      padding: 0;
       border-radius: 0;
       background: transparent;
       border: 0;
       box-shadow: none;
-    }
-
-    /* Debug borders: helps visualize the 3 main home containers (viewport, timeline, toolbar). */
-    .books-home-viewport,
-    .player-books,
-    .books-home-toolbar {
-      box-sizing: border-box;
-      border: 1px solid #ffffff;
     }
 
     .player-books__time {
@@ -808,6 +822,8 @@
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 6px;
+      padding: 0;
+      margin: 0;
     }
 
     .books-home-control-btn {
@@ -1372,9 +1388,7 @@
       padding: 28px 16px 30px;
       justify-items: center;
       align-content: center;
-      background:
-        radial-gradient(circle at 50% 16%, rgba(113, 170, 255, 0.18), transparent 28%),
-        linear-gradient(180deg, rgba(5, 10, 18, 0.98), rgba(3, 6, 12, 0.99));
+      background: transparent;
       box-shadow: none;
     }
 
@@ -1385,10 +1399,16 @@
       gap: 28px;
       opacity: 1;
       filter: blur(0);
-      transition: opacity 2000ms ease, filter 2000ms ease;
+      transition: opacity 1000ms ease, filter 1000ms ease;
     }
 
     .pre-book-card.is-starting .pre-book-main {
+      opacity: 0;
+      filter: blur(7px);
+    }
+
+    /* Close dissolve for pre-book overlay. */
+    #booksPreBookModal.is-closing .pre-book-main {
       opacity: 0;
       filter: blur(7px);
     }
@@ -1483,17 +1503,19 @@
     .pre-book-insights {
       width: min(92vw, 420px);
       min-height: 88px;
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
-      padding: 14px 15px;
+      border-radius: 0;
+      border: 0;
+      background: transparent;
+      padding: 0;
       display: grid;
-      grid-template-columns: 36px 1fr;
-      gap: 10px;
+      grid-template-columns: 1fr;
+      gap: 6px;
       align-items: center;
-      box-shadow: 0 14px 26px rgba(0, 0, 0, 0.35);
+      box-shadow: none;
       opacity: 1;
       transition: opacity 220ms ease;
+      text-align: center;
+      justify-items: center;
     }
 
     .pre-book-insights.is-fading {
@@ -1508,6 +1530,11 @@
       display: grid;
       place-items: center;
       color: #f4f8ff;
+    }
+
+    /* Make the insights container visually "invisible" but keep the info. */
+    #booksPreBookModal .pre-book-insight-icon {
+      display: none;
     }
 
     .pre-book-insight-icon svg {
@@ -2160,7 +2187,8 @@
     #booksPreBookModal {
       padding: 0;
       place-items: stretch;
-      background: rgba(0, 0, 0, 0.86);
+      background: transparent;
+      backdrop-filter: none;
     }
 
     .pre-book-actions[data-pre-book-step="training"] .pre-book-action-root {

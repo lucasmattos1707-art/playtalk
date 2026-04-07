@@ -7169,42 +7169,36 @@ app.get('/api/books/prebook-insights', async (req, res) => {
       return;
     }
 
-    await ensureBooksSpeakingStatsTable();
     await ensureUserBooksLibraryStatsTable();
 
-    const [libraryResult, speakingResult] = await Promise.all([
-      pool.query(
-        `SELECT
-           COALESCE(MAX(best_listening_percent), 0)::int AS best_listening_percent,
-           COALESCE(MAX(best_speaking_percent), 0)::int AS best_reading_percent,
-           COALESCE(SUM(reads_completed), 0)::bigint AS total_reads
-         FROM public.user_books_library_stats
-         WHERE user_id = $1`,
-        [userId]
-      ),
-      pool.query(
-        `SELECT COALESCE(book_read, 0)::int AS book_read
-         FROM public.user_books_speaking_stats
-         WHERE user_id = $1
-         LIMIT 1`,
-        [userId]
-      )
-    ]);
+    const bookId = normalizeMiniBookId(req.query?.bookId);
+    if (!bookId) {
+      res.status(400).json({ success: false, message: 'bookId ausente ou invalido.' });
+      return;
+    }
 
-    const row = libraryResult.rows[0] || {};
-    const speakingRow = speakingResult.rows[0] || {};
+    const result = await pool.query(
+      `SELECT
+         COALESCE(best_listening_percent, 0)::int AS best_listening_percent,
+         COALESCE(best_speaking_percent, 0)::int AS best_reading_percent,
+         COALESCE(reads_completed, 0)::bigint AS total_reads
+       FROM public.user_books_library_stats
+       WHERE user_id = $1 AND book_id = $2
+       LIMIT 1`,
+      [userId, bookId]
+    );
 
+    const row = result.rows[0] || {};
     const bestListeningPercent = Math.max(0, Math.min(100, Number(row.best_listening_percent) || 0));
     const bestReadingPercent = Math.max(0, Math.min(100, Number(row.best_reading_percent) || 0));
-    const readsFromLibrary = Math.max(0, Number(row.total_reads) || 0);
-    const readsFromSpeaking = Math.max(0, Number(speakingRow.book_read) || 0);
+    const totalReads = Math.max(0, Number(row.total_reads) || 0);
 
     res.json({
       success: true,
       stats: {
         bestListeningPercent,
         bestReadingPercent,
-        totalReads: Math.max(readsFromLibrary, readsFromSpeaking)
+        totalReads
       }
     });
   } catch (error) {
