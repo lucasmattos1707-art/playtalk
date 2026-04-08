@@ -8,7 +8,8 @@ const outputDirs = [
   path.join(rootDir, 'dist')
 ];
 const rootStaticFiles = [
-  'edu.html'
+  'edu.html',
+  'arquivos-codex/fluentlevelup.png'
 ];
 const rootStaticDirectories = [
   {

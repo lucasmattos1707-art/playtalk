@@ -30,7 +30,7 @@
       margin: 0;
       width: 100%;
       min-height: 100%;
-      background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+      background: linear-gradient(180deg, #050608 0%, #121417 52%, #232629 100%);
       color: #ffffff;
       font-family: "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
     }
@@ -41,15 +41,6 @@
       overflow: hidden;
       overflow-x: hidden;
       position: relative;
-    }
-
-    .books-stars {
-      position: fixed;
-      inset: 0;
-      overflow: hidden;
-      pointer-events: none;
-      z-index: 2;
-      contain: strict;
     }
 
     .books-home-book-bg {
@@ -76,56 +67,6 @@
     /* When the pre-book overlay is open, blur the background image behind the paused home screen. */
     body.books-prebook-open .books-home-book-bg.is-visible {
       filter: blur(14px);
-    }
-
-    .books-stars__layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      background: transparent;
-      box-shadow: var(--star-shadow);
-      animation: books-star-rise var(--star-duration) linear infinite;
-      will-change: transform;
-      transform: translate3d(0, 0, 0);
-      backface-visibility: hidden;
-    }
-
-    .books-stars__layer::after {
-      content: "";
-      position: absolute;
-      top: 2000px;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: transparent;
-      box-shadow: var(--star-shadow);
-    }
-
-    #stars {
-      width: 1px;
-      height: 1px;
-      --star-duration: 50s;
-    }
-
-    #stars2 {
-      width: 2px;
-      height: 2px;
-      --star-duration: 100s;
-    }
-
-    #stars3 {
-      width: 3px;
-      height: 3px;
-      --star-duration: 150s;
-    }
-
-    @keyframes books-star-rise {
-      from {
-        transform: translateY(0);
-      }
-      to {
-        transform: translateY(-2000px);
-      }
     }
 
     .books-page {
@@ -579,19 +520,20 @@
     }
 
     .books-home-start-visual {
-      width: min(140px, 34vw);
-      height: min(140px, 34vw);
+      width: min(340px, 76vw);
+      height: auto;
       display: grid;
       place-items: center;
     }
 
-    .books-home-start svg {
+    .books-home-start-visual img {
       width: 100%;
-      height: 100%;
+      height: auto;
       display: block;
       filter:
-        drop-shadow(0 0 10px rgba(112, 214, 255, 0.85))
-        drop-shadow(0 0 24px rgba(112, 214, 255, 0.48))
+        drop-shadow(0 0 10px rgba(112, 214, 255, 0.86))
+        drop-shadow(0 0 28px rgba(112, 214, 255, 0.54))
+        drop-shadow(0 0 54px rgba(77, 132, 255, 0.36))
         drop-shadow(0 14px 30px rgba(0, 0, 0, 0.34));
     }
 
@@ -740,9 +682,23 @@
 
     .books-home-start.is-hidden {
       opacity: 0;
-      transform: translate(-50%, calc(-50% - 80px)) scale(0.92);
-      filter: blur(8px);
+      transform: translate(-50%, calc(-50% - 80px));
+      filter: none;
       pointer-events: none;
+    }
+
+    @media (max-width: 720px) {
+      .books-home-start-visual {
+        transform: translateY(-70px);
+      }
+
+      #booksHomeLaunchBtn {
+        transform: translateY(-70px);
+      }
+
+      .books-home-logout {
+        bottom: 86px;
+      }
     }
 
     .books-home-shell {
@@ -2696,11 +2652,7 @@
   <body>
     <div class="books-home-book-bg books-home-book-bg--primary is-top" id="booksHomeBookBackgroundPrimary" aria-hidden="true"></div>
     <div class="books-home-book-bg books-home-book-bg--secondary" id="booksHomeBookBackgroundSecondary" aria-hidden="true"></div>
-    <div class="books-stars" aria-hidden="true">
-    <div class="books-stars__layer" id="stars"></div>
-    <div class="books-stars__layer" id="stars2"></div>
-    <div class="books-stars__layer" id="stars3"></div>
-  </div>
+    
   <main class="books-page">
     <section class="books-level-menu" id="booksLevelMenu" aria-label="Selecao de nivel">
       <button class="books-arrow-btn" id="booksLevelPrevBtn" type="button" aria-label="Nivel anterior">
@@ -2740,35 +2692,7 @@
         <div class="books-home-stage">
             <div class="books-home-start" id="booksHomeStartPanel" aria-label="Comece no SmartBooks">
               <div class="books-home-start-visual" aria-hidden="true">
-                <svg viewBox="0 0 64 64" aria-hidden="true">
-                  <!-- Rocket with a hollow "window" (circle cutout) using even-odd fill. -->
-                  <path fill="currentColor" fill-rule="evenodd" d="
-                    M32 6
-                    C40.8 10 46 18 46 28
-                    C46 37.5 39.8 46.9 32 56
-                    C24.2 46.9 18 37.5 18 28
-                    C18 18 23.2 10 32 6
-                    Z
-                    M32 21
-                    A5.5 5.5 0 1 0 32 32
-                    A5.5 5.5 0 1 0 32 21
-                    Z
-                    M18 31
-                    L10 39
-                    L22 41
-                    Z
-                    M46 31
-                    L54 39
-                    L42 41
-                    Z
-                    M28 52
-                    L24 60
-                    L32 58
-                    L40 60
-                    L36 52
-                    Z
-                  "/>
-                </svg>
+                <img src="/arquivos-codex/fluentlevelup.png" alt="Fluent Level Up">
               </div>
               <p class="books-home-start-title">Fluency LevelUp</p>
               <p class="books-home-start-tagline">Comece agora</p>
@@ -3017,6 +2941,24 @@
       </div>
     </div>
   </section>
+
+  <nav class="flashcards-footer-nav" data-shell-page="books" aria-label="Navegacao do flashcards">
+    <a class="flashcards-footer-nav__item" href="/flashcards?view=play" aria-label="Jogar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.36a1 1 0 0 0 0-1.72l-10-6.36A1 1 0 0 0 8 5.14Z"/></svg>
+    </a>
+    <a class="flashcards-footer-nav__item" href="/allcards" aria-label="Flashcards">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4h10a2 2 0 0 1 2 2v9h-2V6H7zm-2 4h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2m0 2v10h10V10z"/></svg>
+    </a>
+    <a class="flashcards-footer-nav__item" href="/users" aria-label="Usuarios">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16 11c1.66 0 3-1.57 3-3.5S17.66 4 16 4s-3 1.57-3 3.5S14.34 11 16 11m-8 0c1.66 0 3-1.57 3-3.5S9.66 4 8 4S5 5.57 5 7.5S6.34 11 8 11m0 2c-2.33 0-7 1.17-7 3.5V20h14v-3.5C15 14.17 10.33 13 8 13m8 0c-.29 0-.62.02-.97.05c1.16.84 1.97 1.96 1.97 3.45V20h6v-3.5c0-2.33-4.67-3.5-7-3.5"/></svg>
+    </a>
+    <a class="flashcards-footer-nav__item" href="/account" aria-label="Perfil">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5m0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5"/></svg>
+    </a>
+    <a class="flashcards-footer-nav__item is-active" href="/books" aria-label="Books">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 4.5A2.5 2.5 0 0 1 8.5 2H18v17.5a2.5 2.5 0 0 0-2.5-2.5H6zm0 0v13A2.5 2.5 0 0 0 8.5 20H16"/></svg>
+    </a>
+  </nav>
 
   <script src="js/android-config.js"></script>
   <script src="/config.js"></script>

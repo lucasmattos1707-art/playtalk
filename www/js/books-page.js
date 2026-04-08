@@ -261,6 +261,7 @@
     shelfAnimationToken: 0,
     homeSleepActive: false,
     homeIntroDismissed: false,
+    homeStartBusy: false,
     homeAuthBusy: false,
     homePlaybackToken: 0,
     homeAudioElement: null,
@@ -1100,7 +1101,11 @@
     }
     if (els.homeLaunchBtn) {
       els.homeLaunchBtn.hidden = !isLoggedIn;
-      els.homeLaunchBtn.disabled = state.homeAuthBusy;
+      els.homeLaunchBtn.disabled = state.homeAuthBusy || state.homeStartBusy;
+      const launchLabel = els.homeLaunchBtn.querySelector('span');
+      if (launchLabel) {
+        launchLabel.textContent = state.homeStartBusy ? 'Abrindo...' : 'Iniciar';
+      }
     }
     if (els.homeLoginInput) {
       els.homeLoginInput.disabled = state.homeAuthBusy || isLoggedIn;
@@ -1503,7 +1508,8 @@
       coverElement.classList.toggle('is-loading', Boolean(options.isLoading));
       coverElement.style.backgroundImage = coverUrl
         ? `url(${safeCssUrl(coverUrl)})`
-        : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
+        : 'none';
+      coverElement.style.backgroundColor = coverUrl ? '' : 'transparent';
     }
     const textPayload = getHomeSessionText(session, cardIndex);
     renderHomeTextPanel(
@@ -1709,11 +1715,11 @@
     applyHomeBookBackground(backgroundSession);
     renderHomeScreen(els.homeCover, els.homeTextPanel, state.homeCurrentSession, state.homeCurrentCardIndex, {
       hideText: !state.homeTextVisible,
-      isLoading: !state.homeCurrentSession
+      isLoading: false
     });
     renderHomeScreen(els.homeNextCover, els.homeNextTextPanel, state.homeNextSession, 0, {
       hideText: true,
-      isLoading: !state.homeNextSession
+      isLoading: false
     });
     renderHomeProgressUi();
     renderHomeTransportUi();
@@ -2445,14 +2451,29 @@
     }
   }
 
-  function startHomeSleepPlayback() {
-    if (state.homeSleepActive) return;
+  async function startHomeSleepPlayback() {
+    if (state.homeSleepActive || state.homeStartBusy) return;
+    state.homeStartBusy = true;
+    renderHomeAuthUi();
+    const token = state.homePlaybackToken + 1;
+    let firstSession = null;
+    try {
+      firstSession = await prepareRandomHomeSession(token, []);
+    } catch (_error) {
+      firstSession = null;
+    }
+    if (!firstSession) {
+      state.homeStartBusy = false;
+      renderHomeAuthUi();
+      setStatus('Nao consegui carregar o primeiro livro agora.', 'error');
+      return;
+    }
     state.homeIntroDismissed = true;
     state.homeSleepActive = true;
     state.homePaused = false;
     state.homeSkipRequested = false;
-    state.homePlaybackToken += 1;
-    state.homeCurrentSession = null;
+    state.homePlaybackToken = token;
+    state.homeCurrentSession = firstSession;
     state.homeNextSession = null;
     state.homeUpcomingSessions = [];
     state.homeSessionHistory = [];
@@ -2467,11 +2488,17 @@
     state.homeBackgroundUrl = '';
     state.homeBackgroundLayer = 'primary';
     state.homeTransitioning = false;
-    renderHomePanel();
-    if (state.homeMusicEnabled) {
-      void playHomeMusicTrack(state.homePlaybackToken);
+    if (firstSession) {
+      setActiveHomeSession(firstSession, { hideText: false });
+      void ensureHomeNextSession(token, true);
     }
-    void runHomePlaybackLoop(state.homePlaybackToken);
+    state.homeStartBusy = false;
+    renderHomePanel();
+    renderHomeAuthUi();
+    if (state.homeMusicEnabled) {
+      void playHomeMusicTrack(token);
+    }
+    void runHomePlaybackLoop(token);
   }
 
   function stopHomeSleepPlayback(options = {}) {
