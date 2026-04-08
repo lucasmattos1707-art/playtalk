@@ -348,6 +348,10 @@
     return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
   }
 
+  function normalizePrecisePercent(value) {
+    return Math.max(0, Math.min(100, Number(Number(value) || 0)));
+  }
+
   function formatCountCompact(value) {
     const normalized = Math.max(0, Number(value) || 0);
     if (normalized >= 1_000_000) return `${Math.round((normalized / 1_000_000) * 10) / 10}m`;
@@ -594,7 +598,7 @@
       ? {
         ...stats,
         pronunciationSamplesCount: Math.max(0, Number(stats.pronunciationSamplesCount) || 0),
-        generalPronunciationPercent: normalizePercent(stats.generalPronunciationPercent),
+        generalPronunciationPercent: normalizePrecisePercent(stats.generalPronunciationPercent),
         latestPronunciationPercent: normalizePercent(stats.latestPronunciationPercent)
       }
       : stats;
@@ -1753,7 +1757,7 @@
 
     const stats = state.stats || {};
     const booksRead = Math.max(0, Number(stats.bookReadCount) || 0);
-    const pronAvg = Math.max(0, Math.min(100, Math.round(Number(stats.generalPronunciationPercent) || 0)));
+    const pronAvg = normalizePrecisePercent(stats.generalPronunciationPercent);
     const speakingChars = Math.max(0, Number(stats.speakingChars) || 0);
     // Prefer local totals because they include pending (not-yet-flushed) progress.
     const listeningChars = Math.max(0, Number(state.listeningCharsTotal) || 0);
@@ -1787,7 +1791,7 @@
       {
         kind: 'pronunciation',
         label: 'Pronuncia media',
-        value: formatReaderRoundedScoreValue(pronAvg).text,
+        value: formatReaderScoreValue(pronAvg).text,
         hint: 'Media geral das ultimas avaliacoes.'
       }
     ];

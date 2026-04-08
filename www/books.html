@@ -489,6 +489,9 @@
       border-radius: 0;
       padding: 42px 22px 28px;
       transform: none;
+      justify-items: center;
+      justify-content: center;
+      align-items: center;
       align-content: center;
       border-color: transparent;
       background: transparent;
@@ -525,18 +528,21 @@
     }
 
     .books-home-start-visual {
-      width: min(720px, 92vw);
-      max-width: 92vw;
+      width: min(360px, 46vw);
+      max-width: 46vw;
       height: auto;
       display: grid;
       place-items: center;
       overflow: visible;
+      justify-self: center;
+      align-self: center;
     }
 
     .books-home-start-visual img {
       width: 100%;
       height: auto;
       display: block;
+      margin: 0 auto;
       filter:
         drop-shadow(0 0 10px rgba(112, 214, 255, 0.86))
         drop-shadow(0 0 28px rgba(112, 214, 255, 0.54))
@@ -696,13 +702,13 @@
 
     @media (max-width: 720px) {
       .books-home-start-visual {
-        width: min(560px, 96vw);
-        max-width: 96vw;
-        transform: translateY(-70px);
+        width: min(280px, 72vw);
+        max-width: 72vw;
+        transform: none;
       }
 
       #booksHomeLaunchBtn {
-        transform: translateY(-70px);
+        transform: none;
       }
 
       .books-home-logout {

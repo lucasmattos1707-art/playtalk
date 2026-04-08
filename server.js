@@ -435,7 +435,7 @@ const getBooksPronunciationPercentFromAggregate = (sum, count) => {
   if (!normalizedCount) {
     return 0;
   }
-  return Math.max(0, Math.min(100, Math.round(normalizedSum / normalizedCount)));
+  return Math.max(0, Math.min(100, Number((normalizedSum / normalizedCount).toFixed(2))));
 };
 
 const normalizeBooksPronunciationPayload = (value) => {
