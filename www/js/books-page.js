@@ -1807,8 +1807,7 @@
       {
         kind: 'pronunciation',
         label: 'Pronuncia media',
-        value: `${formatReaderScoreValue(pronAvg).text}`,
-        scoreValue: formatReaderScoreValue(pronAvg).scaledValue,
+        value: formatReaderRoundedScoreValue(pronAvg).text,
         hint: 'Media geral das ultimas avaliacoes.'
       }
     ];
@@ -1850,7 +1849,7 @@
     const label = safeText(metric?.label) || 'Estatisticas';
     const value = safeText(metric?.value) || '...';
     const hint = safeText(metric?.hint) || 'Carregando...';
-    const signature = `${safeText(metric?.kind)}|${label}|${value}|${hint}|${Number(metric?.scoreValue) || 0}`;
+    const signature = `${safeText(metric?.kind)}|${label}|${value}|${hint}`;
     if (state.statsLastRenderedLine !== signature) {
       state.statsLastRenderedLine = signature;
       if (els.statsIcon) {
@@ -1864,17 +1863,9 @@
         els.statsLabel.textContent = label;
       }
       if (els.statsValue) {
-        if (metric?.kind === 'pronunciation' && Number.isFinite(Number(metric?.scoreValue))) {
-          void animateDecimalMarkup(els.statsValue, Number(metric.scoreValue), {
-            decimals: 2,
-            duration: SCORE_ANIMATION_MS,
-            startValue: 0
-          });
-        } else {
-          cancelAnimatedNumber(els.statsValue);
-          els.statsValue.textContent = value;
-          delete els.statsValue.dataset.displayValue;
-        }
+        cancelAnimatedNumber(els.statsValue);
+        els.statsValue.textContent = value;
+        delete els.statsValue.dataset.displayValue;
       }
       if (els.statsLine) {
         els.statsLine.textContent = hint;
@@ -3939,17 +3930,10 @@
 
   function showReaderMicScore(value) {
     if (!els.readerMicBtn || !els.readerMicScore) return;
-    const display = formatReaderScoreValue(value);
-    const previousDisplayValue = Number(els.readerMicScore.dataset.displayValue);
+    const display = formatReaderRoundedScoreValue(value);
     clearReaderMicScoreDisplay();
-    const startDisplayValue = Number.isFinite(previousDisplayValue) ? previousDisplayValue : 0;
-    setAnimatedDecimalMarkup(els.readerMicScore, startDisplayValue, { decimals: 2 });
+    els.readerMicScore.textContent = display.text;
     els.readerMicBtn.classList.add('is-showing-score');
-    void animateDecimalMarkup(els.readerMicScore, display.scaledValue, {
-      decimals: 2,
-      duration: SCORE_ANIMATION_MS,
-      startValue: 0
-    });
     state.readerMicScoreTimer = window.setTimeout(() => {
       if (els.readerMicBtn) {
         els.readerMicBtn.classList.remove('is-showing-score');
@@ -4403,6 +4387,15 @@
     };
   }
 
+  function formatReaderRoundedScoreValue(value) {
+    const precise = formatReaderScoreValue(value);
+    const roundedValue = Math.max(0, Math.ceil(precise.scaledValue));
+    return {
+      text: `${roundedValue}`,
+      roundedValue
+    };
+  }
+
   function isReaderTrainingMode(mode = state.readerMode) {
     return mode === 'listening-training' || mode === 'speaking-training';
   }
@@ -4615,14 +4608,9 @@
       completionPayload?.stats?.generalPronunciationPercent
     );
     const lines = [
-      {
-        scoreValue: formatReaderScoreValue(sessionPronunciationPercent).scaledValue
-      },
+      formatReaderRoundedScoreValue(sessionPronunciationPercent).text,
       `${savedBookRead > 0 ? savedBookRead : '--'} Livros`,
-      {
-        prefix: 'Nota geral',
-        scoreValue: formatReaderScoreValue(savedGeneralPronunciation).scaledValue
-      }
+      `Nota geral ${formatReaderRoundedScoreValue(savedGeneralPronunciation).text}`
     ];
 
     for (const line of lines) {
