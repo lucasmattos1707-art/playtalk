@@ -44,7 +44,7 @@
   const LISTENING_CHARS_TOTAL_KEY = 'playtalk_books_listening_chars_total_v1';
   const PRACTICE_SECONDS_PENDING_KEY = 'playtalk_books_practice_seconds_pending_v1';
   const PRACTICE_SECONDS_TOTAL_KEY = 'playtalk_books_practice_seconds_total_v1';
-  const BOOKS_PRONUNCIATION_PENDING_KEY = 'playtalk_books_pronunciation_pending_v1';
+  const BOOKS_PRONUNCIATION_FLUSH_BATCH_SIZE = 6;
   const HOME_MUSIC_PLAYLIST = [
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen1.mp3',
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen2.mp3',
@@ -335,25 +335,16 @@
     }
   }
 
-  function normalizePercent(value) {
-    return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
-  }
-
-  function readStoredArray(key) {
+  function clearLegacyPronunciationStorage() {
     try {
-      const raw = JSON.parse(localStorage.getItem(key) || '[]');
-      return Array.isArray(raw) ? raw : [];
-    } catch (_error) {
-      return [];
-    }
-  }
-
-  function writeStoredArray(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value : []));
+      localStorage.removeItem('playtalk_books_pronunciation_pending_v1');
     } catch (_error) {
       // ignore
     }
+  }
+
+  function normalizePercent(value) {
+    return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
   }
 
   function formatCountCompact(value) {
@@ -592,48 +583,16 @@
     }
   }
 
-  function loadLocalPronunciationCounters() {
-    state.booksPronunciationPending = readStoredArray(BOOKS_PRONUNCIATION_PENDING_KEY)
-      .map((sample) => normalizePercent(sample))
-      .filter((sample) => Number.isFinite(sample))
-      .slice(-BOOKS_PRONUNCIATION_SAMPLE_LIMIT);
-  }
-
-  function persistLocalPronunciationCounters() {
-    writeStoredArray(BOOKS_PRONUNCIATION_PENDING_KEY, state.booksPronunciationPending);
-  }
-
-  function mergeStatsWithPendingPronunciation(stats) {
-    const nextStats = stats && typeof stats === 'object'
-      ? { ...stats }
-      : {};
-    const pendingSamples = Array.isArray(state.booksPronunciationPending)
-      ? state.booksPronunciationPending
-      : [];
-
-    if (!pendingSamples.length) {
-      nextStats.pronunciationSamplesCount = Math.max(0, Number(nextStats.pronunciationSamplesCount) || 0);
-      nextStats.generalPronunciationPercent = normalizePercent(nextStats.generalPronunciationPercent);
-      return nextStats;
-    }
-
-    const savedCount = Math.max(0, Number(nextStats.pronunciationSamplesCount) || 0);
-    const savedAverage = normalizePercent(nextStats.generalPronunciationPercent);
-    const pendingSum = pendingSamples.reduce((total, sample) => total + normalizePercent(sample), 0);
-    const mergedCount = savedCount + pendingSamples.length;
-    const mergedAverage = mergedCount > 0
-      ? Math.round(((savedAverage * savedCount) + pendingSum) / mergedCount)
-      : 0;
-
-    nextStats.pronunciationSamplesCount = mergedCount;
-    nextStats.generalPronunciationPercent = mergedAverage;
-    nextStats.latestPronunciationPercent = pendingSamples[pendingSamples.length - 1];
-    return nextStats;
-  }
-
   function setStatsState(stats) {
     reconcileLocalConsumptionTotals(stats);
-    state.stats = mergeStatsWithPendingPronunciation(stats);
+    state.stats = stats && typeof stats === 'object'
+      ? {
+        ...stats,
+        pronunciationSamplesCount: Math.max(0, Number(stats.pronunciationSamplesCount) || 0),
+        generalPronunciationPercent: normalizePercent(stats.generalPronunciationPercent),
+        latestPronunciationPercent: normalizePercent(stats.latestPronunciationPercent)
+      }
+      : stats;
     return state.stats;
   }
 
@@ -643,9 +602,7 @@
       ...(Array.isArray(state.booksPronunciationPending) ? state.booksPronunciationPending : []),
       normalized
     ].slice(-BOOKS_PRONUNCIATION_SAMPLE_LIMIT);
-    persistLocalPronunciationCounters();
-    setStatsState(state.stats || {});
-    renderStatsPanel();
+    void flushBooksPronunciationIfNeeded();
   }
 
   function addListeningProgress(englishText, practiceSecondsDelta = 0) {
@@ -721,7 +678,11 @@
       ? state.booksPronunciationPending.slice(-BOOKS_PRONUNCIATION_SAMPLE_LIMIT)
       : [];
     if (!pendingSamples.length) return false;
-    if (!force && pendingSamples.length < 1) return false;
+    if (!force && pendingSamples.length < BOOKS_PRONUNCIATION_FLUSH_BATCH_SIZE) return false;
+
+    const samplesToSend = force
+      ? pendingSamples
+      : pendingSamples.slice(0, BOOKS_PRONUNCIATION_FLUSH_BATCH_SIZE);
 
     state.booksPronunciationFlushInFlight = true;
     try {
@@ -731,15 +692,14 @@
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           bookId: safeText(state.readerBookId || state.modeBookId || ''),
-          pronunciationPercents: pendingSamples
+          pronunciationPercents: samplesToSend
         })
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) {
         return false;
       }
-      state.booksPronunciationPending = [];
-      persistLocalPronunciationCounters();
+      state.booksPronunciationPending = pendingSamples.slice(samplesToSend.length);
       setStatsState({ ...(state.stats || {}), ...(payload.stats || {}) });
       renderStatsPanel();
       return true;
@@ -5460,8 +5420,8 @@
     renderLevelMenu();
     renderAdminUiToggle();
     state.localProfile = readLocalPlayerProfile();
+    clearLegacyPronunciationStorage();
     loadLocalConsumptionCounters();
-    loadLocalPronunciationCounters();
     renderStatsPanel();
 
     const [sessionUser, books] = await Promise.all([

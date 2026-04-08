@@ -200,7 +200,6 @@ const FLASHCARD_RANKING_WEEKDAY_INDEX = {
   Fri: 5,
   Sat: 6
 };
-const BOOKS_PRONUNCIATION_SAMPLE_LIMIT = 300;
 const BOOKS_PRONUNCIATION_TAG = 'speak-books';
 const FLASHCARD_REVIEW_PHASES = {
   1: { key: 'first-star', label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
@@ -427,15 +426,16 @@ const normalizeBooksPronunciationSamples = (value) => {
   return source
     .map((sample) => Math.max(0, Math.min(100, Math.round(Number(sample) || 0))))
     .filter((sample) => Number.isFinite(sample))
-    .slice(-BOOKS_PRONUNCIATION_SAMPLE_LIMIT);
+    .slice(-1000);
 };
 
-const getBooksPronunciationPercent = (samples) => {
-  if (!Array.isArray(samples) || !samples.length) {
+const getBooksPronunciationPercentFromAggregate = (sum, count) => {
+  const normalizedSum = Math.max(0, Number(sum) || 0);
+  const normalizedCount = Math.max(0, Number(count) || 0);
+  if (!normalizedCount) {
     return 0;
   }
-  const average = samples.reduce((sum, sample) => sum + sample, 0) / samples.length;
-  return Math.max(0, Math.min(100, Math.round(average)));
+  return Math.max(0, Math.min(100, Math.round(normalizedSum / normalizedCount)));
 };
 
 const normalizeBooksPronunciationPayload = (value) => {
@@ -449,11 +449,45 @@ const normalizeBooksPronunciationPayload = (value) => {
   return normalizeBooksPronunciationSamples([numeric]);
 };
 
+const getBooksPronunciationAggregateFromRow = (row) => {
+  const fallbackSamples = normalizeBooksPronunciationSamples(row?.pronunciation_samples);
+  const fallbackCount = fallbackSamples.length;
+  const fallbackSum = fallbackSamples.reduce((total, sample) => total + sample, 0);
+  const count = Math.max(
+    0,
+    Number.parseInt(row?.pronunciation_samples_count, 10)
+      || Number.parseInt(row?.pronunciation_count, 10)
+      || fallbackCount
+  );
+  const sum = Math.max(
+    0,
+    Number(row?.pronunciation_sum) || (count > 0 ? fallbackSum : 0)
+  );
+  const latest = Math.max(
+    0,
+    Math.min(
+      100,
+      Number.parseInt(row?.latest_pronunciation_percent, 10)
+        || (fallbackCount ? fallbackSamples[fallbackCount - 1] : 0)
+    )
+  );
+  return {
+    pronunciationSum: sum,
+    pronunciationSamplesCount: count,
+    generalPronunciationPercent: getBooksPronunciationPercentFromAggregate(sum, count),
+    latestPronunciationPercent: latest
+  };
+};
+
 const upsertUserBooksPronunciationSamples = async (client, userId, samplesInput) => {
   const samplesToAppend = normalizeBooksPronunciationPayload(samplesInput);
+  const appendedCount = samplesToAppend.length;
+  const appendedSum = samplesToAppend.reduce((total, sample) => total + sample, 0);
+  const latestPercent = appendedCount ? samplesToAppend[appendedCount - 1] : 0;
 
   const existingResult = await client.query(
-    `SELECT user_id, book_read, pronunciation_tag, pronunciation_samples, updated_at
+    `SELECT user_id, book_read, pronunciation_tag, pronunciation_samples,
+            pronunciation_sum, pronunciation_samples_count, latest_pronunciation_percent, updated_at
      FROM public.user_books_speaking_stats
      WHERE user_id = $1
      FOR UPDATE`,
@@ -461,11 +495,13 @@ const upsertUserBooksPronunciationSamples = async (client, userId, samplesInput)
   );
 
   const existingRow = existingResult.rows[0] || null;
-  const existingSamples = normalizeBooksPronunciationSamples(existingRow?.pronunciation_samples);
-  const nextSamples = samplesToAppend.length
-    ? [...existingSamples, ...samplesToAppend].slice(-BOOKS_PRONUNCIATION_SAMPLE_LIMIT)
-    : existingSamples;
+  const existingAggregate = getBooksPronunciationAggregateFromRow(existingRow);
   const nextBookReadCount = Math.max(0, Number.parseInt(existingRow?.book_read, 10) || 0);
+  const nextPronunciationSum = existingAggregate.pronunciationSum + appendedSum;
+  const nextPronunciationCount = existingAggregate.pronunciationSamplesCount + appendedCount;
+  const nextLatestPercent = appendedCount
+    ? latestPercent
+    : existingAggregate.latestPronunciationPercent;
 
   const upsertResult = await client.query(
     `INSERT INTO public.user_books_speaking_stats (
@@ -473,26 +509,38 @@ const upsertUserBooksPronunciationSamples = async (client, userId, samplesInput)
        book_read,
        pronunciation_tag,
        pronunciation_samples,
+       pronunciation_sum,
+       pronunciation_samples_count,
+       latest_pronunciation_percent,
        updated_at
      )
-     VALUES ($1, $2, $3, $4::jsonb, now())
+     VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, now())
      ON CONFLICT (user_id)
      DO UPDATE
        SET book_read = EXCLUDED.book_read,
            pronunciation_tag = EXCLUDED.pronunciation_tag,
            pronunciation_samples = EXCLUDED.pronunciation_samples,
+           pronunciation_sum = EXCLUDED.pronunciation_sum,
+           pronunciation_samples_count = EXCLUDED.pronunciation_samples_count,
+           latest_pronunciation_percent = EXCLUDED.latest_pronunciation_percent,
            updated_at = now()
      RETURNING
        user_id,
        book_read,
        pronunciation_tag,
        pronunciation_samples,
+       pronunciation_sum,
+       pronunciation_samples_count,
+       latest_pronunciation_percent,
        updated_at`,
     [
       userId,
       nextBookReadCount,
       BOOKS_PRONUNCIATION_TAG,
-      JSON.stringify(nextSamples)
+      '[]',
+      nextPronunciationSum,
+      nextPronunciationCount,
+      nextLatestPercent
     ]
   );
 
@@ -500,20 +548,21 @@ const upsertUserBooksPronunciationSamples = async (client, userId, samplesInput)
     user_id: userId,
     book_read: nextBookReadCount,
     pronunciation_tag: BOOKS_PRONUNCIATION_TAG,
-    pronunciation_samples: nextSamples,
+    pronunciation_samples: [],
+    pronunciation_sum: nextPronunciationSum,
+    pronunciation_samples_count: nextPronunciationCount,
+    latest_pronunciation_percent: nextLatestPercent,
     updated_at: new Date().toISOString()
   };
-  const normalizedSamples = normalizeBooksPronunciationSamples(saved.pronunciation_samples);
+  const aggregate = getBooksPronunciationAggregateFromRow(saved);
 
   return {
     saved,
     pronunciationTag: BOOKS_PRONUNCIATION_TAG,
-    pronunciationSamples: normalizedSamples,
-    pronunciationSamplesCount: normalizedSamples.length,
-    generalPronunciationPercent: getBooksPronunciationPercent(normalizedSamples),
-    latestPronunciationPercent: normalizedSamples.length
-      ? normalizedSamples[normalizedSamples.length - 1]
-      : 0
+    pronunciationSum: aggregate.pronunciationSum,
+    pronunciationSamplesCount: aggregate.pronunciationSamplesCount,
+    generalPronunciationPercent: aggregate.generalPronunciationPercent,
+    latestPronunciationPercent: aggregate.latestPronunciationPercent
   };
 };
 
@@ -960,6 +1009,9 @@ const ensureBooksSpeakingStatsTable = async () => {
           book_read integer NOT NULL DEFAULT 0,
           pronunciation_tag text NOT NULL DEFAULT '${BOOKS_PRONUNCIATION_TAG}',
           pronunciation_samples jsonb NOT NULL DEFAULT '[]'::jsonb,
+          pronunciation_sum bigint NOT NULL DEFAULT 0,
+          pronunciation_samples_count bigint NOT NULL DEFAULT 0,
+          latest_pronunciation_percent integer NOT NULL DEFAULT 0,
           updated_at timestamptz NOT NULL DEFAULT now()
         )
       `);
@@ -974,6 +1026,43 @@ const ensureBooksSpeakingStatsTable = async () => {
       await pool.query(`
         ALTER TABLE public.user_books_speaking_stats
         ADD COLUMN IF NOT EXISTS pronunciation_samples jsonb NOT NULL DEFAULT '[]'::jsonb
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_books_speaking_stats
+        ADD COLUMN IF NOT EXISTS pronunciation_sum bigint NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_books_speaking_stats
+        ADD COLUMN IF NOT EXISTS pronunciation_samples_count bigint NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_books_speaking_stats
+        ADD COLUMN IF NOT EXISTS latest_pronunciation_percent integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        UPDATE public.user_books_speaking_stats
+        SET
+          pronunciation_sum = agg.pronunciation_sum,
+          pronunciation_samples_count = agg.pronunciation_samples_count,
+          latest_pronunciation_percent = agg.latest_pronunciation_percent
+        FROM (
+          SELECT
+            user_id,
+            COALESCE(SUM((sample.value)::int), 0)::bigint AS pronunciation_sum,
+            COUNT(sample.value)::bigint AS pronunciation_samples_count,
+            COALESCE((
+              SELECT (last_sample.value)::int
+              FROM jsonb_array_elements_text(COALESCE(ubs.pronunciation_samples, '[]'::jsonb)) WITH ORDINALITY AS last_sample(value, ord)
+              ORDER BY last_sample.ord DESC
+              LIMIT 1
+            ), 0)::int AS latest_pronunciation_percent
+          FROM public.user_books_speaking_stats ubs
+          LEFT JOIN jsonb_array_elements_text(COALESCE(ubs.pronunciation_samples, '[]'::jsonb)) AS sample(value)
+            ON TRUE
+          GROUP BY user_id, pronunciation_samples
+        ) AS agg
+        WHERE public.user_books_speaking_stats.user_id = agg.user_id
+          AND public.user_books_speaking_stats.pronunciation_samples_count = 0
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_books_speaking_stats_updated_idx
@@ -8945,17 +9034,14 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
         [userId]
       );
       const pronunciationResult = await client.query(
-        `SELECT pronunciation_samples
+        `SELECT pronunciation_sum, pronunciation_samples_count, latest_pronunciation_percent, pronunciation_samples
          FROM public.user_books_speaking_stats
          WHERE user_id = $1
          LIMIT 1`,
         [userId]
       );
       await client.query('COMMIT');
-
-      const pronunciationSamples = normalizeBooksPronunciationSamples(
-        pronunciationResult.rows[0]?.pronunciation_samples
-      );
+      const pronunciationStats = getBooksPronunciationAggregateFromRow(pronunciationResult.rows[0]);
 
       res.json({
         success: true,
@@ -8963,8 +9049,9 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
         mode,
         stats: {
           bookReadCount: Math.max(0, Number(totalsResult.rows[0]?.total_reads) || 0),
-          generalPronunciationPercent: getBooksPronunciationPercent(pronunciationSamples),
-          pronunciationSamplesCount: pronunciationSamples.length,
+          generalPronunciationPercent: pronunciationStats.generalPronunciationPercent,
+          pronunciationSamplesCount: pronunciationStats.pronunciationSamplesCount,
+          latestPronunciationPercent: pronunciationStats.latestPronunciationPercent,
           book: {
             readsCompleted: nextReadsCompleted,
             listenedSeconds: nextListenedSeconds,
@@ -9021,7 +9108,7 @@ app.get('/api/books/stats', async (req, res) => {
         [userId]
       ),
       pool.query(
-        `SELECT pronunciation_samples
+        `SELECT pronunciation_sum, pronunciation_samples_count, latest_pronunciation_percent, pronunciation_samples
          FROM public.user_books_speaking_stats
          WHERE user_id = $1
          ORDER BY updated_at DESC
@@ -9037,16 +9124,16 @@ app.get('/api/books/stats', async (req, res) => {
       )
     ]);
 
-    const samples = normalizeBooksPronunciationSamples(speakingStatsResult.rows[0]?.pronunciation_samples);
-    const generalPronunciationPercent = getBooksPronunciationPercent(samples);
+    const pronunciationStats = getBooksPronunciationAggregateFromRow(speakingStatsResult.rows[0]);
     const consumption = consumptionResult.rows[0] || {};
 
     res.json({
       success: true,
       stats: {
         bookReadCount: Math.max(0, Number(totalsResult.rows[0]?.total_reads) || 0),
-        generalPronunciationPercent,
-        pronunciationSamplesCount: samples.length,
+        generalPronunciationPercent: pronunciationStats.generalPronunciationPercent,
+        pronunciationSamplesCount: pronunciationStats.pronunciationSamplesCount,
+        latestPronunciationPercent: pronunciationStats.latestPronunciationPercent,
         speakingChars: Math.max(0, Number(consumption.speaking_chars) || 0),
         listeningChars: Math.max(0, Number(consumption.listening_chars) || 0),
         practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0)
