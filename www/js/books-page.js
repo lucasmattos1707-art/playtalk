@@ -2454,8 +2454,10 @@
   async function startHomeSleepPlayback() {
     if (state.homeSleepActive || state.homeStartBusy) return;
     state.homeStartBusy = true;
+    state.homeSleepActive = true;
     renderHomeAuthUi();
     const token = state.homePlaybackToken + 1;
+    state.homePlaybackToken = token;
     let firstSession = null;
     try {
       firstSession = await prepareRandomHomeSession(token, []);
@@ -2464,15 +2466,14 @@
     }
     if (!firstSession) {
       state.homeStartBusy = false;
+      state.homeSleepActive = false;
       renderHomeAuthUi();
       setStatus('Nao consegui carregar o primeiro livro agora.', 'error');
       return;
     }
     state.homeIntroDismissed = true;
-    state.homeSleepActive = true;
     state.homePaused = false;
     state.homeSkipRequested = false;
-    state.homePlaybackToken = token;
     state.homeCurrentSession = firstSession;
     state.homeNextSession = null;
     state.homeUpcomingSessions = [];
