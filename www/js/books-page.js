@@ -42,9 +42,9 @@
 
   const LISTENING_CHARS_PENDING_KEY = 'playtalk_books_listening_chars_pending_v1';
   const LISTENING_CHARS_TOTAL_KEY = 'playtalk_books_listening_chars_total_v1';
-  const PRACTICE_SECONDS_PENDING_KEY = 'playtalk_books_practice_seconds_pending_v1';
-  const PRACTICE_SECONDS_TOTAL_KEY = 'playtalk_books_practice_seconds_total_v1';
   const BOOKS_PRONUNCIATION_FLUSH_BATCH_SIZE = 6;
+  const BOOKS_PRACTICE_FLUSH_BATCH_SECONDS = 60;
+  const READER_PRACTICE_CAP_SECONDS = 10;
   const HOME_MUSIC_PLAYLIST = [
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen1.mp3',
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas/zen2.mp3',
@@ -290,6 +290,7 @@
     homeProgressDragging: false,
     homeAudioResolver: null,
     homeAudioInterrupted: false,
+    homeAudioPracticeAnchorTime: null,
     homeSkipRequested: false,
     homeSeekTarget: null,
     homeTransitioning: false,
@@ -548,15 +549,19 @@
   function loadLocalConsumptionCounters() {
     state.listeningCharsPending = readStoredInt(LISTENING_CHARS_PENDING_KEY);
     state.listeningCharsTotal = readStoredInt(LISTENING_CHARS_TOTAL_KEY);
-    state.practiceSecondsPending = readStoredInt(PRACTICE_SECONDS_PENDING_KEY);
-    state.practiceSecondsTotal = readStoredInt(PRACTICE_SECONDS_TOTAL_KEY);
+    state.practiceSecondsPending = 0;
+    state.practiceSecondsTotal = 0;
   }
 
   function persistLocalConsumptionCounters() {
     writeStoredInt(LISTENING_CHARS_PENDING_KEY, state.listeningCharsPending);
     writeStoredInt(LISTENING_CHARS_TOTAL_KEY, state.listeningCharsTotal);
-    writeStoredInt(PRACTICE_SECONDS_PENDING_KEY, state.practiceSecondsPending);
-    writeStoredInt(PRACTICE_SECONDS_TOTAL_KEY, state.practiceSecondsTotal);
+  }
+
+  function syncPracticeSecondsTotal(serverPracticeSeconds) {
+    const synced = Math.max(0, Math.round(Number(serverPracticeSeconds) || 0));
+    const pendingWholeSeconds = Math.max(0, Math.floor(Number(state.practiceSecondsPending) || 0));
+    state.practiceSecondsTotal = synced + pendingWholeSeconds;
   }
 
   function reconcileLocalConsumptionTotals(stats) {
@@ -569,7 +574,7 @@
       Math.max(0, Number(state.listeningCharsTotal) || 0)
     );
     const nextPracticeTotal = Math.max(
-      serverPracticeSeconds + Math.max(0, Number(state.practiceSecondsPending) || 0),
+      serverPracticeSeconds + Math.max(0, Math.floor(Number(state.practiceSecondsPending) || 0)),
       Math.max(0, Number(state.practiceSecondsTotal) || 0)
     );
 
@@ -593,6 +598,7 @@
         latestPronunciationPercent: normalizePercent(stats.latestPronunciationPercent)
       }
       : stats;
+    syncPracticeSecondsTotal(state.stats?.practiceSeconds);
     return state.stats;
   }
 
@@ -605,21 +611,25 @@
     void flushBooksPronunciationIfNeeded();
   }
 
-  function addListeningProgress(englishText, practiceSecondsDelta = 0) {
+  function addListeningProgress(englishText) {
     const english = safeText(englishText);
     const charsDelta = english ? english.length : 0;
-    const secondsDelta = Math.max(0, Math.round(Number(practiceSecondsDelta) || 0));
 
     if (charsDelta > 0) {
       state.listeningCharsPending += charsDelta;
       state.listeningCharsTotal += charsDelta;
     }
-    if (secondsDelta > 0) {
-      state.practiceSecondsPending += secondsDelta;
-      state.practiceSecondsTotal += secondsDelta;
-    }
 
     persistLocalConsumptionCounters();
+    renderStatsPanel();
+    void flushListeningProgressIfNeeded();
+  }
+
+  function addPracticeProgressSeconds(secondsDelta) {
+    const normalized = Math.max(0, Number(secondsDelta) || 0);
+    if (normalized <= 0) return;
+    state.practiceSecondsPending += normalized;
+    syncPracticeSecondsTotal(state.stats?.practiceSeconds);
     renderStatsPanel();
     void flushListeningProgressIfNeeded();
   }
@@ -630,12 +640,15 @@
     const pendingChars = Math.max(0, Number(state.listeningCharsPending) || 0);
     const pendingSeconds = Math.max(0, Number(state.practiceSecondsPending) || 0);
     const chunkChars = force ? pendingChars : (Math.floor(pendingChars / 1000) * 1000);
-    if (!chunkChars && !force) return false;
-    if (!chunkChars && force && pendingSeconds <= 0) return false;
+    const chunkSeconds = force
+      ? Math.floor(pendingSeconds)
+      : (Math.floor(pendingSeconds / BOOKS_PRACTICE_FLUSH_BATCH_SECONDS) * BOOKS_PRACTICE_FLUSH_BATCH_SECONDS);
+    if (!chunkChars && !chunkSeconds && !force) return false;
+    if (!chunkChars && !chunkSeconds && force) return false;
 
     state.listeningFlushInFlight = true;
     const sendChars = Math.max(0, Math.round(chunkChars) || 0);
-    const sendSeconds = Math.max(0, Math.round(pendingSeconds) || 0);
+    const sendSeconds = Math.max(0, Math.round(chunkSeconds) || 0);
     try {
       const response = await fetch(buildApiUrl('/api/books/listening-progress'), {
         method: 'POST',
@@ -651,7 +664,7 @@
         return false;
       }
       state.listeningCharsPending = Math.max(0, state.listeningCharsPending - sendChars);
-      state.practiceSecondsPending = 0;
+      state.practiceSecondsPending = Math.max(0, state.practiceSecondsPending - sendSeconds);
       persistLocalConsumptionCounters();
       if (payload?.stats) {
         setStatsState({ ...(state.stats || {}), ...(payload.stats || {}) });
@@ -661,6 +674,7 @@
       } else {
         void refreshStatsFromServer();
       }
+      syncPracticeSecondsTotal(payload?.stats?.practiceSeconds ?? state.stats?.practiceSeconds);
       renderStatsPanel();
       return true;
     } catch (_error) {
@@ -1852,6 +1866,9 @@
   function interruptHomeAudioPlayback() {
     const current = state.homeAudioElement;
     const resolver = state.homeAudioResolver;
+    if (current) {
+      commitHomeAudioPracticeProgress(current);
+    }
     state.homeAudioElement = null;
     state.homeAudioResolver = null;
     try {
@@ -1954,6 +1971,24 @@
     while (state.homePaused && state.homeSleepActive && token === state.homePlaybackToken) {
       await wait(120);
     }
+  }
+
+  function beginHomeAudioPracticeProgress(audio) {
+    if (!audio) return;
+    state.homeAudioPracticeAnchorTime = Math.max(0, Number(audio.currentTime) || 0);
+  }
+
+  function commitHomeAudioPracticeProgress(audio) {
+    if (!audio || state.homeAudioPracticeAnchorTime == null) return;
+    const currentTime = Math.max(0, Number(audio.currentTime) || 0);
+    const anchorTime = Math.max(0, Number(state.homeAudioPracticeAnchorTime) || 0);
+    const deltaSeconds = Math.max(0, currentTime - anchorTime);
+    state.homeAudioPracticeAnchorTime = currentTime;
+    addPracticeProgressSeconds(deltaSeconds);
+  }
+
+  function resetHomeAudioPracticeProgress() {
+    state.homeAudioPracticeAnchorTime = null;
   }
 
   async function waitHomeDelay(ms, token, onTick) {
@@ -2181,6 +2216,7 @@
     state.homePaused = !state.homePaused;
     if (state.homePaused) {
       try {
+        commitHomeAudioPracticeProgress(state.homeAudioElement);
         state.homeAudioElement?.pause();
       } catch (_error) {
         // ignore
@@ -2192,6 +2228,7 @@
       if (state.homeAudioElement) {
         applyHomeAudioPlaybackRate(state.homeAudioElement);
         await state.homeAudioElement.play();
+        beginHomeAudioPracticeProgress(state.homeAudioElement);
       }
     } catch (_error) {
       // ignore
@@ -2257,6 +2294,7 @@
         audio.ontimeupdate = null;
         audio.onloadedmetadata = null;
         state.homeAudioResolver = null;
+        resetHomeAudioPracticeProgress();
         if (state.homeAudioElement === audio) {
           state.homeAudioElement = null;
         }
@@ -2287,13 +2325,8 @@
       };
       audio.ontimeupdate = syncProgress;
       audio.onended = () => {
-        // Listening stats: count english chars heard and practice seconds for the SmartBooks (home) player.
-        const rawDuration = Number(audio.duration);
-        const startAt = Math.max(0, Number(meta.startAtSeconds) || 0);
-        const fallbackDuration = getHomeCardDurationSeconds(state.homeCurrentCards[baseIndex]);
-        const effectiveDuration = (Number.isFinite(rawDuration) && rawDuration > 0) ? rawDuration : fallbackDuration;
-        const listenedSeconds = Math.max(0, effectiveDuration - startAt);
-        addListeningProgress(meta.english, listenedSeconds);
+        commitHomeAudioPracticeProgress(audio);
+        addListeningProgress(meta.english);
 
         const totalSeconds = getHomeSessionTotalSeconds(state.homeCurrentSession);
         const elapsedSeconds = getHomeElapsedSecondsForPosition(
@@ -2309,7 +2342,9 @@
         syncProgress();
         return;
       }
-      audio.play().catch(() => finish('error'));
+      audio.play().then(() => {
+        beginHomeAudioPracticeProgress(audio);
+      }).catch(() => finish('error'));
     });
     return reason;
   }
@@ -3067,13 +3102,12 @@
       renderHomeTransportUi();
       const voice = state.homeAudioElement;
       if (voice && !voice.paused) {
-        void fadeOutAudioElement(voice, PREBOOK_OVERLAY_MS).then(() => {
-          try {
-            voice.pause();
-          } catch (_error) {
-            // ignore
-          }
-        });
+        commitHomeAudioPracticeProgress(voice);
+        try {
+          voice.pause();
+        } catch (_error) {
+          // ignore
+        }
       }
     } else {
       setPreBookOverlayOpen(true);
@@ -3148,7 +3182,9 @@
         state.homePaused = false;
         // Resume current voice audio (it is paused mid-track), and keep the music always on.
         try {
-          void voice?.play();
+          void voice?.play().then(() => {
+            beginHomeAudioPracticeProgress(voice);
+          });
         } catch (_error) {
           // ignore
         }
@@ -4295,7 +4331,7 @@
     audio.onended = () => {
       if (token !== state.readerAudioToken) return;
       state.readerSessionListenedMs += Math.max(0, Math.round((Number(audio.duration) || 0) * 1000));
-      addListeningProgress(english, 0);
+      addListeningProgress(english);
     };
     state.readerAudioElement = audio;
 
@@ -4396,6 +4432,16 @@
     if (!Array.isArray(state.readerScores) || !state.readerScores.length) return 0;
     const total = state.readerScores.reduce((acc, value) => acc + normalizeReaderPercent(value), 0);
     return normalizeReaderPercent(total / state.readerScores.length);
+  }
+
+  function commitReaderPhrasePracticeProgress() {
+    if (!isReaderTrainingMode()) return;
+    const shownAt = Number(state.readerCardShownAt) || 0;
+    if (!shownAt) return;
+    const elapsedSeconds = Math.max(0, (Date.now() - shownAt) / 1000);
+    const creditedSeconds = Math.min(READER_PRACTICE_CAP_SECONDS, elapsedSeconds);
+    state.readerCardShownAt = 0;
+    addPracticeProgressSeconds(creditedSeconds);
   }
 
   function findActiveReaderBook() {
@@ -4558,6 +4604,7 @@
   async function runReaderBookCompletionSequence() {
     if (!state.readerOpen || !isReaderTrainingMode() || state.readerFinishing) return;
 
+    commitReaderPhrasePracticeProgress();
     state.readerFinishing = true;
     state.readerFinishToken += 1;
     const token = state.readerFinishToken;
@@ -4795,6 +4842,9 @@
     const displayText = displayLanguage === 'portuguese' ? portuguese : english;
     const displayTextFormatted = splitBalancedLines(sanitizeReaderDisplayText(displayText));
     if (state.readerRenderedCardIndex !== index) {
+      if (state.readerRenderedCardIndex >= 0) {
+        commitReaderPhrasePracticeProgress();
+      }
       state.readerRenderedCardIndex = index;
       state.readerCardShownAt = Date.now();
       if (isReaderTrainingMode()) {
@@ -4810,6 +4860,7 @@
   }
 
   function closeReader() {
+    commitReaderPhrasePracticeProgress();
     stopReaderAudio();
     stopInlineReaderEditing();
     closeReaderAdminAudioModal(true);
