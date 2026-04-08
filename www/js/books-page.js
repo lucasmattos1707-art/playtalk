@@ -30,6 +30,7 @@
   const HOME_BOOK_TRANSITION_MS = 600;
   const HOME_SWIPE_UP_THRESHOLD = 70;
   const HOME_SWIPE_DOWN_THRESHOLD = 70;
+  const HOME_WHEEL_THRESHOLD = 18;
   const MAX_BOOK_LEVEL = 10;
   // UI levels:
   // 0 = Home
@@ -73,6 +74,7 @@
   ];
   const HOME_AUDIO_DURATION_CACHE = new Map();
   const NUMBER_ANIMATION_HANDLES = new WeakMap();
+  const HOME_UPCOMING_SESSION_TARGET = 1;
 
   const els = {
     page: document.querySelector('.books-page'),
@@ -2078,20 +2080,29 @@
     const cards = await fetchBookCards(book);
     const playableCards = cards.filter((card) => safeText(card?.audio));
     if (!playableCards.length) return null;
-    await hydrateHomeCardDurations(playableCards);
     const coverImageUrl = safeText(book?.coverImageUrl);
     const backgroundUrl = chooseReaderBackgroundUrl(book);
-    await Promise.all([
-      coverImageUrl ? preloadImageUrl(coverImageUrl) : Promise.resolve(false),
-      backgroundUrl ? preloadImageUrl(backgroundUrl) : Promise.resolve(false)
-    ]);
-    return {
+    const session = {
       bookId: safeText(book?.bookId),
       title: safeText(book?.nome) || 'Livro',
       coverImageUrl,
       book,
       cards: playableCards
     };
+    void hydrateHomeCardDurations(playableCards).then(() => {
+      if (
+        safeText(state.homeCurrentSession?.bookId) === session.bookId
+        || safeText(state.homeNextSession?.bookId) === session.bookId
+      ) {
+        refreshHomeProgressFromPlayback();
+        renderHomePanel();
+      }
+    });
+    void Promise.allSettled([
+      coverImageUrl ? preloadImageUrl(coverImageUrl) : Promise.resolve(false),
+      backgroundUrl ? preloadImageUrl(backgroundUrl) : Promise.resolve(false)
+    ]);
+    return session;
   }
 
   function pickRandomHomeBook(excludedIds = []) {
@@ -2134,14 +2145,14 @@
   async function ensureHomeNextSession(token, force = false) {
     if (!state.homeSleepActive || token !== state.homePlaybackToken) return null;
     normalizeHomeUpcomingSessions();
-    if (!force && state.homeUpcomingSessions.length >= 2) {
+    if (!force && state.homeUpcomingSessions.length >= HOME_UPCOMING_SESSION_TARGET) {
       return state.homeNextSession;
     }
     const excludedIds = new Set([
       safeText(state.homeCurrentSession?.bookId),
       ...state.homeUpcomingSessions.map((session) => safeText(session?.bookId))
     ].filter(Boolean));
-    while (state.homeUpcomingSessions.length < 2) {
+    while (state.homeUpcomingSessions.length < HOME_UPCOMING_SESSION_TARGET) {
       const session = await prepareRandomHomeSession(token, Array.from(excludedIds));
       if (!state.homeSleepActive || token !== state.homePlaybackToken || !session) break;
       const bookId = safeText(session?.bookId);
@@ -5053,6 +5064,19 @@
     }
   }
 
+  function handleHomeWheel(event) {
+    if (!state.homeIntroDismissed) return;
+    if (isOverlayOpen()) return;
+    const deltaY = Number(event.deltaY) || 0;
+    if (Math.abs(deltaY) < HOME_WHEEL_THRESHOLD) return;
+    event.preventDefault();
+    if (deltaY > 0) {
+      void requestHomeNextBook();
+      return;
+    }
+    void requestHomePreviousBook();
+  }
+
   function bindEvents() {
     els.prevLevelBtn?.addEventListener('click', () => {
       void setLevel(state.selectedLevel - 1);
@@ -5234,6 +5258,8 @@
     els.homeViewport?.addEventListener('touchend', handleHomeSwipeEnd, { passive: true });
     els.homeShell?.addEventListener('touchstart', handleHomeSwipeStart, { passive: true });
     els.homeShell?.addEventListener('touchend', handleHomeSwipeEnd, { passive: true });
+    els.homeViewport?.addEventListener('wheel', handleHomeWheel, { passive: false });
+    els.homeShell?.addEventListener('wheel', handleHomeWheel, { passive: false });
 
     els.createSubmitBtn?.addEventListener('click', () => {
       void createBookFromLines();
