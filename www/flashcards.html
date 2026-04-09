@@ -185,10 +185,6 @@
       display: none;
     }
 
-    body.gameplay-active .flashcards-footer-nav {
-      display: none !important;
-    }
-
     .flashcards-home-toggle[hidden],
     .topbar[hidden],
     .catalog[hidden],
@@ -1789,6 +1785,30 @@
       height: auto;
       flex: 0 0 auto;
       margin: auto;
+      --flashcards-mic-ring-padding: 13px;
+      --flashcards-mic-ring-fill: linear-gradient(145deg, #0d3f8f 0%, #1f73cf 52%, #5fc3ff 100%);
+      --flashcards-mic-ring-glow:
+        drop-shadow(0 0 12px rgba(37, 121, 224, 0.42))
+        drop-shadow(0 0 24px rgba(95, 195, 255, 0.34));
+    }
+
+    .game-card__visual::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      padding: var(--flashcards-mic-ring-padding);
+      background: var(--flashcards-mic-ring-fill);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      transform: translateY(var(--flashcards-active-image-shift, var(--flashcards-image-shift))) scale(var(--flashcards-active-image-scale, var(--flashcards-image-scale)));
+      transform-origin: center center;
+      pointer-events: none;
+      z-index: 5;
+      opacity: 0.98;
+      filter: var(--flashcards-mic-ring-glow);
+      transition: background 220ms ease, filter 220ms ease, opacity 220ms ease;
     }
 
     .game-card__visual > img:not(.game-card__seal) {
@@ -2761,21 +2781,11 @@
     }
 
     .game-card__visual.is-mic-live::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
       --flashcards-mic-progress: 0;
-      padding: 22px;
-      background: #ff8a1f;
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      transform: translateY(var(--flashcards-active-image-shift, var(--flashcards-image-shift))) scale(var(--flashcards-active-image-scale, var(--flashcards-image-scale)));
-      transform-origin: center center;
-      pointer-events: none;
-      z-index: 5;
-      filter: drop-shadow(0 0 16px rgba(255, 138, 31, 0.42));
+      --flashcards-mic-ring-fill: linear-gradient(145deg, #07391d 0%, #0b7a35 48%, #34ff8a 100%);
+      --flashcards-mic-ring-glow:
+        drop-shadow(0 0 14px rgba(15, 180, 88, 0.55))
+        drop-shadow(0 0 30px rgba(52, 255, 138, 0.42));
       animation: flashcardsMicRingFill 500ms ease-out forwards;
     }
 
@@ -3748,11 +3758,11 @@
       object-fit: cover;
     }
 
-    .game[data-phase-key="first-star"] #gameVisual.is-mic-live::before,
-    .game[data-phase-key="third-star"] #gameVisual.is-mic-live::before,
-    .game[data-phase-key="fifth-star"] #gameVisual.is-mic-live::before {
+    .game[data-phase-key="first-star"] #gameVisual::before,
+    .game[data-phase-key="third-star"] #gameVisual::before,
+    .game[data-phase-key="fifth-star"] #gameVisual::before {
       inset: 0;
-      padding: 8px;
+      padding: 13px;
       transform: none !important;
       animation: none;
     }
@@ -3879,10 +3889,10 @@
       transform-origin: center center;
     }
 
-    .game[data-phase-key="first-star"] #gameVisual.is-mic-live::before,
-    .game[data-phase-key="third-star"] #gameVisual.is-mic-live::before {
+    .game[data-phase-key="first-star"] #gameVisual::before,
+    .game[data-phase-key="third-star"] #gameVisual::before {
       inset: 0;
-      padding: 8px;
+      padding: 13px;
       border-radius: 50%;
       aspect-ratio: 1 / 1;
       transform: none !important;
@@ -4228,16 +4238,21 @@
       font-size: clamp(49px, 15.84vw, 97px);
       line-height: 0.82;
       font-family: "Pltay", "Soopafre", Arial, sans-serif;
-      background-image:
-        linear-gradient(rgba(8, 56, 31, 0.4), rgba(8, 56, 31, 0.4)),
-        url("images/bgtype.png");
-      background-position: center, center;
-      background-repeat: no-repeat, no-repeat;
-      background-size: cover, cover;
-      color: #f7fff8;
+      background: linear-gradient(145deg, #072616 0%, #0a3f24 55%, #106638 100%);
+      border: 2px solid rgba(86, 255, 165, 0.82);
+      border-radius: 14px;
+      color: #ffffff;
       text-shadow:
         0 2px 0 rgba(7, 34, 20, 0.95),
         0 8px 14px rgba(0, 0, 0, 0.35);
+      box-shadow:
+        inset 0 0 0 1px rgba(198, 255, 223, 0.14),
+        0 0 14px rgba(22, 201, 99, 0.28),
+        0 0 28px rgba(53, 255, 140, 0.14);
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__key:hover {
+      filter: brightness(1.08) drop-shadow(0 0 14px rgba(67, 255, 150, 0.32));
     }
 
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key {
@@ -5688,15 +5703,6 @@
       50% { transform: translateX(-50%); }
       75% { transform: translateX(-25%); }
       100% { transform: translateX(1px); }
-    }
-
-    body.identity-gate-open .flashcards-footer-nav,
-    body.sound-test-open .flashcards-footer-nav,
-    body.game-open .flashcards-footer-nav {
-      opacity: 1 !important;
-      pointer-events: none !important;
-      visibility: hidden !important;
-      display: none !important;
     }
 
     @media (max-width: 520px) {
@@ -9365,7 +9371,7 @@
 
       function syncFlashcardsFooterVisibility() {
         if (!els.flashcardsFooterNav) return;
-        els.flashcardsFooterNav.hidden = !Boolean(state.user?.hasPassword) || Boolean(state.game?.active);
+        els.flashcardsFooterNav.hidden = false;
       }
 
       function syncTutorialSetupButton() {
@@ -10859,14 +10865,12 @@
       }
 
       function isFooterGuardStage(entry = currentGameEntry()) {
-        return Boolean(state.game.active && entry && (entry.stage === 2 || entry.stage === 4));
+        return false;
       }
 
       function syncFooterGuardState(entry = currentGameEntry()) {
         if (!els.flashcardsFooterNav) return;
-        const guardActive = isFooterGuardStage(entry);
-        els.flashcardsFooterNav.classList.toggle('is-stage-guarded', guardActive);
-        els.flashcardsFooterNav.classList.toggle('is-stage-guarded-primed', !guardActive || state.game.footerNavPrimed);
+        els.flashcardsFooterNav.classList.remove('is-stage-guarded', 'is-stage-guarded-primed');
       }
 
       function primeFooterNavigation(event) {
