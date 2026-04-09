@@ -1181,6 +1181,29 @@
     setHomeAuthStatus('', null);
   }
 
+  // Override the legacy login-focused home UI: Books Home should launch directly.
+  function renderHomeAuthUi() {
+    const isLoggedIn = Boolean(state.user?.id);
+    if (els.homeStartPanel) {
+      els.homeStartPanel.classList.toggle('is-logged-in', isLoggedIn);
+    }
+    if (els.homeStartBtn) {
+      els.homeStartBtn.hidden = true;
+    }
+    if (els.homeLaunchBtn) {
+      els.homeLaunchBtn.hidden = false;
+      els.homeLaunchBtn.disabled = state.homeStartBusy;
+      const launchLabel = els.homeLaunchBtn.querySelector('span');
+      if (launchLabel) {
+        launchLabel.textContent = state.homeStartBusy ? 'Abrindo...' : 'Iniciar';
+      }
+    }
+    setHomeAuthStatus('', null);
+    if (els.homeLogoutBtn) {
+      els.homeLogoutBtn.hidden = true;
+    }
+  }
+
   function getFirstHomeBook() {
     const pool = getHomeBooksPool();
     if (!pool.length) return null;
