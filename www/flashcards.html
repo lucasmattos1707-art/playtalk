@@ -299,6 +299,7 @@
       width: min(240px, 62vw);
       height: auto;
       object-fit: contain;
+      clip-path: inset(1.8% 0 1.8% 1.8%);
       filter:
         drop-shadow(0 0 12px rgba(112, 214, 255, 0.92))
         drop-shadow(0 0 28px rgba(112, 214, 255, 0.62))
@@ -334,15 +335,18 @@
       min-height: 58px;
       padding: 16px 28px;
       border-radius: 999px;
-      background: linear-gradient(135deg, #0e7fff 0%, #b6ff2a 100%);
+      border: 1px solid rgba(110, 213, 255, 0.42);
+      background: linear-gradient(135deg, #071b4a 0%, #0d2f78 58%, #1367c7 100%);
       color: #ffffff;
       font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
       font-size: clamp(20px, 4vw, 26px);
       line-height: 1;
       letter-spacing: 0.04em;
       box-shadow:
-        0 18px 36px rgba(17, 107, 255, 0.28),
-        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        0 0 16px rgba(56, 170, 255, 0.3),
+        0 0 34px rgba(56, 170, 255, 0.18),
+        0 18px 36px rgba(17, 107, 255, 0.32),
+        inset 0 1px 0 rgba(186, 233, 255, 0.28);
       text-shadow:
         0 2px 0 rgba(8, 35, 93, 0.62),
         0 8px 16px rgba(10, 50, 121, 0.34);
@@ -353,8 +357,10 @@
     .welcome-gate__start-btn:focus-visible {
       transform: translateY(-2px) scale(1.01);
       box-shadow:
-        0 22px 42px rgba(17, 107, 255, 0.34),
-        inset 0 1px 0 rgba(255, 255, 255, 0.45);
+        0 0 18px rgba(108, 206, 255, 0.42),
+        0 0 42px rgba(56, 170, 255, 0.24),
+        0 22px 42px rgba(17, 107, 255, 0.38),
+        inset 0 1px 0 rgba(210, 242, 255, 0.34);
       filter: saturate(1.08);
     }
 
@@ -6375,6 +6381,7 @@
         entry: {
           cardsReady: false,
           welcomeVisible: true,
+          welcomeDismissed: false,
           welcomeIndex: 0,
           welcomeTimer: 0,
           launchAfterSoundTest: '',
@@ -7814,6 +7821,7 @@
       }
 
       function shouldShowWelcomeGate() {
+        if (state.entry.welcomeDismissed) return false;
         if (state.entry.authRequired || state.game.active || state.watch.active || isAdminUser()) return false;
         // Mantem a entrada visivel para usuario comum ate ele escolher iniciar.
         // Evita o efeito de "dissolver" para o catalogo quando a carta de tutorial nao estiver carregada.
@@ -7868,6 +7876,7 @@
         state.entry.pendingPlayStart = false;
         state.entry.pendingTutorialStart = false;
         state.entry.pendingTutorialMuteNarration = false;
+        state.entry.welcomeDismissed = true;
         state.entry.welcomeVisible = false;
         document.body.classList.remove('welcome-active');
         els.welcomeGate?.classList.remove('is-visible');
