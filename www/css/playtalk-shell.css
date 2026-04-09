@@ -111,16 +111,33 @@ body.playtalk-cosmic-shell .container::after {
 }
 
 .flashcards-footer-nav {
+  position: fixed !important;
+  left: 0;
+  right: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
+  height: max(62px, 8vh);
+  display: grid !important;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: stretch;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 200;
   background: var(--playtalk-footer-bg) !important;
   border-top: 1px solid var(--playtalk-footer-line);
   box-shadow:
     0 -10px 36px rgba(0, 0, 0, 0.42),
     0 -2px 20px rgba(40, 117, 255, 0.12);
   backdrop-filter: blur(20px);
+  transition: opacity 180ms ease, box-shadow 180ms ease;
 }
 
 .flashcards-footer-nav__item {
   position: relative;
+  border: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
   color: #ffffff !important;
   opacity: 0.88 !important;
   transition: transform 160ms ease, opacity 160ms ease, filter 160ms ease, background 160ms ease, box-shadow 160ms ease;
@@ -148,6 +165,9 @@ body.playtalk-cosmic-shell .container::after {
 
 .flashcards-footer-nav__item svg,
 .flashcards-footer-nav__item img {
+  width: 28px;
+  height: 28px;
+  display: block;
   filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0));
 }
 
@@ -165,7 +185,7 @@ body.playtalk-cosmic-shell .container::after {
 }
 
 .flashcards-footer-nav[data-shell-page="books"] {
-  display: none !important;
+  display: grid !important;
 }
 
 body.books-home-footer-visible .flashcards-footer-nav[data-shell-page="books"] {
