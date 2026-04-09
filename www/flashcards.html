@@ -269,6 +269,9 @@
       visibility: hidden;
       background: transparent;
       backdrop-filter: none;
+      border: 0;
+      outline: 0;
+      box-shadow: none;
     }
 
     .welcome-gate.is-visible {
@@ -286,6 +289,9 @@
       padding: 32px 20px;
       background: transparent;
       text-align: center;
+      border: 0;
+      outline: 0;
+      box-shadow: none;
     }
 
     .welcome-gate__stack {
@@ -293,13 +299,21 @@
       justify-items: center;
       gap: 18px;
       width: min(360px, 100%);
+      border: 0;
+      outline: 0;
+      box-shadow: none;
     }
 
     .welcome-gate__logo {
-      width: min(240px, 62vw);
+      width: min(276px, 71.3vw);
       height: auto;
       object-fit: contain;
-      clip-path: inset(1.8% 0 1.8% 1.8%);
+      display: block;
+      background: transparent;
+      border: 0;
+      outline: 0;
+      backface-visibility: hidden;
+      transform: translateZ(0);
       filter:
         drop-shadow(0 0 12px rgba(112, 214, 255, 0.92))
         drop-shadow(0 0 28px rgba(112, 214, 255, 0.62))
@@ -307,6 +321,7 @@
         drop-shadow(0 18px 34px rgba(34, 148, 255, 0.18));
       cursor: pointer;
       touch-action: manipulation;
+      animation: welcomeLogoNeonPulse 3.4s ease-in-out infinite;
     }
 
     .welcome-gate__copy {
@@ -4761,7 +4776,7 @@
     }
 
     .game-shell__tutorial-logo {
-      width: min(280px, 60vw);
+      width: min(322px, 69vw);
       height: auto;
       opacity: 0;
       transform: scale(0.88);
@@ -4771,6 +4786,7 @@
         drop-shadow(0 0 28px rgba(112, 214, 255, 0.62))
         drop-shadow(0 0 54px rgba(77, 132, 255, 0.42))
         drop-shadow(0 20px 36px rgba(0, 0, 0, 0.34));
+      animation: welcomeLogoNeonPulse 3.4s ease-in-out infinite;
     }
 
     .game-shell__tutorial-logo.is-visible {
@@ -4781,6 +4797,24 @@
     .game-shell__tutorial-logo.is-fading-out {
       opacity: 0;
       transform: scale(1.08);
+    }
+
+    @keyframes welcomeLogoNeonPulse {
+      0%,
+      100% {
+        filter:
+          drop-shadow(0 0 10px rgba(112, 214, 255, 0.82))
+          drop-shadow(0 0 22px rgba(112, 214, 255, 0.52))
+          drop-shadow(0 0 42px rgba(77, 132, 255, 0.34))
+          drop-shadow(0 18px 34px rgba(34, 148, 255, 0.16));
+      }
+      50% {
+        filter:
+          drop-shadow(0 0 14px rgba(145, 226, 255, 1))
+          drop-shadow(0 0 32px rgba(112, 214, 255, 0.72))
+          drop-shadow(0 0 64px rgba(77, 132, 255, 0.5))
+          drop-shadow(0 20px 38px rgba(34, 148, 255, 0.22));
+      }
     }
 
     #gameHeadCopy,
@@ -5755,7 +5789,7 @@
   <section class="welcome-gate is-visible" id="welcomeGate" aria-label="Entrada do PlayTalk">
     <div class="welcome-gate__stack">
       <div class="welcome-gate__touch" id="welcomeTouch">
-        <img class="welcome-gate__logo" id="welcomeLogo" src="/arquivos-codex/fluentlevelup.png" alt="Fluent Level Up">
+        <img class="welcome-gate__logo" id="welcomeLogo" src="/arquivos-codex/welcome-logo-test-2.png" alt="Logo de teste">
         <p class="welcome-gate__copy" id="welcomeCopy">Flu&#234;ncia f&#225;cil</p>
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button">JOGAR AGORA</button>
       </div>
@@ -5938,7 +5972,7 @@
           </div>
         </section>
         <div class="game-shell__tutorial-overlay" id="gameTutorialOverlay" aria-hidden="true">
-          <img class="game-shell__tutorial-logo" id="gameTutorialLogo" src="/arquivos-codex/fluentlevelup.png" alt="Fluent Level Up">
+          <img class="game-shell__tutorial-logo" id="gameTutorialLogo" src="/arquivos-codex/welcome-logo-test-2.png" alt="Logo de teste">
         </div>
       </div>
     </section>
