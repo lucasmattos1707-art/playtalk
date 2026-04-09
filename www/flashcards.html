@@ -299,7 +299,11 @@
       width: min(240px, 62vw);
       height: auto;
       object-fit: contain;
-      filter: drop-shadow(0 18px 34px rgba(34, 148, 255, 0.18));
+      filter:
+        drop-shadow(0 0 12px rgba(112, 214, 255, 0.92))
+        drop-shadow(0 0 28px rgba(112, 214, 255, 0.62))
+        drop-shadow(0 0 54px rgba(77, 132, 255, 0.42))
+        drop-shadow(0 18px 34px rgba(34, 148, 255, 0.18));
       cursor: pointer;
       touch-action: manipulation;
     }
@@ -4756,7 +4760,11 @@
       opacity: 0;
       transform: scale(0.88);
       transition: opacity 1000ms ease, transform 1000ms ease;
-      filter: drop-shadow(0 20px 36px rgba(0, 0, 0, 0.34));
+      filter:
+        drop-shadow(0 0 12px rgba(112, 214, 255, 0.92))
+        drop-shadow(0 0 28px rgba(112, 214, 255, 0.62))
+        drop-shadow(0 0 54px rgba(77, 132, 255, 0.42))
+        drop-shadow(0 20px 36px rgba(0, 0, 0, 0.34));
     }
 
     .game-shell__tutorial-logo.is-visible {
@@ -5741,7 +5749,7 @@
   <section class="welcome-gate is-visible" id="welcomeGate" aria-label="Entrada do PlayTalk">
     <div class="welcome-gate__stack">
       <div class="welcome-gate__touch" id="welcomeTouch">
-        <img class="welcome-gate__logo" id="welcomeLogo" src="SVG/logo.png" alt="PlayTalk">
+        <img class="welcome-gate__logo" id="welcomeLogo" src="/arquivos-codex/fluentlevelup.png" alt="Fluent Level Up">
         <p class="welcome-gate__copy" id="welcomeCopy">Flu&#234;ncia f&#225;cil</p>
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button">JOGAR AGORA</button>
       </div>
@@ -5924,7 +5932,7 @@
           </div>
         </section>
         <div class="game-shell__tutorial-overlay" id="gameTutorialOverlay" aria-hidden="true">
-          <img class="game-shell__tutorial-logo" id="gameTutorialLogo" src="SVG/logo.png" alt="PlayTalk">
+          <img class="game-shell__tutorial-logo" id="gameTutorialLogo" src="/arquivos-codex/fluentlevelup.png" alt="Fluent Level Up">
         </div>
       </div>
     </section>
