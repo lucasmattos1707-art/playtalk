@@ -3,19 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Escolha uma bela foto</title>
+  <title>Crie seu avatar</title>
   <style>
     @font-face {
-      font-family: "PlaytalkDisplay";
-      src: url("/playtalk.otf") format("opentype");
-      font-weight: 400;
-      font-style: normal;
-      font-display: swap;
-    }
-
-    @font-face {
-      font-family: "Soopafre";
-      src: url("/soopafre.ttf") format("truetype");
+      font-family: "Pltay";
+      src: url("/arquivos-codex/pltay.otf") format("opentype");
       font-weight: 400;
       font-style: normal;
       font-display: swap;
@@ -32,11 +24,13 @@
       --text: #f4f8ff;
       --muted: #c7daef;
       --shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
-      --green-1: #2bc057;
-      --green-2: #1fae4d;
-      --blue-1: #376df0;
-      --blue-2: #2553d4;
-      --ring-track: rgba(255,255,255,0.12);
+      --green-1: #0d3b1f;
+      --green-2: #072b16;
+      --green-neon: #58f09d;
+      --blue-1: #06183d;
+      --blue-2: #03112e;
+      --blue-neon: #61d4ff;
+      --ring-track: rgba(97, 212, 255, 0.2);
     }
 
     @media (max-width: 800px) {
@@ -144,15 +138,28 @@
     h1 {
       margin: 20px 0 12px;
       color: #fff;
-      font-family: "Soopafre", "Trebuchet MS", sans-serif;
+      font-family: "Pltay", "Trebuchet MS", sans-serif;
       font-size: clamp(38px, 7.2vw, 53px);
       letter-spacing: 0.02em;
       line-height: 0.88;
-      display: grid;
-      justify-items: center;
-      gap: 2px;
       width: 100%;
       text-align: center;
+      text-transform: uppercase;
+      text-shadow: 0 0 18px rgba(97, 212, 255, 0.32);
+    }
+
+    .photo-helper {
+      margin: 18px auto 0;
+      width: min(94%, 520px);
+      font-family: "Pltay", "Trebuchet MS", sans-serif;
+      font-size: clamp(19px, 3.6vw, 26px);
+      line-height: 1.05;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: #d7e9ff;
+      text-align: center;
+      text-wrap: balance;
+      text-shadow: 0 0 12px rgba(97, 212, 255, 0.24);
     }
 
     .photo-shell {
@@ -170,8 +177,10 @@
       margin-top: 0;
       padding: 8px;
       border-radius: 50%;
-      background: conic-gradient(#39d353 0deg, #39d353 var(--progress-angle), var(--ring-track) var(--progress-angle), var(--ring-track) 360deg);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.22);
+      background: conic-gradient(var(--blue-neon) 0deg, var(--blue-neon) var(--progress-angle), var(--ring-track) var(--progress-angle), var(--ring-track) 360deg);
+      box-shadow:
+        0 0 18px rgba(97, 212, 255, 0.72),
+        0 0 42px rgba(97, 212, 255, 0.34);
       transition: background 180ms linear;
     }
 
@@ -180,8 +189,10 @@
     }
 
     body.ai-generating .photo-ring {
-      background: conic-gradient(rgba(255,255,255,0.9) 0deg, rgba(255,255,255,0.9) var(--progress-angle), rgba(255,255,255,0.16) var(--progress-angle), rgba(255,255,255,0.16) 360deg);
-      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.16);
+      background: conic-gradient(var(--blue-neon) 0deg, var(--blue-neon) var(--progress-angle), var(--ring-track) var(--progress-angle), var(--ring-track) 360deg);
+      box-shadow:
+        0 0 22px rgba(97, 212, 255, 0.8),
+        0 0 54px rgba(97, 212, 255, 0.38);
     }
 
     .photo-circle {
@@ -277,7 +288,7 @@
       width: min(100%, 420px);
       min-height: 3.2em;
       margin-top: 60px;
-      font-family: "PlaytalkDisplay", "Trebuchet MS", sans-serif;
+      font-family: "Pltay", "Trebuchet MS", sans-serif;
       font-size: clamp(24px, 5.8vw, 40px);
       line-height: 0.92;
       color: #ffffff;
@@ -322,20 +333,35 @@
 
     .identity-action {
       min-height: 56px;
-      border: 0;
+      border: 2px solid transparent;
       border-radius: 18px;
       color: #fff;
       font-size: 18px;
-      font-weight: 800;
+      font-family: "Pltay", "Trebuchet MS", sans-serif;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
       cursor: pointer;
-      box-shadow: 0 18px 36px rgba(20, 48, 118, 0.34);
+      box-shadow: 0 0 0 rgba(0, 0, 0, 0);
       transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
     }
 
     .identity-action:hover { filter: brightness(1.03); }
     .identity-action:active { transform: translateY(1px) scale(0.99); }
-    .identity-action.is-success { background: linear-gradient(180deg, var(--green-1), var(--green-2)); }
-    .identity-action.is-secondary { background: linear-gradient(180deg, var(--blue-1), var(--blue-2)); }
+    .identity-action.is-success {
+      background: linear-gradient(180deg, var(--green-1), var(--green-2));
+      border-color: var(--green-neon);
+      box-shadow:
+        0 0 13px rgba(88, 240, 157, 0.58),
+        inset 0 0 16px rgba(88, 240, 157, 0.15);
+    }
+    .identity-action.is-secondary {
+      background: linear-gradient(180deg, var(--blue-1), var(--blue-2));
+      border-color: var(--blue-neon);
+      box-shadow:
+        0 0 12px rgba(97, 212, 255, 0.58),
+        inset 0 0 14px rgba(97, 212, 255, 0.14);
+    }
 
     .identity-action[disabled] {
       opacity: 0.55;
@@ -415,14 +441,15 @@
     <div class="wave"></div>
   </div>
   <main class="identity-page">
-    <section class="identity-card" aria-label="Escolha uma bela foto">
-      <h1><span>Escolha uma</span><span>bela foto</span></h1>
+    <section class="identity-card" aria-label="Crie seu avatar">
+      <h1>Crie seu avatar</h1>
       <div class="photo-shell">
         <div class="photo-ring is-hidden-progress" id="photoRing">
           <button class="photo-circle" id="photoCircle" type="button" aria-label="Enviar foto">
             <svg id="photoPlaceholder" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
           </button>
         </div>
+        <p class="photo-helper">Sua foto sera transformada em um desenho para seu avatar</p>
         <input id="photoInput" type="file" accept="image/*" hidden>
         <p class="identity-status" id="photoStatus"></p>
         <p class="identity-status" id="loadingCopy" aria-live="polite"></p>
@@ -437,15 +464,6 @@
   <script src="js/api-config.js"></script>
   <script src="js/android-shell.js"></script>
   <script>
-    const ONBOARDING_PHOTO_AUDIO_PATH = window.PlaytalkApi && typeof window.PlaytalkApi.accesskeyUrl === 'function'
-      ? window.PlaytalkApi.accesskeyUrl('photo.mp3')
-      : '/accesskey/photo.mp3';
-    const ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH = window.PlaytalkApi && typeof window.PlaytalkApi.accesskeyUrl === 'function'
-      ? window.PlaytalkApi.accesskeyUrl('photorecieve.mp3')
-      : '/accesskey/photorecieve.mp3';
-    const ONBOARDING_IMAGE_READY_AUDIO_PATH = window.PlaytalkApi && typeof window.PlaytalkApi.accesskeyUrl === 'function'
-      ? window.PlaytalkApi.accesskeyUrl('imageready.mp3')
-      : '/accesskey/imageready.mp3';
     const ONBOARDING_MAX_PHOTO_GENERATIONS = 5;
     const ONBOARDING_LOADING_MESSAGES = [
       'Analisando a imagem enviada...',
@@ -463,7 +481,6 @@
     const BLUR_SEQUENCE = [0.7, 0.6, 0.5, 0.4];
     const state = {
       user: null,
-      identityAudio: null,
       photoGateBusy: false,
       photoSourceDataUrl: '',
       photoVersions: [],
@@ -475,8 +492,7 @@
       photoProgressTimer: 0,
       photoProgressStartedAt: 0,
       blurTimer: 0,
-      blurIndex: 0,
-      audioRetryBound: false
+      blurIndex: 0
     };
     const els = {
       photoRing: document.getElementById('photoRing'),
@@ -577,63 +593,6 @@
       target.textContent = message || '';
       target.className = 'identity-status';
       if (tone) target.classList.add(`is-${tone}`);
-    }
-    function stopIdentityAudio() {
-      if (!state.identityAudio) return;
-      try {
-        state.identityAudio.pause();
-        state.identityAudio.currentTime = 0;
-      } catch (_error) {}
-      state.identityAudio = null;
-    }
-    function fadeOutIdentityAudio(durationMs = 1000) {
-      const activeAudio = state.identityAudio;
-      if (!activeAudio) return Promise.resolve(false);
-      return new Promise((resolve) => {
-        const startVolume = Number(activeAudio.volume) || 1;
-        const steps = Math.max(1, Math.round(durationMs / 50));
-        let currentStep = 0;
-        const timer = window.setInterval(() => {
-          currentStep += 1;
-          const ratio = Math.max(0, 1 - (currentStep / steps));
-          activeAudio.volume = startVolume * ratio;
-          if (currentStep >= steps) {
-            window.clearInterval(timer);
-            try {
-              activeAudio.pause();
-              activeAudio.currentTime = 0;
-              activeAudio.volume = 1;
-            } catch (_error) {}
-            if (state.identityAudio === activeAudio) state.identityAudio = null;
-            resolve(true);
-          }
-        }, 50);
-      });
-    }
-    function bindAudioRetry(src) {
-      if (state.audioRetryBound) return;
-      state.audioRetryBound = true;
-      const retry = () => {
-        playIdentityAudio(src, false);
-        document.removeEventListener('pointerdown', retry);
-        document.removeEventListener('keydown', retry);
-        state.audioRetryBound = false;
-      };
-      document.addEventListener('pointerdown', retry, { once: true });
-      document.addEventListener('keydown', retry, { once: true });
-    }
-    function playIdentityAudio(src, allowRetry = true) {
-      if (!src) return;
-      stopIdentityAudio();
-      const audio = new Audio(src);
-      audio.volume = 1;
-      state.identityAudio = audio;
-      audio.addEventListener('ended', () => { if (state.identityAudio === audio) state.identityAudio = null; }, { once: true });
-      audio.addEventListener('error', () => { if (state.identityAudio === audio) state.identityAudio = null; }, { once: true });
-      audio.play().catch(() => {
-        if (state.identityAudio === audio) state.identityAudio = null;
-        if (allowRetry) bindAudioRetry(src);
-      });
     }
     function stopPhotoLoadingCopy() {
       if (!state.photoLoadingTimer) return;
@@ -866,11 +825,9 @@
         const sourceDataUrl = await fileToSquareWebpDataUrl(file, 400);
         state.photoSourceDataUrl = sourceDataUrl;
         renderPhoto();
-        playIdentityAudio(ONBOARDING_PHOTO_RECEIVED_AUDIO_PATH);
         startPhotoLoadingCopy();
         const cartoonDataUrl = await createCartoonAvatar(sourceDataUrl);
         const optimizedCartoonDataUrl = await dataUrlToSquareWebpDataUrl(cartoonDataUrl, 400);
-        await fadeOutIdentityAudio(1000);
         stopPhotoLoadingCopy();
         stopProgressRing();
         setLoadingCopy('');
@@ -880,7 +837,6 @@
         state.photoVersionIndex = state.photoVersions.length - 1;
         state.photoGateBusy = false;
         renderPhoto();
-        playIdentityAudio(ONBOARDING_IMAGE_READY_AUDIO_PATH);
         flashPhotoResult();
         flashGoldenPhotoResult();
       } catch (error) {
@@ -908,7 +864,6 @@
         state.photoVersionIndex = Math.max(0, state.photoVersions.length - 1);
         state.photoGenerationCount = Math.max(state.photoVersions.length, Number(user?.avatarGenerationCount || 0));
         renderPhoto();
-        playIdentityAudio(ONBOARDING_PHOTO_AUDIO_PATH);
       } catch (error) {
         if ((state.photoVersions || []).length) {
           setStatus('');
@@ -953,7 +908,6 @@
       stopPhotoLoadingCopy();
       stopProgressRing();
       stopBlurAnimation();
-      stopIdentityAudio();
     });
     void init();
   </script>

@@ -6,9 +6,9 @@
   <title>Escolha um nome</title>
   <style>
     @font-face {
-      font-family: "PlaytalkDisplay";
-      src: url("/THEBOLDFONT-FREEVERSION.otf") format("opentype");
-      font-weight: 700;
+      font-family: "Pltay";
+      src: url("/arquivos-codex/pltay.otf") format("opentype");
+      font-weight: 400;
       font-style: normal;
       font-display: swap;
     }
@@ -24,12 +24,15 @@
       --text: #f4f8ff;
       --muted: #c7daef;
       --shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
-      --key-blue-1: #376df0;
-      --key-blue-2: #2553d4;
-      --space-blue-1: #47bcff;
-      --space-blue-2: #2b6ae8;
-      --green-1: #2bc057;
-      --green-2: #1fae4d;
+      --key-blue-1: #06183d;
+      --key-blue-2: #03112e;
+      --key-neon-blue: #61d4ff;
+      --danger-1: #3f0712;
+      --danger-2: #2b040c;
+      --danger-neon: #ff5f7d;
+      --green-1: #0d3b1f;
+      --green-2: #072b16;
+      --green-neon: #58f09d;
     }
 
     @media (max-width: 800px) {
@@ -102,11 +105,12 @@
     h1 {
       margin: 0 0 20px;
       color: #fff;
-      font-family: "PlaytalkDisplay", "Trebuchet MS", sans-serif;
+      font-family: "Pltay", "Trebuchet MS", sans-serif;
       font-size: clamp(32px, 6vw, 42px);
       letter-spacing: 0.02em;
       line-height: 0.95;
       text-transform: uppercase;
+      text-shadow: 0 0 16px rgba(97, 212, 255, 0.34);
     }
 
     .identity-name-display {
@@ -140,14 +144,17 @@
 
     .identity-key,
     .identity-action {
-      border: 0;
-      border-radius: 18px;
+      border: 2px solid transparent;
+      border-radius: 16px;
       color: #fff;
       font-size: 18px;
-      font-weight: 800;
+      font-family: "Pltay", "Trebuchet MS", sans-serif;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
       cursor: pointer;
       transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
-      box-shadow: 0 18px 36px rgba(20, 48, 118, 0.34);
+      box-shadow: 0 0 0 rgba(0, 0, 0, 0);
     }
 
     .identity-key:hover,
@@ -161,8 +168,14 @@
     }
 
     .identity-key {
-      min-height: 58px;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      min-height: 0;
       background: linear-gradient(180deg, var(--key-blue-1), var(--key-blue-2));
+      border-color: var(--key-neon-blue);
+      box-shadow:
+        0 0 10px rgba(97, 212, 255, 0.55),
+        inset 0 0 14px rgba(97, 212, 255, 0.12);
     }
 
     .identity-actions-row {
@@ -175,12 +188,20 @@
 
     .identity-space-btn {
       min-height: 62px;
-      background: linear-gradient(180deg, var(--space-blue-1), var(--space-blue-2));
+      background: linear-gradient(180deg, var(--key-blue-1), var(--key-blue-2));
+      border-color: var(--key-neon-blue);
+      box-shadow:
+        0 0 12px rgba(97, 212, 255, 0.58),
+        inset 0 0 14px rgba(97, 212, 255, 0.14);
     }
 
     .identity-delete-btn {
       min-height: 62px;
-      background: linear-gradient(180deg, #ff5454, #e12626);
+      background: linear-gradient(180deg, var(--danger-1), var(--danger-2));
+      border-color: var(--danger-neon);
+      box-shadow:
+        0 0 12px rgba(255, 95, 125, 0.58),
+        inset 0 0 14px rgba(255, 95, 125, 0.16);
       font-size: 16px;
       letter-spacing: 0.01em;
     }
@@ -190,6 +211,10 @@
       min-height: 56px;
       margin-top: 36px;
       background: linear-gradient(180deg, var(--green-1), var(--green-2));
+      border-color: var(--green-neon);
+      box-shadow:
+        0 0 13px rgba(88, 240, 157, 0.58),
+        inset 0 0 16px rgba(88, 240, 157, 0.15);
     }
 
     .identity-action[disabled] {
