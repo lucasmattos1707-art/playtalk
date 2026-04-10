@@ -4318,6 +4318,13 @@
       margin: 0;
     }
 
+    .game[data-phase-key="second-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="second-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="second-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="second-star"] #gameVisual .game-card__reveal-image {
+      transform: scale(1.05) !important;
+    }
+
     .game[data-phase-key="second-star"] #gameVisual .game-card__phase-flag,
     .game[data-phase-key="fourth-star"] #gameVisual .game-card__phase-flag {
       width: 100%;
@@ -6182,7 +6189,7 @@
         <div class="game-head">
           <div>
             <h2>Jogar agora</h2>
-            <p>O jogo comeca com 3 flashcards. A cada vitoria, 2 novos sobem para a mesa ate o maximo de 12.</p>
+            <p>O jogo comeca com 12 flashcards base. Cartas que voltam do memorizing ocupam ate 8 slots extras, chegando a 20 ativas.</p>
             <p id="gameSetupCountCopy" class="admin-tools__status">Calculando flashcards disponiveis...</p>
           </div>
           <div class="actions">
@@ -6190,7 +6197,7 @@
           </div>
         </div>
         <div class="game-setup__options" id="gameSetupOptions">
-          <button class="game-setup__option" type="button" data-game-count="3">Comecar com 3 cartas</button>
+          <button class="game-setup__option" type="button" data-game-count="12">Comecar com 12 cartas</button>
           <button class="game-setup__option game-setup__option--tutorial" id="startTutorialBtn" type="button" hidden>Iniciar Modo Tutorial</button>
         </div>
       </div>
@@ -6460,11 +6467,14 @@
       const BALANCE_TRACKS = ['zen1.mp3', 'zen2.mp3', 'zen3.mp3', 'zen4.mp3'];
       const BALANCE_TRACK_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas';
       const TYPING_KEY_BLUES = ['#6ebcff', '#76c3ff', '#7dc9ff', '#86ceff', '#8fd4ff', '#98d9ff'];
-      const DEFAULT_GAME_CONTEXT_LIMIT = 1;
+      const DEFAULT_GAME_CONTEXT_LIMIT = 12;
       const MIN_GAME_CONTEXT_LIMIT = 1;
-      const GAME_ACTIVE_CARD_CAP = 12;
+      const GAME_BASE_CARD_COUNT = 12;
+      const GAME_ACTIVE_CARD_CAP = 20;
       const GAME_STAR_TARGET = 5;
       const REVIEW_SLOT_LIMIT = 8;
+      const GAME_UPCOMING_PRELOAD_COUNT = 3;
+      const GAME_MIC_UNLOCK_DELAY_MS = 1200;
       const TUTORIAL_AUDIO_ROOT = AUDIOSTUTO_PUBLIC_ROOT;
       const TUTORIAL_NORMAL_GAME_COUNT = 1;
       const TUTORIAL_PLANET_IMAGE_NAME = 'planet.jpg';
@@ -6665,6 +6675,7 @@
           milestoneAudios: new Map(),
           reportAudio: null,
           preloadImages: new Map(),
+          preloadAudios: new Map(),
           contextLimit: DEFAULT_GAME_CONTEXT_LIMIT,
           selectedCount: null,
           pendingRewardSeal: null,
@@ -6675,6 +6686,10 @@
           currentCardTrainingId: '',
           currentCardTrainingStartedAt: 0,
           canListen: false,
+          micUnlockTimer: 0,
+          micUnlockCardId: '',
+          micUnlockStage: 0,
+          audioCanBeInterruptedAt: 0,
           typingPromptLoopTimer: 0,
           secondStarIdleHintDelayTimer: 0,
           secondStarIdleHintRotateTimer: 0,
@@ -7104,11 +7119,22 @@
       }
 
       function readScopedStorage(baseKey, fallback, userId = state.user?.id) {
-        return fallback;
+        const storageKey = storageKeyForUser(baseKey, userId);
+        try {
+          const raw = localStorage.getItem(storageKey);
+          if (raw == null || raw === '') return fallback;
+          return JSON.parse(raw);
+        } catch (_error) {
+          return fallback;
+        }
       }
 
       function removeScopedStorage(baseKey, userId = state.user?.id) {
-        return undefined;
+        try {
+          localStorage.removeItem(storageKeyForUser(baseKey, userId));
+        } catch (_error) {
+          // ignore
+        }
       }
 
       function readTutorialProgressForUser(userId = state.user?.id) {
@@ -7121,7 +7147,14 @@
       }
 
       function persistTutorialProgressLocally() {
-        return undefined;
+        try {
+          localStorage.setItem(
+            storageKeyForUser(TUTORIAL_PROGRESS_STORAGE_KEY, state.user?.id),
+            JSON.stringify(Boolean(state.game.tutorial.completed))
+          );
+        } catch (_error) {
+          // ignore
+        }
       }
 
       function normalizeSavedGameEntry(raw) {
@@ -7153,7 +7186,19 @@
       }
 
       function persistGameSessionLocally() {
-        return undefined;
+        const snapshot = serializeCurrentGameState();
+        if (!snapshot) {
+          removeScopedStorage(GAME_SESSION_STORAGE_KEY, state.user?.id);
+          return;
+        }
+        try {
+          localStorage.setItem(
+            storageKeyForUser(GAME_SESSION_STORAGE_KEY, state.user?.id),
+            JSON.stringify(snapshot)
+          );
+        } catch (_error) {
+          // ignore
+        }
       }
 
       function clearGameSessionLocally(userId = state.user?.id) {
@@ -7161,7 +7206,7 @@
       }
 
       function readGameSessionForUser(userId = state.user?.id) {
-        return null;
+        return readScopedStorage(GAME_SESSION_STORAGE_KEY, null, userId);
       }
 
       function setTutorialCompleted(completed) {
@@ -7181,7 +7226,14 @@
       }
 
       function persistOwnedIdsLocally() {
-        return undefined;
+        try {
+          localStorage.setItem(
+            storageKeyForUser(OWNED_STORAGE_KEY, state.user?.id),
+            JSON.stringify(Array.from(state.ownedIds.values()))
+          );
+        } catch (_error) {
+          // ignore
+        }
       }
 
       function getNowMs() {
@@ -7189,19 +7241,39 @@
       }
 
       function readTimeOffsetMs() {
-        return 0;
+        try {
+          return Math.round(Number(localStorage.getItem(TIME_OFFSET_STORAGE_KEY)) || 0);
+        } catch (_error) {
+          return 0;
+        }
       }
 
       function saveTimeOffsetMs() {
-        return undefined;
+        try {
+          localStorage.setItem(TIME_OFFSET_STORAGE_KEY, String(Math.round(Number(state.timeOffsetMs) || 0)));
+        } catch (_error) {
+          // ignore
+        }
       }
 
       function readCachedCards() {
-        return [];
+        try {
+          const parsed = JSON.parse(localStorage.getItem(CARDS_CACHE_STORAGE_KEY) || 'null');
+          return Array.isArray(parsed?.cards) ? parsed.cards : [];
+        } catch (_error) {
+          return [];
+        }
       }
 
       function saveCachedCards(cards) {
-        return undefined;
+        try {
+          localStorage.setItem(CARDS_CACHE_STORAGE_KEY, JSON.stringify({
+            savedAt: Date.now(),
+            cards: Array.isArray(cards) ? cards : []
+          }));
+        } catch (_error) {
+          // ignore
+        }
       }
 
       function normalizeStatsSnapshot(raw) {
@@ -7261,7 +7333,14 @@
       }
 
       function persistUserStatsLocally() {
-        return undefined;
+        try {
+          localStorage.setItem(
+            storageKeyForUser(USER_STATS_STORAGE_KEY, state.user?.id),
+            JSON.stringify(normalizeStatsSnapshot(state.stats))
+          );
+        } catch (_error) {
+          // ignore
+        }
       }
 
       function saveUserStats(options = {}) {
@@ -7354,7 +7433,29 @@
       }
 
       function readUserProgressForUser(userId = state.user?.id) {
-        return new Map();
+        try {
+          const parsed = JSON.parse(localStorage.getItem(storageKeyForUser(USER_PROGRESS_STORAGE_KEY, userId)) || 'null');
+          const records = Array.isArray(parsed) ? parsed.map(normalizeProgressRecord).filter(Boolean) : [];
+          if (records.length) {
+            return new Map(records.map((record) => [record.cardId, record]));
+          }
+        } catch (_error) {
+          // ignore
+        }
+
+        const ownedIds = readOwnedIdsForUser(userId);
+        if (!ownedIds.length) return new Map();
+        const now = getNowMs();
+        return new Map(ownedIds.map((cardId, index) => [cardId, createProgressRecord(cardId, {
+          phaseIndex: 1,
+          targetPhaseIndex: 1,
+          status: 'ready',
+          memorizingStartedAt: 0,
+          memorizingDurationMs: 0,
+          availableAt: now - 1,
+          returnedAt: now + index,
+          createdAt: now + index
+        })]));
       }
 
       function readUserProgress() {
@@ -7363,7 +7464,15 @@
 
       function persistUserProgressLocally() {
         syncOwnedIdsFromProgress();
-        return undefined;
+        persistOwnedIdsLocally();
+        try {
+          localStorage.setItem(
+            storageKeyForUser(USER_PROGRESS_STORAGE_KEY, state.user?.id),
+            JSON.stringify(Array.from(state.userCards.values()))
+          );
+        } catch (_error) {
+          // ignore
+        }
       }
 
       function readHiddenCardIdsForUser(userId = state.user?.id) {
@@ -7379,7 +7488,14 @@
       }
 
       function persistHiddenCardIdsLocally() {
-        return undefined;
+        try {
+          localStorage.setItem(
+            storageKeyForUser(USER_HIDDEN_STORAGE_KEY, state.user?.id),
+            JSON.stringify(Array.from(state.hiddenCardIds.values()))
+          );
+        } catch (_error) {
+          // ignore
+        }
       }
 
       function saveUserProgress(options = {}) {
@@ -12104,13 +12220,27 @@
         const rate = Number(options?.rate) > 0 ? Number(options.rate) : 1;
         stopActiveAudio();
         if (card.audioUrl) {
-          const audio = new Audio(card.audioUrl);
+          const cachedAudio = state.game.preloadAudios.get(card.audioUrl);
+          const audio = cachedAudio || new Audio(card.audioUrl);
+          try {
+            audio.pause();
+            audio.currentTime = 0;
+          } catch (_error) {
+            // ignore
+          }
+          audio.preload = 'auto';
           audio.playbackRate = rate;
           audio.defaultPlaybackRate = rate;
           audio.preservesPitch = true;
           state.stats.listenings += 1;
           saveUserStats({ skipCloudSync: true });
           updateGameChips();
+          if (options.enableMicDuringPlayback !== false) {
+            scheduleGameMicUnlock(
+              state.game.currentId ? state.game.entries.get(state.game.currentId) : null,
+              options.unlockDelayMs
+            );
+          }
           return playAudioWithSoftEnd(audio, { registerAsActive: true });
         }
 
@@ -12265,10 +12395,64 @@
         state.game.preloadImages.set(src, image);
       }
 
-      function preloadUpcomingGameCard() {
-        const nextId = state.game.queue[0];
-        if (!nextId) return;
-        preloadCardImage(cardById(nextId));
+      function preloadCardAudio(card) {
+        const src = safeText(card?.audioUrl);
+        if (!src || state.game.preloadAudios.has(src)) return;
+        try {
+          const audio = new Audio(src);
+          audio.preload = 'auto';
+          audio.load();
+          state.game.preloadAudios.set(src, audio);
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      function clearGameMicUnlockTimer() {
+        if (state.game.micUnlockTimer) {
+          window.clearTimeout(state.game.micUnlockTimer);
+          state.game.micUnlockTimer = 0;
+        }
+        state.game.micUnlockCardId = '';
+        state.game.micUnlockStage = 0;
+        state.game.audioCanBeInterruptedAt = 0;
+      }
+
+      function scheduleGameMicUnlock(entry, delayMs = GAME_MIC_UNLOCK_DELAY_MS) {
+        clearGameMicUnlockTimer();
+        const entryId = safeText(entry?.id);
+        const entryStage = Number(entry?.stage) || 0;
+        if (!entryId || !entryStage || isTypingStage(entry)) return;
+        state.game.micUnlockCardId = entryId;
+        state.game.micUnlockStage = entryStage;
+        state.game.audioCanBeInterruptedAt = Date.now() + Math.max(0, Number(delayMs) || 0);
+        state.game.micUnlockTimer = window.setTimeout(() => {
+          state.game.micUnlockTimer = 0;
+          if (!state.game.active || state.game.currentId !== entryId) return;
+          const currentEntry = state.game.entries.get(entryId);
+          if (!currentEntry || Number(currentEntry.stage) !== entryStage) return;
+          state.game.canListen = true;
+          renderGameTouchButton(STAGES[currentEntry.stage] || STAGES[1], currentEntry);
+        }, Math.max(0, Number(delayMs) || 0));
+      }
+
+      function primeCurrentAndUpcomingGameMedia(currentCard = null) {
+        const cards = [];
+        if (currentCard) {
+          cards.push(currentCard);
+        }
+        state.game.queue
+          .slice(0, GAME_UPCOMING_PRELOAD_COUNT)
+          .forEach((nextId) => {
+            const nextCard = cardById(nextId);
+            if (nextCard) {
+              cards.push(nextCard);
+            }
+          });
+        cards.forEach((card) => {
+          preloadCardImage(card);
+          preloadCardAudio(card);
+        });
       }
 
       function expandEnglishSpeechContractions(text) {
@@ -12507,6 +12691,10 @@
           ? buildStageThreePlaceholderMarkup(card)
           : escapeHtml('?');
         preloadCardImage(card);
+        preloadCardAudio(card);
+        if (stageConfig.overlayFlag) {
+          preloadCardImage({ imageUrl: stageConfig.overlayFlag });
+        }
         const imageOnlyMarkup = card.imageUrl
           ? `<img src="${escapeHtml(card.imageUrl)}" alt="${escapeHtml(card.english || card.portuguese || card.deckTitle)}">`
           : `<div class="mini-card__fallback">${escapeHtml(card.deckTitle)}</div>`;
@@ -13123,6 +13311,7 @@
           || stageConfig.key === 'third-star'
           || stageConfig.key === 'fifth-star';
         const typingStage = isTypingStage(entry);
+        clearGameMicUnlockTimer();
         if (typingStage) {
           entry.typingMistakes = 0;
         }
@@ -13135,7 +13324,7 @@
           setGameStatus('', '');
         }
         buildGameVisual(card, stageConfig);
-        preloadUpcomingGameCard();
+        primeCurrentAndUpcomingGameMedia(card);
 
         let word = ' ';
         if (stageConfig.wordType === 'portuguese') {
@@ -13248,7 +13437,7 @@
           window.setTimeout(() => {
             if (state.game.currentId === entry.id && !state.game.listening && !state.game.paused) {
               if (entry.stage !== 2) {
-                playPromptAudio(card);
+                playPromptAudio(card, { enableMicDuringPlayback: false });
               }
             }
           }, 220);
@@ -13264,7 +13453,9 @@
           }
           window.setTimeout(() => {
             if (state.game.currentId === entry.id && !state.game.listening && !state.game.paused) {
-              const playback = playPromptAudio(card);
+              const playback = playPromptAudio(card, {
+                unlockDelayMs: GAME_MIC_UNLOCK_DELAY_MS
+              });
               playback.finally(() => {
                 if (state.game.currentId === entry.id) {
                   state.game.canListen = true;
@@ -13807,9 +13998,10 @@
           state.game.active = true;
           state.game.sessionStartedAt = Date.now();
 
-          const roundCount = normalizeGameCount(state.game.selectedCount) || DEFAULT_GAME_CONTEXT_LIMIT;
+          const roundCount = GAME_BASE_CARD_COUNT;
           state.game.contextLimit = GAME_ACTIVE_CARD_CAP;
-          const reviewLimit = Math.min(REVIEW_SLOT_LIMIT, Math.floor(roundCount / 3));
+          state.game.selectedCount = GAME_BASE_CARD_COUNT;
+          const reviewLimit = Math.min(REVIEW_SLOT_LIMIT, readyReviewCards().length);
           const reviewCards = readyReviewCards().slice(0, reviewLimit);
           const basePool = applyEarlyFlashcardFilter(baseCandidateCards());
           const chosenCards = buildOrderedDeckSelection(
@@ -14088,8 +14280,14 @@
         if (!entry) return;
         if (isTypingStage(entry)) return;
         if (state.game.activeAudio) {
-          flashGameVisualBlockedAudio();
-          return;
+          const canInterruptAudio = state.game.canListen
+            && Number(state.game.audioCanBeInterruptedAt) > 0
+            && Date.now() >= Number(state.game.audioCanBeInterruptedAt);
+          if (!canInterruptAudio) {
+            flashGameVisualBlockedAudio();
+            return;
+          }
+          await fadeOutActiveAudio(180);
         }
         if (!state.game.canListen) return;
 
