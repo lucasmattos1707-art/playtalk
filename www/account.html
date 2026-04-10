@@ -219,6 +219,7 @@
       font-size: 32px;
       line-height: 1.1;
       text-align: center;
+      white-space: pre-line;
     }
 
     .account-field {
@@ -315,26 +316,63 @@
 
     .panel.is-guest .account-name-prompt {
       display: inline-flex;
+      width: 100%;
+      min-height: 58px;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .panel.is-guest .account-name-inline {
+      position: relative;
+      width: 100%;
+      min-height: 58px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1.5px solid rgba(112, 239, 255, 0.95);
+      background: linear-gradient(180deg, rgba(4, 42, 72, 0.96) 0%, rgba(7, 31, 78, 0.98) 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(194, 248, 255, 0.12),
+        0 0 16px rgba(86, 225, 255, 0.42),
+        0 0 34px rgba(36, 112, 255, 0.22);
+      text-shadow: 0 0 14px rgba(114, 239, 255, 0.22);
+      cursor: text;
     }
 
     .panel.is-guest .account-name-input {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      min-height: 58px;
+      padding: 0 18px;
       border-radius: 999px;
-      border: 1.5px solid rgba(112, 239, 255, 0.28);
-      background: rgba(11, 34, 65, 0.72);
+      border: 0;
+      background: transparent;
       color: #e9feff;
       font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
       font-size: 24px;
       font-weight: 800;
       line-height: 1;
       letter-spacing: 0.01em;
-      box-shadow:
-        inset 0 0 0 1px rgba(194, 248, 255, 0.08),
-        0 0 14px rgba(86, 225, 255, 0.18);
-      caret-color: #9bf7ff;
+      box-shadow: none;
+      caret-color: #ffffff;
+      opacity: 0;
+      pointer-events: none;
     }
 
     .panel.is-guest .account-name-input::placeholder {
-      color: rgba(233, 254, 255, 0.58);
+      color: transparent;
+    }
+
+    .panel.is-guest .account-name-inline.is-typing .account-name-prompt,
+    .panel.is-guest .account-name-inline.has-value .account-name-prompt {
+      display: none;
+    }
+
+    .panel.is-guest .account-name-inline.is-typing .account-name-input,
+    .panel.is-guest .account-name-inline.has-value .account-name-input {
+      opacity: 1;
+      pointer-events: auto;
     }
 
     .account-name-input[readonly] {
@@ -635,8 +673,84 @@
       display: none !important;
     }
 
+    .panel.is-guest #accountPasswordField {
+      position: relative;
+      width: 100%;
+      min-height: 58px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1.5px solid rgba(255, 153, 56, 0.95);
+      background: linear-gradient(180deg, rgba(89, 31, 7, 0.96), rgba(46, 16, 2, 0.98));
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 201, 142, 0.16),
+        0 0 18px rgba(255, 126, 45, 0.34),
+        0 0 40px rgba(255, 97, 24, 0.24),
+        0 22px 44px rgba(71, 24, 5, 0.28);
+      color: #ffd6a3;
+      cursor: text;
+      overflow: hidden;
+    }
+
     .panel.is-guest #accountPasswordField > span {
+      display: inline-flex;
+      width: 100%;
+      min-height: 58px;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      text-shadow: 0 0 12px rgba(255, 214, 163, 0.16);
+    }
+
+    .panel.is-guest #accountPasswordField > span::before {
+      content: "";
+      width: 22px;
+      height: 22px;
+      display: inline-block;
+      background: currentColor;
+      filter:
+        drop-shadow(0 0 8px rgba(255, 190, 112, 0.65))
+        drop-shadow(0 0 18px rgba(255, 128, 33, 0.44));
+      -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M7.5 10V7.75a4.5 4.5 0 0 1 9 0V10h.5A2.5 2.5 0 0 1 19.5 12.5v5A2.5 2.5 0 0 1 17 20H7a2.5 2.5 0 0 1-2.5-2.5v-5A2.5 2.5 0 0 1 7 10zm1.5 0h6V7.75a3 3 0 0 0-6 0z'/></svg>") center / contain no-repeat;
+      mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M7.5 10V7.75a4.5 4.5 0 0 1 9 0V10h.5A2.5 2.5 0 0 1 19.5 12.5v5A2.5 2.5 0 0 1 17 20H7a2.5 2.5 0 0 1-2.5-2.5v-5A2.5 2.5 0 0 1 7 10zm1.5 0h6V7.75a3 3 0 0 0-6 0z'/></svg>") center / contain no-repeat;
+      flex: 0 0 auto;
+    }
+
+    .panel.is-guest #accountPasswordInput {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      min-height: 58px;
+      padding: 0 18px;
+      border: 0;
+      background: transparent;
+      color: #fff4e4;
+      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0.12em;
+      text-align: center;
+      caret-color: #ffffff;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .panel.is-guest #accountPasswordInput::placeholder {
+      color: transparent;
+    }
+
+    .panel.is-guest #accountPasswordField.is-typing > span,
+    .panel.is-guest #accountPasswordField.has-value > span {
       display: none;
+    }
+
+    .panel.is-guest #accountPasswordField.is-typing #accountPasswordInput,
+    .panel.is-guest #accountPasswordField.has-value #accountPasswordInput {
+      opacity: 1;
+      pointer-events: auto;
     }
 
     .account-status.is-success {

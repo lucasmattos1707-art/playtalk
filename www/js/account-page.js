@@ -2,6 +2,8 @@
   const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
   const AUTO_SAVE_DELAY_MS = 700;
   const STATS_ROTATE_MS = 2500;
+  const GUEST_PROMPT_ROTATE_MS = 2500;
+  const GUEST_NAME_PROMPTS = ['Digite um nome de usuário', 'Toque para digitar'];
   const NUMBER_ANIMATION_HANDLES = new WeakMap();
   const els = {
     panel: document.querySelector('.panel'),
@@ -10,6 +12,7 @@
     avatarPreview: document.getElementById('accountAvatarPreview'),
     avatarFallback: document.getElementById('accountAvatarFallback'),
     nameInline: document.getElementById('accountNameInline'),
+    namePromptLabel: document.querySelector('.account-name-prompt-label'),
     nameInput: document.getElementById('accountNameInput'),
     passwordField: document.getElementById('accountPasswordField'),
     passwordInput: document.getElementById('accountPasswordInput'),
@@ -46,7 +49,9 @@
     booksStats: null,
     statsRotationTimer: 0,
     statsRotationIndex: 0,
-    statsLastRenderedLine: ''
+    statsLastRenderedLine: '',
+    guestPromptTimer: 0,
+    guestPromptIndex: 0
   };
 
   function buildApiUrl(path) {
@@ -378,6 +383,46 @@
     els.premiumIcon.hidden = !isLoggedIn;
   }
 
+  function syncGuestInlineUi() {
+    const isLoggedIn = Boolean(state.user?.id);
+    if (els.nameInline) {
+      const hasNameValue = Boolean(safeText(els.nameInput?.value));
+      els.nameInline.classList.toggle('is-typing', !isLoggedIn && document.activeElement === els.nameInput);
+      els.nameInline.classList.toggle('has-value', !isLoggedIn && hasNameValue);
+    }
+    if (els.passwordField) {
+      const hasPasswordValue = Boolean(safeText(els.passwordInput?.value));
+      els.passwordField.classList.toggle('is-typing', !isLoggedIn && document.activeElement === els.passwordInput);
+      els.passwordField.classList.toggle('has-value', !isLoggedIn && hasPasswordValue);
+    }
+  }
+
+  function stopGuestPromptRotation() {
+    if (!state.guestPromptTimer) return;
+    window.clearInterval(state.guestPromptTimer);
+    state.guestPromptTimer = 0;
+  }
+
+  function renderGuestPromptLabel() {
+    if (!els.namePromptLabel) return;
+    const isLoggedIn = Boolean(state.user?.id);
+    const isTyping = document.activeElement === els.nameInput || Boolean(safeText(els.nameInput?.value));
+    if (isLoggedIn || isTyping) return;
+    els.namePromptLabel.textContent = GUEST_NAME_PROMPTS[state.guestPromptIndex % GUEST_NAME_PROMPTS.length] || GUEST_NAME_PROMPTS[0];
+  }
+
+  function startGuestPromptRotation() {
+    stopGuestPromptRotation();
+    const isLoggedIn = Boolean(state.user?.id);
+    if (isLoggedIn || !els.namePromptLabel) return;
+    renderGuestPromptLabel();
+    state.guestPromptTimer = window.setInterval(() => {
+      if (document.activeElement === els.nameInput || safeText(els.nameInput?.value)) return;
+      state.guestPromptIndex = (state.guestPromptIndex + 1) % GUEST_NAME_PROMPTS.length;
+      renderGuestPromptLabel();
+    }, GUEST_PROMPT_ROTATE_MS);
+  }
+
   function snapshotCurrentProfile() {
     return {
       username: safeText(els.nameInput?.value || state.user?.username || state.localProfile?.username),
@@ -410,7 +455,7 @@
     }
     els.avatarPreview.src = hasAvatar ? avatar : 'Avatar/avatar-man-person-svgrepo-com.svg';
     els.avatarPreview.style.display = isLoggedIn && hasAvatar ? 'block' : 'none';
-    els.avatarFallback.textContent = isLoggedIn ? (username.charAt(0).toUpperCase() || 'P') : 'Entre com sua conta';
+    els.avatarFallback.textContent = isLoggedIn ? (username.charAt(0).toUpperCase() || 'P') : 'Entre com\nsua conta';
     els.avatarFallback.style.display = isLoggedIn && hasAvatar ? 'none' : 'grid';
     els.avatarInput.disabled = !isLoggedIn;
     els.avatarInput.value = '';
@@ -425,16 +470,20 @@
     const shouldHidePasswordField = isLoggedIn ? !state.passwordEditMode : false;
     if (els.passwordField) {
       els.passwordField.hidden = shouldHidePasswordField;
+      const passwordFieldLabel = els.passwordField.querySelector('span');
+      if (passwordFieldLabel) {
+        passwordFieldLabel.textContent = isLoggedIn ? 'Senha' : 'Crie uma boa senha';
+      }
     }
     if (els.passwordInput) {
       els.passwordInput.placeholder = isLoggedIn ? 'Nova senha' : 'Digite sua senha';
     }
     if (els.passwordBtn) {
-      els.passwordBtn.hidden = false;
+      els.passwordBtn.hidden = !isLoggedIn;
       if (els.passwordBtnLabel) {
         els.passwordBtnLabel.textContent = isLoggedIn
           ? (state.passwordEditMode ? 'Cancelar' : 'Trocar senha')
-          : 'Trocar senha';
+          : 'Crie uma boa senha';
       }
     }
     if (shouldHidePasswordField && els.passwordInput) {
@@ -442,6 +491,9 @@
     }
 
     els.logoutBtn.hidden = !state.user;
+    syncGuestInlineUi();
+    renderGuestPromptLabel();
+    startGuestPromptRotation();
     renderPremiumStatus();
     renderPremiumButton();
     renderAccountMetrics();
@@ -833,12 +885,16 @@
 
     els.nameInput?.addEventListener('input', () => {
       setStatus('');
+      syncGuestInlineUi();
+      renderGuestPromptLabel();
       if (state.user?.id) {
         scheduleAutoSave();
       }
     });
 
     els.nameInput?.addEventListener('focus', () => {
+      syncGuestInlineUi();
+      renderGuestPromptLabel();
       if (state.user?.id && !state.nameEditing) {
         startInlineNameEdit();
       }
@@ -851,6 +907,8 @@
     });
 
     els.nameInput?.addEventListener('blur', () => {
+      syncGuestInlineUi();
+      renderGuestPromptLabel();
       if (!state.user?.id) return;
       finishInlineNameEdit({ save: true });
     });
@@ -873,6 +931,7 @@
       if (!state.user?.id) {
         els.passwordInput?.focus();
         setStatus('');
+        syncGuestInlineUi();
         return;
       }
       state.passwordEditMode = !state.passwordEditMode;
@@ -886,6 +945,32 @@
       } else {
         setStatus('');
       }
+    });
+
+    els.nameInline?.addEventListener('click', () => {
+      if (state.user?.id) return;
+      els.nameInput?.focus();
+      syncGuestInlineUi();
+      renderGuestPromptLabel();
+    });
+
+    els.passwordField?.addEventListener('click', () => {
+      if (state.user?.id) return;
+      els.passwordInput?.focus();
+      syncGuestInlineUi();
+    });
+
+    els.passwordInput?.addEventListener('focus', () => {
+      syncGuestInlineUi();
+    });
+
+    els.passwordInput?.addEventListener('input', () => {
+      setStatus('');
+      syncGuestInlineUi();
+    });
+
+    els.passwordInput?.addEventListener('blur', () => {
+      syncGuestInlineUi();
     });
 
     els.premiumBtn?.addEventListener('click', () => {
