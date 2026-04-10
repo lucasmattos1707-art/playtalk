@@ -1407,6 +1407,9 @@
 
   function setPreBookOverlayOpen(isOpen) {
     document.body.classList.toggle('books-prebook-open', Boolean(isOpen));
+    if (!isOpen) {
+      document.body.classList.remove('books-prebook-training');
+    }
   }
 
   function isPreBookOverlayOpen() {
@@ -2745,6 +2748,7 @@
     if (els.preBookActions) {
       els.preBookActions.dataset.preBookStep = state.preBookStep;
     }
+    document.body.classList.toggle('books-prebook-training', state.preBookStep === 'training');
   }
 
   function resetModeTransitionUi() {
@@ -3225,13 +3229,7 @@
     const reading = Math.max(0, Math.min(100, Number(stats?.bestReadingPercent) || 0));
     const totalReads = Math.max(0, Math.round(Number(stats?.totalReads) || 0));
     if (totalReads <= 0) {
-      return [
-        {
-          kind: 'stats',
-          label: '',
-          value: 'Voce ainda nao leu esse livro'
-        }
-      ];
+      return [];
     }
     return [
       {
@@ -3261,7 +3259,24 @@
 
   async function renderActivePreBookInsight(immediate) {
     const entries = Array.isArray(state.preBookInsightsData) ? state.preBookInsightsData : [];
-    if (!entries.length || !els.preBookInsightIcon || !els.preBookInsightLabel || !els.preBookInsightValue) return;
+    if (!entries.length || !els.preBookInsightIcon || !els.preBookInsightLabel || !els.preBookInsightValue) {
+      if (els.preBookInsights) {
+        els.preBookInsights.hidden = true;
+      }
+      if (els.preBookInsightLabel) {
+        els.preBookInsightLabel.textContent = '';
+      }
+      if (els.preBookInsightValue) {
+        els.preBookInsightValue.textContent = '';
+      }
+      if (els.preBookInsightIcon) {
+        els.preBookInsightIcon.innerHTML = '';
+      }
+      return;
+    }
+    if (els.preBookInsights) {
+      els.preBookInsights.hidden = false;
+    }
     const index = Math.max(0, Math.min(entries.length - 1, state.preBookInsightsIndex));
     const entry = entries[index] || entries[0];
     if (!entry) return;
@@ -4429,7 +4444,7 @@
   }
 
   function getReaderLockedLanguage(mode = state.readerMode) {
-    return mode === 'listening-training' ? 'portuguese' : 'english';
+    return mode === 'free-read' ? 'english' : 'portuguese';
   }
 
   function calculateReaderAverageScore() {
@@ -4794,14 +4809,15 @@
     const isTraining = isReaderTrainingMode();
     const isAdminEditor = Boolean(state.isAdmin);
     const activeBook = findActiveReaderBook();
+    const hidesBookHero = state.readerMode === 'speaking-training' || state.readerMode === 'free-read' || isTraining;
     if (els.reader) {
       els.reader.dataset.readerMode = state.readerMode || 'free-read';
       els.reader.classList.toggle('is-admin-reader', isAdminEditor);
     }
     if (els.readerBookHero) {
-      els.readerBookHero.hidden = isTraining;
+      els.readerBookHero.hidden = hidesBookHero;
     }
-    if (!isTraining) {
+    if (!hidesBookHero) {
       renderReaderBookCover(activeBook);
     }
     if (els.readerProfile) {

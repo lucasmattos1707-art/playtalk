@@ -924,7 +924,14 @@
       pointer-events: none;
     }
 
-    body.books-prebook-open .books-home-footer {
+    body.books-prebook-open .books-home-footer,
+    body.books-prebook-open .books-level-menu {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    body.books-prebook-training .flashcards-footer-nav[data-shell-page="books"] {
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
@@ -1686,6 +1693,7 @@
       display: grid;
       justify-items: center;
       gap: 28px;
+      margin-top: 25px;
       opacity: 1;
       filter: blur(0);
       transition: opacity 1000ms ease, filter 1000ms ease;
@@ -1950,12 +1958,30 @@
       inset: 0;
       z-index: 1001;
       display: none;
-      background: radial-gradient(circle at top, rgba(22, 34, 56, 0.72), #04070d 60%, #020306 100%);
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
       color: #ffffff;
+      isolation: isolate;
+    }
+
+    .books-reader::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--playtalk-global-bg-overlay);
+      opacity: 1;
+      pointer-events: none;
+      z-index: 0;
     }
 
     .books-reader.is-visible {
       display: block;
+    }
+
+    .books-reader-back,
+    .books-reader-content,
+    .books-reader-progress,
+    .books-reader-finish {
+      z-index: 1;
     }
 
     .books-reader.is-visible .books-reader-content {
@@ -2382,6 +2408,16 @@
       overflow: hidden;
     }
 
+    .books-reader[data-reader-mode="speaking-training"] .books-reader-book-hero,
+    .books-reader[data-reader-mode="free-read"] .books-reader-book-hero {
+      display: none !important;
+    }
+
+    .books-reader[data-reader-mode="speaking-training"] .books-reader-progress,
+    .books-reader[data-reader-mode="free-read"] .books-reader-progress {
+      display: none !important;
+    }
+
     .books-reader-progress-fill {
       display: block;
       height: 100%;
@@ -2552,6 +2588,10 @@
     }
 
     .pre-book-actions[data-pre-book-step="root"] .pre-book-action-training {
+      display: none;
+    }
+
+    .pre-book-actions[data-pre-book-step="training"] ~ .pre-book-insights {
       display: none;
     }
 
