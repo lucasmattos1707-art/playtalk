@@ -22,6 +22,7 @@
       --playtalk-global-bg-desktop: url('/backgrounds/playtalk-global-desktop.webp');
       --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
       --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
+      --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 1) 0%, rgba(4, 18, 38, 0.58) 38%, rgba(4, 18, 38, 0) 100%);
       --bg-2: #102838;
       --card: rgba(9, 32, 47, 0.88);
       --line: rgba(124, 192, 150, 0.35);
@@ -67,6 +68,13 @@
       overflow: hidden;
       pointer-events: none;
       z-index: 0;
+    }
+
+    .container::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--playtalk-global-bg-overlay);
     }
 
     body.is-speaking-admin .container {

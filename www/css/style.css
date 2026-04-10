@@ -40,6 +40,7 @@
   --playtalk-global-bg-desktop: url('/backgrounds/playtalk-global-desktop.webp');
   --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
   --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
+  --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 1) 0%, rgba(4, 18, 38, 0.58) 38%, rgba(4, 18, 38, 0) 100%);
   --playtalk-cosmic-bg: #030712;
   --playtalk-cosmic-text: #ffffff;
 }
@@ -208,7 +209,10 @@ body {
   color: var(--app-text-color, #ffffff);
   position: relative;
   overflow: auto;
-  background: #041226 var(--playtalk-global-bg-image) center/cover fixed no-repeat;
+  background:
+    var(--playtalk-global-bg-overlay),
+    var(--playtalk-global-bg-image) center/cover fixed no-repeat,
+    #041226;
 }
 
 body.has-custom-text-color {
@@ -228,7 +232,10 @@ body.has-custom-text-color * {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.45s ease;
-  background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
+  background:
+    var(--playtalk-global-bg-overlay),
+    var(--playtalk-global-bg-image) center/cover no-repeat,
+    #041226;
 }
 
 .playtalk-cosmic-bg .nebula,
@@ -11377,46 +11384,6 @@ html *::after {
 }
 
 
-:root {
-  --playtalk-global-bg-image: none !important;
-  --app-background-gradient: none !important;
-  --app-text-color: #000000 !important;
-  --game-phrase-color: #000000 !important;
-  --phrase-color: #000000 !important;
-}
-
-html,
-body,
-body.dark-mode,
-body.theme-blue,
-body.page-fun,
-body.page-play,
-body.page-home,
-body.page-profile,
-body.page-class,
-body.page-create {
-  background: #ffffff !important;
-  background-image: none !important;
-  color: #000000 !important;
-}
-
-body *,
-body *::before,
-body *::after {
-  color: #000000 !important;
-  background-image: none !important;
-}
-
-.lens-overlay,
-.game-background,
-.game-background__video,
-body::before,
-body::after,
-.page-return-to-play::after {
-  background: #ffffff !important;
-  background-image: none !important;
-}
-
 #fun-container,
 #play-container,
 #home-main,
@@ -11431,23 +11398,6 @@ body::after,
 .page-fun .radio-lounge__cover-wrap,
 .page-fun .radio-lounge__image,
 .page-fun .radio-lounge__title,
-.page-fun .radio-lounge__subtitle,
-.page-fun .radio-lounge__label,
-.page-fun .radio-lounge__description,
-.page-fun .radio-lounge__hint,
-.page-footer,
-#main-nav,
-.site-header,
-.site-header__slot,
-.site-header__player,
-.site-header__identity,
-.site-header__coins,
-.site-header__menu-button {
-  background: #ffffff !important;
-  background-image: none !important;
-  color: #000000 !important;
-}
-
 .page-fun .radio-lounge__title {
   text-align: center !important;
 }
@@ -11488,92 +11438,6 @@ body::after,
 .vocabulary-game [class*='phase-'] {
   opacity: 1 !important;
   visibility: visible !important;
-}
-
-.vocabulary-game,
-.vocabulary-game .game-main,
-.vocabulary-game .board,
-.vocabulary-game .board-wrapper,
-.vocabulary-game .text-container,
-.vocabulary-game .choice-row,
-.vocabulary-game .progress-footer,
-.vocabulary-game .game-status,
-.vocabulary-game .overlay-card,
-.vocabulary-game .final-overlay,
-.vocabulary-game .final-overlay__slideshow {
-  background: #ffffff !important;
-  background-image: none !important;
-  color: #000000 !important;
-}
-
-
-
-html,
-body,
-body.dark-mode,
-body.theme-blue,
-body.page-fun,
-body.page-play,
-body.page-home,
-body.page-profile,
-body.page-class,
-body.page-create,
-.lens-overlay,
-.game-background,
-.game-background__video,
-body::before,
-body::after,
-.page-return-to-play::after {
-  background: #ffffff !important;
-  background-image: none !important;
-  color: #000000 !important;
-}
-
-body *,
-body *::before,
-body *::after,
-#fun-container,
-#play-container,
-#home-main,
-.container-screen,
-.page-footer,
-#main-nav,
-.site-header,
-.site-header__slot,
-.site-header__player,
-.site-header__identity,
-.site-header__coins,
-.site-header__menu-button,
-.page-play .play-modes-hub,
-.page-play .play-modes-grid-shell,
-.page-play .play-modes-icons,
-.page-fun .radio-lounge-layout,
-.page-fun .radio-lounge,
-.page-fun .radio-lounge__selector,
-.page-fun .radio-lounge__cover,
-.page-fun .radio-lounge__cover-wrap,
-.page-fun .radio-lounge__image,
-.page-fun .radio-lounge__title,
-.page-fun .radio-lounge__subtitle,
-.page-fun .radio-lounge__label,
-.page-fun .radio-lounge__description,
-.page-fun .radio-lounge__hint,
-.vocabulary-game,
-.vocabulary-game .game-main,
-.vocabulary-game .board,
-.vocabulary-game .board-wrapper,
-.vocabulary-game .board__inner,
-.vocabulary-game .text-container,
-.vocabulary-game .choice-row,
-.vocabulary-game .progress-footer,
-.vocabulary-game .game-status,
-.vocabulary-game .overlay-card,
-.vocabulary-game .final-overlay,
-.vocabulary-game .final-overlay__slideshow {
-  background: transparent !important;
-  background-image: none !important;
-  color: #000000 !important;
-  box-shadow: none !important;
 }
 
 body.page-cards {
