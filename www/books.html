@@ -679,27 +679,93 @@
 
     .books-home-launch-btn {
       position: relative;
-      width: min(440px, 76vw);
-      padding: 0;
-      border: 0;
+      width: min(360px, 78vw);
+      min-height: 68px;
+      padding: 0 24px;
+      border: 1.5px solid rgba(122, 223, 255, 0.8);
       border-radius: 999px;
-      background: transparent;
-      color: #ffffff;
+      background: linear-gradient(180deg, rgba(7, 34, 88, 0.96), rgba(10, 25, 63, 0.96));
+      color: #f4fbff;
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      gap: 14px;
       overflow: hidden;
       box-shadow:
-        0 0 18px rgba(102, 232, 255, 0.28),
-        0 0 34px rgba(67, 157, 255, 0.18),
+        0 0 0 1px rgba(185, 239, 255, 0.18) inset,
+        0 0 16px rgba(86, 210, 255, 0.26),
+        0 0 34px rgba(44, 132, 255, 0.2),
         0 20px 42px rgba(18, 73, 125, 0.24);
+      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease, border-color 180ms ease;
     }
 
-    .books-home-launch-btn img {
-      width: 100%;
-      height: auto;
+    .books-home-launch-btn:hover,
+    .books-home-launch-btn:focus-visible {
+      transform: translateY(-2px);
+      filter: saturate(1.05);
+    }
+
+    .books-home-launch-btn svg {
+      width: 26px;
+      height: 26px;
       display: block;
-      border-radius: inherit;
+      flex: 0 0 auto;
+      color: currentColor;
+    }
+
+    .books-home-launch-btn span {
+      position: relative;
+      z-index: 1;
+      font-size: clamp(20px, 3vw, 26px);
+      font-weight: 900;
+      letter-spacing: 0.01em;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+    }
+
+    .books-home-actions {
+      width: min(420px, 86vw);
+      display: grid;
+      justify-items: center;
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .books-home-launch-btn--collect {
+      color: #ffd6a3;
+      border-color: rgba(255, 153, 56, 0.9);
+      background: linear-gradient(180deg, rgba(89, 31, 7, 0.96), rgba(46, 16, 2, 0.98));
+      box-shadow:
+        0 0 0 1px rgba(255, 201, 142, 0.16) inset,
+        0 0 18px rgba(255, 126, 45, 0.34),
+        0 0 40px rgba(255, 97, 24, 0.24),
+        0 22px 44px rgba(71, 24, 5, 0.28);
+    }
+
+    .books-home-launch-btn--collect:hover,
+    .books-home-launch-btn--collect:focus-visible {
+      box-shadow:
+        0 0 0 1px rgba(255, 214, 163, 0.22) inset,
+        0 0 22px rgba(255, 140, 56, 0.42),
+        0 0 48px rgba(255, 97, 24, 0.3),
+        0 24px 48px rgba(71, 24, 5, 0.34);
+    }
+
+    .books-home-launch-btn--collect svg {
+      color: #ffbd70;
+      filter:
+        drop-shadow(0 0 8px rgba(255, 190, 112, 0.65))
+        drop-shadow(0 0 18px rgba(255, 128, 33, 0.44));
+    }
+
+    .books-home-launch-btn--sleep {
+      color: #d8f6ff;
+    }
+
+    .books-home-launch-btn--sleep svg {
+      color: #8cecff;
+      filter:
+        drop-shadow(0 0 8px rgba(140, 236, 255, 0.62))
+        drop-shadow(0 0 18px rgba(65, 176, 255, 0.34));
     }
 
     .books-home-launch-btn[disabled] {
@@ -777,6 +843,10 @@
         width: min(320px, 82vw);
         max-width: 82vw;
         transform: none;
+      }
+
+      .books-home-actions {
+        width: min(360px, 90vw);
       }
 
       #booksHomeLaunchBtn {
@@ -2888,9 +2958,16 @@
                 <button class="books-home-auth-submit" id="booksHomeStartBtn" type="submit">Entrar e começar</button>
                 <p class="books-home-auth-status" id="booksHomeAuthStatus"></p>
               </form>
-              <button class="books-home-launch-btn" id="booksHomeLaunchBtn" type="button" hidden>
-                <img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora">
-              </button>
+              <div class="books-home-actions" aria-label="Acoes iniciais dos books">
+                <button class="books-home-launch-btn books-home-launch-btn--collect" id="booksHomeCollectBtn" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 4.5A2.5 2.5 0 0 1 8.5 2H18v17.5a2.5 2.5 0 0 0-2.5-2.5H6zm0 0v13A2.5 2.5 0 0 0 8.5 20H16"/></svg>
+                  <span>Colecionar Books</span>
+                </button>
+                <button class="books-home-launch-btn books-home-launch-btn--sleep" id="booksHomeLaunchBtn" type="button" hidden>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2l1.88 5.8H20l-4.94 3.58 1.89 5.82L12 13.62 7.05 17.2l1.89-5.82L4 7.8h6.12z"/></svg>
+                  <span>SleepMode</span>
+                </button>
+              </div>
               <button class="books-home-logout" id="booksHomeLogoutBtn" type="button" hidden aria-label="Sair da conta"></button>
             </div>
           <div class="books-home-shell" id="booksHomeShell" hidden>

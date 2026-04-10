@@ -104,6 +104,7 @@
     homePasswordInput: document.getElementById('booksHomePasswordInput'),
     homeAuthStatus: document.getElementById('booksHomeAuthStatus'),
     homeStartBtn: document.getElementById('booksHomeStartBtn'),
+    homeCollectBtn: document.getElementById('booksHomeCollectBtn'),
     homeLaunchBtn: document.getElementById('booksHomeLaunchBtn'),
     homeLogoutBtn: document.getElementById('booksHomeLogoutBtn'),
     homeCover: document.getElementById('booksHomeCover'),
@@ -1188,12 +1189,16 @@
     if (els.homeStartBtn) {
       els.homeStartBtn.hidden = true;
     }
+    if (els.homeCollectBtn) {
+      els.homeCollectBtn.hidden = false;
+      els.homeCollectBtn.disabled = state.homeStartBusy;
+    }
     if (els.homeLaunchBtn) {
       els.homeLaunchBtn.hidden = false;
       els.homeLaunchBtn.disabled = state.homeStartBusy;
       const launchLabel = els.homeLaunchBtn.querySelector('span');
       if (launchLabel) {
-        launchLabel.textContent = state.homeStartBusy ? 'Abrindo...' : 'Iniciar';
+        launchLabel.textContent = state.homeStartBusy ? 'Abrindo...' : 'SleepMode';
       }
     }
     setHomeAuthStatus('', null);
@@ -1311,6 +1316,16 @@
     if (!Number.isFinite(parsed)) return null;
     if (parsed < UI_FIRST_BOOK_LEVEL) return null;
     return normalizeLevel(parsed);
+  }
+
+  async function openBooksCollectionFromHome() {
+    if (state.homeStartBusy) return;
+    stopHomeSleepPlayback({ keepIntro: false });
+    state.selectedLevel = UI_FIRST_BOOK_LEVEL;
+    state.shelfIndex = 0;
+    renderHomeAuthUi();
+    renderLevelMenu();
+    renderCards();
   }
 
   function bookLevelToUiLevel(level) {
@@ -5164,6 +5179,10 @@
 
     els.homeLaunchBtn?.addEventListener('click', () => {
       startHomeSleepPlayback();
+    });
+
+    els.homeCollectBtn?.addEventListener('click', () => {
+      void openBooksCollectionFromHome();
     });
 
     els.homeRepeatBtn?.addEventListener('click', () => {
