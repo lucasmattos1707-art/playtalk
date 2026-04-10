@@ -293,6 +293,7 @@
 
     .welcome-gate__touch {
       width: min(680px, 100%);
+      max-width: 100%;
       min-height: min(72vh, 720px);
       display: grid;
       justify-items: center;
@@ -311,7 +312,8 @@
       justify-items: center;
       align-items: center;
       gap: 18px;
-      width: min(480px, 100%);
+      width: min(483px, 100%);
+      max-width: 100%;
       border: 0;
       outline: 0;
       box-shadow: none;
@@ -341,6 +343,8 @@
       cursor: pointer;
       touch-action: manipulation;
       animation: welcomeLogoNeonPulse 3.4s ease-in-out infinite;
+      justify-self: center;
+      margin-inline: auto;
     }
 
     .welcome-gate__copy {
@@ -356,38 +360,39 @@
       position: relative;
       width: min(440px, 90vw);
       padding: 0;
-      border-radius: 0;
+      border-radius: 999px;
       border: 0;
       background: transparent;
       color: #ffffff;
-      overflow: visible;
+      overflow: hidden;
       box-shadow: none;
       margin: 0 auto;
       transition: transform 180ms ease, filter 180ms ease;
+      justify-self: center;
     }
 
     .welcome-gate__start-btn img {
       width: 100%;
       height: auto;
       display: block;
-      border-radius: 0;
+      border-radius: inherit;
     }
 
     .welcome-gate__start-btn::after {
       content: "";
       position: absolute;
-      inset: -12% -24%;
+      inset: 0;
       background: linear-gradient(
         105deg,
         transparent 0%,
-        transparent 42%,
-        rgba(255, 255, 255, 0.08) 46%,
-        rgba(255, 255, 255, 0.92) 50%,
-        rgba(255, 255, 255, 0.08) 54%,
-        transparent 58%,
+        transparent 44%,
+        rgba(255, 255, 255, 0.04) 47%,
+        rgba(255, 255, 255, 0.55) 50%,
+        rgba(255, 255, 255, 0.04) 53%,
+        transparent 56%,
         transparent 100%
       );
-      transform: translateX(-180%) skewX(-18deg);
+      transform: translateX(-150%) skewX(-20deg);
       opacity: 0;
       pointer-events: none;
       mix-blend-mode: screen;
@@ -401,21 +406,21 @@
     }
 
     @keyframes welcomeStartButtonFlash {
-      0%, 58%, 100% {
-        transform: translateX(-180%) skewX(-18deg);
+      0%, 62%, 100% {
+        transform: translateX(-150%) skewX(-20deg);
         opacity: 0;
       }
 
-      10% {
-        opacity: 1;
+      12% {
+        opacity: 0.95;
       }
 
-      32% {
-        transform: translateX(180%) skewX(-18deg);
-        opacity: 0.96;
+      34% {
+        transform: translateX(150%) skewX(-20deg);
+        opacity: 0.82;
       }
 
-      40% {
+      42% {
         opacity: 0;
       }
     }
@@ -5982,21 +5987,24 @@
 
     @media (max-width: 520px) {
       .welcome-gate__stack {
-        width: min(420px, 100%);
+        width: min(483px, 100%);
         gap: 16px;
       }
 
       .welcome-gate__touch {
         width: 100%;
         padding: 24px 12px;
+        justify-items: center;
       }
 
       .welcome-gate__logo {
         width: min(483px, 94vw);
+        max-width: 94vw;
       }
 
       .welcome-gate__start-btn {
         width: min(440px, 94vw);
+        max-width: 94vw;
       }
 
       .premium-gate__grid {
