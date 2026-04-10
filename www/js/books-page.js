@@ -31,6 +31,7 @@
   const HOME_SWIPE_UP_THRESHOLD = 70;
   const HOME_SWIPE_DOWN_THRESHOLD = 70;
   const HOME_WHEEL_THRESHOLD = 18;
+  const ALL_BOOKS_WINDOW_SIZE = 6;
   const MAX_BOOK_LEVEL = 10;
   // UI levels:
   // 0 = Home
@@ -310,6 +311,8 @@
     homePreBookVoiceVolumeBefore: 1,
     allBooksFeed: [],
     allBooksFeedVersion: '',
+    allBooksWindowStart: 0,
+    allBooksAdvancePending: 0,
     listeningCharsPending: 0,
     listeningCharsTotal: 0,
     practiceSecondsPending: 0,
@@ -1364,6 +1367,7 @@
     if (!sourceBooks.length) {
       state.allBooksFeed = [];
       state.allBooksFeedVersion = '';
+      state.allBooksWindowStart = 0;
       return [];
     }
     const version = sourceBooks.map((book) => `${safeText(book?.bookId)}:${normalizeLevel(book?.nivel)}`).join('|');
@@ -1375,13 +1379,57 @@
       }
       state.allBooksFeed = feed;
       state.allBooksFeedVersion = version;
+      state.allBooksWindowStart = 0;
     }
     return state.allBooksFeed.slice();
   }
 
+  function buildAllBooksWindow(feed, startIndex, size = ALL_BOOKS_WINDOW_SIZE) {
+    const items = Array.isArray(feed) ? feed : [];
+    if (!items.length) return [];
+    const desiredSize = Math.max(1, Math.round(Number(size) || ALL_BOOKS_WINDOW_SIZE));
+    const normalizedStart = ((Math.round(Number(startIndex) || 0) % items.length) + items.length) % items.length;
+    const windowItems = [];
+    for (let index = 0; index < desiredSize; index += 1) {
+      windowItems.push(items[(normalizedStart + index) % items.length]);
+    }
+    return windowItems;
+  }
+
+  function getAllBooksWindow() {
+    const feed = getAllBooksFeed();
+    if (!feed.length) return [];
+    return buildAllBooksWindow(feed, state.allBooksWindowStart, ALL_BOOKS_WINDOW_SIZE);
+  }
+
+  function queueAllBooksWindowAdvance(step = 1) {
+    if (!isAllBooksLevel()) return;
+    const normalizedStep = Math.trunc(Number(step) || 0);
+    if (!normalizedStep) return;
+    state.allBooksAdvancePending += normalizedStep;
+  }
+
+  function rotateAllBooksWindow(step = 1, preferredIndex = state.shelfIndex) {
+    const feed = getAllBooksFeed();
+    if (!feed.length) return;
+    const normalizedStep = Math.trunc(Number(step) || 0);
+    if (!normalizedStep) return;
+    state.allBooksWindowStart = ((state.allBooksWindowStart + normalizedStep) % feed.length + feed.length) % feed.length;
+    const nextIndex = Math.max(0, Math.round(Number(preferredIndex) || 0));
+    state.shelfIndex = nextIndex;
+    renderCards();
+  }
+
+  function flushPendingAllBooksAdvance(preferredIndex = state.shelfIndex) {
+    const pending = Math.trunc(Number(state.allBooksAdvancePending) || 0);
+    state.allBooksAdvancePending = 0;
+    if (!pending) return;
+    rotateAllBooksWindow(pending, preferredIndex);
+  }
+
   function getBooksForSelectedLevel() {
     if (isAllBooksLevel()) {
-      return getAllBooksFeed();
+      return getAllBooksWindow();
     }
     const bookLevel = uiLevelToBookLevel(state.selectedLevel);
     if (!bookLevel) return [];
@@ -1747,6 +1795,7 @@
     if (!els.homePanel) return;
     const visible = isHomeLevel();
     syncBooksInjectedFooterVisibility();
+    document.body.classList.toggle('books-sleeping-mode', visible && state.homeIntroDismissed);
     els.homePanel.classList.toggle('is-visible', visible);
     els.homePanel.classList.toggle('is-immersive', visible && state.homeIntroDismissed);
     if (els.page) {
@@ -2802,7 +2851,19 @@
     const step = Number(direction) > 0 ? 1 : -1;
     let target = clampShelfIndex(state.shelfIndex + step);
     if (isAllBooksLevel()) {
-      if (step > 0 && state.shelfIndex >= (pages.length - 1)) {
+      const feed = getAllBooksFeed();
+      if (feed.length > pages.length) {
+        if (step > 0 && state.shelfIndex >= (pages.length - 1)) {
+          rotateAllBooksWindow(1, pages.length - 1);
+          flashShelfCard(pages.length - 1);
+          return;
+        }
+        if (step < 0 && state.shelfIndex <= 0) {
+          rotateAllBooksWindow(-1, 0);
+          flashShelfCard(0);
+          return;
+        }
+      } else if (step > 0 && state.shelfIndex >= (pages.length - 1)) {
         target = 0;
       } else if (step < 0 && state.shelfIndex <= 0) {
         target = pages.length - 1;
@@ -3187,6 +3248,9 @@
     if (!els.preBookModal || !book) return;
     const bookId = safeText(book.bookId);
     if (!bookId) return;
+    if (isAllBooksLevel()) {
+      queueAllBooksWindowAdvance(1);
+    }
 
     // If this comes from the Home player, pause voice + blur background while we show the pre-book overlay.
     if (isHomeLevel() && state.homeIntroDismissed) {
@@ -3263,6 +3327,7 @@
     const resumeHomeAfter = isHomeLevel() && state.homeIntroDismissed && !state.homePreBookPausedBefore;
 
     const finalizeClose = () => {
+      const preferredShelfIndex = state.shelfIndex;
       state.modeBookId = '';
       state.preBookInsightsFetchToken += 1;
       stopPreBookInsightsRotation();
@@ -3284,6 +3349,9 @@
           // ignore
         }
         renderHomeTransportUi();
+      }
+      if (!isHomeLevel()) {
+        flushPendingAllBooksAdvance(preferredShelfIndex);
       }
     };
 
@@ -3728,6 +3796,10 @@
     await animateLevelChangeTransition(direction);
     state.selectedLevel = normalizedLevel;
     state.shelfIndex = 0;
+    if (isAllBooksLevel()) {
+      state.allBooksWindowStart = 0;
+      state.allBooksAdvancePending = 0;
+    }
     renderLevelMenu();
     renderCards();
     await settleLevelChangeTransition();
