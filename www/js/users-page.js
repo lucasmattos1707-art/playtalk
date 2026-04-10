@@ -9,6 +9,8 @@
   const BANNER_SLOT_COUNT = 4;
   const BANNER_SLOT_MS = BANNER_CYCLE_MS / BANNER_SLOT_COUNT;
   const BANNER_SLOT_CHECK_MS = 240;
+  const RANKING_CACHE_TTL_MS = 25000;
+  const USERS_STAGE_SLIDE_MS = 320;
 
   const RANKING_METRICS = [
     { slot: 1, key: 'flashcards', label: 'Flashcards', valueLabel: '' },
@@ -18,6 +20,7 @@
   ];
 
   const els = {
+    usersStage: document.getElementById('usersStage'),
     usersList: document.getElementById('usersList'),
     usersStatus: document.getElementById('usersStatus'),
     rankingLabel: document.getElementById('rankingLabel'),
@@ -63,7 +66,10 @@
     bannerTrack: null,
     activeBannerSlot: 0,
     bannerClockStartedAtMs: Date.now(),
-    loadRequestId: 0
+    loadRequestId: 0,
+    rankingCache: new Map(),
+    preloadInFlight: new Map(),
+    stageAnimating: false
   };
 
   function buildApiUrl(path) {
@@ -115,6 +121,12 @@
 
   function metricBySlot(slot) {
     return RANKING_METRICS.find((metric) => metric.slot === slot) || RANKING_METRICS[0];
+  }
+
+  function wait(ms) {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
+    });
   }
 
   function metricValueFromEntry(entry, metricKey) {
@@ -376,48 +388,139 @@
     return normalizeUser(payload.user);
   }
 
-  async function loadUsers(message, options = {}) {
-    const metricKey = safeText(options.metricKey || state.currentMetricKey || 'flashcards') || 'flashcards';
+  async function fetchUsersMetric(metricKey, options = {}) {
+    const normalizedMetricKey = safeText(metricKey || state.currentMetricKey || 'flashcards') || 'flashcards';
     const force = Boolean(options.force);
-    const requestId = state.loadRequestId + 1;
-    state.loadRequestId = requestId;
-
-    if (message) {
-      setUsersStatus(message);
-    } else if (force) {
-      setUsersStatus('Atualizando ranking...');
+    const cached = state.rankingCache.get(normalizedMetricKey);
+    if (!force && cached && (Date.now() - cached.fetchedAt) < RANKING_CACHE_TTL_MS) {
+      return cached.data;
     }
-
     try {
-      const response = await fetch(buildApiUrl(`/api/users/flashcards?limit=50&metric=${encodeURIComponent(metricKey)}`), {
+      const response = await fetch(buildApiUrl(`/api/users/flashcards?limit=50&metric=${encodeURIComponent(normalizedMetricKey)}`), {
         headers: buildAuthHeaders(),
         cache: 'no-store',
         credentials: 'include'
       });
       const payload = await response.json().catch(() => ({}));
-      if (requestId !== state.loadRequestId) return;
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.message || 'Falha ao carregar usuarios.');
       }
 
-      const selectedMetric = metricByKey(payload?.metric || metricKey);
-      state.currentMetricKey = selectedMetric.key;
-      state.currentMetricLabel = safeText(payload?.metricLabel || selectedMetric.label) || selectedMetric.label;
-      state.currentMetricValueLabel = safeText(payload?.metricValueLabel || selectedMetric.valueLabel || '');
-      setRankingLabel(state.currentMetricLabel);
-
-      const users = normalizeUsers(payload);
-      state.rows = users;
-      state.viewer = normalizeViewer(payload.viewer);
-      renderRows(users);
-      const viewer = currentViewerEntry(users);
-      setUsersStatus(viewer?.rank ? `Voce esta em ${viewer.rank} lugar` : 'Ranking carregado.');
+      const selectedMetric = metricByKey(payload?.metric || normalizedMetricKey);
+      const data = {
+        metricKey: selectedMetric.key,
+        metricLabel: safeText(payload?.metricLabel || selectedMetric.label) || selectedMetric.label,
+        metricValueLabel: safeText(payload?.metricValueLabel || selectedMetric.valueLabel || ''),
+        rows: normalizeUsers(payload),
+        viewer: normalizeViewer(payload.viewer)
+      };
+      state.rankingCache.set(normalizedMetricKey, {
+        fetchedAt: Date.now(),
+        data
+      });
+      return data;
     } catch (_error) {
-      if (requestId !== state.loadRequestId) return;
+      return null;
+    }
+  }
+
+  async function preloadMetric(metricKey, options = {}) {
+    const normalizedMetricKey = safeText(metricKey) || 'flashcards';
+    const force = Boolean(options.force);
+    if (!force) {
+      const cached = state.rankingCache.get(normalizedMetricKey);
+      if (cached && (Date.now() - cached.fetchedAt) < RANKING_CACHE_TTL_MS) {
+        return cached.data;
+      }
+    }
+    const existing = state.preloadInFlight.get(normalizedMetricKey);
+    if (existing) return existing;
+    const promise = fetchUsersMetric(normalizedMetricKey, { force })
+      .finally(() => {
+        state.preloadInFlight.delete(normalizedMetricKey);
+      });
+    state.preloadInFlight.set(normalizedMetricKey, promise);
+    return promise;
+  }
+
+  async function animateUsersStageSlide() {
+    if (!els.usersStage || state.stageAnimating) return;
+    state.stageAnimating = true;
+    els.usersStage.classList.remove('is-sliding-in');
+    els.usersStage.classList.add('is-sliding-out');
+    await wait(USERS_STAGE_SLIDE_MS);
+  }
+
+  async function settleUsersStageSlide() {
+    if (!els.usersStage || !state.stageAnimating) return;
+    els.usersStage.classList.remove('is-sliding-out');
+    els.usersStage.classList.add('is-sliding-in');
+    void els.usersStage.offsetWidth;
+    els.usersStage.classList.remove('is-sliding-in');
+    await wait(USERS_STAGE_SLIDE_MS);
+    state.stageAnimating = false;
+  }
+
+  function applyUsersData(data, options = {}) {
+    if (!data) return;
+    state.currentMetricKey = data.metricKey;
+    state.currentMetricLabel = data.metricLabel;
+    state.currentMetricValueLabel = data.metricValueLabel;
+    setRankingLabel(state.currentMetricLabel);
+    state.rows = Array.isArray(data.rows) ? data.rows : [];
+    state.viewer = data.viewer || null;
+    renderRows(state.rows);
+    const viewer = currentViewerEntry(state.rows);
+    if (options.statusMessage != null) {
+      setUsersStatus(options.statusMessage);
+      return;
+    }
+    setUsersStatus(viewer?.rank ? `Voce esta em ${viewer.rank} lugar` : 'Ranking carregado.');
+  }
+
+  function nextMetricKeyForSlot(slot) {
+    const nextSlot = (Number(slot) || 1) >= BANNER_SLOT_COUNT ? 1 : (Number(slot) || 1) + 1;
+    return metricBySlot(nextSlot).key;
+  }
+
+  async function ensureUpcomingRankingPreloaded(slot) {
+    const nextMetricKey = nextMetricKeyForSlot(slot);
+    await preloadMetric(nextMetricKey);
+  }
+
+  async function loadUsers(message, options = {}) {
+    const metricKey = safeText(options.metricKey || state.currentMetricKey || 'flashcards') || 'flashcards';
+    const force = Boolean(options.force);
+    const animate = options.animate !== false;
+    const requestId = state.loadRequestId + 1;
+    state.loadRequestId = requestId;
+
+    if (message) {
+      setUsersStatus(message);
+    }
+
+    const data = await preloadMetric(metricKey, { force });
+    if (requestId !== state.loadRequestId) return;
+    if (!data) {
       renderRows([]);
       state.rows = [];
       setUsersStatus('Nao consegui carregar o ranking agora.');
+      return;
     }
+
+    const metricChanged = state.currentMetricKey !== data.metricKey;
+    if (animate && metricChanged) {
+      await animateUsersStageSlide();
+      if (requestId !== state.loadRequestId) {
+        state.stageAnimating = false;
+        return;
+      }
+    }
+    applyUsersData(data);
+    if (animate && metricChanged) {
+      await settleUsersStageSlide();
+    }
+    void ensureUpcomingRankingPreloaded(metricByKey(data.metricKey).slot);
   }
 
   function currentBannerSlot() {
@@ -453,7 +556,10 @@
     if (!metric) return;
     if (!force && state.activeBannerSlot === slot && state.currentMetricKey === metric.key) return;
     state.activeBannerSlot = slot;
-    await loadUsers('', { metricKey: metric.key, force: true });
+    if (!force) {
+      void ensureUpcomingRankingPreloaded(slot);
+    }
+    await loadUsers('', { metricKey: metric.key, force, animate: !force });
   }
 
   function startBannerLinkedRankingLoop() {

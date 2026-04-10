@@ -96,7 +96,7 @@
       width: min(900px, calc(100vw - 28px));
       margin: 0 auto;
       min-height: 100vh;
-      padding: calc(14px + var(--native-top-offset)) 0 calc(var(--footer-total-height) + 20px);
+      padding: var(--native-top-offset) 0 calc(var(--footer-total-height) + 20px);
     }
 
     .panel {
@@ -144,6 +144,7 @@
       display: flex;
       width: 400%;
       animation: bannersSlide 14s infinite;
+      will-change: transform;
     }
 
     body.is-admin-banner .banner-carousel.is-admin-paused .banner-carousel__track {
@@ -244,25 +245,44 @@
     }
 
     @keyframes bannersSlide {
-      0%, 24.999% {
+      0%, 18% {
         transform: translateX(0);
       }
 
-      25%, 49.999% {
+      25%, 43% {
         transform: translateX(-25%);
       }
 
-      50%, 74.999% {
+      50%, 68% {
         transform: translateX(-50%);
       }
 
-      75%, 99.999% {
+      75%, 93% {
         transform: translateX(-75%);
       }
 
       100% {
         transform: translateX(-75%);
       }
+    }
+
+    .users-stage {
+      display: grid;
+      gap: 0;
+      transition: transform 320ms ease, opacity 320ms ease, filter 320ms ease;
+      will-change: transform, opacity, filter;
+    }
+
+    .users-stage.is-sliding-out {
+      transform: translateX(-34px);
+      opacity: 0;
+      filter: blur(4px);
+    }
+
+    .users-stage.is-sliding-in {
+      transform: translateX(34px);
+      opacity: 0;
+      filter: blur(4px);
     }
 
     .status {
@@ -797,8 +817,13 @@
   </section>
 
   <main class="page">
-    <p class="ranking-label" id="rankingLabel"><span class="ranking-label__text">Ranking: Flashcards</span></p>
-    <p class="status" id="usersStatus">Carregando usuarios...</p>
+    <div class="users-stage" id="usersStage">
+      <p class="ranking-label" id="rankingLabel"><span class="ranking-label__text">Ranking: Flashcards</span></p>
+      <p class="status" id="usersStatus">Carregando usuarios...</p>
+      <section class="panel">
+        <section class="users-list" id="usersList" aria-live="polite"></section>
+      </section>
+    </div>
     <section class="banner-admin-controls" id="bannerAdminControls" hidden aria-label="Controles dos banners do admin">
       <div class="banner-admin-controls__row">
         <button type="button" class="banner-admin-controls__btn" data-banner-action="mode" aria-label="Alternar desktop e mobile">
@@ -819,9 +844,6 @@
       </div>
       <input id="bannerAdminUploadInput" type="file" accept="image/*" hidden>
       <p class="banner-admin-controls__status" data-banner-admin-status aria-live="polite"></p>
-    </section>
-    <section class="panel">
-      <section class="users-list" id="usersList" aria-live="polite"></section>
     </section>
   </main>
 
