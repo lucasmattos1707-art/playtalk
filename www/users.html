@@ -16,6 +16,10 @@
 
     :root {
       --bg: #07111f;
+      --playtalk-global-bg-desktop: url('/backgrounds/playtalk-global-desktop.webp');
+      --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
+      --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
+      --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 1) 0%, rgba(4, 18, 38, 0.58) 38%, rgba(4, 18, 38, 0) 100%);
       --panel: rgba(9, 21, 38, 0.92);
       --line: rgba(140, 197, 255, 0.14);
       --line-strong: rgba(140, 197, 255, 0.24);
@@ -30,6 +34,12 @@
       --footer-total-height: calc(var(--footer-height) + var(--footer-safe-bottom));
     }
 
+    @media (max-width: 800px) {
+      :root {
+        --playtalk-global-bg-image: var(--playtalk-global-bg-mobile);
+      }
+    }
+
     * {
       box-sizing: border-box;
     }
@@ -39,7 +49,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      background: lightblue;
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
       overflow: hidden;
       pointer-events: none;
       z-index: 0;
@@ -48,15 +58,8 @@
     .container::before {
       content: "";
       position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background:
-        radial-gradient(circle, #3498db 10%, transparent 20%),
-        radial-gradient(circle, transparent 10%, #3498db 20%);
-      background-size: 30px 30px;
-      animation: moveBackground 8s linear infinite;
+      inset: 0;
+      background: var(--playtalk-global-bg-overlay);
     }
 
     @keyframes moveBackground {

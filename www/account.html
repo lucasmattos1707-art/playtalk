@@ -97,7 +97,7 @@
       width: min(900px, calc(100vw - 28px));
       margin: 0 auto;
       min-height: 100vh;
-      padding: var(--native-top-offset) 0 calc(var(--footer-total-height) + 20px);
+      padding: calc(var(--native-top-offset) + 8vh) 0 calc(var(--footer-total-height) + 20px);
     }
 
     .panel {
@@ -561,7 +561,7 @@
     @media (max-width: 640px) {
       .page {
         width: calc(100vw - 16px);
-        padding-top: 0;
+        padding-top: calc(var(--native-top-offset) + 8vh);
       }
 
       .panel {
