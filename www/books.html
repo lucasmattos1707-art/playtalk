@@ -2125,16 +2125,29 @@
     .books-reader {
       position: fixed;
       inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      min-height: 100dvh;
+      overflow: hidden;
       z-index: 1001;
       display: none;
-      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
+      background: transparent;
       color: #ffffff;
       isolation: isolate;
     }
 
     .books-reader::before {
       content: "";
-      position: absolute;
+      position: fixed;
+      inset: 0;
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat fixed;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .books-reader::after {
+      content: "";
+      position: fixed;
       inset: 0;
       background: var(--playtalk-global-bg-overlay);
       opacity: 1;
