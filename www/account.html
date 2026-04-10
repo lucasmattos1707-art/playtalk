@@ -135,9 +135,7 @@
       width: 188px;
       height: 188px;
       border-radius: 50%;
-      background:
-        linear-gradient(0deg, rgba(4, 24, 55, 1) 0%, rgba(4, 24, 55, 0.9) 18%, rgba(4, 24, 55, 0.38) 54%, rgba(4, 24, 55, 0) 100%),
-        linear-gradient(180deg, #f9fafb 0%, #e5e7eb 100%);
+      background: transparent;
       border: 2px solid rgba(129, 225, 255, 0.98);
       overflow: hidden;
       display: grid;
@@ -152,14 +150,17 @@
       isolation: isolate;
     }
 
-    .account-avatar::after {
+    .account-avatar::before {
       content: "";
       position: absolute;
       inset: 0;
       border-radius: inherit;
-      background: linear-gradient(0deg, rgba(4, 24, 55, 1) 0%, rgba(4, 24, 55, 0.86) 20%, rgba(4, 24, 55, 0.34) 52%, rgba(4, 24, 55, 0) 100%);
+      background:
+        linear-gradient(180deg, rgba(6, 20, 44, 0) 0%, rgba(6, 20, 44, 0.08) 28%, rgba(5, 22, 50, 0.5) 56%, rgba(4, 24, 55, 0.92) 82%, rgba(4, 24, 55, 1) 100%),
+        radial-gradient(circle at 50% 22%, rgba(64, 194, 255, 0.2), rgba(6, 20, 44, 0) 52%),
+        linear-gradient(180deg, rgba(9, 22, 44, 0.82) 0%, rgba(4, 24, 55, 0.96) 100%);
       pointer-events: none;
-      z-index: 2;
+      z-index: 0;
     }
 
     .account-avatar.is-message {
@@ -175,6 +176,7 @@
       isolation: auto;
     }
 
+    .account-avatar.is-message::before,
     .account-avatar.is-message::after {
       display: none;
     }
@@ -191,6 +193,10 @@
       color: #475569;
       position: relative;
       z-index: 1;
+    }
+
+    .account-avatar span {
+      background: transparent;
     }
 
     .account-avatar.is-message span {
@@ -363,6 +369,10 @@
       display: grid;
       place-items: center;
       justify-self: center;
+      background: transparent !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      opacity: 1;
     }
 
     .account-stats-icon {

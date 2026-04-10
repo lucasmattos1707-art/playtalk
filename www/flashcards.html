@@ -3923,6 +3923,19 @@
       place-items: center;
     }
 
+    .game[data-phase-key="first-star"] #gameVisual {
+      border-radius: 0;
+      overflow: visible;
+      --flashcards-mic-ring-padding: 12px;
+      --flashcards-mic-ring-fill:
+        linear-gradient(180deg, rgba(4, 24, 55, 0) 0%, rgba(4, 24, 55, 0.3) 48%, rgba(4, 24, 55, 0.88) 78%, rgba(4, 24, 55, 1) 100%),
+        linear-gradient(180deg, rgba(118, 231, 255, 1) 0%, rgba(67, 205, 255, 1) 100%);
+      --flashcards-mic-ring-glow:
+        drop-shadow(0 0 18px rgba(68, 206, 255, 0.95))
+        drop-shadow(0 0 36px rgba(68, 206, 255, 0.55))
+        drop-shadow(0 0 64px rgba(32, 102, 255, 0.3));
+    }
+
     .game[data-phase-key="first-star"] #gameVisual > img:not(.game-card__seal),
     .game[data-phase-key="first-star"] #gameVisual .mini-card__fallback,
     .game[data-phase-key="first-star"] #gameVisual .game-card__placeholder,
@@ -3943,6 +3956,14 @@
       transform-origin: center center;
     }
 
+    .game[data-phase-key="first-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="first-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="first-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="first-star"] #gameVisual .game-card__reveal-image {
+      border-radius: 30px;
+      clip-path: inset(0 round 30px) !important;
+    }
+
     .game[data-phase-key="first-star"] #gameVisual::before,
     .game[data-phase-key="third-star"] #gameVisual::before {
       inset: 0;
@@ -3950,6 +3971,24 @@
       border-radius: 50%;
       aspect-ratio: 1 / 1;
       transform: none !important;
+    }
+
+    .game[data-phase-key="first-star"] #gameVisual::before {
+      inset: -6px;
+      padding: var(--flashcards-mic-ring-padding);
+      opacity: 0.98;
+      background: var(--flashcards-mic-ring-fill);
+      filter: var(--flashcards-mic-ring-glow);
+    }
+
+    .game[data-phase-key="first-star"] #gameVisual.is-mic-live::before {
+      --flashcards-mic-ring-fill:
+        linear-gradient(180deg, rgba(4, 28, 18, 0) 0%, rgba(4, 28, 18, 0.28) 48%, rgba(4, 28, 18, 0.88) 78%, rgba(4, 28, 18, 1) 100%),
+        linear-gradient(180deg, rgba(115, 255, 186, 1) 0%, rgba(46, 245, 140, 1) 100%);
+      --flashcards-mic-ring-glow:
+        drop-shadow(0 0 18px rgba(72, 255, 159, 0.95))
+        drop-shadow(0 0 36px rgba(72, 255, 159, 0.56))
+        drop-shadow(0 0 64px rgba(26, 173, 93, 0.32));
     }
 
     .game[data-phase-key="first-star"] .game-translation-slot .game-phase-word,
