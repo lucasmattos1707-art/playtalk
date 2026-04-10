@@ -10010,6 +10010,20 @@
         return playableLockedCards;
       }
 
+      function playableVisibleGameCards() {
+        return state.allCards.filter((card) => (
+          !isCardHiddenForUser(card.id)
+          && hasCoreFlashcardText(card)
+          && hasPlayableFlashcardImage(card)
+        ));
+      }
+
+      function baseRoundSourceCards() {
+        const lockedCards = baseCandidateCards();
+        if (lockedCards.length) return lockedCards;
+        return playableVisibleGameCards();
+      }
+
       function formatDuration(ms) {
         const totalSeconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
         const hours = Math.floor(totalSeconds / 3600);
@@ -13472,9 +13486,9 @@
         const earlyRestricted = shouldRestrictEarlyFlashcards();
         let preferredSource = pool === 'review'
           ? readyReviewCards().filter(card => !activeIds.has(card.id))
-          : baseCandidateCards().filter(card => !activeIds.has(card.id));
+          : baseRoundSourceCards().filter(card => !activeIds.has(card.id));
         let fallbackSource = pool === 'review'
-          ? baseCandidateCards().filter(card => !activeIds.has(card.id))
+          ? baseRoundSourceCards().filter(card => !activeIds.has(card.id))
           : readyReviewCards().filter(card => !activeIds.has(card.id));
         if (earlyRestricted) {
           if (pool === 'base') {
@@ -14003,7 +14017,7 @@
           state.game.selectedCount = GAME_BASE_CARD_COUNT;
           const reviewLimit = Math.min(REVIEW_SLOT_LIMIT, readyReviewCards().length);
           const reviewCards = readyReviewCards().slice(0, reviewLimit);
-          const basePool = applyEarlyFlashcardFilter(baseCandidateCards());
+          const basePool = applyEarlyFlashcardFilter(baseRoundSourceCards());
           const chosenCards = buildOrderedDeckSelection(
             basePool,
             Math.max(0, roundCount - reviewCards.length)
