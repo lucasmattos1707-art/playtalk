@@ -29,8 +29,8 @@
       --green-neon: #58f09d;
       --blue-1: #06183d;
       --blue-2: #03112e;
-      --blue-neon: #61d4ff;
-      --ring-track: rgba(97, 212, 255, 0.2);
+      --blue-neon: #00b8ff;
+      --ring-track: rgba(0, 184, 255, 0.26);
     }
 
     @media (max-width: 800px) {
@@ -132,12 +132,13 @@
       margin: 20px 0 12px;
       color: #fff;
       font-family: "Pltay", "Trebuchet MS", sans-serif;
-      font-size: clamp(38px, 7.2vw, 53px);
+      font-size: clamp(34px, 6.5vw, 48px);
       letter-spacing: 0.02em;
       line-height: 0.88;
       width: 100%;
       text-align: center;
       text-transform: uppercase;
+      white-space: nowrap;
       text-shadow: 0 0 18px rgba(97, 212, 255, 0.32);
     }
 
@@ -153,6 +154,14 @@
       text-align: center;
       text-wrap: balance;
       text-shadow: 0 0 12px rgba(97, 212, 255, 0.24);
+    }
+
+    .photo-helper span {
+      display: block;
+    }
+
+    .photo-helper.is-hidden {
+      display: none;
     }
 
     .photo-shell {
@@ -172,8 +181,8 @@
       border-radius: 50%;
       background: conic-gradient(var(--blue-neon) 0deg, var(--blue-neon) var(--progress-angle), var(--ring-track) var(--progress-angle), var(--ring-track) 360deg);
       box-shadow:
-        0 0 18px rgba(97, 212, 255, 0.72),
-        0 0 42px rgba(97, 212, 255, 0.34);
+        0 0 24px rgba(0, 184, 255, 0.9),
+        0 0 54px rgba(0, 184, 255, 0.48);
       transition: background 180ms linear;
     }
 
@@ -184,8 +193,8 @@
     body.ai-generating .photo-ring {
       background: conic-gradient(var(--blue-neon) 0deg, var(--blue-neon) var(--progress-angle), var(--ring-track) var(--progress-angle), var(--ring-track) 360deg);
       box-shadow:
-        0 0 22px rgba(97, 212, 255, 0.8),
-        0 0 54px rgba(97, 212, 255, 0.38);
+        0 0 28px rgba(0, 184, 255, 0.98),
+        0 0 70px rgba(0, 184, 255, 0.56);
     }
 
     .photo-circle {
@@ -194,13 +203,13 @@
       height: 100%;
       border: 0;
       border-radius: 50%;
-      background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
+      background: transparent;
       overflow: hidden;
       cursor: pointer;
       display: grid;
       place-items: center;
       padding: 0;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+      box-shadow: none;
     }
 
     .photo-circle img,
@@ -316,7 +325,7 @@
       display: grid;
       gap: 12px;
       width: min(100%, 300px);
-      margin-top: 18px;
+      margin-top: 16px;
     }
 
     .photo-actions.is-hidden {
@@ -405,14 +414,14 @@
             <svg id="photoPlaceholder" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
           </button>
         </div>
-        <p class="photo-helper">Sua foto sera transformada em um desenho para seu avatar</p>
-        <input id="photoInput" type="file" accept="image/*" hidden>
-        <p class="identity-status" id="photoStatus"></p>
-        <p class="identity-status" id="loadingCopy" aria-live="polite"></p>
+        <p class="photo-helper" id="photoHelper"><span>SUA FOTO SER&Aacute;</span><span>TRANSFORMADA</span><span>EM UM DESENHO</span></p>
         <div class="photo-actions" id="photoActions">
           <button class="identity-action is-success" id="continueBtn" type="button" disabled>Avancar</button>
           <button class="identity-action is-secondary" id="regenerateBtn" type="button" disabled>Gerar nova</button>
         </div>
+        <input id="photoInput" type="file" accept="image/*" hidden>
+        <p class="identity-status" id="photoStatus"></p>
+        <p class="identity-status" id="loadingCopy" aria-live="polite"></p>
       </div>
     </section>
   </main>
@@ -454,6 +463,7 @@
       photoRing: document.getElementById('photoRing'),
       photoCircle: document.getElementById('photoCircle'),
       photoPlaceholder: document.getElementById('photoPlaceholder'),
+      photoHelper: document.getElementById('photoHelper'),
       photoInput: document.getElementById('photoInput'),
       photoStatus: document.getElementById('photoStatus'),
       loadingCopy: document.getElementById('loadingCopy'),
@@ -631,6 +641,7 @@
     }
     function renderPhoto() {
       const currentVersion = currentPhotoVersion();
+      const hasGeneratedAvatar = Boolean(currentVersion?.image) || state.photoVersions.length > 0;
       document.body.classList.toggle('ai-generating', Boolean(state.photoGateBusy));
       const parts = [];
       if (state.photoSourceDataUrl) {
@@ -646,6 +657,7 @@
       els.photoCircle.classList.toggle('is-busy', state.photoGateBusy && Boolean(state.photoSourceDataUrl));
       els.photoCircle.classList.toggle('has-preview', Boolean(state.photoSourceDataUrl));
       els.photoCircle.classList.toggle('has-result', Boolean(currentVersion?.image) && !state.photoGateBusy);
+      els.photoHelper?.classList.toggle('is-hidden', hasGeneratedAvatar);
       els.continueBtn.disabled = state.photoGateBusy || !currentVersion?.image;
       els.regenerateBtn.disabled = state.photoGateBusy || state.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS || !state.photoSourceDataUrl;
       els.photoActions.classList.toggle('is-hidden', state.photoGateBusy);
