@@ -2384,6 +2384,8 @@
       justify-items: center;
       gap: 12px;
       margin-top: 38px;
+      position: relative;
+      z-index: 3;
     }
 
     .books-reader-profile {
@@ -2391,6 +2393,8 @@
       justify-items: center;
       gap: 10px;
       transform: translateY(-30px);
+      position: relative;
+      z-index: 3;
     }
 
     .books-reader-pron-ring {
@@ -2471,6 +2475,8 @@
       color: #ffffff;
       text-shadow: 0 3px 16px rgba(0, 0, 0, 0.45);
       line-height: 1;
+      position: relative;
+      z-index: 4;
     }
 
     .books-reader-lang {
@@ -2483,6 +2489,8 @@
 
     .books-reader-current-score {
       display: none;
+      position: relative;
+      z-index: 4;
     }
 
     .books-reader-mic-btn {
@@ -2501,6 +2509,7 @@
         inset 0 0 18px rgba(73, 129, 255, 0.14),
         0 14px 28px rgba(0, 0, 0, 0.4);
       position: relative;
+      z-index: 4;
       overflow: hidden;
       transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
     }
@@ -2585,9 +2594,11 @@
       left: 0;
       right: 0;
       bottom: 0;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.24);
+      height: 9px;
+      background: rgba(44, 255, 156, 0.18);
+      box-shadow: inset 0 1px 0 rgba(208, 255, 228, 0.16);
       overflow: hidden;
+      z-index: 4;
     }
 
     .books-reader[data-reader-mode="speaking-training"] .books-reader-book-hero,
@@ -2604,7 +2615,10 @@
       display: block;
       height: 100%;
       width: 0%;
-      background: #ffffff;
+      background: linear-gradient(90deg, #4dff9a 0%, #72ffb1 45%, #c6ffe2 100%);
+      box-shadow:
+        0 0 10px rgba(72, 255, 159, 0.82),
+        0 0 24px rgba(72, 255, 159, 0.42);
       transition: width 220ms ease;
     }
 
