@@ -3690,6 +3690,12 @@
     .game[data-phase-key="first-star"] #gameVisual,
     .game[data-phase-key="third-star"] #gameVisual,
     .game[data-phase-key="fifth-star"] #gameVisual {
+      --flashcards-neon-border-color: rgba(129, 225, 255, 1);
+      --flashcards-neon-outline-color: rgba(36, 112, 255, 0.52);
+      --flashcards-neon-glow-1: rgba(68, 206, 255, 1);
+      --flashcards-neon-glow-2: rgba(68, 206, 255, 0.92);
+      --flashcards-neon-glow-3: rgba(32, 102, 255, 0.7);
+      --flashcards-neon-glow-4: rgba(32, 102, 255, 0.48);
       display: grid;
       place-items: center;
       align-items: center;
@@ -3817,18 +3823,10 @@
     }
 
     .game[data-phase-key="first-star"] #gameVisual::before,
-    .game[data-phase-key="third-star"] #gameVisual::before,
-    .game[data-phase-key="fifth-star"] #gameVisual::before {
-      inset: 0;
-      padding: 13px;
-      transform: none !important;
-      animation: none;
-    }
-
-    .game[data-phase-key="third-star"] #gameVisual::before,
-    .game[data-phase-key="fifth-star"] #gameVisual::before,
     .game[data-phase-key="second-star"] #gameVisual::before,
-    .game[data-phase-key="fourth-star"] #gameVisual::before {
+    .game[data-phase-key="third-star"] #gameVisual::before,
+    .game[data-phase-key="fourth-star"] #gameVisual::before,
+    .game[data-phase-key="fifth-star"] #gameVisual::before {
       content: "";
       position: absolute;
       inset: 0;
@@ -3840,8 +3838,10 @@
       pointer-events: none;
       z-index: 0;
       padding: 0;
+      transform: none !important;
       filter: none;
       opacity: 1;
+      animation: none !important;
     }
 
     .game[data-phase-key="first-star"] #gameVisual::after,
@@ -3853,16 +3853,35 @@
       position: absolute;
       inset: -7px;
       border-radius: inherit;
-      border: 2px solid rgba(129, 225, 255, 1);
+      border: 2px solid var(--flashcards-neon-border-color);
       pointer-events: none;
       z-index: 3;
       opacity: 1;
+      transition: border-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
       box-shadow:
-        0 0 0 2px rgba(36, 112, 255, 0.52),
-        0 0 20px rgba(68, 206, 255, 1),
-        0 0 42px rgba(68, 206, 255, 0.92),
-        0 0 72px rgba(32, 102, 255, 0.7),
-        0 0 110px rgba(32, 102, 255, 0.48);
+        0 0 0 2px var(--flashcards-neon-outline-color),
+        0 0 20px var(--flashcards-neon-glow-1),
+        0 0 42px var(--flashcards-neon-glow-2),
+        0 0 72px var(--flashcards-neon-glow-3),
+        0 0 110px var(--flashcards-neon-glow-4);
+    }
+
+    .game #gameVisual.is-neon-touch::after {
+      --flashcards-neon-border-color: rgba(126, 255, 172, 1);
+      --flashcards-neon-outline-color: rgba(25, 171, 92, 0.54);
+      --flashcards-neon-glow-1: rgba(103, 255, 155, 1);
+      --flashcards-neon-glow-2: rgba(103, 255, 155, 0.9);
+      --flashcards-neon-glow-3: rgba(38, 214, 117, 0.72);
+      --flashcards-neon-glow-4: rgba(25, 171, 92, 0.48);
+    }
+
+    .game #gameVisual.is-neon-audio::after {
+      --flashcards-neon-border-color: rgba(255, 121, 121, 1);
+      --flashcards-neon-outline-color: rgba(194, 44, 44, 0.56);
+      --flashcards-neon-glow-1: rgba(255, 99, 99, 1);
+      --flashcards-neon-glow-2: rgba(255, 99, 99, 0.92);
+      --flashcards-neon-glow-3: rgba(255, 72, 72, 0.74);
+      --flashcards-neon-glow-4: rgba(194, 44, 44, 0.5);
     }
 
     .game[data-phase-key="first-star"] .textscreen,
@@ -4011,37 +4030,13 @@
     .game[data-phase-key="first-star"] #gameVisual::before,
     .game[data-phase-key="third-star"] #gameVisual::before {
       inset: 0;
-      padding: 13px;
       border-radius: 50%;
       aspect-ratio: 1 / 1;
       transform: none !important;
     }
 
-    .game[data-phase-key="first-star"] #gameVisual::before {
-      inset: -6px;
-      padding: var(--flashcards-mic-ring-padding);
-      opacity: 0.98;
-      background: var(--flashcards-mic-ring-fill);
-      filter: var(--flashcards-mic-ring-glow);
-    }
-
-    .game[data-phase-key="first-star"] #gameVisual.is-mic-live::before {
-      --flashcards-mic-ring-fill:
-        linear-gradient(180deg, rgba(4, 28, 18, 0) 0%, rgba(4, 28, 18, 0.28) 48%, rgba(4, 28, 18, 0.88) 78%, rgba(4, 28, 18, 1) 100%),
-        linear-gradient(180deg, rgba(115, 255, 186, 1) 0%, rgba(46, 245, 140, 1) 100%);
-      --flashcards-mic-ring-glow:
-        drop-shadow(0 0 18px rgba(72, 255, 159, 0.95))
-        drop-shadow(0 0 36px rgba(72, 255, 159, 0.56))
-        drop-shadow(0 0 64px rgba(26, 173, 93, 0.32));
-    }
-
-    .game:not([data-phase-key="first-star"]) #gameVisual::before,
     .game:not([data-phase-key="first-star"]) #gameVisual.is-mic-live::before {
-      display: none !important;
-      opacity: 0 !important;
       animation: none !important;
-      filter: none !important;
-      background: none !important;
     }
 
     .game[data-phase-key="first-star"] .game-translation-slot .game-phase-word,
@@ -4251,6 +4246,12 @@
 
     .game[data-phase-key="second-star"] #gameVisual,
     .game[data-phase-key="fourth-star"] #gameVisual {
+      --flashcards-neon-border-color: rgba(129, 225, 255, 1);
+      --flashcards-neon-outline-color: rgba(36, 112, 255, 0.52);
+      --flashcards-neon-glow-1: rgba(68, 206, 255, 1);
+      --flashcards-neon-glow-2: rgba(68, 206, 255, 0.92);
+      --flashcards-neon-glow-3: rgba(32, 102, 255, 0.7);
+      --flashcards-neon-glow-4: rgba(32, 102, 255, 0.48);
       width: 300px;
       height: 300px;
       max-width: 300px;
@@ -4299,6 +4300,16 @@
       transform: none !important;
       position: relative;
       z-index: 1;
+    }
+
+    .game[data-phase-key="second-star"] #gameVisual .game-card__phase-flag,
+    .game[data-phase-key="fourth-star"] #gameVisual .game-card__phase-flag {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+      clip-path: circle(50% at 50% 50%);
+      z-index: 2;
     }
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual,
@@ -11846,8 +11857,21 @@
           .map((entry) => entry.item);
       }
 
+      function setGameVisualNeonState(mode = 'default') {
+        if (!els.gameVisual) return;
+        els.gameVisual.classList.remove('is-neon-touch', 'is-neon-audio');
+        if (mode === 'touch') {
+          els.gameVisual.classList.add('is-neon-touch');
+          return;
+        }
+        if (mode === 'audio') {
+          els.gameVisual.classList.add('is-neon-audio');
+        }
+      }
+
       function stopActiveAudio() {
         const current = state.game.activeAudio;
+        setGameVisualNeonState('default');
         if (!current) return;
         state.game.activeAudio = null;
         if (current.type === 'audio') {
@@ -11860,6 +11884,7 @@
 
       function fadeOutActiveAudio(durationMs = 1000) {
         const current = state.game.activeAudio;
+        setGameVisualNeonState('default');
         if (!current) return Promise.resolve(false);
         state.game.activeAudio = null;
         if (current.type === 'audio') {
@@ -11921,6 +11946,7 @@
         state.game.listening = false;
         els.gameCard.classList.remove('is-listening');
         els.gameVisual.classList.remove('is-mic-live');
+        setGameVisualNeonState('default');
       }
 
       function playAudioWithSoftEnd(audio, { registerAsActive = false } = {}) {
@@ -11994,7 +12020,11 @@
           state.stats.listenings += 1;
           saveUserStats({ skipCloudSync: true });
           updateGameChips();
-          return playAudioWithSoftEnd(audio, { registerAsActive: true });
+          setGameVisualNeonState('audio');
+          return playAudioWithSoftEnd(audio, { registerAsActive: true })
+            .finally(() => {
+              setGameVisualNeonState('default');
+            });
         }
 
         if (window.speechSynthesis && card.english) {
@@ -12007,9 +12037,11 @@
               if (state.game.activeAudio && state.game.activeAudio.instance === utterance) {
                 state.game.activeAudio = null;
               }
+              setGameVisualNeonState('default');
               resolve(true);
             };
             state.game.activeAudio = { type: 'tts', instance: utterance };
+            setGameVisualNeonState('audio');
             window.speechSynthesis.cancel();
             window.speechSynthesis.speak(utterance);
           });
@@ -12430,6 +12462,7 @@
         if (stageConfig.blurImage) visualClasses.push('is-stage-two');
         if (stageConfig.revealOnHit) visualClasses.push('is-stage-three');
         els.gameVisual.className = visualClasses.join(' ');
+        setGameVisualNeonState('default');
         els.gameVisual.innerHTML = `${imageMarkup}${sealMarkup}`;
       }
 
@@ -13995,6 +14028,7 @@
         els.gameTouchBtn.classList.add('is-busy');
         els.gameCard.classList.add('is-listening');
         els.gameVisual.classList.add('is-mic-live');
+        setGameVisualNeonState('touch');
         setGameStatus('', 'live');
         updateGuestFirstStarResultsBanner(entry, true);
 
@@ -14041,6 +14075,7 @@
           renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
           els.gameCard.classList.remove('is-listening');
           els.gameVisual.classList.remove('is-mic-live');
+          setGameVisualNeonState('default');
           clearStageHintLoop();
           updateGuestFirstStarResultsBanner(entry, false);
         };
