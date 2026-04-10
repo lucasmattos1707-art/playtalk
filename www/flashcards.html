@@ -56,6 +56,9 @@
 
     :root {
       --bg: #041321;
+      --playtalk-global-bg-desktop: url('/backgrounds/playtalk-global-desktop.webp');
+      --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
+      --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
       --panel: rgba(8, 28, 54, 0.9);
       --line: rgba(95, 201, 255, 0.22);
       --text: #f7fbff;
@@ -87,13 +90,19 @@
       --footer-total-height: calc(var(--footer-height) + var(--footer-safe-bottom));
     }
 
+    @media (max-width: 800px) {
+      :root {
+        --playtalk-global-bg-image: var(--playtalk-global-bg-mobile);
+      }
+    }
+
     * { box-sizing: border-box; }
     .container {
       position: fixed;
       inset: 0;
       width: 100%;
       height: 100%;
-      background: #041226 url('/accesskey/quantum-gradient.svg') center/cover no-repeat;
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
       overflow: hidden;
       pointer-events: none;
       z-index: 0;
@@ -143,7 +152,7 @@
     }
 
     body.auth-locked {
-      background: #ffffff;
+      background: transparent;
       color: #10233d;
       overflow: hidden;
     }
@@ -6116,7 +6125,7 @@
       <div class="premium-gate__card">
         <div class="premium-gate__copy">
           <h2>Premium</h2>
-          <p>Voce chegou em 30 cartas. Toque nas 16 imagens na ordem certa para montar sua chave secreta.</p>
+          <p>Toque nas 16 imagens na ordem certa para montar sua chave secreta.</p>
         </div>
         <div class="premium-gate__code" id="premiumCodeValue"></div>
         <p class="premium-gate__status" id="premiumStatus">Toque nas imagens na ordem certa para montar a chave.</p>
@@ -6295,7 +6304,7 @@
       const TUTORIAL_FINALE_SEAL_FLASH_MS = 400;
       const TUTORIAL_LAUNCH_SESSION_KEY = 'playtalk-flashcards-launch-tutorial-consumed';
       const GUEST_FLASHCARD_LOGIN_THRESHOLD = 999999;
-      const FLASHCARD_PREMIUM_GATE_LIMIT = 30;
+      const FLASHCARD_PREMIUM_GATE_LIMIT = Number.POSITIVE_INFINITY;
       const GUEST_FLASHCARD_LOGIN_DELAY_MS = 5000;
       const AUTH_GATE_FORM_REVEAL_MS = 1200;
       const WELCOME_COPY_ROTATION_MS = 2000;
@@ -8171,7 +8180,7 @@
         document.body.classList.add('premium-gate-open');
         els.premiumGate.classList.add('is-visible');
         playPremiumLimitAudio();
-        setPremiumStatus(message || 'Voce chegou ao limite de 30 cartas. Monte sua chave premium tocando nas imagens.');
+        setPremiumStatus(message || 'Monte sua chave premium tocando nas imagens.');
       }
 
       async function redeemPremiumAccessCode() {
@@ -13776,7 +13785,7 @@
               scheduleOnboardingGateOpen();
             }
             if (shouldGatePremiumAccess()) {
-              setPremiumStatus('Voce chegou em 30 cartas. Monte uma chave premium tocando nas imagens.');
+              setPremiumStatus('Monte uma chave premium tocando nas imagens.');
             }
             showRewardGameStatus();
             triggerLibrarySummaryRankSwap();

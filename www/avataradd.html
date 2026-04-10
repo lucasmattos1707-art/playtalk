@@ -23,6 +23,9 @@
 
     :root {
       --bg: #07111f;
+      --playtalk-global-bg-desktop: url('/backgrounds/playtalk-global-desktop.webp');
+      --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
+      --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
       --panel: rgba(9, 21, 38, 0.22);
       --line: rgba(140, 197, 255, 0.18);
       --text: #f4f8ff;
@@ -33,6 +36,12 @@
       --blue-1: #376df0;
       --blue-2: #2553d4;
       --ring-track: rgba(255,255,255,0.12);
+    }
+
+    @media (max-width: 800px) {
+      :root {
+        --playtalk-global-bg-image: var(--playtalk-global-bg-mobile);
+      }
     }
 
     * { box-sizing: border-box; }
@@ -61,7 +70,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      background: lightblue;
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
       overflow: hidden;
       pointer-events: none;
       z-index: 0;
@@ -71,22 +80,13 @@
     .container::before {
       content: "";
       position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background:
-        radial-gradient(circle, #3498db 10%, transparent 20%),
-        radial-gradient(circle, transparent 10%, #3498db 20%);
-      background-size: 30px 30px;
-      animation: moveBackground 8s linear infinite;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(4, 10, 22, 0.1), rgba(4, 10, 22, 0.32));
     }
 
     body.ai-generating {
-      background: linear-gradient(315deg, rgba(101,0,94,1) 3%, rgba(60,132,206,1) 38%, rgba(48,238,226,1) 68%, rgba(255,25,25,1) 98%);
-      background-size: 400% 400%;
-      background-attachment: fixed;
-      animation: gradient 15s ease infinite;
+      background: transparent;
+      animation: none;
     }
 
     body.ai-generating .container {
@@ -94,28 +94,11 @@
     }
 
     .ai-background {
-      position: fixed;
-      inset: 0;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 700ms ease;
-      overflow: hidden;
-      z-index: 0;
+      display: none;
     }
 
     body.ai-generating .ai-background {
       opacity: 1;
-    }
-
-    @keyframes moveBackground {
-      0% { transform: translate(0, 0); }
-      100% { transform: translate(20%, 20%); }
-    }
-
-    @keyframes gradient {
-      0% { background-position: 0% 0%; }
-      50% { background-position: 100% 100%; }
-      100% { background-position: 0% 0%; }
     }
 
     .identity-page {

@@ -105,7 +105,8 @@
             return;
           }
 
-          var bgUrl = '/accesskey/quantum-gradient.svg';
+          var bgUrl = '/backgrounds/playtalk-global-desktop.webp';
+          var mobileBgUrl = '/backgrounds/playtalk-global-mobile.webp';
           var iconSrc = 'SVG/logo.png';
           if (typeof window.__playLaunchIconSrc === 'string' && window.__playLaunchIconSrc) {
             iconSrc = window.__playLaunchIconSrc;
@@ -114,11 +115,7 @@
             icon.src = iconSrc;
           }
 
-          var modeSvgAssets = [];
-          for (var i = 1; i <= 12; i += 1) {
-            modeSvgAssets.push('SVG/background' + i + '.svg');
-          }
-          var assets = [bgUrl].concat(modeSvgAssets);
+          var assets = [bgUrl, mobileBgUrl];
           var total = assets.length;
           var loaded = 0;
 

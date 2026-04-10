@@ -481,25 +481,12 @@
   }
 
   function applySelectedMiniBookBackground() {
-    const selectedBook = getSelectedBook();
     const body = document.body;
     if (!body) return;
-    if (state.isAdmin) {
-      body.style.backgroundImage = 'none';
-      body.style.backgroundSize = '';
-      body.style.backgroundPosition = '';
-      body.style.backgroundRepeat = '';
-      body.style.backgroundColor = '#000';
-      return;
-    }
-    const desktopBg = safeText(selectedBook?.backgroundDesktopUrl);
-    const mobileBg = safeText(selectedBook?.backgroundMobileUrl);
-    const useMobile = window.matchMedia && window.matchMedia('(max-width: 800px)').matches;
-    const selectedBackground = useMobile ? (mobileBg || desktopBg) : (desktopBg || mobileBg);
-    body.style.backgroundImage = selectedBackground ? `url("${selectedBackground}")` : '';
-    body.style.backgroundSize = selectedBackground ? 'cover' : '';
-    body.style.backgroundPosition = selectedBackground ? 'center' : '';
-    body.style.backgroundRepeat = selectedBackground ? 'no-repeat' : '';
+    body.style.backgroundImage = '';
+    body.style.backgroundSize = '';
+    body.style.backgroundPosition = '';
+    body.style.backgroundRepeat = '';
     body.style.backgroundColor = '';
   }
 

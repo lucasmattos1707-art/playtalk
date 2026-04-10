@@ -13332,7 +13332,7 @@ app.post('/api/admin/flashcards/fill-missing-text', express.json({ limit: '2mb' 
   try {
     await requireAdminUserFromRequest(req);
 
-    const cards = Array.isArray(req.body?.cards) ? req.body.cards.slice(0, 30) : [];
+    const cards = Array.isArray(req.body?.cards) ? req.body.cards : [];
     const basePrompt = typeof req.body?.basePrompt === 'string' ? req.body.basePrompt.trim() : '';
     const persist = req.body?.persist !== false;
     const maxChars = Math.max(6, Math.min(32, Number.parseInt(req.body?.maxChars, 10) || 32));
@@ -13674,7 +13674,7 @@ app.post('/api/admin/flashcards/fill-missing-images', express.json({ limit: '2mb
       return;
     }
 
-    const cards = Array.isArray(req.body?.cards) ? req.body.cards.slice(0, 30) : [];
+    const cards = Array.isArray(req.body?.cards) ? req.body.cards : [];
     const basePrompt = typeof req.body?.basePrompt === 'string' ? req.body.basePrompt.trim() : '';
     const magicMode = req.body?.magicMode === true;
 
@@ -13839,7 +13839,7 @@ app.post('/api/admin/flashcards/fill-missing-audio', express.json({ limit: '2mb'
       return;
     }
 
-    const cards = Array.isArray(req.body?.cards) ? req.body.cards.slice(0, 30) : [];
+    const cards = Array.isArray(req.body?.cards) ? req.body.cards : [];
     if (!cards.length) {
       res.status(400).json({ error: 'Nenhum flashcard foi enviado para preencher audio.' });
       return;

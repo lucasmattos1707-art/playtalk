@@ -3,7 +3,7 @@
   margin: 0;
   display: grid;
   place-items: center;
-  background: #041226 url('/accesskey/quantum-gradient.svg') center/cover fixed no-repeat;
+  background: #041226 url('/backgrounds/playtalk-global-desktop.webp') center/cover fixed no-repeat;
   font-family: 'Open Sans', sans-serif;
   padding: 20px;
 }
@@ -11,6 +11,12 @@
 .auth-page,
 .auth-page * {
   box-sizing: border-box;
+}
+
+@media (max-width: 800px) {
+  .auth-page {
+    background-image: url('/backgrounds/playtalk-global-mobile.webp');
+  }
 }
 
 .auth-card {

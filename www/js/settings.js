@@ -307,7 +307,7 @@
     const container = ensureGameBackgroundContainer();
     container.innerHTML = '';
     container.style.removeProperty('background-image');
-    container.style.background = '#ffffff';
+    container.style.background = 'transparent';
   }
 
   function applyContextLensColors(lensColors = {}, fallbackColor = '') {

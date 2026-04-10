@@ -19,6 +19,9 @@
     }
     :root {
       --bg-1: #06141f;
+      --playtalk-global-bg-desktop: url('/backgrounds/playtalk-global-desktop.webp');
+      --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
+      --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
       --bg-2: #102838;
       --card: rgba(9, 32, 47, 0.88);
       --line: rgba(124, 192, 150, 0.35);
@@ -29,6 +32,12 @@
       --enemy: #ffb25e;
       --enemy-2: #ff8d4a;
       --danger: #ff8f8f;
+    }
+
+    @media (max-width: 800px) {
+      :root {
+        --playtalk-global-bg-image: var(--playtalk-global-bg-mobile);
+      }
     }
 
     * { box-sizing: border-box; }
@@ -54,7 +63,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      background: #041226 url('/accesskey/quantum-gradient.svg') center/cover no-repeat;
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
       overflow: hidden;
       pointer-events: none;
       z-index: 0;
