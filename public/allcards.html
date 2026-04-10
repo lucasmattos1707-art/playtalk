@@ -8,22 +8,54 @@
   <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
   <link rel="stylesheet" href="css/playtalk-shell.css">
   <style>
+    @font-face {
+      font-family: "Soopafre";
+      src: url("soopafre.ttf") format("truetype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "PlaytalkDisplay";
+      src: url("playtalk.otf") format("opentype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
     :root {
+      --bg: #041321;
+      --playtalk-global-bg-desktop: url('/backgrounds/playtalk-global-desktop.webp');
+      --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
+      --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
+      --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 1) 0%, rgba(4, 18, 38, 0.58) 38%, rgba(4, 18, 38, 0) 100%);
+      --muted: #b8d4ea;
+      --blue: #38c9ff;
       --footer-height: max(62px, 8vh);
       --footer-safe-bottom: env(safe-area-inset-bottom, 0px);
       --footer-total-height: calc(var(--footer-height) + var(--footer-safe-bottom));
-      --native-top-offset: 0px;
-      --page-max-width: 1240px;
-      --card-width-mobile: 80vw;
-      --card-gap: 24px;
-      --panel-bg: rgba(255, 255, 255, 0.12);
-      --panel-line: rgba(255, 255, 255, 0.2);
-      --progress-track: rgba(255, 255, 255, 0.18);
-      --progress-fill: linear-gradient(90deg, #5cff88 0%, #1eba5f 100%);
     }
 
-    * {
-      box-sizing: border-box;
+    @media (max-width: 800px) {
+      :root {
+        --playtalk-global-bg-image: var(--playtalk-global-bg-mobile);
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: "Soopafre", Arial, sans-serif;
+      color: #fff;
+      background: transparent;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     .container {
@@ -31,7 +63,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      background: lightblue;
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
       overflow: hidden;
       pointer-events: none;
       z-index: 0;
@@ -40,49 +72,8 @@
     .container::before {
       content: "";
       position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background:
-        radial-gradient(circle, #3498db 10%, transparent 20%),
-        radial-gradient(circle, transparent 10%, #3498db 20%);
-      background-size: 30px 30px;
-      animation: moveBackground 8s linear infinite;
-    }
-
-    @keyframes moveBackground {
-      0% {
-        transform: translate(0, 0);
-      }
-
-      100% {
-        transform: translate(20%, 20%);
-      }
-    }
-
-    html,
-    body {
-      margin: 0;
-      min-height: 100%;
-      overflow-y: auto !important;
-      overflow-x: hidden !important;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    body {
-      font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
-      background: transparent;
-      color: #ffffff;
-      position: relative;
-      overflow-y: auto !important;
-      overflow-x: hidden !important;
-      touch-action: auto !important;
-      overscroll-behavior-y: auto;
-    }
-
-    body.is-native-runtime {
-      --native-top-offset: 50px;
+      inset: 0;
+      background: var(--playtalk-global-bg-overlay);
     }
 
     body > *:not(.container) {
@@ -90,569 +81,218 @@
       z-index: 1;
     }
 
-    .allcards-page {
-      width: min(var(--page-max-width), calc(100vw - 24px));
+    .shell {
+      width: min(1240px, calc(100vw - 24px));
       margin: 0 auto;
-      min-height: 100vh;
-      padding: calc(26px + var(--native-top-offset)) 0 calc(var(--footer-total-height) + 32px);
-      font-family: "Open Sans", "Arial Black", "Segoe UI", Arial, sans-serif;
-      font-weight: 700;
-      overflow: visible;
-      touch-action: auto !important;
+      padding: 18px 0 calc(var(--footer-total-height) + 24px);
     }
 
-    .allcards-page,
-    .allcards-page * {
-      color: #ffffff;
-      font-family: "Open Sans", "Arial Black", "Segoe UI", Arial, sans-serif;
-      font-weight: 700;
-    }
-
-    .allcards-head {
+    .catalog {
       display: grid;
-      justify-items: center;
-      gap: 6px;
-      margin-bottom: 24px;
-      text-align: center;
+      gap: 16px;
     }
 
-    .allcards-admin-toolbar {
-      width: min(720px, calc(100vw - 24px));
-      margin: 0 auto 20px;
-      padding: 14px 16px;
-      border-radius: 18px;
-      background: rgba(11, 34, 68, 0.42);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 16px 34px rgba(5, 15, 34, 0.18);
-      display: grid;
-      gap: 10px;
-      justify-items: center;
-      text-align: center;
-    }
-
-    .allcards-admin-toolbar[hidden] {
-      display: none !important;
-    }
-
-    .allcards-admin-toolbar__btn {
-      min-width: min(280px, 100%);
-      min-height: 48px;
-      padding: 0 18px;
-      border-radius: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.26);
-      background: linear-gradient(135deg, rgba(40, 138, 255, 0.95), rgba(18, 104, 219, 0.92));
-      color: #ffffff;
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: 0.01em;
-      cursor: pointer;
-      transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
-      box-shadow: 0 14px 30px rgba(20, 76, 148, 0.28);
-    }
-
-    .allcards-admin-toolbar__btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 18px 34px rgba(20, 76, 148, 0.32);
-    }
-
-    .allcards-admin-toolbar__btn:disabled {
-      opacity: 0.62;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-
-    .allcards-admin-toolbar__status {
-      margin: 0;
-      font-size: 12px;
-      line-height: 1.45;
-      color: rgba(255, 255, 255, 0.92);
-      font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
-      font-weight: 700;
-    }
-
-    .banner-carousel {
-      width: 100vw;
-      margin: 0 0 8px;
-      margin-left: calc(50% - 50vw);
-      margin-right: calc(50% - 50vw);
-      overflow: hidden;
+    .panel.section {
       background: transparent;
-    }
-
-    .banner-carousel__viewport {
-      overflow: hidden;
-    }
-
-    .banner-carousel__track {
-      display: flex;
-      width: 400%;
-      animation: bannersSlide 14s infinite;
-    }
-
-    body.is-admin-banner .banner-carousel.is-admin-paused .banner-carousel__track {
-      animation-play-state: paused;
-      transform: translateX(calc(var(--admin-focus-index, 0) * -25%));
-    }
-
-    .banner-carousel__item {
-      width: 25%;
-      min-height: 0;
-      padding: 0;
-      display: grid;
-      align-content: start;
-      justify-items: stretch;
-      gap: 0;
-      text-align: center;
-      background: transparent;
-      user-select: none;
-      position: relative;
-    }
-
-    .banner-carousel__media {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 80 / 27;
-      overflow: hidden;
-      border: 0;
-      background: linear-gradient(140deg, rgba(27, 88, 161, 0.92), rgba(36, 112, 199, 0.9));
-    }
-
-    body.banner-view-mobile .banner-carousel__media {
-      aspect-ratio: 16 / 9;
-    }
-
-    body.banner-view-desktop .banner-carousel__media {
-      aspect-ratio: 80 / 27;
-    }
-
-    .banner-carousel__item:nth-child(2) .banner-carousel__media {
-      background: linear-gradient(140deg, rgba(16, 116, 138, 0.92), rgba(30, 148, 172, 0.9));
-    }
-
-    .banner-carousel__item:nth-child(3) .banner-carousel__media {
-      background: linear-gradient(140deg, rgba(41, 96, 159, 0.92), rgba(75, 133, 198, 0.9));
-    }
-
-    .banner-carousel__item:nth-child(4) .banner-carousel__media {
-      background: linear-gradient(140deg, rgba(13, 95, 173, 0.92), rgba(38, 127, 214, 0.9));
-    }
-
-    .banner-carousel__media-image {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: calc(100% + var(--banner-size-adjust, 0px));
-      height: calc(100% + var(--banner-size-adjust, 0px));
-      object-fit: cover;
-      transform: translate(
-        calc(-50% + var(--banner-offset-x, 0px)),
-        calc(-50% + var(--banner-offset-y, 0px))
-      );
-      transition: transform 120ms ease, width 120ms ease, height 120ms ease, opacity 220ms ease;
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    body.is-admin-banner .banner-carousel__media-image {
-      object-fit: contain;
-    }
-
-    .banner-carousel__item.has-image .banner-carousel__media-image {
-      opacity: 1;
-    }
-
-    body.is-admin-banner .banner-carousel__item {
-      cursor: pointer;
-    }
-
-    .banner-carousel__item.is-editing .banner-carousel__media {
-      box-shadow: inset 0 0 0 2px rgba(125, 255, 175, 0.9);
-    }
-
-    .banner-carousel__item.is-busy::after {
-      content: "Gerando...";
-      position: absolute;
-      inset: 12px 10px auto;
-      min-height: 24px;
-      display: grid;
-      place-items: center;
-      border-radius: 10px;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: #ffffff;
-      background: rgba(8, 24, 44, 0.72);
-      border: 1px solid rgba(255, 255, 255, 0.26);
-    }
-
-    @keyframes bannersSlide {
-      0%, 24.999% {
-        transform: translateX(0);
-      }
-
-      25%, 49.999% {
-        transform: translateX(-25%);
-      }
-
-      50%, 74.999% {
-        transform: translateX(-50%);
-      }
-
-      75%, 99.999% {
-        transform: translateX(-75%);
-      }
-
-      100% {
-        transform: translateX(-75%);
-      }
-    }
-
-    .banner-admin-controls {
-      width: 100vw;
-      height: 12vh;
-      min-height: 72px;
-      max-height: 140px;
-      margin: 0 0 10px;
-      margin-left: calc(50% - 50vw);
-      margin-right: calc(50% - 50vw);
-      padding: 8px 16px;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      background: rgba(8, 28, 54, 0.55);
-      border-top: 1px solid rgba(255, 255, 255, 0.16);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.16);
-      backdrop-filter: blur(8px);
-    }
-
-    body.is-admin-banner .banner-admin-controls {
-      display: flex;
-    }
-
-    .banner-admin-controls__row {
-      width: min(600px, 100%);
-      display: grid;
-      grid-template-columns: repeat(5, minmax(56px, 1fr));
-      align-items: center;
-      gap: 10px;
-    }
-
-    .banner-admin-controls__btn {
-      border: 1px solid rgba(255, 255, 255, 0.26);
-      border-radius: 16px;
-      min-height: 52px;
-      background: rgba(6, 22, 44, 0.7);
-      color: #ffffff;
-      display: grid;
-      place-items: center;
-      cursor: pointer;
-      transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
-    }
-
-    .banner-admin-controls__btn:hover {
-      transform: translateY(-1px);
-      background: rgba(21, 63, 112, 0.82);
-      border-color: rgba(255, 255, 255, 0.42);
-    }
-
-    .banner-admin-controls__btn:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .banner-admin-controls__btn svg {
-      width: 28px;
-      height: 28px;
-      display: block;
-    }
-
-    .banner-admin-controls__status {
-      min-width: min(320px, 100%);
-      margin: 0;
-      color: #ffffff;
-      text-align: center;
-      font-size: 13px;
-      font-weight: 700;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    }
-
-    .allcards-title {
-      margin: 0;
-      font-size: clamp(32px, 6vw, 48px);
-      font-weight: 800;
-      color: #ffffff;
-      letter-spacing: 0.03em;
-    }
-
-    .allcards-total {
-      margin: 0;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.88);
-    }
-
-    .allcards-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      justify-items: center;
-      gap: var(--card-gap);
-      overflow: visible;
-      touch-action: auto !important;
-    }
-
-    .allcards-empty {
-      width: min(80vw, 520px);
-      margin: 12px auto 0;
-      padding: 22px 18px;
-      text-align: center;
-      font-size: 14px;
-      font-weight: 700;
-      color: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 28px;
-      border: 1px solid var(--panel-line);
-      background: var(--panel-bg);
-      box-shadow: 0 18px 34px rgba(20, 47, 114, 0.16);
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(8px);
+      padding: 18px 14px;
     }
 
-    .allcards-card {
-      width: var(--card-width-mobile);
+    .section-head {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    .section-copy {
+      width: 100%;
+      text-align: center;
+    }
+
+    #libraryTitle {
+      width: 100%;
+      margin: 0;
+      text-align: center;
+      font-size: clamp(34px, 5.4vw, 52px);
+      letter-spacing: 0.03em;
+      color: #fff;
+    }
+
+    #allSectionCopy {
+      margin: 8px 0 0;
+      font-family: "PlaytalkDisplay", "Soopafre", Arial, sans-serif;
+      font-size: clamp(28px, 5vw, 46px);
+      line-height: 1;
+      letter-spacing: 0.03em;
+      text-align: center;
+      background: linear-gradient(180deg, #8ed8ff 0%, #3ea8ff 48%, #0b67ff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 10px 26px rgba(37, 125, 255, 0.16);
+      transition: transform 220ms ease, opacity 220ms ease, filter 220ms ease;
+    }
+
+    #allSectionCopy.is-updating {
+      transform: translateY(-2px) scale(1.04);
+      filter: drop-shadow(0 10px 24px rgba(35, 137, 255, 0.26));
+    }
+
+    .grid {
       display: grid;
-      gap: 10px;
-      justify-items: stretch;
-      transition: opacity 180ms ease;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
     }
 
-    .allcards-card.is-hidden-deck {
-      opacity: 0.5;
+    .mini-card {
+      padding: 10px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      min-height: 100%;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(6px);
     }
 
-    .allcards-card__admin-head {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .allcards-card__admin-actions {
-      display: inline-flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 8px;
-    }
-
-    .allcards-admin-btn {
-      width: 38px;
-      height: 38px;
-      border: 1px solid rgba(255, 255, 255, 0.4);
-      background: rgba(15, 44, 89, 0.68);
-      border-radius: 12px;
-      color: #ffffff;
-      display: grid;
-      place-items: center;
-      cursor: pointer;
-      padding: 0;
-      transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
-    }
-
-    .allcards-admin-btn svg {
-      width: 20px;
-      height: 20px;
-      display: block;
-    }
-
-    .allcards-admin-btn:hover {
-      transform: translateY(-1px);
-      background: rgba(34, 87, 162, 0.86);
-      border-color: rgba(255, 255, 255, 0.65);
-    }
-
-    .allcards-admin-btn.is-active {
-      background: rgba(58, 119, 207, 0.9);
-      border-color: rgba(255, 255, 255, 0.85);
-    }
-
-    .allcards-admin-btn.is-danger {
-      background: rgba(162, 28, 49, 0.9);
-      border-color: rgba(255, 185, 198, 0.58);
-    }
-
-    .allcards-admin-btn.is-danger:disabled {
-      background: rgba(112, 33, 49, 0.42);
-      border-color: rgba(255, 185, 198, 0.22);
-    }
-
-    .allcards-admin-btn:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .allcards-card__frame {
+    .mini-card__image {
       width: 100%;
       aspect-ratio: 1 / 1;
-      padding: 12px;
-      border-radius: 32px;
-      border: 1px solid var(--panel-line);
-      background: var(--panel-bg);
-      box-shadow: 0 18px 34px rgba(20, 47, 114, 0.16);
-      backdrop-filter: blur(12px);
-    }
-
-    .allcards-card__image {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      border-radius: 26px;
-      overflow: hidden;
-      background: rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      overflow: visible;
+      background: rgba(255, 255, 255, 0.02);
       border: 1px solid rgba(255, 255, 255, 0.12);
+      position: relative;
+      isolation: isolate;
     }
 
-    .allcards-card__image img,
-    .allcards-card__fallback {
+    .mini-card__image > img:not(.mini-card__seal) {
       width: 100%;
       height: 100%;
-      display: block;
       object-fit: cover;
+      clip-path: inset(8% 8% 8% 8% round 14px);
+      transition: filter 240ms ease, opacity 240ms ease;
     }
 
-    .allcards-card__fallback {
+    .mini-card__fallback {
+      width: 100%;
+      height: 100%;
       display: grid;
       place-items: center;
-      padding: 18px;
       text-align: center;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
+      padding: 12px;
+      color: var(--blue);
       text-transform: uppercase;
-      color: #ffffff;
-      background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
-        rgba(255, 255, 255, 0.06);
-    }
-
-    .allcards-card__status {
-      min-height: 18px;
-      margin: 0;
-      text-align: center;
-      color: #ffffff;
+      letter-spacing: 0.12em;
       font-size: 12px;
-      font-weight: 700;
-      line-height: 1.4;
-      letter-spacing: 0;
-      font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+      background:
+        linear-gradient(135deg, rgba(83, 213, 255, 0.12), transparent),
+        rgba(255, 255, 255, 0.02);
     }
 
-    .allcards-card__progress {
+    .mini-card__word {
+      margin: 10px 0 0;
+      font-weight: 700;
+      font-size: 17px;
+      text-align: center;
+    }
+
+    .mini-card__subword {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+      min-height: 18px;
+    }
+
+    .mini-card__seal {
+      position: absolute;
+      right: -10px;
+      bottom: -10px;
+      top: auto;
+      width: clamp(56px, 34%, 82px);
+      height: clamp(56px, 34%, 82px);
+      object-fit: contain;
+      transform: none;
+      filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.28));
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .mini-card__progress {
+      margin-top: 10px;
       width: 100%;
       height: 8px;
-      overflow: hidden;
       border-radius: 999px;
-      background: var(--progress-track);
+      background: rgba(255, 255, 255, 0.1);
+      overflow: hidden;
     }
 
-    .allcards-card__progress span {
+    .mini-card__progress span {
       display: block;
       height: 100%;
       border-radius: inherit;
-      background: var(--progress-fill);
-      transition: width 220ms ease;
+      background: linear-gradient(90deg, #5cff88, #1eba5f);
     }
 
-    .allcards-card__admin-panel {
+    .mini-card__loader {
+      position: absolute;
+      inset: 50% auto auto 50%;
+      width: 34px;
+      height: 34px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: linear-gradient(#ee280e, #15a0f7, #6ed15a);
+      animation: flashcardsMiniLoaderSpin 1.2s linear infinite;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .mini-card__loader span {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: linear-gradient(#ee280e, #15a0f7, #5ad15a);
+    }
+
+    .mini-card__loader::after {
+      content: "";
+      position: absolute;
+      inset: 7px;
+      background: rgba(22, 28, 40, 0.96);
+      border: solid rgba(22, 28, 40, 0.96) 7px;
+      border-radius: 50%;
+    }
+
+    .mini-card__loader span:nth-child(1) { filter: blur(3px); }
+    .mini-card__loader span:nth-child(2) { filter: blur(6px); }
+    .mini-card__loader span:nth-child(3) { filter: blur(12px); }
+    .mini-card__loader span:nth-child(4) { filter: blur(18px); }
+
+    .empty {
+      min-height: 220px;
       display: grid;
-      gap: 8px;
-      padding: 12px;
-      border-radius: 18px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      background: rgba(13, 44, 90, 0.72);
-      box-shadow: 0 8px 18px rgba(12, 29, 74, 0.25);
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+      border-radius: 24px;
+      color: var(--muted);
+      border: 1px dashed rgba(125, 203, 255, 0.16);
+      background: rgba(255, 255, 255, 0.02);
     }
 
-    .allcards-card__admin-label {
-      margin: 0;
-      font-size: 11px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.88);
-      font-weight: 800;
-    }
-
-    .allcards-card__admin-input {
-      width: 100%;
-      min-height: 40px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.28);
-      background: rgba(7, 23, 46, 0.66);
-      color: #ffffff;
-      padding: 10px 12px;
-      font-size: 13px;
-      font-weight: 700;
-      outline: none;
-    }
-
-    .allcards-card__admin-input:focus {
-      border-color: rgba(123, 227, 255, 0.95);
-      box-shadow: 0 0 0 2px rgba(96, 196, 245, 0.2);
-    }
-
-    .allcards-card__admin-row {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-    }
-
-    .allcards-card__admin-submit {
-      min-height: 38px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      background: rgba(44, 120, 255, 0.9);
-      color: #ffffff;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.03em;
-      cursor: pointer;
-      transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
-    }
-
-    .allcards-card__admin-submit:hover {
-      transform: translateY(-1px);
-      background: rgba(61, 138, 255, 0.95);
-      border-color: rgba(255, 255, 255, 0.75);
-    }
-
-    .allcards-card__admin-submit.is-secondary {
-      background: rgba(21, 73, 142, 0.86);
-    }
-
-    .allcards-card__admin-submit:disabled {
-      opacity: 0.58;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .allcards-card__admin-status {
-      margin: 2px 0 0;
-      font-size: 12px;
-      line-height: 1.35;
-      color: rgba(255, 255, 255, 0.92);
-      text-align: left;
-      font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
-      font-weight: 700;
+    @keyframes flashcardsMiniLoaderSpin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
     }
 
     .flashcards-footer-nav {
       position: fixed !important;
       left: 0;
       right: 0;
-      bottom: 0;
       bottom: var(--footer-safe-bottom);
       height: var(--footer-height);
       background: #157efb;
@@ -661,9 +301,6 @@
       align-items: stretch;
       z-index: 200;
       box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.12);
-      visibility: visible;
-      opacity: 1;
-      pointer-events: auto;
     }
 
     .flashcards-footer-nav__item {
@@ -693,98 +330,37 @@
       fill: currentColor;
     }
 
-    @media (min-width: 900px) {
-      .allcards-grid {
+    @media (max-width: 900px) {
+      .grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        align-items: start;
-      }
-
-      .allcards-card {
-        width: min(100%, 340px);
       }
     }
 
-    @media (max-width: 640px) {
-      .banner-carousel__media {
-        aspect-ratio: 16 / 9;
+    @media (max-width: 680px) {
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      .allcards-page {
-        width: calc(100vw - 16px);
-      }
-
-      .banner-admin-controls {
-        height: 12vh;
-        min-height: 66px;
-        padding: 8px 10px;
-      }
-
-      .banner-admin-controls__row {
-        gap: 8px;
-      }
-
-      .banner-admin-controls__btn {
-        min-height: 48px;
-        border-radius: 14px;
-      }
-
-      .banner-admin-controls__status {
-        font-size: 12px;
-      }
-
-      .allcards-admin-btn {
-        width: 34px;
-        height: 34px;
-        border-radius: 10px;
+      .panel.section {
+        padding: 14px 10px;
       }
     }
   </style>
 </head>
-<body data-lens-context="menus" data-banner-surface="allcards">
+<body>
   <div class="container" aria-hidden="true"></div>
-  <section class="banner-carousel" data-banner-carousel aria-label="Carrossel de banners">
-    <div class="banner-carousel__viewport">
-      <div class="banner-carousel__track">
-        <article class="banner-carousel__item" data-banner-slot="1">
-          <div class="banner-carousel__media">
-            <img class="banner-carousel__media-image" alt="Banner 1" loading="lazy">
+
+  <main class="shell">
+    <section class="catalog" id="catalog">
+      <div class="panel section">
+        <div class="section-head">
+          <div class="section-copy">
+            <h2 id="libraryTitle">FlashCards</h2>
+            <p id="allSectionCopy">0 FlashCards</p>
           </div>
-        </article>
-        <article class="banner-carousel__item" data-banner-slot="2">
-          <div class="banner-carousel__media">
-            <img class="banner-carousel__media-image" alt="Banner 2" loading="lazy">
-          </div>
-        </article>
-        <article class="banner-carousel__item" data-banner-slot="3">
-          <div class="banner-carousel__media">
-            <img class="banner-carousel__media-image" alt="Banner 3" loading="lazy">
-          </div>
-        </article>
-        <article class="banner-carousel__item" data-banner-slot="4">
-          <div class="banner-carousel__media">
-            <img class="banner-carousel__media-image" alt="Banner 4" loading="lazy">
-          </div>
-        </article>
+        </div>
+        <div class="grid" id="allGrid"></div>
       </div>
-    </div>
-  </section>
-
-  <main class="allcards-page" aria-live="polite">
-    <header class="allcards-head">
-      <h1 class="allcards-title">AllCards</h1>
-      <p class="allcards-total" id="allcards-total">0 FlashCards</p>
-    </header>
-
-    <section id="allcards-admin-toolbar" class="allcards-admin-toolbar" hidden aria-label="Ferramentas de administrador">
-      <button id="allcards-admin-hidden-toggle-btn" class="allcards-admin-toolbar__btn" type="button">Mostrar ocultos</button>
-      <button id="allcards-admin-upload-btn" class="allcards-admin-toolbar__btn" type="button">Enviar decks</button>
-      <input id="allcards-admin-upload-input" type="file" accept=".json,application/json" multiple hidden>
-      <p id="allcards-admin-upload-status" class="allcards-admin-toolbar__status"></p>
-    </section>
-
-    <section>
-      <div id="allcards-grid" class="allcards-grid" role="list"></div>
-      <p id="allcards-empty" class="allcards-empty" hidden></p>
     </section>
   </main>
 
@@ -809,13 +385,7 @@
   <script src="js/android-config.js"></script>
   <script src="js/api-config.js"></script>
   <script src="js/playtalk-shell.js"></script>
-  <script src="js/banner-carousel-admin.js"></script>
   <script src="js/android-shell.js"></script>
-  <script>
-    if (window.PlaytalkNative && typeof window.PlaytalkNative.isNativeRuntime === 'function' && window.PlaytalkNative.isNativeRuntime()) {
-      document.body.classList.add('is-native-runtime');
-    }
-  </script>
-  <script src="js/allcards-page.js?v=20260404-3" defer></script>
+  <script src="js/allcards-page.js?v=20260410-1" defer></script>
 </body>
 </html>

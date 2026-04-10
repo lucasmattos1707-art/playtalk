@@ -316,7 +316,7 @@
     }
 
     .welcome-gate__logo {
-      width: min(276px, 71.3vw);
+      width: min(420px, 78vw);
       height: auto;
       object-fit: contain;
       display: block;
@@ -341,19 +341,7 @@
     }
 
     .welcome-gate__copy {
-      margin: 0;
-      min-height: 2.8em;
-      display: grid;
-      place-items: center;
-      margin-top: 30px;
-      color: #ffffff;
-      font-size: clamp(18px, 3.9vw, 29px);
-      line-height: 1.2;
-      letter-spacing: 0.04em;
-      text-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
-      opacity: 1;
-      transform: translateY(0);
-      transition: opacity 320ms ease, transform 320ms ease;
+      display: none !important;
     }
 
     .welcome-gate__copy.is-changing {
@@ -362,37 +350,77 @@
     }
 
     .welcome-gate__start-btn {
-      width: min(280px, 100%);
-      min-height: 58px;
-      padding: 16px 28px;
+      position: relative;
+      width: min(440px, 92vw);
+      padding: 0;
       border-radius: 999px;
-      border: 1px solid rgba(110, 213, 255, 0.42);
-      background: linear-gradient(135deg, #071b4a 0%, #0d2f78 58%, #1367c7 100%);
+      border: 0;
+      background: transparent;
       color: #ffffff;
-      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
-      font-size: clamp(20px, 4vw, 26px);
-      line-height: 1;
-      letter-spacing: 0.04em;
+      overflow: hidden;
       box-shadow:
-        0 0 16px rgba(56, 170, 255, 0.3),
-        0 0 34px rgba(56, 170, 255, 0.18),
-        0 18px 36px rgba(17, 107, 255, 0.32),
-        inset 0 1px 0 rgba(186, 233, 255, 0.28);
-      text-shadow:
-        0 2px 0 rgba(8, 35, 93, 0.62),
-        0 8px 16px rgba(10, 50, 121, 0.34);
+        0 0 16px rgba(56, 170, 255, 0.24),
+        0 0 34px rgba(56, 170, 255, 0.16),
+        0 18px 36px rgba(17, 107, 255, 0.28);
       transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+    }
+
+    .welcome-gate__start-btn img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: inherit;
+    }
+
+    .welcome-gate__start-btn::after {
+      content: "";
+      position: absolute;
+      inset: -12% -24%;
+      background: linear-gradient(
+        105deg,
+        transparent 0%,
+        transparent 42%,
+        rgba(255, 255, 255, 0.08) 46%,
+        rgba(255, 255, 255, 0.92) 50%,
+        rgba(255, 255, 255, 0.08) 54%,
+        transparent 58%,
+        transparent 100%
+      );
+      transform: translateX(-180%) skewX(-18deg);
+      opacity: 0;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      animation: welcomeStartButtonFlash 2s ease-in-out infinite;
     }
 
     .welcome-gate__start-btn:hover,
     .welcome-gate__start-btn:focus-visible {
       transform: translateY(-2px) scale(1.01);
       box-shadow:
-        0 0 18px rgba(108, 206, 255, 0.42),
-        0 0 42px rgba(56, 170, 255, 0.24),
-        0 22px 42px rgba(17, 107, 255, 0.38),
-        inset 0 1px 0 rgba(210, 242, 255, 0.34);
+        0 0 18px rgba(108, 206, 255, 0.32),
+        0 0 42px rgba(56, 170, 255, 0.2),
+        0 22px 42px rgba(17, 107, 255, 0.34);
       filter: saturate(1.08);
+    }
+
+    @keyframes welcomeStartButtonFlash {
+      0%, 58%, 100% {
+        transform: translateX(-180%) skewX(-18deg);
+        opacity: 0;
+      }
+
+      10% {
+        opacity: 1;
+      }
+
+      32% {
+        transform: translateX(180%) skewX(-18deg);
+        opacity: 0.96;
+      }
+
+      40% {
+        opacity: 0;
+      }
     }
 
     .welcome-gate__account-link {
@@ -5363,9 +5391,15 @@
 
     .flashcards-footer-nav__item img,
     .flashcards-footer-nav__item svg {
-      width: 28px;
-      height: 28px;
+      width: 31px;
+      height: 31px;
       display: block;
+    }
+
+    .flashcards-footer-nav__item img {
+      object-fit: contain;
+      filter: drop-shadow(0 6px 14px rgba(7, 17, 35, 0.28));
+      transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
     }
 
     .flashcards-footer-nav__item svg {
@@ -5375,6 +5409,13 @@
 
     .flashcards-footer-nav__item svg path {
       fill: currentColor;
+    }
+
+    .flashcards-footer-nav__item.is-active img {
+      transform: translateY(-1px) scale(1.05);
+      filter:
+        drop-shadow(0 0 10px rgba(105, 214, 255, 0.55))
+        drop-shadow(0 8px 16px rgba(7, 17, 35, 0.28));
     }
 
     .premium-gate {
@@ -5964,9 +6005,9 @@
   <section class="welcome-gate is-visible" id="welcomeGate" aria-label="Entrada do PlayTalk">
     <div class="welcome-gate__stack">
       <div class="welcome-gate__touch" id="welcomeTouch">
-        <img class="welcome-gate__logo" id="welcomeLogo" src="/arquivos-codex/fluentlevelup.png" alt="Level Up">
-        <p class="welcome-gate__copy" id="welcomeCopy">Flu&#234;ncia f&#225;cil</p>
-        <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button">JOGAR AGORA</button>
+        <img class="welcome-gate__logo" id="welcomeLogo" src="/arquivos-codex/fluent-levelup-logo.png" alt="Level Up">
+        <p class="welcome-gate__copy" id="welcomeCopy"></p>
+        <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button"><img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora"></button>
       </div>
       <a class="welcome-gate__account-link" id="welcomeAccountLink" href="/accounts">Entrar com minha conta</a>
     </div>
@@ -6342,19 +6383,19 @@
 
   <nav class="flashcards-footer-nav" id="flashcardsFooterNav" aria-label="Navegacao do flashcards">
     <button class="flashcards-footer-nav__item is-active" id="footerPlayBtn" type="button" data-view="play" aria-label="Jogar">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.36a1 1 0 0 0 0-1.72l-10-6.36A1 1 0 0 0 8 5.14Z"/></svg>
+      <img src="/arquivos-codex/nav-icons/home.png" alt="Home">
     </button>
     <button class="flashcards-footer-nav__item" id="footerCardsBtn" type="button" data-view="cards" aria-label="Flashcards">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.6 2.5c.33 2.34 2.12 3.25 3.48 4.86 1.34 1.59 2 3.22 2 5.35 0 4.3-2.96 8.79-7.58 8.79-3.36 0-5.58-2.4-5.58-5.34 0-2.21 1.12-3.85 2.97-5.78 1.38-1.44 2.94-3.14 4.71-7.88Z"/></svg>
+      <img src="/arquivos-codex/nav-icons/messenge.png" alt="Mensagens">
     </button>
     <button class="flashcards-footer-nav__item" id="footerUsersBtn" type="button" data-view="users" aria-label="Usuarios">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 3h10v2h2a2 2 0 0 1 2 2c0 3.32-2.47 6-5.57 6.4A5.99 5.99 0 0 1 13 17.83V20h4v2H7v-2h4v-2.17A5.99 5.99 0 0 1 8.57 13.4C5.47 13 3 10.32 3 7a2 2 0 0 1 2-2h2V3Zm-2 4c0 2.1 1.45 3.82 3.4 4.28A6 6 0 0 1 7 7V7H5Zm14 0h-2a6 6 0 0 1-1.4 4.28C17.55 10.82 19 9.1 19 7Z"/></svg>
+      <img src="/arquivos-codex/nav-icons/rank.png" alt="Ranking">
     </button>
     <button class="flashcards-footer-nav__item" id="footerProfileBtn" type="button" data-view="profile" aria-label="Perfil">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2c-4.42 0-8 2.46-8 5.5 0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5 0-3.04-3.58-5.5-8-5.5Z"/></svg>
+      <img src="/arquivos-codex/nav-icons/profile.png" alt="Perfil">
     </button>
     <a class="flashcards-footer-nav__item" href="/books" aria-label="Books">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v15h-2V4H7.5a.5.5 0 0 0 0 1H16v12H7.5A2.5 2.5 0 0 1 5 14.5v-10Zm2.5 10.5H14V7H7.5a2.5 2.5 0 0 1-.5-.05v7.55a.5.5 0 0 0 .5.5Z"/></svg>
+      <img src="/arquivos-codex/nav-icons/book.png" alt="Books">
     </a>
   </nav>
   <script src="js/android-config.js"></script>
@@ -8039,7 +8080,7 @@
 
       function syncWelcomeStartButton() {
         if (!els.welcomeStartBtn) return;
-        els.welcomeStartBtn.textContent = 'JOGAR AGORA';
+        els.welcomeStartBtn.innerHTML = '<img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora">';
         els.welcomeStartBtn.disabled = false;
       }
 
