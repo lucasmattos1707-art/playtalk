@@ -12196,7 +12196,8 @@ app.post('/api/images/openai/avatar-cartoon', async (req, res) => {
   const fileNameHint = typeof req.body?.fileName === 'string' ? req.body.fileName.trim() : 'playtalk-avatar-cartoon';
   const size = typeof req.body?.size === 'string' ? req.body.size.trim() : '1024x1024';
   const quality = typeof req.body?.quality === 'string' ? req.body.quality.trim() : 'low';
-  const outputFormat = typeof req.body?.outputFormat === 'string' ? req.body.outputFormat.trim() : 'webp';
+  const outputFormat = typeof req.body?.outputFormat === 'string' ? req.body.outputFormat.trim() : 'png';
+  const background = typeof req.body?.background === 'string' ? req.body.background.trim() : 'transparent';
   const parsedImage = parseBase64DataUrl(imageDataUrl);
 
   if (!parsedImage?.buffer?.length || !/^image\//i.test(parsedImage.mimeType || '')) {
@@ -12223,8 +12224,9 @@ app.post('/api/images/openai/avatar-cartoon', async (req, res) => {
     'Make the person look naturally a bit fitter, healthier, more alive, happier, and lighter in aura, with cleaner skin and flattering presentation while keeping them recognizably the same person.',
     'If the subject appears slightly overweight, reduce it only subtly and tastefully while preserving identity and realism.',
     'If the subject is clearly an adult and appears over about 40 years old, make them look only a little younger, around five years younger, while preserving realism and identity.',
-    'Render it as a polished child-friendly 3D animated movie character with cinematic lighting, soft shadows, vibrant colors, detailed textures, gentle depth of field, premium 4k animation quality, and a beautiful cinematic background.',
-    'Use attractive background settings such as beach scenery, blue sky, sunny daylight, late afternoon light, or elegant night scenes, varying naturally while keeping the subject as the main focus.',
+    'Render it as a polished premium 3D animated portrait with cinematic lighting, soft shadows, vibrant colors, detailed textures, gentle depth of field, premium 4k animation quality.',
+    'Use transparent background only (alpha channel). Do not add beach, sky, scenery, room, wall, gradients, floor, objects, or any backdrop.',
+    'Keep only the person cut out cleanly with smooth edges and no background pixels.',
     'Keep the composition close to the original photo and use only the uploaded photo as reference.',
     'Do not invent props, toys, shoulder characters, extra accessories, extra people, text, logos, or watermarks.',
     'Keep the final image clean, premium, warm, and visually uplifting.'
@@ -12241,6 +12243,7 @@ app.post('/api/images/openai/avatar-cartoon', async (req, res) => {
     formData.append('size', size);
     formData.append('quality', quality);
     formData.append('output_format', outputFormat);
+    formData.append('background', background);
 
     const upstreamResponse = await fetch('https://api.openai.com/v1/images/edits', {
       method: 'POST',
