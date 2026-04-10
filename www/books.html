@@ -21,6 +21,19 @@
       initial-value: 0deg;
     }
 
+    :root {
+      --playtalk-global-bg-desktop: url('/backgrounds/playtalk-global-desktop.webp');
+      --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
+      --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
+      --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 1) 0%, rgba(4, 18, 38, 0.58) 38%, rgba(4, 18, 38, 0) 100%);
+    }
+
+    @media (max-width: 800px) {
+      :root {
+        --playtalk-global-bg-image: var(--playtalk-global-bg-mobile);
+      }
+    }
+
     * {
       box-sizing: border-box;
     }
@@ -30,7 +43,7 @@
       margin: 0;
       width: 100%;
       min-height: 100%;
-      background: linear-gradient(180deg, #050608 0%, #121417 52%, #232629 100%);
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat fixed;
       color: #ffffff;
       font-family: "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
     }
@@ -41,6 +54,15 @@
       overflow: hidden;
       overflow-x: hidden;
       position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: var(--playtalk-global-bg-overlay);
+      pointer-events: none;
+      z-index: 0;
     }
 
     .books-home-book-bg {
@@ -54,6 +76,7 @@
       pointer-events: none;
       z-index: 1;
       transition: opacity 1000ms ease, filter 1000ms ease;
+      background-image: none !important;
     }
 
     .books-home-book-bg.is-top {
@@ -1194,6 +1217,7 @@
     .books-card__background {
       position: absolute;
       inset: 0;
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
       background-position: center;
       background-size: cover;
       background-repeat: no-repeat;

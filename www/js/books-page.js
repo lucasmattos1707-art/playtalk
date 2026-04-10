@@ -2,7 +2,7 @@
   const ADMIN_ALIASES = new Set(['admin', 'adm', 'adminst']);
   const MAX_GRADIENTS = 8;
   const SESSION_ENDPOINTS = ['/auth/session', '/api/me'];
-  const DEFAULT_READER_BACKGROUND = 'radial-gradient(circle at top, rgba(22, 34, 56, 0.72), #04070d 60%, #020306 100%)';
+  const DEFAULT_READER_BACKGROUND = 'transparent';
   const FORCE_ADMIN_UI_STORAGE_KEY = 'playtalk_books_force_admin_ui_v1';
   const MODE_DISSOLVE_MS = 2000;
   const MODE_LOADING_FADE_MS = 500;
@@ -1646,46 +1646,19 @@
   }
 
   function applyHomeBookBackground(session = state.homeCurrentSession) {
-    const backgroundUrl = chooseReaderBackgroundUrl(session?.book || session || null);
     const primary = els.homeBookBackgroundPrimary;
     const secondary = els.homeBookBackgroundSecondary;
-    if (!backgroundUrl) {
-      [primary, secondary].forEach((layer) => {
-        if (!layer) return;
-        layer.style.backgroundImage = 'none';
-        layer.classList.remove('is-visible', 'is-top');
-      });
-      if (primary) {
-        primary.classList.add('is-top');
-      }
-      if (els.homePanel) {
-        els.homePanel.style.background = 'transparent';
-      }
-      if (els.homeShell) {
-        els.homeShell.style.background = 'transparent';
-      }
-      return;
+    [primary, secondary].forEach((layer) => {
+      if (!layer) return;
+      layer.style.backgroundImage = 'none';
+      layer.classList.remove('is-visible', 'is-top');
+    });
+    if (primary) {
+      primary.classList.add('is-top');
     }
-    const homeBackground = `url(${safeCssUrl(backgroundUrl)}) center / cover no-repeat`;
-    const backgroundCss = `url(${safeCssUrl(backgroundUrl)})`;
-    if (primary && secondary) {
-      if (state.homeBackgroundUrl !== backgroundUrl) {
-        const activeLayer = state.homeBackgroundLayer === 'secondary' ? secondary : primary;
-        const nextLayer = state.homeBackgroundLayer === 'secondary' ? primary : secondary;
-        nextLayer.style.backgroundImage = backgroundCss;
-        nextLayer.classList.add('is-top', 'is-visible');
-        activeLayer.classList.remove('is-top');
-        activeLayer.classList.remove('is-visible');
-        state.homeBackgroundLayer = state.homeBackgroundLayer === 'secondary' ? 'primary' : 'secondary';
-        state.homeBackgroundUrl = backgroundUrl;
-      } else {
-        const activeLayer = state.homeBackgroundLayer === 'secondary' ? secondary : primary;
-        activeLayer.style.backgroundImage = backgroundCss;
-        activeLayer.classList.add('is-top', 'is-visible');
-      }
-    }
+    state.homeBackgroundUrl = '';
     if (els.homePanel) {
-      els.homePanel.style.background = homeBackground;
+      els.homePanel.style.background = 'transparent';
     }
     if (els.homeShell) {
       els.homeShell.style.background = 'transparent';
@@ -3513,11 +3486,7 @@
 
       const background = document.createElement('span');
       background.className = 'books-card__background';
-      if (coverImageUrl) {
-        background.style.backgroundImage = `url(${safeCssUrl(coverImageUrl)})`;
-      } else {
-        background.style.backgroundImage = gradient;
-      }
+      background.style.backgroundImage = 'none';
 
       const overlay = document.createElement('span');
       overlay.className = 'books-card__overlay';
@@ -4779,7 +4748,6 @@
   async function preloadReaderAssets(book) {
     const profile = state.user || state.localProfile || {};
     const urls = [
-      chooseReaderBackgroundUrl(book),
       safeText(profile.avatarImage)
     ]
       .filter(Boolean)
@@ -4791,13 +4759,7 @@
 
   function applyReaderBackground(book) {
     if (!els.reader) return;
-    const backgroundUrl = chooseReaderBackgroundUrl(book);
-    if (!backgroundUrl) {
-      els.reader.style.background = DEFAULT_READER_BACKGROUND;
-      return;
-    }
-
-    els.reader.style.background = `linear-gradient(to top, rgba(2, 5, 10, 0.78) 0%, rgba(2, 5, 10, 0.38) 60%, rgba(2, 5, 10, 0.32) 100%), url(${safeCssUrl(backgroundUrl)}) center / cover no-repeat`;
+    els.reader.style.background = DEFAULT_READER_BACKGROUND;
   }
 
   function renderReaderBookCover(book) {
