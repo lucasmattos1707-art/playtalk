@@ -55,7 +55,7 @@
     }
 
     :root {
-      --bg: #041321;
+      --bg: #07111f;
       --playtalk-global-bg-desktop: url('/backgrounds/playtalk-global-desktop.webp');
       --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
       --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
@@ -2813,8 +2813,8 @@
     }
 
     .game-card__visual.is-four-star-glow {
-      filter: drop-shadow(0 0 18px rgba(86, 167, 255, 0.65));
-      transition: filter 260ms ease;
+      filter: none;
+      transition: none;
     }
 
     @property --flashcards-mic-progress {
@@ -2878,14 +2878,20 @@
       overflow: visible;
     }
 
+    .game[data-phase-key="fourth-star"] #gameVisual::before,
+    .game[data-phase-key="fifth-star"] #gameVisual::before {
+      background: none;
+    }
+
     .game[data-phase-key="fifth-star"] .game-card__seal {
       right: -8%;
       bottom: calc(3% + 15px);
     }
 
     .game[data-phase-key="fifth-star"] .game-card__reward-seal {
-      right: -8%;
+      right: calc(-8% + 25px);
       bottom: calc(3% - 35px);
+      transform: scale(1.15);
     }
 
     .game[data-phase-key="fifth-star"] .game-card__seal.is-tutorial-finale {
@@ -12101,12 +12107,7 @@
       }
 
       function triggerFourStarGlow() {
-        els.gameVisual.classList.remove('is-four-star-glow');
-        void els.gameVisual.offsetWidth;
-        els.gameVisual.classList.add('is-four-star-glow');
-        window.setTimeout(() => {
-          els.gameVisual.classList.remove('is-four-star-glow');
-        }, 900);
+        return;
       }
 
       function animateStarsCascade(count) {
