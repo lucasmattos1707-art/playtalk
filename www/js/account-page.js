@@ -14,6 +14,7 @@
     passwordField: document.getElementById('accountPasswordField'),
     passwordInput: document.getElementById('accountPasswordInput'),
     passwordBtn: document.getElementById('accountPasswordBtn'),
+    passwordBtnLabel: document.getElementById('accountPasswordBtnLabel'),
     premiumCard: document.querySelector('.account-premium'),
     metrics: document.getElementById('accountMetrics'),
     statsCard: document.getElementById('accountStatsCard'),
@@ -429,7 +430,9 @@
     }
     if (els.passwordBtn) {
       els.passwordBtn.hidden = !isLoggedIn;
-      els.passwordBtn.textContent = state.passwordEditMode ? 'Cancelar' : 'Trocar senha';
+      if (els.passwordBtnLabel) {
+        els.passwordBtnLabel.textContent = state.passwordEditMode ? 'Cancelar' : 'Trocar senha';
+      }
     }
     if (shouldHidePasswordField && els.passwordInput) {
       els.passwordInput.value = '';
