@@ -524,9 +524,6 @@
       overflow: visible;
     }
 
-    #booksHomeStartPanel.is-logged-in .books-home-start-title,
-    #booksHomeStartPanel.is-logged-in .books-home-start-tagline,
-    #booksHomeStartPanel.is-logged-in .books-home-start-auth-title,
     #booksHomeStartPanel.is-logged-in #booksHomeAuthForm,
     #booksHomeStartPanel.is-logged-in #booksHomeAuthStatus {
       display: none !important;
@@ -552,9 +549,13 @@
       cursor: pointer;
     }
 
+    #booksHomeLogoutBtn {
+      display: none !important;
+    }
+
     .books-home-start-visual {
-      width: min(360px, 46vw);
-      max-width: 46vw;
+      width: min(420px, 56vw);
+      max-width: 56vw;
       height: auto;
       display: grid;
       place-items: center;
@@ -677,35 +678,74 @@
     }
 
     .books-home-launch-btn {
-      width: min(160px, calc(50vw - 27px));
-      min-height: 54px;
-      border: 1px solid rgba(163, 239, 255, 0.72);
+      position: relative;
+      width: min(440px, 76vw);
+      padding: 0;
+      border: 0;
       border-radius: 999px;
-      background: linear-gradient(135deg, rgba(111, 225, 255, 0.98), rgba(72, 173, 255, 0.96));
+      background: transparent;
       color: #ffffff;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      font-size: 17px;
-      font-weight: 900;
-      letter-spacing: 0.02em;
+      overflow: hidden;
       box-shadow:
-        0 0 18px rgba(102, 232, 255, 0.45),
-        0 0 34px rgba(67, 157, 255, 0.3),
-        0 20px 42px rgba(18, 73, 125, 0.2);
+        0 0 18px rgba(102, 232, 255, 0.28),
+        0 0 34px rgba(67, 157, 255, 0.18),
+        0 20px 42px rgba(18, 73, 125, 0.24);
     }
 
-    .books-home-launch-btn svg {
-      width: 11px;
-      height: 22px;
+    .books-home-launch-btn img {
+      width: 100%;
+      height: auto;
       display: block;
-      filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.55));
+      border-radius: inherit;
     }
 
     .books-home-launch-btn[disabled] {
       opacity: 0.7;
       cursor: wait;
+    }
+
+    .books-home-launch-btn::after {
+      content: "";
+      position: absolute;
+      inset: -12% -24%;
+      background: linear-gradient(
+        105deg,
+        transparent 0%,
+        transparent 42%,
+        rgba(255, 255, 255, 0.08) 46%,
+        rgba(255, 255, 255, 0.92) 50%,
+        rgba(255, 255, 255, 0.08) 54%,
+        transparent 58%,
+        transparent 100%
+      );
+      transform: translateX(-180%) skewX(-18deg);
+      opacity: 0;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      animation: booksLaunchButtonFlash 2s ease-in-out infinite;
+    }
+
+    @keyframes booksLaunchButtonFlash {
+      0%, 58%, 100% {
+        transform: translateX(-180%) skewX(-18deg);
+        opacity: 0;
+      }
+
+      10% {
+        opacity: 1;
+      }
+
+      32% {
+        transform: translateX(180%) skewX(-18deg);
+        opacity: 0.96;
+      }
+
+      40% {
+        opacity: 0;
+      }
     }
 
     .books-home-auth-status {
@@ -734,8 +774,8 @@
 
     @media (max-width: 720px) {
       .books-home-start-visual {
-        width: min(280px, 72vw);
-        max-width: 72vw;
+        width: min(320px, 82vw);
+        max-width: 82vw;
         transform: none;
       }
 
@@ -994,6 +1034,22 @@
       bottom: 0;
       width: 100%;
       z-index: 220;
+    }
+
+    .flashcards-footer-nav[data-shell-page="books"] .flashcards-footer-nav__item img {
+      width: 31px;
+      height: 31px;
+      display: block;
+      object-fit: contain;
+      filter: drop-shadow(0 6px 14px rgba(7, 17, 35, 0.28));
+      transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
+    }
+
+    .flashcards-footer-nav[data-shell-page="books"] .flashcards-footer-nav__item.is-active img {
+      transform: translateY(-1px) scale(1.05);
+      filter:
+        drop-shadow(0 0 10px rgba(105, 214, 255, 0.55))
+        drop-shadow(0 8px 16px rgba(7, 17, 35, 0.28));
     }
 
     .player-books {
@@ -2820,10 +2876,8 @@
         <div class="books-home-stage">
             <div class="books-home-start" id="booksHomeStartPanel" aria-label="Comece no SmartBooks">
               <div class="books-home-start-visual" aria-hidden="true">
-                <img src="/arquivos-codex/fluentlevelup.png" alt="Fluent Level Up">
+                <img src="/arquivos-codex/fluent-levelup-logo.png" alt="Fluent Level Up">
               </div>
-              <p class="books-home-start-title">Fluency LevelUp</p>
-              <p class="books-home-start-tagline">Comece agora</p>
               <form class="books-home-auth-form" id="booksHomeAuthForm">
                 <label class="books-home-auth-field">
                   <input class="books-home-auth-input" id="booksHomeLoginInput" type="text" autocomplete="username" placeholder="seu login">
@@ -2835,10 +2889,9 @@
                 <p class="books-home-auth-status" id="booksHomeAuthStatus"></p>
               </form>
               <button class="books-home-launch-btn" id="booksHomeLaunchBtn" type="button" hidden>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.36a1 1 0 0 0 0-1.72l-10-6.36A1 1 0 0 0 8 5.14Z"/></svg>
-                <span>Iniciar</span>
+                <img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora">
               </button>
-              <button class="books-home-logout" id="booksHomeLogoutBtn" type="button" hidden>Sair da conta</button>
+              <button class="books-home-logout" id="booksHomeLogoutBtn" type="button" hidden aria-label="Sair da conta"></button>
             </div>
           <div class="books-home-shell" id="booksHomeShell" hidden>
             <div class="books-home-viewport" id="booksHomeViewport">
@@ -3072,19 +3125,19 @@
 
   <nav class="flashcards-footer-nav" data-shell-page="books" aria-label="Navegacao do flashcards">
     <a class="flashcards-footer-nav__item" href="/flashcards?view=play" aria-label="Jogar">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.36a1 1 0 0 0 0-1.72l-10-6.36A1 1 0 0 0 8 5.14Z"/></svg>
+      <img src="/arquivos-codex/nav-icons/home.png" alt="Home">
     </a>
     <a class="flashcards-footer-nav__item" href="/allcards" aria-label="Flashcards">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4h10a2 2 0 0 1 2 2v9h-2V6H7zm-2 4h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2m0 2v10h10V10z"/></svg>
+      <img src="/arquivos-codex/nav-icons/messenge.png" alt="Mensagens">
     </a>
     <a class="flashcards-footer-nav__item" href="/users" aria-label="Usuarios">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16 11c1.66 0 3-1.57 3-3.5S17.66 4 16 4s-3 1.57-3 3.5S14.34 11 16 11m-8 0c1.66 0 3-1.57 3-3.5S9.66 4 8 4S5 5.57 5 7.5S6.34 11 8 11m0 2c-2.33 0-7 1.17-7 3.5V20h14v-3.5C15 14.17 10.33 13 8 13m8 0c-.29 0-.62.02-.97.05c1.16.84 1.97 1.96 1.97 3.45V20h6v-3.5c0-2.33-4.67-3.5-7-3.5"/></svg>
+      <img src="/arquivos-codex/nav-icons/rank.png" alt="Ranking">
     </a>
     <a class="flashcards-footer-nav__item" href="/account" aria-label="Perfil">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5m0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5"/></svg>
+      <img src="/arquivos-codex/nav-icons/profile.png" alt="Perfil">
     </a>
     <a class="flashcards-footer-nav__item is-active" href="/books" aria-label="Books">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 4.5A2.5 2.5 0 0 1 8.5 2H18v17.5a2.5 2.5 0 0 0-2.5-2.5H6zm0 0v13A2.5 2.5 0 0 0 8.5 20H16"/></svg>
+      <img src="/arquivos-codex/nav-icons/book.png" alt="Books">
     </a>
   </nav>
 
