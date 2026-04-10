@@ -3924,7 +3924,7 @@
     }
 
     .game[data-phase-key="first-star"] #gameVisual {
-      border-radius: 0;
+      border-radius: 50%;
       overflow: visible;
       --flashcards-mic-ring-padding: 12px;
       --flashcards-mic-ring-fill:
@@ -3960,8 +3960,8 @@
     .game[data-phase-key="first-star"] #gameVisual .mini-card__fallback,
     .game[data-phase-key="first-star"] #gameVisual .game-card__placeholder,
     .game[data-phase-key="first-star"] #gameVisual .game-card__reveal-image {
-      border-radius: 30px;
-      clip-path: inset(0 round 30px) !important;
+      border-radius: 50%;
+      clip-path: circle(50% at 50% 50%) !important;
     }
 
     .game[data-phase-key="first-star"] #gameVisual::before,
@@ -3989,6 +3989,15 @@
         drop-shadow(0 0 18px rgba(72, 255, 159, 0.95))
         drop-shadow(0 0 36px rgba(72, 255, 159, 0.56))
         drop-shadow(0 0 64px rgba(26, 173, 93, 0.32));
+    }
+
+    .game:not([data-phase-key="first-star"]) #gameVisual::before,
+    .game:not([data-phase-key="first-star"]) #gameVisual.is-mic-live::before {
+      display: none !important;
+      opacity: 0 !important;
+      animation: none !important;
+      filter: none !important;
+      background: none !important;
     }
 
     .game[data-phase-key="first-star"] .game-translation-slot .game-phase-word,
