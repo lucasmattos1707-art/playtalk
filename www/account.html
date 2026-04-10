@@ -244,10 +244,51 @@
 
     .account-name-inline {
       width: 100%;
-      display: flex;
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      min-height: 28px;
+    }
+
+    .account-name-prompt {
+      display: none;
+      width: 100%;
+      min-height: 58px;
+      padding: 0 18px;
+      border-radius: 999px;
       align-items: center;
       justify-content: center;
-      min-height: 28px;
+      gap: 12px;
+      background: linear-gradient(180deg, rgba(4, 42, 72, 0.96) 0%, rgba(7, 31, 78, 0.98) 100%);
+      color: #dffcff;
+      border: 1.5px solid rgba(112, 239, 255, 0.95);
+      box-shadow:
+        inset 0 0 0 1px rgba(194, 248, 255, 0.12),
+        0 0 16px rgba(86, 225, 255, 0.42),
+        0 0 34px rgba(36, 112, 255, 0.22);
+      text-shadow: 0 0 14px rgba(114, 239, 255, 0.22);
+    }
+
+    .account-name-prompt-icon {
+      width: 22px;
+      height: 22px;
+      display: inline-flex;
+      color: #8cecff;
+      filter:
+        drop-shadow(0 0 8px rgba(140, 236, 255, 0.72))
+        drop-shadow(0 0 18px rgba(65, 176, 255, 0.34));
+    }
+
+    .account-name-prompt-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .account-name-prompt-label {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
     }
 
     .account-name-input {
@@ -255,6 +296,7 @@
       margin: 0;
       padding: 0;
       border: 0;
+      border-radius: 0;
       outline: none;
       background: transparent;
       color: #ffffff;
@@ -269,6 +311,30 @@
 
     .account-name-input::placeholder {
       color: rgba(255, 255, 255, 0.7);
+    }
+
+    .panel.is-guest .account-name-prompt {
+      display: inline-flex;
+    }
+
+    .panel.is-guest .account-name-input {
+      border-radius: 999px;
+      border: 1.5px solid rgba(112, 239, 255, 0.28);
+      background: rgba(11, 34, 65, 0.72);
+      color: #e9feff;
+      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0.01em;
+      box-shadow:
+        inset 0 0 0 1px rgba(194, 248, 255, 0.08),
+        0 0 14px rgba(86, 225, 255, 0.18);
+      caret-color: #9bf7ff;
+    }
+
+    .panel.is-guest .account-name-input::placeholder {
+      color: rgba(233, 254, 255, 0.58);
     }
 
     .account-name-input[readonly] {
@@ -292,6 +358,25 @@
     .account-button--primary {
       background: linear-gradient(180deg, #ffffff 0%, #dbeafe 100%);
       color: #10233d;
+    }
+
+    .panel.is-guest .account-button--primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: linear-gradient(180deg, rgba(6, 54, 24, 0.98) 0%, rgba(5, 36, 18, 0.98) 100%);
+      color: #e9ffe9;
+      border: 1.5px solid rgba(104, 255, 160, 0.92);
+      box-shadow:
+        inset 0 0 0 1px rgba(194, 255, 207, 0.1),
+        0 0 16px rgba(74, 255, 136, 0.36),
+        0 0 34px rgba(30, 178, 94, 0.24);
+      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: 22px;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      text-shadow: 0 0 12px rgba(114, 255, 163, 0.16);
     }
 
     .account-button--secondary {
@@ -484,6 +569,22 @@
         0 0 38px rgba(124, 58, 237, 0.28);
     }
 
+    .panel.is-guest .account-button--premium {
+      gap: 12px;
+      background: linear-gradient(180deg, rgba(6, 54, 24, 0.98) 0%, rgba(5, 36, 18, 0.98) 100%);
+      color: #e9ffe9;
+      border: 1.5px solid rgba(104, 255, 160, 0.92);
+      box-shadow:
+        inset 0 0 0 1px rgba(194, 255, 207, 0.1),
+        0 0 16px rgba(74, 255, 136, 0.36),
+        0 0 34px rgba(30, 178, 94, 0.24);
+      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: 22px;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      text-shadow: 0 0 12px rgba(114, 255, 163, 0.16);
+    }
+
     .account-button__crown {
       font-size: 20px;
       line-height: 1;
@@ -508,6 +609,34 @@
 
     .account-button__label {
       display: inline-block;
+    }
+
+    .account-button__arrow {
+      width: 20px;
+      height: 20px;
+      display: none;
+      color: #98ffb3;
+      filter:
+        drop-shadow(0 0 8px rgba(152, 255, 179, 0.68))
+        drop-shadow(0 0 18px rgba(74, 255, 136, 0.24));
+    }
+
+    .account-button__arrow svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .panel.is-guest .account-button__arrow {
+      display: inline-flex;
+    }
+
+    .panel.is-guest .account-button__crown {
+      display: none !important;
+    }
+
+    .panel.is-guest #accountPasswordField > span {
+      display: none;
     }
 
     .account-status.is-success {
@@ -602,6 +731,12 @@
             <input id="accountAvatarInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
           </label>
           <div class="account-name-inline" id="accountNameInline">
+            <span class="account-name-prompt" id="accountNamePrompt" aria-hidden="true">
+              <span class="account-name-prompt-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2c-4.42 0-8 2.46-8 5.5 0 .83.67 1.5 1.5 1.5h13c.83 0 1.5-.67 1.5-1.5 0-3.04-3.58-5.5-8-5.5Z"/></svg>
+              </span>
+              <span class="account-name-prompt-label">Digite um nome de usuário</span>
+            </span>
             <input class="account-name-input" id="accountNameInput" type="text" maxlength="32" placeholder="Seu nome">
           </div>
           <label class="account-field" id="accountPasswordField" hidden>
@@ -640,6 +775,9 @@
         <button class="account-button account-button--premium" id="accountPremiumBtn" type="button">
           <span class="account-button__crown" id="accountPremiumIcon" aria-hidden="true">👑</span>
           <span id="accountPremiumLabel">Comprar premium!</span>
+          <span class="account-button__arrow" id="accountPremiumArrow" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m13.2 5.2l6 6.8l-6 6.8l-1.5-1.3l3.7-4.2H5v-2.6h10.4l-3.7-4.2z"/></svg>
+          </span>
         </button>
         <button class="account-button account-button--secondary" id="accountLogoutBtn" type="button">Sair da conta</button>
         <p class="account-status" id="accountStatus" aria-live="polite"></p>

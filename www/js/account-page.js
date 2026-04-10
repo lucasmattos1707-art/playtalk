@@ -402,7 +402,8 @@
     if (els.nameInput) {
       const shouldUseInlineReadonly = isLoggedIn && !state.nameEditing;
       els.nameInput.readOnly = shouldUseInlineReadonly;
-      els.nameInput.setAttribute('aria-label', isLoggedIn ? 'Nome do usuario' : 'Login');
+      els.nameInput.setAttribute('aria-label', isLoggedIn ? 'Nome do usuario' : 'Digite um nome de usuario');
+      els.nameInput.placeholder = isLoggedIn ? 'Seu nome' : 'Digite um nome de usuário';
     }
     if (els.nameInline) {
       els.nameInline.classList.toggle('is-editing', isLoggedIn && state.nameEditing);
@@ -426,12 +427,14 @@
       els.passwordField.hidden = shouldHidePasswordField;
     }
     if (els.passwordInput) {
-      els.passwordInput.placeholder = isLoggedIn ? 'Nova senha' : 'Senha';
+      els.passwordInput.placeholder = isLoggedIn ? 'Nova senha' : 'Digite sua senha';
     }
     if (els.passwordBtn) {
-      els.passwordBtn.hidden = !isLoggedIn;
+      els.passwordBtn.hidden = false;
       if (els.passwordBtnLabel) {
-        els.passwordBtnLabel.textContent = state.passwordEditMode ? 'Cancelar' : 'Trocar senha';
+        els.passwordBtnLabel.textContent = isLoggedIn
+          ? (state.passwordEditMode ? 'Cancelar' : 'Trocar senha')
+          : 'Trocar senha';
       }
     }
     if (shouldHidePasswordField && els.passwordInput) {
@@ -867,6 +870,11 @@
     });
 
     els.passwordBtn?.addEventListener('click', () => {
+      if (!state.user?.id) {
+        els.passwordInput?.focus();
+        setStatus('');
+        return;
+      }
       state.passwordEditMode = !state.passwordEditMode;
       if (!state.passwordEditMode && els.passwordInput) {
         els.passwordInput.value = '';
