@@ -34,10 +34,13 @@
   const MAX_BOOK_LEVEL = 10;
   // UI levels:
   // 0 = Home
-  // 1..MAX_BOOK_LEVEL map to book levels 1..MAX_BOOK_LEVEL
-  const MAX_UI_LEVEL = MAX_BOOK_LEVEL;
+  // 1 = Books (all books feed)
+  // 2.. map to book levels 1..MAX_BOOK_LEVEL
   const UI_LEVEL_HOME = 0;
-  const UI_FIRST_BOOK_LEVEL = 1;
+  const UI_LEVEL_ALL_BOOKS = 1;
+  const UI_FIRST_BOOK_LEVEL = 2;
+  const MAX_UI_LEVEL = UI_FIRST_BOOK_LEVEL + MAX_BOOK_LEVEL - 1;
+  const DEFAULT_HOME_REPEAT_INDEX = Math.max(0, HOME_REPEAT_OPTIONS.indexOf(5));
 
   const LISTENING_CHARS_PENDING_KEY = 'playtalk_books_listening_chars_pending_v1';
   const LISTENING_CHARS_TOTAL_KEY = 'playtalk_books_listening_chars_total_v1';
@@ -299,12 +302,14 @@
     homeBackgroundLayer: 'primary',
     homeTouchStartX: 0,
     homeTouchStartY: 0,
-    homeRepeatIndex: 0,
-    homeMusicEnabled: false,
+    homeRepeatIndex: DEFAULT_HOME_REPEAT_INDEX,
+    homeMusicEnabled: true,
     homeMusicAudioElement: null,
     homeMusicIndex: 0,
     homePreBookPausedBefore: false,
     homePreBookVoiceVolumeBefore: 1,
+    allBooksFeed: [],
+    allBooksFeedVersion: '',
     listeningCharsPending: 0,
     listeningCharsTotal: 0,
     practiceSecondsPending: 0,
@@ -1315,13 +1320,13 @@
     const parsed = Number.parseInt(level, 10);
     if (!Number.isFinite(parsed)) return null;
     if (parsed < UI_FIRST_BOOK_LEVEL) return null;
-    return normalizeLevel(parsed);
+    return normalizeLevel(parsed - UI_FIRST_BOOK_LEVEL + 1);
   }
 
   async function openBooksCollectionFromHome() {
     if (state.homeStartBusy) return;
     stopHomeSleepPlayback({ keepIntro: false });
-    state.selectedLevel = UI_FIRST_BOOK_LEVEL;
+    state.selectedLevel = UI_LEVEL_ALL_BOOKS;
     state.shelfIndex = 0;
     renderHomeAuthUi();
     renderLevelMenu();
@@ -1329,10 +1334,55 @@
   }
 
   function bookLevelToUiLevel(level) {
-    return normalizeLevel(level);
+    return normalizeLevel(level) + UI_FIRST_BOOK_LEVEL - 1;
+  }
+
+  function isAllBooksLevel(level = state.selectedLevel) {
+    return Number.parseInt(level, 10) === UI_LEVEL_ALL_BOOKS;
+  }
+
+  function getAccessibleLevels() {
+    if (state.isAdmin) {
+      return Array.from({ length: MAX_UI_LEVEL + 1 }, (_value, index) => index);
+    }
+    return [UI_LEVEL_HOME, UI_LEVEL_ALL_BOOKS];
+  }
+
+  function shuffleBooks(list) {
+    const items = Array.isArray(list) ? list.slice() : [];
+    for (let index = items.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      const current = items[index];
+      items[index] = items[swapIndex];
+      items[swapIndex] = current;
+    }
+    return items;
+  }
+
+  function getAllBooksFeed() {
+    const sourceBooks = state.books.slice().sort(sortByNome);
+    if (!sourceBooks.length) {
+      state.allBooksFeed = [];
+      state.allBooksFeedVersion = '';
+      return [];
+    }
+    const version = sourceBooks.map((book) => `${safeText(book?.bookId)}:${normalizeLevel(book?.nivel)}`).join('|');
+    if (state.allBooksFeedVersion !== version || !state.allBooksFeed.length) {
+      const cycles = Math.max(4, Math.ceil(36 / sourceBooks.length));
+      const feed = [];
+      for (let cycle = 0; cycle < cycles; cycle += 1) {
+        feed.push(...shuffleBooks(sourceBooks));
+      }
+      state.allBooksFeed = feed;
+      state.allBooksFeedVersion = version;
+    }
+    return state.allBooksFeed.slice();
   }
 
   function getBooksForSelectedLevel() {
+    if (isAllBooksLevel()) {
+      return getAllBooksFeed();
+    }
     const bookLevel = uiLevelToBookLevel(state.selectedLevel);
     if (!bookLevel) return [];
     return state.books
@@ -1342,8 +1392,16 @@
 
   function normalizeBrowseLevel(value) {
     const parsed = Number.parseInt(value, 10);
-    if (!Number.isFinite(parsed)) return 0;
-    return Math.max(0, Math.min(MAX_UI_LEVEL, parsed));
+    const accessibleLevels = getAccessibleLevels();
+    if (!accessibleLevels.length) return UI_LEVEL_HOME;
+    if (!Number.isFinite(parsed)) return accessibleLevels[0];
+    if (accessibleLevels.includes(parsed)) return parsed;
+    return accessibleLevels.reduce((closest, level) => {
+      if (Math.abs(level - parsed) < Math.abs(closest - parsed)) {
+        return level;
+      }
+      return closest;
+    }, accessibleLevels[0]);
   }
 
   function isHomeLevel() {
@@ -1357,6 +1415,7 @@
   function syncBooksInjectedFooterVisibility() {
     const shouldShow = isHomeLevel()
       && !state.homeIntroDismissed
+      && !state.homeSleepActive
       && !state.readerOpen
       && !state.modeBookId
       && !state.magicBookId
@@ -2741,7 +2800,14 @@
     if (!pages.length) return;
     updateShelfIndexFromViewport();
     const step = Number(direction) > 0 ? 1 : -1;
-    const target = clampShelfIndex(state.shelfIndex + step);
+    let target = clampShelfIndex(state.shelfIndex + step);
+    if (isAllBooksLevel()) {
+      if (step > 0 && state.shelfIndex >= (pages.length - 1)) {
+        target = 0;
+      } else if (step < 0 && state.shelfIndex <= 0) {
+        target = pages.length - 1;
+      }
+    }
     if (target === state.shelfIndex) return;
     await scrollShelfToIndex(target, true);
   }
@@ -3473,8 +3539,13 @@
     renderStatsPanel();
     const books = getBooksForSelectedLevel();
     const bookLevel = uiLevelToBookLevel(state.selectedLevel);
+    const showAllBooks = isAllBooksLevel();
     const pendingBooks = state.createJobs
-      .filter((job) => Boolean(bookLevel) && isCreateJobRunning(job) && normalizeLevel(job?.book?.level) === bookLevel)
+      .filter((job) => {
+        if (!isCreateJobRunning(job)) return false;
+        if (showAllBooks) return true;
+        return Boolean(bookLevel) && normalizeLevel(job?.book?.level) === bookLevel;
+      })
       .map((job) => ({
         bookId: `job:${job.id}`,
         jobId: job.id,
@@ -3598,12 +3669,15 @@
     const parsed = Number.parseInt(level, 10);
     if (!Number.isFinite(parsed)) return 'Home';
     if (parsed === UI_LEVEL_HOME) return 'Home';
+    if (parsed === UI_LEVEL_ALL_BOOKS) return 'Books';
     const bookLevel = uiLevelToBookLevel(parsed);
     if (!bookLevel) return `Nivel ${parsed}`;
     return BOOK_LEVEL_DISPLAY_NAMES[bookLevel] || `Nivel ${bookLevel}`;
   }
 
   function renderLevelMenu() {
+    const accessibleLevels = getAccessibleLevels();
+    const currentIndex = accessibleLevels.indexOf(normalizeBrowseLevel(state.selectedLevel));
     if (els.levelMenu) {
       // Hide the top navigation UI on the Home/login screen, but keep swipe navigation working.
       els.levelMenu.hidden = isHomeLevel();
@@ -3612,10 +3686,12 @@
       els.levelTitle.textContent = `${getUiLevelDisplayName(state.selectedLevel)}`;
     }
     if (els.prevLevelBtn) {
-      els.prevLevelBtn.disabled = state.selectedLevel <= 0 || state.uploadInFlight;
+      els.prevLevelBtn.disabled = currentIndex <= 0 || state.uploadInFlight;
     }
     if (els.nextLevelBtn) {
-      els.nextLevelBtn.disabled = state.selectedLevel >= MAX_UI_LEVEL || state.uploadInFlight;
+      els.nextLevelBtn.disabled = currentIndex < 0
+        || currentIndex >= (accessibleLevels.length - 1)
+        || state.uploadInFlight;
     }
   }
 
@@ -3643,9 +3719,12 @@
   }
 
   async function setLevel(nextLevel) {
+    const accessibleLevels = getAccessibleLevels();
     const normalizedLevel = normalizeBrowseLevel(nextLevel);
     if (normalizedLevel === state.selectedLevel) return;
-    const direction = normalizedLevel > state.selectedLevel ? 1 : -1;
+    const currentIndex = accessibleLevels.indexOf(normalizeBrowseLevel(state.selectedLevel));
+    const nextIndex = accessibleLevels.indexOf(normalizedLevel);
+    const direction = nextIndex >= currentIndex ? 1 : -1;
     await animateLevelChangeTransition(direction);
     state.selectedLevel = normalizedLevel;
     state.shelfIndex = 0;
@@ -5094,11 +5173,17 @@
 
   function bindEvents() {
     els.prevLevelBtn?.addEventListener('click', () => {
-      void setLevel(state.selectedLevel - 1);
+      const accessibleLevels = getAccessibleLevels();
+      const currentIndex = accessibleLevels.indexOf(normalizeBrowseLevel(state.selectedLevel));
+      const targetLevel = accessibleLevels[Math.max(0, currentIndex - 1)];
+      void setLevel(targetLevel);
     });
 
     els.nextLevelBtn?.addEventListener('click', () => {
-      void setLevel(state.selectedLevel + 1);
+      const accessibleLevels = getAccessibleLevels();
+      const currentIndex = accessibleLevels.indexOf(normalizeBrowseLevel(state.selectedLevel));
+      const targetLevel = accessibleLevels[Math.min(accessibleLevels.length - 1, currentIndex + 1)];
+      void setLevel(targetLevel);
     });
 
     els.shelfViewport?.addEventListener('wheel', (event) => {
@@ -5146,10 +5231,12 @@
         state.shelfLastGestureAt = Date.now();
       }
       if (Math.abs(dx) >= LEVEL_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+        const accessibleLevels = getAccessibleLevels();
+        const currentIndex = accessibleLevels.indexOf(normalizeBrowseLevel(state.selectedLevel));
         if (dx < 0) {
-          void setLevel(state.selectedLevel + 1);
+          void setLevel(accessibleLevels[Math.min(accessibleLevels.length - 1, currentIndex + 1)]);
         } else {
-          void setLevel(state.selectedLevel - 1);
+          void setLevel(accessibleLevels[Math.max(0, currentIndex - 1)]);
         }
         return;
       }
@@ -5540,7 +5627,7 @@
       await refreshCreateJobs({ ignoreTransitions: true });
     }
 
-    const firstBook = getBooksForSelectedLevel()[0];
+    const firstBook = getAllBooksFeed()[0] || state.books.slice().sort(sortByNome)[0];
     const firstCoverUrl = safeText(firstBook?.coverImageUrl);
     if (firstCoverUrl) {
       await preloadImageUrl(firstCoverUrl);
