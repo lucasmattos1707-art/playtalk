@@ -7,6 +7,7 @@
     avatarInput: document.getElementById('accountAvatarInput'),
     avatarPreview: document.getElementById('accountAvatarPreview'),
     avatarFallback: document.getElementById('accountAvatarFallback'),
+    nameInline: document.getElementById('accountNameInline'),
     nameInput: document.getElementById('accountNameInput'),
     passwordField: document.getElementById('accountPasswordField'),
     passwordInput: document.getElementById('accountPasswordInput'),
@@ -14,7 +15,9 @@
     premiumCard: document.querySelector('.account-premium'),
     metrics: document.getElementById('accountMetrics'),
     pronunciationMetric: document.getElementById('accountPronunciationMetric'),
-    speedMetric: document.getElementById('accountSpeedMetric'),
+    booksMetric: document.getElementById('accountBooksMetric'),
+    listeningMetric: document.getElementById('accountListeningMetric'),
+    speakingMetric: document.getElementById('accountSpeakingMetric'),
     trainingMetric: document.getElementById('accountTrainingMetric'),
     premiumLevel: document.getElementById('accountPremiumLevel'),
     premiumUntil: document.getElementById('accountPremiumUntil'),
@@ -36,8 +39,8 @@
     lastSavedUsername: '',
     lastSavedAvatar: '',
     passwordEditMode: false,
-    flashcardStats: null,
-    flashcardsCount: 0
+    nameEditing: false,
+    booksStats: null
   };
 
   function buildApiUrl(path) {
@@ -89,19 +92,34 @@
     return `${totalMinutes} min`;
   }
 
+  function formatCountCompact(value) {
+    const total = Math.max(0, Number(value) || 0);
+    if (total >= 1000000) {
+      return `${(total / 1000000).toFixed(total >= 10000000 ? 0 : 1).replace(/\.0$/, '')}M`;
+    }
+    if (total >= 1000) {
+      return `${(total / 1000).toFixed(total >= 10000 ? 0 : 1).replace(/\.0$/, '')}k`;
+    }
+    return `${Math.round(total)}`;
+  }
+
   function renderAccountMetrics() {
-    if (!els.metrics || !els.pronunciationMetric || !els.speedMetric || !els.trainingMetric) return;
+    if (!els.metrics || !els.pronunciationMetric || !els.booksMetric || !els.listeningMetric || !els.speakingMetric || !els.trainingMetric) return;
     const isLoggedIn = Boolean(state.user?.id);
     els.metrics.hidden = !isLoggedIn;
     if (!isLoggedIn) return;
 
-    const stats = state.flashcardStats || {};
-    const pronunciationPercent = Math.max(0, Math.min(100, Math.round(Number(stats.pronunciationPercent) || 0)));
-    const speedFlashcardsPerHour = Math.max(0, Number(stats.speedFlashcardsPerHour) || 0);
-    const trainingTimeMs = Math.max(0, Number(stats.trainingTimeMs) || 0);
+    const stats = state.booksStats || {};
+    const pronunciationPercent = Math.max(0, Math.min(100, Math.round(Number(stats.generalPronunciationPercent) || 0)));
+    const booksRead = Math.max(0, Math.round(Number(stats.bookReadCount) || 0));
+    const listeningChars = Math.max(0, Number(stats.listeningChars) || 0);
+    const speakingChars = Math.max(0, Number(stats.speakingChars) || 0);
+    const trainingTimeMs = Math.max(0, (Number(stats.practiceSeconds) || 0) * 1000);
 
     els.pronunciationMetric.textContent = `${pronunciationPercent}%`;
-    els.speedMetric.textContent = speedFlashcardsPerHour.toFixed(1);
+    els.booksMetric.textContent = `${booksRead}`;
+    els.listeningMetric.textContent = formatCountCompact(listeningChars);
+    els.speakingMetric.textContent = formatCountCompact(speakingChars);
     els.trainingMetric.textContent = formatTrainingTime(trainingTimeMs);
   }
 
@@ -213,8 +231,16 @@
     const avatar = safeText(state.avatarDraft || sourceProfile.avatarImage);
     const hasAvatar = Boolean(avatar);
     const isLoggedIn = Boolean(state.user?.id);
-    if (document.activeElement !== els.nameInput) {
+    if (document.activeElement !== els.nameInput || !state.nameEditing) {
       els.nameInput.value = username;
+    }
+    if (els.nameInput) {
+      const shouldUseInlineReadonly = isLoggedIn && !state.nameEditing;
+      els.nameInput.readOnly = shouldUseInlineReadonly;
+      els.nameInput.setAttribute('aria-label', isLoggedIn ? 'Nome do usuario' : 'Login');
+    }
+    if (els.nameInline) {
+      els.nameInline.classList.toggle('is-editing', isLoggedIn && state.nameEditing);
     }
     els.avatarPreview.src = hasAvatar ? avatar : 'Avatar/avatar-man-person-svgrepo-com.svg';
     els.avatarPreview.style.display = isLoggedIn && hasAvatar ? 'block' : 'none';
@@ -309,16 +335,15 @@
     return normalizeUser(payload.user);
   }
 
-  async function fetchFlashcardMetrics() {
+  async function fetchBooksMetrics() {
     if (!state.user?.id) {
-      state.flashcardStats = null;
-      state.flashcardsCount = 0;
+      state.booksStats = null;
       renderAccountMetrics();
       return;
     }
 
     try {
-      const response = await fetch(buildApiUrl('/api/flashcards/state'), {
+      const response = await fetch(buildApiUrl('/api/books/stats'), {
         headers: buildAuthHeaders(),
         cache: 'no-store'
       });
@@ -326,13 +351,40 @@
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.message || 'Nao foi possivel carregar as estatisticas.');
       }
-      state.flashcardStats = payload.stats || null;
-      state.flashcardsCount = Array.isArray(payload.progress) ? payload.progress.length : 0;
+      state.booksStats = payload.stats || null;
     } catch (_error) {
-      state.flashcardStats = null;
-      state.flashcardsCount = 0;
+      state.booksStats = null;
     }
     renderAccountMetrics();
+  }
+
+  function finishInlineNameEdit(options = {}) {
+    const shouldSave = options.save !== false;
+    const revert = options.revert === true;
+    if (revert) {
+      els.nameInput.value = safeText(state.lastSavedUsername || state.user?.username || state.localProfile?.username || 'Jogador');
+    }
+    const wasEditing = state.nameEditing;
+    state.nameEditing = false;
+    renderUser();
+    if (wasEditing && shouldSave && state.user?.id) {
+      scheduleAutoSave(120);
+    }
+  }
+
+  function startInlineNameEdit() {
+    if (!state.user?.id || state.nameEditing || !els.nameInput) return;
+    state.nameEditing = true;
+    renderUser();
+    window.requestAnimationFrame(() => {
+      els.nameInput.focus();
+      const valueLength = els.nameInput.value.length;
+      try {
+        els.nameInput.setSelectionRange(valueLength, valueLength);
+      } catch (_error) {
+        // ignore
+      }
+    });
   }
 
   async function createCartoonAvatar(imageDataUrl) {
@@ -485,7 +537,7 @@
         els.passwordInput.value = '';
       }
       renderUser();
-      await fetchFlashcardMetrics();
+      await fetchBooksMetrics();
       setStatus('Conta criada com sucesso.', 'success');
     } catch (error) {
       setStatus(error?.message || 'Nao foi possivel criar a conta.', 'error');
@@ -567,7 +619,7 @@
         els.passwordInput.value = '';
       }
       renderUser();
-      await fetchFlashcardMetrics();
+      await fetchBooksMetrics();
       setStatus('Entrada liberada com sucesso.', 'success');
     } catch (error) {
       setStatus(error?.message || 'Nao foi possivel entrar agora.', 'error');
@@ -594,7 +646,7 @@
     state.localProfile = readLocalPlayerProfile();
     syncSavedSnapshot(state.user || state.localProfile);
     renderUser();
-    await fetchFlashcardMetrics();
+    await fetchBooksMetrics();
 
     els.form?.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -611,7 +663,40 @@
 
     els.nameInput?.addEventListener('input', () => {
       setStatus('');
-      scheduleAutoSave();
+      if (state.user?.id) {
+        scheduleAutoSave();
+      }
+    });
+
+    els.nameInput?.addEventListener('focus', () => {
+      if (state.user?.id && !state.nameEditing) {
+        startInlineNameEdit();
+      }
+    });
+
+    els.nameInput?.addEventListener('click', () => {
+      if (state.user?.id && !state.nameEditing) {
+        startInlineNameEdit();
+      }
+    });
+
+    els.nameInput?.addEventListener('blur', () => {
+      if (!state.user?.id) return;
+      finishInlineNameEdit({ save: true });
+    });
+
+    els.nameInput?.addEventListener('keydown', (event) => {
+      if (!state.user?.id) return;
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        els.nameInput?.blur();
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        finishInlineNameEdit({ save: false, revert: true });
+        return;
+      }
     });
 
     els.passwordBtn?.addEventListener('click', () => {

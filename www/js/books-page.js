@@ -34,12 +34,10 @@
   const MAX_BOOK_LEVEL = 10;
   // UI levels:
   // 0 = Home
-  // 1 = Estatísticas
-  // 2..(MAX_BOOK_LEVEL+1) map to book levels 1..MAX_BOOK_LEVEL
-  const MAX_UI_LEVEL = MAX_BOOK_LEVEL + 1;
+  // 1..MAX_BOOK_LEVEL map to book levels 1..MAX_BOOK_LEVEL
+  const MAX_UI_LEVEL = MAX_BOOK_LEVEL;
   const UI_LEVEL_HOME = 0;
-  const UI_LEVEL_STATS = 1;
-  const UI_FIRST_BOOK_LEVEL = 2;
+  const UI_FIRST_BOOK_LEVEL = 1;
 
   const LISTENING_CHARS_PENDING_KEY = 'playtalk_books_listening_chars_pending_v1';
   const LISTENING_CHARS_TOTAL_KEY = 'playtalk_books_listening_chars_total_v1';
@@ -1312,11 +1310,11 @@
     const parsed = Number.parseInt(level, 10);
     if (!Number.isFinite(parsed)) return null;
     if (parsed < UI_FIRST_BOOK_LEVEL) return null;
-    return normalizeLevel(parsed - 1);
+    return normalizeLevel(parsed);
   }
 
   function bookLevelToUiLevel(level) {
-    return normalizeLevel(level) + 1;
+    return normalizeLevel(level);
   }
 
   function getBooksForSelectedLevel() {
@@ -1338,7 +1336,7 @@
   }
 
   function isStatsLevel() {
-    return state.selectedLevel === UI_LEVEL_STATS;
+    return false;
   }
 
   function syncBooksInjectedFooterVisibility() {
@@ -3599,7 +3597,6 @@
     const parsed = Number.parseInt(level, 10);
     if (!Number.isFinite(parsed)) return 'Home';
     if (parsed === UI_LEVEL_HOME) return 'Home';
-    if (parsed === UI_LEVEL_STATS) return 'Estatísticas';
     const bookLevel = uiLevelToBookLevel(parsed);
     if (!bookLevel) return `Nivel ${parsed}`;
     return BOOK_LEVEL_DISPLAY_NAMES[bookLevel] || `Nivel ${bookLevel}`;
