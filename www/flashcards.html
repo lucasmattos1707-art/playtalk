@@ -296,6 +296,7 @@
       min-height: min(72vh, 720px);
       display: grid;
       justify-items: center;
+      align-items: center;
       align-content: center;
       padding: 32px 20px;
       background: transparent;
@@ -308,15 +309,17 @@
     .welcome-gate__stack {
       display: grid;
       justify-items: center;
+      align-items: center;
       gap: 18px;
-      width: min(360px, 100%);
+      width: min(480px, 100%);
       border: 0;
       outline: 0;
       box-shadow: none;
+      margin: 0 auto;
     }
 
     .welcome-gate__logo {
-      width: min(420px, 78vw);
+      width: min(483px, 89vw);
       height: auto;
       object-fit: contain;
       display: block;
@@ -351,25 +354,23 @@
 
     .welcome-gate__start-btn {
       position: relative;
-      width: min(440px, 92vw);
+      width: min(440px, 90vw);
       padding: 0;
-      border-radius: 999px;
+      border-radius: 0;
       border: 0;
       background: transparent;
       color: #ffffff;
-      overflow: hidden;
-      box-shadow:
-        0 0 16px rgba(56, 170, 255, 0.24),
-        0 0 34px rgba(56, 170, 255, 0.16),
-        0 18px 36px rgba(17, 107, 255, 0.28);
-      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+      overflow: visible;
+      box-shadow: none;
+      margin: 0 auto;
+      transition: transform 180ms ease, filter 180ms ease;
     }
 
     .welcome-gate__start-btn img {
       width: 100%;
       height: auto;
       display: block;
-      border-radius: inherit;
+      border-radius: 0;
     }
 
     .welcome-gate__start-btn::after {
@@ -396,10 +397,6 @@
     .welcome-gate__start-btn:hover,
     .welcome-gate__start-btn:focus-visible {
       transform: translateY(-2px) scale(1.01);
-      box-shadow:
-        0 0 18px rgba(108, 206, 255, 0.32),
-        0 0 42px rgba(56, 170, 255, 0.2),
-        0 22px 42px rgba(17, 107, 255, 0.34);
       filter: saturate(1.08);
     }
 
@@ -5984,6 +5981,24 @@
     }
 
     @media (max-width: 520px) {
+      .welcome-gate__stack {
+        width: min(420px, 100%);
+        gap: 16px;
+      }
+
+      .welcome-gate__touch {
+        width: 100%;
+        padding: 24px 12px;
+      }
+
+      .welcome-gate__logo {
+        width: min(483px, 94vw);
+      }
+
+      .welcome-gate__start-btn {
+        width: min(440px, 94vw);
+      }
+
       .premium-gate__grid {
         gap: 10px;
       }
