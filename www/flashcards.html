@@ -4033,6 +4033,14 @@
       clip-path: circle(50% at 50% 50%) !important;
     }
 
+    .game[data-phase-key="third-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="third-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="third-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="third-star"] #gameVisual .game-card__reveal-image {
+      border-radius: 50%;
+      clip-path: circle(50% at 50% 50%) !important;
+    }
+
     .game[data-phase-key="first-star"] #gameVisual::before,
     .game[data-phase-key="third-star"] #gameVisual::before {
       inset: 0;
@@ -4308,6 +4316,18 @@
       z-index: 1;
     }
 
+    .game[data-phase-key="second-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="second-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="second-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="second-star"] #gameVisual .game-card__reveal-image,
+    .game[data-phase-key="second-star"] #gameVisual .game-card__phase-flag {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+    }
+
     .game[data-phase-key="second-star"] #gameVisual .game-card__phase-flag,
     .game[data-phase-key="fourth-star"] #gameVisual .game-card__phase-flag {
       width: 100%;
@@ -4316,6 +4336,18 @@
       border-radius: 50%;
       clip-path: circle(50% at 50% 50%);
       z-index: 2;
+    }
+
+    .game[data-phase-key="fourth-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="fourth-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="fourth-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="fourth-star"] #gameVisual .game-card__reveal-image,
+    .game[data-phase-key="fifth-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="fifth-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="fifth-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="fifth-star"] #gameVisual .game-card__reveal-image {
+      transform: scale(1.06) !important;
+      transform-origin: center center;
     }
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual,
