@@ -1317,7 +1317,7 @@
     }
 
     .game-controls-proxy {
-      display: none !important;
+      display: none;
     }
 
     .actions { justify-content: flex-end; }
@@ -4588,6 +4588,71 @@
       display: none;
     }
 
+    .game[data-phase-key="first-star"] .game-controls-proxy:not(.is-hidden),
+    .game[data-phase-key="third-star"] .game-controls-proxy:not(.is-hidden),
+    .game[data-phase-key="fifth-star"] .game-controls-proxy:not(.is-hidden) {
+      display: grid;
+      justify-items: center;
+      align-self: start;
+      justify-self: center;
+      width: min(160px, 100%);
+      margin: 14px auto 0;
+      z-index: 8;
+    }
+
+    .game-touch.game-touch--books-mic {
+      width: clamp(112px, 24vw, 128px);
+      height: clamp(112px, 24vw, 128px);
+      min-width: clamp(112px, 24vw, 128px);
+      min-height: clamp(112px, 24vw, 128px);
+      padding: 0;
+      flex: 0 0 auto;
+      border-radius: 999px;
+      border: 2px solid rgba(89, 149, 255, 0.78);
+      background: radial-gradient(circle at 32% 28%, rgba(74, 121, 255, 0.24), rgba(6, 17, 44, 0.9) 72%);
+      color: #ffffff;
+      box-shadow:
+        0 0 18px rgba(59, 108, 255, 0.58),
+        0 0 42px rgba(28, 64, 182, 0.34),
+        inset 0 0 18px rgba(73, 129, 255, 0.14),
+        0 14px 28px rgba(0, 0, 0, 0.4);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: none;
+      font-size: 0;
+      line-height: 0;
+      transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, opacity 180ms ease;
+    }
+
+    .game-touch.game-touch--books-mic:disabled {
+      opacity: 0.72;
+      cursor: not-allowed;
+    }
+
+    .game-touch__books-mic-icon {
+      width: 52px;
+      height: 52px;
+      display: block;
+      filter: drop-shadow(0 0 10px rgba(132, 181, 255, 0.56));
+      transition: opacity 140ms ease, transform 140ms ease, filter 180ms ease;
+    }
+
+    .game-touch.game-touch--books-mic.is-busy {
+      background: radial-gradient(circle at 32% 28%, rgba(118, 255, 187, 0.44), rgba(2, 24, 16, 0.94) 72%);
+      border-color: rgba(207, 255, 228, 0.98);
+      box-shadow:
+        0 0 24px rgba(72, 255, 159, 0.9),
+        0 0 54px rgba(72, 255, 159, 0.42),
+        inset 0 0 20px rgba(72, 255, 159, 0.22),
+        0 18px 34px rgba(0, 0, 0, 0.44);
+      color: transparent;
+    }
+
+    .game-touch.game-touch--books-mic.is-busy .game-touch__books-mic-icon {
+      filter: drop-shadow(0 0 10px rgba(180, 255, 214, 0.5));
+      transform: scale(1.02);
+    }
+
     .game-touch__swap {
       position: relative;
       display: block;
@@ -6164,6 +6229,12 @@
         <article class="game-card circlescreen" id="gameCard" aria-live="polite">
           <div class="game-card__layout">
             <div class="game-card__visual" id="gameVisual"></div>
+            <div class="game-controls-proxy is-hidden" id="gameControlsProxy" aria-hidden="true">
+              <button class="game-language-btn" id="gameLanguageBtn" type="button" tabindex="-1" aria-hidden="true">
+                <img src="SVG/codex-icons/ingles.svg" alt="">
+              </button>
+              <button class="game-touch" id="gameTouchBtn" type="button">Fale ingles</button>
+            </div>
             <div class="game-translation-slot" id="gameTranslationSlot" aria-hidden="true"></div>
             <div class="game-card__content">
               <div>
@@ -6186,13 +6257,6 @@
         </div>
 
         <div class="navbarscreen" id="gameFooterSlot" aria-hidden="true"></div>
-
-        <div class="game-controls-proxy" id="gameControlsProxy" aria-hidden="true" hidden>
-          <button class="game-language-btn" id="gameLanguageBtn" type="button" tabindex="-1" aria-hidden="true">
-            <img src="SVG/codex-icons/ingles.svg" alt="">
-          </button>
-          <button class="game-touch" id="gameTouchBtn" type="button">Fale ingles</button>
-        </div>
 
         <section class="game-end" id="gameEnd">
           <div>
@@ -11861,11 +11925,19 @@
       }
 
       function renderGameTouchButton(stageConfig, entry) {
+        const stageNumber = Number(entry?.stage) || 0;
+        const useBooksMic = stageNumber === 1 || stageNumber === 3 || stageNumber === 5;
         els.gameTouchBtn.className = 'game-touch';
-        els.gameTouchBtn.classList.add('is-hidden');
         els.gameTouchBtn.textContent = '';
+        els.gameTouchBtn.innerHTML = '';
         els.gameTouchBtn.setAttribute('aria-label', stageConfig.instruction || 'Ativar microfone');
-        els.gameTouchBtn.disabled = true;
+        els.gameTouchBtn.disabled = !state.game.canListen;
+        if (!useBooksMic) {
+          els.gameTouchBtn.classList.add('is-hidden');
+          return;
+        }
+        els.gameTouchBtn.classList.add('game-touch--books-mic');
+        els.gameTouchBtn.innerHTML = '<svg class="game-touch__books-mic-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>';
       }
 
       function playStatusCueAudio(path) {
