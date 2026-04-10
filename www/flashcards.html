@@ -273,7 +273,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 24px 12px;
       opacity: 0;
       pointer-events: none;
       transition: opacity 420ms ease, visibility 420ms ease;
@@ -292,19 +292,20 @@
     }
 
     .welcome-gate__touch {
-      width: min(680px, 100%);
-      max-width: 100%;
+      width: 100%;
+      max-width: 483px;
       min-height: min(72vh, 720px);
       display: grid;
       justify-items: center;
       align-items: center;
       align-content: center;
-      padding: 32px 20px;
+      padding: 32px 0;
       background: transparent;
       text-align: center;
       border: 0;
       outline: 0;
       box-shadow: none;
+      margin: 0 auto;
     }
 
     .welcome-gate__stack {
@@ -378,51 +379,10 @@
       border-radius: inherit;
     }
 
-    .welcome-gate__start-btn::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        105deg,
-        transparent 0%,
-        transparent 44%,
-        rgba(255, 255, 255, 0.04) 47%,
-        rgba(255, 255, 255, 0.55) 50%,
-        rgba(255, 255, 255, 0.04) 53%,
-        transparent 56%,
-        transparent 100%
-      );
-      transform: translateX(-150%) skewX(-20deg);
-      opacity: 0;
-      pointer-events: none;
-      mix-blend-mode: screen;
-      animation: welcomeStartButtonFlash 2s ease-in-out infinite;
-    }
-
     .welcome-gate__start-btn:hover,
     .welcome-gate__start-btn:focus-visible {
       transform: translateY(-2px) scale(1.01);
       filter: saturate(1.08);
-    }
-
-    @keyframes welcomeStartButtonFlash {
-      0%, 62%, 100% {
-        transform: translateX(-150%) skewX(-20deg);
-        opacity: 0;
-      }
-
-      12% {
-        opacity: 0.95;
-      }
-
-      34% {
-        transform: translateX(150%) skewX(-20deg);
-        opacity: 0.82;
-      }
-
-      42% {
-        opacity: 0;
-      }
     }
 
     .welcome-gate__account-link {
@@ -5993,7 +5953,8 @@
 
       .welcome-gate__touch {
         width: 100%;
-        padding: 24px 12px;
+        max-width: 483px;
+        padding: 24px 0;
         justify-items: center;
       }
 

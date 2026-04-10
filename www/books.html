@@ -529,10 +529,6 @@
       display: none !important;
     }
 
-    #booksHomeStartPanel:not(.is-logged-in) #booksHomeLaunchBtn {
-      display: none !important;
-    }
-
     .books-home-logout {
       border: 0;
       background: transparent;
@@ -759,6 +755,22 @@
 
     .books-home-launch-btn--sleep {
       color: #d8f6ff;
+      border-color: rgba(122, 223, 255, 0.9);
+      background: linear-gradient(180deg, rgba(7, 34, 88, 0.96), rgba(10, 25, 63, 0.98));
+      box-shadow:
+        0 0 0 1px rgba(185, 239, 255, 0.18) inset,
+        0 0 18px rgba(86, 210, 255, 0.32),
+        0 0 40px rgba(44, 132, 255, 0.24),
+        0 22px 44px rgba(18, 73, 125, 0.28);
+    }
+
+    .books-home-launch-btn--sleep:hover,
+    .books-home-launch-btn--sleep:focus-visible {
+      box-shadow:
+        0 0 0 1px rgba(208, 247, 255, 0.22) inset,
+        0 0 22px rgba(98, 220, 255, 0.4),
+        0 0 48px rgba(44, 132, 255, 0.28),
+        0 24px 48px rgba(18, 73, 125, 0.34);
     }
 
     .books-home-launch-btn--sleep svg {
@@ -2964,8 +2976,8 @@
                   <span>Colecionar Books</span>
                 </button>
                 <button class="books-home-launch-btn books-home-launch-btn--sleep" id="booksHomeLaunchBtn" type="button" hidden>
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2l1.88 5.8H20l-4.94 3.58 1.89 5.82L12 13.62 7.05 17.2l1.89-5.82L4 7.8h6.12z"/></svg>
-                  <span>SleepMode</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.8 2.2a8.8 8.8 0 1 0 7 14.2a7.9 7.9 0 1 1-7-14.2Z"/></svg>
+                  <span>Sleeping Mode</span>
                 </button>
               </div>
               <button class="books-home-logout" id="booksHomeLogoutBtn" type="button" hidden aria-label="Sair da conta"></button>

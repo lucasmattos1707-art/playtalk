@@ -1198,7 +1198,7 @@
       els.homeLaunchBtn.disabled = state.homeStartBusy;
       const launchLabel = els.homeLaunchBtn.querySelector('span');
       if (launchLabel) {
-        launchLabel.textContent = state.homeStartBusy ? 'Abrindo...' : 'SleepMode';
+        launchLabel.textContent = state.homeStartBusy ? 'Abrindo...' : 'Sleeping Mode';
       }
     }
     setHomeAuthStatus('', null);
@@ -1356,6 +1356,7 @@
 
   function syncBooksInjectedFooterVisibility() {
     const shouldShow = isHomeLevel()
+      && !state.homeIntroDismissed
       && !state.readerOpen
       && !state.modeBookId
       && !state.magicBookId
