@@ -3709,13 +3709,13 @@
       align-content: center;
       justify-content: center;
       margin: 0 auto;
-      width: 300px;
-      height: 300px;
-      max-width: 300px;
-      max-height: 300px;
-      min-width: 300px;
-      min-height: 300px;
-      flex: 0 0 300px;
+      width: 270px;
+      height: 270px;
+      max-width: 270px;
+      max-height: 270px;
+      min-width: 270px;
+      min-height: 270px;
+      flex: 0 0 270px;
       border-radius: 50%;
       overflow: visible;
       position: relative;
@@ -3979,12 +3979,12 @@
 
     .game[data-phase-key="first-star"] #gameVisual,
     .game[data-phase-key="third-star"] #gameVisual {
-      width: 315px;
-      height: 315px;
-      min-width: 315px;
-      min-height: 315px;
-      max-width: 315px;
-      max-height: 315px;
+      width: 284px;
+      height: 284px;
+      min-width: 284px;
+      min-height: 284px;
+      max-width: 284px;
+      max-height: 284px;
       aspect-ratio: 1 / 1;
       border-radius: 50%;
       overflow: visible;
@@ -11907,9 +11907,29 @@
         }
       }
 
+      function flashGameVisualBlockedAudio() {
+        if (!els.gameVisual) return;
+        setGameVisualNeonState('audio');
+        if (state.game.blockedAudioFlashTimer) {
+          window.clearTimeout(state.game.blockedAudioFlashTimer);
+        }
+        state.game.blockedAudioFlashTimer = window.setTimeout(() => {
+          state.game.blockedAudioFlashTimer = 0;
+          if (state.game.listening) {
+            setGameVisualNeonState('touch');
+            return;
+          }
+          setGameVisualNeonState('default');
+        }, 420);
+      }
+
       function stopActiveAudio() {
         const current = state.game.activeAudio;
         setGameVisualNeonState('default');
+        if (state.game.blockedAudioFlashTimer) {
+          window.clearTimeout(state.game.blockedAudioFlashTimer);
+          state.game.blockedAudioFlashTimer = 0;
+        }
         if (!current) return;
         state.game.activeAudio = null;
         if (current.type === 'audio') {
@@ -11923,6 +11943,10 @@
       function fadeOutActiveAudio(durationMs = 1000) {
         const current = state.game.activeAudio;
         setGameVisualNeonState('default');
+        if (state.game.blockedAudioFlashTimer) {
+          window.clearTimeout(state.game.blockedAudioFlashTimer);
+          state.game.blockedAudioFlashTimer = 0;
+        }
         if (!current) return Promise.resolve(false);
         state.game.activeAudio = null;
         if (current.type === 'audio') {
@@ -11984,6 +12008,10 @@
         state.game.listening = false;
         els.gameCard.classList.remove('is-listening');
         els.gameVisual.classList.remove('is-mic-live');
+        if (state.game.blockedAudioFlashTimer) {
+          window.clearTimeout(state.game.blockedAudioFlashTimer);
+          state.game.blockedAudioFlashTimer = 0;
+        }
         setGameVisualNeonState('default');
       }
 
@@ -12058,11 +12086,7 @@
           state.stats.listenings += 1;
           saveUserStats({ skipCloudSync: true });
           updateGameChips();
-          setGameVisualNeonState('audio');
-          return playAudioWithSoftEnd(audio, { registerAsActive: true })
-            .finally(() => {
-              setGameVisualNeonState('default');
-            });
+          return playAudioWithSoftEnd(audio, { registerAsActive: true });
         }
 
         if (window.speechSynthesis && card.english) {
@@ -12075,11 +12099,9 @@
               if (state.game.activeAudio && state.game.activeAudio.instance === utterance) {
                 state.game.activeAudio = null;
               }
-              setGameVisualNeonState('default');
               resolve(true);
             };
             state.game.activeAudio = { type: 'tts', instance: utterance };
-            setGameVisualNeonState('audio');
             window.speechSynthesis.cancel();
             window.speechSynthesis.speak(utterance);
           });
@@ -14039,7 +14061,12 @@
         if (!state.game.active || state.game.transitioning || state.game.listening || state.game.paused) return;
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return;
-        if (isTypingStage(entry) || !state.game.canListen) return;
+        if (isTypingStage(entry)) return;
+        if (state.game.activeAudio) {
+          flashGameVisualBlockedAudio();
+          return;
+        }
+        if (!state.game.canListen) return;
 
         const nativeSpeech = getNativeSpeechRecognition();
         const openAiSpeech = getOpenAiSpeechRecognition();
