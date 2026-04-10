@@ -5,17 +5,9 @@
 
   function injectStars() {
     if (!starPages.has(path)) return;
-    if (document.querySelector('.playtalk-cosmic-stars')) return;
-    document.body.classList.add('playtalk-cosmic-shell');
-    const stars = document.createElement('div');
-    stars.className = 'playtalk-cosmic-stars';
-    stars.setAttribute('aria-hidden', 'true');
-    stars.innerHTML = [
-      '<span class="playtalk-cosmic-stars__layer playtalk-cosmic-stars__layer--one"></span>',
-      '<span class="playtalk-cosmic-stars__layer playtalk-cosmic-stars__layer--two"></span>',
-      '<span class="playtalk-cosmic-stars__layer playtalk-cosmic-stars__layer--three"></span>'
-    ].join('');
-    document.body.insertBefore(stars, document.body.firstChild);
+    // Global background now comes from shared page CSS/WebP assets.
+    // Keep legacy cosmic-shell effect disabled to avoid masking the new background.
+    return;
   }
 
   function activeSlot() {
