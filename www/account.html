@@ -136,17 +136,12 @@
       height: 188px;
       border-radius: 50%;
       background: transparent;
-      border: 2px solid rgba(129, 225, 255, 0.98);
-      overflow: hidden;
+      border: 0;
+      overflow: visible;
       display: grid;
       place-items: center;
       cursor: pointer;
       position: relative;
-      box-shadow:
-        0 0 0 2px rgba(36, 112, 255, 0.34),
-        0 0 18px rgba(68, 206, 255, 0.95),
-        0 0 36px rgba(68, 206, 255, 0.55),
-        0 0 64px rgba(32, 102, 255, 0.3);
       isolation: isolate;
     }
 
@@ -161,6 +156,23 @@
         linear-gradient(180deg, rgba(9, 22, 44, 0.82) 0%, rgba(4, 24, 55, 0.96) 100%);
       pointer-events: none;
       z-index: 0;
+    }
+
+    .account-avatar::after {
+      content: "";
+      position: absolute;
+      inset: -7px;
+      border-radius: inherit;
+      border: 2px solid rgba(129, 225, 255, 1);
+      pointer-events: none;
+      z-index: 3;
+      opacity: 1;
+      box-shadow:
+        0 0 0 2px rgba(36, 112, 255, 0.52),
+        0 0 20px rgba(68, 206, 255, 1),
+        0 0 42px rgba(68, 206, 255, 0.92),
+        0 0 72px rgba(32, 102, 255, 0.7),
+        0 0 110px rgba(32, 102, 255, 0.48);
     }
 
     .account-avatar.is-message {
@@ -188,6 +200,8 @@
       display: grid;
       place-items: center;
       object-fit: cover;
+      border-radius: inherit;
+      clip-path: circle(50% at 50% 50%);
       font-size: 58px;
       font-weight: 800;
       color: #475569;
