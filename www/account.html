@@ -284,10 +284,7 @@
       margin-left: calc(50% - 50vw);
       margin-right: calc(50% - 50vw);
       padding: 0 15px 15px;
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px 18px;
-      align-items: start;
+      display: block;
       background: transparent;
       border: 0;
       box-shadow: none;
@@ -297,27 +294,113 @@
       display: none !important;
     }
 
-    .account-metric {
+    .account-stats-card {
+      width: 100%;
+      min-height: 0;
+      padding: 34px 20px 30px;
+      border-radius: 0;
+      border: 1.5px solid rgba(124, 228, 255, 0.7);
+      background:
+        radial-gradient(circle at 50% 16%, rgba(88, 190, 255, 0.06), transparent 22%),
+        linear-gradient(180deg, rgba(7, 15, 27, 0.2), rgba(4, 9, 18, 0.22));
+      box-shadow:
+        0 0 24px rgba(91, 218, 255, 0.18),
+        0 0 64px rgba(53, 136, 255, 0.12),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+      contain: layout paint;
+      isolation: isolate;
       display: grid;
-      gap: 4px;
-      min-width: 0;
-      color: #ffffff;
-      text-align: left;
+      justify-items: center;
+      align-content: center;
+      gap: 18px;
     }
 
-    .account-metric strong {
-      font-size: 19px;
+    .account-stats-icon-shell {
+      width: min(220px, 56vw);
+      height: min(220px, 56vw);
+      display: grid;
+      place-items: center;
+    }
+
+    .account-stats-icon {
+      width: 72%;
+      height: 72%;
+      color: #8cecff;
+      filter:
+        drop-shadow(0 0 10px rgba(107, 230, 255, 0.95))
+        drop-shadow(0 0 24px rgba(107, 230, 255, 0.52))
+        drop-shadow(0 0 44px rgba(77, 132, 255, 0.34));
+      transition: opacity 160ms ease;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+    }
+
+    .account-stats-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .account-stats-tag {
+      margin: 0;
+      min-height: 1.25em;
+      color: rgba(225, 251, 255, 0.96);
+      font-size: clamp(22px, 5vw, 34px);
       font-weight: 800;
-      line-height: 1.05;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-align: center;
+      text-shadow:
+        0 0 16px rgba(95, 221, 255, 0.38),
+        0 0 30px rgba(62, 141, 255, 0.22);
     }
 
-    .account-metric span {
-      min-width: 0;
-      color: rgba(216, 230, 255, 0.82);
-      font-size: 12px;
+    .account-stats-value {
+      margin: 0;
+      min-height: 1.15em;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: clamp(52px, 13vw, 112px);
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      text-align: center;
+      text-shadow:
+        0 0 12px rgba(255, 255, 255, 0.28),
+        0 0 32px rgba(106, 215, 255, 0.18);
+      word-break: break-word;
+    }
+
+    .account-decimal-value {
+      display: inline-flex;
+      align-items: flex-start;
+      justify-content: center;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .account-decimal-value__main {
+      display: inline-block;
+    }
+
+    .account-decimal-value__fraction {
+      display: inline-block;
+      font-size: 0.88em;
+      line-height: 1.08;
+      padding-top: 0.12em;
+    }
+
+    .account-stats-hint {
+      margin: 0;
+      min-height: 20px;
+      color: rgba(199, 221, 233, 0.82);
+      font-size: 13px;
       font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      text-align: center;
     }
 
     .account-button--premium {
@@ -394,13 +477,7 @@
       }
 
       .account-metrics {
-        grid-template-columns: 1fr;
-        gap: 10px;
         padding: 0 15px 15px;
-      }
-
-      .account-metric {
-        text-align: center;
       }
     }
   </style>
@@ -426,25 +503,17 @@
           <button class="account-button account-button--password" id="accountPasswordBtn" type="button" hidden>Trocar senha</button>
         </div>
         <div class="account-metrics" id="accountMetrics" hidden>
-          <div class="account-metric">
-            <strong id="accountPronunciationMetric">0%</strong>
-            <span>Pronuncia media</span>
-          </div>
-          <div class="account-metric">
-            <strong id="accountBooksMetric">0</strong>
-            <span>Livros lidos</span>
-          </div>
-          <div class="account-metric">
-            <strong id="accountListeningMetric">0</strong>
-            <span>Listening</span>
-          </div>
-          <div class="account-metric">
-            <strong id="accountSpeakingMetric">0</strong>
-            <span>Speaking</span>
-          </div>
-          <div class="account-metric">
-            <strong id="accountTrainingMetric">0 min</strong>
-            <span>Tempo de pratica</span>
+          <div class="account-stats-card" id="accountStatsCard" aria-label="Estatisticas do usuario">
+            <div class="account-stats-icon-shell" aria-hidden="true">
+              <div class="account-stats-icon" id="accountStatsIcon">
+                <svg viewBox="0 0 64 64" aria-hidden="true">
+                  <path fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" d="M17 11v10m15-10v18m15-18v28M11 49h42"/>
+                </svg>
+              </div>
+            </div>
+            <p class="account-stats-tag" id="accountStatsLabel">Estatisticas</p>
+            <p class="account-stats-value" id="accountStatsValue">...</p>
+            <p class="account-stats-hint" id="accountStatsLine">Carregando...</p>
           </div>
         </div>
         <div class="account-premium">

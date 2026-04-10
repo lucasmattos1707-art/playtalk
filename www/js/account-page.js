@@ -1,6 +1,8 @@
 (function initPlaytalkAccountPage() {
   const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
   const AUTO_SAVE_DELAY_MS = 700;
+  const STATS_ROTATE_MS = 2500;
+  const NUMBER_ANIMATION_HANDLES = new WeakMap();
   const els = {
     panel: document.querySelector('.panel'),
     form: document.getElementById('accountForm'),
@@ -14,11 +16,11 @@
     passwordBtn: document.getElementById('accountPasswordBtn'),
     premiumCard: document.querySelector('.account-premium'),
     metrics: document.getElementById('accountMetrics'),
-    pronunciationMetric: document.getElementById('accountPronunciationMetric'),
-    booksMetric: document.getElementById('accountBooksMetric'),
-    listeningMetric: document.getElementById('accountListeningMetric'),
-    speakingMetric: document.getElementById('accountSpeakingMetric'),
-    trainingMetric: document.getElementById('accountTrainingMetric'),
+    statsCard: document.getElementById('accountStatsCard'),
+    statsIcon: document.getElementById('accountStatsIcon'),
+    statsLabel: document.getElementById('accountStatsLabel'),
+    statsValue: document.getElementById('accountStatsValue'),
+    statsLine: document.getElementById('accountStatsLine'),
     premiumLevel: document.getElementById('accountPremiumLevel'),
     premiumUntil: document.getElementById('accountPremiumUntil'),
     premiumBtn: document.getElementById('accountPremiumBtn'),
@@ -40,7 +42,10 @@
     lastSavedAvatar: '',
     passwordEditMode: false,
     nameEditing: false,
-    booksStats: null
+    booksStats: null,
+    statsRotationTimer: 0,
+    statsRotationIndex: 0,
+    statsLastRenderedLine: ''
   };
 
   function buildApiUrl(path) {
@@ -103,24 +108,183 @@
     return `${Math.round(total)}`;
   }
 
-  function renderAccountMetrics() {
-    if (!els.metrics || !els.pronunciationMetric || !els.booksMetric || !els.listeningMetric || !els.speakingMetric || !els.trainingMetric) return;
-    const isLoggedIn = Boolean(state.user?.id);
-    els.metrics.hidden = !isLoggedIn;
-    if (!isLoggedIn) return;
+  function normalizePrecisePercent(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.max(0, Math.min(100, Math.round(numeric * 10) / 10));
+  }
+
+  function formatDurationCompact(totalSeconds) {
+    const normalized = Math.max(0, Math.round(Number(totalSeconds) || 0));
+    const hours = Math.floor(normalized / 3600);
+    const minutes = Math.floor((normalized % 3600) / 60);
+    if (hours > 0) return `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}`;
+    if (minutes > 0) return `${minutes} min`;
+    return `${normalized}s`;
+  }
+
+  function setAnimatedDecimalMarkup(element, value) {
+    if (!element) return;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      element.textContent = safeText(value) || '--';
+      return;
+    }
+    const rounded = Math.round(numeric * 10) / 10;
+    const [main, fraction = '0'] = rounded.toFixed(1).split('.');
+    element.innerHTML = `<span class="account-decimal-value"><span class="account-decimal-value__main">${main}</span><span class="account-decimal-value__fraction">.${fraction}</span></span>`;
+  }
+
+  function cancelAnimatedNumber(element) {
+    if (!element) return;
+    const frameId = NUMBER_ANIMATION_HANDLES.get(element);
+    if (frameId) {
+      window.cancelAnimationFrame(frameId);
+      NUMBER_ANIMATION_HANDLES.delete(element);
+    }
+  }
+
+  function getStatsMetricIconMarkup(kind) {
+    switch (safeText(kind)) {
+      case 'books':
+        return `
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" d="M12 16.5c0-2.49 2.01-4.5 4.5-4.5H31v39H16.5A4.5 4.5 0 0 1 12 46.5zm40 0c0-2.49-2.01-4.5-4.5-4.5H33v39h14.5a4.5 4.5 0 0 0 4.5-4.5zM31 15h2"/>
+          </svg>
+        `;
+      case 'listening':
+        return `
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M8 35c4.5 0 4.5-16 9-16s4.5 26 9 26s4.5-34 9-34s4.5 42 9 42s4.5-18 9-18"/>
+          </svg>
+        `;
+      case 'speaking':
+        return `
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M32 40a8 8 0 0 0 8-8V19a8 8 0 1 0-16 0v13a8 8 0 0 0 8 8zm13-9a13 13 0 0 1-26 0M32 44v10m-8 0h16"/>
+          </svg>
+        `;
+      case 'pronunciation':
+        return `
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M18 34l9 9 19-21"/>
+            <circle cx="32" cy="32" r="22" fill="none" stroke="currentColor" stroke-width="3.4"/>
+          </svg>
+        `;
+      case 'practice-time':
+      default:
+        return `
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="21" fill="none" stroke="currentColor" stroke-width="3.4"/>
+            <path fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M32 20v13l8 5M24 8h16"/>
+          </svg>
+        `;
+    }
+  }
+
+  function buildStatsRotationItems() {
+    if (!state.user?.id) {
+      return [
+        {
+          kind: 'practice-time',
+          label: 'Estatisticas',
+          value: '--',
+          hint: 'Entre para ver suas metricas.'
+        }
+      ];
+    }
 
     const stats = state.booksStats || {};
-    const pronunciationPercent = Math.max(0, Math.min(100, Math.round(Number(stats.generalPronunciationPercent) || 0)));
-    const booksRead = Math.max(0, Math.round(Number(stats.bookReadCount) || 0));
-    const listeningChars = Math.max(0, Number(stats.listeningChars) || 0);
+    const booksRead = Math.max(0, Number(stats.bookReadCount) || 0);
+    const pronAvg = normalizePrecisePercent(stats.generalPronunciationPercent);
     const speakingChars = Math.max(0, Number(stats.speakingChars) || 0);
-    const trainingTimeMs = Math.max(0, (Number(stats.practiceSeconds) || 0) * 1000);
+    const listeningChars = Math.max(0, Number(stats.listeningChars) || 0);
+    const practiceSeconds = Math.max(0, Number(stats.practiceSeconds) || 0);
 
-    els.pronunciationMetric.textContent = `${pronunciationPercent}%`;
-    els.booksMetric.textContent = `${booksRead}`;
-    els.listeningMetric.textContent = formatCountCompact(listeningChars);
-    els.speakingMetric.textContent = formatCountCompact(speakingChars);
-    els.trainingMetric.textContent = formatTrainingTime(trainingTimeMs);
+    return [
+      {
+        kind: 'practice-time',
+        label: 'Tempo de pratica',
+        value: formatDurationCompact(practiceSeconds),
+        hint: 'Quanto voce treinou no total.'
+      },
+      {
+        kind: 'books',
+        label: 'Livros lidos',
+        value: `${booksRead}`,
+        hint: 'Livros concluidos no Books.'
+      },
+      {
+        kind: 'listening',
+        label: 'Listening',
+        value: formatCountCompact(listeningChars),
+        hint: 'Caracteres ouvidos no Books.'
+      },
+      {
+        kind: 'speaking',
+        label: 'Speaking',
+        value: formatCountCompact(speakingChars),
+        hint: 'Caracteres falados no treino.'
+      },
+      {
+        kind: 'pronunciation',
+        label: 'Pronuncia media',
+        value: pronAvg,
+        hint: 'Media geral das ultimas avaliacoes.',
+        decimal: true
+      }
+    ];
+  }
+
+  function stopStatsRotation() {
+    if (!state.statsRotationTimer) return;
+    window.clearInterval(state.statsRotationTimer);
+    state.statsRotationTimer = 0;
+  }
+
+  function startStatsRotation() {
+    if (state.statsRotationTimer || !state.user?.id) return;
+    state.statsRotationTimer = window.setInterval(() => {
+      state.statsRotationIndex = (state.statsRotationIndex + 1) % 1000000;
+      renderAccountMetrics();
+    }, STATS_ROTATE_MS);
+  }
+
+  function renderAccountMetrics() {
+    if (!els.metrics || !els.statsIcon || !els.statsLabel || !els.statsValue || !els.statsLine) return;
+    const isLoggedIn = Boolean(state.user?.id);
+    els.metrics.hidden = !isLoggedIn;
+    if (!isLoggedIn) {
+      stopStatsRotation();
+      return;
+    }
+
+    startStatsRotation();
+    const items = buildStatsRotationItems();
+    const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
+    const metric = safeItems.length
+      ? safeItems[state.statsRotationIndex % safeItems.length]
+      : null;
+    const label = safeText(metric?.label) || 'Estatisticas';
+    const value = metric?.value ?? '...';
+    const hint = safeText(metric?.hint) || 'Carregando...';
+    const signature = `${safeText(metric?.kind)}|${label}|${value}|${hint}|${metric?.decimal ? '1' : '0'}`;
+    if (state.statsLastRenderedLine === signature) return;
+    state.statsLastRenderedLine = signature;
+
+    const iconKind = safeText(metric?.kind) || 'practice-time';
+    if (els.statsIcon.dataset.kind !== iconKind) {
+      els.statsIcon.dataset.kind = iconKind;
+      els.statsIcon.innerHTML = getStatsMetricIconMarkup(iconKind);
+    }
+    els.statsLabel.textContent = label;
+    cancelAnimatedNumber(els.statsValue);
+    if (metric?.decimal) {
+      setAnimatedDecimalMarkup(els.statsValue, value);
+    } else {
+      els.statsValue.textContent = safeText(value) || '...';
+    }
+    els.statsLine.textContent = hint;
   }
 
   function persistAuthToken(token) {
