@@ -3261,7 +3261,8 @@
     const entries = Array.isArray(state.preBookInsightsData) ? state.preBookInsightsData : [];
     if (!entries.length || !els.preBookInsightIcon || !els.preBookInsightLabel || !els.preBookInsightValue) {
       if (els.preBookInsights) {
-        els.preBookInsights.hidden = true;
+        els.preBookInsights.hidden = false;
+        els.preBookInsights.classList.add('is-empty');
       }
       if (els.preBookInsightLabel) {
         els.preBookInsightLabel.textContent = '';
@@ -3276,6 +3277,7 @@
     }
     if (els.preBookInsights) {
       els.preBookInsights.hidden = false;
+      els.preBookInsights.classList.remove('is-empty');
     }
     const index = Math.max(0, Math.min(entries.length - 1, state.preBookInsightsIndex));
     const entry = entries[index] || entries[0];
@@ -3478,10 +3480,7 @@
       return;
     }
 
-    const gradients = state.gradients.length ? state.gradients : ['linear-gradient(160deg, #4a5cff, #4ea5ff)'];
-
-    cardsList.forEach((book, index) => {
-      const gradient = gradients[index % gradients.length];
+    cardsList.forEach((book) => {
       const coverImageUrl = safeText(book?.coverImageUrl);
       const pendingCreate = Boolean(book?.isPendingCreate);
       const processingMagic = pendingCreate || isBookProcessingMagic(book?.bookId);
@@ -3501,7 +3500,9 @@
 
       const background = document.createElement('span');
       background.className = 'books-card__background';
-      background.style.backgroundImage = 'none';
+      background.style.backgroundImage = coverImageUrl
+        ? `url(${safeCssUrl(coverImageUrl)})`
+        : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
 
       const overlay = document.createElement('span');
       overlay.className = 'books-card__overlay';
