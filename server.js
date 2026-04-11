@@ -5048,9 +5048,47 @@ function computeBotPronunciationPercent(botConfig, sessionId, cardIndex) {
 
 function buildBotPronunciationSamples(botConfig, sessionId, totalCards) {
   const count = Math.max(0, Number(totalCards) || 0);
-  return Array.from({ length: count }, (_, index) => (
-    computeBotPronunciationPercent(botConfig, sessionId, index)
-  ));
+  const base = clampPercent(Number(botConfig?.pronunciationBase) || 0);
+  if (!count) return [];
+
+  const rawOffsets = Array.from({ length: count }, (_, index) => {
+    const unit = seededUnitInterval(`${sessionId}:pron-seed:${index}`);
+    return ((unit * 2) - 1) * BOT_PRONUNCIATION_VARIANCE_PERCENT;
+  });
+  const averageOffset = rawOffsets.reduce((sum, value) => sum + value, 0) / count;
+  const samples = rawOffsets.map((offset) => clampPercent(base + (offset - averageOffset)));
+  const targetTotal = base * count;
+  let currentTotal = samples.reduce((sum, sample) => sum + sample, 0);
+  let diff = targetTotal - currentTotal;
+
+  for (let index = samples.length - 1; index >= 0 && diff !== 0; index -= 1) {
+    const direction = diff > 0 ? 1 : -1;
+    const nextValue = clampPercent(samples[index] + direction);
+    if (nextValue === samples[index]) continue;
+    samples[index] = nextValue;
+    currentTotal += direction;
+    diff = targetTotal - currentTotal;
+  }
+
+  return samples;
+}
+
+function buildBotResponseTimeline(botConfig, sessionId, totalCards) {
+  const count = Math.max(0, Number(totalCards) || 0);
+  if (!count) return [];
+  const base = Math.max(1, Number(botConfig?.responseSeconds) || 3);
+  const rawOffsets = Array.from({ length: count }, (_, index) => {
+    const unit = seededUnitInterval(`${sessionId}:response-seed:${index}`);
+    return ((unit * 2) - 1) * BOT_RESPONSE_VARIANCE_SECONDS;
+  });
+  const averageOffset = rawOffsets.reduce((sum, value) => sum + value, 0) / count;
+
+  return rawOffsets.map((offset) => {
+    const adjusted = base + (offset - averageOffset);
+    const min = Math.max(1, base - BOT_RESPONSE_VARIANCE_SECONDS);
+    const max = base + BOT_RESPONSE_VARIANCE_SECONDS;
+    return Math.max(min, Math.min(max, Number(adjusted.toFixed(2))));
+  });
 }
 
 function buildBotProgressSnapshot(session, botUserId, botConfig) {
@@ -5070,8 +5108,9 @@ function buildBotProgressSnapshot(session, botUserId, botConfig) {
   let accumulatedMs = 0;
   let completed = 0;
   const pronunciationSamples = buildBotPronunciationSamples(botConfig, session.id || botUserId, totalCards);
+  const responseTimeline = buildBotResponseTimeline(botConfig, session.id || botUserId, totalCards);
   for (let index = 0; index < totalCards; index += 1) {
-    accumulatedMs += computeBotResponseSeconds(botConfig, session.id || botUserId, index) * 1000;
+    accumulatedMs += (responseTimeline[index] || computeBotResponseSeconds(botConfig, session.id || botUserId, index)) * 1000;
     if (elapsedMs < accumulatedMs) break;
     completed += 1;
   }
@@ -7842,17 +7881,7 @@ async function readAuthenticatedUserFromRequest(req) {
   if (user) {
     return user;
   }
-  return {
-    id: Number(payload.sub) || 0,
-    email: String(payload.username || '').trim(),
-    username: String(payload.username || '').trim(),
-    avatar_image: '',
-    avatar_versions: [],
-    avatar_generation_count: 0,
-    onboarding_name_completed: false,
-    onboarding_photo_completed: false,
-    created_at: null
-  };
+  return null;
 }
 
 app.post('/register', async (req, res) => {
