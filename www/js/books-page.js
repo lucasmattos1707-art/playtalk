@@ -4206,6 +4206,11 @@
     els.readerMicBtn.classList.toggle('is-live', Boolean(active));
   }
 
+  function setReaderMicVisible(visible) {
+    if (!els.readerMicBtn) return;
+    els.readerMicBtn.classList.toggle('is-visible', Boolean(visible));
+  }
+
   function clearReaderMicScoreDisplay() {
     if (state.readerMicScoreTimer) {
       window.clearTimeout(state.readerMicScoreTimer);
@@ -4575,6 +4580,7 @@
 
     if (!source) {
       state.readerLastAudioKey = key;
+      setReaderMicVisible(true);
       return;
     }
     if (state.readerLastAudioKey === key) {
@@ -4608,7 +4614,9 @@
       await audio.play();
       if (token !== state.readerAudioToken) {
         audio.pause();
+        return;
       }
+      setReaderMicVisible(true);
     } catch (_error) {
       // browser may block autoplay; keep silent
     }
@@ -5126,6 +5134,7 @@
       state.readerCardShownAt = Date.now();
       if (isReaderTrainingMode()) {
         state.readerCurrentScore = null;
+        setReaderMicVisible(false);
       }
     }
     els.readerEnglish.textContent = displayTextFormatted || 'Sem conteudo neste livro.';
@@ -5162,6 +5171,7 @@
     setReaderTrainingStatus('');
     clearReaderMicScoreDisplay();
     setReaderMicLive(false);
+    setReaderMicVisible(false);
   }
 
   function stepReader(delta) {
