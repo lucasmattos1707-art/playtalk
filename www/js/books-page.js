@@ -1188,6 +1188,7 @@
 
     persistAuthToken('');
     state.user = null;
+    state.stats = null;
     state.isAdmin = false;
     state.homeAuthBusy = false;
     // Return to the login screen and stop audio.
@@ -1362,7 +1363,7 @@
     if (state.isAdmin) {
       return Array.from({ length: MAX_UI_LEVEL + 1 }, (_value, index) => index);
     }
-    return [UI_LEVEL_HOME, UI_LEVEL_MY_BOOKS];
+    return [UI_LEVEL_HOME, UI_LEVEL_MY_BOOKS, UI_LEVEL_ALL_BOOKS];
   }
 
   function shuffleBooks(list) {
@@ -1874,6 +1875,9 @@
         return null;
       }
       setStatsState(payload.stats || null);
+      if (!state.initialLoading && isMyBooksLevel()) {
+        renderCards();
+      }
       return state.stats;
     } catch (_error) {
       return null;
@@ -3640,6 +3644,7 @@
       .filter((job) => {
         if (!isCreateJobRunning(job)) return false;
         if (showAllBooks) return true;
+        if (isMyBooksLevel()) return false;
         return Boolean(bookLevel) && normalizeLevel(job?.book?.level) === bookLevel;
       })
       .map((job) => ({
@@ -3654,6 +3659,9 @@
     const cardsList = books.concat(pendingBooks);
     els.cardsGrid.innerHTML = '';
     els.cardsEmpty.hidden = cardsList.length > 0;
+    els.cardsEmpty.textContent = isMyBooksLevel()
+      ? 'Nenhum MiniBook com melhor nota igual ou acima de 75% ainda.'
+      : 'Nenhum arquivo neste nivel.';
     if (!cardsList.length) {
       state.shelfIndex = 0;
       cancelShelfAnimation();
@@ -3765,6 +3773,7 @@
     const parsed = Number.parseInt(level, 10);
     if (!Number.isFinite(parsed)) return 'Home';
     if (parsed === UI_LEVEL_HOME) return 'Home';
+    if (parsed === UI_LEVEL_MY_BOOKS) return 'MyBooks';
     if (parsed === UI_LEVEL_ALL_BOOKS) return 'Books';
     const bookLevel = uiLevelToBookLevel(parsed);
     if (!bookLevel) return `Nivel ${parsed}`;
@@ -4852,6 +4861,13 @@
 
     const completionPayload = await completionPromise;
     if (token !== state.readerFinishToken || !state.readerOpen) return;
+    if (completionPayload?.stats) {
+      setStatsState({ ...(state.stats || {}), ...(completionPayload.stats || {}) });
+      renderStatsPanel();
+      if (isMyBooksLevel()) {
+        renderCards();
+      }
+    }
 
     const savedBookRead = Math.max(0, Number(completionPayload?.stats?.bookReadCount) || 0);
     const savedGeneralPronunciation = normalizeReaderPercent(
@@ -4900,6 +4916,13 @@
 
     const completionPayload = await completionPromise;
     if (token !== state.readerFinishToken || !state.readerOpen) return;
+    if (completionPayload?.stats) {
+      setStatsState({ ...(state.stats || {}), ...(completionPayload.stats || {}) });
+      renderStatsPanel();
+      if (isMyBooksLevel()) {
+        renderCards();
+      }
+    }
 
     const savedBookRead = Math.max(0, Number(completionPayload?.stats?.bookReadCount) || 0);
     if (savedBookRead > 0) {
@@ -5159,7 +5182,6 @@
       state.readerFinishToken += 1;
       state.readerFinishing = false;
       resetReaderFinishUi();
-      setReaderVisible(true);
       state.readerBookId = safeText(book.bookId);
       state.readerMode = ['listening-training', 'speaking-training', 'free-read'].includes(mode) ? mode : 'free-read';
       state.readerCards = cards.length
@@ -5183,6 +5205,7 @@
       renderReaderBookCover(book);
       setReaderTrainingStatus('');
       renderReader();
+      setReaderVisible(true);
       setStatus('', null);
     } catch (error) {
       closeReader();
