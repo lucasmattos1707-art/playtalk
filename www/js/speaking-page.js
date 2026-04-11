@@ -1721,14 +1721,17 @@
     const isChallenger = meRole === 'challenger';
     const me = isChallenger ? session?.challenger : session?.opponent;
     const rival = isChallenger ? session?.opponent : session?.challenger;
+    const nextMePercent = Math.max(0, Number(session?.mePercent) || 0);
+    const nextRivalProgress = Math.max(0, Number(session?.rivalProgress) || 0);
+    const nextRivalPercent = Math.max(0, Number(session?.rivalPercent) || 0);
     state.duel.meName = safeText(me?.username || 'Você') || 'Você';
     state.duel.meAvatar = safeText(me?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg') || '/Avatar/avatar-man-person-svgrepo-com.svg';
     state.duel.rivalName = safeText(rival?.username || 'Adversário') || 'Adversário';
     state.duel.rivalAvatar = safeText(rival?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg') || '/Avatar/avatar-man-person-svgrepo-com.svg';
-    state.duel.mePercent = Math.max(0, Number(session?.mePercent) || 0);
-    state.duel.rivalProgress = Math.max(0, Number(session?.rivalProgress) || 0);
-    state.duel.rivalPercent = Math.max(0, Number(session?.rivalPercent) || 0);
-    state.duel.meFinished = Boolean(session?.meFinished);
+    state.duel.mePercent = Math.max(Math.max(0, Number(state.duel.mePercent) || 0), nextMePercent);
+    state.duel.rivalProgress = Math.max(Math.max(0, Number(state.duel.rivalProgress) || 0), nextRivalProgress);
+    state.duel.rivalPercent = Math.max(Math.max(0, Number(state.duel.rivalPercent) || 0), nextRivalPercent);
+    state.duel.meFinished = Boolean(state.duel.meFinished || session?.meFinished);
     state.duel.introCountdownSeconds = Math.max(
       1,
       Number.parseInt(session?.introCountdownSeconds, 10) || DUEL_INTRO_COUNTDOWN_SECONDS
