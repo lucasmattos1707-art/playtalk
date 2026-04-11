@@ -479,6 +479,30 @@ const getBooksPronunciationAggregateFromRow = (row) => {
   };
 };
 
+const getQualifiedUserBookIds = async (db, userId, minimumPercent = 75) => {
+  const normalizedUserId = Number.parseInt(userId, 10);
+  const normalizedMinimumPercent = Math.max(0, Math.min(100, Math.round(Number(minimumPercent) || 0)));
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    return [];
+  }
+
+  const result = await db.query(
+    `SELECT book_id
+     FROM public.user_books_library_stats
+     WHERE user_id = $1
+       AND GREATEST(
+         COALESCE(best_speaking_percent, 0),
+         COALESCE(best_listening_percent, 0)
+       ) >= $2
+     ORDER BY updated_at DESC, book_id ASC`,
+    [normalizedUserId, normalizedMinimumPercent]
+  );
+
+  return result.rows
+    .map((row) => normalizeMiniBookId(row?.book_id))
+    .filter(Boolean);
+};
+
 const upsertUserBooksPronunciationSamples = async (client, userId, samplesInput) => {
   const samplesToAppend = normalizeBooksPronunciationPayload(samplesInput);
   const appendedCount = samplesToAppend.length;
@@ -9040,6 +9064,7 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
          LIMIT 1`,
         [userId]
       );
+      const qualifiedBookIds = await getQualifiedUserBookIds(client, userId);
       await client.query('COMMIT');
       const pronunciationStats = getBooksPronunciationAggregateFromRow(pronunciationResult.rows[0]);
 
@@ -9052,6 +9077,8 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
           generalPronunciationPercent: pronunciationStats.generalPronunciationPercent,
           pronunciationSamplesCount: pronunciationStats.pronunciationSamplesCount,
           latestPronunciationPercent: pronunciationStats.latestPronunciationPercent,
+          qualifiedBookIds,
+          qualifiedBookCount: qualifiedBookIds.length,
           book: {
             readsCompleted: nextReadsCompleted,
             listenedSeconds: nextListenedSeconds,
@@ -9100,7 +9127,7 @@ app.get('/api/books/stats', async (req, res) => {
     await ensureBooksSpeakingStatsTable();
     await ensureUserBooksConsumptionStatsTable();
 
-    const [totalsResult, speakingStatsResult, consumptionResult] = await Promise.all([
+    const [totalsResult, speakingStatsResult, consumptionResult, qualifiedBooksResult] = await Promise.all([
       pool.query(
         `SELECT COALESCE(SUM(reads_completed), 0)::int AS total_reads
          FROM public.user_books_library_stats
@@ -9121,11 +9148,13 @@ app.get('/api/books/stats', async (req, res) => {
          WHERE user_id = $1
          LIMIT 1`,
         [userId]
-      )
+      ),
+      getQualifiedUserBookIds(pool, userId)
     ]);
 
     const pronunciationStats = getBooksPronunciationAggregateFromRow(speakingStatsResult.rows[0]);
     const consumption = consumptionResult.rows[0] || {};
+    const qualifiedBookIds = Array.isArray(qualifiedBooksResult) ? qualifiedBooksResult : [];
 
     res.json({
       success: true,
@@ -9136,7 +9165,9 @@ app.get('/api/books/stats', async (req, res) => {
         latestPronunciationPercent: pronunciationStats.latestPronunciationPercent,
         speakingChars: Math.max(0, Number(consumption.speaking_chars) || 0),
         listeningChars: Math.max(0, Number(consumption.listening_chars) || 0),
-        practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0)
+        practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0),
+        qualifiedBookIds,
+        qualifiedBookCount: qualifiedBookIds.length
       }
     });
   } catch (error) {

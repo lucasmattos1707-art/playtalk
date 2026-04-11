@@ -35,11 +35,13 @@
   const MAX_BOOK_LEVEL = 10;
   // UI levels:
   // 0 = Home
-  // 1 = Books (all books feed)
-  // 2.. map to book levels 1..MAX_BOOK_LEVEL
+  // 1 = MyBooks
+  // 2 = Books (all books feed)
+  // 3.. map to book levels 1..MAX_BOOK_LEVEL
   const UI_LEVEL_HOME = 0;
-  const UI_LEVEL_ALL_BOOKS = 1;
-  const UI_FIRST_BOOK_LEVEL = 2;
+  const UI_LEVEL_MY_BOOKS = 1;
+  const UI_LEVEL_ALL_BOOKS = 2;
+  const UI_FIRST_BOOK_LEVEL = 3;
   const MAX_UI_LEVEL = UI_FIRST_BOOK_LEVEL + MAX_BOOK_LEVEL - 1;
   const DEFAULT_HOME_REPEAT_INDEX = Math.max(0, HOME_REPEAT_OPTIONS.indexOf(5));
 
@@ -608,7 +610,15 @@
         ...stats,
         pronunciationSamplesCount: Math.max(0, Number(stats.pronunciationSamplesCount) || 0),
         generalPronunciationPercent: normalizePrecisePercent(stats.generalPronunciationPercent),
-        latestPronunciationPercent: normalizePercent(stats.latestPronunciationPercent)
+        latestPronunciationPercent: normalizePercent(stats.latestPronunciationPercent),
+        qualifiedBookIds: Array.isArray(stats.qualifiedBookIds)
+          ? Array.from(new Set(stats.qualifiedBookIds.map((value) => safeText(value)).filter(Boolean)))
+          : [],
+        qualifiedBookCount: Math.max(
+          0,
+          Number(stats.qualifiedBookCount)
+            || (Array.isArray(stats.qualifiedBookIds) ? stats.qualifiedBookIds.length : 0)
+        )
       }
       : stats;
     syncPracticeSecondsTotal(state.stats?.practiceSeconds);
@@ -1329,7 +1339,7 @@
   async function openBooksCollectionFromHome() {
     if (state.homeStartBusy) return;
     stopHomeSleepPlayback({ keepIntro: false });
-    state.selectedLevel = UI_LEVEL_ALL_BOOKS;
+    state.selectedLevel = UI_LEVEL_MY_BOOKS;
     state.shelfIndex = 0;
     renderHomeAuthUi();
     renderLevelMenu();
@@ -1340,6 +1350,10 @@
     return normalizeLevel(level) + UI_FIRST_BOOK_LEVEL - 1;
   }
 
+  function isMyBooksLevel(level = state.selectedLevel) {
+    return Number.parseInt(level, 10) === UI_LEVEL_MY_BOOKS;
+  }
+
   function isAllBooksLevel(level = state.selectedLevel) {
     return Number.parseInt(level, 10) === UI_LEVEL_ALL_BOOKS;
   }
@@ -1348,7 +1362,7 @@
     if (state.isAdmin) {
       return Array.from({ length: MAX_UI_LEVEL + 1 }, (_value, index) => index);
     }
-    return [UI_LEVEL_HOME, UI_LEVEL_ALL_BOOKS];
+    return [UI_LEVEL_HOME, UI_LEVEL_MY_BOOKS];
   }
 
   function shuffleBooks(list) {
@@ -1382,6 +1396,17 @@
       state.allBooksWindowStart = 0;
     }
     return state.allBooksFeed.slice();
+  }
+
+  function getQualifiedMyBooks() {
+    const ids = Array.isArray(state.stats?.qualifiedBookIds) ? state.stats.qualifiedBookIds : [];
+    if (!ids.length) return [];
+    const booksById = new Map(
+      state.books.map((book) => [safeText(book?.bookId).toLowerCase(), book])
+    );
+    return ids
+      .map((bookId) => booksById.get(safeText(bookId).toLowerCase()))
+      .filter(Boolean);
   }
 
   function buildAllBooksWindow(feed, startIndex, size = ALL_BOOKS_WINDOW_SIZE) {
@@ -1428,6 +1453,9 @@
   }
 
   function getBooksForSelectedLevel() {
+    if (isMyBooksLevel()) {
+      return getQualifiedMyBooks();
+    }
     if (isAllBooksLevel()) {
       return getAllBooksWindow();
     }

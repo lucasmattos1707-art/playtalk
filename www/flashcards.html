@@ -2087,7 +2087,7 @@
       flex: 1 1 auto;
     }
 
-    .game-touch.is-busy {
+    .game-touch.is-busy:not(.game-touch--books-mic) {
       display: inline-flex;
       width: 68px;
       min-width: 68px;
@@ -3730,7 +3730,7 @@
       align-self: center;
       --flashcards-active-image-shift: 0px;
       --flashcards-active-image-scale: 1;
-      transform: none !important;
+      transform: translateY(-40px) !important;
     }
 
     .game[data-phase-key="first-star"] .game-card__content,
@@ -4009,7 +4009,7 @@
       display: grid;
       place-items: center;
       margin: 0 auto;
-      transform: none !important;
+      transform: translateY(-40px) !important;
     }
 
     .game[data-phase-key="first-star"] #gameVisual {
@@ -6658,8 +6658,8 @@
       const LIBRARY_RANK_SWAP_DELAY_MS = 2000;
       const REWARD_RANK_VISIBLE_MS = 2000;
       const FIFTH_STAR_HINT_ROTATION_MS = 1500;
-      const FIFTH_STAR_HINT_MESSAGES = ['Toque para ligar o microfone', 'Fale inglês'];
-      const THIRD_STAR_HINT_MESSAGES = ['Fale em inglês', 'Toque e ligue o microfone'];
+      const FIFTH_STAR_HINT_MESSAGES = [];
+      const THIRD_STAR_HINT_MESSAGES = [];
       const SECOND_STAR_IDLE_HINT_DELAY_MS = 4000;
       const SECOND_STAR_IDLE_HINT_ROTATION_MS = 750;
       const SECOND_STAR_IDLE_HINT_MESSAGES = ['Digite Português', 'Type portuguese'];
@@ -12207,7 +12207,20 @@
       }
 
       function setGameStatus(text, tone, options = {}) {
-        els.gameStatus.textContent = text || '';
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        const speakingStarPhase = phaseKey === 'first-star' || phaseKey === 'third-star' || phaseKey === 'fifth-star';
+        const normalizedText = safeText(text);
+        const suppressedSpeakingStarStatuses = new Set([
+          'Toque para ligar o microfone',
+          'Microfone ligado',
+          'Toque para falar',
+          'Ouvindo...',
+          'Analisando...'
+        ]);
+        const resolvedText = speakingStarPhase && suppressedSpeakingStarStatuses.has(normalizedText)
+          ? ''
+          : (text || '');
+        els.gameStatus.textContent = resolvedText;
         els.gameStatus.className = 'game-status';
         if (els.gameStatusIcon) {
           const iconPath = safeText(options.iconPath);
@@ -12223,7 +12236,7 @@
         if (tone) {
           els.gameStatus.classList.add(`is-${tone}`);
         }
-        if (text) {
+        if (resolvedText) {
           els.gameStatus.classList.add('is-visible');
         }
       }
@@ -12238,11 +12251,9 @@
           els.gameResultsScreen.setAttribute('aria-hidden', 'true');
           return;
         }
-        els.gameResultsScreen.style.display = 'flex';
-        els.gameResultsScreen.textContent = micActive
-          ? 'Microfone ligado'
-          : 'Toque para ligar o microfone';
-        els.gameResultsScreen.setAttribute('aria-hidden', 'false');
+        els.gameResultsScreen.style.display = 'none';
+        els.gameResultsScreen.textContent = '';
+        els.gameResultsScreen.setAttribute('aria-hidden', 'true');
       }
 
       function clearStageHintLoop({ clearStatus = false } = {}) {
