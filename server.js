@@ -9100,7 +9100,7 @@ app.get('/api/books/stats', async (req, res) => {
     await ensureBooksSpeakingStatsTable();
     await ensureUserBooksConsumptionStatsTable();
 
-    const [totalsResult, speakingStatsResult, consumptionResult] = await Promise.all([
+    const [totalsResult, speakingStatsResult, consumptionResult, libraryResult] = await Promise.all([
       pool.query(
         `SELECT COALESCE(SUM(reads_completed), 0)::int AS total_reads
          FROM public.user_books_library_stats
@@ -9121,6 +9121,21 @@ app.get('/api/books/stats', async (req, res) => {
          WHERE user_id = $1
          LIMIT 1`,
         [userId]
+      ),
+      pool.query(
+        `SELECT book_id,
+                book_title,
+                cover_image_url,
+                background_desktop_url,
+                COALESCE(reads_completed, 0)::int AS reads_completed,
+                COALESCE(listened_seconds, 0)::int AS listened_seconds,
+                COALESCE(best_speaking_percent, 0)::int AS best_speaking_percent,
+                COALESCE(best_listening_percent, 0)::int AS best_listening_percent,
+                updated_at
+         FROM public.user_books_library_stats
+         WHERE user_id = $1
+         ORDER BY updated_at DESC, book_id ASC`,
+        [userId]
       )
     ]);
 
@@ -9136,7 +9151,18 @@ app.get('/api/books/stats', async (req, res) => {
         latestPronunciationPercent: pronunciationStats.latestPronunciationPercent,
         speakingChars: Math.max(0, Number(consumption.speaking_chars) || 0),
         listeningChars: Math.max(0, Number(consumption.listening_chars) || 0),
-        practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0)
+        practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0),
+        libraryBooks: libraryResult.rows.map((row) => ({
+          bookId: safeText(row.book_id),
+          title: normalizeMiniBookText(row.book_title || ''),
+          coverImageUrl: normalizeMiniBookText(row.cover_image_url || ''),
+          backgroundDesktopUrl: normalizeMiniBookText(row.background_desktop_url || ''),
+          readsCompleted: Math.max(0, Number(row.reads_completed) || 0),
+          listenedSeconds: Math.max(0, Number(row.listened_seconds) || 0),
+          bestSpeakingPercent: Math.max(0, Math.min(100, Number(row.best_speaking_percent) || 0)),
+          bestListeningPercent: Math.max(0, Math.min(100, Number(row.best_listening_percent) || 0)),
+          updatedAt: row.updated_at || null
+        }))
       }
     });
   } catch (error) {

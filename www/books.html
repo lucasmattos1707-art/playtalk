@@ -1333,8 +1333,8 @@
       display: grid;
       justify-items: center;
       align-content: start;
-      padding: 15px 0 0;
-      overflow: hidden;
+      padding: 15px 0 90px;
+      overflow: visible;
     }
 
     .books-card {
@@ -1545,6 +1545,30 @@
 
     .books-card.is-processing .books-card__actions {
       opacity: 0.45;
+    }
+
+    .books-card__badge {
+      position: absolute;
+      right: 18px;
+      bottom: -74px;
+      width: 104px;
+      height: 104px;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      z-index: 4;
+      filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.36));
+    }
+
+    .books-card__badge[hidden] {
+      display: none !important;
+    }
+
+    .books-card__badge-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
     }
 
     @keyframes books-spin {

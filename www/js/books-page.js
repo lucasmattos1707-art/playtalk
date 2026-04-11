@@ -35,12 +35,21 @@
   const MAX_BOOK_LEVEL = 10;
   // UI levels:
   // 0 = Home
-  // 1 = Books (all books feed)
-  // 2.. map to book levels 1..MAX_BOOK_LEVEL
+  // 1 = MyBooks
+  // 2 = Books (all books feed)
+  // 3.. map to book levels 1..MAX_BOOK_LEVEL
   const UI_LEVEL_HOME = 0;
-  const UI_LEVEL_ALL_BOOKS = 1;
-  const UI_FIRST_BOOK_LEVEL = 2;
+  const UI_LEVEL_MY_BOOKS = 1;
+  const UI_LEVEL_ALL_BOOKS = 2;
+  const UI_FIRST_BOOK_LEVEL = 3;
   const MAX_UI_LEVEL = UI_FIRST_BOOK_LEVEL + MAX_BOOK_LEVEL - 1;
+  const MY_BOOKS_BADGES = [
+    { key: 'diamante', minPercent: 97, src: '/medalhas/diamante.png', label: 'Diamante' },
+    { key: 'ouro', minPercent: 95, src: '/medalhas/ouro.png', label: 'Ouro' },
+    { key: 'platina', minPercent: 90, src: '/medalhas/platina.png', label: 'Platina' },
+    { key: 'quartz', minPercent: 85, src: '/medalhas/quartz.png', label: 'Quartz' },
+    { key: 'prata', minPercent: 75, src: '/medalhas/prata.png', label: 'Prata' }
+  ];
   const DEFAULT_HOME_REPEAT_INDEX = Math.max(0, HOME_REPEAT_OPTIONS.indexOf(5));
 
   const LISTENING_CHARS_PENDING_KEY = 'playtalk_books_listening_chars_pending_v1';
@@ -606,6 +615,7 @@
     state.stats = stats && typeof stats === 'object'
       ? {
         ...stats,
+        libraryBooks: normalizeLibraryBooks(stats.libraryBooks),
         pronunciationSamplesCount: Math.max(0, Number(stats.pronunciationSamplesCount) || 0),
         generalPronunciationPercent: normalizePrecisePercent(stats.generalPronunciationPercent),
         latestPronunciationPercent: normalizePercent(stats.latestPronunciationPercent)
@@ -613,6 +623,78 @@
       : stats;
     syncPracticeSecondsTotal(state.stats?.practiceSeconds);
     return state.stats;
+  }
+
+  function normalizeLibraryBookEntry(entry) {
+    const bookId = safeText(entry?.bookId || entry?.book_id);
+    if (!bookId) return null;
+    const bestSpeakingPercent = normalizePercent(entry?.bestSpeakingPercent ?? entry?.best_speaking_percent);
+    const bestListeningPercent = normalizePercent(entry?.bestListeningPercent ?? entry?.best_listening_percent);
+    return {
+      bookId,
+      title: safeText(entry?.title || entry?.bookTitle || entry?.book_title),
+      coverImageUrl: safeText(entry?.coverImageUrl || entry?.cover_image_url),
+      backgroundDesktopUrl: safeText(entry?.backgroundDesktopUrl || entry?.background_desktop_url),
+      readsCompleted: Math.max(0, Number(entry?.readsCompleted ?? entry?.reads_completed) || 0),
+      listenedSeconds: Math.max(0, Number(entry?.listenedSeconds ?? entry?.listened_seconds) || 0),
+      bestSpeakingPercent,
+      bestListeningPercent,
+      bestOverallPercent: Math.max(bestSpeakingPercent, bestListeningPercent),
+      updatedAt: safeText(entry?.updatedAt || entry?.updated_at)
+    };
+  }
+
+  function normalizeLibraryBooks(items) {
+    if (!Array.isArray(items)) return [];
+    const byBookId = new Map();
+    items.forEach((item) => {
+      const normalized = normalizeLibraryBookEntry(item);
+      if (!normalized) return;
+      const previous = byBookId.get(normalized.bookId);
+      if (!previous || normalized.bestOverallPercent >= previous.bestOverallPercent) {
+        byBookId.set(normalized.bookId, normalized);
+      }
+    });
+    return Array.from(byBookId.values());
+  }
+
+  function getMyBooksBadge(percent) {
+    const normalizedPercent = normalizePercent(percent);
+    return MY_BOOKS_BADGES.find((badge) => normalizedPercent >= badge.minPercent) || null;
+  }
+
+  function getQualifiedMyBooksMap() {
+    const entries = Array.isArray(state.stats?.libraryBooks) ? state.stats.libraryBooks : [];
+    const qualified = new Map();
+    entries.forEach((entry) => {
+      const badge = getMyBooksBadge(entry?.bestOverallPercent);
+      if (!badge) return;
+      qualified.set(entry.bookId, { ...entry, badge });
+    });
+    return qualified;
+  }
+
+  function getQualifiedMyBooksList() {
+    const qualifiedMap = getQualifiedMyBooksMap();
+    const merged = Array.from(qualifiedMap.values()).map((entry) => {
+      const sourceBook = state.books.find((book) => safeText(book?.bookId) === entry.bookId) || {};
+      return {
+        ...sourceBook,
+        bookId: entry.bookId,
+        nome: safeText(sourceBook?.nome) || safeText(sourceBook?.title) || entry.title || 'Livro',
+        coverImageUrl: safeText(sourceBook?.coverImageUrl) || entry.coverImageUrl,
+        backgroundDesktopUrl: safeText(sourceBook?.backgroundDesktopUrl) || entry.backgroundDesktopUrl,
+        myBooksBadge: entry.badge,
+        myBooksBestPercent: entry.bestOverallPercent,
+        myBooksBestSpeakingPercent: entry.bestSpeakingPercent,
+        myBooksBestListeningPercent: entry.bestListeningPercent
+      };
+    });
+    return merged.sort((left, right) => {
+      const scoreDiff = (Number(right?.myBooksBestPercent) || 0) - (Number(left?.myBooksBestPercent) || 0);
+      if (scoreDiff !== 0) return scoreDiff;
+      return sortByNome(left, right);
+    });
   }
 
   function addPendingPronunciationSample(percent) {
@@ -1340,6 +1422,10 @@
     return normalizeLevel(level) + UI_FIRST_BOOK_LEVEL - 1;
   }
 
+  function isMyBooksLevel(level = state.selectedLevel) {
+    return Number.parseInt(level, 10) === UI_LEVEL_MY_BOOKS;
+  }
+
   function isAllBooksLevel(level = state.selectedLevel) {
     return Number.parseInt(level, 10) === UI_LEVEL_ALL_BOOKS;
   }
@@ -1348,7 +1434,7 @@
     if (state.isAdmin) {
       return Array.from({ length: MAX_UI_LEVEL + 1 }, (_value, index) => index);
     }
-    return [UI_LEVEL_HOME, UI_LEVEL_ALL_BOOKS];
+    return [UI_LEVEL_HOME, UI_LEVEL_MY_BOOKS, UI_LEVEL_ALL_BOOKS];
   }
 
   function shuffleBooks(list) {
@@ -1363,7 +1449,11 @@
   }
 
   function getAllBooksFeed() {
-    const sourceBooks = state.books.slice().sort(sortByNome);
+    const qualifiedMap = getQualifiedMyBooksMap();
+    const sourceBooks = state.books
+      .filter((book) => !qualifiedMap.has(safeText(book?.bookId)))
+      .slice()
+      .sort(sortByNome);
     if (!sourceBooks.length) {
       state.allBooksFeed = [];
       state.allBooksFeedVersion = '';
@@ -1428,6 +1518,9 @@
   }
 
   function getBooksForSelectedLevel() {
+    if (isMyBooksLevel()) {
+      return getQualifiedMyBooksList();
+    }
     if (isAllBooksLevel()) {
       return getAllBooksWindow();
     }
@@ -3625,6 +3718,9 @@
       .sort(sortByNome);
     const cardsList = books.concat(pendingBooks);
     els.cardsGrid.innerHTML = '';
+    els.cardsEmpty.textContent = isMyBooksLevel()
+      ? 'Nenhum book entrou no MyBooks ainda.'
+      : 'Nenhum arquivo neste nivel.';
     els.cardsEmpty.hidden = cardsList.length > 0;
     if (!cardsList.length) {
       state.shelfIndex = 0;
@@ -3717,8 +3813,20 @@
         : 'Gerando...';
       processingOverlay.innerHTML = `<span class="books-card__spinner" aria-hidden="true"></span><span class="books-card__processing-label">${escapeHtml(processingLabel)}</span>`;
 
+      const myBooksBadge = book?.myBooksBadge || null;
+      const badgeWrap = document.createElement('span');
+      badgeWrap.className = 'books-card__badge';
+      badgeWrap.hidden = !myBooksBadge;
+      if (myBooksBadge) {
+        const badgeImage = document.createElement('img');
+        badgeImage.className = 'books-card__badge-image';
+        badgeImage.src = myBooksBadge.src;
+        badgeImage.alt = `Selo ${myBooksBadge.label}`;
+        badgeWrap.appendChild(badgeImage);
+      }
+
       actions.append(uploadBtn, magicBtn, textBtn);
-      card.append(background, overlay, adminChip, actions, processingOverlay);
+      card.append(background, overlay, adminChip, actions, processingOverlay, badgeWrap);
       card.addEventListener('click', () => {
         if ((Date.now() - state.shelfLastGestureAt) < 240) return;
         if (state.uploadInFlight || processingMagic || pendingCreate) return;
@@ -3737,6 +3845,7 @@
     const parsed = Number.parseInt(level, 10);
     if (!Number.isFinite(parsed)) return 'Home';
     if (parsed === UI_LEVEL_HOME) return 'Home';
+    if (parsed === UI_LEVEL_MY_BOOKS) return 'MyBooks';
     if (parsed === UI_LEVEL_ALL_BOOKS) return 'Books';
     const bookLevel = uiLevelToBookLevel(parsed);
     if (!bookLevel) return `Nivel ${parsed}`;
@@ -4824,6 +4933,12 @@
 
     const completionPayload = await completionPromise;
     if (token !== state.readerFinishToken || !state.readerOpen) return;
+    setStatsState({ ...(state.stats || {}), ...(completionPayload?.stats || {}) });
+    if (state.user?.id) {
+      await refreshStatsFromServer();
+      renderLevelMenu();
+      renderCards();
+    }
 
     const savedBookRead = Math.max(0, Number(completionPayload?.stats?.bookReadCount) || 0);
     const savedGeneralPronunciation = normalizeReaderPercent(
@@ -4872,6 +4987,12 @@
 
     const completionPayload = await completionPromise;
     if (token !== state.readerFinishToken || !state.readerOpen) return;
+    setStatsState({ ...(state.stats || {}), ...(completionPayload?.stats || {}) });
+    if (state.user?.id) {
+      await refreshStatsFromServer();
+      renderLevelMenu();
+      renderCards();
+    }
 
     const savedBookRead = Math.max(0, Number(completionPayload?.stats?.bookReadCount) || 0);
     if (savedBookRead > 0) {
