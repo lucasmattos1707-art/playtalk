@@ -5046,6 +5046,13 @@ function computeBotPronunciationPercent(botConfig, sessionId, cardIndex) {
   );
 }
 
+function buildBotPronunciationSamples(botConfig, sessionId, totalCards) {
+  const count = Math.max(0, Number(totalCards) || 0);
+  return Array.from({ length: count }, (_, index) => (
+    computeBotPronunciationPercent(botConfig, sessionId, index)
+  ));
+}
+
 function buildBotProgressSnapshot(session, botUserId, botConfig) {
   const cards = Array.isArray(session?.cards) ? session.cards : [];
   const totalCards = Math.max(1, cards.length || SPEAKING_DUEL_DEFAULT_CARDS);
@@ -5062,17 +5069,20 @@ function buildBotProgressSnapshot(session, botUserId, botConfig) {
 
   let accumulatedMs = 0;
   let completed = 0;
-  let sumPercent = 0;
+  const pronunciationSamples = buildBotPronunciationSamples(botConfig, session.id || botUserId, totalCards);
   for (let index = 0; index < totalCards; index += 1) {
     accumulatedMs += computeBotResponseSeconds(botConfig, session.id || botUserId, index) * 1000;
     if (elapsedMs < accumulatedMs) break;
     completed += 1;
-    sumPercent += computeBotPronunciationPercent(botConfig, session.id || botUserId, index);
   }
 
   const progress = Math.min(totalCards, completed);
   const finished = progress >= totalCards;
-  const percent = progress > 0 ? Math.round(sumPercent / progress) : 0;
+  const activeSamples = progress > 0 ? pronunciationSamples.slice(0, progress) : [];
+  const sumPercent = activeSamples.reduce((total, sample) => total + sample, 0);
+  const percent = progress > 0
+    ? Math.round(getBooksPronunciationPercentFromAggregate(sumPercent, activeSamples.length))
+    : 0;
   return { progress, percent, finished };
 }
 

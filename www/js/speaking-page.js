@@ -1887,6 +1887,7 @@
 
   function startDuelLoops() {
     stopDuelLoops();
+    void pollDuelSession();
     state.duel.pollTimer = window.setInterval(() => {
       void pollDuelSession();
     }, DUEL_POLL_MS);
