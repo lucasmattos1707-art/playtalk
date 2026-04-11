@@ -1793,6 +1793,16 @@
     .books-create-line {
       display: block;
       min-height: 1.55em;
+      opacity: 1;
+      transition: opacity 160ms ease;
+    }
+
+    .books-create-card.is-edit-mode .books-create-line.is-muted {
+      opacity: 0.7;
+    }
+
+    .books-create-card.is-edit-mode .books-create-line.is-edited {
+      opacity: 1;
     }
 
     .books-create-line--title {
@@ -3254,8 +3264,8 @@
   </section>
 
   <section class="books-magic-modal" id="booksCreateModal" aria-label="Criar livro por linhas">
-    <div class="books-magic-card books-create-card">
-      <h2 class="books-magic-title">Criar livro por linhas</h2>
+    <div class="books-magic-card books-create-card" id="booksCreateCard">
+      <h2 class="books-magic-title" id="booksCreateModalTitle">Criar livro por linhas</h2>
       <div class="books-create-toolbar">
         <label class="books-create-control">
           <span class="books-create-control-label">Voz dos audios</span>
@@ -3269,11 +3279,11 @@
             <option value="elevenlabs:burt-raynalds">ElevenLabs - Burt Raynalds</option>
           </select>
         </label>
-        <label class="books-create-control">
+        <label class="books-create-control" id="booksCreateIdeaControl">
           <span class="books-create-control-label">Tema para escrever</span>
           <input class="books-create-control-input" id="booksCreateIdeaInput" type="text" placeholder="Ex.: amizade no colegio, comedia leve">
         </label>
-        <label class="books-create-control">
+        <label class="books-create-control" id="booksCreateCharsControl">
           <span class="books-create-control-label">Caracteres (0-1500)</span>
           <input class="books-create-control-input" id="booksCreateCharsInput" type="number" min="0" max="1500" value="900">
         </label>

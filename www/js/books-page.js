@@ -15,6 +15,8 @@
   const CREATE_MIN_LINES = 7;
   const CREATE_MAX_PHRASE_PAIRS = 120;
   const CREATE_JOBS_POLL_MS = 2200;
+  const CREATE_EDIT_COVER_SENTINEL = 'Capa';
+  const CREATE_EDIT_BACKGROUND_SENTINEL = 'Background';
   const READER_FINISH_DISSOLVE_MS = 500;
   const READER_FINISH_BOOK_ENTER_MS = 500;
   const READER_FINISH_LINE_STEP_MS = 1000;
@@ -153,11 +155,15 @@
     jsonSaveBtn: document.getElementById('booksJsonSaveBtn'),
     jsonCloseBtn: document.getElementById('booksJsonCloseBtn'),
     createModal: document.getElementById('booksCreateModal'),
+    createCard: document.getElementById('booksCreateCard'),
+    createModalTitle: document.getElementById('booksCreateModalTitle'),
     createEditor: document.getElementById('booksCreateEditor'),
     createPreview: document.getElementById('booksCreatePreview'),
     createInput: document.getElementById('booksCreateInput'),
     createVoiceSelect: document.getElementById('booksCreateVoiceSelect'),
+    createIdeaControl: document.getElementById('booksCreateIdeaControl'),
     createIdeaInput: document.getElementById('booksCreateIdeaInput'),
+    createCharsControl: document.getElementById('booksCreateCharsControl'),
     createCharsInput: document.getElementById('booksCreateCharsInput'),
     createWriteBtn: document.getElementById('booksCreateWriteBtn'),
     createSubmitBtn: document.getElementById('booksCreateSubmitBtn'),
@@ -226,6 +232,9 @@
     magicProcessingBookIds: new Set(),
     jsonBookId: '',
     createModalOpen: false,
+    createMode: 'create',
+    createEditBookId: '',
+    createOriginalLines: [],
     createBusy: false,
     createWriteBusy: false,
     createJobs: [],
@@ -838,6 +847,31 @@
       .split('\n');
   }
 
+  function isCreateEditMode() {
+    return state.createMode === 'edit';
+  }
+
+  function normalizeCreateComparableLine(value) {
+    return String(value || '').replace(/\s+$/g, '');
+  }
+
+  function doesCreateLineRequestAudio(value) {
+    return String(value || '').includes('@');
+  }
+
+  function isCreateLineEdited(line, index) {
+    if (!isCreateEditMode()) return true;
+    const originalLine = Array.isArray(state.createOriginalLines) ? state.createOriginalLines[index] : '';
+    return normalizeCreateComparableLine(line) !== normalizeCreateComparableLine(originalLine)
+      || doesCreateLineRequestAudio(line);
+  }
+
+  function resetCreateModalState(mode) {
+    state.createMode = mode === 'edit' ? 'edit' : 'create';
+    state.createEditBookId = '';
+    state.createOriginalLines = [];
+  }
+
   function getCreateLineClassName(index) {
     if (index === 0) return 'books-create-line--title';
     if (index === 1) return 'books-create-line--level';
@@ -853,13 +887,19 @@
     const html = lines
       .map((line, index) => {
         const className = getCreateLineClassName(index);
+        const opacityClass = isCreateEditMode()
+          ? (isCreateLineEdited(line, index) ? ' is-edited' : ' is-muted')
+          : '';
         const content = line.length ? escapeHtml(line) : '&nbsp;';
-        return `<span class="books-create-line ${className}">${content}</span>`;
+        return `<span class="books-create-line ${className}${opacityClass}">${content}</span>`;
       })
       .join('');
     els.createPreview.innerHTML = html;
     if (els.createEditor) {
       els.createEditor.classList.toggle('is-empty', !safeText(rawText));
+    }
+    if (els.createCard) {
+      els.createCard.classList.toggle('is-edit-mode', isCreateEditMode());
     }
   }
 
@@ -3019,28 +3059,75 @@
     }
   }
 
-  function openJsonModal(book) {
-    if (!state.isAdmin || !els.jsonModal || !book) return;
+  async function openEditBookModal(book) {
+    if (!state.isAdmin || !book) return;
     const bookId = safeText(book.bookId);
-    if (!bookId) return;
+    if (!bookId || !els.createModal) return;
     if (isBookProcessingMagic(bookId)) {
       setStatus('Esse livro esta processando. Aguarde terminar.', null);
       return;
     }
-    state.jsonBookId = bookId;
-    if (els.jsonTitle) {
-      els.jsonTitle.textContent = `Salvar JSON: ${safeText(book.nome) || 'Livro'}`;
+    setStatus('Carregando linhas do livro para editar...', null);
+    try {
+      const response = await fetch(buildApiUrl(`/api/admin/minibooks/edit-lines?bookId=${encodeURIComponent(bookId)}`), {
+        credentials: 'include',
+        headers: buildAuthHeaders(),
+        cache: 'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error || payload?.message || 'Nao foi possivel carregar o editor desse livro.');
+      }
+      resetCreateModalState('edit');
+      state.createEditBookId = bookId;
+      state.createOriginalLines = splitCreateInputRawLines(payload?.linesText || '');
+      if (els.createInput) {
+        els.createInput.value = String(payload?.linesText || '');
+      }
+      if (els.createVoiceSelect && safeText(payload?.voice)) {
+        els.createVoiceSelect.value = safeText(payload.voice);
+      }
+      if (els.createIdeaInput) {
+        els.createIdeaInput.value = '';
+      }
+      if (els.createCharsInput) {
+        els.createCharsInput.value = '900';
+      }
+      openCreateModal();
+      setStatus(`Editor aberto para "${safeText(payload?.book?.title || book?.nome) || 'Livro'}".`, 'success');
+    } catch (error) {
+      setStatus(error?.message || 'Falha ao abrir editor do livro.', 'error');
     }
-    if (els.jsonInput) {
-      els.jsonInput.value = '';
-    }
-    els.jsonModal.classList.add('is-visible');
   }
 
   function closeJsonModal() {
     state.jsonBookId = '';
     if (els.jsonModal) {
       els.jsonModal.classList.remove('is-visible');
+    }
+  }
+
+  function renderCreateModalMode() {
+    const isEditMode = isCreateEditMode();
+    if (els.createModalTitle) {
+      els.createModalTitle.textContent = isEditMode ? 'Editar livro por linhas' : 'Criar livro por linhas';
+    }
+    if (els.createIdeaControl) {
+      els.createIdeaControl.hidden = isEditMode;
+    }
+    if (els.createCharsControl) {
+      els.createCharsControl.hidden = isEditMode;
+    }
+    if (els.createWriteBtn) {
+      els.createWriteBtn.hidden = isEditMode;
+    }
+    if (els.createSubmitBtn) {
+      els.createSubmitBtn.textContent = isEditMode ? 'Atualizar livro' : 'Criar livro';
+    }
+    if (els.createInput) {
+      els.createInput.placeholder = isEditMode
+        ? `Titulo do livro\nNivel (1-10)\nstory_1\n${CREATE_EDIT_COVER_SENTINEL}\n${CREATE_EDIT_BACKGROUND_SENTINEL}\nFrase 1 em portugues\nSentence 1 in english`
+        : 'Titulo do livro\nNivel (1-10)\nstory_1\nPrompt capa 9:16\nPrompt background 16:9\nFrase 1 em portugues\nSentence 1 in english';
     }
   }
 
@@ -3066,7 +3153,7 @@
       els.createCharsInput.disabled = lockAll;
     }
     if (els.createWriteBtn) {
-      els.createWriteBtn.disabled = lockAll;
+      els.createWriteBtn.disabled = lockAll || isCreateEditMode();
       els.createWriteBtn.textContent = state.createWriteBusy ? 'Escrevendo...' : 'Escrever livro';
     }
     if (els.createBookBtn) {
@@ -3083,6 +3170,7 @@
   function openCreateModal() {
     if (!state.isAdmin || !els.createModal) return;
     state.createModalOpen = true;
+    renderCreateModalMode();
     renderCreateInputPreview();
     syncCreatePreviewScroll();
     setCreateBusy(state.createBusy);
@@ -3137,6 +3225,7 @@
 
   function closeCreateModal() {
     state.createModalOpen = false;
+    resetCreateModalState('create');
     if (els.createModal) {
       els.createModal.classList.remove('is-visible');
     }
@@ -3304,6 +3393,63 @@
       setStatus(`Criacao de "${queuedTitle}" em andamento. ${progressLabel}`, 'success');
     } catch (error) {
       setStatus(error?.message || 'Falha ao criar livro por linhas.', 'error');
+    } finally {
+      setCreateBusy(false);
+    }
+  }
+
+  function hasCreateEditsPending() {
+    if (!isCreateEditMode()) return false;
+    const lines = splitCreateInputRawLines(String(els.createInput?.value || ''));
+    const maxLines = Math.max(lines.length, state.createOriginalLines.length);
+    for (let index = 0; index < maxLines; index += 1) {
+      if (isCreateLineEdited(lines[index] || '', index)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async function updateBookFromLines() {
+    if (!state.isAdmin || state.createBusy || state.createWriteBusy) return;
+    const rawText = String(els.createInput?.value || '');
+    const selectedVoice = safeText(els.createVoiceSelect?.value || 'openai:fable').toLowerCase();
+    const targetBookId = safeText(state.createEditBookId);
+    if (!targetBookId) {
+      setStatus('Livro alvo da edicao nao encontrado.', 'error');
+      return;
+    }
+    if (!hasCreateEditsPending()) {
+      closeCreateModal();
+      setStatus('Nenhuma linha foi editada. Livro mantido como estava.', null);
+      return;
+    }
+
+    let parsedInput = null;
+    try {
+      parsedInput = parseCreateInputForSubmission(rawText);
+    } catch (error) {
+      setStatus(error?.message || 'Formato invalido para atualizar livro.', 'error');
+      return;
+    }
+
+    closeCreateModal();
+    setCreateBusy(true);
+    setStatus(`Atualizando "${parsedInput.title}"...`, null);
+
+    try {
+      const payload = await postJsonWithSuccess('/api/admin/minibooks/update-from-lines', {
+        bookId: targetBookId,
+        linesText: rawText,
+        voice: selectedVoice
+      }, 'Nao foi possivel atualizar o livro.');
+      state.selectedLevel = bookLevelToUiLevel(payload?.book?.level || parsedInput.level);
+      state.books = await fetchStories();
+      renderLevelMenu();
+      renderCards();
+      setStatus(payload?.message || `Livro "${parsedInput.title}" atualizado.`, 'success');
+    } catch (error) {
+      setStatus(error?.message || 'Falha ao atualizar livro por linhas.', 'error');
     } finally {
       setCreateBusy(false);
     }
@@ -3777,18 +3923,14 @@
       const textBtn = document.createElement('button');
       textBtn.type = 'button';
       textBtn.className = 'books-card__text-btn';
-      textBtn.setAttribute('aria-label', `Salvar JSON de ${safeText(book?.nome) || 'livro'}`);
-      textBtn.title = 'Salvar JSON';
-      textBtn.textContent = 'JSON';
-      textBtn.style.fontSize = '9px';
-      textBtn.style.fontWeight = '800';
-      textBtn.style.letterSpacing = '0.06em';
-      textBtn.style.background = 'rgba(9, 36, 70, 0.9)';
+      textBtn.setAttribute('aria-label', `Editar ${safeText(book?.nome) || 'livro'}`);
+      textBtn.title = 'Editar livro';
+      textBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a1.003 1.003 0 0 0 0-1.42L18.37 3.29a1.003 1.003 0 0 0-1.42 0L15.12 5.12l3.75 3.75z"/></svg>';
       textBtn.disabled = processingMagic || pendingCreate;
       textBtn.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
-        openJsonModal(book);
+        void openEditBookModal(book);
       });
 
       const processingOverlay = document.createElement('span');
@@ -5435,6 +5577,16 @@
     });
 
     els.createBookBtn?.addEventListener('click', () => {
+      resetCreateModalState('create');
+      if (els.createInput) {
+        els.createInput.value = '';
+      }
+      if (els.createIdeaInput) {
+        els.createIdeaInput.value = '';
+      }
+      if (els.createCharsInput) {
+        els.createCharsInput.value = '900';
+      }
       openCreateModal();
     });
 
@@ -5546,7 +5698,11 @@
     els.homeShell?.addEventListener('wheel', handleHomeWheel, { passive: false });
 
     els.createSubmitBtn?.addEventListener('click', () => {
-      void createBookFromLines();
+      if (isCreateEditMode()) {
+        void updateBookFromLines();
+      } else {
+        void createBookFromLines();
+      }
     });
 
     els.createWriteBtn?.addEventListener('click', () => {

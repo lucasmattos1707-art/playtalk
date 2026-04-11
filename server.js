@@ -4677,25 +4677,27 @@ async function loadMiniBookJsonOverrides() {
 
 async function loadEditableMiniBookSource(bookId) {
   const normalizedBookId = normalizeMiniBookId(bookId);
-  if (!normalizedBookId || !pool) return null;
+  if (!normalizedBookId) return null;
 
-  await ensureMiniBookJsonTables();
-  const overrideResult = await pool.query(
-    `SELECT book_id, file_name, title, level, payload
-     FROM public.minibook_json_content
-     WHERE book_id = $1
-     LIMIT 1`,
-    [normalizedBookId]
-  );
-  const overrideRow = overrideResult.rows[0] || null;
-  if (overrideRow?.payload && typeof overrideRow.payload === 'object' && !Array.isArray(overrideRow.payload)) {
-    return {
-      bookId: normalizedBookId,
-      fileName: normalizeMiniBookText(overrideRow.file_name, `${normalizedBookId}.json`),
-      title: normalizeMiniBookText(overrideRow.title, normalizedBookId),
-      level: normalizeSpeakingStoryLevel(overrideRow.level),
-      payload: overrideRow.payload
-    };
+  if (pool) {
+    await ensureMiniBookJsonTables();
+    const overrideResult = await pool.query(
+      `SELECT book_id, file_name, title, level, payload
+       FROM public.minibook_json_content
+       WHERE book_id = $1
+       LIMIT 1`,
+      [normalizedBookId]
+    );
+    const overrideRow = overrideResult.rows[0] || null;
+    if (overrideRow?.payload && typeof overrideRow.payload === 'object' && !Array.isArray(overrideRow.payload)) {
+      return {
+        bookId: normalizedBookId,
+        fileName: normalizeMiniBookText(overrideRow.file_name, `${normalizedBookId}.json`),
+        title: normalizeMiniBookText(overrideRow.title, normalizedBookId),
+        level: normalizeSpeakingStoryLevel(overrideRow.level),
+        payload: overrideRow.payload
+      };
+    }
   }
 
   for (const root of BATTLE_STORIES_ROOT_CANDIDATES) {
@@ -6608,6 +6610,124 @@ function parseMiniBookCreateLines(linesText) {
   };
 }
 
+function stripMiniBookAudioRefreshMarker(value) {
+  return String(value || '').replace(/@/g, '');
+}
+
+function parseMiniBookUpdateLines(linesText, options = {}) {
+  const lines = String(linesText || '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => String(line || '').trim())
+    .filter(Boolean);
+
+  if (lines.length < 7) {
+    const error = new Error('Preencha pelo menos 7 linhas para atualizar o livro.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const title = normalizeMiniBookText(lines[0]);
+  const level = parseMiniBookLevelFromCreateLine(lines[1]);
+  const tag = normalizeMiniBookText(lines[2], 'story_1');
+  const coverLine = normalizeMiniBookText(lines[3]);
+  const backgroundLine = normalizeMiniBookText(lines[4]);
+  const phraseLines = lines.slice(5);
+  const currentCards = Array.isArray(options.currentCards) ? options.currentCards : [];
+
+  if (!title) {
+    const error = new Error('Linha 1 (titulo) obrigatoria.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!level) {
+    const error = new Error('Linha 2 precisa de nivel valido (1-10 ou nome do nivel).');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!tag) {
+    const error = new Error('Linha 3 (tag) obrigatoria.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (phraseLines.length < 2) {
+    const error = new Error('Informe pelo menos um par portugues/ingles a partir da linha 6.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if ((phraseLines.length % 2) !== 0) {
+    const error = new Error('As frases devem estar em pares: portugues e ingles.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const coverPromptChanged = normalizeMiniBookComparableText(coverLine) !== normalizeMiniBookComparableText('Capa');
+  const backgroundPromptChanged = normalizeMiniBookComparableText(backgroundLine) !== normalizeMiniBookComparableText('Background');
+  const coverPrompt = coverPromptChanged
+    ? normalizeMiniBookText(coverLine)
+    : normalizeMiniBookText(options.coverPrompt);
+  const backgroundPrompt = backgroundPromptChanged
+    ? normalizeMiniBookText(backgroundLine)
+    : normalizeMiniBookText(options.backgroundPrompt);
+
+  if (coverPromptChanged && !coverPrompt) {
+    const error = new Error('Se editar a linha 4, envie um prompt valido para a capa.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (backgroundPromptChanged && !backgroundPrompt) {
+    const error = new Error('Se editar a linha 5, envie um prompt valido para o background.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const pairsCount = phraseLines.length / 2;
+  if (pairsCount > 120) {
+    const error = new Error('Limite de 120 pares de frases por atualizacao.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const cards = [];
+  for (let index = 0; index < phraseLines.length; index += 2) {
+    const rawPortugueseLine = String(phraseLines[index] || '').trim();
+    const rawEnglishLine = String(phraseLines[index + 1] || '').trim();
+    const shouldRegenerateAudio = rawPortugueseLine.includes('@') || rawEnglishLine.includes('@');
+    const portuguese = normalizeMiniBookText(stripMiniBookAudioRefreshMarker(rawPortugueseLine));
+    const cleanEnglishLine = String(stripMiniBookAudioRefreshMarker(rawEnglishLine)).trim();
+    const highlight = cleanEnglishLine.startsWith('#');
+    const english = normalizeMiniBookText(highlight ? cleanEnglishLine.slice(1) : cleanEnglishLine);
+    if (!portuguese || !english) continue;
+    cards.push({
+      pt: portuguese,
+      en: english,
+      audio: normalizeMiniBookText(currentCards[index / 2]?.audio),
+      highlight,
+      regenerateAudio: shouldRegenerateAudio
+    });
+  }
+
+  if (!cards.length) {
+    const error = new Error('Nenhum par valido de frases foi encontrado.');
+    error.statusCode = 422;
+    throw error;
+  }
+
+  return {
+    title,
+    level,
+    tag,
+    storyKey: safeGeneratedBase(tag, 'story_1'),
+    coverPrompt,
+    backgroundPrompt,
+    coverPromptChanged,
+    backgroundPromptChanged,
+    cards,
+    bookId: normalizeMiniBookId(options.bookId || title),
+    fileName: normalizeMiniBookText(options.fileName, `${normalizeMiniBookId(options.bookId || title)}.json`)
+  };
+}
+
 async function generateMiniBookSpeechWithOpenAi(text, options = {}) {
   const input = String(text || '').trim();
   if (!input) {
@@ -6869,6 +6989,61 @@ function buildMiniBookJsonPayloadFromCreateInput(createInput) {
     highlight: Boolean(card.highlight)
   }));
   return payload;
+}
+
+function buildMiniBookJsonPayloadFromUpdatedInput(source, updateInput) {
+  const sourcePayload = source?.payload && typeof source.payload === 'object' && !Array.isArray(source.payload)
+    ? source.payload
+    : {};
+  const nextPayload = {
+    ...sourcePayload,
+    bookId: source.bookId,
+    fileName: source.fileName,
+    nome: updateInput.title,
+    title: updateInput.title,
+    nivel: updateInput.level,
+    level: updateInput.level,
+    tag: updateInput.tag,
+    prompts: {
+      ...(sourcePayload.prompts && typeof sourcePayload.prompts === 'object' && !Array.isArray(sourcePayload.prompts)
+        ? sourcePayload.prompts
+        : {}),
+      cover: updateInput.coverPrompt,
+      background: updateInput.backgroundPrompt
+    }
+  };
+
+  const parsedSource = buildMiniBookStoriesFromJsonPayload(sourcePayload, {
+    bookId: source.bookId,
+    fileName: source.fileName,
+    bookTitle: source.title,
+    level: source.level
+  });
+  parsedSource.stories.forEach((story) => {
+    delete nextPayload[story.storyKey];
+  });
+
+  const nextItems = updateInput.cards.map((card) => ({
+    pt: card.pt,
+    en: card.en,
+    audio: normalizeMiniBookText(card.audio),
+    highlight: Boolean(card.highlight)
+  }));
+
+  if (Array.isArray(sourcePayload.stories)) {
+    nextPayload.stories = [{
+      storyKey: updateInput.storyKey,
+      cards: nextItems
+    }];
+  } else if (sourcePayload.stories && typeof sourcePayload.stories === 'object' && !Array.isArray(sourcePayload.stories)) {
+    nextPayload.stories = {
+      [updateInput.storyKey]: nextItems
+    };
+  } else {
+    nextPayload[updateInput.storyKey] = nextItems;
+  }
+
+  return nextPayload;
 }
 
 function sortFluencyObjectKeys(left, right) {
@@ -7395,6 +7570,69 @@ async function uploadUserAvatarToR2(user, imageDataUrl, label = 'avatar') {
   const objectKey = `${usernameFolder}/${safeGeneratedBase(label, 'avatar')}-${Date.now()}.${extension}`;
   await putR2Object(objectKey, parsedImage.buffer, contentType);
   return buildFlashcardsR2PublicUrl(objectKey);
+}
+
+function buildMiniBookEditorLinesPayload(source, manifestEntry = {}) {
+  if (!source?.payload || typeof source.payload !== 'object' || Array.isArray(source.payload)) {
+    return null;
+  }
+
+  const parsed = buildMiniBookStoriesFromJsonPayload(source.payload, {
+    bookId: source.bookId,
+    fileName: source.fileName,
+    bookTitle: source.title,
+    level: source.level
+  });
+  const primaryStory = Array.isArray(parsed.stories) ? parsed.stories[0] : null;
+  if (!primaryStory || !Array.isArray(primaryStory.cards) || !primaryStory.cards.length) {
+    return null;
+  }
+
+  const rawPrompts = source.payload?.prompts && typeof source.payload.prompts === 'object' && !Array.isArray(source.payload.prompts)
+    ? source.payload.prompts
+    : {};
+  const title = normalizeMiniBookText(source.payload?.nome || source.payload?.title, source.title);
+  const level = normalizeSpeakingStoryLevel(source.payload?.nivel ?? source.payload?.level ?? source.level);
+  const tag = normalizeMiniBookText(source.payload?.tag || primaryStory.storyKey, 'story_1');
+  const coverPrompt = normalizeMiniBookText(
+    rawPrompts.cover || source.payload?.coverPrompt || manifestEntry?.coverPrompt,
+    ''
+  );
+  const backgroundPrompt = normalizeMiniBookText(
+    rawPrompts.background || source.payload?.backgroundPrompt || manifestEntry?.backgroundPrompt,
+    ''
+  );
+
+  const lines = [
+    title,
+    String(level),
+    tag,
+    'Capa',
+    'Background'
+  ];
+  primaryStory.cards.forEach((card) => {
+    const portuguese = normalizeMiniBookText(card?.portuguese || card?.pt);
+    const english = normalizeMiniBookText(card?.english || card?.en);
+    if (!portuguese || !english) return;
+    lines.push(portuguese, `${card?.highlight ? '#' : ''}${english}`);
+  });
+
+  return {
+    bookId: source.bookId,
+    fileName: source.fileName,
+    title,
+    level,
+    storyKey: tag,
+    coverPrompt,
+    backgroundPrompt,
+    cards: primaryStory.cards.map((card) => ({
+      pt: normalizeMiniBookText(card?.portuguese || card?.pt),
+      en: normalizeMiniBookText(card?.english || card?.en),
+      audio: normalizeMiniBookText(card?.audio || card?.audioUrl),
+      highlight: Boolean(card?.highlight)
+    })),
+    linesText: lines.join('\n')
+  };
 }
 
 async function generateAvatarCartoonWithOpenAI({
@@ -10124,6 +10362,55 @@ app.post('/api/admin/minibooks/save-json', express.json({ limit: '6mb' }), async
   }
 });
 
+app.get('/api/admin/minibooks/edit-lines', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  try {
+    const bookId = normalizeMiniBookId(req.query?.bookId || '');
+    if (!bookId) {
+      res.status(400).json({ error: 'bookId obrigatorio para abrir o editor.' });
+      return;
+    }
+
+    const source = await loadEditableMiniBookSource(bookId);
+    if (!source?.payload) {
+      res.status(404).json({ error: 'Livro nao encontrado para edicao.' });
+      return;
+    }
+
+    const manifest = await loadMiniBooksManifest().catch(() => createDefaultMiniBooksManifest());
+    const manifestEntry = normalizeMiniBookEntry(bookId, manifest?.books?.[bookId] || {});
+    const editorPayload = buildMiniBookEditorLinesPayload(source, manifestEntry);
+    if (!editorPayload?.linesText) {
+      res.status(422).json({ error: 'Nao foi possivel montar as linhas desse livro para edicao.' });
+      return;
+    }
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      success: true,
+      book: {
+        id: source.bookId,
+        title: editorPayload.title,
+        level: editorPayload.level
+      },
+      linesText: editorPayload.linesText,
+      voice: 'openai:fable'
+    });
+  } catch (error) {
+    res.status(Number(error?.statusCode || 500)).json({
+      error: error.message || 'Falha ao abrir o editor do MiniBook.',
+      details: error.details || null
+    });
+  }
+});
+
 app.post('/api/admin/minibooks/write-lines', express.json({ limit: '2mb' }), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -10583,6 +10870,181 @@ app.post('/api/admin/minibooks/create-from-lines', express.json({ limit: '4mb' }
     const statusCode = Number(error?.statusCode || 500);
     res.status(statusCode).json({
       error: error.message || 'Falha ao criar MiniBook por linhas.',
+      details: error.details || null,
+      instructions: error.instructions || null
+    });
+  }
+});
+
+app.post('/api/admin/minibooks/update-from-lines', express.json({ limit: '4mb' }), async (req, res) => {
+  let adminUser = null;
+  try {
+    adminUser = await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  if (!pool) {
+    res.status(503).json({ error: 'DATABASE_URL nao configurada.' });
+    return;
+  }
+
+  try {
+    const bookId = normalizeMiniBookId(req.body?.bookId || '');
+    if (!bookId) {
+      res.status(400).json({ error: 'bookId obrigatorio para atualizar o livro.' });
+      return;
+    }
+
+    const source = await loadEditableMiniBookSource(bookId);
+    if (!source?.payload) {
+      res.status(404).json({ error: 'Livro nao encontrado para atualizacao.' });
+      return;
+    }
+
+    const manifest = await loadMiniBooksManifest().catch(() => createDefaultMiniBooksManifest());
+    const previousEntry = normalizeMiniBookEntry(bookId, manifest?.books?.[bookId] || {});
+    const editorPayload = buildMiniBookEditorLinesPayload(source, previousEntry);
+    if (!editorPayload) {
+      res.status(422).json({ error: 'Nao foi possivel ler o livro atual para edicao.' });
+      return;
+    }
+
+    const updateInput = parseMiniBookUpdateLines(req.body?.linesText || req.body?.text || '', {
+      bookId: source.bookId,
+      fileName: source.fileName,
+      coverPrompt: editorPayload.coverPrompt,
+      backgroundPrompt: editorPayload.backgroundPrompt,
+      currentCards: editorPayload.cards
+    });
+    const audioSelection = parseMiniBookAudioSelection(req.body?.voice);
+    const shouldUpdateImages = updateInput.coverPromptChanged || updateInput.backgroundPromptChanged;
+    const shouldUpdateAudio = updateInput.cards.some((card) => card.regenerateAudio);
+    if ((shouldUpdateImages || shouldUpdateAudio) && !isR2FluencyConfigured()) {
+      res.status(503).json({ error: 'R2 nao configurado para atualizar imagens ou audios do MiniBook.' });
+      return;
+    }
+
+    const cacheBuster = Date.now();
+    if (shouldUpdateAudio) {
+      for (let index = 0; index < updateInput.cards.length; index += 1) {
+        const card = updateInput.cards[index];
+        if (!card.regenerateAudio) continue;
+        const generatedAudio = audioSelection.provider === 'elevenlabs'
+          ? await generateMiniBookSpeechWithElevenLabs(card.en, { languageCode: 'en', voice: audioSelection.voice })
+          : await generateMiniBookSpeechWithOpenAi(card.en, { voice: audioSelection.voice });
+        const audioObjectKey = buildMiniBookAudioObjectKey(source.bookId, index);
+        await putR2Object(audioObjectKey, generatedAudio.buffer, generatedAudio.mimeType || 'audio/mpeg');
+        card.audio = `${buildFlashcardsR2PublicUrl(audioObjectKey)}?v=${cacheBuster}`;
+      }
+    }
+
+    const normalizedPayload = buildMiniBookJsonPayloadFromUpdatedInput(source, updateInput);
+    const parsedMiniBook = buildMiniBookStoriesFromJsonPayload(normalizedPayload, {
+      bookId: source.bookId,
+      fileName: source.fileName,
+      bookTitle: updateInput.title,
+      level: updateInput.level
+    });
+
+    await ensureMiniBookJsonTables();
+    await pool.query(
+      `INSERT INTO public.minibook_json_content (
+         book_id,
+         file_name,
+         title,
+         level,
+         payload,
+         updated_by_user_id,
+         updated_at
+       )
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6, now())
+       ON CONFLICT (book_id)
+       DO UPDATE SET
+         file_name = EXCLUDED.file_name,
+         title = EXCLUDED.title,
+         level = EXCLUDED.level,
+         payload = EXCLUDED.payload,
+         updated_by_user_id = EXCLUDED.updated_by_user_id,
+         updated_at = now()`,
+      [
+        source.bookId,
+        parsedMiniBook.fileName,
+        parsedMiniBook.bookTitle,
+        parsedMiniBook.level,
+        JSON.stringify(normalizedPayload),
+        Number(adminUser?.id) || null
+      ]
+    );
+    invalidateSpeakingCardsCache();
+
+    const nextManifestEntry = normalizeMiniBookEntry(source.bookId, {
+      ...previousEntry,
+      bookId: source.bookId,
+      fileName: parsedMiniBook.fileName,
+      title: parsedMiniBook.bookTitle,
+      level: parsedMiniBook.level,
+      coverPrompt: updateInput.coverPrompt,
+      backgroundPrompt: updateInput.backgroundPrompt,
+      updatedAt: new Date().toISOString()
+    });
+
+    if (updateInput.coverPromptChanged) {
+      const coverGenerated = await generateMiniBookImageWithOpenAi(updateInput.coverPrompt, { size: '1024x1536', quality: 'medium' });
+      const coverBuffer = await optimizeMiniBookAssetToWebp(coverGenerated.buffer, 'cover');
+      const coverObjectKey = buildMiniBookObjectKey(source.bookId, 'cover');
+      await putR2Object(coverObjectKey, coverBuffer, 'image/webp');
+      nextManifestEntry.coverObjectKey = coverObjectKey;
+      nextManifestEntry.coverImageUrl = `${buildFlashcardsR2PublicUrl(coverObjectKey)}?v=${cacheBuster}`;
+    }
+
+    if (updateInput.backgroundPromptChanged) {
+      const [desktopGenerated, mobileGenerated] = await Promise.all([
+        generateMiniBookImageWithOpenAi(updateInput.backgroundPrompt, { size: '1536x1024', quality: 'medium' }),
+        generateMiniBookImageWithOpenAi(updateInput.backgroundPrompt, { size: '1024x1536', quality: 'medium' })
+      ]);
+      const [desktopBuffer, mobileBuffer] = await Promise.all([
+        optimizeMiniBookAssetToWebp(desktopGenerated.buffer, 'background-desktop'),
+        optimizeMiniBookAssetToWebp(mobileGenerated.buffer, 'background-mobile')
+      ]);
+      const desktopObjectKey = buildMiniBookObjectKey(source.bookId, 'background-desktop');
+      const mobileObjectKey = buildMiniBookObjectKey(source.bookId, 'background-mobile');
+      await Promise.all([
+        putR2Object(desktopObjectKey, desktopBuffer, 'image/webp'),
+        putR2Object(mobileObjectKey, mobileBuffer, 'image/webp')
+      ]);
+      nextManifestEntry.backgroundDesktopObjectKey = desktopObjectKey;
+      nextManifestEntry.backgroundDesktopUrl = `${buildFlashcardsR2PublicUrl(desktopObjectKey)}?v=${cacheBuster}`;
+      nextManifestEntry.backgroundMobileObjectKey = mobileObjectKey;
+      nextManifestEntry.backgroundMobileUrl = `${buildFlashcardsR2PublicUrl(mobileObjectKey)}?v=${cacheBuster}`;
+    }
+
+    manifest.books = manifest.books || {};
+    manifest.books[source.bookId] = normalizeMiniBookEntry(source.bookId, nextManifestEntry);
+    manifest.updatedAt = new Date().toISOString();
+    await persistMiniBooksManifest(manifest);
+
+    res.json({
+      success: true,
+      book: {
+        id: source.bookId,
+        title: parsedMiniBook.bookTitle,
+        level: parsedMiniBook.level
+      },
+      updates: {
+        images: shouldUpdateImages,
+        audio: shouldUpdateAudio,
+        cards: updateInput.cards.length
+      },
+      message: shouldUpdateImages || shouldUpdateAudio
+        ? `Livro "${parsedMiniBook.bookTitle}" atualizado com ${shouldUpdateImages ? 'imagens' : 'texto'}${shouldUpdateImages && shouldUpdateAudio ? ' e ' : ''}${shouldUpdateAudio ? 'audio' : ''}.`
+        : `Livro "${parsedMiniBook.bookTitle}" atualizado.`
+    });
+  } catch (error) {
+    res.status(Number(error?.statusCode || 500)).json({
+      error: error.message || 'Falha ao atualizar o MiniBook por linhas.',
       details: error.details || null,
       instructions: error.instructions || null
     });
