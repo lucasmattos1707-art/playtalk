@@ -1754,7 +1754,7 @@ const mapPublicUser = (user) => ({
   created_at: user?.created_at || null,
   is_admin: isAdminUserRecord(user),
   is_bot: isBotUserRecord(user),
-  bot_config: parseBotConfig(user?.bot_config),
+  bot_config: parseBotConfig(user?.bot_config, { fallbackUsername: user?.username || user?.email || '' }),
   bot_avatar_status: String(user?.bot_avatar_status || '').trim() || 'ready',
   bot_avatar_error: String(user?.bot_avatar_error || '').trim(),
   has_password: Boolean(user?.password_hash),
@@ -2163,7 +2163,7 @@ const normalizeBotConfig = (value, options = {}) => {
   };
 };
 
-const parseBotConfig = (value) => {
+const parseBotConfig = (value, options = {}) => {
   if (!value) return null;
   let parsed = value;
   if (typeof value === 'string') {
@@ -2175,6 +2175,13 @@ const parseBotConfig = (value) => {
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
   try {
+    const fallbackUsername = String(options?.fallbackUsername || '').trim();
+    if (fallbackUsername && !String(parsed.username || parsed.name || '').trim()) {
+      parsed = {
+        ...parsed,
+        username: fallbackUsername
+      };
+    }
     return normalizeBotConfig(parsed, { requirePhoto: false });
   } catch (_error) {
     return null;
@@ -2208,7 +2215,7 @@ function computeBotVariance(baseValue, variance, seed) {
 }
 
 function buildBotDerivedStats(user, now = new Date()) {
-  const botConfig = parseBotConfig(user?.bot_config);
+  const botConfig = parseBotConfig(user?.bot_config, { fallbackUsername: user?.username || user?.email || '' });
   if (!isBotUserRecord(user) || !botConfig) {
     return {
       flashcardsCount: normalizeFlashcardsCount(user?.flashcards_count),
@@ -5138,8 +5145,12 @@ async function syncBotStateIntoSpeakingSession(client, session) {
   const usersById = new Map(usersResult.rows.map((row) => [Number(row.id) || 0, row]));
   const challengerUser = usersById.get(challengerUserId);
   const opponentUser = usersById.get(opponentUserId);
-  const challengerBotConfig = isBotUserRecord(challengerUser) ? parseBotConfig(challengerUser?.bot_config) : null;
-  const opponentBotConfig = isBotUserRecord(opponentUser) ? parseBotConfig(opponentUser?.bot_config) : null;
+  const challengerBotConfig = isBotUserRecord(challengerUser)
+    ? parseBotConfig(challengerUser?.bot_config, { fallbackUsername: challengerUser?.username || challengerUser?.email || '' })
+    : null;
+  const opponentBotConfig = isBotUserRecord(opponentUser)
+    ? parseBotConfig(opponentUser?.bot_config, { fallbackUsername: opponentUser?.username || opponentUser?.email || '' })
+    : null;
   if (!challengerBotConfig && !opponentBotConfig) {
     return {
       ...session,
@@ -9578,7 +9589,7 @@ app.get('/api/users/flashcards', async (req, res) => {
         isBot: isBotUserRecord(entry),
         botAvatarStatus: String(entry.bot_avatar_status || '').trim() || 'ready',
         botAvatarError: String(entry.bot_avatar_error || '').trim(),
-        botConfig: parseBotConfig(entry.bot_config),
+        botConfig: parseBotConfig(entry.bot_config, { fallbackUsername: entry.username || '' }),
         rank: Number(entry.rank_position) || 0,
         flashcardsCount: Number(entry.flashcards_count) || 0,
         pronunciationPercent: Number(entry.pronunciation_percent) || 0,
@@ -12325,6 +12336,7 @@ app.post('/api/admin/users/bots', async (req, res) => {
         passwordHash,
         initialAvatar,
         JSON.stringify({
+          username: botConfig.username,
           flashcardsCount: botConfig.flashcardsCount,
           pronunciationBase: botConfig.pronunciationBase,
           flashcardsPerHour: botConfig.flashcardsPerHour,
