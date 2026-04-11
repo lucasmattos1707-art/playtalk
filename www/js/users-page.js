@@ -2,6 +2,8 @@
   const GUEST_ID_KEY = 'playtalk_guest_rank_id';
   const GUEST_PROGRESS_KEY = 'playtalk-flashcards-progress-v3';
   const GUEST_OWNED_KEY = 'playtalk-flashcards-owned-v2';
+  const USER_HIDDEN_STORAGE_KEY = 'playtalk-flashcards-hidden-v1';
+  const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
   const PRESENCE_PING_MS = 15000;
   const CHALLENGE_POLL_MS = 2500;
   const HAS_GLOBAL_CHALLENGE_POPUPS = Boolean(window.PlaytalkChallengePopups);
@@ -145,6 +147,77 @@
     return new Promise((resolve) => {
       window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
     });
+  }
+
+  function storageKeyForUser(baseKey, userId) {
+    const normalizedUserId = Number(userId) || 0;
+    return normalizedUserId ? `${baseKey}:${normalizedUserId}` : baseKey;
+  }
+
+  function readStoredJson(key, fallbackValue) {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+      return parsed == null ? fallbackValue : parsed;
+    } catch (_error) {
+      return fallbackValue;
+    }
+  }
+
+  function readLocalProgressForUser(userId) {
+    const records = readStoredJson(storageKeyForUser(GUEST_PROGRESS_KEY, userId), []);
+    if (!Array.isArray(records)) return [];
+    return records.filter((record) => safeText(record?.cardId));
+  }
+
+  function readLocalHiddenCardIdsForUser(userId) {
+    const ids = readStoredJson(storageKeyForUser(USER_HIDDEN_STORAGE_KEY, userId), []);
+    if (!Array.isArray(ids)) return [];
+    return ids.map((cardId) => safeText(cardId)).filter(Boolean);
+  }
+
+  function readLocalStatsForUser(userId) {
+    const stats = readStoredJson(storageKeyForUser(USER_STATS_STORAGE_KEY, userId), {});
+    return stats && typeof stats === 'object' ? stats : {};
+  }
+
+  async function bootstrapViewerFlashcardsFromLocal() {
+    const userId = Number(state.currentUser?.id) || 0;
+    if (!userId) return false;
+
+    const localProgress = readLocalProgressForUser(userId);
+    if (!localProgress.length) return false;
+
+    try {
+      const stateResponse = await fetch(buildApiUrl('/api/flashcards/state'), {
+        headers: buildAuthHeaders(),
+        cache: 'no-store',
+        credentials: 'include'
+      });
+      const statePayload = await stateResponse.json().catch(() => ({}));
+      if (!stateResponse.ok || !statePayload?.success) {
+        return false;
+      }
+
+      const serverProgressCount = Array.isArray(statePayload?.progress) ? statePayload.progress.length : 0;
+      if (serverProgressCount >= localProgress.length) {
+        return false;
+      }
+
+      const syncResponse = await fetch(buildApiUrl('/api/flashcards/state'), {
+        method: 'PUT',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify({
+          progress: localProgress,
+          stats: readLocalStatsForUser(userId),
+          hiddenCardIds: readLocalHiddenCardIdsForUser(userId)
+        })
+      });
+      const syncPayload = await syncResponse.json().catch(() => ({}));
+      return Boolean(syncResponse.ok && syncPayload?.success);
+    } catch (_error) {
+      return false;
+    }
   }
 
   function metricValueFromEntry(entry, metricKey) {
@@ -434,8 +507,17 @@
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.message || 'Nao foi possivel criar o bot.');
       }
+      const botLogin = payload?.botLogin && typeof payload.botLogin === 'object'
+        ? {
+            username: safeText(payload.botLogin.username),
+            password: safeText(payload.botLogin.password)
+          }
+        : null;
       closeBotModal();
       await loadUsers('Bot criado. Atualizando ranking...', { metricKey: state.currentMetricKey, force: true });
+      if (botLogin?.username && botLogin?.password) {
+        setUsersStatus(`Bot ${username} criado. Login: ${botLogin.username} | senha: ${botLogin.password}`);
+      }
     } catch (error) {
       setBotStatus(error?.message || 'Nao foi possivel criar o bot.');
       state.botBusy = false;
@@ -969,6 +1051,9 @@
     syncAdminViewerUi();
     updateBotHint();
     await pingPresence();
+    if (await bootstrapViewerFlashcardsFromLocal()) {
+      state.rankingCache.clear();
+    }
     await syncRankingWithBanner(true);
     if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
       await pollChallenges();

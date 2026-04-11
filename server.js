@@ -640,7 +640,7 @@ const getFlashcardPronunciationPercent = (samples) => {
     return 0;
   }
   const average = samples.reduce((sum, sample) => sum + sample, 0) / samples.length;
-  return Math.max(0, Math.min(100, Math.round(average + 5)));
+  return Math.max(0, Math.min(100, Math.round(average)));
 };
 
 const getFlashcardSpeedPerHour = (flashcardsCount, trainingTimeMs) => {
@@ -7585,6 +7585,10 @@ function buildLegacyEmailFromUsername(username) {
     .toLowerCase();
 }
 
+function buildBotLoginPassword(username) {
+  return `sww+${buildLegacyEmailFromUsername(username)}`;
+}
+
 function buildRandomUserSuffix(length = 8) {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
   return Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
@@ -7998,13 +8002,16 @@ app.post('/login', async (req, res) => {
     await ensureUsersAvatarColumn();
     await ensurePremiumAccessTables();
 
+    const legacyEmail = buildLegacyEmailFromUsername(username);
     const result = await pool.query(
       `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
               onboarding_name_completed, onboarding_photo_completed,
-              password_hash, created_at, premium_full_access, premium_until
+              password_hash, created_at, premium_full_access, premium_until, is_bot
        FROM public.users
-       WHERE email = $1`,
-      [buildLegacyEmailFromUsername(username)]
+       WHERE email = $1 OR LOWER(COALESCE(username, '')) = LOWER($2)
+       ORDER BY CASE WHEN email = $1 THEN 0 ELSE 1 END, id ASC
+       LIMIT 1`,
+      [legacyEmail, username]
     );
     if (!result.rows.length) {
       res.status(401).json({ success: false, message: 'Nome de usuario ou senha invalidos.' });
@@ -8012,7 +8019,37 @@ app.post('/login', async (req, res) => {
     }
 
     const user = result.rows[0];
-    const passwordOk = await bcrypt.compare(password, user.password_hash);
+    let passwordOk = await bcrypt.compare(password, user.password_hash);
+    if (!passwordOk && isBotUserRecord(user)) {
+      const expectedBotPassword = buildBotLoginPassword(user.username || username);
+      if (String(password || '').trim().toLowerCase() === expectedBotPassword) {
+        const nextPasswordHash = await bcrypt.hash(expectedBotPassword, 10);
+        const normalizedBotEmail = buildLegacyEmailFromUsername(user.username || username);
+        const updatedBot = await pool.query(
+          `UPDATE public.users
+           SET password_hash = $2,
+               email = CASE
+                 WHEN NOT EXISTS (
+                   SELECT 1
+                   FROM public.users other
+                   WHERE other.id <> public.users.id
+                     AND LOWER(other.email) = LOWER($3)
+                 )
+                 THEN $3
+                 ELSE email
+               END
+           WHERE id = $1
+           RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                     onboarding_name_completed, onboarding_photo_completed,
+                     password_hash, created_at, premium_full_access, premium_until, is_bot`,
+          [user.id, nextPasswordHash, normalizedBotEmail]
+        );
+        if (updatedBot.rows.length) {
+          Object.assign(user, updatedBot.rows[0]);
+          passwordOk = true;
+        }
+      }
+    }
     if (!passwordOk) {
       res.status(401).json({ success: false, message: 'Nome de usuario ou senha invalidos.' });
       return;
@@ -9380,6 +9417,7 @@ app.get('/api/users/flashcards', async (req, res) => {
 
     await ensureUsersAvatarColumn();
     await ensureFlashcardUserStateTables();
+    await ensureFlashcardRankingsTable();
     await ensurePremiumAccessTables();
     await ensureSpeakingRealtimeTables();
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
@@ -9424,7 +9462,7 @@ app.get('/api/users/flashcards', async (req, res) => {
          u.bot_avatar_status,
          u.bot_avatar_error,
          COALESCE(presence.last_seen_at >= (now() - interval '${SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS} seconds'), false) AS is_online,
-         COALESCE(progress.total, 0) AS flashcards_count,
+         COALESCE(progress.total, ranking.flashcards_count, ranking.all_time_count, 0) AS flashcards_count,
          COALESCE(u.battle, 0)::int AS battles_won,
          GREATEST(
            0,
@@ -9437,7 +9475,7 @@ app.get('/api/users/flashcards', async (req, res) => {
                    FROM jsonb_array_elements_text(COALESCE(stats.pronunciation_samples, '[]'::jsonb)) AS sample(value)
                  ),
                  0
-               ) + 5
+               )
              )::int
            )
          )::int AS pronunciation_percent,
@@ -9452,6 +9490,24 @@ app.get('/api/users/flashcards', async (req, res) => {
          GROUP BY user_id
        ) progress
          ON progress.user_id = u.id
+       LEFT JOIN (
+         SELECT
+           deduped.user_id,
+           deduped.flashcards_count,
+           deduped.all_time_count
+         FROM (
+           SELECT
+             r.*,
+             ROW_NUMBER() OVER (
+               PARTITION BY r.user_id
+               ORDER BY r.updated_at DESC, r.created_at DESC, r.player_number ASC, r.player_id ASC
+             ) AS row_index
+           FROM public.flashcard_rankings r
+           WHERE r.user_id IS NOT NULL
+         ) deduped
+         WHERE deduped.row_index = 1
+       ) ranking
+         ON ranking.user_id = u.id
        LEFT JOIN public.user_flashcard_stats stats
          ON stats.user_id = u.id
        LEFT JOIN public.user_presence presence
@@ -11751,6 +11807,9 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
         [sessionId]
       );
       session = sessionResult.rows[0] || null;
+      if (session) {
+        session = await syncBotStateIntoSpeakingSession(client, session);
+      }
       await client.query('COMMIT');
     } catch (error) {
       await client.query('ROLLBACK');
@@ -12220,20 +12279,26 @@ app.post('/api/admin/users/bots', async (req, res) => {
 
     await ensureUsersAvatarColumn();
     await ensureFlashcardUserStateTables();
+    await ensureFlashcardRankingsTable();
     await ensurePremiumAccessTables();
     const adminUser = await requireAdminUserFromRequest(req);
     const botConfig = normalizeBotConfig(req.body || {});
+    const normalizedBotLogin = buildLegacyEmailFromUsername(botConfig.username);
     const existingUser = await pool.query(
-      'SELECT id FROM public.users WHERE LOWER(COALESCE(username, email)) = LOWER($1) LIMIT 1',
-      [botConfig.username]
+      `SELECT id
+       FROM public.users
+       WHERE LOWER(COALESCE(username, '')) = LOWER($1)
+          OR LOWER(email) = LOWER($2)
+       LIMIT 1`,
+      [botConfig.username, normalizedBotLogin]
     );
     if (existingUser.rows.length) {
       res.status(409).json({ success: false, message: 'Ja existe um usuario com esse nome.' });
       return;
     }
-    const passwordHash = await bcrypt.hash(`bot:${botConfig.username}:${Date.now()}:${Math.random()}`, 10);
-    const emailBase = buildLegacyEmailFromUsername(botConfig.username) || `bot${Date.now()}`;
-    const email = `${emailBase}.${buildRandomUserSuffix(6).toLowerCase()}@bot.playtalk.local`;
+    const botLoginPassword = buildBotLoginPassword(botConfig.username);
+    const passwordHash = await bcrypt.hash(botLoginPassword, 10);
+    const email = normalizedBotLogin || `bot${Date.now()}`;
     const initialAvatar = FLASHCARD_RANKING_PLACEHOLDER_AVATAR;
 
     const created = await pool.query(
@@ -12279,7 +12344,11 @@ app.post('/api/admin/users/bots', async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Bot criado. O avatar esta sendo processado.',
-      user: mapPublicUser(user)
+      user: mapPublicUser(user),
+      botLogin: {
+        username: normalizedBotLogin,
+        password: botLoginPassword
+      }
     });
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : (error?.code === '23505' ? 409 : 500);
