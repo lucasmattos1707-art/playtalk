@@ -277,9 +277,9 @@
   }
 
   function buildLibraryCardView(card) {
-    const record = card.progress || null;
+    const record = card.progress;
     const percent = progressPercent(record);
-    const memorizing = record?.status === 'memorizing';
+    const memorizing = record.status === 'memorizing';
     const displayedSeal = activeSealPhase(record);
     const sealMarkup = displayedSeal
       ? `<img class="mini-card__seal" src="${escapeHtml(phaseMeta(displayedSeal).sealPath)}" alt="${escapeHtml(phaseMeta(displayedSeal).label)}">`
@@ -327,33 +327,20 @@
   function hydrateCards(progressMap) {
     const cache = readCardsCache();
     const cardMap = new Map(cache.map((card) => [safeText(card?.id), card]));
-    state.cards = cache
-      .map((card) => {
-        const cardId = safeText(card?.id);
-        if (!cardId) return null;
-        const progress = progressMap.get(cardId) || null;
+    state.cards = Array.from(progressMap.values())
+      .map((progress) => {
+        const card = cardMap.get(progress.cardId);
+        if (!card) return null;
         return { ...card, progress };
       })
       .filter(Boolean)
       .sort((left, right) => {
-        const leftHasProgress = Boolean(left.progress);
-        const rightHasProgress = Boolean(right.progress);
-        if (leftHasProgress !== rightHasProgress) {
-          return leftHasProgress ? -1 : 1;
-        }
-        if (!leftHasProgress && !rightHasProgress) {
-          return String(left.deckTitle || left.english || left.portuguese || '')
-            .localeCompare(String(right.deckTitle || right.english || right.portuguese || ''), 'pt-BR', {
-              sensitivity: 'base',
-              numeric: true
-            });
-        }
-        const leftPin = left.progress?.status === 'memorizing'
-          ? Number(left.progress?.availableAt) || 0
-          : Number(left.progress?.returnedAt || left.progress?.createdAt) || 0;
-        const rightPin = right.progress?.status === 'memorizing'
-          ? Number(right.progress?.availableAt) || 0
-          : Number(right.progress?.returnedAt || right.progress?.createdAt) || 0;
+        const leftPin = left.progress.status === 'memorizing'
+          ? Number(left.progress.availableAt) || 0
+          : Number(left.progress.returnedAt || left.progress.createdAt) || 0;
+        const rightPin = right.progress.status === 'memorizing'
+          ? Number(right.progress.availableAt) || 0
+          : Number(right.progress.returnedAt || right.progress.createdAt) || 0;
         return rightPin - leftPin;
       });
   }
@@ -550,8 +537,7 @@
       progressMap = readUserProgressForUser(state.userId);
     }
 
-    const cachedCards = readCardsCache();
-    if (!cachedCards.length || (progressMap.size && unresolvedProgressCount(progressMap) > 0)) {
+    if (progressMap.size && (!readCardsCache().length || unresolvedProgressCount(progressMap) > 0)) {
       try {
         await fetchRemoteCardsCatalog();
       } catch (_error) {
