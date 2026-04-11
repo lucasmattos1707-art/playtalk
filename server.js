@@ -5058,26 +5058,11 @@ function buildBotPronunciationSamples(botConfig, sessionId, totalCards) {
   const base = clampPercent(Number(botConfig?.pronunciationBase) || 0);
   if (!count) return [];
 
-  const rawOffsets = Array.from({ length: count }, (_, index) => {
+  return Array.from({ length: count }, (_, index) => {
     const unit = seededUnitInterval(`${sessionId}:pron-seed:${index}`);
-    return ((unit * 2) - 1) * BOT_PRONUNCIATION_VARIANCE_PERCENT;
+    const offset = ((unit * 2) - 1) * BOT_PRONUNCIATION_VARIANCE_PERCENT;
+    return clampPercent(Math.round(base + offset));
   });
-  const averageOffset = rawOffsets.reduce((sum, value) => sum + value, 0) / count;
-  const samples = rawOffsets.map((offset) => clampPercent(base + (offset - averageOffset)));
-  const targetTotal = base * count;
-  let currentTotal = samples.reduce((sum, sample) => sum + sample, 0);
-  let diff = targetTotal - currentTotal;
-
-  for (let index = samples.length - 1; index >= 0 && diff !== 0; index -= 1) {
-    const direction = diff > 0 ? 1 : -1;
-    const nextValue = clampPercent(samples[index] + direction);
-    if (nextValue === samples[index]) continue;
-    samples[index] = nextValue;
-    currentTotal += direction;
-    diff = targetTotal - currentTotal;
-  }
-
-  return samples;
 }
 
 function buildBotResponseTimeline(botConfig, sessionId, totalCards) {
