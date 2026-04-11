@@ -1,7 +1,7 @@
 (function initPlaytalkShell() {
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
   const starPages = new Set(['/flashcards', '/allcards', '/speaking', '/users', '/account', '/premium']);
-  const footerInjectedPages = new Set(['/books', '/speaking']);
+  const footerInjectedPages = new Set(['/books']);
 
   function injectStars() {
     if (!starPages.has(path)) return;

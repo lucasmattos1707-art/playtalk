@@ -1126,8 +1126,6 @@
   async function runDuelIntroCountdown() {
     if (!state.duel.enabled) return;
     const totalCountdownSeconds = Math.max(1, Number.parseInt(state.duel.introCountdownSeconds, 10) || DUEL_INTRO_COUNTDOWN_SECONDS);
-    let switchedToPlayers = false;
-    let playersDissolving = false;
 
     setDuelIntroVisible(true);
     updateTopPercents();
@@ -1138,15 +1136,11 @@
     primeDuelIntroAssets();
     preloadFirstDuelCardAudio();
     revealDuelIntroBook();
+    revealDuelIntroPlayers();
 
     for (let remaining = totalCountdownSeconds; remaining >= 1; remaining -= 1) {
       if (!state.duel.enabled || state.duel.completed) break;
-      if (!switchedToPlayers && remaining <= DUEL_INTRO_SWITCH_TO_PLAYERS_SECONDS) {
-        switchedToPlayers = true;
-        transitionDuelIntroFromBookToPlayers();
-      }
-      if (switchedToPlayers && !playersDissolving && remaining <= 1) {
-        playersDissolving = true;
+      if (remaining <= 1) {
         dissolveDuelIntroPlayers();
       }
       if (els.duelIntroCountdown) {
