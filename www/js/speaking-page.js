@@ -845,7 +845,7 @@
     setDuelIntroAvatarPending(els.duelIntroEnemyAvatar, false);
   }
 
-  function revealDuelIntroPlayers() {
+  function revealDuelIntroPlayers(showNames = true) {
     if (els.duelIntro) {
       els.duelIntro.classList.remove('is-book-stage');
       els.duelIntro.classList.add('is-player-stage');
@@ -858,8 +858,8 @@
       els.duelIntroVs.classList.remove('is-leaving');
       els.duelIntroVs.classList.add('is-visible');
     }
-    revealDuelIntroPlayer(els.duelIntroMePlayer, els.duelIntroMeName);
-    revealDuelIntroPlayer(els.duelIntroEnemyPlayer, els.duelIntroEnemyName);
+    revealDuelIntroPlayer(els.duelIntroMePlayer, showNames ? els.duelIntroMeName : null);
+    revealDuelIntroPlayer(els.duelIntroEnemyPlayer, showNames ? els.duelIntroEnemyName : null);
   }
 
   function revealDuelIntroPlayer(playerEl, nameEl) {
@@ -875,6 +875,11 @@
     nameEl.classList.remove('is-flash', 'is-leaving');
     void nameEl.offsetWidth;
     nameEl.classList.add('is-flash');
+  }
+
+  function revealDuelIntroNames() {
+    revealDuelIntroPlayer(null, els.duelIntroMeName);
+    revealDuelIntroPlayer(null, els.duelIntroEnemyName);
   }
 
   function applyDuelIntroBook() {
@@ -993,7 +998,6 @@
       if (els.duelIntroBookStage) {
         els.duelIntroBookStage.hidden = true;
       }
-      revealDuelIntroPlayers();
     }, 360);
   }
 
@@ -1126,6 +1130,8 @@
   async function runDuelIntroCountdown() {
     if (!state.duel.enabled) return;
     const totalCountdownSeconds = Math.max(1, Number.parseInt(state.duel.introCountdownSeconds, 10) || DUEL_INTRO_COUNTDOWN_SECONDS);
+    let switchedToPlayers = false;
+    let namesRevealed = false;
 
     setDuelIntroVisible(true);
     updateTopPercents();
@@ -1136,10 +1142,20 @@
     primeDuelIntroAssets();
     preloadFirstDuelCardAudio();
     revealDuelIntroBook();
-    revealDuelIntroPlayers();
 
     for (let remaining = totalCountdownSeconds; remaining >= 1; remaining -= 1) {
       if (!state.duel.enabled || state.duel.completed) break;
+      if (!switchedToPlayers && remaining <= DUEL_INTRO_SWITCH_TO_PLAYERS_SECONDS) {
+        switchedToPlayers = true;
+        transitionDuelIntroFromBookToPlayers();
+        queueDuelIntroAnimation(() => {
+          revealDuelIntroPlayers(false);
+        }, 360);
+      }
+      if (switchedToPlayers && !namesRevealed && remaining <= (DUEL_INTRO_SWITCH_TO_PLAYERS_SECONDS - 1)) {
+        namesRevealed = true;
+        revealDuelIntroNames();
+      }
       if (remaining <= 1) {
         dissolveDuelIntroPlayers();
       }
@@ -1853,7 +1869,7 @@
     const isTimedOut = Boolean(timedOut);
     const markFinished = isTimedOut ? Boolean(state.duel.meFinished) : Boolean(forceFinished);
     try {
-      await fetch(buildApiUrl(`/api/speaking/sessions/${encodeURIComponent(state.duel.sessionId)}/progress`), {
+      const response = await fetch(buildApiUrl(`/api/speaking/sessions/${encodeURIComponent(state.duel.sessionId)}/progress`), {
         method: 'POST',
         credentials: 'include',
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
@@ -1864,9 +1880,14 @@
           timedOut: isTimedOut
         })
       });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok && payload?.success && payload?.session) {
+        return payload.session;
+      }
     } catch (_error) {
       // ignore
     }
+    return null;
   }
 
   async function pollDuelSession() {
@@ -2112,7 +2133,12 @@
     }
     if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = true;
     setMicLiveVisual(false);
-    void syncDuelProgress(true);
+    void syncDuelProgress(true).then((session) => {
+      if (session) {
+        syncDuelView(session);
+      }
+      return pollDuelSession();
+    });
 
     if (state.duel.enabled) {
       state.duel.meFinished = true;

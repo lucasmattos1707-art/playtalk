@@ -11975,8 +11975,9 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
         next.opponentFinished = finished || normalizedProgress >= totalCards;
       }
 
+      const bothFinished = next.challengerFinished && next.opponentFinished;
       const battleExpired = timedOut || isSpeakingDuelBattleExpired(session);
-      if (battleExpired && next.status !== 'completed') {
+      if ((bothFinished || battleExpired) && next.status !== 'completed') {
         next.status = 'completed';
         next.winnerUserId = computeSpeakingDuelWinnerUserId({
           challenger_finished: next.challengerFinished,

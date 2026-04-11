@@ -505,16 +505,6 @@
       z-index: 1;
     }
 
-    .duel-intro__player--me {
-      justify-items: start;
-      padding-left: 0;
-    }
-
-    .duel-intro__player--enemy {
-      justify-items: end;
-      padding-right: 0;
-    }
-
     .duel-intro__player.is-visible {
       opacity: 1;
       transform: scale(1);
@@ -871,10 +861,11 @@
 
     .duel-avatars {
       display: flex;
-      gap: 26px;
+      gap: 20px;
       align-items: center;
-      align-items: center;
-      justify-content: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0 20px;
       margin: 14px 0 14px;
     }
 
@@ -1008,10 +999,8 @@
     .mic-trigger-wrap {
       display: grid;
       justify-items: center;
-      margin: auto 0 12px;
+      margin: 34px 0 28px;
       gap: 0;
-      order: 3;
-      transform: translateY(120px);
     }
 
     .game-touch.game-touch--books-mic {
@@ -1338,7 +1327,7 @@
       .duel-avatars {
         width: 100%;
         justify-content: space-between;
-        padding: 0 40px;
+        padding: 0 20px;
         margin: 10px 0 10px;
         gap: 0;
       }
@@ -1357,9 +1346,7 @@
         font-size: 29px;
       }
       .mic-trigger-wrap {
-        order: 3;
-        margin: 2px 0 8px;
-        transform: translateY(120px);
+        margin: 28px 0 18px;
       }
       .card-word {
         order: 1;
