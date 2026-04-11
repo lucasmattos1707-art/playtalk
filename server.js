@@ -160,6 +160,10 @@ const SPEAKING_DUEL_DEFAULT_CARDS = 25;
 const SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS = 20;
 const SPEAKING_DUEL_INTRO_SECONDS = 10;
 const SPEAKING_DUEL_BATTLE_SECONDS = 180;
+const BOT_DAILY_FLASHCARD_TRAINING_MINUTES = 5;
+const BOT_PRONUNCIATION_VARIANCE_PERCENT = 3;
+const BOT_FLASHCARDS_SPEED_VARIANCE_PERCENT = 6;
+const BOT_RESPONSE_VARIANCE_SECONDS = 1;
 const SPEAKING_CARD_CACHE_TTL_MS = 60 * 1000;
 const BATTLE_STORIES_ROOT_CANDIDATES = Array.from(new Set([
   path.join(__dirname, 'battle-stories'),
@@ -237,6 +241,14 @@ const normalizeFlashcardsCount = (value) => {
     return 0;
   }
   return parsed;
+};
+
+const clampPercent = (value) => Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+
+const clampBotUpdateHour = (value) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return 6;
+  return Math.max(6, Math.min(22, parsed));
 };
 
 const padFlashcardRankingNumber = (value) => String(value).padStart(2, '0');
@@ -1698,6 +1710,26 @@ const ensureUsersAvatarColumn = async () => {
         ADD COLUMN IF NOT EXISTS battle integer NOT NULL DEFAULT 0
       `);
       await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS is_bot boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS bot_config jsonb NOT NULL DEFAULT '{}'::jsonb
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS bot_avatar_status text NOT NULL DEFAULT 'ready'
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS bot_avatar_error text
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS created_by_user_id integer REFERENCES public.users(id) ON DELETE SET NULL
+      `);
+      await pool.query(`
         UPDATE public.users
         SET username = COALESCE(NULLIF(username, ''), email)
       `);
@@ -1721,6 +1753,10 @@ const mapPublicUser = (user) => ({
   onboarding_photo_completed: Boolean(user?.onboarding_photo_completed),
   created_at: user?.created_at || null,
   is_admin: isAdminUserRecord(user),
+  is_bot: isBotUserRecord(user),
+  bot_config: parseBotConfig(user?.bot_config),
+  bot_avatar_status: String(user?.bot_avatar_status || '').trim() || 'ready',
+  bot_avatar_error: String(user?.bot_avatar_error || '').trim(),
   has_password: Boolean(user?.password_hash),
   premium_full_access: Boolean(user?.premium_full_access),
   premium_until: user?.premium_until || null
@@ -2045,7 +2081,8 @@ const readUserById = async (userId) => {
   const result = await pool.query(
     `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
             onboarding_name_completed, onboarding_photo_completed, created_at, password_hash,
-            premium_full_access, premium_until
+            premium_full_access, premium_until, is_bot, bot_config, bot_avatar_status,
+            bot_avatar_error, created_by_user_id, battle
      FROM public.users
      WHERE id = $1
      LIMIT 1`,
@@ -2076,6 +2113,139 @@ const normalizeAvatarImage = (value) => {
   }
 
   return avatar;
+};
+
+const normalizeBotConfig = (value, options = {}) => {
+  const source = value && typeof value === 'object' ? value : {};
+  const requirePhoto = options.requirePhoto !== false;
+  const username = normalizeUsername(source.username || source.name || '');
+  const flashcardsCount = normalizeFlashcardsCount(source.flashcardsCount);
+  const pronunciationBase = clampPercent(source.pronunciationBase);
+  const flashcardsPerHour = Math.max(0, Math.round(Number(source.flashcardsPerHour) || 0));
+  const responseSeconds = Math.max(1, Math.min(30, Number(source.responseSeconds) || 3));
+  const updateHour = clampBotUpdateHour(source.updateHour);
+  const sourceImageDataUrl = source.sourceImageDataUrl ? normalizeAvatarImage(source.sourceImageDataUrl) : '';
+
+  if (!isValidUsername(username)) {
+    const error = new Error('Nome do bot invalido. Use de 3 a 32 caracteres.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (flashcardsCount <= 0) {
+    const error = new Error('Numero de flashcards invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (pronunciationBase <= 0) {
+    const error = new Error('Pronuncia invalida.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (flashcardsPerHour <= 0) {
+    const error = new Error('Flashcards por hora invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (requirePhoto && !sourceImageDataUrl) {
+    const error = new Error('Envie uma foto para gerar o avatar do bot.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return {
+    username,
+    flashcardsCount,
+    pronunciationBase,
+    flashcardsPerHour,
+    responseSeconds,
+    updateHour,
+    sourceImageDataUrl
+  };
+};
+
+const parseBotConfig = (value) => {
+  if (!value) return null;
+  let parsed = value;
+  if (typeof value === 'string') {
+    try {
+      parsed = JSON.parse(value);
+    } catch (_error) {
+      parsed = null;
+    }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  try {
+    return normalizeBotConfig(parsed, { requirePhoto: false });
+  } catch (_error) {
+    return null;
+  }
+};
+
+const isBotUserRecord = (user) => Boolean(user?.is_bot);
+
+function seededUnitInterval(seed) {
+  const hash = crypto.createHash('sha256').update(String(seed || '')).digest('hex').slice(0, 12);
+  const integer = Number.parseInt(hash, 16);
+  if (!Number.isFinite(integer) || integer <= 0) return 0.5;
+  return integer / 0xffffffffffff;
+}
+
+function resolveBotUpdateDateKey(now = new Date(), updateHour = 6) {
+  const localNow = new Date(now.toLocaleString('en-US', { timeZone: FLASHCARD_RANKING_TIMEZONE }));
+  if (localNow.getHours() < updateHour) {
+    localNow.setDate(localNow.getDate() - 1);
+  }
+  const year = localNow.getFullYear();
+  const month = String(localNow.getMonth() + 1).padStart(2, '0');
+  const day = String(localNow.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function computeBotVariance(baseValue, variance, seed) {
+  const unit = seededUnitInterval(seed);
+  const swing = (unit * 2) - 1;
+  return baseValue + (swing * variance);
+}
+
+function buildBotDerivedStats(user, now = new Date()) {
+  const botConfig = parseBotConfig(user?.bot_config);
+  if (!isBotUserRecord(user) || !botConfig) {
+    return {
+      flashcardsCount: normalizeFlashcardsCount(user?.flashcards_count),
+      pronunciationPercent: clampPercent(user?.pronunciation_percent),
+      speedFlashcardsPerHour: Math.max(0, Number(user?.speed_flashcards_per_hour) || 0),
+      battlesWon: Math.max(0, Number(user?.battle) || 0)
+    };
+  }
+
+  const createdAtMs = Date.parse(String(user?.created_at || '').trim());
+  const updateDateKey = resolveBotUpdateDateKey(now, botConfig.updateHour);
+  const currentDateKey = String(updateDateKey || '');
+  let daysSinceCreation = 0;
+  if (Number.isFinite(createdAtMs) && createdAtMs > 0) {
+    const createdDateKey = resolveBotUpdateDateKey(new Date(createdAtMs), botConfig.updateHour);
+    const createdLocal = new Date(`${createdDateKey}T00:00:00`);
+    const currentLocal = new Date(`${currentDateKey}T00:00:00`);
+    const deltaDays = Math.floor((currentLocal - createdLocal) / 86400000);
+    daysSinceCreation = Math.max(0, deltaDays);
+  }
+
+  const dailySeedBase = `${user.id}:${currentDateKey}`;
+  const dailyFlashcardsGain = Math.max(0, Math.round(botConfig.flashcardsPerHour * (BOT_DAILY_FLASHCARD_TRAINING_MINUTES / 60)));
+  const speed = Math.max(
+    0,
+    Number(computeBotVariance(botConfig.flashcardsPerHour, botConfig.flashcardsPerHour * (BOT_FLASHCARDS_SPEED_VARIANCE_PERCENT / 100), `${dailySeedBase}:speed`).toFixed(1))
+  );
+  const pronunciationPercent = clampPercent(
+    computeBotVariance(botConfig.pronunciationBase, BOT_PRONUNCIATION_VARIANCE_PERCENT, `${dailySeedBase}:pronunciation`)
+  );
+
+  return {
+    flashcardsCount: botConfig.flashcardsCount + (dailyFlashcardsGain * daysSinceCreation),
+    pronunciationPercent,
+    speedFlashcardsPerHour: speed,
+    battlesWon: Math.max(0, Number(user?.battle) || 0)
+  };
 };
 
 const readFlashcardProgressCountForUser = async (userId) => {
@@ -4849,6 +5019,189 @@ function isSpeakingDuelBattleExpired(session) {
   return Date.now() >= deadlineMs;
 }
 
+function computeBotResponseSeconds(botConfig, sessionId, cardIndex) {
+  const base = Math.max(1, Number(botConfig?.responseSeconds) || 3);
+  const varied = computeBotVariance(base, BOT_RESPONSE_VARIANCE_SECONDS, `${sessionId}:response:${cardIndex}`);
+  return Math.max(1, Number(varied.toFixed(2)));
+}
+
+function computeBotPronunciationPercent(botConfig, sessionId, cardIndex) {
+  return clampPercent(
+    computeBotVariance(
+      Number(botConfig?.pronunciationBase) || 0,
+      BOT_PRONUNCIATION_VARIANCE_PERCENT,
+      `${sessionId}:pron:${cardIndex}`
+    )
+  );
+}
+
+function buildBotProgressSnapshot(session, botUserId, botConfig) {
+  const cards = Array.isArray(session?.cards) ? session.cards : [];
+  const totalCards = Math.max(1, cards.length || SPEAKING_DUEL_DEFAULT_CARDS);
+  const createdAtMs = Date.parse(String(session?.created_at || '').trim());
+  if (!Number.isFinite(createdAtMs) || createdAtMs <= 0) {
+    return { progress: 0, percent: 0, finished: false };
+  }
+
+  const battleStartedAtMs = createdAtMs + (SPEAKING_DUEL_INTRO_SECONDS * 1000);
+  const elapsedMs = Math.max(0, Date.now() - battleStartedAtMs);
+  if (elapsedMs <= 0) {
+    return { progress: 0, percent: 0, finished: false };
+  }
+
+  let accumulatedMs = 0;
+  let completed = 0;
+  let sumPercent = 0;
+  for (let index = 0; index < totalCards; index += 1) {
+    accumulatedMs += computeBotResponseSeconds(botConfig, session.id || botUserId, index) * 1000;
+    if (elapsedMs < accumulatedMs) break;
+    completed += 1;
+    sumPercent += computeBotPronunciationPercent(botConfig, session.id || botUserId, index);
+  }
+
+  const progress = Math.min(totalCards, completed);
+  const finished = progress >= totalCards;
+  const percent = progress > 0 ? Math.round(sumPercent / progress) : 0;
+  return { progress, percent, finished };
+}
+
+async function syncBotStateIntoSpeakingSession(client, session) {
+  if (!session) return session;
+  const challengerUserId = Number(session?.challenger_user_id) || 0;
+  const opponentUserId = Number(session?.opponent_user_id) || 0;
+  const usersResult = await client.query(
+    `SELECT id, is_bot, bot_config
+     FROM public.users
+     WHERE id = ANY($1::int[])`,
+    [[challengerUserId, opponentUserId]]
+  );
+  const usersById = new Map(usersResult.rows.map((row) => [Number(row.id) || 0, row]));
+  const challengerUser = usersById.get(challengerUserId);
+  const opponentUser = usersById.get(opponentUserId);
+  const challengerBotConfig = isBotUserRecord(challengerUser) ? parseBotConfig(challengerUser?.bot_config) : null;
+  const opponentBotConfig = isBotUserRecord(opponentUser) ? parseBotConfig(opponentUser?.bot_config) : null;
+  if (!challengerBotConfig && !opponentBotConfig) {
+    return {
+      ...session,
+      challenger_is_bot: false,
+      opponent_is_bot: false
+    };
+  }
+
+  const next = {
+    challengerProgress: Number(session.challenger_progress) || 0,
+    opponentProgress: Number(session.opponent_progress) || 0,
+    challengerPercent: Number(session.challenger_percent) || 0,
+    opponentPercent: Number(session.opponent_percent) || 0,
+    challengerFinished: Boolean(session.challenger_finished),
+    opponentFinished: Boolean(session.opponent_finished),
+    status: String(session.status || '').trim() || 'active',
+    winnerUserId: Number(session.winner_user_id) || 0
+  };
+  let changed = false;
+
+  if (challengerBotConfig) {
+    const snapshot = buildBotProgressSnapshot(session, challengerUserId, challengerBotConfig);
+    if (
+      snapshot.progress !== next.challengerProgress
+      || snapshot.percent !== next.challengerPercent
+      || snapshot.finished !== next.challengerFinished
+    ) {
+      next.challengerProgress = snapshot.progress;
+      next.challengerPercent = snapshot.percent;
+      next.challengerFinished = snapshot.finished;
+      changed = true;
+    }
+  }
+  if (opponentBotConfig) {
+    const snapshot = buildBotProgressSnapshot(session, opponentUserId, opponentBotConfig);
+    if (
+      snapshot.progress !== next.opponentProgress
+      || snapshot.percent !== next.opponentPercent
+      || snapshot.finished !== next.opponentFinished
+    ) {
+      next.opponentProgress = snapshot.progress;
+      next.opponentPercent = snapshot.percent;
+      next.opponentFinished = snapshot.finished;
+      changed = true;
+    }
+  }
+
+  const battleExpired = isSpeakingDuelBattleExpired(session);
+  if (battleExpired && next.status !== 'completed') {
+    next.status = 'completed';
+    next.winnerUserId = computeSpeakingDuelTimeoutWinnerUserId({
+      challenger_finished: next.challengerFinished,
+      opponent_finished: next.opponentFinished,
+      challenger_user_id: challengerUserId,
+      opponent_user_id: opponentUserId
+    });
+    changed = true;
+  } else if (next.challengerFinished && next.opponentFinished && next.status !== 'completed') {
+    next.status = 'completed';
+    if (next.challengerPercent > next.opponentPercent) {
+      next.winnerUserId = challengerUserId;
+    } else if (next.opponentPercent > next.challengerPercent) {
+      next.winnerUserId = opponentUserId;
+    } else if (next.challengerProgress > next.opponentProgress) {
+      next.winnerUserId = challengerUserId;
+    } else if (next.opponentProgress > next.challengerProgress) {
+      next.winnerUserId = opponentUserId;
+    } else {
+      next.winnerUserId = challengerUserId;
+    }
+    changed = true;
+  }
+
+  if (changed) {
+    const updateResult = await client.query(
+      `UPDATE public.speaking_duel_sessions
+       SET challenger_progress = $2,
+           opponent_progress = $3,
+           challenger_percent = $4,
+           opponent_percent = $5,
+           challenger_finished = $6,
+           opponent_finished = $7,
+           status = $8,
+           winner_user_id = CASE
+             WHEN $8 = 'completed' THEN CASE WHEN $9 > 0 THEN $9 ELSE NULL END
+             ELSE winner_user_id
+           END,
+           finished_at = CASE WHEN $8 = 'completed' THEN COALESCE(finished_at, now()) ELSE finished_at END,
+           updated_at = now()
+       WHERE id = $1
+       RETURNING *`,
+      [
+        session.id,
+        next.challengerProgress,
+        next.opponentProgress,
+        next.challengerPercent,
+        next.opponentPercent,
+        next.challengerFinished,
+        next.opponentFinished,
+        next.status,
+        next.winnerUserId
+      ]
+    );
+    const updated = updateResult.rows[0] || session;
+    if (String(updated.status || '').trim() === 'completed') {
+      await markSpeakingChallengeCompletedBySessionId(client, session.id);
+      await awardSpeakingBattleWin(client, session.id, Number(updated.winner_user_id) || 0);
+    }
+    return {
+      ...updated,
+      challenger_is_bot: Boolean(challengerBotConfig),
+      opponent_is_bot: Boolean(opponentBotConfig)
+    };
+  }
+
+  return {
+    ...session,
+    challenger_is_bot: Boolean(challengerBotConfig),
+    opponent_is_bot: Boolean(opponentBotConfig)
+  };
+}
+
 async function touchSpeakingSessionAndResolveTimeout(client, sessionId, requesterUserId) {
   const result = await client.query(
     `SELECT *
@@ -4937,7 +5290,7 @@ async function touchSpeakingSessionAndResolveTimeout(client, sessionId, requeste
     await markSpeakingChallengeCompletedBySessionId(client, sessionId);
     await awardSpeakingBattleWin(client, sessionId, Number(updated.winner_user_id) || 0);
   }
-  return updated;
+  return syncBotStateIntoSpeakingSession(client, updated);
 }
 
 async function refreshFlashcardManifestMirror() {
@@ -7036,6 +7389,140 @@ async function uploadUserAvatarToR2(user, imageDataUrl, label = 'avatar') {
   return buildFlashcardsR2PublicUrl(objectKey);
 }
 
+async function generateAvatarCartoonWithOpenAI({
+  imageDataUrl,
+  prompt = '',
+  fileNameHint = 'playtalk-avatar-cartoon',
+  size = '1024x1024',
+  quality = 'low',
+  outputFormat = 'png',
+  background = 'transparent'
+}) {
+  const parsedImage = parseBase64DataUrl(imageDataUrl);
+  if (!parsedImage?.buffer?.length || !/^image\//i.test(parsedImage.mimeType || '')) {
+    const error = new Error('Imagem invalida para transformar em desenho.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (parsedImage.buffer.length > 8 * 1024 * 1024) {
+    const error = new Error('Imagem muito grande. Envie uma foto menor que 8 MB.');
+    error.statusCode = 413;
+    throw error;
+  }
+  if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
+    const error = new Error('OpenAI nao configurado.');
+    error.statusCode = 503;
+    error.instructions = 'Preencha OPENAI_API_KEY no .env com a chave real da OpenAI.';
+    throw error;
+  }
+
+  const stylePrompt = prompt || [
+    'Analyze the uploaded user photo and recreate the same person as a high-end animated portrait.',
+    'Preserve identity, facial proportions, hairstyle, skin tone, gaze direction, and overall expression.',
+    'Make the person look naturally a bit fitter, healthier, more alive, happier, and lighter in aura, with cleaner skin and flattering presentation while keeping them recognizably the same person.',
+    'If the subject appears slightly overweight, reduce it only subtly and tastefully while preserving identity and realism.',
+    'If the subject is clearly an adult and appears over about 40 years old, make them look only a little younger, around five years younger, while preserving realism and identity.',
+    'Render it as a polished premium 3D animated portrait with cinematic lighting, soft shadows, vibrant colors, detailed textures, gentle depth of field, premium 4k animation quality.',
+    'Use transparent background only (alpha channel). Do not add beach, sky, scenery, room, wall, gradients, floor, objects, or any backdrop.',
+    'Keep only the person cut out cleanly with smooth edges and no background pixels.',
+    'Keep the composition close to the original photo and use only the uploaded photo as reference.',
+    'Do not invent props, toys, shoulder characters, extra accessories, extra people, text, logos, or watermarks.',
+    'Keep the final image clean, premium, warm, and visually uplifting.'
+  ].join(' ');
+
+  const extension = extensionFromMimeType(parsedImage.mimeType);
+  const fileName = `avatar-source.${extension}`;
+  const imageBlob = new Blob([parsedImage.buffer], { type: parsedImage.mimeType });
+  const formData = new FormData();
+  formData.append('model', OPENAI_AVATAR_IMAGE_MODEL);
+  formData.append('prompt', stylePrompt);
+  formData.append('image', imageBlob, fileName);
+  formData.append('size', size);
+  formData.append('quality', quality);
+  formData.append('output_format', outputFormat);
+  formData.append('background', background);
+
+  const upstreamResponse = await fetch('https://api.openai.com/v1/images/edits', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`
+    },
+    body: formData
+  });
+
+  const responseText = await upstreamResponse.text();
+  let payload = null;
+  try {
+    payload = responseText ? JSON.parse(responseText) : null;
+  } catch (_error) {
+    payload = null;
+  }
+
+  if (!upstreamResponse.ok) {
+    const error = new Error(payload?.error?.message || responseText.slice(0, 500) || 'Falha ao transformar avatar na OpenAI.');
+    error.statusCode = upstreamResponse.status || 502;
+    throw error;
+  }
+
+  const image = Array.isArray(payload?.data) ? payload.data[0] : null;
+  const b64 = image?.b64_json;
+  if (!b64) {
+    const error = new Error('A OpenAI nao retornou a imagem editada em base64.');
+    error.statusCode = 502;
+    throw error;
+  }
+
+  const safeExt = outputFormat === 'jpeg' ? 'jpg' : outputFormat === 'png' ? 'png' : 'webp';
+  const mimeType = safeExt === 'jpg' ? 'image/jpeg' : safeExt === 'png' ? 'image/png' : 'image/webp';
+  const finalFileName = `${safeGeneratedBase(fileNameHint)}-${Date.now()}.${safeExt}`;
+
+  return {
+    success: true,
+    fileName: finalFileName,
+    model: OPENAI_AVATAR_IMAGE_MODEL,
+    dataUrl: `data:${mimeType};base64,${b64}`,
+    usage: payload?.usage || null
+  };
+}
+
+async function queueBotAvatarGeneration({ userId, sourceImageDataUrl }) {
+  const normalizedUserId = Number(userId) || 0;
+  if (!normalizedUserId || !sourceImageDataUrl || !pool) return;
+
+  (async () => {
+    try {
+      const generated = await generateAvatarCartoonWithOpenAI({
+        imageDataUrl: sourceImageDataUrl,
+        fileNameHint: `bot-avatar-${normalizedUserId}`
+      });
+      const user = await readUserById(normalizedUserId);
+      if (!user) {
+        throw new Error('Bot nao encontrado para salvar avatar.');
+      }
+      const avatarUrl = await uploadUserAvatarToR2(user, generated.dataUrl, 'bot-avatar-current');
+      const fallbackAvatar = avatarUrl || generated.dataUrl;
+      await pool.query(
+        `UPDATE public.users
+         SET avatar_image = $2,
+             onboarding_photo_completed = true,
+             bot_avatar_status = 'ready',
+             bot_avatar_error = NULL
+         WHERE id = $1`,
+        [normalizedUserId, fallbackAvatar]
+      );
+    } catch (error) {
+      console.error(`Erro ao gerar avatar do bot ${normalizedUserId}:`, error);
+      await pool.query(
+        `UPDATE public.users
+         SET bot_avatar_status = 'error',
+             bot_avatar_error = $2
+         WHERE id = $1`,
+        [normalizedUserId, String(error?.message || 'Falha ao gerar avatar.').slice(0, 300)]
+      ).catch(() => null);
+    }
+  })();
+}
+
 function parseCookies(req) {
   const header = req.headers.cookie;
   if (!header) return {};
@@ -8638,166 +9125,119 @@ app.get('/api/users/flashcards', async (req, res) => {
         ? '/h'
         : '';
 
-    const rankingSortSql = metricKey === 'pronunciation'
-      ? 'pronunciation_percent DESC, flashcards_count DESC, created_at ASC, id ASC'
-      : metricKey === 'speed'
-        ? 'speed_flashcards_per_hour DESC, flashcards_count DESC, created_at ASC, id ASC'
-        : metricKey === 'battle'
-          ? 'battles_won DESC, flashcards_count DESC, created_at ASC, id ASC'
-          : 'flashcards_count DESC, created_at ASC, id ASC';
-    const metricValueSql = metricKey === 'pronunciation'
-      ? 'pronunciation_percent'
-      : metricKey === 'speed'
-        ? 'speed_flashcards_per_hour'
-        : metricKey === 'battle'
-          ? 'battles_won'
-          : 'flashcards_count';
-
     const visibilityWhereClause = buildPublicUsersVisibilityWhereClause(requesterIsAdmin);
-    const rankingSql = `WITH base_users AS (
-         SELECT
-           u.id,
-           COALESCE(NULLIF(u.username, ''), u.email) AS username,
-           COALESCE(u.avatar_image, '') AS avatar_image,
-           u.created_at,
-           u.premium_full_access,
-           u.premium_until,
-           COALESCE(presence.last_seen_at >= (now() - interval '${SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS} seconds'), false) AS is_online,
-           COALESCE(progress.total, 0) AS flashcards_count,
-           COALESCE(u.battle, 0)::int AS battles_won,
-           GREATEST(
-             0,
-             LEAST(
-               100,
-               ROUND(
-                 COALESCE(
-                   (
-                     SELECT AVG(sample.value::numeric)
-                     FROM jsonb_array_elements_text(COALESCE(stats.pronunciation_samples, '[]'::jsonb)) AS sample(value)
-                   ),
-                   0
-                 ) + 5
-               )::int
-             )
-           )::int AS pronunciation_percent,
-           CASE
-             WHEN COALESCE(stats.training_time_ms, 0) <= 0 OR COALESCE(progress.total, 0) <= 0 THEN 0
-             ELSE ROUND((COALESCE(progress.total, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
-           END AS speed_flashcards_per_hour
-         FROM public.users u
-         LEFT JOIN (
-           SELECT
-             user_id,
-             COUNT(*)::int AS total
-           FROM public.user_flashcard_progress
-           GROUP BY user_id
-         ) progress
-           ON progress.user_id = u.id
-         LEFT JOIN public.user_flashcard_stats stats
-           ON stats.user_id = u.id
-         LEFT JOIN public.user_presence presence
-           ON presence.user_id = u.id
-         ${visibilityWhereClause}
-       ),
-       ranked_users AS (
-         SELECT
-           base_users.*,
-           ROW_NUMBER() OVER (
-             ORDER BY ${rankingSortSql}
-           )::int AS rank_position,
-           ${metricValueSql} AS ranking_value
-         FROM base_users
-       )
-       SELECT *
-       FROM ranked_users
-       ORDER BY rank_position
-       LIMIT $1`;
-    const result = await pool.query(rankingSql, [limit]);
-    const viewerResult = authUser?.id
-      ? await pool.query(
-        `WITH base_users AS (
-           SELECT
-             u.id,
-             COALESCE(NULLIF(u.username, ''), u.email) AS username,
-             COALESCE(u.avatar_image, '') AS avatar_image,
-             u.created_at,
-             u.premium_full_access,
-             u.premium_until,
-             COALESCE(presence.last_seen_at >= (now() - interval '${SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS} seconds'), false) AS is_online,
-             COALESCE(progress.total, 0) AS flashcards_count,
-             COALESCE(u.battle, 0)::int AS battles_won,
-             GREATEST(
-               0,
-               LEAST(
-                 100,
-                 ROUND(
-                   COALESCE(
-                     (
-                       SELECT AVG(sample.value::numeric)
-                       FROM jsonb_array_elements_text(COALESCE(stats.pronunciation_samples, '[]'::jsonb)) AS sample(value)
-                     ),
-                     0
-                   ) + 5
-                 )::int
-               )
-             )::int AS pronunciation_percent,
-             CASE
-               WHEN COALESCE(stats.training_time_ms, 0) <= 0 OR COALESCE(progress.total, 0) <= 0 THEN 0
-               ELSE ROUND((COALESCE(progress.total, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
-             END AS speed_flashcards_per_hour
-           FROM public.users u
-           LEFT JOIN (
-             SELECT
-               user_id,
-               COUNT(*)::int AS total
-             FROM public.user_flashcard_progress
-             GROUP BY user_id
-           ) progress
-             ON progress.user_id = u.id
-           LEFT JOIN public.user_flashcard_stats stats
-             ON stats.user_id = u.id
-           LEFT JOIN public.user_presence presence
-             ON presence.user_id = u.id
-           ${visibilityWhereClause}
-         ),
-         ranked_users AS (
-           SELECT
-             base_users.*,
-             ROW_NUMBER() OVER (
-               ORDER BY ${rankingSortSql}
-             )::int AS rank_position,
-             ${metricValueSql} AS ranking_value
-           FROM base_users
-         )
-         SELECT *
-         FROM ranked_users
-         WHERE id = $1
-         LIMIT 1`,
-        [authUser.id]
-      )
-      : { rows: [] };
+    const result = await pool.query(
+      `SELECT
+         u.id,
+         COALESCE(NULLIF(u.username, ''), u.email) AS username,
+         COALESCE(u.avatar_image, '') AS avatar_image,
+         u.created_at,
+         u.premium_full_access,
+         u.premium_until,
+         u.is_bot,
+         u.bot_config,
+         u.bot_avatar_status,
+         u.bot_avatar_error,
+         COALESCE(presence.last_seen_at >= (now() - interval '${SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS} seconds'), false) AS is_online,
+         COALESCE(progress.total, 0) AS flashcards_count,
+         COALESCE(u.battle, 0)::int AS battles_won,
+         GREATEST(
+           0,
+           LEAST(
+             100,
+             ROUND(
+               COALESCE(
+                 (
+                   SELECT AVG(sample.value::numeric)
+                   FROM jsonb_array_elements_text(COALESCE(stats.pronunciation_samples, '[]'::jsonb)) AS sample(value)
+                 ),
+                 0
+               ) + 5
+             )::int
+           )
+         )::int AS pronunciation_percent,
+         CASE
+           WHEN COALESCE(stats.training_time_ms, 0) <= 0 OR COALESCE(progress.total, 0) <= 0 THEN 0
+           ELSE ROUND((COALESCE(progress.total, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+         END AS speed_flashcards_per_hour
+       FROM public.users u
+       LEFT JOIN (
+         SELECT user_id, COUNT(*)::int AS total
+         FROM public.user_flashcard_progress
+         GROUP BY user_id
+       ) progress
+         ON progress.user_id = u.id
+       LEFT JOIN public.user_flashcard_stats stats
+         ON stats.user_id = u.id
+       LEFT JOIN public.user_presence presence
+         ON presence.user_id = u.id
+       ${visibilityWhereClause}`
+    );
+
+    const entries = result.rows.map((entry) => {
+      const derived = buildBotDerivedStats(entry);
+      const isBot = isBotUserRecord(entry);
+      const rankingValue = metricKey === 'pronunciation'
+        ? derived.pronunciationPercent
+        : metricKey === 'speed'
+          ? derived.speedFlashcardsPerHour
+          : metricKey === 'battle'
+            ? derived.battlesWon
+            : derived.flashcardsCount;
+      return {
+        ...entry,
+        is_online: isBot ? true : Boolean(entry.is_online),
+        flashcards_count: derived.flashcardsCount,
+        pronunciation_percent: derived.pronunciationPercent,
+        speed_flashcards_per_hour: derived.speedFlashcardsPerHour,
+        battles_won: derived.battlesWon,
+        ranking_value: rankingValue
+      };
+    }).sort((left, right) => {
+      const primary = Number(right.ranking_value) - Number(left.ranking_value);
+      if (primary !== 0) return primary;
+      const flashcardsDiff = Number(right.flashcards_count) - Number(left.flashcards_count);
+      if (flashcardsDiff !== 0) return flashcardsDiff;
+      const leftCreatedAt = Date.parse(String(left.created_at || '').trim());
+      const rightCreatedAt = Date.parse(String(right.created_at || '').trim());
+      const createdAtDiff = (Number.isFinite(leftCreatedAt) ? leftCreatedAt : 0) - (Number.isFinite(rightCreatedAt) ? rightCreatedAt : 0);
+      if (createdAtDiff !== 0) return createdAtDiff;
+      return (Number(left.id) || 0) - (Number(right.id) || 0);
+    }).map((entry, index) => ({
+      ...entry,
+      rank_position: index + 1
+    }));
+
+    const limitedEntries = entries.slice(0, limit);
+    const viewerEntry = authUser?.id
+      ? entries.find((entry) => Number(entry.id) === Number(authUser.id)) || null
+      : null;
 
     res.json({
       success: true,
       metric: metricKey,
       metricLabel,
       metricValueLabel,
-      viewer: viewerResult.rows[0] ? {
-        userId: Number(viewerResult.rows[0].id) || 0,
-        username: String(viewerResult.rows[0].username || '').trim() || 'Usuario',
-        rank: Number(viewerResult.rows[0].rank_position) || 0,
-        flashcardsCount: Number(viewerResult.rows[0].flashcards_count) || 0,
-        pronunciationPercent: Number(viewerResult.rows[0].pronunciation_percent) || 0,
-        speedFlashcardsPerHour: Number(viewerResult.rows[0].speed_flashcards_per_hour) || 0,
-        battlesWon: Number(viewerResult.rows[0].battles_won) || 0,
-        rankingValue: Number(viewerResult.rows[0].ranking_value) || 0,
-        isOnline: Boolean(viewerResult.rows[0].is_online)
+      viewer: viewerEntry ? {
+        userId: Number(viewerEntry.id) || 0,
+        username: String(viewerEntry.username || '').trim() || 'Usuario',
+        rank: Number(viewerEntry.rank_position) || 0,
+        flashcardsCount: Number(viewerEntry.flashcards_count) || 0,
+        pronunciationPercent: Number(viewerEntry.pronunciation_percent) || 0,
+        speedFlashcardsPerHour: Number(viewerEntry.speed_flashcards_per_hour) || 0,
+        battlesWon: Number(viewerEntry.battles_won) || 0,
+        rankingValue: Number(viewerEntry.ranking_value) || 0,
+        isOnline: Boolean(viewerEntry.is_online)
       } : null,
-      users: result.rows.map((entry) => ({
+      users: limitedEntries.map((entry) => ({
         userId: Number(entry.id) || 0,
         username: String(entry.username || '').trim() || 'Usuario',
         avatarImage: String(entry.avatar_image || '').trim(),
         isAdmin: isAdminUserRecord(entry),
+        isBot: isBotUserRecord(entry),
+        botAvatarStatus: String(entry.bot_avatar_status || '').trim() || 'ready',
+        botAvatarError: String(entry.bot_avatar_error || '').trim(),
+        botConfig: parseBotConfig(entry.bot_config),
         rank: Number(entry.rank_position) || 0,
         flashcardsCount: Number(entry.flashcards_count) || 0,
         pronunciationPercent: Number(entry.pronunciation_percent) || 0,
@@ -10488,6 +10928,8 @@ app.post('/api/speaking/challenges/send', async (req, res) => {
          u.id,
          COALESCE(NULLIF(u.username, ''), u.email) AS username,
          COALESCE(u.avatar_image, '') AS avatar_image,
+         u.is_bot,
+         u.bot_config,
          COALESCE(p.last_seen_at >= (now() - interval '${SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS} seconds'), false) AS is_online
        FROM public.users u
        LEFT JOIN public.user_presence p
@@ -10501,7 +10943,8 @@ app.post('/api/speaking/challenges/send', async (req, res) => {
       res.status(404).json({ success: false, message: 'Usuario nao encontrado.' });
       return;
     }
-    if (!Boolean(opponent.is_online)) {
+    const opponentIsBot = isBotUserRecord(opponent);
+    if (!opponentIsBot && !Boolean(opponent.is_online)) {
       res.status(409).json({ success: false, message: 'Usuario offline no momento.' });
       return;
     }
@@ -10528,6 +10971,67 @@ app.post('/api/speaking/challenges/send', async (req, res) => {
         message: 'Ja existe um desafio pendente entre voces.'
       });
       return;
+    }
+
+    if (opponentIsBot) {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const cards = await buildRandomSpeakingCards();
+        if (!cards.length) {
+          const error = new Error('Nao foi possivel preparar as cartas do duelo.');
+          error.statusCode = 500;
+          throw error;
+        }
+        const challengeResult = await client.query(
+          `INSERT INTO public.speaking_challenges (
+             challenger_user_id,
+             opponent_user_id,
+             status,
+             expires_at,
+             updated_at
+           )
+           VALUES ($1, $2, 'accepted', now() + interval '${SPEAKING_CHALLENGE_PENDING_TTL_SECONDS} seconds', now())
+           RETURNING id, created_at, expires_at`,
+          [challengerUserId, opponentUserId]
+        );
+        const sessionId = buildSpeakingSessionId();
+        await client.query(
+          `INSERT INTO public.speaking_duel_sessions (
+             id,
+             challenger_user_id,
+             opponent_user_id,
+             cards,
+             status,
+             updated_at
+           )
+           VALUES ($1, $2, $3, $4::jsonb, 'active', now())`,
+          [sessionId, challengerUserId, opponentUserId, JSON.stringify(cards)]
+        );
+        await client.query(
+          `UPDATE public.speaking_challenges
+           SET session_id = $2,
+               responded_at = now(),
+               updated_at = now()
+           WHERE id = $1`,
+          [Number(challengeResult.rows[0]?.id) || 0, sessionId]
+        );
+        await client.query('COMMIT');
+        res.json({
+          success: true,
+          challengeId: Number(challengeResult.rows[0]?.id) || 0,
+          createdAt: challengeResult.rows[0]?.created_at || null,
+          expiresAt: challengeResult.rows[0]?.expires_at || null,
+          sessionId,
+          acceptedImmediately: true
+        });
+        return;
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
     }
 
     const created = await pool.query(
@@ -10797,12 +11301,14 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
         challenger: {
           userId: Number(session.challenger_id) || 0,
           username: String(session.challenger_name || '').trim() || 'Usuario',
-          avatarImage: String(session.challenger_avatar || '').trim()
+          avatarImage: String(session.challenger_avatar || '').trim(),
+          isBot: Boolean(session.challenger_is_bot)
         },
         opponent: {
           userId: Number(session.opponent_id) || 0,
           username: String(session.opponent_name || '').trim() || 'Usuario',
-          avatarImage: String(session.opponent_avatar || '').trim()
+          avatarImage: String(session.opponent_avatar || '').trim(),
+          isBot: Boolean(session.opponent_is_bot)
         },
         winner: Number(session.winner_id) ? {
           userId: Number(session.winner_id) || 0,
@@ -11201,6 +11707,88 @@ app.post('/api/premium/redeem', async (req, res) => {
         : statusCode === 404
           ? 'Usuario nao encontrado.'
           : error?.message || 'Erro ao resgatar chave.'
+    });
+  }
+});
+
+app.post('/api/admin/users/bots', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await ensureUsersAvatarColumn();
+    await ensureFlashcardUserStateTables();
+    await ensurePremiumAccessTables();
+    const adminUser = await requireAdminUserFromRequest(req);
+    const botConfig = normalizeBotConfig(req.body || {});
+    const existingUser = await pool.query(
+      'SELECT id FROM public.users WHERE LOWER(COALESCE(username, email)) = LOWER($1) LIMIT 1',
+      [botConfig.username]
+    );
+    if (existingUser.rows.length) {
+      res.status(409).json({ success: false, message: 'Ja existe um usuario com esse nome.' });
+      return;
+    }
+    const passwordHash = await bcrypt.hash(`bot:${botConfig.username}:${Date.now()}:${Math.random()}`, 10);
+    const emailBase = buildLegacyEmailFromUsername(botConfig.username) || `bot${Date.now()}`;
+    const email = `${emailBase}.${buildRandomUserSuffix(6).toLowerCase()}@bot.playtalk.local`;
+    const initialAvatar = FLASHCARD_RANKING_PLACEHOLDER_AVATAR;
+
+    const created = await pool.query(
+      `INSERT INTO public.users (
+         email,
+         username,
+         password_hash,
+         avatar_image,
+         onboarding_name_completed,
+         onboarding_photo_completed,
+         is_bot,
+         bot_config,
+         bot_avatar_status,
+         created_by_user_id
+       )
+       VALUES ($1, $2, $3, $4, true, false, true, $5::jsonb, 'processing', $6)
+       RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                 onboarding_name_completed, onboarding_photo_completed, created_at,
+                 password_hash, premium_full_access, premium_until, is_bot, bot_config,
+                 bot_avatar_status, bot_avatar_error, created_by_user_id, battle`,
+      [
+        email,
+        botConfig.username,
+        passwordHash,
+        initialAvatar,
+        JSON.stringify({
+          flashcardsCount: botConfig.flashcardsCount,
+          pronunciationBase: botConfig.pronunciationBase,
+          flashcardsPerHour: botConfig.flashcardsPerHour,
+          responseSeconds: botConfig.responseSeconds,
+          updateHour: botConfig.updateHour
+        }),
+        Number(adminUser.id) || null
+      ]
+    );
+
+    const user = created.rows[0];
+    queueBotAvatarGeneration({
+      userId: user.id,
+      sourceImageDataUrl: botConfig.sourceImageDataUrl
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Bot criado. O avatar esta sendo processado.',
+      user: mapPublicUser(user)
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : (error?.code === '23505' ? 409 : 500);
+    console.error('Erro ao criar bot admin:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: error?.code === '23505'
+        ? 'Ja existe um usuario com esse nome.'
+        : (error?.message || 'Nao foi possivel criar o bot.')
     });
   }
 });
@@ -12261,110 +12849,24 @@ app.post('/api/images/openai', async (req, res) => {
 });
 
 app.post('/api/images/openai/avatar-cartoon', async (req, res) => {
-  const imageDataUrl = typeof req.body?.imageDataUrl === 'string'
-    ? req.body.imageDataUrl.trim()
-    : (typeof req.body?.avatar === 'string' ? req.body.avatar.trim() : '');
-  const customPrompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
-  const fileNameHint = typeof req.body?.fileName === 'string' ? req.body.fileName.trim() : 'playtalk-avatar-cartoon';
-  const size = typeof req.body?.size === 'string' ? req.body.size.trim() : '1024x1024';
-  const quality = typeof req.body?.quality === 'string' ? req.body.quality.trim() : 'low';
-  const outputFormat = typeof req.body?.outputFormat === 'string' ? req.body.outputFormat.trim() : 'png';
-  const background = typeof req.body?.background === 'string' ? req.body.background.trim() : 'transparent';
-  const parsedImage = parseBase64DataUrl(imageDataUrl);
-
-  if (!parsedImage?.buffer?.length || !/^image\//i.test(parsedImage.mimeType || '')) {
-    res.status(400).json({ error: 'Imagem invalida para transformar em desenho.' });
-    return;
-  }
-
-  if (parsedImage.buffer.length > 8 * 1024 * 1024) {
-    res.status(413).json({ error: 'Imagem muito grande. Envie uma foto menor que 8 MB.' });
-    return;
-  }
-
-  if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
-    res.status(503).json({
-      error: 'OpenAI nao configurado.',
-      instructions: 'Preencha OPENAI_API_KEY no .env com a chave real da OpenAI.'
-    });
-    return;
-  }
-
-  const stylePrompt = customPrompt || [
-    'Analyze the uploaded user photo and recreate the same person as a high-end animated portrait.',
-    'Preserve identity, facial proportions, hairstyle, skin tone, gaze direction, and overall expression.',
-    'Make the person look naturally a bit fitter, healthier, more alive, happier, and lighter in aura, with cleaner skin and flattering presentation while keeping them recognizably the same person.',
-    'If the subject appears slightly overweight, reduce it only subtly and tastefully while preserving identity and realism.',
-    'If the subject is clearly an adult and appears over about 40 years old, make them look only a little younger, around five years younger, while preserving realism and identity.',
-    'Render it as a polished premium 3D animated portrait with cinematic lighting, soft shadows, vibrant colors, detailed textures, gentle depth of field, premium 4k animation quality.',
-    'Use transparent background only (alpha channel). Do not add beach, sky, scenery, room, wall, gradients, floor, objects, or any backdrop.',
-    'Keep only the person cut out cleanly with smooth edges and no background pixels.',
-    'Keep the composition close to the original photo and use only the uploaded photo as reference.',
-    'Do not invent props, toys, shoulder characters, extra accessories, extra people, text, logos, or watermarks.',
-    'Keep the final image clean, premium, warm, and visually uplifting.'
-  ].join(' ');
-
   try {
-    const extension = extensionFromMimeType(parsedImage.mimeType);
-    const fileName = `avatar-source.${extension}`;
-    const imageBlob = new Blob([parsedImage.buffer], { type: parsedImage.mimeType });
-    const formData = new FormData();
-    formData.append('model', OPENAI_AVATAR_IMAGE_MODEL);
-    formData.append('prompt', stylePrompt);
-    formData.append('image', imageBlob, fileName);
-    formData.append('size', size);
-    formData.append('quality', quality);
-    formData.append('output_format', outputFormat);
-    formData.append('background', background);
-
-    const upstreamResponse = await fetch('https://api.openai.com/v1/images/edits', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`
-      },
-      body: formData
+    const payload = await generateAvatarCartoonWithOpenAI({
+      imageDataUrl: typeof req.body?.imageDataUrl === 'string'
+        ? req.body.imageDataUrl.trim()
+        : (typeof req.body?.avatar === 'string' ? req.body.avatar.trim() : ''),
+      prompt: typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '',
+      fileNameHint: typeof req.body?.fileName === 'string' ? req.body.fileName.trim() : 'playtalk-avatar-cartoon',
+      size: typeof req.body?.size === 'string' ? req.body.size.trim() : '1024x1024',
+      quality: typeof req.body?.quality === 'string' ? req.body.quality.trim() : 'low',
+      outputFormat: typeof req.body?.outputFormat === 'string' ? req.body.outputFormat.trim() : 'png',
+      background: typeof req.body?.background === 'string' ? req.body.background.trim() : 'transparent'
     });
-
-    const responseText = await upstreamResponse.text();
-    let payload = null;
-    try {
-      payload = responseText ? JSON.parse(responseText) : null;
-    } catch (_error) {
-      payload = null;
-    }
-
-    if (!upstreamResponse.ok) {
-      res.status(upstreamResponse.status).json({
-        error: 'Falha ao transformar avatar na OpenAI.',
-        details: payload?.error?.message || responseText.slice(0, 500)
-      });
-      return;
-    }
-
-    const image = Array.isArray(payload?.data) ? payload.data[0] : null;
-    const b64 = image?.b64_json;
-    if (!b64) {
-      res.status(502).json({
-        error: 'A OpenAI nao retornou a imagem editada em base64.'
-      });
-      return;
-    }
-
-    const safeExt = outputFormat === 'jpeg' ? 'jpg' : outputFormat === 'png' ? 'png' : 'webp';
-    const mimeType = safeExt === 'jpg' ? 'image/jpeg' : safeExt === 'png' ? 'image/png' : 'image/webp';
-    const finalFileName = `${safeGeneratedBase(fileNameHint)}-${Date.now()}.${safeExt}`;
-
-    res.json({
-      success: true,
-      fileName: finalFileName,
-      model: OPENAI_AVATAR_IMAGE_MODEL,
-      dataUrl: `data:${mimeType};base64,${b64}`,
-      usage: payload?.usage || null
-    });
+    res.json(payload);
   } catch (error) {
-    res.status(502).json({
-      error: 'Erro ao conectar com a OpenAI.',
-      details: error.message
+    res.status(Number(error?.statusCode || 502)).json({
+      error: error.message || 'Erro ao conectar com a OpenAI.',
+      details: error.details || null,
+      instructions: error.instructions || null
     });
   }
 });
