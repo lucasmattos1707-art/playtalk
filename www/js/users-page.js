@@ -28,6 +28,20 @@
     adminTitle: document.getElementById('usersAdminTitle'),
     adminCopy: document.getElementById('usersAdminCopy'),
     adminStatus: document.getElementById('usersAdminStatus'),
+    botLaunchBtn: document.getElementById('usersBotLaunchBtn'),
+    botModal: document.getElementById('usersBotModal'),
+    botForm: document.getElementById('usersBotForm'),
+    botAvatarPreview: document.getElementById('usersBotAvatarPreview'),
+    botPhotoInput: document.getElementById('usersBotPhotoInput'),
+    botNameInput: document.getElementById('usersBotNameInput'),
+    botFlashcardsInput: document.getElementById('usersBotFlashcardsInput'),
+    botPronunciationInput: document.getElementById('usersBotPronunciationInput'),
+    botSpeedInput: document.getElementById('usersBotSpeedInput'),
+    botResponseInput: document.getElementById('usersBotResponseInput'),
+    botHint: document.getElementById('usersBotHint'),
+    botCreateBtn: document.getElementById('usersBotCreateBtn'),
+    botCloseBtn: document.getElementById('usersBotCloseBtn'),
+    botStatus: document.getElementById('usersBotStatus'),
     grant7Btn: document.getElementById('grant7Btn'),
     grant30Btn: document.getElementById('grant30Btn'),
     grant365Btn: document.getElementById('grant365Btn'),
@@ -69,7 +83,9 @@
     loadRequestId: 0,
     rankingCache: new Map(),
     preloadInFlight: new Map(),
-    stageAnimating: false
+    stageAnimating: false,
+    botBusy: false,
+    botSourceImageDataUrl: ''
   };
 
   function buildApiUrl(path) {
@@ -206,6 +222,9 @@
       rankingValue: Number(entry?.rankingValue) || 0,
       avatarImage: safeText(entry?.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg') || 'Avatar/avatar-man-person-svgrepo-com.svg',
       isAdmin: Boolean(entry?.isAdmin),
+      isBot: Boolean(entry?.isBot),
+      botAvatarStatus: safeText(entry?.botAvatarStatus || 'ready') || 'ready',
+      botAvatarError: safeText(entry?.botAvatarError || ''),
       premiumUntil: entry?.premiumUntil || null,
       premiumActive: Boolean(entry?.premiumActive),
       isOnline: Boolean(entry?.isOnline)
@@ -230,6 +249,15 @@
     return Boolean(state.currentUser?.isAdmin);
   }
 
+  function syncAdminViewerUi() {
+    document.body.classList.toggle('is-admin-viewer', isAdminViewer());
+  }
+
+  function setBotStatus(message) {
+    if (!els.botStatus) return;
+    els.botStatus.textContent = message || '';
+  }
+
   function setAdminStatus(message) {
     if (!els.adminStatus) return;
     els.adminStatus.textContent = message || '';
@@ -249,6 +277,128 @@
     if (els.adminModal) els.adminModal.classList.remove('is-visible');
     setAdminStatus('');
     syncAdminButtons();
+  }
+
+  function updateBotHint() {
+    if (!els.botHint) return;
+    const flashcardsPerHour = Math.max(0, Number(els.botSpeedInput?.value) || 0);
+    const estimatedGain = Math.max(0, Math.round(flashcardsPerHour / 12));
+    els.botHint.textContent = `Treino diario: 5 minutos. Com ${flashcardsPerHour || 0} flashcards/hora, esse bot ganha ${estimatedGain} flashcard${estimatedGain === 1 ? '' : 's'} por atualizacao.`;
+  }
+
+  function closeBotModal() {
+    state.botBusy = false;
+    state.botSourceImageDataUrl = '';
+    if (els.botModal) els.botModal.classList.remove('is-visible');
+    if (els.botForm) els.botForm.reset();
+    if (els.botAvatarPreview) {
+      els.botAvatarPreview.src = '/Avatar/avatar-man-person-svgrepo-com.svg';
+    }
+    if (els.botCreateBtn) els.botCreateBtn.disabled = false;
+    setBotStatus('');
+    updateBotHint();
+  }
+
+  function openBotModal() {
+    if (!isAdminViewer()) return;
+    updateBotHint();
+    setBotStatus('');
+    if (els.botModal) els.botModal.classList.add('is-visible');
+  }
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Nao foi possivel ler a imagem.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function dataUrlToSquareWebpDataUrl(sourceDataUrl, size = 400) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const context = canvas.getContext('2d');
+          if (!context) {
+            reject(new Error('Nao foi possivel preparar a imagem.'));
+            return;
+          }
+          const sourceWidth = image.naturalWidth || image.width;
+          const sourceHeight = image.naturalHeight || image.height;
+          const sourceSide = Math.min(sourceWidth, sourceHeight);
+          const sourceX = Math.max(0, Math.round((sourceWidth - sourceSide) / 2));
+          const sourceY = Math.max(0, Math.round((sourceHeight - sourceSide) / 2));
+          context.clearRect(0, 0, size, size);
+          context.drawImage(image, sourceX, sourceY, sourceSide, sourceSide, 0, 0, size, size);
+          resolve(canvas.toDataURL('image/webp', 0.86));
+        } catch (error) {
+          reject(error);
+        }
+      };
+      image.onerror = () => reject(new Error('Nao foi possivel abrir a foto.'));
+      image.src = sourceDataUrl;
+    });
+  }
+
+  async function handleBotPhotoChange(event) {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+    try {
+      setBotStatus('Preparando foto...');
+      const sourceDataUrl = await fileToDataUrl(file);
+      const squareDataUrl = await dataUrlToSquareWebpDataUrl(sourceDataUrl, 400);
+      state.botSourceImageDataUrl = squareDataUrl;
+      if (els.botAvatarPreview) {
+        els.botAvatarPreview.src = squareDataUrl;
+      }
+      setBotStatus('Foto pronta. O avatar final vai ser gerado em segundo plano.');
+    } catch (error) {
+      state.botSourceImageDataUrl = '';
+      setBotStatus(error?.message || 'Nao foi possivel preparar a foto.');
+    }
+  }
+
+  async function createBot() {
+    if (!isAdminViewer() || state.botBusy) return;
+    const username = safeText(els.botNameInput?.value);
+    if (!username || !state.botSourceImageDataUrl) {
+      setBotStatus('Preencha o nome e envie a foto base do bot.');
+      return;
+    }
+
+    state.botBusy = true;
+    if (els.botCreateBtn) els.botCreateBtn.disabled = true;
+    setBotStatus('Criando bot e enviando avatar para a fila...');
+    try {
+      const response = await fetch(buildApiUrl('/api/admin/users/bots'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          username,
+          sourceImageDataUrl: state.botSourceImageDataUrl,
+          flashcardsCount: Math.max(0, Number(els.botFlashcardsInput?.value) || 0),
+          pronunciationBase: Math.max(0, Number(els.botPronunciationInput?.value) || 0),
+          flashcardsPerHour: Math.max(0, Number(els.botSpeedInput?.value) || 0),
+          responseSeconds: Math.max(1, Number(els.botResponseInput?.value) || 0)
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Nao foi possivel criar o bot.');
+      }
+      closeBotModal();
+      await loadUsers('Bot criado. Atualizando ranking...', { metricKey: state.currentMetricKey, force: true });
+    } catch (error) {
+      setBotStatus(error?.message || 'Nao foi possivel criar o bot.');
+      state.botBusy = false;
+      if (els.botCreateBtn) els.botCreateBtn.disabled = false;
+    }
   }
 
   function openAdminModal(user) {
@@ -286,12 +436,14 @@
     }
     if (els.challengeName) els.challengeName.textContent = user.username;
     if (els.challengeCopy) {
-      els.challengeCopy.textContent = user.isOnline
-        ? 'Usuario online agora. Clique para enviar desafio speaking com 25 cartas.'
-        : 'Usuario offline no momento. Quando ele ficar online voce consegue desafiar.';
+      els.challengeCopy.textContent = user.isBot
+        ? 'Bot aceita na hora e o duelo abre direto no speaking.'
+        : user.isOnline
+          ? 'Usuario online agora. Clique para enviar desafio speaking com 25 cartas.'
+          : 'Usuario offline no momento. Quando ele ficar online voce consegue desafiar.';
     }
     if (els.challengeActionBtn) {
-      els.challengeActionBtn.disabled = !user.isOnline;
+      els.challengeActionBtn.disabled = !user.isBot && !user.isOnline;
     }
     setChallengeStatus('');
     if (els.challengeModal) els.challengeModal.classList.add('is-visible');
@@ -319,8 +471,14 @@
 
   function rowMetaText(entry) {
     const parts = [];
-    parts.push(entry.premiumActive ? 'Premium ativo' : 'Free');
-    parts.push(entry.isOnline ? 'Online' : 'Offline');
+    parts.push(entry.isBot ? 'Bot' : (entry.premiumActive ? 'Premium ativo' : 'Free'));
+    if (entry.isBot && entry.botAvatarStatus === 'processing') {
+      parts.push('Avatar gerando');
+    } else if (entry.isBot && entry.botAvatarStatus === 'error') {
+      parts.push('Avatar com erro');
+    } else {
+      parts.push(entry.isOnline ? 'Online' : 'Offline');
+    }
     return parts.join(' | ');
   }
 
@@ -340,7 +498,7 @@
 
     const rowMarkup = displayRows.map((entry) => `
       <div class="users-row${entry.isOnline ? ' is-online' : ''}${isAdminViewer() && entry.userId !== state.currentUser?.id ? ' is-admin-target' : ''}" data-user-id="${entry.userId}">
-        <div class="users-avatar">
+        <div class="users-avatar${entry.botAvatarStatus === 'processing' ? ' is-processing' : ''}">
           <img src="${escapeHtml(entry.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg')}" alt="${escapeHtml(entry.username)}">
           <span class="users-rank-badge">${escapeHtml(entry.rank || 0)}</span>
         </div>
@@ -706,6 +864,10 @@
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.message || 'Nao foi possivel enviar o desafio.');
       }
+      if (payload?.sessionId) {
+        window.location.href = `/speaking?session=${encodeURIComponent(payload.sessionId)}`;
+        return;
+      }
       setChallengeStatus('Desafio enviado. Aguardando resposta...');
       closeChallengeModal();
       if (window.PlaytalkChallengePopups && typeof window.PlaytalkChallengePopups.forcePoll === 'function') {
@@ -787,6 +949,8 @@
 
   (async () => {
     state.currentUser = await fetchSessionUser();
+    syncAdminViewerUi();
+    updateBotHint();
     await pingPresence();
     await syncRankingWithBanner(true);
     if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
@@ -795,7 +959,41 @@
     startBackgroundLoops();
   })();
 
+  window.addEventListener('keydown', (event) => {
+    if (!isAdminViewer()) return;
+    if (event.defaultPrevented) return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    const target = event.target;
+    const typing = target instanceof HTMLElement
+      && (
+        target.tagName === 'INPUT'
+        || target.tagName === 'TEXTAREA'
+        || target.tagName === 'SELECT'
+        || target.isContentEditable
+      );
+    if (typing) return;
+    if (String(event.key || '').toLowerCase() !== 'c') return;
+    event.preventDefault();
+    if (els.botModal?.classList.contains('is-visible')) {
+      void createBot();
+      return;
+    }
+    openBotModal();
+  });
+
   els.closeAdminModalBtn?.addEventListener('click', closeAdminModal);
+  els.botLaunchBtn?.addEventListener('click', openBotModal);
+  els.botCloseBtn?.addEventListener('click', closeBotModal);
+  els.botPhotoInput?.addEventListener('change', (event) => { void handleBotPhotoChange(event); });
+  els.botCreateBtn?.addEventListener('click', () => { void createBot(); });
+  els.botForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void createBot();
+  });
+  els.botSpeedInput?.addEventListener('input', updateBotHint);
+  els.botModal?.addEventListener('click', (event) => {
+    if (event.target === els.botModal) closeBotModal();
+  });
   els.grant7Btn?.addEventListener('click', () => { void grantPremium(7); });
   els.grant30Btn?.addEventListener('click', () => { void grantPremium(30); });
   els.grant365Btn?.addEventListener('click', () => { void grantPremium(365); });
