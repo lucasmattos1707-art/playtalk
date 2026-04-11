@@ -3405,8 +3405,8 @@
       font-family: "Soopafre", Arial, sans-serif;
       text-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
       letter-spacing: 0.01em;
-      white-space: pre-wrap;
-      word-break: keep-all;
+      white-space: normal;
+      word-break: normal;
       overflow-wrap: normal;
       hyphens: manual;
     }
@@ -3425,7 +3425,9 @@
       place-items: center;
       align-content: center;
       text-align: center;
-      line-height: 1.18;
+      text-shadow:
+        0 3px 0 rgba(8, 28, 74, 0.98),
+        0 10px 22px rgba(8, 28, 74, 0.64);
     }
 
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual {
@@ -3435,7 +3437,9 @@
       place-items: center;
       align-content: center;
       text-align: center;
-      line-height: 1.18;
+      text-shadow:
+        0 3px 0 rgba(8, 28, 74, 0.98),
+        0 10px 22px rgba(8, 28, 74, 0.64);
     }
 
     .flashcards-typing__display--visual.is-answer-image {
@@ -3467,16 +3471,16 @@
       font-family: "Pltay", "Soopafre", Arial, sans-serif;
       font-size: clamp(39px, 12.7vw, 78px);
       text-shadow:
-        0 2px 0 rgba(8, 55, 29, 0.98),
-        0 8px 16px rgba(8, 55, 29, 0.42);
+        0 3px 0 rgba(8, 28, 74, 0.98),
+        0 10px 22px rgba(8, 28, 74, 0.64);
     }
 
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual.is-star-phase-copy {
       font-family: "Pltay", "Soopafre", Arial, sans-serif;
       font-size: clamp(39px, 12.7vw, 78px);
       text-shadow:
-        0 2px 0 rgba(7, 35, 95, 0.98),
-        0 8px 16px rgba(7, 35, 95, 0.42);
+        0 3px 0 rgba(8, 28, 74, 0.98),
+        0 10px 22px rgba(8, 28, 74, 0.64);
     }
 
     .flashcards-typing__display-letter {
@@ -3668,10 +3672,12 @@
     .game[data-phase-key="third-star"] .circlescreen .game-card__layout,
     .game[data-phase-key="fifth-star"] .circlescreen .game-card__layout {
       display: flex !important;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       width: 100%;
       height: 100%;
+      position: relative;
     }
 
     .game[data-phase-key="first-star"] .circlescreen .game-card__content,
@@ -3687,8 +3693,10 @@
       height: 100%;
       min-height: 0;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      position: relative;
     }
 
     .game[data-phase-key="first-star"] #gameVisual,
@@ -3706,6 +3714,7 @@
       justify-items: center;
       align-content: center;
       justify-content: center;
+      left: 50%;
       margin: 0 auto;
       width: 270px;
       height: 270px;
@@ -3722,7 +3731,7 @@
       align-self: center;
       --flashcards-active-image-shift: 0px;
       --flashcards-active-image-scale: 1;
-      transform: none !important;
+      transform: translateX(-50%) !important;
     }
 
     .game[data-phase-key="first-star"] .game-card__content,
@@ -3999,6 +4008,8 @@
       overflow: visible;
       display: grid;
       place-items: center;
+      left: 50%;
+      transform: translateX(-50%) !important;
     }
 
     .game[data-phase-key="first-star"] #gameVisual {
@@ -4373,7 +4384,6 @@
       min-height: 0;
       display: grid;
       place-items: center;
-      line-height: 1.08;
       text-align: center;
     }
 
@@ -4603,12 +4613,16 @@
     .game[data-phase-key="fifth-star"] .game-controls-proxy:not(.is-hidden) {
       display: grid;
       grid-template-columns: 1fr;
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--footer-total-height) + 50px);
       justify-items: center;
-      align-self: start;
-      justify-self: center;
+      align-self: auto;
+      justify-self: auto;
       width: min(160px, 100%);
-      margin: 70px auto 0;
-      z-index: 8;
+      margin: 0;
+      transform: translateX(-50%);
+      z-index: 80;
     }
 
     .game[data-phase-key="first-star"] .game-controls-proxy .game-language-btn,
@@ -13027,16 +13041,71 @@
         return source.charAt(0).toLocaleUpperCase('pt-BR') + source.slice(1).toLocaleLowerCase('pt-BR');
       }
 
+      function countTypingDisplayCharacters(value) {
+        return safeText(value).replace(/\s+/g, '').length;
+      }
+
+      function scoreTypingDisplayLines(lines) {
+        const lengths = lines.map((line) => countTypingDisplayCharacters(line));
+        const maxLength = lengths.length ? Math.max(...lengths) : 0;
+        const minLength = lengths.length ? Math.min(...lengths) : 0;
+        const imbalance = maxLength - minLength;
+        const overflowPenalty = lengths.reduce((total, length) => total + Math.max(0, length - 14), 0);
+        return (overflowPenalty * 1000) + (maxLength * 20) + imbalance;
+      }
+
+      function chooseTypingDisplaySplit(words, lineCount) {
+        const best = { score: Number.POSITIVE_INFINITY, lines: [words.join(' ')] };
+        if (!Array.isArray(words) || !words.length || lineCount <= 1) {
+          return best.lines;
+        }
+
+        const buildPartitions = (startIndex, remainingLines, chosen) => {
+          if (remainingLines === 1) {
+            const lines = [...chosen, words.slice(startIndex).join(' ')];
+            const score = scoreTypingDisplayLines(lines);
+            if (score < best.score) {
+              best.score = score;
+              best.lines = lines;
+            }
+            return;
+          }
+
+          const maxStart = words.length - remainingLines;
+          for (let endIndex = startIndex + 1; endIndex <= maxStart; endIndex += 1) {
+            buildPartitions(
+              endIndex,
+              remainingLines - 1,
+              [...chosen, words.slice(startIndex, endIndex).join(' ')]
+            );
+          }
+        };
+
+        buildPartitions(0, Math.min(lineCount, words.length), []);
+        return best.lines;
+      }
+
       function splitTypingDisplayText(text) {
         const source = safeText(text).trim();
         if (!source) return [''];
-        const compactLength = source.replace(/\s+/g, '').length;
-        if (compactLength <= 12) return [source];
         const words = source.split(/\s+/).filter(Boolean);
-        if (words.length >= 2) {
-          const midpoint = Math.ceil(words.length / 2);
-          return [words.slice(0, midpoint).join(' '), words.slice(midpoint).join(' ')].filter(Boolean);
+        if (words.length <= 1) return [source];
+
+        const compactLength = countTypingDisplayCharacters(source);
+        if (compactLength <= 14) return [source];
+
+        if (compactLength > 24 && words.length >= 3) {
+          return chooseTypingDisplaySplit(words, 3);
         }
+
+        if (words.length === 2 && compactLength >= 12) {
+          return words;
+        }
+
+        if (compactLength >= 12) {
+          return chooseTypingDisplaySplit(words, 2);
+        }
+
         return [source];
       }
 
