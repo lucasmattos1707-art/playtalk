@@ -5002,13 +5002,22 @@ async function awardSpeakingBattleWin(client, sessionId, winnerUserId) {
   return true;
 }
 
-function computeSpeakingDuelTimeoutWinnerUserId(session) {
+function computeSpeakingDuelWinnerUserId(session) {
   const challengerFinished = Boolean(session?.challenger_finished);
   const opponentFinished = Boolean(session?.opponent_finished);
   const challengerUserId = Number(session?.challenger_user_id) || 0;
   const opponentUserId = Number(session?.opponent_user_id) || 0;
+  const challengerPercent = Number(session?.challenger_percent) || 0;
+  const opponentPercent = Number(session?.opponent_percent) || 0;
+  const challengerProgress = Number(session?.challenger_progress) || 0;
+  const opponentProgress = Number(session?.opponent_progress) || 0;
   if (challengerFinished && !opponentFinished) return challengerUserId;
   if (opponentFinished && !challengerFinished) return opponentUserId;
+  if (challengerPercent > opponentPercent) return challengerUserId;
+  if (opponentPercent > challengerPercent) return opponentUserId;
+  if (challengerProgress > opponentProgress) return challengerUserId;
+  if (opponentProgress > challengerProgress) return opponentUserId;
+  if (challengerUserId > 0) return challengerUserId;
   return 0;
 }
 
@@ -5130,26 +5139,16 @@ async function syncBotStateIntoSpeakingSession(client, session) {
   const battleExpired = isSpeakingDuelBattleExpired(session);
   if (battleExpired && next.status !== 'completed') {
     next.status = 'completed';
-    next.winnerUserId = computeSpeakingDuelTimeoutWinnerUserId({
+    next.winnerUserId = computeSpeakingDuelWinnerUserId({
       challenger_finished: next.challengerFinished,
       opponent_finished: next.opponentFinished,
+      challenger_percent: next.challengerPercent,
+      opponent_percent: next.opponentPercent,
+      challenger_progress: next.challengerProgress,
+      opponent_progress: next.opponentProgress,
       challenger_user_id: challengerUserId,
       opponent_user_id: opponentUserId
     });
-    changed = true;
-  } else if (next.challengerFinished && next.opponentFinished && next.status !== 'completed') {
-    next.status = 'completed';
-    if (next.challengerPercent > next.opponentPercent) {
-      next.winnerUserId = challengerUserId;
-    } else if (next.opponentPercent > next.challengerPercent) {
-      next.winnerUserId = opponentUserId;
-    } else if (next.challengerProgress > next.opponentProgress) {
-      next.winnerUserId = challengerUserId;
-    } else if (next.opponentProgress > next.challengerProgress) {
-      next.winnerUserId = opponentUserId;
-    } else {
-      next.winnerUserId = challengerUserId;
-    }
     changed = true;
   }
 
@@ -5235,18 +5234,27 @@ async function touchSpeakingSessionAndResolveTimeout(client, sessionId, requeste
   let challengerFinished = Boolean(next.challenger_finished);
   let opponentFinished = Boolean(next.opponent_finished);
   let finishedAt = next.finished_at || null;
+  const usersResult = await client.query(
+    `SELECT id, is_bot
+     FROM public.users
+     WHERE id = ANY($1::int[])`,
+    [[challengerUserId, opponentUserId]]
+  );
+  const usersById = new Map(usersResult.rows.map((row) => [Number(row.id) || 0, row]));
+  const challengerIsBot = isBotUserRecord(usersById.get(challengerUserId));
+  const opponentIsBot = isBotUserRecord(usersById.get(opponentUserId));
 
   if (status === 'active') {
     const battleExpired = isSpeakingDuelBattleExpired(next);
     if (battleExpired) {
       status = 'completed';
-      winnerUserId = computeSpeakingDuelTimeoutWinnerUserId(next);
+      winnerUserId = computeSpeakingDuelWinnerUserId(next);
       finishedAt = nowIso;
     }
 
     const requesterWinsByTimeout = requesterIsChallenger
-      ? (Date.now() - Date.parse(next.opponent_last_seen_at || 0)) > (SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS * 1000)
-      : (Date.now() - Date.parse(next.challenger_last_seen_at || 0)) > (SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS * 1000);
+      ? (!opponentIsBot && (Date.now() - Date.parse(next.opponent_last_seen_at || 0)) > (SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS * 1000))
+      : (!challengerIsBot && (Date.now() - Date.parse(next.challenger_last_seen_at || 0)) > (SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS * 1000));
 
     if (!battleExpired && requesterWinsByTimeout) {
       status = 'completed';
@@ -11414,25 +11422,16 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
       const battleExpired = timedOut || isSpeakingDuelBattleExpired(session);
       if (battleExpired && next.status !== 'completed') {
         next.status = 'completed';
-        next.winnerUserId = computeSpeakingDuelTimeoutWinnerUserId({
+        next.winnerUserId = computeSpeakingDuelWinnerUserId({
           challenger_finished: next.challengerFinished,
           opponent_finished: next.opponentFinished,
+          challenger_percent: next.challengerPercent,
+          opponent_percent: next.opponentPercent,
+          challenger_progress: next.challengerProgress,
+          opponent_progress: next.opponentProgress,
           challenger_user_id: challengerUserId,
           opponent_user_id: opponentUserId
         });
-      } else if (next.challengerFinished && next.opponentFinished) {
-        next.status = 'completed';
-        if (next.challengerPercent > next.opponentPercent) {
-          next.winnerUserId = challengerUserId;
-        } else if (next.opponentPercent > next.challengerPercent) {
-          next.winnerUserId = opponentUserId;
-        } else if (next.challengerProgress > next.opponentProgress) {
-          next.winnerUserId = challengerUserId;
-        } else if (next.opponentProgress > next.challengerProgress) {
-          next.winnerUserId = opponentUserId;
-        } else {
-          next.winnerUserId = challengerUserId;
-        }
       }
 
       await client.query(
