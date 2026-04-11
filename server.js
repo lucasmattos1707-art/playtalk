@@ -8965,6 +8965,7 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
     await ensureUserBooksConsumptionStatsTable();
     const book = await findSpeakingBookById(bookId);
 
+    const MIN_BOOK_LIBRARY_PERCENT = 75;
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -8976,43 +8977,60 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
         [userId, bookId]
       );
       const existing = existingResult.rows[0] || null;
-      const nextReadsCompleted = Math.max(0, Number(existing?.reads_completed) || 0) + 1;
-      const nextListenedSeconds = Math.max(0, Number(existing?.listened_seconds) || 0) + listenedSeconds;
-      const nextBestSpeaking = mode === 'speaking-training'
-        ? Math.max(scorePercent, Math.max(0, Number(existing?.best_speaking_percent) || 0))
-        : (existing?.best_speaking_percent == null ? null : Math.max(0, Number(existing.best_speaking_percent) || 0));
-      const nextBestListening = mode === 'listening-training'
-        ? Math.max(scorePercent, Math.max(0, Number(existing?.best_listening_percent) || 0))
-        : (existing?.best_listening_percent == null ? null : Math.max(0, Number(existing.best_listening_percent) || 0));
+      const qualifiesForLibrary = scorePercent >= MIN_BOOK_LIBRARY_PERCENT;
+      const hasExistingLibraryEntry = Boolean(existing);
+      const shouldPersistLibraryEntry = qualifiesForLibrary || hasExistingLibraryEntry;
+      let nextReadsCompleted = Math.max(0, Number(existing?.reads_completed) || 0);
+      let nextListenedSeconds = Math.max(0, Number(existing?.listened_seconds) || 0);
+      let nextBestSpeaking = existing?.best_speaking_percent == null
+        ? null
+        : Math.max(0, Number(existing.best_speaking_percent) || 0);
+      let nextBestListening = existing?.best_listening_percent == null
+        ? null
+        : Math.max(0, Number(existing.best_listening_percent) || 0);
 
-      await client.query(
-        `INSERT INTO public.user_books_library_stats (
-           user_id, book_id, book_title, cover_image_url, background_desktop_url,
-           reads_completed, listened_seconds, best_speaking_percent, best_listening_percent, updated_at
-         )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
-         ON CONFLICT (user_id, book_id)
-         DO UPDATE
-           SET book_title = EXCLUDED.book_title,
-               cover_image_url = EXCLUDED.cover_image_url,
-               background_desktop_url = EXCLUDED.background_desktop_url,
-               reads_completed = EXCLUDED.reads_completed,
-               listened_seconds = EXCLUDED.listened_seconds,
-               best_speaking_percent = EXCLUDED.best_speaking_percent,
-               best_listening_percent = EXCLUDED.best_listening_percent,
-               updated_at = now()`,
-        [
-          userId,
-          bookId,
-          normalizeMiniBookText(book?.title || book?.nome || ''),
-          normalizeMiniBookText(book?.coverImageUrl || ''),
-          normalizeMiniBookText(book?.backgroundDesktopUrl || ''),
-          nextReadsCompleted,
-          nextListenedSeconds,
-          nextBestSpeaking,
-          nextBestListening
-        ]
-      );
+      if (shouldPersistLibraryEntry) {
+        nextReadsCompleted += 1;
+        nextListenedSeconds += listenedSeconds;
+      }
+
+      nextBestSpeaking = mode === 'speaking-training'
+        ? Math.max(scorePercent, Math.max(0, Number(existing?.best_speaking_percent) || 0))
+        : nextBestSpeaking;
+      nextBestListening = mode === 'listening-training'
+        ? Math.max(scorePercent, Math.max(0, Number(existing?.best_listening_percent) || 0))
+        : nextBestListening;
+
+      if (shouldPersistLibraryEntry) {
+        await client.query(
+          `INSERT INTO public.user_books_library_stats (
+             user_id, book_id, book_title, cover_image_url, background_desktop_url,
+             reads_completed, listened_seconds, best_speaking_percent, best_listening_percent, updated_at
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
+           ON CONFLICT (user_id, book_id)
+           DO UPDATE
+             SET book_title = EXCLUDED.book_title,
+                 cover_image_url = EXCLUDED.cover_image_url,
+                 background_desktop_url = EXCLUDED.background_desktop_url,
+                 reads_completed = EXCLUDED.reads_completed,
+                 listened_seconds = EXCLUDED.listened_seconds,
+                 best_speaking_percent = EXCLUDED.best_speaking_percent,
+                 best_listening_percent = EXCLUDED.best_listening_percent,
+                 updated_at = now()`,
+          [
+            userId,
+            bookId,
+            normalizeMiniBookText(book?.title || book?.nome || ''),
+            normalizeMiniBookText(book?.coverImageUrl || ''),
+            normalizeMiniBookText(book?.backgroundDesktopUrl || ''),
+            nextReadsCompleted,
+            nextListenedSeconds,
+            nextBestSpeaking,
+            nextBestListening
+          ]
+        );
+      }
 
       if (speakingChars > 0) {
         await client.query(
