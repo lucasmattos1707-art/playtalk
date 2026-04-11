@@ -354,7 +354,7 @@
         ? 'Usuario online agora.'
         : 'Usuario offline no momento.';
       els.adminBotGrid.innerHTML = '';
-      els.adminBotGrid.hidden = true;
+      els.adminBotGrid.setAttribute('hidden', '');
       return;
     }
 
@@ -366,15 +366,15 @@
       ['Tempo medio por frase', `${Math.max(0, Number(botConfig.responseSeconds) || 0)} s`]
     ];
 
-    els.adminPanelTitle.textContent = 'Configuracao do bot';
-    els.adminPanelCopy.textContent = 'Esses sao os dados configurados quando o bot foi criado.';
+    els.adminPanelTitle.textContent = 'Informacoes do bot';
+    els.adminPanelCopy.textContent = 'Esses sao os dados que o admin preencheu ao criar esse bot.';
     els.adminBotGrid.innerHTML = infoItems.map(([label, value]) => `
       <article class="users-admin-bot-item">
         <span class="users-admin-bot-label">${escapeHtml(label)}</span>
         <span class="users-admin-bot-value">${escapeHtml(value)}</span>
       </article>
     `).join('');
-    els.adminBotGrid.hidden = false;
+    els.adminBotGrid.removeAttribute('hidden');
   }
 
   function syncAdminButtons() {
