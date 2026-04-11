@@ -3714,7 +3714,6 @@
       justify-items: center;
       align-content: center;
       justify-content: center;
-      left: 50%;
       margin: 0 auto;
       width: 270px;
       height: 270px;
@@ -3731,7 +3730,7 @@
       align-self: center;
       --flashcards-active-image-shift: 0px;
       --flashcards-active-image-scale: 1;
-      transform: translateX(-50%) !important;
+      transform: none !important;
     }
 
     .game[data-phase-key="first-star"] .game-card__content,
@@ -4009,8 +4008,8 @@
       overflow: visible;
       display: grid;
       place-items: center;
-      left: 50%;
-      transform: translateX(-50%) !important;
+      margin: 0 auto;
+      transform: none !important;
     }
 
     .game[data-phase-key="first-star"] #gameVisual {
@@ -6734,11 +6733,13 @@
       const STAGE_INTRO_OVERLAYS = {
         1: {
           key: 'first-star',
+          storageKey: 'first-star-intro',
           src: '/arquivos-codex/tutorial/fluent-levelup-tuto1.png',
           alt: 'Tutorial da first star'
         },
         2: {
           key: 'second-star',
+          storageKey: 'second-star-intro',
           src: '/arquivos-codex/tutorial/fluent-levelup-tuto2.png',
           alt: 'Tutorial da second star'
         }
