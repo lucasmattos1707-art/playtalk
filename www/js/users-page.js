@@ -27,6 +27,9 @@
     adminModal: document.getElementById('usersAdminModal'),
     adminTitle: document.getElementById('usersAdminTitle'),
     adminCopy: document.getElementById('usersAdminCopy'),
+    adminPanelTitle: document.getElementById('usersAdminPanelTitle'),
+    adminPanelCopy: document.getElementById('usersAdminPanelCopy'),
+    adminBotGrid: document.getElementById('usersAdminBotGrid'),
     adminStatus: document.getElementById('usersAdminStatus'),
     botLaunchBtn: document.getElementById('usersBotLaunchBtn'),
     botModal: document.getElementById('usersBotModal'),
@@ -41,12 +44,11 @@
     botHint: document.getElementById('usersBotHint'),
     botCreateBtn: document.getElementById('usersBotCreateBtn'),
     botCloseBtn: document.getElementById('usersBotCloseBtn'),
+    botCloseTopBtn: document.getElementById('usersBotCloseTopBtn'),
     botStatus: document.getElementById('usersBotStatus'),
-    grant7Btn: document.getElementById('grant7Btn'),
-    grant30Btn: document.getElementById('grant30Btn'),
-    grant365Btn: document.getElementById('grant365Btn'),
     deleteUserBtn: document.getElementById('deleteUserBtn'),
     closeAdminModalBtn: document.getElementById('closeAdminModalBtn'),
+    closeAdminModalTopBtn: document.getElementById('closeAdminModalTopBtn'),
     challengeModal: document.getElementById('usersChallengeModal'),
     challengeAvatar: document.getElementById('usersChallengeAvatar'),
     challengeName: document.getElementById('usersChallengeName'),
@@ -225,6 +227,13 @@
       isBot: Boolean(entry?.isBot),
       botAvatarStatus: safeText(entry?.botAvatarStatus || 'ready') || 'ready',
       botAvatarError: safeText(entry?.botAvatarError || ''),
+      botConfig: entry?.botConfig && typeof entry.botConfig === 'object' ? {
+        username: safeText(entry.botConfig.username || entry.username || 'Usuario') || 'Usuario',
+        flashcardsCount: Number(entry.botConfig.flashcardsCount) || 0,
+        pronunciationBase: Number(entry.botConfig.pronunciationBase) || 0,
+        flashcardsPerHour: Number(entry.botConfig.flashcardsPerHour) || 0,
+        responseSeconds: Number(entry.botConfig.responseSeconds) || 0
+      } : null,
       premiumUntil: entry?.premiumUntil || null,
       premiumActive: Boolean(entry?.premiumActive),
       isOnline: Boolean(entry?.isOnline)
@@ -263,9 +272,42 @@
     els.adminStatus.textContent = message || '';
   }
 
+  function renderAdminBotInfo(user) {
+    if (!els.adminBotGrid || !els.adminPanelTitle || !els.adminPanelCopy) return;
+    const botConfig = user?.botConfig && typeof user.botConfig === 'object' ? user.botConfig : null;
+    if (!user?.isBot || !botConfig) {
+      els.adminPanelTitle.textContent = 'Informacoes do usuario';
+      els.adminPanelCopy.textContent = user?.isOnline
+        ? 'Usuario online agora.'
+        : 'Usuario offline no momento.';
+      els.adminBotGrid.innerHTML = '';
+      els.adminBotGrid.hidden = true;
+      return;
+    }
+
+    const infoItems = [
+      ['Nome', safeText(botConfig.username || user.username || 'Bot') || 'Bot'],
+      ['Rank atual', String(Math.max(0, Number(user.rank) || 0))],
+      ['Flashcards iniciais', String(Math.max(0, Number(botConfig.flashcardsCount) || 0))],
+      ['Pronuncia media', `${Math.max(0, Number(botConfig.pronunciationBase) || 0)}%`],
+      ['Flashcards por hora', String(Math.max(0, Number(botConfig.flashcardsPerHour) || 0))],
+      ['Tempo medio por frase', `${Math.max(0, Number(botConfig.responseSeconds) || 0)} s`]
+    ];
+
+    els.adminPanelTitle.textContent = 'Configuracao do bot';
+    els.adminPanelCopy.textContent = 'Esses sao os dados configurados quando o bot foi criado.';
+    els.adminBotGrid.innerHTML = infoItems.map(([label, value]) => `
+      <article class="users-admin-bot-item">
+        <span class="users-admin-bot-label">${escapeHtml(label)}</span>
+        <span class="users-admin-bot-value">${escapeHtml(value)}</span>
+      </article>
+    `).join('');
+    els.adminBotGrid.hidden = false;
+  }
+
   function syncAdminButtons() {
     const disabled = state.adminBusy || !state.selectedUser;
-    [els.grant7Btn, els.grant30Btn, els.grant365Btn, els.deleteUserBtn].forEach((button) => {
+    [els.deleteUserBtn].forEach((button) => {
       if (!button) return;
       button.disabled = disabled;
     });
@@ -409,6 +451,7 @@
     if (els.adminCopy) {
       els.adminCopy.textContent = `Rank ${user.rank || 0} | ${formatMetricValue(user, state.currentMetricKey, state.currentMetricValueLabel)} (${state.currentMetricLabel})`;
     }
+    renderAdminBotInfo(user);
     if (els.adminModal) els.adminModal.classList.add('is-visible');
     setAdminStatus('');
     syncAdminButtons();
@@ -883,32 +926,6 @@
     }
   }
 
-  async function grantPremium(durationDays) {
-    if (!state.selectedUser || state.adminBusy) return;
-    state.adminBusy = true;
-    syncAdminButtons();
-    setAdminStatus('Liberando premium...');
-    try {
-      const response = await fetch(buildApiUrl(`/api/admin/users/${state.selectedUser.userId}/premium`), {
-        method: 'POST',
-        credentials: 'include',
-        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ durationDays })
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.success) {
-        throw new Error(payload?.message || 'Erro ao atribuir premium.');
-      }
-      setAdminStatus('Premium atualizado.');
-      await loadUsers('Atualizando ranking...', { metricKey: state.currentMetricKey, force: true });
-    } catch (error) {
-      setAdminStatus(error?.message || 'Erro ao atribuir premium.');
-    } finally {
-      state.adminBusy = false;
-      syncAdminButtons();
-    }
-  }
-
   async function deleteUser() {
     if (!state.selectedUser || state.adminBusy) return;
     const confirmed = window.confirm(`Excluir ${state.selectedUser.username} e todos os dados dele?`);
@@ -984,6 +1001,7 @@
   els.closeAdminModalBtn?.addEventListener('click', closeAdminModal);
   els.botLaunchBtn?.addEventListener('click', openBotModal);
   els.botCloseBtn?.addEventListener('click', closeBotModal);
+  els.botCloseTopBtn?.addEventListener('click', closeBotModal);
   els.botPhotoInput?.addEventListener('change', (event) => { void handleBotPhotoChange(event); });
   els.botCreateBtn?.addEventListener('click', () => { void createBot(); });
   els.botForm?.addEventListener('submit', (event) => {
@@ -994,10 +1012,8 @@
   els.botModal?.addEventListener('click', (event) => {
     if (event.target === els.botModal) closeBotModal();
   });
-  els.grant7Btn?.addEventListener('click', () => { void grantPremium(7); });
-  els.grant30Btn?.addEventListener('click', () => { void grantPremium(30); });
-  els.grant365Btn?.addEventListener('click', () => { void grantPremium(365); });
   els.deleteUserBtn?.addEventListener('click', () => { void deleteUser(); });
+  els.closeAdminModalTopBtn?.addEventListener('click', closeAdminModal);
   els.challengeActionBtn?.addEventListener('click', () => { void sendChallenge(); });
   els.challengeCloseBtn?.addEventListener('click', closeChallengeModal);
   els.incomingAcceptBtn?.addEventListener('click', () => { void respondIncomingChallenge('accept'); });
