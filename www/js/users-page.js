@@ -360,7 +360,6 @@
 
     const infoItems = [
       ['Nome', safeText(botConfig.username || user.username || 'Bot') || 'Bot'],
-      ['Rank atual', String(Math.max(0, Number(user.rank) || 0))],
       ['Flashcards iniciais', String(Math.max(0, Number(botConfig.flashcardsCount) || 0))],
       ['Pronuncia media', `${Math.max(0, Number(botConfig.pronunciationBase) || 0)}%`],
       ['Flashcards por hora', String(Math.max(0, Number(botConfig.flashcardsPerHour) || 0))],
