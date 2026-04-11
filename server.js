@@ -8533,8 +8533,17 @@ app.get('/api/flashcards/manifest', async (req, res) => {
       || includeHiddenRequested === 'true'
       || includeHiddenRequested === 'yes'
     );
-    const postgresFiles = await collectPostgresFlashcardManifestEntries();
-    const files = postgresFiles
+    const [localFiles, postgresFiles] = await Promise.all([
+      collectAllcardsManifestEntries(),
+      collectPostgresFlashcardManifestEntries()
+    ]);
+    const mergedBySource = new Map();
+    [...localFiles, ...postgresFiles].forEach((entry) => {
+      const sourceKey = String(entry?.source || entry?.path || entry?.name || '').trim().toLowerCase();
+      if (!sourceKey || mergedBySource.has(sourceKey)) return;
+      mergedBySource.set(sourceKey, entry);
+    });
+    const files = Array.from(mergedBySource.values())
       .filter((entry) => includeHiddenForRequester || !Boolean(entry?.isHidden))
       .sort((left, right) => (
         String(left?.title || '').localeCompare(String(right?.title || ''), 'pt-BR', {
