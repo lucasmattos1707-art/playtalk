@@ -883,12 +883,12 @@
       --percent: 0;
       --ring-a: #61f2a4;
       --ring-b: #2c7f50;
-      width: 198px;
-      height: 198px;
-      padding: 15px;
+      width: 238px;
+      height: 238px;
+      padding: 12px;
       border-radius: 50%;
-      background: rgba(8, 17, 30, 0.14);
-      border: 15px solid var(--ring-a);
+      background:
+        conic-gradient(var(--ring-a) calc(var(--percent) * 1%), rgba(255,255,255,0.14) 0%);
       display: grid;
       place-items: center;
       animation: ringPulse 1600ms ease-in-out infinite;
@@ -896,7 +896,7 @@
         0 0 18px color-mix(in srgb, var(--ring-a) 58%, transparent),
         0 0 42px color-mix(in srgb, var(--ring-a) 28%, transparent),
         0 8px 18px rgba(0,0,0,0.24);
-      transition: border-color 300ms ease, box-shadow 300ms ease;
+      transition: --percent 300ms ease, box-shadow 300ms ease;
     }
 
     .duel-avatar__ring.enemy {
@@ -910,6 +910,8 @@
       aspect-ratio: 1 / 1;
       border-radius: 50%;
       object-fit: cover;
+      outline: 12px solid rgba(8, 17, 30, 0.92);
+      outline-offset: -1px;
       border: 0;
       clip-path: circle(50%);
       background: rgba(8, 17, 30, 0.9);
@@ -998,7 +1000,7 @@
       justify-items: center;
       margin: auto 0 12px;
       gap: 0;
-      order: 4;
+      order: 3;
     }
 
     .game-touch.game-touch--books-mic {
@@ -1024,6 +1026,8 @@
       line-height: 0;
       transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, opacity 180ms ease;
       cursor: pointer;
+      display: grid;
+      place-items: center;
     }
 
     .game-touch.game-touch--books-mic:disabled {
@@ -1035,6 +1039,7 @@
       width: 65px;
       height: 65px;
       display: block;
+      margin: auto;
       filter: drop-shadow(0 0 10px rgba(132, 181, 255, 0.56));
       transition: opacity 140ms ease, transform 140ms ease, filter 180ms ease;
     }
@@ -1330,10 +1335,9 @@
         min-width: 0;
       }
       .duel-avatar__ring {
-        width: min(146px, 36vw);
-        height: min(146px, 36vw);
+        width: min(176px, 42vw);
+        height: min(176px, 42vw);
         padding: 12px;
-        border-width: 12px;
       }
       .duel-avatar__name {
         display: none;
@@ -1342,14 +1346,14 @@
         font-size: 29px;
       }
       .mic-trigger-wrap {
-        order: 1;
+        order: 3;
         margin: 2px 0 8px;
       }
       .card-word {
-        order: 2;
+        order: 1;
       }
       .card-subword {
-        order: 3;
+        order: 2;
         margin-top: 2px;
       }
       .game-touch.game-touch--books-mic {
