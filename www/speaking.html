@@ -796,11 +796,11 @@
     }
 
     .duel-timer {
-      margin: 6px 0 2px;
+      margin: 6px 0 4px;
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 7px;
+      gap: 9px;
       color: #fff0d2;
       font-family: "Soopafre", "Trebuchet MS", "Segoe UI", sans-serif;
       font-size: 20px;
@@ -816,15 +816,11 @@
       filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.28));
     }
 
-    .duel-timer__label {
-      color: #fff8e8;
-      font-weight: 800;
-    }
-
     .duel-timer__value {
       color: #fff0d2;
       min-width: 54px;
       text-align: left;
+      font-weight: 800;
     }
 
     .progress-wrap {
@@ -858,7 +854,9 @@
     }
 
     .progress-footer {
-      margin-top: 10px;
+      margin-top: auto;
+      display: grid;
+      gap: 8px;
     }
 
     .duel-avatars {
@@ -887,15 +885,18 @@
       --ring-b: #2c7f50;
       width: 198px;
       height: 198px;
-      padding: 6px;
+      padding: 15px;
       border-radius: 50%;
-      background:
-        conic-gradient(var(--ring-a) calc(var(--percent) * 1%), rgba(255,255,255,0.16) 0%);
+      background: rgba(8, 17, 30, 0.14);
+      border: 15px solid var(--ring-a);
       display: grid;
       place-items: center;
       animation: ringPulse 1600ms ease-in-out infinite;
-      box-shadow: 0 8px 18px rgba(0,0,0,0.24);
-      transition: --percent 300ms ease;
+      box-shadow:
+        0 0 18px color-mix(in srgb, var(--ring-a) 58%, transparent),
+        0 0 42px color-mix(in srgb, var(--ring-a) 28%, transparent),
+        0 8px 18px rgba(0,0,0,0.24);
+      transition: border-color 300ms ease, box-shadow 300ms ease;
     }
 
     .duel-avatar__ring.enemy {
@@ -911,6 +912,7 @@
       object-fit: cover;
       border: 0;
       clip-path: circle(50%);
+      background: rgba(8, 17, 30, 0.9);
     }
 
     .duel-avatar__name {
@@ -994,15 +996,16 @@
     .mic-trigger-wrap {
       display: grid;
       justify-items: center;
-      margin: 8px 0 6px;
-      gap: 8px;
+      margin: auto 0 12px;
+      gap: 0;
+      order: 4;
     }
 
     .game-touch.game-touch--books-mic {
-      width: clamp(112px, 24vw, 128px);
-      height: clamp(112px, 24vw, 128px);
-      min-width: clamp(112px, 24vw, 128px);
-      min-height: clamp(112px, 24vw, 128px);
+      width: clamp(140px, 30vw, 160px);
+      height: clamp(140px, 30vw, 160px);
+      min-width: clamp(140px, 30vw, 160px);
+      min-height: clamp(140px, 30vw, 160px);
       padding: 0;
       flex: 0 0 auto;
       border-radius: 999px;
@@ -1029,8 +1032,8 @@
     }
 
     .game-touch__books-mic-icon {
-      width: 52px;
-      height: 52px;
+      width: 65px;
+      height: 65px;
       display: block;
       filter: drop-shadow(0 0 10px rgba(132, 181, 255, 0.56));
       transition: opacity 140ms ease, transform 140ms ease, filter 180ms ease;
@@ -1062,33 +1065,7 @@
     }
 
     .language-switch {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 2px;
-    }
-
-    .language-switch__btn {
-      border: 0;
-      background: transparent;
-      padding: 0;
-      cursor: pointer;
-      opacity: 0.5;
-      transition: transform 180ms ease, opacity 180ms ease;
-    }
-
-    .language-switch__btn img {
-      width: 44px;
-      height: 44px;
-      display: block;
-      object-fit: contain;
-      filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.25));
-    }
-
-    .language-switch__btn.is-active {
-      opacity: 1;
-      transform: translateY(-1px);
+      display: none !important;
     }
 
     .btn-secondary {
@@ -1355,6 +1332,8 @@
       .duel-avatar__ring {
         width: min(146px, 36vw);
         height: min(146px, 36vw);
+        padding: 12px;
+        border-width: 12px;
       }
       .duel-avatar__name {
         display: none;
@@ -1374,10 +1353,10 @@
         margin-top: 2px;
       }
       .game-touch.game-touch--books-mic {
-        width: clamp(112px, 34vw, 132px);
-        height: clamp(112px, 34vw, 132px);
-        min-width: clamp(112px, 34vw, 132px);
-        min-height: clamp(112px, 34vw, 132px);
+        width: clamp(136px, 38vw, 164px);
+        height: clamp(136px, 38vw, 164px);
+        min-width: clamp(136px, 38vw, 164px);
+        min-height: clamp(136px, 38vw, 164px);
       }
       .progress-footer {
         position: fixed;
@@ -1512,7 +1491,6 @@
         <svg class="duel-timer__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path fill="currentColor" d="M12 6.4a.9.9 0 0 1 .9.9v4.22l2.69 1.56a.9.9 0 0 1-.9 1.55l-3.14-1.82a.9.9 0 0 1-.45-.78V7.3a.9.9 0 0 1 .9-.9M12 2.8a9.2 9.2 0 1 1 0 18.4 9.2 9.2 0 0 1 0-18.4m0 1.8a7.4 7.4 0 1 0 0 14.8 7.4 7.4 0 0 0 0-14.8"/>
         </svg>
-        <span class="duel-timer__label">Tempo restante:</span>
         <span class="duel-timer__value" id="duelTimerValue">03:00</span>
       </p>
 
@@ -1541,14 +1519,6 @@
             <path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/>
           </svg>
         </button>
-        <div class="language-switch" aria-label="Selecionar idioma do texto">
-          <button id="languageEnglishBtn" class="language-switch__btn is-active" type="button" aria-label="Mostrar texto em inglês" aria-pressed="true">
-            <img src="/SVG/codex-icons/ingles.svg" alt="Inglês">
-          </button>
-          <button id="languagePortugueseBtn" class="language-switch__btn" type="button" aria-label="Mostrar texto em português" aria-pressed="false">
-            <img src="/SVG/codex-icons/portugues.svg" alt="Português">
-          </button>
-        </div>
       </div>
       <div class="progress-footer">
         <div class="progress-wrap" aria-hidden="true">
