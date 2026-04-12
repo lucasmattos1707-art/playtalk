@@ -11,6 +11,7 @@
   const BANNER_SLOT_COUNT = 4;
   const BANNER_SLOT_MS = BANNER_CYCLE_MS / BANNER_SLOT_COUNT;
   const BANNER_SLOT_CHECK_MS = 240;
+  const NATIVE_BANNER_SLOT_CHECK_MS = 1400;
   const RANKING_CACHE_TTL_MS = 25000;
   const USERS_STAGE_SLIDE_MS = 320;
 
@@ -121,6 +122,21 @@
 
   function safeText(value) {
     return typeof value === 'string' ? value.trim() : '';
+  }
+
+  function isNativeRuntime() {
+    try {
+      if (window.PlaytalkNative && typeof window.PlaytalkNative.isNativeRuntime === 'function') {
+        return Boolean(window.PlaytalkNative.isNativeRuntime());
+      }
+    } catch (_error) {
+      // ignore
+    }
+
+    const protocol = String(window.location?.protocol || '').toLowerCase();
+    const hostname = String(window.location?.hostname || '').toLowerCase();
+    const port = String(window.location?.port || '').trim();
+    return protocol === 'file:' || ((hostname === 'localhost' || hostname === '127.0.0.1') && !port);
   }
 
   function setUsersStatus(message) {
@@ -661,6 +677,13 @@
   }
 
   async function fetchSessionUser() {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
+      const user = await window.PlaytalkApi.fetchSessionUser({
+        attempts: 3,
+        retryDelayMs: 450
+      });
+      return normalizeUser(user);
+    }
     const response = await fetch(buildApiUrl('/auth/session'), {
       headers: buildAuthHeaders(),
       cache: 'no-store',
@@ -807,6 +830,12 @@
   }
 
   function currentBannerSlot() {
+    if (isNativeRuntime()) {
+      const elapsed = Math.max(0, Date.now() - state.bannerClockStartedAtMs);
+      const cycleProgress = elapsed % BANNER_CYCLE_MS;
+      return Math.floor(cycleProgress / BANNER_SLOT_MS) + 1;
+    }
+
     const track = resolveBannerTrackElement();
     if (track) {
       const computedStyle = window.getComputedStyle(track);
@@ -827,7 +856,6 @@
         return progress + 1;
       }
     }
-
     const elapsed = Math.max(0, Date.now() - state.bannerClockStartedAtMs);
     const cycleProgress = elapsed % BANNER_CYCLE_MS;
     return Math.floor(cycleProgress / BANNER_SLOT_MS) + 1;
@@ -848,7 +876,7 @@
   function startBannerLinkedRankingLoop() {
     window.setInterval(() => {
       void syncRankingWithBanner(false);
-    }, BANNER_SLOT_CHECK_MS);
+    }, isNativeRuntime() ? NATIVE_BANNER_SLOT_CHECK_MS : BANNER_SLOT_CHECK_MS);
   }
 
   async function pingPresence() {
@@ -1038,7 +1066,9 @@
     window.setInterval(() => {
       void pingPresence();
     }, PRESENCE_PING_MS);
-    startBannerLinkedRankingLoop();
+    if (!isNativeRuntime()) {
+      startBannerLinkedRankingLoop();
+    }
     if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
       window.setInterval(() => {
         void pollChallenges();
@@ -1054,7 +1084,11 @@
     if (await bootstrapViewerFlashcardsFromLocal()) {
       state.rankingCache.clear();
     }
-    await syncRankingWithBanner(true);
+    if (isNativeRuntime()) {
+      await loadUsers('', { metricKey: 'flashcards', force: true, animate: false });
+    } else {
+      await syncRankingWithBanner(true);
+    }
     if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
       await pollChallenges();
     }

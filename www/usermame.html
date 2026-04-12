@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <title>PlayTalk</title>
+  <script>
+    (function redirectToUsername() {
+      var targetUrl = new URL('/username.html', window.location.origin);
+      targetUrl.search = window.location.search || '';
+      targetUrl.hash = window.location.hash || '';
+      window.location.replace(targetUrl.pathname + targetUrl.search + targetUrl.hash);
+    })();
+  </script>
+</head>
+<body></body>
+</html>

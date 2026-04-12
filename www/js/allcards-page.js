@@ -438,6 +438,13 @@
   }
 
   async function resolveSessionUserId() {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
+      const user = await window.PlaytalkApi.fetchSessionUser({
+        attempts: 3,
+        retryDelayMs: 450
+      });
+      return Number(user?.id) || 0;
+    }
     try {
       const response = await fetch(buildApiUrl('/auth/session'), {
         headers: buildAuthHeaders(),

@@ -6148,7 +6148,7 @@
 </head>
 <body class="flashcards-home-collapsed">
   <div class="container" aria-hidden="true"></div>
-  <section class="welcome-gate is-visible" id="welcomeGate" aria-label="Entrada do PlayTalk">
+  <section class="welcome-gate" id="welcomeGate" aria-label="Entrada do PlayTalk">
     <div class="welcome-gate__stack">
       <div class="welcome-gate__touch" id="welcomeTouch">
         <img class="welcome-gate__logo" id="welcomeLogo" src="/arquivos-codex/fluent-levelup-logo.png" alt="Level Up">
@@ -6821,7 +6821,8 @@
           pendingTutorialMuteNarration: false,
           authRequired: false,
           authDelayTimer: 0,
-          authRevealTimer: 0
+          authRevealTimer: 0,
+          cardsReloadInFlight: false
         },
         admin: {
           busy: false,
@@ -7986,7 +7987,7 @@
           const payload = await response.json().catch(() => ({}));
           if (!response.ok || !payload?.success) {
             if (response.status === 401) {
-              await handleLoggedOutState('Sua sessao expirou. Entre novamente para continuar.');
+              console.warn('Sessao recusada ao sincronizar flashcards; mantendo estado local.');
               return false;
             }
             throw new Error(payload?.message || 'Falha ao salvar seus flashcards.');
@@ -8386,6 +8387,7 @@
       }
 
       function shouldShowWelcomeGate() {
+        if (isNativeRuntime()) return false;
         if (state.entry.welcomeDismissed) return false;
         if (state.user?.id) return false;
         if (state.entry.authRequired || state.game.active || state.watch.active || isAdminUser()) return false;
@@ -8569,9 +8571,17 @@
       }
 
       async function fetchSessionUser() {
+        if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
+          const user = await window.PlaytalkApi.fetchSessionUser({
+            attempts: 3,
+            retryDelayMs: 450
+          });
+          return normalizeUser(user);
+        }
         const response = await fetch(buildApiUrl('/auth/session'), {
           headers: buildAuthHeaders(),
-          cache: 'no-store'
+          cache: 'no-store',
+          credentials: 'include'
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload?.success) {
@@ -9495,9 +9505,10 @@
           cloudState = await fetchFlashcardCloudState();
         } catch (error) {
           if (Number(error?.statusCode) === 401) {
-            throw error;
+            console.warn('Sessao recusada ao carregar estado em nuvem; mantendo estado local.');
+          } else {
+            console.warn('Falha ao carregar estado salvo dos flashcards:', error);
           }
-          console.warn('Falha ao carregar estado salvo dos flashcards:', error);
         }
 
         const cloudProgress = Array.isArray(cloudState?.progress)
@@ -11195,13 +11206,20 @@
       }
 
       async function reloadCardsFromNetwork() {
-        const freshPayload = await refreshCardsFromNetwork();
-        state.allCards = Array.isArray(freshPayload?.cards) ? freshPayload.cards : [];
-        state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
-        await refreshAdminDecks();
-        await refreshAdminReportSummary();
-        saveCachedCards(state.allCards);
-        refreshLibrary();
+        if (state.entry.cardsReloadInFlight) return false;
+        state.entry.cardsReloadInFlight = true;
+        try {
+          const freshPayload = await refreshCardsFromNetwork();
+          state.allCards = Array.isArray(freshPayload?.cards) ? freshPayload.cards : [];
+          state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
+          await refreshAdminDecks();
+          await refreshAdminReportSummary();
+          saveCachedCards(state.allCards);
+          refreshLibrary();
+          return true;
+        } finally {
+          state.entry.cardsReloadInFlight = false;
+        }
       }
 
       async function reloadCardsFromNetworkWithRetry(maxAttempts = 5, delayMs = 900) {
@@ -15217,14 +15235,16 @@
             stopWatch();
           }
         });
-        window.addEventListener('focus', () => {
-          if (!state.user) return;
-          reloadCardsFromNetwork().catch(() => {});
-        });
-        document.addEventListener('visibilitychange', () => {
-          if (!state.user || document.hidden) return;
-          reloadCardsFromNetwork().catch(() => {});
-        });
+        if (!isNativeRuntime()) {
+          window.addEventListener('focus', () => {
+            if (!state.user) return;
+            reloadCardsFromNetwork().catch(() => {});
+          });
+          document.addEventListener('visibilitychange', () => {
+            if (!state.user || document.hidden) return;
+            reloadCardsFromNetwork().catch(() => {});
+          });
+        }
         els.gameTouchBtn.addEventListener('click', (event) => {
           event.stopPropagation();
           startRecognition();

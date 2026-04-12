@@ -4047,6 +4047,16 @@
   }
 
   async function fetchSessionUser() {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
+      const user = await window.PlaytalkApi.fetchSessionUser({
+        attempts: 3,
+        retryDelayMs: 450
+      });
+      const normalized = normalizeUser(user);
+      if (normalized) {
+        return normalized;
+      }
+    }
     for (const path of SESSION_ENDPOINTS) {
       try {
         const response = await fetch(buildApiUrl(path), {

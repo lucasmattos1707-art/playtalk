@@ -1,41 +1,14 @@
 apply plugin: 'com.android.application'
 
-def keystoreProperties = new Properties()
-def keystorePropertiesFile = rootProject.file('key.properties')
-
-if (keystorePropertiesFile.exists()) {
-    keystorePropertiesFile.withInputStream { stream ->
-        keystoreProperties.load(stream)
-    }
-}
-
-def releaseStoreFile = (keystoreProperties.getProperty('storeFile') ?: System.getenv('PLAYTALK_UPLOAD_STORE_FILE'))?.trim()
-def releaseStorePassword = (keystoreProperties.getProperty('storePassword') ?: System.getenv('PLAYTALK_UPLOAD_STORE_PASSWORD'))?.trim()
-def releaseKeyAlias = (keystoreProperties.getProperty('keyAlias') ?: System.getenv('PLAYTALK_UPLOAD_KEY_ALIAS'))?.trim()
-def releaseKeyPassword = (keystoreProperties.getProperty('keyPassword') ?: System.getenv('PLAYTALK_UPLOAD_KEY_PASSWORD'))?.trim()
-def hasReleaseSigning = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { value ->
-    value != null && !value.isEmpty()
-}
-
 android {
     namespace "com.playtalk.app"
     compileSdk rootProject.ext.compileSdkVersion
-    signingConfigs {
-        if (hasReleaseSigning) {
-            release {
-                storeFile rootProject.file(releaseStoreFile)
-                storePassword releaseStorePassword
-                keyAlias releaseKeyAlias
-                keyPassword releaseKeyPassword
-            }
-        }
-    }
     defaultConfig {
         applicationId "com.playtalk.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "1.0.1"
+        versionCode 1
+        versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -45,9 +18,6 @@ android {
     }
     buildTypes {
         release {
-            if (hasReleaseSigning) {
-                signingConfig signingConfigs.release
-            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -81,16 +51,4 @@ try {
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
-}
-
-gradle.taskGraph.whenReady { graph ->
-    def releaseTaskRequested = graph.allTasks.any { task ->
-        task.project == project && ['bundleRelease', 'assembleRelease'].contains(task.name)
-    }
-    if (releaseTaskRequested && !hasReleaseSigning) {
-        throw new GradleException(
-            "Release signing not configured. Create android/key.properties from android/key.properties.example " +
-            "or define PLAYTALK_UPLOAD_STORE_FILE, PLAYTALK_UPLOAD_STORE_PASSWORD, PLAYTALK_UPLOAD_KEY_ALIAS and PLAYTALK_UPLOAD_KEY_PASSWORD."
-        )
-    }
 }

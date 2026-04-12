@@ -722,6 +722,12 @@
       return String(payload.dataUrl);
     }
     async function getSessionUser() {
+      if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
+        return normalizeUser(await window.PlaytalkApi.fetchSessionUser({
+          attempts: 3,
+          retryDelayMs: 450
+        }));
+      }
       const response = await fetch(buildApiUrl('/auth/session'), {
         cache: 'no-store',
         credentials: 'include',

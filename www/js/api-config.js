@@ -81,12 +81,22 @@
     return `${apiBaseUrl}${normalizePath(path)}`;
   }
 
+  function wait(ms) {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
+    });
+  }
+
   function getAuthToken() {
     try {
       return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || '';
     } catch (_error) {
       return '';
     }
+  }
+
+  function hasAuthToken() {
+    return Boolean(getAuthToken());
   }
 
   function setAuthToken(token) {
@@ -112,6 +122,40 @@
       headers.Authorization = `Bearer ${token}`;
     }
     return headers;
+  }
+
+  async function fetchSessionUser(options = {}) {
+    const attempts = Math.max(1, Math.min(4, Number(options.attempts) || (hasAuthToken() ? 3 : 1)));
+    const retryDelayMs = Math.max(0, Number(options.retryDelayMs) || 350);
+    const extraHeaders = options.headers && typeof options.headers === 'object' ? options.headers : undefined;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        const response = await fetch(buildApiUrl('/auth/session'), {
+          headers: buildAuthHeaders(extraHeaders),
+          cache: 'no-store',
+          credentials: 'include'
+        });
+        const payload = await response.json().catch(() => ({}));
+
+        if (response.ok && payload?.success && payload?.user) {
+          return payload.user;
+        }
+
+        const shouldRetry = attempt < attempts && (response.status === 401 || response.status === 403 || response.status >= 500);
+        if (!shouldRetry) {
+          return null;
+        }
+      } catch (_error) {
+        if (attempt >= attempts) {
+          return null;
+        }
+      }
+
+      await wait(retryDelayMs * attempt);
+    }
+
+    return null;
   }
 
   function buildAccesskeyUrl(relativePath = '') {
@@ -149,7 +193,9 @@
     },
     url: buildApiUrl,
     getAuthToken,
+    hasAuthToken,
     setAuthToken,
+    fetchSessionUser,
     authHeaders: buildAuthHeaders,
     accesskeyUrl: buildAccesskeyUrl,
     audiostutoUrl: buildAudiostutoUrl,

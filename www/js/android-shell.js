@@ -1,4 +1,6 @@
 (function initPlaytalkAndroidShell() {
+  const LAST_ROUTE_STORAGE_KEY = 'playtalk_native_last_route_v1';
+  const LAST_ROUTE_MAX_AGE_MS = 30000;
   const ROUTES = {
     flashcards: { webPath: '/flashcards', localPath: '/flashcards.html?view=play' },
     allcards: { webPath: '/allcards', localPath: '/allcards.html' },
@@ -76,6 +78,20 @@
     const candidate = comparableHref(rawValue);
     const current = comparableHref(window.location.href);
     return Boolean(candidate) && candidate === current;
+  }
+
+  function rememberCurrentRoute() {
+    if (!isNativeRuntime()) return;
+    const routeKey = currentRouteKey();
+    if (!routeKey || routeKey === 'speaking') return;
+    try {
+      window.localStorage.setItem(LAST_ROUTE_STORAGE_KEY, JSON.stringify({
+        href: comparableHref(window.location.href),
+        savedAt: Date.now()
+      }));
+    } catch (_error) {
+      // ignore
+    }
   }
 
   function resolveRouteHref(target, options = {}) {
@@ -495,6 +511,7 @@
     if (!isNativeRuntime()) return;
     rewriteAnchors(document);
     syncFooterNav();
+    rememberCurrentRoute();
     bindNavigationInterceptor();
     void bindBackButtonListener();
   }

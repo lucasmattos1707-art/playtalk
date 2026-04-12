@@ -12764,6 +12764,8 @@ app.use((req, res, next) => {
     '/fast/',
     '/username',
     '/username/',
+    '/usermame',
+    '/usermame/',
     '/avataradd',
     '/avataradd/',
     '/password',
@@ -12978,7 +12980,7 @@ app.get(['/fast', '/fast/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'www', 'fast.html'));
 });
 
-app.get(['/username', '/username/'], (req, res) => {
+app.get(['/username', '/username/', '/usermame', '/usermame/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'www', 'username.html'));
 });
 

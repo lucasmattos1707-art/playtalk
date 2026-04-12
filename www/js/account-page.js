@@ -546,9 +546,17 @@
   }
 
   async function fetchSessionUser() {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
+      const user = await window.PlaytalkApi.fetchSessionUser({
+        attempts: 3,
+        retryDelayMs: 450
+      });
+      return normalizeUser(user);
+    }
     const response = await fetch(buildApiUrl('/auth/session'), {
       headers: buildAuthHeaders(),
-      cache: 'no-store'
+      cache: 'no-store',
+      credentials: 'include'
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload?.success) {
@@ -567,7 +575,8 @@
     try {
       const response = await fetch(buildApiUrl('/api/books/stats'), {
         headers: buildAuthHeaders(),
-        cache: 'no-store'
+        cache: 'no-store',
+        credentials: 'include'
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) {

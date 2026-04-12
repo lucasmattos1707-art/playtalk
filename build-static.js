@@ -16,6 +16,7 @@ const appHtmlFiles = new Set([
   'books.html',
   'speaking.html',
   'username.html',
+  'usermame.html',
   'avataradd.html',
   'password.html',
   'premium.html'
