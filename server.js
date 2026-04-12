@@ -157,6 +157,10 @@ const FLASHCARD_RANKING_TIMEZONE = 'America/Sao_Paulo';
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
 const SPEAKING_DUEL_DEFAULT_CARDS = 25;
+const SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS = 30;
+const SPEAKING_DUEL_CARDS_MODE_TARGET_SCORE = 20;
+const SPEAKING_DUEL_SMARTBOOKS_MODE = 'smartbooks';
+const SPEAKING_DUEL_CARDS_MODE = 'battle-cards';
 const SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS = 20;
 const SPEAKING_DUEL_INTRO_SECONDS = 10;
 const SPEAKING_DUEL_BATTLE_SECONDS = 180;
@@ -949,6 +953,7 @@ const ensureSpeakingRealtimeTables = async () => {
           id bigserial PRIMARY KEY,
           challenger_user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
           opponent_user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          challenge_mode text NOT NULL DEFAULT '${SPEAKING_DUEL_SMARTBOOKS_MODE}',
           status text NOT NULL DEFAULT 'pending',
           session_id text,
           created_at timestamptz NOT NULL DEFAULT now(),
@@ -963,6 +968,10 @@ const ensureSpeakingRealtimeTables = async () => {
         ADD COLUMN IF NOT EXISTS challenger_notified_at timestamptz
       `);
       await pool.query(`
+        ALTER TABLE public.speaking_challenges
+        ADD COLUMN IF NOT EXISTS challenge_mode text NOT NULL DEFAULT '${SPEAKING_DUEL_SMARTBOOKS_MODE}'
+      `);
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS speaking_challenges_opponent_idx
         ON public.speaking_challenges (opponent_user_id, status, created_at DESC)
       `);
@@ -975,10 +984,14 @@ const ensureSpeakingRealtimeTables = async () => {
           id text PRIMARY KEY,
           challenger_user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
           opponent_user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          mode text NOT NULL DEFAULT '${SPEAKING_DUEL_SMARTBOOKS_MODE}',
           cards jsonb NOT NULL DEFAULT '[]'::jsonb,
           status text NOT NULL DEFAULT 'active',
+          target_score integer NOT NULL DEFAULT 0,
           challenger_progress integer NOT NULL DEFAULT 0,
           opponent_progress integer NOT NULL DEFAULT 0,
+          challenger_score integer NOT NULL DEFAULT 0,
+          opponent_score integer NOT NULL DEFAULT 0,
           challenger_percent integer NOT NULL DEFAULT 0,
           opponent_percent integer NOT NULL DEFAULT 0,
           challenger_finished boolean NOT NULL DEFAULT false,
@@ -994,6 +1007,22 @@ const ensureSpeakingRealtimeTables = async () => {
       await pool.query(`
         ALTER TABLE public.speaking_duel_sessions
         ADD COLUMN IF NOT EXISTS challenger_last_seen_at timestamptz NOT NULL DEFAULT now()
+      `);
+      await pool.query(`
+        ALTER TABLE public.speaking_duel_sessions
+        ADD COLUMN IF NOT EXISTS mode text NOT NULL DEFAULT '${SPEAKING_DUEL_SMARTBOOKS_MODE}'
+      `);
+      await pool.query(`
+        ALTER TABLE public.speaking_duel_sessions
+        ADD COLUMN IF NOT EXISTS target_score integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.speaking_duel_sessions
+        ADD COLUMN IF NOT EXISTS challenger_score integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.speaking_duel_sessions
+        ADD COLUMN IF NOT EXISTS opponent_score integer NOT NULL DEFAULT 0
       `);
       await pool.query(`
         ALTER TABLE public.speaking_duel_sessions
@@ -4556,6 +4585,200 @@ function normalizeSpeakingStoryLevel(value) {
   return Math.max(1, Math.min(10, parsed));
 }
 
+function normalizeSpeakingChallengeMode(value) {
+  return String(value || '').trim().toLowerCase() === SPEAKING_DUEL_CARDS_MODE
+    ? SPEAKING_DUEL_CARDS_MODE
+    : SPEAKING_DUEL_SMARTBOOKS_MODE;
+}
+
+function normalizeDuelTargetScore(value, mode) {
+  const normalizedMode = normalizeSpeakingChallengeMode(mode);
+  if (normalizedMode === SPEAKING_DUEL_CARDS_MODE) {
+    return SPEAKING_DUEL_CARDS_MODE_TARGET_SCORE;
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  return Math.max(0, parsed);
+}
+
+function normalizeBattleCardsAssetUrl(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (/^https?:\/\//i.test(text)) return text;
+  if (/^\/+/.test(text)) return text;
+  return `/${text.replace(/^\/+/, '')}`;
+}
+
+function normalizeBattleCardsDeckTitle(payload, fallbackFileName) {
+  const fallback = path.posix.basename(String(fallbackFileName || '').trim() || 'deck.json', '.json') || 'Deck';
+  return String(payload?.title || fallback).trim() || fallback;
+}
+
+function normalizeBattleCardsDeckCard(item, options = {}) {
+  const source = item && typeof item === 'object' ? item : {};
+  const english = readFlashcardItemEnglish(source);
+  const portuguese = readFlashcardItemPortuguese(source);
+  if (!english || !portuguese) return null;
+  const deckTitle = String(options.deckTitle || 'Deck').trim() || 'Deck';
+  const deckId = String(options.deckId || deckTitle).trim() || deckTitle;
+  const sourceIndex = Math.max(0, Number(options.sourceIndex) || 0);
+  const imageUrl = normalizeBattleCardsAssetUrl(readFlashcardItemImage(source));
+  const audioUrl = normalizeBattleCardsAssetUrl(readFlashcardItemAudio(source));
+  return {
+    id: `${safeGeneratedBase(deckId, 'deck')}-${sourceIndex}`,
+    deckId,
+    deckTitle,
+    english,
+    portuguese,
+    imageUrl,
+    audioUrl,
+    sourceIndex
+  };
+}
+
+function buildRepeatedBattleCardsSelection(cards, limit) {
+  const sourceCards = Array.isArray(cards) ? cards.filter(Boolean) : [];
+  const safeLimit = Math.max(0, Number(limit) || 0);
+  if (!sourceCards.length || !safeLimit) return [];
+
+  const shuffled = sourceCards.slice();
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    const current = shuffled[index];
+    shuffled[index] = shuffled[swapIndex];
+    shuffled[swapIndex] = current;
+  }
+
+  const selected = [];
+  let cursor = 0;
+  while (selected.length < safeLimit) {
+    const card = shuffled[cursor % shuffled.length];
+    const batchIndex = selected.length;
+    selected.push({
+      ...card,
+      duelCardIndex: batchIndex,
+      queueIndex: batchIndex,
+      battleDeckCardIndex: Number(card?.sourceIndex) || 0
+    });
+    cursor += 1;
+  }
+  return selected;
+}
+
+async function loadBattleCardsDeckPool() {
+  const decks = [];
+
+  try {
+    let localEntries = [];
+    try {
+      localEntries = await fs.promises.readdir(ALLCARDS_ROOT, { withFileTypes: true });
+    } catch (_error) {
+      localEntries = [];
+    }
+
+    for (const entry of localEntries) {
+      if (!entry?.isFile?.() || !entry.name.toLowerCase().endsWith('.json')) continue;
+      try {
+        const fullPath = path.join(ALLCARDS_ROOT, entry.name);
+        const raw = (await fs.promises.readFile(fullPath, 'utf8')).replace(/^\uFEFF/, '');
+        const payload = JSON.parse(raw);
+        const items = getFlashcardPayloadItems(payload);
+        const deckTitle = normalizeBattleCardsDeckTitle(payload, entry.name);
+        const deckId = `allcards:${entry.name}`;
+        const cards = items
+          .map((item, index) => normalizeBattleCardsDeckCard(item, {
+            deckTitle,
+            deckId,
+            sourceIndex: index
+          }))
+          .filter(Boolean);
+        if (!cards.length) continue;
+        decks.push({
+          id: deckId,
+          title: deckTitle,
+          source: `allcards/${entry.name}`,
+          fileName: entry.name,
+          cards
+        });
+      } catch (_error) {
+        // ignore malformed local decks
+      }
+    }
+  } catch (_error) {
+    // ignore local deck load failures
+  }
+
+  if (pool) {
+    try {
+      await ensurePublicFlashcardDecksTable();
+      const result = await pool.query(
+        `SELECT file_name, source, title, payload, is_hidden
+         FROM public.flashcards_public_decks
+         WHERE COALESCE(is_hidden, false) = false
+         ORDER BY lower(title) ASC, updated_at DESC`
+      );
+
+      for (const row of result.rows) {
+        const source = String(row?.source || '').trim().toLowerCase();
+        if (source === 'allcards') continue;
+        const repaired = repairPublicDeckPayloadAssets(row?.payload, row);
+        const payload = repaired?.payload && typeof repaired.payload === 'object'
+          ? repaired.payload
+          : null;
+        const items = getFlashcardPayloadItems(payload);
+        const deckTitle = String(row?.title || payload?.title || row?.file_name || 'Deck').trim() || 'Deck';
+        const fileName = normalizePublicFlashcardDeckFileName(row?.file_name, 'deck.json');
+        const deckId = `public:${fileName}`;
+        const cards = items
+          .map((item, index) => normalizeBattleCardsDeckCard(item, {
+            deckTitle,
+            deckId,
+            sourceIndex: index
+          }))
+          .filter(Boolean);
+        if (!cards.length) continue;
+        decks.push({
+          id: deckId,
+          title: deckTitle,
+          source: source || fileName,
+          fileName,
+          cards
+        });
+      }
+    } catch (error) {
+      console.error('Falha ao carregar decks publicos para battle-cards:', error);
+    }
+  }
+
+  return decks;
+}
+
+async function buildRandomBattleCards(selectedDeckId) {
+  const decks = await loadBattleCardsDeckPool();
+  if (!decks.length) return [];
+
+  const normalizedDeckId = String(selectedDeckId || '').trim();
+  let selectedDeck = null;
+  if (normalizedDeckId) {
+    selectedDeck = decks.find((entry) => String(entry.id || '').trim() === normalizedDeckId) || null;
+  }
+  if (!selectedDeck) {
+    const eligibleDecks = decks.filter((entry) => Array.isArray(entry.cards) && entry.cards.length);
+    if (!eligibleDecks.length) return [];
+    selectedDeck = eligibleDecks[Math.floor(Math.random() * eligibleDecks.length)] || null;
+  }
+  if (!selectedDeck || !Array.isArray(selectedDeck.cards) || !selectedDeck.cards.length) return [];
+
+  return buildRepeatedBattleCardsSelection(selectedDeck.cards, SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS).map((card, index) => ({
+    ...card,
+    battleDeckId: String(selectedDeck.id || '').trim(),
+    battleDeckTitle: String(selectedDeck.title || '').trim(),
+    battleDeckSource: String(selectedDeck.source || '').trim(),
+    battleDeckFileName: String(selectedDeck.fileName || '').trim(),
+    battleCardIndex: index
+  }));
+}
+
 function toEnglishUnderscoreName(value, fallback) {
   const base = String(value || fallback || '').trim();
   if (!base) return 'Story_One';
@@ -4951,6 +5174,14 @@ async function buildRandomSpeakingCards(selectedStoryId) {
   });
 }
 
+async function buildSpeakingDuelCardsForMode(mode, options = {}) {
+  const normalizedMode = normalizeSpeakingChallengeMode(mode);
+  if (normalizedMode === SPEAKING_DUEL_CARDS_MODE) {
+    return buildRandomBattleCards(options.deckId || options.selectedDeckId);
+  }
+  return buildRandomSpeakingCards(options.storyId || options.selectedStoryId);
+}
+
 async function findSpeakingBookById(bookId) {
   const targetBookId = normalizeMiniBookId(bookId);
   const stories = await loadSpeakingCardPool();
@@ -5012,14 +5243,21 @@ async function awardSpeakingBattleWin(client, sessionId, winnerUserId) {
 }
 
 function computeSpeakingDuelWinnerUserId(session) {
+  const mode = normalizeSpeakingChallengeMode(session?.mode);
   const challengerFinished = Boolean(session?.challenger_finished);
   const opponentFinished = Boolean(session?.opponent_finished);
   const challengerUserId = Number(session?.challenger_user_id) || 0;
   const opponentUserId = Number(session?.opponent_user_id) || 0;
+  const challengerScore = Math.max(0, Number(session?.challenger_score) || 0);
+  const opponentScore = Math.max(0, Number(session?.opponent_score) || 0);
   const challengerPercent = Number(session?.challenger_percent) || 0;
   const opponentPercent = Number(session?.opponent_percent) || 0;
   const challengerProgress = Number(session?.challenger_progress) || 0;
   const opponentProgress = Number(session?.opponent_progress) || 0;
+  if (mode === SPEAKING_DUEL_CARDS_MODE) {
+    if (challengerScore > opponentScore) return challengerUserId;
+    if (opponentScore > challengerScore) return opponentUserId;
+  }
   if (challengerFinished && !opponentFinished) return challengerUserId;
   if (opponentFinished && !challengerFinished) return opponentUserId;
   if (challengerPercent > opponentPercent) return challengerUserId;
@@ -5033,7 +5271,9 @@ function computeSpeakingDuelWinnerUserId(session) {
 function isSpeakingDuelBattleExpired(session) {
   const createdAtMs = Date.parse(String(session?.created_at || '').trim());
   if (!Number.isFinite(createdAtMs) || createdAtMs <= 0) return false;
-  const deadlineMs = createdAtMs + ((SPEAKING_DUEL_INTRO_SECONDS + SPEAKING_DUEL_BATTLE_SECONDS) * 1000);
+  const introSeconds = Math.max(1, Number(session?.intro_countdown_seconds) || SPEAKING_DUEL_INTRO_SECONDS);
+  const battleSeconds = Math.max(1, Number(session?.battle_duration_seconds) || SPEAKING_DUEL_BATTLE_SECONDS);
+  const deadlineMs = createdAtMs + ((introSeconds + battleSeconds) * 1000);
   return Date.now() >= deadlineMs;
 }
 
@@ -5084,17 +5324,22 @@ function buildBotResponseTimeline(botConfig, sessionId, totalCards) {
 }
 
 function buildBotProgressSnapshot(session, botUserId, botConfig) {
+  const mode = normalizeSpeakingChallengeMode(session?.mode);
   const cards = Array.isArray(session?.cards) ? session.cards : [];
-  const totalCards = Math.max(1, cards.length || SPEAKING_DUEL_DEFAULT_CARDS);
+  const totalCards = Math.max(
+    1,
+    cards.length || (mode === SPEAKING_DUEL_CARDS_MODE ? SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS : SPEAKING_DUEL_DEFAULT_CARDS)
+  );
   const createdAtMs = Date.parse(String(session?.created_at || '').trim());
   if (!Number.isFinite(createdAtMs) || createdAtMs <= 0) {
-    return { progress: 0, percent: 0, finished: false };
+    return { progress: 0, percent: 0, finished: false, score: 0 };
   }
 
-  const battleStartedAtMs = createdAtMs + (SPEAKING_DUEL_INTRO_SECONDS * 1000);
+  const introSeconds = Math.max(1, Number(session?.intro_countdown_seconds) || SPEAKING_DUEL_INTRO_SECONDS);
+  const battleStartedAtMs = createdAtMs + (introSeconds * 1000);
   const elapsedMs = Math.max(0, Date.now() - battleStartedAtMs);
   if (elapsedMs <= 0) {
-    return { progress: 0, percent: 0, finished: false };
+    return { progress: 0, percent: 0, finished: false, score: 0 };
   }
 
   let accumulatedMs = 0;
@@ -5108,13 +5353,19 @@ function buildBotProgressSnapshot(session, botUserId, botConfig) {
   }
 
   const progress = Math.min(totalCards, completed);
-  const finished = progress >= totalCards;
+  const targetScore = normalizeDuelTargetScore(session?.target_score, mode);
   const activeSamples = progress > 0 ? pronunciationSamples.slice(0, progress) : [];
   const sumPercent = activeSamples.reduce((total, sample) => total + sample, 0);
+  const score = mode === SPEAKING_DUEL_CARDS_MODE
+    ? activeSamples.reduce((total, sample) => total + (Number(sample) >= 50 ? 1 : 0), 0)
+    : 0;
+  const finished = mode === SPEAKING_DUEL_CARDS_MODE
+    ? (targetScore > 0 ? score >= targetScore : progress >= totalCards)
+    : progress >= totalCards;
   const percent = progress > 0
     ? Math.round(getBooksPronunciationPercentFromAggregate(sumPercent, activeSamples.length))
     : 0;
-  return { progress, percent, finished };
+  return { progress, percent, finished, score };
 }
 
 async function syncBotStateIntoSpeakingSession(client, session) {
@@ -5145,8 +5396,12 @@ async function syncBotStateIntoSpeakingSession(client, session) {
   }
 
   const next = {
+    mode: normalizeSpeakingChallengeMode(session.mode),
+    targetScore: normalizeDuelTargetScore(session.target_score, session.mode),
     challengerProgress: Number(session.challenger_progress) || 0,
     opponentProgress: Number(session.opponent_progress) || 0,
+    challengerScore: Number(session.challenger_score) || 0,
+    opponentScore: Number(session.opponent_score) || 0,
     challengerPercent: Number(session.challenger_percent) || 0,
     opponentPercent: Number(session.opponent_percent) || 0,
     challengerFinished: Boolean(session.challenger_finished),
@@ -5160,10 +5415,12 @@ async function syncBotStateIntoSpeakingSession(client, session) {
     const snapshot = buildBotProgressSnapshot(session, challengerUserId, challengerBotConfig);
     if (
       snapshot.progress !== next.challengerProgress
+      || snapshot.score !== next.challengerScore
       || snapshot.percent !== next.challengerPercent
       || snapshot.finished !== next.challengerFinished
     ) {
       next.challengerProgress = snapshot.progress;
+      next.challengerScore = snapshot.score;
       next.challengerPercent = snapshot.percent;
       next.challengerFinished = snapshot.finished;
       changed = true;
@@ -5173,10 +5430,12 @@ async function syncBotStateIntoSpeakingSession(client, session) {
     const snapshot = buildBotProgressSnapshot(session, opponentUserId, opponentBotConfig);
     if (
       snapshot.progress !== next.opponentProgress
+      || snapshot.score !== next.opponentScore
       || snapshot.percent !== next.opponentPercent
       || snapshot.finished !== next.opponentFinished
     ) {
       next.opponentProgress = snapshot.progress;
+      next.opponentScore = snapshot.score;
       next.opponentPercent = snapshot.percent;
       next.opponentFinished = snapshot.finished;
       changed = true;
@@ -5187,6 +5446,10 @@ async function syncBotStateIntoSpeakingSession(client, session) {
   if (battleExpired && next.status !== 'completed') {
     next.status = 'completed';
     next.winnerUserId = computeSpeakingDuelWinnerUserId({
+      mode: next.mode,
+      target_score: next.targetScore,
+      challenger_score: next.challengerScore,
+      opponent_score: next.opponentScore,
       challenger_finished: next.challengerFinished,
       opponent_finished: next.opponentFinished,
       challenger_percent: next.challengerPercent,
@@ -5204,16 +5467,18 @@ async function syncBotStateIntoSpeakingSession(client, session) {
       `UPDATE public.speaking_duel_sessions
        SET challenger_progress = $2,
            opponent_progress = $3,
-           challenger_percent = $4,
-           opponent_percent = $5,
-           challenger_finished = $6,
-           opponent_finished = $7,
-           status = $8,
+           challenger_score = $4,
+           opponent_score = $5,
+           challenger_percent = $6,
+           opponent_percent = $7,
+           challenger_finished = $8,
+           opponent_finished = $9,
+           status = $10,
            winner_user_id = CASE
-             WHEN $8 = 'completed' THEN CASE WHEN $9 > 0 THEN $9 ELSE NULL END
+             WHEN $10 = 'completed' THEN CASE WHEN $11 > 0 THEN $11 ELSE NULL END
              ELSE winner_user_id
            END,
-           finished_at = CASE WHEN $8 = 'completed' THEN COALESCE(finished_at, now()) ELSE finished_at END,
+           finished_at = CASE WHEN $10 = 'completed' THEN COALESCE(finished_at, now()) ELSE finished_at END,
            updated_at = now()
        WHERE id = $1
        RETURNING *`,
@@ -5221,6 +5486,8 @@ async function syncBotStateIntoSpeakingSession(client, session) {
         session.id,
         next.challengerProgress,
         next.opponentProgress,
+        next.challengerScore,
+        next.opponentScore,
         next.challengerPercent,
         next.opponentPercent,
         next.challengerFinished,
@@ -11359,6 +11626,7 @@ app.get('/api/speaking/challenges/poll', async (req, res) => {
     const incomingResult = await pool.query(
       `SELECT
          c.id,
+         c.challenge_mode,
          c.status,
          c.created_at,
          c.expires_at,
@@ -11380,6 +11648,7 @@ app.get('/api/speaking/challenges/poll', async (req, res) => {
     const outgoingResult = await pool.query(
       `SELECT
          c.id,
+         c.challenge_mode,
          c.status,
          c.created_at,
          c.expires_at,
@@ -11428,6 +11697,7 @@ app.get('/api/speaking/challenges/poll', async (req, res) => {
       success: true,
       incomingChallenge: incoming ? {
         challengeId: Number(incoming.id) || 0,
+        challengeMode: normalizeSpeakingChallengeMode(incoming.challenge_mode),
         status: String(incoming.status || '').trim(),
         sessionId: String(incoming.session_id || '').trim(),
         createdAt: incoming.created_at || null,
@@ -11440,6 +11710,7 @@ app.get('/api/speaking/challenges/poll', async (req, res) => {
       } : null,
       outgoingChallenge: outgoing ? {
         challengeId: Number(outgoing.id) || 0,
+        challengeMode: normalizeSpeakingChallengeMode(outgoing.challenge_mode),
         status: (
           String(outgoing.status || '').trim() === 'accepted'
           && String(outgoing.session_status || '').trim() === 'completed'
@@ -11479,6 +11750,7 @@ app.post('/api/speaking/challenges/send', async (req, res) => {
 
     const challengerUserId = Number(authUser.id) || 0;
     const opponentUserId = Number.parseInt(req.body?.opponentUserId, 10) || 0;
+    const challengeMode = normalizeSpeakingChallengeMode(req.body?.mode);
     if (!challengerUserId || !opponentUserId || challengerUserId === opponentUserId) {
       res.status(400).json({ success: false, message: 'Adversario invalido para desafio.' });
       return;
@@ -11515,6 +11787,7 @@ app.post('/api/speaking/challenges/send', async (req, res) => {
        FROM public.speaking_challenges
        WHERE status = 'pending'
          AND expires_at >= now()
+         AND challenge_mode = $3
          AND (
            (challenger_user_id = $1 AND opponent_user_id = $2)
            OR
@@ -11522,7 +11795,7 @@ app.post('/api/speaking/challenges/send', async (req, res) => {
          )
        ORDER BY created_at DESC
        LIMIT 1`,
-      [challengerUserId, opponentUserId]
+      [challengerUserId, opponentUserId, challengeMode]
     );
 
     if (existingPending.rows[0]?.id) {
@@ -11538,7 +11811,7 @@ app.post('/api/speaking/challenges/send', async (req, res) => {
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
-        const cards = await buildRandomSpeakingCards();
+        const cards = await buildSpeakingDuelCardsForMode(challengeMode);
         if (!cards.length) {
           const error = new Error('Nao foi possivel preparar as cartas do duelo.');
           error.statusCode = 500;
@@ -11548,13 +11821,14 @@ app.post('/api/speaking/challenges/send', async (req, res) => {
           `INSERT INTO public.speaking_challenges (
              challenger_user_id,
              opponent_user_id,
+             challenge_mode,
              status,
              expires_at,
              updated_at
            )
-           VALUES ($1, $2, 'accepted', now() + interval '${SPEAKING_CHALLENGE_PENDING_TTL_SECONDS} seconds', now())
+           VALUES ($1, $2, $3, 'accepted', now() + interval '${SPEAKING_CHALLENGE_PENDING_TTL_SECONDS} seconds', now())
            RETURNING id, created_at, expires_at`,
-          [challengerUserId, opponentUserId]
+          [challengerUserId, opponentUserId, challengeMode]
         );
         const sessionId = buildSpeakingSessionId();
         await client.query(
@@ -11562,12 +11836,21 @@ app.post('/api/speaking/challenges/send', async (req, res) => {
              id,
              challenger_user_id,
              opponent_user_id,
+             mode,
              cards,
+             target_score,
              status,
              updated_at
            )
-           VALUES ($1, $2, $3, $4::jsonb, 'active', now())`,
-          [sessionId, challengerUserId, opponentUserId, JSON.stringify(cards)]
+           VALUES ($1, $2, $3, $4, $5::jsonb, $6, 'active', now())`,
+          [
+            sessionId,
+            challengerUserId,
+            opponentUserId,
+            challengeMode,
+            JSON.stringify(cards),
+            normalizeDuelTargetScore(0, challengeMode)
+          ]
         );
         await client.query(
           `UPDATE public.speaking_challenges
@@ -11599,18 +11882,20 @@ app.post('/api/speaking/challenges/send', async (req, res) => {
       `INSERT INTO public.speaking_challenges (
          challenger_user_id,
          opponent_user_id,
+         challenge_mode,
          status,
          expires_at,
          updated_at
        )
-       VALUES ($1, $2, 'pending', now() + interval '${SPEAKING_CHALLENGE_PENDING_TTL_SECONDS} seconds', now())
+       VALUES ($1, $2, $3, 'pending', now() + interval '${SPEAKING_CHALLENGE_PENDING_TTL_SECONDS} seconds', now())
        RETURNING id, created_at, expires_at`,
-      [challengerUserId, opponentUserId]
+      [challengerUserId, opponentUserId, challengeMode]
     );
 
     res.json({
       success: true,
       challengeId: Number(created.rows[0]?.id) || 0,
+      challengeMode,
       createdAt: created.rows[0]?.created_at || null,
       expiresAt: created.rows[0]?.expires_at || null
     });
@@ -11646,7 +11931,7 @@ app.post('/api/speaking/challenges/respond', async (req, res) => {
     try {
       await client.query('BEGIN');
       const challengeResult = await client.query(
-        `SELECT id, challenger_user_id, opponent_user_id, status, expires_at
+        `SELECT id, challenger_user_id, opponent_user_id, challenge_mode, status, expires_at
          FROM public.speaking_challenges
          WHERE id = $1
            AND opponent_user_id = $2
@@ -11692,7 +11977,8 @@ app.post('/api/speaking/challenges/respond', async (req, res) => {
         return;
       }
 
-      const cards = await buildRandomSpeakingCards();
+      const challengeMode = normalizeSpeakingChallengeMode(challenge?.challenge_mode);
+      const cards = await buildSpeakingDuelCardsForMode(challengeMode);
       if (!cards.length) {
         const error = new Error('Nao foi possivel preparar as cartas do duelo.');
         error.statusCode = 500;
@@ -11704,16 +11990,20 @@ app.post('/api/speaking/challenges/respond', async (req, res) => {
            id,
            challenger_user_id,
            opponent_user_id,
+           mode,
            cards,
+           target_score,
            status,
            updated_at
          )
-         VALUES ($1, $2, $3, $4::jsonb, 'active', now())`,
+         VALUES ($1, $2, $3, $4, $5::jsonb, $6, 'active', now())`,
         [
           sessionId,
           Number(challenge.challenger_user_id),
           Number(challenge.opponent_user_id),
-          JSON.stringify(cards)
+          challengeMode,
+          JSON.stringify(cards),
+          normalizeDuelTargetScore(0, challengeMode)
         ]
       );
       await client.query(
@@ -11906,6 +12196,7 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
       success: true,
       session: {
         id: session.id,
+        mode: normalizeSpeakingChallengeMode(session.mode),
         status: String(session.status || '').trim() || 'active',
         createdAt: session.created_at,
         battleEndsAt: new Date(
@@ -11913,10 +12204,13 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
         ).toISOString(),
         introCountdownSeconds: SPEAKING_DUEL_INTRO_SECONDS,
         battleDurationSeconds: SPEAKING_DUEL_BATTLE_SECONDS,
+        targetScore: normalizeDuelTargetScore(session.target_score, session.mode),
         cards: cardList,
         meRole,
         meProgress: meRole === 'challenger' ? Number(session.challenger_progress) || 0 : Number(session.opponent_progress) || 0,
         rivalProgress: meRole === 'challenger' ? Number(session.opponent_progress) || 0 : Number(session.challenger_progress) || 0,
+        meScore: meRole === 'challenger' ? Number(session.challenger_score) || 0 : Number(session.opponent_score) || 0,
+        rivalScore: meRole === 'challenger' ? Number(session.opponent_score) || 0 : Number(session.challenger_score) || 0,
         mePercent: meRole === 'challenger' ? Number(session.challenger_percent) || 0 : Number(session.opponent_percent) || 0,
         rivalPercent: meRole === 'challenger' ? Number(session.opponent_percent) || 0 : Number(session.challenger_percent) || 0,
         meGeneralPercent,
@@ -11969,6 +12263,7 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
     }
 
     const progress = Math.max(0, Math.min(100, Number.parseInt(req.body?.progress, 10) || 0));
+    const score = Math.max(0, Number.parseInt(req.body?.score, 10) || 0);
     const percent = Math.max(0, Math.min(100, Number.parseInt(req.body?.percent, 10) || 0));
     const finished = Boolean(req.body?.finished);
     const timedOut = Boolean(req.body?.timedOut);
@@ -11993,13 +12288,23 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
       }
 
       const isChallenger = userId === challengerUserId;
+      const mode = normalizeSpeakingChallengeMode(session.mode);
       const cards = Array.isArray(session.cards) ? session.cards : [];
-      const totalCards = Math.max(1, cards.length || SPEAKING_DUEL_DEFAULT_CARDS);
+      const totalCards = Math.max(
+        1,
+        cards.length || (mode === SPEAKING_DUEL_CARDS_MODE ? SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS : SPEAKING_DUEL_DEFAULT_CARDS)
+      );
+      const targetScore = normalizeDuelTargetScore(session.target_score, mode);
       const normalizedProgress = Math.max(0, Math.min(totalCards, progress));
+      const normalizedScore = Math.max(0, Math.min(mode === SPEAKING_DUEL_CARDS_MODE && targetScore > 0 ? targetScore : totalCards, score));
 
       const next = {
+        mode,
+        targetScore,
         challengerProgress: Number(session.challenger_progress) || 0,
         opponentProgress: Number(session.opponent_progress) || 0,
+        challengerScore: Number(session.challenger_score) || 0,
+        opponentScore: Number(session.opponent_score) || 0,
         challengerPercent: Number(session.challenger_percent) || 0,
         opponentPercent: Number(session.opponent_percent) || 0,
         challengerFinished: Boolean(session.challenger_finished),
@@ -12017,6 +12322,8 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
             winnerUserId: next.winnerUserId || 0,
             challengerProgress: next.challengerProgress,
             opponentProgress: next.opponentProgress,
+            challengerScore: next.challengerScore,
+            opponentScore: next.opponentScore,
             challengerPercent: next.challengerPercent,
             opponentPercent: next.opponentPercent,
             challengerFinished: next.challengerFinished,
@@ -12028,12 +12335,18 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
 
       if (isChallenger) {
         next.challengerProgress = normalizedProgress;
+        next.challengerScore = normalizedScore;
         next.challengerPercent = percent;
-        next.challengerFinished = finished || normalizedProgress >= totalCards;
+        next.challengerFinished = mode === SPEAKING_DUEL_CARDS_MODE
+          ? (finished || (targetScore > 0 && normalizedScore >= targetScore))
+          : (finished || normalizedProgress >= totalCards);
       } else {
         next.opponentProgress = normalizedProgress;
+        next.opponentScore = normalizedScore;
         next.opponentPercent = percent;
-        next.opponentFinished = finished || normalizedProgress >= totalCards;
+        next.opponentFinished = mode === SPEAKING_DUEL_CARDS_MODE
+          ? (finished || (targetScore > 0 && normalizedScore >= targetScore))
+          : (finished || normalizedProgress >= totalCards);
       }
 
       const bothFinished = next.challengerFinished && next.opponentFinished;
@@ -12041,6 +12354,10 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
       if ((bothFinished || battleExpired) && next.status !== 'completed') {
         next.status = 'completed';
         next.winnerUserId = computeSpeakingDuelWinnerUserId({
+          mode,
+          target_score: targetScore,
+          challenger_score: next.challengerScore,
+          opponent_score: next.opponentScore,
           challenger_finished: next.challengerFinished,
           opponent_finished: next.opponentFinished,
           challenger_percent: next.challengerPercent,
@@ -12056,22 +12373,26 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
         `UPDATE public.speaking_duel_sessions
          SET challenger_progress = $2,
              opponent_progress = $3,
-             challenger_percent = $4,
-             opponent_percent = $5,
-             challenger_finished = $6,
-             opponent_finished = $7,
-             status = $8,
+             challenger_score = $4,
+             opponent_score = $5,
+             challenger_percent = $6,
+             opponent_percent = $7,
+             challenger_finished = $8,
+             opponent_finished = $9,
+             status = $10,
              winner_user_id = CASE
-               WHEN $8 = 'completed' THEN CASE WHEN $9 > 0 THEN $9 ELSE NULL END
+               WHEN $10 = 'completed' THEN CASE WHEN $11 > 0 THEN $11 ELSE NULL END
                ELSE winner_user_id
              END,
-             finished_at = CASE WHEN $8 = 'completed' THEN COALESCE(finished_at, now()) ELSE finished_at END,
+             finished_at = CASE WHEN $10 = 'completed' THEN COALESCE(finished_at, now()) ELSE finished_at END,
              updated_at = now()
          WHERE id = $1`,
         [
           sessionId,
           next.challengerProgress,
           next.opponentProgress,
+          next.challengerScore,
+          next.opponentScore,
           next.challengerPercent,
           next.opponentPercent,
           next.challengerFinished,
@@ -12093,6 +12414,8 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
           winnerUserId: next.winnerUserId || 0,
           challengerProgress: next.challengerProgress,
           opponentProgress: next.opponentProgress,
+          challengerScore: next.challengerScore,
+          opponentScore: next.opponentScore,
           challengerPercent: next.challengerPercent,
           opponentPercent: next.opponentPercent,
           challengerFinished: next.challengerFinished,

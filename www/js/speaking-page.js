@@ -74,6 +74,11 @@
     enemyAvatarName: document.getElementById('enemyAvatarName'),
     meAvatarPercent: document.getElementById('meAvatarPercent'),
     enemyAvatarPercent: document.getElementById('enemyAvatarPercent'),
+    battleCardsStage: document.getElementById('battleCardsStage'),
+    battleCardsVisualBtn: document.getElementById('battleCardsVisualBtn'),
+    battleCardsImage: document.getElementById('battleCardsImage'),
+    battleCardsFallback: document.getElementById('battleCardsFallback'),
+    battleCardsPhaseWord: document.getElementById('battleCardsPhaseWord'),
     cardEnglishWord: document.getElementById('cardEnglishWord'),
     cardPortugueseWord: document.getElementById('cardPortugueseWord'),
     sendSpeakingBtn: document.getElementById('sendSpeakingBtn'),
@@ -122,8 +127,12 @@
       completed: false,
       completedRedirectTimer: 0,
       meFinished: false,
+      mode: 'battle-mode',
+      targetScore: 0,
+      meScore: 0,
       mePercent: 0,
       rivalProgress: 0,
+      rivalScore: 0,
       rivalPercent: 0,
       rivalName: 'Adversário',
       meName: 'Você',
@@ -327,14 +336,23 @@
   }
 
   function setGameMode(mode) {
-    const normalized = mode === 'battle-mode' ? 'battle-mode' : 'offline-game';
+    const normalized = mode === 'battle-cards'
+      ? 'battle-cards'
+      : mode === 'battle-mode'
+        ? 'battle-mode'
+        : 'offline-game';
     state.gameMode = normalized;
     if (els.game) {
       els.game.dataset.mode = normalized;
+      els.game.classList.toggle('is-battle-cards', normalized === 'battle-cards');
     }
     if (els.duelAvatarsWrap) {
       els.duelAvatarsWrap.classList.toggle('is-offline', normalized === 'offline-game');
     }
+  }
+
+  function isBattleCardsMode() {
+    return state.gameMode === 'battle-cards' || safeText(state.duel.mode) === 'battle-cards';
   }
 
   function buildApiUrl(path) {
@@ -407,6 +425,13 @@
         coverImageUrl: ''
       };
     }
+    if (safeText(firstCard.battleDeckId || firstCard.deckId || firstCard.battleDeckTitle)) {
+      return {
+        id: safeText(firstCard.battleDeckId || firstCard.deckId),
+        title: normalizeBookTitle(firstCard.battleDeckTitle || firstCard.deckTitle || 'FluentCards'),
+        coverImageUrl: safeText(firstCard.imageUrl)
+      };
+    }
     return {
       id: safeText(firstCard.battleBookId || firstCard.bookId),
       title: normalizeBookTitle(firstCard.battleBookTitle || firstCard.bookTitle || firstCard.bookName || ''),
@@ -439,7 +464,7 @@
     const rawTitle = normalizeBookTitle(book?.title || '').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '');
     if (rawTitle) return `${rawTitle.toLowerCase()}.json`;
 
-    return 'minibook.json';
+    return isBattleCardsMode() ? 'fluentcards.json' : 'minibook.json';
   }
 
   function parseLevel(value) {
@@ -599,9 +624,13 @@
   }
 
   function setMicLiveVisual(active) {
-    if (!els.sendSpeakingBtn) return;
     const isActive = Boolean(active);
-    els.sendSpeakingBtn.classList.toggle('is-mic-live', isActive);
+    if (els.sendSpeakingBtn) {
+      els.sendSpeakingBtn.classList.toggle('is-mic-live', isActive);
+    }
+    if (els.battleCardsVisualBtn) {
+      els.battleCardsVisualBtn.classList.toggle('is-mic-live', isActive && isBattleCardsMode());
+    }
   }
 
   function updateLanguageButtons() {
@@ -658,6 +687,44 @@
     }
   }
 
+  function renderBattleCardsPhaseWord(text, language) {
+    if (!els.battleCardsPhaseWord) return;
+    els.battleCardsPhaseWord.textContent = safeText(text) || 'FluentCards';
+    els.battleCardsPhaseWord.classList.remove('is-english', 'is-portuguese');
+    els.battleCardsPhaseWord.classList.add(language === 'portuguese' ? 'is-portuguese' : 'is-english');
+  }
+
+  function renderBattleCardsVisual(card) {
+    const imageUrl = safeText(card?.imageUrl);
+    const fallbackLabel = (safeText(card?.deckTitle || 'FluentCards').slice(0, 2) || 'FC').toUpperCase();
+    if (els.battleCardsImage) {
+      if (imageUrl) {
+        els.battleCardsImage.src = imageUrl;
+        els.battleCardsImage.hidden = false;
+      } else {
+        els.battleCardsImage.hidden = true;
+        els.battleCardsImage.removeAttribute('src');
+      }
+      els.battleCardsImage.alt = safeText(card?.english || card?.portuguese || card?.deckTitle || 'Flashcard atual') || 'Flashcard atual';
+    }
+    if (els.battleCardsFallback) {
+      els.battleCardsFallback.hidden = Boolean(imageUrl);
+      els.battleCardsFallback.textContent = fallbackLabel;
+    }
+  }
+
+  function updateBattleCardsBuffer() {
+    if (!isBattleCardsMode()) return;
+    const nextCards = state.activeCards.slice(state.currentIndex, state.currentIndex + 3);
+    nextCards.forEach((card) => {
+      const imageUrl = safeText(card?.imageUrl);
+      if (!imageUrl) return;
+      const image = new Image();
+      image.decoding = 'async';
+      image.src = imageUrl;
+    });
+  }
+
   function stopWordTicker() {
     if (state.wordTickerTimer) {
       window.clearInterval(state.wordTickerTimer);
@@ -684,6 +751,29 @@
     state.wordTickerTimer = window.setInterval(() => {
       state.wordTickerEnglish = !state.wordTickerEnglish;
       animateWord(state.wordTickerEnglish ? english : portuguese);
+    }, WORD_SWAP_MS);
+  }
+
+  function startBattleCardsTicker(card) {
+    stopWordTicker();
+    const english = safeText(card?.english) || 'FluentCards';
+    const portuguese = safeText(card?.portuguese) || english;
+    state.wordTickerEnglish = true;
+    renderBattleCardsPhaseWord(english, 'english');
+    state.wordTickerTimer = window.setInterval(() => {
+      state.wordTickerEnglish = !state.wordTickerEnglish;
+      if (els.battleCardsPhaseWord) {
+        els.battleCardsPhaseWord.classList.add('is-fading');
+      }
+      window.setTimeout(() => {
+        renderBattleCardsPhaseWord(
+          state.wordTickerEnglish ? english : portuguese,
+          state.wordTickerEnglish ? 'english' : 'portuguese'
+        );
+        if (els.battleCardsPhaseWord) {
+          els.battleCardsPhaseWord.classList.remove('is-fading');
+        }
+      }, 220);
     }, WORD_SWAP_MS);
   }
 
@@ -725,15 +815,30 @@
   }
 
   function updateDuelAvatarRings() {
-    const myPercent = state.duel.enabled
+    const battleCardsMode = isBattleCardsMode();
+    const myPercent = battleCardsMode && state.duel.targetScore > 0
+      ? Math.round((Math.max(0, Number(state.duel.meScore) || 0) / state.duel.targetScore) * 100)
+      : state.duel.enabled
       ? Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0))
       : getOfflineAveragePercent();
-    const rivalPercent = state.duel.enabled ? Math.max(0, Math.min(100, Number(state.duel.rivalPercent) || 0)) : 0;
+    const rivalPercent = battleCardsMode && state.duel.targetScore > 0
+      ? Math.round((Math.max(0, Number(state.duel.rivalScore) || 0) / state.duel.targetScore) * 100)
+      : state.duel.enabled
+        ? Math.max(0, Math.min(100, Number(state.duel.rivalPercent) || 0))
+        : 0;
 
     if (els.mePronRing) els.mePronRing.style.setProperty('--percent', String(myPercent));
     if (els.enemyPronRing) els.enemyPronRing.style.setProperty('--percent', String(rivalPercent));
-    if (els.meAvatarPercent) els.meAvatarPercent.textContent = `${myPercent}%`;
-    if (els.enemyAvatarPercent) els.enemyAvatarPercent.textContent = `${rivalPercent}%`;
+    if (els.meAvatarPercent) {
+      els.meAvatarPercent.textContent = battleCardsMode
+        ? String(Math.max(0, Number(state.duel.meScore) || 0))
+        : `${myPercent}%`;
+    }
+    if (els.enemyAvatarPercent) {
+      els.enemyAvatarPercent.textContent = battleCardsMode
+        ? String(Math.max(0, Number(state.duel.rivalScore) || 0))
+        : `${rivalPercent}%`;
+    }
     if (els.meAvatarName) {
       els.meAvatarName.textContent = state.duel.enabled ? (state.duel.meName || 'Você') : '';
     }
@@ -748,10 +853,16 @@
 
   function bindAvatarFallbacks() {
     const fallback = '/Avatar/avatar-man-person-svgrepo-com.svg';
-    [els.meAvatar, els.enemyAvatar, els.duelIntroMeAvatar, els.duelIntroEnemyAvatar, els.winnerAvatar, els.winnerRevealAvatar]
+    [els.meAvatar, els.enemyAvatar, els.duelIntroMeAvatar, els.duelIntroEnemyAvatar, els.winnerAvatar, els.winnerRevealAvatar, els.battleCardsImage]
       .filter(Boolean)
       .forEach((img) => {
         img.onerror = () => {
+          if (img === els.battleCardsImage) {
+            img.hidden = true;
+            img.removeAttribute('src');
+            if (els.battleCardsFallback) els.battleCardsFallback.hidden = false;
+            return;
+          }
           if (img.src && img.src.includes(fallback)) return;
           img.src = fallback;
         };
@@ -910,16 +1021,17 @@
   function applyDuelIntroBook() {
     const duelBook = resolveDuelIntroBookData();
     state.duel.introBook = duelBook;
+    const battleCardsMode = isBattleCardsMode();
 
     const fileLabel = buildDuelIntroFileLabel(duelBook);
     if (els.duelIntroBookKicker) {
-      els.duelIntroBookKicker.textContent = 'JSON da batalha';
+      els.duelIntroBookKicker.textContent = battleCardsMode ? 'Deck do duelo' : 'JSON da batalha';
     }
     if (els.duelIntroBookTitle) {
       els.duelIntroBookTitle.textContent = fileLabel;
     }
     if (els.duelIntroBookSubtitle) {
-      const subtitle = duelBook.title || 'Mini Book escolhido para o duelo';
+      const subtitle = duelBook.title || (battleCardsMode ? 'Deck escolhido para o duelo' : 'Mini Book escolhido para o duelo');
       els.duelIntroBookSubtitle.textContent = subtitle;
       els.duelIntroBookSubtitle.hidden = !subtitle;
     }
@@ -1134,6 +1246,9 @@
     if (els.sendSpeakingBtn) {
       els.sendSpeakingBtn.disabled = isVisible || state.duel.meFinished;
     }
+    if (els.battleCardsVisualBtn) {
+      els.battleCardsVisualBtn.disabled = isVisible || state.duel.meFinished;
+    }
     if (!isVisible) {
       clearDuelIntroAnimationTimers();
       stopBattleIntroAudio();
@@ -1201,12 +1316,22 @@
     setDuelIntroVisible(false);
   }
   function updateTopPercents() {
-    const isBattleMode = state.gameMode === 'battle-mode';
+    const battleCardsMode = isBattleCardsMode();
+    const isBattleMode = state.gameMode === 'battle-mode' || battleCardsMode;
     if (isBattleMode) {
-      if (els.speakingPercent) els.speakingPercent.textContent = '';
-      if (els.enemySpeakingPercent) els.enemySpeakingPercent.textContent = '';
+      if (els.speakingPercent) {
+        els.speakingPercent.textContent = battleCardsMode
+          ? `Pontos ${Math.max(0, Number(state.duel.meScore) || 0)}`
+          : '';
+      }
+      if (els.enemySpeakingPercent) {
+        els.enemySpeakingPercent.textContent = battleCardsMode
+          ? `Rival ${Math.max(0, Number(state.duel.rivalScore) || 0)}`
+          : '';
+      }
       if (els.enemyProgressWrap) els.enemyProgressWrap.hidden = false;
       if (els.duelAvatarsWrap) els.duelAvatarsWrap.hidden = false;
+      if (els.battleCardsStage) els.battleCardsStage.hidden = !battleCardsMode;
       updateDuelTimerLabel();
     } else {
       const offlinePercent = getOfflineAveragePercent();
@@ -1214,6 +1339,7 @@
       if (els.enemySpeakingPercent) els.enemySpeakingPercent.textContent = '';
       if (els.enemyProgressWrap) els.enemyProgressWrap.hidden = true;
       if (els.duelAvatarsWrap) els.duelAvatarsWrap.hidden = false;
+      if (els.battleCardsStage) els.battleCardsStage.hidden = true;
       if (els.duelTimerLabel) els.duelTimerLabel.hidden = true;
     }
     updateDuelAvatarRings();
@@ -1222,13 +1348,21 @@
   function updateProgressBars() {
     const total = Math.max(1, state.activeCards.length);
     const completed = Math.min(state.currentIndex, total);
+    const battleCardsMode = isBattleCardsMode();
+    const myBarValue = battleCardsMode && state.duel.targetScore > 0
+      ? Math.min(state.duel.targetScore, Math.max(0, Number(state.duel.meScore) || 0))
+      : completed;
+    const myBarTotal = battleCardsMode && state.duel.targetScore > 0 ? state.duel.targetScore : total;
     if (els.gameProgressBar) {
-      els.gameProgressBar.style.width = `${((completed / total) * 100).toFixed(2)}%`;
+      els.gameProgressBar.style.width = `${((myBarValue / Math.max(1, myBarTotal)) * 100).toFixed(2)}%`;
     }
     if (state.duel.enabled) {
-      const rivalCompleted = Math.min(state.duel.rivalProgress, total);
+      const rivalCompleted = battleCardsMode && state.duel.targetScore > 0
+        ? Math.min(state.duel.targetScore, Math.max(0, Number(state.duel.rivalScore) || 0))
+        : Math.min(state.duel.rivalProgress, total);
       if (els.enemyProgressBar) {
-        els.enemyProgressBar.style.width = `${((rivalCompleted / total) * 100).toFixed(2)}%`;
+        const rivalTotal = battleCardsMode && state.duel.targetScore > 0 ? state.duel.targetScore : total;
+        els.enemyProgressBar.style.width = `${((rivalCompleted / Math.max(1, rivalTotal)) * 100).toFixed(2)}%`;
       }
     }
   }
@@ -1240,7 +1374,14 @@
       return;
     }
     stopWordTicker();
-    renderCurrentCardLanguage();
+    const card = state.activeCards[state.currentIndex];
+    if (isBattleCardsMode()) {
+      renderBattleCardsVisual(card);
+      startBattleCardsTicker(card);
+      updateBattleCardsBuffer();
+    } else {
+      renderCurrentCardLanguage();
+    }
     if (!state.duel.enabled) {
       setGameStatus('', '');
     }
@@ -1759,6 +1900,11 @@
     const isChallenger = meRole === 'challenger';
     const me = isChallenger ? session?.challenger : session?.opponent;
     const rival = isChallenger ? session?.opponent : session?.challenger;
+    state.duel.mode = safeText(session?.mode || 'battle-mode') || 'battle-mode';
+    state.duel.targetScore = Math.max(0, Number(session?.targetScore) || 0);
+    state.currentIndex = Math.max(Math.max(0, Number(state.currentIndex) || 0), Math.max(0, Number(session?.meProgress) || 0));
+    state.duel.meScore = Math.max(Math.max(0, Number(state.duel.meScore) || 0), Math.max(0, Number(session?.meScore) || 0));
+    state.duel.rivalScore = Math.max(Math.max(0, Number(state.duel.rivalScore) || 0), Math.max(0, Number(session?.rivalScore) || 0));
     const nextMePercent = Math.max(0, Number(session?.mePercent) || 0);
     const nextRivalProgress = Math.max(0, Number(session?.rivalProgress) || 0);
     const nextRivalPercent = Math.max(0, Number(session?.rivalPercent) || 0);
@@ -1843,6 +1989,8 @@
     state.duel.enabled = false;
     state.duel.sessionId = '';
     state.duel.completed = false;
+    state.duel.mode = 'battle-mode';
+    state.duel.targetScore = 0;
     if (state.duel.completedRedirectTimer) {
       window.clearTimeout(state.duel.completedRedirectTimer);
       state.duel.completedRedirectTimer = 0;
@@ -1858,8 +2006,10 @@
       state.duel.preloadedIntroAudio = null;
     }
     state.duel.meFinished = false;
+    state.duel.meScore = 0;
     state.duel.mePercent = 0;
     state.duel.rivalProgress = 0;
+    state.duel.rivalScore = 0;
     state.duel.rivalPercent = 0;
     state.duel.introCountdownSeconds = DUEL_INTRO_COUNTDOWN_SECONDS;
     state.duel.battleDurationMs = DUEL_BATTLE_DURATION_MS;
@@ -1888,6 +2038,10 @@
     if (els.home) els.home.hidden = false;
     if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = false;
     if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = false;
+    if (els.battleCardsVisualBtn) {
+      els.battleCardsVisualBtn.disabled = false;
+      els.battleCardsVisualBtn.classList.remove('is-mic-live');
+    }
     setMicLiveVisual(false);
     setDuelIntroVisible(false);
     setHomeStatus('Escolha um MiniBook para jogar.', '');
@@ -1908,6 +2062,7 @@
     const total = Math.max(1, state.activeCards.length);
     const completed = Math.min(state.currentIndex, total);
     const sessionAvg = Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0));
+    const sessionScore = Math.max(0, Number(state.duel.meScore) || 0);
     const isTimedOut = Boolean(timedOut);
     const markFinished = isTimedOut ? Boolean(state.duel.meFinished) : Boolean(forceFinished);
     try {
@@ -1917,6 +2072,7 @@
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           progress: completed,
+          score: sessionScore,
           percent: sessionAvg,
           finished: markFinished,
           timedOut: isTimedOut
@@ -2150,27 +2306,51 @@
     const card = state.activeCards[state.currentIndex];
     if (!card) return;
     if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = true;
+    if (els.battleCardsVisualBtn) {
+      els.battleCardsVisualBtn.disabled = true;
+      els.battleCardsVisualBtn.classList.add('is-mic-live');
+    }
     setMicLiveVisual(true);
     setGameStatus('', '');
 
     try {
       const transcript = safeText(await captureSpeechFast('en-US'));
       const score = calculateSpeechMatchPercent(card.english, transcript);
-      await playSuccessSound();
       const previousCount = Math.max(0, Number(state.currentIndex) || 0);
+      const battleCardsMode = isBattleCardsMode();
+      const isHit = battleCardsMode ? score >= 50 : true;
       state.scores.push(score);
       state.currentIndex += 1;
       const nextCount = previousCount + 1;
       const weighted = ((Number(state.duel.mePercent) || 0) * previousCount) + score;
       state.duel.mePercent = nextCount > 0 ? Math.round(weighted / nextCount) : score;
+      if (battleCardsMode && isHit) {
+        state.duel.meScore = Math.max(0, Number(state.duel.meScore) || 0) + 1;
+        await playSuccessSound();
+      } else if (!battleCardsMode) {
+        await playSuccessSound();
+      }
       updateTopPercents();
       updateProgressBars();
       await syncDuelProgress(false);
+      if (battleCardsMode) {
+        if (
+          (state.duel.targetScore > 0 && state.duel.meScore >= state.duel.targetScore)
+          || state.currentIndex >= state.activeCards.length
+        ) {
+          finishGame();
+          return;
+        }
+      }
       window.setTimeout(renderCard, 220);
     } catch (error) {
       setGameStatus(error?.message || '', 'is-error');
     } finally {
       if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = false;
+      if (els.battleCardsVisualBtn) {
+        els.battleCardsVisualBtn.disabled = false;
+        els.battleCardsVisualBtn.classList.remove('is-mic-live');
+      }
       setMicLiveVisual(false);
     }
   }
@@ -2191,10 +2371,13 @@
 
     updateTopPercents();
     if (els.finalResultBox) {
-      els.finalResultBox.textContent = `${finalPercent}% seu resultado final`;
+      els.finalResultBox.textContent = isBattleCardsMode()
+        ? `${Math.max(0, Number(state.duel.meScore) || 0)} pontos`
+        : `${finalPercent}% seu resultado final`;
       els.finalResultBox.classList.add('is-visible');
     }
     if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = true;
+    if (els.battleCardsVisualBtn) els.battleCardsVisualBtn.disabled = true;
     setMicLiveVisual(false);
     void syncDuelProgress(true).then((session) => {
       if (session) {
@@ -2269,7 +2452,6 @@
   }
 
   async function startDuelMode() {
-    setGameMode('battle-mode');
     state.duel.enabled = true;
     state.duel.completed = false;
     state.duel.timeoutSyncInFlight = false;
@@ -2286,9 +2468,14 @@
     setGameStatus('', '');
     await pingPresence();
     const session = await fetchDuelSession();
+    state.duel.mode = safeText(session?.mode || 'battle-mode') || 'battle-mode';
+    setGameMode(state.duel.mode === 'battle-cards' ? 'battle-cards' : 'battle-mode');
     state.activeCards = Array.isArray(session.cards) ? session.cards : [];
     state.currentIndex = Math.max(0, Number(session.meProgress) || 0);
     state.scores = [];
+    state.duel.meScore = Math.max(0, Number(session.meScore) || 0);
+    state.duel.rivalScore = Math.max(0, Number(session.rivalScore) || 0);
+    state.duel.targetScore = Math.max(0, Number(session.targetScore) || 0);
     state.duel.introCountdownSeconds = Math.max(
       1,
       Number.parseInt(session?.introCountdownSeconds, 10) || DUEL_INTRO_COUNTDOWN_SECONDS
@@ -2362,6 +2549,10 @@
       closeMiniBookEditor();
     });
     els.sendSpeakingBtn?.addEventListener('click', () => {
+      void handleSendSpeaking();
+    });
+    els.battleCardsVisualBtn?.addEventListener('click', () => {
+      if (!isBattleCardsMode()) return;
       void handleSendSpeaking();
     });
     window.addEventListener('resize', () => {

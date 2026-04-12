@@ -375,7 +375,10 @@
     const copy = document.getElementById('globalIncomingCopy');
     if (avatar) avatar.src = challenge?.challenger?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg';
     if (name) name.textContent = challenge?.challenger?.username || 'Usuario';
-    if (copy) copy.textContent = `${challenge?.challenger?.username || 'Usuario'} te desafiou pra um speaking`;
+    const label = String(challenge?.challengeMode || '').trim().toLowerCase() === 'battle-cards'
+      ? 'FluentCards'
+      : 'Smart Books';
+    if (copy) copy.textContent = `${challenge?.challenger?.username || 'Usuario'} te desafiou para ${label}`;
     modal.classList.add('is-visible');
     syncChallengeViewportLock();
   }
@@ -464,6 +467,9 @@
       }
 
       const outgoing = payload.outgoingChallenge;
+      const outgoingLabel = String(outgoing?.challengeMode || '').trim().toLowerCase() === 'battle-cards'
+        ? 'FluentCards'
+        : 'Smart Books';
       if (!outgoing) {
         challengeRuntime.outgoingTerminalNoticeKey = '';
         closeOutgoingPopup();
@@ -472,7 +478,7 @@
       challengeRuntime.outgoingId = Number(outgoing.challengeId) || 0;
       if (outgoing.status === 'pending') {
         challengeRuntime.outgoingTerminalNoticeKey = '';
-        openOutgoingPopup(`Aguardando resposta de ${outgoing?.opponent?.username || 'Usuario'}...`, outgoing?.opponent?.avatarImage, 'Desafio enviado');
+        openOutgoingPopup(`Aguardando resposta de ${outgoing?.opponent?.username || 'Usuario'} em ${outgoingLabel}...`, outgoing?.opponent?.avatarImage, 'Desafio enviado');
       } else if (outgoing.status === 'rejected') {
         const noticeKey = `${challengeRuntime.outgoingId}:rejected`;
         if (challengeRuntime.outgoingTerminalNoticeKey !== noticeKey) {

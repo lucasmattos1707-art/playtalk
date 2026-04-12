@@ -1003,6 +1003,150 @@
       gap: 0;
     }
 
+    .battle-cards-stage {
+      width: 100%;
+      display: grid;
+      justify-items: center;
+      gap: 18px;
+      margin: 18px 0 24px;
+    }
+
+    .battle-cards-stage[hidden] {
+      display: none !important;
+    }
+
+    .battle-cards-visual {
+      position: relative;
+      width: 284px;
+      height: 284px;
+      border: 0;
+      padding: 0;
+      border-radius: 50%;
+      background: transparent;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      outline: none;
+      transition: transform 180ms ease;
+    }
+
+    .battle-cards-visual:hover {
+      transform: scale(1.015);
+    }
+
+    .battle-cards-visual:active {
+      transform: scale(0.985);
+    }
+
+    .battle-cards-visual::before {
+      content: "";
+      position: absolute;
+      inset: -12px;
+      border-radius: 50%;
+      background:
+        linear-gradient(180deg, rgba(4, 24, 55, 0) 0%, rgba(4, 24, 55, 0.3) 48%, rgba(4, 24, 55, 0.88) 78%, rgba(4, 24, 55, 1) 100%),
+        linear-gradient(180deg, rgba(118, 231, 255, 1) 0%, rgba(67, 205, 255, 1) 100%);
+      opacity: 0.96;
+      filter:
+        drop-shadow(0 0 18px rgba(68, 206, 255, 0.95))
+        drop-shadow(0 0 36px rgba(68, 206, 255, 0.55))
+        drop-shadow(0 0 64px rgba(32, 102, 255, 0.3));
+      transition: filter 220ms ease, opacity 220ms ease, transform 220ms ease;
+      animation: flashcardsMicRing 1700ms ease-in-out infinite;
+    }
+
+    .battle-cards-visual.is-mic-live::before {
+      filter:
+        drop-shadow(0 0 22px rgba(111, 248, 166, 0.98))
+        drop-shadow(0 0 44px rgba(111, 248, 166, 0.62))
+        drop-shadow(0 0 80px rgba(30, 146, 88, 0.38));
+      transform: scale(1.02);
+    }
+
+    .battle-cards-visual img,
+    .battle-cards-visual__fallback {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      display: block;
+      object-fit: cover;
+      clip-path: circle(50% at 50% 50%);
+      background: rgba(9, 20, 38, 0.92);
+      z-index: 1;
+      transform: scale(1.08);
+      transform-origin: center center;
+    }
+
+    .battle-cards-visual__fallback {
+      display: grid;
+      place-items: center;
+      color: #f1f7ff;
+      font-family: "Soopafre", "Trebuchet MS", sans-serif;
+      font-size: 28px;
+      letter-spacing: 0.04em;
+      background:
+        radial-gradient(circle at 30% 28%, rgba(118, 231, 255, 0.28), transparent 32%),
+        linear-gradient(145deg, rgba(15, 32, 84, 0.95), rgba(8, 18, 42, 0.98));
+    }
+
+    .battle-cards-translation {
+      position: relative;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 72px;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .battle-cards-phase-word {
+      width: max-content;
+      max-width: calc(100% - 30px);
+      margin: 0 auto;
+      padding: 12px 15px;
+      border-radius: 18px;
+      font-family: "Soopafre", Arial, sans-serif;
+      text-align: center;
+      white-space: normal;
+      line-height: 1;
+      color: #ffffff;
+      background-repeat: no-repeat, no-repeat;
+      background-position: center, center;
+      background-size: cover, cover;
+      transition: opacity 300ms ease;
+      box-shadow: 0 10px 26px rgba(4, 10, 24, 0.26);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 52px;
+    }
+
+    .battle-cards-phase-word.is-english {
+      background-image:
+        linear-gradient(90deg, rgba(7, 24, 84, 1) 0%, rgba(7, 24, 84, 0.15) 100%),
+        linear-gradient(135deg, rgba(8, 20, 58, 0.88) 0%, rgba(12, 36, 98, 0.84) 100%),
+        url('/accesskey/ingles.png');
+    }
+
+    .battle-cards-phase-word.is-portuguese {
+      background-image:
+        linear-gradient(90deg, rgba(8, 58, 28, 1) 0%, rgba(8, 58, 28, 0.15) 100%),
+        linear-gradient(135deg, rgba(8, 60, 28, 0.88) 0%, rgba(18, 102, 42, 0.84) 100%),
+        url('/accesskey/portugues.jpg');
+    }
+
+    .battle-cards-phase-word.is-fading {
+      opacity: 0.28;
+    }
+
+    .speaking-game.is-battle-cards .card-word,
+    .speaking-game.is-battle-cards .card-subword,
+    .speaking-game.is-battle-cards .mic-trigger-wrap {
+      display: none !important;
+    }
+
     .game-touch.game-touch--books-mic {
       width: clamp(140px, 30vw, 160px);
       height: clamp(140px, 30vw, 160px);
@@ -1249,6 +1393,16 @@
     @keyframes duelBookLoaderSpin {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
+    }
+
+    @keyframes flashcardsMicRing {
+      0%,
+      100% {
+        transform: scale(0.985);
+      }
+      50% {
+        transform: scale(1.015);
+      }
     }
 
     @keyframes duelBookLoaderPulse {
@@ -1513,6 +1667,15 @@
           <p class="duel-avatar__percent enemy" id="enemyAvatarPercent">0%</p>
         </article>
       </div>
+      <section class="battle-cards-stage" id="battleCardsStage" hidden>
+        <button class="battle-cards-visual" id="battleCardsVisualBtn" type="button" aria-label="Tocar na imagem para falar">
+          <img id="battleCardsImage" src="" alt="Flashcard atual" hidden>
+          <div class="battle-cards-visual__fallback" id="battleCardsFallback">FC</div>
+        </button>
+        <div class="battle-cards-translation" id="battleCardsTranslationSlot" aria-live="polite">
+          <h2 class="battle-cards-phase-word is-english" id="battleCardsPhaseWord">FluentCards</h2>
+        </div>
+      </section>
       <h2 class="card-word" id="cardEnglishWord">-</h2>
       <p class="card-subword" id="cardPortugueseWord" hidden>-</p>
 

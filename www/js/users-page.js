@@ -57,6 +57,8 @@
     challengeName: document.getElementById('usersChallengeName'),
     challengeCopy: document.getElementById('usersChallengeCopy'),
     challengeActionBtn: document.getElementById('usersChallengeActionBtn'),
+    challengeSmartbooksBtn: document.getElementById('usersChallengeSmartbooksBtn'),
+    challengeCardsBtn: document.getElementById('usersChallengeCardsBtn'),
     challengeCloseBtn: document.getElementById('usersChallengeCloseBtn'),
     challengeCloseTopBtn: document.getElementById('usersChallengeCloseTopBtn'),
     challengeStatus: document.getElementById('usersChallengeStatus'),
@@ -76,6 +78,7 @@
     adminBusy: false,
     challengeTarget: null,
     challengeBusy: false,
+    challengeModePickerOpen: false,
     outgoingChallengeId: 0,
     outgoingTerminalNoticeKey: '',
     incomingChallengeId: 0,
@@ -581,18 +584,40 @@
     els.challengeStatus.textContent = message || '';
   }
 
+  function syncChallengeButtons() {
+    const canChallenge = Boolean(
+      state.challengeTarget
+      && (state.challengeTarget.isBot || state.challengeTarget.isOnline)
+      && !state.challengeBusy
+    );
+    if (els.challengeActionBtn) {
+      els.challengeActionBtn.hidden = state.challengeModePickerOpen;
+      els.challengeActionBtn.disabled = !canChallenge;
+    }
+    if (els.challengeSmartbooksBtn) {
+      els.challengeSmartbooksBtn.hidden = !state.challengeModePickerOpen;
+      els.challengeSmartbooksBtn.disabled = !canChallenge;
+    }
+    if (els.challengeCardsBtn) {
+      els.challengeCardsBtn.hidden = !state.challengeModePickerOpen;
+      els.challengeCardsBtn.disabled = !canChallenge;
+    }
+  }
+
   function closeChallengeModal() {
     if (els.challengeModal) els.challengeModal.classList.remove('is-visible');
     state.challengeTarget = null;
     state.challengeBusy = false;
+    state.challengeModePickerOpen = false;
     setChallengeStatus('');
-    if (els.challengeActionBtn) els.challengeActionBtn.disabled = false;
+    syncChallengeButtons();
   }
 
   function openChallengeModal(user) {
     if (!user || !state.currentUser?.id || user.userId === state.currentUser.id) return;
     state.challengeTarget = user;
     state.challengeBusy = false;
+    state.challengeModePickerOpen = false;
     if (els.challengeAvatar) {
       els.challengeAvatar.src = user.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg';
     }
@@ -601,12 +626,10 @@
       els.challengeCopy.textContent = user.isBot
         ? 'Bot aceita na hora e o duelo abre direto no speaking.'
         : user.isOnline
-          ? 'Usuario online agora. Clique para enviar desafio speaking com 25 cartas.'
+          ? 'Usuario online agora. Clique em desafiar e escolha SmartBooks ou FluentCards.'
           : 'Usuario offline no momento. Quando ele ficar online voce consegue desafiar.';
     }
-    if (els.challengeActionBtn) {
-      els.challengeActionBtn.disabled = !user.isBot && !user.isOnline;
-    }
+    syncChallengeButtons();
     setChallengeStatus('');
     if (els.challengeModal) els.challengeModal.classList.add('is-visible');
   }
@@ -932,7 +955,9 @@
     }
     if (els.incomingCopy) {
       const username = challenge?.challenger?.username || 'Usuario';
-      els.incomingCopy.textContent = `${username} te desafiou pra um speaking`;
+      const challengeMode = safeText(challenge?.challengeMode);
+      const challengeLabel = challengeMode === 'battle-cards' ? 'FluentCards' : 'Smart Books';
+      els.incomingCopy.textContent = `${username} te desafiou para ${challengeLabel}`;
     }
     if (els.incomingModal) els.incomingModal.classList.add('is-visible');
   }
@@ -1013,25 +1038,28 @@
       } else if (outgoing.status === 'pending') {
         state.outgoingTerminalNoticeKey = '';
         const opponentName = outgoing?.opponent?.username || 'Usuario';
-        setUsersStatus(`Aguardando resposta de ${opponentName}...`);
+        const label = safeText(outgoing?.challengeMode) === 'battle-cards' ? 'FluentCards' : 'Smart Books';
+        setUsersStatus(`Aguardando resposta de ${opponentName} em ${label}...`);
       }
     } catch (_error) {
       // ignore polling errors
     }
   }
 
-  async function sendChallenge() {
+  async function sendChallenge(mode) {
     if (!state.challengeTarget || state.challengeBusy) return;
     state.challengeBusy = true;
-    if (els.challengeActionBtn) els.challengeActionBtn.disabled = true;
-    setChallengeStatus('Enviando desafio...');
+    syncChallengeButtons();
+    const normalizedMode = mode === 'battle-cards' ? 'battle-cards' : 'smartbooks';
+    setChallengeStatus(`Enviando desafio ${normalizedMode === 'battle-cards' ? 'FluentCards' : 'Smart Books'}...`);
     try {
       const response = await fetch(buildApiUrl('/api/speaking/challenges/send'), {
         method: 'POST',
         credentials: 'include',
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          opponentUserId: state.challengeTarget.userId
+          opponentUserId: state.challengeTarget.userId,
+          mode: normalizedMode
         })
       });
       const payload = await response.json().catch(() => ({}));
@@ -1051,9 +1079,10 @@
       }
     } catch (error) {
       setChallengeStatus(error?.message || 'Nao foi possivel enviar o desafio.');
-      if (els.challengeActionBtn) els.challengeActionBtn.disabled = false;
+      syncChallengeButtons();
     } finally {
       state.challengeBusy = false;
+      syncChallengeButtons();
     }
   }
 
@@ -1157,7 +1186,13 @@
   });
   els.deleteUserBtn?.addEventListener('click', () => { void deleteUser(); });
   els.closeAdminModalTopBtn?.addEventListener('click', closeAdminModal);
-  els.challengeActionBtn?.addEventListener('click', () => { void sendChallenge(); });
+  els.challengeActionBtn?.addEventListener('click', () => {
+    state.challengeModePickerOpen = true;
+    syncChallengeButtons();
+    setChallengeStatus('Escolha o tipo de desafio.');
+  });
+  els.challengeSmartbooksBtn?.addEventListener('click', () => { void sendChallenge('smartbooks'); });
+  els.challengeCardsBtn?.addEventListener('click', () => { void sendChallenge('battle-cards'); });
   els.challengeCloseTopBtn?.addEventListener('click', closeChallengeModal);
   els.challengeCloseBtn?.addEventListener('click', closeChallengeModal);
   els.incomingAcceptBtn?.addEventListener('click', () => { void respondIncomingChallenge('accept'); });
