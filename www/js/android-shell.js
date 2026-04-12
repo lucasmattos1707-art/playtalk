@@ -66,6 +66,18 @@
     }
   }
 
+  function comparableHref(rawValue) {
+    const parsedUrl = parseUrl(rawValue);
+    if (!parsedUrl) return String(rawValue || '').trim();
+    return `${normalizePathname(parsedUrl.pathname)}${parsedUrl.search}${parsedUrl.hash}`;
+  }
+
+  function isCurrentResolvedHref(rawValue) {
+    const candidate = comparableHref(rawValue);
+    const current = comparableHref(window.location.href);
+    return Boolean(candidate) && candidate === current;
+  }
+
   function resolveRouteHref(target, options = {}) {
     const fallback = String(target || '').trim() || '/flashcards';
     const searchOverride = typeof options.search === 'string' ? options.search : null;
@@ -106,6 +118,10 @@
 
   function navigate(target, options = {}) {
     const href = resolveRouteHref(target, options);
+    if (isCurrentResolvedHref(href)) {
+      syncFooterNav();
+      return;
+    }
     if (options.replace) {
       window.location.replace(href);
       return;
@@ -220,6 +236,10 @@
       if (!nextHref || nextHref === href) return;
 
       event.preventDefault();
+      if (isCurrentResolvedHref(nextHref)) {
+        syncFooterNav();
+        return;
+      }
       navigate(nextHref);
     }, true);
   }

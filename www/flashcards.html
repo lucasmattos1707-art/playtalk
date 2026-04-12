@@ -6155,7 +6155,7 @@
         <p class="welcome-gate__copy" id="welcomeCopy"></p>
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button"><img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora"></button>
       </div>
-      <a class="welcome-gate__account-link" id="welcomeAccountLink" href="/accounts">Entrar com minha conta</a>
+      <a class="welcome-gate__account-link" id="welcomeAccountLink" href="/account">Entrar com minha conta</a>
     </div>
   </section>
   <section class="robotcheck" id="robotcheck" aria-label="Robot check">
@@ -8387,6 +8387,7 @@
 
       function shouldShowWelcomeGate() {
         if (state.entry.welcomeDismissed) return false;
+        if (state.user?.id) return false;
         if (state.entry.authRequired || state.game.active || state.watch.active || isAdminUser()) return false;
         // Mantem a entrada visivel para usuario comum ate ele escolher iniciar.
         // Evita o efeito de "dissolver" para o catalogo quando a carta de tutorial nao estiver carregada.
@@ -8403,7 +8404,7 @@
         if (!els.welcomeAccountLink) return;
         const isLoggedIn = Boolean(state.user?.id);
         els.welcomeAccountLink.textContent = isLoggedIn ? 'Sair da conta' : 'Entrar com minha conta';
-        els.welcomeAccountLink.setAttribute('href', isLoggedIn ? '#' : '/accounts');
+        els.welcomeAccountLink.setAttribute('href', isLoggedIn ? '#' : '/account');
       }
 
       function syncWelcomeGate() {
