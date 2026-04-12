@@ -546,6 +546,7 @@
 
   function closeChallengeModal() {
     if (els.challengeModal) els.challengeModal.classList.remove('is-visible');
+    document.body.classList.remove('users-challenge-open');
     state.challengeTarget = null;
     state.challengeBusy = false;
     setChallengeStatus('');
@@ -572,6 +573,7 @@
     }
     setChallengeStatus('');
     if (els.challengeModal) els.challengeModal.classList.add('is-visible');
+    document.body.classList.add('users-challenge-open');
   }
 
   function currentViewerEntry(rows) {
