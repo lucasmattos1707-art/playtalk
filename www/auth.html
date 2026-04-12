@@ -1,17 +1,16 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PlayTalk | Redirecionando</title>
-  <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
   <script>
-    window.location.replace('index.html');
+    (function redirectToFlashcards() {
+      var targetUrl = new URL('/flashcards.html', window.location.origin);
+      targetUrl.searchParams.set('view', 'play');
+      window.location.replace(targetUrl.pathname + targetUrl.search);
+    })();
   </script>
 </head>
-<body class="auth-page">
-  <main class="auth-card" aria-live="polite">
-    <p>Redirecionando para a Jornada...</p>
-  </main>
-</body>
+<body></body>
 </html>

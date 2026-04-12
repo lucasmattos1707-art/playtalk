@@ -860,7 +860,7 @@
       // ignore
     }
     persistAuthToken('');
-    navigateTo(window.PlaytalkNative ? '/flashcards' : '/auth.html', { replace: true });
+    navigateTo('/flashcards', { replace: true });
   }
 
   async function init() {

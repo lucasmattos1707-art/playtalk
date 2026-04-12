@@ -7,8 +7,20 @@ const outputDirs = [
   path.join(rootDir, 'public'),
   path.join(rootDir, 'dist')
 ];
+const appHtmlFiles = new Set([
+  'index.html',
+  'flashcards.html',
+  'allcards.html',
+  'users.html',
+  'account.html',
+  'books.html',
+  'speaking.html',
+  'username.html',
+  'avataradd.html',
+  'password.html',
+  'premium.html'
+]);
 const rootStaticFiles = [
-  'edu.html',
   'arquivos-codex/fluentlevelup.png'
 ];
 const rootStaticDirectories = [
@@ -44,6 +56,7 @@ async function ensureDir(target) {
 
 async function copyRecursive(source, destination) {
   const stats = await fs.stat(source);
+  const relativeSource = path.relative(sourceDir, source);
 
   if (stats.isDirectory()) {
     await ensureDir(destination);
@@ -52,6 +65,14 @@ async function copyRecursive(source, destination) {
       await copyRecursive(path.join(source, entry), path.join(destination, entry));
     }
   } else {
+    if (relativeSource && !relativeSource.startsWith('..')) {
+      const normalizedRelative = relativeSource.split(path.sep).join('/');
+      const isTopLevelHtml = !normalizedRelative.includes('/') && normalizedRelative.toLowerCase().endsWith('.html');
+      if (isTopLevelHtml && !appHtmlFiles.has(normalizedRelative)) {
+        return;
+      }
+    }
+
     await ensureDir(path.dirname(destination));
     await fs.copyFile(source, destination);
   }

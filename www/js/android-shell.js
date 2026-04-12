@@ -6,6 +6,7 @@
     account: { webPath: '/account', localPath: '/account.html' },
     books: { webPath: '/books', localPath: '/books.html' },
     username: { webPath: '/username', localPath: '/username.html' },
+    usermame: { webPath: '/usermame', localPath: '/username.html' },
     avataradd: { webPath: '/avataradd', localPath: '/avataradd.html' },
     password: { webPath: '/password', localPath: '/password.html' },
     premium: { webPath: '/premium', localPath: '/premium.html' }

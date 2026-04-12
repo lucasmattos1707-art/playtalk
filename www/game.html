@@ -2,139 +2,15 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-  <title>PlayTalk | Vocabulary</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
-  <link rel="stylesheet" href="css/vocabulary-game.css?v=20260313a">
-  <script src="/config.js"></script>
-  <script src="js/gamesounds.js"></script>
-</head>
-<body class="vocabulary-game" data-game-root>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlayTalk | Redirecionando</title>
   <script>
-    (function () {
-      var target = '/index.html' + (window.location.search || '') + '#home';
-      window.location.replace(target);
+    (function redirectToFlashcards() {
+      var targetUrl = new URL('/flashcards.html', window.location.origin);
+      targetUrl.searchParams.set('view', 'play');
+      window.location.replace(targetUrl.pathname + targetUrl.search);
     })();
   </script>
-  <main class="game-main">
-    <div class="game-contnent">
-        <div class="board-wrapper">
-      <div class="board" id="board">
-        <div class="board__inner" id="board-inner"></div>
-      </div>
-    </div>
-        <div class="choice-row" id="choice-row"></div>
-      </div>
-    <div class="text-container" id="text-container" aria-live="polite"></div>
-  </main>
-
-  <div class="game-stars-shell" aria-label="Vidas restantes">
-    <div class="game-status game-status--top" aria-label="Vidas restantes">
-      <div class="game-hearts">
-        <span class="game-heart" aria-hidden="true"><img class="game-heart-icon" src="SVG/codex-icons/star.svg" alt=""></span>
-        <span class="game-heart" aria-hidden="true"><img class="game-heart-icon" src="SVG/codex-icons/star.svg" alt=""></span>
-        <span class="game-heart" aria-hidden="true"><img class="game-heart-icon" src="SVG/codex-icons/star.svg" alt=""></span>
-        <span class="game-heart" aria-hidden="true"><img class="game-heart-icon" src="SVG/codex-icons/star.svg" alt=""></span>
-        <span class="game-heart" aria-hidden="true"><img class="game-heart-icon" src="SVG/codex-icons/star.svg" alt=""></span>
-      </div>
-    </div>
-  </div>
-
-  <div class="game-bottom-shell">
-  <div class="game-footer-shell" aria-label="Controles do jogo">
-    <div class="game-status game-status--bottom" aria-label="Controles do jogo">
-      <div class="game-controls" aria-label="Controles do jogo">
-        <button class="game-control game-control--active" id="game-pause-btn" type="button" aria-label="Pausar ou continuar jogo">
-          <img src="SVG/codex-icons/pause.svg" alt="" aria-hidden="true">
-        </button>
-        <button class="game-control game-control--disabled" id="game-mic-btn" type="button" aria-label="Ativar microfone">
-          <img class="game-control__mic-icon" src="SVG/codex-icons/mic-desligado.png" alt="" aria-hidden="true">
-        </button>
-        <button class="game-control game-control--active" id="game-volume-btn" type="button" aria-label="Ativar ou desativar volume">
-          <img src="SVG/codex-icons/volume.svg" alt="" aria-hidden="true">
-        </button>
-      </div>
-    </div>
-  </div>
-  <div class="progress-footer">
-    <div class="progress-bar" aria-label="Progresso do dia">
-      <div class="progress-bar__fill" id="progress-fill"></div>
-    </div>
-  </div>
-</div>
-
-<section class="start-screen" id="start-screen">
-    <img src="SVG/logo.png" alt="PlayTalk" class="start-screen__logo">
-    <div class="start-screen__text" id="rotating-text">Fluência Fácil</div>
-  </section>
-
-  <section class="game-overlay hidden" id="phase-transition">
-    <div class="overlay-card">
-      <div class="phase-transition__logo-shell hidden" id="phase-transition-logo-shell" aria-hidden="true">
-        <img src="SVG/logo.png" alt="PlayTalk" class="phase-transition__logo-image">
-      </div>
-      <h1 id="phase-transition-title">Seeding</h1>
-      <div class="overlay-actions">
-        <button class="btn-primary" id="phase-transition-btn">Iniciar jogo</button>
-      </div>
-    </div>
-  </section>
-
-  <section class="game-overlay hidden" id="device-select" aria-hidden="true">
-    <div class="overlay-card">
-      <h1>Qual dispositivo você está usando?</h1>
-      <p class="device-select__subtitle">Escolha uma opção para ajustar a sequência das fases.</p>
-      <div class="overlay-actions device-select__options">
-        <button class="btn-primary device-select__button" type="button" data-device-option="android">Android</button>
-        <button class="btn-primary device-select__button" type="button" data-device-option="iphone">iPhone</button>
-        <button class="btn-primary device-select__button" type="button" data-device-option="windows">Windows</button>
-      </div>
-    </div>
-  </section>
-
-  <section class="game-overlay hidden" id="level-complete">
-    <div class="overlay-card">
-      <h1>Pronto para o próximo dia?</h1>
-      <p id="level-complete-text"></p>
-      <p class="level-complete__countdown" id="level-countdown"></p>
-      <div class="overlay-actions">
-        <button class="btn-primary" id="next-level-btn">Ir para o próximo</button>
-        <button class="btn-primary" id="replay-level-btn">Jogar novamente</button>
-      </div>
-    </div>
-  </section>
-
-  <div class="full-green-overlay" id="progress-complete-overlay" aria-hidden="true"></div>
-  <div class="final-overlay" id="final-overlay" aria-hidden="true">
-    <div class="final-overlay__slideshow" id="final-slideshow">
-      <img id="final-slideshow-image" src="" alt="Imagem vista no jogo">
-    </div>
-  </div>
-
-  <audio id="audio-success" src="gamesounds/success.mp3" preload="auto"></audio>
-  <audio id="audio-error" src="gamesounds/error.mp3" preload="auto"></audio>
-  <audio id="audio-conclusao" src="gamesounds/conclusao.mp3" preload="auto"></audio>
-  <audio id="audio-mic" src="gamesounds/mic.mp3" preload="auto"></audio>
-
-  <script src="js/vocabulary-game.js?v=20260325a"></script>
-</body>
+</head>
+<body></body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

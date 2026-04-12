@@ -2,12 +2,15 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-  <meta http-equiv="refresh" content="0; url=index.html">
-  <title>PlayTalk | Redirecionando para Home</title>
-  <link rel="canonical" href="index.html">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlayTalk | Redirecionando</title>
+  <script>
+    (function redirectToFlashcards() {
+      var targetUrl = new URL('/flashcards.html', window.location.origin);
+      targetUrl.searchParams.set('view', 'play');
+      window.location.replace(targetUrl.pathname + targetUrl.search);
+    })();
+  </script>
 </head>
-<body>
-  <p>Redirecionando para a página inicial...</p>
-</body>
+<body></body>
 </html>
