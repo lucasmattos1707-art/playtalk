@@ -286,6 +286,15 @@
     return { ...(extraHeaders || {}) };
   }
 
+  function navigateToSpeakingSession(sessionId, options = {}) {
+    const normalizedSessionId = String(sessionId || '').trim();
+    if (!normalizedSessionId) return;
+    navigate('speaking', {
+      ...options,
+      search: `?session=${encodeURIComponent(normalizedSessionId)}`
+    });
+  }
+
   function ensureChallengePopupUi() {
     if (document.getElementById('globalChallengePopupStyles')) return;
     const style = document.createElement('style');
@@ -411,7 +420,7 @@
       closeIncomingPopup();
       if (action === 'accept' && payload?.sessionId) {
         challengeRuntime.redirecting = true;
-        window.location.href = `/speaking?session=${encodeURIComponent(payload.sessionId)}`;
+        navigateToSpeakingSession(payload.sessionId);
       }
     } catch (_error) {
       // ignore
@@ -480,7 +489,7 @@
         const acceptedSessionId = String(outgoing.sessionId || '').trim();
         if (acceptedSessionId && !isCurrentSpeakingSession(acceptedSessionId)) {
           challengeRuntime.redirecting = true;
-          window.location.href = `/speaking?session=${encodeURIComponent(acceptedSessionId)}`;
+          navigateToSpeakingSession(acceptedSessionId);
         } else {
           challengeRuntime.outgoingTerminalNoticeKey = '';
           closeOutgoingPopup();

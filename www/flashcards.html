@@ -6651,6 +6651,7 @@
       const AUTH_GATE_FORM_REVEAL_MS = 1200;
       const WELCOME_COPY_ROTATION_MS = 2000;
       const WELCOME_COPY_MESSAGES = ['Flu\u00eancia f\u00e1cil', 'Toque para come\u00e7ar'];
+      const LEGACY_FLASHCARDS_HOME_ENABLED = false;
       const SOUND_TEST_COPY_ROTATION_MS = 1500;
       const SOUND_TEST_SUBTITLE_MESSAGES = ['Toque no que est\u00e1 ouvindo', 'Ajuste o volume'];
       const SOUND_TEST_SELECTION_COUNT = 3;
@@ -8387,12 +8388,14 @@
       }
 
       function shouldShowWelcomeGate() {
-        if (isNativeRuntime()) return false;
-        if (state.entry.welcomeDismissed) return false;
-        if (state.user?.id) return false;
-        if (state.entry.authRequired || state.game.active || state.watch.active || isAdminUser()) return false;
-        // Mantem a entrada visivel para usuario comum ate ele escolher iniciar.
-        // Evita o efeito de "dissolver" para o catalogo quando a carta de tutorial nao estiver carregada.
+        if (state.entry.authRequired || state.game.active || state.watch.active) return false;
+        if (LEGACY_FLASHCARDS_HOME_ENABLED) {
+          if (isNativeRuntime()) return false;
+          if (state.entry.welcomeDismissed) return false;
+          if (state.user?.id) return false;
+          if (isAdminUser()) return false;
+        }
+        // Sem a home legada, o welcome gate vira a entrada unica da rota /flashcards.
         return true;
       }
 
@@ -8795,10 +8798,10 @@
       function switchMainView(view) {
         const nextView = 'play';
         state.ui.activeView = nextView;
-        const showCatalog = nextView === 'play';
+        const showCatalog = LEGACY_FLASHCARDS_HOME_ENABLED && nextView === 'play';
         const showUsers = false;
         const showProfile = false;
-        const showTopbar = nextView === 'play';
+        const showTopbar = LEGACY_FLASHCARDS_HOME_ENABLED && nextView === 'play';
 
         if (els.catalog) {
           els.catalog.hidden = !showCatalog;
@@ -11950,6 +11953,10 @@
       }
 
       function triggerLibrarySummaryRankSwap() {
+        if (!LEGACY_FLASHCARDS_HOME_ENABLED) {
+          clearLibrarySummaryTimer();
+          return;
+        }
         const nextCount = accessibleFlashcardsCount();
         state.ui.librarySummaryMode = 'count';
         state.ui.librarySummaryToken += 1;
@@ -11970,18 +11977,34 @@
 
       function refreshLibrary() {
         syncAdminTheme();
-        const cards = userProgressCards().map(buildLibraryCardView);
-        const visibleCards = currentLibraryPageSlice(cards);
-        if (els.libraryTitle) {
-          els.libraryTitle.textContent = 'FlashCards';
+        if (LEGACY_FLASHCARDS_HOME_ENABLED) {
+          const cards = userProgressCards().map(buildLibraryCardView);
+          const visibleCards = currentLibraryPageSlice(cards);
+          if (els.libraryTitle) {
+            els.libraryTitle.textContent = 'FlashCards';
+          }
+          renderLibrarySummary(cards.length);
+          renderMiniCards(
+            els.allGrid,
+            visibleCards,
+            '0'
+          );
+          renderLibraryPagination(cards.length);
+        } else {
+          clearLibrarySummaryTimer();
+          if (els.libraryTitle) {
+            els.libraryTitle.textContent = '';
+          }
+          if (els.allSectionCopy) {
+            els.allSectionCopy.textContent = '';
+          }
+          if (els.allGrid) {
+            els.allGrid.innerHTML = '';
+          }
+          if (els.libraryPagination) {
+            els.libraryPagination.hidden = true;
+          }
         }
-        renderLibrarySummary(cards.length);
-        renderMiniCards(
-          els.allGrid,
-          visibleCards,
-          '0'
-        );
-        renderLibraryPagination(cards.length);
         renderMetrics();
         updateGameChips();
         syncGameSetupSummary();
@@ -14877,9 +14900,11 @@
           state.game.recognition = nativeCapture;
 
           try {
-            const hasNativeMicAccess = typeof nativeSpeech.ensurePermissions === 'function'
-              ? await nativeSpeech.ensurePermissions()
-              : true;
+            const hasNativeMicAccess = typeof nativeSpeech.ensureGameplayCaptureReady === 'function'
+              ? (await nativeSpeech.ensureGameplayCaptureReady(), true)
+              : (typeof nativeSpeech.ensurePermissions === 'function'
+                ? await nativeSpeech.ensurePermissions()
+                : true);
             if (!hasNativeMicAccess) {
               finish();
               if (state.game.active && state.game.currentId === entry.id) {
@@ -14890,11 +14915,17 @@
               return;
             }
 
-            const transcript = await nativeSpeech.captureOnce({
-              language: recognitionLanguage,
-              maxResults: 5,
-              maxDurationMs: 10000
-            });
+            const transcript = typeof nativeSpeech.captureForGameplay === 'function'
+              ? await nativeSpeech.captureForGameplay({
+                  language: recognitionLanguage,
+                  maxResults: 5,
+                  maxDurationMs: 6500
+                })
+              : await nativeSpeech.captureOnce({
+                  language: recognitionLanguage,
+                  maxResults: 5,
+                  maxDurationMs: 6500
+                });
 
             if (nativeCapture.aborted) {
               finish();
@@ -15382,7 +15413,11 @@
         renderProfilePanel();
         renderPremiumCode();
         updateGameChips();
-        renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
+        if (LEGACY_FLASHCARDS_HOME_ENABLED) {
+          renderMiniCards(els.allGrid, [], 'Entre para carregar seus flashcards.');
+        } else if (els.allGrid) {
+          els.allGrid.innerHTML = '';
+        }
         syncAdminTools();
         renderAdminPublishBar();
         els.flashcardsHomeToggle?.setAttribute('aria-label', 'Mostrar resumo');

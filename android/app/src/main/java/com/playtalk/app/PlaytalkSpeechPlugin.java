@@ -35,6 +35,9 @@ public class PlaytalkSpeechPlugin extends Plugin {
     private static final long DEFAULT_MAX_DURATION_MS = 10000L;
     private static final long MIN_MAX_DURATION_MS = 2500L;
     private static final long MAX_MAX_DURATION_MS = 30000L;
+    private static final long COMPLETE_SILENCE_LENGTH_MS = 1200L;
+    private static final long POSSIBLY_COMPLETE_SILENCE_LENGTH_MS = 700L;
+    private static final long MINIMUM_LISTENING_LENGTH_MS = 800L;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -60,7 +63,10 @@ public class PlaytalkSpeechPlugin extends Plugin {
     @PluginMethod
     public void isAvailable(PluginCall call) {
         JSObject result = new JSObject();
-        result.put("available", SpeechRecognizer.isRecognitionAvailable(getContext()));
+        boolean available = SpeechRecognizer.isRecognitionAvailable(getContext());
+        result.put("available", available);
+        result.put("hasPermission", hasAudioPermission());
+        result.put("runtime", "android-speech-recognizer");
         call.resolve(result);
     }
 
@@ -134,6 +140,8 @@ public class PlaytalkSpeechPlugin extends Plugin {
             resetRecognitionState();
             activeCall = call;
 
+            // O jogo usa o microfone apenas em rodadas curtas e iniciadas pelo toque no botao.
+            // Mantemos o recognizer somente durante a jogada ativa para evitar captura em segundo plano.
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(getActivity());
             speechRecognizer.setRecognitionListener(new RecognitionListener() {
                 @Override
@@ -188,6 +196,9 @@ public class PlaytalkSpeechPlugin extends Plugin {
             intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
             intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getContext().getPackageName());
             intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
+            intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, COMPLETE_SILENCE_LENGTH_MS);
+            intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, POSSIBLY_COMPLETE_SILENCE_LENGTH_MS);
+            intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, MINIMUM_LISTENING_LENGTH_MS);
 
             timeoutRunnable = () -> {
                 if (speechRecognizer == null || activeCallFinished) return;
@@ -243,7 +254,7 @@ public class PlaytalkSpeechPlugin extends Plugin {
             transcripts.put(transcript);
         }
         result.put("transcripts", transcripts);
-        result.put("language", Locale.getDefault().toLanguageTag());
+        result.put("language", normalizeLanguage(call.getString("language", Locale.getDefault().toLanguageTag())));
         call.resolve(result);
         activeCall = null;
         releaseRecognizer();

@@ -336,6 +336,16 @@
     return { ...(extraHeaders || {}) };
   }
 
+  function resolveRouteHref(target, options = {}) {
+    if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
+      return window.PlaytalkNative.resolveRouteHref(target, options);
+    }
+    if (typeof options.search === 'string' && options.search) {
+      return `${String(target || '').trim() || '/users'}${options.search}`;
+    }
+    return target;
+  }
+
   function escapeHtml(value) {
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -1860,7 +1870,7 @@
     if (state.duel.completedRedirectTimer) return;
     state.duel.completedRedirectTimer = window.setTimeout(() => {
       resetSpeakingToOfflineMode();
-      window.location.replace('/users');
+      window.location.replace(resolveRouteHref('/users'));
     }, DUEL_WINNER_DURATION_MS);
   }
 
@@ -2065,15 +2075,36 @@
   async function captureSpeechFast(language) {
     const nativeSpeech = window.PlaytalkNativeSpeech;
     if (nativeSpeech && typeof nativeSpeech.isSupported === 'function' && nativeSpeech.isSupported()) {
-      const granted = typeof nativeSpeech.ensurePermissions === 'function'
-        ? await nativeSpeech.ensurePermissions()
-        : true;
-      if (granted && typeof nativeSpeech.captureOnce === 'function') {
-        return nativeSpeech.captureOnce({
-          language: language || 'en-US',
-          maxResults: 5,
-          maxDurationMs: 7000
-        });
+      try {
+        if (typeof nativeSpeech.captureForGameplay === 'function') {
+          return await nativeSpeech.captureForGameplay({
+            language: language || 'en-US',
+            maxResults: 5,
+            maxDurationMs: 7000
+          });
+        }
+        if (typeof nativeSpeech.ensureGameplayCaptureReady === 'function') {
+          await nativeSpeech.ensureGameplayCaptureReady();
+        } else {
+          const granted = typeof nativeSpeech.ensurePermissions === 'function'
+            ? await nativeSpeech.ensurePermissions()
+            : true;
+          if (!granted) {
+            throw new Error('Permissao de microfone negada.');
+          }
+        }
+        if (typeof nativeSpeech.captureOnce === 'function') {
+          return await nativeSpeech.captureOnce({
+            language: language || 'en-US',
+            maxResults: 5,
+            maxDurationMs: 7000
+          });
+        }
+      } catch (nativeError) {
+        const nativeCode = String(nativeError?.code || '').toUpperCase();
+        if (nativeCode === 'PERMISSION_DENIED') {
+          throw new Error('Permissao de microfone negada.');
+        }
       }
     }
 

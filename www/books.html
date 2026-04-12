@@ -1338,6 +1338,8 @@
     }
 
     .books-card {
+      --books-card-book-width: min(258px, 58vw);
+      --books-card-badge-size: 74px;
       width: min(378px, 81vw, calc(var(--books-shelf-height) * 9 / 16 * 0.88));
       aspect-ratio: 9 / 16;
       border: 0;
@@ -1368,7 +1370,7 @@
     .books-card__background {
       position: absolute;
       inset: 0;
-      width: min(258px, 58vw);
+      width: var(--books-card-book-width);
       max-width: 100%;
       aspect-ratio: 9 / 16;
       margin: 0 auto;
@@ -1407,10 +1409,10 @@
 
     .books-card__badge {
       position: absolute;
-      right: 18px;
-      bottom: 18px;
-      width: 62px;
-      height: 62px;
+      left: calc(50% + (var(--books-card-book-width) / 2) - (var(--books-card-badge-size) * 0.58));
+      bottom: 10px;
+      width: var(--books-card-badge-size);
+      height: var(--books-card-badge-size);
       display: grid;
       place-items: center;
       z-index: 3;
@@ -2181,8 +2183,14 @@
       inset: 0;
       background: var(--playtalk-global-bg-overlay);
       opacity: 1;
+      transition: opacity 500ms ease;
       pointer-events: none;
       z-index: 0;
+    }
+
+    .books-reader.is-visible[data-reader-mode="listening-training"]::after,
+    .books-reader.is-visible[data-reader-mode="speaking-training"]::after {
+      animation: books-reader-overlay-dissolve 500ms ease forwards;
     }
 
     .books-reader.is-visible {
@@ -2215,6 +2223,15 @@
       to {
         opacity: 1;
         transform: translateY(0);
+      }
+    }
+
+    @keyframes books-reader-overlay-dissolve {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
       }
     }
 

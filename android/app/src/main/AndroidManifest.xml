@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+
+    <!-- O speaking usa captura curta e iniciada pelo proprio jogador. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- O microfone melhora o jogo, mas nao deve limitar a instalacao em aparelhos sem esse hardware. -->
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"

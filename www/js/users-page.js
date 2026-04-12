@@ -108,6 +108,27 @@
     return { ...(extraHeaders || {}) };
   }
 
+  function resolveRouteHref(target, options = {}) {
+    if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
+      return window.PlaytalkNative.resolveRouteHref(target, options);
+    }
+    if (typeof options.search === 'string' && options.search) {
+      const safeTarget = safeText(target) || '/users';
+      return `${safeTarget}${options.search}`;
+    }
+    return target;
+  }
+
+  function navigateToSpeakingSession(sessionId, options = {}) {
+    const normalizedSessionId = safeText(sessionId);
+    if (!normalizedSessionId) return;
+    const nextHref = resolveRouteHref('/speaking', {
+      ...options,
+      search: `?session=${encodeURIComponent(normalizedSessionId)}`
+    });
+    window.location.href = nextHref;
+  }
+
   function escapeHtml(value) {
     return String(value || '').replace(/[&<>"']/g, (char) => (
       {
@@ -935,7 +956,7 @@
       }
       closeIncomingModal();
       if (action === 'accept' && payload?.sessionId) {
-        window.location.href = `/speaking?session=${encodeURIComponent(payload.sessionId)}`;
+        navigateToSpeakingSession(payload.sessionId);
       } else {
         setUsersStatus('Desafio recusado.');
       }
@@ -974,7 +995,7 @@
       state.outgoingChallengeId = Number(outgoing.challengeId) || 0;
       if (outgoing.status === 'accepted' && outgoing.sessionId && !state.redirectedByChallenge) {
         state.redirectedByChallenge = true;
-        window.location.href = `/speaking?session=${encodeURIComponent(outgoing.sessionId)}`;
+        navigateToSpeakingSession(outgoing.sessionId);
         return;
       }
       if (outgoing.status === 'rejected') {
@@ -1018,7 +1039,7 @@
         throw new Error(payload?.message || 'Nao foi possivel enviar o desafio.');
       }
       if (payload?.sessionId) {
-        window.location.href = `/speaking?session=${encodeURIComponent(payload.sessionId)}`;
+        navigateToSpeakingSession(payload.sessionId);
         return;
       }
       setChallengeStatus('Desafio enviado. Aguardando resposta...');

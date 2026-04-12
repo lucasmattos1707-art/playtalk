@@ -4565,24 +4565,35 @@
     const nativeSpeech = window.PlaytalkNativeSpeech;
     const normalizedLanguage = language || 'en-US';
     if (nativeSpeech && typeof nativeSpeech.isSupported === 'function' && nativeSpeech.isSupported()) {
-      const granted = typeof nativeSpeech.ensurePermissions === 'function'
-        ? await nativeSpeech.ensurePermissions()
-        : true;
-      if (!granted) {
-        throw new Error('Permissao de microfone negada.');
-      }
-      if (typeof nativeSpeech.captureOnce === 'function') {
-        try {
+      try {
+        if (typeof nativeSpeech.captureForGameplay === 'function') {
+          return await nativeSpeech.captureForGameplay({
+            language: normalizedLanguage,
+            maxResults: 5,
+            maxDurationMs: 7000
+          });
+        }
+        if (typeof nativeSpeech.ensureGameplayCaptureReady === 'function') {
+          await nativeSpeech.ensureGameplayCaptureReady();
+        } else {
+          const granted = typeof nativeSpeech.ensurePermissions === 'function'
+            ? await nativeSpeech.ensurePermissions()
+            : true;
+          if (!granted) {
+            throw new Error('Permissao de microfone negada.');
+          }
+        }
+        if (typeof nativeSpeech.captureOnce === 'function') {
           return await nativeSpeech.captureOnce({
             language: normalizedLanguage,
             maxResults: 5,
             maxDurationMs: 7000
           });
-        } catch (nativeError) {
-          const nativeCode = String(nativeError?.code || '').toUpperCase();
-          if (nativeCode === 'PERMISSION_DENIED') {
-            throw new Error('Permissao de microfone negada.');
-          }
+        }
+      } catch (nativeError) {
+        const nativeCode = String(nativeError?.code || '').toUpperCase();
+        if (nativeCode === 'PERMISSION_DENIED') {
+          throw new Error('Permissao de microfone negada.');
         }
       }
     }
