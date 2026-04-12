@@ -848,17 +848,27 @@
       position: fixed;
       inset: 0;
       display: none;
+      opacity: 0;
+      visibility: hidden;
       align-items: stretch;
       justify-content: stretch;
       padding: 0;
       background: rgba(2, 11, 24, 0.42);
-      z-index: 230;
+      z-index: 9999;
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
     }
 
     .users-challenge-modal.is-visible {
       display: flex;
+      opacity: 1;
+      visibility: visible;
+    }
+
+    body.users-challenge-open #usersChallengeModal {
+      display: flex !important;
+      opacity: 1 !important;
+      visibility: visible !important;
     }
 
     .users-challenge-card {
