@@ -330,6 +330,7 @@
     allBooksFeed: [],
     allBooksFeedVersion: '',
     allBooksWindowStart: 0,
+    allBooksSentinelMode: false,
     allBooksAdvancePending: 0,
     listeningCharsPending: 0,
     listeningCharsTotal: 0,
@@ -1501,6 +1502,40 @@
     return buildAllBooksWindow(feed, state.allBooksWindowStart, ALL_BOOKS_WINDOW_SIZE);
   }
 
+  function getAllBooksSentinelWindow() {
+    const feed = getAllBooksFeed();
+    if (feed.length <= ALL_BOOKS_WINDOW_SIZE) {
+      state.allBooksSentinelMode = false;
+      return buildAllBooksWindow(feed, state.allBooksWindowStart, ALL_BOOKS_WINDOW_SIZE);
+    }
+    state.allBooksSentinelMode = true;
+    return buildAllBooksWindow(feed, state.allBooksWindowStart - 1, ALL_BOOKS_WINDOW_SIZE + 2);
+  }
+
+  function getAllBooksSentinelBounds(pageCount = getShelfPages().length) {
+    if (!state.allBooksSentinelMode || pageCount < 3) return null;
+    const prevIndex = 0;
+    const nextIndex = Math.max(0, pageCount - 1);
+    const firstMainIndex = 1;
+    const lastMainIndex = Math.max(firstMainIndex, nextIndex - 1);
+    return {
+      prevIndex,
+      nextIndex,
+      firstMainIndex,
+      lastMainIndex
+    };
+  }
+
+  function clampVisibleShelfIndex(index) {
+    const clamped = clampShelfIndex(index);
+    const sentinelBounds = getAllBooksSentinelBounds();
+    if (!sentinelBounds) return clamped;
+    return Math.max(
+      sentinelBounds.firstMainIndex,
+      Math.min(sentinelBounds.lastMainIndex, clamped)
+    );
+  }
+
   function queueAllBooksWindowAdvance(step = 1) {
     if (!isAllBooksLevel()) return;
     const normalizedStep = Math.trunc(Number(step) || 0);
@@ -1526,13 +1561,20 @@
     rotateAllBooksWindow(pending, preferredIndex);
   }
 
-  function getBooksForSelectedLevel() {
+  function getBooksForSelectedLevel(options = {}) {
     if (isMyBooksLevel()) {
+      state.allBooksSentinelMode = false;
       return getQualifiedMyBooks();
     }
     if (isAllBooksLevel()) {
-      return getAllBooksWindow();
+      const pendingCount = Math.max(0, Math.round(Number(options.pendingCount) || 0));
+      if (pendingCount > 0) {
+        state.allBooksSentinelMode = false;
+        return getAllBooksWindow();
+      }
+      return getAllBooksSentinelWindow();
     }
+    state.allBooksSentinelMode = false;
     const bookLevel = uiLevelToBookLevel(state.selectedLevel);
     if (!bookLevel) return [];
     return state.books
@@ -2957,7 +2999,19 @@
     let target = clampShelfIndex(state.shelfIndex + step);
     if (isAllBooksLevel()) {
       const feed = getAllBooksFeed();
-      if (feed.length > pages.length) {
+      const sentinelBounds = getAllBooksSentinelBounds(pages.length);
+      if (sentinelBounds) {
+        if (step > 0 && state.shelfIndex >= sentinelBounds.lastMainIndex) {
+          await scrollShelfToIndex(sentinelBounds.nextIndex, true);
+          rotateAllBooksWindow(1, sentinelBounds.lastMainIndex);
+          return;
+        }
+        if (step < 0 && state.shelfIndex <= sentinelBounds.firstMainIndex) {
+          await scrollShelfToIndex(sentinelBounds.prevIndex, true);
+          rotateAllBooksWindow(-1, sentinelBounds.firstMainIndex);
+          return;
+        }
+      } else if (feed.length > pages.length) {
         if (step > 0 && state.shelfIndex >= (pages.length - 1)) {
           rotateAllBooksWindow(1, pages.length - 1);
           flashShelfCard(pages.length - 1);
@@ -3816,7 +3870,6 @@
     }
     renderHomePanel();
     renderStatsPanel();
-    const books = getBooksForSelectedLevel();
     const bookLevel = uiLevelToBookLevel(state.selectedLevel);
     const showAllBooks = isAllBooksLevel();
     const pendingBooks = state.createJobs
@@ -3835,6 +3888,7 @@
         pendingLabel: formatCreateJobLabel(job)
       }))
       .sort(sortByNome);
+    const books = getBooksForSelectedLevel({ pendingCount: pendingBooks.length });
     const cardsList = books.concat(pendingBooks);
     els.cardsGrid.innerHTML = '';
     els.cardsEmpty.hidden = cardsList.length > 0;
@@ -3850,12 +3904,17 @@
       return;
     }
 
-    cardsList.forEach((book) => {
+    cardsList.forEach((book, index) => {
       const coverImageUrl = safeText(book?.coverImageUrl);
       const pendingCreate = Boolean(book?.isPendingCreate);
       const processingMagic = pendingCreate || isBookProcessingMagic(book?.bookId);
       const page = document.createElement('article');
       page.className = 'books-shelf-page';
+      if (state.allBooksSentinelMode && index < books.length) {
+        page.dataset.allBooksSlot = index === 0
+          ? 'prev'
+          : (index === (books.length - 1) ? 'next' : 'main');
+      }
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'books-card';
@@ -3952,7 +4011,7 @@
     });
 
     syncShelfViewportHeight();
-    state.shelfIndex = clampShelfIndex(state.shelfIndex);
+    state.shelfIndex = clampVisibleShelfIndex(state.shelfIndex);
     void scrollShelfToIndex(state.shelfIndex, false);
   }
 
@@ -4023,6 +4082,10 @@
     if (isAllBooksLevel()) {
       state.allBooksWindowStart = 0;
       state.allBooksAdvancePending = 0;
+      state.allBooksSentinelMode = getAllBooksFeed().length > ALL_BOOKS_WINDOW_SIZE;
+      if (state.allBooksSentinelMode) {
+        state.shelfIndex = 1;
+      }
     }
     renderLevelMenu();
     renderCards();
@@ -5918,7 +5981,7 @@
         return;
       }
       if (isOverlayOpen()) return;
-      state.shelfIndex = clampShelfIndex(state.shelfIndex);
+      state.shelfIndex = clampVisibleShelfIndex(state.shelfIndex);
       void scrollShelfToIndex(state.shelfIndex, false);
     });
 
