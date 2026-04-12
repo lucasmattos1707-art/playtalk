@@ -57,6 +57,7 @@
     challengeCopy: document.getElementById('usersChallengeCopy'),
     challengeActionBtn: document.getElementById('usersChallengeActionBtn'),
     challengeCloseBtn: document.getElementById('usersChallengeCloseBtn'),
+    challengeCloseTopBtn: document.getElementById('usersChallengeCloseTopBtn'),
     challengeStatus: document.getElementById('usersChallengeStatus'),
     incomingModal: document.getElementById('incomingChallengeModal'),
     incomingAvatar: document.getElementById('incomingChallengeAvatar'),
@@ -1099,6 +1100,7 @@
   els.deleteUserBtn?.addEventListener('click', () => { void deleteUser(); });
   els.closeAdminModalTopBtn?.addEventListener('click', closeAdminModal);
   els.challengeActionBtn?.addEventListener('click', () => { void sendChallenge(); });
+  els.challengeCloseTopBtn?.addEventListener('click', closeChallengeModal);
   els.challengeCloseBtn?.addEventListener('click', closeChallengeModal);
   els.incomingAcceptBtn?.addEventListener('click', () => { void respondIncomingChallenge('accept'); });
   els.incomingRejectBtn?.addEventListener('click', () => { void respondIncomingChallenge('reject'); });
