@@ -171,6 +171,21 @@
     return safeText(params.get('session'));
   }
 
+  function writeSessionIdToUrl(sessionId) {
+    const normalizedSessionId = safeText(sessionId);
+    const nextUrl = new URL(window.location.href);
+    if (normalizedSessionId) {
+      nextUrl.searchParams.set('session', normalizedSessionId);
+    } else {
+      nextUrl.searchParams.delete('session');
+    }
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const targetUrl = `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
+    if (targetUrl !== currentUrl) {
+      window.history.replaceState({}, '', targetUrl);
+    }
+  }
+
   function readLaunchConfig() {
     const params = new URLSearchParams(window.location.search || '');
     const mode = safeText(params.get('mode'));
@@ -1726,6 +1741,19 @@
     return payload.session;
   }
 
+  async function fetchActiveDuelSessionId() {
+    const response = await fetch(buildApiUrl('/api/speaking/sessions/active'), {
+      credentials: 'include',
+      cache: 'no-store',
+      headers: buildAuthHeaders()
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success) {
+      throw new Error(payload?.message || 'Nao consegui verificar sua batalha ativa.');
+    }
+    return safeText(payload?.sessionId);
+  }
+
   function syncDuelView(session) {
     const meRole = safeText(session?.meRole);
     const isChallenger = meRole === 'challenger';
@@ -1846,6 +1874,7 @@
     state.activeCards = [];
     state.currentIndex = 0;
     state.scores = [];
+    writeSessionIdToUrl('');
     setGameMode('offline-game');
     applyOfflineIdentity();
     if (els.winnerReveal) {
@@ -2244,6 +2273,7 @@
     state.duel.enabled = true;
     state.duel.completed = false;
     state.duel.timeoutSyncInFlight = false;
+    writeSessionIdToUrl(state.duel.sessionId);
     if (els.home) els.home.hidden = true;
     if (els.game) els.game.classList.add('is-active');
     if (els.finalResultBox) els.finalResultBox.classList.remove('is-visible');
@@ -2350,13 +2380,20 @@
   async function init() {
     bindEvents();
     bindAvatarFallbacks();
-    setGameMode(state.duel.sessionId ? 'battle-mode' : 'offline-game');
     applyOfflineIdentity();
     void hydrateOfflineIdentityFromSession();
     updateTopPercents();
     updateProgressBars();
     updateLanguageButtons();
     setMicLiveVisual(false);
+    if (!state.duel.sessionId) {
+      try {
+        state.duel.sessionId = await fetchActiveDuelSessionId();
+      } catch (_error) {
+        state.duel.sessionId = '';
+      }
+    }
+    setGameMode(state.duel.sessionId ? 'battle-mode' : 'offline-game');
     if (!state.duel.sessionId) {
       if (els.startSpeakingBtn) els.startSpeakingBtn.disabled = true;
       try {
@@ -2388,7 +2425,11 @@
         setHomeStatus(error?.message || 'Não foi possível abrir a sessão de duelo.', 'is-error');
         if (els.home) els.home.hidden = false;
         if (els.game) els.game.classList.remove('is-active');
+        state.duel.sessionId = '';
+        writeSessionIdToUrl('');
+        setGameMode('offline-game');
       }
+      return;
     }
   }
 

@@ -11741,6 +11741,67 @@ app.post('/api/speaking/challenges/respond', async (req, res) => {
   }
 });
 
+app.get('/api/speaking/sessions/active', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    await ensureSpeakingRealtimeTables();
+
+    const userId = Number(authUser.id) || 0;
+    const candidateResult = await pool.query(
+      `SELECT id
+       FROM public.speaking_duel_sessions
+       WHERE status = 'active'
+         AND (
+           challenger_user_id = $1
+           OR opponent_user_id = $1
+         )
+       ORDER BY created_at DESC
+       LIMIT 5`,
+      [userId]
+    );
+
+    let activeSessionId = '';
+    for (const row of candidateResult.rows) {
+      const sessionId = String(row?.id || '').trim();
+      if (!sessionId) continue;
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const touched = await touchSpeakingSessionAndResolveTimeout(client, sessionId, userId);
+        await client.query('COMMIT');
+        if (touched && String(touched.status || '').trim() === 'active') {
+          activeSessionId = sessionId;
+          break;
+        }
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+
+    res.json({
+      success: true,
+      sessionId: activeSessionId
+    });
+  } catch (error) {
+    console.error('Erro ao buscar sessao ativa de speaking:', error);
+    res.status(500).json({ success: false, message: 'Nao foi possivel verificar a sessao ativa.' });
+  }
+});
+
 app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
   try {
     if (!pool) {
