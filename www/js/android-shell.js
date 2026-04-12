@@ -4,6 +4,7 @@
   const ROUTES = {
     flashcards: { webPath: '/flashcards', localPath: '/flashcards.html?view=play' },
     allcards: { webPath: '/allcards', localPath: '/allcards.html' },
+    mycards: { webPath: '/mycards', localPath: '/mycards.html' },
     users: { webPath: '/users', localPath: '/users.html' },
     account: { webPath: '/account', localPath: '/account.html' },
     books: { webPath: '/books', localPath: '/books.html' },
@@ -19,6 +20,7 @@
   const FILE_TO_ROUTE_KEY = {
     'flashcards.html': 'flashcards',
     'allcards.html': 'allcards',
+    'mycards.html': 'mycards',
     'users.html': 'users',
     'account.html': 'account',
     'books.html': 'books',
@@ -216,7 +218,7 @@
 
       await appPlugin.addListener('backButton', async () => {
         const routeKey = currentRouteKey();
-        const rootRoutes = new Set(['flashcards', 'allcards', 'users', 'account', 'books']);
+        const rootRoutes = new Set(['flashcards', 'allcards', 'mycards', 'users', 'account', 'books']);
 
         if (!rootRoutes.has(routeKey) && window.history.length > 1) {
           window.history.back();

@@ -26,7 +26,8 @@
   const state = {
     userId: 0,
     cards: [],
-    page: 1
+    page: 1,
+    renderTimer: 0
   };
 
   function safeText(value) {
@@ -54,6 +55,12 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function escapeSelectorValue(value) {
+    return String(value || '')
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"');
   }
 
   function storageKeyForUser(baseKey, userId = state.userId) {
@@ -264,7 +271,7 @@
     const cleaned = safeText(value);
     if (!cleaned) return '';
     if (/^https?:\/\//i.test(cleaned)) return cleaned;
-    return `/${cleaned.replace(/^\/+/, '')}`;
+    return buildApiUrl(`/${cleaned.replace(/^\/+/, '')}`);
   }
 
   function withNoCacheUrl(value) {
@@ -322,7 +329,11 @@
   }
 
   async function fetchRemoteCardsCatalog() {
-    const response = await fetch(withNoCacheUrl(buildApiUrl(DATA_MANIFEST_REMOTE_PATH)), { cache: 'no-store' });
+    const response = await fetch(withNoCacheUrl(buildApiUrl(DATA_MANIFEST_REMOTE_PATH)), {
+      cache: 'no-store',
+      headers: buildAuthHeaders(),
+      credentials: 'include'
+    });
     const payload = await response.json().catch(() => ({}));
     const manifestFiles = Array.isArray(payload?.files)
       ? payload.files
@@ -339,7 +350,11 @@
     }));
 
     const responses = await Promise.all(files.map(async (file) => {
-      const deckResponse = await fetch(withNoCacheUrl(file.path), { cache: 'no-store' });
+      const deckResponse = await fetch(withNoCacheUrl(file.path), {
+        cache: 'no-store',
+        headers: buildAuthHeaders(),
+        credentials: 'include'
+      });
       if (!deckResponse.ok) {
         throw new Error(`Nao consegui abrir o deck "${safeText(file.name) || 'deck.json'}".`);
       }
@@ -360,6 +375,75 @@
     if (els.total) {
       els.total.textContent = `${total} FlashCards`;
     }
+  }
+
+  function buildRenderedCardView(card) {
+    const progress = Math.max(0, Math.min(100, progressPercent(card.progress)));
+    const isMemorizing = card.progress?.status === 'memorizing';
+    return {
+      imageUrl: resolveCardImage(card),
+      progress,
+      progressDegrees: `${(progress * 3.6).toFixed(1)}deg`,
+      isMemorizing,
+      statusLabel: isMemorizing ? 'Memorizing' : (card.english || card.portuguese || card.deckTitle),
+      detailLabel: isMemorizing ? `${progress.toFixed(2)}% Complete` : (card.portuguese || ''),
+      sealImage: resolveSealImage(card.progress),
+      fallback: fallbackLetter(card)
+    };
+  }
+
+  function ensureProgressUi(cardShell, view) {
+    if (!cardShell) return;
+
+    let loaderEl = cardShell.querySelector('.mini-card__loader');
+    if (view.isMemorizing) {
+      if (!loaderEl) {
+        const loader = document.createElement('div');
+        loader.className = 'mini-card__loader';
+        loader.setAttribute('aria-hidden', 'true');
+        loader.innerHTML = '<span></span><span></span><span></span><span></span>';
+        cardShell.querySelector('.mycards-card__image')?.appendChild(loader);
+      }
+    } else if (loaderEl) {
+      loaderEl.remove();
+    }
+
+    let progressWrap = cardShell.querySelector('.mycards-card__progress');
+    let progressFill = progressWrap?.querySelector('span') || null;
+    if (view.isMemorizing) {
+      if (!progressWrap) {
+        progressWrap = document.createElement('div');
+        progressWrap.className = 'mycards-card__progress';
+        progressWrap.setAttribute('aria-hidden', 'true');
+        progressFill = document.createElement('span');
+        progressWrap.appendChild(progressFill);
+        cardShell.appendChild(progressWrap);
+      }
+      if (progressFill) {
+        progressFill.style.width = `${view.progress.toFixed(2)}%`;
+      }
+    } else if (progressWrap) {
+      progressWrap.remove();
+    }
+  }
+
+  function refreshRenderedCardsProgress() {
+    if (!els.grid || !state.cards.length) return;
+    pageCards().forEach((card) => {
+      const cardEl = els.grid.querySelector(`[data-card-id="${escapeSelectorValue(card.id)}"]`);
+      if (!cardEl) return;
+      const cardShell = cardEl.querySelector('.mycards-card');
+      const wordEl = cardEl.querySelector('.mycards-card__word');
+      const subwordEl = cardEl.querySelector('.mycards-card__subword');
+      const view = buildRenderedCardView(card);
+
+      cardShell?.style.setProperty('--progress', view.progressDegrees);
+      cardShell?.classList.toggle('is-memorizing', view.isMemorizing);
+      cardShell?.classList.toggle('is-ready', !view.isMemorizing);
+      if (wordEl) wordEl.textContent = view.statusLabel;
+      if (subwordEl) subwordEl.textContent = view.detailLabel;
+      ensureProgressUi(cardShell, view);
+    });
   }
 
   function getPageCount() {
@@ -408,30 +492,25 @@
     els.empty.hidden = true;
     updatePagination();
     els.grid.innerHTML = pageCards().map((card) => {
-      const imageUrl = resolveCardImage(card);
-      const progress = Math.max(0, Math.min(100, progressPercent(card.progress)));
-      const isMemorizing = card.progress?.status === 'memorizing';
-      const statusLabel = isMemorizing ? 'Memorizing' : (card.english || card.portuguese || card.deckTitle);
-      const detailLabel = isMemorizing ? `${progress.toFixed(2)}% Complete` : (card.portuguese || '');
-      const sealImage = resolveSealImage(card.progress);
-      const progressMarkup = isMemorizing
-        ? `<div class="mycards-card__progress" aria-hidden="true"><span style="width:${escapeHtml(progress.toFixed(2))}%"></span></div>`
+      const view = buildRenderedCardView(card);
+      const progressMarkup = view.isMemorizing
+        ? `<div class="mycards-card__progress" aria-hidden="true"><span style="width:${escapeHtml(view.progress.toFixed(2))}%"></span></div>`
         : '';
-      const loaderMarkup = isMemorizing
+      const loaderMarkup = view.isMemorizing
         ? '<div class="mini-card__loader" aria-hidden="true"><span></span><span></span><span></span><span></span></div>'
         : '';
       return `
-        <article class="mycards-item" role="listitem">
-          <div class="mycards-card ${isMemorizing ? 'is-memorizing' : 'is-ready'}" style="--progress:${escapeHtml((progress * 3.6).toFixed(1))}deg;">
+        <article class="mycards-item" role="listitem" data-card-id="${escapeHtml(card.id)}">
+          <div class="mycards-card ${view.isMemorizing ? 'is-memorizing' : 'is-ready'}" style="--progress:${escapeHtml(view.progressDegrees)};">
             <div class="mycards-card__image">
-              ${imageUrl
-                ? `<img src="${escapeHtml(imageUrl)}" alt="Carta">`
-                : `<div class="mycards-card__fallback">${escapeHtml(fallbackLetter(card))}</div>`}
+              ${view.imageUrl
+                ? `<img src="${escapeHtml(view.imageUrl)}" alt="Carta">`
+                : `<div class="mycards-card__fallback">${escapeHtml(view.fallback)}</div>`}
               ${loaderMarkup}
-              ${sealImage ? `<img class="mycards-card__seal" src="${escapeHtml(sealImage)}" alt="">` : ''}
+              ${view.sealImage ? `<img class="mycards-card__seal" src="${escapeHtml(view.sealImage)}" alt="">` : ''}
             </div>
-            <p class="mycards-card__word">${escapeHtml(statusLabel)}</p>
-            <p class="mycards-card__subword">${escapeHtml(detailLabel)}</p>
+            <p class="mycards-card__word">${escapeHtml(view.statusLabel)}</p>
+            <p class="mycards-card__subword">${escapeHtml(view.detailLabel)}</p>
             ${progressMarkup}
           </div>
         </article>
@@ -443,7 +522,8 @@
     try {
       const response = await fetch(buildApiUrl('/auth/session'), {
         headers: buildAuthHeaders(),
-        cache: 'no-store'
+        cache: 'no-store',
+        credentials: 'include'
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) return 0;
@@ -460,7 +540,8 @@
     try {
       const response = await fetch(buildApiUrl('/api/flashcards/state'), {
         headers: buildAuthHeaders(),
-        cache: 'no-store'
+        cache: 'no-store',
+        credentials: 'include'
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) {
@@ -497,7 +578,11 @@
     hydrateCards(progressMap);
     updateSummary();
     renderCardsPage();
-    window.setInterval(renderCardsPage, 1000);
+    if (!state.renderTimer) {
+      state.renderTimer = window.setInterval(() => {
+        refreshRenderedCardsProgress();
+      }, 1000);
+    }
   }
 
   if (els.prevBtn) {

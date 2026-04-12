@@ -46,6 +46,12 @@
       .replace(/'/g, '&#39;');
   }
 
+  function escapeSelectorValue(value) {
+    return String(value || '')
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"');
+  }
+
   function buildApiUrl(path) {
     if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
       return window.PlaytalkApi.url(path);
@@ -324,6 +330,60 @@
     `).join('');
   }
 
+  function ensureMiniCardProgressUi(cardEl, view) {
+    if (!cardEl) return;
+    const imageWrap = cardEl.querySelector('.mini-card__image');
+    let loaderEl = imageWrap?.querySelector('.mini-card__loader') || null;
+    if (view.loaderMarkup) {
+      if (!loaderEl && imageWrap) {
+        const loader = document.createElement('div');
+        loader.className = 'mini-card__loader';
+        loader.setAttribute('aria-hidden', 'true');
+        loader.innerHTML = '<span></span><span></span><span></span><span></span>';
+        imageWrap.appendChild(loader);
+      }
+    } else if (loaderEl) {
+      loaderEl.remove();
+    }
+
+    let progressWrap = cardEl.querySelector('.mini-card__progress');
+    let progressFill = progressWrap?.querySelector('span') || null;
+    if (view.progressMarkup) {
+      if (!progressWrap) {
+        progressWrap = document.createElement('div');
+        progressWrap.className = 'mini-card__progress';
+        progressWrap.setAttribute('aria-hidden', 'true');
+        progressFill = document.createElement('span');
+        progressWrap.appendChild(progressFill);
+        cardEl.appendChild(progressWrap);
+      }
+      if (progressFill) {
+        progressFill.style.width = `${String(view.displayPortuguese || '0').replace(',', '.')}%`;
+      }
+    } else if (progressWrap) {
+      progressWrap.remove();
+    }
+  }
+
+  function refreshRenderedLibraryCards() {
+    if (!els.allGrid || !state.cards.length) return;
+    state.cards.forEach((card) => {
+      const cardEl = els.allGrid.querySelector(`[data-card-id="${escapeSelectorValue(card.id)}"]`);
+      if (!cardEl) return;
+      const view = buildLibraryCardView(card);
+      const imageEl = cardEl.querySelector('.mini-card__image img');
+      const wordEl = cardEl.querySelector('.mini-card__word');
+      const subwordEl = cardEl.querySelector('.mini-card__subword');
+
+      if (imageEl) {
+        imageEl.style.cssText = view.imageStyle || '';
+      }
+      if (wordEl) wordEl.textContent = view.displayEnglish || card.english || card.portuguese || card.deckTitle;
+      if (subwordEl) subwordEl.textContent = view.displayPortuguese || card.portuguese || '';
+      ensureMiniCardProgressUi(cardEl, view);
+    });
+  }
+
   function hydrateCards(progressMap) {
     const cache = readCardsCache();
     const cardMap = new Map(cache.map((card) => [safeText(card?.id), card]));
@@ -526,7 +586,7 @@
   function startVisualTimers() {
     if (!state.renderTimer) {
       state.renderTimer = window.setInterval(() => {
-        refreshLibrary();
+        refreshRenderedLibraryCards();
       }, 1000);
     }
     if (!state.summaryLoopTimer) {
