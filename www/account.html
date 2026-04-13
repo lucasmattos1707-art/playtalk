@@ -15,11 +15,11 @@
     }
 
     :root {
-      --bg: #07111f;
-      --playtalk-global-bg-desktop: url('/backgrounds/playtalk-global-desktop.webp');
-      --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
-      --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
-      --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 1) 0%, rgba(4, 18, 38, 0.58) 38%, rgba(4, 18, 38, 0) 100%);
+      --bg: #060606;
+      --playtalk-global-bg-image: none;
+      --playtalk-global-bg-overlay:
+        radial-gradient(circle at 50% 12%, rgba(115, 122, 132, 0.18), transparent 28%),
+        linear-gradient(180deg, rgba(3, 3, 3, 0.98) 0%, rgba(20, 22, 26, 0.98) 52%, rgba(42, 45, 49, 0.98) 100%);
       --panel: rgba(9, 21, 38, 0.92);
       --line: rgba(140, 197, 255, 0.14);
       --text: #f4f8ff;
@@ -32,12 +32,6 @@
       --footer-total-height: calc(var(--footer-height) + var(--footer-safe-bottom));
     }
 
-    @media (max-width: 800px) {
-      :root {
-        --playtalk-global-bg-image: var(--playtalk-global-bg-mobile);
-      }
-    }
-
     * {
       box-sizing: border-box;
     }
@@ -47,7 +41,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
+      background: linear-gradient(180deg, #030303 0%, #14161a 56%, #2a2d31 100%);
       overflow: hidden;
       pointer-events: none;
       z-index: 0;
@@ -178,14 +172,10 @@
       position: relative;
       isolation: isolate;
       box-shadow:
-        0 0 calc(22px + (24px * var(--aura-speaking-glow))) rgba(255, 211, 72, calc(var(--aura-visible) * (0.16 + (0.46 * var(--aura-speaking-glow))))),
-        0 0 calc(22px + (24px * var(--aura-listening-glow))) rgba(107, 230, 255, calc(var(--aura-visible) * (0.16 + (0.46 * var(--aura-listening-glow))))),
-        0 0 calc(22px + (24px * var(--aura-pronunciation-glow))) rgba(201, 139, 255, calc(var(--aura-visible) * (0.16 + (0.46 * var(--aura-pronunciation-glow)))));
-      filter:
-        drop-shadow(0 0 calc(18px + (30px * var(--aura-speaking-glow))) rgba(255, 211, 72, calc(var(--aura-visible) * (0.08 + (0.34 * var(--aura-speaking-glow))))))
-        drop-shadow(0 0 calc(18px + (30px * var(--aura-listening-glow))) rgba(107, 230, 255, calc(var(--aura-visible) * (0.08 + (0.34 * var(--aura-listening-glow))))))
-        drop-shadow(0 0 calc(18px + (30px * var(--aura-pronunciation-glow))) rgba(201, 139, 255, calc(var(--aura-visible) * (0.08 + (0.34 * var(--aura-pronunciation-glow))))));
-      transition: box-shadow 260ms ease, filter 260ms ease;
+        0 0 calc(16px + (18px * var(--aura-speaking-glow))) rgba(255, 211, 72, calc(var(--aura-visible) * (0.1 + (0.24 * var(--aura-speaking-glow))))),
+        0 0 calc(16px + (18px * var(--aura-listening-glow))) rgba(107, 230, 255, calc(var(--aura-visible) * (0.1 + (0.24 * var(--aura-listening-glow))))),
+        0 0 calc(16px + (18px * var(--aura-pronunciation-glow))) rgba(255, 141, 56, calc(var(--aura-visible) * (0.1 + (0.24 * var(--aura-pronunciation-glow)))));
+      transition: box-shadow 260ms ease;
     }
 
     .account-avatar::before {
@@ -199,16 +189,6 @@
         linear-gradient(180deg, rgba(9, 22, 44, 0.82) 0%, rgba(4, 24, 55, 0.96) 100%);
       pointer-events: none;
       z-index: 0;
-    }
-
-    @keyframes accountAuraSpin {
-      from {
-        transform: rotate(0deg);
-      }
-
-      to {
-        transform: rotate(360deg);
-      }
     }
 
     .account-avatar::after {
@@ -226,9 +206,9 @@
           rgba(255, 211, 72, var(--aura-speaking-alpha)) 0 calc((var(--aura-speaking-end) * 1%) - var(--aura-blend-size)),
           rgba(159, 214, 164, calc((var(--aura-speaking-alpha) + var(--aura-listening-alpha)) * 0.5)) calc(var(--aura-speaking-end) * 1%),
           rgba(63, 217, 255, var(--aura-listening-alpha)) calc((var(--aura-speaking-end) * 1%) + var(--aura-blend-size)) calc((var(--aura-listening-end) * 1%) - var(--aura-blend-size)),
-          rgba(132, 178, 255, calc((var(--aura-listening-alpha) + var(--aura-pronunciation-alpha)) * 0.5)) calc(var(--aura-listening-end) * 1%),
-          rgba(201, 139, 255, var(--aura-pronunciation-alpha)) calc((var(--aura-listening-end) * 1%) + var(--aura-blend-size)) calc((var(--aura-pronunciation-end) * 1%) - var(--aura-blend-size)),
-          rgba(201, 139, 255, calc(var(--aura-pronunciation-alpha) * 0.35)) calc(var(--aura-pronunciation-end) * 1%),
+          rgba(255, 175, 92, calc((var(--aura-listening-alpha) + var(--aura-pronunciation-alpha)) * 0.5)) calc(var(--aura-listening-end) * 1%),
+          rgba(255, 141, 56, var(--aura-pronunciation-alpha)) calc((var(--aura-listening-end) * 1%) + var(--aura-blend-size)) calc((var(--aura-pronunciation-end) * 1%) - var(--aura-blend-size)),
+          rgba(255, 141, 56, calc(var(--aura-pronunciation-alpha) * 0.35)) calc(var(--aura-pronunciation-end) * 1%),
           rgba(136, 160, 192, var(--aura-track-alpha)) 0 100%
         );
       -webkit-mask:
@@ -236,33 +216,22 @@
       mask:
         radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 10px));
       box-shadow:
-        inset 0 0 0 2px rgba(0, 0, 0, 0.18),
-        0 0 0 2px rgba(0, 0, 0, 0.18),
-        inset 0 0 calc(var(--aura-ring-box-blur) * 1.2) rgba(107, 230, 255, calc(0.2 + (0.75 * var(--aura-listening-alpha)))),
-        inset 0 0 calc(var(--aura-ring-box-blur) * 1.2) rgba(255, 211, 72, calc(0.2 + (0.75 * var(--aura-speaking-alpha)))),
-        inset 0 0 calc(var(--aura-ring-box-blur) * 1.2) rgba(201, 139, 255, calc(0.2 + (0.75 * var(--aura-pronunciation-alpha)))),
-        0 0 calc(var(--aura-ring-box-blur) * 1.7) rgba(107, 230, 255, calc(0.26 + (0.95 * var(--aura-listening-alpha)))),
-        0 0 calc(var(--aura-ring-box-blur) * 1.7) rgba(255, 211, 72, calc(0.26 + (0.95 * var(--aura-speaking-alpha)))),
-        0 0 calc(var(--aura-ring-box-blur) * 1.7) rgba(201, 139, 255, calc(0.26 + (0.95 * var(--aura-pronunciation-alpha)))),
-        0 0 calc(var(--aura-ring-box-blur) * 3.2) rgba(107, 230, 255, calc(0.08 + (0.48 * var(--aura-listening-glow)))),
-        0 0 calc(var(--aura-ring-box-blur) * 3.2) rgba(255, 211, 72, calc(0.08 + (0.48 * var(--aura-speaking-glow)))),
-        0 0 calc(var(--aura-ring-box-blur) * 3.2) rgba(201, 139, 255, calc(0.08 + (0.48 * var(--aura-pronunciation-glow))));
-      animation: accountAuraSpin 9s linear infinite;
-      filter:
-        saturate(190%)
-        brightness(calc(1.08 + (0.14 * var(--aura-overall-glow))))
-        drop-shadow(0 0 calc(var(--aura-ring-blur) * 1.1) rgba(107, 230, 255, calc(0.26 + (0.8 * var(--aura-listening-alpha)))))
-        drop-shadow(0 0 calc(var(--aura-ring-blur) * 1.1) rgba(255, 211, 72, calc(0.26 + (0.8 * var(--aura-speaking-alpha)))))
-        drop-shadow(0 0 calc(var(--aura-ring-blur) * 1.1) rgba(201, 139, 255, calc(0.26 + (0.8 * var(--aura-pronunciation-alpha)))))
-        drop-shadow(0 0 calc(var(--aura-ring-blur) * 2.2) rgba(107, 230, 255, calc(0.08 + (0.6 * var(--aura-listening-glow)))))
-        drop-shadow(0 0 calc(var(--aura-ring-blur) * 2.2) rgba(255, 211, 72, calc(0.08 + (0.6 * var(--aura-speaking-glow)))))
-        drop-shadow(0 0 calc(var(--aura-ring-blur) * 2.2) rgba(201, 139, 255, calc(0.08 + (0.6 * var(--aura-pronunciation-glow)))));
+        0 0 0 2px rgba(34, 38, 46, 0.92),
+        0 0 0 4px rgba(12, 15, 20, 0.9),
+        0 0 18px rgba(255, 211, 72, calc(0.12 + (0.52 * var(--aura-speaking-alpha)))),
+        0 0 18px rgba(63, 217, 255, calc(0.12 + (0.52 * var(--aura-listening-alpha)))),
+        0 0 18px rgba(255, 141, 56, calc(0.12 + (0.52 * var(--aura-pronunciation-alpha)))),
+        0 0 42px rgba(255, 211, 72, calc(0.08 + (0.42 * var(--aura-speaking-glow)))),
+        0 0 42px rgba(63, 217, 255, calc(0.08 + (0.42 * var(--aura-listening-glow)))),
+        0 0 42px rgba(255, 141, 56, calc(0.08 + (0.42 * var(--aura-pronunciation-glow)))),
+        0 0 72px rgba(255, 211, 72, calc(0.04 + (0.28 * var(--aura-speaking-glow)))),
+        0 0 72px rgba(63, 217, 255, calc(0.04 + (0.28 * var(--aura-listening-glow)))),
+        0 0 72px rgba(255, 141, 56, calc(0.04 + (0.28 * var(--aura-pronunciation-glow))));
       transition:
         opacity 260ms ease,
         background 260ms linear,
-        filter 260ms ease,
         box-shadow 260ms ease;
-      will-change: transform, opacity, filter;
+      will-change: opacity, box-shadow;
     }
 
     .account-avatar.is-message {
@@ -683,7 +652,14 @@
         drop-shadow(0 0 42px rgba(255, 140, 32, 0.28));
     }
 
-    .account-stats-item[data-kind="precision-general"] .account-stats-icon,
+    .account-stats-item[data-kind="precision-general"] .account-stats-icon {
+      color: #ff9538;
+      filter:
+        drop-shadow(0 0 10px rgba(255, 149, 56, 0.96))
+        drop-shadow(0 0 24px rgba(255, 126, 36, 0.54))
+        drop-shadow(0 0 42px rgba(255, 98, 24, 0.28));
+    }
+
     .account-stats-item[data-kind="consistency"] .account-stats-icon,
     .account-stats-item[data-kind="days"] .account-stats-icon {
       color: #c78bff;
@@ -1245,28 +1221,6 @@
             <div class="account-stats-pages" id="accountStatsPages"></div>
           </div>
         </div>
-        <div class="account-premium">
-          <strong id="accountPremiumLevel">Nivel de acesso: Free</strong>
-          <span id="accountPremiumUntil">Sem premium ativo no momento.</span>
-        </div>
-        <button class="account-button account-button--password" id="accountPasswordBtn" type="button" hidden>
-          <span class="account-button__lock" aria-hidden="true">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M7.5 10V7.75a4.5 4.5 0 0 1 9 0V10"/>
-              <rect x="5" y="10" width="14" height="10" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="1.9"/>
-              <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" d="M12 13.5v3"/>
-            </svg>
-          </span>
-          <span class="account-button__label" id="accountPasswordBtnLabel">Trocar senha</span>
-        </button>
-        <button class="account-button account-button--premium" id="accountPremiumBtn" type="button">
-          <span class="account-button__crown" id="accountPremiumIcon" aria-hidden="true">👑</span>
-          <span id="accountPremiumLabel">Comprar premium!</span>
-          <span class="account-button__arrow" id="accountPremiumArrow" aria-hidden="true">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m13.2 5.2l6 6.8l-6 6.8l-1.5-1.3l3.7-4.2H5v-2.6h10.4l-3.7-4.2z"/></svg>
-          </span>
-        </button>
-        <button class="account-button account-button--secondary" id="accountLogoutBtn" type="button">Sair da conta</button>
         <p class="account-status" id="accountStatus" aria-live="polite"></p>
       </form>
     </section>

@@ -791,7 +791,9 @@
       els.passwordInput.value = '';
     }
 
-    els.logoutBtn.hidden = !state.user;
+    if (els.logoutBtn) {
+      els.logoutBtn.hidden = !state.user;
+    }
     syncGuestInlineUi();
     renderGuestPromptLabel();
     startGuestPromptRotation();

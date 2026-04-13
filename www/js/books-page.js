@@ -125,6 +125,12 @@
     homeStartBtn: document.getElementById('booksHomeStartBtn'),
     homeCollectBtn: document.getElementById('booksHomeCollectBtn'),
     homeLaunchBtn: document.getElementById('booksHomeLaunchBtn'),
+    homeAccountPanel: document.getElementById('booksHomeAccountPanel'),
+    homeAccountStatus: document.getElementById('booksHomeAccountStatus'),
+    homePremiumLevel: document.getElementById('booksHomePremiumLevel'),
+    homePremiumUntil: document.getElementById('booksHomePremiumUntil'),
+    homeSwitchAccountBtn: document.getElementById('booksHomeSwitchAccountBtn'),
+    homePremiumBtn: document.getElementById('booksHomePremiumBtn'),
     homeLogoutBtn: document.getElementById('booksHomeLogoutBtn'),
     homeCover: document.getElementById('booksHomeCover'),
     homeNextCover: document.getElementById('booksHomeNextCover'),
@@ -1174,8 +1180,22 @@
       id: Number(user.id) || 0,
       username,
       avatarImage: safeText(user.avatar_image || user.avatarImage),
+      premiumUntil: safeText(user.premium_until || user.premiumUntil),
+      premiumFullAccess: Boolean(user.premium_full_access || user.premiumFullAccess),
       isAdmin: Boolean(user.is_admin || user.isAdmin) || isAdminAlias(username)
     };
+  }
+
+  function navigateTo(target, options = {}) {
+    if (window.PlaytalkNative && typeof window.PlaytalkNative.navigate === 'function') {
+      window.PlaytalkNative.navigate(target, options);
+      return;
+    }
+    if (options.replace) {
+      window.location.replace(target);
+      return;
+    }
+    window.location.href = target;
   }
 
   function readPersistedPlayerProfile() {
@@ -1224,6 +1244,50 @@
   function persistAuthToken(token) {
     if (window.PlaytalkApi && typeof window.PlaytalkApi.setAuthToken === 'function') {
       window.PlaytalkApi.setAuthToken(token || '');
+    }
+  }
+
+  function isPremiumActive(user = state.user) {
+    if (!user) return false;
+    if (user.premiumFullAccess) return true;
+    const time = Date.parse(user.premiumUntil || '');
+    return Number.isFinite(time) && time > Date.now();
+  }
+
+  function renderHomeAccountUi() {
+    const isLoggedIn = Boolean(state.user?.id);
+    if (els.homeAccountPanel) {
+      els.homeAccountPanel.hidden = false;
+    }
+    if (els.homeAccountStatus && els.homePremiumLevel && els.homePremiumUntil) {
+      els.homeAccountStatus.hidden = !isLoggedIn;
+      if (isLoggedIn) {
+        if (isPremiumActive()) {
+          els.homePremiumLevel.textContent = 'Nivel de acesso: Premium';
+          const until = Date.parse(state.user?.premiumUntil || '');
+          els.homePremiumUntil.textContent = Number.isFinite(until)
+            ? `Ativo ate ${new Date(until).toLocaleDateString('pt-BR')}.`
+            : 'Premium ativo.';
+        } else {
+          els.homePremiumLevel.textContent = 'Nivel de acesso: Free';
+          els.homePremiumUntil.textContent = 'Sem premium ativo no momento.';
+        }
+      } else {
+        els.homePremiumLevel.textContent = '';
+        els.homePremiumUntil.textContent = '';
+      }
+    }
+    if (els.homeSwitchAccountBtn) {
+      els.homeSwitchAccountBtn.hidden = false;
+      els.homeSwitchAccountBtn.disabled = state.homeAuthBusy || state.homeStartBusy;
+    }
+    if (els.homePremiumBtn) {
+      els.homePremiumBtn.hidden = !isLoggedIn;
+      els.homePremiumBtn.disabled = state.homeAuthBusy || state.homeStartBusy;
+    }
+    if (els.homeLogoutBtn) {
+      els.homeLogoutBtn.hidden = !isLoggedIn;
+      els.homeLogoutBtn.disabled = state.homeAuthBusy || state.homeStartBusy;
     }
   }
 
@@ -1370,9 +1434,7 @@
       }
     }
     setHomeAuthStatus('', null);
-    if (els.homeLogoutBtn) {
-      els.homeLogoutBtn.hidden = true;
-    }
+    renderHomeAccountUi();
   }
 
   function getFirstHomeBook() {
@@ -5873,6 +5935,18 @@
 
     els.homeCollectBtn?.addEventListener('click', () => {
       void openBooksCollectionFromHome();
+    });
+
+    els.homeSwitchAccountBtn?.addEventListener('click', () => {
+      navigateTo('/account');
+    });
+
+    els.homePremiumBtn?.addEventListener('click', () => {
+      if (!state.user?.id) {
+        navigateTo('/account');
+        return;
+      }
+      navigateTo('/premium');
     });
 
     els.homeRepeatBtn?.addEventListener('click', () => {
