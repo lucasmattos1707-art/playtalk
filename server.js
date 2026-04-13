@@ -12652,13 +12652,15 @@ app.post('/api/premium/checkout', async (req, res) => {
     const successUrl = buildPremiumReturnUrl(req, '?checkout=success&session_id={CHECKOUT_SESSION_ID}');
     const cancelUrl = buildPremiumReturnUrl(req, '?checkout=cancel');
     const checkoutPayload = {
-      mode: 'payment',
+      mode: 'subscription',
       success_url: successUrl,
       cancel_url: cancelUrl,
       'line_items[0][price]': plan.priceId,
       'line_items[0][quantity]': 1,
       'metadata[user_id]': String(authUser.id),
-      'metadata[plan_key]': plan.key
+      'metadata[plan_key]': plan.key,
+      'subscription_data[metadata][user_id]': String(authUser.id),
+      'subscription_data[metadata][plan_key]': plan.key
     };
     if (isValidEmailAddress(currentUser?.email)) {
       checkoutPayload.customer_email = currentUser.email;

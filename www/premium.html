@@ -56,7 +56,8 @@
     }
 
     .hero,
-    .redeem-card {
+    .redeem-card,
+    .premium-modal__panel {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 32px;
@@ -191,6 +192,14 @@
       gap: 16px;
     }
 
+    .redeem-card__row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
     .redeem-header h2 {
       margin: 0 0 8px;
       font-size: 30px;
@@ -200,6 +209,28 @@
       margin: 0;
       color: var(--text-soft);
       font-weight: 700;
+    }
+
+    .redeem-open-btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 18px;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      color: var(--button-text);
+      background: linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%);
+      transition: transform 140ms ease, opacity 140ms ease;
+    }
+
+    .redeem-open-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .redeem-open-btn:disabled {
+      opacity: 0.6;
+      cursor: wait;
+      transform: none;
     }
 
     .premium-code {
@@ -268,6 +299,78 @@
       background: rgba(255, 255, 255, 0.14);
     }
 
+    .premium-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      display: none;
+      align-items: stretch;
+      justify-content: center;
+      padding: 18px 14px calc(var(--footer-total-height) + 18px);
+      background: rgba(3, 12, 28, 0.78);
+      backdrop-filter: blur(10px);
+    }
+
+    .premium-modal.is-open {
+      display: flex;
+    }
+
+    body.premium-modal-open {
+      overflow: hidden;
+    }
+
+    .premium-modal__panel {
+      width: min(1120px, 100%);
+      min-height: 100%;
+      padding: 24px 20px 20px;
+      display: grid;
+      gap: 18px;
+      background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.14), transparent 30%),
+        linear-gradient(180deg, rgba(7, 27, 52, 0.96) 0%, rgba(15, 78, 132, 0.96) 50%, rgba(78, 201, 255, 0.88) 100%);
+    }
+
+    .premium-modal__topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .premium-modal__title h2 {
+      margin: 0 0 8px;
+      font-size: clamp(30px, 5vw, 44px);
+    }
+
+    .premium-modal__title p {
+      margin: 0;
+      max-width: 720px;
+      color: var(--text-soft);
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .premium-close-btn {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      min-width: 48px;
+      min-height: 48px;
+      padding: 0 18px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 140ms ease, background 140ms ease;
+    }
+
+    .premium-close-btn:hover,
+    .premium-close-btn:focus-visible {
+      background: rgba(255, 255, 255, 0.16);
+      transform: translateY(-2px);
+      outline: none;
+    }
+
     .flashcards-footer-nav {
       position: fixed !important;
       left: 0;
@@ -315,6 +418,12 @@
 
     @media (max-width: 640px) {
       .hero, .redeem-card { border-radius: 28px; }
+      .redeem-card__row,
+      .premium-modal__topbar { align-items: stretch; }
+      .redeem-open-btn,
+      .premium-close-btn { width: 100%; }
+      .premium-modal__panel { padding: 20px 16px 18px; }
+      .premium-actions { grid-template-columns: 1fr; }
       .premium-grid { gap: 10px; }
       .premium-tile { min-height: 74px; border-radius: 18px; }
       .premium-code-slot { min-height: 50px; font-size: 22px; }
@@ -331,17 +440,6 @@
         </div>
         <p class="premium-status" id="premiumBillingStatus">Escolha um plano para abrir o checkout seguro.</p>
         <div class="plans" id="premiumPlans">
-          <article class="plan-card">
-            <span class="plan-badge">Sprint</span>
-            <h2>1 semana</h2>
-            <p>Entrada rapida para testar tudo sem travar a evolucao.</p>
-            <ul>
-              <li>Liberacao imediata apos pagamento</li>
-              <li>Acesso completo aos flashcards premium</li>
-              <li>Compra segura no checkout do Stripe</li>
-            </ul>
-            <button class="plan-buy-btn" type="button" data-plan="semana">Comprar 1 semana</button>
-          </article>
           <article class="plan-card is-featured">
             <span class="plan-badge">Mais pedido</span>
             <h2>1 mes</h2>
@@ -349,30 +447,45 @@
             <ul>
               <li>Melhor para uso continuo</li>
               <li>Mesmo acesso premium completo</li>
-              <li>Checkout com cartao internacional</li>
+              <li>Assinatura recorrente no Stripe</li>
             </ul>
-            <button class="plan-buy-btn" type="button" data-plan="mes">Comprar 1 mes</button>
+            <button class="plan-buy-btn" type="button" data-plan="mes">Assinar por R$ 24,90/mes</button>
           </article>
           <article class="plan-card">
             <span class="plan-badge">Global</span>
             <h2>1 ano</h2>
             <p>Feito para quem quer mergulhar no PlayTalk por muito tempo.</p>
             <ul>
-              <li>Plano longo para expansao global</li>
+              <li>Melhor valor para uso continuo</li>
               <li>Ativacao automatica apos confirmar o pagamento</li>
-              <li>Base pronta para escalar</li>
+              <li>Assinatura anual recorrente</li>
             </ul>
-            <button class="plan-buy-btn" type="button" data-plan="ano">Comprar 1 ano</button>
+            <button class="plan-buy-btn" type="button" data-plan="ano">Assinar por R$ 89,90/ano</button>
           </article>
         </div>
       </section>
 
       <section class="redeem-card">
-        <div class="redeem-header">
-          <h2>Tenho uma chave premium</h2>
-          <p>Toque nas imagens na ordem certa para montar a chave de 6 letras.</p>
+        <div class="redeem-card__row">
+          <div class="redeem-header">
+            <h2>Tenho uma chave de acesso</h2>
+            <p>Abra o painel de ativacao quando quiser e digite sua chave premium em tela cheia.</p>
+          </div>
+          <button class="redeem-open-btn" id="openPremiumModalBtn" type="button">Tenho uma chave de acesso</button>
         </div>
+      </section>
+    </section>
+  </main>
 
+  <section class="premium-modal" id="premiumModal" aria-hidden="true">
+    <div class="premium-modal__panel" role="dialog" aria-modal="true" aria-labelledby="premiumModalTitle">
+      <div class="premium-modal__topbar">
+        <div class="premium-modal__title">
+          <h2 id="premiumModalTitle">Ativar chave premium</h2>
+          <p>Toque nas imagens na ordem certa para montar a chave de 6 letras e liberar o acesso.</p>
+        </div>
+        <button class="premium-close-btn" id="premiumCloseBtn" type="button" aria-label="Fechar modal de chave premium">Fechar</button>
+      </div>
         <div class="premium-code" id="premiumCodeValue" aria-live="polite"></div>
         <p class="premium-status" id="premiumStatus">Preencha os 6 espacos com as letras correspondentes.</p>
 
@@ -400,9 +513,8 @@
           <button class="premium-btn" id="premiumClearBtn" type="button">Limpar</button>
           <button class="premium-btn" id="premiumRedeemBtn" type="button">Ativar</button>
         </div>
-      </section>
-    </section>
-  </main>
+      </div>
+  </section>
 
   <nav class="flashcards-footer-nav" aria-label="Navegacao do flashcards">
     <a class="flashcards-footer-nav__item" href="/flashcards?view=play" aria-label="Jogar">
@@ -429,6 +541,9 @@
   <script>
     (function initPremiumPage() {
       const els = {
+        premiumModal: document.getElementById('premiumModal'),
+        openPremiumModalBtn: document.getElementById('openPremiumModalBtn'),
+        premiumCloseBtn: document.getElementById('premiumCloseBtn'),
         premiumCodeValue: document.getElementById('premiumCodeValue'),
         premiumStatus: document.getElementById('premiumStatus'),
         premiumGrid: document.getElementById('premiumGrid'),
@@ -442,7 +557,8 @@
       const state = {
         code: '',
         redeemBusy: false,
-        checkoutBusy: false
+        checkoutBusy: false,
+        modalOpen: false
       };
 
       if (window.PlaytalkApi && typeof window.PlaytalkApi.rewritePublicAssetSources === 'function') {
@@ -509,6 +625,25 @@
         els.buyButtons.forEach((button) => {
           button.disabled = state.checkoutBusy;
         });
+        if (els.openPremiumModalBtn) {
+          els.openPremiumModalBtn.disabled = state.checkoutBusy;
+        }
+      }
+
+      function openRedeemModal() {
+        if (!els.premiumModal) return;
+        state.modalOpen = true;
+        els.premiumModal.classList.add('is-open');
+        els.premiumModal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('premium-modal-open');
+      }
+
+      function closeRedeemModal() {
+        if (!els.premiumModal) return;
+        state.modalOpen = false;
+        els.premiumModal.classList.remove('is-open');
+        els.premiumModal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('premium-modal-open');
       }
 
       async function redeemCode() {
@@ -614,6 +749,20 @@
         }
       }
 
+      els.openPremiumModalBtn?.addEventListener('click', () => {
+        openRedeemModal();
+      });
+
+      els.premiumCloseBtn?.addEventListener('click', () => {
+        closeRedeemModal();
+      });
+
+      els.premiumModal?.addEventListener('click', (event) => {
+        if (event.target === els.premiumModal) {
+          closeRedeemModal();
+        }
+      });
+
       els.premiumGrid?.addEventListener('click', (event) => {
         const tile = event.target.closest('.premium-tile');
         if (!tile) return;
@@ -644,6 +793,13 @@
       });
 
       window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && state.modalOpen) {
+          closeRedeemModal();
+          return;
+        }
+        if (!state.modalOpen) {
+          return;
+        }
         if (event.key === 'Backspace') {
           if (state.redeemBusy) return;
           state.code = state.code.slice(0, -1);
