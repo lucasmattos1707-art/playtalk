@@ -172,10 +172,13 @@
       position: relative;
       isolation: isolate;
       box-shadow:
-        0 0 calc(16px + (18px * var(--aura-speaking-glow))) rgba(255, 211, 72, calc(var(--aura-visible) * (0.1 + (0.24 * var(--aura-speaking-glow))))),
-        0 0 calc(16px + (18px * var(--aura-listening-glow))) rgba(107, 230, 255, calc(var(--aura-visible) * (0.1 + (0.24 * var(--aura-listening-glow))))),
-        0 0 calc(16px + (18px * var(--aura-pronunciation-glow))) rgba(255, 141, 56, calc(var(--aura-visible) * (0.1 + (0.24 * var(--aura-pronunciation-glow)))));
-      transition: box-shadow 260ms ease;
+        0 0 calc(22px + (30px * var(--aura-speaking-glow))) rgba(255, 211, 72, calc(var(--aura-visible) * (0.12 + (0.38 * var(--aura-speaking-glow))))),
+        0 0 calc(22px + (30px * var(--aura-listening-glow))) rgba(112, 214, 255, calc(var(--aura-visible) * (0.12 + (0.38 * var(--aura-listening-glow))))),
+        0 0 calc(22px + (30px * var(--aura-pronunciation-glow))) rgba(255, 141, 56, calc(var(--aura-visible) * (0.12 + (0.38 * var(--aura-pronunciation-glow))))),
+        0 0 calc(48px + (52px * var(--aura-speaking-glow))) rgba(255, 211, 72, calc(var(--aura-visible) * (0.05 + (0.22 * var(--aura-speaking-glow))))),
+        0 0 calc(48px + (52px * var(--aura-listening-glow))) rgba(77, 132, 255, calc(var(--aura-visible) * (0.05 + (0.22 * var(--aura-listening-glow))))),
+        0 0 calc(48px + (52px * var(--aura-pronunciation-glow))) rgba(255, 98, 24, calc(var(--aura-visible) * (0.05 + (0.22 * var(--aura-pronunciation-glow)))));
+      transition: box-shadow 260ms ease, transform 260ms ease;
     }
 
     .account-avatar::before {
@@ -184,9 +187,9 @@
       inset: 0;
       border-radius: inherit;
       background:
-        linear-gradient(180deg, rgba(6, 20, 44, 0) 0%, rgba(6, 20, 44, 0.08) 28%, rgba(5, 22, 50, 0.5) 56%, rgba(4, 24, 55, 0.92) 82%, rgba(4, 24, 55, 1) 100%),
-        radial-gradient(circle at 50% 22%, rgba(64, 194, 255, 0.2), rgba(6, 20, 44, 0) 52%),
-        linear-gradient(180deg, rgba(9, 22, 44, 0.82) 0%, rgba(4, 24, 55, 0.96) 100%);
+        linear-gradient(180deg, rgba(18, 20, 24, 0.14) 0%, rgba(16, 18, 22, 0.58) 54%, rgba(9, 10, 12, 0.94) 100%),
+        radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.08), rgba(16, 18, 22, 0) 44%),
+        linear-gradient(180deg, rgba(22, 24, 28, 0.92) 0%, rgba(8, 9, 11, 0.98) 100%);
       pointer-events: none;
       z-index: 0;
     }
@@ -218,15 +221,15 @@
       box-shadow:
         0 0 0 2px rgba(34, 38, 46, 0.92),
         0 0 0 4px rgba(12, 15, 20, 0.9),
-        0 0 18px rgba(255, 211, 72, calc(0.12 + (0.52 * var(--aura-speaking-alpha)))),
-        0 0 18px rgba(63, 217, 255, calc(0.12 + (0.52 * var(--aura-listening-alpha)))),
-        0 0 18px rgba(255, 141, 56, calc(0.12 + (0.52 * var(--aura-pronunciation-alpha)))),
-        0 0 42px rgba(255, 211, 72, calc(0.08 + (0.42 * var(--aura-speaking-glow)))),
-        0 0 42px rgba(63, 217, 255, calc(0.08 + (0.42 * var(--aura-listening-glow)))),
-        0 0 42px rgba(255, 141, 56, calc(0.08 + (0.42 * var(--aura-pronunciation-glow)))),
-        0 0 72px rgba(255, 211, 72, calc(0.04 + (0.28 * var(--aura-speaking-glow)))),
-        0 0 72px rgba(63, 217, 255, calc(0.04 + (0.28 * var(--aura-listening-glow)))),
-        0 0 72px rgba(255, 141, 56, calc(0.04 + (0.28 * var(--aura-pronunciation-glow))));
+        0 0 18px rgba(255, 211, 72, calc(0.18 + (0.56 * var(--aura-speaking-alpha)))),
+        0 0 18px rgba(68, 206, 255, calc(0.18 + (0.56 * var(--aura-listening-alpha)))),
+        0 0 18px rgba(255, 141, 56, calc(0.18 + (0.56 * var(--aura-pronunciation-alpha)))),
+        0 0 42px rgba(255, 211, 72, calc(0.1 + (0.5 * var(--aura-speaking-glow)))),
+        0 0 42px rgba(68, 206, 255, calc(0.1 + (0.5 * var(--aura-listening-glow)))),
+        0 0 42px rgba(255, 141, 56, calc(0.1 + (0.5 * var(--aura-pronunciation-glow)))),
+        0 0 96px rgba(255, 211, 72, calc(0.05 + (0.34 * var(--aura-speaking-glow)))),
+        0 0 96px rgba(77, 132, 255, calc(0.05 + (0.34 * var(--aura-listening-glow)))),
+        0 0 96px rgba(255, 98, 24, calc(0.05 + (0.34 * var(--aura-pronunciation-glow))));
       transition:
         opacity 260ms ease,
         background 260ms linear,
