@@ -9893,6 +9893,11 @@ app.get('/api/speaking/stories', async (_req, res) => {
     const list = stories.map((story) => {
       const bookId = normalizeMiniBookId(story.bookId || story.fileName);
       const manifestEntry = normalizeMiniBookEntry(bookId, miniBooksMap[bookId] || {});
+      const audioSources = Array.isArray(story.cards)
+        ? story.cards
+            .map((card) => String(card?.audio || card?.audioUrl || '').trim())
+            .filter(Boolean)
+        : [];
       return {
         id: String(story.id || '').trim(),
         fileName: String(story.fileName || '').trim(),
@@ -9902,6 +9907,7 @@ app.get('/api/speaking/stories', async (_req, res) => {
         nome: String(story.nome || '').trim() || toEnglishUnderscoreName(story.storyKey, story.fileName),
         nivel: normalizeSpeakingStoryLevel(story.nivel),
         count: Array.isArray(story.cards) ? story.cards.length : 0,
+        audioSources,
         coverImageUrl: manifestEntry.coverImageUrl || '',
         backgroundDesktopUrl: manifestEntry.backgroundDesktopUrl || '',
         backgroundMobileUrl: manifestEntry.backgroundMobileUrl || ''
@@ -9921,6 +9927,7 @@ app.get('/api/speaking/stories', async (_req, res) => {
           count: story.count,
           storyIds: [story.id],
           selectedStoryId: story.id,
+          audioSources: Array.isArray(story.audioSources) ? [...story.audioSources] : [],
           coverImageUrl: story.coverImageUrl || '',
           backgroundDesktopUrl: story.backgroundDesktopUrl || '',
           backgroundMobileUrl: story.backgroundMobileUrl || ''
@@ -9929,6 +9936,15 @@ app.get('/api/speaking/stories', async (_req, res) => {
       }
       current.count += story.count;
       current.storyIds.push(story.id);
+      if (Array.isArray(story.audioSources)) {
+        const seenAudioSources = new Set(current.audioSources || []);
+        story.audioSources.forEach((source) => {
+          const normalizedSource = String(source || '').trim();
+          if (!normalizedSource || seenAudioSources.has(normalizedSource)) return;
+          seenAudioSources.add(normalizedSource);
+          current.audioSources.push(normalizedSource);
+        });
+      }
       if (!current.selectedStoryId) {
         current.selectedStoryId = story.id;
       }

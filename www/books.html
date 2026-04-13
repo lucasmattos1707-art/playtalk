@@ -2847,8 +2847,23 @@
     #booksPreBookModal {
       padding: 0;
       place-items: stretch;
-      background: transparent;
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat fixed;
       backdrop-filter: none;
+      overflow: hidden;
+    }
+
+    #booksPreBookModal::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--playtalk-global-bg-overlay);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #booksPreBookModal > * {
+      position: relative;
+      z-index: 1;
     }
 
     .pre-book-actions[data-pre-book-step="training"] .pre-book-action-root {

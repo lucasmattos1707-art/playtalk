@@ -86,6 +86,7 @@
     { id: 'stars3', count: 100 }
   ];
   const HOME_AUDIO_DURATION_CACHE = new Map();
+  const BOOK_READING_TIME_CACHE = new Map();
   const NUMBER_ANIMATION_HANDLES = new WeakMap();
   const HOME_UPCOMING_SESSION_TARGET = 1;
 
@@ -393,6 +394,18 @@
     const minutes = Math.floor((seconds % 3600) / 60);
     if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m`;
     return `${minutes}m`;
+  }
+
+  function normalizeAudioSources(values) {
+    if (!Array.isArray(values)) return [];
+    const seen = new Set();
+    return values
+      .map((value) => safeText(value))
+      .filter((value) => {
+        if (!value || seen.has(value)) return false;
+        seen.add(value);
+        return true;
+      });
   }
 
   function cancelAnimatedNumber(element) {
@@ -1356,6 +1369,7 @@
           fileName,
           nome,
           nivel: normalizeLevel(entry?.nivel),
+          audioSources: normalizeAudioSources(entry?.audioSources),
           coverImageUrl: safeText(entry?.coverImageUrl),
           backgroundDesktopUrl: safeText(entry?.backgroundDesktopUrl),
           backgroundMobileUrl: safeText(entry?.backgroundMobileUrl),
@@ -1374,6 +1388,9 @@
       }
       if (!current.backgroundMobileUrl && safeText(entry?.backgroundMobileUrl)) {
         current.backgroundMobileUrl = safeText(entry.backgroundMobileUrl);
+      }
+      if (Array.isArray(entry?.audioSources) && entry.audioSources.length) {
+        current.audioSources = normalizeAudioSources([...(current.audioSources || []), ...entry.audioSources]);
       }
       if (storyId && !current.storyIds.includes(storyId)) {
         current.storyIds.push(storyId);
@@ -3556,6 +3573,7 @@
     }
     els.preBookModal.classList.add('is-visible');
     state.preBookInsightsData = buildPreBookInsights({
+      readingTimeSeconds: Math.max(0, Number(book.readingTimeSeconds) || 0),
       bestListeningPercent: 0,
       bestReadingPercent: 0,
       totalReads: 0
@@ -3640,13 +3658,21 @@
   }
 
   function buildPreBookInsights(stats) {
+    const readingTimeSeconds = Math.max(0, Math.round(Number(stats?.readingTimeSeconds) || 0));
     const listening = Math.max(0, Math.min(100, Number(stats?.bestListeningPercent) || 0));
     const reading = Math.max(0, Math.min(100, Number(stats?.bestReadingPercent) || 0));
     const totalReads = Math.max(0, Math.round(Number(stats?.totalReads) || 0));
-    if (totalReads <= 0) {
-      return [];
-    }
     return [
+      {
+        kind: 'reading-time',
+        label: 'Tempo de leitura',
+        value: formatDurationCompact(readingTimeSeconds)
+      },
+      {
+        kind: 'stats',
+        label: 'Leituras totais',
+        value: `${totalReads}`
+      },
       {
         kind: 'listening',
         label: 'Melhor listening',
@@ -3656,13 +3682,35 @@
         kind: 'reading',
         label: 'Melhor reading',
         value: `Nota ${formatReaderScoreValue(reading).text}`
-      },
-      {
-        kind: 'stats',
-        label: 'Leituras totais',
-        value: `${totalReads}`
       }
     ];
+  }
+
+  function getBookReadingTimeCacheKey(book) {
+    const bookId = safeText(book?.bookId);
+    const audioSources = normalizeAudioSources(book?.audioSources);
+    return `${bookId}::${audioSources.join('|')}`;
+  }
+
+  async function ensureBookReadingTimeSeconds(book) {
+    const cacheKey = getBookReadingTimeCacheKey(book);
+    if (!cacheKey || cacheKey === '::') return 0;
+    if (BOOK_READING_TIME_CACHE.has(cacheKey)) {
+      return BOOK_READING_TIME_CACHE.get(cacheKey);
+    }
+    const promise = (async () => {
+      const audioSources = normalizeAudioSources(book?.audioSources);
+      if (!audioSources.length) return 0;
+      const durations = await Promise.all(audioSources.map((source) => loadHomeAudioDurationSeconds(source)));
+      const totalAudioSeconds = durations.reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
+      return Math.max(0, Math.round(totalAudioSeconds * 2));
+    })();
+    BOOK_READING_TIME_CACHE.set(cacheKey, promise);
+    const totalSeconds = await promise;
+    if (book && Number(book.readingTimeSeconds) !== totalSeconds) {
+      book.readingTimeSeconds = totalSeconds;
+    }
+    return totalSeconds;
   }
 
   function stopPreBookInsightsRotation() {
@@ -3725,6 +3773,9 @@
   async function refreshPreBookInsights(fetchToken) {
     try {
       const bookId = safeText(state.modeBookId);
+      const selectedBook = findModeSelectedBook();
+      const readingTimeSeconds = await ensureBookReadingTimeSeconds(selectedBook);
+      if (fetchToken !== state.preBookInsightsFetchToken) return;
       const url = bookId ? `/api/books/prebook-insights?bookId=${encodeURIComponent(bookId)}` : '/api/books/prebook-insights';
       const response = await fetch(buildApiUrl(url), {
         method: 'GET',
@@ -3733,14 +3784,25 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) {
+        state.preBookInsightsData = buildPreBookInsights({ readingTimeSeconds });
+        state.preBookInsightsIndex = 0;
+        void renderActivePreBookInsight(false);
         return;
       }
       if (fetchToken !== state.preBookInsightsFetchToken) return;
-      state.preBookInsightsData = buildPreBookInsights(payload.stats || {});
+      state.preBookInsightsData = buildPreBookInsights({
+        ...(payload.stats || {}),
+        readingTimeSeconds
+      });
       state.preBookInsightsIndex = 0;
       void renderActivePreBookInsight(false);
     } catch (_error) {
-      // keep fallback values
+      const selectedBook = findModeSelectedBook();
+      const readingTimeSeconds = Math.max(0, Number(selectedBook?.readingTimeSeconds) || 0);
+      if (fetchToken !== state.preBookInsightsFetchToken) return;
+      state.preBookInsightsData = buildPreBookInsights({ readingTimeSeconds });
+      state.preBookInsightsIndex = 0;
+      void renderActivePreBookInsight(false);
     }
   }
 
