@@ -790,48 +790,34 @@
 
     .guest-keyboard {
       display: none;
-      width: min(100%, 760px);
-      margin: 0 auto;
+      width: 100%;
+      margin: 0;
     }
 
     .panel.is-guest .guest-keyboard {
       display: block;
     }
 
-    .guest-keyboard__shell {
-      aspect-ratio: 34 / 11;
-      background-color: #020202;
-      background-image: radial-gradient(100% 150% ellipse at top center, #1c1c1c 0%, #020202 100%);
-      border-bottom: 2px solid #020202;
-      border-radius: 12px;
-      padding: 8px 8px 16px;
-      box-shadow:
-        inset 0 0 0 1px rgba(180, 233, 255, 0.06),
-        0 24px 50px rgba(0, 0, 0, 0.34);
-    }
-
     .guest-keyboard__board {
-      aspect-ratio: 34 / 11;
-      box-shadow: inset 0 0 28px #020202;
-      border-radius: 12px;
+      width: 100%;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
-      padding: 4px;
-      row-gap: 5px;
+      gap: 6px;
+      padding: 0;
     }
 
     .guest-keyboard__row {
       --key-bg: #070707;
       display: flex;
-      flex: 1;
-      column-gap: 5px;
+      min-height: clamp(48px, 7vw, 62px);
+      column-gap: 6px;
     }
 
-    .guest-keyboard__row:nth-child(1) { --key-bg: #0e0e0e; }
-    .guest-keyboard__row:nth-child(2) { --key-bg: #0c0c0c; }
-    .guest-keyboard__row:nth-child(3) { --key-bg: #0a0a0a; }
-    .guest-keyboard__row:nth-child(4) { --key-bg: #090909; }
+    .guest-keyboard__row:nth-child(1) { --key-bg: rgba(10, 21, 34, 0.98); }
+    .guest-keyboard__row:nth-child(2) { --key-bg: rgba(9, 19, 31, 0.98); }
+    .guest-keyboard__row:nth-child(3) { --key-bg: rgba(8, 17, 29, 0.98); }
+    .guest-keyboard__row:nth-child(4) { --key-bg: rgba(7, 15, 26, 0.98); }
+    .guest-keyboard__row:nth-child(5) { --key-bg: rgba(6, 14, 24, 0.98); }
 
     .guest-keyboard__key {
       --box-shadow: rgba(95, 168, 211, 0.42);
@@ -840,21 +826,22 @@
       --text-shadow: rgba(95, 168, 211, 0.22);
       flex: 1 1 0;
       border: 0;
-      border-radius: 10px;
+      min-width: 0;
+      border-radius: 14px;
       background-color: var(--key-bg);
       box-shadow:
         inset 0 -1px 0 var(--box-shadow-inner),
-        inset 1px 0 0 rgba(0, 0, 0, 0.75),
-        inset -1px 0 0 rgba(0, 0, 0, 0.75),
+        inset 1px 0 0 rgba(255, 255, 255, 0.03),
+        inset -1px 0 0 rgba(255, 255, 255, 0.03),
         inset 0 1px 0 var(--box-shadow-inner),
         inset 0 -8px 16px 8px var(--box-shadow-inner),
-        0 0 16px var(--box-shadow);
+        0 10px 24px rgba(0, 0, 0, 0.24);
       color: var(--color);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0;
-      font-size: 14px;
+      padding: 0 6px;
+      font-size: clamp(12px, 1.45vw, 14px);
       font-weight: 700;
       line-height: 1;
       text-shadow: 0 0 8px var(--text-shadow);
@@ -866,10 +853,10 @@
 
     .guest-keyboard__key:active,
     .guest-keyboard__key.is-active {
-      transform: translateY(3px);
+      transform: translateY(2px);
       box-shadow:
         inset 0 -1px 0 rgba(255, 255, 255, 0.08),
-        0 0 18px rgba(127, 223, 255, 0.55);
+        0 0 18px rgba(127, 223, 255, 0.45);
     }
 
     .guest-keyboard__key--backslash,
@@ -908,14 +895,6 @@
 
     .guest-keyboard__key--backspace {
       flex: 2 1 0;
-    }
-
-    .guest-keyboard__hint {
-      margin: 12px 0 0;
-      text-align: center;
-      color: rgba(226, 240, 255, 0.74);
-      font-size: 13px;
-      letter-spacing: 0.02em;
     }
 
     .flashcards-footer-nav {
@@ -1016,8 +995,7 @@
           </label>
         </div>
         <section class="guest-keyboard" id="guestKeyboard" aria-label="Teclado virtual da conta">
-          <div class="guest-keyboard__shell">
-            <div class="guest-keyboard__board">
+          <div class="guest-keyboard__board">
               <div class="guest-keyboard__row">
                 <button class="guest-keyboard__key" type="button" data-key-action="noop">Esc</button>
                 <button class="guest-keyboard__key" type="button" data-key-value="1">1 !</button>
@@ -1089,9 +1067,7 @@
                 <button class="guest-keyboard__key guest-keyboard__key--ctrl" type="button" data-key-action="noop">Ctrl</button>
                 <button class="guest-keyboard__key guest-keyboard__key--fn" type="button" data-key-action="noop">Fn</button>
               </div>
-            </div>
           </div>
-          <p class="guest-keyboard__hint">Use o teclado da tela para entrar ou criar sua conta.</p>
         </section>
         <div class="account-metrics" id="accountMetrics" hidden>
           <div class="account-stats-card" id="accountStatsCard" aria-label="Estatisticas do usuario">
