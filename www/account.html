@@ -177,6 +177,15 @@
       cursor: pointer;
       position: relative;
       isolation: isolate;
+      box-shadow:
+        0 0 calc(22px + (24px * var(--aura-speaking-glow))) rgba(255, 211, 72, calc(var(--aura-visible) * (0.16 + (0.46 * var(--aura-speaking-glow))))),
+        0 0 calc(22px + (24px * var(--aura-listening-glow))) rgba(107, 230, 255, calc(var(--aura-visible) * (0.16 + (0.46 * var(--aura-listening-glow))))),
+        0 0 calc(22px + (24px * var(--aura-pronunciation-glow))) rgba(201, 139, 255, calc(var(--aura-visible) * (0.16 + (0.46 * var(--aura-pronunciation-glow)))));
+      filter:
+        drop-shadow(0 0 calc(18px + (30px * var(--aura-speaking-glow))) rgba(255, 211, 72, calc(var(--aura-visible) * (0.08 + (0.34 * var(--aura-speaking-glow))))))
+        drop-shadow(0 0 calc(18px + (30px * var(--aura-listening-glow))) rgba(107, 230, 255, calc(var(--aura-visible) * (0.08 + (0.34 * var(--aura-listening-glow))))))
+        drop-shadow(0 0 calc(18px + (30px * var(--aura-pronunciation-glow))) rgba(201, 139, 255, calc(var(--aura-visible) * (0.08 + (0.34 * var(--aura-pronunciation-glow))))));
+      transition: box-shadow 260ms ease, filter 260ms ease;
     }
 
     .account-avatar::before {
