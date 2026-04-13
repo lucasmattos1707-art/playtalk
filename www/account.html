@@ -157,6 +157,8 @@
       --aura-overall-glow: 0;
       --aura-visible: 0;
       --aura-blend-size: 0.9%;
+      --aura-ring-blur: 11px;
+      --aura-ring-box-blur: 5px;
       width: 188px;
       height: 188px;
       border-radius: 50%;
@@ -217,11 +219,28 @@
         radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 10px));
       mask:
         radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 10px));
+      box-shadow:
+        inset 0 0 0 2px rgba(0, 0, 0, 0.18),
+        0 0 0 2px rgba(0, 0, 0, 0.18),
+        inset 0 0 var(--aura-ring-box-blur) rgba(107, 230, 255, calc(0.12 + (0.34 * var(--aura-listening-alpha)))),
+        inset 0 0 var(--aura-ring-box-blur) rgba(255, 211, 72, calc(0.12 + (0.34 * var(--aura-speaking-alpha)))),
+        inset 0 0 var(--aura-ring-box-blur) rgba(201, 139, 255, calc(0.12 + (0.34 * var(--aura-pronunciation-alpha)))),
+        0 0 var(--aura-ring-box-blur) rgba(107, 230, 255, calc(0.12 + (0.34 * var(--aura-listening-alpha)))),
+        0 0 var(--aura-ring-box-blur) rgba(255, 211, 72, calc(0.12 + (0.34 * var(--aura-speaking-alpha)))),
+        0 0 var(--aura-ring-box-blur) rgba(201, 139, 255, calc(0.12 + (0.34 * var(--aura-pronunciation-alpha))));
       animation: accountAuraSpin 9s linear infinite;
+      filter:
+        saturate(190%)
+        brightness(108%)
+        drop-shadow(0 0 var(--aura-ring-blur) rgba(107, 230, 255, calc(0.16 + (0.48 * var(--aura-listening-alpha)))))
+        drop-shadow(0 0 var(--aura-ring-blur) rgba(255, 211, 72, calc(0.16 + (0.48 * var(--aura-speaking-alpha)))))
+        drop-shadow(0 0 var(--aura-ring-blur) rgba(201, 139, 255, calc(0.16 + (0.48 * var(--aura-pronunciation-alpha)))));
       transition:
         opacity 260ms ease,
-        background 260ms linear;
-      will-change: transform, opacity;
+        background 260ms linear,
+        filter 260ms ease,
+        box-shadow 260ms ease;
+      will-change: transform, opacity, filter;
     }
 
     .account-avatar.is-message {
