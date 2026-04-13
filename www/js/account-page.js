@@ -155,7 +155,7 @@
   function intensityToAuraAlpha(intensity) {
     const normalized = clampNumber(intensity, 0, 1);
     if (normalized <= 0) return 0;
-    return 0.015 + (Math.pow(normalized, 1.8) * 0.885);
+    return 0.018 + (Math.pow(normalized, 1.2) * 0.882);
   }
 
   function setAvatarAuraVariable(name, value, digits) {
@@ -168,14 +168,16 @@
 
     if (!state.user?.id) {
       setAvatarAuraVariable('--aura-speaking-end', 0, 3);
-      setAvatarAuraVariable('--aura-listening-end', 100, 3);
-      setAvatarAuraVariable('--aura-pronunciation-end', 100, 3);
+      setAvatarAuraVariable('--aura-listening-end', 0, 3);
+      setAvatarAuraVariable('--aura-pronunciation-end', 0, 3);
       setAvatarAuraVariable('--aura-speaking-alpha', 0, 3);
-      setAvatarAuraVariable('--aura-listening-alpha', 0.82, 3);
+      setAvatarAuraVariable('--aura-listening-alpha', 0, 3);
       setAvatarAuraVariable('--aura-pronunciation-alpha', 0, 3);
       setAvatarAuraVariable('--aura-speaking-glow', 0, 3);
-      setAvatarAuraVariable('--aura-listening-glow', 0.82, 3);
+      setAvatarAuraVariable('--aura-listening-glow', 0, 3);
       setAvatarAuraVariable('--aura-pronunciation-glow', 0, 3);
+      setAvatarAuraVariable('--aura-overall-glow', 0, 3);
+      setAvatarAuraVariable('--aura-visible', 0, 3);
       return;
     }
 
@@ -202,6 +204,8 @@
     const listeningGlow = clampNumber(listeningTotal / 10000, 0, 1);
     const speakingGlow = clampNumber(speakingTotal / 7500, 0, 1);
     const pronunciationGlow = pronunciationProgress;
+    const hasVisibleAura = speakingShare > 0 || listeningShare > 0 || pronunciationShare > 0;
+    const overallGlow = Math.max(speakingGlow, listeningGlow, pronunciationGlow);
 
     setAvatarAuraVariable('--aura-speaking-end', speakingEnd, 3);
     setAvatarAuraVariable('--aura-listening-end', listeningEnd, 3);
@@ -212,6 +216,8 @@
     setAvatarAuraVariable('--aura-speaking-glow', speakingGlow, 3);
     setAvatarAuraVariable('--aura-listening-glow', listeningGlow, 3);
     setAvatarAuraVariable('--aura-pronunciation-glow', pronunciationGlow, 3);
+    setAvatarAuraVariable('--aura-overall-glow', overallGlow, 3);
+    setAvatarAuraVariable('--aura-visible', hasVisibleAura ? 1 : 0, 3);
   }
 
   function formatDurationCompact(totalSeconds) {
