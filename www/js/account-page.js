@@ -6,6 +6,7 @@
   const GUEST_NAME_PROMPTS = ['Digite um nome de usuário', 'Toque para digitar'];
   const NUMBER_ANIMATION_HANDLES = new WeakMap();
   const els = {
+    body: document.body,
     panel: document.querySelector('.panel'),
     form: document.getElementById('accountForm'),
     avatarInput: document.getElementById('accountAvatarInput'),
@@ -31,7 +32,8 @@
     premiumIcon: document.getElementById('accountPremiumIcon'),
     premiumLabel: document.getElementById('accountPremiumLabel'),
     logoutBtn: document.getElementById('accountLogoutBtn'),
-    status: document.getElementById('accountStatus')
+    status: document.getElementById('accountStatus'),
+    guestKeyboard: document.getElementById('guestKeyboard')
   };
 
   const state = {
@@ -51,7 +53,11 @@
     statsRotationIndex: 0,
     statsLastRenderedLine: '',
     guestPromptTimer: 0,
-    guestPromptIndex: 0
+    guestPromptIndex: 0,
+    guestInputTarget: 'name',
+    guestShiftActive: false,
+    guestCapsLockActive: false,
+    bootComplete: false
   };
 
   function buildApiUrl(path) {
@@ -91,6 +97,21 @@
     if (tone) {
       els.status.classList.add(`is-${tone}`);
     }
+  }
+
+  function isLoggedIn() {
+    return Boolean(state.user?.id);
+  }
+
+  function isGuestFieldActive(fieldName) {
+    if (isLoggedIn()) return false;
+    if (state.guestInputTarget === fieldName) return true;
+    const field = fieldName === 'password' ? els.passwordInput : els.nameInput;
+    return document.activeElement === field;
+  }
+
+  function getGuestTargetInput() {
+    return state.guestInputTarget === 'password' ? els.passwordInput : els.nameInput;
   }
 
   function formatTrainingTime(trainingTimeMs) {
@@ -258,9 +279,9 @@
 
   function renderAccountMetrics() {
     if (!els.metrics || !els.statsIcon || !els.statsLabel || !els.statsValue || !els.statsLine) return;
-    const isLoggedIn = Boolean(state.user?.id);
-    els.metrics.hidden = !isLoggedIn;
-    if (!isLoggedIn) {
+    const loggedIn = isLoggedIn();
+    els.metrics.hidden = !loggedIn;
+    if (!loggedIn) {
       stopStatsRotation();
       return;
     }
@@ -357,9 +378,9 @@
 
   function renderPremiumStatus() {
     if (!els.premiumLevel || !els.premiumUntil || !els.premiumCard) return;
-    const isLoggedIn = Boolean(state.user?.id);
-    els.premiumCard.hidden = !isLoggedIn;
-    if (!isLoggedIn) {
+    const loggedIn = isLoggedIn();
+    els.premiumCard.hidden = !loggedIn;
+    if (!loggedIn) {
       els.premiumLevel.textContent = '';
       els.premiumUntil.textContent = '';
       return;
@@ -378,22 +399,24 @@
 
   function renderPremiumButton() {
     if (!els.premiumBtn || !els.premiumLabel || !els.premiumIcon) return;
-    const isLoggedIn = Boolean(state.user?.id);
-    els.premiumLabel.textContent = isLoggedIn ? 'Comprar premium!' : 'Entrar';
-    els.premiumIcon.hidden = !isLoggedIn;
+    const loggedIn = isLoggedIn();
+    els.premiumLabel.textContent = loggedIn ? 'Comprar premium!' : 'Entrar';
+    els.premiumIcon.hidden = !loggedIn;
   }
 
   function syncGuestInlineUi() {
-    const isLoggedIn = Boolean(state.user?.id);
+    const loggedIn = isLoggedIn();
     if (els.nameInline) {
       const hasNameValue = Boolean(safeText(els.nameInput?.value));
-      els.nameInline.classList.toggle('is-typing', !isLoggedIn && document.activeElement === els.nameInput);
-      els.nameInline.classList.toggle('has-value', !isLoggedIn && hasNameValue);
+      els.nameInline.classList.toggle('is-typing', !loggedIn && isGuestFieldActive('name'));
+      els.nameInline.classList.toggle('has-value', !loggedIn && hasNameValue);
+      els.nameInline.classList.toggle('is-active', !loggedIn && state.guestInputTarget === 'name');
     }
     if (els.passwordField) {
       const hasPasswordValue = Boolean(safeText(els.passwordInput?.value));
-      els.passwordField.classList.toggle('is-typing', !isLoggedIn && document.activeElement === els.passwordInput);
-      els.passwordField.classList.toggle('has-value', !isLoggedIn && hasPasswordValue);
+      els.passwordField.classList.toggle('is-typing', !loggedIn && isGuestFieldActive('password'));
+      els.passwordField.classList.toggle('has-value', !loggedIn && hasPasswordValue);
+      els.passwordField.classList.toggle('is-active', !loggedIn && state.guestInputTarget === 'password');
     }
   }
 
@@ -405,22 +428,122 @@
 
   function renderGuestPromptLabel() {
     if (!els.namePromptLabel) return;
-    const isLoggedIn = Boolean(state.user?.id);
-    const isTyping = document.activeElement === els.nameInput || Boolean(safeText(els.nameInput?.value));
-    if (isLoggedIn || isTyping) return;
+    const loggedIn = isLoggedIn();
+    const isTyping = isGuestFieldActive('name') || Boolean(safeText(els.nameInput?.value));
+    if (loggedIn || isTyping) return;
     els.namePromptLabel.textContent = GUEST_NAME_PROMPTS[state.guestPromptIndex % GUEST_NAME_PROMPTS.length] || GUEST_NAME_PROMPTS[0];
   }
 
   function startGuestPromptRotation() {
     stopGuestPromptRotation();
-    const isLoggedIn = Boolean(state.user?.id);
-    if (isLoggedIn || !els.namePromptLabel) return;
+    const loggedIn = isLoggedIn();
+    if (loggedIn || !els.namePromptLabel) return;
     renderGuestPromptLabel();
     state.guestPromptTimer = window.setInterval(() => {
-      if (document.activeElement === els.nameInput || safeText(els.nameInput?.value)) return;
+      if (isGuestFieldActive('name') || safeText(els.nameInput?.value)) return;
       state.guestPromptIndex = (state.guestPromptIndex + 1) % GUEST_NAME_PROMPTS.length;
       renderGuestPromptLabel();
     }, GUEST_PROMPT_ROTATE_MS);
+  }
+
+  function clearGuestModifiers() {
+    state.guestShiftActive = false;
+  }
+
+  function setGuestInputTarget(fieldName) {
+    if (fieldName !== 'name' && fieldName !== 'password') return;
+    state.guestInputTarget = fieldName;
+    syncGuestInlineUi();
+    renderGuestPromptLabel();
+  }
+
+  function finishBoot() {
+    if (state.bootComplete) return;
+    state.bootComplete = true;
+    els.body?.classList.remove('account-page--booting');
+  }
+
+  function updateGuestKeyboardState() {
+    if (!els.guestKeyboard) return;
+    const keys = els.guestKeyboard.querySelectorAll('[data-key-action="shift"], [data-key-action="caps"]');
+    keys.forEach((key) => {
+      const action = key.getAttribute('data-key-action');
+      if (action === 'shift') {
+        key.classList.toggle('is-active', state.guestShiftActive);
+      }
+      if (action === 'caps') {
+        key.classList.toggle('is-active', state.guestCapsLockActive);
+      }
+    });
+  }
+
+  function applyGuestKeyValue(rawValue) {
+    const input = getGuestTargetInput();
+    if (!input) return;
+    const value = String(rawValue || '');
+    if (!value) return;
+    const maxLength = Number(input.maxLength) > 0 ? Number(input.maxLength) : 9999;
+    if ((input.value || '').length >= maxLength) return;
+    const shouldUppercase = state.guestShiftActive !== state.guestCapsLockActive;
+    const nextChar = /^[a-z]$/i.test(value)
+      ? (shouldUppercase ? value.toUpperCase() : value.toLowerCase())
+      : value;
+    input.value = `${input.value || ''}${nextChar}`;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    clearGuestModifiers();
+    updateGuestKeyboardState();
+  }
+
+  function deleteGuestKeyValue() {
+    const input = getGuestTargetInput();
+    if (!input || !input.value) return;
+    input.value = input.value.slice(0, -1);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    clearGuestModifiers();
+    updateGuestKeyboardState();
+  }
+
+  function toggleGuestShift() {
+    state.guestShiftActive = !state.guestShiftActive;
+    updateGuestKeyboardState();
+  }
+
+  function toggleGuestCaps() {
+    state.guestCapsLockActive = !state.guestCapsLockActive;
+    updateGuestKeyboardState();
+  }
+
+  async function handleGuestKeyboardAction(action, keyValue) {
+    if (isLoggedIn()) return;
+    switch (action) {
+      case 'backspace':
+        deleteGuestKeyValue();
+        return;
+      case 'tab':
+        setGuestInputTarget(state.guestInputTarget === 'name' ? 'password' : 'name');
+        return;
+      case 'shift':
+        toggleGuestShift();
+        return;
+      case 'caps':
+        toggleGuestCaps();
+        return;
+      case 'space':
+        applyGuestKeyValue(' ');
+        return;
+      case 'enter':
+        await loginFromAccount();
+        return;
+      case 'noop':
+        return;
+      default:
+        applyGuestKeyValue(keyValue);
+    }
+  }
+
+  function preventGuestPaste(event) {
+    if (isLoggedIn()) return;
+    event.preventDefault();
   }
 
   function snapshotCurrentProfile() {
@@ -440,50 +563,55 @@
     const username = safeText(sourceProfile.username) || 'Jogador';
     const avatar = safeText(state.avatarDraft || sourceProfile.avatarImage);
     const hasAvatar = Boolean(avatar);
-    const isLoggedIn = Boolean(state.user?.id);
+    const loggedIn = isLoggedIn();
     if (document.activeElement !== els.nameInput || !state.nameEditing) {
       els.nameInput.value = username;
     }
     if (els.nameInput) {
-      const shouldUseInlineReadonly = isLoggedIn && !state.nameEditing;
+      const shouldUseInlineReadonly = loggedIn ? !state.nameEditing : true;
       els.nameInput.readOnly = shouldUseInlineReadonly;
-      els.nameInput.setAttribute('aria-label', isLoggedIn ? 'Nome do usuario' : 'Digite um nome de usuario');
-      els.nameInput.placeholder = isLoggedIn ? 'Seu nome' : 'Digite um nome de usuário';
+      els.nameInput.inputMode = loggedIn ? 'text' : 'none';
+      els.nameInput.autocomplete = 'off';
+      els.nameInput.setAttribute('aria-label', loggedIn ? 'Nome do usuario' : 'Digite um nome de usuario');
+      els.nameInput.placeholder = loggedIn ? 'Seu nome' : 'Digite um nome de usuario';
     }
     if (els.nameInline) {
-      els.nameInline.classList.toggle('is-editing', isLoggedIn && state.nameEditing);
+      els.nameInline.classList.toggle('is-editing', loggedIn && state.nameEditing);
     }
     els.avatarPreview.src = hasAvatar ? avatar : 'Avatar/avatar-man-person-svgrepo-com.svg';
-    els.avatarPreview.style.display = isLoggedIn && hasAvatar ? 'block' : 'none';
-    els.avatarFallback.textContent = isLoggedIn ? (username.charAt(0).toUpperCase() || 'P') : 'Entre com\nsua conta';
-    els.avatarFallback.style.display = isLoggedIn && hasAvatar ? 'none' : 'grid';
-    els.avatarInput.disabled = !isLoggedIn;
+    els.avatarPreview.style.display = loggedIn && hasAvatar ? 'block' : 'none';
+    els.avatarFallback.textContent = loggedIn ? (username.charAt(0).toUpperCase() || 'P') : 'Entre com\nsua conta';
+    els.avatarFallback.style.display = loggedIn && hasAvatar ? 'none' : 'grid';
+    els.avatarInput.disabled = !loggedIn;
     els.avatarInput.value = '';
-    els.avatarPreview.alt = isLoggedIn ? 'Avatar do usuario' : '';
+    els.avatarPreview.alt = loggedIn ? 'Avatar do usuario' : '';
     if (els.panel) {
-      els.panel.classList.toggle('is-guest', !isLoggedIn);
+      els.panel.classList.toggle('is-guest', !loggedIn);
     }
     if (els.avatarPreview?.parentElement) {
-      els.avatarPreview.parentElement.classList.toggle('is-message', !isLoggedIn);
+      els.avatarPreview.parentElement.classList.toggle('is-message', !loggedIn);
     }
 
-    const shouldHidePasswordField = isLoggedIn ? !state.passwordEditMode : false;
+    const shouldHidePasswordField = loggedIn ? !state.passwordEditMode : false;
     if (els.passwordField) {
       els.passwordField.hidden = shouldHidePasswordField;
       const passwordFieldLabel = els.passwordField.querySelector('span');
       if (passwordFieldLabel) {
-        passwordFieldLabel.textContent = isLoggedIn ? 'Senha' : 'Crie uma boa senha';
+        passwordFieldLabel.textContent = 'Senha';
       }
     }
     if (els.passwordInput) {
-      els.passwordInput.placeholder = isLoggedIn ? 'Nova senha' : 'Digite sua senha';
+      els.passwordInput.placeholder = loggedIn ? 'Nova senha' : 'Digite sua senha';
+      els.passwordInput.readOnly = !loggedIn;
+      els.passwordInput.inputMode = loggedIn ? 'text' : 'none';
+      els.passwordInput.autocomplete = 'off';
     }
     if (els.passwordBtn) {
-      els.passwordBtn.hidden = !isLoggedIn;
+      els.passwordBtn.hidden = !loggedIn;
       if (els.passwordBtnLabel) {
-        els.passwordBtnLabel.textContent = isLoggedIn
+        els.passwordBtnLabel.textContent = loggedIn
           ? (state.passwordEditMode ? 'Cancelar' : 'Trocar senha')
-          : 'Crie uma boa senha';
+          : '';
       }
     }
     if (shouldHidePasswordField && els.passwordInput) {
@@ -497,6 +625,7 @@
     renderPremiumStatus();
     renderPremiumButton();
     renderAccountMetrics();
+    updateGuestKeyboardState();
   }
 
   async function fileToDataUrl(file) {
@@ -873,11 +1002,20 @@
   }
 
   async function init() {
-    state.user = await fetchSessionUser();
-    state.localProfile = readLocalPlayerProfile();
-    syncSavedSnapshot(state.user || state.localProfile);
-    renderUser();
-    await fetchBooksMetrics();
+    try {
+      state.user = await fetchSessionUser();
+      state.localProfile = readLocalPlayerProfile();
+      syncSavedSnapshot(state.user || state.localProfile);
+      renderUser();
+      await fetchBooksMetrics();
+    } catch (_error) {
+      state.user = null;
+      state.localProfile = readLocalPlayerProfile();
+      syncSavedSnapshot(state.localProfile);
+      renderUser();
+    } finally {
+      finishBoot();
+    }
 
     els.form?.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -906,13 +1044,17 @@
       renderGuestPromptLabel();
       if (state.user?.id && !state.nameEditing) {
         startInlineNameEdit();
+      } else if (!state.user?.id) {
+        setGuestInputTarget('name');
       }
     });
 
     els.nameInput?.addEventListener('click', () => {
       if (state.user?.id && !state.nameEditing) {
         startInlineNameEdit();
+        return;
       }
+      setGuestInputTarget('name');
     });
 
     els.nameInput?.addEventListener('blur', () => {
@@ -958,18 +1100,21 @@
 
     els.nameInline?.addEventListener('click', () => {
       if (state.user?.id) return;
-      els.nameInput?.focus();
+      setGuestInputTarget('name');
       syncGuestInlineUi();
       renderGuestPromptLabel();
     });
 
     els.passwordField?.addEventListener('click', () => {
       if (state.user?.id) return;
-      els.passwordInput?.focus();
+      setGuestInputTarget('password');
       syncGuestInlineUi();
     });
 
     els.passwordInput?.addEventListener('focus', () => {
+      if (!state.user?.id) {
+        setGuestInputTarget('password');
+      }
       syncGuestInlineUi();
     });
 
@@ -1012,6 +1157,24 @@
       } finally {
         state.avatarGenerating = false;
       }
+    });
+
+    [els.nameInput, els.passwordInput].forEach((input) => {
+      input?.addEventListener('keydown', (event) => {
+        if (state.user?.id) return;
+        event.preventDefault();
+      });
+      input?.addEventListener('paste', preventGuestPaste);
+      input?.addEventListener('drop', preventGuestPaste);
+      input?.addEventListener('contextmenu', preventGuestPaste);
+    });
+
+    els.guestKeyboard?.addEventListener('click', async (event) => {
+      const key = event.target.closest('[data-key-action], [data-key-value]');
+      if (!key) return;
+      const action = key.getAttribute('data-key-action') || '';
+      const keyValue = key.getAttribute('data-key-value') || '';
+      await handleGuestKeyboardAction(action, keyValue);
     });
   }
 

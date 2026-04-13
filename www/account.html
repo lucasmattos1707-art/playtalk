@@ -84,6 +84,12 @@
       background: transparent;
     }
 
+    body.account-page--booting .account-form {
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+    }
+
     body.is-native-runtime {
       --native-top-offset: 50px;
     }
@@ -122,6 +128,7 @@
       display: grid;
       justify-items: center;
       gap: 18px;
+      transition: opacity 180ms ease, transform 180ms ease;
     }
 
     .account-profile {
@@ -129,6 +136,11 @@
       display: grid;
       justify-items: center;
       gap: 18px;
+    }
+
+    .panel.is-guest .account-profile {
+      transform: translateY(-60px);
+      margin-bottom: -42px;
     }
 
     .account-avatar {
@@ -337,6 +349,13 @@
         0 0 34px rgba(36, 112, 255, 0.22);
       text-shadow: 0 0 14px rgba(114, 239, 255, 0.22);
       cursor: text;
+    }
+
+    .panel.is-guest .account-name-inline.is-active {
+      box-shadow:
+        inset 0 0 0 1px rgba(194, 248, 255, 0.18),
+        0 0 18px rgba(125, 235, 255, 0.62),
+        0 0 40px rgba(36, 112, 255, 0.34);
     }
 
     .panel.is-guest .account-name-input {
@@ -691,6 +710,14 @@
       overflow: hidden;
     }
 
+    .panel.is-guest #accountPasswordField.is-active {
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 201, 142, 0.2),
+        0 0 22px rgba(255, 145, 71, 0.48),
+        0 0 44px rgba(255, 97, 24, 0.3),
+        0 22px 44px rgba(71, 24, 5, 0.28);
+    }
+
     .panel.is-guest #accountPasswordField > span {
       display: inline-flex;
       width: 100%;
@@ -759,6 +786,136 @@
 
     .account-status.is-error {
       color: #f87171;
+    }
+
+    .guest-keyboard {
+      display: none;
+      width: min(100%, 760px);
+      margin: 0 auto;
+    }
+
+    .panel.is-guest .guest-keyboard {
+      display: block;
+    }
+
+    .guest-keyboard__shell {
+      aspect-ratio: 34 / 11;
+      background-color: #020202;
+      background-image: radial-gradient(100% 150% ellipse at top center, #1c1c1c 0%, #020202 100%);
+      border-bottom: 2px solid #020202;
+      border-radius: 12px;
+      padding: 8px 8px 16px;
+      box-shadow:
+        inset 0 0 0 1px rgba(180, 233, 255, 0.06),
+        0 24px 50px rgba(0, 0, 0, 0.34);
+    }
+
+    .guest-keyboard__board {
+      aspect-ratio: 34 / 11;
+      box-shadow: inset 0 0 28px #020202;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 4px;
+      row-gap: 5px;
+    }
+
+    .guest-keyboard__row {
+      --key-bg: #070707;
+      display: flex;
+      flex: 1;
+      column-gap: 5px;
+    }
+
+    .guest-keyboard__row:nth-child(1) { --key-bg: #0e0e0e; }
+    .guest-keyboard__row:nth-child(2) { --key-bg: #0c0c0c; }
+    .guest-keyboard__row:nth-child(3) { --key-bg: #0a0a0a; }
+    .guest-keyboard__row:nth-child(4) { --key-bg: #090909; }
+
+    .guest-keyboard__key {
+      --box-shadow: rgba(95, 168, 211, 0.42);
+      --box-shadow-inner: rgba(95, 168, 211, 0.08);
+      --color: rgb(190, 233, 232);
+      --text-shadow: rgba(95, 168, 211, 0.22);
+      flex: 1 1 0;
+      border: 0;
+      border-radius: 10px;
+      background-color: var(--key-bg);
+      box-shadow:
+        inset 0 -1px 0 var(--box-shadow-inner),
+        inset 1px 0 0 rgba(0, 0, 0, 0.75),
+        inset -1px 0 0 rgba(0, 0, 0, 0.75),
+        inset 0 1px 0 var(--box-shadow-inner),
+        inset 0 -8px 16px 8px var(--box-shadow-inner),
+        0 0 16px var(--box-shadow);
+      color: var(--color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1;
+      text-shadow: 0 0 8px var(--text-shadow);
+      user-select: none;
+      white-space: nowrap;
+      transition: transform 90ms linear, box-shadow 90ms linear, opacity 90ms linear;
+      cursor: pointer;
+    }
+
+    .guest-keyboard__key:active,
+    .guest-keyboard__key.is-active {
+      transform: translateY(3px);
+      box-shadow:
+        inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+        0 0 18px rgba(127, 223, 255, 0.55);
+    }
+
+    .guest-keyboard__key--backslash,
+    .guest-keyboard__key--tab {
+      flex: 1.4 1 0;
+    }
+
+    .guest-keyboard__key--ctrl,
+    .guest-keyboard__key--cmd,
+    .guest-keyboard__key--menu,
+    .guest-keyboard__key--fn,
+    .guest-keyboard__key--alt {
+      flex: 1.2 1 0;
+      opacity: 0.55;
+    }
+
+    .guest-keyboard__key--space {
+      flex: 5 1 0;
+    }
+
+    .guest-keyboard__key--caps {
+      flex: 1.7 1 0;
+    }
+
+    .guest-keyboard__key--enter {
+      flex: 2.2 1 0;
+    }
+
+    .guest-keyboard__key--lshift {
+      flex: 2.2 1 0;
+    }
+
+    .guest-keyboard__key--rshift {
+      flex: 2.6 1 0;
+    }
+
+    .guest-keyboard__key--backspace {
+      flex: 2 1 0;
+    }
+
+    .guest-keyboard__hint {
+      margin: 12px 0 0;
+      text-align: center;
+      color: rgba(226, 240, 255, 0.74);
+      font-size: 13px;
+      letter-spacing: 0.02em;
     }
 
     .flashcards-footer-nav {
@@ -833,7 +990,7 @@
     }
   </style>
 </head>
-<body>
+<body class="account-page--booting">
   <div class="container" aria-hidden="true"></div>
   <main class="page">
     <section class="panel">
@@ -858,6 +1015,84 @@
             <input id="accountPasswordInput" type="password" maxlength="64" placeholder="Senha">
           </label>
         </div>
+        <section class="guest-keyboard" id="guestKeyboard" aria-label="Teclado virtual da conta">
+          <div class="guest-keyboard__shell">
+            <div class="guest-keyboard__board">
+              <div class="guest-keyboard__row">
+                <button class="guest-keyboard__key" type="button" data-key-action="noop">Esc</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="1">1 !</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="2">2 @</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="3">3 #</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="4">4 $</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="5">5 %</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="6">6 ^</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="7">7 &amp;</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="8">8 *</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="9">9 (</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="0">0 )</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="-">- _</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="=">= +</button>
+                <button class="guest-keyboard__key guest-keyboard__key--backspace" type="button" data-key-action="backspace">&larr;</button>
+              </div>
+              <div class="guest-keyboard__row">
+                <button class="guest-keyboard__key guest-keyboard__key--tab" type="button" data-key-action="tab">&rarrb;</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="q">Q</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="w">W</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="e">E</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="r">R</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="t">T</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="y">Y</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="u">U</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="i">I</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="o">O</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="p">P</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="[">[ {</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="]">] }</button>
+                <button class="guest-keyboard__key guest-keyboard__key--backslash" type="button" data-key-value="\\">\ |</button>
+              </div>
+              <div class="guest-keyboard__row">
+                <button class="guest-keyboard__key guest-keyboard__key--caps" type="button" data-key-action="caps">&mapstoup;</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="a">A</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="s">S</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="d">D</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="f">F</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="g">G</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="h">H</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="j">J</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="k">K</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="l">L</button>
+                <button class="guest-keyboard__key" type="button" data-key-value=";">; :</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="'">' "</button>
+                <button class="guest-keyboard__key guest-keyboard__key--enter" type="button" data-key-action="enter">&ldsh;</button>
+              </div>
+              <div class="guest-keyboard__row">
+                <button class="guest-keyboard__key guest-keyboard__key--lshift" type="button" data-key-action="shift">&uarr;</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="z">Z</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="x">X</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="c">C</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="v">V</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="b">B</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="n">N</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="m">M</button>
+                <button class="guest-keyboard__key" type="button" data-key-value=",">, &lt;</button>
+                <button class="guest-keyboard__key" type="button" data-key-value=".">. &gt;</button>
+                <button class="guest-keyboard__key" type="button" data-key-value="/">/ ?</button>
+                <button class="guest-keyboard__key guest-keyboard__key--rshift" type="button" data-key-action="shift">&uarr;</button>
+              </div>
+              <div class="guest-keyboard__row">
+                <button class="guest-keyboard__key guest-keyboard__key--ctrl" type="button" data-key-action="noop">Ctrl</button>
+                <button class="guest-keyboard__key guest-keyboard__key--cmd" type="button" data-key-action="noop">Cmd</button>
+                <button class="guest-keyboard__key guest-keyboard__key--alt" type="button" data-key-action="noop">Alt</button>
+                <button class="guest-keyboard__key guest-keyboard__key--space" type="button" data-key-action="space">&mdash;</button>
+                <button class="guest-keyboard__key guest-keyboard__key--alt" type="button" data-key-action="noop">Alt</button>
+                <button class="guest-keyboard__key guest-keyboard__key--menu" type="button" data-key-action="noop">Menu</button>
+                <button class="guest-keyboard__key guest-keyboard__key--ctrl" type="button" data-key-action="noop">Ctrl</button>
+                <button class="guest-keyboard__key guest-keyboard__key--fn" type="button" data-key-action="noop">Fn</button>
+              </div>
+            </div>
+          </div>
+          <p class="guest-keyboard__hint">Use o teclado da tela para entrar ou criar sua conta.</p>
+        </section>
         <div class="account-metrics" id="accountMetrics" hidden>
           <div class="account-stats-card" id="accountStatsCard" aria-label="Estatisticas do usuario">
             <div class="account-stats-icon-shell" aria-hidden="true">
