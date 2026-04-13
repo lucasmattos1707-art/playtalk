@@ -5034,76 +5034,6 @@
       box-shadow: none;
     }
 
-    .game-shell__tutorial-overlay {
-      position: absolute;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      background: transparent;
-      z-index: 15;
-      pointer-events: none;
-    }
-
-    .game-shell.is-tutorial-intro .game-shell__tutorial-overlay {
-      display: flex;
-    }
-
-    .game-shell__tutorial-overlay.is-stage-modal {
-      display: flex;
-      padding: 0;
-      background: rgba(1, 8, 24, 0.22);
-      opacity: 1;
-      pointer-events: auto;
-      transition: opacity 500ms ease;
-    }
-
-    .game-shell__tutorial-overlay.is-stage-modal.is-dismissing {
-      opacity: 0;
-    }
-
-    .game-shell__tutorial-logo {
-      width: min(322px, 69vw);
-      height: auto;
-      opacity: 0;
-      transform: scale(0.88);
-      transition: opacity 1000ms ease, transform 1000ms ease;
-      filter:
-        brightness(1.18)
-        saturate(1.22)
-        contrast(1.08)
-        drop-shadow(0 0 12px rgba(170, 241, 255, 1))
-        drop-shadow(0 0 30px rgba(112, 214, 255, 0.98))
-        drop-shadow(0 0 60px rgba(77, 132, 255, 0.86))
-        drop-shadow(0 0 104px rgba(33, 105, 255, 0.72))
-        drop-shadow(0 20px 38px rgba(34, 148, 255, 0.34));
-      animation: welcomeLogoNeonPulse 3.4s ease-in-out infinite;
-    }
-
-    .game-shell__tutorial-overlay.is-stage-modal .game-shell__tutorial-logo {
-      width: 100%;
-      height: 100%;
-      max-width: none;
-      object-fit: cover;
-      object-position: center center;
-      opacity: 1;
-      transform: none;
-      transition: none;
-      filter: none;
-      animation: none;
-    }
-
-    .game-shell__tutorial-logo.is-visible {
-      opacity: 1;
-      transform: scale(1);
-    }
-
-    .game-shell__tutorial-logo.is-fading-out {
-      opacity: 0;
-      transform: scale(1.08);
-    }
-
     @keyframes welcomeLogoNeonPulse {
       0%,
       100% {
@@ -6332,9 +6262,6 @@
             <p>Voce ja ganhou todos os cards carregados, ou ainda nao existem cartas suficientes fora de Meus flashcards para montar a rodada.</p>
           </div>
         </section>
-        <div class="game-shell__tutorial-overlay" id="gameTutorialOverlay" aria-hidden="true">
-          <img class="game-shell__tutorial-logo" id="gameTutorialLogo" src="/arquivos-codex/fluentlevelup.png" alt="Level Up">
-        </div>
       </div>
     </section>
 
@@ -6565,7 +6492,6 @@
       const USER_HIDDEN_STORAGE_KEY = 'playtalk-flashcards-hidden-v1';
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
       const TUTORIAL_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-tutorial-v1';
-      const STAGE_INTRO_OVERLAY_STORAGE_KEY = 'playtalk-flashcards-stage-intro-v1';
       const GAME_SESSION_STORAGE_KEY = 'playtalk-flashcards-game-session-v1';
       const TIME_OFFSET_STORAGE_KEY = 'playtalk-flashcards-time-offset-v1';
       const TRAINING_TIME_PER_CARD_LIMIT_MS = 10000;
@@ -6622,8 +6548,6 @@
       const BALANCE_TRACKS = ['zen1.mp3', 'zen2.mp3', 'zen3.mp3', 'zen4.mp3'];
       const BALANCE_TRACK_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas';
       const TYPING_KEY_BLUES = ['#6ebcff', '#76c3ff', '#7dc9ff', '#86ceff', '#8fd4ff', '#98d9ff'];
-      const DEFAULT_GAME_TUTORIAL_LOGO_SRC = '/arquivos-codex/fluentlevelup.png';
-      const DEFAULT_GAME_TUTORIAL_LOGO_ALT = 'Level Up';
       const DEFAULT_GAME_CONTEXT_LIMIT = 12;
       const MIN_GAME_CONTEXT_LIMIT = 1;
       const GAME_BASE_CARD_COUNT = 12;
@@ -6642,9 +6566,6 @@
       const EARLY_FLASHCARD_MAX_CHARACTERS = 12;
       const TUTORIAL_FINALE_SEAL_FLASH_MS = 400;
       const TUTORIAL_LAUNCH_SESSION_KEY = 'playtalk-flashcards-launch-tutorial-consumed';
-      const STAGE_INTRO_MIN_LOCK_MS = 3000;
-      const STAGE_INTRO_AUTO_DISMISS_MS = 8000;
-      const STAGE_INTRO_DISSOLVE_MS = 500;
       const GUEST_FLASHCARD_LOGIN_THRESHOLD = 999999;
       const FLASHCARD_PREMIUM_GATE_LIMIT = Number.POSITIVE_INFINITY;
       const GUEST_FLASHCARD_LOGIN_DELAY_MS = 5000;
@@ -6731,21 +6652,6 @@
         5: { key: 'fifth-star', badge: 'Fifth star', instruction: 'Fale ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false }
       };
 
-      const STAGE_INTRO_OVERLAYS = {
-        1: {
-          key: 'first-star',
-          storageKey: 'first-star-intro',
-          src: '/arquivos-codex/tutorial/fluent-levelup-tuto1.png',
-          alt: 'Tutorial da first star'
-        },
-        2: {
-          key: 'second-star',
-          storageKey: 'second-star-intro',
-          src: '/arquivos-codex/tutorial/fluent-levelup-tuto2.png',
-          alt: 'Tutorial da second star'
-        }
-      };
-
       function createTutorialState() {
         return {
           active: false,
@@ -6765,17 +6671,6 @@
             sealFlash: false,
             sealSoft: false
           }
-        };
-      }
-
-      function createStageIntroOverlayState() {
-        return {
-          active: false,
-          dismissAllowed: false,
-          storageKey: '',
-          entryId: '',
-          stage: 0,
-          timers: []
         };
       }
 
@@ -6890,7 +6785,6 @@
           fifthStarHintDismissed: false,
           paused: false,
           reportCardId: '',
-          stageIntro: createStageIntroOverlayState(),
           tutorial: createTutorialState()
         },
         watch: {
@@ -7081,9 +6975,6 @@
         watchWord: document.getElementById('watchWord'),
         watchSubword: document.getElementById('watchSubword'),
         watchStars: document.getElementById('watchStars'),
-        gameTutorialOverlay: document.getElementById('gameTutorialOverlay'),
-        gameTutorialLogo: document.getElementById('gameTutorialLogo')
-        ,
         usersPanel: document.getElementById('usersPanel'),
         usersFrame: document.getElementById('usersFrame'),
         profilePanel: document.getElementById('profilePanel'),
@@ -7283,7 +7174,6 @@
           USER_HIDDEN_STORAGE_KEY,
           USER_STATS_STORAGE_KEY,
           TUTORIAL_PROGRESS_STORAGE_KEY,
-          STAGE_INTRO_OVERLAY_STORAGE_KEY,
           GAME_SESSION_STORAGE_KEY
         ];
         const directKeys = [
@@ -7341,33 +7231,6 @@
           localStorage.setItem(
             storageKeyForUser(TUTORIAL_PROGRESS_STORAGE_KEY, state.user?.id),
             JSON.stringify(Boolean(state.game.tutorial.completed))
-          );
-        } catch (_error) {
-          // ignore
-        }
-      }
-
-      function readStageIntroOverlayProgress(userId = state.user?.id) {
-        const parsed = readScopedStorage(STAGE_INTRO_OVERLAY_STORAGE_KEY, {}, userId);
-        return parsed && typeof parsed === 'object' ? parsed : {};
-      }
-
-      function hasSeenStageIntroOverlay(storageKey, userId = state.user?.id) {
-        const normalizedKey = safeText(storageKey);
-        if (!normalizedKey) return true;
-        const progress = readStageIntroOverlayProgress(userId);
-        return Boolean(progress?.[normalizedKey]);
-      }
-
-      function markStageIntroOverlaySeen(storageKey, userId = state.user?.id) {
-        const normalizedKey = safeText(storageKey);
-        if (!normalizedKey) return;
-        try {
-          const progress = readStageIntroOverlayProgress(userId);
-          progress[normalizedKey] = Date.now();
-          localStorage.setItem(
-            storageKeyForUser(STAGE_INTRO_OVERLAY_STORAGE_KEY, userId),
-            JSON.stringify(progress)
           );
         } catch (_error) {
           // ignore
@@ -10058,128 +9921,10 @@
         }, TUTORIAL_FINALE_SEAL_FLASH_MS);
       }
 
-      function clearStageIntroOverlayTimers() {
-        const timers = Array.isArray(state.game.stageIntro?.timers) ? state.game.stageIntro.timers : [];
-        timers.forEach((timerId) => window.clearTimeout(timerId));
-        state.game.stageIntro.timers = [];
-      }
-
-      function queueStageIntroOverlayTimer(delayMs, callback) {
-        const timerId = window.setTimeout(() => {
-          state.game.stageIntro.timers = state.game.stageIntro.timers.filter((currentId) => currentId !== timerId);
-          callback();
-        }, Math.max(0, Number(delayMs) || 0));
-        state.game.stageIntro.timers.push(timerId);
-        return timerId;
-      }
-
-      function resetStageIntroOverlayState() {
-        clearStageIntroOverlayTimers();
-        state.game.stageIntro = createStageIntroOverlayState();
-      }
-
       function resetTutorialVisualState() {
         const gameShell = els.game.querySelector('.game-shell');
         gameShell?.classList.remove('is-tutorial-intro', 'is-tutorial-reveal');
-        els.gameTutorialOverlay?.classList.remove('is-stage-modal', 'is-dismissing');
-        els.gameTutorialOverlay?.setAttribute('aria-hidden', 'true');
-        els.gameTutorialLogo?.classList.remove('is-visible', 'is-fading-out');
-        if (els.gameTutorialLogo) {
-          els.gameTutorialLogo.src = DEFAULT_GAME_TUTORIAL_LOGO_SRC;
-          els.gameTutorialLogo.alt = DEFAULT_GAME_TUTORIAL_LOGO_ALT;
-        }
         els.gameVisual.classList.remove('is-mic-live', 'is-tutorial-mic-fade', 'is-tutorial-mic-flash');
-      }
-
-      function setStageIntroOverlayLocked(locked) {
-        const nextLocked = Boolean(locked);
-        state.game.paused = nextLocked;
-        if (nextLocked) {
-          state.game.canListen = false;
-          cleanupGameRecognition();
-          stopActiveAudio();
-        }
-        els.gameTouchBtn.disabled = nextLocked;
-        if (els.gameLanguageBtn) {
-          els.gameLanguageBtn.disabled = nextLocked;
-        }
-        if (els.gameReportTrigger) {
-          els.gameReportTrigger.disabled = nextLocked;
-        }
-        setTutorialTypingDisabled(nextLocked);
-      }
-
-      function hideStageIntroOverlay({ immediate = false, suppressRerender = false } = {}) {
-        if (!state.game.stageIntro.active) return false;
-        const entryId = safeText(state.game.stageIntro.entryId);
-        const overlay = els.gameTutorialOverlay;
-        clearStageIntroOverlayTimers();
-
-        const finalize = () => {
-          overlay?.classList.remove('is-stage-modal', 'is-dismissing');
-          overlay?.setAttribute('aria-hidden', 'true');
-          resetStageIntroOverlayState();
-          setStageIntroOverlayLocked(false);
-          if (!suppressRerender && state.game.active && entryId && state.game.currentId === entryId) {
-            renderCurrentCard();
-          }
-        };
-
-        if (immediate) {
-          finalize();
-          return true;
-        }
-
-        overlay?.classList.add('is-dismissing');
-        queueStageIntroOverlayTimer(STAGE_INTRO_DISSOLVE_MS, finalize);
-        return true;
-      }
-
-      function resolveStageIntroOverlay(entry) {
-        const stageNumber = Number(entry?.stage) || 0;
-        return STAGE_INTRO_OVERLAYS[stageNumber] || null;
-      }
-
-      function maybeShowStageIntroOverlay(entry) {
-        if (!state.game.active || state.game.tutorial.active) return false;
-        const config = resolveStageIntroOverlay(entry);
-        if (!config) return false;
-
-        const currentStorageKey = safeText(config.storageKey);
-        if (!currentStorageKey || hasSeenStageIntroOverlay(currentStorageKey)) {
-          return false;
-        }
-
-        const overlay = els.gameTutorialOverlay;
-        const logo = els.gameTutorialLogo;
-        if (!overlay || !logo) return false;
-
-        markStageIntroOverlaySeen(currentStorageKey);
-        resetTutorialVisualState();
-        resetStageIntroOverlayState();
-        state.game.stageIntro.active = true;
-        state.game.stageIntro.storageKey = currentStorageKey;
-        state.game.stageIntro.entryId = safeText(entry?.id);
-        state.game.stageIntro.stage = Number(entry?.stage) || 0;
-        logo.src = config.src;
-        logo.alt = config.alt;
-        overlay.setAttribute('aria-hidden', 'false');
-        overlay.classList.remove('is-dismissing');
-        overlay.classList.add('is-stage-modal');
-        setStageIntroOverlayLocked(true);
-
-        queueStageIntroOverlayTimer(STAGE_INTRO_MIN_LOCK_MS, () => {
-          if (!state.game.stageIntro.active || state.game.stageIntro.storageKey !== currentStorageKey) return;
-          state.game.stageIntro.dismissAllowed = true;
-        });
-
-        queueStageIntroOverlayTimer(STAGE_INTRO_AUTO_DISMISS_MS, () => {
-          if (!state.game.stageIntro.active || state.game.stageIntro.storageKey !== currentStorageKey) return;
-          state.game.stageIntro.dismissAllowed = true;
-          hideStageIntroOverlay();
-        });
-
-        return true;
       }
 
       function setTutorialTypingDisabled(disabled) {
@@ -10208,7 +9953,6 @@
 
       function resetTutorialRuntime({ preserveCompletion = true } = {}) {
         clearTutorialTimers();
-        hideStageIntroOverlay({ immediate: true, suppressRerender: true });
         resetTutorialVisualState();
         state.game.paused = false;
         state.game.canListen = false;
@@ -10253,7 +9997,6 @@
         setTutorialInteractionLocked(true);
         setGameStatus('', '');
         gameShell?.classList.remove('is-tutorial-intro', 'is-tutorial-reveal');
-        els.gameTutorialLogo?.classList.remove('is-visible', 'is-fading-out');
         els.gameVisual.classList.remove('is-tutorial-mic-fade');
         els.gameVisual.classList.add('is-mic-live');
         triggerTutorialMicFlash();
@@ -11649,7 +11392,7 @@
       }
 
       function openGameReportMenu() {
-        if (state.game.tutorial.interactionLocked || state.game.stageIntro.active) return;
+        if (state.game.tutorial.interactionLocked) return;
         if (!state.game.active || !currentGameCard() || !els.gameReportMenu) return;
         state.game.paused = true;
         cleanupGameRecognition();
@@ -13724,7 +13467,6 @@
         cleanupGameRecognition();
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) {
-          hideStageIntroOverlay({ immediate: true, suppressRerender: true });
           els.game.removeAttribute('data-phase-key');
           clearGameStatusRankTimer();
           clearGameLanguageSwapTimer();
@@ -13790,9 +13532,6 @@
         buildGameVisual(card, stageConfig);
         primeCurrentAndUpcomingGameMedia(card);
         if (maybeRunTutorialSequence(entry, card)) {
-          return;
-        }
-        if (maybeShowStageIntroOverlay(entry)) {
           return;
         }
 
@@ -15055,12 +14794,6 @@
       }
 
       function bindEvents() {
-        els.gameTutorialOverlay?.addEventListener('pointerdown', (event) => {
-          if (!state.game.stageIntro.active) return;
-          event.preventDefault();
-          if (!state.game.stageIntro.dismissAllowed) return;
-          hideStageIntroOverlay();
-        });
         els.welcomeStartBtn?.addEventListener('click', () => {
           requestWelcomeTutorialStart(true);
         });
