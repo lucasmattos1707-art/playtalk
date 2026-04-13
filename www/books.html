@@ -1331,16 +1331,17 @@
       width: 100%;
       height: 100%;
       display: grid;
-      justify-items: center;
-      align-content: start;
-      padding: 15px 0 0;
+      place-items: center;
+      align-content: center;
+      padding: 0;
       overflow: hidden;
     }
 
     .books-card {
-      --books-card-book-width: min(258px, 58vw);
-      --books-card-badge-size: 74px;
-      width: min(378px, 81vw, calc(var(--books-shelf-height) * 9 / 16 * 0.88));
+      --books-card-book-width: min(310px, 70vw);
+      --books-card-book-height: calc(var(--books-card-book-width) * 16 / 9);
+      --books-card-badge-size: 89px;
+      width: min(454px, 90vw, calc(var(--books-shelf-height) * 9 / 16 * 0.96));
       aspect-ratio: 9 / 16;
       border: 0;
       border-radius: 16px;
@@ -1369,11 +1370,11 @@
 
     .books-card__background {
       position: absolute;
-      inset: 0;
+      left: 50%;
+      top: 50%;
       width: var(--books-card-book-width);
+      height: var(--books-card-book-height);
       max-width: 100%;
-      aspect-ratio: 9 / 16;
-      margin: 0 auto;
       border-radius: 14px;
       background: linear-gradient(155deg, #2a5bcf, #28a7d5);
       background-position: center;
@@ -1383,7 +1384,8 @@
       box-shadow:
         0 26px 44px rgba(0, 0, 0, 0.48),
         18px 0 24px rgba(0, 0, 0, 0.18);
-      transform: perspective(1300px) rotateY(-16deg) rotateX(7deg) translateY(0);
+      transform: translate(-50%, -50%) perspective(1300px) rotateY(-16deg) rotateX(7deg);
+      transform-origin: center center;
       transform-style: preserve-3d;
       overflow: visible;
     }
@@ -1403,14 +1405,20 @@
 
     .books-card__overlay {
       position: absolute;
-      inset: 0;
+      left: 50%;
+      top: 50%;
+      width: var(--books-card-book-width);
+      height: var(--books-card-book-height);
+      transform: translate(-50%, -50%);
+      border-radius: 14px;
       background: transparent;
+      pointer-events: none;
     }
 
     .books-card__badge {
       position: absolute;
-      left: calc(50% + (var(--books-card-book-width) / 2) - (var(--books-card-badge-size) * 0.58));
-      bottom: 10px;
+      right: calc(50% - (var(--books-card-book-width) / 2) - (var(--books-card-badge-size) * 0.08));
+      bottom: calc(50% - (var(--books-card-book-height) / 2) - (var(--books-card-badge-size) * 0.06));
       width: var(--books-card-badge-size);
       height: var(--books-card-badge-size);
       display: grid;
@@ -2953,7 +2961,7 @@
       }
 
       .books-card {
-        width: min(360px, 80vw);
+        width: min(432px, 88vw);
       }
 
       .books-home-shell {
