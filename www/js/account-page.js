@@ -18,6 +18,7 @@
     nameInput: document.getElementById('accountNameInput'),
     passwordField: document.getElementById('accountPasswordField'),
     passwordInput: document.getElementById('accountPasswordInput'),
+    guestLoginBtn: document.getElementById('accountGuestLoginBtn'),
     passwordBtn: document.getElementById('accountPasswordBtn'),
     passwordBtnLabel: document.getElementById('accountPasswordBtnLabel'),
     premiumCard: document.querySelector('.account-premium'),
@@ -732,7 +733,7 @@
 
   function renderUser() {
     const sourceProfile = state.user || state.localProfile || {};
-    const username = safeText(sourceProfile.username) || 'Jogador';
+    const username = safeText(sourceProfile.username);
     const avatar = safeText(state.avatarDraft || sourceProfile.avatarImage);
     const hasAvatar = Boolean(avatar);
     const loggedIn = isLoggedIn();
@@ -751,12 +752,12 @@
       els.nameInline.classList.toggle('is-editing', loggedIn && state.nameEditing);
     }
     els.avatarPreview.src = hasAvatar ? avatar : 'Avatar/avatar-man-person-svgrepo-com.svg';
-    els.avatarPreview.style.display = loggedIn && hasAvatar ? 'block' : 'none';
-    els.avatarFallback.textContent = loggedIn ? (username.charAt(0).toUpperCase() || 'P') : 'Entre com\nsua conta';
-    els.avatarFallback.style.display = loggedIn && hasAvatar ? 'none' : 'grid';
+    els.avatarPreview.style.display = (loggedIn && hasAvatar) || !loggedIn ? 'block' : 'none';
+    els.avatarFallback.textContent = loggedIn ? (username.charAt(0).toUpperCase() || 'P') : '';
+    els.avatarFallback.style.display = loggedIn && !hasAvatar ? 'grid' : 'none';
     els.avatarInput.disabled = !loggedIn;
     els.avatarInput.value = '';
-    els.avatarPreview.alt = loggedIn ? 'Avatar do usuario' : '';
+    els.avatarPreview.alt = loggedIn ? 'Avatar do usuario' : 'Avatar padrao';
     if (els.panel) {
       els.panel.classList.toggle('is-guest', !loggedIn);
     }
@@ -793,6 +794,9 @@
 
     if (els.logoutBtn) {
       els.logoutBtn.hidden = !state.user;
+    }
+    if (els.guestLoginBtn) {
+      els.guestLoginBtn.hidden = loggedIn;
     }
     syncGuestInlineUi();
     renderGuestPromptLabel();
@@ -919,7 +923,7 @@
     const shouldSave = options.save !== false;
     const revert = options.revert === true;
     if (revert) {
-      els.nameInput.value = safeText(state.lastSavedUsername || state.user?.username || state.localProfile?.username || 'Jogador');
+      els.nameInput.value = safeText(state.lastSavedUsername || state.user?.username || state.localProfile?.username);
     }
     const wasEditing = state.nameEditing;
     state.nameEditing = false;
@@ -1147,6 +1151,7 @@
       return;
     }
 
+    if (els.guestLoginBtn) els.guestLoginBtn.disabled = true;
     if (els.premiumBtn) els.premiumBtn.disabled = true;
     setStatus('Entrando na sua conta...');
 
@@ -1181,6 +1186,7 @@
     } catch (error) {
       setStatus(error?.message || 'Nao foi possivel entrar agora.', 'error');
     } finally {
+      if (els.guestLoginBtn) els.guestLoginBtn.disabled = false;
       if (els.premiumBtn) els.premiumBtn.disabled = false;
     }
   }

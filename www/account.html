@@ -439,11 +439,6 @@
       color: transparent;
     }
 
-    .panel.is-guest .account-name-inline.is-typing .account-name-prompt,
-    .panel.is-guest .account-name-inline.has-value .account-name-prompt {
-      display: none;
-    }
-
     .panel.is-guest .account-name-inline.is-typing .account-name-input,
     .panel.is-guest .account-name-inline.has-value .account-name-input {
       opacity: 1;
@@ -1143,6 +1138,14 @@
             <span>Senha</span>
             <input id="accountPasswordInput" type="password" maxlength="64" placeholder="Senha">
           </label>
+          <button class="account-button account-button--primary" id="accountGuestLoginBtn" type="submit" hidden>
+            <span class="account-button__label">Entrar</span>
+            <span class="account-button__arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </button>
         </div>
         <section class="guest-keyboard" id="guestKeyboard" aria-label="Teclado virtual da conta">
           <div class="guest-keyboard__board">
