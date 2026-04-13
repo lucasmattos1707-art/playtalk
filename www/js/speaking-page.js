@@ -696,7 +696,6 @@
 
   function renderBattleCardsVisual(card) {
     const imageUrl = safeText(card?.imageUrl);
-    const fallbackLabel = (safeText(card?.deckTitle || 'FluentCards').slice(0, 2) || 'FC').toUpperCase();
     if (els.battleCardsImage) {
       if (imageUrl) {
         els.battleCardsImage.src = imageUrl;
@@ -708,8 +707,8 @@
       els.battleCardsImage.alt = safeText(card?.english || card?.portuguese || card?.deckTitle || 'Flashcard atual') || 'Flashcard atual';
     }
     if (els.battleCardsFallback) {
-      els.battleCardsFallback.hidden = Boolean(imageUrl);
-      els.battleCardsFallback.textContent = fallbackLabel;
+      els.battleCardsFallback.hidden = true;
+      els.battleCardsFallback.textContent = '';
     }
   }
 
@@ -860,7 +859,10 @@
           if (img === els.battleCardsImage) {
             img.hidden = true;
             img.removeAttribute('src');
-            if (els.battleCardsFallback) els.battleCardsFallback.hidden = false;
+            if (els.battleCardsFallback) {
+              els.battleCardsFallback.hidden = true;
+              els.battleCardsFallback.textContent = '';
+            }
             return;
           }
           if (img.src && img.src.includes(fallback)) return;
@@ -2332,12 +2334,17 @@
       }
       updateTopPercents();
       updateProgressBars();
-      await syncDuelProgress(false);
+      const syncedSession = await syncDuelProgress(false);
+      if (syncedSession?.status === 'completed') {
+        await pollDuelSession();
+        return;
+      }
       if (battleCardsMode) {
         if (
           (state.duel.targetScore > 0 && state.duel.meScore >= state.duel.targetScore)
           || state.currentIndex >= state.activeCards.length
         ) {
+          state.duel.meFinished = true;
           finishGame();
           return;
         }

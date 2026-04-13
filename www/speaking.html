@@ -1017,8 +1017,8 @@
 
     .battle-cards-visual {
       position: relative;
-      width: 284px;
-      height: 284px;
+      width: 228px;
+      height: 228px;
       border: 0;
       padding: 0;
       border-radius: 50%;
@@ -1081,10 +1081,6 @@
     .battle-cards-visual__fallback {
       display: grid;
       place-items: center;
-      color: #f1f7ff;
-      font-family: "Soopafre", "Trebuchet MS", sans-serif;
-      font-size: 28px;
-      letter-spacing: 0.04em;
       background:
         radial-gradient(circle at 30% 28%, rgba(118, 231, 255, 0.28), transparent 32%),
         linear-gradient(145deg, rgba(15, 32, 84, 0.95), rgba(8, 18, 42, 0.98));
@@ -1097,6 +1093,7 @@
       align-items: center;
       justify-content: center;
       min-height: 72px;
+      margin-top: -2px;
       pointer-events: none;
       z-index: 2;
     }
@@ -1143,7 +1140,8 @@
 
     .speaking-game.is-battle-cards .card-word,
     .speaking-game.is-battle-cards .card-subword,
-    .speaking-game.is-battle-cards .mic-trigger-wrap {
+    .speaking-game.is-battle-cards .mic-trigger-wrap,
+    .speaking-game.is-battle-cards .progress-footer {
       display: none !important;
     }
 
@@ -1670,7 +1668,7 @@
       <section class="battle-cards-stage" id="battleCardsStage" hidden>
         <button class="battle-cards-visual" id="battleCardsVisualBtn" type="button" aria-label="Tocar na imagem para falar">
           <img id="battleCardsImage" src="" alt="Flashcard atual" hidden>
-          <div class="battle-cards-visual__fallback" id="battleCardsFallback">FC</div>
+          <div class="battle-cards-visual__fallback" id="battleCardsFallback" hidden></div>
         </button>
         <div class="battle-cards-translation" id="battleCardsTranslationSlot" aria-live="polite">
           <h2 class="battle-cards-phase-word is-english" id="battleCardsPhaseWord">FluentCards</h2>

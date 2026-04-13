@@ -87,6 +87,7 @@
   ];
   const HOME_AUDIO_DURATION_CACHE = new Map();
   const BOOK_READING_TIME_CACHE = new Map();
+  const BOOK_ENGLISH_CHAR_CACHE = new Map();
   const NUMBER_ANIMATION_HANDLES = new WeakMap();
   const HOME_UPCOMING_SESSION_TARGET = 1;
 
@@ -3573,7 +3574,7 @@
     }
     els.preBookModal.classList.add('is-visible');
     state.preBookInsightsData = buildPreBookInsights({
-      readingTimeSeconds: Math.max(0, Number(book.readingTimeSeconds) || 0),
+      englishChars: Math.max(0, Number(book.englishChars) || 0),
       bestListeningPercent: 0,
       bestReadingPercent: 0,
       totalReads: 0
@@ -3658,15 +3659,15 @@
   }
 
   function buildPreBookInsights(stats) {
-    const readingTimeSeconds = Math.max(0, Math.round(Number(stats?.readingTimeSeconds) || 0));
+    const englishChars = Math.max(0, Math.round(Number(stats?.englishChars) || 0));
     const listening = Math.max(0, Math.min(100, Number(stats?.bestListeningPercent) || 0));
     const reading = Math.max(0, Math.min(100, Number(stats?.bestReadingPercent) || 0));
     const totalReads = Math.max(0, Math.round(Number(stats?.totalReads) || 0));
     return [
       {
-        kind: 'reading-time',
-        label: 'Tempo de leitura',
-        value: formatDurationCompact(readingTimeSeconds)
+        kind: 'stats',
+        label: 'Caracteres em ingles',
+        value: `${englishChars}`
       },
       {
         kind: 'stats',
@@ -3692,6 +3693,12 @@
     return `${bookId}::${audioSources.join('|')}`;
   }
 
+  function getBookEnglishCharCacheKey(book) {
+    const bookId = safeText(book?.bookId);
+    const storyId = safeText(book?.selectedStoryId || (Array.isArray(book?.storyIds) ? book.storyIds[0] : ''));
+    return `${bookId}::${storyId}`;
+  }
+
   async function ensureBookReadingTimeSeconds(book) {
     const cacheKey = getBookReadingTimeCacheKey(book);
     if (!cacheKey || cacheKey === '::') return 0;
@@ -3711,6 +3718,24 @@
       book.readingTimeSeconds = totalSeconds;
     }
     return totalSeconds;
+  }
+
+  async function ensureBookEnglishChars(book) {
+    const cacheKey = getBookEnglishCharCacheKey(book);
+    if (!cacheKey || cacheKey === '::') return 0;
+    if (BOOK_ENGLISH_CHAR_CACHE.has(cacheKey)) {
+      return BOOK_ENGLISH_CHAR_CACHE.get(cacheKey);
+    }
+    const promise = (async () => {
+      const cards = await fetchBookCards(book).catch(() => []);
+      return cards.reduce((sum, card) => sum + safeText(card?.english).length, 0);
+    })();
+    BOOK_ENGLISH_CHAR_CACHE.set(cacheKey, promise);
+    const totalChars = await promise;
+    if (book && Number(book.englishChars) !== totalChars) {
+      book.englishChars = totalChars;
+    }
+    return totalChars;
   }
 
   function stopPreBookInsightsRotation() {
@@ -3774,7 +3799,7 @@
     try {
       const bookId = safeText(state.modeBookId);
       const selectedBook = findModeSelectedBook();
-      const readingTimeSeconds = await ensureBookReadingTimeSeconds(selectedBook);
+      const englishChars = await ensureBookEnglishChars(selectedBook);
       if (fetchToken !== state.preBookInsightsFetchToken) return;
       const url = bookId ? `/api/books/prebook-insights?bookId=${encodeURIComponent(bookId)}` : '/api/books/prebook-insights';
       const response = await fetch(buildApiUrl(url), {
@@ -3784,7 +3809,7 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) {
-        state.preBookInsightsData = buildPreBookInsights({ readingTimeSeconds });
+        state.preBookInsightsData = buildPreBookInsights({ englishChars });
         state.preBookInsightsIndex = 0;
         void renderActivePreBookInsight(false);
         return;
@@ -3792,15 +3817,15 @@
       if (fetchToken !== state.preBookInsightsFetchToken) return;
       state.preBookInsightsData = buildPreBookInsights({
         ...(payload.stats || {}),
-        readingTimeSeconds
+        englishChars
       });
       state.preBookInsightsIndex = 0;
       void renderActivePreBookInsight(false);
     } catch (_error) {
       const selectedBook = findModeSelectedBook();
-      const readingTimeSeconds = Math.max(0, Number(selectedBook?.readingTimeSeconds) || 0);
+      const englishChars = Math.max(0, Number(selectedBook?.englishChars) || 0);
       if (fetchToken !== state.preBookInsightsFetchToken) return;
-      state.preBookInsightsData = buildPreBookInsights({ readingTimeSeconds });
+      state.preBookInsightsData = buildPreBookInsights({ englishChars });
       state.preBookInsightsIndex = 0;
       void renderActivePreBookInsight(false);
     }

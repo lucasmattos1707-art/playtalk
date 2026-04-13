@@ -4758,23 +4758,26 @@ async function buildRandomBattleCards(selectedDeckId) {
   if (!decks.length) return [];
 
   const normalizedDeckId = String(selectedDeckId || '').trim();
-  let selectedDeck = null;
-  if (normalizedDeckId) {
-    selectedDeck = decks.find((entry) => String(entry.id || '').trim() === normalizedDeckId) || null;
-  }
-  if (!selectedDeck) {
-    const eligibleDecks = decks.filter((entry) => Array.isArray(entry.cards) && entry.cards.length);
-    if (!eligibleDecks.length) return [];
-    selectedDeck = eligibleDecks[Math.floor(Math.random() * eligibleDecks.length)] || null;
-  }
-  if (!selectedDeck || !Array.isArray(selectedDeck.cards) || !selectedDeck.cards.length) return [];
+  const eligibleDecks = normalizedDeckId
+    ? decks.filter((entry) => String(entry.id || '').trim() === normalizedDeckId && Array.isArray(entry.cards) && entry.cards.length)
+    : decks.filter((entry) => Array.isArray(entry.cards) && entry.cards.length);
+  if (!eligibleDecks.length) return [];
 
-  return buildRepeatedBattleCardsSelection(selectedDeck.cards, SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS).map((card, index) => ({
+  const allCards = eligibleDecks.flatMap((deck) => (
+    Array.isArray(deck.cards)
+      ? deck.cards.map((card) => ({
+          ...card,
+          battleDeckId: String(deck.id || '').trim(),
+          battleDeckTitle: String(deck.title || '').trim(),
+          battleDeckSource: String(deck.source || '').trim(),
+          battleDeckFileName: String(deck.fileName || '').trim()
+        }))
+      : []
+  ));
+  if (!allCards.length) return [];
+
+  return buildRepeatedBattleCardsSelection(allCards, SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS).map((card, index) => ({
     ...card,
-    battleDeckId: String(selectedDeck.id || '').trim(),
-    battleDeckTitle: String(selectedDeck.title || '').trim(),
-    battleDeckSource: String(selectedDeck.source || '').trim(),
-    battleDeckFileName: String(selectedDeck.fileName || '').trim(),
     battleCardIndex: index
   }));
 }
