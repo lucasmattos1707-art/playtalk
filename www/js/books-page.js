@@ -397,6 +397,20 @@
     return `${minutes}m`;
   }
 
+  function formatEstimatedReadingTimeFromChars(totalChars) {
+    const chars = Math.max(0, Number(totalChars) || 0);
+    const totalSeconds = Math.max(0, Math.round(chars / 2.75));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes <= 0) {
+      return `${seconds} segundo${seconds === 1 ? '' : 's'}`;
+    }
+    if (seconds <= 0) {
+      return `${minutes} minuto${minutes === 1 ? '' : 's'}`;
+    }
+    return `${minutes} minuto${minutes === 1 ? '' : 's'} e ${seconds} segundo${seconds === 1 ? '' : 's'}`;
+  }
+
   function normalizeAudioSources(values) {
     if (!Array.isArray(values)) return [];
     const seen = new Set();
@@ -3666,8 +3680,8 @@
     return [
       {
         kind: 'stats',
-        label: 'Caracteres em ingles',
-        value: `${englishChars}`
+        label: 'Tempo de leitura',
+        value: formatEstimatedReadingTimeFromChars(englishChars)
       },
       {
         kind: 'stats',
