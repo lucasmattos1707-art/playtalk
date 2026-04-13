@@ -431,6 +431,37 @@ const normalizeFlashcardPronunciationSamples = (value) => {
     .slice(-FLASHCARD_PRONUNCIATION_SAMPLE_LIMIT);
 };
 
+const getFlashcardAccurateAggregateFromRow = (row) => {
+  const fallbackSamples = normalizeFlashcardPronunciationSamples(row?.pronunciation_samples);
+  const fallbackCount = fallbackSamples.length;
+  const fallbackSum = fallbackSamples.reduce((total, sample) => total + sample, 0);
+  const count = Math.max(
+    0,
+    Number.parseInt(row?.pronunciation_samples_count, 10)
+      || Number.parseInt(row?.pronunciation_count, 10)
+      || fallbackCount
+  );
+  const sum = Math.max(
+    0,
+    Number(row?.pronunciation_sum) || (count > 0 ? fallbackSum : 0)
+  );
+  const latest = Math.max(
+    0,
+    Math.min(
+      100,
+      Number.parseInt(row?.latest_pronunciation_percent, 10)
+        || (fallbackCount ? fallbackSamples[fallbackCount - 1] : 0)
+    )
+  );
+  return {
+    pronunciationSamples: fallbackSamples,
+    pronunciationSum: sum,
+    pronunciationSamplesCount: count,
+    pronunciationPercent: getFlashcardPronunciationPercent(fallbackSamples),
+    latestPronunciationPercent: latest
+  };
+};
+
 const normalizeBooksPronunciationSamples = (value) => {
   const source = Array.isArray(value)
     ? value
@@ -804,8 +835,8 @@ const ensureFlashcardUserStateTables = async () => {
         CREATE TABLE IF NOT EXISTS public.user_flashcard_stats (
           user_id integer PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
           play_time_ms bigint NOT NULL DEFAULT 0,
-          speakings integer NOT NULL DEFAULT 0,
-          listenings integer NOT NULL DEFAULT 0,
+          speakings bigint NOT NULL DEFAULT 0,
+          listenings bigint NOT NULL DEFAULT 0,
           training_time_ms bigint NOT NULL DEFAULT 0,
           pronunciation_samples jsonb NOT NULL DEFAULT '[]'::jsonb,
           second_star_error_heard boolean NOT NULL DEFAULT false,
@@ -823,6 +854,49 @@ const ensureFlashcardUserStateTables = async () => {
       await pool.query(`
         ALTER TABLE public.user_flashcard_stats
         ADD COLUMN IF NOT EXISTS pronunciation_samples jsonb NOT NULL DEFAULT '[]'::jsonb
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
+        ALTER COLUMN speakings TYPE bigint
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
+        ALTER COLUMN listenings TYPE bigint
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.flashcards_accurate (
+          user_id integer PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+          pronunciation_tag text NOT NULL DEFAULT 'flashcards-accurate',
+          pronunciation_samples jsonb NOT NULL DEFAULT '[]'::jsonb,
+          pronunciation_sum bigint NOT NULL DEFAULT 0,
+          pronunciation_samples_count bigint NOT NULL DEFAULT 0,
+          latest_pronunciation_percent integer NOT NULL DEFAULT 0,
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        ALTER TABLE public.flashcards_accurate
+        ADD COLUMN IF NOT EXISTS pronunciation_tag text NOT NULL DEFAULT 'flashcards-accurate'
+      `);
+      await pool.query(`
+        ALTER TABLE public.flashcards_accurate
+        ADD COLUMN IF NOT EXISTS pronunciation_samples jsonb NOT NULL DEFAULT '[]'::jsonb
+      `);
+      await pool.query(`
+        ALTER TABLE public.flashcards_accurate
+        ADD COLUMN IF NOT EXISTS pronunciation_sum bigint NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.flashcards_accurate
+        ADD COLUMN IF NOT EXISTS pronunciation_samples_count bigint NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.flashcards_accurate
+        ADD COLUMN IF NOT EXISTS latest_pronunciation_percent integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS flashcards_accurate_updated_idx
+        ON public.flashcards_accurate (updated_at DESC)
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_hidden (
@@ -2420,7 +2494,7 @@ const readFlashcardStateForUser = async (userId) => {
     throw error;
   }
 
-  const [progressResult, statsResult, hiddenResult] = await Promise.all([
+  const [progressResult, statsResult, accurateResult, hiddenResult] = await Promise.all([
     pool.query(
       `SELECT
          card_id,
@@ -2449,6 +2523,14 @@ const readFlashcardStateForUser = async (userId) => {
     )
     ,
     pool.query(
+      `SELECT pronunciation_tag, pronunciation_samples, pronunciation_sum,
+              pronunciation_samples_count, latest_pronunciation_percent, updated_at
+       FROM public.flashcards_accurate
+       WHERE user_id = $1
+       LIMIT 1`,
+      [normalizedUserId]
+    ),
+    pool.query(
       `SELECT card_id
        FROM public.user_flashcard_hidden
        WHERE user_id = $1
@@ -2458,22 +2540,23 @@ const readFlashcardStateForUser = async (userId) => {
   ]);
 
   await syncFlashcardRankingForUser(normalizedUserId, progressResult.rows.length);
+  const accurateAggregate = getFlashcardAccurateAggregateFromRow(accurateResult.rows[0]);
+
+  const flashcardStatsRow = statsResult.rows[0] || {};
 
   return {
     progress: progressResult.rows.map(mapStoredFlashcardProgressRow).filter((item) => item.cardId),
-    stats: statsResult.rows[0]
-      ? normalizeFlashcardStats({
-        playTimeMs: statsResult.rows[0].play_time_ms,
-        speakings: statsResult.rows[0].speakings,
-        listenings: statsResult.rows[0].listenings,
-        trainingTimeMs: statsResult.rows[0].training_time_ms,
-        pronunciationSamples: statsResult.rows[0].pronunciation_samples,
-        secondStarErrorHeard: statsResult.rows[0].second_star_error_heard
-      }, progressResult.rows.length)
-      : normalizeFlashcardStats({}, progressResult.rows.length),
+    stats: normalizeFlashcardStats({
+      playTimeMs: flashcardStatsRow.play_time_ms,
+      speakings: flashcardStatsRow.speakings,
+      listenings: flashcardStatsRow.listenings,
+      trainingTimeMs: flashcardStatsRow.training_time_ms,
+      pronunciationSamples: accurateAggregate.pronunciationSamples,
+      secondStarErrorHeard: flashcardStatsRow.second_star_error_heard
+    }, progressResult.rows.length),
     meta: {
       hasProgress: progressResult.rows.length > 0,
-      hasStats: Boolean(statsResult.rows[0]),
+      hasStats: Boolean(statsResult.rows[0] || accurateResult.rows[0]),
       hiddenCardIds: hiddenResult.rows
         .map((row) => typeof row?.card_id === 'string' ? row.card_id.trim() : '')
         .filter(Boolean)
@@ -2521,7 +2604,7 @@ const saveFlashcardStateForUser = async (userId, payload) => {
     await client.query('BEGIN');
 
     const existingStatsResult = await client.query(
-      `SELECT training_time_ms, pronunciation_samples
+      `SELECT training_time_ms
        FROM public.user_flashcard_stats
        WHERE user_id = $1
        LIMIT 1`,
@@ -2535,6 +2618,10 @@ const saveFlashcardStateForUser = async (userId, payload) => {
     );
     const existingProgressCount = Math.max(0, Number(existingProgressCountResult.rows[0]?.total) || 0);
     const shouldPersistPerformanceStats = progress.length > existingProgressCount;
+    const accurateSamples = normalizeFlashcardPronunciationSamples(stats.pronunciationSamples);
+    const accurateSum = accurateSamples.reduce((total, sample) => total + sample, 0);
+    const accurateCount = accurateSamples.length;
+    const accurateLatest = accurateCount ? accurateSamples[accurateCount - 1] : 0;
 
     if (progress.length) {
       const cardIds = progress.map((item) => item.cardId);
@@ -2677,13 +2764,37 @@ const saveFlashcardStateForUser = async (userId, payload) => {
         shouldPersistPerformanceStats
           ? stats.trainingTimeMs
           : Math.max(0, Number(existingStatsResult.rows[0]?.training_time_ms) || 0),
-        JSON.stringify(
-          shouldPersistPerformanceStats
-            ? stats.pronunciationSamples
-            : normalizeFlashcardPronunciationSamples(existingStatsResult.rows[0]?.pronunciation_samples)
-        ),
+        JSON.stringify(accurateSamples),
         stats.secondStarErrorHeard,
         shouldPersistPerformanceStats
+      ]
+    );
+
+    await client.query(
+      `INSERT INTO public.flashcards_accurate (
+         user_id,
+         pronunciation_tag,
+         pronunciation_samples,
+         pronunciation_sum,
+         pronunciation_samples_count,
+         latest_pronunciation_percent,
+         updated_at
+       )
+       VALUES ($1, 'flashcards-accurate', $2::jsonb, $3, $4, $5, now())
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         pronunciation_tag = EXCLUDED.pronunciation_tag,
+         pronunciation_samples = EXCLUDED.pronunciation_samples,
+         pronunciation_sum = EXCLUDED.pronunciation_sum,
+         pronunciation_samples_count = EXCLUDED.pronunciation_samples_count,
+         latest_pronunciation_percent = EXCLUDED.latest_pronunciation_percent,
+         updated_at = now()`,
+      [
+        normalizedUserId,
+        JSON.stringify(accurateSamples),
+        accurateSum,
+        accurateCount,
+        accurateLatest
       ]
     );
 
@@ -9735,13 +9846,11 @@ app.get('/api/users/flashcards', async (req, res) => {
            LEAST(
              100,
              ROUND(
-               COALESCE(
-                 (
-                   SELECT AVG(sample.value::numeric)
-                   FROM jsonb_array_elements_text(COALESCE(stats.pronunciation_samples, '[]'::jsonb)) AS sample(value)
-                 ),
-                 0
-               )
+               CASE
+                 WHEN COALESCE(accurate.pronunciation_samples_count, 0) > 0
+                   THEN COALESCE(accurate.pronunciation_sum, 0)::numeric / accurate.pronunciation_samples_count::numeric
+                 ELSE 0
+               END
              )::int
            )
          )::int AS pronunciation_percent,
@@ -9776,6 +9885,8 @@ app.get('/api/users/flashcards', async (req, res) => {
          ON ranking.user_id = u.id
        LEFT JOIN public.user_flashcard_stats stats
          ON stats.user_id = u.id
+       LEFT JOIN public.flashcards_accurate accurate
+         ON accurate.user_id = u.id
        LEFT JOIN public.user_presence presence
          ON presence.user_id = u.id
        ${visibilityWhereClause}`
@@ -12196,15 +12307,15 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
     const cardList = Array.isArray(session.cards) ? session.cards : [];
 
     const statsResult = await pool.query(
-      `SELECT user_id, pronunciation_samples
-       FROM public.user_flashcard_stats
+      `SELECT user_id, pronunciation_samples, pronunciation_sum, pronunciation_samples_count
+       FROM public.flashcards_accurate
        WHERE user_id = ANY($1::int[])`,
       [[userId, rivalUserId]]
     );
     const statsByUser = new Map(
       statsResult.rows.map((row) => {
-        const samples = normalizeFlashcardPronunciationSamples(row?.pronunciation_samples);
-        return [Number(row?.user_id) || 0, getFlashcardPronunciationPercent(samples)];
+        const aggregate = getFlashcardAccurateAggregateFromRow(row);
+        return [Number(row?.user_id) || 0, aggregate.pronunciationPercent];
       })
     );
 
@@ -12851,6 +12962,7 @@ app.delete('/api/admin/users/:userId', async (req, res) => {
       await client.query('DELETE FROM public.user_flashcard_reports WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.user_flashcard_hidden WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.user_flashcard_type_portuguese WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.flashcards_accurate WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.user_flashcard_stats WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.user_flashcard_progress WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.flashcard_rankings WHERE user_id = $1', [userId]);
