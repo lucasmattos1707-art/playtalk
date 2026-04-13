@@ -4554,6 +4554,32 @@
       filter: brightness(1.2) drop-shadow(0 0 16px rgba(255, 255, 255, 0.75));
     }
 
+    .game-stage-tutorial {
+      position: fixed;
+      inset: 0;
+      z-index: 2600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      background: rgba(3, 9, 23, 0.96);
+      touch-action: manipulation;
+    }
+
+    .game-stage-tutorial.is-visible {
+      display: flex;
+    }
+
+    .game-stage-tutorial__image {
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
     .game[data-phase-key="second-star"] .flashcards-typing__key.is-correct-hit {
       filter: brightness(1.2) drop-shadow(0 0 16px rgba(255, 255, 255, 0.75));
       box-shadow: none;
@@ -6222,6 +6248,9 @@
     </section>
 
     <section class="game" id="game" aria-modal="true" role="dialog">
+      <div class="game-stage-tutorial" id="gameStageTutorial" aria-hidden="true">
+        <img class="game-stage-tutorial__image" id="gameStageTutorialImage" alt="Tutorial da etapa">
+      </div>
       <div class="panel game-shell">
         <div class="game-head">
           <div id="gameHeadCopy">
@@ -6509,6 +6538,7 @@
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
       const TUTORIAL_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-tutorial-v1';
       const GAME_SESSION_STORAGE_KEY = 'playtalk-flashcards-game-session-v1';
+      const SECOND_STAGE_TUTORIAL_DONE_STORAGE_KEY = 'playtalk-second-stage-tutorial-done-v1';
       const TIME_OFFSET_STORAGE_KEY = 'playtalk-flashcards-time-offset-v1';
       const TRAINING_TIME_PER_CARD_LIMIT_MS = 10000;
       const PRONUNCIATION_SAMPLE_LIMIT = 200;
@@ -6557,6 +6587,10 @@
       const TYPING_SKIP_LETTER_DELAY_MS = 350;
       const TYPING_SKIP_PROMPT_REPEATS = 2;
       const TYPING_SKIP_PROMPT_RATE = 0.8;
+      const STAGE_TUTORIAL_ONE_IMAGE_PATH = 'images/tutorial1.png';
+      const STAGE_TUTORIAL_TWO_IMAGE_PATH = 'images/tutorial2.png';
+      const STAGE_TUTORIAL_ONE_REMINDER_MS = 12000;
+      const STAGE_TUTORIAL_TWO_REMINDER_MS = 15000;
       const STAGE_TWO_HINT_DELAY_MS = 2000;
       const STAGE_TWO_HINT_VISIBLE_MS = 3000;
       const ONBOARDING_GATE_TRANSITION_MS = 2000;
@@ -6802,6 +6836,7 @@
           typingSkipActive: false,
           typingSkipRunId: 0,
           typingSkipEntryId: '',
+          stageTutorialReminderTimer: 0,
           stageHintTimer: 0,
           stageHintIndex: 0,
           firstStageIdleTimer: 0,
@@ -6856,6 +6891,13 @@
           gameStatusRankTimer: 0,
           gameStatusRankToken: 0,
           gameStatusPreviousRank: 0,
+          gameStageTutorialVisible: false,
+          gameStageTutorialKind: '',
+          gameStageTutorialDismissHandler: null,
+          gameStageTutorialMissingAssets: {
+            first: false,
+            second: false
+          },
           premiumGateOpen: false,
           premiumCode: '',
           premiumStatus: '',
@@ -6962,6 +7004,8 @@
         gameLanguageBtn: document.getElementById('gameLanguageBtn'),
         gameTouchBtn: document.getElementById('gameTouchBtn'),
         gameTypingKeyboard: document.getElementById('gameTypingKeyboard'),
+        gameStageTutorial: document.getElementById('gameStageTutorial'),
+        gameStageTutorialImage: document.getElementById('gameStageTutorialImage'),
         gameHeadCopy: document.getElementById('gameHeadCopy'),
         gameStarsWrap: document.getElementById('gameStarsWrap'),
         gameTranslationSlot: document.getElementById('gameTranslationSlot'),
@@ -7197,7 +7241,8 @@
           USER_HIDDEN_STORAGE_KEY,
           USER_STATS_STORAGE_KEY,
           TUTORIAL_PROGRESS_STORAGE_KEY,
-          GAME_SESSION_STORAGE_KEY
+          GAME_SESSION_STORAGE_KEY,
+          SECOND_STAGE_TUTORIAL_DONE_STORAGE_KEY
         ];
         const directKeys = [
           CARDS_CACHE_STORAGE_KEY,
@@ -11873,6 +11918,118 @@
         state.game.typingSkipRunId = (Number(state.game.typingSkipRunId) || 0) + 1;
       }
 
+      function readSecondStageTutorialCompleted(userId = state.user?.id) {
+        return Boolean(readScopedStorage(SECOND_STAGE_TUTORIAL_DONE_STORAGE_KEY, false, userId));
+      }
+
+      function persistSecondStageTutorialCompleted(completed, userId = state.user?.id) {
+        try {
+          localStorage.setItem(
+            storageKeyForUser(SECOND_STAGE_TUTORIAL_DONE_STORAGE_KEY, userId),
+            JSON.stringify(Boolean(completed))
+          );
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      function clearStageTutorialReminder() {
+        if (state.game.stageTutorialReminderTimer) {
+          window.clearTimeout(state.game.stageTutorialReminderTimer);
+          state.game.stageTutorialReminderTimer = 0;
+        }
+      }
+
+      function getStageTutorialAssetPath(kind) {
+        return kind === 'second' ? STAGE_TUTORIAL_TWO_IMAGE_PATH : STAGE_TUTORIAL_ONE_IMAGE_PATH;
+      }
+
+      function isFirstStageTutorialEligible(entry) {
+        return Boolean(entry && Number(entry.stage) === 1 && Number(state.stats.speakings || 0) === 0);
+      }
+
+      function isSecondStageTutorialEligible(entry) {
+        return Boolean(
+          entry
+          && Number(entry.stage) === 2
+          && Number(entry.stars || 0) === 1
+          && accessibleFlashcardsCount() === 0
+          && !readSecondStageTutorialCompleted()
+        );
+      }
+
+      function resolveStageTutorialKind(entry) {
+        if (isFirstStageTutorialEligible(entry)) return 'first';
+        if (isSecondStageTutorialEligible(entry)) return 'second';
+        return '';
+      }
+
+      function hideGameStageTutorial(options = {}) {
+        if (!els.gameStageTutorial) return;
+        const shouldResume = options.resume !== false;
+        const dismissHandler = typeof state.ui.gameStageTutorialDismissHandler === 'function'
+          ? state.ui.gameStageTutorialDismissHandler
+          : null;
+        state.ui.gameStageTutorialVisible = false;
+        state.ui.gameStageTutorialKind = '';
+        state.ui.gameStageTutorialDismissHandler = null;
+        els.gameStageTutorial.classList.remove('is-visible');
+        els.gameStageTutorial.setAttribute('aria-hidden', 'true');
+        if (els.gameStageTutorialImage) {
+          els.gameStageTutorialImage.removeAttribute('src');
+        }
+        if (shouldResume && dismissHandler) {
+          dismissHandler();
+        }
+      }
+
+      function showGameStageTutorial(kind, entry, onDismiss) {
+        if (!els.gameStageTutorial || !els.gameStageTutorialImage) return false;
+        if (!state.game.active || state.game.paused || state.game.currentId !== entry?.id) return false;
+        if (!kind || state.ui.gameStageTutorialMissingAssets[kind]) return false;
+        state.ui.gameStageTutorialVisible = true;
+        state.ui.gameStageTutorialKind = kind;
+        state.ui.gameStageTutorialDismissHandler = typeof onDismiss === 'function' ? onDismiss : null;
+        els.gameStageTutorialImage.src = getStageTutorialAssetPath(kind);
+        els.gameStageTutorial.classList.add('is-visible');
+        els.gameStageTutorial.setAttribute('aria-hidden', 'false');
+        return true;
+      }
+
+      function maybeShowStageTutorialBeforeCard(entry, options = {}) {
+        const skipKind = safeText(options.skipKind);
+        const kind = resolveStageTutorialKind(entry);
+        if (!kind || kind === skipKind) return false;
+        if (showGameStageTutorial(kind, entry, () => {
+          if (!state.game.active || state.game.currentId !== entry?.id) return;
+          renderCurrentCard({ skipStageTutorialKind: kind });
+        })) {
+          return true;
+        }
+        return false;
+      }
+
+      function scheduleStageTutorialReminder(entry) {
+        clearStageTutorialReminder();
+        const kind = resolveStageTutorialKind(entry);
+        if (!kind || state.ui.gameStageTutorialMissingAssets[kind]) return;
+        const delayMs = kind === 'second' ? STAGE_TUTORIAL_TWO_REMINDER_MS : STAGE_TUTORIAL_ONE_REMINDER_MS;
+        state.game.stageTutorialReminderTimer = window.setTimeout(() => {
+          state.game.stageTutorialReminderTimer = 0;
+          if (!state.game.active || state.game.paused || state.game.currentId !== entry?.id) return;
+          if (state.game.listening || state.ui.gameStageTutorialVisible) {
+            scheduleStageTutorialReminder(entry);
+            return;
+          }
+          const liveKind = resolveStageTutorialKind(entry);
+          if (!liveKind || liveKind !== kind) return;
+          showGameStageTutorial(liveKind, entry, () => {
+            if (!state.game.active || state.game.currentId !== entry?.id) return;
+            renderCurrentCard({ skipStageTutorialKind: liveKind });
+          });
+        }, delayMs);
+      }
+
       function startTypingSkipAutomation(entry) {
         clearTypingSkipAutomation();
         state.game.typingSkipActive = true;
@@ -13560,10 +13717,12 @@
         target.appendChild(els.gamePhaseWord);
       }
 
-      function renderCurrentCard() {
+      function renderCurrentCard(options = {}) {
         cleanupGameRecognition();
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) {
+          clearStageTutorialReminder();
+          hideGameStageTutorial({ resume: false });
           els.game.removeAttribute('data-phase-key');
           clearGameStatusRankTimer();
           clearGameLanguageSwapTimer();
@@ -13611,6 +13770,9 @@
 
         const card = cardById(entry.id);
         const stageConfig = resolveGameStageConfig(entry);
+        if (maybeShowStageTutorialBeforeCard(entry, options)) {
+          return;
+        }
         const isSimpleStarPhase = stageConfig.key === 'first-star'
           || stageConfig.key === 'third-star'
           || stageConfig.key === 'fifth-star';
@@ -13735,6 +13897,7 @@
         els.gameStarCopy.textContent = '';
         updateGuestFirstStarResultsBanner(entry, false);
         updateGameChips();
+        scheduleStageTutorialReminder(entry);
         scheduleStageTwoHintLoop(entry);
         scheduleFirstStageIdleTimer(entry);
 
@@ -14107,6 +14270,8 @@
         clearGameLanguageSwapTimer();
         clearTypingPromptLoop();
         clearTypingSkipAutomation();
+        clearStageTutorialReminder();
+        hideGameStageTutorial({ resume: false });
         clearStageTwoHintTimer();
         clearFirstStageIdleTimer();
         clearStageHintLoop({ clearStatus: true });
@@ -14252,6 +14417,8 @@
         cleanupGameRecognition();
         commitCurrentCardTrainingTime();
         clearPendingRewardSeal();
+        clearStageTutorialReminder();
+        hideGameStageTutorial({ resume: false });
         clearStageTwoHintTimer();
         clearFirstStageIdleTimer();
         if (!state.game.queue.length) {
@@ -14286,6 +14453,8 @@
         clearGameLanguageSwapTimer();
         clearTypingPromptLoop();
         clearTypingSkipAutomation();
+        clearStageTutorialReminder();
+        hideGameStageTutorial({ resume: false });
         clearStageTwoHintTimer();
         clearFirstStageIdleTimer();
         clearStageHintLoop({ clearStatus: true });
@@ -14363,6 +14532,8 @@
         clearGameLanguageSwapTimer();
         clearTypingPromptLoop();
         clearTypingSkipAutomation();
+        clearStageTutorialReminder();
+        hideGameStageTutorial({ resume: false });
         clearStageTwoHintTimer();
         clearStageHintLoop({ clearStatus: true });
         state.game.fifthStarHintDismissed = false;
@@ -14409,6 +14580,8 @@
         clearGameLanguageSwapTimer();
         clearTypingPromptLoop();
         clearTypingSkipAutomation();
+        clearStageTutorialReminder();
+        hideGameStageTutorial({ resume: false });
         clearStageTwoHintTimer();
         clearStageHintLoop({ clearStatus: true });
         state.game.fifthStarHintDismissed = false;
@@ -14450,12 +14623,19 @@
         const { score, isHit } = evaluateAcceptedAnswers(expectedAnswers, transcript);
         const card = cardById(entry.id);
         if (inputMode === 'speech') {
+          clearStageTutorialReminder();
+          hideGameStageTutorial({ resume: false });
           addSpeakingCharsFromTranscript(transcript);
           pushPronunciationSample(score);
         }
         updateGameChips();
 
         if (isHit) {
+          if (evaluatedStage === 2) {
+            persistSecondStageTutorialCompleted(true);
+            clearStageTutorialReminder();
+            hideGameStageTutorial({ resume: false });
+          }
           if (evaluatedStage === 5) {
         clearStageHintLoop({ clearStatus: true });
           }
@@ -14586,6 +14766,7 @@
 
       async function startRecognition() {
         if (!state.game.active || state.game.transitioning || state.game.listening || state.game.paused) return;
+        hideGameStageTutorial({ resume: false });
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return;
         if (isTypingStage(entry)) return;
@@ -14994,6 +15175,20 @@
         gameShell?.addEventListener('pointerdown', beginGameSwipeTracking);
         gameShell?.addEventListener('pointerup', finishGameSwipeTracking);
         gameShell?.addEventListener('pointercancel', resetGameSwipeTracking);
+        els.gameStageTutorial?.addEventListener('pointerdown', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          hideGameStageTutorial();
+        });
+        els.gameStageTutorial?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        });
+        els.gameStageTutorialImage?.addEventListener('error', () => {
+          const missingKind = state.ui.gameStageTutorialKind === 'second' ? 'second' : 'first';
+          state.ui.gameStageTutorialMissingAssets[missingKind] = true;
+          hideGameStageTutorial();
+        });
         gameShell?.addEventListener('click', (event) => {
           if (!state.game.active) return;
           if (Date.now() - (Number(state.ui.gameSwipeTriggeredAt) || 0) < 400) return;
