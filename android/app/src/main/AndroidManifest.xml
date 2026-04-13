@@ -9,6 +9,7 @@
 
     <!-- O speaking usa captura curta e iniciada pelo proprio jogador. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- O microfone melhora o jogo, mas nao deve limitar a instalacao em aparelhos sem esse hardware. -->
     <uses-feature
         android:name="android.hardware.microphone"

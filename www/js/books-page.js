@@ -23,7 +23,8 @@
   const READER_FINISH_LINE_ENTER_MS = 260;
   const READER_FREE_READ_MIN_VIEW_MS = 3000;
   const READER_BLOCKED_FLASH_MS = 750;
-  const BOOKS_STATS_SYNC_MS = 5 * 60 * 1000;
+  const BOOKS_STATS_SYNC_MS = 30 * 1000;
+  const BOOKS_LISTENING_FLUSH_BATCH_CHARS = 250;
   const BOOKS_PRONUNCIATION_SAMPLE_LIMIT = 300;
   const SCORE_ANIMATION_MS = 1000;
   const PREBOOK_OVERLAY_MS = 1000;
@@ -89,7 +90,8 @@
   const BOOK_READING_TIME_CACHE = new Map();
   const BOOK_ENGLISH_CHAR_CACHE = new Map();
   const NUMBER_ANIMATION_HANDLES = new WeakMap();
-  const HOME_UPCOMING_SESSION_TARGET = 1;
+  const HOME_UPCOMING_SESSION_TARGET = 2;
+  const HOME_AUDIO_PREROLL_CARD_COUNT = 2;
 
   const els = {
     page: document.querySelector('.books-page'),
@@ -289,6 +291,7 @@
     homeStartBusy: false,
     homeAuthBusy: false,
     homePlaybackToken: 0,
+    homePlaybackLoopRunningToken: 0,
     homeAudioElement: null,
     homeCurrentBookId: '',
     homeCurrentBookCover: '',
@@ -329,6 +332,7 @@
     homeMusicIndex: 0,
     homePreBookPausedBefore: false,
     homePreBookVoiceVolumeBefore: 1,
+    homeNativeSleepLockEnabled: false,
     allBooksFeed: [],
     allBooksFeedVersion: '',
     allBooksWindowStart: 0,
@@ -346,6 +350,47 @@
 
   function safeText(value) {
     return typeof value === 'string' ? value.trim() : '';
+  }
+
+  function getNativeBooksSleepPlugin() {
+    return window.Capacitor?.Plugins?.PlaytalkBooksSleep || null;
+  }
+
+  function isNativeBooksSleepSupported() {
+    try {
+      if (window.PlaytalkNative && typeof window.PlaytalkNative.isNativeRuntime === 'function') {
+        if (!window.PlaytalkNative.isNativeRuntime()) return false;
+      } else if (!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform())) {
+        return false;
+      }
+    } catch (_error) {
+      return false;
+    }
+    return Boolean(getNativeBooksSleepPlugin());
+  }
+
+  async function setNativeBooksSleepModeEnabled(enabled) {
+    const shouldEnable = Boolean(enabled);
+    const plugin = getNativeBooksSleepPlugin();
+    if (!plugin || !isNativeBooksSleepSupported()) return false;
+    if (shouldEnable === state.homeNativeSleepLockEnabled) return true;
+    try {
+      if (shouldEnable && typeof plugin.activate === 'function') {
+        await plugin.activate();
+        state.homeNativeSleepLockEnabled = true;
+        return true;
+      }
+      if (!shouldEnable && typeof plugin.deactivate === 'function') {
+        await plugin.deactivate();
+        state.homeNativeSleepLockEnabled = false;
+        return true;
+      }
+    } catch (_error) {
+      if (!shouldEnable) {
+        state.homeNativeSleepLockEnabled = false;
+      }
+    }
+    return false;
   }
 
   function readStoredInt(key) {
@@ -715,7 +760,9 @@
     if (state.listeningFlushInFlight) return false;
     const pendingChars = Math.max(0, Number(state.listeningCharsPending) || 0);
     const pendingSeconds = Math.max(0, Number(state.practiceSecondsPending) || 0);
-    const chunkChars = force ? pendingChars : (Math.floor(pendingChars / 1000) * 1000);
+    const chunkChars = force
+      ? pendingChars
+      : (Math.floor(pendingChars / BOOKS_LISTENING_FLUSH_BATCH_CHARS) * BOOKS_LISTENING_FLUSH_BATCH_CHARS);
     const chunkSeconds = force
       ? Math.floor(pendingSeconds)
       : (Math.floor(pendingSeconds / BOOKS_PRACTICE_FLUSH_BATCH_SECONDS) * BOOKS_PRACTICE_FLUSH_BATCH_SECONDS);
@@ -813,6 +860,24 @@
       if (!state.user?.id || navigator.onLine === false) return;
       void flushBooksSyncIfNeeded(true);
     }, BOOKS_STATS_SYNC_MS);
+  }
+
+  function primeHomeSessionAudio(session, limit = HOME_AUDIO_PREROLL_CARD_COUNT) {
+    const cards = Array.isArray(session?.cards) ? session.cards : [];
+    cards
+      .slice(0, Math.max(0, Number(limit) || 0))
+      .forEach((card) => {
+        const source = safeText(card?.audio);
+        if (!source) return;
+        try {
+          const audio = new Audio();
+          audio.preload = 'auto';
+          audio.src = source;
+          audio.load();
+        } catch (_error) {
+          // ignore prefetch failures
+        }
+      });
   }
 
   function loadHomeAudioDurationSeconds(source) {
@@ -1814,6 +1879,14 @@
         : 'none';
       coverElement.style.backgroundColor = coverUrl ? '' : 'transparent';
     }
+    if (textElement) {
+      textElement.style.backgroundImage = coverUrl
+        ? `linear-gradient(180deg, rgba(4, 10, 22, 0.18), rgba(4, 10, 22, 0.42)), url(${safeCssUrl(coverUrl)})`
+        : 'none';
+      textElement.style.backgroundSize = 'cover';
+      textElement.style.backgroundPosition = 'center';
+      textElement.style.backgroundRepeat = 'no-repeat';
+    }
     const textPayload = getHomeSessionText(session, cardIndex);
     renderHomeTextPanel(
       textElement,
@@ -2389,6 +2462,7 @@
       book,
       cards: playableCards
     };
+    primeHomeSessionAudio(session);
     void hydrateHomeCardDurations(playableCards).then(() => {
       if (
         safeText(state.homeCurrentSession?.bookId) === session.bookId
@@ -2544,6 +2618,8 @@
         applyHomeAudioPlaybackRate(state.homeAudioElement);
         await state.homeAudioElement.play();
         beginHomeAudioPracticeProgress(state.homeAudioElement);
+      } else {
+        ensureHomePlaybackLoopRunning('manual-resume');
       }
     } catch (_error) {
       // ignore
@@ -2590,6 +2666,7 @@
     const audio = new Audio(source);
     audio.preload = 'auto';
     audio.loop = false;
+    audio.crossOrigin = 'anonymous';
     applyHomeAudioPlaybackRate(audio);
     state.homeAudioElement = audio;
     state.homeCurrentCardIndex = Math.max(0, Number(meta.cardIndex) || 0);
@@ -2665,100 +2742,117 @@
   }
 
   async function runHomePlaybackLoop(token) {
-    const initialSession = state.homeCurrentSession || await prepareRandomHomeSession(token);
-    if (!initialSession) {
-      renderHomePanel();
-      return;
-    }
-    setActiveHomeSession(initialSession, { hideText: true });
-    queueHomeTextReveal();
-    renderHomePanel();
-
-    while (state.homeSleepActive && token === state.homePlaybackToken) {
-      const session = state.homeCurrentSession;
-      const cards = Array.isArray(session?.cards) ? session.cards : [];
-      if (!session || !cards.length) {
-        const fallback = await prepareRandomHomeSession(token, [safeText(session?.bookId)]);
-        if (!fallback) {
-          await wait(800);
-          continue;
-        }
-        setActiveHomeSession(fallback, { hideText: true });
-        queueHomeTextReveal();
+    state.homePlaybackLoopRunningToken = token;
+    try {
+      const initialSession = state.homeCurrentSession || await prepareRandomHomeSession(token);
+      if (!initialSession) {
         renderHomePanel();
-        continue;
+        return;
       }
+      setActiveHomeSession(initialSession, { hideText: true });
+      queueHomeTextReveal();
+      renderHomePanel();
 
-      void ensureHomeNextSession(token);
-
-      for (let index = 0; index < cards.length; index += 1) {
-        let startAtSeconds = 0;
-        if (state.homeSeekTarget && state.homeSeekTarget.bookId === safeText(session?.bookId)) {
-          index = Math.max(0, Math.min(cards.length - 1, Number(state.homeSeekTarget.cardIndex) || 0));
-          startAtSeconds = Math.max(0, Number(state.homeSeekTarget.startAtSeconds) || 0);
-          state.homeSeekTarget = null;
-          state.homeSkipRequested = false;
-        }
-        const card = cards[index];
-        if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
-        if (state.homeSkipRequested) break;
-        const result = await playHomeAudioSource(safeText(card.audio), token, {
-          cardIndex: index,
-          totalCards: cards.length,
-          startAtSeconds,
-          english: safeText(card.english),
-          portuguese: safeText(card.portuguese || card.english),
-          bookTitle: session.title
-        });
-        if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
-        if (state.homeSeekTarget && state.homeSeekTarget.bookId === safeText(session?.bookId)) {
-          index -= 1;
+      while (state.homeSleepActive && token === state.homePlaybackToken) {
+        const session = state.homeCurrentSession;
+        const cards = Array.isArray(session?.cards) ? session.cards : [];
+        if (!session || !cards.length) {
+          const fallback = await prepareRandomHomeSession(token, [safeText(session?.bookId)]);
+          if (!fallback) {
+            await wait(800);
+            continue;
+          }
+          setActiveHomeSession(fallback, { hideText: true });
+          queueHomeTextReveal();
+          renderHomePanel();
           continue;
         }
-        if (state.homeSkipRequested) break;
-        if (result === 'interrupted') {
-          break;
-        }
-        const gapDelayMs = getHomeRepeatSeconds() * 1000;
-        const gapStartedAt = Date.now();
-        const baseElapsedSeconds = getHomeElapsedSecondsForPosition(
-          index,
-          getHomeCardDurationSeconds(cards[index]),
-          state.homeCurrentSession
-        );
-        const totalTimelineSeconds = getHomeSessionTotalSeconds(state.homeCurrentSession);
-        const waited = await waitHomeDelay(gapDelayMs, token, () => {
-          const gapElapsedSeconds = Math.max(0, Math.min(gapDelayMs, Date.now() - gapStartedAt)) / 1000;
-          updateHomeProgressTimeline(
-            baseElapsedSeconds + gapElapsedSeconds,
-            totalTimelineSeconds,
-            state.homeCurrentBookName || safeText(session?.title) || 'Livro'
+
+        void ensureHomeNextSession(token);
+
+        for (let index = 0; index < cards.length; index += 1) {
+          let startAtSeconds = 0;
+          if (state.homeSeekTarget && state.homeSeekTarget.bookId === safeText(session?.bookId)) {
+            index = Math.max(0, Math.min(cards.length - 1, Number(state.homeSeekTarget.cardIndex) || 0));
+            startAtSeconds = Math.max(0, Number(state.homeSeekTarget.startAtSeconds) || 0);
+            state.homeSeekTarget = null;
+            state.homeSkipRequested = false;
+          }
+          const card = cards[index];
+          if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
+          if (state.homeSkipRequested) break;
+          const result = await playHomeAudioSource(safeText(card.audio), token, {
+            cardIndex: index,
+            totalCards: cards.length,
+            startAtSeconds,
+            english: safeText(card.english),
+            portuguese: safeText(card.portuguese || card.english),
+            bookTitle: session.title
+          });
+          if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
+          if (state.homeSeekTarget && state.homeSeekTarget.bookId === safeText(session?.bookId)) {
+            index -= 1;
+            continue;
+          }
+          if (state.homeSkipRequested) break;
+          if (result === 'interrupted') {
+            break;
+          }
+          const gapDelayMs = getHomeRepeatSeconds() * 1000;
+          const gapStartedAt = Date.now();
+          const baseElapsedSeconds = getHomeElapsedSecondsForPosition(
+            index,
+            getHomeCardDurationSeconds(cards[index]),
+            state.homeCurrentSession
           );
-        });
-        if (state.homeSeekTarget && state.homeSeekTarget.bookId === safeText(session?.bookId)) {
-          index -= 1;
+          const totalTimelineSeconds = getHomeSessionTotalSeconds(state.homeCurrentSession);
+          const waited = await waitHomeDelay(gapDelayMs, token, () => {
+            const gapElapsedSeconds = Math.max(0, Math.min(gapDelayMs, Date.now() - gapStartedAt)) / 1000;
+            updateHomeProgressTimeline(
+              baseElapsedSeconds + gapElapsedSeconds,
+              totalTimelineSeconds,
+              state.homeCurrentBookName || safeText(session?.title) || 'Livro'
+            );
+          });
+          if (state.homeSeekTarget && state.homeSeekTarget.bookId === safeText(session?.bookId)) {
+            index -= 1;
+            continue;
+          }
+          if (!waited || state.homeSkipRequested) {
+            break;
+          }
+        }
+
+        if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
+        const transitionDirection = state.homePendingDirection === 'previous' && state.homePendingSession ? 'previous' : 'next';
+        const nextSession = transitionDirection === 'previous'
+          ? state.homePendingSession
+          : (state.homeNextSession || await ensureHomeNextSession(token, true));
+        if (!nextSession) {
+          state.homeSkipRequested = false;
+          state.homePendingSession = null;
+          state.homePendingDirection = 'next';
+          await wait(600);
           continue;
         }
-        if (!waited || state.homeSkipRequested) {
-          break;
-        }
+        await animateHomeSessionTransition(nextSession, token, transitionDirection);
+        void ensureHomeNextSession(token);
       }
-
-      if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
-      const transitionDirection = state.homePendingDirection === 'previous' && state.homePendingSession ? 'previous' : 'next';
-      const nextSession = transitionDirection === 'previous'
-        ? state.homePendingSession
-        : (state.homeNextSession || await ensureHomeNextSession(token, true));
-      if (!nextSession) {
-        state.homeSkipRequested = false;
-        state.homePendingSession = null;
-        state.homePendingDirection = 'next';
-        await wait(600);
-        continue;
+    } finally {
+      if (state.homePlaybackLoopRunningToken === token) {
+        state.homePlaybackLoopRunningToken = 0;
       }
-      await animateHomeSessionTransition(nextSession, token, transitionDirection);
-      void ensureHomeNextSession(token);
     }
+  }
+
+  function ensureHomePlaybackLoopRunning(reason = 'resume') {
+    if (!state.homeSleepActive || state.homePaused) return;
+    const token = state.homePlaybackToken;
+    if (!token) return;
+    if (state.homePlaybackLoopRunningToken === token) return;
+    if (state.homeAudioElement || state.homeTransitioning) return;
+    state.homeSkipRequested = false;
+    void runHomePlaybackLoop(token);
   }
 
   async function startHomeSleepPlayback() {
@@ -2804,6 +2898,7 @@
       void ensureHomeNextSession(token, true);
     }
     state.homeStartBusy = false;
+    void setNativeBooksSleepModeEnabled(true);
     renderHomePanel();
     renderHomeAuthUi();
     if (state.homeMusicEnabled) {
@@ -2847,6 +2942,7 @@
     }
     interruptHomeAudioPlayback();
     stopHomeMusicLoop();
+    void setNativeBooksSleepModeEnabled(false);
     renderHomePanel();
   }
 
@@ -6099,17 +6195,43 @@
 
     window.addEventListener('online', () => {
       void flushBooksSyncIfNeeded(true);
+      ensureHomePlaybackLoopRunning('online');
     });
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
         void flushBooksSyncIfNeeded(true);
+        return;
+      }
+      if (state.homeSleepActive) {
+        void flushBooksSyncIfNeeded(true);
+        ensureHomePlaybackLoopRunning('visibility');
       }
     });
 
     window.addEventListener('pagehide', () => {
       void flushBooksSyncIfNeeded(true);
     });
+
+    const appPlugin = window.Capacitor?.Plugins?.App;
+    if (appPlugin && typeof appPlugin.addListener === 'function') {
+      try {
+        const listener = appPlugin.addListener('appStateChange', ({ isActive }) => {
+          if (!isActive) {
+            void flushBooksSyncIfNeeded(true);
+            return;
+          }
+          if (state.homeSleepActive) {
+            ensureHomePlaybackLoopRunning('app-active');
+          }
+        });
+        if (listener && typeof listener.catch === 'function') {
+          listener.catch(() => {});
+        }
+      } catch (_error) {
+        // ignore
+      }
+    }
   }
 
   async function init() {
