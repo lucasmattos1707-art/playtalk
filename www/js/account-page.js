@@ -152,7 +152,7 @@
   function intensityToAuraAlpha(intensity) {
     const normalized = clampNumber(intensity, 0, 1);
     if (normalized <= 0) return 0;
-    return 0.018 + (Math.pow(normalized, 1.2) * 0.882);
+    return 0.5 + (Math.pow(normalized, 1.15) * 0.5);
   }
 
   function setAvatarAuraVariable(name, value, digits) {
@@ -354,7 +354,7 @@
           },
           {
             kind: 'precision-general',
-            label: 'Precisao Geral',
+            label: 'Precisao',
             value: pronAvg,
             decimal: true
           }

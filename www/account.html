@@ -164,8 +164,8 @@
       --aura-overall-glow: 0;
       --aura-visible: 0;
       --aura-blend-size: 0.9%;
-      --aura-ring-blur: 11px;
-      --aura-ring-box-blur: 5px;
+      --aura-ring-blur: 18px;
+      --aura-ring-box-blur: 9px;
       width: 188px;
       height: 188px;
       border-radius: 50%;
@@ -229,19 +229,25 @@
       box-shadow:
         inset 0 0 0 2px rgba(0, 0, 0, 0.18),
         0 0 0 2px rgba(0, 0, 0, 0.18),
-        inset 0 0 var(--aura-ring-box-blur) rgba(107, 230, 255, calc(0.12 + (0.34 * var(--aura-listening-alpha)))),
-        inset 0 0 var(--aura-ring-box-blur) rgba(255, 211, 72, calc(0.12 + (0.34 * var(--aura-speaking-alpha)))),
-        inset 0 0 var(--aura-ring-box-blur) rgba(201, 139, 255, calc(0.12 + (0.34 * var(--aura-pronunciation-alpha)))),
-        0 0 var(--aura-ring-box-blur) rgba(107, 230, 255, calc(0.12 + (0.34 * var(--aura-listening-alpha)))),
-        0 0 var(--aura-ring-box-blur) rgba(255, 211, 72, calc(0.12 + (0.34 * var(--aura-speaking-alpha)))),
-        0 0 var(--aura-ring-box-blur) rgba(201, 139, 255, calc(0.12 + (0.34 * var(--aura-pronunciation-alpha))));
+        inset 0 0 calc(var(--aura-ring-box-blur) * 1.2) rgba(107, 230, 255, calc(0.2 + (0.75 * var(--aura-listening-alpha)))),
+        inset 0 0 calc(var(--aura-ring-box-blur) * 1.2) rgba(255, 211, 72, calc(0.2 + (0.75 * var(--aura-speaking-alpha)))),
+        inset 0 0 calc(var(--aura-ring-box-blur) * 1.2) rgba(201, 139, 255, calc(0.2 + (0.75 * var(--aura-pronunciation-alpha)))),
+        0 0 calc(var(--aura-ring-box-blur) * 1.7) rgba(107, 230, 255, calc(0.26 + (0.95 * var(--aura-listening-alpha)))),
+        0 0 calc(var(--aura-ring-box-blur) * 1.7) rgba(255, 211, 72, calc(0.26 + (0.95 * var(--aura-speaking-alpha)))),
+        0 0 calc(var(--aura-ring-box-blur) * 1.7) rgba(201, 139, 255, calc(0.26 + (0.95 * var(--aura-pronunciation-alpha)))),
+        0 0 calc(var(--aura-ring-box-blur) * 3.2) rgba(107, 230, 255, calc(0.08 + (0.48 * var(--aura-listening-glow)))),
+        0 0 calc(var(--aura-ring-box-blur) * 3.2) rgba(255, 211, 72, calc(0.08 + (0.48 * var(--aura-speaking-glow)))),
+        0 0 calc(var(--aura-ring-box-blur) * 3.2) rgba(201, 139, 255, calc(0.08 + (0.48 * var(--aura-pronunciation-glow))));
       animation: accountAuraSpin 9s linear infinite;
       filter:
         saturate(190%)
-        brightness(108%)
-        drop-shadow(0 0 var(--aura-ring-blur) rgba(107, 230, 255, calc(0.16 + (0.48 * var(--aura-listening-alpha)))))
-        drop-shadow(0 0 var(--aura-ring-blur) rgba(255, 211, 72, calc(0.16 + (0.48 * var(--aura-speaking-alpha)))))
-        drop-shadow(0 0 var(--aura-ring-blur) rgba(201, 139, 255, calc(0.16 + (0.48 * var(--aura-pronunciation-alpha)))));
+        brightness(calc(1.08 + (0.14 * var(--aura-overall-glow))))
+        drop-shadow(0 0 calc(var(--aura-ring-blur) * 1.1) rgba(107, 230, 255, calc(0.26 + (0.8 * var(--aura-listening-alpha)))))
+        drop-shadow(0 0 calc(var(--aura-ring-blur) * 1.1) rgba(255, 211, 72, calc(0.26 + (0.8 * var(--aura-speaking-alpha)))))
+        drop-shadow(0 0 calc(var(--aura-ring-blur) * 1.1) rgba(201, 139, 255, calc(0.26 + (0.8 * var(--aura-pronunciation-alpha)))))
+        drop-shadow(0 0 calc(var(--aura-ring-blur) * 2.2) rgba(107, 230, 255, calc(0.08 + (0.6 * var(--aura-listening-glow)))))
+        drop-shadow(0 0 calc(var(--aura-ring-blur) * 2.2) rgba(255, 211, 72, calc(0.08 + (0.6 * var(--aura-speaking-glow)))))
+        drop-shadow(0 0 calc(var(--aura-ring-blur) * 2.2) rgba(201, 139, 255, calc(0.08 + (0.6 * var(--aura-pronunciation-glow)))));
       transition:
         opacity 260ms ease,
         background 260ms linear,
