@@ -8,6 +8,7 @@
   const DUEL_INTRO_COUNTDOWN_SECONDS = 10;
   const DUEL_BATTLE_DURATION_MS = 3 * 60 * 1000;
   const DUEL_INTRO_SWITCH_TO_PLAYERS_SECONDS = 6;
+  const SPEAKING_CONSUMPTION_FLUSH_SECONDS = 5;
   const DUEL_INTRO_FALLBACK_GRADIENTS = [
     'linear-gradient(160deg, #274873, #6f3f72)',
     'linear-gradient(160deg, #1f5b57, #355f9d)',
@@ -117,6 +118,11 @@
     activeCards: [],
     currentIndex: 0,
     scores: [],
+    speakingCharsPending: 0,
+    listeningCharsPending: 0,
+    practiceSecondsPending: 0,
+    consumptionFlushInFlight: false,
+    practiceSessionStartedAt: 0,
     finalTimer: 0,
     wordTickerTimer: 0,
     wordTickerEnglish: true,
@@ -620,6 +626,82 @@
       localStorage.setItem(SPEAKING_STATS_KEY, JSON.stringify(state.speakingStats));
     } catch (_error) {
       // ignore
+    }
+  }
+
+  function countMetricChars(value) {
+    const text = safeText(value).replace(/\s+/g, ' ').trim();
+    return text ? text.length : 0;
+  }
+
+  function addSpeakingConsumptionChars(value) {
+    const chars = countMetricChars(value);
+    if (chars <= 0) return 0;
+    state.speakingCharsPending += chars;
+    void flushSpeakingConsumptionIfNeeded();
+    return chars;
+  }
+
+  function addListeningConsumptionCharsFromCard(card) {
+    const chars = countMetricChars(card?.english || card?.portuguese || '');
+    if (chars <= 0) return 0;
+    state.listeningCharsPending += chars;
+    void flushSpeakingConsumptionIfNeeded();
+    return chars;
+  }
+
+  function startSpeakingPracticeSession() {
+    if (state.practiceSessionStartedAt > 0) return;
+    state.practiceSessionStartedAt = Date.now();
+  }
+
+  function commitSpeakingPracticeSession() {
+    const startedAt = Number(state.practiceSessionStartedAt) || 0;
+    if (!startedAt) return 0;
+    state.practiceSessionStartedAt = 0;
+    const deltaSeconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+    if (deltaSeconds > 0) {
+      state.practiceSecondsPending += deltaSeconds;
+    }
+    return deltaSeconds;
+  }
+
+  async function flushSpeakingConsumptionIfNeeded(force = false) {
+    if (navigator.onLine === false || state.consumptionFlushInFlight) return false;
+    const pendingSpeaking = Math.max(0, Math.round(Number(state.speakingCharsPending) || 0));
+    const pendingListening = Math.max(0, Math.round(Number(state.listeningCharsPending) || 0));
+    const pendingPracticeSeconds = Math.max(0, Number(state.practiceSecondsPending) || 0);
+    const sendSpeaking = force ? pendingSpeaking : (Math.floor(pendingSpeaking / 1000) * 1000);
+    const sendListening = force ? pendingListening : (Math.floor(pendingListening / 1000) * 1000);
+    const sendPracticeSeconds = force
+      ? Math.floor(pendingPracticeSeconds)
+      : (Math.floor(pendingPracticeSeconds / SPEAKING_CONSUMPTION_FLUSH_SECONDS) * SPEAKING_CONSUMPTION_FLUSH_SECONDS);
+    if (!sendSpeaking && !sendListening && !sendPracticeSeconds) return false;
+
+    state.consumptionFlushInFlight = true;
+    try {
+      const response = await fetch(buildApiUrl('/api/books/listening-progress'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          speakingCharsDelta: sendSpeaking,
+          listeningCharsDelta: sendListening,
+          practiceSecondsDelta: sendPracticeSeconds
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        return false;
+      }
+      state.speakingCharsPending = Math.max(0, state.speakingCharsPending - sendSpeaking);
+      state.listeningCharsPending = Math.max(0, state.listeningCharsPending - sendListening);
+      state.practiceSecondsPending = Math.max(0, state.practiceSecondsPending - sendPracticeSeconds);
+      return true;
+    } catch (_error) {
+      return false;
+    } finally {
+      state.consumptionFlushInFlight = false;
     }
   }
 
@@ -1981,6 +2063,8 @@
   }
 
   function resetSpeakingToOfflineMode() {
+    commitSpeakingPracticeSession();
+    void flushSpeakingConsumptionIfNeeded(true);
     stopDuelLoops();
     stopDuelBattleTimer();
     clearDuelIntroTimer();
@@ -2317,6 +2401,7 @@
 
     try {
       const transcript = safeText(await captureSpeechFast('en-US'));
+      addSpeakingConsumptionChars(transcript);
       const score = calculateSpeechMatchPercent(card.english, transcript);
       const previousCount = Math.max(0, Number(state.currentIndex) || 0);
       const battleCardsMode = isBattleCardsMode();
@@ -2363,6 +2448,8 @@
   }
 
   function finishGame() {
+    commitSpeakingPracticeSession();
+    void flushSpeakingConsumptionIfNeeded(true);
     const sessionCount = state.scores.length;
     const sessionSum = state.scores.reduce((acc, value) => acc + value, 0);
     const finalPercent = sessionCount ? Math.round(sessionSum / sessionCount) : 0;
@@ -2444,6 +2531,7 @@
       await hydrateOfflineIdentityFromSession();
       if (els.home) els.home.hidden = true;
       if (els.game) els.game.classList.add('is-active');
+      startSpeakingPracticeSession();
       if (els.finalResultBox) els.finalResultBox.classList.remove('is-visible');
       if (els.winnerCard) els.winnerCard.classList.remove('is-visible');
       updateTopPercents();
@@ -2459,6 +2547,7 @@
   }
 
   async function startDuelMode() {
+    startSpeakingPracticeSession();
     state.duel.enabled = true;
     state.duel.completed = false;
     state.duel.timeoutSyncInFlight = false;
@@ -2566,6 +2655,8 @@
       applySelectedMiniBookBackground();
     });
     window.addEventListener('beforeunload', () => {
+      commitSpeakingPracticeSession();
+      void flushSpeakingConsumptionIfNeeded(true);
       stopDuelLoops();
       stopDuelBattleTimer();
       clearDuelIntroTimer();

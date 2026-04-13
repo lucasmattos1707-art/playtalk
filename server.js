@@ -2618,10 +2618,19 @@ const saveFlashcardStateForUser = async (userId, payload) => {
     );
     const existingProgressCount = Math.max(0, Number(existingProgressCountResult.rows[0]?.total) || 0);
     const shouldPersistPerformanceStats = progress.length > existingProgressCount;
+    const existingTrainingTimeMs = Math.max(0, Number(existingStatsResult.rows[0]?.training_time_ms) || 0);
     const accurateSamples = normalizeFlashcardPronunciationSamples(stats.pronunciationSamples);
     const accurateSum = accurateSamples.reduce((total, sample) => total + sample, 0);
     const accurateCount = accurateSamples.length;
     const accurateLatest = accurateCount ? accurateSamples[accurateCount - 1] : 0;
+    const persistedTrainingTimeMs = Math.max(
+      existingTrainingTimeMs,
+      Math.max(0, Number(stats.trainingTimeMs) || 0)
+    );
+    const practiceSecondsDelta = Math.max(
+      0,
+      Math.floor((persistedTrainingTimeMs - existingTrainingTimeMs) / 1000)
+    );
 
     if (progress.length) {
       const cardIds = progress.map((item) => item.cardId);
@@ -2761,14 +2770,26 @@ const saveFlashcardStateForUser = async (userId, payload) => {
         stats.playTimeMs,
         stats.speakings,
         stats.listenings,
-        shouldPersistPerformanceStats
-          ? stats.trainingTimeMs
-          : Math.max(0, Number(existingStatsResult.rows[0]?.training_time_ms) || 0),
+        persistedTrainingTimeMs,
         JSON.stringify(accurateSamples),
         stats.secondStarErrorHeard,
-        shouldPersistPerformanceStats
+        true
       ]
     );
+
+    if (practiceSecondsDelta > 0) {
+      await ensureUserBooksConsumptionStatsTable();
+      await client.query(
+        `INSERT INTO public.user_books_consumption_stats (
+           user_id, speaking_chars, listening_chars, practice_seconds, updated_at
+         ) VALUES ($1, 0, 0, $2, now())
+         ON CONFLICT (user_id)
+         DO UPDATE
+           SET practice_seconds = public.user_books_consumption_stats.practice_seconds + EXCLUDED.practice_seconds,
+               updated_at = now()`,
+        [normalizedUserId, practiceSecondsDelta]
+      );
+    }
 
     await client.query(
       `INSERT INTO public.flashcards_accurate (
@@ -10406,13 +10427,14 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
     }
 
     const userId = Number.parseInt(authUser.id, 10);
+    const speakingCharsDelta = Math.max(0, Math.round(Number(req.body?.speakingCharsDelta) || 0));
     const listeningCharsDelta = Math.max(0, Math.round(Number(req.body?.listeningCharsDelta) || 0));
     const practiceSecondsDelta = Math.max(0, Math.round(Number(req.body?.practiceSecondsDelta) || 0));
     if (!Number.isInteger(userId) || userId <= 0) {
       res.status(400).json({ success: false, message: 'Usuario invalido.' });
       return;
     }
-    if (!listeningCharsDelta && !practiceSecondsDelta) {
+    if (!speakingCharsDelta && !listeningCharsDelta && !practiceSecondsDelta) {
       res.json({ success: true, stats: null });
       return;
     }
@@ -10422,14 +10444,15 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
     const result = await pool.query(
       `INSERT INTO public.user_books_consumption_stats (
          user_id, speaking_chars, listening_chars, practice_seconds, updated_at
-       ) VALUES ($1, 0, $2, $3, now())
+       ) VALUES ($1, $2, $3, $4, now())
        ON CONFLICT (user_id)
        DO UPDATE
-         SET listening_chars = public.user_books_consumption_stats.listening_chars + EXCLUDED.listening_chars,
+         SET speaking_chars = public.user_books_consumption_stats.speaking_chars + EXCLUDED.speaking_chars,
+             listening_chars = public.user_books_consumption_stats.listening_chars + EXCLUDED.listening_chars,
              practice_seconds = public.user_books_consumption_stats.practice_seconds + EXCLUDED.practice_seconds,
              updated_at = now()
        RETURNING speaking_chars, listening_chars, practice_seconds`,
-      [userId, listeningCharsDelta, practiceSecondsDelta]
+      [userId, speakingCharsDelta, listeningCharsDelta, practiceSecondsDelta]
     );
 
     res.json({

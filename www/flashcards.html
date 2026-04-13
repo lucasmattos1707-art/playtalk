@@ -6782,6 +6782,7 @@
           typingKeyAudioIndex: 0,
           stageHintTimer: 0,
           stageHintIndex: 0,
+          firstStageIdleTimer: 0,
           fifthStarHintDismissed: false,
           paused: false,
           reportCardId: '',
@@ -11853,6 +11854,26 @@
         els.gameVisual.querySelector('.game-card__stage-two-hint')?.remove();
       }
 
+      function clearFirstStageIdleTimer() {
+        if (state.game.firstStageIdleTimer) {
+          window.clearTimeout(state.game.firstStageIdleTimer);
+          state.game.firstStageIdleTimer = 0;
+        }
+      }
+
+      function scheduleFirstStageIdleTimer(entry) {
+        clearFirstStageIdleTimer();
+        if (!entry || entry.stage !== 1 || !state.game.active || state.game.currentId !== entry.id) return;
+        state.game.firstStageIdleTimer = window.setTimeout(() => {
+          state.game.firstStageIdleTimer = 0;
+          if (!state.game.active || state.game.paused || state.game.transitioning) return;
+          if (state.game.listening || state.game.currentId !== entry.id || entry.stage !== 1) return;
+          removeGameEntry(entry.id);
+          refillGameEntry(entry.pool);
+          advanceToNextCard();
+        }, 10000);
+      }
+
       function scheduleStageTwoHintLoop(entry) {
         clearStageTwoHintTimer();
         if (!entry || entry.stage !== 2 || state.game.currentId !== entry.id || isTypingStage(entry)) return;
@@ -13502,6 +13523,7 @@
           clearGameLanguageSwapTimer();
           clearTypingPromptLoop();
           clearStageTwoHintTimer();
+          clearFirstStageIdleTimer();
           clearStageHintLoop({ clearStatus: true });
           state.game.footerNavPrimed = false;
           state.game.footerNavPrimeKey = '';
@@ -13668,6 +13690,7 @@
         updateGuestFirstStarResultsBanner(entry, false);
         updateGameChips();
         scheduleStageTwoHintLoop(entry);
+        scheduleFirstStageIdleTimer(entry);
 
         if (typingStage) {
           window.setTimeout(() => {
@@ -14038,6 +14061,7 @@
         clearGameLanguageSwapTimer();
         clearTypingPromptLoop();
         clearStageTwoHintTimer();
+        clearFirstStageIdleTimer();
         clearStageHintLoop({ clearStatus: true });
         clearPendingRewardSeal();
         closeGameReportMenu();
@@ -14182,6 +14206,7 @@
         commitCurrentCardTrainingTime();
         clearPendingRewardSeal();
         clearStageTwoHintTimer();
+        clearFirstStageIdleTimer();
         if (!state.game.queue.length) {
           state.game.currentId = null;
           renderCurrentCard();
@@ -14214,6 +14239,7 @@
         clearGameLanguageSwapTimer();
         clearTypingPromptLoop();
         clearStageTwoHintTimer();
+        clearFirstStageIdleTimer();
         clearStageHintLoop({ clearStatus: true });
         state.game.fifthStarHintDismissed = false;
         clearPendingRewardSeal();
@@ -14535,6 +14561,7 @@
 
         cleanupGameRecognition();
         clearStageHintLoop({ clearStatus: true });
+        clearFirstStageIdleTimer();
         if (isFifthStarEntry(entry)) {
           state.game.fifthStarHintDismissed = true;
         }
