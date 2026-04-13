@@ -22,11 +22,8 @@
     passwordBtnLabel: document.getElementById('accountPasswordBtnLabel'),
     premiumCard: document.querySelector('.account-premium'),
     metrics: document.getElementById('accountMetrics'),
-    statsCard: document.getElementById('accountStatsCard'),
-    statsIcon: document.getElementById('accountStatsIcon'),
-    statsLabel: document.getElementById('accountStatsLabel'),
-    statsValue: document.getElementById('accountStatsValue'),
-    statsLine: document.getElementById('accountStatsLine'),
+    statsCarousel: document.getElementById('accountStatsCarousel'),
+    statsPages: document.getElementById('accountStatsPages'),
     premiumLevel: document.getElementById('accountPremiumLevel'),
     premiumUntil: document.getElementById('accountPremiumUntil'),
     premiumBtn: document.getElementById('accountPremiumBtn'),
@@ -277,6 +274,14 @@
             <circle cx="32" cy="32" r="22" fill="none" stroke="currentColor" stroke-width="3.4"/>
           </svg>
         `;
+      case 'days':
+        return `
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <rect x="12" y="15" width="40" height="35" rx="8" ry="8" fill="none" stroke="currentColor" stroke-width="3.2"/>
+            <path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" d="M21 10v10m22-10v10M12 24h40"/>
+            <path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" d="M23 32h18M23 40h10"/>
+          </svg>
+        `;
       case 'practice-time':
       default:
         return `
@@ -294,52 +299,66 @@
         {
           kind: 'practice-time',
           label: 'Estatisticas',
-          value: '--',
-          hint: 'Entre para ver suas metricas.'
+          value: '--'
         }
       ];
     }
 
     const stats = state.booksStats || {};
-    const booksRead = Math.max(0, Number(stats.bookReadCount) || 0);
+    const myBooksCount = Math.max(
+      0,
+      Number(stats.myBooksCount)
+        || Number(stats.qualifiedBookCount)
+        || 0
+    );
     const pronAvg = normalizePrecisePercent(stats.generalPronunciationPercent);
     const speakingChars = Math.max(0, Number(stats.speakingChars) || 0);
     const listeningChars = Math.max(0, Number(stats.listeningChars) || 0);
     const practiceSeconds = Math.max(0, Number(stats.practiceSeconds) || 0);
+    const registeredDays = Math.max(0, Math.floor(Number(stats.accountAgeDays) || 0));
 
     return [
       {
         kind: 'practice-time',
-        label: 'Tempo de pratica',
-        value: formatDurationCompact(practiceSeconds),
-        hint: 'Quanto voce treinou no total.'
+        label: 'Pratica',
+        value: formatDurationCompact(practiceSeconds)
       },
       {
         kind: 'books',
-        label: 'Livros lidos',
-        value: `${booksRead}`,
-        hint: 'Livros concluidos no Books.'
+        label: 'Livros',
+        value: `${myBooksCount}`
       },
       {
         kind: 'listening',
         label: 'Listening',
-        value: formatCountCompact(listeningChars),
-        hint: 'Caracteres ouvidos em Books + Flashcards.'
+        value: formatCountCompact(listeningChars)
       },
       {
         kind: 'speaking',
         label: 'Speaking',
-        value: formatCountCompact(speakingChars),
-        hint: 'Caracteres falados em Books + Flashcards.'
+        value: formatCountCompact(speakingChars)
       },
       {
         kind: 'pronunciation',
-        label: 'Pronuncia media',
+        label: 'Pronuncia',
         value: pronAvg,
-        hint: 'Media geral das ultimas avaliacoes.',
         decimal: true
+      },
+      {
+        kind: 'days',
+        label: 'Dias',
+        value: `${registeredDays}`
       }
     ];
+  }
+
+  function chunkStatsItems(items, size = 3) {
+    const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
+    const chunks = [];
+    for (let index = 0; index < safeItems.length; index += size) {
+      chunks.push(safeItems.slice(index, index + size));
+    }
+    return chunks;
   }
 
   function stopStatsRotation() {
@@ -356,41 +375,71 @@
     }, STATS_ROTATE_MS);
   }
 
+  function createStatsMetricCard(metric) {
+    const card = document.createElement('article');
+    card.className = 'account-stats-item';
+    card.dataset.kind = safeText(metric?.kind) || 'practice-time';
+
+    const label = document.createElement('p');
+    label.className = 'account-stats-label';
+    label.textContent = safeText(metric?.label) || 'Estatisticas';
+
+    const iconShell = document.createElement('div');
+    iconShell.className = 'account-stats-icon-shell';
+    iconShell.setAttribute('aria-hidden', 'true');
+
+    const icon = document.createElement('div');
+    icon.className = 'account-stats-icon';
+    icon.innerHTML = getStatsMetricIconMarkup(metric?.kind);
+    iconShell.appendChild(icon);
+
+    const value = document.createElement('p');
+    value.className = 'account-stats-value';
+    if (metric?.decimal) {
+      setAnimatedDecimalMarkup(value, metric?.value);
+    } else {
+      value.textContent = safeText(metric?.value) || '--';
+    }
+
+    card.append(label, iconShell, value);
+    return card;
+  }
+
   function renderAccountMetrics() {
-    if (!els.metrics || !els.statsIcon || !els.statsLabel || !els.statsValue || !els.statsLine) return;
+    if (!els.metrics || !els.statsPages) return;
     const loggedIn = isLoggedIn();
     els.metrics.hidden = !loggedIn;
     if (!loggedIn) {
       stopStatsRotation();
+      els.statsPages.innerHTML = '';
+      els.statsPages.style.transform = 'translateX(0)';
       return;
     }
 
     startStatsRotation();
     const items = buildStatsRotationItems();
-    const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
-    const metric = safeItems.length
-      ? safeItems[state.statsRotationIndex % safeItems.length]
-      : null;
-    const label = safeText(metric?.label) || 'Estatisticas';
-    const value = metric?.value ?? '...';
-    const hint = safeText(metric?.hint) || 'Carregando...';
-    const signature = `${safeText(metric?.kind)}|${label}|${value}|${hint}|${metric?.decimal ? '1' : '0'}`;
-    if (state.statsLastRenderedLine === signature) return;
+    const pages = chunkStatsItems(items, 3);
+    const safePages = Array.isArray(pages) ? pages.filter((page) => Array.isArray(page) && page.length) : [];
+    const pageCount = safePages.length || 1;
+    const activePageIndex = state.statsRotationIndex % pageCount;
+    const signature = safePages
+      .map((page) => page.map((metric) => `${safeText(metric?.kind)}|${safeText(metric?.label)}|${metric?.value ?? ''}|${metric?.decimal ? '1' : '0'}`).join('~'))
+      .join('||');
+    const shouldRebuild = state.statsLastRenderedLine !== signature;
     state.statsLastRenderedLine = signature;
 
-    const iconKind = safeText(metric?.kind) || 'practice-time';
-    if (els.statsIcon.dataset.kind !== iconKind) {
-      els.statsIcon.dataset.kind = iconKind;
-      els.statsIcon.innerHTML = getStatsMetricIconMarkup(iconKind);
+    if (shouldRebuild) {
+      els.statsPages.innerHTML = '';
+      safePages.forEach((page) => {
+        const pageElement = document.createElement('div');
+        pageElement.className = 'account-stats-page';
+        page.forEach((metric) => {
+          pageElement.appendChild(createStatsMetricCard(metric));
+        });
+        els.statsPages.appendChild(pageElement);
+      });
     }
-    els.statsLabel.textContent = label;
-    cancelAnimatedNumber(els.statsValue);
-    if (metric?.decimal) {
-      setAnimatedDecimalMarkup(els.statsValue, value);
-    } else {
-      els.statsValue.textContent = safeText(value) || '...';
-    }
-    els.statsLine.textContent = hint;
+    els.statsPages.style.transform = `translateX(-${activePageIndex * 100}%)`;
   }
 
   function persistAuthToken(token) {
@@ -414,6 +463,7 @@
       id,
       username,
       avatarImage: safeText(user.avatar_image || user.avatarImage),
+      createdAt: user.created_at || user.createdAt || null,
       premiumFullAccess: Boolean(user.premium_full_access),
       premiumUntil: user.premium_until || user.premiumUntil || null,
       hasPassword: Boolean(user.has_password || user.hasPassword)

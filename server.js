@@ -10435,17 +10435,23 @@ app.get('/api/books/stats', async (req, res) => {
     const pronunciationStats = getBooksPronunciationAggregateFromRow(speakingStatsResult.rows[0]);
     const consumption = consumptionResult.rows[0] || {};
     const qualifiedBookIds = Array.isArray(qualifiedBooksResult) ? qualifiedBooksResult : [];
+    const accountCreatedAtMs = Date.parse(String(authUser.created_at || '').trim());
+    const accountAgeDays = Number.isFinite(accountCreatedAtMs)
+      ? Math.max(0, Math.floor((Date.now() - accountCreatedAtMs) / (25 * 60 * 60 * 1000)))
+      : 0;
 
     res.json({
       success: true,
       stats: {
         bookReadCount: Math.max(0, Number(totalsResult.rows[0]?.total_reads) || 0),
+        myBooksCount: qualifiedBookIds.length,
         generalPronunciationPercent: pronunciationStats.generalPronunciationPercent,
         pronunciationSamplesCount: pronunciationStats.pronunciationSamplesCount,
         latestPronunciationPercent: pronunciationStats.latestPronunciationPercent,
         speakingChars: Math.max(0, Number(consumption.speaking_chars) || 0),
         listeningChars: Math.max(0, Number(consumption.listening_chars) || 0),
         practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0),
+        accountAgeDays,
         qualifiedBookIds,
         qualifiedBookCount: qualifiedBookIds.length,
         bookBestPercentById
