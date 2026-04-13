@@ -9,6 +9,7 @@
     body: document.body,
     panel: document.querySelector('.panel'),
     form: document.getElementById('accountForm'),
+    avatarFrame: document.querySelector('.account-avatar'),
     avatarInput: document.getElementById('accountAvatarInput'),
     avatarPreview: document.getElementById('accountAvatarPreview'),
     avatarFallback: document.getElementById('accountAvatarFallback'),
@@ -49,6 +50,7 @@
     passwordEditMode: false,
     nameEditing: false,
     booksStats: null,
+    pronunciationRankingPercent: 0,
     statsRotationTimer: 0,
     statsRotationIndex: 0,
     statsLastRenderedLine: '',
@@ -139,6 +141,77 @@
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return 0;
     return Math.max(0, Math.min(100, Math.round(numeric * 10) / 10));
+  }
+
+  function clampNumber(value, min, max) {
+    return Math.min(max, Math.max(min, Number(value) || 0));
+  }
+
+  function formatCssAuraValue(value, digits = 3) {
+    const numeric = Number(value) || 0;
+    return String(Number(numeric.toFixed(digits)));
+  }
+
+  function intensityToAuraAlpha(intensity) {
+    const normalized = clampNumber(intensity, 0, 1);
+    if (normalized <= 0) return 0;
+    return 0.015 + (Math.pow(normalized, 1.8) * 0.885);
+  }
+
+  function setAvatarAuraVariable(name, value, digits) {
+    if (!els.avatarFrame) return;
+    els.avatarFrame.style.setProperty(name, formatCssAuraValue(value, digits));
+  }
+
+  function applyAvatarAura() {
+    if (!els.avatarFrame) return;
+
+    if (!state.user?.id) {
+      setAvatarAuraVariable('--aura-speaking-end', 0, 3);
+      setAvatarAuraVariable('--aura-listening-end', 100, 3);
+      setAvatarAuraVariable('--aura-pronunciation-end', 100, 3);
+      setAvatarAuraVariable('--aura-speaking-alpha', 0, 3);
+      setAvatarAuraVariable('--aura-listening-alpha', 0.82, 3);
+      setAvatarAuraVariable('--aura-pronunciation-alpha', 0, 3);
+      setAvatarAuraVariable('--aura-speaking-glow', 0, 3);
+      setAvatarAuraVariable('--aura-listening-glow', 0.82, 3);
+      setAvatarAuraVariable('--aura-pronunciation-glow', 0, 3);
+      return;
+    }
+
+    const stats = state.booksStats || {};
+    const listeningTotal = Math.max(0, Number(stats.listeningChars) || 0);
+    const speakingTotal = Math.max(0, Number(stats.speakingChars) || 0);
+    const pronunciationAverage = normalizePrecisePercent(stats.generalPronunciationPercent);
+    const pronunciationRanking = normalizePrecisePercent(state.pronunciationRankingPercent);
+    const pronunciationBlend = normalizePrecisePercent((pronunciationAverage + pronunciationRanking) / 2);
+    const pronunciationProgress = pronunciationBlend <= 60
+      ? 0
+      : clampNumber((pronunciationBlend - 60) / 40, 0, 1);
+    const pronunciationShare = pronunciationProgress * 33;
+    const trainingTotal = listeningTotal + speakingTotal;
+    const remainingShare = Math.max(0, 100 - pronunciationShare);
+    const listeningRatio = trainingTotal > 0 ? listeningTotal / trainingTotal : 0;
+    const speakingRatio = trainingTotal > 0 ? speakingTotal / trainingTotal : 0;
+    const speakingShare = remainingShare * speakingRatio;
+    const listeningShare = remainingShare * listeningRatio;
+    const speakingEnd = speakingShare;
+    const listeningEnd = speakingShare + listeningShare;
+    const pronunciationEnd = Math.min(100, listeningEnd + pronunciationShare);
+
+    const listeningGlow = clampNumber(listeningTotal / 10000, 0, 1);
+    const speakingGlow = clampNumber(speakingTotal / 7500, 0, 1);
+    const pronunciationGlow = pronunciationProgress;
+
+    setAvatarAuraVariable('--aura-speaking-end', speakingEnd, 3);
+    setAvatarAuraVariable('--aura-listening-end', listeningEnd, 3);
+    setAvatarAuraVariable('--aura-pronunciation-end', pronunciationEnd, 3);
+    setAvatarAuraVariable('--aura-speaking-alpha', intensityToAuraAlpha(speakingGlow), 3);
+    setAvatarAuraVariable('--aura-listening-alpha', intensityToAuraAlpha(listeningGlow), 3);
+    setAvatarAuraVariable('--aura-pronunciation-alpha', intensityToAuraAlpha(pronunciationGlow), 3);
+    setAvatarAuraVariable('--aura-speaking-glow', speakingGlow, 3);
+    setAvatarAuraVariable('--aura-listening-glow', listeningGlow, 3);
+    setAvatarAuraVariable('--aura-pronunciation-glow', pronunciationGlow, 3);
   }
 
   function formatDurationCompact(totalSeconds) {
@@ -591,6 +664,7 @@
     if (els.avatarPreview?.parentElement) {
       els.avatarPreview.parentElement.classList.toggle('is-message', !loggedIn);
     }
+    applyAvatarAura();
 
     const shouldHidePasswordField = loggedIn ? !state.passwordEditMode : false;
     if (els.passwordField) {
@@ -697,24 +771,44 @@
   async function fetchBooksMetrics() {
     if (!state.user?.id) {
       state.booksStats = null;
+      state.pronunciationRankingPercent = 0;
+      applyAvatarAura();
       renderAccountMetrics();
       return;
     }
 
-    try {
-      const response = await fetch(buildApiUrl('/api/books/stats'), {
+    const [booksResult, rankingResult] = await Promise.allSettled([
+      fetch(buildApiUrl('/api/books/stats'), {
         headers: buildAuthHeaders(),
         cache: 'no-store',
         credentials: 'include'
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.success) {
-        throw new Error(payload?.message || 'Nao foi possivel carregar as estatisticas.');
-      }
-      state.booksStats = payload.stats || null;
-    } catch (_error) {
+      }),
+      fetch(buildApiUrl('/api/users/flashcards?limit=50&metric=pronunciation'), {
+        headers: buildAuthHeaders(),
+        cache: 'no-store',
+        credentials: 'include'
+      })
+    ]);
+
+    if (booksResult.status === 'fulfilled') {
+      const payload = await booksResult.value.json().catch(() => ({}));
+      state.booksStats = booksResult.value.ok && payload?.success
+        ? (payload.stats || null)
+        : null;
+    } else {
       state.booksStats = null;
     }
+
+    if (rankingResult.status === 'fulfilled') {
+      const payload = await rankingResult.value.json().catch(() => ({}));
+      state.pronunciationRankingPercent = rankingResult.value.ok && payload?.success
+        ? normalizePrecisePercent(payload?.viewer?.pronunciationPercent)
+        : 0;
+    } else {
+      state.pronunciationRankingPercent = 0;
+    }
+
+    applyAvatarAura();
     renderAccountMetrics();
   }
 
