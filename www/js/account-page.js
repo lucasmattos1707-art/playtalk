@@ -224,13 +224,13 @@
         kind: 'listening',
         label: 'Listening',
         value: formatCountCompact(listeningChars),
-        hint: 'Caracteres ouvidos no Books.'
+        hint: 'Caracteres ouvidos em Books + Flashcards.'
       },
       {
         kind: 'speaking',
         label: 'Speaking',
         value: formatCountCompact(speakingChars),
-        hint: 'Caracteres falados no treino.'
+        hint: 'Caracteres falados em Books + Flashcards.'
       },
       {
         kind: 'pronunciation',

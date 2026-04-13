@@ -2604,7 +2604,7 @@ const saveFlashcardStateForUser = async (userId, payload) => {
     await client.query('BEGIN');
 
     const existingStatsResult = await client.query(
-      `SELECT training_time_ms
+      `SELECT training_time_ms, speakings, listenings
        FROM public.user_flashcard_stats
        WHERE user_id = $1
        LIMIT 1`,
@@ -2623,14 +2623,26 @@ const saveFlashcardStateForUser = async (userId, payload) => {
     const accurateSum = accurateSamples.reduce((total, sample) => total + sample, 0);
     const accurateCount = accurateSamples.length;
     const accurateLatest = accurateCount ? accurateSamples[accurateCount - 1] : 0;
+    const existingSpeakings = Math.max(0, Number(existingStatsResult.rows[0]?.speakings) || 0);
+    const existingListenings = Math.max(0, Number(existingStatsResult.rows[0]?.listenings) || 0);
     const persistedTrainingTimeMs = Math.max(
       existingTrainingTimeMs,
       Math.max(0, Number(stats.trainingTimeMs) || 0)
+    );
+    const persistedSpeakings = Math.max(
+      existingSpeakings,
+      Math.max(0, Number(stats.speakings) || 0)
+    );
+    const persistedListenings = Math.max(
+      existingListenings,
+      Math.max(0, Number(stats.listenings) || 0)
     );
     const practiceSecondsDelta = Math.max(
       0,
       Math.floor((persistedTrainingTimeMs - existingTrainingTimeMs) / 1000)
     );
+    const speakingCharsDelta = Math.max(0, persistedSpeakings - existingSpeakings);
+    const listeningCharsDelta = Math.max(0, persistedListenings - existingListenings);
 
     if (progress.length) {
       const cardIds = progress.map((item) => item.cardId);
@@ -2753,8 +2765,8 @@ const saveFlashcardStateForUser = async (userId, payload) => {
        ON CONFLICT (user_id)
        DO UPDATE SET
          play_time_ms = EXCLUDED.play_time_ms,
-         speakings = EXCLUDED.speakings,
-         listenings = EXCLUDED.listenings,
+         speakings = GREATEST(public.user_flashcard_stats.speakings, EXCLUDED.speakings),
+         listenings = GREATEST(public.user_flashcard_stats.listenings, EXCLUDED.listenings),
          training_time_ms = CASE
            WHEN $8::boolean THEN EXCLUDED.training_time_ms
            ELSE public.user_flashcard_stats.training_time_ms
@@ -2768,8 +2780,8 @@ const saveFlashcardStateForUser = async (userId, payload) => {
       [
         normalizedUserId,
         stats.playTimeMs,
-        stats.speakings,
-        stats.listenings,
+        persistedSpeakings,
+        persistedListenings,
         persistedTrainingTimeMs,
         JSON.stringify(accurateSamples),
         stats.secondStarErrorHeard,
@@ -2777,17 +2789,19 @@ const saveFlashcardStateForUser = async (userId, payload) => {
       ]
     );
 
-    if (practiceSecondsDelta > 0) {
+    if (practiceSecondsDelta > 0 || speakingCharsDelta > 0 || listeningCharsDelta > 0) {
       await ensureUserBooksConsumptionStatsTable();
       await client.query(
         `INSERT INTO public.user_books_consumption_stats (
            user_id, speaking_chars, listening_chars, practice_seconds, updated_at
-         ) VALUES ($1, 0, 0, $2, now())
+         ) VALUES ($1, $2, $3, $4, now())
          ON CONFLICT (user_id)
          DO UPDATE
-           SET practice_seconds = public.user_books_consumption_stats.practice_seconds + EXCLUDED.practice_seconds,
+           SET speaking_chars = public.user_books_consumption_stats.speaking_chars + EXCLUDED.speaking_chars,
+               listening_chars = public.user_books_consumption_stats.listening_chars + EXCLUDED.listening_chars,
+               practice_seconds = public.user_books_consumption_stats.practice_seconds + EXCLUDED.practice_seconds,
                updated_at = now()`,
-        [normalizedUserId, practiceSecondsDelta]
+        [normalizedUserId, speakingCharsDelta, listeningCharsDelta, practiceSecondsDelta]
       );
     }
 
