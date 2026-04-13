@@ -126,6 +126,10 @@
     finalTimer: 0,
     wordTickerTimer: 0,
     wordTickerEnglish: true,
+    battleCardsPromptTimer: 0,
+    battleCardsPromptAudio: null,
+    battleCardsPromptToken: 0,
+    battleCardsReadyToSpeak: false,
     speakingStats: readSpeakingStats(),
     duel: {
       sessionId: readSessionId(),
@@ -813,6 +817,33 @@
     }
   }
 
+  function stopBattleCardsPromptTimer() {
+    if (state.battleCardsPromptTimer) {
+      window.clearTimeout(state.battleCardsPromptTimer);
+      state.battleCardsPromptTimer = 0;
+    }
+  }
+
+  function stopBattleCardsPromptAudio() {
+    stopBattleCardsPromptTimer();
+    state.battleCardsPromptToken += 1;
+    state.battleCardsReadyToSpeak = false;
+    const current = state.battleCardsPromptAudio;
+    state.battleCardsPromptAudio = null;
+    try {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    } catch (_error) {
+      // ignore
+    }
+    try {
+      current?.pause?.();
+    } catch (_error) {
+      // ignore
+    }
+  }
+
   function animateWord(nextText) {
     renderCardDisplayText(nextText, state.displayLanguage === 'portuguese' ? 'portuguese' : 'english');
   }
@@ -856,6 +887,89 @@
         }
       }, 220);
     }, WORD_SWAP_MS);
+  }
+
+  function syncBattleCardsReadyState() {
+    if (!els.battleCardsVisualBtn) return;
+    els.battleCardsVisualBtn.disabled = !state.battleCardsReadyToSpeak || state.duel.meFinished || state.duel.completed;
+  }
+
+  function playBattleCardsEnglishPrompt(card, options = {}) {
+    const english = safeText(card?.english);
+    const audioUrl = safeText(card?.audioUrl || card?.audio);
+    const unlockDelayMs = Math.max(0, Number(options.unlockDelayMs) || 0);
+    const token = (Number(state.battleCardsPromptToken) || 0) + 1;
+    state.battleCardsPromptToken = token;
+    state.battleCardsReadyToSpeak = false;
+    syncBattleCardsReadyState();
+
+    const unlockSpeaking = () => {
+      if (token !== state.battleCardsPromptToken) return;
+      state.battleCardsReadyToSpeak = true;
+      syncBattleCardsReadyState();
+    };
+
+    if (unlockDelayMs > 0) {
+      stopBattleCardsPromptTimer();
+      state.battleCardsPromptTimer = window.setTimeout(() => {
+        state.battleCardsPromptTimer = 0;
+        unlockSpeaking();
+      }, unlockDelayMs);
+    } else {
+      unlockSpeaking();
+    }
+
+    return new Promise((resolve) => {
+      const finish = () => {
+        if (token !== state.battleCardsPromptToken) {
+          resolve();
+          return;
+        }
+        resolve();
+      };
+
+      if (audioUrl) {
+        try {
+          const audio = new Audio(audioUrl);
+          state.battleCardsPromptAudio = audio;
+          audio.preload = 'auto';
+          audio.onended = finish;
+          audio.onerror = finish;
+          audio.play().catch(finish);
+          return;
+        } catch (_error) {
+          // fallback to speech synthesis below
+        }
+      }
+
+      if (window.speechSynthesis && english) {
+        try {
+          const utterance = new SpeechSynthesisUtterance(english);
+          utterance.lang = 'en-US';
+          utterance.rate = 0.92;
+          utterance.pitch = 1;
+          utterance.onend = finish;
+          utterance.onerror = finish;
+          state.battleCardsPromptAudio = utterance;
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(utterance);
+          return;
+        } catch (_error) {
+          // ignore and resolve below
+        }
+      }
+
+      finish();
+    });
+  }
+
+  async function beginBattleCardsTurn(card) {
+    if (!card || !isBattleCardsMode()) return;
+    stopBattleCardsPromptAudio();
+    renderBattleCardsVisual(card);
+    renderBattleCardsPhaseWord(safeText(card?.portuguese) || safeText(card?.english) || 'FluentCards', 'portuguese');
+    updateBattleCardsBuffer();
+    await playBattleCardsEnglishPrompt(card, { unlockDelayMs: 1000 });
   }
 
   function countLetterBlocksCoverage(expected, spoken) {
@@ -1460,9 +1574,7 @@
     stopWordTicker();
     const card = state.activeCards[state.currentIndex];
     if (isBattleCardsMode()) {
-      renderBattleCardsVisual(card);
-      startBattleCardsTicker(card);
-      updateBattleCardsBuffer();
+      void beginBattleCardsTurn(card);
     } else {
       renderCurrentCardLanguage();
     }
@@ -2020,6 +2132,7 @@
 
     if (safeText(session?.status) === 'completed' && !state.duel.completed) {
       state.duel.completed = true;
+      stopBattleCardsPromptAudio();
       stopDuelBattleTimer();
       showWinnerReveal(session?.winner);
       scheduleDuelReturnToUsers();
@@ -2070,6 +2183,7 @@
     clearDuelIntroTimer();
     clearDuelIntroAnimationTimers();
     stopBattleIntroAudio();
+    stopBattleCardsPromptAudio();
     state.duel.introAssetToken = (Number(state.duel.introAssetToken) || 0) + 1;
     stopWordTicker();
     state.duel.enabled = false;
@@ -2187,9 +2301,10 @@
   function startDuelLoops() {
     stopDuelLoops();
     void pollDuelSession();
+    const pollMs = isBattleCardsMode() ? 700 : DUEL_POLL_MS;
     state.duel.pollTimer = window.setInterval(() => {
       void pollDuelSession();
-    }, DUEL_POLL_MS);
+    }, pollMs);
     state.duel.pingTimer = window.setInterval(() => {
       void pingPresence();
     }, PRESENCE_PING_MS);
@@ -2391,6 +2506,10 @@
     if (!state.activeCards.length || state.duel.meFinished) return;
     const card = state.activeCards[state.currentIndex];
     if (!card) return;
+    if (isBattleCardsMode() && !state.battleCardsReadyToSpeak) return;
+    if (isBattleCardsMode()) {
+      stopBattleCardsPromptAudio();
+    }
     if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = true;
     if (els.battleCardsVisualBtn) {
       els.battleCardsVisualBtn.disabled = true;
@@ -2433,6 +2552,11 @@
           finishGame();
           return;
         }
+        renderBattleCardsPhaseWord(safeText(card?.portuguese) || safeText(card?.english) || 'FluentCards', 'portuguese');
+        await waitMs(1500);
+        await playBattleCardsEnglishPrompt(card, { unlockDelayMs: 999999 });
+        window.setTimeout(renderCard, 120);
+        return;
       }
       window.setTimeout(renderCard, 220);
     } catch (error) {
@@ -2440,10 +2564,10 @@
     } finally {
       if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = false;
       if (els.battleCardsVisualBtn) {
-        els.battleCardsVisualBtn.disabled = false;
         els.battleCardsVisualBtn.classList.remove('is-mic-live');
       }
       setMicLiveVisual(false);
+      syncBattleCardsReadyState();
     }
   }
 
@@ -2663,6 +2787,7 @@
       clearDuelIntroAnimationTimers();
       stopBattleIntroAudio();
       stopWordTicker();
+      stopBattleCardsPromptAudio();
     });
   }
 

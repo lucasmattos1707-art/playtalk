@@ -358,7 +358,7 @@
 
     .welcome-gate__start-btn {
       position: relative;
-      width: min(440px, 90vw);
+      width: min(396px, 81vw);
       padding: 0;
       border-radius: 999px;
       border: 0;
@@ -373,7 +373,10 @@
         drop-shadow(0 12px 26px rgba(34, 148, 255, 0.16));
       transition: transform 220ms ease, filter 220ms ease;
       justify-self: center;
-      animation: welcomeButtonNeonPulse 6.4s ease-in-out infinite;
+      transform: translateY(-30px) scale(0.9);
+      transform-origin: center;
+      will-change: transform, filter;
+      animation: welcomeButtonNeonPulse 4s ease-in-out infinite;
     }
 
     .welcome-gate__start-btn img {
@@ -385,7 +388,7 @@
 
     .welcome-gate__start-btn:hover,
     .welcome-gate__start-btn:focus-visible {
-      transform: translateY(-2px) scale(1.01);
+      transform: translateY(-32px) scale(0.93);
       filter:
         saturate(1.04)
         drop-shadow(0 0 10px rgba(170, 241, 255, 0.54))
@@ -5103,16 +5106,20 @@
     @keyframes welcomeButtonNeonPulse {
       0%,
       100% {
+        transform: translateY(-30px) scale(0.9);
         filter:
           drop-shadow(0 0 8px rgba(170, 241, 255, 0.38))
           drop-shadow(0 0 18px rgba(112, 214, 255, 0.24))
           drop-shadow(0 12px 26px rgba(34, 148, 255, 0.14));
       }
       50% {
+        transform: translateY(-30px) scale(1);
         filter:
-          drop-shadow(0 0 10px rgba(200, 248, 255, 0.5))
-          drop-shadow(0 0 24px rgba(133, 227, 255, 0.32))
-          drop-shadow(0 14px 30px rgba(34, 148, 255, 0.2));
+          brightness(1.16)
+          drop-shadow(0 0 16px rgba(235, 252, 255, 0.9))
+          drop-shadow(0 0 34px rgba(170, 241, 255, 0.7))
+          drop-shadow(0 0 56px rgba(112, 214, 255, 0.54))
+          drop-shadow(0 16px 34px rgba(34, 148, 255, 0.28));
       }
     }
 
@@ -6098,7 +6105,7 @@
       }
 
       .welcome-gate__start-btn {
-        width: min(440px, 94vw);
+        width: min(396px, 84.6vw);
         max-width: 94vw;
       }
 

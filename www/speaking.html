@@ -1279,8 +1279,12 @@
 
     .winner-reveal {
       display: none;
-      min-height: 58vh;
-      margin-top: 12px;
+      position: fixed;
+      inset: 0;
+      z-index: 120;
+      background:
+        radial-gradient(circle at center, rgba(255, 219, 147, 0.18), transparent 28%),
+        linear-gradient(180deg, rgba(4, 10, 22, 0.92), rgba(6, 15, 32, 0.98));
       align-items: center;
       justify-content: center;
       flex-direction: column;
