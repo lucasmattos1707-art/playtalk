@@ -139,6 +139,7 @@ let miniBookJsonTablesReadyPromise = null;
 let booksSpeakingStatsTablesReadyPromise = null;
 let userBooksLibraryStatsReadyPromise = null;
 let userBooksConsumptionStatsReadyPromise = null;
+let usersPresenceClassReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
 let speakingCardsCache = {
@@ -175,6 +176,7 @@ const BATTLE_STORIES_ROOT_CANDIDATES = Array.from(new Set([
 ]));
 const FLASHCARD_RANKING_PLACEHOLDER_NAME = 'Usuario';
 const FLASHCARD_RANKING_PLACEHOLDER_AVATAR = '/Avatar/avatar-man-person-svgrepo-com.svg';
+const PRESENCE_CLASS_DAILY_TARGET = 5000;
 const FLASHCARD_RANKING_PERIODS = {
   weekly: {
     id: 'weekly',
@@ -574,6 +576,83 @@ const getUserBookBestPercentById = async (db, userId) => {
     accumulator[bookId] = Math.max(0, Math.min(100, Number(row?.best_percent) || 0));
     return accumulator;
   }, {});
+};
+
+const computePresenceConsistencyPercent = (accountAgeDays, presenceClassRaw) => {
+  const totalDays = Math.max(0, Math.floor(Number(accountAgeDays) || 0));
+  const presenceClass = Math.max(0, Math.floor(Number(presenceClassRaw) || 0));
+  if (!totalDays || !presenceClass) return 0;
+
+  const basePercent = Math.max(0, Math.min(100, (presenceClass / totalDays) * 100));
+  let bonusPercent = 0;
+  if (basePercent >= 85) {
+    bonusPercent = 15;
+  } else if (basePercent >= 70) {
+    bonusPercent = 10;
+  } else if (basePercent >= 50) {
+    bonusPercent = 5;
+  }
+  return Math.max(0, Math.min(100, Number((basePercent + bonusPercent).toFixed(1))));
+};
+
+const updateUserPresenceClassProgress = async (db, userId, deltas = {}) => {
+  const normalizedUserId = Number.parseInt(userId, 10);
+  const speakingCharsDelta = Math.max(0, Math.round(Number(deltas?.speakingCharsDelta) || 0));
+  const listeningCharsDelta = Math.max(0, Math.round(Number(deltas?.listeningCharsDelta) || 0));
+  const totalDelta = speakingCharsDelta + listeningCharsDelta;
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0 || totalDelta <= 0) {
+    return { awardedToday: false, presenceClass: null, dayPointsTotal: 0, dayQualified: false };
+  }
+
+  await ensureUsersPresenceClassMetricStorage();
+
+  const existingResult = await db.query(
+    `SELECT points_total, qualified
+     FROM public.user_presence_class_days
+     WHERE user_id = $1
+       AND day_key = CURRENT_DATE
+     FOR UPDATE`,
+    [normalizedUserId]
+  );
+
+  const existingRow = existingResult.rows[0] || null;
+  const previousPointsTotal = Math.max(0, Number(existingRow?.points_total) || 0);
+  const previousQualified = Boolean(existingRow?.qualified);
+  const nextPointsTotal = previousPointsTotal + totalDelta;
+  const nextQualified = previousQualified || nextPointsTotal >= PRESENCE_CLASS_DAILY_TARGET;
+
+  await db.query(
+    `INSERT INTO public.user_presence_class_days (
+       user_id, day_key, points_total, qualified, created_at, updated_at
+     )
+     VALUES ($1, CURRENT_DATE, $2, $3, now(), now())
+     ON CONFLICT (user_id, day_key)
+     DO UPDATE SET
+       points_total = EXCLUDED.points_total,
+       qualified = EXCLUDED.qualified,
+       updated_at = now()`,
+    [normalizedUserId, nextPointsTotal, nextQualified]
+  );
+
+  let presenceClass = null;
+  const awardedToday = !previousQualified && nextQualified;
+  if (awardedToday) {
+    const updatedUserResult = await db.query(
+      `UPDATE public.users
+       SET presence_class = COALESCE(presence_class, 0) + 1
+       WHERE id = $1
+       RETURNING presence_class`,
+      [normalizedUserId]
+    );
+    presenceClass = Math.max(0, Number(updatedUserResult.rows[0]?.presence_class) || 0);
+  }
+
+  return {
+    awardedToday,
+    presenceClass,
+    dayPointsTotal: nextPointsTotal,
+    dayQualified: nextQualified
+  };
 };
 
 const upsertUserBooksPronunciationSamples = async (client, userId, samplesInput) => {
@@ -1310,6 +1389,42 @@ const ensureUserBooksConsumptionStatsTable = async () => {
   }
 
   return userBooksConsumptionStatsReadyPromise;
+};
+
+const ensureUsersPresenceClassMetricStorage = async () => {
+  if (!pool) return false;
+
+  await ensureUsersAvatarColumn();
+
+  if (!usersPresenceClassReadyPromise) {
+    usersPresenceClassReadyPromise = (async () => {
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS presence_class integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_presence_class_days (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          day_key date NOT NULL,
+          points_total bigint NOT NULL DEFAULT 0,
+          qualified boolean NOT NULL DEFAULT false,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, day_key)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_presence_class_days_user_idx
+        ON public.user_presence_class_days (user_id, day_key DESC)
+      `);
+      return true;
+    })().catch((error) => {
+      usersPresenceClassReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return usersPresenceClassReadyPromise;
 };
 
 const ensureFlashcardRankingsTable = async () => {
@@ -2803,6 +2918,10 @@ const saveFlashcardStateForUser = async (userId, payload) => {
                updated_at = now()`,
         [normalizedUserId, speakingCharsDelta, listeningCharsDelta, practiceSecondsDelta]
       );
+      await updateUserPresenceClassProgress(client, normalizedUserId, {
+        speakingCharsDelta,
+        listeningCharsDelta
+      });
     }
 
     await client.query(
@@ -10405,8 +10524,9 @@ app.get('/api/books/stats', async (req, res) => {
     await ensureUserBooksLibraryStatsTable();
     await ensureBooksSpeakingStatsTable();
     await ensureUserBooksConsumptionStatsTable();
+    await ensureUsersPresenceClassMetricStorage();
 
-    const [totalsResult, speakingStatsResult, consumptionResult, qualifiedBooksResult, bookBestPercentById] = await Promise.all([
+    const [totalsResult, speakingStatsResult, consumptionResult, qualifiedBooksResult, bookBestPercentById, flashcardsResult, presenceClassResult] = await Promise.all([
       pool.query(
         `SELECT COALESCE(SUM(reads_completed), 0)::int AS total_reads
          FROM public.user_books_library_stats
@@ -10429,7 +10549,20 @@ app.get('/api/books/stats', async (req, res) => {
         [userId]
       ),
       getQualifiedUserBookIds(pool, userId),
-      getUserBookBestPercentById(pool, userId)
+      getUserBookBestPercentById(pool, userId),
+      pool.query(
+        `SELECT COUNT(*)::int AS flashcards_count
+         FROM public.user_flashcard_progress
+         WHERE user_id = $1`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT presence_class
+         FROM public.users
+         WHERE id = $1
+         LIMIT 1`,
+        [userId]
+      )
     ]);
 
     const pronunciationStats = getBooksPronunciationAggregateFromRow(speakingStatsResult.rows[0]);
@@ -10437,13 +10570,16 @@ app.get('/api/books/stats', async (req, res) => {
     const qualifiedBookIds = Array.isArray(qualifiedBooksResult) ? qualifiedBooksResult : [];
     const accountCreatedAtMs = Date.parse(String(authUser.created_at || '').trim());
     const accountAgeDays = Number.isFinite(accountCreatedAtMs)
-      ? Math.max(0, Math.floor((Date.now() - accountCreatedAtMs) / (25 * 60 * 60 * 1000)))
+      ? Math.max(0, Math.floor((Date.now() - accountCreatedAtMs) / (24 * 60 * 60 * 1000)))
       : 0;
+    const presenceClass = Math.max(0, Number(presenceClassResult.rows[0]?.presence_class) || 0);
+    const consistencyPercent = computePresenceConsistencyPercent(accountAgeDays, presenceClass);
 
     res.json({
       success: true,
       stats: {
         bookReadCount: Math.max(0, Number(totalsResult.rows[0]?.total_reads) || 0),
+        flashcardsCount: Math.max(0, Number(flashcardsResult.rows[0]?.flashcards_count) || 0),
         myBooksCount: qualifiedBookIds.length,
         generalPronunciationPercent: pronunciationStats.generalPronunciationPercent,
         pronunciationSamplesCount: pronunciationStats.pronunciationSamplesCount,
@@ -10452,6 +10588,8 @@ app.get('/api/books/stats', async (req, res) => {
         listeningChars: Math.max(0, Number(consumption.listening_chars) || 0),
         practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0),
         accountAgeDays,
+        presenceClass,
+        consistencyPercent,
         qualifiedBookIds,
         qualifiedBookCount: qualifiedBookIds.length,
         bookBestPercentById
@@ -10491,20 +10629,40 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
     }
 
     await ensureUserBooksConsumptionStatsTable();
+    await ensureUsersPresenceClassMetricStorage();
 
-    const result = await pool.query(
-      `INSERT INTO public.user_books_consumption_stats (
-         user_id, speaking_chars, listening_chars, practice_seconds, updated_at
-       ) VALUES ($1, $2, $3, $4, now())
-       ON CONFLICT (user_id)
-       DO UPDATE
-         SET speaking_chars = public.user_books_consumption_stats.speaking_chars + EXCLUDED.speaking_chars,
-             listening_chars = public.user_books_consumption_stats.listening_chars + EXCLUDED.listening_chars,
-             practice_seconds = public.user_books_consumption_stats.practice_seconds + EXCLUDED.practice_seconds,
-             updated_at = now()
-       RETURNING speaking_chars, listening_chars, practice_seconds`,
-      [userId, speakingCharsDelta, listeningCharsDelta, practiceSecondsDelta]
-    );
+    const client = await pool.connect();
+    let result;
+    try {
+      await client.query('BEGIN');
+      result = await client.query(
+        `INSERT INTO public.user_books_consumption_stats (
+           user_id, speaking_chars, listening_chars, practice_seconds, updated_at
+         ) VALUES ($1, $2, $3, $4, now())
+         ON CONFLICT (user_id)
+         DO UPDATE
+           SET speaking_chars = public.user_books_consumption_stats.speaking_chars + EXCLUDED.speaking_chars,
+               listening_chars = public.user_books_consumption_stats.listening_chars + EXCLUDED.listening_chars,
+               practice_seconds = public.user_books_consumption_stats.practice_seconds + EXCLUDED.practice_seconds,
+               updated_at = now()
+         RETURNING speaking_chars, listening_chars, practice_seconds`,
+        [userId, speakingCharsDelta, listeningCharsDelta, practiceSecondsDelta]
+      );
+      await updateUserPresenceClassProgress(client, userId, {
+        speakingCharsDelta,
+        listeningCharsDelta
+      });
+      await client.query('COMMIT');
+    } catch (error) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (_rollbackError) {
+        // ignore
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
 
     res.json({
       success: true,

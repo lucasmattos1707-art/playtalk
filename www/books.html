@@ -944,9 +944,10 @@
     .books-home-book-slot {
       min-height: 0;
       display: flex;
-      align-items: flex-start;
+      align-items: flex-end;
       justify-content: center;
-      padding-top: 90px;
+      padding-top: 70px;
+      padding-bottom: 0;
     }
 
     .books-home-cover-wrap {
@@ -959,7 +960,7 @@
       justify-content: center;
       perspective: 1300px;
       margin-top: 0;
-      transform: scale(0.88);
+      transform: translateY(34px) scale(0.88);
       transform-origin: top center;
       transition: opacity 1000ms ease, filter 1000ms ease;
     }
@@ -1036,7 +1037,7 @@
       display: flex;
       align-items: stretch;
       justify-content: center;
-      padding-top: 50px;
+      padding-top: 0;
       transition: opacity 1000ms ease, filter 1000ms ease;
     }
 
@@ -2981,17 +2982,18 @@
 
       /* Mobile: place the book cover visually between the top and the text block. */
       .books-home-book-slot {
-        padding-top: 56px;
+        padding-top: 40px;
       }
 
       .books-home-text-slot {
-        padding-top: 26px;
+        padding-top: 0;
       }
 
       .books-home-cover-wrap {
         width: auto;
         height: 100%;
         max-height: 100%;
+        transform: translateY(22px) scale(0.9);
       }
 
       .books-home-text-panel {

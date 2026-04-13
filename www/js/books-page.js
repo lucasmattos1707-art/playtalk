@@ -1879,14 +1879,6 @@
         : 'none';
       coverElement.style.backgroundColor = coverUrl ? '' : 'transparent';
     }
-    if (textElement) {
-      textElement.style.backgroundImage = coverUrl
-        ? `linear-gradient(180deg, rgba(4, 10, 22, 0.18), rgba(4, 10, 22, 0.42)), url(${safeCssUrl(coverUrl)})`
-        : 'none';
-      textElement.style.backgroundSize = 'cover';
-      textElement.style.backgroundPosition = 'center';
-      textElement.style.backgroundRepeat = 'no-repeat';
-    }
     const textPayload = getHomeSessionText(session, cardIndex);
     renderHomeTextPanel(
       textElement,
@@ -2666,7 +2658,6 @@
     const audio = new Audio(source);
     audio.preload = 'auto';
     audio.loop = false;
-    audio.crossOrigin = 'anonymous';
     applyHomeAudioPlaybackRate(audio);
     state.homeAudioElement = audio;
     state.homeCurrentCardIndex = Math.max(0, Number(meta.cardIndex) || 0);

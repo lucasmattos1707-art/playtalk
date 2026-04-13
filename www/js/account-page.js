@@ -226,7 +226,7 @@
     return `${normalized}s`;
   }
 
-  function setAnimatedDecimalMarkup(element, value) {
+  function setAnimatedDecimalMarkup(element, value, suffix = '') {
     if (!element) return;
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) {
@@ -235,7 +235,8 @@
     }
     const rounded = Math.round(numeric * 10) / 10;
     const [main, fraction = '0'] = rounded.toFixed(1).split('.');
-    element.innerHTML = `<span class="account-decimal-value"><span class="account-decimal-value__main">${main}</span><span class="account-decimal-value__fraction">.${fraction}</span></span>`;
+    const safeSuffix = safeText(suffix);
+    element.innerHTML = `<span class="account-decimal-value"><span class="account-decimal-value__main">${main}</span><span class="account-decimal-value__fraction">.${fraction}</span>${safeSuffix ? `<span class="account-decimal-value__suffix">${safeSuffix}</span>` : ''}</span>`;
   }
 
   function cancelAnimatedNumber(element) {
@@ -249,6 +250,13 @@
 
   function getStatsMetricIconMarkup(kind) {
     switch (safeText(kind)) {
+      case 'flashcards':
+        return `
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <rect x="14" y="18" width="28" height="22" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="3.2"/>
+            <path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" d="M22 27h12m-12 7h8M22 13h28a4 4 0 0 1 4 4v20"/>
+          </svg>
+        `;
       case 'books':
         return `
           <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -267,11 +275,17 @@
             <path fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M32 40a8 8 0 0 0 8-8V19a8 8 0 1 0-16 0v13a8 8 0 0 0 8 8zm13-9a13 13 0 0 1-26 0M32 44v10m-8 0h16"/>
           </svg>
         `;
-      case 'pronunciation':
+      case 'precision-general':
+        return `
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" d="M35 9L20 34h12l-3 21l15-25H32z"/>
+          </svg>
+        `;
+      case 'consistency':
         return `
           <svg viewBox="0 0 64 64" aria-hidden="true">
             <path fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M18 34l9 9 19-21"/>
-            <circle cx="32" cy="32" r="22" fill="none" stroke="currentColor" stroke-width="3.4"/>
+            <path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" d="M16 50h32"/>
           </svg>
         `;
       case 'days':
@@ -297,9 +311,14 @@
     if (!state.user?.id) {
       return [
         {
-          kind: 'practice-time',
-          label: 'Estatisticas',
-          value: '--'
+          layout: 'three',
+          items: [
+            {
+              kind: 'practice-time',
+              label: 'Estatisticas',
+              value: '--'
+            }
+          ]
         }
       ];
     }
@@ -316,49 +335,69 @@
     const listeningChars = Math.max(0, Number(stats.listeningChars) || 0);
     const practiceSeconds = Math.max(0, Number(stats.practiceSeconds) || 0);
     const registeredDays = Math.max(0, Math.floor(Number(stats.accountAgeDays) || 0));
+    const flashcardsCount = Math.max(0, Number(stats.flashcardsCount) || 0);
+    const consistencyPercent = normalizePrecisePercent(stats.consistencyPercent);
 
     return [
       {
-        kind: 'practice-time',
-        label: 'Pratica',
-        value: formatDurationCompact(practiceSeconds)
+        layout: 'three',
+        items: [
+          {
+            kind: 'listening',
+            label: 'Listening',
+            value: formatCountCompact(listeningChars)
+          },
+          {
+            kind: 'speaking',
+            label: 'Speaking',
+            value: formatCountCompact(speakingChars)
+          },
+          {
+            kind: 'precision-general',
+            label: 'Precisao Geral',
+            value: pronAvg,
+            decimal: true
+          }
+        ]
       },
       {
-        kind: 'books',
-        label: 'Livros',
-        value: `${myBooksCount}`
+        layout: 'three',
+        items: [
+          {
+            kind: 'days',
+            label: 'Dias',
+            value: `${registeredDays}`
+          },
+          {
+            kind: 'practice-time',
+            label: 'Pratica',
+            value: formatDurationCompact(practiceSeconds)
+          },
+          {
+            kind: 'consistency',
+            label: 'Consistencia',
+            value: consistencyPercent,
+            decimal: true,
+            suffix: '%'
+          }
+        ]
       },
       {
-        kind: 'listening',
-        label: 'Listening',
-        value: formatCountCompact(listeningChars)
-      },
-      {
-        kind: 'speaking',
-        label: 'Speaking',
-        value: formatCountCompact(speakingChars)
-      },
-      {
-        kind: 'pronunciation',
-        label: 'Pronuncia',
-        value: pronAvg,
-        decimal: true
-      },
-      {
-        kind: 'days',
-        label: 'Dias',
-        value: `${registeredDays}`
+        layout: 'two',
+        items: [
+          {
+            kind: 'flashcards',
+            label: 'Flash Cards',
+            value: `${flashcardsCount}`
+          },
+          {
+            kind: 'books',
+            label: 'Livros Lidos',
+            value: `${myBooksCount}`
+          }
+        ]
       }
     ];
-  }
-
-  function chunkStatsItems(items, size = 3) {
-    const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
-    const chunks = [];
-    for (let index = 0; index < safeItems.length; index += size) {
-      chunks.push(safeItems.slice(index, index + size));
-    }
-    return chunks;
   }
 
   function stopStatsRotation() {
@@ -396,7 +435,7 @@
     const value = document.createElement('p');
     value.className = 'account-stats-value';
     if (metric?.decimal) {
-      setAnimatedDecimalMarkup(value, metric?.value);
+      setAnimatedDecimalMarkup(value, metric?.value, metric?.suffix);
     } else {
       value.textContent = safeText(metric?.value) || '--';
     }
@@ -412,34 +451,38 @@
     if (!loggedIn) {
       stopStatsRotation();
       els.statsPages.innerHTML = '';
-      els.statsPages.style.transform = 'translateX(0)';
       return;
     }
 
     startStatsRotation();
     const items = buildStatsRotationItems();
-    const pages = chunkStatsItems(items, 3);
-    const safePages = Array.isArray(pages) ? pages.filter((page) => Array.isArray(page) && page.length) : [];
+    const safePages = Array.isArray(items)
+      ? items.filter((page) => Array.isArray(page?.items) && page.items.length)
+      : [];
     const pageCount = safePages.length || 1;
     const activePageIndex = state.statsRotationIndex % pageCount;
     const signature = safePages
-      .map((page) => page.map((metric) => `${safeText(metric?.kind)}|${safeText(metric?.label)}|${metric?.value ?? ''}|${metric?.decimal ? '1' : '0'}`).join('~'))
+      .map((page) => `${safeText(page?.layout)}:${page.items.map((metric) => `${safeText(metric?.kind)}|${safeText(metric?.label)}|${metric?.value ?? ''}|${metric?.decimal ? '1' : '0'}|${safeText(metric?.suffix)}`).join('~')}`)
       .join('||');
     const shouldRebuild = state.statsLastRenderedLine !== signature;
     state.statsLastRenderedLine = signature;
 
     if (shouldRebuild) {
       els.statsPages.innerHTML = '';
-      safePages.forEach((page) => {
+      safePages.forEach((page, pageIndex) => {
         const pageElement = document.createElement('div');
         pageElement.className = 'account-stats-page';
-        page.forEach((metric) => {
+        pageElement.dataset.layout = safeText(page?.layout) || 'three';
+        pageElement.dataset.pageIndex = String(pageIndex);
+        page.items.forEach((metric) => {
           pageElement.appendChild(createStatsMetricCard(metric));
         });
         els.statsPages.appendChild(pageElement);
       });
     }
-    els.statsPages.style.transform = `translateX(-${activePageIndex * 100}%)`;
+    Array.from(els.statsPages.children).forEach((pageElement, pageIndex) => {
+      pageElement.classList.toggle('is-active', pageIndex === activePageIndex);
+    });
   }
 
   function persistAuthToken(token) {
@@ -697,10 +740,10 @@
       els.nameInput.value = username;
     }
     if (els.nameInput) {
-      const shouldUseInlineReadonly = loggedIn ? !state.nameEditing : true;
+      const shouldUseInlineReadonly = loggedIn ? !state.nameEditing : false;
       els.nameInput.readOnly = shouldUseInlineReadonly;
-      els.nameInput.inputMode = loggedIn ? 'text' : 'none';
-      els.nameInput.autocomplete = 'off';
+      els.nameInput.inputMode = 'text';
+      els.nameInput.autocomplete = loggedIn ? 'name' : 'username';
       els.nameInput.setAttribute('aria-label', loggedIn ? 'Nome do usuario' : 'Digite um nome de usuario');
       els.nameInput.placeholder = loggedIn ? 'Seu nome' : 'Digite um nome de usuario';
     }
@@ -732,9 +775,9 @@
     }
     if (els.passwordInput) {
       els.passwordInput.placeholder = loggedIn ? 'Nova senha' : 'Digite sua senha';
-      els.passwordInput.readOnly = !loggedIn;
-      els.passwordInput.inputMode = loggedIn ? 'text' : 'none';
-      els.passwordInput.autocomplete = 'off';
+      els.passwordInput.readOnly = false;
+      els.passwordInput.inputMode = 'text';
+      els.passwordInput.autocomplete = loggedIn ? 'new-password' : 'current-password';
     }
     if (els.passwordBtn) {
       els.passwordBtn.hidden = !loggedIn;
@@ -755,7 +798,9 @@
     renderPremiumStatus();
     renderPremiumButton();
     renderAccountMetrics();
-    updateGuestKeyboardState();
+    if (els.guestKeyboard) {
+      els.guestKeyboard.hidden = true;
+    }
   }
 
   async function fileToDataUrl(file) {
@@ -1309,23 +1354,6 @@
       }
     });
 
-    [els.nameInput, els.passwordInput].forEach((input) => {
-      input?.addEventListener('keydown', (event) => {
-        if (state.user?.id) return;
-        event.preventDefault();
-      });
-      input?.addEventListener('paste', preventGuestPaste);
-      input?.addEventListener('drop', preventGuestPaste);
-      input?.addEventListener('contextmenu', preventGuestPaste);
-    });
-
-    els.guestKeyboard?.addEventListener('click', async (event) => {
-      const key = event.target.closest('[data-key-action], [data-key-value]');
-      if (!key) return;
-      const action = key.getAttribute('data-key-action') || '';
-      const keyValue = key.getAttribute('data-key-value') || '';
-      await handleGuestKeyboardAction(action, keyValue);
-    });
   }
 
   init();
