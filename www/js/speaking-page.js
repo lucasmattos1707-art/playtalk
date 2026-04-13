@@ -2301,7 +2301,7 @@
   function startDuelLoops() {
     stopDuelLoops();
     void pollDuelSession();
-    const pollMs = isBattleCardsMode() ? 700 : DUEL_POLL_MS;
+    const pollMs = isBattleCardsMode() ? 250 : DUEL_POLL_MS;
     state.duel.pollTimer = window.setInterval(() => {
       void pollDuelSession();
     }, pollMs);

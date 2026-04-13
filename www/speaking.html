@@ -1145,6 +1145,32 @@
       display: none !important;
     }
 
+    .speaking-game.is-battle-cards .battle-cards-visual,
+    .speaking-game.is-battle-cards .battle-cards-visual:hover,
+    .speaking-game.is-battle-cards .battle-cards-visual:active,
+    .speaking-game.is-battle-cards .battle-cards-phase-word,
+    .speaking-game.is-battle-cards .duel-avatar__ring,
+    .speaking-game.is-battle-cards .duel-avatar__ring img,
+    .speaking-game.is-battle-cards .winner-reveal,
+    .speaking-game.is-battle-cards .winner-reveal__avatar,
+    .speaking-game.is-battle-cards .winner-reveal__text {
+      animation: none !important;
+      transition: none !important;
+      transform: none !important;
+      box-shadow: none !important;
+      filter: none !important;
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-visual::before {
+      display: none !important;
+    }
+
+    .speaking-game.is-battle-cards .duel-avatar__ring,
+    .speaking-game.is-battle-cards .duel-avatar__ring.enemy {
+      background: rgba(255, 255, 255, 0.12) !important;
+      padding: 8px;
+    }
+
     .game-touch.game-touch--books-mic {
       width: clamp(140px, 30vw, 160px);
       height: clamp(140px, 30vw, 160px);

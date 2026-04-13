@@ -5495,8 +5495,12 @@ function buildBotProgressSnapshot(session, botUserId, botConfig) {
   let completed = 0;
   const pronunciationSamples = buildBotPronunciationSamples(botConfig, session.id || botUserId, totalCards);
   const responseTimeline = buildBotResponseTimeline(botConfig, session.id || botUserId, totalCards);
+  const responseScale = mode === SPEAKING_DUEL_CARDS_MODE ? 1.5 : 1;
   for (let index = 0; index < totalCards; index += 1) {
-    accumulatedMs += (responseTimeline[index] || computeBotResponseSeconds(botConfig, session.id || botUserId, index)) * 1000;
+    accumulatedMs += (
+      (responseTimeline[index] || computeBotResponseSeconds(botConfig, session.id || botUserId, index))
+      * responseScale
+    ) * 1000;
     if (elapsedMs < accumulatedMs) break;
     completed += 1;
   }
@@ -5592,7 +5596,15 @@ async function syncBotStateIntoSpeakingSession(client, session) {
   }
 
   const battleExpired = isSpeakingDuelBattleExpired(session);
-  if (battleExpired && next.status !== 'completed') {
+  const cardsModeFinished = next.mode === SPEAKING_DUEL_CARDS_MODE
+    && next.targetScore > 0
+    && (
+      next.challengerScore >= next.targetScore
+      || next.opponentScore >= next.targetScore
+      || next.challengerFinished
+      || next.opponentFinished
+    );
+  if ((battleExpired || cardsModeFinished) && next.status !== 'completed') {
     next.status = 'completed';
     next.winnerUserId = computeSpeakingDuelWinnerUserId({
       mode: next.mode,
@@ -5709,9 +5721,28 @@ async function touchSpeakingSessionAndResolveTimeout(client, sessionId, requeste
 
   if (status === 'active') {
     const battleExpired = isSpeakingDuelBattleExpired(next);
+    const mode = normalizeSpeakingChallengeMode(next.mode);
+    const targetScore = normalizeDuelTargetScore(next.target_score, mode);
+    const cardsModeFinished = mode === SPEAKING_DUEL_CARDS_MODE
+      && targetScore > 0
+      && (
+        (Number(next.challenger_score) || 0) >= targetScore
+        || (Number(next.opponent_score) || 0) >= targetScore
+        || challengerFinished
+        || opponentFinished
+      );
     if (battleExpired) {
       status = 'completed';
       winnerUserId = computeSpeakingDuelWinnerUserId(next);
+      finishedAt = nowIso;
+    }
+    if (!battleExpired && cardsModeFinished) {
+      status = 'completed';
+      winnerUserId = computeSpeakingDuelWinnerUserId({
+        ...next,
+        mode,
+        target_score: targetScore
+      });
       finishedAt = nowIso;
     }
 
@@ -12518,7 +12549,15 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
 
       const bothFinished = next.challengerFinished && next.opponentFinished;
       const battleExpired = timedOut || isSpeakingDuelBattleExpired(session);
-      if ((bothFinished || battleExpired) && next.status !== 'completed') {
+      const cardsModeFinished = mode === SPEAKING_DUEL_CARDS_MODE
+        && targetScore > 0
+        && (
+          next.challengerScore >= targetScore
+          || next.opponentScore >= targetScore
+          || next.challengerFinished
+          || next.opponentFinished
+        );
+      if ((bothFinished || battleExpired || cardsModeFinished) && next.status !== 'completed') {
         next.status = 'completed';
         next.winnerUserId = computeSpeakingDuelWinnerUserId({
           mode,
