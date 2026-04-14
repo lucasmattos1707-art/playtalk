@@ -2058,6 +2058,60 @@
         ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72L19 12 8 5.14z"/></svg>'
         : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5h3v14H8zm5 0h3v14h-3z"/></svg>';
     }
+    syncHomeMediaSession();
+  }
+
+  function clearHomeMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = 'none';
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  function syncHomeMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+    if (!state.homeIntroDismissed || !state.homeSleepActive) {
+      clearHomeMediaSession();
+      return;
+    }
+    const currentSession = state.homeCurrentSession;
+    const currentCard = state.homeCurrentCards[state.homeCurrentCardIndex] || null;
+    const title = safeText(currentCard?.english) || safeText(currentSession?.title) || 'PlayTalk Books';
+    const artist = safeText(currentSession?.title) || 'Sleeping Mode';
+    const album = state.homeMusicEnabled ? 'PlayTalk Sleep' : 'PlayTalk Books';
+    const artworkSrc = safeText(state.homeCurrentBookCover || currentSession?.coverImageUrl);
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title,
+        artist,
+        album,
+        artwork: artworkSrc ? [{ src: artworkSrc, sizes: '512x512', type: 'image/png' }] : []
+      });
+      navigator.mediaSession.playbackState = state.homePaused ? 'paused' : 'playing';
+      navigator.mediaSession.setActionHandler('play', () => {
+        void toggleHomePausePlayback();
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        void toggleHomePausePlayback();
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        void requestHomePreviousBook();
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        void requestHomeNextBook();
+      });
+      navigator.mediaSession.setActionHandler('seekbackward', null);
+      navigator.mediaSession.setActionHandler('seekforward', null);
+      navigator.mediaSession.setActionHandler('stop', () => {
+        stopHomeSleepPlayback({ keepIntro: false });
+        renderHomeAuthUi();
+      });
+    } catch (_error) {
+      // ignore browsers with partial Media Session support
+    }
   }
 
   function applyHomeAudioPlaybackRate(audio) {

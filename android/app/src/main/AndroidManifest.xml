@@ -10,6 +10,8 @@
     <!-- O speaking usa captura curta e iniciada pelo proprio jogador. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- O microfone melhora o jogo, mas nao deve limitar a instalacao em aparelhos sem esse hardware. -->
     <uses-feature
         android:name="android.hardware.microphone"
@@ -37,6 +39,12 @@
             </intent-filter>
 
         </activity>
+
+        <service
+            android:name=".PlaytalkBooksSleepService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
