@@ -14098,7 +14098,7 @@ app.post('/api/chat/openai', async (req, res) => {
           role: message.role,
           content: [
             {
-              type: 'input_text',
+              type: message.role === 'assistant' ? 'output_text' : 'input_text',
               text: message.content
             }
           ]
