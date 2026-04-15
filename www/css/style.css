@@ -225,9 +225,15 @@ body.has-custom-text-color * {
 
 body.page-thata {
   min-height: 100vh;
+  height: auto;
   padding: 0;
   color: #f8fbff;
   font-family: 'Space Grotesk', sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   background:
     radial-gradient(circle at top left, rgba(0, 90, 255, 0.32), transparent 30%),
     radial-gradient(circle at top right, rgba(0, 255, 170, 0.12), transparent 24%),
