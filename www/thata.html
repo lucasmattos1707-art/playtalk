@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <title>ThatA | PlayTalk</title>
+  <meta name="description" content="Chat fluido com varios modelos GPT e prompt livre para definir a personalidade da IA.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/api-config.js"></script>
+  <script src="/config.js"></script>
+</head>
+<body class="page-thata">
+  <main class="thata-shell">
+    <section class="thata-panel thata-panel--hero">
+      <div class="thata-topbar">
+        <div>
+          <p class="thata-kicker">PlayTalk / ThatA</p>
+          <h1>Monte a personalidade e converse.</h1>
+          <p class="thata-subtitle">Escolha um dos 6 modelos e defina 100% o norte da IA no prompt abaixo.</p>
+        </div>
+
+        <label class="thata-model-picker" for="thata-model">
+          <span>Modelo</span>
+          <select id="thata-model">
+            <option value="gpt-5-nano">GPT-5 Nano / muito rapido</option>
+            <option value="gpt-5-mini">GPT-5 Mini / rapido e equilibrado</option>
+            <option value="gpt-5" selected>GPT-5 / robusto</option>
+            <option value="gpt-5.1">GPT-5.1 / novo e recomendado</option>
+            <option value="gpt-5-chat-latest">GPT-5 Chat Latest / estilo ChatGPT</option>
+            <option value="gpt-4.1">GPT-4.1 / estavel e forte</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="thata-layout">
+      <section class="thata-panel thata-panel--prompt">
+        <div class="thata-section-head">
+          <div>
+            <p class="thata-section-kicker">Container 1</p>
+            <h2>Prompt mestre da IA</h2>
+          </div>
+          <button id="thata-apply-prompt" type="button" class="thata-button thata-button--ghost">Aplicar prompt</button>
+        </div>
+
+        <label class="thata-field" for="thata-system-prompt">
+          <span>Defina a personalidade, o tom e as regras da resposta.</span>
+          <textarea id="thata-system-prompt" rows="7" placeholder="Ex: Seja ironico, muito inteligente, responda em portugues, fale curto, nunca use ingles, use analogias do dia a dia..."></textarea>
+        </label>
+        <p id="thata-prompt-status" class="thata-prompt-status">O modelo entra neutro. O texto acima guia totalmente o comportamento dele.</p>
+      </section>
+
+      <section class="thata-panel thata-panel--chat">
+        <div class="thata-section-head">
+          <div>
+            <p class="thata-section-kicker">Container 2</p>
+            <h2>Conversa</h2>
+          </div>
+          <button id="thata-clear-chat" type="button" class="thata-button">Limpar chat</button>
+        </div>
+
+        <div id="thata-feed" class="thata-feed" aria-live="polite">
+          <article class="thata-bubble thata-bubble--assistant">
+            <p class="thata-bubble__label">GPT</p>
+            <p class="thata-bubble__text">Escolha o modelo, escreva o prompt mestre e mande a primeira mensagem.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="thata-panel thata-panel--composer">
+        <div class="thata-section-head">
+          <div>
+            <p class="thata-section-kicker">Container 3</p>
+            <h2>Enviar mensagem</h2>
+          </div>
+        </div>
+
+        <form id="thata-form" class="thata-form">
+          <label class="thata-field" for="thata-input">
+            <span>Mensagem do usuario</span>
+            <textarea id="thata-input" rows="5" maxlength="2400" placeholder="Digite sua mensagem para conversar com fluidez..."></textarea>
+          </label>
+
+          <div class="thata-form__footer">
+            <span id="thata-count" class="thata-count">0/2400</span>
+            <button id="thata-send" type="submit" class="thata-button thata-button--primary">Enviar</button>
+          </div>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  <script src="js/thata-page.js"></script>
+</body>
+</html>

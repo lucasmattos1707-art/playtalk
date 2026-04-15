@@ -80,6 +80,14 @@ const OPENAI_STORY_MODEL = env(process.env.OPENAI_STORY_MODEL) || 'gpt-5.4-nano'
 const OPENAI_TTS_MODEL = env(process.env.OPENAI_TTS_MODEL) || 'gpt-4o-mini-tts';
 const OPENAI_STT_MODEL = env(process.env.OPENAI_STT_MODEL) || 'gpt-4o-mini-transcribe';
 const OPENAI_CHAT_FAST_MODEL = env(process.env.OPENAI_CHAT_FAST_MODEL) || 'gpt-5-mini';
+const OPENAI_CHAT_ALLOWED_MODELS = new Set([
+  'gpt-5-nano',
+  'gpt-5-mini',
+  'gpt-5',
+  'gpt-5.1',
+  'gpt-5-chat-latest',
+  'gpt-4.1'
+]);
 const PLAYTALK_PUBLIC_BASE_URL = env(process.env.PLAYTALK_PUBLIC_BASE_URL);
 const STRIPE_SECRET_KEY = env(process.env.STRIPE_SECRET_KEY);
 const STRIPE_PUBLISHABLE_KEY = env(process.env.STRIPE_PUBLISHABLE_KEY);
@@ -13687,6 +13695,10 @@ app.get(['/chat/', '/chat/index.html'], (req, res) => {
   res.sendFile(path.join(staticDir, 'chat', 'index.html'));
 });
 
+app.get(['/thata', '/thata/', '/thata.html'], (req, res) => {
+  res.sendFile(path.join(staticDir, 'thata.html'));
+});
+
 app.get('/', (req, res) => {
   const queryIndex = req.originalUrl.indexOf('?');
   const search = queryIndex >= 0 ? req.originalUrl.slice(queryIndex) : '';
@@ -14038,6 +14050,7 @@ app.post('/api/chat/openai', async (req, res) => {
   const messages = Array.isArray(req.body?.messages) ? req.body.messages : [];
   const requestedSystemPrompt = typeof req.body?.systemPrompt === 'string' ? req.body.systemPrompt.trim() : '';
   const requestedMaxOutputChars = Number.parseInt(req.body?.maxOutputChars, 10);
+  const requestedModel = typeof req.body?.model === 'string' ? req.body.model.trim() : '';
   const normalizedMessages = messages
     .map((message) => ({
       role: message?.role === 'assistant' ? 'assistant' : 'user',
@@ -14063,6 +14076,9 @@ app.post('/api/chat/openai', async (req, res) => {
   const maxOutputChars = Number.isInteger(requestedMaxOutputChars) && requestedMaxOutputChars > 0
     ? Math.min(requestedMaxOutputChars, 280)
     : 0;
+  const selectedModel = OPENAI_CHAT_ALLOWED_MODELS.has(requestedModel)
+    ? requestedModel
+    : OPENAI_CHAT_FAST_MODEL;
 
   try {
     const upstreamResponse = await fetch('https://api.openai.com/v1/responses', {
@@ -14072,7 +14088,7 @@ app.post('/api/chat/openai', async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: OPENAI_CHAT_FAST_MODEL,
+        model: selectedModel,
         instructions: systemPrompt,
         input: normalizedMessages.map((message) => ({
           type: 'message',
@@ -14116,7 +14132,7 @@ app.post('/api/chat/openai', async (req, res) => {
     res.json({
       success: true,
       text,
-      model: OPENAI_CHAT_FAST_MODEL,
+      model: selectedModel,
       usage: payload?.usage || null
     });
   } catch (error) {
