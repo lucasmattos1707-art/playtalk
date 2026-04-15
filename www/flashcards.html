@@ -367,16 +367,13 @@
       overflow: hidden;
       box-shadow: none;
       margin: 0 auto;
-      filter:
-        drop-shadow(0 0 8px rgba(170, 241, 255, 0.42))
-        drop-shadow(0 0 18px rgba(112, 214, 255, 0.28))
-        drop-shadow(0 12px 26px rgba(34, 148, 255, 0.16));
-      transition: transform 220ms ease, filter 220ms ease;
+        filter: none;
+        transition: transform 220ms ease;
       justify-self: center;
       transform: translateY(-30px) scale(0.9);
       transform-origin: center;
-      will-change: transform, filter;
-      animation: welcomeButtonNeonPulse 4s ease-in-out infinite;
+      will-change: transform;
+      animation: none;
     }
 
     .welcome-gate__start-btn img {
@@ -389,12 +386,8 @@
     .welcome-gate__start-btn:hover,
     .welcome-gate__start-btn:focus-visible {
       transform: translateY(-32px) scale(0.93);
-      filter:
-        saturate(1.04)
-        drop-shadow(0 0 10px rgba(170, 241, 255, 0.54))
-        drop-shadow(0 0 24px rgba(112, 214, 255, 0.34))
-        drop-shadow(0 14px 28px rgba(34, 148, 255, 0.22));
-    }
+        filter: none;
+      }
 
     .welcome-gate__account-link {
       border: 0;
@@ -2747,18 +2740,24 @@
       opacity: 1;
       pointer-events: none;
       filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.18));
-      -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.82) 34%, rgba(0, 0, 0, 0.45) 68%, transparent 100%);
-      mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.82) 34%, rgba(0, 0, 0, 0.45) 68%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to top, #000000 0%, #000000 30%, rgba(0, 0, 0, 0.88) 52%, rgba(0, 0, 0, 0.42) 70%, transparent 100%);
+      mask-image: linear-gradient(to top, #000000 0%, #000000 30%, rgba(0, 0, 0, 0.88) 52%, rgba(0, 0, 0, 0.42) 70%, transparent 100%);
       transition: opacity 500ms ease;
     }
 
+    .game-card__visual.is-stage-two .game-card__phase-flag--english,
     .game-card__visual.is-stage-two .game-card__phase-flag--portuguese {
       object-fit: cover;
       opacity: 0;
     }
 
+    .game-card__visual.is-stage-two.is-image-ready .game-card__phase-flag--english,
     .game-card__visual.is-stage-two.is-image-ready .game-card__phase-flag--portuguese {
       opacity: 1;
+    }
+
+    .game-card__visual.is-stage-two.is-image-ready .game-card__phase-flag--english {
+      opacity: 0.88;
     }
 
     .game-card__visual.is-overlay-dissolving .game-card__phase-flag {
@@ -3428,9 +3427,12 @@
       place-items: center;
       align-content: center;
       text-align: center;
+      font-size: 29.9px;
       text-shadow:
-        0 3px 0 rgba(8, 28, 74, 0.98),
-        0 10px 22px rgba(8, 28, 74, 0.64);
+        0 0 10px rgba(5, 22, 92, 0.92),
+        0 0 22px rgba(5, 22, 92, 0.82),
+        0 0 34px rgba(5, 22, 92, 0.72),
+        0 8px 18px rgba(5, 22, 92, 0.88);
     }
 
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual {
@@ -3472,10 +3474,12 @@
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-star-phase-copy {
       font-family: "Pltay", "Soopafre", Arial, sans-serif;
-      font-size: clamp(39px, 12.7vw, 78px);
+      font-size: clamp(44.85px, 14.6vw, 89.7px);
       text-shadow:
-        0 3px 0 rgba(8, 28, 74, 0.98),
-        0 10px 22px rgba(8, 28, 74, 0.64);
+        0 0 10px rgba(5, 22, 92, 0.92),
+        0 0 22px rgba(5, 22, 92, 0.82),
+        0 0 34px rgba(5, 22, 92, 0.72),
+        0 8px 18px rgba(5, 22, 92, 0.88);
     }
 
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual.is-star-phase-copy {
@@ -3489,12 +3493,49 @@
     .flashcards-typing__display-letter {
       display: inline-block;
       min-width: 0.32em;
+      position: relative;
+      z-index: 0;
+    }
+
+    .game[data-phase-key="second-star"] .flashcards-typing__display-letter::before {
+      content: attr(data-char);
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      color: rgba(5, 22, 92, 0.88);
+      filter: blur(7px);
+      opacity: 0.95;
+      z-index: -1;
+      pointer-events: none;
+      white-space: pre;
     }
 
     .flashcards-typing__display-line {
       display: block;
       width: 100%;
       text-align: center;
+      white-space: nowrap;
+    }
+
+    .flashcards-typing__display--size-xl {
+      transform: translate(-50%, -50%) scale(1.6);
+      transform-origin: center center;
+    }
+
+    .flashcards-typing__display--size-lg {
+      transform: translate(-50%, -50%) scale(1.4);
+      transform-origin: center center;
+    }
+
+    .flashcards-typing__display--size-md {
+      transform: translate(-50%, -50%) scale(1.2);
+      transform-origin: center center;
+    }
+
+    .flashcards-typing__display--two-lines {
+      transform: translate(-50%, -50%) scale(1.3);
+      transform-origin: center center;
     }
 
     .flashcards-typing__display-letter.is-dimmed {
@@ -3508,9 +3549,11 @@
     .flashcards-typing__display-letter.is-filled {
       color: #ffffff;
       opacity: 1;
-      text-shadow:
-        0 0 8px rgba(255, 255, 255, 0.35),
-        0 4px 12px rgba(0, 0, 0, 0.32);
+      text-shadow: none;
+    }
+
+    .flashcards-typing__display-letter.is-hidden-unfilled::before {
+      opacity: 0;
     }
 
     .flashcards-typing__display-letter.is-hint {
@@ -3523,6 +3566,10 @@
       filter: drop-shadow(0 4px 10px rgba(24, 155, 83, 0.22));
     }
 
+    .flashcards-typing__display-letter.is-hint::before {
+      opacity: 0;
+    }
+
     .flashcards-typing__display-prompt {
       display: inline-block;
       opacity: 0.95;
@@ -3531,20 +3578,20 @@
     }
 
     .flashcards-typing__toolbar {
-      width: calc(100% - 60px);
+      width: 100%;
       display: flex;
-      justify-content: flex-end;
+      justify-content: center;
       align-items: center;
     }
 
     .flashcards-typing__skip {
       border: none;
       border-radius: 999px;
-      padding: 8px 14px;
+      padding: 9px 15px;
       background: rgba(7, 27, 73, 0.9);
       color: #f5fbff;
       font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
-      font-size: 14px;
+      font-size: 15px;
       letter-spacing: 0.03em;
       cursor: pointer;
       box-shadow:
@@ -4565,7 +4612,7 @@
       align-items: center;
       justify-content: center;
       padding: 0;
-      background: rgba(3, 9, 23, 0.96);
+      background: #000000;
       touch-action: manipulation;
     }
 
@@ -4574,8 +4621,8 @@
     }
 
     .game-stage-tutorial__image {
-      width: min(100vw, calc(100vh * 9 / 16));
-      height: min(100vh, calc(100vw * 16 / 9));
+      width: 100vw;
+      height: 100vh;
       max-width: 100vw;
       max-height: 100vh;
       object-fit: contain;
@@ -4592,12 +4639,17 @@
 
     .game[data-phase-key="second-star"] .flashcards-typing__grid.is-error .flashcards-typing__key,
     .game[data-phase-key="fourth-star"] .flashcards-typing__grid.is-error .flashcards-typing__key {
-      background: #d63a51 !important;
+      background: linear-gradient(145deg, #4e0816 0%, #7b1023 58%, #a61f33 100%) !important;
       background-image: none !important;
+      border-color: rgba(255, 103, 137, 0.96) !important;
       color: #fff5f7;
       text-shadow:
-        0 2px 0 rgba(119, 18, 33, 0.92),
-        0 6px 12px rgba(119, 18, 33, 0.32);
+        0 2px 0 rgba(73, 7, 21, 0.98),
+        0 6px 12px rgba(73, 7, 21, 0.5);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 188, 201, 0.12),
+        0 0 14px rgba(255, 60, 99, 0.34),
+        0 0 28px rgba(255, 60, 99, 0.22);
       animation: flashcardsTypingErrorShake 1000ms ease-in-out;
     }
 
@@ -12155,8 +12207,8 @@
         }
         return {
           ...baseConfig,
-          overlayFlag: PORTUGUESE_ICON_PATH,
-          overlayClassName: 'game-card__phase-flag--portuguese'
+          overlayFlag: ENGLISH_ICON_PATH,
+          overlayClassName: 'game-card__phase-flag--english'
         };
       }
 
@@ -13312,18 +13364,26 @@
         };
       }
 
-      function isPlaytalkStarTypingStage(entry) {
-        return Boolean(entry && (entry.stage === 2 || entry.stage === 4));
-      }
-
-      function formatTypingDisplayText(rawText) {
-        const source = safeText(rawText).trim();
-        if (!source) return '';
-        return source.charAt(0).toLocaleUpperCase('pt-BR') + source.slice(1).toLocaleLowerCase('pt-BR');
-      }
-
       function countTypingDisplayCharacters(value) {
-        return safeText(value).replace(/\s+/g, '').length;
+        return safeText(value).trim().length;
+      }
+
+      function countTypingDisplayLetters(value) {
+        return normalizeTypingSource(value).replace(/\s+/g, '').length;
+      }
+
+      function getTypingDisplayWords(text) {
+        return safeText(text).trim().split(/\s+/).filter(Boolean);
+      }
+
+      function hasOversizeTypingWord(text) {
+        return getTypingDisplayWords(text).some((word) => countTypingDisplayLetters(word) >= 15);
+      }
+
+      function isCardEligibleForGame(card) {
+        const englishSource = safeText(card?.english || card?.portuguese || card?.deckTitle || '').trim();
+        if (!englishSource) return false;
+        return !hasOversizeTypingWord(englishSource);
       }
 
       function scoreTypingDisplayLines(lines) {
@@ -13339,6 +13399,15 @@
         const best = { score: Number.POSITIVE_INFINITY, lines: [words.join(' ')] };
         if (!Array.isArray(words) || !words.length || lineCount <= 1) {
           return best.lines;
+        }
+
+        if (
+          lineCount === 2
+          && words.length === 2
+          && countTypingDisplayLetters(words[0]) > 3
+          && countTypingDisplayLetters(words[1]) > 3
+        ) {
+          return [words[0], words[1]];
         }
 
         const buildPartitions = (startIndex, remainingLines, chosen) => {
@@ -13369,25 +13438,39 @@
       function splitTypingDisplayText(text) {
         const source = safeText(text).trim();
         if (!source) return [''];
-        const words = source.split(/\s+/).filter(Boolean);
+        if (hasOversizeTypingWord(source)) return [];
+        const words = getTypingDisplayWords(source);
         if (words.length <= 1) return [source];
 
-        const compactLength = countTypingDisplayCharacters(source);
-        if (compactLength <= 14) return [source];
-
-        if (compactLength > 24 && words.length >= 3) {
-          return chooseTypingDisplaySplit(words, 3);
+        const hasTwoLongWords = words.length === 2
+          && countTypingDisplayLetters(words[0]) > 3
+          && countTypingDisplayLetters(words[1]) > 3;
+        if (hasTwoLongWords) {
+          return [words[0], words[1]];
         }
 
-        if (words.length === 2 && compactLength >= 12) {
-          return words;
-        }
+        const totalLength = countTypingDisplayCharacters(source);
+        if (totalLength <= 14) return [source];
+        const desiredLineCount = totalLength >= 25 ? 3 : (hasTwoLongWords ? 2 : 2);
+        return chooseTypingDisplaySplit(words, desiredLineCount);
+      }
 
-        if (compactLength >= 12) {
-          return chooseTypingDisplaySplit(words, 2);
-        }
+      function typingDisplayScaleClass(text) {
+        const length = countTypingDisplayLetters(text);
+        if (length >= 3 && length <= 5) return 'flashcards-typing__display--size-xl';
+        if (length >= 6 && length <= 8) return 'flashcards-typing__display--size-lg';
+        if (length >= 9 && length <= 11) return 'flashcards-typing__display--size-md';
+        return '';
+      }
 
-        return [source];
+      function isPlaytalkStarTypingStage(entry) {
+        return Boolean(entry && (entry.stage === 2 || entry.stage === 4));
+      }
+
+      function formatTypingDisplayText(rawText) {
+        const source = safeText(rawText).trim();
+        if (!source) return '';
+        return source.charAt(0).toLocaleUpperCase('pt-BR') + source.slice(1).toLocaleLowerCase('pt-BR');
       }
 
       function buildTypingDisplayMarkup(typingState, typedLetters, options = {}) {
@@ -13428,7 +13511,7 @@
             if (isHint) classNames.push('is-hint');
 
             normalizedLetterIndex += 1;
-            return `<span class="${classNames.join(' ')}">${escapeHtml(visibleChar)}</span>`;
+            return `<span class="${classNames.join(' ')}" data-char="${escapeHtml(visibleChar)}">${escapeHtml(visibleChar)}</span>`;
           }).join('');
           return `<span class="flashcards-typing__display-line">${lineMarkup}</span>`;
         }).join('');
@@ -13436,6 +13519,21 @@
 
       function renderTypingDisplay(display, typingState, typedLetters, options = {}) {
         if (!display) return;
+        const displayText = formatTypingDisplayText(typingState?.sourceText || typingState?.acceptedAnswer || '');
+        const splitLines = splitTypingDisplayText(displayText);
+        display.classList.remove(
+          'flashcards-typing__display--size-xl',
+          'flashcards-typing__display--size-lg',
+          'flashcards-typing__display--size-md',
+          'flashcards-typing__display--two-lines'
+        );
+        const scaleClassName = typingDisplayScaleClass(displayText);
+        if (scaleClassName) {
+          display.classList.add(scaleClassName);
+        }
+        if (splitLines.length === 2) {
+          display.classList.add('flashcards-typing__display--two-lines');
+        }
         display.innerHTML = buildTypingDisplayMarkup(typingState, typedLetters, options);
       }
 
@@ -13628,8 +13726,8 @@
         const skipBtn = document.createElement('button');
         skipBtn.type = 'button';
         skipBtn.className = 'flashcards-typing__skip';
-        skipBtn.textContent = 'Pular';
-        skipBtn.setAttribute('aria-label', 'Pular digitacao automatica');
+        skipBtn.textContent = 'AVANÇAR';
+        skipBtn.setAttribute('aria-label', 'Avancar digitacao automatica');
         toolbar.appendChild(skipBtn);
 
         const grid = document.createElement('div');
@@ -13778,6 +13876,13 @@
         syncFooterGuardState(entry);
 
         const card = cardById(entry.id);
+        if (!isCardEligibleForGame(card)) {
+          removeGameEntry(entry.id);
+          refillGameEntry(entry.pool || 'base', state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT);
+          state.game.currentId = state.game.queue.shift() || Array.from(state.game.entries.keys())[0] || null;
+          renderCurrentCard(options);
+          return;
+        }
         const stageConfig = resolveGameStageConfig(entry);
         if (maybeShowStageTutorialBeforeCard(entry, options)) {
           return;
@@ -13961,6 +14066,8 @@
             fallbackSource = fallbackSource.filter(isEarlyFlashcardLengthEligible);
           }
         }
+        preferredSource = preferredSource.filter(isCardEligibleForGame);
+        fallbackSource = fallbackSource.filter(isCardEligibleForGame);
         const sourceCards = preferredSource.length ? preferredSource : fallbackSource;
         let nextCard = (pool === 'review' && preferredSource.length)
           ? sourceCards[0]

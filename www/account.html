@@ -15,11 +15,11 @@
     }
 
     :root {
-      --bg: #060606;
-      --playtalk-global-bg-image: none;
-      --playtalk-global-bg-overlay:
-        radial-gradient(circle at 50% 12%, rgba(115, 122, 132, 0.18), transparent 28%),
-        linear-gradient(180deg, rgba(3, 3, 3, 0.98) 0%, rgba(20, 22, 26, 0.98) 52%, rgba(42, 45, 49, 0.98) 100%);
+      --bg: #07111f;
+      --playtalk-global-bg-desktop: url('/backgrounds/playtalk-global-desktop.webp');
+      --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
+      --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
+      --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 0.78) 0%, rgba(4, 18, 38, 0.34) 42%, rgba(4, 18, 38, 0.04) 100%);
       --panel: rgba(9, 21, 38, 0.92);
       --line: rgba(140, 197, 255, 0.14);
       --text: #f4f8ff;
@@ -41,7 +41,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(180deg, #030303 0%, #14161a 56%, #2a2d31 100%);
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
       overflow: hidden;
       pointer-events: none;
       z-index: 0;
@@ -140,8 +140,14 @@
     }
 
     .panel.is-guest .account-profile {
-      transform: translateY(-60px);
-      margin-bottom: -42px;
+      transform: translateY(0);
+      margin-bottom: 0;
+      padding-top: 30px;
+      gap: 10px;
+    }
+
+    .panel:not(.is-guest) .account-profile {
+      gap: 0;
     }
 
     .account-avatar {
@@ -175,7 +181,7 @@
 
     .account-avatar__aura {
       position: absolute;
-      inset: -18px;
+      inset: -28px;
       overflow: visible;
       pointer-events: none;
       z-index: 3;
@@ -240,6 +246,14 @@
       background: transparent;
     }
 
+    #accountAvatarPreview,
+    #accountAvatarFallback {
+      width: 106%;
+      height: 106%;
+      transform: translateY(10px);
+      transform-origin: center bottom;
+    }
+
     .account-avatar.is-message > span:not(.account-avatar__aura) {
       height: auto;
       color: #ffffff;
@@ -282,6 +296,10 @@
       justify-items: center;
       gap: 10px;
       min-height: 28px;
+    }
+
+    .panel:not(.is-guest) .account-name-inline {
+      display: none;
     }
 
     .account-name-prompt {
@@ -349,16 +367,20 @@
 
     .panel.is-guest .account-name-prompt {
       display: inline-flex;
-      width: 100%;
-      min-height: 58px;
+      width: auto;
+      min-height: 0;
+      padding: 0;
       align-items: center;
       justify-content: center;
       gap: 12px;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
     }
 
     .panel.is-guest .account-name-inline {
       position: relative;
-      width: 100%;
+      width: min(85%, 336px);
       min-height: 58px;
       padding: 0 18px;
       border-radius: 999px;
@@ -370,6 +392,48 @@
         0 0 34px rgba(36, 112, 255, 0.22);
       text-shadow: 0 0 14px rgba(114, 239, 255, 0.22);
       cursor: text;
+    }
+
+    .panel.is-guest #accountPasswordField,
+    .panel.is-guest .account-button--primary,
+    .panel.is-guest .account-button--premium {
+      margin-top: 0;
+    }
+
+    .panel.is-guest .account-name-inline,
+    .panel.is-guest #accountPasswordField,
+    .panel.is-guest .account-button--primary,
+    .panel.is-guest .account-button--premium {
+      margin-top: 0;
+    }
+
+    .panel.is-guest #accountPasswordField,
+    .panel.is-guest .account-button--primary,
+    .panel.is-guest .account-button--premium {
+      width: min(85%, 336px);
+    }
+
+    .panel.is-guest .account-avatar {
+      width: min(483px, 89vw);
+      height: auto;
+      min-height: 0;
+      aspect-ratio: auto;
+      margin-bottom: 4px;
+    }
+
+    .panel.is-guest .account-avatar::before,
+    .panel.is-guest .account-avatar__aura,
+    .panel.is-guest #accountAvatarFallback {
+      display: none !important;
+    }
+
+    .panel.is-guest #accountAvatarPreview {
+      width: 100%;
+      height: auto;
+      transform: none;
+      clip-path: none;
+      border-radius: 0;
+      object-fit: contain;
     }
 
     .panel.is-guest .account-name-inline.is-active {
@@ -408,6 +472,11 @@
     .panel.is-guest .account-name-inline.has-value .account-name-input {
       opacity: 1;
       pointer-events: auto;
+    }
+
+    .panel.is-guest .account-name-inline.is-typing .account-name-prompt,
+    .panel.is-guest .account-name-inline.has-value .account-name-prompt {
+      opacity: 0;
     }
 
     .account-name-input[readonly] {
@@ -480,6 +549,7 @@
       margin: 0;
       color: var(--muted);
       text-align: center;
+      display: none !important;
     }
 
     .account-premium {
@@ -845,6 +915,7 @@
       font-weight: 800;
       letter-spacing: 0.01em;
       text-shadow: 0 0 12px rgba(255, 214, 163, 0.16);
+      transition: opacity 220ms ease;
     }
 
     .panel.is-guest #accountPasswordField > span::before {
@@ -887,7 +958,7 @@
 
     .panel.is-guest #accountPasswordField.is-typing > span,
     .panel.is-guest #accountPasswordField.has-value > span {
-      display: none;
+      opacity: 0;
     }
 
     .panel.is-guest #accountPasswordField.is-typing #accountPasswordInput,
@@ -1151,14 +1222,14 @@
             <input class="account-name-input" id="accountNameInput" type="text" maxlength="32" placeholder="Seu nome">
           </div>
           <label class="account-field" id="accountPasswordField" hidden>
-            <span>Senha</span>
+            <span>Toque para inserir a senha</span>
             <input id="accountPasswordInput" type="password" maxlength="64" placeholder="Senha">
           </label>
           <button class="account-button account-button--primary" id="accountGuestLoginBtn" type="submit" hidden>
-            <span class="account-button__label">Entrar</span>
+            <span class="account-button__label">Acessar plataforma</span>
             <span class="account-button__arrow" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none">
-                <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 6.5l10 5.5l-10 5.5z" fill="currentColor"/>
               </svg>
             </span>
           </button>

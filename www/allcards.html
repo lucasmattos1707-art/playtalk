@@ -92,18 +92,95 @@
       gap: 16px;
     }
 
+    .content-switcher {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-top: calc(5vh - 20px);
+    }
+
+    .content-switcher__btn {
+      width: 50%;
+      max-width: 50%;
+      height: 4.8vh;
+      min-height: 37px;
+      border-radius: 0;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(5, 17, 31, 0.72);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 14px;
+      font-family: "PlaytalkDisplay", "Soopafre", Arial, sans-serif;
+      font-size: clamp(20px, 4.2vw, 32px);
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+
+    .content-switcher__btn svg {
+      width: clamp(22px, 5vw, 30px);
+      height: clamp(22px, 5vw, 30px);
+      flex: 0 0 auto;
+      filter: drop-shadow(0 0 14px currentColor);
+    }
+
+    .content-switcher__btn span {
+      white-space: nowrap;
+      text-shadow: 0 0 10px currentColor;
+    }
+
+    .content-switcher__btn--flashcards {
+      color: #ff8c42;
+    }
+
+    .content-switcher__btn--smartbooks {
+      color: #67d8ff;
+    }
+
+    .content-switcher__btn.is-active {
+      transform: translateY(-1px);
+    }
+
+    .content-switcher__btn--flashcards.is-active {
+      border-color: rgba(255, 150, 64, 0.82);
+      background: linear-gradient(180deg, rgba(255, 150, 64, 0.28), rgba(35, 14, 5, 0.82));
+      box-shadow: 0 0 0 1px rgba(255, 150, 64, 0.18), 0 0 26px rgba(255, 128, 45, 0.3);
+    }
+
+    .content-switcher__btn--smartbooks.is-active {
+      border-color: rgba(93, 218, 255, 0.82);
+      background: linear-gradient(180deg, rgba(77, 191, 255, 0.22), rgba(7, 23, 43, 0.86));
+      box-shadow: 0 0 0 1px rgba(111, 218, 255, 0.16), 0 0 28px rgba(62, 177, 255, 0.28);
+    }
+
+    .content-view {
+      margin-top: 5vh;
+    }
+
+    .content-view[hidden] {
+      display: none !important;
+    }
+
+    #smartbooksView {
+      margin-top: 0;
+      transform: translateY(-5vh);
+    }
+
     .panel.section {
       background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid transparent;
       border-radius: 28px;
-      backdrop-filter: blur(8px);
+      backdrop-filter: none;
       padding: 18px 14px;
     }
 
     .section-head {
       display: flex;
       justify-content: center;
-      margin-bottom: 12px;
+      margin-bottom: 0;
     }
 
     .section-copy {
@@ -115,12 +192,20 @@
       width: 100%;
       margin: 0;
       text-align: center;
-      font-size: clamp(34px, 5.4vw, 52px);
+      font-size: clamp(28px, 4.6vw, 42px);
       letter-spacing: 0.03em;
       color: #fff;
+      text-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+      transition: transform 220ms ease, opacity 220ms ease, filter 220ms ease;
+    }
+
+    #libraryTitle.is-updating {
+      transform: translateY(-2px) scale(1.02);
+      filter: drop-shadow(0 10px 20px rgba(255, 255, 255, 0.12));
     }
 
     #allSectionCopy {
+      display: none;
       margin: 8px 0 0;
       font-family: "PlaytalkDisplay", "Soopafre", Arial, sans-serif;
       font-size: clamp(28px, 5vw, 46px);
@@ -150,12 +235,12 @@
     .mini-card {
       padding: 10px;
       border-radius: 24px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: transparent;
+      border: 1px solid transparent;
       min-height: 100%;
       position: relative;
       overflow: hidden;
-      backdrop-filter: blur(6px);
+      backdrop-filter: none;
     }
 
     .mini-card__image {
@@ -163,8 +248,8 @@
       aspect-ratio: 1 / 1;
       border-radius: 18px;
       overflow: visible;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: transparent;
+      border: 1px solid transparent;
       position: relative;
       isolation: isolate;
     }
@@ -241,36 +326,26 @@
     .mini-card__loader {
       position: absolute;
       inset: 50% auto auto 50%;
-      width: 34px;
-      height: 34px;
+      width: 28px;
+      height: 28px;
       transform: translate(-50%, -50%);
       border-radius: 50%;
-      background: linear-gradient(#ee280e, #15a0f7, #6ed15a);
-      animation: flashcardsMiniLoaderSpin 1.2s linear infinite;
+      border: 3px solid rgba(92, 214, 255, 0.18);
+      border-top-color: #55deff;
+      border-right-color: #1da7ff;
+      box-shadow: 0 0 14px rgba(66, 198, 255, 0.38);
+      animation: flashcardsMiniLoaderSpin 0.9s linear infinite;
       pointer-events: none;
       z-index: 2;
-    }
-
-    .mini-card__loader span {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      background: linear-gradient(#ee280e, #15a0f7, #5ad15a);
     }
 
     .mini-card__loader::after {
       content: "";
       position: absolute;
-      inset: 7px;
-      background: rgba(22, 28, 40, 0.96);
-      border: solid rgba(22, 28, 40, 0.96) 7px;
+      inset: 5px;
+      background: rgba(6, 18, 36, 0.82);
       border-radius: 50%;
     }
-
-    .mini-card__loader span:nth-child(1) { filter: blur(3px); }
-    .mini-card__loader span:nth-child(2) { filter: blur(6px); }
-    .mini-card__loader span:nth-child(3) { filter: blur(12px); }
-    .mini-card__loader span:nth-child(4) { filter: blur(18px); }
 
     .empty {
       min-height: 220px;
@@ -282,6 +357,155 @@
       color: var(--muted);
       border: 1px dashed rgba(125, 203, 255, 0.16);
       background: rgba(255, 255, 255, 0.02);
+    }
+
+    .smartbooks-shelf {
+      --books-shelf-height: max(420px, calc(100vh - var(--footer-total-height) - 23vh));
+      min-height: var(--books-shelf-height);
+      max-height: var(--books-shelf-height);
+      border-radius: 0;
+      border: 1px solid transparent;
+      background: transparent;
+      backdrop-filter: none;
+      box-shadow: none;
+      overflow-x: hidden;
+      overflow-y: auto;
+      position: relative;
+      scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .smartbooks-grid {
+      width: 100%;
+      min-height: 100%;
+      display: block;
+      padding: 0;
+      margin: 0;
+    }
+
+    .smartbooks-shelf-page {
+      width: 100%;
+      min-height: var(--books-shelf-height);
+      display: grid;
+      place-items: center;
+      align-content: center;
+      padding: 0;
+      overflow: hidden;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+    }
+
+    .smartbooks-card {
+      --books-card-book-width: min(calc(var(--books-shelf-height) * 9 / 16 * 0.81), 81vw);
+      --books-card-book-height: calc(var(--books-card-book-width) * 16 / 9);
+      --books-card-badge-size: 102px;
+      --books-card-vertical-offset: 0px;
+      width: min(calc(var(--books-shelf-height) * 9 / 16 * 0.81), 81vw);
+      max-width: 81%;
+      max-height: 81%;
+      aspect-ratio: 9 / 16;
+      border: 0;
+      border-radius: 16px;
+      overflow: visible;
+      position: relative;
+      padding: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .smartbooks-card__background {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: var(--books-card-book-width);
+      height: var(--books-card-book-height);
+      max-width: 100%;
+      border-radius: 14px;
+      background: linear-gradient(155deg, #2a5bcf, #28a7d5);
+      background-position: center;
+      background-size: cover;
+      background-repeat: no-repeat;
+      border: 1px solid transparent;
+      box-shadow: 0 26px 44px rgba(0, 0, 0, 0.48), 18px 0 24px rgba(0, 0, 0, 0.18);
+      transform: translate(-50%, calc(-50% + var(--books-card-vertical-offset))) perspective(1300px) rotateY(-16deg) rotateX(7deg);
+      transform-origin: center center;
+      transform-style: preserve-3d;
+      overflow: visible;
+    }
+
+    .smartbooks-card__background::after {
+      content: "";
+      position: absolute;
+      top: 2%;
+      bottom: 2%;
+      right: -10px;
+      width: 12px;
+      border-radius: 0 12px 12px 0;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(0, 0, 0, 0.3));
+      filter: blur(0.2px);
+      opacity: 0.8;
+    }
+
+    .smartbooks-card__overlay {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: var(--books-card-book-width);
+      height: var(--books-card-book-height);
+      transform: translate(-50%, calc(-50% + var(--books-card-vertical-offset)));
+      border-radius: 14px;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    .smartbooks-card__badge {
+      position: absolute;
+      right: calc(50% - (var(--books-card-book-width) / 2) - (var(--books-card-badge-size) * 0.16) - 6vw);
+      bottom: calc(50% - (var(--books-card-book-height) / 2) - (var(--books-card-badge-size) * 0.12) - 7vh);
+      width: var(--books-card-badge-size);
+      height: var(--books-card-badge-size);
+      display: grid;
+      place-items: center;
+      z-index: 3;
+      pointer-events: none;
+      filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.42));
+      transform: none;
+    }
+
+    .smartbooks-card__badge img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .smartbooks-card__title {
+      display: none;
+    }
+
+    #smartbooksTitle {
+      position: relative;
+      transform: translateY(50%);
+      z-index: 2;
+    }
+
+    .smartbooks-status {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      text-align: center;
+      color: #9fdcff;
+      font-size: clamp(18px, 3.5vw, 24px);
+      letter-spacing: 0.02em;
+      background: linear-gradient(180deg, rgba(4, 16, 29, 0.76), rgba(4, 16, 29, 0.24));
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+
+    .smartbooks-status[hidden] {
+      opacity: 0;
     }
 
     @keyframes flashcardsMiniLoaderSpin {
@@ -368,14 +592,53 @@
 
   <main class="shell">
     <section class="catalog" id="catalog">
-      <div class="panel section">
+      <div class="content-switcher" role="tablist" aria-label="Escolher biblioteca">
+        <button
+          class="content-switcher__btn content-switcher__btn--flashcards is-active"
+          id="flashcardsToggleBtn"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-controls="flashcardsView"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffba75" d="M13.1 2.4c.24 1.68 1.33 2.6 2.31 3.58c1.34 1.35 2.29 2.92 2.29 5.11c0 4.63-3.1 10.51-8.25 10.51c-3.22 0-5.17-2.24-5.17-5.07c0-1.8.89-3.39 2.18-4.86c1.16-1.34 2.56-2.81 3.97-6.49z"/></svg>
+          <span>FlashCards</span>
+        </button>
+        <button
+          class="content-switcher__btn content-switcher__btn--smartbooks"
+          id="smartbooksToggleBtn"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="smartbooksView"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#a9f1ff" d="M5.5 4.2A2.3 2.3 0 0 1 7.8 2h10.7A1.5 1.5 0 0 1 20 3.5v15.9a.6.6 0 0 1-.88.54A6.7 6.7 0 0 0 16 19.2H7.9a2.9 2.9 0 0 0-2.4 1.15V4.2zm1.3.6v12.1a4.5 4.5 0 0 1 1.1-.14H16c.88 0 1.74.12 2.6.37V4.4H7.8c-.57 0-1 .4-1 .4zm-.7 15.9c.42-.54 1.08-.9 1.8-.9h8.1c1.03 0 2.05.22 3 .64v.06H7.3c-.52 0-1.02.08-1.2.2z"/></svg>
+          <span>SmartBooks</span>
+        </button>
+      </div>
+
+      <div class="content-view" id="flashcardsView" role="tabpanel" aria-labelledby="flashcardsToggleBtn">
         <div class="section-head">
           <div class="section-copy">
-            <h2 id="libraryTitle">FlashCards</h2>
+            <h2 id="libraryTitle">0 FlashCards</h2>
             <p id="allSectionCopy">0 FlashCards</p>
           </div>
         </div>
-        <div class="grid" id="allGrid"></div>
+        <div class="panel section">
+          <div class="grid" id="allGrid"></div>
+        </div>
+      </div>
+
+      <div class="content-view" id="smartbooksView" role="tabpanel" aria-labelledby="smartbooksToggleBtn" hidden>
+        <div class="section-head">
+          <div class="section-copy">
+            <h2 id="smartbooksTitle">SmartBooks</h2>
+          </div>
+        </div>
+        <div class="smartbooks-shelf" id="smartbooksShelf">
+          <div class="smartbooks-grid" id="smartbooksGrid"></div>
+          <div class="smartbooks-status" id="smartbooksStatus">Carregando MyBooks...</div>
+        </div>
       </div>
     </section>
   </main>
@@ -402,6 +665,6 @@
   <script src="js/api-config.js"></script>
   <script src="js/playtalk-shell.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/allcards-page.js?v=20260410-1" defer></script>
+  <script src="js/allcards-page.js?v=20260415-2" defer></script>
 </body>
 </html>

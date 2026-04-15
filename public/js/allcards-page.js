@@ -2,6 +2,7 @@
   const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
   const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
   const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
+  const LAST_ACTIVE_USER_STORAGE_KEY = 'playtalk-flashcards-last-user-v1';
   const DATA_MANIFEST_REMOTE_PATH = '/api/flashcards/manifest';
   const FLASHCARDS_LOCAL_SOURCE_PREFIX = 'allcards';
   const LIBRARY_RANK_SWAP_DELAY_MS = 2000;
@@ -16,21 +17,35 @@
   const els = {
     allGrid: document.getElementById('allGrid'),
     allSectionCopy: document.getElementById('allSectionCopy'),
-    libraryTitle: document.getElementById('libraryTitle')
+    libraryTitle: document.getElementById('libraryTitle'),
+    flashcardsToggleBtn: document.getElementById('flashcardsToggleBtn'),
+    smartbooksToggleBtn: document.getElementById('smartbooksToggleBtn'),
+    flashcardsView: document.getElementById('flashcardsView'),
+    smartbooksView: document.getElementById('smartbooksView'),
+    smartbooksTitle: document.getElementById('smartbooksTitle'),
+    smartbooksShelf: document.getElementById('smartbooksShelf'),
+    smartbooksGrid: document.getElementById('smartbooksGrid'),
+    smartbooksStatus: document.getElementById('smartbooksStatus')
   };
 
   const state = {
     userId: 0,
     cards: [],
     ui: {
+      activeView: 'flashcards',
       librarySummaryMode: 'count',
       librarySummaryRank: 0,
       librarySummaryTimer: 0,
       librarySummaryFlashTimer: 0,
-      librarySummaryToken: 0
+      librarySummaryToken: 0,
+      smartbooksReady: false,
+      smartbooksLoading: false
     },
     renderTimer: 0,
-    summaryLoopTimer: 0
+    summaryLoopTimer: 0,
+    smartbooksInitPromise: null,
+    smartbooksBooks: [],
+    smartbooksStats: null
   };
 
   function safeText(value) {
@@ -70,9 +85,33 @@
     return Date.now();
   }
 
+  function wait(ms) {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
+    });
+  }
+
   function storageKeyForUser(baseKey, userId = state.userId) {
     const normalizedUserId = Number(userId) || 0;
     return normalizedUserId ? `${baseKey}:${normalizedUserId}` : baseKey;
+  }
+
+  function readLastActiveUserId() {
+    try {
+      return Math.max(0, Number(localStorage.getItem(LAST_ACTIVE_USER_STORAGE_KEY)) || 0);
+    } catch (_error) {
+      return 0;
+    }
+  }
+
+  function saveLastActiveUserId(userId) {
+    const normalizedUserId = Math.max(0, Number(userId) || 0);
+    if (!normalizedUserId) return;
+    try {
+      localStorage.setItem(LAST_ACTIVE_USER_STORAGE_KEY, String(normalizedUserId));
+    } catch (_error) {
+      // ignore
+    }
   }
 
   function createProgressRecord(cardId, overrides = {}) {
@@ -294,7 +333,7 @@
       ? `<div class="mini-card__progress" aria-hidden="true"><span style="width:${escapeHtml(percent.toFixed(2))}%"></span></div>`
       : '';
     const loaderMarkup = memorizing
-      ? '<div class="mini-card__loader" aria-hidden="true"><span></span><span></span><span></span><span></span></div>'
+      ? '<div class="mini-card__loader" aria-hidden="true"></div>'
       : '';
     const blurPx = memorizing ? (7 * (1 - (percent / 100))) : 0;
     return {
@@ -339,7 +378,6 @@
         const loader = document.createElement('div');
         loader.className = 'mini-card__loader';
         loader.setAttribute('aria-hidden', 'true');
-        loader.innerHTML = '<span></span><span></span><span></span><span></span>';
         imageWrap.appendChild(loader);
       }
     } else if (loaderEl) {
@@ -418,13 +456,13 @@
   }
 
   function flashLibrarySummary() {
-    if (!els.allSectionCopy) return;
+    if (!els.libraryTitle) return;
     clearLibrarySummaryFlashTimer();
-    els.allSectionCopy.classList.remove('is-updating');
-    void els.allSectionCopy.offsetWidth;
-    els.allSectionCopy.classList.add('is-updating');
+    els.libraryTitle.classList.remove('is-updating');
+    void els.libraryTitle.offsetWidth;
+    els.libraryTitle.classList.add('is-updating');
     state.ui.librarySummaryFlashTimer = window.setTimeout(() => {
-      els.allSectionCopy?.classList.remove('is-updating');
+      els.libraryTitle?.classList.remove('is-updating');
       state.ui.librarySummaryFlashTimer = 0;
     }, 260);
   }
@@ -439,33 +477,12 @@
   }
 
   function renderLibrarySummary(count = state.cards.length) {
-    if (!els.allSectionCopy) return;
-    const nextText = state.ui.librarySummaryMode === 'rank'
-      ? (formatLibrarySummaryRank() || formatLibrarySummaryCount(count))
-      : formatLibrarySummaryCount(count);
-    els.allSectionCopy.textContent = nextText;
-  }
-
-  async function refreshLibraryRanking() {
-    if (!state.userId) {
-      state.ui.librarySummaryRank = 0;
-      return 0;
+    const nextText = formatLibrarySummaryCount(count);
+    if (els.libraryTitle) {
+      els.libraryTitle.textContent = nextText;
     }
-    try {
-      const response = await fetch(buildApiUrl('/api/rankings/flashcards'), {
-        method: 'POST',
-        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-        cache: 'no-store',
-        credentials: 'include'
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.success) {
-        throw new Error(payload?.message || 'Falha ao carregar ranking.');
-      }
-      state.ui.librarySummaryRank = Math.max(0, Number(payload?.rank) || 0);
-      return state.ui.librarySummaryRank;
-    } catch (_error) {
-      return state.ui.librarySummaryRank;
+    if (els.allSectionCopy) {
+      els.allSectionCopy.textContent = nextText;
     }
   }
 
@@ -473,28 +490,212 @@
     const nextCount = state.cards.length;
     state.ui.librarySummaryMode = 'count';
     state.ui.librarySummaryToken += 1;
-    const token = state.ui.librarySummaryToken;
     clearLibrarySummaryTimer();
     renderLibrarySummary(nextCount);
     flashLibrarySummary();
-    state.ui.librarySummaryTimer = window.setTimeout(async () => {
-      state.ui.librarySummaryTimer = 0;
-      if (token !== state.ui.librarySummaryToken) return;
-      const rank = await refreshLibraryRanking();
-      if (token !== state.ui.librarySummaryToken || !rank) return;
-      state.ui.librarySummaryMode = 'rank';
-      renderLibrarySummary(nextCount);
-      flashLibrarySummary();
-    }, LIBRARY_RANK_SWAP_DELAY_MS);
   }
 
   function refreshLibrary() {
-    if (els.libraryTitle) {
-      els.libraryTitle.textContent = 'FlashCards';
-    }
     const cards = state.cards.map(buildLibraryCardView);
     renderMiniCards(els.allGrid, cards, '0');
     renderLibrarySummary(cards.length);
+  }
+
+  function renderViewToggle() {
+    const flashcardsActive = state.ui.activeView === 'flashcards';
+    const smartbooksActive = !flashcardsActive;
+    els.flashcardsToggleBtn?.classList.toggle('is-active', flashcardsActive);
+    els.smartbooksToggleBtn?.classList.toggle('is-active', smartbooksActive);
+    els.flashcardsToggleBtn?.setAttribute('aria-selected', flashcardsActive ? 'true' : 'false');
+    els.smartbooksToggleBtn?.setAttribute('aria-selected', smartbooksActive ? 'true' : 'false');
+    if (els.flashcardsView) {
+      els.flashcardsView.hidden = !flashcardsActive;
+    }
+    if (els.smartbooksView) {
+      els.smartbooksView.hidden = !smartbooksActive;
+    }
+  }
+
+  function setSmartbooksStatus(message, visible = true) {
+    if (!els.smartbooksStatus) return;
+    els.smartbooksStatus.textContent = safeText(message) || 'Carregando MyBooks...';
+    els.smartbooksStatus.hidden = !visible;
+  }
+
+  function normalizePercent(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.max(0, Math.min(100, numeric));
+  }
+
+  function normalizeAudioSources(value) {
+    return Array.isArray(value)
+      ? value.map((item) => safeText(item)).filter(Boolean)
+      : [];
+  }
+
+  function normalizeBooksFromStories(stories) {
+    const byBook = new Map();
+    if (!Array.isArray(stories)) return [];
+
+    stories.forEach((entry) => {
+      const fileName = safeText(entry?.fileName);
+      const nome = safeText(entry?.nome);
+      const bookId = safeText(entry?.bookId);
+      const storyId = safeText(entry?.id);
+      if (!fileName || !nome || !bookId) return;
+
+      const key = bookId.toLowerCase();
+      if (!byBook.has(key)) {
+        byBook.set(key, {
+          bookId,
+          fileName,
+          nome,
+          nivel: Number.parseInt(entry?.nivel, 10) || 1,
+          audioSources: normalizeAudioSources(entry?.audioSources),
+          coverImageUrl: safeText(entry?.coverImageUrl),
+          selectedStoryId: storyId
+        });
+        return;
+      }
+
+      const current = byBook.get(key);
+      if (!current.coverImageUrl && safeText(entry?.coverImageUrl)) {
+        current.coverImageUrl = safeText(entry.coverImageUrl);
+      }
+      if (Array.isArray(entry?.audioSources) && entry.audioSources.length) {
+        current.audioSources = normalizeAudioSources([...(current.audioSources || []), ...entry.audioSources]);
+      }
+      if (!current.selectedStoryId && storyId) {
+        current.selectedStoryId = storyId;
+      }
+    });
+
+    return Array.from(byBook.values()).sort((left, right) => String(left?.nome || '').localeCompare(String(right?.nome || ''), 'pt-BR', {
+      sensitivity: 'base',
+      numeric: true
+    }));
+  }
+
+  function getMyBooksBadge(bestPercent) {
+    const normalizedPercent = normalizePercent(bestPercent);
+    if (normalizedPercent >= 97) return { src: '/medalhas/diamante.png', alt: 'Selo diamante' };
+    if (normalizedPercent >= 95) return { src: '/medalhas/ouro.png', alt: 'Selo ouro' };
+    if (normalizedPercent >= 90) return { src: '/medalhas/platina.png', alt: 'Selo platina' };
+    if (normalizedPercent >= 85) return { src: '/medalhas/quartz.png', alt: 'Selo quartz' };
+    if (normalizedPercent >= 75) return { src: '/medalhas/prata.png', alt: 'Selo prata' };
+    return null;
+  }
+
+  function getQualifiedMyBooks(books, stats) {
+    const ids = Array.isArray(stats?.qualifiedBookIds) ? stats.qualifiedBookIds : [];
+    if (!ids.length) return [];
+    const booksById = new Map(
+      (Array.isArray(books) ? books : []).map((book) => [safeText(book?.bookId).toLowerCase(), book])
+    );
+    return ids
+      .map((bookId) => booksById.get(safeText(bookId).toLowerCase()))
+      .filter(Boolean);
+  }
+
+  function renderSmartbooksGrid() {
+    if (!els.smartbooksGrid) return;
+    const books = getQualifiedMyBooks(state.smartbooksBooks, state.smartbooksStats);
+    if (els.smartbooksTitle) {
+      els.smartbooksTitle.textContent = `${books.length} SmartBooks`;
+    }
+    if (!books.length) {
+      els.smartbooksGrid.innerHTML = '<div class="empty">Nenhum livro ainda em MyBooks.</div>';
+      return;
+    }
+
+    els.smartbooksGrid.innerHTML = books.map((book) => {
+      const badge = getMyBooksBadge(state.smartbooksStats?.bookBestPercentById?.[safeText(book?.bookId)] || 0);
+      return `
+        <article class="smartbooks-shelf-page">
+          <div class="smartbooks-card" aria-label="${escapeHtml(safeText(book?.nome) || 'Livro')}">
+            <span class="smartbooks-card__background" style="background-image:${safeText(book?.coverImageUrl) ? `url(${escapeHtml(book.coverImageUrl)})` : 'linear-gradient(155deg, #2a5bcf, #28a7d5)'}"></span>
+            <span class="smartbooks-card__overlay"></span>
+            ${badge ? `<span class="smartbooks-card__badge"><img src="${escapeHtml(badge.src)}" alt="${escapeHtml(badge.alt)}"></span>` : ''}
+            <p class="smartbooks-card__title">${escapeHtml(safeText(book?.nome) || 'Livro')}</p>
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  async function fetchSmartbooksStats() {
+    const response = await fetch(buildApiUrl('/api/books/stats'), {
+      credentials: 'include',
+      headers: buildAuthHeaders(),
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success) {
+      return { qualifiedBookIds: [], bookBestPercentById: {} };
+    }
+    return payload.stats || { qualifiedBookIds: [], bookBestPercentById: {} };
+  }
+
+  async function fetchSmartbooksStories() {
+    const response = await fetch(buildApiUrl('/api/speaking/stories'), {
+      credentials: 'include',
+      headers: buildAuthHeaders(),
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success) {
+      return [];
+    }
+    return normalizeBooksFromStories(payload.stories);
+  }
+
+  function ensureSmartbooksGrid() {
+    if (state.ui.smartbooksReady) {
+      renderSmartbooksGrid();
+      setSmartbooksStatus('', false);
+      return Promise.resolve();
+    }
+    if (state.smartbooksInitPromise) {
+      return state.smartbooksInitPromise;
+    }
+
+    state.ui.smartbooksLoading = true;
+    setSmartbooksStatus('Carregando MyBooks...', true);
+
+    state.smartbooksInitPromise = Promise.all([
+      fetchSmartbooksStories(),
+      fetchSmartbooksStats()
+    ]).then(([books, stats]) => {
+      state.smartbooksBooks = Array.isArray(books) ? books : [];
+      state.smartbooksStats = stats || { qualifiedBookIds: [], bookBestPercentById: {} };
+      state.ui.smartbooksReady = true;
+      renderSmartbooksGrid();
+      setSmartbooksStatus('', false);
+    }).catch((error) => {
+      state.ui.smartbooksReady = false;
+      state.ui.smartbooksLoading = false;
+      setSmartbooksStatus(error?.message || 'Nao foi possivel carregar o SmartBooks.', true);
+      throw error;
+    }).finally(() => {
+      state.ui.smartbooksLoading = false;
+      state.smartbooksInitPromise = null;
+    });
+
+    return state.smartbooksInitPromise;
+  }
+
+  function bindViewToggles() {
+    els.flashcardsToggleBtn?.addEventListener('click', () => {
+      state.ui.activeView = 'flashcards';
+      renderViewToggle();
+    });
+
+    els.smartbooksToggleBtn?.addEventListener('click', () => {
+      state.ui.activeView = 'smartbooks';
+      renderViewToggle();
+      void ensureSmartbooksGrid();
+    });
   }
 
   async function resolveSessionUserId() {
@@ -503,7 +704,11 @@
         attempts: 3,
         retryDelayMs: 450
       });
-      return Number(user?.id) || 0;
+      const resolvedId = Number(user?.id) || 0;
+      if (resolvedId) {
+        saveLastActiveUserId(resolvedId);
+      }
+      return resolvedId || readLastActiveUserId();
     }
     try {
       const response = await fetch(buildApiUrl('/auth/session'), {
@@ -512,10 +717,14 @@
         credentials: 'include'
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.success) return 0;
-      return Number(payload?.user?.id) || 0;
+      if (!response.ok || !payload?.success) return readLastActiveUserId();
+      const resolvedId = Number(payload?.user?.id) || 0;
+      if (resolvedId) {
+        saveLastActiveUserId(resolvedId);
+      }
+      return resolvedId || readLastActiveUserId();
     } catch (_error) {
-      return 0;
+      return readLastActiveUserId();
     }
   }
 
@@ -596,7 +805,10 @@
     }
   }
 
-  async function init() {
+  async function loadFlashcardsLibrary(options = {}) {
+    const forceCatalogRefresh = Boolean(options.forceCatalogRefresh);
+    const allowRetry = options.allowRetry !== false;
+
     state.userId = await resolveSessionUserId();
 
     let progressMap = await fetchCloudProgressForUser();
@@ -604,7 +816,11 @@
       progressMap = readUserProgressForUser(state.userId);
     }
 
-    if (progressMap.size && (!readCardsCache().length || unresolvedProgressCount(progressMap) > 0)) {
+    const shouldRefreshCatalog = forceCatalogRefresh
+      || !readCardsCache().length
+      || unresolvedProgressCount(progressMap) > 0;
+
+    if (shouldRefreshCatalog) {
       try {
         await fetchRemoteCardsCatalog();
       } catch (_error) {
@@ -615,6 +831,22 @@
     hydrateCards(progressMap);
     refreshLibrary();
     triggerLibrarySummaryRankSwap();
+
+    if (!state.cards.length && allowRetry) {
+      await wait(700);
+      return loadFlashcardsLibrary({
+        forceCatalogRefresh: true,
+        allowRetry: false
+      });
+    }
+
+    return state.cards;
+  }
+
+  async function init() {
+    bindViewToggles();
+    renderViewToggle();
+    await loadFlashcardsLibrary();
     startVisualTimers();
   }
 

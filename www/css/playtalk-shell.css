@@ -186,6 +186,7 @@ body.playtalk-cosmic-shell .container::after {
 
 .flashcards-footer-nav[data-shell-page="books"] {
   display: grid !important;
+  bottom: 0 !important;
 }
 
 body.books-home-footer-visible .flashcards-footer-nav[data-shell-page="books"] {

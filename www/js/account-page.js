@@ -3,10 +3,10 @@
   const AUTO_SAVE_DELAY_MS = 700;
   const STATS_ROTATE_MS = 2500;
   const GUEST_PROMPT_ROTATE_MS = 2500;
-  const GUEST_NAME_PROMPTS = ['Digite um nome de usuário', 'Toque para digitar'];
+  const GUEST_NAME_PROMPTS = ['Digite um nome de usuário'];
   const NUMBER_ANIMATION_HANDLES = new WeakMap();
   const AURA_MIN_VISIBLE_SHARE = 8;
-  const AURA_CIRCLE_RADIUS = 112;
+  const AURA_CIRCLE_RADIUS = 123.2;
   const AURA_CIRCLE_GAP_DEG = 3.5;
   const AURA_COLORS = {
     listening: { bright: '#38b6ff', dim: 'rgba(56,182,255,0.28)', filterId: 'accountAuraBlueGlow' },
@@ -196,12 +196,12 @@
     if (glowPercent <= 0) {
       pathElement.setAttribute('stroke', colorConfig.dim);
       pathElement.removeAttribute('filter');
-      pathElement.style.opacity = '0.88';
+      pathElement.style.opacity = '1';
       return;
     }
     pathElement.setAttribute('stroke', colorConfig.bright);
     pathElement.setAttribute('filter', `url(#${colorConfig.filterId})`);
-    pathElement.style.opacity = String((0.4 + ((glowPercent / 100) * 0.6)).toFixed(2));
+    pathElement.style.opacity = '1';
   }
 
   function hideAuraArc(pathElement) {
@@ -251,7 +251,7 @@
     const speakingRatio = trainingTotal > 0 ? speakingTotal / trainingTotal : 0;
     const speakingShare = remainingShare * speakingRatio;
     const listeningShare = remainingShare * listeningRatio;
-    const consistencyGlowPercent = normalizePrecisePercent(stats.consistencyPercent);
+    const consistencyGlowPercent = 100;
 
     applyGlowFilter(AURA_COLORS.listening.filterId, consistencyGlowPercent);
     applyGlowFilter(AURA_COLORS.speaking.filterId, consistencyGlowPercent);
@@ -738,7 +738,7 @@
         deleteGuestKeyValue();
         return;
       case 'tab':
-        setGuestInputTarget(state.guestInputTarget === 'name' ? 'password' : 'name');
+        setGuestInputTarget('name');
         return;
       case 'shift':
         toggleGuestShift();
@@ -796,18 +796,17 @@
     if (els.nameInline) {
       els.nameInline.classList.toggle('is-editing', loggedIn && state.nameEditing);
     }
-    els.avatarPreview.src = hasAvatar ? avatar : 'Avatar/avatar-man-person-svgrepo-com.svg';
-    els.avatarPreview.style.display = (loggedIn && hasAvatar) || !loggedIn ? 'block' : 'none';
+    els.avatarPreview.src = hasAvatar
+      ? avatar
+      : (loggedIn ? 'Avatar/avatar-man-person-svgrepo-com.svg' : '/arquivos-codex/fluent-levelup-logo.png');
+    els.avatarPreview.style.display = 'block';
     els.avatarFallback.textContent = loggedIn ? (username.charAt(0).toUpperCase() || 'P') : '';
     els.avatarFallback.style.display = loggedIn && !hasAvatar ? 'grid' : 'none';
     els.avatarInput.disabled = !loggedIn;
     els.avatarInput.value = '';
-    els.avatarPreview.alt = loggedIn ? 'Avatar do usuario' : 'Avatar padrao';
+    els.avatarPreview.alt = loggedIn ? 'Avatar do usuario' : 'Logo PlayTalk';
     if (els.panel) {
       els.panel.classList.toggle('is-guest', !loggedIn);
-    }
-    if (els.avatarPreview?.parentElement) {
-      els.avatarPreview.parentElement.classList.toggle('is-message', !loggedIn);
     }
     applyAvatarAura();
 
@@ -816,7 +815,7 @@
       els.passwordField.hidden = shouldHidePasswordField;
       const passwordFieldLabel = els.passwordField.querySelector('span');
       if (passwordFieldLabel) {
-        passwordFieldLabel.textContent = 'Senha';
+        passwordFieldLabel.textContent = loggedIn ? 'Senha' : 'Toque para inserir a senha';
       }
     }
     if (els.passwordInput) {
@@ -842,6 +841,10 @@
     }
     if (els.guestLoginBtn) {
       els.guestLoginBtn.hidden = loggedIn;
+      const guestLoginLabel = els.guestLoginBtn.querySelector('.account-button__label');
+      if (guestLoginLabel) {
+        guestLoginLabel.textContent = 'Acessar plataforma';
+      }
     }
     syncGuestInlineUi();
     renderGuestPromptLabel();

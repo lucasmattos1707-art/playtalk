@@ -1,4 +1,7 @@
 (function initPlaytalkBooksPage() {
+  const URL_PARAMS = new URLSearchParams(window.location.search || '');
+  const EMBED_MODE = String(URL_PARAMS.get('embed') || '').trim().toLowerCase();
+  const IS_MYBOOKS_GRID_EMBED = EMBED_MODE === 'mybooks-grid';
   const ADMIN_ALIASES = new Set(['admin', 'adm', 'adminst']);
   const MAX_GRADIENTS = 8;
   const SESSION_ENDPOINTS = ['/auth/session', '/api/me'];
@@ -353,6 +356,54 @@
     booksPronunciationFlushInFlight: false,
     booksSyncTimer: 0
   };
+
+  function applyMyBooksGridEmbedUi() {
+    if (!IS_MYBOOKS_GRID_EMBED || document.getElementById('booksEmbedMybooksGridStyle')) return;
+    document.body.classList.add('books-embed-mybooks-grid');
+    const style = document.createElement('style');
+    style.id = 'booksEmbedMybooksGridStyle';
+    style.textContent = `
+      html,
+      body {
+        background: transparent !important;
+      }
+      body.books-embed-mybooks-grid {
+        overflow: hidden !important;
+      }
+      body.books-embed-mybooks-grid::before,
+      body.books-embed-mybooks-grid .books-home-book-bg,
+      body.books-embed-mybooks-grid #booksLevelMenu,
+      body.books-embed-mybooks-grid #booksStatus,
+      body.books-embed-mybooks-grid #booksStatsPanel,
+      body.books-embed-mybooks-grid #booksHomePanel,
+      body.books-embed-mybooks-grid .flashcards-footer-nav {
+        display: none !important;
+      }
+      body.books-embed-mybooks-grid .books-page {
+        width: 100% !important;
+        max-width: none !important;
+        min-height: 100vh !important;
+        padding: 0 !important;
+        gap: 0 !important;
+        grid-template-rows: 1fr !important;
+      }
+      body.books-embed-mybooks-grid .books-shelf {
+        margin: 0 !important;
+        min-height: 100vh !important;
+        padding: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+      }
+      body.books-embed-mybooks-grid .books-grid {
+        padding-top: 0 !important;
+        padding-bottom: 18px !important;
+      }
+      body.books-embed-mybooks-grid .books-card {
+        cursor: default !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
   function safeText(value) {
     return typeof value === 'string' ? value.trim() : '';
@@ -1140,6 +1191,12 @@
 
   function setStatus(message, tone) {
     if (!els.status) return;
+    if (IS_MYBOOKS_GRID_EMBED) {
+      els.status.textContent = '';
+      els.status.className = 'books-status';
+      els.status.hidden = true;
+      return;
+    }
     els.status.textContent = safeText(message);
     els.status.className = 'books-status';
     if (tone) {
@@ -1301,6 +1358,10 @@
   }
 
   function renderHomeAuthUi() {
+    if (IS_MYBOOKS_GRID_EMBED) {
+      setHomeAuthStatus('', null);
+      return;
+    }
     const isLoggedIn = Boolean(state.user?.id);
     if (els.homeStartPanel) {
       els.homeStartPanel.classList.toggle('is-logged-in', isLoggedIn);
@@ -1575,6 +1636,9 @@
   }
 
   function getAccessibleLevels() {
+    if (IS_MYBOOKS_GRID_EMBED) {
+      return [UI_LEVEL_MY_BOOKS];
+    }
     if (state.isAdmin) {
       return Array.from({ length: MAX_UI_LEVEL + 1 }, (_value, index) => index);
     }
@@ -2150,6 +2214,18 @@
 
   function renderHomePanel() {
     if (!els.homePanel) return;
+    if (IS_MYBOOKS_GRID_EMBED) {
+      els.homePanel.classList.remove('is-visible', 'is-immersive');
+      els.homePanel.hidden = true;
+      if (els.homeShell) {
+        els.homeShell.hidden = true;
+        els.homeShell.classList.remove('is-visible');
+      }
+      if (els.homeControls) {
+        els.homeControls.hidden = true;
+      }
+      return;
+    }
     const visible = isHomeLevel();
     syncBooksInjectedFooterVisibility();
     document.body.classList.toggle('books-sleeping-mode', visible && state.homeIntroDismissed);
@@ -2296,6 +2372,12 @@
 
   function renderStatsPanel() {
     if (!els.statsPanel) return;
+    if (IS_MYBOOKS_GRID_EMBED) {
+      els.statsPanel.classList.remove('is-visible');
+      els.statsPanel.hidden = true;
+      stopStatsRotation();
+      return;
+    }
     const visible = isStatsLevel();
     els.statsPanel.classList.toggle('is-visible', visible);
     if (!visible) {
@@ -4224,7 +4306,7 @@
       card.className = 'books-card';
       card.dataset.bookId = safeText(book?.bookId);
       card.setAttribute('aria-label', `Livro ${safeText(book?.nome) || '-'}`);
-      if (isAdminUiEnabled()) {
+      if (!IS_MYBOOKS_GRID_EMBED && isAdminUiEnabled()) {
         card.classList.add('is-admin');
       }
       if (processingMagic) {
@@ -4252,60 +4334,65 @@
         badgeEl.appendChild(badgeImg);
       }
 
-      const adminChip = document.createElement('span');
-      adminChip.className = 'books-card__admin-chip';
-      adminChip.textContent = 'Admin';
+      card.append(background, overlay, badgeEl);
 
-      const actions = document.createElement('div');
-      actions.className = 'books-card__actions';
+      if (!IS_MYBOOKS_GRID_EMBED) {
+        const adminChip = document.createElement('span');
+        adminChip.className = 'books-card__admin-chip';
+        adminChip.textContent = 'Admin';
 
-      const uploadBtn = document.createElement('button');
-      uploadBtn.type = 'button';
-      uploadBtn.className = 'books-card__upload-btn';
-      uploadBtn.setAttribute('aria-label', `Enviar capa de ${safeText(book?.nome) || 'livro'}`);
-      uploadBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 18v2H5v-2H3v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2zm-7-2 5-5h-3V2h-4v9H7z"/></svg>';
-      uploadBtn.disabled = state.uploadInFlight || processingMagic || pendingCreate;
-      uploadBtn.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        openUploadForBook(book.bookId);
-      });
+        const actions = document.createElement('div');
+        actions.className = 'books-card__actions';
 
-      const magicBtn = document.createElement('button');
-      magicBtn.type = 'button';
-      magicBtn.className = 'books-card__magic-btn';
-      magicBtn.setAttribute('aria-label', `Gerar imagens com IA para ${safeText(book?.nome) || 'livro'}`);
-      magicBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m7.5 2 1.13 3.4L12 6.5l-3.37 1.1L7.5 11l-1.13-3.4L3 6.5l3.37-1.1zm9 5 1.5 4.5L22.5 13 18 14.5 16.5 19 15 14.5 10.5 13 15 11.5zm-8 7 1 3 3 1-3 1-1 3-1-3-3-1 3-1z"/></svg>';
-      magicBtn.disabled = processingMagic || pendingCreate;
-      magicBtn.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        openMagicModal(book);
-      });
+        const uploadBtn = document.createElement('button');
+        uploadBtn.type = 'button';
+        uploadBtn.className = 'books-card__upload-btn';
+        uploadBtn.setAttribute('aria-label', `Enviar capa de ${safeText(book?.nome) || 'livro'}`);
+        uploadBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 18v2H5v-2H3v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2zm-7-2 5-5h-3V2h-4v9H7z"/></svg>';
+        uploadBtn.disabled = state.uploadInFlight || processingMagic || pendingCreate;
+        uploadBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          openUploadForBook(book.bookId);
+        });
 
-      const textBtn = document.createElement('button');
-      textBtn.type = 'button';
-      textBtn.className = 'books-card__text-btn';
-      textBtn.setAttribute('aria-label', `Editar ${safeText(book?.nome) || 'livro'}`);
-      textBtn.title = 'Editar livro';
-      textBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a1.003 1.003 0 0 0 0-1.42L18.37 3.29a1.003 1.003 0 0 0-1.42 0L15.12 5.12l3.75 3.75z"/></svg>';
-      textBtn.disabled = processingMagic || pendingCreate;
-      textBtn.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        void openEditBookModal(book);
-      });
+        const magicBtn = document.createElement('button');
+        magicBtn.type = 'button';
+        magicBtn.className = 'books-card__magic-btn';
+        magicBtn.setAttribute('aria-label', `Gerar imagens com IA para ${safeText(book?.nome) || 'livro'}`);
+        magicBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m7.5 2 1.13 3.4L12 6.5l-3.37 1.1L7.5 11l-1.13-3.4L3 6.5l3.37-1.1zm9 5 1.5 4.5L22.5 13 18 14.5 16.5 19 15 14.5 10.5 13 15 11.5zm-8 7 1 3 3 1-3 1-1 3-1-3-3-1 3-1z"/></svg>';
+        magicBtn.disabled = processingMagic || pendingCreate;
+        magicBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          openMagicModal(book);
+        });
 
-      const processingOverlay = document.createElement('span');
-      processingOverlay.className = 'books-card__processing';
-      const processingLabel = pendingCreate
-        ? safeText(book?.pendingLabel) || 'Criando...'
-        : 'Gerando...';
-      processingOverlay.innerHTML = `<span class="books-card__spinner" aria-hidden="true"></span><span class="books-card__processing-label">${escapeHtml(processingLabel)}</span>`;
+        const textBtn = document.createElement('button');
+        textBtn.type = 'button';
+        textBtn.className = 'books-card__text-btn';
+        textBtn.setAttribute('aria-label', `Editar ${safeText(book?.nome) || 'livro'}`);
+        textBtn.title = 'Editar livro';
+        textBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a1.003 1.003 0 0 0 0-1.42L18.37 3.29a1.003 1.003 0 0 0-1.42 0L15.12 5.12l3.75 3.75z"/></svg>';
+        textBtn.disabled = processingMagic || pendingCreate;
+        textBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void openEditBookModal(book);
+        });
 
-      actions.append(uploadBtn, magicBtn, textBtn);
-      card.append(background, overlay, badgeEl, adminChip, actions, processingOverlay);
+        const processingOverlay = document.createElement('span');
+        processingOverlay.className = 'books-card__processing';
+        const processingLabel = pendingCreate
+          ? safeText(book?.pendingLabel) || 'Criando...'
+          : 'Gerando...';
+        processingOverlay.innerHTML = `<span class="books-card__spinner" aria-hidden="true"></span><span class="books-card__processing-label">${escapeHtml(processingLabel)}</span>`;
+
+        actions.append(uploadBtn, magicBtn, textBtn);
+        card.append(adminChip, actions, processingOverlay);
+      }
       card.addEventListener('click', () => {
+        if (IS_MYBOOKS_GRID_EMBED) return;
         if ((Date.now() - state.shelfLastGestureAt) < 240) return;
         if (state.uploadInFlight || processingMagic || pendingCreate) return;
         openPreBookModal(book);
@@ -4334,8 +4421,13 @@
     const accessibleLevels = getAccessibleLevels();
     const currentIndex = accessibleLevels.indexOf(normalizeBrowseLevel(state.selectedLevel));
     if (els.levelMenu) {
+      if (IS_MYBOOKS_GRID_EMBED) {
+        els.levelMenu.hidden = true;
+      }
       // Hide the top navigation UI on the Home/login screen, but keep swipe navigation working.
-      els.levelMenu.hidden = isHomeLevel();
+      if (!IS_MYBOOKS_GRID_EMBED) {
+        els.levelMenu.hidden = isHomeLevel();
+      }
     }
     if (els.levelTitle) {
       els.levelTitle.textContent = `${getUiLevelDisplayName(state.selectedLevel)}`;
@@ -6354,6 +6446,10 @@
   }
 
   async function init() {
+    applyMyBooksGridEmbedUi();
+    if (IS_MYBOOKS_GRID_EMBED) {
+      state.selectedLevel = UI_LEVEL_MY_BOOKS;
+    }
     initializeBooksStarfield();
     bindEvents();
     renderCreateInputPreview();
