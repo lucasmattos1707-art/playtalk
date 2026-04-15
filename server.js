@@ -6432,6 +6432,98 @@ async function publishFlashcardDeckToR2FromSource(sourceInfo, payload) {
   };
 }
 
+async function publishFlashcardEditorBundle({
+  fileName,
+  source = '',
+  pathName = '',
+  dayKey = '',
+  payload,
+  decodedFiles = []
+}) {
+  if (!isR2FluencyConfigured()) {
+    const error = new Error('R2 nao configurado para publicar decks de flashcards.');
+    error.statusCode = 503;
+    throw error;
+  }
+
+  const sourceFileName = normalizePublicDeckSourceToFileName(source)
+    || normalizePublicDeckSourceToFileName(pathName)
+    || normalizePublicFlashcardDeckFileName(fileName, '')
+    || (normalizeLevelFolderKey(dayKey) ? buildPublicLevelsFlashcardDeckFileName(dayKey) : '');
+  const normalizedFileName = normalizePublicFlashcardDeckFileName(
+    sourceFileName,
+    `${safeGeneratedBase(String(payload?.title || '').trim(), 'deck')}.json`
+  );
+  const remoteDeck = buildFlashcardsRemoteDeckInfo(payload, normalizedFileName);
+  const uploadedByName = new Map(
+    decodedFiles
+      .map((entry) => [path.posix.basename(String(entry?.name || '').trim()), entry])
+      .filter((entry) => entry[0] && entry[1]?.buffer?.length)
+  );
+  const publishedPayload = {
+    title: remoteDeck.deckTitle,
+    coverImage: typeof payload?.coverImage === 'string' ? payload.coverImage.trim() : '',
+    items: []
+  };
+  const items = getFlashcardPayloadItems(payload);
+
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
+    const nextItem = JSON.parse(JSON.stringify(item || {}));
+    const imageValue = readFlashcardItemImage(item);
+    const audioValue = readFlashcardItemAudio(item);
+
+    if (imageValue) {
+      if (isFlashcardPlaceholderImageValue(imageValue)) {
+        setFlashcardItemImage(nextItem, getFlashcardPlaceholderImageUrl());
+      } else {
+        const imageFileName = path.posix.basename(String(imageValue || '').trim());
+        const imageUpload = uploadedByName.get(imageFileName);
+        if (imageUpload?.buffer?.length) {
+          const imageExtension = path.extname(imageFileName).toLowerCase() || '.webp';
+          const imageObjectKey = `${remoteDeck.imagesFolder}/${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${imageExtension}`;
+          await putR2Object(imageObjectKey, imageUpload.buffer, imageUpload.contentType || contentTypeFromObjectKey(imageObjectKey));
+          setFlashcardItemImage(nextItem, buildFlashcardsR2PublicUrl(imageObjectKey));
+        } else if (typeof imageValue === 'string' && imageValue.trim()) {
+          setFlashcardItemImage(nextItem, imageValue.trim());
+        }
+      }
+    }
+
+    if (audioValue) {
+      const audioFileName = path.posix.basename(String(audioValue || '').trim());
+      const audioUpload = uploadedByName.get(audioFileName);
+      if (audioUpload?.buffer?.length) {
+        const audioExtension = path.extname(audioFileName).toLowerCase() || '.mp3';
+        const audioObjectKey = `${remoteDeck.audioFolder}/${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${audioExtension}`;
+        await putR2Object(audioObjectKey, audioUpload.buffer, audioUpload.contentType || contentTypeFromObjectKey(audioObjectKey));
+        setFlashcardItemAudio(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey));
+      } else if (typeof audioValue === 'string' && audioValue.trim()) {
+        setFlashcardItemAudio(nextItem, audioValue.trim());
+      }
+    }
+
+    publishedPayload.items.push(nextItem);
+  }
+
+  const postgresDeck = await upsertPublicFlashcardDeck({
+    deckKey: `editor:${encodeURIComponent(normalizedFileName.toLowerCase())}`,
+    fileName: normalizedFileName,
+    dayKey: normalizeLevelFolderKey(dayKey),
+    source: 'levels-editor',
+    title: publishedPayload.title,
+    payload: publishedPayload,
+    publishVisible: true
+  });
+
+  return {
+    fileName: normalizedFileName,
+    itemCount: publishedPayload.items.length,
+    postgresDeck,
+    payload: publishedPayload
+  };
+}
+
 async function publishFlashcardsManifestEntryToR2(sourceInfo, publishedDeck) {
   const manifestObjectKey = `${FLASHCARDS_R2_PREFIX}/manifest.json`;
   const manifestPayload = (await readOptionalR2JsonObject(manifestObjectKey)) || { generatedAt: '', files: [] };
@@ -15226,6 +15318,80 @@ app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), as
   } catch (error) {
     res.status(error.statusCode || 500).json({
       error: error.message || 'Falha ao publicar o deck localmente.',
+      ...(error.instructions ? { instructions: error.instructions } : {})
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/public-decks/publish-editor-bundle', express.json({ limit: '100mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+
+    const mode = typeof req.body?.mode === 'string' ? req.body.mode.trim() : 'flashcard';
+    const dayKey = normalizeLevelFolderKey(req.body?.day || '');
+    const files = Array.isArray(req.body?.files) ? req.body.files : [];
+    const source = typeof req.body?.source === 'string' ? req.body.source.trim() : '';
+    const pathName = typeof req.body?.path === 'string' ? req.body.path.trim() : '';
+    const requestedFileName = typeof req.body?.fileName === 'string' ? req.body.fileName.trim() : '';
+
+    if (mode !== 'flashcard') {
+      res.status(400).json({ error: 'A publicacao do editor esta liberada apenas para FlashCard.' });
+      return;
+    }
+
+    if (!files.length) {
+      res.status(400).json({ error: 'Nenhum arquivo foi enviado para publicar no PlayTalk.' });
+      return;
+    }
+
+    const decodedFiles = files
+      .map((file) => ({
+        name: path.posix.basename(typeof file?.name === 'string' ? file.name.trim() : ''),
+        buffer: typeof file?.base64 === 'string' && file.base64.trim()
+          ? Buffer.from(file.base64.trim(), 'base64')
+          : null,
+        contentType: contentTypeFromObjectKey(typeof file?.name === 'string' ? file.name.trim() : '')
+      }))
+      .filter((file) => file.name && file.buffer);
+
+    const jsonEntry = decodedFiles.find((file) => path.extname(file.name).toLowerCase() === '.json');
+    if (!jsonEntry) {
+      res.status(400).json({ error: 'O bundle precisa incluir um arquivo JSON.' });
+      return;
+    }
+
+    let jsonPayload = null;
+    try {
+      jsonPayload = JSON.parse(jsonEntry.buffer.toString('utf8'));
+    } catch (error) {
+      res.status(400).json({ error: 'O JSON enviado para publicar no PlayTalk esta invalido.', details: error.message });
+      return;
+    }
+
+    const items = getFlashcardPayloadItems(jsonPayload);
+    if (!items.length) {
+      res.status(400).json({ error: 'O deck enviado nao possui flashcards validos.' });
+      return;
+    }
+
+    const result = await publishFlashcardEditorBundle({
+      fileName: requestedFileName,
+      source,
+      pathName,
+      dayKey,
+      payload: jsonPayload,
+      decodedFiles: decodedFiles.filter((entry) => entry !== jsonEntry)
+    });
+
+    res.json({
+      success: true,
+      itemCount: result.itemCount,
+      fileName: result.fileName,
+      deck: result.postgresDeck || null
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Falha ao publicar o deck do editor no PlayTalk.',
       ...(error.instructions ? { instructions: error.instructions } : {})
     });
   }
