@@ -35,6 +35,12 @@
     @keyframes spin{to{transform:rotate(360deg)}}
     .char{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
     .popover{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:20px;z-index:50}.popover-card{width:min(420px,100%);background:#111;border:1px solid rgba(255,255,255,.16);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:14px}
+    .deck-edit-picker{display:flex;align-items:center;gap:12px;min-height:8vh;padding:10px 12px;border:1px solid rgba(79,158,255,.24);border-radius:16px;background:linear-gradient(180deg,rgba(11,24,56,.72),rgba(7,15,36,.86))}
+    .deck-edit-picker select{flex:1;min-height:44px}
+    .deck-edit-picker__copy{display:grid;gap:4px;min-width:0}
+    .deck-edit-picker__copy strong{font-size:14px}
+    .deck-edit-picker__copy span{font-size:12px;color:rgba(255,255,255,.72)}
+    @media (max-width:640px){.deck-edit-picker{flex-direction:column;align-items:stretch}}
     .popover-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.media-btn{position:relative;min-height:112px;padding:14px 12px 12px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:6px;border-radius:20px;text-align:left;overflow:hidden}
     .media-btn.active{border-color:#ef8f1a;box-shadow:0 0 0 3px rgba(239,143,26,.18)}.media-btn strong{font-size:17px}.media-btn span{font-size:12px;color:rgba(255,255,255,.72)}.icon-swap{position:absolute;top:14px;right:14px;width:40px;height:40px}
     .icon-swap img{position:absolute;inset:0;width:40px;height:40px;animation:swapPulse 1s steps(1,end) infinite}.icon-swap img:last-child{animation-delay:.5s}@keyframes swapPulse{0%,49.9%{opacity:1}50%,100%{opacity:0}}
@@ -185,6 +191,15 @@
       <div><div class="mini">Colar texto</div><h2 style="margin:6px 0 0">Preencher cards em lote</h2></div>
       <div class="mini" id="pasteHelp">FlashCard usa 2 linhas por item: portugues e ingles.</div>
       <div class="field"><label for="pasteArea">Texto colado</label><textarea id="pasteArea" rows="10"></textarea></div>
+      <div id="editCardsDeckPicker" class="deck-edit-picker hidden" aria-live="polite">
+        <div class="deck-edit-picker__copy">
+          <strong>Decks existentes no jogo</strong>
+          <span id="editCardsDeckHint">Digite editcards para liberar o menu de decks.</span>
+        </div>
+        <select id="editCardsDeckSelect">
+          <option value="">Escolha um deck</option>
+        </select>
+      </div>
       <div class="row" style="justify-content:space-between"><button id="pasteCloseBtn" type="button">Fechar</button><button id="applyPasteBtn" class="accent" type="button">Preencher cards</button></div>
     </div>
   </div>
@@ -329,10 +344,11 @@
       const movieStoryDraft={topic:'',itemCount:8};
       const ADMIN_USERNAMES=new Set(['admin','adm','adminst']);
       const adminStudio={checked:false,enabled:false,username:'',search:'',selectMode:false,selected:new Set(),status:'Aguardando sessao do administrador.',statusError:false,publishTimer:0,publishBusy:false,publishQueued:false,activeMenuIndex:null};
+      const editCardsState={visible:false,loading:false,selectedPath:'',decks:[]};
       const jsonBatchPublishState={files:[],results:[],busy:false};
       let deckMetaAction='r2';
       let pendingImage=null,pendingAudio=null,currentAudio=null,audioBatchTargets={pt:false,en:false},aiBatchBusy=false,aiTextBusy=false,zipBusy=false,elevenBusy=false,r2UploadBusy=false,publishLocalBusy=false;
-      let watchRuntime=null,watchVoiceAudio=null,watchMusicAudio=null,watchLibraryCache=null;
+      let watchRuntime=null,watchVoiceAudio=null,watchMusicAudio=null,watchLibraryCache=null,editableDeckOptionsCache=null;
       const aiImageLocks=new Set();
       const defaultItem=()=>({imageFile:'',imageDataUrl:'',pt:'',en:'',imagePrompt:'',category:'flashcard',tense:'present-simple',sentenceForm:'affirmative',audioFile:'',audioDataUrl:'',audioPtFile:'',audioPtDataUrl:'',audioEnFile:'',audioEnDataUrl:'',characterId:''});
       const defaultChar=input=>{const normalizedKey=String(input||'').trim().toLowerCase()==='jessa'?'jessica':String(input||'').trim().toLowerCase();const base=typeof input==='number'?SCENE_CHARACTERS[input]||SCENE_CHARACTERS[0]:SCENE_CHARACTER_MAP.get(normalizedKey)||SCENE_CHARACTERS[0];return{id:base.id,name:base.name,voiceId:base.voiceId,defaultImageFile:base.defaultImageFile,imageFile:'',imageDataUrl:''}};
@@ -421,8 +437,92 @@
       function openDeckMetaPopover(action='r2'){deckMetaAction=action==='playtalk'?'playtalk':'r2';$('deckMetaPopoverEyebrow').textContent=deckMetaAction==='playtalk'?'Enviar para PlayTalk':'Enviar R2';$('deckMetaPopoverTitle').textContent='Complete os dados do deck';$('sendPlaytalkConfirmBtn').textContent=deckMetaAction==='playtalk'?'Enviar para PlayTalk':'Enviar R2';$('dayInput').value=state.day;$('titleInput').value=state.title;$('flashcardCoverUrlInput').value=state.flashcardCoverUrl||'';$('sendPlaytalkPopover').classList.remove('hidden');$('sendPlaytalkPopover').setAttribute('aria-hidden','false')}
       function closeSendPlaytalkPopover(){$('sendPlaytalkPopover').classList.add('hidden');$('sendPlaytalkPopover').setAttribute('aria-hidden','true')}
       function resetDeckMeta(){state.day='1';state.title='';state.flashcardCoverUrl=''}
-      function openPastePopover(){$('pasteArea').value='';$('pastePopover').classList.remove('hidden');$('pastePopover').setAttribute('aria-hidden','false')}
-      function closePastePopover(){$('pastePopover').classList.add('hidden');$('pastePopover').setAttribute('aria-hidden','true')}
+      function syncEditCardsDeckPicker(){
+        const host=$('editCardsDeckPicker'),select=$('editCardsDeckSelect'),hint=$('editCardsDeckHint');
+        const canShow=adminStudio.enabled&&editCardsState.visible;
+        host.classList.toggle('hidden',!canShow);
+        if(!canShow){
+          select.innerHTML='<option value="">Escolha um deck</option>';
+          select.value='';
+          hint.textContent=adminStudio.enabled?'Digite editcards para liberar o menu de decks.':'Entre como admin para liberar a edicao de decks.';
+          return;
+        }
+        const options=['<option value="">Escolha um deck</option>'];
+        editCardsState.decks.forEach(deck=>{
+          const safeTitle=String(deck.title||'Flashcards').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          const safePath=String(deck.path||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+          options.push(`<option value="${safePath}">${safeTitle}${deck.count?` (${deck.count})`:''}</option>`);
+        });
+        select.innerHTML=options.join('');
+        select.disabled=editCardsState.loading||!editCardsState.decks.length;
+        select.value=editCardsState.selectedPath||'';
+        if(editCardsState.loading)hint.textContent='Carregando decks disponiveis...';
+        else if(!editCardsState.decks.length)hint.textContent='Nenhum deck de flashcards foi encontrado no manifest local.';
+        else hint.textContent='Selecione um deck para preencher os slots atuais da grade de flashcards.';
+      }
+      async function loadEditableFlashcardDeckOptions(){
+        if(Array.isArray(editableDeckOptionsCache)&&editableDeckOptionsCache.length)return editableDeckOptionsCache;
+        const manifest=await loadJsonFile('/data/local-level-files.json');
+        const files=Array.isArray(manifest?.files)?manifest.files:[];
+        const flashcardFiles=files.filter(file=>file?.folder==='words'&&file?.path);
+        const loaded=await Promise.all(flashcardFiles.map(async file=>{
+          try{
+            const path=`/${String(file.path||'').replace(/^\/+/,'')}`;
+            const data=await loadJsonFile(path);
+            const items=Array.isArray(data?.items)?data.items:[];
+            return{path,title:String(data?.title||file?.name||'Flashcards').trim()||'Flashcards',count:items.length,data};
+          }catch(error){
+            console.error('Falha ao carregar deck editavel',file,error);
+            return null;
+          }
+        }));
+        editableDeckOptionsCache=loaded.filter(Boolean).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR',{sensitivity:'base'}));
+        return editableDeckOptionsCache;
+      }
+      async function ensureEditCardsDeckPickerReady(){
+        if(!adminStudio.enabled)return;
+        editCardsState.loading=true;
+        syncEditCardsDeckPicker();
+        try{
+          editCardsState.decks=await loadEditableFlashcardDeckOptions();
+        }finally{
+          editCardsState.loading=false;
+          syncEditCardsDeckPicker();
+        }
+      }
+      async function toggleEditCardsDeckPicker(forceVisible){
+        const nextVisible=typeof forceVisible==='boolean'?forceVisible:!editCardsState.visible;
+        editCardsState.visible=nextVisible&&adminStudio.enabled;
+        if(!editCardsState.visible){
+          editCardsState.selectedPath='';
+          syncEditCardsDeckPicker();
+          return;
+        }
+        await ensureEditCardsDeckPickerReady();
+      }
+      async function loadSelectedDeckIntoLevels(path){
+        const normalizedPath=String(path||'').trim();
+        if(!normalizedPath)return;
+        const deck=editCardsState.decks.find(entry=>entry.path===normalizedPath);
+        if(!deck)throw new Error('Deck selecionado nao foi encontrado.');
+        editCardsState.selectedPath=normalizedPath;
+        syncEditCardsDeckPicker();
+        const payload=deck.data||await loadJsonFile(normalizedPath);
+        importJsonPayload(payload);
+        closePastePopover();
+      }
+      function handlePasteAreaMode(){
+        const shouldShow=adminStudio.enabled&&String($('pasteArea').value||'').trim()==='editcards';
+        toggleEditCardsDeckPicker(shouldShow).catch(error=>{
+          console.error('Falha ao abrir seletor de decks',error);
+          editCardsState.visible=false;
+          editCardsState.loading=false;
+          syncEditCardsDeckPicker();
+          alert(error.message||'Nao foi possivel carregar os decks agora.');
+        });
+      }
+      function openPastePopover(){$('pasteArea').value='';editCardsState.selectedPath='';toggleEditCardsDeckPicker(false);$('pastePopover').classList.remove('hidden');$('pastePopover').setAttribute('aria-hidden','false')}
+      function closePastePopover(){$('pastePopover').classList.add('hidden');$('pastePopover').setAttribute('aria-hidden','true');editCardsState.selectedPath='';toggleEditCardsDeckPicker(false)}
       function normalizeAiFlashcardItems(items){return items.map(item=>({pt:String(item?.pt||'').trim(),en:String(item?.en||'').trim()})).filter(item=>item.pt&&item.en)}
       function loadWatchSettings(){try{const raw=JSON.parse(localStorage.getItem(WATCH_SETTINGS_STORE)||'null');if(raw&&typeof raw==='object')return{gapMs:[3000,5000,10000,30000,60000].includes(Number(raw.gapMs))?Number(raw.gapMs):5000,scope:raw.scope==='all'?'all':'mine',music:raw.music==='on'?'on':'off'}}catch{}return{gapMs:5000,scope:'mine',music:'off'}}
       function saveWatchSettings(settings){try{localStorage.setItem(WATCH_SETTINGS_STORE,JSON.stringify(settings))}catch{}}
@@ -491,7 +591,7 @@
       function canPublishAdminDeck(){return isAdminStudioEnabled()&&state.title.trim()&&flashcardCoverPreview()&&state.items.some(item=>item.imageFile&&item.pt&&item.en)}
       async function publishAdminFlashcardsLocal(options={}){const force=Boolean(options.force),silent=Boolean(options.silent);if(!isAdminStudioEnabled())return null;if(adminStudio.publishBusy)return null;if(!canPublishAdminDeck()){if(force)throw new Error('Preencha titulo, capa publica e pelo menos um flashcard completo antes de publicar.');setAdminStudioStatus('Deck ainda nao pode ser publicado. Faltam titulo, capa publica ou itens completos.');syncAdminStudioControls();return null}adminStudio.publishBusy=true;setAdminStudioStatus('Enviando deck para PlayTalk...');syncAdminStudioControls();try{const files=await collectBundleFiles({publicJsonAssets:false}),payloadFiles=files.map(file=>({name:file.name,base64:base64FromBytes(file.bytes)})),result=await publishLevelFilesLocal(payloadFiles);setAdminStudioStatus(`${result.itemCount||0} flashcard(s) enviado(s) para PlayTalk.`);if(force&&!silent)alert('Thanks Codex');return result}catch(error){setAdminStudioStatus(error.message||'Erro ao publicar deck local.',true);if(force&&!silent)throw error;return null}finally{adminStudio.publishBusy=false;syncAdminStudioControls()}}
       async function publishJsonBatchDeckFiles(files){if(!adminStudio.enabled)throw new Error('Acesso restrito ao administrador.');jsonBatchPublishState.busy=true;jsonBatchPublishState.results=[];syncJsonBatchPublishPopover();try{const normalizedFiles=[];for(let index=0;index<files.length;index+=1){const file=files[index];try{const raw=await asText(file),parsed=JSON.parse(raw),payload=normalizeJsonBatchPayload(parsed,file.name);normalizedFiles.push({name:file.name,content:JSON.stringify(payload,null,2)})}catch(error){jsonBatchPublishState.results[index]={error:true,message:error.message||'Falha ao validar o deck.'}}syncJsonBatchPublishPopover()}if(!normalizedFiles.length)throw new Error('Nenhum deck valido foi selecionado para subir no Postgres.');const result=await uploadJsonDecksToPostgres(normalizedFiles);const uploadedDecks=Array.isArray(result?.decks)?result.decks:[];let uploadedIndex=0;for(let index=0;index<files.length;index+=1){if(jsonBatchPublishState.results[index]?.error)continue;const deck=uploadedDecks[uploadedIndex]||null;uploadedIndex+=1;jsonBatchPublishState.results[index]={ok:true,message:deck?.title?`Deck "${deck.title}" salvo no Postgres.`:'Deck salvo no Postgres.'}}}finally{jsonBatchPublishState.busy=false;syncJsonBatchPublishPopover()}}
-      async function hydrateAdminStudio(){try{const response=await fetch('/auth/session',{credentials:'include',cache:'no-store'});if(!response.ok){adminStudio.checked=true;adminStudio.enabled=false;setAdminStudioStatus('Painel admin oculto. Entre com adm/admin para liberar.');renderAll();return}const payload=await response.json();const user=payload?.user||{},username=normalizeAdminUsername(user?.username||user?.email||''),isAdminFlag=user?.is_admin===true||user?.isAdmin===true;adminStudio.checked=true;adminStudio.username=username;adminStudio.enabled=Boolean(isAdminFlag||ADMIN_USERNAMES.has(username));setAdminStudioStatus(adminStudio.enabled?`Painel admin ativo para ${username||'admin'}. Envio manual pronto.`:'Painel admin oculto. Entre com adm/admin para liberar.');renderAll()}catch(error){adminStudio.checked=true;adminStudio.enabled=false;setAdminStudioStatus('Nao foi possivel validar a sessao do admin agora.',true);renderAll()}}
+      async function hydrateAdminStudio(){try{const response=await fetch('/auth/session',{credentials:'include',cache:'no-store'});if(!response.ok){adminStudio.checked=true;adminStudio.enabled=false;setAdminStudioStatus('Painel admin oculto. Entre com adm/admin para liberar.');renderAll();return}const payload=await response.json();const user=payload?.user||{},username=normalizeAdminUsername(user?.username||user?.email||''),isAdminFlag=user?.is_admin===true||user?.isAdmin===true;adminStudio.checked=true;adminStudio.username=username;adminStudio.enabled=Boolean(isAdminFlag||ADMIN_USERNAMES.has(username));setAdminStudioStatus(adminStudio.enabled?`Painel admin ativo para ${username||'admin'}. Envio manual pronto.`:'Painel admin oculto. Entre com adm/admin para liberar.');renderAll();if(adminStudio.enabled&&String($('pasteArea')?.value||'').trim()==='editcards')await ensureEditCardsDeckPickerReady()}catch(error){adminStudio.checked=true;adminStudio.enabled=false;setAdminStudioStatus('Nao foi possivel validar a sessao do admin agora.',true);renderAll()}}
       function syncAdminStudioControls(){const enabled=isAdminStudioEnabled(),selectedCount=adminStudio.selected.size;$('adminStudioBar').classList.toggle('hidden',!enabled);$('adminSelectBtn').disabled=!enabled;$('adminSelectBtn').textContent=adminStudio.selectMode?'Cancelar selecao':'Selecionar';$('adminBatchClearImageBtn').disabled=!enabled||!selectedCount;$('adminBatchClearAudioBtn').disabled=!enabled||!selectedCount;$('publishLocalBtn').disabled=!enabled||adminStudio.publishBusy;$('publishLocalBtn').textContent=adminStudio.publishBusy?'Enviando...':'Enviar para PlayTalk';const sendPlaytalkBtn=$('sendPlaytalkBtn');if(sendPlaytalkBtn)sendPlaytalkBtn.disabled=!enabled||adminStudio.publishBusy;$('adminSearchInput').value=adminStudio.search||'';$('adminSearchInput').disabled=!enabled||adminStudio.publishBusy;$('adminStudioStatus').textContent=selectedCount&&enabled?`${adminStudio.status} ${selectedCount} selecionado(s).`:adminStudio.status;$('adminStudioStatus').classList.toggle('is-error',adminStudio.statusError)}
       function syncAdminRenderedItems(){const host=$('items');const cards=Array.from(host.children);cards.forEach((card,index)=>{const item=state.items[index];if(!item||!card.classList.contains('card'))return;const visible=!isAdminStudioEnabled()||itemMatchesAdminSearch(item);card.classList.toggle('hidden',!visible);card.classList.toggle('is-admin-card',isAdminStudioEnabled());card.classList.toggle('is-selected',isAdminStudioEnabled()&&adminStudio.selected.has(index));if(isAdminStudioEnabled()&&!card.dataset.adminBound){card.dataset.adminBound='true';card.addEventListener('click',event=>{if(!isAdminStudioEnabled()||isInteractiveAdminTarget(event.target))return;if(adminStudio.selectMode){event.preventDefault();toggleAdminItemSelection(index);return}openItemAdminPopover(index)})}})}
       function remainingVoiceTargets(){if(state.mode==='scenes'||state.mode==='movies'){const out=[];state.items.forEach((item,index)=>{const pt=String(item?.pt||'').trim(),en=String(item?.en||'').trim();if(pt&&!hasGeneratedAudio(item,'pt'))out.push({index,kind:'pt',text:pt,fileName:`${itemStem(index)}-pt.mp3`});if(en&&!hasGeneratedAudio(item,'en'))out.push({index,kind:'en',text:en,fileName:`${itemStem(index)}-en.mp3`})});return out}return state.items.map((item,index)=>({item,index,text:String(item?.en||item?.pt||'').trim()})).filter(entry=>entry.text&&!hasGeneratedAudio(entry.item,'single')).map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${itemStem(entry.index)}-en.mp3`}))}
@@ -570,7 +670,7 @@
       $('uploadR2Btn').onclick=()=>{if(zipBusy||r2UploadBusy)return;openDeckMetaPopover('r2')};
       $('sendPlaytalkBtn').onclick=async()=>{try{const result=await publishAdminFlashcardsLocal({force:true});if(!result)throw new Error('Acesso restrito ao administrador.')}catch(error){alert(error.message||'Erro ao enviar para PlayTalk.')}};
       $('testOnlineBtn').onclick=()=>{};
-      $('applyPasteBtn').onclick=()=>{const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),out=[];for(let i=0;i<lines.length;i+=2){const chunk=lines.slice(i,i+2);if(chunk.length<2)break;const item=defaultItem();item.pt=chunk[0]||'';item.en=chunk[1]||'';out.push(item)}state.items=out;$('pasteArea').value='';save();renderAll();closePastePopover()};
+      $('applyPasteBtn').onclick=()=>{const rawValue=String($('pasteArea').value||'').trim();if(adminStudio.enabled&&rawValue==='editcards'){const selectedPath=String($('editCardsDeckSelect').value||'').trim();if(!selectedPath)return alert('Escolha um deck para carregar nos slots do /levels.');loadSelectedDeckIntoLevels(selectedPath).catch(error=>alert(error.message||'Erro ao carregar deck.'));return}const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),out=[];for(let i=0;i<lines.length;i+=2){const chunk=lines.slice(i,i+2);if(chunk.length<2)break;const item=defaultItem();item.pt=chunk[0]||'';item.en=chunk[1]||'';out.push(item)}state.items=out;$('pasteArea').value='';save();renderAll();closePastePopover()};
       $('dayInput').oninput=e=>{state.day=sanitizeDayKey(e.target.value);save();renderAll()};
       $('titleInput').oninput=e=>{state.title=e.target.value;save();renderAll()};
       $('flashcardCoverUrlInput').oninput=e=>{state.flashcardCoverUrl=e.target.value.trim();save();renderAll()};
@@ -579,7 +679,9 @@
       $('audioPopoverCloseBtn').onclick=()=>closeAudioPopover();
       $('sendPlaytalkCloseBtn').onclick=()=>closeSendPlaytalkPopover();
       $('sendPlaytalkConfirmBtn').onclick=async()=>{state.day=sanitizeDayKey($('dayInput').value);state.title=String($('titleInput').value||'').trim();state.flashcardCoverUrl=String($('flashcardCoverUrlInput').value||'').trim();save();renderAll();if(deckMetaAction==='playtalk'){try{const result=await publishAdminFlashcardsLocal({force:true});if(!result)throw new Error('Acesso restrito ao administrador.');closeSendPlaytalkPopover()}catch(error){alert(error.message||'Erro ao enviar para PlayTalk.')}return}if(zipBusy||r2UploadBusy)return;r2UploadBusy=true;renderAll();try{const bundle=await buildZipBundle({publicJsonAssets:true}),payloadFiles=bundle.files.map(file=>({name:file.name,base64:base64FromBytes(file.bytes)})),result=await uploadLevelFilesToR2(payloadFiles);closeSendPlaytalkPopover();alert(`${result.uploadedCount} arquivo(s) enviado(s) para ${result.prefix}`)}catch(error){alert(error.message||'Erro ao enviar arquivos para o R2.')}finally{r2UploadBusy=false;renderAll()}};
+      $('pasteArea').oninput=()=>handlePasteAreaMode();
       $('pasteCloseBtn').onclick=()=>closePastePopover();
+      $('editCardsDeckSelect').onchange=e=>{editCardsState.selectedPath=String(e.target.value||'').trim();syncEditCardsDeckPicker()};
       $('textPopoverCloseBtn').onclick=()=>closeTextPopover();
       $('watchPopoverCloseBtn').onclick=()=>closeWatchPopover();
       $('jsonBatchCloseBtn').onclick=()=>closeJsonBatchPublishPopover();

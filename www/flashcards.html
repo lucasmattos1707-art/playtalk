@@ -2748,7 +2748,7 @@
     .game-card__visual.is-stage-two .game-card__phase-flag--english,
     .game-card__visual.is-stage-two .game-card__phase-flag--portuguese {
       object-fit: cover;
-      opacity: 0;
+      opacity: var(--stage-two-overlay-opacity, 0);
     }
 
     .game-card__visual.is-stage-two.is-image-ready .game-card__phase-flag--english,
@@ -3425,14 +3425,12 @@
       min-height: min(70vw, 232px);
       display: grid;
       place-items: center;
+      justify-items: center;
+      justify-content: center;
       align-content: center;
       text-align: center;
       font-size: 29.9px;
-      text-shadow:
-        0 0 10px rgba(5, 22, 92, 0.92),
-        0 0 22px rgba(5, 22, 92, 0.82),
-        0 0 34px rgba(5, 22, 92, 0.72),
-        0 8px 18px rgba(5, 22, 92, 0.88);
+      text-shadow: none;
     }
 
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual {
@@ -3475,11 +3473,7 @@
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-star-phase-copy {
       font-family: "Pltay", "Soopafre", Arial, sans-serif;
       font-size: clamp(44.85px, 14.6vw, 89.7px);
-      text-shadow:
-        0 0 10px rgba(5, 22, 92, 0.92),
-        0 0 22px rgba(5, 22, 92, 0.82),
-        0 0 34px rgba(5, 22, 92, 0.72),
-        0 8px 18px rgba(5, 22, 92, 0.88);
+      text-shadow: none;
     }
 
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual.is-star-phase-copy {
@@ -3502,10 +3496,10 @@
       position: absolute;
       left: 50%;
       top: 50%;
-      transform: translate(-50%, -50%);
-      color: rgba(5, 22, 92, 0.88);
-      filter: blur(7px);
-      opacity: 0.95;
+      transform: translate(-50%, -50%) scale(1.08);
+      color: rgba(2, 14, 88, 1);
+      filter: blur(9px);
+      opacity: 1;
       z-index: -1;
       pointer-events: none;
       white-space: pre;
@@ -3513,9 +3507,12 @@
 
     .flashcards-typing__display-line {
       display: block;
-      width: 100%;
+      width: fit-content;
+      max-width: 100%;
+      margin-inline: auto;
       text-align: center;
       white-space: nowrap;
+      line-height: 0.86;
     }
 
     .flashcards-typing__display--size-xl {
@@ -3534,7 +3531,12 @@
     }
 
     .flashcards-typing__display--two-lines {
-      transform: translate(-50%, -50%) scale(1.3);
+      transform: translate(-50%, -50%) scale(1.45);
+      transform-origin: center center;
+    }
+
+    .flashcards-typing__display--three-lines {
+      transform: translate(-50%, -50%) scale(1.15);
       transform-origin: center center;
     }
 
@@ -13202,6 +13204,7 @@
         if (stageConfig.blurImage) visualClasses.push('is-stage-two');
         if (stageConfig.revealOnHit) visualClasses.push('is-stage-three');
         els.gameVisual.className = visualClasses.join(' ');
+        els.gameVisual.style.removeProperty('--stage-two-overlay-opacity');
         setGameVisualNeonState('default');
         els.gameVisual.innerHTML = `${imageMarkup}${sealMarkup}`;
       }
@@ -13222,7 +13225,21 @@
       }
 
       function triggerOverlayDissolve() {
+        els.gameVisual.style.setProperty('--stage-two-overlay-opacity', '0');
         els.gameVisual.classList.add('is-overlay-dissolving');
+      }
+
+      function updateStageTwoOverlayProgress(entry, typingState, typedLetters = '') {
+        if (!els.gameVisual) return;
+        if (!entry || entry.stage !== 2) {
+          els.gameVisual.style.removeProperty('--stage-two-overlay-opacity');
+          return;
+        }
+        const totalLetters = Math.max(1, countTypingDisplayLetters(typingState?.sourceText || typingState?.acceptedAnswer || ''));
+        const typedCount = Math.max(0, String(typedLetters || '').length);
+        const progress = Math.max(0, Math.min(1, typedCount / totalLetters));
+        const nextOpacity = 0.88 * (1 - progress);
+        els.gameVisual.style.setProperty('--stage-two-overlay-opacity', String(nextOpacity));
       }
 
       function triggerWinFlash() {
@@ -13493,7 +13510,9 @@
           const lineMarkup = line.split('').map((char) => {
             const normalizedChar = normalizeTypingSource(char);
             if (!normalizedChar) {
-              return char === ' ' ? '&nbsp;' : escapeHtml(char);
+              const shouldRevealSpecial = revealAll || alwaysVisible || typed.length >= normalizedLetterIndex;
+              const specialChar = shouldRevealSpecial ? (char === ' ' ? '&nbsp;' : escapeHtml(char)) : '&nbsp;';
+              return `<span class="flashcards-typing__display-letter${shouldRevealSpecial ? ' is-filled' : ' is-hidden-unfilled'}" data-char="${shouldRevealSpecial ? escapeHtml(char === ' ' ? '\u00A0' : char) : ''}">${specialChar}</span>`;
             }
 
             const isHint = normalizedLetterIndex >= hintStart && normalizedLetterIndex < (hintStart + hintLength);
@@ -13525,7 +13544,8 @@
           'flashcards-typing__display--size-xl',
           'flashcards-typing__display--size-lg',
           'flashcards-typing__display--size-md',
-          'flashcards-typing__display--two-lines'
+          'flashcards-typing__display--two-lines',
+          'flashcards-typing__display--three-lines'
         );
         const scaleClassName = typingDisplayScaleClass(displayText);
         if (scaleClassName) {
@@ -13533,6 +13553,8 @@
         }
         if (splitLines.length === 2) {
           display.classList.add('flashcards-typing__display--two-lines');
+        } else if (splitLines.length >= 3) {
+          display.classList.add('flashcards-typing__display--three-lines');
         }
         display.innerHTML = buildTypingDisplayMarkup(typingState, typedLetters, options);
       }
@@ -13717,6 +13739,7 @@
         display.className = 'flashcards-typing__display flashcards-typing__display--visual';
         display.classList.toggle('is-star-phase-copy', isPlaytalkStarTypingStage(entry));
         const renderTyped = () => {
+          updateStageTwoOverlayProgress(entry, typingState, typed);
           renderTypingDisplay(display, typingState, typed, {});
         };
         renderTyped();
