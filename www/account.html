@@ -145,21 +145,6 @@
     }
 
     .account-avatar {
-      --aura-speaking-end: 0;
-      --aura-listening-end: 0;
-      --aura-pronunciation-end: 0;
-      --aura-speaking-alpha: 0;
-      --aura-listening-alpha: 0;
-      --aura-pronunciation-alpha: 0;
-      --aura-track-alpha: 0;
-      --aura-speaking-glow: 0;
-      --aura-listening-glow: 0;
-      --aura-pronunciation-glow: 0;
-      --aura-overall-glow: 0;
-      --aura-visible: 0;
-      --aura-blend-size: 0.9%;
-      --aura-ring-blur: 18px;
-      --aura-ring-box-blur: 9px;
       width: 188px;
       height: 188px;
       border-radius: 50%;
@@ -171,14 +156,8 @@
       cursor: pointer;
       position: relative;
       isolation: isolate;
-      box-shadow:
-        0 0 calc(22px + (30px * var(--aura-speaking-glow))) rgba(255, 211, 72, calc(var(--aura-visible) * (0.12 + (0.38 * var(--aura-speaking-glow))))),
-        0 0 calc(22px + (30px * var(--aura-listening-glow))) rgba(112, 214, 255, calc(var(--aura-visible) * (0.12 + (0.38 * var(--aura-listening-glow))))),
-        0 0 calc(22px + (30px * var(--aura-pronunciation-glow))) rgba(255, 141, 56, calc(var(--aura-visible) * (0.12 + (0.38 * var(--aura-pronunciation-glow))))),
-        0 0 calc(48px + (52px * var(--aura-speaking-glow))) rgba(255, 211, 72, calc(var(--aura-visible) * (0.05 + (0.22 * var(--aura-speaking-glow))))),
-        0 0 calc(48px + (52px * var(--aura-listening-glow))) rgba(77, 132, 255, calc(var(--aura-visible) * (0.05 + (0.22 * var(--aura-listening-glow))))),
-        0 0 calc(48px + (52px * var(--aura-pronunciation-glow))) rgba(255, 98, 24, calc(var(--aura-visible) * (0.05 + (0.22 * var(--aura-pronunciation-glow)))));
-      transition: box-shadow 260ms ease, transform 260ms ease;
+      box-shadow: none;
+      transition: transform 260ms ease;
     }
 
     .account-avatar::before {
@@ -194,47 +173,12 @@
       z-index: 0;
     }
 
-    .account-avatar::after {
-      content: "";
+    .account-avatar__aura {
       position: absolute;
-      inset: -12px;
-      border-radius: inherit;
+      inset: -18px;
+      overflow: visible;
       pointer-events: none;
       z-index: 3;
-      opacity: var(--aura-visible);
-      padding: 5px;
-      background:
-        conic-gradient(
-          from -90deg,
-          rgba(255, 211, 72, var(--aura-speaking-alpha)) 0 calc((var(--aura-speaking-end) * 1%) - var(--aura-blend-size)),
-          rgba(159, 214, 164, calc((var(--aura-speaking-alpha) + var(--aura-listening-alpha)) * 0.5)) calc(var(--aura-speaking-end) * 1%),
-          rgba(63, 217, 255, var(--aura-listening-alpha)) calc((var(--aura-speaking-end) * 1%) + var(--aura-blend-size)) calc((var(--aura-listening-end) * 1%) - var(--aura-blend-size)),
-          rgba(255, 175, 92, calc((var(--aura-listening-alpha) + var(--aura-pronunciation-alpha)) * 0.5)) calc(var(--aura-listening-end) * 1%),
-          rgba(255, 141, 56, var(--aura-pronunciation-alpha)) calc((var(--aura-listening-end) * 1%) + var(--aura-blend-size)) calc((var(--aura-pronunciation-end) * 1%) - var(--aura-blend-size)),
-          rgba(255, 141, 56, calc(var(--aura-pronunciation-alpha) * 0.35)) calc(var(--aura-pronunciation-end) * 1%),
-          rgba(136, 160, 192, var(--aura-track-alpha)) 0 100%
-        );
-      -webkit-mask:
-        radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 10px));
-      mask:
-        radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 10px));
-      box-shadow:
-        0 0 0 2px rgba(34, 38, 46, 0.92),
-        0 0 0 4px rgba(12, 15, 20, 0.9),
-        0 0 18px rgba(255, 211, 72, calc(0.18 + (0.56 * var(--aura-speaking-alpha)))),
-        0 0 18px rgba(68, 206, 255, calc(0.18 + (0.56 * var(--aura-listening-alpha)))),
-        0 0 18px rgba(255, 141, 56, calc(0.18 + (0.56 * var(--aura-pronunciation-alpha)))),
-        0 0 42px rgba(255, 211, 72, calc(0.1 + (0.5 * var(--aura-speaking-glow)))),
-        0 0 42px rgba(68, 206, 255, calc(0.1 + (0.5 * var(--aura-listening-glow)))),
-        0 0 42px rgba(255, 141, 56, calc(0.1 + (0.5 * var(--aura-pronunciation-glow)))),
-        0 0 96px rgba(255, 211, 72, calc(0.05 + (0.34 * var(--aura-speaking-glow)))),
-        0 0 96px rgba(77, 132, 255, calc(0.05 + (0.34 * var(--aura-listening-glow)))),
-        0 0 96px rgba(255, 98, 24, calc(0.05 + (0.34 * var(--aura-pronunciation-glow))));
-      transition:
-        opacity 260ms ease,
-        background 260ms linear,
-        box-shadow 260ms ease;
-      will-change: opacity, box-shadow;
     }
 
     .account-avatar.is-message {
@@ -251,12 +195,33 @@
     }
 
     .account-avatar.is-message::before,
-    .account-avatar.is-message::after {
+    .account-avatar.is-message .account-avatar__aura {
       display: none;
     }
 
+    .account-avatar__aura svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      display: block;
+    }
+
+    .account-avatar__track {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 12;
+    }
+
+    .account-avatar__arc {
+      fill: none;
+      stroke-width: 12;
+      stroke-linecap: round;
+      opacity: 0;
+      transition: stroke 180ms ease, opacity 180ms ease, filter 180ms ease;
+    }
+
     .account-avatar img,
-    .account-avatar span {
+    .account-avatar > span:not(.account-avatar__aura) {
       width: 100%;
       height: 100%;
       display: grid;
@@ -271,11 +236,11 @@
       z-index: 1;
     }
 
-    .account-avatar span {
+    .account-avatar > span:not(.account-avatar__aura) {
       background: transparent;
     }
 
-    .account-avatar.is-message span {
+    .account-avatar.is-message > span:not(.account-avatar__aura) {
       height: auto;
       color: #ffffff;
       font-size: 32px;
@@ -546,12 +511,12 @@
       width: min(980px, 100%);
       max-width: 100%;
       margin: 0 auto;
-      padding: 2px 8px 14px;
+      padding: 2px 8px 28px;
       display: grid;
       background: transparent;
       border: 0;
       box-shadow: none;
-      overflow: hidden;
+      overflow: visible;
     }
 
     .account-metrics[hidden] {
@@ -560,7 +525,7 @@
 
     .account-stats-carousel {
       width: 100%;
-      overflow: hidden;
+      overflow: visible;
       position: relative;
     }
 
@@ -568,8 +533,8 @@
       display: grid;
       width: 100%;
       position: relative;
-      min-height: clamp(170px, 33vw, 250px);
-      overflow: hidden;
+      min-height: clamp(236px, 46vw, 340px);
+      overflow: visible;
     }
 
     .account-stats-page {
@@ -580,7 +545,7 @@
       gap: 6px;
       align-items: start;
       justify-items: center;
-      padding: 8px 0 4px;
+      padding: 8px 0 16px;
       position: absolute;
       inset: 0;
       opacity: 0;
@@ -651,11 +616,11 @@
     }
 
     .account-stats-item[data-kind="precision-general"] .account-stats-icon {
-      color: #ff9538;
+      color: #b84dff;
       filter:
-        drop-shadow(0 0 10px rgba(255, 149, 56, 0.96))
-        drop-shadow(0 0 24px rgba(255, 126, 36, 0.54))
-        drop-shadow(0 0 42px rgba(255, 98, 24, 0.28));
+        drop-shadow(0 0 10px rgba(184, 77, 255, 0.96))
+        drop-shadow(0 0 24px rgba(157, 108, 255, 0.54))
+        drop-shadow(0 0 42px rgba(108, 92, 255, 0.28));
     }
 
     .account-stats-item[data-kind="consistency"] .account-stats-icon,
@@ -733,6 +698,14 @@
     }
 
     @media (max-width: 760px) {
+      .account-metrics {
+        padding-bottom: 34px;
+      }
+
+      .account-stats-pages {
+        min-height: clamp(250px, 58vw, 372px);
+      }
+
       .account-stats-page {
         gap: 4px;
       }
@@ -1121,6 +1094,49 @@
       <form class="account-form" id="accountForm">
         <div class="account-profile">
           <label class="account-avatar" for="accountAvatarInput">
+            <span class="account-avatar__aura" aria-hidden="true">
+              <svg viewBox="0 0 260 260" focusable="false">
+                <defs>
+                  <filter id="accountAuraBlueGlow" x="-500%" y="-500%" width="1100%" height="1100%">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur1"/>
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur2"/>
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur3"/>
+                    <feMerge>
+                      <feMergeNode in="blur3"/>
+                      <feMergeNode in="blur2"/>
+                      <feMergeNode in="blur1"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                  <filter id="accountAuraYellowGlow" x="-500%" y="-500%" width="1100%" height="1100%">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur1"/>
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur2"/>
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur3"/>
+                    <feMerge>
+                      <feMergeNode in="blur3"/>
+                      <feMergeNode in="blur2"/>
+                      <feMergeNode in="blur1"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                  <filter id="accountAuraPurpleGlow" x="-500%" y="-500%" width="1100%" height="1100%">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur1"/>
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur2"/>
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur3"/>
+                    <feMerge>
+                      <feMergeNode in="blur3"/>
+                      <feMergeNode in="blur2"/>
+                      <feMergeNode in="blur1"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+                <circle class="account-avatar__track" cx="130" cy="130" r="112"></circle>
+                <path class="account-avatar__arc" id="accountAuraBlueArc"></path>
+                <path class="account-avatar__arc" id="accountAuraYellowArc"></path>
+                <path class="account-avatar__arc" id="accountAuraPurpleArc"></path>
+              </svg>
+            </span>
             <img id="accountAvatarPreview" src="Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar do usuario">
             <span id="accountAvatarFallback">P</span>
             <input id="accountAvatarInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>

@@ -5,11 +5,22 @@
   const GUEST_PROMPT_ROTATE_MS = 2500;
   const GUEST_NAME_PROMPTS = ['Digite um nome de usuário', 'Toque para digitar'];
   const NUMBER_ANIMATION_HANDLES = new WeakMap();
+  const AURA_MIN_VISIBLE_SHARE = 8;
+  const AURA_CIRCLE_RADIUS = 112;
+  const AURA_CIRCLE_GAP_DEG = 3.5;
+  const AURA_COLORS = {
+    listening: { bright: '#38b6ff', dim: 'rgba(56,182,255,0.28)', filterId: 'accountAuraBlueGlow' },
+    speaking: { bright: '#ffd84d', dim: 'rgba(255,216,77,0.28)', filterId: 'accountAuraYellowGlow' },
+    precision: { bright: '#b84dff', dim: 'rgba(184,77,255,0.28)', filterId: 'accountAuraPurpleGlow' }
+  };
   const els = {
     body: document.body,
     panel: document.querySelector('.panel'),
     form: document.getElementById('accountForm'),
     avatarFrame: document.querySelector('.account-avatar'),
+    auraBlueArc: document.getElementById('accountAuraBlueArc'),
+    auraYellowArc: document.getElementById('accountAuraYellowArc'),
+    auraPurpleArc: document.getElementById('accountAuraPurpleArc'),
     avatarInput: document.getElementById('accountAvatarInput'),
     avatarPreview: document.getElementById('accountAvatarPreview'),
     avatarFallback: document.getElementById('accountAvatarFallback'),
@@ -150,32 +161,77 @@
     return String(Number(numeric.toFixed(digits)));
   }
 
-  function intensityToAuraAlpha(intensity) {
-    const normalized = clampNumber(intensity, 0, 1);
-    if (normalized <= 0) return 0;
-    return 0.5 + (Math.pow(normalized, 1.15) * 0.5);
+  function polarToCartesian(cx, cy, radius, angleDeg) {
+    const radians = ((angleDeg - 90) * Math.PI) / 180;
+    return {
+      x: cx + (radius * Math.cos(radians)),
+      y: cy + (radius * Math.sin(radians))
+    };
   }
 
-  function setAvatarAuraVariable(name, value, digits) {
-    if (!els.avatarFrame) return;
-    els.avatarFrame.style.setProperty(name, formatCssAuraValue(value, digits));
+  function describeAuraArc(cx, cy, radius, startAngle, endAngle) {
+    const start = polarToCartesian(cx, cy, radius, endAngle);
+    const end = polarToCartesian(cx, cy, radius, startAngle);
+    const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
+    return ['M', start.x, start.y, 'A', radius, radius, 0, largeArcFlag, 0, end.x, end.y].join(' ');
+  }
+
+  function glowToStdDeviation(glowPercent) {
+    return (clampNumber(glowPercent, 0, 100) / 100) * 25;
+  }
+
+  function applyGlowFilter(filterId, glowPercent) {
+    const filterElement = document.getElementById(filterId);
+    if (!filterElement) return;
+    const blurNodes = filterElement.querySelectorAll('feGaussianBlur');
+    if (blurNodes.length < 3) return;
+    const base = glowToStdDeviation(glowPercent);
+    blurNodes[0].setAttribute('stdDeviation', (base * 0.15).toFixed(2));
+    blurNodes[1].setAttribute('stdDeviation', (base * 0.8).toFixed(2));
+    blurNodes[2].setAttribute('stdDeviation', (base * 2.2).toFixed(2));
+  }
+
+  function setAuraArcStyle(pathElement, colorConfig, glowPercent) {
+    if (!pathElement || !colorConfig) return;
+    if (glowPercent <= 0) {
+      pathElement.setAttribute('stroke', colorConfig.dim);
+      pathElement.removeAttribute('filter');
+      pathElement.style.opacity = '0.88';
+      return;
+    }
+    pathElement.setAttribute('stroke', colorConfig.bright);
+    pathElement.setAttribute('filter', `url(#${colorConfig.filterId})`);
+    pathElement.style.opacity = String((0.4 + ((glowPercent / 100) * 0.6)).toFixed(2));
+  }
+
+  function hideAuraArc(pathElement) {
+    if (!pathElement) return;
+    pathElement.setAttribute('d', '');
+    pathElement.removeAttribute('filter');
+    pathElement.style.opacity = '0';
+  }
+
+  function renderAuraArc(pathElement, sharePercent, startAngle, colorConfig, glowPercent) {
+    if (!pathElement || !colorConfig) return startAngle;
+    if (sharePercent < AURA_MIN_VISIBLE_SHARE) {
+      hideAuraArc(pathElement);
+      return startAngle;
+    }
+    const usableDegrees = 360 - (AURA_CIRCLE_GAP_DEG * 3);
+    const sweep = usableDegrees * (sharePercent / 100);
+    const endAngle = startAngle + sweep;
+    pathElement.setAttribute('d', describeAuraArc(130, 130, AURA_CIRCLE_RADIUS, startAngle, endAngle));
+    setAuraArcStyle(pathElement, colorConfig, glowPercent);
+    return endAngle + AURA_CIRCLE_GAP_DEG;
   }
 
   function applyAvatarAura() {
     if (!els.avatarFrame) return;
 
     if (!state.user?.id) {
-      setAvatarAuraVariable('--aura-speaking-end', 0, 3);
-      setAvatarAuraVariable('--aura-listening-end', 0, 3);
-      setAvatarAuraVariable('--aura-pronunciation-end', 0, 3);
-      setAvatarAuraVariable('--aura-speaking-alpha', 0, 3);
-      setAvatarAuraVariable('--aura-listening-alpha', 0, 3);
-      setAvatarAuraVariable('--aura-pronunciation-alpha', 0, 3);
-      setAvatarAuraVariable('--aura-speaking-glow', 0, 3);
-      setAvatarAuraVariable('--aura-listening-glow', 0, 3);
-      setAvatarAuraVariable('--aura-pronunciation-glow', 0, 3);
-      setAvatarAuraVariable('--aura-overall-glow', 0, 3);
-      setAvatarAuraVariable('--aura-visible', 0, 3);
+      hideAuraArc(els.auraBlueArc);
+      hideAuraArc(els.auraYellowArc);
+      hideAuraArc(els.auraPurpleArc);
       return;
     }
 
@@ -195,27 +251,16 @@
     const speakingRatio = trainingTotal > 0 ? speakingTotal / trainingTotal : 0;
     const speakingShare = remainingShare * speakingRatio;
     const listeningShare = remainingShare * listeningRatio;
-    const speakingEnd = speakingShare;
-    const listeningEnd = speakingShare + listeningShare;
-    const pronunciationEnd = Math.min(100, listeningEnd + pronunciationShare);
+    const consistencyGlowPercent = normalizePrecisePercent(stats.consistencyPercent);
 
-    const listeningGlow = clampNumber(listeningTotal / 10000, 0, 1);
-    const speakingGlow = clampNumber(speakingTotal / 7500, 0, 1);
-    const pronunciationGlow = pronunciationProgress;
-    const hasVisibleAura = speakingShare > 0 || listeningShare > 0 || pronunciationShare > 0;
-    const overallGlow = Math.max(speakingGlow, listeningGlow, pronunciationGlow);
+    applyGlowFilter(AURA_COLORS.listening.filterId, consistencyGlowPercent);
+    applyGlowFilter(AURA_COLORS.speaking.filterId, consistencyGlowPercent);
+    applyGlowFilter(AURA_COLORS.precision.filterId, consistencyGlowPercent);
 
-    setAvatarAuraVariable('--aura-speaking-end', speakingEnd, 3);
-    setAvatarAuraVariable('--aura-listening-end', listeningEnd, 3);
-    setAvatarAuraVariable('--aura-pronunciation-end', pronunciationEnd, 3);
-    setAvatarAuraVariable('--aura-speaking-alpha', intensityToAuraAlpha(speakingGlow), 3);
-    setAvatarAuraVariable('--aura-listening-alpha', intensityToAuraAlpha(listeningGlow), 3);
-    setAvatarAuraVariable('--aura-pronunciation-alpha', intensityToAuraAlpha(pronunciationGlow), 3);
-    setAvatarAuraVariable('--aura-speaking-glow', speakingGlow, 3);
-    setAvatarAuraVariable('--aura-listening-glow', listeningGlow, 3);
-    setAvatarAuraVariable('--aura-pronunciation-glow', pronunciationGlow, 3);
-    setAvatarAuraVariable('--aura-overall-glow', overallGlow, 3);
-    setAvatarAuraVariable('--aura-visible', hasVisibleAura ? 1 : 0, 3);
+    let startAngle = 0;
+    startAngle = renderAuraArc(els.auraBlueArc, listeningShare, startAngle, AURA_COLORS.listening, consistencyGlowPercent);
+    startAngle = renderAuraArc(els.auraYellowArc, speakingShare, startAngle, AURA_COLORS.speaking, consistencyGlowPercent);
+    renderAuraArc(els.auraPurpleArc, pronunciationShare, startAngle, AURA_COLORS.precision, consistencyGlowPercent);
   }
 
   function formatDurationCompact(totalSeconds) {

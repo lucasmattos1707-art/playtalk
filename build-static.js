@@ -58,6 +58,7 @@ async function ensureDir(target) {
 async function copyRecursive(source, destination) {
   const stats = await fs.stat(source);
   const relativeSource = path.relative(sourceDir, source);
+  const relativeFromRoot = path.relative(rootDir, source).split(path.sep).join('/');
 
   if (stats.isDirectory()) {
     await ensureDir(destination);
@@ -66,6 +67,10 @@ async function copyRecursive(source, destination) {
       await copyRecursive(path.join(source, entry), path.join(destination, entry));
     }
   } else {
+    if (relativeFromRoot.startsWith('accesskey/teclas/Teclas/') && relativeFromRoot.toLowerCase().endsWith('.mp4')) {
+      return;
+    }
+
     if (relativeSource && !relativeSource.startsWith('..')) {
       const normalizedRelative = relativeSource.split(path.sep).join('/');
       const isTopLevelHtml = !normalizedRelative.includes('/') && normalizedRelative.toLowerCase().endsWith('.html');
