@@ -19,7 +19,8 @@ const appHtmlFiles = new Set([
   'usermame.html',
   'avataradd.html',
   'password.html',
-  'premium.html'
+  'premium.html',
+  'thata.html'
 ]);
 const rootStaticFiles = [
   'arquivos-codex/fluentlevelup.png'
