@@ -154,10 +154,22 @@ let speakingCardsCache = {
   stories: [],
   updatedAt: 0
 };
+let adminMiniBooksSummaryCache = {
+  summary: null,
+  updatedAt: 0
+};
 
 function invalidateSpeakingCardsCache() {
   speakingCardsCache = {
     stories: [],
+    updatedAt: 0
+  };
+  invalidateAdminMiniBooksSummaryCache();
+}
+
+function invalidateAdminMiniBooksSummaryCache() {
+  adminMiniBooksSummaryCache = {
+    summary: null,
     updatedAt: 0
   };
 }
@@ -175,9 +187,11 @@ const SPEAKING_DUEL_INTRO_SECONDS = 10;
 const SPEAKING_DUEL_BATTLE_SECONDS = 180;
 const BOT_DAILY_FLASHCARD_TRAINING_MINUTES = 5;
 const BOT_PRONUNCIATION_VARIANCE_PERCENT = 3;
+const BOT_SPEAKING_DUEL_VARIANCE_PERCENT = 5;
 const BOT_FLASHCARDS_SPEED_VARIANCE_PERCENT = 6;
 const BOT_RESPONSE_VARIANCE_SECONDS = 1;
 const SPEAKING_CARD_CACHE_TTL_MS = 60 * 1000;
+const ADMIN_MINIBOOKS_SUMMARY_CACHE_TTL_MS = 5 * 60 * 1000;
 const BATTLE_STORIES_ROOT_CANDIDATES = Array.from(new Set([
   path.join(__dirname, 'battle-stories'),
   path.join(process.cwd(), 'battle-stories')
@@ -4864,6 +4878,75 @@ function normalizeSpeakingChallengeMode(value) {
     : SPEAKING_DUEL_SMARTBOOKS_MODE;
 }
 
+function normalizeSpeakingScoringText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function countSpeakingCardExpectedPoints(card) {
+  return normalizeSpeakingScoringText(card?.english).length;
+}
+
+function getSpeakingCardsExpectedPoints(cards) {
+  const total = Array.isArray(cards)
+    ? cards.reduce((sum, card) => sum + countSpeakingCardExpectedPoints(card), 0)
+    : 0;
+  return Math.max(1, total);
+}
+
+function normalizeAdminBooksWordToken(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function collectAdminBooksWordTokens(value) {
+  const normalized = normalizeAdminBooksWordToken(value);
+  if (!normalized) return [];
+  return normalized.split(/\s+/).filter(Boolean);
+}
+
+async function getAdminMiniBooksSummary() {
+  const now = Date.now();
+  if (
+    adminMiniBooksSummaryCache.summary
+    && (now - adminMiniBooksSummaryCache.updatedAt) < ADMIN_MINIBOOKS_SUMMARY_CACHE_TTL_MS
+  ) {
+    return adminMiniBooksSummaryCache.summary;
+  }
+
+  const stories = await loadSpeakingCardPool();
+  const bookIds = new Set();
+  const uniqueWords = new Set();
+
+  for (const story of Array.isArray(stories) ? stories : []) {
+    const bookId = normalizeMiniBookId(story?.bookId || story?.fileName);
+    if (bookId) {
+      bookIds.add(bookId);
+    }
+    for (const card of Array.isArray(story?.cards) ? story.cards : []) {
+      collectAdminBooksWordTokens(card?.english).forEach((word) => uniqueWords.add(word));
+      collectAdminBooksWordTokens(card?.portuguese).forEach((word) => uniqueWords.add(word));
+    }
+  }
+
+  const summary = {
+    totalBooks: bookIds.size,
+    uniqueWordsCount: uniqueWords.size
+  };
+  adminMiniBooksSummaryCache = {
+    summary,
+    updatedAt: now
+  };
+  return summary;
+}
+
 function normalizeDuelTargetScore(value, mode) {
   const normalizedMode = normalizeSpeakingChallengeMode(mode);
   if (normalizedMode === SPEAKING_DUEL_CARDS_MODE) {
@@ -5530,10 +5613,8 @@ function computeSpeakingDuelWinnerUserId(session) {
   const opponentPercent = Number(session?.opponent_percent) || 0;
   const challengerProgress = Number(session?.challenger_progress) || 0;
   const opponentProgress = Number(session?.opponent_progress) || 0;
-  if (mode === SPEAKING_DUEL_CARDS_MODE) {
-    if (challengerScore > opponentScore) return challengerUserId;
-    if (opponentScore > challengerScore) return opponentUserId;
-  }
+  if (challengerScore > opponentScore) return challengerUserId;
+  if (opponentScore > challengerScore) return opponentUserId;
   if (challengerFinished && !opponentFinished) return challengerUserId;
   if (opponentFinished && !challengerFinished) return opponentUserId;
   if (challengerPercent > opponentPercent) return challengerUserId;
@@ -5563,7 +5644,7 @@ function computeBotPronunciationPercent(botConfig, sessionId, cardIndex) {
   return clampPercent(
     computeBotVariance(
       Number(botConfig?.pronunciationBase) || 0,
-      BOT_PRONUNCIATION_VARIANCE_PERCENT,
+      BOT_SPEAKING_DUEL_VARIANCE_PERCENT,
       `${sessionId}:pron:${cardIndex}`
     )
   );
@@ -5576,7 +5657,7 @@ function buildBotPronunciationSamples(botConfig, sessionId, totalCards) {
 
   return Array.from({ length: count }, (_, index) => {
     const unit = seededUnitInterval(`${sessionId}:pron-seed:${index}`);
-    const offset = ((unit * 2) - 1) * BOT_PRONUNCIATION_VARIANCE_PERCENT;
+    const offset = ((unit * 2) - 1) * BOT_SPEAKING_DUEL_VARIANCE_PERCENT;
     return clampPercent(Math.round(base + offset));
   });
 }
@@ -5638,7 +5719,11 @@ function buildBotProgressSnapshot(session, botUserId, botConfig) {
   const sumPercent = activeSamples.reduce((total, sample) => total + sample, 0);
   const score = mode === SPEAKING_DUEL_CARDS_MODE
     ? activeSamples.reduce((total, sample) => total + (Number(sample) >= 50 ? 1 : 0), 0)
-    : 0;
+    : activeSamples.reduce((total, sample, index) => {
+        const card = cards[index];
+        const expectedPoints = countSpeakingCardExpectedPoints(card);
+        return total + Math.max(0, Math.round((expectedPoints * Number(sample)) / 100));
+      }, 0);
   const finished = mode === SPEAKING_DUEL_CARDS_MODE
     ? (targetScore > 0 ? score >= targetScore : progress >= totalCards)
     : progress >= totalCards;
@@ -10620,13 +10705,14 @@ app.get('/api/books/stats', async (req, res) => {
       res.status(400).json({ success: false, message: 'Usuario invalido.' });
       return;
     }
+    const requesterIsAdmin = isAdminUserRecord(authUser);
 
     await ensureUserBooksLibraryStatsTable();
     await ensureBooksSpeakingStatsTable();
     await ensureUserBooksConsumptionStatsTable();
     await ensureUsersPresenceClassMetricStorage();
 
-    const [totalsResult, speakingStatsResult, consumptionResult, qualifiedBooksResult, bookBestPercentById, flashcardsResult, presenceClassResult] = await Promise.all([
+    const [totalsResult, speakingStatsResult, consumptionResult, qualifiedBooksResult, bookBestPercentById, flashcardsResult, presenceClassResult, adminBooksSummary] = await Promise.all([
       pool.query(
         `SELECT COALESCE(SUM(reads_completed), 0)::int AS total_reads
          FROM public.user_books_library_stats
@@ -10662,7 +10748,8 @@ app.get('/api/books/stats', async (req, res) => {
          WHERE id = $1
          LIMIT 1`,
         [userId]
-      )
+      ),
+      requesterIsAdmin ? getAdminMiniBooksSummary() : Promise.resolve(null)
     ]);
 
     const pronunciationStats = getBooksPronunciationAggregateFromRow(speakingStatsResult.rows[0]);
@@ -10692,7 +10779,8 @@ app.get('/api/books/stats', async (req, res) => {
         consistencyPercent,
         qualifiedBookIds,
         qualifiedBookCount: qualifiedBookIds.length,
-        bookBestPercentById
+        bookBestPercentById,
+        adminBooksSummary: requesterIsAdmin ? adminBooksSummary : null
       }
     });
   } catch (error) {
@@ -12758,7 +12846,10 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
       );
       const targetScore = normalizeDuelTargetScore(session.target_score, mode);
       const normalizedProgress = Math.max(0, Math.min(totalCards, progress));
-      const normalizedScore = Math.max(0, Math.min(mode === SPEAKING_DUEL_CARDS_MODE && targetScore > 0 ? targetScore : totalCards, score));
+      const scoreCap = mode === SPEAKING_DUEL_CARDS_MODE
+        ? (targetScore > 0 ? targetScore : totalCards)
+        : getSpeakingCardsExpectedPoints(cards);
+      const normalizedScore = Math.max(0, Math.min(scoreCap, score));
 
       const next = {
         mode,

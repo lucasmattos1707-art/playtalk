@@ -117,6 +117,10 @@
     statsLabel: document.getElementById('booksStatsLabel'),
     statsValue: document.getElementById('booksStatsValue'),
     statsLine: document.getElementById('booksStatsLine'),
+    adminSummary: document.getElementById('booksAdminSummary'),
+    adminSummaryTotalBooks: document.getElementById('booksAdminTotalBooks'),
+    adminSummaryUniqueWords: document.getElementById('booksAdminUniqueWords'),
+    adminSummaryHint: document.getElementById('booksAdminSummaryHint'),
     homePanel: document.getElementById('booksHomePanel'),
     homeShell: document.getElementById('booksHomeShell'),
     homeViewport: document.getElementById('booksHomeViewport'),
@@ -235,6 +239,7 @@
     statsRotationIndex: 0,
     statsLastRenderedLine: '',
     statsFetchInFlight: false,
+    adminBooksSummary: null,
     books: [],
     isAdmin: false,
     forceAdminUi: false,
@@ -773,10 +778,19 @@
             accumulator[normalizedBookId] = normalizePercent(percent);
             return accumulator;
           }, {})
-          : {}
+          : {},
+        adminBooksSummary: stats.adminBooksSummary && typeof stats.adminBooksSummary === 'object'
+          ? {
+            totalBooks: Math.max(0, Number(stats.adminBooksSummary.totalBooks) || 0),
+            uniqueWordsCount: Math.max(0, Number(stats.adminBooksSummary.uniqueWordsCount) || 0)
+          }
+          : null
       }
       : stats;
     syncPracticeSecondsTotal(state.stats?.practiceSeconds);
+    if (!state.initialLoading && isMyBooksLevel()) {
+      renderCards();
+    }
     return state.stats;
   }
 
@@ -2419,6 +2433,27 @@
       if (els.statsLine) {
         els.statsLine.textContent = hint;
       }
+    }
+  }
+
+  function renderMyBooksAdminSummary() {
+    if (!els.adminSummary) return;
+    const isVisible = isMyBooksLevel() && Boolean(state.isAdmin) && Boolean(state.stats?.adminBooksSummary);
+    els.adminSummary.hidden = !isVisible;
+    if (!isVisible) return;
+
+    const summary = state.stats?.adminBooksSummary || {};
+    const totalBooks = Math.max(0, Number(summary.totalBooks) || 0);
+    const uniqueWordsCount = Math.max(0, Number(summary.uniqueWordsCount) || 0);
+
+    if (els.adminSummaryTotalBooks) {
+      els.adminSummaryTotalBooks.textContent = `${totalBooks}`;
+    }
+    if (els.adminSummaryUniqueWords) {
+      els.adminSummaryUniqueWords.textContent = `${uniqueWordsCount}`;
+    }
+    if (els.adminSummaryHint) {
+      els.adminSummaryHint.textContent = 'Contagem feita em todos os MiniBooks e visível apenas para administradores.';
     }
   }
 
@@ -4236,6 +4271,7 @@
       els.cardsGrid.innerHTML = '';
       els.cardsGrid.hidden = true;
       els.cardsEmpty.hidden = true;
+      renderMyBooksAdminSummary();
       if (els.shelfViewport) {
         els.shelfViewport.scrollTop = 0;
       }
@@ -4247,6 +4283,7 @@
       els.cardsGrid.innerHTML = '';
       els.cardsGrid.hidden = true;
       els.cardsEmpty.hidden = true;
+      renderMyBooksAdminSummary();
       if (els.shelfViewport) {
         els.shelfViewport.scrollTop = 0;
       }
@@ -4256,6 +4293,7 @@
     }
     renderHomePanel();
     renderStatsPanel();
+    renderMyBooksAdminSummary();
     const bookLevel = uiLevelToBookLevel(state.selectedLevel);
     const showAllBooks = isAllBooksLevel();
     const pendingBooks = state.createJobs

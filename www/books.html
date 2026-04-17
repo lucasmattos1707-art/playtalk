@@ -1387,6 +1387,76 @@
       transform: translateX(-44px);
     }
 
+    .books-admin-summary {
+      width: min(900px, 100%);
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: linear-gradient(160deg, rgba(9, 18, 34, 0.94), rgba(22, 39, 64, 0.9));
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+      padding: 14px 16px 16px;
+      display: grid;
+      gap: 12px;
+      margin-top: 2px;
+      position: relative;
+      z-index: 5;
+    }
+
+    .books-admin-summary[hidden] {
+      display: none !important;
+    }
+
+    .books-admin-summary__kicker {
+      margin: 0;
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: rgba(224, 240, 255, 0.7);
+    }
+
+    .books-admin-summary__metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .books-admin-summary__metric {
+      border-radius: 18px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: grid;
+      gap: 4px;
+    }
+
+    .books-admin-summary__label {
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: rgba(224, 240, 255, 0.72);
+      font-weight: 700;
+    }
+
+    .books-admin-summary__value {
+      font-size: clamp(26px, 4vw, 36px);
+      line-height: 1;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+    }
+
+    .books-admin-summary__hint {
+      margin: 0;
+      font-size: 13px;
+      color: rgba(224, 240, 255, 0.72);
+    }
+
+    @media (max-width: 680px) {
+      .books-admin-summary__metrics {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .books-shelf-page {
       width: 100%;
       height: 100%;
@@ -3253,6 +3323,20 @@
         </div>
       </section>
       <section class="books-grid" id="booksCardsGrid" aria-label="Livros por nivel"></section>
+      <section class="books-admin-summary" id="booksAdminSummary" aria-label="Resumo administrativo dos books" hidden>
+        <p class="books-admin-summary__kicker">Resumo admin</p>
+        <div class="books-admin-summary__metrics">
+          <div class="books-admin-summary__metric">
+            <span class="books-admin-summary__label">Livros no total</span>
+            <strong class="books-admin-summary__value" id="booksAdminTotalBooks">0</strong>
+          </div>
+          <div class="books-admin-summary__metric">
+            <span class="books-admin-summary__label">Palavras únicas</span>
+            <strong class="books-admin-summary__value" id="booksAdminUniqueWords">0</strong>
+          </div>
+        </div>
+        <p class="books-admin-summary__hint" id="booksAdminSummaryHint">Visível apenas para administradores.</p>
+      </section>
       <p class="books-empty" id="booksCardsEmpty" hidden>Nenhum arquivo neste nivel.</p>
     </section>
     <input id="booksCoverUploadInput" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/gif" hidden>

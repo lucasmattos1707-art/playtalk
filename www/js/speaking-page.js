@@ -185,6 +185,17 @@
     return normalizeText(value).replace(/[^a-z0-9]/g, '');
   }
 
+  function getCardExpectedPoints(card) {
+    return lettersOnly(safeText(card?.english)).length;
+  }
+
+  function getBattleExpectedPoints(cards = state.activeCards) {
+    const total = Array.isArray(cards)
+      ? cards.reduce((sum, card) => sum + getCardExpectedPoints(card), 0)
+      : 0;
+    return Math.max(1, total);
+  }
+
   function readSessionId() {
     const params = new URLSearchParams(window.location.search || '');
     return safeText(params.get('session'));
@@ -979,9 +990,9 @@
 
     const ranges = [];
     for (let start = 0; start < expectedRaw.length; start += 1) {
-      for (let end = start + 2; end <= expectedRaw.length; end += 1) {
+      for (let end = start + 1; end <= expectedRaw.length; end += 1) {
         const fragment = expectedRaw.slice(start, end);
-        if (fragment.length >= 2 && spokenRaw.includes(fragment)) {
+        if (fragment.length >= 1 && spokenRaw.includes(fragment)) {
           ranges.push({ start, end, len: end - start });
         }
       }
@@ -1001,16 +1012,25 @@
     return covered.filter(Boolean).length;
   }
 
-  function calculateSpeechMatchPercent(expected, spoken) {
+  function calculateSpeechMatchStats(expected, spoken) {
     const expectedRaw = lettersOnly(expected);
-    if (!expectedRaw) return 0;
+    if (!expectedRaw) return { matched: 0, total: 0, percent: 0 };
     const matched = countLetterBlocksCoverage(expected, spoken);
     const baseScore = Math.max(0, Math.min(100, Math.round((matched / expectedRaw.length) * 100)));
-    return Math.max(0, Math.min(100, Math.round(baseScore * 1.1)));
+    return {
+      matched,
+      total: expectedRaw.length,
+      percent: Math.max(0, Math.min(100, Math.round(baseScore * 1.1)))
+    };
+  }
+
+  function calculateSpeechMatchPercent(expected, spoken) {
+    return calculateSpeechMatchStats(expected, spoken).percent;
   }
 
   function updateDuelAvatarRings() {
     const battleCardsMode = isBattleCardsMode();
+    const showPoints = Boolean(state.duel.enabled) && !battleCardsMode;
     const myPercent = battleCardsMode && state.duel.targetScore > 0
       ? Math.round((Math.max(0, Number(state.duel.meScore) || 0) / state.duel.targetScore) * 100)
       : state.duel.enabled
@@ -1025,12 +1045,12 @@
     if (els.mePronRing) els.mePronRing.style.setProperty('--percent', String(myPercent));
     if (els.enemyPronRing) els.enemyPronRing.style.setProperty('--percent', String(rivalPercent));
     if (els.meAvatarPercent) {
-      els.meAvatarPercent.textContent = battleCardsMode
+      els.meAvatarPercent.textContent = (battleCardsMode || showPoints)
         ? String(Math.max(0, Number(state.duel.meScore) || 0))
         : `${myPercent}%`;
     }
     if (els.enemyAvatarPercent) {
-      els.enemyAvatarPercent.textContent = battleCardsMode
+      els.enemyAvatarPercent.textContent = (battleCardsMode || showPoints)
         ? String(Math.max(0, Number(state.duel.rivalScore) || 0))
         : `${rivalPercent}%`;
     }
@@ -1517,15 +1537,20 @@
     const battleCardsMode = isBattleCardsMode();
     const isBattleMode = state.gameMode === 'battle-mode' || battleCardsMode;
     if (isBattleMode) {
+      const showPoints = Boolean(state.duel.enabled) && !battleCardsMode;
       if (els.speakingPercent) {
         els.speakingPercent.textContent = battleCardsMode
           ? `Pontos ${Math.max(0, Number(state.duel.meScore) || 0)}`
-          : '';
+          : showPoints
+            ? `Pontos ${Math.max(0, Number(state.duel.meScore) || 0)}`
+            : '';
       }
       if (els.enemySpeakingPercent) {
         els.enemySpeakingPercent.textContent = battleCardsMode
           ? `Rival ${Math.max(0, Number(state.duel.rivalScore) || 0)}`
-          : '';
+          : showPoints
+            ? `Rival ${Math.max(0, Number(state.duel.rivalScore) || 0)}`
+            : '';
       }
       if (els.enemyProgressWrap) els.enemyProgressWrap.hidden = false;
       if (els.duelAvatarsWrap) els.duelAvatarsWrap.hidden = false;
@@ -2521,19 +2546,29 @@
     try {
       const transcript = safeText(await captureSpeechFast('en-US'));
       addSpeakingConsumptionChars(transcript);
-      const score = calculateSpeechMatchPercent(card.english, transcript);
+      const matchStats = calculateSpeechMatchStats(card.english, transcript);
       const previousCount = Math.max(0, Number(state.currentIndex) || 0);
       const battleCardsMode = isBattleCardsMode();
-      const isHit = battleCardsMode ? score >= 50 : true;
+      const isBattleBooksMode = Boolean(state.duel.enabled) && !battleCardsMode;
+      const score = isBattleBooksMode
+        ? matchStats.matched
+        : matchStats.percent;
+      const isHit = battleCardsMode ? matchStats.percent >= 50 : true;
       state.scores.push(score);
       state.currentIndex += 1;
       const nextCount = previousCount + 1;
-      const weighted = ((Number(state.duel.mePercent) || 0) * previousCount) + score;
-      state.duel.mePercent = nextCount > 0 ? Math.round(weighted / nextCount) : score;
+      if (isBattleBooksMode) {
+        state.duel.meScore = Math.max(0, Number(state.duel.meScore) || 0) + score;
+        const battlePointsTotal = getBattleExpectedPoints();
+        state.duel.mePercent = Math.round((Math.max(0, Number(state.duel.meScore) || 0) / battlePointsTotal) * 100);
+      } else {
+        const weighted = ((Number(state.duel.mePercent) || 0) * previousCount) + score;
+        state.duel.mePercent = nextCount > 0 ? Math.round(weighted / nextCount) : score;
+      }
       if (battleCardsMode && isHit) {
         state.duel.meScore = Math.max(0, Number(state.duel.meScore) || 0) + 1;
         await playSuccessSound();
-      } else if (!battleCardsMode) {
+      } else if (!battleCardsMode && score > 0) {
         await playSuccessSound();
       }
       updateTopPercents();
@@ -2554,7 +2589,6 @@
         }
         renderBattleCardsPhaseWord(safeText(card?.portuguese) || safeText(card?.english) || 'FluentCards', 'portuguese');
         await waitMs(1500);
-        await playBattleCardsEnglishPrompt(card, { unlockDelayMs: 999999 });
         window.setTimeout(renderCard, 120);
         return;
       }
@@ -2577,6 +2611,9 @@
     const sessionCount = state.scores.length;
     const sessionSum = state.scores.reduce((acc, value) => acc + value, 0);
     const finalPercent = sessionCount ? Math.round(sessionSum / sessionCount) : 0;
+    const battleCardsMode = isBattleCardsMode();
+    const duelBooksMode = Boolean(state.duel.enabled) && !battleCardsMode;
+    const totalBattlePoints = duelBooksMode ? getBattleExpectedPoints() : 0;
 
     if (!state.duel.enabled) {
       state.speakingStats.sum += sessionSum;
@@ -2584,12 +2621,17 @@
       state.speakingStats.sessions += 1;
       saveSpeakingStats();
     } else {
-      state.duel.mePercent = finalPercent;
+      if (duelBooksMode) {
+        state.duel.meScore = sessionSum;
+        state.duel.mePercent = Math.round((sessionSum / totalBattlePoints) * 100);
+      } else {
+        state.duel.mePercent = finalPercent;
+      }
     }
 
     updateTopPercents();
     if (els.finalResultBox) {
-      els.finalResultBox.textContent = isBattleCardsMode()
+      els.finalResultBox.textContent = (battleCardsMode || duelBooksMode)
         ? `${Math.max(0, Number(state.duel.meScore) || 0)} pontos`
         : `${finalPercent}% seu resultado final`;
       els.finalResultBox.classList.add('is-visible');
