@@ -5196,6 +5196,11 @@
   }
 
   async function playReaderCardAudio(card, index) {
+    if (state.readerMode === 'speaking-training') {
+      state.readerLastAudioKey = `${Number(index) || 0}::speaking-training`;
+      setReaderMicVisible(true);
+      return;
+    }
     const source = safeText(card?.audio || card?.audioUrl);
     const english = safeText(card?.english);
     const key = `${Number(index) || 0}::${source || english}`;
@@ -5324,7 +5329,8 @@
   }
 
   function getReaderLockedLanguage(mode = state.readerMode) {
-    return mode === 'free-read' ? 'english' : 'portuguese';
+    if (mode === 'listening-training') return 'portuguese';
+    return 'english';
   }
 
   function calculateReaderAverageScore() {
@@ -5746,6 +5752,7 @@
     const portuguese = safeText(card?.portuguese || english);
     const highlight = Boolean(card?.highlight);
     const displayLanguage = isReaderTrainingMode() ? getReaderLockedLanguage() : 'english';
+    state.readerDisplayLanguage = displayLanguage;
     const displayText = displayLanguage === 'portuguese' ? portuguese : english;
     const displayTextFormatted = splitBalancedLines(sanitizeReaderDisplayText(displayText));
     if (state.readerRenderedCardIndex !== index) {
