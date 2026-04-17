@@ -245,6 +245,8 @@
     forceAdminUi: false,
     uploadInFlight: false,
     uploadTargetBookId: '',
+    deleteConfirmBookId: '',
+    deleteBusyBookId: '',
     gradients: [],
     magicBookId: '',
     magicProcessingBookIds: new Set(),
@@ -1167,12 +1169,37 @@
     return bestLineB ? `${bestLineA}\n${bestLineB}` : bestLineA;
   }
 
+  function sanitizeBooksDisplayTail(value) {
+    let text = String(value || '').trimEnd();
+    while (text) {
+      const dotTrail = text.match(/\.{2,}$/);
+      if (dotTrail) {
+        return `${text.slice(0, -dotTrail[0].length)}${dotTrail[0].length >= 3 ? '...' : '.'}`;
+      }
+      const commaTrail = text.match(/,+$/);
+      if (commaTrail) {
+        return `${text.slice(0, -commaTrail[0].length)},`;
+      }
+      const questionTrail = text.match(/\?+$/);
+      if (questionTrail) {
+        return `${text.slice(0, -questionTrail[0].length)}?`;
+      }
+      if (/[,.?]$/.test(text) || /\p{L}$/u.test(text)) {
+        return text;
+      }
+      text = text.slice(0, -1).trimEnd();
+    }
+    return '';
+  }
+
   function sanitizeReaderDisplayText(value) {
-    return String(value || '')
+    const normalized = String(value || '')
+      .replace(/\u221F/g, ' ')
       .replace(/,;/g, '')
       .replace(/[ \t]{2,}/g, ' ')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
+    return sanitizeBooksDisplayTail(normalized);
   }
 
   function readForceAdminUiFlag() {
@@ -2279,6 +2306,50 @@
     }
   }
 
+  function closeBookDeleteConfirm() {
+    if (!state.deleteConfirmBookId) return;
+    state.deleteConfirmBookId = '';
+    if (!state.deleteBusyBookId) {
+      renderCards();
+    }
+  }
+
+  function openBookDeleteConfirm(bookId) {
+    const normalizedBookId = safeText(bookId);
+    if (!normalizedBookId || state.deleteBusyBookId === normalizedBookId) return;
+    state.deleteConfirmBookId = normalizedBookId;
+    renderCards();
+  }
+
+  async function deleteBookPermanently(book) {
+    const bookId = safeText(book?.bookId);
+    if (!bookId || state.deleteBusyBookId === bookId) return;
+    state.deleteConfirmBookId = bookId;
+    state.deleteBusyBookId = bookId;
+    renderCards();
+
+    const bookName = safeText(book?.nome || book?.title || 'Livro');
+    setStatus(`Excluindo "${bookName}"...`, null);
+    try {
+      await postJsonWithSuccess('/api/admin/minibooks/delete', {
+        bookId
+      }, 'Nao foi possivel excluir o livro.');
+      state.books = state.books.filter((entry) => safeText(entry?.bookId) !== bookId);
+      if (safeText(state.readerBookId) === bookId) {
+        closeReader();
+      }
+      await refreshStatsFromServer().catch(() => null);
+      closeBookDeleteConfirm();
+      setStatus(`"${bookName}" foi excluido permanentemente.`, 'success');
+      renderCards();
+    } catch (error) {
+      setStatus(error?.message || `Falha ao excluir o livro "${bookName}".`, 'error');
+    } finally {
+      state.deleteBusyBookId = '';
+      renderCards();
+    }
+  }
+
   async function refreshStatsFromServer() {
     if (!state.user?.id || state.statsFetchInFlight) return null;
     state.statsFetchInFlight = true;
@@ -2453,7 +2524,7 @@
       els.adminSummaryUniqueWords.textContent = `${uniqueWordsCount}`;
     }
     if (els.adminSummaryHint) {
-      els.adminSummaryHint.textContent = 'Contagem feita em todos os MiniBooks e visível apenas para administradores.';
+      els.adminSummaryHint.textContent = 'Contagem feita apenas no texto em ingles dos MiniBooks e visível apenas para administradores.';
     }
   }
 
@@ -4419,6 +4490,52 @@
           void openEditBookModal(book);
         });
 
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'books-card__delete-btn';
+        deleteBtn.setAttribute('aria-label', `Excluir ${safeText(book?.nome) || 'livro'}`);
+        deleteBtn.title = 'Excluir livro';
+        deleteBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4h10l1 2h3v2H3V6h3zM6 8h12l-1 12H7zM10 10v8h2v-8zm4 0v8h2v-8z"/></svg>';
+        deleteBtn.disabled = processingMagic || pendingCreate || state.deleteBusyBookId === safeText(book?.bookId);
+        deleteBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          openBookDeleteConfirm(book.bookId);
+        });
+
+        const deletePopover = document.createElement('div');
+        deletePopover.className = 'books-card__delete-popover';
+        deletePopover.hidden = state.deleteConfirmBookId !== safeText(book?.bookId);
+        const deletePopoverTitle = document.createElement('div');
+        deletePopoverTitle.className = 'books-card__delete-popover-title';
+        deletePopoverTitle.textContent = 'Excluir para sempre?';
+        const deletePopoverText = document.createElement('div');
+        deletePopoverText.className = 'books-card__delete-popover-text';
+        deletePopoverText.textContent = 'Esse texto some do livro e nao volta.';
+        const deletePopoverActions = document.createElement('div');
+        deletePopoverActions.className = 'books-card__delete-popover-actions';
+        const deleteConfirmBtn = document.createElement('button');
+        deleteConfirmBtn.type = 'button';
+        deleteConfirmBtn.className = 'books-card__delete-confirm-btn';
+        deleteConfirmBtn.textContent = state.deleteBusyBookId === safeText(book?.bookId) ? 'Excluindo...' : 'Excluir';
+        deleteConfirmBtn.disabled = state.deleteBusyBookId === safeText(book?.bookId);
+        deleteConfirmBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void deleteBookPermanently(book);
+        });
+        const deleteCancelBtn = document.createElement('button');
+        deleteCancelBtn.type = 'button';
+        deleteCancelBtn.className = 'books-card__delete-cancel-btn';
+        deleteCancelBtn.textContent = 'Cancelar';
+        deleteCancelBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeBookDeleteConfirm();
+        });
+        deletePopoverActions.append(deleteConfirmBtn, deleteCancelBtn);
+        deletePopover.append(deletePopoverTitle, deletePopoverText, deletePopoverActions);
+
         const processingOverlay = document.createElement('span');
         processingOverlay.className = 'books-card__processing';
         const processingLabel = pendingCreate
@@ -4426,8 +4543,8 @@
           : 'Gerando...';
         processingOverlay.innerHTML = `<span class="books-card__spinner" aria-hidden="true"></span><span class="books-card__processing-label">${escapeHtml(processingLabel)}</span>`;
 
-        actions.append(uploadBtn, magicBtn, textBtn);
-        card.append(adminChip, actions, processingOverlay);
+        actions.append(uploadBtn, magicBtn, textBtn, deleteBtn);
+        card.append(adminChip, actions, deletePopover, processingOverlay);
       }
       card.addEventListener('click', () => {
         if (IS_MYBOOKS_GRID_EMBED) return;

@@ -4932,7 +4932,6 @@ async function getAdminMiniBooksSummary() {
     }
     for (const card of Array.isArray(story?.cards) ? story.cards : []) {
       collectAdminBooksWordTokens(card?.english).forEach((word) => uniqueWords.add(word));
-      collectAdminBooksWordTokens(card?.portuguese).forEach((word) => uniqueWords.add(word));
     }
   }
 
@@ -5317,6 +5316,41 @@ async function loadEditableMiniBookSource(bookId) {
   }
 
   return null;
+}
+
+async function deleteMiniBookSourceFiles(bookId) {
+  const normalizedBookId = normalizeMiniBookId(bookId);
+  if (!normalizedBookId) {
+    return [];
+  }
+
+  const deletedFiles = [];
+  for (const root of BATTLE_STORIES_ROOT_CANDIDATES) {
+    let dirEntries = [];
+    try {
+      dirEntries = await fs.promises.readdir(root, { withFileTypes: true });
+    } catch (_error) {
+      dirEntries = [];
+    }
+
+    for (const entry of dirEntries) {
+      if (!entry?.isFile?.() || !entry.name.toLowerCase().endsWith('.json')) continue;
+      const fileBaseName = path.basename(entry.name, '.json');
+      if (normalizeMiniBookId(fileBaseName) !== normalizedBookId) continue;
+
+      const fullPath = path.join(root, entry.name);
+      try {
+        await fs.promises.unlink(fullPath);
+        deletedFiles.push(fullPath);
+      } catch (error) {
+        if (error?.code !== 'ENOENT') {
+          throw error;
+        }
+      }
+    }
+  }
+
+  return deletedFiles;
 }
 
 async function findLocalSpeakingBookMetadataById(bookId) {
@@ -12116,6 +12150,89 @@ app.post('/api/admin/minibooks/update-card', express.json({ limit: '2mb' }), asy
       error: error.message || 'Falha ao atualizar card do MiniBook.',
       details: error.details || null,
       instructions: error.instructions || null
+    });
+  }
+});
+
+app.post('/api/admin/minibooks/delete', express.json({ limit: '256kb' }), async (req, res) => {
+  let adminUser = null;
+  try {
+    adminUser = await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  try {
+    const rawBookId = String(req.body?.bookId || '').trim();
+    const bookId = normalizeMiniBookId(rawBookId);
+    if (!bookId) {
+      res.status(400).json({ error: 'bookId obrigatorio para excluir o livro.' });
+      return;
+    }
+
+    const manifest = await loadMiniBooksManifest().catch(() => createDefaultMiniBooksManifest());
+    const manifestHasBook = Boolean(manifest?.books && manifest.books[bookId]);
+    const manifestEntry = normalizeMiniBookEntry(bookId, manifest?.books?.[bookId] || {});
+    const source = await loadEditableMiniBookSource(bookId).catch(() => null);
+    if (!manifestHasBook && !source) {
+      res.status(404).json({ error: 'Livro nao encontrado para exclusao.' });
+      return;
+    }
+
+    const cleanup = {
+      localFilesDeleted: [],
+      databaseRowsDeleted: 0,
+      r2ObjectsDeleted: 0
+    };
+
+    cleanup.localFilesDeleted = await deleteMiniBookSourceFiles(bookId);
+
+    if (pool) {
+      await ensureMiniBookJsonTables();
+      const deleteResult = await pool.query(
+        `DELETE FROM public.minibook_json_content
+         WHERE book_id = $1`,
+        [bookId]
+      );
+      cleanup.databaseRowsDeleted = Number(deleteResult.rowCount || 0);
+    }
+
+    if (isR2FluencyConfigured()) {
+      const objectKeys = new Set([
+        manifestEntry.coverObjectKey || buildMiniBookObjectKey(bookId, 'cover'),
+        manifestEntry.backgroundDesktopObjectKey || buildMiniBookObjectKey(bookId, 'background-desktop'),
+        manifestEntry.backgroundMobileObjectKey || buildMiniBookObjectKey(bookId, 'background-mobile')
+      ]);
+      for (const objectKey of objectKeys) {
+        if (!objectKey) continue;
+        await deleteR2Object(objectKey);
+        cleanup.r2ObjectsDeleted += 1;
+      }
+      const audioPrefix = `${path.posix.join(MINIBOOKS_AUDIO_OBJECT_PREFIX, bookId)}/`;
+      cleanup.r2ObjectsDeleted += await deleteR2Prefix(audioPrefix);
+    }
+
+    if (manifestHasBook) {
+      delete manifest.books[bookId];
+      manifest.updatedAt = new Date().toISOString();
+      await persistMiniBooksManifest(manifest);
+    }
+
+    invalidateSpeakingCardsCache();
+    invalidateAdminMiniBooksSummaryCache();
+
+    res.json({
+      success: true,
+      bookId,
+      deletedByUserId: Number(adminUser?.id) || null,
+      cleanup
+    });
+  } catch (error) {
+    res.status(Number(error?.statusCode || 500)).json({
+      error: error.message || 'Falha ao excluir o MiniBook.',
+      details: error.details || null
     });
   }
 });

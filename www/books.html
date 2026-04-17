@@ -1125,6 +1125,11 @@
       pointer-events: none;
     }
 
+    body.books-sleeping-mode .books-home-book-slot,
+    body.books-sleeping-mode .books-home-text-slot {
+      transform: translateY(8vh);
+    }
+
     .books-home-text-panel {
       width: 100%;
       min-height: 13vh;
@@ -1464,7 +1469,7 @@
       place-items: center;
       align-content: center;
       padding: 0;
-      overflow: hidden;
+      overflow: visible;
     }
 
     .books-card {
@@ -1624,7 +1629,7 @@
       right: 10px;
       transform: translateY(-50%);
       display: none;
-      grid-template-rows: repeat(3, 42px);
+      grid-template-rows: repeat(4, 42px);
       gap: 8px;
       z-index: 2;
     }
@@ -1635,7 +1640,8 @@
 
     .books-card__upload-btn,
     .books-card__magic-btn,
-    .books-card__text-btn {
+    .books-card__text-btn,
+    .books-card__delete-btn {
       width: 42px;
       height: 42px;
       border-radius: 999px;
@@ -1649,7 +1655,8 @@
 
     .books-card__upload-btn svg,
     .books-card__magic-btn svg,
-    .books-card__text-btn svg {
+    .books-card__text-btn svg,
+    .books-card__delete-btn svg {
       width: 14px;
       height: 14px;
       display: block;
@@ -1657,16 +1664,94 @@
 
     .books-card__upload-btn:hover:not(:disabled),
     .books-card__magic-btn:hover:not(:disabled),
-    .books-card__text-btn:hover:not(:disabled) {
+    .books-card__text-btn:hover:not(:disabled),
+    .books-card__delete-btn:hover:not(:disabled) {
       background: rgba(11, 27, 52, 0.9);
       transform: scale(1.03);
     }
 
     .books-card__upload-btn:disabled,
     .books-card__magic-btn:disabled,
-    .books-card__text-btn:disabled {
+    .books-card__text-btn:disabled,
+    .books-card__delete-btn:disabled {
       opacity: 0.55;
       cursor: not-allowed;
+    }
+
+    .books-card__delete-popover {
+      position: absolute;
+      top: 50%;
+      right: 58px;
+      transform: translateY(-50%);
+      width: min(210px, 55vw);
+      padding: 10px 11px 11px;
+      border-radius: 16px;
+      background: rgba(6, 14, 28, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow:
+        0 20px 36px rgba(0, 0, 0, 0.34),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+      backdrop-filter: blur(10px);
+      color: #ffffff;
+      z-index: 4;
+    }
+
+    .books-card__delete-popover::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -7px;
+      width: 12px;
+      height: 12px;
+      transform: translateY(-50%) rotate(45deg);
+      background: rgba(6, 14, 28, 0.96);
+      border-top: 1px solid rgba(255, 255, 255, 0.16);
+      border-right: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .books-card__delete-popover-title {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .books-card__delete-popover-text {
+      font-size: 11px;
+      line-height: 1.25;
+      color: rgba(240, 246, 255, 0.84);
+      margin-bottom: 10px;
+    }
+
+    .books-card__delete-popover-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .books-card__delete-confirm-btn,
+    .books-card__delete-cancel-btn {
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .books-card__delete-confirm-btn {
+      background: linear-gradient(180deg, rgba(203, 61, 61, 0.98), rgba(146, 34, 34, 0.98));
+      border-color: rgba(255, 143, 143, 0.26);
+    }
+
+    .books-card__delete-cancel-btn:hover:not(:disabled),
+    .books-card__delete-confirm-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
     }
 
     .books-card__processing {
