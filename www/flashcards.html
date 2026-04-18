@@ -6654,6 +6654,7 @@
       const STAGE_TUTORIAL_TWO_IMAGE_PATH = 'images/tutorial2.png';
       const STAGE_TUTORIAL_ONE_REMINDER_MS = 12000;
       const STAGE_TUTORIAL_TWO_REMINDER_MS = 15000;
+      const ENABLE_STAGE_TUTORIALS = false;
       const STAGE_TWO_HINT_DELAY_MS = 2000;
       const STAGE_TWO_HINT_VISIBLE_MS = 3000;
       const ONBOARDING_GATE_TRANSITION_MS = 2000;
@@ -12022,6 +12023,7 @@
       }
 
       function resolveStageTutorialKind(entry) {
+        if (!ENABLE_STAGE_TUTORIALS) return '';
         if (isFirstStageTutorialEligible(entry)) return 'first';
         if (isSecondStageTutorialEligible(entry)) return 'second';
         return '';
@@ -12060,6 +12062,7 @@
       }
 
       function maybeShowStageTutorialBeforeCard(entry, options = {}) {
+        if (!ENABLE_STAGE_TUTORIALS) return false;
         const skipKind = safeText(options.skipStageTutorialKind || options.skipKind);
         const kind = resolveStageTutorialKind(entry);
         if (!kind || kind === skipKind) return false;
@@ -12073,6 +12076,7 @@
       }
 
       function scheduleStageTutorialReminder(entry) {
+        if (!ENABLE_STAGE_TUTORIALS) return;
         clearStageTutorialReminder();
         const kind = resolveStageTutorialKind(entry);
         if (!kind || state.ui.gameStageTutorialMissingAssets[kind]) return;
