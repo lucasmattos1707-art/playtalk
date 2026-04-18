@@ -16478,18 +16478,24 @@ app.post('/api/admin/flashcards/create-deck', express.json({ limit: '1mb' }), as
 
     const deckTitle = typeof req.body?.deckTitle === 'string' ? req.body.deckTitle.trim() : '';
     const coverImage = typeof req.body?.coverImage === 'string' ? req.body.coverImage.trim() : '';
+    const folderName = typeof req.body?.folderName === 'string' ? req.body.folderName.trim() : '';
     const parsedSlotCount = Number.parseInt(req.body?.slotCount, 10);
     const slotCount = Number.isInteger(parsedSlotCount)
       ? Math.max(0, Math.min(100, parsedSlotCount))
       : 0;
+    if (!folderName) {
+      res.status(400).json({ error: 'Informe a pasta do deck.' });
+      return;
+    }
     if (!deckTitle) {
       res.status(400).json({ error: 'Informe o nome do deck.' });
       return;
     }
 
+    const folderSegment = normalizeFlashcardsDeckSegment(folderName, 'deck');
     const baseName = safeGeneratedBase(deckTitle, 'novo-deck');
     const fileName = `${baseName}.json`;
-    const relativeJsonPath = path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, baseName, 'json', fileName);
+    const relativeJsonPath = path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, folderSegment, 'json', fileName);
     const payload = createEditableFlashcardDeckPayload(deckTitle, coverImage, slotCount);
 
     await writeJsonToRelativePath(relativeJsonPath, payload);
@@ -16500,6 +16506,7 @@ app.post('/api/admin/flashcards/create-deck', express.json({ limit: '1mb' }), as
     res.json({
       success: true,
       source: relativeJsonPath,
+      folder: folderSegment,
       fileName,
       title: payload.title,
       coverImage: payload.coverImage,

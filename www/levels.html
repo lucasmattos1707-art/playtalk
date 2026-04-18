@@ -1217,6 +1217,7 @@
       }
       async function publishLevelFilesLocal(files,options={}){const day=typeof options?.day==='string'||typeof options?.day==='number'?String(options.day):state.day,mode=typeof options?.mode==='string'?options.mode:state.mode,{fileName,source,pathValue}=resolvePublishDeckIdentity(options);const response=await fetch('/api/admin/flashcards/public-decks/publish-editor-bundle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day,mode,fileName,source,path:pathValue,files})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao publicar o deck no PlayTalk.');return payload}
       async function uploadJsonDecksToPostgres(files){const response=await fetch('/api/admin/flashcards/public-decks/upload-jsons',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.details||payload?.message||'Erro ao enviar decks para o Postgres.');return payload}
+      async function createAdminFlashcardDeck({folderName,deckTitle,coverImage,slotCount=0}={}){const response=await fetch('/api/admin/flashcards/create-deck',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({folderName,deckTitle,coverImage,slotCount})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.error||payload?.message||'Falha ao criar o novo deck.');return payload}
       function canPublishAdminDeck(){return isAdminStudioEnabled()&&state.title.trim()&&flashcardCoverPreview()&&state.items.some(item=>item.pt&&item.en)}
       async function publishAdminFlashcardsLocal(options={}){
         const force=Boolean(options.force),silent=Boolean(options.silent);
@@ -1617,7 +1618,57 @@
       function getSceneExportData(){ensureChars();const itemEntries=state.items.filter(i=>i.pt&&i.en&&i.characterId).map((i,n)=>({id:n+1,character:i.characterId,portuguese:i.pt,english:i.en,audio_portuguese:i.audioPtFile?cloud(state.day,PHASE.scenes,i.audioPtFile):'',audio_english:i.audioEnFile?cloud(state.day,PHASE.scenes,i.audioEnFile):'',item:i}));const usedIds=new Set(itemEntries.map(entry=>entry.character));const characters=state.chars.filter(char=>{const id=String(char?.id||'').trim();const name=String(char?.name||'').trim();return id&&name&&usedIds.has(id)}).map(char=>({id:char.id.trim(),name:char.name.trim(),voiceId:char.voiceId||getSceneCharacter(char.id)?.voiceId||'',image:char.imageFile?cloud(state.day,PHASE.scenes,char.imageFile):defaultSceneCharacterImageUrl(char.id),char}));const validIds=new Set(characters.map(char=>char.id));return{characters:characters.map(({char,...entry})=>entry),items:itemEntries.filter(entry=>validIds.has(entry.character)).map(({item,...entry})=>entry),characterAssets:characters.map(entry=>entry.char)}}
       function payload(){if(state.mode==='flashcard'){validateFlashcard();return{title:state.title.trim(),coverImage:flashcardCoverPreview(),items:state.items.filter(i=>i.pt&&i.en).map(i=>({imagem:i.imageRemoteUrl||cloud(state.day,PHASE.flashcard,i.imageFile)||'',nomePortugues:i.pt,nomeIngles:i.en,categoria:i.category||'flashcard',audio:i.audioRemoteUrl||((i.audioFile||i.audioDataUrl)?cloud(state.day,PHASE.flashcard,i.audioFile):''),tense:i.tense||'present-simple',sentenceForm:i.sentenceForm||'affirmative'}))}}validateMovie();if(state.mode==='movies')return{soundtrack:state.soundFile?cloud(state.day,PHASE.movies,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),items:state.items.filter(i=>i.imageFile&&i.pt&&i.en).map((i,n)=>({id:n+1,image:cloud(state.day,PHASE.movies,i.imageFile),portuguese:i.pt,english:i.en,image_prompt:i.imagePrompt||'',audio_portuguese:i.audioPtFile?cloud(state.day,PHASE.movies,i.audioPtFile):'',audio_english:i.audioEnFile?cloud(state.day,PHASE.movies,i.audioEnFile):''})),title:state.title.trim(),coverImage:state.coverFile?cloud(state.day,PHASE.movies,state.coverFile):''};const sceneExport=getSceneExportData();return{soundtrack:state.soundFile?cloud(state.day,PHASE.scenes,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),characters:sceneExport.characters,items:sceneExport.items,title:state.title.trim(),coverImage:state.coverFile?cloud(state.day,PHASE.scenes,state.coverFile):''}}
       const downloadJson=()=>{const blob=new Blob([JSON.stringify(payload(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=jsonFileName();document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)};
-      $('newBtn').onclick=()=>{if(!confirm('Apagar os itens e comecar uma grade nova?'))return;state.items=[];state.publicDeckFileName='';state.publicDeckPath='';state.publicDeckSource='';editCardsState.selectedPath='';resetDeckSearchState({clearMode:true});resetDeckMeta();closeSendPlaytalkPopover();save();renderAll()};
+      $('newBtn').onclick=async()=>{
+        if(!confirm('Apagar os itens e comecar uma grade nova?'))return;
+        let nextFolder='1',nextTitle='',nextCover='';
+        const shouldCreatePostgresDeck=adminStudio.enabled&&state.mode==='flashcard';
+        if(shouldCreatePostgresDeck){
+          const folderAnswer=window.prompt('Pasta do novo deck (ex.: 1, 250, casa):',String(state.day||'1'));
+          if(folderAnswer===null)return;
+          const titleAnswer=window.prompt('Titulo do novo deck:',String(state.title||'').trim());
+          if(titleAnswer===null)return;
+          const coverAnswer=window.prompt('Link publico da capa do deck:',String(state.flashcardCoverUrl||'').trim());
+          if(coverAnswer===null)return;
+          nextFolder=sanitizeDayKey(folderAnswer);
+          nextTitle=String(titleAnswer||'').trim();
+          nextCover=String(coverAnswer||'').trim();
+          if(!nextFolder)return alert('Informe a pasta do deck.');
+          if(!nextTitle)return alert('Informe o titulo do deck.');
+          if(!nextCover)return alert('Informe o link publico da capa.');
+        }
+        state.items=[];
+        state.publicDeckFileName='';
+        state.publicDeckPath='';
+        state.publicDeckSource='';
+        editCardsState.selectedPath='';
+        resetDeckSearchState({clearMode:true});
+        resetDeckMeta();
+        if(shouldCreatePostgresDeck){
+          state.day=nextFolder;
+          state.title=nextTitle;
+          state.flashcardCoverUrl=nextCover;
+        }
+        closeSendPlaytalkPopover();
+        save();
+        renderAll();
+        if(!shouldCreatePostgresDeck)return;
+        try{
+          const created=await createAdminFlashcardDeck({folderName:nextFolder,deckTitle:nextTitle,coverImage:nextCover,slotCount:0});
+          const publishedPath=safeText(created?.publishedDecks?.[0]?.path);
+          const sourcePath=safeText(created?.source);
+          const normalizedPath=normalizeFlashcardsDataPath(publishedPath||sourcePath);
+          state.publicDeckFileName=safeText(created?.fileName);
+          state.publicDeckPath=normalizedPath||sourcePath;
+          state.publicDeckSource=sourcePath||state.publicDeckPath;
+          editCardsState.selectedPath=state.publicDeckPath;
+          await refreshEditCardsDeckPicker();
+          save();
+          renderAll();
+          showFeedbackToast('Novo deck criado no Postgres com 0 cards e ja vinculado ao jogo.');
+        }catch(error){
+          alert(error.message||'Nao foi possivel criar o deck no Postgres.');
+        }
+      };
       $('charactersToggleBtn').onclick=()=>{state.sceneCharactersOpen=!state.sceneCharactersOpen;save();renderAll()};
       $('addBtn').onclick=()=>{if(elevenBusy)return;openVoicePopover()};
       $('watchFlashcardsBtn').onclick=()=>openWatchPopover();
