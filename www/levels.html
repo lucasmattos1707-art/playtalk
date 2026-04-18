@@ -774,8 +774,52 @@
       const flashcardFileStem=()=>safeBase(state.title||`day-${sanitizeDayKey(state.day)}`,`day-${sanitizeDayKey(state.day)}`);
       const flashcardJsonFileName=()=>`${flashcardFileStem()}.json`;
       const flashcardCoverPreview=()=>String(state.flashcardCoverUrl||'').trim();
-      function syncAssetFileNames(){let index=1;const assign=(target,fileKey,dataKey,fallback)=>{if(!(target?.[fileKey]||target?.[dataKey]))return;if(target?.[dataKey]){target[fileKey]=numberedName(index,assetExt(target[fileKey],target[dataKey],fallback));index+=1;return}target[fileKey]=fileNameOnly(target[fileKey])};if(state.mode==='flashcard'){state.items.forEach(item=>{assign(item,'imageFile','imageDataUrl','webp');assign(item,'audioFile','audioDataUrl','mp3')});return}assign(state,'coverFile','coverDataUrl','webp');assign(state,'soundFile','soundDataUrl','mp3');if(state.mode==='movies'){state.items.forEach(item=>{assign(item,'imageFile','imageDataUrl','webp');assign(item,'audioPtFile','audioPtDataUrl','mp3');assign(item,'audioEnFile','audioEnDataUrl','mp3')});return}ensureChars();state.chars.forEach(char=>assign(char,'imageFile','imageDataUrl','webp'));state.items.forEach(item=>{assign(item,'audioPtFile','audioPtDataUrl','mp3');assign(item,'audioEnFile','audioEnDataUrl','mp3')})}
+      function syncAssetFileNames(){
+        let index=1;
+        const assign=(target,fileKey,dataKey,fallback)=>{
+          if(!(target?.[fileKey]||target?.[dataKey]))return;
+          if(target?.[dataKey]){
+            target[fileKey]=numberedName(index,assetExt(target[fileKey],target[dataKey],fallback));
+            index+=1;
+            return;
+          }
+          target[fileKey]=fileNameOnly(target[fileKey]);
+        };
+        if(state.mode==='flashcard'){
+          state.items.forEach((item,itemIndex)=>{
+            if(item?.imageFile||item?.imageDataUrl){
+              if(item?.imageDataUrl)item.imageFile=numberedName(itemIndex+1,assetExt(item.imageFile,item.imageDataUrl,'webp'));
+              else item.imageFile=fileNameOnly(item.imageFile);
+            }
+            if(item?.audioFile||item?.audioDataUrl){
+              if(item?.audioDataUrl)item.audioFile=numberedName(itemIndex+1,assetExt(item.audioFile,item.audioDataUrl,'mp3'));
+              else item.audioFile=fileNameOnly(item.audioFile);
+            }
+          });
+          return;
+        }
+        assign(state,'coverFile','coverDataUrl','webp');
+        assign(state,'soundFile','soundDataUrl','mp3');
+        if(state.mode==='movies'){
+          state.items.forEach(item=>{
+            assign(item,'imageFile','imageDataUrl','webp');
+            assign(item,'audioPtFile','audioPtDataUrl','mp3');
+            assign(item,'audioEnFile','audioEnDataUrl','mp3');
+          });
+          return;
+        }
+        ensureChars();
+        state.chars.forEach(char=>assign(char,'imageFile','imageDataUrl','webp'));
+        state.items.forEach(item=>{
+          assign(item,'audioPtFile','audioPtDataUrl','mp3');
+          assign(item,'audioEnFile','audioEnDataUrl','mp3');
+        });
+      }
       const defaultLevelKey=()=>state.mode==='movies'?`movie_day_${sanitizeDayKey(state.day)}`:`scene_day_${sanitizeDayKey(state.day)}`,save=()=>{syncAssetFileNames();localStorage.setItem(STORE,JSON.stringify(state))};
+      function clearLevelsLocalCache(){
+        try{localStorage.removeItem(STORE)}catch{}
+        try{localStorage.removeItem(WATCH_SETTINGS_STORE)}catch{}
+      }
       const load=()=>{try{const parsed=JSON.parse(localStorage.getItem(STORE)||'null');if(!parsed)return;Object.assign(state,parsed);state.mode='flashcard';state.voiceMode=false;state.day=sanitizeDayKey(state.day);state.items=Array.isArray(state.items)?state.items.map(i=>({...defaultItem(),...i})):[];state.chars=normalizeSceneChars(Array.isArray(state.chars)?state.chars:[])}catch{}state.mode='flashcard';state.voiceMode=false};
       const stopAudio=()=>{if(!currentAudio)return;currentAudio.audio.pause();currentAudio.audio.currentTime=0;currentAudio.button.classList.remove('has');currentAudio=null};
       const play=(src,btn)=>{if(!src)return;stopAudio();const audio=new Audio(src);currentAudio={audio,button:btn};btn.classList.add('has');audio.addEventListener('ended',stopAudio);audio.addEventListener('error',stopAudio);audio.play().catch(stopAudio)};
@@ -1709,6 +1753,14 @@
           }catch(error){
             alert(error.message||'Nao foi possivel baixar o deck.');
           }
+          return;
+        }
+        if(rawValue==='clearall'){
+          clearLevelsLocalCache();
+          $('pasteArea').value='';
+          closePastePopover();
+          showFeedbackToast('Cache local do editor limpo. Recarregando...');
+          window.setTimeout(()=>window.location.reload(),140);
           return;
         }
         const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),out=[];
