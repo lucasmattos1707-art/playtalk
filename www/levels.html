@@ -654,7 +654,7 @@
         editCardsState.searchResults=[...searchMatches,...pinnedMatches];
       }
       function renderableFlashcardEntries(){
-        if(isDeckSearchActive())return editCardsState.searchResults;
+        if(editCardsState.searchMode)return editCardsState.searchResults;
         return state.items.map((item,index)=>({source:'editor',item,index,deckPath:editCardsState.selectedPath||'',deckTitle:state.title||'Deck aberto',deckDay:sanitizeDayKey(state.day||'1'),itemIndex:index,rawItem:null}));
       }
       function findDeckByPath(path){
@@ -798,14 +798,24 @@
         if(state.mode==='scenes'){
           return targets.concat(state.chars.map((char,index)=>({kind:'char',index,char})).filter(entry=>entry.char&&!entry.char.imageFile&&!entry.char.imageDataUrl));
         }
-        if(state.mode==='flashcard'&&isDeckSearchActive()){
+        if(state.mode==='flashcard'&&editCardsState.searchMode){
           const searchTargets=renderableFlashcardEntries()
             .filter(entry=>entry?.source==='search')
             .map(entry=>({kind:'item',index:Number(entry.itemIndex),item:entry.item,entry}))
-            .filter(entry=>entry.item&&(entry.item.pt||entry.item.en)&&!entry.item.imageFile&&!entry.item.imageDataUrl);
+            .filter(entry=>{
+              if(!entry.item||!(entry.item.pt||entry.item.en))return false;
+              const missingImage=!entry.item.imageFile&&!entry.item.imageDataUrl;
+              const needsRegeneration=entry.item.imageMuted===true;
+              return missingImage||needsRegeneration;
+            });
           return targets.concat(searchTargets);
         }
-        return targets.concat(state.items.map((item,index)=>({kind:'item',index,item})).filter(entry=>entry.item&&(entry.item.pt||entry.item.en)&&!entry.item.imageFile&&!entry.item.imageDataUrl));
+        return targets.concat(state.items.map((item,index)=>({kind:'item',index,item})).filter(entry=>{
+          if(!entry.item||!(entry.item.pt||entry.item.en))return false;
+          const missingImage=!entry.item.imageFile&&!entry.item.imageDataUrl;
+          const needsRegeneration=entry.item.imageMuted===true;
+          return missingImage||needsRegeneration;
+        }));
       };
       const aiStatusLabel=()=>aiBatchBusy?'Gerando imagens IA...':'Gerar imagens IA';
       const aiTextStatusLabel=()=>aiTextBusy?(state.mode==='scenes'?'Gerando historia IA...':state.mode==='movies'?'Gerando filme IA...':'Gerando frases IA...'):(state.mode==='scenes'?'Gerar historia IA':state.mode==='movies'?'Gerar filme IA':'Gerar frases IA');
@@ -1152,7 +1162,7 @@
         }
       }
       const normalizeAdminUsername=value=>String(value||'').trim().toLowerCase();
-      const isAdminStudioEnabled=()=>adminStudio.enabled&&state.mode==='flashcard'&&!isDeckSearchActive();
+      const isAdminStudioEnabled=()=>adminStudio.enabled&&state.mode==='flashcard'&&!editCardsState.searchMode;
       function setAdminStudioStatus(message,isError=false){adminStudio.status=String(message||'').trim()||'Painel do admin pronto.';adminStudio.statusError=Boolean(isError)}
       function clearAdminSelection(){adminStudio.selected.clear()}
       function normalizedSearchText(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()}
@@ -1273,7 +1283,7 @@
           });
           return out;
         }
-        const sourceEntries=isDeckSearchActive()
+        const sourceEntries=editCardsState.searchMode
           ? renderableFlashcardEntries().filter(entry=>entry?.source==='search')
           : state.items.map((item,index)=>({item,itemIndex:index,source:'editor'}));
         const pendingAudio=sourceEntries
@@ -1387,7 +1397,12 @@
       function unlockTargets(targets){targets.forEach(target=>aiImageLocks.delete(aiLockKey(target.kind,target.index)))}
       async function generateItemImageBatch(targets){
         const validTargets=(targets||[])
-          .filter(target=>target?.item&&(target.item.pt||target.item.en)&&!target.item.imageFile&&!target.item.imageDataUrl)
+          .filter(target=>{
+            if(!target?.item||!(target.item.pt||target.item.en))return false;
+            const missingImage=!target.item.imageFile&&!target.item.imageDataUrl;
+            const needsRegeneration=target.item.imageMuted===true;
+            return missingImage||needsRegeneration;
+          })
           .slice(0,4);
         if(!validTargets.length)return 0;
         lockTargets(validTargets);
