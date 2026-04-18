@@ -66,6 +66,10 @@
     .deck-edit-picker__search-toggle{width:30px;height:30px;display:grid;place-items:center;padding:0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.18);border-radius:9px}
     .deck-edit-picker__search-toggle svg{width:16px;height:16px;display:block}
     .deck-edit-picker__search-toggle.is-active{border-color:rgba(255,92,92,.55);background:rgba(63,8,8,.5)}
+    .search-pin{margin-right:8px;width:30px;height:30px;display:grid;place-items:center;padding:0;border-radius:9px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.04);opacity:.4;transition:opacity 500ms ease,transform 500ms ease,border-color 500ms ease,background 500ms ease}
+    .search-pin svg{width:16px;height:16px;display:block;fill:#fff}
+    .search-pin:hover{opacity:.65}
+    .search-pin.is-pinned{opacity:1;border-color:rgba(255,255,255,.72);background:rgba(255,255,255,.14);transform:translateY(-1px)}
     .feedback-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);min-width:min(78vw,420px);max-width:88vw;padding:14px 18px;border-radius:18px;background:linear-gradient(180deg,rgba(21,109,255,.96),rgba(9,69,188,.96));color:#fff;text-align:center;font-weight:700;box-shadow:0 18px 36px rgba(5,29,86,.42);opacity:0;pointer-events:none;z-index:120}
     .feedback-toast.is-visible{animation:feedbackToastFade 3000ms ease forwards}
     @keyframes feedbackToastFade{
@@ -417,11 +421,12 @@
       const movieStoryDraft={topic:'',itemCount:8};
       const ADMIN_USERNAMES=new Set(['admin','adm','adminst']);
       const adminStudio={checked:false,enabled:false,username:'',search:'',selectMode:false,selected:new Set(),status:'Aguardando sessao do administrador.',statusError:false,publishTimer:0,publishBusy:false,publishQueued:false,activeMenuIndex:null};
-      const editCardsState={visible:false,loading:false,selectedPath:'',decks:[],searchMode:false,searchQuery:'',searchResults:[]};
+      const editCardsState={visible:false,loading:false,selectedPath:'',decks:[],searchMode:false,searchQuery:'',searchResults:[],pinnedKeys:new Set()};
       const jsonBatchPublishState={files:[],results:[],busy:false};
       let deckMetaAction='r2';
       let pendingImage=null,pendingAudio=null,currentAudio=null,audioBatchTargets={pt:false,en:false},aiBatchBusy=false,aiTextBusy=false,zipBusy=false,elevenBusy=false,r2UploadBusy=false,publishLocalBusy=false,feedbackToastTimer=0;
       let watchRuntime=null,watchVoiceAudio=null,watchMusicAudio=null,watchLibraryCache=null,editableDeckOptionsCache=null;
+      const postgresDeckSyncTimers=new Map();
       const visualClickTimers=new Map();
       const aiImageLocks=new Set();
       const flashcardAssetSyncState=new WeakMap();
@@ -516,40 +521,91 @@
         deckEntry.tense=String(item?.tense||'present-simple').trim()||'present-simple';
         deckEntry.sentenceForm=String(item?.sentenceForm||'affirmative').trim()||'affirmative';
       }
-      function resetDeckSearchState({clearMode=false}={}){
+      function searchEntryKey(deckPath,itemIndex){
+        return `${String(deckPath||'').trim()}::${Number(itemIndex)}`;
+      }
+      function parseSearchEntryKey(key){
+        const [deckPath,...rest]=String(key||'').split('::');
+        const itemIndex=Number.parseInt(rest.join('::'),10);
+        if(!deckPath||!Number.isInteger(itemIndex)||itemIndex<0)return null;
+        return{deckPath,itemIndex};
+      }
+      function isPinnedSearchEntry(entry){
+        if(!entry||entry.source!=='search')return false;
+        return editCardsState.pinnedKeys.has(searchEntryKey(entry.deckPath,entry.itemIndex));
+      }
+      function togglePinnedSearchEntry(entry){
+        if(!entry||entry.source!=='search')return;
+        const key=searchEntryKey(entry.deckPath,entry.itemIndex);
+        if(editCardsState.pinnedKeys.has(key))editCardsState.pinnedKeys.delete(key);
+        else editCardsState.pinnedKeys.add(key);
+        syncDeckSearchResults();
+        renderItems();
+      }
+      function clearPinnedSearchDeckPath(deckPath){
+        const target=String(deckPath||'').trim();
+        if(!target)return;
+        Array.from(editCardsState.pinnedKeys).forEach(key=>{
+          if(String(key).startsWith(`${target}::`))editCardsState.pinnedKeys.delete(key);
+        });
+      }
+      function buildSearchEntry(deck,itemIndex){
+        const items=Array.isArray(deck?.data?.items)?deck.data.items:[];
+        const rawItem=items[itemIndex];
+        if(!rawItem)return null;
+        const path=String(deck?.path||'').trim();
+        return{
+          source:'search',
+          deckPath:path,
+          deckTitle:String(deck?.title||'Flashcards').trim()||'Flashcards',
+          deckDay:sanitizeDayKey(deck?.dayKey||state.day||'1'),
+          itemIndex,
+          rawItem,
+          item:flashcardEditorItemFromDeckEntry(rawItem),
+          pinned:editCardsState.pinnedKeys.has(searchEntryKey(path,itemIndex))
+        };
+      }
+      function resetDeckSearchState({clearMode=false,clearPins=clearMode}={}){
         if(clearMode)editCardsState.searchMode=false;
         editCardsState.searchQuery='';
         editCardsState.searchResults=[];
+        if(clearPins)editCardsState.pinnedKeys.clear();
       }
       function isDeckSearchActive(){
         return state.mode==='flashcard'&&editCardsState.searchMode&&normalizedSearchText(editCardsState.searchQuery).length>=3;
       }
       function syncDeckSearchResults(){
         const query=normalizedSearchText(editCardsState.searchQuery);
-        if(!editCardsState.searchMode||query.length<3){
+        if(!editCardsState.searchMode){
           editCardsState.searchResults=[];
           return;
         }
-        const out=[];
-        editCardsState.decks.forEach(deck=>{
-          const data=deck?.data&&typeof deck.data==='object'?deck.data:null;
-          const items=Array.isArray(data?.items)?data.items:[];
-          items.forEach((rawItem,itemIndex)=>{
-            const text=normalizedSearchText([rawItem?.nomePortugues,rawItem?.nomeIngles,rawItem?.categoria].filter(Boolean).join(' '));
-            if(!text.includes(query))return;
-            const item=flashcardEditorItemFromDeckEntry(rawItem);
-            out.push({
-              source:'search',
-              deckPath:String(deck.path||'').trim(),
-              deckTitle:String(deck.title||'Flashcards').trim()||'Flashcards',
-              deckDay:sanitizeDayKey(deck.dayKey||state.day||'1'),
-              itemIndex,
-              rawItem,
-              item
+        const resultMap=new Map();
+        Array.from(editCardsState.pinnedKeys).forEach(key=>{
+          const parsed=parseSearchEntryKey(key);
+          if(!parsed)return;
+          const deck=findDeckByPath(parsed.deckPath);
+          const entry=buildSearchEntry(deck,parsed.itemIndex);
+          if(!entry){
+            editCardsState.pinnedKeys.delete(key);
+            return;
+          }
+          resultMap.set(searchEntryKey(entry.deckPath,entry.itemIndex),entry);
+        });
+        if(query.length>=3){
+          editCardsState.decks.forEach(deck=>{
+            const data=deck?.data&&typeof deck.data==='object'?deck.data:null;
+            const items=Array.isArray(data?.items)?data.items:[];
+            items.forEach((rawItem,itemIndex)=>{
+              const text=normalizedSearchText([rawItem?.nomePortugues,rawItem?.nomeIngles,rawItem?.categoria].filter(Boolean).join(' '));
+              if(!text.includes(query))return;
+              const entry=buildSearchEntry(deck,itemIndex);
+              if(!entry)return;
+              resultMap.set(searchEntryKey(entry.deckPath,entry.itemIndex),entry);
             });
           });
-        });
-        editCardsState.searchResults=out;
+        }
+        editCardsState.searchResults=Array.from(resultMap.values());
       }
       function renderableFlashcardEntries(){
         if(isDeckSearchActive())return editCardsState.searchResults;
@@ -563,7 +619,7 @@
       function findSearchResultEntry(deckPath,itemIndex){
         return editCardsState.searchResults.find(entry=>entry.deckPath===deckPath&&Number(entry.itemIndex)===Number(itemIndex))||null;
       }
-      function syncSearchEntryToDeck(entry){
+      function syncSearchEntryToDeck(entry,{persist=true,delay=120}={}){
         if(!entry||entry.source!=='search')return;
         const deck=findDeckByPath(entry.deckPath);
         if(!deck||!deck.data||!Array.isArray(deck.data.items))return;
@@ -573,6 +629,7 @@
         if(deck.path===editCardsState.selectedPath&&state.items[entry.itemIndex]){
           Object.assign(state.items[entry.itemIndex],entry.item);
         }
+        if(persist)queuePersistDeckByPath(deck.path,{delay});
       }
       function entryStorageKey(entry){
         if(!entry)return '';
@@ -590,6 +647,66 @@
         const item=state.items[index];
         if(!item)return null;
         return{source:'editor',item,index,deckPath:editCardsState.selectedPath||'',deckTitle:state.title||'Deck aberto',deckDay:sanitizeDayKey(state.day||'1'),itemIndex:index,rawItem:null};
+      }
+      function deckPayloadForPersistence(deck){
+        if(!deck||typeof deck!=='object')return null;
+        const data=deck?.data&&typeof deck.data==='object'?deck.data:{};
+        const items=Array.isArray(data?.items)?data.items:[];
+        const normalizedItems=items.map(entry=>{
+          const item=flashcardEditorItemFromDeckEntry(entry);
+          const out={};
+          applyEditorItemIntoDeckEntry(item,out,deck.dayKey||state.day);
+          return out;
+        });
+        return{
+          title:String(data?.title||deck.title||'Flashcards').trim()||'Flashcards',
+          coverImage:String(data?.coverImage||'').trim(),
+          items:normalizedItems
+        };
+      }
+      async function persistDeckToPostgres(deck){
+        if(!adminStudio.enabled||!deck?.fileName||!deck?.data)return null;
+        const payload=deckPayloadForPersistence(deck);
+        if(!payload||!Array.isArray(payload.items)||!payload.items.length)return null;
+        const response=await fetch('/api/admin/flashcards/public-decks/upload-jsons',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files:[{name:String(deck.fileName||'').trim(),content:JSON.stringify(payload,null,2)}]})});
+        const result=await response.json().catch(()=>null);
+        if(!response.ok)throw new Error(result?.message||result?.details||'Falha ao atualizar deck no Postgres.');
+        return result;
+      }
+      function queuePersistDeckByPath(deckPath,{delay=120}={}){
+        const normalizedPath=String(deckPath||'').trim();
+        const deck=findDeckByPath(normalizedPath);
+        if(!deck||!adminStudio.enabled)return;
+        const previousTimer=postgresDeckSyncTimers.get(normalizedPath);
+        if(previousTimer)window.clearTimeout(previousTimer);
+        const timer=window.setTimeout(async()=>{
+          postgresDeckSyncTimers.delete(normalizedPath);
+          try{
+            await persistDeckToPostgres(deck);
+          }catch(error){
+            showFeedbackToast(error?.message||'Nao consegui atualizar o Postgres agora.');
+          }
+        },Math.max(0,Number(delay)||0));
+        postgresDeckSyncTimers.set(normalizedPath,timer);
+      }
+      function syncSelectedDeckFromEditor(){
+        const deck=findDeckByPath(editCardsState.selectedPath);
+        if(!deck||!deck?.data)return null;
+        const currentData=deck.data&&typeof deck.data==='object'?deck.data:{};
+        const nextItems=state.items.map(item=>{
+          const entry={};
+          applyEditorItemIntoDeckEntry(item,entry,deck.dayKey||state.day);
+          return entry;
+        });
+        deck.data={...currentData,title:String(state.title||currentData.title||deck.title||'Flashcards').trim()||'Flashcards',coverImage:String(state.flashcardCoverUrl||currentData.coverImage||'').trim(),items:nextItems};
+        deck.count=nextItems.length;
+        deck.title=String(deck.data.title||deck.title||'Flashcards').trim()||'Flashcards';
+        return deck;
+      }
+      function queuePersistCurrentEditorDeck({delay=120}={}){
+        const deck=syncSelectedDeckFromEditor();
+        if(!deck)return;
+        queuePersistDeckByPath(deck.path,{delay});
       }
       const safeBase=(name,fallback)=>String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase()||fallback;
       const safeFile=(name,ext,fallback)=>`${safeBase(name,fallback)}.${ext}`,ext=name=>(String(name).split('.').pop()||'').toLowerCase();
@@ -634,6 +751,13 @@
         }
         if(state.mode==='scenes'){
           return targets.concat(state.chars.map((char,index)=>({kind:'char',index,char})).filter(entry=>entry.char&&!entry.char.imageFile&&!entry.char.imageDataUrl));
+        }
+        if(state.mode==='flashcard'&&isDeckSearchActive()){
+          const searchTargets=renderableFlashcardEntries()
+            .filter(entry=>entry?.source==='search')
+            .map(entry=>({kind:'item',index:Number(entry.itemIndex),item:entry.item,entry}))
+            .filter(entry=>entry.item&&(entry.item.pt||entry.item.en)&&!entry.item.imageFile&&!entry.item.imageDataUrl);
+          return targets.concat(searchTargets);
         }
         return targets.concat(state.items.map((item,index)=>({kind:'item',index,item})).filter(entry=>entry.item&&(entry.item.pt||entry.item.en)&&!entry.item.imageFile&&!entry.item.imageDataUrl));
       };
@@ -705,7 +829,10 @@
         else if(!editCardsState.decks.length)hint.textContent='Nenhum deck de flashcards foi encontrado no catalogo do jogo.';
         else if(searchMode){
           const queryLength=normalizedSearchText(editCardsState.searchQuery).length;
-          if(queryLength<3)hint.textContent='Digite pelo menos 3 letras para buscar flashcards em todos os decks.';
+          if(queryLength<3){
+            const pinnedCount=editCardsState.searchResults.filter(entry=>isPinnedSearchEntry(entry)).length;
+            hint.textContent=pinnedCount?`Digite 3 letras para buscar mais cards. ${pinnedCount} card(s) fixado(s) na grade.`:'Digite pelo menos 3 letras para buscar flashcards em todos os decks.';
+          }
           else{
             const deckCount=new Set(editCardsState.searchResults.map(entry=>entry.deckPath)).size;
             hint.textContent=`${editCardsState.searchResults.length} flashcard(s) encontrado(s) em ${deckCount} deck(s).`;
@@ -749,6 +876,7 @@
           item.imageMuted=false;
           item.imageRestoreFx=false;
           if(entry.source==='search')syncSearchEntryToDeck(entry);
+          else queuePersistCurrentEditorDeck();
           save();
           renderAll();
           return;
@@ -763,6 +891,7 @@
           currentItem.audioDataUrl='';
           currentItem.audioRemoteUrl='';
           if(entry.source==='search')syncSearchEntryToDeck(entry);
+          else queuePersistCurrentEditorDeck();
           save();
           renderAll();
         },1000);
@@ -909,10 +1038,10 @@
       async function generateMovieStoryBatch({topic,minChars,maxChars,itemCount}){const response=await fetch('/api/text/openai/movies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,minChars,maxChars,itemCount})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao gerar filme.');const items=Array.isArray(payload?.items)?payload.items.map(item=>({pt:String(item?.pt||'').trim(),en:String(item?.en||'').trim(),imagePrompt:String(item?.imagePrompt||'').trim()})).filter(item=>item.pt&&item.en&&item.imagePrompt):[];return{title:String(payload?.title||'').trim(),items}}
       function applyMovieStory({title,items}){state.title=title;state.items=items.map(entry=>{const item=defaultItem();item.pt=entry.pt;item.en=entry.en;item.imagePrompt=entry.imagePrompt;return item});save();renderAll();return state.items.length}
       function imagePromptAssist(){const extra=String(state.imageAiHint||'').trim();return extra?` Additional instruction for all generated images: ${extra}`:''}
-      async function generateFlashcardTextBatch({topic,minChars,maxChars,count}){const response=await fetch('/api/text/openai/flashcards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,minChars,maxChars,count})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao gerar frases.');const items=normalizeAiFlashcardItems(payload?.items||[]);if(!items.length)throw new Error('A OpenAI nao retornou frases validas.');return items}
-      function applyGeneratedFlashcards(items){const normalized=normalizeAiFlashcardItems(items);if(!normalized.length)return 0;const emptyIndexes=[];state.items.forEach((item,index)=>{if(!(item.pt||item.en))emptyIndexes.push(index)});while(emptyIndexes.length<normalized.length){addItem();emptyIndexes.push(state.items.length-1)}normalized.forEach((entry,listIndex)=>{const item=state.items[emptyIndexes[listIndex]];if(!item)return;item.pt=entry.pt;item.en=entry.en;item.category=item.category||'flashcard'});save();renderAll();return normalized.length}
+      async function generateFlashcardTextBatch({topic,minChars,maxChars,count}){const response=await fetch('/api/text/openai/flashcards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,minChars,maxChars,count,model:'gpt-4.1'})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao gerar frases.');const items=normalizeAiFlashcardItems(payload?.items||[]);if(!items.length)throw new Error('A OpenAI nao retornou frases validas.');return items}
+      function applyGeneratedFlashcards(items){const normalized=normalizeAiFlashcardItems(items);if(!normalized.length)return 0;const emptyIndexes=[];state.items.forEach((item,index)=>{if(!(item.pt||item.en))emptyIndexes.push(index)});while(emptyIndexes.length<normalized.length){addItem();emptyIndexes.push(state.items.length-1)}normalized.forEach((entry,listIndex)=>{const item=state.items[emptyIndexes[listIndex]];if(!item)return;item.pt=entry.pt;item.en=entry.en;item.category=item.category||'flashcard'});queuePersistCurrentEditorDeck();save();renderAll();return normalized.length}
       async function translatePortugueseBatch(items){const response=await fetch('/api/text/openai/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao traduzir textos.');const translations=Array.isArray(payload?.items)?payload.items.map(item=>({index:Number.parseInt(item?.index,10),en:String(item?.en||'').trim()})).filter(item=>Number.isInteger(item.index)&&item.en):[];if(!translations.length)throw new Error('A OpenAI nao retornou traducoes validas.');return translations}
-      function applyTranslations(items){let applied=0;(items||[]).forEach(entry=>{const item=state.items[entry.index];if(!item)return;if(!String(item.pt||'').trim())return;if(String(item.en||'').trim())return;item.en=String(entry.en||'').trim();if(item.en)applied+=1});save();renderAll();return applied}
+      function applyTranslations(items){let applied=0;(items||[]).forEach(entry=>{const item=state.items[entry.index];if(!item)return;if(!String(item.pt||'').trim())return;if(String(item.en||'').trim())return;item.en=String(entry.en||'').trim();if(item.en)applied+=1});if(applied)queuePersistCurrentEditorDeck();save();renderAll();return applied}
       async function uploadLevelFilesToR2(files){const response=await fetch('/api/r2/upload-level-files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day:state.day,mode:state.mode,files})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.details||payload?.error||'Erro ao enviar arquivos para o R2.');return payload}
       function getFlashcardItemSyncTone(item){
         const status=flashcardAssetSyncState.get(item);
@@ -949,6 +1078,7 @@
         const item=isNumericTarget?state.items[target]:target?.item;
         if(!item)return null;
         const dayKey=isNumericTarget?sanitizeDayKey(state.day||'1'):sanitizeDayKey(target?.dayKey||state.day||'1');
+        const deckPath=!isNumericTarget?String(target?.deckPath||'').trim():'';
         const files=[];
         if(image&&item.imageDataUrl&&item.imageFile){
           files.push({name:item.imageFile,base64:base64FromBytes(bytesFromDataUrl(item.imageDataUrl))});
@@ -963,6 +1093,8 @@
           if(audio&&item.audioFile)item.audioRemoteUrl=cloud(dayKey,PHASE.flashcard,item.audioFile,'flashcard');
           if(!isNumericTarget&&typeof target?.onSynced==='function')target.onSynced();
           markFlashcardItemSynced(item,{image,audio});
+          if(isNumericTarget)queuePersistCurrentEditorDeck({delay:80});
+          else if(deckPath)queuePersistDeckByPath(deckPath,{delay:80});
           save();
           renderItems();
           return true;
@@ -981,14 +1113,14 @@
       function itemMatchesAdminSearch(item){const query=normalizedSearchText(adminStudio.search);if(!query)return true;const haystack=normalizedSearchText([item?.pt,item?.en,item?.category].filter(Boolean).join(' '));return haystack.includes(query)}
       function isInteractiveAdminTarget(target){return Boolean(target?.closest('button,input,select,textarea,label,a'))}
       function closeItemAdminPopover(){$('itemAdminPopover').classList.add('hidden');$('itemAdminPopover').setAttribute('aria-hidden','true');adminStudio.activeMenuIndex=null}
-      function deleteItemImage(index){clearVisualClickTimer(index);const item=state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);item.imageFile='';item.imageDataUrl='';item.imageRemoteUrl='';item.imageMuted=false;item.imageRestoreFx=false;save();renderAll()}
-      function deleteItemAudio(index){const item=state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);item.audioFile='';item.audioDataUrl='';item.audioRemoteUrl='';save();renderAll()}
-      function deleteItemContainer(index){if(index<0||index>=state.items.length)return;clearVisualClickTimer(index);state.items.splice(index,1);clearAdminSelection();closeItemAdminPopover();save();renderAll()}
+      function deleteItemImage(index){clearVisualClickTimer(index);const item=state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);item.imageFile='';item.imageDataUrl='';item.imageRemoteUrl='';item.imageMuted=false;item.imageRestoreFx=false;queuePersistCurrentEditorDeck();save();renderAll()}
+      function deleteItemAudio(index){const item=state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);item.audioFile='';item.audioDataUrl='';item.audioRemoteUrl='';queuePersistCurrentEditorDeck();save();renderAll()}
+      function deleteItemContainer(index){if(index<0||index>=state.items.length)return;clearVisualClickTimer(index);state.items.splice(index,1);clearAdminSelection();closeItemAdminPopover();queuePersistCurrentEditorDeck({delay:60});save();renderAll()}
       function toggleAdminItemSelection(index){if(adminStudio.selected.has(index))adminStudio.selected.delete(index);else adminStudio.selected.add(index);syncAdminStudioControls();syncAdminRenderedItems()}
       function toggleAdminSelectionMode(){adminStudio.selectMode=!adminStudio.selectMode;if(!adminStudio.selectMode)clearAdminSelection();closeItemAdminPopover();syncAdminStudioControls();syncAdminRenderedItems()}
       function openItemAdminPopover(index){if(!isAdminStudioEnabled())return;adminStudio.activeMenuIndex=index;$('itemAdminPopoverTitle').textContent=`Acoes do flashcard ${index+1}`;$('itemAdminPopover').classList.remove('hidden');$('itemAdminPopover').setAttribute('aria-hidden','false')}
-      function deleteSelectedImages(){if(!isAdminStudioEnabled()||!adminStudio.selected.size)return;adminStudio.selected.forEach(index=>{clearVisualClickTimer(index);const item=state.items[index];if(!item)return;item.imageFile='';item.imageDataUrl='';item.imageRemoteUrl='';item.imageMuted=false;item.imageRestoreFx=false});save();renderAll()}
-      function deleteSelectedAudios(){if(!isAdminStudioEnabled()||!adminStudio.selected.size)return;adminStudio.selected.forEach(index=>{const item=state.items[index];if(!item)return;item.audioFile='';item.audioDataUrl='';item.audioRemoteUrl=''});save();renderAll()}
+      function deleteSelectedImages(){if(!isAdminStudioEnabled()||!adminStudio.selected.size)return;adminStudio.selected.forEach(index=>{clearVisualClickTimer(index);const item=state.items[index];if(!item)return;item.imageFile='';item.imageDataUrl='';item.imageRemoteUrl='';item.imageMuted=false;item.imageRestoreFx=false});queuePersistCurrentEditorDeck();save();renderAll()}
+      function deleteSelectedAudios(){if(!isAdminStudioEnabled()||!adminStudio.selected.size)return;adminStudio.selected.forEach(index=>{const item=state.items[index];if(!item)return;item.audioFile='';item.audioDataUrl='';item.audioRemoteUrl=''});queuePersistCurrentEditorDeck();save();renderAll()}
       function resolvePublishDeckIdentity(options={}){
         const optionFileName=typeof options?.fileName==='string'?String(options.fileName).trim():'';
         const optionSource=typeof options?.source==='string'?String(options.source).trim():'';
@@ -1085,7 +1217,29 @@
       async function hydrateAdminStudio(){try{const response=await fetch('/auth/session',{credentials:'include',cache:'no-store'});if(!response.ok){adminStudio.checked=true;adminStudio.enabled=false;setAdminStudioStatus('Painel admin oculto. Entre com adm/admin para liberar.');renderAll();syncEditCardsDeckPicker();return}const payload=await response.json();const user=payload?.user||{},username=normalizeAdminUsername(user?.username||user?.email||''),isAdminFlag=user?.is_admin===true||user?.isAdmin===true;adminStudio.checked=true;adminStudio.username=username;adminStudio.enabled=Boolean(isAdminFlag||ADMIN_USERNAMES.has(username));setAdminStudioStatus(adminStudio.enabled?`Painel admin ativo para ${username||'admin'}. Envio manual pronto.`:'Painel admin oculto. Entre com adm/admin para liberar.');renderAll();syncEditCardsDeckPicker()}catch(error){adminStudio.checked=true;adminStudio.enabled=false;setAdminStudioStatus('Nao foi possivel validar a sessao do admin agora.',true);renderAll();syncEditCardsDeckPicker()}}
       function syncAdminStudioControls(){const enabled=isAdminStudioEnabled(),selectedCount=adminStudio.selected.size;$('adminStudioBar').classList.toggle('hidden',!enabled);$('adminSelectBtn').disabled=!enabled;$('adminSelectBtn').textContent=adminStudio.selectMode?'Cancelar selecao':'Selecionar';$('adminBatchClearImageBtn').disabled=!enabled||!selectedCount;$('adminBatchClearAudioBtn').disabled=!enabled||!selectedCount;$('publishLocalBtn').disabled=!enabled||adminStudio.publishBusy;$('publishLocalBtn').textContent=adminStudio.publishBusy?'Enviando...':'Enviar para PlayTalk';const sendPlaytalkBtn=$('sendPlaytalkBtn');if(sendPlaytalkBtn)sendPlaytalkBtn.disabled=!enabled||adminStudio.publishBusy;$('adminSearchInput').value=adminStudio.search||'';$('adminSearchInput').disabled=!enabled||adminStudio.publishBusy;$('adminStudioStatus').textContent=selectedCount&&enabled?`${adminStudio.status} ${selectedCount} selecionado(s).`:adminStudio.status;$('adminStudioStatus').classList.toggle('is-error',adminStudio.statusError)}
       function syncAdminRenderedItems(){const host=$('items');const cards=Array.from(host.children);cards.forEach(card=>{if(!card.classList.contains('card'))return;const entry=getRenderedEntryFromCard(card);const item=entry?.item;if(!item||entry?.source!=='editor')return;const index=Number.parseInt(String(card.dataset.index||''),10);const visible=!isAdminStudioEnabled()||itemMatchesAdminSearch(item);card.classList.toggle('hidden',!visible);card.classList.toggle('is-admin-card',isAdminStudioEnabled());card.classList.toggle('is-selected',isAdminStudioEnabled()&&adminStudio.selected.has(index));if(isAdminStudioEnabled()&&!card.dataset.adminBound){card.dataset.adminBound='true';card.addEventListener('click',event=>{if(!isAdminStudioEnabled()||isInteractiveAdminTarget(event.target))return;const currentIndex=Number.parseInt(String(card.dataset.index||''),10);if(!Number.isInteger(currentIndex))return;if(adminStudio.selectMode){event.preventDefault();toggleAdminItemSelection(currentIndex);return}openItemAdminPopover(currentIndex)})}})}
-      function remainingVoiceTargets(){if(state.mode==='scenes'||state.mode==='movies'){const out=[];state.items.forEach((item,index)=>{const pt=String(item?.pt||'').trim(),en=String(item?.en||'').trim();if(pt&&!hasGeneratedAudio(item,'pt'))out.push({index,kind:'pt',text:pt,fileName:`${itemStem(index)}-pt.mp3`});if(en&&!hasGeneratedAudio(item,'en'))out.push({index,kind:'en',text:en,fileName:`${itemStem(index)}-en.mp3`})});return out}const pendingAudio=state.items.map((item,index)=>({item,index,text:String(item?.en||item?.pt||'').trim()})).filter(entry=>entry.text&&entry.item?.imageMuted&&!hasGeneratedAudio(entry.item,'single')).map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${itemStem(entry.index)}-en.mp3`}));if(pendingAudio.length)return pendingAudio;return state.items.map((item,index)=>({item,index,text:String(item?.en||item?.pt||'').trim()})).filter(entry=>entry.text&&!hasGeneratedAudio(entry.item,'single')).map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${itemStem(entry.index)}-en.mp3`}))}
+      function remainingVoiceTargets(){
+        if(state.mode==='scenes'||state.mode==='movies'){
+          const out=[];
+          state.items.forEach((item,index)=>{
+            const pt=String(item?.pt||'').trim(),en=String(item?.en||'').trim();
+            if(pt&&!hasGeneratedAudio(item,'pt'))out.push({index,kind:'pt',text:pt,fileName:`${itemStem(index)}-pt.mp3`});
+            if(en&&!hasGeneratedAudio(item,'en'))out.push({index,kind:'en',text:en,fileName:`${itemStem(index)}-en.mp3`});
+          });
+          return out;
+        }
+        const sourceEntries=isDeckSearchActive()
+          ? renderableFlashcardEntries().filter(entry=>entry?.source==='search')
+          : state.items.map((item,index)=>({item,itemIndex:index,source:'editor'}));
+        const pendingAudio=sourceEntries
+          .map(entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:String(entry?.item?.en||entry?.item?.pt||'').trim()}))
+          .filter(entry=>entry.text&&entry.item?.imageMuted&&!hasGeneratedAudio(entry.item,'single'))
+          .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${itemStem(entry.index)}-en.mp3`,entry:entry.entry}));
+        if(pendingAudio.length)return pendingAudio;
+        return sourceEntries
+          .map(entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:String(entry?.item?.en||entry?.item?.pt||'').trim()}))
+          .filter(entry=>entry.text&&!hasGeneratedAudio(entry.item,'single'))
+          .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${itemStem(entry.index)}-en.mp3`,entry:entry.entry}));
+      }
       async function generateRemainingVoiceAssets(voice){
         const targets=remainingVoiceTargets();
         if(!targets.length){
@@ -1100,7 +1254,7 @@
           for(const target of targets){
             try{
               const asset=await generateVoiceAsset(target.text,target.fileName,voice);
-              const item=state.items[target.index];
+              const item=target?.entry?.item||state.items[target.index];
               if(!item)continue;
               if(target.kind==='single'){
                 item.audioFile=asset.fileName;
@@ -1121,13 +1275,19 @@
               save();
               renderItems();
               if(target.kind==='single'){
-                await autoUploadFlashcardAssetsToR2(target.index,{audio:true});
+                if(target?.entry?.source==='search'){
+                  await autoUploadFlashcardAssetsToR2({item,dayKey:target.entry.deckDay,deckPath:target.entry.deckPath,onSynced:()=>syncSearchEntryToDeck(target.entry,{persist:false})},{audio:true});
+                }else{
+                  await autoUploadFlashcardAssetsToR2(target.index,{audio:true});
+                }
               }
               if(item.imageRestoreFx){
                 window.setTimeout(()=>{
-                  const currentItem=state.items[target.index];
+                  const currentItem=target?.entry?.item||state.items[target.index];
                   if(!currentItem)return;
                   currentItem.imageRestoreFx=false;
+                  if(target?.entry?.source==='search')syncSearchEntryToDeck(target.entry);
+                  else queuePersistCurrentEditorDeck();
                   save();
                   renderItems();
                 },1000);
@@ -1190,24 +1350,30 @@
           const payload=await generateAiImage({prompt:itemGridImagePrompt(validTargets),fileName:`${itemStem(validTargets[0].index)}-grid`});
           const slices=await sliceGridImage(payload.dataUrl);
           validTargets.forEach((target,listIndex)=>{
-            const item=state.items[target.index],slice=slices[listIndex];
+            const item=target?.entry?.item||state.items[target.index],slice=slices[listIndex];
             if(!item||!slice)return;
             item.imageFile=safeFile(`${itemStem(target.index)}-grid-${listIndex+1}`,'webp',itemStem(target.index));
             item.imageDataUrl=slice;
             item.imageRemoteUrl='';
             item.imageMuted=false;
             item.imageRestoreFx=false;
+            if(target?.entry?.source==='search')syncSearchEntryToDeck(target.entry,{persist:false});
           });
           save();
-          await Promise.all(validTargets.map(target=>autoUploadFlashcardAssetsToR2(target.index,{image:true})));
+          await Promise.all(validTargets.map(target=>{
+            if(target?.entry?.source==='search'){
+              return autoUploadFlashcardAssetsToR2({item:target.entry.item,dayKey:target.entry.deckDay,deckPath:target.entry.deckPath,onSynced:()=>syncSearchEntryToDeck(target.entry,{persist:false})},{image:true});
+            }
+            return autoUploadFlashcardAssetsToR2(target.index,{image:true});
+          }));
           return validTargets.length;
         }finally{
           unlockTargets(validTargets);
           renderAll();
         }
       }
-      async function generateItemImage(index){
-        const item=state.items[index];
+      async function generateItemImage(index,entry=null){
+        const item=entry?.item||state.items[index];
         if(!item)throw new Error('Item nao encontrado.');
         const lockKey=aiLockKey('item',index);
         if(aiImageLocks.has(lockKey))return;
@@ -1220,8 +1386,13 @@
           item.imageRemoteUrl='';
           item.imageMuted=false;
           item.imageRestoreFx=false;
+          if(entry?.source==='search')syncSearchEntryToDeck(entry,{persist:false});
           save();
-          await autoUploadFlashcardAssetsToR2(index,{image:true});
+          if(entry?.source==='search'){
+            await autoUploadFlashcardAssetsToR2({item:entry.item,dayKey:entry.deckDay,deckPath:entry.deckPath,onSynced:()=>syncSearchEntryToDeck(entry,{persist:false})},{image:true});
+          }else{
+            await autoUploadFlashcardAssetsToR2(index,{image:true});
+          }
         }finally{
           aiImageLocks.delete(lockKey);
           renderAll();
@@ -1229,7 +1400,7 @@
       }
       async function generateCoverImage(){if(state.mode==='flashcard')return;const lockKey=aiLockKey('cover',0);if(aiImageLocks.has(lockKey))return;aiImageLocks.add(lockKey);renderAll();try{const payload=await generateAiImage({prompt:coverImagePrompt(),fileName:coverStem()});state.coverFile=payload.fileName;state.coverDataUrl=payload.dataUrl;save()}finally{aiImageLocks.delete(lockKey);renderAll()}}
       async function generateCharImage(index){const char=state.chars[index];if(!char)throw new Error('Personagem nao encontrado.');const lockKey=aiLockKey('char',index);if(aiImageLocks.has(lockKey))return;aiImageLocks.add(lockKey);renderAll();try{const payload=await generateAiImage({prompt:charImagePrompt(char,index),fileName:charStem(index,char),background:'transparent'});char.imageFile=payload.fileName;char.imageDataUrl=payload.dataUrl;save()}finally{aiImageLocks.delete(lockKey);renderAll()}}
-      async function generateMissingAiImages(){if(aiBatchBusy)return;const targets=aiImageMissingTargets();if(!targets.length){alert(state.mode==='scenes'?'Todos os personagens e a capa ja tem imagem.':'Todos os itens e a capa ja tem imagem.');return}aiBatchBusy=true;renderAll();let done=0;try{if((state.mode==='movies'||state.mode==='scenes')&&!state.coverFile&&!state.coverDataUrl){await generateCoverImage();done+=1}if(state.mode==='scenes'){for(const target of aiImageMissingTargets().filter(target=>target.kind==='char')){await generateCharImage(target.index);done+=1}}else{while(itemBatchTargets().length){const currentTargets=itemBatchTargets();if(currentTargets.length===1){await generateItemImage(currentTargets[0].index);done+=1}else{done+=await generateItemImageBatch(currentTargets)}}}alert(`${done} imagem(ns) gerada(s) com IA.`)}catch(error){alert(`${done} imagem(ns) gerada(s) antes da parada.\n${error.message||'Erro ao gerar imagem.'}`)}finally{aiBatchBusy=false;renderAll()}}
+      async function generateMissingAiImages(){if(aiBatchBusy)return;const targets=aiImageMissingTargets();if(!targets.length){alert(state.mode==='scenes'?'Todos os personagens e a capa ja tem imagem.':'Todos os itens e a capa ja tem imagem.');return}aiBatchBusy=true;renderAll();let done=0;try{if((state.mode==='movies'||state.mode==='scenes')&&!state.coverFile&&!state.coverDataUrl){await generateCoverImage();done+=1}if(state.mode==='scenes'){for(const target of aiImageMissingTargets().filter(target=>target.kind==='char')){await generateCharImage(target.index);done+=1}}else{while(itemBatchTargets().length){const currentTargets=itemBatchTargets();if(currentTargets.length===1){await generateItemImage(currentTargets[0].index,currentTargets[0].entry||null);done+=1}else{done+=await generateItemImageBatch(currentTargets)}}}alert(`${done} imagem(ns) gerada(s) com IA.`)}catch(error){alert(`${done} imagem(ns) gerada(s) antes da parada.\n${error.message||'Erro ao gerar imagem.'}`)}finally{aiBatchBusy=false;renderAll()}}
       function syncAudioPopover(){const movieMode=state.mode!=='flashcard';$('audioPtBtn').classList.toggle('active',!!audioBatchTargets.pt);$('audioEnBtn').classList.toggle('active',!!audioBatchTargets.en);$('audioBatchConfirmBtn').disabled=!movieMode||(!audioBatchTargets.pt&&!audioBatchTargets.en)}
       function openAudioPopover(){audioBatchTargets={pt:true,en:true};$('audioPopover').classList.remove('hidden');$('audioPopover').setAttribute('aria-hidden','false');syncAudioPopover()}
       function closeAudioPopover(){audioBatchTargets={pt:false,en:false};$('audioPopover').classList.add('hidden');$('audioPopover').setAttribute('aria-hidden','true')}
@@ -1269,6 +1440,16 @@
           const top=document.createElement('div');
           top.className='row';
           top.style.justifyContent='flex-end';
+          if(editCardsState.searchMode&&entry.source==='search'){
+            const pin=document.createElement('button');
+            pin.type='button';
+            pin.className=`search-pin${isPinnedSearchEntry(entry)?' is-pinned':''}`;
+            pin.setAttribute('aria-label',isPinnedSearchEntry(entry)?'Desafixar flashcard':'Fixar flashcard');
+            pin.setAttribute('title',isPinnedSearchEntry(entry)?'Desafixar flashcard':'Fixar flashcard');
+            pin.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.8 3.2c.34.34.34.9 0 1.24L15.2 6l2.8 2.8c.27.27.33.69.15 1.03l-1.1 2.06-4.23.71-1.44 1.44 4.03 4.03-1.41 1.41-4.03-4.03-3.36 3.36-1.41-1.41 3.36-3.36-4.03-4.03 1.41-1.41 4.03 4.03 1.44-1.44.71-4.23 2.06-1.1c.34-.18.76-.12 1.03.15L18 8.8l1.56-1.56c.34-.34.9-.34 1.24 0l.2.2c.34.34.34.9 0 1.24L19.44 10.24l1.36 1.36c.34.34.34.9 0 1.24l-.2.2c-.34.34-.9.34-1.24 0L18 11.68l-1.56 1.56c-.34.34-.9.34-1.24 0l-.2-.2c-.34-.34-.34-.9 0-1.24L16.56 10.24 13.76 7.44l-1.25.67-.6 3.57-7.5 7.5-1.41-1.41 7.5-7.5 3.57-.6.67-1.25-2.8-2.8-1.56 1.56c-.34.34-.9.34-1.24 0l-.2-.2a.88.88 0 0 1 0-1.24L10.56 4.8a.88.88 0 0 1 1.24 0l.2.2c.34.34.34.9 0 1.24L10.44 7.8l2.8 2.8 1.56-1.56a.88.88 0 0 1 1.24 0l.2.2c.34.34.34.9 0 1.24L14.68 12l1.36 1.36 3.57-.6.67-1.25-2.8-2.8-1.56 1.56a.88.88 0 0 1-1.24 0l-.2-.2a.88.88 0 0 1 0-1.24l1.56-1.56-2.8-2.8-1.56 1.56a.88.88 0 0 1-1.24 0l-.2-.2a.88.88 0 0 1 0-1.24l1.56-1.56c.34-.34.9-.34 1.24 0l2.8 2.8 1.56-1.56a.88.88 0 0 1 1.24 0l.2.2Z"/></svg>';
+            pin.onclick=event=>{event.preventDefault();event.stopPropagation();togglePinnedSearchEntry(entry)};
+            top.appendChild(pin);
+          }
           if(entry.source==='search'){
             const tag=document.createElement('span');
             tag.className='mini';
@@ -1302,10 +1483,13 @@
                 deck.data.items.splice(entry.itemIndex,1);
                 deck.count=Math.max(0,Number(deck.count||0)-1);
                 if(deck.path===editCardsState.selectedPath&&entry.itemIndex<state.items.length)state.items.splice(entry.itemIndex,1);
+                clearPinnedSearchDeckPath(deck.path);
+                queuePersistDeckByPath(deck.path,{delay:60});
               }
               syncDeckSearchResults();
             }else{
               state.items.splice(sourceIndex,1);
+              queuePersistCurrentEditorDeck({delay:60});
             }
             save();
             renderAll();
@@ -1343,6 +1527,7 @@
             if(v===null)return;
             item.pt=v.trim();
             if(entry.source==='search')syncSearchEntryToDeck(entry);
+            else queuePersistCurrentEditorDeck();
             save();
             renderItems();
           }));
@@ -1351,6 +1536,7 @@
             if(v===null)return;
             item.en=v.trim();
             if(entry.source==='search')syncSearchEntryToDeck(entry);
+            else queuePersistCurrentEditorDeck();
             save();
             renderItems();
           }));
@@ -1386,8 +1572,8 @@
       $('testOnlineBtn').onclick=()=>{};
       $('applyPasteBtn').onclick=()=>{const rawValue=String($('pasteArea').value||'').trim().toLowerCase();if(adminStudio.enabled&&rawValue==='editcards'){closePastePopover();toggleEditCardsDeckPicker(true).catch(error=>alert(error.message||'Erro ao carregar decks.'));return}if(rawValue==='getdeck'){try{downloadOpenedDeckJson();$('pasteArea').value='';closePastePopover()}catch(error){alert(error.message||'Nao foi possivel baixar o deck.')}return}const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),out=[];for(let i=0;i<lines.length;i+=2){const chunk=lines.slice(i,i+2);if(chunk.length<2)break;const item=defaultItem();item.pt=chunk[0]||'';item.en=chunk[1]||'';out.push(item)}state.items=out;state.publicDeckFileName='';state.publicDeckPath='';state.publicDeckSource='';editCardsState.selectedPath='';resetDeckSearchState({clearMode:true});$('pasteArea').value='';save();renderAll();closePastePopover()};
       $('dayInput').oninput=e=>{state.day=sanitizeDayKey(e.target.value);save();renderAll()};
-      $('titleInput').oninput=e=>{state.title=e.target.value;save();renderAll()};
-      $('flashcardCoverUrlInput').oninput=e=>{state.flashcardCoverUrl=e.target.value.trim();save();renderAll()};
+      $('titleInput').oninput=e=>{state.title=e.target.value;queuePersistCurrentEditorDeck();save();renderAll()};
+      $('flashcardCoverUrlInput').oninput=e=>{state.flashcardCoverUrl=e.target.value.trim();queuePersistCurrentEditorDeck();save();renderAll()};
       $('audioPtBtn').onclick=()=>{audioBatchTargets.pt=!audioBatchTargets.pt;syncAudioPopover()};
       $('audioEnBtn').onclick=()=>{audioBatchTargets.en=!audioBatchTargets.en;syncAudioPopover()};
       $('audioPopoverCloseBtn').onclick=()=>closeAudioPopover();
@@ -1489,7 +1675,7 @@
             item.imageRemoteUrl='';
             item.imageMuted=false;
             item.imageRestoreFx=false;
-            if(searchEntry)syncSearchEntryToDeck(searchEntry);
+            if(searchEntry)syncSearchEntryToDeck(searchEntry,{persist:false});
           }
         }
         e.target.value='';
@@ -1500,7 +1686,7 @@
           if(pending.source==='search'){
             const searchEntry=findSearchResultEntry(pending.deckPath,pending.index);
             if(searchEntry){
-              await autoUploadFlashcardAssetsToR2({item:searchEntry.item,dayKey:searchEntry.deckDay,onSynced:()=>syncSearchEntryToDeck(searchEntry)},{image:true});
+              await autoUploadFlashcardAssetsToR2({item:searchEntry.item,dayKey:searchEntry.deckDay,deckPath:searchEntry.deckPath,onSynced:()=>syncSearchEntryToDeck(searchEntry,{persist:false})},{image:true});
             }
           }else{
             await autoUploadFlashcardAssetsToR2(pending.index,{image:true});
@@ -1542,7 +1728,7 @@
               item.audioEnFile=data.fileName;
               item.audioEnDataUrl=data.dataUrl;
             }
-            if(searchEntry)syncSearchEntryToDeck(searchEntry);
+            if(searchEntry)syncSearchEntryToDeck(searchEntry,{persist:false});
           }
         }
         e.target.value='';
@@ -1553,7 +1739,7 @@
           if(pending.source==='search'){
             const searchEntry=findSearchResultEntry(pending.deckPath,pending.index);
             if(searchEntry){
-              await autoUploadFlashcardAssetsToR2({item:searchEntry.item,dayKey:searchEntry.deckDay,onSynced:()=>syncSearchEntryToDeck(searchEntry)},{audio:true});
+              await autoUploadFlashcardAssetsToR2({item:searchEntry.item,dayKey:searchEntry.deckDay,deckPath:searchEntry.deckPath,onSynced:()=>syncSearchEntryToDeck(searchEntry,{persist:false})},{audio:true});
             }
           }else{
             await autoUploadFlashcardAssetsToR2(pending.index,{audio:true});
