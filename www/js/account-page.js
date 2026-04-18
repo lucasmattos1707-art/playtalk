@@ -89,6 +89,26 @@
     return typeof value === 'string' ? value.trim() : '';
   }
 
+  async function awaitWithTimeout(promise, timeoutMs, fallbackValue) {
+    const timeout = Math.max(0, Number(timeoutMs) || 0);
+    if (!timeout) {
+      return promise;
+    }
+    let timer = 0;
+    try {
+      return await Promise.race([
+        promise,
+        new Promise((resolve) => {
+          timer = window.setTimeout(() => resolve(fallbackValue), timeout);
+        })
+      ]);
+    } finally {
+      if (timer) {
+        window.clearTimeout(timer);
+      }
+    }
+  }
+
   function navigateTo(target, options = {}) {
     if (window.PlaytalkNative && typeof window.PlaytalkNative.navigate === 'function') {
       window.PlaytalkNative.navigate(target, options);
@@ -1204,11 +1224,25 @@
     setStatus('Entrando na sua conta...');
 
     try {
-      const response = await fetch(buildApiUrl('/login'), {
-        method: 'POST',
-        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ username, password })
-      });
+      const supportsAbort = typeof AbortController === 'function';
+      const requestController = supportsAbort ? new AbortController() : null;
+      const requestTimeoutMs = 14000;
+      const timeoutHandle = requestController
+        ? window.setTimeout(() => requestController.abort(), requestTimeoutMs)
+        : 0;
+      let response;
+      try {
+        response = await fetch(buildApiUrl('/login'), {
+          method: 'POST',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ username, password }),
+          ...(requestController ? { signal: requestController.signal } : {})
+        });
+      } finally {
+        if (timeoutHandle) {
+          window.clearTimeout(timeoutHandle);
+        }
+      }
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.message || 'Nao foi possivel entrar agora.');
@@ -1232,7 +1266,10 @@
       await fetchBooksMetrics();
       setStatus('Entrada liberada com sucesso.', 'success');
     } catch (error) {
-      setStatus(error?.message || 'Nao foi possivel entrar agora.', 'error');
+      const timeoutMessage = error?.name === 'AbortError'
+        ? 'Servidor demorou para responder. Confirme se o Postgres esta online e tente novamente.'
+        : (error?.message || 'Nao foi possivel entrar agora.');
+      setStatus(timeoutMessage, 'error');
     } finally {
       if (els.guestLoginBtn) els.guestLoginBtn.disabled = false;
       if (els.premiumBtn) els.premiumBtn.disabled = false;
@@ -1253,12 +1290,18 @@
   }
 
   async function init() {
+    const bootTimeoutToken = Symbol('account-boot-timeout');
     try {
-      state.user = await fetchSessionUser();
+      const sessionUser = await awaitWithTimeout(fetchSessionUser(), 5200, bootTimeoutToken);
+      const sessionRequestTimedOut = sessionUser === bootTimeoutToken;
+      state.user = sessionRequestTimedOut ? null : sessionUser;
       state.localProfile = readLocalPlayerProfile();
       syncSavedSnapshot(state.user || state.localProfile);
       renderUser();
-      await fetchBooksMetrics();
+      const metricsResult = await awaitWithTimeout(fetchBooksMetrics(), 5200, bootTimeoutToken);
+      if (sessionRequestTimedOut || metricsResult === bootTimeoutToken) {
+        setStatus('Servidor instavel no momento. Voce ainda pode tentar fazer login manualmente.', 'error');
+      }
     } catch (_error) {
       state.user = null;
       state.localProfile = readLocalPlayerProfile();

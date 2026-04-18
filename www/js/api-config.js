@@ -81,6 +81,24 @@
     return `${apiBaseUrl}${normalizePath(path)}`;
   }
 
+  async function fetchWithTimeout(resource, options = {}, timeoutMs = 0) {
+    const timeout = Math.max(0, Number(timeoutMs) || 0);
+    if (!timeout || typeof AbortController !== 'function') {
+      return fetch(resource, options);
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), timeout);
+    try {
+      return await fetch(resource, {
+        ...(options || {}),
+        signal: controller.signal
+      });
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+
   function wait(ms) {
     return new Promise((resolve) => {
       window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
@@ -127,15 +145,16 @@
   async function fetchSessionUser(options = {}) {
     const attempts = Math.max(1, Math.min(4, Number(options.attempts) || (hasAuthToken() ? 3 : 1)));
     const retryDelayMs = Math.max(0, Number(options.retryDelayMs) || 350);
+    const timeoutMs = Math.max(1200, Number(options.timeoutMs) || 4200);
     const extraHeaders = options.headers && typeof options.headers === 'object' ? options.headers : undefined;
 
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       try {
-        const response = await fetch(buildApiUrl('/auth/session'), {
+        const response = await fetchWithTimeout(buildApiUrl('/auth/session'), {
           headers: buildAuthHeaders(extraHeaders),
           cache: 'no-store',
           credentials: 'include'
-        });
+        }, timeoutMs);
         const payload = await response.json().catch(() => ({}));
 
         if (response.ok && payload?.success && payload?.user) {
