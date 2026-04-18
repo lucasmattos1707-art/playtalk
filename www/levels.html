@@ -654,6 +654,21 @@
           alert(error.message||'Nao foi possivel carregar os decks agora.');
         });
       }
+      function hasOpenedDeckContext(){
+        return Boolean(
+          safeText(editCardsState.selectedPath)
+          || safeText(state.publicDeckPath)
+          || safeText(state.publicDeckSource)
+          || safeText(state.publicDeckFileName)
+        );
+      }
+      function downloadOpenedDeckJson(){
+        if(state.mode!=='flashcard')throw new Error('O comando getdeck funciona apenas no modo FlashCard.');
+        if(!hasOpenedDeckContext())throw new Error('Abra um deck primeiro (editcards) antes de usar getdeck.');
+        const fileName=safeText(state.publicDeckFileName)||jsonFileName();
+        const blob=new Blob([JSON.stringify(payload(),null,2)],{type:'application/json'});
+        triggerDownload(blob,fileName.toLowerCase().endsWith('.json')?fileName:`${fileName}.json`);
+      }
       function openPastePopover(){$('pasteArea').value='';$('pastePopover').classList.remove('hidden');$('pastePopover').setAttribute('aria-hidden','false')}
       function closePastePopover(){$('pastePopover').classList.add('hidden');$('pastePopover').setAttribute('aria-hidden','true')}
       function normalizeAiFlashcardItems(items){return items.map(item=>({pt:String(item?.pt||'').trim(),en:String(item?.en||'').trim()})).filter(item=>item.pt&&item.en)}
@@ -894,7 +909,7 @@
       $('uploadR2Btn').onclick=()=>{if(zipBusy||r2UploadBusy)return;openDeckMetaPopover('r2')};
       $('sendPlaytalkBtn').onclick=async()=>{try{const result=await publishAdminFlashcardsLocal({force:true});if(!result)throw new Error('Acesso restrito ao administrador.')}catch(error){alert(error.message||'Erro ao enviar para PlayTalk.')}};
       $('testOnlineBtn').onclick=()=>{};
-      $('applyPasteBtn').onclick=()=>{const rawValue=String($('pasteArea').value||'').trim();if(adminStudio.enabled&&rawValue==='editcards'){closePastePopover();toggleEditCardsDeckPicker(true).catch(error=>alert(error.message||'Erro ao carregar decks.'));return}const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),out=[];for(let i=0;i<lines.length;i+=2){const chunk=lines.slice(i,i+2);if(chunk.length<2)break;const item=defaultItem();item.pt=chunk[0]||'';item.en=chunk[1]||'';out.push(item)}state.items=out;state.publicDeckFileName='';state.publicDeckPath='';state.publicDeckSource='';editCardsState.selectedPath='';$('pasteArea').value='';save();renderAll();closePastePopover()};
+      $('applyPasteBtn').onclick=()=>{const rawValue=String($('pasteArea').value||'').trim().toLowerCase();if(adminStudio.enabled&&rawValue==='editcards'){closePastePopover();toggleEditCardsDeckPicker(true).catch(error=>alert(error.message||'Erro ao carregar decks.'));return}if(rawValue==='getdeck'){try{downloadOpenedDeckJson();$('pasteArea').value='';closePastePopover()}catch(error){alert(error.message||'Nao foi possivel baixar o deck.')}return}const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),out=[];for(let i=0;i<lines.length;i+=2){const chunk=lines.slice(i,i+2);if(chunk.length<2)break;const item=defaultItem();item.pt=chunk[0]||'';item.en=chunk[1]||'';out.push(item)}state.items=out;state.publicDeckFileName='';state.publicDeckPath='';state.publicDeckSource='';editCardsState.selectedPath='';$('pasteArea').value='';save();renderAll();closePastePopover()};
       $('dayInput').oninput=e=>{state.day=sanitizeDayKey(e.target.value);save();renderAll()};
       $('titleInput').oninput=e=>{state.title=e.target.value;save();renderAll()};
       $('flashcardCoverUrlInput').oninput=e=>{state.flashcardCoverUrl=e.target.value.trim();save();renderAll()};
