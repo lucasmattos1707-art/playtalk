@@ -406,6 +406,21 @@
       text-decoration: underline;
     }
 
+    .welcome-gate__admin-stats {
+      margin: -10px 0 0;
+      padding: 0;
+      color: #ffd54a;
+      font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: clamp(21px, 5.1vw, 34px);
+      letter-spacing: 0.02em;
+      line-height: 1.05;
+      text-align: center;
+      text-shadow:
+        0 0 10px rgba(255, 209, 74, 0.42),
+        0 7px 20px rgba(70, 41, 0, 0.34);
+      text-transform: lowercase;
+    }
+
     .robotcheck {
       position: fixed !important;
       top: 0 !important;
@@ -6190,6 +6205,7 @@
         <p class="welcome-gate__copy" id="welcomeCopy"></p>
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button"><img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora"></button>
       </div>
+      <p class="welcome-gate__admin-stats" id="welcomeAdminStats" hidden></p>
       <a class="welcome-gate__account-link" id="welcomeAccountLink" href="/account">Entrar com minha conta</a>
     </div>
   </section>
@@ -6987,6 +7003,7 @@
         welcomeLogo: document.getElementById('welcomeLogo'),
         welcomeCopy: document.getElementById('welcomeCopy'),
         welcomeStartBtn: document.getElementById('welcomeStartBtn'),
+        welcomeAdminStats: document.getElementById('welcomeAdminStats'),
         welcomeAccountLink: document.getElementById('welcomeAccountLink'),
         robotcheck: document.getElementById('robotcheck'),
         appShell: document.querySelector('main.shell'),
@@ -8427,11 +8444,41 @@
         els.welcomeStartBtn.disabled = false;
       }
 
+      function countWelcomePlayableDecksAndFlashcards() {
+        const playableCards = (Array.isArray(state.allCards) ? state.allCards : [])
+          .filter((card) => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
+        const playableDeckSources = new Set();
+        playableCards.forEach((card) => {
+          const sourceKey = safeText(card?.source) || safeText(card?.adminSource) || safeText(card?.deckTitle);
+          if (sourceKey) {
+            playableDeckSources.add(sourceKey);
+          }
+        });
+        return {
+          decksCount: playableDeckSources.size,
+          flashcardsCount: playableCards.length
+        };
+      }
+
+      function syncWelcomeAdminStats() {
+        if (!els.welcomeAdminStats) return;
+        const showAdminStats = Boolean(state.user?.id) && isAdminUser();
+        if (!showAdminStats) {
+          els.welcomeAdminStats.textContent = '';
+          els.welcomeAdminStats.hidden = true;
+          return;
+        }
+        const { decksCount, flashcardsCount } = countWelcomePlayableDecksAndFlashcards();
+        els.welcomeAdminStats.textContent = `${decksCount} decks ${flashcardsCount} flashcards`;
+        els.welcomeAdminStats.hidden = false;
+      }
+
       function syncWelcomeAccountLink() {
         if (!els.welcomeAccountLink) return;
         const isLoggedIn = Boolean(state.user?.id);
         els.welcomeAccountLink.textContent = isLoggedIn ? 'Sair da conta' : 'Entrar com minha conta';
         els.welcomeAccountLink.setAttribute('href', isLoggedIn ? '#' : '/account');
+        syncWelcomeAdminStats();
       }
 
       function syncWelcomeGate() {
@@ -10574,6 +10621,7 @@
         await refreshAdminDecks();
         await refreshAdminReportSummary();
         saveCachedCards(state.allCards);
+        syncWelcomeAdminStats();
       }
 
       function renderMetrics() {
@@ -11120,6 +11168,7 @@
           await refreshAdminDecks();
           await refreshAdminReportSummary();
           saveCachedCards(state.allCards);
+          syncWelcomeAdminStats();
           refreshLibrary();
           return true;
         } finally {
