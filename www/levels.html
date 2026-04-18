@@ -1694,7 +1694,63 @@
       $('uploadR2Btn').onclick=()=>{if(zipBusy||r2UploadBusy)return;openDeckMetaPopover('r2')};
       $('sendPlaytalkBtn').onclick=async()=>{try{const result=await publishAdminFlashcardsLocal({force:true});if(!result)throw new Error('Acesso restrito ao administrador.')}catch(error){alert(error.message||'Erro ao enviar para PlayTalk.')}};
       $('testOnlineBtn').onclick=()=>{};
-      $('applyPasteBtn').onclick=()=>{const rawValue=String($('pasteArea').value||'').trim().toLowerCase();if(adminStudio.enabled&&rawValue==='editcards'){closePastePopover();toggleEditCardsDeckPicker(true).catch(error=>alert(error.message||'Erro ao carregar decks.'));return}if(rawValue==='getdeck'){try{downloadOpenedDeckJson();$('pasteArea').value='';closePastePopover()}catch(error){alert(error.message||'Nao foi possivel baixar o deck.')}return}const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),out=[];for(let i=0;i<lines.length;i+=2){const chunk=lines.slice(i,i+2);if(chunk.length<2)break;const item=defaultItem();item.pt=chunk[0]||'';item.en=chunk[1]||'';out.push(item)}state.items=out;state.publicDeckFileName='';state.publicDeckPath='';state.publicDeckSource='';editCardsState.selectedPath='';resetDeckSearchState({clearMode:true});$('pasteArea').value='';save();renderAll();closePastePopover()};
+      $('applyPasteBtn').onclick=()=>{
+        const rawValue=String($('pasteArea').value||'').trim().toLowerCase();
+        if(adminStudio.enabled&&rawValue==='editcards'){
+          closePastePopover();
+          toggleEditCardsDeckPicker(true).catch(error=>alert(error.message||'Erro ao carregar decks.'));
+          return;
+        }
+        if(rawValue==='getdeck'){
+          try{
+            downloadOpenedDeckJson();
+            $('pasteArea').value='';
+            closePastePopover();
+          }catch(error){
+            alert(error.message||'Nao foi possivel baixar o deck.');
+          }
+          return;
+        }
+        const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),out=[];
+        for(let i=0;i<lines.length;i+=2){
+          const chunk=lines.slice(i,i+2);
+          if(chunk.length<2)break;
+          const item=defaultItem();
+          item.pt=chunk[0]||'';
+          item.en=chunk[1]||'';
+          out.push(item);
+        }
+        if(!out.length){
+          alert('Cole pares de linhas (Portugues e English) para criar novos flashcards.');
+          return;
+        }
+        const knownFileName=safeText(state.publicDeckFileName);
+        const inferredDeckPath=knownFileName?normalizeFlashcardsDataPath(`allcards/${knownFileName}`):'';
+        const activeDeckPath=safeText(editCardsState.selectedPath)||safeText(state.publicDeckPath)||inferredDeckPath;
+        const hasDeckContext=state.mode==='flashcard'&&Boolean(activeDeckPath||safeText(state.publicDeckSource)||safeText(state.publicDeckFileName));
+        if(hasDeckContext){
+          if(!safeText(state.publicDeckSource)&&knownFileName)state.publicDeckSource=`allcards/${knownFileName}`;
+          state.items=[...state.items,...out];
+          if(activeDeckPath){
+            editCardsState.selectedPath=activeDeckPath;
+            state.publicDeckPath=activeDeckPath;
+          }
+          queuePersistCurrentEditorDeck({delay:60});
+          if(editCardsState.searchMode)syncDeckSearchResults();
+          showFeedbackToast(`${out.length} flashcard(s) adicionado(s) ao deck atual.`);
+        }else{
+          state.items=out;
+          state.publicDeckFileName='';
+          state.publicDeckPath='';
+          state.publicDeckSource='';
+          editCardsState.selectedPath='';
+          resetDeckSearchState({clearMode:true});
+        }
+        $('pasteArea').value='';
+        save();
+        renderAll();
+        closePastePopover();
+      };
       $('dayInput').oninput=e=>{state.day=sanitizeDayKey(e.target.value);save();renderAll()};
       $('titleInput').oninput=e=>{state.title=e.target.value;queuePersistCurrentEditorDeck();save();renderAll()};
       $('flashcardCoverUrlInput').oninput=e=>{state.flashcardCoverUrl=e.target.value.trim();queuePersistCurrentEditorDeck();save();renderAll()};
