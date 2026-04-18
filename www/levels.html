@@ -27,8 +27,14 @@
     .visual{position:relative;width:139px;height:139px;border-radius:999px;padding:12px;margin:0 auto;background-size:cover;background-position:center;transition:filter 1000ms ease,opacity 1000ms ease}.visual.has-image{border:none;box-shadow:none}.visual.is-loading::after{content:'';position:absolute;inset:-6px;border-radius:999px;border:3px solid rgba(255,255,255,.16);border-top-color:#fff;animation:spin 1s linear infinite}.visual.is-audio-pending{filter:grayscale(1);opacity:.5}.visual.is-restoring{animation:visualColorRestore 1000ms ease}.visual svg{width:34px;height:34px;fill:#8f8f8f}.charpic{width:70px;height:70px;border-radius:16px}.textbtn{text-align:left;min-height:56px;display:flex;align-items:center;font-size:20px;line-height:1.35;font-weight:700;background:transparent;border-color:transparent}.textbtn small{display:none}
     .textbtn--pt{color:#ffd84d}
     .textbtn--en{color:#74b7ff}
-    .icon-delete{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border-color:transparent;background:rgba(255,0,0,.08)}
+    .icon-delete,.icon-play{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border-color:transparent}
+    .icon-delete{background:rgba(255,0,0,.08)}
     .icon-delete svg{width:20px;height:20px;fill:#ff4d4f}
+    .icon-play{background:rgba(15,126,255,.18)}
+    .icon-play svg{width:20px;height:20px;fill:#7cc0ff}
+    .icon-play.has{background:rgba(56,214,120,.24)}
+    .icon-play.has svg{fill:#72f0a8}
+    .icon-play[disabled]{opacity:.45;cursor:not-allowed}
     .audio{display:flex;gap:10px;align-items:center}.audio button{width:56px;height:56px;padding:0;display:grid;place-items:center}.audio img{width:28px;height:28px;filter:grayscale(1) brightness(1.2)}.audio .has img{filter:none}.audio.voice-target button{background:linear-gradient(135deg,#8f53ff,#6427db);border-color:#6427db}.audio.voice-target img{filter:brightness(0) invert(1)}.audio button.ready{background:linear-gradient(135deg,#41c26e,#1f6b3e);border-color:#1f6b3e}.audio button.ready img{filter:brightness(0) invert(1)}
     .icon-btn--light img,.eleven-btn img,.ai-image-btn img{filter:brightness(0) invert(1)}
     .plus-icon{font-size:46px;line-height:1;color:#38d678;font-weight:700}
@@ -39,6 +45,8 @@
     }
     .char{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
     .popover{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:20px;z-index:50}.popover-card{width:min(420px,100%);background:#111;border:1px solid rgba(255,255,255,.16);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:14px}
+    #voicePopover #ttsVoiceSelect{background:#082a66;border-color:#0f3f93;color:#eef5ff}
+    #voicePopover #ttsVoiceSelect option{background:#082a66;color:#eef5ff}
     .deck-edit-picker-box{padding:14px}
     .deck-edit-picker{display:flex;align-items:center;gap:12px;min-height:8vh;padding:10px 12px;border:1px solid rgba(79,158,255,.24);border-radius:16px;background:linear-gradient(180deg,rgba(11,24,56,.72),rgba(7,15,36,.86))}
     .deck-edit-picker select{flex:1;min-height:44px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px 12px}
@@ -510,7 +518,9 @@
         editCardsState.decks.forEach(deck=>{
           const safeTitle=String(deck.title||'Flashcards').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
           const safePath=String(deck.path||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-          options.push(`<option value="${safePath}">${safeTitle}${deck.count?` (${deck.count})`:''}</option>`);
+          const countLabel=deck.count?` (${deck.count})`:'';
+          const statusLabel=deck.loadError?' [json indisponivel]':'';
+          options.push(`<option value="${safePath}">${safeTitle}${countLabel}${statusLabel}</option>`);
         });
         select.innerHTML=options.join('');
         select.disabled=editCardsState.loading||!editCardsState.decks.length;
@@ -569,23 +579,25 @@
       }
       async function loadEditableFlashcardDeckOptions(){
         if(Array.isArray(editableDeckOptionsCache)&&editableDeckOptionsCache.length)return editableDeckOptionsCache;
-        const response=await fetch(withNoCacheUrl(buildApiUrl(DATA_MANIFEST_REMOTE_PATH)),{credentials:'include',cache:'no-store'});
+        const response=await fetch(withNoCacheUrl(buildApiUrl(`${DATA_MANIFEST_REMOTE_PATH}?includeHidden=1`)),{credentials:'include',cache:'no-store'});
         const manifest=await response.json().catch(()=>({}));
         const files=Array.isArray(manifest?.files)?manifest.files:(Array.isArray(manifest?.data?.files)?manifest.data.files:[]);
         if(!response.ok||!files.length)throw new Error(manifest?.message||'Nenhum deck de flashcards foi encontrado no manifesto do jogo.');
         const flashcardFiles=files.filter(file=>safeText(file?.path||file?.source||file?.name));
         const loaded=await Promise.all(flashcardFiles.map(async file=>{
+          const path=normalizeFlashcardsDataPath(file?.path||file?.source||file?.name);
+          if(!path)return null;
+          const base={path,source:safeText(file?.source||file?.path||file?.name),fileName:safeText(file?.name||path.split('/').pop()),title:String(file?.title||file?.name||'Flashcards').trim()||'Flashcards',count:Number(file?.count)||0,data:null,loadError:true};
           try{
-            const path=normalizeFlashcardsDataPath(file?.path||file?.source||file?.name);
-            if(!path)return null;
             const deckResponse=await fetch(withNoCacheUrl(path),{credentials:'include',cache:'no-store'});
-            if(!deckResponse.ok)return null;
-            const data=await deckResponse.json().catch(()=>({}));
+            if(!deckResponse.ok)return base;
+            const data=await deckResponse.json().catch(()=>null);
+            if(!data||typeof data!=='object')return base;
             const items=Array.isArray(data?.items)?data.items:[];
-            return{path,source:safeText(file?.source||file?.path||file?.name),fileName:safeText(file?.name||path.split('/').pop()),title:String(data?.title||file?.name||file?.title||'Flashcards').trim()||'Flashcards',count:items.length,data};
+            return{...base,title:String(data?.title||file?.name||file?.title||'Flashcards').trim()||base.title,count:items.length,data,loadError:false};
           }catch(error){
             console.error('Falha ao carregar deck editavel',file,error);
-            return null;
+            return base;
           }
         }));
         editableDeckOptionsCache=loaded.filter(Boolean).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR',{sensitivity:'base'}));
@@ -767,7 +779,7 @@
       function cameraIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l1.4 2H20a2 2 0 0 1 2 2v8a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8a2 2 0 0 1 2-2h3.6L9 4Zm3 4.5A4.5 4.5 0 1 0 16.5 13 4.5 4.5 0 0 0 12 8.5Zm0 2A2.5 2.5 0 1 1 9.5 13 2.5 2.5 0 0 1 12 10.5Z"/></svg>'}
       function audioControl(icon,labelText,has,onClick,onDelete,voiceTarget=false){const wrap=document.createElement('div');wrap.className='audio';if(voiceTarget&&state.voiceMode)wrap.classList.add('voice-target');const btn=document.createElement('button');btn.type='button';btn.className=has?'has ready':'';btn.innerHTML=`<img src="${icon}" alt="">`;const text=document.createElement('div');text.className='mini';text.textContent=has?'Ok':`${labelText} vazio`;let timer=null,held=false;btn.onpointerdown=()=>{held=false;if(!has||state.voiceMode)return;timer=setTimeout(()=>{held=true;onDelete()},2000)};['pointerup','pointerleave','pointercancel'].forEach(name=>btn.addEventListener(name,()=>{if(timer)clearTimeout(timer);timer=null}));btn.onclick=()=>{if(held){held=false;return}onClick(btn)};wrap.append(btn,text);return wrap}
       function renderChars(){const host=$('characters');host.innerHTML='';if(state.mode!=='scenes')return;ensureChars();state.chars.forEach((char,index)=>{const card=document.createElement('div');card.className='char';const pic=document.createElement('div');pic.className='charpic';pic.style.backgroundImage=charImg(char)?`url("${charImg(char)}")`:'';pic.textContent=charImg(char)?'':'Sem imagem';const id=document.createElement('div');id.className='field';id.innerHTML=`<label>ID</label><input type="text" value="${char.id||''}" readonly>`;const name=document.createElement('div');name.className='field';name.innerHTML=`<label>Nome</label><input type="text" value="${char.name||''}" readonly>`;const voice=document.createElement('div');voice.className='field';voice.innerHTML=`<label>ElevenLabs</label><input type="text" value="${char.voiceId||''}" readonly>`;const row=document.createElement('div');row.className='row';const imgBtn=document.createElement('button');imgBtn.type='button';imgBtn.textContent='Imagem';imgBtn.onclick=()=>{pendingImage={type:'char',index};$('singleImageInput').click()};const locked=isAiLocked('char',index),aiBtn=document.createElement('button');aiBtn.type='button';aiBtn.textContent=locked?'Gerando...':'IA';aiBtn.disabled=locked;aiBtn.onclick=async()=>{try{await generateCharImage(index)}catch(error){alert(error.message||'Erro ao gerar imagem.')}};row.append(imgBtn,aiBtn);card.append(pic,id,name,voice,row);host.appendChild(card)})}
-      function renderItems(){stopAudio();const host=$('items');host.innerHTML='';state.items.forEach((item,index)=>{const locked=isAiLocked('item',index);const hasAudio=Boolean(audioSrc(item,'single'));const hasImage=Boolean(itemImg(item));const visualClasses=['visual'];if(hasImage)visualClasses.push('has-image');if(locked)visualClasses.push('is-loading');if(item.imageMuted)visualClasses.push('is-audio-pending');if(item.imageRestoreFx)visualClasses.push('is-restoring');const card=document.createElement('div');card.className=`card${hasAudio?' has-audio':''}`;const top=document.createElement('div');top.className='row';top.style.justifyContent='flex-end';const del=document.createElement('button');del.type='button';del.className='icon-delete';del.setAttribute('aria-label',`Apagar item ${index+1}`);del.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h5v2H3V5h5l1-2Zm1 6h2v8h-2V9Zm4 0h2v8h-2V9ZM7 9h2v8H7V9Zm-1 11a2 2 0 0 1-2-2V8h16v10a2 2 0 0 1-2 2H6Z"/></svg>';del.onclick=()=>{clearVisualClickTimer(index);state.items.splice(index,1);save();renderAll()};top.appendChild(del);card.appendChild(top);const visual=document.createElement('button');visual.type='button';visual.className=visualClasses.join(' ');visual.style.backgroundImage=hasImage?`url("${itemImg(item)}")`:'';visual.innerHTML=!hasImage&&!locked?cameraIcon():'';visual.onclick=()=>{if(!hasImage&&!locked){pendingImage={type:'item',index};$('singleImageInput').click();return}if(hasImage){handleFilledImageClick(index)}};card.appendChild(visual);card.appendChild(textBtn('Portugues',item.pt,()=>{const v=prompt(`Portugues do item ${index+1}`,item.pt);if(v===null)return;item.pt=v.trim();save();renderItems()}));card.appendChild(textBtn('English',item.en,()=>{const v=prompt(`English do item ${index+1}`,item.en);if(v===null)return;item.en=v.trim();save();renderItems()}));host.appendChild(card)})}
+      function renderItems(){stopAudio();const host=$('items');host.innerHTML='';state.items.forEach((item,index)=>{const locked=isAiLocked('item',index);const hasAudio=Boolean(audioSrc(item,'single'));const hasImage=Boolean(itemImg(item));const visualClasses=['visual'];if(hasImage)visualClasses.push('has-image');if(locked)visualClasses.push('is-loading');if(item.imageMuted)visualClasses.push('is-audio-pending');if(item.imageRestoreFx)visualClasses.push('is-restoring');const card=document.createElement('div');card.className=`card${hasAudio?' has-audio':''}`;const top=document.createElement('div');top.className='row';top.style.justifyContent='flex-end';const playBtn=document.createElement('button');playBtn.type='button';playBtn.className='icon-play';playBtn.setAttribute('aria-label',`Ouvir audio do item ${index+1}`);playBtn.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5a1 1 0 0 1 1.53-.848l9 5.5a1 1 0 0 1 0 1.696l-9 5.5A1 1 0 0 1 8 16.5v-11Z"/></svg>';playBtn.disabled=!hasAudio;playBtn.onclick=()=>{const src=preferredItemAudioSrc(item);if(!src)return;play(src,playBtn)};const del=document.createElement('button');del.type='button';del.className='icon-delete';del.setAttribute('aria-label',`Apagar item ${index+1}`);del.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h5v2H3V5h5l1-2Zm1 6h2v8h-2V9Zm4 0h2v8h-2V9ZM7 9h2v8H7V9Zm-1 11a2 2 0 0 1-2-2V8h16v10a2 2 0 0 1-2 2H6Z"/></svg>';del.onclick=()=>{clearVisualClickTimer(index);state.items.splice(index,1);save();renderAll()};top.append(playBtn,del);card.appendChild(top);const visual=document.createElement('button');visual.type='button';visual.className=visualClasses.join(' ');visual.style.backgroundImage=hasImage?`url("${itemImg(item)}")`:'';visual.innerHTML=!hasImage&&!locked?cameraIcon():'';visual.onclick=()=>{if(!hasImage&&!locked){pendingImage={type:'item',index};$('singleImageInput').click();return}if(hasImage){handleFilledImageClick(index)}};card.appendChild(visual);card.appendChild(textBtn('Portugues',item.pt,()=>{const v=prompt(`Portugues do item ${index+1}`,item.pt);if(v===null)return;item.pt=v.trim();save();renderItems()}));card.appendChild(textBtn('English',item.en,()=>{const v=prompt(`English do item ${index+1}`,item.en);if(v===null)return;item.en=v.trim();save();renderItems()}));host.appendChild(card)})}
       function renderAll(){syncAssetFileNames();updateTop();renderChars();renderItems();syncAdminStudioControls();syncAdminRenderedItems();syncEditCardsDeckPicker()}
       function addItem(image=null){const item=defaultItem();if(image){item.imageFile=image.fileName;item.imageDataUrl=image.dataUrl;item.imageRemoteUrl='';item.imageMuted=false;item.imageRestoreFx=false}if(state.mode==='scenes'){ensureChars();item.characterId=state.chars[0]?.id||''}state.items.push(item)}
       function validateFlashcard(){if(state.mode!=='flashcard')return;if(!state.title.trim())throw new Error('Preencha o nome do deck antes de exportar.');if(!flashcardCoverPreview())throw new Error('Preencha o link publico da capa do deck antes de exportar.');if(!state.items.some(item=>item.pt&&item.en))throw new Error('Adicione pelo menos um flashcard com portugues e english antes de exportar.')}
