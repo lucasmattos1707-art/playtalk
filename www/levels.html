@@ -1185,13 +1185,20 @@
           return{fileName:optionFileName,source:optionSource,pathValue:optionPathValue};
         }
         const selectedPath=safeText(editCardsState.selectedPath);
-        if(!selectedPath){
-          return{fileName:'',source:'',pathValue:''};
+        const stateFileName=safeText(state.publicDeckFileName);
+        const stateSource=safeText(state.publicDeckSource);
+        const statePath=safeText(state.publicDeckPath)||selectedPath;
+        if(stateFileName||stateSource||statePath){
+          return{
+            fileName:stateFileName,
+            source:stateSource,
+            pathValue:statePath
+          };
         }
         return{
-          fileName:safeText(state.publicDeckFileName),
-          source:safeText(state.publicDeckSource),
-          pathValue:safeText(state.publicDeckPath)
+          fileName:'',
+          source:'',
+          pathValue:''
         };
       }
       function applyPublishedFlashcardPayload(payload){
@@ -1654,12 +1661,15 @@
         if(!shouldCreatePostgresDeck)return;
         try{
           const created=await createAdminFlashcardDeck({folderName:nextFolder,deckTitle:nextTitle,coverImage:nextCover,slotCount:0});
+          const createdFileName=safeText(created?.fileName);
+          const canonicalPath=createdFileName?normalizeFlashcardsDataPath(`allcards/${createdFileName}`):'';
+          const canonicalSource=createdFileName?`allcards/${createdFileName}`:'';
           const publishedPath=safeText(created?.publishedDecks?.[0]?.path);
           const sourcePath=safeText(created?.source);
           const normalizedPath=normalizeFlashcardsDataPath(publishedPath||sourcePath);
-          state.publicDeckFileName=safeText(created?.fileName);
-          state.publicDeckPath=normalizedPath||sourcePath;
-          state.publicDeckSource=sourcePath||state.publicDeckPath;
+          state.publicDeckFileName=createdFileName;
+          state.publicDeckPath=canonicalPath||normalizedPath||sourcePath;
+          state.publicDeckSource=canonicalSource||sourcePath||state.publicDeckPath;
           editCardsState.selectedPath=state.publicDeckPath;
           await refreshEditCardsDeckPicker();
           save();

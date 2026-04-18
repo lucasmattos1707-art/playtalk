@@ -16500,6 +16500,15 @@ app.post('/api/admin/flashcards/create-deck', express.json({ limit: '1mb' }), as
 
     await writeJsonToRelativePath(relativeJsonPath, payload);
     await refreshFlashcardManifestMirror();
+    const postgresDeck = await upsertPublicFlashcardDeck({
+      deckKey: `editor:${encodeURIComponent(fileName.toLowerCase())}`,
+      fileName,
+      dayKey: normalizeLevelFolderKey(folderSegment),
+      source: 'levels-editor',
+      title: payload.title,
+      payload,
+      publishVisible: true
+    });
     const sourceInfo = resolveAdminFlashcardSourceInfo(relativeJsonPath);
     const publishedDecks = await publishFlashcardSourcesToR2([sourceInfo]);
 
@@ -16511,6 +16520,7 @@ app.post('/api/admin/flashcards/create-deck', express.json({ limit: '1mb' }), as
       title: payload.title,
       coverImage: payload.coverImage,
       slotCount,
+      deck: postgresDeck || null,
       publishedDecks
     });
   } catch (error) {
