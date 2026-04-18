@@ -51,12 +51,21 @@
     .popover{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:20px;z-index:50}.popover-card{width:min(420px,100%);background:#111;border:1px solid rgba(255,255,255,.16);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:14px}
     #voicePopover #ttsVoiceSelect{background:#082a66;border-color:#0f3f93;color:#eef5ff}
     #voicePopover #ttsVoiceSelect option{background:#082a66;color:#eef5ff}
-    .deck-edit-picker-box{padding:14px}
-    .deck-edit-picker{display:flex;align-items:center;gap:12px;min-height:8vh;padding:10px 12px;border:1px solid rgba(79,158,255,.24);border-radius:16px;background:linear-gradient(180deg,rgba(11,24,56,.72),rgba(7,15,36,.86))}
-    .deck-edit-picker select{flex:1;min-height:44px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px 12px}
-    .deck-edit-picker__copy{display:grid;gap:4px;min-width:0}
-    .deck-edit-picker__copy strong{font-size:14px}
-    .deck-edit-picker__copy span{font-size:12px;color:rgba(255,255,255,.72)}
+    .deck-edit-picker-box{padding:10px;background:linear-gradient(180deg,#0a1f4f,#071538);border-color:rgba(100,157,255,.28)}
+    .deck-edit-picker{display:grid;gap:8px;padding:8px 10px;border:1px solid rgba(110,174,255,.24);border-radius:14px;background:linear-gradient(180deg,rgba(8,25,67,.95),rgba(5,16,45,.96))}
+    .deck-edit-picker__head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .deck-edit-picker__head strong{font-size:13px;letter-spacing:.04em}
+    .deck-edit-picker__hint{font-size:11px;color:rgba(255,255,255,.72)}
+    .deck-edit-picker__control{display:flex;align-items:center;gap:8px}
+    .deck-edit-picker__field{position:relative;flex:1;max-width:180px;min-height:30px}
+    .deck-edit-picker select,.deck-edit-picker input{width:100%;min-height:30px;font-size:12px;padding:6px 10px;border-radius:9px;color:#fff}
+    .deck-edit-picker select{background:rgba(4,14,38,.92);border:1px solid rgba(130,187,255,.34);appearance:none;-webkit-appearance:none;padding-right:26px;background-image:linear-gradient(45deg,transparent 50%,rgba(255,255,255,.8) 50%),linear-gradient(135deg,rgba(255,255,255,.8) 50%,transparent 50%);background-position:calc(100% - 14px) 12px,calc(100% - 9px) 12px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+    .deck-edit-picker input{background:rgba(5,18,47,.92);border:1px solid rgba(130,187,255,.34)}
+    .deck-edit-picker__select-wrap,.deck-edit-picker__search-wrap{position:absolute;inset:0;display:flex;align-items:center;transition:opacity 500ms ease,transform 500ms ease}
+    .deck-edit-picker__select-wrap.is-hidden,.deck-edit-picker__search-wrap.is-hidden{opacity:0;transform:translateY(-6px);pointer-events:none}
+    .deck-edit-picker__search-toggle{width:30px;height:30px;display:grid;place-items:center;padding:0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.18);border-radius:9px}
+    .deck-edit-picker__search-toggle svg{width:16px;height:16px;display:block}
+    .deck-edit-picker__search-toggle.is-active{border-color:rgba(255,92,92,.55);background:rgba(63,8,8,.5)}
     .feedback-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);min-width:min(78vw,420px);max-width:88vw;padding:14px 18px;border-radius:18px;background:linear-gradient(180deg,rgba(21,109,255,.96),rgba(9,69,188,.96));color:#fff;text-align:center;font-weight:700;box-shadow:0 18px 36px rgba(5,29,86,.42);opacity:0;pointer-events:none;z-index:120}
     .feedback-toast.is-visible{animation:feedbackToastFade 3000ms ease forwards}
     @keyframes feedbackToastFade{
@@ -65,7 +74,7 @@
       78%{opacity:1;transform:translateX(-50%) translateY(0)}
       100%{opacity:0;transform:translateX(-50%) translateY(10px)}
     }
-    @media (max-width:640px){.deck-edit-picker{flex-direction:column;align-items:stretch}}
+    @media (max-width:640px){.deck-edit-picker__head{flex-direction:column;align-items:flex-start}.deck-edit-picker__field{max-width:none}}
     .popover-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.media-btn{position:relative;min-height:112px;padding:14px 12px 12px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:6px;border-radius:20px;text-align:left;overflow:hidden}
     .media-btn.active{border-color:#ef8f1a;box-shadow:0 0 0 3px rgba(239,143,26,.18)}.media-btn strong{font-size:17px}.media-btn span{font-size:12px;color:rgba(255,255,255,.72)}.icon-swap{position:absolute;top:14px;right:14px;width:40px;height:40px}
     .icon-swap img{position:absolute;inset:0;width:40px;height:40px;animation:swapPulse 1s steps(1,end) infinite}.icon-swap img:last-child{animation-delay:.5s}@keyframes swapPulse{0%,49.9%{opacity:1}50%,100%{opacity:0}}
@@ -153,13 +162,27 @@
     </div>
     <div class="box hidden flashcardOnly deck-edit-picker-box" id="editCardsDeckBar">
       <div id="editCardsDeckPicker" class="deck-edit-picker" aria-live="polite">
-        <div class="deck-edit-picker__copy">
+        <div class="deck-edit-picker__head">
           <strong>Decks existentes no jogo</strong>
-          <span id="editCardsDeckHint">Digite editcards em "Preencher cards em lote" para abrir este seletor.</span>
+          <span id="editCardsDeckHint" class="deck-edit-picker__hint">Digite editcards em "Preencher cards em lote" para abrir este seletor.</span>
         </div>
-        <select id="editCardsDeckSelect">
-          <option value="">Escolha um deck</option>
-        </select>
+        <div class="deck-edit-picker__control">
+          <div class="deck-edit-picker__field">
+            <div id="editCardsDeckSelectWrap" class="deck-edit-picker__select-wrap">
+              <select id="editCardsDeckSelect">
+                <option value="">Escolha um deck</option>
+              </select>
+            </div>
+            <div id="editCardsDeckSearchWrap" class="deck-edit-picker__search-wrap is-hidden">
+              <input id="editCardsDeckSearchInput" type="text" placeholder="Buscar flashcard (min. 3 letras)">
+            </div>
+          </div>
+          <button id="editCardsDeckSearchToggle" class="deck-edit-picker__search-toggle" type="button" aria-label="Pesquisar flashcards" title="Pesquisar flashcards">
+            <svg id="editCardsDeckSearchIcon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm0-2a9 9 0 1 0 5.64 16.02l3.17 3.18 1.42-1.42-3.18-3.17A9 9 0 0 0 11 2Z"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
     <div class="box hidden" id="charactersWrap">
@@ -394,7 +417,7 @@
       const movieStoryDraft={topic:'',itemCount:8};
       const ADMIN_USERNAMES=new Set(['admin','adm','adminst']);
       const adminStudio={checked:false,enabled:false,username:'',search:'',selectMode:false,selected:new Set(),status:'Aguardando sessao do administrador.',statusError:false,publishTimer:0,publishBusy:false,publishQueued:false,activeMenuIndex:null};
-      const editCardsState={visible:false,loading:false,selectedPath:'',decks:[]};
+      const editCardsState={visible:false,loading:false,selectedPath:'',decks:[],searchMode:false,searchQuery:'',searchResults:[]};
       const jsonBatchPublishState={files:[],results:[],busy:false};
       let deckMetaAction='r2';
       let pendingImage=null,pendingAudio=null,currentAudio=null,audioBatchTargets={pt:false,en:false},aiBatchBusy=false,aiTextBusy=false,zipBusy=false,elevenBusy=false,r2UploadBusy=false,publishLocalBusy=false,feedbackToastTimer=0;
@@ -450,6 +473,123 @@
       function importedFileName(value){
         const parsed=parseCloudAssetInfo(value);
         return parsed?.fileName||fileNameOnly(value);
+      }
+      function detectDeckDayKeyFromData(data){
+        if(!data||typeof data!=='object')return '';
+        const probeValues=[data?.coverImage];
+        const items=Array.isArray(data?.items)?data.items:[];
+        for(let index=0;index<items.length;index+=1){
+          const entry=items[index]||{};
+          probeValues.push(entry?.imagem,entry?.audio,entry?.image,entry?.audioUrl);
+        }
+        for(const value of probeValues){
+          const parsed=parseCloudAssetInfo(value);
+          if(parsed?.day)return sanitizeDayKey(parsed.day);
+        }
+        return '';
+      }
+      function flashcardEditorItemFromDeckEntry(entry){
+        return normalizeImportedItem({
+          imageFile:importedFileName(entry?.imagem||entry?.image),
+          imageRemoteUrl:String(entry?.imagem||entry?.image||'').trim(),
+          imageDataUrl:'',
+          pt:entry?.nomePortugues||entry?.portuguese||entry?.pt||'',
+          en:entry?.nomeIngles||entry?.english||entry?.en||'',
+          category:entry?.categoria||entry?.category||'flashcard',
+          audioFile:importedFileName(entry?.audio||entry?.audioUrl),
+          audioRemoteUrl:String(entry?.audio||entry?.audioUrl||'').trim(),
+          audioDataUrl:'',
+          tense:entry?.tense||'present-simple',
+          sentenceForm:entry?.sentenceForm||'affirmative'
+        });
+      }
+      function applyEditorItemIntoDeckEntry(item,deckEntry,dayKey=''){
+        if(!deckEntry||typeof deckEntry!=='object')return;
+        const resolvedDay=sanitizeDayKey(dayKey||state.day||'1');
+        const nextImage=item?.imageRemoteUrl||((item?.imageFile||item?.imageDataUrl)?cloud(resolvedDay,PHASE.flashcard,item?.imageFile,'flashcard'):'');
+        const nextAudio=item?.audioRemoteUrl||((item?.audioFile||item?.audioDataUrl)?cloud(resolvedDay,PHASE.flashcard,item?.audioFile,'flashcard'):'');
+        deckEntry.imagem=String(nextImage||'').trim();
+        deckEntry.audio=String(nextAudio||'').trim();
+        deckEntry.nomePortugues=String(item?.pt||'').trim();
+        deckEntry.nomeIngles=String(item?.en||'').trim();
+        deckEntry.categoria=String(item?.category||'flashcard').trim()||'flashcard';
+        deckEntry.tense=String(item?.tense||'present-simple').trim()||'present-simple';
+        deckEntry.sentenceForm=String(item?.sentenceForm||'affirmative').trim()||'affirmative';
+      }
+      function resetDeckSearchState({clearMode=false}={}){
+        if(clearMode)editCardsState.searchMode=false;
+        editCardsState.searchQuery='';
+        editCardsState.searchResults=[];
+      }
+      function isDeckSearchActive(){
+        return state.mode==='flashcard'&&editCardsState.searchMode&&normalizedSearchText(editCardsState.searchQuery).length>=3;
+      }
+      function syncDeckSearchResults(){
+        const query=normalizedSearchText(editCardsState.searchQuery);
+        if(!editCardsState.searchMode||query.length<3){
+          editCardsState.searchResults=[];
+          return;
+        }
+        const out=[];
+        editCardsState.decks.forEach(deck=>{
+          const data=deck?.data&&typeof deck.data==='object'?deck.data:null;
+          const items=Array.isArray(data?.items)?data.items:[];
+          items.forEach((rawItem,itemIndex)=>{
+            const text=normalizedSearchText([rawItem?.nomePortugues,rawItem?.nomeIngles,rawItem?.categoria].filter(Boolean).join(' '));
+            if(!text.includes(query))return;
+            const item=flashcardEditorItemFromDeckEntry(rawItem);
+            out.push({
+              source:'search',
+              deckPath:String(deck.path||'').trim(),
+              deckTitle:String(deck.title||'Flashcards').trim()||'Flashcards',
+              deckDay:sanitizeDayKey(deck.dayKey||state.day||'1'),
+              itemIndex,
+              rawItem,
+              item
+            });
+          });
+        });
+        editCardsState.searchResults=out;
+      }
+      function renderableFlashcardEntries(){
+        if(isDeckSearchActive())return editCardsState.searchResults;
+        return state.items.map((item,index)=>({source:'editor',item,index,deckPath:editCardsState.selectedPath||'',deckTitle:state.title||'Deck aberto',deckDay:sanitizeDayKey(state.day||'1'),itemIndex:index,rawItem:null}));
+      }
+      function findDeckByPath(path){
+        const target=String(path||'').trim();
+        if(!target)return null;
+        return editCardsState.decks.find(deck=>String(deck?.path||'').trim()===target)||null;
+      }
+      function findSearchResultEntry(deckPath,itemIndex){
+        return editCardsState.searchResults.find(entry=>entry.deckPath===deckPath&&Number(entry.itemIndex)===Number(itemIndex))||null;
+      }
+      function syncSearchEntryToDeck(entry){
+        if(!entry||entry.source!=='search')return;
+        const deck=findDeckByPath(entry.deckPath);
+        if(!deck||!deck.data||!Array.isArray(deck.data.items))return;
+        const raw=deck.data.items[entry.itemIndex];
+        if(!raw)return;
+        applyEditorItemIntoDeckEntry(entry.item,raw,entry.deckDay||deck.dayKey||state.day);
+        if(deck.path===editCardsState.selectedPath&&state.items[entry.itemIndex]){
+          Object.assign(state.items[entry.itemIndex],entry.item);
+        }
+      }
+      function entryStorageKey(entry){
+        if(!entry)return '';
+        if(entry.source==='search')return `search:${entry.deckPath}:${entry.itemIndex}`;
+        return `editor:${entry.index}`;
+      }
+      function getRenderedEntryFromCard(card){
+        const source=String(card?.dataset?.source||'').trim();
+        if(source==='search'){
+          const deckPath=String(card?.dataset?.deckPath||'').trim();
+          const itemIndex=Number.parseInt(String(card?.dataset?.itemIndex||''),10);
+          return findSearchResultEntry(deckPath,itemIndex);
+        }
+        const index=Number.parseInt(String(card?.dataset?.index||''),10);
+        const item=state.items[index];
+        if(!item)return null;
+        return{source:'editor',item,index,deckPath:editCardsState.selectedPath||'',deckTitle:state.title||'Deck aberto',deckDay:sanitizeDayKey(state.day||'1'),itemIndex:index,rawItem:null};
       }
       const safeBase=(name,fallback)=>String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase()||fallback;
       const safeFile=(name,ext,fallback)=>`${safeBase(name,fallback)}.${ext}`,ext=name=>(String(name).split('.').pop()||'').toLowerCase();
@@ -512,11 +652,23 @@
       function resetDeckMeta(){state.day='1';state.title='';state.flashcardCoverUrl=''}
       function syncEditCardsDeckPicker(){
         const host=$('editCardsDeckBar'),select=$('editCardsDeckSelect'),hint=$('editCardsDeckHint');
+        const selectWrap=$('editCardsDeckSelectWrap'),searchWrap=$('editCardsDeckSearchWrap'),searchInput=$('editCardsDeckSearchInput');
+        const searchToggle=$('editCardsDeckSearchToggle'),searchIcon=$('editCardsDeckSearchIcon');
         const canShow=adminStudio.enabled&&editCardsState.visible;
         host.classList.toggle('hidden',!canShow);
         if(!canShow){
           select.innerHTML='<option value="">Escolha um deck</option>';
           select.value='';
+          if(searchInput)searchInput.value='';
+          if(selectWrap)selectWrap.classList.remove('is-hidden');
+          if(searchWrap)searchWrap.classList.add('is-hidden');
+          if(searchToggle){
+            searchToggle.classList.remove('is-active');
+            searchToggle.disabled=true;
+            searchToggle.setAttribute('aria-label','Pesquisar flashcards');
+            searchToggle.setAttribute('title','Pesquisar flashcards');
+          }
+          if(searchIcon)searchIcon.innerHTML='<path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm0-2a9 9 0 1 0 5.64 16.02l3.17 3.18 1.42-1.42-3.18-3.17A9 9 0 0 0 11 2Z"/>';
           hint.textContent=adminStudio.enabled?'Digite editcards para liberar o menu de decks.':'Entre como admin para liberar a edicao de decks.';
           return;
         }
@@ -531,14 +683,43 @@
         select.innerHTML=options.join('');
         select.disabled=editCardsState.loading||!editCardsState.decks.length;
         select.value=editCardsState.selectedPath||'';
+        const searchMode=Boolean(editCardsState.searchMode);
+        if(searchToggle){
+          searchToggle.disabled=editCardsState.loading||!editCardsState.decks.length;
+          searchToggle.classList.toggle('is-active',searchMode);
+          searchToggle.setAttribute('aria-label',searchMode?'Fechar pesquisa de flashcards':'Pesquisar flashcards');
+          searchToggle.setAttribute('title',searchMode?'Fechar pesquisa de flashcards':'Pesquisar flashcards');
+        }
+        if(searchIcon){
+          searchIcon.innerHTML=searchMode
+            ?'<path d="M6.34 4.92 12 10.58l5.66-5.66 1.42 1.42L13.42 12l5.66 5.66-1.42 1.42L12 13.42l-5.66 5.66-1.42-1.42L10.58 12 4.92 6.34l1.42-1.42Z"/>'
+            :'<path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm0-2a9 9 0 1 0 5.64 16.02l3.17 3.18 1.42-1.42-3.18-3.17A9 9 0 0 0 11 2Z"/>';
+        }
+        if(selectWrap)selectWrap.classList.toggle('is-hidden',searchMode);
+        if(searchWrap)searchWrap.classList.toggle('is-hidden',!searchMode);
+        if(searchInput){
+          if(searchInput.value!==editCardsState.searchQuery)searchInput.value=editCardsState.searchQuery||'';
+          searchInput.disabled=editCardsState.loading||!editCardsState.decks.length;
+        }
         if(editCardsState.loading)hint.textContent='Carregando decks disponiveis...';
         else if(!editCardsState.decks.length)hint.textContent='Nenhum deck de flashcards foi encontrado no catalogo do jogo.';
-        else hint.textContent=`${editCardsState.decks.length||0} deck(s) carregado(s) no jogo`;
+        else if(searchMode){
+          const queryLength=normalizedSearchText(editCardsState.searchQuery).length;
+          if(queryLength<3)hint.textContent='Digite pelo menos 3 letras para buscar flashcards em todos os decks.';
+          else{
+            const deckCount=new Set(editCardsState.searchResults.map(entry=>entry.deckPath)).size;
+            hint.textContent=`${editCardsState.searchResults.length} flashcard(s) encontrado(s) em ${deckCount} deck(s).`;
+          }
+        }else hint.textContent=`${editCardsState.decks.length||0} deck(s) carregado(s) no jogo`;
       }
       function clearVisualClickTimer(index){
-        const timer=visualClickTimers.get(index);
-        if(timer)window.clearTimeout(timer);
-        visualClickTimers.delete(index);
+        const keys=[index];
+        if(typeof index==='number'||/^\d+$/.test(String(index||'')))keys.push(`editor:${Number(index)}`);
+        keys.forEach(key=>{
+          const timer=visualClickTimers.get(key);
+          if(timer)window.clearTimeout(timer);
+          visualClickTimers.delete(key);
+        });
       }
       function showFeedbackToast(message){
         const toast=$('feedbackToast');
@@ -554,34 +735,38 @@
           feedbackToastTimer=0;
         },3000);
       }
-      function handleFilledImageClick(index){
-        const item=state.items[index];
+      function handleFilledImageClick(entry){
+        if(!entry||!entry.item)return;
+        const storageKey=entryStorageKey(entry);
+        const item=entry.item;
         if(!item)return;
-        const activeTimer=visualClickTimers.get(index);
+        const activeTimer=visualClickTimers.get(storageKey);
         if(activeTimer){
-          clearVisualClickTimer(index);
+          clearVisualClickTimer(storageKey);
           item.imageFile='';
           item.imageDataUrl='';
           item.imageRemoteUrl='';
           item.imageMuted=false;
           item.imageRestoreFx=false;
+          if(entry.source==='search')syncSearchEntryToDeck(entry);
           save();
           renderAll();
           return;
         }
         const timer=window.setTimeout(()=>{
-          visualClickTimers.delete(index);
-          const currentItem=state.items[index];
+          visualClickTimers.delete(storageKey);
+          const currentItem=entry.item;
           if(!currentItem)return;
           currentItem.imageMuted=true;
           currentItem.imageRestoreFx=false;
           currentItem.audioFile='';
           currentItem.audioDataUrl='';
           currentItem.audioRemoteUrl='';
+          if(entry.source==='search')syncSearchEntryToDeck(entry);
           save();
           renderAll();
         },1000);
-        visualClickTimers.set(index,timer);
+        visualClickTimers.set(storageKey,timer);
       }
       async function loadEditableFlashcardDeckOptions(){
         if(Array.isArray(editableDeckOptionsCache)&&editableDeckOptionsCache.length)return editableDeckOptionsCache;
@@ -593,14 +778,14 @@
         const loaded=await Promise.all(flashcardFiles.map(async file=>{
           const path=normalizeFlashcardsDataPath(file?.path||file?.source||file?.name);
           if(!path)return null;
-          const base={path,source:safeText(file?.source||file?.path||file?.name),fileName:safeText(file?.name||path.split('/').pop()),title:String(file?.title||file?.name||'Flashcards').trim()||'Flashcards',count:Number(file?.count)||0,data:null,loadError:true};
+          const base={path,source:safeText(file?.source||file?.path||file?.name),fileName:safeText(file?.name||path.split('/').pop()),title:String(file?.title||file?.name||'Flashcards').trim()||'Flashcards',count:Number(file?.count)||0,data:null,loadError:true,dayKey:''};
           try{
             const deckResponse=await fetch(withNoCacheUrl(path),{credentials:'include',cache:'no-store'});
             if(!deckResponse.ok)return base;
             const data=await deckResponse.json().catch(()=>null);
             if(!data||typeof data!=='object')return base;
             const items=Array.isArray(data?.items)?data.items:[];
-            return{...base,title:String(data?.title||file?.name||file?.title||'Flashcards').trim()||base.title,count:items.length,data,loadError:false};
+            return{...base,title:String(data?.title||file?.name||file?.title||'Flashcards').trim()||base.title,count:items.length,data,loadError:false,dayKey:detectDeckDayKeyFromData(data)};
           }catch(error){
             console.error('Falha ao carregar deck editavel',file,error);
             return base;
@@ -609,17 +794,19 @@
         editableDeckOptionsCache=loaded.filter(Boolean).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR',{sensitivity:'base'}));
         return editableDeckOptionsCache;
       }
-      function invalidateEditableDeckOptionsCache(){editableDeckOptionsCache=null;editCardsState.decks=[];if(editCardsState.visible)syncEditCardsDeckPicker()}
-      async function refreshEditCardsDeckPicker(){if(!adminStudio.enabled)return;editableDeckOptionsCache=null;await ensureEditCardsDeckPickerReady();if(editCardsState.selectedPath&&!editCardsState.decks.some(deck=>deck.path===editCardsState.selectedPath)){editCardsState.selectedPath='';syncEditCardsDeckPicker()}}
+      function invalidateEditableDeckOptionsCache(){editableDeckOptionsCache=null;editCardsState.decks=[];resetDeckSearchState({clearMode:true});if(editCardsState.visible)syncEditCardsDeckPicker()}
+      async function refreshEditCardsDeckPicker(){if(!adminStudio.enabled)return;editableDeckOptionsCache=null;await ensureEditCardsDeckPickerReady();if(editCardsState.searchMode)syncDeckSearchResults();if(editCardsState.selectedPath&&!editCardsState.decks.some(deck=>deck.path===editCardsState.selectedPath)){editCardsState.selectedPath='';syncEditCardsDeckPicker()}}
       async function ensureEditCardsDeckPickerReady(){
         if(!adminStudio.enabled)return;
         editCardsState.loading=true;
         syncEditCardsDeckPicker();
         try{
           editCardsState.decks=await loadEditableFlashcardDeckOptions();
+          if(editCardsState.searchMode)syncDeckSearchResults();
         }finally{
           editCardsState.loading=false;
           syncEditCardsDeckPicker();
+          if(editCardsState.searchMode)renderItems();
         }
       }
       async function toggleEditCardsDeckPicker(forceVisible){
@@ -627,7 +814,9 @@
         editCardsState.visible=nextVisible&&adminStudio.enabled;
         if(!editCardsState.visible){
           editCardsState.selectedPath='';
+          resetDeckSearchState({clearMode:true});
           syncEditCardsDeckPicker();
+          renderItems();
           return;
         }
         editableDeckOptionsCache=null;
@@ -638,6 +827,7 @@
         if(!normalizedPath)return;
         const deck=editCardsState.decks.find(entry=>entry.path===normalizedPath);
         if(!deck)throw new Error('Deck selecionado nao foi encontrado.');
+        resetDeckSearchState();
         editCardsState.selectedPath=normalizedPath;
         syncEditCardsDeckPicker();
         const payload=deck.data||await loadJsonFile(normalizedPath);
@@ -753,10 +943,12 @@
         },FLASHCARD_ASSET_SYNC_FEEDBACK_MS);
         flashcardAssetSyncState.set(item,previous);
       }
-      async function autoUploadFlashcardAssetsToR2(index,{image=false,audio=false,showErrorToast=true}={}){
+      async function autoUploadFlashcardAssetsToR2(target,{image=false,audio=false,showErrorToast=true}={}){
         if(state.mode!=='flashcard')return null;
-        const item=state.items[index];
+        const isNumericTarget=typeof target==='number';
+        const item=isNumericTarget?state.items[target]:target?.item;
         if(!item)return null;
+        const dayKey=isNumericTarget?sanitizeDayKey(state.day||'1'):sanitizeDayKey(target?.dayKey||state.day||'1');
         const files=[];
         if(image&&item.imageDataUrl&&item.imageFile){
           files.push({name:item.imageFile,base64:base64FromBytes(bytesFromDataUrl(item.imageDataUrl))});
@@ -767,8 +959,9 @@
         if(!files.length)return null;
         try{
           await uploadLevelFilesToR2(files);
-          if(image&&item.imageFile)item.imageRemoteUrl=cloud(state.day,PHASE.flashcard,item.imageFile,'flashcard');
-          if(audio&&item.audioFile)item.audioRemoteUrl=cloud(state.day,PHASE.flashcard,item.audioFile,'flashcard');
+          if(image&&item.imageFile)item.imageRemoteUrl=cloud(dayKey,PHASE.flashcard,item.imageFile,'flashcard');
+          if(audio&&item.audioFile)item.audioRemoteUrl=cloud(dayKey,PHASE.flashcard,item.audioFile,'flashcard');
+          if(!isNumericTarget&&typeof target?.onSynced==='function')target.onSynced();
           markFlashcardItemSynced(item,{image,audio});
           save();
           renderItems();
@@ -781,7 +974,7 @@
         }
       }
       const normalizeAdminUsername=value=>String(value||'').trim().toLowerCase();
-      const isAdminStudioEnabled=()=>adminStudio.enabled&&state.mode==='flashcard';
+      const isAdminStudioEnabled=()=>adminStudio.enabled&&state.mode==='flashcard'&&!isDeckSearchActive();
       function setAdminStudioStatus(message,isError=false){adminStudio.status=String(message||'').trim()||'Painel do admin pronto.';adminStudio.statusError=Boolean(isError)}
       function clearAdminSelection(){adminStudio.selected.clear()}
       function normalizedSearchText(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()}
@@ -891,7 +1084,7 @@
       async function publishJsonBatchDeckFiles(files){if(!adminStudio.enabled)throw new Error('Acesso restrito ao administrador.');jsonBatchPublishState.busy=true;jsonBatchPublishState.results=[];syncJsonBatchPublishPopover();try{const normalizedFiles=[];for(let index=0;index<files.length;index+=1){const file=files[index];try{const raw=await asText(file),parsed=JSON.parse(raw),payload=normalizeJsonBatchPayload(parsed,file.name);normalizedFiles.push({name:file.name,content:JSON.stringify(payload,null,2)})}catch(error){jsonBatchPublishState.results[index]={error:true,message:error.message||'Falha ao validar o deck.'}}syncJsonBatchPublishPopover()}if(!normalizedFiles.length)throw new Error('Nenhum deck valido foi selecionado para subir no Postgres.');const result=await uploadJsonDecksToPostgres(normalizedFiles);const uploadedDecks=Array.isArray(result?.decks)?result.decks:[];let uploadedIndex=0;for(let index=0;index<files.length;index+=1){if(jsonBatchPublishState.results[index]?.error)continue;const deck=uploadedDecks[uploadedIndex]||null;uploadedIndex+=1;jsonBatchPublishState.results[index]={ok:true,message:deck?.title?`Deck "${deck.title}" salvo no Postgres.`:'Deck salvo no Postgres.'}}await refreshEditCardsDeckPicker()}finally{jsonBatchPublishState.busy=false;syncJsonBatchPublishPopover()}}
       async function hydrateAdminStudio(){try{const response=await fetch('/auth/session',{credentials:'include',cache:'no-store'});if(!response.ok){adminStudio.checked=true;adminStudio.enabled=false;setAdminStudioStatus('Painel admin oculto. Entre com adm/admin para liberar.');renderAll();syncEditCardsDeckPicker();return}const payload=await response.json();const user=payload?.user||{},username=normalizeAdminUsername(user?.username||user?.email||''),isAdminFlag=user?.is_admin===true||user?.isAdmin===true;adminStudio.checked=true;adminStudio.username=username;adminStudio.enabled=Boolean(isAdminFlag||ADMIN_USERNAMES.has(username));setAdminStudioStatus(adminStudio.enabled?`Painel admin ativo para ${username||'admin'}. Envio manual pronto.`:'Painel admin oculto. Entre com adm/admin para liberar.');renderAll();syncEditCardsDeckPicker()}catch(error){adminStudio.checked=true;adminStudio.enabled=false;setAdminStudioStatus('Nao foi possivel validar a sessao do admin agora.',true);renderAll();syncEditCardsDeckPicker()}}
       function syncAdminStudioControls(){const enabled=isAdminStudioEnabled(),selectedCount=adminStudio.selected.size;$('adminStudioBar').classList.toggle('hidden',!enabled);$('adminSelectBtn').disabled=!enabled;$('adminSelectBtn').textContent=adminStudio.selectMode?'Cancelar selecao':'Selecionar';$('adminBatchClearImageBtn').disabled=!enabled||!selectedCount;$('adminBatchClearAudioBtn').disabled=!enabled||!selectedCount;$('publishLocalBtn').disabled=!enabled||adminStudio.publishBusy;$('publishLocalBtn').textContent=adminStudio.publishBusy?'Enviando...':'Enviar para PlayTalk';const sendPlaytalkBtn=$('sendPlaytalkBtn');if(sendPlaytalkBtn)sendPlaytalkBtn.disabled=!enabled||adminStudio.publishBusy;$('adminSearchInput').value=adminStudio.search||'';$('adminSearchInput').disabled=!enabled||adminStudio.publishBusy;$('adminStudioStatus').textContent=selectedCount&&enabled?`${adminStudio.status} ${selectedCount} selecionado(s).`:adminStudio.status;$('adminStudioStatus').classList.toggle('is-error',adminStudio.statusError)}
-      function syncAdminRenderedItems(){const host=$('items');const cards=Array.from(host.children);cards.forEach((card,index)=>{const item=state.items[index];if(!item||!card.classList.contains('card'))return;const visible=!isAdminStudioEnabled()||itemMatchesAdminSearch(item);card.classList.toggle('hidden',!visible);card.classList.toggle('is-admin-card',isAdminStudioEnabled());card.classList.toggle('is-selected',isAdminStudioEnabled()&&adminStudio.selected.has(index));if(isAdminStudioEnabled()&&!card.dataset.adminBound){card.dataset.adminBound='true';card.addEventListener('click',event=>{if(!isAdminStudioEnabled()||isInteractiveAdminTarget(event.target))return;if(adminStudio.selectMode){event.preventDefault();toggleAdminItemSelection(index);return}openItemAdminPopover(index)})}})}
+      function syncAdminRenderedItems(){const host=$('items');const cards=Array.from(host.children);cards.forEach(card=>{if(!card.classList.contains('card'))return;const entry=getRenderedEntryFromCard(card);const item=entry?.item;if(!item||entry?.source!=='editor')return;const index=Number.parseInt(String(card.dataset.index||''),10);const visible=!isAdminStudioEnabled()||itemMatchesAdminSearch(item);card.classList.toggle('hidden',!visible);card.classList.toggle('is-admin-card',isAdminStudioEnabled());card.classList.toggle('is-selected',isAdminStudioEnabled()&&adminStudio.selected.has(index));if(isAdminStudioEnabled()&&!card.dataset.adminBound){card.dataset.adminBound='true';card.addEventListener('click',event=>{if(!isAdminStudioEnabled()||isInteractiveAdminTarget(event.target))return;const currentIndex=Number.parseInt(String(card.dataset.index||''),10);if(!Number.isInteger(currentIndex))return;if(adminStudio.selectMode){event.preventDefault();toggleAdminItemSelection(currentIndex);return}openItemAdminPopover(currentIndex)})}})}
       function remainingVoiceTargets(){if(state.mode==='scenes'||state.mode==='movies'){const out=[];state.items.forEach((item,index)=>{const pt=String(item?.pt||'').trim(),en=String(item?.en||'').trim();if(pt&&!hasGeneratedAudio(item,'pt'))out.push({index,kind:'pt',text:pt,fileName:`${itemStem(index)}-pt.mp3`});if(en&&!hasGeneratedAudio(item,'en'))out.push({index,kind:'en',text:en,fileName:`${itemStem(index)}-en.mp3`})});return out}const pendingAudio=state.items.map((item,index)=>({item,index,text:String(item?.en||item?.pt||'').trim()})).filter(entry=>entry.text&&entry.item?.imageMuted&&!hasGeneratedAudio(entry.item,'single')).map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${itemStem(entry.index)}-en.mp3`}));if(pendingAudio.length)return pendingAudio;return state.items.map((item,index)=>({item,index,text:String(item?.en||item?.pt||'').trim()})).filter(entry=>entry.text&&!hasGeneratedAudio(entry.item,'single')).map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${itemStem(entry.index)}-en.mp3`}))}
       async function generateRemainingVoiceAssets(voice){
         const targets=remainingVoiceTargets();
@@ -1057,8 +1250,11 @@
         stopAudio();
         const host=$('items');
         host.innerHTML='';
-        state.items.forEach((item,index)=>{
-          const locked=isAiLocked('item',index);
+        const entries=renderableFlashcardEntries();
+        entries.forEach((entry,viewIndex)=>{
+          const item=entry.item;
+          const sourceIndex=Number(entry.itemIndex);
+          const locked=entry.source==='editor'&&isAiLocked('item',sourceIndex);
           const hasAudio=Boolean(audioSrc(item,'single'));
           const hasImage=Boolean(itemImg(item));
           const visualClasses=['visual'];
@@ -1073,10 +1269,18 @@
           const top=document.createElement('div');
           top.className='row';
           top.style.justifyContent='flex-end';
+          if(entry.source==='search'){
+            const tag=document.createElement('span');
+            tag.className='mini';
+            tag.textContent=entry.deckTitle||'Deck';
+            tag.style.marginRight='auto';
+            tag.style.opacity='.88';
+            top.appendChild(tag);
+          }
           const playBtn=document.createElement('button');
           playBtn.type='button';
           playBtn.className='icon-play';
-          playBtn.setAttribute('aria-label',`Ouvir audio do item ${index+1}`);
+          playBtn.setAttribute('aria-label',`Ouvir audio do item ${sourceIndex+1}`);
           playBtn.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5a1 1 0 0 1 1.53-.848l9 5.5a1 1 0 0 1 0 1.696l-9 5.5A1 1 0 0 1 8 16.5v-11Z"/></svg>';
           playBtn.disabled=!hasAudio;
           playBtn.onclick=()=>{
@@ -1087,12 +1291,22 @@
           const del=document.createElement('button');
           del.type='button';
           del.className='icon-delete';
-          del.setAttribute('aria-label',`Apagar item ${index+1}`);
+          del.setAttribute('aria-label',`Apagar item ${sourceIndex+1}`);
           del.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h5v2H3V5h5l1-2Zm1 6h2v8h-2V9Zm4 0h2v8h-2V9ZM7 9h2v8H7V9Zm-1 11a2 2 0 0 1-2-2V8h16v10a2 2 0 0 1-2 2H6Z"/></svg>';
           del.onclick=()=>{
-            clearVisualClickTimer(index);
+            clearVisualClickTimer(entryStorageKey(entry));
             clearFlashcardItemSyncFeedback(item);
-            state.items.splice(index,1);
+            if(entry.source==='search'){
+              const deck=findDeckByPath(entry.deckPath);
+              if(deck&&deck.data&&Array.isArray(deck.data.items)&&entry.itemIndex>=0&&entry.itemIndex<deck.data.items.length){
+                deck.data.items.splice(entry.itemIndex,1);
+                deck.count=Math.max(0,Number(deck.count||0)-1);
+                if(deck.path===editCardsState.selectedPath&&entry.itemIndex<state.items.length)state.items.splice(entry.itemIndex,1);
+              }
+              syncDeckSearchResults();
+            }else{
+              state.items.splice(sourceIndex,1);
+            }
             save();
             renderAll();
           };
@@ -1106,12 +1320,12 @@
           visual.innerHTML=!hasImage&&!locked?cameraIcon():'';
           visual.onclick=()=>{
             if(!hasImage&&!locked){
-              pendingImage={type:'item',index};
+              pendingImage={type:'item',source:entry.source,index:sourceIndex,deckPath:entry.deckPath||'',deckDay:entry.deckDay||sanitizeDayKey(state.day||'1')};
               $('singleImageInput').click();
               return;
             }
             if(hasImage){
-              handleFilledImageClick(index);
+              handleFilledImageClick(entry);
             }
           };
 
@@ -1125,19 +1339,25 @@
 
           card.appendChild(visual);
           card.appendChild(textBtn('Portugues',item.pt,()=>{
-            const v=prompt(`Portugues do item ${index+1}`,item.pt);
+            const v=prompt(`Portugues do item ${sourceIndex+1}`,item.pt);
             if(v===null)return;
             item.pt=v.trim();
+            if(entry.source==='search')syncSearchEntryToDeck(entry);
             save();
             renderItems();
           }));
           card.appendChild(textBtn('English',item.en,()=>{
-            const v=prompt(`English do item ${index+1}`,item.en);
+            const v=prompt(`English do item ${sourceIndex+1}`,item.en);
             if(v===null)return;
             item.en=v.trim();
+            if(entry.source==='search')syncSearchEntryToDeck(entry);
             save();
             renderItems();
           }));
+          card.dataset.source=entry.source;
+          card.dataset.index=String(sourceIndex);
+          card.dataset.itemIndex=String(sourceIndex);
+          card.dataset.deckPath=entry.deckPath||'';
           host.appendChild(card);
         });
       }
@@ -1148,7 +1368,7 @@
       function getSceneExportData(){ensureChars();const itemEntries=state.items.filter(i=>i.pt&&i.en&&i.characterId).map((i,n)=>({id:n+1,character:i.characterId,portuguese:i.pt,english:i.en,audio_portuguese:i.audioPtFile?cloud(state.day,PHASE.scenes,i.audioPtFile):'',audio_english:i.audioEnFile?cloud(state.day,PHASE.scenes,i.audioEnFile):'',item:i}));const usedIds=new Set(itemEntries.map(entry=>entry.character));const characters=state.chars.filter(char=>{const id=String(char?.id||'').trim();const name=String(char?.name||'').trim();return id&&name&&usedIds.has(id)}).map(char=>({id:char.id.trim(),name:char.name.trim(),voiceId:char.voiceId||getSceneCharacter(char.id)?.voiceId||'',image:char.imageFile?cloud(state.day,PHASE.scenes,char.imageFile):defaultSceneCharacterImageUrl(char.id),char}));const validIds=new Set(characters.map(char=>char.id));return{characters:characters.map(({char,...entry})=>entry),items:itemEntries.filter(entry=>validIds.has(entry.character)).map(({item,...entry})=>entry),characterAssets:characters.map(entry=>entry.char)}}
       function payload(){if(state.mode==='flashcard'){validateFlashcard();return{title:state.title.trim(),coverImage:flashcardCoverPreview(),items:state.items.filter(i=>i.pt&&i.en).map(i=>({imagem:i.imageRemoteUrl||cloud(state.day,PHASE.flashcard,i.imageFile)||'',nomePortugues:i.pt,nomeIngles:i.en,categoria:i.category||'flashcard',audio:i.audioRemoteUrl||((i.audioFile||i.audioDataUrl)?cloud(state.day,PHASE.flashcard,i.audioFile):''),tense:i.tense||'present-simple',sentenceForm:i.sentenceForm||'affirmative'}))}}validateMovie();if(state.mode==='movies')return{soundtrack:state.soundFile?cloud(state.day,PHASE.movies,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),items:state.items.filter(i=>i.imageFile&&i.pt&&i.en).map((i,n)=>({id:n+1,image:cloud(state.day,PHASE.movies,i.imageFile),portuguese:i.pt,english:i.en,image_prompt:i.imagePrompt||'',audio_portuguese:i.audioPtFile?cloud(state.day,PHASE.movies,i.audioPtFile):'',audio_english:i.audioEnFile?cloud(state.day,PHASE.movies,i.audioEnFile):''})),title:state.title.trim(),coverImage:state.coverFile?cloud(state.day,PHASE.movies,state.coverFile):''};const sceneExport=getSceneExportData();return{soundtrack:state.soundFile?cloud(state.day,PHASE.scenes,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),characters:sceneExport.characters,items:sceneExport.items,title:state.title.trim(),coverImage:state.coverFile?cloud(state.day,PHASE.scenes,state.coverFile):''}}
       const downloadJson=()=>{const blob=new Blob([JSON.stringify(payload(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=jsonFileName();document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)};
-      $('newBtn').onclick=()=>{if(!confirm('Apagar os itens e comecar uma grade nova?'))return;state.items=[];state.publicDeckFileName='';state.publicDeckPath='';state.publicDeckSource='';editCardsState.selectedPath='';resetDeckMeta();closeSendPlaytalkPopover();save();renderAll()};
+      $('newBtn').onclick=()=>{if(!confirm('Apagar os itens e comecar uma grade nova?'))return;state.items=[];state.publicDeckFileName='';state.publicDeckPath='';state.publicDeckSource='';editCardsState.selectedPath='';resetDeckSearchState({clearMode:true});resetDeckMeta();closeSendPlaytalkPopover();save();renderAll()};
       $('charactersToggleBtn').onclick=()=>{state.sceneCharactersOpen=!state.sceneCharactersOpen;save();renderAll()};
       $('addBtn').onclick=()=>{if(elevenBusy)return;openVoicePopover()};
       $('watchFlashcardsBtn').onclick=()=>openWatchPopover();
@@ -1164,7 +1384,7 @@
       $('uploadR2Btn').onclick=()=>{if(zipBusy||r2UploadBusy)return;openDeckMetaPopover('r2')};
       $('sendPlaytalkBtn').onclick=async()=>{try{const result=await publishAdminFlashcardsLocal({force:true});if(!result)throw new Error('Acesso restrito ao administrador.')}catch(error){alert(error.message||'Erro ao enviar para PlayTalk.')}};
       $('testOnlineBtn').onclick=()=>{};
-      $('applyPasteBtn').onclick=()=>{const rawValue=String($('pasteArea').value||'').trim().toLowerCase();if(adminStudio.enabled&&rawValue==='editcards'){closePastePopover();toggleEditCardsDeckPicker(true).catch(error=>alert(error.message||'Erro ao carregar decks.'));return}if(rawValue==='getdeck'){try{downloadOpenedDeckJson();$('pasteArea').value='';closePastePopover()}catch(error){alert(error.message||'Nao foi possivel baixar o deck.')}return}const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),out=[];for(let i=0;i<lines.length;i+=2){const chunk=lines.slice(i,i+2);if(chunk.length<2)break;const item=defaultItem();item.pt=chunk[0]||'';item.en=chunk[1]||'';out.push(item)}state.items=out;state.publicDeckFileName='';state.publicDeckPath='';state.publicDeckSource='';editCardsState.selectedPath='';$('pasteArea').value='';save();renderAll();closePastePopover()};
+      $('applyPasteBtn').onclick=()=>{const rawValue=String($('pasteArea').value||'').trim().toLowerCase();if(adminStudio.enabled&&rawValue==='editcards'){closePastePopover();toggleEditCardsDeckPicker(true).catch(error=>alert(error.message||'Erro ao carregar decks.'));return}if(rawValue==='getdeck'){try{downloadOpenedDeckJson();$('pasteArea').value='';closePastePopover()}catch(error){alert(error.message||'Nao foi possivel baixar o deck.')}return}const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),out=[];for(let i=0;i<lines.length;i+=2){const chunk=lines.slice(i,i+2);if(chunk.length<2)break;const item=defaultItem();item.pt=chunk[0]||'';item.en=chunk[1]||'';out.push(item)}state.items=out;state.publicDeckFileName='';state.publicDeckPath='';state.publicDeckSource='';editCardsState.selectedPath='';resetDeckSearchState({clearMode:true});$('pasteArea').value='';save();renderAll();closePastePopover()};
       $('dayInput').oninput=e=>{state.day=sanitizeDayKey(e.target.value);save();renderAll()};
       $('titleInput').oninput=e=>{state.title=e.target.value;save();renderAll()};
       $('flashcardCoverUrlInput').oninput=e=>{state.flashcardCoverUrl=e.target.value.trim();save();renderAll()};
@@ -1176,6 +1396,36 @@
       $('pasteArea').oninput=()=>handlePasteAreaMode();
       $('pasteCloseBtn').onclick=()=>closePastePopover();
       $('editCardsDeckSelect').onchange=e=>{const selectedPath=String(e.target.value||'').trim();editCardsState.selectedPath=selectedPath;syncEditCardsDeckPicker();if(!selectedPath)return;loadSelectedDeckIntoLevels(selectedPath).catch(error=>alert(error.message||'Erro ao carregar deck.'))};
+      $('editCardsDeckSearchToggle').onclick=()=>{
+        if(editCardsState.loading||!editCardsState.decks.length)return;
+        if(editCardsState.searchMode){
+          resetDeckSearchState({clearMode:true});
+          clearAdminSelection();
+          closeItemAdminPopover();
+          syncEditCardsDeckPicker();
+          renderAll();
+          return;
+        }
+        editCardsState.searchMode=true;
+        editCardsState.searchQuery='';
+        editCardsState.searchResults=[];
+        clearAdminSelection();
+        closeItemAdminPopover();
+        syncEditCardsDeckPicker();
+        const input=$('editCardsDeckSearchInput');
+        if(input){
+          window.setTimeout(()=>input.focus(),520);
+        }
+        renderItems();
+      };
+      $('editCardsDeckSearchInput').oninput=e=>{
+        editCardsState.searchQuery=String(e.target.value||'');
+        syncDeckSearchResults();
+        clearAdminSelection();
+        closeItemAdminPopover();
+        syncEditCardsDeckPicker();
+        renderItems();
+      };
       $('textPopoverCloseBtn').onclick=()=>closeTextPopover();
       $('watchPopoverCloseBtn').onclick=()=>closeWatchPopover();
       $('jsonBatchCloseBtn').onclick=()=>closeJsonBatchPublishPopover();
@@ -1225,13 +1475,21 @@
             c.imageDataUrl=data.dataUrl;
           }
         }else{
-          const item=state.items[pending.index];
+          let item=null;
+          let searchEntry=null;
+          if(pending.source==='search'){
+            searchEntry=findSearchResultEntry(pending.deckPath,pending.index);
+            item=searchEntry?.item||null;
+          }else{
+            item=state.items[pending.index];
+          }
           if(item){
             item.imageFile=data.fileName;
             item.imageDataUrl=data.dataUrl;
             item.imageRemoteUrl='';
             item.imageMuted=false;
             item.imageRestoreFx=false;
+            if(searchEntry)syncSearchEntryToDeck(searchEntry);
           }
         }
         e.target.value='';
@@ -1239,7 +1497,14 @@
         save();
         renderAll();
         if(pending.type==='item'){
-          await autoUploadFlashcardAssetsToR2(pending.index,{image:true});
+          if(pending.source==='search'){
+            const searchEntry=findSearchResultEntry(pending.deckPath,pending.index);
+            if(searchEntry){
+              await autoUploadFlashcardAssetsToR2({item:searchEntry.item,dayKey:searchEntry.deckDay,onSynced:()=>syncSearchEntryToDeck(searchEntry)},{image:true});
+            }
+          }else{
+            await autoUploadFlashcardAssetsToR2(pending.index,{image:true});
+          }
         }
       };
       $('audioInput').onchange=async e=>{
@@ -1255,7 +1520,14 @@
           state.soundFile=data.fileName;
           state.soundDataUrl=data.dataUrl;
         }else{
-          const item=state.items[pending.index];
+          let item=null;
+          let searchEntry=null;
+          if(pending.source==='search'){
+            searchEntry=findSearchResultEntry(pending.deckPath,pending.index);
+            item=searchEntry?.item||null;
+          }else{
+            item=state.items[pending.index];
+          }
           if(item){
             if(pending.kind==='single'){
               item.audioFile=data.fileName;
@@ -1270,6 +1542,7 @@
               item.audioEnFile=data.fileName;
               item.audioEnDataUrl=data.dataUrl;
             }
+            if(searchEntry)syncSearchEntryToDeck(searchEntry);
           }
         }
         e.target.value='';
@@ -1277,11 +1550,18 @@
         save();
         renderAll();
         if(pending.type!=='sound'&&pending.kind==='single'){
-          await autoUploadFlashcardAssetsToR2(pending.index,{audio:true});
+          if(pending.source==='search'){
+            const searchEntry=findSearchResultEntry(pending.deckPath,pending.index);
+            if(searchEntry){
+              await autoUploadFlashcardAssetsToR2({item:searchEntry.item,dayKey:searchEntry.deckDay,onSynced:()=>syncSearchEntryToDeck(searchEntry)},{audio:true});
+            }
+          }else{
+            await autoUploadFlashcardAssetsToR2(pending.index,{audio:true});
+          }
         }
       };
       $('audioBatchInput').onchange=async e=>{const files=Array.from(e.target.files||[]);e.target.value='';if(!files.length)return;await importAudioBatch(files);closeAudioPopover()};
-      $('jsonInput').onchange=async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{importJsonPayload(JSON.parse(await asText(file)));state.publicDeckFileName='';state.publicDeckPath='';state.publicDeckSource='';editCardsState.selectedPath='';save()}catch(error){alert(error.message||'Erro ao importar JSON.')}};
+      $('jsonInput').onchange=async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{importJsonPayload(JSON.parse(await asText(file)));state.publicDeckFileName='';state.publicDeckPath='';state.publicDeckSource='';editCardsState.selectedPath='';resetDeckSearchState({clearMode:true});save()}catch(error){alert(error.message||'Erro ao importar JSON.')}};
       $('jsonBatchPublishInput').onchange=e=>{jsonBatchPublishState.files=Array.from(e.target.files||[]).filter(file=>/\.json$/i.test(file.name));jsonBatchPublishState.results=[];e.target.value='';syncJsonBatchPublishPopover()};
       $('jsonBatchPublishPopover').onclick=e=>{if(e.target===e.currentTarget)closeJsonBatchPublishPopover()};
       load();state.mode='flashcard';renderAll();hydrateAdminStudio();
