@@ -6615,13 +6615,19 @@ async function publishFlashcardEditorBundle({
     throw error;
   }
 
+  const normalizedDayKey = normalizeLevelFolderKey(dayKey);
+  const requestedFileName = normalizePublicFlashcardDeckFileName(fileName, '');
   const sourceFileName = normalizePublicDeckSourceToFileName(source)
-    || normalizePublicDeckSourceToFileName(pathName)
-    || normalizePublicFlashcardDeckFileName(fileName, '')
-    || (normalizeLevelFolderKey(dayKey) ? buildPublicLevelsFlashcardDeckFileName(dayKey) : '');
+    || normalizePublicDeckSourceToFileName(pathName);
+  const fallbackStem = safeGeneratedBase(String(payload?.title || '').trim(), 'deck');
+  const fallbackFileName = normalizedDayKey
+    ? `${fallbackStem}-${safeGeneratedBase(normalizedDayKey, '1')}.json`
+    : `${fallbackStem}.json`;
   const normalizedFileName = normalizePublicFlashcardDeckFileName(
-    sourceFileName,
-    `${safeGeneratedBase(String(payload?.title || '').trim(), 'deck')}.json`
+    requestedFileName
+      || sourceFileName
+      || (normalizedDayKey ? buildPublicLevelsFlashcardDeckFileName(normalizedDayKey) : ''),
+    fallbackFileName
   );
   const remoteDeck = buildFlashcardsRemoteDeckInfo(payload, normalizedFileName);
   const uploadedByName = new Map(
@@ -6692,7 +6698,7 @@ async function publishFlashcardEditorBundle({
   const postgresDeck = await upsertPublicFlashcardDeck({
     deckKey: `editor:${encodeURIComponent(normalizedFileName.toLowerCase())}`,
     fileName: normalizedFileName,
-    dayKey: normalizeLevelFolderKey(dayKey),
+    dayKey: normalizedDayKey,
     source: 'levels-editor',
     title: publishedPayload.title,
     payload: publishedPayload,
