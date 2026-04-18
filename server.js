@@ -11,6 +11,7 @@ const {
   S3Client,
   ListObjectsV2Command,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   DeleteObjectCommand
 } = require('@aws-sdk/client-s3');
@@ -3546,18 +3547,59 @@ async function requestR2(method, pathName, queryParams = {}) {
 
 async function putR2Object(objectKey, bodyBuffer, contentType = 'application/octet-stream') {
   const payloadBuffer = Buffer.isBuffer(bodyBuffer) ? bodyBuffer : Buffer.from(bodyBuffer || []);
+  const payloadHash = sha256HexBuffer(payloadBuffer);
   try {
     await getR2Client().send(new PutObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: objectKey,
       Body: payloadBuffer,
-      ContentType: contentType
+      ContentType: contentType,
+      Metadata: {
+        sha256: payloadHash
+      }
     }));
     return true;
   } catch (error) {
     const details = error?.message || error?.Code || String(error);
     throw new Error(`R2 PUT ${objectKey} falhou: ${details}`.trim());
   }
+}
+
+async function getR2ObjectHead(objectKey) {
+  try {
+    return await getR2Client().send(new HeadObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: objectKey
+    }));
+  } catch (error) {
+    const statusCode = Number(error?.$metadata?.httpStatusCode || 0);
+    const code = String(error?.Code || error?.name || '').toLowerCase();
+    if (statusCode === 404 || code.includes('notfound') || code.includes('nosuchkey')) {
+      return null;
+    }
+    const details = error?.message || error?.Code || String(error);
+    throw new Error(`R2 HEAD ${objectKey} falhou: ${details}`.trim());
+  }
+}
+
+async function putR2ObjectIfChanged(objectKey, bodyBuffer, contentType = 'application/octet-stream') {
+  const payloadBuffer = Buffer.isBuffer(bodyBuffer) ? bodyBuffer : Buffer.from(bodyBuffer || []);
+  const payloadHash = sha256HexBuffer(payloadBuffer);
+  const payloadMd5 = crypto.createHash('md5').update(payloadBuffer).digest('hex');
+  const payloadSize = payloadBuffer.length;
+  const head = await getR2ObjectHead(objectKey);
+  if (head) {
+    const remoteHash = String(head?.Metadata?.sha256 || '').trim().toLowerCase();
+    const remoteEtag = String(head?.ETag || '').replace(/"/g, '').trim().toLowerCase();
+    const remoteSize = Number(head?.ContentLength || -1);
+    const sameByHash = remoteHash && remoteHash === payloadHash;
+    const sameByEtag = remoteEtag && remoteSize === payloadSize && remoteEtag === payloadMd5;
+    if (sameByHash || sameByEtag) {
+      return { uploaded: false, skipped: true, reason: 'unchanged' };
+    }
+  }
+  await putR2Object(objectKey, payloadBuffer, contentType);
+  return { uploaded: true, skipped: false, reason: head ? 'updated' : 'created' };
 }
 
 function safeZipObjectName(name, fallback = 'playtalk-levels.zip') {
@@ -6592,6 +6634,8 @@ async function publishFlashcardEditorBundle({
     coverImage: typeof payload?.coverImage === 'string' ? payload.coverImage.trim() : '',
     items: []
   };
+  let uploadedAssetsCount = 0;
+  let skippedAssetsCount = 0;
   const items = getFlashcardPayloadItems(payload);
 
   for (let index = 0; index < items.length; index += 1) {
@@ -6609,7 +6653,13 @@ async function publishFlashcardEditorBundle({
         if (imageUpload?.buffer?.length) {
           const imageExtension = path.extname(imageFileName).toLowerCase() || '.webp';
           const imageObjectKey = `${remoteDeck.imagesFolder}/${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${imageExtension}`;
-          await putR2Object(imageObjectKey, imageUpload.buffer, imageUpload.contentType || contentTypeFromObjectKey(imageObjectKey));
+          const uploadResult = await putR2ObjectIfChanged(
+            imageObjectKey,
+            imageUpload.buffer,
+            imageUpload.contentType || contentTypeFromObjectKey(imageObjectKey)
+          );
+          if (uploadResult.uploaded) uploadedAssetsCount += 1;
+          else skippedAssetsCount += 1;
           setFlashcardItemImage(nextItem, buildFlashcardsR2PublicUrl(imageObjectKey));
         } else if (typeof imageValue === 'string' && imageValue.trim()) {
           setFlashcardItemImage(nextItem, imageValue.trim());
@@ -6623,7 +6673,13 @@ async function publishFlashcardEditorBundle({
       if (audioUpload?.buffer?.length) {
         const audioExtension = path.extname(audioFileName).toLowerCase() || '.mp3';
         const audioObjectKey = `${remoteDeck.audioFolder}/${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${audioExtension}`;
-        await putR2Object(audioObjectKey, audioUpload.buffer, audioUpload.contentType || contentTypeFromObjectKey(audioObjectKey));
+        const uploadResult = await putR2ObjectIfChanged(
+          audioObjectKey,
+          audioUpload.buffer,
+          audioUpload.contentType || contentTypeFromObjectKey(audioObjectKey)
+        );
+        if (uploadResult.uploaded) uploadedAssetsCount += 1;
+        else skippedAssetsCount += 1;
         setFlashcardItemAudio(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey));
       } else if (typeof audioValue === 'string' && audioValue.trim()) {
         setFlashcardItemAudio(nextItem, audioValue.trim());
@@ -6646,6 +6702,8 @@ async function publishFlashcardEditorBundle({
   return {
     fileName: normalizedFileName,
     itemCount: publishedPayload.items.length,
+    uploadedAssetsCount,
+    skippedAssetsCount,
     postgresDeck,
     payload: publishedPayload
   };
@@ -13911,9 +13969,7 @@ app.get(['/thata', '/thata/', '/thata.html'], (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  const queryIndex = req.originalUrl.indexOf('?');
-  const search = queryIndex >= 0 ? req.originalUrl.slice(queryIndex) : '';
-  res.redirect(302, `/flashcards${search}`);
+  res.sendFile(path.join(staticDir, 'index.html'));
 });
 
 app.use(express.static(staticDir));
@@ -15416,6 +15472,7 @@ app.post('/api/r2/upload-level-files', express.json({ limit: '100mb' }), async (
 
   try {
     const uploaded = [];
+    const skipped = [];
 
     for (const file of files) {
       const fileName = path.basename(typeof file?.name === 'string' ? file.name.trim() : '');
@@ -15425,11 +15482,12 @@ app.post('/api/r2/upload-level-files', express.json({ limit: '100mb' }), async (
 
       const objectKey = `${prefix}/${fileName}`;
       const fileBuffer = Buffer.from(base64, 'base64');
-      await putR2Object(objectKey, fileBuffer, contentTypeFromObjectKey(fileName));
-      uploaded.push(objectKey);
+      const result = await putR2ObjectIfChanged(objectKey, fileBuffer, contentTypeFromObjectKey(fileName));
+      if (result.uploaded) uploaded.push(objectKey);
+      else skipped.push(objectKey);
     }
 
-    if (!uploaded.length) {
+    if (!uploaded.length && !skipped.length) {
       res.status(400).json({ error: 'Nenhum arquivo valido foi enviado para o R2.' });
       return;
     }
@@ -15439,7 +15497,9 @@ app.post('/api/r2/upload-level-files', express.json({ limit: '100mb' }), async (
       bucket: R2_BUCKET_NAME,
       prefix,
       uploadedCount: uploaded.length,
-      uploaded
+      skippedCount: skipped.length,
+      uploaded,
+      skipped
     });
   } catch (error) {
     res.status(502).json({
@@ -15619,6 +15679,8 @@ app.post('/api/admin/flashcards/public-decks/publish-editor-bundle', express.jso
     res.json({
       success: true,
       itemCount: result.itemCount,
+      uploadedAssetsCount: result.uploadedAssetsCount || 0,
+      skippedAssetsCount: result.skippedAssetsCount || 0,
       fileName: result.fileName,
       deck: result.postgresDeck || null
     });
