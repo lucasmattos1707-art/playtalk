@@ -6609,6 +6609,7 @@ async function publishFlashcardEditorBundle({
   payload,
   decodedFiles = []
 }) {
+  const startedAtMs = Date.now();
   if (!isR2FluencyConfigured()) {
     const error = new Error('R2 nao configurado para publicar decks de flashcards.');
     error.statusCode = 503;
@@ -6643,17 +6644,20 @@ async function publishFlashcardEditorBundle({
   let uploadedAssetsCount = 0;
   let skippedAssetsCount = 0;
   const items = getFlashcardPayloadItems(payload);
-
-  for (let index = 0; index < items.length; index += 1) {
-    const item = items[index];
+  const processedItems = await Promise.all(items.map(async (item, index) => {
     const nextItem = JSON.parse(JSON.stringify(item || {}));
     const imageValue = readFlashcardItemImage(item);
     const audioValue = readFlashcardItemAudio(item);
+    let uploaded = 0;
+    let skipped = 0;
+    const tasks = [];
 
     if (imageValue) {
-      if (isFlashcardPlaceholderImageValue(imageValue)) {
-        setFlashcardItemImage(nextItem, getFlashcardPlaceholderImageUrl());
-      } else {
+      tasks.push((async () => {
+        if (isFlashcardPlaceholderImageValue(imageValue)) {
+          setFlashcardItemImage(nextItem, getFlashcardPlaceholderImageUrl());
+          return;
+        }
         const imageFileName = path.posix.basename(String(imageValue || '').trim());
         const imageUpload = uploadedByName.get(imageFileName);
         if (imageUpload?.buffer?.length) {
@@ -6664,36 +6668,51 @@ async function publishFlashcardEditorBundle({
             imageUpload.buffer,
             imageUpload.contentType || contentTypeFromObjectKey(imageObjectKey)
           );
-          if (uploadResult.uploaded) uploadedAssetsCount += 1;
-          else skippedAssetsCount += 1;
+          if (uploadResult.uploaded) uploaded += 1;
+          else skipped += 1;
           setFlashcardItemImage(nextItem, buildFlashcardsR2PublicUrl(imageObjectKey));
-        } else if (typeof imageValue === 'string' && imageValue.trim()) {
+          return;
+        }
+        if (typeof imageValue === 'string' && imageValue.trim()) {
           setFlashcardItemImage(nextItem, imageValue.trim());
         }
-      }
+      })());
     }
 
     if (audioValue) {
-      const audioFileName = path.posix.basename(String(audioValue || '').trim());
-      const audioUpload = uploadedByName.get(audioFileName);
-      if (audioUpload?.buffer?.length) {
-        const audioExtension = path.extname(audioFileName).toLowerCase() || '.mp3';
-        const audioObjectKey = `${remoteDeck.audioFolder}/${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${audioExtension}`;
-        const uploadResult = await putR2ObjectIfChanged(
-          audioObjectKey,
-          audioUpload.buffer,
-          audioUpload.contentType || contentTypeFromObjectKey(audioObjectKey)
-        );
-        if (uploadResult.uploaded) uploadedAssetsCount += 1;
-        else skippedAssetsCount += 1;
-        setFlashcardItemAudio(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey));
-      } else if (typeof audioValue === 'string' && audioValue.trim()) {
-        setFlashcardItemAudio(nextItem, audioValue.trim());
-      }
+      tasks.push((async () => {
+        const audioFileName = path.posix.basename(String(audioValue || '').trim());
+        const audioUpload = uploadedByName.get(audioFileName);
+        if (audioUpload?.buffer?.length) {
+          const audioExtension = path.extname(audioFileName).toLowerCase() || '.mp3';
+          const audioObjectKey = `${remoteDeck.audioFolder}/${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${audioExtension}`;
+          const uploadResult = await putR2ObjectIfChanged(
+            audioObjectKey,
+            audioUpload.buffer,
+            audioUpload.contentType || contentTypeFromObjectKey(audioObjectKey)
+          );
+          if (uploadResult.uploaded) uploaded += 1;
+          else skipped += 1;
+          setFlashcardItemAudio(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey));
+          return;
+        }
+        if (typeof audioValue === 'string' && audioValue.trim()) {
+          setFlashcardItemAudio(nextItem, audioValue.trim());
+        }
+      })());
     }
 
-    publishedPayload.items.push(nextItem);
-  }
+    await Promise.all(tasks);
+    return { index, nextItem, uploaded, skipped };
+  }));
+
+  processedItems
+    .sort((left, right) => left.index - right.index)
+    .forEach((entry) => {
+      uploadedAssetsCount += Number(entry?.uploaded || 0);
+      skippedAssetsCount += Number(entry?.skipped || 0);
+      publishedPayload.items.push(entry.nextItem);
+    });
 
   const postgresDeck = await upsertPublicFlashcardDeck({
     deckKey: `editor:${encodeURIComponent(normalizedFileName.toLowerCase())}`,
@@ -6708,10 +6727,12 @@ async function publishFlashcardEditorBundle({
   return {
     fileName: normalizedFileName,
     itemCount: publishedPayload.items.length,
+    receivedAssetsCount: decodedFiles.length,
     uploadedAssetsCount,
     skippedAssetsCount,
     postgresDeck,
-    payload: publishedPayload
+    payload: publishedPayload,
+    durationMs: Math.max(0, Date.now() - startedAtMs)
   };
 }
 
@@ -15685,10 +15706,13 @@ app.post('/api/admin/flashcards/public-decks/publish-editor-bundle', express.jso
     res.json({
       success: true,
       itemCount: result.itemCount,
+      receivedAssetsCount: result.receivedAssetsCount || 0,
       uploadedAssetsCount: result.uploadedAssetsCount || 0,
       skippedAssetsCount: result.skippedAssetsCount || 0,
+      durationMs: result.durationMs || 0,
       fileName: result.fileName,
-      deck: result.postgresDeck || null
+      deck: result.postgresDeck || null,
+      publishedPayload: result.payload || null
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({
