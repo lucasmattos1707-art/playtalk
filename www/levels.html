@@ -530,17 +530,56 @@
         if(!deckPath||!Number.isInteger(itemIndex)||itemIndex<0)return null;
         return{deckPath,itemIndex};
       }
+      function pinAddressForEntry(entry){
+        if(!entry)return null;
+        if(entry.source==='search'){
+          const deckPath=String(entry.deckPath||'').trim();
+          const itemIndex=Number.parseInt(String(entry.itemIndex),10);
+          if(!deckPath||!Number.isInteger(itemIndex)||itemIndex<0)return null;
+          return{deckPath,itemIndex};
+        }
+        if(entry.source==='editor'){
+          const deckPath=safeText(editCardsState.selectedPath)||safeText(state.publicDeckPath);
+          const itemIndex=Number.parseInt(String(entry.itemIndex),10);
+          if(!deckPath||!Number.isInteger(itemIndex)||itemIndex<0)return null;
+          return{deckPath,itemIndex};
+        }
+        return null;
+      }
       function isPinnedSearchEntry(entry){
-        if(!entry||entry.source!=='search')return false;
-        return editCardsState.pinnedKeys.has(searchEntryKey(entry.deckPath,entry.itemIndex));
+        const address=pinAddressForEntry(entry);
+        if(!address)return false;
+        return editCardsState.pinnedKeys.has(searchEntryKey(address.deckPath,address.itemIndex));
       }
       function togglePinnedSearchEntry(entry){
-        if(!entry||entry.source!=='search')return;
-        const key=searchEntryKey(entry.deckPath,entry.itemIndex);
+        const address=pinAddressForEntry(entry);
+        if(!address){
+          showFeedbackToast('Abra um deck do jogo para fixar este flashcard.');
+          return;
+        }
+        const key=searchEntryKey(address.deckPath,address.itemIndex);
         if(editCardsState.pinnedKeys.has(key))editCardsState.pinnedKeys.delete(key);
         else editCardsState.pinnedKeys.add(key);
         syncDeckSearchResults();
+        syncEditCardsDeckPicker();
         renderItems();
+      }
+      function shiftPinnedIndexesAfterRemoval(deckPath,removedIndex){
+        const targetPath=String(deckPath||'').trim();
+        const targetIndex=Number.parseInt(String(removedIndex),10);
+        if(!targetPath||!Number.isInteger(targetIndex)||targetIndex<0)return;
+        const next=new Set();
+        Array.from(editCardsState.pinnedKeys).forEach(key=>{
+          const parsed=parseSearchEntryKey(key);
+          if(!parsed||parsed.deckPath!==targetPath){
+            next.add(key);
+            return;
+          }
+          if(parsed.itemIndex===targetIndex)return;
+          const nextIndex=parsed.itemIndex>targetIndex?parsed.itemIndex-1:parsed.itemIndex;
+          next.add(searchEntryKey(parsed.deckPath,nextIndex));
+        });
+        editCardsState.pinnedKeys=next;
       }
       function clearPinnedSearchDeckPath(deckPath){
         const target=String(deckPath||'').trim();
@@ -565,7 +604,7 @@
           pinned:editCardsState.pinnedKeys.has(searchEntryKey(path,itemIndex))
         };
       }
-      function resetDeckSearchState({clearMode=false,clearPins=clearMode}={}){
+      function resetDeckSearchState({clearMode=false,clearPins=false}={}){
         if(clearMode)editCardsState.searchMode=false;
         editCardsState.searchQuery='';
         editCardsState.searchResults=[];
@@ -580,18 +619,8 @@
           editCardsState.searchResults=[];
           return;
         }
-        const resultMap=new Map();
-        Array.from(editCardsState.pinnedKeys).forEach(key=>{
-          const parsed=parseSearchEntryKey(key);
-          if(!parsed)return;
-          const deck=findDeckByPath(parsed.deckPath);
-          const entry=buildSearchEntry(deck,parsed.itemIndex);
-          if(!entry){
-            editCardsState.pinnedKeys.delete(key);
-            return;
-          }
-          resultMap.set(searchEntryKey(entry.deckPath,entry.itemIndex),entry);
-        });
+        const searchMatches=[];
+        const searchMatchKeySet=new Set();
         if(query.length>=3){
           editCardsState.decks.forEach(deck=>{
             const data=deck?.data&&typeof deck.data==='object'?deck.data:null;
@@ -601,11 +630,28 @@
               if(!text.includes(query))return;
               const entry=buildSearchEntry(deck,itemIndex);
               if(!entry)return;
-              resultMap.set(searchEntryKey(entry.deckPath,entry.itemIndex),entry);
+              const key=searchEntryKey(entry.deckPath,entry.itemIndex);
+              if(searchMatchKeySet.has(key))return;
+              searchMatchKeySet.add(key);
+              searchMatches.push(entry);
             });
           });
         }
-        editCardsState.searchResults=Array.from(resultMap.values());
+        const pinnedMatches=[];
+        Array.from(editCardsState.pinnedKeys).forEach(key=>{
+          const parsed=parseSearchEntryKey(key);
+          if(!parsed)return;
+          const deck=findDeckByPath(parsed.deckPath);
+          const entry=buildSearchEntry(deck,parsed.itemIndex);
+          if(!entry){
+            editCardsState.pinnedKeys.delete(key);
+            return;
+          }
+          const entryKey=searchEntryKey(entry.deckPath,entry.itemIndex);
+          if(searchMatchKeySet.has(entryKey))return;
+          pinnedMatches.push(entry);
+        });
+        editCardsState.searchResults=[...searchMatches,...pinnedMatches];
       }
       function renderableFlashcardEntries(){
         if(isDeckSearchActive())return editCardsState.searchResults;
@@ -1440,7 +1486,7 @@
           const top=document.createElement('div');
           top.className='row';
           top.style.justifyContent='flex-end';
-          if(editCardsState.searchMode&&entry.source==='search'){
+          if(state.mode==='flashcard'){
             const pin=document.createElement('button');
             pin.type='button';
             pin.className=`search-pin${isPinnedSearchEntry(entry)?' is-pinned':''}`;
@@ -1483,12 +1529,14 @@
                 deck.data.items.splice(entry.itemIndex,1);
                 deck.count=Math.max(0,Number(deck.count||0)-1);
                 if(deck.path===editCardsState.selectedPath&&entry.itemIndex<state.items.length)state.items.splice(entry.itemIndex,1);
-                clearPinnedSearchDeckPath(deck.path);
+                shiftPinnedIndexesAfterRemoval(deck.path,entry.itemIndex);
                 queuePersistDeckByPath(deck.path,{delay:60});
               }
               syncDeckSearchResults();
             }else{
+              const editorDeckPath=safeText(editCardsState.selectedPath)||safeText(state.publicDeckPath);
               state.items.splice(sourceIndex,1);
+              if(editorDeckPath)shiftPinnedIndexesAfterRemoval(editorDeckPath,sourceIndex);
               queuePersistCurrentEditorDeck({delay:60});
             }
             save();
@@ -1594,7 +1642,7 @@
         }
         editCardsState.searchMode=true;
         editCardsState.searchQuery='';
-        editCardsState.searchResults=[];
+        syncDeckSearchResults();
         clearAdminSelection();
         closeItemAdminPopover();
         syncEditCardsDeckPicker();
