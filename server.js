@@ -14358,9 +14358,15 @@ app.post('/api/tts/elevenlabs', async (req, res) => {
   const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
   const fileName = typeof req.body?.fileName === 'string' ? req.body.fileName.trim() : 'playtalk-voice.mp3';
   const requestedVoiceId = typeof req.body?.voiceId === 'string' ? req.body.voiceId.trim() : '';
+  const requestedVoice = typeof req.body?.voice === 'string' ? req.body.voice.trim().toLowerCase() : '';
   const requestedLanguageCode = typeof req.body?.languageCode === 'string' ? req.body.languageCode.trim().toLowerCase() : '';
   const languageCode = /^[a-z]{2}$/.test(requestedLanguageCode) ? requestedLanguageCode : '';
-  const voiceId = requestedVoiceId || ELEVENLABS_VOICE_ID_HARRY;
+  const voiceId = requestedVoiceId
+    || (requestedVoice === 'harry' || requestedVoice === 'elevenlabs:harry'
+      ? ELEVENLABS_VOICE_ID_HARRY
+      : requestedVoice === 'burt-raynalds' || requestedVoice === 'burt' || requestedVoice === 'elevenlabs:burt-raynalds' || requestedVoice === 'elevenlabs:burt'
+        ? ELEVENLABS_VOICE_ID_BURT_RAYNALDS
+        : ELEVENLABS_VOICE_ID_HARRY);
 
   if (!text) {
     res.status(400).json({ error: 'Texto vazio para gerar voz.' });
