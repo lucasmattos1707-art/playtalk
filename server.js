@@ -4557,59 +4557,75 @@ async function seedPublicFlashcardDecksFromAllcards(options = {}) {
 
   const task = (async () => {
     await ensurePublicFlashcardDecksTable();
-    const localEntries = await collectAllcardsManifestEntries();
+    const localSources = [
+      { rootPath: ALLCARDS_ROOT, source: 'allcards', deckKeyPrefix: 'allcards' },
+      { rootPath: LEGACY_FLASHCARDS_ROOT, source: 'legacy', deckKeyPrefix: 'legacy' }
+    ];
+    let total = 0;
     let seeded = 0;
 
-    for (const entry of localEntries) {
-      const fileName = normalizePublicFlashcardDeckFileName(entry?.name, 'deck.json');
-      const absolutePath = path.join(ALLCARDS_ROOT, fileName);
-      let payload = null;
+    for (const localSource of localSources) {
+      let dirEntries = [];
       try {
-        const raw = (await fs.promises.readFile(absolutePath, 'utf8')).replace(/^\uFEFF/, '');
-        payload = JSON.parse(raw);
+        dirEntries = await fs.promises.readdir(localSource.rootPath, { withFileTypes: true });
       } catch (_error) {
-        continue;
+        dirEntries = [];
       }
 
-      const deckKey = `allcards:${encodeURIComponent(fileName.toLowerCase())}`;
-      const title = typeof payload?.title === 'string' && payload.title.trim()
-        ? payload.title.trim()
-        : path.posix.basename(fileName, '.json');
-      const itemCount = getFlashcardPayloadItems(payload).length;
+      for (const dirEntry of dirEntries) {
+        if (!dirEntry?.isFile?.() || path.extname(dirEntry.name).toLowerCase() !== '.json') continue;
+        total += 1;
 
-      // Important: do not overwrite existing Postgres payload/media links during seed.
-      // Seed from /allcards should only create missing rows.
-      const insertResult = await pool.query(
-        `INSERT INTO public.flashcards_public_decks (
-           deck_key,
-           file_name,
-           day_key,
-           source,
-           title,
-           item_count,
-           payload,
-           updated_at
-         )
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, now())
-         ON CONFLICT (deck_key) DO NOTHING
-         RETURNING id`,
-        [
-          deckKey,
-          fileName,
-          '',
-          'allcards',
-          title,
-          itemCount,
-          JSON.stringify(payload)
-        ]
-      );
-      if (insertResult.rows.length) {
-        seeded += 1;
+        const fileName = normalizePublicFlashcardDeckFileName(dirEntry.name, 'deck.json');
+        const absolutePath = path.join(localSource.rootPath, fileName);
+        let payload = null;
+        try {
+          const raw = (await fs.promises.readFile(absolutePath, 'utf8')).replace(/^\uFEFF/, '');
+          payload = JSON.parse(raw);
+        } catch (_error) {
+          continue;
+        }
+
+        const deckKey = `${localSource.deckKeyPrefix}:${encodeURIComponent(fileName.toLowerCase())}`;
+        const title = typeof payload?.title === 'string' && payload.title.trim()
+          ? payload.title.trim()
+          : path.posix.basename(fileName, '.json');
+        const itemCount = getFlashcardPayloadItems(payload).length;
+
+        // Important: do not overwrite existing Postgres payload/media links during seed.
+        // Seed local folders should only create missing rows.
+        const insertResult = await pool.query(
+          `INSERT INTO public.flashcards_public_decks (
+             deck_key,
+             file_name,
+             day_key,
+             source,
+             title,
+             item_count,
+             payload,
+             updated_at
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, now())
+           ON CONFLICT DO NOTHING
+           RETURNING id`,
+          [
+            deckKey,
+            fileName,
+            '',
+            localSource.source,
+            title,
+            itemCount,
+            JSON.stringify(payload)
+          ]
+        );
+        if (insertResult.rows.length) {
+          seeded += 1;
+        }
       }
     }
 
     return {
-      total: localEntries.length,
+      total,
       seeded
     };
   })();
@@ -4626,11 +4642,11 @@ async function seedPublicFlashcardDecksFromAllcards(options = {}) {
   return result;
 }
 
-async function collectPostgresFlashcardManifestEntries() {
+async function collectPostgresFlashcardManifestEntries(options = {}) {
   if (!pool) return [];
   try {
     await ensurePublicFlashcardDecksTable();
-    const legacyDefaults = await collectLegacyDefaultPublicDeckIdentifiers();
+    const includeHidden = options?.includeHidden === true;
 
     const result = await pool.query(
       `SELECT file_name, day_key, source, title, item_count, payload, is_hidden, updated_at
@@ -4639,28 +4655,72 @@ async function collectPostgresFlashcardManifestEntries() {
     );
 
     return result.rows
-      .filter((row) => {
-        const source = String(row?.source || '').trim();
-        if (source === 'allcards') {
-          return false;
-        }
-
-        if (source === 'levels') {
-          const normalizedFileName = normalizePublicFlashcardDeckFileName(row?.file_name, '');
-          const normalizedDayKey = normalizeLevelFolderKey(row?.day_key || '');
-          if (legacyDefaults.fileNames.has(normalizedFileName) || legacyDefaults.dayKeys.has(normalizedDayKey)) {
-            return false;
-          }
-        }
-
-        return true;
-      })
+      .filter((row) => includeHidden || !Boolean(row?.is_hidden))
       .map((row) => buildPublicFlashcardDeckManifestEntryFromRow(row))
       .filter(Boolean);
   } catch (error) {
     console.error('Erro ao carregar decks publicos no Postgres:', error);
     return [];
   }
+}
+
+function isPlayablePublicFlashcardItem(item) {
+  if (!item || typeof item !== 'object') return false;
+  const english = readFlashcardItemEnglish(item);
+  const portuguese = readFlashcardItemPortuguese(item);
+  const image = readFlashcardItemImage(item);
+  if (!english || !portuguese) return false;
+  return !isFlashcardMagicImageSlotValue(image);
+}
+
+function countPlayablePublicFlashcardsInPayload(payload) {
+  const items = getFlashcardPayloadItems(payload);
+  if (!items.length) return 0;
+  let count = 0;
+  for (const item of items) {
+    if (isPlayablePublicFlashcardItem(item)) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+async function computePostgresFlashcardsGameSummary(options = {}) {
+  if (!pool) {
+    return {
+      decksCount: 0,
+      flashcardsCount: 0
+    };
+  }
+
+  await ensurePublicFlashcardDecksTable();
+  const includeHidden = options?.includeHidden === true;
+  const result = await pool.query(
+    `SELECT file_name, day_key, source, title, payload, is_hidden
+     FROM public.flashcards_public_decks
+     ORDER BY lower(title) ASC, updated_at DESC`
+  );
+
+  let decksCount = 0;
+  let flashcardsCount = 0;
+  for (const row of result.rows) {
+    if (!includeHidden && Boolean(row?.is_hidden)) continue;
+    const repaired = repairPublicDeckPayloadAssets(row?.payload, row);
+    const payload = repaired?.payload && typeof repaired.payload === 'object'
+      ? repaired.payload
+      : null;
+    if (!payload) continue;
+
+    const playableCount = countPlayablePublicFlashcardsInPayload(payload);
+    if (playableCount <= 0) continue;
+    decksCount += 1;
+    flashcardsCount += playableCount;
+  }
+
+  return {
+    decksCount,
+    flashcardsCount
+  };
 }
 
 async function findPostgresFlashcardDeckPayloadByFileName(fileName) {
@@ -5064,46 +5124,6 @@ function buildRepeatedBattleCardsSelection(cards, limit) {
 
 async function loadBattleCardsDeckPool() {
   const decks = [];
-
-  try {
-    let localEntries = [];
-    try {
-      localEntries = await fs.promises.readdir(ALLCARDS_ROOT, { withFileTypes: true });
-    } catch (_error) {
-      localEntries = [];
-    }
-
-    for (const entry of localEntries) {
-      if (!entry?.isFile?.() || !entry.name.toLowerCase().endsWith('.json')) continue;
-      try {
-        const fullPath = path.join(ALLCARDS_ROOT, entry.name);
-        const raw = (await fs.promises.readFile(fullPath, 'utf8')).replace(/^\uFEFF/, '');
-        const payload = JSON.parse(raw);
-        const items = getFlashcardPayloadItems(payload);
-        const deckTitle = normalizeBattleCardsDeckTitle(payload, entry.name);
-        const deckId = `allcards:${entry.name}`;
-        const cards = items
-          .map((item, index) => normalizeBattleCardsDeckCard(item, {
-            deckTitle,
-            deckId,
-            sourceIndex: index
-          }))
-          .filter(Boolean);
-        if (!cards.length) continue;
-        decks.push({
-          id: deckId,
-          title: deckTitle,
-          source: `allcards/${entry.name}`,
-          fileName: entry.name,
-          cards
-        });
-      } catch (_error) {
-        // ignore malformed local decks
-      }
-    }
-  } catch (_error) {
-    // ignore local deck load failures
-  }
 
   if (pool) {
     try {
@@ -6785,42 +6805,15 @@ async function publishFlashcardSourcesToR2(sourceInfos) {
 }
 
 async function listAdminFlashcardDecks() {
-  const manifestPath = path.posix.join(FLASHCARD_DATA_RELATIVE_ROOT, 'manifest.json');
-  let builtinFiles = [];
-  try {
-    const manifest = await readJsonFromRelativePath(manifestPath);
-    builtinFiles = Array.isArray(manifest?.files) ? manifest.files : [];
-  } catch (_error) {
-    builtinFiles = [];
-  }
-
-  const sources = builtinFiles.map((file) => ({
-    source: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || '')),
-    relativeJsonPath: normalizeMirroredRelativePath(String(file?.source || file?.path || file?.name || ''))
-  })).filter((entry) => entry.source && entry.relativeJsonPath);
-
-  const decks = [];
-  for (const entry of sources) {
-    try {
-      const payload = await readJsonFromRelativePath(entry.relativeJsonPath);
-      const items = getFlashcardPayloadItems(payload);
-      decks.push({
-        source: entry.source,
-        title: typeof payload?.title === 'string' && payload.title.trim()
-          ? payload.title.trim()
-          : path.posix.basename(entry.relativeJsonPath),
-        coverImage: typeof payload?.coverImage === 'string' ? payload.coverImage.trim() : '',
-        count: items.length
-      });
-    } catch (_error) {
-      decks.push({
-        source: entry.source,
-        title: path.posix.basename(entry.relativeJsonPath),
-        coverImage: '',
-        count: 0
-      });
-    }
-  }
+  const manifestEntries = await collectPostgresFlashcardManifestEntries({ includeHidden: true });
+  const decks = manifestEntries.map((entry) => ({
+    source: String(entry?.source || '').trim(),
+    title: String(entry?.title || '').trim() || String(entry?.name || '').trim() || 'Deck',
+    coverImage: typeof entry?.coverImage === 'string' ? entry.coverImage.trim() : '',
+    count: Math.max(0, Number(entry?.count) || 0),
+    isHidden: Boolean(entry?.isHidden),
+    updatedAt: entry?.updatedAt || null
+  })).filter((entry) => entry.source);
 
   return decks.sort((left, right) => left.title.localeCompare(right.title, 'pt-BR', {
     sensitivity: 'base',
@@ -9860,12 +9853,39 @@ app.get('/api/admin/flashcards/reports-summary', async (req, res) => {
 app.get('/api/admin/flashcards/decks', async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    await seedPublicFlashcardDecksFromAllcards({ force: false });
     const decks = await listAdminFlashcardDecks();
-    res.json({ success: true, decks });
+    const gameSummary = await computePostgresFlashcardsGameSummary();
+    res.json({ success: true, decks, gameSummary });
   } catch (error) {
     res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Falha ao carregar os decks de flashcards.'
+    });
+  }
+});
+
+app.get('/api/admin/flashcards/game-summary', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const summary = await computePostgresFlashcardsGameSummary();
+    res.json({
+      success: true,
+      decksCount: summary.decksCount,
+      flashcardsCount: summary.flashcardsCount
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao carregar o resumo de decks e flashcards.'
     });
   }
 });
@@ -9994,19 +10014,7 @@ app.post('/api/admin/flashcards/public-decks/visibility', express.json({ limit: 
         return;
       }
     }
-
-    const localDeckRecord = await findLocalFlashcardDeckRecordByFileName(fileName);
-    if (!localDeckRecord) {
-      res.status(404).json({ success: false, message: 'Deck nao encontrado.' });
-      return;
-    }
-
-    await setLocalFlashcardDeckHiddenState(fileName, hidden);
-    const nextDeckRecord = await findLocalFlashcardDeckRecordByFileName(fileName);
-    res.json({
-      success: true,
-      deck: nextDeckRecord?.deck || { ...localDeckRecord.deck, isHidden: hidden }
-    });
+    res.status(404).json({ success: false, message: 'Deck nao encontrado no Postgres.' });
   } catch (error) {
     res.status(error.statusCode || 500).json({
       success: false,
@@ -10200,6 +10208,11 @@ app.post('/api/admin/flashcards/public-decks/approve-cover', express.json({ limi
 
 app.get('/api/flashcards/manifest', async (req, res) => {
   try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    await seedPublicFlashcardDecksFromAllcards({ force: false });
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     const requesterIsAdmin = isAdminUserRecord(authUser);
     const includeHiddenRequested = String(req.query?.includeHidden || '').trim().toLowerCase();
@@ -10208,26 +10221,9 @@ app.get('/api/flashcards/manifest', async (req, res) => {
       || includeHiddenRequested === 'true'
       || includeHiddenRequested === 'yes'
     );
-    const [localFiles, postgresFiles] = await Promise.all([
-      collectAllcardsManifestEntries(),
-      collectPostgresFlashcardManifestEntries()
-    ]);
-    const mergedBySource = new Map();
-    // Prefer decks from Postgres when source keys collide so /levels edits
-    // stay in sync with /flashcards without being shadowed by local /allcards files.
-    [...postgresFiles, ...localFiles].forEach((entry) => {
-      const sourceKey = String(entry?.source || entry?.path || entry?.name || '').trim().toLowerCase();
-      if (!sourceKey || mergedBySource.has(sourceKey)) return;
-      mergedBySource.set(sourceKey, entry);
+    const files = await collectPostgresFlashcardManifestEntries({
+      includeHidden: includeHiddenForRequester
     });
-    const files = Array.from(mergedBySource.values())
-      .filter((entry) => includeHiddenForRequester || !Boolean(entry?.isHidden))
-      .sort((left, right) => (
-        String(left?.title || '').localeCompare(String(right?.title || ''), 'pt-BR', {
-          sensitivity: 'base',
-          numeric: true
-        })
-      ));
     res.setHeader('Cache-Control', 'no-store');
     res.json({
       success: true,
@@ -10235,10 +10231,10 @@ app.get('/api/flashcards/manifest', async (req, res) => {
       files
     });
   } catch (error) {
-    console.error('Erro ao montar manifesto de allcards:', error);
+    console.error('Erro ao montar manifesto de flashcards no Postgres:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao carregar os decks em allcards.'
+      message: 'Erro ao carregar os decks de flashcards no Postgres.'
     });
   }
 });
@@ -14053,27 +14049,11 @@ app.get(/^\/allcards\/([^/]+\.json)$/i, async (req, res, next) => {
       return;
     }
 
-    const localDeckRecord = await findLocalFlashcardDeckRecordByFileName(normalizedFileName);
-    if (localDeckRecord?.deck?.isHidden && !requesterIsAdmin) {
-      res.status(404).send('Deck nao encontrado.');
-      return;
-    }
-    if (localDeckRecord?.filePath) {
-      res.setHeader('Cache-Control', 'no-store');
-      res.sendFile(localDeckRecord.filePath);
-      return;
-    }
-
     next();
   } catch (error) {
     next(error);
   }
 });
-app.use('/allcards', express.static(ALLCARDS_ROOT, {
-  setHeaders(res) {
-    res.setHeader('Cache-Control', 'no-store');
-  }
-}));
 app.get(/^\/accesskey\/(.+)$/, async (req, res) => {
   try {
     const relativePath = String(req.params?.[0] || '').replace(/\\/g, '/').replace(/^\/+/, '');

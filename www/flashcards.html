@@ -6611,7 +6611,7 @@
       const FLASHCARD_CAMERA_IMAGE_URL = `${FLASHCARDS_R2_PUBLIC_ROOT}/${FLASHCARD_CAMERA_OBJECT_KEY}`;
       const DATA_MANIFEST_REMOTE_PATH = '/api/flashcards/manifest';
       const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
-      const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
+      const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v3-postgres';
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
       const USER_HIDDEN_STORAGE_KEY = 'playtalk-flashcards-hidden-v1';
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
@@ -6861,6 +6861,7 @@
           activeCardId: '',
           selectedDeckSource: '',
           decks: [],
+          welcomeSummary: null,
           reportFilter: '',
           reportCounts: new Map(),
           draftCards: new Map(),
@@ -8460,6 +8461,19 @@
         };
       }
 
+      function normalizeWelcomeAdminSummary(payload) {
+        const decksCount = Math.max(0, Math.round(Number(payload?.decksCount) || 0));
+        const flashcardsCount = Math.max(0, Math.round(Number(payload?.flashcardsCount) || 0));
+        return { decksCount, flashcardsCount };
+      }
+
+      function resolveWelcomeAdminStats() {
+        if (state.admin?.welcomeSummary) {
+          return normalizeWelcomeAdminSummary(state.admin.welcomeSummary);
+        }
+        return null;
+      }
+
       function syncWelcomeAdminStats() {
         if (!els.welcomeAdminStats) return;
         const showAdminStats = Boolean(state.user?.id) && isAdminUser();
@@ -8468,7 +8482,13 @@
           els.welcomeAdminStats.hidden = true;
           return;
         }
-        const { decksCount, flashcardsCount } = countWelcomePlayableDecksAndFlashcards();
+        const summary = resolveWelcomeAdminStats();
+        if (!summary) {
+          els.welcomeAdminStats.textContent = 'Sincronizando decks...';
+          els.welcomeAdminStats.hidden = false;
+          return;
+        }
+        const { decksCount, flashcardsCount } = summary;
         els.welcomeAdminStats.textContent = `${decksCount} decks ${flashcardsCount} flashcards`;
         els.welcomeAdminStats.hidden = false;
       }
@@ -9645,6 +9665,7 @@
         if ((!hasCloudProgress && localProgress.size > 0) || (!hasCloudStats && hasMeaningfulStats(localStats))) {
           await syncFlashcardCloudNow();
         }
+        await refreshAdminWelcomeSummary();
         syncWelcomeGate();
       }
 
@@ -9673,6 +9694,7 @@
         state.libraryPage = 1;
         state.admin.selectedDeckSource = '';
         state.admin.decks = [];
+        state.admin.welcomeSummary = null;
         state.admin.reportFilter = '';
         state.admin.reportCounts = new Map();
         state.admin.draftCards = new Map();
@@ -10620,6 +10642,7 @@
         state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
         await refreshAdminDecks();
         await refreshAdminReportSummary();
+        await refreshAdminWelcomeSummary();
         saveCachedCards(state.allCards);
         syncWelcomeAdminStats();
       }
@@ -10952,6 +10975,28 @@
         els.adminReportFilter.value = currentValue;
       }
 
+      async function refreshAdminWelcomeSummary() {
+        if (!isAdminUser()) {
+          state.admin.welcomeSummary = null;
+          syncWelcomeAdminStats();
+          return;
+        }
+        try {
+          const response = await fetch(buildApiUrl('/api/admin/flashcards/game-summary'), {
+            headers: buildAuthHeaders(),
+            cache: 'no-store'
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Falha ao carregar resumo dos decks.');
+          }
+          state.admin.welcomeSummary = normalizeWelcomeAdminSummary(payload);
+        } catch (_error) {
+          state.admin.welcomeSummary = null;
+        }
+        syncWelcomeAdminStats();
+      }
+
       async function refreshAdminReportSummary() {
         if (!isAdminUser()) {
           state.admin.reportCounts = new Map();
@@ -10979,6 +11024,7 @@
       async function refreshAdminDecks() {
         if (!isAdminUser()) {
           state.admin.decks = [];
+          state.admin.welcomeSummary = null;
           syncAdminDeckSelect();
           return;
         }
@@ -11167,6 +11213,7 @@
           state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
           await refreshAdminDecks();
           await refreshAdminReportSummary();
+          await refreshAdminWelcomeSummary();
           saveCachedCards(state.allCards);
           syncWelcomeAdminStats();
           refreshLibrary();
