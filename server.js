@@ -10213,7 +10213,9 @@ app.get('/api/flashcards/manifest', async (req, res) => {
       collectPostgresFlashcardManifestEntries()
     ]);
     const mergedBySource = new Map();
-    [...localFiles, ...postgresFiles].forEach((entry) => {
+    // Prefer decks from Postgres when source keys collide so /levels edits
+    // stay in sync with /flashcards without being shadowed by local /allcards files.
+    [...postgresFiles, ...localFiles].forEach((entry) => {
       const sourceKey = String(entry?.source || entry?.path || entry?.name || '').trim().toLowerCase();
       if (!sourceKey || mergedBySource.has(sourceKey)) return;
       mergedBySource.set(sourceKey, entry);
