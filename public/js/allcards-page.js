@@ -52,6 +52,16 @@
     return typeof value === 'string' ? value.trim() : '';
   }
 
+  function slug(value) {
+    return String(value || '')
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'card';
+  }
+
   function escapeHtml(value) {
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -282,22 +292,32 @@
         ? payload.items
         : [];
 
-    return items.map((item, index) => ({
-      id: `${idSource.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-${index}`,
-      source: sourceKey,
-      sourceIndex: index,
-      deckTitle: title,
-      imageUrl: safeText(item?.imagem || item?.image),
-      imageDisplayUrl: safeText(item?.imagem || item?.image),
-      english: safeText(item?.nomeIngles || item?.english || item?.word),
-      portuguese: safeText(item?.nomePortugues || item?.portuguese || item?.translation),
-      audioUrl: safeText(item?.audio || item?.audioUrl)
-    }));
+    return items.map((item, index) => {
+      const legacyId = `${idSource.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-${index}`;
+      return {
+        id: `${slug(idSource)}-${slug(title)}-${index}`,
+        legacyId,
+        source: sourceKey,
+        sourceIndex: index,
+        deckTitle: title,
+        imageUrl: safeText(item?.imagem || item?.image),
+        imageDisplayUrl: safeText(item?.imagem || item?.image),
+        english: safeText(item?.nomeIngles || item?.english || item?.word),
+        portuguese: safeText(item?.nomePortugues || item?.portuguese || item?.translation),
+        audioUrl: safeText(item?.audio || item?.audioUrl)
+      };
+    });
   }
 
   function unresolvedProgressCount(progressMap) {
     const cache = readCardsCache();
-    const cardIds = new Set(cache.map((card) => safeText(card?.id)).filter(Boolean));
+    const cardIds = new Set();
+    cache.forEach((card) => {
+      const id = safeText(card?.id);
+      const legacyId = safeText(card?.legacyId);
+      if (id) cardIds.add(id);
+      if (legacyId) cardIds.add(legacyId);
+    });
     return Array.from(progressMap.values()).filter((progress) => !cardIds.has(progress.cardId)).length;
   }
 
@@ -424,7 +444,13 @@
 
   function hydrateCards(progressMap) {
     const cache = readCardsCache();
-    const cardMap = new Map(cache.map((card) => [safeText(card?.id), card]));
+    const cardMap = new Map();
+    cache.forEach((card) => {
+      const id = safeText(card?.id);
+      const legacyId = safeText(card?.legacyId);
+      if (id) cardMap.set(id, card);
+      if (legacyId && !cardMap.has(legacyId)) cardMap.set(legacyId, card);
+    });
     state.cards = Array.from(progressMap.values())
       .map((progress) => {
         const card = cardMap.get(progress.cardId);

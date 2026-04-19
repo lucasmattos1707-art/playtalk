@@ -4,6 +4,10 @@
   const LOCAL_LEVEL_API_PATH = '/api/local-level/day/{day}/phase/{phase}';
   const LOCAL_WORDS_DECKS_API_PATH = '/api/local-level/words';
   const LOCAL_LEVEL_FILES_MANIFEST_PATH = 'data/local-level-files.json';
+  const DATA_MANIFEST_REMOTE_PATH = '/api/flashcards/manifest';
+  const FLASHCARDS_LOCAL_SOURCE_PREFIX = 'allcards';
+  const BUILTIN_FLASHCARDS_MANIFEST_PATH = 'data/flashcards/130/001/TryAll/manifest.json';
+  const BUILTIN_FLASHCARDS_ROOT_PATH = 'data/flashcards/130/001/TryAll';
   const PUBLIC_LEVEL_ASSET_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis';
   const PLAY_DESTINATION_TEMPLATE = 'index.html?phase={phase}&day={day}&source=cards#home';
   const CARDS_STATE_STORAGE_KEY = 'playtalk-cards-view-state-v1';
@@ -12,7 +16,6 @@
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/02.png',
     'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/03.png'
   ];
-  const JOURNEY_FLASHCARD_DECKS = [];
   const WORDS_DECKS = Array.from({ length: 25 }, (_, index) => {
     const deckNumber = String(index + 1).padStart(3, '0');
     return {
@@ -68,6 +71,30 @@
     return typeof value === 'string' ? value.trim() : '';
   }
 
+  function slug(value) {
+    return String(value || '')
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'deck';
+  }
+
+  function buildApiUrl(path) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
+      return window.PlaytalkApi.url(path);
+    }
+    return path;
+  }
+
+  function buildAuthHeaders(extraHeaders) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function') {
+      return window.PlaytalkApi.authHeaders(extraHeaders);
+    }
+    return { ...(extraHeaders || {}) };
+  }
+
   function getPhaseFolderCode(phaseNumber) {
     if (Number(phaseNumber) === 11) return '011';
     if (Number(phaseNumber) === 12) return '012';
@@ -91,6 +118,74 @@
     const dayFolder = String(Math.max(1, Number(dayNumber) || 1)).padStart(3, '0');
     const phaseFolder = getPhaseFolderCode(Number(phaseNumber) || 1);
     return `${PUBLIC_LEVEL_ASSET_BASE_URL}/${dayFolder}/${phaseFolder}/${encodeURIComponent(fileName)}`;
+  }
+
+  function normalizeFlashcardsDataPath(value) {
+    const cleaned = safeText(value);
+    if (!cleaned) return '';
+    if (/^https?:\/\//i.test(cleaned)) return cleaned;
+    return buildApiUrl(`/${cleaned.replace(/^\/+/, '')}`);
+  }
+
+  function withNoCacheUrl(value) {
+    const normalized = normalizeFlashcardsDataPath(value);
+    if (!normalized) return '';
+    const separator = normalized.includes('?') ? '&' : '?';
+    return `${normalized}${separator}_pt=${Date.now()}`;
+  }
+
+  function buildFlashcardsPublicUrl(objectKey) {
+    const encodedKey = safeText(objectKey)
+      .split('/')
+      .filter(Boolean)
+      .map((segment) => encodeURIComponent(segment))
+      .join('/');
+    return encodedKey ? buildApiUrl(`/${FLASHCARDS_LOCAL_SOURCE_PREFIX}/${encodedKey}`) : '';
+  }
+
+  function isFlashcardsDeckPath(value) {
+    const text = safeText(value);
+    if (!text) return false;
+    if (/^https?:\/\//i.test(text)) {
+      try {
+        const parsed = new URL(text);
+        const parsedPath = decodeURIComponent(String(parsed.pathname || '')).replace(/^\/+/, '');
+        return parsedPath.toLowerCase().endsWith('.json')
+          && parsedPath.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`);
+      } catch (_error) {
+        return false;
+      }
+    }
+    const normalized = text.replace(/^\/+/, '');
+    return normalized.toLowerCase().endsWith('.json')
+      && normalized.startsWith(`${FLASHCARDS_LOCAL_SOURCE_PREFIX}/`);
+  }
+
+  function resolveManifestDeckPath(file) {
+    const fallbackName = safeText(file?.name) || safeText(file?.title) || 'deck.json';
+    const candidates = [safeText(file?.path), safeText(file?.source), safeText(file?.name)].filter(Boolean);
+
+    for (const candidate of candidates) {
+      if (isFlashcardsDeckPath(candidate)) {
+        return /^https?:\/\//i.test(candidate) ? candidate : buildApiUrl(`/${candidate.replace(/^\/+/, '')}`);
+      }
+      const normalized = candidate.replace(/^\/+/, '');
+      if (/^[^/]+\.json$/i.test(normalized)) {
+        return buildFlashcardsPublicUrl(normalized);
+      }
+      if (normalized.toLowerCase().endsWith('.json')) {
+        return buildApiUrl(`/${normalized}`);
+      }
+    }
+
+    return buildFlashcardsPublicUrl(fallbackName);
+  }
+
+  function resolveDirectAssetUrl(value) {
+    const cleaned = safeText(value);
+    if (!cleaned) return '';
+    if (/^(?:https?:|data:|blob:)/i.test(cleaned)) return cleaned;
+    return buildApiUrl(`/${cleaned.replace(/\\/g, '/').replace(/^\/+/, '')}`);
   }
 
   function entriesFromData(data) {
@@ -217,34 +312,115 @@
   }
 
   async function loadDeckJson(deck) {
-    const data = await loadJson(deck.filePath);
-    return normalizeDeckPayload(deck, data);
+    const candidates = Array.isArray(deck.filePathCandidates) && deck.filePathCandidates.length
+      ? deck.filePathCandidates
+      : [deck.filePath];
+    let lastError = null;
+
+    for (const candidate of candidates) {
+      try {
+        const data = await loadJson(candidate);
+        return normalizeDeckPayload(deck, data);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error(`Falha ao carregar deck ${deck.title || deck.id}.`);
   }
 
   function normalizeDeckEntries(deck, entries) {
     const deckKey = safeText(deck.id) || `deck-${safeText(deck.filePath).replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
     const assetDay = Number(deck.day) || 1;
+    const useDirectAssets = deck.assetMode === 'direct';
     return entries.map((entry, index) => ({
       id: `flashcard-${deckKey}-${index}`,
-      image: resolveEntryImage(entry, assetDay, 1),
+      image: useDirectAssets
+        ? resolveDirectAssetUrl(entry?.imagem || entry?.image || entry?.coverImage || '')
+        : resolveEntryImage(entry, assetDay, 1),
       label: resolveEntryEnglish(entry),
       portuguese: resolveEntryPortuguese(entry),
-      audio: resolveEntryAudio(entry, assetDay, 1)
+      audio: useDirectAssets
+        ? resolveDirectAssetUrl(entry?.audio || entry?.audioUrl || '')
+        : resolveEntryAudio(entry, assetDay, 1)
     })).filter((entry) => entry.image || entry.label);
   }
 
   function normalizeDeckPayload(deck, data) {
     const entries = entriesFromData(data);
+    const normalizedEntries = normalizeDeckEntries(deck, entries);
+    const directCoverImage = deck.assetMode === 'direct'
+      ? resolveDirectAssetUrl(data?.coverImage || deck.image)
+      : '';
     return {
       ...deck,
       title: safeText(data?.title) || deck.title,
-      image: safeText(data?.coverImage) || deck.image,
-      entries: normalizeDeckEntries(deck, entries)
+      image: directCoverImage || safeText(data?.coverImage) || deck.image || normalizedEntries.find((entry) => entry.image)?.image || '',
+      entries: normalizedEntries
     };
   }
 
   async function loadFlashcardsView() {
-    return { kind: 'deck-library', items: await loadDeckCollection(JOURNEY_FLASHCARD_DECKS) };
+    return { kind: 'deck-library', items: await loadDeckCollection(await loadFlashcardDeckManifest()) };
+  }
+
+  function getFallbackDeckPath(file) {
+    const fileName = extractAssetFileName(safeText(file?.name) || safeText(file?.path) || 'deck.json');
+    if (!fileName) return '';
+    const rawPath = safeText(file?.path).replace(/\\/g, '/');
+    if (/^\/?data\/flashcards\/130\/001\/[^/]+\.json$/i.test(rawPath)) {
+      return buildApiUrl(`/${BUILTIN_FLASHCARDS_ROOT_PATH}/${encodeURIComponent(fileName)}`);
+    }
+    return resolveManifestDeckPath(file);
+  }
+
+  function normalizeFlashcardDeckManifestItem(file, index, options = {}) {
+    const fileName = safeText(file?.name) || extractAssetFileName(file?.path) || `deck-${index + 1}.json`;
+    const title = safeText(file?.title) || fileName.replace(/\.json$/i, '');
+    const source = safeText(file?.source || file?.path || fileName);
+    const filePath = options.fallback === true ? getFallbackDeckPath(file) : resolveManifestDeckPath(file);
+    const deckNumber = String(index + 1).padStart(3, '0');
+    return {
+      id: `flashcards-${slug(source || fileName)}-${deckNumber}`,
+      badge: safeText(file?.badge) || `Deck ${deckNumber}`,
+      title,
+      fileName,
+      filePath,
+      filePathCandidates: [filePath].filter(Boolean),
+      image: resolveDirectAssetUrl(file?.coverImage || ''),
+      assetMode: 'direct'
+    };
+  }
+
+  async function loadRemoteFlashcardDeckManifest() {
+    const response = await fetch(withNoCacheUrl(buildApiUrl(DATA_MANIFEST_REMOTE_PATH)), {
+      cache: 'no-store',
+      headers: buildAuthHeaders(),
+      credentials: 'include'
+    });
+    const payload = await response.json().catch(() => ({}));
+    const files = Array.isArray(payload?.files)
+      ? payload.files
+      : (Array.isArray(payload?.data?.files) ? payload.data.files : []);
+    if (!response.ok || !files.length) {
+      throw new Error(payload?.message || 'Nao consegui abrir o manifesto dos flashcards.');
+    }
+    return files.map((file, index) => normalizeFlashcardDeckManifestItem(file, index));
+  }
+
+  async function loadFallbackFlashcardDeckManifest() {
+    const payload = await loadJson(BUILTIN_FLASHCARDS_MANIFEST_PATH);
+    const files = Array.isArray(payload?.files) ? payload.files : [];
+    return files.map((file, index) => normalizeFlashcardDeckManifestItem(file, index, { fallback: true }));
+  }
+
+  async function loadFlashcardDeckManifest() {
+    try {
+      return await loadRemoteFlashcardDeckManifest();
+    } catch (error) {
+      console.warn('Falha ao carregar manifesto de flashcards pela API. Usando fallback local.', error);
+      return loadFallbackFlashcardDeckManifest();
+    }
   }
 
   async function loadWordsView() {
@@ -586,7 +762,9 @@
         grid.innerHTML = decks.map((deck) => `
           <button class="cards-library-card cards-library-card--launch" type="button" data-deck-id="${escapeHtml(deck.id)}" role="listitem" aria-label="Abrir deck ${escapeHtml(deck.title)}">
             <div class="cards-library-card__cover">
-              <img src="${escapeHtml(deck.image)}" alt="${escapeHtml(deck.title)}">
+              ${deck.image
+                ? `<img src="${escapeHtml(deck.image)}" alt="${escapeHtml(deck.title)}">`
+                : `<div class="cards-library-card__cover-fallback">${escapeHtml((deck.title || 'PT').slice(0, 2))}</div>`}
             </div>
             <p class="cards-library-card__day">${escapeHtml(deck.badge || 'Deck')}</p>
             <h3 class="cards-library-card__title">${escapeHtml(deck.title)}</h3>
@@ -625,7 +803,9 @@
         grid.innerHTML = deck.entries.map((item) => `
           <article class="cards-flashcard-item" data-flashcard-id="${escapeHtml(item.id)}" role="button" tabindex="0" aria-label="Ouvir ${escapeHtml(item.label || deck.title)}">
             <div class="cards-flashcard-item__image-wrap">
-              <img class="cards-flashcard-item__image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.label || deck.title)}">
+              ${item.image
+                ? `<img class="cards-flashcard-item__image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.label || deck.title)}">`
+                : `<div class="cards-library-card__cover-fallback">${escapeHtml((item.label || deck.title || 'PT').slice(0, 2))}</div>`}
             </div>
             <p class="cards-flashcard-item__label">${escapeHtml(item.label || deck.title)}</p>
           </article>
