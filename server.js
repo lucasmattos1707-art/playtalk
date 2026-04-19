@@ -234,14 +234,14 @@ const FLASHCARD_RANKING_WEEKDAY_INDEX = {
   Sat: 6
 };
 const BOOKS_PRONUNCIATION_TAG = 'speak-books';
-const FLASHCARD_REVIEW_SCALE_VERSION = 2;
+const FLASHCARD_REVIEW_SCALE_VERSION = 3;
 const FLASHCARD_REVIEW_PHASE_MAX = 6;
 const FLASHCARD_REVIEW_PHASES = {
   1: { key: 'first-star', label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
   2: { key: 'second-star', label: 'Second star', durationMs: 34 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
   3: { key: 'emerald-star', label: 'Emerald star', durationMs: 4 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/emerald.png' },
-  4: { key: 'third-star', label: 'Third star', durationMs: 10 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/ouro.png' },
-  5: { key: 'fourth-star', label: 'Fourth star', durationMs: 20 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
+  4: { key: 'third-star', label: 'Third star', durationMs: 10 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
+  5: { key: 'fourth-star', label: 'Fourth star', durationMs: 20 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/ouro.png' },
   6: { key: 'fifth-star', label: 'Fifth star', durationMs: 45 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/diamante.png' }
 };
 const PREMIUM_BILLING_PLANS = {
@@ -321,13 +321,29 @@ const flashcardRankingCountAliasForPeriod = (periodId) => (
   || FLASHCARD_RANKING_PERIODS.weekly.countAlias
 );
 
+const buildFlashcardProgressRankingScoreSql = (alias = '') => {
+  const prefix = alias ? `${alias}.` : '';
+  const activePhaseSql = `COALESCE(NULLIF(CASE WHEN ${prefix}status = 'memorizing' THEN ${prefix}target_phase_index ELSE ${prefix}phase_index END, 0), ${prefix}phase_index, 0)`;
+  return `
+          CASE
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%diamante%' THEN 6
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%ouro%' THEN 5
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%platina%' THEN 4
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%emerald%' THEN 3
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%quartz%' THEN 2
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%prata%' THEN 1
+            ELSE GREATEST(0, LEAST(${FLASHCARD_REVIEW_PHASE_MAX}, ${activePhaseSql}))
+          END`;
+};
+
 const buildFlashcardRankingCteSql = (periodId) => {
   const countAlias = flashcardRankingCountAliasForPeriod(periodId);
+  const progressScoreSql = buildFlashcardProgressRankingScoreSql();
   return `
     WITH progress_counts AS (
       SELECT
         user_id,
-        COUNT(*)::int AS total
+        COALESCE(SUM(${progressScoreSql}), 0)::int AS total
       FROM public.user_flashcard_progress
       GROUP BY user_id
     ),
@@ -842,13 +858,34 @@ const flashcardPhaseFromSealImage = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return 0;
   if (normalized.includes('diamante')) return 6;
-  if (normalized.includes('platina')) return 5;
-  if (normalized.includes('ouro')) return 4;
+  if (normalized.includes('ouro')) return 5;
+  if (normalized.includes('platina')) return 4;
   if (normalized.includes('emerald')) return 3;
   if (normalized.includes('quartz')) return 2;
   if (normalized.includes('prata')) return 1;
   return 0;
 };
+
+const flashcardRankingScoreForPhase = (phaseIndex) => (
+  Math.max(0, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(phaseIndex, 10) || 0))
+);
+
+const flashcardProgressRankingScore = (record) => {
+  if (!record) return 0;
+  const imagePhase = flashcardPhaseFromSealImage(record.sealImage || record.seal_image);
+  const activePhase = imagePhase || (
+    record.status === 'memorizing'
+      ? (Number.parseInt(record.targetPhaseIndex || record.target_phase_index, 10) || Number.parseInt(record.phaseIndex || record.phase_index, 10) || 0)
+      : (Number.parseInt(record.phaseIndex || record.phase_index, 10) || 0)
+  );
+  return flashcardRankingScoreForPhase(activePhase);
+};
+
+const flashcardProgressRankingScoreTotal = (records) => (
+  Array.isArray(records)
+    ? records.reduce((total, record) => total + flashcardProgressRankingScore(record), 0)
+    : 0
+);
 
 const migrateFlashcardReviewPhase = (rawPhase, raw, minPhase, preferSealImage = false) => {
   const lowerBound = minPhase ? 1 : 0;
@@ -861,9 +898,14 @@ const migrateFlashcardReviewPhase = (rawPhase, raw, minPhase, preferSealImage = 
   if (imagePhase > 0) {
     return Math.max(lowerBound, Math.min(FLASHCARD_REVIEW_PHASE_MAX, imagePhase));
   }
-  if (parsedPhase >= 3) {
-    return Math.min(FLASHCARD_REVIEW_PHASE_MAX, parsedPhase + 1);
+  if (version >= 2) {
+    if (parsedPhase === 4) return Math.max(lowerBound, 5);
+    if (parsedPhase === 5) return Math.max(lowerBound, 4);
+    return parsedPhase;
   }
+  if (parsedPhase === 3) return Math.max(lowerBound, 5);
+  if (parsedPhase === 4) return Math.max(lowerBound, 4);
+  if (parsedPhase >= 5) return FLASHCARD_REVIEW_PHASE_MAX;
   return parsedPhase;
 };
 
@@ -1814,11 +1856,12 @@ const syncFlashcardRankingTableFromProgressCounts = async () => {
   await ensureFlashcardRankingsTable();
 
   const periodKeys = getFlashcardRankingPeriodKeys();
+  const progressScoreSql = buildFlashcardProgressRankingScoreSql();
   await pool.query(
     `WITH progress_counts AS (
        SELECT
          user_id,
-         COUNT(*)::int AS total
+         COALESCE(SUM(${progressScoreSql}), 0)::int AS total
        FROM public.user_flashcard_progress
        GROUP BY user_id
      )
