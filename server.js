@@ -1392,6 +1392,7 @@ const ensureUserBooksConsumptionStatsTable = async () => {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_books_consumption_stats (
           user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          reading_chars bigint NOT NULL DEFAULT 0,
           speaking_chars bigint NOT NULL DEFAULT 0,
           listening_chars bigint NOT NULL DEFAULT 0,
           practice_seconds bigint NOT NULL DEFAULT 0,
@@ -1399,6 +1400,10 @@ const ensureUserBooksConsumptionStatsTable = async () => {
           updated_at timestamptz NOT NULL DEFAULT now(),
           PRIMARY KEY (user_id)
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_books_consumption_stats
+        ADD COLUMN IF NOT EXISTS reading_chars bigint NOT NULL DEFAULT 0
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_books_consumption_stats_updated_idx
@@ -2931,8 +2936,8 @@ const saveFlashcardStateForUser = async (userId, payload) => {
       await ensureUserBooksConsumptionStatsTable();
       await client.query(
         `INSERT INTO public.user_books_consumption_stats (
-           user_id, speaking_chars, listening_chars, practice_seconds, updated_at
-         ) VALUES ($1, $2, $3, $4, now())
+           user_id, reading_chars, speaking_chars, listening_chars, practice_seconds, updated_at
+         ) VALUES ($1, 0, $2, $3, $4, now())
          ON CONFLICT (user_id)
          DO UPDATE
            SET speaking_chars = public.user_books_consumption_stats.speaking_chars + EXCLUDED.speaking_chars,
@@ -10743,8 +10748,8 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
       if (speakingChars > 0) {
         await client.query(
           `INSERT INTO public.user_books_consumption_stats (
-             user_id, speaking_chars, listening_chars, practice_seconds, updated_at
-           ) VALUES ($1, $2, 0, 0, now())
+             user_id, reading_chars, speaking_chars, listening_chars, practice_seconds, updated_at
+           ) VALUES ($1, 0, $2, 0, 0, now())
            ON CONFLICT (user_id)
            DO UPDATE
              SET speaking_chars = public.user_books_consumption_stats.speaking_chars + EXCLUDED.speaking_chars,
@@ -10851,7 +10856,7 @@ app.get('/api/books/stats', async (req, res) => {
         [userId]
       ),
       pool.query(
-        `SELECT speaking_chars, listening_chars, practice_seconds
+        `SELECT reading_chars, speaking_chars, listening_chars, practice_seconds
          FROM public.user_books_consumption_stats
          WHERE user_id = $1
          LIMIT 1`,
@@ -10894,6 +10899,7 @@ app.get('/api/books/stats', async (req, res) => {
         generalPronunciationPercent: pronunciationStats.generalPronunciationPercent,
         pronunciationSamplesCount: pronunciationStats.pronunciationSamplesCount,
         latestPronunciationPercent: pronunciationStats.latestPronunciationPercent,
+        readingChars: Math.max(0, Number(consumption.reading_chars) || 0),
         speakingChars: Math.max(0, Number(consumption.speaking_chars) || 0),
         listeningChars: Math.max(0, Number(consumption.listening_chars) || 0),
         practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0),
@@ -10927,6 +10933,7 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
     }
 
     const userId = Number.parseInt(authUser.id, 10);
+    const readingCharsDelta = Math.max(0, Math.round(Number(req.body?.readingCharsDelta) || 0));
     const speakingCharsDelta = Math.max(0, Math.round(Number(req.body?.speakingCharsDelta) || 0));
     const listeningCharsDelta = Math.max(0, Math.round(Number(req.body?.listeningCharsDelta) || 0));
     const practiceSecondsDelta = Math.max(0, Math.round(Number(req.body?.practiceSecondsDelta) || 0));
@@ -10934,7 +10941,7 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
       res.status(400).json({ success: false, message: 'Usuario invalido.' });
       return;
     }
-    if (!speakingCharsDelta && !listeningCharsDelta && !practiceSecondsDelta) {
+    if (!readingCharsDelta && !speakingCharsDelta && !listeningCharsDelta && !practiceSecondsDelta) {
       res.json({ success: true, stats: null });
       return;
     }
@@ -10948,16 +10955,17 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
       await client.query('BEGIN');
       result = await client.query(
         `INSERT INTO public.user_books_consumption_stats (
-           user_id, speaking_chars, listening_chars, practice_seconds, updated_at
-         ) VALUES ($1, $2, $3, $4, now())
+           user_id, reading_chars, speaking_chars, listening_chars, practice_seconds, updated_at
+         ) VALUES ($1, $2, $3, $4, $5, now())
          ON CONFLICT (user_id)
          DO UPDATE
-           SET speaking_chars = public.user_books_consumption_stats.speaking_chars + EXCLUDED.speaking_chars,
+           SET reading_chars = public.user_books_consumption_stats.reading_chars + EXCLUDED.reading_chars,
+               speaking_chars = public.user_books_consumption_stats.speaking_chars + EXCLUDED.speaking_chars,
                listening_chars = public.user_books_consumption_stats.listening_chars + EXCLUDED.listening_chars,
                practice_seconds = public.user_books_consumption_stats.practice_seconds + EXCLUDED.practice_seconds,
                updated_at = now()
-         RETURNING speaking_chars, listening_chars, practice_seconds`,
-        [userId, speakingCharsDelta, listeningCharsDelta, practiceSecondsDelta]
+         RETURNING reading_chars, speaking_chars, listening_chars, practice_seconds`,
+        [userId, readingCharsDelta, speakingCharsDelta, listeningCharsDelta, practiceSecondsDelta]
       );
       await updateUserPresenceClassProgress(client, userId, {
         speakingCharsDelta,
@@ -10978,6 +10986,7 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
     res.json({
       success: true,
       stats: {
+        readingChars: Math.max(0, Number(result.rows[0]?.reading_chars) || 0),
         speakingChars: Math.max(0, Number(result.rows[0]?.speaking_chars) || 0),
         listeningChars: Math.max(0, Number(result.rows[0]?.listening_chars) || 0),
         practiceSeconds: Math.max(0, Number(result.rows[0]?.practice_seconds) || 0)

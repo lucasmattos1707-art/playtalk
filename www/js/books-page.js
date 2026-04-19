@@ -60,7 +60,10 @@
 
   const LISTENING_CHARS_PENDING_KEY = 'playtalk_books_listening_chars_pending_v1';
   const LISTENING_CHARS_TOTAL_KEY = 'playtalk_books_listening_chars_total_v1';
+  const READING_CHARS_PENDING_KEY = 'playtalk_books_reading_chars_pending_v1';
+  const READING_CHARS_TOTAL_KEY = 'playtalk_books_reading_chars_total_v1';
   const BOOKS_PRONUNCIATION_FLUSH_BATCH_SIZE = 6;
+  const BOOKS_READING_FLUSH_BATCH_CHARS = 250;
   const BOOKS_PRACTICE_FLUSH_BATCH_SECONDS = 60;
   const READER_PRACTICE_CAP_SECONDS = 10;
   const HOME_MUSIC_PLAYLIST = [
@@ -138,7 +141,6 @@
     homePremiumUntil: document.getElementById('booksHomePremiumUntil'),
     homeSwitchAccountBtn: document.getElementById('booksHomeSwitchAccountBtn'),
     homePremiumBtn: document.getElementById('booksHomePremiumBtn'),
-    homeLogoutBtn: document.getElementById('booksHomeLogoutBtn'),
     homeCover: document.getElementById('booksHomeCover'),
     homeNextCover: document.getElementById('booksHomeNextCover'),
     homeTextPanel: document.getElementById('booksHomeTextPanel'),
@@ -354,6 +356,10 @@
     allBooksWindowStart: 0,
     allBooksSentinelMode: false,
     allBooksAdvancePending: 0,
+    readingCharsPending: 0,
+    readingCharsTotal: 0,
+    homeLastReadingKey: '',
+    readerLastReadingKey: '',
     listeningCharsPending: 0,
     listeningCharsTotal: 0,
     practiceSecondsPending: 0,
@@ -608,6 +614,7 @@
   function getStatsMetricIconMarkup(kind) {
     switch (safeText(kind)) {
       case 'books':
+      case 'reading':
         return `
           <svg viewBox="0 0 64 64" aria-hidden="true">
             <path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" d="M12 16.5c0-2.49 2.01-4.5 4.5-4.5H31v39H16.5A4.5 4.5 0 0 1 12 46.5zm40 0c0-2.49-2.01-4.5-4.5-4.5H33v39h14.5a4.5 4.5 0 0 0 4.5-4.5zM31 15h2"/>
@@ -716,6 +723,8 @@
   }
 
   function loadLocalConsumptionCounters() {
+    state.readingCharsPending = readStoredInt(READING_CHARS_PENDING_KEY);
+    state.readingCharsTotal = readStoredInt(READING_CHARS_TOTAL_KEY);
     state.listeningCharsPending = readStoredInt(LISTENING_CHARS_PENDING_KEY);
     state.listeningCharsTotal = readStoredInt(LISTENING_CHARS_TOTAL_KEY);
     state.practiceSecondsPending = 0;
@@ -723,6 +732,8 @@
   }
 
   function persistLocalConsumptionCounters() {
+    writeStoredInt(READING_CHARS_PENDING_KEY, state.readingCharsPending);
+    writeStoredInt(READING_CHARS_TOTAL_KEY, state.readingCharsTotal);
     writeStoredInt(LISTENING_CHARS_PENDING_KEY, state.listeningCharsPending);
     writeStoredInt(LISTENING_CHARS_TOTAL_KEY, state.listeningCharsTotal);
   }
@@ -736,8 +747,13 @@
   function reconcileLocalConsumptionTotals(stats) {
     if (!stats || typeof stats !== 'object') return;
 
+    const serverReadingChars = Math.max(0, Math.round(Number(stats.readingChars) || 0));
     const serverListeningChars = Math.max(0, Math.round(Number(stats.listeningChars) || 0));
     const serverPracticeSeconds = Math.max(0, Math.round(Number(stats.practiceSeconds) || 0));
+    const nextReadingTotal = Math.max(
+      serverReadingChars + Math.max(0, Number(state.readingCharsPending) || 0),
+      Math.max(0, Number(state.readingCharsTotal) || 0)
+    );
     const nextListeningTotal = Math.max(
       serverListeningChars + Math.max(0, Number(state.listeningCharsPending) || 0),
       Math.max(0, Number(state.listeningCharsTotal) || 0)
@@ -748,9 +764,11 @@
     );
 
     if (
-      nextListeningTotal !== state.listeningCharsTotal
+      nextReadingTotal !== state.readingCharsTotal
+      || nextListeningTotal !== state.listeningCharsTotal
       || nextPracticeTotal !== state.practiceSecondsTotal
     ) {
+      state.readingCharsTotal = nextReadingTotal;
       state.listeningCharsTotal = nextListeningTotal;
       state.practiceSecondsTotal = nextPracticeTotal;
       persistLocalConsumptionCounters();
@@ -819,6 +837,19 @@
     void flushListeningProgressIfNeeded();
   }
 
+  function addReadingProgress(englishText, key) {
+    const english = safeText(englishText);
+    const charsDelta = english ? english.length : 0;
+    const dedupeKey = safeText(key) || english;
+    if (!charsDelta || !dedupeKey) return;
+
+    state.readingCharsPending += charsDelta;
+    state.readingCharsTotal += charsDelta;
+    persistLocalConsumptionCounters();
+    renderStatsPanel();
+    void flushListeningProgressIfNeeded();
+  }
+
   function addPracticeProgressSeconds(secondsDelta) {
     const normalized = Math.max(0, Number(secondsDelta) || 0);
     if (normalized <= 0) return;
@@ -831,18 +862,23 @@
   async function flushListeningProgressIfNeeded(force = false) {
     if (!state.user?.id || navigator.onLine === false) return false;
     if (state.listeningFlushInFlight) return false;
+    const pendingReadingChars = Math.max(0, Number(state.readingCharsPending) || 0);
     const pendingChars = Math.max(0, Number(state.listeningCharsPending) || 0);
     const pendingSeconds = Math.max(0, Number(state.practiceSecondsPending) || 0);
+    const chunkReadingChars = force
+      ? pendingReadingChars
+      : (Math.floor(pendingReadingChars / BOOKS_READING_FLUSH_BATCH_CHARS) * BOOKS_READING_FLUSH_BATCH_CHARS);
     const chunkChars = force
       ? pendingChars
       : (Math.floor(pendingChars / BOOKS_LISTENING_FLUSH_BATCH_CHARS) * BOOKS_LISTENING_FLUSH_BATCH_CHARS);
     const chunkSeconds = force
       ? Math.floor(pendingSeconds)
       : (Math.floor(pendingSeconds / BOOKS_PRACTICE_FLUSH_BATCH_SECONDS) * BOOKS_PRACTICE_FLUSH_BATCH_SECONDS);
-    if (!chunkChars && !chunkSeconds && !force) return false;
-    if (!chunkChars && !chunkSeconds && force) return false;
+    if (!chunkReadingChars && !chunkChars && !chunkSeconds && !force) return false;
+    if (!chunkReadingChars && !chunkChars && !chunkSeconds && force) return false;
 
     state.listeningFlushInFlight = true;
+    const sendReadingChars = Math.max(0, Math.round(chunkReadingChars) || 0);
     const sendChars = Math.max(0, Math.round(chunkChars) || 0);
     const sendSeconds = Math.max(0, Math.round(chunkSeconds) || 0);
     try {
@@ -851,6 +887,7 @@
         credentials: 'include',
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
+          readingCharsDelta: sendReadingChars,
           listeningCharsDelta: sendChars,
           practiceSecondsDelta: sendSeconds
         })
@@ -859,6 +896,7 @@
       if (!response.ok || !payload?.success) {
         return false;
       }
+      state.readingCharsPending = Math.max(0, state.readingCharsPending - sendReadingChars);
       state.listeningCharsPending = Math.max(0, state.listeningCharsPending - sendChars);
       state.practiceSecondsPending = Math.max(0, state.practiceSecondsPending - sendSeconds);
       persistLocalConsumptionCounters();
@@ -1383,10 +1421,6 @@
       els.homePremiumBtn.hidden = !isLoggedIn;
       els.homePremiumBtn.disabled = state.homeAuthBusy || state.homeStartBusy;
     }
-    if (els.homeLogoutBtn) {
-      els.homeLogoutBtn.hidden = !isLoggedIn;
-      els.homeLogoutBtn.disabled = state.homeAuthBusy || state.homeStartBusy;
-    }
   }
 
   function setHomeAuthStatus(message, tone) {
@@ -1437,9 +1471,6 @@
     if (isLoggedIn) {
       setHomeAuthStatus(`Conta ativa: ${safeText(state.user?.username)}.`, 'success');
     }
-    if (els.homeLogoutBtn) {
-      els.homeLogoutBtn.hidden = !isLoggedIn;
-    }
   }
 
   async function loginFromBooksHome() {
@@ -1488,30 +1519,6 @@
       state.homeAuthBusy = false;
       renderHomeAuthUi();
     }
-  }
-
-  async function logoutFromBooksHome() {
-    try {
-      await fetch(buildApiUrl('/logout'), {
-        method: 'POST',
-        credentials: 'include',
-        headers: buildAuthHeaders({ 'Content-Type': 'application/json' })
-      });
-    } catch (_error) {
-      // ignore network errors; we'll still clear local state
-    }
-
-    persistAuthToken('');
-    state.user = null;
-    state.stats = null;
-    state.isAdmin = false;
-    state.homeAuthBusy = false;
-    // Return to the login screen and stop audio.
-    stopHomeSleepPlayback({ keepIntro: false });
-    renderAvatar();
-    renderAdminUiToggle();
-    renderHomeAuthUi();
-    setHomeAuthStatus('', null);
   }
 
   // Override the legacy login-focused home UI: Books Home should launch directly.
@@ -2047,10 +2054,15 @@
       coverElement.style.backgroundColor = coverUrl ? '' : 'transparent';
     }
     const textPayload = getHomeSessionText(session, cardIndex);
-    renderHomeTextPanel(
-      textElement,
-      options.hideText ? '' : getHomeVisibleTextForMode(textPayload.english, textPayload.portuguese)
-    );
+    const visibleText = options.hideText ? '' : getHomeVisibleTextForMode(textPayload.english, textPayload.portuguese);
+    renderHomeTextPanel(textElement, visibleText);
+    if (!options.hideText && state.homeTextMode === 'english' && visibleText) {
+      const readingKey = `home:${safeText(session?.bookId)}:${Number(cardIndex) || 0}:${safeText(textPayload.english)}`;
+      if (state.homeLastReadingKey !== readingKey) {
+        state.homeLastReadingKey = readingKey;
+        addReadingProgress(textPayload.english, readingKey);
+      }
+    }
   }
 
   function renderHomeProgressUi() {
@@ -2385,6 +2397,12 @@
           hint: 'Entre para ver suas metricas.'
         },
         {
+          kind: 'reading',
+          label: 'Reading',
+          value: formatCountCompact(state.readingCharsTotal),
+          hint: 'Caracteres lidos neste aparelho.'
+        },
+        {
           kind: 'listening',
           label: 'Listening',
           value: formatCountCompact(state.listeningCharsTotal),
@@ -2402,6 +2420,7 @@
     const stats = state.stats || {};
     const booksRead = Math.max(0, Number(stats.bookReadCount) || 0);
     const pronAvg = normalizePrecisePercent(stats.generalPronunciationPercent);
+    const readingChars = Math.max(0, Number(state.readingCharsTotal) || Number(stats.readingChars) || 0);
     const speakingChars = Math.max(0, Number(stats.speakingChars) || 0);
     // Prefer local totals because they include pending (not-yet-flushed) progress.
     const listeningChars = Math.max(0, Number(state.listeningCharsTotal) || 0);
@@ -2419,6 +2438,12 @@
         label: 'Livros lidos',
         value: `${booksRead}`,
         hint: 'Livros concluidos no Books.'
+      },
+      {
+        kind: 'reading',
+        label: 'Reading',
+        value: formatCountCompact(readingChars),
+        hint: 'Caracteres em ingles vistos no Books.'
       },
       {
         kind: 'listening',
@@ -5923,6 +5948,13 @@
     }
     els.readerEnglish.textContent = displayTextFormatted || 'Sem conteudo neste livro.';
     els.readerEnglish.classList.toggle('is-highlight', highlight && displayLanguage === 'english');
+    if (displayLanguage === 'english' && english) {
+      const readingKey = `reader:${safeText(state.readerBookId)}:${index}:${english}`;
+      if (state.readerLastReadingKey !== readingKey) {
+        state.readerLastReadingKey = readingKey;
+        addReadingProgress(english, readingKey);
+      }
+    }
     animateReaderPhrase();
     void playReaderCardAudio(card, index);
     updateReaderProgress(total, index);
@@ -5949,6 +5981,7 @@
     state.readerSessionSpokenChars = 0;
     state.readerMicBusy = false;
     state.readerLastAudioKey = '';
+    state.readerLastReadingKey = '';
     state.readerCardShownAt = 0;
     state.readerRenderedCardIndex = -1;
     state.readerAdminAudioBusy = false;
@@ -6269,10 +6302,6 @@
 
     els.homePauseBtn?.addEventListener('click', () => {
       void toggleHomePausePlayback();
-    });
-
-    els.homeLogoutBtn?.addEventListener('click', () => {
-      void logoutFromBooksHome();
     });
 
     els.homeCornerHomeBtn?.addEventListener('click', () => {

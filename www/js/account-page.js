@@ -5,13 +5,12 @@
   const GUEST_PROMPT_ROTATE_MS = 2500;
   const GUEST_NAME_PROMPTS = ['Digite um nome de usuário'];
   const NUMBER_ANIMATION_HANDLES = new WeakMap();
-  const AURA_MIN_VISIBLE_SHARE = 8;
   const AURA_CIRCLE_RADIUS = 123.2;
   const AURA_CIRCLE_GAP_DEG = 3.5;
   const AURA_COLORS = {
     listening: { bright: '#38b6ff', dim: 'rgba(56,182,255,0.28)', filterId: 'accountAuraBlueGlow' },
     speaking: { bright: '#ffd84d', dim: 'rgba(255,216,77,0.28)', filterId: 'accountAuraYellowGlow' },
-    precision: { bright: '#b84dff', dim: 'rgba(184,77,255,0.28)', filterId: 'accountAuraPurpleGlow' }
+    reading: { bright: '#b84dff', dim: 'rgba(184,77,255,0.28)', filterId: 'accountAuraPurpleGlow' }
   };
   const els = {
     body: document.body,
@@ -41,6 +40,7 @@
     premiumBtn: document.getElementById('accountPremiumBtn'),
     premiumIcon: document.getElementById('accountPremiumIcon'),
     premiumLabel: document.getElementById('accountPremiumLabel'),
+    logoutWrap: document.getElementById('accountLogoutWrap'),
     logoutBtn: document.getElementById('accountLogoutBtn'),
     status: document.getElementById('accountStatus'),
     guestKeyboard: document.getElementById('guestKeyboard')
@@ -59,7 +59,6 @@
     passwordEditMode: false,
     nameEditing: false,
     booksStats: null,
-    pronunciationRankingPercent: 0,
     statsRotationTimer: 0,
     statsRotationIndex: 0,
     statsLastRenderedLine: '',
@@ -233,7 +232,7 @@
 
   function renderAuraArc(pathElement, sharePercent, startAngle, colorConfig, glowPercent) {
     if (!pathElement || !colorConfig) return startAngle;
-    if (sharePercent < AURA_MIN_VISIBLE_SHARE) {
+    if (sharePercent <= 0) {
       hideAuraArc(pathElement);
       return startAngle;
     }
@@ -256,31 +255,23 @@
     }
 
     const stats = state.booksStats || {};
+    const readingTotal = Math.max(0, Number(stats.readingChars) || 0);
     const listeningTotal = Math.max(0, Number(stats.listeningChars) || 0);
     const speakingTotal = Math.max(0, Number(stats.speakingChars) || 0);
-    const pronunciationAverage = normalizePrecisePercent(stats.generalPronunciationPercent);
-    const pronunciationRanking = normalizePrecisePercent(state.pronunciationRankingPercent);
-    const pronunciationBlend = normalizePrecisePercent((pronunciationAverage + pronunciationRanking) / 2);
-    const pronunciationProgress = pronunciationBlend <= 60
-      ? 0
-      : clampNumber((pronunciationBlend - 60) / 40, 0, 1);
-    const pronunciationShare = pronunciationProgress * 33;
-    const trainingTotal = listeningTotal + speakingTotal;
-    const remainingShare = Math.max(0, 100 - pronunciationShare);
-    const listeningRatio = trainingTotal > 0 ? listeningTotal / trainingTotal : 0;
-    const speakingRatio = trainingTotal > 0 ? speakingTotal / trainingTotal : 0;
-    const speakingShare = remainingShare * speakingRatio;
-    const listeningShare = remainingShare * listeningRatio;
+    const trainingTotal = readingTotal + listeningTotal + speakingTotal;
+    const readingShare = trainingTotal > 0 ? (readingTotal / trainingTotal) * 100 : 0;
+    const listeningShare = trainingTotal > 0 ? (listeningTotal / trainingTotal) * 100 : 0;
+    const speakingShare = trainingTotal > 0 ? (speakingTotal / trainingTotal) * 100 : 0;
     const consistencyGlowPercent = 100;
 
     applyGlowFilter(AURA_COLORS.listening.filterId, consistencyGlowPercent);
     applyGlowFilter(AURA_COLORS.speaking.filterId, consistencyGlowPercent);
-    applyGlowFilter(AURA_COLORS.precision.filterId, consistencyGlowPercent);
+    applyGlowFilter(AURA_COLORS.reading.filterId, consistencyGlowPercent);
 
     let startAngle = 0;
     startAngle = renderAuraArc(els.auraBlueArc, listeningShare, startAngle, AURA_COLORS.listening, consistencyGlowPercent);
     startAngle = renderAuraArc(els.auraYellowArc, speakingShare, startAngle, AURA_COLORS.speaking, consistencyGlowPercent);
-    renderAuraArc(els.auraPurpleArc, pronunciationShare, startAngle, AURA_COLORS.precision, consistencyGlowPercent);
+    renderAuraArc(els.auraPurpleArc, readingShare, startAngle, AURA_COLORS.reading, consistencyGlowPercent);
   }
 
   function formatDurationCompact(totalSeconds) {
@@ -324,6 +315,7 @@
           </svg>
         `;
       case 'books':
+      case 'reading':
         return `
           <svg viewBox="0 0 64 64" aria-hidden="true">
             <path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" d="M12 16.5c0-2.49 2.01-4.5 4.5-4.5H31v39H16.5A4.5 4.5 0 0 1 12 46.5zm40 0c0-2.49-2.01-4.5-4.5-4.5H33v39h14.5a4.5 4.5 0 0 0 4.5-4.5zM31 15h2"/>
@@ -397,6 +389,7 @@
         || 0
     );
     const pronAvg = normalizePrecisePercent(stats.generalPronunciationPercent);
+    const readingChars = Math.max(0, Number(stats.readingChars) || 0);
     const speakingChars = Math.max(0, Number(stats.speakingChars) || 0);
     const listeningChars = Math.max(0, Number(stats.listeningChars) || 0);
     const practiceSeconds = Math.max(0, Number(stats.practiceSeconds) || 0);
@@ -419,10 +412,9 @@
             value: formatCountCompact(speakingChars)
           },
           {
-            kind: 'precision-general',
-            label: 'Precisao',
-            value: pronAvg,
-            decimal: true
+            kind: 'reading',
+            label: 'Reading',
+            value: formatCountCompact(readingChars)
           }
         ]
       },
@@ -449,7 +441,7 @@
         ]
       },
       {
-        layout: 'two',
+        layout: 'three',
         items: [
           {
             kind: 'flashcards',
@@ -460,6 +452,12 @@
             kind: 'books',
             label: 'Livros Lidos',
             value: `${myBooksCount}`
+          },
+          {
+            kind: 'precision-general',
+            label: 'Precisao',
+            value: pronAvg,
+            decimal: true
           }
         ]
       }
@@ -506,7 +504,7 @@
       value.textContent = safeText(metric?.value) || '--';
     }
 
-    card.append(label, iconShell, value);
+    card.append(iconShell, label, value);
     return card;
   }
 
@@ -859,6 +857,9 @@
     if (els.logoutBtn) {
       els.logoutBtn.hidden = !state.user;
     }
+    if (els.logoutWrap) {
+      els.logoutWrap.hidden = !state.user;
+    }
     if (els.guestLoginBtn) {
       els.guestLoginBtn.hidden = loggedIn;
       const guestLoginLabel = els.guestLoginBtn.querySelector('.account-button__label');
@@ -946,24 +947,16 @@
   async function fetchBooksMetrics() {
     if (!state.user?.id) {
       state.booksStats = null;
-      state.pronunciationRankingPercent = 0;
       applyAvatarAura();
       renderAccountMetrics();
       return;
     }
 
-    const [booksResult, rankingResult] = await Promise.allSettled([
-      fetch(buildApiUrl('/api/books/stats'), {
-        headers: buildAuthHeaders(),
-        cache: 'no-store',
-        credentials: 'include'
-      }),
-      fetch(buildApiUrl('/api/users/flashcards?limit=50&metric=pronunciation'), {
-        headers: buildAuthHeaders(),
-        cache: 'no-store',
-        credentials: 'include'
-      })
-    ]);
+    const booksResult = await Promise.resolve(fetch(buildApiUrl('/api/books/stats'), {
+      headers: buildAuthHeaders(),
+      cache: 'no-store',
+      credentials: 'include'
+    })).then((value) => ({ status: 'fulfilled', value }), (reason) => ({ status: 'rejected', reason }));
 
     if (booksResult.status === 'fulfilled') {
       const payload = await booksResult.value.json().catch(() => ({}));
@@ -972,15 +965,6 @@
         : null;
     } else {
       state.booksStats = null;
-    }
-
-    if (rankingResult.status === 'fulfilled') {
-      const payload = await rankingResult.value.json().catch(() => ({}));
-      state.pronunciationRankingPercent = rankingResult.value.ok && payload?.success
-        ? normalizePrecisePercent(payload?.viewer?.pronunciationPercent)
-        : 0;
-    } else {
-      state.pronunciationRankingPercent = 0;
     }
 
     applyAvatarAura();

@@ -693,6 +693,14 @@
         drop-shadow(0 0 42px rgba(108, 92, 255, 0.28));
     }
 
+    .account-stats-item[data-kind="reading"] .account-stats-icon {
+      color: #5affd6;
+      filter:
+        drop-shadow(0 0 10px rgba(90, 255, 214, 0.96))
+        drop-shadow(0 0 24px rgba(45, 255, 190, 0.54))
+        drop-shadow(0 0 42px rgba(66, 204, 255, 0.28));
+    }
+
     .account-stats-item[data-kind="consistency"] .account-stats-icon,
     .account-stats-item[data-kind="days"] .account-stats-icon {
       color: #c78bff;
@@ -705,6 +713,26 @@
     .account-stats-item[data-kind="flashcards"] .account-stats-icon,
     .account-stats-item[data-kind="books"] .account-stats-icon {
       color: #93f0ff;
+    }
+
+    .account-logout-wrap {
+      width: min(360px, 82%);
+      margin: 4px auto 0;
+      display: grid;
+    }
+
+    .account-logout-wrap[hidden] {
+      display: none !important;
+    }
+
+    .account-button--logout {
+      min-height: 48px;
+      background: linear-gradient(180deg, rgba(5, 30, 55, 0.9), rgba(5, 19, 39, 0.94));
+      color: #e8f9ff;
+      border: 1.5px solid rgba(114, 239, 255, 0.48);
+      box-shadow:
+        inset 0 0 0 1px rgba(189, 247, 255, 0.08),
+        0 0 16px rgba(86, 225, 255, 0.2);
     }
 
     .account-stats-label {
@@ -1313,6 +1341,9 @@
           <div class="account-stats-carousel" id="accountStatsCarousel" aria-label="Estatisticas do usuario">
             <div class="account-stats-pages" id="accountStatsPages"></div>
           </div>
+          <div class="account-logout-wrap" id="accountLogoutWrap" hidden>
+            <button class="account-button account-button--logout" id="accountLogoutBtn" type="button">Sair da conta</button>
+          </div>
         </div>
         <p class="account-status" id="accountStatus" aria-live="polite"></p>
       </form>
@@ -1346,6 +1377,6 @@
       document.body.classList.add('is-native-runtime');
     }
   </script>
-  <script src="js/account-page.js"></script>
+  <script src="js/account-page.js?v=20260419a"></script>
 </body>
 </html>
