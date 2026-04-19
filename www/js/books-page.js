@@ -237,7 +237,7 @@
     user: null,
     localProfile: null,
     initialLoading: true,
-    selectedLevel: 0,
+    selectedLevel: UI_LEVEL_ALL_BOOKS,
     stats: null,
     statsRotationTimer: 0,
     statsRotationIndex: 0,
@@ -1535,16 +1535,12 @@
     if (els.homeStartBtn) {
       els.homeStartBtn.hidden = true;
     }
-    if (els.homeCollectBtn) {
-      els.homeCollectBtn.hidden = false;
-      els.homeCollectBtn.disabled = state.homeStartBusy;
-    }
     if (els.homeLaunchBtn) {
       els.homeLaunchBtn.hidden = false;
       els.homeLaunchBtn.disabled = state.homeStartBusy;
       const launchLabel = els.homeLaunchBtn.querySelector('span');
       if (launchLabel) {
-        launchLabel.textContent = state.homeStartBusy ? 'Abrindo...' : 'Sleeping Mode';
+        launchLabel.textContent = state.homeStartBusy ? 'Abrindo...' : 'AllBooks';
       }
     }
     setHomeAuthStatus('', null);
@@ -1669,7 +1665,7 @@
   async function openBooksCollectionFromHome() {
     if (state.homeStartBusy) return;
     stopHomeSleepPlayback({ keepIntro: false });
-    state.selectedLevel = UI_LEVEL_MY_BOOKS;
+    state.selectedLevel = UI_LEVEL_ALL_BOOKS;
     state.shelfIndex = 0;
     renderHomeAuthUi();
     renderLevelMenu();
@@ -1692,10 +1688,7 @@
     if (IS_MYBOOKS_GRID_EMBED) {
       return [UI_LEVEL_MY_BOOKS];
     }
-    if (state.isAdmin) {
-      return Array.from({ length: MAX_UI_LEVEL + 1 }, (_value, index) => index);
-    }
-    return [UI_LEVEL_HOME, UI_LEVEL_MY_BOOKS, UI_LEVEL_ALL_BOOKS];
+    return [UI_LEVEL_ALL_BOOKS];
   }
 
   function shuffleBooks(list) {
@@ -1868,7 +1861,7 @@
   function normalizeBrowseLevel(value) {
     const parsed = Number.parseInt(value, 10);
     const accessibleLevels = getAccessibleLevels();
-    if (!accessibleLevels.length) return UI_LEVEL_HOME;
+    if (!accessibleLevels.length) return UI_LEVEL_ALL_BOOKS;
     if (!Number.isFinite(parsed)) return accessibleLevels[0];
     if (accessibleLevels.includes(parsed)) return parsed;
     return accessibleLevels.reduce((closest, level) => {
@@ -4482,6 +4475,20 @@
 
       card.append(background, overlay, badgeEl);
 
+      if (isAllBooksLevel() && !pendingCreate) {
+        const sleepBtn = document.createElement('button');
+        sleepBtn.type = 'button';
+        sleepBtn.className = 'books-home-launch-btn books-home-launch-btn--sleep books-home-launch-btn--compact books-card__sleep-btn';
+        sleepBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.8 2.2a8.8 8.8 0 1 0 7 14.2a7.9 7.9 0 1 1-7-14.2Z"/></svg><span>Sleeping Mode</span>';
+        sleepBtn.disabled = state.homeStartBusy || processingMagic;
+        sleepBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void startHomeSleepPlayback();
+        });
+        card.appendChild(sleepBtn);
+      }
+
       if (!IS_MYBOOKS_GRID_EMBED) {
         const adminChip = document.createElement('span');
         adminChip.className = 'books-card__admin-chip';
@@ -4600,7 +4607,7 @@
 
   function getUiLevelDisplayName(level) {
     const parsed = Number.parseInt(level, 10);
-    if (!Number.isFinite(parsed)) return 'Home';
+    if (!Number.isFinite(parsed)) return 'AllBooks';
     if (parsed === UI_LEVEL_HOME) return 'Home';
     if (parsed === UI_LEVEL_MY_BOOKS) return 'MyBooks';
     if (parsed === UI_LEVEL_ALL_BOOKS) return 'AllBooks';
@@ -4616,18 +4623,20 @@
       if (IS_MYBOOKS_GRID_EMBED) {
         els.levelMenu.hidden = true;
       }
-      // Hide the top navigation UI on the Home/login screen, but keep swipe navigation working.
       if (!IS_MYBOOKS_GRID_EMBED) {
-        els.levelMenu.hidden = isHomeLevel();
+        els.levelMenu.hidden = !Boolean(state.isAdmin);
       }
     }
     if (els.levelTitle) {
       els.levelTitle.textContent = `${getUiLevelDisplayName(state.selectedLevel)}`;
+      els.levelTitle.hidden = true;
     }
     if (els.prevLevelBtn) {
+      els.prevLevelBtn.hidden = true;
       els.prevLevelBtn.disabled = currentIndex <= 0 || state.uploadInFlight;
     }
     if (els.nextLevelBtn) {
+      els.nextLevelBtn.hidden = true;
       els.nextLevelBtn.disabled = currentIndex < 0
         || currentIndex >= (accessibleLevels.length - 1)
         || state.uploadInFlight;

@@ -760,6 +760,24 @@
       text-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
     }
 
+    .books-home-launch-btn--compact,
+    .books-card__sleep-btn {
+      min-height: 48px;
+      padding: 0 20px;
+      gap: 12px;
+    }
+
+    .books-home-launch-btn--compact svg,
+    .books-card__sleep-btn svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .books-home-launch-btn--compact span,
+    .books-card__sleep-btn span {
+      font-size: clamp(17px, 2.7vw, 22px);
+    }
+
     .books-home-account-btn--switch {
       color: #d8f6ff;
     }
@@ -1463,10 +1481,10 @@
     }
 
     .books-card {
-      --books-card-book-width: min(310px, 70vw);
+      --books-card-book-width: min(279px, 63vw);
       --books-card-book-height: calc(var(--books-card-book-width) * 16 / 9);
       --books-card-badge-size: 89px;
-      --books-card-vertical-offset: -10dvh;
+      --books-card-vertical-offset: -16dvh;
       width: min(454px, 90vw, calc(var(--books-shelf-height) * 9 / 16 * 0.96));
       aspect-ratio: 9 / 16;
       border: 0;
@@ -2702,6 +2720,40 @@
       display: none;
     }
 
+    .books-card__sleep-btn {
+      position: absolute;
+      left: 50%;
+      top: calc(50% + var(--books-card-vertical-offset) + (var(--books-card-book-height) / 2) + 34px);
+      transform: translateX(-50%);
+      width: min(250px, 62vw);
+      border: 1.5px solid rgba(122, 223, 255, 0.9);
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(7, 34, 88, 0.96), rgba(10, 25, 63, 0.98));
+      color: #f4fbff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow:
+        0 0 0 1px rgba(185, 239, 255, 0.18) inset,
+        0 0 18px rgba(86, 210, 255, 0.28),
+        0 0 38px rgba(44, 132, 255, 0.22),
+        0 18px 34px rgba(18, 73, 125, 0.26);
+      z-index: 2;
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+    }
+
+    .books-card__sleep-btn:hover,
+    .books-card__sleep-btn:focus-visible {
+      transform: translateX(-50%) translateY(-2px);
+      filter: saturate(1.05);
+    }
+
+    .books-card__sleep-btn[disabled] {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
     .books-reader-current-badge.is-swapping {
       animation: books-reader-badge-swap 500ms ease both;
     }
@@ -3213,7 +3265,7 @@
       }
 
       .books-card {
-        --books-card-vertical-offset: -10dvh;
+        --books-card-vertical-offset: -16dvh;
         width: min(432px, 88vw);
       }
 
@@ -3306,7 +3358,7 @@
       <button class="books-arrow-btn" id="booksLevelPrevBtn" type="button" aria-label="Nivel anterior">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.41 6.59 14 5.17 7.17 12 14 18.83l1.41-1.42L10 12z"/></svg>
       </button>
-      <h1 class="books-level-title" id="booksLevelTitle">MyBooks</h1>
+      <h1 class="books-level-title" id="booksLevelTitle">AllBooks</h1>
       <button class="books-arrow-btn" id="booksLevelNextBtn" type="button" aria-label="Proximo nivel">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m8.59 16.59 1.41 1.42L16.83 12 10 5.17 8.59 6.59 14 12z"/></svg>
       </button>
@@ -3350,28 +3402,10 @@
                 <p class="books-home-auth-status" id="booksHomeAuthStatus"></p>
               </form>
               <div class="books-home-actions" aria-label="Acoes iniciais dos books">
-                <button class="books-home-launch-btn books-home-launch-btn--collect" id="booksHomeCollectBtn" type="button">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 4.5A2.5 2.5 0 0 1 8.5 2H18v17.5a2.5 2.5 0 0 0-2.5-2.5H6zm0 0v13A2.5 2.5 0 0 0 8.5 20H16"/></svg>
-                  <span>Colecionar Books</span>
-                </button>
-                <button class="books-home-launch-btn books-home-launch-btn--sleep" id="booksHomeLaunchBtn" type="button" hidden>
+                <button class="books-home-launch-btn books-home-launch-btn--sleep books-home-launch-btn--compact" id="booksHomeLaunchBtn" type="button" hidden>
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.8 2.2a8.8 8.8 0 1 0 7 14.2a7.9 7.9 0 1 1-7-14.2Z"/></svg>
-                  <span>Sleeping Mode</span>
+                  <span>AllBooks</span>
                 </button>
-                <div class="books-home-account-panel" id="booksHomeAccountPanel">
-                  <div class="books-home-account-status" id="booksHomeAccountStatus" hidden>
-                    <strong class="books-home-account-level" id="booksHomePremiumLevel">Nivel de acesso: Free</strong>
-                    <span class="books-home-account-until" id="booksHomePremiumUntil">Sem premium ativo no momento.</span>
-                  </div>
-                  <div class="books-home-account-buttons">
-                    <button class="books-home-account-btn books-home-account-btn--switch" id="booksHomeSwitchAccountBtn" type="button">
-                      <span>Trocar conta</span>
-                    </button>
-                    <button class="books-home-account-btn books-home-account-btn--premium" id="booksHomePremiumBtn" type="button" hidden>
-                      <span>Comprar premium</span>
-                    </button>
-                  </div>
-                </div>
               </div>
             </div>
           <div class="books-home-shell" id="booksHomeShell" hidden>
