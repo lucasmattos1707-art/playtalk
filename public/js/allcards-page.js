@@ -667,7 +667,7 @@
     if (!els.smartbooksGrid) return;
     const books = getQualifiedMyBooks(state.smartbooksBooks, state.smartbooksStats);
     if (els.smartbooksTitle) {
-      els.smartbooksTitle.textContent = `${books.length} SmartBooks`;
+      els.smartbooksTitle.textContent = `Voc\u00ea tem "${books.length}" SmartBooks`;
     }
     if (!books.length) {
       els.smartbooksGrid.innerHTML = '<div class="empty">Nenhum livro ainda em MyBooks.</div>';

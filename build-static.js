@@ -46,6 +46,10 @@ const rootStaticDirectories = [
   {
     source: 'newsongs',
     destination: 'newsongs'
+  },
+  {
+    source: 'newfonts',
+    destination: 'newfonts'
   }
 ];
 

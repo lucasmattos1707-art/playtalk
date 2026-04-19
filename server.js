@@ -14090,6 +14090,7 @@ app.use((req, res, next) => {
     || pathName.startsWith('/videos/')
     || pathName.startsWith('/SVG/')
     || pathName.startsWith('/Fontes/')
+    || pathName.startsWith('/newfonts/')
     || pathName.startsWith('/medalhas/')
     || pathName.startsWith('/Avatar/')
     || pathName.startsWith('/backgrounds/')
@@ -14127,6 +14128,7 @@ app.get('/', (req, res) => {
 });
 
 app.use(express.static(staticDir));
+app.use('/newfonts', express.static(path.join(__dirname, 'newfonts')));
 app.get(['/landing', '/landing/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'landing.html'));
 });
