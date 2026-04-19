@@ -8,6 +8,10 @@
   --neon-blue: #38c9ff;
   --panel: rgba(6, 12, 14, 0.82);
   --header-height: clamp(72px, 10vh, 104px);
+  --playtalk-global-bg-desktop: url('/backgrounds/playtalk-global-desktop.webp');
+  --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
+  --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
+  --landing-bg-overlay: linear-gradient(180deg, rgba(0, 0, 0, 0.34) 0%, rgba(3, 5, 6, 0.74) 56%, rgba(3, 5, 6, 0.94) 100%);
 }
 
 @font-face {
@@ -32,8 +36,8 @@ body {
   min-height: 100%;
   color: var(--ink);
   background:
-    linear-gradient(90deg, rgba(56, 201, 255, 0.04) 1px, transparent 1px) 0 0 / 84px 84px,
-    linear-gradient(0deg, rgba(72, 255, 155, 0.035) 1px, transparent 1px) 0 0 / 84px 84px,
+    var(--landing-bg-overlay),
+    var(--playtalk-global-bg-image) center/cover fixed no-repeat,
     var(--page-bg);
   font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
   overflow-x: hidden;
@@ -45,8 +49,9 @@ body::before {
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(3, 5, 6, 0.18) 0%, rgba(3, 5, 6, 0.88) 100%),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 9px);
+    linear-gradient(90deg, rgba(56, 201, 255, 0.04) 1px, transparent 1px) 0 0 / 84px 84px,
+    linear-gradient(0deg, rgba(72, 255, 155, 0.035) 1px, transparent 1px) 0 0 / 84px 84px,
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 9px);
   z-index: -1;
 }
 
@@ -629,6 +634,10 @@ h3 {
 }
 
 @media (max-width: 1080px) {
+  :root {
+    --playtalk-global-bg-image: var(--playtalk-global-bg-mobile);
+  }
+
   .feature-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
