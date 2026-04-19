@@ -4325,7 +4325,7 @@ body.pause-menu-active .vocabulary-game.phase-3 .phase-option-button {
 
 
 
-/* PlayTalk game test layout with fixed vertical containers (2026-03-06) */
+/* Fluent LevelUp game test layout with fixed vertical containers (2026-03-06) */
 #home-game.vocabulary-game {
   --game-visor-size: 60fr;
   --game-input-size: 0fr;

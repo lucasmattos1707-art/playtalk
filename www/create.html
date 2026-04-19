@@ -1,12 +1,12 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-  <title>Criar aula | PlayTalk</title>
+  <title>Criar aula | Fluent LevelUp</title>
   <meta
     name="description"
-    content="Crie aulas com quadros de imagem, √°udio, v√≠deo, texto e alternativas."
+    content="Crie aulas com quadros de imagem, ·udio, vÌdeo, texto e alternativas."
   >
   <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
@@ -19,7 +19,7 @@
   <header class="site-header" id="global-header">
     <div class="site-header__profile">
       <div class="site-header__text">
-        <span class="site-header__name">PlayTalk</span>
+        <span class="site-header__name">Fluent LevelUp</span>
       </div>
     </div>
   </header>
@@ -28,7 +28,7 @@
       <div class="create-panel__header">
         <div>
           <h1 class="create-title">Criador de aulas</h1>
-          <p class="create-subtitle">Monte quadros um de cada vez, com visualiza√ß√£o imediata.</p>
+          <p class="create-subtitle">Monte quadros um de cada vez, com visualizaÁ„o imediata.</p>
         </div>
         <div class="create-actions">
           <button id="create-frame-btn" class="btn-primary create-action-btn create-action-btn--add" type="button">Adicionar</button>
@@ -36,7 +36,7 @@
       </div>
       <div class="create-lesson-info">
         <label class="create-field">
-          <span>T√≠tulo da aula</span>
+          <span>TÌtulo da aula</span>
           <input id="lesson-title" type="text" placeholder="Ex: Present simple" autocomplete="off">
         </label>
       </div>
@@ -58,7 +58,7 @@
                   <path d="M14 3v11.5a3.5 3.5 0 1 1-2-3.15V7.5l8-2v9.5a3.5 3.5 0 1 1-2-3.15V4.5l-4 1z"></path>
                 </svg>
               </span>
-              <span class="create-menu__label">Quadro 2: √Åudio</span>
+              <span class="create-menu__label">Quadro 2: ¡udio</span>
             </button>
             <button class="create-menu__card create-menu__card--video" data-frame-type="video" type="button">
               <span class="create-menu__icon" aria-hidden="true">
@@ -66,7 +66,7 @@
                   <path d="M4 6h11a1 1 0 0 1 1 1v3.2l4-2.3v8.2l-4-2.3V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"></path>
                 </svg>
               </span>
-              <span class="create-menu__label">Quadro 4: V√≠deo</span>
+              <span class="create-menu__label">Quadro 4: VÌdeo</span>
             </button>
             <button class="create-menu__card create-menu__card--quiz" data-frame-type="quiz" type="button">
               <span class="create-menu__icon" aria-hidden="true">
@@ -114,7 +114,7 @@
                   <path d="M4 6h11a1 1 0 0 1 1 1v3.2l4-2.3v8.2l-4-2.3V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"></path>
                 </svg>
               </span>
-              <span class="create-menu__label">V√≠deo</span>
+              <span class="create-menu__label">VÌdeo</span>
             </button>
           </div>
           <button id="close-visual-menu-btn" class="btn-secondary create-menu__close" type="button">Fechar</button>
@@ -127,9 +127,9 @@
         </section>
         <section class="create-preview">
           <div class="create-preview__header">
-            <h2 class="create-section-title">Pr√©via do quadro</h2>
+            <h2 class="create-section-title">PrÈvia do quadro</h2>
             <div class="create-preview__controls">
-              <button id="preview-play" class="btn-secondary" type="button">‚ñ∂Ô∏è Reproduzir</button>
+              <button id="preview-play" class="btn-secondary" type="button">?? Reproduzir</button>
               <label class="create-preview__time" aria-label="Tempo em milissegundos">
                 <input id="preview-time" class="create-preview__time-input" type="number" min="0" step="1" value="0">
                 <span>ms</span>
@@ -150,7 +150,7 @@
     <section id="lesson-overview" class="create-overview" aria-live="polite">
       <div class="create-overview__header">
         <div>
-          <h2 class="create-section-title">Vis√£o da aula</h2>
+          <h2 class="create-section-title">Vis„o da aula</h2>
           <p id="lesson-total" class="create-overview__total">Tempo total: 0s</p>
         </div>
         <div class="create-overview__actions">
@@ -163,7 +163,7 @@
   </main>
   <div id="lesson-player" class="lesson-player" role="dialog" aria-modal="true">
     <div class="lesson-player__container">
-      <button id="lesson-player-close" class="lesson-player__close" type="button" aria-label="Fechar reprodu√ß√£o">‚úï</button>
+      <button id="lesson-player-close" class="lesson-player__close" type="button" aria-label="Fechar reproduÁ„o">?</button>
       <div id="lesson-player-frame" class="class-frame lesson-player__frame"></div>
     </div>
   </div>

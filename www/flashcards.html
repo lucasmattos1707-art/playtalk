@@ -1,9 +1,9 @@
-Ôªø<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PlayTalk | Flashcards</title>
+  <title>Fluent LevelUp | Flashcards</title>
   <link rel="stylesheet" href="css/playtalk-shell.css">
   <style>
     @font-face {
@@ -6200,7 +6200,7 @@
 </head>
 <body class="flashcards-home-collapsed">
   <div class="container" aria-hidden="true"></div>
-  <section class="welcome-gate" id="welcomeGate" aria-label="Entrada do PlayTalk">
+  <section class="welcome-gate" id="welcomeGate" aria-label="Entrada do Fluent LevelUp">
     <div class="welcome-gate__stack">
       <div class="welcome-gate__touch" id="welcomeTouch">
         <img class="welcome-gate__logo" id="welcomeLogo" src="/arquivos-codex/fluent-levelup-logo.png" alt="Level Up">
@@ -6212,10 +6212,10 @@
     </div>
   </section>
   <section class="robotcheck" id="robotcheck" aria-label="Robot check">
-    <div class="robotcheck__touch" aria-label="Teste de som do PlayTalk">
+    <div class="robotcheck__touch" aria-label="Teste de som do Fluent LevelUp">
       <main class="soundcheck-shell">
         <header class="soundcheck-header">
-          <p>PlayTalk</p>
+          <p>Fluent LevelUp</p>
           <h1>Teste de som</h1>
           <p class="soundcheck-subtitle" id="soundTestSubtitle">Toque no que est&aacute; ouvindo</p>
         </header>
@@ -6251,10 +6251,10 @@
   </section>
   <section class="auth-gate" id="authGate" aria-modal="true" role="dialog" aria-labelledby="authTitle">
     <div class="auth-card" id="authCard">
-      <img class="auth-logo" src="SVG/logo.svg" alt="PlayTalk">
+      <img class="auth-logo" src="SVG/logo.svg" alt="Fluent LevelUp">
       <div>
-        <h1 class="auth-title" id="authTitle">PlayTalk</h1>
-        <p class="auth-copy" id="authCopy">Entre com seu nome e senha para come√É¬ßar a jogar na Liga Playtalk.</p>
+        <h1 class="auth-title" id="authTitle">Fluent LevelUp</h1>
+        <p class="auth-copy" id="authCopy">Entre com seu nome e senha para come√ßar a jogar na Liga Playtalk.</p>
       </div>
       <div class="auth-card__body" id="authBody">
         <div class="auth-switch" id="authSwitch" aria-label="Escolha entre entrar ou cadastrar">
@@ -6308,7 +6308,7 @@
     </section>
 
     <section class="panel section embedded-panel" id="usersPanel" hidden>
-      <iframe class="embedded-panel__frame" id="usersFrame" src="/users" title="Usuarios PlayTalk" loading="lazy"></iframe>
+      <iframe class="embedded-panel__frame" id="usersFrame" src="/users" title="Usuarios Fluent LevelUp" loading="lazy"></iframe>
     </section>
 
     <section class="panel section profile-panel" id="profilePanel" hidden>
@@ -6339,7 +6339,7 @@
             <p id="gameHeaderCopy">O jogo comeca com 3 cartas e cresce ate 12 conforme voce ganha flashcards.</p>
           </div>
           <div class="actions">
-            <button class="btn btn-close" id="exitGameBtn" type="button" aria-label="Fechar" hidden>√É‚Äî</button>
+            <button class="btn btn-close" id="exitGameBtn" type="button" aria-label="Fechar" hidden>√ó</button>
           </div>
         </div>
 
@@ -6400,7 +6400,7 @@
             <p id="gameSetupCountCopy" class="admin-tools__status">Calculando flashcards disponiveis...</p>
           </div>
           <div class="actions">
-            <button class="btn btn-close" id="closeGameSetupBtn" type="button" aria-label="Fechar">√É∆í√¢‚Ç¨‚Äù</button>
+            <button class="btn btn-close" id="closeGameSetupBtn" type="button" aria-label="Fechar">√É‚Äî</button>
           </div>
         </div>
         <div class="game-setup__options" id="gameSetupOptions">
@@ -6418,12 +6418,12 @@
             <p>Escolha como quer ouvir.</p>
           </div>
           <div class="actions">
-            <button class="btn btn-close" id="closeWatchPopoverBtn" type="button" aria-label="Fechar">√É‚Äî</button>
+            <button class="btn btn-close" id="closeWatchPopoverBtn" type="button" aria-label="Fechar">√ó</button>
           </div>
         </div>
         <div class="watch-options">
           <label class="watch-field">
-            <span>Espa√É¬ßo de repeti√É¬ß√É¬£o</span>
+            <span>Espa√ßo de repeti√ß√£o</span>
             <select id="watchGapSelect">
               <option value="3000">3 segundos</option>
               <option value="5000">5 segundos</option>
@@ -6458,7 +6458,7 @@
           <div class="watch-decks__grid" id="watchDeckGrid"></div>
         </section>
         <div class="actions">
-          <button class="btn btn-primary" id="startWatchBtn" type="button">Come√É¬ßar</button>
+          <button class="btn btn-primary" id="startWatchBtn" type="button">Come√ßar</button>
         </div>
       </div>
     </section>
@@ -6466,7 +6466,7 @@
     <section class="watch" id="watch" aria-modal="true" role="dialog">
       <div class="watch-shell">
         <div class="watch-head">
-          <button class="btn btn-close" id="exitWatchBtn" type="button" aria-label="Fechar">√É‚Äî</button>
+          <button class="btn btn-close" id="exitWatchBtn" type="button" aria-label="Fechar">√ó</button>
         </div>
         <article class="watch-card">
           <div class="watch-card__layout">
@@ -6659,7 +6659,7 @@
       const FIVE_STARS_SOUND_PATH = 'newsongs/5stars.mp3';
       const SECOND_STAR_ERROR_SOUND_PATH = 'flashcard-audio-cues/second-star-error.mp3';
       const TYPE_PORTUGUESE_SOUND_PATH = 'flashcard-audio-cues/typeportuguese.mp3';
-      const ACCESSKEY_ERROR_SOUND_PATH = 'https://playtalk-dvv5.onrender.com/error.mp3';
+      const ACCESSKEY_ERROR_SOUND_PATH = 'https://fluentlevelup.com/error.mp3';
       const LESS_SOUND_PATH = 'svgnovo/less.wav';
       const REPORT_SOUND_PATH = 'thesongs/report.wav';
       const TYPING_KEY_SOUND_PATH = 'sounds/type.mp3';
@@ -7177,7 +7177,7 @@
       function fixMojibake(value) {
         const text = safeText(value);
         if (!text) return '';
-        if (!/[√É√Ç√¢√Ø¬ø¬Ω]/.test(text)) return text;
+        if (!/[√¬‚ÔøΩ]/.test(text)) return text;
         try {
           return decodeURIComponent(escape(text));
         } catch (_error) {
@@ -7189,7 +7189,7 @@
         let text = fixMojibake(value);
         if (!text) return '';
         for (let attempt = 0; attempt < 2; attempt += 1) {
-          if (!/[√É√Ç√¢√Ø¬ø¬Ω]/.test(text)) break;
+          if (!/[√¬‚ÔøΩ]/.test(text)) break;
           try {
             const decoded = decodeURIComponent(escape(text));
             if (!decoded || decoded === text) break;
@@ -7199,20 +7199,20 @@
           }
         }
         const replacements = [
-          ['√É¬°', '√°'], ['√É√†', '√†'], ['√É√¢', '√¢'], ['√É√£', '√£'], ['√É√§', '√§'],
-          ['√É√©', '√©'], ['√É√®', '√®'], ['√É√™', '√™'], ['√É√´', '√´'],
-          ['√É√≠', '√≠'], ['√É√¨', '√¨'], ['√É√Æ', '√Æ'], ['√É√Ø', '√Ø'],
-          ['√É√≥', '√≥'], ['√É√≤', '√≤'], ['√É√¥', '√¥'], ['√É√µ', '√µ'], ['√É√∂', '√∂'],
-          ['√É√∫', '√∫'], ['√É√π', '√π'], ['√É√ª', '√ª'], ['√É√º', '√º'],
-          ['√É√ß', '√ß'], ['√É√±', '√±'],
-          ['√É√Å', '√Å'], ['√É√Ä', '√Ä'], ['√É√Ç', '√Ç'], ['√É√É', '√É'], ['√É√Ñ', '√Ñ'],
-          ['√É√â', '√â'], ['√É√à', '√à'], ['√É√ä', '√ä'], ['√É√ã', '√ã'],
-          ['√É√ç', '√ç'], ['√É√å', '√å'], ['√É√é', '√é'], ['√É√è', '√è'],
-          ['√É√ì', '√ì'], ['√É√í', '√í'], ['√É√î', '√î'], ['√É√ï', '√ï'], ['√É√ñ', '√ñ'],
-          ['√É√ö', '√ö'], ['√É√ô', '√ô'], ['√É√õ', '√õ'], ['√É√ú', '√ú'],
-          ['√É√á', '√á'], ['√É‚Äò', '√ë'],
-          ['√¢‚Ç¨‚Äù', '-'], ['√¢‚Ç¨‚Äú', '-'], ['√¢‚Ç¨Àú', "'"], ['√¢‚Ç¨‚Ñ¢', "'"], ['√¢‚Ç¨≈ì', '"'], ['√¢‚Ç¨¬ù', '"'],
-          ['√Ç¬∫', '¬∫'], ['√Ç¬™', '¬™'], ['√Ç¬∞', '¬∞'], ['√Ç', '']
+          ['√°', '·'], ['√‡', '‡'], ['√‚', '‚'], ['√„', '„'], ['√‰', '‰'],
+          ['√È', 'È'], ['√Ë', 'Ë'], ['√Í', 'Í'], ['√Î', 'Î'],
+          ['√Ì', 'Ì'], ['√Ï', 'Ï'], ['√Ó', 'Ó'], ['√Ô', 'Ô'],
+          ['√Û', 'Û'], ['√Ú', 'Ú'], ['√Ù', 'Ù'], ['√ı', 'ı'], ['√ˆ', 'ˆ'],
+          ['√˙', '˙'], ['√˘', '˘'], ['√˚', '˚'], ['√¸', '¸'],
+          ['√Á', 'Á'], ['√Ò', 'Ò'],
+          ['√¡', '¡'], ['√¿', '¿'], ['√¬', '¬'], ['√√', '√'], ['√ƒ', 'ƒ'],
+          ['√…', '…'], ['√»', '»'], ['√ ', ' '], ['√À', 'À'],
+          ['√Õ', 'Õ'], ['√Ã', 'Ã'], ['√Œ', 'Œ'], ['√œ', 'œ'],
+          ['√”', '”'], ['√“', '“'], ['√‘', '‘'], ['√’', '’'], ['√÷', '÷'],
+          ['√⁄', '⁄'], ['√Ÿ', 'Ÿ'], ['√€', '€'], ['√‹', '‹'],
+          ['√«', '«'], ['√ë', '—'],
+          ['‚Äî', '-'], ['‚Äì', '-'], ['‚Äò', "'"], ['‚Äô', "'"], ['‚Äú', '"'], ['‚Äù', '"'],
+          ['¬∫', '∫'], ['¬™', '™'], ['¬∞', '∞'], ['¬', '']
         ];
         let repaired = text;
         replacements.forEach(([from, to]) => {
@@ -8109,7 +8109,7 @@
         }
         return isRegister
           ? 'Crie seu nome e sua senha para entrar na Liga Playtalk e aparecer no ranking.'
-          : 'Entre com seu nome e senha para come√É∆í√Ç¬ßar a jogar na Liga Playtalk.';
+          : 'Entre com seu nome e senha para come√É¬ßar a jogar na Liga Playtalk.';
       }
 
       function setAuthMode(mode) {
@@ -8747,7 +8747,7 @@
           const slots = Array.from({ length: 6 }, (_, index) => {
             const letter = state.ui.premiumCode[index] || '';
             if (!letter) {
-              return '<div class="premium-gate__code-slot"><span>√¢‚Ç¨¬¢</span></div>';
+              return '<div class="premium-gate__code-slot"><span>‚Ä¢</span></div>';
             }
             return                             `<div class="premium-gate__code-slot" data-filled-slot="${index}"><img src="${escapeHtml(getAccessKeyImagePath(letter))}" alt="${escapeHtml(letter)}"></div>`;
           });
@@ -9863,9 +9863,9 @@
 
         const nativeBaseUrl = (() => {
           try {
-            return String(window.PlaytalkApi?.baseUrl || 'https://playtalk-dvv5.onrender.com').trim().replace(/\/+$/, '');
+            return String(window.PlaytalkApi?.baseUrl || 'https://fluentlevelup.com').trim().replace(/\/+$/, '');
           } catch (_error) {
-            return 'https://playtalk-dvv5.onrender.com';
+            return 'https://fluentlevelup.com';
           }
         })();
 
@@ -13903,7 +13903,7 @@
         const skipBtn = document.createElement('button');
         skipBtn.type = 'button';
         skipBtn.className = 'flashcards-typing__skip';
-        skipBtn.textContent = 'AVAN√áAR';
+        skipBtn.textContent = 'AVAN«AR';
         skipBtn.setAttribute('aria-label', 'Avancar digitacao automatica');
         toolbar.appendChild(skipBtn);
 
@@ -14410,7 +14410,7 @@
             </button>
           `;
         }).join('');
-        els.watchDeckSummary.textContent = `${selectedSources.size} deck${selectedSources.size === 1 ? '' : 's'} ativo${selectedSources.size === 1 ? '' : 's'} √¢‚Ç¨¬¢ ${selectedCardCount} carta${selectedCardCount === 1 ? '' : 's'}`;
+        els.watchDeckSummary.textContent = `${selectedSources.size} deck${selectedSources.size === 1 ? '' : 's'} ativo${selectedSources.size === 1 ? '' : 's'} ‚Ä¢ ${selectedCardCount} carta${selectedCardCount === 1 ? '' : 's'}`;
         if (els.startWatchBtn) {
           els.startWatchBtn.disabled = !selectedSources.size || !selectedCardCount;
         }
@@ -14643,7 +14643,7 @@
             navigator.mediaSession.metadata = new MediaMetadata({
               title: card.english || card.portuguese || 'Flashcard',
               artist: card.portuguese || '',
-              album: 'PlayTalk Flashcards'
+              album: 'Fluent LevelUp Flashcards'
             });
             navigator.mediaSession.playbackState = 'playing';
           } catch (_error) {
@@ -15620,7 +15620,7 @@
           if (primeFooterNavigation(event)) return;
           window.location.href = isNativeRuntime()
             ? resolveNativeRenderPageHref('cards')
-            : 'https://playtalk-dvv5.onrender.com/allcards';
+            : '/allcards';
         });
         els.footerUsersBtn?.addEventListener('click', (event) => {
           if (primeFooterNavigation(event)) return;

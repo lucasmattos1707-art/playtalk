@@ -1,16 +1,16 @@
-# Recuperar o deploy Render do PlayTalk
+# Recuperar o deploy do Fluent LevelUp
 
-Este guia existe para facilitar a volta do projeto quando precisar recriar a conta do Render, o banco Postgres ou a URL do backend.
+Este guia existe para facilitar a volta do projeto quando precisar recriar a conta de deploy, o banco Postgres ou a URL do backend.
 
 ## O que precisa existir
 
-Para o PlayTalk voltar a funcionar com login e recursos do servidor, voce precisa recriar:
+Para o Fluent LevelUp voltar a funcionar com login e recursos do servidor, voce precisa recriar:
 
 - 1 banco Postgres
 - 1 web service Node.js apontando para este repositorio
 - as variaveis de ambiente do backend
 
-O frontend nao depende mais de uma URL fixa antiga do Render. Quando ele estiver sendo servido pelo mesmo backend, ele passa a usar a origem atual automaticamente.
+O frontend nao depende mais de uma URL fixa antiga. Quando ele estiver sendo servido pelo mesmo backend, ele passa a usar a origem atual automaticamente.
 
 ## Variaveis importantes
 
@@ -82,7 +82,7 @@ Depois do deploy:
 Se voce publicar o frontend separado do backend, pode definir a base da API manualmente no navegador:
 
 ```js
-localStorage.setItem('playtalk_api_base_url', 'https://SEU-BACKEND.onrender.com');
+localStorage.setItem('playtalk_api_base_url', 'https://fluentlevelup.com');
 location.reload();
 ```
 

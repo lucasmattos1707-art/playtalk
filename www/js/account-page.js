@@ -822,7 +822,7 @@
     els.avatarFallback.style.display = loggedIn && !hasAvatar ? 'grid' : 'none';
     els.avatarInput.disabled = !loggedIn;
     els.avatarInput.value = '';
-    els.avatarPreview.alt = loggedIn ? 'Avatar do usuario' : 'Logo PlayTalk';
+    els.avatarPreview.alt = loggedIn ? 'Avatar do usuario' : 'Logo Fluent LevelUp';
     if (els.panel) {
       els.panel.classList.toggle('is-guest', !loggedIn);
     }

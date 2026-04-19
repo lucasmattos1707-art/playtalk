@@ -1,5 +1,5 @@
 (function initPlaytalkAndroidConfig() {
-  const DEFAULT_REMOTE_API_BASE_URL = 'https://playtalk-dvv5.onrender.com';
+  const DEFAULT_REMOTE_API_BASE_URL = 'https://fluentlevelup.com';
 
   function normalizeBaseUrl(value) {
     return typeof value === 'string' ? value.trim().replace(/\/+$/, '') : '';

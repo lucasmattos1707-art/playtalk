@@ -53,7 +53,7 @@ public class PlaytalkBooksSleepService extends Service {
         if (manager == null) return;
         NotificationChannel channel = new NotificationChannel(
             CHANNEL_ID,
-            "PlayTalk Sleep Mode",
+            "Fluent LevelUp Sleep Mode",
             NotificationManager.IMPORTANCE_LOW
         );
         channel.setDescription("Mantem o modo sleeping do Books tocando com a tela apagada.");
@@ -82,7 +82,7 @@ public class PlaytalkBooksSleepService extends Service {
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("PlayTalk Sleeping Mode")
+            .setContentTitle("Fluent LevelUp Sleeping Mode")
             .setContentText("Books continua tocando em segundo plano.")
             .setContentIntent(contentIntent)
             .setOngoing(true)

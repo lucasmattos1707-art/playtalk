@@ -2208,9 +2208,9 @@
     }
     const currentSession = state.homeCurrentSession;
     const currentCard = state.homeCurrentCards[state.homeCurrentCardIndex] || null;
-    const title = safeText(currentCard?.english) || safeText(currentSession?.title) || 'PlayTalk Books';
+    const title = safeText(currentCard?.english) || safeText(currentSession?.title) || 'Fluent LevelUp Books';
     const artist = safeText(currentSession?.title) || 'Sleeping Mode';
-    const album = state.homeMusicEnabled ? 'PlayTalk Sleep' : 'PlayTalk Books';
+    const album = state.homeMusicEnabled ? 'Fluent LevelUp Sleep' : 'Fluent LevelUp Books';
     const artworkSrc = safeText(state.homeCurrentBookCover || currentSession?.coverImageUrl);
     try {
       navigator.mediaSession.metadata = new MediaMetadata({

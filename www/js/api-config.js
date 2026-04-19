@@ -1,5 +1,6 @@
 (function initPlaytalkApiConfig() {
-  const LEGACY_RENDER_URL = 'https://playtalk-dvv5.onrender.com';
+  const DEFAULT_REMOTE_API_BASE_URL = 'https://fluentlevelup.com';
+  const DEFAULT_REMOTE_API_HOSTNAME = 'fluentlevelup.com';
   const API_BASE_URL_STORAGE_KEY = 'playtalk_api_base_url';
   const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
   const DEFAULT_PUBLIC_ASSETS_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
@@ -27,9 +28,28 @@
     return `${normalizedBase}/${encodedPath}`;
   }
 
+  function shouldDiscardStoredBaseUrl(value) {
+    try {
+      const parsedUrl = new URL(normalizeBaseUrl(value));
+      const hostname = parsedUrl.hostname.toLowerCase();
+      const currentHostname = String(window.location?.hostname || '').toLowerCase();
+      return hostname !== DEFAULT_REMOTE_API_HOSTNAME
+        && hostname !== currentHostname
+        && hostname !== 'localhost'
+        && hostname !== '127.0.0.1';
+    } catch (_error) {
+      return false;
+    }
+  }
+
   function readStoredBaseUrl() {
     try {
-      return normalizeBaseUrl(window.localStorage.getItem(API_BASE_URL_STORAGE_KEY) || '');
+      const storedBaseUrl = normalizeBaseUrl(window.localStorage.getItem(API_BASE_URL_STORAGE_KEY) || '');
+      if (shouldDiscardStoredBaseUrl(storedBaseUrl)) {
+        window.localStorage.removeItem(API_BASE_URL_STORAGE_KEY);
+        return '';
+      }
+      return storedBaseUrl;
     } catch (_error) {
       return '';
     }
@@ -52,7 +72,7 @@
     if (configuredBaseUrl) return configuredBaseUrl;
 
     if (!window.location || !window.location.origin) {
-      return LEGACY_RENDER_URL;
+      return DEFAULT_REMOTE_API_BASE_URL;
     }
 
     const { hostname, origin, protocol, port } = window.location;

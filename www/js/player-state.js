@@ -1,4 +1,4 @@
-﻿(function initPlaytalkPlayerState() {
+(function initPlaytalkPlayerState() {
   const STORAGE_KEY = 'playtalk_player_profile';
   const DEFAULT_AVATAR = '';
   const PROGRESS_STORAGE_KEY = 'vocabulary-progress';
@@ -322,7 +322,7 @@
       dayEl.textContent = `Dia ${readJourneyDay()}`;
     }
     if (menuBtn && menuLabel) {
-      menuLabel.textContent = 'PlayTalk';
+      menuLabel.textContent = 'Fluent LevelUp';
       menuBtn.setAttribute('aria-label', 'Menu principal');
     }
 

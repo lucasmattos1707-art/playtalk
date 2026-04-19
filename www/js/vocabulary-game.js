@@ -5494,7 +5494,7 @@
 
   function startRotatingText() {
     if (!rotatingText) return;
-    rotatingText.textContent = 'Jornada PlayTalk';
+    rotatingText.textContent = 'Jornada Fluent LevelUp';
     rotatingText.classList.remove('is-fading');
     if (rotationTimer) {
       window.clearInterval(rotationTimer);

@@ -9673,7 +9673,7 @@ app.get('/api/fluency/day/:day/phase/:phase', async (req, res) => {
 
     const payload = await fetchR2JsonObject(objectKey);
     res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('X-PlayTalk-R2-Key', objectKey);
+    res.setHeader('X-Fluent-LevelUp-R2-Key', objectKey);
     res.json(payload);
   } catch (error) {
     console.error('Erro ao carregar conteudo de fluencia do R2:', error);
@@ -13869,7 +13869,7 @@ app.get('/api/r2/level-json', async (req, res) => {
 
     const payload = await fetchR2JsonObject(objectKey);
     res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('X-PlayTalk-R2-Key', objectKey);
+    res.setHeader('X-Fluent-LevelUp-R2-Key', objectKey);
     res.json(payload);
   } catch (error) {
     if (/404/i.test(String(error?.message || ''))) {
@@ -15792,7 +15792,7 @@ app.post('/api/admin/flashcards/public-decks/publish-editor-bundle', express.jso
     }
 
     if (!files.length) {
-      res.status(400).json({ error: 'Nenhum arquivo foi enviado para publicar no PlayTalk.' });
+      res.status(400).json({ error: 'Nenhum arquivo foi enviado para publicar no Fluent LevelUp.' });
       return;
     }
 
@@ -15816,7 +15816,7 @@ app.post('/api/admin/flashcards/public-decks/publish-editor-bundle', express.jso
     try {
       jsonPayload = JSON.parse(jsonEntry.buffer.toString('utf8'));
     } catch (error) {
-      res.status(400).json({ error: 'O JSON enviado para publicar no PlayTalk esta invalido.', details: error.message });
+      res.status(400).json({ error: 'O JSON enviado para publicar no Fluent LevelUp esta invalido.', details: error.message });
       return;
     }
 
@@ -15848,7 +15848,7 @@ app.post('/api/admin/flashcards/public-decks/publish-editor-bundle', express.jso
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({
-      error: error.message || 'Falha ao publicar o deck do editor no PlayTalk.',
+      error: error.message || 'Falha ao publicar o deck do editor no Fluent LevelUp.',
       ...(error.instructions ? { instructions: error.instructions } : {})
     });
   }

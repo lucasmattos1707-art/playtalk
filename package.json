@@ -1,5 +1,5 @@
 {
-    "name": "game",
+    "name": "fluent-levelup",
     "version": "1.0.0",
     "description": "Fluency game",
     "main": "server.js",

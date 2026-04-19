@@ -14,7 +14,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 @CapacitorPlugin(name = "PlaytalkBooksSleep")
 public class PlaytalkBooksSleepPlugin extends Plugin {
-    private static final String WAKE_LOCK_TAG = "PlayTalk:BooksSleep";
+    private static final String WAKE_LOCK_TAG = "FluentLevelUp:BooksSleep";
 
     @Nullable
     private PowerManager.WakeLock wakeLock;
