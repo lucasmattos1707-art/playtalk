@@ -6,14 +6,14 @@
   const DATA_MANIFEST_REMOTE_PATH = '/api/flashcards/manifest';
   const FLASHCARDS_LOCAL_SOURCE_PREFIX = 'allcards';
   const LIBRARY_RANK_SWAP_DELAY_MS = 2000;
-  const REVIEW_SCALE_VERSION = 2;
+  const REVIEW_SCALE_VERSION = 3;
   const REVIEW_PHASE_MAX = 6;
   const REVIEW_PHASES = {
     1: { label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
     2: { label: 'Second star', durationMs: 34 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
     3: { label: 'Emerald star', durationMs: 4 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/emerald.png' },
-    4: { label: 'Third star', durationMs: 10 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/ouro.png' },
-    5: { label: 'Fourth star', durationMs: 20 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/platina.png' },
+    4: { label: 'Third star', durationMs: 10 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/platina.png' },
+    5: { label: 'Fourth star', durationMs: 20 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/ouro.png' },
     6: { label: 'Fifth star', durationMs: 45 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/diamante.png' }
   };
 
@@ -147,8 +147,8 @@
     const normalized = safeText(value).toLowerCase();
     if (!normalized) return 0;
     if (normalized.includes('diamante')) return 6;
-    if (normalized.includes('platina')) return 5;
-    if (normalized.includes('ouro')) return 4;
+    if (normalized.includes('ouro')) return 5;
+    if (normalized.includes('platina')) return 4;
     if (normalized.includes('emerald')) return 3;
     if (normalized.includes('quartz')) return 2;
     if (normalized.includes('prata')) return 1;
@@ -160,10 +160,17 @@
     const fallback = minPhase ? 1 : 0;
     const parsedPhase = Math.max(lowerBound, Math.min(REVIEW_PHASE_MAX, Number.parseInt(rawPhase, 10) || fallback));
     const version = Number.parseInt(raw?.reviewScaleVersion || raw?.review_scale_version, 10) || 0;
-    if (version >= REVIEW_SCALE_VERSION) return parsedPhase;
     const imagePhase = preferSealImage ? phaseFromSealImage(raw?.sealImage || raw?.seal_image) : 0;
+    if (version >= REVIEW_SCALE_VERSION) return parsedPhase;
     if (imagePhase > 0) return Math.max(lowerBound, Math.min(REVIEW_PHASE_MAX, imagePhase));
-    if (parsedPhase >= 3) return Math.min(REVIEW_PHASE_MAX, parsedPhase + 1);
+    if (version >= 2) {
+      if (parsedPhase === 4) return Math.max(lowerBound, 5);
+      if (parsedPhase === 5) return Math.max(lowerBound, 4);
+      return parsedPhase;
+    }
+    if (parsedPhase === 3) return Math.max(lowerBound, 5);
+    if (parsedPhase === 4) return Math.max(lowerBound, 4);
+    if (parsedPhase >= 5) return REVIEW_PHASE_MAX;
     return parsedPhase;
   }
 
@@ -637,8 +644,8 @@
   function getMyBooksBadge(bestPercent) {
     const normalizedPercent = normalizePercent(bestPercent);
     if (normalizedPercent >= 98) return { src: '/medalhas/diamante.png', alt: 'Selo diamante' };
-    if (normalizedPercent >= 94) return { src: '/medalhas/platina.png', alt: 'Selo platina' };
-    if (normalizedPercent >= 92) return { src: '/medalhas/ouro.png', alt: 'Selo ouro' };
+    if (normalizedPercent >= 94) return { src: '/medalhas/ouro.png', alt: 'Selo ouro' };
+    if (normalizedPercent >= 92) return { src: '/medalhas/platina.png', alt: 'Selo platina' };
     if (normalizedPercent >= 90) return { src: '/medalhas/emerald.png', alt: 'Selo esmeralda' };
     if (normalizedPercent >= 85) return { src: '/medalhas/quartz.png', alt: 'Selo quartz' };
     if (normalizedPercent >= 80) return { src: '/medalhas/prata.png', alt: 'Selo prata' };

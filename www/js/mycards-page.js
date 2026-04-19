@@ -5,14 +5,14 @@
   const DATA_MANIFEST_REMOTE_PATH = '/api/flashcards/manifest';
   const FLASHCARDS_LOCAL_SOURCE_PREFIX = 'allcards';
   const PAGE_SIZE = 30;
-  const REVIEW_SCALE_VERSION = 2;
+  const REVIEW_SCALE_VERSION = 3;
   const REVIEW_PHASE_MAX = 6;
   const REVIEW_PHASES = {
     1: { durationMs: 6 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
     2: { durationMs: 34 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
     3: { durationMs: 4 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/emerald.png' },
-    4: { durationMs: 10 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/ouro.png' },
-    5: { durationMs: 20 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
+    4: { durationMs: 10 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
+    5: { durationMs: 20 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/ouro.png' },
     6: { durationMs: 45 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/diamante.png' }
   };
 
@@ -116,8 +116,8 @@
     const normalized = safeText(value).toLowerCase();
     if (!normalized) return 0;
     if (normalized.includes('diamante')) return 6;
-    if (normalized.includes('platina')) return 5;
-    if (normalized.includes('ouro')) return 4;
+    if (normalized.includes('ouro')) return 5;
+    if (normalized.includes('platina')) return 4;
     if (normalized.includes('emerald')) return 3;
     if (normalized.includes('quartz')) return 2;
     if (normalized.includes('prata')) return 1;
@@ -129,10 +129,17 @@
     const fallback = minPhase ? 1 : 0;
     const parsedPhase = Math.max(lowerBound, Math.min(REVIEW_PHASE_MAX, Number.parseInt(rawPhase, 10) || fallback));
     const version = Number.parseInt(raw?.reviewScaleVersion || raw?.review_scale_version, 10) || 0;
-    if (version >= REVIEW_SCALE_VERSION) return parsedPhase;
     const imagePhase = preferSealImage ? phaseFromSealImage(raw?.sealImage || raw?.seal_image) : 0;
+    if (version >= REVIEW_SCALE_VERSION) return parsedPhase;
     if (imagePhase > 0) return Math.max(lowerBound, Math.min(REVIEW_PHASE_MAX, imagePhase));
-    if (parsedPhase >= 3) return Math.min(REVIEW_PHASE_MAX, parsedPhase + 1);
+    if (version >= 2) {
+      if (parsedPhase === 4) return Math.max(lowerBound, 5);
+      if (parsedPhase === 5) return Math.max(lowerBound, 4);
+      return parsedPhase;
+    }
+    if (parsedPhase === 3) return Math.max(lowerBound, 5);
+    if (parsedPhase === 4) return Math.max(lowerBound, 4);
+    if (parsedPhase >= 5) return REVIEW_PHASE_MAX;
     return parsedPhase;
   }
 

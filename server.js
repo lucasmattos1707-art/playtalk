@@ -2603,6 +2603,31 @@ const readFlashcardProgressCountForUser = async (userId) => {
   return Number(result.rows[0]?.total) || 0;
 };
 
+const readFlashcardProgressRankingScoreForUser = async (userId) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  await ensureFlashcardUserStateTables();
+
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    const error = new Error('userId invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const progressScoreSql = buildFlashcardProgressRankingScoreSql();
+  const result = await pool.query(
+    `SELECT COALESCE(SUM(${progressScoreSql}), 0)::int AS total
+     FROM public.user_flashcard_progress
+     WHERE user_id = $1`,
+    [normalizedUserId]
+  );
+
+  return Number(result.rows[0]?.total) || 0;
+};
+
 const extendUserPremiumAccess = async (userId, durationDays, options = {}) => {
   if (!pool) {
     throw new Error('DATABASE_URL nao configurada.');
@@ -2697,8 +2722,8 @@ const extendUserPremiumAccess = async (userId, durationDays, options = {}) => {
 };
 
 const syncFlashcardRankingFromProgressCount = async (userId) => {
-  const count = await readFlashcardProgressCountForUser(userId);
-  return syncFlashcardRankingForUser(userId, count);
+  const score = await readFlashcardProgressRankingScoreForUser(userId);
+  return syncFlashcardRankingForUser(userId, score);
 };
 
 const readFlashcardStateForUser = async (userId) => {
@@ -2760,13 +2785,14 @@ const readFlashcardStateForUser = async (userId) => {
     )
   ]);
 
-  await syncFlashcardRankingForUser(normalizedUserId, progressResult.rows.length);
+  const progressRecords = progressResult.rows.map(mapStoredFlashcardProgressRow).filter((item) => item.cardId);
+  await syncFlashcardRankingForUser(normalizedUserId, flashcardProgressRankingScoreTotal(progressRecords));
   const accurateAggregate = getFlashcardAccurateAggregateFromRow(accurateResult.rows[0]);
 
   const flashcardStatsRow = statsResult.rows[0] || {};
 
   return {
-    progress: progressResult.rows.map(mapStoredFlashcardProgressRow).filter((item) => item.cardId),
+    progress: progressRecords,
     stats: normalizeFlashcardStats({
       playTimeMs: flashcardStatsRow.play_time_ms,
       speakings: flashcardStatsRow.speakings,
@@ -2774,9 +2800,9 @@ const readFlashcardStateForUser = async (userId) => {
       trainingTimeMs: flashcardStatsRow.training_time_ms,
       pronunciationSamples: accurateAggregate.pronunciationSamples,
       secondStarErrorHeard: flashcardStatsRow.second_star_error_heard
-    }, progressResult.rows.length),
+    }, progressRecords.length),
     meta: {
-      hasProgress: progressResult.rows.length > 0,
+      hasProgress: progressRecords.length > 0,
       hasStats: Boolean(statsResult.rows[0] || accurateResult.rows[0]),
       hiddenCardIds: hiddenResult.rows
         .map((row) => typeof row?.card_id === 'string' ? row.card_id.trim() : '')
@@ -3066,7 +3092,10 @@ const saveFlashcardStateForUser = async (userId, payload) => {
     client.release();
   }
 
-  const rankingRecord = await syncFlashcardRankingForUser(normalizedUserId, progress.length);
+  const rankingRecord = await syncFlashcardRankingForUser(
+    normalizedUserId,
+    flashcardProgressRankingScoreTotal(progress)
+  );
   return {
     progressCount: progress.length,
     stats,
@@ -10402,6 +10431,7 @@ app.get('/api/users/flashcards', async (req, res) => {
         : '';
 
     const visibilityWhereClause = buildPublicUsersVisibilityWhereClause(requesterIsAdmin);
+    const progressScoreSql = buildFlashcardProgressRankingScoreSql();
     const result = await pool.query(
       `SELECT
          u.id,
@@ -10415,7 +10445,7 @@ app.get('/api/users/flashcards', async (req, res) => {
          u.bot_avatar_status,
          u.bot_avatar_error,
          COALESCE(presence.last_seen_at >= (now() - interval '${SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS} seconds'), false) AS is_online,
-         COALESCE(progress.total, ranking.flashcards_count, ranking.all_time_count, 0) AS flashcards_count,
+         COALESCE(progress.ranking_total, ranking.flashcards_count, ranking.all_time_count, 0) AS flashcards_count,
          COALESCE(u.battle, 0)::int AS battles_won,
          GREATEST(
            0,
@@ -10431,12 +10461,15 @@ app.get('/api/users/flashcards', async (req, res) => {
            )
          )::int AS pronunciation_percent,
          CASE
-           WHEN COALESCE(stats.training_time_ms, 0) <= 0 OR COALESCE(progress.total, 0) <= 0 THEN 0
-           ELSE ROUND((COALESCE(progress.total, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+           WHEN COALESCE(stats.training_time_ms, 0) <= 0 OR COALESCE(progress.card_count, 0) <= 0 THEN 0
+           ELSE ROUND((COALESCE(progress.card_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
          END AS speed_flashcards_per_hour
        FROM public.users u
        LEFT JOIN (
-         SELECT user_id, COUNT(*)::int AS total
+         SELECT
+           user_id,
+           COUNT(*)::int AS card_count,
+           COALESCE(SUM(${progressScoreSql}), 0)::int AS ranking_total
          FROM public.user_flashcard_progress
          GROUP BY user_id
        ) progress

@@ -52,8 +52,8 @@
   const DEFAULT_HOME_REPEAT_INDEX = Math.max(0, HOME_REPEAT_OPTIONS.indexOf(5));
   const MY_BOOKS_BADGES = [
     { minPercent: 98, src: '/medalhas/diamante.png', alt: 'Selo diamante' },
-    { minPercent: 94, src: '/medalhas/platina.png', alt: 'Selo platina' },
-    { minPercent: 92, src: '/medalhas/ouro.png', alt: 'Selo ouro' },
+    { minPercent: 94, src: '/medalhas/ouro.png', alt: 'Selo ouro' },
+    { minPercent: 92, src: '/medalhas/platina.png', alt: 'Selo platina' },
     { minPercent: 90, src: '/medalhas/emerald.png', alt: 'Selo esmeralda' },
     { minPercent: 85, src: '/medalhas/quartz.png', alt: 'Selo quartz' },
     { minPercent: 80, src: '/medalhas/prata.png', alt: 'Selo prata' }
