@@ -220,7 +220,7 @@
 
     .account-avatar__arc {
       fill: none;
-      stroke-width: 12;
+      stroke-width: 13;
       stroke-linecap: round;
       opacity: 0;
       transition: stroke 180ms ease, opacity 180ms ease, filter 180ms ease;
@@ -1198,34 +1198,43 @@
                 <defs>
                   <filter id="accountAuraBlueGlow" x="-500%" y="-500%" width="1100%" height="1100%">
                     <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur1"/>
+                    <feColorMatrix in="blur1" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1.75 0" result="glow1"/>
                     <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur2"/>
+                    <feColorMatrix in="blur2" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1.45 0" result="glow2"/>
                     <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur3"/>
+                    <feColorMatrix in="blur3" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1.2 0" result="glow3"/>
                     <feMerge>
-                      <feMergeNode in="blur3"/>
-                      <feMergeNode in="blur2"/>
-                      <feMergeNode in="blur1"/>
+                      <feMergeNode in="glow3"/>
+                      <feMergeNode in="glow2"/>
+                      <feMergeNode in="glow1"/>
                       <feMergeNode in="SourceGraphic"/>
                     </feMerge>
                   </filter>
                   <filter id="accountAuraYellowGlow" x="-500%" y="-500%" width="1100%" height="1100%">
                     <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur1"/>
+                    <feColorMatrix in="blur1" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1.75 0" result="glow1"/>
                     <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur2"/>
+                    <feColorMatrix in="blur2" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1.45 0" result="glow2"/>
                     <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur3"/>
+                    <feColorMatrix in="blur3" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1.2 0" result="glow3"/>
                     <feMerge>
-                      <feMergeNode in="blur3"/>
-                      <feMergeNode in="blur2"/>
-                      <feMergeNode in="blur1"/>
+                      <feMergeNode in="glow3"/>
+                      <feMergeNode in="glow2"/>
+                      <feMergeNode in="glow1"/>
                       <feMergeNode in="SourceGraphic"/>
                     </feMerge>
                   </filter>
                   <filter id="accountAuraPurpleGlow" x="-500%" y="-500%" width="1100%" height="1100%">
                     <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur1"/>
+                    <feColorMatrix in="blur1" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1.75 0" result="glow1"/>
                     <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur2"/>
+                    <feColorMatrix in="blur2" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1.45 0" result="glow2"/>
                     <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur3"/>
+                    <feColorMatrix in="blur3" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1.2 0" result="glow3"/>
                     <feMerge>
-                      <feMergeNode in="blur3"/>
-                      <feMergeNode in="blur2"/>
-                      <feMergeNode in="blur1"/>
+                      <feMergeNode in="glow3"/>
+                      <feMergeNode in="glow2"/>
+                      <feMergeNode in="glow1"/>
                       <feMergeNode in="SourceGraphic"/>
                     </feMerge>
                   </filter>

@@ -10,7 +10,7 @@
   const AURA_COLORS = {
     listening: { bright: '#38b6ff', dim: 'rgba(56,182,255,0.28)', filterId: 'accountAuraBlueGlow' },
     speaking: { bright: '#ffd84d', dim: 'rgba(255,216,77,0.28)', filterId: 'accountAuraYellowGlow' },
-    reading: { bright: '#b84dff', dim: 'rgba(184,77,255,0.28)', filterId: 'accountAuraPurpleGlow' }
+    reading: { bright: '#5affd6', dim: 'rgba(90,255,214,0.34)', filterId: 'accountAuraPurpleGlow' }
   };
   const els = {
     body: document.body,
@@ -205,9 +205,9 @@
     const blurNodes = filterElement.querySelectorAll('feGaussianBlur');
     if (blurNodes.length < 3) return;
     const base = glowToStdDeviation(glowPercent);
-    blurNodes[0].setAttribute('stdDeviation', (base * 0.15).toFixed(2));
-    blurNodes[1].setAttribute('stdDeviation', (base * 0.8).toFixed(2));
-    blurNodes[2].setAttribute('stdDeviation', (base * 2.2).toFixed(2));
+    blurNodes[0].setAttribute('stdDeviation', (base * 0.28).toFixed(2));
+    blurNodes[1].setAttribute('stdDeviation', (base * 1.2).toFixed(2));
+    blurNodes[2].setAttribute('stdDeviation', (base * 3.3).toFixed(2));
   }
 
   function setAuraArcStyle(pathElement, colorConfig, glowPercent) {
@@ -278,6 +278,7 @@
     const normalized = Math.max(0, Math.round(Number(totalSeconds) || 0));
     const hours = Math.floor(normalized / 3600);
     const minutes = Math.floor((normalized % 3600) / 60);
+    if (hours >= 10) return `${hours}h`;
     if (hours > 0) return `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}`;
     if (minutes > 0) return `${minutes} min`;
     return `${normalized}s`;
@@ -433,7 +434,7 @@
           },
           {
             kind: 'consistency',
-            label: 'Consistencia',
+            label: 'Streak',
             value: consistencyPercent,
             decimal: true,
             suffix: '%'
@@ -445,12 +446,12 @@
         items: [
           {
             kind: 'flashcards',
-            label: 'Flash Cards',
+            label: 'Cards',
             value: `${flashcardsCount}`
           },
           {
             kind: 'books',
-            label: 'Livros Lidos',
+            label: 'MBooks',
             value: `${myBooksCount}`
           },
           {
