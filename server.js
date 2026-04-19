@@ -6963,6 +6963,7 @@ function normalizeAdminBannerVariant(value) {
 function normalizeAdminBannerSurface(value) {
   const normalized = String(value || '').trim().toLowerCase();
   if (normalized === 'users') return 'users';
+  if (normalized === 'landing') return 'landing';
   return 'allcards';
 }
 
@@ -6996,7 +6997,8 @@ function createDefaultAdminBannerManifest() {
     generatedAt: new Date().toISOString(),
     updatedAt: null,
     banners: createDefaultAdminBannerSet(),
-    bannersUsers: createDefaultAdminBannerSet()
+    bannersUsers: createDefaultAdminBannerSet(),
+    bannersLanding: createDefaultAdminBannerSet()
   };
 }
 
@@ -7078,6 +7080,10 @@ function normalizeAdminBannerManifest(payload) {
   const usersSource = payload?.bannersUsers;
   base.bannersUsers = usersSource
     ? normalizeBannerSet(usersSource)
+    : createDefaultAdminBannerSet();
+  const landingSource = payload?.bannersLanding;
+  base.bannersLanding = landingSource
+    ? normalizeBannerSet(landingSource)
     : createDefaultAdminBannerSet();
   base.generatedAt = payload?.generatedAt || base.generatedAt;
   base.updatedAt = payload?.updatedAt || null;
@@ -13894,6 +13900,9 @@ app.use((req, res, next) => {
   const pathName = req.path;
   const publicPaths = new Set([
     '/',
+    '/landing',
+    '/landing/',
+    '/landing.html',
     '/index.html',
     '/auth.html',
     '/allcards',
@@ -13994,10 +14003,13 @@ app.get(['/thata', '/thata/', '/thata.html'], (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(staticDir, 'index.html'));
+  res.sendFile(path.join(staticDir, 'landing.html'));
 });
 
 app.use(express.static(staticDir));
+app.get(['/landing', '/landing/'], (req, res) => {
+  res.sendFile(path.join(staticDir, 'landing.html'));
+});
 app.get(['/allcards', '/allcards/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'allcards.html'));
 });
@@ -14593,7 +14605,9 @@ app.get('/api/public/banners', async (req, res) => {
     const manifest = await loadAdminBannerManifest();
     const selectedBanners = surface === 'users'
       ? manifest.bannersUsers
-      : manifest.banners;
+      : surface === 'landing'
+        ? manifest.bannersLanding
+        : manifest.banners;
     res.json({
       success: true,
       slotCount: ADMIN_BANNER_SLOT_COUNT,
@@ -14819,8 +14833,14 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
 
     const safeExtension = 'webp';
     const mimeType = 'image/webp';
+    const surfaceSegment = surface === 'users'
+      ? 'users'
+      : surface === 'landing'
+        ? 'landing'
+        : 'allcards';
     const objectKey = path.posix.join(
       ADMIN_BANNER_IMAGE_OBJECT_PREFIX,
+      surfaceSegment,
       `banner-${slot}-${variant}.${safeExtension}`
     );
 
@@ -14829,7 +14849,11 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
     const publicUrl = buildFlashcardsR2PublicUrl(objectKey);
     const versionedPublicUrl = `${publicUrl}?v=${cacheBuster}`;
     const manifest = await loadAdminBannerManifest();
-    const bannerCollectionKey = surface === 'users' ? 'bannersUsers' : 'banners';
+    const bannerCollectionKey = surface === 'users'
+      ? 'bannersUsers'
+      : surface === 'landing'
+        ? 'bannersLanding'
+        : 'banners';
     if (!Array.isArray(manifest[bannerCollectionKey])) {
       manifest[bannerCollectionKey] = createDefaultAdminBannerSet();
     }
@@ -14874,10 +14898,14 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
     });
     manifest.updatedAt = new Date().toISOString();
     const savedManifest = await persistAdminBannerManifest(manifest);
-    const savedCollection = surface === 'users' ? savedManifest.bannersUsers : savedManifest.banners;
+    const savedCollection = surface === 'users'
+      ? savedManifest.bannersUsers
+      : surface === 'landing'
+        ? savedManifest.bannersLanding
+        : savedManifest.banners;
     const savedEntry = savedCollection.find((entry) => entry.slot === slot) || null;
 
-    if (previousObjectKey && previousObjectKey !== objectKey) {
+    if (previousObjectKey && previousObjectKey !== objectKey && previousObjectKey.includes(`/${surfaceSegment}/`)) {
       deleteR2Object(previousObjectKey).catch(() => {});
     }
 

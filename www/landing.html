@@ -3,150 +3,188 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PlayTalk | App da Fluência</title>
+  <title>PlayTalk | Academia da Fluencia</title>
+  <meta name="description" content="PlayTalk e uma academia digital de fluencia em ingles com flashcards, livros interativos, voz, rankings e batalhas online.">
   <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/landing.css">
+  <link rel="preload" href="/arquivos-codex/fluent-levelup-logo.png" as="image">
+  <link rel="stylesheet" href="css/landing.css?v=20260418a">
+  <script src="js/api-config.js"></script>
 </head>
-<body>
-  <header class="hero">
-    <div class="container hero__content">
-      <div class="hero__text">
-        <span class="pill">App da Fluência</span>
-        <h1>Inglês vivo, com jogo, voz e ritmo</h1>
-        <p>O PlayTalk mistura desafios de vocabulário, listening e speaking em missões curtas que cabem no seu dia.</p>
-        <div class="hero__cta">
-          <a class="btn btn--primary" href="index.html">Jogar agora</a>
-          <a class="btn btn--ghost" href="#sobre">Como funciona</a>
-        </div>
-      </div>
-      <div class="hero__media">
-        <div class="photo-placeholder" aria-hidden="true"></div>
-        <p class="placeholder-label">Troque por uma imagem do app em ação</p>
-      </div>
-    </div>
+<body data-banner-surface="landing">
+  <header class="landing-header" aria-label="PlayTalk">
+    <a class="landing-header__logo-link" href="/flashcards?view=play" aria-label="PlayTalk">
+      <img class="landing-header__logo" src="/arquivos-codex/fluent-levelup-logo.png" alt="PlayTalk">
+    </a>
   </header>
 
+  <section class="banner-carousel landing-banner" data-banner-carousel aria-label="Banners PlayTalk">
+    <div class="banner-carousel__viewport">
+      <div class="banner-carousel__track">
+        <article class="banner-carousel__item" data-banner-slot="1">
+          <div class="banner-carousel__media">
+            <img class="banner-carousel__media-image" alt="Banner PlayTalk 1" loading="eager">
+          </div>
+        </article>
+        <article class="banner-carousel__item" data-banner-slot="2">
+          <div class="banner-carousel__media">
+            <img class="banner-carousel__media-image" alt="Banner PlayTalk 2" loading="lazy">
+          </div>
+        </article>
+        <article class="banner-carousel__item" data-banner-slot="3">
+          <div class="banner-carousel__media">
+            <img class="banner-carousel__media-image" alt="Banner PlayTalk 3" loading="lazy">
+          </div>
+        </article>
+        <article class="banner-carousel__item" data-banner-slot="4">
+          <div class="banner-carousel__media">
+            <img class="banner-carousel__media-image" alt="Banner PlayTalk 4" loading="lazy">
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="banner-admin-controls" id="bannerAdminControls" hidden aria-label="Controles dos banners do admin">
+    <div class="banner-admin-controls__row">
+      <button type="button" class="banner-admin-controls__btn" data-banner-action="mode" aria-label="Alternar desktop e mobile"></button>
+      <button type="button" class="banner-admin-controls__btn" data-banner-action="next" aria-label="Proximo banner">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.3 5.3a1 1 0 0 1 1.4 1.4L10.41 12l5.3 5.3a1 1 0 0 1-1.42 1.4l-6-6a1 1 0 0 1 0-1.4l6-6Z"/></svg>
+      </button>
+      <button type="button" class="banner-admin-controls__btn" data-banner-action="previous" aria-label="Banner anterior">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.7 5.3a1 1 0 0 0-1.4 1.4L13.59 12l-5.3 5.3a1 1 0 1 0 1.42 1.4l6-6a1 1 0 0 0 0-1.4l-6-6Z"/></svg>
+      </button>
+      <button type="button" class="banner-admin-controls__btn" data-banner-action="approve" aria-label="Aprovar e salvar banner">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.55 16.2 5.8 12.45a1 1 0 1 0-1.4 1.42l4.46 4.45a1 1 0 0 0 1.41 0l9.33-9.32a1 1 0 1 0-1.41-1.42L9.55 16.2Z"/></svg>
+      </button>
+      <button type="button" class="banner-admin-controls__btn" data-banner-action="upload" aria-label="Enviar banner do dispositivo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.29a1 1 0 1 1 1.4 1.41l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 1.4-1.41L11 12.59V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z"/></svg>
+      </button>
+    </div>
+    <input id="bannerAdminUploadInput" type="file" accept="image/*" hidden>
+    <p class="banner-admin-controls__status" data-banner-admin-status aria-live="polite"></p>
+  </section>
+
   <main>
-    <section id="sobre" class="section">
-      <div class="container section__grid">
-        <div>
-          <h2>Aprender falando de verdade</h2>
-          <p>Você treina frases que realmente usa, com correção imediata e feedback de velocidade. O app entende sua voz e ajusta o nível conforme seu desempenho.</p>
-          <ul class="list">
-            <li>Correção automática de pronúncia e digitação.</li>
-            <li>Fases rápidas que cabem na rotina.</li>
-            <li>Recompensas e medalhas a cada rodada.</li>
-          </ul>
-        </div>
-        <div class="photo-stack">
-          <div class="photo-placeholder"></div>
-          <div class="photo-placeholder"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section section--muted">
-      <div class="container section__grid section__grid--reverse">
-        <div>
-          <h2>Seis modos para dominar inglês</h2>
-          <p>Do vocabulário ao raciocínio em tempo real, cada modo foi desenhado para destravar uma habilidade diferente e manter o treino variado.</p>
-          <div class="modes">
-            <div class="mode-card">Vocabulary</div>
-            <div class="mode-card">Explore</div>
-            <div class="mode-card">Listening</div>
-            <div class="mode-card">Reading</div>
-            <div class="mode-card">Building</div>
-            <div class="mode-card">Fluent</div>
+    <section class="landing-section landing-section--intro">
+      <div class="landing-wrap intro-grid">
+        <div class="intro-copy">
+          <p class="eyebrow">Academia digital de fluencia</p>
+          <h1>Treine ingles como quem evolui de fase.</h1>
+          <p class="lead">O PlayTalk mistura flashcards, leitura, escuta, fala, repeticao inteligente, selos, rankings e batalhas online para transformar estudo em treino diario.</p>
+          <div class="intro-actions">
+            <a class="landing-btn landing-btn--primary" href="/flashcards?view=play">Comecar treino</a>
+            <a class="landing-btn landing-btn--ghost" href="/books">Ver SmartBooks</a>
           </div>
         </div>
-        <div class="photo-placeholder photo-placeholder--tall"></div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container section__grid">
-        <div>
-          <h2>Feedback que guia seus próximos passos</h2>
-          <p>Indicadores de precisão, ritmo e sequência mostram onde você está brilhando e onde ainda pode acelerar.</p>
-          <div class="stat-grid">
-            <div class="stat-card">
-              <strong>Precisão</strong>
-              <p>Aponte para 90%+ ao repetir frases.</p>
-            </div>
-            <div class="stat-card">
-              <strong>Ritmo</strong>
-              <p>Acompanhe caracteres por minuto a cada rodada.</p>
-            </div>
-            <div class="stat-card">
-              <strong>Níveis</strong>
-              <p>Suba de fase conforme acerta, sem teto para evoluir.</p>
-            </div>
-          </div>
-        </div>
-        <div class="photo-stack">
-          <div class="photo-placeholder"></div>
-          <div class="photo-placeholder"></div>
+        <div class="intro-metrics" aria-label="Experiencias do PlayTalk">
+          <div class="metric-line"><strong>5 min</strong><span>treinos curtos</span></div>
+          <div class="metric-line"><strong>12</strong><span>modos de pratica</span></div>
+          <div class="metric-line"><strong>24h</strong><span>progresso visivel</span></div>
         </div>
       </div>
     </section>
 
-    <section class="section section--muted">
-      <div class="container section__grid section__grid--reverse">
-        <div>
-          <h2>Gamificação que mantém o foco</h2>
-          <p>Medalhas, metas diárias e placares instantâneos transformam treino em jogo. Cada sessão rende pontos e conquistas novas.</p>
-          <div class="badge-row">
-            <div class="badge">Diamante</div>
-            <div class="badge">Ouro</div>
-            <div class="badge">Prata</div>
-            <div class="badge">Bronze</div>
-          </div>
+    <section class="landing-section landing-section--icons">
+      <div class="landing-wrap">
+        <div class="section-heading">
+          <p class="eyebrow">Tudo vira treino</p>
+          <h2>Pequenas praticas, evolucao constante.</h2>
         </div>
-        <div class="photo-placeholder photo-placeholder--tall"></div>
+        <div class="feature-grid" aria-label="Recursos PlayTalk">
+          <article class="feature-tile">
+            <img src="/SVG/gamehub/planting.svg" alt="">
+            <p><span>Treino diario</span><span>em poucos minutos</span></p>
+          </article>
+          <article class="feature-tile">
+            <img src="/SVG/gamehub/talking.svg" alt="">
+            <p><span>Fala com confianca</span><span>ouvindo sua voz</span></p>
+          </article>
+          <article class="feature-tile">
+            <img src="/SVG/gamehub/memory.svg" alt="">
+            <p><span>Flashcards vivos</span><span>com imagem e audio</span></p>
+          </article>
+          <article class="feature-tile">
+            <img src="/SVG/gamehub/reading.svg" alt="">
+            <p><span>Livros gamificados</span><span>pra ler e escutar</span></p>
+          </article>
+          <article class="feature-tile">
+            <img src="/SVG/codex-icons/star.svg" alt="">
+            <p><span>Rankings e selos</span><span>progresso visivel</span></p>
+          </article>
+          <article class="feature-tile">
+            <img src="/SVG/gamehub/connecting.svg" alt="">
+            <p><span>Batalhas online</span><span>desafio em tempo real</span></p>
+          </article>
+        </div>
       </div>
     </section>
 
-    <section class="section">
-      <div class="container section__grid">
+    <section class="landing-section">
+      <div class="landing-wrap split-section">
         <div>
-          <h2>Pronto para desktop e mobile</h2>
-          <p>Use microfone, teclado ou toques. O PlayTalk adapta o treino ao seu dispositivo e mantém o progresso sincronizado.</p>
-          <ul class="list">
-            <li>Funciona bem em telas pequenas.</li>
-            <li>Reconhecimento de voz otimizado.</li>
-            <li>Interface clara para repetir frases e revisar.</li>
-          </ul>
+          <p class="eyebrow">Como funciona</p>
+          <h2>O aluno entra, escolhe uma missao e pratica.</h2>
+          <p>Ele ve a palavra, escuta vozes naturais, repete frases, digita respostas, revisa conteudos e ganha selos conforme avanca. Cada ciclo reforca memoria, pronuncia, listening e leitura.</p>
         </div>
-        <div class="photo-placeholder"></div>
+        <div class="step-list">
+          <article><span>01</span><strong>Flashcards ativos</strong><p>Imagem, audio, fala e digitacao para memorizar melhor.</p></article>
+          <article><span>02</span><strong>SmartBooks</strong><p>Historias curtas com leitura, escuta e pratica de voz.</p></article>
+          <article><span>03</span><strong>Desafios vivos</strong><p>Rankings, recompensas e batalhas entre usuarios.</p></article>
+        </div>
       </div>
     </section>
 
-    <section class="section cta">
-      <div class="container cta__content">
+    <section class="landing-section landing-section--showcase">
+      <div class="landing-wrap showcase-grid">
+        <div class="showcase-panel">
+          <img src="/SVG/gamehub/listening.svg" alt="">
+          <h3>Ouvir</h3>
+          <p>Vozes naturais e frases curtas treinam compreensao sem aula pesada.</p>
+        </div>
+        <div class="showcase-panel">
+          <img src="/SVG/gamehub/talking.svg" alt="">
+          <h3>Falar</h3>
+          <p>O microfone transforma repeticao em confianca para usar ingles real.</p>
+        </div>
+        <div class="showcase-panel">
+          <img src="/SVG/gamehub/building.svg" alt="">
+          <h3>Construir</h3>
+          <p>Conteudos, decks, imagens e audios viram treino dentro da plataforma.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-section">
+      <div class="landing-wrap split-section split-section--reverse">
         <div>
-          <h2>Comece hoje sua rota de fluência</h2>
-          <p>Entre em uma rodada de 5 frases e veja sua evolução na mesma hora.</p>
+          <p class="eyebrow">Evolucao visivel</p>
+          <h2>Como uma academia, so que para fluencia.</h2>
+          <p>O sistema transforma conteudo em repeticoes inteligentes. O aluno acompanha progresso em rankings, estrelas, selos e recompensas, criando constancia sem depender de motivacao perfeita.</p>
         </div>
-        <div class="cta__actions">
-          <a class="btn btn--primary" href="index.html">Jogar agora</a>
-          <a class="btn btn--ghost" href="play.html">Explorar modos</a>
+        <div class="progress-stack">
+          <span style="--value: 92%">Vocabulary</span>
+          <span style="--value: 78%">Listening</span>
+          <span style="--value: 84%">Speaking</span>
+          <span style="--value: 69%">Reading</span>
         </div>
+      </div>
+    </section>
+
+    <section class="landing-section landing-section--cta">
+      <div class="landing-wrap cta-band">
+        <p class="eyebrow">Em uma frase</p>
+        <h2>PlayTalk e uma plataforma gamificada de fluencia em ingles.</h2>
+        <p>Flashcards, livros interativos, vozes naturais, rankings e batalhas online em uma rotina leve de pratica diaria.</p>
+        <a class="landing-btn landing-btn--primary" href="/flashcards?view=play">Jogar agora</a>
       </div>
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="container footer__grid">
-      <div>
-        <strong>PlayTalk</strong>
-        <p>Inglês guiado por jogo e feedback em tempo real.</p>
-      </div>
-      <div class="footer__links">
-        <a href="custom.html">Sobre</a>
-        <a href="play.html">Estatísticas</a>
-      </div>
-    </div>
+  <footer class="landing-footer">
+    <span>PlayTalk</span>
+    <a href="/account">Minha conta</a>
   </footer>
+
+  <script src="js/banner-carousel-admin.js?v=20260418a"></script>
 </body>
 </html>

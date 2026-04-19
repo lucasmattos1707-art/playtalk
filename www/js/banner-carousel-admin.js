@@ -26,9 +26,11 @@
   function detectBannerSurface() {
     const bodySurface = String(document.body?.getAttribute('data-banner-surface') || '').trim().toLowerCase();
     if (bodySurface === 'users') return 'users';
+    if (bodySurface === 'landing') return 'landing';
     if (bodySurface === 'allcards') return 'allcards';
     const pathName = String(window.location?.pathname || '').toLowerCase();
     if (pathName.includes('/users')) return 'users';
+    if (pathName.includes('/landing')) return 'landing';
     return 'allcards';
   }
 
