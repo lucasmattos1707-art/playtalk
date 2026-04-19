@@ -7,16 +7,10 @@
   <meta name="description" content="PlayTalk e uma academia digital de fluencia em ingles com flashcards, livros interativos, voz, rankings e batalhas online.">
   <link rel="icon" type="image/svg+xml" href="SVG/logo.svg">
   <link rel="preload" href="/arquivos-codex/fluent-levelup-logo.png" as="image">
-  <link rel="stylesheet" href="css/landing.css?v=20260418a">
+  <link rel="stylesheet" href="css/landing.css?v=20260418b">
   <script src="js/api-config.js"></script>
 </head>
 <body data-banner-surface="landing">
-  <header class="landing-header" aria-label="PlayTalk">
-    <a class="landing-header__logo-link" href="/flashcards?view=play" aria-label="PlayTalk">
-      <img class="landing-header__logo" src="/arquivos-codex/fluent-levelup-logo.png" alt="PlayTalk">
-    </a>
-  </header>
-
   <section class="banner-carousel landing-banner" data-banner-carousel aria-label="Banners PlayTalk">
     <div class="banner-carousel__viewport">
       <div class="banner-carousel__track">
@@ -137,17 +131,26 @@
     <section class="landing-section landing-section--showcase">
       <div class="landing-wrap showcase-grid">
         <div class="showcase-panel">
-          <img src="/SVG/gamehub/listening.svg" alt="">
+          <svg class="showcase-neon-icon showcase-neon-icon--listen" viewBox="0 0 120 120" aria-hidden="true">
+            <path d="M22 46h18l26-24v76L40 74H22V46Z" fill="none" stroke="currentColor" stroke-width="8" stroke-linejoin="round"/>
+            <path d="M78 42c7 10 7 26 0 36M91 30c15 18 15 42 0 60" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>
+          </svg>
           <h3>Ouvir</h3>
           <p>Vozes naturais e frases curtas treinam compreensao sem aula pesada.</p>
         </div>
         <div class="showcase-panel">
-          <img src="/SVG/gamehub/talking.svg" alt="">
+          <svg class="showcase-neon-icon showcase-neon-icon--talk" viewBox="0 0 120 120" aria-hidden="true">
+            <path d="M60 18c-12 0-22 10-22 22v18c0 12 10 22 22 22s22-10 22-22V40c0-12-10-22-22-22Z" fill="none" stroke="currentColor" stroke-width="8"/>
+            <path d="M28 56c0 20 14 36 32 36s32-16 32-36M60 92v16M44 108h32" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+            <path d="M50 42h20M50 56h20" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+          </svg>
           <h3>Falar</h3>
           <p>O microfone transforma repeticao em confianca para usar ingles real.</p>
         </div>
         <div class="showcase-panel">
-          <img src="/SVG/gamehub/building.svg" alt="">
+          <svg class="showcase-neon-icon showcase-neon-icon--build" viewBox="0 0 120 120" aria-hidden="true">
+            <path d="M24 48h24V34c0-7 5-12 12-12s12 5 12 12v14h24v24H82c-7 0-12 5-12 12s5 12 12 12h14v16H24V88h14c7 0 12-5 12-12s-5-12-12-12H24V48Z" fill="none" stroke="currentColor" stroke-width="8" stroke-linejoin="round"/>
+          </svg>
           <h3>Construir</h3>
           <p>Conteudos, decks, imagens e audios viram treino dentro da plataforma.</p>
         </div>

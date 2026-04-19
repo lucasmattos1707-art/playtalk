@@ -7,7 +7,6 @@
   --neon-green: #48ff9b;
   --neon-blue: #38c9ff;
   --panel: rgba(6, 12, 14, 0.82);
-  --header-height: clamp(72px, 10vh, 104px);
   --playtalk-global-bg-desktop: url('/backgrounds/playtalk-global-desktop.webp');
   --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
   --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
@@ -63,31 +62,6 @@ a {
 img,
 svg {
   display: block;
-}
-
-.landing-header {
-  height: var(--header-height);
-  min-height: var(--header-height);
-  display: grid;
-  place-items: center;
-  background: #000;
-  border-bottom: 1px solid rgba(72, 255, 155, 0.22);
-  position: relative;
-  z-index: 20;
-}
-
-.landing-header__logo-link {
-  display: grid;
-  place-items: center;
-  height: 100%;
-  padding: 8px 18px;
-}
-
-.landing-header__logo {
-  width: min(260px, 58vw);
-  max-height: calc(var(--header-height) - 18px);
-  object-fit: contain;
-  filter: drop-shadow(0 0 18px rgba(56, 201, 255, 0.32));
 }
 
 .landing-banner {
@@ -376,11 +350,11 @@ h2 {
 
 h1 {
   max-width: 800px;
-  font-size: clamp(42px, 8vw, 94px);
+  font-size: clamp(34px, 6.4vw, 75px);
 }
 
 h2 {
-  font-size: clamp(34px, 5.2vw, 66px);
+  font-size: clamp(27px, 4.16vw, 53px);
 }
 
 h3 {
@@ -549,19 +523,35 @@ h3 {
 .showcase-panel {
   min-height: 290px;
   display: grid;
-  align-content: end;
+  align-content: center;
+  justify-items: center;
   padding: 24px;
   border: 1px solid var(--line-blue);
   background:
-    linear-gradient(180deg, rgba(56, 201, 255, 0.06), transparent 40%),
-    rgba(4, 10, 12, 0.88);
+    linear-gradient(180deg, rgba(56, 201, 255, 0.05), transparent 42%),
+    rgba(4, 10, 12, 0.5);
+  text-align: center;
 }
 
-.showcase-panel img {
-  width: 78px;
-  height: 78px;
-  margin-bottom: 28px;
-  filter: drop-shadow(0 0 18px rgba(56, 201, 255, 0.34));
+.showcase-neon-icon {
+  width: 133px;
+  height: 133px;
+  margin: 0 auto 26px;
+}
+
+.showcase-neon-icon--listen {
+  color: #38c9ff;
+  filter: drop-shadow(0 0 16px rgba(56, 201, 255, 0.75)) drop-shadow(0 0 34px rgba(56, 201, 255, 0.42));
+}
+
+.showcase-neon-icon--talk {
+  color: #ff8a2a;
+  filter: drop-shadow(0 0 16px rgba(255, 138, 42, 0.76)) drop-shadow(0 0 34px rgba(255, 138, 42, 0.42));
+}
+
+.showcase-neon-icon--build {
+  color: #b45cff;
+  filter: drop-shadow(0 0 16px rgba(180, 92, 255, 0.76)) drop-shadow(0 0 34px rgba(180, 92, 255, 0.42));
 }
 
 .progress-stack {
