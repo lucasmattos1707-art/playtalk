@@ -7,11 +7,6 @@
   const PRESENCE_PING_MS = 15000;
   const CHALLENGE_POLL_MS = 2500;
   const HAS_GLOBAL_CHALLENGE_POPUPS = Boolean(window.PlaytalkChallengePopups);
-  const BANNER_CYCLE_MS = 14000;
-  const BANNER_SLOT_COUNT = 4;
-  const BANNER_SLOT_MS = BANNER_CYCLE_MS / BANNER_SLOT_COUNT;
-  const BANNER_SLOT_CHECK_MS = 240;
-  const NATIVE_BANNER_SLOT_CHECK_MS = 1400;
   const RANKING_CACHE_TTL_MS = 25000;
   const USERS_STAGE_SLIDE_MS = 320;
 
@@ -86,9 +81,6 @@
     currentMetricKey: 'flashcards',
     currentMetricLabel: 'Flashcards',
     currentMetricValueLabel: '',
-    bannerTrack: null,
-    activeBannerSlot: 0,
-    bannerClockStartedAtMs: Date.now(),
     loadRequestId: 0,
     rankingCache: new Map(),
     preloadInFlight: new Map(),
@@ -178,10 +170,6 @@
 
   function metricByKey(metricKey) {
     return RANKING_METRICS.find((metric) => metric.key === metricKey) || RANKING_METRICS[0];
-  }
-
-  function metricBySlot(slot) {
-    return RANKING_METRICS.find((metric) => metric.slot === slot) || RANKING_METRICS[0];
   }
 
   function wait(ms) {
@@ -274,13 +262,6 @@
       return `${value.toFixed(1)}${metricValueLabel || ''}`;
     }
     return `${Math.max(0, Math.round(value))}${metricValueLabel || ''}`;
-  }
-
-  function resolveBannerTrackElement() {
-    if (state.bannerTrack && state.bannerTrack.isConnected) return state.bannerTrack;
-    const track = document.querySelector('.banner-carousel__track');
-    state.bannerTrack = track || null;
-    return state.bannerTrack;
   }
 
   function readGuestName() {
@@ -828,16 +809,6 @@
     setUsersStatus(viewer?.rank ? `Voce esta em ${viewer.rank} lugar` : 'Ranking carregado.');
   }
 
-  function nextMetricKeyForSlot(slot) {
-    const nextSlot = (Number(slot) || 1) >= BANNER_SLOT_COUNT ? 1 : (Number(slot) || 1) + 1;
-    return metricBySlot(nextSlot).key;
-  }
-
-  async function ensureUpcomingRankingPreloaded(slot) {
-    const nextMetricKey = nextMetricKeyForSlot(slot);
-    await preloadMetric(nextMetricKey);
-  }
-
   async function loadUsers(message, options = {}) {
     const metricKey = safeText(options.metricKey || state.currentMetricKey || 'flashcards') || 'flashcards';
     const force = Boolean(options.force);
@@ -870,57 +841,6 @@
     if (animate && metricChanged) {
       await settleUsersStageSlide();
     }
-    void ensureUpcomingRankingPreloaded(metricByKey(data.metricKey).slot);
-  }
-
-  function currentBannerSlot() {
-    if (isNativeRuntime()) {
-      const elapsed = Math.max(0, Date.now() - state.bannerClockStartedAtMs);
-      const cycleProgress = elapsed % BANNER_CYCLE_MS;
-      return Math.floor(cycleProgress / BANNER_SLOT_MS) + 1;
-    }
-
-    const track = resolveBannerTrackElement();
-    if (track) {
-      const computedStyle = window.getComputedStyle(track);
-      const transform = computedStyle?.transform || '';
-      if (transform && transform !== 'none') {
-        const matrix3dMatch = transform.match(/^matrix3d\((.+)\)$/);
-        const matrix2dMatch = transform.match(/^matrix\((.+)\)$/);
-        let translateX = 0;
-        if (matrix3dMatch) {
-          const parts = matrix3dMatch[1].split(',').map((part) => Number(part.trim()));
-          translateX = Number(parts[12]) || 0;
-        } else if (matrix2dMatch) {
-          const parts = matrix2dMatch[1].split(',').map((part) => Number(part.trim()));
-          translateX = Number(parts[4]) || 0;
-        }
-        const trackWidth = Math.max(1, track.getBoundingClientRect().width || 1);
-        const progress = Math.max(0, Math.min(3, Math.round((-translateX / trackWidth) * 4)));
-        return progress + 1;
-      }
-    }
-    const elapsed = Math.max(0, Date.now() - state.bannerClockStartedAtMs);
-    const cycleProgress = elapsed % BANNER_CYCLE_MS;
-    return Math.floor(cycleProgress / BANNER_SLOT_MS) + 1;
-  }
-
-  async function syncRankingWithBanner(force) {
-    const slot = currentBannerSlot();
-    const metric = metricBySlot(slot);
-    if (!metric) return;
-    if (!force && state.activeBannerSlot === slot && state.currentMetricKey === metric.key) return;
-    state.activeBannerSlot = slot;
-    if (!force) {
-      void ensureUpcomingRankingPreloaded(slot);
-    }
-    await loadUsers('', { metricKey: metric.key, force, animate: !force });
-  }
-
-  function startBannerLinkedRankingLoop() {
-    window.setInterval(() => {
-      void syncRankingWithBanner(false);
-    }, isNativeRuntime() ? NATIVE_BANNER_SLOT_CHECK_MS : BANNER_SLOT_CHECK_MS);
   }
 
   async function pingPresence() {
@@ -1116,9 +1036,6 @@
     window.setInterval(() => {
       void pingPresence();
     }, PRESENCE_PING_MS);
-    if (!isNativeRuntime()) {
-      startBannerLinkedRankingLoop();
-    }
     if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
       window.setInterval(() => {
         void pollChallenges();
@@ -1134,11 +1051,7 @@
     if (await bootstrapViewerFlashcardsFromLocal()) {
       state.rankingCache.clear();
     }
-    if (isNativeRuntime()) {
-      await loadUsers('', { metricKey: 'flashcards', force: true, animate: false });
-    } else {
-      await syncRankingWithBanner(true);
-    }
+    await loadUsers('', { metricKey: 'flashcards', force: true, animate: false });
     if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
       await pollChallenges();
     }
