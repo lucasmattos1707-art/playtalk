@@ -234,12 +234,15 @@ const FLASHCARD_RANKING_WEEKDAY_INDEX = {
   Sat: 6
 };
 const BOOKS_PRONUNCIATION_TAG = 'speak-books';
+const FLASHCARD_REVIEW_SCALE_VERSION = 2;
+const FLASHCARD_REVIEW_PHASE_MAX = 6;
 const FLASHCARD_REVIEW_PHASES = {
   1: { key: 'first-star', label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
-  2: { key: 'second-star', label: 'Second star', durationMs: 3 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
-  3: { key: 'third-star', label: 'Third star', durationMs: 7 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/ouro.png' },
-  4: { key: 'fourth-star', label: 'Fourth star', durationMs: 12 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
-  5: { key: 'fifth-star', label: 'Fifth star', durationMs: 30 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/diamante.png' }
+  2: { key: 'second-star', label: 'Second star', durationMs: 34 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
+  3: { key: 'emerald-star', label: 'Emerald star', durationMs: 4 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/emerald.png' },
+  4: { key: 'third-star', label: 'Third star', durationMs: 10 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/ouro.png' },
+  5: { key: 'fourth-star', label: 'Fourth star', durationMs: 20 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
+  6: { key: 'fifth-star', label: 'Fifth star', durationMs: 45 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/diamante.png' }
 };
 const PREMIUM_BILLING_PLANS = {
   semana: {
@@ -551,7 +554,7 @@ const getBooksPronunciationAggregateFromRow = (row) => {
   };
 };
 
-const getQualifiedUserBookIds = async (db, userId, minimumPercent = 75) => {
+const getQualifiedUserBookIds = async (db, userId, minimumPercent = 80) => {
   const normalizedUserId = Number.parseInt(userId, 10);
   const normalizedMinimumPercent = Math.max(0, Math.min(100, Math.round(Number(minimumPercent) || 0)));
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
@@ -829,19 +832,48 @@ const flashcardMillisFromTimestamp = (value) => {
 const resolveFlashcardSealImage = (record) => {
   if (!record) return '';
   const phaseIndex = record.status === 'memorizing'
-    ? clampInteger(record.targetPhaseIndex || record.phaseIndex, 1, 5, 1)
-    : clampInteger(record.phaseIndex, 0, 5, 0);
+    ? clampInteger(record.targetPhaseIndex || record.phaseIndex, 1, FLASHCARD_REVIEW_PHASE_MAX, 1)
+    : clampInteger(record.phaseIndex, 0, FLASHCARD_REVIEW_PHASE_MAX, 0);
   if (phaseIndex <= 0) return '';
   return FLASHCARD_REVIEW_PHASES[phaseIndex]?.sealImage || '';
+};
+
+const flashcardPhaseFromSealImage = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return 0;
+  if (normalized.includes('diamante')) return 6;
+  if (normalized.includes('platina')) return 5;
+  if (normalized.includes('ouro')) return 4;
+  if (normalized.includes('emerald')) return 3;
+  if (normalized.includes('quartz')) return 2;
+  if (normalized.includes('prata')) return 1;
+  return 0;
+};
+
+const migrateFlashcardReviewPhase = (rawPhase, raw, minPhase, preferSealImage = false) => {
+  const lowerBound = minPhase ? 1 : 0;
+  const parsedPhase = clampInteger(rawPhase, lowerBound, FLASHCARD_REVIEW_PHASE_MAX, minPhase ? 1 : 0);
+  const version = Number.parseInt(raw?.reviewScaleVersion || raw?.review_scale_version, 10) || 0;
+  if (version >= FLASHCARD_REVIEW_SCALE_VERSION) {
+    return parsedPhase;
+  }
+  const imagePhase = preferSealImage ? flashcardPhaseFromSealImage(raw?.sealImage || raw?.seal_image) : 0;
+  if (imagePhase > 0) {
+    return Math.max(lowerBound, Math.min(FLASHCARD_REVIEW_PHASE_MAX, imagePhase));
+  }
+  if (parsedPhase >= 3) {
+    return Math.min(FLASHCARD_REVIEW_PHASE_MAX, parsedPhase + 1);
+  }
+  return parsedPhase;
 };
 
 const normalizeFlashcardProgressRecord = (raw) => {
   const cardId = typeof raw?.cardId === 'string' ? raw.cardId.trim() : '';
   if (!cardId) return null;
 
-  const phaseIndex = clampInteger(raw?.phaseIndex, 0, 5, 0);
-  const targetPhaseIndex = clampInteger(raw?.targetPhaseIndex, 1, 5, 1);
   const status = normalizeFlashcardStatus(raw?.status);
+  const phaseIndex = migrateFlashcardReviewPhase(raw?.phaseIndex, raw, false, status === 'ready');
+  const targetPhaseIndex = migrateFlashcardReviewPhase(raw?.targetPhaseIndex, raw, true, true);
   const memorizingDurationMs = Math.max(
     0,
     Math.round(Number(raw?.memorizingDurationMs) || 0)
@@ -864,6 +896,7 @@ const normalizeFlashcardProgressRecord = (raw) => {
       : availableAtMs || returnedAtMs || createdAtMs,
     returnedAt: status === 'ready' ? (returnedAtMs || availableAtMs || Date.now()) : returnedAtMs,
     createdAt: createdAtMs,
+    reviewScaleVersion: FLASHCARD_REVIEW_SCALE_VERSION,
     sealImage: ''
   };
 
@@ -872,17 +905,19 @@ const normalizeFlashcardProgressRecord = (raw) => {
 };
 
 const mapStoredFlashcardProgressRow = (row) => {
+  const status = normalizeFlashcardStatus(row?.status);
   const mapped = {
     cardId: String(row?.card_id || '').trim(),
-    phaseIndex: clampInteger(row?.phase_index, 0, 5, 0),
-    targetPhaseIndex: clampInteger(row?.target_phase_index, 1, 5, 1),
-    status: normalizeFlashcardStatus(row?.status),
+    phaseIndex: migrateFlashcardReviewPhase(row?.phase_index, row, false, status === 'ready'),
+    targetPhaseIndex: migrateFlashcardReviewPhase(row?.target_phase_index, row, true, true),
+    status,
     typePortuguese: Boolean(row?.type_portuguese),
     memorizingStartedAt: flashcardMillisFromTimestamp(row?.memorizing_started_at),
     memorizingDurationMs: Math.max(0, Math.round(Number(row?.memorizing_duration_ms) || 0)),
     availableAt: flashcardMillisFromTimestamp(row?.available_at),
     returnedAt: flashcardMillisFromTimestamp(row?.returned_at),
     createdAt: flashcardMillisFromTimestamp(row?.created_at),
+    reviewScaleVersion: FLASHCARD_REVIEW_SCALE_VERSION,
     sealImage: String(row?.seal_image || '').trim()
   };
 

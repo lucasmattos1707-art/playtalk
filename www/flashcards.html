@@ -6769,12 +6769,15 @@
         'wrong-text': '<svg class="game-report-menu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14"></path><path d="M5 12h8"></path><path d="M5 18h6"></path><line x1="16" y1="11" x2="21" y2="16"></line><line x1="21" y1="11" x2="16" y2="16"></line></svg>',
         'hide-card': '<svg class="game-report-menu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"></path><line x1="4" y1="4" x2="20" y2="20"></line></svg>'
       };
+      const REVIEW_SCALE_VERSION = 2;
+      const REVIEW_PHASE_MAX = 6;
       const REVIEW_PHASES = {
         1: { key: 'first-star', label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
-        2: { key: 'second-star', label: 'Second star', durationMs: 3 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
-        3: { key: 'third-star', label: 'Third star', durationMs: 7 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/ouro.png' },
-        4: { key: 'fourth-star', label: 'Fourth star', durationMs: 12 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/platina.png' },
-        5: { key: 'fifth-star', label: 'Fifth star', durationMs: 30 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/diamante.png' }
+        2: { key: 'second-star', label: 'Second star', durationMs: 34 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
+        3: { key: 'emerald-star', label: 'Emerald star', durationMs: 4 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/emerald.png' },
+        4: { key: 'third-star', label: 'Third star', durationMs: 10 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/ouro.png' },
+        5: { key: 'fourth-star', label: 'Fourth star', durationMs: 20 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/platina.png' },
+        6: { key: 'fifth-star', label: 'Fifth star', durationMs: 45 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/diamante.png' }
       };
 
       const STAGES = {
@@ -7662,6 +7665,7 @@
           cardId,
           phaseIndex: 0,
           targetPhaseIndex: 1,
+          reviewScaleVersion: REVIEW_SCALE_VERSION,
           status: 'memorizing',
           typePortuguese: false,
           memorizingStartedAt: getNowMs(),
@@ -7673,16 +7677,44 @@
         };
       }
 
+      function phaseFromSealImage(value) {
+        const normalized = safeText(value).toLowerCase();
+        if (!normalized) return 0;
+        if (normalized.includes('diamante')) return 6;
+        if (normalized.includes('platina')) return 5;
+        if (normalized.includes('ouro')) return 4;
+        if (normalized.includes('emerald')) return 3;
+        if (normalized.includes('quartz')) return 2;
+        if (normalized.includes('prata')) return 1;
+        return 0;
+      }
+
+      function migrateReviewPhase(rawPhase, raw, minPhase, preferSealImage = false) {
+        const lowerBound = minPhase ? 1 : 0;
+        const fallback = minPhase ? 1 : 0;
+        const parsedPhase = Math.max(lowerBound, Math.min(REVIEW_PHASE_MAX, Number.parseInt(rawPhase, 10) || fallback));
+        const version = Number.parseInt(raw?.reviewScaleVersion || raw?.review_scale_version, 10) || 0;
+        if (version >= REVIEW_SCALE_VERSION) return parsedPhase;
+        const imagePhase = preferSealImage ? phaseFromSealImage(raw?.sealImage || raw?.seal_image) : 0;
+        if (imagePhase > 0) return Math.max(lowerBound, Math.min(REVIEW_PHASE_MAX, imagePhase));
+        if (parsedPhase >= 3) return Math.min(REVIEW_PHASE_MAX, parsedPhase + 1);
+        return parsedPhase;
+      }
+
       function normalizeProgressRecord(raw) {
         const cardId = String(raw?.cardId || '').trim();
         if (!cardId) return null;
+        const status = raw?.status === 'ready' ? 'ready' : 'memorizing';
+        const phaseIndex = migrateReviewPhase(raw?.phaseIndex, raw, false, status === 'ready');
+        const targetPhaseIndex = migrateReviewPhase(raw?.targetPhaseIndex, raw, true, true);
         return createProgressRecord(cardId, {
-          phaseIndex: Math.max(0, Math.min(5, Number.parseInt(raw?.phaseIndex, 10) || 0)),
-          targetPhaseIndex: Math.max(1, Math.min(5, Number.parseInt(raw?.targetPhaseIndex, 10) || 1)),
-          status: raw?.status === 'ready' ? 'ready' : 'memorizing',
+          phaseIndex,
+          targetPhaseIndex,
+          reviewScaleVersion: REVIEW_SCALE_VERSION,
+          status,
           typePortuguese: Boolean(raw?.typePortuguese || raw?.type_portuguese),
           memorizingStartedAt: Number.isFinite(Number(raw?.memorizingStartedAt)) ? Number(raw.memorizingStartedAt) : getNowMs(),
-          memorizingDurationMs: Number.isFinite(Number(raw?.memorizingDurationMs)) ? Number(raw.memorizingDurationMs) : REVIEW_PHASES[1].durationMs,
+          memorizingDurationMs: Number.isFinite(Number(raw?.memorizingDurationMs)) ? Number(raw.memorizingDurationMs) : (REVIEW_PHASES[targetPhaseIndex]?.durationMs || REVIEW_PHASES[1].durationMs),
           availableAt: Number.isFinite(Number(raw?.availableAt)) ? Number(raw.availableAt) : getNowMs(),
           returnedAt: Number.isFinite(Number(raw?.returnedAt)) ? Number(raw.returnedAt) : 0,
           createdAt: Number.isFinite(Number(raw?.createdAt)) ? Number(raw.createdAt) : getNowMs()
@@ -7822,7 +7854,7 @@
         }
         const phase = Math.max(
           0,
-          Math.min(5, Number(record.status === 'ready' ? record.phaseIndex : Math.max(record.phaseIndex || 0, record.targetPhaseIndex || 0)) || 0)
+          Math.min(REVIEW_PHASE_MAX, Number(record.status === 'ready' ? record.phaseIndex : Math.max(record.phaseIndex || 0, record.targetPhaseIndex || 0)) || 0)
         );
         return {
           phase,
@@ -7952,8 +7984,8 @@
       function adminReadyProgressRecord(cardId) {
         const now = getNowMs();
         return createProgressRecord(cardId, {
-          phaseIndex: 5,
-          targetPhaseIndex: 5,
+          phaseIndex: REVIEW_PHASE_MAX,
+          targetPhaseIndex: REVIEW_PHASE_MAX,
           status: 'ready',
           memorizingStartedAt: 0,
           memorizingDurationMs: 0,
@@ -7976,8 +8008,9 @@
         return {
           progress: Array.from(state.userCards.values()).map(record => ({
             cardId: safeText(record?.cardId),
-            phaseIndex: Math.max(0, Math.min(5, Number.parseInt(record?.phaseIndex, 10) || 0)),
-            targetPhaseIndex: Math.max(1, Math.min(5, Number.parseInt(record?.targetPhaseIndex, 10) || 1)),
+            phaseIndex: Math.max(0, Math.min(REVIEW_PHASE_MAX, Number.parseInt(record?.phaseIndex, 10) || 0)),
+            targetPhaseIndex: Math.max(1, Math.min(REVIEW_PHASE_MAX, Number.parseInt(record?.targetPhaseIndex, 10) || 1)),
+            reviewScaleVersion: REVIEW_SCALE_VERSION,
             status: record?.status === 'ready' ? 'ready' : 'memorizing',
             typePortuguese: Boolean(record?.typePortuguese),
             memorizingStartedAt: Number.isFinite(Number(record?.memorizingStartedAt)) ? Number(record.memorizingStartedAt) : 0,
@@ -9849,13 +9882,13 @@
       }
 
       function phaseMeta(phaseIndex) {
-        return REVIEW_PHASES[Math.max(1, Math.min(5, Number(phaseIndex) || 1))] || REVIEW_PHASES[1];
+        return REVIEW_PHASES[Math.max(1, Math.min(REVIEW_PHASE_MAX, Number(phaseIndex) || 1))] || REVIEW_PHASES[1];
       }
 
       function activeSealPhase(record) {
         if (!record) return 0;
         if (record.status === 'memorizing') {
-          return Math.max(1, Math.min(5, Number(record.targetPhaseIndex) || Number(record.phaseIndex) || 1));
+          return Math.max(1, Math.min(REVIEW_PHASE_MAX, Number(record.targetPhaseIndex) || Number(record.phaseIndex) || 1));
         }
         if ((record.phaseIndex || 0) >= 1) return record.phaseIndex;
         return 0;
@@ -9864,10 +9897,10 @@
       function resolveRewardSealPhase(entry) {
         const currentRecord = state.userCards.get(entry.id) || null;
         if (!currentRecord) return 1;
-        if (currentRecord.status === 'ready' && (currentRecord.phaseIndex || 0) >= 5) {
-          return Math.max(1, currentRecord.phaseIndex || 5);
+        if (currentRecord.status === 'ready' && (currentRecord.phaseIndex || 0) >= REVIEW_PHASE_MAX) {
+          return Math.max(1, currentRecord.phaseIndex || REVIEW_PHASE_MAX);
         }
-        return Math.max(1, Math.min(5, (currentRecord.phaseIndex || 0) + 1));
+        return Math.max(1, Math.min(REVIEW_PHASE_MAX, (currentRecord.phaseIndex || 0) + 1));
       }
 
       function progressPercent(record) {
@@ -9884,7 +9917,7 @@
           if (record.status !== 'memorizing') return;
           if (now < (Number(record.availableAt) || 0)) return;
           record.status = 'ready';
-          record.phaseIndex = Math.max(1, Math.min(5, Number(record.targetPhaseIndex) || 1));
+          record.phaseIndex = Math.max(1, Math.min(REVIEW_PHASE_MAX, Number(record.targetPhaseIndex) || 1));
           record.targetPhaseIndex = record.phaseIndex;
           record.memorizingStartedAt = 0;
           record.memorizingDurationMs = 0;
@@ -9902,7 +9935,7 @@
 
       function moveCardToMemorizing(cardId, targetPhaseIndex) {
         const current = state.userCards.get(cardId) || createProgressRecord(cardId);
-        const nextPhase = Math.max(1, Math.min(5, Number(targetPhaseIndex) || 1));
+        const nextPhase = Math.max(1, Math.min(REVIEW_PHASE_MAX, Number(targetPhaseIndex) || 1));
         const meta = phaseMeta(nextPhase);
         const now = getNowMs();
         const record = createProgressRecord(cardId, {
@@ -10759,7 +10792,7 @@
       function buildAdminLibraryCardView(card) {
         const isEmptySlot = !hasPlayableFlashcardImage(card);
         const sealOpacity = card.audioUrl ? 1 : (isEmptySlot ? 0.3 : 0.2);
-        const sealMarkup = `<button class="mini-card__seal-btn" type="button" data-admin-audio="${escapeHtml(card.id)}" aria-label="Ouvir audio do flashcard" ${card.audioUrl ? '' : 'disabled'}><img class="mini-card__seal" src="${escapeHtml(phaseMeta(5).sealPath)}" alt="${escapeHtml(phaseMeta(5).label)}" style="--seal-opacity:${escapeHtml(String(sealOpacity))}"></button>`;
+        const sealMarkup = `<button class="mini-card__seal-btn" type="button" data-admin-audio="${escapeHtml(card.id)}" aria-label="Ouvir audio do flashcard" ${card.audioUrl ? '' : 'disabled'}><img class="mini-card__seal" src="${escapeHtml(phaseMeta(REVIEW_PHASE_MAX).sealPath)}" alt="${escapeHtml(phaseMeta(REVIEW_PHASE_MAX).label)}" style="--seal-opacity:${escapeHtml(String(sealOpacity))}"></button>`;
         const reportCounts = state.admin.reportCounts.get(card.id) || {};
         const reportsMarkup = FLASHCARD_REPORT_TYPES
           .filter((item) => Number(reportCounts?.[item.key] || 0) > 0)
@@ -14226,8 +14259,8 @@
           commitCurrentCardTrainingTime();
         }
         const currentRecord = state.userCards.get(entry.id) || null;
-        const currentPhase = Math.max(0, Math.min(5, Number(currentRecord?.phaseIndex) || 0));
-        const nextPhase = Math.max(1, Math.min(5, currentPhase + 1));
+        const currentPhase = Math.max(0, Math.min(REVIEW_PHASE_MAX, Number(currentRecord?.phaseIndex) || 0));
+        const nextPhase = Math.max(1, Math.min(REVIEW_PHASE_MAX, currentPhase + 1));
         moveCardToMemorizing(entry.id, nextPhase);
       }
 

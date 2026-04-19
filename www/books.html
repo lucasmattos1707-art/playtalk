@@ -2680,7 +2680,46 @@
         0 18px 32px rgba(0, 0, 0, 0.36);
       display: grid;
       place-items: center;
+      position: relative;
       transition: --reader-progress-angle 340ms ease;
+    }
+
+    .books-reader-current-badge {
+      position: absolute;
+      right: -8px;
+      bottom: 8px;
+      width: clamp(64px, 32%, 86px);
+      height: clamp(64px, 32%, 86px);
+      object-fit: contain;
+      z-index: 5;
+      filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.46));
+      pointer-events: none;
+      transform-origin: center;
+      opacity: 1;
+    }
+
+    .books-reader-current-badge[hidden] {
+      display: none;
+    }
+
+    .books-reader-current-badge.is-swapping {
+      animation: books-reader-badge-swap 500ms ease both;
+    }
+
+    .books-reader-current-badge.is-flashing {
+      animation: books-reader-badge-swap 500ms ease both, books-reader-badge-flash 500ms ease both;
+    }
+
+    @keyframes books-reader-badge-swap {
+      0% { opacity: 0; transform: scale(0.72) rotate(-8deg); }
+      55% { opacity: 1; transform: scale(1.12) rotate(4deg); }
+      100% { opacity: 1; transform: scale(1) rotate(0deg); }
+    }
+
+    @keyframes books-reader-badge-flash {
+      0% { filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.46)); }
+      45% { filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.92)) drop-shadow(0 0 30px rgba(75, 255, 166, 0.58)); }
+      100% { filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.46)); }
     }
 
     @keyframes books-neon-spin {
@@ -3446,6 +3485,7 @@
             <img class="books-reader-avatar-img" id="booksReaderAvatarImage" alt="Avatar do usuario" hidden>
             <span class="books-reader-avatar-fallback" id="booksReaderAvatarFallback">P</span>
           </div>
+          <img class="books-reader-current-badge" id="booksReaderCurrentBadge" alt="" hidden>
         </div>
         <p class="books-reader-user-name" id="booksReaderUserName">Jogador</p>
           <p class="books-reader-pron-percent" id="booksReaderPronPercent">0.0</p>

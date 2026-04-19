@@ -51,11 +51,12 @@
   const MAX_UI_LEVEL = UI_FIRST_BOOK_LEVEL + MAX_BOOK_LEVEL - 1;
   const DEFAULT_HOME_REPEAT_INDEX = Math.max(0, HOME_REPEAT_OPTIONS.indexOf(5));
   const MY_BOOKS_BADGES = [
-    { minPercent: 97, src: '/medalhas/diamante.png', alt: 'Selo diamante' },
-    { minPercent: 95, src: '/medalhas/ouro.png', alt: 'Selo ouro' },
-    { minPercent: 90, src: '/medalhas/platina.png', alt: 'Selo platina' },
+    { minPercent: 98, src: '/medalhas/diamante.png', alt: 'Selo diamante' },
+    { minPercent: 94, src: '/medalhas/platina.png', alt: 'Selo platina' },
+    { minPercent: 92, src: '/medalhas/ouro.png', alt: 'Selo ouro' },
+    { minPercent: 90, src: '/medalhas/emerald.png', alt: 'Selo esmeralda' },
     { minPercent: 85, src: '/medalhas/quartz.png', alt: 'Selo quartz' },
-    { minPercent: 75, src: '/medalhas/prata.png', alt: 'Selo prata' }
+    { minPercent: 80, src: '/medalhas/prata.png', alt: 'Selo prata' }
   ];
 
   const LISTENING_CHARS_PENDING_KEY = 'playtalk_books_listening_chars_pending_v1';
@@ -210,6 +211,7 @@
     readerTraining: document.getElementById('booksReaderTraining'),
     readerAvatarImage: document.getElementById('booksReaderAvatarImage'),
     readerAvatarFallback: document.getElementById('booksReaderAvatarFallback'),
+    readerCurrentBadge: document.getElementById('booksReaderCurrentBadge'),
     readerUserName: document.getElementById('booksReaderUserName'),
     readerPronRing: document.getElementById('booksReaderPronRing'),
     readerPronPercent: document.getElementById('booksReaderPronPercent'),
@@ -280,6 +282,9 @@
     readerDisplayLanguage: 'english',
     readerScores: [],
     readerCurrentScore: null,
+    readerCurrentBadgeSrc: '',
+    readerCurrentBadgeRank: 0,
+    readerCurrentBadgeTimer: 0,
     readerSessionListenedMs: 0,
     readerSessionSpokenChars: 0,
     readerMicBusy: false,
@@ -1753,6 +1758,13 @@
   function getMyBooksBadge(bestPercent) {
     const normalizedPercent = normalizePercent(bestPercent);
     return MY_BOOKS_BADGES.find((badge) => normalizedPercent >= badge.minPercent) || null;
+  }
+
+  function getMyBooksBadgeRank(badge) {
+    const src = safeText(badge?.src);
+    if (!src) return 0;
+    const index = MY_BOOKS_BADGES.findIndex((entry) => safeText(entry.src) === src);
+    return index >= 0 ? MY_BOOKS_BADGES.length - index : 0;
   }
 
   function buildAllBooksWindow(feed, startIndex, size = ALL_BOOKS_WINDOW_SIZE) {
@@ -5447,6 +5459,60 @@
     els.readerEnglish.classList.add('is-dissolve');
   }
 
+  function updateReaderCurrentBadge(percent, options = {}) {
+    const badgeEl = els.readerCurrentBadge;
+    if (!badgeEl) return;
+    const shouldShow = isReaderTrainingMode();
+    const badge = shouldShow ? getMyBooksBadge(percent) : null;
+    const nextSrc = safeText(badge?.src);
+    const nextRank = getMyBooksBadgeRank(badge);
+    const previousSrc = state.readerCurrentBadgeSrc;
+    const previousRank = state.readerCurrentBadgeRank;
+
+    if (!nextSrc) {
+      badgeEl.hidden = true;
+      badgeEl.removeAttribute('src');
+      badgeEl.classList.remove('is-swapping', 'is-flashing');
+      state.readerCurrentBadgeSrc = '';
+      state.readerCurrentBadgeRank = 0;
+      return;
+    }
+
+    if (nextSrc === previousSrc && !options.force) return;
+
+    if (state.readerCurrentBadgeTimer) {
+      window.clearTimeout(state.readerCurrentBadgeTimer);
+      state.readerCurrentBadgeTimer = 0;
+    }
+
+    badgeEl.hidden = false;
+    badgeEl.src = nextSrc;
+    badgeEl.alt = safeText(badge.alt);
+    badgeEl.classList.remove('is-swapping', 'is-flashing');
+    void badgeEl.offsetWidth;
+    badgeEl.classList.add(nextRank > previousRank ? 'is-flashing' : 'is-swapping');
+    state.readerCurrentBadgeTimer = window.setTimeout(() => {
+      badgeEl.classList.remove('is-swapping', 'is-flashing');
+      state.readerCurrentBadgeTimer = 0;
+    }, 540);
+
+    state.readerCurrentBadgeSrc = nextSrc;
+    state.readerCurrentBadgeRank = nextRank;
+  }
+
+  function resetReaderCurrentBadge() {
+    if (state.readerCurrentBadgeTimer) {
+      window.clearTimeout(state.readerCurrentBadgeTimer);
+      state.readerCurrentBadgeTimer = 0;
+    }
+    state.readerCurrentBadgeSrc = '';
+    state.readerCurrentBadgeRank = 0;
+    if (!els.readerCurrentBadge) return;
+    els.readerCurrentBadge.hidden = true;
+    els.readerCurrentBadge.removeAttribute('src');
+    els.readerCurrentBadge.classList.remove('is-swapping', 'is-flashing');
+  }
+
   function updateReaderPronPercent() {
     const total = state.readerScores.length;
     const avg = total
@@ -5464,6 +5530,7 @@
         startValue: 0
       });
     }
+    updateReaderCurrentBadge(avg);
   }
 
   function updateReaderLanguageButtons() {
@@ -5977,6 +6044,7 @@
     state.readerDisplayLanguage = 'english';
     state.readerScores = [];
     state.readerCurrentScore = null;
+    resetReaderCurrentBadge();
     state.readerSessionListenedMs = 0;
     state.readerSessionSpokenChars = 0;
     state.readerMicBusy = false;
@@ -6065,6 +6133,7 @@
         }];
       state.readerScores = [];
       state.readerCurrentScore = null;
+      resetReaderCurrentBadge();
       state.readerSessionListenedMs = 0;
       state.readerSessionSpokenChars = 0;
       state.readerDisplayLanguage = 'english';
