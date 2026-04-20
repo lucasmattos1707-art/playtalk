@@ -637,7 +637,7 @@
   function renderPremiumButton() {
     if (!els.premiumBtn || !els.premiumLabel || !els.premiumIcon) return;
     const loggedIn = isLoggedIn();
-    els.premiumLabel.textContent = loggedIn ? 'Comprar premium!' : 'Entrar';
+    els.premiumLabel.textContent = loggedIn ? 'Obter premium' : 'Entrar';
     els.premiumIcon.hidden = !loggedIn;
   }
 
