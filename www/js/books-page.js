@@ -5668,6 +5668,10 @@
     };
   }
 
+  function getReaderDisplayedScorePercent(value) {
+    return Math.max(0, Math.min(100, formatReaderRoundedScoreValue(value).roundedValue * 10));
+  }
+
   function isReaderTrainingMode(mode = state.readerMode) {
     return mode === 'listening-training' || mode === 'speaking-training';
   }
@@ -5680,7 +5684,7 @@
   function calculateReaderAverageScore() {
     if (!Array.isArray(state.readerScores) || !state.readerScores.length) return 0;
     const total = state.readerScores.reduce((acc, value) => acc + normalizeReaderPercent(value), 0);
-    return normalizeReaderPercent(total / state.readerScores.length);
+    return Math.max(0, Math.min(100, total / state.readerScores.length));
   }
 
   function commitReaderPhrasePracticeProgress() {
@@ -5895,13 +5899,21 @@
     }
 
     const savedBookRead = Math.max(0, Number(completionPayload?.stats?.bookReadCount) || 0);
-    const savedGeneralPronunciation = normalizeReaderPercent(
+    const savedGeneralPronunciation = normalizePrecisePercent(
       completionPayload?.stats?.generalPronunciationPercent
     );
+    const sessionPronunciationDisplay = formatReaderScoreValue(sessionPronunciationPercent);
+    const savedGeneralPronunciationDisplay = formatReaderScoreValue(savedGeneralPronunciation);
     const lines = [
-      formatReaderRoundedScoreValue(sessionPronunciationPercent).text,
+      {
+        prefix: 'Pronuncia: ',
+        scoreValue: sessionPronunciationDisplay.scaledValue
+      },
       `${savedBookRead > 0 ? savedBookRead : '--'} Livros`,
-      `Nota geral ${formatReaderRoundedScoreValue(savedGeneralPronunciation).text}`
+      {
+        prefix: 'Nota geral ',
+        scoreValue: savedGeneralPronunciationDisplay.scaledValue
+      }
     ];
 
     for (const line of lines) {
@@ -6272,12 +6284,13 @@
         if (transcript) {
           state.readerSessionSpokenChars += transcript.length;
         }
-        const score = applyReaderSentenceBonus(calculateSpeechMatchPercent(card.english, transcript));
-        state.readerScores.push(score);
-        addPendingPronunciationSample(score);
-        state.readerCurrentScore = score;
+        const rawScore = applyReaderSentenceBonus(calculateSpeechMatchPercent(card.english, transcript));
+        const displayedScore = getReaderDisplayedScorePercent(rawScore);
+        state.readerScores.push(displayedScore);
+        addPendingPronunciationSample(displayedScore);
+        state.readerCurrentScore = displayedScore;
         updateReaderPronPercent();
-        showReaderMicScore(score);
+        showReaderMicScore(displayedScore);
         setReaderTrainingStatus('');
         if (state.readerIndex < (state.readerCards.length - 1)) {
         window.setTimeout(() => {
