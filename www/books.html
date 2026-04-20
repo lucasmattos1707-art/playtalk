@@ -514,6 +514,30 @@
       min-height: 0;
     }
 
+    .books-home.is-player-books .books-home-screen--current {
+      transform: translateY(18vh);
+    }
+
+    .books-home.is-player-books .books-home-screen--next {
+      transform: translateY(calc(100% + 18vh));
+    }
+
+    .books-home.is-player-books .books-home-viewport.is-book-transitioning .books-home-screen--current {
+      transform: translateY(calc(-100% + 18vh));
+    }
+
+    .books-home.is-player-books .books-home-viewport.is-book-transitioning .books-home-screen--next {
+      transform: translateY(18vh);
+    }
+
+    .books-home.is-player-books .books-home-viewport.is-book-transitioning.is-reverse .books-home-screen--current {
+      transform: translateY(calc(100% + 18vh));
+    }
+
+    .books-home.is-player-books .books-home-viewport.is-book-transitioning.is-reverse .books-home-screen--next {
+      transform: translateY(18vh);
+    }
+
     .books-home.is-immersive .books-home-book-slot {
       padding-top: 0;
       align-items: center;

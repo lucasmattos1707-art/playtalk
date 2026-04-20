@@ -2302,7 +2302,7 @@
   function renderHomePanel() {
     if (!els.homePanel) return;
     if (IS_MYBOOKS_GRID_EMBED) {
-      els.homePanel.classList.remove('is-visible', 'is-immersive');
+      els.homePanel.classList.remove('is-visible', 'is-immersive', 'is-player-books');
       els.homePanel.hidden = true;
       if (els.homeShell) {
         els.homeShell.hidden = true;
@@ -2327,6 +2327,7 @@
     els.homePanel.hidden = !visible;
     els.homePanel.classList.toggle('is-visible', visible);
     els.homePanel.classList.toggle('is-immersive', shellActive);
+    els.homePanel.classList.toggle('is-player-books', shellActive);
     if (els.statsPanel) {
       els.statsPanel.hidden = shellActive || !isStatsLevel();
       els.statsPanel.classList.toggle('is-visible', !shellActive && isStatsLevel());
