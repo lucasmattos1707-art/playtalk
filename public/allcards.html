@@ -123,8 +123,9 @@
       justify-content: center;
       gap: 10px;
       padding: 0 14px;
-      font-family: "PlaytalkDisplay", "Soopafre", Arial, sans-serif;
-      font-size: clamp(20px, 4.2vw, 32px);
+      font-family: "Open Sans", Arial, sans-serif;
+      font-size: clamp(14px, 2.8vw, 17px);
+      font-weight: 700;
       color: #fff;
       letter-spacing: 0;
       cursor: pointer;
@@ -135,7 +136,13 @@
       width: clamp(22px, 5vw, 30px);
       height: clamp(22px, 5vw, 30px);
       flex: 0 0 auto;
+      color: currentColor;
       filter: drop-shadow(0 0 14px currentColor);
+    }
+
+    .content-switcher__btn svg,
+    .content-switcher__btn svg * {
+      fill: currentColor !important;
     }
 
     .content-switcher__btn span {
@@ -183,6 +190,9 @@
       position: relative;
       margin-top: 0;
       transform: translateY(-2vh);
+      min-height: calc(100vh - var(--footer-total-height) - 2vh);
+      display: flex;
+      flex-direction: column;
     }
 
     .panel.section {
@@ -210,13 +220,9 @@
       align-items: center;
       justify-content: center;
       width: min(720px, calc(100vw - 28px));
-      margin: 0 auto;
-      min-height: clamp(46px, 9vw, 58px);
-      padding: 0 calc(clamp(46px, 9vw, 58px) + 12px);
-      position: absolute;
-      left: 50%;
-      bottom: calc(var(--footer-total-height) + 4vh);
-      transform: translateX(-50%);
+      margin: 10px auto 12px;
+      min-height: auto;
+      padding: 0 10px;
       z-index: 6;
     }
 
@@ -227,9 +233,9 @@
     .smartbooks-play-btn {
       width: clamp(46px, 9vw, 58px);
       height: clamp(46px, 9vw, 58px);
-      position: absolute;
-      top: 50%;
-      right: 4px;
+      position: fixed;
+      top: 50vh;
+      right: 18px;
       border: 0;
       border-radius: 50%;
       display: grid;
@@ -244,6 +250,7 @@
       text-decoration: none;
       transform: translateY(-50%);
       transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+      z-index: 12;
     }
 
     .smartbooks-play-btn:hover,
@@ -258,9 +265,8 @@
     }
 
     .smartbooks-play-btn svg {
-      width: 84%;
-      height: 84%;
-      transform: translateX(5%);
+      width: 74%;
+      height: 74%;
       fill: currentColor;
       filter: drop-shadow(0 2px 4px rgba(0, 82, 24, 0.22));
     }
@@ -437,7 +443,7 @@
     }
 
     .smartbooks-shelf {
-      --books-shelf-height: max(420px, calc(100vh - var(--footer-total-height) - 23vh));
+      --books-shelf-height: max(420px, calc(100vh - var(--footer-total-height) - 112px));
       min-height: var(--books-shelf-height);
       max-height: var(--books-shelf-height);
       border-radius: 0;
@@ -450,6 +456,19 @@
       position: relative;
       scroll-snap-type: y mandatory;
       -webkit-overflow-scrolling: touch;
+      flex: 1 1 auto;
+      margin-bottom: calc(-1 * (24px + env(safe-area-inset-bottom, 0px)));
+      padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .smartbooks-shelf::before {
+      display: none;
+    }
+
+    .smartbooks-shelf::-webkit-scrollbar {
+      display: none;
     }
 
     .smartbooks-grid {
@@ -566,14 +585,14 @@
       z-index: 2;
       margin: 0;
       color: #fff;
-      font-family: "QuicksandLight", Arial, sans-serif;
-      font-size: 1.1rem;
-      font-weight: 300;
+      font-family: "Open Sans", Arial, sans-serif;
+      font-size: clamp(18px, 3.8vw, 24px);
+      font-weight: 700;
       line-height: 1.05;
       letter-spacing: 0;
       text-align: center;
-      white-space: nowrap;
       text-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+      transform: translateY(2vh);
     }
 
     .smartbooks-status {
@@ -722,7 +741,7 @@
             <h2 id="smartbooksTitle">SmartBooks</h2>
           </div>
           <a class="smartbooks-play-btn" href="/books" aria-label="Abrir Books">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.36a1 1 0 0 0 0-1.72l-10-6.36A1 1 0 0 0 8 5.14Z"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z"/></svg>
           </a>
         </div>
         <div class="smartbooks-shelf" id="smartbooksShelf">

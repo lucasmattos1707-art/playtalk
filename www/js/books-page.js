@@ -2284,24 +2284,25 @@
       }
       return;
     }
-    const visible = isHomeLevel();
+    const shellActive = state.homeIntroDismissed || state.homeSleepActive;
+    const visible = isHomeLevel() || shellActive;
     syncBooksInjectedFooterVisibility();
-    document.body.classList.toggle('books-sleeping-mode', visible && state.homeIntroDismissed);
+    document.body.classList.toggle('books-sleeping-mode', shellActive);
     els.homePanel.classList.toggle('is-visible', visible);
-    els.homePanel.classList.toggle('is-immersive', visible && state.homeIntroDismissed);
+    els.homePanel.classList.toggle('is-immersive', shellActive);
     if (els.page) {
-      els.page.classList.toggle('is-home-immersive', visible && state.homeIntroDismissed);
+      els.page.classList.toggle('is-home-immersive', shellActive);
     }
     if (els.homeStartPanel) {
       els.homeStartPanel.classList.toggle('is-hidden', state.homeIntroDismissed);
     }
     if (els.homeShell) {
-      const showShell = state.homeIntroDismissed;
+      const showShell = shellActive;
       els.homeShell.hidden = !showShell;
       els.homeShell.classList.toggle('is-visible', showShell);
     }
     if (els.homeControls) {
-      els.homeControls.hidden = !state.homeIntroDismissed;
+      els.homeControls.hidden = !shellActive;
     }
     const backgroundSession = (state.homeTransitioning && state.homeNextSession) ? state.homeNextSession : state.homeCurrentSession;
     applyHomeBookBackground(backgroundSession);
@@ -2316,7 +2317,7 @@
     renderHomeProgressUi();
     renderHomeTransportUi();
     if (els.cardsGrid) {
-      els.cardsGrid.hidden = visible;
+      els.cardsGrid.hidden = shellActive;
     }
     if (visible && els.cardsEmpty) {
       els.cardsEmpty.hidden = true;
