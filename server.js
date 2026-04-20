@@ -148,6 +148,7 @@ let miniBookJsonTablesReadyPromise = null;
 let booksSpeakingStatsTablesReadyPromise = null;
 let userBooksLibraryStatsReadyPromise = null;
 let userBooksConsumptionStatsReadyPromise = null;
+let userDailyEnergyStatsReadyPromise = null;
 let usersPresenceClassReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
@@ -176,6 +177,7 @@ function invalidateAdminMiniBooksSummaryCache() {
 }
 
 const FLASHCARD_RANKING_TIMEZONE = 'America/Sao_Paulo';
+const DAILY_FREE_ENERGY_LIMIT = 5000;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
 const SPEAKING_DUEL_DEFAULT_CARDS = 25;
@@ -637,6 +639,45 @@ const computePresenceConsistencyPercent = (accountAgeDays, presenceClassRaw) => 
   return Math.max(0, Math.min(100, Number((basePercent + bonusPercent).toFixed(1))));
 };
 
+const buildNextDailyEnergyResetIso = (now = new Date()) => {
+  const current = now instanceof Date ? new Date(now.getTime()) : new Date(now);
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: FLASHCARD_RANKING_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const tomorrow = new Date(current.getTime() + (24 * 60 * 60 * 1000));
+  const tomorrowDate = formatter.format(tomorrow);
+  const reset = new Date(`${tomorrowDate}T00:00:00-03:00`);
+  return Number.isNaN(reset.getTime())
+    ? tomorrow.toISOString()
+    : reset.toISOString();
+};
+
+const buildDailyEnergySnapshot = (user, dailyRow = {}) => {
+  const unlimited = isPremiumActiveFromUser(user);
+  const readingChars = Math.max(0, Number(dailyRow?.reading_chars) || 0);
+  const speakingChars = Math.max(0, Number(dailyRow?.speaking_chars) || 0);
+  const listeningChars = Math.max(0, Number(dailyRow?.listening_chars) || 0);
+  const used = Math.max(0, readingChars + speakingChars + listeningChars);
+  return {
+    unlimited,
+    dailyEnergyLimit: DAILY_FREE_ENERGY_LIMIT,
+    dailyEnergyUsed: unlimited ? 0 : used,
+    remainingEnergy: unlimited ? null : Math.max(0, DAILY_FREE_ENERGY_LIMIT - used),
+    readingCharsToday: readingChars,
+    speakingCharsToday: speakingChars,
+    listeningCharsToday: listeningChars,
+    nextEnergyResetAt: buildNextDailyEnergyResetIso()
+  };
+};
+
+const mergeStatsWithDailyEnergy = (user, stats = {}, dailyRow = {}) => ({
+  ...stats,
+  ...buildDailyEnergySnapshot(user, dailyRow)
+});
+
 const updateUserPresenceClassProgress = async (db, userId, deltas = {}) => {
   const normalizedUserId = Number.parseInt(userId, 10);
   const speakingCharsDelta = Math.max(0, Math.round(Number(deltas?.speakingCharsDelta) || 0));
@@ -695,6 +736,76 @@ const updateUserPresenceClassProgress = async (db, userId, deltas = {}) => {
     dayPointsTotal: nextPointsTotal,
     dayQualified: nextQualified
   };
+};
+
+const incrementDailyEnergyUsage = async (db, user, deltas = {}) => {
+  const normalizedUserId = Number.parseInt(user?.id || user, 10);
+  const readingCharsDelta = Math.max(0, Math.round(Number(deltas?.readingCharsDelta) || 0));
+  const speakingCharsDelta = Math.max(0, Math.round(Number(deltas?.speakingCharsDelta) || 0));
+  const listeningCharsDelta = Math.max(0, Math.round(Number(deltas?.listeningCharsDelta) || 0));
+  const totalDelta = readingCharsDelta + speakingCharsDelta + listeningCharsDelta;
+
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    const error = new Error('Usuario invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await ensureUserDailyEnergyStatsTable();
+
+  if (isPremiumActiveFromUser(user)) {
+    return buildDailyEnergySnapshot(user, {});
+  }
+
+  const existingResult = await db.query(
+    `SELECT reading_chars, speaking_chars, listening_chars
+     FROM public.user_daily_energy_stats
+     WHERE user_id = $1
+       AND day_key = (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::date
+     LIMIT 1`,
+    [normalizedUserId]
+  );
+  const existing = existingResult.rows[0] || {};
+  const existingUsed = Math.max(0,
+    (Number(existing.reading_chars) || 0)
+    + (Number(existing.speaking_chars) || 0)
+    + (Number(existing.listening_chars) || 0)
+  );
+
+  if (totalDelta > 0 && (existingUsed + totalDelta) > DAILY_FREE_ENERGY_LIMIT) {
+    const error = new Error('Mais energia em breve. Abra /account para acompanhar o reset.');
+    error.statusCode = 402;
+    error.energySnapshot = buildDailyEnergySnapshot(user, existing);
+    throw error;
+  }
+
+  if (totalDelta <= 0) {
+    return buildDailyEnergySnapshot(user, existing);
+  }
+
+  const result = await db.query(
+    `INSERT INTO public.user_daily_energy_stats (
+       user_id, day_key, reading_chars, speaking_chars, listening_chars, updated_at
+     )
+     VALUES (
+       $1,
+       (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::date,
+       $2,
+       $3,
+       $4,
+       now()
+     )
+     ON CONFLICT (user_id, day_key)
+     DO UPDATE SET
+       reading_chars = public.user_daily_energy_stats.reading_chars + EXCLUDED.reading_chars,
+       speaking_chars = public.user_daily_energy_stats.speaking_chars + EXCLUDED.speaking_chars,
+       listening_chars = public.user_daily_energy_stats.listening_chars + EXCLUDED.listening_chars,
+       updated_at = now()
+     RETURNING reading_chars, speaking_chars, listening_chars`,
+    [normalizedUserId, readingCharsDelta, speakingCharsDelta, listeningCharsDelta]
+  );
+
+  return buildDailyEnergySnapshot(user, result.rows[0] || {});
 };
 
 const upsertUserBooksPronunciationSamples = async (client, userId, samplesInput) => {
@@ -1494,6 +1605,39 @@ const ensureUserBooksConsumptionStatsTable = async () => {
   }
 
   return userBooksConsumptionStatsReadyPromise;
+};
+
+const ensureUserDailyEnergyStatsTable = async () => {
+  if (!pool) return false;
+
+  await ensureUsersAvatarColumn();
+
+  if (!userDailyEnergyStatsReadyPromise) {
+    userDailyEnergyStatsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_daily_energy_stats (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          day_key date NOT NULL,
+          reading_chars bigint NOT NULL DEFAULT 0,
+          speaking_chars bigint NOT NULL DEFAULT 0,
+          listening_chars bigint NOT NULL DEFAULT 0,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, day_key)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_daily_energy_stats_day_idx
+        ON public.user_daily_energy_stats (day_key DESC, updated_at DESC)
+      `);
+      return true;
+    })().catch((error) => {
+      userDailyEnergyStatsReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return userDailyEnergyStatsReadyPromise;
 };
 
 const ensureUsersPresenceClassMetricStorage = async () => {
@@ -2811,7 +2955,7 @@ const readFlashcardStateForUser = async (userId) => {
   };
 };
 
-const saveFlashcardStateForUser = async (userId, payload) => {
+const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => {
   if (!pool) {
     throw new Error('DATABASE_URL nao configurada.');
   }
@@ -9844,7 +9988,7 @@ app.put('/api/flashcards/state', async (req, res) => {
       return;
     }
 
-    const savedState = await saveFlashcardStateForUser(authUser.id, req.body);
+    const savedState = await saveFlashcardStateForUser(authUser.id, req.body, authUser);
     res.json({
       success: true,
       progressCount: savedState.progressCount,
@@ -10949,9 +11093,10 @@ app.get('/api/books/stats', async (req, res) => {
     await ensureUserBooksLibraryStatsTable();
     await ensureBooksSpeakingStatsTable();
     await ensureUserBooksConsumptionStatsTable();
+    await ensureUserDailyEnergyStatsTable();
     await ensureUsersPresenceClassMetricStorage();
 
-    const [totalsResult, speakingStatsResult, consumptionResult, qualifiedBooksResult, bookBestPercentById, flashcardsResult, presenceClassResult, adminBooksSummary] = await Promise.all([
+    const [totalsResult, speakingStatsResult, consumptionResult, dailyEnergyResult, qualifiedBooksResult, bookBestPercentById, flashcardsResult, presenceClassResult, adminBooksSummary] = await Promise.all([
       pool.query(
         `SELECT COALESCE(SUM(reads_completed), 0)::int AS total_reads
          FROM public.user_books_library_stats
@@ -10970,6 +11115,14 @@ app.get('/api/books/stats', async (req, res) => {
         `SELECT reading_chars, speaking_chars, listening_chars, practice_seconds
          FROM public.user_books_consumption_stats
          WHERE user_id = $1
+         LIMIT 1`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT reading_chars, speaking_chars, listening_chars
+         FROM public.user_daily_energy_stats
+         WHERE user_id = $1
+           AND day_key = (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::date
          LIMIT 1`,
         [userId]
       ),
@@ -11001,27 +11154,29 @@ app.get('/api/books/stats', async (req, res) => {
     const presenceClass = Math.max(0, Number(presenceClassResult.rows[0]?.presence_class) || 0);
     const consistencyPercent = computePresenceConsistencyPercent(accountAgeDays, presenceClass);
 
+    const statsPayload = mergeStatsWithDailyEnergy(authUser, {
+      bookReadCount: Math.max(0, Number(totalsResult.rows[0]?.total_reads) || 0),
+      flashcardsCount: Math.max(0, Number(flashcardsResult.rows[0]?.flashcards_count) || 0),
+      myBooksCount: qualifiedBookIds.length,
+      generalPronunciationPercent: pronunciationStats.generalPronunciationPercent,
+      pronunciationSamplesCount: pronunciationStats.pronunciationSamplesCount,
+      latestPronunciationPercent: pronunciationStats.latestPronunciationPercent,
+      readingChars: Math.max(0, Number(consumption.reading_chars) || 0),
+      speakingChars: Math.max(0, Number(consumption.speaking_chars) || 0),
+      listeningChars: Math.max(0, Number(consumption.listening_chars) || 0),
+      practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0),
+      accountAgeDays,
+      presenceClass,
+      consistencyPercent,
+      qualifiedBookIds,
+      qualifiedBookCount: qualifiedBookIds.length,
+      bookBestPercentById,
+      adminBooksSummary: requesterIsAdmin ? adminBooksSummary : null
+    }, dailyEnergyResult.rows[0] || {});
+
     res.json({
       success: true,
-      stats: {
-        bookReadCount: Math.max(0, Number(totalsResult.rows[0]?.total_reads) || 0),
-        flashcardsCount: Math.max(0, Number(flashcardsResult.rows[0]?.flashcards_count) || 0),
-        myBooksCount: qualifiedBookIds.length,
-        generalPronunciationPercent: pronunciationStats.generalPronunciationPercent,
-        pronunciationSamplesCount: pronunciationStats.pronunciationSamplesCount,
-        latestPronunciationPercent: pronunciationStats.latestPronunciationPercent,
-        readingChars: Math.max(0, Number(consumption.reading_chars) || 0),
-        speakingChars: Math.max(0, Number(consumption.speaking_chars) || 0),
-        listeningChars: Math.max(0, Number(consumption.listening_chars) || 0),
-        practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0),
-        accountAgeDays,
-        presenceClass,
-        consistencyPercent,
-        qualifiedBookIds,
-        qualifiedBookCount: qualifiedBookIds.length,
-        bookBestPercentById,
-        adminBooksSummary: requesterIsAdmin ? adminBooksSummary : null
-      }
+      stats: statsPayload
     });
   } catch (error) {
     console.error('Erro ao carregar estatisticas de livros:', error);
@@ -11058,12 +11213,19 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
     }
 
     await ensureUserBooksConsumptionStatsTable();
+    await ensureUserDailyEnergyStatsTable();
     await ensureUsersPresenceClassMetricStorage();
 
     const client = await pool.connect();
     let result;
+    let energySnapshot;
     try {
       await client.query('BEGIN');
+      energySnapshot = await incrementDailyEnergyUsage(client, authUser, {
+        readingCharsDelta,
+        speakingCharsDelta,
+        listeningCharsDelta
+      });
       result = await client.query(
         `INSERT INTO public.user_books_consumption_stats (
            user_id, reading_chars, speaking_chars, listening_chars, practice_seconds, updated_at
@@ -11100,12 +11262,20 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
         readingChars: Math.max(0, Number(result.rows[0]?.reading_chars) || 0),
         speakingChars: Math.max(0, Number(result.rows[0]?.speaking_chars) || 0),
         listeningChars: Math.max(0, Number(result.rows[0]?.listening_chars) || 0),
-        practiceSeconds: Math.max(0, Number(result.rows[0]?.practice_seconds) || 0)
+        practiceSeconds: Math.max(0, Number(result.rows[0]?.practice_seconds) || 0),
+        ...(energySnapshot || buildDailyEnergySnapshot(authUser, {}))
       }
     });
   } catch (error) {
     console.error('Erro ao salvar listening progress:', error);
-    res.status(500).json({ success: false, message: 'Nao foi possivel salvar listening agora.' });
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: statusCode === 402
+        ? (error?.message || 'Mais energia em breve.')
+        : 'Nao foi possivel salvar listening agora.',
+      energy: error?.energySnapshot || null
+    });
   }
 });
 

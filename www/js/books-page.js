@@ -1404,7 +1404,12 @@
       stats: {
         readingChars: state.readingCharsTotal,
         listeningChars: state.listeningCharsTotal,
-        speakingChars: state.speakingCharsTotal
+        speakingChars: Math.max(0, Number(state.booksStats?.speakingChars) || 0),
+        remainingEnergy: state.booksStats?.remainingEnergy,
+        dailyEnergyUsed: state.booksStats?.dailyEnergyUsed,
+        dailyEnergyLimit: state.booksStats?.dailyEnergyLimit,
+        unlimited: state.booksStats?.unlimited,
+        nextEnergyResetAt: state.booksStats?.nextEnergyResetAt
       }
     });
     return Boolean(result?.allowed);

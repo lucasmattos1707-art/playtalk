@@ -7591,6 +7591,35 @@
         return text ? text.length : 0;
       }
 
+      function postImmediateEnergyConsumption(deltas = {}) {
+        if (!state.user?.id) return Promise.resolve(null);
+        const readingCharsDelta = Math.max(0, Math.round(Number(deltas?.readingCharsDelta) || 0));
+        const speakingCharsDelta = Math.max(0, Math.round(Number(deltas?.speakingCharsDelta) || 0));
+        const listeningCharsDelta = Math.max(0, Math.round(Number(deltas?.listeningCharsDelta) || 0));
+        if (!readingCharsDelta && !speakingCharsDelta && !listeningCharsDelta) return Promise.resolve(null);
+        return fetch(buildApiUrl('/api/books/listening-progress'), {
+          method: 'POST',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          credentials: 'include',
+          body: JSON.stringify({
+            readingCharsDelta,
+            speakingCharsDelta,
+            listeningCharsDelta,
+            practiceSecondsDelta: 0
+          })
+        }).then((response) => (
+          response.json().catch(() => ({})).then((payload) => ({ response, payload }))
+        )).then(({ response, payload }) => {
+          if (!response.ok || !payload?.success) {
+            if (window.PlaytalkEnergy?.isEnergyErrorPayload(payload, response.status)) {
+              window.location.href = window.PlaytalkEnergy.resolveAccountHref();
+            }
+            return null;
+          }
+          return payload.stats || null;
+        }).catch(() => null);
+      }
+
       function addListeningCharsForCard(card) {
         const chars = countMetricChars(card?.english || card?.portuguese || '');
         if (chars <= 0) return 0;
@@ -7599,6 +7628,18 @@
           listenings: Number(state.stats.listenings || 0) + chars
         });
         saveUserStats();
+        void postImmediateEnergyConsumption({ listeningCharsDelta: chars });
+        return chars;
+      }
+
+      function addReadingCharsForCard(entry, card, stageKey) {
+        const normalizedStageKey = safeText(stageKey);
+        if (!entry || !normalizedStageKey) return 0;
+        if (safeText(entry.lastReadingChargeKey) === normalizedStageKey) return 0;
+        const chars = countMetricChars(card?.english || card?.portuguese || '');
+        if (chars <= 0) return 0;
+        entry.lastReadingChargeKey = normalizedStageKey;
+        void postImmediateEnergyConsumption({ readingCharsDelta: chars });
         return chars;
       }
 
@@ -7610,6 +7651,7 @@
           speakings: Number(state.stats.speakings || 0) + chars
         });
         saveUserStats();
+        void postImmediateEnergyConsumption({ speakingCharsDelta: chars });
         return chars;
       }
 
@@ -14083,6 +14125,9 @@
         }
         buildGameVisual(card, stageConfig);
         primeCurrentAndUpcomingGameMedia(card);
+        if (stageConfig.key === 'first-star' || stageConfig.key === 'second-star' || stageConfig.key === 'fourth-star') {
+          addReadingCharsForCard(entry, card, stageConfig.key);
+        }
         if (maybeRunTutorialSequence(entry, card)) {
           return;
         }
