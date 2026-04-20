@@ -9,6 +9,7 @@
   const HAS_GLOBAL_CHALLENGE_POPUPS = Boolean(window.PlaytalkChallengePopups);
   const RANKING_CACHE_TTL_MS = 25000;
   const USERS_STAGE_SLIDE_MS = 320;
+  const RANKING_ROTATE_MS = 3200;
 
   const RANKING_METRICS = [
     { slot: 1, key: 'flashcards', label: 'Flashcards', valueLabel: '' },
@@ -85,6 +86,8 @@
     rankingCache: new Map(),
     preloadInFlight: new Map(),
     stageAnimating: false,
+    metricRotationTimer: 0,
+    metricRotationIndex: 0,
     botBusy: false,
     botSourceImageDataUrl: ''
   };
@@ -162,7 +165,7 @@
 
   function setRankingLabel(label) {
     if (!els.rankingLabel) return;
-    const text = `Ranking: ${safeText(label) || 'Flashcards'}`;
+    const text = safeText(label) || 'Flashcards';
     els.rankingLabel.innerHTML = `<span class="ranking-label__text">${escapeHtml(text)}</span>`;
     els.rankingLabel.style.opacity = '1';
     els.rankingLabel.style.visibility = 'visible';
@@ -701,6 +704,30 @@
     });
   }
 
+  function stopRankingRotation() {
+    if (!state.metricRotationTimer) return;
+    window.clearInterval(state.metricRotationTimer);
+    state.metricRotationTimer = 0;
+  }
+
+  async function rotateToNextMetric() {
+    if (state.stageAnimating) return;
+    const currentIndex = RANKING_METRICS.findIndex((metric) => metric.key === state.currentMetricKey);
+    const safeIndex = currentIndex >= 0 ? currentIndex : state.metricRotationIndex;
+    const nextIndex = (safeIndex + 1) % RANKING_METRICS.length;
+    state.metricRotationIndex = nextIndex;
+    const nextMetric = RANKING_METRICS[nextIndex] || RANKING_METRICS[0];
+    await loadUsers('', { metricKey: nextMetric.key, animate: true });
+  }
+
+  function startRankingRotation() {
+    stopRankingRotation();
+    if (RANKING_METRICS.length <= 1) return;
+    state.metricRotationTimer = window.setInterval(() => {
+      void rotateToNextMetric();
+    }, RANKING_ROTATE_MS);
+  }
+
   async function fetchSessionUser() {
     if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
       const user = await window.PlaytalkApi.fetchSessionUser({
@@ -797,6 +824,7 @@
     state.currentMetricKey = data.metricKey;
     state.currentMetricLabel = data.metricLabel;
     state.currentMetricValueLabel = data.metricValueLabel;
+    state.metricRotationIndex = Math.max(0, RANKING_METRICS.findIndex((metric) => metric.key === data.metricKey));
     setRankingLabel(state.currentMetricLabel);
     state.rows = Array.isArray(data.rows) ? data.rows : [];
     state.viewer = data.viewer || null;
@@ -1052,10 +1080,16 @@
       state.rankingCache.clear();
     }
     await loadUsers('', { metricKey: 'flashcards', force: true, animate: false });
+    RANKING_METRICS.forEach((metric) => {
+      if (metric.key !== 'flashcards') {
+        void preloadMetric(metric.key);
+      }
+    });
     if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
       await pollChallenges();
     }
     startBackgroundLoops();
+    startRankingRotation();
   })();
 
   window.addEventListener('keydown', (event) => {
