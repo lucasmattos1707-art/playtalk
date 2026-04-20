@@ -333,7 +333,6 @@
     homeTextRevealToken: 0,
     homeTextMode: 'english',
     homeSpeedIndex: 3,
-    homeReturnLevel: UI_LEVEL_ALL_BOOKS,
     homeProgressRatio: 0,
     homeProgressLabel: '',
     homeProgressElapsedSeconds: 0,
@@ -2316,9 +2315,6 @@
     els.homePanel.hidden = !visible;
     els.homePanel.classList.toggle('is-visible', visible);
     els.homePanel.classList.toggle('is-immersive', shellActive);
-    if (els.page) {
-      els.page.classList.toggle('is-home-immersive', shellActive);
-    }
     if (els.statsPanel) {
       els.statsPanel.hidden = shellActive || !isStatsLevel();
       els.statsPanel.classList.toggle('is-visible', !shellActive && isStatsLevel());
@@ -2346,9 +2342,6 @@
     });
     renderHomeProgressUi();
     renderHomeTransportUi();
-    if (els.cardsGrid) {
-      els.cardsGrid.hidden = shellActive;
-    }
     if (visible && els.cardsEmpty) {
       els.cardsEmpty.hidden = true;
     }
@@ -3214,8 +3207,6 @@
   async function startHomeSleepPlayback() {
     if (state.homeSleepActive || state.homeStartBusy) return;
     if (!(await guardEnergyAndRedirect())) return;
-    state.homeReturnLevel = normalizeBrowseLevel(state.selectedLevel);
-    state.selectedLevel = UI_LEVEL_HOME;
     state.homeStartBusy = true;
     state.homeSleepActive = true;
     renderHomeAuthUi();
@@ -3279,7 +3270,6 @@
       els.homeViewport.classList.remove('is-reverse');
     }
     if (!keepIntro) {
-      state.selectedLevel = normalizeBrowseLevel(state.homeReturnLevel || UI_LEVEL_ALL_BOOKS);
       state.homeIntroDismissed = false;
       state.homeCurrentBookCover = '';
       state.homeCurrentBookId = '';
