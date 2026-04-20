@@ -514,6 +514,28 @@
       min-height: 0;
     }
 
+    .books-home.is-immersive .books-home-book-slot {
+      padding-top: 0;
+      align-items: center;
+    }
+
+    .books-home.is-immersive .books-home-cover-wrap {
+      height: min(58dvh, calc(100dvh - 220px));
+      max-height: 58dvh;
+      margin-top: 0;
+      transform: none;
+    }
+
+    .books-home.is-immersive .books-home-text-slot {
+      padding-top: 0;
+    }
+
+    .books-home.is-immersive .books-home-footer {
+      transform: none;
+      margin-top: 0;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
     .books-home-stage {
       width: 100%;
       height: 100%;
@@ -1178,15 +1200,35 @@
       pointer-events: none;
     }
 
+    body.books-sleeping-mode {
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
+    }
+
     body.books-sleeping-mode .flashcards-footer-nav[data-shell-page="books"] {
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
     }
 
-    body.books-sleeping-mode .books-home-book-slot,
-    body.books-sleeping-mode .books-home-text-slot {
-      transform: translateY(8vh);
+    body.books-sleeping-mode .books-page {
+      overflow: hidden;
+    }
+
+    body.books-sleeping-mode .books-shelf,
+    body.books-sleeping-mode .books-grid,
+    body.books-sleeping-mode .books-level-menu,
+    body.books-sleeping-mode .books-status {
+      pointer-events: none;
+      user-select: none;
+      touch-action: none;
+    }
+
+    body.books-sleeping-mode #booksHomePanel,
+    body.books-sleeping-mode #booksHomePanel * {
+      pointer-events: auto;
+      touch-action: auto;
     }
 
     .books-home-text-panel {
@@ -3349,6 +3391,16 @@
         transform: translateY(22px) scale(0.9);
       }
 
+      .books-home.is-immersive .books-home-book-slot {
+        padding-top: 0;
+      }
+
+      .books-home.is-immersive .books-home-cover-wrap {
+        height: min(56dvh, calc(100dvh - 210px));
+        max-height: 56dvh;
+        transform: none;
+      }
+
       .books-home-text-panel {
         min-height: 13vh;
         height: 13vh;
@@ -3363,6 +3415,11 @@
         align-content: stretch;
         gap: 2px;
         padding: 0 16px 0;
+      }
+
+      .books-home.is-immersive .books-home-footer {
+        transform: none;
+        padding: 0 16px max(12px, env(safe-area-inset-bottom));
       }
 
       .player-books {

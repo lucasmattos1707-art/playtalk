@@ -375,6 +375,11 @@
     booksSyncTimer: 0
   };
 
+  const homePanelMount = {
+    parent: els.homePanel?.parentElement || null,
+    nextSibling: els.homePanel?.nextSibling || null
+  };
+
   function applyMyBooksGridEmbedUi() {
     if (!IS_MYBOOKS_GRID_EMBED || document.getElementById('booksEmbedMybooksGridStyle')) return;
     document.body.classList.add('books-embed-mybooks-grid');
@@ -2310,6 +2315,13 @@
     }
     const shellActive = isHomeShellActive();
     const visible = isHomeLevel() || shellActive;
+    if (shellActive) {
+      if (els.homePanel.parentElement !== document.body) {
+        document.body.appendChild(els.homePanel);
+      }
+    } else if (homePanelMount.parent && els.homePanel.parentElement !== homePanelMount.parent) {
+      homePanelMount.parent.insertBefore(els.homePanel, homePanelMount.nextSibling);
+    }
     syncBooksInjectedFooterVisibility();
     document.body.classList.toggle('books-sleeping-mode', shellActive);
     els.homePanel.hidden = !visible;
