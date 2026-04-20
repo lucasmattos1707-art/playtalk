@@ -13826,26 +13826,45 @@ app.post('/api/admin/users/:userId/premium', async (req, res) => {
       return;
     }
 
-    const durationMap = {
-      semana: ACCESS_KEY_TYPES.semana.durationDays,
-      mes: ACCESS_KEY_TYPES.mes.durationDays,
-      ano: ACCESS_KEY_TYPES.ano.durationDays
-    };
-    const plan = String(req.body?.plan || '').trim().toLowerCase();
-    const durationDays = durationMap[plan];
-    if (!durationDays) {
-      res.status(400).json({ success: false, message: 'Plano premium invalido.' });
-      return;
-    }
+    const action = String(req.body?.action || 'grant').trim().toLowerCase();
+    let updatedUser;
+    let message;
 
-    const updatedUser = await extendUserPremiumAccess(req.params.userId, durationDays, {
-      accessType: `admin:${plan}`,
-      sourceFile: 'admin'
-    });
+    if (action === 'cancel' || action === 'revoke' || action === 'disable') {
+      const userId = Number.parseInt(req.params.userId, 10);
+      if (!Number.isInteger(userId) || userId <= 0) {
+        res.status(400).json({ success: false, message: 'Usuario invalido.' });
+        return;
+      }
+      const result = await pool.query(
+        `UPDATE public.users
+         SET premium_full_access = false,
+             premium_until = NULL
+         WHERE id = $1
+         RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                   onboarding_name_completed, onboarding_photo_completed,
+                   created_at, premium_full_access, premium_until`,
+        [userId]
+      );
+      if (!result.rows.length) {
+        res.status(404).json({ success: false, message: 'Usuario nao encontrado.' });
+        return;
+      }
+      updatedUser = result.rows[0];
+      message = 'Premium cancelado com sucesso.';
+    } else {
+      const updated = await extendUserPremiumAccess(req.params.userId, 3650, {
+        accessType: 'admin:manual',
+        sourceFile: 'admin',
+        grantFullAccess: true
+      });
+      updatedUser = updated;
+      message = 'Premium manual atribuido com sucesso.';
+    }
 
     res.json({
       success: true,
-      message: `Premium ${ACCESS_KEY_TYPES[plan].label} atribuido com sucesso.`,
+      message,
       user: mapPublicUser(updatedUser),
       premium: resolvePremiumState(updatedUser)
     });

@@ -45,6 +45,7 @@
     botCloseBtn: document.getElementById('usersBotCloseBtn'),
     botCloseTopBtn: document.getElementById('usersBotCloseTopBtn'),
     botStatus: document.getElementById('usersBotStatus'),
+    premiumUserBtn: document.getElementById('premiumUserBtn'),
     deleteUserBtn: document.getElementById('deleteUserBtn'),
     closeAdminModalBtn: document.getElementById('closeAdminModalBtn'),
     closeAdminModalTopBtn: document.getElementById('closeAdminModalTopBtn'),
@@ -387,9 +388,9 @@
     const botConfig = user?.botConfig && typeof user.botConfig === 'object' ? user.botConfig : null;
     if (!user?.isBot || !botConfig) {
       els.adminPanelTitle.textContent = 'Informacoes do usuario';
-      els.adminPanelCopy.textContent = user?.isOnline
-        ? 'Usuario online agora.'
-        : 'Usuario offline no momento.';
+      const onlineText = user?.isOnline ? 'Usuario online agora.' : 'Usuario offline no momento.';
+      const premiumText = user?.premiumActive ? 'Premium ativo.' : 'Free.';
+      els.adminPanelCopy.textContent = `${onlineText} ${premiumText}`;
       els.adminBotGrid.innerHTML = '';
       els.adminBotGrid.setAttribute('hidden', '');
       return;
@@ -416,16 +417,32 @@
 
   function syncAdminButtons() {
     const disabled = state.adminBusy || !state.selectedUser;
-    [els.deleteUserBtn].forEach((button) => {
+    [els.premiumUserBtn, els.deleteUserBtn].forEach((button) => {
       if (!button) return;
       button.disabled = disabled;
     });
+    if (els.premiumUserBtn) {
+      els.premiumUserBtn.textContent = state.selectedUser?.premiumActive
+        ? 'Cancelar premium'
+        : 'Atribuir premium';
+    }
+  }
+
+  function syncModalOverlayState() {
+    const open = Boolean(
+      els.adminModal?.classList.contains('is-visible')
+      || els.botModal?.classList.contains('is-visible')
+      || els.challengeModal?.classList.contains('is-visible')
+      || els.incomingModal?.classList.contains('is-visible')
+    );
+    document.body.classList.toggle('users-modal-open', open);
   }
 
   function closeAdminModal() {
     state.selectedUser = null;
     state.adminBusy = false;
     if (els.adminModal) els.adminModal.classList.remove('is-visible');
+    syncModalOverlayState();
     setAdminStatus('');
     syncAdminButtons();
   }
@@ -441,6 +458,7 @@
     state.botBusy = false;
     state.botSourceImageDataUrl = '';
     if (els.botModal) els.botModal.classList.remove('is-visible');
+    syncModalOverlayState();
     if (els.botForm) els.botForm.reset();
     if (els.botAvatarPreview) {
       els.botAvatarPreview.src = '/Avatar/avatar-man-person-svgrepo-com.svg';
@@ -455,6 +473,7 @@
     updateBotHint();
     setBotStatus('');
     if (els.botModal) els.botModal.classList.add('is-visible');
+    syncModalOverlayState();
   }
 
   function fileToDataUrl(file) {
@@ -571,6 +590,7 @@
     }
     renderAdminBotInfo(user);
     if (els.adminModal) els.adminModal.classList.add('is-visible');
+    syncModalOverlayState();
     setAdminStatus('');
     syncAdminButtons();
   }
@@ -602,6 +622,7 @@
 
   function closeChallengeModal() {
     if (els.challengeModal) els.challengeModal.classList.remove('is-visible');
+    syncModalOverlayState();
     state.challengeTarget = null;
     state.challengeBusy = false;
     state.challengeModePickerOpen = false;
@@ -628,6 +649,7 @@
     syncChallengeButtons();
     setChallengeStatus('');
     if (els.challengeModal) els.challengeModal.classList.add('is-visible');
+    syncModalOverlayState();
   }
 
   function currentViewerEntry(rows) {
@@ -901,6 +923,7 @@
   function closeIncomingModal() {
     state.incomingChallengeId = 0;
     if (els.incomingModal) els.incomingModal.classList.remove('is-visible');
+    syncModalOverlayState();
   }
 
   function openIncomingModal(challenge) {
@@ -921,6 +944,7 @@
       els.incomingCopy.textContent = `${username} te desafiou para ${challengeLabel}`;
     }
     if (els.incomingModal) els.incomingModal.classList.add('is-visible');
+    syncModalOverlayState();
   }
 
   async function respondIncomingChallenge(action) {
@@ -1074,6 +1098,40 @@
     }
   }
 
+  async function toggleSelectedUserPremium() {
+    if (!state.selectedUser || state.adminBusy) return;
+    state.adminBusy = true;
+    syncAdminButtons();
+    const shouldCancel = Boolean(state.selectedUser.premiumActive);
+    setAdminStatus(shouldCancel ? 'Cancelando premium...' : 'Atribuindo premium...');
+    try {
+      const response = await fetch(buildApiUrl(`/api/admin/users/${state.selectedUser.userId}/premium`), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify({ action: shouldCancel ? 'cancel' : 'grant' })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Nao foi possivel atualizar premium.');
+      }
+      state.selectedUser = {
+        ...state.selectedUser,
+        premiumActive: Boolean(payload?.premium?.fullAccess ?? !shouldCancel),
+        premiumUntil: payload?.user?.premium_until || payload?.user?.premiumUntil || null
+      };
+      renderAdminBotInfo(state.selectedUser);
+      setAdminStatus(payload?.message || (shouldCancel ? 'Premium cancelado.' : 'Premium atribuido.'));
+      syncAdminButtons();
+      await loadUsers('', { metricKey: state.currentMetricKey, force: true });
+    } catch (error) {
+      setAdminStatus(error?.message || 'Nao foi possivel atualizar premium.');
+    } finally {
+      state.adminBusy = false;
+      syncAdminButtons();
+    }
+  }
+
   function startBackgroundLoops() {
     window.setInterval(() => {
       void pingPresence();
@@ -1145,6 +1203,7 @@
   els.challengeModal?.addEventListener('click', (event) => {
     if (event.target === els.challengeModal) closeChallengeModal();
   });
+  els.premiumUserBtn?.addEventListener('click', () => { void toggleSelectedUserPremium(); });
   els.deleteUserBtn?.addEventListener('click', () => { void deleteUser(); });
   els.closeAdminModalTopBtn?.addEventListener('click', closeAdminModal);
   els.challengeActionBtn?.addEventListener('click', () => {
