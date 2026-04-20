@@ -470,13 +470,20 @@
       display: flex;
       align-items: stretch;
       justify-content: stretch;
-      background:
-        radial-gradient(circle at 50% 0%, rgba(88, 137, 255, 0.14), transparent 34%),
-        linear-gradient(180deg, rgba(5, 9, 17, 0.98) 0%, rgba(5, 8, 14, 0.96) 100%);
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
       backdrop-filter: blur(14px);
       pointer-events: auto;
       overflow: hidden;
       overscroll-behavior: none;
+    }
+
+    .books-home.is-player-books::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--playtalk-global-bg-overlay);
+      pointer-events: none;
+      z-index: 0;
     }
 
     .books-home.is-immersive .books-home-stage {
@@ -487,6 +494,16 @@
       flex: 0 0 100dvh;
       overflow: hidden;
       pointer-events: auto;
+      position: relative;
+      z-index: 1;
+      transition: opacity 3000ms ease, filter 3000ms ease, transform 3000ms ease;
+    }
+
+    .books-home.is-energy-dissolving .books-home-stage {
+      opacity: 0;
+      filter: blur(18px);
+      transform: scale(0.98);
+      pointer-events: none;
     }
 
     .books-home.is-immersive .books-home-shell {

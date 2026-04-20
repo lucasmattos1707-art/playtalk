@@ -178,6 +178,7 @@ function invalidateAdminMiniBooksSummaryCache() {
 
 const FLASHCARD_RANKING_TIMEZONE = 'America/Sao_Paulo';
 const DAILY_FREE_ENERGY_LIMIT = 5000;
+const DAILY_FREE_ENERGY_ZERO_THRESHOLD = 50;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
 const SPEAKING_DUEL_DEFAULT_CARDS = 25;
@@ -661,11 +662,13 @@ const buildDailyEnergySnapshot = (user, dailyRow = {}) => {
   const speakingChars = Math.max(0, Number(dailyRow?.speaking_chars) || 0);
   const listeningChars = Math.max(0, Number(dailyRow?.listening_chars) || 0);
   const used = Math.max(0, readingChars + speakingChars + listeningChars);
+  const rawRemaining = Math.max(0, DAILY_FREE_ENERGY_LIMIT - used);
+  const remainingEnergy = rawRemaining <= DAILY_FREE_ENERGY_ZERO_THRESHOLD ? 0 : rawRemaining;
   return {
     unlimited,
     dailyEnergyLimit: DAILY_FREE_ENERGY_LIMIT,
     dailyEnergyUsed: unlimited ? 0 : used,
-    remainingEnergy: unlimited ? null : Math.max(0, DAILY_FREE_ENERGY_LIMIT - used),
+    remainingEnergy: unlimited ? null : remainingEnergy,
     readingCharsToday: readingChars,
     speakingCharsToday: speakingChars,
     listeningCharsToday: listeningChars,
@@ -772,7 +775,8 @@ const incrementDailyEnergyUsage = async (db, user, deltas = {}) => {
     + (Number(existing.listening_chars) || 0)
   );
 
-  if (totalDelta > 0 && (existingUsed + totalDelta) > DAILY_FREE_ENERGY_LIMIT) {
+  const existingRemaining = Math.max(0, DAILY_FREE_ENERGY_LIMIT - existingUsed);
+  if (totalDelta > 0 && existingRemaining <= DAILY_FREE_ENERGY_ZERO_THRESHOLD) {
     const error = new Error('Mais energia em breve. Abra /account para acompanhar o reset.');
     error.statusCode = 402;
     error.energySnapshot = buildDailyEnergySnapshot(user, existing);

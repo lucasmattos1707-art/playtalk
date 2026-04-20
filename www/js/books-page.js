@@ -356,6 +356,7 @@
     homePreBookPausedBefore: false,
     homePreBookVoiceVolumeBefore: 1,
     homeNativeSleepLockEnabled: false,
+    energyRedirectInProgress: false,
     allBooksFeed: [],
     allBooksFeedVersion: '',
     allBooksWindowStart: 0,
@@ -904,6 +905,9 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) {
+        if (window.PlaytalkEnergy?.isEnergyErrorPayload(payload, response.status)) {
+          syncEnergyRedirectFromStats(payload?.energy || {});
+        }
         return false;
       }
       state.readingCharsPending = Math.max(0, state.readingCharsPending - sendReadingChars);
@@ -912,6 +916,7 @@
       persistLocalConsumptionCounters();
       if (payload?.stats) {
         setStatsState({ ...(state.stats || {}), ...(payload.stats || {}) });
+        syncEnergyRedirectFromStats(payload.stats);
         if (state.user?.id && (state.stats.bookReadCount == null || state.stats.generalPronunciationPercent == null)) {
           void refreshStatsFromServer();
         }
@@ -959,6 +964,7 @@
       }
       state.booksPronunciationPending = pendingSamples.slice(samplesToSend.length);
       setStatsState({ ...(state.stats || {}), ...(payload.stats || {}) });
+      syncEnergyRedirectFromStats(payload.stats);
       renderStatsPanel();
       return true;
     } catch (_error) {
@@ -1401,23 +1407,52 @@
   }
 
   async function guardEnergyAndRedirect() {
-    if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.guardEnergy !== 'function') {
+    if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.getEnergyStatus !== 'function') {
       return true;
     }
-    const result = await window.PlaytalkEnergy.guardEnergy({
+    const status = await window.PlaytalkEnergy.getEnergyStatus({
       user: state.user,
       stats: {
         readingChars: state.readingCharsTotal,
         listeningChars: state.listeningCharsTotal,
-        speakingChars: Math.max(0, Number(state.booksStats?.speakingChars) || 0),
-        remainingEnergy: state.booksStats?.remainingEnergy,
-        dailyEnergyUsed: state.booksStats?.dailyEnergyUsed,
-        dailyEnergyLimit: state.booksStats?.dailyEnergyLimit,
-        unlimited: state.booksStats?.unlimited,
-        nextEnergyResetAt: state.booksStats?.nextEnergyResetAt
+        speakingChars: Math.max(0, Number(state.stats?.speakingChars) || 0),
+        remainingEnergy: state.stats?.remainingEnergy,
+        dailyEnergyUsed: state.stats?.dailyEnergyUsed,
+        dailyEnergyLimit: state.stats?.dailyEnergyLimit,
+        unlimited: state.stats?.unlimited,
+        nextEnergyResetAt: state.stats?.nextEnergyResetAt
       }
     });
-    return Boolean(result?.allowed);
+    if (status?.loggedIn && status?.blocked) {
+      handleEnergyExhaustedRedirect();
+      return false;
+    }
+    return true;
+  }
+
+  function handleEnergyExhaustedRedirect() {
+    if (state.energyRedirectInProgress) return;
+    state.energyRedirectInProgress = true;
+    state.homePaused = true;
+    interruptHomeAudioPlayback();
+    stopHomeMusicLoop();
+    if (els.homePanel) {
+      els.homePanel.classList.add('is-energy-dissolving');
+    }
+    window.setTimeout(() => {
+      const accountHref = window.PlaytalkEnergy && typeof window.PlaytalkEnergy.resolveAccountHref === 'function'
+        ? window.PlaytalkEnergy.resolveAccountHref()
+        : '/account';
+      navigateTo(accountHref, { replace: true });
+    }, 3000);
+  }
+
+  function syncEnergyRedirectFromStats(stats) {
+    if (isPremiumActive()) return;
+    const remaining = Number(stats?.remainingEnergy);
+    if (Number.isFinite(remaining) && remaining <= 0) {
+      handleEnergyExhaustedRedirect();
+    }
   }
 
   function renderHomeAccountUi() {
@@ -2418,6 +2453,7 @@
         return null;
       }
       setStatsState(payload.stats || null);
+      syncEnergyRedirectFromStats(payload.stats);
       if (!state.initialLoading && isMyBooksLevel()) {
         renderCards();
       }
