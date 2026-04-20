@@ -316,6 +316,7 @@
     homePlaybackToken: 0,
     homePlaybackLoopRunningToken: 0,
     homeAudioElement: null,
+    homeVoiceAudioElement: null,
     homeCurrentBookId: '',
     homeCurrentBookCover: '',
     homeCurrentBookName: '',
@@ -2125,13 +2126,6 @@
     const textPayload = getHomeSessionText(session, cardIndex);
     const visibleText = options.hideText ? '' : getHomeVisibleTextForMode(textPayload.english, textPayload.portuguese);
     renderHomeTextPanel(textElement, visibleText);
-    if (!options.hideText && state.homeTextMode === 'english' && visibleText) {
-      const readingKey = `home:${safeText(session?.bookId)}:${Number(cardIndex) || 0}:${safeText(textPayload.english)}`;
-      if (state.homeLastReadingKey !== readingKey) {
-        state.homeLastReadingKey = readingKey;
-        addReadingProgress(textPayload.english, readingKey);
-      }
-    }
   }
 
   function renderHomeProgressUi() {
@@ -2652,7 +2646,6 @@
     try {
       if (current) {
         current.pause();
-        current.src = '';
       }
     } catch (_error) {
       // ignore
@@ -2660,6 +2653,29 @@
     if (typeof resolver === 'function') {
       resolver();
     }
+  }
+
+  function getHomeVoiceAudioElement(source) {
+    const normalizedSource = safeText(source);
+    let audio = state.homeVoiceAudioElement;
+    if (!audio) {
+      audio = new Audio();
+      audio.preload = 'auto';
+      audio.loop = false;
+      state.homeVoiceAudioElement = audio;
+    }
+    if (audio.getAttribute('src') !== normalizedSource) {
+      try {
+        audio.pause();
+      } catch (_error) {
+        // ignore
+      }
+      audio.src = normalizedSource;
+      audio.load();
+    }
+    audio.preload = 'auto';
+    audio.loop = false;
+    return audio;
   }
 
   function stopHomeMusicLoop() {
@@ -3062,9 +3078,7 @@
     if (!state.homeSleepActive || token !== state.homePlaybackToken || state.homeSkipRequested) {
       return 'interrupted';
     }
-    const audio = new Audio(source);
-    audio.preload = 'auto';
-    audio.loop = false;
+    const audio = getHomeVoiceAudioElement(source);
     applyHomeAudioPlaybackRate(audio);
     state.homeAudioElement = audio;
     state.homeCurrentCardIndex = Math.max(0, Number(meta.cardIndex) || 0);
@@ -6098,11 +6112,11 @@
     }
     els.readerEnglish.textContent = displayTextFormatted || 'Sem conteudo neste livro.';
     els.readerEnglish.classList.toggle('is-highlight', highlight && displayLanguage === 'english');
-    if (displayLanguage === 'english' && english) {
-      const readingKey = `reader:${safeText(state.readerBookId)}:${index}:${english}`;
+    if (displayText) {
+      const readingKey = `reader:${safeText(state.readerBookId)}:${displayLanguage}:${index}:${displayText}`;
       if (state.readerLastReadingKey !== readingKey) {
         state.readerLastReadingKey = readingKey;
-        addReadingProgress(english, readingKey);
+        addReadingProgress(displayText, readingKey);
       }
     }
     animateReaderPhrase();

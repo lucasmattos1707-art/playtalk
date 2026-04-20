@@ -1231,7 +1231,11 @@
       align-items: stretch;
       justify-content: center;
       padding-top: 0;
-      transition: opacity 1000ms ease, filter 1000ms ease;
+      transition: opacity 1000ms ease, filter 1000ms ease, transform 1000ms ease;
+    }
+
+    .books-home.is-player-books .books-home-text-slot {
+      transform: translateY(2dvh);
     }
 
     body.books-prebook-open .books-home-text-slot {
