@@ -438,11 +438,29 @@
     document.body.classList.toggle('users-modal-open', open);
   }
 
+  function openFullscreenModal(modal) {
+    if (!modal) return;
+    if (modal.parentElement !== document.body) {
+      document.body.appendChild(modal);
+    }
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    modal.classList.add('is-visible');
+    syncModalOverlayState();
+  }
+
+  function closeFullscreenModal(modal) {
+    if (!modal) return;
+    modal.classList.remove('is-visible');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.hidden = true;
+    syncModalOverlayState();
+  }
+
   function closeAdminModal() {
     state.selectedUser = null;
     state.adminBusy = false;
-    if (els.adminModal) els.adminModal.classList.remove('is-visible');
-    syncModalOverlayState();
+    closeFullscreenModal(els.adminModal);
     setAdminStatus('');
     syncAdminButtons();
   }
@@ -457,8 +475,7 @@
   function closeBotModal() {
     state.botBusy = false;
     state.botSourceImageDataUrl = '';
-    if (els.botModal) els.botModal.classList.remove('is-visible');
-    syncModalOverlayState();
+    closeFullscreenModal(els.botModal);
     if (els.botForm) els.botForm.reset();
     if (els.botAvatarPreview) {
       els.botAvatarPreview.src = '/Avatar/avatar-man-person-svgrepo-com.svg';
@@ -472,8 +489,7 @@
     if (!isAdminViewer()) return;
     updateBotHint();
     setBotStatus('');
-    if (els.botModal) els.botModal.classList.add('is-visible');
-    syncModalOverlayState();
+    openFullscreenModal(els.botModal);
   }
 
   function fileToDataUrl(file) {
@@ -589,8 +605,7 @@
       els.adminCopy.textContent = `Rank ${user.rank || 0} | ${formatMetricValue(user, state.currentMetricKey, state.currentMetricValueLabel)} (${state.currentMetricLabel})`;
     }
     renderAdminBotInfo(user);
-    if (els.adminModal) els.adminModal.classList.add('is-visible');
-    syncModalOverlayState();
+    openFullscreenModal(els.adminModal);
     setAdminStatus('');
     syncAdminButtons();
   }
@@ -621,8 +636,7 @@
   }
 
   function closeChallengeModal() {
-    if (els.challengeModal) els.challengeModal.classList.remove('is-visible');
-    syncModalOverlayState();
+    closeFullscreenModal(els.challengeModal);
     state.challengeTarget = null;
     state.challengeBusy = false;
     state.challengeModePickerOpen = false;
@@ -648,8 +662,7 @@
     }
     syncChallengeButtons();
     setChallengeStatus('');
-    if (els.challengeModal) els.challengeModal.classList.add('is-visible');
-    syncModalOverlayState();
+    openFullscreenModal(els.challengeModal);
   }
 
   function currentViewerEntry(rows) {
@@ -922,8 +935,7 @@
 
   function closeIncomingModal() {
     state.incomingChallengeId = 0;
-    if (els.incomingModal) els.incomingModal.classList.remove('is-visible');
-    syncModalOverlayState();
+    closeFullscreenModal(els.incomingModal);
   }
 
   function openIncomingModal(challenge) {
@@ -943,8 +955,7 @@
       const challengeLabel = challengeMode === 'battle-cards' ? 'FluentCards' : 'Smart Books';
       els.incomingCopy.textContent = `${username} te desafiou para ${challengeLabel}`;
     }
-    if (els.incomingModal) els.incomingModal.classList.add('is-visible');
-    syncModalOverlayState();
+    openFullscreenModal(els.incomingModal);
   }
 
   async function respondIncomingChallenge(action) {

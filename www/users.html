@@ -734,11 +734,34 @@
     .users-admin-modal,
     .users-bot-modal,
     .users-challenge-modal {
+      position: fixed !important;
+      inset: 0 !important;
       width: 100vw;
       height: 100dvh;
       min-width: 100vw;
       min-height: 100dvh;
       overflow: hidden;
+      transform: none !important;
+      contain: none;
+    }
+
+    body.users-modal-open .users-admin-modal.is-visible,
+    body.users-modal-open .users-bot-modal.is-visible,
+    body.users-modal-open .users-challenge-modal.is-visible {
+      display: flex !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+      z-index: 5000 !important;
+    }
+
+    body.users-modal-open .users-admin-card,
+    body.users-modal-open .users-bot-card,
+    body.users-modal-open .users-challenge-card {
+      width: 100vw;
+      height: 100dvh;
+      min-width: 100vw;
+      min-height: 100dvh;
     }
 
     .challenge-avatar {
@@ -851,7 +874,7 @@
     </div>
   </main>
 
-  <div class="users-admin-modal" id="usersAdminModal" aria-modal="true" role="dialog" aria-label="Gerenciar usuario">
+  <div class="users-admin-modal" id="usersAdminModal" aria-modal="true" aria-hidden="true" role="dialog" aria-label="Gerenciar usuario" hidden>
     <div class="users-admin-card">
       <div class="users-modal-head">
         <div class="users-modal-head-copy">
@@ -874,7 +897,7 @@
     </div>
   </div>
 
-  <div class="users-bot-modal" id="usersBotModal" aria-modal="true" role="dialog" aria-label="Criar bot">
+  <div class="users-bot-modal" id="usersBotModal" aria-modal="true" aria-hidden="true" role="dialog" aria-label="Criar bot" hidden>
     <div class="users-bot-card">
       <div class="users-modal-head">
         <div class="users-modal-head-copy">
@@ -914,7 +937,7 @@
     </div>
   </div>
 
-  <div class="users-challenge-modal" id="usersChallengeModal" aria-modal="true" role="dialog" aria-label="Desafiar usuario">
+  <div class="users-challenge-modal" id="usersChallengeModal" aria-modal="true" aria-hidden="true" role="dialog" aria-label="Desafiar usuario" hidden>
     <div class="users-challenge-card">
       <div class="users-modal-head">
         <div class="users-modal-head-copy">
@@ -937,7 +960,7 @@
     </div>
   </div>
 
-  <div class="users-challenge-modal" id="incomingChallengeModal" aria-modal="true" role="dialog" aria-label="Convite de speaking">
+  <div class="users-challenge-modal" id="incomingChallengeModal" aria-modal="true" aria-hidden="true" role="dialog" aria-label="Convite de speaking" hidden>
     <div class="users-challenge-card">
       <img class="incoming-challenge-avatar" id="incomingChallengeAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar do usuario">
       <h2>Voce recebeu um desafio</h2>
