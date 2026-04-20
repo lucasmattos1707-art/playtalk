@@ -486,6 +486,7 @@
       min-height: 100dvh;
       flex: 0 0 100dvh;
       overflow: hidden;
+      pointer-events: auto;
     }
 
     .books-home.is-immersive .books-home-shell {
@@ -498,6 +499,7 @@
       margin: 0;
       align-self: stretch;
       justify-self: stretch;
+      pointer-events: auto;
     }
 
     .books-home.is-immersive .books-home-viewport {
@@ -515,27 +517,27 @@
     }
 
     .books-home.is-player-books .books-home-screen--current {
-      transform: translateY(18vh);
+      transform: translateY(10vh);
     }
 
     .books-home.is-player-books .books-home-screen--next {
-      transform: translateY(calc(100% + 18vh));
+      transform: translateY(calc(100% + 10vh));
     }
 
     .books-home.is-player-books .books-home-viewport.is-book-transitioning .books-home-screen--current {
-      transform: translateY(calc(-100% + 18vh));
+      transform: translateY(calc(-100% + 10vh));
     }
 
     .books-home.is-player-books .books-home-viewport.is-book-transitioning .books-home-screen--next {
-      transform: translateY(18vh);
+      transform: translateY(10vh);
     }
 
     .books-home.is-player-books .books-home-viewport.is-book-transitioning.is-reverse .books-home-screen--current {
-      transform: translateY(calc(100% + 18vh));
+      transform: translateY(calc(100% + 10vh));
     }
 
     .books-home.is-player-books .books-home-viewport.is-book-transitioning.is-reverse .books-home-screen--next {
-      transform: translateY(18vh);
+      transform: translateY(10vh);
     }
 
     .books-home.is-immersive .books-home-book-slot {
@@ -558,6 +560,16 @@
       transform: none;
       margin-top: 0;
       padding-bottom: max(12px, env(safe-area-inset-bottom));
+      pointer-events: auto;
+      touch-action: manipulation;
+    }
+
+    .books-home.is-player-books .books-home-toolbar,
+    .books-home.is-player-books .books-home-control-btn,
+    .books-home.is-player-books .player-books,
+    .books-home.is-player-books .player-books__progress,
+    .books-home.is-player-books .player-books__progress-track {
+      pointer-events: auto;
     }
 
     .books-home-stage {
@@ -1227,7 +1239,6 @@
     body.books-sleeping-mode {
       overflow: hidden;
       overscroll-behavior: none;
-      touch-action: none;
     }
 
     body.books-sleeping-mode .flashcards-footer-nav[data-shell-page="books"] {
@@ -1252,7 +1263,17 @@
     body.books-sleeping-mode #booksHomePanel,
     body.books-sleeping-mode #booksHomePanel * {
       pointer-events: auto;
-      touch-action: auto;
+    }
+
+    body.books-sleeping-mode #booksHomePanel {
+      touch-action: pan-y;
+    }
+
+    body.books-sleeping-mode #booksHomePanel button,
+    body.books-sleeping-mode #booksHomePanel [role="button"],
+    body.books-sleeping-mode #booksHomePanel [role="slider"],
+    body.books-sleeping-mode #booksHomePanel .player-books__progress-track {
+      touch-action: manipulation;
     }
 
     .books-home-text-panel {
