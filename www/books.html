@@ -461,14 +461,57 @@
     .books-home.is-immersive {
       position: fixed;
       inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      min-width: 100vw;
+      min-height: 100dvh;
       z-index: 80;
       padding: 0;
       display: flex;
+      align-items: stretch;
+      justify-content: stretch;
       background:
         radial-gradient(circle at 50% 0%, rgba(88, 137, 255, 0.14), transparent 34%),
         linear-gradient(180deg, rgba(5, 9, 17, 0.98) 0%, rgba(5, 8, 14, 0.96) 100%);
       backdrop-filter: blur(14px);
       pointer-events: auto;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    .books-home.is-immersive .books-home-stage {
+      width: 100vw;
+      height: 100dvh;
+      min-width: 100vw;
+      min-height: 100dvh;
+      flex: 0 0 100dvh;
+      overflow: hidden;
+    }
+
+    .books-home.is-immersive .books-home-shell {
+      width: 100vw;
+      height: 100dvh;
+      min-width: 100vw;
+      min-height: 100dvh;
+      max-width: 100vw;
+      max-height: 100dvh;
+      margin: 0;
+      align-self: stretch;
+      justify-self: stretch;
+    }
+
+    .books-home.is-immersive .books-home-viewport {
+      width: 100vw;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      touch-action: pan-y;
+    }
+
+    .books-home.is-immersive .books-home-screen {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
     }
 
     .books-home-stage {
