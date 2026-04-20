@@ -553,11 +553,11 @@
     }
 
     .account-premium {
-      width: min(360px, 82%);
+      width: min(90%, 420px);
       max-width: 100%;
       display: grid;
       gap: 12px;
-      margin: 0 auto 8px;
+      margin: 10px auto 0;
       padding: 16px 16px 14px;
       border-radius: 24px;
       background: linear-gradient(180deg, rgba(24, 10, 42, 0.92), rgba(15, 8, 30, 0.96));
@@ -581,6 +581,16 @@
     .account-premium-action {
       display: flex;
       justify-content: center;
+    }
+
+    .account-premium-action-row {
+      width: min(90%, 420px);
+      margin: 10px auto 0;
+      display: grid;
+    }
+
+    .account-premium-action-row[hidden] {
+      display: none !important;
     }
 
     .account-premium[hidden] {
@@ -726,7 +736,7 @@
     }
 
     .account-logout-wrap {
-      width: min(360px, 82%);
+      width: min(90%, 420px);
       margin: 4px auto 0;
       display: grid;
     }
@@ -1357,26 +1367,26 @@
           </div>
         </section>
         <div class="account-metrics" id="accountMetrics" hidden>
-          <section class="account-premium" id="accountPremiumCard" hidden>
-            <strong id="accountPremiumLevel"></strong>
-            <span id="accountPremiumUntil"></span>
-            <div class="account-premium-action">
-              <button class="account-button account-button--premium" id="accountPremiumBtn" type="button">
-                <span class="account-button__lock" id="accountPremiumIcon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M7.5 10V8.25a4.5 4.5 0 1 1 9 0V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                    <rect x="5.25" y="10" width="13.5" height="9.75" rx="2.4" stroke="currentColor" stroke-width="1.8"/>
-                  </svg>
-                </span>
-                <span class="account-button__label" id="accountPremiumLabel">Obter premium</span>
-              </button>
-            </div>
-          </section>
           <div class="account-stats-carousel" id="accountStatsCarousel" aria-label="Estatisticas do usuario">
             <div class="account-stats-pages" id="accountStatsPages"></div>
           </div>
           <div class="account-logout-wrap" id="accountLogoutWrap" hidden>
             <button class="account-button account-button--logout" id="accountLogoutBtn" type="button">Sair da conta</button>
+          </div>
+          <section class="account-premium" id="accountPremiumCard" hidden>
+            <strong id="accountPremiumLevel"></strong>
+            <span id="accountPremiumUntil"></span>
+          </section>
+          <div class="account-premium-action-row" id="accountPremiumActionRow">
+            <button class="account-button account-button--premium" id="accountPremiumBtn" type="button">
+              <span class="account-button__lock" id="accountPremiumIcon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M7.5 10V8.25a4.5 4.5 0 1 1 9 0V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  <rect x="5.25" y="10" width="13.5" height="9.75" rx="2.4" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+              </span>
+              <span class="account-button__label" id="accountPremiumLabel">Obter premium</span>
+            </button>
           </div>
         </div>
         <p class="account-status" id="accountStatus" aria-live="polite"></p>
@@ -1404,6 +1414,7 @@
 
   <script src="js/android-config.js"></script>
   <script src="js/api-config.js"></script>
+  <script src="js/energy-manager.js?v=20260419a"></script>
   <script src="js/playtalk-shell.js"></script>
   <script src="js/android-shell.js"></script>
   <script>
@@ -1411,6 +1422,6 @@
       document.body.classList.add('is-native-runtime');
     }
   </script>
-  <script src="js/account-page.js?v=20260419a"></script>
+  <script src="js/account-page.js?v=20260419b"></script>
 </body>
 </html>

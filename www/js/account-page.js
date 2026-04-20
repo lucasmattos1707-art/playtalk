@@ -37,6 +37,7 @@
     statsPages: document.getElementById('accountStatsPages'),
     premiumLevel: document.getElementById('accountPremiumLevel'),
     premiumUntil: document.getElementById('accountPremiumUntil'),
+    premiumActionRow: document.getElementById('accountPremiumActionRow'),
     premiumBtn: document.getElementById('accountPremiumBtn'),
     premiumIcon: document.getElementById('accountPremiumIcon'),
     premiumLabel: document.getElementById('accountPremiumLabel'),
@@ -63,6 +64,7 @@
     statsRotationIndex: 0,
     statsLastRenderedLine: '',
     guestPromptTimer: 0,
+    premiumEnergyTimer: 0,
     guestPromptIndex: 0,
     guestInputTarget: 'name',
     guestShiftActive: false,
@@ -613,30 +615,51 @@
     return Number.isFinite(time) && time > Date.now();
   }
 
+  function stopPremiumEnergyTimer() {
+    if (!state.premiumEnergyTimer) return;
+    window.clearInterval(state.premiumEnergyTimer);
+    state.premiumEnergyTimer = 0;
+  }
+
+  function startPremiumEnergyTimer() {
+    if (state.premiumEnergyTimer || !state.user?.id) return;
+    state.premiumEnergyTimer = window.setInterval(() => {
+      renderPremiumStatus();
+    }, 30000);
+  }
+
   function renderPremiumStatus() {
     if (!els.premiumLevel || !els.premiumUntil || !els.premiumCard) return;
     const loggedIn = isLoggedIn();
     els.premiumCard.hidden = !loggedIn;
     if (!loggedIn) {
+      stopPremiumEnergyTimer();
       els.premiumLevel.textContent = '';
       els.premiumUntil.textContent = '';
       return;
     }
-    if (isPremiumActive()) {
+    startPremiumEnergyTimer();
+    const energyStatus = window.PlaytalkEnergy && typeof window.PlaytalkEnergy.buildEnergyStatus === 'function'
+      ? window.PlaytalkEnergy.buildEnergyStatus({ user: state.user, stats: state.booksStats })
+      : null;
+    if (isPremiumActive() || energyStatus?.premium) {
       els.premiumLevel.textContent = 'Nivel de acesso: Premium';
       const until = Date.parse(state.user?.premiumUntil || '');
       els.premiumUntil.textContent = Number.isFinite(until)
         ? `Ativo ate ${new Date(until).toLocaleDateString('pt-BR')}.`
-        : 'Premium ativo.';
+        : 'Energia infinita.';
       return;
     }
     els.premiumLevel.textContent = 'Nivel de acesso: Free';
-    els.premiumUntil.textContent = 'Sem premium ativo no momento.';
+    els.premiumUntil.textContent = energyStatus?.message || '5000 energias restantes';
   }
 
   function renderPremiumButton() {
     if (!els.premiumBtn || !els.premiumLabel || !els.premiumIcon) return;
     const loggedIn = isLoggedIn();
+    if (els.premiumActionRow) {
+      els.premiumActionRow.hidden = !loggedIn;
+    }
     els.premiumLabel.textContent = loggedIn ? 'Obter premium' : 'Entrar';
     els.premiumIcon.hidden = !loggedIn;
   }

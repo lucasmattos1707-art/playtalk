@@ -1395,6 +1395,21 @@
     return Number.isFinite(time) && time > Date.now();
   }
 
+  async function guardEnergyAndRedirect() {
+    if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.guardEnergy !== 'function') {
+      return true;
+    }
+    const result = await window.PlaytalkEnergy.guardEnergy({
+      user: state.user,
+      stats: {
+        readingChars: state.readingCharsTotal,
+        listeningChars: state.listeningCharsTotal,
+        speakingChars: state.speakingCharsTotal
+      }
+    });
+    return Boolean(result?.allowed);
+  }
+
   function renderHomeAccountUi() {
     const isLoggedIn = Boolean(state.user?.id);
     if (els.homeAccountPanel) {
@@ -3183,6 +3198,7 @@
 
   async function startHomeSleepPlayback() {
     if (state.homeSleepActive || state.homeStartBusy) return;
+    if (!(await guardEnergyAndRedirect())) return;
     state.homeStartBusy = true;
     state.homeSleepActive = true;
     renderHomeAuthUi();
@@ -6530,15 +6546,24 @@
     });
 
     els.preBookPronounceBtn?.addEventListener('click', () => {
-      setPreBookStep('training');
+      void (async () => {
+        if (!(await guardEnergyAndRedirect())) return;
+        setPreBookStep('training');
+      })();
     });
 
     els.preBookListeningBtn?.addEventListener('click', () => {
-      void startBookFromPreBookModal('listening-training');
+      void (async () => {
+        if (!(await guardEnergyAndRedirect())) return;
+        await startBookFromPreBookModal('listening-training');
+      })();
     });
 
     els.preBookSpeakingBtn?.addEventListener('click', () => {
-      void startBookFromPreBookModal('speaking-training');
+      void (async () => {
+        if (!(await guardEnergyAndRedirect())) return;
+        await startBookFromPreBookModal('speaking-training');
+      })();
     });
 
     els.preBookCloseBtn?.addEventListener('click', () => {

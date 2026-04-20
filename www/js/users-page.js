@@ -305,7 +305,9 @@
     return {
       id,
       username,
-      isAdmin: Boolean(user.is_admin)
+      isAdmin: Boolean(user.is_admin),
+      premiumFullAccess: Boolean(user.premium_full_access || user.premiumFullAccess),
+      premiumUntil: user.premium_until || user.premiumUntil || null
     };
   }
 
@@ -354,6 +356,16 @@
 
   function isAdminViewer() {
     return Boolean(state.currentUser?.isAdmin);
+  }
+
+  async function guardEnergyAndRedirect() {
+    if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.guardEnergy !== 'function') {
+      return true;
+    }
+    const result = await window.PlaytalkEnergy.guardEnergy({
+      user: state.currentUser
+    });
+    return Boolean(result?.allowed);
   }
 
   function syncAdminViewerUi() {
@@ -691,7 +703,7 @@
       countEl.style.visibility = 'visible';
     });
     Array.from(els.usersList.querySelectorAll('[data-user-id]')).forEach((rowEl) => {
-      rowEl.addEventListener('click', () => {
+      rowEl.addEventListener('click', async () => {
         const userId = Number(rowEl.getAttribute('data-user-id')) || 0;
         const user = state.rows.find((entry) => entry.userId === userId);
         if (!user || user.userId === state.currentUser?.id) return;
@@ -699,6 +711,7 @@
           openAdminModal(user);
           return;
         }
+        if (!(await guardEnergyAndRedirect())) return;
         openChallengeModal(user);
       });
     });
@@ -996,6 +1009,7 @@
 
   async function sendChallenge(mode) {
     if (!state.challengeTarget || state.challengeBusy) return;
+    if (!(await guardEnergyAndRedirect())) return;
     state.challengeBusy = true;
     syncChallengeButtons();
     const normalizedMode = mode === 'battle-cards' ? 'battle-cards' : 'smartbooks';

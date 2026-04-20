@@ -6598,6 +6598,7 @@
   </nav>
   <script src="js/android-config.js"></script>
   <script src="js/api-config.js"></script>
+  <script src="js/energy-manager.js?v=20260419a"></script>
   <script src="js/android-shell.js"></script>
   <script src="js/playtalk-shell.js"></script>
   <script src="js/openai-stt.js"></script>
@@ -7177,7 +7178,7 @@
       function fixMojibake(value) {
         const text = safeText(value);
         if (!text) return '';
-        if (!/[ÃÂâï¿½]/.test(text)) return text;
+        if (!/[ï¿½ï¿½ï¿½ï¿½]/.test(text)) return text;
         try {
           return decodeURIComponent(escape(text));
         } catch (_error) {
@@ -7189,7 +7190,7 @@
         let text = fixMojibake(value);
         if (!text) return '';
         for (let attempt = 0; attempt < 2; attempt += 1) {
-          if (!/[ÃÂâï¿½]/.test(text)) break;
+          if (!/[ï¿½ï¿½ï¿½ï¿½]/.test(text)) break;
           try {
             const decoded = decodeURIComponent(escape(text));
             if (!decoded || decoded === text) break;
@@ -7199,20 +7200,20 @@
           }
         }
         const replacements = [
-          ['Ã¡', 'á'], ['Ãà', 'à'], ['Ãâ', 'â'], ['Ãã', 'ã'], ['Ãä', 'ä'],
-          ['Ãé', 'é'], ['Ãè', 'è'], ['Ãê', 'ê'], ['Ãë', 'ë'],
-          ['Ãí', 'í'], ['Ãì', 'ì'], ['Ãî', 'î'], ['Ãï', 'ï'],
-          ['Ãó', 'ó'], ['Ãò', 'ò'], ['Ãô', 'ô'], ['Ãõ', 'õ'], ['Ãö', 'ö'],
-          ['Ãú', 'ú'], ['Ãù', 'ù'], ['Ãû', 'û'], ['Ãü', 'ü'],
-          ['Ãç', 'ç'], ['Ãñ', 'ñ'],
-          ['ÃÁ', 'Á'], ['ÃÀ', 'À'], ['ÃÂ', 'Â'], ['ÃÃ', 'Ã'], ['ÃÄ', 'Ä'],
-          ['ÃÉ', 'É'], ['ÃÈ', 'È'], ['ÃÊ', 'Ê'], ['ÃË', 'Ë'],
-          ['ÃÍ', 'Í'], ['ÃÌ', 'Ì'], ['ÃÎ', 'Î'], ['ÃÏ', 'Ï'],
-          ['ÃÓ', 'Ó'], ['ÃÒ', 'Ò'], ['ÃÔ', 'Ô'], ['ÃÕ', 'Õ'], ['ÃÖ', 'Ö'],
-          ['ÃÚ', 'Ú'], ['ÃÙ', 'Ù'], ['ÃÛ', 'Û'], ['ÃÜ', 'Ü'],
-          ['ÃÇ', 'Ç'], ['Ã‘', 'Ñ'],
+          ['Ã¡', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['Ã‘', 'ï¿½'],
           ['â€”', '-'], ['â€“', '-'], ['â€˜', "'"], ['â€™', "'"], ['â€œ', '"'], ['â€', '"'],
-          ['Âº', 'º'], ['Âª', 'ª'], ['Â°', '°'], ['Â', '']
+          ['Âº', 'ï¿½'], ['Âª', 'ï¿½'], ['Â°', 'ï¿½'], ['ï¿½', '']
         ];
         let repaired = text;
         replacements.forEach(([from, to]) => {
@@ -13903,7 +13904,7 @@
         const skipBtn = document.createElement('button');
         skipBtn.type = 'button';
         skipBtn.className = 'flashcards-typing__skip';
-        skipBtn.textContent = 'AVANÇAR';
+        skipBtn.textContent = 'AVANï¿½AR';
         skipBtn.setAttribute('aria-label', 'Avancar digitacao automatica');
         toolbar.appendChild(skipBtn);
 
@@ -15374,12 +15375,28 @@
         }
       }
 
+      async function guardWelcomeEnergy() {
+        if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.guardEnergy !== 'function') {
+          return true;
+        }
+        const result = await window.PlaytalkEnergy.guardEnergy({
+          user: state.user
+        });
+        return Boolean(result?.allowed);
+      }
+
       function bindEvents() {
         els.welcomeStartBtn?.addEventListener('click', () => {
-          requestWelcomeTutorialStart(true);
+          void (async () => {
+            if (!(await guardWelcomeEnergy())) return;
+            requestWelcomeTutorialStart(true);
+          })();
         });
         els.welcomeLogo?.addEventListener('click', () => {
-          requestWelcomeTutorialStart(true);
+          void (async () => {
+            if (!(await guardWelcomeEnergy())) return;
+            requestWelcomeTutorialStart(true);
+          })();
         });
         els.welcomeAccountLink?.addEventListener('click', (event) => {
           event.stopPropagation();
