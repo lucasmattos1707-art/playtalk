@@ -1261,8 +1261,24 @@
     }
 
     body.books-sleeping-mode #booksHomePanel,
-    body.books-sleeping-mode #booksHomePanel * {
+    body.books-sleeping-mode #booksHomePanel .books-home-stage,
+    body.books-sleeping-mode #booksHomePanel .books-home-shell,
+    body.books-sleeping-mode #booksHomePanel .books-home-viewport,
+    body.books-sleeping-mode #booksHomePanel .books-home-screen--current,
+    body.books-sleeping-mode #booksHomePanel .books-home-footer,
+    body.books-sleeping-mode #booksHomePanel .books-home-toolbar,
+    body.books-sleeping-mode #booksHomePanel .books-home-control-btn,
+    body.books-sleeping-mode #booksHomePanel .books-home-corner-btn,
+    body.books-sleeping-mode #booksHomePanel .player-books,
+    body.books-sleeping-mode #booksHomePanel .player-books__progress,
+    body.books-sleeping-mode #booksHomePanel .player-books__progress-track {
       pointer-events: auto;
+    }
+
+    body.books-sleeping-mode #booksHomePanel .books-home-start.is-hidden,
+    body.books-sleeping-mode #booksHomePanel .books-home-screen--next,
+    body.books-sleeping-mode #booksHomePanel .books-home-screen--next * {
+      pointer-events: none;
     }
 
     body.books-sleeping-mode #booksHomePanel {
