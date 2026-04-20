@@ -972,6 +972,7 @@
     if (!state.user?.id) {
       state.booksStats = null;
       applyAvatarAura();
+      renderPremiumStatus();
       renderAccountMetrics();
       return;
     }
@@ -992,6 +993,7 @@
     }
 
     applyAvatarAura();
+    renderPremiumStatus();
     renderAccountMetrics();
   }
 
