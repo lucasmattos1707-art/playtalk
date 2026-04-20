@@ -127,6 +127,8 @@
       min-height: 100vh;
       margin: 0;
       border-radius: 0;
+      overflow: hidden;
+      touch-action: none;
     }
 
     .books-level-menu {
@@ -323,6 +325,10 @@
 
     .books-home.is-visible {
       display: flex;
+    }
+
+    .books-home[hidden] {
+      display: none !important;
     }
 
     .books-stats {

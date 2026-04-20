@@ -1896,6 +1896,10 @@
     return state.selectedLevel === UI_LEVEL_HOME;
   }
 
+  function isHomeShellActive() {
+    return state.homeIntroDismissed || state.homeSleepActive;
+  }
+
   function isStatsLevel() {
     return false;
   }
@@ -2304,14 +2308,19 @@
       }
       return;
     }
-    const shellActive = state.homeIntroDismissed || state.homeSleepActive;
+    const shellActive = isHomeShellActive();
     const visible = isHomeLevel() || shellActive;
     syncBooksInjectedFooterVisibility();
     document.body.classList.toggle('books-sleeping-mode', shellActive);
+    els.homePanel.hidden = !visible;
     els.homePanel.classList.toggle('is-visible', visible);
     els.homePanel.classList.toggle('is-immersive', shellActive);
     if (els.page) {
       els.page.classList.toggle('is-home-immersive', shellActive);
+    }
+    if (els.statsPanel) {
+      els.statsPanel.hidden = shellActive || !isStatsLevel();
+      els.statsPanel.classList.toggle('is-visible', !shellActive && isStatsLevel());
     }
     if (els.homeStartPanel) {
       els.homeStartPanel.classList.toggle('is-hidden', state.homeIntroDismissed);
@@ -6282,7 +6291,7 @@
     });
 
     els.shelfViewport?.addEventListener('wheel', (event) => {
-      if ((isHomeLevel() && state.homeIntroDismissed) || isStatsLevel()) return;
+      if (isHomeShellActive() || isStatsLevel()) return;
       if (isOverlayOpen()) return;
       const deltaY = Number(event.deltaY) || 0;
       if (Math.abs(deltaY) < 4) return;
@@ -6292,7 +6301,7 @@
     }, { passive: false });
 
     els.shelfViewport?.addEventListener('touchstart', (event) => {
-      if ((isHomeLevel() && state.homeIntroDismissed) || isStatsLevel()) return;
+      if (isHomeShellActive() || isStatsLevel()) return;
       const touch = event.touches?.[0];
       if (!touch) return;
       state.shelfTouchStartX = Number(touch.clientX) || 0;
@@ -6301,7 +6310,7 @@
     }, { passive: true });
 
     els.shelfViewport?.addEventListener('touchmove', (event) => {
-      if ((isHomeLevel() && state.homeIntroDismissed) || isStatsLevel()) return;
+      if (isHomeShellActive() || isStatsLevel()) return;
       if (isOverlayOpen()) return;
       const touch = event.touches?.[0];
       if (!touch) return;
@@ -6314,7 +6323,7 @@
     }, { passive: false });
 
     els.shelfViewport?.addEventListener('touchend', (event) => {
-      if ((isHomeLevel() && state.homeIntroDismissed) || isStatsLevel()) return;
+      if (isHomeShellActive() || isStatsLevel()) return;
       if (isOverlayOpen()) return;
       const touch = event.changedTouches?.[0];
       if (!touch) return;
