@@ -53,10 +53,23 @@
   function buildEnergyStatus({ user, stats } = {}) {
     const premium = isPremiumActive(user) || Boolean(stats?.unlimited);
     const nextResetAt = String(stats?.nextEnergyResetAt || '').trim();
+    const hasServerEnergySnapshot = stats && (
+      stats.remainingEnergy != null
+      || stats.dailyEnergyUsed != null
+      || stats.dailyEnergyLimit != null
+      || stats.unlimited != null
+      || stats.nextEnergyResetAt != null
+    );
     const remaining = premium
       ? Number.POSITIVE_INFINITY
-      : Math.max(0, Math.round(safeNumber(stats?.remainingEnergy)));
-    const usedToday = premium ? 0 : Math.max(0, Math.round(safeNumber(stats?.dailyEnergyUsed)));
+      : hasServerEnergySnapshot
+        ? Math.max(0, Math.round(safeNumber(stats?.remainingEnergy)))
+        : DAILY_FREE_ENERGY;
+    const usedToday = premium
+      ? 0
+      : hasServerEnergySnapshot
+        ? Math.max(0, Math.round(safeNumber(stats?.dailyEnergyUsed)))
+        : 0;
     return {
       loggedIn: Boolean(user?.id),
       premium,
