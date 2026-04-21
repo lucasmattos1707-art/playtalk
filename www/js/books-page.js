@@ -537,12 +537,12 @@
 
   function formatEstimatedReadingTimeFromChars(totalChars) {
     const chars = Math.max(0, Number(totalChars) || 0);
-    const totalSeconds = Math.max(0, Math.round(chars / 2.75));
+    const totalSeconds = Math.max(0, chars * 60 / 400);
     return formatEstimatedReadingTimeFromSeconds(totalSeconds);
   }
 
   function formatEstimatedReadingTimeFromSeconds(totalSeconds) {
-    const normalizedSeconds = Math.max(0, Math.round(Number(totalSeconds) || 0));
+    const normalizedSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
     const minutes = Math.floor(normalizedSeconds / 60) + ((normalizedSeconds % 60) >= 31 ? 1 : 0);
     return `${minutes} minuto${minutes === 1 ? '' : 's'}`;
   }
@@ -1691,6 +1691,8 @@
           fileName,
           nome,
           nivel: normalizeLevel(entry?.nivel),
+          englishChars: Math.max(0, Number(entry?.englishChars) || 0),
+          readingTimeSeconds: Math.max(0, Number(entry?.readingTimeSeconds) || 0),
           audioSources: normalizeAudioSources(entry?.audioSources),
           coverImageUrl: safeText(entry?.coverImageUrl),
           backgroundDesktopUrl: safeText(entry?.backgroundDesktopUrl),
@@ -1702,6 +1704,10 @@
       }
 
       const current = byBook.get(key);
+      const entryEnglishChars = Math.max(0, Number(entry?.englishChars) || 0);
+      const entryReadingSeconds = Math.max(0, Number(entry?.readingTimeSeconds) || (entryEnglishChars * 60 / 400));
+      current.englishChars = Math.max(0, Number(current.englishChars) || 0) + entryEnglishChars;
+      current.readingTimeSeconds = Math.max(0, Number(current.readingTimeSeconds) || 0) + entryReadingSeconds;
       if (!current.coverImageUrl && safeText(entry?.coverImageUrl)) {
         current.coverImageUrl = safeText(entry.coverImageUrl);
       }
@@ -2147,7 +2153,7 @@
 
   function getHomeBookMetaItems(book) {
     const level = normalizeLevel(book?.nivel ?? book?.level);
-    const readingSeconds = Math.max(0, Math.round(Number(book?.readingTimeSeconds) || 0));
+    const readingSeconds = Math.max(0, Number(book?.readingTimeSeconds) || ((Number(book?.englishChars) || 0) * 60 / 400));
     return [
       {
         label: 'Nível do Livro',
@@ -2962,15 +2968,11 @@
       title: safeText(book?.nome) || 'Livro',
       coverImageUrl,
       book,
+      readingTimeSeconds: Math.max(0, Number(book?.readingTimeSeconds) || ((Number(book?.englishChars) || 0) * 60 / 400)),
       cards: playableCards
     };
     primeHomeSessionAudio(session);
     void hydrateHomeCardDurations(playableCards).then(() => {
-      const totalAudioSeconds = playableCards.reduce((sum, card) => sum + getHomeCardDurationSeconds(card), 0);
-      session.readingTimeSeconds = Math.max(0, Math.round(totalAudioSeconds * 1.5));
-      if (book && Number(book.readingTimeSeconds) !== session.readingTimeSeconds) {
-        book.readingTimeSeconds = session.readingTimeSeconds;
-      }
       if (
         safeText(state.homeCurrentSession?.bookId) === session.bookId
         || safeText(state.homeNextSession?.bookId) === session.bookId
@@ -4328,8 +4330,8 @@
 
   function getBookReadingTimeCacheKey(book) {
     const bookId = safeText(book?.bookId);
-    const audioSources = normalizeAudioSources(book?.audioSources);
-    return `${bookId}::${audioSources.join('|')}`;
+    const englishChars = Math.max(0, Number(book?.englishChars) || 0);
+    return `${bookId}::${englishChars}`;
   }
 
   function getBookEnglishCharCacheKey(book) {
@@ -4341,20 +4343,20 @@
   async function ensureBookReadingTimeSeconds(book) {
     const cacheKey = getBookReadingTimeCacheKey(book);
     if (!cacheKey || cacheKey === '::') return 0;
+    const storedSeconds = Math.max(0, Number(book?.readingTimeSeconds) || 0);
+    if (storedSeconds > 0) return storedSeconds;
+    const storedChars = Math.max(0, Number(book?.englishChars) || 0);
+    if (storedChars > 0) {
+      const seconds = storedChars * 60 / 400;
+      if (book) book.readingTimeSeconds = seconds;
+      return seconds;
+    }
     if (BOOK_READING_TIME_CACHE.has(cacheKey)) {
       return BOOK_READING_TIME_CACHE.get(cacheKey);
     }
     const promise = (async () => {
-      const cardAudioSources = Array.isArray(book?.cards)
-        ? book.cards.map((card) => card?.audio || card?.audioUrl)
-        : [];
-      const audioSources = normalizeAudioSources(
-        normalizeAudioSources(book?.audioSources).concat(cardAudioSources)
-      );
-      if (!audioSources.length) return 0;
-      const durations = await Promise.all(audioSources.map((source) => loadHomeAudioDurationSeconds(source)));
-      const totalAudioSeconds = durations.reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
-      return Math.max(0, Math.round(totalAudioSeconds * 1.5));
+      const totalChars = await ensureBookEnglishChars(book);
+      return totalChars * 60 / 400;
     })();
     BOOK_READING_TIME_CACHE.set(cacheKey, promise);
     const totalSeconds = await promise;
@@ -5720,23 +5722,24 @@
   }
 
   function updateReaderPronPercent() {
-    const total = state.readerScores.length;
-    const avg = total
-      ? Math.max(0, Math.min(100, state.readerScores.reduce((acc, value) => acc + value, 0) / total))
+    const totalCards = Math.max(0, Number(state.readerCards?.length) || 0);
+    const currentIndex = Math.max(0, Math.min(Math.max(0, totalCards - 1), Number(state.readerIndex) || 0));
+    const progressPercent = totalCards > 0
+      ? Math.max(0, Math.min(100, ((currentIndex + 1) / totalCards) * 100))
       : 0;
-    const avgDisplay = formatReaderScoreValue(avg);
+    const progressDisplay = formatReaderScoreValue(progressPercent);
     if (els.readerPronRing) {
-      els.readerPronRing.style.setProperty('--percent', String(avg));
-      els.readerPronRing.style.setProperty('--reader-progress-angle', `${avg * 3.6}deg`);
+      els.readerPronRing.style.setProperty('--percent', String(progressPercent));
+      els.readerPronRing.style.setProperty('--reader-progress-angle', `${progressPercent * 3.6}deg`);
     }
     if (els.readerPronPercent) {
-      void animateDecimalMarkup(els.readerPronPercent, avgDisplay.scaledValue, {
+      void animateDecimalMarkup(els.readerPronPercent, progressDisplay.scaledValue, {
         decimals: 2,
         duration: SCORE_ANIMATION_MS,
         startValue: 0
       });
     }
-    updateReaderCurrentBadge(avg);
+    updateReaderCurrentBadge(progressPercent);
   }
 
   function updateReaderLanguageButtons() {

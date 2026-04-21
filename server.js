@@ -1445,6 +1445,7 @@ const ensureMiniBookJsonTables = async () => {
         CREATE INDEX IF NOT EXISTS minibook_json_content_level_idx
         ON public.minibook_json_content (level, updated_at DESC)
       `);
+      await backfillMiniBookReadingStats();
       return true;
     })().catch((error) => {
       miniBookJsonTablesReadyPromise = null;
@@ -5482,6 +5483,78 @@ function toEnglishUnderscoreName(value, fallback) {
     .join('_');
 }
 
+function getMiniBookEnglishCharsFromCards(cards) {
+  const list = Array.isArray(cards) ? cards : [];
+  return list.reduce((total, card) => (
+    total + String(card?.en || card?.english || card?.text || card?.sentence || '').trim().length
+  ), 0);
+}
+
+function getMiniBookReadingTimeSecondsFromChars(englishChars) {
+  const chars = Math.max(0, Number(englishChars) || 0);
+  return chars > 0 ? (chars * 60 / 400) : 0;
+}
+
+function getMiniBookReadingStatsFromCards(cards) {
+  const englishChars = getMiniBookEnglishCharsFromCards(cards);
+  return {
+    englishChars,
+    readingTimeSeconds: getMiniBookReadingTimeSecondsFromChars(englishChars)
+  };
+}
+
+function withMiniBookReadingStats(payload) {
+  const source = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload
+    : {};
+  const parsed = buildMiniBookStoriesFromJsonPayload(source, {
+    bookId: source.bookId || source.fileName || source.nome || source.title || 'book',
+    fileName: source.fileName,
+    bookTitle: source.nome || source.title,
+    level: source.nivel ?? source.level
+  });
+  const englishChars = Array.isArray(parsed.stories)
+    ? parsed.stories.reduce((sum, story) => sum + Math.max(0, Number(story.englishChars) || 0), 0)
+    : 0;
+  return {
+    ...source,
+    englishChars,
+    readingTimeSeconds: getMiniBookReadingTimeSecondsFromChars(englishChars)
+  };
+}
+
+async function backfillMiniBookReadingStats() {
+  if (!pool) return;
+  const result = await pool.query(`
+    SELECT book_id, payload
+    FROM public.minibook_json_content
+  `);
+  const rows = Array.isArray(result.rows) ? result.rows : [];
+  for (const row of rows) {
+    const bookId = normalizeMiniBookId(row?.book_id || '');
+    const payload = row?.payload && typeof row.payload === 'object' && !Array.isArray(row.payload)
+      ? row.payload
+      : null;
+    if (!bookId || !payload) continue;
+    const nextPayload = withMiniBookReadingStats(payload);
+    const currentChars = Math.max(0, Number(payload.englishChars) || 0);
+    const currentSeconds = Math.max(0, Number(payload.readingTimeSeconds) || 0);
+    if (
+      currentChars === Math.max(0, Number(nextPayload.englishChars) || 0)
+      && Math.abs(currentSeconds - Math.max(0, Number(nextPayload.readingTimeSeconds) || 0)) < 0.001
+    ) {
+      continue;
+    }
+    await pool.query(
+      `UPDATE public.minibook_json_content
+       SET payload = $2::jsonb,
+           updated_at = updated_at
+       WHERE book_id = $1`,
+      [bookId, JSON.stringify(nextPayload)]
+    );
+  }
+}
+
 function buildMiniBookStoriesFromJsonPayload(payload, options = {}) {
   const source = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : null;
   if (!source) {
@@ -5512,7 +5585,9 @@ function buildMiniBookStoriesFromJsonPayload(payload, options = {}) {
     'stories',
     'author',
     'createdAt',
-    'updatedAt'
+    'updatedAt',
+    'englishChars',
+    'readingTimeSeconds'
   ]);
 
   if (source.stories && typeof source.stories === 'object' && !Array.isArray(source.stories)) {
@@ -5557,6 +5632,7 @@ function buildMiniBookStoriesFromJsonPayload(payload, options = {}) {
       })
       .filter(Boolean);
     if (!cards.length) return acc;
+    const readingStats = getMiniBookReadingStatsFromCards(cards);
     acc.push({
       id: `db:${bookId}::${storyKey}`,
       fileName,
@@ -5565,6 +5641,8 @@ function buildMiniBookStoriesFromJsonPayload(payload, options = {}) {
       storyKey,
       nome: displayName,
       nivel: level,
+      englishChars: readingStats.englishChars,
+      readingTimeSeconds: readingStats.readingTimeSeconds,
       cards
     });
     return acc;
@@ -10812,6 +10890,8 @@ app.get('/api/speaking/stories', async (_req, res) => {
             .map((card) => String(card?.audio || card?.audioUrl || '').trim())
             .filter(Boolean)
         : [];
+      const englishChars = Math.max(0, Number(story.englishChars) || getMiniBookEnglishCharsFromCards(story.cards));
+      const readingTimeSeconds = Math.max(0, Number(story.readingTimeSeconds) || getMiniBookReadingTimeSecondsFromChars(englishChars));
       return {
         id: String(story.id || '').trim(),
         fileName: String(story.fileName || '').trim(),
@@ -10821,6 +10901,8 @@ app.get('/api/speaking/stories', async (_req, res) => {
         nome: String(story.nome || '').trim() || toEnglishUnderscoreName(story.storyKey, story.fileName),
         nivel: normalizeSpeakingStoryLevel(story.nivel),
         count: Array.isArray(story.cards) ? story.cards.length : 0,
+        englishChars,
+        readingTimeSeconds,
         audioSources,
         coverImageUrl: manifestEntry.coverImageUrl || '',
         backgroundDesktopUrl: manifestEntry.backgroundDesktopUrl || '',
@@ -10839,6 +10921,8 @@ app.get('/api/speaking/stories', async (_req, res) => {
           title: story.bookTitle || story.nome || story.fileName,
           nivel: story.nivel,
           count: story.count,
+          englishChars: story.englishChars,
+          readingTimeSeconds: story.readingTimeSeconds,
           storyIds: [story.id],
           selectedStoryId: story.id,
           audioSources: Array.isArray(story.audioSources) ? [...story.audioSources] : [],
@@ -10849,6 +10933,8 @@ app.get('/api/speaking/stories', async (_req, res) => {
         return;
       }
       current.count += story.count;
+      current.englishChars = Math.max(0, Number(current.englishChars) || 0) + Math.max(0, Number(story.englishChars) || 0);
+      current.readingTimeSeconds = getMiniBookReadingTimeSecondsFromChars(current.englishChars);
       current.storyIds.push(story.id);
       if (Array.isArray(story.audioSources)) {
         const seenAudioSources = new Set(current.audioSources || []);
@@ -11664,13 +11750,13 @@ app.post('/api/admin/minibooks/save-json', express.json({ limit: '6mb' }), async
       return;
     }
 
-    const normalizedPayload = {
+    const normalizedPayload = withMiniBookReadingStats({
       ...parsedPayload,
       bookId: parsedMiniBook.bookId,
       fileName: normalizeMiniBookText(parsedPayload.fileName, metadataSource.fileName),
       nome: normalizeMiniBookText(parsedPayload.nome || parsedPayload.title, metadataSource.title),
       nivel: normalizeSpeakingStoryLevel(parsedPayload.nivel ?? parsedPayload.level ?? metadataSource.level)
-    };
+    });
 
     await ensureMiniBookJsonTables();
     await pool.query(
@@ -11958,7 +12044,7 @@ async function runMiniBookCreateFromLinesPipeline({ createInput, audioSelection,
   }
 
   progress(54, 'Montando JSON...');
-  const payload = buildMiniBookJsonPayloadFromCreateInput(createInput);
+  const payload = withMiniBookReadingStats(buildMiniBookJsonPayloadFromCreateInput(createInput));
   const parsedMiniBook = buildMiniBookStoriesFromJsonPayload(payload, {
     bookId: createInput.bookId,
     fileName: createInput.fileName,
@@ -12309,7 +12395,7 @@ app.post('/api/admin/minibooks/update-from-lines', express.json({ limit: '4mb' }
       }
     }
 
-    const normalizedPayload = buildMiniBookJsonPayloadFromUpdatedInput(source, updateInput);
+    const normalizedPayload = withMiniBookReadingStats(buildMiniBookJsonPayloadFromUpdatedInput(source, updateInput));
     const parsedMiniBook = buildMiniBookStoriesFromJsonPayload(normalizedPayload, {
       bookId: source.bookId,
       fileName: source.fileName,
@@ -12515,13 +12601,13 @@ app.post('/api/admin/minibooks/update-card', express.json({ limit: '2mb' }), asy
     nextItems[cardIndex] = targetItem;
     storyRef.assign(nextItems);
 
-    const normalizedPayload = {
+    const normalizedPayload = withMiniBookReadingStats({
       ...source.payload,
       bookId: source.bookId,
       fileName: normalizeMiniBookText(source.payload.fileName, source.fileName),
       nome: normalizeMiniBookText(source.payload.nome || source.payload.title, source.title),
       nivel: normalizeSpeakingStoryLevel(source.payload.nivel ?? source.payload.level ?? source.level)
-    };
+    });
 
     const parsedMiniBook = buildMiniBookStoriesFromJsonPayload(normalizedPayload, {
       bookId: source.bookId,
