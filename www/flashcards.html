@@ -479,6 +479,21 @@
       overflow: hidden;
     }
 
+    .robotcheck[data-step="mic"] {
+      background: transparent;
+    }
+
+    .robotcheck[data-step="mic"] .soundcheck-shell {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .robotcheck[data-step="mic"] #miccheck {
+      opacity: 1;
+      pointer-events: auto;
+      visibility: visible;
+    }
+
     .robotcheck__touch::before {
       content: "";
       position: absolute;
@@ -6413,12 +6428,12 @@
         <header class="soundcheck-header">
           <h1>Ative seu microfone</h1>
           <h2 class="soundcheck-subtitle" id="micTestSubtitle">Toque no c&iacute;rculo azul</h2>
-          <p class="soundcheck-status" id="micTestStatus">Clique em permitir e diga microfone</p>
+          <p class="soundcheck-status" id="micTestStatus"></p>
         </header>
         <div class="miccheck-rules">
-          <p><strong>1.</strong> Toque no <strong>circulo azul</strong></p>
-          <p><strong>2.</strong> Clique em <strong>permitir</strong></p>
-          <p><strong>3.</strong> E diga <strong>microfone</strong></p>
+          <p><strong>1.</strong> Toque no <strong style="color:#7fe6ff;">circulo azul</strong></p>
+          <p><strong>2.</strong> Clique em <strong style="color:#7affb6;">permitir</strong></p>
+          <p><strong>3.</strong> E diga <strong style="color:#ffb24d;">microfone</strong></p>
         </div>
         <button class="soundcheck-play soundcheck-play--mic" id="micTestPlayBtn" type="button" aria-label="Ativar microfone">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
@@ -8414,6 +8429,10 @@
         }
       }
 
+      function resolveAudioCheckCompletedState() {
+        return Boolean(state.user?.audio_check_completed) || readAudioCheckCompletedFlag();
+      }
+
       function persistAudioCheckCompletedFlag(value) {
         try {
           if (value) {
@@ -8494,7 +8513,7 @@
         const targetLetters = Array.from(String(targetWord || '').toUpperCase()).filter((letter) => /[A-Z]/.test(letter));
         const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
         const extras = shuffleArray(alphabet.filter((letter) => !targetLetters.includes(letter)));
-        return [...targetLetters, ...extras].slice(0, AUDIO_CHECK_KEY_COUNT);
+        return [...targetLetters, ...extras].slice(0, AUDIO_CHECK_KEY_COUNT).sort();
       }
 
       function setAudioCheckSubtitle(text, animate = false) {
@@ -8558,10 +8577,12 @@
         if (els.soundTestAnswer) {
           const expected = String(state.ui.audioCheckTargetWord || '').toUpperCase();
           const typed = String(state.ui.audioCheckTyped || '').toUpperCase();
-          els.soundTestAnswer.innerHTML = Array.from(typed || '').map((char, index) => {
-            const ok = expected[index] === char;
-            return `<span class="${ok ? 'is-correct' : 'is-wrong'}">${escapeHtml(char)}</span>`;
-          }).join('') || '<span style="opacity:.24">_</span>';
+          els.soundTestAnswer.innerHTML = Array.from(expected || '').map((char, index) => {
+            const nextTyped = typed[index] || '';
+            const ok = nextTyped && nextTyped === char;
+            const mismatch = nextTyped && nextTyped !== char;
+            return `<span class="${ok ? 'is-correct' : mismatch ? 'is-wrong' : ''}">${escapeHtml(nextTyped || '_')}</span>`;
+          }).join('');
         }
       }
 
@@ -8606,7 +8627,7 @@
       }
 
       async function openAudioCheck() {
-        if (readAudioCheckCompletedFlag()) {
+        if (resolveAudioCheckCompletedState()) {
           openMicCheck();
           return;
         }
@@ -8651,7 +8672,8 @@
         state.ui.soundTestOpen = false;
         stopAudioCheckSubtitleRotation();
         stopAudioCheckAudio();
-        els.robotcheck?.classList.remove('is-visible');
+        els.robotcheck?.classList.add('is-visible');
+        els.robotcheck?.setAttribute('data-step', 'mic');
         els.miccheck?.classList.add('is-visible');
         document.body.classList.add('robotcheck-open');
         document.body.classList.add('sound-test-open');
@@ -8701,7 +8723,7 @@
       function setMicCheckStatus(message) {
         state.ui.micCheckStatus = safeText(message);
         if (els.micTestStatus) {
-          els.micTestStatus.textContent = state.ui.micCheckStatus || 'Clique em permitir';
+          els.micTestStatus.textContent = state.ui.micCheckStatus || '';
         }
       }
 
@@ -10047,6 +10069,9 @@
         state.user = normalizeUser(user);
         if (!state.user) {
           throw new Error('Sessao invalida.');
+        }
+        if (state.user.audio_check_completed) {
+          persistAudioCheckCompletedFlag(true);
         }
         clearGuestAuthDelay();
         scheduleCardsRefresh();
@@ -16275,6 +16300,9 @@
             primeGameTouchButton();
           } else {
             await handleLoggedOutState('');
+          }
+          if (resolveAudioCheckCompletedState() && !readMicCheckCompletedFlag()) {
+            openMicCheck();
           }
           if (!hasSpeechRecognitionSupport()) {
             if (els.startGameBtn) {
