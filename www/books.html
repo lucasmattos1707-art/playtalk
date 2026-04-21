@@ -28,7 +28,7 @@
       --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 1) 0%, rgba(4, 18, 38, 0.58) 38%, rgba(4, 18, 38, 0) 100%);
       --books-card-book-width: min(304px, 66vw);
       --books-card-book-height: calc(var(--books-card-book-width) * 16 / 9);
-      --books-card-vertical-offset: -10dvh;
+      --books-card-vertical-offset: 0dvh;
     }
 
     @media (max-width: 800px) {
@@ -39,7 +39,7 @@
 
     @media (max-width: 700px) {
       :root {
-        --books-card-vertical-offset: -16dvh;
+        --books-card-vertical-offset: -6dvh;
       }
     }
 
@@ -126,6 +126,12 @@
       padding: 0;
       gap: 0;
       z-index: 79;
+    }
+
+    body.books-sleeping-mode .books-home-book-bg {
+      opacity: 0 !important;
+      filter: none !important;
+      background-image: none !important;
     }
 
     .books-page.is-home-immersive .books-shelf {
@@ -483,8 +489,8 @@
       display: flex;
       align-items: stretch;
       justify-content: stretch;
-      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
-      backdrop-filter: blur(14px);
+      background: linear-gradient(180deg, #000000 0%, #020814 48%, #031638 100%);
+      backdrop-filter: none;
       pointer-events: auto;
       overflow: hidden;
       overscroll-behavior: none;
@@ -494,7 +500,9 @@
       content: "";
       position: absolute;
       inset: 0;
-      background: var(--playtalk-global-bg-overlay);
+      background:
+        radial-gradient(circle at 50% 18%, rgba(7, 35, 84, 0.72) 0%, rgba(2, 10, 27, 0.92) 46%, #000000 100%),
+        linear-gradient(180deg, #000000 0%, #03112b 58%, #000000 100%);
       pointer-events: none;
       z-index: 0;
     }
@@ -2226,8 +2234,8 @@
     .books-sleep-fab-meta {
       position: fixed;
       left: 50%;
-      top: calc(50% + (var(--books-card-book-height, min(304px, 66vw)) / 2) + var(--books-card-vertical-offset, -10dvh) + 12dvh);
-      width: min(270px, 72vw);
+      top: calc(50% + (var(--books-card-book-height, min(304px, 66vw)) / 2) + var(--books-card-vertical-offset, 0dvh) + 20dvh);
+      width: min(338px, 78vw);
       z-index: 259;
       display: grid;
       justify-items: center;
@@ -2251,7 +2259,7 @@
     .books-sleep-fab-meta-label {
       margin: 0;
       color: rgba(223, 245, 255, 0.78);
-      font-size: 10px;
+      font-size: 12.5px;
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -2261,7 +2269,7 @@
     .books-sleep-fab-meta-value {
       margin: 0;
       color: #ffffff;
-      font-size: clamp(17px, 4.8vw, 24px);
+      font-size: clamp(21px, 6vw, 30px);
       font-family: "BooksReading", "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
       font-weight: 800;
       line-height: 1.04;
@@ -2426,7 +2434,7 @@
       --books-card-book-width: min(304px, 66vw);
       --books-card-book-height: calc(var(--books-card-book-width) * 16 / 9);
       --books-card-badge-size: 97px;
-      --books-card-vertical-offset: -10dvh;
+      --books-card-vertical-offset: 0dvh;
       width: min(454px, 90vw, calc(var(--books-shelf-height) * 9 / 16 * 0.96));
       aspect-ratio: 9 / 15.2;
       border: 0;
@@ -4225,7 +4233,7 @@
       }
 
       .books-card {
-        --books-card-vertical-offset: -16dvh;
+        --books-card-vertical-offset: -6dvh;
         width: min(432px, 88vw);
       }
 

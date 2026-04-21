@@ -543,15 +543,8 @@
 
   function formatEstimatedReadingTimeFromSeconds(totalSeconds) {
     const normalizedSeconds = Math.max(0, Math.round(Number(totalSeconds) || 0));
-    const minutes = Math.floor(normalizedSeconds / 60);
-    const seconds = normalizedSeconds % 60;
-    if (minutes <= 0) {
-      return `${seconds} segundo${seconds === 1 ? '' : 's'}`;
-    }
-    if (seconds <= 0) {
-      return `${minutes} minuto${minutes === 1 ? '' : 's'}`;
-    }
-    return `${minutes} minuto${minutes === 1 ? '' : 's'} e ${seconds} segundo${seconds === 1 ? '' : 's'}`;
+    const minutes = Math.floor(normalizedSeconds / 60) + ((normalizedSeconds % 60) >= 31 ? 1 : 0);
+    return `${minutes} minuto${minutes === 1 ? '' : 's'}`;
   }
 
   function normalizeAudioSources(values) {
