@@ -4566,8 +4566,8 @@
       if (isAllBooksLevel() && !pendingCreate) {
         const sleepBtn = document.createElement('button');
         sleepBtn.type = 'button';
-        sleepBtn.className = 'books-home-launch-btn books-home-launch-btn--sleep books-home-launch-btn--compact books-card__sleep-btn';
-        sleepBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.8 2.2a8.8 8.8 0 1 0 7 14.2a7.9 7.9 0 1 1-7-14.2Z"/></svg><span>Sleeping Mode</span>';
+        sleepBtn.className = 'books-home-corner-btn books-home-corner-btn--right books-card__sleep-btn';
+        sleepBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.8 2.2a8.8 8.8 0 1 0 7 14.2a7.9 7.9 0 1 1-7-14.2Z"/></svg>';
         sleepBtn.disabled = state.homeStartBusy || processingMagic;
         sleepBtn.addEventListener('click', (event) => {
           event.preventDefault();
