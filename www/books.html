@@ -570,7 +570,7 @@
       height: min(58dvh, calc(100dvh - 220px));
       max-height: 58dvh;
       margin-top: 0;
-      transform: translateY(-7dvh);
+      transform: none;
     }
 
     .books-home.is-immersive .books-home-text-slot {
@@ -1150,57 +1150,13 @@
       max-height: 100%;
       aspect-ratio: 9 / 16;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       perspective: 1300px;
-      overflow: visible;
       margin-top: 0;
-      transform: translateY(3vh) scale(0.92);
+      transform: translateY(10vh) scale(0.92);
       transform-origin: center center;
       transition: opacity 1000ms ease, filter 1000ms ease;
-    }
-
-    .books-home-book-meta {
-      display: grid;
-      justify-items: center;
-      gap: 3px;
-      margin-top: clamp(8px, 1.4dvh, 14px);
-      min-height: 48px;
-      text-align: center;
-      color: #ffffff;
-      transition: opacity 220ms ease, filter 220ms ease;
-    }
-
-    .books-home-book-meta.is-fading {
-      opacity: 0.2;
-      filter: blur(2px);
-    }
-
-    .books-home-book-meta[hidden] {
-      display: none !important;
-    }
-
-    .books-home-book-meta-label {
-      margin: 0;
-      color: rgba(223, 245, 255, 0.78);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
-    }
-
-    .books-home-book-meta-value {
-      margin: 0;
-      color: #ffffff;
-      font-size: clamp(18px, 4.8vw, 28px);
-      font-family: "BooksReading", "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
-      font-weight: 800;
-      line-height: 1.04;
-      text-shadow:
-        0 3px 10px rgba(0, 0, 0, 0.58),
-        0 0 18px rgba(109, 220, 255, 0.24);
     }
 
     body.books-prebook-open .books-home-cover-wrap {
@@ -1356,6 +1312,80 @@
     body.books-sleeping-mode #booksHomePanel [role="slider"],
     body.books-sleeping-mode #booksHomePanel .player-books__progress-track {
       touch-action: manipulation;
+    }
+
+    .books-blackout-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 250;
+      display: grid;
+      place-items: center;
+      background: #000000;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 280ms ease, visibility 280ms ease;
+    }
+
+    body.books-player-blackout .books-blackout-screen {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .books-blackout-z-wrap {
+      position: relative;
+      width: 160px;
+      height: 140px;
+      color: rgba(180, 230, 255, 0.9);
+      text-shadow:
+        0 0 10px rgba(0, 150, 255, 0.68),
+        0 0 22px rgba(0, 255, 150, 0.22);
+    }
+
+    .books-blackout-z-wrap .z {
+      position: absolute;
+      left: 34px;
+      top: 78px;
+      font-size: 32px;
+      font-weight: 900;
+      opacity: 0;
+    }
+
+    .books-blackout-z-wrap .z-1 {
+      animation: swayUpToRight 2s ease-out infinite;
+    }
+
+    .books-blackout-z-wrap .z-2 {
+      animation: swayUpToRight 2s ease-out 0.5s infinite;
+    }
+
+    .books-blackout-z-wrap .z-3 {
+      animation: swayUpToRight 2s ease-out 1s infinite;
+    }
+
+    .books-blackout-z-wrap .z-4 {
+      animation: swayUpToRight 2s ease-out 1.5s infinite;
+    }
+
+    @keyframes swayUpToRight {
+      0% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(80px, -100px) rotate(30deg);
+        opacity: 0;
+      }
+    }
+
+    body.books-player-blackout #booksHomePanel .books-home-footer,
+    body.books-player-blackout #booksHomePanel .books-home-corner-btn--left,
+    body.books-player-blackout #booksHomePanel .books-home-screen,
+    body.books-player-blackout .books-home-sleep-fab,
+    body.books-player-blackout .books-sleep-fab-meta {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
 
     .books-home-text-panel {
@@ -1571,6 +1601,580 @@
       right: 20px;
     }
 
+    .books-home-corner-btn[hidden] {
+      display: none !important;
+    }
+
+    .books-home-sleep-toggle {
+      width: 150px;
+      height: 60px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      border-radius: 30px;
+      filter: none;
+      overflow: visible;
+    }
+
+    body.books-player-blackout #booksHomePanel .books-home-sleep-toggle {
+      position: fixed;
+      top: max(18px, env(safe-area-inset-top));
+      right: max(18px, env(safe-area-inset-right));
+      z-index: 320;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .toggle-container {
+      position: absolute;
+      width: 150px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      perspective: 800px;
+      z-index: 5;
+    }
+
+    .toggle-wrap {
+      position: relative;
+      width: 100%;
+      height: 60px;
+      transform-style: preserve-3d;
+    }
+
+    .toggle-input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-track {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 30, 60, 0.4);
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow:
+        0 0 15px rgba(0, 80, 255, 0.2),
+        inset 0 0 10px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      backdrop-filter: blur(5px);
+      transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+      border: 1px solid rgba(0, 150, 255, 0.3);
+    }
+
+    .toggle-track::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center, rgba(0, 80, 255, 0.1) 0%, rgba(0, 0, 0, 0) 70%),
+        linear-gradient(90deg, rgba(0, 60, 120, 0.1) 0%, rgba(0, 30, 60, 0.2) 100%);
+      opacity: 0.6;
+      transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .toggle-track::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      right: 2px;
+      height: 10px;
+      background: linear-gradient(90deg, rgba(0, 170, 255, 0.3) 0%, rgba(0, 80, 255, 0.1) 100%);
+      border-radius: 30px 30px 0 0;
+      opacity: 0.7;
+      filter: blur(1px);
+    }
+
+    .track-lines {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      transform: translateY(-50%);
+      overflow: hidden;
+    }
+
+    .track-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(90deg, rgba(0, 150, 255, 0.3) 0px, rgba(0, 150, 255, 0.3) 5px, transparent 5px, transparent 15px);
+      animation: track-line-move 3s linear infinite;
+    }
+
+    @keyframes track-line-move {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(20px);
+      }
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      width: 54px;
+      height: 54px;
+      left: 3px;
+      top: 3px;
+      background: radial-gradient(circle, rgba(10, 40, 90, 0.9) 0%, rgba(0, 20, 50, 0.8) 100%);
+      border-radius: 50%;
+      box-shadow:
+        0 2px 15px rgba(0, 0, 0, 0.5),
+        inset 0 0 15px rgba(0, 150, 255, 0.5);
+      transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+      z-index: 2;
+      border: 1px solid rgba(0, 170, 255, 0.6);
+      overflow: hidden;
+      transform-style: preserve-3d;
+    }
+
+    .thumb-core {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(0, 180, 255, 0.6) 0%, rgba(0, 50, 120, 0.2) 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(0, 150, 255, 0.5);
+      opacity: 0.9;
+      transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .thumb-inner {
+      position: absolute;
+      width: 25px;
+      height: 25px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, rgba(100, 200, 255, 0.5) 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(100, 200, 255, 0.7);
+      opacity: 0.7;
+      transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+      animation: pulse 2s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 0.5;
+        transform: translate(-50%, -50%) scale(0.9);
+      }
+      100% {
+        opacity: 0.8;
+        transform: translate(-50%, -50%) scale(1.1);
+      }
+    }
+
+    .thumb-scan {
+      position: absolute;
+      width: 100%;
+      height: 5px;
+      background: linear-gradient(90deg, rgba(0, 0, 0, 0) 0%, rgba(0, 150, 255, 0.5) 20%, rgba(255, 255, 255, 0.8) 50%, rgba(0, 150, 255, 0.5) 80%, rgba(0, 0, 0, 0) 100%);
+      top: 0;
+      left: 0;
+      filter: blur(1px);
+      animation: thumb-scan 2s linear infinite;
+      opacity: 0.7;
+    }
+
+    @keyframes thumb-scan {
+      0% {
+        top: -5px;
+        opacity: 0;
+      }
+      20%,
+      80% {
+        opacity: 0.7;
+      }
+      100% {
+        top: 54px;
+        opacity: 0;
+      }
+    }
+
+    .thumb-particles {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      overflow: hidden;
+    }
+
+    .thumb-particle {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: rgba(100, 200, 255, 0.8);
+      border-radius: 50%;
+      box-shadow: 0 0 5px rgba(100, 200, 255, 0.8);
+      animation: thumb-particle-float 3s infinite ease-out;
+      opacity: 0;
+    }
+
+    .thumb-particle:nth-child(1) {
+      top: 70%;
+      left: 30%;
+      animation-delay: 0.2s;
+    }
+
+    .thumb-particle:nth-child(2) {
+      top: 60%;
+      left: 60%;
+      animation-delay: 0.6s;
+    }
+
+    .thumb-particle:nth-child(3) {
+      top: 50%;
+      left: 40%;
+      animation-delay: 1s;
+    }
+
+    .thumb-particle:nth-child(4) {
+      top: 40%;
+      left: 70%;
+      animation-delay: 1.4s;
+    }
+
+    .thumb-particle:nth-child(5) {
+      top: 80%;
+      left: 50%;
+      animation-delay: 1.8s;
+    }
+
+    @keyframes thumb-particle-float {
+      0% {
+        transform: translateY(0) scale(1);
+        opacity: 0;
+      }
+      20% {
+        opacity: 0.8;
+      }
+      100% {
+        transform: translateY(-30px) scale(0);
+        opacity: 0;
+      }
+    }
+
+    .toggle-data {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .data-text {
+      position: absolute;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: all 0.5s ease;
+    }
+
+    .data-text.off {
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 1;
+      color: rgba(0, 150, 255, 0.6);
+      text-shadow: 0 0 5px rgba(0, 100, 255, 0.4);
+    }
+
+    .data-text.on {
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      color: rgba(0, 255, 150, 0.6);
+      text-shadow: 0 0 5px rgba(0, 255, 100, 0.4);
+    }
+
+    .status-indicator {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 180, 255, 0.8) 0%, rgba(0, 80, 200, 0.4) 100%);
+      box-shadow: 0 0 10px rgba(0, 150, 255, 0.5);
+      animation: blink 2s infinite alternate;
+      transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .status-indicator.off {
+      top: 25px;
+      right: 15px;
+    }
+
+    .status-indicator.on {
+      top: 25px;
+      left: 15px;
+      opacity: 0;
+      background: radial-gradient(circle, rgba(0, 255, 150, 0.8) 0%, rgba(0, 200, 80, 0.4) 100%);
+      box-shadow: 0 0 10px rgba(0, 255, 150, 0.5);
+    }
+
+    @keyframes blink {
+      0%,
+      100% {
+        opacity: 0.5;
+        transform: scale(0.9);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+    }
+
+    .energy-rings {
+      position: absolute;
+      width: 54px;
+      height: 54px;
+      left: 3px;
+      top: 3px;
+      pointer-events: none;
+      z-index: 1;
+      transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .energy-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 2px solid transparent;
+      opacity: 0;
+    }
+
+    .energy-ring:nth-child(1) {
+      width: 50px;
+      height: 50px;
+      border-top-color: rgba(0, 150, 255, 0.5);
+      border-right-color: rgba(0, 150, 255, 0.3);
+      animation: spin 3s linear infinite;
+    }
+
+    .energy-ring:nth-child(2) {
+      width: 40px;
+      height: 40px;
+      border-bottom-color: rgba(0, 150, 255, 0.5);
+      border-left-color: rgba(0, 150, 255, 0.3);
+      animation: spin 2s linear infinite reverse;
+    }
+
+    .energy-ring:nth-child(3) {
+      width: 30px;
+      height: 30px;
+      border-left-color: rgba(0, 150, 255, 0.5);
+      border-top-color: rgba(0, 150, 255, 0.3);
+      animation: spin 1.5s linear infinite;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+      100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+
+    .interface-lines {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .interface-line {
+      position: absolute;
+      background: rgba(0, 150, 255, 0.3);
+      transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .interface-line:nth-child(1) {
+      width: 15px;
+      height: 1px;
+      bottom: -5px;
+      left: 20px;
+    }
+
+    .interface-line:nth-child(2) {
+      width: 1px;
+      height: 8px;
+      bottom: -12px;
+      left: 35px;
+    }
+
+    .interface-line:nth-child(3) {
+      width: 25px;
+      height: 1px;
+      bottom: -12px;
+      left: 35px;
+    }
+
+    .interface-line:nth-child(4) {
+      width: 15px;
+      height: 1px;
+      bottom: -5px;
+      right: 20px;
+    }
+
+    .interface-line:nth-child(5) {
+      width: 1px;
+      height: 8px;
+      bottom: -12px;
+      right: 35px;
+    }
+
+    .interface-line:nth-child(6) {
+      width: 25px;
+      height: 1px;
+      bottom: -12px;
+      right: 10px;
+    }
+
+    .toggle-reflection {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 40%);
+      border-radius: 30px;
+      pointer-events: none;
+    }
+
+    .holo-glow {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 30px;
+      background: radial-gradient(ellipse at center, rgba(0, 150, 255, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+      filter: blur(10px);
+      opacity: 0.5;
+      transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+      z-index: 0;
+    }
+
+    .toggle-input:checked + .toggle-track {
+      background: rgba(0, 60, 30, 0.4);
+      border-color: rgba(0, 255, 150, 0.3);
+      box-shadow:
+        0 0 15px rgba(0, 255, 150, 0.2),
+        inset 0 0 10px rgba(0, 0, 0, 0.8);
+    }
+
+    .toggle-input:checked + .toggle-track::before {
+      background: radial-gradient(ellipse at center, rgba(0, 255, 150, 0.1) 0%, rgba(0, 0, 0, 0) 70%),
+        linear-gradient(90deg, rgba(0, 120, 60, 0.1) 0%, rgba(0, 60, 30, 0.2) 100%);
+    }
+
+    .toggle-input:checked + .toggle-track::after {
+      background: linear-gradient(90deg, rgba(0, 255, 150, 0.3) 0%, rgba(0, 160, 80, 0.1) 100%);
+    }
+
+    .toggle-input:checked + .toggle-track .track-line {
+      background: repeating-linear-gradient(90deg, rgba(0, 255, 150, 0.3) 0px, rgba(0, 255, 150, 0.3) 5px, transparent 5px, transparent 15px);
+      animation-direction: reverse;
+    }
+
+    .toggle-input:checked + .toggle-track .toggle-thumb {
+      left: calc(100% - 57px);
+      background: radial-gradient(circle, rgba(10, 90, 40, 0.9) 0%, rgba(0, 50, 20, 0.8) 100%);
+      border-color: rgba(0, 255, 150, 0.6);
+      box-shadow:
+        0 2px 15px rgba(0, 0, 0, 0.5),
+        inset 0 0 15px rgba(0, 255, 150, 0.5);
+    }
+
+    .toggle-input:checked + .toggle-track .thumb-core {
+      background: radial-gradient(circle, rgba(0, 255, 150, 0.6) 0%, rgba(0, 120, 50, 0.2) 100%);
+      box-shadow: 0 0 20px rgba(0, 255, 150, 0.5);
+    }
+
+    .toggle-input:checked + .toggle-track .thumb-inner {
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, rgba(100, 255, 200, 0.5) 100%);
+      box-shadow: 0 0 10px rgba(100, 255, 200, 0.7);
+    }
+
+    .toggle-input:checked + .toggle-track .thumb-scan {
+      background: linear-gradient(90deg, rgba(0, 0, 0, 0) 0%, rgba(0, 255, 150, 0.5) 20%, rgba(255, 255, 255, 0.8) 50%, rgba(0, 255, 150, 0.5) 80%, rgba(0, 0, 0, 0) 100%);
+    }
+
+    .toggle-input:checked + .toggle-track .thumb-particle {
+      background: rgba(100, 255, 200, 0.8);
+      box-shadow: 0 0 5px rgba(100, 255, 200, 0.8);
+    }
+
+    .toggle-input:checked + .toggle-track .data-text.off,
+    .toggle-input:checked + .toggle-track .status-indicator.off {
+      opacity: 0;
+    }
+
+    .toggle-input:checked + .toggle-track .data-text.on,
+    .toggle-input:checked + .toggle-track .status-indicator.on {
+      opacity: 1;
+    }
+
+    .toggle-input:checked + .toggle-track .energy-rings {
+      left: calc(100% - 57px);
+    }
+
+    .toggle-input:checked + .toggle-track .energy-ring {
+      opacity: 1;
+    }
+
+    .toggle-input:checked + .toggle-track .energy-ring:nth-child(1) {
+      border-top-color: rgba(0, 255, 150, 0.5);
+      border-right-color: rgba(0, 255, 150, 0.3);
+    }
+
+    .toggle-input:checked + .toggle-track .energy-ring:nth-child(2) {
+      border-bottom-color: rgba(0, 255, 150, 0.5);
+      border-left-color: rgba(0, 255, 150, 0.3);
+    }
+
+    .toggle-input:checked + .toggle-track .energy-ring:nth-child(3) {
+      border-left-color: rgba(0, 255, 150, 0.5);
+      border-top-color: rgba(0, 255, 150, 0.3);
+    }
+
+    .toggle-input:checked + .toggle-track .interface-line {
+      background: rgba(0, 255, 150, 0.3);
+    }
+
+    .toggle-input:checked + .toggle-track .holo-glow {
+      background: radial-gradient(ellipse at center, rgba(0, 255, 150, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+    }
+
+    .toggle-input:hover + .toggle-track {
+      box-shadow:
+        0 0 20px rgba(0, 150, 255, 0.3),
+        inset 0 0 10px rgba(0, 0, 0, 0.8);
+    }
+
+    .toggle-input:checked:hover + .toggle-track {
+      box-shadow:
+        0 0 20px rgba(0, 255, 150, 0.3),
+        inset 0 0 10px rgba(0, 0, 0, 0.8);
+    }
+
     .books-home-sleep-fab {
       position: fixed;
       top: max(16px, env(safe-area-inset-top));
@@ -1602,6 +2206,52 @@
       filter:
         drop-shadow(0 0 10px rgba(154, 234, 255, 0.9))
         drop-shadow(0 0 20px rgba(71, 171, 255, 0.52));
+    }
+
+    .books-sleep-fab-meta {
+      position: fixed;
+      top: calc(max(16px, env(safe-area-inset-top)) + 76px);
+      right: max(12px, env(safe-area-inset-right));
+      width: min(210px, 54vw);
+      z-index: 259;
+      display: grid;
+      justify-items: end;
+      gap: 3px;
+      text-align: right;
+      color: #ffffff;
+      pointer-events: none;
+      transition: opacity 220ms ease, filter 220ms ease;
+    }
+
+    .books-sleep-fab-meta.is-fading {
+      opacity: 0.2;
+      filter: blur(2px);
+    }
+
+    .books-sleep-fab-meta[hidden] {
+      display: none !important;
+    }
+
+    .books-sleep-fab-meta-label {
+      margin: 0;
+      color: rgba(223, 245, 255, 0.78);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    }
+
+    .books-sleep-fab-meta-value {
+      margin: 0;
+      color: #ffffff;
+      font-size: clamp(17px, 4.8vw, 24px);
+      font-family: "BooksReading", "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
+      font-weight: 800;
+      line-height: 1.04;
+      text-shadow:
+        0 3px 10px rgba(0, 0, 0, 0.58),
+        0 0 18px rgba(109, 220, 255, 0.24);
     }
 
     .books-card__sleep-btn {
@@ -3599,16 +4249,7 @@
       .books-home.is-immersive .books-home-cover-wrap {
         height: min(56dvh, calc(100dvh - 210px));
         max-height: 56dvh;
-        transform: translateY(-7dvh);
-      }
-
-      .books-home-book-meta {
-        margin-top: 6px;
-        min-height: 42px;
-      }
-
-      .books-home-book-meta-value {
-        font-size: clamp(17px, 5vw, 23px);
+        transform: none;
       }
 
       .books-home-text-panel {
@@ -3675,6 +4316,10 @@
     <button class="books-home-corner-btn books-home-corner-btn--right books-home-sleep-fab" id="booksHomeSleepFab" type="button" aria-label="AllBooks">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.8 2.2a8.8 8.8 0 1 0 7 14.2a7.9 7.9 0 1 1-7-14.2Z"/></svg>
     </button>
+    <div class="books-sleep-fab-meta" id="booksSleepFabMeta" aria-live="polite" hidden>
+      <p class="books-sleep-fab-meta-label" id="booksSleepFabMetaLabel"></p>
+      <p class="books-sleep-fab-meta-value" id="booksSleepFabMetaValue"></p>
+    </div>
     <section class="books-level-menu" id="booksLevelMenu" aria-label="Selecao de nivel">
       <button class="books-arrow-btn" id="booksLevelPrevBtn" type="button" aria-label="Nivel anterior">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.41 6.59 14 5.17 7.17 12 14 18.83l1.41-1.42L10 12z"/></svg>
@@ -3734,17 +4379,59 @@
               <button class="books-home-corner-btn books-home-corner-btn--left" id="booksHomeCornerHomeBtn" type="button" aria-label="Voltar para inicio" hidden>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.2 3 10v10.8h6.2v-6.4h5.6v6.4H21V10zm7.2 16H16v-6.4a1.2 1.2 0 0 0-1.2-1.2H9.2A1.2 1.2 0 0 0 8 12.8v6.4H4.8v-8.4L12 5.6l7.2 5.2z"/></svg>
               </button>
-              <button class="books-home-corner-btn books-home-corner-btn--right" id="booksHomeCornerPlayBtn" type="button" aria-label="Play ou pause" hidden>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72L19 12 8 5.14z"/></svg>
-              </button>
+              <div class="books-home-corner-btn books-home-corner-btn--right books-home-sleep-toggle toggle-container" id="booksHomeCornerPlayBtn" hidden>
+                <div class="toggle-wrap">
+                  <input class="toggle-input" id="booksHomeBlackoutToggle" type="checkbox" aria-label="Modo tela preta">
+                  <label class="toggle-track" for="booksHomeBlackoutToggle">
+                    <div class="track-lines"><div class="track-line"></div></div>
+                    <div class="toggle-thumb">
+                      <div class="thumb-core"></div>
+                      <div class="thumb-inner"></div>
+                      <div class="thumb-scan"></div>
+                      <div class="thumb-particles">
+                        <div class="thumb-particle"></div>
+                        <div class="thumb-particle"></div>
+                        <div class="thumb-particle"></div>
+                        <div class="thumb-particle"></div>
+                        <div class="thumb-particle"></div>
+                      </div>
+                    </div>
+                    <div class="toggle-data">
+                      <div class="data-text off">OFF</div>
+                      <div class="data-text on">ON</div>
+                      <div class="status-indicator off"></div>
+                      <div class="status-indicator on"></div>
+                    </div>
+                    <div class="energy-rings">
+                      <div class="energy-ring"></div>
+                      <div class="energy-ring"></div>
+                      <div class="energy-ring"></div>
+                    </div>
+                    <div class="interface-lines">
+                      <div class="interface-line"></div>
+                      <div class="interface-line"></div>
+                      <div class="interface-line"></div>
+                      <div class="interface-line"></div>
+                      <div class="interface-line"></div>
+                      <div class="interface-line"></div>
+                    </div>
+                    <div class="toggle-reflection"></div>
+                    <div class="holo-glow"></div>
+                  </label>
+                </div>
+              </div>
+              <div class="books-blackout-screen" id="booksBlackoutScreen" aria-hidden="true">
+                <div class="books-blackout-z-wrap">
+                  <div class="z z-1">Z</div>
+                  <div class="z z-2">Z</div>
+                  <div class="z z-3">Z</div>
+                  <div class="z z-4">Z</div>
+                </div>
+              </div>
               <div class="books-home-screen books-home-screen--current" id="booksHomeCurrentScreen">
                 <div class="books-home-book-slot">
                   <div class="books-home-cover-wrap">
                     <div class="books-home-cover" id="booksHomeCover"></div>
-                    <div class="books-home-book-meta" id="booksHomeBookMeta" aria-live="polite" hidden>
-                      <p class="books-home-book-meta-label" id="booksHomeBookMetaLabel"></p>
-                      <p class="books-home-book-meta-value" id="booksHomeBookMetaValue"></p>
-                    </div>
                   </div>
                 </div>
                 <div class="books-home-text-slot">
@@ -3755,10 +4442,6 @@
                 <div class="books-home-book-slot">
                   <div class="books-home-cover-wrap">
                     <div class="books-home-cover" id="booksHomeNextCover"></div>
-                    <div class="books-home-book-meta" id="booksHomeNextBookMeta" aria-hidden="true" hidden>
-                      <p class="books-home-book-meta-label" id="booksHomeNextBookMetaLabel"></p>
-                      <p class="books-home-book-meta-value" id="booksHomeNextBookMetaValue"></p>
-                    </div>
                   </div>
                 </div>
                 <div class="books-home-text-slot">

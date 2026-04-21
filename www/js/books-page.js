@@ -144,18 +144,17 @@
     homeSwitchAccountBtn: document.getElementById('booksHomeSwitchAccountBtn'),
     homePremiumBtn: document.getElementById('booksHomePremiumBtn'),
     homeCover: document.getElementById('booksHomeCover'),
-    homeBookMeta: document.getElementById('booksHomeBookMeta'),
-    homeBookMetaLabel: document.getElementById('booksHomeBookMetaLabel'),
-    homeBookMetaValue: document.getElementById('booksHomeBookMetaValue'),
+    sleepFabMeta: document.getElementById('booksSleepFabMeta'),
+    sleepFabMetaLabel: document.getElementById('booksSleepFabMetaLabel'),
+    sleepFabMetaValue: document.getElementById('booksSleepFabMetaValue'),
     homeNextCover: document.getElementById('booksHomeNextCover'),
-    homeNextBookMeta: document.getElementById('booksHomeNextBookMeta'),
-    homeNextBookMetaLabel: document.getElementById('booksHomeNextBookMetaLabel'),
-    homeNextBookMetaValue: document.getElementById('booksHomeNextBookMetaValue'),
     homeTextPanel: document.getElementById('booksHomeTextPanel'),
     homeNextTextPanel: document.getElementById('booksHomeNextTextPanel'),
     homeControls: document.getElementById('booksHomeControls'),
     homeCornerHomeBtn: document.getElementById('booksHomeCornerHomeBtn'),
     homeCornerPlayBtn: document.getElementById('booksHomeCornerPlayBtn'),
+    homeBlackoutToggle: document.getElementById('booksHomeBlackoutToggle'),
+    blackoutScreen: document.getElementById('booksBlackoutScreen'),
     homeSleepFab: document.getElementById('booksHomeSleepFab'),
     playerBooksProgressTime: document.getElementById('playerBooksProgressTime'),
     playerBooksProgressTrack: document.getElementById('playerBooksProgressTrack'),
@@ -363,6 +362,7 @@
     homeTouchStartY: 0,
     homeRepeatIndex: DEFAULT_HOME_REPEAT_INDEX,
     homeMusicEnabled: true,
+    homeBlackoutActive: false,
     homeMusicAudioElement: null,
     homeMusicIndex: 0,
     homePreBookPausedBefore: false,
@@ -1905,6 +1905,7 @@
     const nextIndex = Math.max(0, Math.round(Number(preferredIndex) || 0));
     state.shelfIndex = nextIndex;
     renderCards();
+    renderSleepFabMeta();
   }
 
   function flushPendingAllBooksAdvance(preferredIndex = state.shelfIndex) {
@@ -2144,10 +2145,16 @@
     renderHomeTextPanel(textElement, visibleText);
   }
 
-  function getHomeBookMetaItems(session) {
-    const book = session?.book || {};
+  function getVisibleShelfBook() {
+    const card = getShelfCards()[clampShelfIndex(state.shelfIndex)] || null;
+    const bookId = safeText(card?.dataset?.bookId);
+    if (!bookId || bookId.startsWith('job:')) return null;
+    return state.books.find((book) => safeText(book?.bookId) === bookId) || null;
+  }
+
+  function getHomeBookMetaItems(book) {
     const level = normalizeLevel(book?.nivel ?? book?.level);
-    const readingSeconds = Math.max(0, Math.round(Number(book?.readingTimeSeconds) || Number(session?.readingTimeSeconds) || 0));
+    const readingSeconds = Math.max(0, Math.round(Number(book?.readingTimeSeconds) || 0));
     return [
       {
         label: 'Nível do Livro',
@@ -2160,17 +2167,27 @@
     ];
   }
 
-  function renderHomeBookMeta(metaElement, labelElement, valueElement, session, options = {}) {
+  function renderSleepFabMeta() {
+    const metaElement = els.sleepFabMeta;
+    const labelElement = els.sleepFabMetaLabel;
+    const valueElement = els.sleepFabMetaValue;
     if (!metaElement || !labelElement || !valueElement) return;
-    const hasSession = Boolean(session?.bookId || session?.book);
-    metaElement.hidden = !hasSession || Boolean(options.hide);
-    if (!hasSession || options.hide) {
+    const book = isAllBooksLevel() && !state.homeSleepActive ? getVisibleShelfBook() : null;
+    metaElement.hidden = !book;
+    if (!book) {
       labelElement.textContent = '';
       valueElement.textContent = '';
       return;
     }
+    if (!Number(book?.readingTimeSeconds)) {
+      void ensureBookReadingTimeSeconds(book).then(() => {
+        if (getVisibleShelfBook() === book) {
+          renderSleepFabMeta();
+        }
+      });
+    }
 
-    const items = getHomeBookMetaItems(session);
+    const items = getHomeBookMetaItems(book);
     const index = Math.max(0, Number(state.homeBookMetaIndex) || 0) % items.length;
     const entry = items[index] || items[0];
     const nextLabel = safeText(entry?.label);
@@ -2190,7 +2207,7 @@
     if (state.homeBookMetaRotationTimer) return;
     state.homeBookMetaRotationTimer = window.setInterval(() => {
       state.homeBookMetaIndex = (state.homeBookMetaIndex + 1) % 1000000;
-      renderHomePanel();
+      renderSleepFabMeta();
     }, HOME_BOOK_META_ROTATE_MS);
   }
 
@@ -2306,9 +2323,12 @@
     }
     if (els.homeCornerPlayBtn) {
       els.homeCornerPlayBtn.hidden = !state.homeIntroDismissed;
-      els.homeCornerPlayBtn.innerHTML = state.homePaused
-        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72L19 12 8 5.14z"/></svg>'
-        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5h3v14H8zm5 0h3v14h-3z"/></svg>';
+    }
+    if (els.homeBlackoutToggle) {
+      const isBlackout = Boolean(state.homeBlackoutActive && state.homeSleepActive);
+      els.homeBlackoutToggle.checked = isBlackout;
+      els.homeBlackoutToggle.setAttribute('aria-checked', isBlackout ? 'true' : 'false');
+      els.homeBlackoutToggle.setAttribute('aria-label', isBlackout ? 'Voltar para o player' : 'Ativar tela preta');
     }
     syncHomeMediaSession();
   }
@@ -2425,6 +2445,7 @@
     }
     syncBooksInjectedFooterVisibility();
     document.body.classList.toggle('books-sleeping-mode', shellActive);
+    document.body.classList.toggle('books-player-blackout', shellActive && state.homeBlackoutActive);
     els.homePanel.hidden = !visible;
     els.homePanel.classList.toggle('is-visible', visible);
     els.homePanel.classList.toggle('is-immersive', shellActive);
@@ -2450,24 +2471,10 @@
       hideText: !state.homeTextVisible,
       isLoading: false
     });
-    renderHomeBookMeta(
-      els.homeBookMeta,
-      els.homeBookMetaLabel,
-      els.homeBookMetaValue,
-      state.homeCurrentSession,
-      { hide: !shellActive }
-    );
     renderHomeScreen(els.homeNextCover, els.homeNextTextPanel, state.homeNextSession, 0, {
       hideText: true,
       isLoading: false
     });
-    renderHomeBookMeta(
-      els.homeNextBookMeta,
-      els.homeNextBookMetaLabel,
-      els.homeNextBookMetaValue,
-      state.homeNextSession,
-      { hide: true }
-    );
     renderHomeProgressUi();
     renderHomeTransportUi();
     if (visible && els.cardsEmpty) {
@@ -3115,6 +3122,13 @@
     renderHomePanel();
   }
 
+  function setHomeBlackoutMode(active) {
+    if (!state.homeIntroDismissed || !state.homeSleepActive) return;
+    state.homeBlackoutActive = Boolean(active);
+    renderHomePanel();
+    renderHomeTransportUi();
+  }
+
   async function toggleHomePausePlayback() {
     if (!state.homeIntroDismissed) return;
     state.homePaused = !state.homePaused;
@@ -3372,6 +3386,7 @@
     if (!(await guardEnergyAndRedirect())) return;
     state.homeStartBusy = true;
     state.homeSleepActive = true;
+    state.homeBlackoutActive = false;
     renderHomeAuthUi();
     const token = state.homePlaybackToken + 1;
     state.homePlaybackToken = token;
@@ -3410,7 +3425,8 @@
       setActiveHomeSession(firstSession, { hideText: false });
       void ensureHomeNextSession(token, true);
     }
-    startHomeBookMetaRotation();
+    stopHomeBookMetaRotation();
+    renderSleepFabMeta();
     state.homeStartBusy = false;
     void setNativeBooksSleepModeEnabled(true);
     renderHomePanel();
@@ -3427,6 +3443,7 @@
     state.homePlaybackToken += 1;
     state.homeSleepActive = false;
     state.homePaused = false;
+    state.homeBlackoutActive = false;
     state.homeSkipRequested = false;
     state.homeTransitioning = false;
     if (els.homeViewport) {
@@ -3614,6 +3631,7 @@
       if (previousIndex !== nextIndex) {
         flashShelfCard(nextIndex);
       }
+      renderSleepFabMeta();
       return;
     }
     cancelShelfAnimation();
@@ -3621,6 +3639,7 @@
     if (previousIndex !== nextIndex) {
       flashShelfCard(nextIndex);
     }
+    renderSleepFabMeta();
   }
 
   function updateShelfIndexFromViewport() {
@@ -3632,6 +3651,7 @@
     }
     const pageHeight = Math.max(1, shelf.clientHeight);
     state.shelfIndex = clampShelfIndex(Math.round(shelf.scrollTop / pageHeight));
+    renderSleepFabMeta();
   }
 
   async function snapShelfByStep(direction) {
@@ -4786,6 +4806,7 @@
     state.shelfIndex = clampVisibleShelfIndex(state.shelfIndex);
     void scrollShelfToIndex(state.shelfIndex, false);
     syncSleepFabVisibility();
+    renderSleepFabMeta();
   }
 
   function getUiLevelDisplayName(level) {
@@ -5790,6 +5811,12 @@
     const shouldShow = isAllBooksLevel() && !state.homeStartBusy;
     fab.hidden = !shouldShow;
     fab.disabled = state.homeStartBusy;
+    if (shouldShow && !state.homeSleepActive) {
+      startHomeBookMetaRotation();
+      renderSleepFabMeta();
+    } else {
+      renderSleepFabMeta();
+    }
   }
 
   function getReaderDisplayedScorePercent(value) {
@@ -6619,10 +6646,12 @@
       renderCards();
     });
 
-    els.homeCornerPlayBtn?.addEventListener('click', () => {
-      if (!state.homeIntroDismissed) return;
-      // Toggle play/pause of the voice audio. Music stays on.
-      void toggleHomePausePlayback();
+    els.homeCornerPlayBtn?.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+
+    els.homeBlackoutToggle?.addEventListener('change', () => {
+      setHomeBlackoutMode(Boolean(els.homeBlackoutToggle?.checked));
     });
 
     els.homeSleepFab?.addEventListener('click', (event) => {
