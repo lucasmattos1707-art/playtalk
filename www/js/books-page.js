@@ -149,6 +149,7 @@
     homeControls: document.getElementById('booksHomeControls'),
     homeCornerHomeBtn: document.getElementById('booksHomeCornerHomeBtn'),
     homeCornerPlayBtn: document.getElementById('booksHomeCornerPlayBtn'),
+    homeSleepFab: document.getElementById('booksHomeSleepFab'),
     playerBooksProgressTime: document.getElementById('playerBooksProgressTime'),
     playerBooksProgressTrack: document.getElementById('playerBooksProgressTrack'),
     playerBooksProgressFill: document.getElementById('playerBooksProgressFill'),
@@ -4563,20 +4564,6 @@
 
       card.append(background, overlay, badgeEl);
 
-      if (isAllBooksLevel() && !pendingCreate) {
-        const sleepBtn = document.createElement('button');
-        sleepBtn.type = 'button';
-        sleepBtn.className = 'books-home-corner-btn books-home-corner-btn--right books-card__sleep-btn';
-        sleepBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.8 2.2a8.8 8.8 0 1 0 7 14.2a7.9 7.9 0 1 1-7-14.2Z"/></svg>';
-        sleepBtn.disabled = state.homeStartBusy || processingMagic;
-        sleepBtn.addEventListener('click', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          void startHomeSleepPlayback();
-        });
-        card.appendChild(sleepBtn);
-      }
-
       if (!IS_MYBOOKS_GRID_EMBED) {
         const adminChip = document.createElement('span');
         adminChip.className = 'books-card__admin-chip';
@@ -4691,6 +4678,7 @@
     syncShelfViewportHeight();
     state.shelfIndex = clampVisibleShelfIndex(state.shelfIndex);
     void scrollShelfToIndex(state.shelfIndex, false);
+    syncSleepFabVisibility();
   }
 
   function getUiLevelDisplayName(level) {
@@ -5668,6 +5656,14 @@
     };
   }
 
+  function syncSleepFabVisibility() {
+    const fab = els.homeSleepFab;
+    if (!fab) return;
+    const shouldShow = isAllBooksLevel() && !state.homeStartBusy;
+    fab.hidden = !shouldShow;
+    fab.disabled = state.homeStartBusy;
+  }
+
   function getReaderDisplayedScorePercent(value) {
     return Math.max(0, Math.min(100, formatReaderRoundedScoreValue(value).roundedValue * 10));
   }
@@ -6497,6 +6493,12 @@
       void toggleHomePausePlayback();
     });
 
+    els.homeSleepFab?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void startHomeSleepPlayback();
+    });
+
     // Tapping the current book cover in the Home player opens the pre-book overlay (paused + blurred).
     els.homeCover?.addEventListener('click', () => {
       if (!isHomeLevel() || !state.homeIntroDismissed) return;
@@ -6890,6 +6892,7 @@
       setStatus('', null);
     }
     renderHomeAuthUi();
+    syncSleepFabVisibility();
   }
 
   init();

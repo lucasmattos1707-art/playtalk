@@ -111,6 +111,21 @@
   appearance: none;
 }
 
+.auth-form input:-webkit-autofill,
+.auth-form input:-webkit-autofill:hover,
+.auth-form input:-webkit-autofill:focus,
+.auth-form input:-webkit-autofill:active {
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+  -webkit-box-shadow: 0 0 0 1000px rgba(1, 5, 14, 0.96) inset;
+  box-shadow: 0 0 0 1000px rgba(1, 5, 14, 0.96) inset;
+  transition: background-color 9999s ease-out 0s, color 9999s ease-out 0s;
+}
+
+.auth-form input:-webkit-autofill {
+  border-color: rgba(93, 190, 255, 0.38);
+}
+
 .auth-form input:focus {
   outline: 2px solid rgba(66, 190, 255, 0.3);
   border-color: rgba(111, 220, 255, 0.9);

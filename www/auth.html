@@ -52,13 +52,13 @@
         var params = new URLSearchParams(window.location.search || '');
         var rawReturn = String(params.get('return') || '').trim();
         if (!rawReturn || rawReturn.indexOf('//') === 0 || /^https?:/i.test(rawReturn)) {
-          return '/flashcards?view=play';
+          return '/play';
         }
         if (rawReturn.charAt(0) !== '/') {
-          return '/flashcards?view=play';
+          return '/play';
         }
         if (/^\/(?:entrar|auth\.html|login|register|logout)(?:[?#/]|$)/i.test(rawReturn)) {
-          return '/flashcards?view=play';
+          return '/play';
         }
         return rawReturn;
       }

@@ -1136,13 +1136,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding-top: 70px;
+      padding-top: 0;
       padding-bottom: 0;
     }
 
     .books-home-cover-wrap {
       width: auto;
-      height: min(60vh, calc(100vh - 200px));
+      height: min(60vh, calc(100vh - 180px));
       max-height: 100%;
       aspect-ratio: 9 / 16;
       display: flex;
@@ -1150,8 +1150,8 @@
       justify-content: center;
       perspective: 1300px;
       margin-top: 0;
-      transform: translateY(34px) scale(0.88);
-      transform-origin: top center;
+      transform: translateY(0) scale(0.92);
+      transform-origin: center center;
       transition: opacity 1000ms ease, filter 1000ms ease;
     }
 
@@ -2916,41 +2916,7 @@
     }
 
     .books-card__sleep-btn {
-      position: fixed;
-      top: max(16px, env(safe-area-inset-top));
-      right: max(16px, env(safe-area-inset-right));
-      left: auto;
-      bottom: auto;
-      transform: none;
-      width: 76px;
-      height: 76px;
-      border-radius: 999px;
-      padding: 0;
-      border: 1.5px solid rgba(122, 223, 255, 0.9);
-      background: linear-gradient(180deg, rgba(7, 34, 88, 0.96), rgba(10, 25, 63, 0.98));
-      color: #f4fbff;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow:
-        0 0 0 1px rgba(185, 239, 255, 0.18) inset,
-        0 0 18px rgba(86, 210, 255, 0.28),
-        0 0 38px rgba(44, 132, 255, 0.22),
-        0 18px 34px rgba(18, 73, 125, 0.26);
-      z-index: 2;
-      cursor: pointer;
-      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
-    }
-
-    .books-card__sleep-btn:hover,
-    .books-card__sleep-btn:focus-visible {
-      transform: translateY(-2px);
-      filter: saturate(1.05);
-    }
-
-    .books-card__sleep-btn[disabled] {
-      opacity: 0.7;
-      cursor: wait;
+      display: none;
     }
 
     .books-reader-current-badge.is-swapping {
@@ -3483,7 +3449,7 @@
 
       /* Mobile: place the book cover visually between the top and the text block. */
       .books-home-book-slot {
-        padding-top: 40px;
+        padding-top: 0;
       }
 
       .books-home-text-slot {
@@ -3494,7 +3460,7 @@
         width: auto;
         height: 100%;
         max-height: 100%;
-        transform: translateY(22px) scale(0.9);
+        transform: translateY(0) scale(0.92);
       }
 
       .books-home.is-immersive .books-home-book-slot {
@@ -3568,6 +3534,9 @@
     <div class="books-home-book-bg books-home-book-bg--secondary" id="booksHomeBookBackgroundSecondary" aria-hidden="true"></div>
     
   <main class="books-page">
+    <button class="books-home-corner-btn books-home-corner-btn--right books-home-sleep-fab" id="booksHomeSleepFab" type="button" aria-label="AllBooks">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.8 2.2a8.8 8.8 0 1 0 7 14.2a7.9 7.9 0 1 1-7-14.2Z"/></svg>
+    </button>
     <section class="books-level-menu" id="booksLevelMenu" aria-label="Selecao de nivel">
       <button class="books-arrow-btn" id="booksLevelPrevBtn" type="button" aria-label="Nivel anterior">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.41 6.59 14 5.17 7.17 12 14 18.83l1.41-1.42L10 12z"/></svg>
@@ -3868,20 +3837,20 @@
   </section>
 
   <nav class="flashcards-footer-nav" data-shell-page="books" aria-label="Navegacao do flashcards">
-    <a class="flashcards-footer-nav__item" href="/flashcards?view=play" aria-label="Jogar">
-      <img src="/arquivos-codex/nav-icons/home.png" alt="Home">
+    <a class="flashcards-footer-nav__item" href="/play" aria-label="Jogar">
+      <img src="/flashcard-audio-cues/1.png" alt="Home">
     </a>
     <a class="flashcards-footer-nav__item" href="/allcards" aria-label="Flashcards">
-      <img src="/arquivos-codex/nav-icons/messenge.png" alt="Mensagens">
+      <img src="/flashcard-audio-cues/2.png" alt="Flashcards">
     </a>
     <a class="flashcards-footer-nav__item" href="/users" aria-label="Usuarios">
-      <img src="/arquivos-codex/nav-icons/rank.png" alt="Ranking">
+      <img src="/flashcard-audio-cues/3.png" alt="Usuarios">
     </a>
     <a class="flashcards-footer-nav__item" href="/account" aria-label="Perfil">
-      <img src="/arquivos-codex/nav-icons/profile.png" alt="Perfil">
+      <img src="/flashcard-audio-cues/5.png" alt="Perfil">
     </a>
     <a class="flashcards-footer-nav__item is-active" href="/books" aria-label="Books">
-      <img src="/arquivos-codex/nav-icons/book.png" alt="Books">
+      <img src="/flashcard-audio-cues/4.png" alt="Books">
     </a>
   </nav>
 
@@ -3897,5 +3866,3 @@
   <script src="js/books-page.js?v=20260419b"></script>
 </body>
 </html>
-
-
