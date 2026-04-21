@@ -542,6 +542,10 @@
       order: 1;
     }
 
+    #miccheck .soundcheck-shell {
+      position: relative;
+    }
+
     .soundcheck-header p {
       margin: 0;
       color: #ffffff;
@@ -610,7 +614,11 @@
     }
 
     #miccheck .soundcheck-play--mic {
-      order: 2;
+      order: 3;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
     }
 
     .soundcheck-play.is-listening {
@@ -717,27 +725,31 @@
       align-items: center;
       justify-content: center;
       flex-wrap: wrap;
-      gap: 12px 18px;
-      order: 3;
-      width: min(100%, 380px);
-      min-height: 104px;
+      gap: 8px;
+      order: 2;
+      position: absolute;
+      top: calc(50% - 116px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(100%, 460px);
+      min-height: 36px;
       color: #ffffff;
       font-family: "Open Sans", Arial, sans-serif;
-      font-size: 24px;
+      font-size: 23px;
       font-weight: 800;
-      line-height: 1.25;
+      line-height: 1.12;
       text-align: center;
     }
 
     .miccheck-rules p {
       margin: 0;
       display: flex;
-      flex: 1 1 108px;
+      flex: 0 1 auto;
       min-width: 0;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
-      gap: 10px;
+      gap: 0;
+      white-space: nowrap;
       max-height: 0;
       opacity: 0;
       transform: translateY(8px);
@@ -747,9 +759,22 @@
     }
 
     .miccheck-rules p.is-visible {
-      max-height: 104px;
+      max-height: 42px;
       opacity: 1;
       transform: translateY(0);
+    }
+
+    .miccheck-checks {
+      order: 4;
+      position: absolute;
+      top: calc(50% + 78px);
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      min-height: 42px;
     }
 
     .miccheck-step-icon {
@@ -776,6 +801,16 @@
     }
 
     .miccheck-rules p.is-complete .miccheck-step-icon {
+      border-color: rgba(122, 255, 182, 0.98);
+      background: radial-gradient(circle at 35% 30%, rgba(186, 255, 213, 0.44), rgba(6, 120, 63, 0.96) 74%);
+      color: #baffd5;
+      box-shadow:
+        0 0 16px rgba(122, 255, 182, 0.9),
+        0 0 34px rgba(122, 255, 182, 0.38),
+        inset 0 0 14px rgba(186, 255, 213, 0.24);
+    }
+
+    .miccheck-step-icon.is-complete {
       border-color: rgba(122, 255, 182, 0.98);
       background: radial-gradient(circle at 35% 30%, rgba(186, 255, 213, 0.44), rgba(6, 120, 63, 0.96) 74%);
       color: #baffd5;
@@ -829,10 +864,6 @@
       letter-spacing: 0.14em;
       text-transform: uppercase;
       font-family: "Open Sans", Arial, sans-serif;
-    }
-
-    .soundcheck-answer:empty {
-      display: none;
     }
 
     .soundcheck-answer .is-correct {
@@ -6624,21 +6655,23 @@
         </header>
         <div class="miccheck-rules">
           <p class="is-visible" data-mic-rule data-mic-step="touch">
-            <span class="miccheck-step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l1.8-1.8 2.8 2.8 8-8L19.2 6.8z"/></svg></span>
             <span>Toque no <strong class="miccheck-neon-blue">circulo azul</strong></span>
           </p>
           <p data-mic-rule data-mic-step="permit">
-            <span class="miccheck-step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l1.8-1.8 2.8 2.8 8-8L19.2 6.8z"/></svg></span>
             <span>Clique em <strong class="miccheck-neon-green">permitir</strong></span>
           </p>
           <p data-mic-rule data-mic-step="speak">
-            <span class="miccheck-step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l1.8-1.8 2.8 2.8 8-8L19.2 6.8z"/></svg></span>
             <span>E diga <strong class="miccheck-neon-orange">microfone</strong></span>
           </p>
         </div>
         <button class="soundcheck-play soundcheck-play--mic" id="micTestPlayBtn" type="button" aria-label="Ativar microfone">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
         </button>
+        <div class="miccheck-checks" aria-hidden="true">
+          <span class="miccheck-step-icon" data-mic-check="touch"><svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l1.8-1.8 2.8 2.8 8-8L19.2 6.8z"/></svg></span>
+          <span class="miccheck-step-icon" data-mic-check="permit"><svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l1.8-1.8 2.8 2.8 8-8L19.2 6.8z"/></svg></span>
+          <span class="miccheck-step-icon" data-mic-check="speak"><svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l1.8-1.8 2.8 2.8 8-8L19.2 6.8z"/></svg></span>
+        </div>
       </main>
     </div>
   </section>
@@ -8940,9 +8973,8 @@
       function setMicCheckSubtitle(text, animate = false) {
         const rules = Array.from(els.miccheck?.querySelectorAll('[data-mic-rule]') || []);
         if (!rules.length) return;
-        const ruleIndex = Math.max(0, MIC_CHECK_MESSAGES.indexOf(safeText(text)));
-        rules.forEach((rule, index) => {
-          rule.classList.toggle('is-visible', index <= ruleIndex);
+        rules.forEach((rule) => {
+          rule.classList.add('is-visible');
         });
       }
 
@@ -8975,12 +9007,17 @@
 
       function setMicCheckStepComplete(step, complete = true) {
         const item = els.miccheck?.querySelector(`[data-mic-step="${step}"]`);
+        const check = els.miccheck?.querySelector(`[data-mic-check="${step}"]`);
         item?.classList.toggle('is-complete', Boolean(complete));
+        check?.classList.toggle('is-complete', Boolean(complete));
       }
 
       function resetMicCheckSteps() {
-        Array.from(els.miccheck?.querySelectorAll('[data-mic-step]') || []).forEach((item, index) => {
-          item.classList.toggle('is-visible', index === 0);
+        Array.from(els.miccheck?.querySelectorAll('[data-mic-rule]') || []).forEach((item) => {
+          item.classList.add('is-visible');
+          item.classList.remove('is-complete');
+        });
+        Array.from(els.miccheck?.querySelectorAll('[data-mic-check]') || []).forEach((item) => {
           item.classList.remove('is-complete');
         });
       }
