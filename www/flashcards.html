@@ -2101,6 +2101,10 @@
       cursor: default;
     }
 
+    .game-advance-btn {
+      display: none;
+    }
+
     .game-language-btn img {
       width: 34px;
       height: 34px;
@@ -4578,6 +4582,42 @@
       backdrop-filter: blur(8px);
     }
 
+    .game[data-phase-key="second-star"] .game-advance-btn {
+      display: inline-flex;
+      position: fixed;
+      top: calc(50% + 150px);
+      left: calc(50% + 140px);
+      width: 58px;
+      height: 58px;
+      min-width: 58px;
+      min-height: 58px;
+      padding: 0;
+      margin: 0;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 185, 110, 0.44);
+      background:
+        radial-gradient(circle at 32% 28%, rgba(255, 214, 158, 0.34), rgba(67, 28, 0, 0.98) 74%);
+      color: #ffd8a0;
+      z-index: 229;
+      box-shadow:
+        0 0 0 1px rgba(255, 180, 88, 0.16),
+        0 0 20px rgba(255, 149, 42, 0.42),
+        0 0 44px rgba(255, 109, 28, 0.2),
+        inset 0 0 12px rgba(255, 205, 146, 0.12);
+    }
+
+    .game[data-phase-key="second-star"] .game-advance-btn::before {
+      content: "";
+      width: 62%;
+      height: 62%;
+      background: no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffd8a0' d='M5 6.5v11l8.25-5.5L5 6.5Zm8.5 0v11L21.75 12 13.5 6.5Z'/%3E%3C/svg%3E");
+      filter:
+        drop-shadow(0 0 10px rgba(255, 223, 176, 0.95))
+        drop-shadow(0 0 20px rgba(255, 170, 70, 0.55));
+    }
+
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing,
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing {
       width: min(492px, calc(100vw - 32px));
@@ -4610,40 +4650,6 @@
       margin: 0;
     }
 
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__skip {
-      width: 58px;
-      min-width: 58px;
-      height: 58px;
-      min-height: 58px;
-      padding: 0;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 185, 110, 0.44);
-      background:
-        radial-gradient(circle at 32% 28%, rgba(255, 214, 158, 0.32), rgba(67, 28, 0, 0.98) 74%);
-      box-shadow:
-        0 0 0 1px rgba(255, 180, 88, 0.16),
-        0 0 20px rgba(255, 149, 42, 0.42),
-        0 0 44px rgba(255, 109, 28, 0.2),
-        inset 0 0 12px rgba(255, 205, 146, 0.12);
-      color: transparent;
-      font-size: 0;
-      line-height: 0;
-      position: relative;
-      overflow: hidden;
-      flex: 0 0 auto;
-    }
-
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__skip::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: no-repeat center/62% 62% url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffd8a0' d='M5 6.5v11l8.25-5.5L5 6.5Zm8.5 0v11L21.75 12 13.5 6.5Z'/%3E%3C/svg%3E");
-      filter:
-        drop-shadow(0 0 10px rgba(255, 223, 176, 0.95))
-        drop-shadow(0 0 20px rgba(255, 170, 70, 0.55));
-      opacity: 1;
-    }
-
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid,
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid {
       width: min(492px, calc(100vw - 32px));
@@ -4668,6 +4674,10 @@
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__key {
       min-height: clamp(68px, 12vw, 95px);
       border-radius: 16px;
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__skip {
+      display: none !important;
     }
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__key,
@@ -6446,6 +6456,7 @@
                 <img src="SVG/codex-icons/ingles.svg" alt="">
               </button>
               <button class="game-touch" id="gameTouchBtn" type="button">Fale ingles</button>
+              <button class="game-advance-btn" id="gameAdvanceBtn" type="button" aria-label="Avancar digitacao automatica" hidden></button>
             </div>
             <div class="game-translation-slot" id="gameTranslationSlot" aria-hidden="true"></div>
             <div class="game-card__content">
@@ -6742,6 +6753,8 @@
       }
       const STAR_ICON_PATH = 'SVG/codex-icons/star.svg';
       const ENGLISH_ICON_PATH = 'SVG/codex-icons/ingles.svg';
+      const GAME_TOUCH_ICON_STORAGE_KEY = 'playtalk-game-touch-icon-v1';
+      const GAME_TOUCH_ICON_MARKUP = '<svg class="game-touch__books-mic-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>';
       const PORTUGUESE_ICON_PATH = 'SVG/codex-icons/portugues.svg';
       const SUCCESS_SOUND_PATH = 'gamesounds/success.mp3';
       const FOUR_STARS_SOUND_PATH = 'newsongs/4stars.mp3';
@@ -7178,6 +7191,7 @@
         gameStars: document.getElementById('gameStars'),
         gameLanguageBtn: document.getElementById('gameLanguageBtn'),
         gameTouchBtn: document.getElementById('gameTouchBtn'),
+        gameAdvanceBtn: document.getElementById('gameAdvanceBtn'),
         gameTypingKeyboard: document.getElementById('gameTypingKeyboard'),
         gameStageTutorial: document.getElementById('gameStageTutorial'),
         gameStageTutorialImage: document.getElementById('gameStageTutorialImage'),
@@ -8618,6 +8632,20 @@
         els.welcomeStartBtn.disabled = false;
       }
 
+      function syncGameAdvanceButton(entry = null) {
+        if (!els.gameAdvanceBtn) return;
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        const showAdvance = phaseKey === 'second-star';
+        if (!showAdvance) {
+          els.gameAdvanceBtn.hidden = true;
+          els.gameAdvanceBtn.classList.remove('is-visible');
+          return;
+        }
+        els.gameAdvanceBtn.hidden = false;
+        els.gameAdvanceBtn.classList.add('is-visible');
+        els.gameAdvanceBtn.disabled = !state.game.active || state.game.paused || state.game.listening || state.game.typingSkipActive || state.game.currentId !== entry?.id;
+      }
+
       function countWelcomePlayableDecksAndFlashcards() {
         const playableCards = (Array.isArray(state.allCards) ? state.allCards : [])
           .filter((card) => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
@@ -9852,6 +9880,7 @@
           persistAuthToken(payload.token || '');
           els.authPassword.value = '';
           await hydrateAuthenticatedApp(payload.user);
+          primeGameTouchButton();
           setAuthStatus(state.authMode === 'register' ? 'Conta criada. Bora jogar.' : 'Entrada liberada.', 'success');
         } catch (error) {
           setAuthStatus(String(error.message || 'Nao foi possivel autenticar agora.'), 'error');
@@ -12408,7 +12437,7 @@
 
       function resolveGameStageConfig(entry) {
         const baseConfig = STAGES[entry?.stage] || STAGES[1];
-        if (!hasStageTwoPortugueseOverlay(entry)) {
+        if (!hasStageTwoPortugueseOverlay(entry) || Number(entry?.stage) === 2) {
           return baseConfig;
         }
         return {
@@ -12488,12 +12517,31 @@
         els.gameTouchBtn.innerHTML = '';
         els.gameTouchBtn.setAttribute('aria-label', stageConfig.instruction || 'Ativar microfone');
         els.gameTouchBtn.disabled = !state.game.canListen;
+        try {
+          localStorage.setItem(GAME_TOUCH_ICON_STORAGE_KEY, GAME_TOUCH_ICON_MARKUP);
+        } catch (_error) {
+          // ignore
+        }
         if (!useBooksMic) {
           els.gameTouchBtn.classList.add('is-hidden');
           return;
         }
         els.gameTouchBtn.classList.add('game-touch--books-mic');
-        els.gameTouchBtn.innerHTML = '<svg class="game-touch__books-mic-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>';
+        els.gameTouchBtn.innerHTML = GAME_TOUCH_ICON_MARKUP;
+      }
+
+      function primeGameTouchButton() {
+        try {
+          const cached = String(localStorage.getItem(GAME_TOUCH_ICON_STORAGE_KEY) || '').trim();
+          if (cached) {
+            els.gameTouchBtn.innerHTML = cached;
+          } else {
+            localStorage.setItem(GAME_TOUCH_ICON_STORAGE_KEY, GAME_TOUCH_ICON_MARKUP);
+            els.gameTouchBtn.innerHTML = GAME_TOUCH_ICON_MARKUP;
+          }
+        } catch (_error) {
+          els.gameTouchBtn.innerHTML = GAME_TOUCH_ICON_MARKUP;
+        }
       }
 
       function playStatusCueAudio(path) {
@@ -13908,6 +13956,7 @@
           clearTypingSkipAutomation();
           clearTypingPromptLoop();
           clearSecondStarIdleHintTimers();
+          syncGameAdvanceButton(null);
           els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
           els.gameTypingKeyboard.innerHTML = '';
           els.gameTypingKeyboard.classList.remove('is-visible');
@@ -13921,10 +13970,12 @@
 
         const typingState = resolveTypingStageState(entry, card);
         const target = typingState.normalizedTarget.replace(/\s/g, '');
+        syncGameAdvanceButton(entry);
         if (!target) {
           clearTypingSkipAutomation();
           clearTypingPromptLoop();
           clearSecondStarIdleHintTimers();
+          syncGameAdvanceButton(null);
           els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
           els.gameTypingKeyboard.innerHTML = '';
           els.gameTypingKeyboard.classList.remove('is-visible');
@@ -13956,6 +14007,32 @@
         skipBtn.setAttribute('aria-label', 'Avancar digitacao automatica');
         skipBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M5 6.5v11l8.25-5.5L5 6.5Zm8.5 0v11L21.75 12 13.5 6.5Z"/></svg>';
         toolbar.appendChild(skipBtn);
+        skipBtn.hidden = true;
+
+        const advanceBtn = els.gameAdvanceBtn;
+        if (advanceBtn) {
+          advanceBtn.hidden = false;
+          advanceBtn.disabled = false;
+          advanceBtn.onclick = async () => {
+            if (!state.game.active || state.game.paused || state.game.listening || state.game.currentId !== entry.id || state.game.typingSkipActive) return;
+            const runId = startTypingSkipAutomation(entry);
+            clearTypingPromptLoop();
+            clearSecondStarIdleHintTimers();
+            advanceBtn.disabled = true;
+            setTypingKeysDisabled(grid, true);
+            const promptSequence = playTypingSkipPromptSequence(entry, card, runId);
+            try {
+              await promptSequence;
+              if (isTypingSkipAutomationActive(entry, runId)) {
+                await handleRecognitionResult(typingState.acceptedAnswer || typingState.sourceText || '', 'typing');
+              }
+            } finally {
+              stopTypingSkipAutomation(entry, runId);
+              advanceBtn.disabled = false;
+              setTypingKeysDisabled(grid, false);
+            }
+          };
+        }
 
         const grid = document.createElement('div');
         grid.className = 'flashcards-typing__grid';
@@ -15839,6 +15916,7 @@
           const sessionUser = await fetchSessionUser();
           if (sessionUser) {
             await hydrateAuthenticatedApp(sessionUser, { skipLoadCards: true });
+            primeGameTouchButton();
           } else {
             await handleLoggedOutState('');
           }
