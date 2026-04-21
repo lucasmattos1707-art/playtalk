@@ -3,14 +3,155 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fluent LevelUp | Redirecionando</title>
+  <title>Fluent LevelUp | Entrar</title>
+  <link rel="stylesheet" href="css/auth.css">
+</head>
+<body class="auth-page">
+  <main class="auth-card" aria-labelledby="authTitle">
+    <img class="auth-logo" src="/arquivos-codex/logo.png" alt="Fluent LevelUp">
+    <h1 id="authTitle">Fluent LevelUp</h1>
+    <p class="auth-subtitle">Entre para salvar progresso, ranking, livros e energia.</p>
+
+    <div class="auth-switch" role="tablist" aria-label="Modo de acesso">
+      <button class="auth-switch__btn is-active" id="authModeLogin" type="button" data-auth-mode="login">Entrar</button>
+      <button class="auth-switch__btn" id="authModeRegister" type="button" data-auth-mode="register">Cadastrar</button>
+    </div>
+
+    <form class="auth-form" id="authForm" autocomplete="on">
+      <label for="authUsername">Nome de usuario</label>
+      <input id="authUsername" name="username" type="text" autocomplete="username" minlength="3" maxlength="32" required>
+
+      <label for="authPassword">Senha</label>
+      <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="6" required>
+
+      <button id="auth-submit" type="submit">Entrar e jogar</button>
+    </form>
+
+    <p class="auth-message" id="authMessage" aria-live="polite"></p>
+  </main>
+
+  <script src="js/android-config.js"></script>
+  <script src="js/api-config.js"></script>
   <script>
-    (function redirectToFlashcards() {
-      var targetUrl = new URL('/flashcards.html', window.location.origin);
-      targetUrl.searchParams.set('view', 'play');
-      window.location.replace(targetUrl.pathname + targetUrl.search);
+    (function bootAuthPortal() {
+      var state = { mode: 'login', submitting: false };
+      var form = document.getElementById('authForm');
+      var usernameInput = document.getElementById('authUsername');
+      var passwordInput = document.getElementById('authPassword');
+      var submitBtn = document.getElementById('auth-submit');
+      var message = document.getElementById('authMessage');
+      var loginBtn = document.getElementById('authModeLogin');
+      var registerBtn = document.getElementById('authModeRegister');
+
+      function buildApiUrl(path) {
+        if (window.PlaytalkApi && typeof window.PlaytalkApi.buildUrl === 'function') {
+          return window.PlaytalkApi.buildUrl(path);
+        }
+        return path;
+      }
+
+      function safeReturnPath() {
+        var params = new URLSearchParams(window.location.search || '');
+        var rawReturn = String(params.get('return') || '').trim();
+        if (!rawReturn || rawReturn.indexOf('//') === 0 || /^https?:/i.test(rawReturn)) {
+          return '/flashcards?view=play';
+        }
+        if (rawReturn.charAt(0) !== '/') {
+          return '/flashcards?view=play';
+        }
+        if (/^\/(?:auth\.html|login|register|logout)(?:[?#/]|$)/i.test(rawReturn)) {
+          return '/flashcards?view=play';
+        }
+        return rawReturn;
+      }
+
+      function persistAuthToken(token) {
+        try {
+          if (token) {
+            window.localStorage.setItem('playtalk_auth_token', token);
+          } else {
+            window.localStorage.removeItem('playtalk_auth_token');
+          }
+        } catch (_error) {
+          // localStorage may be unavailable in private modes.
+        }
+      }
+
+      function setMessage(text, type) {
+        if (!message) return;
+        message.textContent = text || '';
+        message.classList.toggle('is-error', type === 'error');
+        message.classList.toggle('is-success', type === 'success');
+      }
+
+      function setMode(mode) {
+        state.mode = mode === 'register' ? 'register' : 'login';
+        var isRegister = state.mode === 'register';
+        loginBtn.classList.toggle('is-active', !isRegister);
+        registerBtn.classList.toggle('is-active', isRegister);
+        passwordInput.autocomplete = isRegister ? 'new-password' : 'current-password';
+        submitBtn.textContent = isRegister ? 'Criar conta e entrar' : 'Entrar e jogar';
+        setMessage('');
+      }
+
+      async function checkExistingSession() {
+        try {
+          var response = await fetch(buildApiUrl('/auth/session'), {
+            credentials: 'include',
+            cache: 'no-store'
+          });
+          if (response.ok) {
+            window.location.replace(safeReturnPath());
+          }
+        } catch (_error) {
+          // stay on portal
+        }
+      }
+
+      async function submitAuth(event) {
+        event.preventDefault();
+        if (state.submitting) return;
+
+        var username = String(usernameInput.value || '').trim();
+        var password = String(passwordInput.value || '').trim();
+        if (username.length < 3 || password.length < 6) {
+          setMessage('Use nome com 3+ caracteres e senha com 6+.', 'error');
+          return;
+        }
+
+        state.submitting = true;
+        submitBtn.disabled = true;
+        setMessage(state.mode === 'register' ? 'Criando sua conta...' : 'Entrando...');
+
+        try {
+          var endpoint = state.mode === 'register' ? '/register' : '/login';
+          var response = await fetch(buildApiUrl(endpoint), {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username, password: password })
+          });
+          var payload = await response.json().catch(function () { return {}; });
+          if (!response.ok || !payload.success) {
+            throw new Error(payload.message || 'Nao foi possivel liberar a entrada.');
+          }
+          persistAuthToken(payload.token || '');
+          setMessage('Entrada liberada. Bora jogar.', 'success');
+          window.location.replace(safeReturnPath());
+        } catch (error) {
+          setMessage(error && error.message ? error.message : 'Nao foi possivel entrar agora.', 'error');
+        } finally {
+          state.submitting = false;
+          submitBtn.disabled = false;
+        }
+      }
+
+      loginBtn.addEventListener('click', function () { setMode('login'); });
+      registerBtn.addEventListener('click', function () { setMode('register'); });
+      form.addEventListener('submit', submitAuth);
+      setMode('login');
+      void checkExistingSession();
     })();
   </script>
-</head>
-<body></body>
+</body>
 </html>

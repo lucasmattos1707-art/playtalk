@@ -9,6 +9,7 @@ const outputDirs = [
 ];
 const appHtmlFiles = new Set([
   'index.html',
+  'auth.html',
   'landing.html',
   'flashcards.html',
   'allcards.html',

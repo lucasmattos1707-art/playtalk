@@ -14212,58 +14212,9 @@ app.use((req, res, next) => {
 
   const pathName = req.path;
   const publicPaths = new Set([
-    '/',
-    '/landing',
-    '/landing/',
-    '/landing.html',
-    '/index.html',
+    '/auth',
+    '/auth/',
     '/auth.html',
-    '/allcards',
-    '/allcards/',
-    '/speak',
-    '/speak/',
-    '/speaking',
-    '/speaking/',
-    '/levels',
-    '/levels/',
-    '/database',
-    '/database/',
-    '/flashcards',
-    '/flashcards/',
-    '/fast',
-    '/fast/',
-    '/username',
-    '/username/',
-    '/usermame',
-    '/usermame/',
-    '/avataradd',
-    '/avataradd/',
-    '/password',
-    '/password/',
-    '/mycards',
-    '/mycards/',
-    '/mycards.html',
-    '/signup',
-    '/signup/',
-    '/premium',
-    '/premium/',
-    '/books',
-    '/books/',
-    '/users',
-    '/users/',
-    '/account',
-    '/account/',
-    '/accounts',
-    '/accounts/',
-    '/storage',
-    '/storage/',
-    '/storage-debug',
-    '/storage-debug/',
-    '/thata',
-    '/thata/',
-    '/thata.html',
-    '/eventos',
-    '/eventos/',
     '/login',
     '/register',
     '/logout',
@@ -14297,7 +14248,10 @@ app.use((req, res, next) => {
 
   const payload = getAuthenticatedUserFromRequest(req);
   if (!payload) {
-    res.redirect('/auth.html');
+    const returnTo = req.originalUrl && req.originalUrl !== '/auth.html'
+      ? `?return=${encodeURIComponent(req.originalUrl)}`
+      : '';
+    res.redirect(`/auth.html${returnTo}`);
     return;
   }
 
@@ -14318,6 +14272,22 @@ app.get(['/thata', '/thata/', '/thata.html'], (req, res) => {
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(staticDir, 'landing.html'));
+});
+
+app.get(['/auth', '/auth/', '/auth.html'], (req, res) => {
+  const payload = getAuthenticatedUserFromRequest(req);
+  if (payload) {
+    const requestedReturn = typeof req.query?.return === 'string' ? req.query.return.trim() : '';
+    const redirectTo = requestedReturn.startsWith('/') && !requestedReturn.startsWith('//')
+      && !/^\/(?:auth|auth\.html|login|register|logout)(?:[/?#]|$)/i.test(requestedReturn)
+      ? req.query.return
+      : '/flashcards?view=play';
+    res.redirect(302, redirectTo);
+    return;
+  }
+
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(staticDir, 'auth.html'));
 });
 
 app.use(express.static(staticDir));
