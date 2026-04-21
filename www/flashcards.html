@@ -516,10 +516,15 @@
       position: relative;
       z-index: 1;
       width: min(100%, 1120px);
+      min-height: min(100svh - 48px, 820px);
       margin: 0 auto;
       display: grid;
-      gap: 24px;
+      align-content: center;
+      justify-content: center;
+      place-items: center;
+      gap: clamp(14px, 2.6vh, 24px);
       justify-items: center;
+      text-align: center;
       color: #ffffff;
     }
 
@@ -576,7 +581,7 @@
       width: 118px;
       height: 118px;
       border: 2px solid rgba(56, 201, 255, 0.8);
-      border-radius: 26px;
+      border-radius: 999px;
       background: linear-gradient(180deg, rgba(13, 104, 255, 0.26) 0%, rgba(5, 44, 116, 0.88) 100%);
       display: grid;
       place-items: center;
@@ -689,20 +694,19 @@
     }
 
     .soundcheck-answer .is-correct {
-      color: #7affb6;
+      color: #ffffff;
     }
 
     .soundcheck-answer .is-wrong {
-      color: #ff8aa0;
+      color: #ffffff;
     }
 
     .miccheck-rules {
       display: grid;
-      grid-template-areas: "rule";
-      align-items: center;
-      justify-items: center;
-      gap: 12px;
-      min-height: 34px;
+      align-items: stretch;
+      justify-items: stretch;
+      gap: 14px;
+      min-height: 158px;
       color: #ffffff;
       font-family: "Open Sans", Arial, sans-serif;
       font-size: 22px;
@@ -712,17 +716,56 @@
     }
 
     .miccheck-rules p {
-      grid-area: rule;
       margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      max-height: 0;
       opacity: 0;
       transform: translateY(8px);
-      transition: opacity 420ms ease, transform 420ms ease;
+      overflow: hidden;
+      transition: opacity 420ms ease, transform 420ms ease, max-height 420ms ease;
       pointer-events: none;
     }
 
     .miccheck-rules p.is-visible {
+      max-height: 64px;
       opacity: 1;
       transform: translateY(0);
+    }
+
+    .miccheck-step-icon {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 auto;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      border: 2px solid rgba(218, 226, 238, 0.72);
+      background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.34), rgba(112, 123, 145, 0.9) 74%);
+      color: #ffffff;
+      box-shadow:
+        inset 0 0 10px rgba(255, 255, 255, 0.12),
+        0 0 16px rgba(180, 190, 210, 0.18);
+      transition: background 260ms ease, border-color 260ms ease, color 260ms ease, box-shadow 260ms ease;
+    }
+
+    .miccheck-step-icon svg {
+      width: 19px;
+      height: 19px;
+      display: block;
+      fill: currentColor;
+    }
+
+    .miccheck-rules p.is-complete .miccheck-step-icon {
+      border-color: rgba(122, 255, 182, 0.98);
+      background: radial-gradient(circle at 35% 30%, rgba(186, 255, 213, 0.44), rgba(6, 120, 63, 0.96) 74%);
+      color: #baffd5;
+      box-shadow:
+        0 0 16px rgba(122, 255, 182, 0.9),
+        0 0 34px rgba(122, 255, 182, 0.38),
+        inset 0 0 14px rgba(186, 255, 213, 0.24);
     }
 
     .miccheck-neon-blue {
@@ -772,11 +815,11 @@
     }
 
     .soundcheck-answer .is-correct {
-      color: #7affb6;
+      color: #ffffff;
     }
 
     .soundcheck-answer .is-wrong {
-      color: #ff8aa0;
+      color: #ffffff;
     }
 
     .soundcheck-keyboard .flashcards-typing__grid {
@@ -6487,8 +6530,8 @@
 
         <p class="soundcheck-status" id="soundTestStatus"></p>
 
-        <div class="soundcheck-keyboard" id="soundTestKeyboard" aria-label="Teclado do teste de som"></div>
         <div class="soundcheck-answer" id="soundTestAnswer" aria-live="polite"></div>
+        <div class="soundcheck-keyboard" id="soundTestKeyboard" aria-label="Teclado do teste de som"></div>
       </main>
     </div>
   </section>
@@ -6502,9 +6545,18 @@
           <p class="soundcheck-status" id="micTestStatus"></p>
         </header>
         <div class="miccheck-rules">
-          <p class="is-visible" data-mic-rule>1. Toque no "<strong class="miccheck-neon-blue">circulo azul</strong>"</p>
-          <p data-mic-rule>2. Clique em "<strong class="miccheck-neon-green">permitir</strong>"</p>
-          <p data-mic-rule>3. E diga "<strong class="miccheck-neon-orange">microfone</strong>"</p>
+          <p class="is-visible" data-mic-rule data-mic-step="touch">
+            <span class="miccheck-step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l1.8-1.8 2.8 2.8 8-8L19.2 6.8z"/></svg></span>
+            <span>Toque no "<strong class="miccheck-neon-blue">circulo azul</strong>"</span>
+          </p>
+          <p data-mic-rule data-mic-step="permit">
+            <span class="miccheck-step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l1.8-1.8 2.8 2.8 8-8L19.2 6.8z"/></svg></span>
+            <span>Clique em "<strong class="miccheck-neon-green">permitir</strong>"</span>
+          </p>
+          <p data-mic-rule data-mic-step="speak">
+            <span class="miccheck-step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l1.8-1.8 2.8 2.8 8-8L19.2 6.8z"/></svg></span>
+            <span>E diga "<strong class="miccheck-neon-orange">microfone</strong>"</span>
+          </p>
         </div>
         <button class="soundcheck-play soundcheck-play--mic" id="micTestPlayBtn" type="button" aria-label="Ativar microfone">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
@@ -8747,11 +8799,24 @@
         stopAudioCheckAudio();
       }
 
+      function requestVerifiedGameStart() {
+        if (!state.entry.cardsReady) {
+          state.entry.pendingPlayStart = true;
+          state.entry.pendingTutorialStart = false;
+          state.entry.pendingTutorialMuteNarration = false;
+          setWelcomeCopy('Preparando jogo...');
+          return;
+        }
+        hideWelcomeGate();
+        saveSelectedGameCount(DEFAULT_GAME_CONTEXT_LIMIT);
+        state.game.selectedCount = DEFAULT_GAME_CONTEXT_LIMIT;
+        beginGame();
+      }
+
       function openMicCheck() {
         if (readMicCheckCompletedFlag()) {
           closeAudioCheck();
-          hideWelcomeGate();
-          beginGame();
+          requestVerifiedGameStart();
           return;
         }
         state.ui.micCheckOpen = true;
@@ -8766,6 +8831,7 @@
         document.body.classList.add('robotcheck-open');
         document.body.classList.add('sound-test-open');
         startMicCheckSubtitleRotation();
+        resetMicCheckSteps();
         setMicCheckStatus('');
       }
 
@@ -8784,7 +8850,7 @@
         if (!rules.length) return;
         const ruleIndex = Math.max(0, MIC_CHECK_MESSAGES.indexOf(safeText(text)));
         rules.forEach((rule, index) => {
-          rule.classList.toggle('is-visible', index === ruleIndex);
+          rule.classList.toggle('is-visible', index <= ruleIndex);
         });
       }
 
@@ -8794,8 +8860,11 @@
         setMicCheckSubtitle(MIC_CHECK_MESSAGES[0]);
         state.ui.micCheckSubtitleTimer = window.setInterval(() => {
           if (!state.ui.micCheckOpen) return;
-          state.ui.micCheckSubtitleIndex = (state.ui.micCheckSubtitleIndex + 1) % MIC_CHECK_MESSAGES.length;
+          state.ui.micCheckSubtitleIndex = Math.min(MIC_CHECK_MESSAGES.length - 1, state.ui.micCheckSubtitleIndex + 1);
           setMicCheckSubtitle(MIC_CHECK_MESSAGES[state.ui.micCheckSubtitleIndex], true);
+          if (state.ui.micCheckSubtitleIndex >= MIC_CHECK_MESSAGES.length - 1) {
+            stopMicCheckSubtitleRotation();
+          }
         }, MIC_CHECK_ROTATION_MS);
       }
 
@@ -8810,6 +8879,18 @@
         if (els.micTestStatus) {
           els.micTestStatus.textContent = state.ui.micCheckStatus || '';
         }
+      }
+
+      function setMicCheckStepComplete(step, complete = true) {
+        const item = els.miccheck?.querySelector(`[data-mic-step="${step}"]`);
+        item?.classList.toggle('is-complete', Boolean(complete));
+      }
+
+      function resetMicCheckSteps() {
+        Array.from(els.miccheck?.querySelectorAll('[data-mic-step]') || []).forEach((item, index) => {
+          item.classList.toggle('is-visible', index === 0);
+          item.classList.remove('is-complete');
+        });
       }
 
       function stopMicCheckRecognition() {
@@ -8831,12 +8912,12 @@
 
       async function completeMicCheck() {
         if (!state.ui.micCheckOpen) return;
+        setMicCheckStepComplete('speak', true);
         persistMicCheckCompletedFlag(true);
         setMicCheckStatus('Microfone ativado.');
         await wait(350);
         closeMicCheck();
-        hideWelcomeGate();
-        beginGame();
+        requestVerifiedGameStart();
       }
 
       function resolveMicCheckTranscript(results) {
@@ -8858,6 +8939,7 @@
         }
 
         state.ui.micCheckBusy = true;
+        setMicCheckStepComplete('touch', true);
         els.micTestPlayBtn?.classList.add('is-listening');
         if (els.micTestPlayBtn) {
           els.micTestPlayBtn.disabled = true;
@@ -8886,6 +8968,7 @@
               setMicCheckStatus('Clique em permitir para continuar.');
               return;
             }
+            setMicCheckStepComplete('permit', true);
             const transcript = typeof nativeSpeech.captureForGameplay === 'function'
               ? await nativeSpeech.captureForGameplay({ language: 'pt-BR', maxResults: 5, maxDurationMs: 6500 })
               : await nativeSpeech.captureOnce({ language: 'pt-BR', maxResults: 5, maxDurationMs: 6500 });
@@ -8931,6 +9014,10 @@
         recognition.continuous = false;
         recognition.interimResults = true;
         recognition.maxAlternatives = 5;
+        recognition.onstart = () => {
+          setMicCheckStepComplete('permit', true);
+          setMicCheckStatus('Ouvindo...');
+        };
         recognition.onresult = async (event) => {
           const transcript = resolveMicCheckTranscript(event.results);
           if (transcript) {
