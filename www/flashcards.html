@@ -474,11 +474,17 @@
       place-items: center;
       padding: clamp(32px, 6vw, 48px);
       margin: 0;
-      background:
-        radial-gradient(circle at top, rgba(203, 255, 64, 0.42) 0%, rgba(203, 255, 64, 0) 38%),
-        linear-gradient(180deg, #ffe860 0%, #d8ff3f 100%);
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
       text-align: center;
       overflow: hidden;
+    }
+
+    .robotcheck__touch::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--playtalk-global-bg-overlay);
+      pointer-events: none;
     }
 
     .robotcheck__content {
@@ -507,12 +513,14 @@
     }
 
     .soundcheck-shell {
+      position: relative;
+      z-index: 1;
       width: min(100%, 1120px);
       margin: 0 auto;
       display: grid;
       gap: 24px;
       justify-items: center;
-      color: #164300;
+      color: #ffffff;
     }
 
     .soundcheck-header {
@@ -524,7 +532,7 @@
 
     .soundcheck-header p {
       margin: 0;
-      color: #3e6c00;
+      color: #ffffff;
       font-size: 0.88rem;
       font-weight: 700;
       letter-spacing: 0.22em;
@@ -533,14 +541,15 @@
 
     .soundcheck-header h1 {
       margin: 0;
-      font-size: clamp(2rem, 5vw, 3.2rem);
+      color: #ffffff;
+      font-size: clamp(2.4rem, 6vw, 4.2rem);
       line-height: 1.05;
     }
 
     .soundcheck-subtitle {
       margin: 0;
       min-height: 1.5em;
-      color: #426400;
+      color: #ffffff;
       font-size: clamp(1rem, 2.8vw, 1.24rem);
       transition: opacity 220ms ease, transform 220ms ease;
     }
@@ -550,41 +559,11 @@
       transform: translateY(8px);
     }
 
-    .soundcheck-slots {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      width: min(100%, 520px);
-    }
-
-    .soundcheck-slot {
-      min-height: 108px;
-      border-radius: 28px;
-      border: 2px dashed rgba(62, 108, 0, 0.24);
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(248, 255, 210, 0.72) 100%);
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-    }
-
-    .soundcheck-slot img {
-      width: min(100%, 92px);
-      height: auto;
-      object-fit: contain;
-    }
-
-    .soundcheck-slot span {
-      color: #87a95b;
-      font-size: 1.8rem;
-      line-height: 1;
-    }
-
     .soundcheck-status {
       margin: 0;
       max-width: 700px;
       text-align: center;
-      color: #355100;
+      color: #ffffff;
       font-size: 1rem;
       line-height: 1.6;
     }
@@ -610,15 +589,12 @@
       font-weight: 700;
       cursor: pointer;
       color: #ffffff;
-      background: linear-gradient(180deg, #5d8f00 0%, #3d6500 100%);
-      box-shadow: 0 16px 34px rgba(61, 101, 0, 0.18);
+      background: linear-gradient(180deg, #0e66ff 0%, #063fb0 100%);
+      box-shadow: 0 16px 34px rgba(15, 77, 214, 0.24);
     }
 
     .soundcheck-btn.is-secondary {
-      color: #315000;
-      background: rgba(255, 255, 255, 0.86);
-      border: 1px solid rgba(49, 80, 0, 0.12);
-      box-shadow: none;
+      display: none;
     }
 
     .soundcheck-btn:disabled {
@@ -654,6 +630,33 @@
     .soundcheck-tile.is-selected {
       outline-color: #5d8f00;
       background: linear-gradient(180deg, #f8ffd8 0%, #e8f7b5 100%);
+    }
+
+    .soundcheck-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .soundcheck-keyboard {
+      width: min(100%, 520px);
+    }
+
+    .soundcheck-keyboard .flashcards-typing__grid {
+      width: 100%;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0;
+    }
+
+    .soundcheck-keyboard .flashcards-typing__key {
+      font-size: 32px;
+    }
+
+    .soundcheck-keyboard .flashcards-typing__key--backspace {
+      background: linear-gradient(145deg, #0b2f88 0%, #1550c7 100%);
+      color: #ffffff;
     }
 
     .soundcheck-tile img {
@@ -6318,8 +6321,7 @@
       <main class="soundcheck-shell">
         <header class="soundcheck-header">
           <h1>Teste de som</h1>
-          <h2 class="soundcheck-subtitle" id="soundTestSubtitle">Toque em play</h2>
-          <p class="soundcheck-status" id="soundTestStatus">Digite o que ouviu</p>
+          <h2 class="soundcheck-subtitle" id="soundTestSubtitle">Toque em play para ouvir</h2>
         </header>
 
         <button class="soundcheck-play" id="soundTestPlayBtn" type="button" aria-label="Play">
@@ -6328,10 +6330,7 @@
 
         <input class="soundcheck-input" id="soundTestInput" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Digite a palavra">
 
-        <div class="soundcheck-actions">
-          <button class="soundcheck-btn" id="soundTestReplayBtn" type="button">Ouvir de novo</button>
-          <button class="soundcheck-btn is-secondary" id="soundTestClearBtn" type="button">Limpar</button>
-        </div>
+        <p class="soundcheck-status" id="soundTestStatus"></p>
 
         <div class="soundcheck-keyboard" id="soundTestKeyboard" aria-label="Teclado do teste de som"></div>
       </main>
@@ -7138,8 +7137,6 @@
         soundTestSubtitle: document.getElementById('soundTestSubtitle'),
         soundTestSlots: document.getElementById('soundTestSlots'),
         soundTestStatus: document.getElementById('soundTestStatus'),
-        soundTestReplayBtn: document.getElementById('soundTestReplayBtn'),
-        soundTestClearBtn: document.getElementById('soundTestClearBtn'),
         soundTestKeyboard: document.getElementById('soundTestKeyboard'),
         soundTestPlayBtn: document.getElementById('soundTestPlayBtn'),
         soundTestInput: document.getElementById('soundTestInput'),
@@ -8329,6 +8326,7 @@
       const MIC_CHECK_STORAGE_KEY = 'playtalk-mic-check-completed';
       const AUDIO_CHECK_ROTATION_MS = 2000;
       const AUDIO_CHECK_INPUT_MAX = 4;
+      const AUDIO_CHECK_KEY_COUNT = 16;
       const AUDIO_CHECK_FALLBACK_WORDS = ['CASA', 'BOLA', 'GATO', 'PATO'];
       const MIC_CHECK_MESSAGES = [
         'Toque no circulo azul',
@@ -8417,12 +8415,19 @@
       function pickAudioCheckWords() {
         const keys = Object.keys(state.ui.audioCheckDeck || {});
         const pool = keys.length ? keys : AUDIO_CHECK_FALLBACK_WORDS;
-        return shuffleArray(pool).slice(0, 3);
+        return shuffleArray(pool).slice(0, 1);
+      }
+
+      function buildAudioCheckKeyboardLetters(targetWord) {
+        const targetLetters = Array.from(String(targetWord || '').toUpperCase()).filter((letter) => /[A-Z]/.test(letter));
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        const extras = shuffleArray(alphabet.filter((letter) => !targetLetters.includes(letter)));
+        return shuffleArray([...targetLetters, ...extras]).slice(0, AUDIO_CHECK_KEY_COUNT);
       }
 
       function setAudioCheckSubtitle(text, animate = false) {
         if (!els.soundTestSubtitle) return;
-        const nextText = safeText(text) || 'Toque em play';
+        const nextText = safeText(text) || 'Toque em play para ouvir';
         if (!animate || els.soundTestSubtitle.textContent === nextText) {
           els.soundTestSubtitle.textContent = nextText;
           els.soundTestSubtitle.classList.remove('is-changing');
@@ -8439,12 +8444,12 @@
       function startAudioCheckSubtitleRotation() {
         stopAudioCheckSubtitleRotation();
         state.ui.soundTestSubtitleIndex = 0;
-        setAudioCheckSubtitle('Toque em play');
+        setAudioCheckSubtitle('Toque em play para ouvir');
         state.ui.soundTestSubtitleTimer = window.setInterval(() => {
           if (!state.ui.soundTestOpen) return;
           state.ui.soundTestSubtitleIndex = (state.ui.soundTestSubtitleIndex + 1) % 2;
           setAudioCheckSubtitle(
-            state.ui.soundTestSubtitleIndex === 0 ? 'Toque em play' : 'Digite o que ouviu',
+            state.ui.soundTestSubtitleIndex === 0 ? 'Toque em play para ouvir' : '',
             true
           );
         }, AUDIO_CHECK_ROTATION_MS);
@@ -8460,13 +8465,13 @@
         state.ui.soundTestStatus = safeText(message);
         state.ui.soundTestStatusError = Boolean(isError);
         if (!els.soundTestStatus) return;
-        els.soundTestStatus.textContent = state.ui.soundTestStatus || 'Digite o que ouviu';
+        els.soundTestStatus.textContent = state.ui.soundTestStatus || '';
         els.soundTestStatus.classList.toggle('is-error', state.ui.soundTestStatusError);
       }
 
       function renderAudioCheckKeyboard() {
         if (!els.soundTestKeyboard) return;
-        const letters = Array.from((state.ui.audioCheckTargetWord || ''))
+        const letters = buildAudioCheckKeyboardLetters(state.ui.audioCheckTargetWord)
           .map((letter) => `<button class="flashcards-typing__key" type="button" data-audio-letter="${escapeHtml(letter)}">${escapeHtml(letter)}</button>`);
         els.soundTestKeyboard.innerHTML = `
           <div class="flashcards-typing__grid">
@@ -8478,7 +8483,7 @@
 
       function renderAudioCheckInput() {
         if (!els.soundTestInput) return;
-        els.soundTestInput.value = state.ui.audioCheckTargetWord;
+        els.soundTestInput.value = '';
       }
 
       function renderAudioCheckGate() {
@@ -8730,9 +8735,8 @@
       }
 
       function clearSoundTestSelection({ keepStatus = false } = {}) {
-        state.ui.soundTestSelectedLetters = [];
         if (!keepStatus) {
-          setSoundTestStatus('Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.');
+          setAudioCheckStatus('');
         }
         renderSoundTestGate();
       }
@@ -8746,40 +8750,13 @@
         return copy;
       }
 
-      function buildRandomSoundTestLetters() {
-        return shuffleArray(ACCESS_KEY_LETTERS).slice(0, SOUND_TEST_SELECTION_COUNT);
-      }
-
-      function playSingleSoundTestLetter(letter) {
-        return new Promise((resolve) => {
-          const src = getAccessKeySoundPath(letter);
-          if (!src) {
-            resolve();
-            return;
-          }
-          stopSoundTestAudio();
-          const audio = new Audio(src);
-          audio.preload = 'auto';
-          state.ui.soundTestAudio = audio;
-          const finish = () => {
-            if (state.ui.soundTestAudio === audio) {
-              state.ui.soundTestAudio = null;
-            }
-            resolve();
-          };
-          audio.addEventListener('ended', finish, { once: true });
-          audio.addEventListener('error', finish, { once: true });
-          audio.play().catch(finish);
-        });
-      }
-
       async function playSoundTestSequence() {
         const words = state.ui.soundTestTargetLetters.slice();
         if (!words.length) return;
         const token = Date.now();
         state.ui.soundTestPlaybackToken = token;
         state.ui.soundTestBusy = true;
-        setAudioCheckStatus('Ouvindo o som...');
+        setAudioCheckStatus('');
         renderSoundTestGate();
         for (const word of words) {
           if (!state.ui.soundTestOpen || state.ui.soundTestPlaybackToken !== token) {
@@ -8830,15 +8807,14 @@
       }
 
       function clearSoundTestSelection(keepStatus = false) {
-        state.ui.soundTestSelectedLetters = [];
         if (!keepStatus) {
-          setAudioCheckStatus('Digite o que ouviu');
+          setAudioCheckStatus('');
         }
         renderSoundTestGate();
       }
 
       async function validateSoundTestSelection() {
-        if (state.ui.soundTestSelectedLetters.length !== SOUND_TEST_SELECTION_COUNT || state.ui.soundTestBusy) return;
+        if (state.ui.soundTestBusy) return;
         const selected = String(els.soundTestInput?.value || '').trim().toUpperCase();
         const target = String(state.ui.audioCheckTargetWord || '').trim().toUpperCase();
         if (selected === target) {
@@ -8852,8 +8828,7 @@
           openMicCheck();
           return;
         }
-        setAudioCheckStatus('Ainda nao bateu. Tente novamente.', true);
-        state.ui.soundTestSelectedLetters = [];
+        setAudioCheckStatus('');
         if (els.soundTestInput) {
           els.soundTestInput.value = '';
         }
