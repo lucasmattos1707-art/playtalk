@@ -308,6 +308,30 @@
     }
   }
 
+  function getStatsMetricIconAsset(kind) {
+    switch (safeText(kind)) {
+      case 'flashcards':
+        return '/arquivos-codex/account-stats/cards.png';
+      case 'books':
+        return '/arquivos-codex/account-stats/mbooks.png';
+      case 'reading':
+        return '/arquivos-codex/account-stats/reading.png';
+      case 'listening':
+        return '/arquivos-codex/account-stats/listening.png';
+      case 'speaking':
+        return '/arquivos-codex/account-stats/speaking.png';
+      case 'precision-general':
+        return '/arquivos-codex/account-stats/precisao.png';
+      case 'consistency':
+        return '/arquivos-codex/account-stats/streak.png';
+      case 'days':
+        return '/arquivos-codex/account-stats/dias.png';
+      case 'practice-time':
+      default:
+        return '/arquivos-codex/account-stats/pratica.png';
+    }
+  }
+
   function getStatsMetricIconMarkup(kind) {
     switch (safeText(kind)) {
       case 'flashcards':
@@ -496,7 +520,17 @@
 
     const icon = document.createElement('div');
     icon.className = 'account-stats-icon';
-    icon.innerHTML = getStatsMetricIconMarkup(metric?.kind);
+    const iconAsset = getStatsMetricIconAsset(metric?.kind);
+    if (iconAsset) {
+      const image = document.createElement('img');
+      image.src = iconAsset;
+      image.alt = '';
+      image.loading = 'lazy';
+      image.decoding = 'async';
+      icon.appendChild(image);
+    } else {
+      icon.innerHTML = getStatsMetricIconMarkup(metric?.kind);
+    }
     iconShell.appendChild(icon);
 
     const value = document.createElement('p');
