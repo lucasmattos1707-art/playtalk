@@ -34,6 +34,7 @@
   const HOME_REPEAT_OPTIONS = [1, 2, 3, 5, 7, 10];
   const HOME_SPEED_OPTIONS = [0.7, 0.8, 0.9, 1, 1.25, 1.5, 2];
   const HOME_BOOK_TRANSITION_MS = 600;
+  const HOME_BOOK_META_ROTATE_MS = 2000;
   const HOME_SWIPE_UP_THRESHOLD = 70;
   const HOME_SWIPE_DOWN_THRESHOLD = 70;
   const HOME_WHEEL_THRESHOLD = 18;
@@ -143,7 +144,13 @@
     homeSwitchAccountBtn: document.getElementById('booksHomeSwitchAccountBtn'),
     homePremiumBtn: document.getElementById('booksHomePremiumBtn'),
     homeCover: document.getElementById('booksHomeCover'),
+    homeBookMeta: document.getElementById('booksHomeBookMeta'),
+    homeBookMetaLabel: document.getElementById('booksHomeBookMetaLabel'),
+    homeBookMetaValue: document.getElementById('booksHomeBookMetaValue'),
     homeNextCover: document.getElementById('booksHomeNextCover'),
+    homeNextBookMeta: document.getElementById('booksHomeNextBookMeta'),
+    homeNextBookMetaLabel: document.getElementById('booksHomeNextBookMetaLabel'),
+    homeNextBookMetaValue: document.getElementById('booksHomeNextBookMetaValue'),
     homeTextPanel: document.getElementById('booksHomeTextPanel'),
     homeNextTextPanel: document.getElementById('booksHomeNextTextPanel'),
     homeControls: document.getElementById('booksHomeControls'),
@@ -281,6 +288,7 @@
     readerCards: [],
     readerIndex: 0,
     readerDisplayLanguage: 'english',
+    readerVisualLanguage: 'english',
     readerScores: [],
     readerCurrentScore: null,
     readerCurrentBadgeSrc: '',
@@ -334,6 +342,8 @@
     homeTextVisible: true,
     homeTextRevealToken: 0,
     homeTextMode: 'english',
+    homeBookMetaIndex: 0,
+    homeBookMetaRotationTimer: 0,
     homeSpeedIndex: 3,
     homeProgressRatio: 0,
     homeProgressLabel: '',
@@ -528,8 +538,13 @@
   function formatEstimatedReadingTimeFromChars(totalChars) {
     const chars = Math.max(0, Number(totalChars) || 0);
     const totalSeconds = Math.max(0, Math.round(chars / 2.75));
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
+    return formatEstimatedReadingTimeFromSeconds(totalSeconds);
+  }
+
+  function formatEstimatedReadingTimeFromSeconds(totalSeconds) {
+    const normalizedSeconds = Math.max(0, Math.round(Number(totalSeconds) || 0));
+    const minutes = Math.floor(normalizedSeconds / 60);
+    const seconds = normalizedSeconds % 60;
     if (minutes <= 0) {
       return `${seconds} segundo${seconds === 1 ? '' : 's'}`;
     }
@@ -2129,6 +2144,62 @@
     renderHomeTextPanel(textElement, visibleText);
   }
 
+  function getHomeBookMetaItems(session) {
+    const book = session?.book || {};
+    const level = normalizeLevel(book?.nivel ?? book?.level);
+    const readingSeconds = Math.max(0, Math.round(Number(book?.readingTimeSeconds) || Number(session?.readingTimeSeconds) || 0));
+    return [
+      {
+        label: 'Nível do Livro',
+        value: level ? `Nível ${level}` : 'Nível -'
+      },
+      {
+        label: 'Tempo de leitura',
+        value: readingSeconds > 0 ? formatEstimatedReadingTimeFromSeconds(readingSeconds) : 'Calculando...'
+      }
+    ];
+  }
+
+  function renderHomeBookMeta(metaElement, labelElement, valueElement, session, options = {}) {
+    if (!metaElement || !labelElement || !valueElement) return;
+    const hasSession = Boolean(session?.bookId || session?.book);
+    metaElement.hidden = !hasSession || Boolean(options.hide);
+    if (!hasSession || options.hide) {
+      labelElement.textContent = '';
+      valueElement.textContent = '';
+      return;
+    }
+
+    const items = getHomeBookMetaItems(session);
+    const index = Math.max(0, Number(state.homeBookMetaIndex) || 0) % items.length;
+    const entry = items[index] || items[0];
+    const nextLabel = safeText(entry?.label);
+    const nextValue = safeText(entry?.value);
+    if (labelElement.textContent === nextLabel && valueElement.textContent === nextValue) return;
+    metaElement.classList.add('is-fading');
+    window.setTimeout(() => {
+      labelElement.textContent = nextLabel;
+      valueElement.textContent = nextValue;
+      window.requestAnimationFrame(() => {
+        metaElement.classList.remove('is-fading');
+      });
+    }, 120);
+  }
+
+  function startHomeBookMetaRotation() {
+    if (state.homeBookMetaRotationTimer) return;
+    state.homeBookMetaRotationTimer = window.setInterval(() => {
+      state.homeBookMetaIndex = (state.homeBookMetaIndex + 1) % 1000000;
+      renderHomePanel();
+    }, HOME_BOOK_META_ROTATE_MS);
+  }
+
+  function stopHomeBookMetaRotation() {
+    if (!state.homeBookMetaRotationTimer) return;
+    window.clearInterval(state.homeBookMetaRotationTimer);
+    state.homeBookMetaRotationTimer = 0;
+  }
+
   function renderHomeProgressUi() {
     const ratio = Math.max(0, Math.min(1, Number(state.homeProgressRatio) || 0));
     if (els.playerBooksProgressFill) {
@@ -2379,10 +2450,24 @@
       hideText: !state.homeTextVisible,
       isLoading: false
     });
+    renderHomeBookMeta(
+      els.homeBookMeta,
+      els.homeBookMetaLabel,
+      els.homeBookMetaValue,
+      state.homeCurrentSession,
+      { hide: !shellActive }
+    );
     renderHomeScreen(els.homeNextCover, els.homeNextTextPanel, state.homeNextSession, 0, {
       hideText: true,
       isLoading: false
     });
+    renderHomeBookMeta(
+      els.homeNextBookMeta,
+      els.homeNextBookMetaLabel,
+      els.homeNextBookMetaValue,
+      state.homeNextSession,
+      { hide: true }
+    );
     renderHomeProgressUi();
     renderHomeTransportUi();
     if (visible && els.cardsEmpty) {
@@ -2860,6 +2945,7 @@
     state.homeCurrentCardText = safeText(session?.cards?.[0]?.english);
     state.homeCurrentCardTextPt = safeText(session?.cards?.[0]?.portuguese || session?.cards?.[0]?.english);
     state.homeTextVisible = !options.hideText;
+    state.homeBookMetaIndex = 0;
     normalizeHomeUpcomingSessions();
     setHomeProgress(state.homeCurrentBookName || 'Livro', 0);
   }
@@ -2880,12 +2966,25 @@
     };
     primeHomeSessionAudio(session);
     void hydrateHomeCardDurations(playableCards).then(() => {
+      const totalAudioSeconds = playableCards.reduce((sum, card) => sum + getHomeCardDurationSeconds(card), 0);
+      session.readingTimeSeconds = Math.max(0, Math.round(totalAudioSeconds * 1.5));
+      if (book && Number(book.readingTimeSeconds) !== session.readingTimeSeconds) {
+        book.readingTimeSeconds = session.readingTimeSeconds;
+      }
       if (
         safeText(state.homeCurrentSession?.bookId) === session.bookId
         || safeText(state.homeNextSession?.bookId) === session.bookId
       ) {
         refreshHomeProgressFromPlayback();
         renderHomePanel();
+      }
+    });
+    void ensureBookReadingTimeSeconds(book).then((seconds) => {
+      if (seconds > 0 && Number(session.readingTimeSeconds) !== seconds) {
+        session.readingTimeSeconds = seconds;
+        if (safeText(state.homeCurrentSession?.bookId) === session.bookId) {
+          renderHomePanel();
+        }
       }
     });
     void Promise.allSettled([
@@ -3311,6 +3410,7 @@
       setActiveHomeSession(firstSession, { hideText: false });
       void ensureHomeNextSession(token, true);
     }
+    startHomeBookMetaRotation();
     state.homeStartBusy = false;
     void setNativeBooksSleepModeEnabled(true);
     renderHomePanel();
@@ -3323,6 +3423,7 @@
 
   function stopHomeSleepPlayback(options = {}) {
     const keepIntro = Boolean(options.keepIntro);
+    stopHomeBookMetaRotation();
     state.homePlaybackToken += 1;
     state.homeSleepActive = false;
     state.homePaused = false;
@@ -3350,6 +3451,7 @@
       state.homeCurrentCardTextPt = '';
       state.homeTextVisible = true;
       state.homeTextRevealToken = 0;
+      state.homeBookMetaIndex = 0;
       state.homeBackgroundUrl = '';
       state.homeBackgroundLayer = 'primary';
       setHomeProgress('Livro', 0);
@@ -4230,11 +4332,16 @@
       return BOOK_READING_TIME_CACHE.get(cacheKey);
     }
     const promise = (async () => {
-      const audioSources = normalizeAudioSources(book?.audioSources);
+      const cardAudioSources = Array.isArray(book?.cards)
+        ? book.cards.map((card) => card?.audio || card?.audioUrl)
+        : [];
+      const audioSources = normalizeAudioSources(
+        normalizeAudioSources(book?.audioSources).concat(cardAudioSources)
+      );
       if (!audioSources.length) return 0;
       const durations = await Promise.all(audioSources.map((source) => loadHomeAudioDurationSeconds(source)));
       const totalAudioSeconds = durations.reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
-      return Math.max(0, Math.round(totalAudioSeconds * 2));
+      return Math.max(0, Math.round(totalAudioSeconds * 1.5));
     })();
     BOOK_READING_TIME_CACHE.set(cacheKey, promise);
     const totalSeconds = await promise;
@@ -5619,7 +5726,28 @@
   }
 
   function updateReaderLanguageButtons() {
-    // language is mode-locked in the current reader flow
+    const showToggles = state.readerMode === 'speaking-training';
+    const visualLanguage = state.readerVisualLanguage === 'portuguese' ? 'portuguese' : 'english';
+    if (els.readerLangEnglishBtn) {
+      els.readerLangEnglishBtn.hidden = !showToggles;
+      els.readerLangEnglishBtn.classList.toggle('is-active', visualLanguage === 'english');
+      els.readerLangEnglishBtn.setAttribute('aria-pressed', visualLanguage === 'english' ? 'true' : 'false');
+    }
+    if (els.readerLangPortugueseBtn) {
+      els.readerLangPortugueseBtn.hidden = !showToggles;
+      els.readerLangPortugueseBtn.classList.toggle('is-active', visualLanguage === 'portuguese');
+      els.readerLangPortugueseBtn.setAttribute('aria-pressed', visualLanguage === 'portuguese' ? 'true' : 'false');
+    }
+  }
+
+  function setReaderVisualLanguage(language) {
+    const nextLanguage = language === 'portuguese' ? 'portuguese' : 'english';
+    if (state.readerVisualLanguage === nextLanguage) {
+      updateReaderLanguageButtons();
+      return;
+    }
+    state.readerVisualLanguage = nextLanguage;
+    renderReader();
   }
 
   function setReaderVisible(visible) {
@@ -6103,7 +6231,9 @@
     const english = safeText(card?.english);
     const portuguese = safeText(card?.portuguese || english);
     const highlight = Boolean(card?.highlight);
-    const displayLanguage = isReaderTrainingMode() ? getReaderLockedLanguage() : 'english';
+    const displayLanguage = state.readerMode === 'speaking-training'
+      ? (state.readerVisualLanguage === 'portuguese' ? 'portuguese' : 'english')
+      : (isReaderTrainingMode() ? getReaderLockedLanguage() : 'english');
     state.readerDisplayLanguage = displayLanguage;
     const displayText = displayLanguage === 'portuguese' ? portuguese : english;
     const displayTextFormatted = splitBalancedLines(sanitizeReaderDisplayText(displayText));
@@ -6147,6 +6277,7 @@
     state.readerCards = [];
     state.readerIndex = 0;
     state.readerDisplayLanguage = 'english';
+    state.readerVisualLanguage = 'english';
     state.readerScores = [];
     state.readerCurrentScore = null;
     resetReaderCurrentBadge();
@@ -6242,6 +6373,7 @@
       state.readerSessionListenedMs = 0;
       state.readerSessionSpokenChars = 0;
       state.readerDisplayLanguage = 'english';
+      state.readerVisualLanguage = 'english';
       state.readerMicBusy = false;
       state.readerLastAudioKey = '';
       state.readerCardShownAt = 0;
@@ -6683,6 +6815,14 @@
 
     els.readerMicBtn?.addEventListener('click', () => {
       void handleReaderMicTraining();
+    });
+
+    els.readerLangEnglishBtn?.addEventListener('click', () => {
+      setReaderVisualLanguage('english');
+    });
+
+    els.readerLangPortugueseBtn?.addEventListener('click', () => {
+      setReaderVisualLanguage('portuguese');
     });
 
     els.readerEnglish?.addEventListener('click', () => {
