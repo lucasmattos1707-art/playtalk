@@ -4779,42 +4779,58 @@
       backdrop-filter: blur(8px);
     }
 
-    .game[data-phase-key="second-star"] .game-advance-btn,
-    .game[data-phase-key="fourth-star"] .game-advance-btn {
+    .game[data-phase-key="second-star"] .game-card__visual > .game-advance-btn,
+    .game[data-phase-key="fourth-star"] .game-card__visual > .game-advance-btn {
       display: inline-flex;
-      position: fixed;
-      top: calc(50% - 150px);
-      left: calc(50% + 108px);
-      width: 58px;
-      height: 58px;
-      min-width: 58px;
-      min-height: 58px;
+      position: absolute;
+      top: clamp(18px, 7%, 38px);
+      right: clamp(18px, 7%, 38px);
+      width: clamp(54px, 14vw, 68px);
+      height: clamp(54px, 14vw, 68px);
+      min-width: 54px;
+      min-height: 54px;
       padding: 0;
       margin: 0;
       align-items: center;
       justify-content: center;
       border-radius: 999px;
-      border: 1px solid rgba(255, 185, 110, 0.44);
+      border: 1px solid rgba(255, 210, 122, 0.72);
       background:
-        radial-gradient(circle at 32% 28%, rgba(255, 214, 158, 0.34), rgba(67, 28, 0, 0.98) 74%);
-      color: #ffd8a0;
-      z-index: 229;
+        radial-gradient(circle at 31% 28%, rgba(255, 239, 186, 0.66), rgba(255, 132, 28, 0.95) 43%, rgba(118, 42, 0, 0.98) 84%);
+      color: #fff1c4;
+      z-index: 14;
+      cursor: pointer;
       box-shadow:
-        0 0 0 1px rgba(255, 180, 88, 0.16),
-        0 0 20px rgba(255, 149, 42, 0.42),
-        0 0 44px rgba(255, 109, 28, 0.2),
-        inset 0 0 12px rgba(255, 205, 146, 0.12);
+        0 0 0 1px rgba(255, 239, 186, 0.28),
+        0 0 18px rgba(255, 186, 68, 0.75),
+        0 0 42px rgba(255, 112, 24, 0.48),
+        0 10px 26px rgba(68, 24, 0, 0.42),
+        inset 0 0 16px rgba(255, 242, 204, 0.24);
+      transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
     }
 
-    .game[data-phase-key="second-star"] .game-advance-btn::before,
-    .game[data-phase-key="fourth-star"] .game-advance-btn::before {
+    .game[data-phase-key="second-star"] .game-card__visual > .game-advance-btn:disabled,
+    .game[data-phase-key="fourth-star"] .game-card__visual > .game-advance-btn:disabled {
+      cursor: default;
+      opacity: 0.58;
+      filter: saturate(0.76);
+    }
+
+    .game[data-phase-key="second-star"] .game-card__visual > .game-advance-btn:not(:disabled):active,
+    .game[data-phase-key="fourth-star"] .game-card__visual > .game-advance-btn:not(:disabled):active {
+      transform: scale(0.94);
+    }
+
+    .game[data-phase-key="second-star"] .game-card__visual > .game-advance-btn::before,
+    .game[data-phase-key="fourth-star"] .game-card__visual > .game-advance-btn::before {
       content: "";
       width: 62%;
       height: 62%;
-      background: no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffd8a0' d='M5 6.5v11l8.25-5.5L5 6.5Zm8.5 0v11L21.75 12 13.5 6.5Z'/%3E%3C/svg%3E");
+      background: no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff1c4' d='M4.5 6.35v11.3L13 12 4.5 6.35Zm8.65 0v11.3L21.65 12 13.15 6.35Z'/%3E%3C/svg%3E");
       filter:
-        drop-shadow(0 0 10px rgba(255, 223, 176, 0.95))
-        drop-shadow(0 0 20px rgba(255, 170, 70, 0.55));
+        drop-shadow(0 0 8px rgba(255, 252, 219, 0.98))
+        drop-shadow(0 0 18px rgba(255, 192, 68, 0.82))
+        drop-shadow(0 0 28px rgba(255, 112, 24, 0.58));
     }
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing,
@@ -9341,8 +9357,12 @@
           els.gameAdvanceBtn.classList.remove('is-visible');
           return;
         }
+        if (els.gameVisual && els.gameAdvanceBtn.parentElement !== els.gameVisual) {
+          els.gameVisual.appendChild(els.gameAdvanceBtn);
+        }
         els.gameAdvanceBtn.hidden = false;
         els.gameAdvanceBtn.classList.add('is-visible');
+        els.gameAdvanceBtn.setAttribute('aria-label', 'Avancar rapido com digitacao automatica');
         els.gameAdvanceBtn.disabled = !state.game.active || state.game.paused || state.game.listening || state.game.typingSkipActive || state.game.currentId !== entry?.id;
       }
 
@@ -14718,25 +14738,6 @@
         if (advanceBtn) {
           advanceBtn.hidden = false;
           advanceBtn.disabled = false;
-          advanceBtn.onclick = async () => {
-            if (!state.game.active || state.game.paused || state.game.listening || state.game.currentId !== entry.id || state.game.typingSkipActive) return;
-            const runId = startTypingSkipAutomation(entry);
-            clearTypingPromptLoop();
-            clearSecondStarIdleHintTimers();
-            advanceBtn.disabled = true;
-            setTypingKeysDisabled(grid, true);
-            const promptSequence = playTypingSkipPromptSequence(entry, card, runId);
-            try {
-              await promptSequence;
-              if (isTypingSkipAutomationActive(entry, runId)) {
-                await handleRecognitionResult(typingState.acceptedAnswer || typingState.sourceText || '', 'typing');
-              }
-            } finally {
-              stopTypingSkipAutomation(entry, runId);
-              advanceBtn.disabled = false;
-              setTypingKeysDisabled(grid, false);
-            }
-          };
         }
 
         const grid = document.createElement('div');
@@ -14781,6 +14782,7 @@
           clearTypingPromptLoop();
           clearSecondStarIdleHintTimers();
           skipBtn.disabled = true;
+          if (advanceBtn) advanceBtn.disabled = true;
           setTypingKeysDisabled(grid, true);
           const promptSequence = playTypingSkipPromptSequence(entry, card, runId);
           try {
@@ -14803,8 +14805,17 @@
             await handleRecognitionResult(typingState.acceptedAnswer || typingState.sourceText || '', 'typing');
           } finally {
             finishTypingSkipAutomation(runId);
+            skipBtn.disabled = false;
+            if (advanceBtn) advanceBtn.disabled = false;
+            setTypingKeysDisabled(grid, false);
           }
         });
+        if (advanceBtn) {
+          advanceBtn.onclick = () => {
+            if (advanceBtn.disabled) return;
+            skipBtn.click();
+          };
+        }
 
         els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
         els.gameVisual.appendChild(display);
