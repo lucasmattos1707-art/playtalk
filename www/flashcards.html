@@ -8902,10 +8902,9 @@
           state.entry.soundTestCompleted = true;
           persistAudioCheckCompletedFlag(true);
           void persistAudioCheckOnServer();
-          setAudioCheckStatus('Perfeito. Som ok, vamos jogar.');
+          setAudioCheckStatus('');
           renderSoundTestGate();
           await wait(420);
-          closeSoundTestGate();
           openMicCheck();
           return;
         }
