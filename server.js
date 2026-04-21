@@ -14255,12 +14255,7 @@ app.use((req, res, next) => {
 
   const payload = getAuthenticatedUserFromRequest(req);
   if (!payload) {
-    const requestedUrl = req.originalUrl || '';
-    const isCanonicalLoginPath = requestedUrl === '/entrar' || requestedUrl === '/entrar/' || requestedUrl === '/auth.html';
-    const returnTo = requestedUrl && !isCanonicalLoginPath
-      ? `?return=${encodeURIComponent(requestedUrl)}`
-      : '';
-    res.redirect(`/entrar${returnTo}`);
+    res.redirect('/entrar');
     return;
   }
 
