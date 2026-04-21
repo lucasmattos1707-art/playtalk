@@ -8949,12 +8949,11 @@
           state.ui.soundTestBusy = true;
           state.entry.soundTestCompleted = true;
           persistAudioCheckCompletedFlag(true);
-          await persistAudioCheckOnServer();
           setAudioCheckStatus('');
-          renderSoundTestGate();
-          await wait(420);
+          state.ui.audioCheckTyped = '';
           state.ui.soundTestBusy = false;
           openMicCheck();
+          void persistAudioCheckOnServer();
           return;
         }
         setAudioCheckStatus('');
