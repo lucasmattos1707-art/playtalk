@@ -1328,7 +1328,21 @@
     }
 
     .game-controls-proxy {
-      display: none;
+      display: grid;
+      grid-template-columns: 1fr;
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--footer-total-height) + 30px);
+      width: min(160px, 100%);
+      margin: 0;
+      transform: translateX(-50%);
+      justify-items: center;
+      align-self: auto;
+      justify-self: auto;
+      z-index: 80;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
 
     .actions { justify-content: flex-end; }
@@ -4736,18 +4750,6 @@
     .game[data-phase-key="first-star"] .game-controls-proxy,
     .game[data-phase-key="third-star"] .game-controls-proxy,
     .game[data-phase-key="fifth-star"] .game-controls-proxy {
-      display: grid;
-      grid-template-columns: 1fr;
-      position: fixed;
-      left: 50%;
-      bottom: calc(var(--footer-total-height) + 30px);
-      justify-items: center;
-      align-self: auto;
-      justify-self: auto;
-      width: min(160px, 100%);
-      margin: 0;
-      transform: translateX(-50%);
-      z-index: 80;
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
