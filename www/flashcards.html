@@ -3662,7 +3662,8 @@
       font-family: "PlaytalkP2", "Soopafre", Arial, sans-serif;
     }
 
-    .game[data-phase-key="second-star"] .flashcards-typing__display--visual {
+    .game[data-phase-key="second-star"] .flashcards-typing__display--visual,
+    .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual {
       width: min(70%, 232px);
       min-height: min(70vw, 232px);
       display: grid;
@@ -3676,15 +3677,8 @@
     }
 
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual {
-      width: min(70%, 232px);
-      min-height: min(70vw, 232px);
-      display: grid;
-      place-items: center;
-      align-content: center;
-      text-align: center;
-      text-shadow:
-        0 3px 0 rgba(8, 28, 74, 0.98),
-        0 10px 22px rgba(8, 28, 74, 0.64);
+      justify-items: center;
+      justify-content: center;
     }
 
     .flashcards-typing__display--visual.is-answer-image {
@@ -3712,18 +3706,15 @@
       text-transform: none;
     }
 
-    .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-star-phase-copy {
+    .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-star-phase-copy,
+    .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual.is-star-phase-copy {
       font-family: "Pltay", "Soopafre", Arial, sans-serif;
       font-size: clamp(44.85px, 14.6vw, 89.7px);
       text-shadow: none;
     }
 
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual.is-star-phase-copy {
-      font-family: "Pltay", "Soopafre", Arial, sans-serif;
-      font-size: clamp(39px, 12.7vw, 78px);
-      text-shadow:
-        0 3px 0 rgba(8, 28, 74, 0.98),
-        0 10px 22px rgba(8, 28, 74, 0.64);
+      text-shadow: none;
     }
 
     .flashcards-typing__display-letter {
@@ -3733,7 +3724,8 @@
       z-index: 0;
     }
 
-    .game[data-phase-key="second-star"] .flashcards-typing__display-letter::before {
+    .game[data-phase-key="second-star"] .flashcards-typing__display-letter::before,
+    .game[data-phase-key="fourth-star"] .flashcards-typing__display-letter::before {
       content: attr(data-char);
       position: absolute;
       left: 50%;
@@ -4766,7 +4758,8 @@
       height: 100%;
     }
 
-    .game[data-phase-key="second-star"] .textscreen .keyboardscreen-host {
+    .game[data-phase-key="second-star"] .textscreen .keyboardscreen-host,
+    .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
       position: fixed;
       left: 50%;
       bottom: 5vh;
@@ -4786,11 +4779,12 @@
       backdrop-filter: blur(8px);
     }
 
-    .game[data-phase-key="second-star"] .game-advance-btn {
+    .game[data-phase-key="second-star"] .game-advance-btn,
+    .game[data-phase-key="fourth-star"] .game-advance-btn {
       display: inline-flex;
       position: fixed;
-      top: calc(50% + 150px);
-      left: calc(50% + 140px);
+      top: calc(50% - 150px);
+      left: calc(50% + 108px);
       width: 58px;
       height: 58px;
       min-width: 58px;
@@ -4812,7 +4806,8 @@
         inset 0 0 12px rgba(255, 205, 146, 0.12);
     }
 
-    .game[data-phase-key="second-star"] .game-advance-btn::before {
+    .game[data-phase-key="second-star"] .game-advance-btn::before,
+    .game[data-phase-key="fourth-star"] .game-advance-btn::before {
       content: "";
       width: 62%;
       height: 62%;
@@ -4835,7 +4830,8 @@
       width: min(433px, calc((100vw - 32px) * 0.88));
     }
 
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing {
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing {
       width: 100%;
       max-width: 100%;
       margin: 0;
@@ -4843,12 +4839,15 @@
     }
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__toolbar,
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid {
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__toolbar,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid {
       width: 100%;
       max-width: 100%;
     }
 
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__toolbar {
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__toolbar,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__toolbar {
       justify-content: flex-end;
       padding: 0 1px 1px 1px;
       margin: 0;
@@ -4866,7 +4865,8 @@
       width: min(433px, calc((100vw - 32px) * 0.88));
     }
 
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid {
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid {
       width: 100%;
       margin: 0;
       padding: 0 1px 1px 1px;
@@ -4875,12 +4875,14 @@
       gap: 1px;
     }
 
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__key {
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__key,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key {
       min-height: clamp(68px, 12vw, 95px);
       border-radius: 16px;
     }
 
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__skip {
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__skip,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__skip {
       display: none !important;
     }
 
@@ -4973,7 +4975,8 @@
       -webkit-user-drag: none;
     }
 
-    .game[data-phase-key="second-star"] .flashcards-typing__key.is-correct-hit {
+    .game[data-phase-key="second-star"] .flashcards-typing__key.is-correct-hit,
+    .game[data-phase-key="fourth-star"] .flashcards-typing__key.is-correct-hit {
       filter: brightness(1.2) drop-shadow(0 0 16px rgba(255, 255, 255, 0.75));
       box-shadow: none;
     }
@@ -9332,7 +9335,7 @@
       function syncGameAdvanceButton(entry = null) {
         if (!els.gameAdvanceBtn) return;
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
-        const showAdvance = phaseKey === 'second-star';
+        const showAdvance = phaseKey === 'second-star' || phaseKey === 'fourth-star';
         if (!showAdvance) {
           els.gameAdvanceBtn.hidden = true;
           els.gameAdvanceBtn.classList.remove('is-visible');
@@ -14629,16 +14632,16 @@
 
       function startTypingPromptLoop(entry, card) {
         clearTypingPromptLoop();
-        if (!entry || entry.stage !== 2 || !card) return;
+        if (!isTypingStage(entry) || !card) return;
         const replayPrompt = () => {
-          if (!state.game.active || state.game.paused || state.game.currentId !== entry.id || entry.stage !== 2) {
+          if (!state.game.active || state.game.paused || state.game.currentId !== entry.id || !isTypingStage(entry)) {
             clearTypingPromptLoop();
             return;
           }
           Promise.resolve(playPromptAudio(card, { rate: 0.8 }))
             .catch(() => {})
             .finally(() => {
-              if (!state.game.active || state.game.paused || state.game.currentId !== entry.id || entry.stage !== 2) {
+              if (!state.game.active || state.game.paused || state.game.currentId !== entry.id || !isTypingStage(entry)) {
                 clearTypingPromptLoop();
                 return;
               }
@@ -15027,9 +15030,7 @@
         if (typingStage) {
           window.setTimeout(() => {
             if (state.game.currentId === entry.id && !state.game.listening && !state.game.paused) {
-              if (entry.stage !== 2) {
-                playPromptAudio(card, { enableMicDuringPlayback: false });
-              }
+              playPromptAudio(card, { rate: 0.8, enableMicDuringPlayback: false });
             }
           }, 220);
           return;
