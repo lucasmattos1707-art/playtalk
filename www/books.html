@@ -28,7 +28,7 @@
       --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 1) 0%, rgba(4, 18, 38, 0.58) 38%, rgba(4, 18, 38, 0) 100%);
       --books-card-book-width: min(304px, 66vw);
       --books-card-book-height: calc(var(--books-card-book-width) * 16 / 9);
-      --books-card-vertical-offset: 0dvh;
+      --books-card-vertical-offset: -10dvh;
     }
 
     @media (max-width: 800px) {
@@ -39,7 +39,7 @@
 
     @media (max-width: 700px) {
       :root {
-        --books-card-vertical-offset: -6dvh;
+        --books-card-vertical-offset: -16dvh;
       }
     }
 
@@ -2234,12 +2234,12 @@
     .books-sleep-fab-meta {
       position: fixed;
       left: 50%;
-      top: calc(50% + (var(--books-card-book-height, min(304px, 66vw)) / 2) + var(--books-card-vertical-offset, 0dvh) + 20dvh);
+      top: calc(50% + (var(--books-card-book-height, min(304px, 66vw)) / 2) + var(--books-card-vertical-offset, 0dvh) + 12dvh);
       width: min(338px, 78vw);
       z-index: 259;
       display: grid;
       justify-items: center;
-      gap: 3px;
+      gap: 9px;
       text-align: center;
       color: #ffffff;
       pointer-events: none;
@@ -2256,26 +2256,28 @@
       display: none !important;
     }
 
-    .books-sleep-fab-meta-label {
-      margin: 0;
-      color: rgba(223, 245, 255, 0.78);
-      font-size: 12.5px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
-    }
-
-    .books-sleep-fab-meta-value {
-      margin: 0;
+    .books-sleep-fab-meta-row {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 28px;
       color: #ffffff;
-      font-size: clamp(21px, 6vw, 30px);
+      font-size: clamp(18px, 5vw, 25px);
       font-family: "BooksReading", "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
       font-weight: 800;
       line-height: 1.04;
       text-shadow:
         0 3px 10px rgba(0, 0, 0, 0.58),
         0 0 18px rgba(109, 220, 255, 0.24);
+    }
+
+    .books-sleep-fab-meta-row svg {
+      width: 22px;
+      height: 22px;
+      flex: 0 0 auto;
+      color: #ffffff;
+      filter: drop-shadow(0 0 9px rgba(150, 224, 255, 0.38));
     }
 
     .books-card__sleep-btn {
@@ -2434,7 +2436,7 @@
       --books-card-book-width: min(304px, 66vw);
       --books-card-book-height: calc(var(--books-card-book-width) * 16 / 9);
       --books-card-badge-size: 97px;
-      --books-card-vertical-offset: 0dvh;
+      --books-card-vertical-offset: -10dvh;
       width: min(454px, 90vw, calc(var(--books-shelf-height) * 9 / 16 * 0.96));
       aspect-ratio: 9 / 15.2;
       border: 0;
@@ -3136,8 +3138,15 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0;
+      gap: 10px;
       font-size: 1.1em;
+    }
+
+    .pre-book-option svg {
+      width: 23px;
+      height: 23px;
+      flex: 0 0 auto;
+      display: block;
     }
 
     .books-magic-btn {
@@ -3180,6 +3189,32 @@
       transform: translateY(0);
     }
 
+    #booksPreBookRankedBtn {
+      color: #fff6ed;
+      background: linear-gradient(135deg, rgba(255, 126, 24, 0.98), rgba(255, 62, 12, 0.94));
+      box-shadow:
+        0 0 20px rgba(255, 127, 32, 0.52),
+        0 0 42px rgba(255, 72, 12, 0.3);
+    }
+
+    #booksPreBookRankedBtn svg {
+      color: #fff2e0;
+      filter: drop-shadow(0 0 10px rgba(255, 125, 28, 0.82));
+    }
+
+    #booksPreBookPronounceBtn {
+      background: linear-gradient(135deg, rgba(134, 92, 255, 0.98), rgba(184, 91, 255, 0.94));
+      color: #fff7ff;
+      box-shadow:
+        0 0 18px rgba(161, 104, 255, 0.36),
+        0 0 34px rgba(201, 107, 255, 0.22);
+    }
+
+    #booksPreBookPronounceBtn svg {
+      color: #fff7ff;
+      filter: drop-shadow(0 0 9px rgba(202, 146, 255, 0.72));
+    }
+
     #booksPreBookListeningBtn {
       background: linear-gradient(135deg, rgba(70, 160, 255, 0.96), rgba(42, 110, 255, 0.92));
       color: #ffffff;
@@ -3210,6 +3245,10 @@
       transition: opacity 220ms ease;
       text-align: center;
       justify-items: center;
+    }
+
+    #booksPreBookModal .pre-book-insights {
+      display: none !important;
     }
 
     .pre-book-insights.is-fading {
@@ -4233,7 +4272,7 @@
       }
 
       .books-card {
-        --books-card-vertical-offset: -6dvh;
+        --books-card-vertical-offset: -16dvh;
         width: min(432px, 88vw);
       }
 
@@ -4340,10 +4379,7 @@
     <button class="books-home-corner-btn books-home-corner-btn--right books-home-sleep-fab" id="booksHomeSleepFab" type="button" aria-label="AllBooks">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.8 2.2a8.8 8.8 0 1 0 7 14.2a7.9 7.9 0 1 1-7-14.2Z"/></svg>
     </button>
-    <div class="books-sleep-fab-meta" id="booksSleepFabMeta" aria-live="polite" hidden>
-      <p class="books-sleep-fab-meta-label" id="booksSleepFabMetaLabel"></p>
-      <p class="books-sleep-fab-meta-value" id="booksSleepFabMetaValue"></p>
-    </div>
+    <div class="books-sleep-fab-meta" id="booksSleepFabMeta" aria-live="polite" hidden></div>
     <section class="books-level-menu" id="booksLevelMenu" aria-label="Selecao de nivel">
       <button class="books-arrow-btn" id="booksLevelPrevBtn" type="button" aria-label="Nivel anterior">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.41 6.59 14 5.17 7.17 12 14 18.83l1.41-1.42L10 12z"/></svg>
@@ -4604,8 +4640,17 @@
           <div class="pre-book-cover" id="booksPreBookCover"></div>
         </div>
         <div class="pre-book-actions" id="booksPreBookActions" data-pre-book-step="root">
+          <button class="books-magic-btn pre-book-action-root" id="booksPreBookRankedBtn" type="button">
+            <span class="pre-book-option">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13.6 2.4c.7 2.9-.5 4.8-1.9 6.3-1.2 1.3-2.4 2.5-2.1 4.5.8-.5 1.4-1.2 1.7-2.1 2.1 1.3 3.2 3.2 3.2 5.3 0 3.1-2.5 5.3-5.5 5.3-3.2 0-5.7-2.3-5.7-5.8 0-2.6 1.4-4.7 3.3-6.5 1.8-1.8 3.4-3.8 3-6.9 1.7.6 3 1.6 4 3.1Zm2.9 4.3c2.2 1.8 3.5 4.2 3.5 7.1 0 4.4-3.1 7.9-7.3 8.6 2.3-1.2 3.7-3.3 3.7-5.9 0-2.3-.9-4.3-2.7-5.9 1.1-1 2-2.2 2.8-3.9Z"/></svg>
+              Jogar ranqueado
+            </span>
+          </button>
           <button class="books-magic-btn is-primary pre-book-action-root" id="booksPreBookPronounceBtn" type="button">
-            <span class="pre-book-option">Treinar pronuncia</span>
+            <span class="pre-book-option">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 13h2v-2H3zm4 4h2V7H7zm4 4h2V3h-2zm4-4h2V7h-2zm4-4h2v-2h-2z"/></svg>
+              Treinar pronuncia
+            </span>
           </button>
           <button class="books-magic-btn pre-book-action-training" id="booksPreBookListeningBtn" type="button">
             <span class="pre-book-option">Listening</span>

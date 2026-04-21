@@ -145,8 +145,6 @@
     homePremiumBtn: document.getElementById('booksHomePremiumBtn'),
     homeCover: document.getElementById('booksHomeCover'),
     sleepFabMeta: document.getElementById('booksSleepFabMeta'),
-    sleepFabMetaLabel: document.getElementById('booksSleepFabMetaLabel'),
-    sleepFabMetaValue: document.getElementById('booksSleepFabMetaValue'),
     homeNextCover: document.getElementById('booksHomeNextCover'),
     homeTextPanel: document.getElementById('booksHomeTextPanel'),
     homeNextTextPanel: document.getElementById('booksHomeNextTextPanel'),
@@ -200,6 +198,7 @@
     preBookActions: document.getElementById('booksPreBookActions'),
     preBookLoading: document.getElementById('booksPreBookLoading'),
     preBookCover: document.getElementById('booksPreBookCover'),
+    preBookRankedBtn: document.getElementById('booksPreBookRankedBtn'),
     preBookPronounceBtn: document.getElementById('booksPreBookPronounceBtn'),
     preBookListeningBtn: document.getElementById('booksPreBookListeningBtn'),
     preBookSpeakingBtn: document.getElementById('booksPreBookSpeakingBtn'),
@@ -274,6 +273,7 @@
     createJobStatusById: new Map(),
     modeBookId: '',
     preBookStep: 'root',
+    preBookRankedMode: true,
     preBookInsightsRotationTimer: 0,
     preBookInsightsIndex: 0,
     preBookInsightsData: [],
@@ -284,6 +284,7 @@
     readerOpen: false,
     readerBookId: '',
     readerMode: 'free-read',
+    readerRankedMode: true,
     readerCards: [],
     readerIndex: 0,
     readerDisplayLanguage: 'english',
@@ -545,6 +546,16 @@
     const normalizedSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
     const minutes = Math.floor(normalizedSeconds / 60) + ((normalizedSeconds % 60) >= 31 ? 1 : 0);
     return `${minutes} minuto${minutes === 1 ? '' : 's'}`;
+  }
+
+  function getRoundedReadingMinutes(totalSeconds) {
+    const normalizedSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+    return Math.floor(normalizedSeconds / 60) + ((normalizedSeconds % 60) >= 31 ? 1 : 0);
+  }
+
+  function formatEstimatedReadingMinutesEn(totalSeconds) {
+    const minutes = getRoundedReadingMinutes(totalSeconds);
+    return `${minutes} minute${minutes === 1 ? '' : 's'}`;
   }
 
   function normalizeAudioSources(values) {
@@ -2156,26 +2167,30 @@
     const readingSeconds = Math.max(0, Number(book?.readingTimeSeconds) || ((Number(book?.englishChars) || 0) * 60 / 400));
     return [
       {
-        label: 'Nível do Livro',
-        value: level ? `Nível ${level}` : 'Nível -'
+        kind: 'time',
+        value: readingSeconds > 0 ? formatEstimatedReadingMinutesEn(readingSeconds) : '0 minutes'
       },
       {
-        label: 'Tempo de leitura',
-        value: readingSeconds > 0 ? formatEstimatedReadingTimeFromSeconds(readingSeconds) : 'Calculando...'
+        kind: 'level',
+        value: level ? `Level ${level}` : 'Level -'
       }
     ];
   }
 
+  function getHomeBookMetaIcon(kind) {
+    if (kind === 'level') {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" d="M4 19h16M5 15l4-4 3 3 6-7m0 0h-4m4 0v4"/></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>';
+  }
+
   function renderSleepFabMeta() {
     const metaElement = els.sleepFabMeta;
-    const labelElement = els.sleepFabMetaLabel;
-    const valueElement = els.sleepFabMetaValue;
-    if (!metaElement || !labelElement || !valueElement) return;
+    if (!metaElement) return;
     const book = isAllBooksLevel() && !state.homeSleepActive ? getVisibleShelfBook() : null;
     metaElement.hidden = !book;
     if (!book) {
-      labelElement.textContent = '';
-      valueElement.textContent = '';
+      metaElement.innerHTML = '';
       return;
     }
     if (!Number(book?.readingTimeSeconds)) {
@@ -2187,27 +2202,15 @@
     }
 
     const items = getHomeBookMetaItems(book);
-    const index = Math.max(0, Number(state.homeBookMetaIndex) || 0) % items.length;
-    const entry = items[index] || items[0];
-    const nextLabel = safeText(entry?.label);
-    const nextValue = safeText(entry?.value);
-    if (labelElement.textContent === nextLabel && valueElement.textContent === nextValue) return;
-    metaElement.classList.add('is-fading');
-    window.setTimeout(() => {
-      labelElement.textContent = nextLabel;
-      valueElement.textContent = nextValue;
-      window.requestAnimationFrame(() => {
-        metaElement.classList.remove('is-fading');
-      });
-    }, 120);
+    const nextHtml = items
+      .map((entry) => `<div class="books-sleep-fab-meta-row">${getHomeBookMetaIcon(entry.kind)}<span>${escapeHtml(entry.value)}</span></div>`)
+      .join('');
+    if (metaElement.innerHTML === nextHtml) return;
+    metaElement.innerHTML = nextHtml;
   }
 
   function startHomeBookMetaRotation() {
-    if (state.homeBookMetaRotationTimer) return;
-    state.homeBookMetaRotationTimer = window.setInterval(() => {
-      state.homeBookMetaIndex = (state.homeBookMetaIndex + 1) % 1000000;
-      renderSleepFabMeta();
-    }, HOME_BOOK_META_ROTATE_MS);
+    renderSleepFabMeta();
   }
 
   function stopHomeBookMetaRotation() {
@@ -3693,6 +3696,9 @@
 
   function setModeStartBusy(isBusy) {
     state.modeStartBusy = Boolean(isBusy);
+    if (els.preBookRankedBtn) {
+      els.preBookRankedBtn.disabled = state.modeStartBusy;
+    }
     if (els.preBookPronounceBtn) {
       els.preBookPronounceBtn.disabled = state.modeStartBusy;
     }
@@ -4198,6 +4204,7 @@
     }
 
     state.modeBookId = bookId;
+    state.preBookRankedMode = true;
     setPreBookStep('root');
     resetModeTransitionUi();
     setModeStartBusy(false);
@@ -4214,18 +4221,6 @@
       }
     }
     els.preBookModal.classList.add('is-visible');
-    state.preBookInsightsData = buildPreBookInsights({
-      englishChars: Math.max(0, Number(book.englishChars) || 0),
-      bestListeningPercent: 0,
-      bestReadingPercent: 0,
-      totalReads: 0
-    });
-    state.preBookInsightsIndex = 0;
-    void renderActivePreBookInsight(true);
-    startPreBookInsightsRotation();
-    const fetchToken = state.preBookInsightsFetchToken + 1;
-    state.preBookInsightsFetchToken = fetchToken;
-    void refreshPreBookInsights(fetchToken);
   }
 
   function closePreBookModal(options) {
@@ -4254,6 +4249,7 @@
     const finalizeClose = () => {
       const preferredShelfIndex = state.shelfIndex;
       state.modeBookId = '';
+      state.preBookRankedMode = true;
       state.preBookInsightsFetchToken += 1;
       stopPreBookInsightsRotation();
       setPreBookStep('root');
@@ -4573,7 +4569,9 @@
     await hideModeLoadingSmoothly();
     if (startToken !== state.modeStartToken) return;
 
+    const rankedMode = Boolean(state.preBookRankedMode);
     closePreBookModal({ cancelStart: false, animate: false });
+    state.preBookRankedMode = rankedMode;
     await startBookByMode(selected, mode, cards);
   }
 
@@ -6025,7 +6023,9 @@
 
     triggerReaderFinishFlash();
 
-    await flushBooksPronunciationIfNeeded(true);
+    if (state.readerRankedMode) {
+      await flushBooksPronunciationIfNeeded(true);
+    }
     if (token !== state.readerFinishToken || !state.readerOpen) return;
 
     completionPromise = postReaderBookCompletion(activeBook, {
@@ -6051,17 +6051,23 @@
     );
     const sessionPronunciationDisplay = formatReaderScoreValue(sessionPronunciationPercent);
     const savedGeneralPronunciationDisplay = formatReaderScoreValue(savedGeneralPronunciation);
-    const lines = [
-      {
-        prefix: 'Pronuncia: ',
-        scoreValue: sessionPronunciationDisplay.scaledValue
-      },
-      `${savedBookRead > 0 ? savedBookRead : '--'} Livros`,
-      {
-        prefix: 'Nota geral ',
-        scoreValue: savedGeneralPronunciationDisplay.scaledValue
-      }
-    ];
+    const lines = state.readerRankedMode
+      ? [
+        {
+          prefix: 'Pronuncia: ',
+          scoreValue: sessionPronunciationDisplay.scaledValue
+        },
+        `${savedBookRead > 0 ? savedBookRead : '--'} Livros`,
+        {
+          prefix: 'Nota geral ',
+          scoreValue: savedGeneralPronunciationDisplay.scaledValue
+        }
+      ]
+      : [
+        'Treino concluido',
+        `${savedBookRead > 0 ? savedBookRead : '--'} Livros`,
+        'Progresso salvo'
+      ];
 
     for (const line of lines) {
       await animateReaderFinishLine(line);
@@ -6297,6 +6303,7 @@
     setReaderVisible(false);
     state.readerBookId = '';
     state.readerMode = 'free-read';
+    state.readerRankedMode = false;
     state.readerCards = [];
     state.readerIndex = 0;
     state.readerDisplayLanguage = 'english';
@@ -6383,6 +6390,7 @@
       resetReaderFinishUi();
       state.readerBookId = safeText(book.bookId);
       state.readerMode = ['listening-training', 'speaking-training', 'free-read'].includes(mode) ? mode : 'free-read';
+      state.readerRankedMode = isReaderTrainingMode(state.readerMode) ? Boolean(state.preBookRankedMode) : false;
       state.readerCards = cards.length
         ? cards
         : [{
@@ -6438,7 +6446,9 @@
         const rawScore = applyReaderSentenceBonus(calculateSpeechMatchPercent(card.english, transcript));
         const displayedScore = getReaderDisplayedScorePercent(rawScore);
         state.readerScores.push(displayedScore);
-        addPendingPronunciationSample(displayedScore);
+        if (state.readerRankedMode) {
+          addPendingPronunciationSample(displayedScore);
+        }
         state.readerCurrentScore = displayedScore;
         updateReaderPronPercent();
         showReaderMicScore(displayedScore);
@@ -6788,9 +6798,18 @@
       }
     });
 
+    els.preBookRankedBtn?.addEventListener('click', () => {
+      void (async () => {
+        if (!(await guardEnergyAndRedirect())) return;
+        state.preBookRankedMode = true;
+        setPreBookStep('training');
+      })();
+    });
+
     els.preBookPronounceBtn?.addEventListener('click', () => {
       void (async () => {
         if (!(await guardEnergyAndRedirect())) return;
+        state.preBookRankedMode = false;
         setPreBookStep('training');
       })();
     });
