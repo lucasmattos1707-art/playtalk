@@ -479,21 +479,6 @@
       overflow: hidden;
     }
 
-    .robotcheck[data-step="mic"] {
-      background: transparent;
-    }
-
-    .robotcheck[data-step="mic"] .soundcheck-shell {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .robotcheck[data-step="mic"] #miccheck {
-      opacity: 1;
-      pointer-events: auto;
-      visibility: visible;
-    }
-
     .robotcheck__touch::before {
       content: "";
       position: absolute;
@@ -700,6 +685,36 @@
 
     .soundcheck-answer .is-wrong {
       color: #ff8aa0;
+    }
+
+    .miccheck-rules {
+      display: grid;
+      gap: 12px;
+      color: #ffffff;
+      font-family: "Open Sans", Arial, sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.25;
+      text-align: center;
+    }
+
+    .miccheck-rules p {
+      margin: 0;
+    }
+
+    .miccheck-neon-blue {
+      color: #7fe6ff;
+      text-shadow: 0 0 14px rgba(127, 230, 255, 0.62);
+    }
+
+    .miccheck-neon-green {
+      color: #7affb6;
+      text-shadow: 0 0 14px rgba(122, 255, 182, 0.58);
+    }
+
+    .miccheck-neon-orange {
+      color: #ffb24d;
+      text-shadow: 0 0 14px rgba(255, 178, 77, 0.62);
     }
 
     .soundcheck-keyboard {
@@ -6431,9 +6446,9 @@
           <p class="soundcheck-status" id="micTestStatus"></p>
         </header>
         <div class="miccheck-rules">
-          <p><strong>1.</strong> Toque no <strong style="color:#7fe6ff;">circulo azul</strong></p>
-          <p><strong>2.</strong> Clique em <strong style="color:#7affb6;">permitir</strong></p>
-          <p><strong>3.</strong> E diga <strong style="color:#ffb24d;">microfone</strong></p>
+          <p>1. Toque no "<strong class="miccheck-neon-blue">circulo azul</strong>"</p>
+          <p>2. Clique em "<strong class="miccheck-neon-green">permitir</strong>"</p>
+          <p>3. E diga "<strong class="miccheck-neon-orange">microfone</strong>"</p>
         </div>
         <button class="soundcheck-play soundcheck-play--mic" id="micTestPlayBtn" type="button" aria-label="Ativar microfone">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
@@ -7549,8 +7564,6 @@
           TIME_OFFSET_STORAGE_KEY,
           SOUND_TEST_COMPLETED_STORAGE_KEY,
           SOUND_TEST_LAUNCH_TARGET_STORAGE_KEY,
-          'playtalk-audio-check-completed',
-          'playtalk-mic-check-completed',
           WATCH_SETTINGS_KEY,
           'playtalk_player_profile',
           'playtalk-player-state'
@@ -8467,16 +8480,22 @@
 
       async function persistAudioCheckOnServer() {
         try {
-          await fetch('/auth/audio-check', {
+          const response = await fetch('/auth/audio-check', {
             method: 'PATCH',
             headers: buildAuthHeaders({
               'Content-Type': 'application/json'
             }),
             credentials: 'include'
           });
+          const payload = await response.json().catch(() => ({}));
+          if (response.ok && payload?.user) {
+            state.user = normalizeUser(payload.user);
+          }
+          return response.ok;
         } catch (_error) {
           // ignore
         }
+        return false;
       }
 
       async function loadAudioCheckDeck() {
@@ -8672,18 +8691,21 @@
         state.ui.soundTestOpen = false;
         stopAudioCheckSubtitleRotation();
         stopAudioCheckAudio();
-        els.robotcheck?.classList.add('is-visible');
-        els.robotcheck?.setAttribute('data-step', 'mic');
+        els.robotcheck?.classList.remove('is-visible');
+        els.robotcheck?.removeAttribute('data-step');
         els.miccheck?.classList.add('is-visible');
+        document.documentElement.classList.add('robotcheck-open');
         document.body.classList.add('robotcheck-open');
         document.body.classList.add('sound-test-open');
         startMicCheckSubtitleRotation();
-        setMicCheckStatus('Clique em permitir');
+        setMicCheckStatus('');
       }
 
       function closeMicCheck() {
         state.ui.micCheckOpen = false;
         els.miccheck?.classList.remove('is-visible');
+        document.documentElement.classList.remove('robotcheck-open');
+        document.body.classList.remove('robotcheck-open', 'sound-test-open');
         stopMicCheckSubtitleRotation();
       }
 
@@ -8921,12 +8943,14 @@
         const selected = String(state.ui.audioCheckTyped || '').trim().toUpperCase();
         const target = String(state.ui.audioCheckTargetWord || '').trim().toUpperCase();
         if (selected === target) {
+          state.ui.soundTestBusy = true;
           state.entry.soundTestCompleted = true;
           persistAudioCheckCompletedFlag(true);
-          void persistAudioCheckOnServer();
+          await persistAudioCheckOnServer();
           setAudioCheckStatus('');
           renderSoundTestGate();
           await wait(420);
+          state.ui.soundTestBusy = false;
           openMicCheck();
           return;
         }
