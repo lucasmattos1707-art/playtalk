@@ -6560,13 +6560,6 @@
         <article class="game-card circlescreen" id="gameCard" aria-live="polite">
           <div class="game-card__layout">
             <div class="game-card__visual" id="gameVisual"></div>
-            <div class="game-controls-proxy is-hidden" id="gameControlsProxy" aria-hidden="true" hidden>
-              <button class="game-language-btn" id="gameLanguageBtn" type="button" tabindex="-1" aria-hidden="true">
-                <img src="SVG/codex-icons/ingles.svg" alt="">
-              </button>
-              <button class="game-touch" id="gameTouchBtn" type="button">Fale ingles</button>
-              <button class="game-advance-btn" id="gameAdvanceBtn" type="button" aria-label="Avancar digitacao automatica" hidden></button>
-            </div>
             <div class="game-translation-slot" id="gameTranslationSlot" aria-hidden="true"></div>
             <div class="game-card__content">
               <div>
@@ -6578,6 +6571,14 @@
             </div>
           </div>
         </article>
+
+        <div class="game-controls-proxy is-hidden" id="gameControlsProxy" aria-hidden="true" hidden>
+          <button class="game-language-btn" id="gameLanguageBtn" type="button" tabindex="-1" aria-hidden="true">
+            <img src="SVG/codex-icons/ingles.svg" alt="">
+          </button>
+          <button class="game-touch" id="gameTouchBtn" type="button">Fale ingles</button>
+          <button class="game-advance-btn" id="gameAdvanceBtn" type="button" aria-label="Avancar digitacao automatica" hidden></button>
+        </div>
 
         <div class="game-status-slot textscreen" id="gameStatusSlot" aria-live="polite" aria-atomic="true">
           <h3 class="game-phase-word container-translations" id="gamePhaseWord" aria-live="polite"></h3>
