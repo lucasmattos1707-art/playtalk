@@ -14212,6 +14212,11 @@ app.use((req, res, next) => {
 
   const pathName = req.path;
   const publicPaths = new Set([
+    '/',
+    '/index.html',
+    '/landing',
+    '/landing/',
+    '/landing.html',
     '/auth',
     '/auth/',
     '/auth.html',
