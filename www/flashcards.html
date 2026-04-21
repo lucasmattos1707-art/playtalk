@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -572,6 +572,31 @@
       color: #aa2f2f;
     }
 
+    .soundcheck-play {
+      width: 118px;
+      height: 118px;
+      border: 2px solid rgba(56, 201, 255, 0.8);
+      border-radius: 26px;
+      background: linear-gradient(180deg, rgba(13, 104, 255, 0.26) 0%, rgba(5, 44, 116, 0.88) 100%);
+      display: grid;
+      place-items: center;
+      box-shadow:
+        0 0 24px rgba(56, 201, 255, 0.42),
+        0 18px 34px rgba(5, 20, 58, 0.24);
+      color: #ffffff;
+    }
+
+    .soundcheck-play svg {
+      width: 58px;
+      height: 58px;
+      display: block;
+      fill: currentColor;
+    }
+
+    .soundcheck-play--mic {
+      border-radius: 999px;
+    }
+
     .soundcheck-actions {
       display: flex;
       flex-wrap: wrap;
@@ -640,8 +665,52 @@
       pointer-events: none;
     }
 
+    .soundcheck-answer {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: #ffffff;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-family: "Open Sans", Arial, sans-serif;
+    }
+
+    .soundcheck-answer .is-correct {
+      color: #7affb6;
+    }
+
+    .soundcheck-answer .is-wrong {
+      color: #ff8aa0;
+    }
+
     .soundcheck-keyboard {
       width: min(100%, 520px);
+    }
+
+    .soundcheck-answer {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: #ffffff;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-family: "Open Sans", Arial, sans-serif;
+    }
+
+    .soundcheck-answer .is-correct {
+      color: #7affb6;
+    }
+
+    .soundcheck-answer .is-wrong {
+      color: #ff8aa0;
     }
 
     .soundcheck-keyboard .flashcards-typing__grid {
@@ -6333,6 +6402,7 @@
         <p class="soundcheck-status" id="soundTestStatus"></p>
 
         <div class="soundcheck-keyboard" id="soundTestKeyboard" aria-label="Teclado do teste de som"></div>
+        <div class="soundcheck-answer" id="soundTestAnswer" aria-live="polite"></div>
       </main>
     </div>
   </section>
@@ -6361,7 +6431,7 @@
       <img class="auth-logo" src="/favicon.png" alt="Fluent LevelUp">
       <div>
         <h1 class="auth-title" id="authTitle">Fluent LevelUp</h1>
-        <p class="auth-copy" id="authCopy">Entre com seu nome e senha para começar a jogar na Liga Playtalk.</p>
+        <p class="auth-copy" id="authCopy">Entre com seu nome e senha para comeÃ§ar a jogar na Liga Playtalk.</p>
       </div>
       <div class="auth-card__body" id="authBody">
         <div class="auth-switch" id="authSwitch" aria-label="Escolha entre entrar ou cadastrar">
@@ -6446,7 +6516,7 @@
             <p id="gameHeaderCopy">O jogo comeca com 3 cartas e cresce ate 12 conforme voce ganha flashcards.</p>
           </div>
           <div class="actions">
-            <button class="btn btn-close" id="exitGameBtn" type="button" aria-label="Fechar" hidden>×</button>
+            <button class="btn btn-close" id="exitGameBtn" type="button" aria-label="Fechar" hidden>Ã—</button>
           </div>
         </div>
 
@@ -6508,7 +6578,7 @@
             <p id="gameSetupCountCopy" class="admin-tools__status">Calculando flashcards disponiveis...</p>
           </div>
           <div class="actions">
-            <button class="btn btn-close" id="closeGameSetupBtn" type="button" aria-label="Fechar">Ã—</button>
+            <button class="btn btn-close" id="closeGameSetupBtn" type="button" aria-label="Fechar">Ãƒâ€”</button>
           </div>
         </div>
         <div class="game-setup__options" id="gameSetupOptions">
@@ -6526,12 +6596,12 @@
             <p>Escolha como quer ouvir.</p>
           </div>
           <div class="actions">
-            <button class="btn btn-close" id="closeWatchPopoverBtn" type="button" aria-label="Fechar">×</button>
+            <button class="btn btn-close" id="closeWatchPopoverBtn" type="button" aria-label="Fechar">Ã—</button>
           </div>
         </div>
         <div class="watch-options">
           <label class="watch-field">
-            <span>Espaço de repetição</span>
+            <span>EspaÃ§o de repetiÃ§Ã£o</span>
             <select id="watchGapSelect">
               <option value="3000">3 segundos</option>
               <option value="5000">5 segundos</option>
@@ -6566,7 +6636,7 @@
           <div class="watch-decks__grid" id="watchDeckGrid"></div>
         </section>
         <div class="actions">
-          <button class="btn btn-primary" id="startWatchBtn" type="button">Começar</button>
+          <button class="btn btn-primary" id="startWatchBtn" type="button">ComeÃ§ar</button>
         </div>
       </div>
     </section>
@@ -6574,7 +6644,7 @@
     <section class="watch" id="watch" aria-modal="true" role="dialog">
       <div class="watch-shell">
         <div class="watch-head">
-          <button class="btn btn-close" id="exitWatchBtn" type="button" aria-label="Fechar">×</button>
+          <button class="btn btn-close" id="exitWatchBtn" type="button" aria-label="Fechar">Ã—</button>
         </div>
         <article class="watch-card">
           <div class="watch-card__layout">
@@ -7114,6 +7184,7 @@
           audioCheckLoaded: false,
           audioCheckDeck: {},
           audioCheckTargetWord: '',
+          audioCheckTyped: '',
           audioCheckAudio: null,
           audioCheckBusy: false,
           audioCheckIndex: 0,
@@ -7138,6 +7209,7 @@
         soundTestSlots: document.getElementById('soundTestSlots'),
         soundTestStatus: document.getElementById('soundTestStatus'),
         soundTestKeyboard: document.getElementById('soundTestKeyboard'),
+        soundTestAnswer: document.getElementById('soundTestAnswer'),
         soundTestPlayBtn: document.getElementById('soundTestPlayBtn'),
         soundTestInput: document.getElementById('soundTestInput'),
         miccheck: document.getElementById('miccheck'),
@@ -7303,7 +7375,7 @@
       function fixMojibake(value) {
         const text = safeText(value);
         if (!text) return '';
-        if (!/[����]/.test(text)) return text;
+        if (!/[ï¿½ï¿½ï¿½ï¿½]/.test(text)) return text;
         try {
           return decodeURIComponent(escape(text));
         } catch (_error) {
@@ -7315,7 +7387,7 @@
         let text = fixMojibake(value);
         if (!text) return '';
         for (let attempt = 0; attempt < 2; attempt += 1) {
-          if (!/[����]/.test(text)) break;
+          if (!/[ï¿½ï¿½ï¿½ï¿½]/.test(text)) break;
           try {
             const decoded = decodeURIComponent(escape(text));
             if (!decoded || decoded === text) break;
@@ -7325,20 +7397,20 @@
           }
         }
         const replacements = [
-          ['á', '�'], ['��', '�'], ['��', '�'], ['��', '�'], ['��', '�'],
-          ['��', '�'], ['��', '�'], ['��', '�'], ['��', '�'],
-          ['��', '�'], ['��', '�'], ['��', '�'], ['��', '�'],
-          ['��', '�'], ['��', '�'], ['��', '�'], ['��', '�'], ['��', '�'],
-          ['��', '�'], ['��', '�'], ['��', '�'], ['��', '�'],
-          ['��', '�'], ['��', '�'],
-          ['��', '�'], ['��', '�'], ['��', '�'], ['��', '�'], ['��', '�'],
-          ['��', '�'], ['��', '�'], ['��', '�'], ['��', '�'],
-          ['��', '�'], ['��', '�'], ['��', '�'], ['��', '�'],
-          ['��', '�'], ['��', '�'], ['��', '�'], ['��', '�'], ['��', '�'],
-          ['��', '�'], ['��', '�'], ['��', '�'], ['��', '�'],
-          ['��', '�'], ['Ñ', '�'],
-          ['—', '-'], ['–', '-'], ['‘', "'"], ['’', "'"], ['“', '"'], ['”', '"'],
-          ['º', '�'], ['ª', '�'], ['°', '�'], ['�', '']
+          ['Ã¡', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'], ['ï¿½ï¿½', 'ï¿½'],
+          ['ï¿½ï¿½', 'ï¿½'], ['Ã‘', 'ï¿½'],
+          ['â€”', '-'], ['â€“', '-'], ['â€˜', "'"], ['â€™', "'"], ['â€œ', '"'], ['â€', '"'],
+          ['Âº', 'ï¿½'], ['Âª', 'ï¿½'], ['Â°', 'ï¿½'], ['ï¿½', '']
         ];
         let repaired = text;
         replacements.forEach(([from, to]) => {
@@ -8279,7 +8351,7 @@
         }
         return isRegister
           ? 'Crie seu nome e sua senha para entrar na Liga Playtalk e aparecer no ranking.'
-          : 'Entre com seu nome e senha para comeÃ§ar a jogar na Liga Playtalk.';
+          : 'Entre com seu nome e senha para comeÃƒÂ§ar a jogar na Liga Playtalk.';
       }
 
       function setAuthMode(mode) {
@@ -8422,7 +8494,7 @@
         const targetLetters = Array.from(String(targetWord || '').toUpperCase()).filter((letter) => /[A-Z]/.test(letter));
         const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
         const extras = shuffleArray(alphabet.filter((letter) => !targetLetters.includes(letter)));
-        return shuffleArray([...targetLetters, ...extras]).slice(0, AUDIO_CHECK_KEY_COUNT);
+        return [...targetLetters, ...extras].slice(0, AUDIO_CHECK_KEY_COUNT);
       }
 
       function setAudioCheckSubtitle(text, animate = false) {
@@ -8476,7 +8548,6 @@
         els.soundTestKeyboard.innerHTML = `
           <div class="flashcards-typing__grid">
             ${letters.join('')}
-            <button class="flashcards-typing__key flashcards-typing__key--backspace" type="button" data-audio-backspace>⌫</button>
           </div>
         `;
       }
@@ -8484,6 +8555,14 @@
       function renderAudioCheckInput() {
         if (!els.soundTestInput) return;
         els.soundTestInput.value = '';
+        if (els.soundTestAnswer) {
+          const expected = String(state.ui.audioCheckTargetWord || '').toUpperCase();
+          const typed = String(state.ui.audioCheckTyped || '').toUpperCase();
+          els.soundTestAnswer.innerHTML = Array.from(typed || '').map((char, index) => {
+            const ok = expected[index] === char;
+            return `<span class="${ok ? 'is-correct' : 'is-wrong'}">${escapeHtml(char)}</span>`;
+          }).join('') || '<span style="opacity:.24">_</span>';
+        }
       }
 
       function renderAudioCheckGate() {
@@ -8552,6 +8631,7 @@
         const targetWords = pickAudioCheckWords();
         state.ui.audioCheckTargetWord = targetWords[0] || 'CASA';
         state.ui.soundTestTargetLetters = targetWords;
+        state.ui.audioCheckTyped = '';
         setAudioCheckStatus('Digite o que ouviu');
         startAudioCheckSubtitleRotation();
         renderAudioCheckGate();
@@ -8807,6 +8887,7 @@
       }
 
       function clearSoundTestSelection(keepStatus = false) {
+        state.ui.audioCheckTyped = '';
         if (!keepStatus) {
           setAudioCheckStatus('');
         }
@@ -8815,7 +8896,7 @@
 
       async function validateSoundTestSelection() {
         if (state.ui.soundTestBusy) return;
-        const selected = String(els.soundTestInput?.value || '').trim().toUpperCase();
+        const selected = String(state.ui.audioCheckTyped || '').trim().toUpperCase();
         const target = String(state.ui.audioCheckTargetWord || '').trim().toUpperCase();
         if (selected === target) {
           state.entry.soundTestCompleted = true;
@@ -8829,6 +8910,7 @@
           return;
         }
         setAudioCheckStatus('');
+        state.ui.audioCheckTyped = '';
         if (els.soundTestInput) {
           els.soundTestInput.value = '';
         }
@@ -8841,24 +8923,18 @@
 
       function toggleSoundTestLetter(letter) {
         if (!state.ui.soundTestOpen || state.ui.soundTestBusy) return;
-        if (letter === '⌫') {
-          if (els.soundTestInput) {
-            els.soundTestInput.value = els.soundTestInput.value.slice(0, -1);
-          }
-          setAudioCheckStatus('Digite o que ouviu');
+        const normalized = safeText(letter).toUpperCase().replace(/[^A-Z]/g, '');
+        if (!normalized) return;
+        const nextValue = `${state.ui.audioCheckTyped || ''}${normalized}`;
+        const target = String(state.ui.audioCheckTargetWord || '').toUpperCase();
+        if (target && !target.startsWith(nextValue)) {
+          state.ui.audioCheckTyped = '';
           renderSoundTestGate();
           return;
         }
-        const normalized = safeText(letter).toUpperCase().replace(/[^A-Z]/g, '');
-        if (!normalized) return;
-        if (els.soundTestInput) {
-          if (els.soundTestInput.value.length < AUDIO_CHECK_INPUT_MAX) {
-            els.soundTestInput.value += normalized;
-          }
-        }
-        setAudioCheckStatus('Digite o que ouviu');
+        state.ui.audioCheckTyped = nextValue;
         renderSoundTestGate();
-        if ((els.soundTestInput?.value || '').trim().length >= AUDIO_CHECK_INPUT_MAX) {
+        if ((state.ui.audioCheckTyped || '').trim().length >= String(state.ui.audioCheckTargetWord || '').length) {
           void validateSoundTestSelection();
         }
       }
@@ -9092,7 +9168,7 @@
           const slots = Array.from({ length: 6 }, (_, index) => {
             const letter = state.ui.premiumCode[index] || '';
             if (!letter) {
-              return '<div class="premium-gate__code-slot"><span>•</span></div>';
+              return '<div class="premium-gate__code-slot"><span>â€¢</span></div>';
             }
             return                             `<div class="premium-gate__code-slot" data-filled-slot="${index}"><img src="${escapeHtml(getAccessKeyImagePath(letter))}" alt="${escapeHtml(letter)}"></div>`;
           });
@@ -14267,7 +14343,7 @@
         const skipBtn = document.createElement('button');
         skipBtn.type = 'button';
         skipBtn.className = 'flashcards-typing__skip';
-        skipBtn.textContent = 'AVAN�AR';
+        skipBtn.textContent = 'AVANï¿½AR';
         skipBtn.setAttribute('aria-label', 'Avancar digitacao automatica');
         skipBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M5 6.5v11l8.25-5.5L5 6.5Zm8.5 0v11L21.75 12 13.5 6.5Z"/></svg>';
         toolbar.appendChild(skipBtn);
@@ -14804,7 +14880,7 @@
             </button>
           `;
         }).join('');
-        els.watchDeckSummary.textContent = `${selectedSources.size} deck${selectedSources.size === 1 ? '' : 's'} ativo${selectedSources.size === 1 ? '' : 's'} • ${selectedCardCount} carta${selectedCardCount === 1 ? '' : 's'}`;
+        els.watchDeckSummary.textContent = `${selectedSources.size} deck${selectedSources.size === 1 ? '' : 's'} ativo${selectedSources.size === 1 ? '' : 's'} â€¢ ${selectedCardCount} carta${selectedCardCount === 1 ? '' : 's'}`;
         if (els.startWatchBtn) {
           els.startWatchBtn.disabled = !selectedSources.size || !selectedCardCount;
         }
@@ -15807,7 +15883,7 @@
         els.soundTestKeyboard?.addEventListener('click', (event) => {
           const tile = event.target.closest('[data-audio-letter], [data-audio-backspace]');
           if (!tile) return;
-          toggleSoundTestLetter(tile.getAttribute('data-audio-letter') || '⌫');
+          toggleSoundTestLetter(tile.getAttribute('data-audio-letter') || 'âŒ«');
         });
         els.soundTestInput?.addEventListener('input', () => {
           const normalized = String(els.soundTestInput.value || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, AUDIO_CHECK_INPUT_MAX);
@@ -16246,5 +16322,6 @@
   </script>
 </body>
 </html>
+
 
 
