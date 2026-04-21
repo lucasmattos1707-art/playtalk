@@ -472,7 +472,8 @@
       min-height: 100dvh;
       display: grid;
       place-items: center;
-      padding: clamp(32px, 6vw, 48px);
+      box-sizing: border-box;
+      padding: clamp(18px, 4vw, 32px);
       margin: 0;
       background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
       text-align: center;
@@ -515,9 +516,11 @@
     .soundcheck-shell {
       position: relative;
       z-index: 1;
-      width: min(100%, 1120px);
+      width: min(433px, calc(100vw - 32px));
+      max-width: 100%;
+      box-sizing: border-box;
       min-height: min(100svh - 48px, 820px);
-      margin: 0 auto;
+      margin-inline: auto;
       display: grid;
       align-content: center;
       justify-content: center;
