@@ -14278,6 +14278,20 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(staticDir, 'landing.html'));
 });
 
+app.get(['/play', '/play/'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(staticDir, 'flashcards.html'));
+});
+
+app.get(['/flashcards', '/flashcards/'], (req, res) => {
+  const view = typeof req.query?.view === 'string' ? req.query.view.trim().toLowerCase() : '';
+  if (view === 'play') {
+    res.redirect(302, '/play');
+    return;
+  }
+  res.redirect(302, '/play');
+});
+
 app.get(['/entrar', '/entrar/', '/auth', '/auth/', '/auth.html'], (req, res) => {
   const payload = getAuthenticatedUserFromRequest(req);
   if (payload) {
@@ -14285,7 +14299,7 @@ app.get(['/entrar', '/entrar/', '/auth', '/auth/', '/auth.html'], (req, res) => 
     const redirectTo = requestedReturn.startsWith('/') && !requestedReturn.startsWith('//')
       && !/^\/(?:auth|auth\.html|login|register|logout)(?:[/?#]|$)/i.test(requestedReturn)
       ? req.query.return
-      : '/flashcards?view=play';
+      : '/play';
     res.redirect(302, redirectTo);
     return;
   }

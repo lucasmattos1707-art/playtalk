@@ -6208,7 +6208,6 @@
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button"><img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora"></button>
       </div>
       <p class="welcome-gate__admin-stats" id="welcomeAdminStats" hidden></p>
-      <a class="welcome-gate__account-link" id="welcomeAccountLink" href="/account">Entrar com minha conta</a>
     </div>
   </section>
   <section class="robotcheck" id="robotcheck" aria-label="Robot check">
@@ -7011,7 +7010,6 @@
         welcomeCopy: document.getElementById('welcomeCopy'),
         welcomeStartBtn: document.getElementById('welcomeStartBtn'),
         welcomeAdminStats: document.getElementById('welcomeAdminStats'),
-        welcomeAccountLink: document.getElementById('welcomeAccountLink'),
         robotcheck: document.getElementById('robotcheck'),
         appShell: document.querySelector('main.shell'),
         soundTestSubtitle: document.getElementById('soundTestSubtitle'),
@@ -8579,13 +8577,7 @@
         els.welcomeAdminStats.hidden = false;
       }
 
-      function syncWelcomeAccountLink() {
-        if (!els.welcomeAccountLink) return;
-        const isLoggedIn = Boolean(state.user?.id);
-        els.welcomeAccountLink.textContent = isLoggedIn ? 'Sair da conta' : 'Entrar com minha conta';
-        els.welcomeAccountLink.setAttribute('href', isLoggedIn ? '#' : '/account');
-        syncWelcomeAdminStats();
-      }
+      function syncWelcomeAccountLink() {}
 
       function syncWelcomeGate() {
         const visible = shouldShowWelcomeGate();
@@ -8667,86 +8659,17 @@
         return false;
       }
 
-      function clearGuestAuthDelay() {
-        if (!state.entry.authDelayTimer) return;
-        window.clearTimeout(state.entry.authDelayTimer);
-        state.entry.authDelayTimer = 0;
-      }
-
       function shouldRequireGuestAuth() {
         return false;
       }
 
-      function clearAuthRevealTimer() {
-        if (!state.entry.authRevealTimer) return;
-        window.clearTimeout(state.entry.authRevealTimer);
-        state.entry.authRevealTimer = 0;
-      }
-
-      function lockFlashcardsApp(locked) {
-        document.body.classList.toggle('auth-locked', locked);
-      }
-
-      function hideAuthGate() {
-        state.entry.authRequired = false;
-        state.authReason = 'optional';
-        clearAuthRevealTimer();
-        els.authGate?.classList.remove('is-form-visible');
-        lockFlashcardsApp(false);
-        setAuthStatus('');
-      }
-
-      function showAuthGate({ reason = 'optional', statusMessage = '' } = {}) {
-        state.entry.authRequired = true;
-        state.authReason = reason;
-        clearAuthRevealTimer();
-        lockFlashcardsApp(true);
-        els.authGate?.classList.remove('is-form-visible');
-        setAuthMode('login');
-        els.authCopy.textContent = authCopyText();
-        setAuthStatus(statusMessage);
-        state.entry.authRevealTimer = window.setTimeout(() => {
-          state.entry.authRevealTimer = 0;
-          els.authGate?.classList.add('is-form-visible');
-          els.authUsername?.focus({ preventScroll: true });
-        }, AUTH_GATE_FORM_REVEAL_MS);
-      }
-
-      async function enforceGuestAuthGate() {
-        clearGuestAuthDelay();
-        if (!shouldRequireGuestAuth()) return false;
-        hideWelcomeGate();
-        if (state.watch.active) {
-          stopWatch();
-        }
-        if (state.game.active) {
-          await exitGame();
-        }
-        showAuthGate({
-          reason: 'progress',
-          statusMessage: 'Voce liberou 6 flashcards. Entre para continuar.'
-        });
-        return true;
-      }
-
-      function scheduleGuestAuthRequirement({ immediate = false } = {}) {
-        if (!shouldRequireGuestAuth()) {
-          clearGuestAuthDelay();
-          return false;
-        }
-        if (state.entry.authRequired || state.entry.authDelayTimer) {
-          return true;
-        }
-        if (immediate) {
-          void enforceGuestAuthGate();
-          return true;
-        }
-        state.entry.authDelayTimer = window.setTimeout(() => {
-          state.entry.authDelayTimer = 0;
-          void enforceGuestAuthGate();
-        }, GUEST_FLASHCARD_LOGIN_DELAY_MS);
-        return true;
-      }
+      function clearGuestAuthDelay() {}
+      function clearAuthRevealTimer() {}
+      function lockFlashcardsApp(_locked) {}
+      function hideAuthGate() {}
+      function showAuthGate() {}
+      async function enforceGuestAuthGate() { return false; }
+      function scheduleGuestAuthRequirement() { return false; }
 
       async function fetchSessionUser() {
         if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
@@ -9805,13 +9728,7 @@
         }
         switchMainView('play');
         syncWelcomeGate();
-        if (shouldRequireGuestAuth()) {
-          showAuthGate({
-            reason: 'progress',
-            statusMessage: message || 'Entre com seu nome e senha para continuar.'
-          });
-          return;
-        }
+        hideAuthGate();
         setAuthStatus('');
       }
 
@@ -9893,7 +9810,7 @@
 
       function resolveNativeRenderPageHref(view) {
         const nativeRouteMap = {
-          play: '/flashcards?view=play',
+          play: '/play',
           cards: '/allcards',
           users: '/users',
           profile: '/account',
@@ -15443,13 +15360,7 @@
             requestWelcomeTutorialStart(true);
           })();
         });
-        els.welcomeAccountLink?.addEventListener('click', (event) => {
-          event.stopPropagation();
-          if (state.user?.id) {
-            event.preventDefault();
-            void logoutCurrentUser();
-          }
-        });
+        // Guest account link removed from the play screen.
         els.soundTestReplayBtn?.addEventListener('click', () => {
           if (state.ui.soundTestBusy || !state.ui.soundTestOpen) return;
           void playSoundTestSequence();
