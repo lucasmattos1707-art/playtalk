@@ -6317,37 +6317,43 @@
     <div class="robotcheck__touch" aria-label="Teste de som do Fluent LevelUp">
       <main class="soundcheck-shell">
         <header class="soundcheck-header">
-          <p>Fluent LevelUp</p>
           <h1>Teste de som</h1>
-          <p class="soundcheck-subtitle" id="soundTestSubtitle">Toque no que est&aacute; ouvindo</p>
+          <h2 class="soundcheck-subtitle" id="soundTestSubtitle">Toque em play</h2>
+          <p class="soundcheck-status" id="soundTestStatus">Digite o que ouviu</p>
         </header>
 
-        <div class="soundcheck-slots" id="soundTestSlots" aria-label="Escolhas do teste de som"></div>
-        <p class="soundcheck-status" id="soundTestStatus">Ou&ccedil;a os 3 sons e toque nas 3 imagens correspondentes. A ordem n&atilde;o importa.</p>
+        <button class="soundcheck-play" id="soundTestPlayBtn" type="button" aria-label="Play">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.36a1 1 0 0 0 0-1.72l-10-6.36A1 1 0 0 0 8 5.14Z"/></svg>
+        </button>
+
+        <input class="soundcheck-input" id="soundTestInput" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Digite a palavra">
 
         <div class="soundcheck-actions">
           <button class="soundcheck-btn" id="soundTestReplayBtn" type="button">Ouvir de novo</button>
-          <button class="soundcheck-btn is-secondary" id="soundTestClearBtn" type="button">Limpar sele&ccedil;&atilde;o</button>
+          <button class="soundcheck-btn is-secondary" id="soundTestClearBtn" type="button">Limpar</button>
         </div>
 
-        <div class="soundcheck-grid" id="soundTestGrid">
-          <button class="soundcheck-tile" type="button" data-letter="A"><img src="/accesskey/teclas/Imagens/A.png" alt="A"></button>
-          <button class="soundcheck-tile" type="button" data-letter="B"><img src="/accesskey/teclas/Imagens/B.png" alt="B"></button>
-          <button class="soundcheck-tile" type="button" data-letter="C"><img src="/accesskey/teclas/Imagens/C.png" alt="C"></button>
-          <button class="soundcheck-tile" type="button" data-letter="D"><img src="/accesskey/teclas/Imagens/D.png" alt="D"></button>
-          <button class="soundcheck-tile" type="button" data-letter="E"><img src="/accesskey/teclas/Imagens/E.png" alt="E"></button>
-          <button class="soundcheck-tile" type="button" data-letter="F"><img src="/accesskey/teclas/Imagens/F.png" alt="F"></button>
-          <button class="soundcheck-tile" type="button" data-letter="G"><img src="/accesskey/teclas/Imagens/G.png" alt="G"></button>
-          <button class="soundcheck-tile" type="button" data-letter="H"><img src="/accesskey/teclas/Imagens/H.png" alt="H"></button>
-          <button class="soundcheck-tile" type="button" data-letter="I"><img src="/accesskey/teclas/Imagens/I.png" alt="I"></button>
-          <button class="soundcheck-tile" type="button" data-letter="J"><img src="/accesskey/teclas/Imagens/J.png" alt="J"></button>
-          <button class="soundcheck-tile" type="button" data-letter="K"><img src="/accesskey/teclas/Imagens/K.png" alt="K"></button>
-          <button class="soundcheck-tile" type="button" data-letter="L"><img src="/accesskey/teclas/Imagens/L.png" alt="L"></button>
-          <button class="soundcheck-tile" type="button" data-letter="M"><img src="/accesskey/teclas/Imagens/M.png" alt="M"></button>
-          <button class="soundcheck-tile" type="button" data-letter="N"><img src="/accesskey/teclas/Imagens/N.png" alt="N"></button>
-          <button class="soundcheck-tile" type="button" data-letter="O"><img src="/accesskey/teclas/Imagens/O.png" alt="O"></button>
-          <button class="soundcheck-tile" type="button" data-letter="P"><img src="/accesskey/teclas/Imagens/P.png" alt="P"></button>
+        <div class="soundcheck-keyboard" id="soundTestKeyboard" aria-label="Teclado do teste de som"></div>
+      </main>
+    </div>
+  </section>
+
+  <section class="robotcheck" id="miccheck" aria-label="Ativacao do microfone">
+    <div class="robotcheck__touch" aria-label="Ative seu microfone">
+      <main class="soundcheck-shell">
+        <header class="soundcheck-header">
+          <h1>Ative seu microfone</h1>
+          <h2 class="soundcheck-subtitle" id="micTestSubtitle">Toque no c&iacute;rculo azul</h2>
+          <p class="soundcheck-status" id="micTestStatus">Clique em permitir e diga microfone</p>
+        </header>
+        <div class="miccheck-rules">
+          <p><strong>1.</strong> Toque no <strong>circulo azul</strong></p>
+          <p><strong>2.</strong> Clique em <strong>permitir</strong></p>
+          <p><strong>3.</strong> E diga <strong>microfone</strong></p>
         </div>
+        <button class="soundcheck-play soundcheck-play--mic" id="micTestPlayBtn" type="button" aria-label="Ativar microfone">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
+        </button>
       </main>
     </div>
   </section>
@@ -7105,7 +7111,18 @@
           soundTestAudio: null,
           soundTestSelectedLetters: [],
           soundTestTargetLetters: [],
-          soundTestPlaybackToken: 0
+          soundTestPlaybackToken: 0,
+          audioCheckLoaded: false,
+          audioCheckDeck: {},
+          audioCheckTargetWord: '',
+          audioCheckAudio: null,
+          audioCheckBusy: false,
+          audioCheckIndex: 0,
+          micCheckOpen: false,
+          micCheckSubtitleIndex: 0,
+          micCheckSubtitleTimer: 0,
+          micCheckStatus: '',
+          micCheckBusy: false
         }
       };
 
@@ -7123,7 +7140,13 @@
         soundTestStatus: document.getElementById('soundTestStatus'),
         soundTestReplayBtn: document.getElementById('soundTestReplayBtn'),
         soundTestClearBtn: document.getElementById('soundTestClearBtn'),
-        soundTestGrid: document.getElementById('soundTestGrid'),
+        soundTestKeyboard: document.getElementById('soundTestKeyboard'),
+        soundTestPlayBtn: document.getElementById('soundTestPlayBtn'),
+        soundTestInput: document.getElementById('soundTestInput'),
+        miccheck: document.getElementById('miccheck'),
+        micTestSubtitle: document.getElementById('micTestSubtitle'),
+        micTestStatus: document.getElementById('micTestStatus'),
+        micTestPlayBtn: document.getElementById('micTestPlayBtn'),
         authGate: document.getElementById('authGate'),
         authCard: document.getElementById('authCard'),
         authBody: document.getElementById('authBody'),
@@ -7442,6 +7465,8 @@
           TIME_OFFSET_STORAGE_KEY,
           SOUND_TEST_COMPLETED_STORAGE_KEY,
           SOUND_TEST_LAUNCH_TARGET_STORAGE_KEY,
+          'playtalk-audio-check-completed',
+          'playtalk-mic-check-completed',
           WATCH_SETTINGS_KEY,
           'playtalk_player_profile',
           'playtalk-player-state'
@@ -8300,39 +8325,302 @@
         state.entry.welcomeTimer = 0;
       }
 
-      function openRobotCheck(launchTarget = 'welcome') {
+      const AUDIO_CHECK_STORAGE_KEY = 'playtalk-audio-check-completed';
+      const MIC_CHECK_STORAGE_KEY = 'playtalk-mic-check-completed';
+      const AUDIO_CHECK_ROTATION_MS = 2000;
+      const AUDIO_CHECK_INPUT_MAX = 4;
+      const AUDIO_CHECK_FALLBACK_WORDS = ['CASA', 'BOLA', 'GATO', 'PATO'];
+      const MIC_CHECK_MESSAGES = [
+        'Toque no circulo azul',
+        'Clique em permitir',
+        'E diga microfone'
+      ];
+
+      function readAudioCheckCompletedFlag() {
+        try {
+          return localStorage.getItem(AUDIO_CHECK_STORAGE_KEY) === '1';
+        } catch (_error) {
+          return false;
+        }
+      }
+
+      function persistAudioCheckCompletedFlag(value) {
+        try {
+          if (value) {
+            localStorage.setItem(AUDIO_CHECK_STORAGE_KEY, '1');
+          } else {
+            localStorage.removeItem(AUDIO_CHECK_STORAGE_KEY);
+          }
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      function readMicCheckCompletedFlag() {
+        try {
+          return localStorage.getItem(MIC_CHECK_STORAGE_KEY) === '1';
+        } catch (_error) {
+          return false;
+        }
+      }
+
+      function persistMicCheckCompletedFlag(value) {
+        try {
+          if (value) {
+            localStorage.setItem(MIC_CHECK_STORAGE_KEY, '1');
+          } else {
+            localStorage.removeItem(MIC_CHECK_STORAGE_KEY);
+          }
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      async function persistAudioCheckOnServer() {
+        try {
+          await fetch('/auth/audio-check', {
+            method: 'PATCH',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            }),
+            credentials: 'include'
+          });
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      async function loadAudioCheckDeck() {
+        if (state.ui.audioCheckLoaded) return state.ui.audioCheckDeck;
+        try {
+          const response = await fetch('/data/audio-check.json', { cache: 'no-store' });
+          const payload = await response.json();
+          if (payload && typeof payload === 'object') {
+            state.ui.audioCheckDeck = payload;
+          }
+        } catch (_error) {
+          state.ui.audioCheckDeck = {};
+        }
+        state.ui.audioCheckLoaded = true;
+        return state.ui.audioCheckDeck;
+      }
+
+      function shuffleArray(items) {
+        const copy = Array.isArray(items) ? items.slice() : [];
+        for (let index = copy.length - 1; index > 0; index -= 1) {
+          const randomIndex = Math.floor(Math.random() * (index + 1));
+          [copy[index], copy[randomIndex]] = [copy[randomIndex], copy[index]];
+        }
+        return copy;
+      }
+
+      function pickAudioCheckWords() {
+        const keys = Object.keys(state.ui.audioCheckDeck || {});
+        const pool = keys.length ? keys : AUDIO_CHECK_FALLBACK_WORDS;
+        return shuffleArray(pool).slice(0, 3);
+      }
+
+      function setAudioCheckSubtitle(text, animate = false) {
+        if (!els.soundTestSubtitle) return;
+        const nextText = safeText(text) || 'Toque em play';
+        if (!animate || els.soundTestSubtitle.textContent === nextText) {
+          els.soundTestSubtitle.textContent = nextText;
+          els.soundTestSubtitle.classList.remove('is-changing');
+          return;
+        }
+        els.soundTestSubtitle.classList.add('is-changing');
+        window.setTimeout(() => {
+          if (!els.soundTestSubtitle) return;
+          els.soundTestSubtitle.textContent = nextText;
+          els.soundTestSubtitle.classList.remove('is-changing');
+        }, 140);
+      }
+
+      function startAudioCheckSubtitleRotation() {
+        stopAudioCheckSubtitleRotation();
+        state.ui.soundTestSubtitleIndex = 0;
+        setAudioCheckSubtitle('Toque em play');
+        state.ui.soundTestSubtitleTimer = window.setInterval(() => {
+          if (!state.ui.soundTestOpen) return;
+          state.ui.soundTestSubtitleIndex = (state.ui.soundTestSubtitleIndex + 1) % 2;
+          setAudioCheckSubtitle(
+            state.ui.soundTestSubtitleIndex === 0 ? 'Toque em play' : 'Digite o que ouviu',
+            true
+          );
+        }, AUDIO_CHECK_ROTATION_MS);
+      }
+
+      function stopAudioCheckSubtitleRotation() {
+        if (!state.ui.soundTestSubtitleTimer) return;
+        window.clearInterval(state.ui.soundTestSubtitleTimer);
+        state.ui.soundTestSubtitleTimer = 0;
+      }
+
+      function setAudioCheckStatus(message, isError = false) {
+        state.ui.soundTestStatus = safeText(message);
+        state.ui.soundTestStatusError = Boolean(isError);
+        if (!els.soundTestStatus) return;
+        els.soundTestStatus.textContent = state.ui.soundTestStatus || 'Digite o que ouviu';
+        els.soundTestStatus.classList.toggle('is-error', state.ui.soundTestStatusError);
+      }
+
+      function renderAudioCheckKeyboard() {
+        if (!els.soundTestKeyboard) return;
+        const letters = Array.from((state.ui.audioCheckTargetWord || ''))
+          .map((letter) => `<button class="flashcards-typing__key" type="button" data-audio-letter="${escapeHtml(letter)}">${escapeHtml(letter)}</button>`);
+        els.soundTestKeyboard.innerHTML = `
+          <div class="flashcards-typing__grid">
+            ${letters.join('')}
+            <button class="flashcards-typing__key flashcards-typing__key--backspace" type="button" data-audio-backspace>⌫</button>
+          </div>
+        `;
+      }
+
+      function renderAudioCheckInput() {
+        if (!els.soundTestInput) return;
+        els.soundTestInput.value = state.ui.audioCheckTargetWord;
+      }
+
+      function renderAudioCheckGate() {
+        renderAudioCheckInput();
+        renderAudioCheckKeyboard();
+        setAudioCheckStatus(state.ui.soundTestStatus, state.ui.soundTestStatusError);
+      }
+
+      function stopAudioCheckAudio() {
+        const current = state.ui.audioCheckAudio;
+        if (!current) return;
+        try {
+          current.pause();
+          current.currentTime = 0;
+        } catch (_error) {
+          // ignore
+        }
+        state.ui.audioCheckAudio = null;
+      }
+
+      async function playAudioCheckWord(word) {
+        const deck = await loadAudioCheckDeck();
+        const normalized = safeText(word).toUpperCase();
+        const src = deck[normalized];
+        if (!src) return false;
+        stopAudioCheckAudio();
+        const audio = new Audio(src);
+        audio.preload = 'auto';
+        state.ui.audioCheckAudio = audio;
+        return new Promise((resolve) => {
+          const finish = () => {
+            if (state.ui.audioCheckAudio === audio) {
+              state.ui.audioCheckAudio = null;
+            }
+            resolve(true);
+          };
+          audio.addEventListener('ended', finish, { once: true });
+          audio.addEventListener('error', finish, { once: true });
+          audio.play().catch(finish);
+        });
+      }
+
+      async function openAudioCheck() {
+        if (readAudioCheckCompletedFlag()) {
+          openMicCheck();
+          return;
+        }
         state.entry.welcomeVisible = false;
-        state.entry.launchAfterSoundTest = safeText(launchTarget);
         clearWelcomeRotation();
         stopSoundTestAudio();
-        clearSoundTestSubtitleRotation();
+        stopAudioCheckAudio();
+        stopMicCheckAudio();
+        stopAudioCheckSubtitleRotation();
+        stopMicCheckSubtitleRotation();
         document.documentElement.classList.add('robotcheck-open');
         document.body.classList.remove('welcome-active');
         document.body.classList.add('robotcheck-open', 'sound-test-open');
         els.welcomeGate?.classList.remove('is-visible');
         els.robotcheck?.classList.add('is-visible');
+        els.miccheck?.classList.remove('is-visible');
         state.ui.soundTestOpen = true;
         state.ui.soundTestBusy = false;
-        state.ui.soundTestStatus = '';
         state.ui.soundTestStatusError = false;
-        state.ui.soundTestSelectedLetters = [];
-        state.ui.soundTestTargetLetters = buildRandomSoundTestLetters();
-        state.ui.soundTestPlaybackToken = 0;
-        startSoundTestSubtitleRotation();
-        setSoundTestStatus('Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.');
-        renderSoundTestGate();
-        window.setTimeout(() => {
-          if (state.ui.soundTestOpen) {
-            void playSoundTestSequence();
-          }
-        }, 120);
+        state.ui.audioCheckTargetWord = '';
+        state.ui.soundTestTargetLetters = [];
+        const targetWords = pickAudioCheckWords();
+        state.ui.audioCheckTargetWord = targetWords[0] || 'CASA';
+        state.ui.soundTestTargetLetters = targetWords;
+        setAudioCheckStatus('Digite o que ouviu');
+        startAudioCheckSubtitleRotation();
+        renderAudioCheckGate();
       }
 
-      function closeRobotCheck() {
+      function closeAudioCheck() {
         document.documentElement.classList.remove('robotcheck-open');
         document.body.classList.remove('robotcheck-open', 'sound-test-open');
         els.robotcheck?.classList.remove('is-visible');
+        stopAudioCheckSubtitleRotation();
+        stopAudioCheckAudio();
       }
+
+      function openMicCheck() {
+        state.ui.micCheckOpen = true;
+        state.ui.micCheckBusy = false;
+        state.ui.soundTestOpen = false;
+        stopAudioCheckSubtitleRotation();
+        stopAudioCheckAudio();
+        els.robotcheck?.classList.remove('is-visible');
+        els.miccheck?.classList.add('is-visible');
+        document.body.classList.add('robotcheck-open');
+        document.body.classList.add('sound-test-open');
+        startMicCheckSubtitleRotation();
+        setMicCheckStatus('Clique em permitir');
+      }
+
+      function closeMicCheck() {
+        state.ui.micCheckOpen = false;
+        els.miccheck?.classList.remove('is-visible');
+        stopMicCheckSubtitleRotation();
+      }
+
+      function setMicCheckSubtitle(text, animate = false) {
+        if (!els.micTestSubtitle) return;
+        const nextText = safeText(text) || MIC_CHECK_MESSAGES[0];
+        if (!animate || els.micTestSubtitle.textContent === nextText) {
+          els.micTestSubtitle.textContent = nextText;
+          els.micTestSubtitle.classList.remove('is-changing');
+          return;
+        }
+        els.micTestSubtitle.classList.add('is-changing');
+        window.setTimeout(() => {
+          if (!els.micTestSubtitle) return;
+          els.micTestSubtitle.textContent = nextText;
+          els.micTestSubtitle.classList.remove('is-changing');
+        }, 140);
+      }
+
+      function startMicCheckSubtitleRotation() {
+        stopMicCheckSubtitleRotation();
+        state.ui.micCheckSubtitleIndex = 0;
+        setMicCheckSubtitle(MIC_CHECK_MESSAGES[0]);
+        state.ui.micCheckSubtitleTimer = window.setInterval(() => {
+          if (!state.ui.micCheckOpen) return;
+          state.ui.micCheckSubtitleIndex = (state.ui.micCheckSubtitleIndex + 1) % MIC_CHECK_MESSAGES.length;
+          setMicCheckSubtitle(MIC_CHECK_MESSAGES[state.ui.micCheckSubtitleIndex], true);
+        }, AUDIO_CHECK_ROTATION_MS);
+      }
+
+      function stopMicCheckSubtitleRotation() {
+        if (!state.ui.micCheckSubtitleTimer) return;
+        window.clearInterval(state.ui.micCheckSubtitleTimer);
+        state.ui.micCheckSubtitleTimer = 0;
+      }
+
+      function setMicCheckStatus(message) {
+        state.ui.micCheckStatus = safeText(message);
+        if (els.micTestStatus) {
+          els.micTestStatus.textContent = state.ui.micCheckStatus || 'Clique em permitir';
+        }
+      }
+
+      function stopMicCheckAudio() {}
 
       function setWelcomeCopy(text, animate = false) {
         if (!els.welcomeCopy) return;
@@ -8438,9 +8726,7 @@
       }
 
       function renderSoundTestGate() {
-        renderSoundTestSlots();
-        renderSoundTestGrid();
-        setSoundTestStatus(state.ui.soundTestStatus, state.ui.soundTestStatusError);
+        renderAudioCheckGate();
       }
 
       function clearSoundTestSelection({ keepStatus = false } = {}) {
@@ -8488,30 +8774,30 @@
       }
 
       async function playSoundTestSequence() {
-        const letters = state.ui.soundTestTargetLetters.slice();
-        if (!letters.length) return;
+        const words = state.ui.soundTestTargetLetters.slice();
+        if (!words.length) return;
         const token = Date.now();
         state.ui.soundTestPlaybackToken = token;
         state.ui.soundTestBusy = true;
-        setSoundTestStatus('Ouvindo os sons...');
+        setAudioCheckStatus('Ouvindo o som...');
         renderSoundTestGate();
-        for (const letter of letters) {
+        for (const word of words) {
           if (!state.ui.soundTestOpen || state.ui.soundTestPlaybackToken !== token) {
             state.ui.soundTestBusy = false;
             renderSoundTestGate();
             return;
           }
-          await playSingleSoundTestLetter(letter);
+          await playAudioCheckWord(word);
           if (!state.ui.soundTestOpen || state.ui.soundTestPlaybackToken !== token) {
             state.ui.soundTestBusy = false;
             renderSoundTestGate();
             return;
           }
-          await wait(260);
+          await wait(400);
         }
         if (state.ui.soundTestPlaybackToken === token) {
           state.ui.soundTestBusy = false;
-          setSoundTestStatus('');
+          setAudioCheckStatus('');
           renderSoundTestGate();
         }
       }
@@ -8519,16 +8805,8 @@
       function continueFromSoundTest() {
         const launchTarget = state.entry.launchAfterSoundTest;
         state.entry.launchAfterSoundTest = '';
-        if (launchTarget === 'welcome') {
-          requestWelcomeTutorialStart(true);
-          return;
-        }
-        if (launchTarget === 'tutorial-setup') {
-          requestWelcomeTutorialStart(true);
-          return;
-        }
-        if (launchTarget === 'play-ready-check') {
-          syncWelcomeGate();
+        if (launchTarget === 'welcome' || launchTarget === 'tutorial-setup' || launchTarget === 'play-ready-check') {
+          openMicCheck();
         }
       }
 
@@ -8541,9 +8819,9 @@
         state.ui.soundTestOpen = false;
         state.ui.soundTestBusy = false;
         state.ui.soundTestPlaybackToken = 0;
-        stopSoundTestAudio();
-        clearSoundTestSubtitleRotation();
-        closeRobotCheck();
+        stopAudioCheckAudio();
+        stopAudioCheckSubtitleRotation();
+        closeAudioCheck();
       }
 
       function openSoundTestGate(launchTarget = '') {
@@ -8554,27 +8832,31 @@
       function clearSoundTestSelection(keepStatus = false) {
         state.ui.soundTestSelectedLetters = [];
         if (!keepStatus) {
-          setSoundTestStatus('Ouca os 3 sons e toque nas 3 imagens correspondentes. A ordem nao importa.');
+          setAudioCheckStatus('Digite o que ouviu');
         }
         renderSoundTestGate();
       }
 
       async function validateSoundTestSelection() {
         if (state.ui.soundTestSelectedLetters.length !== SOUND_TEST_SELECTION_COUNT || state.ui.soundTestBusy) return;
-        const selected = state.ui.soundTestSelectedLetters.slice().sort().join('');
-        const target = state.ui.soundTestTargetLetters.slice().sort().join('');
+        const selected = String(els.soundTestInput?.value || '').trim().toUpperCase();
+        const target = String(state.ui.audioCheckTargetWord || '').trim().toUpperCase();
         if (selected === target) {
           state.entry.soundTestCompleted = true;
-          persistSoundTestCompletedFlag(true);
-          setSoundTestStatus('Perfeito. Som ok, vamos jogar.');
+          persistAudioCheckCompletedFlag(true);
+          void persistAudioCheckOnServer();
+          setAudioCheckStatus('Perfeito. Som ok, vamos jogar.');
           renderSoundTestGate();
           await wait(420);
           closeSoundTestGate();
-          continueFromSoundTest();
+          openMicCheck();
           return;
         }
-        setSoundTestStatus('Ainda nao bateu. Vou repetir os 3 sons para voce tentar de novo.', true);
+        setAudioCheckStatus('Ainda nao bateu. Tente novamente.', true);
         state.ui.soundTestSelectedLetters = [];
+        if (els.soundTestInput) {
+          els.soundTestInput.value = '';
+        }
         renderSoundTestGate();
         await wait(500);
         if (state.ui.soundTestOpen) {
@@ -8584,23 +8866,24 @@
 
       function toggleSoundTestLetter(letter) {
         if (!state.ui.soundTestOpen || state.ui.soundTestBusy) return;
-        const normalized = safeText(letter).toUpperCase().replace(/[^A-P]/g, '');
-        if (!normalized) return;
-        if (state.ui.soundTestSelectedLetters.includes(normalized)) {
-          state.ui.soundTestSelectedLetters = state.ui.soundTestSelectedLetters.filter((item) => item !== normalized);
-          setSoundTestStatus('Selecao atualizada. Complete com 3 imagens.');
+        if (letter === '⌫') {
+          if (els.soundTestInput) {
+            els.soundTestInput.value = els.soundTestInput.value.slice(0, -1);
+          }
+          setAudioCheckStatus('Digite o que ouviu');
           renderSoundTestGate();
           return;
         }
-        if (state.ui.soundTestSelectedLetters.length >= SOUND_TEST_SELECTION_COUNT) return;
-        state.ui.soundTestSelectedLetters = state.ui.soundTestSelectedLetters.concat(normalized);
-        setSoundTestStatus(
-          state.ui.soundTestSelectedLetters.length >= SOUND_TEST_SELECTION_COUNT
-            ? 'Validando sua resposta...'
-            : 'Boa. Continue ate escolher 3 imagens.'
-        );
+        const normalized = safeText(letter).toUpperCase().replace(/[^A-Z]/g, '');
+        if (!normalized) return;
+        if (els.soundTestInput) {
+          if (els.soundTestInput.value.length < AUDIO_CHECK_INPUT_MAX) {
+            els.soundTestInput.value += normalized;
+          }
+        }
+        setAudioCheckStatus('Digite o que ouviu');
         renderSoundTestGate();
-        if (state.ui.soundTestSelectedLetters.length >= SOUND_TEST_SELECTION_COUNT) {
+        if ((els.soundTestInput?.value || '').trim().length >= AUDIO_CHECK_INPUT_MAX) {
           void validateSoundTestSelection();
         }
       }
@@ -8708,7 +8991,7 @@
         syncWelcomeStartButton();
         syncWelcomeAccountLink();
         if (visible) {
-          closeRobotCheck();
+          closeAudioCheck();
         }
         if (!visible) {
           clearWelcomeRotation();
@@ -8739,7 +9022,7 @@
         state.entry.welcomeVisible = false;
         document.body.classList.remove('welcome-active');
         els.welcomeGate?.classList.remove('is-visible');
-        closeRobotCheck();
+        closeAudioCheck();
         clearWelcomeRotation();
       }
 
@@ -15524,16 +15807,20 @@
         els.welcomeStartBtn?.addEventListener('click', () => {
           void (async () => {
             if (!(await guardWelcomeEnergy())) return;
-            requestWelcomeTutorialStart(true);
+            void openAudioCheck();
           })();
         });
         els.welcomeLogo?.addEventListener('click', () => {
           void (async () => {
             if (!(await guardWelcomeEnergy())) return;
-            requestWelcomeTutorialStart(true);
+            void openAudioCheck();
           })();
         });
         // Guest account link removed from the play screen.
+        els.soundTestPlayBtn?.addEventListener('click', () => {
+          if (state.ui.soundTestBusy || !state.ui.soundTestOpen) return;
+          void playSoundTestSequence();
+        });
         els.soundTestReplayBtn?.addEventListener('click', () => {
           if (state.ui.soundTestBusy || !state.ui.soundTestOpen) return;
           void playSoundTestSequence();
@@ -15542,10 +15829,23 @@
           if (state.ui.soundTestBusy || !state.ui.soundTestOpen) return;
           clearSoundTestSelection();
         });
-        els.soundTestGrid?.addEventListener('click', (event) => {
-          const tile = event.target.closest('[data-letter]');
+        els.soundTestKeyboard?.addEventListener('click', (event) => {
+          const tile = event.target.closest('[data-audio-letter], [data-audio-backspace]');
           if (!tile) return;
-          toggleSoundTestLetter(tile.getAttribute('data-letter') || '');
+          toggleSoundTestLetter(tile.getAttribute('data-audio-letter') || '⌫');
+        });
+        els.soundTestInput?.addEventListener('input', () => {
+          const normalized = String(els.soundTestInput.value || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, AUDIO_CHECK_INPUT_MAX);
+          els.soundTestInput.value = normalized;
+          setAudioCheckStatus('Digite o que ouviu');
+        });
+        els.micTestPlayBtn?.addEventListener('click', async () => {
+          persistMicCheckCompletedFlag(true);
+          setMicCheckStatus('Microfone ativado.');
+          await wait(450);
+          closeMicCheck();
+          hideWelcomeGate();
+          beginGame();
         });
         els.authModeLogin.addEventListener('click', () => {
           setAuthMode('login');
@@ -15870,7 +16170,7 @@
         }
         const requestedPremiumOpen = searchParams.get('premium') === '1';
         clearFlashcardsLocalStorage();
-        state.entry.soundTestCompleted = readSoundTestCompletedFlag();
+        state.entry.soundTestCompleted = readAudioCheckCompletedFlag();
         state.timeOffsetMs = readTimeOffsetMs();
         loadSelectedGameCount();
         syncWatchControls();

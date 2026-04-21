@@ -2179,6 +2179,10 @@ const ensureUsersAvatarColumn = async () => {
       `);
       await pool.query(`
         ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS audio_check_completed boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
         ADD COLUMN IF NOT EXISTS battle integer NOT NULL DEFAULT 0
       `);
       await pool.query(`
@@ -2223,6 +2227,7 @@ const mapPublicUser = (user) => ({
   avatar_generation_count: Math.max(0, Number.parseInt(user?.avatar_generation_count, 10) || 0),
   onboarding_name_completed: Boolean(user?.onboarding_name_completed),
   onboarding_photo_completed: Boolean(user?.onboarding_photo_completed),
+  audio_check_completed: Boolean(user?.audio_check_completed),
   created_at: user?.created_at || null,
   is_admin: isAdminUserRecord(user),
   is_bot: isBotUserRecord(user),
@@ -9040,7 +9045,7 @@ app.post('/register', async (req, res) => {
        )
        VALUES ($1, $2, $3, $4, true, $5)
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
-                 onboarding_name_completed, onboarding_photo_completed,
+                 onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
                  created_at, password_hash, premium_full_access, premium_until`,
       [email, username, passwordHash, avatarImage || null, Boolean(avatarImage)]
     );
@@ -9536,7 +9541,7 @@ app.patch('/auth/avatar', async (req, res) => {
            onboarding_photo_completed = onboarding_photo_completed OR $5::boolean
        WHERE id = $1
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
-                 onboarding_name_completed, onboarding_photo_completed,
+                 onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
                  created_at, password_hash, premium_full_access, premium_until`,
       [
         authUser.id,
@@ -9623,6 +9628,44 @@ app.patch('/auth/profile', async (req, res) => {
     }
     console.error('Erro ao atualizar perfil do usuario:', error);
     res.status(500).json({ success: false, message: 'Erro ao atualizar perfil.' });
+  }
+});
+
+app.patch('/auth/audio-check', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    await ensureUsersAvatarColumn();
+    const result = await pool.query(
+      `UPDATE public.users
+       SET audio_check_completed = true
+       WHERE id = $1
+       RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                 onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
+                 created_at, password_hash, premium_full_access, premium_until`,
+      [authUser.id]
+    );
+
+    if (!result.rows.length) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    res.json({ success: true, user: mapPublicUser(result.rows[0]) });
+  } catch (error) {
+    console.error('Erro ao atualizar audio_check do usuario:', error);
+    res.status(500).json({ success: false, message: 'Erro ao atualizar audio_check.' });
   }
 });
 
