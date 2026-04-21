@@ -14217,6 +14217,8 @@ app.use((req, res, next) => {
     '/landing',
     '/landing/',
     '/landing.html',
+    '/entrar',
+    '/entrar/',
     '/auth',
     '/auth/',
     '/auth.html',

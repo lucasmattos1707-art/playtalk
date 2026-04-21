@@ -57,7 +57,7 @@
         if (rawReturn.charAt(0) !== '/') {
           return '/flashcards?view=play';
         }
-        if (/^\/(?:auth\.html|login|register|logout)(?:[?#/]|$)/i.test(rawReturn)) {
+        if (/^\/(?:entrar|auth\.html|login|register|logout)(?:[?#/]|$)/i.test(rawReturn)) {
           return '/flashcards?view=play';
         }
         return rawReturn;
