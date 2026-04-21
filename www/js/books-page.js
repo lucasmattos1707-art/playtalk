@@ -34,7 +34,7 @@
   const HOME_REPEAT_OPTIONS = [1, 2, 3, 5, 7, 10];
   const HOME_SPEED_OPTIONS = [0.7, 0.8, 0.9, 1, 1.25, 1.5, 2];
   const HOME_BOOK_TRANSITION_MS = 600;
-  const HOME_BOOK_META_ROTATE_MS = 2000;
+  const HOME_BOOK_META_ROTATE_MS = 2400;
   const HOME_SWIPE_UP_THRESHOLD = 70;
   const HOME_SWIPE_DOWN_THRESHOLD = 70;
   const HOME_WHEEL_THRESHOLD = 18;
@@ -2202,15 +2202,26 @@
     }
 
     const items = getHomeBookMetaItems(book);
-    const nextHtml = items
-      .map((entry) => `<div class="books-sleep-fab-meta-row">${getHomeBookMetaIcon(entry.kind)}<span>${escapeHtml(entry.value)}</span></div>`)
-      .join('');
+    const index = Math.max(0, Number(state.homeBookMetaIndex) || 0) % items.length;
+    const entry = items[index] || items[0];
+    const nextHtml = `<div class="books-sleep-fab-meta-row">${getHomeBookMetaIcon(entry.kind)}<span>${escapeHtml(entry.value)}</span></div>`;
     if (metaElement.innerHTML === nextHtml) return;
-    metaElement.innerHTML = nextHtml;
+    metaElement.classList.add('is-fading');
+    window.setTimeout(() => {
+      metaElement.innerHTML = nextHtml;
+      window.requestAnimationFrame(() => {
+        metaElement.classList.remove('is-fading');
+      });
+    }, 120);
   }
 
   function startHomeBookMetaRotation() {
+    if (state.homeBookMetaRotationTimer) return;
     renderSleepFabMeta();
+    state.homeBookMetaRotationTimer = window.setInterval(() => {
+      state.homeBookMetaIndex = (state.homeBookMetaIndex + 1) % 1000000;
+      renderSleepFabMeta();
+    }, HOME_BOOK_META_ROTATE_MS);
   }
 
   function stopHomeBookMetaRotation() {
@@ -3382,6 +3393,7 @@
   async function startHomeSleepPlayback() {
     if (state.homeSleepActive || state.homeStartBusy) return;
     if (!(await guardEnergyAndRedirect())) return;
+    const visibleBook = getVisibleShelfBook();
     state.homeStartBusy = true;
     state.homeSleepActive = true;
     state.homeBlackoutActive = false;
@@ -3390,7 +3402,10 @@
     state.homePlaybackToken = token;
     let firstSession = null;
     try {
-      firstSession = await prepareRandomHomeSession(token, []);
+      firstSession = visibleBook ? await loadHomeSessionForBook(visibleBook) : null;
+      if (!firstSession) {
+        firstSession = await prepareRandomHomeSession(token, []);
+      }
     } catch (_error) {
       firstSession = null;
     }

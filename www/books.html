@@ -1462,6 +1462,8 @@
       bottom: 0;
       width: 100%;
       z-index: 220;
+      background: linear-gradient(90deg, rgba(1, 9, 28, 0.98) 0%, rgba(4, 29, 72, 0.98) 50%, rgba(7, 48, 105, 0.98) 100%);
+      box-shadow: 0 -14px 32px rgba(0, 0, 0, 0.28), 0 -1px 0 rgba(109, 214, 255, 0.16) inset;
     }
 
     .flashcards-footer-nav[data-shell-page="books"] .flashcards-footer-nav__item img {
@@ -2235,7 +2237,7 @@
       position: fixed;
       left: 50%;
       top: calc(50% + (var(--books-card-book-height, min(304px, 66vw)) / 2) + var(--books-card-vertical-offset, 0dvh) + 12dvh);
-      width: min(338px, 78vw);
+      width: min(460px, 86vw);
       z-index: 259;
       display: grid;
       justify-items: center;
@@ -2263,7 +2265,7 @@
       gap: 9px;
       min-height: 28px;
       color: #ffffff;
-      font-size: clamp(18px, 5vw, 25px);
+      font-size: clamp(32px, 9vw, 45px);
       font-family: "BooksReading", "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
       font-weight: 800;
       line-height: 1.04;
@@ -2273,8 +2275,8 @@
     }
 
     .books-sleep-fab-meta-row svg {
-      width: 22px;
-      height: 22px;
+      width: 40px;
+      height: 40px;
       flex: 0 0 auto;
       color: #ffffff;
       filter: drop-shadow(0 0 9px rgba(150, 224, 255, 0.38));
