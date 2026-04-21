@@ -343,7 +343,7 @@
     homeTextMode: 'english',
     homeBookMetaIndex: 0,
     homeBookMetaRotationTimer: 0,
-    homeSpeedIndex: 3,
+    homeSpeedIndex: 1,
     homeProgressRatio: 0,
     homeProgressLabel: '',
     homeProgressElapsedSeconds: 0,

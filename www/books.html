@@ -26,11 +26,20 @@
       --playtalk-global-bg-mobile: url('/backgrounds/playtalk-global-mobile.webp');
       --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
       --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 1) 0%, rgba(4, 18, 38, 0.58) 38%, rgba(4, 18, 38, 0) 100%);
+      --books-card-book-width: min(304px, 66vw);
+      --books-card-book-height: calc(var(--books-card-book-width) * 16 / 9);
+      --books-card-vertical-offset: -10dvh;
     }
 
     @media (max-width: 800px) {
       :root {
         --playtalk-global-bg-image: var(--playtalk-global-bg-mobile);
+      }
+    }
+
+    @media (max-width: 700px) {
+      :root {
+        --books-card-vertical-offset: -16dvh;
       }
     }
 
@@ -1565,6 +1574,10 @@
       display: block;
     }
 
+    #booksHomeMusicBtn:not(.is-on) svg {
+      opacity: 0.6;
+    }
+
     .books-home-control-btn span {
       font-size: 12px;
       font-weight: 800;
@@ -1614,6 +1627,8 @@
       border-radius: 30px;
       filter: none;
       overflow: visible;
+      transform: scale(0.7);
+      transform-origin: top right;
     }
 
     body.books-player-blackout #booksHomePanel .books-home-sleep-toggle {
@@ -2177,7 +2192,7 @@
 
     .books-home-sleep-fab {
       position: fixed;
-      top: max(16px, env(safe-area-inset-top));
+      top: max(28px, env(safe-area-inset-top));
       right: max(16px, env(safe-area-inset-right));
       left: auto;
       bottom: auto;
@@ -2210,16 +2225,17 @@
 
     .books-sleep-fab-meta {
       position: fixed;
-      top: calc(max(16px, env(safe-area-inset-top)) + 76px);
-      right: max(12px, env(safe-area-inset-right));
-      width: min(210px, 54vw);
+      left: 50%;
+      top: calc(50% + (var(--books-card-book-height, min(304px, 66vw)) / 2) + var(--books-card-vertical-offset, -10dvh) + 12dvh);
+      width: min(270px, 72vw);
       z-index: 259;
       display: grid;
-      justify-items: end;
+      justify-items: center;
       gap: 3px;
-      text-align: right;
+      text-align: center;
       color: #ffffff;
       pointer-events: none;
+      transform: translateX(-50%);
       transition: opacity 220ms ease, filter 220ms ease;
     }
 
@@ -2454,7 +2470,7 @@
       box-shadow:
         0 26px 44px rgba(0, 0, 0, 0.48),
         18px 0 24px rgba(0, 0, 0, 0.18);
-      transform: translate(-50%, calc(-50% + var(--books-card-vertical-offset) + 10vh)) perspective(1300px) rotateY(-16deg) rotateX(7deg);
+      transform: translate(-50%, calc(-50% + var(--books-card-vertical-offset))) perspective(1300px) rotateY(-16deg) rotateX(7deg);
       transform-origin: center center;
       transform-style: preserve-3d;
       overflow: visible;
@@ -2479,7 +2495,7 @@
       top: 50%;
       width: var(--books-card-book-width);
       height: var(--books-card-book-height);
-      transform: translate(-50%, calc(-50% + var(--books-card-vertical-offset) + 10vh));
+      transform: translate(-50%, calc(-50% + var(--books-card-vertical-offset)));
       border-radius: 14px;
       background: transparent;
       pointer-events: none;
@@ -2488,7 +2504,7 @@
     .books-card__badge {
       position: absolute;
       right: calc(50% - (var(--books-card-book-width) / 2) - (var(--books-card-badge-size) * 0.08));
-      bottom: calc(50% - (var(--books-card-book-height) / 2) - (var(--books-card-badge-size) * 0.06));
+      bottom: calc(50% - (var(--books-card-book-height) / 2) - (var(--books-card-badge-size) * 0.06) - var(--books-card-vertical-offset));
       width: var(--books-card-badge-size);
       height: var(--books-card-badge-size);
       display: grid;
