@@ -1134,7 +1134,7 @@
     .books-home-book-slot {
       min-height: 0;
       display: flex;
-      align-items: flex-end;
+      align-items: center;
       justify-content: center;
       padding-top: 70px;
       padding-bottom: 0;
@@ -2916,13 +2916,17 @@
     }
 
     .books-card__sleep-btn {
-      position: absolute;
-      left: 50%;
-      top: calc(50% + var(--books-card-vertical-offset) + (var(--books-card-book-height) / 2) + 34px);
-      transform: translateX(-50%);
-      width: min(250px, 62vw);
-      border: 1.5px solid rgba(122, 223, 255, 0.9);
+      position: fixed;
+      top: max(16px, env(safe-area-inset-top));
+      right: max(16px, env(safe-area-inset-right));
+      left: auto;
+      bottom: auto;
+      transform: none;
+      width: 76px;
+      height: 76px;
       border-radius: 999px;
+      padding: 0;
+      border: 1.5px solid rgba(122, 223, 255, 0.9);
       background: linear-gradient(180deg, rgba(7, 34, 88, 0.96), rgba(10, 25, 63, 0.98));
       color: #f4fbff;
       display: inline-flex;
@@ -2940,7 +2944,7 @@
 
     .books-card__sleep-btn:hover,
     .books-card__sleep-btn:focus-visible {
-      transform: translateX(-50%) translateY(-2px);
+      transform: translateY(-2px);
       filter: saturate(1.05);
     }
 
