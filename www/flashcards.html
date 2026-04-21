@@ -728,7 +728,7 @@
       gap: 8px;
       order: 2;
       position: absolute;
-      top: calc(50% - 116px);
+      top: calc(50% - 116px - 15vh);
       left: 50%;
       transform: translateX(-50%);
       width: min(100%, 460px);
@@ -767,7 +767,7 @@
     .miccheck-checks {
       order: 4;
       position: absolute;
-      top: calc(50% + 78px);
+      top: calc(50% + 78px + 15vh);
       left: 50%;
       transform: translateX(-50%);
       display: flex;
@@ -775,6 +775,22 @@
       justify-content: center;
       gap: 22px;
       min-height: 42px;
+    }
+
+    #miccheck #micTestStatus {
+      position: absolute;
+      left: 50%;
+      bottom: clamp(20px, 5vh, 44px);
+      transform: translateX(-50%);
+      width: min(92vw, 420px);
+      margin: 0;
+      font-family: "Open Sans", Arial, sans-serif;
+      font-size: clamp(18px, 4.8vw, 24px);
+      font-weight: 800;
+      line-height: 1.2;
+      text-align: center;
+      color: #ffffff;
+      text-shadow: 0 4px 14px rgba(0, 0, 0, 0.36);
     }
 
     .miccheck-step-icon {
@@ -7451,6 +7467,8 @@
           micCheckOpen: false,
           micCheckSubtitleIndex: 0,
           micCheckSubtitleTimer: 0,
+          micCheckFeedbackIndex: 0,
+          micCheckFeedbackTimer: 0,
           micCheckStatus: '',
           micCheckBusy: false,
           micCheckRecognition: null
@@ -8669,6 +8687,11 @@
         'Clique em permitir',
         'E diga microfone'
       ];
+      const MIC_CHECK_FEEDBACK_ROTATION_MS = 2400;
+      const MIC_CHECK_FEEDBACK_MESSAGES = [
+        'Sem capta\u00e7\u00e3o de voz',
+        'Diga qualquer coisa'
+      ];
 
       function readAudioCheckCompletedFlag() {
         try {
@@ -8956,8 +8979,8 @@
         document.body.classList.add('robotcheck-open');
         document.body.classList.add('sound-test-open');
         startMicCheckSubtitleRotation();
+        startMicCheckFeedbackRotation();
         resetMicCheckSteps();
-        setMicCheckStatus('');
       }
 
       function closeMicCheck() {
@@ -8968,6 +8991,7 @@
         document.documentElement.classList.remove('robotcheck-open');
         document.body.classList.remove('robotcheck-open', 'sound-test-open');
         stopMicCheckSubtitleRotation();
+        stopMicCheckFeedbackRotation();
       }
 
       function setMicCheckSubtitle(text, animate = false) {
@@ -8998,8 +9022,50 @@
         state.ui.micCheckSubtitleTimer = 0;
       }
 
+      function renderMicCheckFeedback() {
+        if (!els.micTestStatus) return;
+        const message = MIC_CHECK_FEEDBACK_MESSAGES[state.ui.micCheckFeedbackIndex % MIC_CHECK_FEEDBACK_MESSAGES.length];
+        state.ui.micCheckStatus = message;
+        els.micTestStatus.textContent = message;
+      }
+
+      function startMicCheckFeedbackRotation() {
+        stopMicCheckFeedbackRotation();
+        state.ui.micCheckFeedbackIndex = 0;
+        renderMicCheckFeedback();
+        state.ui.micCheckFeedbackTimer = window.setInterval(() => {
+          if (!state.ui.micCheckOpen) {
+            stopMicCheckFeedbackRotation();
+            return;
+          }
+          state.ui.micCheckFeedbackIndex = (state.ui.micCheckFeedbackIndex + 1) % MIC_CHECK_FEEDBACK_MESSAGES.length;
+          renderMicCheckFeedback();
+        }, MIC_CHECK_FEEDBACK_ROTATION_MS);
+      }
+
+      function stopMicCheckFeedbackRotation() {
+        if (!state.ui.micCheckFeedbackTimer) return;
+        window.clearInterval(state.ui.micCheckFeedbackTimer);
+        state.ui.micCheckFeedbackTimer = 0;
+      }
+
       function setMicCheckStatus(message) {
-        state.ui.micCheckStatus = safeText(message);
+        const nextMessage = safeText(message);
+        if (nextMessage === 'Microfone ativado.') {
+          stopMicCheckFeedbackRotation();
+          state.ui.micCheckStatus = nextMessage;
+          if (els.micTestStatus) {
+            els.micTestStatus.textContent = nextMessage;
+          }
+          return;
+        }
+        if (state.ui.micCheckOpen) {
+          if (!state.ui.micCheckFeedbackTimer) {
+            startMicCheckFeedbackRotation();
+          }
+          return;
+        }
+        state.ui.micCheckStatus = nextMessage;
         if (els.micTestStatus) {
           els.micTestStatus.textContent = state.ui.micCheckStatus || '';
         }
