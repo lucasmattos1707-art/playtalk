@@ -1,0 +1,2890 @@
+{
+  "deletedAt": "2026-04-21T13:32:08.821Z",
+  "ids": [
+    "smarttalk-small-steps",
+    "the-small-moment-that-changes-your-day",
+    "can-you-become-a-new-you",
+    "it-gets-better-but-not-that-fun",
+    "simple-money-real-growth",
+    "so-how-were-those-greek-schools",
+    "wait-what-were-the-silk-roads",
+    "you-don-t-find-yourself-you-notice-yourself",
+    "fluencia-natural-no-ingles"
+  ],
+  "rows": [
+    {
+      "book_id": "smarttalk-small-steps",
+      "file_name": "smarttalk-small-steps.json",
+      "title": "SMARTTALK: SMALL STEPS",
+      "level": 1,
+      "payload": {
+        "tag": "smarttalk-small-steps",
+        "nome": "SMARTTALK: SMALL STEPS",
+        "nivel": 1,
+        "bookId": "smarttalk-small-steps",
+        "prompts": {
+          "cover": "simple modern cover, two friendly characters talking, soft blue and green tones, clean typography, light and minimal design, beginner friendly, calm and positive vibe",
+          "background": "light background, soft pastel colors, smooth gradients, simple shapes, calm and friendly atmosphere"
+        },
+        "fileName": "smarttalk-small-steps.json",
+        "smarttalk-small-steps": [
+          {
+            "en": "Hey, you ok?",
+            "pt": "#Hey, you ok?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/001.mp3?v=1775443553499",
+            "highlight": true
+          },
+          {
+            "en": "Yeah, just tired",
+            "pt": "Yeah, just tired",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/002.mp3?v=1775443553499",
+            "highlight": false
+          },
+          {
+            "en": "Too much going on?",
+            "pt": "#Too much going on?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/003.mp3?v=1775443553499",
+            "highlight": true
+          },
+          {
+            "en": "Yeah, a lot today",
+            "pt": "Yeah, a lot today",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/004.mp3?v=1775443553499",
+            "highlight": false
+          },
+          {
+            "en": "Take it slow, ok?",
+            "pt": "#Take it slow, ok?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/005.mp3?v=1775443553499",
+            "highlight": true
+          },
+          {
+            "en": "I try, but hard",
+            "pt": "I try, but hard",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/006.mp3?v=1775443553499",
+            "highlight": false
+          },
+          {
+            "en": "One step at time",
+            "pt": "#One step at time",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/007.mp3?v=1775443553499",
+            "highlight": true
+          },
+          {
+            "en": "Just one step?",
+            "pt": "Just one step?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/008.mp3?v=1775443553499",
+            "highlight": false
+          },
+          {
+            "en": "Yes, just one step",
+            "pt": "#Yes, just one step",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/009.mp3?v=1775443553499",
+            "highlight": true
+          },
+          {
+            "en": "Feels too small",
+            "pt": "Feels too small",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/010.mp3?v=1775443553499",
+            "highlight": false
+          },
+          {
+            "en": "Small is good start",
+            "pt": "#Small is good start",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/011.mp3?v=1775443553499",
+            "highlight": true
+          },
+          {
+            "en": "Ok, I get it",
+            "pt": "Ok, I get it",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/012.mp3?v=1775443553499",
+            "highlight": false
+          },
+          {
+            "en": "No need be perfect",
+            "pt": "#No need be perfect",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/013.mp3?v=1775443553499",
+            "highlight": true
+          },
+          {
+            "en": "That helps a bit",
+            "pt": "That helps a bit",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/014.mp3?v=1775443553499",
+            "highlight": false
+          },
+          {
+            "en": "You are doing fine",
+            "pt": "#You are doing fine",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/015.mp3?v=1775443553499",
+            "highlight": true
+          },
+          {
+            "en": "Thanks, I try",
+            "pt": "Thanks, I try",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/016.mp3?v=1775443553499",
+            "highlight": false
+          },
+          {
+            "en": "Keep going, ok?",
+            "pt": "#Keep going, ok?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/017.mp3?v=1775443553499",
+            "highlight": true
+          },
+          {
+            "en": "Yeah, I will try",
+            "pt": "Yeah, I will try",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/018.mp3?v=1775443553499",
+            "highlight": false
+          },
+          {
+            "en": "That is enough now",
+            "pt": "#That is enough now",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/smarttalk-small-steps/019.mp3?v=1775443553499",
+            "highlight": true
+          }
+        ]
+      },
+      "updated_at": "2026-04-06T02:46:11.613Z"
+    },
+    {
+      "book_id": "the-small-moment-that-changes-your-day",
+      "file_name": "the-small-moment-that-changes-your-day.json",
+      "title": "\"The Small Moment That Changes Your Day\"",
+      "level": 2,
+      "payload": {
+        "tag": "\"the-small-moment-that-changes-your-day\"",
+        "nome": "\"The Small Moment That Changes Your Day\"",
+        "nivel": 2,
+        "bookId": "the-small-moment-that-changes-your-day",
+        "prompts": {
+          "cover": "\"capa minimalista luz suave janela\"",
+          "background": "\"fundo claro com degrade luz calma\""
+        },
+        "fileName": "the-small-moment-that-changes-your-day.json",
+        "the-small-moment-that-changes-your-day": [
+          {
+            "en": "Eu acordei tarde. De novo.",
+            "pt": "I woke up late. Again.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/001.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Celular vibrando.",
+            "pt": "Phone buzzing.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/002.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Mente já cansada.",
+            "pt": "Mind already tired.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/003.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Não hoje, pensei.",
+            "pt": "Not today, I thought.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/004.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Mas sim, estava acontecendo.",
+            "pt": "But yeah, it was happening.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/005.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Levantei devagar.",
+            "pt": "I got up, slow.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/006.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Sem pressa.",
+            "pt": "No rush.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/007.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Fiz café.",
+            "pt": "Made coffee.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/008.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Só fiquei ali.",
+            "pt": "Just standing there.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/009.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Esperando.",
+            "pt": "Waiting.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/010.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Então algo pequeno aconteceu.",
+            "pt": "Then something small happened.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/011.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Olhei para a janela.",
+            "pt": "I looked at the window.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/012.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "A luz entrava.",
+            "pt": "Light was coming in.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/013.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Suave. Silenciosa.",
+            "pt": "Soft. Quiet.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/014.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "E eu parei.",
+            "pt": "And I stopped.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/015.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Sem celular.",
+            "pt": "No phone.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/016.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Sem pensar no futuro.",
+            "pt": "No thinking ahead.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/017.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Só aquele momento.",
+            "pt": "Just that moment.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/018.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Hmm... isso é bom.",
+            "pt": "Hmm… this is nice.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/019.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Durou dez segundos.",
+            "pt": "It lasted ten seconds.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/020.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Mas foi diferente.",
+            "pt": "But it felt different.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/021.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "No ônibus, tudo bagunçado.",
+            "pt": "On the bus, still messy.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/022.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Pessoas barulhentas.",
+            "pt": "People loud.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/023.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Trânsito lento.",
+            "pt": "Traffic slow.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/024.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Mas eu não era o mesmo.",
+            "pt": "But I wasn’t the same.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/025.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Guardei aquela luz.",
+            "pt": "I kept that light.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/026.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Aquela pausa.",
+            "pt": "That pause.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/027.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Não precisamos dias perfeitos.",
+            "pt": "We don’t need perfect days.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/028.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Precisamos de um momento.",
+            "pt": "We need one moment.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/029.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Tente isso depois.",
+            "pt": "Try this later.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/030.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Pare por dez segundos.",
+            "pt": "Stop ten seconds.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/031.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Olhe ao redor.",
+            "pt": "Look around.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/032.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Respire.",
+            "pt": "Breathe.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/033.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Não conserte nada.",
+            "pt": "Don’t fix anything.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/034.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Só observe.",
+            "pt": "Just notice.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/035.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Não resolve a vida.",
+            "pt": "It won’t solve life.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/036.mp3?v=1775521216277",
+            "highlight": false
+          },
+          {
+            "en": "Mas pode mudar seu dia.",
+            "pt": "But it may change your day.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/the-small-moment-that-changes-your-day/037.mp3?v=1775521216277",
+            "highlight": false
+          }
+        ]
+      },
+      "updated_at": "2026-04-07T00:21:45.302Z"
+    },
+    {
+      "book_id": "can-you-become-a-new-you",
+      "file_name": "can-you-become-a-new-you.json",
+      "title": "Can You Become a New You?",
+      "level": 3,
+      "payload": {
+        "tag": "can-you-become-a-new-you",
+        "nome": "Can You Become a New You?",
+        "nivel": 3,
+        "bookId": "can-you-become-a-new-you",
+        "prompts": {
+          "cover": "Crie uma capa de livro em português com o título \"Can You Become a New You?\" e a logline \"Uma visão curiosa e realista sobre como mudanças reais podem parecer se tornar uma nova pessoa.\" usar tipografia moderna e introspectiva, com fonte branca elegante e levemente suave, fundo com estética de transformação pessoal, como transição de sombra para luz ou formas abstratas evoluindo, cores harmonizadas como azul profundo, roxo suave e tons claros, sensação de mudança, crescimento e consciência, composição premium com título no topo e arte ao fundo ocupando 100% do tamanho vertical e horizontal da arte, alinhamento premium, proporção 9:16",
+          "background": "Fundo abstrato representando transformação pessoal, com transições suaves de cores, formas orgânicas evoluindo, luz emergindo da sombra, tons de azul, roxo e branco, sensação de profundidade, mudança e equilíbrio, estilo moderno e contemplativo"
+        },
+        "fileName": "can-you-become-a-new-you.json",
+        "can-you-become-a-new-you": [
+          {
+            "en": "Posso me tornar uma pessoa",
+            "pt": "Can I become a totally",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/001.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "totalmente nova?",
+            "pt": "new person?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/002.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Hmm… depende.",
+            "pt": "Hmm… depends.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/003.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Não é mágica.",
+            "pt": "Not magic.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/004.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Mas… é meio possível.",
+            "pt": "But… kind of possible.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/005.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "O que você quer dizer?",
+            "pt": "What do you mean?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/006.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Você não acorda",
+            "pt": "You don’t wake up",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/007.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "sendo outra pessoa.",
+            "pt": "as someone else.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/008.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Mas pode mudar padrões.",
+            "pt": "But you can change patterns.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/009.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Pensamentos, hábitos, reações.",
+            "pt": "Thoughts. Habits. Reactions.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/010.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Então… tipo nova versão?",
+            "pt": "So… like a new version?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/011.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Sim.",
+            "pt": "Yeah.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/012.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Mesmo corpo.",
+            "pt": "Same body.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/013.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Forma de viver diferente.",
+            "pt": "Different way of living.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/014.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "E o trauma?",
+            "pt": "But what about trauma?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/015.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "E maus hábitos?",
+            "pt": "Bad habits?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/016.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Eles não somem do nada.",
+            "pt": "They don’t just disappear.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/017.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Vamos ser honestos.",
+            "pt": "Let’s be honest.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/018.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Mas…",
+            "pt": "But…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/019.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Você pode enfraquecer.",
+            "pt": "You can weaken them.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/020.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Pode parar de alimentar.",
+            "pt": "You can stop feeding them.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/021.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Como?",
+            "pt": "How?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/022.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Pequenas mudanças.",
+            "pt": "Small shifts.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/023.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "O que faz todo dia.",
+            "pt": "What you do every day.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/024.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "O que pensa…",
+            "pt": "What you think…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/025.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "de novo e de novo.",
+            "pt": "again and again.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/026.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Seu cérebro se adapta.",
+            "pt": "Your brain adapts.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/027.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Isso é real.",
+            "pt": "That’s real.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/028.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Ele aprende novos caminhos.",
+            "pt": "It learns new paths.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/029.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Posso me reprogramar?",
+            "pt": "So I can reprogram myself?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/030.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Hmm… não como máquina.",
+            "pt": "Hmm… not like a machine.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/031.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Mas pode se treinar.",
+            "pt": "But you can train yourself.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/032.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Devagar.",
+            "pt": "Slowly.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/033.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "E essa ideia de",
+            "pt": "Where does this new",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/034.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "nova energia?",
+            "pt": "energy idea come in?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/035.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Boa pergunta.",
+            "pt": "Good question.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/036.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Não é energia mágica.",
+            "pt": "It’s not magic energy.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/037.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "É seu estado.",
+            "pt": "It’s your state.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/038.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Seu foco.",
+            "pt": "Your focus.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/039.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Suas emoções.",
+            "pt": "Your emotions.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/040.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Seu corpo.",
+            "pt": "Your body.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/041.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Tudo junto.",
+            "pt": "All working together.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/042.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Quando dorme melhor…",
+            "pt": "When you sleep better…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/043.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "pensa com clareza…",
+            "pt": "think clearer…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/044.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "age com intenção…",
+            "pt": "act with intention…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/045.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Você se sente diferente.",
+            "pt": "You feel different.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/046.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Tipo… mais leve?",
+            "pt": "Like… lighter?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/047.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Sim.",
+            "pt": "Yeah.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/048.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Mais estável.",
+            "pt": "More stable.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/049.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Mais no controle.",
+            "pt": "More in control.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/050.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "E as pessoas dizem:",
+            "pt": "And people say:",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/051.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Estou em outra vibração.",
+            "pt": "I’m in a different vibration.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/052.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "É só uma forma de dizer.",
+            "pt": "It’s a way to describe it.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/053.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Mas a base é real.",
+            "pt": "But the base is real.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/054.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Psicologia, biologia, hábitos.",
+            "pt": "Psychology. Biology. Behavior.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/055.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Então não preciso",
+            "pt": "So I don’t need to",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/056.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "fugir do passado?",
+            "pt": "escape my past?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/057.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Não.",
+            "pt": "No.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/058.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Você constrói sobre ele.",
+            "pt": "You build over it.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/059.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Dia após dia.",
+            "pt": "Day by day.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/060.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Escolha por escolha.",
+            "pt": "Choice by choice.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/061.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Um dia você percebe:",
+            "pt": "One day, you notice:",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/062.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Não reajo como antes.",
+            "pt": "I don’t react like before.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/063.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Não quero as mesmas coisas.",
+            "pt": "I don’t want the same things.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/064.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Essa é a mudança.",
+            "pt": "That’s the shift.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/065.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Não é instantânea.",
+            "pt": "Not instant.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/066.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Mas é profunda.",
+            "pt": "But deep.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/067.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Então…",
+            "pt": "So…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/068.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Pode virar um novo você?",
+            "pt": "Can you become a new you?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/069.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Não de repente.",
+            "pt": "Not suddenly.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/070.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Nem perfeito.",
+            "pt": "Not perfectly.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/071.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Mas com o tempo?",
+            "pt": "But over time?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/072.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Sim…",
+            "pt": "Yeah…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/073.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "Você pode se tornar alguém",
+            "pt": "You can become someone",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/074.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "bem diferente.",
+            "pt": "very different.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/075.mp3?v=1775706585370",
+            "highlight": false
+          },
+          {
+            "en": "E isso parece… real.",
+            "pt": "And it feels… real.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/can-you-become-a-new-you/076.mp3?v=1775706585370",
+            "highlight": false
+          }
+        ]
+      },
+      "updated_at": "2026-04-09T03:51:08.940Z"
+    },
+    {
+      "book_id": "it-gets-better-but-not-that-fun",
+      "file_name": "it-gets-better-but-not-that-fun.json",
+      "title": "It Gets Better… But Not That Fun",
+      "level": 4,
+      "payload": {
+        "tag": "it-gets-better-but-not-that-fun",
+        "nome": "It Gets Better… But Not That Fun",
+        "nivel": 4,
+        "bookId": "it-gets-better-but-not-that-fun",
+        "prompts": {
+          "cover": "Crie uma capa de livro em português com o título \"It Gets Better… But Not That Fun\" e a logline \"Algumas tarefas melhoram muito, mas nunca se tornam puro prazer — e tudo bem.\" usar tipografia moderna, limpa e levemente minimalista, com fonte branca elegante e bem contrastada, fundo com estética cotidiana e levemente abstrata representando rotina (organização, limpeza, fluxo), cores suaves como azul claro, bege e tons neutros, sensação de calma e progresso, composição equilibrada com título no topo e arte ao fundo ocupando 100% do tamanho vertical e horizontal da arte, alinhamento premium, proporção 9:16",
+          "background": "Fundo abstrato minimalista representando rotina e organização, elementos suaves como linhas fluindo, objetos organizados, tons neutros e azul claro, iluminação suave, sensação de leveza e ordem, estilo moderno e clean"
+        },
+        "fileName": "it-gets-better-but-not-that-fun.json",
+        "it-gets-better-but-not-that-fun": [
+          {
+            "en": "Aff… não quero fazer isso.",
+            "pt": "Ugh… I don’t wanna do this.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/001.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Sim… já falei isso muito.",
+            "pt": "Yeah… I’ve said that a lot.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/002.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Limpar, organizar, coisas",
+            "pt": "Cleaning, organizing, small",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/003.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "pequenas do dia a dia…",
+            "pt": "daily stuff…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/004.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Nunca é como ver um",
+            "pt": "It never feels like watching",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/005.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "filme.",
+            "pt": "a movie.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/006.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "E sabe de uma coisa?",
+            "pt": "And you know what?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/007.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Nunca vai ser.",
+            "pt": "It never will.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/008.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Mas… espera.",
+            "pt": "But… wait.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/009.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Isso não quer dizer que",
+            "pt": "That doesn’t mean it",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/010.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "não pode melhorar.",
+            "pt": "can’t get better.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/011.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Posso tornar isso mais fácil?",
+            "pt": "Can I make this easier?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/012.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Sim. Você pode.",
+            "pt": "Yes. You can.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/013.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Você pode ir mais rápido.",
+            "pt": "You can move faster.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/014.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Você pode achar um ritmo.",
+            "pt": "You can find a rhythm.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/015.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Pode parar de pensar demais.",
+            "pt": "You can stop overthinking.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/016.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Um dia, você só… faz.",
+            "pt": "One day, you just… do it.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/017.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Sem drama.",
+            "pt": "No drama.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/018.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Como?",
+            "pt": "How?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/019.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Bom… algumas coisas ajudam.",
+            "pt": "Well… a few things help.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/020.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Primeiro, mentalidade.",
+            "pt": "First, mindset.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/021.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Por que estou fazendo isso?",
+            "pt": "Why am I doing this?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/022.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Não por diversão.",
+            "pt": "Not for fun.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/023.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Pela paz. Pela ordem.",
+            "pt": "For peace. For order.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/024.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Pelo meu eu do futuro.",
+            "pt": "For future me.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/025.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Segundo, sistema.",
+            "pt": "Second, system.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/026.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Você melhora a forma",
+            "pt": "You improve the way",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/027.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "de fazer as coisas.",
+            "pt": "you do things.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/028.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Como escovar os dentes.",
+            "pt": "Like brushing your teeth.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/029.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Mesma tarefa.",
+            "pt": "Same task.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/030.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Mas movimento melhor.",
+            "pt": "But better movement.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/031.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Mais fluido. Menos tempo.",
+            "pt": "Better flow. Less time.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/032.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Você nem percebe…",
+            "pt": "You don’t notice…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/033.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "mas melhorou.",
+            "pt": "but you improved.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/034.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Terceiro, ambiente.",
+            "pt": "Third, environment.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/035.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Menos atrito.",
+            "pt": "Less friction.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/036.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Tudo no lugar certo.",
+            "pt": "Everything in the right place.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/037.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Sem caos. Sem esforço extra.",
+            "pt": "No chaos. No extra effort.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/038.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Você começa… e flui.",
+            "pt": "You start… and it flows.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/039.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "E sim… adicione algo leve.",
+            "pt": "And yeah… add something light.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/040.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Música. Ar fresco.",
+            "pt": "Music. Fresh air.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/041.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Pés descalços no chão.",
+            "pt": "Bare feet on the floor.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/042.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Não é incrível.",
+            "pt": "It’s not amazing.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/043.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Mas é… melhor.",
+            "pt": "But it’s… nicer.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/044.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Ainda assim…",
+            "pt": "Still…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/045.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Vamos ser honestos.",
+            "pt": "Let’s be honest.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/046.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Isso nunca vai vencer",
+            "pt": "This will never beat",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/047.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "pizza e Netflix.",
+            "pt": "pizza and Netflix.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/048.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Nem perto.",
+            "pt": "Not even close.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/049.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "E esse é o ponto.",
+            "pt": "And that’s the point.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/050.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Nem tudo precisa.",
+            "pt": "Not everything needs to.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/051.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Algumas coisas não são",
+            "pt": "Some things are not",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/052.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "para prazer.",
+            "pt": "for pleasure.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/053.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Elas são para estrutura.",
+            "pt": "They are for structure.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/054.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "E estrutura dá",
+            "pt": "And structure gives",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/055.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "liberdade.",
+            "pt": "you freedom.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/056.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Estranho, né?",
+            "pt": "Weird, right?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/057.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Mas é verdade.",
+            "pt": "But true.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/058.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Então da próxima vez:",
+            "pt": "So next time you think:",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/059.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Isso é chato…",
+            "pt": "This is boring…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/060.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Talvez diga:",
+            "pt": "Maybe just say:",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/061.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "Ok… mas estou ficando",
+            "pt": "Okay… but I’m getting",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/062.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "melhor nisso.",
+            "pt": "better at it.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/063.mp3?v=1775705820370",
+            "highlight": false
+          },
+          {
+            "en": "E isso já basta.",
+            "pt": "And that’s enough.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/it-gets-better-but-not-that-fun/064.mp3?v=1775705820370",
+            "highlight": false
+          }
+        ]
+      },
+      "updated_at": "2026-04-09T03:38:19.693Z"
+    },
+    {
+      "book_id": "simple-money-real-growth",
+      "file_name": "simple-money-real-growth.json",
+      "title": "Simple Money, Real Growth",
+      "level": 4,
+      "payload": {
+        "tag": "simple-money-real-growth",
+        "nome": "Simple Money, Real Growth",
+        "nivel": 4,
+        "bookId": "simple-money-real-growth",
+        "prompts": {
+          "cover": "Crie uma capa de livro em português com o título \"Simple Money, Real Growth\" e a logline \"Ficar mais rico não é mágica — são hábitos simples repetidos por muito tempo.\" usar tipografia moderna, elegante e financeira, com fonte branca sofisticada e bem contrastada, fundo com estética clean representando crescimento financeiro gradual, elementos visuais sutis como gráficos ascendentes, linhas suaves ou moedas minimalistas, cores harmonizadas como verde, azul escuro e tons neutros, sensação de estabilidade, progresso e inteligência financeira, composição premium com título no topo e arte ao fundo ocupando 100% do tamanho vertical e horizontal da arte, alinhamento premium, proporção 9:16",
+          "background": "Fundo abstrato financeiro minimalista com sensação de crescimento contínuo, elementos como linhas ascendentes suaves, gráficos discretos e formas geométricas elegantes, tons de verde, azul escuro e cinza, iluminação suave, estilo moderno e clean"
+        },
+        "fileName": "simple-money-real-growth.json",
+        "simple-money-real-growth": [
+          {
+            "en": "Eu quero mais dinheiro.",
+            "pt": "I want more money.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/001.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Sim… todo mundo quer.",
+            "pt": "Yeah… everyone does.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/002.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Mas como isso funciona?",
+            "pt": "But how does it really work?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/003.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Dinheiro rápido?",
+            "pt": "Fast money?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/004.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Golpes de sorte?",
+            "pt": "Lucky hits?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/005.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Hmm… não muito.",
+            "pt": "Hmm… not really.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/006.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Dinheiro real é lento.",
+            "pt": "Real money is slow.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/007.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "E constante.",
+            "pt": "And steady.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/008.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Não empolga… mas funciona.",
+            "pt": "Not exciting… but it works.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/009.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Por onde começo?",
+            "pt": "Where do I start?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/010.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Primeiro… ganhar.",
+            "pt": "First… earn.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/011.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Você precisa de renda.",
+            "pt": "You need income.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/012.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Um trabalho. Uma habilidade.",
+            "pt": "A job. A skill. A service.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/013.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "O dinheiro começa aí.",
+            "pt": "Money starts there.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/014.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Segundo… não gaste tudo.",
+            "pt": "Second… don’t spend everything.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/015.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Sim… isso é difícil.",
+            "pt": "Yeah… this is hard.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/016.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Mas importa muito.",
+            "pt": "But it matters a lot.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/017.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Guarde um pouco.",
+            "pt": "Save a little.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/018.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Mesmo que seja pouco.",
+            "pt": "Even a small amount.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/019.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Todo mês.",
+            "pt": "Every month.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/020.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Sem desculpas.",
+            "pt": "No excuses.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/021.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Terceiro… investir.",
+            "pt": "Third… invest.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/022.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Coisas simples.",
+            "pt": "Simple things.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/023.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Coisas seguras.",
+            "pt": "Safe things.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/024.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Longo prazo.",
+            "pt": "Long term.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/025.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "É rápido?",
+            "pt": "Is it fast?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/026.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Não.",
+            "pt": "No.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/027.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "E esse é o ponto.",
+            "pt": "And that’s the point.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/028.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "O tempo faz o trabalho.",
+            "pt": "Time does the work.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/029.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Não você.",
+            "pt": "Not you.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/030.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Você só continua.",
+            "pt": "You just keep going.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/031.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Alguns tentam atalhos.",
+            "pt": "Some people try shortcuts.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/032.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Hype de cripto.",
+            "pt": "Crypto hype.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/033.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Trades rápidos.",
+            "pt": "Quick trades.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/034.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Hmm… arriscado.",
+            "pt": "Hmm… risky.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/035.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Às vezes funciona.",
+            "pt": "Sometimes it works.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/036.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Na maioria… não funciona.",
+            "pt": "Most times… it doesn’t.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/037.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Ganhos sólidos.",
+            "pt": "Solid wins.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/038.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Ganhos lentos.",
+            "pt": "Slow wins.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/039.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Mas permanece.",
+            "pt": "But it stays.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/040.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Pense assim:",
+            "pt": "Think like this:",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/041.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Estou construindo, não apostando.",
+            "pt": "I’m building, not gambling.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/042.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Os anos passam.",
+            "pt": "Years pass.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/043.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Você continua consistente.",
+            "pt": "You stay consistent.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/044.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Você não desiste.",
+            "pt": "You don’t quit.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/045.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Um dia você vê.",
+            "pt": "One day, you check.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/046.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Uau… isso cresceu.",
+            "pt": "Wow… this grew.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/047.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Não rápido.",
+            "pt": "Not fast.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/048.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Mas forte.",
+            "pt": "But strong.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/049.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Então…",
+            "pt": "So…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/050.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Ganhe.",
+            "pt": "Earn.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/051.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Guarde.",
+            "pt": "Save.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/052.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Invista.",
+            "pt": "Invest.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/053.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "Repita.",
+            "pt": "Repeat.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/054.mp3?v=1775706174434",
+            "highlight": false
+          },
+          {
+            "en": "E dê tempo ao tempo.",
+            "pt": "And give it time.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/simple-money-real-growth/055.mp3?v=1775706174434",
+            "highlight": false
+          }
+        ]
+      },
+      "updated_at": "2026-04-09T03:43:56.335Z"
+    },
+    {
+      "book_id": "so-how-were-those-greek-schools",
+      "file_name": "so-how-were-those-greek-schools.json",
+      "title": "So… How Were Those Greek Schools?",
+      "level": 4,
+      "payload": {
+        "tag": "so-how-were-those-greek-schools",
+        "nome": "So… How Were Those Greek Schools?",
+        "nivel": 4,
+        "bookId": "so-how-were-those-greek-schools",
+        "prompts": {
+          "cover": "Crie uma capa de livro em português com o título \"So… How Were Those Greek Schools?\" e a logline \"Uma conversa leve sobre como Platão e Aristóteles ensinavam de forma simples e real.\" usar tipografia elegante com toque clássico e moderno, fonte branca sofisticada inspirada na filosofia grega, fundo com ambiente ao ar livre com colunas gregas, árvores e estudantes caminhando, estilo artístico leve e intelectual, cores em tons de bege, mármore, azul claro e dourado suave, atmosfera de curiosidade e reflexão, composição premium com título no topo e arte ao fundo ocupando 100% do tamanho vertical e horizontal da arte, alinhamento premium, proporção 9:16",
+          "background": "Fundo artístico inspirado na Grécia antiga com jardins, colunas e pessoas caminhando e conversando, luz natural suave, tons de mármore branco, bege e azul céu, estilo clean e contemplativo com sensação de aprendizado e curiosidade"
+        },
+        "fileName": "so-how-were-those-greek-schools.json",
+        "so-how-were-those-greek-schools": [
+          {
+            "en": "Ei… as escolas da Grécia",
+            "pt": "Hey… were schools in ancient",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/001.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "eram como as nossas?",
+            "pt": "Greece like ours?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/002.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Hmm… não muito.",
+            "pt": "Hmm… not really.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/003.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Eram bem diferentes.",
+            "pt": "They were very different.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/004.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Diferentes como?",
+            "pt": "Different how?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/005.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Bom… sem salas como hoje.",
+            "pt": "Well… no classrooms like today.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/006.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Sem filas. Sem quadro.",
+            "pt": "No rows. No whiteboard.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/007.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Às vezes… só espaços abertos.",
+            "pt": "Sometimes… just open spaces.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/008.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Árvores. Jardins. Caminhando.",
+            "pt": "Trees. Gardens. Walking around.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/009.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Ué… estudavam fora?",
+            "pt": "Wait… they studied outside?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/010.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Sim… bastante.",
+            "pt": "Yeah… a lot.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/011.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Por exemplo, Platão tinha",
+            "pt": "For example, Plato had",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/012.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "um lugar chamado Academia.",
+            "pt": "a place called the Academy.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/013.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "As pessoas conversavam,",
+            "pt": "People talked, asked questions,",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/014.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "perguntavam e discutiam.",
+            "pt": "discussed ideas.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/015.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Não só ouvir… mas pensar.",
+            "pt": "Not just listening… but thinking.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/016.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Isso parece legal…",
+            "pt": "That sounds kind of nice…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/017.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Era sim.",
+            "pt": "It was.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/018.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Mas também intenso.",
+            "pt": "But also intense.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/019.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Falavam sobre vida, verdade,",
+            "pt": "They talked about life, truth,",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/020.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "política…",
+            "pt": "politics…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/021.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Grandes perguntas.",
+            "pt": "Big questions.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/022.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "E Aristóteles?",
+            "pt": "And what about Aristotle?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/023.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Ah… a escola dele era",
+            "pt": "Ah… his school was a bit",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/024.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "um pouco diferente.",
+            "pt": "different.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/025.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Chamava-se Liceu.",
+            "pt": "It was called the Lyceum.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/026.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Ele gostava de ensinar andando.",
+            "pt": "He liked to walk while teaching.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/027.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Andar e aprender?",
+            "pt": "Walk and learn?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/028.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Sim… alunos iam com ele.",
+            "pt": "Yeah… students walked with him.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/029.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Conversando, perguntando.",
+            "pt": "Talking, asking, thinking.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/030.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Passo a passo.",
+            "pt": "Step by step.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/031.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Então sem provas?",
+            "pt": "So no tests?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/032.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Não como hoje.",
+            "pt": "Not like today.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/033.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Menos decorar.",
+            "pt": "Less memorizing.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/034.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Mais entender.",
+            "pt": "More understanding.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/035.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Parece mais real.",
+            "pt": "That feels… more real.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/036.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Sim… mais ou menos.",
+            "pt": "Yeah… kind of.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/037.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Era mais lento.",
+            "pt": "It was slower.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/038.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Mais humano.",
+            "pt": "More human.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/039.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Mais curioso.",
+            "pt": "More curious.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/040.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Você acha que era melhor?",
+            "pt": "Do you think it was better?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/041.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Hmm…",
+            "pt": "Hmm…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/042.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Algumas partes, sim.",
+            "pt": "Some parts, yes.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/043.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Outras, não.",
+            "pt": "Some parts, no.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/044.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Hoje temos mais acesso.",
+            "pt": "Today we have more access.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/045.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Mais ferramentas, info.",
+            "pt": "More tools. More information.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/046.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Mas talvez…",
+            "pt": "But maybe…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/047.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Menos pensamento profundo.",
+            "pt": "Less deep thinking.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/048.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "O que podemos aprender?",
+            "pt": "So what can we learn from them?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/049.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Simples.",
+            "pt": "Simple.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/050.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Pergunte mais.",
+            "pt": "Ask more questions.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/051.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Pense por si.",
+            "pt": "Think for yourself.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/052.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Não aceite tudo.",
+            "pt": "Don’t just accept things.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/053.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Hmm… gostei disso.",
+            "pt": "Hmm… I like that.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/054.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "É…",
+            "pt": "Yeah…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/055.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Escolas antigas.",
+            "pt": "Old schools.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/056.mp3?v=1775706380145",
+            "highlight": false
+          },
+          {
+            "en": "Mas ideias ainda vivas.",
+            "pt": "But still very alive ideas.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/so-how-were-those-greek-schools/057.mp3?v=1775706380145",
+            "highlight": false
+          }
+        ]
+      },
+      "updated_at": "2026-04-09T03:47:26.216Z"
+    },
+    {
+      "book_id": "wait-what-were-the-silk-roads",
+      "file_name": "wait-what-were-the-silk-roads.json",
+      "title": "Wait… What Were the Silk Roads?",
+      "level": 4,
+      "payload": {
+        "tag": "wait-what-were-the-silk-roads",
+        "nome": "Wait… What Were the Silk Roads?",
+        "nivel": 4,
+        "bookId": "wait-what-were-the-silk-roads",
+        "prompts": {
+          "cover": "Crie uma capa de livro em português com o título \"Wait… What Were the Silk Roads?\" e a logline \"Uma conversa simples sobre como as Rotas da Seda conectaram pessoas, mercadorias e ideias.\" usar tipografia elegante com toque histórico e moderno, fonte branca bem contrastada, fundo com paisagens que remetam a rotas antigas como desertos, montanhas e caravanas, estilo artístico cinematográfico e levemente abstrato, cores quentes como dourado, areia, marrom e azul profundo, atmosfera de viagem, conexão e descoberta, composição premium com título no topo e arte ao fundo ocupando 100% do tamanho vertical e horizontal da arte, alinhamento premium, proporção 9:16",
+          "background": "Fundo artístico inspirado nas Rotas da Seda com caravanas no deserto, montanhas ao fundo e céu amplo, tons quentes de areia, dourado e azul, luz suave de pôr do sol, sensação de jornada, conexão e história, estilo clean e imersivo"
+        },
+        "fileName": "wait-what-were-the-silk-roads.json",
+        "wait-what-were-the-silk-roads": [
+          {
+            "en": "Ei… o que são as Rotas da Seda?",
+            "pt": "Hey… what are the Silk Roads?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/001.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Boa pergunta.",
+            "pt": "Good question.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/002.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Não era só uma estrada.",
+            "pt": "They were not just one road.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/003.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Eram várias rotas.",
+            "pt": "They were many routes.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/004.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Rotas… tipo caminhos?",
+            "pt": "Routes… like travel paths?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/005.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Exatamente.",
+            "pt": "Exactly.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/006.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Caminhos longos ligando a China",
+            "pt": "Long paths connecting China",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/007.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "à Europa.",
+            "pt": "to Europe.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/008.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Passando por desertos,",
+            "pt": "Passing through deserts,",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/009.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "montanhas e cidades.",
+            "pt": "mountains, and cities.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/010.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Uau… isso é longe.",
+            "pt": "Wow… that sounds far.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/011.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Era sim.",
+            "pt": "It was.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/012.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Muito longe.",
+            "pt": "Very far.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/013.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Viagens levavam meses…",
+            "pt": "Trips could take months…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/014.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "até anos.",
+            "pt": "even years.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/015.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Mas por que viajar tanto?",
+            "pt": "But why travel so much?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/016.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Comércio.",
+            "pt": "Trade.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/017.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Pessoas levavam produtos.",
+            "pt": "People carried goods.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/018.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Seda, especiarias, ouro, chá.",
+            "pt": "Silk, spices, gold, tea.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/019.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Seda… da China?",
+            "pt": "Silk… from China?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/020.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Sim.",
+            "pt": "Yes.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/021.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Por isso chamamos de",
+            "pt": "That’s why we call it",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/022.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Rotas da Seda.",
+            "pt": "Silk Roads.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/023.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "A seda era valiosa.",
+            "pt": "Silk was very valuable.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/024.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Só coisas eram trocadas?",
+            "pt": "Only things were traded?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/025.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Não… essa é a parte legal.",
+            "pt": "No… that’s the interesting part.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/026.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Ideias viajavam também.",
+            "pt": "Ideas traveled too.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/027.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Que tipo de ideias?",
+            "pt": "What kind of ideas?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/028.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Religião, ciência, cultura.",
+            "pt": "Religion. Science. Culture.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/029.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Por exemplo, o budismo",
+            "pt": "For example, Buddhism moved",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/030.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "se espalhou por elas.",
+            "pt": "along these routes.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/031.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Então as pessoas mudaram",
+            "pt": "So people changed because",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/032.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "por causa disso?",
+            "pt": "of that?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/033.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Exatamente.",
+            "pt": "Exactly.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/034.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Novas crenças, hábitos.",
+            "pt": "New beliefs. New habits.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/035.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Novas formas de ver o mundo.",
+            "pt": "New ways to see the world.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/036.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Era seguro?",
+            "pt": "Was it safe?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/037.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Hmm… nem sempre.",
+            "pt": "Hmm… not always.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/038.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Havia perigos.",
+            "pt": "There were dangers.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/039.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Bandidos, clima ruim.",
+            "pt": "Bandits. Weather.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/040.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Longas distâncias.",
+            "pt": "Long distances.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/041.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Então por que fazer?",
+            "pt": "Then why do it?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/042.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Porque valia a pena.",
+            "pt": "Because the reward was big.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/043.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Novos bens, conhecimento.",
+            "pt": "New goods. New knowledge.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/044.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Novas conexões.",
+            "pt": "New connections.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/045.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Parece a internet…",
+            "pt": "Sounds like the internet…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/046.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "mas lenta.",
+            "pt": "but slow.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/047.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Haha… sim, mais ou menos.",
+            "pt": "Haha… yeah, kind of.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/048.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Muito lenta… mas poderosa.",
+            "pt": "Very slow… but powerful.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/049.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Qual é a lição aqui?",
+            "pt": "So what’s the lesson here?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/050.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Simples.",
+            "pt": "Simple.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/051.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Conexão muda tudo.",
+            "pt": "Connection changes everything.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/052.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Quando pessoas se encontram…",
+            "pt": "When people meet…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/053.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "coisas crescem.",
+            "pt": "things grow.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/054.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Ideias crescem.",
+            "pt": "Ideas grow.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/055.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "O comércio cresce.",
+            "pt": "Trade grows.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/056.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "A vida muda.",
+            "pt": "Life changes.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/057.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Hmm… isso é legal.",
+            "pt": "Hmm… that’s actually cool.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/058.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "É…",
+            "pt": "Yeah…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/059.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Rotas antigas.",
+            "pt": "Old roads.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/060.mp3?v=1775706448040",
+            "highlight": false
+          },
+          {
+            "en": "Grande impacto.",
+            "pt": "Big impact.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/wait-what-were-the-silk-roads/061.mp3?v=1775706448040",
+            "highlight": false
+          }
+        ]
+      },
+      "updated_at": "2026-04-09T03:48:30.834Z"
+    },
+    {
+      "book_id": "you-don-t-find-yourself-you-notice-yourself",
+      "file_name": "you-don-t-find-yourself-you-notice-yourself.json",
+      "title": "You Don’t Find Yourself… You Notice Yourself",
+      "level": 4,
+      "payload": {
+        "tag": "you-dont-find-yourself-you-notice-yourself",
+        "nome": "You Don’t Find Yourself… You Notice Yourself",
+        "nivel": 4,
+        "bookId": "you-don-t-find-yourself-you-notice-yourself",
+        "prompts": {
+          "cover": "Crie uma capa de livro em português com o título \"You Don’t Find Yourself… You Notice Yourself\" e a logline \"Autoconhecimento não é uma grande descoberta — são pequenos momentos honestos que você para de ignorar.\" usar tipografia elegante, introspectiva e contemporânea, com fonte branca sofisticada e harmonizada com o tema, fundo emocional e minimalista representando reflexão, percepção e consciência, com atmosfera suave, artística e profunda, cores equilibradas em tons de azul acinzentado, bege claro, branco suave e sombras sutis, composição premium com título na parte superior, arte tomando o background de forma refinada, capa em português, proporção 9:16, ocupando 100% do tamanho vertical e horizontal da arte, alinhamento premium",
+          "background": "Fundo abstrato e contemplativo representando autoconhecimento e percepção, com luz suave, camadas delicadas, formas orgânicas, sensação de pausa e introspecção, tons de azul acinzentado, areia clara e branco fosco, estética clean, moderna e emocional, contraste ideal para tipografia branca"
+        },
+        "fileName": "you-don-t-find-yourself-you-notice-yourself.json",
+        "you-dont-find-yourself-you-notice-yourself": [
+          {
+            "en": "Eu preciso me encontrar…",
+            "pt": "I need to find myself…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/001.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Hmm… parece grande, né?",
+            "pt": "Hmm… sounds big, right?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/002.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Como se faltasse algo.",
+            "pt": "Like something is missing.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/003.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Mas e se… nada estiver faltando?",
+            "pt": "But what if… nothing is missing?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/004.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "E se você só não",
+            "pt": "What if you’re just not",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/005.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "estiver prestando atenção?",
+            "pt": "paying attention?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/006.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Ontem, você estava cansado.",
+            "pt": "Yesterday, you felt tired.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/007.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Mas disse: estou bem.",
+            "pt": "But you said, I’m fine.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/008.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Hoje, você se irritou.",
+            "pt": "Today, you got irritated.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/009.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Mas disse: não é nada.",
+            "pt": "But you said, It’s nothing.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/010.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Pequenas mentiras. O dia todo.",
+            "pt": "Little lies. All day.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/011.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "O autoconhecimento começa aí.",
+            "pt": "Self-knowledge starts there.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/012.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Não nos livros.",
+            "pt": "Not in books.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/013.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Não em teorias profundas.",
+            "pt": "Not in deep theories.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/014.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Em momentos pequenos e honestos.",
+            "pt": "In small, honest moments.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/015.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "O que estou sentindo agora?",
+            "pt": "What am I feeling right now?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/016.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Pausa.",
+            "pt": "Pause.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/017.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Não conserte isso.",
+            "pt": "Don’t fix it.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/018.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Só perceba.",
+            "pt": "Just notice it.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/019.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Às vezes é simples.",
+            "pt": "Sometimes it’s simple.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/020.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Estou cansado.",
+            "pt": "I’m tired.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/021.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Estou entediado.",
+            "pt": "I’m bored.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/022.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Eu não quero isso.",
+            "pt": "I don’t want this.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/023.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Sim… isso é real.",
+            "pt": "Yeah… that’s real.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/024.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Outras vezes, é bagunçado.",
+            "pt": "Other times, it’s messy.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/025.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Eu disse sim… mas queria não.",
+            "pt": "I said yes… but I wanted no.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/026.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Hmm…",
+            "pt": "Hmm…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/027.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Isso fica na sua cabeça.",
+            "pt": "That one stays in your head.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/028.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Você começa a ver padrões.",
+            "pt": "You begin to see patterns.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/029.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Mesmas reações.",
+            "pt": "Same reactions.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/030.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Mesmas escolhas.",
+            "pt": "Same choices.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/031.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Dias diferentes.",
+            "pt": "Different days.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/032.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Por que eu sempre faço isso?",
+            "pt": "Why do I always do this?",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/033.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Boa pergunta.",
+            "pt": "Good question.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/034.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Não apresse a resposta.",
+            "pt": "Don’t rush the answer.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/035.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Só fique com isso um pouco.",
+            "pt": "Just stay with it a bit.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/036.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "O autoconhecimento é lento.",
+            "pt": "Self-knowledge is slow.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/037.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Não é um grande momento.",
+            "pt": "It’s not a big moment.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/038.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "É um processo silencioso.",
+            "pt": "It’s a quiet process.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/039.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Você observa a si mesmo.",
+            "pt": "You watch yourself.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/040.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Enquanto fala.",
+            "pt": "While talking.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/041.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Enquanto trabalha.",
+            "pt": "While working.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/042.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Enquanto evita coisas.",
+            "pt": "While avoiding things.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/043.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "E às vezes você ri.",
+            "pt": "And sometimes you laugh.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/044.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Uau… eu sempre faço isso.",
+            "pt": "Wow… I always do that.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/045.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Sim… agora você vê.",
+            "pt": "Yeah… now you see it.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/046.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "E aqui vem a virada.",
+            "pt": "And here’s the shift.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/047.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Quando você vê isso…",
+            "pt": "When you see it…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/048.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "você pode mudar.",
+            "pt": "you can change it.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/049.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Não tudo de uma vez.",
+            "pt": "Not all at once.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/050.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Mas passo a passo.",
+            "pt": "But step by step.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/051.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Então não…",
+            "pt": "So no…",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/052.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Você não se encontra.",
+            "pt": "You don’t find yourself.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/053.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Você se percebe.",
+            "pt": "You notice yourself.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/054.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "Um pouco mais a cada dia.",
+            "pt": "A little more each day.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/055.mp3?v=1775705923709",
+            "highlight": false
+          },
+          {
+            "en": "E… isso muda tudo.",
+            "pt": "And… that changes everything.",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/you-don-t-find-yourself-you-notice-yourself/056.mp3?v=1775705923709",
+            "highlight": false
+          }
+        ]
+      },
+      "updated_at": "2026-04-09T03:39:49.507Z"
+    },
+    {
+      "book_id": "fluencia-natural-no-ingles",
+      "file_name": "fluencia-natural-no-ingles.json",
+      "title": "Fluência Natural no Inglês",
+      "level": 7,
+      "payload": {
+        "tag": "fluencia-natural-no-ingles",
+        "nome": "Fluência Natural no Inglês",
+        "nivel": 7,
+        "bookId": "fluencia-natural-no-ingles",
+        "prompts": {
+          "cover": "Capa moderna e minimalista com tipografia elegante e fluida, título em destaque com fonte sans-serif suave, cores azul e branco transmitindo clareza e progresso, fundo com elementos abstratos que remetem a comunicação e movimento, iluminação leve e sofisticada, estilo clean e profissional",
+          "background": "Background abstrato em tons de azul com degradê suave, formas fluidas representando comunicação, iluminação leve e moderna, contraste ideal para texto branco"
+        },
+        "fileName": "fluencia-natural-no-ingles.json",
+        "fluencia-natural-no-ingles": [
+          {
+            "en": "- Fluência não é perfeição",
+            "pt": "- Fluency is not perfection",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/001.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- É sobre comunicação",
+            "pt": "- It is about communication",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/002.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Fale mesmo com erros",
+            "pt": "- Speak even with mistakes",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/003.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Erros ajudam você crescer",
+            "pt": "- Mistakes help you grow",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/004.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Pratique todos os dias",
+            "pt": "- Practice every single day",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/005.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Pequenos passos geram confiança",
+            "pt": "- Small steps build confidence",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/006.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Ouça mais do que fala",
+            "pt": "- Listen more than you speak",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/007.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Seu cérebro aprende padrões",
+            "pt": "- Your brain learns patterns",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/008.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Repita frases em voz alta",
+            "pt": "- Repeat phrases out loud",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/009.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Isso melhora pronúncia",
+            "pt": "- This improves pronunciation",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/010.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Pense em inglês diariamente",
+            "pt": "- Think in English daily",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/011.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Evite traduzir tudo",
+            "pt": "- Avoid translating everything",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/012.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Use frases simples primeiro",
+            "pt": "- Use simple sentences first",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/013.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Depois aumente complexidade",
+            "pt": "- Then increase complexity",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/014.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Leia conteúdos que gosta",
+            "pt": "- Read content you enjoy",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/015.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Isso mantém motivação",
+            "pt": "- This keeps you motivated",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/016.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Veja vídeos com legenda",
+            "pt": "- Watch videos with subtitles",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/017.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Depois retire legendas",
+            "pt": "- Then remove the subtitles",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/018.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Fale com pessoas reais",
+            "pt": "- Speak with real people",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/019.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Prática cria fluência real",
+            "pt": "- Practice builds real fluency",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/020.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Tenha paciência com você",
+            "pt": "- Be patient with yourself",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/021.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Fluência leva tempo",
+            "pt": "- Fluency takes time to grow",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/022.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Mantenha consistência",
+            "pt": "- Stay consistent and focused",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/023.mp3?v=1775521372478",
+            "highlight": false
+          },
+          {
+            "en": "- Você verá progresso logo",
+            "pt": "- You will see progress soon",
+            "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/minibooks/audio/fluencia-natural-no-ingles/024.mp3?v=1775521372478",
+            "highlight": false
+          }
+        ]
+      },
+      "updated_at": "2026-04-07T00:23:58.533Z"
+    }
+  ]
+}

@@ -615,6 +615,7 @@
 
     .account-stats-carousel {
       width: 100%;
+      margin-bottom: 5vh;
       overflow: visible;
       position: relative;
     }
@@ -736,8 +737,10 @@
     }
 
     .account-logout-wrap {
-      width: min(90%, 420px);
-      margin: 4px auto 0;
+      position: fixed;
+      top: calc(var(--native-top-offset) + max(14px, env(safe-area-inset-top, 0px)));
+      right: max(14px, env(safe-area-inset-right, 0px));
+      z-index: 80;
       display: grid;
     }
 
@@ -746,13 +749,34 @@
     }
 
     .account-button--logout {
-      min-height: 48px;
+      width: 42px;
+      height: 42px;
+      min-height: 0;
+      padding: 0;
+      border-radius: 50%;
       background: linear-gradient(180deg, rgba(5, 30, 55, 0.9), rgba(5, 19, 39, 0.94));
       color: #e8f9ff;
       border: 1.5px solid rgba(114, 239, 255, 0.48);
+      display: grid;
+      place-items: center;
       box-shadow:
         inset 0 0 0 1px rgba(189, 247, 255, 0.08),
         0 0 16px rgba(86, 225, 255, 0.2);
+    }
+
+    .account-button--logout:hover,
+    .account-button--logout:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(168, 247, 255, 0.78);
+      box-shadow:
+        inset 0 0 0 1px rgba(189, 247, 255, 0.12),
+        0 0 22px rgba(86, 225, 255, 0.34);
+    }
+
+    .account-logout-icon {
+      width: 21px;
+      height: 21px;
+      display: block;
     }
 
     .account-stats-label {
@@ -1395,7 +1419,11 @@
             <div class="account-stats-pages" id="accountStatsPages"></div>
           </div>
           <div class="account-logout-wrap" id="accountLogoutWrap" hidden>
-            <button class="account-button account-button--logout" id="accountLogoutBtn" type="button">Sair da conta</button>
+            <button class="account-button account-button--logout" id="accountLogoutBtn" type="button" aria-label="Sair da conta" title="Sair da conta">
+              <svg class="account-logout-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M11 3a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V5H6v14h4v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6Zm6.7 5.3 3 3a1 1 0 0 1 0 1.4l-3 3a1 1 0 0 1-1.4-1.4l1.29-1.3H10a1 1 0 1 1 0-2h7.59l-1.3-1.3a1 1 0 1 1 1.42-1.4Z"/>
+              </svg>
+            </button>
           </div>
           <section class="account-premium" id="accountPremiumCard" hidden>
             <strong id="accountPremiumLevel"></strong>
