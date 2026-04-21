@@ -169,7 +169,7 @@
       height: 100% !important;
     }
 
-    body.robotcheck-open > *:not(#robotcheck) {
+    body.robotcheck-open > *:not(#robotcheck):not(#miccheck) {
       visibility: hidden !important;
     }
 
@@ -8678,8 +8678,11 @@
       }
 
       function closeAudioCheck() {
-        document.documentElement.classList.remove('robotcheck-open');
-        document.body.classList.remove('robotcheck-open', 'sound-test-open');
+        state.ui.soundTestOpen = false;
+        if (!state.ui.micCheckOpen) {
+          document.documentElement.classList.remove('robotcheck-open');
+          document.body.classList.remove('robotcheck-open', 'sound-test-open');
+        }
         els.robotcheck?.classList.remove('is-visible');
         stopAudioCheckSubtitleRotation();
         stopAudioCheckAudio();
@@ -8998,6 +9001,7 @@
       }
 
       function shouldShowWelcomeGate() {
+        if (state.ui.soundTestOpen || state.ui.micCheckOpen) return false;
         if (state.entry.authRequired || state.game.active || state.watch.active) return false;
         if (LEGACY_FLASHCARDS_HOME_ENABLED) {
           if (isNativeRuntime()) return false;
@@ -9086,7 +9090,7 @@
         els.welcomeGate?.classList.toggle('is-visible', visible);
         syncWelcomeStartButton();
         syncWelcomeAccountLink();
-        if (visible) {
+        if (visible && !state.ui.soundTestOpen && !state.ui.micCheckOpen) {
           closeAudioCheck();
         }
         if (!visible) {
