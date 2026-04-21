@@ -14253,10 +14253,12 @@ app.use((req, res, next) => {
 
   const payload = getAuthenticatedUserFromRequest(req);
   if (!payload) {
-    const returnTo = req.originalUrl && req.originalUrl !== '/auth.html'
-      ? `?return=${encodeURIComponent(req.originalUrl)}`
+    const requestedUrl = req.originalUrl || '';
+    const isCanonicalLoginPath = requestedUrl === '/entrar' || requestedUrl === '/entrar/' || requestedUrl === '/auth.html';
+    const returnTo = requestedUrl && !isCanonicalLoginPath
+      ? `?return=${encodeURIComponent(requestedUrl)}`
       : '';
-    res.redirect(`/auth.html${returnTo}`);
+    res.redirect(`/entrar${returnTo}`);
     return;
   }
 
@@ -14279,7 +14281,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(staticDir, 'landing.html'));
 });
 
-app.get(['/auth', '/auth/', '/auth.html'], (req, res) => {
+app.get(['/entrar', '/entrar/', '/auth', '/auth/', '/auth.html'], (req, res) => {
   const payload = getAuthenticatedUserFromRequest(req);
   if (payload) {
     const requestedReturn = typeof req.query?.return === 'string' ? req.query.return.trim() : '';

@@ -1,4 +1,4 @@
-﻿.auth-page {
+.auth-page {
   min-height: 100vh;
   margin: 0;
   display: grid;
@@ -6,6 +6,7 @@
   background: #041226 url('/backgrounds/playtalk-global-desktop.webp') center/cover fixed no-repeat;
   font-family: 'Open Sans', sans-serif;
   padding: 20px;
+  overflow-x: hidden;
 }
 
 .auth-page,
@@ -16,6 +17,8 @@
 @media (max-width: 800px) {
   .auth-page {
     background-image: url('/backgrounds/playtalk-global-mobile.webp');
+    padding: 16px;
+    justify-items: center;
   }
 }
 
@@ -28,15 +31,27 @@
   backdrop-filter: blur(8px);
   padding: 26px;
   color: #ffffff;
+  margin-inline: auto;
+  justify-self: center;
 }
 
 .auth-logo {
-  width: min(100%, 280px);
+  width: min(100%, 350px);
   max-height: 120px;
   height: auto;
   object-fit: contain;
   display: block;
   margin: 0 auto 18px;
+}
+
+@media (max-width: 800px) {
+  .auth-card {
+    width: min(420px, calc(100vw - 32px));
+  }
+
+  .auth-logo {
+    width: min(100%, 330px);
+  }
 }
 
 .auth-subtitle {
@@ -173,4 +188,3 @@
 .auth-message.is-success {
   color: #9fffe0;
 }
-
