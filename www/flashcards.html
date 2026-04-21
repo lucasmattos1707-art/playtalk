@@ -4844,6 +4844,10 @@
       display: none;
     }
 
+    .game-controls-proxy[hidden] {
+      display: none !important;
+    }
+
     .game[data-phase-key="first-star"] .game-controls-proxy,
     .game[data-phase-key="third-star"] .game-controls-proxy,
     .game[data-phase-key="fifth-star"] .game-controls-proxy {
@@ -6451,7 +6455,7 @@
         <article class="game-card circlescreen" id="gameCard" aria-live="polite">
           <div class="game-card__layout">
             <div class="game-card__visual" id="gameVisual"></div>
-            <div class="game-controls-proxy is-hidden" id="gameControlsProxy" aria-hidden="true">
+            <div class="game-controls-proxy is-hidden" id="gameControlsProxy" aria-hidden="true" hidden>
               <button class="game-language-btn" id="gameLanguageBtn" type="button" tabindex="-1" aria-hidden="true">
                 <img src="SVG/codex-icons/ingles.svg" alt="">
               </button>
@@ -12512,6 +12516,7 @@
       function renderGameTouchButton(stageConfig, entry) {
         const stageNumber = Number(entry?.stage) || 0;
         const useBooksMic = stageNumber === 1 || stageNumber === 3 || stageNumber === 5;
+        els.gameTouchBtn.parentElement.hidden = !useBooksMic;
         els.gameTouchBtn.className = 'game-touch';
         els.gameTouchBtn.textContent = '';
         els.gameTouchBtn.innerHTML = '';
@@ -12526,6 +12531,7 @@
           els.gameTouchBtn.classList.add('is-hidden');
           return;
         }
+        els.gameTouchBtn.parentElement.hidden = false;
         els.gameTouchBtn.classList.add('game-touch--books-mic');
         els.gameTouchBtn.innerHTML = GAME_TOUCH_ICON_MARKUP;
       }
