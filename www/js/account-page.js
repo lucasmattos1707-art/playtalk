@@ -657,11 +657,15 @@
   function renderPremiumButton() {
     if (!els.premiumBtn || !els.premiumLabel || !els.premiumIcon) return;
     const loggedIn = isLoggedIn();
+    const premiumActive = loggedIn && isPremiumActive();
     if (els.premiumActionRow) {
       els.premiumActionRow.hidden = !loggedIn;
     }
-    els.premiumLabel.textContent = loggedIn ? 'Obter premium' : 'Entrar';
-    els.premiumIcon.hidden = !loggedIn;
+    els.premiumBtn.classList.toggle('is-cancel', premiumActive);
+    els.premiumLabel.textContent = premiumActive
+      ? 'Cancelar premium'
+      : (loggedIn ? 'Obter premium' : 'Entrar');
+    els.premiumIcon.hidden = !loggedIn || premiumActive;
   }
 
   function syncGuestInlineUi() {
@@ -1434,6 +1438,10 @@
     els.premiumBtn?.addEventListener('click', () => {
       if (!state.user?.id) {
         void loginFromAccount();
+        return;
+      }
+      if (isPremiumActive()) {
+        setStatus('Cancelamento premium: fale com o suporte para concluir.', 'success');
         return;
       }
       navigateTo('/premium');
