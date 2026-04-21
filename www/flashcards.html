@@ -538,6 +538,10 @@
       justify-items: center;
     }
 
+    #miccheck .soundcheck-header {
+      order: 1;
+    }
+
     .soundcheck-header p {
       margin: 0;
       color: #ffffff;
@@ -558,7 +562,7 @@
       margin: 0;
       min-height: 1.5em;
       color: #ffffff;
-      font-size: clamp(1rem, 2.8vw, 1.24rem);
+      font-size: clamp(1.4rem, 3.92vw, 1.74rem);
       transition: opacity 220ms ease, transform 220ms ease;
     }
 
@@ -603,6 +607,10 @@
 
     .soundcheck-play--mic {
       border-radius: 999px;
+    }
+
+    #miccheck .soundcheck-play--mic {
+      order: 2;
     }
 
     .soundcheck-play.is-listening {
@@ -705,14 +713,17 @@
     }
 
     .miccheck-rules {
-      display: grid;
-      align-items: stretch;
-      justify-items: stretch;
-      gap: 14px;
-      min-height: 158px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px 18px;
+      order: 3;
+      width: min(100%, 380px);
+      min-height: 104px;
       color: #ffffff;
       font-family: "Open Sans", Arial, sans-serif;
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 800;
       line-height: 1.25;
       text-align: center;
@@ -721,9 +732,12 @@
     .miccheck-rules p {
       margin: 0;
       display: flex;
+      flex: 1 1 108px;
+      min-width: 0;
       align-items: center;
       justify-content: center;
-      gap: 12px;
+      flex-direction: column;
+      gap: 10px;
       max-height: 0;
       opacity: 0;
       transform: translateY(8px);
@@ -733,7 +747,7 @@
     }
 
     .miccheck-rules p.is-visible {
-      max-height: 64px;
+      max-height: 104px;
       opacity: 1;
       transform: translateY(0);
     }
@@ -787,7 +801,7 @@
     }
 
     .soundcheck-keyboard {
-      width: min(433px, calc(100vw - 32px));
+      width: min(368px, calc(100vw - 59px));
       max-width: 100%;
       box-sizing: border-box;
       justify-self: center;
@@ -817,6 +831,10 @@
       font-family: "Open Sans", Arial, sans-serif;
     }
 
+    .soundcheck-answer:empty {
+      display: none;
+    }
+
     .soundcheck-answer .is-correct {
       color: #ffffff;
     }
@@ -834,7 +852,7 @@
     }
 
     .soundcheck-keyboard .flashcards-typing__key {
-      min-height: clamp(68px, 12vw, 95px);
+      min-height: clamp(58px, 10.2vw, 81px);
       aspect-ratio: 1 / 1;
       display: flex;
       align-items: center;
@@ -844,7 +862,7 @@
       background: linear-gradient(145deg, #061b49 0%, #0b2e74 55%, #1558b5 100%);
       color: #ffffff;
       font-family: "Pltay", "Soopafre", Arial, sans-serif;
-      font-size: clamp(49px, 15.84vw, 97px);
+      font-size: clamp(42px, 13.46vw, 82px);
       line-height: 1;
       text-shadow:
         0 2px 0 rgba(8, 38, 102, 0.98),
@@ -4247,6 +4265,44 @@
       display: none;
     }
 
+    .game[data-phase-key="first-star"].is-first-stage-mic-hint-visible .textscreen .game-status-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: min(92vw, 620px);
+      margin: 0 auto;
+    }
+
+    .game[data-phase-key="first-star"].is-first-stage-mic-hint-visible .textscreen .game-status-icon {
+      display: none !important;
+    }
+
+    .game[data-phase-key="first-star"].is-first-stage-mic-hint-visible .textscreen .game-status {
+      color: #ffffff !important;
+      font-family: "Open Sans", Arial, sans-serif;
+      font-size: clamp(19px, 5vw, 28px);
+      font-weight: 800;
+      line-height: 1.12;
+      text-align: center;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.34);
+      white-space: normal;
+    }
+
+    .game-status__hint-blue {
+      color: #7fe6ff;
+      text-shadow: 0 0 14px rgba(127, 230, 255, 0.58);
+    }
+
+    .game-status__hint-green {
+      color: #8fffc3;
+      text-shadow: 0 0 14px rgba(143, 255, 195, 0.54);
+    }
+
+    .game-status__hint-red {
+      color: #ff8f8f;
+      text-shadow: 0 0 14px rgba(255, 143, 143, 0.54);
+    }
+
     .game[data-phase-key="third-star"] .textscreen .game-status-wrap,
     .game[data-phase-key="fifth-star"] .textscreen .game-status-wrap {
       display: flex;
@@ -6541,7 +6597,7 @@
       <main class="soundcheck-shell">
         <header class="soundcheck-header">
           <h1>Teste de som</h1>
-          <h2 class="soundcheck-subtitle" id="soundTestSubtitle">Toque em play para ouvir</h2>
+          <h2 class="soundcheck-subtitle" id="soundTestSubtitle">Toque no circulo</h2>
         </header>
 
         <button class="soundcheck-play" id="soundTestPlayBtn" type="button" aria-label="Play">
@@ -6569,15 +6625,15 @@
         <div class="miccheck-rules">
           <p class="is-visible" data-mic-rule data-mic-step="touch">
             <span class="miccheck-step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l1.8-1.8 2.8 2.8 8-8L19.2 6.8z"/></svg></span>
-            <span>Toque no "<strong class="miccheck-neon-blue">circulo azul</strong>"</span>
+            <span>Toque no <strong class="miccheck-neon-blue">circulo azul</strong></span>
           </p>
           <p data-mic-rule data-mic-step="permit">
             <span class="miccheck-step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l1.8-1.8 2.8 2.8 8-8L19.2 6.8z"/></svg></span>
-            <span>Clique em "<strong class="miccheck-neon-green">permitir</strong>"</span>
+            <span>Clique em <strong class="miccheck-neon-green">permitir</strong></span>
           </p>
           <p data-mic-rule data-mic-step="speak">
             <span class="miccheck-step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l1.8-1.8 2.8 2.8 8-8L19.2 6.8z"/></svg></span>
-            <span>E diga "<strong class="miccheck-neon-orange">microfone</strong>"</span>
+            <span>E diga <strong class="miccheck-neon-orange">microfone</strong></span>
           </p>
         </div>
         <button class="soundcheck-play soundcheck-play--mic" id="micTestPlayBtn" type="button" aria-label="Ativar microfone">
@@ -7059,6 +7115,13 @@
       const FIFTH_STAR_HINT_ROTATION_MS = 1500;
       const FIFTH_STAR_HINT_MESSAGES = [];
       const THIRD_STAR_HINT_MESSAGES = [];
+      const FIRST_STAGE_MIC_HINT_DELAY_MS = 6000;
+      const FIRST_STAGE_MIC_HINT_ROTATION_MS = 2400;
+      const FIRST_STAGE_MIC_HINT_MESSAGES = [
+        { html: 'Toque no <span class="game-status__hint-blue">microfone</span>' },
+        { html: 'Espere ficar <span class="game-status__hint-green">verde</span>' },
+        { html: 'Fale <span class="game-status__hint-red">inglês</span>' }
+      ];
       const SECOND_STAR_IDLE_HINT_DELAY_MS = 4000;
       const SECOND_STAR_IDLE_HINT_ROTATION_MS = 750;
       const SECOND_STAR_IDLE_HINT_MESSAGES = ['Digite ingles', 'Type english'];
@@ -7268,6 +7331,9 @@
           stageHintTimer: 0,
           stageHintIndex: 0,
           firstStageIdleTimer: 0,
+          firstStageMicHintTimer: 0,
+          firstStageMicHintRotationTimer: 0,
+          firstStageMicHintIndex: 0,
           fifthStarHintDismissed: false,
           paused: false,
           reportCardId: '',
@@ -8556,11 +8622,15 @@
 
       const AUDIO_CHECK_STORAGE_KEY = 'playtalk-audio-check-completed';
       const MIC_CHECK_STORAGE_KEY = 'playtalk-mic-check-completed';
-      const AUDIO_CHECK_ROTATION_MS = 2000;
+      const AUDIO_CHECK_ROTATION_MS = 2400;
       const MIC_CHECK_ROTATION_MS = 1000;
       const AUDIO_CHECK_INPUT_MAX = 4;
       const AUDIO_CHECK_KEY_COUNT = 16;
       const AUDIO_CHECK_FALLBACK_WORDS = ['CASA', 'BOLA', 'GATO', 'PATO'];
+      const AUDIO_CHECK_SUBTITLE_MESSAGES = [
+        'Toque no circulo',
+        'Digite o que escutou'
+      ];
       const MIC_CHECK_MESSAGES = [
         'Toque no circulo azul',
         'Clique em permitir',
@@ -8670,7 +8740,7 @@
 
       function setAudioCheckSubtitle(text, animate = false) {
         if (!els.soundTestSubtitle) return;
-        const nextText = safeText(text) || 'Toque em play para ouvir';
+        const nextText = safeText(text) || AUDIO_CHECK_SUBTITLE_MESSAGES[0];
         if (!animate || els.soundTestSubtitle.textContent === nextText) {
           els.soundTestSubtitle.textContent = nextText;
           els.soundTestSubtitle.classList.remove('is-changing');
@@ -8687,12 +8757,12 @@
       function startAudioCheckSubtitleRotation() {
         stopAudioCheckSubtitleRotation();
         state.ui.soundTestSubtitleIndex = 0;
-        setAudioCheckSubtitle('Toque em play para ouvir');
+        setAudioCheckSubtitle(AUDIO_CHECK_SUBTITLE_MESSAGES[0]);
         state.ui.soundTestSubtitleTimer = window.setInterval(() => {
           if (!state.ui.soundTestOpen) return;
-          state.ui.soundTestSubtitleIndex = (state.ui.soundTestSubtitleIndex + 1) % 2;
+          state.ui.soundTestSubtitleIndex = (state.ui.soundTestSubtitleIndex + 1) % AUDIO_CHECK_SUBTITLE_MESSAGES.length;
           setAudioCheckSubtitle(
-            state.ui.soundTestSubtitleIndex === 0 ? 'Toque em play para ouvir' : '',
+            AUDIO_CHECK_SUBTITLE_MESSAGES[state.ui.soundTestSubtitleIndex],
             true
           );
         }, AUDIO_CHECK_ROTATION_MS);
@@ -8729,12 +8799,12 @@
         if (els.soundTestAnswer) {
           const expected = String(state.ui.audioCheckTargetWord || '').toUpperCase();
           const typed = String(state.ui.audioCheckTyped || '').toUpperCase();
-          els.soundTestAnswer.innerHTML = Array.from(expected || '').map((char, index) => {
+          els.soundTestAnswer.innerHTML = typed ? Array.from(expected || '').map((char, index) => {
             const nextTyped = typed[index] || '';
             const ok = nextTyped && nextTyped === char;
             const mismatch = nextTyped && nextTyped !== char;
-            return `<span class="${ok ? 'is-correct' : mismatch ? 'is-wrong' : ''}">${escapeHtml(nextTyped || '_')}</span>`;
-          }).join('');
+            return `<span class="${ok ? 'is-correct' : mismatch ? 'is-wrong' : ''}">${escapeHtml(nextTyped)}</span>`;
+          }).join('') : '';
         }
       }
 
@@ -8805,7 +8875,7 @@
         state.ui.audioCheckTargetWord = targetWords[0] || 'CASA';
         state.ui.soundTestTargetLetters = targetWords;
         state.ui.audioCheckTyped = '';
-        setAudioCheckStatus('Digite o que ouviu');
+        setAudioCheckStatus('');
         startAudioCheckSubtitleRotation();
         renderAudioCheckGate();
       }
@@ -13089,6 +13159,57 @@
         }
       }
 
+      function clearFirstStageMicHint({ clearStatus = false } = {}) {
+        if (state.game.firstStageMicHintTimer) {
+          window.clearTimeout(state.game.firstStageMicHintTimer);
+          state.game.firstStageMicHintTimer = 0;
+        }
+        if (state.game.firstStageMicHintRotationTimer) {
+          window.clearInterval(state.game.firstStageMicHintRotationTimer);
+          state.game.firstStageMicHintRotationTimer = 0;
+        }
+        state.game.firstStageMicHintIndex = 0;
+        els.game?.classList.remove('is-first-stage-mic-hint-visible');
+        if (clearStatus && safeText(els.game?.dataset?.phaseKey) === 'first-star') {
+          els.gameStatus.textContent = '';
+          els.gameStatus.className = 'game-status';
+        }
+      }
+
+      function renderFirstStageMicHintMessage() {
+        if (!els.gameStatus || safeText(els.game?.dataset?.phaseKey) !== 'first-star') return;
+        const message = FIRST_STAGE_MIC_HINT_MESSAGES[state.game.firstStageMicHintIndex % FIRST_STAGE_MIC_HINT_MESSAGES.length];
+        els.game.classList.add('is-first-stage-mic-hint-visible');
+        els.gameStatus.className = 'game-status is-visible';
+        els.gameStatus.innerHTML = message?.html || '';
+      }
+
+      function startFirstStageMicHintLoop(entry) {
+        clearFirstStageMicHint({ clearStatus: true });
+        if (!entry || Number(entry.stage) !== 1 || !state.game.active || state.game.currentId !== entry.id) return;
+        state.game.firstStageMicHintIndex = 0;
+        renderFirstStageMicHintMessage();
+        state.game.firstStageMicHintRotationTimer = window.setInterval(() => {
+          if (!state.game.active || state.game.paused || state.game.listening || state.game.currentId !== entry.id || Number(entry.stage) !== 1) {
+            clearFirstStageMicHint({ clearStatus: true });
+            return;
+          }
+          state.game.firstStageMicHintIndex = (state.game.firstStageMicHintIndex + 1) % FIRST_STAGE_MIC_HINT_MESSAGES.length;
+          renderFirstStageMicHintMessage();
+        }, FIRST_STAGE_MIC_HINT_ROTATION_MS);
+      }
+
+      function scheduleFirstStageMicHint(entry) {
+        clearFirstStageMicHint({ clearStatus: true });
+        if (!entry || Number(entry.stage) !== 1 || !state.game.active || state.game.currentId !== entry.id || state.game.listening) return;
+        state.game.firstStageMicHintTimer = window.setTimeout(() => {
+          state.game.firstStageMicHintTimer = 0;
+          if (!state.game.active || state.game.paused || state.game.transitioning || state.game.listening) return;
+          if (state.game.currentId !== entry.id || Number(entry.stage) !== 1) return;
+          startFirstStageMicHintLoop(entry);
+        }, FIRST_STAGE_MIC_HINT_DELAY_MS);
+      }
+
       function scheduleFirstStageIdleTimer(entry) {
         clearFirstStageIdleTimer();
         if (!entry || entry.stage !== 1 || !state.game.active || state.game.currentId !== entry.id) return;
@@ -13581,6 +13702,7 @@
       }
 
       function cleanupGameRecognition() {
+        clearFirstStageMicHint({ clearStatus: true });
         const current = state.game.recognition;
         if (!current) return;
         state.game.recognition = null;
@@ -14912,6 +15034,7 @@
           || stageConfig.key === 'fifth-star';
         const typingStage = isTypingStage(entry);
         clearGameMicUnlockTimer();
+        clearFirstStageMicHint({ clearStatus: true });
         if (typingStage) {
           entry.typingMistakes = 0;
         }
@@ -15037,6 +15160,7 @@
         scheduleStageTutorialReminder(entry);
         scheduleStageTwoHintLoop(entry);
         scheduleFirstStageIdleTimer(entry);
+        scheduleFirstStageMicHint(entry);
 
         if (typingStage) {
           window.setTimeout(() => {
@@ -15411,6 +15535,7 @@
         hideGameStageTutorial({ resume: false });
         clearStageTwoHintTimer();
         clearFirstStageIdleTimer();
+        clearFirstStageMicHint({ clearStatus: true });
         clearStageHintLoop({ clearStatus: true });
         clearPendingRewardSeal();
         closeGameReportMenu();
@@ -15672,6 +15797,8 @@
         clearStageTutorialReminder();
         hideGameStageTutorial({ resume: false });
         clearStageTwoHintTimer();
+        clearFirstStageIdleTimer();
+        clearFirstStageMicHint({ clearStatus: true });
         clearStageHintLoop({ clearStatus: true });
         state.game.fifthStarHintDismissed = false;
         clearPendingRewardSeal();
@@ -15932,6 +16059,7 @@
         cleanupGameRecognition();
         clearStageHintLoop({ clearStatus: true });
         clearFirstStageIdleTimer();
+        clearFirstStageMicHint({ clearStatus: true });
         if (isFifthStarEntry(entry)) {
           state.game.fifthStarHintDismissed = true;
         }
@@ -15963,6 +16091,7 @@
             } else {
               setGameStatus(statusText, 'live');
             }
+            scheduleFirstStageMicHint(entry);
             updateGuestFirstStarResultsBanner(entry, false);
           }
         };
@@ -16262,7 +16391,7 @@
         els.soundTestInput?.addEventListener('input', () => {
           const normalized = String(els.soundTestInput.value || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, AUDIO_CHECK_INPUT_MAX);
           els.soundTestInput.value = normalized;
-          setAudioCheckStatus('Digite o que ouviu');
+          setAudioCheckStatus('');
         });
         els.micTestPlayBtn?.addEventListener('click', async () => {
           await startMicCheckCapture();
