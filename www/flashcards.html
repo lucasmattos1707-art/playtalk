@@ -597,6 +597,15 @@
       border-radius: 999px;
     }
 
+    .soundcheck-play.is-listening {
+      border-color: rgba(122, 255, 182, 0.98);
+      background: radial-gradient(circle at 32% 28%, rgba(118, 255, 187, 0.44), rgba(2, 24, 16, 0.94) 72%);
+      box-shadow:
+        0 0 24px rgba(72, 255, 159, 0.9),
+        0 0 54px rgba(72, 255, 159, 0.42),
+        inset 0 0 20px rgba(72, 255, 159, 0.22);
+    }
+
     .soundcheck-actions {
       display: flex;
       flex-wrap: wrap;
@@ -689,7 +698,11 @@
 
     .miccheck-rules {
       display: grid;
+      grid-template-areas: "rule";
+      align-items: center;
+      justify-items: center;
       gap: 12px;
+      min-height: 34px;
       color: #ffffff;
       font-family: "Open Sans", Arial, sans-serif;
       font-size: 22px;
@@ -699,7 +712,17 @@
     }
 
     .miccheck-rules p {
+      grid-area: rule;
       margin: 0;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 420ms ease, transform 420ms ease;
+      pointer-events: none;
+    }
+
+    .miccheck-rules p.is-visible {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     .miccheck-neon-blue {
@@ -718,7 +741,17 @@
     }
 
     .soundcheck-keyboard {
-      width: min(100%, 520px);
+      width: min(433px, calc(100vw - 32px));
+      max-width: 100%;
+      padding: 1px;
+      border: 1px solid rgba(129, 225, 255, 0.22);
+      border-radius: 22px;
+      background: rgba(6, 17, 44, 0.28);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.08),
+        0 0 34px rgba(68, 206, 255, 0.18),
+        0 18px 42px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(8px);
     }
 
     .soundcheck-answer {
@@ -746,16 +779,36 @@
     .soundcheck-keyboard .flashcards-typing__grid {
       width: 100%;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 0;
+      gap: 1px;
+      padding: 0 1px 1px;
+      box-sizing: border-box;
     }
 
     .soundcheck-keyboard .flashcards-typing__key {
-      font-size: 32px;
+      min-height: clamp(68px, 12vw, 95px);
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid rgba(109, 186, 255, 0.84);
+      border-radius: 14px;
+      background: linear-gradient(145deg, #061b49 0%, #0b2e74 55%, #1558b5 100%);
+      color: #ffffff;
+      font-family: "PlaytalkP2", "Soopafre", Arial, sans-serif;
+      font-size: clamp(49px, 15.84vw, 97px);
+      line-height: 1;
+      text-shadow:
+        0 2px 0 rgba(8, 38, 102, 0.98),
+        0 8px 14px rgba(0, 0, 0, 0.35);
+      box-shadow:
+        inset 0 0 0 1px rgba(210, 235, 255, 0.16),
+        0 0 14px rgba(48, 132, 255, 0.28),
+        0 0 28px rgba(109, 186, 255, 0.16);
     }
 
-    .soundcheck-keyboard .flashcards-typing__key--backspace {
-      background: linear-gradient(145deg, #0b2f88 0%, #1550c7 100%);
-      color: #ffffff;
+    .soundcheck-keyboard .flashcards-typing__key:hover,
+    .soundcheck-keyboard .flashcards-typing__key:focus-visible {
+      filter: brightness(1.08) drop-shadow(0 0 14px rgba(109, 186, 255, 0.34));
     }
 
     .soundcheck-tile img {
@@ -6442,13 +6495,13 @@
       <main class="soundcheck-shell">
         <header class="soundcheck-header">
           <h1>Ative seu microfone</h1>
-          <h2 class="soundcheck-subtitle" id="micTestSubtitle">Toque no c&iacute;rculo azul</h2>
+          <h2 class="soundcheck-subtitle" id="micTestSubtitle" hidden></h2>
           <p class="soundcheck-status" id="micTestStatus"></p>
         </header>
         <div class="miccheck-rules">
-          <p>1. Toque no "<strong class="miccheck-neon-blue">circulo azul</strong>"</p>
-          <p>2. Clique em "<strong class="miccheck-neon-green">permitir</strong>"</p>
-          <p>3. E diga "<strong class="miccheck-neon-orange">microfone</strong>"</p>
+          <p class="is-visible" data-mic-rule>1. Toque no "<strong class="miccheck-neon-blue">circulo azul</strong>"</p>
+          <p data-mic-rule>2. Clique em "<strong class="miccheck-neon-green">permitir</strong>"</p>
+          <p data-mic-rule>3. E diga "<strong class="miccheck-neon-orange">microfone</strong>"</p>
         </div>
         <button class="soundcheck-play soundcheck-play--mic" id="micTestPlayBtn" type="button" aria-label="Ativar microfone">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
@@ -7223,7 +7276,8 @@
           micCheckSubtitleIndex: 0,
           micCheckSubtitleTimer: 0,
           micCheckStatus: '',
-          micCheckBusy: false
+          micCheckBusy: false,
+          micCheckRecognition: null
         }
       };
 
@@ -8426,6 +8480,7 @@
       const AUDIO_CHECK_STORAGE_KEY = 'playtalk-audio-check-completed';
       const MIC_CHECK_STORAGE_KEY = 'playtalk-mic-check-completed';
       const AUDIO_CHECK_ROTATION_MS = 2000;
+      const MIC_CHECK_ROTATION_MS = 1000;
       const AUDIO_CHECK_INPUT_MAX = 4;
       const AUDIO_CHECK_KEY_COUNT = 16;
       const AUDIO_CHECK_FALLBACK_WORDS = ['CASA', 'BOLA', 'GATO', 'PATO'];
@@ -8690,6 +8745,12 @@
       }
 
       function openMicCheck() {
+        if (readMicCheckCompletedFlag()) {
+          closeAudioCheck();
+          hideWelcomeGate();
+          beginGame();
+          return;
+        }
         state.ui.micCheckOpen = true;
         state.ui.micCheckBusy = false;
         state.ui.soundTestOpen = false;
@@ -8707,6 +8768,8 @@
 
       function closeMicCheck() {
         state.ui.micCheckOpen = false;
+        state.ui.micCheckBusy = false;
+        stopMicCheckRecognition();
         els.miccheck?.classList.remove('is-visible');
         document.documentElement.classList.remove('robotcheck-open');
         document.body.classList.remove('robotcheck-open', 'sound-test-open');
@@ -8714,19 +8777,12 @@
       }
 
       function setMicCheckSubtitle(text, animate = false) {
-        if (!els.micTestSubtitle) return;
-        const nextText = safeText(text) || MIC_CHECK_MESSAGES[0];
-        if (!animate || els.micTestSubtitle.textContent === nextText) {
-          els.micTestSubtitle.textContent = nextText;
-          els.micTestSubtitle.classList.remove('is-changing');
-          return;
-        }
-        els.micTestSubtitle.classList.add('is-changing');
-        window.setTimeout(() => {
-          if (!els.micTestSubtitle) return;
-          els.micTestSubtitle.textContent = nextText;
-          els.micTestSubtitle.classList.remove('is-changing');
-        }, 140);
+        const rules = Array.from(els.miccheck?.querySelectorAll('[data-mic-rule]') || []);
+        if (!rules.length) return;
+        const ruleIndex = Math.max(0, MIC_CHECK_MESSAGES.indexOf(safeText(text)));
+        rules.forEach((rule, index) => {
+          rule.classList.toggle('is-visible', index === ruleIndex);
+        });
       }
 
       function startMicCheckSubtitleRotation() {
@@ -8737,7 +8793,7 @@
           if (!state.ui.micCheckOpen) return;
           state.ui.micCheckSubtitleIndex = (state.ui.micCheckSubtitleIndex + 1) % MIC_CHECK_MESSAGES.length;
           setMicCheckSubtitle(MIC_CHECK_MESSAGES[state.ui.micCheckSubtitleIndex], true);
-        }, AUDIO_CHECK_ROTATION_MS);
+        }, MIC_CHECK_ROTATION_MS);
       }
 
       function stopMicCheckSubtitleRotation() {
@@ -8750,6 +8806,167 @@
         state.ui.micCheckStatus = safeText(message);
         if (els.micTestStatus) {
           els.micTestStatus.textContent = state.ui.micCheckStatus || '';
+        }
+      }
+
+      function stopMicCheckRecognition() {
+        const recognition = state.ui.micCheckRecognition;
+        state.ui.micCheckRecognition = null;
+        if (!recognition) return;
+        try {
+          if (typeof recognition.abort === 'function') {
+            recognition.abort();
+          } else if (typeof recognition.stop === 'function') {
+            recognition.stop();
+          } else if (typeof recognition.cancelListening === 'function') {
+            recognition.cancelListening();
+          }
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      async function completeMicCheck() {
+        if (!state.ui.micCheckOpen) return;
+        persistMicCheckCompletedFlag(true);
+        setMicCheckStatus('Microfone ativado.');
+        await wait(350);
+        closeMicCheck();
+        hideWelcomeGate();
+        beginGame();
+      }
+
+      function resolveMicCheckTranscript(results) {
+        return Array.from(results || []).reduce((best, result) => {
+          const transcript = Array.from(result || []).reduce((candidate, alternative) => {
+            const nextTranscript = safeText(alternative?.transcript || '');
+            return nextTranscript.length > candidate.length ? nextTranscript : candidate;
+          }, '');
+          return transcript.length > best.length ? transcript : best;
+        }, '');
+      }
+
+      async function startMicCheckCapture() {
+        if (!state.ui.micCheckOpen || state.ui.micCheckBusy) return;
+        const nativeSpeech = getNativeSpeechRecognition();
+        if (!nativeSpeech && !recognitionCtor) {
+          setMicCheckStatus('Microfone indisponivel neste aparelho.');
+          return;
+        }
+
+        state.ui.micCheckBusy = true;
+        els.micTestPlayBtn?.classList.add('is-listening');
+        if (els.micTestPlayBtn) {
+          els.micTestPlayBtn.disabled = true;
+        }
+        setMicCheckStatus('Ouvindo...');
+        stopMicCheckRecognition();
+
+        if (nativeSpeech) {
+          const nativeCapture = {
+            aborted: false,
+            abort() {
+              this.aborted = true;
+              if (typeof nativeSpeech.cancelListening === 'function') {
+                nativeSpeech.cancelListening();
+              }
+            }
+          };
+          state.ui.micCheckRecognition = nativeCapture;
+          try {
+            const hasAccess = typeof nativeSpeech.ensureGameplayCaptureReady === 'function'
+              ? (await nativeSpeech.ensureGameplayCaptureReady(), true)
+              : (typeof nativeSpeech.ensurePermissions === 'function'
+                ? await nativeSpeech.ensurePermissions()
+                : true);
+            if (!hasAccess || nativeCapture.aborted || !state.ui.micCheckOpen) {
+              setMicCheckStatus('Clique em permitir para continuar.');
+              return;
+            }
+            const transcript = typeof nativeSpeech.captureForGameplay === 'function'
+              ? await nativeSpeech.captureForGameplay({ language: 'pt-BR', maxResults: 5, maxDurationMs: 6500 })
+              : await nativeSpeech.captureOnce({ language: 'pt-BR', maxResults: 5, maxDurationMs: 6500 });
+            if (nativeCapture.aborted || !state.ui.micCheckOpen) return;
+            if (safeText(transcript)) {
+              await completeMicCheck();
+              return;
+            }
+            setMicCheckStatus('Nao ouvi nada. Tente de novo.');
+          } catch (_error) {
+            if (state.ui.micCheckOpen) {
+              setMicCheckStatus('Nao consegui abrir o microfone. Tente de novo.');
+            }
+          } finally {
+            if (state.ui.micCheckRecognition === nativeCapture) {
+              state.ui.micCheckRecognition = null;
+            }
+            state.ui.micCheckBusy = false;
+            els.micTestPlayBtn?.classList.remove('is-listening');
+            if (els.micTestPlayBtn) {
+              els.micTestPlayBtn.disabled = false;
+            }
+          }
+          return;
+        }
+
+        const recognition = new recognitionCtor();
+        state.ui.micCheckRecognition = recognition;
+        let completed = false;
+        let partialTranscript = '';
+        const finish = () => {
+          state.ui.micCheckBusy = false;
+          if (state.ui.micCheckRecognition === recognition) {
+            state.ui.micCheckRecognition = null;
+          }
+          els.micTestPlayBtn?.classList.remove('is-listening');
+          if (els.micTestPlayBtn) {
+            els.micTestPlayBtn.disabled = false;
+          }
+        };
+
+        recognition.lang = 'pt-BR';
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 5;
+        recognition.onresult = async (event) => {
+          const transcript = resolveMicCheckTranscript(event.results);
+          if (transcript) {
+            partialTranscript = transcript;
+          }
+          const hasFinalResult = Array.from(event.results || []).some(result => result?.isFinal);
+          if (!hasFinalResult && !partialTranscript) return;
+          completed = true;
+          try {
+            recognition.stop();
+          } catch (_error) {
+            // ignore
+          }
+          finish();
+          await completeMicCheck();
+        };
+        recognition.onerror = () => {
+          finish();
+          if (!completed && state.ui.micCheckOpen) {
+            setMicCheckStatus(partialTranscript ? '' : 'Nao ouvi nada. Tente de novo.');
+          }
+        };
+        recognition.onend = async () => {
+          finish();
+          if (!completed && partialTranscript && state.ui.micCheckOpen) {
+            completed = true;
+            await completeMicCheck();
+            return;
+          }
+          if (!completed && state.ui.micCheckOpen) {
+            setMicCheckStatus('Nao ouvi nada. Tente de novo.');
+          }
+        };
+
+        try {
+          recognition.start();
+        } catch (_error) {
+          finish();
+          setMicCheckStatus('Toque para tentar de novo.');
         }
       }
 
@@ -15943,12 +16160,7 @@
           setAudioCheckStatus('Digite o que ouviu');
         });
         els.micTestPlayBtn?.addEventListener('click', async () => {
-          persistMicCheckCompletedFlag(true);
-          setMicCheckStatus('Microfone ativado.');
-          await wait(450);
-          closeMicCheck();
-          hideWelcomeGate();
-          beginGame();
+          await startMicCheckCapture();
         });
         els.authModeLogin.addEventListener('click', () => {
           setAuthMode('login');
