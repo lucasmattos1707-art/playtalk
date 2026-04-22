@@ -26,6 +26,7 @@
     flashcardsView: document.getElementById('flashcardsView'),
     smartbooksView: document.getElementById('smartbooksView'),
     smartbooksTitle: document.getElementById('smartbooksTitle'),
+    smartbooksPlayBtn: document.getElementById('smartbooksPlayBtn'),
     smartbooksShelf: document.getElementById('smartbooksShelf'),
     smartbooksGrid: document.getElementById('smartbooksGrid'),
     smartbooksStatus: document.getElementById('smartbooksStatus')
@@ -408,7 +409,11 @@
   function renderMiniCards(target, cards, emptyCopy) {
     if (!target) return;
     if (!cards.length) {
-      target.innerHTML = `<div class="empty">${escapeHtml(emptyCopy)}</div>`;
+      target.innerHTML = renderEmptyLibraryState({
+        copy: emptyCopy,
+        href: '/flashcards',
+        label: 'Come\u00e7ar FlashCards'
+      });
       return;
     }
     target.innerHTML = cards.map((card) => `
@@ -425,6 +430,21 @@
         ${card.progressMarkup || ''}
       </article>
     `).join('');
+  }
+
+  function renderEmptyLibraryState({ copy, href, label }) {
+    const copyHtml = String(copy || '')
+      .split(/<br\s*\/?>|\n/i)
+      .map((line) => escapeHtml(line))
+      .join('<br>');
+    return `
+      <div class="empty-library">
+        <p class="empty-library__copy">${copyHtml}</p>
+        <a class="empty-library__start-btn" href="${escapeHtml(href)}" aria-label="${escapeHtml(label)}">
+          <img src="/arquivos-codex/welcome-gate/button.png" alt="${escapeHtml(label)}">
+        </a>
+      </div>
+    `;
   }
 
   function ensureMiniCardProgressUi(cardEl, view) {
@@ -561,7 +581,7 @@
 
   function refreshLibrary() {
     const cards = state.cards.map(buildLibraryCardView);
-    renderMiniCards(els.allGrid, cards, '0');
+    renderMiniCards(els.allGrid, cards, 'Voc\u00ea ainda n\u00e3o tem<br>FlashCards');
     renderLibrarySummary(cards.length);
   }
 
@@ -667,10 +687,17 @@
     if (!els.smartbooksGrid) return;
     const books = getQualifiedMyBooks(state.smartbooksBooks, state.smartbooksStats);
     if (els.smartbooksTitle) {
-      els.smartbooksTitle.textContent = `Voc\u00ea tem ${books.length} smartbooks`;
+      els.smartbooksTitle.textContent = `${books.length} SmartBooks`;
+    }
+    if (els.smartbooksPlayBtn) {
+      els.smartbooksPlayBtn.hidden = !books.length;
     }
     if (!books.length) {
-      els.smartbooksGrid.innerHTML = '<div class="empty">Nenhum livro ainda em MyBooks.</div>';
+      els.smartbooksGrid.innerHTML = renderEmptyLibraryState({
+        copy: 'Voc\u00ea ainda n\u00e3o tem<br>SmartBooks',
+        href: '/books',
+        label: 'Abrir Books'
+      });
       return;
     }
 

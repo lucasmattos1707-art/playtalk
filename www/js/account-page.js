@@ -5,7 +5,7 @@
   const GUEST_PROMPT_ROTATE_MS = 2500;
   const GUEST_NAME_PROMPTS = ['Digite um nome de usuário'];
   const NUMBER_ANIMATION_HANDLES = new WeakMap();
-  const AURA_CIRCLE_RADIUS = 123.2;
+  const AURA_CIRCLE_RADIUS = 112;
   const AURA_CIRCLE_GAP_DEG = 3.5;
   const AURA_COLORS = {
     listening: { bright: '#38b6ff', dim: 'rgba(56,182,255,0.28)', filterId: 'accountAuraBlueGlow' },
