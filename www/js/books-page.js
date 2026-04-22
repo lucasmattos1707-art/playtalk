@@ -840,6 +840,9 @@
       }
       : stats;
     syncPracticeSecondsTotal(state.stats?.practiceSeconds);
+    if (state.readerOpen && isReaderTrainingMode()) {
+      updateReaderPronPercent();
+    }
     if (!state.initialLoading && isMyBooksLevel()) {
       renderCards();
     }
@@ -5737,22 +5740,23 @@
   function updateReaderPronPercent() {
     const totalCards = Math.max(0, Number(state.readerCards?.length) || 0);
     const currentIndex = Math.max(0, Math.min(Math.max(0, totalCards - 1), Number(state.readerIndex) || 0));
-    const progressPercent = totalCards > 0
+    const bookProgressPercent = totalCards > 0
       ? Math.max(0, Math.min(100, ((currentIndex + 1) / totalCards) * 100))
       : 0;
-    const progressDisplay = formatReaderScoreValue(progressPercent);
+    const generalPronunciationPercent = getReaderGeneralPronunciationPercent();
+    const pronunciationDisplay = formatReaderScoreValue(generalPronunciationPercent);
     if (els.readerPronRing) {
-      els.readerPronRing.style.setProperty('--percent', String(progressPercent));
-      els.readerPronRing.style.setProperty('--reader-progress-angle', `${progressPercent * 3.6}deg`);
+      els.readerPronRing.style.setProperty('--percent', String(bookProgressPercent));
+      els.readerPronRing.style.setProperty('--reader-progress-angle', `${bookProgressPercent * 3.6}deg`);
     }
     if (els.readerPronPercent) {
-      void animateDecimalMarkup(els.readerPronPercent, progressDisplay.scaledValue, {
+      void animateDecimalMarkup(els.readerPronPercent, pronunciationDisplay.scaledValue, {
         decimals: 2,
         duration: SCORE_ANIMATION_MS,
         startValue: 0
       });
     }
-    updateReaderCurrentBadge(progressPercent);
+    updateReaderCurrentBadge(generalPronunciationPercent);
   }
 
   function updateReaderLanguageButtons() {
@@ -5845,6 +5849,23 @@
     if (!Array.isArray(state.readerScores) || !state.readerScores.length) return 0;
     const total = state.readerScores.reduce((acc, value) => acc + normalizeReaderPercent(value), 0);
     return Math.max(0, Math.min(100, total / state.readerScores.length));
+  }
+
+  function getReaderGeneralPronunciationPercent() {
+    const stats = state.stats || {};
+    const baseCount = Math.max(0, Number(stats.pronunciationSamplesCount) || 0);
+    const basePercent = normalizePrecisePercent(stats.generalPronunciationPercent);
+    const pendingSamples = Array.isArray(state.booksPronunciationPending)
+      ? state.booksPronunciationPending.map(normalizePercent)
+      : [];
+
+    if (!pendingSamples.length) return basePercent;
+
+    const pendingTotal = pendingSamples.reduce((acc, value) => acc + value, 0);
+    const totalCount = baseCount + pendingSamples.length;
+    if (totalCount <= 0) return 0;
+
+    return normalizePrecisePercent(((basePercent * baseCount) + pendingTotal) / totalCount);
   }
 
   function commitReaderPhrasePracticeProgress() {
