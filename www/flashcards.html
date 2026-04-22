@@ -4327,7 +4327,7 @@
     .game[data-phase-key="first-star"].is-first-stage-mic-hint-visible .textscreen .game-status {
       color: #ffffff !important;
       font-family: "Open Sans", Arial, sans-serif;
-      font-size: clamp(19px, 5vw, 28px);
+      font-size: clamp(25px, 6.5vw, 36px);
       font-weight: 800;
       line-height: 1.12;
       text-align: center;
@@ -4362,17 +4362,30 @@
     }
 
     .game[data-phase-key="fifth-star"] .textscreen .game-status-wrap {
-      transform: translateY(clamp(-48px, -6vh, -24px));
+      transform: none;
+      margin-top: clamp(8px, 2vh, 18px);
     }
 
     .game[data-phase-key="fifth-star"] .textscreen .game-status {
       color: #ffffff !important;
-      font-family: "Soopafre", Arial, sans-serif;
-      font-size: clamp(34px, 5.4vw, 58px);
-      line-height: 1.08;
+      font-family: "Pltay", "Soopafre", Arial, sans-serif;
+      font-size: clamp(32px, 8.5vw, 64px);
+      line-height: 0.9;
       text-align: center;
-      text-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+      text-shadow:
+        0 2px 0 rgba(8, 38, 102, 0.98),
+        0 8px 14px rgba(0, 0, 0, 0.35);
       white-space: nowrap;
+    }
+
+    .game[data-phase-key="fifth-star"] .textscreen .game-status.is-flashcards-count {
+      font-family: "Pltay", "Soopafre", Arial, sans-serif;
+      font-size: clamp(32px, 8.5vw, 64px);
+      line-height: 0.9;
+      margin-top: 0;
+      text-shadow:
+        0 2px 0 rgba(8, 38, 102, 0.98),
+        0 8px 14px rgba(0, 0, 0, 0.35);
     }
 
     .game[data-phase-key="third-star"] .textscreen .game-status {
@@ -4437,7 +4450,15 @@
       display: grid;
       place-items: center;
       margin: 0 auto;
+      transform: translateY(calc(-40px - 3vh)) !important;
+    }
+
+    .game[data-phase-key="third-star"] #gameVisual {
       transform: translateY(-40px) !important;
+    }
+
+    .game[data-phase-key="fifth-star"] #gameVisual {
+      transform: translateY(calc(-40px - 4vh)) !important;
     }
 
     .game[data-phase-key="first-star"] #gameVisual {
@@ -5188,6 +5209,14 @@
       opacity: 1;
       visibility: visible;
       pointer-events: auto;
+    }
+
+    .game[data-phase-key="first-star"] .game-controls-proxy {
+      transform: translate(-50%, -3vh);
+    }
+
+    .game[data-phase-key="fifth-star"] .game-controls-proxy {
+      transform: translate(-50%, -4vh);
     }
 
     .game[data-phase-key="first-star"] .game-controls-proxy .game-language-btn,
