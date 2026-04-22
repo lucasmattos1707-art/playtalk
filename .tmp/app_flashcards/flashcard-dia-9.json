@@ -1,276 +1,276 @@
 {
-    "title":  "I wonder why",
-    "coverImage":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/03.png",
-    "items":  [
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000001.webp",
-                      "nomePortugues":  "ele estÃ¡ correndo?",
-                      "nomeIngles":  "is he running?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000002.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000003.webp",
-                      "nomePortugues":  "ela estÃ¡ comendo pizza?",
-                      "nomeIngles":  "is she eating pizza?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000004.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000005.webp",
-                      "nomePortugues":  "ele estÃ¡ bebendo cafÃ©?",
-                      "nomeIngles":  "is he drinking coffee?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000006.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000007.webp",
-                      "nomePortugues":  "ela estÃ¡ lendo um livro?",
-                      "nomeIngles":  "is she reading a book?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000008.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000009.webp",
-                      "nomePortugues":  "ele estÃ¡ escrevendo?",
-                      "nomeIngles":  "is he writing?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000010.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000011.webp",
-                      "nomePortugues":  "ela estÃ¡ dirigindo um carro?",
-                      "nomeIngles":  "is she driving a car?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000012.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000013.webp",
-                      "nomePortugues":  "ele estÃ¡ jogando futebol?",
-                      "nomeIngles":  "is he playing soccer?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000014.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000015.webp",
-                      "nomePortugues":  "ela estÃ¡ nadando?",
-                      "nomeIngles":  "is she swimming?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000016.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000017.webp",
-                      "nomePortugues":  "ele estÃ¡ dormindo?",
-                      "nomeIngles":  "is he sleeping?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000018.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000019.webp",
-                      "nomePortugues":  "ela estÃ¡ cantando?",
-                      "nomeIngles":  "is she singing?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000020.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000021.webp",
-                      "nomePortugues":  "ele estÃ¡ danÃ§ando?",
-                      "nomeIngles":  "is he dancing?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000022.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000023.webp",
-                      "nomePortugues":  "ela estÃ¡ cozinhando?",
-                      "nomeIngles":  "is she cooking?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000024.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000025.webp",
-                      "nomePortugues":  "ele estÃ¡ comprando comida?",
-                      "nomeIngles":  "is he buying food?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000026.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000027.webp",
-                      "nomePortugues":  "ela estÃ¡ usando maquiagem?",
-                      "nomeIngles":  "is she wearing makeup?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000028.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000029.webp",
-                      "nomePortugues":  "ele estÃ¡ trabalhando?",
-                      "nomeIngles":  "is he working?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000030.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000031.webp",
-                      "nomePortugues":  "ela estÃ¡ estudando?",
-                      "nomeIngles":  "is she studying?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000032.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000033.webp",
-                      "nomePortugues":  "ele estÃ¡ andando no parque?",
-                      "nomeIngles":  "is he walking in the park?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000034.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000035.webp",
-                      "nomePortugues":  "ela estÃ¡ olhando o celular?",
-                      "nomeIngles":  "is she looking at her phone?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000036.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000037.webp",
-                      "nomePortugues":  "ele estÃ¡ abrindo a porta?",
-                      "nomeIngles":  "is he opening the door?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000038.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000039.webp",
-                      "nomePortugues":  "ela estÃ¡ fechando a janela?",
-                      "nomeIngles":  "is she closing the window?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000040.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000041.webp",
-                      "nomePortugues":  "ele estÃ¡ segurando um gato?",
-                      "nomeIngles":  "is he holding a cat?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000042.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000043.webp",
-                      "nomePortugues":  "ela estÃ¡ brincando com um cachorro?",
-                      "nomeIngles":  "is she playing with a dog?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000044.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000045.webp",
-                      "nomePortugues":  "ele estÃ¡ comendo um hambÃºrguer?",
-                      "nomeIngles":  "is he eating a hamburger?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000046.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000047.webp",
-                      "nomePortugues":  "ela estÃ¡ bebendo Ã¡gua?",
-                      "nomeIngles":  "is she drinking water?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000048.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000049.webp",
-                      "nomePortugues":  "ele estÃ¡ correndo na praia?",
-                      "nomeIngles":  "is he running on the beach?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000050.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000051.webp",
-                      "nomePortugues":  "ela estÃ¡ andando de bicicleta?",
-                      "nomeIngles":  "is she riding a bike?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000052.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000053.webp",
-                      "nomePortugues":  "ele estÃ¡ tirando uma foto?",
-                      "nomeIngles":  "is he taking a photo?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000054.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000055.webp",
-                      "nomePortugues":  "ela estÃ¡ assistindo TV?",
-                      "nomeIngles":  "is she watching TV?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000056.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000057.webp",
-                      "nomePortugues":  "ele estÃ¡ usando um computador?",
-                      "nomeIngles":  "is he using a computer?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000058.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000059.webp",
-                      "nomePortugues":  "ela estÃ¡ falando ao telefone?",
-                      "nomeIngles":  "is she talking on the phone?",
-                      "categoria":  "FlashCard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000060.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  }
-              ]
+  "title": "I wonder why",
+  "coverImage": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/03.png",
+  "items": [
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000001.webp",
+      "nomePortugues": "ele está correndo?",
+      "nomeIngles": "is he running?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000002.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000003.webp",
+      "nomePortugues": "ela está comendo pizza?",
+      "nomeIngles": "is she eating pizza?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000004.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000005.webp",
+      "nomePortugues": "ele está bebendo café?",
+      "nomeIngles": "is he drinking coffee?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000006.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000007.webp",
+      "nomePortugues": "ela está lendo um livro?",
+      "nomeIngles": "is she reading a book?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000008.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000009.webp",
+      "nomePortugues": "ele está escrevendo?",
+      "nomeIngles": "is he writing?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000010.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000011.webp",
+      "nomePortugues": "ela está dirigindo um carro?",
+      "nomeIngles": "is she driving a car?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000012.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000013.webp",
+      "nomePortugues": "ele está jogando futebol?",
+      "nomeIngles": "is he playing soccer?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000014.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000015.webp",
+      "nomePortugues": "ela está nadando?",
+      "nomeIngles": "is she swimming?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000016.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000017.webp",
+      "nomePortugues": "ele está dormindo?",
+      "nomeIngles": "is he sleeping?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000018.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000019.webp",
+      "nomePortugues": "ela está cantando?",
+      "nomeIngles": "is she singing?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000020.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000021.webp",
+      "nomePortugues": "ele está dançando?",
+      "nomeIngles": "is he dancing?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000022.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000023.webp",
+      "nomePortugues": "ela está cozinhando?",
+      "nomeIngles": "is she cooking?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000024.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000025.webp",
+      "nomePortugues": "ele está comprando comida?",
+      "nomeIngles": "is he buying food?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000026.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000027.webp",
+      "nomePortugues": "ela está usando maquiagem?",
+      "nomeIngles": "is she wearing makeup?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000028.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000029.webp",
+      "nomePortugues": "ele está trabalhando?",
+      "nomeIngles": "is he working?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000030.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000031.webp",
+      "nomePortugues": "ela está estudando?",
+      "nomeIngles": "is she studying?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000032.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000033.webp",
+      "nomePortugues": "ele está andando no parque?",
+      "nomeIngles": "is he walking in the park?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000034.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000035.webp",
+      "nomePortugues": "ela está olhando o celular?",
+      "nomeIngles": "is she looking at her phone?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000036.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000037.webp",
+      "nomePortugues": "ele está abrindo a porta?",
+      "nomeIngles": "is he opening the door?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000038.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000039.webp",
+      "nomePortugues": "ela está fechando a janela?",
+      "nomeIngles": "is she closing the window?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000040.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000041.webp",
+      "nomePortugues": "ele está segurando um gato?",
+      "nomeIngles": "is he holding a cat?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000042.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000043.webp",
+      "nomePortugues": "ela está brincando com um cachorro?",
+      "nomeIngles": "is she playing with a dog?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000044.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000045.webp",
+      "nomePortugues": "ele está comendo um hambúrguer?",
+      "nomeIngles": "is he eating a hamburger?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000046.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000047.webp",
+      "nomePortugues": "ela está bebendo água?",
+      "nomeIngles": "is she drinking water?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000048.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000049.webp",
+      "nomePortugues": "ele está correndo na praia?",
+      "nomeIngles": "is he running on the beach?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000050.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000051.webp",
+      "nomePortugues": "ela está andando de bicicleta?",
+      "nomeIngles": "is she riding a bike?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000052.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000053.webp",
+      "nomePortugues": "ele está tirando uma foto?",
+      "nomeIngles": "is he taking a photo?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000054.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000055.webp",
+      "nomePortugues": "ela está assistindo TV?",
+      "nomeIngles": "is she watching TV?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000056.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000057.webp",
+      "nomePortugues": "ele está usando um computador?",
+      "nomeIngles": "is he using a computer?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000058.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000059.webp",
+      "nomePortugues": "ela está falando ao telefone?",
+      "nomeIngles": "is she talking on the phone?",
+      "categoria": "FlashCard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/009/001/000060.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    }
+  ]
 }

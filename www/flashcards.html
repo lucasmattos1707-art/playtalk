@@ -4317,7 +4317,12 @@
       align-items: center;
       justify-content: center;
       width: min(92vw, 620px);
-      margin: 0 auto;
+      position: fixed;
+      left: 50%;
+      bottom: 5vh;
+      margin: 0;
+      transform: translateX(-50%);
+      z-index: 220;
     }
 
     .game[data-phase-key="first-star"].is-first-stage-mic-hint-visible .textscreen .game-status-icon {
@@ -4425,10 +4430,6 @@
       height: 11%;
     }
 
-    .game[data-phase-key="first-star"] .textscreen {
-      transform: translateY(15vh);
-    }
-
     .game[data-phase-key="first-star"] .game-translation-slot,
     .game[data-phase-key="third-star"] .game-translation-slot {
       position: absolute;
@@ -4454,7 +4455,7 @@
       display: grid;
       place-items: center;
       margin: 0 auto;
-      transform: translateY(calc(-40px + 10vh)) !important;
+      transform: translateY(calc(-40px - 15vh)) !important;
     }
 
     .game[data-phase-key="third-star"] #gameVisual {

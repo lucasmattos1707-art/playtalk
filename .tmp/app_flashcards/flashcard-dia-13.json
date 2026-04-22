@@ -1,366 +1,366 @@
 {
-    "title":  "Adjectives",
-    "coverImage":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/01.png",
-    "items":  [
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000001.webp",
-                      "nomePortugues":  "Ela Ã© linda",
-                      "nomeIngles":  "She is beautiful",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000002.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000003.webp",
-                      "nomePortugues":  "Ele estÃ¡ na grama",
-                      "nomeIngles":  "He is on the grass",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000004.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000005.webp",
-                      "nomePortugues":  "Eles estÃ£o subindo",
-                      "nomeIngles":  "They are climbing",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000006.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000007.webp",
-                      "nomePortugues":  "Eles estÃ£o deitados",
-                      "nomeIngles":  "They are lying down",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000008.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000009.webp",
-                      "nomePortugues":  "Eles estÃ£o felizes",
-                      "nomeIngles":  "They are happy",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000010.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000011.webp",
-                      "nomePortugues":  "Ele usa Ã³culos",
-                      "nomeIngles":  "He wears glasses",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000012.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000013.webp",
-                      "nomePortugues":  "Ele ama o cahocrro",
-                      "nomeIngles":  "He loves the dog",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000014.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000015.webp",
-                      "nomePortugues":  "O vestido dela Ã© azul",
-                      "nomeIngles":  "Her dress is blue",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000016.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000017.webp",
-                      "nomePortugues":  "Eles estÃ£o apaixonados",
-                      "nomeIngles":  "They are in love",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000018.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000019.webp",
-                      "nomePortugues":  "Eles sÃ£o amigos",
-                      "nomeIngles":  "They are friends",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000020.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000021.webp",
-                      "nomePortugues":  "Ele tem olho azul",
-                      "nomeIngles":  "He has blue eyes",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000022.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000023.webp",
-                      "nomePortugues":  "Ela estÃ¡ tirando foto",
-                      "nomeIngles":  "She is taking a picture",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000024.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000025.webp",
-                      "nomePortugues":  "Ele tem uns 40 anos",
-                      "nomeIngles":  "He is about 40 years old",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000026.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000027.webp",
-                      "nomePortugues":  "Ela estÃ¡ deitada na grama",
-                      "nomeIngles":  "She is lying on the grass",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000028.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000029.webp",
-                      "nomePortugues":  "Ela estÃ¡ timida",
-                      "nomeIngles":  "She is shy",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000030.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000031.webp",
-                      "nomePortugues":  "Ela ama o cachorro",
-                      "nomeIngles":  "She loves the dog",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000032.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000033.webp",
-                      "nomePortugues":  "Minhas roupas estÃ£o passadas",
-                      "nomeIngles":  "My clothes are ironed.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000034.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000035.webp",
-                      "nomePortugues":  "Ãs vezes eu uso gravata",
-                      "nomeIngles":  "Sometimes I wear a tie.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000036.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000037.webp",
-                      "nomePortugues":  "Ã‰ um laÃ§o de presente",
-                      "nomeIngles":  "It\u0027s a gift bow.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000038.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000039.webp",
-                      "nomePortugues":  "O mais puro diamante",
-                      "nomeIngles":  "The purest diamond.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000040.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000041.webp",
-                      "nomePortugues":  "Isso Ã© coisa chic",
-                      "nomeIngles":  "That\u0027s fancy.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000042.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000043.webp",
-                      "nomePortugues":  "Uma loÃ§Ã£o rarissima",
-                      "nomeIngles":  "A very rare lotion.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000044.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000045.webp",
-                      "nomePortugues":  "Esse Ã© o mais fino tecido",
-                      "nomeIngles":  "This is the finest fabric.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000046.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000047.webp",
-                      "nomePortugues":  "Ã‰ meu bloco de notas azul",
-                      "nomeIngles":  "It\u0027s my blue notebook.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000048.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000049.webp",
-                      "nomePortugues":  "SÃ£o as pantufas dela",
-                      "nomeIngles":  "Those are her slippers.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000050.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000051.webp",
-                      "nomePortugues":  "Perfeito para relaxar",
-                      "nomeIngles":  "Perfect for relaxing.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000052.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000053.webp",
-                      "nomePortugues":  "O jantar estÃ¡ servido",
-                      "nomeIngles":  "Dinner is served.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000054.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000055.webp",
-                      "nomePortugues":  "NÃ£o Ã© bebida de verdade",
-                      "nomeIngles":  "It\u0027s not a real drink.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000056.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000057.webp",
-                      "nomePortugues":  "Ã‰ um objeto religioso",
-                      "nomeIngles":  "It\u0027s a religious item.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000058.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000059.webp",
-                      "nomePortugues":  "Ã‰ uma caixa exÃ³tica",
-                      "nomeIngles":  "It\u0027s an exotic box.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000060.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000061.webp",
-                      "nomePortugues":  "Um belo presente",
-                      "nomeIngles":  "A lovely gift.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000062.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000063.webp",
-                      "nomePortugues":  "Um anel precioso",
-                      "nomeIngles":  "A precious ring.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000064.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000065.webp",
-                      "nomePortugues":  "Belos sapatos novos",
-                      "nomeIngles":  "Beautiful new shoes.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000066.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000067.webp",
-                      "nomePortugues":  "Um lugar para um bom banho",
-                      "nomeIngles":  "A place for a nice bath.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000068.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000069.webp",
-                      "nomePortugues":  "Sapatos perfeitos pra vocÃª",
-                      "nomeIngles":  "Perfect shoes for you.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000070.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000071.webp",
-                      "nomePortugues":  "Esses sÃ£o os meus Ã³culos",
-                      "nomeIngles":  "These are my glasses.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000072.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000073.webp",
-                      "nomePortugues":  "Ela se maqueia aqui",
-                      "nomeIngles":  "She does her makeup here.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000074.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000075.webp",
-                      "nomePortugues":  "Ã‰ a maquiagem tela",
-                      "nomeIngles":  "It\u0027s the makeup canvas.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000076.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000077.webp",
-                      "nomePortugues":  "Esse perfume Ã© outro nivel",
-                      "nomeIngles":  "This perfume is on another level.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000078.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000079.webp",
-                      "nomePortugues":  "Apenas relaxe",
-                      "nomeIngles":  "Just relax.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000080.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  }
-              ]
+  "title": "Adjectives",
+  "coverImage": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/01.png",
+  "items": [
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000001.webp",
+      "nomePortugues": "Ela é linda",
+      "nomeIngles": "She is beautiful",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000002.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000003.webp",
+      "nomePortugues": "Ele está na grama",
+      "nomeIngles": "He is on the grass",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000004.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000005.webp",
+      "nomePortugues": "Eles estão subindo",
+      "nomeIngles": "They are climbing",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000006.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000007.webp",
+      "nomePortugues": "Eles estão deitados",
+      "nomeIngles": "They are lying down",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000008.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000009.webp",
+      "nomePortugues": "Eles estão felizes",
+      "nomeIngles": "They are happy",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000010.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000011.webp",
+      "nomePortugues": "Ele usa óculos",
+      "nomeIngles": "He wears glasses",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000012.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000013.webp",
+      "nomePortugues": "Ele ama o cahocrro",
+      "nomeIngles": "He loves the dog",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000014.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000015.webp",
+      "nomePortugues": "O vestido dela é azul",
+      "nomeIngles": "Her dress is blue",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000016.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000017.webp",
+      "nomePortugues": "Eles estão apaixonados",
+      "nomeIngles": "They are in love",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000018.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000019.webp",
+      "nomePortugues": "Eles são amigos",
+      "nomeIngles": "They are friends",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000020.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000021.webp",
+      "nomePortugues": "Ele tem olho azul",
+      "nomeIngles": "He has blue eyes",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000022.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000023.webp",
+      "nomePortugues": "Ela está tirando foto",
+      "nomeIngles": "She is taking a picture",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000024.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000025.webp",
+      "nomePortugues": "Ele tem uns 40 anos",
+      "nomeIngles": "He is about 40 years old",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000026.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000027.webp",
+      "nomePortugues": "Ela está deitada na grama",
+      "nomeIngles": "She is lying on the grass",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000028.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000029.webp",
+      "nomePortugues": "Ela está timida",
+      "nomeIngles": "She is shy",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000030.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000031.webp",
+      "nomePortugues": "Ela ama o cachorro",
+      "nomeIngles": "She loves the dog",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000032.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000033.webp",
+      "nomePortugues": "Minhas roupas estão passadas",
+      "nomeIngles": "My clothes are ironed.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000034.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000035.webp",
+      "nomePortugues": "Ás vezes eu uso gravata",
+      "nomeIngles": "Sometimes I wear a tie.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000036.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000037.webp",
+      "nomePortugues": "É um laço de presente",
+      "nomeIngles": "It's a gift bow.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000038.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000039.webp",
+      "nomePortugues": "O mais puro diamante",
+      "nomeIngles": "The purest diamond.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000040.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000041.webp",
+      "nomePortugues": "Isso é coisa chic",
+      "nomeIngles": "That's fancy.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000042.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000043.webp",
+      "nomePortugues": "Uma loção rarissima",
+      "nomeIngles": "A very rare lotion.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000044.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000045.webp",
+      "nomePortugues": "Esse é o mais fino tecido",
+      "nomeIngles": "This is the finest fabric.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000046.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000047.webp",
+      "nomePortugues": "É meu bloco de notas azul",
+      "nomeIngles": "It's my blue notebook.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000048.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000049.webp",
+      "nomePortugues": "São as pantufas dela",
+      "nomeIngles": "Those are her slippers.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000050.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000051.webp",
+      "nomePortugues": "Perfeito para relaxar",
+      "nomeIngles": "Perfect for relaxing.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000052.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000053.webp",
+      "nomePortugues": "O jantar está servido",
+      "nomeIngles": "Dinner is served.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000054.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000055.webp",
+      "nomePortugues": "Não é bebida de verdade",
+      "nomeIngles": "It's not a real drink.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000056.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000057.webp",
+      "nomePortugues": "É um objeto religioso",
+      "nomeIngles": "It's a religious item.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000058.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000059.webp",
+      "nomePortugues": "É uma caixa exótica",
+      "nomeIngles": "It's an exotic box.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000060.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000061.webp",
+      "nomePortugues": "Um belo presente",
+      "nomeIngles": "A lovely gift.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000062.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000063.webp",
+      "nomePortugues": "Um anel precioso",
+      "nomeIngles": "A precious ring.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000064.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000065.webp",
+      "nomePortugues": "Belos sapatos novos",
+      "nomeIngles": "Beautiful new shoes.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000066.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000067.webp",
+      "nomePortugues": "Um lugar para um bom banho",
+      "nomeIngles": "A place for a nice bath.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000068.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000069.webp",
+      "nomePortugues": "Sapatos perfeitos pra você",
+      "nomeIngles": "Perfect shoes for you.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000070.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000071.webp",
+      "nomePortugues": "Esses são os meus óculos",
+      "nomeIngles": "These are my glasses.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000072.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000073.webp",
+      "nomePortugues": "Ela se maqueia aqui",
+      "nomeIngles": "She does her makeup here.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000074.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000075.webp",
+      "nomePortugues": "É a maquiagem tela",
+      "nomeIngles": "It's the makeup canvas.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000076.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000077.webp",
+      "nomePortugues": "Esse perfume é outro nivel",
+      "nomeIngles": "This perfume is on another level.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000078.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000079.webp",
+      "nomePortugues": "Apenas relaxe",
+      "nomeIngles": "Just relax.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/013/001/000080.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    }
+  ]
 }

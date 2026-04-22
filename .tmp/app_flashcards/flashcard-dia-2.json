@@ -1,222 +1,222 @@
 {
-    "title":  "The world",
-    "coverImage":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/02.png",
-    "items":  [
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000001.webp",
-                      "nomePortugues":  "A bola.",
-                      "nomeIngles":  "The ball.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000002.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000003.webp",
-                      "nomePortugues":  "O homem.",
-                      "nomeIngles":  "The man.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000004.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000005.webp",
-                      "nomePortugues":  "A menina.",
-                      "nomeIngles":  "The girl.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000006.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000007.webp",
-                      "nomePortugues":  "O menino.",
-                      "nomeIngles":  "The boy.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000008.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000009.webp",
-                      "nomePortugues":  "O gato.",
-                      "nomeIngles":  "The cat.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000010.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000011.webp",
-                      "nomePortugues":  "O cachorro.",
-                      "nomeIngles":  "The dog.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000012.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000013.webp",
-                      "nomePortugues":  "O livro.",
-                      "nomeIngles":  "The book.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000014.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000015.webp",
-                      "nomePortugues":  "O carro.",
-                      "nomeIngles":  "The car.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000016.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000017.webp",
-                      "nomePortugues":  "A casa.",
-                      "nomeIngles":  "The house.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000018.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000019.webp",
-                      "nomePortugues":  "A cadeira.",
-                      "nomeIngles":  "The chair.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000020.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000021.webp",
-                      "nomePortugues":  "A mesa.",
-                      "nomeIngles":  "The table.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000022.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000023.webp",
-                      "nomePortugues":  "A janela.",
-                      "nomeIngles":  "The window.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000024.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000025.webp",
-                      "nomePortugues":  "A porta.",
-                      "nomeIngles":  "The door.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000026.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000027.webp",
-                      "nomePortugues":  "A Ã¡rvore.",
-                      "nomeIngles":  "The tree.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000028.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000029.webp",
-                      "nomePortugues":  "O sol Ã©.",
-                      "nomeIngles":  "The sun is.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000030.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000031.webp",
-                      "nomePortugues":  "A lua Ã©.",
-                      "nomeIngles":  "The moon is.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000032.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000033.webp",
-                      "nomePortugues":  "A estrela.",
-                      "nomeIngles":  "The star.",
-                      "categoria":  "flashcard",
-                      "audio":  "",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000034.webp",
-                      "nomePortugues":  "A maÃ§Ã£.",
-                      "nomeIngles":  "The apple.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000035.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000036.webp",
-                      "nomePortugues":  "A Ã¡gua.",
-                      "nomeIngles":  "The water.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000037.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000038.webp",
-                      "nomePortugues":  "O leite.",
-                      "nomeIngles":  "The milk.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000039.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000040.webp",
-                      "nomePortugues":  "A cama.",
-                      "nomeIngles":  "The bed.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000041.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000042.webp",
-                      "nomePortugues":  "O sapato.",
-                      "nomeIngles":  "The shoe.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000043.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000044.webp",
-                      "nomePortugues":  "A mÃ£o Ã©.",
-                      "nomeIngles":  "The hand is.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000045.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  },
-                  {
-                      "imagem":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000046.webp",
-                      "nomePortugues":  "O olho.",
-                      "nomeIngles":  "The eye.",
-                      "categoria":  "flashcard",
-                      "audio":  "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000047.mp3",
-                      "tense":  "present-simple",
-                      "sentenceForm":  "affirmative"
-                  }
-              ]
+  "title": "The world",
+  "coverImage": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/cardsfolder/02.png",
+  "items": [
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000001.webp",
+      "nomePortugues": "A bola.",
+      "nomeIngles": "The ball.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000002.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000003.webp",
+      "nomePortugues": "O homem.",
+      "nomeIngles": "The man.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000004.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000005.webp",
+      "nomePortugues": "A menina.",
+      "nomeIngles": "The girl.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000006.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000007.webp",
+      "nomePortugues": "O menino.",
+      "nomeIngles": "The boy.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000008.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000009.webp",
+      "nomePortugues": "O gato.",
+      "nomeIngles": "The cat.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000010.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000011.webp",
+      "nomePortugues": "O cachorro.",
+      "nomeIngles": "The dog.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000012.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000013.webp",
+      "nomePortugues": "O livro.",
+      "nomeIngles": "The book.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000014.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000015.webp",
+      "nomePortugues": "O carro.",
+      "nomeIngles": "The car.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000016.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000017.webp",
+      "nomePortugues": "A casa.",
+      "nomeIngles": "The house.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000018.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000019.webp",
+      "nomePortugues": "A cadeira.",
+      "nomeIngles": "The chair.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000020.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000021.webp",
+      "nomePortugues": "A mesa.",
+      "nomeIngles": "The table.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000022.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000023.webp",
+      "nomePortugues": "A janela.",
+      "nomeIngles": "The window.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000024.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000025.webp",
+      "nomePortugues": "A porta.",
+      "nomeIngles": "The door.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000026.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000027.webp",
+      "nomePortugues": "A árvore.",
+      "nomeIngles": "The tree.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000028.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000029.webp",
+      "nomePortugues": "O sol é.",
+      "nomeIngles": "The sun is.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000030.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000031.webp",
+      "nomePortugues": "A lua é.",
+      "nomeIngles": "The moon is.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000032.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000033.webp",
+      "nomePortugues": "A estrela.",
+      "nomeIngles": "The star.",
+      "categoria": "flashcard",
+      "audio": "",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000034.webp",
+      "nomePortugues": "A maçã.",
+      "nomeIngles": "The apple.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000035.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000036.webp",
+      "nomePortugues": "A água.",
+      "nomeIngles": "The water.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000037.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000038.webp",
+      "nomePortugues": "O leite.",
+      "nomeIngles": "The milk.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000039.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000040.webp",
+      "nomePortugues": "A cama.",
+      "nomeIngles": "The bed.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000041.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000042.webp",
+      "nomePortugues": "O sapato.",
+      "nomeIngles": "The shoe.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000043.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000044.webp",
+      "nomePortugues": "A mão é.",
+      "nomeIngles": "The hand is.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000045.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    },
+    {
+      "imagem": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000046.webp",
+      "nomePortugues": "O olho.",
+      "nomeIngles": "The eye.",
+      "categoria": "flashcard",
+      "audio": "https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/Niveis/002/001/000047.mp3",
+      "tense": "present-simple",
+      "sentenceForm": "affirmative"
+    }
+  ]
 }
