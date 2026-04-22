@@ -3618,13 +3618,19 @@ async function optimizeAdminBannerToWebp(inputBuffer, variant = 'desktop', optio
   const offsetX = normalizeAdminBannerOffset(options?.offsetX);
   const offsetY = normalizeAdminBannerOffset(options?.offsetY);
   const sizeAdjustPx = normalizeAdminBannerSizeAdjust(options?.sizeAdjustPx);
-  const placedWidth = Math.max(64, Math.min(6000, renderSize.width + sizeAdjustPx));
-  const placedHeight = Math.max(64, Math.min(6000, renderSize.height + sizeAdjustPx));
+  const widthAdjustPx = normalizeAdminBannerSizeAdjust(options?.widthAdjustPx ?? sizeAdjustPx);
+  const heightAdjustPx = normalizeAdminBannerSizeAdjust(options?.heightAdjustPx ?? sizeAdjustPx);
+  const placedWidth = Math.max(64, Math.min(6000, renderSize.width + widthAdjustPx));
+  const placedHeight = Math.max(64, Math.min(6000, renderSize.height + heightAdjustPx));
+  const source = sharp(inputBuffer, { failOn: 'none', animated: false }).rotate();
+  const sourceMetadata = await source.clone().metadata().catch(() => null);
+  const sourceRatio = Number(sourceMetadata?.width || 0) / Math.max(1, Number(sourceMetadata?.height || 0));
+  const renderRatio = renderSize.width / renderSize.height;
+  const preservesCanvasRatio = Number.isFinite(sourceRatio) && Math.abs(sourceRatio - renderRatio) < 0.01;
 
-  const placedImageBuffer = await sharp(inputBuffer, { failOn: 'none', animated: false })
-    .rotate()
+  const placedImageBuffer = await source
     .resize(placedWidth, placedHeight, {
-      fit: 'contain',
+      fit: preservesCanvasRatio ? 'fill' : 'contain',
       position: 'centre',
       withoutEnlargement: false,
       background: { r: 0, g: 0, b: 0, alpha: 0 }
@@ -15247,11 +15253,15 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
     const renderOffsetX = normalizeAdminBannerOffset(Math.round(offsetX * scaleX));
     const renderOffsetY = normalizeAdminBannerOffset(Math.round(offsetY * scaleY));
     const renderSizeAdjustPx = normalizeAdminBannerSizeAdjust(Math.round(sizeAdjustPx * scaleForSize));
+    const renderWidthAdjustPx = normalizeAdminBannerSizeAdjust(Math.round(sizeAdjustPx * scaleX));
+    const renderHeightAdjustPx = normalizeAdminBannerSizeAdjust(Math.round(sizeAdjustPx * scaleY));
 
     const optimizedBuffer = await optimizeAdminBannerToWebp(parsedImage.buffer, variant, {
       offsetX: renderOffsetX,
       offsetY: renderOffsetY,
-      sizeAdjustPx: renderSizeAdjustPx
+      sizeAdjustPx: renderSizeAdjustPx,
+      widthAdjustPx: renderWidthAdjustPx,
+      heightAdjustPx: renderHeightAdjustPx
     });
     if (!optimizedBuffer?.length) {
       res.status(422).json({ error: 'Nao foi possivel otimizar o banner para WebP.' });
@@ -15356,7 +15366,9 @@ app.post('/api/admin/banners/save', express.json({ limit: '50mb' }), async (req,
         previewHeight: hasPreviewDimensions ? previewHeight : null,
         renderOffsetX,
         renderOffsetY,
-        renderSizeAdjustPx
+        renderSizeAdjustPx,
+        renderWidthAdjustPx,
+        renderHeightAdjustPx
       },
       banner: savedEntry
     });
