@@ -52,6 +52,7 @@
   const resultsRingProgress = document.getElementById('results-ring-progress');
   const resultsAvatarImage = document.getElementById('results-avatar-image');
   const resultsAvatarFallback = document.getElementById('results-avatar-fallback');
+  const DEFAULT_PROFILE_AVATAR = '/Avatar/profile-neon-blue.svg';
   const resultsMetricIcon = document.getElementById('results-metric-icon');
   const resultsMetricLabel = document.getElementById('results-metric-label');
   const resultsMetricValue = document.getElementById('results-metric-value');
@@ -789,19 +790,14 @@
       ? window.playtalkPlayerState.get()
       : null;
     const avatar = player && typeof player.avatar === 'string' ? player.avatar.trim() : '';
+    const displayAvatar = avatar || DEFAULT_PROFILE_AVATAR;
     if (resultsAvatarImage) {
-      if (avatar) {
-        resultsAvatarImage.src = avatar;
-        resultsAvatarImage.style.display = 'block';
-      } else {
-        resultsAvatarImage.removeAttribute('src');
-        resultsAvatarImage.style.display = 'none';
-      }
+      resultsAvatarImage.src = displayAvatar;
+      resultsAvatarImage.style.display = 'block';
     }
     if (resultsAvatarFallback) {
-      const username = player && typeof player.username === 'string' ? player.username.trim() : '';
-      resultsAvatarFallback.textContent = username ? username.charAt(0).toUpperCase() : 'P';
-      resultsAvatarFallback.style.display = avatar ? 'none' : 'flex';
+      resultsAvatarFallback.textContent = '';
+      resultsAvatarFallback.style.display = 'none';
     }
   }
 
@@ -3676,19 +3672,14 @@
       ? window.playtalkPlayerState.get()
       : null;
     const avatar = player && typeof player.avatar === 'string' ? player.avatar.trim() : '';
-    const username = player && typeof player.username === 'string' ? player.username.trim() : '';
+    const hasAvatar = Boolean(avatar) && avatar !== 'Avatar/avatar-boy-male-svgrepo-com.svg';
     if (finalAvatarImage) {
-      if (avatar && avatar !== 'Avatar/avatar-boy-male-svgrepo-com.svg') {
-        finalAvatarImage.src = avatar;
-        finalAvatarImage.style.display = 'block';
-      } else {
-        finalAvatarImage.removeAttribute('src');
-        finalAvatarImage.style.display = 'none';
-      }
+      finalAvatarImage.src = hasAvatar ? avatar : DEFAULT_PROFILE_AVATAR;
+      finalAvatarImage.style.display = 'block';
     }
     if (finalAvatarFallback) {
-      finalAvatarFallback.textContent = username ? username.charAt(0).toUpperCase() : 'P';
-      finalAvatarFallback.style.display = (avatar && avatar !== 'Avatar/avatar-boy-male-svgrepo-com.svg') ? 'none' : 'block';
+      finalAvatarFallback.textContent = '';
+      finalAvatarFallback.style.display = 'none';
     }
   }
 

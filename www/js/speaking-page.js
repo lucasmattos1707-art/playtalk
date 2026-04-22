@@ -16,6 +16,7 @@
     'linear-gradient(160deg, #2b5a44, #83506f)',
     'linear-gradient(160deg, #1e4a66, #9b5d3c)'
   ];
+  const DEFAULT_PROFILE_AVATAR = '/Avatar/profile-neon-blue.svg';
 
   const els = {
     home: document.getElementById('speakingHome'),
@@ -146,8 +147,8 @@
       rivalPercent: 0,
       rivalName: 'Adversário',
       meName: 'Você',
-      meAvatar: '/Avatar/avatar-man-person-svgrepo-com.svg',
-      rivalAvatar: '/Avatar/avatar-man-person-svgrepo-com.svg',
+      meAvatar: DEFAULT_PROFILE_AVATAR,
+      rivalAvatar: DEFAULT_PROFILE_AVATAR,
       pollTimer: 0,
       pingTimer: 0,
       introTimer: 0,
@@ -281,7 +282,7 @@
 
   function normalizeAvatarSource(value) {
     const avatar = safeText(value);
-    return avatar || '/Avatar/avatar-man-person-svgrepo-com.svg';
+    return avatar || DEFAULT_PROFILE_AVATAR;
   }
 
   function readCurrentPlayerIdentity() {
@@ -319,7 +320,7 @@
     state.duel.meName = identity.username;
     state.duel.meAvatar = identity.avatar;
     state.duel.rivalName = 'Adversário';
-    state.duel.rivalAvatar = '/Avatar/avatar-man-person-svgrepo-com.svg';
+    state.duel.rivalAvatar = DEFAULT_PROFILE_AVATAR;
   }
 
   async function hydrateOfflineIdentityFromSession() {
@@ -1067,7 +1068,7 @@
   }
 
   function bindAvatarFallbacks() {
-    const fallback = '/Avatar/avatar-man-person-svgrepo-com.svg';
+    const fallback = DEFAULT_PROFILE_AVATAR;
     [els.meAvatar, els.enemyAvatar, els.duelIntroMeAvatar, els.duelIntroEnemyAvatar, els.winnerAvatar, els.winnerRevealAvatar, els.battleCardsImage]
       .filter(Boolean)
       .forEach((img) => {
@@ -1278,7 +1279,7 @@
       ? state.duel.introBook
       : resolveDuelIntroBookData();
     const bookUrl = safeText(duelBook?.coverImageUrl);
-    const fallbackAvatar = '/Avatar/avatar-man-person-svgrepo-com.svg';
+    const fallbackAvatar = DEFAULT_PROFILE_AVATAR;
     const introAvatars = [
       { element: els.duelIntroMeAvatar, url: normalizeAvatarSource(state.duel.meAvatar) },
       { element: els.duelIntroEnemyAvatar, url: normalizeAvatarSource(state.duel.rivalAvatar) }
@@ -2130,9 +2131,9 @@
     const nextRivalProgress = Math.max(0, Number(session?.rivalProgress) || 0);
     const nextRivalPercent = Math.max(0, Number(session?.rivalPercent) || 0);
     state.duel.meName = safeText(me?.username || 'Você') || 'Você';
-    state.duel.meAvatar = safeText(me?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg') || '/Avatar/avatar-man-person-svgrepo-com.svg';
+    state.duel.meAvatar = safeText(me?.avatarImage || DEFAULT_PROFILE_AVATAR) || DEFAULT_PROFILE_AVATAR;
     state.duel.rivalName = safeText(rival?.username || 'Adversário') || 'Adversário';
-    state.duel.rivalAvatar = safeText(rival?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg') || '/Avatar/avatar-man-person-svgrepo-com.svg';
+    state.duel.rivalAvatar = safeText(rival?.avatarImage || DEFAULT_PROFILE_AVATAR) || DEFAULT_PROFILE_AVATAR;
     state.duel.mePercent = Math.max(Math.max(0, Number(state.duel.mePercent) || 0), nextMePercent);
     state.duel.rivalProgress = Math.max(Math.max(0, Number(state.duel.rivalProgress) || 0), nextRivalProgress);
     state.duel.rivalPercent = Math.max(Math.max(0, Number(state.duel.rivalPercent) || 0), nextRivalPercent);
@@ -2178,7 +2179,7 @@
       els.game.classList.add('is-winner');
       return;
     }
-    const avatarImage = safeText(winner?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg') || '/Avatar/avatar-man-person-svgrepo-com.svg';
+    const avatarImage = safeText(winner?.avatarImage || DEFAULT_PROFILE_AVATAR) || DEFAULT_PROFILE_AVATAR;
     if (els.winnerRevealAvatar) {
       els.winnerRevealAvatar.src = avatarImage;
     }

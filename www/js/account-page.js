@@ -878,10 +878,10 @@
     }
     els.avatarPreview.src = hasAvatar
       ? avatar
-      : (loggedIn ? 'Avatar/avatar-man-person-svgrepo-com.svg' : '/arquivos-codex/fluent-levelup-logo.png');
+      : (loggedIn ? '/Avatar/profile-neon-blue.svg' : '/arquivos-codex/fluent-levelup-logo.png');
     els.avatarPreview.style.display = 'block';
-    els.avatarFallback.textContent = loggedIn ? (username.charAt(0).toUpperCase() || 'P') : '';
-    els.avatarFallback.style.display = loggedIn && !hasAvatar ? 'grid' : 'none';
+    els.avatarFallback.textContent = '';
+    els.avatarFallback.style.display = 'none';
     els.avatarInput.disabled = !loggedIn;
     els.avatarInput.value = '';
     els.avatarPreview.alt = loggedIn ? 'Avatar do usuario' : 'Logo Fluent LevelUp';

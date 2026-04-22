@@ -6,6 +6,7 @@
   const STICKY_PERCENT_STORAGE_KEY = 'playtalk-home-journey-percent-sticky-v1';
   const DAY_MS = 24 * 60 * 60 * 1000;
   const RING_CIRC = 326.73;
+  const DEFAULT_PROFILE_AVATAR = '/Avatar/profile-neon-blue.svg';
   const ICONS = {
     pronunciation: 'SVG/codex-icons/post-results/pronuncia.svg',
     tempo: 'SVG/codex-icons/post-results/clock.svg',
@@ -176,6 +177,7 @@
     const username = String(state?.username || '').trim() || 'Jogador';
     const avatar = String(state?.avatar || '').trim();
     const hasAvatar = Boolean(avatar) && avatar !== 'Avatar/avatar-boy-male-svgrepo-com.svg';
+    const displayAvatar = hasAvatar ? avatar : DEFAULT_PROFILE_AVATAR;
     const levelNumber = getPlayerLevel(state);
     const levelBadge = getLevelBadge(levelNumber);
 
@@ -217,8 +219,8 @@
           <circle class="profile-dashboard__ring-progress" id="profile-ring-progress" cx="60" cy="60" r="52"></circle>
         </svg>
         <div class="profile-dashboard__photo">
-          <img id="profile-photo-image" src="${hasAvatar ? escapeHtml(avatar) : ''}" alt="Foto do jogador">
-          <span id="profile-photo-fallback">${escapeHtml(username.charAt(0).toUpperCase())}</span>
+          <img id="profile-photo-image" src="${escapeHtml(displayAvatar)}" alt="Foto do jogador">
+          <span id="profile-photo-fallback"></span>
         </div>
       </div>
       <div id="selos-nivel" class="profile-level-badge" style="--level-badge-bg:${escapeHtml(levelBadge.gradient)};--level-badge-color:${escapeHtml(levelBadge.text)};">
@@ -237,8 +239,8 @@
 
     const imageEl = document.getElementById('profile-photo-image');
     const fallbackEl = document.getElementById('profile-photo-fallback');
-    if (imageEl) imageEl.style.display = hasAvatar ? 'block' : 'none';
-    if (fallbackEl) fallbackEl.style.display = hasAvatar ? 'none' : 'block';
+    if (imageEl) imageEl.style.display = 'block';
+    if (fallbackEl) fallbackEl.style.display = 'none';
 
     const ringEl = document.getElementById('profile-ring-progress');
     if (ringEl) {

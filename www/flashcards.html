@@ -6786,7 +6786,7 @@
     <section class="panel section profile-panel" id="profilePanel" hidden>
       <form class="profile-panel__form" id="profileForm">
         <label class="profile-panel__avatar" for="profileAvatarInput">
-          <img id="profileAvatarPreview" src="Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar do usuario">
+          <img id="profileAvatarPreview" src="/Avatar/profile-neon-blue.svg" alt="Avatar do usuario">
           <span id="profileAvatarFallback">P</span>
           <input id="profileAvatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
         </label>
@@ -9917,12 +9917,12 @@
           els.profileNameInput.value = username;
         }
         if (els.profileAvatarPreview) {
-          els.profileAvatarPreview.src = hasAvatar ? avatar : 'Avatar/avatar-man-person-svgrepo-com.svg';
-          els.profileAvatarPreview.style.display = hasAvatar ? 'block' : 'none';
+          els.profileAvatarPreview.src = hasAvatar ? avatar : '/Avatar/profile-neon-blue.svg';
+          els.profileAvatarPreview.style.display = 'block';
         }
         if (els.profileAvatarFallback) {
-          els.profileAvatarFallback.textContent = username.charAt(0).toUpperCase() || 'P';
-          els.profileAvatarFallback.style.display = hasAvatar ? 'none' : 'grid';
+          els.profileAvatarFallback.textContent = '';
+          els.profileAvatarFallback.style.display = 'none';
         }
         if (els.profileSaveBtn) {
           els.profileSaveBtn.disabled = !state.user;

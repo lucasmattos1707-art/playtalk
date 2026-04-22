@@ -62,6 +62,7 @@
 
   const LISTENING_CHARS_PENDING_KEY = 'playtalk_books_listening_chars_pending_v1';
   const LISTENING_CHARS_TOTAL_KEY = 'playtalk_books_listening_chars_total_v1';
+  const DEFAULT_PROFILE_AVATAR = '/Avatar/profile-neon-blue.svg';
   const READING_CHARS_PENDING_KEY = 'playtalk_books_reading_chars_pending_v1';
   const READING_CHARS_TOTAL_KEY = 'playtalk_books_reading_chars_total_v1';
   const BOOKS_PRONUNCIATION_FLUSH_BATCH_SIZE = 6;
@@ -1664,17 +1665,9 @@
       els.avatarName.textContent = splitBalancedLines(username);
     }
 
-    if (hasAvatar) {
-      els.avatarImage.src = avatar;
-      els.avatarImage.hidden = false;
-      els.avatarFallback.hidden = true;
-      return;
-    }
-
-    els.avatarImage.removeAttribute('src');
-    els.avatarImage.hidden = true;
-    els.avatarFallback.hidden = false;
-    els.avatarFallback.textContent = username.charAt(0).toUpperCase() || 'P';
+    els.avatarImage.src = hasAvatar ? avatar : DEFAULT_PROFILE_AVATAR;
+    els.avatarImage.hidden = false;
+    els.avatarFallback.hidden = true;
   }
 
   function sortByNome(left, right) {
@@ -6218,16 +6211,9 @@
     if (els.readerUserName) {
       els.readerUserName.textContent = splitBalancedLines(username);
     }
-    if (avatar) {
-      els.readerAvatarImage.src = avatar;
-      els.readerAvatarImage.hidden = false;
-      els.readerAvatarFallback.hidden = true;
-      return;
-    }
-    els.readerAvatarImage.removeAttribute('src');
-    els.readerAvatarImage.hidden = true;
-    els.readerAvatarFallback.hidden = false;
-    els.readerAvatarFallback.textContent = username.charAt(0).toUpperCase() || 'P';
+    els.readerAvatarImage.src = avatar || DEFAULT_PROFILE_AVATAR;
+    els.readerAvatarImage.hidden = false;
+    els.readerAvatarFallback.hidden = true;
   }
 
   function renderReaderModeUi() {

@@ -1,6 +1,7 @@
 (function initPlaytalkPlayerState() {
   const STORAGE_KEY = 'playtalk_player_profile';
   const DEFAULT_AVATAR = '';
+  const DEFAULT_PROFILE_AVATAR = '/Avatar/profile-neon-blue.svg';
   const PROGRESS_STORAGE_KEY = 'vocabulary-progress';
   const COMPLETION_STORAGE_KEY = 'vocabulary-last-complete';
   const GAME_CONTEXT_STORAGE_KEY = 'playtalk-active-game-context';
@@ -297,20 +298,19 @@
     header.classList.toggle('is-hidden', !shouldShowHeader());
 
     const avatarValue = typeof state.avatar === 'string' ? state.avatar.trim() : '';
-    const hasCustomAvatar = Boolean(avatarValue) && avatarValue !== 'Avatar/avatar-boy-male-svgrepo-com.svg';
+    const hasCustomAvatar = Boolean(avatarValue)
+      && !avatarValue.endsWith('/Avatar/profile-neon-blue.svg')
+      && avatarValue !== 'Avatar/avatar-boy-male-svgrepo-com.svg';
+    const displayAvatar = hasCustomAvatar ? avatarValue : DEFAULT_PROFILE_AVATAR;
 
     if (avatarImg) {
       avatarImg.alt = state.username ? `Avatar de ${state.username}` : 'Avatar do jogador';
-      avatarImg.style.display = hasCustomAvatar ? 'block' : 'none';
-      if (hasCustomAvatar) {
-        avatarImg.src = avatarValue;
-      } else {
-        avatarImg.removeAttribute('src');
-      }
+      avatarImg.style.display = 'block';
+      avatarImg.src = displayAvatar;
     }
     if (avatarFallback) {
-      avatarFallback.textContent = state.username ? state.username.slice(0, 1).toUpperCase() : 'P';
-      avatarFallback.style.display = hasCustomAvatar ? 'none' : 'flex';
+      avatarFallback.textContent = '';
+      avatarFallback.style.display = 'none';
     }
     if (coinsEl) {
       coinsEl.textContent = formatCoins(state.coins);

@@ -201,7 +201,7 @@ const BATTLE_STORIES_ROOT_CANDIDATES = Array.from(new Set([
   path.join(process.cwd(), 'battle-stories')
 ]));
 const FLASHCARD_RANKING_PLACEHOLDER_NAME = 'Usuario';
-const FLASHCARD_RANKING_PLACEHOLDER_AVATAR = '/Avatar/avatar-man-person-svgrepo-com.svg';
+const FLASHCARD_RANKING_PLACEHOLDER_AVATAR = '/Avatar/profile-neon-blue.svg';
 const PRESENCE_CLASS_DAILY_TARGET = 5000;
 const FLASHCARD_RANKING_PERIODS = {
   weekly: {

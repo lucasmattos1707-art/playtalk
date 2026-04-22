@@ -320,7 +320,7 @@
     incoming.className = 'global-challenge-modal';
     incoming.innerHTML = `
       <div class="global-challenge-card">
-        <img class="global-challenge-avatar" id="globalIncomingAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar">
+        <img class="global-challenge-avatar" id="globalIncomingAvatar" src="/Avatar/profile-neon-blue.svg" alt="Avatar">
         <h2 class="global-challenge-title">Voce recebeu um desafio</h2>
         <h2 class="global-challenge-title" id="globalIncomingName">Usuario</h2>
         <p class="global-challenge-copy" id="globalIncomingCopy">Usuario te desafiou pra um speaking</p>
@@ -337,7 +337,7 @@
     outgoing.className = 'global-challenge-modal';
     outgoing.innerHTML = `
       <div class="global-challenge-card">
-        <img class="global-challenge-avatar" id="globalOutgoingAvatar" src="/Avatar/avatar-man-person-svgrepo-com.svg" alt="Avatar">
+        <img class="global-challenge-avatar" id="globalOutgoingAvatar" src="/Avatar/profile-neon-blue.svg" alt="Avatar">
         <h2 class="global-challenge-title" id="globalOutgoingTitle">Desafio speaking</h2>
         <p class="global-challenge-copy" id="globalOutgoingCopy"></p>
         <div class="global-challenge-actions">
@@ -373,7 +373,7 @@
     const avatar = document.getElementById('globalIncomingAvatar');
     const name = document.getElementById('globalIncomingName');
     const copy = document.getElementById('globalIncomingCopy');
-    if (avatar) avatar.src = challenge?.challenger?.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg';
+    if (avatar) avatar.src = challenge?.challenger?.avatarImage || '/Avatar/profile-neon-blue.svg';
     if (name) name.textContent = challenge?.challenger?.username || 'Usuario';
     const label = String(challenge?.challengeMode || '').trim().toLowerCase() === 'battle-cards'
       ? 'FluentCards'
@@ -396,7 +396,7 @@
     const avatarEl = document.getElementById('globalOutgoingAvatar');
     const titleEl = document.getElementById('globalOutgoingTitle');
     if (copyEl) copyEl.textContent = copy || '';
-    if (avatarEl) avatarEl.src = avatar || '/Avatar/avatar-man-person-svgrepo-com.svg';
+    if (avatarEl) avatarEl.src = avatar || '/Avatar/profile-neon-blue.svg';
     if (titleEl) titleEl.textContent = title || 'Desafio speaking';
     modal.classList.add('is-visible');
     syncChallengeViewportLock();

@@ -10,6 +10,7 @@
   const RANKING_CACHE_TTL_MS = 25000;
   const USERS_STAGE_SLIDE_MS = 320;
   const RANKING_ROTATE_MS = 3200;
+  const DEFAULT_PROFILE_AVATAR = '/Avatar/profile-neon-blue.svg';
 
   const RANKING_METRICS = [
     { slot: 1, key: 'flashcards', label: 'Flashcards', valueLabel: '' },
@@ -323,7 +324,7 @@
       speedFlashcardsPerHour: Number(entry?.speedFlashcardsPerHour) || 0,
       battlesWon: Number(entry?.battlesWon) || 0,
       rankingValue: Number(entry?.rankingValue) || 0,
-      avatarImage: safeText(entry?.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg') || 'Avatar/avatar-man-person-svgrepo-com.svg',
+      avatarImage: safeText(entry?.avatarImage || DEFAULT_PROFILE_AVATAR) || DEFAULT_PROFILE_AVATAR,
       isAdmin: Boolean(entry?.isAdmin),
       isBot: Boolean(entry?.isBot),
       botAvatarStatus: safeText(entry?.botAvatarStatus || 'ready') || 'ready',
@@ -478,7 +479,7 @@
     closeFullscreenModal(els.botModal);
     if (els.botForm) els.botForm.reset();
     if (els.botAvatarPreview) {
-      els.botAvatarPreview.src = '/Avatar/avatar-man-person-svgrepo-com.svg';
+      els.botAvatarPreview.src = DEFAULT_PROFILE_AVATAR;
     }
     if (els.botCreateBtn) els.botCreateBtn.disabled = false;
     setBotStatus('');
@@ -650,7 +651,7 @@
     state.challengeBusy = false;
     state.challengeModePickerOpen = false;
     if (els.challengeAvatar) {
-      els.challengeAvatar.src = user.avatarImage || '/Avatar/avatar-man-person-svgrepo-com.svg';
+      els.challengeAvatar.src = user.avatarImage || DEFAULT_PROFILE_AVATAR;
     }
     if (els.challengeName) els.challengeName.textContent = user.username;
     if (els.challengeCopy) {
@@ -715,7 +716,7 @@
     const rowMarkup = displayRows.map((entry) => `
       <div class="users-row${entry.isOnline ? ' is-online' : ''}${isAdminViewer() && entry.userId !== state.currentUser?.id ? ' is-admin-target' : ''}" data-user-id="${entry.userId}">
         <div class="users-avatar${entry.botAvatarStatus === 'processing' ? ' is-processing' : ''}">
-          <img src="${escapeHtml(entry.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg')}" alt="${escapeHtml(entry.username)}">
+          <img src="${escapeHtml(entry.avatarImage || DEFAULT_PROFILE_AVATAR)}" alt="${escapeHtml(entry.username)}">
           <span class="users-rank-badge">${escapeHtml(entry.rank || 0)}</span>
         </div>
         <div class="users-main">
@@ -944,7 +945,7 @@
     if (!challengeId || state.incomingChallengeId === challengeId) return;
     state.incomingChallengeId = challengeId;
     if (els.incomingAvatar) {
-      els.incomingAvatar.src = challenge?.challenger?.avatarImage || 'Avatar/avatar-man-person-svgrepo-com.svg';
+      els.incomingAvatar.src = challenge?.challenger?.avatarImage || DEFAULT_PROFILE_AVATAR;
     }
     if (els.incomingName) {
       els.incomingName.textContent = challenge?.challenger?.username || 'Usuario';

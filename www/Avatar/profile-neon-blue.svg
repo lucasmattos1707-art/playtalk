@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Perfil azul neon</title>
+  <desc id="desc">Avatar padrao de perfil com silhueta azul neon.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="32%" r="70%">
+      <stop offset="0%" stop-color="#1ee9ff"/>
+      <stop offset="42%" stop-color="#0d65ff"/>
+      <stop offset="100%" stop-color="#071633"/>
+    </radialGradient>
+    <linearGradient id="line" x1="50%" x2="50%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#b9fbff"/>
+      <stop offset="52%" stop-color="#46dcff"/>
+      <stop offset="100%" stop-color="#1a72ff"/>
+    </linearGradient>
+    <filter id="glow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <circle cx="128" cy="128" r="124" fill="#061229"/>
+  <circle cx="128" cy="128" r="116" fill="url(#bg)" opacity="0.36"/>
+  <circle cx="128" cy="128" r="112" fill="none" stroke="#4cecff" stroke-width="4" opacity="0.9" filter="url(#glow)"/>
+  <circle cx="128" cy="96" r="42" fill="#081b3d" stroke="url(#line)" stroke-width="8" filter="url(#glow)"/>
+  <path d="M56 208c8-42 35-67 72-67s64 25 72 67" fill="#081b3d" stroke="url(#line)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <path d="M78 210c10-26 29-41 50-41s40 15 50 41" fill="#0b2f66" opacity="0.52"/>
+  <circle cx="88" cy="62" r="4" fill="#a7f7ff" opacity="0.9"/>
+  <circle cx="184" cy="74" r="3" fill="#7eeeff" opacity="0.75"/>
+  <circle cx="196" cy="156" r="2.5" fill="#7eeeff" opacity="0.7"/>
+</svg>
