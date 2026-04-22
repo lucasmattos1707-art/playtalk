@@ -354,7 +354,7 @@ body.is-admin-banner .banner-admin-controls {
 .roadmap-marquee__track {
   display: flex;
   width: max-content;
-  animation: roadmapMarquee 92s linear infinite;
+  animation: roadmapMarquee 46s linear infinite;
   will-change: transform;
 }
 
@@ -380,6 +380,14 @@ body.is-admin-banner .banner-admin-controls {
   grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
   gap: clamp(28px, 6vw, 74px);
   align-items: center;
+}
+
+.intro-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.intro-copy {
+  width: min(860px, 100%);
 }
 
 .split-section--reverse {
@@ -500,19 +508,7 @@ h3 {
 }
 
 .badge-carousel {
-  position: relative;
-  width: min(430px, 100%);
-  min-height: 396px;
-  margin: 0 auto;
-  border: 1px solid rgba(255, 122, 26, 0.28);
-  background:
-    radial-gradient(circle at 50% 18%, rgba(255, 122, 26, 0.18), transparent 45%),
-    linear-gradient(180deg, rgba(9, 18, 28, 0.82), rgba(2, 6, 10, 0.92));
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
-    0 22px 54px rgba(0, 0, 0, 0.34),
-    0 0 46px rgba(255, 122, 26, 0.12);
-  overflow: hidden;
+  display: none;
 }
 
 .badge-slide {
