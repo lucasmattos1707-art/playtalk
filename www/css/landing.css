@@ -35,6 +35,7 @@ html {
 body {
   margin: 0;
   min-height: 100%;
+  padding-bottom: 96px;
   color: var(--ink);
   background:
     var(--landing-bg-overlay),
@@ -382,10 +383,6 @@ body.is-admin-banner .banner-admin-controls {
   align-items: center;
 }
 
-.intro-grid {
-  grid-template-columns: minmax(0, 1fr);
-}
-
 .intro-copy {
   width: min(860px, 100%);
 }
@@ -455,6 +452,10 @@ h3 {
   margin-top: 28px;
 }
 
+.intro-actions[hidden] {
+  display: none;
+}
+
 .landing-btn {
   min-height: 52px;
   display: inline-flex;
@@ -507,8 +508,28 @@ h3 {
   background: rgba(4, 12, 15, 0.86);
 }
 
+.landing-sticky-cta {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 60;
+  width: min(360px, calc(100vw - 28px));
+  transform: translateX(-50%);
+}
+
+.landing-sticky-cta:hover {
+  transform: translateX(-50%) translateY(-2px);
+}
+
 .badge-carousel {
-  display: none;
+  position: relative;
+  width: min(430px, 100%);
+  min-height: 396px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .badge-slide {
@@ -840,6 +861,10 @@ h3 {
 
   .landing-btn {
     width: 100%;
+  }
+
+  .landing-sticky-cta {
+    width: min(360px, calc(100vw - 28px));
   }
 
   .banner-admin-controls {
