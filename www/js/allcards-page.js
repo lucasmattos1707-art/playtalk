@@ -581,7 +581,7 @@
 
   function refreshLibrary() {
     const cards = state.cards.map(buildLibraryCardView);
-    renderMiniCards(els.allGrid, cards, 'Voc\u00ea ainda n\u00e3o :<br>tem flashcards');
+    renderMiniCards(els.allGrid, cards, 'Voc\u00ea ainda n\u00e3o tem<br>FlashCards');
     renderLibrarySummary(cards.length);
   }
 
@@ -694,7 +694,7 @@
     }
     if (!books.length) {
       els.smartbooksGrid.innerHTML = renderEmptyLibraryState({
-        copy: 'Voc\u00ea ainda n\u00e3o :<br>tem smartbooks',
+        copy: 'Voc\u00ea ainda n\u00e3o tem<br>SmartBooks',
         href: '/books',
         label: 'Abrir Books'
       });
