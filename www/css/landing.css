@@ -185,7 +185,7 @@ body.is-admin-banner.banner-view-desktop .banner-carousel__track {
 }
 
 body.is-admin-banner.banner-view-mobile .banner-carousel__track {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1 / 1;
   max-height: none;
 }
 
@@ -196,6 +196,17 @@ body.is-admin-banner.banner-view-mobile .banner-carousel__media {
 
 body.is-admin-banner .banner-carousel__media-image {
   object-fit: contain;
+}
+
+@media (min-width: 821px) {
+  body.is-admin-banner.banner-view-mobile .landing-banner {
+    padding-block: 18px;
+  }
+
+  body.is-admin-banner.banner-view-mobile .banner-carousel__viewport {
+    width: min(440px, calc(100vw - 48px));
+    margin: 0 auto;
+  }
 }
 
 body.is-admin-banner .banner-carousel__item {

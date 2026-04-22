@@ -3334,9 +3334,9 @@ const ADMIN_BANNER_MANIFEST_RELATIVE_PATH = path.posix.join(ADMIN_BANNER_RELATIV
 const ADMIN_BANNER_MANIFEST_OBJECT_KEY = path.posix.join(ADMIN_BANNER_RELATIVE_ROOT, 'manifest.json');
 const ADMIN_BANNER_IMAGE_OBJECT_PREFIX = path.posix.join(ADMIN_BANNER_RELATIVE_ROOT, 'images');
 const ADMIN_BANNER_SLOT_COUNT = 4;
-const ADMIN_BANNER_RESOLUTION_LABEL = '1600 x 900 px';
+const ADMIN_BANNER_RESOLUTION_LABEL = 'desktop 1600 x 540 px / mobile 1600 x 1600 px';
 const ADMIN_BANNER_DESKTOP_RENDER_SIZE = Object.freeze({ width: 1600, height: 540 });
-const ADMIN_BANNER_MOBILE_RENDER_SIZE = Object.freeze({ width: 1600, height: 900 });
+const ADMIN_BANNER_MOBILE_RENDER_SIZE = Object.freeze({ width: 1600, height: 1600 });
 const ADMIN_BANNER_DEFAULT_PROMPT = [
   'Create a premium website hero banner.',
   'Landscape 16:9 composition, cinematic lighting, realistic style, clean and modern.',
@@ -15073,8 +15073,10 @@ app.post('/api/admin/banners/generate', express.json({ limit: '2mb' }), async (r
   }
 
   const slot = normalizeAdminBannerSlot(req.body?.slot);
+  const variant = normalizeAdminBannerVariant(req.body?.variant) || 'desktop';
   const customPrompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
-  const size = typeof req.body?.size === 'string' ? req.body.size.trim() : '1536x1024';
+  const requestedSize = typeof req.body?.size === 'string' ? req.body.size.trim() : '';
+  const size = requestedSize || (variant === 'mobile' ? '1024x1024' : '1536x1024');
   const quality = typeof req.body?.quality === 'string' ? req.body.quality.trim() : 'medium';
   const outputFormat = typeof req.body?.outputFormat === 'string' ? req.body.outputFormat.trim() : 'webp';
 
@@ -15092,7 +15094,10 @@ app.post('/api/admin/banners/generate', express.json({ limit: '2mb' }), async (r
   }
 
   const prompt = customPrompt || ADMIN_BANNER_DEFAULT_PROMPT;
-  const promptWithGuidance = `${prompt} Keep a safe central framing for website crop and repositioning.`;
+  const variantGuidance = variant === 'mobile'
+    ? 'Square 1:1 composition for a mobile website header.'
+    : 'Wide horizontal website header composition.';
+  const promptWithGuidance = `${prompt} ${variantGuidance} Keep a safe central framing for website crop and repositioning.`;
 
   try {
     const upstreamResponse = await fetch('https://api.openai.com/v1/images/generations', {

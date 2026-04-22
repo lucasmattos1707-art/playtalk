@@ -430,6 +430,7 @@
     state.activeEditSlot = normalizeSlot(slot, 1);
     syncEditingClass();
     setSlotBusy(slot, true);
+    const variant = normalizeVariant(state.viewMode);
     setCarouselStatus(`Gerando Banner ${slot} (${state.viewMode})...`);
     try {
       const response = await fetch(buildApiUrl('/api/admin/banners/generate'), {
@@ -438,7 +439,9 @@
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           slot,
-          prompt
+          prompt,
+          variant,
+          size: variant === 'mobile' ? '1024x1024' : '1536x1024'
         })
       });
       const payload = await response.json().catch(() => ({}));
@@ -446,7 +449,6 @@
         throw new Error(payload?.error || payload?.details || 'Falha ao gerar banner.');
       }
 
-      const variant = normalizeVariant(state.viewMode);
       const current = getBannerEntry(slot);
       const nextEntry = {
         ...current,
