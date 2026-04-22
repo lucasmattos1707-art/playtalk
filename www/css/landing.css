@@ -81,9 +81,9 @@ svg {
 .banner-carousel__track {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 80 / 27;
   height: auto;
-  max-height: min(100vw, 100vh);
+  max-height: none;
 }
 
 .banner-carousel__item {
@@ -177,6 +177,21 @@ body.banner-view-mobile .banner-carousel__track {
 
 body.banner-view-mobile .banner-carousel__media {
   aspect-ratio: 1 / 1;
+}
+
+body.is-admin-banner.banner-view-desktop .banner-carousel__track {
+  aspect-ratio: 80 / 27;
+  max-height: none;
+}
+
+body.is-admin-banner.banner-view-mobile .banner-carousel__track {
+  aspect-ratio: 16 / 9;
+  max-height: none;
+}
+
+body.is-admin-banner.banner-view-desktop .banner-carousel__media,
+body.is-admin-banner.banner-view-mobile .banner-carousel__media {
+  aspect-ratio: inherit;
 }
 
 body.is-admin-banner .banner-carousel__media-image {
