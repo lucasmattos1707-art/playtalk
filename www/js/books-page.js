@@ -840,9 +840,6 @@
       }
       : stats;
     syncPracticeSecondsTotal(state.stats?.practiceSeconds);
-    if (state.readerOpen && isReaderTrainingMode()) {
-      updateReaderPronPercent();
-    }
     if (!state.initialLoading && isMyBooksLevel()) {
       renderCards();
     }
@@ -5743,8 +5740,8 @@
     const bookProgressPercent = totalCards > 0
       ? Math.max(0, Math.min(100, ((currentIndex + 1) / totalCards) * 100))
       : 0;
-    const generalPronunciationPercent = getReaderGeneralPronunciationPercent();
-    const pronunciationDisplay = formatReaderScoreValue(generalPronunciationPercent);
+    const readingPronunciationPercent = calculateReaderAverageScore();
+    const pronunciationDisplay = formatReaderScoreValue(readingPronunciationPercent);
     if (els.readerPronRing) {
       els.readerPronRing.style.setProperty('--percent', String(bookProgressPercent));
       els.readerPronRing.style.setProperty('--reader-progress-angle', `${bookProgressPercent * 3.6}deg`);
@@ -5756,7 +5753,7 @@
         startValue: 0
       });
     }
-    updateReaderCurrentBadge(generalPronunciationPercent);
+    updateReaderCurrentBadge(readingPronunciationPercent);
   }
 
   function updateReaderLanguageButtons() {
@@ -5849,23 +5846,6 @@
     if (!Array.isArray(state.readerScores) || !state.readerScores.length) return 0;
     const total = state.readerScores.reduce((acc, value) => acc + normalizeReaderPercent(value), 0);
     return Math.max(0, Math.min(100, total / state.readerScores.length));
-  }
-
-  function getReaderGeneralPronunciationPercent() {
-    const stats = state.stats || {};
-    const baseCount = Math.max(0, Number(stats.pronunciationSamplesCount) || 0);
-    const basePercent = normalizePrecisePercent(stats.generalPronunciationPercent);
-    const pendingSamples = Array.isArray(state.booksPronunciationPending)
-      ? state.booksPronunciationPending.map(normalizePercent)
-      : [];
-
-    if (!pendingSamples.length) return basePercent;
-
-    const pendingTotal = pendingSamples.reduce((acc, value) => acc + value, 0);
-    const totalCount = baseCount + pendingSamples.length;
-    if (totalCount <= 0) return 0;
-
-    return normalizePrecisePercent(((basePercent * baseCount) + pendingTotal) / totalCount);
   }
 
   function commitReaderPhrasePracticeProgress() {

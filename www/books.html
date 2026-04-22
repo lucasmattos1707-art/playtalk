@@ -3191,6 +3191,11 @@
       transform: translateY(0);
     }
 
+    #booksPreBookRankedBtn,
+    #booksPreBookPronounceBtn {
+      width: min(88vw, 432px);
+    }
+
     #booksPreBookRankedBtn {
       color: #fff6ed;
       background: linear-gradient(135deg, rgba(255, 126, 24, 0.98), rgba(255, 62, 12, 0.94));
@@ -3726,11 +3731,12 @@
     .books-reader-pron-ring {
       --percent: 0;
       --reader-progress-angle: 0deg;
+      --reader-ring-width: 6px;
       width: 220px;
       height: 220px;
-      padding: 6px;
+      padding: var(--reader-ring-width);
       border-radius: 999px;
-      background: conic-gradient(#48ff9f var(--reader-progress-angle), rgba(255, 255, 255, 0.1) 0);
+      background: transparent;
       box-shadow:
         0 0 22px rgba(72, 255, 159, 0.42),
         0 0 46px rgba(72, 255, 159, 0.22),
@@ -3739,6 +3745,18 @@
       place-items: center;
       position: relative;
       transition: --reader-progress-angle 340ms ease;
+    }
+
+    .books-reader-pron-ring::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: conic-gradient(#48ff9f var(--reader-progress-angle), rgba(255, 255, 255, 0.1) 0);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--reader-ring-width)), #000 calc(100% - var(--reader-ring-width) + 1px));
+      mask: radial-gradient(farthest-side, transparent calc(100% - var(--reader-ring-width)), #000 calc(100% - var(--reader-ring-width) + 1px));
+      pointer-events: none;
+      z-index: 0;
     }
 
     .books-reader-current-badge {
@@ -4362,6 +4380,11 @@
 
       .pre-book-actions .books-magic-btn {
         width: min(58vw, 250px);
+      }
+
+      #booksPreBookRankedBtn,
+      #booksPreBookPronounceBtn {
+        width: min(70vw, 300px);
       }
 
       .books-reader-book-hero {
