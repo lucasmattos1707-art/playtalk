@@ -271,19 +271,28 @@
       filter: drop-shadow(0 2px 4px rgba(0, 82, 24, 0.22));
     }
 
-    #libraryTitle {
+    .smartbooks-play-btn[hidden] {
+      display: none !important;
+    }
+
+    #libraryTitle,
+    #smartbooksTitle {
       width: 100%;
       margin: 0;
       text-align: center;
       font-size: clamp(28px, 4.6vw, 42px);
+      font-family: "Soopafre", Arial, sans-serif;
+      font-weight: 400;
+      line-height: 1;
       letter-spacing: 0.03em;
       color: #fff;
       text-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
       transition: transform 220ms ease, opacity 220ms ease, filter 220ms ease;
+      transform: translateY(-4vh);
     }
 
     #libraryTitle.is-updating {
-      transform: translateY(-2px) scale(1.02);
+      transform: translateY(calc(-4vh - 2px)) scale(1.02);
       filter: drop-shadow(0 10px 20px rgba(255, 255, 255, 0.12));
     }
 
@@ -442,6 +451,51 @@
       background: rgba(255, 255, 255, 0.02);
     }
 
+    .empty-library {
+      grid-column: 1 / -1;
+      min-height: min(52vh, 440px);
+      display: grid;
+      place-items: start center;
+      align-content: start;
+      justify-items: center;
+      gap: 10px;
+      padding: 4vh 12px 0;
+      text-align: center;
+    }
+
+    .empty-library__copy {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.92);
+      font-family: "Open Sans", Arial, sans-serif;
+      font-size: clamp(15px, 3.5vw, 20px);
+      font-weight: 700;
+      line-height: 1.18;
+      letter-spacing: 0;
+      text-shadow: 0 7px 18px rgba(0, 0, 0, 0.28);
+    }
+
+    .empty-library__start-btn {
+      width: min(317px, 64.8vw);
+      display: block;
+      border-radius: 999px;
+      transform: translateY(-8px) scale(0.9);
+      transform-origin: center;
+      transition: transform 180ms ease;
+    }
+
+    .empty-library__start-btn:hover,
+    .empty-library__start-btn:focus-visible {
+      transform: translateY(-10px) scale(0.93);
+      outline: none;
+    }
+
+    .empty-library__start-btn img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: inherit;
+    }
+
     .smartbooks-shelf {
       --books-shelf-height: max(420px, calc(100vh - var(--footer-total-height) - 112px));
       min-height: var(--books-shelf-height);
@@ -583,16 +637,6 @@
     #smartbooksTitle {
       position: relative;
       z-index: 2;
-      margin: 0;
-      color: #fff;
-      font-family: "Open Sans", Arial, sans-serif;
-      font-size: clamp(18px, 3.8vw, 24px);
-      font-weight: 700;
-      line-height: 1.05;
-      letter-spacing: 0;
-      text-align: center;
-      text-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
-      transform: translateY(2vh);
     }
 
     .smartbooks-status {
@@ -740,7 +784,7 @@
           <div class="section-copy">
             <h2 id="smartbooksTitle">SmartBooks</h2>
           </div>
-          <a class="smartbooks-play-btn" href="/books" aria-label="Abrir Books">
+          <a class="smartbooks-play-btn" id="smartbooksPlayBtn" href="/books" aria-label="Abrir Books">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z"/></svg>
           </a>
         </div>
@@ -774,7 +818,7 @@
   <script src="js/api-config.js"></script>
   <script src="js/playtalk-shell.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/allcards-page.js?v=20260415-2" defer></script>
+  <script src="js/allcards-page.js?v=20260421-1" defer></script>
 </body>
 </html>
 
