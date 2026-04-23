@@ -10149,9 +10149,15 @@
 
       function syncWelcomeStartButton() {
         if (!els.welcomeStartBtn) return;
-        els.welcomeStartBtn.innerHTML = '<img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora">';
+        if (!els.welcomeStartBtn.querySelector('img')) {
+          els.welcomeStartBtn.innerHTML = '<img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora">';
+        }
         els.welcomeStartBtn.disabled = false;
         els.welcomeStartBtn.style.opacity = state.ui.welcomeEnergyBlocked ? '0.8' : '1';
+        const image = els.welcomeStartBtn.querySelector('img');
+        if (image) {
+          image.style.opacity = state.ui.welcomeEnergyBlocked ? '0.8' : '1';
+        }
       }
 
       async function refreshWelcomeEnergyState() {

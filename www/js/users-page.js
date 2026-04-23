@@ -648,13 +648,14 @@
     if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.getEnergyStatus !== 'function') {
       state.challengeEnergyBlocked = false;
       syncChallengeButtons();
-      return;
+      return false;
     }
     const status = await window.PlaytalkEnergy.getEnergyStatus({
       user: state.currentUser
     });
     state.challengeEnergyBlocked = Boolean(status?.loggedIn && status?.blocked);
     syncChallengeButtons();
+    return state.challengeEnergyBlocked;
   }
 
   function closeChallengeModal() {
@@ -672,6 +673,7 @@
     state.challengeTarget = user;
     state.challengeBusy = false;
     state.challengeModePickerOpen = false;
+    state.challengeEnergyBlocked = false;
     if (els.challengeAvatar) {
       els.challengeAvatar.src = user.avatarImage || DEFAULT_PROFILE_AVATAR;
     }
@@ -771,6 +773,7 @@
           return;
         }
         openChallengeModal(user);
+        void refreshChallengeEnergyState();
       });
     });
   }
