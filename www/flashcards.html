@@ -5342,6 +5342,27 @@
       width: min(520px, calc(100vw - 24px));
     }
 
+    .game-setup .btn-close {
+      width: 46px;
+      height: 46px;
+      min-width: 46px;
+      min-height: 46px;
+      padding: 0;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      background: rgba(12, 35, 76, 0.72);
+      border: 1px solid rgba(126, 221, 255, 0.36);
+      color: #ffffff;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+    }
+
+    .game-setup .btn-close svg {
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
+    }
+
     .game-setup__options {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -5362,15 +5383,93 @@
       background: linear-gradient(135deg, #2192ff 0%, #47c3ff 100%);
     }
 
-    .game-setup__options.is-training-counts {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+    .game-setup__training-picker {
+      width: min(100%, 430px);
+      min-height: 260px;
+      display: none;
+      grid-template-columns: 58px minmax(0, 1fr) 58px;
+      align-items: center;
+      justify-items: center;
+      gap: 16px;
+      margin: 2px auto 0;
     }
 
-    .game-setup__option[data-training-count] {
-      min-height: 72px;
-      background: linear-gradient(145deg, rgba(8, 43, 102, 0.94), rgba(19, 105, 205, 0.96));
+    .game-setup__training-picker.is-visible {
+      display: grid;
+    }
+
+    .game-setup__arrow {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      background: rgba(12, 35, 76, 0.72);
+      border: 1px solid rgba(126, 221, 255, 0.38);
       color: #ffffff;
-      border-color: rgba(137, 222, 255, 0.34);
+      box-shadow:
+        0 0 14px rgba(72, 191, 255, 0.32),
+        0 12px 24px rgba(0, 0, 0, 0.28);
+      transition: transform 180ms ease, opacity 180ms ease, filter 180ms ease;
+    }
+
+    .game-setup__arrow:not(:disabled):hover,
+    .game-setup__arrow:not(:disabled):focus-visible {
+      transform: scale(1.06);
+      filter: brightness(1.12);
+    }
+
+    .game-setup__arrow:disabled {
+      opacity: 0.36;
+      cursor: default;
+    }
+
+    .game-setup__arrow svg {
+      width: 34px;
+      height: 34px;
+      fill: currentColor;
+    }
+
+    .game-setup__training-start {
+      width: min(230px, 54vw);
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 36% 24%, rgba(255, 255, 255, 0.2), rgba(9, 48, 118, 0.96) 72%);
+      border: 2px solid rgba(126, 221, 255, 0.62);
+      color: #ffffff;
+      box-shadow:
+        0 0 24px rgba(72, 191, 255, 0.48),
+        0 18px 38px rgba(0, 0, 0, 0.34),
+        inset 0 0 20px rgba(126, 221, 255, 0.18);
+      transition: transform 180ms ease, filter 180ms ease;
+    }
+
+    .game-setup__training-start:hover,
+    .game-setup__training-start:focus-visible {
+      transform: translateY(-2px) scale(1.03);
+      filter: brightness(1.1);
+    }
+
+    .game-setup__training-value {
+      display: block;
+      font-family: "Pltay", "Soopafre", Arial, sans-serif;
+      font-size: clamp(72px, 18vw, 128px);
+      line-height: 0.76;
+      text-shadow:
+        0 3px 0 rgba(8, 38, 102, 0.98),
+        0 12px 22px rgba(0, 0, 0, 0.35);
+    }
+
+    .game-setup__training-label {
+      display: block;
+      margin-top: 12px;
+      font-family: "Soopafre", Arial, sans-serif;
+      font-size: clamp(22px, 5vw, 34px);
+      line-height: 0.9;
+      text-transform: lowercase;
+      color: rgba(255, 255, 255, 0.92);
     }
 
     .stars.is-training-sequence {
@@ -5413,6 +5512,16 @@
 
       .game-setup__options {
         grid-template-columns: 1fr;
+      }
+
+      .game-setup__training-picker {
+        grid-template-columns: 48px minmax(0, 1fr) 48px;
+        gap: 10px;
+      }
+
+      .game-setup__arrow {
+        width: 48px;
+        height: 48px;
       }
 
       .game-card__visual {
@@ -6961,17 +7070,27 @@
             <p id="gameSetupCountCopy" class="admin-tools__status">Calculando flashcards disponiveis...</p>
           </div>
           <div class="actions">
-            <button class="btn btn-close" id="closeGameSetupBtn" type="button" aria-label="Fechar">Ãƒâ€”</button>
+            <button class="btn btn-close" id="closeGameSetupBtn" type="button" aria-label="Fechar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>
+            </button>
           </div>
+        </div>
+        <div class="game-setup__training-picker" id="trainingCountPicker" hidden>
+          <button class="game-setup__arrow" id="trainingCountDownBtn" type="button" aria-label="Diminuir cartas">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 5.4 8.8 12l6.6 6.6-1.4 1.4L6 12l8-8z"/></svg>
+          </button>
+          <button class="game-setup__training-start" id="trainingStartBtn" type="button" aria-label="Iniciar treino com 10 flashcards">
+            <span>
+              <span class="game-setup__training-value" id="trainingCountValue">10</span>
+              <span class="game-setup__training-label">flashcards</span>
+            </span>
+          </button>
+          <button class="game-setup__arrow" id="trainingCountUpBtn" type="button" aria-label="Aumentar cartas">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.6 18.6 6.6-6.6-6.6-6.6L10 4l8 8-8 8z"/></svg>
+          </button>
         </div>
         <div class="game-setup__options" id="gameSetupOptions">
           <button class="game-setup__option" type="button" data-game-count="12">Comecar com 12 cartas</button>
-          <button class="game-setup__option" type="button" data-training-count="10" hidden>10 cartas</button>
-          <button class="game-setup__option" type="button" data-training-count="20" hidden>20 cartas</button>
-          <button class="game-setup__option" type="button" data-training-count="30" hidden>30 cartas</button>
-          <button class="game-setup__option" type="button" data-training-count="40" hidden>40 cartas</button>
-          <button class="game-setup__option" type="button" data-training-count="50" hidden>50 cartas</button>
-          <button class="game-setup__option" type="button" data-training-count="60" hidden>60 cartas</button>
           <button class="game-setup__option game-setup__option--tutorial" id="startTutorialBtn" type="button" hidden>Iniciar Modo Tutorial</button>
         </div>
       </div>
@@ -7256,7 +7375,8 @@
       const DEFAULT_GAME_CONTEXT_LIMIT = 12;
       const MIN_GAME_CONTEXT_LIMIT = 1;
       const TRAINING_MIN_CARD_COUNT = 10;
-      const TRAINING_MAX_CARD_COUNT = 60;
+      const TRAINING_MAX_CARD_COUNT = 500;
+      const TRAINING_CARD_STEP = 10;
       const GAME_BASE_CARD_COUNT = 12;
       const GAME_ACTIVE_CARD_CAP = 20;
       const GAME_STAR_TARGET = 5;
@@ -7494,6 +7614,7 @@
             pendingStage: 0,
             stage: 0,
             selectedCount: 0,
+            pendingCount: TRAINING_MIN_CARD_COUNT,
             sourceIds: [],
             cycleIndex: 0,
             cycleNumber: 0,
@@ -7726,6 +7847,11 @@
           gameSetup: document.getElementById('gameSetup'),
           gameSetupTitle: document.getElementById('gameSetupTitle'),
           gameSetupCopy: document.getElementById('gameSetupCopy'),
+          trainingCountPicker: document.getElementById('trainingCountPicker'),
+          trainingCountValue: document.getElementById('trainingCountValue'),
+          trainingCountDownBtn: document.getElementById('trainingCountDownBtn'),
+          trainingCountUpBtn: document.getElementById('trainingCountUpBtn'),
+          trainingStartBtn: document.getElementById('trainingStartBtn'),
           gameSetupOptions: document.getElementById('gameSetupOptions'),
           closeGameSetupBtn: document.getElementById('closeGameSetupBtn'),
           gameSetupCountCopy: document.getElementById('gameSetupCountCopy'),
@@ -7920,7 +8046,8 @@
       function normalizeTrainingCount(value) {
         const parsed = Number.parseInt(String(value || '').trim(), 10);
         if (!Number.isFinite(parsed)) return TRAINING_MIN_CARD_COUNT;
-        return Math.max(TRAINING_MIN_CARD_COUNT, Math.min(TRAINING_MAX_CARD_COUNT, parsed));
+        const stepped = Math.round(parsed / TRAINING_CARD_STEP) * TRAINING_CARD_STEP;
+        return Math.max(TRAINING_MIN_CARD_COUNT, Math.min(TRAINING_MAX_CARD_COUNT, stepped));
       }
 
       function normalizeTrainingStage(value) {
@@ -7939,6 +8066,7 @@
           pendingStage,
           stage: 0,
           selectedCount: 0,
+          pendingCount: TRAINING_MIN_CARD_COUNT,
           sourceIds: [],
           cycleIndex: 0,
           cycleNumber: 0,
@@ -15084,6 +15212,11 @@
         setTypingKeysDisabled(grid, true);
         triggerTypingMistakeFeedback(grid);
         playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
+        if (isTrainingMode()) {
+          await wait(180);
+          await handleRecognitionResult('', 'typing');
+          return true;
+        }
         revealTypingAnswer(entry, card, { hintStart: typedLength, hintLength: 2 });
         await Promise.allSettled([playPromptAudio(card, { rate: 0.8 }), wait(2000)]);
         if (!state.game.active || state.game.currentId !== entry.id) return true;
@@ -15831,10 +15964,36 @@
         beginGame();
       }
 
+      function updateTrainingCountPicker() {
+        const count = normalizeTrainingCount(state.game.training?.pendingCount);
+        state.game.training.pendingCount = count;
+        if (els.trainingCountValue) {
+          els.trainingCountValue.textContent = String(count);
+        }
+        if (els.trainingStartBtn) {
+          els.trainingStartBtn.setAttribute('aria-label', `Iniciar treino com ${count} flashcards`);
+        }
+        if (els.trainingCountDownBtn) {
+          els.trainingCountDownBtn.disabled = count <= TRAINING_MIN_CARD_COUNT;
+        }
+        if (els.trainingCountUpBtn) {
+          els.trainingCountUpBtn.disabled = count >= TRAINING_MAX_CARD_COUNT;
+        }
+      }
+
+      function changeTrainingCount(delta) {
+        const current = normalizeTrainingCount(state.game.training?.pendingCount);
+        state.game.training.pendingCount = normalizeTrainingCount(current + delta);
+        updateTrainingCountPicker();
+      }
+
       function syncGameSetupMode() {
         const pendingStage = normalizeTrainingStage(state.game.training?.pendingStage);
         const isTrainingSetup = pendingStage > 0;
-        els.gameSetupOptions?.classList.toggle('is-training-counts', isTrainingSetup);
+        if (els.trainingCountPicker) {
+          els.trainingCountPicker.hidden = !isTrainingSetup;
+          els.trainingCountPicker.classList.toggle('is-visible', isTrainingSetup);
+        }
         if (els.gameSetupTitle) {
           els.gameSetupTitle.textContent = isTrainingSetup
             ? `Treino ${STAGES[pendingStage]?.badge || 'Flashcards'}`
@@ -15848,13 +16007,9 @@
         Array.from(els.gameSetupOptions?.querySelectorAll('[data-game-count], #startTutorialBtn') || []).forEach((button) => {
           button.hidden = isTrainingSetup;
         });
-        Array.from(els.gameSetupOptions?.querySelectorAll('[data-training-count]') || []).forEach((button) => {
-          const count = normalizeTrainingCount(button.getAttribute('data-training-count'));
-          const available = totalGameAvailableCards();
-          button.hidden = !isTrainingSetup;
-          button.disabled = available <= 0;
-          button.textContent = `${Math.min(count, Math.max(TRAINING_MIN_CARD_COUNT, available || count))} cartas`;
-        });
+        if (isTrainingSetup) {
+          updateTrainingCountPicker();
+        }
         syncGameSetupSummary();
       }
 
@@ -15867,6 +16022,7 @@
         if (!targetStage || totalGameAvailableCards() < 1) return;
         resetTrainingRuntime();
         state.game.training.pendingStage = targetStage;
+        state.game.training.pendingCount = TRAINING_MIN_CARD_COUNT;
         syncGameSetupMode();
         els.gameSetup.classList.add('is-visible');
         window.requestAnimationFrame(() => els.gameSetup.classList.add('is-active'));
@@ -16381,14 +16537,18 @@
             state.game.training.hitStreak = 0;
             entry.typingMistakes = 0;
             setGameStatus('', 'miss');
-            playFeedbackAudio(errorAudio);
+            playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
           }
           renderTrainingSequence();
-          await playStageResponseSequence(evaluatedStage, card, { skipPromptAudio: isHit && evaluatedStage === 2 });
-          await wait(isHit ? 420 : 900);
+          if (isHit) {
+            await playStageResponseSequence(evaluatedStage, card, { skipPromptAudio: evaluatedStage === 2 });
+            await wait(420);
+          } else {
+            await wait(180);
+          }
           if (!state.game.active || state.game.currentId !== entry.id) return;
           removeGameEntry(entry.id);
-          advanceToNextCard();
+          await advanceToNextCard();
           return;
         }
 
@@ -17005,6 +17165,17 @@
           );
         });
         els.closeGameSetupBtn.addEventListener('click', closeGameSetup);
+        els.trainingCountDownBtn?.addEventListener('click', () => {
+          changeTrainingCount(-TRAINING_CARD_STEP);
+        });
+        els.trainingCountUpBtn?.addEventListener('click', () => {
+          changeTrainingCount(TRAINING_CARD_STEP);
+        });
+        els.trainingStartBtn?.addEventListener('click', () => {
+          const stage = normalizeTrainingStage(state.game.training?.pendingStage);
+          const count = normalizeTrainingCount(state.game.training?.pendingCount);
+          beginTrainingGame(stage, count);
+        });
         els.startTutorialBtn?.addEventListener('click', () => {
           state.game.selectedCount = DEFAULT_GAME_CONTEXT_LIMIT;
           beginGame();
@@ -17016,13 +17187,6 @@
             saveSelectedGameCount(count);
             beginGame();
           });
-        });
-        els.gameSetupOptions?.addEventListener('click', (event) => {
-          const button = event.target.closest('[data-training-count]');
-          if (!button || button.hidden || button.disabled) return;
-          const stage = normalizeTrainingStage(state.game.training?.pendingStage);
-          const count = normalizeTrainingCount(button.getAttribute('data-training-count'));
-          beginTrainingGame(stage, count);
         });
         els.game.addEventListener('click', (event) => {
           if (event.target === els.game) {
