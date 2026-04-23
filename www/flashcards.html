@@ -56,8 +56,8 @@
 
     :root {
       --bg: #07111f;
-      --playtalk-global-bg-desktop: url('/backgrounds/playtalk-blue-hall.png');
-      --playtalk-global-bg-mobile: url('/backgrounds/playtalk-blue-hall.png');
+      --playtalk-global-bg-desktop: url('/api/r2-media/backgrounds/playtalk-global-desktop.webp');
+      --playtalk-global-bg-mobile: url('/api/r2-media/backgrounds/playtalk-global-mobile.webp');
       --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
       --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 0.78) 0%, rgba(4, 18, 38, 0.34) 42%, rgba(4, 18, 38, 0.04) 100%);
       --panel: rgba(8, 28, 54, 0.9);
@@ -611,6 +611,61 @@
         0 0 10px rgba(255, 209, 74, 0.42),
         0 7px 20px rgba(70, 41, 0, 0.34);
       text-transform: lowercase;
+    }
+
+    .welcome-gate__bg-admin {
+      margin: 6px 0 0;
+      display: grid;
+      justify-items: center;
+      gap: 6px;
+    }
+
+    .welcome-gate__bg-admin[hidden] {
+      display: none;
+    }
+
+    .welcome-gate__bg-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .welcome-gate__bg-btn {
+      width: 48px;
+      height: 48px;
+      border: 1px solid rgba(128, 211, 255, 0.46);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #e8f8ff;
+      background: rgba(2, 18, 56, 0.58);
+      box-shadow: 0 0 18px rgba(56, 201, 255, 0.2);
+      cursor: pointer;
+    }
+
+    .welcome-gate__bg-btn:disabled {
+      opacity: 0.52;
+      cursor: wait;
+    }
+
+    .welcome-gate__bg-btn svg {
+      width: 27px;
+      height: 27px;
+      fill: currentColor;
+    }
+
+    .welcome-gate__bg-status {
+      min-height: 1em;
+      margin: 0;
+      color: #bfefff;
+      font-size: clamp(12px, 2.8vw, 15px);
+      text-align: center;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.42);
+    }
+
+    .welcome-gate__bg-status.is-error {
+      color: #ffb7c0;
     }
 
     .robotcheck {
@@ -7068,6 +7123,18 @@
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button"><img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora"></button>
       </div>
       <p class="welcome-gate__admin-stats" id="welcomeAdminStats" hidden></p>
+      <div class="welcome-gate__bg-admin" id="welcomeBgAdmin" hidden>
+        <div class="welcome-gate__bg-actions" aria-label="Upload do background global">
+          <button class="welcome-gate__bg-btn" id="welcomeBgDesktopBtn" type="button" aria-label="Enviar background desktop" title="Enviar background desktop">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8A2.5 2.5 0 0 1 17.5 16H13v2h3v2H8v-2h3v-2H6.5A2.5 2.5 0 0 1 4 13.5v-8Zm2.5-.5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5h-11Z"/></svg>
+          </button>
+          <button class="welcome-gate__bg-btn" id="welcomeBgMobileBtn" type="button" aria-label="Enviar background mobile" title="Enviar background mobile">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2.5h8A2.5 2.5 0 0 1 18.5 5v14A2.5 2.5 0 0 1 16 21.5H8A2.5 2.5 0 0 1 5.5 19V5A2.5 2.5 0 0 1 8 2.5Zm0 2a.5.5 0 0 0-.5.5v14a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V5a.5.5 0 0 0-.5-.5H8Zm2.75 12.5h2.5v1.5h-2.5V17Z"/></svg>
+          </button>
+        </div>
+        <input id="welcomeBgUploadInput" type="file" accept="image/*" hidden>
+        <p class="welcome-gate__bg-status" id="welcomeBgStatus"></p>
+      </div>
     </div>
   </section>
   <section class="robotcheck" id="robotcheck" aria-label="Robot check">
@@ -7775,6 +7842,10 @@
           busy: false,
           status: 'Nenhuma acao em andamento.',
           error: false,
+          backgroundBusy: false,
+          backgroundVariant: '',
+          backgroundStatus: '',
+          backgroundError: false,
           prompt: '',
           activeCardId: '',
           selectedDeckSource: '',
@@ -7960,6 +8031,11 @@
         welcomeCopy: document.getElementById('welcomeCopy'),
         welcomeStartBtn: document.getElementById('welcomeStartBtn'),
         welcomeAdminStats: document.getElementById('welcomeAdminStats'),
+        welcomeBgAdmin: document.getElementById('welcomeBgAdmin'),
+        welcomeBgDesktopBtn: document.getElementById('welcomeBgDesktopBtn'),
+        welcomeBgMobileBtn: document.getElementById('welcomeBgMobileBtn'),
+        welcomeBgUploadInput: document.getElementById('welcomeBgUploadInput'),
+        welcomeBgStatus: document.getElementById('welcomeBgStatus'),
         robotcheck: document.getElementById('robotcheck'),
         appShell: document.querySelector('main.shell'),
         soundTestSubtitle: document.getElementById('soundTestSubtitle'),
@@ -10128,6 +10204,79 @@
         els.welcomeAdminStats.hidden = false;
       }
 
+      function setWelcomeBackgroundStatus(message, isError = false) {
+        state.admin.backgroundStatus = safeText(message);
+        state.admin.backgroundError = Boolean(isError);
+        if (!els.welcomeBgStatus) return;
+        els.welcomeBgStatus.textContent = state.admin.backgroundStatus;
+        els.welcomeBgStatus.classList.toggle('is-error', state.admin.backgroundError);
+      }
+
+      function syncWelcomeBackgroundAdmin() {
+        const adminMode = Boolean(state.user?.id) && isAdminUser();
+        if (els.welcomeBgAdmin) {
+          els.welcomeBgAdmin.hidden = !adminMode;
+        }
+        if (!adminMode) {
+          state.admin.backgroundBusy = false;
+          state.admin.backgroundVariant = '';
+          setWelcomeBackgroundStatus('');
+          return;
+        }
+        const disabled = Boolean(state.admin.backgroundBusy);
+        if (els.welcomeBgDesktopBtn) els.welcomeBgDesktopBtn.disabled = disabled;
+        if (els.welcomeBgMobileBtn) els.welcomeBgMobileBtn.disabled = disabled;
+        if (!state.admin.backgroundStatus) {
+          setWelcomeBackgroundStatus('BG global: desktop / mobile');
+        }
+      }
+
+      function applyUploadedGlobalBackground(variant, proxyUrl) {
+        const normalizedVariant = variant === 'mobile' ? 'mobile' : 'desktop';
+        const url = safeText(proxyUrl);
+        if (!url) return;
+        document.documentElement.style.setProperty(
+          normalizedVariant === 'mobile' ? '--playtalk-global-bg-mobile' : '--playtalk-global-bg-desktop',
+          `url("${url}")`
+        );
+      }
+
+      function requestWelcomeBackgroundUpload(variant) {
+        if (!isAdminUser() || state.admin.backgroundBusy || !els.welcomeBgUploadInput) return;
+        state.admin.backgroundVariant = variant === 'mobile' ? 'mobile' : 'desktop';
+        els.welcomeBgUploadInput.value = '';
+        els.welcomeBgUploadInput.click();
+      }
+
+      async function uploadWelcomeBackgroundFile(file) {
+        if (!file || !isAdminUser()) return;
+        const variant = state.admin.backgroundVariant === 'mobile' ? 'mobile' : 'desktop';
+        state.admin.backgroundBusy = true;
+        setWelcomeBackgroundStatus(`Enviando BG ${variant}...`);
+        syncWelcomeBackgroundAdmin();
+        try {
+          const imageDataUrl = await fileToDataUrl(file);
+          const response = await fetch(buildApiUrl('/api/admin/global-background'), {
+            method: 'POST',
+            headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+            credentials: 'include',
+            body: JSON.stringify({ variant, imageDataUrl })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.error || payload?.details || 'Nao foi possivel salvar o background global.');
+          }
+          applyUploadedGlobalBackground(variant, payload.proxyUrl);
+          setWelcomeBackgroundStatus(`BG ${variant} publicado no R2.`);
+        } catch (error) {
+          setWelcomeBackgroundStatus(error?.message || 'Falha ao enviar background.', true);
+        } finally {
+          state.admin.backgroundBusy = false;
+          state.admin.backgroundVariant = '';
+          syncWelcomeBackgroundAdmin();
+        }
+      }
+
       function syncWelcomeLevelProgress() {
         if (!els.welcomeUserName || !els.welcomeUserLevel || !els.welcomeLevelProgressBar || !els.welcomeLevelProgressCopy) return;
         const username = safeText(state.user?.username) || 'Jogador';
@@ -10163,6 +10312,7 @@
         syncWelcomeStartButton();
         syncWelcomeAccountLink();
         syncWelcomeLevelProgress();
+        syncWelcomeBackgroundAdmin();
         if (visible && !state.ui.soundTestOpen && !state.ui.micCheckOpen) {
           closeAudioCheck();
         }
@@ -17550,6 +17700,13 @@
         els.adminDeleteAudioBtn?.addEventListener('click', () => runAdminCardAssetDelete('audio'));
         els.adminDeleteCardBtn?.addEventListener('click', runAdminCardDelete);
         els.adminClosePopoverBtn?.addEventListener('click', closeAdminCardPopover);
+        els.welcomeBgDesktopBtn?.addEventListener('click', () => requestWelcomeBackgroundUpload('desktop'));
+        els.welcomeBgMobileBtn?.addEventListener('click', () => requestWelcomeBackgroundUpload('mobile'));
+        els.welcomeBgUploadInput?.addEventListener('change', (event) => {
+          const file = event.target?.files?.[0] || null;
+          event.target.value = '';
+          if (file) void uploadWelcomeBackgroundFile(file);
+        });
         els.adminCardPopover?.addEventListener('click', (event) => {
           if (event.target === els.adminCardPopover) {
             closeAdminCardPopover();

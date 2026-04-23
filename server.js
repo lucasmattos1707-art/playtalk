@@ -3458,6 +3458,10 @@ const FLASHCARDS_R2_PUBLIC_ROOT = (() => {
 })();
 const FLASHCARDS_R2_PREFIX = 'Star';
 const FLASHCARD_CAMERA_OBJECT_KEY = 'FlashCards/camera.webp';
+const GLOBAL_BACKGROUND_OBJECT_KEYS = {
+  desktop: 'backgrounds/playtalk-global-desktop.webp',
+  mobile: 'backgrounds/playtalk-global-mobile.webp'
+};
 const DEFAULT_GAME_SOUNDS_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/gamesounds';
 const GAME_SOUNDS_BASE_URL = (process.env.GAME_SOUNDS_BASE_URL || DEFAULT_GAME_SOUNDS_BASE_URL).trim();
 const EMPTY_R2_PAYLOAD_HASH = require('crypto').createHash('sha256').update('').digest('hex');
@@ -3653,6 +3657,42 @@ function parseBase64DataUrl(dataUrl) {
     mimeType: match[1] || 'application/octet-stream',
     buffer: Buffer.from(match[2], 'base64')
   };
+}
+
+function normalizeGlobalBackgroundVariant(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'mobile' ? 'mobile' : normalized === 'desktop' ? 'desktop' : '';
+}
+
+function isGlobalBackgroundObjectKey(objectKey) {
+  const normalized = String(objectKey || '').replace(/^\/+/, '');
+  return Object.values(GLOBAL_BACKGROUND_OBJECT_KEYS).includes(normalized);
+}
+
+function localGlobalBackgroundFallbackPath() {
+  const candidates = [
+    path.join(__dirname, 'www', 'backgrounds', 'playtalk-blue-hall.png'),
+    path.join(__dirname, 'public', 'backgrounds', 'playtalk-blue-hall.png'),
+    path.join(__dirname, 'dist', 'backgrounds', 'playtalk-blue-hall.png')
+  ];
+  return candidates.find(candidate => fs.existsSync(candidate)) || '';
+}
+
+async function optimizeGlobalBackgroundToWebp(inputBuffer, variant = 'desktop') {
+  const normalizedVariant = normalizeGlobalBackgroundVariant(variant) || 'desktop';
+  const maxSize = normalizedVariant === 'mobile'
+    ? { width: 1440, height: 2560 }
+    : { width: 2560, height: 2560 };
+  return sharp(inputBuffer, { failOn: 'none', animated: false })
+    .rotate()
+    .resize({
+      width: maxSize.width,
+      height: maxSize.height,
+      fit: 'inside',
+      withoutEnlargement: true
+    })
+    .webp({ quality: 88 })
+    .toBuffer();
 }
 
 async function optimizeAdminBannerToWebp(inputBuffer, variant = 'desktop', options = {}) {
@@ -14257,30 +14297,100 @@ app.post('/api/rankings/flashcards', async (req, res) => {
 });
 
 app.get('/api/r2-media/:objectKey(*)', async (req, res) => {
+  const objectKey = String(req.params.objectKey || '').replace(/^\/+/, '');
   try {
     if (!isR2FluencyConfigured()) {
+      if (isGlobalBackgroundObjectKey(objectKey)) {
+        const fallbackPath = localGlobalBackgroundFallbackPath();
+        if (fallbackPath) {
+          res.setHeader('Cache-Control', 'no-cache');
+          res.type(contentTypeFromObjectKey(fallbackPath));
+          res.sendFile(fallbackPath);
+          return;
+        }
+      }
       res.status(503).json({ success: false, message: 'R2 nao configurado para conteudo de fluencia.' });
       return;
     }
 
-    const objectKey = String(req.params.objectKey || '').replace(/^\/+/, '');
     if (!objectKey) {
       res.status(400).json({ success: false, message: 'Objeto do R2 nao informado.' });
       return;
     }
 
     const data = await fetchR2ObjectBuffer(objectKey);
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Cache-Control', isGlobalBackgroundObjectKey(objectKey) ? 'no-cache' : 'public, max-age=3600');
     res.type(contentTypeFromObjectKey(objectKey));
     res.send(data);
   } catch (error) {
     if (/404/i.test(String(error?.message || ''))) {
+      if (isGlobalBackgroundObjectKey(objectKey)) {
+        const fallbackPath = localGlobalBackgroundFallbackPath();
+        if (fallbackPath) {
+          res.setHeader('Cache-Control', 'no-cache');
+          res.type(contentTypeFromObjectKey(fallbackPath));
+          res.sendFile(fallbackPath);
+          return;
+        }
+      }
       res.status(404).send('Arquivo nao encontrado no R2.');
       return;
     }
 
     console.error('Erro ao servir asset do R2:', error);
     res.status(500).json({ success: false, message: 'Erro ao carregar arquivo do R2.' });
+  }
+});
+
+app.post('/api/admin/global-background', express.json({ limit: '60mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+  } catch (error) {
+    const statusCode = Number(error?.statusCode || 401);
+    res.status(statusCode).json({ error: error.message || 'Acesso negado.' });
+    return;
+  }
+
+  if (!isR2FluencyConfigured()) {
+    res.status(503).json({ error: 'R2 nao configurado para salvar background global.' });
+    return;
+  }
+
+  const variant = normalizeGlobalBackgroundVariant(req.body?.variant);
+  if (!variant) {
+    res.status(400).json({ error: 'Escolha desktop ou mobile para o background global.' });
+    return;
+  }
+
+  const parsed = parseBase64DataUrl(req.body?.imageDataUrl);
+  if (!parsed?.buffer?.length || !/^image\//i.test(parsed.mimeType || '')) {
+    res.status(400).json({ error: 'Imagem invalida para o background global.' });
+    return;
+  }
+
+  try {
+    const objectKey = GLOBAL_BACKGROUND_OBJECT_KEYS[variant];
+    const optimizedBuffer = await optimizeGlobalBackgroundToWebp(parsed.buffer, variant);
+    if (!optimizedBuffer?.length) {
+      res.status(422).json({ error: 'Nao foi possivel otimizar o background para WebP.' });
+      return;
+    }
+
+    await putR2Object(objectKey, optimizedBuffer, 'image/webp');
+    const cacheBuster = Date.now();
+    res.json({
+      success: true,
+      variant,
+      objectKey,
+      publicUrl: `${buildFlashcardsR2PublicUrl(objectKey)}?v=${cacheBuster}`,
+      proxyUrl: `/api/r2-media/${objectKey}?v=${cacheBuster}`,
+      size: optimizedBuffer.length
+    });
+  } catch (error) {
+    res.status(502).json({
+      error: 'Falha ao salvar background global no R2.',
+      details: error.message
+    });
   }
 });
 
