@@ -17613,27 +17613,29 @@
         }
       }
 
-      async function guardWelcomeEnergy() {
-        if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.guardEnergy !== 'function') {
+      async function guardWelcomeEnergy(options = {}) {
+        if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.guardEnergyGate !== 'function') {
           return true;
         }
-        const result = await window.PlaytalkEnergy.guardEnergy({
-          user: state.user
+        const result = await window.PlaytalkEnergy.guardEnergyGate({
+          user: state.user,
+          previewTarget: options.previewTarget,
+          previewTargets: options.previewTargets
         });
         return Boolean(result?.allowed);
       }
 
       function bindEvents() {
-        els.welcomeStartBtn?.addEventListener('click', () => {
+        els.welcomeStartBtn?.addEventListener('click', (event) => {
           void (async () => {
-            if (!(await guardWelcomeEnergy())) return;
+            if (!(await guardWelcomeEnergy({ previewTarget: event.currentTarget }))) return;
             state.entry.welcomeStartRequested = true;
             void openAudioCheck();
           })();
         });
-        els.welcomeLogo?.addEventListener('click', () => {
+        els.welcomeLogo?.addEventListener('click', (event) => {
           void (async () => {
-            if (!(await guardWelcomeEnergy())) return;
+            if (!(await guardWelcomeEnergy({ previewTarget: [event.currentTarget, els.welcomeStartBtn] }))) return;
             state.entry.welcomeStartRequested = true;
             void openAudioCheck();
           })();

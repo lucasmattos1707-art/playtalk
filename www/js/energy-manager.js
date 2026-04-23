@@ -131,14 +131,16 @@
       }
 
       .playtalk-energy-gate__content {
-        width: min(92vw, 560px);
+        width: min(92vw, 620px);
         display: grid;
         justify-items: center;
+        justify-content: center;
         align-content: center;
         place-self: center;
+        justify-self: center;
         text-align: center;
         gap: clamp(14px, 2.6vh, 24px);
-        padding: 32px 16px;
+        padding: 18px 16px 32px;
         margin: 0 auto;
       }
 
@@ -147,8 +149,9 @@
         display: grid;
         gap: 2px;
         font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
-        font-size: clamp(30px, 7.6vw, 60px);
+        font-size: clamp(33px, 8.4vw, 66px);
         line-height: 0.92;
+        transform: translateY(-10px);
         text-shadow:
           0 3px 0 rgba(5, 48, 138, 0.98),
           0 14px 30px rgba(0, 0, 0, 0.28);
@@ -159,8 +162,8 @@
       }
 
       .playtalk-energy-gate__star {
-        width: min(15vw, 15vh, 132px);
-        height: min(15vw, 15vh, 132px);
+        width: min(27vw, 27vh, 238px);
+        height: min(27vw, 27vh, 238px);
         object-fit: contain;
         filter:
           drop-shadow(0 10px 24px rgba(0, 0, 0, 0.28))
@@ -168,20 +171,17 @@
       }
 
       .playtalk-energy-gate__logline {
-        min-height: 2.5em;
+        min-height: 1.2em;
         margin: 0;
-        display: grid;
-        gap: 2px;
-        font-size: clamp(18px, 4.7vw, 31px);
-        line-height: 1.02;
+        display: block;
+        width: 100%;
+        font-size: clamp(16px, 4.2vw, 28px);
+        line-height: 1;
+        white-space: nowrap;
         text-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
         opacity: 1;
         transform: translateY(0);
         transition: opacity 420ms ease, transform 420ms ease;
-      }
-
-      .playtalk-energy-gate__logline span {
-        display: block;
       }
 
       .playtalk-energy-gate__logline.is-changing {
@@ -219,7 +219,7 @@
       .playtalk-energy-gate__countdown-value {
         display: inline-block;
         min-width: 7.4em;
-        text-align: left;
+        text-align: center;
       }
 
       .playtalk-energy-gate__premium {
@@ -227,12 +227,12 @@
         padding: 0 28px;
         border: 0;
         border-radius: 999px;
-        background: linear-gradient(180deg, #fff56b 0%, #ffb92f 100%);
-        color: #08265d;
+        background: linear-gradient(180deg, #c084fc 0%, #9333ea 52%, #6b21c8 100%);
+        color: #ffffff;
         font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
         font-size: clamp(20px, 4.6vw, 32px);
         box-shadow:
-          0 0 24px rgba(255, 236, 92, 0.42),
+          0 0 24px rgba(192, 132, 252, 0.42),
           0 16px 34px rgba(0, 0, 0, 0.24);
         cursor: pointer;
       }
@@ -307,28 +307,10 @@
     countdown.textContent = formatResetCountdownDetailed(latestEnergyGateStatus?.nextResetAt);
   }
 
-  function splitBalancedText(value) {
-    const words = String(value || '').trim().split(/\s+/).filter(Boolean);
-    if (words.length <= 2) return [words.join(' ')].filter(Boolean);
-    let best = [String(value || '').trim()];
-    let bestScore = Number.POSITIVE_INFINITY;
-    for (let index = 1; index < words.length; index += 1) {
-      const first = words.slice(0, index).join(' ');
-      const second = words.slice(index).join(' ');
-      const score = Math.abs(first.length - second.length);
-      if (score < bestScore) {
-        bestScore = score;
-        best = [first, second];
-      }
-    }
-    return best;
-  }
-
   function renderEnergyGateLogline(text) {
     const logline = document.getElementById('playtalkEnergyGateLogline');
     if (!logline) return;
-    const parts = splitBalancedText(text);
-    logline.innerHTML = parts.map((part) => `<span>${escapeHtml(part)}</span>`).join('');
+    logline.innerHTML = escapeHtml(text);
   }
 
   function startEnergyGateTimers() {
