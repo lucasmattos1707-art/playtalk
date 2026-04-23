@@ -347,45 +347,6 @@
       margin-inline: auto;
     }
 
-    .welcome-gate__modes {
-      width: min(396px, 84vw);
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      transform: translateY(-4vh);
-      margin: -8px auto 0;
-    }
-
-    .welcome-gate__mode-btn {
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      border-radius: 50%;
-      border: 2px solid rgba(126, 221, 255, 0.72);
-      background: radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.24), rgba(11, 54, 124, 0.94) 72%);
-      color: #ffffff;
-      display: grid;
-      place-items: center;
-      box-shadow:
-        0 0 18px rgba(72, 191, 255, 0.58),
-        0 14px 28px rgba(4, 12, 28, 0.34),
-        inset 0 0 16px rgba(126, 221, 255, 0.18);
-      transition: transform 180ms ease, filter 180ms ease, border-color 180ms ease;
-    }
-
-    .welcome-gate__mode-btn:hover,
-    .welcome-gate__mode-btn:focus-visible {
-      transform: translateY(-3px) scale(1.04);
-      filter: brightness(1.12);
-      border-color: rgba(163, 255, 218, 0.92);
-    }
-
-    .welcome-gate__mode-btn svg {
-      width: 52%;
-      height: 52%;
-      fill: currentColor;
-      filter: drop-shadow(0 0 10px rgba(182, 235, 255, 0.58));
-    }
-
     .welcome-gate__copy {
       display: none !important;
     }
@@ -6813,11 +6774,6 @@
         max-width: 94vw;
       }
 
-      .welcome-gate__modes {
-        width: min(360px, 82vw);
-        gap: 10px;
-      }
-
       .welcome-gate__start-btn {
         width: min(396px, 84.6vw);
         max-width: 94vw;
@@ -6845,20 +6801,6 @@
     <div class="welcome-gate__stack">
       <div class="welcome-gate__touch" id="welcomeTouch">
         <img class="welcome-gate__logo" id="welcomeLogo" src="/arquivos-codex/fluent-levelup-logo.png" alt="Level Up">
-        <div class="welcome-gate__modes" id="welcomeTrainingModes" aria-label="Modos de treino">
-          <button class="welcome-gate__mode-btn" type="button" data-training-stage="1" aria-label="Treinar first star">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
-          </button>
-          <button class="welcome-gate__mode-btn" type="button" data-training-stage="2" aria-label="Treinar second star">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v3H4zm0 5h4v3H4zm6 0h4v3h-4zm6 0h4v3h-4zM4 15h16v4H4z"/></svg>
-          </button>
-          <button class="welcome-gate__mode-btn" type="button" data-training-stage="3" aria-label="Treinar third star">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12s3.2-6 8-6 8 6 8 6-3.2 6-8 6-8-6-8-6m8 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>
-          </button>
-          <button class="welcome-gate__mode-btn" type="button" data-training-stage="5" aria-label="Treinar fifth star">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21 7 14.2 2 9.3l6.9-1z"/></svg>
-          </button>
-        </div>
         <p class="welcome-gate__copy" id="welcomeCopy"></p>
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button"><img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora"></button>
       </div>
