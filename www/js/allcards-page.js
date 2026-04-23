@@ -790,6 +790,56 @@
     });
   }
 
+  async function fetchSessionUserForEnergy() {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
+      return window.PlaytalkApi.fetchSessionUser({
+        attempts: 2,
+        retryDelayMs: 250
+      });
+    }
+    try {
+      const response = await fetch(buildApiUrl('/auth/session'), {
+        headers: buildAuthHeaders(),
+        cache: 'no-store',
+        credentials: 'include'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) return null;
+      return payload.user || null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  async function guardEnergyGate(options = {}) {
+    if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.guardEnergyGate !== 'function') {
+      return true;
+    }
+    const user = await fetchSessionUserForEnergy();
+    const result = await window.PlaytalkEnergy.guardEnergyGate({
+      user,
+      previewTarget: options.previewTarget
+    });
+    return Boolean(result?.allowed);
+  }
+
+  function bindEnergyGateEntryPoints() {
+    document.addEventListener('click', (event) => {
+      const trigger = event.target instanceof Element
+        ? event.target.closest('.empty-library__start-btn')
+        : null;
+      if (!trigger) return;
+      const href = safeText(trigger.getAttribute('href')) || trigger.href || '';
+      event.preventDefault();
+      void (async () => {
+        if (!(await guardEnergyGate({ previewTarget: trigger }))) return;
+        if (href) {
+          window.location.href = href;
+        }
+      })();
+    });
+  }
+
   async function resolveSessionUserId() {
     if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
       const user = await window.PlaytalkApi.fetchSessionUser({
@@ -937,6 +987,7 @@
 
   async function init() {
     bindViewToggles();
+    bindEnergyGateEntryPoints();
     renderViewToggle();
     await loadFlashcardsLibrary();
     startVisualTimers();

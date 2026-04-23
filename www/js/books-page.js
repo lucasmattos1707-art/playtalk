@@ -1428,11 +1428,11 @@
     return Number.isFinite(time) && time > Date.now();
   }
 
-  async function guardEnergyAndRedirect() {
-    if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.getEnergyStatus !== 'function') {
+  async function guardEnergyAndRedirect(options = {}) {
+    if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.guardEnergyGate !== 'function') {
       return true;
     }
-    const status = await window.PlaytalkEnergy.getEnergyStatus({
+    const result = await window.PlaytalkEnergy.guardEnergyGate({
       user: state.user,
       stats: {
         readingChars: state.readingCharsTotal,
@@ -1443,13 +1443,11 @@
         dailyEnergyLimit: state.stats?.dailyEnergyLimit,
         unlimited: state.stats?.unlimited,
         nextEnergyResetAt: state.stats?.nextEnergyResetAt
-      }
+      },
+      previewTarget: options.previewTarget,
+      previewTargets: options.previewTargets
     });
-    if (status?.loggedIn && status?.blocked) {
-      handleEnergyExhaustedRedirect();
-      return false;
-    }
-    return true;
+    return Boolean(result?.allowed);
   }
 
   function handleEnergyExhaustedRedirect() {
@@ -1458,30 +1456,22 @@
     state.homePaused = true;
     interruptHomeAudioPlayback();
     stopHomeMusicLoop();
-    if (els.homePanel) {
-      els.homePanel.classList.add('is-energy-dissolving');
+    if (window.PlaytalkEnergy && typeof window.PlaytalkEnergy.openEnergyGate === 'function') {
+      window.PlaytalkEnergy.openEnergyGate(
+        window.PlaytalkEnergy.buildEnergyStatus({
+          user: state.user,
+          stats: state.stats || {}
+        })
+      );
     }
-    window.setTimeout(() => {
-      if (window.PlaytalkEnergy && typeof window.PlaytalkEnergy.redirectToFlashcardsEnergyGate === 'function') {
-        window.PlaytalkEnergy.redirectToFlashcardsEnergyGate(
-          window.PlaytalkEnergy.buildEnergyStatus({
-            user: state.user,
-            stats: state.stats || {}
-          })
-        );
-        return;
-      }
-      navigateTo('/flashcards?energy=empty', { replace: true });
-    }, 3000);
+    state.energyRedirectInProgress = false;
   }
 
   function syncEnergyRedirectFromStats(stats) {
     if (isPremiumActive()) return;
     const remaining = Number(stats?.remainingEnergy);
     const minimum = Number(window.PlaytalkEnergy?.ENERGY_GATE_MINIMUM) || 60;
-    if (Number.isFinite(remaining) && remaining < minimum) {
-      handleEnergyExhaustedRedirect();
-    }
+    return Number.isFinite(remaining) && remaining < minimum;
   }
 
   function renderHomeAccountUi() {
@@ -3390,9 +3380,9 @@
     void runHomePlaybackLoop(token);
   }
 
-  async function startHomeSleepPlayback() {
+  async function startHomeSleepPlayback(options = {}) {
     if (state.homeSleepActive || state.homeStartBusy) return;
-    if (!(await guardEnergyAndRedirect())) return;
+    if (!(await guardEnergyAndRedirect({ previewTarget: options.previewTarget }))) return;
     const visibleBook = getVisibleShelfBook();
     state.homeStartBusy = true;
     state.homeSleepActive = true;
@@ -6619,8 +6609,8 @@
       void loginFromBooksHome();
     });
 
-    els.homeLaunchBtn?.addEventListener('click', () => {
-      startHomeSleepPlayback();
+    els.homeLaunchBtn?.addEventListener('click', (event) => {
+      void startHomeSleepPlayback({ previewTarget: event.currentTarget });
     });
 
     els.homeCollectBtn?.addEventListener('click', () => {
@@ -6672,7 +6662,7 @@
     els.homeSleepFab?.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      void startHomeSleepPlayback();
+      void startHomeSleepPlayback({ previewTarget: event.currentTarget });
     });
 
     // Tapping the current book cover in the Home player opens the pre-book overlay (paused + blurred).
@@ -6809,7 +6799,7 @@
 
     els.preBookRankedBtn?.addEventListener('click', () => {
       void (async () => {
-        if (!(await guardEnergyAndRedirect())) return;
+        if (!(await guardEnergyAndRedirect({ previewTarget: els.preBookRankedBtn }))) return;
         state.preBookRankedMode = true;
         setPreBookStep('training');
       })();
@@ -6817,7 +6807,7 @@
 
     els.preBookPronounceBtn?.addEventListener('click', () => {
       void (async () => {
-        if (!(await guardEnergyAndRedirect())) return;
+        if (!(await guardEnergyAndRedirect({ previewTarget: els.preBookPronounceBtn }))) return;
         state.preBookRankedMode = false;
         setPreBookStep('training');
       })();

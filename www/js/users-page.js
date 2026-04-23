@@ -360,12 +360,14 @@
     return Boolean(state.currentUser?.isAdmin);
   }
 
-  async function guardEnergyAndRedirect() {
-    if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.guardEnergy !== 'function') {
+  async function guardEnergyAndRedirect(options = {}) {
+    if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.guardEnergyGate !== 'function') {
       return true;
     }
-    const result = await window.PlaytalkEnergy.guardEnergy({
-      user: state.currentUser
+    const result = await window.PlaytalkEnergy.guardEnergyGate({
+      user: state.currentUser,
+      previewTarget: options.previewTarget,
+      previewTargets: options.previewTargets
     });
     return Boolean(result?.allowed);
   }
@@ -742,12 +744,12 @@
       rowEl.addEventListener('click', async () => {
         const userId = Number(rowEl.getAttribute('data-user-id')) || 0;
         const user = state.rows.find((entry) => entry.userId === userId);
+        if (!(await guardEnergyAndRedirect({ previewTarget: rowEl }))) return;
         if (!user || user.userId === state.currentUser?.id) return;
         if (isAdminViewer()) {
           openAdminModal(user);
           return;
         }
-        if (!(await guardEnergyAndRedirect())) return;
         openChallengeModal(user);
       });
     });
@@ -1045,7 +1047,8 @@
 
   async function sendChallenge(mode) {
     if (!state.challengeTarget || state.challengeBusy) return;
-    if (!(await guardEnergyAndRedirect())) return;
+    const previewTarget = mode === 'battle-cards' ? els.challengeCardsBtn : els.challengeSmartbooksBtn;
+    if (!(await guardEnergyAndRedirect({ previewTarget }))) return;
     state.challengeBusy = true;
     syncChallengeButtons();
     const normalizedMode = mode === 'battle-cards' ? 'battle-cards' : 'smartbooks';
@@ -1063,11 +1066,11 @@
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) {
         if (window.PlaytalkEnergy?.isEnergyErrorPayload(payload, response.status)) {
-          const status = window.PlaytalkEnergy.buildEnergyStatus({
+          await window.PlaytalkEnergy.previewBlockedTargets(previewTarget);
+          window.PlaytalkEnergy.openEnergyGate(window.PlaytalkEnergy.buildEnergyStatus({
             user: state.currentUser,
             stats: payload?.energy || {}
-          });
-          window.PlaytalkEnergy.redirectToFlashcardsEnergyGate(status);
+          }));
           closeChallengeModal();
           return;
         }

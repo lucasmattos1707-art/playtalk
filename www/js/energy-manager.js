@@ -2,6 +2,7 @@
   const DAILY_FREE_ENERGY = 5000;
   const ENERGY_EXHAUSTED_STATUS = 402;
   const ENERGY_GATE_MINIMUM = 60;
+  const ENERGY_GATE_PREVIEW_MS = 1000;
   const ENERGY_GATE_LOG_LINES = [
     'Volte amanhã para treinar mais!',
     'ou continue com energias infinitas'
@@ -190,8 +191,19 @@
           0 16px 34px rgba(0, 0, 0, 0.24);
         cursor: pointer;
       }
+
+      .playtalk-energy-preview-blocked {
+        filter: grayscale(1) brightness(0.42) !important;
+        transition: filter 180ms ease, opacity 180ms ease !important;
+      }
     `;
     document.head.appendChild(style);
+  }
+
+  function wait(ms) {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
+    });
   }
 
   function ensureEnergyGate() {
@@ -279,6 +291,35 @@
       gate.hidden = true;
     }
     stopEnergyGateTimers();
+  }
+
+  function normalizePreviewTargets(targets) {
+    const source = Array.isArray(targets) ? targets : [targets];
+    return source.filter((target) => target instanceof HTMLElement);
+  }
+
+  async function previewBlockedTargets(targets, durationMs = ENERGY_GATE_PREVIEW_MS) {
+    const entries = normalizePreviewTargets(targets).map((element) => ({
+      element,
+      pointerEvents: element.style.pointerEvents
+    }));
+    if (!entries.length) {
+      await wait(durationMs);
+      return;
+    }
+    entries.forEach(({ element }) => {
+      element.classList.add('playtalk-energy-preview-blocked');
+      element.style.pointerEvents = 'none';
+    });
+    await wait(durationMs);
+    entries.forEach(({ element, pointerEvents }) => {
+      element.classList.remove('playtalk-energy-preview-blocked');
+      if (pointerEvents) {
+        element.style.pointerEvents = pointerEvents;
+      } else {
+        element.style.removeProperty('pointer-events');
+      }
+    });
   }
 
   function redirectToFlashcardsEnergyGate(status = null) {
@@ -417,6 +458,19 @@
     return buildEnergyStatus({ user, stats });
   }
 
+  async function guardEnergyGate(options = {}) {
+    const status = await getEnergyStatus(options);
+    if (status.loggedIn && status.blocked) {
+      const previewTargets = options.previewTargets != null
+        ? options.previewTargets
+        : options.previewTarget;
+      await previewBlockedTargets(previewTargets, options.previewDurationMs);
+      openEnergyGate(status);
+      return { allowed: false, status };
+    }
+    return { allowed: true, status };
+  }
+
   async function guardEnergy(options = {}) {
     const status = await getEnergyStatus(options);
     if (status.loggedIn && status.blocked) {
@@ -438,11 +492,13 @@
     fetchBooksStats,
     formatResetCountdown,
     getEnergyStatus,
+    guardEnergyGate,
     guardEnergy,
     isEnergyErrorPayload,
     isPremiumActive,
     openEnergyGate,
     closeEnergyGate,
+    previewBlockedTargets,
     redirectToFlashcardsEnergyGate,
     resolveFlashcardsEnergyHref,
     resolvePremiumHref,
