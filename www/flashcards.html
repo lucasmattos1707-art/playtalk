@@ -6147,6 +6147,32 @@
       transition: opacity 180ms ease, box-shadow 180ms ease;
     }
 
+    .flashcard-level-progress {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: var(--footer-total-height);
+      height: 10px;
+      background: rgba(12, 34, 29, 0.72);
+      z-index: 18;
+      overflow: hidden;
+      pointer-events: none;
+      box-shadow: 0 -1px 14px rgba(97, 242, 164, 0.2);
+    }
+
+    .flashcard-level-progress[hidden] {
+      display: none !important;
+    }
+
+    .flashcard-level-progress__bar {
+      display: block;
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #39ff7a, #a9ff4f);
+      box-shadow: 0 0 18px rgba(97, 242, 164, 0.95);
+      transition: width 280ms ease;
+    }
+
     .flashcards-footer-nav__item {
       border: 0;
       background: transparent;
@@ -7224,6 +7250,9 @@
       <img src="/arquivos-codex/nav-icons/book.png" alt="Books">
     </a>
   </nav>
+  <div class="flashcard-level-progress" id="flashcardLevelProgress" hidden aria-hidden="true">
+    <span class="flashcard-level-progress__bar" id="flashcardLevelProgressBar"></span>
+  </div>
   <script src="js/android-config.js"></script>
   <script src="js/api-config.js"></script>
   <script src="js/energy-manager.js?v=20260423a"></script>
@@ -7315,6 +7344,10 @@
       const BALANCE_TRACK_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas';
       const TYPING_KEY_BLUES = ['#6ebcff', '#76c3ff', '#7dc9ff', '#86ceff', '#8fd4ff', '#98d9ff'];
       const DEFAULT_GAME_CONTEXT_LIMIT = 12;
+      const USER_LEVEL_MIN = 1;
+      const USER_LEVEL_MAX = 100;
+      const USER_LEVEL_CARD_TARGET = 12;
+      const CURRENT_LEVEL_ROUND_RATIO = 0.75;
       const MIN_GAME_CONTEXT_LIMIT = 1;
       const TRAINING_MIN_CARD_COUNT = 10;
       const TRAINING_MAX_CARD_COUNT = 500;
@@ -7475,6 +7508,8 @@
         },
         timeOffsetMs: 0,
         user: null,
+        userLevel: 1,
+        lastLevelUpLevel: 0,
         authMode: 'login',
         authReason: 'optional',
           flashcardsSyncInFlight: false,
@@ -7763,6 +7798,8 @@
         gameStep: document.getElementById('gameStep'),
         gameStatus: document.getElementById('gameStatus'),
         gameStatusIcon: document.getElementById('gameStatusIcon'),
+        flashcardLevelProgress: document.getElementById('flashcardLevelProgress'),
+        flashcardLevelProgressBar: document.getElementById('flashcardLevelProgressBar'),
         gameStars: document.getElementById('gameStars'),
         gameLanguageBtn: document.getElementById('gameLanguageBtn'),
         gameTouchBtn: document.getElementById('gameTouchBtn'),
@@ -8617,7 +8654,8 @@
           createdAt: user.created_at || user.createdAt || null,
           isAdmin: Boolean(user.is_admin),
           premiumFullAccess: Boolean(user.premium_full_access),
-          premiumUntil: user.premium_until || user.premiumUntil || null
+          premiumUntil: user.premium_until || user.premiumUntil || null,
+          level: normalizeUserLevel(user.level ?? user.userLevel)
         };
       }
 
@@ -8794,6 +8832,7 @@
             sealImage: safeText(record?.sealImage || phaseMeta(activeSealPhase(record)).sealPath)
           })).filter(record => record.cardId),
           stats: normalizeStatsSnapshot(state.stats),
+          userLevel: normalizeUserLevel(state.userLevel),
           hiddenCardIds: Array.from(state.hiddenCardIds.values())
         };
       }
@@ -8838,6 +8877,10 @@
               return false;
             }
             throw new Error(payload?.message || 'Falha ao salvar seus flashcards.');
+          }
+          if (Number.isFinite(Number(payload?.userLevel))) {
+            state.userLevel = normalizeUserLevel(payload.userLevel);
+            if (state.user) state.user.level = state.userLevel;
           }
           return true;
         } catch (error) {
@@ -10848,6 +10891,7 @@
         if (!state.user) {
           throw new Error('Sessao invalida.');
         }
+        state.userLevel = normalizeUserLevel(state.user.level);
         if (state.user.audio_check_completed) {
           persistAudioCheckCompletedFlag(true);
         }
@@ -10883,6 +10927,8 @@
         state.hiddenCardIds = Array.isArray(cloudState?.meta?.hiddenCardIds)
           ? new Set(cloudState.meta.hiddenCardIds.map((cardId) => safeText(cardId)).filter(Boolean))
           : localHidden;
+        state.userLevel = normalizeUserLevel(cloudState?.userLevel ?? cloudState?.meta?.userLevel ?? state.user.level);
+        state.user.level = state.userLevel;
         state.game.tutorial.completed = readTutorialProgress();
         syncOwnedIdsFromProgress();
         reconcileTutorialProgress();
@@ -11249,7 +11295,7 @@
           .filter(record => record.status === 'ready' && (record.phaseIndex || 0) >= 1)
           .sort((left, right) => (Number(left.returnedAt) || 0) - (Number(right.returnedAt) || 0))
           .map(record => state.allCards.find(card => card.id === record.cardId))
-          .filter(card => card && !isCardHiddenForUser(card.id) && hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
+          .filter(card => card && !isCardHiddenForUser(card.id) && hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card) && isCardAllowedForUserLevel(card));
       }
 
       function totalGameAvailableCards() {
@@ -11272,6 +11318,17 @@
             : `${total} flashcards disponiveis no total para jogar agora.`)
           : 'Nenhum flashcard disponivel para jogar agora.';
         syncTutorialSetupButton();
+      }
+
+      function normalizeUserLevel(value) {
+        const parsed = Number.parseInt(String(value ?? '').trim(), 10);
+        if (!Number.isInteger(parsed)) return USER_LEVEL_MIN;
+        return Math.max(USER_LEVEL_MIN, Math.min(USER_LEVEL_MAX, parsed));
+      }
+
+      function normalizeDeckLevel(value) {
+        const parsed = Number.parseInt(String(value ?? '').trim(), 10);
+        return Number.isInteger(parsed) && parsed > 0 ? Math.max(USER_LEVEL_MIN, Math.min(USER_LEVEL_MAX, parsed)) : USER_LEVEL_MIN;
       }
 
       function tutorialAudioPath(index) {
@@ -11596,12 +11653,67 @@
         return (Array.isArray(cards) ? cards : []).filter(isEarlyFlashcardLengthEligible);
       }
 
+      function currentUserLevel() {
+        return normalizeUserLevel(state.userLevel || state.user?.level || 1);
+      }
+
+      function cardDeckLevel(card) {
+        return normalizeDeckLevel(card?.deckLevel);
+      }
+
+      function isCardAllowedForUserLevel(card) {
+        if (isAdminUser()) return true;
+        return cardDeckLevel(card) <= currentUserLevel();
+      }
+
+      function currentLevelProgressCount(level = currentUserLevel()) {
+        const targetLevel = normalizeUserLevel(level);
+        let total = 0;
+        state.userCards.forEach((record, cardId) => {
+          if (!record) return;
+          const card = state.allCards.find(item => item.id === cardId);
+          if (!card || cardDeckLevel(card) !== targetLevel) return;
+          total += 1;
+        });
+        return total;
+      }
+
+      function updateLevelProgressBar() {
+        if (!els.flashcardLevelProgress || !els.flashcardLevelProgressBar) return;
+        const show = Boolean(state.game.active && !isAdminUser());
+        els.flashcardLevelProgress.hidden = !show;
+        const count = state.lastLevelUpLevel
+          ? USER_LEVEL_CARD_TARGET
+          : Math.max(0, Math.min(USER_LEVEL_CARD_TARGET, currentLevelProgressCount()));
+        const percent = (count / USER_LEVEL_CARD_TARGET) * 100;
+        els.flashcardLevelProgressBar.style.width = `${percent.toFixed(2)}%`;
+      }
+
+      function maybeAdvanceUserLevel() {
+        if (isAdminUser()) return false;
+        const levelBefore = currentUserLevel();
+        let nextLevel = levelBefore;
+        while (
+          nextLevel < USER_LEVEL_MAX
+          && currentLevelProgressCount(nextLevel) >= USER_LEVEL_CARD_TARGET
+        ) {
+          nextLevel = normalizeUserLevel(nextLevel + 1);
+        }
+        if (nextLevel === levelBefore) return false;
+        state.userLevel = nextLevel;
+        if (state.user) state.user.level = nextLevel;
+        state.lastLevelUpLevel = nextLevel;
+        saveUserProgress();
+        updateLevelProgressBar();
+        return true;
+      }
+
       function baseCandidateCards() {
         if (isAdminUser()) {
           return state.allCards.filter((card) => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
         }
         const lockedCards = state.allCards.filter(card => !state.userCards.has(card.id) && !isCardHiddenForUser(card.id));
-        const playableLockedCards = lockedCards.filter(card => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
+        const playableLockedCards = lockedCards.filter(card => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card) && isCardAllowedForUserLevel(card));
         return playableLockedCards;
       }
 
@@ -11610,6 +11722,7 @@
           !isCardHiddenForUser(card.id)
           && hasCoreFlashcardText(card)
           && hasPlayableFlashcardImage(card)
+          && isCardAllowedForUserLevel(card)
         ));
       }
 
@@ -11631,6 +11744,7 @@
         const title = repairDisplayText(payload?.title) || fileName.replace(/\.json$/i, '');
         const sourceKey = safeText(options.sourceKey || fileName) || fileName;
         const idSource = safeText(options.idSource || fileName) || fileName;
+        const deckLevel = normalizeDeckLevel(options.deckLevel);
         const items = Array.isArray(payload)
           ? payload
           : Array.isArray(payload?.items)
@@ -11645,6 +11759,7 @@
             source: sourceKey,
             sourceIndex: index,
             deckTitle: title,
+            deckLevel,
             imageUrl: safeText(item?.imagem || item?.image),
             english,
             englishAnswers: collectAcceptedAnswers(
@@ -11809,6 +11924,7 @@
           source: safeText(file?.sourceKey || file?.name || file?.path),
           title: repairDisplayText(payload?.title) || safeText(file?.title) || defaultTitle,
           path: safeText(file?.path),
+          deckLevel: normalizeDeckLevel(file?.deckLevel),
           count: Array.isArray(cards) ? cards.length : (Number.isFinite(Number(file?.count)) ? Math.max(0, Number(file.count)) : 0)
         };
       }
@@ -11878,7 +11994,8 @@
             path: resolvedPath,
             sourceKey,
             idSource: sourceKey,
-            count: file.count
+            count: file.count,
+            deckLevel: normalizeDeckLevel(file?.deckLevel)
           };
         });
         const responses = await Promise.all(files.map(async (file) => {
@@ -11893,7 +12010,8 @@
           const payload = await response.json();
           const cards = flattenPayload(file.name || file.path, payload, {
             sourceKey: file.sourceKey,
-            idSource: file.idSource
+            idSource: file.idSource,
+            deckLevel: file.deckLevel
           });
           return {
             cards,
@@ -11916,6 +12034,7 @@
           ? freshPayload.cards.map((card) => applyTutorialPlanetCardDefaults(card))
           : [];
         state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
+        maybeAdvanceUserLevel();
         await refreshAdminDecks();
         await refreshAdminReportSummary();
         await refreshAdminWelcomeSummary();
@@ -13931,11 +14050,20 @@
 
       function showRewardGameStatus() {
         clearStageHintLoop();
+        const levelUpLevel = Math.max(0, Number(state.lastLevelUpLevel) || 0);
         const flashcardsCount = weightedAccessibleFlashcardsScore();
         state.ui.gameStatusRankToken += 1;
         const token = state.ui.gameStatusRankToken;
         clearGameStatusRankTimer();
-        setGameStatus(`${flashcardsCount} FlashCards`, 'flashcards-count');
+        if (levelUpLevel) {
+          setGameStatus(`Voce chegou no Nivel ${levelUpLevel}`, 'flashcards-count');
+          if (els.gameStarCopy) {
+            els.gameStarCopy.textContent = `Voce chegou no Nivel ${levelUpLevel}`;
+          }
+          state.lastLevelUpLevel = 0;
+        } else {
+          setGameStatus(`${flashcardsCount} FlashCards`, 'flashcards-count');
+        }
         state.ui.gameStatusRankTimer = window.setTimeout(async () => {
           state.ui.gameStatusRankTimer = 0;
           if (token !== state.ui.gameStatusRankToken || !state.game.active) return;
@@ -14570,6 +14698,7 @@
         const activeCount = state.game.entries.size || 0;
         const targetCount = state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT;
         els.gameHeaderCopy.textContent = `${activeCount}/${targetCount} cartas ativas na mesa.`;
+        updateLevelProgressBar();
       }
 
       function cardById(id) {
@@ -14646,7 +14775,8 @@
         state.game.contextLimit = snapshot.contextLimit || GAME_ACTIVE_CARD_CAP;
 
         entries.forEach((entry) => {
-          if (!cardById(entry.id)) return;
+          const card = cardById(entry.id);
+          if (!card || !isCardAllowedForUserLevel(card)) return;
           state.game.entries.set(entry.id, { ...entry });
         });
         state.game.queue = (Array.isArray(snapshot.queue) ? snapshot.queue : [])
@@ -14669,6 +14799,74 @@
         const normalizedLimit = Math.max(0, Number(limit) || 0);
         if (!normalizedLimit || !cards.length) return [];
         return shuffle(cards.slice()).slice(0, normalizedLimit);
+      }
+
+      function buildLevelAwareRoundGroups(baseCards, reviewCards, limit) {
+        const normalizedLimit = Math.max(0, Number(limit) || 0);
+        const reviews = uniqueCardsById(
+          (Array.isArray(reviewCards) ? reviewCards : []).filter(isCardAllowedForUserLevel)
+        ).slice(0, Math.min(REVIEW_SLOT_LIMIT, normalizedLimit));
+        const reviewIds = new Set(reviews.map(card => card.id));
+        const base = uniqueCardsById(
+          (Array.isArray(baseCards) ? baseCards : [])
+            .filter(card => isCardAllowedForUserLevel(card) && !reviewIds.has(card.id))
+        );
+        if (!normalizedLimit || isAdminUser()) {
+          return {
+            baseCards: buildOrderedDeckSelection(base, Math.max(0, normalizedLimit - reviews.length)),
+            reviewCards: reviews
+          };
+        }
+
+        const level = currentUserLevel();
+        const currentTarget = level <= 1
+          ? normalizedLimit
+          : Math.max(1, Math.round(normalizedLimit * CURRENT_LEVEL_ROUND_RATIO));
+        const previousTarget = Math.max(0, normalizedLimit - currentTarget);
+        const currentReviews = reviews.filter(card => cardDeckLevel(card) === level).slice(0, currentTarget);
+        const previousReviews = level <= 1
+          ? []
+          : reviews.filter(card => cardDeckLevel(card) < level).slice(0, previousTarget);
+        let selectedReviews = uniqueCardsById([...currentReviews, ...previousReviews]);
+        const selectedIds = new Set(selectedReviews.map(card => card.id));
+        const baseCurrent = base.filter(card => cardDeckLevel(card) === level && !selectedIds.has(card.id));
+        const basePrevious = level <= 1
+          ? []
+          : base.filter(card => cardDeckLevel(card) < level && !selectedIds.has(card.id));
+        const selectedBase = uniqueCardsById([
+          ...buildOrderedDeckSelection(
+            baseCurrent,
+            Math.max(0, currentTarget - currentReviews.length)
+          ),
+          ...buildOrderedDeckSelection(
+            basePrevious,
+            Math.max(0, previousTarget - previousReviews.length)
+          )
+        ]);
+        selectedBase.forEach(card => selectedIds.add(card.id));
+
+        let selectedTotal = selectedBase.length + selectedReviews.length;
+        if (selectedTotal < normalizedLimit) {
+          const fillers = buildOrderedDeckSelection(
+            [...baseCurrent, ...basePrevious].filter(card => !selectedIds.has(card.id)),
+            normalizedLimit - selectedTotal
+          );
+          selectedBase.push(...fillers);
+          fillers.forEach(card => selectedIds.add(card.id));
+        }
+
+        selectedTotal = selectedBase.length + selectedReviews.length;
+        if (selectedTotal < normalizedLimit) {
+          selectedReviews = uniqueCardsById([
+            ...selectedReviews,
+            ...reviews.filter(card => !selectedIds.has(card.id)).slice(0, normalizedLimit - selectedTotal)
+          ]);
+        }
+
+        return {
+          baseCards: shuffle(selectedBase).slice(0, normalizedLimit),
+          reviewCards: selectedReviews
+        };
       }
 
       function buildGameVisual(card, stageConfig) {
@@ -15683,6 +15881,7 @@
         const currentPhase = Math.max(0, Math.min(REVIEW_PHASE_MAX, Number(currentRecord?.phaseIndex) || 0));
         const nextPhase = Math.max(1, Math.min(REVIEW_PHASE_MAX, currentPhase + 1));
         moveCardToMemorizing(entry.id, nextPhase);
+        maybeAdvanceUserLevel();
       }
 
       function removeGameEntry(cardId) {
@@ -16314,19 +16513,20 @@
           const roundCount = GAME_BASE_CARD_COUNT;
           state.game.contextLimit = GAME_ACTIVE_CARD_CAP;
           state.game.selectedCount = GAME_BASE_CARD_COUNT;
-          const reviewLimit = Math.min(REVIEW_SLOT_LIMIT, readyReviewCards().length);
-          const reviewCards = readyReviewCards().slice(0, reviewLimit);
+          const reviewCards = readyReviewCards().slice(0, REVIEW_SLOT_LIMIT);
           const basePool = applyEarlyFlashcardFilter(baseRoundSourceCards());
-          const chosenCards = buildOrderedDeckSelection(
+          const roundGroups = buildLevelAwareRoundGroups(
             basePool,
-            Math.max(0, roundCount - reviewCards.length)
+            reviewCards,
+            roundCount
           );
+          const chosenCards = roundGroups.baseCards;
           chosenCards.forEach(card => {
             const entry = createGameEntry(card, 'base');
             state.game.entries.set(entry.id, entry);
             state.game.queue.push(entry.id);
           });
-          reviewCards.forEach(card => {
+          roundGroups.reviewCards.forEach(card => {
             const entry = createGameEntry(card, 'review');
             state.game.entries.set(entry.id, entry);
             state.game.queue.push(entry.id);
@@ -16432,6 +16632,7 @@
         state.game.currentId = null;
         state.game.listening = false;
         state.game.paused = false;
+        updateLevelProgressBar();
         if (state.game.sessionStartedAt) {
           state.stats.playTimeMs += Date.now() - state.game.sessionStartedAt;
           state.game.sessionStartedAt = 0;

@@ -2188,6 +2188,22 @@ const ensureUsersAvatarColumn = async () => {
       `);
       await pool.query(`
         ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS level integer NOT NULL DEFAULT 1
+      `);
+      await pool.query(`
+        UPDATE public.users
+        SET level = LEAST(100, GREATEST(1, COALESCE(level, 1)))
+      `);
+      await pool.query(`
+        DO $$
+        BEGIN
+          ALTER TABLE public.users
+          ADD CONSTRAINT users_level_range_check CHECK (level BETWEEN 1 AND 100);
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
         ADD COLUMN IF NOT EXISTS is_bot boolean NOT NULL DEFAULT false
       `);
       await pool.query(`
@@ -2566,7 +2582,7 @@ const readUserById = async (userId) => {
   const result = await pool.query(
     `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
             onboarding_name_completed, onboarding_photo_completed, created_at, password_hash,
-            premium_full_access, premium_until, is_bot, bot_config, bot_avatar_status,
+            premium_full_access, premium_until, level, is_bot, bot_config, bot_avatar_status,
             bot_avatar_error, created_by_user_id, battle
      FROM public.users
      WHERE id = $1
@@ -2901,7 +2917,7 @@ const readFlashcardStateForUser = async (userId) => {
     throw error;
   }
 
-  const [progressResult, statsResult, accurateResult, hiddenResult] = await Promise.all([
+  const [progressResult, statsResult, accurateResult, hiddenResult, userLevelResult] = await Promise.all([
     pool.query(
       `SELECT
          card_id,
@@ -2943,6 +2959,13 @@ const readFlashcardStateForUser = async (userId) => {
        WHERE user_id = $1
        ORDER BY updated_at DESC, created_at DESC, card_id ASC`,
       [normalizedUserId]
+    ),
+    pool.query(
+      `SELECT level
+       FROM public.users
+       WHERE id = $1
+       LIMIT 1`,
+      [normalizedUserId]
     )
   ]);
 
@@ -2963,6 +2986,7 @@ const readFlashcardStateForUser = async (userId) => {
       secondStarErrorHeard: flashcardStatsRow.second_star_error_heard
     }, progressRecords.length),
     meta: {
+      userLevel: normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level),
       hasProgress: progressRecords.length > 0,
       hasStats: Boolean(statsResult.rows[0] || accurateResult.rows[0]),
       hiddenCardIds: hiddenResult.rows
@@ -3007,9 +3031,20 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       .map((cardId) => typeof cardId === 'string' ? cardId.trim() : '')
       .filter(Boolean)))
     : [];
+  const requestedUserLevel = normalizeUserFlashcardLevel(payload?.userLevel ?? payload?.level);
+  let persistedUserLevel = requestedUserLevel;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    const userLevelResult = await client.query(
+      `UPDATE public.users
+       SET level = GREATEST(level, $2)
+       WHERE id = $1
+       RETURNING level`,
+      [normalizedUserId, requestedUserLevel]
+    );
+    persistedUserLevel = normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level ?? requestedUserLevel);
 
     const existingStatsResult = await client.query(
       `SELECT training_time_ms, speakings, listenings
@@ -3260,6 +3295,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
   return {
     progressCount: progress.length,
     stats,
+    userLevel: persistedUserLevel,
     rankingRecord
   };
 };
@@ -10131,6 +10167,7 @@ app.get('/api/flashcards/state', async (req, res) => {
       progress: state.progress,
       stats: state.stats,
       meta: state.meta,
+      userLevel: state.meta.userLevel,
       serverTimeMs: Date.now()
     });
   } catch (error) {
@@ -10164,6 +10201,7 @@ app.put('/api/flashcards/state', async (req, res) => {
       success: true,
       progressCount: savedState.progressCount,
       stats: savedState.stats,
+      userLevel: savedState.userLevel,
       updatedAt: savedState.rankingRecord?.updated_at || new Date().toISOString()
     });
   } catch (error) {
