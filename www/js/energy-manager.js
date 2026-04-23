@@ -266,34 +266,17 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>
       </button>
       <div class="playtalk-energy-gate__content">
-        <h2 class="playtalk-energy-gate__title"><span>Você completou</span><span>seu treino diário!</span></h2>
+        <h2 class="playtalk-energy-gate__title"><span>Você completou</span><span>o treino diário!</span></h2>
+        <img class="playtalk-energy-gate__star" src="/SVG/codex-icons/star.svg" alt="" aria-hidden="true">
         <p class="playtalk-energy-gate__logline" id="playtalkEnergyGateLogline">${ENERGY_GATE_LOG_LINES[0]}</p>
-        <p class="playtalk-energy-gate__countdown" id="playtalkEnergyGateCountdown">00h 00m 00s</p>
+        <p class="playtalk-energy-gate__countdown">
+          <img class="playtalk-energy-gate__countdown-icon" src="/SVG/codex-icons/relógio.svg" alt="" aria-hidden="true">
+          <span class="playtalk-energy-gate__countdown-value" id="playtalkEnergyGateCountdown">00h 00m 00s</span>
+        </p>
         <button class="playtalk-energy-gate__premium" id="playtalkEnergyGatePremium" type="button">Assinar premium</button>
       </div>
     `;
     document.body.appendChild(gate);
-    const title = gate.querySelector('.playtalk-energy-gate__title');
-    if (title) {
-      title.innerHTML = '<span>Você completou</span><span>o treino diário!</span>';
-    }
-    const logline = gate.querySelector('#playtalkEnergyGateLogline');
-    if (logline) {
-      const star = document.createElement('img');
-      star.className = 'playtalk-energy-gate__star';
-      star.src = '/SVG/codex-icons/star.svg';
-      star.alt = '';
-      star.setAttribute('aria-hidden', 'true');
-      logline.before(star);
-    }
-    const countdown = gate.querySelector('#playtalkEnergyGateCountdown');
-    if (countdown) {
-      countdown.removeAttribute('id');
-      countdown.innerHTML = `
-        <img class="playtalk-energy-gate__countdown-icon" src="/SVG/codex-icons/relógio.svg" alt="" aria-hidden="true">
-        <span class="playtalk-energy-gate__countdown-value" id="playtalkEnergyGateCountdown">00h 00m 00s</span>
-      `;
-    }
     gate.querySelector('#playtalkEnergyGateClose')?.addEventListener('click', closeEnergyGate);
     gate.querySelector('#playtalkEnergyGatePremium')?.addEventListener('click', () => {
       window.location.href = resolvePremiumHref();

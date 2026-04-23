@@ -10151,6 +10151,20 @@
         if (!els.welcomeStartBtn) return;
         els.welcomeStartBtn.innerHTML = '<img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora">';
         els.welcomeStartBtn.disabled = false;
+        els.welcomeStartBtn.style.opacity = state.ui.welcomeEnergyBlocked ? '0.8' : '1';
+      }
+
+      async function refreshWelcomeEnergyState() {
+        if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.getEnergyStatus !== 'function') {
+          state.ui.welcomeEnergyBlocked = false;
+          syncWelcomeStartButton();
+          return;
+        }
+        const status = await window.PlaytalkEnergy.getEnergyStatus({
+          user: state.user
+        });
+        state.ui.welcomeEnergyBlocked = Boolean(status?.loggedIn && status?.blocked);
+        syncWelcomeStartButton();
       }
 
       function syncGameAdvanceButton(entry = null) {
@@ -10305,7 +10319,11 @@
         const percent = (progressCount / USER_LEVEL_CARD_TARGET) * 100;
         els.welcomeUserName.textContent = username;
         if (els.welcomeAvatarPreview) {
-          els.welcomeAvatarPreview.src = hasAvatar ? avatar : '/Avatar/profile-neon-blue.svg';
+          const nextAvatar = hasAvatar ? avatar : '/Avatar/profile-neon-blue.svg';
+          if (els.welcomeAvatarPreview.dataset.src !== nextAvatar) {
+            els.welcomeAvatarPreview.src = nextAvatar;
+            els.welcomeAvatarPreview.dataset.src = nextAvatar;
+          }
           els.welcomeAvatarPreview.hidden = false;
         }
         els.welcomeUserLevel.textContent = `Nivel ${level}`;
@@ -10325,6 +10343,7 @@
         document.body.classList.toggle('welcome-active', visible);
         els.welcomeGate?.classList.toggle('is-visible', visible);
         syncWelcomeStartButton();
+        void refreshWelcomeEnergyState();
         syncWelcomeAccountLink();
         syncWelcomeLevelProgress();
         syncWelcomeBackgroundAdmin();

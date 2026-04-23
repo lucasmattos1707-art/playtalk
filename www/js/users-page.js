@@ -77,6 +77,7 @@
     challengeTarget: null,
     challengeBusy: false,
     challengeModePickerOpen: false,
+    challengeEnergyBlocked: false,
     outgoingChallengeId: 0,
     outgoingTerminalNoticeKey: '',
     incomingChallengeId: 0,
@@ -624,18 +625,36 @@
       && (state.challengeTarget.isBot || state.challengeTarget.isOnline)
       && !state.challengeBusy
     );
+    const blockedByEnergy = canChallenge && state.challengeEnergyBlocked;
+    const syncButtonState = (button, hidden) => {
+      if (!button) return;
+      button.hidden = Boolean(hidden);
+      button.disabled = !canChallenge && !blockedByEnergy;
+      button.style.opacity = blockedByEnergy ? '0.8' : '1';
+      button.style.cursor = canChallenge ? 'pointer' : 'not-allowed';
+    };
     if (els.challengeActionBtn) {
-      els.challengeActionBtn.hidden = state.challengeModePickerOpen;
-      els.challengeActionBtn.disabled = !canChallenge;
+      syncButtonState(els.challengeActionBtn, state.challengeModePickerOpen);
     }
     if (els.challengeSmartbooksBtn) {
-      els.challengeSmartbooksBtn.hidden = !state.challengeModePickerOpen;
-      els.challengeSmartbooksBtn.disabled = !canChallenge;
+      syncButtonState(els.challengeSmartbooksBtn, !state.challengeModePickerOpen);
     }
     if (els.challengeCardsBtn) {
-      els.challengeCardsBtn.hidden = !state.challengeModePickerOpen;
-      els.challengeCardsBtn.disabled = !canChallenge;
+      syncButtonState(els.challengeCardsBtn, !state.challengeModePickerOpen);
     }
+  }
+
+  async function refreshChallengeEnergyState() {
+    if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.getEnergyStatus !== 'function') {
+      state.challengeEnergyBlocked = false;
+      syncChallengeButtons();
+      return;
+    }
+    const status = await window.PlaytalkEnergy.getEnergyStatus({
+      user: state.currentUser
+    });
+    state.challengeEnergyBlocked = Boolean(status?.loggedIn && status?.blocked);
+    syncChallengeButtons();
   }
 
   function closeChallengeModal() {
@@ -643,6 +662,7 @@
     state.challengeTarget = null;
     state.challengeBusy = false;
     state.challengeModePickerOpen = false;
+    state.challengeEnergyBlocked = false;
     setChallengeStatus('');
     syncChallengeButtons();
   }
@@ -666,6 +686,7 @@
     syncChallengeButtons();
     setChallengeStatus('');
     openFullscreenModal(els.challengeModal);
+    void refreshChallengeEnergyState();
   }
 
   function currentViewerEntry(rows) {
@@ -744,7 +765,6 @@
       rowEl.addEventListener('click', async () => {
         const userId = Number(rowEl.getAttribute('data-user-id')) || 0;
         const user = state.rows.find((entry) => entry.userId === userId);
-        if (!(await guardEnergyAndRedirect({ previewTarget: rowEl }))) return;
         if (!user || user.userId === state.currentUser?.id) return;
         if (isAdminViewer()) {
           openAdminModal(user);
@@ -1231,9 +1251,12 @@
   els.deleteUserBtn?.addEventListener('click', () => { void deleteUser(); });
   els.closeAdminModalTopBtn?.addEventListener('click', closeAdminModal);
   els.challengeActionBtn?.addEventListener('click', () => {
-    state.challengeModePickerOpen = true;
-    syncChallengeButtons();
-    setChallengeStatus('Escolha o tipo de desafio.');
+    void (async () => {
+      if (!(await guardEnergyAndRedirect({ previewTarget: els.challengeActionBtn }))) return;
+      state.challengeModePickerOpen = true;
+      syncChallengeButtons();
+      setChallengeStatus('Escolha o tipo de desafio.');
+    })();
   });
   els.challengeSmartbooksBtn?.addEventListener('click', () => { void sendChallenge('smartbooks'); });
   els.challengeCardsBtn?.addEventListener('click', () => { void sendChallenge('battle-cards'); });
