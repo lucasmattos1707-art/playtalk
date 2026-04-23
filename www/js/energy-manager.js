@@ -1,6 +1,7 @@
 (function initPlaytalkEnergyManager() {
   const DAILY_FREE_ENERGY = 5000;
   const ENERGY_EXHAUSTED_STATUS = 402;
+  const ENERGY_GATE_MINIMUM = 60;
   const ENERGY_GATE_LOG_LINES = [
     'Volte amanhã para treinar mais!',
     'ou continue com energias infinitas'
@@ -61,6 +62,11 @@
       return window.PlaytalkNative.resolveRouteHref(path);
     }
     return path;
+  }
+
+  function isFlashcardsRoute() {
+    const path = String(window.location?.pathname || '').toLowerCase();
+    return path === '/flashcards' || path.endsWith('/flashcards.html');
   }
 
   function injectEnergyGateStyles() {
@@ -281,6 +287,10 @@
     } catch (_error) {
       // ignore
     }
+    if (isFlashcardsRoute()) {
+      openEnergyGate(status);
+      return;
+    }
     window.location.href = resolveFlashcardsEnergyHref();
   }
 
@@ -338,6 +348,7 @@
       || stats.unlimited != null
       || stats.nextEnergyResetAt != null
     );
+    const dailyEnergyLimit = Math.max(0, Math.round(safeNumber(stats?.dailyEnergyLimit))) || DAILY_FREE_ENERGY;
     const usedToday = premium
       ? 0
       : hasSimpleEnergyTotals
@@ -345,24 +356,31 @@
         : hasServerEnergySnapshot
         ? Math.max(0, Math.round(safeNumber(stats?.dailyEnergyUsed)))
         : 0;
+    const serverRemaining = safeNumber(stats?.remainingEnergy);
+    const hasServerRemaining = stats?.remainingEnergy != null && Number.isFinite(Number(stats.remainingEnergy));
     const remaining = premium
       ? Number.POSITIVE_INFINITY
-      : Math.max(0, DAILY_FREE_ENERGY - usedToday);
+      : hasServerRemaining
+        ? Math.max(0, Math.round(serverRemaining))
+        : Math.max(0, dailyEnergyLimit - usedToday);
+    const gateRequired = !premium && remaining < ENERGY_GATE_MINIMUM;
     return {
       loggedIn: Boolean(user?.id),
       premium,
       unlimited: premium,
       remaining,
       usedToday,
-      blocked: !premium && remaining <= 0,
+      blocked: gateRequired,
+      gateRequired,
+      minimumEnergyRequired: ENERGY_GATE_MINIMUM,
       nextResetAt: nextResetAt || null,
       countdownText: nextResetAt ? formatResetCountdown(nextResetAt) : '0h 0min',
       message: premium
         ? 'Energia infinita'
-        : remaining <= 0
+        : gateRequired
           ? `Mais energia em ${nextResetAt ? formatResetCountdown(nextResetAt) : '0h 0min'}`
           : `${remaining} energias restantes`,
-      dailyEnergyLimit: Math.max(0, Math.round(safeNumber(stats?.dailyEnergyLimit))) || DAILY_FREE_ENERGY
+      dailyEnergyLimit
     };
   }
 
@@ -377,7 +395,7 @@
   async function guardEnergy(options = {}) {
     const status = await getEnergyStatus(options);
     if (status.loggedIn && status.blocked) {
-      openEnergyGate(status);
+      redirectToFlashcardsEnergyGate(status);
       return { allowed: false, status };
     }
     return { allowed: true, status };
@@ -390,6 +408,7 @@
   window.PlaytalkEnergy = {
     DAILY_FREE_ENERGY,
     ENERGY_EXHAUSTED_STATUS,
+    ENERGY_GATE_MINIMUM,
     buildEnergyStatus,
     fetchBooksStats,
     formatResetCountdown,

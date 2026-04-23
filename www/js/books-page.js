@@ -1478,7 +1478,8 @@
   function syncEnergyRedirectFromStats(stats) {
     if (isPremiumActive()) return;
     const remaining = Number(stats?.remainingEnergy);
-    if (Number.isFinite(remaining) && remaining <= 0) {
+    const minimum = Number(window.PlaytalkEnergy?.ENERGY_GATE_MINIMUM) || 60;
+    if (Number.isFinite(remaining) && remaining < minimum) {
       handleEnergyExhaustedRedirect();
     }
   }

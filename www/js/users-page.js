@@ -1067,7 +1067,7 @@
             user: state.currentUser,
             stats: payload?.energy || {}
           });
-          window.PlaytalkEnergy.openEnergyGate(status);
+          window.PlaytalkEnergy.redirectToFlashcardsEnergyGate(status);
           closeChallengeModal();
           return;
         }
