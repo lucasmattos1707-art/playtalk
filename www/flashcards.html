@@ -382,6 +382,7 @@
       grid-row: 2;
       align-self: center;
       padding: 0 10px;
+      transform: translateY(calc(-1 * min(5vh, 34px)));
     }
 
     .welcome-gate__username {
@@ -436,23 +437,23 @@
     .welcome-gate__avatar-track,
     .welcome-gate__avatar-arc {
       fill: none;
-      stroke-linecap: round;
     }
 
     .welcome-gate__avatar-track {
-      stroke: rgba(255, 255, 255, 0.08);
+      stroke: transparent;
       stroke-width: 12;
     }
 
     .welcome-gate__avatar-arc {
       stroke-width: 13;
+      stroke-linecap: butt;
       opacity: 0.96;
       transform-origin: 130px 130px;
     }
 
     .welcome-gate__avatar-arc--blue {
       stroke: #61d4ff;
-      stroke-dasharray: 35 65;
+      stroke-dasharray: 33.8 66.2;
       filter:
         drop-shadow(0 0 6px rgba(97, 212, 255, 1))
         drop-shadow(0 0 18px rgba(97, 212, 255, 0.76));
@@ -460,8 +461,8 @@
 
     .welcome-gate__avatar-arc--yellow {
       stroke: #ffe36d;
-      stroke-dasharray: 24 76;
-      stroke-dashoffset: -39;
+      stroke-dasharray: 33.8 66.2;
+      stroke-dashoffset: -33.3;
       filter:
         drop-shadow(0 0 6px rgba(255, 227, 109, 0.95))
         drop-shadow(0 0 16px rgba(255, 198, 74, 0.66));
@@ -469,31 +470,22 @@
 
     .welcome-gate__avatar-arc--purple {
       stroke: #c78bff;
-      stroke-dasharray: 18 82;
-      stroke-dashoffset: -69;
+      stroke-dasharray: 33.8 66.2;
+      stroke-dashoffset: -66.6;
       filter:
         drop-shadow(0 0 6px rgba(199, 139, 255, 0.95))
         drop-shadow(0 0 16px rgba(153, 93, 255, 0.64));
     }
 
-    .welcome-gate__avatar img,
-    .welcome-gate__avatar-fallback {
+    .welcome-gate__avatar img {
       width: 100%;
       height: 100%;
-      display: grid;
-      place-items: center;
+      display: block;
       object-fit: cover;
       border-radius: inherit;
       clip-path: circle(50% at 50% 50%);
       position: relative;
       z-index: 1;
-    }
-
-    .welcome-gate__avatar-fallback {
-      color: #dff8ff;
-      font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
-      font-size: clamp(48px, 10vw, 72px);
-      background: linear-gradient(180deg, rgba(24, 185, 255, 0.24), rgba(7, 18, 32, 0.96));
     }
 
     .welcome-gate__level-panel {
@@ -7066,7 +7058,6 @@
                 </svg>
               </span>
               <img id="welcomeAvatarPreview" src="/Avatar/profile-neon-blue.svg" alt="">
-              <span class="welcome-gate__avatar-fallback" id="welcomeAvatarFallback" hidden>J</span>
             </div>
           </div>
           <div class="welcome-gate__level-panel">
@@ -7966,7 +7957,6 @@
         welcomeProfile: document.getElementById('welcomeProfile'),
         welcomeUserName: document.getElementById('welcomeUserName'),
         welcomeAvatarPreview: document.getElementById('welcomeAvatarPreview'),
-        welcomeAvatarFallback: document.getElementById('welcomeAvatarFallback'),
         welcomeUserLevel: document.getElementById('welcomeUserLevel'),
         welcomeLevelProgressBar: document.getElementById('welcomeLevelProgressBar'),
         welcomeLevelProgressCopy: document.getElementById('welcomeLevelProgressCopy'),
@@ -10157,10 +10147,6 @@
         if (els.welcomeAvatarPreview) {
           els.welcomeAvatarPreview.src = hasAvatar ? avatar : '/Avatar/profile-neon-blue.svg';
           els.welcomeAvatarPreview.hidden = false;
-        }
-        if (els.welcomeAvatarFallback) {
-          els.welcomeAvatarFallback.textContent = username.slice(0, 1).toUpperCase() || 'J';
-          els.welcomeAvatarFallback.hidden = true;
         }
         els.welcomeUserLevel.textContent = `Nivel ${level}`;
         els.welcomeLevelProgressBar.style.width = `${percent.toFixed(2)}%`;
