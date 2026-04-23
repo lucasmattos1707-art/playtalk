@@ -174,7 +174,7 @@
       <div id="editCardsDeckPicker" class="deck-edit-picker" aria-live="polite">
         <div class="deck-edit-picker__head">
           <strong>Decks existentes no jogo</strong>
-          <span id="editCardsDeckHint" class="deck-edit-picker__hint">Digite editcards em "Preencher cards em lote" para abrir este seletor.</span>
+          <span id="editCardsDeckHint" class="deck-edit-picker__hint">Carregando decks do jogo...</span>
         </div>
         <div class="deck-edit-picker__control">
           <div class="deck-edit-picker__field">
@@ -431,7 +431,7 @@
       const movieStoryDraft={topic:'',itemCount:8};
       const ADMIN_USERNAMES=new Set(['admin','adm','adminst']);
       const adminStudio={checked:false,enabled:false,username:'',search:'',selectMode:false,selected:new Set(),status:'Aguardando sessao do administrador.',statusError:false,publishTimer:0,publishBusy:false,publishQueued:false,activeMenuIndex:null};
-      const editCardsState={visible:false,loading:false,selectedPath:'',decks:[],searchMode:false,searchQuery:'',searchResults:[],pinnedKeys:new Set(),levelBusy:false};
+      const editCardsState={visible:true,loading:false,selectedPath:'',decks:[],searchMode:false,searchQuery:'',searchResults:[],pinnedKeys:new Set(),levelBusy:false};
       const jsonBatchPublishState={files:[],results:[],busy:false};
       let deckMetaAction='r2';
       let pendingImage=null,pendingAudio=null,currentAudio=null,audioBatchTargets={pt:false,en:false},aiBatchBusy=false,aiTextBusy=false,zipBusy=false,elevenBusy=false,r2UploadBusy=false,publishLocalBusy=false,feedbackToastTimer=0;
@@ -996,7 +996,7 @@
             searchToggle.setAttribute('title','Pesquisar flashcards');
           }
           if(searchIcon)searchIcon.innerHTML='<path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm0-2a9 9 0 1 0 5.64 16.02l3.17 3.18 1.42-1.42-3.18-3.17A9 9 0 0 0 11 2Z"/>';
-          hint.textContent=adminStudio.enabled?'Digite editcards para liberar o menu de decks.':'Entre como admin para liberar a edicao de decks.';
+          hint.textContent=adminStudio.enabled?'Carregando menu de decks...':'Entre como admin para liberar a edicao de decks.';
           return;
         }
         const options=['<option value="">Escolha um deck</option>'];
@@ -1207,7 +1207,7 @@
       }
       function downloadOpenedDeckJson(){
         if(state.mode!=='flashcard')throw new Error('O comando getdeck funciona apenas no modo FlashCard.');
-        if(!hasOpenedDeckContext())throw new Error('Abra um deck primeiro (editcards) antes de usar getdeck.');
+        if(!hasOpenedDeckContext())throw new Error('Abra um deck primeiro antes de usar getdeck.');
         const fileName=safeText(state.publicDeckFileName)||jsonFileName();
         const blob=new Blob([JSON.stringify(payload(),null,2)],{type:'application/json'});
         triggerDownload(blob,fileName.toLowerCase().endsWith('.json')?fileName:`${fileName}.json`);
@@ -1442,7 +1442,7 @@
         }
       }
       async function publishJsonBatchDeckFiles(files){if(!adminStudio.enabled)throw new Error('Acesso restrito ao administrador.');jsonBatchPublishState.busy=true;jsonBatchPublishState.results=[];syncJsonBatchPublishPopover();try{const normalizedFiles=[];for(let index=0;index<files.length;index+=1){const file=files[index];try{const raw=await asText(file),parsed=JSON.parse(raw),payload=normalizeJsonBatchPayload(parsed,file.name);normalizedFiles.push({name:file.name,content:JSON.stringify(payload,null,2)})}catch(error){jsonBatchPublishState.results[index]={error:true,message:error.message||'Falha ao validar o deck.'}}syncJsonBatchPublishPopover()}if(!normalizedFiles.length)throw new Error('Nenhum deck valido foi selecionado para subir no Postgres.');const result=await uploadJsonDecksToPostgres(normalizedFiles);const uploadedDecks=Array.isArray(result?.decks)?result.decks:[];let uploadedIndex=0;for(let index=0;index<files.length;index+=1){if(jsonBatchPublishState.results[index]?.error)continue;const deck=uploadedDecks[uploadedIndex]||null;uploadedIndex+=1;jsonBatchPublishState.results[index]={ok:true,message:deck?.title?`Deck "${deck.title}" salvo no Postgres.`:'Deck salvo no Postgres.'}}await refreshEditCardsDeckPicker()}finally{jsonBatchPublishState.busy=false;syncJsonBatchPublishPopover()}}
-      async function hydrateAdminStudio(){try{const response=await fetch('/auth/session',{credentials:'include',cache:'no-store'});if(!response.ok){adminStudio.checked=true;adminStudio.enabled=false;setAdminStudioStatus('Painel admin oculto. Entre com adm/admin para liberar.');renderAll();syncEditCardsDeckPicker();return}const payload=await response.json();const user=payload?.user||{},username=normalizeAdminUsername(user?.username||user?.email||''),isAdminFlag=user?.is_admin===true||user?.isAdmin===true;adminStudio.checked=true;adminStudio.username=username;adminStudio.enabled=Boolean(isAdminFlag||ADMIN_USERNAMES.has(username));setAdminStudioStatus(adminStudio.enabled?`Painel admin ativo para ${username||'admin'}. Envio manual pronto.`:'Painel admin oculto. Entre com adm/admin para liberar.');renderAll();syncEditCardsDeckPicker()}catch(error){adminStudio.checked=true;adminStudio.enabled=false;setAdminStudioStatus('Nao foi possivel validar a sessao do admin agora.',true);renderAll();syncEditCardsDeckPicker()}}
+      async function hydrateAdminStudio(){try{const response=await fetch('/auth/session',{credentials:'include',cache:'no-store'});if(!response.ok){window.location.href='/entrar?return=%2Flevels';return}const payload=await response.json();const user=payload?.user||{},username=normalizeAdminUsername(user?.username||user?.email||''),isAdminFlag=user?.is_admin===true||user?.isAdmin===true;adminStudio.checked=true;adminStudio.username=username;adminStudio.enabled=Boolean(isAdminFlag||ADMIN_USERNAMES.has(username));editCardsState.visible=adminStudio.enabled;setAdminStudioStatus(adminStudio.enabled?`Painel admin ativo para ${username||'admin'}. Envio manual pronto.`:'Painel admin oculto. Entre com adm/admin para liberar.');renderAll();if(adminStudio.enabled)ensureEditCardsDeckPickerReady().catch(error=>{console.error('Falha ao carregar decks automaticamente',error);editCardsState.loading=false;syncEditCardsDeckPicker();showFeedbackToast(error?.message||'Nao foi possivel carregar os decks agora.')});else syncEditCardsDeckPicker()}catch(error){window.location.href='/entrar?return=%2Flevels'}}
       function syncAdminStudioControls(){const enabled=isAdminStudioEnabled(),selectedCount=adminStudio.selected.size;$('adminStudioBar').classList.toggle('hidden',!enabled);$('adminSelectBtn').disabled=!enabled;$('adminSelectBtn').textContent=adminStudio.selectMode?'Cancelar selecao':'Selecionar';$('adminBatchClearImageBtn').disabled=!enabled||!selectedCount;$('adminBatchClearAudioBtn').disabled=!enabled||!selectedCount;$('publishLocalBtn').disabled=!enabled||adminStudio.publishBusy;$('publishLocalBtn').textContent=adminStudio.publishBusy?'Enviando...':'Enviar para Fluent LevelUp';const sendPlaytalkBtn=$('sendPlaytalkBtn');if(sendPlaytalkBtn)sendPlaytalkBtn.disabled=!enabled||adminStudio.publishBusy;$('adminSearchInput').value=adminStudio.search||'';$('adminSearchInput').disabled=!enabled||adminStudio.publishBusy;$('adminStudioStatus').textContent=selectedCount&&enabled?`${adminStudio.status} ${selectedCount} selecionado(s).`:adminStudio.status;$('adminStudioStatus').classList.toggle('is-error',adminStudio.statusError)}
       function syncAdminRenderedItems(){const host=$('items');const cards=Array.from(host.children);cards.forEach(card=>{if(!card.classList.contains('card'))return;const entry=getRenderedEntryFromCard(card);const item=entry?.item;if(!item||entry?.source!=='editor')return;const index=Number.parseInt(String(card.dataset.index||''),10);const visible=!isAdminStudioEnabled()||itemMatchesAdminSearch(item);card.classList.toggle('hidden',!visible);card.classList.toggle('is-admin-card',isAdminStudioEnabled());card.classList.toggle('is-selected',isAdminStudioEnabled()&&adminStudio.selected.has(index));if(isAdminStudioEnabled()&&!card.dataset.adminBound){card.dataset.adminBound='true';card.addEventListener('click',event=>{if(!isAdminStudioEnabled()||isInteractiveAdminTarget(event.target))return;const currentIndex=Number.parseInt(String(card.dataset.index||''),10);if(!Number.isInteger(currentIndex))return;if(adminStudio.selectMode){event.preventDefault();toggleAdminItemSelection(currentIndex);return}openItemAdminPopover(currentIndex)})}})}
       function remainingVoiceTargets(){

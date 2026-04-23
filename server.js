@@ -14472,7 +14472,10 @@ app.use((req, res, next) => {
 
   const payload = getAuthenticatedUserFromRequest(req);
   if (!payload) {
-    res.redirect('/entrar');
+    const returnTo = req.originalUrl && req.originalUrl.startsWith('/') && !req.originalUrl.startsWith('//')
+      ? req.originalUrl
+      : req.path || '/play';
+    res.redirect(`/entrar?return=${encodeURIComponent(returnTo)}`);
     return;
   }
 
@@ -14634,6 +14637,12 @@ app.get(['/vocabulary', '/vocabulary/'], (req, res) => {
 });
 
 app.get(['/levels', '/levels/', '/levels.html'], (req, res) => {
+  const payload = getAuthenticatedUserFromRequest(req);
+  if (!payload) {
+    res.redirect(302, '/entrar?return=%2Flevels');
+    return;
+  }
+  res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'www', 'levels.html'));
 });
 
