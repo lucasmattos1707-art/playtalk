@@ -261,6 +261,60 @@
     gate.setAttribute('aria-modal', 'true');
     gate.setAttribute('role', 'dialog');
     gate.setAttribute('aria-label', 'Treino diario completo');
+    const closeButton = document.createElement('button');
+    closeButton.className = 'playtalk-energy-gate__close';
+    closeButton.id = 'playtalkEnergyGateClose';
+    closeButton.type = 'button';
+    closeButton.setAttribute('aria-label', 'Fechar');
+    closeButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>';
+
+    const content = document.createElement('div');
+    content.className = 'playtalk-energy-gate__content';
+
+    const title = document.createElement('h2');
+    title.className = 'playtalk-energy-gate__title';
+    title.innerHTML = '<span>Você completou</span><span>o treino diário!</span>';
+
+    const star = document.createElement('img');
+    star.className = 'playtalk-energy-gate__star';
+    star.src = '/SVG/codex-icons/star.svg';
+    star.alt = '';
+    star.setAttribute('aria-hidden', 'true');
+
+    const logline = document.createElement('p');
+    logline.className = 'playtalk-energy-gate__logline';
+    logline.id = 'playtalkEnergyGateLogline';
+    logline.textContent = ENERGY_GATE_LOG_LINES[0];
+
+    const countdown = document.createElement('p');
+    countdown.className = 'playtalk-energy-gate__countdown';
+
+    const countdownIcon = document.createElement('img');
+    countdownIcon.className = 'playtalk-energy-gate__countdown-icon';
+    countdownIcon.src = '/SVG/codex-icons/relógio.svg';
+    countdownIcon.alt = '';
+    countdownIcon.setAttribute('aria-hidden', 'true');
+
+    const countdownValue = document.createElement('span');
+    countdownValue.className = 'playtalk-energy-gate__countdown-value';
+    countdownValue.id = 'playtalkEnergyGateCountdown';
+    countdownValue.textContent = '00h 00m 00s';
+
+    const premiumButton = document.createElement('button');
+    premiumButton.className = 'playtalk-energy-gate__premium';
+    premiumButton.id = 'playtalkEnergyGatePremium';
+    premiumButton.type = 'button';
+    premiumButton.textContent = 'Assinar premium';
+
+    countdown.append(countdownIcon, countdownValue);
+    content.append(title, star, logline, countdown, premiumButton);
+    gate.append(closeButton, content);
+    document.body.appendChild(gate);
+    closeButton.addEventListener('click', closeEnergyGate);
+    premiumButton.addEventListener('click', () => {
+      window.location.href = resolvePremiumHref();
+    });
+    return gate;
     gate.innerHTML = `
       <button class="playtalk-energy-gate__close" id="playtalkEnergyGateClose" type="button" aria-label="Fechar">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>
