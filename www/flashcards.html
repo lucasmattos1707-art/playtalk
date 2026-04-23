@@ -294,18 +294,22 @@
     .welcome-gate__touch {
       width: 100%;
       max-width: 483px;
-      min-height: min(72vh, 720px);
+      height: min(72vh, 720px);
+      max-height: calc(100dvh - 48px);
+      min-height: 460px;
       display: grid;
+      grid-template-rows: 10% 10% 30% 20% 15% 15%;
       justify-items: center;
       align-items: center;
-      align-content: center;
-      padding: 32px 0;
+      align-content: stretch;
+      padding: 0;
       background: transparent;
       text-align: center;
       border: 0;
       outline: 0;
       box-shadow: none;
       margin: 0 auto;
+      overflow: visible;
     }
 
     .welcome-gate__stack {
@@ -349,13 +353,7 @@
 
     .welcome-gate__profile {
       width: min(396px, 81vw);
-      display: grid;
-      gap: 10px;
-      justify-items: center;
-      padding: 0 10px;
-      transform: translateY(-28px);
-      cursor: pointer;
-      touch-action: manipulation;
+      display: contents;
       color: #ffffff;
       text-align: center;
       text-shadow:
@@ -363,13 +361,146 @@
         0 8px 26px rgba(17, 70, 120, 0.34);
     }
 
+    .welcome-gate__top-spacer {
+      grid-row: 1;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .welcome-gate__name-row,
+    .welcome-gate__avatar-row,
+    .welcome-gate__level-panel {
+      width: min(396px, 81vw);
+      display: grid;
+      place-items: center;
+      overflow: visible;
+    }
+
+    .welcome-gate__name-row {
+      grid-row: 2;
+      align-self: center;
+      padding: 0 10px;
+    }
+
     .welcome-gate__username {
       max-width: 100%;
       overflow-wrap: anywhere;
       font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
-      font-size: clamp(28px, 7vw, 46px);
+      font-size: clamp(26px, 6.6vw, 44px);
       line-height: 0.95;
       color: #ffffff;
+    }
+
+    .welcome-gate__avatar-row {
+      grid-row: 3;
+      align-self: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .welcome-gate__avatar {
+      width: clamp(118px, 21vh, 172px);
+      height: clamp(118px, 21vh, 172px);
+      border-radius: 50%;
+      position: relative;
+      display: grid;
+      place-items: center;
+      isolation: isolate;
+      overflow: visible;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.12), rgba(16, 26, 42, 0) 42%),
+        linear-gradient(180deg, rgba(17, 31, 48, 0.92), rgba(3, 8, 16, 0.98));
+      box-shadow:
+        inset 0 0 24px rgba(113, 225, 255, 0.12),
+        0 0 18px rgba(76, 204, 255, 0.2);
+    }
+
+    .welcome-gate__avatar-aura {
+      position: absolute;
+      inset: -32px;
+      overflow: visible;
+      pointer-events: none;
+      z-index: 3;
+      animation: welcomeAvatarAuraSpin 18s linear infinite;
+    }
+
+    .welcome-gate__avatar-aura svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: visible;
+    }
+
+    .welcome-gate__avatar-track,
+    .welcome-gate__avatar-arc {
+      fill: none;
+      stroke-linecap: round;
+    }
+
+    .welcome-gate__avatar-track {
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 12;
+    }
+
+    .welcome-gate__avatar-arc {
+      stroke-width: 13;
+      opacity: 0.96;
+      transform-origin: 130px 130px;
+    }
+
+    .welcome-gate__avatar-arc--blue {
+      stroke: #61d4ff;
+      stroke-dasharray: 35 65;
+      filter:
+        drop-shadow(0 0 6px rgba(97, 212, 255, 1))
+        drop-shadow(0 0 18px rgba(97, 212, 255, 0.76));
+    }
+
+    .welcome-gate__avatar-arc--yellow {
+      stroke: #ffe36d;
+      stroke-dasharray: 24 76;
+      stroke-dashoffset: -39;
+      filter:
+        drop-shadow(0 0 6px rgba(255, 227, 109, 0.95))
+        drop-shadow(0 0 16px rgba(255, 198, 74, 0.66));
+    }
+
+    .welcome-gate__avatar-arc--purple {
+      stroke: #c78bff;
+      stroke-dasharray: 18 82;
+      stroke-dashoffset: -69;
+      filter:
+        drop-shadow(0 0 6px rgba(199, 139, 255, 0.95))
+        drop-shadow(0 0 16px rgba(153, 93, 255, 0.64));
+    }
+
+    .welcome-gate__avatar img,
+    .welcome-gate__avatar-fallback {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      object-fit: cover;
+      border-radius: inherit;
+      clip-path: circle(50% at 50% 50%);
+      position: relative;
+      z-index: 1;
+    }
+
+    .welcome-gate__avatar-fallback {
+      color: #dff8ff;
+      font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: clamp(48px, 10vw, 72px);
+      background: linear-gradient(180deg, rgba(24, 185, 255, 0.24), rgba(7, 18, 32, 0.96));
+    }
+
+    .welcome-gate__level-panel {
+      grid-row: 4;
+      align-self: center;
+      gap: 9px;
+      padding: 0 10px;
     }
 
     .welcome-gate__level {
@@ -425,6 +556,7 @@
 
     .welcome-gate__start-btn {
       position: relative;
+      grid-row: 5;
       width: min(396px, 81vw);
       padding: 0;
       border-radius: 999px;
@@ -437,7 +569,8 @@
         filter: none;
         transition: transform 220ms ease;
       justify-self: center;
-      transform: translateY(-30px) scale(0.9);
+      align-self: center;
+      transform: scale(0.9);
       transform-origin: center;
       will-change: transform;
       animation: none;
@@ -452,7 +585,7 @@
 
     .welcome-gate__start-btn:hover,
     .welcome-gate__start-btn:focus-visible {
-      transform: translateY(-32px) scale(0.93);
+      transform: scale(0.93);
         filter: none;
       }
 
@@ -5840,6 +5973,11 @@
       }
     }
 
+    @keyframes welcomeAvatarAuraSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
     @keyframes welcomeButtonNeonPulse {
       0%,
       100% {
@@ -6858,7 +6996,9 @@
       .welcome-gate__touch {
         width: 100%;
         max-width: 483px;
-        padding: 24px 0;
+        height: min(76vh, 650px);
+        min-height: 440px;
+        padding: 0;
         justify-items: center;
       }
 
@@ -6870,7 +7010,18 @@
       .welcome-gate__profile {
         width: min(396px, 84.6vw);
         max-width: 94vw;
-        transform: translateY(-22px);
+      }
+
+      .welcome-gate__name-row,
+      .welcome-gate__avatar-row,
+      .welcome-gate__level-panel {
+        width: min(396px, 84.6vw);
+        max-width: 94vw;
+      }
+
+      .welcome-gate__avatar {
+        width: clamp(112px, 19vh, 152px);
+        height: clamp(112px, 19vh, 152px);
       }
 
       .welcome-gate__start-btn {
@@ -6899,13 +7050,32 @@
   <section class="welcome-gate" id="welcomeGate" aria-label="Entrada do Fluent LevelUp">
     <div class="welcome-gate__stack">
       <div class="welcome-gate__touch" id="welcomeTouch">
-        <div class="welcome-gate__profile" id="welcomeProfile" role="button" tabindex="0" aria-label="Jogar agora">
-          <strong class="welcome-gate__username" id="welcomeUserName">Jogador</strong>
-          <span class="welcome-gate__level" id="welcomeUserLevel">Nivel 1</span>
-          <span class="welcome-gate__level-progress" aria-hidden="true">
-            <span class="welcome-gate__level-progress-bar" id="welcomeLevelProgressBar"></span>
-          </span>
-          <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">Ganhe 12 cartas para avan&ccedil;ar</p>
+        <div class="welcome-gate__profile" id="welcomeProfile">
+          <div class="welcome-gate__top-spacer" aria-hidden="true"></div>
+          <div class="welcome-gate__name-row">
+            <strong class="welcome-gate__username" id="welcomeUserName">Jogador</strong>
+          </div>
+          <div class="welcome-gate__avatar-row">
+            <div class="welcome-gate__avatar" aria-hidden="true">
+              <span class="welcome-gate__avatar-aura">
+                <svg viewBox="0 0 260 260" focusable="false">
+                  <circle class="welcome-gate__avatar-track" cx="130" cy="130" r="112"></circle>
+                  <circle class="welcome-gate__avatar-arc welcome-gate__avatar-arc--blue" cx="130" cy="130" r="112" pathLength="100"></circle>
+                  <circle class="welcome-gate__avatar-arc welcome-gate__avatar-arc--yellow" cx="130" cy="130" r="112" pathLength="100"></circle>
+                  <circle class="welcome-gate__avatar-arc welcome-gate__avatar-arc--purple" cx="130" cy="130" r="112" pathLength="100"></circle>
+                </svg>
+              </span>
+              <img id="welcomeAvatarPreview" src="/Avatar/profile-neon-blue.svg" alt="">
+              <span class="welcome-gate__avatar-fallback" id="welcomeAvatarFallback" hidden>J</span>
+            </div>
+          </div>
+          <div class="welcome-gate__level-panel">
+            <span class="welcome-gate__level" id="welcomeUserLevel">Nivel 1</span>
+            <span class="welcome-gate__level-progress" aria-hidden="true">
+              <span class="welcome-gate__level-progress-bar" id="welcomeLevelProgressBar"></span>
+            </span>
+            <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">Ganhe 12 cartas para avan&ccedil;ar</p>
+          </div>
         </div>
         <p class="welcome-gate__copy" id="welcomeCopy"></p>
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button"><img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora"></button>
@@ -7795,6 +7965,8 @@
         welcomeLogo: document.getElementById('welcomeLogo'),
         welcomeProfile: document.getElementById('welcomeProfile'),
         welcomeUserName: document.getElementById('welcomeUserName'),
+        welcomeAvatarPreview: document.getElementById('welcomeAvatarPreview'),
+        welcomeAvatarFallback: document.getElementById('welcomeAvatarFallback'),
         welcomeUserLevel: document.getElementById('welcomeUserLevel'),
         welcomeLevelProgressBar: document.getElementById('welcomeLevelProgressBar'),
         welcomeLevelProgressCopy: document.getElementById('welcomeLevelProgressCopy'),
@@ -9973,6 +10145,8 @@
       function syncWelcomeLevelProgress() {
         if (!els.welcomeUserName || !els.welcomeUserLevel || !els.welcomeLevelProgressBar || !els.welcomeLevelProgressCopy) return;
         const username = safeText(state.user?.username) || 'Jogador';
+        const avatar = safeText(state.user?.avatarImage || state.user?.avatar_image || state.user?.avatar);
+        const hasAvatar = Boolean(avatar);
         const level = currentUserLevel();
         const progressCount = level >= USER_LEVEL_MAX
           ? USER_LEVEL_CARD_TARGET
@@ -9980,6 +10154,14 @@
         const remaining = Math.max(0, USER_LEVEL_CARD_TARGET - progressCount);
         const percent = (progressCount / USER_LEVEL_CARD_TARGET) * 100;
         els.welcomeUserName.textContent = username;
+        if (els.welcomeAvatarPreview) {
+          els.welcomeAvatarPreview.src = hasAvatar ? avatar : '/Avatar/profile-neon-blue.svg';
+          els.welcomeAvatarPreview.hidden = false;
+        }
+        if (els.welcomeAvatarFallback) {
+          els.welcomeAvatarFallback.textContent = username.slice(0, 1).toUpperCase() || 'J';
+          els.welcomeAvatarFallback.hidden = true;
+        }
         els.welcomeUserLevel.textContent = `Nivel ${level}`;
         els.welcomeLevelProgressBar.style.width = `${percent.toFixed(2)}%`;
         if (level >= USER_LEVEL_MAX) {
@@ -17290,20 +17472,6 @@
           })();
         });
         els.welcomeLogo?.addEventListener('click', () => {
-          void (async () => {
-            if (!(await guardWelcomeEnergy())) return;
-            void openAudioCheck();
-          })();
-        });
-        els.welcomeProfile?.addEventListener('click', () => {
-          void (async () => {
-            if (!(await guardWelcomeEnergy())) return;
-            void openAudioCheck();
-          })();
-        });
-        els.welcomeProfile?.addEventListener('keydown', (event) => {
-          if (event.key !== 'Enter' && event.key !== ' ') return;
-          event.preventDefault();
           void (async () => {
             if (!(await guardWelcomeEnergy())) return;
             void openAudioCheck();
