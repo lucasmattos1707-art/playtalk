@@ -7159,7 +7159,7 @@
             <span class="welcome-gate__level-progress" aria-hidden="true">
               <span class="welcome-gate__level-progress-bar" id="welcomeLevelProgressBar"></span>
             </span>
-            <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">Ganhe 12 cartas para avan&ccedil;ar</p>
+            <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">Ganhe cartas para avan&ccedil;ar</p>
           </div>
         </div>
         <p class="welcome-gate__copy" id="welcomeCopy"></p>
@@ -7693,8 +7693,7 @@
       const DEFAULT_GAME_CONTEXT_LIMIT = 12;
       const USER_LEVEL_MIN = 1;
       const USER_LEVEL_MAX = 100;
-      const USER_LEVEL_CARD_TARGET = 12;
-      const CURRENT_LEVEL_ROUND_RATIO = 0.75;
+      const CURRENT_LEVEL_ROUND_RATIO = 0.4;
       const MIN_GAME_CONTEXT_LIMIT = 1;
       const TRAINING_MIN_CARD_COUNT = 10;
       const TRAINING_MAX_CARD_COUNT = 500;
@@ -10421,11 +10420,12 @@
         const avatar = safeText(state.user?.avatarImage || state.user?.avatar_image || state.user?.avatar);
         const hasAvatar = Boolean(avatar);
         const level = currentUserLevel();
+        const levelTarget = userLevelCardTarget(level);
         const progressCount = level >= USER_LEVEL_MAX
-          ? USER_LEVEL_CARD_TARGET
-          : Math.max(0, Math.min(USER_LEVEL_CARD_TARGET, currentLevelProgressCount(level)));
-        const remaining = Math.max(0, USER_LEVEL_CARD_TARGET - progressCount);
-        const percent = (progressCount / USER_LEVEL_CARD_TARGET) * 100;
+          ? levelTarget
+          : Math.max(0, Math.min(levelTarget, currentLevelProgressCount(level)));
+        const remaining = Math.max(0, levelTarget - progressCount);
+        const percent = (progressCount / Math.max(1, levelTarget)) * 100;
         els.welcomeUserName.textContent = username;
         if (els.welcomeAvatarPreview) {
           const nextAvatar = hasAvatar ? avatar : '/Avatar/profile-neon-blue.svg';
@@ -11911,6 +11911,17 @@
         return Math.max(USER_LEVEL_MIN, Math.min(USER_LEVEL_MAX, parsed));
       }
 
+      function userLevelCardTarget(level = currentUserLevel()) {
+        const normalizedLevel = normalizeUserLevel(level);
+        if (normalizedLevel >= USER_LEVEL_MAX) return 40;
+        if (normalizedLevel >= 40) return 40;
+        if (normalizedLevel >= 30) return 30;
+        if (normalizedLevel >= 20) return 25;
+        if (normalizedLevel === 19) return 20;
+        if (normalizedLevel >= 18) return 19;
+        return normalizedLevel + 2;
+      }
+
       function normalizeDeckLevel(value) {
         const parsed = Number.parseInt(String(value ?? '').trim(), 10);
         return Number.isInteger(parsed) && parsed >= USER_LEVEL_MIN && parsed <= USER_LEVEL_MAX
@@ -12270,10 +12281,12 @@
         if (!els.flashcardLevelProgress || !els.flashcardLevelProgressBar) return;
         const show = Boolean(state.game.active && !isAdminUser());
         els.flashcardLevelProgress.hidden = !show;
+        const level = currentUserLevel();
+        const levelTarget = userLevelCardTarget(level);
         const count = state.lastLevelUpLevel
-          ? USER_LEVEL_CARD_TARGET
-          : Math.max(0, Math.min(USER_LEVEL_CARD_TARGET, currentLevelProgressCount()));
-        const percent = (count / USER_LEVEL_CARD_TARGET) * 100;
+          ? levelTarget
+          : Math.max(0, Math.min(levelTarget, currentLevelProgressCount(level)));
+        const percent = (count / Math.max(1, levelTarget)) * 100;
         els.flashcardLevelProgressBar.style.width = `${percent.toFixed(2)}%`;
         syncWelcomeLevelProgress();
       }
@@ -12284,7 +12297,7 @@
         let nextLevel = levelBefore;
         while (
           nextLevel < USER_LEVEL_MAX
-          && currentLevelProgressCount(nextLevel) >= USER_LEVEL_CARD_TARGET
+          && currentLevelProgressCount(nextLevel) >= userLevelCardTarget(nextLevel)
         ) {
           nextLevel = normalizeUserLevel(nextLevel + 1);
         }
