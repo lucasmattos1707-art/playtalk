@@ -575,6 +575,49 @@
       border-radius: inherit;
     }
 
+    .welcome-gate__start-btn.is-energy-blocked {
+      filter: grayscale(1);
+    }
+
+    .welcome-gate__start-btn.is-energy-blocked img {
+      opacity: 0.8;
+    }
+
+    .welcome-gate__start-timer {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 26px;
+      color: #ffffff;
+      font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: clamp(22px, 4.4vw, 32px);
+      letter-spacing: 0.08em;
+      text-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.7),
+        0 0 18px rgba(0, 0, 0, 0.45);
+      pointer-events: none;
+    }
+
+    .welcome-gate__start-timer[hidden] {
+      display: none;
+    }
+
+    .welcome-gate__start-timer-icon {
+      width: clamp(22px, 4.6vw, 34px);
+      height: clamp(22px, 4.6vw, 34px);
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+      flex: 0 0 auto;
+    }
+
+    .welcome-gate__start-timer-value {
+      white-space: nowrap;
+      line-height: 1;
+    }
+
     .welcome-gate__start-btn:hover,
     .welcome-gate__start-btn:focus-visible {
       transform: scale(0.93);
@@ -7977,6 +8020,9 @@
           gameStatusRankTimer: 0,
           gameStatusRankToken: 0,
           gameStatusPreviousRank: 0,
+          welcomeEnergyBlocked: false,
+          welcomeEnergyNextResetAt: '',
+          welcomeEnergyTimer: 0,
           gameStageTutorialVisible: false,
           gameStageTutorialKind: '',
           gameStageTutorialDismissHandler: null,
@@ -10149,20 +10195,71 @@
 
       function syncWelcomeStartButton() {
         if (!els.welcomeStartBtn) return;
-        if (!els.welcomeStartBtn.querySelector('img')) {
-          els.welcomeStartBtn.innerHTML = '<img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora">';
+        if (!els.welcomeStartBtn.querySelector('.welcome-gate__start-image')) {
+          els.welcomeStartBtn.innerHTML = [
+            '<img class="welcome-gate__start-image" src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora">',
+            '<span class="welcome-gate__start-timer" hidden>',
+            '<img class="welcome-gate__start-timer-icon" src="/SVG/codex-icons/relógio.svg" alt="" aria-hidden="true">',
+            '<span class="welcome-gate__start-timer-value">00:00:00</span>',
+            '</span>'
+          ].join('');
         }
         els.welcomeStartBtn.disabled = false;
+        els.welcomeStartBtn.classList.toggle('is-energy-blocked', Boolean(state.ui.welcomeEnergyBlocked));
         els.welcomeStartBtn.style.opacity = state.ui.welcomeEnergyBlocked ? '0.8' : '1';
-        const image = els.welcomeStartBtn.querySelector('img');
-        if (image) {
-          image.style.opacity = state.ui.welcomeEnergyBlocked ? '0.8' : '1';
+        const image = els.welcomeStartBtn.querySelector('.welcome-gate__start-image');
+        const timer = els.welcomeStartBtn.querySelector('.welcome-gate__start-timer');
+        const timerValue = els.welcomeStartBtn.querySelector('.welcome-gate__start-timer-value');
+        if (image) image.style.opacity = state.ui.welcomeEnergyBlocked ? '0.8' : '1';
+        if (timer) timer.hidden = !state.ui.welcomeEnergyBlocked;
+        if (timerValue) timerValue.textContent = formatWelcomeEnergyCountdown(state.ui.welcomeEnergyNextResetAt);
+      }
+
+      function formatWelcomeEnergyCountdown(nextResetAt) {
+        const targetMs = Date.parse(nextResetAt || '');
+        if (!Number.isFinite(targetMs)) return '00:00:00';
+        const diffMs = Math.max(0, targetMs - Date.now());
+        const totalSeconds = Math.max(0, Math.floor(diffMs / 1000));
+        const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+        const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+        const seconds = String(totalSeconds % 60).padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
+      }
+
+      function stopWelcomeEnergyCountdown() {
+        if (state.ui.welcomeEnergyTimer) {
+          window.clearInterval(state.ui.welcomeEnergyTimer);
+          state.ui.welcomeEnergyTimer = 0;
         }
+      }
+
+      function startWelcomeEnergyCountdown() {
+        stopWelcomeEnergyCountdown();
+        if (!state.ui.welcomeEnergyBlocked || !state.ui.welcomeEnergyNextResetAt) {
+          syncWelcomeStartButton();
+          return;
+        }
+        syncWelcomeStartButton();
+        state.ui.welcomeEnergyTimer = window.setInterval(() => {
+          if (!state.ui.welcomeEnergyBlocked) {
+            stopWelcomeEnergyCountdown();
+            syncWelcomeStartButton();
+            return;
+          }
+          if (formatWelcomeEnergyCountdown(state.ui.welcomeEnergyNextResetAt) === '00:00:00') {
+            stopWelcomeEnergyCountdown();
+            void refreshWelcomeEnergyState();
+            return;
+          }
+          syncWelcomeStartButton();
+        }, 1000);
       }
 
       async function refreshWelcomeEnergyState() {
         if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.getEnergyStatus !== 'function') {
           state.ui.welcomeEnergyBlocked = false;
+          state.ui.welcomeEnergyNextResetAt = '';
+          stopWelcomeEnergyCountdown();
           syncWelcomeStartButton();
           return;
         }
@@ -10170,6 +10267,12 @@
           user: state.user
         });
         state.ui.welcomeEnergyBlocked = Boolean(status?.loggedIn && status?.blocked);
+        state.ui.welcomeEnergyNextResetAt = state.ui.welcomeEnergyBlocked ? String(status?.nextResetAt || '') : '';
+        if (state.ui.welcomeEnergyBlocked) {
+          startWelcomeEnergyCountdown();
+          return;
+        }
+        stopWelcomeEnergyCountdown();
         syncWelcomeStartButton();
       }
 
