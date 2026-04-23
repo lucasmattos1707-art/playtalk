@@ -7833,6 +7833,7 @@
           pendingPlayStart: false,
           pendingTutorialStart: false,
           pendingTutorialMuteNarration: false,
+          welcomeStartRequested: false,
           authRequired: false,
           authDelayTimer: 0,
           authRevealTimer: 0,
@@ -9522,6 +9523,10 @@
       }
 
       async function openAudioCheck() {
+        if (isAdminUser() && !state.entry.welcomeStartRequested) {
+          syncWelcomeGate();
+          return;
+        }
         if (resolveAudioCheckCompletedState()) {
           openMicCheck();
           return;
@@ -9565,6 +9570,11 @@
       }
 
       function requestVerifiedGameStart() {
+        if (isAdminUser() && !state.entry.welcomeStartRequested) {
+          state.entry.pendingPlayStart = false;
+          syncWelcomeGate();
+          return;
+        }
         if (!state.entry.cardsReady) {
           state.entry.pendingPlayStart = true;
           state.entry.pendingTutorialStart = false;
@@ -9572,6 +9582,7 @@
           setWelcomeCopy('Preparando jogo...');
           return;
         }
+        state.entry.welcomeStartRequested = false;
         hideWelcomeGate();
         saveSelectedGameCount(DEFAULT_GAME_CONTEXT_LIMIT);
         state.game.selectedCount = DEFAULT_GAME_CONTEXT_LIMIT;
@@ -9579,6 +9590,10 @@
       }
 
       function openMicCheck() {
+        if (isAdminUser() && !state.entry.welcomeStartRequested) {
+          syncWelcomeGate();
+          return;
+        }
         if (readMicCheckCompletedFlag()) {
           closeAudioCheck();
           requestVerifiedGameStart();
@@ -10341,6 +10356,7 @@
         state.entry.pendingPlayStart = false;
         state.entry.pendingTutorialStart = false;
         state.entry.pendingTutorialMuteNarration = false;
+        state.entry.welcomeStartRequested = false;
         state.entry.welcomeDismissed = true;
         state.entry.welcomeVisible = false;
         document.body.classList.remove('welcome-active');
@@ -10351,7 +10367,13 @@
 
       function tryStartPendingWelcomePlay() {
         if (!state.entry.pendingPlayStart || !state.entry.cardsReady) return false;
+        if (isAdminUser() && !state.entry.welcomeStartRequested) {
+          state.entry.pendingPlayStart = false;
+          syncWelcomeGate();
+          return false;
+        }
         state.entry.pendingPlayStart = false;
+        state.entry.welcomeStartRequested = false;
         hideWelcomeGate();
         saveSelectedGameCount(DEFAULT_GAME_CONTEXT_LIMIT);
         state.game.selectedCount = DEFAULT_GAME_CONTEXT_LIMIT;
@@ -10369,6 +10391,10 @@
 
       function requestWelcomeTutorialStart(skipSoundTest = false, options = {}) {
         if (state.entry.authRequired) return;
+        if (isAdminUser() && !state.entry.welcomeStartRequested && !options.forceTutorial) {
+          syncWelcomeGate();
+          return;
+        }
         if (!state.entry.cardsReady) {
           state.entry.pendingPlayStart = true;
           state.entry.pendingTutorialStart = false;
@@ -10376,6 +10402,7 @@
           setWelcomeCopy('Preparando jogo...');
           return;
         }
+        state.entry.welcomeStartRequested = false;
         hideWelcomeGate();
         saveSelectedGameCount(DEFAULT_GAME_CONTEXT_LIMIT);
         state.game.selectedCount = DEFAULT_GAME_CONTEXT_LIMIT;
@@ -17600,12 +17627,14 @@
         els.welcomeStartBtn?.addEventListener('click', () => {
           void (async () => {
             if (!(await guardWelcomeEnergy())) return;
+            state.entry.welcomeStartRequested = true;
             void openAudioCheck();
           })();
         });
         els.welcomeLogo?.addEventListener('click', () => {
           void (async () => {
             if (!(await guardWelcomeEnergy())) return;
+            state.entry.welcomeStartRequested = true;
             void openAudioCheck();
           })();
         });
@@ -18037,7 +18066,7 @@
           } else {
             await handleLoggedOutState('');
           }
-          if (resolveAudioCheckCompletedState() && !readMicCheckCompletedFlag()) {
+          if (!isAdminUser() && resolveAudioCheckCompletedState() && !readMicCheckCompletedFlag()) {
             openMicCheck();
           }
           if (!hasSpeechRecognitionSupport()) {
@@ -18062,7 +18091,7 @@
           console.warn('Falha ao verificar onboarding de identidade:', error);
         }
 
-        if (requestedTutorialLaunch) {
+        if (requestedTutorialLaunch && !isAdminUser()) {
           requestWelcomeTutorialStart(true, { forceTutorial: true });
         }
 
