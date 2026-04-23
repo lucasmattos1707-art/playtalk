@@ -2223,6 +2223,7 @@ const ensureUsersAvatarColumn = async () => {
 const mapPublicUser = (user) => ({
   id: Number(user?.id) || 0,
   username: String(user?.username || user?.email || '').trim(),
+  level: normalizeUserFlashcardLevel(user?.level),
   avatar_image: String(user?.avatar_image || '').trim(),
   avatar_versions: Array.isArray(user?.avatar_versions) ? user.avatar_versions : [],
   avatar_generation_count: Math.max(0, Number.parseInt(user?.avatar_generation_count, 10) || 0),
@@ -2239,6 +2240,12 @@ const mapPublicUser = (user) => ({
   premium_full_access: Boolean(user?.premium_full_access),
   premium_until: user?.premium_until || null
 });
+
+function normalizeUserFlashcardLevel(value) {
+  const parsed = Number.parseInt(String(value ?? '').trim(), 10);
+  if (!Number.isInteger(parsed)) return 1;
+  return Math.max(1, Math.min(100, parsed));
+}
 
 const normalizeAdminUsername = (value) => String(value || '').trim().toLowerCase();
 
