@@ -4643,7 +4643,9 @@ function buildPublicFlashcardDeckManifestEntryFromRow(row) {
   const dayKey = rawDayKey ? normalizeLevelFolderKey(rawDayKey) : '';
   const canDelete = originType !== 'allcards';
   const deckLevel = Number.parseInt(row?.deck_level, 10);
-  const normalizedDeckLevel = Number.isInteger(deckLevel) && deckLevel > 0 ? deckLevel : null;
+  const normalizedDeckLevel = Number.isInteger(deckLevel) && deckLevel >= 1 && deckLevel <= 100
+    ? deckLevel
+    : null;
 
   return {
     name: fileName,
@@ -4666,8 +4668,8 @@ function buildPublicFlashcardDeckManifestEntryFromRow(row) {
 function normalizePublicFlashcardDeckLevel(value) {
   if (value === null || value === undefined || String(value).trim() === '') return null;
   const parsed = Number.parseInt(String(value).trim(), 10);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 9999) {
-    const error = new Error('Nivel do deck precisa ser um numero entre 1 e 9999.');
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+    const error = new Error('Nivel do deck precisa ser um numero entre 1 e 100.');
     error.statusCode = 400;
     throw error;
   }
@@ -7226,14 +7228,14 @@ async function listAdminFlashcardDecks() {
     title: String(entry?.title || '').trim() || String(entry?.name || '').trim() || 'Deck',
     coverImage: typeof entry?.coverImage === 'string' ? entry.coverImage.trim() : '',
     count: Math.max(0, Number(entry?.count) || 0),
-    deckLevel: Number.isInteger(Number(entry?.deckLevel)) && Number(entry.deckLevel) > 0 ? Number(entry.deckLevel) : null,
+    deckLevel: Number.isInteger(Number(entry?.deckLevel)) && Number(entry.deckLevel) >= 1 && Number(entry.deckLevel) <= 100 ? Number(entry.deckLevel) : null,
     isHidden: Boolean(entry?.isHidden),
     updatedAt: entry?.updatedAt || null
   })).filter((entry) => entry.source);
 
   return decks.sort((left, right) => {
-    const leftLevel = Number.isInteger(Number(left.deckLevel)) && Number(left.deckLevel) > 0 ? Number(left.deckLevel) : null;
-    const rightLevel = Number.isInteger(Number(right.deckLevel)) && Number(right.deckLevel) > 0 ? Number(right.deckLevel) : null;
+    const leftLevel = Number.isInteger(Number(left.deckLevel)) && Number(left.deckLevel) >= 1 && Number(left.deckLevel) <= 100 ? Number(left.deckLevel) : null;
+    const rightLevel = Number.isInteger(Number(right.deckLevel)) && Number(right.deckLevel) >= 1 && Number(right.deckLevel) <= 100 ? Number(right.deckLevel) : null;
     if (leftLevel !== null || rightLevel !== null) {
       if (leftLevel === null) return 1;
       if (rightLevel === null) return -1;

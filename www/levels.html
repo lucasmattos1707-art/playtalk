@@ -193,7 +193,7 @@
             </svg>
           </button>
           <div class="deck-edit-picker__level">
-            <input id="editCardsDeckLevelInput" type="number" min="1" max="9999" step="1" placeholder="Nivel" aria-label="Nivel do deck">
+            <input id="editCardsDeckLevelInput" type="number" min="1" max="100" step="1" placeholder="Nivel" aria-label="Nivel do deck">
             <button id="editCardsDeckLevelSaveBtn" type="button">OK</button>
           </div>
         </div>
@@ -931,7 +931,7 @@
       function resetDeckMeta(){state.day='1';state.title='';state.flashcardCoverUrl=''}
       function normalizeDeckLevelValue(value){
         const parsed=parseInt(String(value||'').trim(),10);
-        return Number.isInteger(parsed)&&parsed>0?parsed:null;
+        return Number.isInteger(parsed)&&parsed>=1&&parsed<=100?parsed:null;
       }
       function currentEditCardsDeck(){
         const selected=safeText(editCardsState.selectedPath);

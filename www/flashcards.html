@@ -11328,7 +11328,9 @@
 
       function normalizeDeckLevel(value) {
         const parsed = Number.parseInt(String(value ?? '').trim(), 10);
-        return Number.isInteger(parsed) && parsed > 0 ? Math.max(USER_LEVEL_MIN, Math.min(USER_LEVEL_MAX, parsed)) : USER_LEVEL_MIN;
+        return Number.isInteger(parsed) && parsed >= USER_LEVEL_MIN && parsed <= USER_LEVEL_MAX
+          ? parsed
+          : null;
       }
 
       function tutorialAudioPath(index) {
@@ -11663,7 +11665,8 @@
 
       function isCardAllowedForUserLevel(card) {
         if (isAdminUser()) return true;
-        return cardDeckLevel(card) <= currentUserLevel();
+        const deckLevel = cardDeckLevel(card);
+        return deckLevel !== null && deckLevel <= currentUserLevel();
       }
 
       function currentLevelProgressCount(level = currentUserLevel()) {
