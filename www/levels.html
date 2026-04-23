@@ -815,7 +815,39 @@
           assign(item,'audioEnFile','audioEnDataUrl','mp3');
         });
       }
-      const defaultLevelKey=()=>state.mode==='movies'?`movie_day_${sanitizeDayKey(state.day)}`:`scene_day_${sanitizeDayKey(state.day)}`,save=()=>{syncAssetFileNames();localStorage.setItem(STORE,JSON.stringify(state))};
+      function storageSafeState(){
+        const snapshot=JSON.parse(JSON.stringify(state));
+        snapshot.coverDataUrl='';
+        snapshot.soundDataUrl='';
+        if(Array.isArray(snapshot.items)){
+          snapshot.items.forEach(item=>{
+            item.imageDataUrl='';
+            item.audioDataUrl='';
+            item.audioPtDataUrl='';
+            item.audioEnDataUrl='';
+          });
+        }
+        if(Array.isArray(snapshot.chars)){
+          snapshot.chars.forEach(char=>{char.imageDataUrl=''});
+        }
+        return snapshot;
+      }
+      function persistEditorState(){
+        const payload=JSON.stringify(storageSafeState());
+        try{
+          localStorage.setItem(STORE,payload);
+          return;
+        }catch(error){
+          try{
+            localStorage.removeItem(STORE);
+            localStorage.setItem(STORE,payload);
+            return;
+          }catch(retryError){
+            console.warn('Nao foi possivel salvar o rascunho do editor no localStorage.',retryError||error);
+          }
+        }
+      }
+      const defaultLevelKey=()=>state.mode==='movies'?`movie_day_${sanitizeDayKey(state.day)}`:`scene_day_${sanitizeDayKey(state.day)}`,save=()=>{syncAssetFileNames();persistEditorState()};
       function clearLevelsLocalCache(){
         try{localStorage.removeItem(STORE)}catch{}
         try{localStorage.removeItem(WATCH_SETTINGS_STORE)}catch{}
@@ -1191,6 +1223,8 @@
           await uploadLevelFilesToR2(files);
           if(image&&item.imageFile)item.imageRemoteUrl=cloud(dayKey,PHASE.flashcard,item.imageFile,'flashcard');
           if(audio&&item.audioFile)item.audioRemoteUrl=cloud(dayKey,PHASE.flashcard,item.audioFile,'flashcard');
+          if(image&&item.imageRemoteUrl)item.imageDataUrl='';
+          if(audio&&item.audioRemoteUrl)item.audioDataUrl='';
           if(!isNumericTarget&&typeof target?.onSynced==='function')target.onSynced();
           markFlashcardItemSynced(item,{image,audio});
           if(isNumericTarget)queuePersistCurrentEditorDeck({delay:80});
