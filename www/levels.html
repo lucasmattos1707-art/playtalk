@@ -58,9 +58,15 @@
     .deck-edit-picker__hint{font-size:11px;color:rgba(255,255,255,.72)}
     .deck-edit-picker__control{display:flex;align-items:center;gap:8px}
     .deck-edit-picker__field{position:relative;flex:1;max-width:180px;min-height:30px}
+    .deck-edit-picker__level{display:flex;align-items:center;gap:6px;min-height:30px}
+    .deck-edit-picker__level input{width:70px;min-height:30px;text-align:center}
+    .deck-edit-picker__level button{min-height:30px;padding:6px 10px;border-radius:9px;font-size:12px}
     .deck-edit-picker select,.deck-edit-picker input{width:100%;min-height:30px;font-size:12px;padding:6px 10px;border-radius:9px;color:#fff}
     .deck-edit-picker select{background:rgba(4,14,38,.92);border:1px solid rgba(130,187,255,.34);appearance:none;-webkit-appearance:none;padding-right:26px;background-image:linear-gradient(45deg,transparent 50%,rgba(255,255,255,.8) 50%),linear-gradient(135deg,rgba(255,255,255,.8) 50%,transparent 50%);background-position:calc(100% - 14px) 12px,calc(100% - 9px) 12px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+    .deck-edit-picker select.is-leveled{color:#ffd84d;font-weight:800}
+    .deck-edit-picker option.is-leveled{color:#d19000;font-weight:800}
     .deck-edit-picker input{background:rgba(5,18,47,.92);border:1px solid rgba(130,187,255,.34)}
+    .deck-edit-picker .deck-edit-picker__level input{width:70px}
     .deck-edit-picker__select-wrap,.deck-edit-picker__search-wrap{position:absolute;inset:0;display:flex;align-items:center;transition:opacity 500ms ease,transform 500ms ease}
     .deck-edit-picker__select-wrap.is-hidden,.deck-edit-picker__search-wrap.is-hidden{opacity:0;transform:translateY(-6px);pointer-events:none}
     .deck-edit-picker__search-toggle{width:30px;height:30px;display:grid;place-items:center;padding:0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.18);border-radius:9px}
@@ -78,7 +84,7 @@
       78%{opacity:1;transform:translateX(-50%) translateY(0)}
       100%{opacity:0;transform:translateX(-50%) translateY(10px)}
     }
-    @media (max-width:640px){.deck-edit-picker__head{flex-direction:column;align-items:flex-start}.deck-edit-picker__field{max-width:none}}
+    @media (max-width:640px){.deck-edit-picker__head{flex-direction:column;align-items:flex-start}.deck-edit-picker__control{flex-wrap:wrap}.deck-edit-picker__field{max-width:none;flex-basis:100%}.deck-edit-picker__level{flex:1}}
     .popover-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.media-btn{position:relative;min-height:112px;padding:14px 12px 12px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:6px;border-radius:20px;text-align:left;overflow:hidden}
     .media-btn.active{border-color:#ef8f1a;box-shadow:0 0 0 3px rgba(239,143,26,.18)}.media-btn strong{font-size:17px}.media-btn span{font-size:12px;color:rgba(255,255,255,.72)}.icon-swap{position:absolute;top:14px;right:14px;width:40px;height:40px}
     .icon-swap img{position:absolute;inset:0;width:40px;height:40px;animation:swapPulse 1s steps(1,end) infinite}.icon-swap img:last-child{animation-delay:.5s}@keyframes swapPulse{0%,49.9%{opacity:1}50%,100%{opacity:0}}
@@ -186,6 +192,10 @@
               <path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14Zm0-2a9 9 0 1 0 5.64 16.02l3.17 3.18 1.42-1.42-3.18-3.17A9 9 0 0 0 11 2Z"/>
             </svg>
           </button>
+          <div class="deck-edit-picker__level">
+            <input id="editCardsDeckLevelInput" type="number" min="1" max="9999" step="1" placeholder="Nivel" aria-label="Nivel do deck">
+            <button id="editCardsDeckLevelSaveBtn" type="button">OK</button>
+          </div>
         </div>
       </div>
     </div>
@@ -421,7 +431,7 @@
       const movieStoryDraft={topic:'',itemCount:8};
       const ADMIN_USERNAMES=new Set(['admin','adm','adminst']);
       const adminStudio={checked:false,enabled:false,username:'',search:'',selectMode:false,selected:new Set(),status:'Aguardando sessao do administrador.',statusError:false,publishTimer:0,publishBusy:false,publishQueued:false,activeMenuIndex:null};
-      const editCardsState={visible:false,loading:false,selectedPath:'',decks:[],searchMode:false,searchQuery:'',searchResults:[],pinnedKeys:new Set()};
+      const editCardsState={visible:false,loading:false,selectedPath:'',decks:[],searchMode:false,searchQuery:'',searchResults:[],pinnedKeys:new Set(),levelBusy:false};
       const jsonBatchPublishState={files:[],results:[],busy:false};
       let deckMetaAction='r2';
       let pendingImage=null,pendingAudio=null,currentAudio=null,audioBatchTargets={pt:false,en:false},aiBatchBusy=false,aiTextBusy=false,zipBusy=false,elevenBusy=false,r2UploadBusy=false,publishLocalBusy=false,feedbackToastTimer=0;
@@ -448,6 +458,8 @@
       const cloud=(day,phase,file,mode=state.mode)=>file?`${ROOT}/${encodePath(['Niveis',sanitizeDayKey(day),PHASE_CODE[mode]||PHASE_CODE.flashcard,String(file).split(/[\\/]/).pop()])}`:'';
       const fileNameOnly=value=>String(value||'').split(/[\\/]/).pop()||'';
       const safeText=value=>typeof value==='string'?value.trim():'';
+      const escapeHtml=value=>String(value||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const escapeAttr=value=>escapeHtml(value).replace(/"/g,'&quot;');
       function buildApiUrl(path){
         if(window.PlaytalkApi&&typeof window.PlaytalkApi.url==='function')return window.PlaytalkApi.url(path);
         return path;
@@ -768,6 +780,17 @@
       function defaultSceneCharacterImageUrl(characterId){const character=getSceneCharacter(characterId);return character?.defaultImageFile?`${DEFAULT_SCENE_CHARACTER_IMAGE_ROOT}/${character.defaultImageFile}`:''}
       function sceneCharacterImageUrl(char){if(!char)return'';if(char.imageDataUrl)return char.imageDataUrl;if(char.imageFile)return remoteOrLocal(cloud(state.day,PHASE.scenes,char.imageFile,'scenes'),char.imageDataUrl);return defaultSceneCharacterImageUrl(char.id)}
       const itemStem=index=>`flashcard-item-${pad(index+1)}`;
+      function flashcardAssetDeckBase(entry=null){
+        const source=entry?.source==='search'
+          ? (entry.deckPath||entry.deckTitle||'')
+          : (state.publicDeckFileName||state.publicDeckSource||state.publicDeckPath||state.title||'');
+        const clean=String(source||'').split(/[?#]/)[0].split('/').pop().replace(/\.json$/i,'');
+        return safeBase(clean||source,'deck');
+      }
+      function flashcardAssetStem(index,entry=null){
+        const deckBase=flashcardAssetDeckBase(entry);
+        return deckBase&&deckBase!=='deck'?`${deckBase}-${itemStem(index)}`:itemStem(index);
+      }
       const charStem=(index,char)=>`flashcard-char-${pad(index+1)}-${safeBase(char?.name||char?.id||`char-${index+1}`,'char')}`;
       const coverStem=()=>`flashcard-cover-${sanitizeDayKey(state.day)}`;
       const soundtrackStem=()=>`flashcard-soundtrack-${sanitizeDayKey(state.day)}`;
@@ -788,11 +811,11 @@
         if(state.mode==='flashcard'){
           state.items.forEach((item,itemIndex)=>{
             if(item?.imageFile||item?.imageDataUrl){
-              if(item?.imageDataUrl)item.imageFile=numberedName(itemIndex+1,assetExt(item.imageFile,item.imageDataUrl,'webp'));
+              if(item?.imageDataUrl)item.imageFile=safeFile(flashcardAssetStem(itemIndex),assetExt(item.imageFile,item.imageDataUrl,'webp'),itemStem(itemIndex));
               else item.imageFile=fileNameOnly(item.imageFile);
             }
             if(item?.audioFile||item?.audioDataUrl){
-              if(item?.audioDataUrl)item.audioFile=numberedName(itemIndex+1,assetExt(item.audioFile,item.audioDataUrl,'mp3'));
+              if(item?.audioDataUrl)item.audioFile=safeFile(flashcardAssetStem(itemIndex),assetExt(item.audioFile,item.audioDataUrl,'mp3'),itemStem(itemIndex));
               else item.audioFile=fileNameOnly(item.audioFile);
             }
           });
@@ -906,15 +929,63 @@
       function openDeckMetaPopover(action='r2'){deckMetaAction=action==='playtalk'?'playtalk':'r2';$('deckMetaPopoverEyebrow').textContent=deckMetaAction==='playtalk'?'Enviar para Fluent LevelUp':'Enviar R2';$('deckMetaPopoverTitle').textContent='Complete os dados do deck';$('sendPlaytalkConfirmBtn').textContent=deckMetaAction==='playtalk'?'Enviar para Fluent LevelUp':'Enviar R2';$('dayInput').value=state.day;$('titleInput').value=state.title;$('flashcardCoverUrlInput').value=state.flashcardCoverUrl||'';$('sendPlaytalkPopover').classList.remove('hidden');$('sendPlaytalkPopover').setAttribute('aria-hidden','false')}
       function closeSendPlaytalkPopover(){$('sendPlaytalkPopover').classList.add('hidden');$('sendPlaytalkPopover').setAttribute('aria-hidden','true')}
       function resetDeckMeta(){state.day='1';state.title='';state.flashcardCoverUrl=''}
+      function normalizeDeckLevelValue(value){
+        const parsed=parseInt(String(value||'').trim(),10);
+        return Number.isInteger(parsed)&&parsed>0?parsed:null;
+      }
+      function currentEditCardsDeck(){
+        const selected=safeText(editCardsState.selectedPath);
+        return selected?editCardsState.decks.find(deck=>deck.path===selected)||null:null;
+      }
+      function compareEditableDecks(a,b){
+        const levelA=normalizeDeckLevelValue(a?.deckLevel),levelB=normalizeDeckLevelValue(b?.deckLevel);
+        if(levelA!==null||levelB!==null){
+          if(levelA===null)return 1;
+          if(levelB===null)return -1;
+          if(levelA!==levelB)return levelA-levelB;
+        }
+        return String(a?.title||'').localeCompare(String(b?.title||''),'pt-BR',{sensitivity:'base',numeric:true});
+      }
+      async function saveCurrentDeckLevel(){
+        if(!adminStudio.enabled||editCardsState.levelBusy)return;
+        const deck=currentEditCardsDeck();
+        if(!deck)throw new Error('Escolha um deck antes de definir o nivel.');
+        const input=$('editCardsDeckLevelInput');
+        const rawValue=String(input?.value||'').trim();
+        const deckLevel=rawValue?normalizeDeckLevelValue(rawValue):null;
+        if(rawValue&&deckLevel===null)throw new Error('Digite um nivel valido para o deck.');
+        editCardsState.levelBusy=true;
+        syncEditCardsDeckPicker();
+        try{
+          const response=await fetch('/api/admin/flashcards/public-decks/level',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({source:deck.source||deck.path,deckLevel})});
+          const result=await response.json().catch(()=>({}));
+          if(!response.ok)throw new Error(result?.message||'Erro ao atualizar o nivel do deck.');
+          const updated=result?.deck||{};
+          const nextLevel=normalizeDeckLevelValue(updated.deckLevel);
+          editCardsState.decks=editCardsState.decks.map(entry=>entry.path===deck.path?{...entry,deckLevel:nextLevel}:entry).sort(compareEditableDecks);
+          editableDeckOptionsCache=editCardsState.decks.slice();
+          editCardsState.selectedPath=deck.path;
+          syncEditCardsDeckPicker();
+          showFeedbackToast(nextLevel?`Nivel ${nextLevel} salvo para "${deck.title}".`:`Nivel removido de "${deck.title}".`);
+        }finally{
+          editCardsState.levelBusy=false;
+          syncEditCardsDeckPicker();
+        }
+      }
       function syncEditCardsDeckPicker(){
         const host=$('editCardsDeckBar'),select=$('editCardsDeckSelect'),hint=$('editCardsDeckHint');
         const selectWrap=$('editCardsDeckSelectWrap'),searchWrap=$('editCardsDeckSearchWrap'),searchInput=$('editCardsDeckSearchInput');
         const searchToggle=$('editCardsDeckSearchToggle'),searchIcon=$('editCardsDeckSearchIcon');
+        const levelInput=$('editCardsDeckLevelInput'),levelSaveBtn=$('editCardsDeckLevelSaveBtn');
         const canShow=adminStudio.enabled&&editCardsState.visible;
         host.classList.toggle('hidden',!canShow);
         if(!canShow){
           select.innerHTML='<option value="">Escolha um deck</option>';
           select.value='';
+          select.classList.remove('is-leveled');
+          if(levelInput)levelInput.value='';
+          if(levelInput)levelInput.disabled=true;
+          if(levelSaveBtn)levelSaveBtn.disabled=true;
           if(searchInput)searchInput.value='';
           if(selectWrap)selectWrap.classList.remove('is-hidden');
           if(searchWrap)searchWrap.classList.add('is-hidden');
@@ -930,15 +1001,30 @@
         }
         const options=['<option value="">Escolha um deck</option>'];
         editCardsState.decks.forEach(deck=>{
-          const safeTitle=String(deck.title||'Flashcards').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-          const safePath=String(deck.path||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+          const safeTitle=escapeHtml(deck.title||'Flashcards');
+          const safePath=escapeAttr(deck.path||'');
           const countLabel=deck.count?` (${deck.count})`:'';
           const statusLabel=deck.loadError?' [json indisponivel]':'';
-          options.push(`<option value="${safePath}">${safeTitle}${countLabel}${statusLabel}</option>`);
+          const deckLevel=normalizeDeckLevelValue(deck.deckLevel);
+          const levelLabel=deckLevel?`Nivel ${deckLevel} - `:'';
+          const classAttr=deckLevel?' class="is-leveled"':'';
+          options.push(`<option${classAttr} value="${safePath}">${levelLabel}${safeTitle}${countLabel}${statusLabel}</option>`);
         });
         select.innerHTML=options.join('');
         select.disabled=editCardsState.loading||!editCardsState.decks.length;
         select.value=editCardsState.selectedPath||'';
+        const selectedDeck=currentEditCardsDeck();
+        const selectedLevel=normalizeDeckLevelValue(selectedDeck?.deckLevel);
+        select.classList.toggle('is-leveled',Boolean(selectedLevel));
+        if(levelInput){
+          const desiredValue=selectedLevel?String(selectedLevel):'';
+          if(document.activeElement!==levelInput&&levelInput.value!==desiredValue)levelInput.value=desiredValue;
+          levelInput.disabled=editCardsState.loading||editCardsState.levelBusy||!selectedDeck;
+        }
+        if(levelSaveBtn){
+          levelSaveBtn.disabled=editCardsState.loading||editCardsState.levelBusy||!selectedDeck;
+          levelSaveBtn.textContent=editCardsState.levelBusy?'...':'OK';
+        }
         const searchMode=Boolean(editCardsState.searchMode);
         if(searchToggle){
           searchToggle.disabled=editCardsState.loading||!editCardsState.decks.length;
@@ -1039,7 +1125,7 @@
         const loaded=await Promise.all(flashcardFiles.map(async file=>{
           const path=normalizeFlashcardsDataPath(file?.path||file?.source||file?.name);
           if(!path)return null;
-          const base={path,source:safeText(file?.source||file?.path||file?.name),fileName:safeText(file?.name||path.split('/').pop()),title:String(file?.title||file?.name||'Flashcards').trim()||'Flashcards',count:Number(file?.count)||0,data:null,loadError:true,dayKey:''};
+          const base={path,source:safeText(file?.source||file?.path||file?.name),fileName:safeText(file?.name||path.split('/').pop()),title:String(file?.title||file?.name||'Flashcards').trim()||'Flashcards',count:Number(file?.count)||0,deckLevel:normalizeDeckLevelValue(file?.deckLevel),data:null,loadError:true,dayKey:''};
           try{
             const deckResponse=await fetch(withNoCacheUrl(path),{credentials:'include',cache:'no-store'});
             if(!deckResponse.ok)return base;
@@ -1052,7 +1138,7 @@
             return base;
           }
         }));
-        editableDeckOptionsCache=loaded.filter(Boolean).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR',{sensitivity:'base'}));
+        editableDeckOptionsCache=loaded.filter(Boolean).sort(compareEditableDecks);
         return editableDeckOptionsCache;
       }
       function invalidateEditableDeckOptionsCache(){editableDeckOptionsCache=null;editCardsState.decks=[];resetDeckSearchState({clearMode:true});if(editCardsState.visible)syncEditCardsDeckPicker()}
@@ -1174,7 +1260,7 @@
       function applyGeneratedFlashcards(items){const normalized=normalizeAiFlashcardItems(items);if(!normalized.length)return 0;const emptyIndexes=[];state.items.forEach((item,index)=>{if(!(item.pt||item.en))emptyIndexes.push(index)});while(emptyIndexes.length<normalized.length){addItem();emptyIndexes.push(state.items.length-1)}normalized.forEach((entry,listIndex)=>{const item=state.items[emptyIndexes[listIndex]];if(!item)return;item.pt=entry.pt;item.en=entry.en;item.category=item.category||'flashcard'});queuePersistCurrentEditorDeck();save();renderAll();return normalized.length}
       async function translatePortugueseBatch(items){const response=await fetch('/api/text/openai/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao traduzir textos.');const translations=Array.isArray(payload?.items)?payload.items.map(item=>({index:Number.parseInt(item?.index,10),en:String(item?.en||'').trim()})).filter(item=>Number.isInteger(item.index)&&item.en):[];if(!translations.length)throw new Error('A OpenAI nao retornou traducoes validas.');return translations}
       function applyTranslations(items){let applied=0;(items||[]).forEach(entry=>{const item=state.items[entry.index];if(!item)return;if(!String(item.pt||'').trim())return;if(String(item.en||'').trim())return;item.en=String(entry.en||'').trim();if(item.en)applied+=1});if(applied)queuePersistCurrentEditorDeck();save();renderAll();return applied}
-      async function uploadLevelFilesToR2(files){const response=await fetch('/api/r2/upload-level-files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day:state.day,mode:state.mode,files})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.details||payload?.error||'Erro ao enviar arquivos para o R2.');return payload}
+      async function uploadLevelFilesToR2(files,options={}){const day=options?.day||state.day,mode=options?.mode||state.mode;const response=await fetch('/api/r2/upload-level-files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day,mode,files})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.details||payload?.error||'Erro ao enviar arquivos para o R2.');return payload}
       function getFlashcardItemSyncTone(item){
         const status=flashcardAssetSyncState.get(item);
         if(!status)return'';
@@ -1220,7 +1306,7 @@
         }
         if(!files.length)return null;
         try{
-          await uploadLevelFilesToR2(files);
+          await uploadLevelFilesToR2(files,{day:dayKey,mode:'flashcard'});
           if(image&&item.imageFile)item.imageRemoteUrl=cloud(dayKey,PHASE.flashcard,item.imageFile,'flashcard');
           if(audio&&item.audioFile)item.audioRemoteUrl=cloud(dayKey,PHASE.flashcard,item.audioFile,'flashcard');
           if(image&&item.imageRemoteUrl)item.imageDataUrl='';
@@ -1375,12 +1461,12 @@
         const pendingAudio=sourceEntries
           .map(entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:String(entry?.item?.en||entry?.item?.pt||'').trim()}))
           .filter(entry=>entry.text&&entry.item?.imageMuted&&!hasGeneratedAudio(entry.item,'single'))
-          .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${itemStem(entry.index)}-en.mp3`,entry:entry.entry}));
+          .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}-en.mp3`,entry:entry.entry}));
         if(pendingAudio.length)return pendingAudio;
         return sourceEntries
           .map(entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:String(entry?.item?.en||entry?.item?.pt||'').trim()}))
           .filter(entry=>entry.text&&!hasGeneratedAudio(entry.item,'single'))
-          .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${itemStem(entry.index)}-en.mp3`,entry:entry.entry}));
+          .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}-en.mp3`,entry:entry.entry}));
       }
       async function generateRemainingVoiceAssets(voice){
         const targets=remainingVoiceTargets();
@@ -1494,12 +1580,12 @@
         lockTargets(validTargets);
         renderAll();
         try{
-          const payload=await generateAiImage({prompt:itemGridImagePrompt(validTargets),fileName:`${itemStem(validTargets[0].index)}-grid`});
+          const payload=await generateAiImage({prompt:itemGridImagePrompt(validTargets),fileName:`${flashcardAssetStem(validTargets[0].index,validTargets[0].entry)}-grid`});
           const slices=await sliceGridImage(payload.dataUrl);
           validTargets.forEach((target,listIndex)=>{
             const item=target?.entry?.item||state.items[target.index],slice=slices[listIndex];
             if(!item||!slice)return;
-            item.imageFile=safeFile(`${itemStem(target.index)}-grid-${listIndex+1}`,'webp',itemStem(target.index));
+            item.imageFile=safeFile(`${flashcardAssetStem(target.index,target.entry)}-grid-${listIndex+1}`,'webp',itemStem(target.index));
             item.imageDataUrl=slice;
             item.imageRemoteUrl='';
             item.imageMuted=false;
@@ -1527,7 +1613,7 @@
         aiImageLocks.add(lockKey);
         renderAll();
         try{
-          const payload=await generateAiImage({prompt:itemImagePrompt(item,index),fileName:itemStem(index)});
+          const payload=await generateAiImage({prompt:itemImagePrompt(item,index),fileName:flashcardAssetStem(index,entry)});
           item.imageFile=payload.fileName;
           item.imageDataUrl=payload.dataUrl;
           item.imageRemoteUrl='';
@@ -1848,6 +1934,8 @@
       $('pasteArea').oninput=()=>handlePasteAreaMode();
       $('pasteCloseBtn').onclick=()=>closePastePopover();
       $('editCardsDeckSelect').onchange=e=>{const selectedPath=String(e.target.value||'').trim();editCardsState.selectedPath=selectedPath;syncEditCardsDeckPicker();if(!selectedPath)return;loadSelectedDeckIntoLevels(selectedPath).catch(error=>alert(error.message||'Erro ao carregar deck.'))};
+      $('editCardsDeckLevelSaveBtn').onclick=()=>saveCurrentDeckLevel().catch(error=>alert(error.message||'Erro ao salvar nivel do deck.'));
+      $('editCardsDeckLevelInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();saveCurrentDeckLevel().catch(error=>alert(error.message||'Erro ao salvar nivel do deck.'))}};
       $('editCardsDeckSearchToggle').onclick=()=>{
         if(editCardsState.loading||!editCardsState.decks.length)return;
         if(editCardsState.searchMode){
@@ -1907,7 +1995,7 @@
       $('textPopover').onclick=e=>{if(e.target===e.currentTarget)closeTextPopover()};
       $('watchPopover').onclick=e=>{if(e.target===e.currentTarget)closeWatchPopover()};
       $('itemAdminPopover').onclick=e=>{if(e.target===e.currentTarget)closeItemAdminPopover()};
-      $('batchImageInput').onchange=async e=>{for(const file of Array.from(e.target.files||[])){addItem(await prepImage(file,itemStem(state.items.length)))}e.target.value='';save();renderAll()};
+      $('batchImageInput').onchange=async e=>{for(const file of Array.from(e.target.files||[])){addItem(await prepImage(file,flashcardAssetStem(state.items.length)))}e.target.value='';save();renderAll()};
       $('singleImageInput').onchange=async e=>{
         const file=e.target.files?.[0];
         if(!file||!pendingImage){
@@ -1916,7 +2004,8 @@
           return;
         }
         const pending={...pendingImage};
-        const data=await prepImage(file,pending.type==='cover'?coverStem():pending.type==='char'?charStem(pending.index,state.chars[pending.index]):itemStem(pending.index));
+        const pendingSearchEntry=pending.source==='search'?findSearchResultEntry(pending.deckPath,pending.index):null;
+        const data=await prepImage(file,pending.type==='cover'?coverStem():pending.type==='char'?charStem(pending.index,state.chars[pending.index]):flashcardAssetStem(pending.index,pendingSearchEntry));
         if(pending.type==='cover'){
           state.coverFile=data.fileName;
           state.coverDataUrl=data.dataUrl;
@@ -1930,7 +2019,7 @@
           let item=null;
           let searchEntry=null;
           if(pending.source==='search'){
-            searchEntry=findSearchResultEntry(pending.deckPath,pending.index);
+            searchEntry=pendingSearchEntry;
             item=searchEntry?.item||null;
           }else{
             item=state.items[pending.index];
@@ -1967,7 +2056,8 @@
           return;
         }
         const pending={...pendingAudio};
-        const data=await prepAudio(file,pending.type==='sound'?soundtrackStem():`${itemStem(pending.index)}-${pending.kind}`);
+        const pendingSearchEntry=pending.source==='search'?findSearchResultEntry(pending.deckPath,pending.index):null;
+        const data=await prepAudio(file,pending.type==='sound'?soundtrackStem():`${flashcardAssetStem(pending.index,pendingSearchEntry)}-${pending.kind}`);
         if(pending.type==='sound'){
           state.soundFile=data.fileName;
           state.soundDataUrl=data.dataUrl;
@@ -1975,7 +2065,7 @@
           let item=null;
           let searchEntry=null;
           if(pending.source==='search'){
-            searchEntry=findSearchResultEntry(pending.deckPath,pending.index);
+            searchEntry=pendingSearchEntry;
             item=searchEntry?.item||null;
           }else{
             item=state.items[pending.index];

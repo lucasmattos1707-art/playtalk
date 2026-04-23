@@ -4599,6 +4599,8 @@ function buildPublicFlashcardDeckManifestEntryFromRow(row) {
   const rawDayKey = String(row?.day_key || '').trim();
   const dayKey = rawDayKey ? normalizeLevelFolderKey(rawDayKey) : '';
   const canDelete = originType !== 'allcards';
+  const deckLevel = Number.parseInt(row?.deck_level, 10);
+  const normalizedDeckLevel = Number.isInteger(deckLevel) && deckLevel > 0 ? deckLevel : null;
 
   return {
     name: fileName,
@@ -4611,10 +4613,22 @@ function buildPublicFlashcardDeckManifestEntryFromRow(row) {
     coverImage,
     originType,
     dayKey,
+    deckLevel: normalizedDeckLevel,
     canDelete,
     isHidden: Boolean(row?.is_hidden),
     updatedAt: row?.updated_at || null
   };
+}
+
+function normalizePublicFlashcardDeckLevel(value) {
+  if (value === null || value === undefined || String(value).trim() === '') return null;
+  const parsed = Number.parseInt(String(value).trim(), 10);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 9999) {
+    const error = new Error('Nivel do deck precisa ser um numero entre 1 e 9999.');
+    error.statusCode = 400;
+    throw error;
+  }
+  return parsed;
 }
 
 async function ensurePublicFlashcardDecksTable() {
@@ -4652,8 +4666,17 @@ async function ensurePublicFlashcardDecksTable() {
         ADD COLUMN IF NOT EXISTS hidden_at timestamptz
       `);
       await pool.query(`
+        ALTER TABLE public.flashcards_public_decks
+        ADD COLUMN IF NOT EXISTS deck_level integer
+      `);
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS flashcards_public_decks_hidden_idx
         ON public.flashcards_public_decks (is_hidden, updated_at DESC)
+      `);
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS flashcards_public_decks_deck_level_unique_idx
+        ON public.flashcards_public_decks (deck_level)
+        WHERE deck_level IS NOT NULL
       `);
     })().catch((error) => {
       publicFlashcardDecksTableReadyPromise = null;
@@ -4718,7 +4741,7 @@ async function upsertPublicFlashcardDeck({
        is_hidden = CASE WHEN $8 THEN false ELSE public.flashcards_public_decks.is_hidden END,
        hidden_at = CASE WHEN $8 THEN NULL ELSE public.flashcards_public_decks.hidden_at END,
        updated_at = now()
-     RETURNING file_name, day_key, source, title, item_count, payload, is_hidden, updated_at`,
+     RETURNING file_name, day_key, source, title, item_count, payload, is_hidden, deck_level, updated_at`,
     [
       normalizedDeckKey,
       normalizedFileName,
@@ -4921,7 +4944,7 @@ async function collectPostgresFlashcardManifestEntries(options = {}) {
     const includeHidden = options?.includeHidden === true;
 
     const result = await pool.query(
-      `SELECT file_name, day_key, source, title, item_count, payload, is_hidden, updated_at
+      `SELECT file_name, day_key, source, title, item_count, payload, is_hidden, deck_level, updated_at
        FROM public.flashcards_public_decks
        ORDER BY lower(title) ASC, updated_at DESC`
     );
@@ -4968,7 +4991,7 @@ async function computePostgresFlashcardsGameSummary(options = {}) {
   await ensurePublicFlashcardDecksTable();
   const includeHidden = options?.includeHidden === true;
   const result = await pool.query(
-    `SELECT file_name, day_key, source, title, payload, is_hidden
+    `SELECT file_name, day_key, source, title, payload, is_hidden, deck_level
      FROM public.flashcards_public_decks
      ORDER BY lower(title) ASC, updated_at DESC`
   );
@@ -5058,7 +5081,7 @@ async function findPublicFlashcardDeckRowByFileName(fileName) {
   }
 
   const result = await pool.query(
-    `SELECT id, deck_key, file_name, source, title, item_count, payload, is_hidden, updated_at
+    `SELECT id, deck_key, file_name, source, title, item_count, payload, is_hidden, deck_level, updated_at
      FROM public.flashcards_public_decks
      WHERE file_name = $1
      LIMIT 1`,
@@ -7160,14 +7183,24 @@ async function listAdminFlashcardDecks() {
     title: String(entry?.title || '').trim() || String(entry?.name || '').trim() || 'Deck',
     coverImage: typeof entry?.coverImage === 'string' ? entry.coverImage.trim() : '',
     count: Math.max(0, Number(entry?.count) || 0),
+    deckLevel: Number.isInteger(Number(entry?.deckLevel)) && Number(entry.deckLevel) > 0 ? Number(entry.deckLevel) : null,
     isHidden: Boolean(entry?.isHidden),
     updatedAt: entry?.updatedAt || null
   })).filter((entry) => entry.source);
 
-  return decks.sort((left, right) => left.title.localeCompare(right.title, 'pt-BR', {
-    sensitivity: 'base',
-    numeric: true
-  }));
+  return decks.sort((left, right) => {
+    const leftLevel = Number.isInteger(Number(left.deckLevel)) && Number(left.deckLevel) > 0 ? Number(left.deckLevel) : null;
+    const rightLevel = Number.isInteger(Number(right.deckLevel)) && Number(right.deckLevel) > 0 ? Number(right.deckLevel) : null;
+    if (leftLevel !== null || rightLevel !== null) {
+      if (leftLevel === null) return 1;
+      if (rightLevel === null) return -1;
+      if (leftLevel !== rightLevel) return leftLevel - rightLevel;
+    }
+    return left.title.localeCompare(right.title, 'pt-BR', {
+      sensitivity: 'base',
+      numeric: true
+    });
+  });
 }
 
 async function listAdminFlashcardDeckEntries() {
@@ -10395,7 +10428,7 @@ app.post('/api/admin/flashcards/public-decks/visibility', express.json({ limit: 
              hidden_at = CASE WHEN $2 THEN now() ELSE NULL END,
              updated_at = now()
          WHERE file_name = $1
-         RETURNING file_name, day_key, source, title, item_count, payload, is_hidden, updated_at`,
+         RETURNING file_name, day_key, source, title, item_count, payload, is_hidden, deck_level, updated_at`,
         [fileName, hidden]
       );
 
@@ -10412,6 +10445,55 @@ app.post('/api/admin/flashcards/public-decks/visibility', express.json({ limit: 
     res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Falha ao atualizar a visibilidade do deck.'
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/public-decks/level', express.json({ limit: '256kb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const fileName = normalizePublicDeckSourceToFileName(req.body?.source || req.body?.path);
+    if (!fileName) {
+      res.status(400).json({ success: false, message: 'Origem do deck invalida.' });
+      return;
+    }
+
+    const deckLevel = normalizePublicFlashcardDeckLevel(req.body?.deckLevel ?? req.body?.level);
+    await ensurePublicFlashcardDecksTable();
+    const result = await pool.query(
+      `UPDATE public.flashcards_public_decks
+       SET deck_level = $2,
+           updated_at = now()
+       WHERE file_name = $1
+       RETURNING file_name, day_key, source, title, item_count, payload, is_hidden, deck_level, updated_at`,
+      [fileName, deckLevel]
+    );
+
+    if (!result.rows.length) {
+      res.status(404).json({ success: false, message: 'Deck nao encontrado no Postgres.' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      deck: buildPublicFlashcardDeckManifestEntryFromRow(result.rows[0] || null)
+    });
+  } catch (error) {
+    if (error?.code === '23505') {
+      res.status(409).json({
+        success: false,
+        message: 'Ja existe outro deck usando esse nivel.'
+      });
+      return;
+    }
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao atualizar o nivel do deck.'
     });
   }
 });
@@ -10582,7 +10664,7 @@ app.post('/api/admin/flashcards/public-decks/approve-cover', express.json({ limi
            item_count = $3,
            updated_at = now()
        WHERE id = $1
-       RETURNING file_name, day_key, source, title, item_count, payload, is_hidden, updated_at`,
+       RETURNING file_name, day_key, source, title, item_count, payload, is_hidden, deck_level, updated_at`,
       [deckRow.id, JSON.stringify(nextPayload), nextItemCount]
     );
 
