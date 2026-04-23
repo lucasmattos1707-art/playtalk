@@ -14,6 +14,14 @@
   let energyGateLoglineIndex = 0;
   let latestEnergyGateStatus = null;
 
+  function rememberEnergyStatus(status = null) {
+    if (!status || typeof status !== 'object') return null;
+    latestEnergyGateStatus = {
+      ...status
+    };
+    return latestEnergyGateStatus;
+  }
+
   function safeNumber(value) {
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : 0;
@@ -383,7 +391,7 @@
 
   function openEnergyGate(status = null) {
     latestEnergyGateStatus = status && typeof status === 'object'
-      ? status
+      ? rememberEnergyStatus(status)
       : latestEnergyGateStatus || buildEnergyStatus({ stats: {} });
     const gate = ensureEnergyGate();
     document.body.classList.add('playtalk-energy-gate-open');
@@ -432,6 +440,9 @@
   }
 
   function redirectToFlashcardsEnergyGate(status = null) {
+    if (status && typeof status === 'object') {
+      rememberEnergyStatus(status);
+    }
     try {
       sessionStorage.setItem(ENERGY_GATE_PENDING_STORE, '1');
       if (status && typeof status === 'object') {
@@ -564,7 +575,16 @@
     const stats = options.stats && typeof options.stats === 'object'
       ? options.stats
       : await fetchBooksStats();
-    return buildEnergyStatus({ user, stats });
+    if (stats && typeof stats === 'object') {
+      return rememberEnergyStatus(buildEnergyStatus({ user, stats }));
+    }
+    if (latestEnergyGateStatus && typeof latestEnergyGateStatus === 'object') {
+      return {
+        ...latestEnergyGateStatus,
+        loggedIn: Boolean(user?.id)
+      };
+    }
+    return rememberEnergyStatus(buildEnergyStatus({ user, stats }));
   }
 
   async function guardEnergyGate(options = {}) {
@@ -601,6 +621,7 @@
     fetchBooksStats,
     formatResetCountdown,
     getEnergyStatus,
+    rememberEnergyStatus,
     guardEnergyGate,
     guardEnergy,
     isEnergyErrorPayload,

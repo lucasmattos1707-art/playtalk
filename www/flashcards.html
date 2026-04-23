@@ -8734,7 +8734,7 @@
                 user: state.user,
                 stats: payload?.energy || {}
               });
-              window.PlaytalkEnergy.redirectToFlashcardsEnergyGate(status);
+              applyWelcomeEnergyStatus(status);
             }
             return null;
           }
@@ -8744,7 +8744,7 @@
               stats: payload.stats
             });
             if (status?.loggedIn && status?.blocked) {
-              window.PlaytalkEnergy.redirectToFlashcardsEnergyGate(status);
+              applyWelcomeEnergyStatus(status);
               return null;
             }
           }
@@ -10254,6 +10254,21 @@
         }, 1000);
       }
 
+      function applyWelcomeEnergyStatus(status) {
+        const blocked = Boolean(status?.loggedIn && status?.blocked);
+        state.ui.welcomeEnergyBlocked = blocked;
+        state.ui.welcomeEnergyNextResetAt = blocked ? String(status?.nextResetAt || '') : '';
+        if (window.PlaytalkEnergy?.rememberEnergyStatus) {
+          window.PlaytalkEnergy.rememberEnergyStatus(status);
+        }
+        if (blocked) {
+          startWelcomeEnergyCountdown();
+          return;
+        }
+        stopWelcomeEnergyCountdown();
+        syncWelcomeStartButton();
+      }
+
       async function refreshWelcomeEnergyState() {
         if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.getEnergyStatus !== 'function') {
           state.ui.welcomeEnergyBlocked = false;
@@ -10265,14 +10280,7 @@
         const status = await window.PlaytalkEnergy.getEnergyStatus({
           user: state.user
         });
-        state.ui.welcomeEnergyBlocked = Boolean(status?.loggedIn && status?.blocked);
-        state.ui.welcomeEnergyNextResetAt = state.ui.welcomeEnergyBlocked ? String(status?.nextResetAt || '') : '';
-        if (state.ui.welcomeEnergyBlocked) {
-          startWelcomeEnergyCountdown();
-          return;
-        }
-        stopWelcomeEnergyCountdown();
-        syncWelcomeStartButton();
+        applyWelcomeEnergyStatus(status);
       }
 
       function syncGameAdvanceButton(entry = null) {
