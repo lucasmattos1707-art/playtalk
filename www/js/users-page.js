@@ -1062,6 +1062,15 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) {
+        if (window.PlaytalkEnergy?.isEnergyErrorPayload(payload, response.status)) {
+          const status = window.PlaytalkEnergy.buildEnergyStatus({
+            user: state.currentUser,
+            stats: payload?.energy || {}
+          });
+          window.PlaytalkEnergy.openEnergyGate(status);
+          closeChallengeModal();
+          return;
+        }
         throw new Error(payload?.message || 'Nao foi possivel enviar o desafio.');
       }
       if (payload?.sessionId) {

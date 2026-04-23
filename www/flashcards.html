@@ -7226,7 +7226,7 @@
   </nav>
   <script src="js/android-config.js"></script>
   <script src="js/api-config.js"></script>
-  <script src="js/energy-manager.js?v=20260419a"></script>
+  <script src="js/energy-manager.js?v=20260423a"></script>
   <script src="js/android-shell.js"></script>
   <script src="js/playtalk-shell.js"></script>
   <script src="js/openai-stt.js"></script>
@@ -8328,7 +8328,11 @@
         )).then(({ response, payload }) => {
           if (!response.ok || !payload?.success) {
             if (window.PlaytalkEnergy?.isEnergyErrorPayload(payload, response.status)) {
-              window.location.href = window.PlaytalkEnergy.resolveAccountHref();
+              const status = window.PlaytalkEnergy.buildEnergyStatus({
+                user: state.user,
+                stats: payload?.energy || {}
+              });
+              window.PlaytalkEnergy.openEnergyGate(status);
             }
             return null;
           }

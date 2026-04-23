@@ -1,6 +1,14 @@
 (function initPlaytalkEnergyManager() {
   const DAILY_FREE_ENERGY = 5000;
   const ENERGY_EXHAUSTED_STATUS = 402;
+  const ENERGY_GATE_LOG_LINES = [
+    'Volte amanhã para treinar mais!',
+    'ou continue com energias infinitas'
+  ];
+  let energyGateTimer = 0;
+  let energyGateCountdownTimer = 0;
+  let energyGateLoglineIndex = 0;
+  let latestEnergyGateStatus = null;
 
   function safeNumber(value) {
     const numeric = Number(value);
@@ -23,12 +31,271 @@
     return `${hours}h ${minutes}min`;
   }
 
+  function formatResetCountdownDetailed(nextResetAt) {
+    const targetMs = Date.parse(nextResetAt || '');
+    const diffMs = Math.max(0, (Number.isFinite(targetMs) ? targetMs : Date.now()) - Date.now());
+    const totalSeconds = Math.ceil(diffMs / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+  }
+
   function resolveAccountHref() {
     if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
       return window.PlaytalkNative.resolveRouteHref('/account');
     }
     return '/account';
   }
+
+  function resolvePremiumHref() {
+    if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
+      return window.PlaytalkNative.resolveRouteHref('/premium');
+    }
+    return '/premium';
+  }
+
+  function resolveFlashcardsEnergyHref() {
+    const path = '/flashcards?energy=empty';
+    if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
+      return window.PlaytalkNative.resolveRouteHref(path);
+    }
+    return path;
+  }
+
+  function injectEnergyGateStyles() {
+    if (document.getElementById('playtalk-energy-gate-style')) return;
+    const style = document.createElement('style');
+    style.id = 'playtalk-energy-gate-style';
+    style.textContent = `
+      .playtalk-energy-gate {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: none;
+        width: 100vw;
+        height: 100dvh;
+        background: linear-gradient(180deg, #0c8cff 0%, #0759db 48%, #042f93 100%);
+        color: #ffffff;
+        font-family: "Soopafre", "PlaytalkDisplay", Arial, sans-serif;
+        overflow: hidden;
+      }
+
+      .playtalk-energy-gate.is-visible {
+        display: grid;
+        place-items: center;
+      }
+
+      body.playtalk-energy-gate-open {
+        overflow: hidden !important;
+      }
+
+      .playtalk-energy-gate__close {
+        position: fixed;
+        top: max(18px, env(safe-area-inset-top, 0px) + 12px);
+        right: 18px;
+        width: 48px;
+        height: 48px;
+        border: 1px solid rgba(255, 255, 255, 0.38);
+        border-radius: 50%;
+        background: rgba(4, 32, 110, 0.58);
+        color: #ffffff;
+        display: grid;
+        place-items: center;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+        cursor: pointer;
+      }
+
+      .playtalk-energy-gate__close svg {
+        width: 25px;
+        height: 25px;
+        fill: currentColor;
+      }
+
+      .playtalk-energy-gate__content {
+        width: min(92vw, 560px);
+        display: grid;
+        justify-items: center;
+        text-align: center;
+        gap: clamp(18px, 4vh, 32px);
+        padding: 32px 16px;
+      }
+
+      .playtalk-energy-gate__title {
+        margin: 0;
+        display: grid;
+        gap: 4px;
+        font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
+        font-size: clamp(44px, 11vw, 86px);
+        line-height: 0.9;
+        text-shadow:
+          0 3px 0 rgba(5, 48, 138, 0.98),
+          0 14px 30px rgba(0, 0, 0, 0.28);
+      }
+
+      .playtalk-energy-gate__title span {
+        display: block;
+      }
+
+      .playtalk-energy-gate__logline {
+        min-height: 2.2em;
+        margin: 0;
+        font-size: clamp(24px, 6vw, 42px);
+        line-height: 1;
+        text-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
+        opacity: 1;
+        transform: translateY(0);
+        transition: opacity 420ms ease, transform 420ms ease;
+      }
+
+      .playtalk-energy-gate__logline.is-changing {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      .playtalk-energy-gate__countdown {
+        margin: 0;
+        min-width: min(90vw, 430px);
+        padding: 14px 18px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        background: rgba(3, 30, 103, 0.42);
+        font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+        font-size: clamp(28px, 7vw, 54px);
+        line-height: 1;
+        box-shadow:
+          inset 0 0 18px rgba(255, 255, 255, 0.08),
+          0 14px 34px rgba(0, 0, 0, 0.2);
+      }
+
+      .playtalk-energy-gate__premium {
+        min-height: 62px;
+        padding: 0 28px;
+        border: 0;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #fff56b 0%, #ffb92f 100%);
+        color: #08265d;
+        font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+        font-size: clamp(20px, 4.6vw, 32px);
+        box-shadow:
+          0 0 24px rgba(255, 236, 92, 0.42),
+          0 16px 34px rgba(0, 0, 0, 0.24);
+        cursor: pointer;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function ensureEnergyGate() {
+    injectEnergyGateStyles();
+    let gate = document.getElementById('playtalkEnergyGate');
+    if (gate) return gate;
+    gate = document.createElement('section');
+    gate.className = 'playtalk-energy-gate';
+    gate.id = 'playtalkEnergyGate';
+    gate.setAttribute('aria-modal', 'true');
+    gate.setAttribute('role', 'dialog');
+    gate.setAttribute('aria-label', 'Treino diario completo');
+    gate.innerHTML = `
+      <button class="playtalk-energy-gate__close" id="playtalkEnergyGateClose" type="button" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>
+      </button>
+      <div class="playtalk-energy-gate__content">
+        <h2 class="playtalk-energy-gate__title"><span>Você completou</span><span>seu treino diário!</span></h2>
+        <p class="playtalk-energy-gate__logline" id="playtalkEnergyGateLogline">${ENERGY_GATE_LOG_LINES[0]}</p>
+        <p class="playtalk-energy-gate__countdown" id="playtalkEnergyGateCountdown">00h 00m 00s</p>
+        <button class="playtalk-energy-gate__premium" id="playtalkEnergyGatePremium" type="button">Assinar premium</button>
+      </div>
+    `;
+    document.body.appendChild(gate);
+    gate.querySelector('#playtalkEnergyGateClose')?.addEventListener('click', closeEnergyGate);
+    gate.querySelector('#playtalkEnergyGatePremium')?.addEventListener('click', () => {
+      window.location.href = resolvePremiumHref();
+    });
+    return gate;
+  }
+
+  function updateEnergyGateCountdown() {
+    const countdown = document.getElementById('playtalkEnergyGateCountdown');
+    if (!countdown) return;
+    countdown.textContent = formatResetCountdownDetailed(latestEnergyGateStatus?.nextResetAt);
+  }
+
+  function startEnergyGateTimers() {
+    stopEnergyGateTimers();
+    const logline = document.getElementById('playtalkEnergyGateLogline');
+    if (logline) {
+      logline.textContent = ENERGY_GATE_LOG_LINES[energyGateLoglineIndex] || ENERGY_GATE_LOG_LINES[0];
+    }
+    updateEnergyGateCountdown();
+    energyGateTimer = window.setInterval(() => {
+      const target = document.getElementById('playtalkEnergyGateLogline');
+      if (!target) return;
+      target.classList.add('is-changing');
+      window.setTimeout(() => {
+        energyGateLoglineIndex = (energyGateLoglineIndex + 1) % ENERGY_GATE_LOG_LINES.length;
+        target.textContent = ENERGY_GATE_LOG_LINES[energyGateLoglineIndex] || ENERGY_GATE_LOG_LINES[0];
+        target.classList.remove('is-changing');
+      }, 430);
+    }, 2400);
+    energyGateCountdownTimer = window.setInterval(updateEnergyGateCountdown, 1000);
+  }
+
+  function stopEnergyGateTimers() {
+    if (energyGateTimer) {
+      window.clearInterval(energyGateTimer);
+      energyGateTimer = 0;
+    }
+    if (energyGateCountdownTimer) {
+      window.clearInterval(energyGateCountdownTimer);
+      energyGateCountdownTimer = 0;
+    }
+  }
+
+  function openEnergyGate(status = null) {
+    latestEnergyGateStatus = status && typeof status === 'object'
+      ? status
+      : latestEnergyGateStatus || buildEnergyStatus({ stats: {} });
+    const gate = ensureEnergyGate();
+    document.body.classList.add('playtalk-energy-gate-open');
+    gate.classList.add('is-visible');
+    gate.removeAttribute('hidden');
+    startEnergyGateTimers();
+  }
+
+  function closeEnergyGate() {
+    const gate = document.getElementById('playtalkEnergyGate');
+    document.body.classList.remove('playtalk-energy-gate-open');
+    if (gate) {
+      gate.classList.remove('is-visible');
+      gate.hidden = true;
+    }
+    stopEnergyGateTimers();
+  }
+
+  function redirectToFlashcardsEnergyGate(status = null) {
+    try {
+      if (status && typeof status === 'object') {
+        sessionStorage.setItem('playtalk-energy-gate-status', JSON.stringify(status));
+      }
+    } catch (_error) {
+      // ignore
+    }
+    window.location.href = resolveFlashcardsEnergyHref();
+  }
+
+  function readStoredEnergyGateStatus() {
+    try {
+      const raw = sessionStorage.getItem('playtalk-energy-gate-status');
+      if (!raw) return null;
+      sessionStorage.removeItem('playtalk-energy-gate-status');
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
 
   async function fetchBooksStats() {
     if (!window.PlaytalkApi || typeof window.PlaytalkApi.buildApiUrl !== 'function') {
@@ -110,7 +377,7 @@
   async function guardEnergy(options = {}) {
     const status = await getEnergyStatus(options);
     if (status.loggedIn && status.blocked) {
-      window.location.href = resolveAccountHref();
+      openEnergyGate(status);
       return { allowed: false, status };
     }
     return { allowed: true, status };
@@ -130,6 +397,25 @@
     guardEnergy,
     isEnergyErrorPayload,
     isPremiumActive,
+    openEnergyGate,
+    closeEnergyGate,
+    redirectToFlashcardsEnergyGate,
+    resolveFlashcardsEnergyHref,
+    resolvePremiumHref,
     resolveAccountHref
   };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search || '');
+      if (params.get('energy') === 'empty') {
+        openEnergyGate(readStoredEnergyGateStatus());
+      }
+    }, { once: true });
+  } else {
+    const params = new URLSearchParams(window.location.search || '');
+    if (params.get('energy') === 'empty') {
+      openEnergyGate(readStoredEnergyGateStatus());
+    }
+  }
 })();

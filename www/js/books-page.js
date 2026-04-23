@@ -1462,10 +1462,16 @@
       els.homePanel.classList.add('is-energy-dissolving');
     }
     window.setTimeout(() => {
-      const accountHref = window.PlaytalkEnergy && typeof window.PlaytalkEnergy.resolveAccountHref === 'function'
-        ? window.PlaytalkEnergy.resolveAccountHref()
-        : '/account';
-      navigateTo(accountHref, { replace: true });
+      if (window.PlaytalkEnergy && typeof window.PlaytalkEnergy.redirectToFlashcardsEnergyGate === 'function') {
+        window.PlaytalkEnergy.redirectToFlashcardsEnergyGate(
+          window.PlaytalkEnergy.buildEnergyStatus({
+            user: state.user,
+            stats: state.stats || {}
+          })
+        );
+        return;
+      }
+      navigateTo('/flashcards?energy=empty', { replace: true });
     }, 3000);
   }
 
