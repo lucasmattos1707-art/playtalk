@@ -6,6 +6,8 @@
     'Volte amanhã para treinar mais!',
     'ou continue com energias infinitas'
   ];
+  const ENERGY_GATE_STATUS_STORE = 'playtalk-energy-gate-status';
+  const ENERGY_GATE_PENDING_STORE = 'playtalk-energy-gate-pending';
   let energyGateTimer = 0;
   let energyGateCountdownTimer = 0;
   let energyGateLoglineIndex = 0;
@@ -281,8 +283,9 @@
 
   function redirectToFlashcardsEnergyGate(status = null) {
     try {
+      sessionStorage.setItem(ENERGY_GATE_PENDING_STORE, '1');
       if (status && typeof status === 'object') {
-        sessionStorage.setItem('playtalk-energy-gate-status', JSON.stringify(status));
+        sessionStorage.setItem(ENERGY_GATE_STATUS_STORE, JSON.stringify(status));
       }
     } catch (_error) {
       // ignore
@@ -296,14 +299,36 @@
 
   function readStoredEnergyGateStatus() {
     try {
-      const raw = sessionStorage.getItem('playtalk-energy-gate-status');
+      const raw = sessionStorage.getItem(ENERGY_GATE_STATUS_STORE);
       if (!raw) return null;
-      sessionStorage.removeItem('playtalk-energy-gate-status');
+      sessionStorage.removeItem(ENERGY_GATE_STATUS_STORE);
       const parsed = JSON.parse(raw);
       return parsed && typeof parsed === 'object' ? parsed : null;
     } catch (_error) {
       return null;
     }
+  }
+
+  function shouldOpenStoredEnergyGate() {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      const hasQueryFlag = params.get('energy') === 'empty';
+      const hasPendingFlag = sessionStorage.getItem(ENERGY_GATE_PENDING_STORE) === '1';
+      if (hasQueryFlag || hasPendingFlag) {
+        sessionStorage.removeItem(ENERGY_GATE_PENDING_STORE);
+        return true;
+      }
+    } catch (_error) {
+      return false;
+    }
+    return false;
+  }
+
+  function openStoredEnergyGateIfNeeded() {
+    if (!shouldOpenStoredEnergyGate()) return;
+    const status = readStoredEnergyGateStatus();
+    openEnergyGate(status);
+    window.setTimeout(() => openEnergyGate(status), 250);
   }
 
 
@@ -426,15 +451,9 @@
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      const params = new URLSearchParams(window.location.search || '');
-      if (params.get('energy') === 'empty') {
-        openEnergyGate(readStoredEnergyGateStatus());
-      }
+      openStoredEnergyGateIfNeeded();
     }, { once: true });
   } else {
-    const params = new URLSearchParams(window.location.search || '');
-    if (params.get('energy') === 'empty') {
-      openEnergyGate(readStoredEnergyGateStatus());
-    }
+    openStoredEnergyGateIfNeeded();
   }
 })();
