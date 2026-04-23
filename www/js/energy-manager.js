@@ -19,6 +19,15 @@
     return Number.isFinite(numeric) ? numeric : 0;
   }
 
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function isPremiumActive(user) {
     if (!user || typeof user !== 'object') return false;
     if (Boolean(user.premiumFullAccess || user.premium_full_access)) return true;
@@ -125,18 +134,21 @@
         width: min(92vw, 560px);
         display: grid;
         justify-items: center;
+        align-content: center;
+        place-self: center;
         text-align: center;
-        gap: clamp(18px, 4vh, 32px);
+        gap: clamp(14px, 2.6vh, 24px);
         padding: 32px 16px;
+        margin: 0 auto;
       }
 
       .playtalk-energy-gate__title {
         margin: 0;
         display: grid;
-        gap: 4px;
+        gap: 2px;
         font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
-        font-size: clamp(44px, 11vw, 86px);
-        line-height: 0.9;
+        font-size: clamp(30px, 7.6vw, 60px);
+        line-height: 0.92;
         text-shadow:
           0 3px 0 rgba(5, 48, 138, 0.98),
           0 14px 30px rgba(0, 0, 0, 0.28);
@@ -146,15 +158,30 @@
         display: block;
       }
 
+      .playtalk-energy-gate__star {
+        width: min(15vw, 15vh, 132px);
+        height: min(15vw, 15vh, 132px);
+        object-fit: contain;
+        filter:
+          drop-shadow(0 10px 24px rgba(0, 0, 0, 0.28))
+          drop-shadow(0 0 18px rgba(255, 226, 112, 0.42));
+      }
+
       .playtalk-energy-gate__logline {
-        min-height: 2.2em;
+        min-height: 2.5em;
         margin: 0;
-        font-size: clamp(24px, 6vw, 42px);
-        line-height: 1;
+        display: grid;
+        gap: 2px;
+        font-size: clamp(18px, 4.7vw, 31px);
+        line-height: 1.02;
         text-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
         opacity: 1;
         transform: translateY(0);
         transition: opacity 420ms ease, transform 420ms ease;
+      }
+
+      .playtalk-energy-gate__logline span {
+        display: block;
       }
 
       .playtalk-energy-gate__logline.is-changing {
@@ -165,16 +192,34 @@
       .playtalk-energy-gate__countdown {
         margin: 0;
         min-width: min(90vw, 430px);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
         padding: 14px 18px 12px;
         border-radius: 999px;
         border: 1px solid rgba(255, 255, 255, 0.35);
         background: rgba(3, 30, 103, 0.42);
         font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
-        font-size: clamp(28px, 7vw, 54px);
+        font-size: clamp(25px, 6.4vw, 48px);
         line-height: 1;
         box-shadow:
           inset 0 0 18px rgba(255, 255, 255, 0.08),
           0 14px 34px rgba(0, 0, 0, 0.2);
+      }
+
+      .playtalk-energy-gate__countdown-icon {
+        width: clamp(24px, 5vw, 38px);
+        height: clamp(24px, 5vw, 38px);
+        object-fit: contain;
+        filter: brightness(0) invert(1);
+        flex: 0 0 auto;
+      }
+
+      .playtalk-energy-gate__countdown-value {
+        display: inline-block;
+        min-width: 7.4em;
+        text-align: left;
       }
 
       .playtalk-energy-gate__premium {
@@ -228,6 +273,27 @@
       </div>
     `;
     document.body.appendChild(gate);
+    const title = gate.querySelector('.playtalk-energy-gate__title');
+    if (title) {
+      title.innerHTML = '<span>Você completou</span><span>o treino diário!</span>';
+    }
+    const logline = gate.querySelector('#playtalkEnergyGateLogline');
+    if (logline) {
+      const star = document.createElement('img');
+      star.className = 'playtalk-energy-gate__star';
+      star.src = '/SVG/codex-icons/star.svg';
+      star.alt = '';
+      star.setAttribute('aria-hidden', 'true');
+      logline.before(star);
+    }
+    const countdown = gate.querySelector('#playtalkEnergyGateCountdown');
+    if (countdown) {
+      countdown.removeAttribute('id');
+      countdown.innerHTML = `
+        <img class="playtalk-energy-gate__countdown-icon" src="/SVG/codex-icons/relógio.svg" alt="" aria-hidden="true">
+        <span class="playtalk-energy-gate__countdown-value" id="playtalkEnergyGateCountdown">00h 00m 00s</span>
+      `;
+    }
     gate.querySelector('#playtalkEnergyGateClose')?.addEventListener('click', closeEnergyGate);
     gate.querySelector('#playtalkEnergyGatePremium')?.addEventListener('click', () => {
       window.location.href = resolvePremiumHref();
@@ -241,11 +307,35 @@
     countdown.textContent = formatResetCountdownDetailed(latestEnergyGateStatus?.nextResetAt);
   }
 
+  function splitBalancedText(value) {
+    const words = String(value || '').trim().split(/\s+/).filter(Boolean);
+    if (words.length <= 2) return [words.join(' ')].filter(Boolean);
+    let best = [String(value || '').trim()];
+    let bestScore = Number.POSITIVE_INFINITY;
+    for (let index = 1; index < words.length; index += 1) {
+      const first = words.slice(0, index).join(' ');
+      const second = words.slice(index).join(' ');
+      const score = Math.abs(first.length - second.length);
+      if (score < bestScore) {
+        bestScore = score;
+        best = [first, second];
+      }
+    }
+    return best;
+  }
+
+  function renderEnergyGateLogline(text) {
+    const logline = document.getElementById('playtalkEnergyGateLogline');
+    if (!logline) return;
+    const parts = splitBalancedText(text);
+    logline.innerHTML = parts.map((part) => `<span>${escapeHtml(part)}</span>`).join('');
+  }
+
   function startEnergyGateTimers() {
     stopEnergyGateTimers();
     const logline = document.getElementById('playtalkEnergyGateLogline');
     if (logline) {
-      logline.textContent = ENERGY_GATE_LOG_LINES[energyGateLoglineIndex] || ENERGY_GATE_LOG_LINES[0];
+      renderEnergyGateLogline(ENERGY_GATE_LOG_LINES[energyGateLoglineIndex] || ENERGY_GATE_LOG_LINES[0]);
     }
     updateEnergyGateCountdown();
     energyGateTimer = window.setInterval(() => {
@@ -254,7 +344,7 @@
       target.classList.add('is-changing');
       window.setTimeout(() => {
         energyGateLoglineIndex = (energyGateLoglineIndex + 1) % ENERGY_GATE_LOG_LINES.length;
-        target.textContent = ENERGY_GATE_LOG_LINES[energyGateLoglineIndex] || ENERGY_GATE_LOG_LINES[0];
+        renderEnergyGateLogline(ENERGY_GATE_LOG_LINES[energyGateLoglineIndex] || ENERGY_GATE_LOG_LINES[0]);
         target.classList.remove('is-changing');
       }, 430);
     }, 2400);
