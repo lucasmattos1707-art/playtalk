@@ -330,7 +330,7 @@
       border: 0;
       outline: 0;
       backface-visibility: hidden;
-      transform: translateZ(0);
+      transform: translateY(-4vh) translateZ(0);
       opacity: 1;
       filter:
         brightness(1.12)
@@ -345,6 +345,45 @@
       animation: welcomeLogoNeonPulse 5.8s ease-in-out infinite;
       justify-self: center;
       margin-inline: auto;
+    }
+
+    .welcome-gate__modes {
+      width: min(396px, 84vw);
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      transform: translateY(-4vh);
+      margin: -8px auto 0;
+    }
+
+    .welcome-gate__mode-btn {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      border: 2px solid rgba(126, 221, 255, 0.72);
+      background: radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.24), rgba(11, 54, 124, 0.94) 72%);
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      box-shadow:
+        0 0 18px rgba(72, 191, 255, 0.58),
+        0 14px 28px rgba(4, 12, 28, 0.34),
+        inset 0 0 16px rgba(126, 221, 255, 0.18);
+      transition: transform 180ms ease, filter 180ms ease, border-color 180ms ease;
+    }
+
+    .welcome-gate__mode-btn:hover,
+    .welcome-gate__mode-btn:focus-visible {
+      transform: translateY(-3px) scale(1.04);
+      filter: brightness(1.12);
+      border-color: rgba(163, 255, 218, 0.92);
+    }
+
+    .welcome-gate__mode-btn svg {
+      width: 52%;
+      height: 52%;
+      fill: currentColor;
+      filter: drop-shadow(0 0 10px rgba(182, 235, 255, 0.58));
     }
 
     .welcome-gate__copy {
@@ -5323,6 +5362,35 @@
       background: linear-gradient(135deg, #2192ff 0%, #47c3ff 100%);
     }
 
+    .game-setup__options.is-training-counts {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .game-setup__option[data-training-count] {
+      min-height: 72px;
+      background: linear-gradient(145deg, rgba(8, 43, 102, 0.94), rgba(19, 105, 205, 0.96));
+      color: #ffffff;
+      border-color: rgba(137, 222, 255, 0.34);
+    }
+
+    .stars.is-training-sequence {
+      min-height: 48px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 18px;
+      border-radius: 999px;
+      background: rgba(10, 38, 92, 0.72);
+      border: 1px solid rgba(126, 221, 255, 0.32);
+      color: #ffffff;
+      font-family: "Pltay", "Soopafre", Arial, sans-serif;
+      font-size: clamp(22px, 5.6vw, 40px);
+      line-height: 1;
+      text-shadow:
+        0 2px 0 rgba(8, 38, 102, 0.98),
+        0 8px 14px rgba(0, 0, 0, 0.35);
+    }
+
     @media (max-width: 680px) {
       .game-shell {
         display: flex;
@@ -6636,6 +6704,11 @@
         max-width: 94vw;
       }
 
+      .welcome-gate__modes {
+        width: min(360px, 82vw);
+        gap: 10px;
+      }
+
       .welcome-gate__start-btn {
         width: min(396px, 84.6vw);
         max-width: 94vw;
@@ -6663,6 +6736,20 @@
     <div class="welcome-gate__stack">
       <div class="welcome-gate__touch" id="welcomeTouch">
         <img class="welcome-gate__logo" id="welcomeLogo" src="/arquivos-codex/fluent-levelup-logo.png" alt="Level Up">
+        <div class="welcome-gate__modes" id="welcomeTrainingModes" aria-label="Modos de treino">
+          <button class="welcome-gate__mode-btn" type="button" data-training-stage="1" aria-label="Treinar first star">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>
+          </button>
+          <button class="welcome-gate__mode-btn" type="button" data-training-stage="2" aria-label="Treinar second star">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v3H4zm0 5h4v3H4zm6 0h4v3h-4zm6 0h4v3h-4zM4 15h16v4H4z"/></svg>
+          </button>
+          <button class="welcome-gate__mode-btn" type="button" data-training-stage="3" aria-label="Treinar third star">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12s3.2-6 8-6 8 6 8 6-3.2 6-8 6-8-6-8-6m8 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>
+          </button>
+          <button class="welcome-gate__mode-btn" type="button" data-training-stage="5" aria-label="Treinar fifth star">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21 7 14.2 2 9.3l6.9-1z"/></svg>
+          </button>
+        </div>
         <p class="welcome-gate__copy" id="welcomeCopy"></p>
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button"><img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora"></button>
       </div>
@@ -6869,8 +6956,8 @@
       <div class="panel game-shell game-setup__shell">
         <div class="game-head">
           <div>
-            <h2>Jogar agora</h2>
-            <p>O jogo comeca com 12 flashcards base. Cartas que voltam do memorizing ocupam ate 8 slots extras, chegando a 20 ativas.</p>
+            <h2 id="gameSetupTitle">Jogar agora</h2>
+            <p id="gameSetupCopy">O jogo comeca com 12 flashcards base. Cartas que voltam do memorizing ocupam ate 8 slots extras, chegando a 20 ativas.</p>
             <p id="gameSetupCountCopy" class="admin-tools__status">Calculando flashcards disponiveis...</p>
           </div>
           <div class="actions">
@@ -6879,6 +6966,12 @@
         </div>
         <div class="game-setup__options" id="gameSetupOptions">
           <button class="game-setup__option" type="button" data-game-count="12">Comecar com 12 cartas</button>
+          <button class="game-setup__option" type="button" data-training-count="10" hidden>10 cartas</button>
+          <button class="game-setup__option" type="button" data-training-count="20" hidden>20 cartas</button>
+          <button class="game-setup__option" type="button" data-training-count="30" hidden>30 cartas</button>
+          <button class="game-setup__option" type="button" data-training-count="40" hidden>40 cartas</button>
+          <button class="game-setup__option" type="button" data-training-count="50" hidden>50 cartas</button>
+          <button class="game-setup__option" type="button" data-training-count="60" hidden>60 cartas</button>
           <button class="game-setup__option game-setup__option--tutorial" id="startTutorialBtn" type="button" hidden>Iniciar Modo Tutorial</button>
         </div>
       </div>
@@ -7162,6 +7255,8 @@
       const TYPING_KEY_BLUES = ['#6ebcff', '#76c3ff', '#7dc9ff', '#86ceff', '#8fd4ff', '#98d9ff'];
       const DEFAULT_GAME_CONTEXT_LIMIT = 12;
       const MIN_GAME_CONTEXT_LIMIT = 1;
+      const TRAINING_MIN_CARD_COUNT = 10;
+      const TRAINING_MAX_CARD_COUNT = 60;
       const GAME_BASE_CARD_COUNT = 12;
       const GAME_ACTIVE_CARD_CAP = 20;
       const GAME_STAR_TARGET = 5;
@@ -7394,6 +7489,17 @@
           canListen: false,
           micUnlockTimer: 0,
           micUnlockCardId: '',
+          training: {
+            active: false,
+            pendingStage: 0,
+            stage: 0,
+            selectedCount: 0,
+            sourceIds: [],
+            cycleIndex: 0,
+            cycleNumber: 0,
+            hitStreak: 0,
+            totalHits: 0
+          },
           micUnlockStage: 0,
           audioCanBeInterruptedAt: 0,
           typingPromptLoopTimer: 0,
@@ -7509,6 +7615,7 @@
         welcomeGate: document.getElementById('welcomeGate'),
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeLogo: document.getElementById('welcomeLogo'),
+        welcomeTrainingModes: document.getElementById('welcomeTrainingModes'),
         welcomeCopy: document.getElementById('welcomeCopy'),
         welcomeStartBtn: document.getElementById('welcomeStartBtn'),
         welcomeAdminStats: document.getElementById('welcomeAdminStats'),
@@ -7617,6 +7724,8 @@
         gameOwnedValue: document.getElementById('gameOwnedValue'),
         gameStarCopy: document.getElementById('gameStarCopy'),
           gameSetup: document.getElementById('gameSetup'),
+          gameSetupTitle: document.getElementById('gameSetupTitle'),
+          gameSetupCopy: document.getElementById('gameSetupCopy'),
           gameSetupOptions: document.getElementById('gameSetupOptions'),
           closeGameSetupBtn: document.getElementById('closeGameSetupBtn'),
           gameSetupCountCopy: document.getElementById('gameSetupCountCopy'),
@@ -7808,6 +7917,36 @@
         return parsed >= MIN_GAME_CONTEXT_LIMIT ? parsed : null;
       }
 
+      function normalizeTrainingCount(value) {
+        const parsed = Number.parseInt(String(value || '').trim(), 10);
+        if (!Number.isFinite(parsed)) return TRAINING_MIN_CARD_COUNT;
+        return Math.max(TRAINING_MIN_CARD_COUNT, Math.min(TRAINING_MAX_CARD_COUNT, parsed));
+      }
+
+      function normalizeTrainingStage(value) {
+        const parsed = Number.parseInt(String(value || '').trim(), 10);
+        return [1, 2, 3, 5].includes(parsed) ? parsed : 0;
+      }
+
+      function isTrainingMode() {
+        return Boolean(state.game.training && state.game.training.active);
+      }
+
+      function resetTrainingRuntime({ keepPending = false } = {}) {
+        const pendingStage = keepPending ? normalizeTrainingStage(state.game.training?.pendingStage) : 0;
+        state.game.training = {
+          active: false,
+          pendingStage,
+          stage: 0,
+          selectedCount: 0,
+          sourceIds: [],
+          cycleIndex: 0,
+          cycleNumber: 0,
+          hitStreak: 0,
+          totalHits: 0
+        };
+      }
+
       function loadSelectedGameCount() {
         state.game.selectedCount = DEFAULT_GAME_CONTEXT_LIMIT;
         state.game.contextLimit = DEFAULT_GAME_CONTEXT_LIMIT;
@@ -7913,6 +8052,7 @@
       }
 
       function serializeCurrentGameState() {
+        if (isTrainingMode()) return null;
         const entries = Array.from(state.game.entries.values())
           .map(normalizeSavedGameEntry)
           .filter((entry) => entry && cardById(entry.id));
@@ -9554,7 +9694,7 @@
       function syncGameAdvanceButton(entry = null) {
         if (!els.gameAdvanceBtn) return;
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
-        const showAdvance = phaseKey === 'second-star' || phaseKey === 'fourth-star';
+        const showAdvance = !isTrainingMode() && (phaseKey === 'second-star' || phaseKey === 'fourth-star');
         if (!showAdvance) {
           els.gameAdvanceBtn.hidden = true;
           els.gameAdvanceBtn.classList.remove('is-visible');
@@ -11051,8 +11191,11 @@
       function syncGameSetupSummary() {
         if (!els.gameSetupCountCopy) return;
         const total = totalGameAvailableCards();
+        const isTrainingSetup = normalizeTrainingStage(state.game.training?.pendingStage) > 0;
         els.gameSetupCountCopy.textContent = total
-          ? `${total} flashcards disponiveis no total para jogar agora.`
+          ? (isTrainingSetup
+            ? `${total} flashcards disponiveis. Escolha de 10 a 60 para esse ciclo.`
+            : `${total} flashcards disponiveis no total para jogar agora.`)
           : 'Nenhum flashcard disponivel para jogar agora.';
         syncTutorialSetupButton();
       }
@@ -13070,6 +13213,11 @@
       }
 
       function renderStars(stars) {
+        if (isTrainingMode()) {
+          renderTrainingSequence();
+          return;
+        }
+        els.gameStars.classList.remove('is-training-sequence');
         els.gameStars.innerHTML = '';
         for (let index = 0; index < GAME_STAR_TARGET; index += 1) {
           const star = document.createElement('img');
@@ -13081,6 +13229,11 @@
       }
 
       function renderStarsLossState(initialStars, lostCount) {
+        if (isTrainingMode()) {
+          renderTrainingSequence();
+          return;
+        }
+        els.gameStars.classList.remove('is-training-sequence');
         els.gameStars.innerHTML = '';
         const safeInitialStars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(initialStars) || 0));
         const safeLostCount = Math.max(0, Math.min(safeInitialStars, Number(lostCount) || 0));
@@ -13092,6 +13245,18 @@
           star.src = STAR_ICON_PATH;
           star.alt = '';
           els.gameStars.appendChild(star);
+        }
+      }
+
+      function renderTrainingSequence() {
+        if (!els.gameStars) return;
+        const training = state.game.training || {};
+        const cycleSize = Math.max(1, Number(training.sourceIds?.length) || Number(training.selectedCount) || 1);
+        const position = Math.max(1, Math.min(cycleSize, Number(training.cycleIndex) || 1));
+        els.gameStars.classList.add('is-training-sequence');
+        els.gameStars.textContent = `${Math.max(0, Number(training.hitStreak) || 0)} acertos`;
+        if (els.gameStarCopy) {
+          els.gameStarCopy.textContent = `${position}/${cycleSize}`;
         }
       }
 
@@ -14344,6 +14509,48 @@
         return { id: card.id, stars: 0, stage: 1, missesWithoutStars: 0, typingMistakes: 0, pool };
       }
 
+      function createTrainingGameEntry(card, stage) {
+        const entry = createGameEntry(card, 'training');
+        entry.stage = normalizeTrainingStage(stage) || 1;
+        entry.training = true;
+        return entry;
+      }
+
+      function trainingSourceCards() {
+        const source = isAdminUser()
+          ? userProgressCards()
+          : uniqueCardsById([
+              ...baseCandidateCards(),
+              ...readyReviewCards()
+            ]);
+        return source.filter((card) => card && isCardEligibleForGame(card));
+      }
+
+      function buildTrainingCycleSourceIds(count) {
+        const source = trainingSourceCards();
+        const targetCount = Math.min(source.length, normalizeTrainingCount(count));
+        return shuffle(source).slice(0, targetCount).map((card) => card.id).filter(Boolean);
+      }
+
+      function refillTrainingCycle() {
+        if (!isTrainingMode()) return false;
+        const training = state.game.training;
+        const sourceIds = Array.isArray(training.sourceIds) ? training.sourceIds.filter((id) => cardById(id)) : [];
+        if (!sourceIds.length) return false;
+        state.game.entries.clear();
+        state.game.queue = [];
+        shuffle(sourceIds).forEach((cardId) => {
+          const card = cardById(cardId);
+          if (!card) return;
+          const entry = createTrainingGameEntry(card, training.stage);
+          state.game.entries.set(entry.id, entry);
+          state.game.queue.push(entry.id);
+        });
+        training.cycleIndex = 0;
+        training.cycleNumber = Math.max(0, Number(training.cycleNumber) || 0) + 1;
+        return state.game.queue.length > 0;
+      }
+
       function applyGameSessionSnapshot(snapshot, { addFreshCard = false } = {}) {
         if (!snapshot || !state.entry.cardsReady || state.game.tutorial.active) return false;
         const entries = Array.isArray(snapshot.entries) ? snapshot.entries : [];
@@ -14990,7 +15197,7 @@
         skipBtn.hidden = true;
 
         const advanceBtn = els.gameAdvanceBtn;
-        if (advanceBtn) {
+        if (advanceBtn && !isTrainingMode()) {
           advanceBtn.hidden = false;
           advanceBtn.disabled = false;
         }
@@ -15037,7 +15244,7 @@
           clearTypingPromptLoop();
           clearSecondStarIdleHintTimers();
           skipBtn.disabled = true;
-          if (advanceBtn) advanceBtn.disabled = true;
+          if (advanceBtn && !isTrainingMode()) advanceBtn.disabled = true;
           setTypingKeysDisabled(grid, true);
           const promptSequence = playTypingSkipPromptSequence(entry, card, runId);
           try {
@@ -15061,15 +15268,19 @@
           } finally {
             finishTypingSkipAutomation(runId);
             skipBtn.disabled = false;
-            if (advanceBtn) advanceBtn.disabled = false;
+            if (advanceBtn && !isTrainingMode()) advanceBtn.disabled = false;
             setTypingKeysDisabled(grid, false);
           }
         });
-        if (advanceBtn) {
+        if (advanceBtn && !isTrainingMode()) {
           advanceBtn.onclick = () => {
             if (advanceBtn.disabled) return;
             skipBtn.click();
           };
+        } else if (advanceBtn) {
+          advanceBtn.onclick = null;
+          advanceBtn.hidden = true;
+          advanceBtn.classList.remove('is-visible');
         }
 
         els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
@@ -15153,6 +15364,10 @@
         const card = cardById(entry.id);
         if (!isCardEligibleForGame(card)) {
           removeGameEntry(entry.id);
+          if (isTrainingMode()) {
+            advanceToNextCard();
+            return;
+          }
           refillGameEntry(entry.pool || 'base', state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT);
           state.game.currentId = state.game.queue.shift() || Array.from(state.game.entries.keys())[0] || null;
           renderCurrentCard(options);
@@ -15286,8 +15501,13 @@
         } else {
           clearStageHintLoop();
         }
-        renderStars(entry.stars);
-        els.gameStarCopy.textContent = '';
+        if (isTrainingMode()) {
+          state.game.training.cycleIndex = Math.max(1, (Number(state.game.training.sourceIds?.length) || 0) - state.game.queue.length);
+          renderTrainingSequence();
+        } else {
+          renderStars(entry.stars);
+          els.gameStarCopy.textContent = '';
+        }
         updateGuestFirstStarResultsBanner(entry, false);
         updateGameChips();
         scheduleStageTutorialReminder(entry);
@@ -15606,13 +15826,60 @@
         if (accessibleFlashcardsCount() < 1) {
           return;
         }
+        resetTrainingRuntime();
         state.game.selectedCount = DEFAULT_GAME_CONTEXT_LIMIT;
         beginGame();
+      }
+
+      function syncGameSetupMode() {
+        const pendingStage = normalizeTrainingStage(state.game.training?.pendingStage);
+        const isTrainingSetup = pendingStage > 0;
+        els.gameSetupOptions?.classList.toggle('is-training-counts', isTrainingSetup);
+        if (els.gameSetupTitle) {
+          els.gameSetupTitle.textContent = isTrainingSetup
+            ? `Treino ${STAGES[pendingStage]?.badge || 'Flashcards'}`
+            : 'Jogar agora';
+        }
+        if (els.gameSetupCopy) {
+          els.gameSetupCopy.textContent = isTrainingSetup
+            ? 'Escolha quantas cartas entram no ciclo. Elas passam embaralhadas e so voltam depois que o ciclo terminar.'
+            : 'O jogo comeca com 12 flashcards base. Cartas que voltam do memorizing ocupam ate 8 slots extras, chegando a 20 ativas.';
+        }
+        Array.from(els.gameSetupOptions?.querySelectorAll('[data-game-count], #startTutorialBtn') || []).forEach((button) => {
+          button.hidden = isTrainingSetup;
+        });
+        Array.from(els.gameSetupOptions?.querySelectorAll('[data-training-count]') || []).forEach((button) => {
+          const count = normalizeTrainingCount(button.getAttribute('data-training-count'));
+          const available = totalGameAvailableCards();
+          button.hidden = !isTrainingSetup;
+          button.disabled = available <= 0;
+          button.textContent = `${Math.min(count, Math.max(TRAINING_MIN_CARD_COUNT, available || count))} cartas`;
+        });
+        syncGameSetupSummary();
+      }
+
+      function openTrainingSetup(stage) {
+        if (shouldGatePremiumAccess()) {
+          openPremiumGate();
+          return;
+        }
+        const targetStage = normalizeTrainingStage(stage);
+        if (!targetStage || totalGameAvailableCards() < 1) return;
+        resetTrainingRuntime();
+        state.game.training.pendingStage = targetStage;
+        syncGameSetupMode();
+        els.gameSetup.classList.add('is-visible');
+        window.requestAnimationFrame(() => els.gameSetup.classList.add('is-active'));
+        document.body.classList.add('game-open');
       }
 
       function closeGameSetup() {
         els.gameSetup.classList.remove('is-active');
         els.gameSetup.classList.remove('is-visible');
+        if (!state.game.active) {
+          resetTrainingRuntime();
+          syncGameSetupMode();
+        }
         if (!state.game.active && !state.watch.active) {
           document.body.classList.remove('game-open');
         }
@@ -15817,6 +16084,16 @@
         clearStageTwoHintTimer();
         clearFirstStageIdleTimer();
         if (!state.game.queue.length) {
+          if (isTrainingMode() && refillTrainingCycle()) {
+            renderTrainingSequence();
+          } else {
+            state.game.currentId = null;
+            renderCurrentCard();
+            return;
+          }
+        }
+
+        if (!state.game.queue.length) {
           state.game.currentId = null;
           renderCurrentCard();
           return;
@@ -15827,6 +16104,9 @@
         els.gameCard.classList.remove('is-sliding-next');
         await wait(180);
         state.game.currentId = state.game.queue.shift();
+        if (isTrainingMode()) {
+          state.game.training.cycleIndex = Math.max(1, (Number(state.game.training.sourceIds?.length) || 0) - state.game.queue.length);
+        }
         persistGameSessionLocally();
         renderCurrentCard();
         els.gameCard.classList.remove('is-transitioning');
@@ -15840,7 +16120,65 @@
         state.game.transitioning = false;
       }
 
+      function beginTrainingGame(stage, count) {
+        const targetStage = normalizeTrainingStage(stage);
+        if (!targetStage) return;
+        const sourceIds = buildTrainingCycleSourceIds(count);
+        if (!sourceIds.length) return;
+
+        hideWelcomeGate();
+        clearScheduledOnboardingGate();
+        clearGameSessionLocally();
+        cleanupGameRecognition();
+        stopActiveAudio();
+        clearGameLanguageSwapTimer();
+        clearTypingPromptLoop();
+        clearTypingSkipAutomation();
+        clearStageTutorialReminder();
+        hideGameStageTutorial({ resume: false });
+        clearStageTwoHintTimer();
+        clearFirstStageIdleTimer();
+        clearFirstStageMicHint({ clearStatus: true });
+        clearStageHintLoop({ clearStatus: true });
+        clearPendingRewardSeal();
+        resetTutorialRuntime({ preserveCompletion: true });
+        resetTrainingRuntime({ keepPending: true });
+
+        state.game.entries.clear();
+        state.game.queue = [];
+        state.game.currentId = null;
+        state.game.listening = false;
+        state.game.paused = false;
+        state.game.canListen = false;
+        state.game.active = true;
+        state.game.transitioning = false;
+        state.game.sessionStartedAt = Date.now();
+        state.game.contextLimit = sourceIds.length;
+        state.game.selectedCount = sourceIds.length;
+        state.game.training.active = true;
+        state.game.training.stage = targetStage;
+        state.game.training.selectedCount = sourceIds.length;
+        state.game.training.sourceIds = sourceIds;
+        state.game.training.cycleIndex = 0;
+        state.game.training.cycleNumber = 0;
+        state.game.training.hitStreak = 0;
+        state.game.training.totalHits = 0;
+        refillTrainingCycle();
+
+        els.topbar.classList.add('is-hidden');
+        els.catalog.classList.add('is-hidden');
+        closeGameSetup();
+        document.body.classList.add('game-open');
+        document.body.classList.add('gameplay-active');
+        els.game.classList.add('is-visible');
+        window.requestAnimationFrame(() => els.game.classList.add('is-active'));
+
+        updateGameChips();
+        advanceToNextCard();
+      }
+
       function beginGame() {
+        resetTrainingRuntime();
         hideWelcomeGate();
         clearScheduledOnboardingGate();
         cleanupGameRecognition();
@@ -15919,6 +16257,7 @@
         const tutorialCard = findTutorialPlanetCard();
         if (!tutorialCard) return;
 
+        resetTrainingRuntime();
         hideWelcomeGate();
         clearScheduledOnboardingGate();
         clearGameSessionLocally();
@@ -15984,6 +16323,7 @@
         state.game.fifthStarHintDismissed = false;
         clearPendingRewardSeal();
         resetTutorialRuntime({ preserveCompletion: true });
+        resetTrainingRuntime();
         state.game.active = false;
         state.game.entries.clear();
         state.game.queue = [];
@@ -16026,6 +16366,31 @@
           pushPronunciationSample(score);
         }
         updateGameChips();
+
+        if (isTrainingMode()) {
+          clearStageHintLoop({ clearStatus: true });
+          clearFirstStageMicHint({ clearStatus: true });
+          clearStageTwoHintTimer();
+          if (isHit) {
+            state.game.training.hitStreak = Math.max(0, Number(state.game.training.hitStreak) || 0) + 1;
+            state.game.training.totalHits = Math.max(0, Number(state.game.training.totalHits) || 0) + 1;
+            entry.typingMistakes = 0;
+            setGameStatus('', 'hit');
+            playSuccessAudio();
+          } else {
+            state.game.training.hitStreak = 0;
+            entry.typingMistakes = 0;
+            setGameStatus('', 'miss');
+            playFeedbackAudio(errorAudio);
+          }
+          renderTrainingSequence();
+          await playStageResponseSequence(evaluatedStage, card, { skipPromptAudio: isHit && evaluatedStage === 2 });
+          await wait(isHit ? 420 : 900);
+          if (!state.game.active || state.game.currentId !== entry.id) return;
+          removeGameEntry(entry.id);
+          advanceToNextCard();
+          return;
+        }
 
         if (isHit) {
           if (evaluatedStage === 2) {
@@ -16554,6 +16919,11 @@
         els.exitWatchBtn?.addEventListener('click', stopWatch);
         els.stopWatchBtn?.addEventListener('click', stopWatch);
         els.startGameBtn?.addEventListener('click', openGameSetup);
+        els.welcomeTrainingModes?.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-training-stage]');
+          if (!button) return;
+          openTrainingSetup(button.getAttribute('data-training-stage'));
+        });
         els.exitGameBtn?.addEventListener('click', exitGame);
         els.libraryPrevBtn?.addEventListener('click', () => {
           state.libraryPage -= 1;
@@ -16646,6 +17016,13 @@
             saveSelectedGameCount(count);
             beginGame();
           });
+        });
+        els.gameSetupOptions?.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-training-count]');
+          if (!button || button.hidden || button.disabled) return;
+          const stage = normalizeTrainingStage(state.game.training?.pendingStage);
+          const count = normalizeTrainingCount(button.getAttribute('data-training-count'));
+          beginTrainingGame(stage, count);
         });
         els.game.addEventListener('click', (event) => {
           if (event.target === els.game) {
