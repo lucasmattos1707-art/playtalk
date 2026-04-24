@@ -165,7 +165,8 @@
       battleDeadlineMs: 0,
       battleTimer: 0,
       timeoutSyncInFlight: false
-    }
+    },
+    energyDepletionWatch: null
   };
 
   function safeText(value) {
@@ -2868,6 +2869,7 @@
     bindAvatarFallbacks();
     applyOfflineIdentity();
     void hydrateOfflineIdentityFromSession();
+    ensureSpeakingEnergyDepletionWatch();
     updateTopPercents();
     updateProgressBars();
     updateLanguageButtons();
@@ -2917,6 +2919,34 @@
       }
       return;
     }
+  }
+
+  function ensureSpeakingEnergyDepletionWatch() {
+    if (state.energyDepletionWatch || !window.PlaytalkEnergy?.watchEnergyDepletion) {
+      return;
+    }
+    state.energyDepletionWatch = window.PlaytalkEnergy.watchEnergyDepletion({
+      getUser: () => ({ id: 1 }),
+      isActive: () => Boolean(els.game?.classList.contains('is-active')),
+      getTargets: () => [els.game?.classList.contains('is-active') ? els.game : null],
+      beforeExit: () => {
+        stopDuelLoops();
+        stopDuelBattleTimer();
+        clearDuelIntroTimer();
+        clearDuelIntroAnimationTimers();
+        stopBattleIntroAudio();
+        stopBattleCardsPromptAudio();
+        stopWordTicker();
+        setMicLiveVisual(false);
+        if (els.successAudio) {
+          try {
+            els.successAudio.pause();
+          } catch (_error) {
+            // ignore
+          }
+        }
+      }
+    });
   }
 
   if (document.readyState === 'loading') {

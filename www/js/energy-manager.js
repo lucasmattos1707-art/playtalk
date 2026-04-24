@@ -3,6 +3,7 @@
   const ENERGY_EXHAUSTED_STATUS = 402;
   const ENERGY_GATE_PREVIEW_MS = 1000;
   const ENERGY_DEPLETION_EXIT_MS = 2000;
+  const ENERGY_DEPLETION_WATCH_MS = 5000;
   const ENERGY_GATE_LOG_LINES = [
     'Volte amanhã para treinar mais!',
     'ou continue com energias infinitas'
@@ -740,6 +741,72 @@
     }
   }
 
+  function watchEnergyDepletion(options = {}) {
+    let timerId = 0;
+    let checkInFlight = false;
+
+    const isActive = () => {
+      if (typeof options.isActive === 'function') {
+        try {
+          return Boolean(options.isActive());
+        } catch (_error) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    const runCheck = async () => {
+      if (checkInFlight || energyDepletionExitInFlight || !isActive()) {
+        return false;
+      }
+      checkInFlight = true;
+      try {
+        const status = await getEnergyStatus({
+          user: typeof options.getUser === 'function' ? options.getUser() : options.user,
+          stats: typeof options.getStats === 'function' ? options.getStats() : options.stats
+        });
+        if (!isDepletedStatus(status)) {
+          return false;
+        }
+        await triggerEnergyDepletionExit({
+          status,
+          targets: typeof options.getTargets === 'function' ? options.getTargets() : options.targets,
+          beforeExit: options.beforeExit,
+          href: options.href,
+          replace: options.replace
+        });
+        return true;
+      } finally {
+        checkInFlight = false;
+      }
+    };
+
+    const start = () => {
+      if (timerId) return;
+      void runCheck();
+      timerId = window.setInterval(() => {
+        void runCheck();
+      }, Math.max(1000, Number(options.intervalMs) || ENERGY_DEPLETION_WATCH_MS));
+    };
+
+    const stop = () => {
+      if (!timerId) return;
+      window.clearInterval(timerId);
+      timerId = 0;
+    };
+
+    if (options.start !== false) {
+      start();
+    }
+
+    return {
+      start,
+      stop,
+      check: runCheck
+    };
+  }
+
   window.PlaytalkEnergy = {
     DAILY_FREE_ENERGY,
     ENERGY_EXHAUSTED_STATUS,
@@ -757,6 +824,7 @@
     closeEnergyGate,
     previewBlockedTargets,
     triggerEnergyDepletionExit,
+    watchEnergyDepletion,
     redirectToFlashcardsEnergyGate,
     resolveHomeHref,
     resolveFlashcardsEnergyHref,

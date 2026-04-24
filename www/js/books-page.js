@@ -388,7 +388,8 @@
     listeningFlushInFlight: false,
     booksPronunciationPending: [],
     booksPronunciationFlushInFlight: false,
-    booksSyncTimer: 0
+    booksSyncTimer: 0,
+    energyDepletionWatch: null
   };
 
   const homePanelMount = {
@@ -1531,6 +1532,29 @@
       }
     });
     return true;
+  }
+
+  function ensureEnergyDepletionWatch() {
+    if (state.energyDepletionWatch || !window.PlaytalkEnergy?.watchEnergyDepletion) {
+      return;
+    }
+    state.energyDepletionWatch = window.PlaytalkEnergy.watchEnergyDepletion({
+      getUser: () => state.user,
+      getStats: () => state.stats,
+      isActive: () => Boolean(state.homeSleepActive || state.readerOpen),
+      getTargets: () => ([
+        state.readerOpen ? els.reader : null,
+        state.homeSleepActive ? els.homePanel : null,
+        els.preBookModal?.classList.contains('is-visible') ? els.preBookModal : null
+      ]),
+      beforeExit: () => {
+        state.energyRedirectInProgress = true;
+        state.homePaused = true;
+        interruptHomeAudioPlayback();
+        stopHomeMusicLoop();
+        closeReaderAdminAudioModal(true);
+      }
+    });
   }
 
   function renderHomeAccountUi() {
@@ -7108,6 +7132,7 @@
     ]);
 
     state.user = sessionUser;
+    ensureEnergyDepletionWatch();
     startBooksSyncTimer();
     void refreshStatsFromServer().then(() => renderStatsPanel());
     state.isAdmin = Boolean(sessionUser?.isAdmin)

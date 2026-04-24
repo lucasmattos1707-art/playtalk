@@ -7905,6 +7905,7 @@
           authRevealTimer: 0,
           cardsReloadInFlight: false
         },
+        energyDepletionWatch: null,
         admin: {
           busy: false,
           status: 'Nenhuma acao em andamento.',
@@ -8764,6 +8765,30 @@
           }
         });
         return true;
+      }
+
+      function ensureFlashcardsEnergyDepletionWatch() {
+        if (state.energyDepletionWatch || !window.PlaytalkEnergy?.watchEnergyDepletion) {
+          return;
+        }
+        state.energyDepletionWatch = window.PlaytalkEnergy.watchEnergyDepletion({
+          getUser: () => state.user,
+          isActive: () => Boolean(
+            state.game.active
+            || state.watch.active
+            || els.gameSetup?.classList.contains('is-visible')
+            || els.watchPopover?.classList.contains('is-visible')
+          ),
+          getTargets: () => ([
+            state.game.active ? els.game : null,
+            state.watch.active ? els.watch : null,
+            els.gameSetup?.classList.contains('is-visible') ? els.gameSetup : null,
+            els.watchPopover?.classList.contains('is-visible') ? els.watchPopover : null
+          ]),
+          beforeExit: () => {
+            state.game.paused = true;
+          }
+        });
       }
 
       function countMetricChars(value) {
@@ -18366,6 +18391,7 @@
           if (sessionUser) {
             state.user = normalizeUser(sessionUser);
           }
+          ensureFlashcardsEnergyDepletionWatch();
           try {
             await loadCards();
           } catch (cardsError) {
