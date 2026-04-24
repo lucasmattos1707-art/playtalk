@@ -119,6 +119,7 @@
         position: fixed;
         top: max(18px, env(safe-area-inset-top, 0px) + 12px);
         right: 18px;
+        z-index: 2;
         width: 48px;
         height: 48px;
         border: 1px solid rgba(255, 255, 255, 0.38);
@@ -138,6 +139,8 @@
       }
 
       .playtalk-energy-gate__content {
+        position: relative;
+        z-index: 1;
         width: min(92vw, 620px);
         display: grid;
         justify-items: center;
@@ -149,6 +152,8 @@
         gap: clamp(14px, 2.6vh, 24px);
         padding: 18px 16px 32px;
         margin: 0 auto;
+        visibility: visible;
+        opacity: 1;
       }
 
       .playtalk-energy-gate__title {

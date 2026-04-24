@@ -454,31 +454,15 @@
     }, 1000);
   }
 
-  function flashNoEnergyMessage(options = {}) {
-    const text = 'Mais energias amanha';
-    if (options.kind === 'incoming' && els.incomingCopy) {
-      const previousText = els.incomingCopy.dataset.previousText || els.incomingCopy.textContent || '';
-      els.incomingCopy.dataset.previousText = previousText;
-      els.incomingCopy.textContent = text;
-      window.setTimeout(() => {
-        if (els.incomingCopy) {
-          els.incomingCopy.textContent = els.incomingCopy.dataset.previousText || previousText;
-        }
-      }, 1000);
-      return;
-    }
-    setChallengeStatus(text);
-    window.setTimeout(() => {
-      if (els.challengeStatus?.textContent === text) {
-        setChallengeStatus('');
-      }
-    }, 1000);
-  }
-
-  function handleManualNoEnergyBlock(button, options = {}) {
+  async function handleManualNoEnergyBlock(button, options = {}) {
     if (!isManualNoEnergyBlocked()) return false;
     pulseBlockedButton(button, '0.6');
-    flashNoEnergyMessage(options);
+    if (window.PlaytalkEnergy?.getEnergyStatus && window.PlaytalkEnergy?.openEnergyGate) {
+      const status = await window.PlaytalkEnergy.getEnergyStatus({
+        user: state.currentUser
+      });
+      window.PlaytalkEnergy.openEnergyGate(status);
+    }
     return true;
   }
 
@@ -1040,7 +1024,7 @@
   async function respondIncomingChallenge(action) {
     if (HAS_GLOBAL_CHALLENGE_POPUPS) return;
     if (!state.incomingChallengeId) return;
-    if (action === 'accept' && handleManualNoEnergyBlock(els.incomingAcceptBtn, { kind: 'incoming' })) {
+    if (action === 'accept' && await handleManualNoEnergyBlock(els.incomingAcceptBtn, { kind: 'incoming' })) {
       return;
     }
     const challengeId = state.incomingChallengeId;
@@ -1127,7 +1111,7 @@
   async function sendChallenge(mode) {
     if (!state.challengeTarget || state.challengeBusy) return;
     const previewTarget = mode === 'battle-cards' ? els.challengeCardsBtn : els.challengeSmartbooksBtn;
-    if (handleManualNoEnergyBlock(previewTarget)) return;
+    if (await handleManualNoEnergyBlock(previewTarget)) return;
     if (!(await guardEnergyAndRedirect({ previewTarget }))) return;
     state.challengeBusy = true;
     syncChallengeButtons();
@@ -1345,7 +1329,7 @@
   els.closeAdminModalTopBtn?.addEventListener('click', closeAdminModal);
   els.challengeActionBtn?.addEventListener('click', () => {
     void (async () => {
-      if (handleManualNoEnergyBlock(els.challengeActionBtn)) return;
+      if (await handleManualNoEnergyBlock(els.challengeActionBtn)) return;
       if (!(await guardEnergyAndRedirect({ previewTarget: els.challengeActionBtn }))) return;
       state.challengeModePickerOpen = true;
       syncChallengeButtons();

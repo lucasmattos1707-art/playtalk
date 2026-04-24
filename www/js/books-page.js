@@ -1375,30 +1375,6 @@
     }, 1000);
   }
 
-  function showSleepFabNoEnergyHint() {
-    if (!els.sleepFabMeta) return;
-    els.sleepFabMeta.hidden = false;
-    els.sleepFabMeta.classList.add('is-no-energy');
-    els.sleepFabMeta.textContent = 'Mais energias amanha';
-    window.setTimeout(() => {
-      if (!els.sleepFabMeta) return;
-      els.sleepFabMeta.textContent = '';
-      els.sleepFabMeta.hidden = true;
-      els.sleepFabMeta.classList.remove('is-no-energy');
-    }, 1000);
-  }
-
-  function showPreBookNoEnergyHint() {
-    if (!els.preBookNoEnergyHint) return;
-    els.preBookNoEnergyHint.hidden = false;
-    els.preBookNoEnergyHint.classList.add('is-visible');
-    window.setTimeout(() => {
-      if (!els.preBookNoEnergyHint) return;
-      els.preBookNoEnergyHint.classList.remove('is-visible');
-      els.preBookNoEnergyHint.hidden = true;
-    }, 1000);
-  }
-
   function syncManualNoEnergyUi() {
     const blocked = isManualNoEnergyBlocked();
     const opacity = blocked ? '0.6' : '1';
@@ -1408,13 +1384,15 @@
     });
   }
 
-  function handleManualNoEnergyBlock(button, hintKind = 'prebook') {
+  async function handleManualNoEnergyBlock(button, hintKind = 'prebook') {
     if (!isManualNoEnergyBlocked()) return false;
     pulseBlockedButton(button, '0.6');
-    if (hintKind === 'sleep') {
-      showSleepFabNoEnergyHint();
-    } else {
-      showPreBookNoEnergyHint();
+    if (window.PlaytalkEnergy?.getEnergyStatus && window.PlaytalkEnergy?.openEnergyGate) {
+      const status = await window.PlaytalkEnergy.getEnergyStatus({
+        user: state.user,
+        stats: state.stats || {}
+      });
+      window.PlaytalkEnergy.openEnergyGate(status);
     }
     return true;
   }
@@ -6670,8 +6648,10 @@
     });
 
     els.homeLaunchBtn?.addEventListener('click', (event) => {
-      if (handleManualNoEnergyBlock(event.currentTarget, 'sleep')) return;
-      void startHomeSleepPlayback({ previewTarget: event.currentTarget });
+      void (async () => {
+        if (await handleManualNoEnergyBlock(event.currentTarget, 'sleep')) return;
+        void startHomeSleepPlayback({ previewTarget: event.currentTarget });
+      })();
     });
 
     els.homeCollectBtn?.addEventListener('click', () => {
@@ -6723,8 +6703,10 @@
     els.homeSleepFab?.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      if (handleManualNoEnergyBlock(event.currentTarget, 'sleep')) return;
-      void startHomeSleepPlayback({ previewTarget: event.currentTarget });
+      void (async () => {
+        if (await handleManualNoEnergyBlock(event.currentTarget, 'sleep')) return;
+        void startHomeSleepPlayback({ previewTarget: event.currentTarget });
+      })();
     });
 
     // Tapping the current book cover in the Home player opens the pre-book overlay (paused + blurred).
@@ -6861,7 +6843,7 @@
 
     els.preBookRankedBtn?.addEventListener('click', () => {
       void (async () => {
-        if (handleManualNoEnergyBlock(els.preBookRankedBtn, 'prebook')) return;
+        if (await handleManualNoEnergyBlock(els.preBookRankedBtn, 'prebook')) return;
         if (!(await guardEnergyAndRedirect({ previewTarget: els.preBookRankedBtn }))) return;
         state.preBookRankedMode = true;
         setPreBookStep('training');
@@ -6870,7 +6852,7 @@
 
     els.preBookPronounceBtn?.addEventListener('click', () => {
       void (async () => {
-        if (handleManualNoEnergyBlock(els.preBookPronounceBtn, 'prebook')) return;
+        if (await handleManualNoEnergyBlock(els.preBookPronounceBtn, 'prebook')) return;
         if (!(await guardEnergyAndRedirect({ previewTarget: els.preBookPronounceBtn }))) return;
         state.preBookRankedMode = false;
         setPreBookStep('training');
