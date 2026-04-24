@@ -680,6 +680,34 @@
     return Number(status.remaining) <= 0;
   }
 
+  async function activateNoEnergyForCurrentUser() {
+    try {
+      const response = await fetch('/api/me/no-energy', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.user) {
+        return null;
+      }
+      try {
+        window.dispatchEvent(new CustomEvent('playtalk:no-energy-updated', {
+          detail: {
+            user: payload.user,
+            noEnergy: Boolean(payload.noEnergy ?? payload.user?.no_energy)
+          }
+        }));
+      } catch (_error) {
+        // ignore
+      }
+      return payload.user;
+    } catch (_error) {
+      return null;
+    }
+  }
+
   async function triggerEnergyDepletionExit(options = {}) {
     const status = options.status && typeof options.status === 'object'
       ? rememberEnergyStatus(options.status)
@@ -693,6 +721,8 @@
 
     energyDepletionExitInFlight = true;
     try {
+      await activateNoEnergyForCurrentUser();
+
       if (typeof options.beforeExit === 'function') {
         try {
           options.beforeExit(status);
@@ -820,6 +850,7 @@
     isEnergyErrorPayload,
     isDepletedStatus,
     isPremiumActive,
+    activateNoEnergyForCurrentUser,
     openEnergyGate,
     closeEnergyGate,
     previewBlockedTargets,

@@ -701,6 +701,28 @@ const ensureAutoNoEnergyForSnapshot = async (db, user, snapshot) => {
   return true;
 };
 
+const setUserNoEnergyState = async (db, userId, action = 'enable') => {
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!db || !Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    return null;
+  }
+  const normalizedAction = String(action || 'enable').trim().toLowerCase();
+  const result = await db.query(
+    `UPDATE public.users
+     SET no_energy = CASE
+       WHEN $2 = 'enable' THEN true
+       WHEN $2 = 'disable' THEN false
+       ELSE NOT COALESCE(no_energy, false)
+     END
+     WHERE id = $1
+     RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+               onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
+               created_at, password_hash, premium_full_access, premium_until, no_energy`,
+    [normalizedUserId, normalizedAction]
+  );
+  return result.rows[0] || null;
+};
+
 const updateUserPresenceClassProgress = async (db, userId, deltas = {}) => {
   const normalizedUserId = Number.parseInt(userId, 10);
   const speakingCharsDelta = Math.max(0, Math.round(Number(deltas?.speakingCharsDelta) || 0));
@@ -14238,26 +14260,12 @@ app.post('/api/admin/users/:userId/no-energy', async (req, res) => {
     }
 
     const action = String(req.body?.action || 'toggle').trim().toLowerCase();
-    const result = await pool.query(
-      `UPDATE public.users
-       SET no_energy = CASE
-         WHEN $2 = 'enable' THEN true
-         WHEN $2 = 'disable' THEN false
-         ELSE NOT COALESCE(no_energy, false)
-       END
-       WHERE id = $1
-       RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
-                 onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
-                 created_at, password_hash, premium_full_access, premium_until, no_energy`,
-      [userId, action]
-    );
-
-    if (!result.rows.length) {
+    const updatedUser = await setUserNoEnergyState(pool, userId, action);
+    if (!updatedUser) {
       res.status(404).json({ success: false, message: 'Usuario nao encontrado.' });
       return;
     }
 
-    const updatedUser = result.rows[0];
     const noEnergy = Boolean(updatedUser.no_energy);
     res.json({
       success: true,
@@ -14273,6 +14281,45 @@ app.post('/api/admin/users/:userId/no-energy', async (req, res) => {
     res.status(statusCode).json({
       success: false,
       message: error?.message || 'Nao foi possivel atualizar o bloqueio manual de energia.'
+    });
+  }
+});
+
+app.post('/api/me/no-energy', express.json({ limit: '16kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await ensureUsersAvatarColumn();
+    await ensurePremiumAccessTables();
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const updatedUser = await setUserNoEnergyState(pool, authUser.id, 'enable');
+    if (!updatedUser) {
+      res.status(404).json({ success: false, message: 'Usuario nao encontrado.' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Bloqueio manual de energia ativado.',
+      user: mapPublicUser(updatedUser),
+      noEnergy: Boolean(updatedUser.no_energy)
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao ativar no-energy do proprio usuario:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel ativar o bloqueio manual de energia.'
     });
   }
 });
