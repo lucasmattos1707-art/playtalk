@@ -201,6 +201,7 @@
     preBookCover: document.getElementById('booksPreBookCover'),
     preBookRankedBtn: document.getElementById('booksPreBookRankedBtn'),
     preBookPronounceBtn: document.getElementById('booksPreBookPronounceBtn'),
+    preBookNoEnergyHint: document.getElementById('booksPreBookNoEnergyHint'),
     preBookListeningBtn: document.getElementById('booksPreBookListeningBtn'),
     preBookSpeakingBtn: document.getElementById('booksPreBookSpeakingBtn'),
     preBookInsights: document.getElementById('booksPreBookInsights'),
@@ -1356,8 +1357,66 @@
       avatarImage: safeText(user.avatar_image || user.avatarImage),
       premiumUntil: safeText(user.premium_until || user.premiumUntil),
       premiumFullAccess: Boolean(user.premium_full_access || user.premiumFullAccess),
-      isAdmin: Boolean(user.is_admin || user.isAdmin) || isAdminAlias(username)
+      isAdmin: Boolean(user.is_admin || user.isAdmin) || isAdminAlias(username),
+      noEnergy: Boolean(user.no_energy || user.noEnergy)
     };
+  }
+
+  function isManualNoEnergyBlocked() {
+    return Boolean(state.user?.noEnergy);
+  }
+
+  function pulseBlockedButton(button, baseOpacity = '0.6') {
+    if (!(button instanceof HTMLElement)) return;
+    button.style.transition = 'opacity 1000ms ease';
+    button.style.opacity = '1';
+    window.setTimeout(() => {
+      button.style.opacity = baseOpacity;
+    }, 1000);
+  }
+
+  function showSleepFabNoEnergyHint() {
+    if (!els.sleepFabMeta) return;
+    els.sleepFabMeta.hidden = false;
+    els.sleepFabMeta.classList.add('is-no-energy');
+    els.sleepFabMeta.textContent = 'Mais energias amanha';
+    window.setTimeout(() => {
+      if (!els.sleepFabMeta) return;
+      els.sleepFabMeta.textContent = '';
+      els.sleepFabMeta.hidden = true;
+      els.sleepFabMeta.classList.remove('is-no-energy');
+    }, 1000);
+  }
+
+  function showPreBookNoEnergyHint() {
+    if (!els.preBookNoEnergyHint) return;
+    els.preBookNoEnergyHint.hidden = false;
+    els.preBookNoEnergyHint.classList.add('is-visible');
+    window.setTimeout(() => {
+      if (!els.preBookNoEnergyHint) return;
+      els.preBookNoEnergyHint.classList.remove('is-visible');
+      els.preBookNoEnergyHint.hidden = true;
+    }, 1000);
+  }
+
+  function syncManualNoEnergyUi() {
+    const blocked = isManualNoEnergyBlocked();
+    const opacity = blocked ? '0.6' : '1';
+    [els.homeLaunchBtn, els.homeSleepFab, els.preBookRankedBtn, els.preBookPronounceBtn].forEach((button) => {
+      if (!(button instanceof HTMLElement)) return;
+      button.style.opacity = opacity;
+    });
+  }
+
+  function handleManualNoEnergyBlock(button, hintKind = 'prebook') {
+    if (!isManualNoEnergyBlocked()) return false;
+    pulseBlockedButton(button, '0.6');
+    if (hintKind === 'sleep') {
+      showSleepFabNoEnergyHint();
+    } else {
+      showPreBookNoEnergyHint();
+    }
+    return true;
   }
 
   function navigateTo(target, options = {}) {
@@ -1468,10 +1527,7 @@
   }
 
   function syncEnergyRedirectFromStats(stats) {
-    if (isPremiumActive()) return;
-    const remaining = Number(stats?.remainingEnergy);
-    const minimum = Number(window.PlaytalkEnergy?.ENERGY_GATE_MINIMUM) || 60;
-    return Number.isFinite(remaining) && remaining < minimum;
+    return false;
   }
 
   function renderHomeAccountUi() {
@@ -1505,6 +1561,7 @@
       els.homePremiumBtn.hidden = !isLoggedIn;
       els.homePremiumBtn.disabled = state.homeAuthBusy || state.homeStartBusy;
     }
+    syncManualNoEnergyUi();
   }
 
   function setHomeAuthStatus(message, tone) {
@@ -1555,6 +1612,7 @@
     if (isLoggedIn) {
       setHomeAuthStatus(`Conta ativa: ${safeText(state.user?.username)}.`, 'success');
     }
+    syncManualNoEnergyUi();
   }
 
   async function loginFromBooksHome() {
@@ -1624,6 +1682,7 @@
     }
     setHomeAuthStatus('', null);
     renderHomeAccountUi();
+    syncManualNoEnergyUi();
   }
 
   function getFirstHomeBook() {
@@ -3713,6 +3772,7 @@
     if (els.preBookSpeakingBtn) {
       els.preBookSpeakingBtn.disabled = state.modeStartBusy;
     }
+    syncManualNoEnergyUi();
   }
 
   function setPreBookStep(step) {
@@ -6610,6 +6670,7 @@
     });
 
     els.homeLaunchBtn?.addEventListener('click', (event) => {
+      if (handleManualNoEnergyBlock(event.currentTarget, 'sleep')) return;
       void startHomeSleepPlayback({ previewTarget: event.currentTarget });
     });
 
@@ -6662,6 +6723,7 @@
     els.homeSleepFab?.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
+      if (handleManualNoEnergyBlock(event.currentTarget, 'sleep')) return;
       void startHomeSleepPlayback({ previewTarget: event.currentTarget });
     });
 
@@ -6799,6 +6861,7 @@
 
     els.preBookRankedBtn?.addEventListener('click', () => {
       void (async () => {
+        if (handleManualNoEnergyBlock(els.preBookRankedBtn, 'prebook')) return;
         if (!(await guardEnergyAndRedirect({ previewTarget: els.preBookRankedBtn }))) return;
         state.preBookRankedMode = true;
         setPreBookStep('training');
@@ -6807,6 +6870,7 @@
 
     els.preBookPronounceBtn?.addEventListener('click', () => {
       void (async () => {
+        if (handleManualNoEnergyBlock(els.preBookPronounceBtn, 'prebook')) return;
         if (!(await guardEnergyAndRedirect({ previewTarget: els.preBookPronounceBtn }))) return;
         state.preBookRankedMode = false;
         setPreBookStep('training');

@@ -641,6 +641,22 @@
       text-decoration: underline;
     }
 
+    .welcome-gate__blocked-note {
+      margin: 6px 0 0;
+      min-height: 1.1em;
+      font-size: 12px;
+      line-height: 1.1;
+      color: rgba(255, 255, 255, 0.84);
+      letter-spacing: 0.02em;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
+    .welcome-gate__blocked-note.is-visible {
+      opacity: 1;
+    }
+
     .welcome-gate__admin-stats {
       margin: -10px 0 0;
       padding: 0;
@@ -7164,6 +7180,7 @@
         </div>
         <p class="welcome-gate__copy" id="welcomeCopy"></p>
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button"><img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora"></button>
+        <p class="welcome-gate__blocked-note" id="welcomeBlockedNote" aria-live="polite" hidden>Mais energias amanhã</p>
       </div>
       <p class="welcome-gate__admin-stats" id="welcomeAdminStats" hidden></p>
       <div class="welcome-gate__bg-admin" id="welcomeBgAdmin" hidden>
@@ -8074,6 +8091,7 @@
         welcomeTrainingModes: document.getElementById('welcomeTrainingModes'),
         welcomeCopy: document.getElementById('welcomeCopy'),
         welcomeStartBtn: document.getElementById('welcomeStartBtn'),
+        welcomeBlockedNote: document.getElementById('welcomeBlockedNote'),
         welcomeAdminStats: document.getElementById('welcomeAdminStats'),
         welcomeBgAdmin: document.getElementById('welcomeBgAdmin'),
         welcomeBgDesktopBtn: document.getElementById('welcomeBgDesktopBtn'),
@@ -9036,6 +9054,7 @@
           isAdmin: Boolean(user.is_admin),
           premiumFullAccess: Boolean(user.premium_full_access),
           premiumUntil: user.premium_until || user.premiumUntil || null,
+          noEnergy: Boolean(user.no_energy || user.noEnergy),
           level: normalizeUserLevel(user.level ?? user.userLevel)
         };
       }
@@ -10199,6 +10218,38 @@
         return true;
       }
 
+      function isManualNoEnergyBlocked() {
+        return Boolean(state.user?.noEnergy);
+      }
+
+      function pulseWelcomeNoEnergyButton(button) {
+        if (!(button instanceof HTMLElement)) return;
+        button.style.transition = 'opacity 1000ms ease';
+        button.style.opacity = '1';
+        window.setTimeout(() => {
+          if (!(button instanceof HTMLElement)) return;
+          button.style.opacity = isManualNoEnergyBlocked() ? '0.6' : (state.ui.welcomeEnergyBlocked ? '0.8' : '1');
+        }, 1000);
+      }
+
+      function showWelcomeNoEnergyNote() {
+        if (!els.welcomeBlockedNote) return;
+        els.welcomeBlockedNote.hidden = false;
+        els.welcomeBlockedNote.classList.add('is-visible');
+        window.setTimeout(() => {
+          if (!els.welcomeBlockedNote) return;
+          els.welcomeBlockedNote.classList.remove('is-visible');
+          els.welcomeBlockedNote.hidden = true;
+        }, 1000);
+      }
+
+      function handleManualWelcomeNoEnergy(button) {
+        if (!isManualNoEnergyBlocked()) return false;
+        pulseWelcomeNoEnergyButton(button);
+        showWelcomeNoEnergyNote();
+        return true;
+      }
+
       function syncWelcomeStartButton() {
         if (!els.welcomeStartBtn) return;
         if (!els.welcomeStartBtn.querySelector('.welcome-gate__start-image')) {
@@ -10210,14 +10261,16 @@
             '</span>'
           ].join('');
         }
+        const blockedByEnergy = Boolean(state.ui.welcomeEnergyBlocked);
+        const blockedByManualNoEnergy = isManualNoEnergyBlocked();
         els.welcomeStartBtn.disabled = false;
-        els.welcomeStartBtn.classList.toggle('is-energy-blocked', Boolean(state.ui.welcomeEnergyBlocked));
-        els.welcomeStartBtn.style.opacity = state.ui.welcomeEnergyBlocked ? '0.8' : '1';
+        els.welcomeStartBtn.classList.toggle('is-energy-blocked', blockedByEnergy);
+        els.welcomeStartBtn.style.opacity = blockedByManualNoEnergy ? '0.6' : (blockedByEnergy ? '0.8' : '1');
         const image = els.welcomeStartBtn.querySelector('.welcome-gate__start-image');
         const timer = els.welcomeStartBtn.querySelector('.welcome-gate__start-timer');
         const timerValue = els.welcomeStartBtn.querySelector('.welcome-gate__start-timer-value');
-        if (image) image.style.opacity = state.ui.welcomeEnergyBlocked ? '0.8' : '1';
-        if (timer) timer.hidden = !state.ui.welcomeEnergyBlocked;
+        if (image) image.style.opacity = blockedByManualNoEnergy ? '0.6' : (blockedByEnergy ? '0.8' : '1');
+        if (timer) timer.hidden = !blockedByEnergy;
         if (timerValue) timerValue.textContent = formatWelcomeEnergyCountdown(state.ui.welcomeEnergyNextResetAt);
       }
 
@@ -17804,6 +17857,7 @@
       function bindEvents() {
         els.welcomeStartBtn?.addEventListener('click', (event) => {
           void (async () => {
+            if (handleManualWelcomeNoEnergy(event.currentTarget)) return;
             if (!(await guardWelcomeEnergy({ previewTarget: event.currentTarget }))) return;
             state.entry.welcomeStartRequested = true;
             void openAudioCheck();
@@ -17811,6 +17865,7 @@
         });
         els.welcomeLogo?.addEventListener('click', (event) => {
           void (async () => {
+            if (handleManualWelcomeNoEnergy(els.welcomeStartBtn || event.currentTarget)) return;
             if (!(await guardWelcomeEnergy({ previewTarget: [event.currentTarget, els.welcomeStartBtn] }))) return;
             state.entry.welcomeStartRequested = true;
             void openAudioCheck();

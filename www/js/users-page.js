@@ -46,6 +46,7 @@
     botCloseBtn: document.getElementById('usersBotCloseBtn'),
     botCloseTopBtn: document.getElementById('usersBotCloseTopBtn'),
     botStatus: document.getElementById('usersBotStatus'),
+    toggleNoEnergyBtn: document.getElementById('toggleNoEnergyBtn'),
     premiumUserBtn: document.getElementById('premiumUserBtn'),
     deleteUserBtn: document.getElementById('deleteUserBtn'),
     closeAdminModalBtn: document.getElementById('closeAdminModalBtn'),
@@ -310,7 +311,8 @@
       username,
       isAdmin: Boolean(user.is_admin),
       premiumFullAccess: Boolean(user.premium_full_access || user.premiumFullAccess),
-      premiumUntil: user.premium_until || user.premiumUntil || null
+      premiumUntil: user.premium_until || user.premiumUntil || null,
+      noEnergy: Boolean(user.no_energy || user.noEnergy)
     };
   }
 
@@ -339,7 +341,8 @@
       } : null,
       premiumUntil: entry?.premiumUntil || null,
       premiumActive: Boolean(entry?.premiumActive),
-      isOnline: Boolean(entry?.isOnline)
+      isOnline: Boolean(entry?.isOnline),
+      noEnergy: Boolean(entry?.noEnergy)
     }));
   }
 
@@ -353,7 +356,8 @@
       pronunciationPercent: Number(entry?.pronunciationPercent) || 0,
       speedFlashcardsPerHour: Number(entry?.speedFlashcardsPerHour) || 0,
       battlesWon: Number(entry?.battlesWon) || 0,
-      rankingValue: Number(entry?.rankingValue) || 0
+      rankingValue: Number(entry?.rankingValue) || 0,
+      noEnergy: Boolean(entry?.noEnergy)
     };
   }
 
@@ -421,15 +425,61 @@
 
   function syncAdminButtons() {
     const disabled = state.adminBusy || !state.selectedUser;
-    [els.premiumUserBtn, els.deleteUserBtn].forEach((button) => {
+    [els.toggleNoEnergyBtn, els.premiumUserBtn, els.deleteUserBtn].forEach((button) => {
       if (!button) return;
       button.disabled = disabled;
     });
+    if (els.toggleNoEnergyBtn) {
+      els.toggleNoEnergyBtn.textContent = state.selectedUser?.noEnergy
+        ? 'Remover no-energy'
+        : 'Ativar no-energy';
+    }
     if (els.premiumUserBtn) {
       els.premiumUserBtn.textContent = state.selectedUser?.premiumActive
         ? 'Cancelar premium'
         : 'Atribuir premium';
     }
+  }
+
+  function isManualNoEnergyBlocked() {
+    return Boolean(state.currentUser?.noEnergy);
+  }
+
+  function pulseBlockedButton(button, baseOpacity = '0.6') {
+    if (!(button instanceof HTMLElement)) return;
+    button.style.transition = 'opacity 1000ms ease';
+    button.style.opacity = '1';
+    window.setTimeout(() => {
+      button.style.opacity = baseOpacity;
+    }, 1000);
+  }
+
+  function flashNoEnergyMessage(options = {}) {
+    const text = 'Mais energias amanha';
+    if (options.kind === 'incoming' && els.incomingCopy) {
+      const previousText = els.incomingCopy.dataset.previousText || els.incomingCopy.textContent || '';
+      els.incomingCopy.dataset.previousText = previousText;
+      els.incomingCopy.textContent = text;
+      window.setTimeout(() => {
+        if (els.incomingCopy) {
+          els.incomingCopy.textContent = els.incomingCopy.dataset.previousText || previousText;
+        }
+      }, 1000);
+      return;
+    }
+    setChallengeStatus(text);
+    window.setTimeout(() => {
+      if (els.challengeStatus?.textContent === text) {
+        setChallengeStatus('');
+      }
+    }, 1000);
+  }
+
+  function handleManualNoEnergyBlock(button, options = {}) {
+    if (!isManualNoEnergyBlocked()) return false;
+    pulseBlockedButton(button, '0.6');
+    flashNoEnergyMessage(options);
+    return true;
   }
 
   function syncModalOverlayState() {
@@ -625,12 +675,12 @@
       && (state.challengeTarget.isBot || state.challengeTarget.isOnline)
       && !state.challengeBusy
     );
-    const blockedByEnergy = canChallenge && state.challengeEnergyBlocked;
+    const blockedByEnergy = canChallenge && (state.challengeEnergyBlocked || isManualNoEnergyBlocked());
     const syncButtonState = (button, hidden) => {
       if (!button) return;
       button.hidden = Boolean(hidden);
       button.disabled = !canChallenge && !blockedByEnergy;
-      button.style.opacity = blockedByEnergy ? '0.8' : '1';
+      button.style.opacity = blockedByEnergy ? '0.6' : '1';
       button.style.cursor = canChallenge ? 'pointer' : 'not-allowed';
     };
     if (els.challengeActionBtn) {
@@ -653,9 +703,9 @@
     const status = await window.PlaytalkEnergy.getEnergyStatus({
       user: state.currentUser
     });
-    state.challengeEnergyBlocked = Boolean(status?.loggedIn && status?.blocked);
+    state.challengeEnergyBlocked = false;
     syncChallengeButtons();
-    return state.challengeEnergyBlocked;
+    return false;
   }
 
   function closeChallengeModal() {
@@ -981,12 +1031,18 @@
       const challengeLabel = challengeMode === 'battle-cards' ? 'FluentCards' : 'Smart Books';
       els.incomingCopy.textContent = `${username} te desafiou para ${challengeLabel}`;
     }
+    if (els.incomingAcceptBtn) {
+      els.incomingAcceptBtn.style.opacity = isManualNoEnergyBlocked() ? '0.6' : '1';
+    }
     openFullscreenModal(els.incomingModal);
   }
 
   async function respondIncomingChallenge(action) {
     if (HAS_GLOBAL_CHALLENGE_POPUPS) return;
     if (!state.incomingChallengeId) return;
+    if (action === 'accept' && handleManualNoEnergyBlock(els.incomingAcceptBtn, { kind: 'incoming' })) {
+      return;
+    }
     const challengeId = state.incomingChallengeId;
     els.incomingAcceptBtn.disabled = true;
     els.incomingRejectBtn.disabled = true;
@@ -1071,6 +1127,7 @@
   async function sendChallenge(mode) {
     if (!state.challengeTarget || state.challengeBusy) return;
     const previewTarget = mode === 'battle-cards' ? els.challengeCardsBtn : els.challengeSmartbooksBtn;
+    if (handleManualNoEnergyBlock(previewTarget)) return;
     if (!(await guardEnergyAndRedirect({ previewTarget }))) return;
     state.challengeBusy = true;
     syncChallengeButtons();
@@ -1179,6 +1236,38 @@
     }
   }
 
+  async function toggleSelectedUserNoEnergy() {
+    if (!state.selectedUser || state.adminBusy) return;
+    state.adminBusy = true;
+    syncAdminButtons();
+    const shouldDisable = Boolean(state.selectedUser.noEnergy);
+    setAdminStatus(shouldDisable ? 'Removendo no-energy...' : 'Ativando no-energy...');
+    try {
+      const response = await fetch(buildApiUrl(`/api/admin/users/${state.selectedUser.userId}/no-energy`), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify({ action: shouldDisable ? 'disable' : 'enable' })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Nao foi possivel atualizar o bloqueio manual.');
+      }
+      state.selectedUser = {
+        ...state.selectedUser,
+        noEnergy: Boolean(payload?.noEnergy ?? payload?.user?.no_energy ?? payload?.user?.noEnergy)
+      };
+      setAdminStatus(payload?.message || (state.selectedUser.noEnergy ? 'No-energy ativado.' : 'No-energy removido.'));
+      syncAdminButtons();
+      await loadUsers('', { metricKey: state.currentMetricKey, force: true });
+    } catch (error) {
+      setAdminStatus(error?.message || 'Nao foi possivel atualizar o bloqueio manual.');
+    } finally {
+      state.adminBusy = false;
+      syncAdminButtons();
+    }
+  }
+
   function startBackgroundLoops() {
     window.setInterval(() => {
       void pingPresence();
@@ -1250,11 +1339,13 @@
   els.challengeModal?.addEventListener('click', (event) => {
     if (event.target === els.challengeModal) closeChallengeModal();
   });
+  els.toggleNoEnergyBtn?.addEventListener('click', () => { void toggleSelectedUserNoEnergy(); });
   els.premiumUserBtn?.addEventListener('click', () => { void toggleSelectedUserPremium(); });
   els.deleteUserBtn?.addEventListener('click', () => { void deleteUser(); });
   els.closeAdminModalTopBtn?.addEventListener('click', closeAdminModal);
   els.challengeActionBtn?.addEventListener('click', () => {
     void (async () => {
+      if (handleManualNoEnergyBlock(els.challengeActionBtn)) return;
       if (!(await guardEnergyAndRedirect({ previewTarget: els.challengeActionBtn }))) return;
       state.challengeModePickerOpen = true;
       syncChallengeButtons();

@@ -2258,6 +2258,12 @@
       display: none !important;
     }
 
+    .books-sleep-fab-meta.is-no-energy {
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
+
     .books-sleep-fab-meta-row {
       display: inline-flex;
       align-items: center;
@@ -3256,6 +3262,22 @@
 
     #booksPreBookModal .pre-book-insights {
       display: none !important;
+    }
+
+    .pre-book-no-energy-hint {
+      margin: 2px 0 0;
+      min-height: 1.1em;
+      font-size: 12px;
+      line-height: 1.1;
+      color: rgba(255, 255, 255, 0.84);
+      letter-spacing: 0.02em;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
+    .pre-book-no-energy-hint.is-visible {
+      opacity: 1;
     }
 
     .pre-book-insights.is-fading {
@@ -4684,6 +4706,7 @@
             <span class="pre-book-option">Speaking</span>
           </button>
         </div>
+        <p class="pre-book-no-energy-hint" id="booksPreBookNoEnergyHint" aria-live="polite" hidden>Mais energias amanhã</p>
         <div class="pre-book-insights" id="booksPreBookInsights" aria-live="polite">
           <span class="pre-book-insight-icon" id="booksPreBookInsightIcon" aria-hidden="true"></span>
           <div class="pre-book-insight-copy">

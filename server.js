@@ -178,7 +178,6 @@ function invalidateAdminMiniBooksSummaryCache() {
 
 const FLASHCARD_RANKING_TIMEZONE = 'America/Sao_Paulo';
 const DAILY_FREE_ENERGY_LIMIT = 5000;
-const DAILY_FREE_ENERGY_ZERO_THRESHOLD = 50;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
 const SPEAKING_DUEL_DEFAULT_CARDS = 25;
@@ -662,8 +661,7 @@ const buildDailyEnergySnapshot = (user, dailyRow = {}) => {
   const speakingChars = Math.max(0, Number(dailyRow?.speaking_chars) || 0);
   const listeningChars = Math.max(0, Number(dailyRow?.listening_chars) || 0);
   const used = Math.max(0, readingChars + speakingChars + listeningChars);
-  const rawRemaining = Math.max(0, DAILY_FREE_ENERGY_LIMIT - used);
-  const remainingEnergy = rawRemaining <= DAILY_FREE_ENERGY_ZERO_THRESHOLD ? 0 : rawRemaining;
+  const remainingEnergy = DAILY_FREE_ENERGY_LIMIT - used;
   return {
     unlimited,
     dailyEnergyLimit: DAILY_FREE_ENERGY_LIMIT,
@@ -769,20 +767,6 @@ const incrementDailyEnergyUsage = async (db, user, deltas = {}) => {
     [normalizedUserId]
   );
   const existing = existingResult.rows[0] || {};
-  const existingUsed = Math.max(0,
-    (Number(existing.reading_chars) || 0)
-    + (Number(existing.speaking_chars) || 0)
-    + (Number(existing.listening_chars) || 0)
-  );
-
-  const existingRemaining = Math.max(0, DAILY_FREE_ENERGY_LIMIT - existingUsed);
-  if (totalDelta > 0 && existingRemaining <= DAILY_FREE_ENERGY_ZERO_THRESHOLD) {
-    const error = new Error('Mais energia em breve. Abra /account para acompanhar o reset.');
-    error.statusCode = 402;
-    error.energySnapshot = buildDailyEnergySnapshot(user, existing);
-    throw error;
-  }
-
   if (totalDelta <= 0) {
     return buildDailyEnergySnapshot(user, existing);
   }
@@ -2223,6 +2207,10 @@ const ensureUsersAvatarColumn = async () => {
         ADD COLUMN IF NOT EXISTS created_by_user_id integer REFERENCES public.users(id) ON DELETE SET NULL
       `);
       await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS no_energy boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
         UPDATE public.users
         SET username = COALESCE(NULLIF(username, ''), email)
       `);
@@ -2254,7 +2242,8 @@ const mapPublicUser = (user) => ({
   bot_avatar_error: String(user?.bot_avatar_error || '').trim(),
   has_password: Boolean(user?.password_hash),
   premium_full_access: Boolean(user?.premium_full_access),
-  premium_until: user?.premium_until || null
+  premium_until: user?.premium_until || null,
+  no_energy: Boolean(user?.no_energy)
 });
 
 function normalizeUserFlashcardLevel(value) {
@@ -2292,6 +2281,8 @@ const isPremiumActiveFromUser = (user) => {
   const premiumUntilTime = Date.parse(user?.premium_until || '');
   return Number.isFinite(premiumUntilTime) && premiumUntilTime > Date.now();
 };
+
+const isNoEnergyUserRecord = (user) => Boolean(user?.no_energy);
 
 const resolvePremiumState = (user) => ({
   fullAccess: isPremiumActiveFromUser(user),
@@ -2583,7 +2574,7 @@ const readUserById = async (userId) => {
     `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
             onboarding_name_completed, onboarding_photo_completed, created_at, password_hash,
             premium_full_access, premium_until, level, is_bot, bot_config, bot_avatar_status,
-            bot_avatar_error, created_by_user_id, battle
+            bot_avatar_error, created_by_user_id, battle, no_energy
      FROM public.users
      WHERE id = $1
      LIMIT 1`,
@@ -2878,7 +2869,7 @@ const extendUserPremiumAccess = async (userId, durationDays, options = {}) => {
        WHERE id = $1
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                  onboarding_name_completed, onboarding_photo_completed,
-                 created_at, premium_full_access, premium_until`,
+                 created_at, premium_full_access, premium_until, no_energy`,
       [normalizedUserId, normalizedDurationDays, grantFullAccess]
     );
 
@@ -9248,7 +9239,7 @@ app.post('/register', async (req, res) => {
        VALUES ($1, $2, $3, $4, true, $5)
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                  onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
-                 created_at, password_hash, premium_full_access, premium_until`,
+                 created_at, password_hash, premium_full_access, premium_until, no_energy`,
       [email, username, passwordHash, avatarImage || null, Boolean(avatarImage)]
     );
 
@@ -9303,7 +9294,7 @@ app.post('/auth/provision-temp', async (req, res) => {
        VALUES ($1, $2, $3, false, false)
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                  onboarding_name_completed, onboarding_photo_completed,
-                 created_at, premium_full_access, premium_until`,
+                 created_at, premium_full_access, premium_until, no_energy`,
       [email, generatedUsername, passwordHash]
     );
     const user = result.rows[0];
@@ -9338,7 +9329,7 @@ app.post('/login', async (req, res) => {
     const result = await pool.query(
       `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
               onboarding_name_completed, onboarding_photo_completed,
-              password_hash, created_at, premium_full_access, premium_until, is_bot
+              password_hash, created_at, premium_full_access, premium_until, no_energy, is_bot
        FROM public.users
        WHERE email = $1 OR LOWER(COALESCE(username, '')) = LOWER($2)
        ORDER BY CASE WHEN email = $1 THEN 0 ELSE 1 END, id ASC
@@ -9373,7 +9364,7 @@ app.post('/login', async (req, res) => {
            WHERE id = $1
            RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                      onboarding_name_completed, onboarding_photo_completed,
-                     password_hash, created_at, premium_full_access, premium_until, is_bot`,
+                     password_hash, created_at, premium_full_access, premium_until, no_energy, is_bot`,
           [user.id, nextPasswordHash, normalizedBotEmail]
         );
         if (updatedBot.rows.length) {
@@ -9429,7 +9420,7 @@ app.post('/api/books/home-auth', async (req, res) => {
     const email = buildLegacyEmailFromUsername(username);
     const selectSql = `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                               onboarding_name_completed, onboarding_photo_completed,
-                              password_hash, created_at, premium_full_access, premium_until
+                              password_hash, created_at, premium_full_access, premium_until, no_energy
                        FROM public.users
                        WHERE email = $1
                        LIMIT 1`;
@@ -9455,7 +9446,7 @@ app.post('/api/books/home-auth', async (req, res) => {
            VALUES ($1, $2, $3, true, false)
            RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                      onboarding_name_completed, onboarding_photo_completed,
-                     password_hash, created_at, premium_full_access, premium_until`,
+                     password_hash, created_at, premium_full_access, premium_until, no_energy`,
           [email, username, passwordHash]
         );
         user = inserted.rows[0] || null;
@@ -9585,7 +9576,7 @@ app.post('/auth/google-quick', async (req, res) => {
     let result = await pool.query(
       `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
               onboarding_name_completed, onboarding_photo_completed,
-              created_at, premium_full_access, premium_until
+              created_at, premium_full_access, premium_until, no_energy
        FROM public.users
        WHERE email = $1`,
       [email]
@@ -9598,7 +9589,7 @@ app.post('/auth/google-quick', async (req, res) => {
          VALUES ($1, $1, $2)
          RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                    onboarding_name_completed, onboarding_photo_completed,
-                   created_at, premium_full_access, premium_until`,
+                   created_at, premium_full_access, premium_until, no_energy`,
         [email, generatedPasswordHash]
       );
     }
@@ -9744,7 +9735,7 @@ app.patch('/auth/avatar', async (req, res) => {
        WHERE id = $1
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                  onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
-                 created_at, password_hash, premium_full_access, premium_until`,
+                 created_at, password_hash, premium_full_access, premium_until, no_energy`,
       [
         authUser.id,
         avatarImage || null,
@@ -9806,7 +9797,7 @@ app.patch('/auth/profile', async (req, res) => {
        WHERE id = $1
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                  onboarding_name_completed, onboarding_photo_completed,
-                 created_at, password_hash, premium_full_access, premium_until`,
+                 created_at, password_hash, premium_full_access, premium_until, no_energy`,
       [authUser.id, buildLegacyEmailFromUsername(username), username]
     );
 
@@ -9854,7 +9845,7 @@ app.patch('/auth/audio-check', async (req, res) => {
        WHERE id = $1
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                  onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
-                 created_at, password_hash, premium_full_access, premium_until`,
+                 created_at, password_hash, premium_full_access, premium_until, no_energy`,
       [authUser.id]
     );
 
@@ -9898,7 +9889,7 @@ app.patch('/auth/password', async (req, res) => {
        WHERE id = $1
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                  onboarding_name_completed, onboarding_photo_completed,
-                 created_at, password_hash, premium_full_access, premium_until`,
+                 created_at, password_hash, premium_full_access, premium_until, no_energy`,
       [authUser.id, passwordHash]
     );
 
@@ -10884,6 +10875,7 @@ app.get('/api/users/flashcards', async (req, res) => {
          u.created_at,
          u.premium_full_access,
          u.premium_until,
+         u.no_energy,
          u.is_bot,
          u.bot_config,
          u.bot_avatar_status,
@@ -10998,7 +10990,8 @@ app.get('/api/users/flashcards', async (req, res) => {
         speedFlashcardsPerHour: Number(viewerEntry.speed_flashcards_per_hour) || 0,
         battlesWon: Number(viewerEntry.battles_won) || 0,
         rankingValue: Number(viewerEntry.ranking_value) || 0,
-        isOnline: Boolean(viewerEntry.is_online)
+        isOnline: Boolean(viewerEntry.is_online),
+        noEnergy: Boolean(viewerEntry.no_energy)
       } : null,
       users: limitedEntries.map((entry) => ({
         userId: Number(entry.id) || 0,
@@ -11018,7 +11011,8 @@ app.get('/api/users/flashcards', async (req, res) => {
         isOnline: Boolean(entry.is_online),
         premiumFullAccess: Boolean(entry.premium_full_access),
         premiumUntil: entry.premium_until || null,
-        premiumActive: requesterIsAdmin ? isPremiumActiveFromUser(entry) : undefined
+        premiumActive: requesterIsAdmin ? isPremiumActiveFromUser(entry) : undefined,
+        noEnergy: Boolean(entry.no_energy)
       }))
     });
   } catch (error) {
@@ -13100,6 +13094,10 @@ app.post('/api/speaking/challenges/send', async (req, res) => {
       res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
       return;
     }
+    if (isNoEnergyUserRecord(authUser)) {
+      res.status(403).json({ success: false, message: 'Mais energias amanha.' });
+      return;
+    }
     await ensureSpeakingRealtimeTables();
 
     const challengerUserId = Number(authUser.id) || 0;
@@ -13269,6 +13267,10 @@ app.post('/api/speaking/challenges/respond', async (req, res) => {
     if (!authUser?.id) {
       clearAuthCookie(res);
       res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    if (isNoEnergyUserRecord(authUser)) {
+      res.status(403).json({ success: false, message: 'Mais energias amanha.' });
       return;
     }
     await ensureSpeakingRealtimeTables();
@@ -14065,7 +14067,7 @@ app.post('/api/admin/users/bots', async (req, res) => {
        VALUES ($1, $2, $3, $4, true, false, true, $5::jsonb, 'processing', $6)
        RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                  onboarding_name_completed, onboarding_photo_completed, created_at,
-                 password_hash, premium_full_access, premium_until, is_bot, bot_config,
+                 password_hash, premium_full_access, premium_until, no_energy, is_bot, bot_config,
                  bot_avatar_status, bot_avatar_error, created_by_user_id, battle`,
       [
         email,
@@ -14147,7 +14149,7 @@ app.post('/api/admin/users/:userId/premium', async (req, res) => {
          WHERE id = $1
          RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
                    onboarding_name_completed, onboarding_photo_completed,
-                   created_at, premium_full_access, premium_until`,
+                   created_at, premium_full_access, premium_until, no_energy`,
         [userId]
       );
       if (!result.rows.length) {
@@ -14178,6 +14180,73 @@ app.post('/api/admin/users/:userId/premium', async (req, res) => {
     res.status(statusCode).json({
       success: false,
       message: error?.message || 'Erro ao atribuir premium.'
+    });
+  }
+});
+
+app.post('/api/admin/users/:userId/no-energy', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await ensureUsersAvatarColumn();
+    await ensurePremiumAccessTables();
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    if (!isAdminUserRecord(authUser)) {
+      res.status(403).json({ success: false, message: 'Apenas admin pode controlar o bloqueio de energia.' });
+      return;
+    }
+
+    const userId = Number.parseInt(req.params.userId, 10);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ success: false, message: 'Usuario invalido.' });
+      return;
+    }
+
+    const action = String(req.body?.action || 'toggle').trim().toLowerCase();
+    const result = await pool.query(
+      `UPDATE public.users
+       SET no_energy = CASE
+         WHEN $2 = 'enable' THEN true
+         WHEN $2 = 'disable' THEN false
+         ELSE NOT COALESCE(no_energy, false)
+       END
+       WHERE id = $1
+       RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                 onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
+                 created_at, password_hash, premium_full_access, premium_until, no_energy`,
+      [userId, action]
+    );
+
+    if (!result.rows.length) {
+      res.status(404).json({ success: false, message: 'Usuario nao encontrado.' });
+      return;
+    }
+
+    const updatedUser = result.rows[0];
+    const noEnergy = Boolean(updatedUser.no_energy);
+    res.json({
+      success: true,
+      message: noEnergy
+        ? 'Bloqueio manual de energia ativado.'
+        : 'Bloqueio manual de energia removido.',
+      user: mapPublicUser(updatedUser),
+      noEnergy
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao atualizar bloqueio manual de energia:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel atualizar o bloqueio manual de energia.'
     });
   }
 });

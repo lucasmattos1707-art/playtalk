@@ -1,7 +1,6 @@
 (function initPlaytalkEnergyManager() {
   const DAILY_FREE_ENERGY = 5000;
   const ENERGY_EXHAUSTED_STATUS = 402;
-  const ENERGY_GATE_MINIMUM = 60;
   const ENERGY_GATE_PREVIEW_MS = 1000;
   const ENERGY_GATE_LOG_LINES = [
     'Volte amanhã para treinar mais!',
@@ -547,25 +546,22 @@
     const remaining = premium
       ? Number.POSITIVE_INFINITY
       : hasServerRemaining
-        ? Math.max(0, Math.round(serverRemaining))
-        : Math.max(0, dailyEnergyLimit - usedToday);
-    const gateRequired = !premium && remaining < ENERGY_GATE_MINIMUM;
+        ? Math.round(serverRemaining)
+        : Math.round(dailyEnergyLimit - usedToday);
     return {
       loggedIn: Boolean(user?.id),
       premium,
       unlimited: premium,
       remaining,
       usedToday,
-      blocked: gateRequired,
-      gateRequired,
-      minimumEnergyRequired: ENERGY_GATE_MINIMUM,
+      blocked: false,
+      gateRequired: false,
+      minimumEnergyRequired: 0,
       nextResetAt: nextResetAt || null,
       countdownText: nextResetAt ? formatResetCountdown(nextResetAt) : '0h 0min',
       message: premium
         ? 'Energia infinita'
-        : gateRequired
-          ? `Mais energia em ${nextResetAt ? formatResetCountdown(nextResetAt) : '0h 0min'}`
-          : `${remaining} energias restantes`,
+        : `${remaining} energias restantes`,
       dailyEnergyLimit
     };
   }
@@ -616,7 +612,6 @@
   window.PlaytalkEnergy = {
     DAILY_FREE_ENERGY,
     ENERGY_EXHAUSTED_STATUS,
-    ENERGY_GATE_MINIMUM,
     buildEnergyStatus,
     fetchBooksStats,
     formatResetCountdown,
