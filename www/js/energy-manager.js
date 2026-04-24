@@ -102,6 +102,30 @@
     const style = document.createElement('style');
     style.id = 'playtalk-energy-gate-style';
     style.textContent = `
+      @font-face {
+        font-family: "Soopafre";
+        src: url("/soopafre.ttf") format("truetype");
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "TheBoldFont";
+        src: url("/THEBOLDFONT-FREEVERSION.otf") format("opentype");
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "PlaytalkDisplay";
+        src: url("/playtalk.otf") format("opentype");
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+
       .playtalk-energy-gate,
       body > .playtalk-energy-gate,
       body > #playtalkEnergyGate {
@@ -584,11 +608,33 @@
     };
   }
 
+  function shouldRefreshEnergyStats(stats) {
+    if (!stats || typeof stats !== 'object') return true;
+    if (stats.nextEnergyResetAt != null && String(stats.nextEnergyResetAt).trim()) return false;
+    const hasEnergyNumbers = (
+      stats.remainingEnergy != null
+      || stats.dailyEnergyUsed != null
+      || stats.dailyEnergyLimit != null
+      || stats.readingChars != null
+      || stats.listeningChars != null
+      || stats.speakingChars != null
+    );
+    return !hasEnergyNumbers || stats.nextEnergyResetAt == null;
+  }
+
   async function getEnergyStatus(options = {}) {
     const user = options.user && typeof options.user === 'object' ? options.user : null;
-    const stats = options.stats && typeof options.stats === 'object'
+    let stats = options.stats && typeof options.stats === 'object'
       ? options.stats
-      : await fetchBooksStats();
+      : null;
+    if (shouldRefreshEnergyStats(stats)) {
+      const fetchedStats = await fetchBooksStats();
+      if (fetchedStats && typeof fetchedStats === 'object') {
+        stats = stats && typeof stats === 'object'
+          ? { ...fetchedStats, ...stats, nextEnergyResetAt: fetchedStats.nextEnergyResetAt || stats.nextEnergyResetAt }
+          : fetchedStats;
+      }
+    }
     if (stats && typeof stats === 'object') {
       return rememberEnergyStatus(buildEnergyStatus({ user, stats }));
     }
