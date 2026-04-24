@@ -380,18 +380,25 @@
 
     .welcome-gate__name-row {
       grid-row: 2;
+      gap: 6px;
       align-self: center;
       padding: 0 10px;
       transform: translateY(calc(-1 * min(5vh, 34px)));
     }
 
     .welcome-gate__username {
+      margin: 0;
       max-width: 100%;
       overflow-wrap: anywhere;
       font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
       font-size: clamp(26px, 6.6vw, 44px);
       line-height: 0.95;
       color: #ffffff;
+    }
+
+    .welcome-gate__name-row .welcome-gate__level {
+      font-size: clamp(18px, 4.2vw, 26px);
+      line-height: 1;
     }
 
     .welcome-gate__avatar-row {
@@ -533,7 +540,9 @@
       max-width: min(340px, 78vw);
       overflow-wrap: anywhere;
       color: rgba(236, 251, 255, 0.95);
-      font-size: clamp(15px, 3.7vw, 19px);
+      font-family: "Open Sans", Arial, sans-serif;
+      font-weight: 700;
+      font-size: clamp(17px, 4.25vw, 22px);
       line-height: 1.15;
     }
 
@@ -7156,6 +7165,7 @@
           <div class="welcome-gate__top-spacer" aria-hidden="true"></div>
           <div class="welcome-gate__name-row">
             <strong class="welcome-gate__username" id="welcomeUserName">Jogador</strong>
+            <span class="welcome-gate__level" id="welcomeUserLevel">Nivel 1</span>
           </div>
           <div class="welcome-gate__avatar-row">
             <div class="welcome-gate__avatar" aria-hidden="true">
@@ -7171,11 +7181,10 @@
             </div>
           </div>
           <div class="welcome-gate__level-panel">
-            <span class="welcome-gate__level" id="welcomeUserLevel">Nivel 1</span>
             <span class="welcome-gate__level-progress" aria-hidden="true">
               <span class="welcome-gate__level-progress-bar" id="welcomeLevelProgressBar"></span>
             </span>
-            <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">Ganhe cartas para avan&ccedil;ar</p>
+            <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">2 cartas para próximo nível</p>
           </div>
         </div>
         <p class="welcome-gate__copy" id="welcomeCopy"></p>
@@ -10246,21 +10255,15 @@
         }, 1000);
       }
 
-      function showWelcomeNoEnergyNote() {
-        if (!els.welcomeBlockedNote) return;
-        els.welcomeBlockedNote.hidden = false;
-        els.welcomeBlockedNote.classList.add('is-visible');
-        window.setTimeout(() => {
-          if (!els.welcomeBlockedNote) return;
-          els.welcomeBlockedNote.classList.remove('is-visible');
-          els.welcomeBlockedNote.hidden = true;
-        }, 1000);
-      }
-
-      function handleManualWelcomeNoEnergy(button) {
+      async function handleManualWelcomeNoEnergy(button) {
         if (!isManualNoEnergyBlocked()) return false;
         pulseWelcomeNoEnergyButton(button);
-        showWelcomeNoEnergyNote();
+        if (window.PlaytalkEnergy?.getEnergyStatus && window.PlaytalkEnergy?.openEnergyGate) {
+          const status = await window.PlaytalkEnergy.getEnergyStatus({
+            user: state.user
+          });
+          window.PlaytalkEnergy.openEnergyGate(status);
+        }
         return true;
       }
 
@@ -10523,7 +10526,7 @@
           els.welcomeLevelProgressCopy.textContent = 'Nivel maximo alcancado';
           return;
         }
-        els.welcomeLevelProgressCopy.textContent = `Ganhe ${remaining} ${remaining === 1 ? 'carta' : 'cartas'} para avan\u00e7ar`;
+        els.welcomeLevelProgressCopy.textContent = `${remaining} ${remaining === 1 ? 'carta' : 'cartas'} para próximo nível`;
       }
 
       function syncWelcomeAccountLink() {}
@@ -12013,13 +12016,8 @@
 
       function userLevelCardTarget(level = currentUserLevel()) {
         const normalizedLevel = normalizeUserLevel(level);
-        if (normalizedLevel >= USER_LEVEL_MAX) return 40;
-        if (normalizedLevel >= 40) return 40;
-        if (normalizedLevel >= 30) return 30;
-        if (normalizedLevel >= 20) return 25;
-        if (normalizedLevel === 19) return 20;
-        if (normalizedLevel >= 18) return 19;
-        return normalizedLevel + 2;
+        if (normalizedLevel >= USER_LEVEL_MAX) return USER_LEVEL_MAX;
+        return normalizedLevel + 1;
       }
 
       function currentBaseGameCount(level = currentUserLevel()) {
@@ -17913,7 +17911,7 @@
       function bindEvents() {
         els.welcomeStartBtn?.addEventListener('click', (event) => {
           void (async () => {
-            if (handleManualWelcomeNoEnergy(event.currentTarget)) return;
+            if (await handleManualWelcomeNoEnergy(event.currentTarget)) return;
             if (!(await guardWelcomeEnergy({ previewTarget: event.currentTarget }))) return;
             state.entry.welcomeStartRequested = true;
             void openAudioCheck();
@@ -17921,7 +17919,7 @@
         });
         els.welcomeLogo?.addEventListener('click', (event) => {
           void (async () => {
-            if (handleManualWelcomeNoEnergy(els.welcomeStartBtn || event.currentTarget)) return;
+            if (await handleManualWelcomeNoEnergy(els.welcomeStartBtn || event.currentTarget)) return;
             if (!(await guardWelcomeEnergy({ previewTarget: [event.currentTarget, els.welcomeStartBtn] }))) return;
             state.entry.welcomeStartRequested = true;
             void openAudioCheck();
