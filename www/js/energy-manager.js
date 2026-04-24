@@ -93,7 +93,9 @@
     const style = document.createElement('style');
     style.id = 'playtalk-energy-gate-style';
     style.textContent = `
-      .playtalk-energy-gate {
+      .playtalk-energy-gate,
+      body > .playtalk-energy-gate,
+      body > #playtalkEnergyGate {
         position: fixed;
         inset: 0;
         z-index: 2147483647;
@@ -106,7 +108,9 @@
         overflow: hidden;
       }
 
-      .playtalk-energy-gate.is-visible {
+      .playtalk-energy-gate.is-visible,
+      body > .playtalk-energy-gate.is-visible,
+      body > #playtalkEnergyGate.is-visible {
         display: grid;
         place-items: center;
       }
