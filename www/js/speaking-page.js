@@ -710,6 +710,35 @@
       if (!response.ok || !payload?.success) {
         return false;
       }
+      if (window.PlaytalkEnergy?.buildEnergyStatus && window.PlaytalkEnergy?.triggerEnergyDepletionExit) {
+        const status = window.PlaytalkEnergy.buildEnergyStatus({
+          user: { id: 1 },
+          stats: payload?.stats || {}
+        });
+        if (window.PlaytalkEnergy.isDepletedStatus?.(status)) {
+          void window.PlaytalkEnergy.triggerEnergyDepletionExit({
+            status,
+            targets: [els.game?.classList.contains('is-active') ? els.game : null],
+            beforeExit: () => {
+              stopDuelLoops();
+              stopDuelBattleTimer();
+              clearDuelIntroTimer();
+              clearDuelIntroAnimationTimers();
+              stopBattleIntroAudio();
+              stopBattleCardsPromptAudio();
+              stopWordTicker();
+              setMicLiveVisual(false);
+              if (els.successAudio) {
+                try {
+                  els.successAudio.pause();
+                } catch (_error) {
+                  // ignore
+                }
+              }
+            }
+          });
+        }
+      }
       state.speakingCharsPending = Math.max(0, state.speakingCharsPending - sendSpeaking);
       state.listeningCharsPending = Math.max(0, state.listeningCharsPending - sendListening);
       state.practiceSecondsPending = Math.max(0, state.practiceSecondsPending - sendPracticeSeconds);

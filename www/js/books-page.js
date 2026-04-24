@@ -1505,7 +1505,32 @@
   }
 
   function syncEnergyRedirectFromStats(stats) {
-    return false;
+    if (!window.PlaytalkEnergy?.buildEnergyStatus || !window.PlaytalkEnergy?.triggerEnergyDepletionExit) {
+      return false;
+    }
+    const status = window.PlaytalkEnergy.buildEnergyStatus({
+      user: state.user,
+      stats: stats || state.stats || {}
+    });
+    if (!window.PlaytalkEnergy.isDepletedStatus?.(status)) {
+      return false;
+    }
+    void window.PlaytalkEnergy.triggerEnergyDepletionExit({
+      status,
+      targets: [
+        state.readerOpen ? els.reader : null,
+        state.homeSleepActive ? els.homePanel : null,
+        els.preBookModal?.classList.contains('is-visible') ? els.preBookModal : null
+      ],
+      beforeExit: () => {
+        state.energyRedirectInProgress = true;
+        state.homePaused = true;
+        interruptHomeAudioPlayback();
+        stopHomeMusicLoop();
+        closeReaderAdminAudioModal(true);
+      }
+    });
+    return true;
   }
 
   function renderHomeAccountUi() {

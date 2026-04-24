@@ -8740,6 +8740,32 @@
         }
       }
 
+      function triggerFlashcardsEnergyDepletionExit(stats) {
+        if (!window.PlaytalkEnergy?.buildEnergyStatus || !window.PlaytalkEnergy?.triggerEnergyDepletionExit) {
+          return false;
+        }
+        const status = window.PlaytalkEnergy.buildEnergyStatus({
+          user: state.user,
+          stats: stats || {}
+        });
+        if (!window.PlaytalkEnergy.isDepletedStatus?.(status)) {
+          return false;
+        }
+        void window.PlaytalkEnergy.triggerEnergyDepletionExit({
+          status,
+          targets: [
+            state.game.active ? els.game : null,
+            state.watch.active ? els.watch : null,
+            els.gameSetup?.classList.contains('is-visible') ? els.gameSetup : null,
+            els.watchPopover?.classList.contains('is-visible') ? els.watchPopover : null
+          ],
+          beforeExit: () => {
+            state.game.paused = true;
+          }
+        });
+        return true;
+      }
+
       function countMetricChars(value) {
         const text = safeText(value).replace(/\s+/g, ' ').trim();
         return text ? text.length : 0;
@@ -8779,6 +8805,9 @@
               user: state.user,
               stats: payload.stats
             });
+            if (triggerFlashcardsEnergyDepletionExit(payload.stats)) {
+              return payload.stats || null;
+            }
             if (status?.loggedIn && status?.blocked) {
               applyWelcomeEnergyStatus(status);
               return null;

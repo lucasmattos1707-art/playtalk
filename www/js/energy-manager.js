@@ -2,6 +2,7 @@
   const DAILY_FREE_ENERGY = 5000;
   const ENERGY_EXHAUSTED_STATUS = 402;
   const ENERGY_GATE_PREVIEW_MS = 1000;
+  const ENERGY_DEPLETION_EXIT_MS = 2000;
   const ENERGY_GATE_LOG_LINES = [
     'Volte amanhã para treinar mais!',
     'ou continue com energias infinitas'
@@ -12,6 +13,7 @@
   let energyGateCountdownTimer = 0;
   let energyGateLoglineIndex = 0;
   let latestEnergyGateStatus = null;
+  let energyDepletionExitInFlight = false;
 
   function rememberEnergyStatus(status = null) {
     if (!status || typeof status !== 'object') return null;
@@ -73,6 +75,13 @@
       return window.PlaytalkNative.resolveRouteHref('/premium');
     }
     return '/premium';
+  }
+
+  function resolveHomeHref() {
+    if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
+      return window.PlaytalkNative.resolveRouteHref('/home');
+    }
+    return '/home';
   }
 
   function resolveFlashcardsEnergyHref() {
@@ -618,6 +627,73 @@
     return Number(statusCode) === ENERGY_EXHAUSTED_STATUS || Boolean(payload?.energy);
   }
 
+  function isDepletedStatus(status) {
+    if (!status || typeof status !== 'object') return false;
+    if (!status.loggedIn || status.premium || status.unlimited) return false;
+    return Number(status.remaining) <= 0;
+  }
+
+  async function triggerEnergyDepletionExit(options = {}) {
+    const status = options.status && typeof options.status === 'object'
+      ? rememberEnergyStatus(options.status)
+      : rememberEnergyStatus(buildEnergyStatus({
+        user: options.user,
+        stats: options.stats
+      }));
+    if (!isDepletedStatus(status) || energyDepletionExitInFlight) {
+      return false;
+    }
+
+    energyDepletionExitInFlight = true;
+    try {
+      if (typeof options.beforeExit === 'function') {
+        try {
+          options.beforeExit(status);
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      const targets = normalizePreviewTargets(options.targets).filter((element) => {
+        if (!(element instanceof HTMLElement)) return false;
+        if (element.hidden) return false;
+        const computed = window.getComputedStyle(element);
+        return computed.display !== 'none' && computed.visibility !== 'hidden';
+      });
+
+      targets.forEach((element) => {
+        element.style.transition = `opacity ${ENERGY_DEPLETION_EXIT_MS}ms ease, filter ${ENERGY_DEPLETION_EXIT_MS}ms ease, transform ${ENERGY_DEPLETION_EXIT_MS}ms ease`;
+        element.style.transformOrigin = 'center center';
+        element.style.pointerEvents = 'none';
+      });
+
+      // Force a frame so the browser sees the initial state before dissolving.
+      void document.body.offsetWidth;
+
+      targets.forEach((element) => {
+        element.style.opacity = '0';
+        element.style.filter = 'blur(18px)';
+        element.style.transform = 'scale(0.98)';
+      });
+
+      await wait(ENERGY_DEPLETION_EXIT_MS);
+
+      const nextHref = safeText(options.href) || resolveHomeHref();
+      if (window.PlaytalkNative && typeof window.PlaytalkNative.navigate === 'function') {
+        window.PlaytalkNative.navigate(nextHref, { replace: true });
+      } else if (options.replace !== false) {
+        window.location.replace(nextHref);
+      } else {
+        window.location.href = nextHref;
+      }
+      return true;
+    } finally {
+      window.setTimeout(() => {
+        energyDepletionExitInFlight = false;
+      }, 250);
+    }
+  }
+
   window.PlaytalkEnergy = {
     DAILY_FREE_ENERGY,
     ENERGY_EXHAUSTED_STATUS,
@@ -629,11 +705,14 @@
     guardEnergyGate,
     guardEnergy,
     isEnergyErrorPayload,
+    isDepletedStatus,
     isPremiumActive,
     openEnergyGate,
     closeEnergyGate,
     previewBlockedTargets,
+    triggerEnergyDepletionExit,
     redirectToFlashcardsEnergyGate,
+    resolveHomeHref,
     resolveFlashcardsEnergyHref,
     resolvePremiumHref,
     resolveAccountHref
