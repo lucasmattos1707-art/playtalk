@@ -679,6 +679,28 @@ const mergeStatsWithDailyEnergy = (user, stats = {}, dailyRow = {}) => ({
   ...buildDailyEnergySnapshot(user, dailyRow)
 });
 
+const ensureAutoNoEnergyForSnapshot = async (db, user, snapshot) => {
+  const normalizedUserId = Number.parseInt(user?.id || user, 10);
+  if (!db || !Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    return false;
+  }
+  if (isPremiumActiveFromUser(user)) {
+    return false;
+  }
+  if (Number(snapshot?.remainingEnergy) > 0) {
+    return false;
+  }
+
+  await db.query(
+    `UPDATE public.users
+     SET no_energy = true
+     WHERE id = $1
+       AND COALESCE(no_energy, false) = false`,
+    [normalizedUserId]
+  );
+  return true;
+};
+
 const updateUserPresenceClassProgress = async (db, userId, deltas = {}) => {
   const normalizedUserId = Number.parseInt(userId, 10);
   const speakingCharsDelta = Math.max(0, Math.round(Number(deltas?.speakingCharsDelta) || 0));
@@ -793,7 +815,9 @@ const incrementDailyEnergyUsage = async (db, user, deltas = {}) => {
     [normalizedUserId, readingCharsDelta, speakingCharsDelta, listeningCharsDelta]
   );
 
-  return buildDailyEnergySnapshot(user, result.rows[0] || {});
+  const snapshot = buildDailyEnergySnapshot(user, result.rows[0] || {});
+  await ensureAutoNoEnergyForSnapshot(db, user, snapshot);
+  return snapshot;
 };
 
 const upsertUserBooksPronunciationSamples = async (client, userId, samplesInput) => {
@@ -11475,6 +11499,8 @@ app.get('/api/books/stats', async (req, res) => {
       bookBestPercentById,
       adminBooksSummary: requesterIsAdmin ? adminBooksSummary : null
     }, dailyEnergyResult.rows[0] || {});
+
+    await ensureAutoNoEnergyForSnapshot(pool, authUser, statsPayload);
 
     res.json({
       success: true,
