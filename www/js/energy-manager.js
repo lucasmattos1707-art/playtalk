@@ -10,11 +10,14 @@
   ];
   const ENERGY_GATE_STATUS_STORE = 'playtalk-energy-gate-status';
   const ENERGY_GATE_PENDING_STORE = 'playtalk-energy-gate-pending';
+  const ENERGY_GATE_MODE_DEFAULT = 'default';
+  const ENERGY_GATE_MODE_DEPLETION = 'depletion';
   let energyGateTimer = 0;
   let energyGateCountdownTimer = 0;
   let energyGateLoglineIndex = 0;
   let latestEnergyGateStatus = null;
   let energyDepletionExitInFlight = false;
+  let energyDepletionScreenVisible = false;
 
   function rememberEnergyStatus(status = null) {
     if (!status || typeof status !== 'object') return null;
@@ -64,6 +67,16 @@
     return `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
   }
 
+  function formatResetCountdownClock(nextResetAt) {
+    const targetMs = Date.parse(nextResetAt || '');
+    const diffMs = Math.max(0, (Number.isFinite(targetMs) ? targetMs : Date.now()) - Date.now());
+    const totalSeconds = Math.ceil(diffMs / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
   function resolveAccountHref() {
     if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
       return window.PlaytalkNative.resolveRouteHref('/account');
@@ -87,6 +100,14 @@
 
   function resolveFlashcardsEnergyHref() {
     const path = '/flashcards?energy=empty';
+    if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
+      return window.PlaytalkNative.resolveRouteHref(path);
+    }
+    return path;
+  }
+
+  function resolveFlashcardsWelcomeHref() {
+    const path = '/flashcards';
     if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
       return window.PlaytalkNative.resolveRouteHref(path);
     }
@@ -130,16 +151,38 @@
       .playtalk-energy-gate,
       body > .playtalk-energy-gate,
       body > #playtalkEnergyGate {
+        --playtalk-global-bg-desktop: url('/api/r2-media/backgrounds/playtalk-global-desktop.webp');
+        --playtalk-global-bg-mobile: url('/api/r2-media/backgrounds/playtalk-global-mobile.webp');
+        --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
+        --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 0.82) 0%, rgba(4, 18, 38, 0.4) 44%, rgba(4, 18, 38, 0.12) 100%);
         position: fixed;
         inset: 0;
         z-index: 2147483647;
         display: none;
         width: 100vw;
         height: 100dvh;
-        background: linear-gradient(180deg, #0c8cff 0%, #0759db 48%, #042f93 100%);
+        background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat fixed;
         color: #ffffff;
         font-family: "Soopafre", "PlaytalkDisplay", Arial, sans-serif;
         overflow: hidden;
+      }
+
+      @media (max-width: 800px) {
+        .playtalk-energy-gate,
+        body > .playtalk-energy-gate,
+        body > #playtalkEnergyGate {
+          --playtalk-global-bg-image: var(--playtalk-global-bg-mobile);
+        }
+      }
+
+      .playtalk-energy-gate::before,
+      body > .playtalk-energy-gate::before,
+      body > #playtalkEnergyGate::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: var(--playtalk-global-bg-overlay);
+        z-index: 0;
       }
 
       .playtalk-energy-gate.is-visible,
@@ -170,7 +213,25 @@
         cursor: pointer;
       }
 
-      .playtalk-energy-gate__close svg {
+      .playtalk-energy-gate__nav {
+        position: fixed;
+        top: max(18px, env(safe-area-inset-top, 0px) + 12px);
+        right: 18px;
+        z-index: 2;
+        width: 48px;
+        height: 48px;
+        border: 1px solid rgba(255, 255, 255, 0.38);
+        border-radius: 50%;
+        background: rgba(4, 32, 110, 0.58);
+        color: #ffffff;
+        display: none;
+        place-items: center;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+        cursor: pointer;
+      }
+
+      .playtalk-energy-gate__close svg,
+      .playtalk-energy-gate__nav svg {
         width: 25px;
         height: 25px;
         fill: currentColor;
@@ -211,6 +272,22 @@
         display: block;
       }
 
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__content {
+        width: min(92vw, 460px);
+        gap: clamp(14px, 2.3vh, 20px);
+        padding: 18px 18px 36px;
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__title {
+        gap: 6px;
+        transform: none;
+        font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+        font-size: clamp(28px, 6.8vw, 42px);
+        font-weight: 700;
+        line-height: 1.08;
+        text-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+      }
+
       .playtalk-energy-gate__star {
         width: min(27vw, 27vh, 238px);
         height: min(27vw, 27vh, 238px);
@@ -220,11 +297,18 @@
           drop-shadow(0 0 18px rgba(255, 226, 112, 0.42));
       }
 
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__star {
+        width: min(37vw, 32vh, 174px);
+        height: min(37vw, 32vh, 174px);
+      }
+
       .playtalk-energy-gate__logline {
         min-height: 1.2em;
         margin: 0;
         display: block;
         width: 100%;
+        font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+        font-weight: 700;
         font-size: clamp(16px, 4.2vw, 28px);
         line-height: 1;
         white-space: nowrap;
@@ -237,6 +321,10 @@
       .playtalk-energy-gate__logline.is-changing {
         opacity: 0;
         transform: translateY(10px);
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__logline {
+        display: none;
       }
 
       .playtalk-energy-gate__countdown {
@@ -258,6 +346,20 @@
           0 14px 34px rgba(0, 0, 0, 0.2);
       }
 
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown {
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        flex-direction: column;
+        gap: 6px;
+        font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+        font-weight: 700;
+        line-height: 1.15;
+      }
+
       .playtalk-energy-gate__countdown-icon {
         width: clamp(24px, 5vw, 38px);
         height: clamp(24px, 5vw, 38px);
@@ -266,10 +368,36 @@
         flex: 0 0 auto;
       }
 
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown-icon {
+        display: none;
+      }
+
+      .playtalk-energy-gate__countdown-label {
+        display: none;
+      }
+
       .playtalk-energy-gate__countdown-value {
         display: inline-block;
         min-width: 7.4em;
         text-align: center;
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown-label {
+        display: block;
+        font-size: clamp(20px, 5vw, 28px);
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.96);
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown-value {
+        min-width: 0;
+        font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+        font-size: clamp(30px, 8vw, 52px);
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.04em;
+        line-height: 1;
+        text-shadow: 0 8px 24px rgba(0, 0, 0, 0.26);
       }
 
       .playtalk-energy-gate__premium {
@@ -285,6 +413,30 @@
           0 0 24px rgba(192, 132, 252, 0.42),
           0 16px 34px rgba(0, 0, 0, 0.24);
         cursor: pointer;
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__premium {
+        min-height: 58px;
+        width: min(90vw, 320px);
+        padding: 0 24px;
+        border: 1.5px solid rgba(229, 166, 255, 0.98);
+        background: linear-gradient(135deg, #40106f 0%, #6b21c8 48%, #9333ea 100%);
+        color: #ffffff;
+        font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+        font-size: clamp(20px, 4.8vw, 28px);
+        font-weight: 800;
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 230, 255, 0.14),
+          0 0 18px rgba(214, 112, 255, 0.44),
+          0 0 42px rgba(147, 51, 234, 0.34);
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__close {
+        display: none;
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__nav {
+        display: grid;
       }
 
       .playtalk-energy-preview-blocked {
@@ -318,6 +470,13 @@
     closeButton.setAttribute('aria-label', 'Fechar');
     closeButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>';
 
+    const navButton = document.createElement('button');
+    navButton.className = 'playtalk-energy-gate__nav';
+    navButton.id = 'playtalkEnergyGateNav';
+    navButton.type = 'button';
+    navButton.setAttribute('aria-label', 'Ir para o inicio do treino');
+    navButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 5.3a1 1 0 0 1 0 1.4L10.41 11H19a1 1 0 1 1 0 2h-8.59l4.3 4.3a1 1 0 1 1-1.42 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.41 0z"/></svg>';
+
     const content = document.createElement('div');
     content.className = 'playtalk-energy-gate__content';
 
@@ -350,17 +509,30 @@
     countdownValue.id = 'playtalkEnergyGateCountdown';
     countdownValue.textContent = '00h 00m 00s';
 
+    const countdownLabel = document.createElement('span');
+    countdownLabel.className = 'playtalk-energy-gate__countdown-label';
+    countdownLabel.id = 'playtalkEnergyGateCountdownLabel';
+    countdownLabel.textContent = 'Mais energias em';
+
     const premiumButton = document.createElement('button');
     premiumButton.className = 'playtalk-energy-gate__premium';
     premiumButton.id = 'playtalkEnergyGatePremium';
     premiumButton.type = 'button';
     premiumButton.textContent = 'Assinar premium';
 
-    countdown.append(countdownIcon, countdownValue);
+    countdown.append(countdownIcon, countdownLabel, countdownValue);
     content.append(title, star, logline, countdown, premiumButton);
-    gate.append(closeButton, content);
+    gate.append(closeButton, navButton, content);
     document.body.appendChild(gate);
     closeButton.addEventListener('click', closeEnergyGate);
+    navButton.addEventListener('click', () => {
+      const href = resolveFlashcardsWelcomeHref();
+      if (window.PlaytalkNative && typeof window.PlaytalkNative.navigate === 'function') {
+        window.PlaytalkNative.navigate(href, { replace: true });
+      } else {
+        window.location.href = href;
+      }
+    });
     premiumButton.addEventListener('click', () => {
       window.location.href = resolvePremiumHref();
     });
@@ -391,7 +563,11 @@
   function updateEnergyGateCountdown() {
     const countdown = document.getElementById('playtalkEnergyGateCountdown');
     if (!countdown) return;
-    countdown.textContent = formatResetCountdownDetailed(latestEnergyGateStatus?.nextResetAt);
+    const gate = document.getElementById('playtalkEnergyGate');
+    const mode = gate?.dataset?.mode || ENERGY_GATE_MODE_DEFAULT;
+    countdown.textContent = mode === ENERGY_GATE_MODE_DEPLETION
+      ? formatResetCountdownClock(latestEnergyGateStatus?.nextResetAt)
+      : formatResetCountdownDetailed(latestEnergyGateStatus?.nextResetAt);
   }
 
   function renderEnergyGateLogline(text) {
@@ -402,21 +578,25 @@
 
   function startEnergyGateTimers() {
     stopEnergyGateTimers();
+    const gate = document.getElementById('playtalkEnergyGate');
+    const mode = gate?.dataset?.mode || ENERGY_GATE_MODE_DEFAULT;
     const logline = document.getElementById('playtalkEnergyGateLogline');
-    if (logline) {
+    if (logline && mode === ENERGY_GATE_MODE_DEFAULT) {
       renderEnergyGateLogline(ENERGY_GATE_LOG_LINES[energyGateLoglineIndex] || ENERGY_GATE_LOG_LINES[0]);
     }
     updateEnergyGateCountdown();
-    energyGateTimer = window.setInterval(() => {
-      const target = document.getElementById('playtalkEnergyGateLogline');
-      if (!target) return;
-      target.classList.add('is-changing');
-      window.setTimeout(() => {
-        energyGateLoglineIndex = (energyGateLoglineIndex + 1) % ENERGY_GATE_LOG_LINES.length;
-        renderEnergyGateLogline(ENERGY_GATE_LOG_LINES[energyGateLoglineIndex] || ENERGY_GATE_LOG_LINES[0]);
-        target.classList.remove('is-changing');
-      }, 430);
-    }, 2400);
+    if (mode === ENERGY_GATE_MODE_DEFAULT) {
+      energyGateTimer = window.setInterval(() => {
+        const target = document.getElementById('playtalkEnergyGateLogline');
+        if (!target) return;
+        target.classList.add('is-changing');
+        window.setTimeout(() => {
+          energyGateLoglineIndex = (energyGateLoglineIndex + 1) % ENERGY_GATE_LOG_LINES.length;
+          renderEnergyGateLogline(ENERGY_GATE_LOG_LINES[energyGateLoglineIndex] || ENERGY_GATE_LOG_LINES[0]);
+          target.classList.remove('is-changing');
+        }, 430);
+      }, 2400);
+    }
     energyGateCountdownTimer = window.setInterval(updateEnergyGateCountdown, 1000);
   }
 
@@ -431,11 +611,40 @@
     }
   }
 
-  function openEnergyGate(status = null) {
+  function applyEnergyGateMode(mode = ENERGY_GATE_MODE_DEFAULT) {
+    const gate = ensureEnergyGate();
+    const title = gate.querySelector('.playtalk-energy-gate__title');
+    const logline = gate.querySelector('#playtalkEnergyGateLogline');
+    const countdownLabel = gate.querySelector('#playtalkEnergyGateCountdownLabel');
+    const premiumButton = gate.querySelector('#playtalkEnergyGatePremium');
+    gate.dataset.mode = mode;
+    gate.classList.toggle('is-depletion-screen', mode === ENERGY_GATE_MODE_DEPLETION);
+    gate.setAttribute(
+      'aria-label',
+      mode === ENERGY_GATE_MODE_DEPLETION ? 'Treino diario completo' : 'Mais energias em breve'
+    );
+    if (title) {
+      title.innerHTML = mode === ENERGY_GATE_MODE_DEPLETION
+        ? '<span>Você completou</span><span>seu treino diário</span>'
+        : '<span>Você completou</span><span>o treino diário!</span>';
+    }
+    if (logline) {
+      logline.textContent = ENERGY_GATE_LOG_LINES[0];
+    }
+    if (countdownLabel) {
+      countdownLabel.textContent = 'Mais energias em';
+    }
+    if (premiumButton) {
+      premiumButton.textContent = mode === ENERGY_GATE_MODE_DEPLETION ? 'Obter premium' : 'Assinar premium';
+    }
+    return gate;
+  }
+
+  function openEnergyGate(status = null, options = {}) {
     latestEnergyGateStatus = status && typeof status === 'object'
       ? rememberEnergyStatus(status)
       : latestEnergyGateStatus || buildEnergyStatus({ stats: {} });
-    const gate = ensureEnergyGate();
+    const gate = applyEnergyGateMode(options.mode || ENERGY_GATE_MODE_DEFAULT);
     document.body.classList.add('playtalk-energy-gate-open');
     gate.classList.add('is-visible');
     gate.removeAttribute('hidden');
@@ -445,9 +654,12 @@
   function closeEnergyGate() {
     const gate = document.getElementById('playtalkEnergyGate');
     document.body.classList.remove('playtalk-energy-gate-open');
+    energyDepletionScreenVisible = false;
     if (gate) {
       gate.classList.remove('is-visible');
       gate.hidden = true;
+      gate.classList.remove('is-depletion-screen');
+      gate.dataset.mode = ENERGY_GATE_MODE_DEFAULT;
     }
     stopEnergyGateTimers();
   }
@@ -494,7 +706,7 @@
       // ignore
     }
     if (isFlashcardsRoute()) {
-      openEnergyGate(status);
+      openEnergyGate(status, { mode: ENERGY_GATE_MODE_DEFAULT });
       return;
     }
     window.location.href = resolveFlashcardsEnergyHref();
@@ -530,8 +742,8 @@
   function openStoredEnergyGateIfNeeded() {
     if (!shouldOpenStoredEnergyGate()) return;
     const status = readStoredEnergyGateStatus();
-    openEnergyGate(status);
-    window.setTimeout(() => openEnergyGate(status), 250);
+    openEnergyGate(status, { mode: ENERGY_GATE_MODE_DEFAULT });
+    window.setTimeout(() => openEnergyGate(status, { mode: ENERGY_GATE_MODE_DEFAULT }), 250);
   }
 
 
@@ -715,7 +927,7 @@
         user: options.user,
         stats: options.stats
       }));
-    if (!isDepletedStatus(status) || energyDepletionExitInFlight) {
+    if (!isDepletedStatus(status) || energyDepletionExitInFlight || energyDepletionScreenVisible) {
       return false;
     }
 
@@ -754,15 +966,8 @@
       });
 
       await wait(ENERGY_DEPLETION_EXIT_MS);
-
-      const nextHref = safeText(options.href) || resolveHomeHref();
-      if (window.PlaytalkNative && typeof window.PlaytalkNative.navigate === 'function') {
-        window.PlaytalkNative.navigate(nextHref, { replace: true });
-      } else if (options.replace !== false) {
-        window.location.replace(nextHref);
-      } else {
-        window.location.href = nextHref;
-      }
+      energyDepletionScreenVisible = true;
+      openEnergyGate(status, { mode: ENERGY_GATE_MODE_DEPLETION });
       return true;
     } finally {
       window.setTimeout(() => {
@@ -787,7 +992,7 @@
     };
 
     const runCheck = async () => {
-      if (checkInFlight || energyDepletionExitInFlight || !isActive()) {
+      if (checkInFlight || energyDepletionExitInFlight || energyDepletionScreenVisible || !isActive()) {
         return false;
       }
       checkInFlight = true;
@@ -859,6 +1064,7 @@
     redirectToFlashcardsEnergyGate,
     resolveHomeHref,
     resolveFlashcardsEnergyHref,
+    resolveFlashcardsWelcomeHref,
     resolvePremiumHref,
     resolveAccountHref
   };
