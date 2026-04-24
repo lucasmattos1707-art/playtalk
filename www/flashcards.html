@@ -8635,6 +8635,9 @@
       }
 
       function readCachedCards() {
+        if (isManualNoEnergyBlocked()) {
+          return [];
+        }
         try {
           const parsed = JSON.parse(localStorage.getItem(CARDS_CACHE_STORAGE_KEY) || 'null');
           return Array.isArray(parsed?.cards) ? parsed.cards : [];
@@ -8647,7 +8650,7 @@
         try {
           localStorage.setItem(CARDS_CACHE_STORAGE_KEY, JSON.stringify({
             savedAt: Date.now(),
-            cards: Array.isArray(cards) ? cards : []
+            cards: isManualNoEnergyBlocked() ? [] : (Array.isArray(cards) ? cards : [])
           }));
         } catch (_error) {
           // ignore
@@ -10222,6 +10225,17 @@
         return Boolean(state.user?.noEnergy);
       }
 
+      function buildNoEnergyCardsPayload() {
+        return {
+          cards: [],
+          deckCatalog: []
+        };
+      }
+
+      function isNoEnergyMediaLocked() {
+        return isManualNoEnergyBlocked() && !isAdminUser();
+      }
+
       function pulseWelcomeNoEnergyButton(button) {
         if (!(button instanceof HTMLElement)) return;
         button.style.transition = 'opacity 1000ms ease';
@@ -10563,6 +10577,11 @@
 
       function tryStartPendingWelcomePlay() {
         if (!state.entry.pendingPlayStart || !state.entry.cardsReady) return false;
+        if (isManualNoEnergyBlocked()) {
+          state.entry.pendingPlayStart = false;
+          syncWelcomeGate();
+          return false;
+        }
         if (isAdminUser() && !state.entry.welcomeStartRequested) {
           state.entry.pendingPlayStart = false;
           syncWelcomeGate();
@@ -10588,6 +10607,10 @@
 
       function requestWelcomeTutorialStart(skipSoundTest = false, options = {}) {
         if (state.entry.authRequired) return;
+        if (isManualNoEnergyBlocked()) {
+          syncWelcomeGate();
+          return;
+        }
         if (isAdminUser() && !state.entry.welcomeStartRequested && !options.forceTutorial) {
           syncWelcomeGate();
           return;
@@ -11608,6 +11631,13 @@
           els.startGameBtn.disabled = false;
         }
         switchMainView('play');
+
+        if (isManualNoEnergyBlocked()) {
+          state.allCards = [];
+          state.deckCatalog = [];
+          saveCachedCards([]);
+          refreshLibrary();
+        }
 
         if (!options.skipLoadCards) {
           try {
@@ -12653,6 +12683,9 @@
       }
 
       async function refreshCardsFromNetwork() {
+        if (isManualNoEnergyBlocked()) {
+          return buildNoEnergyCardsPayload();
+        }
         const manifestPayload = await fetchRemoteManifestOrEmpty(DATA_MANIFEST_REMOTE_PATH);
         const manifest = manifestPayload?.data || {};
         const serverDateHeader = manifestPayload?.response?.headers?.get('date') || '';
@@ -12749,7 +12782,7 @@
         target.innerHTML = cards.map(card => `
           <article class="mini-card" data-card-id="${escapeHtml(card.id)}">
             <div class="mini-card__image" ${adminMode ? `data-admin-image="${escapeHtml(card.id)}"` : ''}>
-              ${safeText(card.imageDisplayUrl || card.imageUrl)
+              ${safeText(card.imageDisplayUrl || card.imageUrl) && !isNoEnergyMediaLocked()
                 ? `<img src="${escapeHtml(card.imageDisplayUrl || card.imageUrl)}" alt="${escapeHtml(card.english || card.portuguese || card.deckTitle)}" style="${escapeHtml(card.imageStyle || '')}">`
                 : (card.imageFallbackMarkup || `<div class="mini-card__fallback">${escapeHtml(card.deckTitle)}</div>`)}
               ${card.sealMarkup || ''}
@@ -14907,6 +14940,7 @@
       }
 
       function playAudioWithSoftEnd(audio, { registerAsActive = false } = {}) {
+        if (isNoEnergyMediaLocked()) return Promise.resolve(false);
         if (!audio) return Promise.resolve(false);
         if (typeof audio._softEndCleanup === 'function') {
           audio._softEndCleanup();
@@ -14964,6 +14998,10 @@
       }
 
       function playPromptAudio(card, options = {}) {
+        if (isNoEnergyMediaLocked()) {
+          stopActiveAudio();
+          return Promise.resolve(false);
+        }
         if (shouldSuppressTutorialCardAudio(card)) {
           return Promise.resolve(false);
         }
@@ -15018,6 +15056,7 @@
       }
 
       function playSuccessAudio() {
+        if (isNoEnergyMediaLocked()) return;
         if (!state.game.successAudio) {
           const resolved = typeof window.getGameSoundUrl === 'function'
             ? window.getGameSoundUrl(SUCCESS_SOUND_PATH)
@@ -15034,6 +15073,7 @@
       }
 
       function playMilestoneAudio(src) {
+        if (isNoEnergyMediaLocked()) return;
         const resolved = resolveInlineMediaUrl(src);
         if (!resolved) return;
         if (!state.game.milestoneAudios.has(resolved)) {
@@ -15051,6 +15091,7 @@
       }
 
       function playLessAudio() {
+        if (isNoEnergyMediaLocked()) return;
         const resolved = resolveInlineMediaUrl(LESS_SOUND_PATH);
         if (!resolved) return;
         if (!state.game.milestoneAudios.has(resolved)) {
@@ -15113,6 +15154,7 @@
       }
 
       function playReportAudio() {
+        if (isNoEnergyMediaLocked()) return;
         if (!state.game.reportAudio) {
           const resolved = typeof window.getGameSoundUrl === 'function'
             ? window.getGameSoundUrl(REPORT_SOUND_PATH)
@@ -15140,6 +15182,7 @@
       }
 
       function preloadCardImage(card) {
+        if (isNoEnergyMediaLocked()) return;
         const src = safeText(card?.imageUrl);
         if (!src || state.game.preloadImages.has(src)) return;
         const image = new Image();
@@ -15148,6 +15191,7 @@
       }
 
       function preloadCardAudio(card) {
+        if (isNoEnergyMediaLocked()) return;
         const src = safeText(card?.audioUrl);
         if (!src || state.game.preloadAudios.has(src)) return;
         try {
@@ -15551,25 +15595,28 @@
       }
 
       function buildGameVisual(card, stageConfig) {
+        const mediaLocked = isNoEnergyMediaLocked();
         const shouldShowImage = stageConfig.showImage !== false;
         const placeholderLabel = stageConfig.placeholderUsesPortuguese
           ? buildStageThreePlaceholderMarkup(card)
           : escapeHtml('?');
-        preloadCardImage(card);
-        preloadCardAudio(card);
-        if (stageConfig.overlayFlag) {
+        if (!mediaLocked) {
+          preloadCardImage(card);
+          preloadCardAudio(card);
+        }
+        if (stageConfig.overlayFlag && !mediaLocked) {
           preloadCardImage({ imageUrl: stageConfig.overlayFlag });
         }
-        const imageOnlyMarkup = card.imageUrl
+        const imageOnlyMarkup = !mediaLocked && card.imageUrl
           ? `<img src="${escapeHtml(card.imageUrl)}" alt="${escapeHtml(card.english || card.portuguese || card.deckTitle)}">`
           : `<div class="mini-card__fallback">${escapeHtml(card.deckTitle)}</div>`;
         let imageMarkup = shouldShowImage
           ? imageOnlyMarkup
           : `<div class="game-card__placeholder${stageConfig.placeholderUsesPortuguese ? ' is-word-mode' : ''}">${placeholderLabel}</div>`;
-        if (stageConfig.revealOnHit && card.imageUrl) {
+        if (!mediaLocked && stageConfig.revealOnHit && card.imageUrl) {
           imageMarkup = `<div class="game-card__placeholder is-word-mode">${placeholderLabel}</div><img class="game-card__reveal-image" src="${escapeHtml(card.imageUrl)}" alt="${escapeHtml(card.english || card.portuguese || card.deckTitle)}">`;
         }
-        if (stageConfig.overlayFlag) {
+        if (!mediaLocked && stageConfig.overlayFlag) {
           const overlayClassName = stageConfig.overlayClassName
             ? `game-card__phase-flag ${stageConfig.overlayClassName}`
             : 'game-card__phase-flag';
@@ -17168,6 +17215,15 @@
       }
 
       function beginGame() {
+        if (isManualNoEnergyBlocked()) {
+          clearGameSessionLocally();
+          state.game.entries.clear();
+          state.game.queue = [];
+          state.game.currentId = null;
+          state.game.active = false;
+          syncWelcomeGate();
+          return;
+        }
         resetTrainingRuntime();
         hideWelcomeGate();
         clearScheduledOnboardingGate();
@@ -18279,6 +18335,10 @@
         els.gameStarCopy.classList.add('is-hidden');
 
         try {
+          const sessionUser = await fetchSessionUser().catch(() => null);
+          if (sessionUser) {
+            state.user = normalizeUser(sessionUser);
+          }
           try {
             await loadCards();
           } catch (cardsError) {
@@ -18292,7 +18352,6 @@
             tryStartPendingTutorial();
             syncWelcomeGate();
           }
-          const sessionUser = await fetchSessionUser();
           if (sessionUser) {
             await hydrateAuthenticatedApp(sessionUser, { skipLoadCards: true });
             primeGameTouchButton();
