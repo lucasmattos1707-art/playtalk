@@ -10588,13 +10588,16 @@
           return;
         }
         const blocked = Boolean(status?.loggedIn && status?.blocked);
-        const remaining = Number.isFinite(Number(status?.remaining))
-          ? Math.max(0, Math.round(Number(status.remaining)))
-          : (
-            Number.isFinite(Number(status?.dailyEnergyLimit)) && Number.isFinite(Number(status?.usedToday))
-              ? Math.max(0, Math.round(Number(status.dailyEnergyLimit) - Number(status.usedToday)))
-              : Math.max(0, Number(window.PlaytalkEnergy?.DAILY_FREE_ENERGY) || 0)
-          );
+        const hasUnlimitedEnergy = Boolean(status?.premium || status?.unlimited);
+        const remaining = hasUnlimitedEnergy
+          ? '\u221e'
+          : Number.isFinite(Number(status?.remaining))
+            ? Math.max(0, Math.round(Number(status.remaining)))
+            : (
+              Number.isFinite(Number(status?.dailyEnergyLimit)) && Number.isFinite(Number(status?.usedToday))
+                ? Math.max(0, Math.round(Number(status.dailyEnergyLimit) - Number(status.usedToday)))
+                : Math.max(0, Number(window.PlaytalkEnergy?.DAILY_FREE_ENERGY) || 0)
+            );
         state.ui.welcomeEnergyBlocked = blocked;
         state.ui.welcomeEnergyNextResetAt = blocked ? String(status?.nextResetAt || '') : '';
         if (els.welcomeEnergyValue) {
