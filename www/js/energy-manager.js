@@ -134,7 +134,7 @@
     const style = document.createElement('style');
     style.id = 'playtalk-energy-gate-style';
     style.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@700;800&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;700&display=swap');
 
       @font-face {
         font-family: "Soopafre";
@@ -271,8 +271,9 @@
         margin: 0;
         display: grid;
         gap: 2px;
-        font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
+        font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
         font-size: clamp(33px, 8.4vw, 66px);
+        font-weight: 700;
         line-height: 0.92;
         transform: translateY(-10px);
         text-shadow:
@@ -293,7 +294,7 @@
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__title {
         gap: 6px;
         transform: none;
-        font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+        font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
         font-size: clamp(28px, 6.8vw, 42px);
         font-weight: 700;
         line-height: 1.08;
@@ -319,8 +320,8 @@
         margin: 0;
         display: block;
         width: 100%;
-        font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
-        font-weight: 700;
+        font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
+        font-weight: 300;
         font-size: clamp(16px, 4.2vw, 28px);
         line-height: 1;
         white-space: nowrap;
@@ -367,8 +368,8 @@
         box-shadow: none;
         flex-direction: column;
         gap: 6px;
-        font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
-        font-weight: 700;
+        font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
+        font-weight: 300;
         line-height: 1.15;
       }
 
@@ -397,15 +398,16 @@
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown-label {
         display: block;
         font-size: clamp(20px, 5vw, 28px);
-        font-weight: 700;
+        font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
+        font-weight: 300;
         color: rgba(255, 255, 255, 0.96);
       }
 
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown-value {
         min-width: 0;
-        font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+        font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
         font-size: clamp(30px, 8vw, 52px);
-        font-weight: 800;
+        font-weight: 700;
         font-variant-numeric: tabular-nums;
         letter-spacing: 0.04em;
         line-height: 1;
@@ -434,9 +436,9 @@
         border: 1.5px solid rgba(229, 166, 255, 0.98);
         background: linear-gradient(135deg, #40106f 0%, #6b21c8 48%, #9333ea 100%);
         color: #ffffff;
-        font-family: "Open Sans", "Segoe UI", Arial, sans-serif;
+        font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
         font-size: clamp(20px, 4.8vw, 28px);
-        font-weight: 800;
+        font-weight: 700;
         box-shadow:
           inset 0 0 0 1px rgba(255, 230, 255, 0.14),
           0 0 18px rgba(214, 112, 255, 0.44),
