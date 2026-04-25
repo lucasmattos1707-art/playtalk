@@ -302,7 +302,7 @@
       min-height: 102dvh;
       position: relative;
       display: grid;
-      grid-template-rows: 12vh 8vh 35vh 15vh 15vh;
+      grid-template-rows: 8vh 35vh 15vh 15vh;
       justify-items: stretch;
       align-items: start;
       align-content: start;
@@ -383,13 +383,17 @@
     }
 
     .welcome-gate__header {
+      display: none !important;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
       position: relative;
-      min-height: 12vh;
-      height: 12vh;
+      min-height: 0;
+      height: 0;
       grid-template-columns: auto minmax(0, 1fr);
       align-items: center;
       gap: 12px;
-      padding: calc(env(safe-area-inset-top, 0px) + 14px) 22px 14px;
+      padding: 0;
       margin-inline: 0;
       background: linear-gradient(180deg, #12356b 0%, #0a1f44 55%, #05080f 100%);
       box-shadow:
@@ -398,6 +402,10 @@
       text-align: left;
       justify-items: start;
       border-radius: 0;
+    }
+
+    .welcome-gate__header * {
+      display: none !important;
     }
 
     .welcome-gate__level-copy-panel {
@@ -512,47 +520,51 @@
     }
 
     .welcome-gate__level-orbit {
-      --welcome-level-progress: 0deg;
-      width: min(212px, 48.6vw, 26.46vh);
-      aspect-ratio: 1;
-      border-radius: 50%;
+      --welcome-level-progress-pct: 0%;
+      width: 100%;
+      max-width: 100%;
       position: relative;
       display: grid;
       place-items: center;
+      align-content: center;
+      justify-items: center;
+      gap: 14px;
       isolation: isolate;
       justify-self: center;
       margin-inline: auto;
     }
 
     .welcome-gate__level-orbit::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      border: 10px solid rgba(18, 155, 255, 0.95);
-      box-sizing: border-box;
-      box-shadow:
-        0 0 20px rgba(16, 144, 252, 0.34),
-        inset 0 0 14px rgba(11, 101, 206, 0.28);
+      content: none;
     }
 
     .welcome-gate__level-progress-bar {
+      position: relative;
+      order: 2;
+      width: 80%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(18, 155, 255, 0.28);
+      overflow: hidden;
+      box-shadow:
+        inset 0 0 0 1px rgba(92, 194, 255, 0.35),
+        0 0 12px rgba(10, 130, 215, 0.24);
+    }
+
+    .welcome-gate__level-progress-bar::after {
+      content: "";
       position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      background: conic-gradient(from -90deg,
-        #62fcb6 0deg,
-        #1ed06d var(--welcome-level-progress),
-        transparent var(--welcome-level-progress),
-        transparent 360deg);
-      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 10px));
-      mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 10px));
-      transition: background 260ms ease;
-      box-shadow: 0 0 22px rgba(32, 209, 108, 0.34);
+      inset: 0 auto 0 0;
+      width: var(--welcome-level-progress-pct);
+      background: linear-gradient(90deg, #62fcb6 0%, #1ed06d 100%);
+      border-radius: inherit;
+      transition: width 260ms ease;
+      box-shadow: 0 0 14px rgba(33, 206, 108, 0.38);
     }
 
     .welcome-gate__level-inner {
       position: relative;
+      order: 1;
       z-index: 1;
       display: grid;
       place-items: center;
@@ -720,6 +732,9 @@
       width: 100%;
       min-height: 15vh;
       height: 15vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       padding: 0;
       border-radius: 0;
       background: transparent;
@@ -737,12 +752,16 @@
       animation: none;
     }
 
-    .welcome-gate__start-btn img {
-      width: min(396px, 81vw);
-      height: auto;
+    .welcome-gate__start-btn img,
+    .welcome-gate__start-btn .welcome-gate__start-image {
+      width: auto;
+      height: 100%;
+      max-height: 100%;
+      max-width: 100%;
       display: block;
+      object-fit: contain;
       border-radius: inherit;
-      margin: 0 auto;
+      margin: 0;
     }
 
     .welcome-gate__start-btn.is-energy-blocked {
@@ -7287,10 +7306,10 @@
       }
 
       .welcome-gate__header {
-        min-height: 12vh;
-        height: 12vh;
+        min-height: 0;
+        height: 0;
         gap: 14px;
-        padding: 0 18px;
+        padding: 0;
       }
 
       .welcome-gate__identity,
@@ -7308,7 +7327,7 @@
       }
 
       .welcome-gate__level-orbit {
-        width: min(212px, 48.6vw, 26.46vh);
+        width: 100%;
       }
 
       .welcome-gate__start-btn {
@@ -7368,7 +7387,6 @@
             <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">2 cartas para avançar</p>
           </div>
         </div>
-        <p class="welcome-gate__copy" id="welcomeCopy"></p>
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button"><img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora"></button>
         <div class="welcome-gate__energy" id="welcomeEnergy">
           <div class="welcome-gate__energy-value">
@@ -10827,7 +10845,7 @@
           els.welcomeLevelHeading.textContent = `Você está no nível ${level}`;
         }
         els.welcomeUserLevelNumber.textContent = String(level);
-        els.welcomeLevelProgressBar.style.setProperty('--welcome-level-progress', `${(percent * 3.6).toFixed(2)}deg`);
+        els.welcomeLevelProgressBar.style.setProperty('--welcome-level-progress-pct', `${percent.toFixed(2)}%`);
         if (els.welcomeLevelOrbit) {
           const orbitLabel = level >= USER_LEVEL_MAX
             ? `Level ${level}. Nivel maximo alcancado.`
