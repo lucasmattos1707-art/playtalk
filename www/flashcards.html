@@ -2612,13 +2612,19 @@
     }
 
     .game.is-level-switching #gameHeadCopy,
-    .game.is-level-switching #gameStarsWrap,
     .game.is-level-switching #gameCard,
     .game.is-level-switching #gameStatusSlot,
     .game.is-level-switching #gameChipRow {
       opacity: 0;
       pointer-events: none;
       transition: opacity 1000ms ease;
+    }
+
+    .game.is-level-switching-reset #gameHeadCopy,
+    .game.is-level-switching-reset #gameCard,
+    .game.is-level-switching-reset #gameStatusSlot,
+    .game.is-level-switching-reset #gameChipRow {
+      transition: none;
     }
 
     .game-card.is-sliding-next {
@@ -17817,7 +17823,13 @@
           state.ui.levelModeProgress = {};
         }
         state.ui.levelModeProgress[selectedGameLevel()] = 0;
+        els.game?.classList.add('is-level-switching-reset');
         els.game?.classList.remove('is-level-switching');
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            els.game?.classList.remove('is-level-switching-reset');
+          });
+        });
 
         const level = selectedGameLevel();
         const roundCount = Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount(level));
