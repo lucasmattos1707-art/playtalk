@@ -28,6 +28,19 @@
     return latestEnergyGateStatus;
   }
 
+  function readRememberedEnergyStatus(user = null) {
+    if (!latestEnergyGateStatus || typeof latestEnergyGateStatus !== 'object') {
+      return null;
+    }
+    if (!user?.id && !latestEnergyGateStatus.loggedIn) {
+      return null;
+    }
+    return {
+      ...latestEnergyGateStatus,
+      loggedIn: Boolean(user?.id || latestEnergyGateStatus.loggedIn)
+    };
+  }
+
   function safeNumber(value) {
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : 0;
@@ -951,6 +964,12 @@
     let stats = options.stats && typeof options.stats === 'object'
       ? options.stats
       : null;
+    if (!stats) {
+      const rememberedStatus = readRememberedEnergyStatus(user);
+      if (rememberedStatus) {
+        return rememberedStatus;
+      }
+    }
     if (shouldRefreshEnergyStats(stats)) {
       const fetchedStats = await fetchBooksStats();
       if (fetchedStats && typeof fetchedStats === 'object') {
@@ -962,11 +981,9 @@
     if (stats && typeof stats === 'object') {
       return rememberEnergyStatus(buildEnergyStatus({ user, stats }));
     }
-    if (latestEnergyGateStatus && typeof latestEnergyGateStatus === 'object') {
-      return {
-        ...latestEnergyGateStatus,
-        loggedIn: Boolean(user?.id)
-      };
+    const rememberedStatus = readRememberedEnergyStatus(user);
+    if (rememberedStatus) {
+      return rememberedStatus;
     }
     return rememberEnergyStatus(buildEnergyStatus({ user, stats }));
   }
@@ -1160,6 +1177,7 @@
     fetchBooksStats,
     formatResetCountdown,
     getEnergyStatus,
+    readRememberedEnergyStatus,
     rememberEnergyStatus,
     guardEnergyGate,
     guardEnergy,
