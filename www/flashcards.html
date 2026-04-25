@@ -7697,7 +7697,7 @@
             <button class="game-level-strip__btn" id="gameLevelPrevBtn" type="button" aria-label="Voltar nivel">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 5.4 8.8 12l6.6 6.6-1.4 1.4L6 12l8-8z"/></svg>
             </button>
-            <div class="game-level-strip__label" id="gameLevelLabel">Nivel 1</div>
+            <div class="game-level-strip__label" id="gameLevelLabel">Todos os niveis</div>
             <button class="game-level-strip__btn" id="gameLevelNextBtn" type="button" aria-label="Avancar nivel">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.6 18.6 6.6-6.6-6.6-6.6L10 4l8 8-8 8z"/></svg>
             </button>
@@ -8397,7 +8397,7 @@
           gameStatusRankTimer: 0,
           gameStatusRankToken: 0,
           gameStatusPreviousRank: 0,
-          welcomeSelectedLevel: 1,
+          welcomeSelectedLevel: 0,
           levelModeProgress: {},
           levelSwitchTimer: 0,
           levelSwitchResetTimer: 0,
@@ -11042,7 +11042,7 @@
         if (!els.welcomeUserLevelNumber || !els.welcomeLevelProgressBar) return;
         if (!state.entry.sessionResolved) return;
         const level = currentUserLevel();
-        if (!Number(state.ui.welcomeSelectedLevel)) {
+        if (state.ui.welcomeSelectedLevel === null || state.ui.welcomeSelectedLevel === undefined || state.ui.welcomeSelectedLevel === '') {
           setSelectedGameLevel(level);
         }
         const levelTarget = userLevelCardTarget(level);
@@ -12559,8 +12559,22 @@
         return Math.max(USER_LEVEL_MIN, Math.min(USER_LEVEL_MAX, parsed));
       }
 
+      function normalizeSelectableGameLevel(value) {
+        const parsed = Number.parseInt(String(value ?? '').trim(), 10);
+        if (!Number.isInteger(parsed)) return 0;
+        return Math.max(0, Math.min(USER_LEVEL_MAX, parsed));
+      }
+
       function selectedGameLevel() {
-        return normalizeUserLevel(state.ui.welcomeSelectedLevel || currentUserLevel());
+        return normalizeSelectableGameLevel(state.ui.welcomeSelectedLevel);
+      }
+
+      function isAllLevelsSelected() {
+        return selectedGameLevel() === 0;
+      }
+
+      function formatSelectedGameLevelLabel(level = selectedGameLevel()) {
+        return Number(level) === 0 ? 'Todos os niveis' : `Nivel ${level}`;
       }
 
       function isLevelModeActive() {
@@ -12593,7 +12607,7 @@
       }
 
       function setSelectedGameLevel(level) {
-        state.ui.welcomeSelectedLevel = normalizeUserLevel(level);
+        state.ui.welcomeSelectedLevel = normalizeSelectableGameLevel(level);
         syncGameLevelNavigator();
       }
 
@@ -12964,8 +12978,11 @@
       }
 
       function buildLevelModeSourceCards(level = selectedGameLevel()) {
-        const targetLevel = normalizeUserLevel(level);
         const allPlayableCards = state.allCards.filter(isCardPlayableInLevelMode);
+        if (Number(level) === 0) {
+          return allPlayableCards;
+        }
+        const targetLevel = normalizeUserLevel(level);
         const exactLevelCards = allPlayableCards.filter((card) => cardDeckLevel(card) === targetLevel);
         return exactLevelCards.length ? exactLevelCards : allPlayableCards;
       }
@@ -12979,10 +12996,10 @@
         if (!active) return;
         const level = selectedGameLevel();
         if (els.gameLevelLabel) {
-          els.gameLevelLabel.textContent = `Nivel ${level}`;
+          els.gameLevelLabel.textContent = formatSelectedGameLevelLabel(level);
         }
         if (els.gameLevelPrevBtn) {
-          els.gameLevelPrevBtn.disabled = level <= USER_LEVEL_MIN;
+          els.gameLevelPrevBtn.disabled = level <= 0;
         }
         if (els.gameLevelNextBtn) {
           els.gameLevelNextBtn.disabled = level >= USER_LEVEL_MAX;
@@ -12992,6 +13009,7 @@
       function advanceSelectedGameLevelIfNeeded() {
         if (!isLevelModeActive()) return false;
         const currentLevel = selectedGameLevel();
+        if (currentLevel <= 0) return false;
         if (currentLevel >= USER_LEVEL_MAX) return false;
         const levelProgress = Math.max(0, Number(state.ui.levelModeProgress?.[currentLevel]) || 0);
         if (levelProgress < userLevelCardTarget(currentLevel)) return false;
@@ -16050,7 +16068,11 @@
         const targetCount = state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT;
         const currentLevelProgress = Math.max(0, Number(state.ui.levelModeProgress?.[selectedGameLevel()]) || 0);
         els.gameHeaderCopy.textContent = isLevelModeActive()
-          ? `Nivel ${selectedGameLevel()} • ${currentLevelProgress}/${userLevelCardTarget(selectedGameLevel())} concluido • ${activeCount}/${targetCount} cartas ativas em loop.`
+          ? (
+            isAllLevelsSelected()
+              ? `${formatSelectedGameLevelLabel()} • todas as cartas do deck em rotacao aleatoria.`
+              : `${formatSelectedGameLevelLabel()} • ${currentLevelProgress}/${userLevelCardTarget(selectedGameLevel())} concluido • ${activeCount}/${targetCount} cartas ativas em loop.`
+          )
           : `${activeCount}/${targetCount} cartas ativas na mesa.`;
         syncGameLevelNavigator();
         updateLevelProgressBar();
@@ -17080,7 +17102,7 @@
           }
         }
         els.gameStep.textContent = isLevelModeActive() && !isTrainingMode()
-          ? `Nivel ${selectedGameLevel()}`
+          ? formatSelectedGameLevelLabel()
           : stageConfig.badge;
         els.gameWord.className = `game-word${stageConfig.showWord === false ? ' is-hidden' : ' is-chip'}`;
         els.gameSubword.className = `game-subword${subword ? ' is-chip' : ' is-hidden'}`;
@@ -17145,7 +17167,7 @@
         } else {
           if (isLevelModeActive()) {
             els.gameStars.innerHTML = '';
-            els.gameStarCopy.textContent = `Nivel ${selectedGameLevel()}`;
+            els.gameStarCopy.textContent = formatSelectedGameLevelLabel();
             syncGameLevelNavigator();
           } else {
             renderStars(entry.stars);
@@ -17839,11 +17861,16 @@
         }, 1400);
 
         const level = selectedGameLevel();
-        const roundCount = Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount(level));
-        state.game.contextLimit = currentGameActiveCardCap(level, roundCount);
+        const sourceCards = buildLevelModeSourceCards(level);
+        const roundCount = isAllLevelsSelected()
+          ? sourceCards.length
+          : Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount(level));
+        state.game.contextLimit = isAllLevelsSelected()
+          ? sourceCards.length
+          : currentGameActiveCardCap(level || currentUserLevel(), roundCount);
         state.game.selectedCount = roundCount;
 
-        buildOrderedDeckSelection(buildLevelModeSourceCards(level), roundCount).forEach((card) => {
+        buildOrderedDeckSelection(sourceCards, roundCount).forEach((card) => {
           const entry = createGameEntry(card, 'base');
           entry.stage = 1;
           entry.stars = 0;
@@ -17900,7 +17927,7 @@
       }
 
       function nudgeSelectedGameLevel(delta) {
-        const nextLevel = normalizeUserLevel(selectedGameLevel() + delta);
+        const nextLevel = normalizeSelectableGameLevel(selectedGameLevel() + delta);
         if (nextLevel === selectedGameLevel()) return;
         if (state.game.active && isLevelModeActive()) {
           scheduleLevelModeRestart(nextLevel);
@@ -18230,8 +18257,8 @@
             ) + 1;
             const movedToNextLevel = advanceSelectedGameLevelIfNeeded();
             els.gameStarCopy.textContent = movedToNextLevel
-              ? `Nivel ${selectedGameLevel()} liberado`
-              : `Nivel ${selectedGameLevel()}`;
+              ? `${formatSelectedGameLevelLabel()} liberado`
+              : formatSelectedGameLevelLabel();
             entry._removeAfterReward = true;
           } else {
             entry.missesWithoutStars = 0;
