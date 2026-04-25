@@ -490,7 +490,7 @@
 
     .welcome-gate__level-orbit {
       --welcome-level-progress: 0deg;
-      width: min(168px, 38vw, 21vh);
+      width: min(236px, 54vw, 29.4vh);
       aspect-ratio: 1;
       border-radius: 50%;
       position: relative;
@@ -10529,7 +10529,11 @@
         const blocked = Boolean(status?.loggedIn && status?.blocked);
         const remaining = Number.isFinite(Number(status?.remaining))
           ? Math.round(Number(status.remaining))
-          : 5000;
+          : (
+            Number.isFinite(Number(status?.dailyEnergyLimit)) && Number.isFinite(Number(status?.usedToday))
+              ? Math.round(Number(status.dailyEnergyLimit) - Number(status.usedToday))
+              : 0
+          );
         state.ui.welcomeEnergyBlocked = blocked;
         state.ui.welcomeEnergyNextResetAt = blocked ? String(status?.nextResetAt || '') : '';
         if (els.welcomeEnergyValue) {
@@ -10553,7 +10557,7 @@
           state.ui.welcomeEnergyBlocked = false;
           state.ui.welcomeEnergyNextResetAt = '';
           if (els.welcomeEnergyValue) {
-            els.welcomeEnergyValue.textContent = '5000';
+            els.welcomeEnergyValue.textContent = '0';
           }
           state.ui.welcomeEnergyReady = true;
           syncWelcomeLoadingState();
@@ -10561,8 +10565,12 @@
           syncWelcomeStartButton();
           return;
         }
+        const fetchedStats = typeof window.PlaytalkEnergy.fetchBooksStats === 'function'
+          ? await window.PlaytalkEnergy.fetchBooksStats().catch(() => null)
+          : null;
         const status = await window.PlaytalkEnergy.getEnergyStatus({
-          user: state.user
+          user: state.user,
+          stats: fetchedStats || undefined
         });
         applyWelcomeEnergyStatus(status);
       }
