@@ -426,7 +426,7 @@
       fill: currentColor;
     }
 
-    .welcome-gate__hero-icon--play {
+    .welcome-gate__hero-icon--action {
       cursor: pointer;
       transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
       background:
@@ -437,8 +437,8 @@
         0 16px 36px rgba(6, 39, 92, 0.34);
     }
 
-    .welcome-gate__hero-icon--play:hover,
-    .welcome-gate__hero-icon--play:focus-visible {
+    .welcome-gate__hero-icon--action:hover,
+    .welcome-gate__hero-icon--action:focus-visible {
       transform: translateY(-2px) scale(1.03);
       border-color: rgba(168, 235, 255, 0.6);
       box-shadow:
@@ -2609,6 +2609,16 @@
 
     .game-card.is-transitioning {
       opacity: 0;
+    }
+
+    .game.is-level-switching #gameHeadCopy,
+    .game.is-level-switching #gameStarsWrap,
+    .game.is-level-switching #gameCard,
+    .game.is-level-switching #gameStatusSlot,
+    .game.is-level-switching #gameChipRow {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1000ms ease;
     }
 
     .game-card.is-sliding-next {
@@ -7479,10 +7489,10 @@
         </div>
         <div class="welcome-gate__profile" id="welcomeProfile">
           <div class="welcome-gate__header">
-            <div class="welcome-gate__hero-icon" aria-hidden="true">
+            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeAudioModeBtn" type="button" aria-label="Comecar modo audio por nivel">
               <svg viewBox="0 0 24 24" focusable="false"><path d="M3 14.5c2.2 0 2.2-5 4.4-5s2.2 8 4.4 8 2.2-11 4.4-11 2.2 5 4.4 5v2c-3 0-3-5-4.4-5s-2.2 11-4.4 11-2.2-8-4.4-8-2.2 5-4.4 5Z"/></svg>
-            </div>
-            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--play" id="welcomeCenterPlayBtn" type="button" aria-label="Comecar modo por nivel">
+            </button>
+            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeCenterPlayBtn" type="button" aria-label="Comecar modo por nivel">
               <svg viewBox="0 0 24 24" focusable="false"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10.5-6.86a1 1 0 0 0 0-1.72L9.5 4.28A1 1 0 0 0 8 5.14Z"/></svg>
             </button>
             <div class="welcome-gate__hero-icon" aria-hidden="true">
@@ -8270,6 +8280,7 @@
         game: {
           active: false,
           levelMode: false,
+          levelAudioMode: false,
           entries: new Map(),
           queue: [],
           currentId: null,
@@ -8381,6 +8392,8 @@
           gameStatusRankToken: 0,
           gameStatusPreviousRank: 0,
           welcomeSelectedLevel: 1,
+          levelModeProgress: {},
+          levelSwitchTimer: 0,
           gameLevelSwipeStartX: 0,
           gameLevelSwipeStartY: 0,
           welcomeEnergyBlocked: false,
@@ -8436,6 +8449,7 @@
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeLogo: document.getElementById('welcomeLogo'),
         welcomeProfile: document.getElementById('welcomeProfile'),
+        welcomeAudioModeBtn: document.getElementById('welcomeAudioModeBtn'),
         welcomeCenterPlayBtn: document.getElementById('welcomeCenterPlayBtn'),
         welcomeUserName: document.getElementById('welcomeUserName'),
         welcomeAvatarPreview: document.getElementById('welcomeAvatarPreview'),
@@ -12546,6 +12560,10 @@
         return Boolean(state.game?.levelMode);
       }
 
+      function isLevelAudioModeActive() {
+        return Boolean(state.game?.levelMode && state.game?.levelAudioMode);
+      }
+
       function userLevelCardTarget(level = currentUserLevel()) {
         const normalizedLevel = normalizeUserLevel(level);
         if (normalizedLevel >= USER_LEVEL_MAX) return USER_LEVEL_MAX;
@@ -12570,6 +12588,12 @@
       function setSelectedGameLevel(level) {
         state.ui.welcomeSelectedLevel = normalizeUserLevel(level);
         syncGameLevelNavigator();
+      }
+
+      function clearLevelSwitchTimer() {
+        if (!state.ui.levelSwitchTimer) return;
+        window.clearTimeout(state.ui.levelSwitchTimer);
+        state.ui.levelSwitchTimer = 0;
       }
 
       function tutorialAudioPath(index) {
@@ -12956,7 +12980,8 @@
         if (!isLevelModeActive()) return false;
         const currentLevel = selectedGameLevel();
         if (currentLevel >= USER_LEVEL_MAX) return false;
-        if (currentLevelProgressCount(currentLevel) < userLevelCardTarget(currentLevel)) return false;
+        const levelProgress = Math.max(0, Number(state.ui.levelModeProgress?.[currentLevel]) || 0);
+        if (levelProgress < userLevelCardTarget(currentLevel)) return false;
         setSelectedGameLevel(currentLevel + 1);
         return true;
       }
@@ -15144,7 +15169,7 @@
 
       function renderGameTouchButton(stageConfig, entry) {
         const stageNumber = Number(entry?.stage) || 0;
-        const useBooksMic = stageNumber === 1 || stageNumber === 3 || stageNumber === 5;
+        const useBooksMic = !isLevelAudioModeActive() && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5);
         els.gameTouchBtn.parentElement.hidden = !useBooksMic;
         els.gameTouchBtn.className = 'game-touch';
         els.gameTouchBtn.textContent = '';
@@ -16010,8 +16035,9 @@
         }
         const activeCount = state.game.entries.size || 0;
         const targetCount = state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT;
+        const currentLevelProgress = Math.max(0, Number(state.ui.levelModeProgress?.[selectedGameLevel()]) || 0);
         els.gameHeaderCopy.textContent = isLevelModeActive()
-          ? `Nivel ${selectedGameLevel()} • ${activeCount}/${targetCount} cartas ativas em loop.`
+          ? `Nivel ${selectedGameLevel()} • ${currentLevelProgress}/${userLevelCardTarget(selectedGameLevel())} concluido • ${activeCount}/${targetCount} cartas ativas em loop.`
           : `${activeCount}/${targetCount} cartas ativas na mesa.`;
         syncGameLevelNavigator();
         updateLevelProgressBar();
@@ -17117,8 +17143,13 @@
         updateGameChips();
         scheduleStageTutorialReminder(entry);
         scheduleStageTwoHintLoop(entry);
-        scheduleFirstStageIdleTimer(entry);
-        scheduleFirstStageMicHint(entry);
+        if (isLevelAudioModeActive()) {
+          clearFirstStageIdleTimer();
+          clearFirstStageMicHint({ clearStatus: true });
+        } else {
+          scheduleFirstStageIdleTimer(entry);
+          scheduleFirstStageMicHint(entry);
+        }
 
         if (typingStage) {
           window.setTimeout(() => {
@@ -17132,7 +17163,7 @@
         if (stageConfig.autoAudio) {
           if (state.game.skipAutoAudioOnce) {
             state.game.skipAutoAudioOnce = false;
-            state.game.canListen = true;
+            state.game.canListen = !isLevelAudioModeActive();
             renderGameTouchButton(stageConfig, entry);
             return;
           }
@@ -17143,8 +17174,16 @@
               });
               playback.finally(() => {
                 if (state.game.currentId === entry.id) {
-                  state.game.canListen = true;
+                  state.game.canListen = !isLevelAudioModeActive();
                   renderGameTouchButton(stageConfig, entry);
+                  if (isLevelAudioModeActive()) {
+                    state.game.queue.push(entry.id);
+                    window.setTimeout(() => {
+                      if (state.game.active && state.game.currentId === entry.id && isLevelAudioModeActive()) {
+                        advanceToNextCard();
+                      }
+                    }, 700);
+                  }
                 }
               });
             }
@@ -17736,28 +17775,34 @@
           return;
         }
 
+        const useCardSlideAnimation = !isLevelModeActive();
         state.game.transitioning = true;
-        els.gameCard.classList.add('is-transitioning');
-        els.gameCard.classList.remove('is-sliding-next');
-        await wait(180);
+        if (useCardSlideAnimation) {
+          els.gameCard.classList.add('is-transitioning');
+          els.gameCard.classList.remove('is-sliding-next');
+          await wait(180);
+        }
         state.game.currentId = state.game.queue.shift();
         if (isTrainingMode()) {
           state.game.training.cycleIndex = Math.max(1, (Number(state.game.training.sourceIds?.length) || 0) - state.game.queue.length);
         }
         persistGameSessionLocally();
         renderCurrentCard();
-        els.gameCard.classList.remove('is-transitioning');
-        playStatusCueAudio(NEXT_CARD_WOOSH_AUDIO_PATH);
-        els.gameCard.classList.add('is-sliding-next');
-        if (!state.game.tutorial.active) {
-          playReportAudio();
+        if (useCardSlideAnimation) {
+          els.gameCard.classList.remove('is-transitioning');
+          playStatusCueAudio(NEXT_CARD_WOOSH_AUDIO_PATH);
+          els.gameCard.classList.add('is-sliding-next');
+          if (!state.game.tutorial.active) {
+            playReportAudio();
+          }
+          await wait(320);
+          els.gameCard.classList.remove('is-sliding-next');
         }
-        await wait(320);
-        els.gameCard.classList.remove('is-sliding-next');
         state.game.transitioning = false;
       }
 
       function seedLevelModeEntries() {
+        clearLevelSwitchTimer();
         state.game.entries.clear();
         state.game.queue = [];
         state.game.currentId = null;
@@ -17768,6 +17813,11 @@
         state.game.transitioning = false;
         state.game.sessionStartedAt = Date.now();
         state.game.levelMode = true;
+        if (!state.ui.levelModeProgress || typeof state.ui.levelModeProgress !== 'object') {
+          state.ui.levelModeProgress = {};
+        }
+        state.ui.levelModeProgress[selectedGameLevel()] = 0;
+        els.game?.classList.remove('is-level-switching');
 
         const level = selectedGameLevel();
         const roundCount = Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount(level));
@@ -17814,11 +17864,27 @@
         advanceToNextCard();
       }
 
+      function scheduleLevelModeRestart(level) {
+        if (Number.isFinite(Number(level))) {
+          setSelectedGameLevel(level);
+        }
+        if (!state.game.active || !isLevelModeActive()) {
+          syncGameLevelNavigator();
+          return;
+        }
+        els.game?.classList.add('is-level-switching');
+        clearLevelSwitchTimer();
+        state.ui.levelSwitchTimer = window.setTimeout(() => {
+          state.ui.levelSwitchTimer = 0;
+          void restartActiveLevelMode(selectedGameLevel());
+        }, 2000);
+      }
+
       function nudgeSelectedGameLevel(delta) {
         const nextLevel = normalizeUserLevel(selectedGameLevel() + delta);
         if (nextLevel === selectedGameLevel()) return;
         if (state.game.active && isLevelModeActive()) {
-          void restartActiveLevelMode(nextLevel);
+          scheduleLevelModeRestart(nextLevel);
           return;
         }
         setSelectedGameLevel(nextLevel);
@@ -17856,6 +17922,7 @@
         state.game.canListen = false;
         state.game.active = true;
         state.game.levelMode = false;
+        state.game.levelAudioMode = false;
         state.game.transitioning = false;
         state.game.sessionStartedAt = Date.now();
         state.game.contextLimit = sourceIds.length;
@@ -17926,6 +17993,7 @@
             state.game.paused = false;
             state.game.canListen = false;
             state.game.active = true;
+            state.game.levelAudioMode = false;
             state.game.sessionStartedAt = Date.now();
 
             const roundCount = Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount());
@@ -18003,6 +18071,7 @@
         state.game.paused = false;
         state.game.canListen = false;
         state.game.active = true;
+        state.game.levelAudioMode = false;
         state.game.transitioning = false;
         state.game.sessionStartedAt = Date.now();
         state.game.tutorial.active = true;
@@ -18047,6 +18116,7 @@
         resetTrainingRuntime();
         state.game.active = false;
         state.game.levelMode = false;
+        state.game.levelAudioMode = false;
         state.game.entries.clear();
         state.game.queue = [];
         state.game.currentId = null;
@@ -18060,6 +18130,8 @@
         }
         document.body.classList.remove('game-open');
         document.body.classList.remove('gameplay-active');
+        clearLevelSwitchTimer();
+        els.game?.classList.remove('is-level-switching');
         resetGameSwipeTracking();
         syncFooterGuardState(null);
         syncGameLevelNavigator();
@@ -18130,7 +18202,11 @@
           if (isHit) {
             setGameStatus('', 'hit');
             playSuccessAudio();
-            promoteCardFromWin(entry);
+            const levelBefore = selectedGameLevel();
+            state.ui.levelModeProgress[levelBefore] = Math.max(
+              0,
+              Number(state.ui.levelModeProgress?.[levelBefore]) || 0
+            ) + 1;
             const movedToNextLevel = advanceSelectedGameLevelIfNeeded();
             els.gameStarCopy.textContent = movedToNextLevel
               ? `Nivel ${selectedGameLevel()} liberado`
@@ -18297,6 +18373,7 @@
 
       async function startRecognition() {
         if (!state.game.active || state.game.transitioning || state.game.listening || state.game.paused) return;
+        if (isLevelAudioModeActive()) return;
         hideGameStageTutorial({ resume: false });
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return;
@@ -18625,24 +18702,29 @@
       }
 
       function bindEvents() {
-        const startLevelModeFromWelcome = async (event) => {
+        const startLevelModeFromWelcome = async (event, options = {}) => {
           if (await handleManualWelcomeNoEnergy(els.welcomeStartBtn || event?.currentTarget)) return;
           if (!(await guardWelcomeEnergy({ previewTarget: [event?.currentTarget, els.welcomeStartBtn].filter(Boolean) }))) return;
           state.game.levelMode = true;
+          state.game.levelAudioMode = Boolean(options.audioOnly);
           state.entry.welcomeStartRequested = true;
           void openAudioCheck();
         };
         els.welcomeStartBtn?.addEventListener('click', (event) => {
-          void startLevelModeFromWelcome(event);
+          void startLevelModeFromWelcome(event, { audioOnly: false });
+        });
+        els.welcomeAudioModeBtn?.addEventListener('click', (event) => {
+          void startLevelModeFromWelcome(event, { audioOnly: true });
         });
         els.welcomeCenterPlayBtn?.addEventListener('click', (event) => {
-          void startLevelModeFromWelcome(event);
+          void startLevelModeFromWelcome(event, { audioOnly: false });
         });
         els.welcomeLogo?.addEventListener('click', (event) => {
           void (async () => {
             if (await handleManualWelcomeNoEnergy(els.welcomeStartBtn || event.currentTarget)) return;
             if (!(await guardWelcomeEnergy({ previewTarget: [event.currentTarget, els.welcomeStartBtn] }))) return;
             state.game.levelMode = true;
+            state.game.levelAudioMode = false;
             state.entry.welcomeStartRequested = true;
             void openAudioCheck();
           })();
