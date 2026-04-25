@@ -533,7 +533,7 @@
     .welcome-gate__level-title {
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
       font-size: clamp(28px, 6.4vw, 42px);
-      font-weight: 500;
+      font-weight: 700;
       line-height: 1;
       color: rgba(239, 250, 255, 0.98);
       order: 2;
@@ -547,6 +547,7 @@
       letter-spacing: -0.08em;
       color: #ffffff;
       order: 1;
+      margin-bottom: 10px;
       text-shadow:
         0 10px 26px rgba(0, 0, 0, 0.18),
         0 0 18px rgba(135, 224, 255, 0.16);
@@ -554,6 +555,50 @@
 
     .welcome-gate__level-copy {
       display: none;
+    }
+
+    .welcome-gate__energy {
+      display: grid;
+      justify-items: center;
+      gap: 2px;
+      margin-top: -2px;
+      color: #ffffff;
+      text-align: center;
+    }
+
+    .welcome-gate__energy-value {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(28px, 6vw, 42px);
+      font-weight: 700;
+      line-height: 1;
+      color: rgba(255, 255, 255, 0.98);
+    }
+
+    .welcome-gate__energy-icon {
+      width: 18px;
+      height: 26px;
+      display: inline-flex;
+      color: #ffffff;
+      flex: 0 0 auto;
+    }
+
+    .welcome-gate__energy-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      fill: currentColor;
+    }
+
+    .welcome-gate__energy-label {
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(12px, 2.8vw, 16px);
+      font-weight: 200;
+      line-height: 1;
+      color: rgba(255, 255, 255, 0.92);
     }
 
     .welcome-gate__copy {
@@ -7205,6 +7250,15 @@
         </div>
         <p class="welcome-gate__copy" id="welcomeCopy"></p>
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button"><img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora"></button>
+        <div class="welcome-gate__energy" id="welcomeEnergy">
+          <div class="welcome-gate__energy-value">
+            <span class="welcome-gate__energy-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M13 2 5 14h5l-1 8 8-12h-5l1-8Z"/></svg>
+            </span>
+            <span id="welcomeEnergyValue">5000</span>
+          </div>
+          <div class="welcome-gate__energy-label">Energias restantes</div>
+        </div>
         <p class="welcome-gate__blocked-note" id="welcomeBlockedNote" aria-live="polite" hidden>Mais energias amanhã</p>
       </div>
       <p class="welcome-gate__admin-stats" id="welcomeAdminStats" hidden></p>
@@ -8119,6 +8173,7 @@
         welcomeTrainingModes: document.getElementById('welcomeTrainingModes'),
         welcomeCopy: document.getElementById('welcomeCopy'),
         welcomeStartBtn: document.getElementById('welcomeStartBtn'),
+        welcomeEnergyValue: document.getElementById('welcomeEnergyValue'),
         welcomeBlockedNote: document.getElementById('welcomeBlockedNote'),
         welcomeAdminStats: document.getElementById('welcomeAdminStats'),
         welcomeBgAdmin: document.getElementById('welcomeBgAdmin'),
@@ -10405,8 +10460,14 @@
 
       function applyWelcomeEnergyStatus(status) {
         const blocked = Boolean(status?.loggedIn && status?.blocked);
+        const remaining = Number.isFinite(Number(status?.remaining))
+          ? Math.round(Number(status.remaining))
+          : 5000;
         state.ui.welcomeEnergyBlocked = blocked;
         state.ui.welcomeEnergyNextResetAt = blocked ? String(status?.nextResetAt || '') : '';
+        if (els.welcomeEnergyValue) {
+          els.welcomeEnergyValue.textContent = String(remaining);
+        }
         if (window.PlaytalkEnergy?.rememberEnergyStatus) {
           window.PlaytalkEnergy.rememberEnergyStatus(status);
         }
@@ -10422,6 +10483,9 @@
         if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.getEnergyStatus !== 'function') {
           state.ui.welcomeEnergyBlocked = false;
           state.ui.welcomeEnergyNextResetAt = '';
+          if (els.welcomeEnergyValue) {
+            els.welcomeEnergyValue.textContent = '5000';
+          }
           stopWelcomeEnergyCountdown();
           syncWelcomeStartButton();
           return;
