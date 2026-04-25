@@ -383,24 +383,67 @@
     }
 
     .welcome-gate__header {
-      display: block;
-      visibility: hidden;
-      opacity: 0;
-      pointer-events: none;
+      display: grid;
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
       position: relative;
       min-height: 12vh;
       height: 12vh;
       width: 100%;
-      grid-template-columns: none;
-      align-items: stretch;
-      gap: 0;
-      padding: 0;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: center;
+      gap: 18px;
+      padding: 8px 12px 0;
       margin-inline: 0;
       background: transparent;
       box-shadow: none;
-      text-align: left;
-      justify-items: start;
+      text-align: center;
+      justify-items: stretch;
       border-radius: 0;
+    }
+
+    .welcome-gate__hero-icon {
+      width: min(18vw, 82px);
+      height: min(18vw, 82px);
+      display: grid;
+      place-items: center;
+      margin: 0 auto;
+      border-radius: 28px;
+      border: 1px solid rgba(121, 213, 255, 0.22);
+      background:
+        linear-gradient(180deg, rgba(17, 46, 108, 0.62), rgba(4, 12, 32, 0.72)),
+        radial-gradient(circle at 50% 16%, rgba(170, 240, 255, 0.24), transparent 58%);
+      box-shadow:
+        inset 0 0 18px rgba(128, 228, 255, 0.12),
+        0 12px 28px rgba(0, 0, 0, 0.22);
+      color: #dff8ff;
+    }
+
+    .welcome-gate__hero-icon svg {
+      width: 48%;
+      height: 48%;
+      fill: currentColor;
+    }
+
+    .welcome-gate__hero-icon--play {
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+      background:
+        linear-gradient(180deg, rgba(17, 78, 138, 0.92), rgba(6, 23, 55, 0.96)),
+        radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.24), transparent 58%);
+      box-shadow:
+        inset 0 0 20px rgba(187, 244, 255, 0.16),
+        0 16px 36px rgba(6, 39, 92, 0.34);
+    }
+
+    .welcome-gate__hero-icon--play:hover,
+    .welcome-gate__hero-icon--play:focus-visible {
+      transform: translateY(-2px) scale(1.03);
+      border-color: rgba(168, 235, 255, 0.6);
+      box-shadow:
+        inset 0 0 20px rgba(212, 247, 255, 0.2),
+        0 18px 42px rgba(10, 57, 128, 0.42);
     }
 
     .welcome-gate__level-copy-panel {
@@ -2785,6 +2828,66 @@
       align-items: center;
       justify-content: center;
       opacity: 1;
+    }
+
+    .game-level-strip {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      width: 100%;
+      max-width: 360px;
+      padding: 4px 0;
+      touch-action: pan-x;
+      user-select: none;
+    }
+
+    .game.is-level-mode .game-level-strip {
+      display: flex;
+    }
+
+    .game.is-level-mode .stars {
+      display: none;
+    }
+
+    .game.is-level-mode .stars-wrap p {
+      display: none;
+    }
+
+    .game-level-strip__btn {
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      border: 1px solid rgba(120, 201, 255, 0.28);
+      border-radius: 999px;
+      background: rgba(9, 32, 78, 0.68);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #e8fbff;
+      box-shadow: inset 0 0 14px rgba(147, 231, 255, 0.12);
+    }
+
+    .game-level-strip__btn svg {
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
+    }
+
+    .game-level-strip__btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    .game-level-strip__label {
+      min-width: 140px;
+      text-align: center;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(22px, 4vw, 30px);
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 0.02em;
+      text-shadow: 0 8px 18px rgba(0, 0, 0, 0.32);
     }
 
     .star {
@@ -7303,8 +7406,28 @@
       .welcome-gate__header {
         min-height: 12vh;
         height: 12vh;
-        gap: 0;
-        padding: 0;
+        gap: 12px;
+        padding: 8px 10px 0;
+      }
+
+      .welcome-gate__hero-icon {
+        width: min(21vw, 72px);
+        height: min(21vw, 72px);
+        border-radius: 24px;
+      }
+
+      .game-level-strip {
+        gap: 10px;
+      }
+
+      .game-level-strip__label {
+        min-width: 116px;
+        font-size: clamp(20px, 5vw, 26px);
+      }
+
+      .game-level-strip__btn {
+        width: 42px;
+        height: 42px;
       }
 
       .welcome-gate__identity,
@@ -7355,7 +7478,17 @@
           <div class="welcome-gate__loading-loop"></div>
         </div>
         <div class="welcome-gate__profile" id="welcomeProfile">
-          <div class="welcome-gate__header" aria-hidden="true"></div>
+          <div class="welcome-gate__header">
+            <div class="welcome-gate__hero-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M3 14.5c2.2 0 2.2-5 4.4-5s2.2 8 4.4 8 2.2-11 4.4-11 2.2 5 4.4 5v2c-3 0-3-5-4.4-5s-2.2 11-4.4 11-2.2-8-4.4-8-2.2 5-4.4 5Z"/></svg>
+            </div>
+            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--play" id="welcomeCenterPlayBtn" type="button" aria-label="Comecar modo por nivel">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10.5-6.86a1 1 0 0 0 0-1.72L9.5 4.28A1 1 0 0 0 8 5.14Z"/></svg>
+            </button>
+            <div class="welcome-gate__hero-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M5 5.75A3.75 3.75 0 0 1 8.75 2h6.5A3.75 3.75 0 0 1 19 5.75v4.5A3.75 3.75 0 0 1 15.25 14H11l-4.44 3.7A.75.75 0 0 1 5 17.12V14.8A3.74 3.74 0 0 1 2 11.25v-5.5A.75.75 0 0 1 5 5.75Z"/></svg>
+            </div>
+          </div>
           <div class="welcome-gate__level-copy-panel">
             <p class="welcome-gate__level-heading" id="welcomeLevelHeading">Você está no nível 1</p>
           </div>
@@ -7544,6 +7677,15 @@
         </div>
 
         <div class="stars-wrap starscreen" id="gameStarsWrap">
+          <div class="game-level-strip" id="gameLevelStrip" hidden>
+            <button class="game-level-strip__btn" id="gameLevelPrevBtn" type="button" aria-label="Voltar nivel">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 5.4 8.8 12l6.6 6.6-1.4 1.4L6 12l8-8z"/></svg>
+            </button>
+            <div class="game-level-strip__label" id="gameLevelLabel">Nivel 1</div>
+            <button class="game-level-strip__btn" id="gameLevelNextBtn" type="button" aria-label="Avancar nivel">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.6 18.6 6.6-6.6-6.6-6.6L10 4l8 8-8 8z"/></svg>
+            </button>
+          </div>
           <div class="stars" id="gameStars" aria-label="Estrelas do card"></div>
           <p id="gameStarCopy" class="game-star-copy">Cada acerto libera uma estrela. Cinco estrelas ganham o card.</p>
         </div>
@@ -8061,6 +8203,7 @@
           playTimeMs: 0,
           speakings: 0,
           listenings: 0,
+          readings: 0,
           secondStarErrorHeard: false,
           trainingTimeMs: 0,
           pronunciationSamples: [],
@@ -8126,6 +8269,7 @@
         },
         game: {
           active: false,
+          levelMode: false,
           entries: new Map(),
           queue: [],
           currentId: null,
@@ -8236,6 +8380,9 @@
           gameStatusRankTimer: 0,
           gameStatusRankToken: 0,
           gameStatusPreviousRank: 0,
+          welcomeSelectedLevel: 1,
+          gameLevelSwipeStartX: 0,
+          gameLevelSwipeStartY: 0,
           welcomeEnergyBlocked: false,
           welcomeEnergyNextResetAt: '',
           welcomeEnergyTimer: 0,
@@ -8289,6 +8436,7 @@
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeLogo: document.getElementById('welcomeLogo'),
         welcomeProfile: document.getElementById('welcomeProfile'),
+        welcomeCenterPlayBtn: document.getElementById('welcomeCenterPlayBtn'),
         welcomeUserName: document.getElementById('welcomeUserName'),
         welcomeAvatarPreview: document.getElementById('welcomeAvatarPreview'),
         welcomeUserLevel: document.getElementById('welcomeUserLevel'),
@@ -8402,6 +8550,10 @@
         gameStarsWrap: document.getElementById('gameStarsWrap'),
         gameTranslationSlot: document.getElementById('gameTranslationSlot'),
         gameResultsScreen: document.getElementById('gameResultsScreen'),
+        gameLevelStrip: document.getElementById('gameLevelStrip'),
+        gameLevelPrevBtn: document.getElementById('gameLevelPrevBtn'),
+        gameLevelLabel: document.getElementById('gameLevelLabel'),
+        gameLevelNextBtn: document.getElementById('gameLevelNextBtn'),
         gameStatusSlot: document.getElementById('gameStatusSlot'),
         gameKeyboardHost: document.getElementById('gameKeyboardHost'),
         gameControlsProxy: document.getElementById('gameControlsProxy'),
@@ -8907,6 +9059,7 @@
           playTimeMs: Math.max(0, Math.round(Number(raw?.playTimeMs) || 0)),
           speakings: Math.max(0, Math.round(Number(raw?.speakings) || 0)),
           listenings: Math.max(0, Math.round(Number(raw?.listenings) || 0)),
+          readings: Math.max(0, Math.round(Number(raw?.readings) || 0)),
           secondStarErrorHeard: Boolean(raw?.secondStarErrorHeard || raw?.second_star_error_heard),
           trainingTimeMs,
           pronunciationSamples: normalizedPronunciationSamples,
@@ -8920,6 +9073,7 @@
         return stats.playTimeMs > 0
           || stats.speakings > 0
           || stats.listenings > 0
+          || stats.readings > 0
           || stats.trainingTimeMs > 0
           || stats.pronunciationSamples.length > 0;
       }
@@ -9070,6 +9224,11 @@
         if (safeText(entry.lastReadingChargeKey) === normalizedStageKey) return 0;
         const chars = countMetricChars(card?.english || card?.portuguese || '');
         if (chars <= 0) return 0;
+        state.stats = normalizeStatsSnapshot({
+          ...state.stats,
+          readings: Number(state.stats.readings || 0) + chars
+        });
+        saveUserStats();
         entry.lastReadingChargeKey = normalizedStageKey;
         void postImmediateEnergyConsumption({ readingCharsDelta: chars });
         return chars;
@@ -9419,6 +9578,7 @@
           playTimeMs: Number(state.stats.playTimeMs || 0) + Number(guestSnapshot.stats?.playTimeMs || 0),
           speakings: Number(state.stats.speakings || 0) + Number(guestSnapshot.stats?.speakings || 0),
           listenings: Number(state.stats.listenings || 0) + Number(guestSnapshot.stats?.listenings || 0),
+          readings: Number(state.stats.readings || 0) + Number(guestSnapshot.stats?.readings || 0),
           trainingTimeMs: Number(state.stats.trainingTimeMs || 0) + Number(guestSnapshot.stats?.trainingTimeMs || 0),
           pronunciationSamples: [
             ...(Array.isArray(state.stats.pronunciationSamples) ? state.stats.pronunciationSamples : []),
@@ -10861,6 +11021,9 @@
         if (!els.welcomeUserLevelNumber || !els.welcomeLevelProgressBar) return;
         if (!state.entry.sessionResolved) return;
         const level = currentUserLevel();
+        if (!Number(state.ui.welcomeSelectedLevel)) {
+          setSelectedGameLevel(level);
+        }
         const levelTarget = userLevelCardTarget(level);
         const progressCount = level >= USER_LEVEL_MAX
           ? levelTarget
@@ -12375,6 +12538,14 @@
         return Math.max(USER_LEVEL_MIN, Math.min(USER_LEVEL_MAX, parsed));
       }
 
+      function selectedGameLevel() {
+        return normalizeUserLevel(state.ui.welcomeSelectedLevel || currentUserLevel());
+      }
+
+      function isLevelModeActive() {
+        return Boolean(state.game?.levelMode);
+      }
+
       function userLevelCardTarget(level = currentUserLevel()) {
         const normalizedLevel = normalizeUserLevel(level);
         if (normalizedLevel >= USER_LEVEL_MAX) return USER_LEVEL_MAX;
@@ -12394,6 +12565,11 @@
         return Number.isInteger(parsed) && parsed >= USER_LEVEL_MIN && parsed <= USER_LEVEL_MAX
           ? parsed
           : null;
+      }
+
+      function setSelectedGameLevel(level) {
+        state.ui.welcomeSelectedLevel = normalizeUserLevel(level);
+        syncGameLevelNavigator();
       }
 
       function tutorialAudioPath(index) {
@@ -12722,6 +12898,12 @@
         return normalizeUserLevel(state.userLevel || state.user?.level || 1);
       }
 
+      function isCardPlayableInLevelMode(card) {
+        return !isCardHiddenForUser(card?.id)
+          && hasCoreFlashcardText(card)
+          && hasPlayableFlashcardImage(card);
+      }
+
       function cardDeckLevel(card) {
         return normalizeDeckLevel(card?.deckLevel);
       }
@@ -12742,6 +12924,41 @@
           total += 1;
         });
         return total;
+      }
+
+      function buildLevelModeSourceCards(level = selectedGameLevel()) {
+        const targetLevel = normalizeUserLevel(level);
+        const allPlayableCards = state.allCards.filter(isCardPlayableInLevelMode);
+        const exactLevelCards = allPlayableCards.filter((card) => cardDeckLevel(card) === targetLevel);
+        return exactLevelCards.length ? exactLevelCards : allPlayableCards;
+      }
+
+      function syncGameLevelNavigator() {
+        const active = isLevelModeActive() && !isTrainingMode();
+        els.game?.classList.toggle('is-level-mode', active);
+        if (els.gameLevelStrip) {
+          els.gameLevelStrip.hidden = !active;
+        }
+        if (!active) return;
+        const level = selectedGameLevel();
+        if (els.gameLevelLabel) {
+          els.gameLevelLabel.textContent = `Nivel ${level}`;
+        }
+        if (els.gameLevelPrevBtn) {
+          els.gameLevelPrevBtn.disabled = level <= USER_LEVEL_MIN;
+        }
+        if (els.gameLevelNextBtn) {
+          els.gameLevelNextBtn.disabled = level >= USER_LEVEL_MAX;
+        }
+      }
+
+      function advanceSelectedGameLevelIfNeeded() {
+        if (!isLevelModeActive()) return false;
+        const currentLevel = selectedGameLevel();
+        if (currentLevel >= USER_LEVEL_MAX) return false;
+        if (currentLevelProgressCount(currentLevel) < userLevelCardTarget(currentLevel)) return false;
+        setSelectedGameLevel(currentLevel + 1);
+        return true;
       }
 
       function updateLevelProgressBar() {
@@ -12778,6 +12995,9 @@
       }
 
       function baseCandidateCards() {
+        if (isLevelModeActive()) {
+          return buildLevelModeSourceCards(selectedGameLevel());
+        }
         if (isAdminUser()) {
           return state.allCards.filter((card) => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
         }
@@ -12787,6 +13007,9 @@
       }
 
       function playableVisibleGameCards() {
+        if (isLevelModeActive()) {
+          return state.allCards.filter(isCardPlayableInLevelMode);
+        }
         return state.allCards.filter((card) => (
           !isCardHiddenForUser(card.id)
           && hasCoreFlashcardText(card)
@@ -14843,6 +15066,9 @@
       }
 
       function resolveGameStageConfig(entry) {
+        if (isLevelModeActive() && !isTrainingMode()) {
+          return STAGES[1];
+        }
         const baseConfig = STAGES[entry?.stage] || STAGES[1];
         if (!hasStageTwoPortugueseOverlay(entry) || Number(entry?.stage) === 2) {
           return baseConfig;
@@ -15776,11 +16002,18 @@
           els.gameQueueValue.textContent = String(state.stats.listenings || 0);
         }
         if (els.gameOwnedValue) {
-          els.gameOwnedValue.textContent = String(accessibleFlashcardsCount());
+          els.gameOwnedValue.textContent = String(state.stats.readings || 0);
+        }
+        const ownedLabel = els.gameOwnedChip?.querySelector('.game-chip__label');
+        if (ownedLabel) {
+          ownedLabel.textContent = 'Readings';
         }
         const activeCount = state.game.entries.size || 0;
         const targetCount = state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT;
-        els.gameHeaderCopy.textContent = `${activeCount}/${targetCount} cartas ativas na mesa.`;
+        els.gameHeaderCopy.textContent = isLevelModeActive()
+          ? `Nivel ${selectedGameLevel()} • ${activeCount}/${targetCount} cartas ativas em loop.`
+          : `${activeCount}/${targetCount} cartas ativas na mesa.`;
+        syncGameLevelNavigator();
         updateLevelProgressBar();
       }
 
@@ -16807,7 +17040,9 @@
             els.gamePhaseWord.classList.remove('is-visible', 'is-english', 'is-portuguese', 'is-fading');
           }
         }
-        els.gameStep.textContent = stageConfig.badge;
+        els.gameStep.textContent = isLevelModeActive() && !isTrainingMode()
+          ? `Nivel ${selectedGameLevel()}`
+          : stageConfig.badge;
         els.gameWord.className = `game-word${stageConfig.showWord === false ? ' is-hidden' : ' is-chip'}`;
         els.gameSubword.className = `game-subword${subword ? ' is-chip' : ' is-hidden'}`;
         els.gameWord.classList.remove('is-stage-swap-hidden');
@@ -16869,8 +17104,14 @@
           state.game.training.cycleIndex = Math.max(1, (Number(state.game.training.sourceIds?.length) || 0) - state.game.queue.length);
           renderTrainingSequence();
         } else {
-          renderStars(entry.stars);
-          els.gameStarCopy.textContent = '';
+          if (isLevelModeActive()) {
+            els.gameStars.innerHTML = '';
+            els.gameStarCopy.textContent = `Nivel ${selectedGameLevel()}`;
+            syncGameLevelNavigator();
+          } else {
+            renderStars(entry.stars);
+            els.gameStarCopy.textContent = '';
+          }
         }
         updateGuestFirstStarResultsBanner(entry, false);
         updateGameChips();
@@ -17516,6 +17757,73 @@
         state.game.transitioning = false;
       }
 
+      function seedLevelModeEntries() {
+        state.game.entries.clear();
+        state.game.queue = [];
+        state.game.currentId = null;
+        state.game.listening = false;
+        state.game.paused = false;
+        state.game.canListen = false;
+        state.game.active = true;
+        state.game.transitioning = false;
+        state.game.sessionStartedAt = Date.now();
+        state.game.levelMode = true;
+
+        const level = selectedGameLevel();
+        const roundCount = Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount(level));
+        state.game.contextLimit = currentGameActiveCardCap(level, roundCount);
+        state.game.selectedCount = roundCount;
+
+        buildOrderedDeckSelection(buildLevelModeSourceCards(level), roundCount).forEach((card) => {
+          const entry = createGameEntry(card, 'base');
+          entry.stage = 1;
+          entry.stars = 0;
+          state.game.entries.set(entry.id, entry);
+          state.game.queue.push(entry.id);
+        });
+        persistGameSessionLocally();
+        syncGameLevelNavigator();
+        return state.game.entries.size > 0;
+      }
+
+      async function restartActiveLevelMode(level) {
+        if (Number.isFinite(Number(level))) {
+          setSelectedGameLevel(level);
+        }
+        if (!state.game.active || !isLevelModeActive()) {
+          syncGameLevelNavigator();
+          return;
+        }
+        cleanupGameRecognition();
+        stopActiveAudio();
+        clearGameLanguageSwapTimer();
+        clearTypingPromptLoop();
+        clearTypingSkipAutomation();
+        clearStageTutorialReminder();
+        hideGameStageTutorial({ resume: false });
+        clearStageTwoHintTimer();
+        clearFirstStageIdleTimer();
+        clearFirstStageMicHint({ clearStatus: true });
+        clearStageHintLoop({ clearStatus: true });
+        clearPendingRewardSeal();
+        clearGameSessionLocally();
+        seedLevelModeEntries();
+        updateGameChips();
+        renderCurrentCard();
+        await wait(80);
+        advanceToNextCard();
+      }
+
+      function nudgeSelectedGameLevel(delta) {
+        const nextLevel = normalizeUserLevel(selectedGameLevel() + delta);
+        if (nextLevel === selectedGameLevel()) return;
+        if (state.game.active && isLevelModeActive()) {
+          void restartActiveLevelMode(nextLevel);
+          return;
+        }
+        setSelectedGameLevel(nextLevel);
+      }
+
       function beginTrainingGame(stage, count) {
         const targetStage = normalizeTrainingStage(stage);
         if (!targetStage) return;
@@ -17547,6 +17855,7 @@
         state.game.paused = false;
         state.game.canListen = false;
         state.game.active = true;
+        state.game.levelMode = false;
         state.game.transitioning = false;
         state.game.sessionStartedAt = Date.now();
         state.game.contextLimit = sourceIds.length;
@@ -17602,40 +17911,46 @@
         if (!hasTutorialPlanetUnlocked()) {
           clearGameSessionLocally();
         }
-        const restored = hasTutorialPlanetUnlocked() && applyGameSessionSnapshot(readGameSessionForUser(), { addFreshCard: true });
+        const restored = !isLevelModeActive()
+          && hasTutorialPlanetUnlocked()
+          && applyGameSessionSnapshot(readGameSessionForUser(), { addFreshCard: true });
         if (!restored) {
           resetTutorialRuntime({ preserveCompletion: true });
-          state.game.entries.clear();
-          state.game.queue = [];
-          state.game.currentId = null;
-          state.game.listening = false;
-          state.game.paused = false;
-          state.game.canListen = false;
-          state.game.active = true;
-          state.game.sessionStartedAt = Date.now();
+          if (isLevelModeActive()) {
+            seedLevelModeEntries();
+          } else {
+            state.game.entries.clear();
+            state.game.queue = [];
+            state.game.currentId = null;
+            state.game.listening = false;
+            state.game.paused = false;
+            state.game.canListen = false;
+            state.game.active = true;
+            state.game.sessionStartedAt = Date.now();
 
-          const roundCount = Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount());
-          state.game.contextLimit = currentGameActiveCardCap(currentUserLevel(), roundCount);
-          state.game.selectedCount = roundCount;
-          const reviewCards = readyReviewCards().slice(0, REVIEW_SLOT_LIMIT);
-          const basePool = applyEarlyFlashcardFilter(baseRoundSourceCards());
-          const roundGroups = buildLevelAwareRoundGroups(
-            basePool,
-            reviewCards,
-            roundCount
-          );
-          const chosenCards = roundGroups.baseCards;
-          chosenCards.forEach(card => {
-            const entry = createGameEntry(card, 'base');
-            state.game.entries.set(entry.id, entry);
-            state.game.queue.push(entry.id);
-          });
-          roundGroups.reviewCards.forEach(card => {
-            const entry = createGameEntry(card, 'review');
-            state.game.entries.set(entry.id, entry);
-            state.game.queue.push(entry.id);
-          });
-          persistGameSessionLocally();
+            const roundCount = Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount());
+            state.game.contextLimit = currentGameActiveCardCap(currentUserLevel(), roundCount);
+            state.game.selectedCount = roundCount;
+            const reviewCards = readyReviewCards().slice(0, REVIEW_SLOT_LIMIT);
+            const basePool = applyEarlyFlashcardFilter(baseRoundSourceCards());
+            const roundGroups = buildLevelAwareRoundGroups(
+              basePool,
+              reviewCards,
+              roundCount
+            );
+            const chosenCards = roundGroups.baseCards;
+            chosenCards.forEach(card => {
+              const entry = createGameEntry(card, 'base');
+              state.game.entries.set(entry.id, entry);
+              state.game.queue.push(entry.id);
+            });
+            roundGroups.reviewCards.forEach(card => {
+              const entry = createGameEntry(card, 'review');
+              state.game.entries.set(entry.id, entry);
+              state.game.queue.push(entry.id);
+            });
+            persistGameSessionLocally();
+          }
         }
 
         els.topbar.classList.add('is-hidden');
@@ -17731,6 +18046,7 @@
         resetTutorialRuntime({ preserveCompletion: true });
         resetTrainingRuntime();
         state.game.active = false;
+        state.game.levelMode = false;
         state.game.entries.clear();
         state.game.queue = [];
         state.game.currentId = null;
@@ -17746,6 +18062,7 @@
         document.body.classList.remove('gameplay-active');
         resetGameSwipeTracking();
         syncFooterGuardState(null);
+        syncGameLevelNavigator();
         els.game.classList.remove('is-active');
         closeGameReportMenu();
         await wait(180);
@@ -17800,6 +18117,44 @@
           if (!state.game.active || state.game.currentId !== entry.id) return;
           removeGameEntry(entry.id);
           await advanceToNextCard();
+          return;
+        }
+
+        if (isLevelModeActive()) {
+          clearStageHintLoop({ clearStatus: true });
+          clearFirstStageMicHint({ clearStatus: true });
+          clearStageTwoHintTimer();
+          entry.stage = 1;
+          entry.stars = 0;
+          entry.typingMistakes = 0;
+          if (isHit) {
+            setGameStatus('', 'hit');
+            playSuccessAudio();
+            promoteCardFromWin(entry);
+            const movedToNextLevel = advanceSelectedGameLevelIfNeeded();
+            els.gameStarCopy.textContent = movedToNextLevel
+              ? `Nivel ${selectedGameLevel()} liberado`
+              : `Nivel ${selectedGameLevel()}`;
+            entry._removeAfterReward = true;
+          } else {
+            entry.missesWithoutStars = 0;
+            setGameStatus('', 'miss');
+            state.game.queue.push(entry.id);
+          }
+          updateGameChips();
+          await playStageResponseSequence(1, card, { skipPromptAudio: !isHit });
+          await wait(isHit ? 260 : 520);
+          if (entry._removeAfterReward) {
+            entry._removeAfterReward = false;
+            removeGameEntry(entry.id);
+            const activeLimit = Math.max(MIN_GAME_CONTEXT_LIMIT, Number(state.game.contextLimit) || currentGameActiveCardCap(selectedGameLevel()));
+            while (state.game.entries.size < activeLimit) {
+              if (!refillGameEntry(entry.pool || 'base', activeLimit)) break;
+            }
+          }
+          if (state.game.active) {
+            advanceToNextCard();
+          }
           return;
         }
 
@@ -18270,21 +18625,48 @@
       }
 
       function bindEvents() {
+        const startLevelModeFromWelcome = async (event) => {
+          if (await handleManualWelcomeNoEnergy(els.welcomeStartBtn || event?.currentTarget)) return;
+          if (!(await guardWelcomeEnergy({ previewTarget: [event?.currentTarget, els.welcomeStartBtn].filter(Boolean) }))) return;
+          state.game.levelMode = true;
+          state.entry.welcomeStartRequested = true;
+          void openAudioCheck();
+        };
         els.welcomeStartBtn?.addEventListener('click', (event) => {
-          void (async () => {
-            if (await handleManualWelcomeNoEnergy(event.currentTarget)) return;
-            if (!(await guardWelcomeEnergy({ previewTarget: event.currentTarget }))) return;
-            state.entry.welcomeStartRequested = true;
-            void openAudioCheck();
-          })();
+          void startLevelModeFromWelcome(event);
+        });
+        els.welcomeCenterPlayBtn?.addEventListener('click', (event) => {
+          void startLevelModeFromWelcome(event);
         });
         els.welcomeLogo?.addEventListener('click', (event) => {
           void (async () => {
             if (await handleManualWelcomeNoEnergy(els.welcomeStartBtn || event.currentTarget)) return;
             if (!(await guardWelcomeEnergy({ previewTarget: [event.currentTarget, els.welcomeStartBtn] }))) return;
+            state.game.levelMode = true;
             state.entry.welcomeStartRequested = true;
             void openAudioCheck();
           })();
+        });
+        els.gameLevelPrevBtn?.addEventListener('click', () => {
+          nudgeSelectedGameLevel(-1);
+        });
+        els.gameLevelNextBtn?.addEventListener('click', () => {
+          nudgeSelectedGameLevel(1);
+        });
+        els.gameLevelStrip?.addEventListener('pointerdown', (event) => {
+          state.ui.gameLevelSwipeStartX = Number(event.clientX) || 0;
+          state.ui.gameLevelSwipeStartY = Number(event.clientY) || 0;
+        });
+        els.gameLevelStrip?.addEventListener('pointerup', (event) => {
+          const startX = Number(state.ui.gameLevelSwipeStartX) || 0;
+          const startY = Number(state.ui.gameLevelSwipeStartY) || 0;
+          state.ui.gameLevelSwipeStartX = 0;
+          state.ui.gameLevelSwipeStartY = 0;
+          if (!startX && !startY) return;
+          const deltaX = (Number(event.clientX) || 0) - startX;
+          const deltaY = (Number(event.clientY) || 0) - startY;
+          if (Math.abs(deltaX) < 36 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+          nudgeSelectedGameLevel(deltaX < 0 ? 1 : -1);
         });
         // Guest account link removed from the play screen.
         els.soundTestPlayBtn?.addEventListener('click', () => {
