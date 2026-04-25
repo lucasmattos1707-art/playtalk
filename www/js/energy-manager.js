@@ -73,7 +73,7 @@
     const totalSeconds = Math.ceil(diffMs / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    return `${hours}:${String(minutes).padStart(2, '0')}`;
   }
 
   function resolveEnergyResetTargetMs(nextResetAt) {
@@ -397,10 +397,16 @@
 
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown-label {
         display: block;
-        font-size: clamp(20px, 5vw, 28px);
+        font-size: clamp(34px, 8.5vw, 48px);
         font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
         font-weight: 300;
+        line-height: 0.96;
+        white-space: normal;
         color: rgba(255, 255, 255, 0.96);
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown-label span {
+        display: block;
       }
 
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown-value {
@@ -411,7 +417,7 @@
         font-variant-numeric: tabular-nums;
         letter-spacing: 0.04em;
         line-height: 1;
-        text-shadow: 0 8px 24px rgba(0, 0, 0, 0.26);
+        text-shadow: none;
       }
 
       .playtalk-energy-gate__premium {
@@ -423,6 +429,10 @@
         color: #ffffff;
         font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
         font-size: clamp(20px, 4.6vw, 32px);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
         box-shadow:
           0 0 24px rgba(192, 132, 252, 0.42),
           0 16px 34px rgba(0, 0, 0, 0.24);
@@ -445,12 +455,45 @@
           0 0 42px rgba(147, 51, 234, 0.34);
       }
 
+      .playtalk-energy-gate__premium-crown {
+        width: 22px;
+        height: 22px;
+        display: inline-block;
+        color: #ffd84a;
+        filter:
+          drop-shadow(0 0 8px rgba(255, 216, 74, 0.68))
+          drop-shadow(0 0 18px rgba(255, 186, 0, 0.26));
+        flex: 0 0 auto;
+      }
+
+      .playtalk-energy-gate__premium-crown svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        fill: currentColor;
+      }
+
+      .playtalk-energy-gate__premium-note {
+        display: none;
+        margin: -2px 0 0;
+        font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
+        font-size: clamp(15px, 3.8vw, 20px);
+        font-weight: 300;
+        line-height: 1.05;
+        color: rgba(255, 255, 255, 0.92);
+        text-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      }
+
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__close {
         display: none;
       }
 
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__nav {
         display: grid;
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__premium-note {
+        display: block;
       }
 
       .playtalk-energy-preview-blocked {
@@ -526,16 +569,21 @@
     const countdownLabel = document.createElement('span');
     countdownLabel.className = 'playtalk-energy-gate__countdown-label';
     countdownLabel.id = 'playtalkEnergyGateCountdownLabel';
-    countdownLabel.textContent = 'Mais energias em';
+    countdownLabel.innerHTML = '<span>Mais energias</span><span>em</span>';
 
     const premiumButton = document.createElement('button');
     premiumButton.className = 'playtalk-energy-gate__premium';
     premiumButton.id = 'playtalkEnergyGatePremium';
     premiumButton.type = 'button';
-    premiumButton.textContent = 'Assinar premium';
+    premiumButton.innerHTML = '<span class="playtalk-energy-gate__premium-crown" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 17h16l-1.2-8.54a.75.75 0 0 0-1.2-.48L14 10.75 11.2 6.9a.75.75 0 0 0-1.2 0L7 10.75 4.4 7.98a.75.75 0 0 0-1.2.48L4 17zm1.1 2a1 1 0 0 1 0-2h13.8a1 1 0 1 1 0 2H5.1z"/></svg></span><span class="playtalk-energy-gate__premium-label">Assinar premium</span>';
+
+    const premiumNote = document.createElement('p');
+    premiumNote.className = 'playtalk-energy-gate__premium-note';
+    premiumNote.id = 'playtalkEnergyGatePremiumNote';
+    premiumNote.textContent = 'Obter energias infinitas..';
 
     countdown.append(countdownIcon, countdownLabel, countdownValue);
-    content.append(title, star, logline, countdown, premiumButton);
+    content.append(title, star, logline, countdown, premiumButton, premiumNote);
     gate.append(closeButton, navButton, content);
     document.body.appendChild(gate);
     closeButton.addEventListener('click', closeEnergyGate);
@@ -631,6 +679,7 @@
     const logline = gate.querySelector('#playtalkEnergyGateLogline');
     const countdownLabel = gate.querySelector('#playtalkEnergyGateCountdownLabel');
     const premiumButton = gate.querySelector('#playtalkEnergyGatePremium');
+    const premiumNote = gate.querySelector('#playtalkEnergyGatePremiumNote');
     gate.dataset.mode = mode;
     gate.classList.toggle('is-depletion-screen', mode === ENERGY_GATE_MODE_DEPLETION);
     gate.setAttribute(
@@ -646,10 +695,15 @@
       logline.textContent = ENERGY_GATE_LOG_LINES[0];
     }
     if (countdownLabel) {
-      countdownLabel.textContent = 'Mais energias em';
+      countdownLabel.innerHTML = mode === ENERGY_GATE_MODE_DEPLETION
+        ? '<span>Mais energias</span><span>em</span>'
+        : 'Mais energias em';
     }
     if (premiumButton) {
-      premiumButton.textContent = mode === ENERGY_GATE_MODE_DEPLETION ? 'Obter premium' : 'Assinar premium';
+      premiumButton.innerHTML = '<span class="playtalk-energy-gate__premium-crown" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 17h16l-1.2-8.54a.75.75 0 0 0-1.2-.48L14 10.75 11.2 6.9a.75.75 0 0 0-1.2 0L7 10.75 4.4 7.98a.75.75 0 0 0-1.2.48L4 17zm1.1 2a1 1 0 0 1 0-2h13.8a1 1 0 1 1 0 2H5.1z"/></svg></span><span class="playtalk-energy-gate__premium-label">Assinar premium</span>';
+    }
+    if (premiumNote) {
+      premiumNote.textContent = 'Obter energias infinitas..';
     }
     return gate;
   }
