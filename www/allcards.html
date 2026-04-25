@@ -101,81 +101,87 @@
     }
 
     .content-switcher {
-      display: flex;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
-      justify-content: center;
-      gap: 0;
-      margin-top: calc(5vh - 20px);
-      overflow: hidden;
-      border-radius: 18px;
+      gap: 12px;
+      width: min(520px, calc(100vw - 28px));
+      margin: calc(5vh - 20px) auto 0;
     }
 
-    .content-switcher__btn {
-      width: 50%;
-      max-width: 50%;
-      height: 4.8vh;
-      min-height: 37px;
-      border-radius: 0;
+    .content-switcher__arrow,
+    .content-switcher__current {
       border: 0;
       background: transparent;
+      color: #fff;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .content-switcher__arrow {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      opacity: 0.92;
+      transition: transform 180ms ease, opacity 180ms ease;
+    }
+
+    .content-switcher__arrow:hover,
+    .content-switcher__arrow:focus-visible {
+      transform: scale(1.08);
+      opacity: 1;
+      outline: none;
+    }
+
+    .content-switcher__arrow svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .content-switcher__current {
+      min-height: 54px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      padding: 0 14px;
-      font-family: "Open Sans", Arial, sans-serif;
-      font-size: clamp(14px, 2.8vw, 17px);
+      gap: 12px;
+      padding: 0 16px;
+      border-radius: 999px;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(20px, 4.8vw, 28px);
       font-weight: 700;
-      color: #fff;
-      letter-spacing: 0;
-      cursor: pointer;
-      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+      letter-spacing: 0.02em;
+      text-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
+      transition: transform 180ms ease, opacity 180ms ease;
     }
 
-    .content-switcher__btn svg {
-      width: clamp(22px, 5vw, 30px);
-      height: clamp(22px, 5vw, 30px);
-      flex: 0 0 auto;
-      color: currentColor;
-      filter: drop-shadow(0 0 14px currentColor);
-    }
-
-    .content-switcher__btn svg,
-    .content-switcher__btn svg * {
-      fill: currentColor !important;
-    }
-
-    .content-switcher__btn span {
-      white-space: nowrap;
-      text-shadow: 0 0 10px currentColor;
-    }
-
-    .content-switcher__btn--flashcards {
-      background: linear-gradient(180deg, #ff9a3d 0%, #ff6a00 100%);
-      border-radius: 18px 0 0 18px;
-      box-shadow: inset 0 0 0 1px rgba(255, 225, 196, 0.24);
-    }
-
-    .content-switcher__btn--smartbooks {
-      background: linear-gradient(180deg, #58dcff 0%, #008dff 100%);
-      border-radius: 0 18px 18px 0;
-      box-shadow: inset 0 0 0 1px rgba(226, 247, 255, 0.22);
-    }
-
-    .content-switcher__btn.is-active {
+    .content-switcher__current:hover,
+    .content-switcher__current:focus-visible {
       transform: translateY(-1px);
+      outline: none;
     }
 
-    .content-switcher__btn--flashcards.is-active {
-      box-shadow:
-        inset 0 0 0 1px rgba(255, 241, 225, 0.38),
-        0 0 26px rgba(255, 122, 24, 0.42);
+    .content-switcher__icon {
+      width: 24px;
+      height: 24px;
+      flex: 0 0 auto;
+      opacity: 1;
     }
 
-    .content-switcher__btn--smartbooks.is-active {
-      box-shadow:
-        inset 0 0 0 1px rgba(229, 248, 255, 0.34),
-        0 0 28px rgba(59, 190, 255, 0.45);
+    .content-switcher__icon svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+      display: block;
+    }
+
+    .content-switcher__label {
+      white-space: nowrap;
     }
 
     .content-view {
@@ -207,6 +213,10 @@
       display: flex;
       justify-content: center;
       margin-bottom: 0;
+    }
+
+    .section-head[hidden] {
+      display: none !important;
     }
 
     .section-copy {
@@ -281,7 +291,7 @@
       margin: 0;
       text-align: center;
       font-size: clamp(28px, 4.6vw, 42px);
-      font-family: "Open Sans", Arial, sans-serif;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
       font-weight: 700;
       line-height: 1;
       letter-spacing: 0;
@@ -458,20 +468,38 @@
       place-items: start center;
       align-content: start;
       justify-items: center;
-      gap: 10px;
+      gap: 14px;
       padding: 7vh 12px 0;
       text-align: center;
+    }
+
+    .empty-library__icon {
+      width: 60px;
+      height: 60px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .empty-library__icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      fill: currentColor;
     }
 
     .empty-library__copy {
       margin: 0;
       color: rgba(255, 255, 255, 0.92);
-      font-family: "Open Sans", Arial, sans-serif;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
       font-size: clamp(19px, 4.4vw, 25px);
       font-weight: 700;
       line-height: 1.18;
       letter-spacing: 0;
       text-shadow: 0 7px 18px rgba(0, 0, 0, 0.28);
+    }
+
+    .empty-library__emphasis {
+      display: inline-block;
+      font-size: 1.25em;
     }
 
     .empty-library__start-btn {
@@ -742,33 +770,29 @@
 
   <main class="shell">
     <section class="catalog" id="catalog">
-      <div class="content-switcher" role="tablist" aria-label="Escolher biblioteca">
-        <button
-          class="content-switcher__btn content-switcher__btn--flashcards is-active"
-          id="flashcardsToggleBtn"
-          type="button"
-          role="tab"
-          aria-selected="true"
-          aria-controls="flashcardsView"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffba75" d="M13.1 2.4c.24 1.68 1.33 2.6 2.31 3.58c1.34 1.35 2.29 2.92 2.29 5.11c0 4.63-3.1 10.51-8.25 10.51c-3.22 0-5.17-2.24-5.17-5.07c0-1.8.89-3.39 2.18-4.86c1.16-1.34 2.56-2.81 3.97-6.49z"/></svg>
-          <span>FlashCards</span>
+      <div class="content-switcher" aria-label="Escolher biblioteca">
+        <button class="content-switcher__arrow" id="contentSwitcherPrevBtn" type="button" aria-label="Mostrar biblioteca anterior">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg>
         </button>
         <button
-          class="content-switcher__btn content-switcher__btn--smartbooks"
-          id="smartbooksToggleBtn"
+          class="content-switcher__current"
+          id="contentSwitcherCurrentBtn"
           type="button"
-          role="tab"
-          aria-selected="false"
-          aria-controls="smartbooksView"
+          aria-live="polite"
+          aria-label="Alternar biblioteca"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#a9f1ff" d="M5.5 4.2A2.3 2.3 0 0 1 7.8 2h10.7A1.5 1.5 0 0 1 20 3.5v15.9a.6.6 0 0 1-.88.54A6.7 6.7 0 0 0 16 19.2H7.9a2.9 2.9 0 0 0-2.4 1.15V4.2zm1.3.6v12.1a4.5 4.5 0 0 1 1.1-.14H16c.88 0 1.74.12 2.6.37V4.4H7.8c-.57 0-1 .4-1 .4zm-.7 15.9c.42-.54 1.08-.9 1.8-.9h8.1c1.03 0 2.05.22 3 .64v.06H7.3c-.52 0-1.02.08-1.2.2z"/></svg>
-          <span>SmartBooks</span>
+          <span class="content-switcher__icon" id="contentSwitcherIcon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 2.7l2.86 5.8 6.4.93-4.63 4.51 1.1 6.36L12 17.2l-5.73 3.1 1.1-6.36L2.74 9.43l6.4-.93z"/></svg>
+          </span>
+          <span class="content-switcher__label" id="contentSwitcherLabel">FlashCards</span>
+        </button>
+        <button class="content-switcher__arrow" id="contentSwitcherNextBtn" type="button" aria-label="Mostrar pr\u00f3xima biblioteca">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg>
         </button>
       </div>
 
-      <div class="content-view" id="flashcardsView" role="tabpanel" aria-labelledby="flashcardsToggleBtn">
-        <div class="section-head">
+      <div class="content-view" id="flashcardsView" role="tabpanel" aria-labelledby="contentSwitcherCurrentBtn">
+        <div class="section-head" id="flashcardsSectionHead">
           <div class="section-copy">
             <h2 id="libraryTitle">0 FlashCards</h2>
             <p id="allSectionCopy">0 FlashCards</p>
@@ -779,8 +803,8 @@
         </div>
       </div>
 
-      <div class="content-view" id="smartbooksView" role="tabpanel" aria-labelledby="smartbooksToggleBtn" hidden>
-        <div class="section-head smartbooks-head">
+      <div class="content-view" id="smartbooksView" role="tabpanel" aria-labelledby="contentSwitcherCurrentBtn" hidden>
+        <div class="section-head smartbooks-head" id="smartbooksSectionHead">
           <div class="section-copy">
             <h2 id="smartbooksTitle">SmartBooks</h2>
           </div>

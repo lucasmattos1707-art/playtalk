@@ -8,6 +8,7 @@
   const LIBRARY_RANK_SWAP_DELAY_MS = 2000;
   const REVIEW_SCALE_VERSION = 3;
   const REVIEW_PHASE_MAX = 6;
+  const VIEW_ORDER = ['flashcards', 'smartbooks'];
   const REVIEW_PHASES = {
     1: { label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
     2: { label: 'Second star', durationMs: 34 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
@@ -21,8 +22,13 @@
     allGrid: document.getElementById('allGrid'),
     allSectionCopy: document.getElementById('allSectionCopy'),
     libraryTitle: document.getElementById('libraryTitle'),
-    flashcardsToggleBtn: document.getElementById('flashcardsToggleBtn'),
-    smartbooksToggleBtn: document.getElementById('smartbooksToggleBtn'),
+    flashcardsSectionHead: document.getElementById('flashcardsSectionHead'),
+    smartbooksSectionHead: document.getElementById('smartbooksSectionHead'),
+    contentSwitcherPrevBtn: document.getElementById('contentSwitcherPrevBtn'),
+    contentSwitcherCurrentBtn: document.getElementById('contentSwitcherCurrentBtn'),
+    contentSwitcherNextBtn: document.getElementById('contentSwitcherNextBtn'),
+    contentSwitcherIcon: document.getElementById('contentSwitcherIcon'),
+    contentSwitcherLabel: document.getElementById('contentSwitcherLabel'),
     flashcardsView: document.getElementById('flashcardsView'),
     smartbooksView: document.getElementById('smartbooksView'),
     smartbooksTitle: document.getElementById('smartbooksTitle'),
@@ -54,6 +60,19 @@
 
   function safeText(value) {
     return typeof value === 'string' ? value.trim() : '';
+  }
+
+  function iconMarkup(kind) {
+    if (kind === 'smartbooks') {
+      return '<svg viewBox="0 0 24 24"><path d="M5.5 4.2A2.3 2.3 0 0 1 7.8 2h10.7A1.5 1.5 0 0 1 20 3.5v15.9a.6.6 0 0 1-.88.54A6.7 6.7 0 0 0 16 19.2H7.9a2.9 2.9 0 0 0-2.4 1.15V4.2zm1.3.6v12.1a4.5 4.5 0 0 1 1.1-.14H16c.88 0 1.74.12 2.6.37V4.4H7.8c-.57 0-1 .4-1 .4zm-.7 15.9c.42-.54 1.08-.9 1.8-.9h8.1c1.03 0 2.05.22 3 .64v.06H7.3c-.52 0-1.02.08-1.2.2z"/></svg>';
+    }
+    return '<svg viewBox="0 0 24 24"><path d="M12 2.7l2.86 5.8 6.4.93-4.63 4.51 1.1 6.36L12 17.2l-5.73 3.1 1.1-6.36L2.74 9.43l6.4-.93z"/></svg>';
+  }
+
+  function viewMeta(view) {
+    return view === 'smartbooks'
+      ? { key: 'smartbooks', label: 'SmartBooks' }
+      : { key: 'flashcards', label: 'FlashCards' };
   }
 
   function slug(value) {
@@ -412,7 +431,8 @@
       target.innerHTML = renderEmptyLibraryState({
         copy: emptyCopy,
         href: '/flashcards',
-        label: 'Come\u00e7ar FlashCards'
+        label: 'Come\u00e7ar FlashCards',
+        kind: 'flashcards'
       });
       return;
     }
@@ -432,13 +452,15 @@
     `).join('');
   }
 
-  function renderEmptyLibraryState({ copy, href, label }) {
-    const copyHtml = String(copy || '')
-      .split(/<br\s*\/?>|\n/i)
-      .map((line) => escapeHtml(line))
-      .join('<br>');
+  function renderEmptyLibraryState({ copy, href, label, kind = 'flashcards' }) {
+    const emphasisLabel = kind === 'smartbooks' ? 'SmartBooks' : 'FlashCards';
+    const copyHtml = escapeHtml(String(copy || ''))
+      .replace(new RegExp(escapeHtml(emphasisLabel), 'g'), `<span class="empty-library__emphasis">${escapeHtml(emphasisLabel)}</span>`)
+      .replace(/&lt;br\s*\/?&gt;/gi, '<br>')
+      .replace(/\n/g, '<br>');
     return `
       <div class="empty-library">
+        <div class="empty-library__icon" aria-hidden="true">${iconMarkup(kind)}</div>
         <p class="empty-library__copy">${copyHtml}</p>
         <a class="empty-library__start-btn" href="${escapeHtml(href)}" aria-label="${escapeHtml(label)}">
           <img src="/arquivos-codex/welcome-gate/button.png" alt="${escapeHtml(label)}">
@@ -562,6 +584,10 @@
 
   function renderLibrarySummary(count = state.cards.length) {
     const nextText = formatLibrarySummaryCount(count);
+    const hasCards = Number(count) > 0;
+    if (els.flashcardsSectionHead) {
+      els.flashcardsSectionHead.hidden = !hasCards;
+    }
     if (els.libraryTitle) {
       els.libraryTitle.textContent = nextText;
     }
@@ -588,10 +614,16 @@
   function renderViewToggle() {
     const flashcardsActive = state.ui.activeView === 'flashcards';
     const smartbooksActive = !flashcardsActive;
-    els.flashcardsToggleBtn?.classList.toggle('is-active', flashcardsActive);
-    els.smartbooksToggleBtn?.classList.toggle('is-active', smartbooksActive);
-    els.flashcardsToggleBtn?.setAttribute('aria-selected', flashcardsActive ? 'true' : 'false');
-    els.smartbooksToggleBtn?.setAttribute('aria-selected', smartbooksActive ? 'true' : 'false');
+    const currentViewMeta = viewMeta(state.ui.activeView);
+    if (els.contentSwitcherLabel) {
+      els.contentSwitcherLabel.textContent = currentViewMeta.label;
+    }
+    if (els.contentSwitcherIcon) {
+      els.contentSwitcherIcon.innerHTML = iconMarkup(currentViewMeta.key);
+    }
+    if (els.contentSwitcherCurrentBtn) {
+      els.contentSwitcherCurrentBtn.setAttribute('aria-label', `Alternar biblioteca, atual ${currentViewMeta.label}`);
+    }
     if (els.flashcardsView) {
       els.flashcardsView.hidden = !flashcardsActive;
     }
@@ -686,6 +718,9 @@
   function renderSmartbooksGrid() {
     if (!els.smartbooksGrid) return;
     const books = getQualifiedMyBooks(state.smartbooksBooks, state.smartbooksStats);
+    if (els.smartbooksSectionHead) {
+      els.smartbooksSectionHead.hidden = !books.length;
+    }
     if (els.smartbooksTitle) {
       els.smartbooksTitle.textContent = `${books.length} SmartBooks`;
     }
@@ -696,7 +731,8 @@
       els.smartbooksGrid.innerHTML = renderEmptyLibraryState({
         copy: 'Voc\u00ea ainda n\u00e3o tem<br>SmartBooks',
         href: '/books',
-        label: 'Abrir Books'
+        label: 'Abrir Books',
+        kind: 'smartbooks'
       });
       return;
     }
@@ -777,17 +813,20 @@
     return state.smartbooksInitPromise;
   }
 
-  function bindViewToggles() {
-    els.flashcardsToggleBtn?.addEventListener('click', () => {
-      state.ui.activeView = 'flashcards';
-      renderViewToggle();
-    });
-
-    els.smartbooksToggleBtn?.addEventListener('click', () => {
-      state.ui.activeView = 'smartbooks';
-      renderViewToggle();
+  function cycleView(direction = 1) {
+    const currentIndex = VIEW_ORDER.indexOf(state.ui.activeView);
+    const nextIndex = (currentIndex + direction + VIEW_ORDER.length) % VIEW_ORDER.length;
+    state.ui.activeView = VIEW_ORDER[nextIndex];
+    renderViewToggle();
+    if (state.ui.activeView === 'smartbooks') {
       void ensureSmartbooksGrid();
-    });
+    }
+  }
+
+  function bindViewToggles() {
+    els.contentSwitcherPrevBtn?.addEventListener('click', () => cycleView(-1));
+    els.contentSwitcherNextBtn?.addEventListener('click', () => cycleView(1));
+    els.contentSwitcherCurrentBtn?.addEventListener('click', () => cycleView(1));
   }
 
   async function resolveSessionUserId() {
