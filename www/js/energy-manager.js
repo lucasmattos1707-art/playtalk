@@ -10,6 +10,7 @@
   ];
   const ENERGY_GATE_STATUS_STORE = 'playtalk-energy-gate-status';
   const ENERGY_GATE_PENDING_STORE = 'playtalk-energy-gate-pending';
+  const ENERGY_GATE_STATIC_COPY = 'Mais energias em:';
   const ENERGY_GATE_MODE_DEFAULT = 'default';
   const ENERGY_GATE_MODE_DEPLETION = 'depletion';
   let energyGateTimer = 0;
@@ -322,18 +323,12 @@
         width: 100%;
         font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
         font-weight: 300;
-        font-size: clamp(16px, 4.2vw, 28px);
+        font-size: clamp(24px, 6.2vw, 42px);
         line-height: 1;
         white-space: nowrap;
         text-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
         opacity: 1;
         transform: translateY(0);
-        transition: opacity 420ms ease, transform 420ms ease;
-      }
-
-      .playtalk-energy-gate__logline.is-changing {
-        opacity: 0;
-        transform: translateY(10px);
       }
 
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__logline {
@@ -351,8 +346,9 @@
         border-radius: 999px;
         border: 1px solid rgba(255, 255, 255, 0.35);
         background: rgba(3, 30, 103, 0.42);
-        font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+        font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
         font-size: clamp(25px, 6.4vw, 48px);
+        font-weight: 700;
         line-height: 1;
         box-shadow:
           inset 0 0 18px rgba(255, 255, 255, 0.08),
@@ -427,8 +423,9 @@
         border-radius: 999px;
         background: linear-gradient(180deg, #c084fc 0%, #9333ea 52%, #6b21c8 100%);
         color: #ffffff;
-        font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+        font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
         font-size: clamp(20px, 4.6vw, 32px);
+        font-weight: 700;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -550,7 +547,7 @@
     const logline = document.createElement('p');
     logline.className = 'playtalk-energy-gate__logline';
     logline.id = 'playtalkEnergyGateLogline';
-    logline.textContent = ENERGY_GATE_LOG_LINES[0];
+    logline.textContent = ENERGY_GATE_STATIC_COPY;
 
     const countdown = document.createElement('p');
     countdown.className = 'playtalk-energy-gate__countdown';
@@ -580,7 +577,7 @@
     const premiumNote = document.createElement('p');
     premiumNote.className = 'playtalk-energy-gate__premium-note';
     premiumNote.id = 'playtalkEnergyGatePremiumNote';
-    premiumNote.textContent = 'Obter energias infinitas..';
+    premiumNote.textContent = 'para energias infinitas';
 
     countdown.append(countdownIcon, countdownLabel, countdownValue);
     content.append(title, star, logline, countdown, premiumButton, premiumNote);
@@ -640,33 +637,15 @@
 
   function startEnergyGateTimers() {
     stopEnergyGateTimers();
-    const gate = document.getElementById('playtalkEnergyGate');
-    const mode = gate?.dataset?.mode || ENERGY_GATE_MODE_DEFAULT;
     const logline = document.getElementById('playtalkEnergyGateLogline');
-    if (logline && mode === ENERGY_GATE_MODE_DEFAULT) {
-      renderEnergyGateLogline(ENERGY_GATE_LOG_LINES[energyGateLoglineIndex] || ENERGY_GATE_LOG_LINES[0]);
+    if (logline) {
+      renderEnergyGateLogline(ENERGY_GATE_STATIC_COPY);
     }
     updateEnergyGateCountdown();
-    if (mode === ENERGY_GATE_MODE_DEFAULT) {
-      energyGateTimer = window.setInterval(() => {
-        const target = document.getElementById('playtalkEnergyGateLogline');
-        if (!target) return;
-        target.classList.add('is-changing');
-        window.setTimeout(() => {
-          energyGateLoglineIndex = (energyGateLoglineIndex + 1) % ENERGY_GATE_LOG_LINES.length;
-          renderEnergyGateLogline(ENERGY_GATE_LOG_LINES[energyGateLoglineIndex] || ENERGY_GATE_LOG_LINES[0]);
-          target.classList.remove('is-changing');
-        }, 430);
-      }, 2400);
-    }
     energyGateCountdownTimer = window.setInterval(updateEnergyGateCountdown, 1000);
   }
 
   function stopEnergyGateTimers() {
-    if (energyGateTimer) {
-      window.clearInterval(energyGateTimer);
-      energyGateTimer = 0;
-    }
     if (energyGateCountdownTimer) {
       window.clearInterval(energyGateCountdownTimer);
       energyGateCountdownTimer = 0;
@@ -692,7 +671,7 @@
         : '<span>Você completou</span><span>o treino diário!</span>';
     }
     if (logline) {
-      logline.textContent = ENERGY_GATE_LOG_LINES[0];
+      logline.textContent = ENERGY_GATE_STATIC_COPY;
     }
     if (countdownLabel) {
       countdownLabel.innerHTML = mode === ENERGY_GATE_MODE_DEPLETION
@@ -703,7 +682,7 @@
       premiumButton.innerHTML = '<span class="playtalk-energy-gate__premium-crown" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 17h16l-1.2-8.54a.75.75 0 0 0-1.2-.48L14 10.75 11.2 6.9a.75.75 0 0 0-1.2 0L7 10.75 4.4 7.98a.75.75 0 0 0-1.2.48L4 17zm1.1 2a1 1 0 0 1 0-2h13.8a1 1 0 1 1 0 2H5.1z"/></svg></span><span class="playtalk-energy-gate__premium-label">Assinar premium</span>';
     }
     if (premiumNote) {
-      premiumNote.textContent = 'Obter energias infinitas..';
+      premiumNote.textContent = 'para energias infinitas';
     }
     return gate;
   }
