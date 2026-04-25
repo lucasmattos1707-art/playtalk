@@ -294,11 +294,12 @@
     }
 
     .welcome-gate__touch {
-      width: 100vw;
-      max-width: 100vw;
-      height: 100dvh;
-      max-height: 100dvh;
-      min-height: 100dvh;
+      width: 102vw;
+      max-width: 102vw;
+      min-width: 102vw;
+      height: 102dvh;
+      max-height: 102dvh;
+      min-height: 102dvh;
       position: relative;
       display: grid;
       grid-template-rows: 12vh 8vh 35vh 15vh 15vh;
@@ -309,7 +310,7 @@
       padding: 0;
       background: transparent;
       text-align: center;
-      border: 1px solid rgba(255, 255, 255, 0.92);
+      border: 1px solid transparent;
       outline: 0;
       box-shadow: none;
       margin: 0;
@@ -323,8 +324,9 @@
       justify-items: stretch;
       align-items: start;
       gap: 0;
-      width: 100vw;
-      max-width: 100vw;
+      width: 102vw;
+      max-width: 102vw;
+      min-width: 102vw;
       border: 0;
       outline: 0;
       box-shadow: none;
@@ -403,7 +405,7 @@
       height: 8vh;
       align-items: center;
       align-content: center;
-      background: rgba(7, 44, 108, 0.42);
+      background: transparent;
     }
 
     .welcome-gate__identity {
@@ -609,7 +611,7 @@
       text-align: center;
       border-radius: 0;
       padding: 10px 18px;
-      background: rgba(7, 44, 108, 0.28);
+      background: transparent;
     }
 
     .welcome-gate__energy-value {
@@ -7263,15 +7265,17 @@
 
     @media (max-width: 520px) {
       .welcome-gate__stack {
-        width: 100vw;
+        width: 102vw;
+        min-width: 102vw;
         gap: 0;
       }
 
       .welcome-gate__touch {
-        width: 100vw;
-        max-width: 100vw;
-        height: 100dvh;
-        min-height: 100dvh;
+        width: 102vw;
+        max-width: 102vw;
+        min-width: 102vw;
+        height: 102dvh;
+        min-height: 102dvh;
         row-gap: 0;
         padding-top: 0;
         justify-items: stretch;
@@ -7361,7 +7365,7 @@
                 <span class="welcome-gate__level-title">Level</span>
             </span>
           </div>
-            <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">Ganhe mais 2 cartas para avançar</p>
+            <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">2 cartas para avançar</p>
           </div>
         </div>
         <p class="welcome-gate__copy" id="welcomeCopy"></p>
@@ -10827,13 +10831,13 @@
         if (els.welcomeLevelOrbit) {
           const orbitLabel = level >= USER_LEVEL_MAX
             ? `Level ${level}. Nivel maximo alcancado.`
-            : `Level ${level}. Ganhe mais ${remaining} ${remaining === 1 ? 'carta' : 'cartas'} para avançar.`;
+            : `Level ${level}. ${remaining} ${remaining === 1 ? 'carta' : 'cartas'} para avançar.`;
           els.welcomeLevelOrbit.setAttribute('aria-label', orbitLabel);
         }
         if (els.welcomeLevelProgressCopy) {
           els.welcomeLevelProgressCopy.textContent = level >= USER_LEVEL_MAX
             ? 'Nivel maximo alcancado'
-            : `Ganhe mais ${remaining} ${remaining === 1 ? 'carta' : 'cartas'} para avançar`;
+            : `${remaining} ${remaining === 1 ? 'carta' : 'cartas'} para avançar`;
         }
         state.ui.welcomeProfileReady = true;
         syncWelcomeLoadingState();
