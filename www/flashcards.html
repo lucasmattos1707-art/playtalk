@@ -8400,6 +8400,7 @@
           welcomeSelectedLevel: 1,
           levelModeProgress: {},
           levelSwitchTimer: 0,
+          levelSwitchResetTimer: 0,
           gameLevelSwipeStartX: 0,
           gameLevelSwipeStartY: 0,
           welcomeEnergyBlocked: false,
@@ -12600,6 +12601,12 @@
         if (!state.ui.levelSwitchTimer) return;
         window.clearTimeout(state.ui.levelSwitchTimer);
         state.ui.levelSwitchTimer = 0;
+      }
+
+      function clearLevelSwitchResetTimer() {
+        if (!state.ui.levelSwitchResetTimer) return;
+        window.clearTimeout(state.ui.levelSwitchResetTimer);
+        state.ui.levelSwitchResetTimer = 0;
       }
 
       function tutorialAudioPath(index) {
@@ -17823,13 +17830,13 @@
           state.ui.levelModeProgress = {};
         }
         state.ui.levelModeProgress[selectedGameLevel()] = 0;
+        clearLevelSwitchResetTimer();
         els.game?.classList.add('is-level-switching-reset');
         els.game?.classList.remove('is-level-switching');
-        window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(() => {
-            els.game?.classList.remove('is-level-switching-reset');
-          });
-        });
+        state.ui.levelSwitchResetTimer = window.setTimeout(() => {
+          state.ui.levelSwitchResetTimer = 0;
+          els.game?.classList.remove('is-level-switching-reset');
+        }, 1400);
 
         const level = selectedGameLevel();
         const roundCount = Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount(level));
@@ -18143,7 +18150,9 @@
         document.body.classList.remove('game-open');
         document.body.classList.remove('gameplay-active');
         clearLevelSwitchTimer();
+        clearLevelSwitchResetTimer();
         els.game?.classList.remove('is-level-switching');
+        els.game?.classList.remove('is-level-switching-reset');
         resetGameSwipeTracking();
         syncFooterGuardState(null);
         syncGameLevelNavigator();
