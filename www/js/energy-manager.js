@@ -49,7 +49,7 @@
   }
 
   function formatResetCountdown(nextResetAt) {
-    const targetMs = Date.parse(nextResetAt || '');
+    const targetMs = resolveEnergyResetTargetMs(nextResetAt);
     const diffMs = Math.max(0, (Number.isFinite(targetMs) ? targetMs : Date.now()) - Date.now());
     const totalMinutes = Math.ceil(diffMs / 60000);
     const hours = Math.floor(totalMinutes / 60);
@@ -58,7 +58,7 @@
   }
 
   function formatResetCountdownDetailed(nextResetAt) {
-    const targetMs = Date.parse(nextResetAt || '');
+    const targetMs = resolveEnergyResetTargetMs(nextResetAt);
     const diffMs = Math.max(0, (Number.isFinite(targetMs) ? targetMs : Date.now()) - Date.now());
     const totalSeconds = Math.ceil(diffMs / 1000);
     const hours = Math.floor(totalSeconds / 3600);
@@ -68,13 +68,23 @@
   }
 
   function formatResetCountdownClock(nextResetAt) {
-    const targetMs = Date.parse(nextResetAt || '');
+    const targetMs = resolveEnergyResetTargetMs(nextResetAt);
     const diffMs = Math.max(0, (Number.isFinite(targetMs) ? targetMs : Date.now()) - Date.now());
     const totalSeconds = Math.ceil(diffMs / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  }
+
+  function resolveEnergyResetTargetMs(nextResetAt) {
+    const parsedMs = Date.parse(nextResetAt || '');
+    if (Number.isFinite(parsedMs)) {
+      return parsedMs;
+    }
+    const now = new Date();
+    const nextMidnight = new Date(now);
+    nextMidnight.setHours(24, 0, 0, 0);
+    return nextMidnight.getTime();
   }
 
   function resolveAccountHref() {
@@ -124,6 +134,8 @@
     const style = document.createElement('style');
     style.id = 'playtalk-energy-gate-style';
     style.textContent = `
+      @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@700;800&display=swap');
+
       @font-face {
         font-family: "Soopafre";
         src: url("/soopafre.ttf") format("truetype");
