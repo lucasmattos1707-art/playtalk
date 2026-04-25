@@ -363,7 +363,7 @@
         background: transparent;
         box-shadow: none;
         flex-direction: column;
-        gap: 6px;
+        gap: 2px;
         font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
         font-weight: 300;
         line-height: 1.15;
@@ -391,6 +391,10 @@
         text-align: center;
       }
 
+      .playtalk-energy-gate__loader {
+        display: none;
+      }
+
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown-label {
         display: block;
         font-size: clamp(34px, 8.5vw, 48px);
@@ -403,6 +407,57 @@
 
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown-label span {
         display: block;
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__loader {
+        width: 65px;
+        height: 65px;
+        display: block;
+        margin: 2px 0 4px;
+        border: 8px solid rgba(238, 155, 0, 0.65);
+        border-radius: 50px;
+        position: relative;
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__loader span {
+        display: block;
+        background: #ee9b00;
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__loader-hour,
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__loader-min {
+        width: 6px;
+        height: 22px;
+        border-radius: 50px;
+        position: absolute;
+        top: 24.5px;
+        left: 21px;
+        animation: playtalkEnergyGateClockSpin 1.2s linear infinite;
+        transform-origin: top center;
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__loader-min {
+        height: 17px;
+        animation-duration: 4s;
+      }
+
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__loader-circle {
+        width: 10px;
+        height: 10px;
+        border-radius: 50px;
+        position: absolute;
+        top: 19px;
+        left: 19px;
+      }
+
+      @keyframes playtalkEnergyGateClockSpin {
+        0% {
+          transform: rotate(0deg);
+        }
+
+        100% {
+          transform: rotate(360deg);
+        }
       }
 
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown-value {
@@ -568,6 +623,11 @@
     countdownLabel.id = 'playtalkEnergyGateCountdownLabel';
     countdownLabel.innerHTML = '<span>Mais energias</span><span>em</span>';
 
+    const countdownLoader = document.createElement('span');
+    countdownLoader.className = 'playtalk-energy-gate__loader';
+    countdownLoader.setAttribute('aria-hidden', 'true');
+    countdownLoader.innerHTML = '<span class="playtalk-energy-gate__loader-hour"></span><span class="playtalk-energy-gate__loader-min"></span><span class="playtalk-energy-gate__loader-circle"></span>';
+
     const premiumButton = document.createElement('button');
     premiumButton.className = 'playtalk-energy-gate__premium';
     premiumButton.id = 'playtalkEnergyGatePremium';
@@ -579,7 +639,7 @@
     premiumNote.id = 'playtalkEnergyGatePremiumNote';
     premiumNote.textContent = 'para energias infinitas';
 
-    countdown.append(countdownIcon, countdownLabel, countdownValue);
+    countdown.append(countdownIcon, countdownLabel, countdownLoader, countdownValue);
     content.append(title, star, logline, countdown, premiumButton, premiumNote);
     gate.append(closeButton, navButton, content);
     document.body.appendChild(gate);

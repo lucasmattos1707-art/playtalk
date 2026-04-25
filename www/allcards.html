@@ -463,19 +463,19 @@
 
     .empty-library {
       grid-column: 1 / -1;
-      min-height: min(52vh, 440px);
+      min-height: min(62vh, 520px);
       display: grid;
       place-items: start center;
       align-content: start;
       justify-items: center;
       gap: 14px;
-      padding: 7vh 12px 0;
+      padding: 17vh 12px 0;
       text-align: center;
     }
 
     .empty-library__icon {
-      width: 60px;
-      height: 60px;
+      width: 75px;
+      height: 75px;
       color: rgba(255, 255, 255, 0.5);
     }
 
@@ -506,14 +506,15 @@
       width: min(317px, 64.8vw);
       display: block;
       border-radius: 999px;
-      transform: translateY(-8px) scale(0.9);
+      margin-top: 2px;
+      transform: scale(0.9);
       transform-origin: center;
       transition: transform 180ms ease;
     }
 
     .empty-library__start-btn:hover,
     .empty-library__start-btn:focus-visible {
-      transform: translateY(-10px) scale(0.93);
+      transform: translateY(-2px) scale(0.93);
       outline: none;
     }
 
