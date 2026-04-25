@@ -273,7 +273,7 @@
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      padding: 0 12px 24px;
+      padding: 0;
       opacity: 0;
       pointer-events: none;
       transition: opacity 420ms ease, visibility 420ms ease;
@@ -299,34 +299,34 @@
       min-height: 100dvh;
       position: relative;
       display: grid;
-      grid-template-rows: auto 43vh 15vh 15vh;
+      grid-template-rows: 12vh 8vh 35vh 15vh 15vh;
       justify-items: stretch;
       align-items: start;
       align-content: start;
       row-gap: 0;
-      padding: calc(env(safe-area-inset-top, 0px) + 116px) 0 0;
+      padding: 0;
       background: transparent;
       text-align: center;
-      border: 0;
+      border: 1px solid rgba(255, 255, 255, 0.92);
       outline: 0;
       box-shadow: none;
-      margin: 0 auto;
-      overflow: visible;
-      border: 1px solid rgba(255, 255, 255, 0.92);
+      margin: 0;
+      overflow-x: clip;
+      overflow-y: visible;
       box-sizing: border-box;
     }
 
     .welcome-gate__stack {
       display: grid;
-      justify-items: center;
+      justify-items: stretch;
       align-items: start;
-      gap: 22px;
-      width: min(100vw, 560px);
-      max-width: 100%;
+      gap: 0;
+      width: 100vw;
+      max-width: 100vw;
       border: 0;
       outline: 0;
       box-shadow: none;
-      margin: 0 auto;
+      margin: 0;
     }
 
     .welcome-gate__logo {
@@ -357,9 +357,7 @@
 
     .welcome-gate__profile {
       width: 100%;
-      display: grid;
-      grid-template-rows: 8vh 35vh;
-      gap: 0;
+      display: contents;
       color: #ffffff;
       text-align: center;
       text-shadow:
@@ -368,21 +366,22 @@
     }
 
     .welcome-gate__header,
-    .welcome-gate__level-panel {
+    .welcome-gate__level-copy-panel,
+    .welcome-gate__level-panel,
+    .welcome-gate__start-btn,
+    .welcome-gate__energy {
       width: 100%;
       display: grid;
       justify-items: center;
-      overflow: visible;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.92);
+      box-sizing: border-box;
     }
 
     .welcome-gate__header {
-      position: absolute;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      min-height: 96px;
-      max-height: 120px;
-      width: 100vw;
+      position: relative;
+      min-height: 12vh;
+      height: 12vh;
       grid-template-columns: auto minmax(0, 1fr);
       align-items: center;
       gap: 12px;
@@ -395,8 +394,14 @@
       text-align: left;
       justify-items: start;
       border-radius: 0;
-      border: 1px solid rgba(255, 255, 255, 0.92);
-      box-sizing: border-box;
+    }
+
+    .welcome-gate__level-copy-panel {
+      min-height: 8vh;
+      height: 8vh;
+      align-items: center;
+      align-content: center;
+      background: rgba(7, 44, 108, 0.42);
     }
 
     .welcome-gate__identity {
@@ -473,9 +478,8 @@
       justify-items: center;
       align-content: center;
       margin-block: 0;
-      border: 1px solid rgba(255, 255, 255, 0.92);
       border-radius: 0;
-      box-sizing: border-box;
+      background: rgba(7, 27, 78, 0.24);
     }
 
     .welcome-gate__level-heading {
@@ -487,9 +491,10 @@
       color: rgba(239, 250, 255, 0.98);
       text-align: center;
       margin-bottom: 0;
-      min-height: 8vh;
       display: grid;
       place-items: center;
+      width: 100%;
+      height: 100%;
     }
 
     .welcome-gate__level {
@@ -580,19 +585,18 @@
     }
 
     .welcome-gate__energy {
-      display: grid;
       width: 100%;
       min-height: 15vh;
+      height: 15vh;
       justify-items: center;
       align-content: center;
       gap: 2px;
       margin-top: 0;
       color: #ffffff;
       text-align: center;
-      border: 1px solid rgba(255, 255, 255, 0.92);
       border-radius: 0;
       padding: 10px 18px;
-      box-sizing: border-box;
+      background: rgba(7, 44, 108, 0.28);
     }
 
     .welcome-gate__energy-value {
@@ -659,6 +663,9 @@
     }
 
     .welcome-gate__touch.is-loading .welcome-gate__profile,
+    .welcome-gate__touch.is-loading .welcome-gate__header,
+    .welcome-gate__touch.is-loading .welcome-gate__level-copy-panel,
+    .welcome-gate__touch.is-loading .welcome-gate__level-panel,
     .welcome-gate__touch.is-loading .welcome-gate__copy,
     .welcome-gate__touch.is-loading .welcome-gate__start-btn,
     .welcome-gate__touch.is-loading .welcome-gate__energy,
@@ -697,9 +704,9 @@
       position: relative;
       width: 100%;
       min-height: 15vh;
+      height: 15vh;
       padding: 0;
       border-radius: 0;
-      border: 1px solid rgba(255, 255, 255, 0.92);
       background: transparent;
       color: #ffffff;
       overflow: hidden;
@@ -7243,8 +7250,8 @@
 
     @media (max-width: 520px) {
       .welcome-gate__stack {
-        width: min(483px, 100%);
-        gap: 16px;
+        width: 100vw;
+        gap: 0;
       }
 
       .welcome-gate__touch {
@@ -7253,7 +7260,7 @@
         height: 100dvh;
         min-height: 100dvh;
         row-gap: 0;
-        padding-top: calc(env(safe-area-inset-top, 0px) + 78px);
+        padding-top: 0;
         justify-items: stretch;
       }
 
@@ -7263,7 +7270,8 @@
       }
 
       .welcome-gate__header {
-        min-height: 78px;
+        min-height: 12vh;
+        height: 12vh;
         gap: 14px;
         padding: 0 18px;
       }
@@ -7329,8 +7337,10 @@
               </div>
             </div>
           </div>
+          <div class="welcome-gate__level-copy-panel">
+            <p class="welcome-gate__level-heading" id="welcomeLevelHeading">Você está no nível 1</p>
+          </div>
           <div class="welcome-gate__level-panel">
-            <p class="welcome-gate__level-heading">Você está no nível</p>
             <div class="welcome-gate__level-orbit" id="welcomeLevelOrbit" aria-hidden="true">
               <span class="welcome-gate__level-progress-bar" id="welcomeLevelProgressBar"></span>
               <span class="welcome-gate__level-inner">
@@ -8262,6 +8272,7 @@
         welcomeUserName: document.getElementById('welcomeUserName'),
         welcomeAvatarPreview: document.getElementById('welcomeAvatarPreview'),
         welcomeUserLevel: document.getElementById('welcomeUserLevel'),
+        welcomeLevelHeading: document.getElementById('welcomeLevelHeading'),
         welcomeUserLevelNumber: document.getElementById('welcomeUserLevelNumber'),
         welcomeLevelOrbit: document.getElementById('welcomeLevelOrbit'),
         welcomeLevelProgressBar: document.getElementById('welcomeLevelProgressBar'),
@@ -10783,6 +10794,9 @@
           els.welcomeAvatarPreview.hidden = false;
         }
         els.welcomeUserLevel.textContent = `Nivel ${level}`;
+        if (els.welcomeLevelHeading) {
+          els.welcomeLevelHeading.textContent = `Você está no nível ${level}`;
+        }
         els.welcomeUserLevelNumber.textContent = String(level);
         els.welcomeLevelProgressBar.style.setProperty('--welcome-level-progress', `${(percent * 3.6).toFixed(2)}deg`);
         if (els.welcomeLevelOrbit) {
