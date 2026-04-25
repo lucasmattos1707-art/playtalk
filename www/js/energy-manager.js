@@ -358,12 +358,15 @@
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown {
         min-width: 0;
         padding: 0;
-        border: 0;
+        border: 0 !important;
+        outline: none !important;
+        box-sizing: border-box;
         border-radius: 0;
-        background: transparent;
-        box-shadow: none;
+        background: transparent !important;
+        box-shadow: none !important;
         flex-direction: column;
-        gap: 2px;
+        align-items: center;
+        gap: 0;
         font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
         font-weight: 300;
         line-height: 1.15;
@@ -403,6 +406,7 @@
         line-height: 0.96;
         white-space: normal;
         color: rgba(255, 255, 255, 0.96);
+        margin-bottom: 2px;
       }
 
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown-label span {
@@ -413,7 +417,7 @@
         width: 65px;
         height: 65px;
         display: block;
-        margin: 2px 0 4px;
+        margin: 0 0 6px;
         border: 8px solid rgba(238, 155, 0, 0.65);
         border-radius: 50px;
         position: relative;
