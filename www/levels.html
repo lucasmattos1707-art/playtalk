@@ -284,7 +284,7 @@
   <div id="pastePopover" class="popover hidden" aria-hidden="true">
     <div class="popover-card send-popover-card" role="dialog" aria-modal="true">
       <div><div class="mini">Colar texto</div><h2 style="margin:6px 0 0">Preencher cards em lote</h2></div>
-      <div class="mini" id="pasteHelp">FlashCard usa 2 linhas por item: portugues e ingles. Comandos admin: editcards, addnewsongs, getdeck e clearall.</div>
+      <div class="mini" id="pasteHelp">FlashCard usa 2 linhas por item: portugues e ingles. Comandos admin: editcards, addnewsongs, getdeck, my texts e clearall.</div>
       <div class="field"><label for="pasteArea">Texto colado</label><textarea id="pasteArea" rows="10"></textarea></div>
       <div class="row" style="justify-content:space-between"><button id="pasteCloseBtn" type="button">Fechar</button><button id="applyPasteBtn" class="accent" type="button">Preencher cards</button></div>
     </div>
@@ -1238,6 +1238,26 @@
         const blob=new Blob([JSON.stringify(payload(),null,2)],{type:'application/json'});
         triggerDownload(blob,fileName.toLowerCase().endsWith('.json')?fileName:`${fileName}.json`);
       }
+      async function downloadAllEnglishTextsByLevel(){
+        if(!adminStudio.enabled)throw new Error('Entre como admin para usar my texts.');
+        const decks=await loadEditableFlashcardDeckOptions();
+        const groupedLevels=new Map();
+        decks.forEach(deck=>{
+          const deckLevel=normalizeDeckLevelValue(deck?.deckLevel);
+          if(!deckLevel)return;
+          const items=Array.isArray(deck?.data?.items)?deck.data.items:[];
+          items.forEach(entry=>{
+            const english=safeText(entry?.nomeIngles||entry?.english||entry?.en);
+            if(!english)return;
+            if(!groupedLevels.has(deckLevel))groupedLevels.set(deckLevel,[]);
+            groupedLevels.get(deckLevel).push(english);
+          });
+        });
+        const sortedLevels=Array.from(groupedLevels.entries()).sort((a,b)=>a[0]-b[0]);
+        if(!sortedLevels.length)throw new Error('Nenhum texto em ingles com nivel definido foi encontrado.');
+        const textContent=sortedLevels.map(([level,texts])=>`Level ${level}\n\n${texts.join('\n')}`).join('\n\n');
+        triggerDownload(new Blob([textContent],{type:'text/plain;charset=utf-8'}),'my-texts.txt');
+      }
       function openPastePopover(){$('pasteArea').value='';$('pastePopover').classList.remove('hidden');$('pastePopover').setAttribute('aria-hidden','false')}
       function closePastePopover(){$('pastePopover').classList.add('hidden');$('pastePopover').setAttribute('aria-hidden','true')}
       function deckAudioReplaceTargets(){return state.items.map((item,index)=>({item,index})).filter(entry=>String(entry?.item?.pt||'').trim()&&String(entry?.item?.en||'').trim())}
@@ -1990,7 +2010,7 @@
       $('uploadR2Btn').onclick=()=>{if(zipBusy||r2UploadBusy)return;openDeckMetaPopover('r2')};
       $('sendPlaytalkBtn').onclick=async()=>{try{const result=await publishAdminFlashcardsLocal({force:true});if(!result)throw new Error('Acesso restrito ao administrador.')}catch(error){alert(error.message||'Erro ao enviar para Fluent LevelUp.')}};
       $('testOnlineBtn').onclick=()=>{};
-      $('applyPasteBtn').onclick=()=>{
+      $('applyPasteBtn').onclick=async()=>{
         const rawValue=String($('pasteArea').value||'').trim().toLowerCase();
         if(adminStudio.enabled&&rawValue==='editcards'){
           closePastePopover();
@@ -2013,6 +2033,16 @@
             closePastePopover();
           }catch(error){
             alert(error.message||'Nao foi possivel baixar o deck.');
+          }
+          return;
+        }
+        if(rawValue==='my texts'){
+          try{
+            await downloadAllEnglishTextsByLevel();
+            $('pasteArea').value='';
+            closePastePopover();
+          }catch(error){
+            alert(error.message||'Nao foi possivel baixar os textos.');
           }
           return;
         }

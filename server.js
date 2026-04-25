@@ -14941,6 +14941,10 @@ app.get(['/levels', '/levels/', '/levels.html'], (req, res) => {
     res.redirect(302, '/entrar?return=%2Flevels');
     return;
   }
+  if (!isAdminUserRecord(payload)) {
+    res.redirect(302, '/');
+    return;
+  }
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'www', 'levels.html'));
 });
