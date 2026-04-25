@@ -17212,9 +17212,9 @@
                   state.game.canListen = !isLevelAudioModeActive();
                   renderGameTouchButton(stageConfig, entry);
                   if (isLevelAudioModeActive()) {
-                    state.game.queue.push(entry.id);
                     window.setTimeout(() => {
                       if (state.game.active && state.game.currentId === entry.id && isLevelAudioModeActive()) {
+                        rotateLevelModeEntry(entry);
                         advanceToNextCard();
                       }
                     }, 700);
@@ -17273,6 +17273,20 @@
         persistGameSessionLocally();
         updateGameChips();
         return true;
+      }
+
+      function refillLevelModeEntries(pool = 'base', limit = state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT) {
+        const activeLimit = Math.max(MIN_GAME_CONTEXT_LIMIT, Number(limit) || DEFAULT_GAME_CONTEXT_LIMIT);
+        while (state.game.entries.size < activeLimit) {
+          if (!refillGameEntry(pool, activeLimit)) break;
+        }
+        return state.game.entries.size > 0;
+      }
+
+      function rotateLevelModeEntry(entry) {
+        if (!entry) return false;
+        removeGameEntry(entry.id);
+        return refillLevelModeEntries(entry.pool || 'base', state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT);
       }
 
       function promoteCardFromWin(entry) {
@@ -18270,11 +18284,7 @@
           await wait(isHit ? 260 : 520);
           if (entry._removeAfterReward) {
             entry._removeAfterReward = false;
-            removeGameEntry(entry.id);
-            const activeLimit = Math.max(MIN_GAME_CONTEXT_LIMIT, Number(state.game.contextLimit) || currentGameActiveCardCap(selectedGameLevel()));
-            while (state.game.entries.size < activeLimit) {
-              if (!refillGameEntry(entry.pool || 'base', activeLimit)) break;
-            }
+            rotateLevelModeEntry(entry);
           }
           if (state.game.active) {
             advanceToNextCard();
