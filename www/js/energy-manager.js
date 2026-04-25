@@ -357,7 +357,7 @@
         gap: 12px;
         padding: 14px 18px 12px;
         border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.35);
+        border: 1px solid transparent;
         background: rgba(3, 30, 103, 0.42);
         font-family: "Exo 2", "Segoe UI", Arial, sans-serif;
         font-size: clamp(25px, 6.4vw, 48px);
@@ -419,7 +419,7 @@
         line-height: 0.96;
         white-space: normal;
         color: rgba(255, 255, 255, 0.96);
-        margin-bottom: 2px;
+        margin-bottom: -4px;
       }
 
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__countdown-label span {
@@ -427,44 +427,33 @@
       }
 
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__loader {
-        width: 65px;
-        height: 65px;
+        width: 56px;
+        height: 56px;
         display: block;
-        margin: 0 0 6px;
-        border: 8px solid rgba(238, 155, 0, 0.65);
-        border-radius: 50px;
-        position: relative;
+        margin: 0 0 2px;
+        color: #ffffff;
       }
 
-      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__loader span {
+      .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__loader svg {
+        width: 100%;
+        height: 100%;
         display: block;
-        background: #ee9b00;
+        fill: currentColor;
+        opacity: 0.96;
+        filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.22));
       }
 
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__loader-hour,
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__loader-min {
-        width: 6px;
-        height: 22px;
-        border-radius: 50px;
-        position: absolute;
-        top: 24.5px;
-        left: 21px;
-        animation: playtalkEnergyGateClockSpin 1.2s linear infinite;
-        transform-origin: top center;
+        display: none;
       }
 
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__loader-min {
-        height: 17px;
-        animation-duration: 4s;
+        display: none;
       }
 
       .playtalk-energy-gate.is-depletion-screen .playtalk-energy-gate__loader-circle {
-        width: 10px;
-        height: 10px;
-        border-radius: 50px;
-        position: absolute;
-        top: 19px;
-        left: 19px;
+        display: none;
       }
 
       @keyframes playtalkEnergyGateClockSpin {
@@ -512,6 +501,7 @@
         min-height: 58px;
         width: min(90vw, 320px);
         padding: 0 24px;
+        margin-top: 10vh;
         border: 1.5px solid rgba(229, 166, 255, 0.98);
         background: linear-gradient(135deg, #40106f 0%, #6b21c8 48%, #9333ea 100%);
         color: #ffffff;
@@ -643,7 +633,7 @@
     const countdownLoader = document.createElement('span');
     countdownLoader.className = 'playtalk-energy-gate__loader';
     countdownLoader.setAttribute('aria-hidden', 'true');
-    countdownLoader.innerHTML = '<span class="playtalk-energy-gate__loader-hour"></span><span class="playtalk-energy-gate__loader-min"></span><span class="playtalk-energy-gate__loader-circle"></span>';
+    countdownLoader.innerHTML = '<svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M12 1.75a10.25 10.25 0 1 0 10.25 10.25A10.26 10.26 0 0 0 12 1.75Zm0 1.8a8.45 8.45 0 1 1-8.45 8.45A8.46 8.46 0 0 1 12 3.55Zm-.9 3.2a.9.9 0 0 1 1.8 0v4.58l3.08 1.92a.9.9 0 0 1-.95 1.53l-3.5-2.18a.9.9 0 0 1-.43-.76Z"/></svg><span class="playtalk-energy-gate__loader-hour"></span><span class="playtalk-energy-gate__loader-min"></span><span class="playtalk-energy-gate__loader-circle"></span>';
 
     const premiumButton = document.createElement('button');
     premiumButton.className = 'playtalk-energy-gate__premium';
