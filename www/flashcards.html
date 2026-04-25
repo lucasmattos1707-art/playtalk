@@ -267,13 +267,11 @@
     }
 
     .welcome-gate {
-      --welcome-header-blue: #157efb;
-      --welcome-header-offset: clamp(52px, 15vh, 118px);
       position: fixed;
       inset: 0;
       z-index: 130;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
       padding: 24px 12px;
       opacity: 0;
@@ -296,16 +294,16 @@
     .welcome-gate__touch {
       width: 100%;
       max-width: 483px;
-      height: min(78vh, 760px);
+      height: min(72vh, 720px);
       max-height: calc(100dvh - 48px);
-      min-height: 520px;
+      min-height: 460px;
       display: grid;
-      grid-template-rows: auto auto auto auto;
+      grid-template-rows: auto 1fr auto auto;
       justify-items: center;
       align-items: start;
       align-content: start;
       row-gap: 18px;
-      padding: var(--welcome-header-offset) 0 0;
+      padding: 15vh 0 0;
       background: transparent;
       text-align: center;
       border: 0;
@@ -355,9 +353,9 @@
     }
 
     .welcome-gate__profile {
-      width: min(396px, 81vw);
+      width: min(483px, 100%);
       display: grid;
-      gap: 14px;
+      gap: 18px;
       color: #ffffff;
       text-align: center;
       text-shadow:
@@ -367,49 +365,36 @@
 
     .welcome-gate__header,
     .welcome-gate__level-panel {
-      width: min(396px, 81vw);
+      width: min(483px, 100%);
       display: grid;
       justify-items: center;
       overflow: visible;
     }
 
     .welcome-gate__header {
+      height: 12vh;
+      min-height: 84px;
+      max-height: 118px;
       grid-template-columns: auto minmax(0, 1fr);
       align-items: center;
-      gap: 16px;
-      padding: 18px 18px 16px;
-      border-radius: 28px;
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.04)),
-        linear-gradient(180deg, #3ca6ff 0%, var(--welcome-header-blue) 52%, #0b63d7 100%);
-      box-shadow:
-        0 18px 34px rgba(8, 52, 117, 0.32),
-        inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      gap: 18px;
+      padding: 0 24px;
+      background: #157efb;
+      box-shadow: 0 12px 28px rgba(8, 52, 117, 0.22);
       text-align: left;
     }
 
     .welcome-gate__identity {
       min-width: 0;
       display: grid;
-      gap: 6px;
+      gap: 4px;
       justify-items: start;
-    }
-
-    .welcome-gate__player-tag {
-      margin: 0;
-      font-family: "Open Sans", Arial, sans-serif;
-      font-weight: 800;
-      font-size: clamp(11px, 2.7vw, 13px);
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: rgba(233, 246, 255, 0.92);
-      text-shadow: none;
     }
 
     .welcome-gate__name-row {
       width: 100%;
       display: grid;
-      gap: 8px;
+      gap: 2px;
       justify-items: start;
     }
 
@@ -417,31 +402,11 @@
       margin: 0;
       max-width: 100%;
       overflow-wrap: anywhere;
-      font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
-      font-size: clamp(27px, 6.1vw, 41px);
-      line-height: 0.9;
-      color: #ffffff;
-    }
-
-    .welcome-gate__level-badge {
-      display: inline-grid;
-      justify-items: start;
-      gap: 2px;
-      padding: 8px 14px 10px;
-      border-radius: 18px;
-      background: rgba(0, 31, 92, 0.28);
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.16),
-        0 10px 20px rgba(5, 38, 96, 0.16);
-    }
-
-    .welcome-gate__level-label {
-      font-family: "Open Sans", Arial, sans-serif;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(25px, 4.3vw, 34px);
       font-weight: 700;
-      font-size: clamp(11px, 2.5vw, 13px);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: rgba(226, 242, 255, 0.88);
+      line-height: 1;
+      color: #ffffff;
       text-shadow: none;
     }
 
@@ -451,8 +416,8 @@
     }
 
     .welcome-gate__avatar {
-      width: clamp(92px, 16vw, 118px);
-      height: clamp(92px, 16vw, 118px);
+      width: clamp(62px, 8.2vh, 78px);
+      height: clamp(62px, 8.2vh, 78px);
       border-radius: 50%;
       position: relative;
       display: grid;
@@ -469,7 +434,7 @@
 
     .welcome-gate__avatar-aura {
       position: absolute;
-      inset: -20px;
+      inset: -8px;
       overflow: visible;
       pointer-events: none;
       z-index: 3;
@@ -540,17 +505,19 @@
     .welcome-gate__level-panel {
       align-self: center;
       gap: 9px;
-      padding: 10px 18px 0;
+      width: min(396px, 81vw);
+      padding: 0 10px;
     }
 
     .welcome-gate__level {
-      font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
-      font-size: clamp(26px, 5vw, 34px);
-      line-height: 0.95;
-      color: #ffffff;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(18px, 3.2vw, 24px);
+      font-weight: 500;
+      line-height: 1.05;
+      color: rgba(255, 255, 255, 0.96);
       text-shadow:
-        0 0 12px rgba(137, 221, 255, 0.5),
-        0 6px 18px rgba(9, 72, 172, 0.36);
+        0 0 8px rgba(77, 214, 255, 0.5),
+        0 0 18px rgba(40, 117, 255, 0.34);
     }
 
     .welcome-gate__level-progress {
@@ -7147,10 +7114,10 @@
       .welcome-gate__touch {
         width: 100%;
         max-width: 483px;
-        height: min(82vh, 690px);
-        min-height: 500px;
+        height: min(76vh, 650px);
+        min-height: 440px;
         row-gap: 16px;
-        padding-top: clamp(48px, 15vh, 96px);
+        padding-top: 15vh;
         justify-items: center;
       }
 
@@ -7160,32 +7127,34 @@
       }
 
       .welcome-gate__profile {
-        width: min(396px, 84.6vw);
+        width: min(483px, 100%);
         max-width: 94vw;
       }
 
       .welcome-gate__header,
       .welcome-gate__level-panel {
-        width: min(396px, 84.6vw);
         max-width: 94vw;
       }
 
       .welcome-gate__header {
-        grid-template-columns: 1fr;
-        text-align: center;
+        min-height: 78px;
         gap: 14px;
-        padding: 18px 18px 20px;
+        padding: 0 18px;
       }
 
       .welcome-gate__identity,
-      .welcome-gate__name-row,
-      .welcome-gate__level-badge {
-        justify-items: center;
+      .welcome-gate__name-row {
+        justify-items: start;
       }
 
       .welcome-gate__avatar {
-        width: clamp(100px, 27vw, 120px);
-        height: clamp(100px, 27vw, 120px);
+        width: clamp(58px, 17vw, 72px);
+        height: clamp(58px, 17vw, 72px);
+      }
+
+      .welcome-gate__level-panel {
+        width: min(396px, 84.6vw);
+        max-width: 94vw;
       }
 
       .welcome-gate__start-btn {
@@ -7230,13 +7199,9 @@
               </div>
             </div>
             <div class="welcome-gate__identity">
-              <span class="welcome-gate__player-tag">Perfil do jogador</span>
               <div class="welcome-gate__name-row">
                 <strong class="welcome-gate__username" id="welcomeUserName">Jogador</strong>
-                <span class="welcome-gate__level-badge">
-                  <span class="welcome-gate__level-label">Seu nível</span>
-                  <span class="welcome-gate__level" id="welcomeUserLevel">Nivel 1</span>
-                </span>
+                <span class="welcome-gate__level" id="welcomeUserLevel">Nivel 1</span>
               </div>
             </div>
           </div>
