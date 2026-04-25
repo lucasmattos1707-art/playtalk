@@ -99,7 +99,72 @@
       width: min(900px, calc(100vw - 28px));
       margin: 0 auto;
       min-height: 100vh;
-      padding: var(--native-top-offset) 0 calc(var(--footer-total-height) + 20px);
+      padding: calc(var(--native-top-offset) + 104px) 0 calc(var(--footer-total-height) + 20px);
+    }
+
+    .users-page-header {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 12;
+      width: 100vw;
+      min-height: 96px;
+      max-height: 120px;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 12px;
+      padding: calc(var(--native-top-offset) + env(safe-area-inset-top, 0px) + 14px) 22px 14px;
+      background: linear-gradient(180deg, #0f4eb7 0%, #0b43a5 52%, #08388f 100%);
+      box-shadow:
+        inset 0 -1px 0 rgba(184, 232, 255, 0.18),
+        0 14px 30px rgba(4, 41, 98, 0.28);
+    }
+
+    .users-page-header__avatar {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.12), rgba(16, 26, 42, 0) 42%),
+        linear-gradient(180deg, rgba(17, 31, 48, 0.92), rgba(3, 8, 16, 0.98));
+      box-shadow:
+        inset 0 0 24px rgba(113, 225, 255, 0.12),
+        0 0 18px rgba(76, 204, 255, 0.2);
+    }
+
+    .users-page-header__avatar img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .users-page-header__identity {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+      justify-items: start;
+      text-align: left;
+    }
+
+    .users-page-header__name {
+      margin: 0;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(24px, 4vw, 32px);
+      font-weight: 700;
+      line-height: 1;
+      color: #ffffff;
+    }
+
+    .users-page-header__level {
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(16px, 3vw, 22px);
+      font-weight: 600;
+      line-height: 1.05;
+      color: rgba(255, 255, 255, 0.96);
     }
 
     .panel {
@@ -862,6 +927,15 @@
 </head>
 <body>
   <div class="container" aria-hidden="true"></div>
+  <header class="users-page-header" aria-label="Perfil atual">
+    <div class="users-page-header__avatar" aria-hidden="true">
+      <img id="usersPageHeaderAvatar" src="/Avatar/profile-neon-blue.svg" alt="">
+    </div>
+    <div class="users-page-header__identity">
+      <strong class="users-page-header__name" id="usersPageHeaderName">Jogador</strong>
+      <span class="users-page-header__level" id="usersPageHeaderLevel">Nivel 1</span>
+    </div>
+  </header>
   <button type="button" class="users-bot-launch" id="usersBotLaunchBtn" aria-label="Criar bot">+</button>
 
   <main class="page">

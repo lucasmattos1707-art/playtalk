@@ -20,6 +20,9 @@
   ];
 
   const els = {
+    pageHeaderAvatar: document.getElementById('usersPageHeaderAvatar'),
+    pageHeaderName: document.getElementById('usersPageHeaderName'),
+    pageHeaderLevel: document.getElementById('usersPageHeaderLevel'),
     usersStage: document.getElementById('usersStage'),
     usersList: document.getElementById('usersList'),
     usersStatus: document.getElementById('usersStatus'),
@@ -183,6 +186,35 @@
     return new Promise((resolve) => {
       window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
     });
+  }
+
+  function cardTargetForLevel(level) {
+    return Math.max(2, Math.floor(Number(level) || 1) + 1);
+  }
+
+  function levelFromFlashcardsCount(totalCards) {
+    let level = 1;
+    let remainingCards = Math.max(0, Math.floor(Number(totalCards) || 0));
+    let requirement = cardTargetForLevel(level);
+    while (remainingCards >= requirement) {
+      remainingCards -= requirement;
+      level += 1;
+      requirement = cardTargetForLevel(level);
+    }
+    return level;
+  }
+
+  function syncPageHeader() {
+    if (!els.pageHeaderName || !els.pageHeaderLevel || !els.pageHeaderAvatar) return;
+    const viewer = currentViewerEntry(state.rows) || state.viewer || null;
+    const fallbackUser = state.currentUser || {};
+    const username = safeText(viewer?.username || fallbackUser?.username || 'Jogador') || 'Jogador';
+    const avatarImage = safeText(viewer?.avatarImage || fallbackUser?.avatarImage || fallbackUser?.avatar_image || fallbackUser?.avatar) || DEFAULT_PROFILE_AVATAR;
+    const flashcardsCount = Number(viewer?.flashcardsCount || fallbackUser?.flashcardsCount || 0);
+    const level = levelFromFlashcardsCount(flashcardsCount);
+    els.pageHeaderName.textContent = username;
+    els.pageHeaderLevel.textContent = `Nivel ${level}`;
+    els.pageHeaderAvatar.src = avatarImage;
   }
 
   function storageKeyForUser(baseKey, userId) {
@@ -937,6 +969,7 @@
     state.rows = Array.isArray(data.rows) ? data.rows : [];
     state.viewer = data.viewer || null;
     renderRows(state.rows);
+    syncPageHeader();
     const viewer = currentViewerEntry(state.rows);
     if (options.statusMessage != null) {
       setUsersStatus(options.statusMessage);
@@ -1265,6 +1298,7 @@
 
   (async () => {
     state.currentUser = await fetchSessionUser();
+    syncPageHeader();
     syncAdminViewerUi();
     updateBotHint();
     await pingPresence();
