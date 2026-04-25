@@ -964,9 +964,10 @@
     let stats = options.stats && typeof options.stats === 'object'
       ? options.stats
       : null;
+    let rememberedStatus = null;
     if (!stats) {
-      const rememberedStatus = readRememberedEnergyStatus(user);
-      if (rememberedStatus) {
+      rememberedStatus = readRememberedEnergyStatus(user);
+      if (rememberedStatus && !shouldRefreshEnergyStats(rememberedStatus)) {
         return rememberedStatus;
       }
     }
@@ -981,7 +982,6 @@
     if (stats && typeof stats === 'object') {
       return rememberEnergyStatus(buildEnergyStatus({ user, stats }));
     }
-    const rememberedStatus = readRememberedEnergyStatus(user);
     if (rememberedStatus) {
       return rememberedStatus;
     }
