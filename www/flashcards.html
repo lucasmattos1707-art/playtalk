@@ -304,7 +304,7 @@
       align-items: start;
       align-content: start;
       row-gap: 22px;
-      padding: calc(env(safe-area-inset-top, 0px) + 116px) 0 0;
+      padding: calc(env(safe-area-inset-top, 0px) + 116px + 10vh) 0 0;
       background: transparent;
       text-align: center;
       border: 0;
@@ -490,7 +490,7 @@
 
     .welcome-gate__level-orbit {
       --welcome-level-progress: 0deg;
-      width: min(240px, 54vw);
+      width: min(168px, 38vw, 21vh);
       aspect-ratio: 1;
       border-radius: 50%;
       position: relative;
@@ -610,6 +610,52 @@
       color: rgba(255, 255, 255, 0.92);
     }
 
+    .welcome-gate__loading {
+      width: 100%;
+      min-height: 34vh;
+      display: none;
+      place-items: center;
+      align-self: center;
+      justify-self: center;
+    }
+
+    .welcome-gate__loading-loop {
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      border: 4px solid rgba(123, 225, 255, 0.2);
+      border-top-color: #68deff;
+      border-right-color: #2bb8ff;
+      box-shadow:
+        0 0 18px rgba(104, 222, 255, 0.42),
+        inset 0 0 18px rgba(104, 222, 255, 0.14);
+      animation: welcomeGateNeonLoop 0.95s linear infinite;
+    }
+
+    .welcome-gate__touch.is-loading .welcome-gate__profile,
+    .welcome-gate__touch.is-loading .welcome-gate__copy,
+    .welcome-gate__touch.is-loading .welcome-gate__start-btn,
+    .welcome-gate__touch.is-loading .welcome-gate__energy,
+    .welcome-gate__touch.is-loading .welcome-gate__blocked-note {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .welcome-gate__touch.is-loading .welcome-gate__loading {
+      display: grid;
+    }
+
+    @keyframes welcomeGateNeonLoop {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
     .welcome-gate__copy {
       display: none !important;
     }
@@ -629,7 +675,7 @@
       color: #ffffff;
       overflow: hidden;
       box-shadow: none;
-      margin: 0 auto;
+      margin: 3vh auto 0;
         filter: none;
         transition: transform 220ms ease;
       justify-self: center;
@@ -7203,7 +7249,7 @@
       }
 
       .welcome-gate__level-orbit {
-        width: min(300px, 72vw);
+        width: min(150px, 34vw, 18vh);
       }
 
       .welcome-gate__start-btn {
@@ -7232,6 +7278,9 @@
   <section class="welcome-gate" id="welcomeGate" aria-label="Entrada do Fluent LevelUp">
     <div class="welcome-gate__stack">
       <div class="welcome-gate__touch" id="welcomeTouch">
+        <div class="welcome-gate__loading" id="welcomeLoading" aria-hidden="true">
+          <div class="welcome-gate__loading-loop"></div>
+        </div>
         <div class="welcome-gate__profile" id="welcomeProfile">
           <div class="welcome-gate__header">
             <div class="welcome-gate__avatar-row">
@@ -7970,6 +8019,7 @@
         secretBuffer: '',
         entry: {
           cardsReady: false,
+          sessionResolved: false,
           welcomeVisible: true,
           welcomeDismissed: false,
           welcomeIndex: 0,
@@ -8127,6 +8177,8 @@
           welcomeEnergyBlocked: false,
           welcomeEnergyNextResetAt: '',
           welcomeEnergyTimer: 0,
+          welcomeProfileReady: false,
+          welcomeEnergyReady: false,
           gameStageTutorialVisible: false,
           gameStageTutorialKind: '',
           gameStageTutorialDismissHandler: null,
@@ -10439,6 +10491,11 @@
         return `${hours}:${minutes}:${seconds}`;
       }
 
+      function syncWelcomeLoadingState() {
+        const ready = Boolean(state.ui.welcomeProfileReady && state.ui.welcomeEnergyReady);
+        els.welcomeTouch?.classList.toggle('is-loading', !ready);
+      }
+
       function stopWelcomeEnergyCountdown() {
         if (state.ui.welcomeEnergyTimer) {
           window.clearInterval(state.ui.welcomeEnergyTimer);
@@ -10478,6 +10535,8 @@
         if (els.welcomeEnergyValue) {
           els.welcomeEnergyValue.textContent = String(remaining);
         }
+        state.ui.welcomeEnergyReady = true;
+        syncWelcomeLoadingState();
         if (window.PlaytalkEnergy?.rememberEnergyStatus) {
           window.PlaytalkEnergy.rememberEnergyStatus(status);
         }
@@ -10496,6 +10555,8 @@
           if (els.welcomeEnergyValue) {
             els.welcomeEnergyValue.textContent = '5000';
           }
+          state.ui.welcomeEnergyReady = true;
+          syncWelcomeLoadingState();
           stopWelcomeEnergyCountdown();
           syncWelcomeStartButton();
           return;
@@ -10647,6 +10708,7 @@
 
       function syncWelcomeLevelProgress() {
         if (!els.welcomeUserName || !els.welcomeUserLevel || !els.welcomeUserLevelNumber || !els.welcomeLevelProgressBar) return;
+        if (!state.entry.sessionResolved) return;
         const username = safeText(state.user?.username) || 'Jogador';
         const avatar = safeText(state.user?.avatarImage || state.user?.avatar_image || state.user?.avatar);
         const hasAvatar = Boolean(avatar);
@@ -10680,6 +10742,8 @@
             ? 'Nivel maximo alcancado'
             : `${remaining} ${remaining === 1 ? 'carta' : 'cartas'} para próximo nível`;
         }
+        state.ui.welcomeProfileReady = true;
+        syncWelcomeLoadingState();
       }
 
       function syncWelcomeAccountLink() {}
@@ -18490,6 +18554,7 @@
           if (sessionUser) {
             state.user = normalizeUser(sessionUser);
           }
+          state.entry.sessionResolved = true;
           ensureFlashcardsEnergyDepletionWatch();
           try {
             await loadCards();
