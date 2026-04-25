@@ -6,7 +6,7 @@
   <title>Fluent LevelUp | Flashcards</title>
   <link rel="stylesheet" href="css/playtalk-shell.css">
   <style>
-    @import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&display=swap");
+    @import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap");
 
     @font-face {
       font-family: "Soopafre";
@@ -376,7 +376,7 @@
       display: grid;
       justify-items: center;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.92);
+      border: 1px solid transparent;
       box-sizing: border-box;
     }
 
@@ -511,7 +511,7 @@
 
     .welcome-gate__level-orbit {
       --welcome-level-progress: 0deg;
-      width: min(236px, 54vw, 29.4vh);
+      width: min(212px, 48.6vw, 26.46vh);
       aspect-ratio: 1;
       border-radius: 50%;
       position: relative;
@@ -587,7 +587,14 @@
     }
 
     .welcome-gate__level-copy {
-      display: none;
+      display: block;
+      margin: 10px 0 0;
+      text-align: center;
+      font-family: "Rajdhani", "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(24px, 4.6vw, 34px);
+      font-weight: 500;
+      line-height: 1.1;
+      color: rgba(240, 249, 255, 0.96);
     }
 
     .welcome-gate__energy {
@@ -633,9 +640,9 @@
     }
 
     .welcome-gate__energy-label {
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-family: "Rajdhani", "Exo 2", "Open Sans", Arial, sans-serif;
       font-size: clamp(16px, 3.6vw, 21px);
-      font-weight: 200;
+      font-weight: 500;
       line-height: 1;
       color: rgba(255, 255, 255, 0.92);
     }
@@ -7297,7 +7304,7 @@
       }
 
       .welcome-gate__level-orbit {
-        width: min(236px, 54vw, 29.4vh);
+        width: min(212px, 48.6vw, 26.46vh);
       }
 
       .welcome-gate__start-btn {
@@ -7354,7 +7361,7 @@
                 <span class="welcome-gate__level-title">Level</span>
             </span>
           </div>
-            <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">2 cartas para próximo nível</p>
+            <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">Ganhe mais 2 cartas para avançar</p>
           </div>
         </div>
         <p class="welcome-gate__copy" id="welcomeCopy"></p>
@@ -7366,7 +7373,7 @@
             </span>
             <span id="welcomeEnergyValue">--</span>
           </div>
-          <div class="welcome-gate__energy-label">Energias "restantes"</div>
+          <div class="welcome-gate__energy-label">energias restantes</div>
         </div>
         <p class="welcome-gate__blocked-note" id="welcomeBlockedNote" aria-live="polite" hidden>Mais energias amanhã</p>
       </div>
@@ -10820,13 +10827,13 @@
         if (els.welcomeLevelOrbit) {
           const orbitLabel = level >= USER_LEVEL_MAX
             ? `Level ${level}. Nivel maximo alcancado.`
-            : `Level ${level}. ${remaining} ${remaining === 1 ? 'carta restante' : 'cartas restantes'} para o próximo nível.`;
+            : `Level ${level}. Ganhe mais ${remaining} ${remaining === 1 ? 'carta' : 'cartas'} para avançar.`;
           els.welcomeLevelOrbit.setAttribute('aria-label', orbitLabel);
         }
         if (els.welcomeLevelProgressCopy) {
           els.welcomeLevelProgressCopy.textContent = level >= USER_LEVEL_MAX
             ? 'Nivel maximo alcancado'
-            : `${remaining} ${remaining === 1 ? 'carta' : 'cartas'} para próximo nível`;
+            : `Ganhe mais ${remaining} ${remaining === 1 ? 'carta' : 'cartas'} para avançar`;
         }
         state.ui.welcomeProfileReady = true;
         syncWelcomeLoadingState();
