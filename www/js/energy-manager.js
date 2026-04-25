@@ -869,17 +869,30 @@
     openEnergyGate(status, { mode: ENERGY_GATE_MODE_DEFAULT });
     window.setTimeout(() => openEnergyGate(status, { mode: ENERGY_GATE_MODE_DEFAULT }), 250);
   }
+  function resolveApiUrl(path) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
+      return window.PlaytalkApi.url(path);
+    }
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.buildApiUrl === 'function') {
+      return window.PlaytalkApi.buildApiUrl(path);
+    }
+    return path;
+  }
 
+  function resolveAuthHeaders(extraHeaders) {
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function') {
+      return window.PlaytalkApi.authHeaders(extraHeaders);
+    }
+    if (window.PlaytalkApi && typeof window.PlaytalkApi.buildAuthHeaders === 'function') {
+      return window.PlaytalkApi.buildAuthHeaders(extraHeaders);
+    }
+    return { ...(extraHeaders || {}) };
+  }
 
   async function fetchBooksStats() {
-    if (!window.PlaytalkApi || typeof window.PlaytalkApi.buildApiUrl !== 'function') {
-      return null;
-    }
     try {
-      const response = await fetch(window.PlaytalkApi.buildApiUrl('/api/books/stats'), {
-        headers: typeof window.PlaytalkApi.buildAuthHeaders === 'function'
-          ? window.PlaytalkApi.buildAuthHeaders()
-          : {},
+      const response = await fetch(resolveApiUrl('/api/books/stats'), {
+        headers: resolveAuthHeaders(),
         cache: 'no-store',
         credentials: 'include'
       });
