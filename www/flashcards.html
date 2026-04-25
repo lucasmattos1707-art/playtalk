@@ -302,7 +302,7 @@
       min-height: 102dvh;
       position: relative;
       display: grid;
-      grid-template-rows: 8vh 35vh 15vh 15vh;
+      grid-template-rows: 12vh 8vh 35vh 15vh 15vh;
       justify-items: stretch;
       align-items: start;
       align-content: start;
@@ -383,29 +383,24 @@
     }
 
     .welcome-gate__header {
-      display: none !important;
+      display: block;
       visibility: hidden;
       opacity: 0;
       pointer-events: none;
       position: relative;
-      min-height: 0;
-      height: 0;
-      grid-template-columns: auto minmax(0, 1fr);
-      align-items: center;
-      gap: 12px;
+      min-height: 12vh;
+      height: 12vh;
+      width: 100%;
+      grid-template-columns: none;
+      align-items: stretch;
+      gap: 0;
       padding: 0;
       margin-inline: 0;
-      background: linear-gradient(180deg, #12356b 0%, #0a1f44 55%, #05080f 100%);
-      box-shadow:
-        inset 0 -1px 0 rgba(184, 232, 255, 0.18),
-        0 14px 30px rgba(4, 41, 98, 0.28);
+      background: transparent;
+      box-shadow: none;
       text-align: left;
       justify-items: start;
       border-radius: 0;
-    }
-
-    .welcome-gate__header * {
-      display: none !important;
     }
 
     .welcome-gate__level-copy-panel {
@@ -7306,9 +7301,9 @@
       }
 
       .welcome-gate__header {
-        min-height: 0;
-        height: 0;
-        gap: 14px;
+        min-height: 12vh;
+        height: 12vh;
+        gap: 0;
         padding: 0;
       }
 
@@ -7360,19 +7355,7 @@
           <div class="welcome-gate__loading-loop"></div>
         </div>
         <div class="welcome-gate__profile" id="welcomeProfile">
-          <div class="welcome-gate__header">
-            <div class="welcome-gate__avatar-row">
-              <div class="welcome-gate__avatar" aria-hidden="true">
-                <img id="welcomeAvatarPreview" src="/Avatar/profile-neon-blue.svg" alt="">
-              </div>
-            </div>
-            <div class="welcome-gate__identity">
-              <div class="welcome-gate__name-row">
-                <strong class="welcome-gate__username" id="welcomeUserName">Jogador</strong>
-                <span class="welcome-gate__level" id="welcomeUserLevel">Nivel 1</span>
-              </div>
-            </div>
-          </div>
+          <div class="welcome-gate__header" aria-hidden="true"></div>
           <div class="welcome-gate__level-copy-panel">
             <p class="welcome-gate__level-heading" id="welcomeLevelHeading">Você está no nível 1</p>
           </div>
@@ -8256,6 +8239,8 @@
           welcomeEnergyBlocked: false,
           welcomeEnergyNextResetAt: '',
           welcomeEnergyTimer: 0,
+          welcomeHeadingTimer: 0,
+          welcomeHeadingModeIndex: 0,
           welcomeProfileReady: false,
           welcomeEnergyReady: false,
           gameStageTutorialVisible: false,
@@ -9650,6 +9635,60 @@
         state.entry.welcomeTimer = 0;
       }
 
+      function formatWelcomeHeadingName(value) {
+        const normalized = safeText(value).replace(/\s+/g, ' ').trim();
+        if (!normalized) return 'Jogador';
+        return normalized
+          .split(' ')
+          .filter(Boolean)
+          .map((part) => {
+            const lower = part.toLowerCase();
+            if (lower.length <= 2) return lower;
+            return lower.charAt(0).toUpperCase() + lower.slice(1);
+          })
+          .join(' ');
+      }
+
+      function resolveWelcomeGreeting() {
+        const now = new Date();
+        const hour = now.getHours();
+        if (hour >= 5 && hour < 12) return 'Bom dia';
+        if (hour >= 12 && hour < 16) return 'Boa tarde';
+        return 'Boa noite';
+      }
+
+      function buildWelcomeHeadingLine(level) {
+        const greeting = resolveWelcomeGreeting();
+        const name = formatWelcomeHeadingName(state.user?.username);
+        const levelLine = `Você está no nível ${level}`;
+        const greetingLine = `${greeting}, ${name}`;
+        return state.ui.welcomeHeadingModeIndex % 2 === 0
+          ? levelLine
+          : greetingLine;
+      }
+
+      function stopWelcomeHeadingRotation() {
+        if (state.ui.welcomeHeadingTimer) {
+          window.clearInterval(state.ui.welcomeHeadingTimer);
+          state.ui.welcomeHeadingTimer = 0;
+        }
+        state.ui.welcomeHeadingModeIndex = 0;
+      }
+
+      function ensureWelcomeHeadingRotation() {
+        if (!els.welcomeLevelHeading) return;
+        if (state.ui.welcomeHeadingTimer) return;
+        state.ui.welcomeHeadingTimer = window.setInterval(() => {
+          if (!state.entry.welcomeVisible || !state.entry.sessionResolved) {
+            stopWelcomeHeadingRotation();
+            return;
+          }
+          state.ui.welcomeHeadingModeIndex = (state.ui.welcomeHeadingModeIndex + 1) % 2;
+          const level = currentUserLevel();
+          els.welcomeLevelHeading.textContent = buildWelcomeHeadingLine(level);
+        }, 3600);
+      }
+
       const AUDIO_CHECK_STORAGE_KEY = 'playtalk-audio-check-completed';
       const MIC_CHECK_STORAGE_KEY = 'playtalk-mic-check-completed';
       const AUDIO_CHECK_ROTATION_MS = 2400;
@@ -10819,11 +10858,8 @@
       }
 
       function syncWelcomeLevelProgress() {
-        if (!els.welcomeUserName || !els.welcomeUserLevel || !els.welcomeUserLevelNumber || !els.welcomeLevelProgressBar) return;
+        if (!els.welcomeUserLevelNumber || !els.welcomeLevelProgressBar) return;
         if (!state.entry.sessionResolved) return;
-        const username = formatWelcomeDisplayName(state.user?.username);
-        const avatar = safeText(state.user?.avatarImage || state.user?.avatar_image || state.user?.avatar);
-        const hasAvatar = Boolean(avatar);
         const level = currentUserLevel();
         const levelTarget = userLevelCardTarget(level);
         const progressCount = level >= USER_LEVEL_MAX
@@ -10831,19 +10867,10 @@
           : Math.max(0, Math.min(levelTarget, currentLevelProgressCount(level)));
         const remaining = Math.max(0, levelTarget - progressCount);
         const percent = (progressCount / Math.max(1, levelTarget)) * 100;
-        els.welcomeUserName.textContent = username;
-        if (els.welcomeAvatarPreview) {
-          const nextAvatar = hasAvatar ? avatar : '/Avatar/profile-neon-blue.svg';
-          if (els.welcomeAvatarPreview.dataset.src !== nextAvatar) {
-            els.welcomeAvatarPreview.src = nextAvatar;
-            els.welcomeAvatarPreview.dataset.src = nextAvatar;
-          }
-          els.welcomeAvatarPreview.hidden = false;
-        }
-        els.welcomeUserLevel.textContent = `Nivel ${level}`;
         if (els.welcomeLevelHeading) {
-          els.welcomeLevelHeading.textContent = `Você está no nível ${level}`;
+          els.welcomeLevelHeading.textContent = buildWelcomeHeadingLine(level);
         }
+        ensureWelcomeHeadingRotation();
         els.welcomeUserLevelNumber.textContent = String(level);
         els.welcomeLevelProgressBar.style.setProperty('--welcome-level-progress-pct', `${percent.toFixed(2)}%`);
         if (els.welcomeLevelOrbit) {
@@ -10878,6 +10905,7 @@
         }
         if (!visible) {
           clearWelcomeRotation();
+          stopWelcomeHeadingRotation();
           return;
         }
         if (state.entry.pendingTutorialStart) {
@@ -10908,6 +10936,7 @@
         els.welcomeGate?.classList.remove('is-visible');
         closeAudioCheck();
         clearWelcomeRotation();
+        stopWelcomeHeadingRotation();
       }
 
       function tryStartPendingWelcomePlay() {
