@@ -3044,7 +3044,7 @@
       height: 30px;
       object-fit: contain;
       filter: brightness(0) invert(1);
-      opacity: 0.76;
+      opacity: 0.7;
     }
 
     .game.is-level-text-mode .game-language-btn.is-active,
@@ -7949,7 +7949,7 @@
             <button class="game-level-strip__btn" id="gameLevelPrevBtn" type="button" aria-label="Voltar nivel">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 5.4 8.8 12l6.6 6.6-1.4 1.4L6 12l8-8z"/></svg>
             </button>
-            <div class="game-level-strip__label" id="gameLevelLabel">Todos os niveis</div>
+            <div class="game-level-strip__label" id="gameLevelLabel">Nivel 1</div>
             <button class="game-level-strip__btn" id="gameLevelNextBtn" type="button" aria-label="Avancar nivel">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.6 18.6 6.6-6.6-6.6-6.6L10 4l8 8-8 8z"/></svg>
             </button>
@@ -8285,10 +8285,10 @@
         return Boolean(recognitionCtor || getNativeSpeechRecognition() || getOpenAiSpeechRecognition());
       }
       const STAR_ICON_PATH = 'SVG/codex-icons/star.svg';
-      const ENGLISH_ICON_PATH = 'arquivos-codex/icones/ingles.svg';
+      const ENGLISH_ICON_PATH = '/arquivos-codex/icones/ingles.svg';
       const GAME_TOUCH_ICON_STORAGE_KEY = 'playtalk-game-touch-icon-v1';
       const GAME_TOUCH_ICON_MARKUP = '<svg class="game-touch__books-mic-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>';
-      const PORTUGUESE_ICON_PATH = 'arquivos-codex/icones/portugues.svg';
+      const PORTUGUESE_ICON_PATH = '/arquivos-codex/icones/portugues.svg';
       const SUCCESS_SOUND_PATH = 'gamesounds/success.mp3';
       const FOUR_STARS_SOUND_PATH = 'newsongs/4stars.mp3';
       const FIVE_STARS_SOUND_PATH = 'newsongs/5stars.mp3';
@@ -8656,7 +8656,7 @@
           gameStatusRankTimer: 0,
           gameStatusRankToken: 0,
           gameStatusPreviousRank: 0,
-          welcomeSelectedLevel: 0,
+      welcomeSelectedLevel: 1,
           levelModeProgress: {},
           levelSwitchTimer: 0,
           levelSwitchResetTimer: 0,
