@@ -18891,7 +18891,15 @@
           void openAudioCheck();
         };
         els.welcomeStartBtn?.addEventListener('click', (event) => {
-          void startLevelModeFromWelcome(event, { audioOnly: false });
+          void (async () => {
+            if (await handleManualWelcomeNoEnergy(event.currentTarget)) return;
+            if (!(await guardWelcomeEnergy({ previewTarget: event.currentTarget }))) return;
+            state.game.levelMode = false;
+            state.game.levelAudioMode = false;
+            state.game.levelTextMode = false;
+            state.entry.welcomeStartRequested = true;
+            void openAudioCheck();
+          })();
         });
         els.welcomeAudioModeBtn?.addEventListener('click', (event) => {
           void startLevelModeFromWelcome(event, { audioOnly: true });
