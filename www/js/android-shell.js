@@ -1,6 +1,8 @@
 (function initPlaytalkAndroidShell() {
   const LAST_ROUTE_STORAGE_KEY = 'playtalk_native_last_route_v1';
+  const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
   const LAST_ROUTE_MAX_AGE_MS = 30000;
+  const PROTECTED_ROUTE_KEYS = new Set(['play', 'allcards', 'users', 'account', 'books', 'flashcards', 'mycards', 'premium', 'speaking']);
   const ROUTES = {
     auth: { webPath: '/entrar', localPath: '/auth.html' },
     play: { webPath: '/play', localPath: '/flashcards.html' },
@@ -89,7 +91,7 @@
   function rememberCurrentRoute() {
     if (!isNativeRuntime()) return;
     const routeKey = currentRouteKey();
-    if (!routeKey || routeKey === 'speaking') return;
+    if (!routeKey || routeKey === 'speaking' || routeKey === 'auth') return;
     try {
       window.localStorage.setItem(LAST_ROUTE_STORAGE_KEY, JSON.stringify({
         href: comparableHref(window.location.href),
@@ -170,6 +172,74 @@
     }
     const matchedRoute = findRouteByWebPath(parsedUrl.pathname);
     return matchedRoute ? matchedRoute[0] : '';
+  }
+
+  function getStoredAuthToken() {
+    try {
+      return String(window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || '').trim();
+    } catch (_error) {
+      return '';
+    }
+  }
+
+  function clearStoredAuthToken() {
+    try {
+      window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  function buildCurrentReturnPath() {
+    const routeKey = currentRouteKey();
+    const route = routeKey && ROUTES[routeKey] ? ROUTES[routeKey] : null;
+    if (route && route.webPath) {
+      return route.webPath;
+    }
+    const pathname = normalizePathname(window.location.pathname);
+    return pathname && pathname !== '/auth.html' ? pathname : '/play';
+  }
+
+  function redirectToAuthGate() {
+    const returnPath = buildCurrentReturnPath();
+    const authUrl = new URL('/auth.html', window.location.origin);
+    authUrl.searchParams.set('return', returnPath);
+    window.location.replace(`${authUrl.pathname}${authUrl.search}${authUrl.hash}`);
+  }
+
+  async function ensureAuthenticatedRoute() {
+    if (!isNativeRuntime()) return true;
+    const routeKey = currentRouteKey();
+    if (!routeKey || routeKey === 'auth' || !PROTECTED_ROUTE_KEYS.has(routeKey)) {
+      return true;
+    }
+
+    try {
+      if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
+        const user = await window.PlaytalkApi.fetchSessionUser({ attempts: 1, timeoutMs: 2200 });
+        if (!user) {
+          if (getStoredAuthToken()) {
+            clearStoredAuthToken();
+          }
+          redirectToAuthGate();
+          return false;
+        }
+        return true;
+      }
+    } catch (_error) {
+      if (getStoredAuthToken()) {
+        clearStoredAuthToken();
+      }
+      redirectToAuthGate();
+      return false;
+    }
+
+    if (!getStoredAuthToken()) {
+      redirectToAuthGate();
+      return false;
+    }
+
+    return true;
   }
 
   function isCurrentSpeakingSession(sessionId) {
@@ -527,7 +597,9 @@
     }, 2500);
   }
 
-  function init() {
+  async function init() {
+    const allowed = await ensureAuthenticatedRoute();
+    if (!allowed) return;
     startGlobalChallengePopups();
     if (!isNativeRuntime()) return;
     rewriteAnchors(document);

@@ -2525,16 +2525,6 @@
             maxDurationMs: 7000
           });
         }
-        if (typeof nativeSpeech.ensureGameplayCaptureReady === 'function') {
-          await nativeSpeech.ensureGameplayCaptureReady();
-        } else {
-          const granted = typeof nativeSpeech.ensurePermissions === 'function'
-            ? await nativeSpeech.ensurePermissions()
-            : true;
-          if (!granted) {
-            throw new Error('Permissao de microfone negada.');
-          }
-        }
         if (typeof nativeSpeech.captureOnce === 'function') {
           return await nativeSpeech.captureOnce({
             language: language || 'en-US',

@@ -1,6 +1,10 @@
 (function initPlaytalkApiConfig() {
-  const DEFAULT_REMOTE_API_BASE_URL = 'https://fluentlevelup.com';
-  const DEFAULT_REMOTE_API_HOSTNAME = 'fluentlevelup.com';
+  const DEFAULT_REMOTE_API_BASE_URL = 'https://www.fluentlevelup.com';
+  const DEFAULT_REMOTE_API_HOSTNAME = 'www.fluentlevelup.com';
+  const LEGACY_REMOTE_API_HOSTNAMES = new Set([
+    'fluentlevelup.com',
+    'www.fluentlevelup.com'
+  ]);
   const API_BASE_URL_STORAGE_KEY = 'playtalk_api_base_url';
   const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
   const DEFAULT_PUBLIC_ASSETS_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
@@ -33,7 +37,7 @@
       const parsedUrl = new URL(normalizeBaseUrl(value));
       const hostname = parsedUrl.hostname.toLowerCase();
       const currentHostname = String(window.location?.hostname || '').toLowerCase();
-      return hostname !== DEFAULT_REMOTE_API_HOSTNAME
+      return !LEGACY_REMOTE_API_HOSTNAMES.has(hostname)
         && hostname !== currentHostname
         && hostname !== 'localhost'
         && hostname !== '127.0.0.1';
@@ -99,6 +103,14 @@
 
   function buildApiUrl(path) {
     return `${apiBaseUrl}${normalizePath(path)}`;
+  }
+
+  function applyGlobalBackgroundCssVars(root = document) {
+    if (!root || !root.documentElement || !apiBaseUrl) return;
+    const desktopUrl = buildApiUrl('/api/r2-media/backgrounds/playtalk-global-desktop.webp');
+    const mobileUrl = buildApiUrl('/api/r2-media/backgrounds/playtalk-global-mobile.webp');
+    root.documentElement.style.setProperty('--playtalk-global-bg-desktop', `url('${desktopUrl}')`);
+    root.documentElement.style.setProperty('--playtalk-global-bg-mobile', `url('${mobileUrl}')`);
   }
 
   async function fetchWithTimeout(resource, options = {}, timeoutMs = 0) {
@@ -231,14 +243,18 @@
       return publicAssetsRoot;
     },
     url: buildApiUrl,
+    buildUrl: buildApiUrl,
+    buildApiUrl,
     getAuthToken,
     hasAuthToken,
     setAuthToken,
     fetchSessionUser,
     authHeaders: buildAuthHeaders,
+    buildAuthHeaders,
     accesskeyUrl: buildAccesskeyUrl,
     audiostutoUrl: buildAudiostutoUrl,
     rewritePublicAssetSources,
+    applyGlobalBackgroundCssVars,
     setBaseUrl(nextBaseUrl) {
       const normalized = normalizeBaseUrl(nextBaseUrl);
       try {
@@ -252,7 +268,10 @@
       } catch (_error) {
         return false;
       }
+      applyGlobalBackgroundCssVars(document);
       return true;
     }
   };
+
+  applyGlobalBackgroundCssVars(document);
 })();

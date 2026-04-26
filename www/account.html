@@ -1179,8 +1179,9 @@
       left: 0;
       right: 0;
       bottom: 0;
-      bottom: var(--footer-safe-bottom);
-      height: var(--footer-height);
+      height: var(--footer-total-height);
+      padding-bottom: var(--footer-safe-bottom);
+      box-sizing: border-box;
       background: #157efb;
       display: grid !important;
       grid-template-columns: repeat(5, 1fr);

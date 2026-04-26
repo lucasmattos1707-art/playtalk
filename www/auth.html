@@ -42,6 +42,9 @@
       var registerBtn = document.getElementById('authModeRegister');
 
       function buildApiUrl(path) {
+        if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
+          return window.PlaytalkApi.url(path);
+        }
         if (window.PlaytalkApi && typeof window.PlaytalkApi.buildUrl === 'function') {
           return window.PlaytalkApi.buildUrl(path);
         }
@@ -115,6 +118,20 @@
         message.classList.toggle('is-success', type === 'success');
       }
 
+      function buildUnexpectedAuthErrorMessage(error, endpoint) {
+        var rawMessage = error && typeof error.message === 'string' ? error.message.trim() : '';
+        if (!rawMessage) {
+          return 'Erro inesperado ao falar com o servidor. [' + endpoint + ']';
+        }
+        if (/failed to fetch|networkerror|load failed/i.test(rawMessage)) {
+          return 'Sem conexao com o servidor. [' + endpoint + ']';
+        }
+        if (/abort|timeout/i.test(rawMessage)) {
+          return 'Tempo esgotado ao acessar o servidor. [' + endpoint + ']';
+        }
+        return rawMessage + ' [' + endpoint + ']';
+      }
+
       function setMode(mode) {
         state.mode = mode === 'register' ? 'register' : 'login';
         var isRegister = state.mode === 'register';
@@ -170,7 +187,7 @@
           setMessage('Entrada liberada. Bora jogar.', 'success');
           window.location.replace(resolveNativeReturnPath(safeReturnPath()));
         } catch (error) {
-          setMessage(error && error.message ? error.message : 'Nao foi possivel entrar agora.', 'error');
+          setMessage(buildUnexpectedAuthErrorMessage(error, state.mode === 'register' ? '/register' : '/login'), 'error');
         } finally {
           state.submitting = false;
           submitBtn.disabled = false;

@@ -42,30 +42,8 @@
   </style>
   <script>
     (function redirectToEntrar() {
-      var LAST_ROUTE_STORAGE_KEY = 'playtalk_native_last_route_v1';
-      var LAST_ROUTE_MAX_AGE_MS = 30000;
       var targetUrl = new URL('/auth.html', window.location.origin);
       targetUrl.searchParams.set('return', '/play');
-      try {
-        var protocol = String(window.location && window.location.protocol || '').toLowerCase();
-        var hostname = String(window.location && window.location.hostname || '').toLowerCase();
-        var port = String(window.location && window.location.port || '').trim();
-        var isNativeRuntime = protocol === 'file:' || ((hostname === 'localhost' || hostname === '127.0.0.1') && !port);
-        if (isNativeRuntime) {
-          var rawSavedRoute = window.localStorage.getItem(LAST_ROUTE_STORAGE_KEY) || '';
-          var savedRoute = rawSavedRoute ? JSON.parse(rawSavedRoute) : null;
-          var savedHref = String(savedRoute && savedRoute.href || '').trim();
-          var savedAt = Number(savedRoute && savedRoute.savedAt) || 0;
-          var routeIsFresh = savedHref && savedAt > 0 && (Date.now() - savedAt) <= LAST_ROUTE_MAX_AGE_MS;
-          var routeIsNotRoot = savedHref && savedHref !== '/' && savedHref !== '/index.html';
-          if (routeIsFresh && routeIsNotRoot) {
-            window.location.replace(savedHref);
-            return;
-          }
-        }
-      } catch (_error) {
-        // ignore restore failures
-      }
       window.location.replace(targetUrl.pathname + targetUrl.search + targetUrl.hash);
     })();
   </script>

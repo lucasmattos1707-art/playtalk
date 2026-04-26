@@ -7000,8 +7000,9 @@
       left: 0;
       right: 0;
       bottom: 0;
-      bottom: var(--footer-safe-bottom);
-      height: var(--footer-height);
+      height: var(--footer-total-height);
+      padding-bottom: var(--footer-safe-bottom);
+      box-sizing: border-box;
       background: #157efb;
       display: grid !important;
       grid-template-columns: repeat(5, 1fr);
@@ -10596,7 +10597,8 @@
       async function startMicCheckCapture() {
         if (!state.ui.micCheckOpen || state.ui.micCheckBusy) return;
         const nativeSpeech = getNativeSpeechRecognition();
-        if (!nativeSpeech && !recognitionCtor) {
+        const openAiSpeech = getOpenAiSpeechRecognition();
+        if (!nativeSpeech && !recognitionCtor && !openAiSpeech) {
           setMicCheckStatus('Microfone indisponivel neste aparelho.');
           return;
         }
@@ -10622,26 +10624,39 @@
           };
           state.ui.micCheckRecognition = nativeCapture;
           try {
-            const hasAccess = typeof nativeSpeech.ensureGameplayCaptureReady === 'function'
-              ? (await nativeSpeech.ensureGameplayCaptureReady(), true)
-              : (typeof nativeSpeech.ensurePermissions === 'function'
-                ? await nativeSpeech.ensurePermissions()
-                : true);
-            if (!hasAccess || nativeCapture.aborted || !state.ui.micCheckOpen) {
-              setMicCheckStatus('Clique em permitir para continuar.');
-              return;
-            }
-            setMicCheckStepComplete('permit', true);
             const transcript = typeof nativeSpeech.captureForGameplay === 'function'
               ? await nativeSpeech.captureForGameplay({ language: 'pt-BR', maxResults: 5, maxDurationMs: 6500 })
               : await nativeSpeech.captureOnce({ language: 'pt-BR', maxResults: 5, maxDurationMs: 6500 });
             if (nativeCapture.aborted || !state.ui.micCheckOpen) return;
+            setMicCheckStepComplete('permit', true);
             if (safeText(transcript)) {
               await completeMicCheck();
               return;
             }
             setMicCheckStatus('Nao ouvi nada. Tente de novo.');
-          } catch (_error) {
+          } catch (error) {
+            const errorCode = safeText(error?.code || error?.message || '').toLowerCase();
+            if (
+              openAiSpeech
+              && errorCode !== 'permission_denied'
+              && errorCode !== 'cancelled'
+              && errorCode !== 'app_paused'
+            ) {
+              try {
+                const transcript = await openAiSpeech.captureAndTranscribe({
+                  language: 'pt-BR',
+                  maxDurationMs: 6500,
+                  onRecordingStart: () => setMicCheckStatus('Ouvindo...'),
+                  onRecordingStop: () => {}
+                });
+                if (safeText(transcript) && state.ui.micCheckOpen) {
+                  await completeMicCheck();
+                  return;
+                }
+              } catch (_fallbackError) {
+                // keep default status below
+              }
+            }
             if (state.ui.micCheckOpen) {
               setMicCheckStatus('Nao consegui abrir o microfone. Tente de novo.');
             }
@@ -19008,21 +19023,6 @@
           state.game.recognition = nativeCapture;
 
           try {
-            const hasNativeMicAccess = typeof nativeSpeech.ensureGameplayCaptureReady === 'function'
-              ? (await nativeSpeech.ensureGameplayCaptureReady(), true)
-              : (typeof nativeSpeech.ensurePermissions === 'function'
-                ? await nativeSpeech.ensurePermissions()
-                : true);
-            if (!hasNativeMicAccess) {
-              finish();
-              if (state.game.active && state.game.currentId === entry.id) {
-                state.game.canListen = true;
-                renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
-                setGameStatus('Toque para falar', 'live');
-              }
-              return;
-            }
-
             const transcript = typeof nativeSpeech.captureForGameplay === 'function'
               ? await nativeSpeech.captureForGameplay({
                   language: recognitionLanguage,
@@ -19068,8 +19068,6 @@
               && errorCode !== 'permission_denied'
               && errorCode !== 'cancelled'
               && errorCode !== 'app_paused'
-              && errorCode !== 'busy'
-              && errorCode !== 'client'
               && await tryOpenAiFallback(`native:${errorCode || 'unknown'}`)
             ) {
               return;
@@ -19081,8 +19079,6 @@
               || errorCode === 'cancelled'
               || errorCode === 'app_paused'
               || errorCode === 'permission_denied'
-              || errorCode === 'busy'
-              || errorCode === 'client'
             ) {
               restoreIdleState(errorCode === 'permission_denied' ? 'Ative o microfone para falar.' : 'Toque para falar');
               return;

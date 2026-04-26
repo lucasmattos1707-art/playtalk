@@ -7,9 +7,13 @@ const config: CapacitorConfig = {
   bundledWebRuntime: false,
   server: {
     hostname: 'localhost',
-    androidScheme: 'https'
+    androidScheme: 'https',
+    allowNavigation: ['www.fluentlevelup.com', 'fluentlevelup.com']
   },
   plugins: {
+    CapacitorHttp: {
+      enabled: true
+    },
     SplashScreen: {
       launchShowDuration: 1200,
       backgroundColor: '#07111f',
