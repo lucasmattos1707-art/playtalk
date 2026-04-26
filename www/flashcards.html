@@ -8285,10 +8285,10 @@
         return Boolean(recognitionCtor || getNativeSpeechRecognition() || getOpenAiSpeechRecognition());
       }
       const STAR_ICON_PATH = 'SVG/codex-icons/star.svg';
-      const ENGLISH_ICON_PATH = 'SVG/codex-icons/ingles.svg';
+      const ENGLISH_ICON_PATH = 'arquivos-codex/icones/ingles.svg';
       const GAME_TOUCH_ICON_STORAGE_KEY = 'playtalk-game-touch-icon-v1';
       const GAME_TOUCH_ICON_MARKUP = '<svg class="game-touch__books-mic-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>';
-      const PORTUGUESE_ICON_PATH = 'SVG/codex-icons/portugues.svg';
+      const PORTUGUESE_ICON_PATH = 'arquivos-codex/icones/portugues.svg';
       const SUCCESS_SOUND_PATH = 'gamesounds/success.mp3';
       const FOUR_STARS_SOUND_PATH = 'newsongs/4stars.mp3';
       const FIVE_STARS_SOUND_PATH = 'newsongs/5stars.mp3';
@@ -12872,7 +12872,7 @@
           els.gameAdvanceBtn.tabIndex = active ? 0 : -1;
           els.gameAdvanceBtn.setAttribute('aria-hidden', active ? 'false' : 'true');
           els.gameAdvanceBtn.setAttribute('aria-label', 'Responder em portugues');
-          els.gameAdvanceBtn.innerHTML = active ? `<img src="${escapeHtml(PORTUGUESE_ICON_PATH)}" alt="Portugues">` : '';
+          els.gameAdvanceBtn.innerHTML = `<img src="${escapeHtml(PORTUGUESE_ICON_PATH)}" alt="Portugues">`;
           els.gameAdvanceBtn.classList.toggle('is-active', active && language === 'portuguese');
         }
       }
@@ -19174,6 +19174,7 @@
         const startLevelModeFromWelcome = async (event, options = {}) => {
           if (await handleManualWelcomeNoEnergy(els.welcomeStartBtn || event?.currentTarget)) return;
           if (!(await guardWelcomeEnergy({ previewTarget: [event?.currentTarget, els.welcomeStartBtn].filter(Boolean) }))) return;
+          setSelectedGameLevel(1);
           state.game.levelMode = true;
           state.game.levelAudioMode = Boolean(options.audioOnly);
           state.game.levelTextMode = Boolean(options.textOnly);
@@ -19206,6 +19207,7 @@
           void (async () => {
             if (await handleManualWelcomeNoEnergy(els.welcomeStartBtn || event.currentTarget)) return;
             if (!(await guardWelcomeEnergy({ previewTarget: [event.currentTarget, els.welcomeStartBtn] }))) return;
+            setSelectedGameLevel(1);
             state.game.levelMode = true;
             state.game.levelAudioMode = false;
             state.game.levelTextMode = false;
