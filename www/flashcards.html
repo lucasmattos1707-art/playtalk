@@ -2617,6 +2617,19 @@
       transition: none;
     }
 
+    .game.is-level-switching-reset #gameVisual,
+    .game.is-level-switching-reset #gameVisual::before,
+    .game.is-level-switching-reset #gameVisual::after,
+    .game.is-level-switching-reset #gameVisual > img:not(.game-card__seal),
+    .game.is-level-switching-reset #gameVisual .mini-card__fallback,
+    .game.is-level-switching-reset #gameVisual .game-card__placeholder,
+    .game.is-level-switching-reset #gameVisual .game-card__reveal-image,
+    .game.is-level-switching-reset #gameVisual .game-card__phase-flag,
+    .game.is-level-switching-reset .game-translation-slot .game-phase-word {
+      transition: none !important;
+      animation: none !important;
+    }
+
     .game-card.is-sliding-next {
       opacity: 1;
     }
@@ -2904,19 +2917,25 @@
     .game.is-level-text-mode .game-card,
     .game.is-level-text-mode .game-status-slot,
     .game.is-level-text-mode .game-head {
-      background: #000000;
+      background: transparent;
       box-shadow: none;
-      border-color: rgba(255, 255, 255, 0.08);
+      border-color: transparent;
     }
 
-    .game.is-level-text-mode #gameHeadCopy h2,
-    .game.is-level-text-mode #gameHeaderCopy,
+    .game.is-level-text-mode #gameHeadCopy,
     .game.is-level-text-mode #gameStep,
+    .game.is-level-text-mode #gameWord,
+    .game.is-level-text-mode #gameSubword,
     .game.is-level-text-mode #gameStarCopy,
+    .game.is-level-text-mode .game-status-slot,
+    .game.is-level-text-mode .game-translation-slot,
+    .game.is-level-text-mode .game-card__content,
+    .game.is-level-text-mode #gameHeaderCopy,
+    .game.is-level-text-mode #gameHeaderCopy,
     .game.is-level-text-mode .game-chip,
     .game.is-level-text-mode .game-status,
     .game.is-level-text-mode .game-phase-word {
-      color: #ffffff;
+      display: none !important;
     }
 
     .game.is-level-text-mode .game-level-strip__label,
@@ -2929,10 +2948,11 @@
     }
 
     .game.is-level-text-mode #gameVisual {
-      background: #000000;
+      background: transparent;
       border: 0;
       box-shadow: none;
       min-height: min(56vh, 460px);
+      overflow: visible;
     }
 
     .game.is-level-text-mode #gameWord,
@@ -2992,8 +3012,8 @@
       min-height: 58px;
       padding: 0;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: transparent;
+      border: 0;
       box-shadow: none;
       backdrop-filter: none;
       cursor: pointer;
@@ -3010,13 +3030,13 @@
 
     .game.is-level-text-mode .game-language-btn.is-active,
     .game.is-level-text-mode .game-advance-btn.is-active {
-      border-color: rgba(127, 217, 255, 0.82);
-      background: rgba(127, 217, 255, 0.12);
+      background: transparent;
     }
 
     .game.is-level-text-mode .game-language-btn.is-active img,
     .game.is-level-text-mode .game-advance-btn.is-active img {
       opacity: 1;
+      filter: none;
     }
 
     .game.is-level-text-mode .game-touch {
@@ -3073,6 +3093,32 @@
 
     .game.is-level-text-mode #gameVisual.is-waveform-playing .level-text-waveform__bar:nth-child(3n) {
       animation-delay: 180ms;
+    }
+
+    .game.is-level-text-mode .circlescreen,
+    .game.is-level-text-mode .game-shell,
+    .game.is-level-text-mode .game-card,
+    .game.is-level-text-mode .game-card__layout {
+      overflow: visible !important;
+    }
+
+    .game.is-level-text-mode[data-phase-key="first-star"] .circlescreen,
+    .game.is-level-text-mode[data-phase-key="third-star"] .circlescreen,
+    .game.is-level-text-mode[data-phase-key="fifth-star"] .circlescreen {
+      flex: 0 0 62%;
+      height: 62%;
+    }
+
+    .game.is-level-text-mode[data-phase-key="first-star"] #gameVisual,
+    .game.is-level-text-mode[data-phase-key="third-star"] #gameVisual,
+    .game.is-level-text-mode[data-phase-key="fifth-star"] #gameVisual {
+      width: 256px;
+      height: 256px;
+      min-width: 256px;
+      min-height: 256px;
+      max-width: 256px;
+      max-height: 256px;
+      transform: translateY(-20px) !important;
     }
 
     .star {
