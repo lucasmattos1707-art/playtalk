@@ -2969,6 +2969,122 @@
       font-weight: 600;
     }
 
+    .game.is-level-text-mode .game-controls-proxy {
+      width: min(250px, calc(100vw - 44px));
+      grid-template-columns: 58px minmax(0, 1fr) 58px;
+      gap: 12px;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .game.is-level-text-mode .game-text-mode-hits {
+      grid-column: 1 / -1;
+      display: block;
+      margin-bottom: 2px;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.9);
+      text-align: center;
+    }
+
+    .game.is-level-text-mode .game-language-btn,
+    .game.is-level-text-mode .game-advance-btn {
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      width: 58px;
+      min-width: 58px;
+      height: 58px;
+      min-height: 58px;
+      padding: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: none;
+      backdrop-filter: none;
+      cursor: pointer;
+    }
+
+    .game.is-level-text-mode .game-language-btn img,
+    .game.is-level-text-mode .game-advance-btn img {
+      width: 30px;
+      height: 30px;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+      opacity: 0.76;
+    }
+
+    .game.is-level-text-mode .game-language-btn.is-active,
+    .game.is-level-text-mode .game-advance-btn.is-active {
+      border-color: rgba(127, 217, 255, 0.82);
+      background: rgba(127, 217, 255, 0.12);
+    }
+
+    .game.is-level-text-mode .game-language-btn.is-active img,
+    .game.is-level-text-mode .game-advance-btn.is-active img {
+      opacity: 1;
+    }
+
+    .game.is-level-text-mode .game-touch {
+      width: 74px;
+      min-width: 74px;
+      height: 74px;
+      min-height: 74px;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      background: radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.14), rgba(20, 91, 188, 0.9) 78%);
+      box-shadow: 0 0 24px rgba(71, 195, 255, 0.18);
+      color: #ffffff;
+      flex: 0 0 auto;
+    }
+
+    .game.is-level-text-mode .game-touch.game-touch--books-mic {
+      background: radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.16), rgba(20, 91, 188, 0.92) 78%);
+      box-shadow: 0 0 24px rgba(71, 195, 255, 0.22);
+    }
+
+    .game.is-level-text-mode #gameVisual.is-level-text-mode {
+      display: grid;
+      place-items: center;
+    }
+
+    .game.is-level-text-mode .level-text-waveform {
+      width: min(72vw, 360px);
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .game.is-level-text-mode .level-text-waveform__bar {
+      width: 10px;
+      height: 22px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(127, 217, 255, 0.3), rgba(127, 217, 255, 0.78));
+      opacity: 0.46;
+      transform: scaleY(0.6);
+      transform-origin: center;
+    }
+
+    .game.is-level-text-mode #gameVisual.is-waveform-playing .level-text-waveform__bar {
+      animation: levelTextWaveformPulse 720ms ease-in-out infinite;
+      opacity: 1;
+    }
+
+    .game.is-level-text-mode #gameVisual.is-waveform-playing .level-text-waveform__bar:nth-child(2n) {
+      animation-delay: 90ms;
+    }
+
+    .game.is-level-text-mode #gameVisual.is-waveform-playing .level-text-waveform__bar:nth-child(3n) {
+      animation-delay: 180ms;
+    }
+
     .star {
       width: 40px;
       height: 40px;
@@ -5876,6 +5992,14 @@
       pointer-events: none;
     }
 
+    .game.is-level-text-mode[data-phase-key="first-star"] .game-controls-proxy,
+    .game.is-level-text-mode[data-phase-key="third-star"] .game-controls-proxy,
+    .game.is-level-text-mode[data-phase-key="fifth-star"] .game-controls-proxy {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
     .game[data-phase-key="first-star"] .game-controls-proxy:not(.is-hidden),
     .game[data-phase-key="third-star"] .game-controls-proxy:not(.is-hidden),
     .game[data-phase-key="fifth-star"] .game-controls-proxy:not(.is-hidden) {
@@ -6331,6 +6455,17 @@
       100% {
         opacity: 1;
         transform: translateX(0);
+      }
+    }
+
+    @keyframes levelTextWaveformPulse {
+      0%, 100% {
+        transform: scaleY(0.55);
+        opacity: 0.44;
+      }
+      50% {
+        transform: scaleY(2.8);
+        opacity: 1;
       }
     }
 
@@ -7787,6 +7922,7 @@
         </article>
 
         <div class="game-controls-proxy is-hidden" id="gameControlsProxy" aria-hidden="true" hidden>
+          <div class="game-text-mode-hits" id="gameTextModeHits" hidden>Hit x0</div>
           <button class="game-language-btn" id="gameLanguageBtn" type="button" tabindex="-1" aria-hidden="true">
             <img src="SVG/codex-icons/ingles.svg" alt="">
           </button>
@@ -8353,6 +8489,8 @@
           levelMode: false,
           levelAudioMode: false,
           levelTextMode: false,
+          levelTextResponseLanguage: 'english',
+          levelTextHitStreak: 0,
           entries: new Map(),
           queue: [],
           currentId: null,
@@ -8631,6 +8769,7 @@
         gameLanguageBtn: document.getElementById('gameLanguageBtn'),
         gameTouchBtn: document.getElementById('gameTouchBtn'),
         gameAdvanceBtn: document.getElementById('gameAdvanceBtn'),
+        gameTextModeHits: document.getElementById('gameTextModeHits'),
         gameTypingKeyboard: document.getElementById('gameTypingKeyboard'),
         gameStageTutorial: document.getElementById('gameStageTutorial'),
         gameStageTutorialImage: document.getElementById('gameStageTutorialImage'),
@@ -12660,6 +12799,73 @@
         return Boolean(isLevelModeActive() && isAllLevelsSelected());
       }
 
+      function selectedLevelTextResponseLanguage() {
+        return safeText(state.game?.levelTextResponseLanguage) === 'portuguese' ? 'portuguese' : 'english';
+      }
+
+      function setLevelTextModeWaveformActive(active) {
+        if (!els.gameVisual) return;
+        els.gameVisual.classList.toggle('is-waveform-playing', Boolean(active && isLevelTextModeActive()));
+      }
+
+      function syncLevelTextModeControls() {
+        const active = isLevelTextModeActive() && state.game.active;
+        const language = selectedLevelTextResponseLanguage();
+        const streak = Math.max(0, Number(state.game.levelTextHitStreak) || 0);
+        if (els.gameTextModeHits) {
+          els.gameTextModeHits.hidden = !active;
+          els.gameTextModeHits.textContent = `Hit x${streak}`;
+        }
+        if (els.gameControlsProxy) {
+          els.gameControlsProxy.classList.toggle('is-level-text-mode', active);
+        }
+        if (els.gameLanguageBtn) {
+          els.gameLanguageBtn.hidden = !active;
+          els.gameLanguageBtn.tabIndex = active ? 0 : -1;
+          els.gameLanguageBtn.setAttribute('aria-hidden', active ? 'false' : 'true');
+          els.gameLanguageBtn.setAttribute('aria-label', 'Responder em ingles');
+          els.gameLanguageBtn.innerHTML = `<img src="${escapeHtml(ENGLISH_ICON_PATH)}" alt="Ingles">`;
+          els.gameLanguageBtn.classList.toggle('is-active', active && language === 'english');
+        }
+        if (els.gameAdvanceBtn) {
+          els.gameAdvanceBtn.hidden = !active;
+          els.gameAdvanceBtn.tabIndex = active ? 0 : -1;
+          els.gameAdvanceBtn.setAttribute('aria-hidden', active ? 'false' : 'true');
+          els.gameAdvanceBtn.setAttribute('aria-label', 'Responder em portugues');
+          els.gameAdvanceBtn.innerHTML = active ? `<img src="${escapeHtml(PORTUGUESE_ICON_PATH)}" alt="Portugues">` : '';
+          els.gameAdvanceBtn.classList.toggle('is-active', active && language === 'portuguese');
+        }
+      }
+
+      function setLevelTextResponseLanguage(language, options = {}) {
+        const normalized = safeText(language) === 'portuguese' ? 'portuguese' : 'english';
+        const current = selectedLevelTextResponseLanguage();
+        if (normalized === current && !options.force) {
+          syncLevelTextModeControls();
+          return true;
+        }
+        const streak = Math.max(0, Number(state.game.levelTextHitStreak) || 0);
+        if (!options.force && streak >= 10) {
+          const confirmed = window.confirm('Trocar idioma? Isso vai resetar sua sequencia.');
+          if (!confirmed) {
+            syncLevelTextModeControls();
+            return false;
+          }
+        }
+        state.game.levelTextResponseLanguage = normalized;
+        state.game.levelTextHitStreak = 0;
+        if (state.game.listening) {
+          cleanupGameRecognition();
+        }
+        const currentEntry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+        if (currentEntry) {
+          renderGameTouchButton(STAGES[currentEntry.stage] || STAGES[1], currentEntry);
+          els.gameTouchBtn.classList.remove('is-busy');
+        }
+        syncLevelTextModeControls();
+        return true;
+      }
+
       function userLevelCardTarget(level = currentUserLevel()) {
         const normalizedLevel = normalizeUserLevel(level);
         if (normalizedLevel >= USER_LEVEL_MAX) return USER_LEVEL_MAX;
@@ -15276,7 +15482,7 @@
 
       function renderGameTouchButton(stageConfig, entry) {
         const stageNumber = Number(entry?.stage) || 0;
-        const useBooksMic = !isLevelAudioModeActive() && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5);
+        const useBooksMic = (!isLevelAudioModeActive() || isLevelTextModeActive()) && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5);
         els.gameTouchBtn.parentElement.hidden = !useBooksMic;
         els.gameTouchBtn.className = 'game-touch';
         els.gameTouchBtn.textContent = '';
@@ -15290,11 +15496,13 @@
         }
         if (!useBooksMic) {
           els.gameTouchBtn.classList.add('is-hidden');
+          syncLevelTextModeControls();
           return;
         }
         els.gameTouchBtn.parentElement.hidden = false;
         els.gameTouchBtn.classList.add('game-touch--books-mic');
         els.gameTouchBtn.innerHTML = GAME_TOUCH_ICON_MARKUP;
+        syncLevelTextModeControls();
       }
 
       function primeGameTouchButton() {
@@ -15566,6 +15774,7 @@
       function stopActiveAudio() {
         const current = state.game.activeAudio;
         setGameVisualNeonState('default');
+        setLevelTextModeWaveformActive(false);
         if (state.game.blockedAudioFlashTimer) {
           window.clearTimeout(state.game.blockedAudioFlashTimer);
           state.game.blockedAudioFlashTimer = 0;
@@ -15583,6 +15792,7 @@
       function fadeOutActiveAudio(durationMs = 1000) {
         const current = state.game.activeAudio;
         setGameVisualNeonState('default');
+        setLevelTextModeWaveformActive(false);
         if (state.game.blockedAudioFlashTimer) {
           window.clearTimeout(state.game.blockedAudioFlashTimer);
           state.game.blockedAudioFlashTimer = 0;
@@ -15649,6 +15859,7 @@
         state.game.listening = false;
         els.gameCard.classList.remove('is-listening');
         els.gameVisual.classList.remove('is-mic-live');
+        els.gameTouchBtn.classList.remove('is-busy');
         if (state.game.blockedAudioFlashTimer) {
           window.clearTimeout(state.game.blockedAudioFlashTimer);
           state.game.blockedAudioFlashTimer = 0;
@@ -15743,12 +15954,17 @@
               options.unlockDelayMs
             );
           }
+          setLevelTextModeWaveformActive(true);
           return playAudioWithSoftEnd(audio, { registerAsActive: true }).then((played) => {
+            setLevelTextModeWaveformActive(false);
             if (played) {
               addListeningCharsForCard(card);
               updateGameChips();
             }
             return played;
+          }).catch((error) => {
+            setLevelTextModeWaveformActive(false);
+            throw error;
           });
         }
 
@@ -15762,10 +15978,12 @@
               if (state.game.activeAudio && state.game.activeAudio.instance === utterance) {
                 state.game.activeAudio = null;
               }
+              setLevelTextModeWaveformActive(false);
               resolve(true);
             };
             state.game.activeAudio = { type: 'tts', instance: utterance };
             window.speechSynthesis.cancel();
+            setLevelTextModeWaveformActive(true);
             window.speechSynthesis.speak(utterance);
           });
         }
@@ -16109,6 +16327,12 @@
       function expectedAnswersForEntry(entry) {
         const card = cardById(entry.id);
         const stageConfig = STAGES[entry.stage] || STAGES[1];
+        if (isLevelTextModeActive()) {
+          const textModeAnswers = selectedLevelTextResponseLanguage() === 'portuguese'
+            ? (Array.isArray(card?.portugueseAnswers) && card.portugueseAnswers.length ? card.portugueseAnswers : [card?.portuguese || ''])
+            : (Array.isArray(card?.englishAnswers) && card.englishAnswers.length ? card.englishAnswers : [card?.english || '']);
+          return uniqueAnswerList(textModeAnswers.map(repairDisplayText).map(item => safeText(item)).filter(Boolean));
+        }
         const answers = stageConfig.expected === 'portuguese'
           ? (Array.isArray(card?.portugueseAnswers) && card.portugueseAnswers.length ? card.portugueseAnswers : [card?.portuguese || ''])
           : (Array.isArray(card?.englishAnswers) && card.englishAnswers.length ? card.englishAnswers : [card?.english || '']);
@@ -16346,7 +16570,19 @@
           els.gameVisual.className = 'game-card__visual is-level-text-mode';
           els.gameVisual.style.removeProperty('--stage-two-overlay-opacity');
           setGameVisualNeonState('default');
-          els.gameVisual.innerHTML = '';
+          els.gameVisual.innerHTML = `
+            <div class="level-text-waveform" aria-hidden="true">
+              <span class="level-text-waveform__bar"></span>
+              <span class="level-text-waveform__bar"></span>
+              <span class="level-text-waveform__bar"></span>
+              <span class="level-text-waveform__bar"></span>
+              <span class="level-text-waveform__bar"></span>
+              <span class="level-text-waveform__bar"></span>
+              <span class="level-text-waveform__bar"></span>
+              <span class="level-text-waveform__bar"></span>
+              <span class="level-text-waveform__bar"></span>
+            </div>
+          `;
           return;
         }
         const mediaLocked = isNoEnergyMediaLocked();
@@ -17977,6 +18213,8 @@
         state.game.sessionStartedAt = Date.now();
         state.game.levelMode = true;
         state.game.levelBufferedSeenCount = 0;
+        state.game.levelTextHitStreak = 0;
+        state.game.levelTextResponseLanguage = selectedLevelTextResponseLanguage();
         if (!state.ui.levelModeProgress || typeof state.ui.levelModeProgress !== 'object') {
           state.ui.levelModeProgress = {};
         }
@@ -18008,6 +18246,7 @@
         });
         persistGameSessionLocally();
         syncGameLevelNavigator();
+        syncLevelTextModeControls();
         return state.game.entries.size > 0;
       }
 
@@ -18297,6 +18536,7 @@
         state.game.levelMode = false;
         state.game.levelAudioMode = false;
         state.game.levelTextMode = false;
+        state.game.levelTextHitStreak = 0;
         state.game.entries.clear();
         state.game.queue = [];
         state.game.currentId = null;
@@ -18318,6 +18558,7 @@
         resetGameSwipeTracking();
         syncFooterGuardState(null);
         syncGameLevelNavigator();
+        syncLevelTextModeControls();
         els.game.classList.remove('is-active');
         closeGameReportMenu();
         await wait(180);
@@ -18383,6 +18624,9 @@
           entry.stars = 0;
           entry.typingMistakes = 0;
           if (isHit) {
+            if (isLevelTextModeActive()) {
+              state.game.levelTextHitStreak = Math.max(0, Number(state.game.levelTextHitStreak) || 0) + 1;
+            }
             setGameStatus('', 'hit');
             playSuccessAudio();
             const levelBefore = selectedGameLevel();
@@ -18396,10 +18640,14 @@
               : formatSelectedGameLevelLabel();
             entry._removeAfterReward = true;
           } else {
+            if (isLevelTextModeActive()) {
+              state.game.levelTextHitStreak = 0;
+            }
             entry.missesWithoutStars = 0;
             setGameStatus('', 'miss');
             state.game.queue.push(entry.id);
           }
+          syncLevelTextModeControls();
           updateGameChips();
           await playStageResponseSequence(1, card, { skipPromptAudio: !isHit });
           await wait(isHit ? 260 : 520);
@@ -18595,7 +18843,9 @@
         setGameStatus('', 'live');
         updateGuestFirstStarResultsBanner(entry, true);
 
-        const recognitionLanguage = entry.stage === 2 ? 'pt-BR' : 'en-US';
+        const recognitionLanguage = isLevelTextModeActive()
+          ? (selectedLevelTextResponseLanguage() === 'portuguese' ? 'pt-BR' : 'en-US')
+          : (entry.stage === 2 ? 'pt-BR' : 'en-US');
 
         let activeRecognition = null;
         let finished = false;
@@ -18885,8 +19135,10 @@
           if (await handleManualWelcomeNoEnergy(els.welcomeStartBtn || event?.currentTarget)) return;
           if (!(await guardWelcomeEnergy({ previewTarget: [event?.currentTarget, els.welcomeStartBtn].filter(Boolean) }))) return;
           state.game.levelMode = true;
-          state.game.levelAudioMode = Boolean(options.audioOnly || options.textOnly);
+          state.game.levelAudioMode = Boolean(options.audioOnly);
           state.game.levelTextMode = Boolean(options.textOnly);
+          state.game.levelTextResponseLanguage = 'english';
+          state.game.levelTextHitStreak = 0;
           state.entry.welcomeStartRequested = true;
           void openAudioCheck();
         };
@@ -19197,6 +19449,16 @@
         els.gameTouchBtn.addEventListener('click', (event) => {
           event.stopPropagation();
           startRecognition();
+        });
+        els.gameLanguageBtn?.addEventListener('click', (event) => {
+          event.stopPropagation();
+          if (!isLevelTextModeActive()) return;
+          setLevelTextResponseLanguage('english');
+        });
+        els.gameAdvanceBtn?.addEventListener('click', (event) => {
+          event.stopPropagation();
+          if (!isLevelTextModeActive()) return;
+          setLevelTextResponseLanguage('portuguese');
         });
         els.footerPlayBtn?.addEventListener('click', (event) => {
           if (primeFooterNavigation(event)) return;
