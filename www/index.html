@@ -41,11 +41,11 @@
     }
   </style>
   <script>
-    (function redirectToFlashcards() {
+    (function redirectToEntrar() {
       var LAST_ROUTE_STORAGE_KEY = 'playtalk_native_last_route_v1';
       var LAST_ROUTE_MAX_AGE_MS = 30000;
-      var targetUrl = new URL('/flashcards.html', window.location.origin);
-      targetUrl.searchParams.set('view', 'play');
+      var targetUrl = new URL('/auth.html', window.location.origin);
+      targetUrl.searchParams.set('return', '/play');
       try {
         var protocol = String(window.location && window.location.protocol || '').toLowerCase();
         var hostname = String(window.location && window.location.hostname || '').toLowerCase();

@@ -2,6 +2,7 @@
   const LAST_ROUTE_STORAGE_KEY = 'playtalk_native_last_route_v1';
   const LAST_ROUTE_MAX_AGE_MS = 30000;
   const ROUTES = {
+    auth: { webPath: '/entrar', localPath: '/auth.html' },
     flashcards: { webPath: '/flashcards', localPath: '/flashcards.html?view=play' },
     allcards: { webPath: '/allcards', localPath: '/allcards.html' },
     mycards: { webPath: '/mycards', localPath: '/mycards.html' },
@@ -18,6 +19,7 @@
   };
 
   const FILE_TO_ROUTE_KEY = {
+    'auth.html': 'auth',
     'flashcards.html': 'flashcards',
     'allcards.html': 'allcards',
     'mycards.html': 'mycards',
