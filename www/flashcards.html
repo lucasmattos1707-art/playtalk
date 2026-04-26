@@ -6071,9 +6071,9 @@
       transform: translate(-50%, -8vh);
     }
 
-    .game[data-phase-key="first-star"] .game-controls-proxy .game-language-btn,
-    .game[data-phase-key="third-star"] .game-controls-proxy .game-language-btn,
-    .game[data-phase-key="fifth-star"] .game-controls-proxy .game-language-btn {
+    .game:not(.is-level-text-mode)[data-phase-key="first-star"] .game-controls-proxy .game-language-btn,
+    .game:not(.is-level-text-mode)[data-phase-key="third-star"] .game-controls-proxy .game-language-btn,
+    .game:not(.is-level-text-mode)[data-phase-key="fifth-star"] .game-controls-proxy .game-language-btn {
       display: none !important;
     }
 
