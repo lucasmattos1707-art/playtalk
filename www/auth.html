@@ -85,10 +85,10 @@
           return normalized;
         }
         if (/^\/play(?:[/?#]|$)/i.test(normalized)) {
-          return '/play.html#play';
+          return '/flashcards.html';
         }
         if (/^\/flashcards(?:[/?#]|$)/i.test(normalized)) {
-          return '/flashcards.html?view=play';
+          return '/flashcards.html';
         }
         if (/^\/(?:entrar|auth|auth\.html)(?:[/?#]|$)/i.test(normalized)) {
           return '/auth.html?return=%2Fplay';

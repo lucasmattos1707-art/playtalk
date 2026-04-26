@@ -3,7 +3,8 @@
   const LAST_ROUTE_MAX_AGE_MS = 30000;
   const ROUTES = {
     auth: { webPath: '/entrar', localPath: '/auth.html' },
-    flashcards: { webPath: '/flashcards', localPath: '/flashcards.html?view=play' },
+    play: { webPath: '/play', localPath: '/flashcards.html' },
+    flashcards: { webPath: '/flashcards', localPath: '/flashcards.html' },
     allcards: { webPath: '/allcards', localPath: '/allcards.html' },
     mycards: { webPath: '/mycards', localPath: '/mycards.html' },
     users: { webPath: '/users', localPath: '/users.html' },
@@ -20,7 +21,8 @@
 
   const FILE_TO_ROUTE_KEY = {
     'auth.html': 'auth',
-    'flashcards.html': 'flashcards',
+    'play.html': 'play',
+    'flashcards.html': 'play',
     'allcards.html': 'allcards',
     'mycards.html': 'mycards',
     'users.html': 'users',
@@ -99,7 +101,7 @@
   }
 
   function resolveRouteHref(target, options = {}) {
-    const fallback = String(target || '').trim() || '/flashcards';
+    const fallback = String(target || '').trim() || '/play';
     const searchOverride = typeof options.search === 'string' ? options.search : null;
     const hashOverride = typeof options.hash === 'string' ? options.hash : null;
 
@@ -220,7 +222,7 @@
 
       await appPlugin.addListener('backButton', async () => {
         const routeKey = currentRouteKey();
-        const rootRoutes = new Set(['flashcards', 'allcards', 'mycards', 'users', 'account', 'books']);
+        const rootRoutes = new Set(['play', 'allcards', 'mycards', 'users', 'account', 'books']);
 
         if (!rootRoutes.has(routeKey) && window.history.length > 1) {
           window.history.back();
