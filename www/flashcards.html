@@ -388,70 +388,60 @@
       opacity: 1;
       pointer-events: auto;
       position: relative;
-      min-height: 12vh;
-      height: 12vh;
+      min-height: 5vh;
+      height: 5vh;
       width: 100%;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       align-items: center;
-      gap: 18px;
-      padding: 8px 12px 0;
+      gap: 10px;
+      padding: 0;
       margin-inline: 0;
       background: transparent;
       box-shadow: none;
       text-align: center;
-      justify-items: stretch;
+      justify-items: center;
       border-radius: 0;
     }
 
     .welcome-gate__hero-icon {
-      width: min(18vw, 82px);
-      height: min(18vw, 82px);
+      width: min(9vw, 34px);
+      height: min(9vw, 34px);
       display: grid;
       place-items: center;
       margin: 0 auto;
-      border-radius: 28px;
-      border: 1px solid rgba(121, 213, 255, 0.22);
-      background:
-        linear-gradient(180deg, rgba(17, 46, 108, 0.62), rgba(4, 12, 32, 0.72)),
-        radial-gradient(circle at 50% 16%, rgba(170, 240, 255, 0.24), transparent 58%);
-      box-shadow:
-        inset 0 0 18px rgba(128, 228, 255, 0.12),
-        0 12px 28px rgba(0, 0, 0, 0.22);
-      color: #dff8ff;
+      border-radius: 999px;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+      color: rgba(223, 248, 255, 0.74);
+      opacity: 0.82;
     }
 
     .welcome-gate__hero-icon svg {
-      width: 48%;
-      height: 48%;
+      width: 70%;
+      height: 70%;
       fill: currentColor;
     }
 
     .welcome-gate__hero-icon--action {
       cursor: pointer;
-      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
-      background:
-        linear-gradient(180deg, rgba(17, 78, 138, 0.92), rgba(6, 23, 55, 0.96)),
-        radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.24), transparent 58%);
-      box-shadow:
-        inset 0 0 20px rgba(187, 244, 255, 0.16),
-        0 16px 36px rgba(6, 39, 92, 0.34);
+      transition: transform 180ms ease, opacity 180ms ease, color 180ms ease;
     }
 
     .welcome-gate__hero-icon--action:hover,
     .welcome-gate__hero-icon--action:focus-visible {
-      transform: translateY(-2px) scale(1.03);
-      border-color: rgba(168, 235, 255, 0.6);
-      box-shadow:
-        inset 0 0 20px rgba(212, 247, 255, 0.2),
-        0 18px 42px rgba(10, 57, 128, 0.42);
+      transform: translateY(-1px) scale(1.04);
+      color: #ffffff;
+      opacity: 1;
     }
 
     .welcome-gate__level-copy-panel {
-      min-height: 8vh;
-      height: 8vh;
+      min-height: 10vh;
+      height: 10vh;
       align-items: center;
       align-content: center;
       background: transparent;
+      gap: 6px;
     }
 
     .welcome-gate__identity {
@@ -640,13 +630,13 @@
 
     .welcome-gate__level-copy {
       display: block;
-      margin: 10px 0 0;
+      margin: 0;
       text-align: center;
-      font-family: "Rajdhani", "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(24px, 4.6vw, 34px);
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(16px, 3.2vw, 22px);
       font-weight: 500;
       line-height: 1.1;
-      color: rgba(240, 249, 255, 0.96);
+      color: rgba(240, 249, 255, 0.9);
     }
 
     .welcome-gate__energy {
@@ -7618,16 +7608,16 @@
       }
 
       .welcome-gate__header {
-        min-height: 12vh;
-        height: 12vh;
-        gap: 12px;
-        padding: 8px 10px 0;
+        min-height: 5vh;
+        height: 5vh;
+        gap: 8px;
+        padding: 0;
       }
 
       .welcome-gate__hero-icon {
-        width: min(21vw, 72px);
-        height: min(21vw, 72px);
-        border-radius: 24px;
+        width: min(11vw, 36px);
+        height: min(11vw, 36px);
+        border-radius: 999px;
       }
 
       .game-level-strip {
@@ -7692,6 +7682,10 @@
           <div class="welcome-gate__loading-loop"></div>
         </div>
         <div class="welcome-gate__profile" id="welcomeProfile">
+          <div class="welcome-gate__level-copy-panel">
+            <p class="welcome-gate__level-heading" id="welcomeLevelHeading">Você está no nível 1</p>
+            <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">Você está no nível 1</p>
+          </div>
           <div class="welcome-gate__header">
             <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeAudioModeBtn" type="button" aria-label="Comecar modo audio por nivel">
               <svg viewBox="0 0 24 24" focusable="false"><path d="M3 14.5c2.2 0 2.2-5 4.4-5s2.2 8 4.4 8 2.2-11 4.4-11 2.2 5 4.4 5v2c-3 0-3-5-4.4-5s-2.2 11-4.4 11-2.2-8-4.4-8-2.2 5-4.4 5Z"/></svg>
@@ -7703,9 +7697,6 @@
               <svg viewBox="0 0 24 24" focusable="false"><path d="M5 5.75A3.75 3.75 0 0 1 8.75 2h6.5A3.75 3.75 0 0 1 19 5.75v4.5A3.75 3.75 0 0 1 15.25 14H11l-4.44 3.7A.75.75 0 0 1 5 17.12V14.8A3.74 3.74 0 0 1 2 11.25v-5.5A.75.75 0 0 1 5 5.75Z"/></svg>
             </button>
           </div>
-          <div class="welcome-gate__level-copy-panel">
-            <p class="welcome-gate__level-heading" id="welcomeLevelHeading">Você está no nível 1</p>
-          </div>
           <div class="welcome-gate__level-panel">
             <div class="welcome-gate__level-orbit" id="welcomeLevelOrbit" aria-hidden="true">
               <span class="welcome-gate__level-progress-bar" id="welcomeLevelProgressBar"></span>
@@ -7713,8 +7704,6 @@
                 <span class="welcome-gate__level-number" id="welcomeUserLevelNumber">1</span>
                 <span class="welcome-gate__level-title">Level</span>
             </span>
-          </div>
-            <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">2 cartas para avançar</p>
           </div>
         </div>
         <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button"><img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora"></button>
@@ -8663,6 +8652,7 @@
         welcomeProfile: document.getElementById('welcomeProfile'),
         welcomeAudioModeBtn: document.getElementById('welcomeAudioModeBtn'),
         welcomeCenterPlayBtn: document.getElementById('welcomeCenterPlayBtn'),
+        welcomeTextModeBtn: document.getElementById('welcomeTextModeBtn'),
         welcomeUserName: document.getElementById('welcomeUserName'),
         welcomeAvatarPreview: document.getElementById('welcomeAvatarPreview'),
         welcomeUserLevel: document.getElementById('welcomeUserLevel'),
@@ -10047,11 +10037,8 @@
       function buildWelcomeHeadingLine(level) {
         const greeting = resolveWelcomeGreeting();
         const name = formatWelcomeHeadingName(state.user?.username);
-        const levelLine = `Você está no nível ${level}`;
         const greetingLine = `${greeting}, ${name}`;
-        return state.ui.welcomeHeadingModeIndex % 2 === 0
-          ? levelLine
-          : greetingLine;
+        return greetingLine;
       }
 
       function stopWelcomeHeadingRotation() {
@@ -10063,17 +10050,7 @@
       }
 
       function ensureWelcomeHeadingRotation() {
-        if (!els.welcomeLevelHeading) return;
-        if (state.ui.welcomeHeadingTimer) return;
-        state.ui.welcomeHeadingTimer = window.setInterval(() => {
-          if (!state.entry.welcomeVisible || !state.entry.sessionResolved) {
-            stopWelcomeHeadingRotation();
-            return;
-          }
-          state.ui.welcomeHeadingModeIndex = (state.ui.welcomeHeadingModeIndex + 1) % 2;
-          const level = currentUserLevel();
-          els.welcomeLevelHeading.textContent = buildWelcomeHeadingLine(level);
-        }, 3600);
+        stopWelcomeHeadingRotation();
       }
 
       const AUDIO_CHECK_STORAGE_KEY = 'playtalk-audio-check-completed';
@@ -11270,9 +11247,7 @@
           els.welcomeLevelOrbit.setAttribute('aria-label', orbitLabel);
         }
         if (els.welcomeLevelProgressCopy) {
-          els.welcomeLevelProgressCopy.textContent = level >= USER_LEVEL_MAX
-            ? 'Nivel maximo alcancado'
-            : `${remaining} ${remaining === 1 ? 'carta' : 'cartas'} para avançar`;
+          els.welcomeLevelProgressCopy.textContent = `Você está no nível ${level}`;
         }
         state.ui.welcomeProfileReady = true;
         syncWelcomeLoadingState();
