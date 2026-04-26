@@ -3005,8 +3005,8 @@
       text-align: center;
     }
 
-    .game.is-level-text-mode .game-language-btn,
-    .game.is-level-text-mode .game-advance-btn {
+    .game.is-level-text-mode .game-controls-proxy .game-language-btn,
+    .game.is-level-text-mode .game-controls-proxy .game-advance-btn {
       display: inline-flex !important;
       align-items: center;
       justify-content: center;
@@ -3023,7 +3023,7 @@
       cursor: pointer;
     }
 
-    .game.is-level-text-mode .game-language-btn {
+    .game.is-level-text-mode .game-controls-proxy .game-language-btn {
       grid-area: left;
       justify-self: end;
     }
@@ -3033,13 +3033,13 @@
       justify-self: center;
     }
 
-    .game.is-level-text-mode .game-advance-btn {
+    .game.is-level-text-mode .game-controls-proxy .game-advance-btn {
       grid-area: right;
       justify-self: start;
     }
 
-    .game.is-level-text-mode .game-language-btn img,
-    .game.is-level-text-mode .game-advance-btn img {
+    .game.is-level-text-mode .game-controls-proxy .game-language-btn img,
+    .game.is-level-text-mode .game-controls-proxy .game-advance-btn img {
       width: 30px;
       height: 30px;
       object-fit: contain;
@@ -3047,13 +3047,13 @@
       opacity: 0.7;
     }
 
-    .game.is-level-text-mode .game-language-btn.is-active,
-    .game.is-level-text-mode .game-advance-btn.is-active {
+    .game.is-level-text-mode .game-controls-proxy .game-language-btn.is-active,
+    .game.is-level-text-mode .game-controls-proxy .game-advance-btn.is-active {
       background: transparent;
     }
 
-    .game.is-level-text-mode .game-language-btn.is-active img,
-    .game.is-level-text-mode .game-advance-btn.is-active img {
+    .game.is-level-text-mode .game-controls-proxy .game-language-btn.is-active img,
+    .game.is-level-text-mode .game-controls-proxy .game-advance-btn.is-active img {
       opacity: 1;
       filter: none;
     }
@@ -7978,10 +7978,12 @@
         <div class="game-controls-proxy is-hidden" id="gameControlsProxy" aria-hidden="true" hidden>
           <div class="game-text-mode-hits" id="gameTextModeHits" hidden>Hit x0</div>
           <button class="game-language-btn" id="gameLanguageBtn" type="button" tabindex="-1" aria-hidden="true">
-            <img src="SVG/codex-icons/ingles.svg" alt="">
+            <img src="/arquivos-codex/icones/ingles.svg" alt="Ingles">
           </button>
           <button class="game-touch" id="gameTouchBtn" type="button">Fale ingles</button>
-          <button class="game-advance-btn" id="gameAdvanceBtn" type="button" aria-label="Avancar digitacao automatica" hidden></button>
+          <button class="game-advance-btn" id="gameAdvanceBtn" type="button" aria-label="Avancar digitacao automatica" hidden>
+            <img src="/SVG/codex-icons/portugues.svg" alt="Portugues">
+          </button>
         </div>
 
         <div class="game-status-slot textscreen" id="gameStatusSlot" aria-live="polite" aria-atomic="true">
@@ -8288,7 +8290,7 @@
       const ENGLISH_ICON_PATH = '/arquivos-codex/icones/ingles.svg';
       const GAME_TOUCH_ICON_STORAGE_KEY = 'playtalk-game-touch-icon-v1';
       const GAME_TOUCH_ICON_MARKUP = '<svg class="game-touch__books-mic-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>';
-      const PORTUGUESE_ICON_PATH = '/arquivos-codex/icones/portugues.svg';
+      const PORTUGUESE_ICON_PATH = '/SVG/codex-icons/portugues.svg';
       const SUCCESS_SOUND_PATH = 'gamesounds/success.mp3';
       const FOUR_STARS_SOUND_PATH = 'newsongs/4stars.mp3';
       const FIVE_STARS_SOUND_PATH = 'newsongs/5stars.mp3';
@@ -12864,7 +12866,6 @@
           els.gameLanguageBtn.tabIndex = active ? 0 : -1;
           els.gameLanguageBtn.setAttribute('aria-hidden', active ? 'false' : 'true');
           els.gameLanguageBtn.setAttribute('aria-label', 'Responder em ingles');
-          els.gameLanguageBtn.innerHTML = `<img src="${escapeHtml(ENGLISH_ICON_PATH)}" alt="Ingles">`;
           els.gameLanguageBtn.classList.toggle('is-active', active && language === 'english');
         }
         if (els.gameAdvanceBtn) {
@@ -12872,7 +12873,6 @@
           els.gameAdvanceBtn.tabIndex = active ? 0 : -1;
           els.gameAdvanceBtn.setAttribute('aria-hidden', active ? 'false' : 'true');
           els.gameAdvanceBtn.setAttribute('aria-label', 'Responder em portugues');
-          els.gameAdvanceBtn.innerHTML = `<img src="${escapeHtml(PORTUGUESE_ICON_PATH)}" alt="Portugues">`;
           els.gameAdvanceBtn.classList.toggle('is-active', active && language === 'portuguese');
         }
       }
