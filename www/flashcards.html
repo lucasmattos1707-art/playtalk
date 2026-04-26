@@ -418,8 +418,8 @@
     }
 
     .welcome-gate__hero-icon svg {
-      width: 70%;
-      height: 70%;
+      width: 126%;
+      height: 126%;
       fill: currentColor;
     }
 
@@ -442,6 +442,7 @@
       align-content: center;
       background: transparent;
       gap: 6px;
+      padding-top: 3vh;
     }
 
     .welcome-gate__identity {
@@ -598,7 +599,7 @@
       place-items: center;
       align-content: center;
       justify-items: center;
-      gap: 0;
+      gap: 6px;
       background: transparent;
       color: #ffffff;
       text-align: center;
@@ -606,12 +607,12 @@
 
     .welcome-gate__level-title {
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(28px, 6.4vw, 42px);
+      font-size: clamp(16px, 3vw, 22px);
       font-weight: 700;
       line-height: 1;
       color: rgba(239, 250, 255, 0.98);
-      order: 2;
-      display: none;
+      order: 1;
+      display: block;
     }
 
     .welcome-gate__level-number {
@@ -621,7 +622,7 @@
       line-height: 0.92;
       letter-spacing: -0.08em;
       color: #ffffff;
-      order: 1;
+      order: 2;
       margin-bottom: 0;
       text-shadow:
         0 10px 26px rgba(0, 0, 0, 0.18),
@@ -2982,6 +2983,9 @@
     .game.is-level-text-mode .game-controls-proxy {
       width: min(250px, calc(100vw - 44px));
       grid-template-columns: 58px minmax(0, 1fr) 58px;
+      grid-template-areas:
+        "hits hits hits"
+        "left center right";
       gap: 12px;
       opacity: 1;
       visibility: visible;
@@ -2989,7 +2993,7 @@
     }
 
     .game.is-level-text-mode .game-text-mode-hits {
-      grid-column: 1 / -1;
+      grid-area: hits;
       display: block;
       margin-bottom: 2px;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
@@ -3017,6 +3021,21 @@
       box-shadow: none;
       backdrop-filter: none;
       cursor: pointer;
+    }
+
+    .game.is-level-text-mode .game-language-btn {
+      grid-area: left;
+      justify-self: end;
+    }
+
+    .game.is-level-text-mode .game-touch {
+      grid-area: center;
+      justify-self: center;
+    }
+
+    .game.is-level-text-mode .game-advance-btn {
+      grid-area: right;
+      justify-self: start;
     }
 
     .game.is-level-text-mode .game-language-btn img,
@@ -11293,7 +11312,7 @@
           els.welcomeLevelOrbit.setAttribute('aria-label', orbitLabel);
         }
         if (els.welcomeLevelProgressCopy) {
-          els.welcomeLevelProgressCopy.textContent = `Você está no nível ${level}`;
+          els.welcomeLevelProgressCopy.textContent = '';
         }
         state.ui.welcomeProfileReady = true;
         syncWelcomeLoadingState();
