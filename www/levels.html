@@ -6,6 +6,7 @@
   <title>Fluent LevelUp | Levels</title>
   <script src="/config.js"></script>
   <style>
+    @import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap");
     body{margin:0;font-family:Arial,sans-serif;background:#000;color:#fff}button,input,select,textarea{font:inherit}
     .page{max-width:1100px;margin:0 auto;padding:24px 16px 48px}.box,.card{background:linear-gradient(180deg,rgba(11,24,56,.82),rgba(7,15,36,.9));border:1px solid rgba(79,158,255,.18);border-radius:16px;backdrop-filter:blur(6px);box-shadow:0 0 18px rgba(63,145,255,.08)}
     .box{padding:14px;margin-bottom:16px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
@@ -284,7 +285,7 @@
   <div id="pastePopover" class="popover hidden" aria-hidden="true">
     <div class="popover-card send-popover-card" role="dialog" aria-modal="true">
       <div><div class="mini">Colar texto</div><h2 style="margin:6px 0 0">Preencher cards em lote</h2></div>
-      <div class="mini" id="pasteHelp">FlashCard usa 2 linhas por item: portugues e ingles. Comandos admin: editcards, addnewsongs, getdeck, my texts e clearall.</div>
+      <div class="mini" id="pasteHelp">FlashCard usa 2 linhas por item: portugues e ingles. Comandos admin: editcards, addnewsongs, getdeck, my texts, my colored texts e clearall.</div>
       <div class="field"><label for="pasteArea">Texto colado</label><textarea id="pasteArea" rows="10"></textarea></div>
       <div class="row" style="justify-content:space-between"><button id="pasteCloseBtn" type="button">Fechar</button><button id="applyPasteBtn" class="accent" type="button">Preencher cards</button></div>
     </div>
@@ -1238,8 +1239,8 @@
         const blob=new Blob([JSON.stringify(payload(),null,2)],{type:'application/json'});
         triggerDownload(blob,fileName.toLowerCase().endsWith('.json')?fileName:`${fileName}.json`);
       }
-      async function downloadAllEnglishTextsByLevel(){
-        if(!adminStudio.enabled)throw new Error('Entre como admin para usar my texts.');
+      async function collectTextsByLevel(){
+        if(!adminStudio.enabled)throw new Error('Entre como admin para usar este comando.');
         const decks=await loadEditableFlashcardDeckOptions();
         const groupedLevels=new Map();
         decks.forEach(deck=>{
@@ -1248,15 +1249,192 @@
           const items=Array.isArray(deck?.data?.items)?deck.data.items:[];
           items.forEach(entry=>{
             const english=safeText(entry?.nomeIngles||entry?.english||entry?.en);
-            if(!english)return;
+            const portuguese=safeText(entry?.nomePortugues||entry?.portuguese||entry?.pt);
+            if(!english&&!portuguese)return;
             if(!groupedLevels.has(deckLevel))groupedLevels.set(deckLevel,[]);
-            groupedLevels.get(deckLevel).push(english);
+            groupedLevels.get(deckLevel).push({english,portuguese});
           });
         });
         const sortedLevels=Array.from(groupedLevels.entries()).sort((a,b)=>a[0]-b[0]);
-        if(!sortedLevels.length)throw new Error('Nenhum texto em ingles com nivel definido foi encontrado.');
-        const textContent=sortedLevels.map(([level,texts])=>`Level ${level}\n\n${texts.join('\n')}`).join('\n\n');
+        if(!sortedLevels.length)throw new Error('Nenhum texto com nivel definido foi encontrado.');
+        return sortedLevels;
+      }
+      async function downloadAllEnglishTextsByLevel(){
+        const sortedLevels=await collectTextsByLevel();
+        const textContent=sortedLevels.map(([level,entries])=>{
+          const englishTexts=entries.map(entry=>entry.english).filter(Boolean);
+          if(!englishTexts.length)return '';
+          return `Level ${level}\n\n${englishTexts.join('\n')}`;
+        }).filter(Boolean).join('\n\n');
+        if(!textContent.trim())throw new Error('Nenhum texto em ingles com nivel definido foi encontrado.');
         triggerDownload(new Blob([textContent],{type:'text/plain;charset=utf-8'}),'my-texts.txt');
+      }
+      async function ensureExo2PdfFontReady(){
+        if(!document.fonts||typeof document.fonts.load!=='function')return;
+        try{
+          await document.fonts.load('400 28px "Exo 2"');
+          await document.fonts.load('600 28px "Exo 2"');
+          if(document.fonts.ready)await document.fonts.ready;
+        }catch(error){
+          console.warn('Nao foi possivel aguardar a fonte Exo 2 para o PDF.',error);
+        }
+      }
+      function wrapPdfColumnText(context,text,maxWidth){
+        const clean=safeText(text);
+        if(!clean)return [''];
+        const words=clean.split(/\s+/).filter(Boolean);
+        if(!words.length)return [''];
+        const lines=[];
+        let currentLine='';
+        words.forEach(word=>{
+          const nextLine=currentLine?`${currentLine} ${word}`:word;
+          if(currentLine&&context.measureText(nextLine).width>maxWidth){
+            lines.push(currentLine);
+            currentLine=word;
+            return;
+          }
+          currentLine=nextLine;
+        });
+        if(currentLine)lines.push(currentLine);
+        return lines.length?lines:[''];
+      }
+      function canvasToJpegBytes(canvas,quality=.92){
+        const dataUrl=canvas.toDataURL('image/jpeg',quality);
+        const base64=String(dataUrl.split(',')[1]||'');
+        const binary=atob(base64);
+        const bytes=new Uint8Array(binary.length);
+        for(let i=0;i<binary.length;i+=1)bytes[i]=binary.charCodeAt(i);
+        return {bytes,width:canvas.width,height:canvas.height};
+      }
+      function concatUint8Arrays(parts){
+        const total=parts.reduce((sum,part)=>sum+(part?.length||0),0);
+        const result=new Uint8Array(total);
+        let offset=0;
+        parts.forEach(part=>{
+          if(!part?.length)return;
+          result.set(part,offset);
+          offset+=part.length;
+        });
+        return result;
+      }
+      function buildPdfBlobFromJpegs(images,pageWidthPt=595.28,pageHeightPt=841.89){
+        const encoder=new TextEncoder();
+        const objects=[];
+        const pageRefs=[];
+        const catalogRef=1;
+        const pagesRef=2;
+        images.forEach((image,index)=>{
+          const pageRef=3+index*3;
+          const contentRef=pageRef+1;
+          const imageRef=pageRef+2;
+          pageRefs.push(pageRef);
+          const imageHeader=encoder.encode(`${imageRef} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${image.bytes.length} >>\nstream\n`);
+          const imageFooter=encoder.encode(`\nendstream\nendobj\n`);
+          objects[imageRef]=concatUint8Arrays([imageHeader,image.bytes,imageFooter]);
+          const contentStream=`q\n${pageWidthPt.toFixed(2)} 0 0 ${pageHeightPt.toFixed(2)} 0 0 cm\n/Im${index+1} Do\nQ`;
+          const contentBytes=encoder.encode(contentStream);
+          objects[contentRef]=encoder.encode(`${contentRef} 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n${contentStream}\nendstream\nendobj\n`);
+          objects[pageRef]=encoder.encode(`${pageRef} 0 obj\n<< /Type /Page /Parent ${pagesRef} 0 R /MediaBox [0 0 ${pageWidthPt.toFixed(2)} ${pageHeightPt.toFixed(2)}] /Resources << /XObject << /Im${index+1} ${imageRef} 0 R >> >> /Contents ${contentRef} 0 R >>\nendobj\n`);
+        });
+        objects[pagesRef]=encoder.encode(`${pagesRef} 0 obj\n<< /Type /Pages /Count ${pageRefs.length} /Kids [${pageRefs.map(ref=>`${ref} 0 R`).join(' ')}] >>\nendobj\n`);
+        objects[catalogRef]=encoder.encode(`${catalogRef} 0 obj\n<< /Type /Catalog /Pages ${pagesRef} 0 R >>\nendobj\n`);
+        const header=new Uint8Array([37,80,68,70,45,49,46,52,10,37,255,255,255,255,10]);
+        const chunks=[header];
+        const offsets=[0];
+        let cursor=header.length;
+        for(let objectNumber=1;objectNumber<objects.length;objectNumber+=1){
+          const objectBytes=objects[objectNumber];
+          if(!objectBytes)continue;
+          offsets[objectNumber]=cursor;
+          chunks.push(objectBytes);
+          cursor+=objectBytes.length;
+        }
+        const objectCount=objects.length-1;
+        const xrefStart=cursor;
+        let xrefText=`xref\n0 ${objectCount+1}\n0000000000 65535 f \n`;
+        for(let objectNumber=1;objectNumber<=objectCount;objectNumber+=1){
+          xrefText+=`${String(offsets[objectNumber]||0).padStart(10,'0')} 00000 n \n`;
+        }
+        xrefText+=`trailer\n<< /Size ${objectCount+1} /Root ${catalogRef} 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+        chunks.push(encoder.encode(xrefText));
+        return new Blob(chunks,{type:'application/pdf'});
+      }
+      async function downloadColoredTextsPdfByLevel(){
+        const sortedLevels=await collectTextsByLevel();
+        const visibleLevels=sortedLevels.map(([level,entries])=>[level,entries.filter(entry=>entry.english||entry.portuguese)]).filter(([,entries])=>entries.length);
+        if(!visibleLevels.length)throw new Error('Nenhum texto com ingles ou portugues foi encontrado para o PDF.');
+        await ensureExo2PdfFontReady();
+        const pageWidth=1240,pageHeight=1754,marginX=84,marginY=92,bottomMargin=92,gutter=54,columnWidth=(pageWidth-marginX*2-gutter)/2;
+        const headerGap=22,rowGap=16,lineHeight=34,sectionGap=20;
+        const pages=[];
+        let canvas=null,context=null,y=0,currentLevelLabel='';
+        const startPage=()=>{
+          canvas=document.createElement('canvas');
+          canvas.width=pageWidth;
+          canvas.height=pageHeight;
+          context=canvas.getContext('2d');
+          context.fillStyle='#ffffff';
+          context.fillRect(0,0,pageWidth,pageHeight);
+          context.textBaseline='top';
+          y=marginY;
+        };
+        const finishPage=()=>{
+          if(canvas)pages.push(canvasToJpegBytes(canvas));
+        };
+        const ensureRoom=(height,continuation=false)=>{
+          if(y+height<=pageHeight-bottomMargin)return;
+          finishPage();
+          startPage();
+          if(continuation&&currentLevelLabel){
+            drawLevelHeader(currentLevelLabel,true);
+          }
+        };
+        const drawLevelHeader=(levelLabel,isContinuation=false)=>{
+          const label=isContinuation?`${levelLabel} (cont.)`:levelLabel;
+          ensureRoom(82,false);
+          context.font='700 34px "Exo 2", Arial, sans-serif';
+          context.fillStyle='#0f172a';
+          context.fillText(label,marginX,y);
+          y+=44;
+          context.strokeStyle='#d7e1ef';
+          context.lineWidth=3;
+          context.beginPath();
+          context.moveTo(marginX,y);
+          context.lineTo(pageWidth-marginX,y);
+          context.stroke();
+          y+=headerGap;
+          context.font='600 22px "Exo 2", Arial, sans-serif';
+          context.fillStyle='#1e3a8a';
+          context.fillText('English',marginX,y);
+          context.fillStyle='#166534';
+          context.fillText('Portugues',marginX+columnWidth+gutter,y);
+          y+=44;
+        };
+        startPage();
+        visibleLevels.forEach(([level,entries])=>{
+          currentLevelLabel=`Level ${level}`;
+          drawLevelHeader(currentLevelLabel,false);
+          entries.forEach(entry=>{
+            context.font='500 28px "Exo 2", Arial, sans-serif';
+            const englishLines=wrapPdfColumnText(context,entry.english,columnWidth);
+            const portugueseLines=wrapPdfColumnText(context,entry.portuguese,columnWidth);
+            const rowHeight=Math.max(englishLines.length,portugueseLines.length)*lineHeight+rowGap;
+            ensureRoom(rowHeight+8,true);
+            context.font='500 28px "Exo 2", Arial, sans-serif';
+            context.fillStyle='#173f7a';
+            englishLines.forEach((line,index)=>{
+              context.fillText(line,marginX,y+index*lineHeight);
+            });
+            context.fillStyle='#1c5a37';
+            portugueseLines.forEach((line,index)=>{
+              context.fillText(line,marginX+columnWidth+gutter,y+index*lineHeight);
+            });
+            y+=rowHeight;
+          });
+          y+=sectionGap;
+        });
+        finishPage();
+        triggerDownload(buildPdfBlobFromJpegs(pages),'my-colored-texts.pdf');
       }
       function openPastePopover(){$('pasteArea').value='';$('pastePopover').classList.remove('hidden');$('pastePopover').setAttribute('aria-hidden','false')}
       function closePastePopover(){$('pastePopover').classList.add('hidden');$('pastePopover').setAttribute('aria-hidden','true')}
@@ -2043,6 +2221,16 @@
             closePastePopover();
           }catch(error){
             alert(error.message||'Nao foi possivel baixar os textos.');
+          }
+          return;
+        }
+        if(rawValue==='my colored texts'){
+          try{
+            await downloadColoredTextsPdfByLevel();
+            $('pasteArea').value='';
+            closePastePopover();
+          }catch(error){
+            alert(error.message||'Nao foi possivel baixar o PDF colorido.');
           }
           return;
         }
