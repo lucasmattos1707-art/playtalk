@@ -3437,7 +3437,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
         persistedTrainingTimeMs,
         JSON.stringify(accurateSamples),
         stats.secondStarErrorHeard,
-        true
+        shouldPersistPerformanceStats
       ]
     );
 
