@@ -391,7 +391,7 @@
       min-height: 5vh;
       height: 5vh;
       width: 100%;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       align-items: center;
       gap: 10px;
       padding: 0;
@@ -873,6 +873,176 @@
 
     .welcome-gate__blocked-note.is-visible {
       opacity: 1;
+    }
+
+    .welcome-mode-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 140;
+      display: none;
+      align-items: stretch;
+      justify-content: stretch;
+      background: linear-gradient(180deg, rgba(2, 9, 19, 0.82) 0%, rgba(2, 9, 19, 0.96) 100%);
+      backdrop-filter: blur(16px);
+    }
+
+    .welcome-mode-modal.is-visible {
+      display: flex;
+    }
+
+    .welcome-mode-modal__panel {
+      width: 100%;
+      min-height: 100dvh;
+      padding: 24px 22px 34px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 20px;
+      color: #ffffff;
+    }
+
+    .welcome-mode-modal__top {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .welcome-mode-modal__home {
+      width: 48px;
+      height: 48px;
+      border-radius: 999px;
+      border: 1px solid rgba(173, 231, 255, 0.3);
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+    }
+
+    .welcome-mode-modal__home svg {
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
+    }
+
+    .welcome-mode-modal__body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 18px;
+    }
+
+    .welcome-mode-modal__eyebrow {
+      margin: 0;
+      font-family: "Rajdhani", "Exo 2", Arial, sans-serif;
+      font-size: 15px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(194, 236, 255, 0.84);
+    }
+
+    .welcome-mode-modal__title {
+      margin: 0;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(34px, 8vw, 52px);
+      font-weight: 800;
+      line-height: 1;
+      color: #ffffff;
+      text-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+    }
+
+    .welcome-mode-modal__description {
+      margin: 0;
+      max-width: 18ch;
+      min-height: 2.8em;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(18px, 4vw, 24px);
+      line-height: 1.35;
+      color: rgba(238, 248, 255, 0.9);
+    }
+
+    .welcome-mode-modal__level {
+      width: min(360px, 100%);
+      display: grid;
+      gap: 10px;
+      justify-items: center;
+    }
+
+    .welcome-mode-modal__level[hidden] {
+      display: none;
+    }
+
+    .welcome-mode-modal__level-copy {
+      margin: 0;
+      font-family: "Rajdhani", "Exo 2", Arial, sans-serif;
+      font-size: clamp(15px, 3.6vw, 19px);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(191, 233, 255, 0.82);
+    }
+
+    .welcome-mode-modal__level-strip {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 56px 1fr 56px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .welcome-mode-modal__level-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 20px;
+      border: 1px solid rgba(173, 231, 255, 0.28);
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      font-size: 28px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .welcome-mode-modal__level-btn:disabled {
+      opacity: 0.38;
+    }
+
+    .welcome-mode-modal__level-value {
+      min-height: 56px;
+      border-radius: 22px;
+      border: 1px solid rgba(173, 231, 255, 0.24);
+      background: rgba(255, 255, 255, 0.08);
+      display: grid;
+      place-items: center;
+      padding: 0 18px;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(22px, 4.8vw, 30px);
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .welcome-mode-modal__footer {
+      display: grid;
+      gap: 12px;
+      justify-items: center;
+      align-content: end;
+      padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    }
+
+    .welcome-mode-modal__start {
+      width: min(320px, 100%);
+      min-height: 64px;
+      border-radius: 999px;
+      border: 1px solid rgba(182, 244, 207, 0.36);
+      background: linear-gradient(180deg, #61f2a4 0%, #1ed06d 100%);
+      color: #062213;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(20px, 4.6vw, 24px);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      box-shadow: 0 18px 32px rgba(30, 208, 109, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.45);
     }
 
     .welcome-gate__admin-stats {
@@ -7753,14 +7923,17 @@
             <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">Você está no nível 1</p>
           </div>
           <div class="welcome-gate__header">
-            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeAudioModeBtn" type="button" aria-label="Comecar modo audio por nivel">
-              <svg viewBox="0 0 24 24" focusable="false"><path d="M3 14.5c2.2 0 2.2-5 4.4-5s2.2 8 4.4 8 2.2-11 4.4-11 2.2 5 4.4 5v2c-3 0-3-5-4.4-5s-2.2 11-4.4 11-2.2-8-4.4-8-2.2 5-4.4 5Z"/></svg>
+            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomePlayingModeBtn" type="button" aria-label="Abrir modo Playing">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H13l-3.6 3a.75.75 0 0 1-1.22-.58V16H6.5A2.5 2.5 0 0 1 4 13.5v-7Zm4.5 1.75a.75.75 0 0 0-.75.75v2.5c0 .414.336.75.75.75h6a.75.75 0 0 0 .75-.75V9a.75.75 0 0 0-.75-.75h-6Z"/></svg>
             </button>
-            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeCenterPlayBtn" type="button" aria-label="Comecar modo por nivel">
+            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeScaleModeBtn" type="button" aria-label="Abrir modo Scale">
               <svg viewBox="0 0 24 24" focusable="false"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10.5-6.86a1 1 0 0 0 0-1.72L9.5 4.28A1 1 0 0 0 8 5.14Z"/></svg>
             </button>
-            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeTextModeBtn" type="button" aria-label="Comecar modo texto por nivel">
-              <svg viewBox="0 0 24 24" focusable="false"><path d="M5 5.75A3.75 3.75 0 0 1 8.75 2h6.5A3.75 3.75 0 0 1 19 5.75v4.5A3.75 3.75 0 0 1 15.25 14H11l-4.44 3.7A.75.75 0 0 1 5 17.12V14.8A3.74 3.74 0 0 1 2 11.25v-5.5A.75.75 0 0 1 5 5.75Z"/></svg>
+            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeAudioModeBtn" type="button" aria-label="Abrir modo Listen">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M3 14.5c2.2 0 2.2-5 4.4-5s2.2 8 4.4 8 2.2-11 4.4-11 2.2 5 4.4 5v2c-3 0-3-5-4.4-5s-2.2 11-4.4 11-2.2-8-4.4-8-2.2 5-4.4 5Z"/></svg>
+            </button>
+            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeTextModeBtn" type="button" aria-label="Abrir modo Typing">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 6h14.5A2.25 2.25 0 0 1 21.5 8.25v7.5A2.25 2.25 0 0 1 19.25 18H4.75A2.25 2.25 0 0 1 2.5 15.75v-7.5A2.25 2.25 0 0 1 4.75 6Zm1 2.25v1.5h1.5v-1.5h-1.5Zm2.5 0v1.5h1.5v-1.5h-1.5Zm2.5 0v1.5h1.5v-1.5h-1.5Zm2.5 0v1.5h1.5v-1.5h-1.5Zm2.5 0v1.5h1.5v-1.5h-1.5Zm-10 3v1.5h8.5v-1.5h-8.5Zm9.5 0v1.5h1.5v-1.5h-1.5Zm-11.5 3v1.5h4.5v-1.5h-4.5Zm5.5 0v1.5h8.5v-1.5H9.25Z"/></svg>
             </button>
           </div>
           <div class="welcome-gate__level-panel">
@@ -7796,6 +7969,31 @@
         </div>
         <input id="welcomeBgUploadInput" type="file" accept="image/*" hidden>
         <p class="welcome-gate__bg-status" id="welcomeBgStatus"></p>
+      </div>
+    </div>
+    <div class="welcome-mode-modal" id="welcomeModeModal" aria-hidden="true">
+      <div class="welcome-mode-modal__panel">
+        <div class="welcome-mode-modal__top">
+          <button class="welcome-mode-modal__home" id="welcomeModeModalHomeBtn" type="button" aria-label="Voltar para a home">
+            <svg viewBox="0 0 24 24" focusable="false"><path d="M10.7 5.3a1 1 0 0 1 0 1.4L6.41 11H20a1 1 0 1 1 0 2H6.4l4.3 4.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
+          </button>
+        </div>
+        <div class="welcome-mode-modal__body">
+          <p class="welcome-mode-modal__eyebrow">Pre-jogo</p>
+          <h2 class="welcome-mode-modal__title" id="welcomeModeModalTitle">Scale</h2>
+          <p class="welcome-mode-modal__description" id="welcomeModeModalDescription">Treino por niveis com cinco etapas em sequencia.</p>
+          <div class="welcome-mode-modal__level" id="welcomeModeModalLevel">
+            <p class="welcome-mode-modal__level-copy">Nivel do jogo</p>
+            <div class="welcome-mode-modal__level-strip">
+              <button class="welcome-mode-modal__level-btn" id="welcomeModeModalLevelPrevBtn" type="button" aria-label="Nivel anterior">&#8249;</button>
+              <div class="welcome-mode-modal__level-value" id="welcomeModeModalLevelValue">Nivel 1</div>
+              <button class="welcome-mode-modal__level-btn" id="welcomeModeModalLevelNextBtn" type="button" aria-label="Proximo nivel">&#8250;</button>
+            </div>
+          </div>
+        </div>
+        <div class="welcome-mode-modal__footer">
+          <button class="welcome-mode-modal__start" id="welcomeModeModalStartBtn" type="button">Iniciar</button>
+        </div>
       </div>
     </div>
   </section>
@@ -8355,6 +8553,28 @@
       const AUTH_GATE_FORM_REVEAL_MS = 1200;
       const WELCOME_COPY_ROTATION_MS = 2000;
       const WELCOME_COPY_MESSAGES = ['Flu\u00eancia f\u00e1cil', 'Toque para come\u00e7ar'];
+      const WELCOME_MODE_CONFIG = {
+        playing: {
+          title: 'Playing',
+          description: 'Veja e ouca cartas em ciclo leve, sem microfone.',
+          usesLevelSelector: false
+        },
+        scale: {
+          title: 'Scale',
+          description: 'Suba a escala com cinco etapas e progresso completo.',
+          usesLevelSelector: true
+        },
+        listen: {
+          title: 'Listen',
+          description: 'Treine o ouvido por nivel com foco total no audio.',
+          usesLevelSelector: true
+        },
+        typing: {
+          title: 'Typing',
+          description: 'Digite em ingles por nivel, sem estrelas e sem mic.',
+          usesLevelSelector: true
+        }
+      };
       const LEGACY_FLASHCARDS_HOME_ENABLED = false;
       const SOUND_TEST_COPY_ROTATION_MS = 1500;
       const SOUND_TEST_SUBTITLE_MESSAGES = ['Toque no que est\u00e1 ouvindo', 'Ajuste o volume'];
@@ -8506,6 +8726,7 @@
           welcomeVisible: true,
           welcomeDismissed: false,
           welcomeIndex: 0,
+          welcomeModeKey: '',
           welcomeTimer: 0,
           launchAfterSoundTest: '',
           soundTestCompleted: false,
@@ -8550,6 +8771,7 @@
           levelMode: false,
           levelAudioMode: false,
           levelTextMode: false,
+          levelTypingMode: false,
           levelTextResponseLanguage: 'english',
           levelTextHitStreak: 0,
           entries: new Map(),
@@ -8719,11 +8941,21 @@
 
       const els = {
         welcomeGate: document.getElementById('welcomeGate'),
+        welcomeModeModal: document.getElementById('welcomeModeModal'),
+        welcomeModeModalHomeBtn: document.getElementById('welcomeModeModalHomeBtn'),
+        welcomeModeModalTitle: document.getElementById('welcomeModeModalTitle'),
+        welcomeModeModalDescription: document.getElementById('welcomeModeModalDescription'),
+        welcomeModeModalLevel: document.getElementById('welcomeModeModalLevel'),
+        welcomeModeModalLevelPrevBtn: document.getElementById('welcomeModeModalLevelPrevBtn'),
+        welcomeModeModalLevelValue: document.getElementById('welcomeModeModalLevelValue'),
+        welcomeModeModalLevelNextBtn: document.getElementById('welcomeModeModalLevelNextBtn'),
+        welcomeModeModalStartBtn: document.getElementById('welcomeModeModalStartBtn'),
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeLogo: document.getElementById('welcomeLogo'),
         welcomeProfile: document.getElementById('welcomeProfile'),
+        welcomePlayingModeBtn: document.getElementById('welcomePlayingModeBtn'),
+        welcomeScaleModeBtn: document.getElementById('welcomeScaleModeBtn'),
         welcomeAudioModeBtn: document.getElementById('welcomeAudioModeBtn'),
-        welcomeCenterPlayBtn: document.getElementById('welcomeCenterPlayBtn'),
         welcomeTextModeBtn: document.getElementById('welcomeTextModeBtn'),
         welcomeUserName: document.getElementById('welcomeUserName'),
         welcomeAvatarPreview: document.getElementById('welcomeAvatarPreview'),
@@ -11351,6 +11583,7 @@
         syncWelcomeAccountLink();
         syncWelcomeLevelProgress();
         syncWelcomeBackgroundAdmin();
+        syncWelcomeModeModal();
         if (visible && !state.ui.soundTestOpen && !state.ui.micCheckOpen) {
           closeAudioCheck();
         }
@@ -11385,6 +11618,7 @@
         state.entry.welcomeVisible = false;
         document.body.classList.remove('welcome-active');
         els.welcomeGate?.classList.remove('is-visible');
+        closeWelcomeModeModal();
         closeAudioCheck();
         clearWelcomeRotation();
         stopWelcomeHeadingRotation();
@@ -12856,6 +13090,56 @@
         return Boolean(state.game?.levelMode && state.game?.levelTextMode);
       }
 
+      function isLevelTypingModeActive() {
+        return Boolean(state.game?.levelMode && state.game?.levelTypingMode);
+      }
+
+      function currentWelcomeModeConfig() {
+        const modeKey = safeText(state.entry?.welcomeModeKey).toLowerCase();
+        return WELCOME_MODE_CONFIG[modeKey] || null;
+      }
+
+      function syncWelcomeModeModal() {
+        const mode = currentWelcomeModeConfig();
+        const visible = Boolean(mode);
+        if (els.welcomeModeModal) {
+          els.welcomeModeModal.classList.toggle('is-visible', visible);
+          els.welcomeModeModal.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        }
+        if (!visible) return;
+        if (els.welcomeModeModalTitle) {
+          els.welcomeModeModalTitle.textContent = mode.title;
+        }
+        if (els.welcomeModeModalDescription) {
+          els.welcomeModeModalDescription.textContent = mode.description;
+        }
+        if (els.welcomeModeModalLevel) {
+          els.welcomeModeModalLevel.hidden = !mode.usesLevelSelector;
+        }
+        if (els.welcomeModeModalLevelValue) {
+          els.welcomeModeModalLevelValue.textContent = formatSelectedGameLevelLabel();
+        }
+        if (els.welcomeModeModalLevelPrevBtn) {
+          els.welcomeModeModalLevelPrevBtn.disabled = !mode.usesLevelSelector || selectedGameLevel() <= 0;
+        }
+        if (els.welcomeModeModalLevelNextBtn) {
+          els.welcomeModeModalLevelNextBtn.disabled = !mode.usesLevelSelector || selectedGameLevel() >= USER_LEVEL_MAX;
+        }
+      }
+
+      function openWelcomeModeModal(modeKey) {
+        const normalized = safeText(modeKey).toLowerCase();
+        if (!WELCOME_MODE_CONFIG[normalized]) return;
+        state.entry.welcomeModeKey = normalized;
+        syncWelcomeModeModal();
+      }
+
+      function closeWelcomeModeModal() {
+        if (!state.entry.welcomeModeKey) return;
+        state.entry.welcomeModeKey = '';
+        syncWelcomeModeModal();
+      }
+
       function shouldUseLevelModeBufferedPool() {
         return Boolean(isLevelModeActive() && isAllLevelsSelected());
       }
@@ -12949,6 +13233,7 @@
       function setSelectedGameLevel(level) {
         state.ui.welcomeSelectedLevel = normalizeSelectableGameLevel(level);
         syncGameLevelNavigator();
+        syncWelcomeModeModal();
       }
 
       function clearLevelSwitchTimer() {
@@ -13360,8 +13645,12 @@
 
       function updateLevelProgressBar() {
         if (!els.flashcardLevelProgress || !els.flashcardLevelProgressBar) return;
-        const show = Boolean(state.game.active && !isAdminUser());
+        const show = Boolean(state.game.active && !isAdminUser() && !isLevelTypingModeActive());
         els.flashcardLevelProgress.hidden = !show;
+        if (!show) {
+          syncWelcomeLevelProgress();
+          return;
+        }
         const level = currentUserLevel();
         const levelTarget = userLevelCardTarget(level);
         const count = state.lastLevelUpLevel
@@ -16448,7 +16737,11 @@
           ? (
             isAllLevelsSelected()
               ? `${formatSelectedGameLevelLabel()} • todas as cartas do deck em rotacao aleatoria.`
-              : `${formatSelectedGameLevelLabel()} • ${currentLevelProgress}/${userLevelCardTarget(selectedGameLevel())} concluido • ${activeCount}/${targetCount} cartas ativas em loop.`
+              : (
+                isLevelTypingModeActive()
+                  ? `${formatSelectedGameLevelLabel()} • typing livre • ${activeCount}/${targetCount} cartas ativas em loop.`
+                  : `${formatSelectedGameLevelLabel()} • ${currentLevelProgress}/${userLevelCardTarget(selectedGameLevel())} concluido • ${activeCount}/${targetCount} cartas ativas em loop.`
+              )
           )
           : `${activeCount}/${targetCount} cartas ativas na mesa.`;
         syncGameLevelNavigator();
@@ -18298,7 +18591,7 @@
 
         buildOrderedDeckSelection(sourceCards, roundCount).forEach((card) => {
           const entry = createGameEntry(card, 'base');
-          entry.stage = 1;
+          entry.stage = isLevelTypingModeActive() ? 4 : 1;
           entry.stars = 0;
           state.game.entries.set(entry.id, entry);
           state.game.queue.push(entry.id);
@@ -18397,6 +18690,7 @@
         state.game.levelMode = false;
         state.game.levelAudioMode = false;
         state.game.levelTextMode = false;
+        state.game.levelTypingMode = false;
         state.game.transitioning = false;
         state.game.sessionStartedAt = Date.now();
         state.game.contextLimit = sourceIds.length;
@@ -18469,6 +18763,7 @@
             state.game.active = true;
             state.game.levelAudioMode = false;
             state.game.levelTextMode = false;
+            state.game.levelTypingMode = false;
             state.game.sessionStartedAt = Date.now();
 
             const roundCount = Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount());
@@ -18549,6 +18844,7 @@
         state.game.levelMode = false;
         state.game.levelAudioMode = false;
         state.game.levelTextMode = false;
+        state.game.levelTypingMode = false;
         state.game.transitioning = false;
         state.game.sessionStartedAt = Date.now();
         state.game.tutorial.active = true;
@@ -18595,6 +18891,7 @@
         state.game.levelMode = false;
         state.game.levelAudioMode = false;
         state.game.levelTextMode = false;
+        state.game.levelTypingMode = false;
         state.game.levelTextHitStreak = 0;
         state.game.entries.clear();
         state.game.queue = [];
@@ -18679,7 +18976,7 @@
           clearStageHintLoop({ clearStatus: true });
           clearFirstStageMicHint({ clearStatus: true });
           clearStageTwoHintTimer();
-          entry.stage = 1;
+          entry.stage = isLevelTypingModeActive() ? 4 : 1;
           entry.stars = 0;
           entry.typingMistakes = 0;
           if (isHit) {
@@ -18688,16 +18985,21 @@
             }
             setGameStatus('', 'hit');
             playSuccessAudio();
-            const levelBefore = selectedGameLevel();
-            state.ui.levelModeProgress[levelBefore] = Math.max(
-              0,
-              Number(state.ui.levelModeProgress?.[levelBefore]) || 0
-            ) + 1;
-            const movedToNextLevel = advanceSelectedGameLevelIfNeeded();
-            els.gameStarCopy.textContent = movedToNextLevel
-              ? `${formatSelectedGameLevelLabel()} liberado`
-              : formatSelectedGameLevelLabel();
-            entry._removeAfterReward = true;
+            if (isLevelTypingModeActive()) {
+              els.gameStarCopy.textContent = 'Typing';
+              entry._removeAfterReward = true;
+            } else {
+              const levelBefore = selectedGameLevel();
+              state.ui.levelModeProgress[levelBefore] = Math.max(
+                0,
+                Number(state.ui.levelModeProgress?.[levelBefore]) || 0
+              ) + 1;
+              const movedToNextLevel = advanceSelectedGameLevelIfNeeded();
+              els.gameStarCopy.textContent = movedToNextLevel
+                ? `${formatSelectedGameLevelLabel()} liberado`
+                : formatSelectedGameLevelLabel();
+              entry._removeAfterReward = true;
+            }
           } else {
             if (isLevelTextModeActive()) {
               state.game.levelTextHitStreak = 0;
@@ -18708,7 +19010,7 @@
           }
           syncLevelTextModeControls();
           updateGameChips();
-          await playStageResponseSequence(1, card, { skipPromptAudio: !isHit });
+          await playStageResponseSequence(isLevelTypingModeActive() ? 4 : 1, card, { skipPromptAudio: !isHit });
           await wait(isHit ? 260 : 520);
           if (entry._removeAfterReward) {
             entry._removeAfterReward = false;
@@ -19172,16 +19474,48 @@
 
       function bindEvents() {
         const startLevelModeFromWelcome = async (event, options = {}) => {
-          if (await handleManualWelcomeNoEnergy(els.welcomeStartBtn || event?.currentTarget)) return;
-          if (!(await guardWelcomeEnergy({ previewTarget: [event?.currentTarget, els.welcomeStartBtn].filter(Boolean) }))) return;
-          setSelectedGameLevel(1);
+          const previewTargets = [event?.currentTarget, els.welcomeModeModalStartBtn, els.welcomeStartBtn].filter(Boolean);
+          if (await handleManualWelcomeNoEnergy(els.welcomeModeModalStartBtn || els.welcomeStartBtn || event?.currentTarget)) return;
+          if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
           state.game.levelMode = true;
           state.game.levelAudioMode = Boolean(options.audioOnly);
           state.game.levelTextMode = Boolean(options.textOnly);
+          state.game.levelTypingMode = false;
           state.game.levelTextResponseLanguage = 'english';
           state.game.levelTextHitStreak = 0;
+          closeWelcomeModeModal();
           state.entry.welcomeStartRequested = true;
           void openAudioCheck();
+        };
+        const startTypingModeFromWelcome = async (event) => {
+          const previewTargets = [event?.currentTarget, els.welcomeModeModalStartBtn, els.welcomeStartBtn].filter(Boolean);
+          if (await handleManualWelcomeNoEnergy(els.welcomeModeModalStartBtn || els.welcomeStartBtn || event?.currentTarget)) return;
+          if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
+          state.game.levelMode = true;
+          state.game.levelAudioMode = false;
+          state.game.levelTextMode = false;
+          state.game.levelTypingMode = true;
+          state.game.levelTextResponseLanguage = 'english';
+          state.game.levelTextHitStreak = 0;
+          state.entry.welcomeStartRequested = false;
+          closeWelcomeModeModal();
+          const selectedCount = currentBaseGameCount(selectedGameLevel() || currentUserLevel());
+          hideWelcomeGate();
+          saveSelectedGameCount(selectedCount);
+          state.game.selectedCount = selectedCount;
+          beginGame();
+        };
+        const startPlayingModeFromWelcome = async (event) => {
+          const previewTargets = [event?.currentTarget, els.welcomeModeModalStartBtn, els.welcomeStartBtn].filter(Boolean);
+          if (await handleManualWelcomeNoEnergy(els.welcomeModeModalStartBtn || els.welcomeStartBtn || event?.currentTarget)) return;
+          if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
+          state.game.levelMode = false;
+          state.game.levelAudioMode = false;
+          state.game.levelTextMode = false;
+          state.game.levelTypingMode = false;
+          closeWelcomeModeModal();
+          hideWelcomeGate();
+          startWatch({ useDefaults: true });
         };
         els.welcomeStartBtn?.addEventListener('click', (event) => {
           void (async () => {
@@ -19190,29 +19524,55 @@
             state.game.levelMode = false;
             state.game.levelAudioMode = false;
             state.game.levelTextMode = false;
+            state.game.levelTypingMode = false;
             state.entry.welcomeStartRequested = true;
             void openAudioCheck();
           })();
         });
-        els.welcomeAudioModeBtn?.addEventListener('click', (event) => {
-          void startLevelModeFromWelcome(event, { audioOnly: true });
+        els.welcomePlayingModeBtn?.addEventListener('click', () => {
+          openWelcomeModeModal('playing');
         });
-        els.welcomeCenterPlayBtn?.addEventListener('click', (event) => {
+        els.welcomeScaleModeBtn?.addEventListener('click', () => {
+          openWelcomeModeModal('scale');
+        });
+        els.welcomeAudioModeBtn?.addEventListener('click', () => {
+          openWelcomeModeModal('listen');
+        });
+        els.welcomeTextModeBtn?.addEventListener('click', () => {
+          openWelcomeModeModal('typing');
+        });
+        els.welcomeModeModalHomeBtn?.addEventListener('click', closeWelcomeModeModal);
+        els.welcomeModeModal?.addEventListener('click', (event) => {
+          if (event.target === els.welcomeModeModal) {
+            closeWelcomeModeModal();
+          }
+        });
+        els.welcomeModeModalLevelPrevBtn?.addEventListener('click', () => {
+          nudgeSelectedGameLevel(-1);
+        });
+        els.welcomeModeModalLevelNextBtn?.addEventListener('click', () => {
+          nudgeSelectedGameLevel(1);
+        });
+        els.welcomeModeModalStartBtn?.addEventListener('click', (event) => {
+          const modeKey = safeText(state.entry.welcomeModeKey).toLowerCase();
+          if (modeKey === 'playing') {
+            void startPlayingModeFromWelcome(event);
+            return;
+          }
+          if (modeKey === 'listen') {
+            void startLevelModeFromWelcome(event, { audioOnly: true });
+            return;
+          }
+          if (modeKey === 'typing') {
+            void startTypingModeFromWelcome(event);
+            return;
+          }
           void startLevelModeFromWelcome(event, { audioOnly: false });
-        });
-        els.welcomeTextModeBtn?.addEventListener('click', (event) => {
-          void startLevelModeFromWelcome(event, { textOnly: true });
         });
         els.welcomeLogo?.addEventListener('click', (event) => {
           void (async () => {
-            if (await handleManualWelcomeNoEnergy(els.welcomeStartBtn || event.currentTarget)) return;
-            if (!(await guardWelcomeEnergy({ previewTarget: [event.currentTarget, els.welcomeStartBtn] }))) return;
-            setSelectedGameLevel(1);
-            state.game.levelMode = true;
-            state.game.levelAudioMode = false;
-            state.game.levelTextMode = false;
-            state.entry.welcomeStartRequested = true;
-            void openAudioCheck();
+            event.preventDefault();
+            openWelcomeModeModal('scale');
           })();
         });
         els.gameLevelPrevBtn?.addEventListener('click', () => {
