@@ -13106,6 +13106,13 @@
         return 1;
       }
 
+      function resolveEntryStageNumber(entry) {
+        if (isLevelModeActive() && !isTrainingMode()) {
+          return resolveLevelModeStage();
+        }
+        return Number(entry?.stage) || 1;
+      }
+
       function resetScaleBatchProgress() {
         state.game.scaleBatchAttempts = 0;
         state.game.scaleBatchHits = 0;
@@ -15860,7 +15867,7 @@
       }
 
       function renderGameTouchButton(stageConfig, entry) {
-        const stageNumber = Number(entry?.stage) || 0;
+        const stageNumber = resolveEntryStageNumber(entry);
         const useBooksMic = (!isLevelAudioModeActive() || isLevelTextModeActive()) && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5);
         els.gameTouchBtn.parentElement.hidden = !useBooksMic;
         els.gameTouchBtn.className = 'game-touch';
@@ -17175,12 +17182,12 @@
       }
 
       function isTypingStage(entry) {
-        const stageConfig = STAGES[entry?.stage] || STAGES[1];
+        const stageConfig = STAGES[resolveEntryStageNumber(entry)] || STAGES[1];
         return stageConfig.inputMode === 'typing';
       }
 
       function resolveTypingStageState(entry, card) {
-        const stageConfig = STAGES[entry?.stage] || STAGES[1];
+        const stageConfig = STAGES[resolveEntryStageNumber(entry)] || STAGES[1];
         const typingMode = stageConfig.typingMode === 'portuguese' ? 'portuguese' : 'english';
         const sourceText = typingMode === 'portuguese'
           ? (card?.portuguese || card?.english || card?.deckTitle || '')
@@ -19232,7 +19239,6 @@
 
       async function startRecognition() {
         if (!state.game.active || state.game.transitioning || state.game.listening || state.game.paused) return;
-        if (isLevelAudioModeActive()) return;
         hideGameStageTutorial({ resume: false });
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return;
