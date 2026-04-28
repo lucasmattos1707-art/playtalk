@@ -13101,7 +13101,7 @@
       }
 
       function resolveLevelModeStage() {
-        if (isLevelTypingModeActive()) return 4;
+        if (isLevelTypingModeActive()) return 2;
         if (isLevelScaleModeActive()) return 3;
         return 1;
       }
@@ -19076,7 +19076,7 @@
           syncLevelTextModeControls();
           updateGameChips();
           await playStageResponseSequence(resolveLevelModeStage(), card, {
-            skipPromptAudio: scaleModeActive || !isHit
+            skipPromptAudio: scaleModeActive || isLevelTypingModeActive() || !isHit
           });
           await wait(isHit ? 260 : 520);
           if (entry._removeAfterReward) {
@@ -19549,13 +19549,14 @@
           if (await handleManualWelcomeNoEnergy(els.welcomeModeModalPlayBtn || els.welcomeStartBtn || event?.currentTarget)) return;
           if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
           const scaleMode = !options.audioOnly && !options.textOnly;
+          const listenMode = Boolean(options.audioOnly);
           if (scaleMode) {
             setSelectedGameLevel(1);
           }
           state.game.levelMode = true;
           state.game.levelScaleMode = scaleMode;
-          state.game.levelAudioMode = Boolean(options.audioOnly);
-          state.game.levelTextMode = Boolean(options.textOnly);
+          state.game.levelAudioMode = listenMode;
+          state.game.levelTextMode = listenMode || Boolean(options.textOnly);
           state.game.levelTypingMode = false;
           state.game.levelTextResponseLanguage = 'english';
           state.game.levelTextHitStreak = 0;
