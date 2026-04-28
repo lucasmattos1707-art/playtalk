@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Crie seu avatar</title>
   <style>
+    @import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&display=swap");
+
     @font-face {
       font-family: "Pltay";
       src: url("/arquivos-codex/pltay.otf") format("opentype");
@@ -131,23 +133,23 @@
     h1 {
       margin: 20px 0 12px;
       color: #fff;
-      font-family: "Pltay", "Trebuchet MS", sans-serif;
-      font-size: clamp(34px, 6.5vw, 48px);
+      font-family: "Exo 2", "Trebuchet MS", sans-serif;
+      font-size: clamp(32px, 6vw, 44px);
+      font-weight: 700;
       letter-spacing: 0.02em;
-      line-height: 0.88;
+      line-height: 1;
       width: 100%;
       text-align: center;
-      text-transform: uppercase;
-      white-space: nowrap;
       text-shadow: 0 0 18px rgba(97, 212, 255, 0.32);
     }
 
     .photo-helper {
       margin: 18px auto 0;
       width: min(94%, 520px);
-      font-family: "Pltay", "Trebuchet MS", sans-serif;
-      font-size: clamp(19px, 3.6vw, 26px);
-      line-height: 1.05;
+      font-family: "Exo 2", "Trebuchet MS", sans-serif;
+      font-size: clamp(18px, 3.5vw, 24px);
+      font-weight: 700;
+      line-height: 1.06;
       letter-spacing: 0.02em;
       text-transform: uppercase;
       color: #d7e9ff;
@@ -371,6 +373,61 @@
       box-shadow: none;
     }
 
+    .photo-prompt {
+      width: min(100%, 360px);
+      margin-top: 18px;
+      display: grid;
+      gap: 8px;
+      justify-items: stretch;
+    }
+
+    .photo-prompt.is-hidden {
+      display: none;
+    }
+
+    .photo-prompt__input {
+      width: 100%;
+      min-height: 108px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(140, 197, 255, 0.3);
+      background: rgba(6, 24, 61, 0.58);
+      color: var(--text);
+      font: 500 15px/1.45 "Exo 2", "Trebuchet MS", sans-serif;
+      resize: none;
+      outline: none;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .photo-prompt__input::placeholder {
+      color: rgba(215, 233, 255, 0.64);
+    }
+
+    .photo-prompt__input:focus {
+      border-color: rgba(88, 240, 157, 0.66);
+      box-shadow:
+        0 0 0 1px rgba(88, 240, 157, 0.34),
+        0 0 16px rgba(88, 240, 157, 0.16);
+    }
+
+    .photo-prompt__meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      color: rgba(215, 233, 255, 0.74);
+      font: 500 12px/1.4 "Exo 2", "Trebuchet MS", sans-serif;
+      text-align: left;
+    }
+
+    .photo-prompt__hint {
+      flex: 1;
+    }
+
+    .photo-prompt__count {
+      white-space: nowrap;
+    }
+
     @keyframes photoFlash {
       from { opacity: 1; }
       to { opacity: 0; }
@@ -414,10 +471,22 @@
             <svg id="photoPlaceholder" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9 4.5 7.5 6H5.75A2.75 2.75 0 0 0 3 8.75v8.5A2.75 2.75 0 0 0 5.75 20h12.5A2.75 2.75 0 0 0 21 17.25v-8.5A2.75 2.75 0 0 0 18.25 6H16.5L15 4.5H9Zm3 12.75a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5Zm0-1.75a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
           </button>
         </div>
-        <p class="photo-helper" id="photoHelper"><span>SUA FOTO SER&Aacute;</span><span>TRANSFORMADA</span><span>EM UM DESENHO</span></p>
+        <p class="photo-helper" id="photoHelper"><span>SUA FOTO SER&Aacute;</span><span>TRANSFORMADA EM DESENHO</span></p>
+        <div class="photo-prompt" id="photoPromptWrap">
+          <textarea
+            class="photo-prompt__input"
+            id="photoPromptInput"
+            maxlength="300"
+            placeholder="Peça detalhes do avatar: acessório, fundo, praia, cabelo grande, roupa, estilo..."
+          ></textarea>
+          <div class="photo-prompt__meta">
+            <span class="photo-prompt__hint">Se quiser, descreva como a imagem deve ficar. Sem foto, vamos usar só o texto.</span>
+            <span class="photo-prompt__count" id="photoPromptCount">0/300</span>
+          </div>
+        </div>
         <div class="photo-actions" id="photoActions">
           <button class="identity-action is-success" id="continueBtn" type="button" disabled>Avancar</button>
-          <button class="identity-action is-secondary" id="regenerateBtn" type="button" disabled>Gerar nova</button>
+          <button class="identity-action is-secondary" id="regenerateBtn" type="button" disabled>Gerar avatar</button>
         </div>
         <input id="photoInput" type="file" accept="image/*" hidden>
         <p class="identity-status" id="photoStatus"></p>
@@ -464,6 +533,9 @@
       photoCircle: document.getElementById('photoCircle'),
       photoPlaceholder: document.getElementById('photoPlaceholder'),
       photoHelper: document.getElementById('photoHelper'),
+      photoPromptWrap: document.getElementById('photoPromptWrap'),
+      photoPromptInput: document.getElementById('photoPromptInput'),
+      photoPromptCount: document.getElementById('photoPromptCount'),
       photoInput: document.getElementById('photoInput'),
       photoStatus: document.getElementById('photoStatus'),
       loadingCopy: document.getElementById('loadingCopy'),
@@ -521,7 +593,14 @@
     function nextAfterAvatar() {
       return `/password?return=${encodeURIComponent(getReturnPath())}`;
     }
+    function currentPromptText() {
+      return safeText(els.photoPromptInput?.value || '').slice(0, 300);
+    }
     function currentPhotoVersion() { return state.photoVersions[state.photoVersionIndex] || null; }
+    function updatePromptCounter() {
+      if (!els.photoPromptCount) return;
+      els.photoPromptCount.textContent = `${currentPromptText().length}/300`;
+    }
     function formatLoadingMessage(message) {
       const words = String(message || '').trim().split(/\s+/).filter(Boolean);
       if (words.length <= 2) return words.join(' ');
@@ -657,9 +736,13 @@
       els.photoCircle.classList.toggle('is-busy', state.photoGateBusy && Boolean(state.photoSourceDataUrl));
       els.photoCircle.classList.toggle('has-preview', Boolean(state.photoSourceDataUrl));
       els.photoCircle.classList.toggle('has-result', Boolean(currentVersion?.image) && !state.photoGateBusy);
-      els.photoHelper?.classList.toggle('is-hidden', hasGeneratedAvatar);
+      els.photoHelper?.classList.toggle('is-hidden', state.photoGateBusy);
+      els.photoPromptWrap?.classList.toggle('is-hidden', state.photoGateBusy);
       els.continueBtn.disabled = state.photoGateBusy || !currentVersion?.image;
-      els.regenerateBtn.disabled = state.photoGateBusy || state.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS || !state.photoSourceDataUrl;
+      els.regenerateBtn.disabled = state.photoGateBusy
+        || state.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS
+        || (!state.photoSourceDataUrl && !currentPromptText());
+      els.regenerateBtn.textContent = hasGeneratedAvatar ? 'Gerar nova' : 'Gerar avatar';
       els.photoActions.classList.toggle('is-hidden', state.photoGateBusy);
       if (state.photoGateBusy) {
         setStatus('');
@@ -710,12 +793,16 @@
       const sourceDataUrl = await fileToDataUrl(file);
       return dataUrlToSquareWebpDataUrl(sourceDataUrl, size);
     }
-    async function createCartoonAvatar(imageDataUrl) {
+    async function createCartoonAvatar({ imageDataUrl = '', prompt = '' } = {}) {
       const response = await fetch(buildApiUrl('/api/images/openai/avatar-cartoon'), {
         method: 'POST',
         credentials: 'include',
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ imageDataUrl })
+        body: JSON.stringify({
+          imageDataUrl,
+          prompt,
+          background: 'auto'
+        })
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success || !payload?.dataUrl) throw new Error(payload?.message || payload?.error || 'Nao foi possivel transformar a foto em desenho.');
@@ -785,8 +872,12 @@
       state.user = user;
       return user;
     }
-    async function generatePhotoVersionFromFile(file) {
-      if (!file) return;
+    async function generatePhotoVersionFromFile(file = null) {
+      const promptText = currentPromptText();
+      if (!file && !state.photoSourceDataUrl && !promptText) {
+        setStatus('Envie uma foto ou escreva como quer o avatar.', 'error');
+        return;
+      }
       if (state.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS) {
         setStatus('Voce chegou ao limite de 5 geracoes.', 'error', els.loadingCopy);
         return;
@@ -796,11 +887,15 @@
       renderPhoto();
       startProgressRing();
       try {
-        const sourceDataUrl = await fileToSquareWebpDataUrl(file, 400);
-        state.photoSourceDataUrl = sourceDataUrl;
+        if (file) {
+          state.photoSourceDataUrl = await fileToSquareWebpDataUrl(file, 400);
+        }
         renderPhoto();
         startPhotoLoadingCopy();
-        const cartoonDataUrl = await createCartoonAvatar(sourceDataUrl);
+        const cartoonDataUrl = await createCartoonAvatar({
+          imageDataUrl: state.photoSourceDataUrl,
+          prompt: promptText
+        });
         const optimizedCartoonDataUrl = await dataUrlToSquareWebpDataUrl(cartoonDataUrl, 400);
         stopPhotoLoadingCopy();
         stopProgressRing();
@@ -822,9 +917,7 @@
       }
     }
     async function regenerateFromLastSource() {
-      const blob = await fetch(state.photoSourceDataUrl).then((response) => response.blob());
-      const file = new File([blob], 'avatar.webp', { type: blob.type || 'image/webp' });
-      await generatePhotoVersionFromFile(file);
+      await generatePhotoVersionFromFile(null);
     }
     async function init() {
       setStatus('');
@@ -863,8 +956,12 @@
       void generatePhotoVersionFromFile(file);
       event.target.value = '';
     });
+    els.photoPromptInput?.addEventListener('input', () => {
+      updatePromptCounter();
+      renderPhoto();
+    });
     els.regenerateBtn.addEventListener('click', () => {
-      if (state.photoGateBusy || state.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS || !state.photoSourceDataUrl) return;
+      if (state.photoGateBusy || state.photoGenerationCount >= ONBOARDING_MAX_PHOTO_GENERATIONS || (!state.photoSourceDataUrl && !currentPromptText())) return;
       void regenerateFromLastSource();
     });
     els.continueBtn.addEventListener('click', () => {
@@ -883,6 +980,7 @@
       stopProgressRing();
       stopBlurAnimation();
     });
+    updatePromptCounter();
     void init();
   </script>
 </body>

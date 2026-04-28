@@ -9064,17 +9064,24 @@ async function generateAvatarCartoonWithOpenAI({
   size = '1024x1024',
   quality = 'low',
   outputFormat = 'png',
-  background = 'transparent'
+  background = 'auto'
 }) {
-  const parsedImage = parseBase64DataUrl(imageDataUrl);
-  if (!parsedImage?.buffer?.length || !/^image\//i.test(parsedImage.mimeType || '')) {
+  const normalizedPrompt = typeof prompt === 'string' ? prompt.trim().slice(0, 300) : '';
+  const hasSourceImage = typeof imageDataUrl === 'string' && imageDataUrl.trim().startsWith('data:image/');
+  const parsedImage = hasSourceImage ? parseBase64DataUrl(imageDataUrl) : null;
+  if (hasSourceImage && (!parsedImage?.buffer?.length || !/^image\//i.test(parsedImage.mimeType || ''))) {
     const error = new Error('Imagem invalida para transformar em desenho.');
     error.statusCode = 400;
     throw error;
   }
-  if (parsedImage.buffer.length > 8 * 1024 * 1024) {
+  if (parsedImage?.buffer?.length > 8 * 1024 * 1024) {
     const error = new Error('Imagem muito grande. Envie uma foto menor que 8 MB.');
     error.statusCode = 413;
+    throw error;
+  }
+  if (!hasSourceImage && !normalizedPrompt) {
+    const error = new Error('Envie uma foto ou descreva o avatar desejado.');
+    error.statusCode = 400;
     throw error;
   }
   if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
@@ -9084,39 +9091,65 @@ async function generateAvatarCartoonWithOpenAI({
     throw error;
   }
 
-  const stylePrompt = prompt || [
-    'Analyze the uploaded user photo and recreate the same person as a high-end animated portrait.',
-    'Preserve identity, facial proportions, hairstyle, skin tone, gaze direction, and overall expression.',
-    'Make the person look naturally a bit fitter, healthier, more alive, happier, and lighter in aura, with cleaner skin and flattering presentation while keeping them recognizably the same person.',
-    'If the subject appears slightly overweight, reduce it only subtly and tastefully while preserving identity and realism.',
-    'If the subject is clearly an adult and appears over about 40 years old, make them look only a little younger, around five years younger, while preserving realism and identity.',
-    'Render it as a polished premium 3D animated portrait with cinematic lighting, soft shadows, vibrant colors, detailed textures, gentle depth of field, premium 4k animation quality.',
-    'Use transparent background only (alpha channel). Do not add beach, sky, scenery, room, wall, gradients, floor, objects, or any backdrop.',
-    'Keep only the person cut out cleanly with smooth edges and no background pixels.',
-    'Keep the composition close to the original photo and use only the uploaded photo as reference.',
-    'Do not invent props, toys, shoulder characters, extra accessories, extra people, text, logos, or watermarks.',
-    'Keep the final image clean, premium, warm, and visually uplifting.'
-  ].join(' ');
+  const stylePrompt = hasSourceImage
+    ? [
+      'Analyze the uploaded user photo and recreate the same person as a premium illustrated avatar.',
+      'Preserve identity, facial proportions, hairstyle, skin tone, gaze direction, and overall expression.',
+      'Keep the person recognizably the same while presenting them in a polished, flattering, warm, high-end illustrated style.',
+      'Render with cinematic lighting, detailed textures, clean lines, rich color, and premium modern animation quality.',
+      'Keep the composition close to the uploaded photo.',
+      'Preserve the same background, place, scenery, and general setting from the uploaded photo unless the user explicitly asks for a different background or environment.',
+      'If the user asks for accessories, hairstyle changes, clothes, mood, or a different setting, follow those instructions while still keeping the same person recognizable.',
+      'Do not add extra people, text, logos, or watermarks.',
+      normalizedPrompt ? `User request: ${normalizedPrompt}` : 'User request: preserve the original scene and transform the photo into a polished illustrated avatar.'
+    ].join(' ')
+    : [
+      'Create a premium illustrated avatar portrait based only on the user description.',
+      'Follow the requested hairstyle, accessories, clothing, expression, and background setting.',
+      'Render with cinematic lighting, detailed textures, rich color, and polished modern animation quality.',
+      'Keep the image visually clean, premium, warm, and expressive.',
+      'Do not add extra people, text, logos, or watermarks.',
+      `User request: ${normalizedPrompt}`
+    ].join(' ');
 
-  const extension = extensionFromMimeType(parsedImage.mimeType);
-  const fileName = `avatar-source.${extension}`;
-  const imageBlob = new Blob([parsedImage.buffer], { type: parsedImage.mimeType });
-  const formData = new FormData();
-  formData.append('model', OPENAI_AVATAR_IMAGE_MODEL);
-  formData.append('prompt', stylePrompt);
-  formData.append('image', imageBlob, fileName);
-  formData.append('size', size);
-  formData.append('quality', quality);
-  formData.append('output_format', outputFormat);
-  formData.append('background', background);
+  let upstreamResponse;
+  if (hasSourceImage) {
+    const extension = extensionFromMimeType(parsedImage.mimeType);
+    const fileName = `avatar-source.${extension}`;
+    const imageBlob = new Blob([parsedImage.buffer], { type: parsedImage.mimeType });
+    const formData = new FormData();
+    formData.append('model', OPENAI_AVATAR_IMAGE_MODEL);
+    formData.append('prompt', stylePrompt);
+    formData.append('image', imageBlob, fileName);
+    formData.append('size', size);
+    formData.append('quality', quality);
+    formData.append('output_format', outputFormat);
+    formData.append('background', background);
 
-  const upstreamResponse = await fetch('https://api.openai.com/v1/images/edits', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`
-    },
-    body: formData
-  });
+    upstreamResponse = await fetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`
+      },
+      body: formData
+    });
+  } else {
+    upstreamResponse = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: OPENAI_AVATAR_IMAGE_MODEL,
+        prompt: stylePrompt,
+        size,
+        quality,
+        background,
+        output_format: outputFormat
+      })
+    });
+  }
 
   const responseText = await upstreamResponse.text();
   let payload = null;
