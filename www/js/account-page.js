@@ -685,7 +685,7 @@
       return;
     }
     els.premiumLevel.textContent = 'Nivel de acesso: Free';
-    els.premiumUntil.textContent = energyStatus?.message || '5000 energias restantes';
+    els.premiumUntil.textContent = energyStatus?.message || '5.000 energias restantes';
   }
 
   function renderPremiumButton() {

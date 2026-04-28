@@ -2,7 +2,7 @@
   const LAST_ROUTE_STORAGE_KEY = 'playtalk_native_last_route_v1';
   const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
   const LAST_ROUTE_MAX_AGE_MS = 30000;
-  const PROTECTED_ROUTE_KEYS = new Set(['play', 'allcards', 'users', 'account', 'books', 'flashcards', 'mycards', 'premium', 'speaking']);
+  const PROTECTED_ROUTE_KEYS = new Set(['play', 'allcards', 'users', 'account', 'books', 'flashcards', 'mycards', 'premium', 'speaking', 'admin']);
   const ROUTES = {
     auth: { webPath: '/entrar', localPath: '/auth.html' },
     play: { webPath: '/play', localPath: '/flashcards.html' },
@@ -16,9 +16,9 @@
     usermame: { webPath: '/usermame', localPath: '/username.html' },
     avataradd: { webPath: '/avataradd', localPath: '/avataradd.html' },
     password: { webPath: '/password', localPath: '/password.html' },
-    premium: { webPath: '/premium', localPath: '/premium.html' }
-    ,
-    speaking: { webPath: '/speaking', localPath: '/speaking.html' }
+    premium: { webPath: '/premium', localPath: '/premium.html' },
+    speaking: { webPath: '/speaking', localPath: '/speaking.html' },
+    admin: { webPath: '/admin', localPath: '/admin.html' }
   };
 
   const FILE_TO_ROUTE_KEY = {
@@ -33,9 +33,9 @@
     'username.html': 'username',
     'avataradd.html': 'avataradd',
     'password.html': 'password',
-    'premium.html': 'premium'
-    ,
-    'speaking.html': 'speaking'
+    'premium.html': 'premium',
+    'speaking.html': 'speaking',
+    'admin.html': 'admin'
   };
 
   let backButtonListenerBound = false;

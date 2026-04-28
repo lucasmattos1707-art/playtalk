@@ -46,6 +46,11 @@
     return Number.isFinite(numeric) ? numeric : 0;
   }
 
+  function formatEnergyWhole(value) {
+    const rounded = Math.max(0, Math.round(safeNumber(value)));
+    return new Intl.NumberFormat('pt-BR').format(rounded);
+  }
+
   function escapeHtml(value) {
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -942,10 +947,10 @@
     const dailyEnergyLimit = Math.max(0, Math.round(safeNumber(stats?.dailyEnergyLimit))) || DAILY_FREE_ENERGY;
     const usedToday = premium
       ? 0
-      : hasSimpleEnergyTotals
-        ? simpleEnergyUsed
-        : hasServerEnergySnapshot
+      : hasServerEnergySnapshot
         ? Math.max(0, Math.round(safeNumber(stats?.dailyEnergyUsed)))
+        : hasSimpleEnergyTotals
+        ? simpleEnergyUsed
         : 0;
     const serverRemaining = safeNumber(stats?.remainingEnergy);
     const hasServerRemaining = stats?.remainingEnergy != null && Number.isFinite(Number(stats.remainingEnergy));
@@ -967,7 +972,7 @@
       countdownText: nextResetAt ? formatResetCountdown(nextResetAt) : '0h 0min',
       message: premium
         ? 'Energia infinita'
-        : `${remaining} energias restantes`,
+        : `${formatEnergyWhole(remaining)} energias restantes`,
       dailyEnergyLimit
     };
   }

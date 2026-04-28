@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Energia</title>
+  <style>
+    :root {
+      --bg: #08111f;
+      --bg-soft: rgba(8, 17, 31, 0.72);
+      --panel: rgba(9, 24, 46, 0.82);
+      --panel-border: rgba(137, 202, 255, 0.16);
+      --text: #f6fbff;
+      --muted: rgba(246, 251, 255, 0.72);
+      --accent: #53d1ff;
+      --accent-strong: #76f0c0;
+      --danger: #ff7c7c;
+      --shadow: 0 28px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(83, 209, 255, 0.22), transparent 34%),
+        linear-gradient(180deg, #091221 0%, #040a14 100%);
+    }
+
+    .admin-shell {
+      width: min(1040px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+    }
+
+    .admin-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .admin-title-wrap h1 {
+      margin: 0 0 6px;
+      font-size: clamp(32px, 6vw, 52px);
+      line-height: 0.94;
+      letter-spacing: -0.04em;
+    }
+
+    .admin-title-wrap p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .admin-topbar-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .admin-link,
+    .admin-btn {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.18s ease, opacity 0.18s ease, background 0.18s ease;
+    }
+
+    .admin-link {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+
+    .admin-btn {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+      color: #05213a;
+    }
+
+    .admin-link:hover,
+    .admin-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .admin-btn:disabled {
+      opacity: 0.55;
+      cursor: wait;
+      transform: none;
+    }
+
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.85fr;
+      gap: 18px;
+    }
+
+    .admin-card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      padding: 22px;
+    }
+
+    .admin-card h2 {
+      margin: 0 0 8px;
+      font-size: 22px;
+    }
+
+    .admin-card-copy {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .admin-form {
+      display: grid;
+      gap: 16px;
+    }
+
+    .admin-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .admin-field label {
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: rgba(246, 251, 255, 0.82);
+    }
+
+    .admin-field input {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      padding: 16px 18px;
+      background: rgba(2, 10, 20, 0.46);
+      color: var(--text);
+      font-size: 20px;
+      font-weight: 700;
+      outline: none;
+    }
+
+    .admin-field small {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .admin-status {
+      min-height: 24px;
+      margin-top: 14px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .admin-status.is-error {
+      color: var(--danger);
+    }
+
+    .admin-status.is-success {
+      color: var(--accent-strong);
+    }
+
+    .admin-preview-list,
+    .admin-facts {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .admin-preview-item,
+    .admin-fact {
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .admin-preview-item strong,
+    .admin-fact strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: rgba(246, 251, 255, 0.72);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .admin-preview-item span,
+    .admin-fact span {
+      display: block;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .admin-preview-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 860px) {
+      .admin-shell {
+        width: min(100vw, calc(100vw - 20px));
+        padding-top: 18px;
+      }
+
+      .admin-topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .admin-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="admin-shell">
+    <header class="admin-topbar">
+      <div class="admin-title-wrap">
+        <h1>/admin</h1>
+        <p>Controle fino da energia sem poluir a experiencia do usuario.</p>
+      </div>
+      <div class="admin-topbar-actions">
+        <a class="admin-link" href="/users">Usuarios</a>
+        <a class="admin-link" href="/account">Conta</a>
+      </div>
+    </header>
+
+    <section class="admin-grid">
+      <article class="admin-card">
+        <h2>Configurar energia</h2>
+        <p class="admin-card-copy">O admin ajusta o multiplicador tecnico e o limite gratis do dia. O usuario final continua vendo apenas numeros inteiros e limpos.</p>
+        <form class="admin-form" id="adminEnergyForm">
+          <div class="admin-field">
+            <label for="adminEnergyMultiplierInput">Custo por caractere</label>
+            <input id="adminEnergyMultiplierInput" name="energyCostMultiplier" type="number" min="0.01" max="10.00" step="0.01" value="1.00" inputmode="decimal" required>
+            <small>Exemplo: <strong>1.20x</strong> faz 100 caracteres custarem 120 energias.</small>
+          </div>
+          <div class="admin-field">
+            <label for="adminEnergyLimitInput">Energias gratis por dia</label>
+            <input id="adminEnergyLimitInput" name="dailyFreeEnergyLimit" type="number" min="0" max="1000000" step="1" value="5000" inputmode="numeric" required>
+            <small>Esse numero aparece para o usuario como total do dia, por exemplo <strong>5.000</strong>.</small>
+          </div>
+          <div class="admin-topbar-actions">
+            <button class="admin-btn" id="adminEnergySaveBtn" type="submit">Salvar energia</button>
+          </div>
+        </form>
+        <div class="admin-status" id="adminEnergyStatus" aria-live="polite"></div>
+      </article>
+
+      <aside class="admin-card">
+        <h2>Preview</h2>
+        <p class="admin-card-copy">Aqui a gente visualiza o impacto antes de salvar.</p>
+        <ul class="admin-preview-list">
+          <li class="admin-preview-item">
+            <strong>100 caracteres</strong>
+            <span id="adminPreview100">100 energias</span>
+          </li>
+          <li class="admin-preview-item">
+            <strong>250 caracteres</strong>
+            <span id="adminPreview250">250 energias</span>
+          </li>
+          <li class="admin-preview-item">
+            <strong>Usuario vai ver</strong>
+            <span id="adminPreviewLimit">5.000 energias</span>
+          </li>
+        </ul>
+        <p class="admin-preview-note">Nenhum decimal aparece para o usuario final. O arredondamento ja acontece no calculo da energia.</p>
+      </aside>
+    </section>
+
+    <section class="admin-card" style="margin-top:18px;">
+      <h2>Resumo rapido</h2>
+      <ul class="admin-facts">
+        <li class="admin-fact">
+          <strong>Multiplicador atual</strong>
+          <span id="adminFactMultiplier">1.00x</span>
+        </li>
+        <li class="admin-fact">
+          <strong>Limite atual</strong>
+          <span id="adminFactLimit">5.000 energias</span>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <script src="js/api-config.js"></script>
+  <script src="js/android-shell.js"></script>
+  <script src="js/admin-page.js?v=20260428a"></script>
+</body>
+</html>

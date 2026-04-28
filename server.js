@@ -150,6 +150,7 @@ let userBooksLibraryStatsReadyPromise = null;
 let userBooksConsumptionStatsReadyPromise = null;
 let userDailyEnergyStatsReadyPromise = null;
 let usersPresenceClassReadyPromise = null;
+let energySettingsReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
 let speakingCardsCache = {
@@ -158,6 +159,10 @@ let speakingCardsCache = {
 };
 let adminMiniBooksSummaryCache = {
   summary: null,
+  updatedAt: 0
+};
+let energySettingsCache = {
+  value: null,
   updatedAt: 0
 };
 
@@ -177,7 +182,9 @@ function invalidateAdminMiniBooksSummaryCache() {
 }
 
 const FLASHCARD_RANKING_TIMEZONE = 'America/Sao_Paulo';
-const DAILY_FREE_ENERGY_LIMIT = 5000;
+const DEFAULT_DAILY_FREE_ENERGY_LIMIT = 5000;
+const DEFAULT_ENERGY_COST_MULTIPLIER_MILLI = 1000;
+const ENERGY_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
 const SPEAKING_DUEL_DEFAULT_CARDS = 25;
@@ -655,28 +662,81 @@ const buildNextDailyEnergyResetIso = (now = new Date()) => {
     : reset.toISOString();
 };
 
-const buildDailyEnergySnapshot = (user, dailyRow = {}) => {
+const normalizeDailyFreeEnergyLimit = (value, fallback = DEFAULT_DAILY_FREE_ENERGY_LIMIT) => {
+  const parsed = Number.parseInt(String(value ?? '').trim(), 10);
+  if (!Number.isInteger(parsed)) return fallback;
+  return Math.max(0, Math.min(1000000, parsed));
+};
+
+const normalizeEnergyCostMultiplierMilli = (value, fallback = DEFAULT_ENERGY_COST_MULTIPLIER_MILLI) => {
+  const parsed = Number.parseInt(String(value ?? '').trim(), 10);
+  if (!Number.isInteger(parsed)) return fallback;
+  return Math.max(1, Math.min(10000, parsed));
+};
+
+const parseEnergyCostMultiplierMilliInput = (value) => {
+  if (value == null || value === '') return null;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  const milli = Math.round(numeric * 1000);
+  return normalizeEnergyCostMultiplierMilli(milli, NaN);
+};
+
+const buildEnergySettingsSnapshot = (row = {}) => {
+  const dailyFreeEnergyLimit = normalizeDailyFreeEnergyLimit(row?.daily_free_energy_limit ?? row?.dailyFreeEnergyLimit);
+  const energyCostMultiplierMilli = normalizeEnergyCostMultiplierMilli(
+    row?.energy_cost_multiplier_milli ?? row?.energyCostMultiplierMilli
+  );
+  return {
+    dailyFreeEnergyLimit,
+    energyCostMultiplierMilli,
+    energyCostMultiplier: Number((energyCostMultiplierMilli / 1000).toFixed(2)),
+    energyCostMultiplierDisplay: `${(energyCostMultiplierMilli / 1000).toFixed(2)}x`
+  };
+};
+
+const rememberEnergySettings = (settings) => {
+  const snapshot = buildEnergySettingsSnapshot(settings);
+  energySettingsCache = {
+    value: snapshot,
+    updatedAt: Date.now()
+  };
+  return snapshot;
+};
+
+const applyEnergyCostMultiplier = (rawChars, multiplierMilli = DEFAULT_ENERGY_COST_MULTIPLIER_MILLI) => {
+  const chars = Math.max(0, Math.round(Number(rawChars) || 0));
+  const normalizedMultiplierMilli = normalizeEnergyCostMultiplierMilli(multiplierMilli);
+  if (chars <= 0) return 0;
+  return Math.ceil((chars * normalizedMultiplierMilli) / 1000);
+};
+
+const buildDailyEnergySnapshot = (user, dailyRow = {}, energySettings = null) => {
+  const settings = buildEnergySettingsSnapshot(energySettings || {});
   const unlimited = isPremiumActiveFromUser(user);
   const readingChars = Math.max(0, Number(dailyRow?.reading_chars) || 0);
   const speakingChars = Math.max(0, Number(dailyRow?.speaking_chars) || 0);
   const listeningChars = Math.max(0, Number(dailyRow?.listening_chars) || 0);
   const used = Math.max(0, readingChars + speakingChars + listeningChars);
-  const remainingEnergy = DAILY_FREE_ENERGY_LIMIT - used;
+  const remainingEnergy = settings.dailyFreeEnergyLimit - used;
   return {
     unlimited,
-    dailyEnergyLimit: DAILY_FREE_ENERGY_LIMIT,
+    dailyEnergyLimit: settings.dailyFreeEnergyLimit,
     dailyEnergyUsed: unlimited ? 0 : used,
     remainingEnergy: unlimited ? null : remainingEnergy,
     readingCharsToday: readingChars,
     speakingCharsToday: speakingChars,
     listeningCharsToday: listeningChars,
+    energyCostMultiplierMilli: settings.energyCostMultiplierMilli,
+    energyCostMultiplier: settings.energyCostMultiplier,
+    energyCostMultiplierDisplay: settings.energyCostMultiplierDisplay,
     nextEnergyResetAt: buildNextDailyEnergyResetIso()
   };
 };
 
-const mergeStatsWithDailyEnergy = (user, stats = {}, dailyRow = {}) => ({
+const mergeStatsWithDailyEnergy = (user, stats = {}, dailyRow = {}, energySettings = null) => ({
   ...stats,
-  ...buildDailyEnergySnapshot(user, dailyRow)
+  ...buildDailyEnergySnapshot(user, dailyRow, energySettings)
 });
 
 const ensureAutoNoEnergyForSnapshot = async (db, user, snapshot) => {
@@ -788,7 +848,11 @@ const incrementDailyEnergyUsage = async (db, user, deltas = {}) => {
   const readingCharsDelta = Math.max(0, Math.round(Number(deltas?.readingCharsDelta) || 0));
   const speakingCharsDelta = Math.max(0, Math.round(Number(deltas?.speakingCharsDelta) || 0));
   const listeningCharsDelta = Math.max(0, Math.round(Number(deltas?.listeningCharsDelta) || 0));
-  const totalDelta = readingCharsDelta + speakingCharsDelta + listeningCharsDelta;
+  const settings = await getEnergySettings();
+  const readingEnergyDelta = applyEnergyCostMultiplier(readingCharsDelta, settings.energyCostMultiplierMilli);
+  const speakingEnergyDelta = applyEnergyCostMultiplier(speakingCharsDelta, settings.energyCostMultiplierMilli);
+  const listeningEnergyDelta = applyEnergyCostMultiplier(listeningCharsDelta, settings.energyCostMultiplierMilli);
+  const totalDelta = readingEnergyDelta + speakingEnergyDelta + listeningEnergyDelta;
 
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
     const error = new Error('Usuario invalido.');
@@ -799,7 +863,7 @@ const incrementDailyEnergyUsage = async (db, user, deltas = {}) => {
   await ensureUserDailyEnergyStatsTable();
 
   if (isPremiumActiveFromUser(user)) {
-    return buildDailyEnergySnapshot(user, {});
+    return buildDailyEnergySnapshot(user, {}, settings);
   }
 
   const existingResult = await db.query(
@@ -812,7 +876,7 @@ const incrementDailyEnergyUsage = async (db, user, deltas = {}) => {
   );
   const existing = existingResult.rows[0] || {};
   if (totalDelta <= 0) {
-    return buildDailyEnergySnapshot(user, existing);
+    return buildDailyEnergySnapshot(user, existing, settings);
   }
 
   const result = await db.query(
@@ -834,10 +898,10 @@ const incrementDailyEnergyUsage = async (db, user, deltas = {}) => {
        listening_chars = public.user_daily_energy_stats.listening_chars + EXCLUDED.listening_chars,
        updated_at = now()
      RETURNING reading_chars, speaking_chars, listening_chars`,
-    [normalizedUserId, readingCharsDelta, speakingCharsDelta, listeningCharsDelta]
+    [normalizedUserId, readingEnergyDelta, speakingEnergyDelta, listeningEnergyDelta]
   );
 
-  const snapshot = buildDailyEnergySnapshot(user, result.rows[0] || {});
+  const snapshot = buildDailyEnergySnapshot(user, result.rows[0] || {}, settings);
   await ensureAutoNoEnergyForSnapshot(db, user, snapshot);
   return snapshot;
 };
@@ -1674,6 +1738,101 @@ const ensureUserDailyEnergyStatsTable = async () => {
 
   return userDailyEnergyStatsReadyPromise;
 };
+
+const ensureEnergySettingsTable = async () => {
+  if (!pool) return false;
+
+  if (!energySettingsReadyPromise) {
+    energySettingsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.app_energy_settings (
+          singleton_key text PRIMARY KEY,
+          daily_free_energy_limit integer NOT NULL DEFAULT ${DEFAULT_DAILY_FREE_ENERGY_LIMIT},
+          energy_cost_multiplier_milli integer NOT NULL DEFAULT ${DEFAULT_ENERGY_COST_MULTIPLIER_MILLI},
+          updated_by_user_id integer REFERENCES public.users(id) ON DELETE SET NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        INSERT INTO public.app_energy_settings (
+          singleton_key,
+          daily_free_energy_limit,
+          energy_cost_multiplier_milli
+        )
+        VALUES (
+          'default',
+          ${DEFAULT_DAILY_FREE_ENERGY_LIMIT},
+          ${DEFAULT_ENERGY_COST_MULTIPLIER_MILLI}
+        )
+        ON CONFLICT (singleton_key) DO NOTHING
+      `);
+      return true;
+    })().catch((error) => {
+      energySettingsReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return energySettingsReadyPromise;
+};
+
+async function getEnergySettings(options = {}) {
+  const force = Boolean(options?.force);
+  if (!pool) {
+    return buildEnergySettingsSnapshot({});
+  }
+  if (
+    !force
+    && energySettingsCache.value
+    && (Date.now() - energySettingsCache.updatedAt) < ENERGY_SETTINGS_CACHE_TTL_MS
+  ) {
+    return energySettingsCache.value;
+  }
+
+  await ensureEnergySettingsTable();
+  const result = await pool.query(
+    `SELECT daily_free_energy_limit, energy_cost_multiplier_milli
+     FROM public.app_energy_settings
+     WHERE singleton_key = 'default'
+     LIMIT 1`
+  );
+  return rememberEnergySettings(result.rows[0] || {});
+}
+
+async function updateEnergySettings(db, values = {}, updatedByUserId = null) {
+  const executor = db && typeof db.query === 'function' ? db : pool;
+  if (!executor) {
+    return buildEnergySettingsSnapshot(values);
+  }
+
+  const dailyFreeEnergyLimit = normalizeDailyFreeEnergyLimit(values?.dailyFreeEnergyLimit);
+  const energyCostMultiplierMilli = normalizeEnergyCostMultiplierMilli(values?.energyCostMultiplierMilli);
+
+  await ensureEnergySettingsTable();
+  const result = await executor.query(
+    `INSERT INTO public.app_energy_settings (
+       singleton_key,
+       daily_free_energy_limit,
+       energy_cost_multiplier_milli,
+       updated_by_user_id,
+       updated_at
+     )
+     VALUES ('default', $1, $2, $3, now())
+     ON CONFLICT (singleton_key)
+     DO UPDATE SET
+       daily_free_energy_limit = EXCLUDED.daily_free_energy_limit,
+       energy_cost_multiplier_milli = EXCLUDED.energy_cost_multiplier_milli,
+       updated_by_user_id = EXCLUDED.updated_by_user_id,
+       updated_at = now()
+     RETURNING daily_free_energy_limit, energy_cost_multiplier_milli`,
+    [dailyFreeEnergyLimit, energyCostMultiplierMilli, Number(updatedByUserId) || null]
+  );
+  return rememberEnergySettings(result.rows[0] || {
+    daily_free_energy_limit: dailyFreeEnergyLimit,
+    energy_cost_multiplier_milli: energyCostMultiplierMilli
+  });
+}
 
 const ensureUsersPresenceClassMetricStorage = async () => {
   if (!pool) return false;
@@ -11475,9 +11634,10 @@ app.get('/api/books/stats', async (req, res) => {
     await ensureBooksSpeakingStatsTable();
     await ensureUserBooksConsumptionStatsTable();
     await ensureUserDailyEnergyStatsTable();
+    await ensureEnergySettingsTable();
     await ensureUsersPresenceClassMetricStorage();
 
-    const [totalsResult, speakingStatsResult, consumptionResult, dailyEnergyResult, qualifiedBooksResult, bookBestPercentById, flashcardsResult, presenceClassResult, adminBooksSummary] = await Promise.all([
+    const [totalsResult, speakingStatsResult, consumptionResult, dailyEnergyResult, qualifiedBooksResult, bookBestPercentById, flashcardsResult, presenceClassResult, adminBooksSummary, energySettings] = await Promise.all([
       pool.query(
         `SELECT COALESCE(SUM(reads_completed), 0)::int AS total_reads
          FROM public.user_books_library_stats
@@ -11522,7 +11682,8 @@ app.get('/api/books/stats', async (req, res) => {
          LIMIT 1`,
         [userId]
       ),
-      requesterIsAdmin ? getAdminMiniBooksSummary() : Promise.resolve(null)
+      requesterIsAdmin ? getAdminMiniBooksSummary() : Promise.resolve(null),
+      getEnergySettings()
     ]);
 
     const pronunciationStats = getBooksPronunciationAggregateFromRow(speakingStatsResult.rows[0]);
@@ -11553,7 +11714,7 @@ app.get('/api/books/stats', async (req, res) => {
       qualifiedBookCount: qualifiedBookIds.length,
       bookBestPercentById,
       adminBooksSummary: requesterIsAdmin ? adminBooksSummary : null
-    }, dailyEnergyResult.rows[0] || {});
+    }, dailyEnergyResult.rows[0] || {}, energySettings);
 
     await ensureAutoNoEnergyForSnapshot(pool, authUser, statsPayload);
 
@@ -11597,6 +11758,7 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
 
     await ensureUserBooksConsumptionStatsTable();
     await ensureUserDailyEnergyStatsTable();
+    await ensureEnergySettingsTable();
     await ensureUsersPresenceClassMetricStorage();
 
     const client = await pool.connect();
@@ -11646,7 +11808,7 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
         speakingChars: Math.max(0, Number(result.rows[0]?.speaking_chars) || 0),
         listeningChars: Math.max(0, Number(result.rows[0]?.listening_chars) || 0),
         practiceSeconds: Math.max(0, Number(result.rows[0]?.practice_seconds) || 0),
-        ...(energySnapshot || buildDailyEnergySnapshot(authUser, {}))
+        ...(energySnapshot || buildDailyEnergySnapshot(authUser, {}, await getEnergySettings()))
       }
     });
   } catch (error) {
@@ -14357,6 +14519,57 @@ app.post('/api/me/no-energy', express.json({ limit: '16kb' }), async (req, res) 
   }
 });
 
+app.get('/api/admin/energy-settings', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const settings = await getEnergySettings({ force: true });
+    res.json({
+      success: true,
+      settings
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel carregar as configuracoes de energia.'
+    });
+  }
+});
+
+app.post('/api/admin/energy-settings', express.json({ limit: '32kb' }), async (req, res) => {
+  try {
+    const adminUser = await requireAdminUserFromRequest(req);
+    const dailyFreeEnergyLimit = normalizeDailyFreeEnergyLimit(req.body?.dailyFreeEnergyLimit, NaN);
+    const energyCostMultiplierMilli = parseEnergyCostMultiplierMilliInput(req.body?.energyCostMultiplier);
+
+    if (!Number.isInteger(dailyFreeEnergyLimit) || dailyFreeEnergyLimit < 0) {
+      res.status(400).json({ success: false, message: 'Defina um limite diario inteiro entre 0 e 1.000.000.' });
+      return;
+    }
+    if (!Number.isInteger(energyCostMultiplierMilli) || energyCostMultiplierMilli < 1) {
+      res.status(400).json({ success: false, message: 'Defina um multiplicador valido entre 0.01x e 10.00x.' });
+      return;
+    }
+
+    const settings = await updateEnergySettings(pool, {
+      dailyFreeEnergyLimit,
+      energyCostMultiplierMilli
+    }, adminUser.id);
+
+    res.json({
+      success: true,
+      message: 'Configuracoes de energia atualizadas.',
+      settings
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel salvar as configuracoes de energia.'
+    });
+  }
+});
+
 app.delete('/api/admin/users/:userId', async (req, res) => {
   try {
     if (!pool) {
@@ -15012,6 +15225,20 @@ app.get(['/signup', '/signup/'], (req, res) => {
 
 app.get(['/premium', '/premium/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'premium.html'));
+});
+
+app.get(['/admin', '/admin/'], async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    res.sendFile(path.join(staticDir, 'admin.html'));
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 403;
+    if (statusCode === 401) {
+      res.redirect(302, '/account');
+      return;
+    }
+    res.status(403).send('Acesso restrito ao administrador.');
+  }
 });
 
 app.get(['/books', '/books/'], (req, res) => {
