@@ -185,6 +185,7 @@ const FLASHCARD_RANKING_TIMEZONE = 'America/Sao_Paulo';
 const DEFAULT_DAILY_FREE_ENERGY_LIMIT = 5000;
 const DEFAULT_ENERGY_COST_MULTIPLIER_MILLI = 1000;
 const ENERGY_SETTINGS_CACHE_TTL_MS = 30 * 1000;
+const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
 const SPEAKING_DUEL_DEFAULT_CARDS = 25;
@@ -744,10 +745,21 @@ const ensureAutoNoEnergyForSnapshot = async (db, user, snapshot) => {
   if (!db || !Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
     return false;
   }
-  if (isPremiumActiveFromUser(user)) {
-    return false;
+  const premiumActive = isPremiumActiveFromUser(user) || Boolean(snapshot?.unlimited);
+  const remainingEnergy = Math.max(0, Number(snapshot?.remainingEnergy) || 0);
+
+  if (premiumActive || remainingEnergy >= AUTO_NO_ENERGY_DISABLE_THRESHOLD) {
+    await db.query(
+      `UPDATE public.users
+       SET no_energy = false
+       WHERE id = $1
+         AND COALESCE(no_energy, false) = true`,
+      [normalizedUserId]
+    );
+    return true;
   }
-  if (Number(snapshot?.remainingEnergy) > 0) {
+
+  if (remainingEnergy > 0) {
     return false;
   }
 
@@ -3067,6 +3079,7 @@ const extendUserPremiumAccess = async (userId, durationDays, options = {}) => {
              WHEN $3::boolean THEN true
              ELSE premium_full_access
            END,
+           no_energy = false,
            premium_until = CASE
              WHEN $3::boolean THEN premium_until
              ELSE GREATEST(COALESCE(premium_until, now()), now()) + ($2::text || ' days')::interval
