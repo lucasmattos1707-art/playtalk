@@ -20,9 +20,9 @@
   ];
 
   const els = {
-    pageHeaderAvatar: document.getElementById('usersPageHeaderAvatar'),
-    pageHeaderName: document.getElementById('usersPageHeaderName'),
-    pageHeaderLevel: document.getElementById('usersPageHeaderLevel'),
+    rankingTitle: document.getElementById('rankingTitle'),
+    rankingStatus: document.getElementById('rankingStatus'),
+    rankingMetrics: document.getElementById('rankingMetrics'),
     usersStage: document.getElementById('usersStage'),
     usersList: document.getElementById('usersList'),
     usersStatus: document.getElementById('usersStatus'),
@@ -95,6 +95,7 @@
     stageAnimating: false,
     metricRotationTimer: 0,
     metricRotationIndex: 0,
+    metricRotationPausedByUser: false,
     botBusy: false,
     botSourceImageDataUrl: ''
   };
@@ -168,14 +169,28 @@
   function setUsersStatus(message) {
     if (!els.usersStatus) return;
     els.usersStatus.textContent = message || '';
+    if (els.rankingStatus) {
+      els.rankingStatus.textContent = message || '';
+    }
   }
 
   function setRankingLabel(label) {
     if (!els.rankingLabel) return;
     const text = safeText(label) || 'Flashcards';
+    if (els.rankingTitle) {
+      els.rankingTitle.textContent = text;
+    }
     els.rankingLabel.innerHTML = `<span class="ranking-label__text">${escapeHtml(text)}</span>`;
     els.rankingLabel.style.opacity = '1';
     els.rankingLabel.style.visibility = 'visible';
+  }
+
+  function syncMetricButtons() {
+    if (!els.rankingMetrics) return;
+    Array.from(els.rankingMetrics.querySelectorAll('[data-metric-key]')).forEach((button) => {
+      const metricKey = safeText(button.getAttribute('data-metric-key'));
+      button.classList.toggle('is-active', metricKey === state.currentMetricKey);
+    });
   }
 
   function metricByKey(metricKey) {
@@ -204,17 +219,17 @@
     return level;
   }
 
-  function syncPageHeader() {
-    if (!els.pageHeaderName || !els.pageHeaderLevel || !els.pageHeaderAvatar) return;
-    const viewer = currentViewerEntry(state.rows) || state.viewer || null;
-    const fallbackUser = state.currentUser || {};
-    const username = safeText(viewer?.username || fallbackUser?.username || 'Jogador') || 'Jogador';
-    const avatarImage = safeText(viewer?.avatarImage || fallbackUser?.avatarImage || fallbackUser?.avatar_image || fallbackUser?.avatar) || DEFAULT_PROFILE_AVATAR;
-    const flashcardsCount = Number(viewer?.flashcardsCount || fallbackUser?.flashcardsCount || 0);
-    const level = levelFromFlashcardsCount(flashcardsCount);
-    els.pageHeaderName.textContent = username;
-    els.pageHeaderLevel.textContent = `Nivel ${level}`;
-    els.pageHeaderAvatar.src = avatarImage;
+  function formatOrdinal(value) {
+    const rank = Math.max(0, Number(value) || 0);
+    return rank ? `${rank}º` : '0º';
+  }
+
+  function syncViewerRankStatus(viewer) {
+    if (!viewer?.rank) {
+      setUsersStatus('Ranking carregado.');
+      return;
+    }
+    setUsersStatus(`Voce esta em ${formatOrdinal(viewer.rank)} lugar.`);
   }
 
   function storageKeyForUser(baseKey, userId) {
@@ -862,10 +877,22 @@
 
   function startRankingRotation() {
     stopRankingRotation();
-    if (RANKING_METRICS.length <= 1) return;
+    if (RANKING_METRICS.length <= 1 || state.metricRotationPausedByUser) return;
     state.metricRotationTimer = window.setInterval(() => {
       void rotateToNextMetric();
     }, RANKING_ROTATE_MS);
+  }
+
+  async function handleMetricSelection(metricKey) {
+    const normalizedMetricKey = safeText(metricKey);
+    if (!normalizedMetricKey) return;
+    state.metricRotationPausedByUser = true;
+    stopRankingRotation();
+    if (normalizedMetricKey === state.currentMetricKey) {
+      syncMetricButtons();
+      return;
+    }
+    await loadUsers('', { metricKey: normalizedMetricKey, animate: true });
   }
 
   async function fetchSessionUser() {
@@ -966,16 +993,16 @@
     state.currentMetricValueLabel = data.metricValueLabel;
     state.metricRotationIndex = Math.max(0, RANKING_METRICS.findIndex((metric) => metric.key === data.metricKey));
     setRankingLabel(state.currentMetricLabel);
+    syncMetricButtons();
     state.rows = Array.isArray(data.rows) ? data.rows : [];
     state.viewer = data.viewer || null;
     renderRows(state.rows);
-    syncPageHeader();
     const viewer = currentViewerEntry(state.rows);
     if (options.statusMessage != null) {
       setUsersStatus(options.statusMessage);
       return;
     }
-    setUsersStatus(viewer?.rank ? `Voce esta em ${viewer.rank} lugar` : 'Ranking carregado.');
+    syncViewerRankStatus(viewer);
   }
 
   async function loadUsers(message, options = {}) {
@@ -1298,7 +1325,6 @@
 
   (async () => {
     state.currentUser = await fetchSessionUser();
-    syncPageHeader();
     syncAdminViewerUi();
     updateBotHint();
     await pingPresence();
@@ -1376,4 +1402,9 @@
   els.challengeCloseBtn?.addEventListener('click', closeChallengeModal);
   els.incomingAcceptBtn?.addEventListener('click', () => { void respondIncomingChallenge('accept'); });
   els.incomingRejectBtn?.addEventListener('click', () => { void respondIncomingChallenge('reject'); });
+  els.rankingMetrics?.addEventListener('click', (event) => {
+    const button = event.target instanceof Element ? event.target.closest('[data-metric-key]') : null;
+    if (!button) return;
+    void handleMetricSelection(button.getAttribute('data-metric-key'));
+  });
 })();

@@ -44,6 +44,13 @@
       box-sizing: border-box;
     }
 
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
     .container {
       position: fixed;
       inset: 0;
@@ -79,7 +86,7 @@
     }
 
     body {
-      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-family: "Exo 2", "Trebuchet MS", "Segoe UI", sans-serif;
       color: var(--text);
       position: relative;
       overflow: auto;
@@ -99,72 +106,95 @@
       width: min(900px, calc(100vw - 28px));
       margin: 0 auto;
       min-height: 100vh;
-      padding: calc(var(--native-top-offset) + 104px) 0 calc(var(--footer-total-height) + 20px);
+      padding: calc(var(--native-top-offset) + 26px) 0 calc(var(--footer-total-height) + 20px);
     }
 
-    .users-page-header {
-      position: fixed;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 12;
-      width: 100vw;
-      min-height: 96px;
-      max-height: 120px;
+    .ranking-hero {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      align-items: center;
-      gap: 12px;
-      padding: calc(var(--native-top-offset) + env(safe-area-inset-top, 0px) + 14px) 22px 14px;
-      background: linear-gradient(180deg, #0f4eb7 0%, #0b43a5 52%, #08388f 100%);
-      box-shadow:
-        inset 0 -1px 0 rgba(184, 232, 255, 0.18),
-        0 14px 30px rgba(4, 41, 98, 0.28);
+      gap: 18px;
+      padding: 24px 22px 12px;
+      border-radius: 30px;
+      background: linear-gradient(180deg, rgba(9, 34, 70, 0.9), rgba(8, 23, 46, 0.74));
+      border: 1px solid rgba(145, 210, 255, 0.14);
+      box-shadow: 0 20px 44px rgba(2, 10, 20, 0.28);
+      backdrop-filter: blur(14px);
     }
 
-    .users-page-header__avatar {
-      width: 68px;
-      height: 68px;
-      border-radius: 50%;
-      overflow: hidden;
-      background:
-        radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.12), rgba(16, 26, 42, 0) 42%),
-        linear-gradient(180deg, rgba(17, 31, 48, 0.92), rgba(3, 8, 16, 0.98));
-      box-shadow:
-        inset 0 0 24px rgba(113, 225, 255, 0.12),
-        0 0 18px rgba(76, 204, 255, 0.2);
-    }
-
-    .users-page-header__avatar img {
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: cover;
-    }
-
-    .users-page-header__identity {
-      min-width: 0;
+    .ranking-hero__copy {
       display: grid;
-      gap: 4px;
-      justify-items: start;
-      text-align: left;
+      gap: 8px;
+      justify-items: center;
+      text-align: center;
     }
 
-    .users-page-header__name {
+    .ranking-title {
       margin: 0;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(24px, 4vw, 32px);
-      font-weight: 700;
+      font-size: clamp(28px, 8vw, 46px);
       line-height: 1;
+      font-weight: 800;
+      letter-spacing: 0.02em;
       color: #ffffff;
+      text-shadow: 0 10px 24px rgba(4, 16, 34, 0.38);
     }
 
-    .users-page-header__level {
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(16px, 3vw, 22px);
+    .ranking-status {
+      margin: 0;
+      min-height: 24px;
+      color: rgba(255, 255, 255, 0.88);
+      font-size: clamp(16px, 3.6vw, 22px);
       font-weight: 600;
-      line-height: 1.05;
-      color: rgba(255, 255, 255, 0.96);
+      letter-spacing: 0.01em;
+    }
+
+    .ranking-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .ranking-metric {
+      min-height: 72px;
+      padding: 12px 10px;
+      display: grid;
+      gap: 7px;
+      justify-items: center;
+      align-content: center;
+      border: 0;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.04);
+      color: rgba(255, 255, 255, 0.72);
+      opacity: 0.6;
+      transition: opacity 180ms ease, transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
+      cursor: pointer;
+    }
+
+    .ranking-metric img {
+      width: 26px;
+      height: 26px;
+      display: block;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+      pointer-events: none;
+    }
+
+    .ranking-metric span {
+      font-size: 11px;
+      line-height: 1.15;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .ranking-metric.is-active {
+      opacity: 1;
+      background: linear-gradient(180deg, rgba(29, 112, 255, 0.34), rgba(18, 63, 159, 0.2));
+      box-shadow: inset 0 0 0 1px rgba(144, 219, 255, 0.24);
+    }
+
+    .ranking-metric:active {
+      transform: scale(0.98);
     }
 
     .panel {
@@ -216,16 +246,11 @@
     }
 
     .status {
-      min-height: 24px;
-      margin: 12px 0 0;
-      text-align: center;
-      color: #ffffff;
-      font-size: 18px;
-      font-weight: 900;
+      display: none;
     }
 
     .ranking-label {
-      margin: 8px 0 0;
+      margin: 0;
       text-align: center;
       opacity: 1 !important;
       visibility: visible !important;
@@ -237,8 +262,8 @@
       display: inline-block;
       color: #ffffff !important;
       -webkit-text-fill-color: #ffffff !important;
-      font-size: 24px;
-      font-weight: 900;
+      font-size: clamp(18px, 4vw, 24px);
+      font-weight: 700;
       letter-spacing: 0.02em;
       text-shadow: 0 2px 10px rgba(6, 20, 42, 0.6);
     }
@@ -908,7 +933,25 @@
     @media (max-width: 640px) {
       .page {
         width: calc(100vw - 16px);
-        padding-top: 0;
+        padding-top: 10px;
+      }
+
+      .ranking-hero {
+        padding: 22px 16px 10px;
+      }
+
+      .ranking-metrics {
+        gap: 8px;
+      }
+
+      .ranking-metric {
+        min-height: 68px;
+        padding: 10px 8px;
+      }
+
+      .ranking-metric img {
+        width: 24px;
+        height: 24px;
       }
 
       .panel-head {
@@ -928,21 +971,36 @@
 </head>
 <body>
   <div class="container" aria-hidden="true"></div>
-  <header class="users-page-header" aria-label="Perfil atual">
-    <div class="users-page-header__avatar" aria-hidden="true">
-      <img id="usersPageHeaderAvatar" src="/Avatar/profile-neon-blue.svg" alt="">
-    </div>
-    <div class="users-page-header__identity">
-      <strong class="users-page-header__name" id="usersPageHeaderName">Jogador</strong>
-      <span class="users-page-header__level" id="usersPageHeaderLevel">Nivel 1</span>
-    </div>
-  </header>
   <button type="button" class="users-bot-launch" id="usersBotLaunchBtn" aria-label="Criar bot">+</button>
 
   <main class="page">
+    <section class="ranking-hero" aria-label="Resumo do ranking">
+      <div class="ranking-hero__copy">
+        <p class="ranking-label" id="rankingLabel"><span class="ranking-label__text">Ranking de Flashcards</span></p>
+        <h1 class="ranking-title" id="rankingTitle">Flashcards</h1>
+        <p class="ranking-status" id="rankingStatus">Você está em 0º lugar.</p>
+        <p class="status" id="usersStatus">Carregando usuarios...</p>
+      </div>
+      <div class="ranking-metrics" id="rankingMetrics" aria-label="Seletores do ranking">
+        <button type="button" class="ranking-metric is-active" data-metric-key="flashcards" aria-label="Ranking de Flashcards">
+          <img src="/svgnovo/cards.svg" alt="">
+          <span>Flashcards</span>
+        </button>
+        <button type="button" class="ranking-metric" data-metric-key="pronunciation" aria-label="Ranking de Pronuncia">
+          <img src="/SVG/voice.svg" alt="">
+          <span>Pronuncia</span>
+        </button>
+        <button type="button" class="ranking-metric" data-metric-key="speed" aria-label="Ranking de Velocidade">
+          <img src="/SVG/speed.svg" alt="">
+          <span>Velocidade</span>
+        </button>
+        <button type="button" class="ranking-metric" data-metric-key="battle" aria-label="Ranking de Batalhas">
+          <img src="/svgnovo/cup.svg" alt="">
+          <span>Batalhas</span>
+        </button>
+      </div>
+    </section>
     <div class="users-stage" id="usersStage">
-      <p class="ranking-label" id="rankingLabel"><span class="ranking-label__text">Ranking: Flashcards</span></p>
-      <p class="status" id="usersStatus">Carregando usuarios...</p>
       <section class="panel">
         <section class="users-list" id="usersList" aria-live="polite"></section>
       </section>
@@ -1077,6 +1135,6 @@
       document.body.classList.add('is-native-runtime');
     }
   </script>
-  <script src="js/users-page.js?v=20260419b"></script>
+  <script src="js/users-page.js?v=20260428a"></script>
 </body>
 </html>
