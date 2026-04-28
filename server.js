@@ -15227,7 +15227,7 @@ app.get(['/premium', '/premium/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'premium.html'));
 });
 
-app.get(['/admin', '/admin/'], async (req, res) => {
+app.get(['/admin', '/admin/', '/admin.html'], async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
     res.sendFile(path.join(staticDir, 'admin.html'));

@@ -23,6 +23,7 @@ const appHtmlFiles = new Set([
   'avataradd.html',
   'password.html',
   'premium.html',
+  'admin.html',
   'thata.html'
 ]);
 const rootStaticFiles = [
