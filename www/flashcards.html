@@ -953,6 +953,42 @@
       text-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
     }
 
+    .welcome-mode-modal__play {
+      width: 88px;
+      height: 88px;
+      border: 0;
+      border-radius: 999px;
+      margin: 2px auto 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,255,255,0.42), transparent 48%),
+        linear-gradient(145deg, rgba(121, 255, 186, 0.96), rgba(16, 201, 124, 0.96));
+      color: #062413;
+      box-shadow:
+        0 0 34px rgba(72, 255, 166, 0.42),
+        inset 0 1px 0 rgba(255,255,255,0.5);
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+    }
+
+    .welcome-mode-modal__play:hover,
+    .welcome-mode-modal__play:focus-visible {
+      transform: translateY(-2px) scale(1.03);
+      box-shadow:
+        0 0 40px rgba(72, 255, 166, 0.56),
+        inset 0 1px 0 rgba(255,255,255,0.62);
+      filter: saturate(1.06);
+    }
+
+    .welcome-mode-modal__play svg {
+      width: 34px;
+      height: 34px;
+      fill: currentColor;
+      margin-left: 4px;
+    }
+
     .welcome-mode-modal__description {
       margin: 0;
       max-width: 18ch;
@@ -1021,28 +1057,6 @@
       font-size: clamp(22px, 4.8vw, 30px);
       font-weight: 700;
       color: #ffffff;
-    }
-
-    .welcome-mode-modal__footer {
-      display: grid;
-      gap: 12px;
-      justify-items: center;
-      align-content: end;
-      padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
-    }
-
-    .welcome-mode-modal__start {
-      width: min(320px, 100%);
-      min-height: 64px;
-      border-radius: 999px;
-      border: 1px solid rgba(182, 244, 207, 0.36);
-      background: linear-gradient(180deg, #61f2a4 0%, #1ed06d 100%);
-      color: #062213;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(20px, 4.6vw, 24px);
-      font-weight: 800;
-      letter-spacing: 0.02em;
-      box-shadow: 0 18px 32px rgba(30, 208, 109, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.45);
     }
 
     .welcome-gate__admin-stats {
@@ -3024,11 +3038,11 @@
       display: none;
       align-items: center;
       justify-content: center;
-      gap: 14px;
+      gap: 0;
       width: 100%;
       max-width: 360px;
       padding: 4px 0;
-      touch-action: pan-x;
+      touch-action: none;
       user-select: none;
     }
 
@@ -3045,17 +3059,7 @@
     }
 
     .game-level-strip__btn {
-      width: 48px;
-      height: 48px;
-      padding: 0;
-      border: 1px solid rgba(120, 201, 255, 0.28);
-      border-radius: 999px;
-      background: rgba(9, 32, 78, 0.68);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: #e8fbff;
-      box-shadow: inset 0 0 14px rgba(147, 231, 255, 0.12);
+      display: none !important;
     }
 
     .game-level-strip__btn svg {
@@ -3070,7 +3074,7 @@
     }
 
     .game-level-strip__label {
-      min-width: 140px;
+      min-width: 160px;
       text-align: center;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
       font-size: clamp(22px, 4vw, 30px);
@@ -7857,17 +7861,12 @@
       }
 
       .game-level-strip {
-        gap: 10px;
+        gap: 0;
       }
 
       .game-level-strip__label {
         min-width: 116px;
         font-size: clamp(20px, 5vw, 26px);
-      }
-
-      .game-level-strip__btn {
-        width: 42px;
-        height: 42px;
       }
 
       .welcome-gate__identity,
@@ -7981,6 +7980,9 @@
         <div class="welcome-mode-modal__body">
           <p class="welcome-mode-modal__eyebrow">Pre-jogo</p>
           <h2 class="welcome-mode-modal__title" id="welcomeModeModalTitle">Scale</h2>
+          <button class="welcome-mode-modal__play" id="welcomeModeModalPlayBtn" type="button" aria-label="Iniciar modo">
+            <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M8 5.5v13l10-6.5-10-6.5Z"/></svg>
+          </button>
           <p class="welcome-mode-modal__description" id="welcomeModeModalDescription">Treino por niveis com cinco etapas em sequencia.</p>
           <div class="welcome-mode-modal__level" id="welcomeModeModalLevel">
             <p class="welcome-mode-modal__level-copy">Nivel do jogo</p>
@@ -7990,9 +7992,6 @@
               <button class="welcome-mode-modal__level-btn" id="welcomeModeModalLevelNextBtn" type="button" aria-label="Proximo nivel">&#8250;</button>
             </div>
           </div>
-        </div>
-        <div class="welcome-mode-modal__footer">
-          <button class="welcome-mode-modal__start" id="welcomeModeModalStartBtn" type="button">Iniciar</button>
         </div>
       </div>
     </div>
@@ -8561,8 +8560,8 @@
         },
         scale: {
           title: 'Scale',
-          description: 'Suba a escala com cinco etapas e progresso completo.',
-          usesLevelSelector: true
+          description: 'Veja a imagem, leia em portugues e fale em ingles.',
+          usesLevelSelector: false
         },
         listen: {
           title: 'Listen',
@@ -8769,11 +8768,14 @@
         game: {
           active: false,
           levelMode: false,
+          levelScaleMode: false,
           levelAudioMode: false,
           levelTextMode: false,
           levelTypingMode: false,
           levelTextResponseLanguage: 'english',
           levelTextHitStreak: 0,
+          scaleBatchAttempts: 0,
+          scaleBatchHits: 0,
           entries: new Map(),
           queue: [],
           currentId: null,
@@ -8945,11 +8947,11 @@
         welcomeModeModalHomeBtn: document.getElementById('welcomeModeModalHomeBtn'),
         welcomeModeModalTitle: document.getElementById('welcomeModeModalTitle'),
         welcomeModeModalDescription: document.getElementById('welcomeModeModalDescription'),
+        welcomeModeModalPlayBtn: document.getElementById('welcomeModeModalPlayBtn'),
         welcomeModeModalLevel: document.getElementById('welcomeModeModalLevel'),
         welcomeModeModalLevelPrevBtn: document.getElementById('welcomeModeModalLevelPrevBtn'),
         welcomeModeModalLevelValue: document.getElementById('welcomeModeModalLevelValue'),
         welcomeModeModalLevelNextBtn: document.getElementById('welcomeModeModalLevelNextBtn'),
-        welcomeModeModalStartBtn: document.getElementById('welcomeModeModalStartBtn'),
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeLogo: document.getElementById('welcomeLogo'),
         welcomeProfile: document.getElementById('welcomeProfile'),
@@ -9329,7 +9331,7 @@
       }
 
       function loadSelectedGameCount() {
-        const selectedCount = currentBaseGameCount();
+        const selectedCount = currentBaseGameCount(selectedGameLevel() || currentUserLevel());
         state.game.selectedCount = selectedCount;
         state.game.contextLimit = currentGameActiveCardCap(currentUserLevel(), selectedCount);
       }
@@ -10651,7 +10653,7 @@
           return;
         }
         state.entry.welcomeStartRequested = false;
-        const selectedCount = currentBaseGameCount();
+        const selectedCount = currentBaseGameCount(selectedGameLevel() || currentUserLevel());
         hideWelcomeGate();
         saveSelectedGameCount(selectedCount);
         state.game.selectedCount = selectedCount;
@@ -11638,7 +11640,7 @@
         }
         state.entry.pendingPlayStart = false;
         state.entry.welcomeStartRequested = false;
-        const selectedCount = currentBaseGameCount();
+        const selectedCount = currentBaseGameCount(selectedGameLevel() || currentUserLevel());
         hideWelcomeGate();
         saveSelectedGameCount(selectedCount);
         state.game.selectedCount = selectedCount;
@@ -13094,6 +13096,31 @@
         return Boolean(state.game?.levelMode && state.game?.levelTypingMode);
       }
 
+      function isLevelScaleModeActive() {
+        return Boolean(state.game?.levelMode && state.game?.levelScaleMode);
+      }
+
+      function resolveLevelModeStage() {
+        if (isLevelTypingModeActive()) return 4;
+        if (isLevelScaleModeActive()) return 3;
+        return 1;
+      }
+
+      function resetScaleBatchProgress() {
+        state.game.scaleBatchAttempts = 0;
+        state.game.scaleBatchHits = 0;
+      }
+
+      function scaleBatchLevelDelta(hitCount) {
+        const hits = Math.max(0, Math.min(5, Number(hitCount) || 0));
+        if (hits >= 5) return 2;
+        if (hits >= 4) return 1;
+        if (hits >= 3) return 0;
+        if (hits >= 2) return -1;
+        if (hits >= 1) return -2;
+        return -3;
+      }
+
       function currentWelcomeModeConfig() {
         const modeKey = safeText(state.entry?.welcomeModeKey).toLowerCase();
         return WELCOME_MODE_CONFIG[modeKey] || null;
@@ -13113,23 +13140,27 @@
         if (els.welcomeModeModalDescription) {
           els.welcomeModeModalDescription.textContent = mode.description;
         }
+        const levelSelectorVisible = Boolean(mode.usesLevelSelector);
         if (els.welcomeModeModalLevel) {
-          els.welcomeModeModalLevel.hidden = !mode.usesLevelSelector;
+          els.welcomeModeModalLevel.hidden = !levelSelectorVisible;
         }
         if (els.welcomeModeModalLevelValue) {
           els.welcomeModeModalLevelValue.textContent = formatSelectedGameLevelLabel();
         }
         if (els.welcomeModeModalLevelPrevBtn) {
-          els.welcomeModeModalLevelPrevBtn.disabled = !mode.usesLevelSelector || selectedGameLevel() <= 0;
+          els.welcomeModeModalLevelPrevBtn.disabled = !levelSelectorVisible || selectedGameLevel() <= 0;
         }
         if (els.welcomeModeModalLevelNextBtn) {
-          els.welcomeModeModalLevelNextBtn.disabled = !mode.usesLevelSelector || selectedGameLevel() >= USER_LEVEL_MAX;
+          els.welcomeModeModalLevelNextBtn.disabled = !levelSelectorVisible || selectedGameLevel() >= USER_LEVEL_MAX;
         }
       }
 
       function openWelcomeModeModal(modeKey) {
         const normalized = safeText(modeKey).toLowerCase();
         if (!WELCOME_MODE_CONFIG[normalized]) return;
+        if (normalized === 'scale') {
+          setSelectedGameLevel(1);
+        }
         state.entry.welcomeModeKey = normalized;
         syncWelcomeModeModal();
       }
@@ -13624,12 +13655,6 @@
         if (els.gameLevelLabel) {
           els.gameLevelLabel.textContent = formatSelectedGameLevelLabel(level);
         }
-        if (els.gameLevelPrevBtn) {
-          els.gameLevelPrevBtn.disabled = level <= 0;
-        }
-        if (els.gameLevelNextBtn) {
-          els.gameLevelNextBtn.disabled = level >= USER_LEVEL_MAX;
-        }
       }
 
       function advanceSelectedGameLevelIfNeeded() {
@@ -13648,6 +13673,12 @@
         const show = Boolean(state.game.active && !isAdminUser() && !isLevelTypingModeActive());
         els.flashcardLevelProgress.hidden = !show;
         if (!show) {
+          syncWelcomeLevelProgress();
+          return;
+        }
+        if (isLevelScaleModeActive()) {
+          const percent = (Math.max(0, Math.min(5, Number(state.game.scaleBatchAttempts) || 0)) / 5) * 100;
+          els.flashcardLevelProgressBar.style.width = `${percent.toFixed(2)}%`;
           syncWelcomeLevelProgress();
           return;
         }
@@ -15753,7 +15784,7 @@
 
       function resolveGameStageConfig(entry) {
         if (isLevelModeActive() && !isTrainingMode()) {
-          return STAGES[1];
+          return STAGES[resolveLevelModeStage()] || STAGES[1];
         }
         const baseConfig = STAGES[entry?.stage] || STAGES[1];
         if (!hasStageTwoPortugueseOverlay(entry) || Number(entry?.stage) === 2) {
@@ -16740,7 +16771,11 @@
               : (
                 isLevelTypingModeActive()
                   ? `${formatSelectedGameLevelLabel()} • typing livre • ${activeCount}/${targetCount} cartas ativas em loop.`
-                  : `${formatSelectedGameLevelLabel()} • ${currentLevelProgress}/${userLevelCardTarget(selectedGameLevel())} concluido • ${activeCount}/${targetCount} cartas ativas em loop.`
+                  : (
+                    isLevelScaleModeActive()
+                      ? `${formatSelectedGameLevelLabel()} • bloco ${Math.max(0, Math.min(5, Number(state.game.scaleBatchAttempts) || 0))}/5 • fale em ingles.`
+                      : `${formatSelectedGameLevelLabel()} • ${currentLevelProgress}/${userLevelCardTarget(selectedGameLevel())} concluido • ${activeCount}/${targetCount} cartas ativas em loop.`
+                  )
               )
           )
           : `${activeCount}/${targetCount} cartas ativas na mesa.`;
@@ -18591,7 +18626,7 @@
 
         buildOrderedDeckSelection(sourceCards, roundCount).forEach((card) => {
           const entry = createGameEntry(card, 'base');
-          entry.stage = isLevelTypingModeActive() ? 4 : 1;
+          entry.stage = resolveLevelModeStage();
           entry.stars = 0;
           state.game.entries.set(entry.id, entry);
           state.game.queue.push(entry.id);
@@ -18609,6 +18644,9 @@
         if (!state.game.active || !isLevelModeActive()) {
           syncGameLevelNavigator();
           return;
+        }
+        if (isLevelScaleModeActive()) {
+          resetScaleBatchProgress();
         }
         cleanupGameRecognition();
         stopActiveAudio();
@@ -18688,9 +18726,11 @@
         state.game.canListen = false;
         state.game.active = true;
         state.game.levelMode = false;
+        state.game.levelScaleMode = false;
         state.game.levelAudioMode = false;
         state.game.levelTextMode = false;
         state.game.levelTypingMode = false;
+        resetScaleBatchProgress();
         state.game.transitioning = false;
         state.game.sessionStartedAt = Date.now();
         state.game.contextLimit = sourceIds.length;
@@ -18752,6 +18792,9 @@
         if (!restored) {
           resetTutorialRuntime({ preserveCompletion: true });
           if (isLevelModeActive()) {
+            if (isLevelScaleModeActive()) {
+              resetScaleBatchProgress();
+            }
             seedLevelModeEntries();
           } else {
             state.game.entries.clear();
@@ -18761,9 +18804,11 @@
             state.game.paused = false;
             state.game.canListen = false;
             state.game.active = true;
+            state.game.levelScaleMode = false;
             state.game.levelAudioMode = false;
             state.game.levelTextMode = false;
             state.game.levelTypingMode = false;
+            resetScaleBatchProgress();
             state.game.sessionStartedAt = Date.now();
 
             const roundCount = Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount());
@@ -18842,9 +18887,11 @@
         state.game.canListen = false;
         state.game.active = true;
         state.game.levelMode = false;
+        state.game.levelScaleMode = false;
         state.game.levelAudioMode = false;
         state.game.levelTextMode = false;
         state.game.levelTypingMode = false;
+        resetScaleBatchProgress();
         state.game.transitioning = false;
         state.game.sessionStartedAt = Date.now();
         state.game.tutorial.active = true;
@@ -18889,10 +18936,12 @@
         resetTrainingRuntime();
         state.game.active = false;
         state.game.levelMode = false;
+        state.game.levelScaleMode = false;
         state.game.levelAudioMode = false;
         state.game.levelTextMode = false;
         state.game.levelTypingMode = false;
         state.game.levelTextHitStreak = 0;
+        resetScaleBatchProgress();
         state.game.entries.clear();
         state.game.queue = [];
         state.game.currentId = null;
@@ -18976,9 +19025,10 @@
           clearStageHintLoop({ clearStatus: true });
           clearFirstStageMicHint({ clearStatus: true });
           clearStageTwoHintTimer();
-          entry.stage = isLevelTypingModeActive() ? 4 : 1;
+          entry.stage = resolveLevelModeStage();
           entry.stars = 0;
           entry.typingMistakes = 0;
+          const scaleModeActive = isLevelScaleModeActive();
           if (isHit) {
             if (isLevelTextModeActive()) {
               state.game.levelTextHitStreak = Math.max(0, Number(state.game.levelTextHitStreak) || 0) + 1;
@@ -18987,6 +19037,11 @@
             playSuccessAudio();
             if (isLevelTypingModeActive()) {
               els.gameStarCopy.textContent = 'Typing';
+              entry._removeAfterReward = true;
+            } else if (scaleModeActive) {
+              state.game.scaleBatchAttempts = Math.max(0, Number(state.game.scaleBatchAttempts) || 0) + 1;
+              state.game.scaleBatchHits = Math.max(0, Number(state.game.scaleBatchHits) || 0) + 1;
+              els.gameStarCopy.textContent = formatSelectedGameLevelLabel();
               entry._removeAfterReward = true;
             } else {
               const levelBefore = selectedGameLevel();
@@ -19006,15 +19061,31 @@
             }
             entry.missesWithoutStars = 0;
             setGameStatus('', 'miss');
+            if (scaleModeActive) {
+              state.game.scaleBatchAttempts = Math.max(0, Number(state.game.scaleBatchAttempts) || 0) + 1;
+            }
             state.game.queue.push(entry.id);
+          }
+          let scaleBatchCompleted = false;
+          if (scaleModeActive && (Number(state.game.scaleBatchAttempts) || 0) >= 5) {
+            const nextLevel = normalizeUserLevel(selectedGameLevel() + scaleBatchLevelDelta(state.game.scaleBatchHits));
+            setSelectedGameLevel(nextLevel);
+            resetScaleBatchProgress();
+            scaleBatchCompleted = true;
           }
           syncLevelTextModeControls();
           updateGameChips();
-          await playStageResponseSequence(isLevelTypingModeActive() ? 4 : 1, card, { skipPromptAudio: !isHit });
+          await playStageResponseSequence(resolveLevelModeStage(), card, {
+            skipPromptAudio: scaleModeActive || !isHit
+          });
           await wait(isHit ? 260 : 520);
           if (entry._removeAfterReward) {
             entry._removeAfterReward = false;
             rotateLevelModeEntry(entry);
+          }
+          if (scaleBatchCompleted && state.game.active) {
+            await restartActiveLevelMode(selectedGameLevel());
+            return;
           }
           if (state.game.active) {
             advanceToNextCard();
@@ -19474,29 +19545,37 @@
 
       function bindEvents() {
         const startLevelModeFromWelcome = async (event, options = {}) => {
-          const previewTargets = [event?.currentTarget, els.welcomeModeModalStartBtn, els.welcomeStartBtn].filter(Boolean);
-          if (await handleManualWelcomeNoEnergy(els.welcomeModeModalStartBtn || els.welcomeStartBtn || event?.currentTarget)) return;
+          const previewTargets = [event?.currentTarget, els.welcomeModeModalPlayBtn, els.welcomeStartBtn].filter(Boolean);
+          if (await handleManualWelcomeNoEnergy(els.welcomeModeModalPlayBtn || els.welcomeStartBtn || event?.currentTarget)) return;
           if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
+          const scaleMode = !options.audioOnly && !options.textOnly;
+          if (scaleMode) {
+            setSelectedGameLevel(1);
+          }
           state.game.levelMode = true;
+          state.game.levelScaleMode = scaleMode;
           state.game.levelAudioMode = Boolean(options.audioOnly);
           state.game.levelTextMode = Boolean(options.textOnly);
           state.game.levelTypingMode = false;
           state.game.levelTextResponseLanguage = 'english';
           state.game.levelTextHitStreak = 0;
+          resetScaleBatchProgress();
           closeWelcomeModeModal();
           state.entry.welcomeStartRequested = true;
           void openAudioCheck();
         };
         const startTypingModeFromWelcome = async (event) => {
-          const previewTargets = [event?.currentTarget, els.welcomeModeModalStartBtn, els.welcomeStartBtn].filter(Boolean);
-          if (await handleManualWelcomeNoEnergy(els.welcomeModeModalStartBtn || els.welcomeStartBtn || event?.currentTarget)) return;
+          const previewTargets = [event?.currentTarget, els.welcomeModeModalPlayBtn, els.welcomeStartBtn].filter(Boolean);
+          if (await handleManualWelcomeNoEnergy(els.welcomeModeModalPlayBtn || els.welcomeStartBtn || event?.currentTarget)) return;
           if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
           state.game.levelMode = true;
+          state.game.levelScaleMode = false;
           state.game.levelAudioMode = false;
           state.game.levelTextMode = false;
           state.game.levelTypingMode = true;
           state.game.levelTextResponseLanguage = 'english';
           state.game.levelTextHitStreak = 0;
+          resetScaleBatchProgress();
           state.entry.welcomeStartRequested = false;
           closeWelcomeModeModal();
           const selectedCount = currentBaseGameCount(selectedGameLevel() || currentUserLevel());
@@ -19506,13 +19585,15 @@
           beginGame();
         };
         const startPlayingModeFromWelcome = async (event) => {
-          const previewTargets = [event?.currentTarget, els.welcomeModeModalStartBtn, els.welcomeStartBtn].filter(Boolean);
-          if (await handleManualWelcomeNoEnergy(els.welcomeModeModalStartBtn || els.welcomeStartBtn || event?.currentTarget)) return;
+          const previewTargets = [event?.currentTarget, els.welcomeModeModalPlayBtn, els.welcomeStartBtn].filter(Boolean);
+          if (await handleManualWelcomeNoEnergy(els.welcomeModeModalPlayBtn || els.welcomeStartBtn || event?.currentTarget)) return;
           if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
           state.game.levelMode = false;
+          state.game.levelScaleMode = false;
           state.game.levelAudioMode = false;
           state.game.levelTextMode = false;
           state.game.levelTypingMode = false;
+          resetScaleBatchProgress();
           closeWelcomeModeModal();
           hideWelcomeGate();
           startWatch({ useDefaults: true });
@@ -19522,9 +19603,11 @@
             if (await handleManualWelcomeNoEnergy(event.currentTarget)) return;
             if (!(await guardWelcomeEnergy({ previewTarget: event.currentTarget }))) return;
             state.game.levelMode = false;
+            state.game.levelScaleMode = false;
             state.game.levelAudioMode = false;
             state.game.levelTextMode = false;
             state.game.levelTypingMode = false;
+            resetScaleBatchProgress();
             state.entry.welcomeStartRequested = true;
             void openAudioCheck();
           })();
@@ -19553,7 +19636,7 @@
         els.welcomeModeModalLevelNextBtn?.addEventListener('click', () => {
           nudgeSelectedGameLevel(1);
         });
-        els.welcomeModeModalStartBtn?.addEventListener('click', (event) => {
+        els.welcomeModeModalPlayBtn?.addEventListener('click', (event) => {
           const modeKey = safeText(state.entry.welcomeModeKey).toLowerCase();
           if (modeKey === 'playing') {
             void startPlayingModeFromWelcome(event);
@@ -19574,27 +19657,6 @@
             event.preventDefault();
             openWelcomeModeModal('scale');
           })();
-        });
-        els.gameLevelPrevBtn?.addEventListener('click', () => {
-          nudgeSelectedGameLevel(-1);
-        });
-        els.gameLevelNextBtn?.addEventListener('click', () => {
-          nudgeSelectedGameLevel(1);
-        });
-        els.gameLevelStrip?.addEventListener('pointerdown', (event) => {
-          state.ui.gameLevelSwipeStartX = Number(event.clientX) || 0;
-          state.ui.gameLevelSwipeStartY = Number(event.clientY) || 0;
-        });
-        els.gameLevelStrip?.addEventListener('pointerup', (event) => {
-          const startX = Number(state.ui.gameLevelSwipeStartX) || 0;
-          const startY = Number(state.ui.gameLevelSwipeStartY) || 0;
-          state.ui.gameLevelSwipeStartX = 0;
-          state.ui.gameLevelSwipeStartY = 0;
-          if (!startX && !startY) return;
-          const deltaX = (Number(event.clientX) || 0) - startX;
-          const deltaY = (Number(event.clientY) || 0) - startY;
-          if (Math.abs(deltaX) < 36 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
-          nudgeSelectedGameLevel(deltaX < 0 ? 1 : -1);
         });
         // Guest account link removed from the play screen.
         els.soundTestPlayBtn?.addEventListener('click', () => {
