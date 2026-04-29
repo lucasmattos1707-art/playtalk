@@ -112,6 +112,224 @@
 
     .options.three-text { grid-template-columns: 1fr; }
 
+    .mix-stage {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .mix-headings {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      align-items: end;
+    }
+
+    .mix-heading {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .mix-heading:last-child {
+      align-items: flex-end;
+      text-align: right;
+    }
+
+    .mix-heading__title {
+      font-size: clamp(24px, 3.6vw, 38px);
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+    }
+
+    .mix-heading__title--flashcards {
+      color: #ffbf7a;
+      text-shadow: 0 0 24px rgba(255, 136, 36, 0.28);
+    }
+
+    .mix-heading__title--smartbooks {
+      color: #a7c7ff;
+      text-shadow: 0 0 24px rgba(79, 124, 255, 0.26);
+    }
+
+    .mix-heading__percent {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #c7d8ef;
+    }
+
+    .mix-slider-shell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      min-height: 112px;
+      padding: 10px 0;
+    }
+
+    .mix-slider-track {
+      position: relative;
+      width: 100%;
+      height: 74px;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: linear-gradient(90deg, #ff8a1f 0%, #ff9a3d 18%, #ffb152 36%, #2f69ff 64%, #4f7cff 82%, #79a7ff 100%);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), 0 18px 42px rgba(9, 21, 49, 0.32);
+    }
+
+    .mix-slider-track::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.26), transparent 32%, transparent 68%, rgba(0,0,0,0.12)),
+        repeating-linear-gradient(
+          90deg,
+          rgba(255,255,255,0.12) 0,
+          rgba(255,255,255,0.12) 1px,
+          transparent 1px,
+          transparent calc(1% - 1px),
+          rgba(255,255,255,0.05) calc(1% - 1px),
+          rgba(255,255,255,0.05) 1%
+        );
+      pointer-events: none;
+    }
+
+    .mix-slider-thumb {
+      position: absolute;
+      top: 50%;
+      left: var(--mix-visual, 50%);
+      width: 34px;
+      height: 96px;
+      border-radius: 999px;
+      border: 2px solid rgba(255,255,255,0.96);
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(238,245,255,0.96));
+      box-shadow: 0 0 0 6px rgba(255,255,255,0.10), 0 18px 32px rgba(2, 8, 22, 0.34);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .mix-slider-input {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 3;
+    }
+
+    .mix-slider-input::-webkit-slider-thumb {
+      width: 34px;
+      height: 96px;
+      appearance: none;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .mix-slider-input::-moz-range-thumb {
+      width: 34px;
+      height: 96px;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .mix-slider-legend {
+      display: flex;
+      justify-content: center;
+      color: #c7d8ef;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    .mix-cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .mix-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-radius: 28px;
+      padding: 18px 20px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(14px);
+      min-height: 104px;
+    }
+
+    .mix-card--flashcards {
+      box-shadow: inset 0 0 0 1px rgba(255, 150, 67, 0.08), 0 0 26px rgba(255, 136, 31, 0.14);
+    }
+
+    .mix-card--smartbooks {
+      box-shadow: inset 0 0 0 1px rgba(121, 167, 255, 0.08), 0 0 26px rgba(79, 124, 255, 0.16);
+    }
+
+    .mix-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 20px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .mix-icon svg {
+      width: 30px;
+      height: 30px;
+      display: block;
+    }
+
+    .mix-icon--flashcards svg {
+      filter: drop-shadow(0 0 18px rgba(255, 136, 31, 0.42));
+    }
+
+    .mix-icon--smartbooks svg {
+      filter: drop-shadow(0 0 18px rgba(79, 124, 255, 0.42));
+    }
+
+    .mix-card__meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .mix-card__label {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #b9c8e8;
+    }
+
+    .mix-card__value {
+      font-size: clamp(26px, 4vw, 42px);
+      line-height: 0.95;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      color: #ffffff;
+    }
+
     button.option {
       border: 1px solid rgba(148, 184, 255, 0.22);
       background: rgba(255,255,255,0.055);
@@ -386,6 +604,11 @@
       .progress-area { grid-column: 1 / -1; order: -1; }
       .nav-btn { min-width: unset; }
       .status { bottom: 48px; }
+      .mix-cards,
+      .mix-headings { grid-template-columns: 1fr; }
+      .mix-heading,
+      .mix-heading:last-child { align-items: center; text-align: center; }
+      .mix-card { min-height: 92px; }
     }
 
     @media (max-height: 760px) {
@@ -400,6 +623,10 @@
       h1 { font-size: clamp(24px, 4.2vw, 40px); }
       .stage-illustration { width: clamp(104px, 16vw, 152px); }
       .options { gap: 10px; }
+      .mix-stage { gap: 16px; }
+      .mix-slider-shell { min-height: 98px; }
+      .mix-slider-track { height: 62px; }
+      .mix-slider-thumb { height: 84px; }
       button.option {
         min-height: 50px;
         padding: 11px 12px;
@@ -558,20 +785,66 @@
 
     <section class="screen" data-step="3">
       <div class="question-block">
-        <h1>Qual plano de treino voce quer?</h1>
+        <h1>Quanto do seu treino vai para cada lado?</h1>
       </div>
-      <svg class="stage-illustration" viewBox="0 0 180 140" fill="none" aria-hidden="true">
-        <path d="M28 104C28 86.3269 42.3269 72 60 72H120C137.673 72 152 86.3269 152 104V110H28V104Z" fill="rgba(0,191,166,0.22)"/>
-        <path d="M48 36C48 29.3726 53.3726 24 60 24H120C126.627 24 132 29.3726 132 36V92C132 98.6274 126.627 104 120 104H60C53.3726 104 48 98.6274 48 92V36Z" fill="rgba(255,255,255,0.08)" stroke="rgba(126,231,255,0.48)" stroke-width="3"/>
-        <path d="M90 36V92" stroke="rgba(126,231,255,0.38)" stroke-width="3"/>
-        <path d="M64 50H82" stroke="#79E7FF" stroke-width="8" stroke-linecap="round"/>
-        <path d="M98 50H116" stroke="#79E7FF" stroke-width="8" stroke-linecap="round"/>
-        <path d="M64 68H82" stroke="#4F7CFF" stroke-width="8" stroke-linecap="round"/>
-        <path d="M98 68H116" stroke="#4F7CFF" stroke-width="8" stroke-linecap="round"/>
-      </svg>
-      <div class="options" data-group="books">
-        <button class="option" data-value="0">Jogar cartas somente</button>
-        <button class="option active" data-value="1">Jogar cartas + ler FluentBooks</button>
+      <div class="mix-stage">
+        <div class="mix-headings">
+          <div class="mix-heading">
+            <span class="mix-heading__title mix-heading__title--flashcards">FlashCards</span>
+            <span class="mix-heading__percent" id="mixHeadingFlashcards">50%</span>
+          </div>
+          <div class="mix-heading">
+            <span class="mix-heading__title mix-heading__title--smartbooks">SmartBooks</span>
+            <span class="mix-heading__percent" id="mixHeadingSmartbooks">50%</span>
+          </div>
+        </div>
+        <div class="mix-slider-shell" id="mixSliderShell">
+          <div class="mix-slider-track" id="mixSliderTrack">
+            <div class="mix-slider-thumb" id="mixSliderThumb" aria-hidden="true"></div>
+          </div>
+          <input class="mix-slider-input" id="mixSlider" type="range" min="0" max="100" step="1" value="50" aria-label="Escolha o percentual de FlashCards e SmartBooks">
+        </div>
+        <div class="mix-slider-legend">Arraste livremente. O plano fecha em blocos de 5%.</div>
+        <div class="mix-cards">
+          <div class="mix-card mix-card--flashcards">
+            <div class="mix-icon mix-icon--flashcards" aria-hidden="true">
+              <svg viewBox="0 0 32 32" fill="none">
+                <path d="M18.4 2L7.8 17.1H15L12.9 30L24.2 13.8H16.8L18.4 2Z" fill="url(#flashGradient)"/>
+                <defs>
+                  <linearGradient id="flashGradient" x1="7.8" y1="2" x2="24.2" y2="30" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#FFD36A"/>
+                    <stop offset="0.42" stop-color="#FF9A3D"/>
+                    <stop offset="1" stop-color="#FF6F1F"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <div class="mix-card__meta">
+              <span class="mix-card__label">FlashCards</span>
+              <span class="mix-card__value" id="flashcardsPercent">50%</span>
+            </div>
+          </div>
+          <div class="mix-card mix-card--smartbooks">
+            <div class="mix-icon mix-icon--smartbooks" aria-hidden="true">
+              <svg viewBox="0 0 32 32" fill="none">
+                <path d="M7 6.4C7 4.97 8.18 3.8 9.62 3.8H24.6V25.2H10.15C8.8 25.2 7.7 26.29 7.7 27.64C7.7 28.16 7.82 28.63 8.05 29H22.8" stroke="url(#bookStroke)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10.4 8.9H20.8" stroke="url(#bookStroke)" stroke-width="2.4" stroke-linecap="round"/>
+                <path d="M10.4 13.4H18.7" stroke="url(#bookStroke)" stroke-width="2.4" stroke-linecap="round"/>
+                <defs>
+                  <linearGradient id="bookStroke" x1="7" y1="3.8" x2="24.6" y2="29" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#8FE6FF"/>
+                    <stop offset="0.52" stop-color="#4F7CFF"/>
+                    <stop offset="1" stop-color="#79A7FF"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <div class="mix-card__meta">
+              <span class="mix-card__label">SmartBooks</span>
+              <span class="mix-card__value" id="smartbooksPercent">50%</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -590,14 +863,14 @@
 
       <div class="stats">
         <div class="stat"><strong id="totalHours">0h</strong><span>tempo total</span></div>
-        <div class="stat"><strong id="dailyBooks">0</strong><span>FluentBooks/dia</span></div>
+        <div class="stat"><strong id="dailyBooks">0</strong><span>SmartBooks/dia</span></div>
         <div class="stat"><strong id="cardsEstimate">0</strong><span>cartas possiveis</span></div>
         <div class="stat"><strong id="planType">Leve</strong><span>tipo de plano</span></div>
       </div>
 
       <div class="boost" id="boostText">
-        <strong>FluentBooks desligados.</strong><br>
-        Seu plano esta focado em cartas, memoria e reconhecimento.
+        <strong>50% FlashCards + 50% SmartBooks.</strong><br>
+        Seu plano mistura memoria rapida com contexto para fluencia pratica.
       </div>
     </section>
 
@@ -635,7 +908,9 @@
       minutes: 30,
       months: 6,
       application: 2,
-      books: 1,
+      flashcardsPercentage: 50,
+      smartbooksPercentage: 50,
+      mixVisual: 50,
       nextOnboardingRoute: ''
     };
 
@@ -679,7 +954,13 @@
       planType: document.getElementById('planType'),
       boostBadge: document.getElementById('boostBadge'),
       boostText: document.getElementById('boostText'),
-      status: document.getElementById('status')
+      status: document.getElementById('status'),
+      mixSliderTrack: document.getElementById('mixSliderTrack'),
+      mixSlider: document.getElementById('mixSlider'),
+      flashcardsPercent: document.getElementById('flashcardsPercent'),
+      smartbooksPercent: document.getElementById('smartbooksPercent'),
+      mixHeadingFlashcards: document.getElementById('mixHeadingFlashcards'),
+      mixHeadingSmartbooks: document.getElementById('mixHeadingSmartbooks')
     };
 
     function clamp(value, min, max) {
@@ -734,23 +1015,56 @@
       };
     }
 
+    function snapMixPercentage(value) {
+      return clamp(Math.round(clamp(Number(value) || 0, 0, 100) / 5) * 5, 0, 100);
+    }
+
+    function syncMixVisual(value) {
+      const visual = clamp(Number(value) || 0, 0, 100);
+      state.mixVisual = visual;
+      if (els.mixSliderTrack) {
+        els.mixSliderTrack.style.setProperty('--mix-visual', `${visual}%`);
+      }
+    }
+
+    function updateMixSelection(rawValue, options = {}) {
+      const visual = clamp(Number(rawValue) || 0, 0, 100);
+      const flashcardsPercentage = snapMixPercentage(visual);
+      const smartbooksPercentage = 100 - flashcardsPercentage;
+      state.flashcardsPercentage = flashcardsPercentage;
+      state.smartbooksPercentage = smartbooksPercentage;
+      syncMixVisual(visual);
+
+      if (!options.skipSliderSync && els.mixSlider) {
+        els.mixSlider.value = String(Math.round(visual));
+      }
+
+      const flashcardsLabel = `${flashcardsPercentage}%`;
+      const smartbooksLabel = `${smartbooksPercentage}%`;
+      if (els.flashcardsPercent) els.flashcardsPercent.textContent = flashcardsLabel;
+      if (els.smartbooksPercent) els.smartbooksPercent.textContent = smartbooksLabel;
+      if (els.mixHeadingFlashcards) els.mixHeadingFlashcards.textContent = flashcardsLabel;
+      if (els.mixHeadingSmartbooks) els.mixHeadingSmartbooks.textContent = smartbooksLabel;
+      updateResult();
+    }
+
     function calculate() {
       const dailyHours = state.minutes / 60;
       const days = state.months * 30;
       const totalHours = dailyHours * days;
       let base = 100 * (1 - Math.exp(-totalHours / 260));
       base *= [0.82, 1.0, 1.15][state.application];
-
-      let bookBoost = 0;
-      if (state.books === 1) {
-        bookBoost = [0.10, 0.20, 0.30][state.application];
-      }
+      const smartbooksShare = state.smartbooksPercentage / 100;
+      const flashcardsShare = state.flashcardsPercentage / 100;
+      const bookBoost = [0.10, 0.20, 0.30][state.application] * smartbooksShare;
 
       const finalScore = clamp(base * (1 + bookBoost), 0, 100);
       return {
         finalScore,
         totalHours,
-        bookBoost
+        bookBoost,
+        smartbooksShare,
+        flashcardsShare
       };
     }
 
@@ -772,23 +1086,20 @@
       els.resultLabel.textContent = selectedLabel[1];
       els.resultDescription.textContent = selectedLabel[2];
       els.totalHours.textContent = `${Math.round(result.totalHours)}h`;
-      els.dailyBooks.textContent = state.books ? (state.application === 0 ? '1-2' : '2-3') : '0';
-      els.cardsEstimate.textContent = Math.round(result.totalHours * 110).toLocaleString('pt-BR');
+      els.dailyBooks.textContent = state.smartbooksPercentage ? `${Math.max(1, Math.round((state.application + 1) * result.smartbooksShare))}` : '0';
+      els.cardsEstimate.textContent = Math.round(result.totalHours * 110 * result.flashcardsShare).toLocaleString('pt-BR');
       els.planType.textContent = getPlanType(rounded);
       els.liveTitle.textContent = selectedLabel[1];
 
-      if (state.books === 0) {
+      if (state.smartbooksPercentage === 0) {
         els.boostBadge.textContent = 'Sem boost';
-        els.boostText.innerHTML = '<strong>FluentBooks desligados.</strong><br>Seu plano esta focado em cartas, memoria e reconhecimento.';
-      } else if (state.application === 0) {
-        els.boostBadge.textContent = '+10% boost';
-        els.boostText.innerHTML = '<strong>Boost leve ativado.</strong><br>Os FluentBooks ajudam, mas sem aplicacao real o ganho fica limitado.';
-      } else if (state.application === 1) {
-        els.boostBadge.textContent = '+20% boost';
-        els.boostText.innerHTML = '<strong>Boost forte ativado.</strong><br>Cartas + FluentBooks + uso ocasional na vida real aceleram a fluencia pratica.';
+        els.boostText.innerHTML = `<strong>${state.flashcardsPercentage}% FlashCards.</strong><br>Seu plano esta focado em repeticao, memoria e resposta rapida.`;
+      } else if (state.flashcardsPercentage === 0) {
+        els.boostBadge.textContent = `+${Math.round(result.bookBoost * 100)}% boost`;
+        els.boostText.innerHTML = `<strong>${state.smartbooksPercentage}% SmartBooks.</strong><br>Seu plano puxa leitura guiada, contexto e ritmo de linguagem o tempo todo.`;
       } else {
-        els.boostBadge.textContent = '+30% boost';
-        els.boostText.innerHTML = '<strong>Boost maximo ativado.</strong><br>Voce esta usando os FluentBooks como treino de fala, timing, emocao e vida real.';
+        els.boostBadge.textContent = `+${Math.round(result.bookBoost * 100)}% boost`;
+        els.boostText.innerHTML = `<strong>${state.flashcardsPercentage}% FlashCards + ${state.smartbooksPercentage}% SmartBooks.</strong><br>O treino mistura memorizacao rapida com leitura contextual para empurrar sua fluencia pratica.`;
       }
     }
 
@@ -823,7 +1134,17 @@
       if (Number.isInteger(Number(plan.minutes))) state.minutes = Number(plan.minutes);
       if (Number.isInteger(Number(plan.months))) state.months = Number(plan.months);
       if (Number.isInteger(Number(plan.application))) state.application = Number(plan.application);
-      if (Number.isInteger(Number(plan.books))) state.books = Number(plan.books);
+      const flashcardsPercentage = Number(plan.flashcardsPercentage ?? plan.flashcards_percentage);
+      const smartbooksPercentage = Number(plan.smartbooksPercentage ?? plan.smartbooks_percentage);
+      if (Number.isInteger(flashcardsPercentage) && Number.isInteger(smartbooksPercentage) && flashcardsPercentage + smartbooksPercentage === 100) {
+        state.flashcardsPercentage = snapMixPercentage(flashcardsPercentage);
+        state.smartbooksPercentage = 100 - state.flashcardsPercentage;
+        state.mixVisual = state.flashcardsPercentage;
+      } else if (Number.isInteger(Number(plan.books))) {
+        state.flashcardsPercentage = Number(plan.books) === 1 ? 50 : 100;
+        state.smartbooksPercentage = 100 - state.flashcardsPercentage;
+        state.mixVisual = state.flashcardsPercentage;
+      }
 
       document.querySelectorAll('[data-group]').forEach((groupEl) => {
         const value = String(state[groupEl.dataset.group]);
@@ -831,6 +1152,7 @@
           button.classList.toggle('active', button.dataset.value === value);
         });
       });
+      updateMixSelection(state.mixVisual);
     }
 
     function resolveNextRoute(user) {
@@ -860,7 +1182,8 @@
           minutes: state.minutes,
           months: state.months,
           application: state.application,
-          books: state.books
+          flashcardsPercentage: state.flashcardsPercentage,
+          smartbooksPercentage: state.smartbooksPercentage
         })
       });
       const payload = await response.json().catch(() => ({}));
@@ -881,6 +1204,18 @@
         updateResult();
       });
     });
+
+    if (els.mixSlider) {
+      els.mixSlider.addEventListener('input', (event) => {
+        if (busy) return;
+        updateMixSelection(event.target.value, { skipSliderSync: true });
+      });
+
+      els.mixSlider.addEventListener('change', (event) => {
+        if (busy) return;
+        updateMixSelection(event.target.value, { skipSliderSync: true });
+      });
+    }
 
     els.backBtn.addEventListener('click', () => {
       if (busy || step === 0) return;
@@ -936,6 +1271,7 @@
     }
 
     renderStep();
+    updateMixSelection(state.mixVisual);
     void init();
   </script>
 </body>

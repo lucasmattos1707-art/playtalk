@@ -2587,11 +2587,34 @@ const ensureUsersAvatarColumn = async () => {
       `);
       await pool.query(`
         ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS fluency_plan_flashcards_percentage integer
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS fluency_plan_smartbooks_percentage integer
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
         ADD COLUMN IF NOT EXISTS fluency_plan_score integer
       `);
       await pool.query(`
         ALTER TABLE public.users
         ADD COLUMN IF NOT EXISTS fluency_plan_updated_at timestamptz
+      `);
+      await pool.query(`
+        UPDATE public.users
+        SET fluency_plan_flashcards_percentage = CASE
+              WHEN fluency_plan_books = 1 THEN 50
+              WHEN fluency_plan_books = 0 THEN 100
+              ELSE fluency_plan_flashcards_percentage
+            END,
+            fluency_plan_smartbooks_percentage = CASE
+              WHEN fluency_plan_books = 1 THEN 50
+              WHEN fluency_plan_books = 0 THEN 0
+              ELSE fluency_plan_smartbooks_percentage
+            END
+        WHERE fluency_plan_flashcards_percentage IS NULL
+           OR fluency_plan_smartbooks_percentage IS NULL
       `);
       await pool.query(`
         UPDATE public.users
@@ -2668,6 +2691,8 @@ const mapPublicUser = (user) => ({
   fluency_plan_months: readNullableInteger(user?.fluency_plan_months),
   fluency_plan_application: readNullableInteger(user?.fluency_plan_application),
   fluency_plan_books: readNullableInteger(user?.fluency_plan_books),
+  fluency_plan_flashcards_percentage: readNullableInteger(user?.fluency_plan_flashcards_percentage),
+  fluency_plan_smartbooks_percentage: readNullableInteger(user?.fluency_plan_smartbooks_percentage),
   fluency_plan_score: readNullableInteger(user?.fluency_plan_score),
   fluency_plan_updated_at: user?.fluency_plan_updated_at || null
 });
@@ -2749,6 +2774,7 @@ async function buildAuthUserPayload(user, options = {}) {
     && sourceUser['fluency-plan'] === undefined
     && sourceUser.fluency_plan_status === undefined
     && sourceUser.fluency_plan_minutes === undefined
+    && sourceUser.fluency_plan_flashcards_percentage === undefined
   ) {
     sourceUser = await readUserById(sourceUser.id).catch(() => sourceUser);
   }
@@ -3084,7 +3110,9 @@ const readUserById = async (userId) => {
             premium_full_access, premium_until, level, is_bot, bot_config, bot_avatar_status,
             bot_avatar_error, created_by_user_id, battle, no_energy,
             "fluency-plan", fluency_plan_minutes, fluency_plan_months,
-            fluency_plan_application, fluency_plan_books, fluency_plan_score,
+            fluency_plan_application, fluency_plan_books,
+            fluency_plan_flashcards_percentage, fluency_plan_smartbooks_percentage,
+            fluency_plan_score,
             fluency_plan_updated_at
      FROM public.users
      WHERE id = $1
@@ -9517,6 +9545,7 @@ const FLUENCY_PLAN_ALLOWED_MINUTES = new Set([5, 15, 30, 45, 60, 90, 120]);
 const FLUENCY_PLAN_ALLOWED_MONTHS = new Set([3, 6, 9, 12, 18, 24]);
 const FLUENCY_PLAN_ALLOWED_APPLICATION = new Set([0, 1, 2]);
 const FLUENCY_PLAN_ALLOWED_BOOKS = new Set([0, 1]);
+const FLUENCY_PLAN_ALLOWED_PERCENTAGES = new Set(Array.from({ length: 21 }, (_, index) => index * 5));
 
 function normalizeFluencyPlanChoice(value, allowedValues) {
   const parsed = Number.parseInt(String(value ?? '').trim(), 10);
@@ -9527,8 +9556,35 @@ function calculateFluencyPlanScoreSnapshot(plan) {
   const minutes = normalizeFluencyPlanChoice(plan?.minutes, FLUENCY_PLAN_ALLOWED_MINUTES);
   const months = normalizeFluencyPlanChoice(plan?.months, FLUENCY_PLAN_ALLOWED_MONTHS);
   const application = normalizeFluencyPlanChoice(plan?.application, FLUENCY_PLAN_ALLOWED_APPLICATION);
-  const books = normalizeFluencyPlanChoice(plan?.books, FLUENCY_PLAN_ALLOWED_BOOKS);
-  if (minutes === null || months === null || application === null || books === null) {
+  const flashcardsPercentage = normalizeFluencyPlanChoice(
+    plan?.flashcardsPercentage ?? plan?.flashcards_percentage,
+    FLUENCY_PLAN_ALLOWED_PERCENTAGES
+  );
+  const smartbooksPercentage = normalizeFluencyPlanChoice(
+    plan?.smartbooksPercentage ?? plan?.smartbooks_percentage,
+    FLUENCY_PLAN_ALLOWED_PERCENTAGES
+  );
+  const legacyBooks = normalizeFluencyPlanChoice(plan?.books, FLUENCY_PLAN_ALLOWED_BOOKS);
+
+  let normalizedFlashcardsPercentage = flashcardsPercentage;
+  let normalizedSmartbooksPercentage = smartbooksPercentage;
+
+  if (normalizedFlashcardsPercentage === null || normalizedSmartbooksPercentage === null) {
+    if (legacyBooks === null) {
+      return null;
+    }
+    normalizedFlashcardsPercentage = legacyBooks === 1 ? 50 : 100;
+    normalizedSmartbooksPercentage = 100 - normalizedFlashcardsPercentage;
+  }
+
+  if (
+    minutes === null
+    || months === null
+    || application === null
+    || normalizedFlashcardsPercentage === null
+    || normalizedSmartbooksPercentage === null
+    || normalizedFlashcardsPercentage + normalizedSmartbooksPercentage !== 100
+  ) {
     return null;
   }
 
@@ -9536,14 +9592,17 @@ function calculateFluencyPlanScoreSnapshot(plan) {
   const totalHours = dailyHours * (months * 30);
   let base = 100 * (1 - Math.exp(-totalHours / 260));
   base *= [0.82, 1.0, 1.15][application];
-  const bookBoost = books === 1 ? [0.10, 0.20, 0.30][application] : 0;
+  const smartbooksShare = normalizedSmartbooksPercentage / 100;
+  const bookBoost = [0.10, 0.20, 0.30][application] * smartbooksShare;
   const finalScore = Math.max(0, Math.min(100, Math.round(base * (1 + bookBoost))));
 
   return {
     minutes,
     months,
     application,
-    books,
+    books: normalizedSmartbooksPercentage > 0 ? 1 : 0,
+    flashcardsPercentage: normalizedFlashcardsPercentage,
+    smartbooksPercentage: normalizedSmartbooksPercentage,
     score: finalScore
   };
 }
@@ -10549,6 +10608,8 @@ app.get('/auth/fluency-plan', async (req, res) => {
         months: readNullableInteger(hydratedUser.fluency_plan_months),
         application: readNullableInteger(hydratedUser.fluency_plan_application),
         books: readNullableInteger(hydratedUser.fluency_plan_books),
+        flashcards_percentage: readNullableInteger(hydratedUser.fluency_plan_flashcards_percentage),
+        smartbooks_percentage: readNullableInteger(hydratedUser.fluency_plan_smartbooks_percentage),
         score: readNullableInteger(hydratedUser.fluency_plan_score)
       }
     });
@@ -10576,7 +10637,9 @@ app.patch('/auth/fluency-plan', async (req, res) => {
       minutes: req.body?.minutes,
       months: req.body?.months,
       application: req.body?.application,
-      books: req.body?.books
+      books: req.body?.books,
+      flashcardsPercentage: req.body?.flashcardsPercentage,
+      smartbooksPercentage: req.body?.smartbooksPercentage
     });
 
     if (!snapshot) {
@@ -10591,7 +10654,9 @@ app.patch('/auth/fluency-plan', async (req, res) => {
            fluency_plan_months = $4,
            fluency_plan_application = $5,
            fluency_plan_books = $6,
-           fluency_plan_score = $7,
+           fluency_plan_flashcards_percentage = $7,
+           fluency_plan_smartbooks_percentage = $8,
+           fluency_plan_score = $9,
            fluency_plan_updated_at = now()
        WHERE id = $1
        RETURNING id`,
@@ -10602,6 +10667,8 @@ app.patch('/auth/fluency-plan', async (req, res) => {
         snapshot.months,
         snapshot.application,
         snapshot.books,
+        snapshot.flashcardsPercentage,
+        snapshot.smartbooksPercentage,
         snapshot.score
       ]
     );
