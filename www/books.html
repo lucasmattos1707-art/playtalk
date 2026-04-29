@@ -3193,21 +3193,26 @@
       display: grid;
       justify-items: center;
       gap: 28px;
-      margin-top: calc(25px + 10dvh);
+      margin-top: 25px;
+      transform: translateY(-10dvh);
       opacity: 1;
       filter: blur(0);
-      transition: opacity 1000ms ease, filter 1000ms ease;
+      transition: opacity 1000ms ease, filter 1000ms ease, transform 1000ms ease;
+      position: relative;
+      z-index: 2;
     }
 
     .pre-book-card.is-starting .pre-book-main {
       opacity: 0;
       filter: blur(7px);
+      transform: translateY(calc(-10dvh - 6px));
     }
 
     /* Close dissolve for pre-book overlay. */
     #booksPreBookModal.is-closing .pre-book-main {
       opacity: 0;
       filter: blur(7px);
+      transform: translateY(calc(-10dvh - 6px));
     }
 
     .pre-book-cover {
@@ -3291,6 +3296,9 @@
       display: grid;
       justify-items: center;
       gap: 14px;
+      position: relative;
+      z-index: 3;
+      pointer-events: auto;
     }
 
     .pre-book-actions .books-magic-btn {
@@ -3302,6 +3310,9 @@
       font-size: 17px;
       letter-spacing: 0.01em;
       transform: translateY(0);
+      position: relative;
+      z-index: 4;
+      pointer-events: auto;
     }
 
     #booksPreBookRankedBtn,
