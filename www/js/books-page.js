@@ -109,6 +109,7 @@
     avatarImage: document.getElementById('booksAccountAvatarImage'),
     avatarFallback: document.getElementById('booksAccountAvatarFallback'),
     avatarName: document.getElementById('booksAccountName'),
+    homeGreeting: document.getElementById('booksHomeGreeting'),
     levelMenu: document.getElementById('booksLevelMenu'),
     adminUiToggleBtn: document.getElementById('booksAdminUiToggleBtn'),
     createBookBtn: document.getElementById('booksCreateBookBtn'),
@@ -372,6 +373,7 @@
     homePreBookVoiceVolumeBefore: 1,
     homeNativeSleepLockEnabled: false,
     energyRedirectInProgress: false,
+    welcomeModesUsersEnabled: true,
     allBooksFeed: [],
     allBooksFeedVersion: '',
     allBooksWindowStart: 0,
@@ -1379,9 +1381,18 @@
   function syncManualNoEnergyUi() {
     const blocked = isManualNoEnergyBlocked();
     const opacity = blocked ? '0.6' : '1';
-    [els.homeLaunchBtn, els.homeSleepFab, els.preBookRankedBtn, els.preBookPronounceBtn].forEach((button) => {
+    [els.homeLaunchBtn, els.homeSleepFab, els.preBookRankedBtn, els.preBookPronounceBtn, els.preBookListeningBtn, els.preBookSpeakingBtn].forEach((button) => {
       if (!(button instanceof HTMLElement)) return;
       button.style.opacity = opacity;
+    });
+  }
+
+  function applyWelcomeModeVisibility() {
+    const showModes = Boolean(state.welcomeModesUsersEnabled);
+    [els.preBookRankedBtn, els.preBookPronounceBtn, els.preBookListeningBtn, els.preBookSpeakingBtn].forEach((button) => {
+      if (!(button instanceof HTMLElement)) return;
+      button.hidden = !showModes;
+      button.disabled = !showModes || state.modeStartBusy;
     });
   }
 
@@ -1408,6 +1419,19 @@
       return;
     }
     window.location.href = target;
+  }
+
+  async function loadWelcomeModeSettings() {
+    const response = await fetch(buildApiUrl('/api/flashcards/welcome-mode-settings'), {
+      headers: buildAuthHeaders(),
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.settings) {
+      throw new Error(payload?.message || 'Nao foi possivel carregar as configuracoes do welcome gate.');
+    }
+    state.welcomeModesUsersEnabled = payload.settings.usersEnabled !== false;
   }
 
   function readPersistedPlayerProfile() {
@@ -1712,6 +1736,19 @@
     syncManualNoEnergyUi();
   }
 
+  function getHomeGreetingText() {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bom dia';
+    if (hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+  }
+
+  function renderHomeGreeting() {
+    if (els.homeGreeting) {
+      els.homeGreeting.textContent = getHomeGreetingText();
+    }
+  }
+
   function getFirstHomeBook() {
     const pool = getHomeBooksPool();
     if (!pool.length) return null;
@@ -1751,6 +1788,7 @@
     els.avatarImage.src = hasAvatar ? avatar : DEFAULT_PROFILE_AVATAR;
     els.avatarImage.hidden = false;
     els.avatarFallback.hidden = true;
+    renderHomeGreeting();
   }
 
   function sortByNome(left, right) {
@@ -2248,7 +2286,7 @@
       },
       {
         kind: 'level',
-        value: level ? `Level ${level}` : 'Level -'
+        value: level ? `Voce esta no level ${level}` : 'Voce esta no level -'
       }
     ];
   }
@@ -3787,18 +3825,7 @@
 
   function setModeStartBusy(isBusy) {
     state.modeStartBusy = Boolean(isBusy);
-    if (els.preBookRankedBtn) {
-      els.preBookRankedBtn.disabled = state.modeStartBusy;
-    }
-    if (els.preBookPronounceBtn) {
-      els.preBookPronounceBtn.disabled = state.modeStartBusy;
-    }
-    if (els.preBookListeningBtn) {
-      els.preBookListeningBtn.disabled = state.modeStartBusy;
-    }
-    if (els.preBookSpeakingBtn) {
-      els.preBookSpeakingBtn.disabled = state.modeStartBusy;
-    }
+    applyWelcomeModeVisibility();
     syncManualNoEnergyUi();
   }
 
@@ -7118,7 +7145,8 @@
 
     const [sessionUser, books] = await Promise.all([
       fetchSessionUser(),
-      fetchStories()
+      fetchStories(),
+      loadWelcomeModeSettings().catch(() => null)
     ]);
 
     state.user = sessionUser;
@@ -7142,6 +7170,7 @@
     renderShelfLoading();
 
     renderAvatar();
+    applyWelcomeModeVisibility();
     renderLevelMenu();
     renderAdminUiToggle();
     renderCards();
