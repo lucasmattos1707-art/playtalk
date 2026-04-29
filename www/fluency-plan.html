@@ -179,7 +179,13 @@
       border-radius: 999px;
       overflow: hidden;
       border: 1px solid rgba(255,255,255,0.14);
-      background: linear-gradient(90deg, #0c66ff 0%, #0e86ff 30%, #ff6500 70%, #ff8d00 100%);
+      background: linear-gradient(
+        90deg,
+        #0f78ff 0%,
+        #0f78ff var(--smartbooks-stop, 50%),
+        #ff7a00 var(--smartbooks-stop, 50%),
+        #ff7a00 100%
+      );
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 18px 42px rgba(9, 21, 49, 0.32);
     }
 
@@ -187,17 +193,7 @@
       content: "";
       position: absolute;
       inset: 0;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.10), transparent 24%, transparent 76%, rgba(0,0,0,0.18)),
-        repeating-linear-gradient(
-          90deg,
-          rgba(255,255,255,0.06) 0,
-          rgba(255,255,255,0.06) 1px,
-          transparent 1px,
-          transparent calc(1% - 1px),
-          rgba(0,0,0,0.08) calc(1% - 1px),
-          rgba(0,0,0,0.08) 1%
-        );
+      background: linear-gradient(180deg, rgba(255,255,255,0.10), transparent 24%, transparent 76%, rgba(0,0,0,0.18));
       pointer-events: none;
     }
 
@@ -208,9 +204,9 @@
       width: 17px;
       height: 76px;
       border-radius: 999px;
-      border: 2px solid rgba(255, 175, 42, 0.98);
-      background: linear-gradient(180deg, #ffb22c, #ff7400);
-      box-shadow: 0 0 0 4px rgba(255, 116, 0, 0.12), 0 18px 32px rgba(2, 8, 22, 0.34);
+      border: 2px solid rgba(255,255,255,0.98);
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(238,245,255,0.96));
+      box-shadow: 0 0 0 4px rgba(255,255,255,0.12), 0 18px 32px rgba(2, 8, 22, 0.34);
       transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 2;
@@ -246,8 +242,9 @@
 
     .mix-cards {
       display: flex;
+      flex-direction: column;
       justify-content: center;
-      align-items: stretch;
+      align-items: center;
       gap: 14px;
       width: 100%;
     }
@@ -262,8 +259,8 @@
       background: rgba(255,255,255,0.05);
       backdrop-filter: blur(14px);
       min-height: 104px;
-      width: min(220px, calc(50% - 7px));
-      flex: 0 1 min(220px, calc(50% - 7px));
+      width: min(440px, 100%);
+      flex: 0 1 auto;
     }
 
     .mix-card--flashcards {
@@ -309,10 +306,21 @@
     .mix-card__label {
       font-size: 13px;
       font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #b9c8e8;
-      line-height: 1.02;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      font-family: 'Exo 2', system-ui, sans-serif;
+      font-size: clamp(24px, 3.6vw, 38px);
+      font-weight: 900;
+    }
+
+    .mix-card--flashcards .mix-card__label {
+      color: #ff7a00;
+      text-shadow: 0 0 24px rgba(255, 122, 0, 0.22);
+    }
+
+    .mix-card--smartbooks .mix-card__label {
+      color: #0f78ff;
+      text-shadow: 0 0 24px rgba(15, 120, 255, 0.22);
     }
 
     .mix-card__value {
@@ -608,7 +616,7 @@
       .bottom-inner { grid-template-columns: 1fr 1fr; }
       .progress-area { grid-column: 1 / -1; order: -1; }
       .nav-btn { min-width: unset; }
-      .mix-card { min-height: 92px; width: min(178px, calc(50% - 7px)); }
+      .mix-card { min-height: 92px; width: min(440px, 100%); }
     }
 
     @media (max-height: 760px) {
@@ -681,7 +689,7 @@
         font-size: clamp(17px, 2.9vw, 23px);
         padding: 12px 14px;
       }
-      .mix-card { min-height: 86px; width: min(156px, calc(50% - 6px)); }
+      .mix-card { min-height: 86px; width: min(440px, 100%); }
       .result-top { gap: 10px; }
       .badge { padding: 9px 12px; font-size: 13px; }
       .big-bar-wrap { height: 12px; }
@@ -819,7 +827,7 @@
               </svg>
             </div>
             <div class="mix-card__meta">
-              <span class="mix-card__label">Flash<br>Cards</span>
+              <span class="mix-card__label">FlashCards</span>
               <span class="mix-card__value" id="flashcardsPercent">50%</span>
             </div>
           </div>
@@ -839,7 +847,7 @@
               </svg>
             </div>
             <div class="mix-card__meta">
-              <span class="mix-card__label">Smart<br>Books</span>
+              <span class="mix-card__label">SmartBooks</span>
               <span class="mix-card__value" id="smartbooksPercent">50%</span>
             </div>
           </div>
@@ -898,6 +906,7 @@
   <script src="js/android-shell.js"></script>
   <script>
     const DEFAULT_RETURN_PATH = '/play';
+    const CLICK_AUDIO_PATH = '/audio/click.mp3';
     const totalChoiceSteps = 4;
     let step = 0;
     let busy = false;
@@ -916,6 +925,7 @@
       },
       liveTitleDefault: '',
       warningTimer: 0,
+      clickSound: null,
       nextOnboardingRoute: ''
     };
 
@@ -1003,6 +1013,27 @@
       window.location.href = target;
     }
 
+    function ensureClickSound() {
+      if (state.clickSound) return state.clickSound;
+      const audio = new Audio(CLICK_AUDIO_PATH);
+      audio.preload = 'auto';
+      state.clickSound = audio;
+      return audio;
+    }
+
+    function playClickSound() {
+      try {
+        const audio = ensureClickSound();
+        audio.currentTime = 0;
+        const playback = audio.play();
+        if (playback && typeof playback.catch === 'function') {
+          playback.catch(() => {});
+        }
+      } catch (_error) {
+        // Ignora falha silenciosamente para nao atrapalhar a interacao.
+      }
+    }
+
     function setStatus(message, tone = '') {
       els.status.textContent = message || '';
       els.status.className = 'status';
@@ -1027,7 +1058,12 @@
       state.mixVisual = visual;
       if (els.mixSliderTrack) {
         els.mixSliderTrack.style.setProperty('--mix-visual', `${visual}%`);
+        els.mixSliderTrack.style.setProperty('--smartbooks-stop', `${smartbooksVisualStop(visual)}%`);
       }
+    }
+
+    function smartbooksVisualStop(visual) {
+      return clamp(Number(visual) || 0, 0, 100);
     }
 
     function updateMixSelection(rawValue, options = {}) {
@@ -1046,13 +1082,6 @@
       const smartbooksLabel = `${smartbooksPercentage}%`;
       if (els.flashcardsPercent) els.flashcardsPercent.textContent = flashcardsLabel;
       if (els.smartbooksPercent) els.smartbooksPercent.textContent = smartbooksLabel;
-      if (els.mixSliderThumb) {
-        const orangeWeight = clamp(flashcardsPercentage / 100, 0, 1);
-        const topColor = orangeWeight >= 0.5 ? '#ffb22c' : '#ff9540';
-        const bottomColor = orangeWeight >= 0.5 ? '#ff7400' : '#ff8617';
-        els.mixSliderThumb.style.background = `linear-gradient(180deg, ${topColor}, ${bottomColor})`;
-        els.mixSliderThumb.style.borderColor = orangeWeight >= 0.5 ? 'rgba(255, 182, 55, 0.98)' : 'rgba(255, 145, 73, 0.98)';
-      }
       updateResult();
     }
 
@@ -1260,6 +1289,7 @@
         if (busy) return;
         const button = event.target.closest('.option');
         if (!button) return;
+        playClickSound();
         groupEl.querySelectorAll('.option').forEach((btn) => btn.classList.remove('active'));
         button.classList.add('active');
         state[groupEl.dataset.group] = Number(button.dataset.value);
@@ -1269,6 +1299,11 @@
     });
 
     if (els.mixSlider) {
+      els.mixSlider.addEventListener('pointerdown', () => {
+        if (busy) return;
+        playClickSound();
+      });
+
       els.mixSlider.addEventListener('input', (event) => {
         if (busy) return;
         updateMixSelection(event.target.value, { skipSliderSync: true });
@@ -1282,6 +1317,7 @@
 
     els.backBtn.addEventListener('click', () => {
       if (busy || step === 0) return;
+      playClickSound();
       step -= 1;
       renderStep();
       setStatus('');
@@ -1289,6 +1325,7 @@
 
     els.nextBtn.addEventListener('click', () => {
       if (busy) return;
+      playClickSound();
       const requiredGroup = requiredGroupForStep(step);
       if (requiredGroup && !state.selectedGroups[requiredGroup]) {
         showStepSelectionWarning();
@@ -1340,6 +1377,7 @@
 
     renderStep();
     updateMixSelection(state.mixVisual);
+    ensureClickSound();
     void init();
   </script>
 </body>
