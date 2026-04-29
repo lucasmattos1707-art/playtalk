@@ -6937,33 +6937,27 @@
     });
 
     els.preBookRankedBtn?.addEventListener('click', () => {
-      void (async () => {
-        if (await handleManualNoEnergyBlock(els.preBookRankedBtn, 'prebook')) return;
-        if (!(await guardEnergyAndRedirect({ previewTarget: els.preBookRankedBtn }))) return;
-        state.preBookRankedMode = true;
-        setPreBookStep('training');
-      })();
+      state.preBookRankedMode = true;
+      setPreBookStep('training');
     });
 
     els.preBookPronounceBtn?.addEventListener('click', () => {
-      void (async () => {
-        if (await handleManualNoEnergyBlock(els.preBookPronounceBtn, 'prebook')) return;
-        if (!(await guardEnergyAndRedirect({ previewTarget: els.preBookPronounceBtn }))) return;
-        state.preBookRankedMode = false;
-        setPreBookStep('training');
-      })();
+      state.preBookRankedMode = false;
+      setPreBookStep('training');
     });
 
     els.preBookListeningBtn?.addEventListener('click', () => {
       void (async () => {
-        if (!(await guardEnergyAndRedirect())) return;
+        if (await handleManualNoEnergyBlock(els.preBookListeningBtn, 'prebook')) return;
+        if (!(await guardEnergyAndRedirect({ previewTarget: els.preBookListeningBtn }))) return;
         await startBookFromPreBookModal('listening-training');
       })();
     });
 
     els.preBookSpeakingBtn?.addEventListener('click', () => {
       void (async () => {
-        if (!(await guardEnergyAndRedirect())) return;
+        if (await handleManualNoEnergyBlock(els.preBookSpeakingBtn, 'prebook')) return;
+        if (!(await guardEnergyAndRedirect({ previewTarget: els.preBookSpeakingBtn }))) return;
         await startBookFromPreBookModal('speaking-training');
       })();
     });
