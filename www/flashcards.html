@@ -294,11 +294,6 @@
     }
 
     .welcome-gate__touch {
-      --welcome-card-bg: rgba(8, 14, 34, 0.82);
-      --welcome-card-border: rgba(130, 190, 255, 0.18);
-      --welcome-card-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
-      --welcome-card-radius: 28px;
-      --welcome-card-padding: clamp(16px, 4vw, 28px);
       width: 102vw;
       max-width: 102vw;
       min-width: 102vw;
@@ -468,15 +463,9 @@
       height: auto;
       align-items: center;
       align-content: center;
-      background: var(--welcome-card-bg);
-      gap: 8px;
-      width: min(92vw, 760px);
-      justify-self: center;
-      padding: var(--welcome-card-padding);
-      border: 1px solid var(--welcome-card-border);
-      border-radius: var(--welcome-card-radius);
-      box-shadow: var(--welcome-card-shadow);
-      backdrop-filter: blur(16px);
+      background: linear-gradient(180deg, rgba(7, 18, 36, 0.58), rgba(7, 18, 36, 0.28));
+      gap: 4px;
+      padding: 10px 16px;
     }
 
     .welcome-gate__identity {
@@ -511,12 +500,10 @@
     .welcome-gate__greeting {
       margin: 0 0 -10px;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(12px, 2.4vw, 14px);
-      font-weight: 800;
-      line-height: 1;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: #72d6ff;
+      font-size: clamp(27px, 6.4vw, 42px);
+      font-weight: 700;
+      line-height: 0.98;
+      color: rgba(239, 250, 255, 0.98);
       text-align: center;
       text-shadow: none;
     }
@@ -524,10 +511,9 @@
     .welcome-gate__display-name {
       margin: 0;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(36px, 8vw, 72px);
-      font-weight: 800;
-      line-height: 0.92;
-      letter-spacing: -0.05em;
+      font-size: clamp(50px, 11vw, 78px);
+      font-weight: 700;
+      line-height: 0.96;
       color: #ffffff;
       text-transform: capitalize;
       text-align: center;
@@ -579,20 +565,17 @@
     .welcome-gate__level-panel {
       align-self: stretch;
       gap: 10px;
-      width: min(92vw, 760px);
+      width: 100%;
       min-height: 0;
       height: auto;
-      padding: clamp(18px, 4vw, 30px);
+      padding: 0;
       margin-inline: auto;
-      place-self: center;
+      place-self: stretch;
       justify-items: center;
       align-content: center;
       margin-block: 0;
-      background: rgba(8, 14, 34, 0.86);
-      border: 1px solid rgba(148, 184, 255, 0.18);
-      border-radius: calc(var(--welcome-card-radius) + 6px);
-      box-shadow: var(--welcome-card-shadow);
-      backdrop-filter: blur(16px);
+      background: transparent;
+      box-shadow: none;
     }
 
     .welcome-gate__level-heading {
@@ -617,7 +600,7 @@
       place-items: center;
       align-content: center;
       justify-items: center;
-      gap: 18px;
+      gap: 10px;
       isolation: isolate;
       justify-self: center;
       margin-inline: auto;
@@ -631,12 +614,15 @@
       position: relative;
       order: 1;
       width: 100%;
-      max-width: 520px;
-      height: 14px;
+      max-width: 360px;
+      height: 12px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.09);
+      background: linear-gradient(180deg, rgba(2, 10, 24, 0.98), rgba(3, 15, 37, 0.98));
       overflow: hidden;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+      box-shadow:
+        inset 0 0 0 1px rgba(8, 22, 48, 0.72),
+        0 0 0 1.5px rgba(10, 45, 96, 0.95),
+        0 0 12px rgba(10, 130, 215, 0.18);
     }
 
     .welcome-gate__level-progress-bar::after {
@@ -644,10 +630,10 @@
       position: absolute;
       inset: 0 auto 0 0;
       width: var(--welcome-level-progress-pct);
-      background: linear-gradient(90deg, #18c8ff, #4f7cff, #9d7bff);
+      background: linear-gradient(90deg, #00cbff 0%, #38f4ff 100%);
       border-radius: inherit;
       transition: width 260ms ease;
-      box-shadow: 0 0 28px rgba(24, 200, 255, 0.45);
+      box-shadow: 0 0 14px rgba(30, 220, 255, 0.48);
     }
 
     .welcome-gate__level-inner {
@@ -716,22 +702,18 @@
     }
 
     .welcome-gate__energy {
-      width: min(92vw, 760px);
+      width: 100%;
       min-height: 0;
       height: auto;
-      justify-self: center;
       justify-items: center;
       align-content: center;
       gap: 10px;
       margin-top: clamp(52px, 10vh, 128px);
       color: #ffffff;
       text-align: center;
-      padding: var(--welcome-card-padding);
-      border: 1px solid var(--welcome-card-border);
-      border-radius: var(--welcome-card-radius);
-      background: var(--welcome-card-bg);
-      box-shadow: var(--welcome-card-shadow);
-      backdrop-filter: blur(16px);
+      padding: 10px 18px 12px;
+      background: transparent;
+      box-shadow: none;
     }
 
     .welcome-gate__energy-value {
@@ -762,20 +744,18 @@
     }
 
     .welcome-gate__energy-label {
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(14px, 2.6vw, 18px);
-      font-weight: 700;
-      line-height: 1.2;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #9fb1d2;
+      font-family: "Rajdhani", "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(16px, 3.6vw, 21px);
+      font-weight: 500;
+      line-height: 1;
+      color: rgba(255, 255, 255, 0.92);
     }
 
     .welcome-gate__energy .welcome-gate__level-progress-bar {
       order: 3;
-      max-width: 520px;
-      height: 14px;
-      background: rgba(255, 255, 255, 0.09);
+      max-width: 320px;
+      height: 10px;
+      background: linear-gradient(180deg, rgba(2, 10, 24, 0.98), rgba(3, 15, 37, 0.98));
     }
 
     .welcome-gate__loading {
@@ -1171,12 +1151,12 @@
       height: 100dvh;
       min-height: 100dvh;
       position: relative;
-      padding: 18px 18px 20px;
+      padding: 18px 18px 120px;
       display: grid;
       grid-template-rows: auto 1fr;
       align-content: stretch;
       justify-items: center;
-      gap: 12px;
+      gap: 18px;
       overflow: hidden;
       overflow-x: hidden;
       color: #f5fbff;
@@ -1217,55 +1197,49 @@
 
     .daily-plan-modal__hero {
       text-align: center;
-      margin: 8px 0 0;
+      margin: 12px 0 0;
       display: grid;
       align-content: center;
       justify-items: center;
-      gap: 0;
+      gap: 6px;
     }
 
     .daily-plan-modal__hero-pre {
-      color: #ffffff;
-      font-family: "Orbitron", sans-serif;
-      font-size: clamp(36px, 10vw, 54px);
-      letter-spacing: 0.08em;
-      font-weight: 900;
-      line-height: 0.88;
-      text-shadow: 0 0 22px rgba(255, 255, 255, 0.32);
+      color: #72d6ff;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: 800;
+      line-height: 1;
     }
 
     .daily-plan-modal__hero-main {
-      font-family: "Orbitron", sans-serif;
-      font-size: clamp(44px, 12vw, 64px);
-      letter-spacing: 0.09em;
-      font-weight: 900;
-      line-height: 0.95;
-      background: linear-gradient(180deg, #c9f4ff 0%, #2ed0ff 40%, #2d66ff 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      filter: drop-shadow(0 0 18px rgba(24, 200, 255, 0.62));
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(36px, 8vw, 72px);
+      letter-spacing: -0.05em;
+      font-weight: 800;
+      line-height: 0.92;
+      color: #ffffff;
     }
 
     .daily-plan-modal__card {
       position: relative;
       min-height: 0;
       height: auto;
-      width: min(70vw, 420px);
+      width: min(920px, 100%);
       max-width: calc(100vw - 42px);
-      background: linear-gradient(180deg, rgba(10, 24, 56, 0.86), rgba(3, 9, 24, 0.88));
-      border: 1px solid rgba(105, 190, 255, 0.32);
+      background: rgba(8, 14, 34, 0.86);
+      border: 1px solid rgba(130, 190, 255, 0.18);
       border-radius: 34px;
-      padding: 16px 16px 14px;
-      box-shadow:
-        0 0 0 1px rgba(70, 170, 255, 0.08) inset,
-        0 0 42px rgba(0, 163, 255, 0.18),
-        0 24px 80px rgba(0, 0, 0, 0.45);
+      padding: clamp(22px, 4vw, 34px);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+      backdrop-filter: blur(16px);
       overflow: hidden;
       display: grid;
-      grid-template-rows: auto auto auto;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       align-content: stretch;
-      gap: 6px;
+      gap: 14px;
     }
 
     .daily-plan-modal__card::before {
@@ -1273,19 +1247,13 @@
       position: absolute;
       inset: 0;
       border-radius: inherit;
-      border: 2px solid rgba(24, 200, 255, 0.28);
+      border: 1px solid rgba(255, 255, 255, 0.04);
       pointer-events: none;
-      filter: drop-shadow(0 0 14px rgba(24, 200, 255, 0.85));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
 
     .daily-plan-modal__card::after {
-      content: "";
-      position: absolute;
-      inset: -2px;
-      background: linear-gradient(110deg, transparent 0 40%, rgba(255, 255, 255, 0.12) 48%, transparent 56%);
-      transform: translateX(-80%);
-      animation: shine 5s infinite;
-      pointer-events: none;
+      display: none;
     }
 
     .daily-plan-modal__mission {
@@ -1293,15 +1261,18 @@
       grid-template-columns: 64px 1fr;
       gap: 12px;
       align-items: center;
-      padding: 2px 0 10px;
+      padding: 18px 16px;
       position: relative;
       z-index: 1;
       min-height: 0;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.055);
     }
 
     .daily-plan-modal__mission + .daily-plan-modal__mission {
-      border-top: 1px solid rgba(116, 185, 255, 0.26);
-      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 18px;
     }
 
     .daily-plan-modal__icon-ring {
@@ -1329,7 +1300,7 @@
 
     .daily-plan-modal__mission h2 {
       margin: 0;
-      font-size: 18px;
+      font-size: clamp(20px, 2.8vw, 30px);
       line-height: 1.08;
       font-weight: 900;
       letter-spacing: -0.02em;
@@ -1341,28 +1312,29 @@
 
     .daily-plan-modal__mission h2 span {
       display: inline;
-      color: #ff9a3d;
-      font-size: 18px;
+      color: #dfeaff;
+      font-size: inherit;
       margin-top: 0;
-      text-shadow: 0 0 14px rgba(255, 154, 61, 0.42);
+      text-shadow: none;
     }
 
     .daily-plan-modal__mission h2 .daily-plan-modal__mission-verb {
-      color: #ffffff;
+      color: #72d6ff;
       text-shadow: none;
     }
 
     .daily-plan-modal__mission.is-books h2 span {
-      color: #18c8ff;
-      text-shadow: 0 0 16px rgba(24, 200, 255, 0.45);
+      color: #dfeaff;
+      text-shadow: none;
     }
 
     .daily-plan-modal__counter {
-      font-family: "Orbitron", sans-serif;
-      font-size: 24px;
-      font-weight: 900;
-      letter-spacing: -0.05em;
-      margin: 6px 0 8px;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(34px, 6vw, 58px);
+      font-weight: 800;
+      letter-spacing: -0.08em;
+      line-height: 0.9;
+      margin: 10px 0 12px;
     }
 
     .daily-plan-modal__counter-done {
@@ -1376,61 +1348,62 @@
     }
 
     .daily-plan-modal__counter-total {
-      color: rgba(255, 255, 255, 0.78);
-      font-size: 0.62em;
+      color: #9fb1d2;
+      font-size: 0.42em;
     }
 
     .daily-plan-modal__bar {
-      height: 14px;
+      height: 22px;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(115, 180, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       overflow: hidden;
-      box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.45);
+      box-shadow: none;
     }
 
     .daily-plan-modal__fill {
       height: 100%;
       width: var(--progress, 0%);
       border-radius: inherit;
-      background: linear-gradient(90deg, #18c8ff, #8deeff);
-      box-shadow: 0 0 22px rgba(24, 200, 255, 0.72);
+      background: linear-gradient(90deg, #18c8ff, #4f7cff, #9d7bff);
+      box-shadow: 0 0 28px rgba(24, 200, 255, 0.45);
     }
 
     .daily-plan-modal__mission.is-books .daily-plan-modal__fill {
-      background: linear-gradient(90deg, #18c8ff, #7deeff);
-      box-shadow: 0 0 22px rgba(24, 200, 255, 0.72);
+      background: linear-gradient(90deg, #18c8ff, #4f7cff, #9d7bff);
+      box-shadow: 0 0 28px rgba(24, 200, 255, 0.45);
     }
 
     .daily-plan-modal__reward {
       margin-top: 0;
-      padding: 12px 14px;
-      border-radius: 22px;
-      background: rgba(5, 14, 34, 0.7);
-      border: 1px solid rgba(105, 190, 255, 0.18);
+      padding: 16px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(0, 163, 255, 0.14), rgba(157, 123, 255, 0.12));
+      border: 1px solid rgba(129, 203, 255, 0.22);
       display: grid;
       grid-template-columns: 1fr 58px;
       gap: 8px;
       align-items: center;
       position: relative;
       z-index: 1;
+      grid-column: 1 / -1;
     }
 
     .daily-plan-modal__reward small {
       display: block;
-      color: #18c8ff;
+      color: #72d6ff;
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.12em;
       margin-bottom: 6px;
-      font-size: 11px;
+      font-size: 13px;
     }
 
     .daily-plan-modal__reward strong {
       display: block;
-      font-size: 15px;
-      line-height: 1.2;
-      letter-spacing: 0.02em;
+      font-size: 16px;
+      line-height: 1.45;
+      letter-spacing: 0;
     }
 
     .daily-plan-modal__medal {
@@ -1447,12 +1420,12 @@
 
     @media (max-width: 380px) {
       .daily-plan-modal__panel { padding: 16px 14px 18px; gap: 10px; }
-      .daily-plan-modal__card { width: min(70vw, 340px); padding: 14px 12px 12px; }
+      .daily-plan-modal__card { width: min(100%, 340px); padding: 14px 12px 12px; grid-template-columns: 1fr; }
       .daily-plan-modal__mission { grid-template-columns: 56px 1fr; gap: 10px; }
       .daily-plan-modal__icon-ring { width: 56px; height: 56px; font-size: 26px; }
       .daily-plan-modal__mission h2 { font-size: 16px; gap: 6px; }
       .daily-plan-modal__mission h2 span { font-size: 16px; }
-      .daily-plan-modal__hero-pre { font-size: 34px; }
+      .daily-plan-modal__hero-pre { font-size: 12px; }
       .daily-plan-modal__hero-main { font-size: 42px; }
       .daily-plan-modal__counter { font-size: 22px; }
       .daily-plan-modal__reward strong { font-size: 14px; }
