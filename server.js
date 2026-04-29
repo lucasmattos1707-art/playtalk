@@ -200,6 +200,7 @@ const pool = (DATABASE_URL || DATABASE_CONFIG.host)
 let flashcardRankingsTableReadyPromise = null;
 let usersAvatarColumnReadyPromise = null;
 let flashcardUserStateTablesReadyPromise = null;
+let userDailyMissionStatsTableReadyPromise = null;
 let premiumAccessTablesReadyPromise = null;
 let speakingRealtimeTablesReadyPromise = null;
 let miniBookJsonTablesReadyPromise = null;
@@ -1836,6 +1837,152 @@ const ensureUserDailyEnergyStatsTable = async () => {
   return userDailyEnergyStatsReadyPromise;
 };
 
+const ensureUserDailyMissionStatsTable = async () => {
+  if (!pool) return false;
+
+  if (!userDailyMissionStatsTableReadyPromise) {
+    userDailyMissionStatsTableReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_daily_mission_stats (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          day_key date NOT NULL,
+          cards_today integer NOT NULL DEFAULT 0,
+          books_today integer NOT NULL DEFAULT 0,
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, day_key)
+        )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_daily_mission_stats
+        ADD COLUMN IF NOT EXISTS cards_today integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_daily_mission_stats
+        ADD COLUMN IF NOT EXISTS books_today integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_daily_mission_stats_day_idx
+        ON public.user_daily_mission_stats (day_key, updated_at DESC)
+      `);
+      return true;
+    })().catch((error) => {
+      userDailyMissionStatsTableReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return userDailyMissionStatsTableReadyPromise;
+};
+
+const readUserDailyMissionProgress = async (db, userId) => {
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    return { cardsToday: 0, booksToday: 0, dayKey: null };
+  }
+
+  const result = await db.query(
+    `SELECT
+       day_key,
+       cards_today,
+       books_today
+     FROM public.user_daily_mission_stats
+     WHERE user_id = $1
+       AND day_key = (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::date
+     LIMIT 1`,
+    [normalizedUserId]
+  );
+  const row = result.rows[0] || {};
+  return {
+    dayKey: row?.day_key || null,
+    cardsToday: Math.max(0, Number(row?.cards_today) || 0),
+    booksToday: Math.max(0, Number(row?.books_today) || 0)
+  };
+};
+
+const incrementUserDailyMissionProgress = async (db, userId, deltas = {}) => {
+  const normalizedUserId = Number.parseInt(userId, 10);
+  const cardsDelta = Math.max(0, Math.round(Number(deltas?.cardsDelta) || 0));
+  const booksDelta = Math.max(0, Math.round(Number(deltas?.booksDelta) || 0));
+
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    const error = new Error('Usuario invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await ensureUserDailyMissionStatsTable();
+
+  if (!cardsDelta && !booksDelta) {
+    return readUserDailyMissionProgress(db, normalizedUserId);
+  }
+
+  const result = await db.query(
+    `INSERT INTO public.user_daily_mission_stats (
+       user_id,
+       day_key,
+       cards_today,
+       books_today,
+       updated_at
+     ) VALUES (
+       $1,
+       (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::date,
+       $2,
+       $3,
+       now()
+     )
+     ON CONFLICT (user_id, day_key)
+     DO UPDATE SET
+       cards_today = public.user_daily_mission_stats.cards_today + EXCLUDED.cards_today,
+       books_today = public.user_daily_mission_stats.books_today + EXCLUDED.books_today,
+       updated_at = now()
+     RETURNING day_key, cards_today, books_today`,
+    [normalizedUserId, cardsDelta, booksDelta]
+  );
+  const row = result.rows[0] || {};
+  return {
+    dayKey: row?.day_key || null,
+    cardsToday: Math.max(0, Number(row?.cards_today) || 0),
+    booksToday: Math.max(0, Number(row?.books_today) || 0)
+  };
+};
+
+const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
+  if (!db) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+
+  await ensureUserDailyMissionStatsTable();
+  const user = typeof userOrId === 'object' && userOrId
+    ? userOrId
+    : await readUserById(userOrId);
+  if (!user?.id) {
+    const error = new Error('Usuario invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const targets = calculateDailyMissionTargetSnapshot(user);
+  const progress = await readUserDailyMissionProgress(db, user.id);
+  const cardsTarget = Math.max(0, Number(targets.cardsTarget) || 0);
+  const booksTarget = Math.max(0, Number(targets.booksTarget) || 0);
+  const cardsToday = Math.max(0, Number(progress.cardsToday) || 0);
+  const booksToday = Math.max(0, Number(progress.booksToday) || 0);
+
+  return {
+    dayKey: progress.dayKey,
+    isConfigured: Boolean(targets.isConfigured),
+    minutes: Math.max(0, Number(targets.minutes) || 0),
+    flashcardsPercentage: Math.max(0, Number(targets.flashcardsPercentage) || 0),
+    smartbooksPercentage: Math.max(0, Number(targets.smartbooksPercentage) || 0),
+    cardsTarget,
+    booksTarget,
+    cardsToday,
+    booksToday,
+    cardsRemaining: Math.max(0, cardsTarget - cardsToday),
+    booksRemaining: Math.max(0, booksTarget - booksToday)
+  };
+};
+
 const ensureEnergySettingsTable = async () => {
   if (!pool) return false;
 
@@ -2377,6 +2524,7 @@ const syncFlashcardRankingTableFromProgressCounts = async () => {
 
   await ensureUsersAvatarColumn();
   await ensureFlashcardUserStateTables();
+  await ensureUserDailyMissionStatsTable();
   await ensureFlashcardRankingsTable();
 
   const periodKeys = getFlashcardRankingPeriodKeys();
@@ -3584,14 +3732,21 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
        LIMIT 1`,
       [normalizedUserId]
     );
-    const existingProgressCountResult = await client.query(
-      `SELECT COUNT(*)::int AS total
+    const existingProgressResult = await client.query(
+      `SELECT card_id
        FROM public.user_flashcard_progress
        WHERE user_id = $1`,
       [normalizedUserId]
     );
-    const existingProgressCount = Math.max(0, Number(existingProgressCountResult.rows[0]?.total) || 0);
-    const shouldPersistPerformanceStats = progress.length > existingProgressCount;
+    const existingCardIds = new Set(
+      existingProgressResult.rows
+        .map((row) => typeof row?.card_id === 'string' ? row.card_id.trim() : '')
+        .filter(Boolean)
+    );
+    const cardsTodayDelta = progress.reduce((total, item) => (
+      item?.cardId && !existingCardIds.has(item.cardId) ? total + 1 : total
+    ), 0);
+    const shouldPersistPerformanceStats = progress.length > existingCardIds.size;
     const existingTrainingTimeMs = Math.max(0, Number(existingStatsResult.rows[0]?.training_time_ms) || 0);
     const accurateSamples = normalizeFlashcardPronunciationSamples(stats.pronunciationSamples);
     const accurateSum = accurateSamples.reduce((total, sample) => total + sample, 0);
@@ -3722,6 +3877,12 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
          WHERE user_id = $1`,
         [normalizedUserId]
       );
+    }
+
+    if (cardsTodayDelta > 0) {
+      await incrementUserDailyMissionProgress(client, normalizedUserId, {
+        cardsDelta: cardsTodayDelta
+      });
     }
 
     await client.query(
@@ -7812,6 +7973,7 @@ async function listAdminFlashcardDecks() {
       if (rightLevel === null) return -1;
       if (leftLevel !== rightLevel) return leftLevel - rightLevel;
     }
+
     return left.title.localeCompare(right.title, 'pt-BR', {
       sensitivity: 'base',
       numeric: true
@@ -9546,6 +9708,8 @@ const FLUENCY_PLAN_ALLOWED_MONTHS = new Set([3, 6, 9, 12, 18, 24]);
 const FLUENCY_PLAN_ALLOWED_APPLICATION = new Set([0, 1, 2]);
 const FLUENCY_PLAN_ALLOWED_BOOKS = new Set([0, 1]);
 const FLUENCY_PLAN_ALLOWED_PERCENTAGES = new Set(Array.from({ length: 21 }, (_, index) => index * 5));
+const DAILY_MISSION_FLASHCARD_MINUTES_PER_CARD = 1;
+const DAILY_MISSION_SMARTBOOK_MINUTES_PER_BOOK = 3;
 
 function normalizeFluencyPlanChoice(value, allowedValues) {
   const parsed = Number.parseInt(String(value ?? '').trim(), 10);
@@ -9604,6 +9768,47 @@ function calculateFluencyPlanScoreSnapshot(plan) {
     flashcardsPercentage: normalizedFlashcardsPercentage,
     smartbooksPercentage: normalizedSmartbooksPercentage,
     score: finalScore
+  };
+}
+
+function calculateDailyMissionTargetSnapshot(user) {
+  const minutes = readNullableInteger(user?.fluency_plan_minutes);
+  const flashcardsPercentage = readNullableInteger(user?.fluency_plan_flashcards_percentage);
+  const smartbooksPercentage = readNullableInteger(user?.fluency_plan_smartbooks_percentage);
+  const isConfigured = Number.isInteger(minutes)
+    && Number.isInteger(flashcardsPercentage)
+    && Number.isInteger(smartbooksPercentage)
+    && flashcardsPercentage >= 0
+    && smartbooksPercentage >= 0
+    && flashcardsPercentage + smartbooksPercentage === 100;
+
+  if (!isConfigured) {
+    return {
+      isConfigured: false,
+      minutes: minutes || 0,
+      flashcardsPercentage: flashcardsPercentage || 0,
+      smartbooksPercentage: smartbooksPercentage || 0,
+      cardsTarget: 0,
+      booksTarget: 0
+    };
+  }
+
+  const flashcardsMinutes = minutes * (flashcardsPercentage / 100);
+  const smartbooksMinutes = minutes * (smartbooksPercentage / 100);
+  const cardsTarget = flashcardsPercentage > 0
+    ? Math.max(1, Math.round(flashcardsMinutes / DAILY_MISSION_FLASHCARD_MINUTES_PER_CARD))
+    : 0;
+  const booksTarget = smartbooksPercentage > 0
+    ? Math.max(1, Math.round(smartbooksMinutes / DAILY_MISSION_SMARTBOOK_MINUTES_PER_BOOK))
+    : 0;
+
+  return {
+    isConfigured: true,
+    minutes,
+    flashcardsPercentage,
+    smartbooksPercentage,
+    cardsTarget,
+    booksTarget
   };
 }
 
@@ -12322,6 +12527,7 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
     await ensureUserBooksLibraryStatsTable();
     await ensureBooksSpeakingStatsTable();
     await ensureUserBooksConsumptionStatsTable();
+    await ensureUserDailyMissionStatsTable();
     const book = await findSpeakingBookById(bookId);
 
     const client = await pool.connect();
@@ -12385,6 +12591,10 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
           [userId, speakingChars]
         );
       }
+
+      await incrementUserDailyMissionProgress(client, userId, {
+        booksDelta: 1
+      });
 
       const totalsResult = await client.query(
         `SELECT COALESCE(SUM(reads_completed), 0)::int AS total_reads
@@ -12558,6 +12768,39 @@ app.get('/api/books/stats', async (req, res) => {
   } catch (error) {
     console.error('Erro ao carregar estatisticas de livros:', error);
     res.status(500).json({ success: false, message: 'Nao foi possivel carregar estatisticas agora.' });
+  }
+});
+
+app.get('/api/daily-plan', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const user = await readUserById(authUser.id);
+    const mission = await buildDailyMissionSnapshot(user, pool);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      success: true,
+      mission
+    });
+  } catch (error) {
+    console.error('Erro ao carregar missao diaria:', error);
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: statusCode === 400
+        ? 'Usuario invalido.'
+        : 'Nao foi possivel carregar a missao diaria.'
+    });
   }
 });
 
@@ -16003,9 +16246,6 @@ app.get(['/landing', '/landing/'], (req, res) => {
 });
 app.get(['/allcards', '/allcards/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'allcards.html'));
-});
-app.get(['/missao', '/missao/', '/missao.html'], (req, res) => {
-  res.sendFile(path.join(staticDir, 'missao.html'));
 });
 app.get(/^\/allcards\/([^/]+\.json)$/i, async (req, res, next) => {
   try {

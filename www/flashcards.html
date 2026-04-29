@@ -8508,8 +8508,8 @@
           <article class="daily-plan-modal__mission">
             <div class="daily-plan-modal__icon-ring">⚡</div>
             <div>
-              <h2>Ganhar <span>20 FlashCards</span></h2>
-              <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanFlashcardsDone">0</span><span class="daily-plan-modal__counter-total">/20</span></div>
+              <h2>Ganhar <span id="dailyPlanFlashcardsGoal">0 FlashCards</span></h2>
+              <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanFlashcardsDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanFlashcardsTotal">/0</span></div>
               <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill" id="dailyPlanFlashcardsBar" style="--progress: 0%"></div></div>
             </div>
           </article>
@@ -8517,8 +8517,8 @@
           <article class="daily-plan-modal__mission is-books">
             <div class="daily-plan-modal__icon-ring is-purple">📘</div>
             <div>
-              <h2>Ler <span>3 MiniBooks</span></h2>
-              <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanBooksDone">0</span><span class="daily-plan-modal__counter-total">/3</span></div>
+              <h2>Ler <span id="dailyPlanBooksGoal">0 MiniBooks</span></h2>
+              <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanBooksDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanBooksTotal">/0</span></div>
               <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill" id="dailyPlanBooksBar" style="--progress: 0%"></div></div>
             </div>
           </article>
@@ -9496,9 +9496,13 @@
         dailyPlanModal: document.getElementById('dailyPlanModal'),
         dailyPlanUserAvatar: document.getElementById('dailyPlanUserAvatar'),
         dailyPlanUserLevel: document.getElementById('dailyPlanUserLevel'),
+        dailyPlanFlashcardsGoal: document.getElementById('dailyPlanFlashcardsGoal'),
         dailyPlanFlashcardsDone: document.getElementById('dailyPlanFlashcardsDone'),
+        dailyPlanFlashcardsTotal: document.getElementById('dailyPlanFlashcardsTotal'),
         dailyPlanFlashcardsBar: document.getElementById('dailyPlanFlashcardsBar'),
+        dailyPlanBooksGoal: document.getElementById('dailyPlanBooksGoal'),
         dailyPlanBooksDone: document.getElementById('dailyPlanBooksDone'),
+        dailyPlanBooksTotal: document.getElementById('dailyPlanBooksTotal'),
         dailyPlanBooksBar: document.getElementById('dailyPlanBooksBar'),
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeLogo: document.getElementById('welcomeLogo'),
@@ -13799,7 +13803,7 @@
       }
 
       async function fetchDailyPlanBooksStats() {
-        const response = await fetch(buildApiUrl('/api/books/stats'), {
+        const response = await fetch(buildApiUrl('/api/daily-plan'), {
           headers: buildAuthHeaders(),
           cache: 'no-store',
           credentials: 'include'
@@ -13808,14 +13812,22 @@
         if (!response.ok || !payload?.success) {
           return null;
         }
-        return payload.stats || null;
+        return payload.mission || null;
       }
 
-      function setDailyPlanProgress(value, total, valueEl, barEl) {
+      function formatDailyPlanGoalLabel(count, singular, plural) {
+        const normalized = Math.max(0, Number(count) || 0);
+        return `${normalized} ${normalized === 1 ? singular : plural}`;
+      }
+
+      function setDailyPlanProgress(value, total, valueEl, totalEl, barEl) {
         const max = Math.max(1, Number(total) || 1);
         const normalized = Math.max(0, Math.min(max, Number(value) || 0));
         if (valueEl) {
           valueEl.textContent = String(normalized);
+        }
+        if (totalEl) {
+          totalEl.textContent = `/${Math.max(0, Number(total) || 0)}`;
         }
         if (barEl) {
           const percent = (normalized / max) * 100;
@@ -13837,13 +13849,19 @@
         if (els.dailyPlanUserLevel) {
           els.dailyPlanUserLevel.textContent = String(currentUserLevel());
         }
-        setDailyPlanProgress(state.userCards.size, 20, els.dailyPlanFlashcardsDone, els.dailyPlanFlashcardsBar);
-        const booksStats = await fetchDailyPlanBooksStats().catch(() => null);
-        const booksDone = Math.max(
-          0,
-          Math.min(3, Number(booksStats?.qualifiedBookCount) || Number(booksStats?.myBooksCount) || 0)
-        );
-        setDailyPlanProgress(booksDone, 3, els.dailyPlanBooksDone, els.dailyPlanBooksBar);
+        const mission = await fetchDailyPlanBooksStats().catch(() => null);
+        const cardsTarget = Math.max(0, Number(mission?.cardsTarget) || 0);
+        const booksTarget = Math.max(0, Number(mission?.booksTarget) || 0);
+        const cardsToday = Math.max(0, Number(mission?.cardsToday) || 0);
+        const booksToday = Math.max(0, Number(mission?.booksToday) || 0);
+        if (els.dailyPlanFlashcardsGoal) {
+          els.dailyPlanFlashcardsGoal.textContent = formatDailyPlanGoalLabel(cardsTarget, 'FlashCard', 'FlashCards');
+        }
+        if (els.dailyPlanBooksGoal) {
+          els.dailyPlanBooksGoal.textContent = formatDailyPlanGoalLabel(booksTarget, 'MiniBook', 'MiniBooks');
+        }
+        setDailyPlanProgress(cardsToday, cardsTarget, els.dailyPlanFlashcardsDone, els.dailyPlanFlashcardsTotal, els.dailyPlanFlashcardsBar);
+        setDailyPlanProgress(booksToday, booksTarget, els.dailyPlanBooksDone, els.dailyPlanBooksTotal, els.dailyPlanBooksBar);
       }
 
       function openDailyPlanModal() {
