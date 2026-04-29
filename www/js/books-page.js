@@ -106,10 +106,6 @@
     page: document.querySelector('.books-page'),
     homeBookBackgroundPrimary: document.getElementById('booksHomeBookBackgroundPrimary'),
     homeBookBackgroundSecondary: document.getElementById('booksHomeBookBackgroundSecondary'),
-    avatarImage: document.getElementById('booksAccountAvatarImage'),
-    avatarFallback: document.getElementById('booksAccountAvatarFallback'),
-    avatarName: document.getElementById('booksAccountName'),
-    homeGreeting: document.getElementById('booksHomeGreeting'),
     levelMenu: document.getElementById('booksLevelMenu'),
     adminUiToggleBtn: document.getElementById('booksAdminUiToggleBtn'),
     createBookBtn: document.getElementById('booksCreateBookBtn'),
@@ -1756,19 +1752,6 @@
     syncManualNoEnergyUi();
   }
 
-  function getHomeGreetingText() {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Bom dia';
-    if (hour < 18) return 'Boa tarde';
-    return 'Boa noite';
-  }
-
-  function renderHomeGreeting() {
-    if (els.homeGreeting) {
-      els.homeGreeting.textContent = getHomeGreetingText();
-    }
-  }
-
   function getFirstHomeBook() {
     const pool = getHomeBooksPool();
     if (!pool.length) return null;
@@ -1796,19 +1779,7 @@
   }
 
   function renderAvatar() {
-    if (!els.avatarImage || !els.avatarFallback) return;
-    const sourceProfile = state.user || state.localProfile || {};
-    const username = safeText(sourceProfile.username) || 'Jogador';
-    const avatar = safeText(sourceProfile.avatarImage);
-    const hasAvatar = Boolean(avatar);
-    if (els.avatarName) {
-      els.avatarName.textContent = splitBalancedLines(username);
-    }
-
-    els.avatarImage.src = hasAvatar ? avatar : DEFAULT_PROFILE_AVATAR;
-    els.avatarImage.hidden = false;
-    els.avatarFallback.hidden = true;
-    renderHomeGreeting();
+    // Header avatar/greeting was removed from the Books home player.
   }
 
   function sortByNome(left, right) {
