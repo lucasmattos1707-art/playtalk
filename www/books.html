@@ -1751,6 +1751,20 @@
       pointer-events: auto;
     }
 
+    #booksHomePanel.is-player-books .books-home-corner-btn--left {
+      position: fixed;
+      top: max(18px, env(safe-area-inset-top));
+      left: max(18px, env(safe-area-inset-left));
+      z-index: 320;
+    }
+
+    #booksHomePanel.is-player-books .books-home-sleep-toggle {
+      position: fixed;
+      top: max(18px, env(safe-area-inset-top));
+      right: max(18px, env(safe-area-inset-right));
+      z-index: 320;
+    }
+
     .toggle-container {
       position: absolute;
       width: 150px;

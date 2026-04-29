@@ -12296,6 +12296,24 @@ body.page-play #global-header .site-header__coins {
   min-width: 70px !important;
 }
 
+body.page-play:not(.play-inline-active):not(.pre-game-active):not(.pause-menu-active) #global-header .site-header__slot--left {
+  align-items: flex-start !important;
+}
+
+body.page-play:not(.play-inline-active):not(.pre-game-active):not(.pause-menu-active) #global-header .site-header__avatar-button {
+  transform: translateY(5dvh) !important;
+}
+
+body.page-play:not(.play-inline-active):not(.pre-game-active):not(.pause-menu-active) #global-header .site-header__slot--center,
+body.page-play:not(.play-inline-active):not(.pre-game-active):not(.pause-menu-active) #global-header .site-header__slot--right {
+  align-items: flex-start !important;
+}
+
+body.page-play:not(.play-inline-active):not(.pre-game-active):not(.pause-menu-active) #global-header .site-header__menu-button,
+body.page-play:not(.play-inline-active):not(.pre-game-active):not(.pause-menu-active) #global-header .site-header__coins {
+  transform: translateY(-10%) !important;
+}
+
 .page-footer,
 #main-nav {
   background: #000000 !important;
