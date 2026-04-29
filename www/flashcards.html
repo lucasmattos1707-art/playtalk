@@ -302,7 +302,7 @@
       min-height: 102dvh;
       position: relative;
       display: grid;
-      grid-template-rows: 10vh 7vh 6vh 29vh 13vh 12vh;
+      grid-template-rows: 11vh 7vh 6vh 24vh 11vh 11vh;
       justify-items: stretch;
       align-items: start;
       align-content: start;
@@ -310,7 +310,7 @@
       padding: 0;
       background: transparent;
       text-align: center;
-      border: 1px solid transparent;
+      border: 1px solid rgba(255, 255, 255, 0.96);
       outline: 0;
       box-shadow: none;
       margin: 0;
@@ -327,7 +327,7 @@
       width: 102vw;
       max-width: 102vw;
       min-width: 102vw;
-      border: 0;
+      border: 1px solid rgba(255, 255, 255, 0.96);
       outline: 0;
       box-shadow: none;
       margin: 0;
@@ -371,12 +371,16 @@
 
     .welcome-gate__topbar {
       width: 100%;
+      position: relative;
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-columns: 1fr;
       align-items: start;
-      gap: 12px;
-      padding: 10px 18px 0;
+      justify-items: center;
+      gap: 10px;
+      padding: 10px 18px 12px;
       box-sizing: border-box;
+      border: 1px solid rgba(255, 255, 255, 0.96);
+      border-radius: 18px;
     }
 
     .welcome-gate__header,
@@ -388,7 +392,8 @@
       display: grid;
       justify-items: center;
       overflow: hidden;
-      border: 1px solid transparent;
+      border: 1px solid rgba(255, 255, 255, 0.96);
+      border-radius: 18px;
       box-sizing: border-box;
     }
 
@@ -411,7 +416,7 @@
       box-shadow: none;
       text-align: center;
       justify-items: center;
-      border-radius: 0;
+      padding-inline: 12px;
     }
 
     .welcome-gate__header[hidden],
@@ -458,14 +463,15 @@
       align-content: center;
       background: transparent;
       gap: 2px;
-      padding-top: 0.8vh;
+      padding: 8px 14px;
     }
 
     .welcome-gate__identity {
       min-width: 0;
       display: grid;
-      gap: 2px;
-      justify-items: start;
+      gap: 8px;
+      justify-items: center;
+      text-align: center;
     }
 
     .welcome-gate__name-row {
@@ -491,34 +497,35 @@
     .welcome-gate__greeting {
       margin: 0;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(24px, 5vw, 34px);
+      font-size: clamp(40px, 9vw, 60px);
       font-weight: 700;
       line-height: 1;
       color: rgba(239, 250, 255, 0.98);
-      text-align: left;
+      text-align: center;
       text-shadow: none;
     }
 
     .welcome-gate__display-name {
       margin: 0;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(29px, 5.2vw, 41px);
+      font-size: clamp(46px, 10vw, 70px);
       font-weight: 700;
       line-height: 1;
       color: #ffffff;
       text-transform: capitalize;
-      text-align: left;
+      text-align: center;
       text-shadow: none;
     }
 
     .welcome-gate__avatar-row {
       position: relative;
       z-index: 2;
+      order: 3;
     }
 
     .welcome-gate__avatar {
-      width: clamp(62px, 8.2vh, 78px);
-      height: clamp(62px, 8.2vh, 78px);
+      width: clamp(86px, 12vh, 118px);
+      height: clamp(86px, 12vh, 118px);
       border-radius: 50%;
       position: relative;
       display: grid;
@@ -531,6 +538,7 @@
       box-shadow:
         inset 0 0 24px rgba(113, 225, 255, 0.12),
         0 0 18px rgba(76, 204, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.96);
     }
 
     .welcome-gate__avatar-aura {
@@ -550,32 +558,21 @@
 
     .welcome-gate__level-panel {
       align-self: stretch;
-      gap: 10px;
+      gap: 12px;
       width: 100%;
-      height: 31vh;
-      padding: 0;
+      min-height: 16vh;
+      height: 16vh;
+      padding: 12px 14px;
       margin-inline: auto;
       place-self: stretch;
       justify-items: center;
       align-content: center;
       margin-block: 0;
-      border-radius: 0;
       background: transparent;
     }
 
     .welcome-gate__level-heading {
-      margin: 0;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(18px, 3.8vw, 25px);
-      font-weight: 700;
-      line-height: 1;
-      color: rgba(239, 250, 255, 0.98);
-      text-align: center;
-      margin-bottom: 0;
-      display: grid;
-      place-items: center;
-      width: 100%;
-      height: 100%;
+      display: none;
     }
 
     .welcome-gate__level {
@@ -596,7 +593,7 @@
       place-items: center;
       align-content: center;
       justify-items: center;
-      gap: 14px;
+      gap: 10px;
       isolation: isolate;
       justify-self: center;
       margin-inline: auto;
@@ -608,9 +605,10 @@
 
     .welcome-gate__level-progress-bar {
       position: relative;
-      order: 2;
-      width: 80%;
-      height: 10px;
+      order: 1;
+      width: 100%;
+      max-width: 360px;
+      height: 12px;
       border-radius: 999px;
       background: linear-gradient(180deg, rgba(2, 10, 24, 0.98), rgba(3, 15, 37, 0.98));
       overflow: hidden;
@@ -633,13 +631,13 @@
 
     .welcome-gate__level-inner {
       position: relative;
-      order: 1;
+      order: 2;
       z-index: 1;
       display: grid;
       place-items: center;
       align-content: center;
       justify-items: center;
-      gap: 6px;
+      gap: 0;
       background: transparent;
       color: #ffffff;
       text-align: center;
@@ -647,29 +645,19 @@
 
     .welcome-gate__level-title {
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(14px, 2.4vw, 18px);
+      font-size: clamp(24px, 5vw, 34px);
       font-weight: 700;
-      line-height: 1;
+      line-height: 1.05;
       color: rgba(239, 250, 255, 0.98);
-      order: 1;
+      order: 2;
       display: block;
-      max-width: min(72vw, 320px);
+      max-width: min(80vw, 420px);
       white-space: normal;
       text-align: center;
     }
 
     .welcome-gate__level-number {
-      font-family: "Rajdhani", "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(117px, 26.4vw, 172px);
-      font-weight: 900;
-      line-height: 0.92;
-      letter-spacing: -0.08em;
-      color: #ffffff;
-      order: 2;
-      margin-bottom: 0;
-      text-shadow:
-        0 10px 26px rgba(0, 0, 0, 0.18),
-        0 0 18px rgba(135, 224, 255, 0.16);
+      display: none;
     }
 
     .welcome-gate__level-copy {
@@ -684,6 +672,9 @@
     }
 
     .welcome-gate__mission-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
       width: 44px;
       height: 44px;
       display: grid;
@@ -695,8 +686,8 @@
         0 0 0 1px rgba(191, 245, 255, 0.12) inset,
         0 0 16px rgba(21, 206, 255, 0.28),
         0 10px 22px rgba(1, 8, 18, 0.26);
-      justify-self: end;
-      align-self: start;
+      justify-self: auto;
+      align-self: auto;
     }
 
     .welcome-gate__mission-btn svg {
@@ -719,7 +710,6 @@
       margin-top: 0;
       color: #ffffff;
       text-align: center;
-      border-radius: 0;
       padding: 10px 18px;
       background: transparent;
     }
@@ -827,9 +817,10 @@
 
     .welcome-gate__start-btn {
       position: relative;
-      width: 100%;
-      min-height: 15vh;
-      height: 15vh;
+      width: 64%;
+      max-width: 260px;
+      min-height: 10vh;
+      height: 10vh;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -843,7 +834,8 @@
         filter: none;
         transition: transform 220ms ease;
       justify-self: center;
-      align-self: center;
+      align-self: start;
+      margin-top: 14px;
       transform: none;
       transform-origin: center;
       will-change: transform;
@@ -852,8 +844,8 @@
 
     .welcome-gate__start-btn img,
     .welcome-gate__start-btn .welcome-gate__start-image {
-      width: auto;
-      height: 100%;
+      width: 72%;
+      height: auto;
       max-height: 100%;
       max-width: 100%;
       display: block;
@@ -7924,7 +7916,7 @@
       }
 
       .welcome-gate__topbar {
-        padding: 12px 14px 0;
+        padding: 12px 14px 10px;
         gap: 10px;
       }
 
@@ -7949,8 +7941,8 @@
       }
 
       .welcome-gate__avatar {
-        width: clamp(58px, 17vw, 72px);
-        height: clamp(58px, 17vw, 72px);
+        width: clamp(84px, 22vw, 108px);
+        height: clamp(84px, 22vw, 108px);
       }
 
       .welcome-gate__mission-btn {
@@ -7960,6 +7952,8 @@
 
       .welcome-gate__level-panel {
         width: 100%;
+        min-height: 15vh;
+        height: 15vh;
       }
 
       .welcome-gate__level-orbit {
@@ -7967,8 +7961,8 @@
       }
 
       .welcome-gate__start-btn {
-        width: 100%;
-        max-width: 100%;
+        width: 64%;
+        max-width: 64%;
       }
 
       .premium-gate__grid {
