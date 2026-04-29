@@ -1335,6 +1335,14 @@
     loader.hide(key);
   }
 
+  function buildBookLoaderMetaItems(book) {
+    const items = getHomeBookMetaItems(book);
+    return items.map((item) => ({
+      icon: getHomeBookMetaIcon(item?.kind),
+      value: safeText(item?.value)
+    })).filter((item) => item.value);
+  }
+
   function renderShelfLoading() {
     if (els.shelfLoading) {
       els.shelfLoading.hidden = true;
@@ -2298,7 +2306,7 @@
       },
       {
         kind: 'level',
-        value: level ? `Voce esta no level ${level}` : 'Voce esta no level -'
+        value: level ? `Level ${level}` : 'Level -'
       }
     ];
   }
@@ -3856,12 +3864,14 @@
     if (els.preBookLoading) {
       els.preBookLoading.classList.remove('is-visible');
     }
+    window.PlaytalkLoader?.setMeta([]);
     toggleGlobalLoader('books-mode-start', false);
   }
 
   async function hideModeLoadingSmoothly() {
     if (!els.preBookLoading || !els.preBookLoading.classList.contains('is-visible')) return;
     els.preBookLoading.classList.remove('is-visible');
+    window.PlaytalkLoader?.setMeta([]);
     toggleGlobalLoader('books-mode-start', false);
     await wait(MODE_LOADING_FADE_MS);
   }
@@ -4359,6 +4369,7 @@
   function closePreBookModal(options) {
     const animate = !options || options.animate !== false;
     const shouldCancelStart = !options || options.cancelStart !== false;
+    window.PlaytalkLoader?.setMeta([]);
     toggleGlobalLoader('books-mode-start', false);
     if (shouldCancelStart) {
       state.modeStartToken += 1;
@@ -4682,6 +4693,8 @@
 
     if (!trackedPreparation.settled && els.preBookLoading) {
       els.preBookLoading.classList.add('is-visible');
+      const loader = window.PlaytalkLoader;
+      loader?.setMeta(buildBookLoaderMetaItems(selected));
       toggleGlobalLoader('books-mode-start', true, 'Preparando seu MiniBook');
       await wait(MODE_LOADING_FADE_MS);
       if (startToken !== state.modeStartToken) return;

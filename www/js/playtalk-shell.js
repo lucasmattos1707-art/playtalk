@@ -22,6 +22,7 @@
     shownAtByKey: new Map(),
     hideTimerByKey: new Map(),
     message: 'Preparando sua jornada',
+    metaItems: [],
     tipIndex: 0,
     tipTimer: 0
   };
@@ -211,6 +212,38 @@
         margin-top: 44px;
       }
 
+      .playtalk-loader__meta {
+        width: min(320px, 100%);
+        margin-top: 24px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .playtalk-loader__meta[hidden] {
+        display: none !important;
+      }
+
+      .playtalk-loader__meta-row {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        color: rgba(224, 241, 255, 0.92);
+        font-family: "Exo 2", "Segoe UI", sans-serif;
+        font-size: clamp(13.5px, 2.9vw, 18px);
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: none;
+      }
+
+      .playtalk-loader__meta-row svg {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+        color: #8deeff;
+        filter: drop-shadow(0 0 10px rgba(24, 200, 255, 0.4));
+      }
+
       .playtalk-loader__progress-head {
         display: flex;
         justify-content: space-between;
@@ -316,6 +349,7 @@
           <span class="playtalk-loader__tip-line"></span>
           <span class="playtalk-loader__tip-line"></span>
         </div>
+        <div class="playtalk-loader__meta" id="playtalkLoaderMeta" hidden></div>
         <section class="playtalk-loader__progress" aria-label="Carregando">
           <div class="playtalk-loader__progress-head">
             <span class="playtalk-loader__message" id="playtalkLoaderMessage"></span>
@@ -357,8 +391,19 @@
     const visible = loaderState.activeKeys.size > 0;
     const message = String(loaderState.message || 'Preparando sua jornada').trim() || 'Preparando sua jornada';
     const messageEl = root.querySelector('#playtalkLoaderMessage');
+    const metaEl = root.querySelector('#playtalkLoaderMeta');
     if (messageEl) {
       messageEl.textContent = message;
+    }
+    if (metaEl) {
+      const safeItems = Array.isArray(loaderState.metaItems) ? loaderState.metaItems.filter(Boolean) : [];
+      metaEl.hidden = safeItems.length === 0;
+      metaEl.innerHTML = safeItems.map((item) => {
+        const icon = String(item?.icon || '').trim();
+        const value = String(item?.value || '').trim();
+        if (!value) return '';
+        return `<div class="playtalk-loader__meta-row">${icon}${value}</div>`;
+      }).join('');
     }
     root.hidden = !visible;
     root.classList.toggle('is-visible', visible);
@@ -391,6 +436,11 @@
     const nextOptions = options && typeof options === 'object' ? options : {};
     if (nextOptions.message) {
       loaderState.message = String(nextOptions.message);
+    }
+    if (Array.isArray(nextOptions.metaItems)) {
+      loaderState.metaItems = nextOptions.metaItems;
+    } else if (nextOptions.clearMeta) {
+      loaderState.metaItems = [];
     }
     clearHideTimer(normalizedKey);
     if (!loaderState.activeKeys.has(normalizedKey)) {
@@ -427,6 +477,11 @@
     renderLoader();
   }
 
+  function setLoaderMeta(metaItems) {
+    loaderState.metaItems = Array.isArray(metaItems) ? metaItems : [];
+    renderLoader();
+  }
+
   function resetLoader() {
     loaderState.hideTimerByKey.forEach((timerId) => {
       window.clearTimeout(timerId);
@@ -434,6 +489,7 @@
     loaderState.hideTimerByKey.clear();
     loaderState.activeKeys.clear();
     loaderState.shownAtByKey.clear();
+    loaderState.metaItems = [];
     renderLoader();
   }
 
@@ -442,6 +498,7 @@
     show: showLoader,
     hide: hideLoader,
     setMessage: setLoaderMessage,
+    setMeta: setLoaderMeta,
     reset: resetLoader,
     isVisible(key) {
       if (key == null) return loaderState.activeKeys.size > 0;
