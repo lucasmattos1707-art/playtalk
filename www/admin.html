@@ -155,6 +155,85 @@
       outline: none;
     }
 
+    .admin-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-radius: 20px;
+      padding: 16px 18px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .admin-toggle-copy strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .admin-toggle-copy span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .admin-toggle-switch {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 68px;
+      height: 38px;
+      flex-shrink: 0;
+    }
+
+    .admin-toggle-switch input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .admin-toggle-switch span {
+      position: relative;
+      display: block;
+      width: 68px;
+      height: 38px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      transition: background 0.18s ease, border-color 0.18s ease;
+    }
+
+    .admin-toggle-switch span::after {
+      content: '';
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #f6fbff;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.26);
+      transition: transform 0.18s ease;
+    }
+
+    .admin-toggle-switch input:checked + span {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+      border-color: transparent;
+    }
+
+    .admin-toggle-switch input:checked + span::after {
+      transform: translateX(30px);
+    }
+
+    .admin-toggle-switch input:disabled + span {
+      opacity: 0.55;
+      cursor: wait;
+    }
+
     .admin-field small {
       color: var(--muted);
       font-size: 13px;
@@ -292,6 +371,27 @@
     </section>
 
     <section class="admin-card" style="margin-top:18px;">
+      <h2>Modos extras do welcome</h2>
+      <p class="admin-card-copy">Os quatro modos do welcome gate continuam sempre visiveis para admin. Aqui voce decide se os usuarios comuns tambem podem ver e abrir esses modos.</p>
+      <form class="admin-form" id="adminWelcomeModesForm">
+        <label class="admin-toggle-row" for="adminWelcomeModesUsersEnabled">
+          <div class="admin-toggle-copy">
+            <strong>Liberar para usuarios</strong>
+            <span>Quando desligado, os quatro modos especiais somem do welcome para quem nao for admin.</span>
+          </div>
+          <span class="admin-toggle-switch">
+            <input id="adminWelcomeModesUsersEnabled" name="usersEnabled" type="checkbox">
+            <span aria-hidden="true"></span>
+          </span>
+        </label>
+        <div class="admin-topbar-actions">
+          <button class="admin-btn" id="adminWelcomeModesSaveBtn" type="submit">Salvar modos</button>
+        </div>
+      </form>
+      <div class="admin-status" id="adminWelcomeModesStatus" aria-live="polite"></div>
+    </section>
+
+    <section class="admin-card" style="margin-top:18px;">
       <h2>Resumo rapido</h2>
       <ul class="admin-facts">
         <li class="admin-fact">
@@ -302,12 +402,16 @@
           <strong>Limite atual</strong>
           <span id="adminFactLimit">5.000 energias</span>
         </li>
+        <li class="admin-fact">
+          <strong>Modos extras para usuarios</strong>
+          <span id="adminFactWelcomeModes">Desligados</span>
+        </li>
       </ul>
     </section>
   </main>
 
   <script src="js/api-config.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/admin-page.js?v=20260428a"></script>
+  <script src="js/admin-page.js?v=20260428b"></script>
 </body>
 </html>

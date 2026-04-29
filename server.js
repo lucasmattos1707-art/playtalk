@@ -17,19 +17,6 @@ const {
 } = require('@aws-sdk/client-s3');
 const app = express();
 
-const corsOptions = {
-  origin(origin, callback) {
-    if (!origin) {
-      callback(null, true);
-      return;
-    }
-    callback(null, true);
-  },
-  credentials: true
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 const PORT = process.env.PORT || 3000;
 const env = (value) => (typeof value === 'string' ? value.trim() : value);
 
@@ -81,6 +68,7 @@ const OPENAI_STORY_MODEL = env(process.env.OPENAI_STORY_MODEL) || 'gpt-5.4-nano'
 const OPENAI_TTS_MODEL = env(process.env.OPENAI_TTS_MODEL) || 'gpt-4o-mini-tts';
 const OPENAI_STT_MODEL = env(process.env.OPENAI_STT_MODEL) || 'gpt-4o-mini-transcribe';
 const OPENAI_CHAT_FAST_MODEL = env(process.env.OPENAI_CHAT_FAST_MODEL) || 'gpt-5-mini';
+const OPENAI_USERNAME_REVIEW_MODEL = env(process.env.OPENAI_USERNAME_REVIEW_MODEL) || 'gpt-4.1';
 const OPENAI_CHAT_ALLOWED_MODELS = new Set([
   'gpt-5-nano',
   'gpt-5-mini',
@@ -92,6 +80,61 @@ const OPENAI_CHAT_ALLOWED_MODELS = new Set([
 const PLAYTALK_PUBLIC_BASE_URL = env(process.env.PLAYTALK_PUBLIC_BASE_URL);
 const STRIPE_SECRET_KEY = env(process.env.STRIPE_SECRET_KEY);
 const STRIPE_PUBLISHABLE_KEY = env(process.env.STRIPE_PUBLISHABLE_KEY);
+const ALLOWED_CORS_ORIGINS = String(process.env.ALLOWED_CORS_ORIGINS || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+const buildAllowedCorsOrigins = () => {
+  const allowed = new Set([
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost',
+    'http://127.0.0.1',
+    'capacitor://localhost',
+    'ionic://localhost'
+  ]);
+
+  if (PLAYTALK_PUBLIC_BASE_URL) {
+    try {
+      allowed.add(new URL(PLAYTALK_PUBLIC_BASE_URL).origin);
+    } catch (_error) {
+      // Ignore invalid public base URL configuration.
+    }
+  }
+
+  ALLOWED_CORS_ORIGINS.forEach((origin) => allowed.add(origin));
+  return allowed;
+};
+
+const ALLOWED_CORS_ORIGIN_SET = buildAllowedCorsOrigins();
+
+const isAllowedCorsOrigin = (origin) => {
+  if (!origin) return true;
+  if (ALLOWED_CORS_ORIGIN_SET.has(origin)) return true;
+
+  try {
+    const parsed = new URL(origin);
+    const hostname = String(parsed.hostname || '').toLowerCase();
+    return hostname === 'localhost' || hostname === '127.0.0.1';
+  } catch (_error) {
+    return false;
+  }
+};
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (isAllowedCorsOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('Origin not allowed by CORS'));
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 const DATABASE_CONFIG = DATABASE_URL
   ? {
@@ -151,6 +194,7 @@ let userBooksConsumptionStatsReadyPromise = null;
 let userDailyEnergyStatsReadyPromise = null;
 let usersPresenceClassReadyPromise = null;
 let energySettingsReadyPromise = null;
+let welcomeModeSettingsReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
 let speakingCardsCache = {
@@ -162,6 +206,10 @@ let adminMiniBooksSummaryCache = {
   updatedAt: 0
 };
 let energySettingsCache = {
+  value: null,
+  updatedAt: 0
+};
+let welcomeModeSettingsCache = {
   value: null,
   updatedAt: 0
 };
@@ -185,6 +233,8 @@ const FLASHCARD_RANKING_TIMEZONE = 'America/Sao_Paulo';
 const DEFAULT_DAILY_FREE_ENERGY_LIMIT = 5000;
 const DEFAULT_ENERGY_COST_MULTIPLIER_MILLI = 1000;
 const ENERGY_SETTINGS_CACHE_TTL_MS = 30 * 1000;
+const DEFAULT_WELCOME_GAME_MODES_FOR_USERS_ENABLED = false;
+const WELCOME_MODE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
@@ -699,6 +749,24 @@ const buildEnergySettingsSnapshot = (row = {}) => {
 const rememberEnergySettings = (settings) => {
   const snapshot = buildEnergySettingsSnapshot(settings);
   energySettingsCache = {
+    value: snapshot,
+    updatedAt: Date.now()
+  };
+  return snapshot;
+};
+
+const buildWelcomeModeSettingsSnapshot = (row = {}) => ({
+  usersEnabled: Boolean(
+    row?.users_enabled
+    ?? row?.usersEnabled
+    ?? row?.welcome_game_modes_enabled_for_users
+    ?? DEFAULT_WELCOME_GAME_MODES_FOR_USERS_ENABLED
+  )
+});
+
+const rememberWelcomeModeSettings = (settings) => {
+  const snapshot = buildWelcomeModeSettingsSnapshot(settings);
+  welcomeModeSettingsCache = {
     value: snapshot,
     updatedAt: Date.now()
   };
@@ -1789,6 +1857,41 @@ const ensureEnergySettingsTable = async () => {
   return energySettingsReadyPromise;
 };
 
+const ensureWelcomeModeSettingsTable = async () => {
+  if (!pool) return false;
+
+  if (!welcomeModeSettingsReadyPromise) {
+    welcomeModeSettingsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.app_welcome_mode_settings (
+          singleton_key text PRIMARY KEY,
+          users_enabled boolean NOT NULL DEFAULT ${DEFAULT_WELCOME_GAME_MODES_FOR_USERS_ENABLED ? 'true' : 'false'},
+          updated_by_user_id integer REFERENCES public.users(id) ON DELETE SET NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        INSERT INTO public.app_welcome_mode_settings (
+          singleton_key,
+          users_enabled
+        )
+        VALUES (
+          'default',
+          ${DEFAULT_WELCOME_GAME_MODES_FOR_USERS_ENABLED ? 'true' : 'false'}
+        )
+        ON CONFLICT (singleton_key) DO NOTHING
+      `);
+      return true;
+    })().catch((error) => {
+      welcomeModeSettingsReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return welcomeModeSettingsReadyPromise;
+};
+
 async function getEnergySettings(options = {}) {
   const force = Boolean(options?.force);
   if (!pool) {
@@ -1810,6 +1913,29 @@ async function getEnergySettings(options = {}) {
      LIMIT 1`
   );
   return rememberEnergySettings(result.rows[0] || {});
+}
+
+async function getWelcomeModeSettings(options = {}) {
+  const force = Boolean(options?.force);
+  if (!pool) {
+    return buildWelcomeModeSettingsSnapshot({});
+  }
+  if (
+    !force
+    && welcomeModeSettingsCache.value
+    && (Date.now() - welcomeModeSettingsCache.updatedAt) < WELCOME_MODE_SETTINGS_CACHE_TTL_MS
+  ) {
+    return welcomeModeSettingsCache.value;
+  }
+
+  await ensureWelcomeModeSettingsTable();
+  const result = await pool.query(
+    `SELECT users_enabled
+     FROM public.app_welcome_mode_settings
+     WHERE singleton_key = 'default'
+     LIMIT 1`
+  );
+  return rememberWelcomeModeSettings(result.rows[0] || {});
 }
 
 async function updateEnergySettings(db, values = {}, updatedByUserId = null) {
@@ -1843,6 +1969,37 @@ async function updateEnergySettings(db, values = {}, updatedByUserId = null) {
   return rememberEnergySettings(result.rows[0] || {
     daily_free_energy_limit: dailyFreeEnergyLimit,
     energy_cost_multiplier_milli: energyCostMultiplierMilli
+  });
+}
+
+async function updateWelcomeModeSettings(db, values = {}, updatedByUserId = null) {
+  const executor = db && typeof db.query === 'function' ? db : pool;
+  if (!executor) {
+    return buildWelcomeModeSettingsSnapshot(values);
+  }
+
+  const usersEnabled = Boolean(values?.usersEnabled);
+
+  await ensureWelcomeModeSettingsTable();
+  const result = await executor.query(
+    `INSERT INTO public.app_welcome_mode_settings (
+       singleton_key,
+       users_enabled,
+       updated_by_user_id,
+       updated_at
+     )
+     VALUES ('default', $1, $2, now())
+     ON CONFLICT (singleton_key)
+     DO UPDATE SET
+       users_enabled = EXCLUDED.users_enabled,
+       updated_by_user_id = EXCLUDED.updated_by_user_id,
+       updated_at = now()
+     RETURNING users_enabled`,
+    [usersEnabled, Number(updatedByUserId) || null]
+  );
+
+  return rememberWelcomeModeSettings(result.rows[0] || {
+    users_enabled: usersEnabled
   });
 }
 
@@ -9114,6 +9271,81 @@ function normalizeUsername(raw) {
   return value.slice(0, 32);
 }
 
+function getClientIp(req) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').trim();
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return String(req.socket?.remoteAddress || req.ip || '').trim() || 'unknown';
+}
+
+const AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const AUTH_RATE_LIMIT_MAX_ATTEMPTS = 8;
+const AUTH_RATE_LIMIT_BLOCK_MS = 15 * 60 * 1000;
+const authRateLimitStore = new Map();
+
+function consumeAuthRateLimit(req, bucketLabel = '') {
+  const now = Date.now();
+  const key = `${getClientIp(req)}::${String(bucketLabel || '').trim().toLowerCase() || 'default'}`;
+  const existing = authRateLimitStore.get(key);
+  if (existing?.blockedUntil && existing.blockedUntil > now) {
+    return {
+      blocked: true,
+      retryAfterSeconds: Math.max(1, Math.ceil((existing.blockedUntil - now) / 1000)),
+      key
+    };
+  }
+
+  const attempts = Array.isArray(existing?.attempts)
+    ? existing.attempts.filter((timestamp) => now - timestamp < AUTH_RATE_LIMIT_WINDOW_MS)
+    : [];
+  attempts.push(now);
+
+  const nextEntry = {
+    attempts,
+    blockedUntil: 0
+  };
+  if (attempts.length > AUTH_RATE_LIMIT_MAX_ATTEMPTS) {
+    nextEntry.blockedUntil = now + AUTH_RATE_LIMIT_BLOCK_MS;
+  }
+
+  authRateLimitStore.set(key, nextEntry);
+  return {
+    blocked: nextEntry.blockedUntil > now,
+    retryAfterSeconds: nextEntry.blockedUntil > now
+      ? Math.max(1, Math.ceil((nextEntry.blockedUntil - now) / 1000))
+      : 0,
+    key
+  };
+}
+
+function clearAuthRateLimit(req, bucketLabel = '') {
+  const key = `${getClientIp(req)}::${String(bucketLabel || '').trim().toLowerCase() || 'default'}`;
+  authRateLimitStore.delete(key);
+}
+
+function isValidPassword(password) {
+  return typeof password === 'string' && password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
+}
+
+function buildPasswordValidationMessage(password, username = '') {
+  const value = typeof password === 'string' ? password : '';
+  if (value.length < 8) {
+    return 'Use pelo menos 8 caracteres na senha.';
+  }
+  if (!/[A-Za-z]/.test(value) || !/\d/.test(value)) {
+    return 'Use uma senha com letras e numeros.';
+  }
+
+  const compactUsername = String(username || '').replace(/\s+/g, '').toLowerCase();
+  const compactPassword = value.replace(/\s+/g, '').toLowerCase();
+  if (compactUsername && compactUsername.length >= 3 && compactPassword.includes(compactUsername)) {
+    return 'Nao use o proprio nome de usuario dentro da senha.';
+  }
+
+  return '';
+}
+
 function isValidUsername(username) {
   if (!username) return false;
   return /^[a-zA-Z0-9._ -]{3,32}$/.test(username);
@@ -9126,13 +9358,240 @@ function buildLegacyEmailFromUsername(username) {
     .toLowerCase();
 }
 
-function buildBotLoginPassword(username) {
-  return `sww+${buildLegacyEmailFromUsername(username)}`;
+function buildStrongRandomSecret(length = 18) {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%*_-+=';
+  const bytes = crypto.randomBytes(Math.max(16, length * 2));
+  let output = '';
+  for (let index = 0; index < bytes.length && output.length < length; index += 1) {
+    output += alphabet[bytes[index] % alphabet.length];
+  }
+  return output;
+}
+
+function buildBotLoginPassword() {
+  let password = '';
+  do {
+    password = buildStrongRandomSecret(18);
+  } while (buildPasswordValidationMessage(password));
+  return password;
 }
 
 function buildRandomUserSuffix(length = 8) {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
   return Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+}
+
+const RESERVED_USERNAME_SET = new Set(['admin', 'adm', 'adminst', 'support', 'suporte', 'moderator', 'mod']);
+const USERNAME_PROFANITY_PATTERN = /\b(?:fuck|foda|foder|porra|caralho|buceta|puta|piranha|viado|viad[oa]|gayzinha|retardad[oa]|idiota|otari[oa]|babaca|corno|fdp|puta[o]?|sexo|sexual|nude|nudes|onlyfans|whore|slut|bitch|asshole|penis|pinto|piroca|rola|xota|cu)\b/i;
+const USERNAME_CONTACT_PATTERN = /(?:@|https?:\/\/|www\.|\.com\b|\.net\b|gmail\b|hotmail\b|outlook\b|yahoo\b|telegram\b|t\.me\b|discord\b|whatsapp\b|whats\b|zap\b|insta\b|instagram\b)|(?:\+?\d[\d\s()._-]{7,}\d)/i;
+const USERNAME_CONTACT_SEEKING_PATTERN = /\b(?:me chama|chama no|fala comigo|fale comigo|call me|text me|dm me|manda msg|manda mensagem|me manda|zap|whats|whatsapp|telegram|discord|insta|instagram|contato|numero|number)\b/i;
+const USERNAME_HARASSMENT_PATTERN = /\b(?:te amo|love you|saudade|miss you|minha princesa|minha rainha|gostosa|gostoso|delicia|tesao|tesuda|hot girl|hot boy|quer casar|quer namorar|odia|odeio|te odeio|vou te pegar)\b/i;
+
+function analyzeUsernameLocally(username) {
+  const normalized = String(username || '').trim();
+  const compact = normalized.replace(/[\s._-]+/g, '').toLowerCase();
+  const categories = new Set();
+  const reasons = [];
+
+  if (!normalized) {
+    return {
+      allowed: false,
+      categories: ['empty'],
+      reasons: ['Nome vazio.']
+    };
+  }
+
+  if (RESERVED_USERNAME_SET.has(compact)) {
+    categories.add('reserved_name');
+    reasons.push('Esse nome e reservado.');
+  }
+  if (USERNAME_PROFANITY_PATTERN.test(normalized)) {
+    categories.add('profanity_or_double_meaning');
+    reasons.push('O nome parece conter palavrao, provocacao ou duplo sentido.');
+  }
+  if (USERNAME_CONTACT_PATTERN.test(normalized)) {
+    categories.add('contact_info');
+    reasons.push('O nome parece conter contato, rede social, link ou numero.');
+  }
+  if (USERNAME_CONTACT_SEEKING_PATTERN.test(normalized)) {
+    categories.add('contact_seeking');
+    reasons.push('O nome parece tentar puxar conversa ou pedir contato.');
+  }
+  if (USERNAME_HARASSMENT_PATTERN.test(normalized)) {
+    categories.add('harassment_or_personal_expression');
+    reasons.push('O nome parece transmitir assedio, flerte ou manifestacao pessoal.');
+  }
+
+  const alphaOnly = compact.replace(/[^a-z]/g, '');
+  const digitOnly = compact.replace(/\D/g, '');
+  if (
+    compact.length >= 10
+    && (
+      (digitOnly.length >= 5 && alphaOnly.length <= 4)
+      || /^[a-z0-9]{12,}$/i.test(compact) && !/[aeiou]/i.test(alphaOnly)
+      || /(?:[a-z]\d){4,}|(?:\d[a-z]){4,}/i.test(compact)
+    )
+  ) {
+    categories.add('random_code');
+    reasons.push('O nome parece codigo aleatorio ou identificador estranho.');
+  }
+
+  return {
+    allowed: categories.size === 0,
+    categories: Array.from(categories),
+    reasons
+  };
+}
+
+function buildUsernamePolicyMessage(review) {
+  const categories = Array.isArray(review?.categories) ? review.categories : [];
+  if (categories.includes('contact_info') || categories.includes('contact_seeking')) {
+    return 'Escolha um nome sem contato, rede social, link, numero ou convite para conversa.';
+  }
+  if (categories.includes('profanity_or_double_meaning')) {
+    return 'Escolha um nome sem palavrao, provocacao ou duplo sentido.';
+  }
+  if (categories.includes('harassment_or_personal_expression')) {
+    return 'Escolha um nome neutro, sem assedio, flerte ou recado pessoal.';
+  }
+  if (categories.includes('random_code')) {
+    return 'Escolha um nome mais natural e legivel, sem cara de codigo aleatorio.';
+  }
+  if (categories.includes('reserved_name')) {
+    return 'Esse nome e reservado. Escolha outro.';
+  }
+  return 'Escolha um nome mais apropriado para o perfil.';
+}
+
+async function reviewUsernameWithOpenAI(username) {
+  if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
+    return null;
+  }
+
+  const schema = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['allow', 'categories', 'reason', 'confidence'],
+    properties: {
+      allow: { type: 'boolean' },
+      categories: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: [
+            'safe',
+            'profanity_or_double_meaning',
+            'contact_info',
+            'random_code',
+            'contact_seeking',
+            'harassment_or_personal_expression'
+          ]
+        }
+      },
+      reason: { type: 'string' },
+      confidence: { type: 'number' }
+    }
+  };
+
+  const prompt = [
+    'You are reviewing a username for a language-learning app.',
+    'Allow only usernames that are neutral, nickname-like, and safe for a public profile.',
+    'Reject usernames that contain profanity, sexual double meaning, contact info, attempts to provoke contact, harassment, personal declarations, or random code-like gibberish.',
+    'Treat phone numbers, emails, social handles, links, and messaging invites as contact info.',
+    'Treat flirty, romantic, explicit, insulting, threatening, or highly personal names as harassment_or_personal_expression unless profanity_or_double_meaning is more direct.',
+    'Treat unreadable or identifier-like strings as random_code.',
+    'Return allow=true only when the username is clearly acceptable.',
+    `Username: ${JSON.stringify(String(username || ''))}`
+  ].join('\n');
+
+  const upstreamResponse = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: OPENAI_USERNAME_REVIEW_MODEL,
+      input: prompt,
+      max_output_tokens: 220,
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'username_review',
+          strict: true,
+          schema
+        }
+      }
+    })
+  });
+
+  const responseText = await upstreamResponse.text();
+  let payload = null;
+  try {
+    payload = responseText ? JSON.parse(responseText) : null;
+  } catch (_error) {
+    payload = null;
+  }
+
+  if (!upstreamResponse.ok) {
+    const error = new Error(payload?.error?.message || responseText.slice(0, 500) || 'Falha ao revisar username com a OpenAI.');
+    error.statusCode = upstreamResponse.status || 502;
+    throw error;
+  }
+
+  const outputText = extractResponseText(payload);
+  const parsed = parseModelJsonText(outputText);
+  if (!parsed || typeof parsed !== 'object') {
+    return null;
+  }
+
+  return {
+    allowed: Boolean(parsed.allow),
+    categories: Array.isArray(parsed.categories)
+      ? parsed.categories.map((value) => String(value || '').trim()).filter(Boolean)
+      : [],
+    reason: String(parsed.reason || '').trim(),
+    confidence: Number(parsed.confidence) || 0
+  };
+}
+
+async function validateUsernameForPublicAuth(username) {
+  const normalized = normalizeUsername(username);
+  if (!isValidUsername(normalized)) {
+    return {
+      allowed: false,
+      categories: ['invalid_format'],
+      message: 'Use de 3 a 32 caracteres com letras, numeros, espaco, ponto, tracinho ou underscore.'
+    };
+  }
+
+  const localReview = analyzeUsernameLocally(normalized);
+  if (!localReview.allowed) {
+    return {
+      allowed: false,
+      categories: localReview.categories,
+      message: buildUsernamePolicyMessage(localReview)
+    };
+  }
+
+  try {
+    const aiReview = await reviewUsernameWithOpenAI(normalized);
+    if (aiReview && !aiReview.allowed) {
+      return {
+        allowed: false,
+        categories: aiReview.categories,
+        message: buildUsernamePolicyMessage(aiReview)
+      };
+    }
+  } catch (error) {
+    console.warn('Falha ao revisar username com GPT-4.1, seguindo com heuristica local:', error?.message || error);
+  }
+
+  return {
+    allowed: true,
+    categories: ['safe'],
+    message: ''
+  };
 }
 
 async function generateAvailableUsername(basePrefix = 'USER') {
@@ -9470,9 +9929,26 @@ app.post('/register', async (req, res) => {
     }
     const username = normalizeUsername(req.body.username || req.body.email);
     const password = typeof req.body.password === 'string' ? req.body.password : '';
+    const rateLimit = consumeAuthRateLimit(req, `register:${username}`);
+    if (rateLimit.blocked) {
+      res.status(429).json({ success: false, message: 'Muitas tentativas. Aguarde alguns minutos e tente de novo.' });
+      return;
+    }
 
-    if (!isValidUsername(username) || !password) {
+    if (!username || !password) {
       res.status(400).json({ success: false, message: 'Nome de usuario e senha sao obrigatorios.' });
+      return;
+    }
+
+    const usernameReview = await validateUsernameForPublicAuth(username);
+    if (!usernameReview.allowed) {
+      res.status(400).json({ success: false, message: usernameReview.message });
+      return;
+    }
+
+    const passwordValidationMessage = buildPasswordValidationMessage(password, username);
+    if (passwordValidationMessage) {
+      res.status(400).json({ success: false, message: passwordValidationMessage });
       return;
     }
 
@@ -9504,6 +9980,7 @@ app.post('/register', async (req, res) => {
     if (token) {
       setAuthCookie(res, token);
     }
+    clearAuthRateLimit(req, `register:${username}`);
     res.status(201).json({
       success: true,
       user: mapPublicUser(user),
@@ -9568,6 +10045,11 @@ app.post('/login', async (req, res) => {
     }
     const username = normalizeUsername(req.body.username || req.body.email);
     const password = typeof req.body.password === 'string' ? req.body.password : '';
+    const rateLimit = consumeAuthRateLimit(req, `login:${username}`);
+    if (rateLimit.blocked) {
+      res.status(429).json({ success: false, message: 'Muitas tentativas. Aguarde alguns minutos e tente de novo.' });
+      return;
+    }
     if (!username || !password) {
       res.status(400).json({ success: false, message: 'Nome de usuario e senha sao obrigatorios.' });
       return;
@@ -9593,37 +10075,7 @@ app.post('/login', async (req, res) => {
     }
 
     const user = result.rows[0];
-    let passwordOk = await bcrypt.compare(password, user.password_hash);
-    if (!passwordOk && isBotUserRecord(user)) {
-      const expectedBotPassword = buildBotLoginPassword(user.username || username);
-      if (String(password || '').trim().toLowerCase() === expectedBotPassword) {
-        const nextPasswordHash = await bcrypt.hash(expectedBotPassword, 10);
-        const normalizedBotEmail = buildLegacyEmailFromUsername(user.username || username);
-        const updatedBot = await pool.query(
-          `UPDATE public.users
-           SET password_hash = $2,
-               email = CASE
-                 WHEN NOT EXISTS (
-                   SELECT 1
-                   FROM public.users other
-                   WHERE other.id <> public.users.id
-                     AND LOWER(other.email) = LOWER($3)
-                 )
-                 THEN $3
-                 ELSE email
-               END
-           WHERE id = $1
-           RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
-                     onboarding_name_completed, onboarding_photo_completed,
-                     password_hash, created_at, premium_full_access, premium_until, no_energy, is_bot`,
-          [user.id, nextPasswordHash, normalizedBotEmail]
-        );
-        if (updatedBot.rows.length) {
-          Object.assign(user, updatedBot.rows[0]);
-          passwordOk = true;
-        }
-      }
-    }
+    const passwordOk = await bcrypt.compare(password, user.password_hash);
     if (!passwordOk) {
       res.status(401).json({ success: false, message: 'Nome de usuario ou senha invalidos.' });
       return;
@@ -9640,6 +10092,7 @@ app.post('/login', async (req, res) => {
 
     const token = createAuthToken({ id: user.id, email: user.email });
     setAuthCookie(res, token);
+    clearAuthRateLimit(req, `login:${username}`);
     res.json({
       success: true,
       token,
@@ -9660,7 +10113,12 @@ app.post('/api/books/home-auth', async (req, res) => {
 
     const username = normalizeUsername(req.body.username || req.body.email).toLowerCase();
     const password = typeof req.body.password === 'string' ? req.body.password : '';
-    if (!isValidUsername(username) || !password) {
+    const rateLimit = consumeAuthRateLimit(req, `books-home:${username}`);
+    if (rateLimit.blocked) {
+      res.status(429).json({ success: false, message: 'Muitas tentativas. Aguarde alguns minutos e tente de novo.' });
+      return;
+    }
+    if (!username || !password) {
       res.status(400).json({ success: false, message: 'Login e senha sao obrigatorios.' });
       return;
     }
@@ -9688,6 +10146,16 @@ app.post('/api/books/home-auth', async (req, res) => {
         return;
       }
     } else {
+      const usernameReview = await validateUsernameForPublicAuth(username);
+      if (!usernameReview.allowed) {
+        res.status(400).json({ success: false, message: usernameReview.message });
+        return;
+      }
+      const passwordValidationMessage = buildPasswordValidationMessage(password, username);
+      if (passwordValidationMessage) {
+        res.status(400).json({ success: false, message: passwordValidationMessage });
+        return;
+      }
       const passwordHash = await bcrypt.hash(password, 10);
       try {
         const inserted = await pool.query(
@@ -9737,6 +10205,7 @@ app.post('/api/books/home-auth', async (req, res) => {
     }
 
     setAuthCookie(res, token);
+    clearAuthRateLimit(req, `books-home:${username}`);
     res.json({
       success: true,
       created,
@@ -10032,8 +10501,9 @@ app.patch('/auth/profile', async (req, res) => {
     }
 
     const username = normalizeUsername(req.body?.username || req.body?.email);
-    if (!isValidUsername(username)) {
-      res.status(400).json({ success: false, message: 'Nome de usuario invalido.' });
+    const usernameReview = await validateUsernameForPublicAuth(username);
+    if (!usernameReview.allowed) {
+      res.status(400).json({ success: false, message: usernameReview.message });
       return;
     }
 
@@ -10128,8 +10598,9 @@ app.patch('/auth/password', async (req, res) => {
     }
 
     const password = typeof req.body?.password === 'string' ? req.body.password.trim() : '';
-    if (password.length < 6) {
-      res.status(400).json({ success: false, message: 'Use pelo menos 6 caracteres na senha.' });
+    const passwordValidationMessage = buildPasswordValidationMessage(password, authUser.username || authUser.email || '');
+    if (passwordValidationMessage) {
+      res.status(400).json({ success: false, message: passwordValidationMessage });
       return;
     }
 
@@ -14289,6 +14760,11 @@ app.post('/api/admin/users/bots', async (req, res) => {
     await ensurePremiumAccessTables();
     const adminUser = await requireAdminUserFromRequest(req);
     const botConfig = normalizeBotConfig(req.body || {});
+    const usernameReview = await validateUsernameForPublicAuth(botConfig.username);
+    if (!usernameReview.allowed) {
+      res.status(400).json({ success: false, message: usernameReview.message });
+      return;
+    }
     const normalizedBotLogin = buildLegacyEmailFromUsername(botConfig.username);
     const existingUser = await pool.query(
       `SELECT id
@@ -14302,7 +14778,7 @@ app.post('/api/admin/users/bots', async (req, res) => {
       res.status(409).json({ success: false, message: 'Ja existe um usuario com esse nome.' });
       return;
     }
-    const botLoginPassword = buildBotLoginPassword(botConfig.username);
+    const botLoginPassword = buildBotLoginPassword();
     const passwordHash = await bcrypt.hash(botLoginPassword, 10);
     const email = normalizedBotLogin || `bot${Date.now()}`;
     const initialAvatar = FLASHCARD_RANKING_PLACEHOLDER_AVATAR;
@@ -14549,6 +15025,38 @@ app.get('/api/admin/energy-settings', async (req, res) => {
   }
 });
 
+app.get('/api/flashcards/welcome-mode-settings', async (req, res) => {
+  try {
+    const settings = await getWelcomeModeSettings({ force: true });
+    res.json({
+      success: true,
+      settings
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel carregar as configuracoes dos modos extras.'
+    });
+  }
+});
+
+app.get('/api/admin/welcome-mode-settings', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const settings = await getWelcomeModeSettings({ force: true });
+    res.json({
+      success: true,
+      settings
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel carregar as configuracoes dos modos extras.'
+    });
+  }
+});
+
 app.post('/api/admin/energy-settings', express.json({ limit: '32kb' }), async (req, res) => {
   try {
     const adminUser = await requireAdminUserFromRequest(req);
@@ -14579,6 +15087,29 @@ app.post('/api/admin/energy-settings', express.json({ limit: '32kb' }), async (r
     res.status(statusCode).json({
       success: false,
       message: error?.message || 'Nao foi possivel salvar as configuracoes de energia.'
+    });
+  }
+});
+
+app.post('/api/admin/welcome-mode-settings', express.json({ limit: '32kb' }), async (req, res) => {
+  try {
+    const adminUser = await requireAdminUserFromRequest(req);
+    const settings = await updateWelcomeModeSettings(pool, {
+      usersEnabled: Boolean(req.body?.usersEnabled)
+    }, adminUser.id);
+
+    res.json({
+      success: true,
+      message: settings.usersEnabled
+        ? 'Modos extras liberados para os usuarios.'
+        : 'Modos extras ocultos para os usuarios.',
+      settings
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel salvar as configuracoes dos modos extras.'
     });
   }
 });

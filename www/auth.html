@@ -20,7 +20,7 @@
       <input id="authUsername" name="username" type="text" autocomplete="username" minlength="3" maxlength="32" required>
 
       <label for="authPassword">Senha</label>
-      <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="6" required>
+      <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="8" required>
 
       <button id="auth-submit" type="submit">Entrar e jogar</button>
     </form>
@@ -100,6 +100,10 @@
       }
 
       function persistAuthToken(token) {
+        if (window.PlaytalkApi && typeof window.PlaytalkApi.setAuthToken === 'function') {
+          window.PlaytalkApi.setAuthToken(token || '');
+          return;
+        }
         try {
           if (token) {
             window.localStorage.setItem('playtalk_auth_token', token);
@@ -162,8 +166,8 @@
 
         var username = String(usernameInput.value || '').trim();
         var password = String(passwordInput.value || '').trim();
-        if (username.length < 3 || password.length < 6) {
-          setMessage('Use nome com 3+ caracteres e senha com 6+.', 'error');
+        if (username.length < 3 || password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+          setMessage('Use nome com 3+ caracteres e senha com 8+ contendo letras e numeros.', 'error');
           return;
         }
 

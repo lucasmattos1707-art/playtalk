@@ -1084,7 +1084,10 @@
   }
 
   function isValidPassword(password) {
-    return typeof password === 'string' && password.trim().length >= 6;
+    return typeof password === 'string'
+      && password.trim().length >= 8
+      && /[A-Za-z]/.test(password)
+      && /\d/.test(password);
   }
 
   async function persistProfileNow() {
@@ -1180,7 +1183,7 @@
       return;
     }
     if (!isValidPassword(nextPassword)) {
-      setStatus('Defina uma senha com pelo menos 6 caracteres.', 'error');
+      setStatus('Defina uma senha com 8+ caracteres, letras e numeros.', 'error');
       return;
     }
 
@@ -1226,7 +1229,7 @@
     const password = safeText(els.passwordInput?.value);
     if (!password) return;
     if (!isValidPassword(password)) {
-      setStatus('Use pelo menos 6 caracteres na senha.', 'error');
+      setStatus('Use uma senha com 8+ caracteres, letras e numeros.', 'error');
       return false;
     }
 

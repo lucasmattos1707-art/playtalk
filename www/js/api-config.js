@@ -9,6 +9,21 @@
   const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
   const DEFAULT_PUBLIC_ASSETS_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
 
+  function isNativeRuntime() {
+    try {
+      if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function') {
+        return Boolean(window.Capacitor.isNativePlatform());
+      }
+    } catch (_error) {
+      // ignore
+    }
+
+    const protocol = String(window.location?.protocol || '').toLowerCase();
+    const hostname = String(window.location?.hostname || '').toLowerCase();
+    const port = String(window.location?.port || '').trim();
+    return protocol === 'file:' || ((hostname === 'localhost' || hostname === '127.0.0.1') && !port);
+  }
+
   function normalizeBaseUrl(value) {
     if (typeof value !== 'string') return '';
     return value.trim().replace(/\/+$/, '');
@@ -138,6 +153,9 @@
   }
 
   function getAuthToken() {
+    if (!isNativeRuntime()) {
+      return '';
+    }
     try {
       return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || '';
     } catch (_error) {
@@ -152,6 +170,10 @@
   function setAuthToken(token) {
     try {
       const normalized = typeof token === 'string' ? token.trim() : '';
+      if (!isNativeRuntime()) {
+        localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+        return true;
+      }
       if (normalized) {
         localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, normalized);
       } else {
@@ -167,6 +189,9 @@
     const headers = {
       ...(extraHeaders || {})
     };
+    if (isNativeRuntime()) {
+      headers['X-Playtalk-Client'] = 'native';
+    }
     const token = getAuthToken();
     if (token) {
       headers.Authorization = `Bearer ${token}`;
@@ -273,5 +298,8 @@
     }
   };
 
+  if (!isNativeRuntime()) {
+    setAuthToken('');
+  }
   applyGlobalBackgroundCssVars(document);
 })();

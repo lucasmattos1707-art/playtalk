@@ -1,25 +1,34 @@
 (function initPlaytalkAdminPage() {
   const els = {
-    form: document.getElementById('adminEnergyForm'),
+    energyForm: document.getElementById('adminEnergyForm'),
     multiplierInput: document.getElementById('adminEnergyMultiplierInput'),
     limitInput: document.getElementById('adminEnergyLimitInput'),
-    saveBtn: document.getElementById('adminEnergySaveBtn'),
-    status: document.getElementById('adminEnergyStatus'),
+    energySaveBtn: document.getElementById('adminEnergySaveBtn'),
+    energyStatus: document.getElementById('adminEnergyStatus'),
     preview100: document.getElementById('adminPreview100'),
     preview250: document.getElementById('adminPreview250'),
     previewLimit: document.getElementById('adminPreviewLimit'),
     factMultiplier: document.getElementById('adminFactMultiplier'),
-    factLimit: document.getElementById('adminFactLimit')
+    factLimit: document.getElementById('adminFactLimit'),
+    welcomeModesForm: document.getElementById('adminWelcomeModesForm'),
+    welcomeModesUsersEnabled: document.getElementById('adminWelcomeModesUsersEnabled'),
+    welcomeModesSaveBtn: document.getElementById('adminWelcomeModesSaveBtn'),
+    welcomeModesStatus: document.getElementById('adminWelcomeModesStatus'),
+    factWelcomeModes: document.getElementById('adminFactWelcomeModes')
   };
 
   const state = {
     user: null,
-    busy: false,
+    energyBusy: false,
+    welcomeModesBusy: false,
     settings: {
       dailyFreeEnergyLimit: 5000,
       energyCostMultiplier: 1,
       energyCostMultiplierMilli: 1000,
       energyCostMultiplierDisplay: '1.00x'
+    },
+    welcomeModes: {
+      usersEnabled: false
     }
   };
 
@@ -63,34 +72,50 @@
     return `${numeric.toFixed(2)}x`;
   }
 
+  function formatWelcomeModesState(usersEnabled) {
+    return usersEnabled ? 'Ligados' : 'Desligados';
+  }
+
   function applyMultiplier(chars, multiplier) {
     const normalizedChars = Math.max(0, Math.round(safeNumber(chars)));
     const normalizedMultiplier = Math.max(0.01, Math.min(10, safeNumber(multiplier, 1)));
     return Math.ceil(normalizedChars * normalizedMultiplier);
   }
 
-  function setStatus(message, tone) {
-    if (!els.status) return;
-    els.status.textContent = message || '';
-    els.status.className = 'admin-status';
-    if (tone) {
-      els.status.classList.add(`is-${tone}`);
-    }
+  function setStatus(target, message, tone) {
+    if (!target) return;
+    target.textContent = message || '';
+    target.className = 'admin-status';
+    if (tone) target.classList.add(`is-${tone}`);
   }
 
-  function syncBusyState() {
-    if (els.saveBtn) {
-      els.saveBtn.disabled = state.busy;
-      els.saveBtn.textContent = state.busy ? 'Salvando...' : 'Salvar energia';
+  function syncEnergyBusyState() {
+    if (els.energySaveBtn) {
+      els.energySaveBtn.disabled = state.energyBusy;
+      els.energySaveBtn.textContent = state.energyBusy ? 'Salvando...' : 'Salvar energia';
     }
-    if (els.multiplierInput) els.multiplierInput.disabled = state.busy;
-    if (els.limitInput) els.limitInput.disabled = state.busy;
+    if (els.multiplierInput) els.multiplierInput.disabled = state.energyBusy;
+    if (els.limitInput) els.limitInput.disabled = state.energyBusy;
+  }
+
+  function syncWelcomeModesBusyState() {
+    if (els.welcomeModesSaveBtn) {
+      els.welcomeModesSaveBtn.disabled = state.welcomeModesBusy;
+      els.welcomeModesSaveBtn.textContent = state.welcomeModesBusy ? 'Salvando...' : 'Salvar modos';
+    }
+    if (els.welcomeModesUsersEnabled) els.welcomeModesUsersEnabled.disabled = state.welcomeModesBusy;
   }
 
   function readDraftSettings() {
     return {
       energyCostMultiplier: Math.max(0.01, Math.min(10, safeNumber(els.multiplierInput?.value, state.settings.energyCostMultiplier))),
       dailyFreeEnergyLimit: Math.max(0, Math.min(1000000, Math.round(safeNumber(els.limitInput?.value, state.settings.dailyFreeEnergyLimit))))
+    };
+  }
+
+  function readDraftWelcomeModes() {
+    return {
+      usersEnabled: Boolean(els.welcomeModesUsersEnabled?.checked)
     };
   }
 
@@ -105,6 +130,12 @@
     if (els.factLimit) els.factLimit.textContent = `${formatInteger(draft.dailyFreeEnergyLimit)} energias`;
   }
 
+  function renderWelcomeModesFact() {
+    if (els.factWelcomeModes) {
+      els.factWelcomeModes.textContent = formatWelcomeModesState(state.welcomeModes.usersEnabled);
+    }
+  }
+
   function applySettings(settings) {
     state.settings = {
       dailyFreeEnergyLimit: Math.max(0, Math.min(1000000, Math.round(safeNumber(settings?.dailyFreeEnergyLimit, 5000)))),
@@ -115,6 +146,16 @@
     if (els.multiplierInput) els.multiplierInput.value = state.settings.energyCostMultiplier.toFixed(2);
     if (els.limitInput) els.limitInput.value = String(state.settings.dailyFreeEnergyLimit);
     renderPreview();
+  }
+
+  function applyWelcomeModes(settings) {
+    state.welcomeModes = {
+      usersEnabled: Boolean(settings?.usersEnabled)
+    };
+    if (els.welcomeModesUsersEnabled) {
+      els.welcomeModesUsersEnabled.checked = state.welcomeModes.usersEnabled;
+    }
+    renderWelcomeModesFact();
   }
 
   async function fetchSessionUser() {
@@ -130,7 +171,7 @@
     return response.ok && payload?.success ? payload.user : null;
   }
 
-  async function loadSettings() {
+  async function loadEnergySettings() {
     const response = await fetch(buildApiUrl('/api/admin/energy-settings'), {
       headers: buildAuthHeaders(),
       credentials: 'include',
@@ -143,11 +184,24 @@
     applySettings(payload.settings);
   }
 
-  async function submitSettings(event) {
+  async function loadWelcomeModeSettings() {
+    const response = await fetch(buildApiUrl('/api/admin/welcome-mode-settings'), {
+      headers: buildAuthHeaders(),
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.settings) {
+      throw new Error(payload?.message || 'Nao foi possivel carregar as configuracoes dos modos extras.');
+    }
+    applyWelcomeModes(payload.settings);
+  }
+
+  async function submitEnergySettings(event) {
     event.preventDefault();
-    state.busy = true;
-    syncBusyState();
-    setStatus('Salvando configuracoes de energia...');
+    state.energyBusy = true;
+    syncEnergyBusyState();
+    setStatus(els.energyStatus, 'Salvando configuracoes de energia...');
     try {
       const draft = readDraftSettings();
       const response = await fetch(buildApiUrl('/api/admin/energy-settings'), {
@@ -161,36 +215,73 @@
         throw new Error(payload?.message || 'Nao foi possivel salvar as configuracoes de energia.');
       }
       applySettings(payload.settings);
-      setStatus(payload?.message || 'Configuracoes de energia atualizadas.', 'success');
+      setStatus(els.energyStatus, payload?.message || 'Configuracoes de energia atualizadas.', 'success');
     } catch (error) {
-      setStatus(error?.message || 'Nao foi possivel salvar as configuracoes de energia.', 'error');
+      setStatus(els.energyStatus, error?.message || 'Nao foi possivel salvar as configuracoes de energia.', 'error');
     } finally {
-      state.busy = false;
-      syncBusyState();
+      state.energyBusy = false;
+      syncEnergyBusyState();
+    }
+  }
+
+  async function submitWelcomeModeSettings(event) {
+    event.preventDefault();
+    state.welcomeModesBusy = true;
+    syncWelcomeModesBusyState();
+    setStatus(els.welcomeModesStatus, 'Salvando configuracoes dos modos extras...');
+    try {
+      const draft = readDraftWelcomeModes();
+      const response = await fetch(buildApiUrl('/api/admin/welcome-mode-settings'), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify(draft)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.settings) {
+        throw new Error(payload?.message || 'Nao foi possivel salvar as configuracoes dos modos extras.');
+      }
+      applyWelcomeModes(payload.settings);
+      setStatus(els.welcomeModesStatus, payload?.message || 'Configuracoes dos modos extras atualizadas.', 'success');
+    } catch (error) {
+      setStatus(els.welcomeModesStatus, error?.message || 'Nao foi possivel salvar as configuracoes dos modos extras.', 'error');
+    } finally {
+      state.welcomeModesBusy = false;
+      syncWelcomeModesBusyState();
     }
   }
 
   function bindEvents() {
-    els.form?.addEventListener('submit', submitSettings);
+    els.energyForm?.addEventListener('submit', submitEnergySettings);
     els.multiplierInput?.addEventListener('input', renderPreview);
     els.limitInput?.addEventListener('input', renderPreview);
+    els.welcomeModesForm?.addEventListener('submit', submitWelcomeModeSettings);
   }
 
   (async () => {
     bindEvents();
-    syncBusyState();
+    syncEnergyBusyState();
+    syncWelcomeModesBusyState();
     renderPreview();
+    renderWelcomeModesFact();
     state.user = await fetchSessionUser().catch(() => null);
     if (!state.user?.id || !state.user?.is_admin) {
-      setStatus('Acesso restrito ao administrador.', 'error');
+      setStatus(els.energyStatus, 'Acesso restrito ao administrador.', 'error');
+      setStatus(els.welcomeModesStatus, 'Acesso restrito ao administrador.', 'error');
       window.setTimeout(() => navigateTo('/account', { replace: true }), 900);
       return;
     }
     try {
-      await loadSettings();
-      setStatus('Configuracoes carregadas.');
+      await Promise.all([
+        loadEnergySettings(),
+        loadWelcomeModeSettings()
+      ]);
+      setStatus(els.energyStatus, 'Configuracoes carregadas.');
+      setStatus(els.welcomeModesStatus, 'Modos extras sincronizados.');
     } catch (error) {
-      setStatus(error?.message || 'Nao foi possivel carregar as configuracoes de energia.', 'error');
+      const message = error?.message || 'Nao foi possivel carregar as configuracoes do admin.';
+      setStatus(els.energyStatus, message, 'error');
+      setStatus(els.welcomeModesStatus, message, 'error');
     }
   })();
 })();

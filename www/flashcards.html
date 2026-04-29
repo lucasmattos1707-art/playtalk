@@ -7922,16 +7922,16 @@
             <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy">Você está no nível 1</p>
           </div>
           <div class="welcome-gate__header">
-            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomePlayingModeBtn" type="button" aria-label="Abrir modo Playing">
+            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomePlayingModeBtn" type="button" aria-label="Abrir modo Playing" hidden>
               <svg viewBox="0 0 24 24" focusable="false"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H13l-3.6 3a.75.75 0 0 1-1.22-.58V16H6.5A2.5 2.5 0 0 1 4 13.5v-7Zm4.5 1.75a.75.75 0 0 0-.75.75v2.5c0 .414.336.75.75.75h6a.75.75 0 0 0 .75-.75V9a.75.75 0 0 0-.75-.75h-6Z"/></svg>
             </button>
-            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeScaleModeBtn" type="button" aria-label="Abrir modo Scale">
+            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeScaleModeBtn" type="button" aria-label="Abrir modo Scale" hidden>
               <svg viewBox="0 0 24 24" focusable="false"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10.5-6.86a1 1 0 0 0 0-1.72L9.5 4.28A1 1 0 0 0 8 5.14Z"/></svg>
             </button>
-            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeAudioModeBtn" type="button" aria-label="Abrir modo Listen">
+            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeAudioModeBtn" type="button" aria-label="Abrir modo Listen" hidden>
               <svg viewBox="0 0 24 24" focusable="false"><path d="M3 14.5c2.2 0 2.2-5 4.4-5s2.2 8 4.4 8 2.2-11 4.4-11 2.2 5 4.4 5v2c-3 0-3-5-4.4-5s-2.2 11-4.4 11-2.2-8-4.4-8-2.2 5-4.4 5Z"/></svg>
             </button>
-            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeTextModeBtn" type="button" aria-label="Abrir modo Typing">
+            <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomeTextModeBtn" type="button" aria-label="Abrir modo Typing" hidden>
               <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 6h14.5A2.25 2.25 0 0 1 21.5 8.25v7.5A2.25 2.25 0 0 1 19.25 18H4.75A2.25 2.25 0 0 1 2.5 15.75v-7.5A2.25 2.25 0 0 1 4.75 6Zm1 2.25v1.5h1.5v-1.5h-1.5Zm2.5 0v1.5h1.5v-1.5h-1.5Zm2.5 0v1.5h1.5v-1.5h-1.5Zm2.5 0v1.5h1.5v-1.5h-1.5Zm2.5 0v1.5h1.5v-1.5h-1.5Zm-10 3v1.5h8.5v-1.5h-8.5Zm9.5 0v1.5h1.5v-1.5h-1.5Zm-11.5 3v1.5h4.5v-1.5h-4.5Zm5.5 0v1.5h8.5v-1.5H9.25Z"/></svg>
             </button>
           </div>
@@ -8727,6 +8727,8 @@
           welcomeIndex: 0,
           welcomeModeKey: '',
           welcomeTimer: 0,
+          welcomeModesResolved: false,
+          welcomeModesUsersEnabled: false,
           launchAfterSoundTest: '',
           soundTestCompleted: false,
           pendingPlayStart: false,
@@ -9977,6 +9979,10 @@
       }
 
       function persistAuthToken(token) {
+        if (window.PlaytalkApi && typeof window.PlaytalkApi.setAuthToken === 'function') {
+          window.PlaytalkApi.setAuthToken(token || '');
+          return;
+        }
         try {
           if (token) {
             localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
@@ -10139,6 +10145,27 @@
         if (Boolean(user.premiumFullAccess)) return true;
         const premiumUntilTime = Date.parse(user?.premiumUntil || '');
         return Number.isFinite(premiumUntilTime) && premiumUntilTime > Date.now();
+      }
+
+      function areWelcomeExtraModesEnabledForCurrentUser() {
+        return isAdminUser() || Boolean(state.entry.welcomeModesUsersEnabled);
+      }
+
+      function syncWelcomeModeButtons() {
+        const enabled = areWelcomeExtraModesEnabledForCurrentUser();
+        [
+          els.welcomePlayingModeBtn,
+          els.welcomeScaleModeBtn,
+          els.welcomeAudioModeBtn,
+          els.welcomeTextModeBtn
+        ].forEach((button) => {
+          if (!button) return;
+          button.hidden = !enabled;
+          button.disabled = !enabled;
+        });
+        if (!enabled && state.entry.welcomeModeKey) {
+          closeWelcomeModeModal();
+        }
       }
 
       function shouldGatePremiumAccess() {
@@ -11580,6 +11607,7 @@
         state.entry.welcomeVisible = visible;
         document.body.classList.toggle('welcome-active', visible);
         els.welcomeGate?.classList.toggle('is-visible', visible);
+        syncWelcomeModeButtons();
         syncWelcomeStartButton();
         void refreshWelcomeEnergyState();
         syncWelcomeAccountLink();
@@ -11715,6 +11743,23 @@
           return null;
         }
         return normalizeUser(payload.user);
+      }
+
+      async function fetchWelcomeModeSettings() {
+        const response = await fetch(buildApiUrl('/api/flashcards/welcome-mode-settings'), {
+          headers: buildAuthHeaders(),
+          cache: 'no-store',
+          credentials: 'include'
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success || !payload?.settings) {
+          return {
+            usersEnabled: false
+          };
+        }
+        return {
+          usersEnabled: Boolean(payload.settings.usersEnabled)
+        };
       }
 
       function setProfileStatus(message, tone = '') {
@@ -13165,6 +13210,7 @@
       function openWelcomeModeModal(modeKey) {
         const normalized = safeText(modeKey).toLowerCase();
         if (!WELCOME_MODE_CONFIG[normalized]) return;
+        if (!areWelcomeExtraModesEnabledForCurrentUser()) return;
         if (normalized === 'scale') {
           setSelectedGameLevel(1);
         }
@@ -20084,9 +20130,12 @@
 
         try {
           const sessionUser = await fetchSessionUser().catch(() => null);
+          const welcomeModeSettings = await fetchWelcomeModeSettings().catch(() => ({ usersEnabled: false }));
           if (sessionUser) {
             state.user = normalizeUser(sessionUser);
           }
+          state.entry.welcomeModesUsersEnabled = Boolean(welcomeModeSettings?.usersEnabled);
+          state.entry.welcomeModesResolved = true;
           state.entry.sessionResolved = true;
           ensureFlashcardsEnergyDepletionWatch();
           try {
