@@ -20,7 +20,7 @@
       <input id="authUsername" name="username" type="text" autocomplete="username" minlength="3" maxlength="32" required>
 
       <label for="authPassword">Senha</label>
-      <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="8" required>
+      <input id="authPassword" name="password" type="password" autocomplete="current-password" required>
 
       <button id="auth-submit" type="submit">Entrar e jogar</button>
     </form>
@@ -157,6 +157,11 @@
         loginBtn.classList.toggle('is-active', !isRegister);
         registerBtn.classList.toggle('is-active', isRegister);
         passwordInput.autocomplete = isRegister ? 'new-password' : 'current-password';
+        if (isRegister) {
+          passwordInput.setAttribute('minlength', '8');
+        } else {
+          passwordInput.removeAttribute('minlength');
+        }
         submitBtn.textContent = isRegister ? 'Criar conta e entrar' : 'Entrar e jogar';
         setMessage('');
       }
