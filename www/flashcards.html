@@ -474,6 +474,7 @@
       gap: 0;
       justify-items: center;
       text-align: center;
+      margin-top: 0;
     }
 
     .welcome-gate__name-row {
@@ -524,12 +525,12 @@
       z-index: 2;
       order: 3;
       margin-top: -10px;
-      margin-bottom: 4px;
+      margin-bottom: 40px;
     }
 
     .welcome-gate__avatar {
-      width: clamp(168px, 23.4vh, 226px);
-      height: clamp(168px, 23.4vh, 226px);
+      width: clamp(286px, 39.8vh, 384px);
+      height: clamp(286px, 39.8vh, 384px);
       border-radius: 50%;
       position: relative;
       display: grid;
@@ -660,10 +661,11 @@
 
     .welcome-gate__mission-btn {
       position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 44px;
-      height: 44px;
+      right: 0;
+      bottom: 0;
+      transform: translate(22%, 8%);
+      width: 54px;
+      height: 54px;
       display: grid;
       place-items: center;
       border-radius: 999px;
@@ -692,7 +694,7 @@
 
     .welcome-gate__mission-btn:hover,
     .welcome-gate__mission-btn:focus-visible {
-      transform: translateY(-1px) scale(1.04);
+      transform: translate(22%, 8%) translateY(-1px) scale(1.04);
       box-shadow:
         0 0 0 1px rgba(191, 245, 255, 0.16) inset,
         0 0 20px rgba(21, 206, 255, 0.34),
@@ -8257,13 +8259,13 @@
       }
 
       .welcome-gate__avatar {
-        width: clamp(122px, 32vw, 158px);
-        height: clamp(122px, 32vw, 158px);
+        width: clamp(208px, 54vw, 268px);
+        height: clamp(208px, 54vw, 268px);
       }
 
       .welcome-gate__mission-btn {
-        width: 40px;
-        height: 40px;
+        width: 46px;
+        height: 46px;
       }
 
       .welcome-gate__level-panel {
@@ -8311,14 +8313,14 @@
               <div class="welcome-gate__avatar">
                 <img id="welcomeAvatarPreview" src="/Avatar/profile-neon-blue.svg" alt="Avatar do usuario">
               </div>
+              <button class="welcome-gate__mission-btn" id="welcomeMissionBtn" type="button" aria-label="Missão diária">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v1.06a7 7 0 1 1-6.94 6.94H5a1 1 0 1 1 0-2h3a1 1 0 0 1 1 1v2.44a1 1 0 1 1-2 0v-.55A5 5 0 1 0 12 7h-.5a1 1 0 1 1 0-2H17a1 1 0 1 1 0 2h-2.59l1.8 1.8a1 1 0 0 1-1.42 1.4L13 8.42V4a1 1 0 0 1 1-1z"/></svg>
+              </button>
             </div>
             <div class="welcome-gate__identity">
               <p class="welcome-gate__greeting" id="welcomeGreetingText">Boa noite</p>
               <p class="welcome-gate__display-name" id="welcomeUserName">Jogador</p>
             </div>
-            <button class="welcome-gate__mission-btn" id="welcomeMissionBtn" type="button" aria-label="Missão diária">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v1.06a7 7 0 1 1-6.94 6.94H5a1 1 0 1 1 0-2h3a1 1 0 0 1 1 1v2.44a1 1 0 1 1-2 0v-.55A5 5 0 1 0 12 7h-.5a1 1 0 1 1 0-2H17a1 1 0 1 1 0 2h-2.59l1.8 1.8a1 1 0 0 1-1.42 1.4L13 8.42V4a1 1 0 0 1 1-1z"/></svg>
-            </button>
           </div>
           <div class="welcome-gate__header" id="welcomeHeader">
             <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomePlayingModeBtn" type="button" aria-label="Abrir modo Playing" hidden>
