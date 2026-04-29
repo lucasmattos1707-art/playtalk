@@ -1143,6 +1143,380 @@
       color: #ffffff;
     }
 
+    .daily-plan-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 145;
+      display: none;
+      align-items: stretch;
+      justify-content: stretch;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(33, 161, 255, 0.22), transparent 38%),
+        linear-gradient(180deg, rgba(2, 9, 19, 0.88) 0%, rgba(2, 9, 19, 0.98) 100%);
+      backdrop-filter: blur(16px);
+    }
+
+    .daily-plan-modal.is-visible {
+      display: flex;
+    }
+
+    .daily-plan-modal__panel {
+      width: 100%;
+      min-height: 100dvh;
+      position: relative;
+      padding: 28px 22px 34px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      color: #f5fbff;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(33, 161, 255, 0.34), transparent 38%),
+        radial-gradient(circle at 90% 38%, rgba(99, 102, 241, 0.22), transparent 28%),
+        radial-gradient(circle at 10% 85%, rgba(0, 198, 255, 0.18), transparent 32%),
+        linear-gradient(180deg, #030817 0%, #061129 52%, #020511 100%);
+      isolation: isolate;
+    }
+
+    .daily-plan-modal__panel::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(120deg, transparent 0 18%, rgba(21, 166, 255, 0.12) 18.3%, transparent 19%),
+        linear-gradient(230deg, transparent 0 20%, rgba(128, 95, 255, 0.16) 20.3%, transparent 21%),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 90px);
+      opacity: 0.8;
+      pointer-events: none;
+      z-index: -2;
+    }
+
+    .daily-plan-modal__glow {
+      position: absolute;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: rgba(24, 200, 255, 0.16);
+      filter: blur(55px);
+      top: 170px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .daily-plan-modal__topbar {
+      display: grid;
+      grid-template-columns: 54px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .daily-plan-modal__spacer {
+      width: 54px;
+      height: 54px;
+    }
+
+    .daily-plan-modal__brand {
+      text-align: center;
+      line-height: 1;
+    }
+
+    .daily-plan-modal__brand strong {
+      display: block;
+      font-family: "Orbitron", sans-serif;
+      letter-spacing: 0.16em;
+      font-size: 19px;
+    }
+
+    .daily-plan-modal__brand small {
+      display: block;
+      color: #18c8ff;
+      letter-spacing: 0.52em;
+      font-weight: 800;
+      font-size: 10px;
+      margin-top: 7px;
+      padding-left: 5px;
+    }
+
+    .daily-plan-modal__player {
+      min-width: 118px;
+      min-height: 54px;
+      padding: 6px 8px 6px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(122, 199, 255, 0.22);
+      background: rgba(255, 255, 255, 0.055);
+      display: inline-grid;
+      grid-template-columns: 42px auto;
+      align-items: center;
+      gap: 10px;
+      justify-self: end;
+      box-shadow:
+        inset 0 0 18px rgba(0, 163, 255, 0.08),
+        0 0 24px rgba(0, 163, 255, 0.08);
+    }
+
+    .daily-plan-modal__avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: radial-gradient(circle, #102143, #050a18 70%);
+      box-shadow:
+        0 0 0 2px rgba(24, 200, 255, 0.72),
+        0 0 16px rgba(24, 200, 255, 0.34);
+    }
+
+    .daily-plan-modal__avatar img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .daily-plan-modal__player-meta {
+      min-width: 0;
+      display: grid;
+      justify-items: start;
+      gap: 2px;
+      text-align: left;
+    }
+
+    .daily-plan-modal__player-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      color: rgba(195, 228, 255, 0.74);
+      text-transform: uppercase;
+    }
+
+    .daily-plan-modal__player-value {
+      font-family: "Orbitron", sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      line-height: 1;
+      text-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+    }
+
+    .daily-plan-modal__hero {
+      text-align: center;
+      margin: 10px 0 24px;
+    }
+
+    .daily-plan-modal__hero-pre {
+      color: #ffffff;
+      font-family: "Orbitron", sans-serif;
+      font-size: clamp(42px, 12vw, 64px);
+      letter-spacing: 0.08em;
+      font-weight: 900;
+      line-height: 0.88;
+      text-shadow: 0 0 22px rgba(255, 255, 255, 0.32);
+    }
+
+    .daily-plan-modal__hero-main {
+      font-family: "Orbitron", sans-serif;
+      font-size: clamp(48px, 14vw, 74px);
+      letter-spacing: 0.09em;
+      font-weight: 900;
+      line-height: 0.95;
+      background: linear-gradient(180deg, #c9f4ff 0%, #2ed0ff 40%, #2d66ff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 0 18px rgba(24, 200, 255, 0.62));
+    }
+
+    .daily-plan-modal__card {
+      position: relative;
+      background: linear-gradient(180deg, rgba(10, 24, 56, 0.86), rgba(3, 9, 24, 0.88));
+      border: 1px solid rgba(105, 190, 255, 0.32);
+      border-radius: 34px;
+      padding: 26px 22px;
+      box-shadow:
+        0 0 0 1px rgba(70, 170, 255, 0.08) inset,
+        0 0 42px rgba(0, 163, 255, 0.18),
+        0 24px 80px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+    }
+
+    .daily-plan-modal__card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      border: 2px solid rgba(24, 200, 255, 0.28);
+      pointer-events: none;
+      filter: drop-shadow(0 0 14px rgba(24, 200, 255, 0.85));
+    }
+
+    .daily-plan-modal__card::after {
+      content: "";
+      position: absolute;
+      inset: -2px;
+      background: linear-gradient(110deg, transparent 0 40%, rgba(255, 255, 255, 0.12) 48%, transparent 56%);
+      transform: translateX(-80%);
+      animation: shine 5s infinite;
+      pointer-events: none;
+    }
+
+    .daily-plan-modal__mission {
+      display: grid;
+      grid-template-columns: 94px 1fr;
+      gap: 18px;
+      align-items: center;
+      padding: 8px 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .daily-plan-modal__mission + .daily-plan-modal__mission {
+      border-top: 1px solid rgba(116, 185, 255, 0.26);
+      padding-top: 28px;
+    }
+
+    .daily-plan-modal__icon-ring {
+      width: 94px;
+      height: 94px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-size: 46px;
+      color: #ffffff;
+      background:
+        radial-gradient(circle, rgba(24, 200, 255, 0.35), rgba(24, 200, 255, 0.04) 62%),
+        rgba(5, 12, 28, 0.88);
+      border: 1px solid rgba(24, 200, 255, 0.38);
+      box-shadow: 0 0 34px rgba(24, 200, 255, 0.34), inset 0 0 24px rgba(24, 200, 255, 0.14);
+    }
+
+    .daily-plan-modal__icon-ring.is-purple {
+      background:
+        radial-gradient(circle, rgba(141, 101, 255, 0.38), rgba(141, 101, 255, 0.04) 62%),
+        rgba(5, 12, 28, 0.88);
+      border-color: rgba(141, 101, 255, 0.42);
+      box-shadow: 0 0 34px rgba(141, 101, 255, 0.36), inset 0 0 24px rgba(141, 101, 255, 0.14);
+    }
+
+    .daily-plan-modal__mission h2 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.02;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+    }
+
+    .daily-plan-modal__mission h2 span {
+      display: block;
+      color: #18c8ff;
+      font-size: 30px;
+      margin-top: 4px;
+      text-shadow: 0 0 16px rgba(24, 200, 255, 0.45);
+    }
+
+    .daily-plan-modal__mission.is-books h2 span {
+      color: #8d65ff;
+      text-shadow: 0 0 16px rgba(141, 101, 255, 0.55);
+    }
+
+    .daily-plan-modal__counter {
+      font-family: "Orbitron", sans-serif;
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      margin-bottom: 12px;
+    }
+
+    .daily-plan-modal__counter-done {
+      color: #18c8ff;
+      filter: drop-shadow(0 0 12px rgba(24, 200, 255, 0.65));
+    }
+
+    .daily-plan-modal__mission.is-books .daily-plan-modal__counter-done {
+      color: #8d65ff;
+      filter: drop-shadow(0 0 12px rgba(141, 101, 255, 0.65));
+    }
+
+    .daily-plan-modal__counter-total {
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 0.62em;
+    }
+
+    .daily-plan-modal__bar {
+      height: 16px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(115, 180, 255, 0.25);
+      overflow: hidden;
+      box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.45);
+    }
+
+    .daily-plan-modal__fill {
+      height: 100%;
+      width: var(--progress, 0%);
+      border-radius: inherit;
+      background: linear-gradient(90deg, #18c8ff, #8deeff);
+      box-shadow: 0 0 22px rgba(24, 200, 255, 0.72);
+    }
+
+    .daily-plan-modal__mission.is-books .daily-plan-modal__fill {
+      background: linear-gradient(90deg, #7b5cff, #b69cff);
+      box-shadow: 0 0 22px rgba(141, 101, 255, 0.72);
+    }
+
+    .daily-plan-modal__reward {
+      margin-top: 4px;
+      padding: 20px;
+      border-radius: 24px;
+      background: rgba(5, 14, 34, 0.7);
+      border: 1px solid rgba(105, 190, 255, 0.18);
+      display: grid;
+      grid-template-columns: 1fr 82px;
+      gap: 12px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .daily-plan-modal__reward small {
+      display: block;
+      color: #18c8ff;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 9px;
+    }
+
+    .daily-plan-modal__reward strong {
+      display: block;
+      font-size: 21px;
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+    }
+
+    .daily-plan-modal__medal {
+      width: 82px;
+      height: 82px;
+      border-radius: 25px;
+      display: grid;
+      place-items: center;
+      font-size: 40px;
+      background: radial-gradient(circle, rgba(24, 200, 255, 0.5), rgba(45, 102, 255, 0.16) 62%, rgba(5, 12, 28, 0.9));
+      border: 1px solid rgba(24, 200, 255, 0.4);
+      box-shadow: 0 0 32px rgba(24, 200, 255, 0.45);
+    }
+
+    @media (max-width: 380px) {
+      .daily-plan-modal__panel { padding-left: 15px; padding-right: 15px; }
+      .daily-plan-modal__topbar { grid-template-columns: 42px 1fr auto; }
+      .daily-plan-modal__spacer { width: 42px; height: 42px; }
+      .daily-plan-modal__player { min-width: 106px; }
+      .daily-plan-modal__card { padding: 22px 16px; }
+      .daily-plan-modal__mission { grid-template-columns: 78px 1fr; gap: 14px; }
+      .daily-plan-modal__icon-ring { width: 78px; height: 78px; font-size: 38px; }
+      .daily-plan-modal__mission h2 span { font-size: 25px; }
+      .daily-plan-modal__hero-pre { font-size: 38px; }
+      .daily-plan-modal__hero-main { font-size: 46px; }
+    }
+
     .welcome-gate__admin-stats {
       margin: -10px 0 0;
       padding: 0;
@@ -8105,6 +8479,60 @@
         </div>
       </div>
     </div>
+    <div class="daily-plan-modal" id="dailyPlanModal" aria-hidden="true">
+      <div class="daily-plan-modal__panel">
+        <div class="daily-plan-modal__glow" aria-hidden="true"></div>
+        <header class="daily-plan-modal__topbar">
+          <div class="daily-plan-modal__spacer" aria-hidden="true"></div>
+          <div class="daily-plan-modal__brand">
+            <strong>FLUENT</strong>
+            <small>LEVEL UP</small>
+          </div>
+          <div class="daily-plan-modal__player" aria-label="Jogador e nível">
+            <div class="daily-plan-modal__avatar">
+              <img id="dailyPlanUserAvatar" src="/Avatar/profile-neon-blue.svg" alt="Avatar do usuário">
+            </div>
+            <div class="daily-plan-modal__player-meta">
+              <span class="daily-plan-modal__player-label">Nível</span>
+              <span class="daily-plan-modal__player-value" id="dailyPlanUserLevel">1</span>
+            </div>
+          </div>
+        </header>
+
+        <section class="daily-plan-modal__hero">
+          <div class="daily-plan-modal__hero-pre">MISSÃO</div>
+          <div class="daily-plan-modal__hero-main">DIÁRIA</div>
+        </section>
+
+        <section class="daily-plan-modal__card">
+          <article class="daily-plan-modal__mission">
+            <div class="daily-plan-modal__icon-ring">⚡</div>
+            <div>
+              <h2>Ganhar <span>20 FlashCards</span></h2>
+              <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanFlashcardsDone">0</span><span class="daily-plan-modal__counter-total">/20</span></div>
+              <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill" id="dailyPlanFlashcardsBar" style="--progress: 0%"></div></div>
+            </div>
+          </article>
+
+          <article class="daily-plan-modal__mission is-books">
+            <div class="daily-plan-modal__icon-ring is-purple">📘</div>
+            <div>
+              <h2>Ler <span>3 MiniBooks</span></h2>
+              <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanBooksDone">0</span><span class="daily-plan-modal__counter-total">/3</span></div>
+              <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill" id="dailyPlanBooksBar" style="--progress: 0%"></div></div>
+            </div>
+          </article>
+
+          <div class="daily-plan-modal__reward">
+            <div>
+              <small>Recompensa</small>
+              <strong>+ Experiência<br>+ Ranking</strong>
+            </div>
+            <div class="daily-plan-modal__medal">⭐</div>
+          </div>
+        </section>
+      </div>
+    </div>
   </section>
   <section class="robotcheck" id="robotcheck" aria-label="Robot check">
     <div class="robotcheck__touch" aria-label="Teste de som do Fluent LevelUp">
@@ -8836,6 +9264,7 @@
           welcomeDismissed: false,
           welcomeIndex: 0,
           welcomeModeKey: '',
+          dailyPlanOpen: false,
           welcomeTimer: 0,
           welcomeModesResolved: false,
           welcomeModesUsersEnabled: false,
@@ -9064,6 +9493,13 @@
         welcomeModeModalLevelPrevBtn: document.getElementById('welcomeModeModalLevelPrevBtn'),
         welcomeModeModalLevelValue: document.getElementById('welcomeModeModalLevelValue'),
         welcomeModeModalLevelNextBtn: document.getElementById('welcomeModeModalLevelNextBtn'),
+        dailyPlanModal: document.getElementById('dailyPlanModal'),
+        dailyPlanUserAvatar: document.getElementById('dailyPlanUserAvatar'),
+        dailyPlanUserLevel: document.getElementById('dailyPlanUserLevel'),
+        dailyPlanFlashcardsDone: document.getElementById('dailyPlanFlashcardsDone'),
+        dailyPlanFlashcardsBar: document.getElementById('dailyPlanFlashcardsBar'),
+        dailyPlanBooksDone: document.getElementById('dailyPlanBooksDone'),
+        dailyPlanBooksBar: document.getElementById('dailyPlanBooksBar'),
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeLogo: document.getElementById('welcomeLogo'),
         welcomeProfile: document.getElementById('welcomeProfile'),
@@ -13360,6 +13796,65 @@
         if (!state.entry.welcomeModeKey) return;
         state.entry.welcomeModeKey = '';
         syncWelcomeModeModal();
+      }
+
+      async function fetchDailyPlanBooksStats() {
+        const response = await fetch(buildApiUrl('/api/books/stats'), {
+          headers: buildAuthHeaders(),
+          cache: 'no-store',
+          credentials: 'include'
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success) {
+          return null;
+        }
+        return payload.stats || null;
+      }
+
+      function setDailyPlanProgress(value, total, valueEl, barEl) {
+        const max = Math.max(1, Number(total) || 1);
+        const normalized = Math.max(0, Math.min(max, Number(value) || 0));
+        if (valueEl) {
+          valueEl.textContent = String(normalized);
+        }
+        if (barEl) {
+          const percent = (normalized / max) * 100;
+          barEl.style.setProperty('--progress', `${percent.toFixed(2)}%`);
+        }
+      }
+
+      async function syncDailyPlanModal() {
+        const visible = Boolean(state.entry.dailyPlanOpen);
+        if (els.dailyPlanModal) {
+          els.dailyPlanModal.classList.toggle('is-visible', visible);
+          els.dailyPlanModal.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        }
+        if (!visible) return;
+        if (els.dailyPlanUserAvatar) {
+          const avatar = safeText(state.user?.avatarImage) || '/Avatar/profile-neon-blue.svg';
+          els.dailyPlanUserAvatar.src = avatar;
+        }
+        if (els.dailyPlanUserLevel) {
+          els.dailyPlanUserLevel.textContent = String(currentUserLevel());
+        }
+        setDailyPlanProgress(state.userCards.size, 20, els.dailyPlanFlashcardsDone, els.dailyPlanFlashcardsBar);
+        const booksStats = await fetchDailyPlanBooksStats().catch(() => null);
+        const booksDone = Math.max(
+          0,
+          Math.min(3, Number(booksStats?.qualifiedBookCount) || Number(booksStats?.myBooksCount) || 0)
+        );
+        setDailyPlanProgress(booksDone, 3, els.dailyPlanBooksDone, els.dailyPlanBooksBar);
+      }
+
+      function openDailyPlanModal() {
+        state.entry.dailyPlanOpen = true;
+        void syncDailyPlanModal();
+      }
+
+      function closeDailyPlanModal() {
+        if (!state.entry.dailyPlanOpen) return;
+        state.entry.dailyPlanOpen = false;
+        void syncDailyPlanModal();
       }
 
       function shouldUseLevelModeBufferedPool() {
@@ -19804,7 +20299,12 @@
           })();
         });
         els.welcomeMissionBtn?.addEventListener('click', () => {
-          window.location.href = '/missao';
+          openDailyPlanModal();
+        });
+        els.dailyPlanModal?.addEventListener('click', (event) => {
+          if (event.target === els.dailyPlanModal) {
+            closeDailyPlanModal();
+          }
         });
         els.welcomePlayingModeBtn?.addEventListener('click', () => {
           openWelcomeModeModal('playing');
@@ -20084,6 +20584,8 @@
           }
           if (event.key === 'Escape' && state.ui.premiumGateOpen) {
             closePremiumGate();
+          } else if (event.key === 'Escape' && state.entry.dailyPlanOpen) {
+            closeDailyPlanModal();
           } else if (event.key === 'Escape' && els.gameReportMenu?.classList.contains('is-visible')) {
             closeGameReportMenu();
           } else if (event.key === 'Escape' && state.game.active) {
