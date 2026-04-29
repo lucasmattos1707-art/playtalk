@@ -1325,9 +1325,21 @@
     }
   }
 
+  function toggleGlobalLoader(key, active, message) {
+    const loader = window.PlaytalkLoader;
+    if (!loader) return;
+    if (active) {
+      loader.show(key, { message });
+      return;
+    }
+    loader.hide(key);
+  }
+
   function renderShelfLoading() {
-    if (!els.shelfLoading) return;
-    els.shelfLoading.hidden = !state.initialLoading;
+    if (els.shelfLoading) {
+      els.shelfLoading.hidden = true;
+    }
+    toggleGlobalLoader('page-init', state.initialLoading, 'Carregando sua estante');
   }
 
   function buildApiUrl(path) {
@@ -3844,11 +3856,13 @@
     if (els.preBookLoading) {
       els.preBookLoading.classList.remove('is-visible');
     }
+    toggleGlobalLoader('books-mode-start', false);
   }
 
   async function hideModeLoadingSmoothly() {
     if (!els.preBookLoading || !els.preBookLoading.classList.contains('is-visible')) return;
     els.preBookLoading.classList.remove('is-visible');
+    toggleGlobalLoader('books-mode-start', false);
     await wait(MODE_LOADING_FADE_MS);
   }
 
@@ -4345,6 +4359,7 @@
   function closePreBookModal(options) {
     const animate = !options || options.animate !== false;
     const shouldCancelStart = !options || options.cancelStart !== false;
+    toggleGlobalLoader('books-mode-start', false);
     if (shouldCancelStart) {
       state.modeStartToken += 1;
     }
@@ -4667,6 +4682,7 @@
 
     if (!trackedPreparation.settled && els.preBookLoading) {
       els.preBookLoading.classList.add('is-visible');
+      toggleGlobalLoader('books-mode-start', true, 'Preparando seu MiniBook');
       await wait(MODE_LOADING_FADE_MS);
       if (startToken !== state.modeStartToken) return;
     }

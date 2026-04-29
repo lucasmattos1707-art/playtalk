@@ -11808,6 +11808,27 @@
         return `${hours}:${minutes}:${seconds}`;
       }
 
+      function syncGlobalPlayLoader() {
+        const loader = window.PlaytalkLoader;
+        if (!loader) return;
+        const ready = Boolean(
+          state.entry.sessionResolved
+          && state.entry.cardsReady
+          && state.ui.welcomeProfileReady
+          && state.ui.welcomeEnergyReady
+        );
+        const message = state.entry.pendingTutorialStart
+          ? 'Preparando tutorial'
+          : state.entry.pendingPlayStart
+            ? 'Preparando jogo'
+            : 'Preparando sua partida';
+        if (ready) {
+          loader.hide('page-init');
+          return;
+        }
+        loader.show('page-init', { message });
+      }
+
       function syncWelcomeLoadingState() {
         const ready = Boolean(
           state.entry.sessionResolved
@@ -11815,6 +11836,7 @@
           && state.ui.welcomeEnergyReady
         );
         els.welcomeTouch?.classList.toggle('is-loading', !ready);
+        syncGlobalPlayLoader();
       }
 
       function stopWelcomeEnergyCountdown() {
@@ -12086,6 +12108,7 @@
       function syncWelcomeAccountLink() {}
 
       function syncWelcomeGate() {
+        syncGlobalPlayLoader();
         const visible = shouldShowWelcomeGate();
         state.entry.welcomeVisible = visible;
         document.body.classList.toggle('welcome-active', visible);

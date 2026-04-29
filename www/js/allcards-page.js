@@ -658,6 +658,16 @@
     els.smartbooksStatus.hidden = !visible;
   }
 
+  function toggleGlobalLoader(key, active, message) {
+    const loader = window.PlaytalkLoader;
+    if (!loader) return;
+    if (active) {
+      loader.show(key, { message });
+      return;
+    }
+    loader.hide(key);
+  }
+
   function normalizePercent(value) {
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return 0;
@@ -838,6 +848,7 @@
 
     state.ui.smartbooksLoading = true;
     setSmartbooksStatus('Carregando MyBooks...', true);
+    toggleGlobalLoader('allcards-smartbooks', true, 'Carregando seus SmartBooks');
 
     state.smartbooksInitPromise = Promise.all([
       fetchSmartbooksStories(),
@@ -856,6 +867,7 @@
     }).finally(() => {
       state.ui.smartbooksLoading = false;
       state.smartbooksInitPromise = null;
+      toggleGlobalLoader('allcards-smartbooks', false);
     });
 
     return state.smartbooksInitPromise;
@@ -1076,8 +1088,13 @@
     bindViewToggles();
     bindEnergyGateEntryPoints();
     renderViewToggle();
-    await loadFlashcardsLibrary();
-    startVisualTimers();
+    toggleGlobalLoader('page-init', true, 'Carregando sua biblioteca');
+    try {
+      await loadFlashcardsLibrary();
+      startVisualTimers();
+    } finally {
+      toggleGlobalLoader('page-init', false);
+    }
   }
 
   init();

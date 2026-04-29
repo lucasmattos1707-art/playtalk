@@ -174,6 +174,16 @@
     }
   }
 
+  function toggleGlobalLoader(key, active, message) {
+    const loader = window.PlaytalkLoader;
+    if (!loader) return;
+    if (active) {
+      loader.show(key, { message });
+      return;
+    }
+    loader.hide(key);
+  }
+
   function setRankingLabel(label) {
     if (!els.rankingLabel) return;
     const text = safeText(label) || 'Flashcards';
@@ -1010,32 +1020,38 @@
     const force = Boolean(options.force);
     const animate = options.animate !== false;
     const requestId = state.loadRequestId + 1;
+    const loaderKey = `users-load-${requestId}`;
     state.loadRequestId = requestId;
 
     if (message) {
       setUsersStatus(message);
     }
 
-    const data = await preloadMetric(metricKey, { force });
-    if (requestId !== state.loadRequestId) return;
-    if (!data) {
-      renderRows([]);
-      state.rows = [];
-      setUsersStatus('Nao consegui carregar o ranking agora.');
-      return;
-    }
-
-    const metricChanged = state.currentMetricKey !== data.metricKey;
-    if (animate && metricChanged) {
-      await animateUsersStageSlide();
-      if (requestId !== state.loadRequestId) {
-        state.stageAnimating = false;
+    toggleGlobalLoader(loaderKey, true, 'Carregando ranking dos jogadores');
+    try {
+      const data = await preloadMetric(metricKey, { force });
+      if (requestId !== state.loadRequestId) return;
+      if (!data) {
+        renderRows([]);
+        state.rows = [];
+        setUsersStatus('Nao consegui carregar o ranking agora.');
         return;
       }
-    }
-    applyUsersData(data);
-    if (animate && metricChanged) {
-      await settleUsersStageSlide();
+
+      const metricChanged = state.currentMetricKey !== data.metricKey;
+      if (animate && metricChanged) {
+        await animateUsersStageSlide();
+        if (requestId !== state.loadRequestId) {
+          state.stageAnimating = false;
+          return;
+        }
+      }
+      applyUsersData(data);
+      if (animate && metricChanged) {
+        await settleUsersStageSlide();
+      }
+    } finally {
+      toggleGlobalLoader(loaderKey, false);
     }
   }
 
@@ -1324,24 +1340,28 @@
   }
 
   (async () => {
-    state.currentUser = await fetchSessionUser();
-    syncAdminViewerUi();
-    updateBotHint();
-    await pingPresence();
-    if (await bootstrapViewerFlashcardsFromLocal()) {
-      state.rankingCache.clear();
-    }
-    await loadUsers('', { metricKey: 'flashcards', force: true, animate: false });
-    RANKING_METRICS.forEach((metric) => {
-      if (metric.key !== 'flashcards') {
-        void preloadMetric(metric.key);
+    try {
+      state.currentUser = await fetchSessionUser();
+      syncAdminViewerUi();
+      updateBotHint();
+      await pingPresence();
+      if (await bootstrapViewerFlashcardsFromLocal()) {
+        state.rankingCache.clear();
       }
-    });
-    if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
-      await pollChallenges();
+      await loadUsers('', { metricKey: 'flashcards', force: true, animate: false });
+      RANKING_METRICS.forEach((metric) => {
+        if (metric.key !== 'flashcards') {
+          void preloadMetric(metric.key);
+        }
+      });
+      if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
+        await pollChallenges();
+      }
+      startBackgroundLoops();
+      startRankingRotation();
+    } finally {
+      toggleGlobalLoader('page-init', false);
     }
-    startBackgroundLoops();
-    startRankingRotation();
   })();
 
   window.addEventListener('keydown', (event) => {
