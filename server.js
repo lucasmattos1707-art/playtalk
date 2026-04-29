@@ -9716,9 +9716,15 @@ function normalizeFluencyPlanChoice(value, allowedValues) {
   return allowedValues.has(parsed) ? parsed : null;
 }
 
+function normalizeFluencyPlanMonthsValue(value) {
+  const parsed = normalizeFluencyPlanChoice(value, FLUENCY_PLAN_ALLOWED_MONTHS);
+  if (parsed === 24) return 18;
+  return parsed;
+}
+
 function calculateFluencyPlanScoreSnapshot(plan) {
   const minutes = normalizeFluencyPlanChoice(plan?.minutes, FLUENCY_PLAN_ALLOWED_MINUTES);
-  const months = normalizeFluencyPlanChoice(plan?.months, FLUENCY_PLAN_ALLOWED_MONTHS);
+  const months = normalizeFluencyPlanMonthsValue(plan?.months);
   const application = normalizeFluencyPlanChoice(plan?.application, FLUENCY_PLAN_ALLOWED_APPLICATION);
   const flashcardsPercentage = normalizeFluencyPlanChoice(
     plan?.flashcardsPercentage ?? plan?.flashcards_percentage,
@@ -9752,8 +9758,9 @@ function calculateFluencyPlanScoreSnapshot(plan) {
     return null;
   }
 
+  const effectiveMonths = months === 18 ? 24 : months;
   const dailyHours = minutes / 60;
-  const totalHours = dailyHours * (months * 30);
+  const totalHours = dailyHours * (effectiveMonths * 30);
   let base = 100 * (1 - Math.exp(-totalHours / 260));
   base *= [0.82, 1.0, 1.15][application];
   const smartbooksShare = normalizedSmartbooksPercentage / 100;
