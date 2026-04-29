@@ -3194,7 +3194,7 @@
       justify-items: center;
       gap: 28px;
       margin-top: 25px;
-      transform: translateY(-10dvh);
+      transform: translateY(-5dvh);
       opacity: 1;
       filter: blur(0);
       transition: opacity 1000ms ease, filter 1000ms ease, transform 1000ms ease;
@@ -3205,14 +3205,14 @@
     .pre-book-card.is-starting .pre-book-main {
       opacity: 0;
       filter: blur(7px);
-      transform: translateY(calc(-10dvh - 6px));
+      transform: translateY(calc(-5dvh - 6px));
     }
 
     /* Close dissolve for pre-book overlay. */
     #booksPreBookModal.is-closing .pre-book-main {
       opacity: 0;
       filter: blur(7px);
-      transform: translateY(calc(-10dvh - 6px));
+      transform: translateY(calc(-5dvh - 6px));
     }
 
     .pre-book-cover {
@@ -3486,7 +3486,7 @@
       visibility: hidden;
       pointer-events: none;
       transition: opacity 500ms ease, visibility 0ms linear 500ms;
-      z-index: 2;
+      z-index: 1;
     }
 
     .pre-book-loading.is-visible {

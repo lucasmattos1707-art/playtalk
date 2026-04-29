@@ -376,15 +376,13 @@
       grid-template-columns: 1fr;
       align-items: center;
       justify-items: center;
-      gap: 12px;
-      padding: 18px 20px 16px;
+      gap: 8px;
+      padding: 42px 20px 10px;
       box-sizing: border-box;
       border: 0;
       border-radius: 28px;
-      background: linear-gradient(180deg, rgba(7, 19, 39, 0.72), rgba(6, 16, 32, 0.42));
-      box-shadow:
-        inset 0 0 0 1px rgba(132, 220, 255, 0.08),
-        0 18px 44px rgba(0, 0, 0, 0.2);
+      background: transparent;
+      box-shadow: none;
     }
 
     .welcome-gate__header,
@@ -525,11 +523,13 @@
       position: relative;
       z-index: 2;
       order: 3;
+      margin-top: -34px;
+      margin-bottom: 4px;
     }
 
     .welcome-gate__avatar {
-      width: clamp(108px, 15vh, 144px);
-      height: clamp(108px, 15vh, 144px);
+      width: clamp(140px, 19.5vh, 188px);
+      height: clamp(140px, 19.5vh, 188px);
       border-radius: 50%;
       position: relative;
       display: grid;
@@ -567,16 +567,14 @@
       width: 100%;
       min-height: 0;
       height: auto;
-      padding: 16px 16px 14px;
+      padding: 0;
       margin-inline: auto;
       place-self: stretch;
       justify-items: center;
       align-content: center;
       margin-block: 0;
-      background: linear-gradient(180deg, rgba(6, 18, 36, 0.76), rgba(5, 16, 31, 0.44));
-      box-shadow:
-        inset 0 0 0 1px rgba(132, 220, 255, 0.08),
-        0 18px 44px rgba(0, 0, 0, 0.18);
+      background: transparent;
+      box-shadow: none;
     }
 
     .welcome-gate__level-heading {
@@ -645,7 +643,7 @@
       place-items: center;
       align-content: center;
       justify-items: center;
-      gap: 0;
+      gap: 2px;
       background: transparent;
       color: #ffffff;
       text-align: center;
@@ -669,7 +667,7 @@
     }
 
     .welcome-gate__level-copy {
-      display: block;
+      display: none;
       margin: 0;
       text-align: center;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
@@ -726,15 +724,13 @@
       height: auto;
       justify-items: center;
       align-content: center;
-      gap: 6px;
+      gap: 10px;
       margin-top: 0;
       color: #ffffff;
       text-align: center;
-      padding: 14px 18px 16px;
-      background: linear-gradient(180deg, rgba(7, 19, 38, 0.64), rgba(5, 16, 30, 0.34));
-      box-shadow:
-        inset 0 0 0 1px rgba(132, 220, 255, 0.06),
-        0 18px 44px rgba(0, 0, 0, 0.14);
+      padding: 10px 18px 12px;
+      background: transparent;
+      box-shadow: none;
     }
 
     .welcome-gate__energy-value {
@@ -770,6 +766,13 @@
       font-weight: 500;
       line-height: 1;
       color: rgba(255, 255, 255, 0.92);
+    }
+
+    .welcome-gate__energy .welcome-gate__level-progress-bar {
+      order: 3;
+      max-width: 320px;
+      height: 10px;
+      background: linear-gradient(180deg, rgba(2, 10, 24, 0.98), rgba(3, 15, 37, 0.98));
     }
 
     .welcome-gate__loading {
@@ -8336,10 +8339,6 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v1.06a7 7 0 1 1-6.94 6.94H5a1 1 0 1 1 0-2h3a1 1 0 0 1 1 1v2.44a1 1 0 1 1-2 0v-.55A5 5 0 1 0 12 7h-.5a1 1 0 1 1 0-2H17a1 1 0 1 1 0 2h-2.59l1.8 1.8a1 1 0 0 1-1.42 1.4L13 8.42V4a1 1 0 0 1 1-1z"/></svg>
             </button>
           </div>
-          <div class="welcome-gate__level-copy-panel">
-            <p class="welcome-gate__level-heading" id="welcomeLevelHeading">Você está no level 1</p>
-            <p class="welcome-gate__level-copy" id="welcomeLevelProgressCopy"></p>
-          </div>
           <div class="welcome-gate__header" id="welcomeHeader">
             <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomePlayingModeBtn" type="button" aria-label="Abrir modo Playing" hidden>
               <svg viewBox="0 0 24 24" focusable="false"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H13l-3.6 3a.75.75 0 0 1-1.22-.58V16H6.5A2.5 2.5 0 0 1 4 13.5v-7Zm4.5 1.75a.75.75 0 0 0-.75.75v2.5c0 .414.336.75.75.75h6a.75.75 0 0 0 .75-.75V9a.75.75 0 0 0-.75-.75h-6Z"/></svg>
@@ -8356,10 +8355,9 @@
           </div>
           <div class="welcome-gate__level-panel">
             <div class="welcome-gate__level-orbit" id="welcomeLevelOrbit" aria-hidden="true">
-              <span class="welcome-gate__level-progress-bar" id="welcomeLevelProgressBar"></span>
               <span class="welcome-gate__level-inner">
                 <span class="welcome-gate__level-number" id="welcomeUserLevelNumber">1</span>
-                <span class="welcome-gate__level-title" id="welcomeLevelTitle">Você está no level 1</span>
+                <span class="welcome-gate__level-title" id="welcomeLevelTitle">Nível 1</span>
             </span>
           </div>
         </div>
@@ -8372,6 +8370,7 @@
             <span id="welcomeEnergyValue">--</span>
           </div>
           <div class="welcome-gate__energy-label">energias restantes</div>
+          <span class="welcome-gate__level-progress-bar" id="welcomeLevelProgressBar"></span>
         </div>
         <p class="welcome-gate__blocked-note" id="welcomeBlockedNote" aria-live="polite" hidden>Mais energias amanhã</p>
       </div>
@@ -10844,7 +10843,7 @@
       }
 
       function buildWelcomeGreetingLine() {
-        return resolveWelcomeGreeting();
+        return `Nível ${currentUserLevel()}`;
       }
 
       function buildWelcomeDisplayName() {
@@ -11877,6 +11876,7 @@
       }
 
       function applyWelcomeEnergyStatus(status) {
+        state.ui.welcomeEnergyStatus = status || null;
         if (!state.user?.id) {
           state.ui.welcomeEnergyBlocked = false;
           state.ui.welcomeEnergyNextResetAt = '';
@@ -11907,6 +11907,7 @@
         }
         state.ui.welcomeEnergyReady = true;
         syncWelcomeLoadingState();
+        syncWelcomeLevelProgress();
         if (window.PlaytalkEnergy?.rememberEnergyStatus) {
           window.PlaytalkEnergy.rememberEnergyStatus(status);
         }
@@ -12083,31 +12084,36 @@
         if (state.ui.welcomeSelectedLevel === null || state.ui.welcomeSelectedLevel === undefined || state.ui.welcomeSelectedLevel === '') {
           setSelectedGameLevel(level);
         }
-        const levelTarget = userLevelCardTarget(level);
-        const progressCount = level >= USER_LEVEL_MAX
-          ? levelTarget
-          : Math.max(0, Math.min(levelTarget, currentLevelProgressCount(level)));
-        const remaining = Math.max(0, levelTarget - progressCount);
-        const percent = (progressCount / Math.max(1, levelTarget)) * 100;
+        const energyStatus = state.ui.welcomeEnergyStatus || {};
+        const hasUnlimitedEnergy = Boolean(energyStatus?.premium || energyStatus?.unlimited);
+        const dailyLimit = Number.isFinite(Number(energyStatus?.dailyEnergyLimit))
+          ? Math.max(0, Number(energyStatus.dailyEnergyLimit))
+          : Math.max(0, Number(window.PlaytalkEnergy?.DAILY_FREE_ENERGY) || 0);
+        const usedToday = Number.isFinite(Number(energyStatus?.usedToday))
+          ? Math.max(0, Number(energyStatus.usedToday))
+          : 0;
+        const percent = hasUnlimitedEnergy
+          ? 0
+          : dailyLimit > 0
+            ? Math.max(0, Math.min(100, (usedToday / dailyLimit) * 100))
+            : 0;
         if (els.welcomeLevelHeading) {
-          els.welcomeLevelHeading.textContent = `Você está no level ${level}`;
+          els.welcomeLevelHeading.textContent = `Nível ${level}`;
         }
         ensureWelcomeHeadingRotation();
         els.welcomeUserLevelNumber.textContent = String(level);
         if (els.welcomeLevelTitle) {
-          els.welcomeLevelTitle.textContent = `Você está no level ${level}`;
+          els.welcomeLevelTitle.textContent = `Nível ${level}`;
         }
         els.welcomeLevelProgressBar.style.setProperty('--welcome-level-progress-pct', `${percent.toFixed(2)}%`);
         if (els.welcomeLevelOrbit) {
-          const orbitLabel = level >= USER_LEVEL_MAX
-            ? `Você está no level ${level}. Nivel maximo alcancado.`
-            : `Você está no level ${level}. ${remaining} ${remaining === 1 ? 'carta' : 'cartas'} para avançar.`;
+          const orbitLabel = hasUnlimitedEnergy
+            ? 'Uso de energias: infinito.'
+            : `Uso de energias: ${Math.round(percent)}%.`;
           els.welcomeLevelOrbit.setAttribute('aria-label', orbitLabel);
         }
         if (els.welcomeLevelProgressCopy) {
-          els.welcomeLevelProgressCopy.textContent = level >= USER_LEVEL_MAX
-            ? 'Nivel maximo alcancado.'
-            : `${remaining} ${remaining === 1 ? 'carta' : 'cartas'} para avançar.`;
+          els.welcomeLevelProgressCopy.textContent = '';
         }
         state.ui.welcomeProfileReady = true;
         syncWelcomeLoadingState();
