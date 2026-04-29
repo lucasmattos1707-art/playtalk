@@ -696,6 +696,9 @@
         0 10px 22px rgba(1, 8, 18, 0.26);
       justify-self: auto;
       align-self: auto;
+      padding: 0;
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease;
     }
 
     .welcome-gate__mission-btn svg {
@@ -706,6 +709,15 @@
       filter:
         drop-shadow(0 0 7px rgba(62, 231, 255, 0.78))
         drop-shadow(0 0 14px rgba(0, 126, 255, 0.42));
+    }
+
+    .welcome-gate__mission-btn:hover,
+    .welcome-gate__mission-btn:focus-visible {
+      transform: translateY(-1px) scale(1.04);
+      box-shadow:
+        0 0 0 1px rgba(191, 245, 255, 0.16) inset,
+        0 0 20px rgba(21, 206, 255, 0.34),
+        0 12px 24px rgba(1, 8, 18, 0.28);
     }
 
     .welcome-gate__energy {
@@ -8011,9 +8023,9 @@
               <p class="welcome-gate__greeting" id="welcomeGreetingText">Boa noite</p>
               <p class="welcome-gate__display-name" id="welcomeUserName">Jogador</p>
             </div>
-            <div class="welcome-gate__mission-btn" aria-label="Missão">
+            <button class="welcome-gate__mission-btn" id="welcomeMissionBtn" type="button" aria-label="Missão diária">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v1.06a7 7 0 1 1-6.94 6.94H5a1 1 0 1 1 0-2h3a1 1 0 0 1 1 1v2.44a1 1 0 1 1-2 0v-.55A5 5 0 1 0 12 7h-.5a1 1 0 1 1 0-2H17a1 1 0 1 1 0 2h-2.59l1.8 1.8a1 1 0 0 1-1.42 1.4L13 8.42V4a1 1 0 0 1 1-1z"/></svg>
-            </div>
+            </button>
           </div>
           <div class="welcome-gate__level-copy-panel">
             <p class="welcome-gate__level-heading" id="welcomeLevelHeading">Você está no level 1</p>
@@ -9060,6 +9072,7 @@
         welcomeAudioModeBtn: document.getElementById('welcomeAudioModeBtn'),
         welcomeTextModeBtn: document.getElementById('welcomeTextModeBtn'),
         welcomeHeader: document.getElementById('welcomeHeader'),
+        welcomeMissionBtn: document.getElementById('welcomeMissionBtn'),
         welcomeUserName: document.getElementById('welcomeUserName'),
         welcomeGreetingText: document.getElementById('welcomeGreetingText'),
         welcomeAvatarPreview: document.getElementById('welcomeAvatarPreview'),
@@ -19789,6 +19802,9 @@
             state.entry.welcomeStartRequested = true;
             void openAudioCheck();
           })();
+        });
+        els.welcomeMissionBtn?.addEventListener('click', () => {
+          window.location.href = '/missao';
         });
         els.welcomePlayingModeBtn?.addEventListener('click', () => {
           openWelcomeModeModal('playing');

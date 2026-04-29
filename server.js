@@ -15937,6 +15937,9 @@ app.get(['/landing', '/landing/'], (req, res) => {
 app.get(['/allcards', '/allcards/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'allcards.html'));
 });
+app.get(['/missao', '/missao/', '/missao.html'], (req, res) => {
+  res.sendFile(path.join(staticDir, 'missao.html'));
+});
 app.get(/^\/allcards\/([^/]+\.json)$/i, async (req, res, next) => {
   try {
     const encodedFileName = String(req.params?.[0] || '').trim();
