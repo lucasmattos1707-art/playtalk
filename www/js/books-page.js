@@ -271,6 +271,7 @@
     createJobsPollInFlight: false,
     createJobStatusById: new Map(),
     modeBookId: '',
+    modeBook: null,
     preBookStep: 'root',
     preBookRankedMode: true,
     preBookInsightsRotationTimer: 0,
@@ -4318,6 +4319,7 @@
     }
 
     state.modeBookId = bookId;
+    state.modeBook = book;
     state.preBookRankedMode = true;
     setPreBookStep('root');
     resetModeTransitionUi();
@@ -4365,6 +4367,7 @@
     const finalizeClose = () => {
       const preferredShelfIndex = state.shelfIndex;
       state.modeBookId = '';
+      state.modeBook = null;
       state.preBookRankedMode = true;
       state.preBookInsightsFetchToken += 1;
       stopPreBookInsightsRotation();
@@ -4592,7 +4595,12 @@
   function findModeSelectedBook() {
     const targetBookId = safeText(state.modeBookId);
     if (!targetBookId) return null;
-    return state.books.find((entry) => safeText(entry?.bookId) === targetBookId) || null;
+    const books = Array.isArray(state.books) ? state.books : [];
+    const matchedBook = books.find((entry) => safeText(entry?.bookId) === targetBookId);
+    if (matchedBook) return matchedBook;
+    if (safeText(state.modeBook?.bookId) === targetBookId) return state.modeBook;
+    if (safeText(state.homeCurrentSession?.book?.bookId) === targetBookId) return state.homeCurrentSession.book;
+    return null;
   }
 
   function getShelfBookCard(bookId) {
@@ -4649,7 +4657,10 @@
   async function startBookFromPreBookModal(mode) {
     if (state.modeStartBusy) return;
     const selected = findModeSelectedBook();
-    if (!selected) return;
+    if (!selected) {
+      setStatus('Nao consegui localizar esse MiniBook para abrir.', 'error');
+      return;
+    }
 
     const startToken = state.modeStartToken + 1;
     state.modeStartToken = startToken;
