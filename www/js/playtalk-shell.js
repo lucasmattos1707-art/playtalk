@@ -6,6 +6,7 @@
   const LOADER_ROOT_ID = 'playtalkGlobalLoader';
   const LOADER_STYLE_ID = 'playtalkGlobalLoaderStyles';
   const LOADER_BODY_CLASS = 'playtalk-loader-active';
+  const LOADER_MIN_VISIBLE_MS = 4000;
   const LOADER_TIPS = [
     ['UM VERBO EM USO', 'VALE MAIS QUE DEZ NA LISTA'],
     ['ERRO TAMBEM ENSINA', 'QUANDO VOCE CONTINUA'],
@@ -18,6 +19,8 @@
   ];
   const loaderState = {
     activeKeys: new Set(),
+    shownAtByKey: new Map(),
+    hideTimerByKey: new Map(),
     message: 'Preparando sua jornada',
     tipIndex: 0,
     tipTimer: 0
@@ -69,9 +72,15 @@
         touch-action: none;
       }
 
-      .playtalk-loader {
-        position: fixed;
-        inset: 0;
+      body > .playtalk-loader {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        height: 100vh !important;
+        min-height: 100vh !important;
+        height: 100dvh !important;
+        min-height: 100dvh !important;
         z-index: 2147483647;
         display: flex;
         align-items: center;
@@ -369,11 +378,23 @@
     return String(key || 'default');
   }
 
+  function clearHideTimer(key) {
+    const timerId = loaderState.hideTimerByKey.get(key);
+    if (timerId) {
+      window.clearTimeout(timerId);
+      loaderState.hideTimerByKey.delete(key);
+    }
+  }
+
   function showLoader(key, options) {
     const normalizedKey = normalizeLoaderKey(key);
     const nextOptions = options && typeof options === 'object' ? options : {};
     if (nextOptions.message) {
       loaderState.message = String(nextOptions.message);
+    }
+    clearHideTimer(normalizedKey);
+    if (!loaderState.activeKeys.has(normalizedKey)) {
+      loaderState.shownAtByKey.set(normalizedKey, Date.now());
     }
     loaderState.activeKeys.add(normalizedKey);
     renderLoader();
@@ -381,7 +402,23 @@
   }
 
   function hideLoader(key) {
-    loaderState.activeKeys.delete(normalizeLoaderKey(key));
+    const normalizedKey = normalizeLoaderKey(key);
+    const shownAt = loaderState.shownAtByKey.get(normalizedKey) || 0;
+    const elapsed = shownAt ? (Date.now() - shownAt) : LOADER_MIN_VISIBLE_MS;
+    const remaining = Math.max(0, LOADER_MIN_VISIBLE_MS - elapsed);
+    clearHideTimer(normalizedKey);
+    if (remaining > 0) {
+      const timerId = window.setTimeout(() => {
+        loaderState.activeKeys.delete(normalizedKey);
+        loaderState.shownAtByKey.delete(normalizedKey);
+        loaderState.hideTimerByKey.delete(normalizedKey);
+        renderLoader();
+      }, remaining);
+      loaderState.hideTimerByKey.set(normalizedKey, timerId);
+      return;
+    }
+    loaderState.activeKeys.delete(normalizedKey);
+    loaderState.shownAtByKey.delete(normalizedKey);
     renderLoader();
   }
 
@@ -391,7 +428,12 @@
   }
 
   function resetLoader() {
+    loaderState.hideTimerByKey.forEach((timerId) => {
+      window.clearTimeout(timerId);
+    });
+    loaderState.hideTimerByKey.clear();
     loaderState.activeKeys.clear();
+    loaderState.shownAtByKey.clear();
     renderLoader();
   }
 

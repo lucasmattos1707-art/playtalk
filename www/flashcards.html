@@ -816,7 +816,7 @@
     }
 
     .welcome-gate__touch.is-loading .welcome-gate__loading {
-      display: grid;
+      display: none !important;
     }
 
     @keyframes welcomeGateNeonLoop {
@@ -8304,7 +8304,7 @@
   <div class="container" aria-hidden="true"></div>
   <section class="welcome-gate" id="welcomeGate" aria-label="Entrada do Fluent LevelUp">
     <div class="welcome-gate__stack">
-      <div class="welcome-gate__touch is-loading" id="welcomeTouch">
+      <div class="welcome-gate__touch" id="welcomeTouch">
         <div class="welcome-gate__loading" id="welcomeLoading" aria-hidden="true">
           <div class="welcome-gate__loading-loop"></div>
         </div>
@@ -11830,12 +11830,7 @@
       }
 
       function syncWelcomeLoadingState() {
-        const ready = Boolean(
-          state.entry.sessionResolved
-          && state.ui.welcomeProfileReady
-          && state.ui.welcomeEnergyReady
-        );
-        els.welcomeTouch?.classList.toggle('is-loading', !ready);
+        els.welcomeTouch?.classList.remove('is-loading');
         syncGlobalPlayLoader();
       }
 
