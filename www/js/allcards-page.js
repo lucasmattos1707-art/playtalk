@@ -1,5 +1,9 @@
 (function initPlaytalkAllCardsPage() {
-  const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v2';
+  const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v3-postgres';
+  const LEGACY_CARDS_CACHE_STORAGE_KEYS = [
+    'playtalk-flashcards-cards-v3-postgres',
+    'playtalk-flashcards-cards-v2'
+  ];
   const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
   const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
   const LAST_ACTIVE_USER_STORAGE_KEY = 'playtalk-flashcards-last-user-v1';
@@ -60,6 +64,17 @@
 
   function safeText(value) {
     return typeof value === 'string' ? value.trim() : '';
+  }
+
+  function repairDisplayText(value) {
+    const text = safeText(value);
+    if (!text) return '';
+    try {
+      const decoded = decodeURIComponent(escape(text));
+      return safeText(decoded) || text;
+    } catch (_error) {
+      return text;
+    }
   }
 
   function iconMarkup(kind) {
@@ -216,12 +231,17 @@
   }
 
   function readCardsCache() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(CARDS_CACHE_STORAGE_KEY) || 'null');
-      return Array.isArray(parsed?.cards) ? parsed.cards : [];
-    } catch (_error) {
-      return [];
+    for (const storageKey of LEGACY_CARDS_CACHE_STORAGE_KEYS) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(storageKey) || 'null');
+        if (Array.isArray(parsed?.cards) && parsed.cards.length) {
+          return parsed.cards;
+        }
+      } catch (_error) {
+        // try next cache key
+      }
     }
+    return [];
   }
 
   function saveCardsCache(cards) {
@@ -341,7 +361,7 @@
   }
 
   function flattenPayload(fileName, payload, options = {}) {
-    const title = safeText(payload?.title) || fileName.replace(/\.json$/i, '');
+    const title = repairDisplayText(payload?.title) || fileName.replace(/\.json$/i, '');
     const sourceKey = safeText(options.sourceKey || fileName) || fileName;
     const idSource = safeText(options.idSource || fileName) || fileName;
     const items = Array.isArray(payload)
@@ -360,8 +380,8 @@
         deckTitle: title,
         imageUrl: safeText(item?.imagem || item?.image),
         imageDisplayUrl: safeText(item?.imagem || item?.image),
-        english: safeText(item?.nomeIngles || item?.english || item?.word),
-        portuguese: safeText(item?.nomePortugues || item?.portuguese || item?.translation),
+        english: repairDisplayText(item?.nomeIngles || item?.english || item?.word),
+        portuguese: repairDisplayText(item?.nomePortugues || item?.portuguese || item?.translation),
         audioUrl: safeText(item?.audio || item?.audioUrl)
       };
     });
@@ -693,6 +713,31 @@
     }));
   }
 
+  function normalizeBooksFromPayload(books) {
+    if (!Array.isArray(books)) return [];
+    return books
+      .map((book) => {
+        const bookId = safeText(book?.id || book?.bookId);
+        const fileName = safeText(book?.fileName);
+        const nome = repairDisplayText(book?.title || book?.nome || book?.bookTitle);
+        if (!bookId || !fileName || !nome) return null;
+        return {
+          bookId,
+          fileName,
+          nome,
+          nivel: Number.parseInt(book?.nivel, 10) || 1,
+          audioSources: normalizeAudioSources(book?.audioSources),
+          coverImageUrl: safeText(book?.coverImageUrl),
+          selectedStoryId: safeText(book?.selectedStoryId) || safeText(Array.isArray(book?.storyIds) ? book.storyIds[0] : '')
+        };
+      })
+      .filter(Boolean)
+      .sort((left, right) => String(left?.nome || '').localeCompare(String(right?.nome || ''), 'pt-BR', {
+        sensitivity: 'base',
+        numeric: true
+      }));
+  }
+
   function getMyBooksBadge(bestPercent) {
     const normalizedPercent = normalizePercent(bestPercent);
     if (normalizedPercent >= 98) return { src: '/medalhas/diamante.png', alt: 'Selo diamante' };
@@ -774,6 +819,9 @@
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload?.success) {
       return [];
+    }
+    if (Array.isArray(payload?.books) && payload.books.length) {
+      return normalizeBooksFromPayload(payload.books);
     }
     return normalizeBooksFromStories(payload.stories);
   }
