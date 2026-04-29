@@ -6917,18 +6917,20 @@
       setPreBookStep('training');
     });
 
+    els.preBookCover?.addEventListener('click', () => {
+      if (state.modeStartBusy || state.preBookStep !== 'root') return;
+      state.preBookRankedMode = true;
+      setPreBookStep('training');
+    });
+
     els.preBookListeningBtn?.addEventListener('click', () => {
       void (async () => {
-        if (await handleManualNoEnergyBlock(els.preBookListeningBtn, 'prebook')) return;
-        if (!(await guardEnergyAndRedirect({ previewTarget: els.preBookListeningBtn }))) return;
         await startBookFromPreBookModal('listening-training');
       })();
     });
 
     els.preBookSpeakingBtn?.addEventListener('click', () => {
       void (async () => {
-        if (await handleManualNoEnergyBlock(els.preBookSpeakingBtn, 'prebook')) return;
-        if (!(await guardEnergyAndRedirect({ previewTarget: els.preBookSpeakingBtn }))) return;
         await startBookFromPreBookModal('speaking-training');
       })();
     });
