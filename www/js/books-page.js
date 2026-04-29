@@ -6942,17 +6942,23 @@
       })();
     });
 
-    els.preBookListeningBtn?.addEventListener('click', () => {
-      void (async () => {
-        await startBookFromPreBookModal('listening-training');
-      })();
-    });
+    const triggerPreBookListeningMode = (event) => {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      void startBookFromPreBookModal('listening-training');
+    };
 
-    els.preBookSpeakingBtn?.addEventListener('click', () => {
-      void (async () => {
-        await startBookFromPreBookModal('speaking-training');
-      })();
-    });
+    const triggerPreBookSpeakingMode = (event) => {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      void startBookFromPreBookModal('speaking-training');
+    };
+
+    els.preBookListeningBtn?.addEventListener('click', triggerPreBookListeningMode);
+    els.preBookListeningBtn?.addEventListener('pointerup', triggerPreBookListeningMode);
+
+    els.preBookSpeakingBtn?.addEventListener('click', triggerPreBookSpeakingMode);
+    els.preBookSpeakingBtn?.addEventListener('pointerup', triggerPreBookSpeakingMode);
 
     els.preBookCloseBtn?.addEventListener('click', () => {
       closePreBookModal({ animate: true });
