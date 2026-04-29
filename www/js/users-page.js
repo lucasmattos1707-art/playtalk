@@ -1349,13 +1349,14 @@
         state.rankingCache.clear();
       }
       await loadUsers('', { metricKey: 'flashcards', force: true, animate: false });
+      toggleGlobalLoader('page-init', false);
       RANKING_METRICS.forEach((metric) => {
         if (metric.key !== 'flashcards') {
           void preloadMetric(metric.key);
         }
       });
       if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
-        await pollChallenges();
+        void pollChallenges();
       }
       startBackgroundLoops();
       startRankingRotation();

@@ -416,7 +416,7 @@
     loaderState.tipTimer = window.setInterval(() => {
       loaderState.tipIndex = (loaderState.tipIndex + 1) % LOADER_TIPS.length;
       renderLoaderTip();
-    }, 2600);
+    }, 4000);
   }
 
   function normalizeLoaderKey(key) {

@@ -1165,12 +1165,12 @@
       height: 100dvh;
       min-height: 100dvh;
       position: relative;
-      padding: 22px 20px 24px;
+      padding: 18px 18px 20px;
       display: grid;
       grid-template-rows: auto 1fr;
       align-content: stretch;
-      justify-items: stretch;
-      gap: 18px;
+      justify-items: center;
+      gap: 12px;
       overflow: hidden;
       overflow-x: hidden;
       color: #f5fbff;
@@ -1215,13 +1215,13 @@
       display: grid;
       align-content: center;
       justify-items: center;
-      gap: 2px;
+      gap: 0;
     }
 
     .daily-plan-modal__hero-pre {
       color: #ffffff;
       font-family: "Orbitron", sans-serif;
-      font-size: clamp(44px, 12vw, 66px);
+      font-size: clamp(36px, 10vw, 54px);
       letter-spacing: 0.08em;
       font-weight: 900;
       line-height: 0.88;
@@ -1230,7 +1230,7 @@
 
     .daily-plan-modal__hero-main {
       font-family: "Orbitron", sans-serif;
-      font-size: clamp(54px, 15vw, 82px);
+      font-size: clamp(44px, 12vw, 64px);
       letter-spacing: 0.09em;
       font-weight: 900;
       line-height: 0.95;
@@ -1244,19 +1244,22 @@
     .daily-plan-modal__card {
       position: relative;
       min-height: 0;
-      height: 100%;
+      height: auto;
+      width: min(70vw, 420px);
+      max-width: calc(100vw - 42px);
       background: linear-gradient(180deg, rgba(10, 24, 56, 0.86), rgba(3, 9, 24, 0.88));
       border: 1px solid rgba(105, 190, 255, 0.32);
       border-radius: 34px;
-      padding: 22px 20px 20px;
+      padding: 16px 16px 14px;
       box-shadow:
         0 0 0 1px rgba(70, 170, 255, 0.08) inset,
         0 0 42px rgba(0, 163, 255, 0.18),
         0 24px 80px rgba(0, 0, 0, 0.45);
       overflow: hidden;
       display: grid;
-      grid-template-rows: 1fr 1fr auto;
+      grid-template-rows: auto auto auto;
       align-content: stretch;
+      gap: 6px;
     }
 
     .daily-plan-modal__card::before {
@@ -1281,10 +1284,10 @@
 
     .daily-plan-modal__mission {
       display: grid;
-      grid-template-columns: 84px 1fr;
-      gap: 16px;
+      grid-template-columns: 64px 1fr;
+      gap: 12px;
       align-items: center;
-      padding: 4px 0 16px;
+      padding: 2px 0 10px;
       position: relative;
       z-index: 1;
       min-height: 0;
@@ -1292,16 +1295,16 @@
 
     .daily-plan-modal__mission + .daily-plan-modal__mission {
       border-top: 1px solid rgba(116, 185, 255, 0.26);
-      padding-top: 20px;
+      padding-top: 12px;
     }
 
     .daily-plan-modal__icon-ring {
-      width: 84px;
-      height: 84px;
+      width: 64px;
+      height: 64px;
       border-radius: 999px;
       display: grid;
       place-items: center;
-      font-size: 40px;
+      font-size: 30px;
       color: #ffffff;
       background:
         radial-gradient(circle, rgba(24, 200, 255, 0.35), rgba(24, 200, 255, 0.04) 62%),
@@ -1312,39 +1315,48 @@
 
     .daily-plan-modal__icon-ring.is-purple {
       background:
-        radial-gradient(circle, rgba(141, 101, 255, 0.38), rgba(141, 101, 255, 0.04) 62%),
+        radial-gradient(circle, rgba(24, 200, 255, 0.32), rgba(24, 200, 255, 0.04) 62%),
         rgba(5, 12, 28, 0.88);
-      border-color: rgba(141, 101, 255, 0.42);
-      box-shadow: 0 0 34px rgba(141, 101, 255, 0.36), inset 0 0 24px rgba(141, 101, 255, 0.14);
+      border-color: rgba(24, 200, 255, 0.42);
+      box-shadow: 0 0 34px rgba(24, 200, 255, 0.28), inset 0 0 24px rgba(24, 200, 255, 0.14);
     }
 
     .daily-plan-modal__mission h2 {
       margin: 0;
-      font-size: 22px;
-      line-height: 1.02;
+      font-size: 18px;
+      line-height: 1.08;
       font-weight: 900;
-      letter-spacing: -0.03em;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .daily-plan-modal__mission h2 span {
-      display: block;
-      color: #18c8ff;
-      font-size: 26px;
-      margin-top: 4px;
-      text-shadow: 0 0 16px rgba(24, 200, 255, 0.45);
+      display: inline;
+      color: #ff9a3d;
+      font-size: 18px;
+      margin-top: 0;
+      text-shadow: 0 0 14px rgba(255, 154, 61, 0.42);
+    }
+
+    .daily-plan-modal__mission h2 .daily-plan-modal__mission-verb {
+      color: #ffffff;
+      text-shadow: none;
     }
 
     .daily-plan-modal__mission.is-books h2 span {
-      color: #8d65ff;
-      text-shadow: 0 0 16px rgba(141, 101, 255, 0.55);
+      color: #18c8ff;
+      text-shadow: 0 0 16px rgba(24, 200, 255, 0.45);
     }
 
     .daily-plan-modal__counter {
       font-family: "Orbitron", sans-serif;
-      font-size: 30px;
+      font-size: 24px;
       font-weight: 900;
       letter-spacing: -0.05em;
-      margin-bottom: 10px;
+      margin: 6px 0 8px;
     }
 
     .daily-plan-modal__counter-done {
@@ -1353,8 +1365,8 @@
     }
 
     .daily-plan-modal__mission.is-books .daily-plan-modal__counter-done {
-      color: #8d65ff;
-      filter: drop-shadow(0 0 12px rgba(141, 101, 255, 0.65));
+      color: #18c8ff;
+      filter: drop-shadow(0 0 12px rgba(24, 200, 255, 0.65));
     }
 
     .daily-plan-modal__counter-total {
@@ -1380,19 +1392,19 @@
     }
 
     .daily-plan-modal__mission.is-books .daily-plan-modal__fill {
-      background: linear-gradient(90deg, #7b5cff, #b69cff);
-      box-shadow: 0 0 22px rgba(141, 101, 255, 0.72);
+      background: linear-gradient(90deg, #18c8ff, #7deeff);
+      box-shadow: 0 0 22px rgba(24, 200, 255, 0.72);
     }
 
     .daily-plan-modal__reward {
-      margin-top: 2px;
-      padding: 16px 18px;
+      margin-top: 0;
+      padding: 12px 14px;
       border-radius: 22px;
       background: rgba(5, 14, 34, 0.7);
       border: 1px solid rgba(105, 190, 255, 0.18);
       display: grid;
-      grid-template-columns: 1fr 72px;
-      gap: 10px;
+      grid-template-columns: 1fr 58px;
+      gap: 8px;
       align-items: center;
       position: relative;
       z-index: 1;
@@ -1404,39 +1416,40 @@
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.12em;
-      margin-bottom: 9px;
+      margin-bottom: 6px;
+      font-size: 11px;
     }
 
     .daily-plan-modal__reward strong {
       display: block;
-      font-size: 18px;
+      font-size: 15px;
       line-height: 1.2;
       letter-spacing: 0.02em;
     }
 
     .daily-plan-modal__medal {
-      width: 72px;
-      height: 72px;
+      width: 58px;
+      height: 58px;
       border-radius: 22px;
       display: grid;
       place-items: center;
-      font-size: 34px;
+      font-size: 28px;
       background: radial-gradient(circle, rgba(24, 200, 255, 0.5), rgba(45, 102, 255, 0.16) 62%, rgba(5, 12, 28, 0.9));
       border: 1px solid rgba(24, 200, 255, 0.4);
       box-shadow: 0 0 32px rgba(24, 200, 255, 0.45);
     }
 
     @media (max-width: 380px) {
-      .daily-plan-modal__panel { padding: 18px 14px 20px; }
-      .daily-plan-modal__card { padding: 18px 14px 16px; }
-      .daily-plan-modal__mission { grid-template-columns: 72px 1fr; gap: 12px; }
-      .daily-plan-modal__icon-ring { width: 72px; height: 72px; font-size: 34px; }
-      .daily-plan-modal__mission h2 { font-size: 20px; }
-      .daily-plan-modal__mission h2 span { font-size: 23px; }
-      .daily-plan-modal__hero-pre { font-size: 38px; }
-      .daily-plan-modal__hero-main { font-size: 46px; }
-      .daily-plan-modal__counter { font-size: 27px; }
-      .daily-plan-modal__reward strong { font-size: 16px; }
+      .daily-plan-modal__panel { padding: 16px 14px 18px; gap: 10px; }
+      .daily-plan-modal__card { width: min(70vw, 340px); padding: 14px 12px 12px; }
+      .daily-plan-modal__mission { grid-template-columns: 56px 1fr; gap: 10px; }
+      .daily-plan-modal__icon-ring { width: 56px; height: 56px; font-size: 26px; }
+      .daily-plan-modal__mission h2 { font-size: 16px; gap: 6px; }
+      .daily-plan-modal__mission h2 span { font-size: 16px; }
+      .daily-plan-modal__hero-pre { font-size: 34px; }
+      .daily-plan-modal__hero-main { font-size: 42px; }
+      .daily-plan-modal__counter { font-size: 22px; }
+      .daily-plan-modal__reward strong { font-size: 14px; }
     }
 
     .welcome-gate__admin-stats {
@@ -8413,7 +8426,7 @@
           <article class="daily-plan-modal__mission">
             <div class="daily-plan-modal__icon-ring">⚡</div>
             <div>
-              <h2>Ganhar <span id="dailyPlanFlashcardsGoal">0 FlashCards</span></h2>
+              <h2><span class="daily-plan-modal__mission-verb">Ganhar</span> <span id="dailyPlanFlashcardsGoal">0 FlashCards</span></h2>
               <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanFlashcardsDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanFlashcardsTotal">/0</span></div>
               <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill" id="dailyPlanFlashcardsBar" style="--progress: 0%"></div></div>
             </div>
@@ -8422,7 +8435,7 @@
           <article class="daily-plan-modal__mission is-books">
             <div class="daily-plan-modal__icon-ring is-purple">📘</div>
             <div>
-              <h2>Ler <span id="dailyPlanBooksGoal">0 MiniBooks</span></h2>
+              <h2><span class="daily-plan-modal__mission-verb">Ler</span> <span id="dailyPlanBooksGoal">0 MiniBooks</span></h2>
               <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanBooksDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanBooksTotal">/0</span></div>
               <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill" id="dailyPlanBooksBar" style="--progress: 0%"></div></div>
             </div>
