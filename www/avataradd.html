@@ -575,7 +575,8 @@
             createdAt: entry?.createdAt || entry?.created_at || null
           })).filter((entry) => entry.image)
           : [],
-        avatarGenerationCount: Math.max(0, Number.parseInt(user.avatar_generation_count || user.avatarGenerationCount, 10) || 0)
+        avatarGenerationCount: Math.max(0, Number.parseInt(user.avatar_generation_count || user.avatarGenerationCount, 10) || 0),
+        nextOnboardingRoute: safeText(user.next_onboarding_route || user.nextOnboardingRoute)
       };
     }
     function getReturnPath() {
@@ -590,8 +591,8 @@
       window.location.href = target;
     }
 
-    function nextAfterAvatar() {
-      return `/password?return=${encodeURIComponent(getReturnPath())}`;
+    function nextAfterAvatar(user) {
+      return safeText(user?.nextOnboardingRoute) || getReturnPath();
     }
     function currentPromptText() {
       return safeText(els.photoPromptInput?.value || '').slice(0, 300);
@@ -923,6 +924,10 @@
       setStatus('');
       try {
         const user = await ensureProvisionedUser();
+        if (user?.nextOnboardingRoute && !/^\/avataradd(?:[/?#]|$)/i.test(user.nextOnboardingRoute)) {
+          navigateTo(user.nextOnboardingRoute, { replace: true });
+          return;
+        }
         state.photoVersions = Array.isArray(user?.avatarVersions) ? user.avatarVersions.slice(0, 5).map((entry) => ({
           image: entry.image,
           source: '',
@@ -968,8 +973,8 @@
       void (async () => {
         setStatus('Salvando foto...');
         try {
-          await persistPhotoGateProfile();
-          navigateTo(nextAfterAvatar());
+          const updatedUser = await persistPhotoGateProfile();
+          navigateTo(nextAfterAvatar(updatedUser), { replace: true });
         } catch (error) {
           setStatus(error?.message || 'Nao foi possivel salvar a foto.', 'error');
         }

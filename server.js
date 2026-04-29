@@ -91,6 +91,8 @@ const buildAllowedCorsOrigins = () => {
     'http://127.0.0.1:3000',
     'http://localhost',
     'http://127.0.0.1',
+    'https://fluentlevelup.com',
+    'https://www.fluentlevelup.com',
     'capacitor://localhost',
     'ionic://localhost'
   ]);
@@ -109,32 +111,45 @@ const buildAllowedCorsOrigins = () => {
 
 const ALLOWED_CORS_ORIGIN_SET = buildAllowedCorsOrigins();
 
-const isAllowedCorsOrigin = (origin) => {
+const isAllowedCorsOrigin = (origin, req = null) => {
   if (!origin) return true;
   if (ALLOWED_CORS_ORIGIN_SET.has(origin)) return true;
 
   try {
     const parsed = new URL(origin);
     const hostname = String(parsed.hostname || '').toLowerCase();
-    return hostname === 'localhost' || hostname === '127.0.0.1';
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return true;
+    }
+
+    const requestHost = String(req?.headers?.host || '').trim().toLowerCase();
+    const requestHostName = requestHost.replace(/:\d+$/, '');
+    return Boolean(requestHostName) && hostname === requestHostName;
   } catch (_error) {
     return false;
   }
 };
 
-const corsOptions = {
+const buildCorsOptions = (req) => ({
   origin(origin, callback) {
-    if (isAllowedCorsOrigin(origin)) {
+    if (isAllowedCorsOrigin(origin, req)) {
       callback(null, true);
       return;
     }
     callback(new Error('Origin not allowed by CORS'));
   },
   credentials: true
-};
+});
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.use((req, res, next) => cors(buildCorsOptions(req))(req, res, next));
+app.options('*', (req, res, next) => cors(buildCorsOptions(req))(req, res, next));
+app.use((error, req, res, next) => {
+  if (error && /origin not allowed by cors/i.test(String(error.message || ''))) {
+    res.status(403).json({ success: false, message: 'Origem nao autorizada para autenticacao.' });
+    return;
+  }
+  next(error);
+});
 
 const DATABASE_CONFIG = DATABASE_URL
   ? {
@@ -259,6 +274,8 @@ const BATTLE_STORIES_ROOT_CANDIDATES = Array.from(new Set([
 ]));
 const FLASHCARD_RANKING_PLACEHOLDER_NAME = 'Usuario';
 const FLASHCARD_RANKING_PLACEHOLDER_AVATAR = '/Avatar/profile-neon-blue.svg';
+const FLUENCY_PLAN_DEFAULT_STATUS = 'nao';
+const FLUENCY_PLAN_COMPLETED_STATUS = 'sim';
 const PRESENCE_CLASS_DAILY_TARGET = 5000;
 const FLASHCARD_RANKING_PERIODS = {
   weekly: {
@@ -2549,6 +2566,34 @@ const ensureUsersAvatarColumn = async () => {
         ADD COLUMN IF NOT EXISTS level integer NOT NULL DEFAULT 1
       `);
       await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS "fluency-plan" text NOT NULL DEFAULT '${FLUENCY_PLAN_DEFAULT_STATUS}'
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS fluency_plan_minutes integer
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS fluency_plan_months integer
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS fluency_plan_application integer
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS fluency_plan_books integer
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS fluency_plan_score integer
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS fluency_plan_updated_at timestamptz
+      `);
+      await pool.query(`
         UPDATE public.users
         SET level = LEAST(100, GREATEST(1, COALESCE(level, 1)))
       `);
@@ -2617,13 +2662,102 @@ const mapPublicUser = (user) => ({
   has_password: Boolean(user?.password_hash),
   premium_full_access: Boolean(user?.premium_full_access),
   premium_until: user?.premium_until || null,
-  no_energy: Boolean(user?.no_energy)
+  no_energy: Boolean(user?.no_energy),
+  fluency_plan_status: String(user?.['fluency-plan'] || user?.fluency_plan_status || FLUENCY_PLAN_DEFAULT_STATUS).trim().toLowerCase() || FLUENCY_PLAN_DEFAULT_STATUS,
+  fluency_plan_minutes: readNullableInteger(user?.fluency_plan_minutes),
+  fluency_plan_months: readNullableInteger(user?.fluency_plan_months),
+  fluency_plan_application: readNullableInteger(user?.fluency_plan_application),
+  fluency_plan_books: readNullableInteger(user?.fluency_plan_books),
+  fluency_plan_score: readNullableInteger(user?.fluency_plan_score),
+  fluency_plan_updated_at: user?.fluency_plan_updated_at || null
 });
 
 function normalizeUserFlashcardLevel(value) {
   const parsed = Number.parseInt(String(value ?? '').trim(), 10);
   if (!Number.isInteger(parsed)) return 1;
   return Math.max(1, Math.min(100, parsed));
+}
+
+function readNullableInteger(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number.parseInt(String(value).trim(), 10);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
+function normalizeFluencyPlanStatus(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === FLUENCY_PLAN_COMPLETED_STATUS
+    ? FLUENCY_PLAN_COMPLETED_STATUS
+    : FLUENCY_PLAN_DEFAULT_STATUS;
+}
+
+function isPlaceholderAvatarImage(value) {
+  const avatar = String(value || '').trim();
+  if (!avatar) return true;
+  return avatar === FLASHCARD_RANKING_PLACEHOLDER_AVATAR
+    || avatar === FLASHCARD_RANKING_PLACEHOLDER_AVATAR.replace(/^\//, '')
+    || avatar.endsWith(FLASHCARD_RANKING_PLACEHOLDER_AVATAR);
+}
+
+function hasCompletedFluencyPlan(user) {
+  return normalizeFluencyPlanStatus(user?.['fluency-plan'] || user?.fluency_plan_status) === FLUENCY_PLAN_COMPLETED_STATUS;
+}
+
+function needsAvatarOnboarding(user) {
+  return isPlaceholderAvatarImage(user?.avatar_image);
+}
+
+function normalizeSafeReturnPath(value) {
+  const requestedReturn = typeof value === 'string' ? value.trim() : '';
+  if (!requestedReturn || !requestedReturn.startsWith('/') || requestedReturn.startsWith('//')) {
+    return '/play';
+  }
+  if (
+    /^\/(?:entrar|auth|auth\.html|login|register|logout|fluency-plan|avataradd|username|usermame|password)(?:[/?#]|$)/i
+      .test(requestedReturn)
+  ) {
+    return '/play';
+  }
+  return requestedReturn;
+}
+
+function normalizePathname(value) {
+  const pathname = String(value || '').trim() || '/';
+  if (pathname === '/') return '/';
+  return pathname.replace(/\/+$/, '') || '/';
+}
+
+function buildOnboardingRoute(pathname, returnTo = '/play') {
+  const safeReturn = normalizeSafeReturnPath(returnTo);
+  return `${pathname}?return=${encodeURIComponent(safeReturn)}`;
+}
+
+function resolveRequiredOnboardingPath(user, returnTo = '/play') {
+  if (!hasCompletedFluencyPlan(user)) {
+    return buildOnboardingRoute('/fluency-plan', returnTo);
+  }
+  if (needsAvatarOnboarding(user)) {
+    return buildOnboardingRoute('/avataradd', returnTo);
+  }
+  return '';
+}
+
+async function buildAuthUserPayload(user, options = {}) {
+  let sourceUser = user;
+  if (
+    sourceUser?.id
+    && sourceUser['fluency-plan'] === undefined
+    && sourceUser.fluency_plan_status === undefined
+    && sourceUser.fluency_plan_minutes === undefined
+  ) {
+    sourceUser = await readUserById(sourceUser.id).catch(() => sourceUser);
+  }
+  const nextOnboardingRoute = resolveRequiredOnboardingPath(sourceUser, options.returnTo || '/play');
+  return {
+    ...mapPublicUser(sourceUser),
+    next_onboarding_route: nextOnboardingRoute,
+    is_onboarding_blocked: Boolean(nextOnboardingRoute)
+  };
 }
 
 const normalizeAdminUsername = (value) => String(value || '').trim().toLowerCase();
@@ -2948,7 +3082,10 @@ const readUserById = async (userId) => {
     `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
             onboarding_name_completed, onboarding_photo_completed, created_at, password_hash,
             premium_full_access, premium_until, level, is_bot, bot_config, bot_avatar_status,
-            bot_avatar_error, created_by_user_id, battle, no_energy
+            bot_avatar_error, created_by_user_id, battle, no_energy,
+            "fluency-plan", fluency_plan_minutes, fluency_plan_months,
+            fluency_plan_application, fluency_plan_books, fluency_plan_score,
+            fluency_plan_updated_at
      FROM public.users
      WHERE id = $1
      LIMIT 1`,
@@ -9376,6 +9513,41 @@ function buildBotLoginPassword() {
   return password;
 }
 
+const FLUENCY_PLAN_ALLOWED_MINUTES = new Set([5, 15, 30, 45, 60, 90, 120]);
+const FLUENCY_PLAN_ALLOWED_MONTHS = new Set([3, 6, 9, 12, 18, 24]);
+const FLUENCY_PLAN_ALLOWED_APPLICATION = new Set([0, 1, 2]);
+const FLUENCY_PLAN_ALLOWED_BOOKS = new Set([0, 1]);
+
+function normalizeFluencyPlanChoice(value, allowedValues) {
+  const parsed = Number.parseInt(String(value ?? '').trim(), 10);
+  return allowedValues.has(parsed) ? parsed : null;
+}
+
+function calculateFluencyPlanScoreSnapshot(plan) {
+  const minutes = normalizeFluencyPlanChoice(plan?.minutes, FLUENCY_PLAN_ALLOWED_MINUTES);
+  const months = normalizeFluencyPlanChoice(plan?.months, FLUENCY_PLAN_ALLOWED_MONTHS);
+  const application = normalizeFluencyPlanChoice(plan?.application, FLUENCY_PLAN_ALLOWED_APPLICATION);
+  const books = normalizeFluencyPlanChoice(plan?.books, FLUENCY_PLAN_ALLOWED_BOOKS);
+  if (minutes === null || months === null || application === null || books === null) {
+    return null;
+  }
+
+  const dailyHours = minutes / 60;
+  const totalHours = dailyHours * (months * 30);
+  let base = 100 * (1 - Math.exp(-totalHours / 260));
+  base *= [0.82, 1.0, 1.15][application];
+  const bookBoost = books === 1 ? [0.10, 0.20, 0.30][application] : 0;
+  const finalScore = Math.max(0, Math.min(100, Math.round(base * (1 + bookBoost))));
+
+  return {
+    minutes,
+    months,
+    application,
+    books,
+    score: finalScore
+  };
+}
+
 function buildRandomUserSuffix(length = 8) {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
   return Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
@@ -9983,7 +10155,7 @@ app.post('/register', async (req, res) => {
     clearAuthRateLimit(req, `register:${username}`);
     res.status(201).json({
       success: true,
-      user: mapPublicUser(user),
+      user: await buildAuthUserPayload(user),
       token
     });
   } catch (error) {
@@ -10008,7 +10180,7 @@ app.post('/auth/provision-temp', async (req, res) => {
 
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     if (authUser?.id) {
-      res.json({ success: true, user: mapPublicUser(authUser), token: null });
+      res.json({ success: true, user: await buildAuthUserPayload(authUser), token: null });
       return;
     }
 
@@ -10030,7 +10202,7 @@ app.post('/auth/provision-temp', async (req, res) => {
     if (token) {
       setAuthCookie(res, token);
     }
-    res.status(201).json({ success: true, user: mapPublicUser(user), token });
+    res.status(201).json({ success: true, user: await buildAuthUserPayload(user), token });
   } catch (error) {
     console.error('Erro ao provisionar usuario temporario:', error);
     res.status(500).json({ success: false, message: 'Nao foi possivel preparar o usuario.' });
@@ -10096,7 +10268,7 @@ app.post('/login', async (req, res) => {
     res.json({
       success: true,
       token,
-      user: mapPublicUser(user)
+      user: await buildAuthUserPayload(user)
     });
   } catch (error) {
     console.error('Erro ao autenticar usuario:', error);
@@ -10210,7 +10382,7 @@ app.post('/api/books/home-auth', async (req, res) => {
       success: true,
       created,
       token,
-      user: mapPublicUser(user)
+      user: await buildAuthUserPayload(user)
     });
   } catch (error) {
     console.error('Erro no login/criacao da area books:', error);
@@ -10326,7 +10498,7 @@ app.post('/auth/google-quick', async (req, res) => {
       return;
     }
     setAuthCookie(res, token);
-    res.json({ success: true, token, user: mapPublicUser(user) });
+    res.json({ success: true, token, user: await buildAuthUserPayload(user) });
   } catch (error) {
     console.error('Erro no login rapido com Google:', error);
     res.status(500).json({ success: false, message: 'Erro ao autenticar com Google.' });
@@ -10342,10 +10514,120 @@ app.get('/auth/session', async (req, res) => {
       return;
     }
 
-    res.json({ success: true, user: mapPublicUser(user) });
+    res.json({
+      success: true,
+      user: await buildAuthUserPayload(user, { returnTo: req.query?.return || '/play' })
+    });
   } catch (error) {
     console.error('Erro ao carregar sessao do usuario:', error);
     res.status(500).json({ success: false, message: 'Erro ao carregar sessao.' });
+  }
+});
+
+app.get('/auth/fluency-plan', async (req, res) => {
+  try {
+    const user = await readAuthenticatedUserFromRequest(req);
+    if (!user?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const hydratedUser = await readUserById(user.id);
+    if (!hydratedUser) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      user: await buildAuthUserPayload(hydratedUser, { returnTo: req.query?.return || '/play' }),
+      plan: {
+        status: normalizeFluencyPlanStatus(hydratedUser['fluency-plan']),
+        minutes: readNullableInteger(hydratedUser.fluency_plan_minutes),
+        months: readNullableInteger(hydratedUser.fluency_plan_months),
+        application: readNullableInteger(hydratedUser.fluency_plan_application),
+        books: readNullableInteger(hydratedUser.fluency_plan_books),
+        score: readNullableInteger(hydratedUser.fluency_plan_score)
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao carregar plano de fluencia:', error);
+    res.status(500).json({ success: false, message: 'Erro ao carregar plano de fluencia.' });
+  }
+});
+
+app.patch('/auth/fluency-plan', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const snapshot = calculateFluencyPlanScoreSnapshot({
+      minutes: req.body?.minutes,
+      months: req.body?.months,
+      application: req.body?.application,
+      books: req.body?.books
+    });
+
+    if (!snapshot) {
+      res.status(400).json({ success: false, message: 'Plano de fluencia invalido. Preencha as 4 etapas.' });
+      return;
+    }
+
+    const result = await pool.query(
+      `UPDATE public.users
+       SET "fluency-plan" = $2,
+           fluency_plan_minutes = $3,
+           fluency_plan_months = $4,
+           fluency_plan_application = $5,
+           fluency_plan_books = $6,
+           fluency_plan_score = $7,
+           fluency_plan_updated_at = now()
+       WHERE id = $1
+       RETURNING id`,
+      [
+        authUser.id,
+        FLUENCY_PLAN_COMPLETED_STATUS,
+        snapshot.minutes,
+        snapshot.months,
+        snapshot.application,
+        snapshot.books,
+        snapshot.score
+      ]
+    );
+
+    if (!result.rows.length) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const user = await readUserById(authUser.id);
+    res.json({
+      success: true,
+      user: await buildAuthUserPayload(user),
+      plan: {
+        status: FLUENCY_PLAN_COMPLETED_STATUS,
+        minutes: snapshot.minutes,
+        months: snapshot.months,
+        application: snapshot.application,
+        books: snapshot.books,
+        score: snapshot.score
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao salvar plano de fluencia:', error);
+    res.status(500).json({ success: false, message: 'Erro ao salvar plano de fluencia.' });
   }
 });
 
@@ -10471,7 +10753,7 @@ app.patch('/auth/avatar', async (req, res) => {
       return;
     }
 
-    res.json({ success: true, user: mapPublicUser(result.rows[0]) });
+    res.json({ success: true, user: await buildAuthUserPayload(result.rows[0]) });
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     console.error('Erro ao atualizar avatar do usuario:', error);
@@ -10534,7 +10816,7 @@ app.patch('/auth/profile', async (req, res) => {
       setAuthCookie(res, token);
     }
 
-    res.json({ success: true, user: mapPublicUser(user), token });
+    res.json({ success: true, user: await buildAuthUserPayload(user), token });
   } catch (error) {
     if (error.code === '23505') {
       res.status(409).json({ success: false, message: 'Nome de usuario ja cadastrado.' });
@@ -10576,7 +10858,7 @@ app.patch('/auth/audio-check', async (req, res) => {
       return;
     }
 
-    res.json({ success: true, user: mapPublicUser(result.rows[0]) });
+    res.json({ success: true, user: await buildAuthUserPayload(result.rows[0]) });
   } catch (error) {
     console.error('Erro ao atualizar audio_check do usuario:', error);
     res.status(500).json({ success: false, message: 'Erro ao atualizar audio_check.' });
@@ -10627,7 +10909,7 @@ app.patch('/auth/password', async (req, res) => {
       setAuthCookie(res, token);
     }
 
-    res.json({ success: true, user: mapPublicUser(user), token });
+    res.json({ success: true, user: await buildAuthUserPayload(user), token });
   } catch (error) {
     console.error('Erro ao atualizar senha do usuario:', error);
     res.status(500).json({ success: false, message: 'Erro ao atualizar senha.' });
@@ -15510,7 +15792,7 @@ app.get('/voices/:filePath(*)', async (req, res, next) => {
   }
 });
 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   if (req.method !== 'GET') {
     next();
     return;
@@ -15568,6 +15850,26 @@ app.use((req, res, next) => {
     return;
   }
 
+  const authUser = await readUserById(payload.sub).catch(() => null);
+  if (!authUser) {
+    const returnTo = req.originalUrl && req.originalUrl.startsWith('/') && !req.originalUrl.startsWith('//')
+      ? req.originalUrl
+      : req.path || '/play';
+    clearAuthCookie(res);
+    res.redirect(`/entrar?return=${encodeURIComponent(returnTo)}`);
+    return;
+  }
+
+  const requiredPath = resolveRequiredOnboardingPath(authUser, req.originalUrl || req.path || '/play');
+  if (requiredPath) {
+    const currentPathname = normalizePathname(req.path || '/');
+    const requiredPathname = normalizePathname(requiredPath.split('?')[0] || '/');
+    if (currentPathname !== requiredPathname) {
+      res.redirect(requiredPath);
+      return;
+    }
+  }
+
   next();
 });
 
@@ -15602,19 +15904,29 @@ app.get(['/flashcards', '/flashcards/'], (req, res) => {
 });
 
 app.get(['/entrar', '/entrar/', '/auth', '/auth/', '/auth.html'], (req, res) => {
-  const payload = getAuthenticatedUserFromRequest(req);
-  if (payload) {
-    const requestedReturn = typeof req.query?.return === 'string' ? req.query.return.trim() : '';
-    const redirectTo = requestedReturn.startsWith('/') && !requestedReturn.startsWith('//')
-      && !/^\/(?:auth|auth\.html|login|register|logout)(?:[/?#]|$)/i.test(requestedReturn)
-      ? req.query.return
-      : '/play';
-    res.redirect(302, redirectTo);
-    return;
-  }
+  (async () => {
+    const payload = getAuthenticatedUserFromRequest(req);
+    if (payload) {
+      const authUser = await readUserById(payload.sub).catch(() => null);
+      const requestedReturn = typeof req.query?.return === 'string' ? req.query.return.trim() : '';
+      if (authUser) {
+        const onboardingRoute = resolveRequiredOnboardingPath(authUser, requestedReturn || '/play');
+        if (onboardingRoute) {
+          res.redirect(302, onboardingRoute);
+          return;
+        }
+      }
+      const redirectTo = normalizeSafeReturnPath(requestedReturn);
+      res.redirect(302, redirectTo);
+      return;
+    }
 
-  res.setHeader('Cache-Control', 'no-store');
-  res.sendFile(path.join(staticDir, 'auth.html'));
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(staticDir, 'auth.html'));
+  })().catch((error) => {
+    console.error('Erro ao abrir portal de autenticacao:', error);
+    res.status(500).send('Erro ao abrir autenticacao.');
+  });
 });
 
 app.use(express.static(staticDir));
@@ -15755,11 +16067,18 @@ app.get(['/username', '/username/', '/usermame', '/usermame/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'www', 'username.html'));
 });
 
+app.get(['/fluency-plan', '/fluency-plan/'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'www', 'fluency-plan.html'));
+});
+
 app.get(['/avataradd', '/avataradd/'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'www', 'avataradd.html'));
 });
 
 app.get(['/password', '/password/'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'www', 'password.html'));
 });
 

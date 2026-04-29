@@ -96,7 +96,22 @@
         if (/^\/(?:entrar|auth|auth\.html)(?:[/?#]|$)/i.test(normalized)) {
           return '/auth.html?return=%2Fplay';
         }
+        if (/^\/fluency-plan(?:[/?#]|$)/i.test(normalized)) {
+          return normalized.replace(/^\/fluency-plan/i, '/fluency-plan.html');
+        }
+        if (/^\/avataradd(?:[/?#]|$)/i.test(normalized)) {
+          return normalized.replace(/^\/avataradd/i, '/avataradd.html');
+        }
         return normalized;
+      }
+
+      function redirectToTarget(target) {
+        var normalized = String(target || '').trim() || '/play';
+        if (window.PlaytalkNative && typeof window.PlaytalkNative.navigate === 'function') {
+          window.PlaytalkNative.navigate(normalized, { replace: true });
+          return;
+        }
+        window.location.replace(resolveNativeReturnPath(normalized));
       }
 
       function persistAuthToken(token) {
@@ -152,8 +167,9 @@
             credentials: 'include',
             cache: 'no-store'
           });
+          var payload = await response.json().catch(function () { return {}; });
           if (response.ok) {
-            window.location.replace(resolveNativeReturnPath(safeReturnPath()));
+            redirectToTarget(String(payload && payload.user && payload.user.next_onboarding_route || '').trim() || safeReturnPath());
           }
         } catch (_error) {
           // stay on portal
@@ -166,8 +182,13 @@
 
         var username = String(usernameInput.value || '').trim();
         var password = String(passwordInput.value || '').trim();
-        if (username.length < 3 || password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-          setMessage('Use nome com 3+ caracteres e senha com 8+ contendo letras e numeros.', 'error');
+        var isRegister = state.mode === 'register';
+        if (username.length < 3 || !password) {
+          setMessage('Preencha nome e senha para continuar.', 'error');
+          return;
+        }
+        if (isRegister && (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password))) {
+          setMessage('Use senha com 8+ caracteres, letras e numeros.', 'error');
           return;
         }
 
@@ -189,7 +210,7 @@
           }
           persistAuthToken(payload.token || '');
           setMessage('Entrada liberada. Bora jogar.', 'success');
-          window.location.replace(resolveNativeReturnPath(safeReturnPath()));
+          redirectToTarget(String(payload?.user?.next_onboarding_route || '').trim() || safeReturnPath());
         } catch (error) {
           setMessage(buildUnexpectedAuthErrorMessage(error, state.mode === 'register' ? '/register' : '/login'), 'error');
         } finally {

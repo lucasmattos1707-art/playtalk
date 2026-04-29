@@ -2,7 +2,7 @@
   const LAST_ROUTE_STORAGE_KEY = 'playtalk_native_last_route_v1';
   const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
   const LAST_ROUTE_MAX_AGE_MS = 30000;
-  const PROTECTED_ROUTE_KEYS = new Set(['play', 'allcards', 'users', 'account', 'books', 'flashcards', 'mycards', 'premium', 'speaking', 'admin']);
+  const PROTECTED_ROUTE_KEYS = new Set(['play', 'allcards', 'users', 'account', 'books', 'flashcards', 'mycards', 'premium', 'speaking', 'admin', 'fluency-plan', 'avataradd', 'password', 'username']);
   const ROUTES = {
     auth: { webPath: '/entrar', localPath: '/auth.html' },
     play: { webPath: '/play', localPath: '/flashcards.html' },
@@ -14,6 +14,7 @@
     books: { webPath: '/books', localPath: '/books.html' },
     username: { webPath: '/username', localPath: '/username.html' },
     usermame: { webPath: '/usermame', localPath: '/username.html' },
+    'fluency-plan': { webPath: '/fluency-plan', localPath: '/fluency-plan.html' },
     avataradd: { webPath: '/avataradd', localPath: '/avataradd.html' },
     password: { webPath: '/password', localPath: '/password.html' },
     premium: { webPath: '/premium', localPath: '/premium.html' },
@@ -31,6 +32,7 @@
     'account.html': 'account',
     'books.html': 'books',
     'username.html': 'username',
+    'fluency-plan.html': 'fluency-plan',
     'avataradd.html': 'avataradd',
     'password.html': 'password',
     'premium.html': 'premium',
@@ -207,6 +209,15 @@
     window.location.replace(`${authUrl.pathname}${authUrl.search}${authUrl.hash}`);
   }
 
+  function normalizeOnboardingRoute(target) {
+    const normalized = String(target || '').trim();
+    if (!normalized) return '';
+    const resolved = resolveRouteHref(normalized);
+    const routeKey = routeKeyFromHref(resolved || normalized);
+    if (!routeKey) return '';
+    return routeKey;
+  }
+
   async function ensureAuthenticatedRoute() {
     if (!isNativeRuntime()) return true;
     const routeKey = currentRouteKey();
@@ -222,6 +233,11 @@
             clearStoredAuthToken();
           }
           redirectToAuthGate();
+          return false;
+        }
+        const requiredRouteKey = normalizeOnboardingRoute(user?.next_onboarding_route);
+        if (requiredRouteKey && requiredRouteKey !== currentRouteKey()) {
+          navigate(String(user.next_onboarding_route || ''), { replace: true });
           return false;
         }
         return true;
