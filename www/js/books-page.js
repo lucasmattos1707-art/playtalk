@@ -6929,9 +6929,17 @@
     });
 
     els.preBookCover?.addEventListener('click', () => {
-      if (state.modeStartBusy || state.preBookStep !== 'root') return;
-      state.preBookRankedMode = true;
-      setPreBookStep('training');
+      void (async () => {
+        if (state.modeStartBusy) return;
+        if (state.preBookStep === 'root') {
+          state.preBookRankedMode = true;
+          setPreBookStep('training');
+          return;
+        }
+        if (state.preBookStep === 'training') {
+          await startBookFromPreBookModal('listening-training');
+        }
+      })();
     });
 
     els.preBookListeningBtn?.addEventListener('click', () => {
