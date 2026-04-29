@@ -289,6 +289,7 @@
     readerIndex: 0,
     readerDisplayLanguage: 'english',
     readerVisualLanguage: 'english',
+    readerListeningRevealPortuguese: false,
     readerScores: [],
     readerCurrentScore: null,
     readerCurrentBadgeSrc: '',
@@ -4919,7 +4920,7 @@
         if (IS_MYBOOKS_GRID_EMBED) return;
         if ((Date.now() - state.shelfLastGestureAt) < 240) return;
         if (state.uploadInFlight || processingMagic || pendingCreate) return;
-        openPreBookModal(book);
+        void startDirectRankedListeningBook(book);
       });
       page.appendChild(card);
       els.cardsGrid.appendChild(page);
@@ -5943,8 +5944,46 @@
   }
 
   function getReaderLockedLanguage(mode = state.readerMode) {
-    if (mode === 'listening-training') return 'portuguese';
+    if (mode === 'listening-training') {
+      return state.readerListeningRevealPortuguese ? 'portuguese' : 'english';
+    }
     return 'english';
+  }
+
+  async function startDirectRankedListeningBook(book) {
+    if (!book || state.modeStartBusy) return;
+    const bookId = safeText(book?.bookId);
+    if (!bookId) return;
+
+    if (isHomeLevel() && state.homeIntroDismissed) {
+      state.homePaused = true;
+      renderHomeTransportUi();
+      const voice = state.homeAudioElement;
+      if (voice && !voice.paused) {
+        commitHomeAudioPracticeProgress(voice);
+        try {
+          voice.pause();
+        } catch (_error) {
+          // ignore
+        }
+      }
+    }
+
+    state.modeBookId = bookId;
+    state.modeBook = book;
+    state.preBookRankedMode = true;
+    setModeStartBusy(true);
+
+    try {
+      const cards = await prepareReaderData(book);
+      await startBookByMode(book, 'listening-training', cards);
+    } catch (error) {
+      setStatus(error?.message || 'Nao foi possivel abrir o livro.', 'error');
+    } finally {
+      state.modeBookId = '';
+      state.modeBook = null;
+      setModeStartBusy(false);
+    }
   }
 
   function calculateReaderAverageScore() {
@@ -6196,11 +6235,7 @@
       if (token !== state.readerFinishToken || !state.readerOpen) return;
     }
 
-    const finishedBook = activeBook;
     closeReader();
-    if (finishedBook && safeText(finishedBook?.bookId)) {
-      openPreBookModal(finishedBook);
-    }
   }
 
   async function runFreeReadCompletionSequence() {
@@ -6422,6 +6457,7 @@
     state.readerIndex = 0;
     state.readerDisplayLanguage = 'english';
     state.readerVisualLanguage = 'english';
+    state.readerListeningRevealPortuguese = false;
     state.readerScores = [];
     state.readerCurrentScore = null;
     resetReaderCurrentBadge();
@@ -6519,6 +6555,7 @@
       state.readerSessionSpokenChars = 0;
       state.readerDisplayLanguage = 'english';
       state.readerVisualLanguage = 'english';
+      state.readerListeningRevealPortuguese = false;
       state.readerMicBusy = false;
       state.readerLastAudioKey = '';
       state.readerCardShownAt = 0;
@@ -6556,6 +6593,10 @@
         const transcript = safeText(await captureSpeechFast('en-US'));
         if (transcript) {
           state.readerSessionSpokenChars += transcript.length;
+          if (state.readerMode === 'listening-training' && !state.readerListeningRevealPortuguese) {
+            state.readerListeningRevealPortuguese = true;
+            renderReader();
+          }
         }
         const rawScore = applyReaderSentenceBonus(calculateSpeechMatchPercent(card.english, transcript));
         const displayedScore = getReaderDisplayedScorePercent(rawScore);
@@ -6789,10 +6830,9 @@
     // Tapping the current book cover in the Home player opens the pre-book overlay (paused + blurred).
     els.homeCover?.addEventListener('click', () => {
       if (!isHomeLevel() || !state.homeIntroDismissed) return;
-      if (els.preBookModal?.classList.contains('is-visible')) return;
       const current = state.homeCurrentSession?.book || null;
       if (!current || !safeText(current?.bookId)) return;
-      openPreBookModal(current);
+      void startDirectRankedListeningBook(current);
     });
 
     els.homeSpeedBtn?.addEventListener('click', () => {

@@ -555,27 +555,27 @@
     }
 
     .books-home.is-player-books .books-home-screen--current {
-      transform: translateY(10vh);
+      transform: translateY(6vh);
     }
 
     .books-home.is-player-books .books-home-screen--next {
-      transform: translateY(calc(100% + 10vh));
+      transform: translateY(calc(100% + 6vh));
     }
 
     .books-home.is-player-books .books-home-viewport.is-book-transitioning .books-home-screen--current {
-      transform: translateY(calc(-100% + 10vh));
+      transform: translateY(calc(-100% + 6vh));
     }
 
     .books-home.is-player-books .books-home-viewport.is-book-transitioning .books-home-screen--next {
-      transform: translateY(10vh);
+      transform: translateY(6vh);
     }
 
     .books-home.is-player-books .books-home-viewport.is-book-transitioning.is-reverse .books-home-screen--current {
-      transform: translateY(calc(100% + 10vh));
+      transform: translateY(calc(100% + 6vh));
     }
 
     .books-home.is-player-books .books-home-viewport.is-book-transitioning.is-reverse .books-home-screen--next {
-      transform: translateY(10vh);
+      transform: translateY(6vh);
     }
 
     .books-home.is-immersive .books-home-book-slot {
@@ -1339,7 +1339,7 @@
     }
 
     .books-home.is-player-books .books-home-text-slot {
-      transform: translateY(2dvh);
+      transform: translateY(-1dvh);
     }
 
     body.books-prebook-open .books-home-text-slot {
@@ -1539,7 +1539,7 @@
       align-content: end;
       gap: 8px;
       padding: 0 18px 8px;
-      transform: translateY(-18px);
+      transform: translateY(-30px);
       width: 100%;
       margin-top: auto;
       background: transparent;
@@ -1696,7 +1696,7 @@
 
     .books-home-corner-btn {
       position: absolute;
-      top: 20px;
+      top: max(18px, env(safe-area-inset-top));
       width: 44px;
       height: 44px;
       border: 0;
@@ -1717,11 +1717,11 @@
     }
 
     .books-home-corner-btn--left {
-      left: 20px;
+      left: max(18px, env(safe-area-inset-left));
     }
 
     .books-home-corner-btn--right {
-      right: 20px;
+      right: max(18px, env(safe-area-inset-right));
     }
 
     .books-home-corner-btn[hidden] {
@@ -3786,7 +3786,7 @@
     }
 
     .books-reader-english.is-dissolve {
-      animation: books-reader-dissolve 380ms ease both;
+      animation: books-reader-dissolve 500ms ease both;
     }
 
     @keyframes books-reader-dissolve {
