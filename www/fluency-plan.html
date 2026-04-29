@@ -41,11 +41,11 @@
       min-height: 0;
       max-height: calc(100dvh - 148px);
       display: none;
-      background: rgba(8, 14, 34, 0.86);
-      border: 1px solid rgba(130, 190, 255, 0.18);
-      border-radius: 34px;
-      box-shadow: 0 24px 80px rgba(0,0,0,.42);
-      backdrop-filter: blur(16px);
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      backdrop-filter: none;
       padding: clamp(18px, 3vw, 34px);
       animation: enter .22s ease both;
       overflow: hidden;
@@ -54,13 +54,21 @@
     .screen.active {
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      justify-content: flex-start;
       gap: clamp(12px, 1.8vh, 18px);
     }
 
     @keyframes enter {
       from { opacity: 0; transform: translateY(16px) scale(.98); }
       to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 56px);
+      line-height: 0.94;
+      letter-spacing: -0.05em;
+      text-wrap: balance;
     }
 
     .eyebrow {
@@ -72,12 +80,11 @@
       margin-bottom: 8px;
     }
 
-    h1 {
-      margin: 0;
-      font-size: clamp(28px, 5vw, 56px);
-      line-height: 0.94;
-      letter-spacing: -0.05em;
-      text-wrap: balance;
+    .question-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 6px;
     }
 
     .subtitle {
@@ -90,6 +97,7 @@
       gap: 12px;
       width: 100%;
       align-content: center;
+      margin-top: 8px;
     }
 
     .options.three-text { grid-template-columns: 1fr; }
@@ -237,12 +245,9 @@
     }
 
     .live-result {
-      position: fixed;
-      left: 18px;
-      right: 18px;
-      bottom: 90px;
+      margin-top: 10px;
       text-align: center;
-      z-index: 8;
+      width: 100%;
       pointer-events: none;
     }
 
@@ -356,7 +361,6 @@
       .screen {
         height: calc(100dvh - 138px);
         max-height: calc(100dvh - 138px);
-        border-radius: 24px;
         padding: 16px;
       }
       .options { grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -364,7 +368,6 @@
       .bottom-inner { grid-template-columns: 1fr 1fr; }
       .progress-area { grid-column: 1 / -1; order: -1; }
       .nav-btn { min-width: unset; }
-      .live-result { bottom: 84px; }
       .status { bottom: 48px; }
     }
 
@@ -377,7 +380,6 @@
         padding: 16px;
       }
       .screen.active { gap: 10px; }
-      .eyebrow { margin-bottom: 4px; }
       h1 { font-size: clamp(24px, 4.2vw, 40px); }
       .options { gap: 10px; }
       button.option {
@@ -390,7 +392,6 @@
       .description { font-size: 13px; line-height: 1.3; }
       .stat { padding: 10px; }
       .boost { padding: 12px 14px; font-size: 13px; }
-      .live-result { bottom: 78px; }
       .status { bottom: 44px; font-size: 13px; }
       .bottom-bar {
         min-height: 72px;
@@ -432,7 +433,6 @@
       .stat strong { font-size: 15px; margin-bottom: 2px; }
       .stat span { font-size: 10px; }
       .boost { line-height: 1.22; }
-      .live-result { display: none; }
       .status {
         bottom: 42px;
         min-height: 18px;
@@ -473,10 +473,10 @@
 <body>
   <main class="modal">
     <section class="screen active" data-step="0">
-      <div class="eyebrow">Etapa 1 de 4</div>
-      <h1>Quanto voce quer jogar por dia?</h1>
+      <div class="question-block">
+        <h1>Quanto voce quer jogar por dia?</h1>
+      </div>
       <div class="options" data-group="minutes">
-        <button class="option" data-value="5">5 min</button>
         <button class="option" data-value="15">15 min</button>
         <button class="option active" data-value="30">30 min</button>
         <button class="option" data-value="45">45 min</button>
@@ -487,8 +487,9 @@
     </section>
 
     <section class="screen" data-step="1">
-      <div class="eyebrow">Etapa 2 de 4</div>
-      <h1>Voce vai treinar por quanto tempo?</h1>
+      <div class="question-block">
+        <h1>Voce vai treinar por quanto tempo?</h1>
+      </div>
       <div class="options" data-group="months">
         <button class="option" data-value="3">3 meses</button>
         <button class="option active" data-value="6">6 meses</button>
@@ -500,8 +501,9 @@
     </section>
 
     <section class="screen" data-step="2">
-      <div class="eyebrow">Etapa 3 de 4</div>
-      <h1>Como voce pretende usar o ingles?</h1>
+      <div class="question-block">
+        <h1>Como voce pretende usar o ingles?</h1>
+      </div>
       <div class="options three-text" data-group="application">
         <button class="option" data-value="0">Somente jogar e nao usar na minha rotina</button>
         <button class="option" data-value="1">Me acostumar a usar os flashcards na vida real</button>
@@ -510,8 +512,9 @@
     </section>
 
     <section class="screen" data-step="3">
-      <div class="eyebrow">Etapa 4 de 4</div>
-      <h1>Qual plano de treino voce quer?</h1>
+      <div class="question-block">
+        <h1>Qual plano de treino voce quer?</h1>
+      </div>
       <div class="options" data-group="books">
         <button class="option" data-value="0">Jogar cartas somente</button>
         <button class="option active" data-value="1">Jogar cartas + ler FluentBooks</button>
@@ -544,8 +547,8 @@
       </div>
     </section>
 
-    <div class="live-result" id="liveResult">
-      <div class="live-kicker">Seu resultado sera</div>
+    <div class="live-result" id="liveResult" hidden>
+      <div class="live-kicker">SEU RESULTADO SERA</div>
       <div class="live-title" id="liveTitle">Fluencia pratica</div>
     </div>
   </main>
@@ -612,6 +615,7 @@
       stepText: document.getElementById('stepText'),
       stepFill: document.getElementById('stepFill'),
       miniResult: document.getElementById('miniResult'),
+      liveResult: document.getElementById('liveResult'),
       liveTitle: document.getElementById('liveTitle'),
       score: document.getElementById('score'),
       bar: document.getElementById('bar'),
@@ -738,9 +742,22 @@
     }
 
     function renderStep() {
+      let activeScreen = null;
       document.querySelectorAll('.screen').forEach((screen) => {
         screen.classList.toggle('active', Number(screen.dataset.step) === step);
+        if (Number(screen.dataset.step) === step) {
+          activeScreen = screen;
+        }
       });
+
+      if (els.liveResult && activeScreen) {
+        if (step < totalChoiceSteps) {
+          activeScreen.appendChild(els.liveResult);
+          els.liveResult.hidden = false;
+        } else {
+          els.liveResult.hidden = true;
+        }
+      }
 
       els.backBtn.disabled = busy || step === 0;
       els.nextBtn.disabled = busy;
