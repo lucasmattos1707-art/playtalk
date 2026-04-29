@@ -158,71 +158,29 @@
       margin: 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 22px;
-      align-items: stretch;
+      gap: 18px;
+      align-items: center;
       justify-content: center;
-    }
-
-    .mix-headings {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-      align-items: end;
-    }
-
-    .mix-heading {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .mix-heading:last-child {
-      align-items: flex-end;
-      text-align: right;
-    }
-
-    .mix-heading__title {
-      font-size: clamp(24px, 3.6vw, 38px);
-      font-weight: 900;
-      line-height: 0.95;
-      letter-spacing: -0.05em;
-    }
-
-    .mix-heading__title--flashcards {
-      color: #ffbf7a;
-      text-shadow: 0 0 24px rgba(255, 136, 36, 0.28);
-    }
-
-    .mix-heading__title--smartbooks {
-      color: #a7c7ff;
-      text-shadow: 0 0 24px rgba(79, 124, 255, 0.26);
-    }
-
-    .mix-heading__percent {
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #c7d8ef;
     }
 
     .mix-slider-shell {
       position: relative;
       display: flex;
       align-items: center;
-      min-height: 112px;
+      width: min(760px, 100%);
+      min-height: 92px;
       padding: 10px 0;
     }
 
     .mix-slider-track {
       position: relative;
       width: 100%;
-      height: 74px;
+      height: 52px;
       border-radius: 999px;
       overflow: hidden;
       border: 1px solid rgba(255,255,255,0.14);
-      background: linear-gradient(90deg, #ff8a1f 0%, #ff9a3d 18%, #ffb152 36%, #2f69ff 64%, #4f7cff 82%, #79a7ff 100%);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), 0 18px 42px rgba(9, 21, 49, 0.32);
+      background: linear-gradient(90deg, #0c66ff 0%, #0e86ff 30%, #ff6500 70%, #ff8d00 100%);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 18px 42px rgba(9, 21, 49, 0.32);
     }
 
     .mix-slider-track::before {
@@ -230,15 +188,15 @@
       position: absolute;
       inset: 0;
       background:
-        linear-gradient(180deg, rgba(255,255,255,0.26), transparent 32%, transparent 68%, rgba(0,0,0,0.12)),
+        linear-gradient(180deg, rgba(255,255,255,0.10), transparent 24%, transparent 76%, rgba(0,0,0,0.18)),
         repeating-linear-gradient(
           90deg,
-          rgba(255,255,255,0.12) 0,
-          rgba(255,255,255,0.12) 1px,
+          rgba(255,255,255,0.06) 0,
+          rgba(255,255,255,0.06) 1px,
           transparent 1px,
           transparent calc(1% - 1px),
-          rgba(255,255,255,0.05) calc(1% - 1px),
-          rgba(255,255,255,0.05) 1%
+          rgba(0,0,0,0.08) calc(1% - 1px),
+          rgba(0,0,0,0.08) 1%
         );
       pointer-events: none;
     }
@@ -247,12 +205,12 @@
       position: absolute;
       top: 50%;
       left: var(--mix-visual, 50%);
-      width: 34px;
-      height: 96px;
+      width: 17px;
+      height: 76px;
       border-radius: 999px;
-      border: 2px solid rgba(255,255,255,0.96);
-      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(238,245,255,0.96));
-      box-shadow: 0 0 0 6px rgba(255,255,255,0.10), 0 18px 32px rgba(2, 8, 22, 0.34);
+      border: 2px solid rgba(255, 175, 42, 0.98);
+      background: linear-gradient(180deg, #ffb22c, #ff7400);
+      box-shadow: 0 0 0 4px rgba(255, 116, 0, 0.12), 0 18px 32px rgba(2, 8, 22, 0.34);
       transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 2;
@@ -270,8 +228,8 @@
     }
 
     .mix-slider-input::-webkit-slider-thumb {
-      width: 34px;
-      height: 96px;
+      width: 17px;
+      height: 76px;
       appearance: none;
       border: 0;
       background: transparent;
@@ -279,28 +237,19 @@
     }
 
     .mix-slider-input::-moz-range-thumb {
-      width: 34px;
-      height: 96px;
+      width: 17px;
+      height: 76px;
       border: 0;
       background: transparent;
       cursor: pointer;
     }
 
-    .mix-slider-legend {
+    .mix-cards {
       display: flex;
       justify-content: center;
-      color: #c7d8ef;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      text-align: center;
-    }
-
-    .mix-cards {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
+      align-items: stretch;
+      gap: 14px;
+      width: 100%;
     }
 
     .mix-card {
@@ -308,19 +257,21 @@
       align-items: center;
       gap: 14px;
       border-radius: 28px;
-      padding: 18px 20px;
+      padding: 16px 18px;
       border: 1px solid rgba(255,255,255,0.10);
       background: rgba(255,255,255,0.05);
       backdrop-filter: blur(14px);
       min-height: 104px;
+      width: min(220px, calc(50% - 7px));
+      flex: 0 1 min(220px, calc(50% - 7px));
     }
 
     .mix-card--flashcards {
-      box-shadow: inset 0 0 0 1px rgba(255, 150, 67, 0.08), 0 0 26px rgba(255, 136, 31, 0.14);
+      box-shadow: inset 0 0 0 1px rgba(255, 115, 0, 0.12), 0 0 26px rgba(255, 111, 0, 0.18);
     }
 
     .mix-card--smartbooks {
-      box-shadow: inset 0 0 0 1px rgba(121, 167, 255, 0.08), 0 0 26px rgba(79, 124, 255, 0.16);
+      box-shadow: inset 0 0 0 1px rgba(14, 120, 255, 0.12), 0 0 26px rgba(14, 120, 255, 0.2);
     }
 
     .mix-icon {
@@ -361,6 +312,7 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: #b9c8e8;
+      line-height: 1.02;
     }
 
     .mix-card__value {
@@ -656,11 +608,7 @@
       .bottom-inner { grid-template-columns: 1fr 1fr; }
       .progress-area { grid-column: 1 / -1; order: -1; }
       .nav-btn { min-width: unset; }
-      .mix-cards,
-      .mix-headings { grid-template-columns: 1fr; }
-      .mix-heading,
-      .mix-heading:last-child { align-items: center; text-align: center; }
-      .mix-card { min-height: 92px; }
+      .mix-card { min-height: 92px; width: min(178px, calc(50% - 7px)); }
     }
 
     @media (max-height: 760px) {
@@ -674,9 +622,9 @@
       .stage-illustration { width: clamp(125px, 19vw, 182px); }
       .options { gap: 10px; }
       .mix-stage { gap: 16px; }
-      .mix-slider-shell { min-height: 98px; }
-      .mix-slider-track { height: 62px; }
-      .mix-slider-thumb { height: 84px; }
+      .mix-slider-shell { min-height: 84px; }
+      .mix-slider-track { height: 44px; }
+      .mix-slider-thumb { height: 68px; }
       .options--months .option { font-size: clamp(21px, 2.6vw, 29px); }
       .options--application .option { font-size: clamp(20px, 2.5vw, 28px); }
       button.option {
@@ -733,6 +681,7 @@
         font-size: clamp(17px, 2.9vw, 23px);
         padding: 12px 14px;
       }
+      .mix-card { min-height: 86px; width: min(156px, calc(50% - 6px)); }
       .result-top { gap: 10px; }
       .badge { padding: 9px 12px; font-size: 13px; }
       .big-bar-wrap { height: 12px; }
@@ -787,7 +736,7 @@
   <main class="modal">
     <section class="screen active" data-step="0">
       <div class="question-block">
-        <h1>Quanto voce quer jogar por dia?</h1>
+        <h1>Quanto você quer jogar por dia?</h1>
       </div>
       <svg class="stage-illustration" viewBox="0 0 180 140" fill="none" aria-hidden="true">
         <circle cx="90" cy="62" r="34" fill="rgba(255,255,255,0.08)" stroke="rgba(133,205,255,0.48)" stroke-width="3"/>
@@ -807,7 +756,7 @@
 
     <section class="screen" data-step="1">
       <div class="question-block">
-        <h1>Voce vai treinar por quanto tempo?</h1>
+        <h1>Você vai treinar por quanto tempo?</h1>
       </div>
       <svg class="stage-illustration" viewBox="0 0 180 140" fill="none" aria-hidden="true">
         <rect x="42" y="28" width="96" height="70" rx="18" fill="rgba(255,255,255,0.08)" stroke="rgba(167,164,255,0.48)" stroke-width="3"/>
@@ -822,14 +771,15 @@
         <button class="option" data-value="3">3 meses</button>
         <button class="option" data-value="6">6 meses</button>
         <button class="option" data-value="9">9 meses</button>
-        <button class="option" data-value="12">1 ano</button>
+        <button class="option" data-value="12">12 meses</button>
         <button class="option" data-value="18">18 meses</button>
+        <button class="option" data-value="24">24 meses</button>
       </div>
     </section>
 
     <section class="screen" data-step="2">
       <div class="question-block">
-        <h1>Como voce pretende usar o ingles?</h1>
+        <h1>Como você pretende usar o inglês?</h1>
       </div>
       <svg class="stage-illustration" viewBox="0 0 180 140" fill="none" aria-hidden="true">
         <path d="M52 34H128C135.732 34 142 40.268 142 48V75C142 82.732 135.732 89 128 89H98L79 105V89H52C44.268 89 38 82.732 38 75V48C38 40.268 44.268 34 52 34Z" fill="rgba(255,255,255,0.08)" stroke="rgba(132,223,255,0.48)" stroke-width="2"/>
@@ -837,9 +787,9 @@
         <path d="M58 69H102" stroke="#5E8FFF" stroke-width="8" stroke-linecap="round"/>
       </svg>
       <div class="options three-text options--application" data-group="application">
-        <button class="option" data-value="0">Somente jogar sem pratica real</button>
+        <button class="option" data-value="0">Somente jogar sem prática real</button>
         <button class="option" data-value="1">Aplicar as dicas do jogo na vida real</button>
-        <button class="option" data-value="2">Seguir o plano de fluencia completo</button>
+        <button class="option" data-value="2">Seguir o plano de fluência completo</button>
       </div>
     </section>
 
@@ -848,23 +798,12 @@
         <h1>Quanto do seu treino vai para cada lado?</h1>
       </div>
       <div class="mix-stage">
-        <div class="mix-headings">
-          <div class="mix-heading">
-            <span class="mix-heading__title mix-heading__title--flashcards">FlashCards</span>
-            <span class="mix-heading__percent" id="mixHeadingFlashcards">50%</span>
-          </div>
-          <div class="mix-heading">
-            <span class="mix-heading__title mix-heading__title--smartbooks">SmartBooks</span>
-            <span class="mix-heading__percent" id="mixHeadingSmartbooks">50%</span>
-          </div>
-        </div>
         <div class="mix-slider-shell" id="mixSliderShell">
           <div class="mix-slider-track" id="mixSliderTrack">
             <div class="mix-slider-thumb" id="mixSliderThumb" aria-hidden="true"></div>
           </div>
           <input class="mix-slider-input" id="mixSlider" type="range" min="0" max="100" step="1" value="50" aria-label="Escolha o percentual de FlashCards e SmartBooks">
         </div>
-        <div class="mix-slider-legend">Arraste livremente. O plano fecha em blocos de 5%.</div>
         <div class="mix-cards">
           <div class="mix-card mix-card--flashcards">
             <div class="mix-icon mix-icon--flashcards" aria-hidden="true">
@@ -880,7 +819,7 @@
               </svg>
             </div>
             <div class="mix-card__meta">
-              <span class="mix-card__label">FlashCards</span>
+              <span class="mix-card__label">Flash<br>Cards</span>
               <span class="mix-card__value" id="flashcardsPercent">50%</span>
             </div>
           </div>
@@ -900,7 +839,7 @@
               </svg>
             </div>
             <div class="mix-card__meta">
-              <span class="mix-card__label">SmartBooks</span>
+              <span class="mix-card__label">Smart<br>Books</span>
               <span class="mix-card__value" id="smartbooksPercent">50%</span>
             </div>
           </div>
@@ -919,24 +858,24 @@
 
       <div class="big-bar-wrap"><div class="big-bar" id="bar"></div></div>
       <div class="label" id="resultLabel">Contato inicial</div>
-      <div class="description" id="resultDescription">Voce comeca a reconhecer o ingles, mas ainda sem autonomia real.</div>
+      <div class="description" id="resultDescription">Você começa a reconhecer o inglês, mas ainda sem autonomia real.</div>
 
       <div class="stats">
         <div class="stat"><strong id="totalHours">0h</strong><span>tempo total</span></div>
         <div class="stat"><strong id="dailyBooks">0</strong><span>SmartBooks/dia</span></div>
-        <div class="stat"><strong id="cardsEstimate">0</strong><span>cartas possiveis</span></div>
+        <div class="stat"><strong id="cardsEstimate">0</strong><span>cartas possíveis</span></div>
         <div class="stat"><strong id="planType">Leve</strong><span>tipo de plano</span></div>
       </div>
 
       <div class="boost" id="boostText">
         <strong>50% FlashCards + 50% SmartBooks.</strong><br>
-        Seu plano mistura memoria rapida com contexto para fluencia pratica.
+        Seu plano mistura memória rápida com contexto para fluência prática.
       </div>
     </section>
 
     <div class="live-result" id="liveResult" hidden>
-      <div class="live-kicker">COM ESSE PLANO VOCE ALCANCA</div>
-      <div class="live-title" id="liveTitle">Fluencia pratica</div>
+      <div class="live-kicker">COM ESSE PLANO VOCÊ ALCANÇA</div>
+      <div class="live-title" id="liveTitle">Fluência prática</div>
     </div>
     <div class="status" id="status" aria-live="polite"></div>
 
@@ -1024,9 +963,7 @@
       mixSliderTrack: document.getElementById('mixSliderTrack'),
       mixSlider: document.getElementById('mixSlider'),
       flashcardsPercent: document.getElementById('flashcardsPercent'),
-      smartbooksPercent: document.getElementById('smartbooksPercent'),
-      mixHeadingFlashcards: document.getElementById('mixHeadingFlashcards'),
-      mixHeadingSmartbooks: document.getElementById('mixHeadingSmartbooks')
+      smartbooksPercent: document.getElementById('smartbooksPercent')
     };
 
     function clamp(value, min, max) {
@@ -1095,7 +1032,7 @@
 
     function updateMixSelection(rawValue, options = {}) {
       const visual = clamp(Number(rawValue) || 0, 0, 100);
-      const flashcardsPercentage = snapMixPercentage(visual);
+      const flashcardsPercentage = snapMixPercentage(100 - visual);
       const smartbooksPercentage = 100 - flashcardsPercentage;
       state.flashcardsPercentage = flashcardsPercentage;
       state.smartbooksPercentage = smartbooksPercentage;
@@ -1109,8 +1046,13 @@
       const smartbooksLabel = `${smartbooksPercentage}%`;
       if (els.flashcardsPercent) els.flashcardsPercent.textContent = flashcardsLabel;
       if (els.smartbooksPercent) els.smartbooksPercent.textContent = smartbooksLabel;
-      if (els.mixHeadingFlashcards) els.mixHeadingFlashcards.textContent = flashcardsLabel;
-      if (els.mixHeadingSmartbooks) els.mixHeadingSmartbooks.textContent = smartbooksLabel;
+      if (els.mixSliderThumb) {
+        const orangeWeight = clamp(flashcardsPercentage / 100, 0, 1);
+        const topColor = orangeWeight >= 0.5 ? '#ffb22c' : '#ff9540';
+        const bottomColor = orangeWeight >= 0.5 ? '#ff7400' : '#ff8617';
+        els.mixSliderThumb.style.background = `linear-gradient(180deg, ${topColor}, ${bottomColor})`;
+        els.mixSliderThumb.style.borderColor = orangeWeight >= 0.5 ? 'rgba(255, 182, 55, 0.98)' : 'rgba(255, 145, 73, 0.98)';
+      }
       updateResult();
     }
 
@@ -1164,13 +1106,13 @@
 
       if (state.smartbooksPercentage === 0) {
         els.boostBadge.textContent = 'Sem boost';
-        els.boostText.innerHTML = `<strong>${state.flashcardsPercentage}% FlashCards.</strong><br>Seu plano esta focado em repeticao, memoria e resposta rapida.`;
+        els.boostText.innerHTML = `<strong>${state.flashcardsPercentage}% FlashCards.</strong><br>Seu plano está focado em repetição, memória e resposta rápida.`;
       } else if (state.flashcardsPercentage === 0) {
         els.boostBadge.textContent = `+${Math.round(result.bookBoost * 100)}% boost`;
         els.boostText.innerHTML = `<strong>${state.smartbooksPercentage}% SmartBooks.</strong><br>Seu plano puxa leitura guiada, contexto e ritmo de linguagem o tempo todo.`;
       } else {
         els.boostBadge.textContent = `+${Math.round(result.bookBoost * 100)}% boost`;
-        els.boostText.innerHTML = `<strong>${state.flashcardsPercentage}% FlashCards + ${state.smartbooksPercentage}% SmartBooks.</strong><br>O treino mistura memorizacao rapida com leitura contextual para empurrar sua fluencia pratica.`;
+        els.boostText.innerHTML = `<strong>${state.flashcardsPercentage}% FlashCards + ${state.smartbooksPercentage}% SmartBooks.</strong><br>O treino mistura memorização rápida com leitura contextual para empurrar sua fluência prática.`;
       }
     }
 
@@ -1220,7 +1162,7 @@
 
       options.forEach((button) => button.classList.add('is-warning'));
       if (els.liveTitle) {
-        els.liveTitle.textContent = 'Escolha uma opcao';
+        els.liveTitle.textContent = 'Escolha uma opção';
         els.liveTitle.classList.remove('is-warning');
         void els.liveTitle.offsetWidth;
         els.liveTitle.classList.add('is-warning');
@@ -1234,7 +1176,7 @@
         clearOptionWarning(activeScreen);
         if (els.liveTitle) {
           els.liveTitle.classList.remove('is-warning');
-          els.liveTitle.textContent = state.liveTitleDefault || 'Fluencia pratica';
+          els.liveTitle.textContent = state.liveTitleDefault || 'Fluência prática';
         }
         state.warningTimer = 0;
       }, 1000);
@@ -1259,11 +1201,11 @@
       if (Number.isInteger(flashcardsPercentage) && Number.isInteger(smartbooksPercentage) && flashcardsPercentage + smartbooksPercentage === 100) {
         state.flashcardsPercentage = snapMixPercentage(flashcardsPercentage);
         state.smartbooksPercentage = 100 - state.flashcardsPercentage;
-        state.mixVisual = state.flashcardsPercentage;
+        state.mixVisual = 100 - state.flashcardsPercentage;
       } else if (Number.isInteger(Number(plan.books))) {
         state.flashcardsPercentage = Number(plan.books) === 1 ? 50 : 100;
         state.smartbooksPercentage = 100 - state.flashcardsPercentage;
-        state.mixVisual = state.flashcardsPercentage;
+        state.mixVisual = 100 - state.flashcardsPercentage;
       }
 
       document.querySelectorAll('[data-group]').forEach((groupEl) => {
@@ -1362,7 +1304,7 @@
       void (async () => {
         busy = true;
         renderStep();
-        setStatus('Salvando seu plano de fluencia...');
+        setStatus('Salvando seu plano de fluência...');
         try {
           const payload = await persistFluencyPlan();
           const user = normalizeUser(payload.user);
@@ -1370,7 +1312,7 @@
           setStatus('Plano salvo com sucesso.', 'success');
           navigateTo(resolveNextRoute(user), { replace: true });
         } catch (error) {
-          setStatus(error?.message || 'Nao foi possivel salvar o plano de fluencia.', 'error');
+          setStatus(error?.message || 'Não foi possível salvar o plano de fluência.', 'error');
         } finally {
           busy = false;
           renderStep();
@@ -1392,7 +1334,7 @@
         setStatus('');
         renderStep();
       } catch (error) {
-        setStatus(error?.message || 'Nao foi possivel abrir o plano de fluencia.', 'error');
+        setStatus(error?.message || 'Não foi possível abrir o plano de fluência.', 'error');
       }
     }
 
