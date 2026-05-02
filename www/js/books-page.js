@@ -1094,6 +1094,25 @@
     return normalizeText(value).replace(/[^a-z0-9]/g, '');
   }
 
+  function hasOneLetterWordMatch(expected, spoken) {
+    const expectedWords = normalizeText(expected).split(' ').filter(Boolean);
+    const spokenWords = normalizeText(spoken).split(' ').filter(Boolean);
+    return expectedWords.some(word => word.length === 1)
+      && spokenWords.some(word => word.length === 1);
+  }
+
+  function hasCommonLetterSequence(expected, spoken, sequenceLength = 2) {
+    const expectedRaw = lettersOnly(expected);
+    const spokenRaw = lettersOnly(spoken);
+    if (expectedRaw.length < sequenceLength || spokenRaw.length < sequenceLength) return false;
+    for (let start = 0; start <= expectedRaw.length - sequenceLength; start += 1) {
+      if (spokenRaw.includes(expectedRaw.slice(start, start + sequenceLength))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function escapeHtml(value) {
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -5373,6 +5392,9 @@
   function calculateSpeechMatchPercent(expected, spoken) {
     const expectedRaw = lettersOnly(expected);
     if (!expectedRaw) return 0;
+    if (hasCommonLetterSequence(expected, spoken, 2) || hasOneLetterWordMatch(expected, spoken)) {
+      return 100;
+    }
     const matched = countLetterBlocksCoverage(expected, spoken);
     const baseScore = Math.max(0, Math.min(100, Math.round((matched / expectedRaw.length) * 100)));
     return Math.max(0, Math.min(100, Math.round(baseScore * 1.1)));

@@ -3868,6 +3868,21 @@
     return (longestMatch / normalizedExpected.length) * 100;
   }
 
+  function hasLenientSpeechMatch(normalizedExpected, normalizedSpoken) {
+    if (!normalizedExpected || !normalizedSpoken) return false;
+    const compactExpected = normalizedExpected.replace(/\s+/g, '');
+    const compactSpoken = normalizedSpoken.replace(/\s+/g, '');
+    if (longestCommonSubstringLength(compactExpected, compactSpoken) >= 2) {
+      return true;
+    }
+
+    const expectedWords = normalizedExpected.split(' ').filter(Boolean);
+    const spokenWords = normalizedSpoken.split(' ').filter(Boolean);
+    const hasExpectedOneLetterWord = expectedWords.some(word => word.length === 1);
+    const hasSpokenOneLetterWord = spokenWords.some(word => word.length === 1);
+    return hasExpectedOneLetterWord && hasSpokenOneLetterWord;
+  }
+
   function getNormalizedSpeechComparisonText(text) {
     return applyMirrorGroups(normalizeSpeechText(text));
   }
@@ -3985,6 +4000,7 @@
   function calculateNormalizedSpeechMatchPercent(normalizedExpected, normalizedSpoken) {
     if (!normalizedExpected) return 0;
     if (normalizedExpected === normalizedSpoken) return 100;
+    if (hasLenientSpeechMatch(normalizedExpected, normalizedSpoken)) return 100;
 
     const substringPercent = calculateSequenceMatchPercent(normalizedExpected, normalizedSpoken);
     const expectedWords = normalizedExpected ? normalizedExpected.split(' ').filter(Boolean) : [];
