@@ -6364,7 +6364,7 @@
     }
 
     .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
-      bottom: 13vh;
+      bottom: 9vh;
       width: min(283px, calc(100vw - 34px));
       padding: 0;
       background: transparent;
@@ -7805,10 +7805,13 @@
       right: 0;
       bottom: 0;
       height: 20px;
-      background: linear-gradient(90deg, rgba(5, 20, 54, 0.96), rgba(6, 37, 84, 0.96));
+      background:
+        linear-gradient(90deg, rgba(64, 221, 255, 0.18), rgba(51, 116, 255, 0.24), rgba(116, 243, 255, 0.18)),
+        linear-gradient(90deg, rgba(5, 20, 54, 0.98), rgba(6, 37, 84, 0.98));
       z-index: 260;
       overflow: hidden;
       pointer-events: none;
+      border-top: 1px solid rgba(116, 243, 255, 0.56);
       box-shadow:
         0 -1px 18px rgba(64, 221, 255, 0.34),
         0 0 34px rgba(51, 116, 255, 0.24);
@@ -7827,6 +7830,15 @@
         0 0 16px rgba(64, 221, 255, 0.96),
         0 0 32px rgba(51, 116, 255, 0.66);
       transition: width 280ms ease;
+    }
+
+    .flashcard-level-progress__bar::after {
+      content: "";
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+      opacity: 0.6;
     }
 
     .flashcards-footer-nav__item {
@@ -19517,10 +19529,12 @@
             renderGameTouchButton(stageConfig, entry);
             return;
           }
+          state.game.canListen = false;
+          renderGameTouchButton(stageConfig, entry);
           window.setTimeout(() => {
             if (state.game.currentId === entry.id && !state.game.listening && !state.game.paused) {
               const playback = playPromptAudio(card, {
-                unlockDelayMs: GAME_MIC_UNLOCK_DELAY_MS
+                unlockDelayMs: stageConfig.key === 'first-star' ? 0 : GAME_MIC_UNLOCK_DELAY_MS
               });
               playback.finally(() => {
                 if (state.game.currentId === entry.id) {
