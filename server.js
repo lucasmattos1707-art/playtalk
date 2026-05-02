@@ -2347,6 +2347,55 @@ const ensureFlashcardRankingsTable = async () => {
 
 const buildFlashcardRankingPlayerId = (userId) => `user:${userId}`;
 
+let userRankingOverridesTableReadyPromise = null;
+const ensureUserRankingOverridesTable = async () => {
+  if (!pool) return false;
+  if (!userRankingOverridesTableReadyPromise) {
+    userRankingOverridesTableReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_ranking_overrides (
+          user_id bigint PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+          flashcards_delta integer NOT NULL DEFAULT 0,
+          pronunciation_delta integer NOT NULL DEFAULT 0,
+          speed_delta numeric(10, 1) NOT NULL DEFAULT 0,
+          level_delta integer NOT NULL DEFAULT 0,
+          updated_by_user_id bigint NULL,
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_ranking_overrides
+        ADD COLUMN IF NOT EXISTS flashcards_delta integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_ranking_overrides
+        ADD COLUMN IF NOT EXISTS pronunciation_delta integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_ranking_overrides
+        ADD COLUMN IF NOT EXISTS speed_delta numeric(10, 1) NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_ranking_overrides
+        ADD COLUMN IF NOT EXISTS level_delta integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_ranking_overrides
+        ADD COLUMN IF NOT EXISTS updated_by_user_id bigint NULL
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_ranking_overrides
+        ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()
+      `);
+      return true;
+    })().catch((error) => {
+      userRankingOverridesTableReadyPromise = null;
+      throw error;
+    });
+  }
+  return userRankingOverridesTableReadyPromise;
+};
+
 const syncFlashcardRankingForUser = async (userId, flashcardsCount) => {
   if (!pool) {
     throw new Error('DATABASE_URL nao configurada.');
@@ -12172,6 +12221,7 @@ app.get('/api/users/flashcards', async (req, res) => {
     await ensureFlashcardRankingsTable();
     await ensurePremiumAccessTables();
     await ensureSpeakingRealtimeTables();
+    await ensureUserRankingOverridesTable();
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     const requesterIsAdmin = isAdminUserRecord(authUser);
 
@@ -12184,16 +12234,16 @@ app.get('/api/users/flashcards', async (req, res) => {
       ? 'pronunciation'
       : requestedMetric === 'speed'
         ? 'speed'
-        : requestedMetric === 'battle'
-          ? 'battle'
+        : requestedMetric === 'level'
+          ? 'level'
           : 'flashcards';
     const metricLabel = metricKey === 'pronunciation'
       ? 'Pronuncia'
       : metricKey === 'speed'
         ? 'Velocidade'
-        : metricKey === 'battle'
-          ? 'Batalhas vencidas'
-          : 'Flashcards';
+        : metricKey === 'level'
+          ? 'Level'
+          : 'Cards';
     const metricValueLabel = metricKey === 'pronunciation'
       ? '%'
       : metricKey === 'speed'
@@ -12215,6 +12265,11 @@ app.get('/api/users/flashcards', async (req, res) => {
          u.bot_config,
          u.bot_avatar_status,
          u.bot_avatar_error,
+         COALESCE(u.level, 1)::int AS user_level,
+         COALESCE(overrides.flashcards_delta, 0)::int AS override_flashcards_delta,
+         COALESCE(overrides.pronunciation_delta, 0)::int AS override_pronunciation_delta,
+         COALESCE(overrides.speed_delta, 0)::numeric AS override_speed_delta,
+         COALESCE(overrides.level_delta, 0)::int AS override_level_delta,
          COALESCE(presence.last_seen_at >= (now() - interval '${SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS} seconds'), false) AS is_online,
          COALESCE(progress.ranking_total, ranking.flashcards_count, ranking.all_time_count, 0) AS flashcards_count,
          COALESCE(u.battle, 0)::int AS battles_won,
@@ -12269,26 +12324,37 @@ app.get('/api/users/flashcards', async (req, res) => {
          ON accurate.user_id = u.id
        LEFT JOIN public.user_presence presence
          ON presence.user_id = u.id
+       LEFT JOIN public.user_ranking_overrides overrides
+         ON overrides.user_id = u.id
        ${visibilityWhereClause}`
     );
 
     const entries = result.rows.map((entry) => {
       const derived = buildBotDerivedStats(entry);
       const isBot = isBotUserRecord(entry);
+      const baseFlashcardsCount = Math.max(0, Number(derived.flashcardsCount) || 0);
+      const basePronunciation = Math.max(0, Number(derived.pronunciationPercent) || 0);
+      const baseSpeed = Math.max(0, Number(derived.speedFlashcardsPerHour) || 0);
+      const baseLevel = Math.max(1, Math.min(200, Number(entry.user_level) || 1));
+      const flashcardsCount = Math.max(0, baseFlashcardsCount + (Number(entry.override_flashcards_delta) || 0));
+      const pronunciationPercent = Math.max(0, Math.min(100, basePronunciation + (Number(entry.override_pronunciation_delta) || 0)));
+      const speedFlashcardsPerHour = Math.max(0, Number((baseSpeed + (Number(entry.override_speed_delta) || 0)).toFixed(1)));
+      const level = Math.max(1, Math.min(200, baseLevel + (Number(entry.override_level_delta) || 0)));
       const rankingValue = metricKey === 'pronunciation'
-        ? derived.pronunciationPercent
+        ? pronunciationPercent
         : metricKey === 'speed'
-          ? derived.speedFlashcardsPerHour
-          : metricKey === 'battle'
-            ? derived.battlesWon
-            : derived.flashcardsCount;
+          ? speedFlashcardsPerHour
+          : metricKey === 'level'
+            ? level
+            : flashcardsCount;
       return {
         ...entry,
         is_online: isBot ? true : Boolean(entry.is_online),
-        flashcards_count: derived.flashcardsCount,
-        pronunciation_percent: derived.pronunciationPercent,
-        speed_flashcards_per_hour: derived.speedFlashcardsPerHour,
+        flashcards_count: flashcardsCount,
+        pronunciation_percent: pronunciationPercent,
+        speed_flashcards_per_hour: speedFlashcardsPerHour,
         battles_won: derived.battlesWon,
+        level_value: level,
         ranking_value: rankingValue
       };
     }).sort((left, right) => {
@@ -12324,6 +12390,7 @@ app.get('/api/users/flashcards', async (req, res) => {
         pronunciationPercent: Number(viewerEntry.pronunciation_percent) || 0,
         speedFlashcardsPerHour: Number(viewerEntry.speed_flashcards_per_hour) || 0,
         battlesWon: Number(viewerEntry.battles_won) || 0,
+        level: Number(viewerEntry.level_value) || 1,
         rankingValue: Number(viewerEntry.ranking_value) || 0,
         isOnline: Boolean(viewerEntry.is_online),
         noEnergy: Boolean(viewerEntry.no_energy)
@@ -12342,6 +12409,7 @@ app.get('/api/users/flashcards', async (req, res) => {
         pronunciationPercent: Number(entry.pronunciation_percent) || 0,
         speedFlashcardsPerHour: Number(entry.speed_flashcards_per_hour) || 0,
         battlesWon: Number(entry.battles_won) || 0,
+        level: Number(entry.level_value) || 1,
         rankingValue: Number(entry.ranking_value) || 0,
         isOnline: Boolean(entry.is_online),
         premiumFullAccess: Boolean(entry.premium_full_access),
@@ -15617,6 +15685,155 @@ app.post('/api/admin/users/:userId/no-energy', async (req, res) => {
       success: false,
       message: error?.message || 'Nao foi possivel atualizar o bloqueio manual de energia.'
     });
+  }
+});
+
+app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    await ensureFlashcardUserStateTables();
+    await ensureFlashcardRankingsTable();
+    await ensureUserRankingOverridesTable();
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id || !isAdminUserRecord(authUser)) {
+      clearAuthCookie(res);
+      res.status(403).json({ success: false, message: 'Apenas admin pode alterar ranking.' });
+      return;
+    }
+
+    const userId = Number.parseInt(req.params.userId, 10) || 0;
+    if (!userId) {
+      res.status(400).json({ success: false, message: 'Usuario invalido.' });
+      return;
+    }
+
+    const rawMetric = String(req.body?.metric || '').trim().toLowerCase();
+    const metricKey = rawMetric === 'pronunciation'
+      ? 'pronunciation'
+      : rawMetric === 'speed'
+        ? 'speed'
+        : rawMetric === 'level'
+          ? 'level'
+          : 'flashcards';
+    const inputValue = Number(req.body?.value);
+    if (!Number.isFinite(inputValue)) {
+      res.status(400).json({ success: false, message: 'Valor invalido.' });
+      return;
+    }
+
+    const progressScoreSql = buildFlashcardProgressRankingScoreSql();
+    const result = await pool.query(
+      `SELECT
+         COALESCE(progress.ranking_total, ranking.flashcards_count, ranking.all_time_count, 0) AS flashcards_count,
+         GREATEST(
+           0,
+           LEAST(
+             100,
+             ROUND(
+               CASE
+                 WHEN COALESCE(accurate.pronunciation_samples_count, 0) > 0
+                   THEN COALESCE(accurate.pronunciation_sum, 0)::numeric / accurate.pronunciation_samples_count::numeric
+                 ELSE 0
+               END
+             )::int
+           )
+         )::int AS pronunciation_percent,
+         CASE
+           WHEN COALESCE(stats.training_time_ms, 0) <= 0 OR COALESCE(progress.card_count, 0) <= 0 THEN 0
+           ELSE ROUND((COALESCE(progress.card_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+         END AS speed_flashcards_per_hour,
+         COALESCE(u.level, 1)::int AS user_level
+       FROM public.users u
+       LEFT JOIN (
+         SELECT
+           user_id,
+           COUNT(*)::int AS card_count,
+           COALESCE(SUM(${progressScoreSql}), 0)::int AS ranking_total
+         FROM public.user_flashcard_progress
+         GROUP BY user_id
+       ) progress ON progress.user_id = u.id
+       LEFT JOIN (
+         SELECT
+           deduped.user_id,
+           deduped.flashcards_count,
+           deduped.all_time_count
+         FROM (
+           SELECT
+             r.*,
+             ROW_NUMBER() OVER (
+               PARTITION BY r.user_id
+               ORDER BY r.updated_at DESC, r.created_at DESC, r.player_number ASC, r.player_id ASC
+             ) AS row_index
+           FROM public.flashcard_rankings r
+           WHERE r.user_id IS NOT NULL
+         ) deduped
+         WHERE deduped.row_index = 1
+       ) ranking ON ranking.user_id = u.id
+       LEFT JOIN public.user_flashcard_stats stats ON stats.user_id = u.id
+       LEFT JOIN public.flashcards_accurate accurate ON accurate.user_id = u.id
+       WHERE u.id = $1
+       LIMIT 1`,
+      [userId]
+    );
+    const current = result.rows[0];
+    if (!current) {
+      res.status(404).json({ success: false, message: 'Usuario nao encontrado.' });
+      return;
+    }
+
+    const baseFlashcards = Math.max(0, Number(current.flashcards_count) || 0);
+    const basePronunciation = Math.max(0, Math.min(100, Number(current.pronunciation_percent) || 0));
+    const baseSpeed = Math.max(0, Number(current.speed_flashcards_per_hour) || 0);
+    const baseLevel = Math.max(1, Math.min(200, Number(current.user_level) || 1));
+
+    let flashcardsDelta = 0;
+    let pronunciationDelta = 0;
+    let speedDelta = 0;
+    let levelDelta = 0;
+    if (metricKey === 'pronunciation') {
+      const target = Math.max(0, Math.min(100, Math.round(inputValue)));
+      pronunciationDelta = target - basePronunciation;
+    } else if (metricKey === 'speed') {
+      const target = Math.max(0, Number(inputValue.toFixed(1)));
+      speedDelta = Number((target - baseSpeed).toFixed(1));
+    } else if (metricKey === 'level') {
+      const target = Math.max(1, Math.min(200, Math.round(inputValue)));
+      levelDelta = target - baseLevel;
+    } else {
+      const target = Math.max(0, Math.round(inputValue));
+      flashcardsDelta = target - baseFlashcards;
+    }
+
+    await pool.query(
+      `INSERT INTO public.user_ranking_overrides (
+         user_id,
+         flashcards_delta,
+         pronunciation_delta,
+         speed_delta,
+         level_delta,
+         updated_by_user_id,
+         updated_at
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, now())
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         flashcards_delta = CASE WHEN $7 = 'flashcards' THEN EXCLUDED.flashcards_delta ELSE public.user_ranking_overrides.flashcards_delta END,
+         pronunciation_delta = CASE WHEN $7 = 'pronunciation' THEN EXCLUDED.pronunciation_delta ELSE public.user_ranking_overrides.pronunciation_delta END,
+         speed_delta = CASE WHEN $7 = 'speed' THEN EXCLUDED.speed_delta ELSE public.user_ranking_overrides.speed_delta END,
+         level_delta = CASE WHEN $7 = 'level' THEN EXCLUDED.level_delta ELSE public.user_ranking_overrides.level_delta END,
+         updated_by_user_id = EXCLUDED.updated_by_user_id,
+         updated_at = now()`,
+      [userId, flashcardsDelta, pronunciationDelta, speedDelta, levelDelta, Number(authUser.id) || null, metricKey]
+    );
+
+    res.json({ success: true, metric: metricKey });
+  } catch (error) {
+    console.error('Erro ao atualizar valor de ranking pelo admin:', error);
+    res.status(500).json({ success: false, message: error?.message || 'Nao foi possivel atualizar o ranking.' });
   }
 });
 

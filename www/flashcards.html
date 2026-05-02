@@ -17735,68 +17735,71 @@
         return Array.from(variants).filter(Boolean);
       }
 
-      function levenshteinDistance(a, b) {
-        const left = String(a || '');
-        const right = String(b || '');
-        if (!left && !right) return 0;
+      const SPEECH_SEQUENCE_MIN_LENGTH = 3;
+      const SPEECH_SEQUENCE_HIT_THRESHOLD = 60;
 
-        const rows = Array.from({ length: left.length + 1 }, () => Array(right.length + 1).fill(0));
-        for (let i = 0; i <= left.length; i += 1) rows[i][0] = i;
-        for (let j = 0; j <= right.length; j += 1) rows[0][j] = j;
-
-        for (let i = 1; i <= left.length; i += 1) {
-          for (let j = 1; j <= right.length; j += 1) {
-            const cost = left[i - 1] === right[j - 1] ? 0 : 1;
-            rows[i][j] = Math.min(rows[i - 1][j] + 1, rows[i][j - 1] + 1, rows[i - 1][j - 1] + cost);
-          }
-        }
-
-        return rows[left.length][right.length];
+      function normalizeSpeechSequenceText(value) {
+        return String(value || '').replace(/[^a-z0-9]+/g, '');
       }
 
-      function longestCommonSubstringLength(a, b) {
-        if (!a || !b) return 0;
-        const dp = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
-        let maxLen = 0;
-        for (let i = 1; i <= a.length; i += 1) {
-          for (let j = 1; j <= b.length; j += 1) {
-            if (a[i - 1] === b[j - 1]) {
-              dp[i][j] = dp[i - 1][j - 1] + 1;
-              if (dp[i][j] > maxLen) maxLen = dp[i][j];
+      function findBestSpeechSequenceMatch(expected, spokenChunk, covered) {
+        const expectedText = String(expected || '');
+        const chunk = String(spokenChunk || '');
+        let best = null;
+
+        for (let spokenStart = 0; spokenStart < chunk.length; spokenStart += 1) {
+          for (let expectedStart = 0; expectedStart < expectedText.length; expectedStart += 1) {
+            let length = 0;
+            while (
+              spokenStart + length < chunk.length
+              && expectedStart + length < expectedText.length
+              && chunk[spokenStart + length] === expectedText[expectedStart + length]
+            ) {
+              length += 1;
+            }
+            if (length < SPEECH_SEQUENCE_MIN_LENGTH) continue;
+            const candidate = { expectedStart, spokenStart, length };
+            if (!best
+              || candidate.length > best.length
+              || (candidate.length === best.length && candidate.spokenStart < best.spokenStart)
+              || (
+                candidate.length === best.length
+                && candidate.spokenStart === best.spokenStart
+                && candidate.expectedStart < best.expectedStart
+              )) {
+              best = candidate;
             }
           }
         }
-        return maxLen;
-      }
 
-      function longestCommonWordSubsequenceLength(expectedWords, spokenWords) {
-        if (!expectedWords.length || !spokenWords.length) return 0;
-        const dp = Array.from({ length: expectedWords.length + 1 }, () => Array(spokenWords.length + 1).fill(0));
-        for (let i = 1; i <= expectedWords.length; i += 1) {
-          for (let j = 1; j <= spokenWords.length; j += 1) {
-            if (expectedWords[i - 1] === spokenWords[j - 1]) {
-              dp[i][j] = dp[i - 1][j - 1] + 1;
-            } else {
-              dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-            }
+        if (!best) return 0;
+
+        let added = 0;
+        for (let index = best.expectedStart; index < best.expectedStart + best.length; index += 1) {
+          if (!covered[index]) {
+            covered[index] = true;
+            added += 1;
           }
         }
-        return dp[expectedWords.length][spokenWords.length];
+        return added;
       }
 
       function calculateNormalizedSpeechMatchPercent(expected, spoken) {
-        if (!expected) return 0;
-        if (expected === spoken) return 100;
+        const expectedText = normalizeSpeechSequenceText(expected);
+        if (!expectedText) return 0;
+        const spokenChunks = String(spoken || '')
+          .split(/\s+/)
+          .map(normalizeSpeechSequenceText)
+          .filter(chunk => chunk.length >= SPEECH_SEQUENCE_MIN_LENGTH);
+        if (!spokenChunks.length) return 0;
 
-        const substringPercent = (longestCommonSubstringLength(expected, spoken) / Math.max(expected.length, 1)) * 100;
-        const expectedWords = expected.split(' ').filter(Boolean);
-        const spokenWords = spoken.split(' ').filter(Boolean);
-        const wordLcs = longestCommonWordSubsequenceLength(expectedWords, spokenWords);
-        const wordPercent = expectedWords.length ? (wordLcs / expectedWords.length) * 100 : 0;
-        const maxLen = Math.max(expected.length, spoken.length, 1);
-        const editPercent = Math.max(0, (1 - (levenshteinDistance(expected, spoken) / maxLen)) * 100);
+        const covered = Array(expectedText.length).fill(false);
+        spokenChunks.forEach((chunk) => {
+          findBestSpeechSequenceMatch(expectedText, chunk, covered);
+        });
 
-        return Math.max(substringPercent, wordPercent, editPercent);
+        const matched = covered.filter(Boolean).length;
+        return (matched / expectedText.length) * 100;
       }
 
       function calculateSpeechMatchPercent(expected, spoken) {
@@ -17836,20 +17839,11 @@
         normalizedAnswers.forEach((answer) => {
           const score = calculateSpeechMatchPercent(answer, spoken);
           bestScore = Math.max(bestScore, score);
-          if (score >= resolveSpeechHitThreshold(answer)) {
+          if (score >= SPEECH_SEQUENCE_HIT_THRESHOLD) {
             isHit = true;
           }
         });
         return { score: bestScore, isHit };
-      }
-
-      function resolveSpeechHitThreshold(expected) {
-        const normalized = getSpeechComparisonCandidates(expected)[0] || '';
-        const words = normalized.split(' ').filter(Boolean);
-        if (words.length === 1 && normalized.length <= 4) return 28;
-        if (words.length === 1 && normalized.length <= 6) return 36;
-        if (words.length <= 2 && normalized.length <= 10) return 42;
-        return 50;
       }
 
       function getReserveGameCardsCount() {
@@ -21029,7 +21023,11 @@
             flashGameVisualBlockedAudio();
             return;
           }
-          await fadeOutActiveAudio(entry.stage === 1 ? 1000 : 180);
+          if (entry.stage === 1) {
+            fadeOutActiveAudio(1000).catch(() => {});
+          } else {
+            await fadeOutActiveAudio(180);
+          }
         }
         if (!state.game.canListen) return;
 

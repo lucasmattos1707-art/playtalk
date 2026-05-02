@@ -15,10 +15,10 @@
   const DEFAULT_PROFILE_AVATAR = '/Avatar/profile-neon-blue.svg';
 
   const RANKING_METRICS = [
-    { slot: 1, key: 'flashcards', label: 'Flashcards', valueLabel: '' },
+    { slot: 1, key: 'flashcards', label: 'Cards', valueLabel: '' },
     { slot: 2, key: 'pronunciation', label: 'Pronuncia', valueLabel: '%' },
     { slot: 3, key: 'speed', label: 'Velocidade', valueLabel: '/h' },
-    { slot: 4, key: 'battle', label: 'Batalhas vencidas', valueLabel: '' }
+    { slot: 4, key: 'level', label: 'Level', valueLabel: '' }
   ];
 
   const els = {
@@ -89,7 +89,7 @@
     incomingChallengeId: 0,
     redirectedByChallenge: false,
     currentMetricKey: 'flashcards',
-    currentMetricLabel: 'Flashcards',
+    currentMetricLabel: 'Cards',
     currentMetricValueLabel: '',
     loadRequestId: 0,
     rankingCache: new Map(),
@@ -210,14 +210,13 @@
   }
 
   function setRankingLabel(label) {
-    if (!els.rankingLabel) return;
-    const text = safeText(label) || 'Flashcards';
+    const text = safeText(label) || 'Cards';
     if (els.rankingTitle) {
       els.rankingTitle.textContent = text;
     }
-    els.rankingLabel.innerHTML = `<span class="ranking-label__text">${escapeHtml(text)}</span>`;
-    els.rankingLabel.style.opacity = '1';
-    els.rankingLabel.style.visibility = 'visible';
+    if (els.rankingLabel) {
+      els.rankingLabel.style.display = 'none';
+    }
   }
 
   function syncMetricButtons() {
@@ -371,7 +370,7 @@
   function metricValueFromEntry(entry, metricKey) {
     if (metricKey === 'pronunciation') return Number(entry?.pronunciationPercent) || 0;
     if (metricKey === 'speed') return Number(entry?.speedFlashcardsPerHour) || 0;
-    if (metricKey === 'battle') return Number(entry?.battlesWon) || 0;
+    if (metricKey === 'level') return Number(entry?.level) || 0;
     return Number(entry?.flashcardsCount) || 0;
   }
 
@@ -438,6 +437,7 @@
       pronunciationPercent: Number(entry?.pronunciationPercent) || 0,
       speedFlashcardsPerHour: Number(entry?.speedFlashcardsPerHour) || 0,
       battlesWon: Number(entry?.battlesWon) || 0,
+      level: Math.max(1, Number(entry?.level) || 1),
       rankingValue: Number(entry?.rankingValue) || 0,
       avatarImage: safeText(entry?.avatarImage || DEFAULT_PROFILE_AVATAR) || DEFAULT_PROFILE_AVATAR,
       isAdmin: Boolean(entry?.isAdmin),
@@ -468,6 +468,7 @@
       pronunciationPercent: Number(entry?.pronunciationPercent) || 0,
       speedFlashcardsPerHour: Number(entry?.speedFlashcardsPerHour) || 0,
       battlesWon: Number(entry?.battlesWon) || 0,
+      level: Math.max(1, Number(entry?.level) || 1),
       rankingValue: Number(entry?.rankingValue) || 0,
       noEnergy: Boolean(entry?.noEnergy)
     };
@@ -896,6 +897,8 @@
         </div>
         <div
           class="users-count"
+          data-user-id="${entry.userId}"
+          data-user-name="${escapeHtml(entry.username)}"
           style="color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:1 !important;visibility:visible !important;text-shadow:0 2px 10px rgba(6,20,42,.65);background:transparent;"
         >${escapeHtml(formatMetricValue(entry, state.currentMetricKey, state.currentMetricValueLabel))}</div>
       </div>
@@ -908,6 +911,19 @@
       countEl.style.background = 'transparent';
       countEl.style.opacity = '1';
       countEl.style.visibility = 'visible';
+      if (isAdminViewer()) {
+        countEl.style.cursor = 'pointer';
+        countEl.title = 'Toque para editar o valor';
+      }
+      countEl.addEventListener('click', (event) => {
+        if (!isAdminViewer()) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const userId = Number(countEl.getAttribute('data-user-id')) || 0;
+        const user = state.rows.find((entry) => entry.userId === userId);
+        if (!user || user.userId === state.currentUser?.id) return;
+        void editRankingValuePrompt(user);
+      });
     });
     Array.from(els.usersList.querySelectorAll('[data-user-id]')).forEach((rowEl) => {
       rowEl.addEventListener('click', async () => {
@@ -1011,6 +1027,54 @@
       return data;
     } catch (_error) {
       return null;
+    }
+  }
+
+  function parseMetricPromptValue(rawValue, metricKey) {
+    const parsed = Number(String(rawValue || '').replace(',', '.'));
+    if (!Number.isFinite(parsed)) return null;
+    if (metricKey === 'pronunciation') return Math.max(0, Math.min(100, Math.round(parsed)));
+    if (metricKey === 'speed') return Math.max(0, Number(parsed.toFixed(1)));
+    if (metricKey === 'level') return Math.max(1, Math.min(200, Math.round(parsed)));
+    return Math.max(0, Math.round(parsed));
+  }
+
+  async function editRankingValuePrompt(user) {
+    if (!user || state.adminBusy) return;
+    const metricKey = state.currentMetricKey;
+    const metricName = state.currentMetricLabel || metricKey;
+    const currentValue = metricValueFromEntry(user, metricKey);
+    const inputValue = window.prompt(`Novo valor de ${metricName} para ${user.username}:`, String(currentValue));
+    if (inputValue == null) return;
+    const nextValue = parseMetricPromptValue(inputValue, metricKey);
+    if (nextValue == null) {
+      setUsersStatus('Valor invalido.');
+      return;
+    }
+
+    state.adminBusy = true;
+    syncAdminButtons();
+    setUsersStatus('Salvando valor...');
+    try {
+      const response = await fetch(buildApiUrl(`/api/admin/users/${user.userId}/ranking-metric`), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify({
+          metric: metricKey,
+          value: nextValue
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Nao foi possivel atualizar o valor.');
+      }
+      await loadUsers('Ranking atualizado.', { metricKey: state.currentMetricKey, force: true, animate: false });
+    } catch (error) {
+      setUsersStatus(error?.message || 'Nao foi possivel atualizar o valor.');
+    } finally {
+      state.adminBusy = false;
+      syncAdminButtons();
     }
   }
 
