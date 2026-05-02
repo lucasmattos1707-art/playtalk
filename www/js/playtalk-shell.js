@@ -56,6 +56,7 @@
       document.body.appendChild(nav);
     }
     nav.className = 'flashcards-footer-nav';
+    nav.id = 'flashcardsFooterNav';
     nav.dataset.shellPage = path === '/books' ? 'books' : 'default';
     nav.setAttribute('aria-label', 'Navegacao do flashcards');
     nav.innerHTML = [
