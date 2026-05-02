@@ -1349,6 +1349,10 @@ const ensureFlashcardUserStateTables = async () => {
       `);
       await pool.query(`
         ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS admin_speed_flashcards_per_hour numeric(10,1) NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
         ALTER COLUMN speakings TYPE bigint
       `);
       await pool.query(`
@@ -12379,8 +12383,9 @@ app.get('/api/users/flashcards', async (req, res) => {
            )
          )::int AS pronunciation_percent,
          CASE
-           WHEN COALESCE(stats.training_time_ms, 0) <= 0 OR COALESCE(progress.card_count, 0) <= 0 THEN 0
-           ELSE ROUND((COALESCE(progress.card_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(progress.card_count, 0) > 0
+             THEN ROUND((COALESCE(progress.card_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+           ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
          END AS speed_flashcards_per_hour
        FROM public.users u
        LEFT JOIN (
@@ -15841,8 +15846,9 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
            )
          )::int AS pronunciation_percent,
          CASE
-           WHEN COALESCE(stats.training_time_ms, 0) <= 0 OR COALESCE(progress.card_count, 0) <= 0 THEN 0
-           ELSE ROUND((COALESCE(progress.card_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(progress.card_count, 0) > 0
+             THEN ROUND((COALESCE(progress.card_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+           ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
          END AS speed_flashcards_per_hour,
          COALESCE(u.level, 1)::int AS user_level
        FROM public.users u
@@ -15936,14 +15942,16 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
              listenings,
              readings,
              training_time_ms,
+             admin_speed_flashcards_per_hour,
              updated_at
            )
-           VALUES ($1, 0, 0, 0, 0, $2, now())
+           VALUES ($1, 0, 0, 0, 0, $2, $3, now())
            ON CONFLICT (user_id)
            DO UPDATE SET
              training_time_ms = EXCLUDED.training_time_ms,
+             admin_speed_flashcards_per_hour = EXCLUDED.admin_speed_flashcards_per_hour,
              updated_at = now()`,
-          [userId, trainingTimeMs]
+          [userId, trainingTimeMs, targetValue]
         );
       } else if (metricKey === 'level') {
         await client.query(
