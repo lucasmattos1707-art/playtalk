@@ -5155,7 +5155,10 @@
     .game[data-phase-key="second-star"] .flashcards-typing__key,
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual,
     .game[data-phase-key="fourth-star"] .flashcards-typing__key {
-      font-family: "PlaytalkP2", "Soopafre", Arial, sans-serif;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
     }
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual,
@@ -5968,11 +5971,18 @@
       margin: 0 auto;
       padding: 12px 15px;
       border-radius: 18px;
-      font-family: "Soopafre", Arial, sans-serif;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
       text-align: center;
       white-space: normal;
-      line-height: 1;
+      line-height: 0.88;
       color: #ffffff;
+      text-shadow:
+        0 2px 0 rgba(0, 22, 72, 0.98),
+        0 0 12px rgba(2, 28, 92, 0.92),
+        0 0 24px rgba(6, 54, 141, 0.74);
       background-repeat: no-repeat, no-repeat;
       background-position: center, center;
       background-size: cover, cover;
@@ -6056,6 +6066,10 @@
     .game[data-phase-key="fifth-star"] .game-word.is-chip,
     .game[data-phase-key="fifth-star"] .game-subword.is-chip {
       display: inline-flex !important;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
     }
 
     .keyboardscreen-host {
@@ -21002,7 +21016,7 @@
             flashGameVisualBlockedAudio();
             return;
           }
-          await fadeOutActiveAudio(180);
+          await fadeOutActiveAudio(entry.stage === 1 ? 1000 : 180);
         }
         if (!state.game.canListen) return;
 

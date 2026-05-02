@@ -1,0 +1,403 @@
+[33m8d404b4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m sua mensagem aqui
+[33mc6e6558[m Restore welcome mission modal button
+[33mfdd002d[m Fix welcome daily mission button
+[33m6c263d0[m Fix welcome mission modal
+[33m0480695[m Fix stage shortcut overlays
+[33m72cda92[m Add stage pause shortcuts
+[33m7cced11[m Remove package manager pin
+[33m6326e5b[m Configure Render npm build
+[33m85be5e6[m Remove legacy footer markup
+[33m33405ee[m Refine welcome action icons
+[33m93d6a44[m Unify footer navigation
+[33m42ee0a1[m Replace welcome start image with action buttons
+[33m498a2a5[m Reduce fourth star key audio latency
+[33m138cf1d[m Restyle daily mission modal
+[33md9a736d[m Update users loader and star typing flow
+[33m6afd230[m Fix login loading and users screen
+[33m7fe181e[m Atualiza segunda estrela com blocos de palavras
+[33m99016a0[m Atualiza segunda estrela com blocos de palavras
+[33m328c8c5[m Atualiza segunda estrela com blocos de palavras
+[33m6a90d90[m Atualiza segunda estrela com blocos de palavras
+[33m267ba7e[m Atualiza segunda estrela com blocos de palavras
+[33m3cc72be[m Atualiza segunda estrela com blocos de palavras
+[33me55b66e[m Atualiza segunda estrela com blocos de palavras
+[33m14612e7[m Atualiza segunda estrela com blocos de palavras
+[33me4fe59e[m Restyle daily plan modal with glass cards
+[33ma36c909[m Restyle welcome gate cards in flashcards
+[33m0557a55[m Align play header and books controls
+[33mba744d6[m Open books directly in ranked listening mode
+[33m4019b22[m Improve prebook button touch handling
+[33m17832fc[m Make pre-book cover start listening flow
+[33m7f5e2f6[m Enlarge welcome gate avatar and dock mission button
+[33mfd91baf[m Fix books modal book selection fallback
+[33m3361c85[m Make prebook cover advance to training
+[33m1d11ab6[m Remove books home greeting header
+[33mc93b7b6[m Restore books prebook mode buttons
+[33m7501493[m Refine welcome gate layout and energy progress
+[33m14f7735[m Refine welcome gate layout and energy progress
+[33m6598664[m Raise pre-book modal and restore button interactivity
+[33m494d2c5[m Add click sound to fluency plan onboarding
+[33m5e476ae[m Refine fluency plan onboarding layout and copy
+[33me8e9ade[m Refine fluency plan onboarding validation and scoring
+[33mbfeacbf[m Refine fluency plan onboarding layout
+[33m7fb3c64[m Refine loading and daily mission modal
+[33m6a9b4a5[m Refine books loader metadata display
+[33m8434e70[m Unify global loader and hide legacy welcome spinner
+[33m0a3adcb[m Add global loading overlay across main game routes
+[33maa209a7[m Refine daily plan modal layout for smaller screens
+[33m5cf7286[m Add daily mission progress tracking
+[33mf566233[m Add daily plan modal to welcome gate
+[33m4805ff6[m Add flashcards-smartbooks mix onboarding slider and persistence
+[33m35d6709[m Add mission page route and link welcome gate button
+[33m37222e1[m Refine welcome gate layout
+[33mb2285b8[m Fix allcards cache and smartbooks payload handling
+[33md8bd24d[m Refine welcome gate layout in flashcards
+[33ma9302d6[m Apply AGENTS guidance
+[33m00eda5b[m Refine welcome gate layout and admin mode visibility
+[33md289672[m Refine fluency plan layout and stage icons
+[33m126f228[m Compact fluency plan layout for onboarding steps
+[33m8d6b255[m Allow weak passwords on login
+[33mc3d09a9[m Refine fluency plan layout for small screens
+[33mbdd9bff[m Tighten fluency plan layout for viewport fit
+[33ma988653[m Add fluency plan onboarding and CORS origin handling
+[33ma59ab59[m Harden auth and username validation
+[33mb82048d[m Fix flashcard training time persistence
+[33ma8ab26d[m Redesign users ranking header and metric selector
+[33md073789[m Add colored PDF export for levels texts
+[33m6b74432[m Auto-disable no-energy at 100 energy and premium
+[33m8c4cf38[m Add admin energy page route
+[33mc37c084[m Add admin energy settings
+[33m1058770[m Restore listen mic handling and typing stage resolution
+[33ma90008d[m Restore listen waveform and typing keyboard
+[33ma018490[m Refine pregame modal and scale mode progression
+[33m4493bcd[m Add welcome mode modal and typing mode
+[33m3cc1a5f[m Add prompt-based avatar creation flow
+[33m18c4977[m Fix Android auth routing and footer safe-area layout
+[33m99429bd[m Align Android routing with current app pages
+[33m795bc57[m Include play page in static build
+[33mf02e9b0[m Fix native auth return handling and touch interaction
+[33mb4e787f[m Refresh Android launch assets and default entry route
+[33m439d34f[m Preserve text mode language button visibility
+[33ma8220a9[m Embed mode 3 English flag icon inline
+[33mf78b487[m Fix mode 3 English icon path
+[33m9e7f780[m Refine level text mode icons and welcome panel
+[33m9c24953[m Reduce level switch debounce to 1 second
+[33m7d6ca80[m Update English icon path
+[33ma8a13a4[m Refine flashcards game control icon paths
+[33m31ee365[m Fix level selector icon paths and default level
+[33me083aa4[m Reset level start and fix icon paths
+[33m9f56e37[m Refine welcome gate level and text-mode layout
+[33md477b56[m Simplify level text mode visuals
+[33m4564d81[m Rework welcome gate layout and level heading
+[33mdd4506f[m Add language-aware text mode controls to level gameplay
+[33m45b5522[m Restore classic welcome start flow
+[33m298875f[m Add buffered text-only level mode
+[33maf72455[m Fix level mode entry rotation
+[33m3c16f58[m Add all-levels mode to flashcards level selection
+[33me52e9be[m Stabilize level switch reset timing
+[33md143bd1[m Fix flashcard level switch transitions
+[33m73e312a[m Refine level mode with audio-only start and delayed switching
+[33m6c283dd[m Add level-based welcome gate and gameplay
+[33mdbaf59f[m Restrict levels to admins and add text export command
+[33mce50484[m Refine energy gate countdown layout
+[33mee467d1[m Refine energy gate countdown layout
+[33md7ed960[m Refine welcome gate layout and dynamic greeting
+[33mca10bff[m Refine welcome gate layout and progress display
+[33m03f4f7d[m Expand welcome gate and simplify level progress copy
+[33m50efef0[m Refine welcome gate energy and level styling
+[33m817fb93[m Refresh welcome gate visuals and display names
+[33m3e0b1d4[m Fix energy stats fetch helpers
+[33mb0ecfcd[m Show unlimited energy as infinity in welcome gate
+[33m709a420[m Show welcome energy without waiting for cardsReady
+[33me7afd4e[m Rework welcome gate layout and level loading
+[33m335d7f9[m Center welcome gate loader and delay content until ready
+[33mf5bab33[m Rework welcome gate layout
+[33m0c9f4f1[m Refresh remembered energy status before reusing fallback
+[33mbdc4c2a[m Sync welcome gate energy display and add white borders
+[33mb9613cf[m Use remembered energy status in welcome gate
+[33m5e2c2a5[m Update flashcard welcome energy sizing and fallback
+[33m509e5ab[m Add loading state to welcome gate
+[33m6170e61[m Refine welcome gate and add users header
+[33m340541c[m Add welcome gate energy display
+[33mf754629[m Center welcome gate header and level panel
+[33mbafd86e[m Refine welcome gate layout and level ring
+[33mc8c270f[m Redesign welcome gate progress layout
+[33mf9a2e8c[m Tighten energy gate countdown layout
+[33mabeba95[m Simplify welcome gate header layout
+[33m4d4c36d[m Redesign welcome gate header with player profile
+[33m3fa5da1[m Polish empty library and energy gate layouts
+[33m7eec605[m Refine allcards switcher and empty states
+[33m5086b9f[m Simplify energy gate copy and typography
+[33m54b83b7[m Refine energy gate depletion copy and countdown
+[33mad3a8f3[m Use Exo 2 in the energy gate
+[33mc157a99[m Fix energy gate countdown and Open Sans loading
+[33m4c77387[m Show daily energy depletion screen
+[33m3750cff[m Add self-service no-energy activation
+[33md36efe9[m Mark users no_energy when snapshot energy is exhausted
+[33mac4a53a[m Add energy depletion watchdog for game screens
+[33m46ea07d[m Unify energy gate fonts and countdown refresh
+[33m6ff155f[m Add energy depletion exit to active game screens
+[33m0c25976[m Force energy gate fullscreen on body injection
+[33m5f77d6c[m Route manual no-energy blocks through energy gate
+[33mcc27391[m Refine welcome gate level and energy handling
+[33m3434612[m Block no-energy media and card caching
+[33m815748d[m Add manual no-energy blocking for admin controls
+[33m8c8fdd8[m Use dynamic card counts in flashcards start flow
+[33mb384c01[m Make game card counts level aware
+[33m06e8d84[m Add Burt Raynalds ElevenLabs env var
+[33m01f3b3d[m Keep flashcards welcome gate synced to cached energy state
+[33m676a8d2[m Adjust flashcard level thresholds and round mix
+[33m8e1b283[m Add blocked energy countdown to welcome gate
+[33m27f9828[m Build energy gate UI dynamically
+[33m3bc9ec4[m Fix energy state sync for welcome and challenge buttons
+[33m3904623[m Block low-energy entry points with energy gate
+[33mffb5122[m Refine welcome gate energy overlay
+[33mbfe7875[m Refine energy gate overlay layout
+[33m185d99a[m Reapply local changes without oversized video files
+[33mad6ea4f[m Prevent admin welcome gate from auto-starting
+[33mc0e72b6[m Add admin upload for global backgrounds
+[33md995a1d[m Apply blue hall background across app pages
+[33m9e1153a[m Refine welcome gate avatar aura and layout
+[33m62f6b7a[m Refine welcome gate with profile aura and level progress
+[33m9a2f13a[m Redirect low-energy players to flashcards gate
+[33mc07b5a3[m Add welcome gate level progress
+[33madd3692[m Constrain flashcard deck levels to user levels
+[33m4b08710[m Add user levels to flashcards progression
+[33m4e8e1c6[m Add flashcard level normalization to public user mapping
+[33md844bd2[m Require login for levels and auto-open deck picker
+[33me8ba009[m Persist deck level support and isolate flashcard asset names
+[33m48d73d2[m Adjust SmartBooks offsets in books and allcards
+[33m4fba1dc[m Avoid localStorage quota errors in levels editor
+[33m1744c16[m Raise SmartBooks book and badge positions
+[33m7cd6e20[m Show energy gate instead of redirecting to account
+[33md2a905c[m Shrink smartbooks and simplify flashcards home
+[33md696f8c[m Refine training setup picker and SVG close button
+[33m763d804[m Add flashcards training modes and cycle selector
+[33m09afaa4[m Adjust fifth-star flashcards layout offsets
+[33mddc2de0[m Fix landing CTA and reveal badge carousel
+[33m435daa9[m Hide badge carousel and speed up landing marquee
+[33m3c4998a[m Add scrolling roadmap marquee to landing page
+[33m61794b0[m Adjust admin banner sizing for mobile and desktop
+[33mb60386e[m Preserve admin banner proportions on save
+[33mb7e0ead[m Make landing banner use panoramic desktop proportions
+[33mde7f418[m Refresh landing hero with badge carousel
+[33m06660f0[m Align account avatar and refresh smartbooks empty states
+[33m7a56d5f[m Add neon profile avatar fallback
+[33mb1e7b19[m Refine books reader progress and prebook button sizing
+[33m30d34f3[m Separate book progress from pronunciation score
+[33m3d0bbc2[m Align first-star layout with third-star
+[33m00c777b[m Adjust first-star mic layout
+[33mb6f4311[m Adjust first-star mic and controls position
+[33m94f855a[m Refine first-star mic and allcards empty states
+[33m2d70072[m Adjust first and fifth stage mic layout
+[33m7e99983[m Refine empty states for AllCards and SmartBooks
+[33mc1f768b[m Improve mic check feedback rotation
+[33mc609b96[m Refine miccheck layout and soundcheck spacing
+[33m21ba7ab[m Refine flashcards audio and mic onboarding
+[33m0749a43[m Prioritize visible book and restyle books footer
+[33mc249195[m Refine books home meta and pre-book modes
+[33mbf7d0d7[m Track mini book reading stats and progress
+[33m58e0788[m Refine books player layout and reading time display
+[33m425c068[m Adjust books player layout and defaults
+[33md24bacc[m Add blackout toggle to books player
+[33mddbf370[m Move typing advance button into flashcard visual
+[33mcfcbf2c[m Apply second-star layout and audio behavior to fourth-star
+[33m6fffd01[m Remove loading overlay backgrounds from books page
+[33m38ffc1e[m Enlarge account stats icons and hide labels
+[33mf3d56a6[m Use PNG stats icons and tighten account metrics
+[33m281f590[m Refine books layout and speaking language toggles
+[33m9f8509a[m Refine account logout button and stats spacing
+[33md326784[m Handle premium cancel state and energy usage totals
+[33m69c479c[m Center soundcheck overlay layout
+[33m0819abd[m Refine audio and mic check overlays
+[33m399fe5e[m Center soundcheck keyboard and match second-star font
+[33m41bec49[m Refine audio and mic check overlays
+[33mfd7ea27[m Move game controls proxy outside the card layout
+[33mf9dc7fb[m Open mic check immediately after audio test success
+[33m869f0d9[m Fix flashcards overlay race on first open
+[33m7e81d79[m Refine mic check flow and styling
+[33m5314e41[m Refine microphone check flow and completion state
+[33m72d9569[m Skip audio success screen and open mic check مباشرة
+[33m8500649[m Refine audio check onboarding flow
+[33mcf8615e[m Refine onboarding audio check flow
+[33mc6a1124[m Add audio and mic onboarding checks
+[33mcc4de20[m Keep game mic hidden until books mode renders
+[33m24e5a29[m Refine second-stage keyboard and preload mic icon
+[33m40fa830[m Refine second-stage keyboard layout and fast-forward button
+[33m6c7328a[m Fix first-star mic layout on mobile
+[33m9044102[m Lower books card book artwork by 10vh
+[33mf362439[m Restore books footer icons and tune home hero
+[33m47e1a0e[m Hide header arrows and lower book cover
+[33mfa6e519[m Use selos PNGs in books footer nav
+[33m10e0997[m Update play navigation and books header icons
+[33m00387cb[m Simplify play route and remove guest login gate
+[33me99f6b9[m Simplify login redirect to /entrar
+[33mc9191bd[m Fix entrar redirect loop
+[33m56b0f40[m Rename login route to /entrar and center auth card
+[33m9757857[m Center minibook cover and move sleep button top right
+[33m88bfa62[m Update favicon and Android app icons
+[33m3d3fd1d[m Refine login logo and books sleep button layout
+[33mff3f6f8[m Remove redundant login title
+[33m8d967cd[m Open landing page and restyle auth portal
+[33m715a04d[m Add authenticated entry portal
+[33me0b3a3d[m Use displayed reader scores in pronunciation averages
+[33m2d10d76[m Refine books progress tracking and audio playback
+[33m28cdce9[m Make users modals fullscreen overlay
+[33mea082f1[m Add admin premium toggle and fullscreen user modals
+[33m66f8490[m Clamp energy zero threshold and refine sleeping player overlay
+[33md7c0a47[m Restore player controls in books sleeping mode
+[33m6b21ae4[m Refine books player overlay interactions
+[33m0f42975[m Adjust books player overlay positioning
+[33mcf4323a[m Fix books sleeping mode fullscreen overlay
+[33m9d74c05[m Fix immersive books home fullscreen sizing
+[33md9b182e[m Simplify home sleep playback state handling
+[33m0177b53[m Restore book level after home sleep playback
+[33md1d05b2[m Fix home shell visibility and touch handling
+[33m01f130b[m Render premium status after loading account stats
+[33m25813fc[m Show default energy until server snapshot loads
+[33mc44151d[m Persist daily energy in Postgres and charge flashcards reads
+[33mac63f76[m Add energy gating to account and game flows
+[33mb0de496[m Refine SmartBooks shell and sleeping mode
+[33m982a08f[m Refine SmartBooks layout and scrolling
+[33madea5a4[m Rotate user rankings and refine leaderboard layout
+[33m7723fd0[m Add premium card to account page
+[33m9725187[m Simplify books landing to AllBooks
+[33ma19d845[m Refine allcards and account UI text and glow
+[33m15c86bd[m Refactor app flows and UI components
+[33mbba63fc[m Lower SmartBooks header
+[33m75b687b[m Adjust SmartBooks shelf header
+[33mb131c12[m Reorder seals and weight flashcard rankings
+[33m2225573[m Reweight flashcard seal ranking and swap gold tiers
+[33m0b05be7[m Update flashcard review scaling
+[33m9d08c21[m Fix flashcards catalog loading and preserve legacy card IDs
+[33m59611d6[m Track reading chars in book stats and move logout button
+[33ma451dc8[m Remove banner carousel from users page
+[33m8974182[m Fix banner carousel responsive sizing
+[33mbf3d2cf[m Refine landing showcase and remove header
+[33m4902fca[m Update landing background with global PlayTalk artwork
+[33m552aa2d[m Create neon PlayTalk landing page with admin banners
+[33mfa070dc[m Fix flashcard asset naming and add local cache reset
+[33m9f36819[m Preserve deck context when pasting flashcards
+[33m2f62e31[m Persist new flashcard decks in Postgres
+[33mc1100c3[m Create empty Postgres deck when starting a new grade
+[33mad5a5b5[m Allow pinned search cards to feed image generation
+[33m0a70a4d[m Keep pinned flashcards in search results
+[33m7cf7a5b[m Persist deck search edits to Postgres
+[33m8d1c765[m Add deck search mode in levels with per-deck card edits
+[33m96b743f[m Move flashcard decks to Postgres-backed manifest
+[33mbab7492[m Add getdeck command for opened flashcard decks
+[33mc213af1[m Prefer Postgres decks in flashcards manifest merge
+[33maef1f5c[m Parallelize flashcard bundle publishing and return payload
+[33m7da0031[m Fix PlayTalk deck publishing identity
+[33m4949c43[m Show admin deck counts in flashcards welcome gate
+[33m7351063[m Harden account login against Postgres timeouts
+[33mcbc8523[m Refresh editcards deck list after publishing decks
+[33m08d5793[m Disable flashcard stage tutorials
+[33md33b6b4[m Optimize R2 uploads and improve publish feedback
+[33m4b3035b[m Add play controls and expose hidden decks
+[33ma510937[m Add OpenAI voice options to levels dropdown
+[33m5c6d5f6[m Improve ElevenLabs error detail in levels
+[33m5f2822e[m first commit
+[33m507d6c8[m Remove Sequência 03 mp3
+[33m220621d[m Accept ElevenLabs voice aliases
+[33m7ba07dd[m Restore ElevenLabs Harry voice on levels
+[33mf48df90[m Add admin book deletion and English-only stats
+[33mc2cbdc8[m Add admin books summary and speaking scoring points
+[33m7cd2a4f[m minha atualização
+[33mefc2318[m Show English in speaking training and suppress audio
+[33m1541137[m Fix assistant message type in chat history
+[33me3b1818[m Enable scrolling on the ThatA page
+[33m64062c1[m Enable scrolling on the ThatA page
+[33ma7f816f[m Include thata page in static build
+[33m9e61f92[m Expose ThatA routes as public pages
+[33m2b5a8c1[m Add ThatA multi-model chat page and model selection
+[33m1206aa2[m Fix Levels image regeneration and publish feedback
+[33m78f7bb4[m Preserve deck cards and add image click audio recovery
+[33m12b8850[m Route levels deck publishes through R2 and Postgres
+[33m6b4b26d[m Move levels deck picker to use game flashcard catalog
+[33mcccf255[m Add admin deck picker to levels batch fill
+[33mc739428[m Refine flashcards and allcards game UI behavior
+[33m0e50700[m Replace account aura with SVG glow ring and exclude mp4 assets
+[33md1b11b9[m Keep Books sleep playback alive with background media service
+[33m1eabd60[m Restore guest login on account page
+[33m61a35bf[m Enhance account avatar aura glow styling
+[33mdaa2d05[m Move account actions to books home panel
+[33ma1e0c60[m Let account aura glow extend beyond avatar
+[33m3683a8a[m Adjust account aura opacity and glow
+[33m6927993[m chore: trigger render deploy for account aura updates
+[33m1767887[m Add presence class stats and fix account layout overflow
+[33mdd0a025[m Enable books sleep mode background playback on Android
+[33m7dc0b69[m Redesign account stats carousel and add account age metrics
+[33macdf79b[m Add neon tube styling to the account avatar aura
+[33mefdb8e5[m Simplify account aura and animate blended ring colors
+[33mc911f8b[m Enhance account avatar aura glow
+[33m77e4224[m Enhance account avatar aura neon glow
+[33m20da106[m Refine account aura glow visibility and transitions
+[33md55d5f3[m Add dynamic training aura to account avatar
+[33m1da9b00[m Fix speaking duel completion timing in cards mode
+[33m53df7fc[m Simplify guest account keyboard layout
+[33m43b9c3d[m Add guest virtual keyboard to account page
+[33m68c9e98[m Sync flashcard speaking and listening stats to account
+[33m954cc17[m Fix flashcards tutorial dismissal and 9:16 image fit
+[33m5f1c8d6[m Improve battle cards prompt flow and CTA animation
+[33m3fa904d[m Add stage tutorial overlays for first and second flashcard steps
+[33m78551f1[m Align second star typing with fourth star and add skip
+[33m74888c8[m Raise books page card position across desktop and mobile
+[33m2a972ef[m Center and enlarge book cards and badges on /books
+[33m42d90d1[m Update premium page and switch checkout to subscriptions
+[33m34f2575[m Track practice time and character metrics in flashcards and speaking
+[33m499649e[m Separate flashcard pronunciation stats and count char metrics
+[33mf3c2a60[m Convert book character counts to estimated reading time
+[33maafa057[m Mix battle cards across decks and refine speaking insights
+[33m222d9af[m Add pre-book reading time and full-screen background
+[33m2906f92[m Remove flashcards stage intro tutorial overlays
+[33m1317050[m Add battle-cards duel mode for speaking challenges
+[33m1e281b8[m Restore active speaking battles on page load
+[33m410ce28[m Refine Android speech capture and books mode UI
+[33m215a6ac[m Fix library card progress refresh and book carousel sliding
+[33mdfcc98c[m Fix APK card sync and stop full-page card rerenders
+[33mdebeabb[m Stabilize APK session handling and rebuild Android app
+[33m606444d[m Fix account link and avoid redundant shell navigation
+[33mc311aa2[m Route legacy entry pages to flashcards and trim Android build
+[33mf4850dd[m Update local level files timestamp
+[33ma573c63[m Improve challenge modal closing and full-screen layout
+[33me6e68dc[m Simplify users challenge modal layout and close handling
+[33m5f814a0[m Fix users challenge modal visibility and stacking
+[33m4fe7dd3[m Lock users page scroll while challenge modal is open
+[33ma304eee[m Make users challenge modal fullscreen with top close button
+[33m87d7017[m Prevent speaking duel percentages from regressing
+[33mb42793a[m Finish battles immediately and refine speaking duel intro
+[33mc446e7d[m Randomize bot pronunciation samples per phrase
+[33m2bf435b[m Align speaking duel layout and remove card blur
+[33mb8ab60d[m Refine speaking duel ring sizing and mic alignment
+[33m05396a8[m Refine speaking duel mic layout and neon avatar rings
+[33md4201c0[m Refine speaking duel intro and replace its footer and mic
+[33mef5f27a[m Persist bot usernames in config parsing
+[33m604d406[m Fix bot info modal visibility and refresh users page cache
+[33m685d760[m Remove bot rank from users admin details
+[33me48eb5c[m Fix bot login and ranking sync
+[33m2af5cf3[m Refine users admin and bot modals
+[33m1a24558[m Balance bot timing samples and reject unknown auth users
+[33m8c59fdf[m Fix bot pronunciation progress and duel polling
+[33m3d81665[m Add admin minibook line editor and update flow
+[33mfc382c8[m Fix bot battle completion and winner selection
+[33mf99208a[m Added the bot button and keyboard shortcut in the source files used by /
+[33m1cc5e83[m Add admin bot users with async avatars and instant speaking duels
+[33mae716f8[m Show only earned cards on allcards page
+[33ma1e5b22[m Fix allcards loading and preserve flashcard controls animation
+[33m16b11ce[m Restore local allcards decks in flashcards manifest
+[33m981e358[m Animate reader mic in when audio playback starts
+[33m5743fd5[m Show MyBooks badges and split out AllBooks
+[33m59da0d3[m Fix MyBooks refresh and reader opening order
+[33mbeb71e5[m Add MyBooks tab for qualified books and refine speaking UI
+[33m5e5a8a7[m Set flashcards text color to white
+[33m4edf43a[m Fix flashcards visual centering and intro storage keys
+[33m7593d31[m Update local level files timestamp
+[33m7e3d3a7[m Keep star mic fixed and lower above the footer
+[33m606e4af[m Add first-time stage intro overlays for flashcards
+[33mb96158c[m Improve flashcard star layout and typing text wrapping
+[33m4fd172b[m Align flashcard neon ring and mic controls
+[33m0e49daf[m Sua mensagem de commit
+[33m1ce32e7[m Sua mensagem de commit
+[33mc5ef77c[m Add fixed fullscreen background to books reader
+[33m690
