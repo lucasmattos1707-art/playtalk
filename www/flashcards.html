@@ -9188,6 +9188,7 @@
       const LESS_SOUND_PATH = 'svgnovo/less.wav';
       const REPORT_SOUND_PATH = 'thesongs/report.wav';
       const TYPING_KEY_SOUND_PATH = 'sounds/type.mp3';
+      const FOURTH_STAR_TYPING_KEY_SOUND_PATH = 'sounds/type-fourth.aac';
       const TYPING_KEY_FLASH_MS = 500;
       const TYPING_PROMPT_REPEAT_DELAY_MS = 2000;
       const TYPING_SKIP_LETTER_DELAY_MS = 350;
@@ -18485,15 +18486,23 @@
         });
       }
 
+      function currentTypingKeySoundPath() {
+        return safeText(els.game?.dataset?.phaseKey || '') === 'fourth-star'
+          ? FOURTH_STAR_TYPING_KEY_SOUND_PATH
+          : TYPING_KEY_SOUND_PATH;
+      }
+
       function playTypingKeyAudio() {
         try {
-          if (!state.game.typingKeyAudioPool.length) {
+          const soundPath = currentTypingKeySoundPath();
+          if (!state.game.typingKeyAudioPool.length || state.game.typingKeyAudioPath !== soundPath) {
             state.game.typingKeyAudioPool = Array.from({ length: 4 }, () => {
-              const audio = new Audio(TYPING_KEY_SOUND_PATH);
+              const audio = new Audio(soundPath);
               audio.preload = 'auto';
               audio.volume = 0.95;
               return audio;
             });
+            state.game.typingKeyAudioPath = soundPath;
             state.game.typingKeyAudioIndex = 0;
           }
           const pool = state.game.typingKeyAudioPool;
@@ -18767,12 +18776,18 @@
         return rows;
       }
 
+      function shuffleSecondStageOptionRows(rows) {
+        return shuffleList(Array.isArray(rows) ? rows : [])
+          .map((row) => shuffleList(Array.isArray(row) ? row : []))
+          .filter((row) => row.length);
+      }
+
       function buildSecondStageOptionRows(correctOptions, wrongWords) {
         const correct = shuffleList(Array.isArray(correctOptions) ? correctOptions : [])
           .sort((a, b) => countSecondStageBlockChars(b) - countSecondStageBlockChars(a));
         const targetTotal = Math.max(SECOND_STAGE_BLOCK_TOTAL, correct.length);
         if (correct.length >= SECOND_STAGE_BLOCK_TOTAL) {
-          return packSecondStageRows(correct);
+          return shuffleSecondStageOptionRows(packSecondStageRows(correct));
         }
 
         const rows = Array.from(
@@ -18828,7 +18843,7 @@
           }
         });
 
-        return rows.filter((row) => row.length);
+        return shuffleSecondStageOptionRows(rows);
       }
 
       function buildSecondStageWordBlockState(typingState, card) {
