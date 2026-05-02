@@ -14535,12 +14535,43 @@
           .length;
       }
 
+      function flashcardLevelTextLimits(level = currentUserLevel()) {
+        const normalizedLevel = normalizeUserLevel(level);
+        if (normalizedLevel <= 6) {
+          return { phraseMaxExclusive: 11, wordMaxExclusive: 7 };
+        }
+        if (normalizedLevel <= 12) {
+          return { phraseMaxExclusive: 13, wordMaxExclusive: 9 };
+        }
+        if (normalizedLevel <= 22) {
+          return { phraseMaxExclusive: 18, wordMaxExclusive: 12 };
+        }
+        return null;
+      }
+
+      function flashcardDifficultyText(card) {
+        return safeText(card?.english || card?.portuguese || card?.deckTitle || '');
+      }
+
+      function longestFlashcardWordLength(text) {
+        const words = safeText(text).match(/[A-Za-z0-9]+(?:['-][A-Za-z0-9]+)*/g) || [];
+        return words.reduce((maxLength, word) => {
+          const normalized = safeText(word).replace(/[^A-Za-z0-9]/g, '');
+          return Math.max(maxLength, normalized.length);
+        }, 0);
+      }
+
       function isEarlyFlashcardLengthEligible(card) {
-        return true;
+        const limits = flashcardLevelTextLimits();
+        if (!limits) return true;
+        const text = flashcardDifficultyText(card);
+        if (!text) return true;
+        return countFlashcardCharacters(text) < limits.phraseMaxExclusive
+          && longestFlashcardWordLength(text) < limits.wordMaxExclusive;
       }
 
       function shouldRestrictEarlyFlashcards() {
-        return false;
+        return !isAdminUser() && Boolean(flashcardLevelTextLimits());
       }
 
       function applyEarlyFlashcardFilter(cards) {
@@ -14555,7 +14586,8 @@
       function isCardPlayableInLevelMode(card) {
         return !isCardHiddenForUser(card?.id)
           && hasCoreFlashcardText(card)
-          && hasPlayableFlashcardImage(card);
+          && hasPlayableFlashcardImage(card)
+          && (isAdminUser() || isEarlyFlashcardLengthEligible(card));
       }
 
       function cardDeckLevel(card) {
@@ -14565,7 +14597,9 @@
       function isCardAllowedForUserLevel(card) {
         if (isAdminUser()) return true;
         const deckLevel = cardDeckLevel(card);
-        return deckLevel !== null && deckLevel <= currentUserLevel();
+        return deckLevel !== null
+          && deckLevel <= currentUserLevel()
+          && isEarlyFlashcardLengthEligible(card);
       }
 
       function currentLevelProgressCount(level = currentUserLevel()) {
@@ -14667,9 +14701,7 @@
       }
 
       function baseRoundSourceCards() {
-        const lockedCards = baseCandidateCards();
-        if (lockedCards.length) return lockedCards;
-        return playableVisibleGameCards();
+        return baseCandidateCards();
       }
 
       function formatDuration(ms) {
@@ -17790,6 +17822,7 @@
         entries.forEach((entry) => {
           const card = cardById(entry.id);
           if (!card || !isCardAllowedForUserLevel(card)) return;
+          if (!isAdminUser() && entry.pool !== 'review' && state.userCards.has(card.id)) return;
           state.game.entries.set(entry.id, { ...entry });
         });
         state.game.queue = (Array.isArray(snapshot.queue) ? snapshot.queue : [])
@@ -17813,6 +17846,40 @@
         const normalizedLimit = Math.max(0, Number(limit) || 0);
         if (!normalizedLimit || !cards.length) return [];
         return shuffle(cards.slice()).slice(0, normalizedLimit);
+      }
+
+      function cardDeckSelectionKey(card) {
+        return safeText(card?.source) || safeText(card?.deckTitle) || safeText(card?.id) || 'deck';
+      }
+
+      function buildDeckFirstCardSelection(cards, limit) {
+        const normalizedLimit = Math.max(0, Number(limit) || 0);
+        const source = Array.isArray(cards) ? cards.filter(Boolean) : [];
+        if (!normalizedLimit || !source.length) return [];
+        const deckGroups = new Map();
+        source.forEach((card) => {
+          const key = cardDeckSelectionKey(card);
+          if (!deckGroups.has(key)) deckGroups.set(key, []);
+          deckGroups.get(key).push(card);
+        });
+        const deckKeys = shuffle(Array.from(deckGroups.keys()));
+        const selected = [];
+        const offsets = new Map(deckKeys.map((key) => [key, 0]));
+        while (selected.length < normalizedLimit) {
+          let pickedInPass = false;
+          for (const key of deckKeys) {
+            if (selected.length >= normalizedLimit) break;
+            const deckCards = deckGroups.get(key) || [];
+            const offset = offsets.get(key) || 0;
+            const card = deckCards[offset] || null;
+            if (!card) continue;
+            selected.push(card);
+            offsets.set(key, offset + 1);
+            pickedInPass = true;
+          }
+          if (!pickedInPass) break;
+        }
+        return selected;
       }
 
       function buildLevelAwareRoundGroups(baseCards, reviewCards, limit) {
@@ -17848,11 +17915,11 @@
           ? []
           : base.filter(card => cardDeckLevel(card) < level && !selectedIds.has(card.id));
         const selectedBase = uniqueCardsById([
-          ...buildOrderedDeckSelection(
+          ...buildDeckFirstCardSelection(
             baseCurrent,
             Math.max(0, currentTarget - currentReviews.length)
           ),
-          ...buildOrderedDeckSelection(
+          ...buildDeckFirstCardSelection(
             basePrevious,
             Math.max(0, previousTarget - previousReviews.length)
           )
@@ -17861,7 +17928,7 @@
 
         let selectedTotal = selectedBase.length + selectedReviews.length;
         if (selectedTotal < normalizedLimit) {
-          const fillers = buildOrderedDeckSelection(
+          const fillers = buildDeckFirstCardSelection(
             [...baseCurrent, ...basePrevious].filter(card => !selectedIds.has(card.id)),
             normalizedLimit - selectedTotal
           );
@@ -17878,7 +17945,7 @@
         }
 
         return {
-          baseCards: shuffle(selectedBase).slice(0, normalizedLimit),
+          baseCards: selectedBase.slice(0, normalizedLimit),
           reviewCards: selectedReviews
         };
       }
@@ -19416,7 +19483,7 @@
           : baseRoundSourceCards().filter(card => !activeIds.has(card.id));
         let fallbackSource = pool === 'review'
           ? baseRoundSourceCards().filter(card => !activeIds.has(card.id))
-          : readyReviewCards().filter(card => !activeIds.has(card.id));
+          : [];
         if (earlyRestricted) {
           if (pool === 'base') {
             preferredSource = preferredSource.filter(isEarlyFlashcardLengthEligible);
@@ -19430,7 +19497,7 @@
         const sourceCards = preferredSource.length ? preferredSource : fallbackSource;
         let nextCard = (pool === 'review' && preferredSource.length)
           ? sourceCards[0]
-          : takeRandom(sourceCards, 1)[0];
+          : buildDeckFirstCardSelection(sourceCards, 1)[0];
         if (!nextCard) return null;
         return {
           card: nextCard,
