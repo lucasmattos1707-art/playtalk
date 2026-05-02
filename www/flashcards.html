@@ -524,7 +524,7 @@
       position: relative;
       z-index: 2;
       order: 3;
-      margin-top: -10px;
+      margin-top: 24px;
       margin-bottom: 40px;
     }
 
@@ -6256,6 +6256,31 @@
       text-align: center;
     }
 
+    .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation {
+      width: min(80%, 250px);
+      min-height: 0;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(22px, 6vw, 34px);
+      font-weight: 800;
+      line-height: 1.04;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      color: #ffffff;
+      text-shadow:
+        0 2px 0 rgba(0, 22, 72, 0.98),
+        0 0 12px rgba(2, 28, 92, 0.92),
+        0 0 24px rgba(6, 54, 141, 0.74);
+      z-index: 5;
+    }
+
+    .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key {
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
     .game[data-phase-key="second-star"] .textscreen,
     .game[data-phase-key="fourth-star"] .textscreen {
       order: 3;
@@ -6328,6 +6353,8 @@
       border-color: transparent;
       box-shadow: none;
       backdrop-filter: none;
+      top: calc(52vh + 6px);
+      bottom: auto;
     }
 
     .game[data-phase-key="second-star"] .game-card__visual > .game-advance-btn,
@@ -6442,6 +6469,13 @@
       gap: 1px;
     }
 
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: min(342px, calc(100vw - 34px));
+      margin-inline: auto;
+      gap: 3px;
+    }
+
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__key,
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key {
       min-height: clamp(68px, 12vw, 95px);
@@ -6473,6 +6507,15 @@
         inset 0 0 0 1px rgba(210, 235, 255, 0.16),
         0 0 14px rgba(48, 132, 255, 0.28),
         0 0 28px rgba(109, 186, 255, 0.16);
+    }
+
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key {
+      font-size: clamp(38px, 11.8vw, 68px);
+    }
+
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key.is-dissolving {
+      animation: flashcardsSmartKeyDissolve 500ms ease-in forwards;
+      pointer-events: none;
     }
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__key:hover,
@@ -7114,6 +7157,19 @@
       0% { transform: scale(1); filter: brightness(1); }
       50% { transform: scale(1.08); filter: brightness(1.35) drop-shadow(0 0 18px rgba(255, 255, 255, 0.82)); }
       100% { transform: scale(1); filter: brightness(1); }
+    }
+
+    @keyframes flashcardsSmartKeyDissolve {
+      0% {
+        opacity: 1;
+        transform: scale(1);
+        filter: brightness(1.08) drop-shadow(0 0 14px rgba(109, 186, 255, 0.34));
+      }
+      100% {
+        opacity: 0;
+        transform: scale(0.78);
+        filter: blur(8px) brightness(1.22);
+      }
     }
 
     @keyframes flashcardsStarBurst {
@@ -9072,6 +9128,20 @@
       const ENERGY_LEVEL_PHASE_TWO_CURVE = 6909;
       const ENERGY_LEVEL_PHASE_TWO_SPAN = 119;
       const WELCOME_LEVEL_ANIMATION_MS = 2500;
+      const SECOND_STAGE_BLOCK_TOTAL = 12;
+      const SECOND_STAGE_WRONG_WORD_MAX_LENGTH = 6;
+      const SECOND_STAGE_WRONG_WORD_PATHS = [
+        'Writing/micro_words.json',
+        'Writing/verbs.json',
+        'Writing/nouns.json',
+        'Writing/adjectives_adverbs.json'
+      ];
+      const SECOND_STAGE_WRONG_WORD_FALLBACK = [
+        'a', 'an', 'the', 'to', 'of', 'in', 'on', 'with', 'for', 'from', 'at', 'by', 'and', 'or', 'but', 'so', 'if', 'as', 'that',
+        'be', 'have', 'go', 'play', 'make', 'see', 'like', 'want', 'need', 'learn', 'write', 'read', 'speak', 'listen',
+        'day', 'night', 'house', 'book', 'music', 'food', 'car', 'school', 'friend', 'family', 'work', 'game', 'time', 'place', 'story',
+        'happy', 'sad', 'good', 'great', 'slowly', 'always', 'never', 'really', 'very', 'today', 'early', 'late'
+      ];
       const CURRENT_LEVEL_ROUND_RATIO = 0.4;
       const MIN_GAME_CONTEXT_LIMIT = 1;
       const LEVEL_MODE_BUFFER_SIZE = 10;
@@ -9493,6 +9563,9 @@
           micCheckRecognition: null
         }
       };
+
+      let secondStageWrongWords = null;
+      let secondStageWrongWordsPromise = null;
 
       const els = {
         welcomeGate: document.getElementById('welcomeGate'),
@@ -18319,6 +18392,71 @@
         }
       }
 
+      function buildSmartTypingLetterPool(target, total = 9) {
+        const letters = String(target || '').toUpperCase().replace(/[^A-Z]/g, '').split('');
+        const pool = [];
+        letters.forEach((letter) => {
+          if (letter && !pool.includes(letter) && pool.length < total) {
+            pool.push(letter);
+          }
+        });
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        while (pool.length < total) {
+          const next = alphabet[Math.floor(Math.random() * alphabet.length)];
+          if (!pool.includes(next)) pool.push(next);
+        }
+        return shuffleList(pool).slice(0, total);
+      }
+
+      function countRemainingSmartLetter(target, typedLength, letter) {
+        const remaining = String(target || '').toUpperCase().slice(Math.max(0, Number(typedLength) || 0));
+        return remaining.split('').filter((item) => item === letter).length;
+      }
+
+      function chooseSmartReplacementLetter(target, typedLength, visibleLetters) {
+        const visible = new Set((Array.isArray(visibleLetters) ? visibleLetters : []).filter(Boolean));
+        const remaining = String(target || '').toUpperCase().slice(Math.max(0, Number(typedLength) || 0)).split('').filter(Boolean);
+        for (let index = remaining.length - 1; index >= 0; index -= 1) {
+          const letter = remaining[index];
+          if (letter && !visible.has(letter)) {
+            return letter;
+          }
+        }
+        return '';
+      }
+
+      function currentSmartKeyboardLetters(grid, exceptKey = null) {
+        return Array.from(grid?.querySelectorAll('.flashcards-typing__key') || [])
+          .filter((key) => key !== exceptKey)
+          .map((key) => safeText(key.dataset.letter || key.textContent).toUpperCase())
+          .filter(Boolean);
+      }
+
+      function setSmartKeyLetter(key, letter) {
+        if (!key || !letter) return;
+        key.dataset.letter = letter;
+        key.textContent = letter;
+        key.setAttribute('aria-label', `Letra ${letter}`);
+      }
+
+      function scheduleSmartKeyReplacement(key, grid, target, typedLength, usedLetter) {
+        if (!key || !grid) return;
+        if (countRemainingSmartLetter(target, typedLength, usedLetter) > 0) return;
+        const replacement = chooseSmartReplacementLetter(target, typedLength, currentSmartKeyboardLetters(grid, key));
+        if (!replacement) return;
+        window.setTimeout(() => {
+          if (!key.isConnected) return;
+          key.classList.add('is-dissolving');
+          key.disabled = true;
+          window.setTimeout(() => {
+            if (!key.isConnected) return;
+            setSmartKeyLetter(key, replacement);
+            key.classList.remove('is-dissolving', 'is-correct-hit');
+            key.disabled = false;
+          }, 500);
+        }, 500);
+      }
+
       function showStageTwoPortugueseHint(card) {
         const portuguese = capitalizeWords(card?.portuguese || card?.english || card?.deckTitle || '');
         if (!portuguese) return;
@@ -18368,6 +18506,39 @@
           .filter((item) => item.normalized);
       }
 
+      function normalizeSecondStageWrongWordList(words) {
+        const seen = new Set();
+        return (Array.isArray(words) ? words : [])
+          .map((word) => safeText(word))
+          .filter((word) => {
+            const normalized = normalizeWordBlockText(word);
+            if (!normalized || normalized.length > SECOND_STAGE_WRONG_WORD_MAX_LENGTH || seen.has(normalized)) return false;
+            seen.add(normalized);
+            return true;
+          });
+      }
+
+      function getSecondStageWrongWords() {
+        if (Array.isArray(secondStageWrongWords)) return secondStageWrongWords;
+        if (!secondStageWrongWordsPromise) {
+          secondStageWrongWordsPromise = Promise.all(
+            SECOND_STAGE_WRONG_WORD_PATHS.map((path) => fetch(path)
+              .then((response) => (response.ok ? response.json() : []))
+              .catch(() => []))
+          ).then((groups) => {
+            secondStageWrongWords = normalizeSecondStageWrongWordList(groups.flat());
+            if (!secondStageWrongWords.length) {
+              secondStageWrongWords = normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
+            }
+            return secondStageWrongWords;
+          }).catch(() => {
+            secondStageWrongWords = normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
+            return secondStageWrongWords;
+          });
+        }
+        return normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
+      }
+
       function buildSecondStageWordBlockState(typingState, card) {
         const answerCandidates = uniqueAnswerList([
           typingState?.acceptedAnswer,
@@ -18401,10 +18572,29 @@
             });
           }
         });
+        if (options.length >= SECOND_STAGE_BLOCK_TOTAL) {
+          return {
+            primarySequence,
+            targetSequences: targetSequences.length ? targetSequences : [primarySequence],
+            options: shuffleList(options)
+          };
+        }
+        const targetWordSet = new Set(options.map((option) => option.normalized));
+        const distractors = shuffleList(getSecondStageWrongWords()
+          .map((word) => ({
+            word,
+            normalized: normalizeWordBlockText(word)
+          }))
+          .filter((item) => item.normalized && !targetWordSet.has(item.normalized)))
+          .slice(0, Math.max(0, SECOND_STAGE_BLOCK_TOTAL - options.length))
+          .map((item) => ({
+            ...item,
+            isDistractor: true
+          }));
         return {
           primarySequence,
           targetSequences: targetSequences.length ? targetSequences : [primarySequence],
-          options: shuffleList(options)
+          options: shuffleList([...options, ...distractors])
         };
       }
 
@@ -18481,7 +18671,15 @@
           clearTypingSkipAutomation();
           clearTypingPromptLoop();
           clearSecondStarIdleHintTimers();
+          const shouldRefreshDistractors = !Array.isArray(secondStageWrongWords);
           const blockState = buildSecondStageWordBlockState(typingState, card);
+          if (shouldRefreshDistractors && secondStageWrongWordsPromise) {
+            secondStageWrongWordsPromise.then(() => {
+              if (state.game.currentId === entry.id && safeText(els.game?.dataset?.phaseKey || '') === 'second-star') {
+                renderCurrentCard();
+              }
+            }).catch(() => {});
+          }
           if (!blockState.options.length || !blockState.targetSequences.length) {
             syncGameAdvanceButton(null);
             els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
@@ -18598,6 +18796,10 @@
           }
 
           els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
+          const translationDisplay = document.createElement('div');
+          translationDisplay.className = 'flashcards-typing__display flashcards-typing__display--visual is-second-star-translation';
+          translationDisplay.textContent = capitalizeWords(card?.portuguese || card?.english || card?.deckTitle || '');
+          els.gameVisual.appendChild(translationDisplay);
           if (keyboardTarget && els.gameTypingKeyboard.parentElement !== keyboardTarget) {
             keyboardTarget.appendChild(els.gameTypingKeyboard);
           }
@@ -18641,20 +18843,25 @@
 
         const grid = document.createElement('div');
         grid.className = 'flashcards-typing__grid';
+        const useSmartKeyboard = phaseKey === 'fourth-star';
         const typingPalette = shuffleList(TYPING_KEY_BLUES);
         const keyNodes = [];
-        buildTypingLetterPool(target, 16).forEach((letter, index) => {
+        const keyboardLetters = useSmartKeyboard
+          ? buildSmartTypingLetterPool(target, 9)
+          : buildTypingLetterPool(target, 16);
+        keyboardLetters.forEach((letter, index) => {
           const key = document.createElement('button');
           key.type = 'button';
           key.className = 'flashcards-typing__key';
-          key.textContent = letter;
-          key.setAttribute('aria-label', `Letra ${letter}`);
+          setSmartKeyLetter(key, letter);
           key.style.setProperty('--typing-key-bg', typingPalette[index % typingPalette.length]);
           key.addEventListener('click', async () => {
             if (!state.game.active || state.game.paused || state.game.listening || state.game.typingSkipActive || state.game.currentId !== entry.id) return;
+            const keyLetter = safeText(key.dataset.letter || key.textContent).toUpperCase();
+            if (!keyLetter) return;
             playTypingKeyAudio();
             const expectedLetter = target[typed.length];
-            if (letter !== expectedLetter) {
+            if (keyLetter !== expectedLetter) {
               const typedLengthBeforeReset = typed.length;
               const finished = await handleTypingMistake(entry, card, grid, typedLengthBeforeReset);
               if (!finished) {
@@ -18663,8 +18870,11 @@
               return;
             }
             triggerTypingKeyFlash(key);
-            typed += letter;
+            typed += keyLetter;
             renderTyped();
+            if (useSmartKeyboard && typed.length < target.length) {
+              scheduleSmartKeyReplacement(key, grid, target, typed.length, keyLetter);
+            }
             if (typed.length === target.length) {
               setTypingKeysDisabled(grid, true);
               await handleRecognitionResult(typingState.acceptedAnswer || typingState.sourceText || '', 'typing');
@@ -18688,7 +18898,13 @@
             while (typed.length < target.length) {
               if (!isTypingSkipAutomationActive(entry, runId)) return;
               const nextLetter = target[typed.length];
-              const nextKey = keyNodes.find((node) => safeText(node.textContent).toUpperCase() === nextLetter);
+              let nextKey = keyNodes.find((node) => safeText(node.dataset.letter || node.textContent).toUpperCase() === nextLetter);
+              if (!nextKey && useSmartKeyboard) {
+                nextKey = keyNodes.find((node) => !node.classList.contains('is-dissolving')) || keyNodes[0] || null;
+                if (nextKey) {
+                  setSmartKeyLetter(nextKey, nextLetter);
+                }
+              }
               if (nextKey) {
                 triggerTypingKeyFlash(nextKey);
               }
