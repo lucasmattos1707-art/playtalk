@@ -9177,6 +9177,8 @@
       const REPORT_SOUND_PATH = 'thesongs/report.wav';
       const TYPING_KEY_SOUND_PATH = 'sounds/type.mp3';
       const FOURTH_STAR_TYPING_KEY_SOUND_PATH = 'sounds/type.aac';
+      const TYPING_KEY_VOLUME = 0.95;
+      const FOURTH_STAR_TYPING_KEY_VOLUME = 0.475;
       const TYPING_KEY_FLASH_MS = 500;
       const TYPING_PROMPT_REPEAT_DELAY_MS = 2000;
       const TYPING_SKIP_LETTER_DELAY_MS = 350;
@@ -9530,6 +9532,11 @@
           recognition: null,
           typingKeyAudioPool: [],
           typingKeyAudioIndex: 0,
+          typingKeyAudioPath: '',
+          typingKeyAudioContext: null,
+          typingKeyAudioBuffer: null,
+          typingKeyAudioBufferPath: '',
+          typingKeyAudioBufferPromise: null,
           typingSkipActive: false,
           typingSkipRunId: 0,
           typingSkipEntryId: '',
@@ -18480,30 +18487,105 @@
           : TYPING_KEY_SOUND_PATH;
       }
 
+      function typingKeyAudioVolume(soundPath) {
+        return soundPath === FOURTH_STAR_TYPING_KEY_SOUND_PATH
+          ? FOURTH_STAR_TYPING_KEY_VOLUME
+          : TYPING_KEY_VOLUME;
+      }
+
+      function getTypingKeyAudioContext() {
+        if (state.game.typingKeyAudioContext) return state.game.typingKeyAudioContext;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return null;
+        try {
+          state.game.typingKeyAudioContext = new AudioContextClass();
+        } catch (_error) {
+          state.game.typingKeyAudioContext = null;
+        }
+        return state.game.typingKeyAudioContext;
+      }
+
+      function primeFourthStarTypingKeyAudio() {
+        const soundPath = FOURTH_STAR_TYPING_KEY_SOUND_PATH;
+        if (state.game.typingKeyAudioBufferPath === soundPath && state.game.typingKeyAudioBuffer) return;
+        if (state.game.typingKeyAudioBufferPromise) return;
+        const audioContext = getTypingKeyAudioContext();
+        if (!audioContext || typeof audioContext.decodeAudioData !== 'function') return;
+        state.game.typingKeyAudioBufferPromise = fetch(resolveInlineMediaUrl(soundPath))
+          .then((response) => (response.ok ? response.arrayBuffer() : Promise.reject(new Error('typing audio unavailable'))))
+          .then((arrayBuffer) => audioContext.decodeAudioData(arrayBuffer))
+          .then((buffer) => {
+            state.game.typingKeyAudioBuffer = buffer;
+            state.game.typingKeyAudioBufferPath = soundPath;
+          })
+          .catch(() => {
+            state.game.typingKeyAudioBuffer = null;
+            state.game.typingKeyAudioBufferPath = '';
+          })
+          .finally(() => {
+            state.game.typingKeyAudioBufferPromise = null;
+          });
+      }
+
+      function playFourthStarTypingKeyAudio() {
+        const audioContext = getTypingKeyAudioContext();
+        const buffer = state.game.typingKeyAudioBufferPath === FOURTH_STAR_TYPING_KEY_SOUND_PATH
+          ? state.game.typingKeyAudioBuffer
+          : null;
+        if (!audioContext || !buffer) return false;
+        try {
+          if (audioContext.state === 'suspended' && typeof audioContext.resume === 'function') {
+            audioContext.resume().catch(() => {});
+          }
+          const source = audioContext.createBufferSource();
+          const gain = audioContext.createGain();
+          source.buffer = buffer;
+          gain.gain.value = FOURTH_STAR_TYPING_KEY_VOLUME;
+          source.connect(gain);
+          gain.connect(audioContext.destination);
+          source.start(0);
+          return true;
+        } catch (_error) {
+          return false;
+        }
+      }
+
+      function ensureTypingKeyAudioPool(soundPath = currentTypingKeySoundPath()) {
+        if (soundPath === FOURTH_STAR_TYPING_KEY_SOUND_PATH) {
+          primeFourthStarTypingKeyAudio();
+        }
+        if (state.game.typingKeyAudioPool.length && state.game.typingKeyAudioPath === soundPath) return;
+        const volume = typingKeyAudioVolume(soundPath);
+        state.game.typingKeyAudioPool = Array.from({ length: 6 }, () => {
+          const audio = new Audio(resolveInlineMediaUrl(soundPath));
+          audio.preload = 'auto';
+          audio.volume = volume;
+          audio.load();
+          return audio;
+        });
+        state.game.typingKeyAudioPath = soundPath;
+        state.game.typingKeyAudioIndex = 0;
+      }
+
       function playTypingKeyAudio() {
         try {
           const soundPath = currentTypingKeySoundPath();
-          if (!state.game.typingKeyAudioPool.length || state.game.typingKeyAudioPath !== soundPath) {
-            state.game.typingKeyAudioPool = Array.from({ length: 4 }, () => {
-              const audio = new Audio(resolveInlineMediaUrl(soundPath));
-              audio.preload = 'auto';
-              audio.volume = 0.95;
-              audio.load();
-              return audio;
-            });
-            state.game.typingKeyAudioPath = soundPath;
-            state.game.typingKeyAudioIndex = 0;
+          if (soundPath === FOURTH_STAR_TYPING_KEY_SOUND_PATH && playFourthStarTypingKeyAudio()) {
+            return;
           }
+          ensureTypingKeyAudioPool(soundPath);
           const pool = state.game.typingKeyAudioPool;
           const audio = pool[state.game.typingKeyAudioIndex % pool.length];
           state.game.typingKeyAudioIndex = (state.game.typingKeyAudioIndex + 1) % pool.length;
-          audio.pause();
-          try {
-            if (audio.readyState > 0) {
-              audio.currentTime = 0;
+          if (!audio.paused) {
+            audio.pause();
+            try {
+              if (audio.readyState > 0) {
+                audio.currentTime = 0;
+              }
+            } catch (_seekError) {
+              // Some native WebViews do not allow seeking fresh AAC taps before metadata is ready.
             }
-          } catch (_seekError) {
-            // Some native WebViews do not allow seeking fresh AAC taps before metadata is ready.
           }
           audio.play().catch(() => {});
         } catch (_error) {
@@ -19187,6 +19269,9 @@
         const keyboardLetters = useSmartKeyboard
           ? buildSmartTypingLetterPool(target, 9)
           : buildTypingLetterPool(target, 16);
+        if (useSmartKeyboard) {
+          ensureTypingKeyAudioPool(FOURTH_STAR_TYPING_KEY_SOUND_PATH);
+        }
         keyboardLetters.forEach((letter, index) => {
           const key = document.createElement('button');
           key.type = 'button';
