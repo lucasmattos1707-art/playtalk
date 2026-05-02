@@ -14792,13 +14792,18 @@
       function updateLevelProgressBar() {
         if (!els.flashcardLevelProgress || !els.flashcardLevelProgressBar) return;
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
-        const show = Boolean(state.game.active && [
+        const currentEntry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+        const currentStage = Number(currentEntry?.stage) || 0;
+        const hasStarStageActive = currentStage >= 1 && currentStage <= 5;
+        const show = Boolean(state.game.active && (
+          hasStarStageActive || [
           'first-star',
           'second-star',
           'third-star',
           'fourth-star',
           'fifth-star'
-        ].includes(phaseKey));
+        ].includes(phaseKey)
+        ));
         els.flashcardLevelProgress.hidden = !show;
         els.flashcardLevelProgress.setAttribute('aria-hidden', show ? 'false' : 'true');
         if (!show) {
