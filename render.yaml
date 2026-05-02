@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: playtalk
+    env: node
+    buildCommand: npm ci && npm run build
+    startCommand: npm start

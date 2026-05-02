@@ -2,6 +2,7 @@
     "name": "fluent-levelup",
     "version": "1.0.0",
     "description": "Fluency game",
+    "packageManager": "npm@11.8.0",
     "main": "server.js",
     "scripts": {
         "prebuild": "npm run sync:levels",
