@@ -9188,7 +9188,7 @@
       const LESS_SOUND_PATH = 'svgnovo/less.wav';
       const REPORT_SOUND_PATH = 'thesongs/report.wav';
       const TYPING_KEY_SOUND_PATH = 'sounds/type.mp3';
-      const FOURTH_STAR_TYPING_KEY_SOUND_PATH = 'sounds/type-fourth.aac';
+      const FOURTH_STAR_TYPING_KEY_SOUND_PATH = 'sounds/type.aac';
       const TYPING_KEY_FLASH_MS = 500;
       const TYPING_PROMPT_REPEAT_DELAY_MS = 2000;
       const TYPING_SKIP_LETTER_DELAY_MS = 350;
@@ -18497,9 +18497,10 @@
           const soundPath = currentTypingKeySoundPath();
           if (!state.game.typingKeyAudioPool.length || state.game.typingKeyAudioPath !== soundPath) {
             state.game.typingKeyAudioPool = Array.from({ length: 4 }, () => {
-              const audio = new Audio(soundPath);
+              const audio = new Audio(resolveInlineMediaUrl(soundPath));
               audio.preload = 'auto';
               audio.volume = 0.95;
+              audio.load();
               return audio;
             });
             state.game.typingKeyAudioPath = soundPath;
@@ -18509,7 +18510,13 @@
           const audio = pool[state.game.typingKeyAudioIndex % pool.length];
           state.game.typingKeyAudioIndex = (state.game.typingKeyAudioIndex + 1) % pool.length;
           audio.pause();
-          audio.currentTime = 0;
+          try {
+            if (audio.readyState > 0) {
+              audio.currentTime = 0;
+            }
+          } catch (_seekError) {
+            // Some native WebViews do not allow seeking fresh AAC taps before metadata is ready.
+          }
           audio.play().catch(() => {});
         } catch (_error) {
           // ignore
@@ -18777,8 +18784,9 @@
       }
 
       function shuffleSecondStageOptionRows(rows) {
-        return shuffleList(Array.isArray(rows) ? rows : [])
-          .map((row) => shuffleList(Array.isArray(row) ? row : []))
+        const shuffledOptions = shuffleList((Array.isArray(rows) ? rows : []).flat());
+        return packSecondStageRows(shuffledOptions)
+          .map((row) => shuffleList(row))
           .filter((row) => row.length);
       }
 

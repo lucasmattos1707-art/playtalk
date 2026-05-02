@@ -2,7 +2,7 @@
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
   const starPages = new Set(['/flashcards', '/allcards', '/speaking', '/users', '/account', '/premium']);
   const footerInjectedPages = new Set(['/books']);
-  const loaderPages = new Set(['/play', '/flashcards', '/books', '/allcards', '/users']);
+  const loaderPages = new Set(['/play', '/flashcards', '/books', '/allcards']);
   const LOADER_ROOT_ID = 'playtalkGlobalLoader';
   const LOADER_STYLE_ID = 'playtalkGlobalLoaderStyles';
   const LOADER_BODY_CLASS = 'playtalk-loader-active';

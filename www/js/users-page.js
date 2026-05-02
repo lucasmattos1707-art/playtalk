@@ -179,6 +179,7 @@
   }
 
   function toggleGlobalLoader(key, active, message, options = {}) {
+    if (window.location.pathname.replace(/\/+$/, '') === '/users') return;
     const loader = window.PlaytalkLoader;
     if (!loader) return;
     if (active) {
