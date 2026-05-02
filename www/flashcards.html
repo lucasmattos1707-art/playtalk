@@ -20943,11 +20943,16 @@
             await animateStarLossSequence(starsBeforeMiss, card);
           } else {
             entry.missesWithoutStars += 1;
-            const missLimit = evaluatedStage === 1 ? 1 : 3;
+            const missLimit = evaluatedStage === 1 ? 2 : 3;
             if (entry.missesWithoutStars >= missLimit) {
               setGameStatus('', 'miss');
-              removeGameEntry(entry.id);
-              refillGameEntry(entry.pool);
+              if (evaluatedStage === 1) {
+                entry.missesWithoutStars = 0;
+                state.game.queue.push(entry.id);
+              } else {
+                removeGameEntry(entry.id);
+                refillGameEntry(entry.pool);
+              }
             } else {
               setGameStatus('', 'miss');
               state.game.queue.push(entry.id);

@@ -5941,6 +5941,12 @@
     renderReader();
   }
 
+  function formatReaderListeningText(value) {
+    const text = safeText(value).trim();
+    if (!text) return '';
+    return text.charAt(0).toLocaleUpperCase('pt-BR') + text.slice(1).toLocaleLowerCase('pt-BR');
+  }
+
   function setReaderVisible(visible) {
     state.readerOpen = Boolean(visible);
     if (els.reader) {
@@ -5998,9 +6004,6 @@
   }
 
   function getReaderLockedLanguage(mode = state.readerMode) {
-    if (mode === 'listening-training') {
-      return state.readerListeningRevealPortuguese ? 'portuguese' : 'english';
-    }
     return 'english';
   }
 
@@ -6467,7 +6470,9 @@
       ? (state.readerVisualLanguage === 'portuguese' ? 'portuguese' : 'english')
       : (isReaderTrainingMode() ? getReaderLockedLanguage() : 'english');
     state.readerDisplayLanguage = displayLanguage;
-    const displayText = displayLanguage === 'portuguese' ? portuguese : english;
+    const displayText = state.readerMode === 'listening-training'
+      ? formatReaderListeningText(english)
+      : (displayLanguage === 'portuguese' ? portuguese : english);
     const displayTextFormatted = splitBalancedLines(sanitizeReaderDisplayText(displayText));
     if (state.readerRenderedCardIndex !== index) {
       if (state.readerRenderedCardIndex >= 0) {
@@ -6647,10 +6652,6 @@
         const transcript = safeText(await captureSpeechFast('en-US'));
         if (transcript) {
           state.readerSessionSpokenChars += transcript.length;
-          if (state.readerMode === 'listening-training' && !state.readerListeningRevealPortuguese) {
-            state.readerListeningRevealPortuguese = true;
-            renderReader();
-          }
         }
         const rawScore = applyReaderSentenceBonus(calculateSpeechMatchPercent(card.english, transcript));
         const displayedScore = getReaderDisplayedScorePercent(rawScore);

@@ -15,6 +15,14 @@
       font-display: block;
     }
 
+    @font-face {
+      font-family: "Pltay";
+      src: url("/fonts/pltay.otf") format("opentype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
     @property --reader-progress-angle {
       syntax: "<angle>";
       inherits: false;
@@ -3782,6 +3790,15 @@
       text-shadow:
         0 3px 8px rgba(0, 0, 0, 0.78),
         0 0 18px rgba(0, 0, 0, 0.42);
+    }
+
+    .books-reader[data-reader-mode="listening-training"] .books-reader-english {
+      font-family: "Pltay", "Soopafre", Arial, sans-serif;
+      font-weight: 400;
+      font-size: clamp(44px, 14.6vw, 90px);
+      line-height: 0.98;
+      letter-spacing: 0;
+      text-shadow: none;
     }
 
     .books-reader-english.is-highlight {
