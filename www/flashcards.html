@@ -5800,24 +5800,32 @@
 
     .game[data-phase-key="fifth-star"] .textscreen .game-status {
       color: #ffffff !important;
-      font-family: "Pltay", "Soopafre", Arial, sans-serif;
-      font-size: clamp(32px, 8.5vw, 64px);
-      line-height: 0.9;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(37px, 10.2vw, 58px);
+      font-weight: 800;
+      line-height: 0.88;
+      letter-spacing: 0;
+      text-transform: uppercase;
       text-align: center;
       text-shadow:
-        0 2px 0 rgba(8, 38, 102, 0.98),
-        0 8px 14px rgba(0, 0, 0, 0.35);
+        0 2px 0 rgba(0, 22, 72, 0.98),
+        0 0 12px rgba(2, 28, 92, 0.92),
+        0 0 24px rgba(6, 54, 141, 0.74);
       white-space: nowrap;
     }
 
     .game[data-phase-key="fifth-star"] .textscreen .game-status.is-flashcards-count {
-      font-family: "Pltay", "Soopafre", Arial, sans-serif;
-      font-size: clamp(32px, 8.5vw, 64px);
-      line-height: 0.9;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(37px, 10.2vw, 58px);
+      font-weight: 800;
+      line-height: 0.88;
+      letter-spacing: 0;
+      text-transform: uppercase;
       margin-top: 0;
       text-shadow:
-        0 2px 0 rgba(8, 38, 102, 0.98),
-        0 8px 14px rgba(0, 0, 0, 0.35);
+        0 2px 0 rgba(0, 22, 72, 0.98),
+        0 0 12px rgba(2, 28, 92, 0.92),
+        0 0 24px rgba(6, 54, 141, 0.74);
     }
 
     .game[data-phase-key="third-star"] .textscreen .game-status {
@@ -6268,7 +6276,8 @@
       text-align: center;
     }
 
-    .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation {
+    .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation,
+    .game[data-phase-key="fifth-star"] .flashcards-typing__display--visual.is-second-star-translation {
       width: min(92%, 290px);
       min-height: 0;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
@@ -6285,10 +6294,27 @@
       z-index: 5;
     }
 
-    .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation .flashcards-typing__translation-line {
+    .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation .flashcards-typing__translation-line,
+    .game[data-phase-key="fifth-star"] .flashcards-typing__display--visual.is-second-star-translation .flashcards-typing__translation-line {
       display: block;
       width: 100%;
       white-space: normal;
+    }
+
+    .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual.is-star-phase-copy {
+      width: min(92%, 290px);
+      min-height: 0;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(37px, 10.2vw, 58px);
+      font-weight: 800;
+      line-height: 0.88;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      color: #ffffff;
+      text-shadow:
+        0 2px 0 rgba(0, 22, 72, 0.98),
+        0 0 12px rgba(2, 28, 92, 0.92),
+        0 0 24px rgba(6, 54, 141, 0.74);
     }
 
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual,
@@ -9309,7 +9335,8 @@
       const SOUND_TEST_SELECTION_COUNT = 3;
       const ACCESS_KEY_LETTERS = 'ABCDEFGHIJKLMNOP'.split('');
       const LIBRARY_RANK_SWAP_DELAY_MS = 2000;
-      const REWARD_RANK_VISIBLE_MS = 2000;
+      const REWARD_RANK_SWAP_DELAY_MS = 1000;
+      const REWARD_RANK_VISIBLE_MS = 1000;
       const FIFTH_STAR_HINT_ROTATION_MS = 1500;
       const FIFTH_STAR_HINT_MESSAGES = [];
       const THIRD_STAR_HINT_MESSAGES = [];
@@ -17151,7 +17178,7 @@
           if (trend === 'up') {
             playStatusCueAudio(REWARD_STATUS_UP_AUDIO_PATH);
           }
-        }, LIBRARY_RANK_SWAP_DELAY_MS);
+        }, REWARD_RANK_SWAP_DELAY_MS);
       }
 
       function resolveInlineMediaUrl(path) {
@@ -19039,6 +19066,17 @@
           .join('');
       }
 
+      function renderFifthStarPortugueseDisplay(card, stageKey) {
+        els.gameVisual.querySelector('.flashcards-typing__display--visual.is-fifth-star-portuguese')?.remove();
+        if (stageKey !== 'fifth-star' || isLevelTextModeActive()) return;
+        const text = capitalizeWords(card?.portuguese || card?.english || card?.deckTitle || '');
+        if (!text) return;
+        const display = document.createElement('div');
+        display.className = 'flashcards-typing__display flashcards-typing__display--visual is-second-star-translation is-fifth-star-portuguese';
+        renderSecondStageTranslationDisplay(display, text);
+        els.gameVisual.appendChild(display);
+      }
+
       async function handleSecondStageWordBlockMistake(entry, card, grid, selectedButtons) {
         setTypingKeysDisabled(grid, true);
         triggerTypingMistakeFeedback(grid, 2000);
@@ -19575,6 +19613,7 @@
         els.gameTouchBtn.parentElement.classList.toggle('is-hidden', typingStage || els.gameTouchBtn.classList.contains('is-hidden'));
         els.gameTouchBtn.classList.toggle('is-busy', state.game.listening);
         renderTypingKeyboard(entry, card);
+        renderFifthStarPortugueseDisplay(card, stageConfig.key);
         if (isSimpleStarPhase && !textOnlyMode) {
           els.gameWord.parentElement?.classList.remove('is-stage-one-swap');
           els.gameWord.classList.remove('is-stage-swap-hidden');
@@ -20905,7 +20944,7 @@
         await wait(redirectingToUsername
           ? 180
           : entry._removeAfterReward || entry._requeueAfterReward
-            ? (LIBRARY_RANK_SWAP_DELAY_MS + REWARD_RANK_VISIBLE_MS)
+            ? (REWARD_RANK_SWAP_DELAY_MS + REWARD_RANK_VISIBLE_MS)
             : (evaluatedStage === 3 ? 120 : 1200));
         if (entry._redirectToUsername) {
           entry._redirectToUsername = false;
