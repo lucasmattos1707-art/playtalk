@@ -2775,6 +2775,10 @@ const ensureUsersAvatarColumn = async () => {
       `);
       await pool.query(`
         ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS level_updated_at timestamptz
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
         ADD COLUMN IF NOT EXISTS "fluency-plan" text NOT NULL DEFAULT '${FLUENCY_PLAN_DEFAULT_STATUS}'
       `);
       await pool.query(`
@@ -3737,7 +3741,7 @@ const readFlashcardStateForUser = async (userId) => {
       [normalizedUserId]
     ),
     pool.query(
-      `SELECT level
+      `SELECT level, level_updated_at
        FROM public.users
        WHERE id = $1
        LIMIT 1`,
@@ -3764,6 +3768,9 @@ const readFlashcardStateForUser = async (userId) => {
     }, progressRecords.length),
     meta: {
       userLevel: normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level),
+      userLevelUpdatedAt: userLevelResult.rows[0]?.level_updated_at
+        ? new Date(userLevelResult.rows[0].level_updated_at).toISOString()
+        : null,
       hasProgress: progressRecords.length > 0,
       hasStats: Boolean(statsResult.rows[0] || accurateResult.rows[0]),
       hiddenCardIds: hiddenResult.rows
@@ -3809,19 +3816,54 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       .filter(Boolean)))
     : [];
   const requestedUserLevel = normalizeUserFlashcardLevel(payload?.userLevel ?? payload?.level);
+  const requestedUserLevelSyncedAtMs = (() => {
+    const rawValue = payload?.userLevelUpdatedAt ?? payload?.meta?.userLevelUpdatedAt;
+    if (!rawValue) return 0;
+    const parsed = Date.parse(rawValue);
+    return Number.isFinite(parsed) ? parsed : 0;
+  })();
   let persistedUserLevel = requestedUserLevel;
+  let persistedUserLevelUpdatedAt = null;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    const userLevelResult = await client.query(
-      `UPDATE public.users
-       SET level = $2
+    const currentUserLevelResult = await client.query(
+      `SELECT level, level_updated_at
+       FROM public.users
        WHERE id = $1
-       RETURNING level`,
-      [normalizedUserId, requestedUserLevel]
+       FOR UPDATE`,
+      [normalizedUserId]
     );
-    persistedUserLevel = normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level ?? requestedUserLevel);
+    const currentUserLevelRow = currentUserLevelResult.rows[0] || {};
+    const currentPersistedUserLevel = normalizeUserFlashcardLevel(
+      currentUserLevelRow.level ?? requestedUserLevel
+    );
+    const currentUserLevelUpdatedAtMs = currentUserLevelRow.level_updated_at
+      ? Date.parse(currentUserLevelRow.level_updated_at)
+      : 0;
+    const clientSawCurrentUserLevel = !currentUserLevelUpdatedAtMs
+      || requestedUserLevelSyncedAtMs >= currentUserLevelUpdatedAtMs - 1000;
+
+    if (clientSawCurrentUserLevel && requestedUserLevel !== currentPersistedUserLevel) {
+      const userLevelResult = await client.query(
+        `UPDATE public.users
+         SET level = $2,
+             level_updated_at = now()
+         WHERE id = $1
+         RETURNING level, level_updated_at`,
+        [normalizedUserId, requestedUserLevel]
+      );
+      persistedUserLevel = normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level ?? requestedUserLevel);
+      persistedUserLevelUpdatedAt = userLevelResult.rows[0]?.level_updated_at
+        ? new Date(userLevelResult.rows[0].level_updated_at).toISOString()
+        : null;
+    } else {
+      persistedUserLevel = currentPersistedUserLevel;
+      persistedUserLevelUpdatedAt = currentUserLevelRow.level_updated_at
+        ? new Date(currentUserLevelRow.level_updated_at).toISOString()
+        : null;
+    }
 
     const existingStatsResult = await client.query(
       `SELECT training_time_ms, speakings, listenings, readings
@@ -4096,6 +4138,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     progressCount: progress.length,
     stats,
     userLevel: persistedUserLevel,
+    userLevelUpdatedAt: persistedUserLevelUpdatedAt,
     rankingRecord
   };
 };
@@ -11632,6 +11675,7 @@ app.get('/api/flashcards/state', async (req, res) => {
       stats: state.stats,
       meta: state.meta,
       userLevel: state.meta.userLevel,
+      userLevelUpdatedAt: state.meta.userLevelUpdatedAt,
       serverTimeMs: Date.now()
     });
   } catch (error) {
@@ -11666,6 +11710,7 @@ app.put('/api/flashcards/state', async (req, res) => {
       progressCount: savedState.progressCount,
       stats: savedState.stats,
       userLevel: savedState.userLevel,
+      userLevelUpdatedAt: savedState.userLevelUpdatedAt,
       updatedAt: savedState.rankingRecord?.updated_at || new Date().toISOString()
     });
   } catch (error) {
@@ -15903,7 +15948,8 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
       } else if (metricKey === 'level') {
         await client.query(
           `UPDATE public.users
-           SET level = $2
+           SET level = $2,
+               level_updated_at = now()
            WHERE id = $1`,
           [userId, targetValue]
         );

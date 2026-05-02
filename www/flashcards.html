@@ -9488,6 +9488,7 @@
         timeOffsetMs: 0,
         user: null,
         userLevel: 1,
+        userLevelUpdatedAt: '',
         lastLevelUpLevel: 0,
         authMode: 'login',
         authReason: 'optional',
@@ -11031,6 +11032,7 @@
           })).filter(record => record.cardId),
           stats: normalizeStatsSnapshot(state.stats),
           userLevel: normalizeUserLevel(state.userLevel),
+          userLevelUpdatedAt: safeText(state.userLevelUpdatedAt),
           hiddenCardIds: Array.from(state.hiddenCardIds.values())
         };
       }
@@ -11079,6 +11081,7 @@
           if (Number.isFinite(Number(payload?.userLevel))) {
             state.userLevel = normalizeUserLevel(payload.userLevel);
             if (state.user) state.user.level = state.userLevel;
+            state.userLevelUpdatedAt = safeText(payload.userLevelUpdatedAt || state.userLevelUpdatedAt);
             syncWelcomeLevelProgress();
           }
           return true;
@@ -13543,6 +13546,7 @@
           : localHidden;
         state.userLevel = normalizeUserLevel(cloudState?.userLevel ?? cloudState?.meta?.userLevel ?? state.user.level);
         state.user.level = state.userLevel;
+        state.userLevelUpdatedAt = safeText(cloudState?.userLevelUpdatedAt || cloudState?.meta?.userLevelUpdatedAt);
         state.game.tutorial.completed = readTutorialProgress();
         syncOwnedIdsFromProgress();
         reconcileTutorialProgress();
@@ -14060,10 +14064,10 @@
           state.ui.welcomeLevelDisplayPercent = previousPercent;
         }
         const leveledUp = progress.level > current;
-        if (progress.level !== current) {
+        if (leveledUp) {
           state.userLevel = progress.level;
           if (state.user) state.user.level = progress.level;
-          state.lastLevelUpLevel = leveledUp ? progress.level : 0;
+          state.lastLevelUpLevel = progress.level;
           saveUserProgress();
         }
         const shouldAnimateToFull = leveledUp && previousPercent > progress.percent;
