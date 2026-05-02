@@ -6257,12 +6257,12 @@
     }
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation {
-      width: min(80%, 250px);
+      width: min(92%, 290px);
       min-height: 0;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(22px, 6vw, 34px);
+      font-size: clamp(37px, 10.2vw, 58px);
       font-weight: 800;
-      line-height: 1.04;
+      line-height: 0.88;
       letter-spacing: 0;
       text-transform: uppercase;
       color: #ffffff;
@@ -6271,6 +6271,12 @@
         0 0 12px rgba(2, 28, 92, 0.92),
         0 0 24px rgba(6, 54, 141, 0.74);
       z-index: 5;
+    }
+
+    .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation .flashcards-typing__translation-line {
+      display: block;
+      width: 100%;
+      white-space: normal;
     }
 
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual,
@@ -6471,7 +6477,7 @@
 
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      width: min(342px, calc(100vw - 34px));
+      width: min(257px, calc(100vw - 34px));
       margin-inline: auto;
       gap: 3px;
     }
@@ -6510,7 +6516,13 @@
     }
 
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key {
-      font-size: clamp(38px, 11.8vw, 68px);
+      min-height: clamp(51px, 9vw, 71px);
+      border-radius: 12px;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(49px, 15.34vw, 88px);
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
     }
 
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key.is-dissolving {
@@ -6529,12 +6541,21 @@
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
+      flex-wrap: nowrap;
       align-items: center;
       align-content: center;
       justify-content: center;
       gap: 9px;
       padding: 10px;
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__word-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      width: 100%;
     }
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key {
@@ -9128,7 +9149,10 @@
       const ENERGY_LEVEL_PHASE_TWO_CURVE = 6909;
       const ENERGY_LEVEL_PHASE_TWO_SPAN = 119;
       const WELCOME_LEVEL_ANIMATION_MS = 2500;
-      const SECOND_STAGE_BLOCK_TOTAL = 12;
+      const SECOND_STAGE_BLOCK_TOTAL = 9;
+      const SECOND_STAGE_BLOCKS_PER_ROW = 3;
+      const SECOND_STAGE_ROW_MIN_CHARS = 9;
+      const SECOND_STAGE_ROW_MAX_CHARS = 11;
       const SECOND_STAGE_WRONG_WORD_MAX_LENGTH = 6;
       const SECOND_STAGE_WRONG_WORD_PATHS = [
         'Writing/micro_words.json',
@@ -18405,7 +18429,7 @@
           const next = alphabet[Math.floor(Math.random() * alphabet.length)];
           if (!pool.includes(next)) pool.push(next);
         }
-        return shuffleList(pool).slice(0, total);
+        return pool.slice(0, total).sort((a, b) => a.localeCompare(b));
       }
 
       function countRemainingSmartLetter(target, typedLength, letter) {
@@ -18432,6 +18456,14 @@
           .filter(Boolean);
       }
 
+      function sortSmartKeyboardKeys(grid) {
+        Array.from(grid?.querySelectorAll('.flashcards-typing__key') || [])
+          .sort((a, b) => safeText(a.dataset.letter || a.textContent).localeCompare(safeText(b.dataset.letter || b.textContent)))
+          .forEach((key, index) => {
+            key.style.order = String(index);
+          });
+      }
+
       function setSmartKeyLetter(key, letter) {
         if (!key || !letter) return;
         key.dataset.letter = letter;
@@ -18453,6 +18485,7 @@
             setSmartKeyLetter(key, replacement);
             key.classList.remove('is-dissolving', 'is-correct-hit');
             key.disabled = false;
+            sortSmartKeyboardKeys(grid);
           }, 500);
         }, 500);
       }
@@ -18539,6 +18572,120 @@
         return normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
       }
 
+      function countSecondStageBlockChars(option) {
+        return normalizeWordBlockText(option?.word || option?.normalized || '').length;
+      }
+
+      function takeSecondStageDistractor(candidates, usedWords, rowCharTotal, slotsLeft) {
+        const maxRoom = SECOND_STAGE_ROW_MAX_CHARS - rowCharTotal;
+        const index = candidates.findIndex((item) => {
+          if (!item?.normalized || usedWords.has(item.normalized)) return false;
+          const length = countSecondStageBlockChars(item);
+          if (!length || length > maxRoom) return false;
+          const remainingSlotsAfterPick = Math.max(0, slotsLeft - 1);
+          if (rowCharTotal + length + (remainingSlotsAfterPick * SECOND_STAGE_WRONG_WORD_MAX_LENGTH) < SECOND_STAGE_ROW_MIN_CHARS) return false;
+          if (slotsLeft <= 1 && rowCharTotal + length < SECOND_STAGE_ROW_MIN_CHARS) return false;
+          return true;
+        });
+        if (index >= 0) {
+          const [picked] = candidates.splice(index, 1);
+          usedWords.add(picked.normalized);
+          return { ...picked, isDistractor: true };
+        }
+
+        const fallbackIndex = candidates.findIndex((item) => {
+          if (!item?.normalized || usedWords.has(item.normalized)) return false;
+          const length = countSecondStageBlockChars(item);
+          return length && length <= maxRoom;
+        });
+        if (fallbackIndex >= 0) {
+          const [picked] = candidates.splice(fallbackIndex, 1);
+          usedWords.add(picked.normalized);
+          return { ...picked, isDistractor: true };
+        }
+        return null;
+      }
+
+      function packSecondStageRows(options) {
+        const rows = [];
+        options.forEach((option) => {
+          let targetRow = rows.find((row) => (
+            row.length < SECOND_STAGE_BLOCKS_PER_ROW
+            && row.reduce((total, item) => total + countSecondStageBlockChars(item), 0) + countSecondStageBlockChars(option) <= SECOND_STAGE_ROW_MAX_CHARS
+          ));
+          if (!targetRow) {
+            targetRow = [];
+            rows.push(targetRow);
+          }
+          targetRow.push(option);
+        });
+        return rows;
+      }
+
+      function buildSecondStageOptionRows(correctOptions, wrongWords) {
+        const correct = shuffleList(Array.isArray(correctOptions) ? correctOptions : [])
+          .sort((a, b) => countSecondStageBlockChars(b) - countSecondStageBlockChars(a));
+        const targetTotal = Math.max(SECOND_STAGE_BLOCK_TOTAL, correct.length);
+        if (correct.length >= SECOND_STAGE_BLOCK_TOTAL) {
+          return packSecondStageRows(correct);
+        }
+
+        const rows = Array.from(
+          { length: Math.ceil(SECOND_STAGE_BLOCK_TOTAL / SECOND_STAGE_BLOCKS_PER_ROW) },
+          () => []
+        );
+        const rowChars = (row) => row.reduce((total, item) => total + countSecondStageBlockChars(item), 0);
+        correct.forEach((option) => {
+          const length = countSecondStageBlockChars(option);
+          const sortedRows = rows
+            .slice()
+            .sort((a, b) => (rowChars(a) - rowChars(b)) || (a.length - b.length));
+          const row = sortedRows.find((candidate) => (
+            candidate.length < SECOND_STAGE_BLOCKS_PER_ROW
+            && rowChars(candidate) + length <= SECOND_STAGE_ROW_MAX_CHARS
+          )) || sortedRows.find((candidate) => candidate.length < SECOND_STAGE_BLOCKS_PER_ROW) || rows[0];
+          row.push(option);
+        });
+
+        const usedWords = new Set(correct.map((option) => option.normalized).filter(Boolean));
+        const candidates = shuffleList((Array.isArray(wrongWords) ? wrongWords : [])
+          .map((word) => ({
+            word,
+            normalized: normalizeWordBlockText(word)
+          }))
+          .filter((item) => item.normalized && !usedWords.has(item.normalized)));
+
+        rows.forEach((row) => {
+          while (row.length < SECOND_STAGE_BLOCKS_PER_ROW) {
+            const totalOptions = rows.reduce((total, current) => total + current.length, 0);
+            if (totalOptions >= targetTotal) break;
+            const picked = takeSecondStageDistractor(
+              candidates,
+              usedWords,
+              rowChars(row),
+              SECOND_STAGE_BLOCKS_PER_ROW - row.length
+            );
+            if (!picked) break;
+            row.push(picked);
+          }
+        });
+
+        rows.forEach((row) => {
+          while (row.length && row.length < SECOND_STAGE_BLOCKS_PER_ROW && rowChars(row) < SECOND_STAGE_ROW_MIN_CHARS) {
+            const picked = takeSecondStageDistractor(
+              candidates,
+              usedWords,
+              rowChars(row),
+              SECOND_STAGE_BLOCKS_PER_ROW - row.length
+            );
+            if (!picked) break;
+            row.push(picked);
+          }
+        });
+
+        return rows.filter((row) => row.length);
+      }
+
       function buildSecondStageWordBlockState(typingState, card) {
         const answerCandidates = uniqueAnswerList([
           typingState?.acceptedAnswer,
@@ -18572,29 +18719,12 @@
             });
           }
         });
-        if (options.length >= SECOND_STAGE_BLOCK_TOTAL) {
-          return {
-            primarySequence,
-            targetSequences: targetSequences.length ? targetSequences : [primarySequence],
-            options: shuffleList(options)
-          };
-        }
-        const targetWordSet = new Set(options.map((option) => option.normalized));
-        const distractors = shuffleList(getSecondStageWrongWords()
-          .map((word) => ({
-            word,
-            normalized: normalizeWordBlockText(word)
-          }))
-          .filter((item) => item.normalized && !targetWordSet.has(item.normalized)))
-          .slice(0, Math.max(0, SECOND_STAGE_BLOCK_TOTAL - options.length))
-          .map((item) => ({
-            ...item,
-            isDistractor: true
-          }));
+        const rows = buildSecondStageOptionRows(options, getSecondStageWrongWords());
         return {
           primarySequence,
           targetSequences: targetSequences.length ? targetSequences : [primarySequence],
-          options: shuffleList([...options, ...distractors])
+          options: rows.flat(),
+          rows
         };
       }
 
@@ -18610,6 +18740,46 @@
           selectedWords.length === sequence.length
           && selectedWords.every((word, index) => sequence[index]?.normalized === word)
         ));
+      }
+
+      function splitSecondStageTranslationText(value) {
+        const words = safeText(value).trim().split(/\s+/).filter(Boolean);
+        if (words.length <= 2) return [words.join(' ')];
+        const lineCount = words.length >= 6 ? 3 : 2;
+        const targetLines = Math.min(lineCount, words.length);
+        let best = [words.join(' ')];
+        let bestScore = Infinity;
+        const scoreLines = (lines) => {
+          const lengths = lines.map((line) => line.replace(/\s+/g, '').length);
+          const max = Math.max(...lengths);
+          const min = Math.min(...lengths);
+          return (max - min) + (Math.abs(targetLines - lines.length) * 100);
+        };
+        const build = (startIndex, remainingLines, chosen) => {
+          if (remainingLines === 1) {
+            const lines = [...chosen, words.slice(startIndex).join(' ')];
+            const score = scoreLines(lines);
+            if (score < bestScore) {
+              best = lines;
+              bestScore = score;
+            }
+            return;
+          }
+          const maxEnd = words.length - remainingLines + 1;
+          for (let endIndex = startIndex + 1; endIndex <= maxEnd; endIndex += 1) {
+            build(endIndex, remainingLines - 1, [...chosen, words.slice(startIndex, endIndex).join(' ')]);
+          }
+        };
+        build(0, targetLines, []);
+        return best.filter(Boolean);
+      }
+
+      function renderSecondStageTranslationDisplay(display, text) {
+        if (!display) return;
+        const lines = splitSecondStageTranslationText(text);
+        display.innerHTML = lines
+          .map((line) => `<span class="flashcards-typing__translation-line">${escapeHtml(line)}</span>`)
+          .join('');
       }
 
       async function handleSecondStageWordBlockMistake(entry, card, grid, selectedButtons) {
@@ -18720,7 +18890,7 @@
             return true;
           };
 
-          blockState.options.forEach((block) => {
+          const appendWordBlock = (block, parent) => {
             const key = document.createElement('button');
             key.type = 'button';
             key.className = 'flashcards-typing__key';
@@ -18747,7 +18917,16 @@
               await finishIfComplete();
             });
             keyNodes.push({ node: key, normalized: block.normalized });
-            grid.appendChild(key);
+            parent.appendChild(key);
+          };
+          const rows = Array.isArray(blockState.rows) && blockState.rows.length
+            ? blockState.rows
+            : [blockState.options];
+          rows.forEach((row) => {
+            const rowNode = document.createElement('div');
+            rowNode.className = 'flashcards-typing__word-row';
+            row.forEach((block) => appendWordBlock(block, rowNode));
+            grid.appendChild(rowNode);
           });
 
           skipBtn.addEventListener('click', async () => {
@@ -18798,7 +18977,10 @@
           els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
           const translationDisplay = document.createElement('div');
           translationDisplay.className = 'flashcards-typing__display flashcards-typing__display--visual is-second-star-translation';
-          translationDisplay.textContent = capitalizeWords(card?.portuguese || card?.english || card?.deckTitle || '');
+          renderSecondStageTranslationDisplay(
+            translationDisplay,
+            capitalizeWords(card?.portuguese || card?.english || card?.deckTitle || '')
+          );
           els.gameVisual.appendChild(translationDisplay);
           if (keyboardTarget && els.gameTypingKeyboard.parentElement !== keyboardTarget) {
             keyboardTarget.appendChild(els.gameTypingKeyboard);
@@ -18884,6 +19066,9 @@
           keyNodes.push(key);
           grid.appendChild(key);
         });
+        if (useSmartKeyboard) {
+          sortSmartKeyboardKeys(grid);
+        }
 
         skipBtn.addEventListener('click', async () => {
           if (!state.game.active || state.game.paused || state.game.listening || state.game.currentId !== entry.id || state.game.typingSkipActive) return;
@@ -18903,6 +19088,7 @@
                 nextKey = keyNodes.find((node) => !node.classList.contains('is-dissolving')) || keyNodes[0] || null;
                 if (nextKey) {
                   setSmartKeyLetter(nextKey, nextLetter);
+                  sortSmartKeyboardKeys(grid);
                 }
               }
               if (nextKey) {
