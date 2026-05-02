@@ -6363,6 +6363,16 @@
       bottom: auto;
     }
 
+    .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
+      bottom: 13vh;
+      width: min(283px, calc(100vw - 34px));
+      padding: 0;
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+
     .game[data-phase-key="second-star"] .game-card__visual > .game-advance-btn,
     .game[data-phase-key="fourth-star"] .game-card__visual > .game-advance-btn {
       display: inline-flex;
@@ -6415,6 +6425,31 @@
         drop-shadow(0 0 8px rgba(255, 252, 219, 0.98))
         drop-shadow(0 0 18px rgba(255, 192, 68, 0.82))
         drop-shadow(0 0 28px rgba(255, 112, 24, 0.58));
+    }
+
+    .game[data-phase-key="fourth-star"] .game-card__visual > .game-advance-btn {
+      border-color: rgba(116, 224, 255, 0.88);
+      background:
+        radial-gradient(circle at 32% 28%, rgba(217, 251, 255, 0.48), rgba(38, 190, 255, 0.92) 42%, rgba(24, 82, 214, 0.98) 86%);
+      color: #8cecff;
+      box-shadow:
+        0 0 0 1px rgba(216, 249, 255, 0.24),
+        0 0 18px rgba(91, 219, 255, 0.82),
+        0 0 42px rgba(50, 122, 255, 0.54),
+        0 10px 26px rgba(0, 34, 92, 0.42),
+        inset 0 0 16px rgba(211, 249, 255, 0.22);
+    }
+
+    .game[data-phase-key="fourth-star"] .game-card__visual > .game-advance-btn img {
+      display: none;
+    }
+
+    .game[data-phase-key="fourth-star"] .game-card__visual > .game-advance-btn::before {
+      background: no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%237be9ff' d='M4.5 6.35v11.3L13 12 4.5 6.35Zm8.65 0v11.3L21.65 12 13.15 6.35Z'/%3E%3C/svg%3E");
+      filter:
+        drop-shadow(0 0 8px rgba(219, 251, 255, 0.98))
+        drop-shadow(0 0 18px rgba(108, 226, 255, 0.88))
+        drop-shadow(0 0 30px rgba(42, 139, 255, 0.68));
     }
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing,
@@ -6477,7 +6512,7 @@
 
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      width: min(257px, calc(100vw - 34px));
+      width: min(283px, calc(100vw - 34px));
       margin-inline: auto;
       gap: 3px;
     }
@@ -6516,13 +6551,20 @@
     }
 
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key {
-      min-height: clamp(51px, 9vw, 71px);
+      min-height: clamp(56px, 9.9vw, 78px);
       border-radius: 12px;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(49px, 15.34vw, 88px);
+      font-size: clamp(54px, 16.87vw, 97px);
       font-weight: 800;
       letter-spacing: 0;
       text-transform: uppercase;
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+      text-shadow:
+        0 0 8px rgba(212, 250, 255, 0.92),
+        0 0 18px rgba(81, 216, 255, 0.72),
+        0 0 32px rgba(41, 128, 255, 0.42);
     }
 
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key.is-dissolving {
@@ -6680,6 +6722,18 @@
         0 0 14px rgba(255, 60, 99, 0.34),
         0 0 28px rgba(255, 60, 99, 0.22);
       animation: flashcardsTypingErrorShake 1000ms ease-in-out;
+    }
+
+    .game[data-phase-key="fourth-star"] .flashcards-typing__grid.is-error .flashcards-typing__key {
+      background: transparent !important;
+      background-image: none !important;
+      border-color: transparent !important;
+      color: #ff6f94;
+      box-shadow: none !important;
+      text-shadow:
+        0 0 8px rgba(255, 230, 236, 0.88),
+        0 0 18px rgba(255, 84, 127, 0.76),
+        0 0 30px rgba(255, 43, 86, 0.5);
     }
 
     .game-language-btn,
@@ -7749,13 +7803,15 @@
       position: fixed;
       left: 0;
       right: 0;
-      bottom: var(--footer-total-height);
-      height: 10px;
-      background: rgba(12, 34, 29, 0.72);
-      z-index: 18;
+      bottom: 0;
+      height: 20px;
+      background: linear-gradient(90deg, rgba(5, 20, 54, 0.96), rgba(6, 37, 84, 0.96));
+      z-index: 260;
       overflow: hidden;
       pointer-events: none;
-      box-shadow: 0 -1px 14px rgba(97, 242, 164, 0.2);
+      box-shadow:
+        0 -1px 18px rgba(64, 221, 255, 0.34),
+        0 0 34px rgba(51, 116, 255, 0.24);
     }
 
     .flashcard-level-progress[hidden] {
@@ -7766,8 +7822,10 @@
       display: block;
       width: 0%;
       height: 100%;
-      background: linear-gradient(90deg, #39ff7a, #a9ff4f);
-      box-shadow: 0 0 18px rgba(97, 242, 164, 0.95);
+      background: linear-gradient(90deg, #40ddff 0%, #3374ff 62%, #74f3ff 100%);
+      box-shadow:
+        0 0 16px rgba(64, 221, 255, 0.96),
+        0 0 32px rgba(51, 116, 255, 0.66);
       transition: width 280ms ease;
     }
 
@@ -9108,6 +9166,7 @@
       const GAME_TOUCH_ICON_STORAGE_KEY = 'playtalk-game-touch-icon-v1';
       const GAME_TOUCH_ICON_MARKUP = '<svg class="game-touch__books-mic-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>';
       const PORTUGUESE_ICON_PATH = '/SVG/codex-icons/%C3%ADcones%20modo%203/portugues.svg';
+      const DOUBLE_PLAY_NEON_ICON_PATH = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%237be9ff' d='M4.5 6.35v11.3L13 12 4.5 6.35Zm8.65 0v11.3L21.65 12 13.15 6.35Z'/%3E%3C/svg%3E";
       const SUCCESS_SOUND_PATH = 'gamesounds/success.mp3';
       const FOUR_STARS_SOUND_PATH = 'newsongs/4stars.mp3';
       const FIVE_STARS_SOUND_PATH = 'newsongs/5stars.mp3';
@@ -12145,6 +12204,11 @@
         }
         els.gameAdvanceBtn.hidden = false;
         els.gameAdvanceBtn.classList.add('is-visible');
+        const icon = els.gameAdvanceBtn.querySelector('img');
+        if (icon) {
+          icon.src = phaseKey === 'fourth-star' ? DOUBLE_PLAY_NEON_ICON_PATH : PORTUGUESE_ICON_PATH;
+          icon.alt = phaseKey === 'fourth-star' ? 'Avancar' : 'Portugues';
+        }
         els.gameAdvanceBtn.setAttribute('aria-label', 'Avancar rapido com digitacao automatica');
         els.gameAdvanceBtn.disabled = !state.game.active || state.game.paused || state.game.listening || state.game.typingSkipActive || state.game.currentId !== entry?.id;
       }
@@ -14651,15 +14715,17 @@
 
       function updateLevelProgressBar() {
         if (!els.flashcardLevelProgress || !els.flashcardLevelProgressBar) return;
-        const show = Boolean(state.game.active && !isAdminUser() && !isLevelTypingModeActive());
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        const show = Boolean(state.game.active && [
+          'first-star',
+          'second-star',
+          'third-star',
+          'fourth-star',
+          'fifth-star'
+        ].includes(phaseKey));
         els.flashcardLevelProgress.hidden = !show;
+        els.flashcardLevelProgress.setAttribute('aria-hidden', show ? 'false' : 'true');
         if (!show) {
-          syncWelcomeLevelProgress();
-          return;
-        }
-        if (isLevelScaleModeActive()) {
-          const percent = (Math.max(0, Math.min(5, Number(state.game.scaleBatchAttempts) || 0)) / 5) * 100;
-          els.flashcardLevelProgressBar.style.width = `${percent.toFixed(2)}%`;
           syncWelcomeLevelProgress();
           return;
         }
