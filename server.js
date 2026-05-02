@@ -2360,6 +2360,7 @@ const ensureUserRankingOverridesTable = async () => {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_ranking_overrides (
           user_id bigint PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+          flashcards_floor integer NULL,
           flashcards_delta integer NOT NULL DEFAULT 0,
           pronunciation_delta integer NOT NULL DEFAULT 0,
           speed_delta numeric(10, 1) NOT NULL DEFAULT 0,
@@ -2367,6 +2368,10 @@ const ensureUserRankingOverridesTable = async () => {
           updated_by_user_id bigint NULL,
           updated_at timestamptz NOT NULL DEFAULT now()
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_ranking_overrides
+        ADD COLUMN IF NOT EXISTS flashcards_floor integer NULL
       `);
       await pool.query(`
         ALTER TABLE public.user_ranking_overrides
@@ -12362,6 +12367,7 @@ app.get('/api/users/flashcards', async (req, res) => {
          u.bot_avatar_status,
          u.bot_avatar_error,
          COALESCE(u.level, 1)::int AS user_level,
+         overrides.flashcards_floor AS override_flashcards_floor,
          COALESCE(overrides.flashcards_delta, 0)::int AS override_flashcards_delta,
          COALESCE(overrides.pronunciation_delta, 0)::int AS override_pronunciation_delta,
          COALESCE(overrides.speed_delta, 0)::numeric AS override_speed_delta,
@@ -12433,7 +12439,13 @@ app.get('/api/users/flashcards', async (req, res) => {
       const basePronunciation = Math.max(0, Number(derived.pronunciationPercent) || 0);
       const baseSpeed = Math.max(0, Number(derived.speedFlashcardsPerHour) || 0);
       const baseLevel = Math.max(1, Math.min(200, Number(entry.user_level) || 1));
-      const flashcardsCount = Math.max(0, baseFlashcardsCount + (Number(entry.override_flashcards_delta) || 0));
+      const flashcardsFloor = Number.isFinite(Number(entry.override_flashcards_floor))
+        ? Math.max(0, Number(entry.override_flashcards_floor))
+        : 0;
+      const flashcardsCount = Math.max(
+        flashcardsFloor,
+        Math.max(0, baseFlashcardsCount + (Number(entry.override_flashcards_delta) || 0))
+      );
       const pronunciationPercent = Math.max(0, Math.min(100, basePronunciation + (Number(entry.override_pronunciation_delta) || 0)));
       const speedFlashcardsPerHour = Math.max(0, Number((baseSpeed + (Number(entry.override_speed_delta) || 0)).toFixed(1)));
       const level = Math.max(1, Math.min(200, baseLevel + (Number(entry.override_level_delta) || 0)));
@@ -15902,117 +15914,101 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
           ? Math.max(1, Math.min(200, Math.round(inputValue)))
           : Math.max(0, Math.round(inputValue));
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      if (metricKey === 'pronunciation') {
-        const sampleCount = Math.max(1, Number(current.pronunciation_samples_count) || 0);
-        const pronunciationSum = Math.max(0, Math.round(targetValue * sampleCount));
-        await client.query(
-          `INSERT INTO public.flashcards_accurate (
-             user_id,
-             pronunciation_tag,
-             pronunciation_samples,
-             pronunciation_sum,
-             pronunciation_samples_count,
-             latest_pronunciation_percent,
-             updated_at
-           )
-           VALUES ($1, 'admin-correction', '[]'::jsonb, $2, $3, $4, now())
-           ON CONFLICT (user_id)
-           DO UPDATE SET
-             pronunciation_tag = EXCLUDED.pronunciation_tag,
-             pronunciation_samples = EXCLUDED.pronunciation_samples,
-             pronunciation_sum = EXCLUDED.pronunciation_sum,
-             pronunciation_samples_count = EXCLUDED.pronunciation_samples_count,
-             latest_pronunciation_percent = EXCLUDED.latest_pronunciation_percent,
-             updated_at = now()`,
-          [userId, pronunciationSum, sampleCount, targetValue]
-        );
-      } else if (metricKey === 'speed') {
-        const progressCards = Math.max(0, Number(current.progress_card_count) || 0);
-        const trainingTimeMs = targetValue > 0 && progressCards > 0
-          ? Math.max(1, Math.round((progressCards * 3600000) / targetValue))
-          : 0;
-        await client.query(
-          `INSERT INTO public.user_flashcard_stats (
-             user_id,
-             play_time_ms,
-             speakings,
-             listenings,
-             readings,
-             training_time_ms,
-             admin_speed_flashcards_per_hour,
-             updated_at
-           )
-           VALUES ($1, 0, 0, 0, 0, $2, $3, now())
-           ON CONFLICT (user_id)
-           DO UPDATE SET
-             training_time_ms = EXCLUDED.training_time_ms,
-             admin_speed_flashcards_per_hour = EXCLUDED.admin_speed_flashcards_per_hour,
-             updated_at = now()`,
-          [userId, trainingTimeMs, targetValue]
-        );
-      } else if (metricKey === 'level') {
-        await client.query(
-          `UPDATE public.users
-           SET level = $2,
-               level_updated_at = now()
-           WHERE id = $1`,
-          [userId, targetValue]
-        );
-      } else {
-        const periodKeys = getFlashcardRankingPeriodKeys();
-        await client.query(
-          `INSERT INTO public.flashcard_rankings (
-             player_id,
-             user_id,
-             player_number,
-             flashcards_count,
-             weekly_count,
-             monthly_count,
-             all_time_count,
-             last_progress_count,
-             weekly_period_key,
-             monthly_period_key,
-             updated_at
-           )
-           VALUES (
-             $1,
-             $2,
-             nextval('public.flashcard_rankings_player_number_seq'),
-             $3,
-             $3,
-             $3,
-             $3,
-             $3,
-             $4,
-             $5,
-             now()
-           )
-           ON CONFLICT (user_id) WHERE user_id IS NOT NULL
-           DO UPDATE SET
-             player_id = EXCLUDED.player_id,
-             flashcards_count = EXCLUDED.flashcards_count,
-             weekly_count = EXCLUDED.weekly_count,
-             monthly_count = EXCLUDED.monthly_count,
-             all_time_count = EXCLUDED.all_time_count,
-             last_progress_count = EXCLUDED.last_progress_count,
-             weekly_period_key = EXCLUDED.weekly_period_key,
-             monthly_period_key = EXCLUDED.monthly_period_key,
-             updated_at = now()`,
-          [buildFlashcardRankingPlayerId(userId), userId, targetValue, periodKeys.weeklyKey, periodKeys.monthlyKey]
-        );
-      }
-
-      await client.query('DELETE FROM public.user_ranking_overrides WHERE user_id = $1', [userId]);
-      await client.query('COMMIT');
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
+    let flashcardsFloor = null;
+    let flashcardsDelta = 0;
+    let pronunciationDelta = 0;
+    let speedDelta = 0;
+    let levelDelta = 0;
+    if (metricKey === 'pronunciation') {
+      pronunciationDelta = 0;
+    } else if (metricKey === 'speed') {
+      speedDelta = Number((targetValue - baseSpeed).toFixed(1));
+    } else if (metricKey === 'level') {
+      levelDelta = targetValue - baseLevel;
+    } else {
+      flashcardsFloor = targetValue;
+      flashcardsDelta = targetValue - baseFlashcards;
     }
+
+    if (metricKey === 'pronunciation') {
+      const manualSamples = Array.from(
+        { length: FLASHCARD_PRONUNCIATION_SAMPLE_LIMIT },
+        () => targetValue
+      );
+      await pool.query(
+        `INSERT INTO public.flashcards_accurate (
+           user_id,
+           pronunciation_tag,
+           pronunciation_samples,
+           pronunciation_sum,
+           pronunciation_samples_count,
+           latest_pronunciation_percent,
+           updated_at
+         )
+         VALUES ($1, 'flashcards-accurate', $2::jsonb, $3, $4, $5, now())
+         ON CONFLICT (user_id)
+         DO UPDATE SET
+           pronunciation_tag = EXCLUDED.pronunciation_tag,
+           pronunciation_samples = EXCLUDED.pronunciation_samples,
+           pronunciation_sum = EXCLUDED.pronunciation_sum,
+           pronunciation_samples_count = EXCLUDED.pronunciation_samples_count,
+           latest_pronunciation_percent = EXCLUDED.latest_pronunciation_percent,
+           updated_at = now()`,
+        [
+          userId,
+          JSON.stringify(manualSamples),
+          targetValue * manualSamples.length,
+          manualSamples.length,
+          targetValue
+        ]
+      );
+      await pool.query(
+        `INSERT INTO public.user_flashcard_stats (
+           user_id,
+           pronunciation_samples,
+           updated_at
+         )
+         VALUES ($1, $2::jsonb, now())
+         ON CONFLICT (user_id)
+         DO UPDATE SET
+           pronunciation_samples = EXCLUDED.pronunciation_samples,
+           updated_at = now()`,
+        [userId, JSON.stringify(manualSamples)]
+      );
+    }
+
+    await pool.query(
+      `INSERT INTO public.user_ranking_overrides (
+         user_id,
+         flashcards_floor,
+         flashcards_delta,
+         pronunciation_delta,
+         speed_delta,
+         level_delta,
+         updated_by_user_id,
+         updated_at
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         flashcards_floor = CASE WHEN $8 = 'flashcards' THEN EXCLUDED.flashcards_floor ELSE public.user_ranking_overrides.flashcards_floor END,
+         flashcards_delta = CASE WHEN $8 = 'flashcards' THEN EXCLUDED.flashcards_delta ELSE public.user_ranking_overrides.flashcards_delta END,
+         pronunciation_delta = CASE WHEN $8 = 'pronunciation' THEN EXCLUDED.pronunciation_delta ELSE public.user_ranking_overrides.pronunciation_delta END,
+         speed_delta = CASE WHEN $8 = 'speed' THEN EXCLUDED.speed_delta ELSE public.user_ranking_overrides.speed_delta END,
+         level_delta = CASE WHEN $8 = 'level' THEN EXCLUDED.level_delta ELSE public.user_ranking_overrides.level_delta END,
+         updated_by_user_id = EXCLUDED.updated_by_user_id,
+         updated_at = now()`,
+      [
+        userId,
+        flashcardsFloor,
+        flashcardsDelta,
+        pronunciationDelta,
+        speedDelta,
+        levelDelta,
+        Number(authUser.id) || null,
+        metricKey
+      ]
+    );
 
     res.json({ success: true, metric: metricKey });
   } catch (error) {
