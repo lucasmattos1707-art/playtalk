@@ -529,6 +529,7 @@
     }
 
     .welcome-gate__avatar {
+      --welcome-avatar-progress: 0deg;
       width: clamp(286px, 39.8vh, 384px);
       height: clamp(286px, 39.8vh, 384px);
       border-radius: 50%;
@@ -547,6 +548,35 @@
       border: 0;
     }
 
+    .welcome-gate__avatar::before {
+      content: "";
+      position: absolute;
+      inset: -8px;
+      z-index: 0;
+      border-radius: 50%;
+      background:
+        conic-gradient(from -90deg, rgba(64, 221, 255, 1) 0deg, rgba(51, 116, 255, 0.96) var(--welcome-avatar-progress), rgba(9, 27, 61, 0.64) var(--welcome-avatar-progress), rgba(9, 27, 61, 0.64) 360deg);
+      filter:
+        drop-shadow(0 0 12px rgba(52, 207, 255, 0.64))
+        drop-shadow(0 0 26px rgba(34, 126, 255, 0.38));
+      transition: --welcome-avatar-progress 2500ms cubic-bezier(0.2, 0.78, 0.18, 1);
+      pointer-events: none;
+    }
+
+    .welcome-gate__avatar::after {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      z-index: 0;
+      border-radius: 50%;
+      background: #071121;
+      pointer-events: none;
+    }
+
+    .welcome-gate__avatar.is-xp-animating img {
+      animation: welcomeAvatarXpFlash 2500ms ease-out;
+    }
+
     .welcome-gate__avatar-aura {
       display: none;
     }
@@ -559,7 +589,7 @@
       border-radius: inherit;
       clip-path: circle(50% at 50% 50%);
       position: relative;
-      z-index: 1;
+      z-index: 2;
     }
 
     .welcome-gate__level-panel {
@@ -6293,6 +6323,13 @@
       backdrop-filter: blur(8px);
     }
 
+    .game[data-phase-key="second-star"] .textscreen .keyboardscreen-host {
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+
     .game[data-phase-key="second-star"] .game-card__visual > .game-advance-btn,
     .game[data-phase-key="fourth-star"] .game-card__visual > .game-advance-btn {
       display: inline-flex;
@@ -6471,7 +6508,7 @@
       font-weight: 800;
       line-height: 1;
       letter-spacing: 0;
-      text-transform: none;
+      text-transform: uppercase;
       background: linear-gradient(145deg, rgba(5, 24, 66, 0.92) 0%, rgba(10, 54, 122, 0.92) 58%, rgba(18, 102, 197, 0.9) 100%);
       border: 2px solid rgba(117, 215, 255, 0.88);
       color: #f6fcff;
@@ -7121,6 +7158,22 @@
       50% {
         transform: scaleY(2.8);
         opacity: 1;
+      }
+    }
+
+    @keyframes welcomeAvatarXpFlash {
+      0% {
+        filter: brightness(1) saturate(1);
+      }
+      18% {
+        filter:
+          brightness(1.34)
+          saturate(1.22)
+          drop-shadow(0 0 18px rgba(84, 224, 255, 0.9))
+          drop-shadow(0 0 34px rgba(42, 139, 255, 0.52));
+      }
+      100% {
+        filter: brightness(1) saturate(1);
       }
     }
 
@@ -9009,7 +9062,16 @@
       const TYPING_KEY_BLUES = ['#6ebcff', '#76c3ff', '#7dc9ff', '#86ceff', '#8fd4ff', '#98d9ff'];
       const DEFAULT_GAME_CONTEXT_LIMIT = 12;
       const USER_LEVEL_MIN = 1;
-      const USER_LEVEL_MAX = 100;
+      const USER_LEVEL_MAX = 200;
+      const ENERGY_XP_DIVISOR = 100;
+      const ENERGY_LEVEL_PHASE_ONE_MAX = 80;
+      const ENERGY_LEVEL_PHASE_ONE_BASE_XP = 50;
+      const ENERGY_LEVEL_PHASE_ONE_BLOCK_SIZE = 5;
+      const ENERGY_LEVEL_PHASE_ONE_BLOCK_STEP = 5;
+      const ENERGY_LEVEL_PHASE_TWO_BASE_XP = 130;
+      const ENERGY_LEVEL_PHASE_TWO_CURVE = 6909;
+      const ENERGY_LEVEL_PHASE_TWO_SPAN = 119;
+      const WELCOME_LEVEL_ANIMATION_MS = 2500;
       const CURRENT_LEVEL_ROUND_RATIO = 0.4;
       const MIN_GAME_CONTEXT_LIMIT = 1;
       const LEVEL_MODE_BUFFER_SIZE = 10;
@@ -9388,6 +9450,9 @@
           welcomeHeadingModeIndex: 0,
           welcomeProfileReady: false,
           welcomeEnergyReady: false,
+          welcomeLevelProgressPercent: 0,
+          welcomeLevelDisplayPercent: null,
+          welcomeLevelAnimationFrame: 0,
           gameStageTutorialVisible: false,
           gameStageTutorialKind: '',
           gameStageTutorialDismissHandler: null,
@@ -12111,29 +12176,13 @@
       function syncWelcomeLevelProgress() {
         if (!els.welcomeUserLevelNumber || !els.welcomeLevelProgressBar) return;
         if (!state.entry.sessionResolved) return;
-        const level = currentUserLevel();
+        const xpProgress = reconcileEnergyLevelProgress({ animate: Boolean(state.entry.welcomeVisible) });
+        const level = xpProgress.level;
         syncWelcomeIdentityHeader();
         if (state.ui.welcomeSelectedLevel === null || state.ui.welcomeSelectedLevel === undefined || state.ui.welcomeSelectedLevel === '') {
           setSelectedGameLevel(level);
         }
-        const energyStatus = state.ui.welcomeEnergyStatus || {};
-        const hasUnlimitedEnergy = Boolean(energyStatus?.premium || energyStatus?.unlimited);
-        const dailyLimit = Number.isFinite(Number(energyStatus?.dailyEnergyLimit))
-          ? Math.max(0, Number(energyStatus.dailyEnergyLimit))
-          : Math.max(0, Number(window.PlaytalkEnergy?.DAILY_FREE_ENERGY) || 0);
-        const usedToday = Number.isFinite(Number(energyStatus?.usedToday))
-          ? Math.max(0, Number(energyStatus.usedToday))
-          : 0;
-        const remaining = hasUnlimitedEnergy
-          ? dailyLimit
-          : Number.isFinite(Number(energyStatus?.remaining))
-            ? Math.max(0, Number(energyStatus.remaining))
-            : Math.max(0, dailyLimit - usedToday);
-        const percent = hasUnlimitedEnergy
-          ? 100
-          : dailyLimit > 0
-            ? Math.max(0, Math.min(100, (remaining / dailyLimit) * 100))
-            : 0;
+        const percent = xpProgress.percent;
         if (els.welcomeLevelHeading) {
           els.welcomeLevelHeading.textContent = `Nível ${level}`;
         }
@@ -12144,10 +12193,10 @@
         }
         els.welcomeLevelProgressBar.style.setProperty('--welcome-level-progress-pct', `${percent.toFixed(2)}%`);
         if (els.welcomeLevelOrbit) {
-          const orbitLabel = hasUnlimitedEnergy
-            ? 'Energias restantes: infinito.'
-            : `Energias restantes: ${Math.round(percent)}%.`;
-          els.welcomeLevelOrbit.setAttribute('aria-label', orbitLabel);
+          els.welcomeLevelOrbit.setAttribute(
+            'aria-label',
+            `Progresso para o proximo nivel: ${Math.round(percent)}%.`
+          );
         }
         if (els.welcomeLevelProgressCopy) {
           els.welcomeLevelProgressCopy.textContent = '';
@@ -13674,6 +13723,124 @@
         return normalizeSelectableGameLevel(state.ui.welcomeSelectedLevel);
       }
 
+      function xpRequiredForEnergyLevel(level) {
+        const normalizedLevel = normalizeUserLevel(level);
+        if (normalizedLevel <= ENERGY_LEVEL_PHASE_ONE_MAX) {
+          return ENERGY_LEVEL_PHASE_ONE_BASE_XP
+            + ENERGY_LEVEL_PHASE_ONE_BLOCK_STEP
+              * Math.floor((normalizedLevel - 1) / ENERGY_LEVEL_PHASE_ONE_BLOCK_SIZE);
+        }
+        const t = (normalizedLevel - ENERGY_LEVEL_PHASE_ONE_MAX) / ENERGY_LEVEL_PHASE_TWO_SPAN;
+        return ENERGY_LEVEL_PHASE_TWO_BASE_XP + ENERGY_LEVEL_PHASE_TWO_CURVE * t * t;
+      }
+
+      function totalEnergySpentFromStats(stats = state.stats) {
+        const source = stats || {};
+        return Math.max(0, Number(source.readings) || 0)
+          + Math.max(0, Number(source.listenings) || 0)
+          + Math.max(0, Number(source.speakings) || 0);
+      }
+
+      function totalEnergyXp(stats = state.stats) {
+        return totalEnergySpentFromStats(stats) / ENERGY_XP_DIVISOR;
+      }
+
+      function resolveEnergyLevelProgress(stats = state.stats) {
+        let remainingXp = totalEnergyXp(stats);
+        let level = USER_LEVEL_MIN;
+        for (let currentLevel = USER_LEVEL_MIN; currentLevel < USER_LEVEL_MAX; currentLevel += 1) {
+          const required = xpRequiredForEnergyLevel(currentLevel);
+          if (remainingXp < required) break;
+          remainingXp -= required;
+          level = currentLevel + 1;
+        }
+        const nextRequired = level >= USER_LEVEL_MAX ? 0 : xpRequiredForEnergyLevel(level);
+        const percent = level >= USER_LEVEL_MAX
+          ? 100
+          : Math.max(0, Math.min(100, (remainingXp / Math.max(1, nextRequired)) * 100));
+        return {
+          level: normalizeUserLevel(level),
+          percent,
+          currentXp: Math.max(0, remainingXp),
+          nextRequired,
+          totalXp: totalEnergyXp(stats)
+        };
+      }
+
+      function setWelcomeAvatarProgress(percent, options = {}) {
+        const avatar = els.welcomeAvatarPreview?.closest('.welcome-gate__avatar');
+        if (!avatar) return;
+        const nextPercent = Math.max(0, Math.min(100, Number(percent) || 0));
+        if (state.ui.welcomeLevelAnimationFrame) {
+          window.cancelAnimationFrame(state.ui.welcomeLevelAnimationFrame);
+          state.ui.welcomeLevelAnimationFrame = 0;
+        }
+        const apply = (value) => {
+          avatar.style.setProperty('--welcome-avatar-progress', `${(Math.max(0, Math.min(100, value)) * 3.6).toFixed(2)}deg`);
+        };
+        if (!options.animate) {
+          state.ui.welcomeLevelDisplayPercent = nextPercent;
+          apply(nextPercent);
+          return;
+        }
+        const startPercent = Number.isFinite(Number(state.ui.welcomeLevelDisplayPercent))
+          ? Math.max(0, Math.min(100, Number(state.ui.welcomeLevelDisplayPercent)))
+          : Math.max(0, Math.min(100, Number(state.ui.welcomeLevelProgressPercent) || 0));
+        if (Math.abs(startPercent - nextPercent) < 0.01) {
+          state.ui.welcomeLevelDisplayPercent = nextPercent;
+          apply(nextPercent);
+          return;
+        }
+        const startedAt = performance.now();
+        avatar.classList.remove('is-xp-animating');
+        void avatar.offsetWidth;
+        avatar.classList.add('is-xp-animating');
+        const step = (now) => {
+          const progress = Math.max(0, Math.min(1, (now - startedAt) / WELCOME_LEVEL_ANIMATION_MS));
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const value = startPercent + ((nextPercent - startPercent) * eased);
+          state.ui.welcomeLevelDisplayPercent = value;
+          apply(value);
+          if (progress < 1) {
+            state.ui.welcomeLevelAnimationFrame = window.requestAnimationFrame(step);
+            return;
+          }
+          state.ui.welcomeLevelAnimationFrame = 0;
+          state.ui.welcomeLevelDisplayPercent = nextPercent;
+          window.setTimeout(() => avatar.classList.remove('is-xp-animating'), 80);
+        };
+        state.ui.welcomeLevelAnimationFrame = window.requestAnimationFrame(step);
+      }
+
+      function reconcileEnergyLevelProgress(options = {}) {
+        if (isAdminUser()) return resolveEnergyLevelProgress();
+        const progress = resolveEnergyLevelProgress();
+        const current = currentUserLevel();
+        const previousPercent = Number.isFinite(Number(state.ui.welcomeLevelProgressPercent))
+          ? Number(state.ui.welcomeLevelProgressPercent)
+          : progress.percent;
+        if (!Number.isFinite(Number(state.ui.welcomeLevelDisplayPercent))) {
+          state.ui.welcomeLevelDisplayPercent = previousPercent;
+        }
+        const leveledUp = progress.level > current;
+        if (progress.level !== current) {
+          state.userLevel = progress.level;
+          if (state.user) state.user.level = progress.level;
+          state.lastLevelUpLevel = leveledUp ? progress.level : 0;
+          saveUserProgress();
+        }
+        const shouldAnimateToFull = leveledUp && previousPercent > progress.percent;
+        setWelcomeAvatarProgress(shouldAnimateToFull ? 100 : progress.percent, { animate: Boolean(options.animate) });
+        if (shouldAnimateToFull) {
+          window.setTimeout(() => {
+            if (!state.entry.welcomeVisible) return;
+            setWelcomeAvatarProgress(progress.percent, { animate: false });
+          }, WELCOME_LEVEL_ANIMATION_MS + 120);
+        }
+        state.ui.welcomeLevelProgressPercent = progress.percent;
+        return progress;
+      }
+
       function isAllLevelsSelected() {
         return selectedGameLevel() === 0;
       }
@@ -14365,33 +14532,17 @@
           syncWelcomeLevelProgress();
           return;
         }
-        const level = currentUserLevel();
-        const levelTarget = userLevelCardTarget(level);
-        const count = state.lastLevelUpLevel
-          ? levelTarget
-          : Math.max(0, Math.min(levelTarget, currentLevelProgressCount(level)));
-        const percent = (count / Math.max(1, levelTarget)) * 100;
+        const percent = resolveEnergyLevelProgress().percent;
         els.flashcardLevelProgressBar.style.width = `${percent.toFixed(2)}%`;
         syncWelcomeLevelProgress();
       }
 
       function maybeAdvanceUserLevel() {
-        if (isAdminUser()) return false;
-        const levelBefore = currentUserLevel();
-        let nextLevel = levelBefore;
-        while (
-          nextLevel < USER_LEVEL_MAX
-          && currentLevelProgressCount(nextLevel) >= userLevelCardTarget(nextLevel)
-        ) {
-          nextLevel = normalizeUserLevel(nextLevel + 1);
-        }
-        if (nextLevel === levelBefore) return false;
-        state.userLevel = nextLevel;
-        if (state.user) state.user.level = nextLevel;
-        state.lastLevelUpLevel = nextLevel;
-        saveUserProgress();
+        if (!state.entry.welcomeVisible) return false;
+        const before = currentUserLevel();
+        reconcileEnergyLevelProgress({ animate: true });
         updateLevelProgressBar();
-        return true;
+        return currentUserLevel() > before;
       }
 
       function baseCandidateCards() {
