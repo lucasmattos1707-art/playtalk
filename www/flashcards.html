@@ -6680,6 +6680,13 @@
       text-overflow: ellipsis;
     }
 
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__key.is-word-block-key {
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif !important;
+      font-weight: 800 !important;
+      letter-spacing: 0 !important;
+      text-transform: uppercase !important;
+    }
+
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key.is-correct-hit,
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key.is-selected {
       background: linear-gradient(145deg, rgba(9, 94, 54, 0.95) 0%, rgba(15, 162, 84, 0.94) 58%, rgba(64, 235, 143, 0.92) 100%);
@@ -9276,6 +9283,7 @@
       const ENERGY_LEVEL_PHASE_TWO_BASE_XP = 130;
       const ENERGY_LEVEL_PHASE_TWO_CURVE = 6909;
       const ENERGY_LEVEL_PHASE_TWO_SPAN = 119;
+      const ENERGY_XP_MULTIPLIER = 3;
       const WELCOME_LEVEL_ANIMATION_MS = 2500;
       const SECOND_STAGE_BLOCK_TOTAL = 9;
       const SECOND_STAGE_BLOCKS_PER_ROW = 3;
@@ -13971,7 +13979,7 @@
       }
 
       function totalEnergyXp(stats = state.stats) {
-        return totalEnergySpentFromStats(stats) / ENERGY_XP_DIVISOR;
+        return (totalEnergySpentFromStats(stats) / ENERGY_XP_DIVISOR) * ENERGY_XP_MULTIPLIER;
       }
 
       function resolveEnergyLevelProgress(stats = state.stats) {
@@ -19202,7 +19210,7 @@
           const appendWordBlock = (block, parent) => {
             const key = document.createElement('button');
             key.type = 'button';
-            key.className = 'flashcards-typing__key';
+            key.className = 'flashcards-typing__key is-word-block-key';
             key.textContent = block.word;
             key.setAttribute('aria-label', `Bloco ${block.word}`);
             key.addEventListener('click', async () => {
