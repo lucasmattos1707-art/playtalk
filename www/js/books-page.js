@@ -39,7 +39,8 @@
   const HOME_SWIPE_DOWN_THRESHOLD = 70;
   const HOME_WHEEL_THRESHOLD = 18;
   const ALL_BOOKS_WINDOW_SIZE = 6;
-  const MAX_BOOK_LEVEL = 10;
+  const MAX_BOOK_LEVEL = 100;
+  const SMARTBOOKS_PER_UNLOCK_LEVEL = 5;
   // UI levels:
   // 0 = Home
   // 1 = MyBooks
@@ -89,6 +90,18 @@
     'Fluente',
     'Expert'
   ];
+  const BOOK_LEVEL_DISPLAY_NAMES_100 = {
+    9: BOOK_LEVEL_DISPLAY_NAMES[1],
+    19: BOOK_LEVEL_DISPLAY_NAMES[2],
+    29: BOOK_LEVEL_DISPLAY_NAMES[3],
+    39: BOOK_LEVEL_DISPLAY_NAMES[4],
+    49: BOOK_LEVEL_DISPLAY_NAMES[5],
+    59: BOOK_LEVEL_DISPLAY_NAMES[6],
+    69: BOOK_LEVEL_DISPLAY_NAMES[7],
+    79: BOOK_LEVEL_DISPLAY_NAMES[8],
+    89: BOOK_LEVEL_DISPLAY_NAMES[9],
+    99: BOOK_LEVEL_DISPLAY_NAMES[10]
+  };
   const STARFIELD_RANGE = 2000;
   const STARFIELD_CONFIG = [
     { id: 'stars', count: 700 },
@@ -242,7 +255,8 @@
     user: null,
     localProfile: null,
     initialLoading: true,
-    selectedLevel: UI_LEVEL_ALL_BOOKS,
+    selectedLevel: UI_FIRST_BOOK_LEVEL,
+    userSelectedBookLevel: false,
     stats: null,
     statsRotationTimer: 0,
     statsRotationIndex: 0,
@@ -843,7 +857,9 @@
       }
       : stats;
     syncPracticeSecondsTotal(state.stats?.practiceSeconds);
-    if (!state.initialLoading && isMyBooksLevel()) {
+    if (!state.initialLoading) {
+      syncSelectedLevelWithUnlocked({ preferUnlocked: !state.userSelectedBookLevel });
+      renderLevelMenu();
       renderCards();
     }
     return state.stats;
@@ -1168,9 +1184,9 @@
 
     const normalizedLevelLabel = normalizeText(normalizedRaw);
     if (!normalizedLevelLabel) return null;
-    const index = BOOK_LEVEL_DISPLAY_NAMES.findIndex((name) => normalizeText(name) === normalizedLevelLabel);
-    if (index <= 0) return null;
-    return index;
+    const namedLevel = Object.entries(BOOK_LEVEL_DISPLAY_NAMES_100)
+      .find(([, name]) => normalizeText(name) === normalizedLevelLabel);
+    return namedLevel ? normalizeLevel(namedLevel[0]) : null;
   }
 
   function parseCreateInputForSubmission(rawText) {
@@ -1193,7 +1209,7 @@
       throw new Error('A linha 1 (titulo) e obrigatoria.');
     }
     if (!levelValue) {
-      throw new Error('A linha 2 precisa de um nivel valido (1-10 ou nome do nivel).');
+      throw new Error('A linha 2 precisa de um nivel valido (1-100 ou nome do nivel).');
     }
     if (!tag) {
       throw new Error('A linha 3 (tag adicional) e obrigatoria.');
@@ -1365,7 +1381,7 @@
   function normalizeLevel(value) {
     const parsed = Number.parseInt(value, 10);
     if (!Number.isFinite(parsed)) return 1;
-    return Math.max(1, Math.min(10, parsed));
+    return Math.max(1, Math.min(MAX_BOOK_LEVEL, parsed));
   }
 
   function normalizeUser(user) {
@@ -1746,7 +1762,7 @@
       els.homeLaunchBtn.disabled = state.homeStartBusy;
       const launchLabel = els.homeLaunchBtn.querySelector('span');
       if (launchLabel) {
-        launchLabel.textContent = state.homeStartBusy ? 'Abrindo...' : 'AllBooks';
+        launchLabel.textContent = state.homeStartBusy ? 'Abrindo...' : 'SmartBooks';
       }
     }
     setHomeAuthStatus('', null);
@@ -1859,7 +1875,8 @@
   async function openBooksCollectionFromHome() {
     if (state.homeStartBusy) return;
     stopHomeSleepPlayback({ keepIntro: false });
-    state.selectedLevel = UI_LEVEL_ALL_BOOKS;
+    state.selectedLevel = bookLevelToUiLevel(1);
+    state.userSelectedBookLevel = false;
     state.shelfIndex = 0;
     renderHomeAuthUi();
     renderLevelMenu();
@@ -1882,7 +1899,7 @@
     if (IS_MYBOOKS_GRID_EMBED) {
       return [UI_LEVEL_MY_BOOKS];
     }
-    return [UI_LEVEL_ALL_BOOKS];
+    return getUnlockedBookUiLevels();
   }
 
   function shuffleBooks(list) {
@@ -1934,6 +1951,40 @@
     return ids
       .map((bookId) => booksById.get(safeText(bookId).toLowerCase()))
       .filter(Boolean);
+  }
+
+  function getCollectedSmartBooksCount() {
+    const ids = Array.isArray(state.stats?.qualifiedBookIds) ? state.stats.qualifiedBookIds : [];
+    const uniqueIds = new Set(ids.map((bookId) => safeText(bookId).toLowerCase()).filter(Boolean));
+    return Math.max(0, Number(state.stats?.qualifiedBookCount) || uniqueIds.size || 0);
+  }
+
+  function getUnlockedSmartBookLevel() {
+    const collectedCount = getCollectedSmartBooksCount();
+    if (collectedCount <= 0) return 1;
+    return Math.max(1, Math.min(
+      MAX_BOOK_LEVEL,
+      Math.floor((collectedCount - 1) / SMARTBOOKS_PER_UNLOCK_LEVEL) + 1
+    ));
+  }
+
+  function getUnlockedBookUiLevels() {
+    const unlockedLevel = getUnlockedSmartBookLevel();
+    return Array.from({ length: unlockedLevel }, (_, index) => bookLevelToUiLevel(index + 1));
+  }
+
+  function syncSelectedLevelWithUnlocked(options = {}) {
+    if (isHomeLevel() || isStatsLevel() || isMyBooksLevel()) return;
+    const accessibleLevels = getUnlockedBookUiLevels();
+    if (!accessibleLevels.length) {
+      state.selectedLevel = bookLevelToUiLevel(1);
+      return;
+    }
+    if (options.preferUnlocked) {
+      state.selectedLevel = accessibleLevels[accessibleLevels.length - 1];
+      return;
+    }
+    state.selectedLevel = normalizeBrowseLevel(state.selectedLevel);
   }
 
   function getBookBestPercent(bookId) {
@@ -2661,7 +2712,9 @@
       }
       setStatsState(payload.stats || null);
       syncEnergyRedirectFromStats(payload.stats);
-      if (!state.initialLoading && isMyBooksLevel()) {
+      if (!state.initialLoading) {
+        syncSelectedLevelWithUnlocked({ preferUnlocked: !state.userSelectedBookLevel });
+        renderLevelMenu();
         renderCards();
       }
       return state.stats;
@@ -3961,8 +4014,8 @@
     }
     if (els.createInput) {
       els.createInput.placeholder = isEditMode
-        ? `Titulo do livro\nNivel (1-10)\nstory_1\n${CREATE_EDIT_COVER_SENTINEL}\n${CREATE_EDIT_BACKGROUND_SENTINEL}\nFrase 1 em portugues\nSentence 1 in english`
-        : 'Titulo do livro\nNivel (1-10)\nstory_1\nPrompt capa 9:16\nPrompt background 16:9\nFrase 1 em portugues\nSentence 1 in english';
+        ? `Titulo do livro\nNivel (1-100)\nstory_1\n${CREATE_EDIT_COVER_SENTINEL}\n${CREATE_EDIT_BACKGROUND_SENTINEL}\nFrase 1 em portugues\nSentence 1 in english`
+        : 'Titulo do livro\nNivel (1-100)\nstory_1\nPrompt capa 9:16\nPrompt background 16:9\nFrase 1 em portugues\nSentence 1 in english';
     }
   }
 
@@ -4735,12 +4788,11 @@
     renderHomePanel();
     renderStatsPanel();
     renderMyBooksAdminSummary();
+    syncSelectedLevelWithUnlocked({ preferUnlocked: !state.userSelectedBookLevel });
     const bookLevel = uiLevelToBookLevel(state.selectedLevel);
-    const showAllBooks = isAllBooksLevel();
     const pendingBooks = state.createJobs
       .filter((job) => {
         if (!isCreateJobRunning(job)) return false;
-        if (showAllBooks) return true;
         if (isMyBooksLevel()) return false;
         return Boolean(bookLevel) && normalizeLevel(job?.book?.level) === bookLevel;
       })
@@ -4756,10 +4808,11 @@
     const books = getBooksForSelectedLevel({ pendingCount: pendingBooks.length });
     const cardsList = books.concat(pendingBooks);
     els.cardsGrid.innerHTML = '';
+    els.cardsGrid.hidden = cardsList.length <= 0;
     els.cardsEmpty.hidden = cardsList.length > 0;
     els.cardsEmpty.textContent = isMyBooksLevel()
       ? 'Nenhum MiniBook com melhor nota igual ou acima de 75% ainda.'
-      : 'Nenhum arquivo neste nivel.';
+      : 'sem livros aqui';
     if (!cardsList.length) {
       state.shelfIndex = 0;
       cancelShelfAnimation();
@@ -4941,7 +4994,7 @@
     if (parsed === UI_LEVEL_ALL_BOOKS) return 'AllBooks';
     const bookLevel = uiLevelToBookLevel(parsed);
     if (!bookLevel) return `Nivel ${parsed}`;
-    return BOOK_LEVEL_DISPLAY_NAMES[bookLevel] || `Nivel ${bookLevel}`;
+    return `${BOOK_LEVEL_DISPLAY_NAMES_100[bookLevel] || `Nivel ${bookLevel}`} ${bookLevel}/100`;
   }
 
   function renderLevelMenu() {
@@ -4952,19 +5005,19 @@
         els.levelMenu.hidden = true;
       }
       if (!IS_MYBOOKS_GRID_EMBED) {
-        els.levelMenu.hidden = !Boolean(state.isAdmin);
+        els.levelMenu.hidden = false;
       }
     }
     if (els.levelTitle) {
       els.levelTitle.textContent = `${getUiLevelDisplayName(state.selectedLevel)}`;
-      els.levelTitle.hidden = true;
+      els.levelTitle.hidden = false;
     }
     if (els.prevLevelBtn) {
-      els.prevLevelBtn.hidden = true;
+      els.prevLevelBtn.hidden = accessibleLevels.length <= 1;
       els.prevLevelBtn.disabled = currentIndex <= 0 || state.uploadInFlight;
     }
     if (els.nextLevelBtn) {
-      els.nextLevelBtn.hidden = true;
+      els.nextLevelBtn.hidden = accessibleLevels.length <= 1;
       els.nextLevelBtn.disabled = currentIndex < 0
         || currentIndex >= (accessibleLevels.length - 1)
         || state.uploadInFlight;
@@ -5003,6 +5056,7 @@
     const direction = nextIndex >= currentIndex ? 1 : -1;
     await animateLevelChangeTransition(direction);
     state.selectedLevel = normalizedLevel;
+    state.userSelectedBookLevel = true;
     state.shelfIndex = 0;
     if (isAllBooksLevel()) {
       state.allBooksWindowStart = 0;
@@ -6200,9 +6254,9 @@
     if (completionPayload?.stats) {
       setStatsState({ ...(state.stats || {}), ...(completionPayload.stats || {}) });
       renderStatsPanel();
-      if (isMyBooksLevel()) {
-        renderCards();
-      }
+      syncSelectedLevelWithUnlocked({ preferUnlocked: !state.userSelectedBookLevel });
+      renderLevelMenu();
+      renderCards();
     }
 
     const savedBookRead = Math.max(0, Number(completionPayload?.stats?.bookReadCount) || 0);
@@ -6265,9 +6319,9 @@
     if (completionPayload?.stats) {
       setStatsState({ ...(state.stats || {}), ...(completionPayload.stats || {}) });
       renderStatsPanel();
-      if (isMyBooksLevel()) {
-        renderCards();
-      }
+      syncSelectedLevelWithUnlocked({ preferUnlocked: !state.userSelectedBookLevel });
+      renderLevelMenu();
+      renderCards();
     }
 
     const savedBookRead = Math.max(0, Number(completionPayload?.stats?.bookReadCount) || 0);
@@ -7222,7 +7276,8 @@
       await refreshCreateJobs({ ignoreTransitions: true });
     }
 
-    const firstBook = getAllBooksFeed()[0] || state.books.slice().sort(sortByNome)[0];
+    syncSelectedLevelWithUnlocked({ preferUnlocked: !state.userSelectedBookLevel });
+    const firstBook = getBooksForSelectedLevel()[0] || state.books.slice().sort(sortByNome)[0];
     const firstCoverUrl = safeText(firstBook?.coverImageUrl);
     if (firstCoverUrl) {
       await preloadImageUrl(firstCoverUrl);

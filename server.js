@@ -1647,6 +1647,7 @@ const ensureMiniBookJsonTables = async () => {
         CREATE INDEX IF NOT EXISTS minibook_json_content_level_idx
         ON public.minibook_json_content (level, updated_at DESC)
       `);
+      await migrateMiniBookLevelsToHundredScale();
       await backfillMiniBookReadingStats();
       return true;
     })().catch((error) => {
@@ -6150,7 +6151,7 @@ function normalizeSpeakingStoryCardItem({ item, storyName = 'story', index = 0 }
 function normalizeSpeakingStoryLevel(value) {
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed)) return 1;
-  return Math.max(1, Math.min(10, parsed));
+  return Math.max(1, Math.min(100, parsed));
 }
 
 function normalizeSpeakingChallengeMode(value) {
@@ -6464,6 +6465,39 @@ async function backfillMiniBookReadingStats() {
            updated_at = updated_at
        WHERE book_id = $1`,
       [bookId, JSON.stringify(nextPayload)]
+    );
+  }
+}
+
+async function migrateMiniBookLevelsToHundredScale() {
+  if (!pool) return;
+  const result = await pool.query(`
+    SELECT book_id, level, payload
+    FROM public.minibook_json_content
+  `);
+  const rows = Array.isArray(result.rows) ? result.rows : [];
+  for (const row of rows) {
+    const bookId = normalizeMiniBookId(row?.book_id || '');
+    const payload = row?.payload && typeof row.payload === 'object' && !Array.isArray(row.payload)
+      ? row.payload
+      : {};
+    if (!bookId || Number(payload.levelScaleVersion) >= MINI_BOOK_LEVEL_SCALE_VERSION) continue;
+
+    const nextLevel = migrateMiniBookLegacyLevel(payload.nivel ?? payload.level ?? row.level);
+    const nextPayload = {
+      ...payload,
+      nivel: nextLevel,
+      level: nextLevel,
+      levelScaleVersion: MINI_BOOK_LEVEL_SCALE_VERSION
+    };
+
+    await pool.query(
+      `UPDATE public.minibook_json_content
+       SET level = $2,
+           payload = $3::jsonb,
+           updated_at = updated_at
+       WHERE book_id = $1`,
+      [bookId, nextLevel, JSON.stringify(nextPayload)]
     );
   }
 }
@@ -8670,17 +8704,27 @@ function normalizeMiniBookComparableText(value) {
     .trim();
 }
 
+const MINI_BOOK_LEVEL_SCALE_VERSION = 100;
+
+function migrateMiniBookLegacyLevel(value) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return 9;
+  if (parsed >= 1 && parsed <= 10) return (parsed * 10) - 1;
+  return normalizeSpeakingStoryLevel(parsed);
+}
+
 const MINI_BOOK_LEVEL_NAME_TO_VALUE = new Map([
-  ['iniciante', 1],
-  ['basico', 2],
-  ['aprendiz', 3],
-  ['estudante', 4],
-  ['leitor', 5],
-  ['intermediario', 6],
-  ['experiente', 7],
-  ['avancado', 8],
-  ['nativo', 9],
-  ['expert', 10]
+  ['iniciante', 9],
+  ['basico', 9],
+  ['aprendiz', 19],
+  ['estudante', 29],
+  ['leitor', 39],
+  ['intermediario', 49],
+  ['experiente', 59],
+  ['avancado', 69],
+  ['nativo', 79],
+  ['fluente', 89],
+  ['expert', 99]
 ]);
 
 function parseMiniBookLevelFromCreateLine(value) {
@@ -8724,7 +8768,7 @@ function parseMiniBookCreateLines(linesText) {
     throw error;
   }
   if (!level) {
-    const error = new Error('Linha 2 precisa de nivel valido (1-10 ou nome do nivel).');
+    const error = new Error('Linha 2 precisa de nivel valido (1-100 ou nome do nivel).');
     error.statusCode = 400;
     throw error;
   }
@@ -8822,7 +8866,7 @@ function parseMiniBookUpdateLines(linesText, options = {}) {
     throw error;
   }
   if (!level) {
-    const error = new Error('Linha 2 precisa de nivel valido (1-10 ou nome do nivel).');
+    const error = new Error('Linha 2 precisa de nivel valido (1-100 ou nome do nivel).');
     error.statusCode = 400;
     throw error;
   }
@@ -9157,6 +9201,8 @@ function buildMiniBookJsonPayloadFromCreateInput(createInput) {
     fileName: createInput.fileName,
     nome: createInput.title,
     nivel: createInput.level,
+    level: createInput.level,
+    levelScaleVersion: MINI_BOOK_LEVEL_SCALE_VERSION,
     tag: createInput.tag,
     prompts: {
       cover: createInput.coverPrompt,
@@ -9184,6 +9230,7 @@ function buildMiniBookJsonPayloadFromUpdatedInput(source, updateInput) {
     title: updateInput.title,
     nivel: updateInput.level,
     level: updateInput.level,
+    levelScaleVersion: MINI_BOOK_LEVEL_SCALE_VERSION,
     tag: updateInput.tag,
     prompts: {
       ...(sourcePayload.prompts && typeof sourcePayload.prompts === 'object' && !Array.isArray(sourcePayload.prompts)
@@ -12530,7 +12577,7 @@ app.get('/api/speaking/stories', async (_req, res) => {
       });
     });
 
-    const levels = Array.from({ length: 10 }, (_, index) => ({
+    const levels = Array.from({ length: 100 }, (_, index) => ({
       level: index + 1,
       count: books.filter((book) => book.nivel === (index + 1)).length
     }));
@@ -13370,7 +13417,9 @@ app.post('/api/admin/minibooks/save-json', express.json({ limit: '6mb' }), async
       bookId: parsedMiniBook.bookId,
       fileName: normalizeMiniBookText(parsedPayload.fileName, metadataSource.fileName),
       nome: normalizeMiniBookText(parsedPayload.nome || parsedPayload.title, metadataSource.title),
-      nivel: normalizeSpeakingStoryLevel(parsedPayload.nivel ?? parsedPayload.level ?? metadataSource.level)
+      nivel: normalizeSpeakingStoryLevel(parsedPayload.nivel ?? parsedPayload.level ?? metadataSource.level),
+      level: normalizeSpeakingStoryLevel(parsedPayload.nivel ?? parsedPayload.level ?? metadataSource.level),
+      levelScaleVersion: MINI_BOOK_LEVEL_SCALE_VERSION
     });
 
     await ensureMiniBookJsonTables();
@@ -13514,7 +13563,7 @@ app.post('/api/admin/minibooks/write-lines', express.json({ limit: '2mb' }), asy
       '',
       'Formatting constraints:',
       '- Line 1 will be title.',
-      '- Line 2 will be english level from 1 to 10.',
+      '- Line 2 will be english level from 1 to 100.',
       '- Line 3 must be lowercase slug separated by hyphen.',
       '- Line 4 cover prompt (about 250 chars).',
       '- Line 5 background prompt.',
@@ -14221,7 +14270,9 @@ app.post('/api/admin/minibooks/update-card', express.json({ limit: '2mb' }), asy
       bookId: source.bookId,
       fileName: normalizeMiniBookText(source.payload.fileName, source.fileName),
       nome: normalizeMiniBookText(source.payload.nome || source.payload.title, source.title),
-      nivel: normalizeSpeakingStoryLevel(source.payload.nivel ?? source.payload.level ?? source.level)
+      nivel: normalizeSpeakingStoryLevel(source.payload.nivel ?? source.payload.level ?? source.level),
+      level: normalizeSpeakingStoryLevel(source.payload.nivel ?? source.payload.level ?? source.level),
+      levelScaleVersion: MINI_BOOK_LEVEL_SCALE_VERSION
     });
 
     const parsedMiniBook = buildMiniBookStoriesFromJsonPayload(normalizedPayload, {
