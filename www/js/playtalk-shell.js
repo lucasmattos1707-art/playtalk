@@ -7,6 +7,7 @@
   const LOADER_STYLE_ID = 'playtalkGlobalLoaderStyles';
   const LOADER_BODY_CLASS = 'playtalk-loader-active';
   const LOADER_MIN_VISIBLE_MS = 4000;
+  const USERS_LOADER_MAX_VISIBLE_MS = 4000;
   const LOADER_TIPS = [
     ['UM VERBO EM USO', 'VALE MAIS QUE DEZ NA LISTA'],
     ['ERRO TAMBEM ENSINA', 'QUANDO VOCE CONTINUA'],
@@ -451,11 +452,12 @@
     startLoaderTips();
   }
 
-  function hideLoader(key) {
+  function hideLoader(key, options) {
     const normalizedKey = normalizeLoaderKey(key);
+    const nextOptions = options && typeof options === 'object' ? options : {};
     const shownAt = loaderState.shownAtByKey.get(normalizedKey) || 0;
     const elapsed = shownAt ? (Date.now() - shownAt) : LOADER_MIN_VISIBLE_MS;
-    const remaining = Math.max(0, LOADER_MIN_VISIBLE_MS - elapsed);
+    const remaining = nextOptions.force ? 0 : Math.max(0, LOADER_MIN_VISIBLE_MS - elapsed);
     clearHideTimer(normalizedKey);
     if (remaining > 0) {
       const timerId = window.setTimeout(() => {
@@ -493,6 +495,11 @@
     renderLoader();
   }
 
+  function forceHideUsersLoader() {
+    if (path !== '/users') return;
+    resetLoader();
+  }
+
   window.PlaytalkLoader = {
     ensure: ensureLoader,
     show: showLoader,
@@ -512,5 +519,8 @@
   startLoaderTips();
   if (loaderPages.has(path)) {
     showLoader('page-init', { message: 'Preparando sua jornada' });
+    if (path === '/users') {
+      window.setTimeout(forceHideUsersLoader, USERS_LOADER_MAX_VISIBLE_MS);
+    }
   }
 })();

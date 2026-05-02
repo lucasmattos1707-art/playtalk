@@ -1128,6 +1128,7 @@ const decorateFlashcardStats = (value, flashcardsCount = 0) => {
     playTimeMs: Math.max(0, Math.round(Number(value?.playTimeMs) || 0)),
     speakings: Math.max(0, Math.round(Number(value?.speakings) || 0)),
     listenings: Math.max(0, Math.round(Number(value?.listenings) || 0)),
+    readings: Math.max(0, Math.round(Number(value?.readings) || 0)),
     secondStarErrorHeard: Boolean(value?.secondStarErrorHeard || value?.second_star_error_heard),
     trainingTimeMs,
     pronunciationSamples,
@@ -1323,11 +1324,16 @@ const ensureFlashcardUserStateTables = async () => {
           play_time_ms bigint NOT NULL DEFAULT 0,
           speakings bigint NOT NULL DEFAULT 0,
           listenings bigint NOT NULL DEFAULT 0,
+          readings bigint NOT NULL DEFAULT 0,
           training_time_ms bigint NOT NULL DEFAULT 0,
           pronunciation_samples jsonb NOT NULL DEFAULT '[]'::jsonb,
           second_star_error_heard boolean NOT NULL DEFAULT false,
           updated_at timestamptz NOT NULL DEFAULT now()
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS readings bigint NOT NULL DEFAULT 0
       `);
       await pool.query(`
         ALTER TABLE public.user_flashcard_stats
@@ -1348,6 +1354,10 @@ const ensureFlashcardUserStateTables = async () => {
       await pool.query(`
         ALTER TABLE public.user_flashcard_stats
         ALTER COLUMN listenings TYPE bigint
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
+        ALTER COLUMN readings TYPE bigint
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.flashcards_accurate (
@@ -2766,16 +2776,53 @@ const ensureUsersAvatarColumn = async () => {
       `);
       await pool.query(`
         UPDATE public.users
-        SET level = LEAST(100, GREATEST(1, COALESCE(level, 1)))
+        SET level = LEAST(200, GREATEST(1, COALESCE(level, 1)))
+        WHERE level IS NULL
+           OR level < 1
+           OR level > 200
       `);
-      await pool.query(`
-        DO $$
-        BEGIN
-          ALTER TABLE public.users
-          ADD CONSTRAINT users_level_range_check CHECK (level BETWEEN 1 AND 100);
-        EXCEPTION WHEN duplicate_object THEN NULL;
-        END $$;
-      `);
+      try {
+        const levelConstraintResult = await pool.query(`
+          SELECT pg_get_constraintdef(c.oid) AS definition
+          FROM pg_constraint c
+          JOIN pg_class t ON t.oid = c.conrelid
+          JOIN pg_namespace n ON n.oid = t.relnamespace
+          WHERE n.nspname = 'public'
+            AND t.relname = 'users'
+            AND c.conname = 'users_level_range_check'
+          LIMIT 1
+        `);
+        const levelConstraintDefinition = String(levelConstraintResult.rows[0]?.definition || '').toLowerCase();
+        const levelConstraintReady = /level\s*>=\s*1/.test(levelConstraintDefinition)
+          && /level\s*<=\s*200/.test(levelConstraintDefinition);
+        if (!levelConstraintReady) {
+          const client = await pool.connect();
+          try {
+            await client.query('BEGIN');
+            await client.query(`SET LOCAL lock_timeout = '4000ms'`);
+            await client.query(`
+              ALTER TABLE public.users
+              DROP CONSTRAINT IF EXISTS users_level_range_check
+            `);
+            await client.query(`
+              ALTER TABLE public.users
+              ADD CONSTRAINT users_level_range_check CHECK (level BETWEEN 1 AND 200) NOT VALID
+            `);
+            await client.query(`
+              ALTER TABLE public.users
+              VALIDATE CONSTRAINT users_level_range_check
+            `);
+            await client.query('COMMIT');
+          } catch (constraintError) {
+            await client.query('ROLLBACK').catch(() => {});
+            console.warn('Nao foi possivel atualizar a constraint de nivel agora:', constraintError?.message || constraintError);
+          } finally {
+            client.release();
+          }
+        }
+      } catch (constraintCheckError) {
+        console.warn('Nao foi possivel verificar a constraint de nivel:', constraintCheckError?.message || constraintCheckError);
+      }
       await pool.query(`
         ALTER TABLE public.users
         ADD COLUMN IF NOT EXISTS is_bot boolean NOT NULL DEFAULT false
@@ -2848,7 +2895,7 @@ const mapPublicUser = (user) => ({
 function normalizeUserFlashcardLevel(value) {
   const parsed = Number.parseInt(String(value ?? '').trim(), 10);
   if (!Number.isInteger(parsed)) return 1;
-  return Math.max(1, Math.min(100, parsed));
+  return Math.max(1, Math.min(200, parsed));
 }
 
 function readNullableInteger(value) {
@@ -3616,7 +3663,7 @@ const readFlashcardStateForUser = async (userId) => {
       [normalizedUserId]
     ),
     pool.query(
-      `SELECT play_time_ms, speakings, listenings, training_time_ms, pronunciation_samples,
+      `SELECT play_time_ms, speakings, listenings, readings, training_time_ms, pronunciation_samples,
               second_star_error_heard, updated_at
        FROM public.user_flashcard_stats
        WHERE user_id = $1
@@ -3660,6 +3707,7 @@ const readFlashcardStateForUser = async (userId) => {
       playTimeMs: flashcardStatsRow.play_time_ms,
       speakings: flashcardStatsRow.speakings,
       listenings: flashcardStatsRow.listenings,
+      readings: flashcardStatsRow.readings,
       trainingTimeMs: flashcardStatsRow.training_time_ms,
       pronunciationSamples: accurateAggregate.pronunciationSamples,
       secondStarErrorHeard: flashcardStatsRow.second_star_error_heard
@@ -3718,7 +3766,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
 
     const userLevelResult = await client.query(
       `UPDATE public.users
-       SET level = GREATEST(level, $2)
+       SET level = $2
        WHERE id = $1
        RETURNING level`,
       [normalizedUserId, requestedUserLevel]
@@ -3726,7 +3774,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     persistedUserLevel = normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level ?? requestedUserLevel);
 
     const existingStatsResult = await client.query(
-      `SELECT training_time_ms, speakings, listenings
+      `SELECT training_time_ms, speakings, listenings, readings
        FROM public.user_flashcard_stats
        WHERE user_id = $1
        LIMIT 1`,
@@ -3754,6 +3802,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     const accurateLatest = accurateCount ? accurateSamples[accurateCount - 1] : 0;
     const existingSpeakings = Math.max(0, Number(existingStatsResult.rows[0]?.speakings) || 0);
     const existingListenings = Math.max(0, Number(existingStatsResult.rows[0]?.listenings) || 0);
+    const existingReadings = Math.max(0, Number(existingStatsResult.rows[0]?.readings) || 0);
     const persistedTrainingTimeMs = Math.max(
       existingTrainingTimeMs,
       Math.max(0, Number(stats.trainingTimeMs) || 0)
@@ -3766,12 +3815,17 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       existingListenings,
       Math.max(0, Number(stats.listenings) || 0)
     );
+    const persistedReadings = Math.max(
+      existingReadings,
+      Math.max(0, Number(stats.readings) || 0)
+    );
     const practiceSecondsDelta = Math.max(
       0,
       Math.floor((persistedTrainingTimeMs - existingTrainingTimeMs) / 1000)
     );
     const speakingCharsDelta = Math.max(0, persistedSpeakings - existingSpeakings);
     const listeningCharsDelta = Math.max(0, persistedListenings - existingListenings);
+    const readingCharsDelta = Math.max(0, persistedReadings - existingReadings);
 
     if (progress.length) {
       const cardIds = progress.map((item) => item.cardId);
@@ -3891,23 +3945,25 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
          play_time_ms,
          speakings,
          listenings,
+         readings,
          training_time_ms,
          pronunciation_samples,
          second_star_error_heard,
          updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, now())
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, now())
        ON CONFLICT (user_id)
        DO UPDATE SET
          play_time_ms = EXCLUDED.play_time_ms,
          speakings = GREATEST(public.user_flashcard_stats.speakings, EXCLUDED.speakings),
          listenings = GREATEST(public.user_flashcard_stats.listenings, EXCLUDED.listenings),
+         readings = GREATEST(public.user_flashcard_stats.readings, EXCLUDED.readings),
          training_time_ms = CASE
-           WHEN $8::boolean THEN EXCLUDED.training_time_ms
+           WHEN $9::boolean THEN EXCLUDED.training_time_ms
            ELSE public.user_flashcard_stats.training_time_ms
          END,
          pronunciation_samples = CASE
-           WHEN $8::boolean THEN EXCLUDED.pronunciation_samples
+           WHEN $9::boolean THEN EXCLUDED.pronunciation_samples
            ELSE public.user_flashcard_stats.pronunciation_samples
          END,
          second_star_error_heard = EXCLUDED.second_star_error_heard,
@@ -3917,6 +3973,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
         stats.playTimeMs,
         persistedSpeakings,
         persistedListenings,
+        persistedReadings,
         persistedTrainingTimeMs,
         JSON.stringify(accurateSamples),
         stats.secondStarErrorHeard,
@@ -3924,19 +3981,20 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       ]
     );
 
-    if (practiceSecondsDelta > 0 || speakingCharsDelta > 0 || listeningCharsDelta > 0) {
+    if (practiceSecondsDelta > 0 || readingCharsDelta > 0 || speakingCharsDelta > 0 || listeningCharsDelta > 0) {
       await ensureUserBooksConsumptionStatsTable();
       await client.query(
         `INSERT INTO public.user_books_consumption_stats (
            user_id, reading_chars, speaking_chars, listening_chars, practice_seconds, updated_at
-         ) VALUES ($1, 0, $2, $3, $4, now())
+         ) VALUES ($1, $2, $3, $4, $5, now())
          ON CONFLICT (user_id)
          DO UPDATE
-           SET speaking_chars = public.user_books_consumption_stats.speaking_chars + EXCLUDED.speaking_chars,
+           SET reading_chars = public.user_books_consumption_stats.reading_chars + EXCLUDED.reading_chars,
+               speaking_chars = public.user_books_consumption_stats.speaking_chars + EXCLUDED.speaking_chars,
                listening_chars = public.user_books_consumption_stats.listening_chars + EXCLUDED.listening_chars,
                practice_seconds = public.user_books_consumption_stats.practice_seconds + EXCLUDED.practice_seconds,
                updated_at = now()`,
-        [normalizedUserId, speakingCharsDelta, listeningCharsDelta, practiceSecondsDelta]
+        [normalizedUserId, readingCharsDelta, speakingCharsDelta, listeningCharsDelta, practiceSecondsDelta]
       );
       await updateUserPresenceClassProgress(client, normalizedUserId, {
         speakingCharsDelta,
@@ -10523,11 +10581,9 @@ app.post('/login', async (req, res) => {
       res.status(401).json({ success: false, message: 'Nome de usuario ou senha invalidos.' });
       return;
     }
-    try {
-      await syncFlashcardRankingFromProgressCount(user.id);
-    } catch (rankingError) {
+    syncFlashcardRankingFromProgressCount(user.id).catch((rankingError) => {
       console.error('Falha ao sincronizar ranking no login:', rankingError);
-    }
+    });
     if (!JWT_SECRET) {
       res.status(500).json({ success: false, message: 'JWT_SECRET nao configurado.' });
       return;
@@ -10635,11 +10691,9 @@ app.post('/api/books/home-auth', async (req, res) => {
       return;
     }
 
-    try {
-      await syncFlashcardRankingFromProgressCount(user.id);
-    } catch (rankingError) {
+    syncFlashcardRankingFromProgressCount(user.id).catch((rankingError) => {
       console.error('Falha ao sincronizar ranking no login da area books:', rankingError);
-    }
+    });
 
     const token = createAuthToken({ id: user.id, email: user.email });
     if (!token) {
@@ -10758,11 +10812,9 @@ app.post('/auth/google-quick', async (req, res) => {
     }
 
     const user = result.rows[0];
-    try {
-      await syncFlashcardRankingFromProgressCount(user.id);
-    } catch (rankingError) {
+    syncFlashcardRankingFromProgressCount(user.id).catch((rankingError) => {
       console.error('Falha ao sincronizar ranking no login rapido Google:', rankingError);
-    }
+    });
     const token = createAuthToken({ id: user.id, email: user.email });
     if (!token) {
       res.status(500).json({ success: false, message: 'JWT_SECRET nao configurado.' });

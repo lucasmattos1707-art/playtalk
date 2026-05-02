@@ -10,6 +10,8 @@
   const RANKING_CACHE_TTL_MS = 25000;
   const USERS_STAGE_SLIDE_MS = 320;
   const RANKING_ROTATE_MS = 3200;
+  const RANKING_IMAGE_READY_TIMEOUT_MS = 2500;
+  const USERS_INITIAL_LOADER_MAX_MS = 4000;
   const DEFAULT_PROFILE_AVATAR = '/Avatar/profile-neon-blue.svg';
 
   const RANKING_METRICS = [
@@ -97,7 +99,9 @@
     metricRotationIndex: 0,
     metricRotationPausedByUser: false,
     botBusy: false,
-    botSourceImageDataUrl: ''
+    botSourceImageDataUrl: '',
+    initialLoaderReleased: false,
+    initialLoaderTimer: 0
   };
 
   function buildApiUrl(path) {
@@ -174,14 +178,34 @@
     }
   }
 
-  function toggleGlobalLoader(key, active, message) {
+  function toggleGlobalLoader(key, active, message, options = {}) {
     const loader = window.PlaytalkLoader;
     if (!loader) return;
     if (active) {
       loader.show(key, { message });
       return;
     }
-    loader.hide(key);
+    loader.hide(key, options);
+  }
+
+  function releaseInitialUsersLoader() {
+    if (state.initialLoaderReleased) return;
+    state.initialLoaderReleased = true;
+    if (state.initialLoaderTimer) {
+      window.clearTimeout(state.initialLoaderTimer);
+      state.initialLoaderTimer = 0;
+    }
+    toggleGlobalLoader('page-init', false, '', { force: true });
+    for (let index = 1; index <= Math.max(1, Number(state.loadRequestId) || 1); index += 1) {
+      toggleGlobalLoader(`users-load-${index}`, false, '', { force: true });
+    }
+  }
+
+  function scheduleInitialUsersLoaderRelease() {
+    if (state.initialLoaderTimer || state.initialLoaderReleased) return;
+    state.initialLoaderTimer = window.setTimeout(() => {
+      releaseInitialUsersLoader();
+    }, USERS_INITIAL_LOADER_MAX_MS);
   }
 
   function setRankingLabel(label) {
@@ -211,6 +235,36 @@
     return new Promise((resolve) => {
       window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
     });
+  }
+
+  function waitForImageReady(image) {
+    return new Promise((resolve) => {
+      if (!(image instanceof HTMLImageElement)) {
+        resolve();
+        return;
+      }
+      if (image.complete) {
+        resolve();
+        return;
+      }
+      const finish = () => {
+        image.removeEventListener('load', finish);
+        image.removeEventListener('error', finish);
+        resolve();
+      };
+      image.addEventListener('load', finish, { once: true });
+      image.addEventListener('error', finish, { once: true });
+    });
+  }
+
+  async function waitForRankingImagesReady() {
+    const images = Array.from(document.querySelectorAll('.ranking-hero img, #usersList img'))
+      .filter((image) => image instanceof HTMLImageElement);
+    if (!images.length) return;
+    await Promise.race([
+      Promise.allSettled(images.map(waitForImageReady)),
+      wait(RANKING_IMAGE_READY_TIMEOUT_MS)
+    ]);
   }
 
   function cardTargetForLevel(level) {
@@ -832,7 +886,7 @@
     const rowMarkup = displayRows.map((entry) => `
       <div class="users-row${entry.isOnline ? ' is-online' : ''}${isAdminViewer() && entry.userId !== state.currentUser?.id ? ' is-admin-target' : ''}" data-user-id="${entry.userId}">
         <div class="users-avatar${entry.botAvatarStatus === 'processing' ? ' is-processing' : ''}">
-          <img src="${escapeHtml(entry.avatarImage || DEFAULT_PROFILE_AVATAR)}" alt="${escapeHtml(entry.username)}">
+          <img src="${escapeHtml(entry.avatarImage || DEFAULT_PROFILE_AVATAR)}" alt="${escapeHtml(entry.username)}" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_AVATAR}';">
           <span class="users-rank-badge">${escapeHtml(entry.rank || 0)}</span>
         </div>
         <div class="users-main">
@@ -1027,7 +1081,9 @@
       setUsersStatus(message);
     }
 
-    toggleGlobalLoader(loaderKey, true, 'Carregando ranking dos jogadores');
+    if (!state.initialLoaderReleased) {
+      toggleGlobalLoader(loaderKey, true, 'Carregando ranking dos jogadores');
+    }
     try {
       const data = await preloadMetric(metricKey, { force });
       if (requestId !== state.loadRequestId) return;
@@ -1050,8 +1106,10 @@
       if (animate && metricChanged) {
         await settleUsersStageSlide();
       }
+      await waitForRankingImagesReady();
+      releaseInitialUsersLoader();
     } finally {
-      toggleGlobalLoader(loaderKey, false);
+      toggleGlobalLoader(loaderKey, false, '', { force: true });
     }
   }
 
@@ -1340,6 +1398,7 @@
   }
 
   (async () => {
+    scheduleInitialUsersLoaderRelease();
     try {
       state.currentUser = await fetchSessionUser();
       syncAdminViewerUi();
@@ -1349,7 +1408,7 @@
         state.rankingCache.clear();
       }
       await loadUsers('', { metricKey: 'flashcards', force: true, animate: false });
-      toggleGlobalLoader('page-init', false);
+      releaseInitialUsersLoader();
       RANKING_METRICS.forEach((metric) => {
         if (metric.key !== 'flashcards') {
           void preloadMetric(metric.key);
@@ -1361,7 +1420,7 @@
       startBackgroundLoops();
       startRankingRotation();
     } finally {
-      toggleGlobalLoader('page-init', false);
+      toggleGlobalLoader('page-init', false, '', { force: true });
     }
   })();
 
