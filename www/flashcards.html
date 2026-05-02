@@ -689,48 +689,6 @@
       color: rgba(240, 249, 255, 0.9);
     }
 
-    .welcome-gate__mission-btn {
-      position: absolute;
-      right: 0;
-      bottom: 0;
-      transform: translate(22%, 8%);
-      width: 54px;
-      height: 54px;
-      display: grid;
-      place-items: center;
-      border-radius: 999px;
-      border: 1.5px solid rgba(84, 227, 255, 0.82);
-      background: radial-gradient(circle at 30% 30%, rgba(7, 62, 137, 0.96), rgba(2, 17, 45, 0.98));
-      box-shadow:
-        0 0 0 1px rgba(191, 245, 255, 0.12) inset,
-        0 0 16px rgba(21, 206, 255, 0.28),
-        0 10px 22px rgba(1, 8, 18, 0.26);
-      justify-self: auto;
-      align-self: auto;
-      padding: 0;
-      cursor: pointer;
-      transition: transform 180ms ease, box-shadow 180ms ease;
-    }
-
-    .welcome-gate__mission-btn svg {
-      width: 22px;
-      height: 22px;
-      display: block;
-      color: #63f3ff;
-      filter:
-        drop-shadow(0 0 7px rgba(62, 231, 255, 0.78))
-        drop-shadow(0 0 14px rgba(0, 126, 255, 0.42));
-    }
-
-    .welcome-gate__mission-btn:hover,
-    .welcome-gate__mission-btn:focus-visible {
-      transform: translate(22%, 8%) translateY(-1px) scale(1.04);
-      box-shadow:
-        0 0 0 1px rgba(191, 245, 255, 0.16) inset,
-        0 0 20px rgba(21, 206, 255, 0.34),
-        0 12px 24px rgba(1, 8, 18, 0.28);
-    }
-
     .welcome-gate__energy {
       width: 100%;
       min-height: 0;
@@ -854,65 +812,129 @@
       transform: translateY(10px);
     }
 
-    .welcome-gate__start-btn {
+    .welcome-gate__action-row {
+      width: min(92vw, 380px);
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      justify-items: center;
+      align-items: start;
+      gap: clamp(14px, 4vw, 24px);
+      margin: 4px auto 0;
+    }
+
+    .welcome-gate__action-btn {
+      --welcome-action-color: #ffffff;
+      --welcome-action-soft: rgba(255, 255, 255, 0.24);
+      --welcome-action-border: rgba(255, 255, 255, 0.58);
+      --welcome-action-glow: rgba(255, 255, 255, 0.42);
       position: relative;
-      width: min(72vw, 320px);
-      max-width: 320px;
-      min-height: 0;
-      height: auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      border-radius: 999px;
+      width: clamp(76px, 22vw, 104px);
+      min-width: 0;
+      border: 0;
       background: transparent;
       color: #ffffff;
-      overflow: hidden;
-      box-shadow: none;
-      margin: 0;
-        filter: none;
-      transition: transform 220ms ease;
-      justify-self: center;
-      align-self: start;
-      margin-top: 4px;
-      transform: none;
+      display: grid;
+      justify-items: center;
+      gap: 9px;
+      padding: 0;
+      cursor: pointer;
       transform-origin: center;
-      will-change: transform;
-      animation: none;
+      transition: transform 180ms ease, filter 180ms ease;
     }
 
-    .welcome-gate__start-btn img,
-    .welcome-gate__start-btn .welcome-gate__start-image {
-      width: 100%;
-      height: auto;
-      max-height: 100%;
-      max-width: 100%;
+    .welcome-gate__action-circle {
+      width: clamp(66px, 18vw, 88px);
+      height: clamp(66px, 18vw, 88px);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: #ffffff;
+      background:
+        radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.26), transparent 20%),
+        radial-gradient(circle, var(--welcome-action-soft), rgba(5, 12, 28, 0.92) 66%);
+      border: 1.5px solid var(--welcome-action-border);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+        inset 0 0 24px var(--welcome-action-soft),
+        0 0 22px var(--welcome-action-glow),
+        0 14px 28px rgba(1, 8, 18, 0.36);
+    }
+
+    .welcome-gate__action-btn svg {
+      width: clamp(32px, 8vw, 44px);
+      height: clamp(32px, 8vw, 44px);
       display: block;
-      object-fit: contain;
-      border-radius: inherit;
-      margin: 0;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter:
+        drop-shadow(0 0 7px rgba(255, 255, 255, 0.86))
+        drop-shadow(0 0 16px var(--welcome-action-glow));
     }
 
-    .welcome-gate__start-btn.is-energy-blocked {
+    .welcome-gate__action-label {
+      color: #ffffff;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(12px, 3.1vw, 15px);
+      font-weight: 900;
+      line-height: 1.08;
+      letter-spacing: 0.02em;
+      text-align: center;
+      text-shadow: 0 0 10px var(--welcome-action-glow), 0 3px 10px rgba(0, 0, 0, 0.48);
+    }
+
+    .welcome-gate__action-btn:hover,
+    .welcome-gate__action-btn:focus-visible {
+      transform: translateY(-2px) scale(1.035);
+      filter: brightness(1.06);
+    }
+
+    .welcome-gate__action-btn:active {
+      transform: scale(0.96);
+    }
+
+    .welcome-gate__action-btn--flashcards {
+      --welcome-action-color: #ff8a18;
+      --welcome-action-soft: rgba(255, 138, 24, 0.34);
+      --welcome-action-border: rgba(255, 171, 72, 0.82);
+      --welcome-action-glow: rgba(255, 138, 24, 0.62);
+    }
+
+    .welcome-gate__action-btn--mission {
+      --welcome-action-color: #ffe44d;
+      --welcome-action-soft: rgba(255, 228, 77, 0.36);
+      --welcome-action-border: rgba(255, 238, 104, 0.86);
+      --welcome-action-glow: rgba(255, 228, 77, 0.72);
+    }
+
+    .welcome-gate__action-btn--books {
+      --welcome-action-color: #165dff;
+      --welcome-action-soft: rgba(22, 93, 255, 0.36);
+      --welcome-action-border: rgba(75, 129, 255, 0.84);
+      --welcome-action-glow: rgba(22, 93, 255, 0.68);
+    }
+
+    .welcome-gate__start-btn.is-energy-blocked .welcome-gate__action-circle {
       filter: grayscale(1);
-    }
-
-    .welcome-gate__start-btn.is-energy-blocked img {
       opacity: 0.8;
     }
 
     .welcome-gate__start-timer {
       position: absolute;
-      inset: 0;
+      inset: 0 0 auto;
+      width: clamp(66px, 18vw, 88px);
+      height: clamp(66px, 18vw, 88px);
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      padding: 0 26px;
+      gap: 5px;
+      padding: 0 8px;
       color: #ffffff;
       font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
-      font-size: clamp(22px, 4.4vw, 32px);
-      letter-spacing: 0.08em;
+      font-size: clamp(11px, 2.7vw, 15px);
+      letter-spacing: 0.03em;
       text-shadow:
         0 2px 8px rgba(0, 0, 0, 0.7),
         0 0 18px rgba(0, 0, 0, 0.45);
@@ -924,8 +946,8 @@
     }
 
     .welcome-gate__start-timer-icon {
-      width: clamp(22px, 4.6vw, 34px);
-      height: clamp(22px, 4.6vw, 34px);
+      width: clamp(13px, 3.2vw, 18px);
+      height: clamp(13px, 3.2vw, 18px);
       object-fit: contain;
       filter: brightness(0) invert(1);
       flex: 0 0 auto;
@@ -938,9 +960,8 @@
 
     .welcome-gate__start-btn:hover,
     .welcome-gate__start-btn:focus-visible {
-      transform: scale(0.93);
-        filter: none;
-      }
+      transform: translateY(-2px) scale(1.035);
+    }
 
     .welcome-gate__account-link {
       border: 0;
@@ -8494,11 +8515,6 @@
         height: clamp(208px, 54vw, 268px);
       }
 
-      .welcome-gate__mission-btn {
-        width: 46px;
-        height: 46px;
-      }
-
       .welcome-gate__level-panel {
         width: 100%;
         min-height: 0;
@@ -8509,9 +8525,9 @@
         width: 100%;
       }
 
-      .welcome-gate__start-btn {
-        width: min(74vw, 320px);
-        max-width: 320px;
+      .welcome-gate__action-row {
+        width: min(94vw, 350px);
+        gap: 12px;
       }
 
       .premium-gate__grid {
@@ -8544,9 +8560,6 @@
               <div class="welcome-gate__avatar">
                 <img id="welcomeAvatarPreview" src="/Avatar/profile-neon-blue.svg" alt="Avatar do usuario">
               </div>
-              <button class="welcome-gate__mission-btn" id="welcomeMissionBtn" type="button" aria-label="Missão diária">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v1.06a7 7 0 1 1-6.94 6.94H5a1 1 0 1 1 0-2h3a1 1 0 0 1 1 1v2.44a1 1 0 1 1-2 0v-.55A5 5 0 1 0 12 7h-.5a1 1 0 1 1 0-2H17a1 1 0 1 1 0 2h-2.59l1.8 1.8a1 1 0 0 1-1.42 1.4L13 8.42V4a1 1 0 0 1 1-1z"/></svg>
-              </button>
             </div>
             <div class="welcome-gate__identity">
               <p class="welcome-gate__greeting" id="welcomeGreetingText">Boa noite</p>
@@ -8575,7 +8588,30 @@
             </span>
           </div>
         </div>
-        <button class="welcome-gate__start-btn" id="welcomeStartBtn" type="button"><img src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora"></button>
+        <div class="welcome-gate__action-row" aria-label="Acoes principais">
+          <button class="welcome-gate__action-btn welcome-gate__action-btn--flashcards welcome-gate__start-btn" id="welcomeStartBtn" type="button" aria-label="FlashCards">
+            <span class="welcome-gate__action-circle" aria-hidden="true">
+              <svg viewBox="0 0 64 64" focusable="false"><path d="M36 5 15 36h16l-4 23 22-35H34l2-19Z"></path></svg>
+            </span>
+            <span class="welcome-gate__action-label">FlashCards</span>
+            <span class="welcome-gate__start-timer" hidden>
+              <img class="welcome-gate__start-timer-icon" src="/SVG/codex-icons/relógio.svg" alt="" aria-hidden="true">
+              <span class="welcome-gate__start-timer-value">00:00:00</span>
+            </span>
+          </button>
+          <button class="welcome-gate__action-btn welcome-gate__action-btn--mission" id="welcomeMissionBtn" type="button" aria-label="Missão diária">
+            <span class="welcome-gate__action-circle" aria-hidden="true">
+              <svg viewBox="0 0 64 64" focusable="false"><path d="m32 6 7.6 15.4 17 2.5-12.3 12 2.9 16.9L32 44.8 16.8 52.8l2.9-16.9-12.3-12 17-2.5L32 6Z"></path></svg>
+            </span>
+            <span class="welcome-gate__action-label">Missão diária</span>
+          </button>
+          <button class="welcome-gate__action-btn welcome-gate__action-btn--books" id="welcomeBooksBtn" type="button" aria-label="MiniBooks">
+            <span class="welcome-gate__action-circle" aria-hidden="true">
+              <svg viewBox="0 0 64 64" focusable="false"><path d="M14 10h18a8 8 0 0 1 8 8v36H22a8 8 0 0 0-8 8V10Z"></path><path d="M40 18a8 8 0 0 1 8-8h4v44h-4a8 8 0 0 0-8 8V18Z"></path><path d="M23 24h9M23 35h9M48 24h4M48 35h4"></path></svg>
+            </span>
+            <span class="welcome-gate__action-label">MiniBooks</span>
+          </button>
+        </div>
         <div class="welcome-gate__energy" id="welcomeEnergy">
           <div class="welcome-gate__energy-value">
             <span class="welcome-gate__energy-icon" aria-hidden="true">
@@ -9689,6 +9725,7 @@
         welcomeTextModeBtn: document.getElementById('welcomeTextModeBtn'),
         welcomeHeader: document.getElementById('welcomeHeader'),
         welcomeMissionBtn: document.getElementById('welcomeMissionBtn'),
+        welcomeBooksBtn: document.getElementById('welcomeBooksBtn'),
         welcomeUserName: document.getElementById('welcomeUserName'),
         welcomeGreetingText: document.getElementById('welcomeGreetingText'),
         welcomeAvatarPreview: document.getElementById('welcomeAvatarPreview'),
@@ -12048,24 +12085,13 @@
 
       function syncWelcomeStartButton() {
         if (!els.welcomeStartBtn) return;
-        if (!els.welcomeStartBtn.querySelector('.welcome-gate__start-image')) {
-          els.welcomeStartBtn.innerHTML = [
-            '<img class="welcome-gate__start-image" src="/arquivos-codex/welcome-gate/button.png" alt="Jogar agora">',
-            '<span class="welcome-gate__start-timer" hidden>',
-            '<img class="welcome-gate__start-timer-icon" src="/SVG/codex-icons/relógio.svg" alt="" aria-hidden="true">',
-            '<span class="welcome-gate__start-timer-value">00:00:00</span>',
-            '</span>'
-          ].join('');
-        }
         const blockedByEnergy = Boolean(state.ui.welcomeEnergyBlocked);
         const blockedByManualNoEnergy = isManualNoEnergyBlocked();
         els.welcomeStartBtn.disabled = false;
         els.welcomeStartBtn.classList.toggle('is-energy-blocked', blockedByEnergy);
         els.welcomeStartBtn.style.opacity = blockedByManualNoEnergy ? '0.6' : (blockedByEnergy ? '0.8' : '1');
-        const image = els.welcomeStartBtn.querySelector('.welcome-gate__start-image');
         const timer = els.welcomeStartBtn.querySelector('.welcome-gate__start-timer');
         const timerValue = els.welcomeStartBtn.querySelector('.welcome-gate__start-timer-value');
-        if (image) image.style.opacity = blockedByManualNoEnergy ? '0.6' : (blockedByEnergy ? '0.8' : '1');
         if (timer) timer.hidden = !blockedByEnergy;
         if (timerValue) timerValue.textContent = formatWelcomeEnergyCountdown(state.ui.welcomeEnergyNextResetAt);
       }
@@ -13673,6 +13699,7 @@
           play: '/play',
           cards: '/allcards',
           users: '/users',
+          books: '/books',
           profile: '/account',
           premium: '/premium'
         };
@@ -13696,6 +13723,8 @@
             return `${nativeBaseUrl}/allcards`;
           case 'users':
             return `${nativeBaseUrl}/users`;
+          case 'books':
+            return `${nativeBaseUrl}/books`;
           case 'profile':
             return `${nativeBaseUrl}/account`;
           default:
@@ -21314,6 +21343,9 @@
         });
         els.welcomeMissionBtn?.addEventListener('click', () => {
           openDailyPlanModal();
+        });
+        els.welcomeBooksBtn?.addEventListener('click', () => {
+          window.location.href = resolveNativeRenderPageHref('books');
         });
         els.dailyPlanModal?.addEventListener('click', (event) => {
           if (event.target === els.dailyPlanModal) {
