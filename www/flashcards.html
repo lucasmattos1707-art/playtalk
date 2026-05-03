@@ -1411,6 +1411,7 @@
       height: auto;
       width: min(430px, 100%);
       max-width: calc(100vw - 42px);
+      margin-top: -5%;
       background: linear-gradient(180deg, rgba(10, 24, 56, 0.86), rgba(3, 9, 24, 0.88));
       border: 1px solid rgba(105, 190, 255, 0.32);
       border-radius: 34px;
@@ -1578,6 +1579,52 @@
     .daily-plan-modal__mission.is-books .daily-plan-modal__fill {
       background: linear-gradient(90deg, #18c8ff, #8deeff);
       box-shadow: 0 0 22px rgba(24, 200, 255, 0.72);
+    }
+
+    .daily-plan-modal__footer {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(116, 185, 255, 0.26);
+      display: grid;
+      gap: 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .daily-plan-modal__footer-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .daily-plan-modal__footer-metric {
+      font-family: "Orbitron", "Exo 2", sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .daily-plan-modal__footer-seal {
+      font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 0.01em;
+      color: #18c8ff;
+      text-shadow: 0 0 16px rgba(24, 200, 255, 0.35);
+    }
+
+    .daily-plan-modal__seal-progress {
+      margin-top: -8px;
+      text-align: center;
+      font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 0.01em;
+      color: #8deeff;
+      text-shadow: 0 0 18px rgba(24, 200, 255, 0.45);
     }
 
     @media (max-width: 380px) {
@@ -8913,7 +8960,15 @@
               <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill" id="dailyPlanBooksBar" style="--progress: 0%"></div></div>
             </div>
           </article>
+
+          <footer class="daily-plan-modal__footer" aria-label="Progresso do selo">
+            <div class="daily-plan-modal__footer-line">
+              <div class="daily-plan-modal__footer-metric" id="dailyPlanOverflowText">FlashCards 0% | MiniBooks 0%</div>
+              <div class="daily-plan-modal__footer-seal" id="dailyPlanSealText">Selo atual: -</div>
+            </div>
+          </footer>
         </section>
+        <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">Progresso do selo: 0%</div>
       </div>
     </div>
   </section>
@@ -9920,6 +9975,9 @@
         dailyPlanBooksDone: document.getElementById('dailyPlanBooksDone'),
         dailyPlanBooksTotal: document.getElementById('dailyPlanBooksTotal'),
         dailyPlanBooksBar: document.getElementById('dailyPlanBooksBar'),
+        dailyPlanOverflowText: document.getElementById('dailyPlanOverflowText'),
+        dailyPlanSealText: document.getElementById('dailyPlanSealText'),
+        dailyPlanSealProgressValue: document.getElementById('dailyPlanSealProgressValue'),
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeLogo: document.getElementById('welcomeLogo'),
         welcomeProfile: document.getElementById('welcomeProfile'),
@@ -14382,17 +14440,19 @@
         return `${normalized} ${normalized === 1 ? singular : plural}`;
       }
 
-      function setDailyPlanProgress(value, total, valueEl, totalEl, barEl) {
-        const max = Math.max(1, Number(total) || 1);
-        const normalized = Math.max(0, Math.min(max, Number(value) || 0));
+      function setDailyPlanProgress(value, expected, target, valueEl, totalEl, barEl) {
+        const done = Math.max(0, Number(value) || 0);
+        const normalizedTarget = Math.max(0, Number(target) || 0);
+        const normalizedExpected = Math.max(0, Number(expected) || 0);
         if (valueEl) {
-          valueEl.textContent = String(normalized);
+          valueEl.textContent = String(Math.round(done));
         }
         if (totalEl) {
-          totalEl.textContent = `/${Math.max(0, Number(total) || 0)}`;
+          totalEl.textContent = `/${normalizedTarget}`;
         }
         if (barEl) {
-          const percent = (normalized / max) * 100;
+          const rawPercent = normalizedExpected > 0 ? (done / normalizedExpected) * 100 : (done > 0 ? 100 : 0);
+          const percent = Math.max(0, Math.min(100, rawPercent));
           barEl.style.setProperty('--progress', `${percent.toFixed(2)}%`);
         }
       }
@@ -14416,14 +14476,40 @@
         const booksTarget = Math.max(0, Number(mission?.booksTarget) || 0);
         const cardsToday = Math.max(0, Number(mission?.cardsToday) || 0);
         const booksToday = Math.max(0, Number(mission?.booksToday) || 0);
+        const cardsExpected = Math.max(0, Number(mission?.cardsExpected) || 0);
+        const booksExpected = Math.max(0, Number(mission?.booksExpected) || 0);
+        const cardsPercent = Math.max(0, Number(mission?.cardsPercent) || 0);
+        const booksPercent = Math.max(0, Number(mission?.booksPercent) || 0);
         if (els.dailyPlanFlashcardsGoal) {
           els.dailyPlanFlashcardsGoal.textContent = formatDailyPlanGoalLabel(cardsTarget, 'FlashCard', 'FlashCards');
         }
         if (els.dailyPlanBooksGoal) {
           els.dailyPlanBooksGoal.textContent = formatDailyPlanGoalLabel(booksTarget, 'MiniBook', 'MiniBooks');
         }
-        setDailyPlanProgress(cardsToday, cardsTarget, els.dailyPlanFlashcardsDone, els.dailyPlanFlashcardsTotal, els.dailyPlanFlashcardsBar);
-        setDailyPlanProgress(booksToday, booksTarget, els.dailyPlanBooksDone, els.dailyPlanBooksTotal, els.dailyPlanBooksBar);
+        setDailyPlanProgress(cardsToday, cardsExpected, cardsTarget, els.dailyPlanFlashcardsDone, els.dailyPlanFlashcardsTotal, els.dailyPlanFlashcardsBar);
+        setDailyPlanProgress(booksToday, booksExpected, booksTarget, els.dailyPlanBooksDone, els.dailyPlanBooksTotal, els.dailyPlanBooksBar);
+
+        if (els.dailyPlanOverflowText) {
+          els.dailyPlanOverflowText.textContent = `FlashCards ${Math.round(cardsPercent)}% | MiniBooks ${Math.round(booksPercent)}%`;
+        }
+        if (els.dailyPlanSealText) {
+          const seal = mission?.seal || null;
+          const sealLabel = safeText(seal?.label);
+          const sealScoreAt120 = seal?.planScoreAt120 == null ? null : Math.max(0, Math.min(100, Math.round(Number(seal.planScoreAt120) || 0)));
+          els.dailyPlanSealText.textContent = sealLabel
+            ? `Selo atual: ${sealLabel}${sealScoreAt120 == null ? '' : ` ${sealScoreAt120}%`}`
+            : 'Selo atual: -';
+        }
+        if (els.dailyPlanSealProgressValue) {
+          const seal = mission?.seal || null;
+          const sealLabel = safeText(seal?.label);
+          const sealScoreAt120 = seal?.planScoreAt120 == null ? null : Math.max(0, Math.min(100, Math.round(Number(seal.planScoreAt120) || 0)));
+          const fallbackProgress = Math.max(0, Math.round(Number(mission?.weightedPercent) || 0));
+          const progressValue = sealScoreAt120 == null ? fallbackProgress : sealScoreAt120;
+          els.dailyPlanSealProgressValue.textContent = sealLabel
+            ? `Progresso do selo (${sealLabel}): ${progressValue}%`
+            : `Progresso do selo: ${progressValue}%`;
+        }
       }
 
       function openDailyPlanModal() {
