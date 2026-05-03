@@ -554,9 +554,9 @@
     .welcome-gate__xp-line {
       --welcome-level-line-color: #40ddff;
       width: min(320px, 78vw);
-      margin: clamp(8px, 1.2vh, 14px) auto 0;
+      margin: calc(clamp(8px, 1.2vh, 14px) + 10px) auto 0;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(15px, 3.5vw, 22px);
+      font-size: clamp(18px, 4.2vw, 26.4px);
       font-weight: 700;
       line-height: 1;
       color: var(--welcome-level-line-color);
@@ -564,6 +564,38 @@
       text-shadow:
         0 0 10px rgba(64, 221, 255, 0.56),
         0 0 22px rgba(51, 116, 255, 0.28);
+    }
+
+    .welcome-gate__energy-mini {
+      width: min(360px, 84vw);
+      margin: clamp(8px, 1.4vh, 14px) auto 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(18px, 4.2vw, 26.4px);
+      font-weight: 700;
+      line-height: 1;
+      color: rgba(57, 255, 20, 0.98);
+      text-shadow:
+        0 0 10px rgba(57, 255, 20, 0.62),
+        0 0 22px rgba(57, 255, 20, 0.28);
+    }
+
+    .welcome-gate__energy-mini-icon {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      filter: drop-shadow(0 0 10px rgba(57, 255, 20, 0.6));
+    }
+
+    .welcome-gate__energy-mini-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      fill: currentColor;
     }
 
     .welcome-gate__display-name {
@@ -590,8 +622,8 @@
 
     .welcome-gate__avatar {
       --welcome-avatar-progress: 0deg;
-      width: clamp(253px, 40.15vh, 378px);
-      height: clamp(253px, 40.15vh, 378px);
+      width: clamp(255.3px, 40.515vh, 381.44px);
+      height: clamp(255.3px, 40.515vh, 381.44px);
       border-radius: 50%;
       position: relative;
       display: grid;
@@ -619,8 +651,15 @@
       filter:
         drop-shadow(0 0 12px rgba(52, 207, 255, 0.64))
         drop-shadow(0 0 26px rgba(34, 126, 255, 0.38));
+      transform-origin: 50% 50%;
+      animation: welcomeAvatarRingSpin 10s linear infinite;
+      will-change: transform;
       transition: --welcome-avatar-progress 2500ms cubic-bezier(0.2, 0.78, 0.18, 1);
       pointer-events: none;
+    }
+
+    @keyframes welcomeAvatarRingSpin {
+      to { transform: rotate(360deg); }
     }
 
     .welcome-gate__avatar::after {
@@ -882,7 +921,7 @@
       justify-items: center;
       align-items: start;
       gap: clamp(8px, 2.6vw, 14px);
-      margin: 8vh auto 0;
+      margin: 11vh auto 0;
     }
 
     .welcome-gate__action-btn {
@@ -8676,8 +8715,8 @@
       }
 
       .welcome-gate__avatar {
-        width: clamp(209px, 55vw, 271px);
-        height: clamp(209px, 55vw, 271px);
+        width: clamp(210.9px, 55.5vw, 273.46px);
+        height: clamp(210.9px, 55.5vw, 273.46px);
       }
 
       .welcome-gate__level-panel {
@@ -8731,6 +8770,12 @@
               <p class="welcome-gate__user-level-line" id="welcomeUserLevelLine">Nível 1</p>
               <p class="welcome-gate__display-name" id="welcomeUserName">Jogador</p>
             </div>
+          </div>
+          <div class="welcome-gate__energy-mini" id="welcomeEnergyMini" aria-label="Energias atuais">
+            <span class="welcome-gate__energy-mini-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M13 2 5 14h5l-1 8 8-12h-5l1-8Z"/></svg>
+            </span>
+            <span class="welcome-gate__energy-mini-value" id="welcomeEnergyMiniValue">--</span>
           </div>
           <div class="welcome-gate__header" id="welcomeHeader">
             <button class="welcome-gate__hero-icon welcome-gate__hero-icon--action" id="welcomePlayingModeBtn" type="button" aria-label="Abrir modo Playing" hidden>
@@ -9880,6 +9925,8 @@
         welcomeGreetingText: document.getElementById('welcomeGreetingText'),
         welcomeUserLevelLine: document.getElementById('welcomeUserLevelLine'),
         welcomeXpLine: document.getElementById('welcomeXpLine'),
+        welcomeEnergyMini: document.getElementById('welcomeEnergyMini'),
+        welcomeEnergyMiniValue: document.getElementById('welcomeEnergyMiniValue'),
         welcomeAvatarPreview: document.getElementById('welcomeAvatarPreview'),
         welcomeUserLevel: document.getElementById('welcomeUserLevel'),
         welcomeLevelHeading: document.getElementById('welcomeLevelHeading'),
@@ -12319,6 +12366,9 @@
           if (els.welcomeEnergyValue) {
             els.welcomeEnergyValue.textContent = '--';
           }
+          if (els.welcomeEnergyMiniValue) {
+            els.welcomeEnergyMiniValue.textContent = '--';
+          }
           state.ui.welcomeEnergyReady = Boolean(state.entry.sessionResolved);
           syncWelcomeLoadingState();
           stopWelcomeEnergyCountdown();
@@ -12327,19 +12377,21 @@
         }
         const blocked = Boolean(status?.loggedIn && status?.blocked);
         const hasUnlimitedEnergy = Boolean(status?.premium || status?.unlimited);
-        const remaining = hasUnlimitedEnergy
-          ? '\u221e'
-          : Number.isFinite(Number(status?.remaining))
-            ? Math.max(0, Math.round(Number(status.remaining)))
-            : (
-              Number.isFinite(Number(status?.dailyEnergyLimit)) && Number.isFinite(Number(status?.usedToday))
-                ? Math.max(0, Math.round(Number(status.dailyEnergyLimit) - Number(status.usedToday)))
-                : Math.max(0, Number(window.PlaytalkEnergy?.DAILY_FREE_ENERGY) || 0)
-            );
+        const remainingNumber = Number.isFinite(Number(status?.remaining))
+          ? Math.max(0, Math.round(Number(status.remaining)))
+          : (
+            Number.isFinite(Number(status?.dailyEnergyLimit)) && Number.isFinite(Number(status?.usedToday))
+              ? Math.max(0, Math.round(Number(status.dailyEnergyLimit) - Number(status.usedToday)))
+              : Math.max(0, Number(window.PlaytalkEnergy?.DAILY_FREE_ENERGY) || 0)
+          );
+        const remainingLabel = hasUnlimitedEnergy ? 'FULL' : String(remainingNumber);
         state.ui.welcomeEnergyBlocked = blocked;
         state.ui.welcomeEnergyNextResetAt = blocked ? String(status?.nextResetAt || '') : '';
         if (els.welcomeEnergyValue) {
-          els.welcomeEnergyValue.textContent = String(remaining);
+          els.welcomeEnergyValue.textContent = remainingLabel;
+        }
+        if (els.welcomeEnergyMiniValue) {
+          els.welcomeEnergyMiniValue.textContent = remainingLabel;
         }
         state.ui.welcomeEnergyReady = true;
         syncWelcomeLoadingState();
