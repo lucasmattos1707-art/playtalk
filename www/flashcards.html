@@ -1417,43 +1417,6 @@
       filter: drop-shadow(0 0 18px rgba(24, 200, 255, 0.62));
     }
 
-    .daily-plan-modal__hero-subtitle {
-      margin-top: 8px;
-      color: #aab4c8;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: 16px;
-      line-height: 1.35;
-    }
-
-    .daily-plan-modal__date-card {
-      width: min(430px, 100%);
-      max-width: calc(100vw - 42px);
-      border-radius: 24px;
-      padding: 16px 18px;
-      background: rgba(255, 255, 255, 0.06);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.25);
-      display: grid;
-      gap: 10px;
-      font-family: "Orbitron", "Exo 2", sans-serif;
-    }
-
-    .daily-plan-modal__date-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      color: #dce5f5;
-      font-weight: 800;
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .daily-plan-modal__date-row strong {
-      color: #4ddcff;
-      font-size: 16px;
-    }
-
     .daily-plan-modal__card {
       position: relative;
       min-height: 0;
@@ -1643,13 +1606,6 @@
       text-shadow: 0 0 16px rgba(24, 200, 255, 0.45);
     }
 
-    .daily-plan-modal__mission h2 .daily-plan-modal__mission-verb {
-      display: inline;
-      color: #ffffff;
-      font-size: 24px;
-      text-shadow: none;
-    }
-
     .daily-plan-modal__mission.is-books h2 span {
       color: #40cfff;
       text-shadow: 0 0 16px rgba(24, 200, 255, 0.55);
@@ -1744,13 +1700,11 @@
       .daily-plan-modal__icon-ring { width: 62px; height: 62px; border-radius: 16px; }
       .daily-plan-modal__icon-ring svg { width: 34px; height: 34px; }
       .daily-plan-modal__mission h2 { font-size: 20px; }
-      .daily-plan-modal__mission h2 .daily-plan-modal__mission-verb { font-size: 20px; }
       .daily-plan-modal__mission h2 span { font-size: 25px; }
       .daily-plan-modal__hero-pre { font-size: 38px; }
       .daily-plan-modal__hero-main { font-size: 46px; }
       .daily-plan-modal__hero { gap: 12px; }
       .daily-plan-modal__hero-icon { width: 66px; height: 66px; font-size: 34px; border-radius: 18px; }
-      .daily-plan-modal__hero-subtitle { font-size: 14px; }
       .daily-plan-modal__general-progress { grid-template-columns: 62px 1fr 74px; }
       .daily-plan-modal__general-badge { width: 62px; height: 62px; font-size: 28px; border-radius: 18px; }
       .daily-plan-modal__general-percent { font-size: 32px; }
@@ -9052,18 +9006,6 @@
           <div>
             <div class="daily-plan-modal__hero-pre">MISSÃO</div>
             <div class="daily-plan-modal__hero-main">DIÁRIA</div>
-            <div class="daily-plan-modal__hero-subtitle">Seu treino de hoje. Consistencia que constroi fluencia.</div>
-          </div>
-        </section>
-
-        <section class="daily-plan-modal__date-card">
-          <div class="daily-plan-modal__date-row">
-            <span>Data</span>
-            <strong id="dailyPlanDateText">--</strong>
-          </div>
-          <div class="daily-plan-modal__date-row">
-            <span>Missao encerra em</span>
-            <strong id="dailyPlanEndsInText">--</strong>
           </div>
         </section>
 
@@ -9089,7 +9031,7 @@
               </svg>
             </div>
             <div>
-              <h2><span class="daily-plan-modal__mission-verb">Ganhar</span> <span id="dailyPlanFlashcardsGoal">0 FlashCards</span></h2>
+              <h2><span>FlashCards</span></h2>
               <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanFlashcardsDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanFlashcardsTotal">/0</span></div>
               <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill" id="dailyPlanFlashcardsBar" style="--progress: 0%"></div></div>
               <div class="daily-plan-modal__remaining" id="dailyPlanFlashcardsRemaining">Faltam 0 flashcards</div>
@@ -9106,7 +9048,7 @@
               </svg>
             </div>
             <div>
-              <h2><span class="daily-plan-modal__mission-verb">Ler</span> <span id="dailyPlanBooksGoal">0 MiniBooks</span></h2>
+              <h2><span>MiniBooks</span></h2>
               <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanBooksDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanBooksTotal">/0</span></div>
               <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill" id="dailyPlanBooksBar" style="--progress: 0%"></div></div>
               <div class="daily-plan-modal__remaining" id="dailyPlanBooksRemaining">Faltam 0 minibooks</div>
@@ -10113,20 +10055,16 @@
         dailyPlanModal: document.getElementById('dailyPlanModal'),
         dailyPlanUserAvatar: document.getElementById('dailyPlanUserAvatar'),
         dailyPlanUserLevel: document.getElementById('dailyPlanUserLevel'),
-        dailyPlanFlashcardsGoal: document.getElementById('dailyPlanFlashcardsGoal'),
         dailyPlanFlashcardsDone: document.getElementById('dailyPlanFlashcardsDone'),
         dailyPlanFlashcardsTotal: document.getElementById('dailyPlanFlashcardsTotal'),
         dailyPlanFlashcardsBar: document.getElementById('dailyPlanFlashcardsBar'),
         dailyPlanFlashcardsRemaining: document.getElementById('dailyPlanFlashcardsRemaining'),
         dailyPlanFlashcardsPercent: document.getElementById('dailyPlanFlashcardsPercent'),
-        dailyPlanBooksGoal: document.getElementById('dailyPlanBooksGoal'),
         dailyPlanBooksDone: document.getElementById('dailyPlanBooksDone'),
         dailyPlanBooksTotal: document.getElementById('dailyPlanBooksTotal'),
         dailyPlanBooksBar: document.getElementById('dailyPlanBooksBar'),
         dailyPlanBooksRemaining: document.getElementById('dailyPlanBooksRemaining'),
         dailyPlanBooksPercent: document.getElementById('dailyPlanBooksPercent'),
-        dailyPlanDateText: document.getElementById('dailyPlanDateText'),
-        dailyPlanEndsInText: document.getElementById('dailyPlanEndsInText'),
         dailyPlanGeneralPercent: document.getElementById('dailyPlanGeneralPercent'),
         dailyPlanGeneralMessage: document.getElementById('dailyPlanGeneralMessage'),
         dailyPlanGeneralRing: document.getElementById('dailyPlanGeneralRing'),
@@ -14589,30 +14527,6 @@
         return payload.mission || null;
       }
 
-      function formatDailyPlanGoalLabel(count, singular, plural) {
-        const normalized = Math.max(0, Number(count) || 0);
-        return `${normalized} ${normalized === 1 ? singular : plural}`;
-      }
-
-      function formatDailyMissionDateLabel() {
-        try {
-          return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long' }).format(new Date());
-        } catch (_error) {
-          return '--';
-        }
-      }
-
-      function formatDailyMissionEndsInLabel() {
-        const now = new Date();
-        const end = new Date(now);
-        end.setHours(23, 59, 59, 999);
-        const diffMs = Math.max(0, end.getTime() - now.getTime());
-        const totalMinutes = Math.floor(diffMs / 60000);
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        return `${hours}h ${String(minutes).padStart(2, '0')}m`;
-      }
-
       function resolveDailyPlanProgressMessage(percent) {
         const normalized = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
         if (normalized >= 100) return 'Missao completa! Voce bateu 100% hoje.';
@@ -14669,20 +14583,8 @@
           : ((cardsPercent + booksPercent) / 2);
         const overallPercentRounded = Math.max(0, Math.round(overallPercent));
         const overallPercentForVisual = Math.max(0, Math.min(100, overallPercent));
-        if (els.dailyPlanFlashcardsGoal) {
-          els.dailyPlanFlashcardsGoal.textContent = formatDailyPlanGoalLabel(cardsTarget, 'FlashCard', 'FlashCards');
-        }
-        if (els.dailyPlanBooksGoal) {
-          els.dailyPlanBooksGoal.textContent = formatDailyPlanGoalLabel(booksTarget, 'MiniBook', 'MiniBooks');
-        }
         setDailyPlanProgress(cardsToday, cardsExpected, cardsTarget, els.dailyPlanFlashcardsDone, els.dailyPlanFlashcardsTotal, els.dailyPlanFlashcardsBar);
         setDailyPlanProgress(booksToday, booksExpected, booksTarget, els.dailyPlanBooksDone, els.dailyPlanBooksTotal, els.dailyPlanBooksBar);
-        if (els.dailyPlanDateText) {
-          els.dailyPlanDateText.textContent = formatDailyMissionDateLabel();
-        }
-        if (els.dailyPlanEndsInText) {
-          els.dailyPlanEndsInText.textContent = formatDailyMissionEndsInLabel();
-        }
         if (els.dailyPlanGeneralPercent) {
           els.dailyPlanGeneralPercent.textContent = `${overallPercentRounded}%`;
         }
