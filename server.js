@@ -4017,19 +4017,28 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       [normalizedUserId]
     );
     const existingProgressResult = await client.query(
-      `SELECT card_id
+      `SELECT card_id, phase_index, target_phase_index, status, seal_image
        FROM public.user_flashcard_progress
        WHERE user_id = $1`,
       [normalizedUserId]
     );
-    const existingCardIds = new Set(
-      existingProgressResult.rows
-        .map((row) => typeof row?.card_id === 'string' ? row.card_id.trim() : '')
-        .filter(Boolean)
-    );
-    const cardsTodayDelta = progress.reduce((total, item) => (
-      item?.cardId && !existingCardIds.has(item.cardId) ? total + 1 : total
-    ), 0);
+    const existingProgressByCardId = new Map();
+    existingProgressResult.rows.forEach((row) => {
+      const mapped = mapStoredFlashcardProgressRow(row);
+      const cardId = String(mapped?.cardId || '').trim();
+      if (!cardId) return;
+      existingProgressByCardId.set(cardId, mapped);
+    });
+    const cardsTodayDelta = progress.reduce((total, item) => {
+      const cardId = String(item?.cardId || '').trim();
+      if (!cardId) return total;
+      const previous = existingProgressByCardId.get(cardId);
+      if (!previous) return total + 1;
+      const previousPhase = resolveFlashcardMissionPhase(previous);
+      const nextPhase = resolveFlashcardMissionPhase(item);
+      return nextPhase > previousPhase ? total + 1 : total;
+    }, 0);
+    const existingCardIds = new Set(existingProgressByCardId.keys());
     const shouldPersistPerformanceStats = progress.length > existingCardIds.size;
     const existingTrainingTimeMs = Math.max(0, Number(existingStatsResult.rows[0]?.training_time_ms) || 0);
     const accurateSamples = normalizeFlashcardPronunciationSamples(stats.pronunciationSamples);
@@ -10085,6 +10094,15 @@ function computeDailyMissionOverflowPercent(done, expected) {
 function computeDailyMissionWeightedUnits(cards, books) {
   return (Math.max(0, Number(cards) || 0) * DAILY_MISSION_FLASHCARD_WEIGHT)
     + (Math.max(0, Number(books) || 0) * DAILY_MISSION_SMARTBOOK_WEIGHT);
+}
+
+function resolveFlashcardMissionPhase(record) {
+  const phaseIndex = Math.max(0, Number(record?.phaseIndex) || 0);
+  const targetPhaseIndex = Math.max(0, Number(record?.targetPhaseIndex) || 0);
+  if (String(record?.status || '').trim().toLowerCase() === 'memorizing') {
+    return Math.max(phaseIndex, targetPhaseIndex);
+  }
+  return phaseIndex;
 }
 
 function normalizeFluencyPlanChoice(value, allowedValues) {
