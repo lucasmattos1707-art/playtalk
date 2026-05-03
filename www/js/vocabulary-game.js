@@ -4265,7 +4265,9 @@
     const percent = candidates.reduce((best, candidate) => (
       Math.max(best, calculateSpeechMatchPercent(expected, candidate))
     ), 0);
-    pronunciationSamples.push(percent);
+    if (Number(phase) === 1) {
+      pronunciationSamples.push(percent);
+    }
     if (percent < 50) {
       console.info('[speech-compare]', {
         expected,

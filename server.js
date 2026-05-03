@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
@@ -12381,8 +12381,11 @@ app.get('/api/users/flashcards', async (req, res) => {
              100,
              ROUND(
                CASE
-                 WHEN COALESCE(accurate.pronunciation_samples_count, 0) > 0
-                   THEN COALESCE(accurate.pronunciation_sum, 0)::numeric / accurate.pronunciation_samples_count::numeric
+                 WHEN (COALESCE(accurate.pronunciation_samples_count, 0) + COALESCE(books_speaking.pronunciation_samples_count, 0)) > 0
+                   THEN (
+                     (COALESCE(accurate.pronunciation_sum, 0)::numeric + COALESCE(books_speaking.pronunciation_sum, 0)::numeric)
+                     / (COALESCE(accurate.pronunciation_samples_count, 0)::numeric + COALESCE(books_speaking.pronunciation_samples_count, 0)::numeric)
+                   )
                  ELSE 0
                END
              )::int
@@ -12425,6 +12428,8 @@ app.get('/api/users/flashcards', async (req, res) => {
          ON stats.user_id = u.id
        LEFT JOIN public.flashcards_accurate accurate
          ON accurate.user_id = u.id
+       LEFT JOIN public.user_books_speaking_stats books_speaking
+         ON books_speaking.user_id = u.id
        LEFT JOIN public.user_presence presence
          ON presence.user_id = u.id
        LEFT JOIN public.user_ranking_overrides overrides
@@ -15843,15 +15848,19 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
       `SELECT
          COALESCE(ranking.flashcards_count, ranking.all_time_count, progress.ranking_total, 0) AS flashcards_count,
          COALESCE(progress.card_count, 0)::int AS progress_card_count,
-         COALESCE(accurate.pronunciation_samples_count, 0)::bigint AS pronunciation_samples_count,
+         COALESCE(accurate.pronunciation_samples_count, 0)::bigint AS flashcard_pronunciation_samples_count,
+         COALESCE(books_speaking.pronunciation_samples_count, 0)::bigint AS books_pronunciation_samples_count,
          GREATEST(
            0,
            LEAST(
              100,
              ROUND(
                CASE
-                 WHEN COALESCE(accurate.pronunciation_samples_count, 0) > 0
-                   THEN COALESCE(accurate.pronunciation_sum, 0)::numeric / accurate.pronunciation_samples_count::numeric
+                 WHEN (COALESCE(accurate.pronunciation_samples_count, 0) + COALESCE(books_speaking.pronunciation_samples_count, 0)) > 0
+                   THEN (
+                     (COALESCE(accurate.pronunciation_sum, 0)::numeric + COALESCE(books_speaking.pronunciation_sum, 0)::numeric)
+                     / (COALESCE(accurate.pronunciation_samples_count, 0)::numeric + COALESCE(books_speaking.pronunciation_samples_count, 0)::numeric)
+                   )
                  ELSE 0
                END
              )::int
@@ -15891,6 +15900,7 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
        ) ranking ON ranking.user_id = u.id
        LEFT JOIN public.user_flashcard_stats stats ON stats.user_id = u.id
        LEFT JOIN public.flashcards_accurate accurate ON accurate.user_id = u.id
+       LEFT JOIN public.user_books_speaking_stats books_speaking ON books_speaking.user_id = u.id
        WHERE u.id = $1
        LIMIT 1`,
       [userId]
@@ -19308,6 +19318,7 @@ if (require.main === module) {
 }
 
 module.exports = app;
+
 
 
 

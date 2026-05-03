@@ -114,10 +114,10 @@
       gap: 18px;
       padding: 24px 22px 12px;
       border-radius: 30px;
-      background: linear-gradient(180deg, rgba(9, 34, 70, 0.9), rgba(8, 23, 46, 0.74));
-      border: 1px solid rgba(145, 210, 255, 0.14);
-      box-shadow: 0 20px 44px rgba(2, 10, 20, 0.28);
-      backdrop-filter: blur(14px);
+      background: transparent;
+      border: 1px solid transparent;
+      box-shadow: none;
+      backdrop-filter: none;
     }
 
     .ranking-hero__copy {
@@ -125,6 +125,15 @@
       gap: 8px;
       justify-items: center;
       text-align: center;
+    }
+
+    .ranking-hero--minimal .ranking-hero__copy {
+      display: none !important;
+    }
+
+    .ranking-hero--minimal {
+      padding-top: 14px;
+      gap: 12px;
     }
 
     .ranking-title {
@@ -161,9 +170,9 @@
       align-content: center;
       border: 0;
       border-radius: 20px;
-      background: rgba(255, 255, 255, 0.04);
-      color: rgba(255, 255, 255, 0.72);
-      opacity: 0.6;
+      background: rgba(255, 255, 255, 0.02);
+      color: rgba(14, 55, 106, 0.6);
+      opacity: 1;
       transition: opacity 180ms ease, transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
       cursor: pointer;
     }
@@ -173,24 +182,48 @@
       height: 26px;
       display: block;
       object-fit: contain;
-      filter: brightness(0) invert(1);
+      opacity: 0.6;
+      filter: brightness(0) saturate(100%) invert(16%) sepia(41%) saturate(1702%) hue-rotate(190deg) brightness(91%) contrast(95%);
       pointer-events: none;
     }
 
     .ranking-metric span {
+      display: none;
       font-size: 11px;
       line-height: 1.15;
       font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
       text-align: center;
+      color: rgba(14, 55, 106, 0.6);
       pointer-events: none;
     }
 
     .ranking-metric.is-active {
       opacity: 1;
-      background: linear-gradient(180deg, rgba(29, 112, 255, 0.34), rgba(18, 63, 159, 0.2));
-      box-shadow: inset 0 0 0 1px rgba(144, 219, 255, 0.24);
+      background: linear-gradient(180deg, rgba(40, 132, 255, 0.24), rgba(14, 66, 184, 0.1));
+      box-shadow:
+        inset 0 0 0 1px rgba(128, 190, 255, 0.55),
+        0 0 18px rgba(56, 145, 255, 0.44);
+      color: #62b3ff;
+    }
+
+    .ranking-metric.is-active img {
+      opacity: 1;
+      filter:
+        brightness(0)
+        saturate(100%)
+        invert(58%)
+        sepia(90%)
+        saturate(1562%)
+        hue-rotate(191deg)
+        brightness(108%)
+        contrast(103%);
+    }
+
+    .ranking-metric.is-active span {
+      color: #4ce6ff;
+      text-shadow: 0 0 8px rgba(76, 230, 255, 0.46);
     }
 
     .ranking-metric:active {
@@ -199,8 +232,8 @@
 
     .panel {
       width: 100%;
-      padding: 30px 22px 22px;
-      border-radius: 0 0 var(--radius) var(--radius);
+      padding: 10px 4px 6px;
+      border-radius: 0;
       border: 0;
       background: transparent;
       box-shadow: none;
@@ -228,7 +261,7 @@
     .users-stage {
       display: grid;
       gap: 0;
-      transform: translateY(4vh);
+      transform: translateY(0);
       transition: transform 320ms ease, opacity 320ms ease, filter 320ms ease;
       will-change: transform, opacity, filter;
     }
@@ -974,7 +1007,7 @@
   <button type="button" class="users-bot-launch" id="usersBotLaunchBtn" aria-label="Criar bot">+</button>
 
   <main class="page">
-    <section class="ranking-hero" aria-label="Resumo do ranking">
+    <section class="ranking-hero ranking-hero--minimal" aria-label="Resumo do ranking">
       <div class="ranking-hero__copy">
         <h1 class="ranking-title" id="rankingTitle">Cards</h1>
         <p class="ranking-status" id="rankingStatus">Você está em 0º lugar.</p>
@@ -983,27 +1016,23 @@
       <div class="ranking-metrics" id="rankingMetrics" aria-label="Seletores do ranking">
         <button type="button" class="ranking-metric is-active" data-metric-key="flashcards" aria-label="Ranking de Cards">
           <img src="/svgnovo/cards.svg" alt="">
-          <span>Cards</span>
         </button>
         <button type="button" class="ranking-metric" data-metric-key="pronunciation" aria-label="Ranking de Pronuncia">
           <img src="/SVG/voice.svg" alt="">
-          <span>Pronuncia</span>
         </button>
         <button type="button" class="ranking-metric" data-metric-key="speed" aria-label="Ranking de Velocidade">
-          <img src="/SVG/speed.svg" alt="">
-          <span>Velocidade</span>
+          <img src="/SVG/codex-icons/lightning.svg" alt="">
         </button>
         <button type="button" class="ranking-metric" data-metric-key="level" aria-label="Ranking de Level">
           <img src="/svgnovo/cup.svg" alt="">
-          <span>Level</span>
         </button>
       </div>
+      <div class="users-stage" id="usersStage">
+        <section class="panel">
+          <section class="users-list" id="usersList" aria-live="polite"></section>
+        </section>
+      </div>
     </section>
-    <div class="users-stage" id="usersStage">
-      <section class="panel">
-        <section class="users-list" id="usersList" aria-live="polite"></section>
-      </section>
-    </div>
   </main>
 
   <div class="users-admin-modal" id="usersAdminModal" aria-modal="true" aria-hidden="true" role="dialog" aria-label="Gerenciar usuario" hidden>
