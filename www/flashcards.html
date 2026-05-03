@@ -516,14 +516,7 @@
     }
 
     .welcome-gate__greeting {
-      margin: 0 0 -10px;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(27px, 6.4vw, 42px);
-      font-weight: 700;
-      line-height: 0.98;
-      color: rgba(239, 250, 255, 0.98);
-      text-align: center;
-      text-shadow: none;
+      display: none !important;
     }
 
     .welcome-gate__user-level-line {
@@ -564,7 +557,7 @@
       margin: clamp(8px, 1.2vh, 14px) auto 0;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
       font-size: clamp(15px, 3.5vw, 22px);
-      font-weight: 300;
+      font-weight: 700;
       line-height: 1;
       color: var(--welcome-level-line-color);
       text-align: center;
@@ -597,8 +590,8 @@
 
     .welcome-gate__avatar {
       --welcome-avatar-progress: 0deg;
-      width: clamp(230px, 36.5vh, 344px);
-      height: clamp(230px, 36.5vh, 344px);
+      width: clamp(253px, 40.15vh, 378px);
+      height: clamp(253px, 40.15vh, 378px);
       border-radius: 50%;
       position: relative;
       display: grid;
@@ -640,9 +633,7 @@
       pointer-events: none;
     }
 
-    .welcome-gate__avatar.is-xp-animating img {
-      animation: welcomeAvatarXpFlash 2500ms ease-out;
-    }
+    .welcome-gate__avatar.is-xp-animating img { animation: none; }
 
     .welcome-gate__avatar-aura {
       display: none;
@@ -8685,8 +8676,8 @@
       }
 
       .welcome-gate__avatar {
-        width: clamp(190px, 50vw, 246px);
-        height: clamp(190px, 50vw, 246px);
+        width: clamp(209px, 55vw, 271px);
+        height: clamp(209px, 55vw, 271px);
       }
 
       .welcome-gate__level-panel {
@@ -8734,10 +8725,9 @@
               <div class="welcome-gate__avatar">
                 <img id="welcomeAvatarPreview" src="/Avatar/profile-neon-blue.svg" alt="Avatar do usuario">
               </div>
-              <p class="welcome-gate__xp-line" id="welcomeXpLine">XP: 0 DE 50</p>
+              <p class="welcome-gate__xp-line" id="welcomeXpLine">XP | 0 DE 50</p>
             </div>
             <div class="welcome-gate__identity">
-              <p class="welcome-gate__greeting" id="welcomeGreetingText">Boa noite</p>
               <p class="welcome-gate__user-level-line" id="welcomeUserLevelLine">Nível 1</p>
               <p class="welcome-gate__display-name" id="welcomeUserName">Jogador</p>
             </div>
@@ -9402,7 +9392,7 @@
       const ENERGY_LEVEL_PHASE_TWO_BASE_XP = 130;
       const ENERGY_LEVEL_PHASE_TWO_CURVE = 6909;
       const ENERGY_LEVEL_PHASE_TWO_SPAN = 119;
-      const ENERGY_XP_MULTIPLIER = 3;
+      const ENERGY_XP_MULTIPLIER = 1.5;
       const WELCOME_LEVEL_ANIMATION_MS = 2500;
       const SECOND_STAGE_BLOCK_TOTAL = 9;
       const SECOND_STAGE_BLOCKS_PER_ROW = 3;
@@ -11297,16 +11287,8 @@
           .join(' ');
       }
 
-      function resolveWelcomeGreeting() {
-        const now = new Date();
-        const hour = now.getHours();
-        if (hour >= 5 && hour < 12) return 'Bom dia';
-        if (hour >= 12 && hour < 16) return 'Boa tarde';
-        return 'Boa noite';
-      }
-
       function buildWelcomeGreetingLine() {
-        return resolveWelcomeGreeting();
+        return '';
       }
 
       function buildWelcomeDisplayName() {
@@ -12562,7 +12544,7 @@
           const currentXp = Math.max(0, Math.round(Number(xpProgress.currentXp) || 0));
           const nextRequired = Math.max(0, Math.round(Number(xpProgress.nextRequired) || 0));
           const xpTarget = nextRequired > 0 ? nextRequired : currentXp;
-          els.welcomeXpLine.textContent = `XP: ${currentXp} DE ${xpTarget}`;
+          els.welcomeXpLine.textContent = `XP | ${currentXp} DE ${xpTarget}`;
         }
         els.welcomeLevelProgressBar.style.setProperty('--welcome-level-progress-pct', `${percent.toFixed(2)}%`);
         if (els.welcomeLevelOrbit) {
@@ -14169,9 +14151,6 @@
           return;
         }
         const startedAt = performance.now();
-        avatar.classList.remove('is-xp-animating');
-        void avatar.offsetWidth;
-        avatar.classList.add('is-xp-animating');
         const step = (now) => {
           const progress = Math.max(0, Math.min(1, (now - startedAt) / WELCOME_LEVEL_ANIMATION_MS));
           const eased = 1 - Math.pow(1 - progress, 3);
@@ -14184,7 +14163,6 @@
           }
           state.ui.welcomeLevelAnimationFrame = 0;
           state.ui.welcomeLevelDisplayPercent = nextPercent;
-          window.setTimeout(() => avatar.classList.remove('is-xp-animating'), 80);
         };
         state.ui.welcomeLevelAnimationFrame = window.requestAnimationFrame(step);
       }
