@@ -208,6 +208,7 @@ let booksSpeakingStatsTablesReadyPromise = null;
 let userBooksLibraryStatsReadyPromise = null;
 let userBooksConsumptionStatsReadyPromise = null;
 let userDailyEnergyStatsReadyPromise = null;
+let userBooksEnergyXpStatsReadyPromise = null;
 let usersPresenceClassReadyPromise = null;
 let energySettingsReadyPromise = null;
 let welcomeModeSettingsReadyPromise = null;
@@ -1002,6 +1003,70 @@ const incrementDailyEnergyUsage = async (db, user, deltas = {}) => {
   const snapshot = buildDailyEnergySnapshot(user, result.rows[0] || {}, settings);
   await ensureAutoNoEnergyForSnapshot(db, user, snapshot);
   return snapshot;
+};
+
+const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = null) => {
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    return { xpDelta: 0, levelsAwarded: 0, totalXp: 0 };
+  }
+
+  const speakingCharsDelta = Math.max(0, Math.round(Number(deltas?.speakingCharsDelta) || 0));
+  const listeningCharsDelta = Math.max(0, Math.round(Number(deltas?.listeningCharsDelta) || 0));
+  if (!speakingCharsDelta && !listeningCharsDelta) {
+    return { xpDelta: 0, levelsAwarded: 0, totalXp: 0 };
+  }
+
+  await ensureUserBooksEnergyXpStatsTable();
+
+  const settings = buildEnergySettingsSnapshot(energySettings || {});
+  const xpDelta = applyEnergyCostMultiplier(
+    speakingCharsDelta + listeningCharsDelta,
+    settings.energyCostMultiplierMilli
+  );
+  if (xpDelta <= 0) {
+    return { xpDelta: 0, levelsAwarded: 0, totalXp: 0 };
+  }
+
+  const currentResult = await db.query(
+    `SELECT energy_xp_total
+     FROM public.user_books_energy_xp_stats
+     WHERE user_id = $1
+     FOR UPDATE`,
+    [normalizedUserId]
+  );
+  const currentTotalXp = Math.max(0, Number(currentResult.rows[0]?.energy_xp_total) || 0);
+  const nextTotalXp = currentTotalXp + xpDelta;
+  const previousLevelSteps = Math.floor(currentTotalXp / BOOKS_ENERGY_XP_PER_LEVEL);
+  const nextLevelSteps = Math.floor(nextTotalXp / BOOKS_ENERGY_XP_PER_LEVEL);
+  const levelsAwarded = Math.max(0, nextLevelSteps - previousLevelSteps);
+
+  await db.query(
+    `INSERT INTO public.user_books_energy_xp_stats (
+       user_id, energy_xp_total, updated_at
+     ) VALUES ($1, $2, now())
+     ON CONFLICT (user_id)
+     DO UPDATE SET
+       energy_xp_total = EXCLUDED.energy_xp_total,
+       updated_at = now()`,
+    [normalizedUserId, nextTotalXp]
+  );
+
+  if (levelsAwarded > 0) {
+    await db.query(
+      `UPDATE public.users
+       SET level = LEAST(200, GREATEST(1, COALESCE(level, 1) + $2)),
+           level_updated_at = now()
+       WHERE id = $1`,
+      [normalizedUserId, levelsAwarded]
+    );
+  }
+
+  return {
+    xpDelta,
+    levelsAwarded,
+    totalXp: nextTotalXp
+  };
 };
 
 const upsertUserBooksPronunciationSamples = async (client, userId, samplesInput) => {
@@ -1850,6 +1915,37 @@ const ensureUserDailyEnergyStatsTable = async () => {
   }
 
   return userDailyEnergyStatsReadyPromise;
+};
+
+const BOOKS_ENERGY_XP_PER_LEVEL = 1000;
+
+const ensureUserBooksEnergyXpStatsTable = async () => {
+  if (!pool) return false;
+
+  await ensureUsersAvatarColumn();
+
+  if (!userBooksEnergyXpStatsReadyPromise) {
+    userBooksEnergyXpStatsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_books_energy_xp_stats (
+          user_id integer PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+          energy_xp_total bigint NOT NULL DEFAULT 0,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_books_energy_xp_stats_updated_idx
+        ON public.user_books_energy_xp_stats (updated_at DESC)
+      `);
+      return true;
+    })().catch((error) => {
+      userBooksEnergyXpStatsReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return userBooksEnergyXpStatsReadyPromise;
 };
 
 const ensureUserDailyMissionStatsTable = async () => {
@@ -12918,6 +13014,7 @@ app.get('/api/books/stats', async (req, res) => {
     await ensureBooksSpeakingStatsTable();
     await ensureUserBooksConsumptionStatsTable();
     await ensureUserDailyEnergyStatsTable();
+    await ensureUserBooksEnergyXpStatsTable();
     await ensureEnergySettingsTable();
     await ensureUsersPresenceClassMetricStorage();
 
@@ -13087,6 +13184,13 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
         readingCharsDelta,
         speakingCharsDelta,
         listeningCharsDelta
+      });
+      await awardUserBooksEnergyXp(client, userId, {
+        speakingCharsDelta,
+        listeningCharsDelta
+      }, {
+        dailyFreeEnergyLimit: energySnapshot?.dailyEnergyLimit,
+        energyCostMultiplierMilli: energySnapshot?.energyCostMultiplierMilli
       });
       result = await client.query(
         `INSERT INTO public.user_books_consumption_stats (
