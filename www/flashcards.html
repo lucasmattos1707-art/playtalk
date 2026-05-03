@@ -1443,7 +1443,7 @@
 
     .daily-plan-modal__general-progress {
       display: grid;
-      grid-template-columns: 76px 1fr 86px;
+      grid-template-columns: 76px 1fr auto;
       gap: 14px;
       align-items: center;
       padding-bottom: 20px;
@@ -1510,6 +1510,20 @@
       color: #8deeff;
       font-weight: 900;
       font-size: 18px;
+    }
+
+    .daily-plan-modal__general-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-self: end;
+    }
+
+    .daily-plan-modal__current-seal {
+      width: 54px;
+      height: 54px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 10px rgba(24, 200, 255, 0.5));
     }
 
     .daily-plan-modal__card::before {
@@ -1725,12 +1739,13 @@
       .daily-plan-modal__hero-main { font-size: 46px; }
       .daily-plan-modal__hero { gap: 12px; }
       .daily-plan-modal__hero-icon { width: 66px; height: 66px; font-size: 34px; border-radius: 18px; }
-      .daily-plan-modal__general-progress { grid-template-columns: 62px 1fr 74px; }
+      .daily-plan-modal__general-progress { grid-template-columns: 62px 1fr auto; }
       .daily-plan-modal__general-badge { width: 62px; height: 62px; font-size: 28px; border-radius: 18px; }
       .daily-plan-modal__general-percent { font-size: 32px; }
       .daily-plan-modal__general-ring { width: 74px; height: 74px; }
       .daily-plan-modal__general-ring::before { width: 56px; height: 56px; }
       .daily-plan-modal__general-ring span { font-size: 15px; }
+      .daily-plan-modal__current-seal { width: 44px; height: 44px; }
       .daily-plan-modal__mini-ring { width: 58px; height: 58px; }
       .daily-plan-modal__mini-ring::before { width: 44px; height: 44px; }
       .daily-plan-modal__mini-ring span { font-size: 12px; }
@@ -9039,8 +9054,11 @@
               <div class="daily-plan-modal__general-percent" id="dailyPlanGeneralPercent">0%</div>
               <div class="daily-plan-modal__general-message" id="dailyPlanGeneralMessage">Bora comecar.</div>
             </div>
-            <div class="daily-plan-modal__general-ring" id="dailyPlanGeneralRing">
-              <span id="dailyPlanGeneralRingText">0%</span>
+            <div class="daily-plan-modal__general-right">
+              <div class="daily-plan-modal__general-ring" id="dailyPlanGeneralRing">
+                <span id="dailyPlanGeneralRingText">0%</span>
+              </div>
+              <img class="daily-plan-modal__current-seal" id="dailyPlanCurrentSealImage" src="medalhas/prata.png" alt="Selo atual">
             </div>
           </section>
 
@@ -9079,7 +9097,7 @@
         <div class="daily-plan-modal__overall-progress">
           <div class="daily-plan-modal__overall-bar"><div class="daily-plan-modal__overall-fill" id="dailyPlanOverallBar" style="--progress: 0%"></div></div>
         </div>
-        <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">Progresso do selo: 0%</div>
+        <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">Progresso do proximo selo: 0%</div>
       </div>
     </div>
   </section>
@@ -10091,6 +10109,7 @@
         dailyPlanGeneralMessage: document.getElementById('dailyPlanGeneralMessage'),
         dailyPlanGeneralRing: document.getElementById('dailyPlanGeneralRing'),
         dailyPlanGeneralRingText: document.getElementById('dailyPlanGeneralRingText'),
+        dailyPlanCurrentSealImage: document.getElementById('dailyPlanCurrentSealImage'),
         dailyPlanSealProgressValue: document.getElementById('dailyPlanSealProgressValue'),
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeLogo: document.getElementById('welcomeLogo'),
@@ -14559,6 +14578,36 @@
         return 'Comece agora: seu progresso sobe rapido.';
       }
 
+      const DAILY_PLAN_FLUENCY_SEALS = [
+        { key: 'prata', label: 'Prata', minScore: 40, sealImage: 'medalhas/prata.png' },
+        { key: 'quartz', label: 'Quartz', minScore: 50, sealImage: 'medalhas/quartz.png' },
+        { key: 'esmeralda', label: 'Esmeralda', minScore: 60, sealImage: 'medalhas/emerald.png' },
+        { key: 'platina', label: 'Platina', minScore: 70, sealImage: 'medalhas/platina.png' },
+        { key: 'ouro', label: 'Ouro', minScore: 80, sealImage: 'medalhas/ouro.png' },
+        { key: 'diamante', label: 'Diamante', minScore: 90, sealImage: 'medalhas/diamante.png' }
+      ];
+
+      function resolveDailyPlanSealByScore(score) {
+        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
+        let selected = null;
+        for (const seal of DAILY_PLAN_FLUENCY_SEALS) {
+          if (!seal) continue;
+          if (normalized >= seal.minScore) selected = seal;
+        }
+        return selected || DAILY_PLAN_FLUENCY_SEALS[0] || null;
+      }
+
+      function computeDailyPlanNextSealProgress(score) {
+        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
+        const nextSeal = DAILY_PLAN_FLUENCY_SEALS.find((seal) => normalized < seal.minScore) || null;
+        if (!nextSeal) return 100;
+        const currentIndex = DAILY_PLAN_FLUENCY_SEALS.findIndex((seal) => seal.key === nextSeal.key);
+        const previousMin = currentIndex > 0 ? DAILY_PLAN_FLUENCY_SEALS[currentIndex - 1].minScore : 0;
+        const span = Math.max(1, nextSeal.minScore - previousMin);
+        const progress = ((normalized - previousMin) / span) * 100;
+        return Math.max(0, Math.min(100, Math.round(progress)));
+      }
+
       function setDailyPlanProgress(value, expected, target, valueEl, totalEl, barEl) {
         const done = Math.max(0, Number(value) || 0);
         const normalizedTarget = Math.max(0, Number(target) || 0);
@@ -14642,15 +14691,21 @@
           const remaining = Math.max(0, booksTarget - Math.round(booksToday));
           els.dailyPlanBooksRemaining.textContent = `Faltam ${remaining} minibooks`;
         }
+        const seal = mission?.seal || null;
+        const sealScoreAt120 = seal?.planScoreAt120 == null ? null : Math.max(0, Math.min(100, Number(seal.planScoreAt120) || 0));
+        const fallbackScore = Math.max(0, Math.min(100, Number(seal?.planScore) || Number(mission?.weightedPercent) || 0));
+        const scoreForSealProgress = sealScoreAt120 == null ? fallbackScore : sealScoreAt120;
+        const currentSeal = resolveDailyPlanSealByScore(scoreForSealProgress);
+        const nextSealProgress = computeDailyPlanNextSealProgress(scoreForSealProgress);
+        if (els.dailyPlanCurrentSealImage) {
+          const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/prata.png';
+          els.dailyPlanCurrentSealImage.src = sealSrc;
+          els.dailyPlanCurrentSealImage.alt = safeText(currentSeal?.label)
+            ? `Selo atual: ${currentSeal.label}`
+            : 'Selo atual';
+        }
         if (els.dailyPlanSealProgressValue) {
-          const seal = mission?.seal || null;
-          const sealLabel = safeText(seal?.label);
-          const sealScoreAt120 = seal?.planScoreAt120 == null ? null : Math.max(0, Math.min(100, Math.round(Number(seal.planScoreAt120) || 0)));
-          const fallbackProgress = Math.max(0, Math.round(Number(mission?.weightedPercent) || 0));
-          const progressValue = sealScoreAt120 == null ? fallbackProgress : sealScoreAt120;
-          els.dailyPlanSealProgressValue.textContent = sealLabel
-            ? `Progresso do selo (${sealLabel}): ${progressValue}%`
-            : `Progresso do selo: ${progressValue}%`;
+          els.dailyPlanSealProgressValue.textContent = `Progresso do proximo selo: ${nextSealProgress}%`;
         }
       }
 
