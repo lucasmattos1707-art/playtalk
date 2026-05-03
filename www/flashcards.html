@@ -438,6 +438,12 @@
       display: none !important;
     }
 
+    #welcomeLevelHeading,
+    #welcomeUserLevelNumber,
+    #welcomeLevelTitle {
+      display: none !important;
+    }
+
     .welcome-gate__hero-icon {
       width: min(9vw, 34px);
       height: min(9vw, 34px);
@@ -550,6 +556,21 @@
 
     .welcome-gate__user-level-line::after {
       background: linear-gradient(90deg, rgba(64, 221, 255, 0.88), rgba(64, 221, 255, 0));
+    }
+
+    .welcome-gate__xp-line {
+      --welcome-level-line-color: #40ddff;
+      width: min(320px, 78vw);
+      margin: clamp(8px, 1.2vh, 14px) auto 0;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(15px, 3.5vw, 22px);
+      font-weight: 300;
+      line-height: 1;
+      color: var(--welcome-level-line-color);
+      text-align: center;
+      text-shadow:
+        0 0 10px rgba(64, 221, 255, 0.56),
+        0 0 22px rgba(51, 116, 255, 0.28);
     }
 
     .welcome-gate__display-name {
@@ -868,7 +889,7 @@
       justify-items: center;
       align-items: start;
       gap: clamp(8px, 2.6vw, 14px);
-      margin: 0 auto;
+      margin: 8vh auto 0;
     }
 
     .welcome-gate__action-btn {
@@ -8711,6 +8732,7 @@
               <div class="welcome-gate__avatar">
                 <img id="welcomeAvatarPreview" src="/Avatar/profile-neon-blue.svg" alt="Avatar do usuario">
               </div>
+              <p class="welcome-gate__xp-line" id="welcomeXpLine">XP: 0 DE 50</p>
             </div>
             <div class="welcome-gate__identity">
               <p class="welcome-gate__greeting" id="welcomeGreetingText">Boa noite</p>
@@ -9865,6 +9887,7 @@
         welcomeUserName: document.getElementById('welcomeUserName'),
         welcomeGreetingText: document.getElementById('welcomeGreetingText'),
         welcomeUserLevelLine: document.getElementById('welcomeUserLevelLine'),
+        welcomeXpLine: document.getElementById('welcomeXpLine'),
         welcomeAvatarPreview: document.getElementById('welcomeAvatarPreview'),
         welcomeUserLevel: document.getElementById('welcomeUserLevel'),
         welcomeLevelHeading: document.getElementById('welcomeLevelHeading'),
@@ -12532,6 +12555,12 @@
         }
         if (els.welcomeUserLevelLine) {
           els.welcomeUserLevelLine.textContent = `Nível ${level}`;
+        }
+        if (els.welcomeXpLine) {
+          const currentXp = Math.max(0, Math.round(Number(xpProgress.currentXp) || 0));
+          const nextRequired = Math.max(0, Math.round(Number(xpProgress.nextRequired) || 0));
+          const xpTarget = nextRequired > 0 ? nextRequired : currentXp;
+          els.welcomeXpLine.textContent = `XP: ${currentXp} DE ${xpTarget}`;
         }
         els.welcomeLevelProgressBar.style.setProperty('--welcome-level-progress-pct', `${percent.toFixed(2)}%`);
         if (els.welcomeLevelOrbit) {
@@ -17835,8 +17864,8 @@
         return Array.from(variants).filter(Boolean);
       }
 
-      const SPEECH_SEQUENCE_MIN_LENGTH = 3;
-      const SPEECH_SEQUENCE_HIT_THRESHOLD = 60;
+      const SPEECH_SEQUENCE_MIN_LENGTH = 2;
+      const SPEECH_SEQUENCE_HIT_THRESHOLD = 50;
 
       function normalizeSpeechSequenceText(value) {
         return String(value || '').replace(/[^a-z0-9]+/g, '');
@@ -18094,33 +18123,7 @@
       }
 
       function buildDeckFirstCardSelection(cards, limit) {
-        const normalizedLimit = Math.max(0, Number(limit) || 0);
-        const source = Array.isArray(cards) ? cards.filter(Boolean) : [];
-        if (!normalizedLimit || !source.length) return [];
-        const deckGroups = new Map();
-        source.forEach((card) => {
-          const key = cardDeckSelectionKey(card);
-          if (!deckGroups.has(key)) deckGroups.set(key, []);
-          deckGroups.get(key).push(card);
-        });
-        const deckKeys = shuffle(Array.from(deckGroups.keys()));
-        const selected = [];
-        const offsets = new Map(deckKeys.map((key) => [key, 0]));
-        while (selected.length < normalizedLimit) {
-          let pickedInPass = false;
-          for (const key of deckKeys) {
-            if (selected.length >= normalizedLimit) break;
-            const deckCards = deckGroups.get(key) || [];
-            const offset = offsets.get(key) || 0;
-            const card = deckCards[offset] || null;
-            if (!card) continue;
-            selected.push(card);
-            offsets.set(key, offset + 1);
-            pickedInPass = true;
-          }
-          if (!pickedInPass) break;
-        }
-        return selected;
+        return buildOrderedDeckSelection(cards, limit);
       }
 
       function buildLevelAwareRoundGroups(baseCards, reviewCards, limit) {
