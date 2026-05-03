@@ -1344,6 +1344,11 @@
         radial-gradient(circle at 10% 85%, rgba(0, 198, 255, 0.18), transparent 32%),
         linear-gradient(180deg, #030817 0%, #061129 52%, #020511 100%);
       isolation: isolate;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
+    .daily-plan-modal__panel * {
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
     }
 
     .daily-plan-modal__panel::before {
@@ -1396,7 +1401,6 @@
 
     .daily-plan-modal__hero-pre {
       color: #ffffff;
-      font-family: "Orbitron", "Exo 2", sans-serif;
       font-size: clamp(42px, 12vw, 64px);
       letter-spacing: 0.08em;
       font-weight: 900;
@@ -1405,7 +1409,6 @@
     }
 
     .daily-plan-modal__hero-main {
-      font-family: "Orbitron", "Exo 2", sans-serif;
       font-size: clamp(44px, 12vw, 66px);
       letter-spacing: 0.08em;
       font-weight: 900;
@@ -1467,11 +1470,9 @@
       font-weight: 900;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      font-family: "Orbitron", "Exo 2", sans-serif;
     }
 
     .daily-plan-modal__general-percent {
-      font-family: "Orbitron", "Exo 2", sans-serif;
       font-size: 38px;
       font-weight: 900;
       line-height: 1;
@@ -1507,7 +1508,6 @@
       position: relative;
       z-index: 1;
       color: #8deeff;
-      font-family: "Orbitron", "Exo 2", sans-serif;
       font-weight: 900;
       font-size: 18px;
     }
@@ -1570,11 +1570,8 @@
     .daily-plan-modal__icon-ring svg {
       width: 48px;
       height: 48px;
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 1.9;
-      stroke-linecap: round;
-      stroke-linejoin: round;
+      fill: currentColor;
+      stroke: none;
       filter:
         drop-shadow(0 0 8px currentColor)
         drop-shadow(0 0 18px currentColor);
@@ -1592,42 +1589,42 @@
 
     .daily-plan-modal__mission h2 {
       margin: 0;
-      font-size: 24px;
-      line-height: 1.02;
+      line-height: 1;
       font-weight: 900;
       letter-spacing: 0;
     }
 
     .daily-plan-modal__mission h2 span {
       display: block;
-      color: #18c8ff;
-      font-size: 30px;
-      margin-top: 4px;
-      text-shadow: 0 0 16px rgba(24, 200, 255, 0.45);
+      color: #8deeff;
+      font-size: 13px;
+      margin-top: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-shadow: none;
     }
 
     .daily-plan-modal__mission.is-books h2 span {
-      color: #40cfff;
-      text-shadow: 0 0 16px rgba(24, 200, 255, 0.55);
+      color: #8deeff;
+      text-shadow: none;
     }
 
     .daily-plan-modal__counter {
-      font-family: "Orbitron", "Exo 2", sans-serif;
-      font-size: 34px;
-      font-weight: 900;
+      font-size: 18px;
+      font-weight: 700;
       letter-spacing: 0;
       line-height: 1;
-      margin: 10px 0 12px;
+      margin: 8px 0 6px;
     }
 
     .daily-plan-modal__counter-done {
       color: #40cfff;
-      filter: drop-shadow(0 0 12px rgba(24, 200, 255, 0.65));
+      filter: none;
     }
 
     .daily-plan-modal__counter-total {
       color: rgba(255, 255, 255, 0.78);
-      font-size: 0.62em;
+      font-size: 1em;
     }
 
     .daily-plan-modal__bar {
@@ -1669,7 +1666,6 @@
     .daily-plan-modal__mini-ring span {
       position: relative;
       z-index: 1;
-      font-family: "Orbitron", "Exo 2", sans-serif;
       font-size: 14px;
       font-weight: 900;
       color: #8deeff;
@@ -1683,14 +1679,38 @@
     }
 
     .daily-plan-modal__seal-progress {
-      margin-top: -8px;
+      margin-top: 2px;
       text-align: center;
-      font-family: "PlaytalkDisplay", "TheBoldFont", "Soopafre", Arial, sans-serif;
-      font-size: 17px;
+      font-size: 15px;
       font-weight: 900;
       letter-spacing: 0.01em;
       color: #8deeff;
       text-shadow: 0 0 18px rgba(24, 200, 255, 0.45);
+    }
+
+    .daily-plan-modal__overall-progress {
+      width: min(430px, 100%);
+      max-width: calc(100vw - 42px);
+      margin-top: -14px;
+    }
+
+    .daily-plan-modal__overall-bar {
+      width: 100%;
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(115, 180, 255, 0.25);
+      overflow: hidden;
+      box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.45);
+    }
+
+    .daily-plan-modal__overall-fill {
+      height: 100%;
+      width: var(--progress, 0%);
+      border-radius: inherit;
+      background: linear-gradient(90deg, #18c8ff, #8deeff);
+      box-shadow: 0 0 22px rgba(24, 200, 255, 0.72);
+      transition: width 220ms ease;
     }
 
     @media (max-width: 380px) {
@@ -1699,8 +1719,8 @@
       .daily-plan-modal__mission { grid-template-columns: 72px 1fr 62px; gap: 10px; }
       .daily-plan-modal__icon-ring { width: 62px; height: 62px; border-radius: 16px; }
       .daily-plan-modal__icon-ring svg { width: 34px; height: 34px; }
-      .daily-plan-modal__mission h2 { font-size: 20px; }
-      .daily-plan-modal__mission h2 span { font-size: 25px; }
+      .daily-plan-modal__mission h2 { font-size: 13px; }
+      .daily-plan-modal__mission h2 span { font-size: 13px; }
       .daily-plan-modal__hero-pre { font-size: 38px; }
       .daily-plan-modal__hero-main { font-size: 46px; }
       .daily-plan-modal__hero { gap: 12px; }
@@ -1714,6 +1734,8 @@
       .daily-plan-modal__mini-ring { width: 58px; height: 58px; }
       .daily-plan-modal__mini-ring::before { width: 44px; height: 44px; }
       .daily-plan-modal__mini-ring span { font-size: 12px; }
+      .daily-plan-modal__counter { font-size: 16px; }
+      .daily-plan-modal__overall-bar { height: 16px; }
     }
 
     .welcome-gate__admin-stats {
@@ -9025,15 +9047,14 @@
           <article class="daily-plan-modal__mission">
             <div class="daily-plan-modal__icon-ring is-flashcards" aria-hidden="true">
               <svg viewBox="0 0 64 64" focusable="false">
-                <path d="M19 12h25a5 5 0 0 1 5 5v30a5 5 0 0 1-5 5H19a5 5 0 0 1-5-5V17a5 5 0 0 1 5-5Z"></path>
-                <path d="M23 22h18M23 32h12M23 42h16"></path>
-                <path d="m45 10 5 7-7 5"></path>
+                <rect x="16" y="16" width="32" height="38" rx="6" opacity="0.4"></rect>
+                <rect x="10" y="10" width="32" height="38" rx="6"></rect>
+                <circle cx="18" cy="18" r="3.2"></circle>
               </svg>
             </div>
             <div>
               <h2><span>FlashCards</span></h2>
               <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanFlashcardsDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanFlashcardsTotal">/0</span></div>
-              <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill" id="dailyPlanFlashcardsBar" style="--progress: 0%"></div></div>
               <div class="daily-plan-modal__remaining" id="dailyPlanFlashcardsRemaining">Faltam 0 flashcards</div>
             </div>
             <div class="daily-plan-modal__mini-ring" id="dailyPlanFlashcardsPercent"><span>0%</span></div>
@@ -9042,20 +9063,22 @@
           <article class="daily-plan-modal__mission is-books">
             <div class="daily-plan-modal__icon-ring is-purple" aria-hidden="true">
               <svg viewBox="0 0 64 64" focusable="false">
-                <path d="M15 13h16a8 8 0 0 1 8 8v30H23a8 8 0 0 0-8 8V13Z"></path>
-                <path d="M39 21a8 8 0 0 1 8-8h2v38h-2a8 8 0 0 0-8 8V21Z"></path>
-                <path d="M23 24h8M23 34h8M47 24h2M47 34h2"></path>
+                <rect x="8" y="10" width="22" height="44" rx="6"></rect>
+                <rect x="34" y="10" width="22" height="44" rx="6" opacity="0.85"></rect>
+                <rect x="30" y="10" width="4" height="44" opacity="0.45"></rect>
               </svg>
             </div>
             <div>
               <h2><span>MiniBooks</span></h2>
               <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanBooksDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanBooksTotal">/0</span></div>
-              <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill" id="dailyPlanBooksBar" style="--progress: 0%"></div></div>
               <div class="daily-plan-modal__remaining" id="dailyPlanBooksRemaining">Faltam 0 minibooks</div>
             </div>
             <div class="daily-plan-modal__mini-ring" id="dailyPlanBooksPercent"><span>0%</span></div>
           </article>
         </section>
+        <div class="daily-plan-modal__overall-progress">
+          <div class="daily-plan-modal__overall-bar"><div class="daily-plan-modal__overall-fill" id="dailyPlanOverallBar" style="--progress: 0%"></div></div>
+        </div>
         <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">Progresso do selo: 0%</div>
       </div>
     </div>
@@ -10057,14 +10080,13 @@
         dailyPlanUserLevel: document.getElementById('dailyPlanUserLevel'),
         dailyPlanFlashcardsDone: document.getElementById('dailyPlanFlashcardsDone'),
         dailyPlanFlashcardsTotal: document.getElementById('dailyPlanFlashcardsTotal'),
-        dailyPlanFlashcardsBar: document.getElementById('dailyPlanFlashcardsBar'),
         dailyPlanFlashcardsRemaining: document.getElementById('dailyPlanFlashcardsRemaining'),
         dailyPlanFlashcardsPercent: document.getElementById('dailyPlanFlashcardsPercent'),
         dailyPlanBooksDone: document.getElementById('dailyPlanBooksDone'),
         dailyPlanBooksTotal: document.getElementById('dailyPlanBooksTotal'),
-        dailyPlanBooksBar: document.getElementById('dailyPlanBooksBar'),
         dailyPlanBooksRemaining: document.getElementById('dailyPlanBooksRemaining'),
         dailyPlanBooksPercent: document.getElementById('dailyPlanBooksPercent'),
+        dailyPlanOverallBar: document.getElementById('dailyPlanOverallBar'),
         dailyPlanGeneralPercent: document.getElementById('dailyPlanGeneralPercent'),
         dailyPlanGeneralMessage: document.getElementById('dailyPlanGeneralMessage'),
         dailyPlanGeneralRing: document.getElementById('dailyPlanGeneralRing'),
@@ -14583,8 +14605,8 @@
           : ((cardsPercent + booksPercent) / 2);
         const overallPercentRounded = Math.max(0, Math.round(overallPercent));
         const overallPercentForVisual = Math.max(0, Math.min(100, overallPercent));
-        setDailyPlanProgress(cardsToday, cardsExpected, cardsTarget, els.dailyPlanFlashcardsDone, els.dailyPlanFlashcardsTotal, els.dailyPlanFlashcardsBar);
-        setDailyPlanProgress(booksToday, booksExpected, booksTarget, els.dailyPlanBooksDone, els.dailyPlanBooksTotal, els.dailyPlanBooksBar);
+        setDailyPlanProgress(cardsToday, cardsExpected, cardsTarget, els.dailyPlanFlashcardsDone, els.dailyPlanFlashcardsTotal, null);
+        setDailyPlanProgress(booksToday, booksExpected, booksTarget, els.dailyPlanBooksDone, els.dailyPlanBooksTotal, null);
         if (els.dailyPlanGeneralPercent) {
           els.dailyPlanGeneralPercent.textContent = `${overallPercentRounded}%`;
         }
@@ -14596,6 +14618,9 @@
         }
         if (els.dailyPlanGeneralMessage) {
           els.dailyPlanGeneralMessage.textContent = resolveDailyPlanProgressMessage(overallPercentForVisual);
+        }
+        if (els.dailyPlanOverallBar) {
+          els.dailyPlanOverallBar.style.setProperty('--progress', `${overallPercentForVisual.toFixed(2)}%`);
         }
         if (els.dailyPlanFlashcardsPercent) {
           const visual = Math.max(0, Math.min(100, cardsPercent));
