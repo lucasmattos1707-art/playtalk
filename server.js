@@ -2076,8 +2076,32 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
   const progress = await readUserDailyMissionProgress(db, user.id);
   const cardsTarget = Math.max(0, Number(targets.cardsTarget) || 0);
   const booksTarget = Math.max(0, Number(targets.booksTarget) || 0);
+  const cardsExpected = Math.max(0, Number(targets.cardsExpected) || 0);
+  const booksExpected = Math.max(0, Number(targets.booksExpected) || 0);
   const cardsToday = Math.max(0, Number(progress.cardsToday) || 0);
   const booksToday = Math.max(0, Number(progress.booksToday) || 0);
+
+  const cardsPercent = computeDailyMissionOverflowPercent(cardsToday, cardsExpected);
+  const booksPercent = computeDailyMissionOverflowPercent(booksToday, booksExpected);
+  const weightedExpectedUnits = computeDailyMissionWeightedUnits(cardsExpected, booksExpected);
+  const weightedDoneUnits = computeDailyMissionWeightedUnits(cardsToday, booksToday);
+  const weightedPercent = computeDailyMissionOverflowPercent(weightedDoneUnits, weightedExpectedUnits);
+
+  const fluencyPlanSnapshot = calculateFluencyPlanScoreSnapshot({
+    minutes: readNullableInteger(user?.fluency_plan_minutes),
+    months: readNullableInteger(user?.fluency_plan_months),
+    application: readNullableInteger(user?.fluency_plan_application),
+    flashcardsPercentage: readNullableInteger(user?.fluency_plan_flashcards_percentage),
+    smartbooksPercentage: readNullableInteger(user?.fluency_plan_smartbooks_percentage)
+  });
+  const fluencyPlanAt120Snapshot = calculateFluencyPlanScoreSnapshot({
+    minutes: 120,
+    months: readNullableInteger(user?.fluency_plan_months),
+    application: readNullableInteger(user?.fluency_plan_application),
+    flashcardsPercentage: readNullableInteger(user?.fluency_plan_flashcards_percentage),
+    smartbooksPercentage: readNullableInteger(user?.fluency_plan_smartbooks_percentage)
+  });
+  const sealTarget = fluencyPlanSnapshot?.score != null ? resolveFluencySealForScore(fluencyPlanSnapshot.score) : null;
 
   return {
     dayKey: progress.dayKey,
@@ -2085,12 +2109,27 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
     minutes: Math.max(0, Number(targets.minutes) || 0),
     flashcardsPercentage: Math.max(0, Number(targets.flashcardsPercentage) || 0),
     smartbooksPercentage: Math.max(0, Number(targets.smartbooksPercentage) || 0),
+    cardsExpected,
+    booksExpected,
     cardsTarget,
     booksTarget,
     cardsToday,
     booksToday,
     cardsRemaining: Math.max(0, cardsTarget - cardsToday),
-    booksRemaining: Math.max(0, booksTarget - booksToday)
+    booksRemaining: Math.max(0, booksTarget - booksToday),
+    cardsPercent,
+    booksPercent,
+    weightedPercent,
+    seal: sealTarget
+      ? {
+          ...sealTarget,
+          planScore: Math.max(0, Math.min(100, Math.round(Number(fluencyPlanSnapshot?.score) || 0))),
+          // "X%" do selo ignorando minutos/dia: plano elevado a 120 minutos.
+          planScoreAt120: fluencyPlanAt120Snapshot?.score == null
+            ? null
+            : Math.max(0, Math.min(100, Math.round(Number(fluencyPlanAt120Snapshot?.score) || 0)))
+        }
+      : null
   };
 };
 
@@ -10012,6 +10051,41 @@ const FLUENCY_PLAN_ALLOWED_BOOKS = new Set([0, 1]);
 const FLUENCY_PLAN_ALLOWED_PERCENTAGES = new Set(Array.from({ length: 21 }, (_, index) => index * 5));
 const DAILY_MISSION_FLASHCARD_MINUTES_PER_CARD = 1;
 const DAILY_MISSION_SMARTBOOK_MINUTES_PER_BOOK = 3;
+const DAILY_MISSION_FLASHCARD_WEIGHT = 1;
+const DAILY_MISSION_SMARTBOOK_WEIGHT = 2;
+
+const FLUENCY_SEAL_CONFIG = [
+  { key: 'prata', label: 'Prata', minScore: 40, sealImage: 'medalhas/prata.png' },
+  { key: 'quartz', label: 'Quartz', minScore: 50, sealImage: 'medalhas/quartz.png' },
+  { key: 'esmeralda', label: 'Esmeralda', minScore: 60, sealImage: 'medalhas/emerald.png' },
+  { key: 'platina', label: 'Platina', minScore: 70, sealImage: 'medalhas/platina.png' },
+  { key: 'ouro', label: 'Ouro', minScore: 80, sealImage: 'medalhas/ouro.png' },
+  { key: 'diamante', label: 'Diamante', minScore: 90, sealImage: 'medalhas/diamante.png' }
+];
+
+function resolveFluencySealForScore(score) {
+  const normalized = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
+  let selected = FLUENCY_SEAL_CONFIG[0] || null;
+  for (const seal of FLUENCY_SEAL_CONFIG) {
+    if (!seal) continue;
+    if (normalized >= seal.minScore) selected = seal;
+  }
+  return selected;
+}
+
+function computeDailyMissionOverflowPercent(done, expected) {
+  const normalizedDone = Math.max(0, Number(done) || 0);
+  const normalizedExpected = Math.max(0, Number(expected) || 0);
+  if (!normalizedExpected) {
+    return normalizedDone > 0 ? 100 : 0;
+  }
+  return Math.max(0, (normalizedDone / normalizedExpected) * 100);
+}
+
+function computeDailyMissionWeightedUnits(cards, books) {
+  return (Math.max(0, Number(cards) || 0) * DAILY_MISSION_FLASHCARD_WEIGHT)
+    + (Math.max(0, Number(books) || 0) * DAILY_MISSION_SMARTBOOK_WEIGHT);
+}
 
 function normalizeFluencyPlanChoice(value, allowedValues) {
   const parsed = Number.parseInt(String(value ?? '').trim(), 10);
@@ -10097,6 +10171,8 @@ function calculateDailyMissionTargetSnapshot(user) {
       minutes: minutes || 0,
       flashcardsPercentage: flashcardsPercentage || 0,
       smartbooksPercentage: smartbooksPercentage || 0,
+      cardsExpected: 0,
+      booksExpected: 0,
       cardsTarget: 0,
       booksTarget: 0
     };
@@ -10104,18 +10180,23 @@ function calculateDailyMissionTargetSnapshot(user) {
 
   const flashcardsMinutes = minutes * (flashcardsPercentage / 100);
   const smartbooksMinutes = minutes * (smartbooksPercentage / 100);
-  const cardsTarget = flashcardsPercentage > 0
-    ? Math.max(1, Math.round(flashcardsMinutes / DAILY_MISSION_FLASHCARD_MINUTES_PER_CARD))
+  const cardsExpected = flashcardsPercentage > 0
+    ? Math.max(0, flashcardsMinutes / DAILY_MISSION_FLASHCARD_MINUTES_PER_CARD)
     : 0;
-  const booksTarget = smartbooksPercentage > 0
-    ? Math.max(1, Math.round(smartbooksMinutes / DAILY_MISSION_SMARTBOOK_MINUTES_PER_BOOK))
+  const booksExpected = smartbooksPercentage > 0
+    ? Math.max(0, smartbooksMinutes / DAILY_MISSION_SMARTBOOK_MINUTES_PER_BOOK)
     : 0;
+  // Display goal is integer, but percent math uses the fractional expected value.
+  const cardsTarget = flashcardsPercentage > 0 ? Math.max(1, Math.ceil(cardsExpected)) : 0;
+  const booksTarget = smartbooksPercentage > 0 ? Math.max(1, Math.ceil(booksExpected)) : 0;
 
   return {
     isConfigured: true,
     minutes,
     flashcardsPercentage,
     smartbooksPercentage,
+    cardsExpected,
+    booksExpected,
     cardsTarget,
     booksTarget
   };
