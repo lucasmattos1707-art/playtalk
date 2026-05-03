@@ -433,6 +433,11 @@
       display: none !important;
     }
 
+    .welcome-gate__level-copy-panel,
+    .welcome-gate__level-panel {
+      display: none !important;
+    }
+
     .welcome-gate__hero-icon {
       width: min(9vw, 34px);
       height: min(9vw, 34px);
@@ -862,7 +867,7 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
       justify-items: center;
       align-items: start;
-      gap: clamp(14px, 4vw, 24px);
+      gap: clamp(8px, 2.6vw, 14px);
       margin: 0 auto;
     }
 
@@ -922,7 +927,7 @@
     .welcome-gate__action-label {
       color: #ffffff;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: calc(clamp(11px, 2.9vw, 14px) * var(--welcome-action-size-multiplier));
+      font-size: calc(clamp(11px, 2.9vw, 14px) * var(--welcome-action-size-multiplier) * 1.1);
       font-weight: 900;
       line-height: 1.08;
       letter-spacing: 0.02em;
@@ -948,12 +953,24 @@
       --welcome-action-glow: rgba(255, 138, 24, 0.62);
     }
 
+    .welcome-gate__action-btn--flashcards .welcome-gate__action-circle {
+      background:
+        radial-gradient(circle at 34% 26%, rgba(255, 244, 212, 0.34), transparent 20%),
+        radial-gradient(circle, rgba(255, 170, 56, 0.5), rgba(56, 20, 8, 0.92) 68%);
+    }
+
     .welcome-gate__action-btn--mission {
       --welcome-action-size-multiplier: 1.18;
       --welcome-action-color: #ffe44d;
       --welcome-action-soft: rgba(255, 228, 77, 0.36);
       --welcome-action-border: rgba(255, 238, 104, 0.86);
       --welcome-action-glow: rgba(255, 228, 77, 0.72);
+    }
+
+    .welcome-gate__action-btn--mission .welcome-gate__action-circle {
+      background:
+        radial-gradient(circle at 34% 26%, rgba(255, 247, 220, 0.36), transparent 20%),
+        radial-gradient(circle, rgba(255, 201, 84, 0.5), rgba(60, 28, 6, 0.92) 68%);
     }
 
     .welcome-gate__action-btn--books {
@@ -8715,14 +8732,6 @@
               <svg viewBox="0 0 24 24" focusable="false"><path d="M4.75 6h14.5A2.25 2.25 0 0 1 21.5 8.25v7.5A2.25 2.25 0 0 1 19.25 18H4.75A2.25 2.25 0 0 1 2.5 15.75v-7.5A2.25 2.25 0 0 1 4.75 6Zm1 2.25v1.5h1.5v-1.5h-1.5Zm2.5 0v1.5h1.5v-1.5h-1.5Zm2.5 0v1.5h1.5v-1.5h-1.5Zm2.5 0v1.5h1.5v-1.5h-1.5Zm2.5 0v1.5h1.5v-1.5h-1.5Zm-10 3v1.5h8.5v-1.5h-8.5Zm9.5 0v1.5h1.5v-1.5h-1.5Zm-11.5 3v1.5h4.5v-1.5h-4.5Zm5.5 0v1.5h8.5v-1.5H9.25Z"/></svg>
             </button>
           </div>
-          <div class="welcome-gate__level-panel">
-            <div class="welcome-gate__level-orbit" id="welcomeLevelOrbit" aria-hidden="true">
-              <span class="welcome-gate__level-inner">
-                <span class="welcome-gate__level-number" id="welcomeUserLevelNumber">1</span>
-                <span class="welcome-gate__level-title" id="welcomeLevelTitle">Nível 1</span>
-            </span>
-          </div>
-        </div>
         <div class="welcome-gate__action-row" aria-label="Acoes principais">
           <button class="welcome-gate__action-btn welcome-gate__action-btn--flashcards welcome-gate__start-btn" id="welcomeStartBtn" type="button" aria-label="FlashCards">
             <span class="welcome-gate__action-circle" aria-hidden="true">
@@ -12502,7 +12511,7 @@
       }
 
       function syncWelcomeLevelProgress() {
-        if (!els.welcomeUserLevelNumber || !els.welcomeLevelProgressBar) return;
+        if (!els.welcomeLevelProgressBar) return;
         if (!state.entry.sessionResolved) return;
         const xpProgress = reconcileEnergyLevelProgress({ animate: Boolean(state.entry.welcomeVisible) });
         const level = xpProgress.level;
@@ -12515,7 +12524,9 @@
           els.welcomeLevelHeading.textContent = `Nível ${level}`;
         }
         ensureWelcomeHeadingRotation();
-        els.welcomeUserLevelNumber.textContent = String(level);
+        if (els.welcomeUserLevelNumber) {
+          els.welcomeUserLevelNumber.textContent = String(level);
+        }
         if (els.welcomeLevelTitle) {
           els.welcomeLevelTitle.textContent = `Nível ${level}`;
         }
@@ -14889,20 +14900,11 @@
 
       function updateLevelProgressBar() {
         if (!els.flashcardLevelProgress || !els.flashcardLevelProgressBar) return;
-        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
-        const currentEntry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
-        const currentStage = Number(currentEntry?.stage) || 0;
-        const hasStarStageActive = currentStage >= 1 && currentStage <= 5;
-        const show = Boolean(state.game.active && !state.ui.gamePausedAtWelcome && (
-          hasStarStageActive || [
-          'first-star',
-          'second-star',
-          'third-star',
-          'fourth-star',
-          'fifth-star'
-        ].includes(phaseKey)
-        ));
+        const show = Boolean(state.game.active && !state.ui.gamePausedAtWelcome);
         els.flashcardLevelProgress.hidden = !show;
+        els.flashcardLevelProgress.style.display = show ? 'block' : 'none';
+        els.flashcardLevelProgress.style.visibility = show ? 'visible' : 'hidden';
+        els.flashcardLevelProgress.style.opacity = show ? '1' : '0';
         els.flashcardLevelProgress.setAttribute('aria-hidden', show ? 'false' : 'true');
         if (!show) {
           syncWelcomeLevelProgress();
@@ -20630,6 +20632,7 @@
         document.body.classList.add('gameplay-active');
         els.game.classList.add('is-visible');
         window.requestAnimationFrame(() => els.game.classList.add('is-active'));
+        updateLevelProgressBar();
 
         updateGameChips();
         advanceToNextCard();
@@ -20722,6 +20725,7 @@
         document.body.classList.add('gameplay-active');
         els.game.classList.add('is-visible');
         window.requestAnimationFrame(() => els.game.classList.add('is-active'));
+        updateLevelProgressBar();
 
         if (!state.game.entries.size) {
           renderCurrentCard();
@@ -20789,6 +20793,7 @@
         document.body.classList.add('gameplay-active');
         els.game.classList.add('is-visible');
         window.requestAnimationFrame(() => els.game.classList.add('is-active'));
+        updateLevelProgressBar();
 
         updateGameChips();
         advanceToNextCard();
