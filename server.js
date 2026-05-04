@@ -2121,11 +2121,11 @@ const resolveCurrentDailyMissionSealCode = (mission) => {
   const planScoreRaw = mission?.seal?.planScoreAt120 == null
     ? mission?.seal?.planScore
     : mission?.seal?.planScoreAt120;
-  const planScoreAt120 = Math.max(0, Math.min(100, Number(planScoreRaw) || 0));
+  const planScoreAt120 = Math.max(0, Math.min(200, Number(planScoreRaw) || 0));
   const missionProgressPercent = Math.max(0, Number(mission?.weightedPercent) || 0);
   const totalSealProgress = Math.max(
     0,
-    Math.min(100, (planScoreAt120 * missionProgressPercent) / 100)
+    Math.min(200, (planScoreAt120 * missionProgressPercent) / 200)
   );
   const seal = resolveFluencySealForScore(totalSealProgress);
   return resolveFluencySealCode(seal);
@@ -2149,17 +2149,6 @@ const ensureDailyFluencySealSlot = async (db, user, missionSnapshot) => {
   const localTimeText = String(nowRow?.local_time || '').trim();
   const cutoffReached = localTimeText >= '23:55:55';
 
-  if (!localDayKey || !cutoffReached) {
-    const readCurrent = await db.query(
-      `SELECT user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key
-         FROM public.user_fluency_seals
-        WHERE user_id = $1
-        LIMIT 1`,
-      [userId]
-    );
-    return readCurrent.rows[0] || null;
-  }
-
   const sealCode = resolveCurrentDailyMissionSealCode(missionSnapshot);
   const rowResult = await db.query(
     `SELECT user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key
@@ -2171,12 +2160,31 @@ const ensureDailyFluencySealSlot = async (db, user, missionSnapshot) => {
   const row = rowResult.rows[0] || null;
   if (!row) return null;
 
-  const alreadyAwardedToday = String(row?.last_awarded_day_key || '') === String(localDayKey);
-  if (alreadyAwardedToday) {
-    return row;
+  const slot = Math.max(1, Math.min(6, Number(row?.next_day_slot) || 1));
+  const currentSlotColumn = `day${slot}`;
+  const currentSlotValue = Math.max(0, Math.min(6, Number(row?.[currentSlotColumn]) || 0));
+  let latestRow = row;
+  if (currentSlotValue !== sealCode) {
+    const syncCurrentSlotResult = await db.query(
+      `UPDATE public.user_fluency_seals
+          SET ${currentSlotColumn} = $2,
+              updated_at = now()
+        WHERE user_id = $1
+      RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key`,
+      [userId, sealCode]
+    );
+    latestRow = syncCurrentSlotResult.rows[0] || row;
   }
 
-  const slot = Math.max(1, Math.min(6, Number(row?.next_day_slot) || 1));
+  if (!localDayKey || !cutoffReached) {
+    return latestRow;
+  }
+
+  const alreadyAwardedToday = String(latestRow?.last_awarded_day_key || '') === String(localDayKey);
+  if (alreadyAwardedToday) {
+    return latestRow;
+  }
+
   const nextSlot = Math.max(1, Math.min(6, slot + 1));
   let updateQuery = '';
   if (slot === 1) {

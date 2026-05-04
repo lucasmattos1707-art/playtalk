@@ -1706,6 +1706,30 @@
       margin-top: -18px;
     }
 
+    .daily-plan-modal__seal-meta {
+      margin-top: 8px;
+      text-align: center;
+      transform: translateY(-20px);
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      color: #cde4ff;
+      display: grid;
+      gap: 3px;
+    }
+
+    .daily-plan-modal__seal-hint {
+      font-weight: 300;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      opacity: 0.92;
+    }
+
+    .daily-plan-modal__seal-time {
+      font-weight: 400;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      color: #9ed8ff;
+    }
+
     .daily-plan-modal__hero,
     .daily-plan-modal__card {
       transform: translateY(-30px);
@@ -9133,9 +9157,13 @@
             <div class="daily-plan-modal__mini-ring" id="dailyPlanBooksPercent"><span>0%</span></div>
           </article>
         </section>
-        <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">Próximo Selo: White</div>
+        <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">Próximo Selo: Prata</div>
         <div class="daily-plan-modal__overall-progress">
           <div class="daily-plan-modal__overall-bar"><div class="daily-plan-modal__overall-fill" id="dailyPlanOverallBar" style="--progress: 0%"></div></div>
+        </div>
+        <div class="daily-plan-modal__seal-meta" id="dailyPlanSealMeta">
+          <div class="daily-plan-modal__seal-hint">Evolua seu selo até o fim do dia</div>
+          <div class="daily-plan-modal__seal-time" id="dailyPlanTimeRemaining">Tempo restante 00h00m</div>
         </div>
       </div>
     </div>
@@ -9903,6 +9931,7 @@
           dailyPlanMissionSnapshot: null,
           dailyPlanPreview120: false,
           dailyPlanPreviewTimer: 0,
+          dailyPlanTimeRemainingTimer: 0,
           welcomeTimer: 0,
           welcomeModesResolved: false,
           welcomeModesUsersEnabled: false,
@@ -10161,6 +10190,7 @@
         dailyPlanGeneralRing: document.getElementById('dailyPlanGeneralRing'),
         dailyPlanCurrentSealImage: document.getElementById('dailyPlanCurrentSealImage'),
         dailyPlanSealProgressValue: document.getElementById('dailyPlanSealProgressValue'),
+        dailyPlanTimeRemaining: document.getElementById('dailyPlanTimeRemaining'),
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeLogo: document.getElementById('welcomeLogo'),
         welcomeProfile: document.getElementById('welcomeProfile'),
@@ -14649,23 +14679,17 @@
         return 'Comece agora: seu progresso sobe rapido.';
       }
 
-      const DAILY_PLAN_PROGRESS_BOOST_MULTIPLIER = 1.6;
       const DAILY_PLAN_FLUENCY_SEALS = [
-        { key: 'white', label: 'White', minScore: 10, sealImage: 'medalhas/white.png' },
-        { key: 'vidro', label: 'Vidro', minScore: 20, sealImage: 'medalhas/vidro.png' },
-        { key: 'metal', label: 'Metal', minScore: 25, sealImage: 'medalhas/metal.png' },
-        { key: 'bronze', label: 'Bronze', minScore: 30, sealImage: 'medalhas/bronze.png' },
         { key: 'prata', label: 'Prata', minScore: 40, sealImage: 'medalhas/prata.png' },
-        { key: 'rubi', label: 'Rubi', minScore: 50, sealImage: 'medalhas/rubi.png' },
-        { key: 'safira', label: 'Safira', minScore: 60, sealImage: 'medalhas/quartz.png' },
-        { key: 'esmeralda', label: 'Esmeralda', minScore: 70, sealImage: 'medalhas/emerald.png' },
-        { key: 'platina', label: 'Platina', minScore: 80, sealImage: 'medalhas/platina.png' },
-        { key: 'ouro', label: 'Ouro', minScore: 90, sealImage: 'medalhas/ouro.png' },
-        { key: 'diamante', label: 'Diamante', minScore: 100, sealImage: 'medalhas/diamante.png' }
+        { key: 'safira', label: 'Safira', minScore: 50, sealImage: 'medalhas/quartz.png' },
+        { key: 'esmeralda', label: 'Esmeralda', minScore: 60, sealImage: 'medalhas/emerald.png' },
+        { key: 'platina', label: 'Platina', minScore: 70, sealImage: 'medalhas/platina.png' },
+        { key: 'ouro', label: 'Ouro', minScore: 80, sealImage: 'medalhas/ouro.png' },
+        { key: 'diamante', label: 'Diamante', minScore: 90, sealImage: 'medalhas/diamante.png' }
       ];
 
       function resolveDailyPlanSealByScore(score) {
-        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
+        const normalized = Math.max(0, Math.min(200, Number(score) || 0));
         let selected = null;
         for (const seal of DAILY_PLAN_FLUENCY_SEALS) {
           if (!seal) continue;
@@ -14675,9 +14699,8 @@
       }
 
       function resolveDailyPlanNextSealByScore(score) {
-        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
-        const nextSeal = DAILY_PLAN_FLUENCY_SEALS.find((seal) => normalized < seal.minScore) || null;
-        return nextSeal || DAILY_PLAN_FLUENCY_SEALS[DAILY_PLAN_FLUENCY_SEALS.length - 1] || null;
+        const normalized = Math.max(0, Math.min(200, Number(score) || 0));
+        return DAILY_PLAN_FLUENCY_SEALS.find((seal) => normalized < seal.minScore) || null;
       }
 
       function computeDailyPlanNextSealProgress(score) {
@@ -14760,11 +14783,34 @@
         }
       }
 
+      function formatDailyPlanTimeRemaining() {
+        const now = new Date();
+        const end = new Date(now);
+        end.setHours(23, 59, 59, 999);
+        const diffMs = Math.max(0, end.getTime() - now.getTime());
+        const totalMinutes = Math.floor(diffMs / 60000);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        return `${String(hours).padStart(2, '0')}h${String(minutes).padStart(2, '0')}m`;
+      }
+
+      function clearDailyPlanTimeRemainingTimer() {
+        if (state.entry.dailyPlanTimeRemainingTimer) {
+          window.clearInterval(state.entry.dailyPlanTimeRemainingTimer);
+          state.entry.dailyPlanTimeRemainingTimer = 0;
+        }
+      }
+
+      function syncDailyPlanTimeRemaining() {
+        if (!els.dailyPlanTimeRemaining) return;
+        els.dailyPlanTimeRemaining.textContent = `Tempo restante ${formatDailyPlanTimeRemaining()}`;
+      }
+
       function renderDailyPlanMission(mission, options = {}) {
         const use120Preview = Boolean(options.use120Preview);
         const missionView = buildDailyPlanMissionView(mission, use120Preview);
         const missionViewAt120 = buildDailyPlanMissionView(mission, true);
-        const overallPercent = clampPercent(missionView.balancedProgressPercent * DAILY_PLAN_PROGRESS_BOOST_MULTIPLIER);
+        const overallPercent = clampPercent(missionView.balancedProgressPercent);
         const overallPercentRounded = Math.round(overallPercent);
         const overallPercentForVisual = toMissionVisualPercent(overallPercent);
         setDailyPlanProgress(
@@ -14814,31 +14860,37 @@
           ? Math.max(0, Math.min(200, Number(seal?.planScore) || 0))
           : Math.max(0, Math.min(200, Number(seal.planScoreAt120) || 0));
         // "Progresso maximo" sempre usa a simulacao com jornada de 120 minutos.
-        const missionProgressPercent = clampPercent(
-          missionViewAt120.balancedProgressPercent * DAILY_PLAN_PROGRESS_BOOST_MULTIPLIER
-        );
+        const missionProgressPercent = clampPercent(missionViewAt120.balancedProgressPercent);
         const totalSealProgress = Math.max(
           0,
-          Math.min(100, (planScoreAt120 * missionProgressPercent) / 100)
+          Math.min(200, (planScoreAt120 * missionProgressPercent) / 200)
         );
         const nextSealProgress = computeDailyPlanNextSealProgress(totalSealProgress);
         const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
         const nextSeal = resolveDailyPlanNextSealByScore(totalSealProgress);
         if (els.dailyPlanCurrentSealImage) {
-          const sealSrc = safeText(nextSeal?.sealImage) || safeText(currentSeal?.sealImage) || 'medalhas/white.png';
+          const hasUnlockedSeal = totalSealProgress >= 40;
+          const sealSrc = hasUnlockedSeal
+            ? (safeText(currentSeal?.sealImage) || 'medalhas/prata.png')
+            : 'medalhas/diamante.png';
           els.dailyPlanCurrentSealImage.src = sealSrc;
-          els.dailyPlanCurrentSealImage.alt = safeText(nextSeal?.label)
-            ? `Proximo selo: ${nextSeal.label}`
-            : 'Proximo selo';
-          els.dailyPlanCurrentSealImage.style.opacity = '1';
-          els.dailyPlanCurrentSealImage.style.filter = 'none';
+          els.dailyPlanCurrentSealImage.alt = hasUnlockedSeal && safeText(currentSeal?.label)
+            ? `Selo atual: ${currentSeal.label}`
+            : 'Selo atual bloqueado';
+          els.dailyPlanCurrentSealImage.style.opacity = hasUnlockedSeal ? '1' : '0.5';
+          els.dailyPlanCurrentSealImage.style.filter = hasUnlockedSeal ? 'none' : 'grayscale(1) saturate(0)';
         }
         if (els.dailyPlanSealProgressValue) {
-          els.dailyPlanSealProgressValue.textContent = `Próximo Selo: ${safeText(nextSeal?.label) || 'White'}`;
+          if (!nextSeal) {
+            els.dailyPlanSealProgressValue.textContent = 'Selo máximo diário obtido';
+          } else {
+            els.dailyPlanSealProgressValue.textContent = `Próximo Selo: ${safeText(nextSeal?.label) || 'Prata'}`;
+          }
         }
         if (els.dailyPlanOverallBar) {
           els.dailyPlanOverallBar.style.setProperty('--progress', `${nextSealProgress.toFixed(2)}%`);
         }
+        syncDailyPlanTimeRemaining();
       }
 
       function showDailyPlan120Preview() {
@@ -14865,6 +14917,7 @@
         document.body.classList.toggle('daily-plan-open', visible);
         if (!visible) {
           clearDailyPlanPreviewTimer();
+          clearDailyPlanTimeRemainingTimer();
           state.entry.dailyPlanPreview120 = false;
           return;
         }
@@ -14878,8 +14931,11 @@
         const mission = await fetchDailyPlanBooksStats().catch(() => null);
         state.entry.dailyPlanMissionSnapshot = mission || {};
         clearDailyPlanPreviewTimer();
+        clearDailyPlanTimeRemainingTimer();
         state.entry.dailyPlanPreview120 = false;
         renderDailyPlanMission(state.entry.dailyPlanMissionSnapshot, { use120Preview: false });
+        syncDailyPlanTimeRemaining();
+        state.entry.dailyPlanTimeRemainingTimer = window.setInterval(syncDailyPlanTimeRemaining, 60000);
       }
 
       function pauseFlashcardsGameForDailyPlan() {
