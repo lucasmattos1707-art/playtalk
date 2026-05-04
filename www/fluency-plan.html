@@ -534,6 +534,7 @@
       align-items: center;
       justify-content: center;
       text-wrap: balance;
+      white-space: pre-line;
     }
 
     .live-title-wrap {
@@ -551,6 +552,22 @@
       object-fit: contain;
       filter: drop-shadow(0 8px 18px rgba(0, 163, 255, 0.28));
       flex: 0 0 auto;
+    }
+
+    .live-title.is-compact-30 {
+      font-size: clamp(20px, 2.6vw, 30px);
+      line-height: 1.08;
+      max-width: 360px;
+    }
+
+    .live-result.is-final .live-title-wrap {
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .live-result.is-final .live-medal {
+      width: clamp(92px, 14vw, 156px);
+      height: clamp(92px, 14vw, 156px);
     }
 
     .live-title.is-warning {
@@ -779,12 +796,6 @@
       <div class="question-block">
         <h1>Quanto você quer jogar por dia?</h1>
       </div>
-      <svg class="stage-illustration" viewBox="0 0 180 140" fill="none" aria-hidden="true">
-        <circle cx="90" cy="62" r="34" fill="rgba(255,255,255,0.08)" stroke="rgba(133,205,255,0.48)" stroke-width="3"/>
-        <path d="M90 46V63L104 74" stroke="#8FE6FF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="90" cy="62" r="5" fill="#6CE4FF"/>
-        <path d="M90 28V36" stroke="#5DA2FF" stroke-width="6" stroke-linecap="round"/>
-      </svg>
       <div class="options options--minutes" data-group="minutes">
         <button class="option" data-value="15"><span class="time-option__value">15</span><span class="time-option__unit">min</span></button>
         <button class="option" data-value="30"><span class="time-option__value">30</span><span class="time-option__unit">min</span></button>
@@ -799,15 +810,6 @@
       <div class="question-block">
         <h1>Você vai treinar por quanto tempo?</h1>
       </div>
-      <svg class="stage-illustration" viewBox="0 0 180 140" fill="none" aria-hidden="true">
-        <rect x="42" y="28" width="96" height="70" rx="18" fill="rgba(255,255,255,0.08)" stroke="rgba(167,164,255,0.48)" stroke-width="3"/>
-        <path d="M58 24V40" stroke="#A8F0FF" stroke-width="8" stroke-linecap="round"/>
-        <path d="M122 24V40" stroke="#A8F0FF" stroke-width="8" stroke-linecap="round"/>
-        <path d="M42 50H138" stroke="#6D89FF" stroke-width="6"/>
-        <rect x="58" y="62" width="18" height="14" rx="4" fill="#84DFFF"/>
-        <rect x="82" y="62" width="18" height="14" rx="4" fill="#5E8FFF"/>
-        <rect x="106" y="62" width="18" height="14" rx="4" fill="#84DFFF"/>
-      </svg>
       <div class="options options--months" data-group="months">
         <button class="option" data-value="3">3 meses</button>
         <button class="option" data-value="6">6 meses</button>
@@ -822,11 +824,6 @@
       <div class="question-block">
         <h1>Como você pretende usar o inglês?</h1>
       </div>
-      <svg class="stage-illustration" viewBox="0 0 180 140" fill="none" aria-hidden="true">
-        <path d="M52 34H128C135.732 34 142 40.268 142 48V75C142 82.732 135.732 89 128 89H98L79 105V89H52C44.268 89 38 82.732 38 75V48C38 40.268 44.268 34 52 34Z" fill="rgba(255,255,255,0.08)" stroke="rgba(132,223,255,0.48)" stroke-width="2"/>
-        <path d="M58 54H122" stroke="#7EE7FF" stroke-width="8" stroke-linecap="round"/>
-        <path d="M58 69H102" stroke="#5E8FFF" stroke-width="8" stroke-linecap="round"/>
-      </svg>
       <div class="options three-text options--application" data-group="application">
         <button class="option" data-value="0">Somente jogar sem prática real</button>
         <button class="option" data-value="1">Aplicar as dicas do jogo na vida real</button>
@@ -950,7 +947,7 @@
       { min: 0, medal: 'white.png', title: 'Nenhum contato com o idioma ate agora.' },
       { min: 10, medal: 'vidro.png', title: 'Reconhece palavras e estruturas simples.' },
       { min: 20, medal: 'metal.png', title: 'Comunica ideias com frases bem basicas.' },
-      { min: 30, medal: 'bronze.png', title: 'Entende o basico e responde frases curtas.' },
+      { min: 30, medal: 'bronze.png', title: 'Entende o basico\ne responde frases curtas.' },
       { min: 40, medal: 'prata.png', title: 'Se comunica em situacoes simples do dia.' },
       { min: 50, medal: 'rubi.png', title: 'Participa de conversas simples com confianca.' },
       { min: 60, medal: 'quartz.png', title: 'Acompanha conversas com algumas limitacoes.' },
@@ -1085,12 +1082,15 @@
       updateResult();
     }
 
-    function effectivePlanMonths(months) {
-      return months === 18 ? 24 : months;
-    }
-
     function calculate() {
-      const days = effectivePlanMonths(state.months) * 30;
+      const monthBonusByPlan = {
+        6: 0.05,
+        9: 0.08,
+        12: 0.10,
+        18: 0.18,
+        24: 0.25
+      };
+      const days = state.months * 30;
       const totalHours = (state.minutes / 60) * days;
       const normalizedHours = 2 * days;
       const timeFactor = clamp(state.minutes / 120, 0, 1);
@@ -1103,7 +1103,8 @@
       const scoreCeilingBeforeInterpolation = 113;
       const targetScoreCeiling = 200;
       const interpolationFactor = targetScoreCeiling / scoreCeilingBeforeInterpolation;
-      const rawScore = base * (1 + bookBoost) * calibrationFactor * timeFactor;
+      const monthBonus = monthBonusByPlan[state.months] || 0;
+      const rawScore = base * (1 + bookBoost) * calibrationFactor * timeFactor * (1 + monthBonus);
       const finalScore = clamp(rawScore * interpolationFactor, 0, targetScoreCeiling);
       return {
         finalScore,
@@ -1126,6 +1127,7 @@
       els.score.textContent = rounded;
       if (els.liveTitle) {
         els.liveTitle.textContent = selectedLabel.title;
+        els.liveTitle.classList.toggle('is-compact-30', selectedLabel.min === 30);
       }
       if (els.liveMedal) {
         els.liveMedal.src = `/medalhas/${selectedLabel.medal}`;
@@ -1143,12 +1145,9 @@
       });
 
       if (els.liveResult && activeScreen) {
-        if (step < totalChoiceSteps) {
-          activeScreen.appendChild(els.liveResult);
-          els.liveResult.hidden = false;
-        } else {
-          els.liveResult.hidden = true;
-        }
+        activeScreen.appendChild(els.liveResult);
+        els.liveResult.hidden = false;
+        els.liveResult.classList.toggle('is-final', step === 4);
       }
 
       els.backBtn.disabled = busy || step === 0;
@@ -1206,7 +1205,7 @@
         state.selectedGroups.minutes = true;
       }
       if (Number.isInteger(Number(plan.months))) {
-        state.months = Number(plan.months) === 24 ? 18 : Number(plan.months);
+        state.months = Number(plan.months);
         state.selectedGroups.months = true;
       }
       if (Number.isInteger(Number(plan.application))) {
