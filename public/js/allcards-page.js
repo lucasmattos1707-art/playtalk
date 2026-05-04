@@ -30,6 +30,15 @@
     5: '/medalhas/ouro.png',
     6: '/medalhas/diamante.png'
   });
+  const SEAL_PERCENT_BY_CODE = Object.freeze({
+    0: 0,
+    1: 40,
+    2: 50,
+    3: 60,
+    4: 70,
+    5: 80,
+    6: 90
+  });
   const EMPTY_SEAL_IMAGE = '/medalhas/diamante.png';
 
   const els = {
@@ -53,6 +62,7 @@
     smartbooksStatus: document.getElementById('smartbooksStatus'),
     sealsSectionHead: document.getElementById('sealsSectionHead'),
     sealsGrid: document.getElementById('sealsGrid'),
+    sealsTotalValue: document.getElementById('sealsTotalValue'),
     sealsStatus: document.getElementById('sealsStatus')
   };
 
@@ -698,7 +708,7 @@
 
   function setSealsStatus(message, visible = true) {
     if (!els.sealsStatus) return;
-    els.sealsStatus.textContent = safeText(message) || 'Slots diarios: DAY 1 ao DAY 6.';
+    els.sealsStatus.textContent = safeText(message);
     els.sealsStatus.hidden = !visible;
   }
 
@@ -718,6 +728,25 @@
     return safeText(SEAL_IMAGE_BY_CODE[normalizeSealCode(code)]) || EMPTY_SEAL_IMAGE;
   }
 
+  function fluencyPercentForSealCode(code) {
+    const normalizedCode = normalizeSealCode(code);
+    return Number(SEAL_PERCENT_BY_CODE[normalizedCode]) || 0;
+  }
+
+  function computeTotalFluencyPercent(slots) {
+    const normalizedSlots = normalizeSealsSlots(slots);
+    const total = normalizedSlots.reduce((sum, slotCode) => sum + fluencyPercentForSealCode(slotCode), 0);
+    const maxTotal = SEAL_SLOT_COUNT * fluencyPercentForSealCode(6);
+    if (maxTotal <= 0) return 0;
+    return (total / maxTotal) * 100;
+  }
+
+  function renderSealsTotal() {
+    if (!els.sealsTotalValue) return;
+    const totalPercent = Math.max(0, Math.min(100, computeTotalFluencyPercent(state.sealsSlots)));
+    els.sealsTotalValue.textContent = `${totalPercent.toFixed(2)}%`;
+  }
+
   function renderSealsGrid() {
     if (!els.sealsGrid) return;
     const slots = normalizeSealsSlots(state.sealsSlots);
@@ -725,7 +754,7 @@
       els.sealsSectionHead.hidden = false;
     }
     els.sealsGrid.innerHTML = slots.map((code, index) => {
-      const earned = normalizeSealCode(code) > 0;
+      const earned = fluencyPercentForSealCode(code) >= 40;
       const dayLabel = `DAY ${index + 1}`;
       const imageSrc = sealImageForCode(code);
       return `
@@ -735,6 +764,7 @@
         </article>
       `;
     }).join('');
+    renderSealsTotal();
   }
 
   async function fetchSealsSlots() {
@@ -761,7 +791,7 @@
     }
 
     state.ui.sealsLoading = true;
-    setSealsStatus('Carregando seus selos...', true);
+    setSealsStatus('', false);
     toggleGlobalLoader('allcards-seals', true, 'Carregando seus selos');
 
     state.sealsInitPromise = fetchSealsSlots()

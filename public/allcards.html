@@ -701,7 +701,7 @@
 
     .seals-grid {
       width: min(700px, calc(100vw - 28px));
-      margin: 2px auto 0;
+      margin: 32px auto 0;
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
@@ -728,8 +728,8 @@
       height: clamp(88px, 23vw, 118px);
       object-fit: contain;
       display: block;
-      opacity: 0;
-      filter: none;
+      opacity: 0.6;
+      filter: grayscale(1) saturate(0) contrast(1.04);
       transform: scale(1);
       transition: transform 180ms ease, opacity 180ms ease;
     }
@@ -763,6 +763,32 @@
       font-weight: 400;
       text-align: center;
       letter-spacing: 0;
+    }
+
+    .seals-total {
+      margin: 8px auto 0;
+      text-align: center;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      color: rgba(176, 189, 202, 0.9);
+    }
+
+    .seals-total__value {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      line-height: 1.1;
+      color: rgba(190, 202, 214, 0.92);
+    }
+
+    .seals-total__label {
+      margin: 3px 0 0;
+      font-size: 8px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(163, 177, 191, 0.86);
+      line-height: 1.1;
     }
 
     @keyframes flashcardsMiniLoaderSpin {
@@ -907,7 +933,11 @@
 
       <div class="content-view" id="sealsView" role="tabpanel" aria-labelledby="contentSwitcherCurrentBtn" hidden>
         <div class="seals-grid" id="sealsGrid"></div>
-        <div class="seals-status" id="sealsStatus">Slots diarios: DAY 1 ao DAY 6.</div>
+        <div class="seals-total" id="sealsTotal">
+          <p class="seals-total__value" id="sealsTotalValue">0.00%</p>
+          <p class="seals-total__label">FLUÊNCIA COMPLETA</p>
+        </div>
+        <div class="seals-status" id="sealsStatus" hidden></div>
       </div>
     </section>
   </main>
@@ -916,7 +946,7 @@
   <script src="js/api-config.js"></script>
   <script src="js/playtalk-shell.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/allcards-page.js?v=20260504-3" defer></script>
+  <script src="js/allcards-page.js?v=20260504-4" defer></script>
 </body>
 </html>
 

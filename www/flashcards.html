@@ -9084,7 +9084,7 @@
               <div class="daily-plan-modal__general-percent" id="dailyPlanGeneralPercent">0%</div>
             </div>
             <div class="daily-plan-modal__general-ring" id="dailyPlanGeneralRing">
-              <img id="dailyPlanCurrentSealImage" src="medalhas/prata.png" alt="Selo atual">
+              <img id="dailyPlanCurrentSealImage" src="medalhas/diamante.png" alt="Selo atual bloqueado">
             </div>
           </section>
 
@@ -14628,7 +14628,7 @@
           if (!seal) continue;
           if (normalized >= seal.minScore) selected = seal;
         }
-        return selected || DAILY_PLAN_FLUENCY_SEALS[0] || null;
+        return selected;
       }
 
       function computeDailyPlanNextSealProgress(score) {
@@ -14728,16 +14728,20 @@
           Math.min(100, (planScoreAt120 * missionProgressPercent) / 100)
         );
         const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
-        const maxSealProgress = planScoreAt120;
         if (els.dailyPlanCurrentSealImage) {
-          const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/prata.png';
+          const hasUnlockedSeal = totalSealProgress >= 40;
+          const sealSrc = hasUnlockedSeal
+            ? (safeText(currentSeal?.sealImage) || 'medalhas/prata.png')
+            : 'medalhas/diamante.png';
           els.dailyPlanCurrentSealImage.src = sealSrc;
-          els.dailyPlanCurrentSealImage.alt = safeText(currentSeal?.label)
+          els.dailyPlanCurrentSealImage.alt = hasUnlockedSeal && safeText(currentSeal?.label)
             ? `Selo atual: ${currentSeal.label}`
-            : 'Selo atual';
+            : 'Selo atual bloqueado';
+          els.dailyPlanCurrentSealImage.style.opacity = hasUnlockedSeal ? '1' : '0.5';
+          els.dailyPlanCurrentSealImage.style.filter = hasUnlockedSeal ? 'none' : 'grayscale(1) saturate(0)';
         }
         if (els.dailyPlanSealProgressValue) {
-          els.dailyPlanSealProgressValue.textContent = `progresso máximo: ${Math.round(maxSealProgress)}%`;
+          els.dailyPlanSealProgressValue.textContent = `progresso máximo: ${Math.round(totalSealProgress)}%`;
         }
       }
 
