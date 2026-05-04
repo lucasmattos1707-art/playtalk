@@ -9134,7 +9134,7 @@
             <div class="daily-plan-modal__mini-ring" id="dailyPlanBooksPercent"><span>0%</span></div>
           </article>
         </section>
-        <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">progresso máximo: 0%</div>
+        <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">Próximo Selo: 0%</div>
         <div class="daily-plan-modal__overall-progress">
           <div class="daily-plan-modal__overall-bar"><div class="daily-plan-modal__overall-fill" id="dailyPlanOverallBar" style="--progress: 0%"></div></div>
         </div>
@@ -14650,17 +14650,23 @@
         return 'Comece agora: seu progresso sobe rapido.';
       }
 
+      const DAILY_PLAN_PROGRESS_BOOST_MULTIPLIER = 1.6;
       const DAILY_PLAN_FLUENCY_SEALS = [
+        { key: 'white', label: 'White', minScore: 10, sealImage: 'medalhas/white.png' },
+        { key: 'vidro', label: 'Vidro', minScore: 20, sealImage: 'medalhas/vidro.png' },
+        { key: 'metal', label: 'Metal', minScore: 25, sealImage: 'medalhas/metal.png' },
+        { key: 'bronze', label: 'Bronze', minScore: 30, sealImage: 'medalhas/bronze.png' },
         { key: 'prata', label: 'Prata', minScore: 40, sealImage: 'medalhas/prata.png' },
-        { key: 'safira', label: 'Safira', minScore: 50, sealImage: 'medalhas/quartz.png' },
-        { key: 'esmeralda', label: 'Esmeralda', minScore: 60, sealImage: 'medalhas/emerald.png' },
-        { key: 'platina', label: 'Platina', minScore: 70, sealImage: 'medalhas/platina.png' },
-        { key: 'ouro', label: 'Ouro', minScore: 80, sealImage: 'medalhas/ouro.png' },
-        { key: 'diamante', label: 'Diamante', minScore: 90, sealImage: 'medalhas/diamante.png' }
+        { key: 'rubi', label: 'Rubi', minScore: 50, sealImage: 'medalhas/rubi.png' },
+        { key: 'safira', label: 'Safira', minScore: 60, sealImage: 'medalhas/quartz.png' },
+        { key: 'esmeralda', label: 'Esmeralda', minScore: 70, sealImage: 'medalhas/emerald.png' },
+        { key: 'platina', label: 'Platina', minScore: 80, sealImage: 'medalhas/platina.png' },
+        { key: 'ouro', label: 'Ouro', minScore: 90, sealImage: 'medalhas/ouro.png' },
+        { key: 'diamante', label: 'Diamante', minScore: 100, sealImage: 'medalhas/diamante.png' }
       ];
 
       function resolveDailyPlanSealByScore(score) {
-        const normalized = Math.max(0, Math.min(200, Number(score) || 0));
+        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
         let selected = null;
         for (const seal of DAILY_PLAN_FLUENCY_SEALS) {
           if (!seal) continue;
@@ -14670,11 +14676,14 @@
       }
 
       function computeDailyPlanNextSealProgress(score) {
-        const normalized = Math.max(0, Math.min(200, Number(score) || 0));
+        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
         const nextSeal = DAILY_PLAN_FLUENCY_SEALS.find((seal) => normalized < seal.minScore) || null;
         if (!nextSeal) return 100;
-        const progress = (normalized / nextSeal.minScore) * 100;
-        return Math.max(0, Math.min(100, Math.round(progress)));
+        const nextIndex = DAILY_PLAN_FLUENCY_SEALS.indexOf(nextSeal);
+        const previousMinScore = nextIndex > 0 ? DAILY_PLAN_FLUENCY_SEALS[nextIndex - 1].minScore : 0;
+        const segmentSize = Math.max(1, nextSeal.minScore - previousMinScore);
+        const segmentProgress = ((normalized - previousMinScore) / segmentSize) * 100;
+        return Math.max(0, Math.min(100, Math.round(segmentProgress)));
       }
 
       function setDailyPlanProgress(value, expected, target, valueEl, totalEl, barEl) {
@@ -14750,7 +14759,7 @@
         const use120Preview = Boolean(options.use120Preview);
         const missionView = buildDailyPlanMissionView(mission, use120Preview);
         const missionViewAt120 = buildDailyPlanMissionView(mission, true);
-        const overallPercent = missionView.balancedProgressPercent;
+        const overallPercent = clampPercent(missionView.balancedProgressPercent * DAILY_PLAN_PROGRESS_BOOST_MULTIPLIER);
         const overallPercentRounded = Math.round(overallPercent);
         const overallPercentForVisual = toMissionVisualPercent(overallPercent);
         setDailyPlanProgress(
@@ -14800,30 +14809,29 @@
           ? Math.max(0, Math.min(200, Number(seal?.planScore) || 0))
           : Math.max(0, Math.min(200, Number(seal.planScoreAt120) || 0));
         // "Progresso maximo" sempre usa a simulacao com jornada de 120 minutos.
-        const missionProgressPercent = missionViewAt120.balancedProgressPercent;
+        const missionProgressPercent = clampPercent(
+          missionViewAt120.balancedProgressPercent * DAILY_PLAN_PROGRESS_BOOST_MULTIPLIER
+        );
         const totalSealProgress = Math.max(
           0,
-          Math.min(200, (planScoreAt120 * missionProgressPercent) / 100)
+          Math.min(100, (planScoreAt120 * missionProgressPercent) / 100)
         );
+        const nextSealProgress = computeDailyPlanNextSealProgress(totalSealProgress);
         const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
         if (els.dailyPlanCurrentSealImage) {
-          const hasUnlockedSeal = totalSealProgress >= 40;
-          const sealSrc = hasUnlockedSeal
-            ? (safeText(currentSeal?.sealImage) || 'medalhas/prata.png')
-            : 'medalhas/diamante.png';
+          const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/white.png';
           els.dailyPlanCurrentSealImage.src = sealSrc;
-          els.dailyPlanCurrentSealImage.alt = hasUnlockedSeal && safeText(currentSeal?.label)
+          els.dailyPlanCurrentSealImage.alt = safeText(currentSeal?.label)
             ? `Selo atual: ${currentSeal.label}`
-            : 'Selo atual bloqueado';
-          els.dailyPlanCurrentSealImage.style.opacity = hasUnlockedSeal ? '1' : '0.5';
-          els.dailyPlanCurrentSealImage.style.filter = hasUnlockedSeal ? 'none' : 'grayscale(1) saturate(0)';
+            : 'Selo em progresso';
+          els.dailyPlanCurrentSealImage.style.opacity = '1';
+          els.dailyPlanCurrentSealImage.style.filter = 'none';
         }
         if (els.dailyPlanSealProgressValue) {
-          els.dailyPlanSealProgressValue.textContent = `progresso máximo: ${Math.round(totalSealProgress)}%`;
+          els.dailyPlanSealProgressValue.textContent = `Próximo Selo: ${Math.round(nextSealProgress)}%`;
         }
         if (els.dailyPlanOverallBar) {
-          const overallVisual = toMissionVisualPercent(totalSealProgress);
-          els.dailyPlanOverallBar.style.setProperty('--progress', `${overallVisual.toFixed(2)}%`);
+          els.dailyPlanOverallBar.style.setProperty('--progress', `${nextSealProgress.toFixed(2)}%`);
         }
       }
 
