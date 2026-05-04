@@ -201,6 +201,7 @@ let flashcardRankingsTableReadyPromise = null;
 let usersAvatarColumnReadyPromise = null;
 let flashcardUserStateTablesReadyPromise = null;
 let userDailyMissionStatsTableReadyPromise = null;
+let userFluencySealsTableReadyPromise = null;
 let premiumAccessTablesReadyPromise = null;
 let speakingRealtimeTablesReadyPromise = null;
 let miniBookJsonTablesReadyPromise = null;
@@ -1983,6 +1984,113 @@ const ensureUserDailyMissionStatsTable = async () => {
   }
 
   return userDailyMissionStatsTableReadyPromise;
+};
+
+const ensureUserFluencySealsTable = async () => {
+  if (!pool) return false;
+
+  await ensureUsersAvatarColumn();
+
+  if (!userFluencySealsTableReadyPromise) {
+    userFluencySealsTableReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_fluency_seals (
+          user_id integer PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+          day1 smallint NOT NULL DEFAULT 0 CHECK (day1 BETWEEN 0 AND 6),
+          day2 smallint NOT NULL DEFAULT 0 CHECK (day2 BETWEEN 0 AND 6),
+          day3 smallint NOT NULL DEFAULT 0 CHECK (day3 BETWEEN 0 AND 6),
+          day4 smallint NOT NULL DEFAULT 0 CHECK (day4 BETWEEN 0 AND 6),
+          day5 smallint NOT NULL DEFAULT 0 CHECK (day5 BETWEEN 0 AND 6),
+          day6 smallint NOT NULL DEFAULT 0 CHECK (day6 BETWEEN 0 AND 6),
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_fluency_seals
+        ADD COLUMN IF NOT EXISTS day1 smallint NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_fluency_seals
+        ADD COLUMN IF NOT EXISTS day2 smallint NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_fluency_seals
+        ADD COLUMN IF NOT EXISTS day3 smallint NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_fluency_seals
+        ADD COLUMN IF NOT EXISTS day4 smallint NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_fluency_seals
+        ADD COLUMN IF NOT EXISTS day5 smallint NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_fluency_seals
+        ADD COLUMN IF NOT EXISTS day6 smallint NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_fluency_seals
+        ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now()
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_fluency_seals
+        ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()
+      `);
+      await pool.query(`
+        UPDATE public.user_fluency_seals
+           SET day1 = LEAST(6, GREATEST(0, COALESCE(day1, 0))),
+               day2 = LEAST(6, GREATEST(0, COALESCE(day2, 0))),
+               day3 = LEAST(6, GREATEST(0, COALESCE(day3, 0))),
+               day4 = LEAST(6, GREATEST(0, COALESCE(day4, 0))),
+               day5 = LEAST(6, GREATEST(0, COALESCE(day5, 0))),
+               day6 = LEAST(6, GREATEST(0, COALESCE(day6, 0)))
+      `);
+      await pool.query(`
+        INSERT INTO public.user_fluency_seals (user_id)
+        SELECT u.id
+          FROM public.users u
+          LEFT JOIN public.user_fluency_seals fs ON fs.user_id = u.id
+         WHERE fs.user_id IS NULL
+      `);
+      await pool.query(`
+        CREATE OR REPLACE FUNCTION public.sync_user_fluency_seals_defaults()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        AS $$
+        BEGIN
+          INSERT INTO public.user_fluency_seals (user_id)
+          VALUES (NEW.id)
+          ON CONFLICT (user_id) DO NOTHING;
+          RETURN NEW;
+        END;
+        $$;
+      `);
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1
+              FROM pg_trigger
+             WHERE tgname = 'trg_user_fluency_seals_defaults'
+          ) THEN
+            CREATE TRIGGER trg_user_fluency_seals_defaults
+            AFTER INSERT ON public.users
+            FOR EACH ROW
+            EXECUTE FUNCTION public.sync_user_fluency_seals_defaults();
+          END IF;
+        END
+        $$;
+      `);
+      return true;
+    })().catch((error) => {
+      userFluencySealsTableReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return userFluencySealsTableReadyPromise;
 };
 
 const readUserDailyMissionProgress = async (db, userId) => {
@@ -4311,6 +4419,7 @@ const logDatabaseConnectionStatus = async () => {
     await ensureUsersAvatarColumn();
     await ensureFlashcardUserStateTables();
     await ensureFlashcardRankingsTable();
+    await ensureUserFluencySealsTable();
     console.log('Conexão com Postgres validada com sucesso.');
   } catch (error) {
     console.error('Falha ao conectar no Postgres:', {
