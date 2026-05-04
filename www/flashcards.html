@@ -15202,16 +15202,8 @@
       }
 
       function flashcardLevelTextLimits(level = currentUserLevel()) {
-        const normalizedLevel = normalizeUserLevel(level);
-        if (normalizedLevel <= 6) {
-          return { phraseMaxExclusive: 11, wordMaxExclusive: 7 };
-        }
-        if (normalizedLevel <= 12) {
-          return { phraseMaxExclusive: 13, wordMaxExclusive: 9 };
-        }
-        if (normalizedLevel <= 22) {
-          return { phraseMaxExclusive: 18, wordMaxExclusive: 12 };
-        }
+        // Regra desativada: nao limitar caracteres por nivel no /play.
+        // Mantemos a funcao para compatibilidade com os filtros existentes.
         return null;
       }
 
