@@ -1345,6 +1345,7 @@
         linear-gradient(180deg, #030817 0%, #061129 52%, #020511 100%);
       isolation: isolate;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      transform: translateY(-40px);
     }
 
     .daily-plan-modal__panel * {
@@ -1379,45 +1380,59 @@
     }
 
     .daily-plan-modal__hero {
-      text-align: left;
+      text-align: center;
       margin: 0;
       display: flex;
       align-items: center;
-      gap: 18px;
+      justify-content: center;
+      gap: 0;
       width: min(430px, 100%);
       max-width: calc(100vw - 42px);
     }
 
-    .daily-plan-modal__hero-icon {
-      width: 82px;
-      height: 82px;
-      border-radius: 22px;
-      display: grid;
-      place-items: center;
-      font-size: 42px;
-      background: rgba(255, 255, 255, 0.06);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-    }
-
-    .daily-plan-modal__hero-pre {
+    .daily-plan-modal__hero-title {
       color: #ffffff;
-      font-size: clamp(42px, 12vw, 64px);
+      font-size: clamp(34px, 9.6vw, 54px);
       letter-spacing: 0.08em;
       font-weight: 900;
-      line-height: 0.88;
+      line-height: 1;
+      text-transform: uppercase;
       text-shadow: 0 0 22px rgba(255, 255, 255, 0.32);
-    }
-
-    .daily-plan-modal__hero-main {
-      font-size: clamp(44px, 12vw, 66px);
-      letter-spacing: 0.08em;
-      font-weight: 900;
-      line-height: 0.95;
       background: linear-gradient(180deg, #c9f4ff 0%, #2ed0ff 40%, #2d66ff 100%);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
       filter: drop-shadow(0 0 18px rgba(24, 200, 255, 0.62));
+    }
+
+    .daily-plan-modal__close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      border: 1px solid rgba(141, 238, 255, 0.46);
+      background: rgba(4, 18, 45, 0.86);
+      color: #8deeff;
+      display: grid;
+      place-items: center;
+      z-index: 2;
+      box-shadow: 0 0 16px rgba(24, 200, 255, 0.34);
+      transition: transform 160ms ease, filter 160ms ease;
+    }
+
+    .daily-plan-modal__close:hover,
+    .daily-plan-modal__close:focus-visible {
+      transform: scale(1.05);
+      filter: brightness(1.12);
+      outline: none;
+    }
+
+    .daily-plan-modal__close svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
     }
 
     .daily-plan-modal__card {
@@ -1716,10 +1731,7 @@
       .daily-plan-modal__icon-ring svg { width: 34px; height: 34px; }
       .daily-plan-modal__mission h2 { font-size: 13px; }
       .daily-plan-modal__mission h2 span { font-size: 13px; }
-      .daily-plan-modal__hero-pre { font-size: 38px; }
-      .daily-plan-modal__hero-main { font-size: 46px; }
-      .daily-plan-modal__hero { gap: 12px; }
-      .daily-plan-modal__hero-icon { width: 66px; height: 66px; font-size: 34px; border-radius: 18px; }
+      .daily-plan-modal__hero-title { font-size: 42px; }
       .daily-plan-modal__general-progress { grid-template-columns: 62px 1fr auto; }
       .daily-plan-modal__general-badge { width: 62px; height: 62px; font-size: 28px; border-radius: 18px; }
       .daily-plan-modal__general-percent { font-size: 32px; }
@@ -1731,6 +1743,7 @@
       .daily-plan-modal__mini-ring span { font-size: 12px; }
       .daily-plan-modal__counter { font-size: 16px; }
       .daily-plan-modal__overall-bar { height: 16px; }
+      .daily-plan-modal__panel { transform: translateY(-24px); }
     }
 
     .welcome-gate__admin-stats {
@@ -3695,11 +3708,15 @@
     }
 
     .game-stars-row {
-      display: inline-grid;
-      grid-template-columns: auto auto;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
       align-items: center;
-      justify-content: center;
+      width: min(430px, 92vw);
       gap: clamp(10px, 3vw, 18px);
+    }
+
+    .game-stars-row .stars {
+      justify-self: center;
     }
 
     .game-home-btn {
@@ -3716,6 +3733,7 @@
         0 0 18px rgba(64, 221, 255, 0.38),
         0 0 34px rgba(51, 116, 255, 0.22);
       transition: transform 160ms ease, filter 160ms ease;
+      justify-self: start;
     }
 
     .game-home-btn:hover,
@@ -3730,6 +3748,39 @@
       height: 58%;
       fill: currentColor;
       filter: drop-shadow(0 0 10px rgba(64, 221, 255, 0.72));
+    }
+
+    .game-mission-btn {
+      width: clamp(38px, 9.6vw, 52px);
+      height: clamp(38px, 9.6vw, 52px);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: #d789ff;
+      background: radial-gradient(circle, rgba(215, 137, 255, 0.24), rgba(31, 7, 47, 0.88) 68%);
+      border: 1px solid rgba(215, 137, 255, 0.62);
+      box-shadow:
+        inset 0 0 18px rgba(215, 137, 255, 0.12),
+        0 0 18px rgba(215, 137, 255, 0.4),
+        0 0 34px rgba(178, 74, 255, 0.3);
+      transition: transform 160ms ease, filter 160ms ease;
+      justify-self: end;
+    }
+
+    .game-mission-btn:hover,
+    .game-mission-btn:focus-visible {
+      transform: translateY(-1px) scale(1.04);
+      filter: brightness(1.12);
+      outline: none;
+    }
+
+    .game-mission-btn svg {
+      width: 56%;
+      height: 56%;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      filter: drop-shadow(0 0 10px rgba(215, 137, 255, 0.82));
     }
 
     .stars-wrap p {
@@ -9017,13 +9068,12 @@
     </div>
     <div class="daily-plan-modal" id="dailyPlanModal" aria-hidden="true">
       <div class="daily-plan-modal__panel">
+        <button class="daily-plan-modal__close" id="dailyPlanCloseBtn" type="button" aria-label="Fechar missao diaria">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>
+        </button>
         <div class="daily-plan-modal__glow" aria-hidden="true"></div>
         <section class="daily-plan-modal__hero">
-          <div class="daily-plan-modal__hero-icon" aria-hidden="true">🎯</div>
-          <div>
-            <div class="daily-plan-modal__hero-pre">MISSÃO</div>
-            <div class="daily-plan-modal__hero-main">DIÁRIA</div>
-          </div>
+          <div class="daily-plan-modal__hero-title">Missão Diária</div>
         </section>
 
         <section class="daily-plan-modal__card">
@@ -9238,6 +9288,13 @@
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10.5Z"/></svg>
             </button>
             <div class="stars" id="gameStars" aria-label="Estrelas do card"></div>
+            <button class="game-mission-btn" id="gameMissionBtn" type="button" aria-label="Abrir missao diaria">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle>
+                <path d="M12 3v3M12 18v3M3 12h3M18 12h3"></path>
+              </svg>
+            </button>
           </div>
           <p id="gameStarCopy" class="game-star-copy">Cada acerto libera uma estrela. Cinco estrelas ganham o card.</p>
         </div>
@@ -9995,6 +10052,7 @@
           gameSwipeStartY: 0,
           gameSwipeTriggeredAt: 0,
           gamePausedAtWelcome: false,
+          gamePausedAtDailyPlan: false,
           gameStatusRankTimer: 0,
           gameStatusRankToken: 0,
           gameStatusPreviousRank: 0,
@@ -10070,6 +10128,7 @@
         welcomeModeModalLevelValue: document.getElementById('welcomeModeModalLevelValue'),
         welcomeModeModalLevelNextBtn: document.getElementById('welcomeModeModalLevelNextBtn'),
         dailyPlanModal: document.getElementById('dailyPlanModal'),
+        dailyPlanCloseBtn: document.getElementById('dailyPlanCloseBtn'),
         dailyPlanUserAvatar: document.getElementById('dailyPlanUserAvatar'),
         dailyPlanUserLevel: document.getElementById('dailyPlanUserLevel'),
         dailyPlanFlashcardsDone: document.getElementById('dailyPlanFlashcardsDone'),
@@ -10205,6 +10264,7 @@
         flashcardLevelProgressBar: document.getElementById('flashcardLevelProgressBar'),
         gameStars: document.getElementById('gameStars'),
         gameHomeBtn: document.getElementById('gameHomeBtn'),
+        gameMissionBtn: document.getElementById('gameMissionBtn'),
         gameLanguageBtn: document.getElementById('gameLanguageBtn'),
         gameTouchBtn: document.getElementById('gameTouchBtn'),
         gameAdvanceBtn: document.getElementById('gameAdvanceBtn'),
@@ -14681,7 +14741,38 @@
         }
       }
 
-      function openDailyPlanModal() {
+      function pauseFlashcardsGameForDailyPlan() {
+        if (!state.game.active) return;
+        commitCurrentCardTrainingTime();
+        state.game.listening = false;
+        cleanupGameRecognition();
+        stopActiveAudio();
+        clearTypingPromptLoop();
+        clearTypingSkipAutomation();
+        clearStageTutorialReminder();
+        hideGameStageTutorial({ resume: false });
+        clearStageTwoHintTimer();
+        clearFirstStageMicHint({ clearStatus: true });
+        clearStageHintLoop({ clearStatus: true });
+        closeGameReportMenu();
+        state.game.paused = true;
+        state.ui.gamePausedAtDailyPlan = true;
+        updateLevelProgressBar();
+        syncLevelTextModeControls();
+      }
+
+      function resumeFlashcardsGameFromDailyPlan() {
+        if (!state.game.active || !state.ui.gamePausedAtDailyPlan) return;
+        state.ui.gamePausedAtDailyPlan = false;
+        state.game.paused = false;
+        syncLevelTextModeControls();
+        updateLevelProgressBar();
+      }
+
+      function openDailyPlanModal(options = {}) {
+        if (options.fromGame) {
+          pauseFlashcardsGameForDailyPlan();
+        }
         state.entry.dailyPlanOpen = true;
         void syncDailyPlanModal();
       }
@@ -14690,6 +14781,7 @@
         if (!state.entry.dailyPlanOpen) return;
         state.entry.dailyPlanOpen = false;
         void syncDailyPlanModal();
+        resumeFlashcardsGameFromDailyPlan();
       }
 
       function shouldUseLevelModeBufferedPool() {
@@ -21105,6 +21197,7 @@
           persistGameSessionLocally();
         }
         state.ui.gamePausedAtWelcome = true;
+        state.ui.gamePausedAtDailyPlan = false;
         state.game.listening = false;
         cleanupGameRecognition();
         stopActiveAudio();
@@ -21864,6 +21957,7 @@
         els.welcomeMissionBtn?.addEventListener('click', () => {
           openDailyPlanModal();
         });
+        els.dailyPlanCloseBtn?.addEventListener('click', closeDailyPlanModal);
         els.welcomeBooksBtn?.addEventListener('click', () => {
           window.location.href = resolveNativeRenderPageHref('books');
         });
@@ -21974,6 +22068,11 @@
           event.stopPropagation();
           pauseFlashcardsGameToWelcome();
         });
+        els.gameMissionBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          openDailyPlanModal({ fromGame: true });
+        });
         els.welcomeTrainingModes?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-training-stage]');
           if (!button) return;
@@ -22050,6 +22149,7 @@
           if (event.target.closest('.btn-close')) return;
           if (event.target.closest('.flashcards-typing')) return;
           if (event.target.closest('.game-home-btn')) return;
+          if (event.target.closest('.game-mission-btn')) return;
           if (event.target.closest('.game-report-trigger')) return;
           startRecognition();
         });
