@@ -9123,7 +9123,7 @@
         <div class="daily-plan-modal__overall-progress">
           <div class="daily-plan-modal__overall-bar"><div class="daily-plan-modal__overall-fill" id="dailyPlanOverallBar" style="--progress: 0%"></div></div>
         </div>
-        <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">Progresso do proximo selo: 0%</div>
+        <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">progresso máximo: 0%</div>
       </div>
     </div>
   </section>
@@ -14728,7 +14728,7 @@
           Math.min(100, (planScoreAt120 * missionProgressPercent) / 100)
         );
         const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
-        const nextSealProgress = computeDailyPlanNextSealProgress(totalSealProgress);
+        const maxSealProgress = planScoreAt120;
         if (els.dailyPlanCurrentSealImage) {
           const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/prata.png';
           els.dailyPlanCurrentSealImage.src = sealSrc;
@@ -14737,7 +14737,7 @@
             : 'Selo atual';
         }
         if (els.dailyPlanSealProgressValue) {
-          els.dailyPlanSealProgressValue.textContent = `Progresso do proximo selo: ${nextSealProgress}%`;
+          els.dailyPlanSealProgressValue.textContent = `progresso máximo: ${Math.round(maxSealProgress)}%`;
         }
       }
 
