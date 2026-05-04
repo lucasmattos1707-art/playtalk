@@ -3799,7 +3799,7 @@
       line-height: 0.98;
       letter-spacing: 0;
       text-shadow: none;
-      margin-top: -60px;
+      margin-top: -30px;
     }
 
     .books-reader-portuguese {
@@ -3808,7 +3808,7 @@
 
     .books-reader[data-reader-mode="listening-training"] .books-reader-portuguese {
       display: block;
-      margin: 8px 0 0;
+      margin: 12px 0 0;
       color: rgba(226, 235, 246, 0.78);
       font-family: "Pltay", "Soopafre", Arial, sans-serif;
       font-weight: 400;
@@ -3817,7 +3817,6 @@
       letter-spacing: 0;
       text-align: center;
       text-shadow: none;
-      transform: translateY(-60px);
       transition: opacity 180ms ease;
     }
 
@@ -3875,6 +3874,10 @@
       justify-content: center;
       gap: clamp(14px, 5vw, 32px);
       min-height: 128px;
+    }
+
+    .books-reader[data-reader-mode="listening-training"] .books-reader-mic-row {
+      transform: translateY(50px);
     }
 
     .books-reader-side-actions {

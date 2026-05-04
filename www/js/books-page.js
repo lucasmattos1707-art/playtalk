@@ -306,7 +306,7 @@
     readerIndex: 0,
     readerDisplayLanguage: 'english',
     readerVisualLanguage: 'english',
-    readerListeningRevealPortuguese: false,
+    readerListeningRevealPortuguese: true,
     readerScores: [],
     readerCurrentScore: null,
     readerCurrentBadgeSrc: '',
@@ -5973,6 +5973,7 @@
     if (els.readerHidePortugueseBtn) {
       els.readerHidePortugueseBtn.classList.toggle('is-active', isListening && hidePortuguese);
       els.readerHidePortugueseBtn.setAttribute('aria-pressed', isListening && hidePortuguese ? 'true' : 'false');
+      els.readerHidePortugueseBtn.setAttribute('aria-label', isListening && hidePortuguese ? 'Mostrar traducao em portugues' : 'Ocultar traducao em portugues');
     }
   }
 
@@ -5999,6 +6000,29 @@
     const text = safeText(value).trim();
     if (!text) return '';
     return text.charAt(0).toLocaleUpperCase('pt-BR') + text.slice(1).toLocaleLowerCase('pt-BR');
+  }
+
+  function formatReaderListeningDisplayText(value) {
+    const normalized = formatReaderListeningText(value).replace(/\s+/g, ' ').trim();
+    if (!normalized) return '';
+    if (normalized.length <= 18) return normalized;
+    const midpoint = Math.floor(normalized.length / 2);
+    const leftBreak = normalized.lastIndexOf(' ', midpoint);
+    const rightBreak = normalized.indexOf(' ', midpoint);
+    let breakAt = -1;
+    if (leftBreak > 3 && rightBreak > 3) {
+      breakAt = (midpoint - leftBreak) <= (rightBreak - midpoint) ? leftBreak : rightBreak;
+    } else if (leftBreak > 3) {
+      breakAt = leftBreak;
+    } else if (rightBreak > 3) {
+      breakAt = rightBreak;
+    }
+    if (breakAt < 0) {
+      breakAt = Math.min(18, Math.max(6, midpoint));
+    }
+    const firstLine = normalized.slice(0, breakAt).trim();
+    const secondLine = normalized.slice(breakAt).trim();
+    return `${firstLine}\n${secondLine}`;
   }
 
   function setReaderVisible(visible) {
@@ -6533,9 +6557,11 @@
     state.readerDisplayLanguage = displayLanguage;
     const listeningPortuguese = formatReaderListeningText(portuguese);
     const displayText = state.readerMode === 'listening-training'
-      ? formatReaderListeningText(english)
+      ? formatReaderListeningDisplayText(english)
       : (displayLanguage === 'portuguese' ? portuguese : english);
-    const displayTextFormatted = splitBalancedLines(sanitizeReaderDisplayText(displayText));
+    const displayTextFormatted = state.readerMode === 'listening-training'
+      ? sanitizeReaderDisplayText(displayText)
+      : splitBalancedLines(sanitizeReaderDisplayText(displayText));
     if (state.readerRenderedCardIndex !== index) {
       if (state.readerRenderedCardIndex >= 0) {
         commitReaderPhrasePracticeProgress();
@@ -6582,7 +6608,7 @@
     state.readerIndex = 0;
     state.readerDisplayLanguage = 'english';
     state.readerVisualLanguage = 'english';
-    state.readerListeningRevealPortuguese = false;
+    state.readerListeningRevealPortuguese = true;
     state.readerScores = [];
     state.readerCurrentScore = null;
     resetReaderCurrentBadge();
@@ -6680,7 +6706,7 @@
       state.readerSessionSpokenChars = 0;
       state.readerDisplayLanguage = 'english';
       state.readerVisualLanguage = 'english';
-      state.readerListeningRevealPortuguese = false;
+      state.readerListeningRevealPortuguese = true;
       state.readerMicBusy = false;
       state.readerLastAudioKey = '';
       state.readerCardShownAt = 0;
