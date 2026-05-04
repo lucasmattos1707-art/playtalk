@@ -1078,16 +1078,20 @@
     }
 
     function calculate() {
-      const dailyHours = state.minutes / 60;
       const days = effectivePlanMonths(state.months) * 30;
-      const totalHours = dailyHours * days;
-      let base = 100 * (1 - Math.exp(-totalHours / 260));
+      const totalHours = (state.minutes / 60) * days;
+      const normalizedHours = 2 * days;
+      const timeFactor = clamp(state.minutes / 120, 0, 1);
+      const calibrationFactor = 25 / 33;
+      let base = 100 * (1 - Math.exp(-normalizedHours / 260));
       base *= [0.82, 1.0, 1.15][state.application];
       const smartbooksShare = state.smartbooksPercentage / 100;
       const flashcardsShare = state.flashcardsPercentage / 100;
       const bookBoost = [0.10, 0.20, 0.30][state.application] * smartbooksShare;
-
-      const finalScore = Math.max(0, base * (1 + bookBoost));
+      const finalScore = Math.max(
+        0,
+        base * (1 + bookBoost) * calibrationFactor * timeFactor
+      );
       return {
         finalScore,
         totalHours,
