@@ -4045,6 +4045,7 @@ const readFlashcardStateForUser = async (userId) => {
   }
 
   await ensureFlashcardUserStateTables();
+  await ensureUserBooksEnergyXpStatsTable();
 
   const normalizedUserId = Number.parseInt(userId, 10);
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
@@ -4053,7 +4054,7 @@ const readFlashcardStateForUser = async (userId) => {
     throw error;
   }
 
-  const [progressResult, statsResult, accurateResult, hiddenResult, userLevelResult] = await Promise.all([
+  const [progressResult, statsResult, accurateResult, hiddenResult, userLevelResult, booksEnergyXpResult] = await Promise.all([
     pool.query(
       `SELECT
          card_id,
@@ -4102,6 +4103,13 @@ const readFlashcardStateForUser = async (userId) => {
        WHERE id = $1
        LIMIT 1`,
       [normalizedUserId]
+    ),
+    pool.query(
+      `SELECT energy_xp_total
+       FROM public.user_books_energy_xp_stats
+       WHERE user_id = $1
+       LIMIT 1`,
+      [normalizedUserId]
     )
   ]);
 
@@ -4113,15 +4121,18 @@ const readFlashcardStateForUser = async (userId) => {
 
   return {
     progress: progressRecords,
-    stats: normalizeFlashcardStats({
-      playTimeMs: flashcardStatsRow.play_time_ms,
-      speakings: flashcardStatsRow.speakings,
-      listenings: flashcardStatsRow.listenings,
-      readings: flashcardStatsRow.readings,
-      trainingTimeMs: flashcardStatsRow.training_time_ms,
-      pronunciationSamples: accurateAggregate.pronunciationSamples,
-      secondStarErrorHeard: flashcardStatsRow.second_star_error_heard
-    }, progressRecords.length),
+    stats: {
+      ...normalizeFlashcardStats({
+        playTimeMs: flashcardStatsRow.play_time_ms,
+        speakings: flashcardStatsRow.speakings,
+        listenings: flashcardStatsRow.listenings,
+        readings: flashcardStatsRow.readings,
+        trainingTimeMs: flashcardStatsRow.training_time_ms,
+        pronunciationSamples: accurateAggregate.pronunciationSamples,
+        secondStarErrorHeard: flashcardStatsRow.second_star_error_heard
+      }, progressRecords.length),
+      booksEnergyXpTotal: Math.max(0, Number(booksEnergyXpResult.rows[0]?.energy_xp_total) || 0)
+    },
     meta: {
       userLevel: normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level),
       userLevelUpdatedAt: userLevelResult.rows[0]?.level_updated_at
@@ -4180,6 +4191,9 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
   })();
   let persistedUserLevel = requestedUserLevel;
   let persistedUserLevelUpdatedAt = null;
+  let booksEnergyXpTotal = 0;
+  let booksEnergyXpDelta = 0;
+  let booksEnergyLevelsAwarded = 0;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -4440,6 +4454,9 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
 
     if (practiceSecondsDelta > 0 || readingCharsDelta > 0 || speakingCharsDelta > 0 || listeningCharsDelta > 0) {
       await ensureUserBooksConsumptionStatsTable();
+      await ensureUserDailyEnergyStatsTable();
+      await ensureUserBooksEnergyXpStatsTable();
+      await ensureEnergySettingsTable();
       await client.query(
         `INSERT INTO public.user_books_consumption_stats (
            user_id, reading_chars, speaking_chars, listening_chars, practice_seconds, updated_at
@@ -4453,10 +4470,38 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
                updated_at = now()`,
         [normalizedUserId, readingCharsDelta, speakingCharsDelta, listeningCharsDelta, practiceSecondsDelta]
       );
+      const effectiveUser = (userRecord && Number.parseInt(userRecord.id, 10) === normalizedUserId)
+        ? userRecord
+        : { id: normalizedUserId };
+      const energySnapshot = await incrementDailyEnergyUsage(client, effectiveUser, {
+        readingCharsDelta,
+        speakingCharsDelta,
+        listeningCharsDelta
+      });
+      const xpAward = await awardUserBooksEnergyXp(client, normalizedUserId, {
+        readingCharsDelta,
+        speakingCharsDelta,
+        listeningCharsDelta
+      }, {
+        dailyFreeEnergyLimit: energySnapshot?.dailyEnergyLimit,
+        energyCostMultiplierMilli: energySnapshot?.energyCostMultiplierMilli
+      });
+      booksEnergyXpTotal = Math.max(0, Number(xpAward?.totalXp) || 0);
+      booksEnergyXpDelta = Math.max(0, Number(xpAward?.xpDelta) || 0);
+      booksEnergyLevelsAwarded = Math.max(0, Number(xpAward?.levelsAwarded) || 0);
       await updateUserPresenceClassProgress(client, normalizedUserId, {
         speakingCharsDelta,
         listeningCharsDelta
       });
+    } else {
+      const booksXpResult = await client.query(
+        `SELECT energy_xp_total
+         FROM public.user_books_energy_xp_stats
+         WHERE user_id = $1
+         LIMIT 1`,
+        [normalizedUserId]
+      );
+      booksEnergyXpTotal = Math.max(0, Number(booksXpResult.rows[0]?.energy_xp_total) || 0);
     }
 
     await client.query(
@@ -4501,7 +4546,12 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
   );
   return {
     progressCount: progress.length,
-    stats,
+    stats: {
+      ...stats,
+      booksEnergyXpTotal,
+      booksEnergyXpDelta,
+      booksEnergyLevelsAwarded
+    },
     userLevel: persistedUserLevel,
     userLevelUpdatedAt: persistedUserLevelUpdatedAt,
     rankingRecord
