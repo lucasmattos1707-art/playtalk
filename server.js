@@ -2039,13 +2039,22 @@ const ensureUserFluencySealsTable = async () => {
         ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()
       `);
       await pool.query(`
+        ALTER TABLE public.user_fluency_seals
+        ADD COLUMN IF NOT EXISTS next_day_slot smallint NOT NULL DEFAULT 1
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_fluency_seals
+        ADD COLUMN IF NOT EXISTS last_awarded_day_key date
+      `);
+      await pool.query(`
         UPDATE public.user_fluency_seals
            SET day1 = LEAST(6, GREATEST(0, COALESCE(day1, 0))),
                day2 = LEAST(6, GREATEST(0, COALESCE(day2, 0))),
                day3 = LEAST(6, GREATEST(0, COALESCE(day3, 0))),
                day4 = LEAST(6, GREATEST(0, COALESCE(day4, 0))),
                day5 = LEAST(6, GREATEST(0, COALESCE(day5, 0))),
-               day6 = LEAST(6, GREATEST(0, COALESCE(day6, 0)))
+               day6 = LEAST(6, GREATEST(0, COALESCE(day6, 0))),
+               next_day_slot = LEAST(6, GREATEST(1, COALESCE(next_day_slot, 1)))
       `);
       await pool.query(`
         INSERT INTO public.user_fluency_seals (user_id)
@@ -2091,6 +2100,100 @@ const ensureUserFluencySealsTable = async () => {
   }
 
   return userFluencySealsTableReadyPromise;
+};
+
+const FLUENCY_SEAL_CODE_BY_KEY = Object.freeze({
+  prata: 1,
+  quartz: 2,
+  esmeralda: 3,
+  platina: 4,
+  ouro: 5,
+  diamante: 6
+});
+
+const resolveFluencySealCode = (seal) => {
+  const key = String(seal?.key || '').trim().toLowerCase();
+  return Number(FLUENCY_SEAL_CODE_BY_KEY[key]) || 0;
+};
+
+const resolveCurrentDailyMissionSealCode = (mission) => {
+  const planScoreRaw = mission?.seal?.planScoreAt120 == null
+    ? mission?.seal?.planScore
+    : mission?.seal?.planScoreAt120;
+  const planScoreAt120 = Math.max(0, Math.min(100, Number(planScoreRaw) || 0));
+  const missionProgressPercent = Math.max(0, Number(mission?.weightedPercent) || 0);
+  const totalSealProgress = Math.max(
+    0,
+    Math.min(100, (planScoreAt120 * missionProgressPercent) / 100)
+  );
+  const seal = resolveFluencySealForScore(totalSealProgress);
+  return resolveFluencySealCode(seal);
+};
+
+const ensureDailyFluencySealSlot = async (db, user, missionSnapshot) => {
+  const userId = Number.parseInt(user?.id, 10);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return null;
+  }
+
+  await ensureUserFluencySealsTable();
+
+  const nowRowResult = await db.query(
+    `SELECT
+       (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::date AS local_day_key,
+       (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::time AS local_time`
+  );
+  const nowRow = nowRowResult.rows[0] || {};
+  const localDayKey = nowRow?.local_day_key || null;
+  const localTimeText = String(nowRow?.local_time || '').trim();
+  const cutoffReached = localTimeText >= '23:55:55';
+
+  if (!localDayKey || !cutoffReached) {
+    const readCurrent = await db.query(
+      `SELECT user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key
+         FROM public.user_fluency_seals
+        WHERE user_id = $1
+        LIMIT 1`,
+      [userId]
+    );
+    return readCurrent.rows[0] || null;
+  }
+
+  const sealCode = resolveCurrentDailyMissionSealCode(missionSnapshot);
+  const rowResult = await db.query(
+    `SELECT user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key
+       FROM public.user_fluency_seals
+      WHERE user_id = $1
+      LIMIT 1`,
+    [userId]
+  );
+  const row = rowResult.rows[0] || null;
+  if (!row) return null;
+
+  const alreadyAwardedToday = String(row?.last_awarded_day_key || '') === String(localDayKey);
+  if (alreadyAwardedToday) {
+    return row;
+  }
+
+  const slot = Math.max(1, Math.min(6, Number(row?.next_day_slot) || 1));
+  const nextSlot = Math.max(1, Math.min(6, slot + 1));
+  let updateQuery = '';
+  if (slot === 1) {
+    updateQuery = 'UPDATE public.user_fluency_seals SET day1 = $2, next_day_slot = $3, last_awarded_day_key = $4, updated_at = now() WHERE user_id = $1 RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key';
+  } else if (slot === 2) {
+    updateQuery = 'UPDATE public.user_fluency_seals SET day2 = $2, next_day_slot = $3, last_awarded_day_key = $4, updated_at = now() WHERE user_id = $1 RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key';
+  } else if (slot === 3) {
+    updateQuery = 'UPDATE public.user_fluency_seals SET day3 = $2, next_day_slot = $3, last_awarded_day_key = $4, updated_at = now() WHERE user_id = $1 RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key';
+  } else if (slot === 4) {
+    updateQuery = 'UPDATE public.user_fluency_seals SET day4 = $2, next_day_slot = $3, last_awarded_day_key = $4, updated_at = now() WHERE user_id = $1 RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key';
+  } else if (slot === 5) {
+    updateQuery = 'UPDATE public.user_fluency_seals SET day5 = $2, next_day_slot = $3, last_awarded_day_key = $4, updated_at = now() WHERE user_id = $1 RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key';
+  } else {
+    updateQuery = 'UPDATE public.user_fluency_seals SET day6 = $2, next_day_slot = $3, last_awarded_day_key = $4, updated_at = now() WHERE user_id = $1 RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key';
+  }
+
+  const updated = await db.query(updateQuery, [userId, sealCode, nextSlot, localDayKey]);
+  return updated.rows[0] || row;
 };
 
 const readUserDailyMissionProgress = async (db, userId) => {
@@ -13350,6 +13453,53 @@ app.get('/api/daily-plan', async (req, res) => {
   }
 });
 
+app.get('/api/fluency-seals', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const user = await readUserById(authUser.id);
+    if (!user?.id) {
+      res.status(400).json({ success: false, message: 'Usuario invalido.' });
+      return;
+    }
+
+    await ensureUserFluencySealsTable();
+    const missionSnapshot = await buildDailyMissionSnapshot(user, pool);
+    const row = await ensureDailyFluencySealSlot(pool, user, missionSnapshot);
+    const slots = [
+      Math.max(0, Math.min(6, Number(row?.day1) || 0)),
+      Math.max(0, Math.min(6, Number(row?.day2) || 0)),
+      Math.max(0, Math.min(6, Number(row?.day3) || 0)),
+      Math.max(0, Math.min(6, Number(row?.day4) || 0)),
+      Math.max(0, Math.min(6, Number(row?.day5) || 0)),
+      Math.max(0, Math.min(6, Number(row?.day6) || 0))
+    ];
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      success: true,
+      seals: {
+        slots,
+        nextDaySlot: Math.max(1, Math.min(6, Number(row?.next_day_slot) || 1)),
+        lastAwardedDayKey: row?.last_awarded_day_key || null
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao carregar selos de fluencia:', error);
+    res.status(500).json({ success: false, message: 'Nao foi possivel carregar os selos agora.' });
+  }
+});
+
 app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async (req, res) => {
   try {
     if (!pool) {
@@ -17023,6 +17173,8 @@ app.get(['/landing', '/landing/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'landing.html'));
 });
 app.get(['/allcards', '/allcards/'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Pragma', 'no-cache');
   res.sendFile(path.join(staticDir, 'allcards.html'));
 });
 app.get(/^\/allcards\/([^/]+\.json)$/i, async (req, res, next) => {

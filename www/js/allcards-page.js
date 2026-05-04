@@ -12,7 +12,7 @@
   const LIBRARY_RANK_SWAP_DELAY_MS = 2000;
   const REVIEW_SCALE_VERSION = 3;
   const REVIEW_PHASE_MAX = 6;
-  const VIEW_ORDER = ['flashcards', 'smartbooks'];
+  const VIEW_ORDER = ['flashcards', 'smartbooks', 'seals'];
   const REVIEW_PHASES = {
     1: { label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
     2: { label: 'Second star', durationMs: 34 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
@@ -21,6 +21,16 @@
     5: { label: 'Fourth star', durationMs: 20 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/ouro.png' },
     6: { label: 'Fifth star', durationMs: 45 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/diamante.png' }
   };
+  const SEAL_SLOT_COUNT = 6;
+  const SEAL_IMAGE_BY_CODE = Object.freeze({
+    1: '/medalhas/prata.png',
+    2: '/medalhas/quartz.png',
+    3: '/medalhas/emerald.png',
+    4: '/medalhas/platina.png',
+    5: '/medalhas/ouro.png',
+    6: '/medalhas/diamante.png'
+  });
+  const EMPTY_SEAL_IMAGE = '/medalhas/diamante.png';
 
   const els = {
     allGrid: document.getElementById('allGrid'),
@@ -35,11 +45,15 @@
     contentSwitcherLabel: document.getElementById('contentSwitcherLabel'),
     flashcardsView: document.getElementById('flashcardsView'),
     smartbooksView: document.getElementById('smartbooksView'),
+    sealsView: document.getElementById('sealsView'),
     smartbooksTitle: document.getElementById('smartbooksTitle'),
     smartbooksPlayBtn: document.getElementById('smartbooksPlayBtn'),
     smartbooksShelf: document.getElementById('smartbooksShelf'),
     smartbooksGrid: document.getElementById('smartbooksGrid'),
-    smartbooksStatus: document.getElementById('smartbooksStatus')
+    smartbooksStatus: document.getElementById('smartbooksStatus'),
+    sealsSectionHead: document.getElementById('sealsSectionHead'),
+    sealsGrid: document.getElementById('sealsGrid'),
+    sealsStatus: document.getElementById('sealsStatus')
   };
 
   const state = {
@@ -53,13 +67,17 @@
       librarySummaryFlashTimer: 0,
       librarySummaryToken: 0,
       smartbooksReady: false,
-      smartbooksLoading: false
+      smartbooksLoading: false,
+      sealsReady: false,
+      sealsLoading: false
     },
     renderTimer: 0,
     summaryLoopTimer: 0,
     smartbooksInitPromise: null,
     smartbooksBooks: [],
-    smartbooksStats: null
+    smartbooksStats: null,
+    sealsInitPromise: null,
+    sealsSlots: []
   };
 
   function safeText(value) {
@@ -81,10 +99,16 @@
     if (kind === 'smartbooks') {
       return '<svg viewBox="0 0 24 24"><path d="M5.5 4.2A2.3 2.3 0 0 1 7.8 2h10.7A1.5 1.5 0 0 1 20 3.5v15.9a.6.6 0 0 1-.88.54A6.7 6.7 0 0 0 16 19.2H7.9a2.9 2.9 0 0 0-2.4 1.15V4.2zm1.3.6v12.1a4.5 4.5 0 0 1 1.1-.14H16c.88 0 1.74.12 2.6.37V4.4H7.8c-.57 0-1 .4-1 .4zm-.7 15.9c.42-.54 1.08-.9 1.8-.9h8.1c1.03 0 2.05.22 3 .64v.06H7.3c-.52 0-1.02.08-1.2.2z"/></svg>';
     }
+    if (kind === 'seals') {
+      return '<svg viewBox="0 0 24 24"><path d="M12 2.7l2.86 5.8 6.4.93-4.63 4.51 1.1 6.36L12 17.2l-5.73 3.1 1.1-6.36L2.74 9.43l6.4-.93z"/></svg>';
+    }
     return '<svg viewBox="0 0 24 24"><path d="M12 2.7l2.86 5.8 6.4.93-4.63 4.51 1.1 6.36L12 17.2l-5.73 3.1 1.1-6.36L2.74 9.43l6.4-.93z"/></svg>';
   }
 
   function viewMeta(view) {
+    if (view === 'seals') {
+      return { key: 'seals', label: 'Selos' };
+    }
     return view === 'smartbooks'
       ? { key: 'smartbooks', label: 'SmartBooks' }
       : { key: 'flashcards', label: 'FlashCards' };
@@ -633,7 +657,8 @@
 
   function renderViewToggle() {
     const flashcardsActive = state.ui.activeView === 'flashcards';
-    const smartbooksActive = !flashcardsActive;
+    const smartbooksActive = state.ui.activeView === 'smartbooks';
+    const sealsActive = state.ui.activeView === 'seals';
     const currentViewMeta = viewMeta(state.ui.activeView);
     if (els.contentSwitcherLabel) {
       els.contentSwitcherLabel.textContent = currentViewMeta.label;
@@ -649,6 +674,9 @@
     }
     if (els.smartbooksView) {
       els.smartbooksView.hidden = !smartbooksActive;
+    }
+    if (els.sealsView) {
+      els.sealsView.hidden = !sealsActive;
     }
   }
 
@@ -666,6 +694,96 @@
       return;
     }
     loader.hide(key);
+  }
+
+  function setSealsStatus(message, visible = true) {
+    if (!els.sealsStatus) return;
+    els.sealsStatus.textContent = safeText(message) || 'Slots diarios: dia 1 ao dia 6.';
+    els.sealsStatus.hidden = !visible;
+  }
+
+  function normalizeSealCode(value) {
+    const code = Math.max(0, Math.min(6, Math.round(Number(value) || 0)));
+    return Number.isFinite(code) ? code : 0;
+  }
+
+  function normalizeSealsSlots(slots) {
+    if (!Array.isArray(slots)) return Array.from({ length: SEAL_SLOT_COUNT }, () => 0);
+    const normalized = slots.slice(0, SEAL_SLOT_COUNT).map(normalizeSealCode);
+    while (normalized.length < SEAL_SLOT_COUNT) normalized.push(0);
+    return normalized;
+  }
+
+  function sealImageForCode(code) {
+    return safeText(SEAL_IMAGE_BY_CODE[normalizeSealCode(code)]) || EMPTY_SEAL_IMAGE;
+  }
+
+  function renderSealsGrid() {
+    if (!els.sealsGrid) return;
+    const slots = normalizeSealsSlots(state.sealsSlots);
+    if (els.sealsSectionHead) {
+      els.sealsSectionHead.hidden = false;
+    }
+    els.sealsGrid.innerHTML = slots.map((code, index) => {
+      const earned = normalizeSealCode(code) > 0;
+      const dayLabel = `dia ${index + 1}`;
+      const imageSrc = sealImageForCode(code);
+      return `
+        <article class="seals-slot${earned ? ' is-earned' : ''}" aria-label="${escapeHtml(dayLabel)}">
+          <img class="seals-slot__badge" src="${escapeHtml(imageSrc)}" alt="${earned ? escapeHtml(`Selo do ${dayLabel}`) : escapeHtml(`Slot vazio do ${dayLabel}`)}">
+          <p class="seals-slot__day">${escapeHtml(dayLabel)}</p>
+        </article>
+      `;
+    }).join('');
+  }
+
+  async function fetchSealsSlots() {
+    const response = await fetch(buildApiUrl('/api/fluency-seals'), {
+      credentials: 'include',
+      headers: buildAuthHeaders(),
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success) {
+      return Array.from({ length: SEAL_SLOT_COUNT }, () => 0);
+    }
+    return normalizeSealsSlots(payload?.seals?.slots);
+  }
+
+  function ensureSealsGrid() {
+    if (state.ui.sealsReady) {
+      renderSealsGrid();
+      setSealsStatus('', false);
+      return Promise.resolve();
+    }
+    if (state.sealsInitPromise) {
+      return state.sealsInitPromise;
+    }
+
+    state.ui.sealsLoading = true;
+    setSealsStatus('Carregando seus selos...', true);
+    toggleGlobalLoader('allcards-seals', true, 'Carregando seus selos');
+
+    state.sealsInitPromise = fetchSealsSlots()
+      .then((slots) => {
+        state.sealsSlots = normalizeSealsSlots(slots);
+        state.ui.sealsReady = true;
+        renderSealsGrid();
+        setSealsStatus('', false);
+      })
+      .catch((error) => {
+        state.ui.sealsReady = false;
+        state.ui.sealsLoading = false;
+        setSealsStatus(error?.message || 'Nao foi possivel carregar os selos.', true);
+        throw error;
+      })
+      .finally(() => {
+        state.ui.sealsLoading = false;
+        state.sealsInitPromise = null;
+        toggleGlobalLoader('allcards-seals', false);
+      });
+
+    return state.sealsInitPromise;
   }
 
   function normalizePercent(value) {
@@ -880,6 +998,10 @@
     renderViewToggle();
     if (state.ui.activeView === 'smartbooks') {
       void ensureSmartbooksGrid();
+      return;
+    }
+    if (state.ui.activeView === 'seals') {
+      void ensureSealsGrid();
     }
   }
 
