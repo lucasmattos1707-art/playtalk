@@ -5359,8 +5359,8 @@
   }
 
   function countLetterBlocksCoverage(expected, spoken) {
-    const expectedRaw = lettersOnly(expected);
-    const spokenRaw = lettersOnly(spoken);
+    const expectedRaw = normalizeText(expected);
+    const spokenRaw = normalizeText(spoken);
     if (!expectedRaw || !spokenRaw) return 0;
 
     const ranges = [];
@@ -5393,14 +5393,10 @@
   }
 
   function calculateSpeechMatchPercent(expected, spoken) {
-    const expectedRaw = lettersOnly(expected);
+    const expectedRaw = normalizeText(expected);
     if (!expectedRaw) return 0;
-    if (hasCommonLetterSequence(expected, spoken, 2) || hasOneLetterWordMatch(expected, spoken)) {
-      return 100;
-    }
     const matched = countLetterBlocksCoverage(expected, spoken);
-    const baseScore = Math.max(0, Math.min(100, Math.round((matched / expectedRaw.length) * 100)));
-    return Math.max(0, Math.min(100, Math.round(baseScore * 1.1)));
+    return clampReaderPercent((matched / expectedRaw.length) * 100);
   }
 
   function mapWebSpeechError(errorCode) {
@@ -5926,14 +5922,14 @@
       ? Math.max(0, Math.min(100, ((currentIndex + 1) / totalCards) * 100))
       : 0;
     const readingPronunciationPercent = calculateReaderAverageScore();
-    const pronunciationDisplay = formatReaderScoreValue(readingPronunciationPercent);
+    const pronunciationDisplay = formatReaderRoundedScoreValue(readingPronunciationPercent);
     if (els.readerPronRing) {
       els.readerPronRing.style.setProperty('--percent', String(bookProgressPercent));
       els.readerPronRing.style.setProperty('--reader-progress-angle', `${bookProgressPercent * 3.6}deg`);
     }
     if (els.readerPronPercent) {
-      void animateDecimalMarkup(els.readerPronPercent, pronunciationDisplay.scaledValue, {
-        decimals: 2,
+      void animateDecimalMarkup(els.readerPronPercent, pronunciationDisplay.roundedValue, {
+        decimals: 0,
         duration: SCORE_ANIMATION_MS,
         startValue: 0
       });
@@ -6753,7 +6749,7 @@
         if (transcript) {
           state.readerSessionSpokenChars += transcript.length;
         }
-        const rawScore = applyReaderSentenceBonus(calculateSpeechMatchPercent(card.english, transcript));
+        const rawScore = calculateSpeechMatchPercent(card.english, transcript);
         const displayedScore = getReaderDisplayedScorePercent(rawScore);
         state.readerScores.push(displayedScore);
         if (state.readerRankedMode) {

@@ -1012,9 +1012,10 @@ const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = 
     return { xpDelta: 0, levelsAwarded: 0, totalXp: 0 };
   }
 
+  const readingCharsDelta = Math.max(0, Math.round(Number(deltas?.readingCharsDelta) || 0));
   const speakingCharsDelta = Math.max(0, Math.round(Number(deltas?.speakingCharsDelta) || 0));
   const listeningCharsDelta = Math.max(0, Math.round(Number(deltas?.listeningCharsDelta) || 0));
-  if (!speakingCharsDelta && !listeningCharsDelta) {
+  if (!readingCharsDelta && !speakingCharsDelta && !listeningCharsDelta) {
     return { xpDelta: 0, levelsAwarded: 0, totalXp: 0 };
   }
 
@@ -1022,7 +1023,7 @@ const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = 
 
   const settings = buildEnergySettingsSnapshot(energySettings || {});
   const xpDelta = applyEnergyCostMultiplier(
-    speakingCharsDelta + listeningCharsDelta,
+    readingCharsDelta + speakingCharsDelta + listeningCharsDelta,
     settings.energyCostMultiplierMilli
   );
   if (xpDelta <= 0) {
@@ -13176,9 +13177,15 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
     await ensureBooksSpeakingStatsTable();
     await ensureUserBooksConsumptionStatsTable();
     await ensureUserDailyMissionStatsTable();
+    await ensureUserDailyEnergyStatsTable();
+    await ensureUserBooksEnergyXpStatsTable();
+    await ensureEnergySettingsTable();
+    await ensureUsersPresenceClassMetricStorage();
     const book = await findSpeakingBookById(bookId);
 
     const client = await pool.connect();
+    let energySnapshot = null;
+    let xpAward = { xpDelta: 0, levelsAwarded: 0, totalXp: 0 };
     try {
       await client.query('BEGIN');
       const existingResult = await client.query(
@@ -13238,6 +13245,19 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
                  updated_at = now()`,
           [userId, speakingChars]
         );
+
+        energySnapshot = await incrementDailyEnergyUsage(client, authUser, {
+          speakingCharsDelta: speakingChars
+        });
+        xpAward = await awardUserBooksEnergyXp(client, userId, {
+          speakingCharsDelta: speakingChars
+        }, {
+          dailyFreeEnergyLimit: energySnapshot?.dailyEnergyLimit,
+          energyCostMultiplierMilli: energySnapshot?.energyCostMultiplierMilli
+        });
+        await updateUserPresenceClassProgress(client, userId, {
+          speakingCharsDelta: speakingChars
+        });
       }
 
       await incrementUserDailyMissionProgress(client, userId, {
@@ -13281,7 +13301,11 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
             listenedSeconds: nextListenedSeconds,
             bestSpeakingPercent: nextBestSpeaking,
             bestListeningPercent: nextBestListening
-          }
+          },
+          booksEnergyXpDelta: Math.max(0, Number(xpAward?.xpDelta) || 0),
+          booksEnergyXpTotal: Math.max(0, Number(xpAward?.totalXp) || 0),
+          booksEnergyLevelsAwarded: Math.max(0, Number(xpAward?.levelsAwarded) || 0),
+          ...(energySnapshot || {})
         }
       });
     } catch (error) {
@@ -13553,6 +13577,7 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
         listeningCharsDelta
       });
       await awardUserBooksEnergyXp(client, userId, {
+        readingCharsDelta,
         speakingCharsDelta,
         listeningCharsDelta
       }, {
