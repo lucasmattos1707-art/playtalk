@@ -698,7 +698,7 @@
 
   function setSealsStatus(message, visible = true) {
     if (!els.sealsStatus) return;
-    els.sealsStatus.textContent = safeText(message) || 'Slots diarios: dia 1 ao dia 6.';
+    els.sealsStatus.textContent = safeText(message) || 'Slots diarios: DAY 1 ao DAY 6.';
     els.sealsStatus.hidden = !visible;
   }
 
@@ -726,7 +726,7 @@
     }
     els.sealsGrid.innerHTML = slots.map((code, index) => {
       const earned = normalizeSealCode(code) > 0;
-      const dayLabel = `dia ${index + 1}`;
+      const dayLabel = `DAY ${index + 1}`;
       const imageSrc = sealImageForCode(code);
       return `
         <article class="seals-slot${earned ? ' is-earned' : ''}" aria-label="${escapeHtml(dayLabel)}">

@@ -203,13 +203,14 @@
 
     #sealsView {
       position: relative;
-      margin-top: 5vh;
+      margin-top: 10px;
       min-height: calc(100vh - var(--footer-total-height) - 2vh);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      gap: 18px;
+      gap: 10px;
+      font-family: "Exo 1", "Exo 2", "Open Sans", Arial, sans-serif;
     }
 
     .panel.section {
@@ -698,48 +699,28 @@
       opacity: 0;
     }
 
-    .seals-head {
-      margin-bottom: 6px;
-    }
-
-    #sealsTitle {
-      width: 100%;
-      margin: 0;
-      text-align: center;
-      font-size: clamp(28px, 4.6vw, 42px);
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-weight: 700;
-      line-height: 1;
-      letter-spacing: 0;
-      color: #fff;
-      text-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
-      transform: translateY(-4vh);
-    }
-
     .seals-grid {
       width: min(700px, calc(100vw - 28px));
-      margin: 0 auto;
+      margin: 2px auto 0;
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
+      gap: 10px;
       justify-items: center;
       align-items: center;
     }
 
     .seals-slot {
-      width: min(240px, 100%);
-      min-height: 170px;
+      width: min(220px, 100%);
+      min-height: 138px;
       border-radius: 16px;
       display: grid;
       align-content: center;
       justify-items: center;
-      gap: 11px;
-      padding: 14px 10px;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
-      border: 1px solid rgba(184, 199, 214, 0.22);
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 10px 20px rgba(1, 10, 23, 0.24);
+      gap: 8px;
+      padding: 8px 8px 6px;
+      background: transparent;
+      border: 1px solid transparent;
+      box-shadow: none;
     }
 
     .seals-slot__badge {
@@ -747,23 +728,26 @@
       height: clamp(88px, 23vw, 118px);
       object-fit: contain;
       display: block;
-      opacity: 0.6;
-      filter: grayscale(1) saturate(0) contrast(1.05);
+      opacity: 0;
+      filter: none;
+      transform: scale(1);
+      transition: transform 180ms ease, opacity 180ms ease;
     }
 
     .seals-slot.is-earned .seals-slot__badge {
       opacity: 1;
       filter: none;
+      transform: scale(1.1);
     }
 
     .seals-slot__day {
       margin: 0;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-family: "Exo 1", "Exo 2", "Open Sans", Arial, sans-serif;
       font-size: 14px;
-      font-weight: 300;
-      letter-spacing: 0;
-      color: rgba(172, 184, 196, 0.92);
-      text-transform: lowercase;
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      color: rgba(172, 184, 196, 0.86);
+      text-transform: uppercase;
     }
 
     .seals-status {
@@ -774,7 +758,7 @@
       border: 1px solid rgba(170, 184, 198, 0.26);
       background: rgba(6, 18, 34, 0.4);
       color: rgba(194, 206, 218, 0.94);
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-family: "Exo 1", "Exo 2", "Open Sans", Arial, sans-serif;
       font-size: 13px;
       font-weight: 400;
       text-align: center;
@@ -864,9 +848,7 @@
         gap: 12px;
       }
 
-      .seals-slot {
-        min-height: 152px;
-      }
+      .seals-slot { min-height: 126px; }
     }
   </style>
 </head>
@@ -924,13 +906,8 @@
       </div>
 
       <div class="content-view" id="sealsView" role="tabpanel" aria-labelledby="contentSwitcherCurrentBtn" hidden>
-        <div class="section-head seals-head" id="sealsSectionHead">
-          <div class="section-copy">
-            <h2 id="sealsTitle">Selos</h2>
-          </div>
-        </div>
         <div class="seals-grid" id="sealsGrid"></div>
-        <div class="seals-status" id="sealsStatus">Slots diarios: dia 1 ao dia 6.</div>
+        <div class="seals-status" id="sealsStatus">Slots diarios: DAY 1 ao DAY 6.</div>
       </div>
     </section>
   </main>
@@ -939,7 +916,7 @@
   <script src="js/api-config.js"></script>
   <script src="js/playtalk-shell.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/allcards-page.js?v=20260504-2" defer></script>
+  <script src="js/allcards-page.js?v=20260504-3" defer></script>
 </body>
 </html>
 

@@ -6,7 +6,7 @@
   const LOADER_ROOT_ID = 'playtalkGlobalLoader';
   const LOADER_STYLE_ID = 'playtalkGlobalLoaderStyles';
   const LOADER_BODY_CLASS = 'playtalk-loader-active';
-  const LOADER_MIN_VISIBLE_MS = 4000;
+  const LOADER_MIN_VISIBLE_MS = 0;
   const USERS_LOADER_MAX_VISIBLE_MS = 4000;
   const LOADER_TIPS = [
     ['UM VERBO EM USO', 'VALE MAIS QUE DEZ NA LISTA'],
