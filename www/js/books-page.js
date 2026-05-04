@@ -226,6 +226,7 @@
     readerBookCover: document.getElementById('booksReaderBookCover'),
     readerProfile: document.getElementById('booksReaderProfile'),
     readerEnglish: document.getElementById('booksReaderEnglish'),
+    readerPortuguese: document.getElementById('booksReaderPortuguese'),
     readerTraining: document.getElementById('booksReaderTraining'),
     readerAvatarImage: document.getElementById('booksReaderAvatarImage'),
     readerAvatarFallback: document.getElementById('booksReaderAvatarFallback'),
@@ -236,6 +237,8 @@
     readerCurrentScore: document.getElementById('booksReaderCurrentScore'),
     readerLangEnglishBtn: document.getElementById('booksReaderLangEnglishBtn'),
     readerLangPortugueseBtn: document.getElementById('booksReaderLangPortugueseBtn'),
+    readerReplayBtn: document.getElementById('booksReaderReplayBtn'),
+    readerHidePortugueseBtn: document.getElementById('booksReaderHidePortugueseBtn'),
     readerMicBtn: document.getElementById('booksReaderMicBtn'),
     readerMicScore: document.getElementById('booksReaderMicScore'),
     readerTrainingStatus: document.getElementById('booksReaderTrainingStatus'),
@@ -5953,6 +5956,35 @@
     }
   }
 
+  function getActiveReaderCard() {
+    const total = state.readerCards.length;
+    if (!total) return null;
+    const index = Math.max(0, Math.min(total - 1, state.readerIndex));
+    return state.readerCards[index] || null;
+  }
+
+  function updateReaderListeningPortugueseUi() {
+    const isListening = state.readerMode === 'listening-training';
+    const hidePortuguese = Boolean(state.readerListeningRevealPortuguese);
+    if (els.readerPortuguese) {
+      els.readerPortuguese.hidden = !isListening;
+      els.readerPortuguese.classList.toggle('is-muted', isListening && hidePortuguese);
+    }
+    if (els.readerHidePortugueseBtn) {
+      els.readerHidePortugueseBtn.classList.toggle('is-active', isListening && hidePortuguese);
+      els.readerHidePortugueseBtn.setAttribute('aria-pressed', isListening && hidePortuguese ? 'true' : 'false');
+    }
+  }
+
+  async function replayReaderListeningAudio() {
+    if (state.readerMode !== 'listening-training') return;
+    const card = getActiveReaderCard();
+    if (!card) return;
+    const index = Math.max(0, Math.min(state.readerCards.length - 1, state.readerIndex));
+    state.readerLastAudioKey = '';
+    await playReaderCardAudio(card, index);
+  }
+
   function setReaderVisualLanguage(language) {
     const nextLanguage = language === 'portuguese' ? 'portuguese' : 'english';
     if (state.readerVisualLanguage === nextLanguage) {
@@ -6472,10 +6504,17 @@
     if (els.readerMicBtn) {
       els.readerMicBtn.disabled = (!(isTraining || isAdminEditor)) || state.readerMicBusy || state.readerFinishing || state.readerAdminAudioBusy;
     }
+    if (els.readerReplayBtn) {
+      els.readerReplayBtn.disabled = state.readerMode !== 'listening-training' || state.readerMicBusy || state.readerFinishing || state.readerAdminAudioBusy;
+    }
+    if (els.readerHidePortugueseBtn) {
+      els.readerHidePortugueseBtn.disabled = state.readerMode !== 'listening-training';
+    }
     if (els.readerEnglish) {
       els.readerEnglish.classList.toggle('is-admin-editable', isAdminEditor);
     }
     updateReaderLanguageButtons();
+    updateReaderListeningPortugueseUi();
     updateReaderPronPercent();
   }
 
@@ -6492,6 +6531,7 @@
       ? (state.readerVisualLanguage === 'portuguese' ? 'portuguese' : 'english')
       : (isReaderTrainingMode() ? getReaderLockedLanguage() : 'english');
     state.readerDisplayLanguage = displayLanguage;
+    const listeningPortuguese = formatReaderListeningText(portuguese);
     const displayText = state.readerMode === 'listening-training'
       ? formatReaderListeningText(english)
       : (displayLanguage === 'portuguese' ? portuguese : english);
@@ -6508,6 +6548,10 @@
       }
     }
     els.readerEnglish.textContent = displayTextFormatted || 'Sem conteudo neste livro.';
+    if (els.readerPortuguese) {
+      const portugueseText = splitBalancedLines(sanitizeReaderDisplayText(listeningPortuguese));
+      els.readerPortuguese.textContent = portugueseText || '';
+    }
     els.readerEnglish.classList.toggle('is-highlight', highlight && displayLanguage === 'english');
     if (displayText) {
       const readingKey = `reader:${safeText(state.readerBookId)}:${displayLanguage}:${index}:${displayText}`;
@@ -7116,6 +7160,16 @@
 
     els.readerLangPortugueseBtn?.addEventListener('click', () => {
       setReaderVisualLanguage('portuguese');
+    });
+
+    els.readerReplayBtn?.addEventListener('click', () => {
+      void replayReaderListeningAudio();
+    });
+
+    els.readerHidePortugueseBtn?.addEventListener('click', () => {
+      if (state.readerMode !== 'listening-training') return;
+      state.readerListeningRevealPortuguese = !state.readerListeningRevealPortuguese;
+      updateReaderListeningPortugueseUi();
     });
 
     els.readerEnglish?.addEventListener('click', () => {
