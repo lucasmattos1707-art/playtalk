@@ -14620,8 +14620,8 @@
       }
 
       function resolveDailyPlanProgressMessage(percent) {
-        const normalized = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
-        if (normalized >= 100) return 'Missao completa! Voce bateu 100% hoje.';
+        const normalized = Math.max(0, Math.min(200, Math.round(Number(percent) || 0)));
+        if (normalized >= 200) return 'Missao completa! Voce bateu 200% hoje.';
         if (normalized >= 80) return 'Quase la! Falta pouco para fechar a missao.';
         if (normalized >= 60) return 'Ritmo forte. Continue assim.';
         if (normalized >= 40) return 'Bom progresso. Bora acelerar.';
@@ -14631,7 +14631,7 @@
 
       const DAILY_PLAN_FLUENCY_SEALS = [
         { key: 'prata', label: 'Prata', minScore: 40, sealImage: 'medalhas/prata.png' },
-        { key: 'quartz', label: 'Quartz', minScore: 50, sealImage: 'medalhas/quartz.png' },
+        { key: 'safira', label: 'Safira', minScore: 50, sealImage: 'medalhas/quartz.png' },
         { key: 'esmeralda', label: 'Esmeralda', minScore: 60, sealImage: 'medalhas/emerald.png' },
         { key: 'platina', label: 'Platina', minScore: 70, sealImage: 'medalhas/platina.png' },
         { key: 'ouro', label: 'Ouro', minScore: 80, sealImage: 'medalhas/ouro.png' },
@@ -14639,7 +14639,7 @@
       ];
 
       function resolveDailyPlanSealByScore(score) {
-        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
+        const normalized = Math.max(0, Math.min(200, Number(score) || 0));
         let selected = null;
         for (const seal of DAILY_PLAN_FLUENCY_SEALS) {
           if (!seal) continue;
@@ -14649,7 +14649,7 @@
       }
 
       function computeDailyPlanNextSealProgress(score) {
-        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
+        const normalized = Math.max(0, Math.min(200, Number(score) || 0));
         const nextSeal = DAILY_PLAN_FLUENCY_SEALS.find((seal) => normalized < seal.minScore) || null;
         if (!nextSeal) return 100;
         const progress = (normalized / nextSeal.minScore) * 100;
@@ -14681,18 +14681,11 @@
       }
 
       function clampPercent(value) {
-        return Math.max(0, Math.min(100, Number(value) || 0));
+        return Math.max(0, Math.min(200, Number(value) || 0));
       }
 
-      function resolveDailyPlanSplitShares(mission) {
-        const flashcardsPercentage = Math.max(0, Number(mission?.flashcardsPercentage) || 0);
-        const smartbooksPercentage = Math.max(0, Number(mission?.smartbooksPercentage) || 0);
-        const total = flashcardsPercentage + smartbooksPercentage;
-        if (total <= 0) return { cardsShare: 0.5, booksShare: 0.5 };
-        return {
-          cardsShare: flashcardsPercentage / total,
-          booksShare: smartbooksPercentage / total
-        };
+      function toMissionVisualPercent(value) {
+        return Math.max(0, Math.min(100, (Number(value) || 0) / 2));
       }
 
       function buildDailyPlanMissionView(mission, use120Preview = false) {
@@ -14703,19 +14696,14 @@
         const scale = use120Preview && minutes > 0 ? (120 / minutes) : 1;
         const cardsExpected = Math.max(0, Number(source?.cardsExpected) || 0) * scale;
         const booksExpected = Math.max(0, Number(source?.booksExpected) || 0) * scale;
-        const { cardsShare, booksShare } = resolveDailyPlanSplitShares(source);
-        const cardsTarget = cardsShare > 0 && cardsExpected > 0 ? Math.max(1, Math.ceil(cardsExpected)) : 0;
-        const booksTarget = booksShare > 0 && booksExpected > 0 ? Math.max(1, Math.ceil(booksExpected)) : 0;
+        const cardsTarget = cardsExpected > 0 ? Math.max(1, Math.ceil(cardsExpected)) : 0;
+        const booksTarget = booksExpected > 0 ? Math.max(1, Math.ceil(booksExpected)) : 0;
         const cardsPercent = computeDailyPlanRawPercent(cardsToday, cardsExpected);
         const booksPercent = computeDailyPlanRawPercent(booksToday, booksExpected);
-        const cardsTrackProgress = cardsShare <= 0
-          ? 1
-          : (cardsExpected > 0 ? Math.min(1, cardsToday / cardsExpected) : 0);
-        const booksTrackProgress = booksShare <= 0
-          ? 1
-          : (booksExpected > 0 ? Math.min(1, booksToday / booksExpected) : 0);
+        const weightedExpectedUnits = Math.max(0, cardsExpected) + (Math.max(0, booksExpected) * 2);
+        const weightedDoneUnits = Math.max(0, cardsToday) + (Math.max(0, booksToday) * 2);
         const balancedProgressPercent = clampPercent(
-          ((cardsTrackProgress * cardsShare) + (booksTrackProgress * booksShare)) * 100
+          computeDailyPlanRawPercent(weightedDoneUnits, weightedExpectedUnits)
         );
         return {
           cardsToday,
@@ -14743,7 +14731,7 @@
         const missionViewAt120 = buildDailyPlanMissionView(mission, true);
         const overallPercent = missionView.balancedProgressPercent;
         const overallPercentRounded = Math.round(overallPercent);
-        const overallPercentForVisual = clampPercent(overallPercent);
+        const overallPercentForVisual = toMissionVisualPercent(overallPercent);
         setDailyPlanProgress(
           missionView.cardsToday,
           missionView.cardsExpected,
@@ -14767,13 +14755,13 @@
           els.dailyPlanGeneralRing.style.background = `conic-gradient(#4ddcff 0 ${overallPercentForVisual.toFixed(2)}%, rgba(255,255,255,.1) ${overallPercentForVisual.toFixed(2)}% 100%)`;
         }
         if (els.dailyPlanFlashcardsPercent) {
-          const visual = clampPercent(missionView.cardsPercent);
+          const visual = toMissionVisualPercent(missionView.cardsPercent);
           els.dailyPlanFlashcardsPercent.style.background = `conic-gradient(#4ddcff 0 ${visual.toFixed(2)}%, rgba(255,255,255,.1) ${visual.toFixed(2)}% 100%)`;
           const label = els.dailyPlanFlashcardsPercent.querySelector('span');
           if (label) label.textContent = `${Math.round(missionView.cardsPercent)}%`;
         }
         if (els.dailyPlanBooksPercent) {
-          const visual = clampPercent(missionView.booksPercent);
+          const visual = toMissionVisualPercent(missionView.booksPercent);
           els.dailyPlanBooksPercent.style.background = `conic-gradient(#4ddcff 0 ${visual.toFixed(2)}%, rgba(255,255,255,.1) ${visual.toFixed(2)}% 100%)`;
           const label = els.dailyPlanBooksPercent.querySelector('span');
           if (label) label.textContent = `${Math.round(missionView.booksPercent)}%`;
@@ -14788,13 +14776,13 @@
         }
         const seal = mission?.seal || null;
         const planScoreAt120 = seal?.planScoreAt120 == null
-          ? Math.max(0, Math.min(100, Number(seal?.planScore) || 0))
-          : Math.max(0, Math.min(100, Number(seal.planScoreAt120) || 0));
+          ? Math.max(0, Math.min(200, Number(seal?.planScore) || 0))
+          : Math.max(0, Math.min(200, Number(seal.planScoreAt120) || 0));
         // "Progresso maximo" sempre usa a simulacao com jornada de 120 minutos.
         const missionProgressPercent = missionViewAt120.balancedProgressPercent;
         const totalSealProgress = Math.max(
           0,
-          Math.min(100, (planScoreAt120 * missionProgressPercent) / 100)
+          Math.min(200, (planScoreAt120 * missionProgressPercent) / 100)
         );
         const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
         if (els.dailyPlanCurrentSealImage) {
@@ -14813,7 +14801,8 @@
           els.dailyPlanSealProgressValue.textContent = `progresso máximo: ${Math.round(totalSealProgress)}%`;
         }
         if (els.dailyPlanOverallBar) {
-          els.dailyPlanOverallBar.style.setProperty('--progress', `${totalSealProgress.toFixed(2)}%`);
+          const overallVisual = toMissionVisualPercent(totalSealProgress);
+          els.dailyPlanOverallBar.style.setProperty('--progress', `${overallVisual.toFixed(2)}%`);
         }
       }
 
