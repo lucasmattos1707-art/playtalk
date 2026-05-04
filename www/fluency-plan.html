@@ -372,7 +372,7 @@
     }
 
     .result-screen {
-      text-align: left;
+      text-align: center;
     }
 
     .result-screen.active {
@@ -382,24 +382,40 @@
 
     .result-top {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
       gap: 14px;
-      margin-bottom: 0;
-      flex-wrap: wrap;
+      width: 100%;
+      margin: auto 0;
+      text-align: center;
+    }
+
+    .result-title {
+      margin: 0;
+      color: #72d6ff;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      font-size: clamp(13px, 1.4vw, 18px);
+      font-weight: 800;
     }
 
     .score {
-      font-size: clamp(62px, 11vw, 118px);
-      font-weight: 800;
-      letter-spacing: -0.08em;
-      line-height: .85;
+      display: inline-flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 8px;
+      margin: 0;
+      font-size: clamp(72px, 13vw, 140px);
+      font-weight: 900;
+      letter-spacing: -0.06em;
+      line-height: .92;
     }
 
-    .score small {
-      font-size: .34em;
-      letter-spacing: -0.03em;
-      color: #7ddcff;
+    .score-unit {
+      font-size: 0.9em;
+      font-weight: 900;
+      line-height: 1;
     }
 
     .badge {
@@ -857,27 +873,8 @@
 
     <section class="screen result-screen" data-step="4">
       <div class="result-top">
-        <div>
-          <div class="eyebrow">Seu resultado estimado</div>
-          <div class="score"><span id="score">0</span><small>%</small></div>
-        </div>
-        <div class="badge" id="boostBadge">Sem boost</div>
-      </div>
-
-      <div class="big-bar-wrap"><div class="big-bar" id="bar"></div></div>
-      <div class="label" id="resultLabel">Contato inicial</div>
-      <div class="description" id="resultDescription">Você começa a reconhecer o inglês, mas ainda sem autonomia real.</div>
-
-      <div class="stats">
-        <div class="stat"><strong id="totalHours">0h</strong><span>tempo total</span></div>
-        <div class="stat"><strong id="dailyBooks">0</strong><span>SmartBooks/dia</span></div>
-        <div class="stat"><strong id="cardsEstimate">0</strong><span>cartas possíveis</span></div>
-        <div class="stat"><strong id="planType">Leve</strong><span>tipo de plano</span></div>
-      </div>
-
-      <div class="boost" id="boostText">
-        <strong>50% FlashCards + 50% SmartBooks.</strong><br>
-        Seu plano mistura memória rápida com contexto para fluência prática.
+        <h2 class="result-title">Seu resultado estimado</h2>
+        <div class="score"><span id="score">0</span><span class="score-unit">%</span></div>
       </div>
     </section>
 
@@ -960,15 +957,6 @@
       liveResult: document.getElementById('liveResult'),
       liveTitle: document.getElementById('liveTitle'),
       score: document.getElementById('score'),
-      bar: document.getElementById('bar'),
-      resultLabel: document.getElementById('resultLabel'),
-      resultDescription: document.getElementById('resultDescription'),
-      totalHours: document.getElementById('totalHours'),
-      dailyBooks: document.getElementById('dailyBooks'),
-      cardsEstimate: document.getElementById('cardsEstimate'),
-      planType: document.getElementById('planType'),
-      boostBadge: document.getElementById('boostBadge'),
-      boostText: document.getElementById('boostText'),
       status: document.getElementById('status'),
       mixSliderTrack: document.getElementById('mixSliderTrack'),
       mixSlider: document.getElementById('mixSlider'),
@@ -1099,7 +1087,7 @@
       const flashcardsShare = state.flashcardsPercentage / 100;
       const bookBoost = [0.10, 0.20, 0.30][state.application] * smartbooksShare;
 
-      const finalScore = clamp(base * (1 + bookBoost), 0, 100);
+      const finalScore = Math.max(0, base * (1 + bookBoost));
       return {
         finalScore,
         totalHours,
@@ -1109,40 +1097,16 @@
       };
     }
 
-    function getPlanType(score) {
-      if (score < 20) return 'Curiosidade';
-      if (score < 40) return 'Leve';
-      if (score < 60) return 'Serio';
-      if (score < 80) return 'Forte';
-      return 'Imersivo';
-    }
-
     function updateResult() {
       const result = calculate();
       const rounded = Math.round(result.finalScore);
       const selectedLabel = labels[clamp(Math.floor(rounded / 5), 0, 19)];
 
       els.score.textContent = rounded;
-      els.bar.style.width = `${rounded}%`;
-      els.resultLabel.textContent = selectedLabel[1];
-      els.resultDescription.textContent = selectedLabel[2];
-      els.totalHours.textContent = `${Math.round(result.totalHours)}h`;
-      els.dailyBooks.textContent = state.smartbooksPercentage ? `${Math.max(1, Math.round((state.application + 1) * result.smartbooksShare))}` : '0';
-      els.cardsEstimate.textContent = Math.round(result.totalHours * 110 * result.flashcardsShare).toLocaleString('pt-BR');
-      els.planType.textContent = getPlanType(rounded);
-      els.liveTitle.textContent = selectedLabel[1];
-      state.liveTitleDefault = selectedLabel[1];
-
-      if (state.smartbooksPercentage === 0) {
-        els.boostBadge.textContent = 'Sem boost';
-        els.boostText.innerHTML = `<strong>${state.flashcardsPercentage}% FlashCards.</strong><br>Seu plano está focado em repetição, memória e resposta rápida.`;
-      } else if (state.flashcardsPercentage === 0) {
-        els.boostBadge.textContent = `+${Math.round(result.bookBoost * 100)}% boost`;
-        els.boostText.innerHTML = `<strong>${state.smartbooksPercentage}% SmartBooks.</strong><br>Seu plano puxa leitura guiada, contexto e ritmo de linguagem o tempo todo.`;
-      } else {
-        els.boostBadge.textContent = `+${Math.round(result.bookBoost * 100)}% boost`;
-        els.boostText.innerHTML = `<strong>${state.flashcardsPercentage}% FlashCards + ${state.smartbooksPercentage}% SmartBooks.</strong><br>O treino mistura memorização rápida com leitura contextual para empurrar sua fluência prática.`;
+      if (els.liveTitle) {
+        els.liveTitle.textContent = selectedLabel[1];
       }
+      state.liveTitleDefault = selectedLabel[1];
     }
 
     function renderStep() {

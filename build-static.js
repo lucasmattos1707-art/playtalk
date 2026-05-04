@@ -21,6 +21,7 @@ const appHtmlFiles = new Set([
   'username.html',
   'usermame.html',
   'avataradd.html',
+  'fluency-plan.html',
   'password.html',
   'premium.html',
   'admin.html',
