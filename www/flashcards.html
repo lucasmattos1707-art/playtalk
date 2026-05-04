@@ -1407,7 +1407,7 @@
 
     .daily-plan-modal__close {
       position: absolute;
-      top: 14px;
+      top: 34px;
       right: 14px;
       width: 42px;
       height: 42px;
@@ -1697,12 +1697,22 @@
       color: #8deeff;
       text-shadow: 0 0 18px rgba(24, 200, 255, 0.45);
       cursor: pointer;
+      transform: translateY(-30px);
     }
 
     .daily-plan-modal__overall-progress {
       width: min(430px, 100%);
       max-width: calc(100vw - 42px);
-      margin-top: -14px;
+      margin-top: -18px;
+    }
+
+    .daily-plan-modal__hero,
+    .daily-plan-modal__card {
+      transform: translateY(-30px);
+    }
+
+    body.daily-plan-open .flashcards-footer-nav {
+      display: none !important;
     }
 
     .daily-plan-modal__overall-bar {
@@ -1745,6 +1755,9 @@
       .daily-plan-modal__counter { font-size: 16px; }
       .daily-plan-modal__overall-bar { height: 16px; }
       .daily-plan-modal__panel { transform: translateY(-24px); }
+      .daily-plan-modal__hero,
+      .daily-plan-modal__card,
+      .daily-plan-modal__seal-progress { transform: translateY(-24px); }
     }
 
     .welcome-gate__admin-stats {
@@ -9121,10 +9134,10 @@
             <div class="daily-plan-modal__mini-ring" id="dailyPlanBooksPercent"><span>0%</span></div>
           </article>
         </section>
+        <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">progresso máximo: 0%</div>
         <div class="daily-plan-modal__overall-progress">
           <div class="daily-plan-modal__overall-bar"><div class="daily-plan-modal__overall-fill" id="dailyPlanOverallBar" style="--progress: 0%"></div></div>
         </div>
-        <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">progresso máximo: 0%</div>
       </div>
     </div>
   </section>
@@ -14727,6 +14740,7 @@
       function renderDailyPlanMission(mission, options = {}) {
         const use120Preview = Boolean(options.use120Preview);
         const missionView = buildDailyPlanMissionView(mission, use120Preview);
+        const missionViewAt120 = buildDailyPlanMissionView(mission, true);
         const overallPercent = missionView.balancedProgressPercent;
         const overallPercentRounded = Math.round(overallPercent);
         const overallPercentForVisual = clampPercent(overallPercent);
@@ -14752,9 +14766,6 @@
         if (els.dailyPlanGeneralRing) {
           els.dailyPlanGeneralRing.style.background = `conic-gradient(#4ddcff 0 ${overallPercentForVisual.toFixed(2)}%, rgba(255,255,255,.1) ${overallPercentForVisual.toFixed(2)}% 100%)`;
         }
-        if (els.dailyPlanOverallBar) {
-          els.dailyPlanOverallBar.style.setProperty('--progress', `${overallPercentForVisual.toFixed(2)}%`);
-        }
         if (els.dailyPlanFlashcardsPercent) {
           const visual = clampPercent(missionView.cardsPercent);
           els.dailyPlanFlashcardsPercent.style.background = `conic-gradient(#4ddcff 0 ${visual.toFixed(2)}%, rgba(255,255,255,.1) ${visual.toFixed(2)}% 100%)`;
@@ -14779,7 +14790,8 @@
         const planScoreAt120 = seal?.planScoreAt120 == null
           ? Math.max(0, Math.min(100, Number(seal?.planScore) || 0))
           : Math.max(0, Math.min(100, Number(seal.planScoreAt120) || 0));
-        const missionProgressPercent = overallPercent;
+        // "Progresso maximo" sempre usa a simulacao com jornada de 120 minutos.
+        const missionProgressPercent = missionViewAt120.balancedProgressPercent;
         const totalSealProgress = Math.max(
           0,
           Math.min(100, (planScoreAt120 * missionProgressPercent) / 100)
@@ -14798,8 +14810,10 @@
           els.dailyPlanCurrentSealImage.style.filter = hasUnlockedSeal ? 'none' : 'grayscale(1) saturate(0)';
         }
         if (els.dailyPlanSealProgressValue) {
-          const suffix = use120Preview ? ' (2h)' : '';
-          els.dailyPlanSealProgressValue.textContent = `progresso máximo${suffix}: ${Math.round(totalSealProgress)}%`;
+          els.dailyPlanSealProgressValue.textContent = `progresso máximo: ${Math.round(totalSealProgress)}%`;
+        }
+        if (els.dailyPlanOverallBar) {
+          els.dailyPlanOverallBar.style.setProperty('--progress', `${totalSealProgress.toFixed(2)}%`);
         }
       }
 
@@ -14824,6 +14838,7 @@
           els.dailyPlanModal.classList.toggle('is-visible', visible);
           els.dailyPlanModal.setAttribute('aria-hidden', visible ? 'false' : 'true');
         }
+        document.body.classList.toggle('daily-plan-open', visible);
         if (!visible) {
           clearDailyPlanPreviewTimer();
           state.entry.dailyPlanPreview120 = false;
