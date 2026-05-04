@@ -14692,11 +14692,18 @@
           els.dailyPlanBooksRemaining.textContent = `Faltam ${remaining} minibooks`;
         }
         const seal = mission?.seal || null;
-        const sealScoreAt120 = seal?.planScoreAt120 == null ? null : Math.max(0, Math.min(100, Number(seal.planScoreAt120) || 0));
-        const fallbackScore = Math.max(0, Math.min(100, Number(seal?.planScore) || Number(mission?.weightedPercent) || 0));
-        const scoreForSealProgress = sealScoreAt120 == null ? fallbackScore : sealScoreAt120;
-        const currentSeal = resolveDailyPlanSealByScore(scoreForSealProgress);
-        const nextSealProgress = computeDailyPlanNextSealProgress(scoreForSealProgress);
+        const planScoreAt120 = seal?.planScoreAt120 == null
+          ? Math.max(0, Math.min(100, Number(seal?.planScore) || 0))
+          : Math.max(0, Math.min(100, Number(seal.planScoreAt120) || 0));
+        const missionProgressPercent = Math.max(0, Number(mission?.weightedPercent) || 0);
+        // Evolucao real do selo: base do plano em 120 min (Nucleo A) multiplicada
+        // pelo cumprimento da Missao Diaria (pode passar de 100%), com teto final 100%.
+        const totalSealProgress = Math.max(
+          0,
+          Math.min(100, (planScoreAt120 * missionProgressPercent) / 100)
+        );
+        const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
+        const nextSealProgress = computeDailyPlanNextSealProgress(totalSealProgress);
         if (els.dailyPlanCurrentSealImage) {
           const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/prata.png';
           els.dailyPlanCurrentSealImage.src = sealSrc;
