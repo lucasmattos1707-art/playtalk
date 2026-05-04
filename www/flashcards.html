@@ -1696,6 +1696,7 @@
       letter-spacing: 0.01em;
       color: #8deeff;
       text-shadow: 0 0 18px rgba(24, 200, 255, 0.45);
+      cursor: pointer;
     }
 
     .daily-plan-modal__overall-progress {
@@ -9288,7 +9289,7 @@
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10.5Z"/></svg>
             </button>
             <div class="stars" id="gameStars" aria-label="Estrelas do card"></div>
-            <button class="game-mission-btn" id="gameMissionBtn" type="button" aria-label="Voltar para a welcome-gate">
+            <button class="game-mission-btn" id="gameMissionBtn" type="button" aria-label="Abrir missao diaria">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <circle cx="12" cy="12" r="6"></circle>
                 <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle>
@@ -9886,6 +9887,9 @@
           welcomeIndex: 0,
           welcomeModeKey: '',
           dailyPlanOpen: false,
+          dailyPlanMissionSnapshot: null,
+          dailyPlanPreview120: false,
+          dailyPlanPreviewTimer: 0,
           welcomeTimer: 0,
           welcomeModesResolved: false,
           welcomeModesUsersEnabled: false,
@@ -14656,37 +14660,92 @@
         }
       }
 
-      async function syncDailyPlanModal() {
-        const visible = Boolean(state.entry.dailyPlanOpen);
-        if (els.dailyPlanModal) {
-          els.dailyPlanModal.classList.toggle('is-visible', visible);
-          els.dailyPlanModal.setAttribute('aria-hidden', visible ? 'false' : 'true');
+      function computeDailyPlanRawPercent(done, expected) {
+        const normalizedDone = Math.max(0, Number(done) || 0);
+        const normalizedExpected = Math.max(0, Number(expected) || 0);
+        if (normalizedExpected <= 0) return normalizedDone > 0 ? 100 : 0;
+        return Math.max(0, (normalizedDone / normalizedExpected) * 100);
+      }
+
+      function clampPercent(value) {
+        return Math.max(0, Math.min(100, Number(value) || 0));
+      }
+
+      function resolveDailyPlanSplitShares(mission) {
+        const flashcardsPercentage = Math.max(0, Number(mission?.flashcardsPercentage) || 0);
+        const smartbooksPercentage = Math.max(0, Number(mission?.smartbooksPercentage) || 0);
+        const total = flashcardsPercentage + smartbooksPercentage;
+        if (total <= 0) return { cardsShare: 0.5, booksShare: 0.5 };
+        return {
+          cardsShare: flashcardsPercentage / total,
+          booksShare: smartbooksPercentage / total
+        };
+      }
+
+      function buildDailyPlanMissionView(mission, use120Preview = false) {
+        const source = mission || {};
+        const minutes = Math.max(0, Number(source?.minutes) || 0);
+        const cardsToday = Math.max(0, Number(source?.cardsToday) || 0);
+        const booksToday = Math.max(0, Number(source?.booksToday) || 0);
+        const scale = use120Preview && minutes > 0 ? (120 / minutes) : 1;
+        const cardsExpected = Math.max(0, Number(source?.cardsExpected) || 0) * scale;
+        const booksExpected = Math.max(0, Number(source?.booksExpected) || 0) * scale;
+        const { cardsShare, booksShare } = resolveDailyPlanSplitShares(source);
+        const cardsTarget = cardsShare > 0 && cardsExpected > 0 ? Math.max(1, Math.ceil(cardsExpected)) : 0;
+        const booksTarget = booksShare > 0 && booksExpected > 0 ? Math.max(1, Math.ceil(booksExpected)) : 0;
+        const cardsPercent = computeDailyPlanRawPercent(cardsToday, cardsExpected);
+        const booksPercent = computeDailyPlanRawPercent(booksToday, booksExpected);
+        const cardsTrackProgress = cardsShare <= 0
+          ? 1
+          : (cardsExpected > 0 ? Math.min(1, cardsToday / cardsExpected) : 0);
+        const booksTrackProgress = booksShare <= 0
+          ? 1
+          : (booksExpected > 0 ? Math.min(1, booksToday / booksExpected) : 0);
+        const balancedProgressPercent = clampPercent(
+          ((cardsTrackProgress * cardsShare) + (booksTrackProgress * booksShare)) * 100
+        );
+        return {
+          cardsToday,
+          booksToday,
+          cardsExpected,
+          booksExpected,
+          cardsTarget,
+          booksTarget,
+          cardsPercent,
+          booksPercent,
+          balancedProgressPercent
+        };
+      }
+
+      function clearDailyPlanPreviewTimer() {
+        if (state.entry.dailyPlanPreviewTimer) {
+          window.clearTimeout(state.entry.dailyPlanPreviewTimer);
+          state.entry.dailyPlanPreviewTimer = 0;
         }
-        if (!visible) return;
-        if (els.dailyPlanUserAvatar) {
-          const avatar = safeText(state.user?.avatarImage) || '/Avatar/profile-neon-blue.svg';
-          els.dailyPlanUserAvatar.src = avatar;
-        }
-        if (els.dailyPlanUserLevel) {
-          els.dailyPlanUserLevel.textContent = String(currentUserLevel());
-        }
-        const mission = await fetchDailyPlanBooksStats().catch(() => null);
-        const cardsTarget = Math.max(0, Number(mission?.cardsTarget) || 0);
-        const booksTarget = Math.max(0, Number(mission?.booksTarget) || 0);
-        const cardsToday = Math.max(0, Number(mission?.cardsToday) || 0);
-        const booksToday = Math.max(0, Number(mission?.booksToday) || 0);
-        const cardsExpected = Math.max(0, Number(mission?.cardsExpected) || 0);
-        const booksExpected = Math.max(0, Number(mission?.booksExpected) || 0);
-        const cardsPercent = Math.max(0, Number(mission?.cardsPercent) || 0);
-        const booksPercent = Math.max(0, Number(mission?.booksPercent) || 0);
-        const overallPercentRaw = Number(mission?.weightedPercent);
-        const overallPercent = Number.isFinite(overallPercentRaw)
-          ? Math.max(0, overallPercentRaw)
-          : ((cardsPercent + booksPercent) / 2);
-        const overallPercentRounded = Math.max(0, Math.round(overallPercent));
-        const overallPercentForVisual = Math.max(0, Math.min(100, overallPercent));
-        setDailyPlanProgress(cardsToday, cardsExpected, cardsTarget, els.dailyPlanFlashcardsDone, els.dailyPlanFlashcardsTotal, null);
-        setDailyPlanProgress(booksToday, booksExpected, booksTarget, els.dailyPlanBooksDone, els.dailyPlanBooksTotal, null);
+      }
+
+      function renderDailyPlanMission(mission, options = {}) {
+        const use120Preview = Boolean(options.use120Preview);
+        const missionView = buildDailyPlanMissionView(mission, use120Preview);
+        const overallPercent = missionView.balancedProgressPercent;
+        const overallPercentRounded = Math.round(overallPercent);
+        const overallPercentForVisual = clampPercent(overallPercent);
+        setDailyPlanProgress(
+          missionView.cardsToday,
+          missionView.cardsExpected,
+          missionView.cardsTarget,
+          els.dailyPlanFlashcardsDone,
+          els.dailyPlanFlashcardsTotal,
+          null
+        );
+        setDailyPlanProgress(
+          missionView.booksToday,
+          missionView.booksExpected,
+          missionView.booksTarget,
+          els.dailyPlanBooksDone,
+          els.dailyPlanBooksTotal,
+          null
+        );
         if (els.dailyPlanGeneralPercent) {
           els.dailyPlanGeneralPercent.textContent = `${overallPercentRounded}%`;
         }
@@ -14697,32 +14756,30 @@
           els.dailyPlanOverallBar.style.setProperty('--progress', `${overallPercentForVisual.toFixed(2)}%`);
         }
         if (els.dailyPlanFlashcardsPercent) {
-          const visual = Math.max(0, Math.min(100, cardsPercent));
+          const visual = clampPercent(missionView.cardsPercent);
           els.dailyPlanFlashcardsPercent.style.background = `conic-gradient(#4ddcff 0 ${visual.toFixed(2)}%, rgba(255,255,255,.1) ${visual.toFixed(2)}% 100%)`;
           const label = els.dailyPlanFlashcardsPercent.querySelector('span');
-          if (label) label.textContent = `${Math.round(cardsPercent)}%`;
+          if (label) label.textContent = `${Math.round(missionView.cardsPercent)}%`;
         }
         if (els.dailyPlanBooksPercent) {
-          const visual = Math.max(0, Math.min(100, booksPercent));
+          const visual = clampPercent(missionView.booksPercent);
           els.dailyPlanBooksPercent.style.background = `conic-gradient(#4ddcff 0 ${visual.toFixed(2)}%, rgba(255,255,255,.1) ${visual.toFixed(2)}% 100%)`;
           const label = els.dailyPlanBooksPercent.querySelector('span');
-          if (label) label.textContent = `${Math.round(booksPercent)}%`;
+          if (label) label.textContent = `${Math.round(missionView.booksPercent)}%`;
         }
         if (els.dailyPlanFlashcardsRemaining) {
-          const remaining = Math.max(0, cardsTarget - Math.round(cardsToday));
+          const remaining = Math.max(0, missionView.cardsTarget - Math.round(missionView.cardsToday));
           els.dailyPlanFlashcardsRemaining.textContent = `Faltam ${remaining} flashcards`;
         }
         if (els.dailyPlanBooksRemaining) {
-          const remaining = Math.max(0, booksTarget - Math.round(booksToday));
+          const remaining = Math.max(0, missionView.booksTarget - Math.round(missionView.booksToday));
           els.dailyPlanBooksRemaining.textContent = `Faltam ${remaining} minibooks`;
         }
         const seal = mission?.seal || null;
         const planScoreAt120 = seal?.planScoreAt120 == null
           ? Math.max(0, Math.min(100, Number(seal?.planScore) || 0))
           : Math.max(0, Math.min(100, Number(seal.planScoreAt120) || 0));
-        const missionProgressPercent = Math.max(0, Number(mission?.weightedPercent) || 0);
-        // Evolucao real do selo: base do plano em 120 min (Nucleo A) multiplicada
-        // pelo cumprimento da Missao Diaria (pode passar de 100%), com teto final 100%.
+        const missionProgressPercent = overallPercent;
         const totalSealProgress = Math.max(
           0,
           Math.min(100, (planScoreAt120 * missionProgressPercent) / 100)
@@ -14741,8 +14798,49 @@
           els.dailyPlanCurrentSealImage.style.filter = hasUnlockedSeal ? 'none' : 'grayscale(1) saturate(0)';
         }
         if (els.dailyPlanSealProgressValue) {
-          els.dailyPlanSealProgressValue.textContent = `progresso máximo: ${Math.round(totalSealProgress)}%`;
+          const suffix = use120Preview ? ' (2h)' : '';
+          els.dailyPlanSealProgressValue.textContent = `progresso máximo${suffix}: ${Math.round(totalSealProgress)}%`;
         }
+      }
+
+      function showDailyPlan120Preview() {
+        if (!state.entry.dailyPlanOpen) return;
+        const mission = state.entry.dailyPlanMissionSnapshot;
+        if (!mission) return;
+        state.entry.dailyPlanPreview120 = true;
+        renderDailyPlanMission(mission, { use120Preview: true });
+        clearDailyPlanPreviewTimer();
+        state.entry.dailyPlanPreviewTimer = window.setTimeout(() => {
+          state.entry.dailyPlanPreviewTimer = 0;
+          state.entry.dailyPlanPreview120 = false;
+          if (!state.entry.dailyPlanOpen) return;
+          renderDailyPlanMission(mission, { use120Preview: false });
+        }, 3000);
+      }
+
+      async function syncDailyPlanModal() {
+        const visible = Boolean(state.entry.dailyPlanOpen);
+        if (els.dailyPlanModal) {
+          els.dailyPlanModal.classList.toggle('is-visible', visible);
+          els.dailyPlanModal.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        }
+        if (!visible) {
+          clearDailyPlanPreviewTimer();
+          state.entry.dailyPlanPreview120 = false;
+          return;
+        }
+        if (els.dailyPlanUserAvatar) {
+          const avatar = safeText(state.user?.avatarImage) || '/Avatar/profile-neon-blue.svg';
+          els.dailyPlanUserAvatar.src = avatar;
+        }
+        if (els.dailyPlanUserLevel) {
+          els.dailyPlanUserLevel.textContent = String(currentUserLevel());
+        }
+        const mission = await fetchDailyPlanBooksStats().catch(() => null);
+        state.entry.dailyPlanMissionSnapshot = mission || {};
+        clearDailyPlanPreviewTimer();
+        state.entry.dailyPlanPreview120 = false;
+        renderDailyPlanMission(state.entry.dailyPlanMissionSnapshot, { use120Preview: false });
       }
 
       function pauseFlashcardsGameForDailyPlan() {
@@ -21954,6 +22052,9 @@
           openDailyPlanModal();
         });
         els.dailyPlanCloseBtn?.addEventListener('click', closeDailyPlanModal);
+        els.dailyPlanSealProgressValue?.addEventListener('click', () => {
+          showDailyPlan120Preview();
+        });
         els.welcomeBooksBtn?.addEventListener('click', () => {
           window.location.href = resolveNativeRenderPageHref('books');
         });
@@ -22067,7 +22168,7 @@
         els.gameMissionBtn?.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-          pauseFlashcardsGameToWelcome();
+          openDailyPlanModal({ fromGame: true });
         });
         els.welcomeTrainingModes?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-training-stage]');
