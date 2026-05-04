@@ -1088,10 +1088,11 @@
       const smartbooksShare = state.smartbooksPercentage / 100;
       const flashcardsShare = state.flashcardsPercentage / 100;
       const bookBoost = [0.10, 0.20, 0.30][state.application] * smartbooksShare;
-      const finalScore = Math.max(
-        0,
-        base * (1 + bookBoost) * calibrationFactor * timeFactor
-      );
+      const scoreCeilingBeforeInterpolation = 113;
+      const targetScoreCeiling = 200;
+      const interpolationFactor = targetScoreCeiling / scoreCeilingBeforeInterpolation;
+      const rawScore = base * (1 + bookBoost) * calibrationFactor * timeFactor;
+      const finalScore = clamp(rawScore * interpolationFactor, 0, targetScoreCeiling);
       return {
         finalScore,
         totalHours,
