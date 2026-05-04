@@ -13484,6 +13484,12 @@ app.get('/api/fluency-seals', async (req, res) => {
       Math.max(0, Math.min(6, Number(row?.day5) || 0)),
       Math.max(0, Math.min(6, Number(row?.day6) || 0))
     ];
+    const earnedSealsCount = slots.reduce((total, code) => total + (code > 0 ? 1 : 0), 0);
+    const planMonths = normalizeFluencyPlanMonthsValue(readNullableInteger(user?.fluency_plan_months));
+    const planDays = planMonths === null ? 0 : Math.max(1, planMonths * 30);
+    const fluencyCompletePercent = planDays > 0
+      ? Math.max(0, Math.min(100, (earnedSealsCount / planDays) * 100))
+      : 0;
 
     res.setHeader('Cache-Control', 'no-store');
     res.json({
@@ -13491,7 +13497,10 @@ app.get('/api/fluency-seals', async (req, res) => {
       seals: {
         slots,
         nextDaySlot: Math.max(1, Math.min(6, Number(row?.next_day_slot) || 1)),
-        lastAwardedDayKey: row?.last_awarded_day_key || null
+        lastAwardedDayKey: row?.last_awarded_day_key || null,
+        earnedSealsCount,
+        planDays,
+        fluencyCompletePercent
       }
     });
   } catch (error) {

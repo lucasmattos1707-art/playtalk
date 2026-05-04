@@ -211,6 +211,7 @@
       justify-content: flex-start;
       gap: 10px;
       font-family: "Exo 1", "Exo 2", "Open Sans", Arial, sans-serif;
+      overflow: hidden;
     }
 
     .panel.section {
@@ -699,9 +700,37 @@
       opacity: 0;
     }
 
-    .seals-grid {
+    .seals-stage {
+      margin: 4px auto 0;
+      text-align: center;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(163, 177, 191, 0.86);
+      line-height: 1.1;
+      user-select: none;
+    }
+
+    .seals-carousel {
       width: min(700px, calc(100vw - 28px));
       margin: 32px auto 0;
+      overflow: hidden;
+      touch-action: pan-y;
+      user-select: none;
+    }
+
+    .seals-track {
+      display: flex;
+      width: 100%;
+      transition: transform 280ms ease;
+      will-change: transform;
+    }
+
+    .seals-page {
+      flex: 0 0 100%;
+      width: 100%;
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
@@ -870,7 +899,7 @@
         padding: 14px 10px;
       }
 
-      .seals-grid {
+      .seals-page {
         gap: 12px;
       }
 
@@ -932,7 +961,10 @@
       </div>
 
       <div class="content-view" id="sealsView" role="tabpanel" aria-labelledby="contentSwitcherCurrentBtn" hidden>
-        <div class="seals-grid" id="sealsGrid"></div>
+        <div class="seals-stage" id="sealsStageValue">Stage 1</div>
+        <div class="seals-carousel" id="sealsCarousel">
+          <div class="seals-track" id="sealsGrid"></div>
+        </div>
         <div class="seals-total" id="sealsTotal">
           <p class="seals-total__value" id="sealsTotalValue">0.00%</p>
           <p class="seals-total__label">FLUÊNCIA COMPLETA</p>
@@ -946,7 +978,7 @@
   <script src="js/api-config.js"></script>
   <script src="js/playtalk-shell.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/allcards-page.js?v=20260504-4" defer></script>
+  <script src="js/allcards-page.js?v=20260504-5" defer></script>
 </body>
 </html>
 

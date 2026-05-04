@@ -13,6 +13,7 @@
   const REVIEW_SCALE_VERSION = 3;
   const REVIEW_PHASE_MAX = 6;
   const VIEW_ORDER = ['flashcards', 'smartbooks', 'seals'];
+  const SEALS_STAGE_SIZE = 6;
   const REVIEW_PHASES = {
     1: { label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
     2: { label: 'Second star', durationMs: 34 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
@@ -29,15 +30,6 @@
     4: '/medalhas/platina.png',
     5: '/medalhas/ouro.png',
     6: '/medalhas/diamante.png'
-  });
-  const SEAL_PERCENT_BY_CODE = Object.freeze({
-    0: 0,
-    1: 40,
-    2: 50,
-    3: 60,
-    4: 70,
-    5: 80,
-    6: 90
   });
   const EMPTY_SEAL_IMAGE = '/medalhas/diamante.png';
 
@@ -61,6 +53,8 @@
     smartbooksGrid: document.getElementById('smartbooksGrid'),
     smartbooksStatus: document.getElementById('smartbooksStatus'),
     sealsSectionHead: document.getElementById('sealsSectionHead'),
+    sealsStageValue: document.getElementById('sealsStageValue'),
+    sealsCarousel: document.getElementById('sealsCarousel'),
     sealsGrid: document.getElementById('sealsGrid'),
     sealsTotalValue: document.getElementById('sealsTotalValue'),
     sealsStatus: document.getElementById('sealsStatus')
@@ -87,7 +81,13 @@
     smartbooksBooks: [],
     smartbooksStats: null,
     sealsInitPromise: null,
-    sealsSlots: []
+    sealsSlots: [],
+    sealsPlanDays: 0,
+    sealsEarnedCount: 0,
+    sealsFluencyPercent: 0,
+    sealsStageIndex: 0,
+    sealsTotalStages: 1,
+    sealsSwipeBound: false
   };
 
   function safeText(value) {
@@ -728,46 +728,135 @@
     return safeText(SEAL_IMAGE_BY_CODE[normalizeSealCode(code)]) || EMPTY_SEAL_IMAGE;
   }
 
-  function fluencyPercentForSealCode(code) {
-    const normalizedCode = normalizeSealCode(code);
-    return Number(SEAL_PERCENT_BY_CODE[normalizedCode]) || 0;
-  }
-
-  function computeTotalFluencyPercent(slots) {
-    const normalizedSlots = normalizeSealsSlots(slots);
-    const total = normalizedSlots.reduce((sum, slotCode) => sum + fluencyPercentForSealCode(slotCode), 0);
-    const maxTotal = SEAL_SLOT_COUNT * fluencyPercentForSealCode(6);
-    if (maxTotal <= 0) return 0;
-    return (total / maxTotal) * 100;
+  function normalizeSealsProgress(raw) {
+    const planDays = Math.max(0, Math.round(Number(raw?.planDays) || 0));
+    const earnedSealsCount = Math.max(0, Math.round(Number(raw?.earnedSealsCount) || 0));
+    const percentRaw = Number(raw?.fluencyCompletePercent);
+    const percent = Number.isFinite(percentRaw)
+      ? percentRaw
+      : (planDays > 0 ? (earnedSealsCount / planDays) * 100 : 0);
+    return {
+      planDays,
+      earnedSealsCount,
+      fluencyCompletePercent: Math.max(0, Math.min(100, percent))
+    };
   }
 
   function renderSealsTotal() {
     if (!els.sealsTotalValue) return;
-    const totalPercent = Math.max(0, Math.min(100, computeTotalFluencyPercent(state.sealsSlots)));
+    const totalPercent = Math.max(0, Math.min(100, Number(state.sealsFluencyPercent) || 0));
     els.sealsTotalValue.textContent = `${totalPercent.toFixed(2)}%`;
+  }
+
+  function buildSealsTimelineSlots() {
+    const sourceSlots = Array.isArray(state.sealsSlots) ? state.sealsSlots.map(normalizeSealCode) : [];
+    const planDays = Math.max(0, Number(state.sealsPlanDays) || 0);
+    const totalDays = Math.max(SEALS_STAGE_SIZE, planDays || sourceSlots.length);
+    const timeline = Array.from({ length: totalDays }, () => 0);
+    for (let index = 0; index < sourceSlots.length && index < timeline.length; index += 1) {
+      timeline[index] = sourceSlots[index];
+    }
+    return timeline;
+  }
+
+  function updateSealsStageUi() {
+    if (!els.sealsGrid) return;
+    const totalStages = Math.max(1, Number(state.sealsTotalStages) || 1);
+    const stageIndex = Math.max(0, Math.min(totalStages - 1, Number(state.sealsStageIndex) || 0));
+    state.sealsStageIndex = stageIndex;
+    if (els.sealsStageValue) {
+      els.sealsStageValue.textContent = `Stage ${stageIndex + 1}`;
+    }
+    els.sealsGrid.style.transform = `translate3d(${-stageIndex * 100}%, 0, 0)`;
+  }
+
+  function setSealsStageByDelta(delta) {
+    const totalStages = Math.max(1, Number(state.sealsTotalStages) || 1);
+    const nextIndex = Math.max(0, Math.min(totalStages - 1, Number(state.sealsStageIndex) + Number(delta || 0)));
+    if (nextIndex === state.sealsStageIndex) return;
+    state.sealsStageIndex = nextIndex;
+    updateSealsStageUi();
+  }
+
+  function bindSealsSwipe() {
+    if (!els.sealsCarousel || state.sealsSwipeBound) return;
+    state.sealsSwipeBound = true;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touching = false;
+
+    els.sealsCarousel.addEventListener('touchstart', (event) => {
+      if (!event.touches || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      touchStartX = Number(touch.clientX) || 0;
+      touchStartY = Number(touch.clientY) || 0;
+      touching = true;
+    }, { passive: true });
+
+    els.sealsCarousel.addEventListener('touchmove', (event) => {
+      if (!touching || !event.touches || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      const deltaX = (Number(touch.clientX) || 0) - touchStartX;
+      const deltaY = (Number(touch.clientY) || 0) - touchStartY;
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+        event.preventDefault();
+      }
+    }, { passive: false });
+
+    els.sealsCarousel.addEventListener('touchend', (event) => {
+      if (!touching) return;
+      touching = false;
+      const touch = event.changedTouches && event.changedTouches[0];
+      if (!touch) return;
+      const endX = Number(touch.clientX) || 0;
+      const endY = Number(touch.clientY) || 0;
+      const deltaX = endX - touchStartX;
+      const deltaY = endY - touchStartY;
+      if (Math.abs(deltaX) < 36 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+      if (deltaX < 0) {
+        setSealsStageByDelta(1);
+      } else {
+        setSealsStageByDelta(-1);
+      }
+    }, { passive: true });
   }
 
   function renderSealsGrid() {
     if (!els.sealsGrid) return;
-    const slots = normalizeSealsSlots(state.sealsSlots);
+    const slotsTimeline = buildSealsTimelineSlots();
+    const totalStages = Math.max(1, Math.ceil(slotsTimeline.length / SEALS_STAGE_SIZE));
+    state.sealsTotalStages = totalStages;
+    if (state.sealsStageIndex > totalStages - 1) {
+      state.sealsStageIndex = totalStages - 1;
+    }
     if (els.sealsSectionHead) {
       els.sealsSectionHead.hidden = false;
     }
-    els.sealsGrid.innerHTML = slots.map((code, index) => {
-      const earned = fluencyPercentForSealCode(code) >= 40;
-      const dayLabel = `DAY ${index + 1}`;
-      const imageSrc = sealImageForCode(code);
-      return `
-        <article class="seals-slot${earned ? ' is-earned' : ''}" aria-label="${escapeHtml(dayLabel)}">
-          <img class="seals-slot__badge" src="${escapeHtml(imageSrc)}" alt="${earned ? escapeHtml(`Selo do ${dayLabel}`) : escapeHtml(`Slot vazio do ${dayLabel}`)}">
-          <p class="seals-slot__day">${escapeHtml(dayLabel)}</p>
-        </article>
-      `;
+    const pagesHtml = Array.from({ length: totalStages }, (_unused, stageIndex) => {
+      const pageStart = stageIndex * SEALS_STAGE_SIZE;
+      const pageSlots = slotsTimeline.slice(pageStart, pageStart + SEALS_STAGE_SIZE);
+      while (pageSlots.length < SEALS_STAGE_SIZE) pageSlots.push(0);
+      const pageHtml = pageSlots.map((code, itemIndex) => {
+        const earned = normalizeSealCode(code) > 0;
+        const dayNumber = pageStart + itemIndex + 1;
+        const dayLabel = `DAY ${dayNumber}`;
+        const imageSrc = sealImageForCode(code);
+        return `
+          <article class="seals-slot${earned ? ' is-earned' : ''}" aria-label="${escapeHtml(dayLabel)}">
+            <img class="seals-slot__badge" src="${escapeHtml(imageSrc)}" alt="${earned ? escapeHtml(`Selo do ${dayLabel}`) : escapeHtml(`Slot vazio do ${dayLabel}`)}">
+            <p class="seals-slot__day">${escapeHtml(dayLabel)}</p>
+          </article>
+        `;
+      }).join('');
+      return `<div class="seals-page" data-stage="${stageIndex + 1}">${pageHtml}</div>`;
     }).join('');
+    els.sealsGrid.innerHTML = pagesHtml;
+    bindSealsSwipe();
+    updateSealsStageUi();
     renderSealsTotal();
   }
 
-  async function fetchSealsSlots() {
+  async function fetchSealsData() {
     const response = await fetch(buildApiUrl('/api/fluency-seals'), {
       credentials: 'include',
       headers: buildAuthHeaders(),
@@ -775,9 +864,15 @@
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload?.success) {
-      return Array.from({ length: SEAL_SLOT_COUNT }, () => 0);
+      return {
+        slots: Array.from({ length: SEAL_SLOT_COUNT }, () => 0),
+        progress: normalizeSealsProgress(null)
+      };
     }
-    return normalizeSealsSlots(payload?.seals?.slots);
+    return {
+      slots: normalizeSealsSlots(payload?.seals?.slots),
+      progress: normalizeSealsProgress(payload?.seals)
+    };
   }
 
   function ensureSealsGrid() {
@@ -794,9 +889,13 @@
     setSealsStatus('', false);
     toggleGlobalLoader('allcards-seals', true, 'Carregando seus selos');
 
-    state.sealsInitPromise = fetchSealsSlots()
-      .then((slots) => {
-        state.sealsSlots = normalizeSealsSlots(slots);
+    state.sealsInitPromise = fetchSealsData()
+      .then((sealsData) => {
+        state.sealsSlots = normalizeSealsSlots(sealsData?.slots);
+        const progress = normalizeSealsProgress(sealsData?.progress);
+        state.sealsPlanDays = progress.planDays;
+        state.sealsEarnedCount = progress.earnedSealsCount;
+        state.sealsFluencyPercent = progress.fluencyCompletePercent;
         state.ui.sealsReady = true;
         renderSealsGrid();
         setSealsStatus('', false);
