@@ -3799,7 +3799,10 @@
       line-height: 0.98;
       letter-spacing: 0;
       text-shadow: none;
-      margin-top: -30px;
+      margin-top: 6px;
+      order: 2;
+      position: relative;
+      z-index: 2;
     }
 
     .books-reader-portuguese {
@@ -3808,16 +3811,21 @@
 
     .books-reader[data-reader-mode="listening-training"] .books-reader-portuguese {
       display: block;
-      margin: 12px 0 0;
-      color: rgba(226, 235, 246, 0.78);
+      margin: 0;
+      color: #7de6ff;
       font-family: "Pltay", "Soopafre", Arial, sans-serif;
       font-weight: 400;
       font-size: clamp(21px, 7vw, 43px);
       line-height: 1;
       letter-spacing: 0;
       text-align: center;
-      text-shadow: none;
+      text-shadow:
+        0 0 10px rgba(75, 224, 255, 0.8),
+        0 0 22px rgba(75, 224, 255, 0.52);
       transition: opacity 180ms ease;
+      order: 1;
+      position: relative;
+      z-index: 2;
     }
 
     .books-reader[data-reader-mode="listening-training"] .books-reader-portuguese.is-muted {
@@ -3877,7 +3885,27 @@
     }
 
     .books-reader[data-reader-mode="listening-training"] .books-reader-mic-row {
-      transform: translateY(50px);
+      transform: translateY(0);
+    }
+
+    .books-reader[data-reader-mode="listening-training"] .books-reader-text-panel {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 6px;
+      padding-top: 32px;
+      padding-bottom: 246px;
+    }
+
+    .books-reader[data-reader-mode="listening-training"] .books-reader-training {
+      position: absolute;
+      left: 50%;
+      bottom: 26px;
+      transform: translateX(-50%);
+      width: min(760px, 100%);
+      margin-top: 0;
     }
 
     .books-reader-side-actions {

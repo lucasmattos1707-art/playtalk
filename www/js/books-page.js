@@ -306,7 +306,7 @@
     readerIndex: 0,
     readerDisplayLanguage: 'english',
     readerVisualLanguage: 'english',
-    readerListeningRevealPortuguese: true,
+    readerListeningRevealPortuguese: false,
     readerScores: [],
     readerCurrentScore: null,
     readerCurrentBadgeSrc: '',
@@ -6587,7 +6587,11 @@
       }
     }
     animateReaderPhrase();
-    void playReaderCardAudio(card, index);
+    if (state.readerMode === 'listening-training') {
+      setReaderMicVisible(true);
+    } else {
+      void playReaderCardAudio(card, index);
+    }
     updateReaderProgress(total, index);
     renderReaderModeUi();
   }
@@ -6608,7 +6612,7 @@
     state.readerIndex = 0;
     state.readerDisplayLanguage = 'english';
     state.readerVisualLanguage = 'english';
-    state.readerListeningRevealPortuguese = true;
+    state.readerListeningRevealPortuguese = false;
     state.readerScores = [];
     state.readerCurrentScore = null;
     resetReaderCurrentBadge();
@@ -6706,7 +6710,7 @@
       state.readerSessionSpokenChars = 0;
       state.readerDisplayLanguage = 'english';
       state.readerVisualLanguage = 'english';
-      state.readerListeningRevealPortuguese = true;
+      state.readerListeningRevealPortuguese = false;
       state.readerMicBusy = false;
       state.readerLastAudioKey = '';
       state.readerCardShownAt = 0;
