@@ -9704,7 +9704,7 @@
       const TRAINING_MAX_CARD_COUNT = 500;
       const TRAINING_CARD_STEP = 10;
       const GAME_STAR_TARGET = 5;
-      const REVIEW_SLOT_LIMIT = 8;
+      const REVIEW_SLOT_LIMIT = 4;
       const GAME_UPCOMING_PRELOAD_COUNT = 3;
       const GAME_MIC_UNLOCK_DELAY_MS = 1200;
       const TUTORIAL_AUDIO_ROOT = AUDIOSTUTO_PUBLIC_ROOT;
@@ -14994,7 +14994,7 @@
       }
 
       function currentBaseGameCount(level = currentUserLevel()) {
-        return Math.max(MIN_GAME_CONTEXT_LIMIT, userLevelCardTarget(level));
+        return 6;
       }
 
       function currentGameActiveCardCap(level = currentUserLevel(), baseCount = currentBaseGameCount(level)) {
@@ -19310,30 +19310,28 @@
         return true;
       }
 
-      function renderFourthStarCorrectionSnippet(display, target, typedLength, wrongLetter) {
+      function renderFourthStarCorrectionSnippet(display, target, typedLength) {
         if (!display) return;
         const letters = normalizeSmartTypingLetters(target);
         const index = Math.max(0, Math.min(letters.length - 1, Number(typedLength) || 0));
-        const expected = letters[index] || '';
-        const next = letters[index + 1] || '';
-        const right1 = String(wrongLetter || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || '';
-        const right2 = expected || '';
-
         const buildLetter = (char, extraClass) => (
           `<span class="flashcards-typing__display-letter${extraClass ? ` ${extraClass}` : ''}" data-char="${escapeHtml(char || ' ')}">${escapeHtml(char || ' ')}</span>`
         );
 
-        // 6 letters total: 2 lime (expected + next), then 2 fillers, then 2 right context (wrong + expected).
-        const fill1 = letters[Math.max(0, index - 1)] || '';
-        const fill2 = letters[Math.max(0, index - 2)] || '';
-        const markup = [
-          buildLetter(expected, 'is-hint'),
-          buildLetter(next, 'is-hint'),
-          buildLetter(fill2, ''),
-          buildLetter(fill1, ''),
-          buildLetter(right1, ''),
-          buildLetter(right2, '')
-        ].join('');
+        // 6 letters total, always from the correct sequence (never show the user's wrong letter).
+        // Highlight 2 letters just before the mistake position, and show 2 letters before and 2 after them.
+        // Example: "PETER HAS A CAT" vs "PETER HAD A CAT" at index=S => shows "ERHASA" with "HA" in lime.
+        const start = Math.max(0, index - 4);
+        const slice = [];
+        for (let offset = 0; offset < 6; offset += 1) {
+          slice.push(letters[start + offset] || '');
+        }
+        const highlightAbsolute = new Set([index - 2, index - 1]);
+        const markup = slice.map((char, offset) => {
+          const absIndex = start + offset;
+          const isHighlight = highlightAbsolute.has(absIndex);
+          return buildLetter(char, isHighlight ? 'is-hint' : '');
+        }).join('');
 
         display.classList.add('flashcards-typing__display--size-xl');
         display.classList.remove('flashcards-typing__display--two-lines', 'flashcards-typing__display--three-lines');
@@ -19345,7 +19343,7 @@
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
         const isFourthStar = phaseKey === 'fourth-star';
         const nowMs = Date.now();
-        const wrongLetter = safeText(options.wrongLetter || '').toUpperCase();
+          const wrongLetter = safeText(options.wrongLetter || '').toUpperCase();
 
         if (shouldPlayMistakeCue(nowMs)) {
           playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
@@ -19362,11 +19360,11 @@
         }
 
         // In fourth-star: show a compact correction for 500ms, then lock keyboard (red) for 1900ms.
-        if (isFourthStar) {
-          const display = els.gameVisual.querySelector('.flashcards-typing__display--visual');
-          if (display) {
-            renderFourthStarCorrectionSnippet(display, safeText(options.targetText || ''), typedLength, wrongLetter);
-          }
+          if (isFourthStar) {
+            const display = els.gameVisual.querySelector('.flashcards-typing__display--visual');
+            if (display) {
+              renderFourthStarCorrectionSnippet(display, safeText(options.targetText || ''), typedLength);
+            }
           // Show correction for 500ms, then lock keyboard (red only during the lock).
           await wait(500);
           setTypingKeysDisabled(grid, true);
