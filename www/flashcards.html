@@ -1479,12 +1479,6 @@
       margin: 6px 0;
     }
 
-    .daily-plan-modal__general-message {
-      color: #aab4c8;
-      font-size: 14px;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-    }
-
     .daily-plan-modal__general-ring {
       width: 84px;
       height: 84px;
@@ -1504,24 +1498,11 @@
       background: #07111f;
     }
 
-    .daily-plan-modal__general-ring span {
+    .daily-plan-modal__general-ring img {
       position: relative;
       z-index: 1;
-      color: #8deeff;
-      font-weight: 900;
-      font-size: 18px;
-    }
-
-    .daily-plan-modal__general-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      justify-self: end;
-    }
-
-    .daily-plan-modal__current-seal {
-      width: 54px;
-      height: 54px;
+      width: 42px;
+      height: 42px;
       object-fit: contain;
       filter: drop-shadow(0 0 10px rgba(24, 200, 255, 0.5));
     }
@@ -1744,8 +1725,7 @@
       .daily-plan-modal__general-percent { font-size: 32px; }
       .daily-plan-modal__general-ring { width: 74px; height: 74px; }
       .daily-plan-modal__general-ring::before { width: 56px; height: 56px; }
-      .daily-plan-modal__general-ring span { font-size: 15px; }
-      .daily-plan-modal__current-seal { width: 44px; height: 44px; }
+      .daily-plan-modal__general-ring img { width: 36px; height: 36px; }
       .daily-plan-modal__mini-ring { width: 58px; height: 58px; }
       .daily-plan-modal__mini-ring::before { width: 44px; height: 44px; }
       .daily-plan-modal__mini-ring span { font-size: 12px; }
@@ -9052,13 +9032,9 @@
             <div>
               <div class="daily-plan-modal__general-label">Progresso da missao</div>
               <div class="daily-plan-modal__general-percent" id="dailyPlanGeneralPercent">0%</div>
-              <div class="daily-plan-modal__general-message" id="dailyPlanGeneralMessage">Bora comecar.</div>
             </div>
-            <div class="daily-plan-modal__general-right">
-              <div class="daily-plan-modal__general-ring" id="dailyPlanGeneralRing">
-                <span id="dailyPlanGeneralRingText">0%</span>
-              </div>
-              <img class="daily-plan-modal__current-seal" id="dailyPlanCurrentSealImage" src="medalhas/prata.png" alt="Selo atual">
+            <div class="daily-plan-modal__general-ring" id="dailyPlanGeneralRing">
+              <img id="dailyPlanCurrentSealImage" src="medalhas/prata.png" alt="Selo atual">
             </div>
           </section>
 
@@ -10106,9 +10082,7 @@
         dailyPlanBooksPercent: document.getElementById('dailyPlanBooksPercent'),
         dailyPlanOverallBar: document.getElementById('dailyPlanOverallBar'),
         dailyPlanGeneralPercent: document.getElementById('dailyPlanGeneralPercent'),
-        dailyPlanGeneralMessage: document.getElementById('dailyPlanGeneralMessage'),
         dailyPlanGeneralRing: document.getElementById('dailyPlanGeneralRing'),
-        dailyPlanGeneralRingText: document.getElementById('dailyPlanGeneralRingText'),
         dailyPlanCurrentSealImage: document.getElementById('dailyPlanCurrentSealImage'),
         dailyPlanSealProgressValue: document.getElementById('dailyPlanSealProgressValue'),
         welcomeTouch: document.getElementById('welcomeTouch'),
@@ -14601,10 +14575,7 @@
         const normalized = Math.max(0, Math.min(100, Number(score) || 0));
         const nextSeal = DAILY_PLAN_FLUENCY_SEALS.find((seal) => normalized < seal.minScore) || null;
         if (!nextSeal) return 100;
-        const currentIndex = DAILY_PLAN_FLUENCY_SEALS.findIndex((seal) => seal.key === nextSeal.key);
-        const previousMin = currentIndex > 0 ? DAILY_PLAN_FLUENCY_SEALS[currentIndex - 1].minScore : 0;
-        const span = Math.max(1, nextSeal.minScore - previousMin);
-        const progress = ((normalized - previousMin) / span) * 100;
+        const progress = (normalized / nextSeal.minScore) * 100;
         return Math.max(0, Math.min(100, Math.round(progress)));
       }
 
@@ -14659,14 +14630,8 @@
         if (els.dailyPlanGeneralPercent) {
           els.dailyPlanGeneralPercent.textContent = `${overallPercentRounded}%`;
         }
-        if (els.dailyPlanGeneralRingText) {
-          els.dailyPlanGeneralRingText.textContent = `${Math.round(overallPercentForVisual)}%`;
-        }
         if (els.dailyPlanGeneralRing) {
           els.dailyPlanGeneralRing.style.background = `conic-gradient(#4ddcff 0 ${overallPercentForVisual.toFixed(2)}%, rgba(255,255,255,.1) ${overallPercentForVisual.toFixed(2)}% 100%)`;
-        }
-        if (els.dailyPlanGeneralMessage) {
-          els.dailyPlanGeneralMessage.textContent = resolveDailyPlanProgressMessage(overallPercentForVisual);
         }
         if (els.dailyPlanOverallBar) {
           els.dailyPlanOverallBar.style.setProperty('--progress', `${overallPercentForVisual.toFixed(2)}%`);
