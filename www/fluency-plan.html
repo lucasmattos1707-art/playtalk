@@ -536,6 +536,23 @@
       text-wrap: balance;
     }
 
+    .live-title-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .live-medal {
+      width: clamp(40px, 5vw, 58px);
+      height: clamp(40px, 5vw, 58px);
+      object-fit: contain;
+      filter: drop-shadow(0 8px 18px rgba(0, 163, 255, 0.28));
+      flex: 0 0 auto;
+    }
+
     .live-title.is-warning {
       color: #b7ff57;
       text-shadow: 0 0 30px rgba(183, 255, 87, 0.34);
@@ -880,7 +897,10 @@
 
     <div class="live-result" id="liveResult" hidden>
       <div class="live-kicker">COM ESSE PLANO VOCÊ ALCANÇA</div>
-      <div class="live-title" id="liveTitle">Fluência prática</div>
+      <div class="live-title-wrap">
+        <img class="live-medal" id="liveMedal" src="/medalhas/white.png" alt="Medalha de fluencia">
+        <div class="live-title" id="liveTitle">Nenhum contato com o idioma ate agora.</div>
+      </div>
     </div>
     <div class="status" id="status" aria-live="polite"></div>
 
@@ -927,26 +947,17 @@
     };
 
     const labels = [
-      ['0-5%', 'Contato inicial com o ingles', 'Voce reconhece alguns sons e palavras, mas ainda depende muito do jogo.'],
-      ['5-10%', 'Reconhece palavras basicas soltas', 'Voce comeca a identificar palavras frequentes e comandos simples.'],
-      ['10-15%', 'Entende frases muito simples', 'Voce entende estruturas pequenas, especialmente quando ja viu o contexto antes.'],
-      ['15-20%', 'Monta frases curtas com esforco', 'Voce comeca a produzir respostas simples, ainda com muita pausa e duvida.'],
-      ['20-25%', 'Sobrevive em situacoes basicas', 'Voce consegue lidar com frases uteis de rotina, mas ainda foge de conversa aberta.'],
-      ['25-30%', 'Entende o geral de conversas simples', 'Voce pega a ideia principal quando o assunto e familiar e o ritmo e amigavel.'],
-      ['30-35%', 'Responde com frases limitadas', 'Voce ja responde, mas ainda escolhe caminhos seguros e frases conhecidas.'],
-      ['35-40%', 'Comeca a ganhar confianca', 'O ingles deixa de parecer parede e comeca a virar ferramenta.'],
-      ['40-45%', 'Se comunica com pausas frequentes', 'Voce consegue conversar, mas ainda precisa procurar palavras e reorganizar ideias.'],
-      ['45-50%', 'Mantem conversas simples', 'Voce ja sustenta interacoes comuns com erros normais e boa recuperacao.'],
-      ['50-55%', 'Entende bem o contexto geral', 'Voce acompanha boa parte do ingles cotidiano, mesmo sem entender tudo palavra por palavra.'],
-      ['55-60%', 'Fala com erros, mas flui', 'Voce ja consegue se expressar sem travar em cada frase.'],
-      ['60-65%', 'Ja pensa em ingles as vezes', 'O idioma comeca a aparecer automatico em situacoes repetidas.'],
-      ['65-70%', 'Conversa com certa naturalidade', 'Voce se vira em conversas reais, com ajustes, perguntas e reformulacoes.'],
-      ['70-75%', 'Independente na maioria das situacoes', 'Voce resolve muita coisa sozinho em ingles, especialmente no dia a dia.'],
-      ['75-80%', 'Boa fluencia pratica', 'Voce fala, entende e reage com boa velocidade em contextos comuns.'],
-      ['80-85%', 'Clareza e seguranca', 'Voce comunica ideias com confianca e ja comeca a refinar estilo e precisao.'],
-      ['85-90%', 'Fluente funcional', 'Voce usa ingles como ferramenta real para estudar, trabalhar, viajar e conversar.'],
-      ['90-95%', 'Fluencia avancada consistente', 'Voce navega assuntos variados com ritmo, precisao e pouca friccao.'],
-      ['95-100%', 'Fluencia natural quase sem esforco', 'O ingles ja faz parte de voce: pensamento, fala, escuta, leitura e resposta caminham juntos.']
+      { min: 0, medal: 'white.png', title: 'Nenhum contato com o idioma ate agora.' },
+      { min: 10, medal: 'vidro.png', title: 'Reconhece palavras e estruturas simples.' },
+      { min: 20, medal: 'metal.png', title: 'Comunica ideias com frases bem basicas.' },
+      { min: 30, medal: 'bronze.png', title: 'Entende o basico e responde frases curtas.' },
+      { min: 40, medal: 'prata.png', title: 'Se comunica em situacoes simples do dia.' },
+      { min: 50, medal: 'rubi.png', title: 'Participa de conversas simples com confianca.' },
+      { min: 60, medal: 'quartz.png', title: 'Acompanha conversas com algumas limitacoes.' },
+      { min: 70, medal: 'emerald.png', title: 'Pensa no idioma com pouca traducao mental.' },
+      { min: 80, medal: 'platina.png', title: 'Expressa ideias com clareza em varios contextos.' },
+      { min: 90, medal: 'ouro.png', title: 'Domina comunicacao com boa fluidez e precisao.' },
+      { min: 100, medal: 'diamante.png', title: 'Usa o idioma com fluidez total em qualquer contexto.' }
     ];
 
     const els = {
@@ -956,6 +967,7 @@
       stepFill: document.getElementById('stepFill'),
       liveResult: document.getElementById('liveResult'),
       liveTitle: document.getElementById('liveTitle'),
+      liveMedal: document.getElementById('liveMedal'),
       score: document.getElementById('score'),
       status: document.getElementById('status'),
       mixSliderTrack: document.getElementById('mixSliderTrack'),
@@ -1105,13 +1117,20 @@
     function updateResult() {
       const result = calculate();
       const rounded = Math.round(result.finalScore);
-      const selectedLabel = labels[clamp(Math.floor(rounded / 5), 0, 19)];
+      const normalizedScore = clamp(rounded, 0, 100);
+      let selectedLabel = labels[0];
+      for (const label of labels) {
+        if (normalizedScore >= label.min) selectedLabel = label;
+      }
 
       els.score.textContent = rounded;
       if (els.liveTitle) {
-        els.liveTitle.textContent = selectedLabel[1];
+        els.liveTitle.textContent = selectedLabel.title;
       }
-      state.liveTitleDefault = selectedLabel[1];
+      if (els.liveMedal) {
+        els.liveMedal.src = `/medalhas/${selectedLabel.medal}`;
+      }
+      state.liveTitleDefault = selectedLabel.title;
     }
 
     function renderStep() {
@@ -1351,3 +1370,4 @@
   </script>
 </body>
 </html>
+
