@@ -522,12 +522,12 @@
 
     .live-title {
       color: white;
-      font-size: clamp(25px, 3.4vw, 40px);
+      font-size: clamp(20px, 2.72vw, 32px);
       line-height: 1.02;
       font-weight: 900;
       letter-spacing: -0.03em;
       text-shadow: 0 0 24px rgba(0, 163, 255, .22);
-      max-width: 320px;
+      max-width: 290px;
       margin: 0 auto;
       min-height: 2.04em;
       display: flex;
@@ -926,16 +926,16 @@
     let busy = false;
 
     const state = {
-      minutes: 30,
-      months: 6,
-      application: 2,
+      minutes: 45,
+      months: 12,
+      application: 1,
       flashcardsPercentage: 50,
       smartbooksPercentage: 50,
       mixVisual: 50,
       selectedGroups: {
-        minutes: false,
-        months: false,
-        application: false
+        minutes: true,
+        months: true,
+        application: true
       },
       liveTitleDefault: '',
       warningTimer: 0,
@@ -944,17 +944,17 @@
     };
 
     const labels = [
-      { min: 0, medal: 'white.png', title: 'Nenhum contato com o idioma ate agora.' },
-      { min: 10, medal: 'vidro.png', title: 'Reconhece palavras e estruturas simples.' },
-      { min: 20, medal: 'metal.png', title: 'Comunica ideias com frases bem basicas.' },
+      { min: 0, medal: 'white.png', title: 'Nenhum contato com\no idioma ate agora.' },
+      { min: 10, medal: 'vidro.png', title: 'Reconhece palavras\ne estruturas simples.' },
+      { min: 20, medal: 'metal.png', title: 'Comunica ideias com\nfrases bem basicas.' },
       { min: 30, medal: 'bronze.png', title: 'Entende o basico\ne responde frases curtas.' },
-      { min: 40, medal: 'prata.png', title: 'Se comunica em situacoes simples do dia.' },
-      { min: 50, medal: 'rubi.png', title: 'Participa de conversas simples com confianca.' },
-      { min: 60, medal: 'quartz.png', title: 'Acompanha conversas com algumas limitacoes.' },
-      { min: 70, medal: 'emerald.png', title: 'Pensa no idioma com pouca traducao mental.' },
-      { min: 80, medal: 'platina.png', title: 'Expressa ideias com clareza em varios contextos.' },
-      { min: 90, medal: 'ouro.png', title: 'Domina comunicacao com boa fluidez e precisao.' },
-      { min: 100, medal: 'diamante.png', title: 'Usa o idioma com fluidez total em qualquer contexto.' }
+      { min: 40, medal: 'prata.png', title: 'Se comunica em situacoes\nsimples do dia.' },
+      { min: 50, medal: 'rubi.png', title: 'Participa de conversas\nsimples com confianca.' },
+      { min: 60, medal: 'quartz.png', title: 'Acompanha conversas com\nalgumas limitacoes.' },
+      { min: 70, medal: 'emerald.png', title: 'Pensa no idioma com\npouca traducao mental.' },
+      { min: 80, medal: 'platina.png', title: 'Expressa ideias com clareza\nem varios contextos.' },
+      { min: 90, medal: 'ouro.png', title: 'Domina comunicacao com\nboa fluidez e precisao.' },
+      { min: 100, medal: 'diamante.png', title: 'Usa o idioma com fluidez\ntotal em qualquer contexto.' }
     ];
 
     const els = {
@@ -1090,6 +1090,10 @@
         18: 0.18,
         24: 0.25
       };
+      const applicationBonusByUse = {
+        1: 0.20,
+        2: 0.25
+      };
       const days = state.months * 30;
       const totalHours = (state.minutes / 60) * days;
       const normalizedHours = 2 * days;
@@ -1104,7 +1108,8 @@
       const targetScoreCeiling = 200;
       const interpolationFactor = targetScoreCeiling / scoreCeilingBeforeInterpolation;
       const monthBonus = monthBonusByPlan[state.months] || 0;
-      const rawScore = base * (1 + bookBoost) * calibrationFactor * timeFactor * (1 + monthBonus);
+      const applicationBonus = applicationBonusByUse[state.application] || 0;
+      const rawScore = base * (1 + bookBoost) * calibrationFactor * timeFactor * (1 + monthBonus) * (1 + applicationBonus);
       const finalScore = clamp(rawScore * interpolationFactor, 0, targetScoreCeiling);
       return {
         finalScore,
@@ -1113,6 +1118,16 @@
         smartbooksShare,
         flashcardsShare
       };
+    }
+
+    function syncSelectedOptionsFromState() {
+      document.querySelectorAll('[data-group]').forEach((groupEl) => {
+        const group = groupEl.dataset.group;
+        const value = String(state[group]);
+        groupEl.querySelectorAll('.option').forEach((button) => {
+          button.classList.toggle('active', state.selectedGroups[group] && button.dataset.value === value);
+        });
+      });
     }
 
     function updateResult() {
@@ -1224,12 +1239,7 @@
         state.mixVisual = 100 - state.flashcardsPercentage;
       }
 
-      document.querySelectorAll('[data-group]').forEach((groupEl) => {
-        const value = String(state[groupEl.dataset.group]);
-        groupEl.querySelectorAll('.option').forEach((button) => {
-          button.classList.toggle('active', Boolean(state.selectedGroups[groupEl.dataset.group]) && button.dataset.value === value);
-        });
-      });
+      syncSelectedOptionsFromState();
       updateMixSelection(state.mixVisual);
     }
 
@@ -1362,6 +1372,7 @@
       }
     }
 
+    syncSelectedOptionsFromState();
     renderStep();
     updateMixSelection(state.mixVisual);
     ensureClickSound();
