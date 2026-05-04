@@ -9288,7 +9288,7 @@
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10.5Z"/></svg>
             </button>
             <div class="stars" id="gameStars" aria-label="Estrelas do card"></div>
-            <button class="game-mission-btn" id="gameMissionBtn" type="button" aria-label="Abrir missao diaria">
+            <button class="game-mission-btn" id="gameMissionBtn" type="button" aria-label="Voltar para a welcome-gate">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <circle cx="12" cy="12" r="6"></circle>
                 <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle>
@@ -22063,7 +22063,7 @@
         els.gameMissionBtn?.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-          openDailyPlanModal({ fromGame: true });
+          pauseFlashcardsGameToWelcome();
         });
         els.welcomeTrainingModes?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-training-stage]');
