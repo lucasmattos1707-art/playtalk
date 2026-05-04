@@ -9133,7 +9133,7 @@
             <div class="daily-plan-modal__mini-ring" id="dailyPlanBooksPercent"><span>0%</span></div>
           </article>
         </section>
-        <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">Próximo Selo: 0%</div>
+        <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">Próximo Selo: White</div>
         <div class="daily-plan-modal__overall-progress">
           <div class="daily-plan-modal__overall-bar"><div class="daily-plan-modal__overall-fill" id="dailyPlanOverallBar" style="--progress: 0%"></div></div>
         </div>
@@ -14674,6 +14674,12 @@
         return selected;
       }
 
+      function resolveDailyPlanNextSealByScore(score) {
+        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
+        const nextSeal = DAILY_PLAN_FLUENCY_SEALS.find((seal) => normalized < seal.minScore) || null;
+        return nextSeal || DAILY_PLAN_FLUENCY_SEALS[DAILY_PLAN_FLUENCY_SEALS.length - 1] || null;
+      }
+
       function computeDailyPlanNextSealProgress(score) {
         const normalized = Math.max(0, Math.min(100, Number(score) || 0));
         const nextSeal = DAILY_PLAN_FLUENCY_SEALS.find((seal) => normalized < seal.minScore) || null;
@@ -14817,17 +14823,18 @@
         );
         const nextSealProgress = computeDailyPlanNextSealProgress(totalSealProgress);
         const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
+        const nextSeal = resolveDailyPlanNextSealByScore(totalSealProgress);
         if (els.dailyPlanCurrentSealImage) {
-          const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/white.png';
+          const sealSrc = safeText(nextSeal?.sealImage) || safeText(currentSeal?.sealImage) || 'medalhas/white.png';
           els.dailyPlanCurrentSealImage.src = sealSrc;
-          els.dailyPlanCurrentSealImage.alt = safeText(currentSeal?.label)
-            ? `Selo atual: ${currentSeal.label}`
-            : 'Selo em progresso';
+          els.dailyPlanCurrentSealImage.alt = safeText(nextSeal?.label)
+            ? `Proximo selo: ${nextSeal.label}`
+            : 'Proximo selo';
           els.dailyPlanCurrentSealImage.style.opacity = '1';
           els.dailyPlanCurrentSealImage.style.filter = 'none';
         }
         if (els.dailyPlanSealProgressValue) {
-          els.dailyPlanSealProgressValue.textContent = `Próximo Selo: ${Math.round(nextSealProgress)}%`;
+          els.dailyPlanSealProgressValue.textContent = `Próximo Selo: ${safeText(nextSeal?.label) || 'White'}`;
         }
         if (els.dailyPlanOverallBar) {
           els.dailyPlanOverallBar.style.setProperty('--progress', `${nextSealProgress.toFixed(2)}%`);

@@ -2,5 +2,5 @@ cd P:\playtalk-main
 
 git status
 git add .
-git commit -m "Sua mensagem de commit"
+git commit -m "Atualização selos em Daily Mission"
 git push origin main
