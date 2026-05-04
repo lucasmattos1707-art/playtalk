@@ -19332,37 +19332,42 @@
         }
       }
 
-      function buildSmartTypingLetterPool(target, total = 9) {
-        const letters = String(target || '').toUpperCase().replace(/[^A-Z]/g, '').split('');
-        const pool = [];
+      function normalizeSmartTypingLetters(target) {
+        return String(target || '')
+          .toUpperCase()
+          .replace(/[^A-Z]/g, '')
+          .split('')
+          .filter(Boolean);
+      }
+
+      function buildSmartTypingKeyboardSpec(target, total = 9) {
+        const letters = normalizeSmartTypingLetters(target);
+        const uniqueNeeded = [];
         letters.forEach((letter) => {
-          if (letter && !pool.includes(letter) && pool.length < total) {
-            pool.push(letter);
-          }
+          if (!letter || uniqueNeeded.includes(letter)) return;
+          uniqueNeeded.push(letter);
         });
+
+        const neededVisible = uniqueNeeded.slice(0, total);
+        const queue = uniqueNeeded.slice(total);
+
+        // Keep 9 keys visible. If there are fewer needed letters, fill with random unique letters.
         const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        while (pool.length < total) {
+        while (neededVisible.length < total) {
           const next = alphabet[Math.floor(Math.random() * alphabet.length)];
-          if (!pool.includes(next)) pool.push(next);
+          if (!neededVisible.includes(next) && !queue.includes(next)) neededVisible.push(next);
         }
-        return pool.slice(0, total).sort((a, b) => a.localeCompare(b));
+
+        // The visible keys are shuffled. The queue preserves priority order.
+        return {
+          letters: shuffleList(neededVisible.slice(0, total)),
+          queue: queue.slice(0)
+        };
       }
 
       function countRemainingSmartLetter(target, typedLength, letter) {
-        const remaining = String(target || '').toUpperCase().slice(Math.max(0, Number(typedLength) || 0));
-        return remaining.split('').filter((item) => item === letter).length;
-      }
-
-      function chooseSmartReplacementLetter(target, typedLength, visibleLetters) {
-        const visible = new Set((Array.isArray(visibleLetters) ? visibleLetters : []).filter(Boolean));
-        const remaining = String(target || '').toUpperCase().slice(Math.max(0, Number(typedLength) || 0)).split('').filter(Boolean);
-        for (let index = remaining.length - 1; index >= 0; index -= 1) {
-          const letter = remaining[index];
-          if (letter && !visible.has(letter)) {
-            return letter;
-          }
-        }
-        return '';
+        const remaining = normalizeSmartTypingLetters(target).slice(Math.max(0, Number(typedLength) || 0));
+        return remaining.filter((item) => item === letter).length;
       }
 
       function currentSmartKeyboardLetters(grid, exceptKey = null) {
@@ -19372,14 +19377,6 @@
           .filter(Boolean);
       }
 
-      function sortSmartKeyboardKeys(grid) {
-        Array.from(grid?.querySelectorAll('.flashcards-typing__key') || [])
-          .sort((a, b) => safeText(a.dataset.letter || a.textContent).localeCompare(safeText(b.dataset.letter || b.textContent)))
-          .forEach((key, index) => {
-            key.style.order = String(index);
-          });
-      }
-
       function setSmartKeyLetter(key, letter) {
         if (!key || !letter) return;
         key.dataset.letter = letter;
@@ -19387,22 +19384,28 @@
         key.setAttribute('aria-label', `Letra ${letter}`);
       }
 
-      function scheduleSmartKeyReplacement(key, grid, target, typedLength, usedLetter) {
+      function scheduleSmartKeyReplacement(key, grid, target, typedLength, usedLetter, queue) {
         if (!key || !grid) return;
         if (countRemainingSmartLetter(target, typedLength, usedLetter) > 0) return;
-        const replacement = chooseSmartReplacementLetter(target, typedLength, currentSmartKeyboardLetters(grid, key));
-        if (!replacement) return;
+
+        // Letter becomes "dead": after 500ms it gets replaced by the next queued letter (if any).
+        key.classList.add('is-dissolving');
+        key.disabled = true;
         window.setTimeout(() => {
           if (!key.isConnected) return;
-          key.classList.add('is-dissolving');
-          key.disabled = true;
-          window.setTimeout(() => {
-            if (!key.isConnected) return;
-            setSmartKeyLetter(key, replacement);
-            key.classList.remove('is-dissolving', 'is-correct-hit');
-            key.disabled = false;
-            sortSmartKeyboardKeys(grid);
-          }, 500);
+          const visible = new Set(currentSmartKeyboardLetters(grid, key));
+          let replacement = '';
+          while (Array.isArray(queue) && queue.length) {
+            const candidate = String(queue.shift() || '').toUpperCase().trim();
+            if (candidate && !visible.has(candidate)) {
+              replacement = candidate;
+              break;
+            }
+          }
+          if (!replacement) return;
+          setSmartKeyLetter(key, replacement);
+          key.classList.remove('is-dissolving', 'is-correct-hit');
+          key.disabled = false;
         }, 500);
       }
 
@@ -19962,8 +19965,10 @@
         const useSmartKeyboard = phaseKey === 'fourth-star';
         const typingPalette = shuffleList(TYPING_KEY_BLUES);
         const keyNodes = [];
+        const smartKeyboardSpec = useSmartKeyboard ? buildSmartTypingKeyboardSpec(target, 9) : null;
+        const smartKeyboardQueue = smartKeyboardSpec ? smartKeyboardSpec.queue : null;
         const keyboardLetters = useSmartKeyboard
-          ? buildSmartTypingLetterPool(target, 9)
+          ? smartKeyboardSpec.letters
           : buildTypingLetterPool(target, 16);
         if (useSmartKeyboard) {
           ensureTypingKeyAudioPool(FOURTH_STAR_TYPING_KEY_SOUND_PATH);
@@ -19992,7 +19997,7 @@
             typed += keyLetter;
             renderTyped();
             if (useSmartKeyboard && typed.length < target.length) {
-              scheduleSmartKeyReplacement(key, grid, target, typed.length, keyLetter);
+              scheduleSmartKeyReplacement(key, grid, target, typed.length, keyLetter, smartKeyboardQueue);
             }
             if (typed.length === target.length) {
               setTypingKeysDisabled(grid, true);
@@ -20003,9 +20008,7 @@
           keyNodes.push(key);
           grid.appendChild(key);
         });
-        if (useSmartKeyboard) {
-          sortSmartKeyboardKeys(grid);
-        }
+        // Smart keyboard order stays shuffled (no alphabetical resort).
 
         skipBtn.addEventListener('click', async () => {
           if (!state.game.active || state.game.paused || state.game.listening || state.game.currentId !== entry.id || state.game.typingSkipActive) return;
@@ -20025,7 +20028,6 @@
                 nextKey = keyNodes.find((node) => !node.classList.contains('is-dissolving')) || keyNodes[0] || null;
                 if (nextKey) {
                   setSmartKeyLetter(nextKey, nextLetter);
-                  sortSmartKeyboardKeys(grid);
                 }
               }
               if (nextKey) {
