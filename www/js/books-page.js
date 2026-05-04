@@ -306,7 +306,7 @@
     readerIndex: 0,
     readerDisplayLanguage: 'english',
     readerVisualLanguage: 'english',
-    readerListeningRevealPortuguese: false,
+    readerListeningRevealPortuguese: true,
     readerScores: [],
     readerCurrentScore: null,
     readerCurrentBadgeSrc: '',
@@ -6033,12 +6033,16 @@
     document.body.classList.toggle('books-reader-open', state.readerOpen);
   }
 
+  function clampReaderPercent(value) {
+    return Math.max(0, Math.min(100, Number(value) || 0));
+  }
+
   function normalizeReaderPercent(value) {
-    return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+    return Math.round(clampReaderPercent(value));
   }
 
   function applyReaderSentenceBonus(value) {
-    return Math.max(0, Math.min(100, normalizeReaderPercent(value) + 10));
+    return clampReaderPercent(Number(value) + 10);
   }
 
   function formatReaderScoreValue(value) {
@@ -6074,7 +6078,7 @@
   }
 
   function getReaderDisplayedScorePercent(value) {
-    return Math.max(0, Math.min(100, formatReaderRoundedScoreValue(value).roundedValue * 10));
+    return clampReaderPercent(value);
   }
 
   function isReaderTrainingMode(mode = state.readerMode) {
@@ -6123,8 +6127,8 @@
 
   function calculateReaderAverageScore() {
     if (!Array.isArray(state.readerScores) || !state.readerScores.length) return 0;
-    const total = state.readerScores.reduce((acc, value) => acc + normalizeReaderPercent(value), 0);
-    return Math.max(0, Math.min(100, total / state.readerScores.length));
+    const total = state.readerScores.reduce((acc, value) => acc + clampReaderPercent(value), 0);
+    return clampReaderPercent(total / state.readerScores.length);
   }
 
   function commitReaderPhrasePracticeProgress() {
@@ -6612,7 +6616,7 @@
     state.readerIndex = 0;
     state.readerDisplayLanguage = 'english';
     state.readerVisualLanguage = 'english';
-    state.readerListeningRevealPortuguese = false;
+    state.readerListeningRevealPortuguese = true;
     state.readerScores = [];
     state.readerCurrentScore = null;
     resetReaderCurrentBadge();
@@ -6710,7 +6714,7 @@
       state.readerSessionSpokenChars = 0;
       state.readerDisplayLanguage = 'english';
       state.readerVisualLanguage = 'english';
-      state.readerListeningRevealPortuguese = false;
+      state.readerListeningRevealPortuguese = true;
       state.readerMicBusy = false;
       state.readerLastAudioKey = '';
       state.readerCardShownAt = 0;

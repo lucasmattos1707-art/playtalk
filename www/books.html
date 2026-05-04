@@ -3799,7 +3799,7 @@
       line-height: 0.98;
       letter-spacing: 0;
       text-shadow: none;
-      margin-top: 6px;
+      margin-top: 0;
       order: 2;
       position: relative;
       z-index: 2;
@@ -3811,7 +3811,7 @@
 
     .books-reader[data-reader-mode="listening-training"] .books-reader-portuguese {
       display: block;
-      margin: 0;
+      margin: 2px 0 0;
       color: #7de6ff;
       font-family: "Pltay", "Soopafre", Arial, sans-serif;
       font-weight: 400;
@@ -3895,17 +3895,18 @@
       align-items: center;
       justify-content: flex-start;
       gap: 6px;
-      padding-top: 32px;
-      padding-bottom: 246px;
+      padding-top: 6px;
+      padding-bottom: 0;
     }
 
     .books-reader[data-reader-mode="listening-training"] .books-reader-training {
-      position: absolute;
+      position: fixed;
       left: 50%;
-      bottom: 26px;
+      bottom: calc(22px + env(safe-area-inset-bottom, 0px));
       transform: translateX(-50%);
-      width: min(760px, 100%);
+      width: min(760px, calc(100vw - 20px));
       margin-top: 0;
+      z-index: 9;
     }
 
     .books-reader-side-actions {
@@ -4153,6 +4154,13 @@
       line-height: 1;
       position: relative;
       z-index: 4;
+    }
+
+    .books-reader[data-reader-mode="listening-training"] .books-reader-pron-percent,
+    .books-reader[data-reader-mode="listening-training"] .books-reader-mic-score {
+      font-family: "Pltay", "Soopafre", Arial, sans-serif;
+      font-weight: 400;
+      letter-spacing: 0;
     }
 
     .books-reader-lang {
