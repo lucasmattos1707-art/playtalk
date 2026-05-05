@@ -14815,8 +14815,10 @@
         const missionView = buildDailyPlanMissionView(mission, use120Preview);
         const missionViewAt120 = buildDailyPlanMissionView(mission, true);
         const overallPercent = clampPercent(missionView.balancedProgressPercent);
+        const projectedOverallPercent = clampPercent(missionViewAt120.balancedProgressPercent);
         const overallPercentRounded = Math.round(overallPercent);
-        const overallPercentForVisual = toMissionVisualPercent(overallPercent);
+        const projectedOverallPercentRounded = Math.round(projectedOverallPercent);
+        const overallPercentForVisual = toMissionVisualPercent(projectedOverallPercent);
         setDailyPlanProgress(
           missionView.cardsToday,
           missionView.cardsExpected,
@@ -14834,7 +14836,8 @@
           null
         );
         if (els.dailyPlanGeneralPercent) {
-          els.dailyPlanGeneralPercent.textContent = `${overallPercentRounded}%`;
+          const percentToShow = use120Preview ? projectedOverallPercentRounded : Math.max(overallPercentRounded, projectedOverallPercentRounded);
+          els.dailyPlanGeneralPercent.textContent = `${percentToShow}%`;
         }
         if (els.dailyPlanGeneralRing) {
           els.dailyPlanGeneralRing.style.background = `conic-gradient(#4ddcff 0 ${overallPercentForVisual.toFixed(2)}%, rgba(255,255,255,.1) ${overallPercentForVisual.toFixed(2)}% 100%)`;
