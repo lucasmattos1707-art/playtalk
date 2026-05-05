@@ -14862,11 +14862,11 @@
           const remaining = Math.max(0, missionView.booksTarget - Math.round(missionView.booksToday));
           els.dailyPlanBooksRemaining.textContent = `Faltam ${remaining} minibooks`;
         }
-        // "Progresso maximo" sempre usa a simulacao com jornada de 120 minutos.
-        const totalSealProgress = Math.max(
-          0,
-          Math.min(100, Number(missionViewAt120.balancedProgressPercent) || 0)
-        );
+        // Quando o backend traz planScore (inclui modo sem plano), ele vira a fonte oficial do selo.
+        const serverPlanScore = Number(mission?.seal?.planScore);
+        const totalSealProgress = Number.isFinite(serverPlanScore)
+          ? Math.max(0, Math.min(200, serverPlanScore))
+          : Math.max(0, Math.min(100, Number(missionViewAt120.balancedProgressPercent) || 0));
         const nextSealProgress = computeDailyPlanNextSealProgress(totalSealProgress);
         const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
         const nextSeal = resolveDailyPlanNextSealByScore(totalSealProgress);

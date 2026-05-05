@@ -279,6 +279,7 @@ const FLASHCARD_RANKING_PLACEHOLDER_NAME = 'Usuario';
 const FLASHCARD_RANKING_PLACEHOLDER_AVATAR = '/Avatar/profile-neon-blue.svg';
 const FLUENCY_PLAN_DEFAULT_STATUS = 'nao';
 const FLUENCY_PLAN_COMPLETED_STATUS = 'sim';
+const FLUENCY_PLAN_NO_PLAN_STATUS = 'sem_plano';
 const PRESENCE_CLASS_DAILY_TARGET = 5000;
 const FLASHCARD_RANKING_PERIODS = {
   weekly: {
@@ -2120,6 +2121,30 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
 
   const targets = calculateDailyMissionTargetSnapshot(user);
   const progress = await readUserDailyMissionProgress(db, user.id);
+  const [flashcardsCountResult, smartbooksCountResult] = await Promise.all([
+    db.query(
+      `SELECT COUNT(*)::int AS flashcards_count
+       FROM public.user_flashcard_progress
+       WHERE user_id = $1`,
+      [user.id]
+    ),
+    db.query(
+      `SELECT COALESCE(SUM(reads_completed), 0)::int AS smartbooks_count
+       FROM public.user_books_library_stats
+       WHERE user_id = $1`,
+      [user.id]
+    )
+  ]);
+  const productionStats = {
+    flashcardsCount: Math.max(0, Number(flashcardsCountResult.rows[0]?.flashcards_count) || 0),
+    smartbooksCount: Math.max(0, Number(smartbooksCountResult.rows[0]?.smartbooks_count) || 0)
+  };
+  const fluencyPlanStatus = normalizeFluencyPlanStatus(user?.['fluency-plan'] || user?.fluency_plan_status);
+  const planSnapshot = calculateFluencyPlanScoreSnapshot(user);
+  const noPlanSnapshot = calculateNoPlanFluencyScoreSnapshot(productionStats);
+  const resolvedPlanScore = fluencyPlanStatus === FLUENCY_PLAN_NO_PLAN_STATUS
+    ? noPlanSnapshot.score
+    : (planSnapshot?.score ?? noPlanSnapshot.score);
   const cardsTarget = Math.max(0, Number(targets.cardsTarget) || 0);
   const booksTarget = Math.max(0, Number(targets.booksTarget) || 0);
   const cardsExpected = Math.max(0, Number(targets.cardsExpected) || 0);
@@ -2150,7 +2175,13 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
     cardsPercent,
     booksPercent,
     weightedPercent,
-    seal: null
+    seal: {
+      mode: fluencyPlanStatus,
+      planScore: resolvedPlanScore,
+      planScoreAt120: resolvedPlanScore,
+      flashcardsCount: productionStats.flashcardsCount,
+      smartbooksCount: productionStats.smartbooksCount
+    }
   };
 };
 
@@ -3137,9 +3168,13 @@ function readNullableInteger(value) {
 
 function normalizeFluencyPlanStatus(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  return normalized === FLUENCY_PLAN_COMPLETED_STATUS
-    ? FLUENCY_PLAN_COMPLETED_STATUS
-    : FLUENCY_PLAN_DEFAULT_STATUS;
+  if (normalized === FLUENCY_PLAN_COMPLETED_STATUS) {
+    return FLUENCY_PLAN_COMPLETED_STATUS;
+  }
+  if (normalized === FLUENCY_PLAN_NO_PLAN_STATUS) {
+    return FLUENCY_PLAN_NO_PLAN_STATUS;
+  }
+  return FLUENCY_PLAN_DEFAULT_STATUS;
 }
 
 function isPlaceholderAvatarImage(value) {
@@ -3151,7 +3186,8 @@ function isPlaceholderAvatarImage(value) {
 }
 
 function hasCompletedFluencyPlan(user) {
-  return normalizeFluencyPlanStatus(user?.['fluency-plan'] || user?.fluency_plan_status) === FLUENCY_PLAN_COMPLETED_STATUS;
+  const status = normalizeFluencyPlanStatus(user?.['fluency-plan'] || user?.fluency_plan_status);
+  return status === FLUENCY_PLAN_COMPLETED_STATUS || status === FLUENCY_PLAN_NO_PLAN_STATUS;
 }
 
 function needsAvatarOnboarding(user) {
@@ -10228,6 +10264,56 @@ function fluencyApplicationCut(application) {
   return Number(application) === 0 ? 30 : 0;
 }
 
+function fluencyVectorByTotalMinutes(totalMinutes) {
+  const minutes = Math.max(0, Number(totalMinutes) || 0);
+  if (minutes <= 0) return 0;
+  if (minutes <= 15) {
+    return (minutes / 15) * 25;
+  }
+  if (minutes <= 45) {
+    return 25 + ((minutes - 15) / (45 - 15)) * 25;
+  }
+  if (minutes <= 120) {
+    return 50 + ((minutes - 45) / (120 - 45)) * 50;
+  }
+  return 100;
+}
+
+function calculateNoPlanFluencyScoreSnapshot(stats = {}) {
+  const flashcardsCount = Math.max(0, Number(stats?.flashcardsCount) || 0);
+  const smartbooksCount = Math.max(0, Number(stats?.smartbooksCount) || 0);
+
+  const secondsFlashcards = flashcardsCount * 60;
+  const secondsSmartbooks = smartbooksCount * 120;
+  const totalMinutes = (secondsFlashcards + secondsSmartbooks) / 60;
+
+  const vectorA = fluencyVectorByTotalMinutes(totalMinutes);
+  const vectorB = 50 + ((12 - 6) / (24 - 6)) * 50;
+
+  const weightedFlashcards = flashcardsCount;
+  const weightedSmartbooks = smartbooksCount * 2;
+  const weightedTotal = weightedFlashcards + weightedSmartbooks;
+  const smartbooksShare = weightedTotal > 0
+    ? (weightedSmartbooks / weightedTotal) * 100
+    : 0;
+
+  let cutSmartbooks = 0;
+  if (smartbooksShare >= 50) {
+    cutSmartbooks = 0;
+  } else if (smartbooksShare <= 20) {
+    cutSmartbooks = 30;
+  } else {
+    cutSmartbooks = ((50 - smartbooksShare) / 30) * 30;
+  }
+
+  const finalScore = Math.max(0, Math.min(200, Math.round((vectorA + vectorB) * (1 - (cutSmartbooks / 100)))));
+  return {
+    score: finalScore,
+    flashcardsCount,
+    smartbooksCount
+  };
+}
+
 function calculateFluencyPlanScoreSnapshot(plan) {
   const minutes = normalizeFluencyPlanChoice(plan?.minutes, FLUENCY_PLAN_ALLOWED_MINUTES);
   const months = normalizeFluencyPlanMonthsValue(plan?.months);
@@ -11357,6 +11443,14 @@ app.patch('/auth/fluency-plan', async (req, res) => {
     const books = readNullableInteger(req.body?.books);
     const flashcardsPercentage = readNullableInteger(req.body?.flashcardsPercentage);
     const smartbooksPercentage = readNullableInteger(req.body?.smartbooksPercentage);
+    const noPlan = req.body?.noPlan === true;
+    const nextStatus = noPlan ? FLUENCY_PLAN_NO_PLAN_STATUS : FLUENCY_PLAN_COMPLETED_STATUS;
+    const nextMinutes = noPlan ? null : minutes;
+    const nextMonths = noPlan ? null : months;
+    const nextApplication = noPlan ? null : application;
+    const nextBooks = noPlan ? null : books;
+    const nextFlashcardsPercentage = noPlan ? null : flashcardsPercentage;
+    const nextSmartbooksPercentage = noPlan ? null : smartbooksPercentage;
 
     const result = await pool.query(
       `UPDATE public.users
@@ -11373,13 +11467,13 @@ app.patch('/auth/fluency-plan', async (req, res) => {
        RETURNING id`,
       [
         authUser.id,
-        FLUENCY_PLAN_COMPLETED_STATUS,
-        minutes,
-        months,
-        application,
-        books,
-        flashcardsPercentage,
-        smartbooksPercentage
+        nextStatus,
+        nextMinutes,
+        nextMonths,
+        nextApplication,
+        nextBooks,
+        nextFlashcardsPercentage,
+        nextSmartbooksPercentage
       ]
     );
 
@@ -11394,13 +11488,13 @@ app.patch('/auth/fluency-plan', async (req, res) => {
       success: true,
       user: await buildAuthUserPayload(user),
       plan: {
-        status: FLUENCY_PLAN_COMPLETED_STATUS,
-        minutes,
-        months,
-        application,
-        books,
-        flashcards_percentage: flashcardsPercentage,
-        smartbooks_percentage: smartbooksPercentage,
+        status: nextStatus,
+        minutes: nextMinutes,
+        months: nextMonths,
+        application: nextApplication,
+        books: nextBooks,
+        flashcards_percentage: nextFlashcardsPercentage,
+        smartbooks_percentage: nextSmartbooksPercentage,
         score: null
       }
     });

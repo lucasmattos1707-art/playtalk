@@ -611,6 +611,30 @@
       margin-top: auto;
     }
 
+    .bottom-skip {
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    .skip-btn {
+      border: 0;
+      background: transparent;
+      color: #9ec8ff;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      opacity: 0.92;
+    }
+
+    .skip-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
     .bottom-inner {
       width: 100%;
       display: grid;
@@ -912,6 +936,9 @@
         </div>
         <button class="nav-btn primary" id="nextBtn" type="button">Continuar</button>
       </div>
+      <div class="bottom-skip">
+        <button class="skip-btn" id="skipPlanBtn" type="button">Seguir sem um plano</button>
+      </div>
     </footer>
   </main>
 
@@ -970,7 +997,8 @@
       mixSliderTrack: document.getElementById('mixSliderTrack'),
       mixSlider: document.getElementById('mixSlider'),
       flashcardsPercent: document.getElementById('flashcardsPercent'),
-      smartbooksPercent: document.getElementById('smartbooksPercent')
+      smartbooksPercent: document.getElementById('smartbooksPercent'),
+      skipPlanBtn: document.getElementById('skipPlanBtn')
     };
 
     function clamp(value, min, max) {
@@ -1177,6 +1205,9 @@
 
       els.backBtn.disabled = busy || step === 0;
       els.nextBtn.disabled = busy;
+      if (els.skipPlanBtn) {
+        els.skipPlanBtn.disabled = busy;
+      }
       els.nextBtn.textContent = step < totalChoiceSteps ? 'Continuar' : (busy ? 'Salvando...' : 'Continuar');
       els.stepFill.style.width = `${clamp(((step + 1) / 5) * 100, 20, 100)}%`;
       updateResult();
@@ -1291,6 +1322,22 @@
       return payload;
     }
 
+    async function persistWithoutPlan() {
+      const response = await fetch(buildApiUrl('/auth/fluency-plan'), {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          noPlan: true
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Nao foi possivel seguir sem plano agora.');
+      }
+      return payload;
+    }
+
     document.querySelectorAll('[data-group]').forEach((groupEl) => {
       groupEl.addEventListener('click', (event) => {
         if (busy) return;
@@ -1357,6 +1404,28 @@
           navigateTo(resolveNextRoute(user), { replace: true });
         } catch (error) {
           setStatus(error?.message || 'Não foi possível salvar o plano de fluência.', 'error');
+        } finally {
+          busy = false;
+          renderStep();
+        }
+      })();
+    });
+
+    els.skipPlanBtn?.addEventListener('click', () => {
+      if (busy) return;
+      playClickSound();
+      void (async () => {
+        busy = true;
+        renderStep();
+        setStatus('Salvando modo sem plano...');
+        try {
+          const payload = await persistWithoutPlan();
+          const user = normalizeUser(payload.user);
+          state.nextOnboardingRoute = safeText(payload?.user?.next_onboarding_route);
+          setStatus('Modo sem plano ativado.', 'success');
+          navigateTo(resolveNextRoute(user), { replace: true });
+        } catch (error) {
+          setStatus(error?.message || 'Nao foi possivel ativar o modo sem plano.', 'error');
         } finally {
           busy = false;
           renderStep();
