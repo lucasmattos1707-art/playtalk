@@ -1484,8 +1484,8 @@
     }
 
     .daily-plan-modal__general-seal img {
-      width: 55px;
-      height: 55px;
+      width: 69px;
+      height: 69px;
       object-fit: contain;
       filter: drop-shadow(0 0 10px rgba(24, 200, 255, 0.5));
     }
@@ -1606,7 +1606,7 @@
     }
 
     .daily-plan-modal__bar {
-      height: 12px;
+      height: 8px;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(115, 180, 255, 0.25);
@@ -1652,6 +1652,8 @@
       width: min(430px, 100%);
       max-width: calc(100vw - 42px);
       margin-top: 12px;
+      display: block;
+      min-height: 8px;
     }
 
     .daily-plan-modal__seal-meta {
@@ -1689,12 +1691,13 @@
 
     .daily-plan-modal__overall-bar {
       width: 100%;
-      height: 18px;
+      height: 8px;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(115, 180, 255, 0.25);
       overflow: hidden;
       box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.45);
+      display: block;
     }
 
     .daily-plan-modal__overall-fill {
@@ -1717,9 +1720,9 @@
       .daily-plan-modal__hero-title { font-size: 42px; }
       .daily-plan-modal__general-progress { grid-template-columns: 1fr auto; }
       .daily-plan-modal__general-percent { font-size: 32px; }
-      .daily-plan-modal__general-seal img { width: 48px; height: 48px; }
+      .daily-plan-modal__general-seal img { width: 60px; height: 60px; }
       .daily-plan-modal__counter { font-size: 24px; }
-      .daily-plan-modal__overall-bar { height: 16px; }
+      .daily-plan-modal__overall-bar { height: 8px; }
       .daily-plan-modal__panel { transform: translateY(-24px); }
       .daily-plan-modal__hero,
       .daily-plan-modal__card,
@@ -14786,8 +14789,16 @@
           els.dailyPlanBooksTotal,
           els.dailyPlanBooksBar
         );
+        // Quando sem plano, a barra da missão mostra progresso até o próximo selo.
+        const serverPlanScoreForBar = Math.max(0, Math.min(200, Number(mission?.seal?.planScore) || 0));
+        const nextSealProgressForBar = computeDailyPlanNextSealProgress(serverPlanScoreForBar);
         if (els.dailyPlanMissionBar) {
-          els.dailyPlanMissionBar.style.setProperty('--progress', `${overallPercentForVisual.toFixed(2)}%`);
+          const missionBarProgress = isNoPlanMode ? nextSealProgressForBar : overallPercentForVisual;
+          els.dailyPlanMissionBar.style.setProperty('--progress', `${missionBarProgress.toFixed(2)}%`);
+        }
+        if (isNoPlanMode) {
+          if (els.dailyPlanFlashcardsTotal) els.dailyPlanFlashcardsTotal.textContent = '';
+          if (els.dailyPlanBooksTotal) els.dailyPlanBooksTotal.textContent = '';
         }
         if (els.dailyPlanGeneralLabel) {
           els.dailyPlanGeneralLabel.textContent = isNoPlanMode ? 'Próximo selo:' : 'Progresso da missão';
