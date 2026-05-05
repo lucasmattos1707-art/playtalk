@@ -1082,41 +1082,51 @@
       updateResult();
     }
 
+    function vectorByTime(minutes) {
+      const min = clamp(Number(minutes) || 0, 15, 120);
+      // 15 min => 25, 45 min => 50, 120 min => 100
+      if (min <= 45) {
+        return 25 + ((min - 15) / (45 - 15)) * 25;
+      }
+      return 50 + ((min - 45) / (120 - 45)) * 50;
+    }
+
+    function vectorByMonths(months) {
+      const m = clamp(Number(months) || 0, 3, 24);
+      // 3 meses => 25, 6 meses => 50, 24 meses => 100
+      if (m <= 6) {
+        return 25 + ((m - 3) / (6 - 3)) * 25;
+      }
+      return 50 + ((m - 6) / (24 - 6)) * 50;
+    }
+
+    function smartbooksCut(percent) {
+      const value = clamp(Number(percent) || 0, 0, 100);
+      if (value >= 50) return 0;
+      if (value >= 45) return 5;
+      if (value >= 40) return 10;
+      if (value >= 35) return 15;
+      if (value >= 30) return 20;
+      if (value >= 25) return 25;
+      return 30;
+    }
+
+    function applicationCut(applicationMode) {
+      // 0 = somente jogar; 1/2 = aplica na vida real
+      return Number(applicationMode) === 0 ? 30 : 0;
+    }
+
     function calculate() {
-      const monthBonusByPlan = {
-        6: 0.05,
-        9: 0.08,
-        12: 0.10,
-        18: 0.18,
-        24: 0.25
-      };
-      const applicationBonusByUse = {
-        1: 0.20,
-        2: 0.25
-      };
-      const days = state.months * 30;
-      const totalHours = (state.minutes / 60) * days;
-      const normalizedHours = 2 * days;
-      const timeFactor = clamp(state.minutes / 120, 0, 1);
-      const calibrationFactor = 25 / 33;
-      let base = 100 * (1 - Math.exp(-normalizedHours / 260));
-      base *= [0.82, 1.0, 1.15][state.application];
-      const smartbooksShare = state.smartbooksPercentage / 100;
-      const flashcardsShare = state.flashcardsPercentage / 100;
-      const bookBoost = [0.10, 0.20, 0.30][state.application] * smartbooksShare;
-      const scoreCeilingBeforeInterpolation = 113;
-      const targetScoreCeiling = 200;
-      const interpolationFactor = targetScoreCeiling / scoreCeilingBeforeInterpolation;
-      const monthBonus = monthBonusByPlan[state.months] || 0;
-      const applicationBonus = applicationBonusByUse[state.application] || 0;
-      const rawScore = base * (1 + bookBoost) * calibrationFactor * timeFactor * (1 + monthBonus) * (1 + applicationBonus);
-      const finalScore = clamp(rawScore * interpolationFactor, 0, targetScoreCeiling);
+      const vectorA = vectorByTime(state.minutes);
+      const vectorB = vectorByMonths(state.months);
+      const base = (vectorA + vectorB) / 2;
+      const cutSmartbooks = smartbooksCut(state.smartbooksPercentage);
+      const cutApplication = applicationCut(state.application);
+      const totalCut = cutSmartbooks + cutApplication;
+      const finalScore = clamp(base * (1 - totalCut / 100), 0, 100);
+
       return {
-        finalScore,
-        totalHours,
-        bookBoost,
-        smartbooksShare,
-        flashcardsShare
+        finalScore
       };
     }
 
