@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <title>Books | Fluent LevelUp</title>
   <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/playtalk-shell.css">
   <style>
     @font-face {
@@ -177,9 +180,10 @@
     .books-level-title {
       margin: 0;
       text-align: center;
-      font-size: clamp(20px, 5vw, 30px);
-      font-weight: 300;
-      letter-spacing: 0.01em;
+      font-family: "Exo 2", "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
+      font-size: clamp(25px, 6.25vw, 37.5px);
+      font-weight: 700;
+      letter-spacing: 0.015em;
       transition: opacity 260ms ease, transform 380ms ease, filter 380ms ease;
       text-shadow: 0 3px 12px rgba(0, 0, 0, 0.34);
     }
@@ -2573,7 +2577,7 @@
       --books-card-book-width: min(304px, 66vw);
       --books-card-book-height: calc(var(--books-card-book-width) * 16 / 9);
       --books-card-badge-size: 97px;
-      --books-card-vertical-offset: -10dvh;
+      --books-card-vertical-offset: calc(-10dvh + 50px);
       width: min(454px, 90vw, calc(var(--books-shelf-height) * 9 / 16 * 0.96));
       aspect-ratio: 9 / 15.2;
       border: 0;
@@ -2666,6 +2670,34 @@
       height: 100%;
       object-fit: contain;
       display: block;
+    }
+
+    .books-card__approved-badge {
+      position: absolute;
+      right: calc(50% - (var(--books-card-book-width) / 2) + 10px);
+      bottom: calc(50% - (var(--books-card-book-height) / 2) + 10px - var(--books-card-vertical-offset));
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      z-index: 5;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #95ffb8 0%, #00ff66 55%, #00d64f 100%);
+      border: 1px solid rgba(223, 255, 236, 0.96);
+      box-shadow:
+        0 0 0 1px rgba(197, 255, 220, 0.2) inset,
+        0 0 14px rgba(0, 255, 102, 0.78),
+        0 0 30px rgba(0, 255, 102, 0.48),
+        0 8px 18px rgba(0, 0, 0, 0.34);
+      pointer-events: none;
+    }
+
+    .books-card__approved-badge svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+      color: #ffffff;
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.62));
     }
 
     .books-card__title {
@@ -4589,7 +4621,7 @@
       }
 
       .books-card {
-        --books-card-vertical-offset: -16dvh;
+        --books-card-vertical-offset: calc(-16dvh + 50px);
         width: min(432px, 88vw);
       }
 

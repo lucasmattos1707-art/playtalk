@@ -1986,8 +1986,19 @@
     if (collectedCount <= 0) return 1;
     return Math.max(1, Math.min(
       MAX_BOOK_LEVEL,
-      Math.floor((collectedCount - 1) / SMARTBOOKS_PER_UNLOCK_LEVEL) + 1
+      Math.floor(collectedCount / SMARTBOOKS_PER_UNLOCK_LEVEL) + 1
     ));
+  }
+
+  function getQualifiedBookIdsSet() {
+    const ids = Array.isArray(state.stats?.qualifiedBookIds) ? state.stats.qualifiedBookIds : [];
+    return new Set(ids.map((bookId) => safeText(bookId).toLowerCase()).filter(Boolean));
+  }
+
+  function isBookQualified(bookId) {
+    const normalizedBookId = safeText(bookId).toLowerCase();
+    if (!normalizedBookId) return false;
+    return getQualifiedBookIdsSet().has(normalizedBookId);
   }
 
   function getUnlockedBookUiLevels() {
@@ -4888,7 +4899,13 @@
         badgeEl.appendChild(badgeImg);
       }
 
-      card.append(background, overlay, badgeEl);
+      const approvedBadge = document.createElement('span');
+      approvedBadge.className = 'books-card__approved-badge';
+      approvedBadge.setAttribute('aria-hidden', 'true');
+      approvedBadge.hidden = !isBookQualified(book?.bookId);
+      approvedBadge.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.55 18.2 3.9 12.55l1.42-1.42 4.23 4.23 9.13-9.13 1.42 1.42z"/></svg>';
+
+      card.append(background, overlay, badgeEl, approvedBadge);
 
       if (!IS_MYBOOKS_GRID_EMBED) {
         const adminChip = document.createElement('span');
@@ -5016,7 +5033,7 @@
     if (parsed === UI_LEVEL_ALL_BOOKS) return 'AllBooks';
     const bookLevel = uiLevelToBookLevel(parsed);
     if (!bookLevel) return `Nivel ${parsed}`;
-    return `${BOOK_LEVEL_DISPLAY_NAMES_100[bookLevel] || `Nivel ${bookLevel}`} ${bookLevel}/100`;
+    return `Nível ${bookLevel}`;
   }
 
   function renderLevelMenu() {
