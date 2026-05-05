@@ -2152,11 +2152,24 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
   const cardsToday = Math.max(0, Number(progress.cardsToday) || 0);
   const booksToday = Math.max(0, Number(progress.booksToday) || 0);
 
-  const cardsPercent = computeDailyMissionOverflowPercent(cardsToday, cardsExpected);
-  const booksPercent = computeDailyMissionOverflowPercent(booksToday, booksExpected);
-  const weightedExpectedUnits = computeDailyMissionWeightedUnits(cardsExpected, booksExpected);
-  const weightedDoneUnits = computeDailyMissionWeightedUnits(cardsToday, booksToday);
-  const weightedPercent = computeDailyMissionOverflowPercent(weightedDoneUnits, weightedExpectedUnits);
+  let cardsPercent = computeDailyMissionOverflowPercent(cardsToday, cardsExpected);
+  let booksPercent = computeDailyMissionOverflowPercent(booksToday, booksExpected);
+  let weightedExpectedUnits = computeDailyMissionWeightedUnits(cardsExpected, booksExpected);
+  let weightedDoneUnits = computeDailyMissionWeightedUnits(cardsToday, booksToday);
+  let weightedPercent = computeDailyMissionOverflowPercent(weightedDoneUnits, weightedExpectedUnits);
+
+  if (fluencyPlanStatus === FLUENCY_PLAN_NO_PLAN_STATUS) {
+    // No modo sem plano, o progresso visual deve seguir o modelo por produção
+    // (flashcards/smartbooks) em vez da regra de missão diária baseada em expected.
+    const smartbooksWeighted = productionStats.smartbooksCount * 2;
+    const totalWeighted = productionStats.flashcardsCount + smartbooksWeighted;
+    const smartbooksSharePercent = totalWeighted > 0 ? (smartbooksWeighted / totalWeighted) * 100 : 0;
+    cardsPercent = Math.max(0, Math.min(200, (100 - smartbooksSharePercent) * 2));
+    booksPercent = Math.max(0, Math.min(200, smartbooksSharePercent * 2));
+    weightedExpectedUnits = 0;
+    weightedDoneUnits = 0;
+    weightedPercent = resolvedPlanScore;
+  }
 
   return {
     dayKey: progress.dayKey,

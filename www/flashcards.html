@@ -14812,13 +14812,16 @@
 
       function renderDailyPlanMission(mission, options = {}) {
         const use120Preview = Boolean(options.use120Preview);
+        const isNoPlanMode = safeText(mission?.seal?.mode).toLowerCase() === 'sem_plano';
         const missionView = buildDailyPlanMissionView(mission, use120Preview);
         const missionViewAt120 = buildDailyPlanMissionView(mission, true);
         const overallPercent = clampPercent(missionView.balancedProgressPercent);
         const projectedOverallPercent = clampPercent(missionViewAt120.balancedProgressPercent);
         const overallPercentRounded = Math.round(overallPercent);
         const projectedOverallPercentRounded = Math.round(projectedOverallPercent);
-        const overallPercentForVisual = toMissionVisualPercent(projectedOverallPercent);
+        const overallPercentForVisual = isNoPlanMode
+          ? Math.max(0, Math.min(100, (Number(mission?.seal?.planScore) || 0) / 2))
+          : toMissionVisualPercent(projectedOverallPercent);
         setDailyPlanProgress(
           missionView.cardsToday,
           missionView.cardsExpected,
@@ -14836,7 +14839,9 @@
           null
         );
         if (els.dailyPlanGeneralPercent) {
-          const percentToShow = use120Preview ? projectedOverallPercentRounded : Math.max(overallPercentRounded, projectedOverallPercentRounded);
+          const percentToShow = isNoPlanMode
+            ? Math.max(0, Math.min(200, Math.round(Number(mission?.seal?.planScore) || 0)))
+            : (use120Preview ? projectedOverallPercentRounded : Math.max(overallPercentRounded, projectedOverallPercentRounded));
           els.dailyPlanGeneralPercent.textContent = `${percentToShow}%`;
         }
         if (els.dailyPlanGeneralRing) {
