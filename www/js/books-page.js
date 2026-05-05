@@ -1975,10 +1975,20 @@
       .filter(Boolean);
   }
 
+  function getOwnedSmartBookIdsSet() {
+    const fromLibraryStats = state.stats?.bookBestPercentById && typeof state.stats.bookBestPercentById === 'object'
+      ? Object.keys(state.stats.bookBestPercentById)
+      : [];
+    if (fromLibraryStats.length) {
+      return new Set(fromLibraryStats.map((bookId) => safeText(bookId).toLowerCase()).filter(Boolean));
+    }
+    const fallbackQualified = Array.isArray(state.stats?.qualifiedBookIds) ? state.stats.qualifiedBookIds : [];
+    return new Set(fallbackQualified.map((bookId) => safeText(bookId).toLowerCase()).filter(Boolean));
+  }
+
   function getCollectedSmartBooksCount() {
-    const ids = Array.isArray(state.stats?.qualifiedBookIds) ? state.stats.qualifiedBookIds : [];
-    const uniqueIds = new Set(ids.map((bookId) => safeText(bookId).toLowerCase()).filter(Boolean));
-    return Math.max(0, Number(state.stats?.qualifiedBookCount) || uniqueIds.size || 0);
+    const owned = getOwnedSmartBookIdsSet();
+    return Math.max(0, owned.size);
   }
 
   function getUnlockedSmartBookLevel() {
@@ -1991,8 +2001,7 @@
   }
 
   function getQualifiedBookIdsSet() {
-    const ids = Array.isArray(state.stats?.qualifiedBookIds) ? state.stats.qualifiedBookIds : [];
-    return new Set(ids.map((bookId) => safeText(bookId).toLowerCase()).filter(Boolean));
+    return getOwnedSmartBookIdsSet();
   }
 
   function isBookQualified(bookId) {
@@ -5939,14 +5948,15 @@
       ? Math.max(0, Math.min(100, ((currentIndex + 1) / totalCards) * 100))
       : 0;
     const readingPronunciationPercent = calculateReaderAverageScore();
-    const pronunciationDisplay = formatReaderRoundedScoreValue(readingPronunciationPercent);
+    const pronunciationDisplay = formatReaderScoreValue(readingPronunciationPercent);
     if (els.readerPronRing) {
       els.readerPronRing.style.setProperty('--percent', String(bookProgressPercent));
       els.readerPronRing.style.setProperty('--reader-progress-angle', `${bookProgressPercent * 3.6}deg`);
     }
     if (els.readerPronPercent) {
-      void animateDecimalMarkup(els.readerPronPercent, pronunciationDisplay.roundedValue, {
-        decimals: 0,
+      void animateDecimalMarkup(els.readerPronPercent, pronunciationDisplay.scaledValue, {
+        decimals: 2,
+        suffix: '%',
         duration: SCORE_ANIMATION_MS,
         startValue: 0
       });
