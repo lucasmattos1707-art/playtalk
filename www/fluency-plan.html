@@ -1112,9 +1112,9 @@
 
     function vectorByTime(minutes) {
       const min = clamp(Number(minutes) || 0, 15, 120);
-      // 15 min => 25, 45 min => 50, 120 min => 100
+      // 15 min => 10, 45 min => 50, 120 min => 100
       if (min <= 45) {
-        return 25 + ((min - 15) / (45 - 15)) * 25;
+        return 10 + ((min - 15) / (45 - 15)) * 40;
       }
       return 50 + ((min - 45) / (120 - 45)) * 50;
     }

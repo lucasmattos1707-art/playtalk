@@ -10233,9 +10233,9 @@ function normalizeFluencyPlanMonthsValue(value) {
 
 function fluencyVectorByTime(minutes) {
   const normalizedMinutes = Math.max(15, Math.min(120, Number(minutes) || 0));
-  // 15min = 25, 45min = 50, 120min = 100.
+  // 15min = 10, 45min = 50, 120min = 100.
   if (normalizedMinutes <= 45) {
-    return 25 + ((normalizedMinutes - 15) / (45 - 15)) * 25;
+    return 10 + ((normalizedMinutes - 15) / (45 - 15)) * 40;
   }
   return 50 + ((normalizedMinutes - 45) / (120 - 45)) * 50;
 }
@@ -10268,10 +10268,10 @@ function fluencyVectorByTotalMinutes(totalMinutes) {
   const minutes = Math.max(0, Number(totalMinutes) || 0);
   if (minutes <= 0) return 0;
   if (minutes <= 15) {
-    return (minutes / 15) * 25;
+    return (minutes / 15) * 10;
   }
   if (minutes <= 45) {
-    return 25 + ((minutes - 15) / (45 - 15)) * 25;
+    return 10 + ((minutes - 15) / (45 - 15)) * 40;
   }
   if (minutes <= 120) {
     return 50 + ((minutes - 45) / (120 - 45)) * 50;
