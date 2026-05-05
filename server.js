@@ -10319,7 +10319,12 @@ function calculateNoPlanFluencyScoreSnapshot(stats = {}) {
     cutSmartbooks = ((50 - smartbooksShare) / 30) * 30;
   }
 
-  const finalScore = Math.max(0, Math.min(200, Math.round((vectorA + vectorB) * (1 - (cutSmartbooks / 100)))));
+  const rawScore = (vectorA + vectorB) * (1 - (cutSmartbooks / 100));
+  // Reescala para que "sem produção" inicie em 0% real no modo sem plano.
+  const baseWithoutProduction = vectorB * (1 - 0.30); // smartbooksShare=0 => corte máximo de 30%
+  const noPlanCeiling = 100 + vectorB; // teto teórico com vetor A no máximo e sem cortes
+  const adjustedScore = ((rawScore - baseWithoutProduction) / Math.max(1, noPlanCeiling - baseWithoutProduction)) * noPlanCeiling;
+  const finalScore = Math.max(0, Math.min(200, Math.round(adjustedScore)));
   return {
     score: finalScore,
     flashcardsCount,
