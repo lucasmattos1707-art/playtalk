@@ -306,7 +306,7 @@
     readerIndex: 0,
     readerDisplayLanguage: 'english',
     readerVisualLanguage: 'english',
-    readerListeningRevealPortuguese: true,
+    readerListeningRevealPortuguese: false,
     readerScores: [],
     readerCurrentScore: null,
     readerCurrentBadgeSrc: '',
@@ -6586,8 +6586,11 @@
       state.readerRenderedCardIndex = index;
       state.readerCardShownAt = Date.now();
       if (isReaderTrainingMode()) {
-        state.readerCurrentScore = null;
-        setReaderMicVisible(false);
+      state.readerCurrentScore = null;
+      if (els.readerCurrentScore) {
+        els.readerCurrentScore.textContent = '-';
+      }
+      setReaderMicVisible(false);
       }
     }
     els.readerEnglish.textContent = displayTextFormatted || 'Sem conteudo neste livro.';
@@ -6629,7 +6632,7 @@
     state.readerIndex = 0;
     state.readerDisplayLanguage = 'english';
     state.readerVisualLanguage = 'english';
-    state.readerListeningRevealPortuguese = true;
+    state.readerListeningRevealPortuguese = false;
     state.readerScores = [];
     state.readerCurrentScore = null;
     resetReaderCurrentBadge();
@@ -6727,7 +6730,7 @@
       state.readerSessionSpokenChars = 0;
       state.readerDisplayLanguage = 'english';
       state.readerVisualLanguage = 'english';
-      state.readerListeningRevealPortuguese = true;
+      state.readerListeningRevealPortuguese = false;
       state.readerMicBusy = false;
       state.readerLastAudioKey = '';
       state.readerCardShownAt = 0;
@@ -6767,12 +6770,16 @@
           state.readerSessionSpokenChars += transcript.length;
         }
         const rawScore = calculateSpeechMatchPercent(card.english, transcript);
-        const displayedScore = getReaderDisplayedScorePercent(rawScore);
+        const withBonus = rawScore > 50 ? applyReaderSentenceBonus(rawScore) : rawScore;
+        const displayedScore = getReaderDisplayedScorePercent(withBonus);
         state.readerScores.push(displayedScore);
         if (state.readerRankedMode) {
           addPendingPronunciationSample(displayedScore);
         }
         state.readerCurrentScore = displayedScore;
+        if (els.readerCurrentScore) {
+          els.readerCurrentScore.textContent = `${displayedScore.toFixed(2)}%`;
+        }
         updateReaderPronPercent();
         showReaderMicScore(displayedScore);
         setReaderTrainingStatus('');
