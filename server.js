@@ -50,6 +50,14 @@ const loadDotEnv = () => {
 loadDotEnv();
 
 const DATABASE_URL = env(process.env.DATABASE_URL);
+const NODE_ENV = env(process.env.NODE_ENV) || 'development';
+const DEV_LOCAL_LOGIN_ENABLED = String(process.env.DEV_LOCAL_LOGIN_ENABLED || '').trim().toLowerCase();
+const SHOULD_ENSURE_DEV_LOCAL_LOGIN = DEV_LOCAL_LOGIN_ENABLED
+  ? !['0', 'false', 'off', 'no'].includes(DEV_LOCAL_LOGIN_ENABLED)
+  : NODE_ENV !== 'production';
+const DEV_LOCAL_LOGIN_USERNAME = env(process.env.DEV_LOCAL_LOGIN_USERNAME) || 'localadmin';
+const DEV_LOCAL_LOGIN_EMAIL = env(process.env.DEV_LOCAL_LOGIN_EMAIL) || 'localadmin';
+const DEV_LOCAL_LOGIN_PASSWORD = env(process.env.DEV_LOCAL_LOGIN_PASSWORD) || 'local123';
 const DATABASE_SSL = process.env.DATABASE_SSL
   ? process.env.DATABASE_SSL === 'true'
   : Boolean(DATABASE_URL && DATABASE_URL.includes('render.com'));
@@ -4441,6 +4449,7 @@ const logDatabaseConnectionStatus = async () => {
     await ensureFlashcardUserStateTables();
     await ensureFlashcardRankingsTable();
     await ensureUserFluencySealsTable();
+    await ensureDevLocalLoginUser();
     console.log('Conexão com Postgres validada com sucesso.');
   } catch (error) {
     console.error('Falha ao conectar no Postgres:', {
@@ -4450,6 +4459,49 @@ const logDatabaseConnectionStatus = async () => {
       source: databaseTarget.source
     });
   }
+};
+
+const ensureDevLocalLoginUser = async () => {
+  if (!pool || !SHOULD_ENSURE_DEV_LOCAL_LOGIN) return;
+
+  const normalizedUsername = String(DEV_LOCAL_LOGIN_USERNAME || '').trim();
+  const normalizedEmail = String(DEV_LOCAL_LOGIN_EMAIL || '').trim();
+  const normalizedPassword = String(DEV_LOCAL_LOGIN_PASSWORD || '').trim();
+  if (!normalizedUsername || !normalizedEmail || !normalizedPassword) return;
+
+  const usernameLower = normalizedUsername.toLowerCase();
+  const emailLower = normalizedEmail.toLowerCase();
+  const passwordHash = await bcrypt.hash(normalizedPassword, 10);
+
+  const existingResult = await pool.query(
+    `SELECT id
+       FROM public.users
+      WHERE LOWER(COALESCE(username, '')) = $1
+         OR LOWER(COALESCE(email, '')) = $2
+      LIMIT 1`,
+    [usernameLower, emailLower]
+  );
+
+  if (existingResult.rowCount > 0) {
+    await pool.query(
+      `UPDATE public.users
+          SET username = $2,
+              email = $3,
+              password_hash = $4
+        WHERE id = $1`,
+      [Number(existingResult.rows[0].id), normalizedUsername, normalizedEmail, passwordHash]
+    );
+    console.log(`Dev login local atualizado: ${normalizedUsername}`);
+    return;
+  }
+
+  await pool.query(
+    `INSERT INTO public.users (
+       email, username, password_hash, onboarding_name_completed, onboarding_photo_completed
+     ) VALUES ($1, $2, $3, false, false)`,
+    [normalizedEmail, normalizedUsername, passwordHash]
+  );
+  console.log(`Dev login local criado: ${normalizedUsername}`);
 };
 
 const staticDir = (() => {

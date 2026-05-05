@@ -1385,7 +1385,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0;
+      gap: 10px;
       width: min(430px, 100%);
       max-width: calc(100vw - 42px);
     }
@@ -1403,6 +1403,14 @@
       background-clip: text;
       color: transparent;
       filter: drop-shadow(0 0 18px rgba(24, 200, 255, 0.62));
+    }
+
+    .daily-plan-modal__hero-seal {
+      width: 83px;
+      height: 83px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 10px rgba(24, 200, 255, 0.5));
+      display: none;
     }
 
     .daily-plan-modal__close {
@@ -1473,13 +1481,16 @@
       font-weight: 900;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+      white-space: pre-line;
+      line-height: 1.05;
     }
 
     .daily-plan-modal__general-percent {
-      font-size: 42px;
+      font-size: 72px;
       font-weight: 900;
       line-height: 1;
       margin: 6px 0;
+      text-align: center;
     }
 
     .daily-plan-modal__general-seal img {
@@ -1516,8 +1527,8 @@
 
     .daily-plan-modal__mission {
       display: grid;
-      grid-template-columns: 84px 1fr;
-      gap: 14px;
+      grid-template-columns: 1fr;
+      gap: 8px;
       align-items: center;
       padding: 6px 0 14px;
       position: relative;
@@ -1571,10 +1582,14 @@
       letter-spacing: 0;
     }
 
+    .daily-plan-modal__mission .daily-plan-modal__icon-ring {
+      display: none;
+    }
+
     .daily-plan-modal__mission h2 span {
       display: inline-block;
       color: #8deeff;
-      font-size: 16px;
+      font-size: 29px;
       margin-top: 0;
       text-transform: uppercase;
       letter-spacing: 0.08em;
@@ -1621,6 +1636,11 @@
       box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.45);
       width: 100%;
       min-width: 100%;
+    }
+
+    .daily-plan-modal__general-progress .daily-plan-modal__bar {
+      height: 13px;
+      width: 100%;
     }
 
     .daily-plan-modal__fill {
@@ -1725,10 +1745,12 @@
       .daily-plan-modal__icon-ring { width: 62px; height: 62px; border-radius: 16px; }
       .daily-plan-modal__icon-ring svg { width: 34px; height: 34px; }
       .daily-plan-modal__mission h2 { font-size: 13px; }
-      .daily-plan-modal__mission h2 span { font-size: 13px; }
+      .daily-plan-modal__mission { grid-template-columns: 1fr; gap: 8px; }
+      .daily-plan-modal__mission h2 span { font-size: 22px; }
       .daily-plan-modal__hero-title { font-size: 42px; }
+      .daily-plan-modal__hero-seal { width: 72px; height: 72px; }
       .daily-plan-modal__general-progress { grid-template-columns: 1fr auto; }
-      .daily-plan-modal__general-percent { font-size: 32px; }
+      .daily-plan-modal__general-percent { font-size: 56px; }
       .daily-plan-modal__general-seal img { width: 60px; height: 60px; }
       .daily-plan-modal__counter { font-size: 24px; }
       .daily-plan-modal__overall-bar { height: 8px; }
@@ -3003,6 +3025,34 @@
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
+    }
+
+    .game-mic-side-metric {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      color: #ffffff;
+      text-shadow: 0 3px 16px rgba(0, 0, 0, 0.45);
+      pointer-events: none;
+    }
+
+    .game-mic-side-metric__seal {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 10px rgba(132, 181, 255, 0.56));
+      flex: 0 0 auto;
+    }
+
+    .game-mic-side-metric__value {
+      margin: 0;
+      font-size: 42px;
+      font-weight: 400;
+      font-family: "Pltay", "Soopafre", Arial, sans-serif;
+      letter-spacing: 0;
+      line-height: 1;
+      white-space: nowrap;
     }
 
     .actions { justify-content: flex-end; }
@@ -7215,6 +7265,11 @@
       opacity: 1;
       visibility: visible;
       pointer-events: auto;
+      width: min(540px, calc(100vw - 18px));
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      justify-items: center;
+      column-gap: 14px;
     }
 
     .game[data-phase-key="first-star"] .game-controls-proxy {
@@ -7223,6 +7278,18 @@
 
     .game[data-phase-key="fifth-star"] .game-controls-proxy {
       transform: translate(-50%, -8vh);
+    }
+
+    .game[data-phase-key="first-star"] .game-controls-proxy .game-mic-side-metric,
+    .game[data-phase-key="third-star"] .game-controls-proxy .game-mic-side-metric,
+    .game[data-phase-key="fifth-star"] .game-controls-proxy .game-mic-side-metric {
+      display: inline-flex;
+    }
+
+    .game[data-phase-key="first-star"] .game-controls-proxy .game-language-btn,
+    .game[data-phase-key="third-star"] .game-controls-proxy .game-language-btn,
+    .game[data-phase-key="fifth-star"] .game-controls-proxy .game-language-btn {
+      display: none !important;
     }
 
     .game:not(.is-level-text-mode)[data-phase-key="first-star"] .game-controls-proxy .game-language-btn,
@@ -9064,6 +9131,7 @@
         </button>
         <div class="daily-plan-modal__glow" aria-hidden="true"></div>
         <section class="daily-plan-modal__hero">
+          <img class="daily-plan-modal__hero-seal" id="dailyPlanHeroSeal" src="medalhas/diamante.png" alt="Selo atual">
           <div class="daily-plan-modal__hero-title">Missão Diária</div>
         </section>
 
@@ -9072,7 +9140,7 @@
             <div>
               <div class="daily-plan-modal__general-label">Progresso da missao</div>
               <div class="daily-plan-modal__general-percent" id="dailyPlanGeneralPercent">0%</div>
-              <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill daily-plan-modal__fill--mission" id="dailyPlanMissionBar" style="--progress: 0%"></div></div>
+              <div class="daily-plan-modal__bar daily-plan-modal__bar--mission"><div class="daily-plan-modal__fill daily-plan-modal__fill--mission" id="dailyPlanMissionBar" style="--progress: 0%"></div></div>
             </div>
             <div class="daily-plan-modal__general-seal">
               <img id="dailyPlanCurrentSealImage" src="medalhas/diamante.png" alt="Selo atual bloqueado">
@@ -9315,6 +9383,9 @@
 
         <div class="game-controls-proxy is-hidden" id="gameControlsProxy" aria-hidden="true" hidden>
           <div class="game-text-mode-hits" id="gameTextModeHits" hidden>Hit x0</div>
+          <div class="game-mic-side-metric game-mic-side-metric--left" id="gameMicCurrentSealMetric" aria-hidden="true">
+            <img class="game-mic-side-metric__seal" id="gameMicCurrentSealImage" src="/medalhas/white.png" alt="Selo atual">
+          </div>
           <button class="game-language-btn" id="gameLanguageBtn" type="button" tabindex="-1" aria-hidden="true">
             <svg viewBox="0 0 512 512" aria-hidden="true" focusable="false">
               <circle fill="#F0F0F0" cx="256" cy="256" r="256"></circle>
@@ -9323,6 +9394,9 @@
             </svg>
           </button>
           <button class="game-touch" id="gameTouchBtn" type="button">Fale ingles</button>
+          <div class="game-mic-side-metric game-mic-side-metric--right" id="gameMicNextSealMetric" aria-hidden="true">
+            <p class="game-mic-side-metric__value" id="gameMicNextSealProgress">0%</p>
+          </div>
           <button class="game-advance-btn" id="gameAdvanceBtn" type="button" aria-label="Avancar digitacao automatica" hidden>
             <img src="/SVG/codex-icons/%C3%ADcones%20modo%203/portugues.svg" alt="Portugues">
           </button>
@@ -10133,6 +10207,7 @@
         welcomeModeModalLevelNextBtn: document.getElementById('welcomeModeModalLevelNextBtn'),
         dailyPlanModal: document.getElementById('dailyPlanModal'),
         dailyPlanCloseBtn: document.getElementById('dailyPlanCloseBtn'),
+        dailyPlanHeroSeal: document.getElementById('dailyPlanHeroSeal'),
         dailyPlanUserAvatar: document.getElementById('dailyPlanUserAvatar'),
         dailyPlanUserLevel: document.getElementById('dailyPlanUserLevel'),
         dailyPlanFlashcardsDone: document.getElementById('dailyPlanFlashcardsDone'),
@@ -10271,6 +10346,10 @@
         gameMissionBtn: document.getElementById('gameMissionBtn'),
         gameLanguageBtn: document.getElementById('gameLanguageBtn'),
         gameTouchBtn: document.getElementById('gameTouchBtn'),
+        gameMicCurrentSealMetric: document.getElementById('gameMicCurrentSealMetric'),
+        gameMicCurrentSealImage: document.getElementById('gameMicCurrentSealImage'),
+        gameMicNextSealMetric: document.getElementById('gameMicNextSealMetric'),
+        gameMicNextSealProgress: document.getElementById('gameMicNextSealProgress'),
         gameAdvanceBtn: document.getElementById('gameAdvanceBtn'),
         gameTextModeHits: document.getElementById('gameTextModeHits'),
         gameTypingKeyboard: document.getElementById('gameTypingKeyboard'),
@@ -14814,7 +14893,7 @@
           if (els.dailyPlanBooksTotal) els.dailyPlanBooksTotal.textContent = '';
         }
         if (els.dailyPlanGeneralLabel) {
-          els.dailyPlanGeneralLabel.textContent = isNoPlanMode ? 'Próximo selo:' : 'Progresso da missão';
+          els.dailyPlanGeneralLabel.textContent = isNoPlanMode ? 'Próximo selo:' : 'Progresso\nda Missão';
         }
         if (els.dailyPlanGeneralPercent) {
           const percentToShow = isNoPlanMode
@@ -14838,6 +14917,14 @@
             : 'Selo atual';
           els.dailyPlanCurrentSealImage.style.opacity = '1';
           els.dailyPlanCurrentSealImage.style.filter = 'none';
+        }
+        if (els.dailyPlanHeroSeal) {
+          const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/white.png';
+          els.dailyPlanHeroSeal.src = sealSrc;
+          els.dailyPlanHeroSeal.alt = safeText(currentSeal?.label)
+            ? `Selo atual: ${currentSeal.label}`
+            : 'Selo atual';
+          els.dailyPlanHeroSeal.style.display = isNoPlanMode ? 'none' : 'block';
         }
         if (els.dailyPlanSealProgressValue) {
           if (!nextSeal) {
@@ -14900,6 +14987,7 @@
         state.entry.dailyPlanPreview120 = false;
         state.entry.dailyPlanSealSwapMode = 'next';
         renderDailyPlanMission(state.entry.dailyPlanMissionSnapshot, { use120Preview: false });
+        updateSpeakingStarMicSealProgress();
         syncDailyPlanTimeRemaining();
         state.entry.dailyPlanTimeRemainingTimer = window.setInterval(syncDailyPlanTimeRemaining, 60000);
         clearDailyPlanSealSwapTimer();
@@ -17667,13 +17755,36 @@
         }
         if (!useBooksMic) {
           els.gameTouchBtn.classList.add('is-hidden');
+          if (els.gameMicCurrentSealMetric) els.gameMicCurrentSealMetric.hidden = true;
+          if (els.gameMicNextSealMetric) els.gameMicNextSealMetric.hidden = true;
           syncLevelTextModeControls();
           return;
         }
         els.gameTouchBtn.parentElement.hidden = false;
         els.gameTouchBtn.classList.add('game-touch--books-mic');
         els.gameTouchBtn.innerHTML = GAME_TOUCH_ICON_MARKUP;
+        updateSpeakingStarMicSealProgress();
         syncLevelTextModeControls();
+      }
+
+      function updateSpeakingStarMicSealProgress() {
+        if (!els.gameMicCurrentSealMetric || !els.gameMicCurrentSealImage || !els.gameMicNextSealMetric || !els.gameMicNextSealProgress) return;
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        const isSpeakingStarPhase = phaseKey === 'first-star' || phaseKey === 'third-star' || phaseKey === 'fifth-star';
+        if (!isSpeakingStarPhase) {
+          els.gameMicCurrentSealMetric.hidden = true;
+          els.gameMicNextSealMetric.hidden = true;
+          return;
+        }
+        const planScore = Math.max(0, Math.min(200, Number(state.entry.dailyPlanMissionSnapshot?.seal?.planScore) || 0));
+        const currentSeal = resolveDailyPlanSealByScore(planScore);
+        const nextSealProgress = computeDailyPlanNextSealProgress(planScore);
+        const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/white.png';
+        els.gameMicCurrentSealImage.src = sealSrc.startsWith('/') ? sealSrc : `/${sealSrc}`;
+        els.gameMicCurrentSealImage.alt = safeText(currentSeal?.label) ? `Selo atual: ${currentSeal.label}` : 'Selo atual';
+        els.gameMicNextSealProgress.textContent = `${nextSealProgress.toFixed(2)}%`;
+        els.gameMicCurrentSealMetric.hidden = false;
+        els.gameMicNextSealMetric.hidden = false;
       }
 
       function primeGameTouchButton() {

@@ -180,12 +180,15 @@
     .books-level-title {
       margin: 0;
       text-align: center;
+      grid-column: 1 / -1;
+      justify-self: center;
       font-family: "Exo 2", "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
       font-size: clamp(25px, 6.25vw, 37.5px);
       font-weight: 700;
       letter-spacing: 0.015em;
       transition: opacity 260ms ease, transform 380ms ease, filter 380ms ease;
       text-shadow: 0 3px 12px rgba(0, 0, 0, 0.34);
+      pointer-events: none;
     }
 
     .books-level-title.is-sliding {
@@ -2676,8 +2679,8 @@
       position: absolute;
       right: calc(50% - (var(--books-card-book-width) / 2) + 10px);
       bottom: calc(50% - (var(--books-card-book-height) / 2) + 10px - var(--books-card-vertical-offset));
-      width: 42px;
-      height: 42px;
+      width: 53px;
+      height: 53px;
       display: grid;
       place-items: center;
       z-index: 5;
@@ -2693,8 +2696,8 @@
     }
 
     .books-card__approved-badge svg {
-      width: 24px;
-      height: 24px;
+      width: 30px;
+      height: 30px;
       display: block;
       color: #ffffff;
       filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.62));
