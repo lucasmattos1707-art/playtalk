@@ -3053,6 +3053,7 @@
       letter-spacing: 0;
       line-height: 1;
       white-space: nowrap;
+      color: #a8b0bd;
     }
 
     .actions { justify-content: flex-end; }
@@ -17822,12 +17823,28 @@
           ? Math.max(0, Math.min(200, planScoreFromMission))
           : Math.max(0, Math.min(200, Number.isFinite(planScoreFallback) ? planScoreFallback : 0));
         const currentSeal = resolveDailyPlanSealByScore(planScore);
-        const missionProgressPercent = Math.max(0, Math.min(100, Number(missionView?.balancedProgressPercent) || 0));
+        const livePartialCardsFromTable = (() => {
+          const entries = Array.from(state.game.entries?.values?.() || []);
+          return entries.reduce((acc, entry) => {
+            const stars = Math.max(0, Math.min(4, Number(entry?.stars) || 0));
+            return acc + (stars / GAME_STAR_TARGET);
+          }, 0);
+        })();
+        const missionProgressPercent = (() => {
+          if (!missionView) return Math.max(0, Math.min(100, computeDailyPlanNextSealProgress(Math.max(0, Math.min(100, planScore))));
+          const cardsDoneDynamic = Math.max(0, Number(missionView.cardsToday) || 0) + livePartialCardsFromTable;
+          const booksDone = Math.max(0, Number(missionView.booksToday) || 0);
+          const cardsExpected = Math.max(0, Number(missionView.cardsExpected) || 0);
+          const booksExpected = Math.max(0, Number(missionView.booksExpected) || 0);
+          const weightedDoneUnits = cardsDoneDynamic + (booksDone * 2);
+          const weightedExpectedUnits = cardsExpected + (booksExpected * 2);
+          return Math.max(0, Math.min(100, computeDailyPlanRawPercent(weightedDoneUnits, weightedExpectedUnits)));
+        })();
         const nextSealProgress = missionProgressPercent;
         const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/white.png';
         els.gameMicCurrentSealImage.src = sealSrc.startsWith('/') ? sealSrc : `/${sealSrc}`;
         els.gameMicCurrentSealImage.alt = safeText(currentSeal?.label) ? `Selo atual: ${currentSeal.label}` : 'Selo atual';
-        els.gameMicNextSealProgress.textContent = `${nextSealProgress.toFixed(2)}%`;
+        els.gameMicNextSealProgress.textContent = `${Math.round(nextSealProgress)}%`;
         els.gameMicCurrentSealMetric.hidden = false;
         els.gameMicNextSealMetric.hidden = false;
         void refreshDailyPlanMissionSnapshot({ maxAgeMs: 60000 });
@@ -20698,6 +20715,7 @@
         const nextPhase = Math.max(1, Math.min(REVIEW_PHASE_MAX, currentPhase + 1));
         moveCardToMemorizing(entry.id, nextPhase);
         maybeAdvanceUserLevel();
+        updateSpeakingStarMicSealProgress();
       }
 
       function removeGameEntry(cardId) {
@@ -20710,6 +20728,7 @@
           state.game.currentId = null;
         }
         persistGameSessionLocally();
+        updateSpeakingStarMicSealProgress();
       }
 
       function wait(ms) {
@@ -21854,6 +21873,7 @@
           entry.stage = Math.min(entry.stars + 1, GAME_STAR_TARGET);
           entry.missesWithoutStars = 0;
           entry.typingMistakes = 0;
+          updateSpeakingStarMicSealProgress();
           if (entry.stars === 4) {
             playMilestoneAudio(FOUR_STARS_SOUND_PATH);
             triggerFourStarGlow();
@@ -21907,6 +21927,7 @@
             entry.stage = 1;
             entry.missesWithoutStars = 0;
             entry.typingMistakes = 0;
+            updateSpeakingStarMicSealProgress();
             setGameStatus('', 'miss');
             state.game.queue.push(entry.id);
             await animateStarLossSequence(starsBeforeMiss, card);
