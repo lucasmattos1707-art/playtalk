@@ -1458,7 +1458,7 @@
 
     .daily-plan-modal__general-progress {
       display: grid;
-      grid-template-columns: 76px 1fr auto;
+      grid-template-columns: 1fr auto;
       gap: 14px;
       align-items: center;
       padding-bottom: 20px;
@@ -1466,17 +1466,6 @@
       margin-bottom: 4px;
       position: relative;
       z-index: 1;
-    }
-
-    .daily-plan-modal__general-badge {
-      width: 76px;
-      height: 76px;
-      border-radius: 22px;
-      display: grid;
-      place-items: center;
-      font-size: 34px;
-      background: rgba(24, 200, 255, 0.14);
-      box-shadow: inset 0 0 0 1px rgba(24, 200, 255, 0.25);
     }
 
     .daily-plan-modal__general-label {
@@ -1488,36 +1477,15 @@
     }
 
     .daily-plan-modal__general-percent {
-      font-size: 38px;
+      font-size: 42px;
       font-weight: 900;
       line-height: 1;
       margin: 6px 0;
     }
 
-    .daily-plan-modal__general-ring {
-      width: 84px;
-      height: 84px;
-      border-radius: 50%;
-      background: conic-gradient(#4ddcff 0 0%, rgba(255, 255, 255, 0.1) 0% 100%);
-      display: grid;
-      place-items: center;
-      position: relative;
-    }
-
-    .daily-plan-modal__general-ring::before {
-      content: "";
-      position: absolute;
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background: #07111f;
-    }
-
-    .daily-plan-modal__general-ring img {
-      position: relative;
-      z-index: 1;
-      width: 42px;
-      height: 42px;
+    .daily-plan-modal__general-seal img {
+      width: 55px;
+      height: 55px;
       object-fit: contain;
       filter: drop-shadow(0 0 10px rgba(24, 200, 255, 0.5));
     }
@@ -1549,8 +1517,8 @@
 
     .daily-plan-modal__mission {
       display: grid;
-      grid-template-columns: 84px 1fr 72px;
-      gap: 12px;
+      grid-template-columns: 84px 1fr;
+      gap: 14px;
       align-items: center;
       padding: 8px 0 24px;
       position: relative;
@@ -1620,7 +1588,7 @@
     }
 
     .daily-plan-modal__counter {
-      font-size: 18px;
+      font-size: 29px;
       font-weight: 700;
       letter-spacing: 0;
       line-height: 1;
@@ -1638,7 +1606,7 @@
     }
 
     .daily-plan-modal__bar {
-      height: 16px;
+      height: 12px;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(115, 180, 255, 0.25);
@@ -1650,42 +1618,22 @@
       height: 100%;
       width: var(--progress, 0%);
       border-radius: inherit;
-      background: linear-gradient(90deg, #18c8ff, #8deeff);
       box-shadow: 0 0 22px rgba(24, 200, 255, 0.72);
     }
 
-    .daily-plan-modal__mini-ring {
-      width: 66px;
-      height: 66px;
-      border-radius: 50%;
-      background: conic-gradient(#4ddcff 0 0%, rgba(255, 255, 255, 0.1) 0% 100%);
-      display: grid;
-      place-items: center;
-      position: relative;
+    .daily-plan-modal__fill--mission {
+      background: linear-gradient(90deg, #46ff7b, #9bffb8);
+      box-shadow: 0 0 22px rgba(70, 255, 123, 0.72);
     }
 
-    .daily-plan-modal__mini-ring::before {
-      content: "";
-      position: absolute;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: #07111f;
+    .daily-plan-modal__fill--flashcards {
+      background: linear-gradient(90deg, #ff9f2e, #ffd77a);
+      box-shadow: 0 0 22px rgba(255, 159, 46, 0.72);
     }
 
-    .daily-plan-modal__mini-ring span {
-      position: relative;
-      z-index: 1;
-      font-size: 14px;
-      font-weight: 900;
-      color: #8deeff;
-    }
-
-    .daily-plan-modal__remaining {
-      margin-top: 10px;
-      color: #aab4c8;
-      font-size: 13px;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+    .daily-plan-modal__fill--books {
+      background: linear-gradient(90deg, #2ab0ff, #8deeff);
+      box-shadow: 0 0 22px rgba(42, 176, 255, 0.72);
     }
 
     .daily-plan-modal__seal-progress {
@@ -1697,19 +1645,19 @@
       color: #8deeff;
       text-shadow: 0 0 18px rgba(24, 200, 255, 0.45);
       cursor: pointer;
-      transform: translateY(-30px);
+      transform: translateY(0);
     }
 
     .daily-plan-modal__overall-progress {
       width: min(430px, 100%);
       max-width: calc(100vw - 42px);
-      margin-top: -18px;
+      margin-top: 12px;
     }
 
     .daily-plan-modal__seal-meta {
       margin-top: 8px;
       text-align: center;
-      transform: translateY(-20px);
+      transform: translateY(10px);
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
       color: #cde4ff;
       display: grid;
@@ -1732,7 +1680,7 @@
 
     .daily-plan-modal__hero,
     .daily-plan-modal__card {
-      transform: translateY(-30px);
+      transform: translateY(0);
     }
 
     body.daily-plan-open .flashcards-footer-nav {
@@ -1753,35 +1701,29 @@
       height: 100%;
       width: var(--progress, 0%);
       border-radius: inherit;
-      background: linear-gradient(90deg, #18c8ff, #8deeff);
-      box-shadow: 0 0 22px rgba(24, 200, 255, 0.72);
+      background: linear-gradient(90deg, #46ff7b, #9bffb8);
+      box-shadow: 0 0 22px rgba(70, 255, 123, 0.72);
       transition: width 220ms ease;
     }
 
     @media (max-width: 380px) {
       .daily-plan-modal__panel { padding: 32px 15px; gap: 24px; }
       .daily-plan-modal__card { padding: 22px 16px; }
-      .daily-plan-modal__mission { grid-template-columns: 72px 1fr 62px; gap: 10px; }
+      .daily-plan-modal__mission { grid-template-columns: 72px 1fr; gap: 10px; }
       .daily-plan-modal__icon-ring { width: 62px; height: 62px; border-radius: 16px; }
       .daily-plan-modal__icon-ring svg { width: 34px; height: 34px; }
       .daily-plan-modal__mission h2 { font-size: 13px; }
       .daily-plan-modal__mission h2 span { font-size: 13px; }
       .daily-plan-modal__hero-title { font-size: 42px; }
-      .daily-plan-modal__general-progress { grid-template-columns: 62px 1fr auto; }
-      .daily-plan-modal__general-badge { width: 62px; height: 62px; font-size: 28px; border-radius: 18px; }
+      .daily-plan-modal__general-progress { grid-template-columns: 1fr auto; }
       .daily-plan-modal__general-percent { font-size: 32px; }
-      .daily-plan-modal__general-ring { width: 74px; height: 74px; }
-      .daily-plan-modal__general-ring::before { width: 56px; height: 56px; }
-      .daily-plan-modal__general-ring img { width: 36px; height: 36px; }
-      .daily-plan-modal__mini-ring { width: 58px; height: 58px; }
-      .daily-plan-modal__mini-ring::before { width: 44px; height: 44px; }
-      .daily-plan-modal__mini-ring span { font-size: 12px; }
-      .daily-plan-modal__counter { font-size: 16px; }
+      .daily-plan-modal__general-seal img { width: 48px; height: 48px; }
+      .daily-plan-modal__counter { font-size: 24px; }
       .daily-plan-modal__overall-bar { height: 16px; }
       .daily-plan-modal__panel { transform: translateY(-24px); }
       .daily-plan-modal__hero,
       .daily-plan-modal__card,
-      .daily-plan-modal__seal-progress { transform: translateY(-24px); }
+      .daily-plan-modal__seal-progress { transform: translateY(6px); }
     }
 
     .welcome-gate__admin-stats {
@@ -9115,12 +9057,12 @@
 
         <section class="daily-plan-modal__card">
           <section class="daily-plan-modal__general-progress">
-            <div class="daily-plan-modal__general-badge" aria-hidden="true">🏆</div>
             <div>
               <div class="daily-plan-modal__general-label">Progresso da missao</div>
               <div class="daily-plan-modal__general-percent" id="dailyPlanGeneralPercent">0%</div>
+              <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill daily-plan-modal__fill--mission" id="dailyPlanMissionBar" style="--progress: 0%"></div></div>
             </div>
-            <div class="daily-plan-modal__general-ring" id="dailyPlanGeneralRing">
+            <div class="daily-plan-modal__general-seal">
               <img id="dailyPlanCurrentSealImage" src="medalhas/diamante.png" alt="Selo atual bloqueado">
             </div>
           </section>
@@ -9136,9 +9078,8 @@
             <div>
               <h2><span>FlashCards</span></h2>
               <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanFlashcardsDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanFlashcardsTotal">/0</span></div>
-              <div class="daily-plan-modal__remaining" id="dailyPlanFlashcardsRemaining">Faltam 0 flashcards</div>
+              <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill daily-plan-modal__fill--flashcards" id="dailyPlanFlashcardsBar" style="--progress: 0%"></div></div>
             </div>
-            <div class="daily-plan-modal__mini-ring" id="dailyPlanFlashcardsPercent"><span>0%</span></div>
           </article>
 
           <article class="daily-plan-modal__mission is-books">
@@ -9152,9 +9093,8 @@
             <div>
               <h2><span>MiniBooks</span></h2>
               <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanBooksDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanBooksTotal">/0</span></div>
-              <div class="daily-plan-modal__remaining" id="dailyPlanBooksRemaining">Faltam 0 minibooks</div>
+              <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill daily-plan-modal__fill--books" id="dailyPlanBooksBar" style="--progress: 0%"></div></div>
             </div>
-            <div class="daily-plan-modal__mini-ring" id="dailyPlanBooksPercent"><span>0%</span></div>
           </article>
         </section>
         <div class="daily-plan-modal__seal-progress" id="dailyPlanSealProgressValue">Próximo Selo: White</div>
@@ -9932,6 +9872,8 @@
           dailyPlanPreview120: false,
           dailyPlanPreviewTimer: 0,
           dailyPlanTimeRemainingTimer: 0,
+          dailyPlanSealSwapTimer: 0,
+          dailyPlanSealSwapMode: 'next',
           welcomeTimer: 0,
           welcomeModesResolved: false,
           welcomeModesUsersEnabled: false,
@@ -10179,15 +10121,14 @@
         dailyPlanUserLevel: document.getElementById('dailyPlanUserLevel'),
         dailyPlanFlashcardsDone: document.getElementById('dailyPlanFlashcardsDone'),
         dailyPlanFlashcardsTotal: document.getElementById('dailyPlanFlashcardsTotal'),
-        dailyPlanFlashcardsRemaining: document.getElementById('dailyPlanFlashcardsRemaining'),
-        dailyPlanFlashcardsPercent: document.getElementById('dailyPlanFlashcardsPercent'),
+        dailyPlanFlashcardsBar: document.getElementById('dailyPlanFlashcardsBar'),
         dailyPlanBooksDone: document.getElementById('dailyPlanBooksDone'),
         dailyPlanBooksTotal: document.getElementById('dailyPlanBooksTotal'),
-        dailyPlanBooksRemaining: document.getElementById('dailyPlanBooksRemaining'),
-        dailyPlanBooksPercent: document.getElementById('dailyPlanBooksPercent'),
+        dailyPlanBooksBar: document.getElementById('dailyPlanBooksBar'),
+        dailyPlanMissionBar: document.getElementById('dailyPlanMissionBar'),
         dailyPlanOverallBar: document.getElementById('dailyPlanOverallBar'),
         dailyPlanGeneralPercent: document.getElementById('dailyPlanGeneralPercent'),
-        dailyPlanGeneralRing: document.getElementById('dailyPlanGeneralRing'),
+        dailyPlanGeneralLabel: document.querySelector('.daily-plan-modal__general-label'),
         dailyPlanCurrentSealImage: document.getElementById('dailyPlanCurrentSealImage'),
         dailyPlanSealProgressValue: document.getElementById('dailyPlanSealProgressValue'),
         dailyPlanTimeRemaining: document.getElementById('dailyPlanTimeRemaining'),
@@ -14805,6 +14746,13 @@
         }
       }
 
+      function clearDailyPlanSealSwapTimer() {
+        if (state.entry.dailyPlanSealSwapTimer) {
+          window.clearInterval(state.entry.dailyPlanSealSwapTimer);
+          state.entry.dailyPlanSealSwapTimer = 0;
+        }
+      }
+
       function syncDailyPlanTimeRemaining() {
         if (!els.dailyPlanTimeRemaining) return;
         els.dailyPlanTimeRemaining.textContent = `Tempo restante ${formatDailyPlanTimeRemaining()}`;
@@ -14828,7 +14776,7 @@
           missionView.cardsTarget,
           els.dailyPlanFlashcardsDone,
           els.dailyPlanFlashcardsTotal,
-          null
+          els.dailyPlanFlashcardsBar
         );
         setDailyPlanProgress(
           missionView.booksToday,
@@ -14836,36 +14784,19 @@
           missionView.booksTarget,
           els.dailyPlanBooksDone,
           els.dailyPlanBooksTotal,
-          null
+          els.dailyPlanBooksBar
         );
+        if (els.dailyPlanMissionBar) {
+          els.dailyPlanMissionBar.style.setProperty('--progress', `${overallPercentForVisual.toFixed(2)}%`);
+        }
+        if (els.dailyPlanGeneralLabel) {
+          els.dailyPlanGeneralLabel.textContent = isNoPlanMode ? 'Próximo selo:' : 'Progresso da missão';
+        }
         if (els.dailyPlanGeneralPercent) {
           const percentToShow = isNoPlanMode
-            ? Math.max(0, Math.min(200, Math.round(Number(mission?.seal?.planScore) || 0)))
+            ? Math.round(computeDailyPlanNextSealProgress(Math.max(0, Math.min(200, Number(mission?.seal?.planScore) || 0))))
             : (use120Preview ? projectedOverallPercentRounded : Math.max(overallPercentRounded, projectedOverallPercentRounded));
           els.dailyPlanGeneralPercent.textContent = `${percentToShow}%`;
-        }
-        if (els.dailyPlanGeneralRing) {
-          els.dailyPlanGeneralRing.style.background = `conic-gradient(#4ddcff 0 ${overallPercentForVisual.toFixed(2)}%, rgba(255,255,255,.1) ${overallPercentForVisual.toFixed(2)}% 100%)`;
-        }
-        if (els.dailyPlanFlashcardsPercent) {
-          const visual = toMissionVisualPercent(missionView.cardsPercent);
-          els.dailyPlanFlashcardsPercent.style.background = `conic-gradient(#4ddcff 0 ${visual.toFixed(2)}%, rgba(255,255,255,.1) ${visual.toFixed(2)}% 100%)`;
-          const label = els.dailyPlanFlashcardsPercent.querySelector('span');
-          if (label) label.textContent = `${Math.round(missionView.cardsPercent)}%`;
-        }
-        if (els.dailyPlanBooksPercent) {
-          const visual = toMissionVisualPercent(missionView.booksPercent);
-          els.dailyPlanBooksPercent.style.background = `conic-gradient(#4ddcff 0 ${visual.toFixed(2)}%, rgba(255,255,255,.1) ${visual.toFixed(2)}% 100%)`;
-          const label = els.dailyPlanBooksPercent.querySelector('span');
-          if (label) label.textContent = `${Math.round(missionView.booksPercent)}%`;
-        }
-        if (els.dailyPlanFlashcardsRemaining) {
-          const remaining = Math.max(0, missionView.cardsTarget - Math.round(missionView.cardsToday));
-          els.dailyPlanFlashcardsRemaining.textContent = `Faltam ${remaining} flashcards`;
-        }
-        if (els.dailyPlanBooksRemaining) {
-          const remaining = Math.max(0, missionView.booksTarget - Math.round(missionView.booksToday));
-          els.dailyPlanBooksRemaining.textContent = `Faltam ${remaining} minibooks`;
         }
         // Quando o backend traz planScore (inclui modo sem plano), ele vira a fonte oficial do selo.
         const serverPlanScore = Number(mission?.seal?.planScore);
@@ -14886,9 +14817,13 @@
         }
         if (els.dailyPlanSealProgressValue) {
           if (!nextSeal) {
-            els.dailyPlanSealProgressValue.textContent = 'Selo máximo diário obtido';
+            els.dailyPlanSealProgressValue.textContent = state.entry.dailyPlanSealSwapMode === 'current'
+              ? `Seu selo atual é: ${safeText(currentSeal?.label) || 'Diamante'}`
+              : 'Próximo selo: máximo (100%)';
+          } else if (state.entry.dailyPlanSealSwapMode === 'current') {
+            els.dailyPlanSealProgressValue.textContent = `Seu selo atual é: ${safeText(currentSeal?.label) || 'White'}`;
           } else {
-            els.dailyPlanSealProgressValue.textContent = `Próximo Selo: ${safeText(nextSeal?.label) || 'Prata'}`;
+            els.dailyPlanSealProgressValue.textContent = `Próximo selo: ${safeText(nextSeal?.label) || 'Prata'} (${Math.round(nextSealProgress)}%)`;
           }
         }
         if (els.dailyPlanOverallBar) {
@@ -14922,6 +14857,7 @@
         if (!visible) {
           clearDailyPlanPreviewTimer();
           clearDailyPlanTimeRemainingTimer();
+          clearDailyPlanSealSwapTimer();
           state.entry.dailyPlanPreview120 = false;
           return;
         }
@@ -14937,9 +14873,17 @@
         clearDailyPlanPreviewTimer();
         clearDailyPlanTimeRemainingTimer();
         state.entry.dailyPlanPreview120 = false;
+        state.entry.dailyPlanSealSwapMode = 'next';
         renderDailyPlanMission(state.entry.dailyPlanMissionSnapshot, { use120Preview: false });
         syncDailyPlanTimeRemaining();
         state.entry.dailyPlanTimeRemainingTimer = window.setInterval(syncDailyPlanTimeRemaining, 60000);
+        clearDailyPlanSealSwapTimer();
+        state.entry.dailyPlanSealSwapTimer = window.setInterval(() => {
+          state.entry.dailyPlanSealSwapMode = state.entry.dailyPlanSealSwapMode === 'next' ? 'current' : 'next';
+          if (state.entry.dailyPlanOpen && state.entry.dailyPlanMissionSnapshot) {
+            renderDailyPlanMission(state.entry.dailyPlanMissionSnapshot, { use120Preview: false });
+          }
+        }, 2500);
       }
 
       function pauseFlashcardsGameForDailyPlan() {
