@@ -9962,6 +9962,8 @@
           dailyPlanMissionSnapshot: null,
           dailyPlanMissionSnapshotUpdatedAt: 0,
           dailyPlanMissionSyncInFlight: false,
+          dailyPlanOptimisticCompletedCards: 0,
+          dailyPlanSnapshotCardsToday: 0,
           dailyPlanPreview120: false,
           dailyPlanPreviewTimer: 0,
           dailyPlanTimeRemainingTimer: 0,
@@ -11566,6 +11568,11 @@
             if (state.user) state.user.level = state.userLevel;
             state.userLevelUpdatedAt = safeText(payload.userLevelUpdatedAt || state.userLevelUpdatedAt);
             syncWelcomeLevelProgress();
+          }
+          if (state.entry.dailyPlanMissionSnapshot) {
+            void refreshDailyPlanMissionSnapshot({ force: true }).then(() => {
+              updateSpeakingStarMicSealProgress();
+            });
           }
           return true;
         } catch (error) {
@@ -14732,6 +14739,16 @@
         try {
           const mission = await fetchDailyPlanBooksStats().catch(() => null);
           if (mission && typeof mission === 'object') {
+            const nextCardsToday = Math.max(0, Number(mission?.cardsToday) || 0);
+            const previousCardsToday = Math.max(0, Number(state.entry.dailyPlanSnapshotCardsToday) || 0);
+            const acknowledgedCards = Math.max(0, nextCardsToday - previousCardsToday);
+            if (acknowledgedCards > 0 && Number(state.entry.dailyPlanOptimisticCompletedCards) > 0) {
+              state.entry.dailyPlanOptimisticCompletedCards = Math.max(
+                0,
+                Number(state.entry.dailyPlanOptimisticCompletedCards) - acknowledgedCards
+              );
+            }
+            state.entry.dailyPlanSnapshotCardsToday = nextCardsToday;
             state.entry.dailyPlanMissionSnapshot = mission;
             state.entry.dailyPlanMissionSnapshotUpdatedAt = Date.now();
           }
@@ -14893,14 +14910,11 @@
         const use120Preview = Boolean(options.use120Preview);
         const isNoPlanMode = safeText(mission?.seal?.mode).toLowerCase() === 'sem_plano';
         const missionView = buildDailyPlanMissionView(mission, use120Preview);
-        const missionViewAt120 = buildDailyPlanMissionView(mission, true);
         const overallPercent = clampPercent(missionView.balancedProgressPercent);
-        const projectedOverallPercent = clampPercent(missionViewAt120.balancedProgressPercent);
         const overallPercentRounded = Math.round(overallPercent);
-        const projectedOverallPercentRounded = Math.round(projectedOverallPercent);
         const overallPercentForVisual = isNoPlanMode
           ? Math.max(0, Math.min(100, (Number(mission?.seal?.planScore) || 0) / 2))
-          : toMissionVisualPercent(projectedOverallPercent);
+          : toMissionVisualPercent(overallPercent);
         setDailyPlanProgress(
           missionView.cardsToday,
           missionView.cardsExpected,
@@ -14934,14 +14948,14 @@
         if (els.dailyPlanGeneralPercent) {
           const percentToShow = isNoPlanMode
             ? Math.round(computeDailyPlanNextSealProgress(Math.max(0, Math.min(200, Number(mission?.seal?.planScore) || 0))))
-            : (use120Preview ? projectedOverallPercentRounded : Math.max(overallPercentRounded, projectedOverallPercentRounded));
+            : overallPercentRounded;
           els.dailyPlanGeneralPercent.textContent = `${percentToShow}%`;
         }
         // Quando o backend traz planScore (inclui modo sem plano), ele vira a fonte oficial do selo.
         const serverPlanScore = Number(mission?.seal?.planScore);
         const totalSealProgress = Number.isFinite(serverPlanScore)
           ? Math.max(0, Math.min(200, serverPlanScore))
-          : Math.max(0, Math.min(100, Number(missionViewAt120.balancedProgressPercent) || 0));
+          : Math.max(0, Math.min(100, Number(missionView.balancedProgressPercent) || 0));
         const nextSealProgress = computeDailyPlanNextSealProgress(totalSealProgress);
         const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
         const nextSeal = resolveDailyPlanNextSealByScore(totalSealProgress);
@@ -14977,22 +14991,6 @@
           els.dailyPlanOverallBar.style.setProperty('--progress', `${nextSealProgress.toFixed(2)}%`);
         }
         syncDailyPlanTimeRemaining();
-      }
-
-      function showDailyPlan120Preview() {
-        if (!state.entry.dailyPlanOpen) return;
-        const mission = state.entry.dailyPlanMissionSnapshot;
-        if (!mission) return;
-        if (safeText(mission?.seal?.mode).toLowerCase() === 'sem_plano') return;
-        state.entry.dailyPlanPreview120 = true;
-        renderDailyPlanMission(mission, { use120Preview: true });
-        clearDailyPlanPreviewTimer();
-        state.entry.dailyPlanPreviewTimer = window.setTimeout(() => {
-          state.entry.dailyPlanPreviewTimer = 0;
-          state.entry.dailyPlanPreview120 = false;
-          if (!state.entry.dailyPlanOpen) return;
-          renderDailyPlanMission(mission, { use120Preview: false });
-        }, 3000);
       }
 
       async function syncDailyPlanModal() {
@@ -15034,9 +15032,6 @@
             renderDailyPlanMission(state.entry.dailyPlanMissionSnapshot, { use120Preview: false });
           }
         }, 2500);
-        if (safeText(state.entry.dailyPlanMissionSnapshot?.seal?.mode).toLowerCase() !== 'sem_plano') {
-          showDailyPlan120Preview();
-        }
       }
 
       function pauseFlashcardsGameForDailyPlan() {
@@ -17826,13 +17821,14 @@
         const livePartialCardsFromTable = (() => {
           const entries = Array.from(state.game.entries?.values?.() || []);
           return entries.reduce((acc, entry) => {
-            const stars = Math.max(0, Math.min(4, Number(entry?.stars) || 0));
+            const stars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(entry?.stars) || 0));
             return acc + (stars / GAME_STAR_TARGET);
           }, 0);
         })();
+        const optimisticCompletedCards = Math.max(0, Number(state.entry.dailyPlanOptimisticCompletedCards) || 0);
         const missionProgressPercent = (() => {
           if (!missionView) return Math.max(0, Math.min(100, computeDailyPlanNextSealProgress(Math.max(0, Math.min(100, planScore)))));
-          const cardsDoneDynamic = Math.max(0, Number(missionView.cardsToday) || 0) + livePartialCardsFromTable;
+          const cardsDoneDynamic = Math.max(0, Number(missionView.cardsToday) || 0) + livePartialCardsFromTable + optimisticCompletedCards;
           const booksDone = Math.max(0, Number(missionView.booksToday) || 0);
           const cardsExpected = Math.max(0, Number(missionView.cardsExpected) || 0);
           const booksExpected = Math.max(0, Number(missionView.booksExpected) || 0);
@@ -21916,6 +21912,7 @@
             showRewardGameStatus();
             triggerLibrarySummaryRankSwap();
             entry._removeAfterReward = true;
+            entry._grantMissionCardCredit = true;
           } else {
             setGameStatus('', 'hit');
             state.game.queue.push(entry.id);
@@ -21980,7 +21977,15 @@
           }
           if (entry._removeAfterReward) {
             entry._removeAfterReward = false;
+            if (entry._grantMissionCardCredit) {
+              entry._grantMissionCardCredit = false;
+              state.entry.dailyPlanOptimisticCompletedCards = Math.max(
+                0,
+                Number(state.entry.dailyPlanOptimisticCompletedCards) || 0
+              ) + 1;
+            }
             removeGameEntry(entry.id);
+            updateSpeakingStarMicSealProgress();
             if (shouldGatePremiumAccess()) {
               openPremiumGate();
               await exitGame();
@@ -22395,9 +22400,6 @@
           openDailyPlanModal();
         });
         els.dailyPlanCloseBtn?.addEventListener('click', closeDailyPlanModal);
-        els.dailyPlanSealProgressValue?.addEventListener('click', () => {
-          showDailyPlan120Preview();
-        });
         els.welcomeBooksBtn?.addEventListener('click', () => {
           window.location.href = resolveNativeRenderPageHref('books');
         });
