@@ -884,63 +884,8 @@ const setUserNoEnergyState = async (db, userId, action = 'enable') => {
 };
 
 const updateUserPresenceClassProgress = async (db, userId, deltas = {}) => {
-  const normalizedUserId = Number.parseInt(userId, 10);
-  const speakingCharsDelta = Math.max(0, Math.round(Number(deltas?.speakingCharsDelta) || 0));
-  const listeningCharsDelta = Math.max(0, Math.round(Number(deltas?.listeningCharsDelta) || 0));
-  const totalDelta = speakingCharsDelta + listeningCharsDelta;
-  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0 || totalDelta <= 0) {
-    return { awardedToday: false, presenceClass: null, dayPointsTotal: 0, dayQualified: false };
-  }
-
-  await ensureUsersPresenceClassMetricStorage();
-
-  const existingResult = await db.query(
-    `SELECT points_total, qualified
-     FROM public.user_presence_class_days
-     WHERE user_id = $1
-       AND day_key = CURRENT_DATE
-     FOR UPDATE`,
-    [normalizedUserId]
-  );
-
-  const existingRow = existingResult.rows[0] || null;
-  const previousPointsTotal = Math.max(0, Number(existingRow?.points_total) || 0);
-  const previousQualified = Boolean(existingRow?.qualified);
-  const nextPointsTotal = previousPointsTotal + totalDelta;
-  const nextQualified = previousQualified || nextPointsTotal >= PRESENCE_CLASS_DAILY_TARGET;
-
-  await db.query(
-    `INSERT INTO public.user_presence_class_days (
-       user_id, day_key, points_total, qualified, created_at, updated_at
-     )
-     VALUES ($1, CURRENT_DATE, $2, $3, now(), now())
-     ON CONFLICT (user_id, day_key)
-     DO UPDATE SET
-       points_total = EXCLUDED.points_total,
-       qualified = EXCLUDED.qualified,
-       updated_at = now()`,
-    [normalizedUserId, nextPointsTotal, nextQualified]
-  );
-
-  let presenceClass = null;
-  const awardedToday = !previousQualified && nextQualified;
-  if (awardedToday) {
-    const updatedUserResult = await db.query(
-      `UPDATE public.users
-       SET presence_class = COALESCE(presence_class, 0) + 1
-       WHERE id = $1
-       RETURNING presence_class`,
-      [normalizedUserId]
-    );
-    presenceClass = Math.max(0, Number(updatedUserResult.rows[0]?.presence_class) || 0);
-  }
-
-  return {
-    awardedToday,
-    presenceClass,
-    dayPointsTotal: nextPointsTotal,
-    dayQualified: nextQualified
-  };
+  // Streak-like progression disabled by product decision.
+  return { awardedToday: false, presenceClass: null, dayPointsTotal: 0, dayQualified: false };
 };
 
 const incrementDailyEnergyUsage = async (db, user, deltas = {}) => {
@@ -1007,68 +952,8 @@ const incrementDailyEnergyUsage = async (db, user, deltas = {}) => {
 };
 
 const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = null) => {
-  const normalizedUserId = Number.parseInt(userId, 10);
-  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
-    return { xpDelta: 0, levelsAwarded: 0, totalXp: 0 };
-  }
-
-  const readingCharsDelta = Math.max(0, Math.round(Number(deltas?.readingCharsDelta) || 0));
-  const speakingCharsDelta = Math.max(0, Math.round(Number(deltas?.speakingCharsDelta) || 0));
-  const listeningCharsDelta = Math.max(0, Math.round(Number(deltas?.listeningCharsDelta) || 0));
-  if (!readingCharsDelta && !speakingCharsDelta && !listeningCharsDelta) {
-    return { xpDelta: 0, levelsAwarded: 0, totalXp: 0 };
-  }
-
-  await ensureUserBooksEnergyXpStatsTable();
-
-  const settings = buildEnergySettingsSnapshot(energySettings || {});
-  const xpDelta = applyEnergyCostMultiplier(
-    readingCharsDelta + speakingCharsDelta + listeningCharsDelta,
-    settings.energyCostMultiplierMilli
-  );
-  if (xpDelta <= 0) {
-    return { xpDelta: 0, levelsAwarded: 0, totalXp: 0 };
-  }
-
-  const currentResult = await db.query(
-    `SELECT energy_xp_total
-     FROM public.user_books_energy_xp_stats
-     WHERE user_id = $1
-     FOR UPDATE`,
-    [normalizedUserId]
-  );
-  const currentTotalXp = Math.max(0, Number(currentResult.rows[0]?.energy_xp_total) || 0);
-  const nextTotalXp = currentTotalXp + xpDelta;
-  const previousLevelSteps = Math.floor(currentTotalXp / BOOKS_ENERGY_XP_PER_LEVEL);
-  const nextLevelSteps = Math.floor(nextTotalXp / BOOKS_ENERGY_XP_PER_LEVEL);
-  const levelsAwarded = Math.max(0, nextLevelSteps - previousLevelSteps);
-
-  await db.query(
-    `INSERT INTO public.user_books_energy_xp_stats (
-       user_id, energy_xp_total, updated_at
-     ) VALUES ($1, $2, now())
-     ON CONFLICT (user_id)
-     DO UPDATE SET
-       energy_xp_total = EXCLUDED.energy_xp_total,
-       updated_at = now()`,
-    [normalizedUserId, nextTotalXp]
-  );
-
-  if (levelsAwarded > 0) {
-    await db.query(
-      `UPDATE public.users
-       SET level = LEAST(200, GREATEST(1, COALESCE(level, 1) + $2)),
-           level_updated_at = now()
-       WHERE id = $1`,
-      [normalizedUserId, levelsAwarded]
-    );
-  }
-
-  return {
-    xpDelta,
-    levelsAwarded,
-    totalXp: nextTotalXp
-  };
+  // XP flow disabled by product decision.
+  return { xpDelta: 0, levelsAwarded: 0, totalXp: 0 };
 };
 
 const upsertUserBooksPronunciationSamples = async (client, userId, samplesInput) => {
@@ -2132,24 +2017,10 @@ const resolveCurrentDailyMissionSealCode = (mission) => {
 };
 
 const ensureDailyFluencySealSlot = async (db, user, missionSnapshot) => {
+  // Automatic seal-slot progression disabled; preserve existing values.
   const userId = Number.parseInt(user?.id, 10);
-  if (!Number.isInteger(userId) || userId <= 0) {
-    return null;
-  }
-
+  if (!Number.isInteger(userId) || userId <= 0) return null;
   await ensureUserFluencySealsTable();
-
-  const nowRowResult = await db.query(
-    `SELECT
-       (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::date AS local_day_key,
-       (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::time AS local_time`
-  );
-  const nowRow = nowRowResult.rows[0] || {};
-  const localDayKey = nowRow?.local_day_key || null;
-  const localTimeText = String(nowRow?.local_time || '').trim();
-  const cutoffReached = localTimeText >= '23:55:55';
-
-  const sealCode = resolveCurrentDailyMissionSealCode(missionSnapshot);
   const rowResult = await db.query(
     `SELECT user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key
        FROM public.user_fluency_seals
@@ -2157,52 +2028,7 @@ const ensureDailyFluencySealSlot = async (db, user, missionSnapshot) => {
       LIMIT 1`,
     [userId]
   );
-  const row = rowResult.rows[0] || null;
-  if (!row) return null;
-
-  const slot = Math.max(1, Math.min(6, Number(row?.next_day_slot) || 1));
-  const currentSlotColumn = `day${slot}`;
-  const currentSlotValue = Math.max(0, Math.min(6, Number(row?.[currentSlotColumn]) || 0));
-  let latestRow = row;
-  if (currentSlotValue !== sealCode) {
-    const syncCurrentSlotResult = await db.query(
-      `UPDATE public.user_fluency_seals
-          SET ${currentSlotColumn} = $2,
-              updated_at = now()
-        WHERE user_id = $1
-      RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key`,
-      [userId, sealCode]
-    );
-    latestRow = syncCurrentSlotResult.rows[0] || row;
-  }
-
-  if (!localDayKey || !cutoffReached) {
-    return latestRow;
-  }
-
-  const alreadyAwardedToday = String(latestRow?.last_awarded_day_key || '') === String(localDayKey);
-  if (alreadyAwardedToday) {
-    return latestRow;
-  }
-
-  const nextSlot = Math.max(1, Math.min(6, slot + 1));
-  let updateQuery = '';
-  if (slot === 1) {
-    updateQuery = 'UPDATE public.user_fluency_seals SET day1 = $2, next_day_slot = $3, last_awarded_day_key = $4, updated_at = now() WHERE user_id = $1 RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key';
-  } else if (slot === 2) {
-    updateQuery = 'UPDATE public.user_fluency_seals SET day2 = $2, next_day_slot = $3, last_awarded_day_key = $4, updated_at = now() WHERE user_id = $1 RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key';
-  } else if (slot === 3) {
-    updateQuery = 'UPDATE public.user_fluency_seals SET day3 = $2, next_day_slot = $3, last_awarded_day_key = $4, updated_at = now() WHERE user_id = $1 RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key';
-  } else if (slot === 4) {
-    updateQuery = 'UPDATE public.user_fluency_seals SET day4 = $2, next_day_slot = $3, last_awarded_day_key = $4, updated_at = now() WHERE user_id = $1 RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key';
-  } else if (slot === 5) {
-    updateQuery = 'UPDATE public.user_fluency_seals SET day5 = $2, next_day_slot = $3, last_awarded_day_key = $4, updated_at = now() WHERE user_id = $1 RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key';
-  } else {
-    updateQuery = 'UPDATE public.user_fluency_seals SET day6 = $2, next_day_slot = $3, last_awarded_day_key = $4, updated_at = now() WHERE user_id = $1 RETURNING user_id, day1, day2, day3, day4, day5, day6, next_day_slot, last_awarded_day_key';
-  }
-
-  const updated = await db.query(updateQuery, [userId, sealCode, nextSlot, localDayKey]);
-  return updated.rows[0] || row;
+  return rowResult.rows[0] || null;
 };
 
 const readUserDailyMissionProgress = async (db, userId) => {
@@ -2307,22 +2133,6 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
   const weightedDoneUnits = computeDailyMissionWeightedUnits(cardsToday, booksToday);
   const weightedPercent = computeDailyMissionOverflowPercent(weightedDoneUnits, weightedExpectedUnits);
 
-  const fluencyPlanSnapshot = calculateFluencyPlanScoreSnapshot({
-    minutes: readNullableInteger(user?.fluency_plan_minutes),
-    months: readNullableInteger(user?.fluency_plan_months),
-    application: readNullableInteger(user?.fluency_plan_application),
-    flashcardsPercentage: readNullableInteger(user?.fluency_plan_flashcards_percentage),
-    smartbooksPercentage: readNullableInteger(user?.fluency_plan_smartbooks_percentage)
-  });
-  const fluencyPlanAt120Snapshot = calculateFluencyPlanScoreSnapshot({
-    minutes: 120,
-    months: readNullableInteger(user?.fluency_plan_months),
-    application: readNullableInteger(user?.fluency_plan_application),
-    flashcardsPercentage: readNullableInteger(user?.fluency_plan_flashcards_percentage),
-    smartbooksPercentage: readNullableInteger(user?.fluency_plan_smartbooks_percentage)
-  });
-  const sealTarget = fluencyPlanSnapshot?.score != null ? resolveFluencySealForScore(fluencyPlanSnapshot.score) : null;
-
   return {
     dayKey: progress.dayKey,
     isConfigured: Boolean(targets.isConfigured),
@@ -2340,16 +2150,7 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
     cardsPercent,
     booksPercent,
     weightedPercent,
-    seal: sealTarget
-      ? {
-          ...sealTarget,
-          planScore: Math.max(0, Math.min(100, Math.round(Number(fluencyPlanSnapshot?.score) || 0))),
-          // "X%" do selo ignorando minutos/dia: plano elevado a 120 minutos.
-          planScoreAt120: fluencyPlanAt120Snapshot?.score == null
-            ? null
-            : Math.max(0, Math.min(100, Math.round(Number(fluencyPlanAt120Snapshot?.score) || 0)))
-        }
-      : null
+    seal: null
   };
 };
 
@@ -3264,6 +3065,18 @@ const ensureUsersAvatarColumn = async () => {
       await pool.query(`
         ALTER TABLE public.users
         ADD COLUMN IF NOT EXISTS no_energy boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        DROP COLUMN IF EXISTS streak
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        DROP COLUMN IF EXISTS pratica
+      `);
+      await pool.query(`
+        ALTER TABLE public.users
+        DROP COLUMN IF EXISTS practice
       `);
       await pool.query(`
         UPDATE public.users
@@ -4298,10 +4111,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       existingReadings,
       Math.max(0, Number(stats.readings) || 0)
     );
-    const practiceSecondsDelta = Math.max(
-      0,
-      Math.floor((persistedTrainingTimeMs - existingTrainingTimeMs) / 1000)
-    );
+    const practiceSecondsDelta = 0;
     const speakingCharsDelta = Math.max(0, persistedSpeakings - existingSpeakings);
     const listeningCharsDelta = Math.max(0, persistedListenings - existingListenings);
     const readingCharsDelta = Math.max(0, persistedReadings - existingReadings);
@@ -4460,7 +4270,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       ]
     );
 
-    if (practiceSecondsDelta > 0 || readingCharsDelta > 0 || speakingCharsDelta > 0 || listeningCharsDelta > 0) {
+    if (readingCharsDelta > 0 || speakingCharsDelta > 0 || listeningCharsDelta > 0) {
       await ensureUserBooksConsumptionStatsTable();
       await ensureUserDailyEnergyStatsTable();
       await ensureUserBooksEnergyXpStatsTable();
@@ -4476,7 +4286,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
                listening_chars = public.user_books_consumption_stats.listening_chars + EXCLUDED.listening_chars,
                practice_seconds = public.user_books_consumption_stats.practice_seconds + EXCLUDED.practice_seconds,
                updated_at = now()`,
-        [normalizedUserId, readingCharsDelta, speakingCharsDelta, listeningCharsDelta, practiceSecondsDelta]
+        [normalizedUserId, readingCharsDelta, speakingCharsDelta, listeningCharsDelta, 0]
       );
       const effectiveUser = (userRecord && Number.parseInt(userRecord.id, 10) === normalizedUserId)
         ? userRecord
@@ -11488,7 +11298,7 @@ app.get('/auth/fluency-plan', async (req, res) => {
         books: readNullableInteger(hydratedUser.fluency_plan_books),
         flashcards_percentage: readNullableInteger(hydratedUser.fluency_plan_flashcards_percentage),
         smartbooks_percentage: readNullableInteger(hydratedUser.fluency_plan_smartbooks_percentage),
-        score: readNullableInteger(hydratedUser.fluency_plan_score)
+        score: null
       }
     });
   } catch (error) {
@@ -11511,19 +11321,12 @@ app.patch('/auth/fluency-plan', async (req, res) => {
       return;
     }
 
-    const snapshot = calculateFluencyPlanScoreSnapshot({
-      minutes: req.body?.minutes,
-      months: req.body?.months,
-      application: req.body?.application,
-      books: req.body?.books,
-      flashcardsPercentage: req.body?.flashcardsPercentage,
-      smartbooksPercentage: req.body?.smartbooksPercentage
-    });
-
-    if (!snapshot) {
-      res.status(400).json({ success: false, message: 'Plano de fluencia invalido. Preencha as 4 etapas.' });
-      return;
-    }
+    const minutes = readNullableInteger(req.body?.minutes);
+    const months = readNullableInteger(req.body?.months);
+    const application = readNullableInteger(req.body?.application);
+    const books = readNullableInteger(req.body?.books);
+    const flashcardsPercentage = readNullableInteger(req.body?.flashcardsPercentage);
+    const smartbooksPercentage = readNullableInteger(req.body?.smartbooksPercentage);
 
     const result = await pool.query(
       `UPDATE public.users
@@ -11534,20 +11337,19 @@ app.patch('/auth/fluency-plan', async (req, res) => {
            fluency_plan_books = $6,
            fluency_plan_flashcards_percentage = $7,
            fluency_plan_smartbooks_percentage = $8,
-           fluency_plan_score = $9,
+           fluency_plan_score = NULL,
            fluency_plan_updated_at = now()
        WHERE id = $1
        RETURNING id`,
       [
         authUser.id,
         FLUENCY_PLAN_COMPLETED_STATUS,
-        snapshot.minutes,
-        snapshot.months,
-        snapshot.application,
-        snapshot.books,
-        snapshot.flashcardsPercentage,
-        snapshot.smartbooksPercentage,
-        snapshot.score
+        minutes,
+        months,
+        application,
+        books,
+        flashcardsPercentage,
+        smartbooksPercentage
       ]
     );
 
@@ -11563,11 +11365,13 @@ app.patch('/auth/fluency-plan', async (req, res) => {
       user: await buildAuthUserPayload(user),
       plan: {
         status: FLUENCY_PLAN_COMPLETED_STATUS,
-        minutes: snapshot.minutes,
-        months: snapshot.months,
-        application: snapshot.application,
-        books: snapshot.books,
-        score: snapshot.score
+        minutes,
+        months,
+        application,
+        books,
+        flashcards_percentage: flashcardsPercentage,
+        smartbooks_percentage: smartbooksPercentage,
+        score: null
       }
     });
   } catch (error) {
@@ -13480,7 +13284,7 @@ app.get('/api/books/stats', async (req, res) => {
       readingChars: Math.max(0, Number(consumption.reading_chars) || 0),
       speakingChars: Math.max(0, Number(consumption.speaking_chars) || 0),
       listeningChars: Math.max(0, Number(consumption.listening_chars) || 0),
-      practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0),
+      practiceSeconds: 0,
       accountAgeDays,
       presenceClass,
       consistencyPercent,
@@ -13556,8 +13360,7 @@ app.get('/api/fluency-seals', async (req, res) => {
     }
 
     await ensureUserFluencySealsTable();
-    const missionSnapshot = await buildDailyMissionSnapshot(user, pool);
-    const row = await ensureDailyFluencySealSlot(pool, user, missionSnapshot);
+    const row = await ensureDailyFluencySealSlot(pool, user, null);
     const slots = [
       Math.max(0, Math.min(6, Number(row?.day1) || 0)),
       Math.max(0, Math.min(6, Number(row?.day2) || 0)),
@@ -13567,11 +13370,8 @@ app.get('/api/fluency-seals', async (req, res) => {
       Math.max(0, Math.min(6, Number(row?.day6) || 0))
     ];
     const earnedSealsCount = slots.reduce((total, code) => total + (code > 0 ? 1 : 0), 0);
-    const planMonths = normalizeFluencyPlanMonthsValue(readNullableInteger(user?.fluency_plan_months));
-    const planDays = planMonths === null ? 0 : Math.max(1, planMonths * 30);
-    const fluencyCompletePercent = planDays > 0
-      ? Math.max(0, Math.min(100, (earnedSealsCount / planDays) * 100))
-      : 0;
+    const planDays = 0;
+    const fluencyCompletePercent = 0;
 
     res.setHeader('Cache-Control', 'no-store');
     res.json({
@@ -13609,12 +13409,12 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
     const readingCharsDelta = Math.max(0, Math.round(Number(req.body?.readingCharsDelta) || 0));
     const speakingCharsDelta = Math.max(0, Math.round(Number(req.body?.speakingCharsDelta) || 0));
     const listeningCharsDelta = Math.max(0, Math.round(Number(req.body?.listeningCharsDelta) || 0));
-    const practiceSecondsDelta = Math.max(0, Math.round(Number(req.body?.practiceSecondsDelta) || 0));
+    const practiceSecondsDelta = 0;
     if (!Number.isInteger(userId) || userId <= 0) {
       res.status(400).json({ success: false, message: 'Usuario invalido.' });
       return;
     }
-    if (!readingCharsDelta && !speakingCharsDelta && !listeningCharsDelta && !practiceSecondsDelta) {
+    if (!readingCharsDelta && !speakingCharsDelta && !listeningCharsDelta) {
       res.json({ success: true, stats: null });
       return;
     }
@@ -13654,7 +13454,7 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
                practice_seconds = public.user_books_consumption_stats.practice_seconds + EXCLUDED.practice_seconds,
                updated_at = now()
          RETURNING reading_chars, speaking_chars, listening_chars, practice_seconds`,
-        [userId, readingCharsDelta, speakingCharsDelta, listeningCharsDelta, practiceSecondsDelta]
+        [userId, readingCharsDelta, speakingCharsDelta, listeningCharsDelta, 0]
       );
       await updateUserPresenceClassProgress(client, userId, {
         speakingCharsDelta,
@@ -13678,7 +13478,7 @@ app.post('/api/books/listening-progress', express.json({ limit: '64kb' }), async
         readingChars: Math.max(0, Number(result.rows[0]?.reading_chars) || 0),
         speakingChars: Math.max(0, Number(result.rows[0]?.speaking_chars) || 0),
         listeningChars: Math.max(0, Number(result.rows[0]?.listening_chars) || 0),
-        practiceSeconds: Math.max(0, Number(result.rows[0]?.practice_seconds) || 0),
+        practiceSeconds: 0,
         ...(energySnapshot || buildDailyEnergySnapshot(authUser, {}, await getEnergySettings()))
       }
     });
