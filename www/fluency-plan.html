@@ -1119,11 +1119,11 @@
     function calculate() {
       const vectorA = vectorByTime(state.minutes);
       const vectorB = vectorByMonths(state.months);
-      const base = (vectorA + vectorB) / 2;
+      const base = vectorA + vectorB;
       const cutSmartbooks = smartbooksCut(state.smartbooksPercentage);
       const cutApplication = applicationCut(state.application);
       const totalCut = cutSmartbooks + cutApplication;
-      const finalScore = clamp(base * (1 - totalCut / 100), 0, 100);
+      const finalScore = clamp(base * (1 - totalCut / 100), 0, 200);
 
       return {
         finalScore

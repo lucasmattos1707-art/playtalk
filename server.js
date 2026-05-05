@@ -10140,7 +10140,7 @@ const FLUENCY_PLAN_ALLOWED_APPLICATION = new Set([0, 1, 2]);
 const FLUENCY_PLAN_ALLOWED_BOOKS = new Set([0, 1]);
 const FLUENCY_PLAN_ALLOWED_PERCENTAGES = new Set(Array.from({ length: 21 }, (_, index) => index * 5));
 const DAILY_MISSION_FLASHCARD_MINUTES_PER_CARD = 1;
-const DAILY_MISSION_SMARTBOOK_MINUTES_PER_BOOK = 3;
+const DAILY_MISSION_SMARTBOOK_MINUTES_PER_BOOK = 2;
 const DAILY_MISSION_FLASHCARD_WEIGHT = 1;
 const DAILY_MISSION_SMARTBOOK_WEIGHT = 2;
 
@@ -10192,9 +10192,40 @@ function normalizeFluencyPlanChoice(value, allowedValues) {
 }
 
 function normalizeFluencyPlanMonthsValue(value) {
-  const parsed = normalizeFluencyPlanChoice(value, FLUENCY_PLAN_ALLOWED_MONTHS);
-  if (parsed === 24) return 18;
-  return parsed;
+  return normalizeFluencyPlanChoice(value, FLUENCY_PLAN_ALLOWED_MONTHS);
+}
+
+function fluencyVectorByTime(minutes) {
+  const normalizedMinutes = Math.max(15, Math.min(120, Number(minutes) || 0));
+  // 15min = 25, 45min = 50, 120min = 100.
+  if (normalizedMinutes <= 45) {
+    return 25 + ((normalizedMinutes - 15) / (45 - 15)) * 25;
+  }
+  return 50 + ((normalizedMinutes - 45) / (120 - 45)) * 50;
+}
+
+function fluencyVectorByMonths(months) {
+  const normalizedMonths = Math.max(3, Math.min(24, Number(months) || 0));
+  // 3 meses = 25, 6 meses = 50, 24 meses = 100.
+  if (normalizedMonths <= 6) {
+    return 25 + ((normalizedMonths - 3) / (6 - 3)) * 25;
+  }
+  return 50 + ((normalizedMonths - 6) / (24 - 6)) * 50;
+}
+
+function fluencySmartbooksCut(percent) {
+  const normalizedPercent = Math.max(0, Math.min(100, Number(percent) || 0));
+  if (normalizedPercent >= 50) return 0;
+  if (normalizedPercent >= 45) return 5;
+  if (normalizedPercent >= 40) return 10;
+  if (normalizedPercent >= 35) return 15;
+  if (normalizedPercent >= 30) return 20;
+  if (normalizedPercent >= 25) return 25;
+  return 30;
+}
+
+function fluencyApplicationCut(application) {
+  return Number(application) === 0 ? 30 : 0;
 }
 
 function calculateFluencyPlanScoreSnapshot(plan) {
@@ -10233,14 +10264,13 @@ function calculateFluencyPlanScoreSnapshot(plan) {
     return null;
   }
 
-  const effectiveMonths = months === 18 ? 24 : months;
-  const dailyHours = minutes / 60;
-  const totalHours = dailyHours * (effectiveMonths * 30);
-  let base = 100 * (1 - Math.exp(-totalHours / 260));
-  base *= [0.82, 1.0, 1.15][application];
-  const smartbooksShare = normalizedSmartbooksPercentage / 100;
-  const bookBoost = [0.10, 0.20, 0.30][application] * smartbooksShare;
-  const finalScore = Math.max(0, Math.min(100, Math.round(base * (1 + bookBoost))));
+  const vectorA = fluencyVectorByTime(minutes);
+  const vectorB = fluencyVectorByMonths(months);
+  const base = vectorA + vectorB;
+  const cutSmartbooks = fluencySmartbooksCut(normalizedSmartbooksPercentage);
+  const cutApplication = fluencyApplicationCut(application);
+  const totalCut = cutSmartbooks + cutApplication;
+  const finalScore = Math.max(0, Math.min(200, Math.round(base * (1 - (totalCut / 100)))));
 
   return {
     minutes,
