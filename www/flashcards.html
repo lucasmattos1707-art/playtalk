@@ -11285,6 +11285,7 @@
         const id = Number(user.id) || 0;
         const username = safeText(user.username);
         if (!id || !username) return null;
+        const isAdmin = Boolean(user.is_admin) || isAdminUsername(username);
         return {
           id,
           username,
@@ -11299,9 +11300,10 @@
           avatarGenerationCount: Math.max(0, Number.parseInt(user.avatar_generation_count || user.avatarGenerationCount, 10) || 0),
           onboardingNameCompleted: Boolean(user.onboarding_name_completed || user.onboardingNameCompleted),
           onboardingPhotoCompleted: Boolean(user.onboarding_photo_completed || user.onboardingPhotoCompleted),
+          audio_check_completed: isAdmin || Boolean(user.audio_check_completed || user.audioCheckCompleted),
           hasPassword: Boolean(user.has_password || user.hasPassword),
           createdAt: user.created_at || user.createdAt || null,
-          isAdmin: Boolean(user.is_admin),
+          isAdmin,
           premiumFullAccess: Boolean(user.premium_full_access),
           premiumUntil: user.premium_until || user.premiumUntil || null,
           noEnergy: Boolean(user.no_energy || user.noEnergy),
@@ -11715,7 +11717,7 @@
       }
 
       function resolveAudioCheckCompletedState() {
-        return Boolean(state.user?.audio_check_completed) || readAudioCheckCompletedFlag();
+        return isAdminUser() || Boolean(state.user?.audio_check_completed) || readAudioCheckCompletedFlag();
       }
 
       function persistAudioCheckCompletedFlag(value) {
@@ -11919,10 +11921,16 @@
 
       async function openAudioCheck() {
         if (isAdminUser() && !state.entry.welcomeStartRequested) {
+          persistAudioCheckCompletedFlag(true);
+          persistMicCheckCompletedFlag(true);
           syncWelcomeGate();
           return;
         }
         if (resolveAudioCheckCompletedState()) {
+          if (isAdminUser()) {
+            persistAudioCheckCompletedFlag(true);
+            persistMicCheckCompletedFlag(true);
+          }
           openMicCheck();
           return;
         }
@@ -11990,7 +11998,10 @@
           syncWelcomeGate();
           return;
         }
-        if (readMicCheckCompletedFlag()) {
+        if (isAdminUser() || readMicCheckCompletedFlag()) {
+          if (isAdminUser()) {
+            persistMicCheckCompletedFlag(true);
+          }
           closeAudioCheck();
           requestVerifiedGameStart();
           return;

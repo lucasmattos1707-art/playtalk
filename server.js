@@ -3261,6 +3261,9 @@ async function buildAuthUserPayload(user, options = {}) {
   ) {
     sourceUser = await readUserById(sourceUser.id).catch(() => sourceUser);
   }
+  if (sourceUser?.id && isAdminUserRecord(sourceUser) && !sourceUser.audio_check_completed) {
+    sourceUser = await markAdminChecksCompletedByUserId(sourceUser.id).catch(() => sourceUser);
+  }
   const nextOnboardingRoute = resolveRequiredOnboardingPath(sourceUser, options.returnTo || '/play');
   return {
     ...mapPublicUser(sourceUser),
@@ -10382,6 +10385,26 @@ function calculateNoPlanFluencyScoreSnapshot(stats = {}) {
     flashcardsCount,
     smartbooksCount
   };
+}
+
+async function markAdminChecksCompletedByUserId(userId) {
+  const normalizedUserId = Number(userId) || 0;
+  if (!pool || normalizedUserId <= 0) return null;
+  const result = await pool.query(
+    `UPDATE public.users
+        SET audio_check_completed = true
+      WHERE id = $1
+      RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
+                created_at, password_hash, premium_full_access, premium_until, no_energy,
+                level, is_bot, bot_config, bot_avatar_status, bot_avatar_error,
+                fluency_plan_status, fluency_plan_minutes, fluency_plan_months,
+                fluency_plan_application, fluency_plan_books,
+                fluency_plan_flashcards_percentage, fluency_plan_smartbooks_percentage,
+                fluency_plan_score, fluency_plan_updated_at`,
+    [normalizedUserId]
+  );
+  return result.rows[0] || null;
 }
 
 function calculateFluencyPlanScoreSnapshot(plan) {
