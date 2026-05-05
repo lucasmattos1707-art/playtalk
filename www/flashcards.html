@@ -1461,9 +1461,8 @@
       grid-template-columns: 1fr auto;
       gap: 14px;
       align-items: center;
-      padding-bottom: 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      margin-bottom: 4px;
+      padding-bottom: 12px;
+      margin-bottom: 0;
       position: relative;
       z-index: 1;
     }
@@ -1520,15 +1519,15 @@
       grid-template-columns: 84px 1fr;
       gap: 14px;
       align-items: center;
-      padding: 8px 0 24px;
+      padding: 6px 0 14px;
       position: relative;
       z-index: 1;
       min-height: 0;
     }
 
     .daily-plan-modal__mission + .daily-plan-modal__mission {
-      border-top: 1px solid rgba(116, 185, 255, 0.26);
-      padding-top: 28px;
+      border-top: 0;
+      padding-top: 12px;
     }
 
     .daily-plan-modal__icon-ring {
@@ -1573,9 +1572,9 @@
     }
 
     .daily-plan-modal__mission h2 span {
-      display: block;
+      display: inline-block;
       color: #8deeff;
-      font-size: 13px;
+      font-size: 16px;
       margin-top: 0;
       text-transform: uppercase;
       letter-spacing: 0.08em;
@@ -1592,7 +1591,15 @@
       font-weight: 700;
       letter-spacing: 0;
       line-height: 1;
-      margin: 8px 0 6px;
+      margin: 0;
+    }
+
+    .daily-plan-modal__mission-mainline {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
     }
 
     .daily-plan-modal__counter-done {
@@ -1609,9 +1616,11 @@
       height: 8px;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(115, 180, 255, 0.25);
+      border: 0;
       overflow: hidden;
       box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.45);
+      width: 100%;
+      min-width: 100%;
     }
 
     .daily-plan-modal__fill {
@@ -1694,7 +1703,7 @@
       height: 8px;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(115, 180, 255, 0.25);
+      border: 0;
       overflow: hidden;
       box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.45);
       display: block;
@@ -9079,8 +9088,10 @@
               </svg>
             </div>
             <div>
-              <h2><span>FlashCards</span></h2>
-              <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanFlashcardsDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanFlashcardsTotal">/0</span></div>
+              <div class="daily-plan-modal__mission-mainline">
+                <h2><span>FlashCards</span></h2>
+                <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanFlashcardsDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanFlashcardsTotal">/0</span></div>
+              </div>
               <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill daily-plan-modal__fill--flashcards" id="dailyPlanFlashcardsBar" style="--progress: 0%"></div></div>
             </div>
           </article>
@@ -9094,8 +9105,10 @@
               </svg>
             </div>
             <div>
-              <h2><span>MiniBooks</span></h2>
-              <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanBooksDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanBooksTotal">/0</span></div>
+              <div class="daily-plan-modal__mission-mainline">
+                <h2><span>MiniBooks</span></h2>
+                <div class="daily-plan-modal__counter"><span class="daily-plan-modal__counter-done" id="dailyPlanBooksDone">0</span><span class="daily-plan-modal__counter-total" id="dailyPlanBooksTotal">/0</span></div>
+              </div>
               <div class="daily-plan-modal__bar"><div class="daily-plan-modal__fill daily-plan-modal__fill--books" id="dailyPlanBooksBar" style="--progress: 0%"></div></div>
             </div>
           </article>
@@ -14847,6 +14860,7 @@
         if (!state.entry.dailyPlanOpen) return;
         const mission = state.entry.dailyPlanMissionSnapshot;
         if (!mission) return;
+        if (safeText(mission?.seal?.mode).toLowerCase() === 'sem_plano') return;
         state.entry.dailyPlanPreview120 = true;
         renderDailyPlanMission(mission, { use120Preview: true });
         clearDailyPlanPreviewTimer();
@@ -14895,6 +14909,9 @@
             renderDailyPlanMission(state.entry.dailyPlanMissionSnapshot, { use120Preview: false });
           }
         }, 2500);
+        if (safeText(state.entry.dailyPlanMissionSnapshot?.seal?.mode).toLowerCase() !== 'sem_plano') {
+          showDailyPlan120Preview();
+        }
       }
 
       function pauseFlashcardsGameForDailyPlan() {
