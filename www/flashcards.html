@@ -14680,17 +14680,21 @@
       }
 
       const DAILY_PLAN_FLUENCY_SEALS = [
-        { key: 'prata', label: 'Prata', minScore: 40, sealImage: 'medalhas/prata.png' },
-        { key: 'safira', label: 'Safira', minScore: 50, sealImage: 'medalhas/quartz.png' },
-        { key: 'esmeralda', label: 'Esmeralda', minScore: 60, sealImage: 'medalhas/emerald.png' },
-        { key: 'platina', label: 'Platina', minScore: 70, sealImage: 'medalhas/platina.png' },
-        { key: 'ouro', label: 'Ouro', minScore: 80, sealImage: 'medalhas/ouro.png' },
-        { key: 'diamante', label: 'Diamante', minScore: 90, sealImage: 'medalhas/diamante.png' }
+        { key: 'white', label: 'White', minScore: 10, sealImage: 'medalhas/white.png' },
+        { key: 'vidro', label: 'Vidro', minScore: 20, sealImage: 'medalhas/vidro.png' },
+        { key: 'metal', label: 'Metal', minScore: 30, sealImage: 'medalhas/metal.png' },
+        { key: 'bronze', label: 'Bronze', minScore: 40, sealImage: 'medalhas/bronze.png' },
+        { key: 'prata', label: 'Prata', minScore: 50, sealImage: 'medalhas/prata.png' },
+        { key: 'safira', label: 'Safira', minScore: 60, sealImage: 'medalhas/quartz.png' },
+        { key: 'esmeralda', label: 'Esmeralda', minScore: 70, sealImage: 'medalhas/emerald.png' },
+        { key: 'platina', label: 'Platina', minScore: 80, sealImage: 'medalhas/platina.png' },
+        { key: 'ouro', label: 'Ouro', minScore: 90, sealImage: 'medalhas/ouro.png' },
+        { key: 'diamante', label: 'Diamante', minScore: 100, sealImage: 'medalhas/diamante.png' }
       ];
 
       function resolveDailyPlanSealByScore(score) {
-        const normalized = Math.max(0, Math.min(200, Number(score) || 0));
-        let selected = null;
+        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
+        let selected = DAILY_PLAN_FLUENCY_SEALS[0] || null;
         for (const seal of DAILY_PLAN_FLUENCY_SEALS) {
           if (!seal) continue;
           if (normalized >= seal.minScore) selected = seal;
@@ -14699,7 +14703,7 @@
       }
 
       function resolveDailyPlanNextSealByScore(score) {
-        const normalized = Math.max(0, Math.min(200, Number(score) || 0));
+        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
         return DAILY_PLAN_FLUENCY_SEALS.find((seal) => normalized < seal.minScore) || null;
       }
 
@@ -14855,30 +14859,22 @@
           const remaining = Math.max(0, missionView.booksTarget - Math.round(missionView.booksToday));
           els.dailyPlanBooksRemaining.textContent = `Faltam ${remaining} minibooks`;
         }
-        const seal = mission?.seal || null;
-        const planScoreAt120 = seal?.planScoreAt120 == null
-          ? Math.max(0, Math.min(200, Number(seal?.planScore) || 0))
-          : Math.max(0, Math.min(200, Number(seal.planScoreAt120) || 0));
         // "Progresso maximo" sempre usa a simulacao com jornada de 120 minutos.
-        const missionProgressPercent = clampPercent(missionViewAt120.balancedProgressPercent);
         const totalSealProgress = Math.max(
           0,
-          Math.min(200, (planScoreAt120 * missionProgressPercent) / 200)
+          Math.min(100, Number(missionViewAt120.balancedProgressPercent) || 0)
         );
         const nextSealProgress = computeDailyPlanNextSealProgress(totalSealProgress);
         const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
         const nextSeal = resolveDailyPlanNextSealByScore(totalSealProgress);
         if (els.dailyPlanCurrentSealImage) {
-          const hasUnlockedSeal = totalSealProgress >= 40;
-          const sealSrc = hasUnlockedSeal
-            ? (safeText(currentSeal?.sealImage) || 'medalhas/prata.png')
-            : 'medalhas/diamante.png';
+          const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/white.png';
           els.dailyPlanCurrentSealImage.src = sealSrc;
-          els.dailyPlanCurrentSealImage.alt = hasUnlockedSeal && safeText(currentSeal?.label)
+          els.dailyPlanCurrentSealImage.alt = safeText(currentSeal?.label)
             ? `Selo atual: ${currentSeal.label}`
-            : 'Selo atual bloqueado';
-          els.dailyPlanCurrentSealImage.style.opacity = hasUnlockedSeal ? '1' : '0.5';
-          els.dailyPlanCurrentSealImage.style.filter = hasUnlockedSeal ? 'none' : 'grayscale(1) saturate(0)';
+            : 'Selo atual';
+          els.dailyPlanCurrentSealImage.style.opacity = '1';
+          els.dailyPlanCurrentSealImage.style.filter = 'none';
         }
         if (els.dailyPlanSealProgressValue) {
           if (!nextSeal) {
