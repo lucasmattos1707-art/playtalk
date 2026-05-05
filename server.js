@@ -3031,6 +3031,10 @@ const ensureUsersAvatarColumn = async () => {
         ADD COLUMN IF NOT EXISTS fluency_plan_updated_at timestamptz
       `);
       await pool.query(`
+        ALTER TABLE public.users
+        ADD COLUMN IF NOT EXISTS offline_mode boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
         UPDATE public.users
         SET fluency_plan_flashcards_percentage = CASE
               WHEN fluency_plan_books = 1 THEN 50
@@ -3164,6 +3168,7 @@ const mapPublicUser = (user) => ({
   premium_full_access: Boolean(user?.premium_full_access),
   premium_until: user?.premium_until || null,
   no_energy: Boolean(user?.no_energy),
+  offline_mode: Boolean(user?.offline_mode),
   fluency_plan_status: String(user?.['fluency-plan'] || user?.fluency_plan_status || FLUENCY_PLAN_DEFAULT_STATUS).trim().toLowerCase() || FLUENCY_PLAN_DEFAULT_STATUS,
   fluency_plan_minutes: readNullableInteger(user?.fluency_plan_minutes),
   fluency_plan_months: readNullableInteger(user?.fluency_plan_months),
@@ -3285,10 +3290,11 @@ const isAdminUserRecord = (user) => {
 
 const buildPublicUsersVisibilityWhereClause = (requesterIsAdmin = false, usernameColumn = `COALESCE(NULLIF(u.username, ''), u.email)`) => {
   if (requesterIsAdmin) return '';
-  return `WHERE NOT (
-    LOWER(${usernameColumn}) IN ('admin', 'adm', 'adminst', 'admin2')
-    OR UPPER(${usernameColumn}) LIKE '%USER%'
-  )`;
+  return `WHERE COALESCE(u.offline_mode, false) = false
+    AND NOT (
+      LOWER(${usernameColumn}) IN ('admin', 'adm', 'adminst', 'admin2')
+      OR UPPER(${usernameColumn}) LIKE '%USER%'
+    )`;
 };
 
 const normalizeAccessKeyCode = (value) => String(value || '')
@@ -12849,6 +12855,7 @@ app.get('/api/users/flashcards', async (req, res) => {
          u.premium_full_access,
          u.premium_until,
          u.no_energy,
+         u.offline_mode,
          u.is_bot,
          u.bot_config,
          u.bot_avatar_status,
@@ -12994,7 +13001,8 @@ app.get('/api/users/flashcards', async (req, res) => {
         level: Number(viewerEntry.level_value) || 1,
         rankingValue: Number(viewerEntry.ranking_value) || 0,
         isOnline: Boolean(viewerEntry.is_online),
-        noEnergy: Boolean(viewerEntry.no_energy)
+        noEnergy: Boolean(viewerEntry.no_energy),
+        offlineMode: Boolean(viewerEntry.offline_mode)
       } : null,
       users: limitedEntries.map((entry) => ({
         userId: Number(entry.id) || 0,
@@ -13016,7 +13024,8 @@ app.get('/api/users/flashcards', async (req, res) => {
         premiumFullAccess: Boolean(entry.premium_full_access),
         premiumUntil: entry.premium_until || null,
         premiumActive: requesterIsAdmin ? isPremiumActiveFromUser(entry) : undefined,
-        noEnergy: Boolean(entry.no_energy)
+        noEnergy: Boolean(entry.no_energy),
+        offlineMode: Boolean(entry.offline_mode)
       }))
     });
   } catch (error) {
@@ -16373,6 +16382,71 @@ app.post('/api/admin/users/:userId/no-energy', async (req, res) => {
     res.status(statusCode).json({
       success: false,
       message: error?.message || 'Nao foi possivel atualizar o bloqueio manual de energia.'
+    });
+  }
+});
+
+app.post('/api/admin/users/:userId/offline-mode', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await ensureUsersAvatarColumn();
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    if (!isAdminUserRecord(authUser)) {
+      res.status(403).json({ success: false, message: 'Apenas admin pode alterar modo offline.' });
+      return;
+    }
+
+    const userId = Number.parseInt(req.params.userId, 10);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ success: false, message: 'Usuario invalido.' });
+      return;
+    }
+
+    const requestedOffline = req.body?.offline;
+    const offlineMode = requestedOffline === undefined
+      ? true
+      : Boolean(requestedOffline);
+
+    const result = await pool.query(
+      `UPDATE public.users
+       SET offline_mode = $2
+       WHERE id = $1
+       RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+                 onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
+                 created_at, premium_full_access, premium_until, no_energy, offline_mode`,
+      [userId, offlineMode]
+    );
+
+    if (!result.rows.length) {
+      res.status(404).json({ success: false, message: 'Usuario nao encontrado.' });
+      return;
+    }
+
+    const updatedUser = result.rows[0];
+    res.json({
+      success: true,
+      message: offlineMode
+        ? 'Usuario definido como offline.'
+        : 'Usuario definido como online.',
+      user: mapPublicUser(updatedUser),
+      offlineMode: Boolean(updatedUser.offline_mode)
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao atualizar modo offline do usuario:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel atualizar modo offline.'
     });
   }
 });

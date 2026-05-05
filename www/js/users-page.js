@@ -52,6 +52,7 @@
     botCloseTopBtn: document.getElementById('usersBotCloseTopBtn'),
     botStatus: document.getElementById('usersBotStatus'),
     toggleNoEnergyBtn: document.getElementById('toggleNoEnergyBtn'),
+    toggleOfflineModeBtn: document.getElementById('toggleOfflineModeBtn'),
     premiumUserBtn: document.getElementById('premiumUserBtn'),
     deleteUserBtn: document.getElementById('deleteUserBtn'),
     closeAdminModalBtn: document.getElementById('closeAdminModalBtn'),
@@ -423,7 +424,8 @@
       isAdmin: Boolean(user.is_admin),
       premiumFullAccess: Boolean(user.premium_full_access || user.premiumFullAccess),
       premiumUntil: user.premium_until || user.premiumUntil || null,
-      noEnergy: Boolean(user.no_energy || user.noEnergy)
+      noEnergy: Boolean(user.no_energy || user.noEnergy),
+      offlineMode: Boolean(user.offline_mode || user.offlineMode)
     };
   }
 
@@ -454,7 +456,8 @@
       premiumUntil: entry?.premiumUntil || null,
       premiumActive: Boolean(entry?.premiumActive),
       isOnline: Boolean(entry?.isOnline),
-      noEnergy: Boolean(entry?.noEnergy)
+      noEnergy: Boolean(entry?.noEnergy),
+      offlineMode: Boolean(entry?.offlineMode)
     }));
   }
 
@@ -538,10 +541,16 @@
 
   function syncAdminButtons() {
     const disabled = state.adminBusy || !state.selectedUser;
-    [els.toggleNoEnergyBtn, els.premiumUserBtn, els.deleteUserBtn].forEach((button) => {
+    [els.toggleOfflineModeBtn, els.toggleNoEnergyBtn, els.premiumUserBtn, els.deleteUserBtn].forEach((button) => {
       if (!button) return;
       button.disabled = disabled;
     });
+    if (els.toggleOfflineModeBtn) {
+      const isOffline = Boolean(state.selectedUser?.offlineMode);
+      els.toggleOfflineModeBtn.textContent = isOffline ? 'Offline' : 'Online';
+      els.toggleOfflineModeBtn.classList.toggle('is-secondary', isOffline);
+      els.toggleOfflineModeBtn.classList.toggle('is-online', !isOffline);
+    }
     if (els.toggleNoEnergyBtn) {
       els.toggleNoEnergyBtn.textContent = state.selectedUser?.noEnergy
         ? 'Remover no-energy'
@@ -1451,6 +1460,38 @@
     }
   }
 
+  async function toggleSelectedUserOfflineMode() {
+    if (!state.selectedUser || state.adminBusy) return;
+    state.adminBusy = true;
+    syncAdminButtons();
+    const willBeOffline = !Boolean(state.selectedUser.offlineMode);
+    setAdminStatus(willBeOffline ? 'Definindo usuario como offline...' : 'Definindo usuario como online...');
+    try {
+      const response = await fetch(buildApiUrl(`/api/admin/users/${state.selectedUser.userId}/offline-mode`), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify({ offline: willBeOffline })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Nao foi possivel atualizar modo offline.');
+      }
+      state.selectedUser = {
+        ...state.selectedUser,
+        offlineMode: Boolean(payload?.offlineMode ?? payload?.user?.offline_mode ?? payload?.user?.offlineMode)
+      };
+      setAdminStatus(payload?.message || (state.selectedUser.offlineMode ? 'Usuario offline.' : 'Usuario online.'));
+      syncAdminButtons();
+      await loadUsers('', { metricKey: state.currentMetricKey, force: true });
+    } catch (error) {
+      setAdminStatus(error?.message || 'Nao foi possivel atualizar modo offline.');
+    } finally {
+      state.adminBusy = false;
+      syncAdminButtons();
+    }
+  }
+
   function startBackgroundLoops() {
     window.setInterval(() => {
       void pingPresence();
@@ -1529,6 +1570,7 @@
     if (event.target === els.challengeModal) closeChallengeModal();
   });
   els.toggleNoEnergyBtn?.addEventListener('click', () => { void toggleSelectedUserNoEnergy(); });
+  els.toggleOfflineModeBtn?.addEventListener('click', () => { void toggleSelectedUserOfflineMode(); });
   els.premiumUserBtn?.addEventListener('click', () => { void toggleSelectedUserPremium(); });
   els.deleteUserBtn?.addEventListener('click', () => { void deleteUser(); });
   els.closeAdminModalTopBtn?.addEventListener('click', closeAdminModal);

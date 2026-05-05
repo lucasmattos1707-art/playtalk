@@ -606,6 +606,12 @@
         0 0 18px rgba(214, 112, 255, 0.36);
     }
 
+    .users-admin-btn.is-online {
+      background: linear-gradient(180deg, #1eea67, #0f9a40);
+      border: 1px solid rgba(154, 255, 195, 0.64);
+      box-shadow: 0 0 14px rgba(42, 220, 108, 0.36);
+    }
+
     .users-admin-btn.is-secondary {
       background: rgba(255,255,255,0.1);
       border: 1px solid rgba(255,255,255,0.12);
@@ -1050,6 +1056,7 @@
         <div class="users-admin-bot-grid" id="usersAdminBotGrid" hidden></div>
       </section>
       <div class="users-admin-actions">
+        <button class="users-admin-btn is-online" id="toggleOfflineModeBtn" type="button">Online</button>
         <button class="users-admin-btn" id="toggleNoEnergyBtn" type="button">Ativar no-energy</button>
         <button class="users-admin-btn is-premium" id="premiumUserBtn" type="button">Atribuir premium</button>
         <button class="users-admin-btn is-danger" id="deleteUserBtn" type="button">Excluir usuario</button>
