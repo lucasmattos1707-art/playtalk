@@ -9959,6 +9959,8 @@
           welcomeModeKey: '',
           dailyPlanOpen: false,
           dailyPlanMissionSnapshot: null,
+          dailyPlanMissionSnapshotUpdatedAt: 0,
+          dailyPlanMissionSyncInFlight: false,
           dailyPlanPreview120: false,
           dailyPlanPreviewTimer: 0,
           dailyPlanTimeRemainingTimer: 0,
@@ -11307,7 +11309,8 @@
           premiumFullAccess: Boolean(user.premium_full_access),
           premiumUntil: user.premium_until || user.premiumUntil || null,
           noEnergy: Boolean(user.no_energy || user.noEnergy),
-          level: normalizeUserLevel(user.level ?? user.userLevel)
+          level: normalizeUserLevel(user.level ?? user.userLevel),
+          fluencyPlanScore: Math.max(0, Math.min(200, Number(user.fluency_plan_score ?? user.fluencyPlanScore) || 0))
         };
       }
 
@@ -14060,6 +14063,7 @@
 
         renderMetrics();
         updateGameChips();
+        void refreshDailyPlanMissionSnapshot({ force: true });
         refreshLibrary();
         void refreshLibraryRanking();
         renderProfilePanel();
@@ -14716,6 +14720,26 @@
         return payload.mission || null;
       }
 
+      async function refreshDailyPlanMissionSnapshot(options = {}) {
+        if (!state.user?.id || state.entry.dailyPlanMissionSyncInFlight) return state.entry.dailyPlanMissionSnapshot;
+        const now = Date.now();
+        const maxAgeMs = Math.max(0, Number(options.maxAgeMs) || 0);
+        if (!options.force && maxAgeMs > 0 && (now - Number(state.entry.dailyPlanMissionSnapshotUpdatedAt || 0)) <= maxAgeMs) {
+          return state.entry.dailyPlanMissionSnapshot;
+        }
+        state.entry.dailyPlanMissionSyncInFlight = true;
+        try {
+          const mission = await fetchDailyPlanBooksStats().catch(() => null);
+          if (mission && typeof mission === 'object') {
+            state.entry.dailyPlanMissionSnapshot = mission;
+            state.entry.dailyPlanMissionSnapshotUpdatedAt = Date.now();
+          }
+        } finally {
+          state.entry.dailyPlanMissionSyncInFlight = false;
+        }
+        return state.entry.dailyPlanMissionSnapshot;
+      }
+
       function resolveDailyPlanProgressMessage(percent) {
         const normalized = Math.max(0, Math.min(200, Math.round(Number(percent) || 0)));
         if (normalized >= 200) return 'Missao completa! Voce bateu 200% hoje.';
@@ -14993,6 +15017,7 @@
         }
         const mission = await fetchDailyPlanBooksStats().catch(() => null);
         state.entry.dailyPlanMissionSnapshot = mission || {};
+        state.entry.dailyPlanMissionSnapshotUpdatedAt = Date.now();
         clearDailyPlanPreviewTimer();
         clearDailyPlanTimeRemainingTimer();
         state.entry.dailyPlanPreview120 = false;
@@ -17787,15 +17812,25 @@
           els.gameMicNextSealMetric.hidden = true;
           return;
         }
-        const planScore = Math.max(0, Math.min(200, Number(state.entry.dailyPlanMissionSnapshot?.seal?.planScore) || 0));
+        const missionSnapshot = state.entry.dailyPlanMissionSnapshot && typeof state.entry.dailyPlanMissionSnapshot === 'object'
+          ? state.entry.dailyPlanMissionSnapshot
+          : null;
+        const missionView = missionSnapshot ? buildDailyPlanMissionView(missionSnapshot, false) : null;
+        const planScoreFromMission = Number(missionSnapshot?.seal?.planScore);
+        const planScoreFallback = Number(state.user?.fluencyPlanScore);
+        const planScore = Number.isFinite(planScoreFromMission)
+          ? Math.max(0, Math.min(200, planScoreFromMission))
+          : Math.max(0, Math.min(200, Number.isFinite(planScoreFallback) ? planScoreFallback : 0));
         const currentSeal = resolveDailyPlanSealByScore(planScore);
-        const nextSealProgress = computeDailyPlanNextSealProgress(planScore);
+        const missionProgressPercent = Math.max(0, Math.min(100, Number(missionView?.balancedProgressPercent) || 0));
+        const nextSealProgress = missionProgressPercent;
         const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/white.png';
         els.gameMicCurrentSealImage.src = sealSrc.startsWith('/') ? sealSrc : `/${sealSrc}`;
         els.gameMicCurrentSealImage.alt = safeText(currentSeal?.label) ? `Selo atual: ${currentSeal.label}` : 'Selo atual';
         els.gameMicNextSealProgress.textContent = `${nextSealProgress.toFixed(2)}%`;
         els.gameMicCurrentSealMetric.hidden = false;
         els.gameMicNextSealMetric.hidden = false;
+        void refreshDailyPlanMissionSnapshot({ maxAgeMs: 60000 });
       }
 
       function primeGameTouchButton() {
@@ -21010,7 +21045,30 @@
         state.ui.gameSwipeTriggeredAt = Date.now();
         event.preventDefault?.();
         event.stopPropagation?.();
+        if (triggerAdminSpeakingStarHitShortcut()) {
+          return;
+        }
         pauseGameToLibrary();
+      }
+
+      function isSpeakingStarPhaseKey(phaseKey) {
+        const key = safeText(phaseKey || '');
+        return key === 'first-star' || key === 'third-star' || key === 'fifth-star';
+      }
+
+      function triggerAdminSpeakingStarHitShortcut() {
+        if (!state.game.active || state.game.paused || state.game.listening) return false;
+        if (!isAdminUser()) return false;
+        if (!isSpeakingStarPhaseKey(els.game?.dataset?.phaseKey)) return false;
+        const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+        if (!entry) return false;
+        const expectedAnswers = expectedAnswersForEntry(entry);
+        const answer = Array.isArray(expectedAnswers)
+          ? safeText(expectedAnswers.find((item) => safeText(item)))
+          : safeText(expectedAnswers);
+        if (!answer) return false;
+        void handleRecognitionResult(answer, 'admin-shortcut');
+        return true;
       }
 
       function pauseGameToLibrary() {
@@ -22591,6 +22649,11 @@
           closePremiumGate();
         });
         window.addEventListener('keydown', (event) => {
+          if (/^h$/i.test(event.key || '') && triggerAdminSpeakingStarHitShortcut()) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
           if (state.ui.soundTestOpen) {
             if (event.key === 'Escape') {
               event.preventDefault();
