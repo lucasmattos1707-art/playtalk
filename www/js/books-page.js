@@ -2008,13 +2008,15 @@
     const booksExpected = Math.max(0, Number(mission?.booksExpected) || 0);
     const booksTarget = booksExpected > 0 ? Math.max(1, Math.ceil(booksExpected)) : SMARTBOOKS_PER_UNLOCK_LEVEL;
     const safeTarget = Math.max(1, booksTarget);
-    const progressPercent = Math.max(0, Math.min(100, (booksToday / safeTarget) * 100));
+    const smartBooksProgressPercent = Math.max(0, Math.min(100, (booksToday / safeTarget) * 100));
     const missionPercent = Math.max(0, Math.min(200, Number(mission?.weightedPercent) || 0));
+    const missionProgressPercent = Math.max(0, Math.min(100, missionPercent / 2));
     return {
       booksToday,
       booksTarget: safeTarget,
       missionPercent,
-      progressPercent
+      smartBooksProgressPercent,
+      missionProgressPercent
     };
   }
 
@@ -2060,7 +2062,11 @@
   function isBookQualified(bookId) {
     const normalizedBookId = safeText(bookId).toLowerCase();
     if (!normalizedBookId) return false;
-    return getQualifiedBookIdsSet().has(normalizedBookId);
+    if (!getQualifiedBookIdsSet().has(normalizedBookId)) return false;
+    return Math.max(
+      getBookBestPercent(normalizedBookId),
+      normalizePercent(state.stats?.bookBestPercentById?.[normalizedBookId.toUpperCase()])
+    ) >= 80;
   }
 
   function getUnlockedBookUiLevels() {
@@ -4971,12 +4977,16 @@
       const missionSummary = getSmartBooksMissionSummary();
       const missionLabel = document.createElement('p');
       missionLabel.className = 'books-card__mission-label';
-      missionLabel.textContent = state.missionCardShowDaily
+      const showingDailyMission = state.missionCardShowDaily;
+      missionLabel.textContent = showingDailyMission
         ? `Missão Diária ${Math.round(missionSummary.missionPercent)}%`
         : `SmartBooks ${Math.round(missionSummary.booksToday)}/${Math.round(missionSummary.booksTarget)}`;
+      const barPercent = showingDailyMission
+        ? missionSummary.missionProgressPercent
+        : missionSummary.smartBooksProgressPercent;
       const missionFill = document.createElement('span');
       missionFill.className = 'books-card__mission-fill';
-      missionFill.style.setProperty('--books-mission-progress', `${missionSummary.progressPercent.toFixed(2)}%`);
+      missionFill.style.setProperty('--books-mission-progress', `${barPercent.toFixed(2)}%`);
       const missionBar = document.createElement('div');
       missionBar.className = 'books-card__mission-bar';
       missionBar.appendChild(missionFill);
