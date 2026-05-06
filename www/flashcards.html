@@ -14820,7 +14820,7 @@
         const previousMinScore = nextIndex > 0 ? DAILY_PLAN_FLUENCY_SEALS[nextIndex - 1].minScore : 0;
         const segmentSize = Math.max(1, nextSeal.minScore - previousMinScore);
         const segmentProgress = ((normalized - previousMinScore) / segmentSize) * 100;
-        return Math.max(0, Math.min(100, Math.round(segmentProgress)));
+        return Math.max(0, Math.min(100, segmentProgress));
       }
 
       function setDailyPlanProgress(value, expected, target, valueEl, totalEl, barEl) {
