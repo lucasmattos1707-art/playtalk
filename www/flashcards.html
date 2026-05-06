@@ -3019,7 +3019,7 @@
       grid-template-columns: 1fr;
       position: fixed;
       left: 50%;
-      bottom: calc(var(--footer-total-height) + 30px);
+      bottom: 10px;
       width: min(160px, 100%);
       margin: 0;
       transform: translateX(-50%);
@@ -7360,11 +7360,11 @@
     }
 
     .game[data-phase-key="first-star"] .game-controls-proxy {
-      transform: translate(-50%, 6vh);
+      transform: translateX(-50%);
     }
 
     .game[data-phase-key="fifth-star"] .game-controls-proxy {
-      transform: translate(-50%, -8vh);
+      transform: translateX(-50%);
     }
 
     .game[data-phase-key="first-star"] .game-controls-proxy .game-mic-side-metric,
@@ -7419,6 +7419,21 @@
       transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, opacity 180ms ease;
     }
 
+    .game[data-phase-key="first-star"] .game-touch.game-touch--books-mic,
+    .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic,
+    .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic {
+      width: clamp(80px, 17.28vw, 92px);
+      height: clamp(80px, 17.28vw, 92px);
+      min-width: clamp(80px, 17.28vw, 92px);
+      min-height: clamp(80px, 17.28vw, 92px);
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      overflow: visible;
+      color: #d7ffe8;
+    }
+
     .game-touch.game-touch--books-mic:disabled {
       opacity: 0.72;
       cursor: not-allowed;
@@ -7443,9 +7458,35 @@
       color: #ffffff;
     }
 
+    .game[data-phase-key="first-star"] .game-touch.game-touch--books-mic.is-busy,
+    .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic.is-busy,
+    .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic.is-busy {
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+      color: #53ff8c;
+    }
+
     .game-touch.game-touch--books-mic.is-busy .game-touch__books-mic-icon {
       filter: drop-shadow(0 0 10px rgba(180, 255, 214, 0.5));
       transform: scale(1.02);
+    }
+
+    .game[data-phase-key="first-star"] .game-touch.game-touch--books-mic .game-touch__books-mic-icon,
+    .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic .game-touch__books-mic-icon,
+    .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic .game-touch__books-mic-icon {
+      width: 62px;
+      height: 62px;
+      filter: drop-shadow(0 0 10px rgba(132, 181, 255, 0.62));
+    }
+
+    .game[data-phase-key="first-star"] .game-touch.game-touch--books-mic.is-busy .game-touch__books-mic-icon,
+    .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic.is-busy .game-touch__books-mic-icon,
+    .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic.is-busy .game-touch__books-mic-icon {
+      filter:
+        drop-shadow(0 0 10px rgba(83, 255, 140, 0.95))
+        drop-shadow(0 0 18px rgba(83, 255, 140, 0.72));
+      transform: scale(1.05);
     }
 
     .game-touch__swap {
