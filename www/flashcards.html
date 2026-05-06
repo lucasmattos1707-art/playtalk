@@ -6626,6 +6626,9 @@
       place-items: center;
       align-content: center;
       justify-items: center;
+      background: transparent !important;
+      box-shadow: none !important;
+      border: 0 !important;
     }
 
     .game[data-phase-key="second-star"] #gameVisual,
@@ -6657,6 +6660,9 @@
       transform: none !important;
       position: relative;
       z-index: 1;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
 
     .game[data-phase-key="second-star"] #gameVisual > img:not(.game-card__seal),
@@ -6702,7 +6708,7 @@
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual,
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual {
-      top: 50%;
+      top: calc(50% - 30px);
       transform: translate(-50%, -50%);
       width: min(76%, 240px);
       min-height: 0;
@@ -6832,7 +6838,7 @@
       border-color: transparent;
       box-shadow: none;
       backdrop-filter: none;
-      top: calc(47vh + 6px);
+      top: calc(42vh + 6px);
       bottom: auto;
     }
 
@@ -7310,6 +7316,38 @@
       justify-items: center;
       column-gap: 14px;
       row-gap: 10px;
+    }
+
+    .game[data-phase-key="second-star"] .game-controls-proxy:not(.is-hidden),
+    .game[data-phase-key="fourth-star"] .game-controls-proxy:not(.is-hidden) {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: none;
+      width: min(283px, calc(100vw - 34px));
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      align-items: center;
+      justify-items: center;
+      column-gap: 14px;
+      row-gap: 8px;
+      bottom: calc(9vh + 170px);
+      transform: translateX(-50%);
+    }
+
+    .game[data-phase-key="second-star"] .game-controls-proxy .game-touch,
+    .game[data-phase-key="fourth-star"] .game-controls-proxy .game-touch,
+    .game[data-phase-key="second-star"] .game-controls-proxy .game-language-btn,
+    .game[data-phase-key="fourth-star"] .game-controls-proxy .game-language-btn,
+    .game[data-phase-key="second-star"] .game-controls-proxy .game-advance-btn,
+    .game[data-phase-key="fourth-star"] .game-controls-proxy .game-advance-btn {
+      display: none !important;
+    }
+
+    .game[data-phase-key="second-star"] .game-controls-proxy .game-mic-side-metric,
+    .game[data-phase-key="fourth-star"] .game-controls-proxy .game-mic-side-metric,
+    .game[data-phase-key="second-star"] .game-controls-proxy .game-mic-next-seal-progress,
+    .game[data-phase-key="fourth-star"] .game-controls-proxy .game-mic-next-seal-progress {
+      display: inline-flex;
     }
 
     .game[data-phase-key="first-star"] .game-controls-proxy {
@@ -17933,8 +17971,12 @@
           || !els.gameMicNextSealProgressFill
         ) return;
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
-        const isSpeakingStarPhase = phaseKey === 'first-star' || phaseKey === 'third-star' || phaseKey === 'fifth-star';
-        if (!isSpeakingStarPhase) {
+        const isMissionMetricPhase = phaseKey === 'first-star'
+          || phaseKey === 'second-star'
+          || phaseKey === 'third-star'
+          || phaseKey === 'fourth-star'
+          || phaseKey === 'fifth-star';
+        if (!isMissionMetricPhase) {
           if (state.entry.gameMicProgressAnimationFrame) {
             window.cancelAnimationFrame(state.entry.gameMicProgressAnimationFrame);
             state.entry.gameMicProgressAnimationFrame = 0;
@@ -17954,16 +17996,6 @@
         const targetPlanScore = Number.isFinite(planScoreFromMission)
           ? Math.max(0, Math.min(200, planScoreFromMission))
           : Math.max(0, Math.min(200, Number.isFinite(planScoreFallback) ? planScoreFallback : 0));
-        const livePartialCardsFromTable = (() => {
-          const entries = Array.from(state.game.entries?.values?.() || []);
-          return entries.reduce((acc, entry) => {
-            const stars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(entry?.stars) || 0));
-            // 12 segundos por estrela ativa; 60s = 1 flashcard completo.
-            const secondsFromActiveStars = stars * 12;
-            return acc + (secondsFromActiveStars / 60);
-          }, 0);
-        })();
-        const optimisticCompletedCards = Math.max(0, Number(state.entry.dailyPlanOptimisticCompletedCards) || 0);
         const dynamicProgress = (() => {
           if (!missionView) {
             const fallbackScore = Math.max(0, Math.min(200, targetPlanScore));
@@ -17974,8 +18006,6 @@
           }
           const cardsToday = Math.max(0, Number(missionView.cardsToday) || 0);
           const cardsExpected = Math.max(0, Number(missionView.cardsExpected) || 0);
-          const cardsAtOrAboveTarget = cardsExpected > 0 && cardsToday >= cardsExpected;
-          const canApplyLivePartialCards = !cardsAtOrAboveTarget;
           const cardsDoneCapped = cardsExpected > 0 ? Math.min(cardsToday, cardsExpected) : cardsToday;
           const booksDoneRaw = Math.max(0, Number(missionView.booksToday) || 0);
           const booksExpected = Math.max(0, Number(missionView.booksExpected) || 0);
@@ -17986,16 +18016,7 @@
             0,
             Math.min(200, computeDailyPlanRawPercent(weightedDoneUnits, weightedExpectedUnits))
           );
-          const liveStarsProgressPercent = canApplyLivePartialCards && cardsExpected > 0
-            ? Math.max(0, (livePartialCardsFromTable / cardsExpected) * 100)
-            : 0;
-          const optimisticCardsProgressPercent = canApplyLivePartialCards && cardsExpected > 0
-            ? Math.max(0, (optimisticCompletedCards / cardsExpected) * 100)
-            : 0;
-          const missionTotalProgressPercent = Math.max(
-            0,
-            Math.min(200, missionBaseProgressPercent + liveStarsProgressPercent + optimisticCardsProgressPercent)
-          );
+          const missionTotalProgressPercent = missionBaseProgressPercent;
           if (isNoPlanMode) {
             return {
               dynamicPlanScore: Math.max(0, Math.min(200, targetPlanScore)),
