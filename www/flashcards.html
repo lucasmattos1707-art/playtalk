@@ -14971,11 +14971,13 @@
             : overallPercentRounded;
           els.dailyPlanGeneralPercent.textContent = `${percentToShow}%`;
         }
-        // Quando o backend traz planScore (inclui modo sem plano), ele vira a fonte oficial do selo.
+        // O selo acompanha o progresso total da missão (weightedPercent).
         const serverPlanScore = Number(mission?.seal?.planScore);
-        const totalSealProgress = Number.isFinite(serverPlanScore)
-          ? Math.max(0, Math.min(200, serverPlanScore))
-          : Math.max(0, Math.min(100, Number(missionView.balancedProgressPercent) || 0));
+        const totalSealProgress = isNoPlanMode
+          ? (Number.isFinite(serverPlanScore)
+            ? Math.max(0, Math.min(200, serverPlanScore))
+            : Math.max(0, Math.min(200, overallPercent)))
+          : Math.max(0, Math.min(200, overallPercent));
         const nextSealProgress = computeDailyPlanNextSealProgress(totalSealProgress);
         const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
         const nextSeal = resolveDailyPlanNextSealByScore(totalSealProgress);
@@ -17883,7 +17885,7 @@
           const weightedExpectedUnits = cardsExpected + (booksExpected * 2);
           const missionTotalProgressPercent = Math.max(
             0,
-            Math.min(100, computeDailyPlanRawPercent(weightedDoneUnits, weightedExpectedUnits))
+            Math.min(200, computeDailyPlanRawPercent(weightedDoneUnits, weightedExpectedUnits))
           );
           if (isNoPlanMode) {
             return {
@@ -17900,7 +17902,10 @@
             missionTotalProgressPercent
           };
         })();
-        const planScore = Math.max(0, Math.min(200, Number(dynamicProgress.dynamicPlanScore) || 0));
+        const planScore = Math.max(
+          0,
+          Math.min(200, Number(dynamicProgress.missionTotalProgressPercent) || Number(dynamicProgress.dynamicPlanScore) || 0)
+        );
         const currentSeal = resolveDailyPlanSealByScore(planScore);
         const nextSealProgress = Math.max(0, Math.min(100, computeDailyPlanNextSealProgress(Math.max(0, Math.min(100, planScore)))));
         const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/white.png';
