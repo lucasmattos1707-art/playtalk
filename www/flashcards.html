@@ -14955,19 +14955,68 @@
         return 'Aplicar as dicas do jogo na vida real';
       }
 
-      function buildDailyPlanRotatingMessages(mission) {
+      function fluencyVectorByTimeLocal(minutes) {
+        const normalizedMinutes = Math.max(15, Math.min(120, Number(minutes) || 0));
+        if (normalizedMinutes <= 45) {
+          return 10 + ((normalizedMinutes - 15) / (45 - 15)) * 40;
+        }
+        return 50 + ((normalizedMinutes - 45) / (120 - 45)) * 50;
+      }
+
+      function fluencyVectorByMonthsLocal(months) {
+        const normalizedMonths = Math.max(3, Math.min(24, Number(months) || 0));
+        if (normalizedMonths <= 6) {
+          return 25 + ((normalizedMonths - 3) / (6 - 3)) * 25;
+        }
+        return 50 + ((normalizedMonths - 6) / (24 - 6)) * 50;
+      }
+
+      function fluencySmartbooksCutLocal(percent) {
+        const normalizedPercent = Math.max(0, Math.min(100, Number(percent) || 0));
+        if (normalizedPercent >= 50) return 0;
+        if (normalizedPercent >= 45) return 5;
+        if (normalizedPercent >= 40) return 10;
+        if (normalizedPercent >= 35) return 15;
+        if (normalizedPercent >= 30) return 20;
+        if (normalizedPercent >= 25) return 25;
+        return 30;
+      }
+
+      function fluencyApplicationCutLocal(application) {
+        return Number(application) === 0 ? 30 : 0;
+      }
+
+      function computeExpectedFluencyPercent(mission) {
+        const minutes = Math.max(0, Number(mission?.minutes ?? state.user?.fluencyPlanMinutes) || 0);
+        const months = Math.max(0, Number(state.user?.fluencyPlanMonths) || 0);
+        const application = Number(state.user?.fluencyPlanApplication);
+        const flashPct = Math.max(0, Number(mission?.flashcardsPercentage ?? state.user?.fluencyPlanFlashcardsPercentage) || 0);
+        const booksPct = Math.max(0, Number(mission?.smartbooksPercentage ?? state.user?.fluencyPlanSmartbooksPercentage) || 0);
+        const scoreFromUser = Math.max(0, Math.min(200, Number(state.user?.fluencyPlanScore) || 0));
+        if (scoreFromUser > 0) return scoreFromUser;
+        if (!(minutes > 0 && months > 0 && (flashPct + booksPct) === 100)) return 0;
+        const base = fluencyVectorByTimeLocal(minutes) + fluencyVectorByMonthsLocal(months);
+        const cutSmartbooks = fluencySmartbooksCutLocal(booksPct);
+        const cutApplication = fluencyApplicationCutLocal(application);
+        return Math.max(0, Math.min(200, Math.round(base * (1 - ((cutSmartbooks + cutApplication) / 100)))));
+      }
+
+      function buildDailyPlanRotatingMessages(mission, missionView) {
         const minutes = Math.max(0, Number(mission?.minutes ?? state.user?.fluencyPlanMinutes) || 0);
         const months = Math.max(0, Number(state.user?.fluencyPlanMonths) || 0);
         const applicationText = fluencyPlanApplicationLabel(state.user?.fluencyPlanApplication);
         const flashPct = Math.max(0, Number(mission?.flashcardsPercentage ?? state.user?.fluencyPlanFlashcardsPercentage) || 0);
         const booksPct = Math.max(0, Number(mission?.smartbooksPercentage ?? state.user?.fluencyPlanSmartbooksPercentage) || 0);
-        const expectedFluency = Math.max(0, Math.min(200, Number(state.user?.fluencyPlanScore) || Number(mission?.seal?.planScore) || 0));
+        const expectedFluency = computeExpectedFluencyPercent(mission);
+        const producedProgress = Math.max(0, Math.min(100, Number(missionView?.balancedProgressPercent) || 0));
+        const producedFluency = Math.max(0, Math.min(expectedFluency, (expectedFluency * producedProgress) / 100));
         return [
           `Seu treino diário é ${Math.round(minutes)} minutos`,
           `Seu plano é de ${Math.round(months)} meses`,
           applicationText,
           `${Math.round(flashPct)}% FlashCards · ${Math.round(booksPct)}% SmartBooks`,
-          `Fluência esperada ${Math.round(expectedFluency)}%`
+          `Fluência esperada ${Math.round(expectedFluency)}%`,
+          `Fluência produzida ${Math.round(producedFluency)}%`
         ];
       }
 
@@ -15052,7 +15101,7 @@
           els.dailyPlanHeroSeal.style.display = isNoPlanMode ? 'none' : 'block';
         }
         if (els.dailyPlanSealProgressValue) {
-          const messages = buildDailyPlanRotatingMessages(mission);
+          const messages = buildDailyPlanRotatingMessages(mission, missionView);
           const safeIndex = Math.max(0, Math.min(messages.length - 1, Number(state.entry.dailyPlanSealSwapMode) || 0));
           els.dailyPlanSealProgressValue.textContent = messages[safeIndex] || messages[0] || '';
         }
@@ -15096,7 +15145,7 @@
         state.entry.dailyPlanTimeRemainingTimer = window.setInterval(syncDailyPlanTimeRemaining, 60000);
         clearDailyPlanSealSwapTimer();
         state.entry.dailyPlanSealSwapTimer = window.setInterval(() => {
-          state.entry.dailyPlanSealSwapMode = (Number(state.entry.dailyPlanSealSwapMode) + 1) % 5;
+          state.entry.dailyPlanSealSwapMode = (Number(state.entry.dailyPlanSealSwapMode) + 1) % 6;
           if (state.entry.dailyPlanOpen && state.entry.dailyPlanMissionSnapshot) {
             renderDailyPlanMission(state.entry.dailyPlanMissionSnapshot, { use120Preview: false });
           }
