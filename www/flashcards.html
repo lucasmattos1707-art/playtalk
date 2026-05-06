@@ -17873,19 +17873,23 @@
           const cardsExpected = Math.max(0, Number(missionView.cardsExpected) || 0);
           const cardsAtOrAboveTarget = cardsExpected > 0 && cardsToday >= cardsExpected;
           const canApplyLivePartialCards = !cardsAtOrAboveTarget;
-          const liveCardsBonus = canApplyLivePartialCards ? livePartialCardsFromTable : 0;
-          const optimisticCardsBonus = canApplyLivePartialCards ? optimisticCompletedCards : 0;
-          const cardsDoneDynamicRaw = cardsToday + liveCardsBonus + optimisticCardsBonus;
-          const cardsDoneDynamic = cardsExpected > 0
-            ? Math.min(cardsExpected, cardsDoneDynamicRaw)
-            : cardsDoneDynamicRaw;
           const booksDone = Math.max(0, Number(missionView.booksToday) || 0);
           const booksExpected = Math.max(0, Number(missionView.booksExpected) || 0);
-          const weightedDoneUnits = cardsDoneDynamic + (booksDone * 2);
+          const weightedDoneUnits = cardsToday + (booksDone * 2);
           const weightedExpectedUnits = cardsExpected + (booksExpected * 2);
-          const missionTotalProgressPercent = Math.max(
+          const missionBaseProgressPercent = Math.max(
             0,
             Math.min(200, computeDailyPlanRawPercent(weightedDoneUnits, weightedExpectedUnits))
+          );
+          const liveStarsProgressPercent = canApplyLivePartialCards && cardsExpected > 0
+            ? Math.max(0, (livePartialCardsFromTable / cardsExpected) * 100)
+            : 0;
+          const optimisticCardsProgressPercent = canApplyLivePartialCards && cardsExpected > 0
+            ? Math.max(0, (optimisticCompletedCards / cardsExpected) * 100)
+            : 0;
+          const missionTotalProgressPercent = Math.max(
+            0,
+            Math.min(200, missionBaseProgressPercent + liveStarsProgressPercent + optimisticCardsProgressPercent)
           );
           if (isNoPlanMode) {
             return {
