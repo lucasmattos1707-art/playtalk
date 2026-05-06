@@ -1100,6 +1100,20 @@ const decorateFlashcardStats = (value, flashcardsCount = 0) => {
 
 const normalizeFlashcardStats = (value, flashcardsCount = 0) => decorateFlashcardStats(value, flashcardsCount);
 
+const normalizeFlashcardOnTableRecord = (raw) => {
+  const cardId = typeof raw?.cardId === 'string' ? raw.cardId.trim() : '';
+  if (!cardId) return null;
+  const stars = Math.max(0, Math.min(5, Number.parseInt(raw?.stars, 10) || 0));
+  const stage = Math.max(1, Math.min(5, Number.parseInt(raw?.stage, 10) || 1));
+  const updatedAtMs = Math.max(0, Math.round(Number(raw?.updatedAt) || 0)) || Date.now();
+  return {
+    cardId,
+    stars,
+    stage,
+    updatedAt: updatedAtMs
+  };
+};
+
 const flashcardTimestampFromMillis = (value) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -1371,6 +1385,20 @@ const ensureFlashcardUserStateTables = async () => {
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_flashcard_hidden_user_idx
         ON public.user_flashcard_hidden (user_id, updated_at DESC)
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_on_table (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          card_id text NOT NULL,
+          stars integer NOT NULL DEFAULT 0,
+          stage integer NOT NULL DEFAULT 1,
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, card_id)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_on_table_user_idx
+        ON public.user_flashcard_on_table (user_id, updated_at DESC)
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_type_portuguese (
@@ -2129,7 +2157,7 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
 
   const targets = calculateDailyMissionTargetSnapshot(user);
   const progress = await readUserDailyMissionProgress(db, user.id);
-  const [flashcardsCountResult, smartbooksCountResult] = await Promise.all([
+  const [flashcardsCountResult, smartbooksCountResult, onTableResult] = await Promise.all([
     db.query(
       `SELECT COUNT(*)::int AS flashcards_count
        FROM public.user_flashcard_progress
@@ -2139,6 +2167,13 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
     db.query(
       `SELECT COALESCE(SUM(reads_completed), 0)::int AS smartbooks_count
        FROM public.user_books_library_stats
+       WHERE user_id = $1`,
+      [user.id]
+    ),
+    db.query(
+      `SELECT COALESCE(SUM(GREATEST(0, LEAST(5, stars))), 0)::int AS stars_sum,
+              COUNT(*)::int AS cards_count
+       FROM public.user_flashcard_on_table
        WHERE user_id = $1`,
       [user.id]
     )
@@ -2158,12 +2193,16 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
   const cardsExpected = Math.max(0, Number(targets.cardsExpected) || 0);
   const booksExpected = Math.max(0, Number(targets.booksExpected) || 0);
   const cardsToday = Math.max(0, Number(progress.cardsToday) || 0);
+  const onTableStarsSum = Math.max(0, Number(onTableResult.rows[0]?.stars_sum) || 0);
+  const onTableCardsCount = Math.max(0, Number(onTableResult.rows[0]?.cards_count) || 0);
+  const onTableCardsPartial = Math.max(0, onTableStarsSum / 5);
+  const cardsTodayWithOnTable = cardsToday + onTableCardsPartial;
   const booksToday = Math.max(0, Number(progress.booksToday) || 0);
 
-  let cardsPercent = computeDailyMissionOverflowPercent(cardsToday, cardsExpected);
+  let cardsPercent = computeDailyMissionOverflowPercent(cardsTodayWithOnTable, cardsExpected);
   let booksPercent = computeDailyMissionOverflowPercent(booksToday, booksExpected);
   let weightedExpectedUnits = computeDailyMissionWeightedUnits(cardsExpected, booksExpected);
-  let weightedDoneUnits = computeDailyMissionWeightedUnits(cardsToday, booksToday);
+  let weightedDoneUnits = computeDailyMissionWeightedUnits(cardsTodayWithOnTable, booksToday);
   let weightedPercent = computeDailyMissionOverflowPercent(weightedDoneUnits, weightedExpectedUnits);
 
   if (fluencyPlanStatus === FLUENCY_PLAN_NO_PLAN_STATUS) {
@@ -2189,7 +2228,10 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
     booksExpected,
     cardsTarget,
     booksTarget,
-    cardsToday,
+    cardsToday: cardsTodayWithOnTable,
+    cardsTodayBase: cardsToday,
+    onTableCardsPartial,
+    onTableCardsCount,
     booksToday,
     cardsRemaining: Math.max(0, cardsTarget - cardsToday),
     booksRemaining: Math.max(0, booksTarget - booksToday),
@@ -3941,7 +3983,7 @@ const readFlashcardStateForUser = async (userId) => {
     throw error;
   }
 
-  const [progressResult, statsResult, accurateResult, hiddenResult, userLevelResult, booksEnergyXpResult] = await Promise.all([
+  const [progressResult, statsResult, accurateResult, hiddenResult, onTableResult, userLevelResult, booksEnergyXpResult] = await Promise.all([
     pool.query(
       `SELECT
          card_id,
@@ -3985,6 +4027,13 @@ const readFlashcardStateForUser = async (userId) => {
       [normalizedUserId]
     ),
     pool.query(
+      `SELECT card_id, stars, stage, updated_at
+       FROM public.user_flashcard_on_table
+       WHERE user_id = $1
+       ORDER BY updated_at DESC, card_id ASC`,
+      [normalizedUserId]
+    ),
+    pool.query(
       `SELECT level, level_updated_at
        FROM public.users
        WHERE id = $1
@@ -4005,6 +4054,14 @@ const readFlashcardStateForUser = async (userId) => {
   const accurateAggregate = getFlashcardAccurateAggregateFromRow(accurateResult.rows[0]);
 
   const flashcardStatsRow = statsResult.rows[0] || {};
+  const onTableRecords = onTableResult.rows
+    .map((row) => normalizeFlashcardOnTableRecord({
+      cardId: row?.card_id,
+      stars: row?.stars,
+      stage: row?.stage,
+      updatedAt: flashcardMillisFromTimestamp(row?.updated_at)
+    }))
+    .filter(Boolean);
 
   return {
     progress: progressRecords,
@@ -4030,7 +4087,8 @@ const readFlashcardStateForUser = async (userId) => {
       hiddenCardIds: hiddenResult.rows
         .map((row) => typeof row?.card_id === 'string' ? row.card_id.trim() : '')
         .filter(Boolean)
-    }
+    },
+    onTable: onTableRecords
   };
 };
 
@@ -4069,6 +4127,13 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       .map((cardId) => typeof cardId === 'string' ? cardId.trim() : '')
       .filter(Boolean)))
     : [];
+  const rawOnTable = Array.isArray(payload?.onTable) ? payload.onTable : [];
+  const dedupedOnTable = new Map();
+  rawOnTable.forEach((item) => {
+    const normalized = normalizeFlashcardOnTableRecord(item);
+    if (normalized) dedupedOnTable.set(normalized.cardId, normalized);
+  });
+  const onTable = Array.from(dedupedOnTable.values());
   const requestedUserLevel = normalizeUserFlashcardLevel(payload?.userLevel ?? payload?.level);
   const requestedUserLevelSyncedAtMs = (() => {
     const rawValue = payload?.userLevelUpdatedAt ?? payload?.meta?.userLevelUpdatedAt;
@@ -4288,6 +4353,53 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       );
     }
 
+    if (onTable.length) {
+      const onTableCardIds = onTable.map((item) => item.cardId);
+      await client.query(
+        `DELETE FROM public.user_flashcard_on_table
+         WHERE user_id = $1
+           AND NOT (card_id = ANY($2::text[]))`,
+        [normalizedUserId, onTableCardIds]
+      );
+
+      const onTableValues = [];
+      const onTableParams = [];
+      onTable.forEach((item, index) => {
+        const offset = index * 5;
+        onTableValues.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`);
+        onTableParams.push(
+          normalizedUserId,
+          item.cardId,
+          item.stars,
+          item.stage,
+          flashcardTimestampFromMillis(item.updatedAt) || new Date()
+        );
+      });
+
+      await client.query(
+        `INSERT INTO public.user_flashcard_on_table (
+           user_id,
+           card_id,
+           stars,
+           stage,
+           updated_at
+         )
+         VALUES ${onTableValues.join(', ')}
+         ON CONFLICT (user_id, card_id)
+         DO UPDATE SET
+           stars = EXCLUDED.stars,
+           stage = EXCLUDED.stage,
+           updated_at = EXCLUDED.updated_at`,
+        onTableParams
+      );
+    } else {
+      await client.query(
+        `DELETE FROM public.user_flashcard_on_table
+         WHERE user_id = $1`,
+        [normalizedUserId]
+      );
+    }
+
     if (cardsTodayDelta > 0) {
       await incrementUserDailyMissionProgress(client, normalizedUserId, {
         cardsDelta: cardsTodayDelta
@@ -4430,6 +4542,8 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
   );
   return {
     progressCount: progress.length,
+    onTableCount: onTable.length,
+    onTable,
     stats: {
       ...stats,
       booksEnergyXpTotal,
@@ -12174,6 +12288,7 @@ app.get('/api/flashcards/state', async (req, res) => {
     res.json({
       success: true,
       progress: state.progress,
+      onTable: state.onTable || [],
       stats: state.stats,
       meta: state.meta,
       userLevel: state.meta.userLevel,
@@ -12210,6 +12325,8 @@ app.put('/api/flashcards/state', async (req, res) => {
     res.json({
       success: true,
       progressCount: savedState.progressCount,
+      onTableCount: savedState.onTableCount || 0,
+      onTable: savedState.onTable || [],
       stats: savedState.stats,
       userLevel: savedState.userLevel,
       userLevelUpdatedAt: savedState.userLevelUpdatedAt,

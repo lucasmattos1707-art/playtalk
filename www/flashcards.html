@@ -11659,6 +11659,12 @@
       }
 
       function buildFlashcardCloudPayload() {
+        const onTable = Array.from(state.game.entries.values()).map((entry) => ({
+          cardId: safeText(entry?.id),
+          stars: Math.max(0, Math.min(5, Number.parseInt(entry?.stars, 10) || 0)),
+          stage: Math.max(1, Math.min(5, Number.parseInt(entry?.stage, 10) || 1)),
+          updatedAt: Date.now()
+        })).filter((item) => item.cardId && item.stars >= 0 && item.stars < GAME_STAR_TARGET);
         return {
           progress: Array.from(state.userCards.values()).map(record => ({
             cardId: safeText(record?.cardId),
@@ -11677,7 +11683,8 @@
           stats: normalizeStatsSnapshot(state.stats),
           userLevel: normalizeUserLevel(state.userLevel),
           userLevelUpdatedAt: safeText(state.userLevelUpdatedAt),
-          hiddenCardIds: Array.from(state.hiddenCardIds.values())
+          hiddenCardIds: Array.from(state.hiddenCardIds.values()),
+          onTable
         };
       }
 
@@ -14998,10 +15005,22 @@
         return Math.max(0, Math.min(100, (Number(value) || 0) / 2));
       }
 
+      function computeOnTableCardsPartialFromEntries() {
+        const entries = Array.from(state.game?.entries?.values?.() || []);
+        const starSum = entries.reduce((total, entry) => {
+          return total + Math.max(0, Math.min(5, Number.parseInt(entry?.stars, 10) || 0));
+        }, 0);
+        return Math.max(0, starSum / 5);
+      }
+
       function buildDailyPlanMissionView(mission, use120Preview = false) {
         const source = mission || {};
         const minutes = Math.max(0, Number(source?.minutes) || 0);
-        const cardsToday = Math.max(0, Number(source?.cardsToday) || 0);
+        const cardsTodayBase = Math.max(0, Number(source?.cardsTodayBase) || Number(source?.cardsToday) || 0);
+        const onTableCardsPartial = state.game?.active
+          ? computeOnTableCardsPartialFromEntries()
+          : Math.max(0, Number(source?.onTableCardsPartial) || 0);
+        const cardsToday = cardsTodayBase + onTableCardsPartial;
         const booksToday = Math.max(0, Number(source?.booksToday) || 0);
         const scale = use120Preview && minutes > 0 ? (120 / minutes) : 1;
         const cardsExpected = Math.max(0, Number(source?.cardsExpected) || 0) * scale;
@@ -15019,6 +15038,8 @@
         ));
         return {
           cardsToday,
+          cardsTodayBase,
+          onTableCardsPartial,
           booksToday,
           cappedCardsToday,
           cappedBooksToday,
@@ -22305,11 +22326,11 @@
             showRewardGameStatus();
             triggerLibrarySummaryRankSwap();
             entry._removeAfterReward = true;
-            entry._grantMissionCardCredit = true;
           } else {
             setGameStatus('', 'hit');
             state.game.queue.push(entry.id);
           }
+          scheduleFlashcardCloudSync(250);
         } else {
           if (entry.stars > 0) {
             const starsBeforeMiss = entry.stars;
@@ -22321,18 +22342,21 @@
             setGameStatus('', 'miss');
             state.game.queue.push(entry.id);
             await animateStarLossSequence(starsBeforeMiss, card);
+            scheduleFlashcardCloudSync(250);
           } else {
             entry.missesWithoutStars += 1;
-            const missLimit = evaluatedStage === 1 ? 2 : 3;
+            const missLimit = evaluatedStage === 1 ? 1 : 3;
             if (entry.missesWithoutStars >= missLimit) {
               setGameStatus('', 'miss');
               if (evaluatedStage === 1) {
                 entry.missesWithoutStars = 0;
-                state.game.queue.push(entry.id);
+                removeGameEntry(entry.id);
+                refillGameEntry(entry.pool);
               } else {
                 removeGameEntry(entry.id);
                 refillGameEntry(entry.pool);
               }
+              scheduleFlashcardCloudSync(250);
             } else {
               setGameStatus('', 'miss');
               state.game.queue.push(entry.id);
@@ -22370,13 +22394,6 @@
           }
           if (entry._removeAfterReward) {
             entry._removeAfterReward = false;
-            if (entry._grantMissionCardCredit) {
-              entry._grantMissionCardCredit = false;
-              state.entry.dailyPlanOptimisticCompletedCards = Math.max(
-                0,
-                Number(state.entry.dailyPlanOptimisticCompletedCards) || 0
-              ) + 1;
-            }
             removeGameEntry(entry.id);
             updateSpeakingStarMicSealProgress();
             if (shouldGatePremiumAccess()) {
