@@ -17853,7 +17853,9 @@
           const entries = Array.from(state.game.entries?.values?.() || []);
           return entries.reduce((acc, entry) => {
             const stars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(entry?.stars) || 0));
-            return acc + (stars / GAME_STAR_TARGET);
+            // 12 segundos por estrela ativa; 60s = 1 flashcard completo.
+            const secondsFromActiveStars = stars * 12;
+            return acc + (secondsFromActiveStars / 60);
           }, 0);
         })();
         const optimisticCompletedCards = Math.max(0, Number(state.entry.dailyPlanOptimisticCompletedCards) || 0);
@@ -17864,9 +17866,14 @@
           }
           const cardsToday = Math.max(0, Number(missionView.cardsToday) || 0);
           const cardsExpected = Math.max(0, Number(missionView.cardsExpected) || 0);
-          const canApplyLivePartialCards = cardsExpected <= 0 || cardsToday < cardsExpected;
+          const cardsAtOrAboveTarget = cardsExpected > 0 && cardsToday >= cardsExpected;
+          const canApplyLivePartialCards = !cardsAtOrAboveTarget;
           const liveCardsBonus = canApplyLivePartialCards ? livePartialCardsFromTable : 0;
-          const cardsDoneDynamic = cardsToday + liveCardsBonus + optimisticCompletedCards;
+          const optimisticCardsBonus = canApplyLivePartialCards ? optimisticCompletedCards : 0;
+          const cardsDoneDynamicRaw = cardsToday + liveCardsBonus + optimisticCardsBonus;
+          const cardsDoneDynamic = cardsExpected > 0
+            ? Math.min(cardsExpected, cardsDoneDynamicRaw)
+            : cardsDoneDynamicRaw;
           const booksDone = Math.max(0, Number(missionView.booksToday) || 0);
           const booksExpected = Math.max(0, Number(missionView.booksExpected) || 0);
           const weightedDoneUnits = cardsDoneDynamic + (booksDone * 2);
