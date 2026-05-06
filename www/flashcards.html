@@ -17862,7 +17862,10 @@
         const dynamicProgress = (() => {
           if (!missionView) {
             const fallbackScore = Math.max(0, Math.min(200, targetPlanScore));
-            return { dynamicPlanScore: fallbackScore };
+            return {
+              dynamicPlanScore: fallbackScore,
+              missionTotalProgressPercent: 0
+            };
           }
           const cardsToday = Math.max(0, Number(missionView.cardsToday) || 0);
           const cardsExpected = Math.max(0, Number(missionView.cardsExpected) || 0);
@@ -17878,16 +17881,24 @@
           const booksExpected = Math.max(0, Number(missionView.booksExpected) || 0);
           const weightedDoneUnits = cardsDoneDynamic + (booksDone * 2);
           const weightedExpectedUnits = cardsExpected + (booksExpected * 2);
+          const missionTotalProgressPercent = Math.max(
+            0,
+            Math.min(100, computeDailyPlanRawPercent(weightedDoneUnits, weightedExpectedUnits))
+          );
           if (isNoPlanMode) {
             return {
-              dynamicPlanScore: Math.max(0, Math.min(200, targetPlanScore))
+              dynamicPlanScore: Math.max(0, Math.min(200, targetPlanScore)),
+              missionTotalProgressPercent
             };
           }
           const progressRatio = weightedExpectedUnits > 0
             ? Math.max(0, Math.min(1, weightedDoneUnits / weightedExpectedUnits))
             : 0;
           const dynamicPlanScore = Math.max(0, Math.min(targetPlanScore, targetPlanScore * progressRatio));
-          return { dynamicPlanScore };
+          return {
+            dynamicPlanScore,
+            missionTotalProgressPercent
+          };
         })();
         const planScore = Math.max(0, Math.min(200, Number(dynamicProgress.dynamicPlanScore) || 0));
         const currentSeal = resolveDailyPlanSealByScore(planScore);
@@ -17922,7 +17933,11 @@
           }
         };
         state.entry.gameMicProgressAnimationFrame = window.requestAnimationFrame(stepAnimatedProgress);
-        els.gameMicNextSealProgressFill.style.width = `${Math.max(0, Math.min(100, Number(nextSealProgress) || 0)).toFixed(2)}%`;
+        const missionBarProgress = Math.max(
+          0,
+          Math.min(100, Number(dynamicProgress.missionTotalProgressPercent) || 0)
+        );
+        els.gameMicNextSealProgressFill.style.width = `${missionBarProgress.toFixed(2)}%`;
         els.gameMicCurrentSealMetric.hidden = false;
         els.gameMicNextSealMetric.hidden = false;
         void refreshDailyPlanMissionSnapshot({ maxAgeMs: 60000 });
