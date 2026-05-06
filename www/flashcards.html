@@ -17828,9 +17828,12 @@
         const optimisticCompletedCards = Math.max(0, Number(state.entry.dailyPlanOptimisticCompletedCards) || 0);
         const missionProgressPercent = (() => {
           if (!missionView) return Math.max(0, Math.min(100, computeDailyPlanNextSealProgress(Math.max(0, Math.min(100, planScore)))));
-          const cardsDoneDynamic = Math.max(0, Number(missionView.cardsToday) || 0) + livePartialCardsFromTable + optimisticCompletedCards;
-          const booksDone = Math.max(0, Number(missionView.booksToday) || 0);
+          const cardsToday = Math.max(0, Number(missionView.cardsToday) || 0);
           const cardsExpected = Math.max(0, Number(missionView.cardsExpected) || 0);
+          const canApplyLivePartialCards = cardsExpected <= 0 || cardsToday < cardsExpected;
+          const liveCardsBonus = canApplyLivePartialCards ? livePartialCardsFromTable : 0;
+          const cardsDoneDynamic = cardsToday + liveCardsBonus + optimisticCompletedCards;
+          const booksDone = Math.max(0, Number(missionView.booksToday) || 0);
           const booksExpected = Math.max(0, Number(missionView.booksExpected) || 0);
           const weightedDoneUnits = cardsDoneDynamic + (booksDone * 2);
           const weightedExpectedUnits = cardsExpected + (booksExpected * 2);
