@@ -1450,19 +1450,16 @@
       width: min(430px, 100%);
       max-width: calc(100vw - 42px);
       margin-top: -5%;
-      background: linear-gradient(180deg, rgba(10, 24, 56, 0.86), rgba(3, 9, 24, 0.88));
-      border: 1px solid rgba(105, 190, 255, 0.32);
-      border-radius: 34px;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
       padding: 26px 22px;
-      box-shadow:
-        inset 0 0 0 1px rgba(70, 170, 255, 0.08),
-        0 0 42px rgba(0, 163, 255, 0.18),
-        0 24px 80px rgba(0, 0, 0, 0.45);
-      overflow: hidden;
+      box-shadow: none;
+      overflow: visible;
       display: grid;
       grid-template-columns: 1fr;
       gap: 0;
-      min-height: 550px;
+      min-height: 468px;
     }
 
     .daily-plan-modal__general-progress {
@@ -1470,7 +1467,7 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding-bottom: 18px;
+      padding-bottom: 10px;
       margin-bottom: 0;
       position: relative;
       z-index: 1;
@@ -1509,25 +1506,8 @@
       display: none;
     }
 
-    .daily-plan-modal__card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      border: 2px solid rgba(24, 200, 255, 0.28);
-      pointer-events: none;
-      filter: drop-shadow(0 0 14px rgba(24, 200, 255, 0.85));
-    }
-
-    .daily-plan-modal__card::after {
-      content: "";
-      position: absolute;
-      inset: -2px;
-      background: linear-gradient(110deg, transparent 0 40%, rgba(255, 255, 255, 0.12) 48%, transparent 56%);
-      transform: translateX(-80%);
-      animation: dailyPlanModalShine 5s infinite;
-      pointer-events: none;
-    }
+    .daily-plan-modal__card::before { display: none; }
+    .daily-plan-modal__card::after { display: none; }
 
     @keyframes dailyPlanModalShine {
       0%, 55% { transform: translateX(-90%); }
@@ -1537,9 +1517,9 @@
     .daily-plan-modal__mission {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 8px;
+      gap: 2px;
       align-items: center;
-      padding: 6px 0 14px;
+      padding: 2px 0 6px;
       position: relative;
       z-index: 1;
       min-height: 0;
@@ -1547,7 +1527,7 @@
 
     .daily-plan-modal__mission + .daily-plan-modal__mission {
       border-top: 0;
-      padding-top: 12px;
+      padding-top: 4px;
     }
 
     .daily-plan-modal__icon-ring {
@@ -1611,7 +1591,7 @@
     }
 
     .daily-plan-modal__counter {
-      font-size: 29px;
+      font-size: 46px;
       font-weight: 700;
       letter-spacing: 0;
       line-height: 1;
@@ -1622,8 +1602,8 @@
       display: flex;
       align-items: baseline;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 8px;
+      gap: 8px;
+      margin-bottom: 4px;
     }
 
     .daily-plan-modal__counter-done {
