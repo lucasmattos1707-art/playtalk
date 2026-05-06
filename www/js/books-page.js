@@ -4984,10 +4984,11 @@
       const barPercent = showingDailyMission
         ? missionSummary.missionProgressPercent
         : missionSummary.smartBooksProgressPercent;
+      const visualBarPercent = barPercent > 0 ? Math.max(2, barPercent) : 0;
       const missionFill = document.createElement('span');
       missionFill.className = 'books-card__mission-fill';
-      missionFill.style.setProperty('--books-mission-progress', `${barPercent.toFixed(2)}%`);
-      missionFill.style.width = `${barPercent.toFixed(2)}%`;
+      missionFill.style.setProperty('--books-mission-progress', `${visualBarPercent.toFixed(2)}%`);
+      missionFill.style.width = `${visualBarPercent.toFixed(2)}%`;
       const missionBar = document.createElement('div');
       missionBar.className = 'books-card__mission-bar';
       missionBar.appendChild(missionFill);

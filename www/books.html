@@ -2738,13 +2738,21 @@
     }
 
     .books-card__mission-bar {
-      height: 10px;
+      height: 12px;
       width: 100%;
       border-radius: 999px;
-      border: 1px solid rgba(167, 255, 199, 0.72);
-      background: rgba(3, 20, 10, 0.92);
+      border: 1px solid rgba(134, 255, 181, 0.92);
+      background:
+        linear-gradient(180deg, rgba(3, 17, 8, 0.98), rgba(2, 10, 5, 0.98)),
+        repeating-linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.08) 0 2px,
+          rgba(255, 255, 255, 0) 2px 8px
+        );
       overflow: hidden;
-      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+      box-shadow:
+        inset 0 0 0 1px rgba(0, 0, 0, 0.32),
+        0 0 12px rgba(45, 255, 126, 0.24);
     }
 
     .books-card__mission-fill {
@@ -2752,18 +2760,31 @@
       height: 100%;
       border-radius: inherit;
       background: linear-gradient(90deg, #42ff84 0%, #00d952 100%);
-      box-shadow: 0 0 14px rgba(35, 255, 117, 0.5);
+      box-shadow:
+        0 0 10px rgba(35, 255, 117, 0.72),
+        0 0 22px rgba(35, 255, 117, 0.44);
       transition: width 240ms ease;
     }
 
     .books-card__mission-summary.is-smartbooks .books-card__mission-bar {
-      border-color: rgba(132, 214, 255, 0.78);
-      background: rgba(5, 15, 35, 0.92);
+      border-color: rgba(130, 210, 255, 0.96);
+      background:
+        linear-gradient(180deg, rgba(4, 12, 31, 0.98), rgba(2, 8, 25, 0.98)),
+        repeating-linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.08) 0 2px,
+          rgba(255, 255, 255, 0) 2px 8px
+        );
+      box-shadow:
+        inset 0 0 0 1px rgba(0, 0, 0, 0.34),
+        0 0 12px rgba(56, 152, 255, 0.24);
     }
 
     .books-card__mission-summary.is-smartbooks .books-card__mission-fill {
       background: linear-gradient(90deg, #3dbdff 0%, #1f6cff 100%);
-      box-shadow: 0 0 14px rgba(61, 157, 255, 0.55);
+      box-shadow:
+        0 0 10px rgba(61, 157, 255, 0.78),
+        0 0 22px rgba(61, 157, 255, 0.46);
     }
 
     .books-top-home-btn {
