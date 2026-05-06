@@ -4992,6 +4992,7 @@
       missionBar.appendChild(missionFill);
       const missionSummaryEl = document.createElement('div');
       missionSummaryEl.className = 'books-card__mission-summary';
+      missionSummaryEl.classList.toggle('is-smartbooks', !showingDailyMission);
       missionSummaryEl.append(missionLabel, missionBar);
 
       card.append(background, overlay, badgeEl, approvedBadge, missionSummaryEl);
