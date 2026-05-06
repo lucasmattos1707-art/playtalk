@@ -1385,10 +1385,10 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
+      gap: 0;
       width: min(430px, 100%);
       max-width: calc(100vw - 42px);
-      transform: translateY(20px);
+      transform: translateY(40px);
     }
 
     .daily-plan-modal__hero-title {
@@ -1419,11 +1419,13 @@
     }
 
     .daily-plan-modal__hero-seal {
-      width: 83px;
-      height: 83px;
+      width: 91px;
+      height: 91px;
       object-fit: contain;
       filter: drop-shadow(0 0 10px rgba(24, 200, 255, 0.5));
       display: none;
+      margin-right: -18px;
+      z-index: 2;
     }
 
     .daily-plan-modal__close {
@@ -1482,6 +1484,7 @@
       align-items: center;
       padding-bottom: 10px;
       margin-bottom: 0;
+      margin-top: 20px;
       position: relative;
       z-index: 1;
     }
@@ -1536,7 +1539,7 @@
       grid-template-columns: 1fr;
       gap: 0;
       align-items: center;
-      padding: 0 0 2px;
+      padding: 0;
       position: relative;
       z-index: 1;
       min-height: 0;
@@ -1544,7 +1547,8 @@
 
     .daily-plan-modal__mission + .daily-plan-modal__mission {
       border-top: 0;
-      padding-top: 1px;
+      padding-top: 0;
+      margin-top: -6px;
     }
 
     .daily-plan-modal__icon-ring {
@@ -1621,8 +1625,8 @@
       display: flex;
       align-items: baseline;
       justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 2px;
+      gap: 3px;
+      margin-bottom: 0;
     }
 
     .daily-plan-modal__counter-done {
@@ -1709,7 +1713,10 @@
       color: #9ed8ff;
     }
 
-    .daily-plan-modal__hero,
+    .daily-plan-modal__hero {
+      transform: translateY(40px);
+    }
+
     .daily-plan-modal__card {
       transform: translateY(0);
     }
@@ -15139,6 +15146,9 @@
         const use120Preview = Boolean(options.use120Preview);
         const isNoPlanMode = safeText(mission?.seal?.mode).toLowerCase() === 'sem_plano';
         const missionView = buildDailyPlanMissionView(mission, use120Preview);
+        const expectedFluency = computeExpectedFluencyPercent(mission);
+        const producedProgress = Math.max(0, Math.min(100, Number(missionView?.balancedProgressPercent) || 0));
+        const producedFluency = Math.max(0, Math.min(expectedFluency, (expectedFluency * producedProgress) / 100));
         const overallPercent = clampPercent(missionView.balancedProgressPercent);
         const overallPercentRounded = Math.round(overallPercent);
         const overallPercentForVisual = isNoPlanMode
@@ -15184,13 +15194,8 @@
         if (els.dailyPlanGeneralPercent) {
           els.dailyPlanGeneralPercent.innerHTML = `${percentToShow}<span class="daily-plan-modal__general-percent-sign">%</span>`;
         }
-        // O selo acompanha o progresso total da missão (weightedPercent).
-        const serverPlanScore = Number(mission?.seal?.planScore);
-        const totalSealProgress = isNoPlanMode
-          ? (Number.isFinite(serverPlanScore)
-            ? Math.max(0, Math.min(200, serverPlanScore))
-            : Math.max(0, Math.min(200, overallPercent)))
-          : Math.max(0, Math.min(100, overallPercent));
+        // O selo atual acompanha a fluencia produzida.
+        const totalSealProgress = Math.max(0, Math.min(100, producedFluency));
         const nextSealProgress = computeDailyPlanNextSealProgress(totalSealProgress);
         const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
         if (els.dailyPlanCurrentSealImage) {
