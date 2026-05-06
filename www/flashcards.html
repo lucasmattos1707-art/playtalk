@@ -3029,6 +3029,7 @@
 
     .game-mic-side-metric {
       display: none;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       min-width: 0;
@@ -3038,8 +3039,8 @@
     }
 
     .game-mic-side-metric__seal {
-      width: 44px;
-      height: 44px;
+      width: 49px;
+      height: 49px;
       object-fit: contain;
       filter: drop-shadow(0 0 10px rgba(132, 181, 255, 0.56));
       flex: 0 0 auto;
@@ -3054,6 +3055,27 @@
       line-height: 1;
       white-space: nowrap;
       color: #a8b0bd;
+    }
+
+    .game-mic-side-metric__progress {
+      margin-top: 8px;
+      width: min(120px, 24vw);
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(126, 255, 167, 0.88);
+      background: rgba(5, 24, 11, 0.92);
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.28);
+    }
+
+    .game-mic-side-metric__progress-fill {
+      display: block;
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #44ff8e 0%, #0eda66 100%);
+      box-shadow: 0 0 12px rgba(52, 255, 132, 0.58);
+      transition: width 200ms ease;
     }
 
     .actions { justify-content: flex-end; }
@@ -9397,6 +9419,9 @@
           <button class="game-touch" id="gameTouchBtn" type="button">Fale ingles</button>
           <div class="game-mic-side-metric game-mic-side-metric--right" id="gameMicNextSealMetric" aria-hidden="true">
             <p class="game-mic-side-metric__value" id="gameMicNextSealProgress">0%</p>
+            <div class="game-mic-side-metric__progress" aria-hidden="true">
+              <span class="game-mic-side-metric__progress-fill" id="gameMicNextSealProgressFill"></span>
+            </div>
           </div>
           <button class="game-advance-btn" id="gameAdvanceBtn" type="button" aria-label="Avancar digitacao automatica" hidden>
             <img src="/SVG/codex-icons/%C3%ADcones%20modo%203/portugues.svg" alt="Portugues">
@@ -10355,6 +10380,7 @@
         gameMicCurrentSealImage: document.getElementById('gameMicCurrentSealImage'),
         gameMicNextSealMetric: document.getElementById('gameMicNextSealMetric'),
         gameMicNextSealProgress: document.getElementById('gameMicNextSealProgress'),
+        gameMicNextSealProgressFill: document.getElementById('gameMicNextSealProgressFill'),
         gameAdvanceBtn: document.getElementById('gameAdvanceBtn'),
         gameTextModeHits: document.getElementById('gameTextModeHits'),
         gameTypingKeyboard: document.getElementById('gameTypingKeyboard'),
@@ -17800,7 +17826,13 @@
       }
 
       function updateSpeakingStarMicSealProgress() {
-        if (!els.gameMicCurrentSealMetric || !els.gameMicCurrentSealImage || !els.gameMicNextSealMetric || !els.gameMicNextSealProgress) return;
+        if (
+          !els.gameMicCurrentSealMetric
+          || !els.gameMicCurrentSealImage
+          || !els.gameMicNextSealMetric
+          || !els.gameMicNextSealProgress
+          || !els.gameMicNextSealProgressFill
+        ) return;
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
         const isSpeakingStarPhase = phaseKey === 'first-star' || phaseKey === 'third-star' || phaseKey === 'fifth-star';
         if (!isSpeakingStarPhase) {
@@ -17844,6 +17876,7 @@
         els.gameMicCurrentSealImage.src = sealSrc.startsWith('/') ? sealSrc : `/${sealSrc}`;
         els.gameMicCurrentSealImage.alt = safeText(currentSeal?.label) ? `Selo atual: ${currentSeal.label}` : 'Selo atual';
         els.gameMicNextSealProgress.textContent = `${Math.round(nextSealProgress)}%`;
+        els.gameMicNextSealProgressFill.style.width = `${Math.max(0, Math.min(100, Number(nextSealProgress) || 0)).toFixed(2)}%`;
         els.gameMicCurrentSealMetric.hidden = false;
         els.gameMicNextSealMetric.hidden = false;
         void refreshDailyPlanMissionSnapshot({ maxAgeMs: 60000 });
@@ -20242,6 +20275,8 @@
         const useSmartKeyboard = phaseKey === 'fourth-star';
         const typingPalette = shuffleList(TYPING_KEY_BLUES);
         const keyNodes = [];
+        let fourthStarResolved = false;
+        let fourthStarResolutionSent = false;
         const smartKeyboardSpec = useSmartKeyboard ? buildSmartTypingKeyboardSpec(target, 9) : null;
         const smartKeyboardQueue = smartKeyboardSpec ? smartKeyboardSpec.queue : null;
         const keyboardLetters = useSmartKeyboard
@@ -20261,6 +20296,12 @@
             const keyLetter = safeText(key.dataset.letter || key.textContent).toUpperCase();
             if (!keyLetter) return;
             playTypingKeyAudio();
+            if (useSmartKeyboard && fourthStarResolved) {
+              if (!key.disabled) {
+                scheduleSmartKeyReplacement(key, grid, target, target.length, keyLetter, []);
+              }
+              return;
+            }
             const expectedLetter = target[typed.length];
             if (keyLetter !== expectedLetter) {
               const typedLengthBeforeReset = typed.length;
@@ -20276,12 +20317,23 @@
             triggerTypingKeyFlash(key);
             typed += keyLetter;
             renderTyped();
-            if (useSmartKeyboard && typed.length < target.length) {
-              scheduleSmartKeyReplacement(key, grid, target, typed.length, keyLetter, smartKeyboardQueue);
+            if (useSmartKeyboard) {
+              // In fourth-star, every correct key can dissolve, including the final one.
+              scheduleSmartKeyReplacement(
+                key,
+                grid,
+                target,
+                typed.length,
+                keyLetter,
+                typed.length < target.length ? smartKeyboardQueue : []
+              );
             }
             if (typed.length === target.length) {
-              setTypingKeysDisabled(grid, true);
-              await handleRecognitionResult(typingState.acceptedAnswer || typingState.sourceText || '', 'typing');
+              fourthStarResolved = true;
+              if (!fourthStarResolutionSent) {
+                fourthStarResolutionSent = true;
+                void handleRecognitionResult(typingState.acceptedAnswer || typingState.sourceText || '', 'typing');
+              }
               return;
             }
           });
