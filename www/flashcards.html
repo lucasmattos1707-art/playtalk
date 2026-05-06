@@ -10002,7 +10002,7 @@
           dailyPlanPreviewTimer: 0,
           dailyPlanTimeRemainingTimer: 0,
           dailyPlanSealSwapTimer: 0,
-          dailyPlanSealSwapMode: 'next',
+          dailyPlanSealSwapMode: 0,
           welcomeTimer: 0,
           welcomeModesResolved: false,
           welcomeModesUsersEnabled: false,
@@ -11349,7 +11349,13 @@
           premiumUntil: user.premium_until || user.premiumUntil || null,
           noEnergy: Boolean(user.no_energy || user.noEnergy),
           level: normalizeUserLevel(user.level ?? user.userLevel),
-          fluencyPlanScore: Math.max(0, Math.min(200, Number(user.fluency_plan_score ?? user.fluencyPlanScore) || 0))
+          fluencyPlanScore: Math.max(0, Math.min(200, Number(user.fluency_plan_score ?? user.fluencyPlanScore) || 0)),
+          fluencyPlanStatus: safeText(user['fluency-plan'] ?? user.fluency_plan_status ?? user.fluencyPlanStatus).toLowerCase(),
+          fluencyPlanMinutes: Math.max(0, Number(user.fluency_plan_minutes ?? user.fluencyPlanMinutes) || 0),
+          fluencyPlanMonths: Math.max(0, Number(user.fluency_plan_months ?? user.fluencyPlanMonths) || 0),
+          fluencyPlanApplication: Number(user.fluency_plan_application ?? user.fluencyPlanApplication),
+          fluencyPlanFlashcardsPercentage: Math.max(0, Number(user.fluency_plan_flashcards_percentage ?? user.fluencyPlanFlashcardsPercentage) || 0),
+          fluencyPlanSmartbooksPercentage: Math.max(0, Number(user.fluency_plan_smartbooks_percentage ?? user.fluencyPlanSmartbooksPercentage) || 0)
         };
       }
 
@@ -14885,16 +14891,20 @@
         const booksExpected = Math.max(0, Number(source?.booksExpected) || 0) * scale;
         const cardsTarget = cardsExpected > 0 ? Math.max(1, Math.ceil(cardsExpected)) : 0;
         const booksTarget = booksExpected > 0 ? Math.max(1, Math.ceil(booksExpected)) : 0;
-        const cardsPercent = computeDailyPlanRawPercent(cardsToday, cardsExpected);
-        const booksPercent = computeDailyPlanRawPercent(booksToday, booksExpected);
+        const cappedCardsToday = cardsExpected > 0 ? Math.min(cardsToday, cardsExpected) : cardsToday;
+        const cappedBooksToday = booksExpected > 0 ? Math.min(booksToday, booksExpected) : booksToday;
+        const cardsPercent = computeDailyPlanRawPercent(cappedCardsToday, cardsExpected);
+        const booksPercent = computeDailyPlanRawPercent(cappedBooksToday, booksExpected);
         const weightedExpectedUnits = Math.max(0, cardsExpected) + (Math.max(0, booksExpected) * 2);
-        const weightedDoneUnits = Math.max(0, cardsToday) + (Math.max(0, booksToday) * 2);
-        const balancedProgressPercent = clampPercent(
+        const weightedDoneUnits = Math.max(0, cappedCardsToday) + (Math.max(0, cappedBooksToday) * 2);
+        const balancedProgressPercent = Math.max(0, Math.min(100,
           computeDailyPlanRawPercent(weightedDoneUnits, weightedExpectedUnits)
-        );
+        ));
         return {
           cardsToday,
           booksToday,
+          cappedCardsToday,
+          cappedBooksToday,
           cardsExpected,
           booksExpected,
           cardsTarget,
@@ -14935,6 +14945,30 @@
           window.clearInterval(state.entry.dailyPlanSealSwapTimer);
           state.entry.dailyPlanSealSwapTimer = 0;
         }
+      }
+
+      function fluencyPlanApplicationLabel(value) {
+        const numeric = Number(value);
+        if (numeric === 0) return 'Somente jogar sem prática real';
+        if (numeric === 1) return 'Aplicar as dicas do jogo na vida real';
+        if (numeric === 2) return 'Seguir o plano de fluência completo';
+        return 'Aplicar as dicas do jogo na vida real';
+      }
+
+      function buildDailyPlanRotatingMessages(mission) {
+        const minutes = Math.max(0, Number(mission?.minutes ?? state.user?.fluencyPlanMinutes) || 0);
+        const months = Math.max(0, Number(state.user?.fluencyPlanMonths) || 0);
+        const applicationText = fluencyPlanApplicationLabel(state.user?.fluencyPlanApplication);
+        const flashPct = Math.max(0, Number(mission?.flashcardsPercentage ?? state.user?.fluencyPlanFlashcardsPercentage) || 0);
+        const booksPct = Math.max(0, Number(mission?.smartbooksPercentage ?? state.user?.fluencyPlanSmartbooksPercentage) || 0);
+        const expectedFluency = Math.max(0, Math.min(200, Number(state.user?.fluencyPlanScore) || Number(mission?.seal?.planScore) || 0));
+        return [
+          `Seu treino diário é ${Math.round(minutes)} minutos`,
+          `Seu plano é de ${Math.round(months)} meses`,
+          applicationText,
+          `${Math.round(flashPct)}% FlashCards · ${Math.round(booksPct)}% SmartBooks`,
+          `Fluência esperada ${Math.round(expectedFluency)}%`
+        ];
       }
 
       function syncDailyPlanTimeRemaining() {
@@ -14997,10 +15031,9 @@
           ? (Number.isFinite(serverPlanScore)
             ? Math.max(0, Math.min(200, serverPlanScore))
             : Math.max(0, Math.min(200, overallPercent)))
-          : Math.max(0, Math.min(200, overallPercent));
+          : Math.max(0, Math.min(100, overallPercent));
         const nextSealProgress = computeDailyPlanNextSealProgress(totalSealProgress);
         const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
-        const nextSeal = resolveDailyPlanNextSealByScore(totalSealProgress);
         if (els.dailyPlanCurrentSealImage) {
           const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/white.png';
           els.dailyPlanCurrentSealImage.src = sealSrc;
@@ -15019,15 +15052,9 @@
           els.dailyPlanHeroSeal.style.display = isNoPlanMode ? 'none' : 'block';
         }
         if (els.dailyPlanSealProgressValue) {
-          if (!nextSeal) {
-            els.dailyPlanSealProgressValue.textContent = state.entry.dailyPlanSealSwapMode === 'current'
-              ? `Seu selo atual é: ${safeText(currentSeal?.label) || 'Diamante'}`
-              : 'Próximo selo: máximo (100%)';
-          } else if (state.entry.dailyPlanSealSwapMode === 'current') {
-            els.dailyPlanSealProgressValue.textContent = `Seu selo atual é: ${safeText(currentSeal?.label) || 'White'}`;
-          } else {
-            els.dailyPlanSealProgressValue.textContent = `Próximo selo: ${safeText(nextSeal?.label) || 'Prata'} (${Math.round(nextSealProgress)}%)`;
-          }
+          const messages = buildDailyPlanRotatingMessages(mission);
+          const safeIndex = Math.max(0, Math.min(messages.length - 1, Number(state.entry.dailyPlanSealSwapMode) || 0));
+          els.dailyPlanSealProgressValue.textContent = messages[safeIndex] || messages[0] || '';
         }
         if (els.dailyPlanOverallBar) {
           els.dailyPlanOverallBar.style.setProperty('--progress', `${nextSealProgress.toFixed(2)}%`);
@@ -15062,18 +15089,18 @@
         clearDailyPlanPreviewTimer();
         clearDailyPlanTimeRemainingTimer();
         state.entry.dailyPlanPreview120 = false;
-        state.entry.dailyPlanSealSwapMode = 'next';
+        state.entry.dailyPlanSealSwapMode = 0;
         renderDailyPlanMission(state.entry.dailyPlanMissionSnapshot, { use120Preview: false });
         updateSpeakingStarMicSealProgress();
         syncDailyPlanTimeRemaining();
         state.entry.dailyPlanTimeRemainingTimer = window.setInterval(syncDailyPlanTimeRemaining, 60000);
         clearDailyPlanSealSwapTimer();
         state.entry.dailyPlanSealSwapTimer = window.setInterval(() => {
-          state.entry.dailyPlanSealSwapMode = state.entry.dailyPlanSealSwapMode === 'next' ? 'current' : 'next';
+          state.entry.dailyPlanSealSwapMode = (Number(state.entry.dailyPlanSealSwapMode) + 1) % 5;
           if (state.entry.dailyPlanOpen && state.entry.dailyPlanMissionSnapshot) {
             renderDailyPlanMission(state.entry.dailyPlanMissionSnapshot, { use120Preview: false });
           }
-        }, 2500);
+        }, 2000);
       }
 
       function pauseFlashcardsGameForDailyPlan() {
@@ -17893,9 +17920,11 @@
           const cardsExpected = Math.max(0, Number(missionView.cardsExpected) || 0);
           const cardsAtOrAboveTarget = cardsExpected > 0 && cardsToday >= cardsExpected;
           const canApplyLivePartialCards = !cardsAtOrAboveTarget;
-          const booksDone = Math.max(0, Number(missionView.booksToday) || 0);
+          const cardsDoneCapped = cardsExpected > 0 ? Math.min(cardsToday, cardsExpected) : cardsToday;
+          const booksDoneRaw = Math.max(0, Number(missionView.booksToday) || 0);
           const booksExpected = Math.max(0, Number(missionView.booksExpected) || 0);
-          const weightedDoneUnits = cardsToday + (booksDone * 2);
+          const booksDone = booksExpected > 0 ? Math.min(booksDoneRaw, booksExpected) : booksDoneRaw;
+          const weightedDoneUnits = cardsDoneCapped + (booksDone * 2);
           const weightedExpectedUnits = cardsExpected + (booksExpected * 2);
           const missionBaseProgressPercent = Math.max(
             0,
@@ -22544,6 +22573,10 @@
           openDailyPlanModal();
         });
         els.dailyPlanCloseBtn?.addEventListener('click', closeDailyPlanModal);
+        els.dailyPlanSealProgressValue?.addEventListener('click', () => {
+          closeDailyPlanModal();
+          window.location.href = '/fluency-plan?returnTo=/play';
+        });
         els.welcomeBooksBtn?.addEventListener('click', () => {
           window.location.href = resolveNativeRenderPageHref('books');
         });
