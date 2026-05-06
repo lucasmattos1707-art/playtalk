@@ -3057,9 +3057,12 @@
       color: #a8b0bd;
     }
 
-    .game-mic-side-metric__progress {
-      margin-top: 8px;
-      width: min(120px, 24vw);
+    .game-mic-next-seal-progress {
+      display: none;
+      grid-column: 1 / -1;
+      grid-row: 2;
+      justify-self: center;
+      width: min(80vh, calc(100vw - 24px));
       height: 10px;
       border-radius: 999px;
       border: 1px solid rgba(126, 255, 167, 0.88);
@@ -7290,9 +7293,11 @@
       pointer-events: auto;
       width: min(540px, calc(100vw - 18px));
       grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      grid-template-rows: auto auto;
       align-items: center;
       justify-items: center;
       column-gap: 14px;
+      row-gap: 10px;
     }
 
     .game[data-phase-key="first-star"] .game-controls-proxy {
@@ -7309,6 +7314,12 @@
       display: inline-flex;
     }
 
+    .game[data-phase-key="first-star"] .game-controls-proxy .game-mic-next-seal-progress,
+    .game[data-phase-key="third-star"] .game-controls-proxy .game-mic-next-seal-progress,
+    .game[data-phase-key="fifth-star"] .game-controls-proxy .game-mic-next-seal-progress {
+      display: block;
+    }
+
     .game[data-phase-key="first-star"] .game-controls-proxy .game-language-btn,
     .game[data-phase-key="third-star"] .game-controls-proxy .game-language-btn,
     .game[data-phase-key="fifth-star"] .game-controls-proxy .game-language-btn {
@@ -7322,10 +7333,10 @@
     }
 
     .game-touch.game-touch--books-mic {
-      width: clamp(112px, 24vw, 128px);
-      height: clamp(112px, 24vw, 128px);
-      min-width: clamp(112px, 24vw, 128px);
-      min-height: clamp(112px, 24vw, 128px);
+      width: clamp(67px, 14.4vw, 77px);
+      height: clamp(67px, 14.4vw, 77px);
+      min-width: clamp(67px, 14.4vw, 77px);
+      min-height: clamp(67px, 14.4vw, 77px);
       padding: 0;
       flex: 0 0 auto;
       border-radius: 999px;
@@ -9419,9 +9430,9 @@
           <button class="game-touch" id="gameTouchBtn" type="button">Fale ingles</button>
           <div class="game-mic-side-metric game-mic-side-metric--right" id="gameMicNextSealMetric" aria-hidden="true">
             <p class="game-mic-side-metric__value" id="gameMicNextSealProgress">0%</p>
-            <div class="game-mic-side-metric__progress" aria-hidden="true">
-              <span class="game-mic-side-metric__progress-fill" id="gameMicNextSealProgressFill"></span>
-            </div>
+          </div>
+          <div class="game-mic-next-seal-progress" aria-hidden="true">
+            <span class="game-mic-side-metric__progress-fill" id="gameMicNextSealProgressFill"></span>
           </div>
           <button class="game-advance-btn" id="gameAdvanceBtn" type="button" aria-label="Avancar digitacao automatica" hidden>
             <img src="/SVG/codex-icons/%C3%ADcones%20modo%203/portugues.svg" alt="Portugues">
@@ -17836,6 +17847,10 @@
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
         const isSpeakingStarPhase = phaseKey === 'first-star' || phaseKey === 'third-star' || phaseKey === 'fifth-star';
         if (!isSpeakingStarPhase) {
+          if (state.entry.gameMicProgressAnimationFrame) {
+            window.cancelAnimationFrame(state.entry.gameMicProgressAnimationFrame);
+            state.entry.gameMicProgressAnimationFrame = 0;
+          }
           els.gameMicCurrentSealMetric.hidden = true;
           els.gameMicNextSealMetric.hidden = true;
           return;
@@ -17890,7 +17905,33 @@
         const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/white.png';
         els.gameMicCurrentSealImage.src = sealSrc.startsWith('/') ? sealSrc : `/${sealSrc}`;
         els.gameMicCurrentSealImage.alt = safeText(currentSeal?.label) ? `Selo atual: ${currentSeal.label}` : 'Selo atual';
-        els.gameMicNextSealProgress.textContent = `${Math.round(nextSealProgress)}%`;
+        const previousAnimatedProgress = Number(state.entry.gameMicAnimatedProgress);
+        const startProgress = Number.isFinite(previousAnimatedProgress)
+          ? Math.max(0, Math.min(100, previousAnimatedProgress))
+          : Math.max(0, Math.min(100, Number(nextSealProgress) || 0));
+        const targetProgress = Math.max(0, Math.min(100, Number(nextSealProgress) || 0));
+        if (state.entry.gameMicProgressAnimationFrame) {
+          window.cancelAnimationFrame(state.entry.gameMicProgressAnimationFrame);
+          state.entry.gameMicProgressAnimationFrame = 0;
+        }
+        const animationStart = performance.now();
+        const animationDurationMs = 1000;
+        const stepAnimatedProgress = (nowTs) => {
+          const elapsed = Math.max(0, nowTs - animationStart);
+          const progress = Math.max(0, Math.min(1, elapsed / animationDurationMs));
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const value = startProgress + ((targetProgress - startProgress) * eased);
+          state.entry.gameMicAnimatedProgress = value;
+          els.gameMicNextSealProgress.textContent = `${value.toFixed(1)}%`;
+          if (progress < 1) {
+            state.entry.gameMicProgressAnimationFrame = window.requestAnimationFrame(stepAnimatedProgress);
+          } else {
+            state.entry.gameMicProgressAnimationFrame = 0;
+            state.entry.gameMicAnimatedProgress = targetProgress;
+            els.gameMicNextSealProgress.textContent = `${targetProgress.toFixed(1)}%`;
+          }
+        };
+        state.entry.gameMicProgressAnimationFrame = window.requestAnimationFrame(stepAnimatedProgress);
         els.gameMicNextSealProgressFill.style.width = `${Math.max(0, Math.min(100, Number(nextSealProgress) || 0)).toFixed(2)}%`;
         els.gameMicCurrentSealMetric.hidden = false;
         els.gameMicNextSealMetric.hidden = false;
