@@ -17944,7 +17944,8 @@
       function renderGameTouchButton(stageConfig, entry) {
         const stageNumber = resolveEntryStageNumber(entry);
         const useBooksMic = (!isLevelAudioModeActive() || isLevelTextModeActive()) && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5);
-        els.gameTouchBtn.parentElement.hidden = !useBooksMic;
+        const showMissionHud = stageNumber >= 1 && stageNumber <= 5;
+        els.gameTouchBtn.parentElement.hidden = !showMissionHud;
         els.gameTouchBtn.className = 'game-touch';
         els.gameTouchBtn.textContent = '';
         els.gameTouchBtn.innerHTML = '';
@@ -17955,7 +17956,7 @@
         } catch (_error) {
           // ignore
         }
-        if (!useBooksMic) {
+        if (!showMissionHud) {
           els.gameTouchBtn.classList.add('is-hidden');
           if (els.gameMicCurrentSealMetric) els.gameMicCurrentSealMetric.hidden = true;
           if (els.gameMicNextSealMetric) els.gameMicNextSealMetric.hidden = true;
@@ -17963,6 +17964,12 @@
           return;
         }
         els.gameTouchBtn.parentElement.hidden = false;
+        if (!useBooksMic) {
+          els.gameTouchBtn.classList.add('is-hidden');
+          updateSpeakingStarMicSealProgress();
+          syncLevelTextModeControls();
+          return;
+        }
         els.gameTouchBtn.classList.add('game-touch--books-mic');
         els.gameTouchBtn.innerHTML = GAME_TOUCH_ICON_MARKUP;
         updateSpeakingStarMicSealProgress();
