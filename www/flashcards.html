@@ -6771,6 +6771,12 @@
         0 0 24px rgba(6, 54, 141, 0.74);
     }
 
+    .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual.is-fourth-star-correction {
+      font-size: clamp(56px, 15.5vw, 88px);
+      line-height: 0.9;
+      letter-spacing: 0;
+    }
+
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual,
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key {
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
@@ -19766,7 +19772,10 @@
 
       function renderFourthStarCorrectionSnippet(display, target, typedLength) {
         if (!display) return;
-        const letters = normalizeSmartTypingLetters(target);
+        const letters = safeText(target)
+          .toUpperCase()
+          .replace(/[^A-Z\s]/g, '')
+          .split('');
         const index = Math.max(0, Math.min(letters.length - 1, Number(typedLength) || 0));
         const buildLetter = (char, extraClass) => (
           `<span class="flashcards-typing__display-letter${extraClass ? ` ${extraClass}` : ''}" data-char="${escapeHtml(char || ' ')}">${escapeHtml(char || ' ')}</span>`
@@ -19787,7 +19796,7 @@
           return buildLetter(char, isHighlight ? 'is-hint' : '');
         }).join('');
 
-        display.classList.add('flashcards-typing__display--size-xl');
+        display.classList.add('flashcards-typing__display--size-xl', 'is-fourth-star-correction');
         display.classList.remove('flashcards-typing__display--two-lines', 'flashcards-typing__display--three-lines');
         display.innerHTML = `<span class="flashcards-typing__display-line">${markup}</span>`;
       }
@@ -20453,10 +20462,21 @@
 
         clearTypingSkipAutomation();
         let typed = '';
+        const useSmartKeyboard = phaseKey === 'fourth-star';
         const display = document.createElement('div');
         display.className = 'flashcards-typing__display flashcards-typing__display--visual';
         display.classList.toggle('is-star-phase-copy', isPlaytalkStarTypingStage(entry));
+        let fourthStarTypingStarted = false;
         const renderTyped = () => {
+          if (useSmartKeyboard && !fourthStarTypingStarted) {
+            display.classList.add('is-second-star-translation');
+            renderSecondStageTranslationDisplay(
+              display,
+              capitalizeWords(card?.portuguese || card?.english || card?.deckTitle || '')
+            );
+            return;
+          }
+          display.classList.remove('is-second-star-translation', 'is-fourth-star-correction');
           updateStageTwoOverlayProgress(entry, typingState, typed);
           renderTypingDisplay(display, typingState, typed, {});
         };
@@ -20481,7 +20501,6 @@
 
         const grid = document.createElement('div');
         grid.className = 'flashcards-typing__grid';
-        const useSmartKeyboard = phaseKey === 'fourth-star';
         const typingPalette = shuffleList(TYPING_KEY_BLUES);
         const keyNodes = [];
         let fourthStarResolved = false;
@@ -20504,6 +20523,10 @@
             if (!state.game.active || state.game.paused || state.game.listening || state.game.typingSkipActive || state.game.currentId !== entry.id) return;
             const keyLetter = safeText(key.dataset.letter || key.textContent).toUpperCase();
             if (!keyLetter) return;
+            if (useSmartKeyboard && !fourthStarTypingStarted) {
+              fourthStarTypingStarted = true;
+              renderTyped();
+            }
             playTypingKeyAudio();
             if (useSmartKeyboard && fourthStarResolved) {
               if (!key.disabled) {
@@ -20854,11 +20877,13 @@
         }
 
         if (typingStage) {
-          window.setTimeout(() => {
-            if (state.game.currentId === entry.id && !state.game.listening && !state.game.paused) {
-              playPromptAudio(card, { rate: 0.8, enableMicDuringPlayback: false });
-            }
-          }, 220);
+          if (stageConfig.key !== 'fourth-star') {
+            window.setTimeout(() => {
+              if (state.game.currentId === entry.id && !state.game.listening && !state.game.paused) {
+                playPromptAudio(card, { rate: 0.8, enableMicDuringPlayback: false });
+              }
+            }, 220);
+          }
           return;
         }
 
