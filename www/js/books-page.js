@@ -2010,7 +2010,7 @@
     const safeTarget = Math.max(1, booksTarget);
     const smartBooksProgressPercent = Math.max(0, Math.min(100, (booksToday / safeTarget) * 100));
     const missionPercent = Math.max(0, Math.min(200, Number(mission?.weightedPercent) || 0));
-    const missionProgressPercent = Math.max(0, Math.min(100, missionPercent / 2));
+    const missionProgressPercent = Math.max(0, Math.min(100, missionPercent));
     return {
       booksToday,
       booksTarget: safeTarget,
@@ -4987,6 +4987,7 @@
       const missionFill = document.createElement('span');
       missionFill.className = 'books-card__mission-fill';
       missionFill.style.setProperty('--books-mission-progress', `${barPercent.toFixed(2)}%`);
+      missionFill.style.width = `${barPercent.toFixed(2)}%`;
       const missionBar = document.createElement('div');
       missionBar.className = 'books-card__mission-bar';
       missionBar.appendChild(missionFill);
