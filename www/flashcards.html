@@ -20785,7 +20785,11 @@
         }
         state.game.canListen = !typingStage && (!stageConfig.autoAudio || entry.stage === 1);
         renderGameTouchButton(stageConfig, entry);
-        els.gameTouchBtn.parentElement.classList.toggle('is-hidden', typingStage || els.gameTouchBtn.classList.contains('is-hidden'));
+        const keepMissionHudInTyping = typingStage && (stageConfig.key === 'second-star' || stageConfig.key === 'fourth-star');
+        els.gameTouchBtn.parentElement.classList.toggle(
+          'is-hidden',
+          !keepMissionHudInTyping && (typingStage || els.gameTouchBtn.classList.contains('is-hidden'))
+        );
         els.gameTouchBtn.classList.toggle('is-busy', state.game.listening);
         renderTypingKeyboard(entry, card);
         renderFifthStarPortugueseDisplay(card, stageConfig.key);
