@@ -125,6 +125,8 @@
     prevLevelBtn: document.getElementById('booksLevelPrevBtn'),
     nextLevelBtn: document.getElementById('booksLevelNextBtn'),
     levelTitle: document.getElementById('booksLevelTitle'),
+    levelSubtitle: document.getElementById('booksLevelSubtitle'),
+    topHomeBtn: document.getElementById('booksTopHomeBtn'),
     status: document.getElementById('booksStatus'),
     shelfViewport: document.getElementById('booksShelfViewport'),
     shelfLoading: document.getElementById('booksShelfLoading'),
@@ -265,6 +267,10 @@
     statsRotationIndex: 0,
     statsLastRenderedLine: '',
     statsFetchInFlight: false,
+    dailyMissionFetchInFlight: false,
+    dailyMission: null,
+    missionCardToggleTimer: 0,
+    missionCardShowDaily: false,
     adminBooksSummary: null,
     books: [],
     isAdmin: false,
@@ -1976,14 +1982,8 @@
   }
 
   function getOwnedSmartBookIdsSet() {
-    const fromLibraryStats = state.stats?.bookBestPercentById && typeof state.stats.bookBestPercentById === 'object'
-      ? Object.keys(state.stats.bookBestPercentById)
-      : [];
-    if (fromLibraryStats.length) {
-      return new Set(fromLibraryStats.map((bookId) => safeText(bookId).toLowerCase()).filter(Boolean));
-    }
-    const fallbackQualified = Array.isArray(state.stats?.qualifiedBookIds) ? state.stats.qualifiedBookIds : [];
-    return new Set(fallbackQualified.map((bookId) => safeText(bookId).toLowerCase()).filter(Boolean));
+    const qualified = Array.isArray(state.stats?.qualifiedBookIds) ? state.stats.qualifiedBookIds : [];
+    return new Set(qualified.map((bookId) => safeText(bookId).toLowerCase()).filter(Boolean));
   }
 
   function getCollectedSmartBooksCount() {
@@ -1998,6 +1998,59 @@
       MAX_BOOK_LEVEL,
       Math.floor(collectedCount / SMARTBOOKS_PER_UNLOCK_LEVEL) + 1
     ));
+  }
+
+  function getSmartBooksMissionSummary() {
+    const mission = state.dailyMission && typeof state.dailyMission === 'object'
+      ? state.dailyMission
+      : {};
+    const booksToday = Math.max(0, Number(mission?.booksToday) || 0);
+    const booksExpected = Math.max(0, Number(mission?.booksExpected) || 0);
+    const booksTarget = booksExpected > 0 ? Math.max(1, Math.ceil(booksExpected)) : SMARTBOOKS_PER_UNLOCK_LEVEL;
+    const safeTarget = Math.max(1, booksTarget);
+    const progressPercent = Math.max(0, Math.min(100, (booksToday / safeTarget) * 100));
+    const missionPercent = Math.max(0, Math.min(200, Number(mission?.weightedPercent) || 0));
+    return {
+      booksToday,
+      booksTarget: safeTarget,
+      missionPercent,
+      progressPercent
+    };
+  }
+
+  async function refreshDailyMissionFromServer() {
+    if (!state.user?.id || state.dailyMissionFetchInFlight) return state.dailyMission;
+    state.dailyMissionFetchInFlight = true;
+    try {
+      const response = await fetch(buildApiUrl('/api/daily-plan'), {
+        credentials: 'include',
+        headers: buildAuthHeaders(),
+        cache: 'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.mission || typeof payload.mission !== 'object') {
+        return state.dailyMission;
+      }
+      state.dailyMission = payload.mission;
+      if (!state.initialLoading) {
+        renderCards();
+      }
+      return state.dailyMission;
+    } catch (_error) {
+      return state.dailyMission;
+    } finally {
+      state.dailyMissionFetchInFlight = false;
+    }
+  }
+
+  function ensureMissionCardToggleLoop() {
+    if (state.missionCardToggleTimer) return;
+    state.missionCardToggleTimer = window.setInterval(() => {
+      state.missionCardShowDaily = !state.missionCardShowDaily;
+      if (!state.initialLoading) {
+        renderCards();
+      }
+    }, 2000);
   }
 
   function getQualifiedBookIdsSet() {
@@ -2754,6 +2807,7 @@
       }
       setStatsState(payload.stats || null);
       syncEnergyRedirectFromStats(payload.stats);
+      void refreshDailyMissionFromServer();
       if (!state.initialLoading) {
         syncSelectedLevelWithUnlocked({ preferUnlocked: !state.userSelectedBookLevel });
         renderLevelMenu();
@@ -4914,7 +4968,23 @@
       approvedBadge.hidden = !isBookQualified(book?.bookId);
       approvedBadge.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.55 18.2 3.9 12.55l1.42-1.42 4.23 4.23 9.13-9.13 1.42 1.42z"/></svg>';
 
-      card.append(background, overlay, badgeEl, approvedBadge);
+      const missionSummary = getSmartBooksMissionSummary();
+      const missionLabel = document.createElement('p');
+      missionLabel.className = 'books-card__mission-label';
+      missionLabel.textContent = state.missionCardShowDaily
+        ? `Missão Diária ${Math.round(missionSummary.missionPercent)}%`
+        : `SmartBooks ${Math.round(missionSummary.booksToday)}/${Math.round(missionSummary.booksTarget)}`;
+      const missionFill = document.createElement('span');
+      missionFill.className = 'books-card__mission-fill';
+      missionFill.style.setProperty('--books-mission-progress', `${missionSummary.progressPercent.toFixed(2)}%`);
+      const missionBar = document.createElement('div');
+      missionBar.className = 'books-card__mission-bar';
+      missionBar.appendChild(missionFill);
+      const missionSummaryEl = document.createElement('div');
+      missionSummaryEl.className = 'books-card__mission-summary';
+      missionSummaryEl.append(missionLabel, missionBar);
+
+      card.append(background, overlay, badgeEl, approvedBadge, missionSummaryEl);
 
       if (!IS_MYBOOKS_GRID_EMBED) {
         const adminChip = document.createElement('span');
@@ -5059,6 +5129,10 @@
     if (els.levelTitle) {
       els.levelTitle.textContent = `${getUiLevelDisplayName(state.selectedLevel)}`;
       els.levelTitle.hidden = false;
+    }
+    if (els.levelSubtitle) {
+      els.levelSubtitle.textContent = 'Leia 5 MiniBooks para avançar';
+      els.levelSubtitle.hidden = false;
     }
     if (els.prevLevelBtn) {
       els.prevLevelBtn.hidden = accessibleLevels.length <= 1;
@@ -7020,6 +7094,10 @@
       void startDirectRankedListeningBook(current);
     });
 
+    els.topHomeBtn?.addEventListener('click', () => {
+      window.location.href = '/play';
+    });
+
     els.homeSpeedBtn?.addEventListener('click', () => {
       cycleHomeSpeed();
     });
@@ -7408,6 +7486,8 @@
     state.user = sessionUser;
     ensureEnergyDepletionWatch();
     startBooksSyncTimer();
+    ensureMissionCardToggleLoop();
+    void refreshDailyMissionFromServer();
     void refreshStatsFromServer().then(() => renderStatsPanel());
     state.isAdmin = Boolean(sessionUser?.isAdmin)
       || isAdminAlias(sessionUser?.username)

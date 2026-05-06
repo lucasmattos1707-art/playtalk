@@ -183,7 +183,7 @@
       grid-column: 1 / -1;
       justify-self: center;
       font-family: "Exo 2", "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
-      font-size: clamp(25px, 6.25vw, 37.5px);
+      font-size: clamp(31px, 7.8vw, 47px);
       font-weight: 700;
       letter-spacing: 0.015em;
       transition: opacity 260ms ease, transform 380ms ease, filter 380ms ease;
@@ -571,6 +571,20 @@
 
     .books-home.is-player-books .books-home-screen--current {
       transform: translateY(6vh);
+    }
+
+    .books-level-subtitle {
+      margin: 2px 0 0;
+      grid-column: 1 / -1;
+      justify-self: center;
+      text-align: center;
+      font-family: "Exo 2", "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
+      font-size: clamp(10px, 2.4vw, 13px);
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: rgba(218, 238, 255, 0.86);
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.32);
+      pointer-events: none;
     }
 
     .books-home.is-player-books .books-home-screen--next {
@@ -1562,14 +1576,7 @@
     }
 
     .flashcards-footer-nav[data-shell-page="books"] {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      width: 100%;
-      z-index: 220;
-      background: linear-gradient(90deg, rgba(1, 9, 28, 0.98) 0%, rgba(4, 29, 72, 0.98) 50%, rgba(7, 48, 105, 0.98) 100%);
-      box-shadow: 0 -14px 32px rgba(0, 0, 0, 0.28), 0 -1px 0 rgba(109, 214, 255, 0.16) inset;
+      display: none !important;
     }
 
     .flashcards-footer-nav[data-shell-page="books"] .flashcards-footer-nav__item img {
@@ -2677,10 +2684,10 @@
 
     .books-card__approved-badge {
       position: absolute;
-      right: calc(50% - (var(--books-card-book-width) / 2) + 10px);
-      bottom: calc(50% - (var(--books-card-book-height) / 2) + 10px - var(--books-card-vertical-offset));
-      width: 53px;
-      height: 53px;
+      right: calc(50% - (var(--books-card-book-width) / 2) - 6px);
+      bottom: calc(50% - (var(--books-card-book-height) / 2) - 6px - var(--books-card-vertical-offset));
+      width: 66px;
+      height: 66px;
       display: grid;
       place-items: center;
       z-index: 5;
@@ -2696,11 +2703,76 @@
     }
 
     .books-card__approved-badge svg {
-      width: 30px;
-      height: 30px;
+      width: 37px;
+      height: 37px;
       display: block;
       color: #ffffff;
       filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.62));
+    }
+
+    .books-card__mission-summary {
+      position: absolute;
+      left: 50%;
+      top: calc(50% + (var(--books-card-book-height) / 2) - var(--books-card-vertical-offset) + 14px);
+      transform: translateX(-50%);
+      width: min(var(--books-card-book-width), calc(100% - 24px));
+      display: grid;
+      gap: 7px;
+      z-index: 4;
+      pointer-events: none;
+    }
+
+    .books-card__mission-label {
+      margin: 0;
+      text-align: center;
+      font-family: "Exo 2", "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
+      font-size: clamp(15px, 3.7vw, 20px);
+      font-weight: 700;
+      color: rgba(235, 247, 255, 0.98);
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.44);
+      letter-spacing: 0.01em;
+    }
+
+    .books-card__mission-bar {
+      height: 10px;
+      width: 100%;
+      border-radius: 999px;
+      border: 1px solid rgba(167, 255, 199, 0.72);
+      background: rgba(3, 20, 10, 0.92);
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+    }
+
+    .books-card__mission-fill {
+      width: var(--books-mission-progress, 0%);
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #42ff84 0%, #00d952 100%);
+      box-shadow: 0 0 14px rgba(35, 255, 117, 0.5);
+      transition: width 240ms ease;
+    }
+
+    .books-top-home-btn {
+      position: fixed;
+      top: max(16px, env(safe-area-inset-top));
+      left: max(16px, env(safe-area-inset-left));
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      border: 1px solid rgba(170, 226, 255, 0.72);
+      background: rgba(3, 21, 45, 0.85);
+      color: #e5f6ff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      z-index: 240;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.36);
+    }
+
+    .books-top-home-btn svg {
+      width: 24px;
+      height: 24px;
+      display: block;
     }
 
     .books-card__title {
@@ -4741,6 +4813,9 @@
     <div class="books-home-book-bg books-home-book-bg--secondary" id="booksHomeBookBackgroundSecondary" aria-hidden="true"></div>
     
   <main class="books-page">
+    <button class="books-top-home-btn" id="booksTopHomeBtn" type="button" aria-label="Ir para o play">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3 2.5 10.8l1.3 1.6L5 11.4V21h5v-5.5h4V21h5v-9.6l1.2 1 1.3-1.6z"/></svg>
+    </button>
     <button class="books-home-corner-btn books-home-corner-btn--right books-home-sleep-fab" id="booksHomeSleepFab" type="button" aria-label="Missao">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a1 1 0 0 1 1 1v1.08a8 8 0 1 1-6.92 6.92H5a1 1 0 1 1 0-2h3a1 1 0 0 1 1 1v3a1 1 0 1 1-2 0v-1.1a6 6 0 1 0 5.9-5.9H12a1 1 0 0 1 0-2h5a1 1 0 1 1 0 2h-2.59l2.3 2.3a1 1 0 0 1-1.42 1.4L13 7.42V3a1 1 0 0 1 1-1z"/></svg>
     </button>
@@ -4753,6 +4828,7 @@
       <button class="books-arrow-btn" id="booksLevelNextBtn" type="button" aria-label="Proximo nivel">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m8.59 16.59 1.41 1.42L16.83 12 10 5.17 8.59 6.59 14 12z"/></svg>
       </button>
+      <p class="books-level-subtitle" id="booksLevelSubtitle">Leia 5 MiniBooks para avançar</p>
       <button class="books-toggle-btn books-create-btn" id="booksCreateBookBtn" type="button" aria-label="Criar livro (admin)" hidden>Criar livro</button>
       <button class="books-toggle-btn" id="booksAdminUiToggleBtn" type="button" aria-label="Ativar ferramentas admin">Admin UI Off</button>
     </section>
