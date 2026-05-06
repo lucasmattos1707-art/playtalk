@@ -6631,9 +6631,9 @@
     .game[data-phase-key="second-star"] #gameVisual,
     .game[data-phase-key="fourth-star"] #gameVisual {
       width: auto;
-      height: 95%;
-      max-width: 95%;
-      max-height: 95%;
+      height: 76%;
+      max-width: 76%;
+      max-height: 76%;
       min-width: 0;
       min-height: 0;
       aspect-ratio: 1 / 1;
@@ -6716,7 +6716,7 @@
       width: min(92%, 290px);
       min-height: 0;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(37px, 10.2vw, 58px);
+      font-size: clamp(33px, 9.2vw, 52px);
       font-weight: 800;
       line-height: 0.88;
       letter-spacing: 0;
@@ -6740,7 +6740,7 @@
       width: min(92%, 290px);
       min-height: 0;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(37px, 10.2vw, 58px);
+      font-size: clamp(33px, 9.2vw, 52px);
       font-weight: 800;
       line-height: 0.88;
       letter-spacing: 0;
@@ -6832,23 +6832,30 @@
       border-color: transparent;
       box-shadow: none;
       backdrop-filter: none;
-      top: calc(52vh + 6px);
+      top: calc(47vh + 6px);
       bottom: auto;
     }
 
     .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
-      bottom: 9vh;
+      bottom: calc(9vh + 30px);
       width: min(283px, calc(100vw - 34px));
-      padding: 0;
-      background: transparent;
-      border-color: transparent;
-      box-shadow: none;
-      backdrop-filter: none;
+      padding: 2px;
+      background: rgba(6, 17, 44, 0.52);
+      border-color: rgba(129, 225, 255, 0.34);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        0 0 28px rgba(68, 206, 255, 0.24),
+        0 14px 30px rgba(0, 0, 0, 0.34);
+      backdrop-filter: blur(6px);
+    }
+
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid {
+      gap: 5px;
     }
 
     .game[data-phase-key="second-star"] .game-card__visual > .game-advance-btn,
     .game[data-phase-key="fourth-star"] .game-card__visual > .game-advance-btn {
-      display: inline-flex;
+      display: none !important;
       position: absolute;
       top: clamp(18px, 7%, 38px);
       right: clamp(18px, 7%, 38px);
