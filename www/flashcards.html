@@ -6730,6 +6730,10 @@
       text-align: center;
     }
 
+    .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual {
+      top: calc(50% - 50px);
+    }
+
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation,
     .game[data-phase-key="fifth-star"] .flashcards-typing__display--visual.is-second-star-translation {
       width: min(92%, 290px);
@@ -6862,16 +6866,13 @@
     }
 
     .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
-      bottom: calc(9vh + 30px);
+      bottom: calc(9vh + 50px);
       width: min(283px, calc(100vw - 34px));
       padding: 2px;
-      background: rgba(6, 17, 44, 0.52);
-      border-color: rgba(129, 225, 255, 0.34);
-      box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.1),
-        0 0 28px rgba(68, 206, 255, 0.24),
-        0 14px 30px rgba(0, 0, 0, 0.34);
-      backdrop-filter: blur(6px);
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
     }
 
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid {
@@ -7343,8 +7344,6 @@
       row-gap: 10px;
     }
 
-    .game[data-phase-key="second-star"] .game-controls-proxy .game-touch,
-    .game[data-phase-key="fourth-star"] .game-controls-proxy .game-touch,
     .game[data-phase-key="second-star"] .game-controls-proxy .game-language-btn,
     .game[data-phase-key="fourth-star"] .game-controls-proxy .game-language-btn,
     .game[data-phase-key="second-star"] .game-controls-proxy .game-advance-btn,
@@ -7420,7 +7419,9 @@
     }
 
     .game[data-phase-key="first-star"] .game-touch.game-touch--books-mic,
+    .game[data-phase-key="second-star"] .game-touch.game-touch--stage-play,
     .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic,
+    .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play,
     .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic {
       width: clamp(80px, 17.28vw, 92px);
       height: clamp(80px, 17.28vw, 92px);
@@ -7432,6 +7433,9 @@
       box-shadow: none;
       overflow: visible;
       color: #d7ffe8;
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
     }
 
     .game-touch.game-touch--books-mic:disabled {
@@ -7459,7 +7463,9 @@
     }
 
     .game[data-phase-key="first-star"] .game-touch.game-touch--books-mic.is-busy,
+    .game[data-phase-key="second-star"] .game-touch.game-touch--stage-play.is-busy,
     .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic.is-busy,
+    .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play.is-busy,
     .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic.is-busy {
       background: transparent;
       border-color: transparent;
@@ -7473,7 +7479,9 @@
     }
 
     .game[data-phase-key="first-star"] .game-touch.game-touch--books-mic .game-touch__books-mic-icon,
+    .game[data-phase-key="second-star"] .game-touch.game-touch--stage-play .game-touch__books-mic-icon,
     .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic .game-touch__books-mic-icon,
+    .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play .game-touch__books-mic-icon,
     .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic .game-touch__books-mic-icon {
       width: 62px;
       height: 62px;
@@ -7481,7 +7489,9 @@
     }
 
     .game[data-phase-key="first-star"] .game-touch.game-touch--books-mic.is-busy .game-touch__books-mic-icon,
+    .game[data-phase-key="second-star"] .game-touch.game-touch--stage-play.is-busy .game-touch__books-mic-icon,
     .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic.is-busy .game-touch__books-mic-icon,
+    .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play.is-busy .game-touch__books-mic-icon,
     .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic.is-busy .game-touch__books-mic-icon {
       filter:
         drop-shadow(0 0 10px rgba(83, 255, 140, 0.95))
@@ -9823,6 +9833,7 @@
       const ENGLISH_ICON_PATH = '/SVG/codex-icons/ingles-modo-3.svg';
       const GAME_TOUCH_ICON_STORAGE_KEY = 'playtalk-game-touch-icon-v1';
       const GAME_TOUCH_ICON_MARKUP = '<svg class="game-touch__books-mic-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>';
+      const GAME_PLAY_ICON_MARKUP = '<svg class="game-touch__books-mic-icon game-touch__play-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 5.4v13.2L18.2 12 7 5.4Z"/></svg>';
       const PORTUGUESE_ICON_PATH = '/SVG/codex-icons/%C3%ADcones%20modo%203/portugues.svg';
       const DOUBLE_PLAY_NEON_ICON_PATH = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%237be9ff' d='M4.5 6.35v11.3L13 12 4.5 6.35Zm8.65 0v11.3L21.65 12 13.15 6.35Z'/%3E%3C/svg%3E";
       const SUCCESS_SOUND_PATH = 'gamesounds/success.mp3';
@@ -17991,13 +18002,14 @@
       function renderGameTouchButton(stageConfig, entry) {
         const stageNumber = resolveEntryStageNumber(entry);
         const useBooksMic = (!isLevelAudioModeActive() || isLevelTextModeActive()) && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5);
+        const useStagePlay = stageNumber === 2 || stageNumber === 4;
         const showMissionHud = stageNumber >= 1 && stageNumber <= 5;
         els.gameTouchBtn.parentElement.hidden = !showMissionHud;
         els.gameTouchBtn.className = 'game-touch';
         els.gameTouchBtn.textContent = '';
         els.gameTouchBtn.innerHTML = '';
         els.gameTouchBtn.setAttribute('aria-label', stageConfig.instruction || 'Ativar microfone');
-        els.gameTouchBtn.disabled = !state.game.canListen;
+        els.gameTouchBtn.disabled = useStagePlay ? false : !state.game.canListen;
         try {
           localStorage.setItem(GAME_TOUCH_ICON_STORAGE_KEY, GAME_TOUCH_ICON_MARKUP);
         } catch (_error) {
@@ -18011,6 +18023,14 @@
           return;
         }
         els.gameTouchBtn.parentElement.hidden = false;
+        if (useStagePlay) {
+          els.gameTouchBtn.classList.add('game-touch--books-mic', 'game-touch--stage-play');
+          els.gameTouchBtn.setAttribute('aria-label', 'Reproduzir audio do flashcard');
+          els.gameTouchBtn.innerHTML = GAME_PLAY_ICON_MARKUP;
+          updateSpeakingStarMicSealProgress();
+          syncLevelTextModeControls();
+          return;
+        }
         if (!useBooksMic) {
           els.gameTouchBtn.classList.add('is-hidden');
           updateSpeakingStarMicSealProgress();
@@ -18161,6 +18181,32 @@
           audio.play().catch(() => {});
         } catch (_error) {
           // ignore
+        }
+      }
+
+      function setStagePlayButtonActive(active) {
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        if (phaseKey !== 'second-star' && phaseKey !== 'fourth-star') return;
+        els.gameTouchBtn?.classList.toggle('is-busy', Boolean(active));
+      }
+
+      async function playCurrentStagePromptAudio(options = {}) {
+        const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+        if (!entry) return false;
+        const stageNumber = Number(entry.stage) || 0;
+        if (stageNumber !== 2 && stageNumber !== 4) return false;
+        const card = cardById(entry.id);
+        if (!card) return false;
+        setStagePlayButtonActive(true);
+        try {
+          return await playPromptAudio(card, {
+            enableMicDuringPlayback: false,
+            ...options
+          });
+        } finally {
+          if (state.game.currentId === entry.id) {
+            setStagePlayButtonActive(false);
+          }
         }
       }
 
@@ -18559,12 +18605,18 @@
       }
 
       function playPromptAudio(card, options = {}) {
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        const reflectStagePlay = phaseKey === 'second-star' || phaseKey === 'fourth-star';
+        const finishStagePlayReflection = (result) => Promise.resolve(result).finally(() => {
+          if (reflectStagePlay) setStagePlayButtonActive(false);
+        });
+        if (reflectStagePlay) setStagePlayButtonActive(true);
         if (isNoEnergyMediaLocked()) {
           stopActiveAudio();
-          return Promise.resolve(false);
+          return finishStagePlayReflection(false);
         }
         if (shouldSuppressTutorialCardAudio(card)) {
-          return Promise.resolve(false);
+          return finishStagePlayReflection(false);
         }
         const rate = Number(options?.rate) > 0 ? Number(options.rate) : 1;
         stopActiveAudio();
@@ -18588,7 +18640,7 @@
             );
           }
           setLevelTextModeWaveformActive(true);
-          return playAudioWithSoftEnd(audio, { registerAsActive: true }).then((played) => {
+          return finishStagePlayReflection(playAudioWithSoftEnd(audio, { registerAsActive: true }).then((played) => {
             setLevelTextModeWaveformActive(false);
             if (played) {
               addListeningCharsForCard(card);
@@ -18598,11 +18650,11 @@
           }).catch((error) => {
             setLevelTextModeWaveformActive(false);
             throw error;
-          });
+          }));
         }
 
         if (window.speechSynthesis && card.english) {
-          return new Promise((resolve) => {
+          return finishStagePlayReflection(new Promise((resolve) => {
             const utterance = new SpeechSynthesisUtterance(card.english);
             utterance.lang = 'en-US';
             utterance.rate = rate;
@@ -18618,9 +18670,9 @@
             window.speechSynthesis.cancel();
             setLevelTextModeWaveformActive(true);
             window.speechSynthesis.speak(utterance);
-          });
+          }));
         }
-        return Promise.resolve(false);
+        return finishStagePlayReflection(false);
       }
 
       function playSuccessAudio() {
@@ -18709,7 +18761,9 @@
         }
         if (stageNumber === 4) {
           triggerOverlayDissolve();
+          const audioPlayback = playPromptAudio(card, { rate: 0.8, enableMicDuringPlayback: false });
           await wait(500);
+          await audioPlayback;
           return;
         }
         if (stageNumber === 5) {
@@ -19866,11 +19920,11 @@
         // In fourth-star: show a compact correction for 500ms, then lock keyboard (red) for 1900ms.
           if (isFourthStar) {
             const display = els.gameVisual.querySelector('.flashcards-typing__display--visual');
-            if (display) {
-              renderFourthStarCorrectionSnippet(display, safeText(options.targetText || ''), typedLength);
-            }
+          if (display) {
+            renderFourthStarCorrectionSnippet(display, safeText(options.targetText || ''), typedLength);
+          }
           // Show correction for 500ms, then lock keyboard (red only during the lock).
-          await wait(500);
+          await Promise.allSettled([playPromptAudio(card, { rate: 0.8, enableMicDuringPlayback: false }), wait(500)]);
           setTypingKeysDisabled(grid, true);
           triggerTypingMistakeFeedback(grid, 1900);
           await wait(1900);
@@ -23065,6 +23119,11 @@
         }
         els.gameTouchBtn.addEventListener('click', (event) => {
           event.stopPropagation();
+          const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+          if (phaseKey === 'second-star' || phaseKey === 'fourth-star') {
+            void playCurrentStagePromptAudio({ rate: phaseKey === 'fourth-star' ? 0.8 : 1 });
+            return;
+          }
           startRecognition();
         });
         els.gameLanguageBtn?.addEventListener('click', (event) => {
