@@ -2233,7 +2233,7 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
     onTableCardsPartial,
     onTableCardsCount,
     booksToday,
-    cardsRemaining: Math.max(0, cardsTarget - cardsToday),
+    cardsRemaining: Math.max(0, cardsTarget - cardsTodayWithOnTable),
     booksRemaining: Math.max(0, booksTarget - booksToday),
     cardsPercent,
     booksPercent,

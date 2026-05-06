@@ -9915,6 +9915,9 @@
       const TRAINING_CARD_STEP = 10;
       const GAME_STAR_TARGET = 5;
       const REVIEW_SLOT_LIMIT = 4;
+      const ON_TABLE_MAX_CARDS = 14;
+      const ON_TABLE_BASE_MAX = 6;
+      const ON_TABLE_REVIEW_MAX = 8;
       const GAME_UPCOMING_PRELOAD_COUNT = 3;
       const GAME_MIC_UNLOCK_DELAY_MS = 1200;
       const TUTORIAL_AUDIO_ROOT = AUDIOSTUTO_PUBLIC_ROOT;
@@ -10213,6 +10216,7 @@
             hitStreak: 0,
             totalHits: 0
           },
+          persistedOnTable: [],
           micUnlockStage: 0,
           audioCanBeInterruptedAt: 0,
           typingPromptLoopTimer: 0,
@@ -14222,6 +14226,7 @@
         state.userLevel = normalizeUserLevel(cloudState?.userLevel ?? cloudState?.meta?.userLevel ?? state.user.level);
         state.user.level = state.userLevel;
         state.userLevelUpdatedAt = safeText(cloudState?.userLevelUpdatedAt || cloudState?.meta?.userLevelUpdatedAt);
+        state.game.persistedOnTable = Array.isArray(cloudState?.onTable) ? cloudState.onTable.slice(0, ON_TABLE_MAX_CARDS) : [];
         state.game.tutorial.completed = readTutorialProgress();
         syncOwnedIdsFromProgress();
         reconcileTutorialProgress();
@@ -19122,6 +19127,62 @@
         return { id: card.id, stars: 0, stage: 1, missesWithoutStars: 0, typingMistakes: 0, pool };
       }
 
+      function normalizeOnTableEntry(raw) {
+        const id = safeText(raw?.cardId || raw?.id);
+        if (!id) return null;
+        const stars = Math.max(0, Math.min(GAME_STAR_TARGET, Number.parseInt(raw?.stars, 10) || 0));
+        const stage = Math.max(1, Math.min(GAME_STAR_TARGET, Number.parseInt(raw?.stage, 10) || Math.min(stars + 1, GAME_STAR_TARGET)));
+        const updatedAt = Math.max(0, Math.round(Number(raw?.updatedAt) || 0));
+        return { id, stars, stage, updatedAt };
+      }
+
+      function buildEntriesFromPersistedOnTable(limit) {
+        const normalizedLimit = Math.max(1, Math.min(ON_TABLE_MAX_CARDS, Number(limit) || ON_TABLE_MAX_CARDS));
+        const savedEntries = Array.isArray(state.game.persistedOnTable)
+          ? state.game.persistedOnTable.map(normalizeOnTableEntry).filter(Boolean)
+          : [];
+        if (!savedEntries.length) {
+          return { baseEntries: [], reviewEntries: [] };
+        }
+
+        const byUpdated = savedEntries.slice().sort((a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0));
+        const usedIds = new Set();
+        const baseEntries = [];
+        const reviewEntries = [];
+        byUpdated.forEach((saved) => {
+          if (usedIds.has(saved.id)) return;
+          const card = cardById(saved.id);
+          if (!card || !isCardAllowedForUserLevel(card)) return;
+          const pool = state.userCards.has(saved.id) ? 'review' : 'base';
+          if (pool === 'review') {
+            if (reviewEntries.length >= ON_TABLE_REVIEW_MAX) return;
+          } else if (baseEntries.length >= ON_TABLE_BASE_MAX) {
+            return;
+          }
+          usedIds.add(saved.id);
+          const entry = createGameEntry(card, pool);
+          entry.stars = saved.stars;
+          entry.stage = saved.stage;
+          entry.missesWithoutStars = 0;
+          entry.typingMistakes = 0;
+          if (pool === 'review') {
+            reviewEntries.push(entry);
+          } else {
+            baseEntries.push(entry);
+          }
+        });
+
+        const combined = baseEntries.length + reviewEntries.length;
+        if (combined > normalizedLimit) {
+          const merged = [...baseEntries, ...reviewEntries].slice(0, normalizedLimit);
+          return {
+            baseEntries: merged.filter((entry) => entry.pool === 'base'),
+            reviewEntries: merged.filter((entry) => entry.pool === 'review')
+          };
+        }
+        return { baseEntries, reviewEntries };
+      }
+
       function createTrainingGameEntry(card, stage) {
         const entry = createGameEntry(card, 'training');
         entry.stage = normalizeTrainingStage(stage) || 1;
@@ -21072,7 +21133,18 @@
       }
 
       function refillGameEntry(pool = 'base', limit = state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT) {
-        if (state.game.entries.size >= Math.max(MIN_GAME_CONTEXT_LIMIT, Number(limit) || 0)) {
+        const hardLimit = Math.min(ON_TABLE_MAX_CARDS, Math.max(MIN_GAME_CONTEXT_LIMIT, Number(limit) || 0));
+        if (state.game.entries.size >= hardLimit) {
+          updateGameChips();
+          return false;
+        }
+        const baseCount = Array.from(state.game.entries.values()).filter((entry) => entry.pool === 'base').length;
+        const reviewCount = Array.from(state.game.entries.values()).filter((entry) => entry.pool === 'review').length;
+        if (pool === 'base' && baseCount >= ON_TABLE_BASE_MAX && reviewCount < ON_TABLE_REVIEW_MAX) {
+          pool = 'review';
+        } else if (pool === 'review' && reviewCount >= ON_TABLE_REVIEW_MAX && baseCount < ON_TABLE_BASE_MAX) {
+          pool = 'base';
+        } else if ((pool === 'base' && baseCount >= ON_TABLE_BASE_MAX) || (pool === 'review' && reviewCount >= ON_TABLE_REVIEW_MAX)) {
           updateGameChips();
           return false;
         }
@@ -21939,17 +22011,43 @@
               reviewCards,
               roundCount
             );
-            const chosenCards = roundGroups.baseCards;
-            chosenCards.forEach(card => {
+            const seeded = buildEntriesFromPersistedOnTable(roundCount);
+            seeded.baseEntries.forEach((entry) => {
+              state.game.entries.set(entry.id, entry);
+              state.game.queue.push(entry.id);
+            });
+            seeded.reviewEntries.forEach((entry) => {
+              state.game.entries.set(entry.id, entry);
+              state.game.queue.push(entry.id);
+            });
+
+            const seedIds = new Set(Array.from(state.game.entries.keys()));
+            const availableBase = roundGroups.baseCards.filter((card) => card && !seedIds.has(card.id));
+            const availableReview = roundGroups.reviewCards.filter((card) => card && !seedIds.has(card.id));
+            availableBase.forEach((card) => {
+              if (state.game.entries.size >= roundCount || availableBase.length <= 0) return;
+              if (state.game.entries.size >= ON_TABLE_MAX_CARDS) return;
+              const currentBaseCount = Array.from(state.game.entries.values()).filter((entry) => entry.pool === 'base').length;
+              if (currentBaseCount >= ON_TABLE_BASE_MAX) return;
               const entry = createGameEntry(card, 'base');
               state.game.entries.set(entry.id, entry);
               state.game.queue.push(entry.id);
+              seedIds.add(card.id);
             });
-            roundGroups.reviewCards.forEach(card => {
+            availableReview.forEach((card) => {
+              if (state.game.entries.size >= roundCount || availableReview.length <= 0) return;
+              if (state.game.entries.size >= ON_TABLE_MAX_CARDS) return;
+              const currentReviewCount = Array.from(state.game.entries.values()).filter((entry) => entry.pool === 'review').length;
+              if (currentReviewCount >= ON_TABLE_REVIEW_MAX) return;
               const entry = createGameEntry(card, 'review');
               state.game.entries.set(entry.id, entry);
               state.game.queue.push(entry.id);
+              seedIds.add(card.id);
             });
+
+            while (state.game.entries.size < Math.min(roundCount, ON_TABLE_MAX_CARDS)) {
+              if (!refillGameEntry('base', Math.min(roundCount, ON_TABLE_MAX_CARDS))) break;
+            }
             persistGameSessionLocally();
           }
         }
@@ -21969,6 +22067,7 @@
         }
 
         updateGameChips();
+        scheduleFlashcardCloudSync(200);
         if (restored && state.game.currentId) {
           renderCurrentCard();
           return;
