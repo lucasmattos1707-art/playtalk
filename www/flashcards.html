@@ -17844,12 +17844,13 @@
           ? state.entry.dailyPlanMissionSnapshot
           : null;
         const missionView = missionSnapshot ? buildDailyPlanMissionView(missionSnapshot, false) : null;
+        const planMode = safeText(missionSnapshot?.seal?.mode).toLowerCase();
+        const isNoPlanMode = planMode === 'sem_plano';
         const planScoreFromMission = Number(missionSnapshot?.seal?.planScore);
         const planScoreFallback = Number(state.user?.fluencyPlanScore);
-        const planScore = Number.isFinite(planScoreFromMission)
+        const targetPlanScore = Number.isFinite(planScoreFromMission)
           ? Math.max(0, Math.min(200, planScoreFromMission))
           : Math.max(0, Math.min(200, Number.isFinite(planScoreFallback) ? planScoreFallback : 0));
-        const currentSeal = resolveDailyPlanSealByScore(planScore);
         const livePartialCardsFromTable = (() => {
           const entries = Array.from(state.game.entries?.values?.() || []);
           return entries.reduce((acc, entry) => {
@@ -17858,8 +17859,11 @@
           }, 0);
         })();
         const optimisticCompletedCards = Math.max(0, Number(state.entry.dailyPlanOptimisticCompletedCards) || 0);
-        const missionProgressPercent = (() => {
-          if (!missionView) return Math.max(0, Math.min(100, computeDailyPlanNextSealProgress(Math.max(0, Math.min(100, planScore)))));
+        const dynamicProgress = (() => {
+          if (!missionView) {
+            const fallbackScore = Math.max(0, Math.min(200, targetPlanScore));
+            return { dynamicPlanScore: fallbackScore };
+          }
           const cardsToday = Math.max(0, Number(missionView.cardsToday) || 0);
           const cardsExpected = Math.max(0, Number(missionView.cardsExpected) || 0);
           const canApplyLivePartialCards = cardsExpected <= 0 || cardsToday < cardsExpected;
@@ -17869,9 +17873,20 @@
           const booksExpected = Math.max(0, Number(missionView.booksExpected) || 0);
           const weightedDoneUnits = cardsDoneDynamic + (booksDone * 2);
           const weightedExpectedUnits = cardsExpected + (booksExpected * 2);
-          return Math.max(0, Math.min(100, computeDailyPlanRawPercent(weightedDoneUnits, weightedExpectedUnits)));
+          if (isNoPlanMode) {
+            return {
+              dynamicPlanScore: Math.max(0, Math.min(200, targetPlanScore))
+            };
+          }
+          const progressRatio = weightedExpectedUnits > 0
+            ? Math.max(0, Math.min(1, weightedDoneUnits / weightedExpectedUnits))
+            : 0;
+          const dynamicPlanScore = Math.max(0, Math.min(targetPlanScore, targetPlanScore * progressRatio));
+          return { dynamicPlanScore };
         })();
-        const nextSealProgress = missionProgressPercent;
+        const planScore = Math.max(0, Math.min(200, Number(dynamicProgress.dynamicPlanScore) || 0));
+        const currentSeal = resolveDailyPlanSealByScore(planScore);
+        const nextSealProgress = Math.max(0, Math.min(100, computeDailyPlanNextSealProgress(Math.max(0, Math.min(100, planScore)))));
         const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/white.png';
         els.gameMicCurrentSealImage.src = sealSrc.startsWith('/') ? sealSrc : `/${sealSrc}`;
         els.gameMicCurrentSealImage.alt = safeText(currentSeal?.label) ? `Selo atual: ${currentSeal.label}` : 'Selo atual';
