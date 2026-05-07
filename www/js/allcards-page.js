@@ -13,7 +13,7 @@
   const REVIEW_SCALE_VERSION = 3;
   const REVIEW_PHASE_MAX = 6;
   const VIEW_ORDER = ['flashcards', 'smartbooks', 'seals'];
-  const SEALS_STAGE_SIZE = 6;
+  const SEALS_STAGE_SIZE = 1;
   const REVIEW_PHASES = {
     1: { label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
     2: { label: 'Second star', durationMs: 34 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
@@ -22,7 +22,7 @@
     5: { label: 'Fourth star', durationMs: 20 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/ouro.png' },
     6: { label: 'Fifth star', durationMs: 45 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/diamante.png' }
   };
-  const SEAL_SLOT_COUNT = 6;
+  const SEAL_SLOT_COUNT = 1;
   const SEAL_IMAGE_BY_CODE = Object.freeze({
     1: '/medalhas/prata.png',
     2: '/medalhas/quartz.png',
@@ -31,7 +31,7 @@
     5: '/medalhas/ouro.png',
     6: '/medalhas/diamante.png'
   });
-  const EMPTY_SEAL_IMAGE = '/medalhas/diamante.png';
+  const EMPTY_SEAL_IMAGE = '/medalhas/prata.png';
 
   const els = {
     allGrid: document.getElementById('allGrid'),
@@ -85,6 +85,9 @@
     sealsPlanDays: 0,
     sealsEarnedCount: 0,
     sealsFluencyPercent: 0,
+    sealsCurrentDayNumber: 1,
+    sealsCurrentLabel: 'PRATA',
+    sealsCurrentCode: 1,
     sealsStageIndex: 0,
     sealsTotalStages: 1,
     sealsSwipeBound: false
@@ -719,8 +722,8 @@
 
   function normalizeSealsSlots(slots) {
     if (!Array.isArray(slots)) return Array.from({ length: SEAL_SLOT_COUNT }, () => 0);
-    const normalized = slots.slice(0, SEAL_SLOT_COUNT).map(normalizeSealCode);
-    while (normalized.length < SEAL_SLOT_COUNT) normalized.push(0);
+    const normalized = slots.map(normalizeSealCode);
+    if (!normalized.length) normalized.push(0);
     return normalized;
   }
 
@@ -738,7 +741,10 @@
     return {
       planDays,
       earnedSealsCount,
-      fluencyCompletePercent: Math.max(0, Math.min(100, percent))
+      fluencyCompletePercent: Math.max(0, Math.min(100, percent)),
+      currentDayNumber: Math.max(1, Math.round(Number(raw?.currentDayNumber) || planDays || 1)),
+      currentSealLabel: safeText(raw?.currentSealLabel).toUpperCase() || 'PRATA',
+      currentDaySealCode: normalizeSealCode(raw?.currentDaySealCode || 1)
     };
   }
 
@@ -751,7 +757,7 @@
   function buildSealsTimelineSlots() {
     const sourceSlots = Array.isArray(state.sealsSlots) ? state.sealsSlots.map(normalizeSealCode) : [];
     const planDays = Math.max(0, Number(state.sealsPlanDays) || 0);
-    const totalDays = Math.max(SEALS_STAGE_SIZE, planDays || sourceSlots.length);
+    const totalDays = Math.max(SEALS_STAGE_SIZE, planDays || sourceSlots.length || 1);
     const timeline = Array.from({ length: totalDays }, () => 0);
     for (let index = 0; index < sourceSlots.length && index < timeline.length; index += 1) {
       timeline[index] = sourceSlots[index];
@@ -760,98 +766,34 @@
   }
 
   function updateSealsStageUi() {
-    if (!els.sealsGrid) return;
-    const totalStages = Math.max(1, Number(state.sealsTotalStages) || 1);
-    const stageIndex = Math.max(0, Math.min(totalStages - 1, Number(state.sealsStageIndex) || 0));
-    state.sealsStageIndex = stageIndex;
     if (els.sealsStageValue) {
-      els.sealsStageValue.textContent = `Stage ${stageIndex + 1}`;
+      const dayNumber = Math.max(1, Number(state.sealsCurrentDayNumber) || 1);
+      els.sealsStageValue.textContent = `Dia ${dayNumber}`;
     }
-    els.sealsGrid.style.transform = `translate3d(${-stageIndex * 100}%, 0, 0)`;
-  }
-
-  function setSealsStageByDelta(delta) {
-    const totalStages = Math.max(1, Number(state.sealsTotalStages) || 1);
-    const nextIndex = Math.max(0, Math.min(totalStages - 1, Number(state.sealsStageIndex) + Number(delta || 0)));
-    if (nextIndex === state.sealsStageIndex) return;
-    state.sealsStageIndex = nextIndex;
-    updateSealsStageUi();
-  }
-
-  function bindSealsSwipe() {
-    if (!els.sealsCarousel || state.sealsSwipeBound) return;
-    state.sealsSwipeBound = true;
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touching = false;
-
-    els.sealsCarousel.addEventListener('touchstart', (event) => {
-      if (!event.touches || event.touches.length !== 1) return;
-      const touch = event.touches[0];
-      touchStartX = Number(touch.clientX) || 0;
-      touchStartY = Number(touch.clientY) || 0;
-      touching = true;
-    }, { passive: true });
-
-    els.sealsCarousel.addEventListener('touchmove', (event) => {
-      if (!touching || !event.touches || event.touches.length !== 1) return;
-      const touch = event.touches[0];
-      const deltaX = (Number(touch.clientX) || 0) - touchStartX;
-      const deltaY = (Number(touch.clientY) || 0) - touchStartY;
-      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
-        event.preventDefault();
-      }
-    }, { passive: false });
-
-    els.sealsCarousel.addEventListener('touchend', (event) => {
-      if (!touching) return;
-      touching = false;
-      const touch = event.changedTouches && event.changedTouches[0];
-      if (!touch) return;
-      const endX = Number(touch.clientX) || 0;
-      const endY = Number(touch.clientY) || 0;
-      const deltaX = endX - touchStartX;
-      const deltaY = endY - touchStartY;
-      if (Math.abs(deltaX) < 36 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
-      if (deltaX < 0) {
-        setSealsStageByDelta(1);
-      } else {
-        setSealsStageByDelta(-1);
-      }
-    }, { passive: true });
   }
 
   function renderSealsGrid() {
     if (!els.sealsGrid) return;
     const slotsTimeline = buildSealsTimelineSlots();
-    const totalStages = Math.max(1, Math.ceil(slotsTimeline.length / SEALS_STAGE_SIZE));
-    state.sealsTotalStages = totalStages;
-    if (state.sealsStageIndex > totalStages - 1) {
-      state.sealsStageIndex = totalStages - 1;
-    }
+    const dayNumber = Math.max(1, Number(state.sealsCurrentDayNumber) || Math.max(1, slotsTimeline.length));
+    const dayIndex = Math.max(0, dayNumber - 1);
+    const earnedCode = normalizeSealCode(slotsTimeline[dayIndex] || state.sealsCurrentCode || 0);
+    const displayCode = earnedCode > 0 ? earnedCode : 1;
+    const imageSrc = sealImageForCode(displayCode);
+    const dayLabel = `DAY ${dayNumber}`;
+    const sealLabel = safeText(state.sealsCurrentLabel).toUpperCase() || 'PRATA';
     if (els.sealsSectionHead) {
       els.sealsSectionHead.hidden = false;
     }
-    const pagesHtml = Array.from({ length: totalStages }, (_unused, stageIndex) => {
-      const pageStart = stageIndex * SEALS_STAGE_SIZE;
-      const pageSlots = slotsTimeline.slice(pageStart, pageStart + SEALS_STAGE_SIZE);
-      while (pageSlots.length < SEALS_STAGE_SIZE) pageSlots.push(0);
-      const pageHtml = pageSlots.map((code, itemIndex) => {
-        const earned = normalizeSealCode(code) > 0;
-        const dayNumber = pageStart + itemIndex + 1;
-        const dayLabel = `DAY ${dayNumber}`;
-        const imageSrc = sealImageForCode(code);
-        return `
-          <article class="seals-slot${earned ? ' is-earned' : ''}" aria-label="${escapeHtml(dayLabel)}">
-            <img class="seals-slot__badge" src="${escapeHtml(imageSrc)}" alt="${earned ? escapeHtml(`Selo do ${dayLabel}`) : escapeHtml(`Slot vazio do ${dayLabel}`)}">
-            <p class="seals-slot__day">${escapeHtml(dayLabel)}</p>
-          </article>
-        `;
-      }).join('');
-      return `<div class="seals-page" data-stage="${stageIndex + 1}">${pageHtml}</div>`;
-    }).join('');
-    els.sealsGrid.innerHTML = pagesHtml;
-    bindSealsSwipe();
+    els.sealsGrid.innerHTML = `
+      <div class="seals-page" data-stage="${dayNumber}">
+        <article class="seals-slot is-earned is-single" aria-label="${escapeHtml(dayLabel)}">
+          <img class="seals-slot__badge" src="${escapeHtml(imageSrc)}" alt="${escapeHtml(`Selo do ${dayLabel}`)}">
+          <p class="seals-slot__day">${escapeHtml(dayLabel)}</p>
+          <p class="seals-slot__label">${escapeHtml(sealLabel)}</p>
+        </article>
+      </div>
+    `;
     updateSealsStageUi();
     renderSealsTotal();
   }
@@ -896,6 +838,9 @@
         state.sealsPlanDays = progress.planDays;
         state.sealsEarnedCount = progress.earnedSealsCount;
         state.sealsFluencyPercent = progress.fluencyCompletePercent;
+        state.sealsCurrentDayNumber = progress.currentDayNumber;
+        state.sealsCurrentLabel = progress.currentSealLabel;
+        state.sealsCurrentCode = progress.currentDaySealCode;
         state.ui.sealsReady = true;
         renderSealsGrid();
         setSealsStatus('', false);

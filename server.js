@@ -210,6 +210,7 @@ let usersAvatarColumnReadyPromise = null;
 let flashcardUserStateTablesReadyPromise = null;
 let userDailyMissionStatsTableReadyPromise = null;
 let userFluencySealsTableReadyPromise = null;
+let userFluencySealsDailyTableReadyPromise = null;
 let premiumAccessTablesReadyPromise = null;
 let speakingRealtimeTablesReadyPromise = null;
 let miniBookJsonTablesReadyPromise = null;
@@ -2025,6 +2026,42 @@ const ensureUserFluencySealsTable = async () => {
   return userFluencySealsTableReadyPromise;
 };
 
+const ensureUserFluencySealsDailyTable = async () => {
+  if (!pool) return false;
+
+  if (!userFluencySealsDailyTableReadyPromise) {
+    userFluencySealsDailyTableReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_fluency_seals_daily (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          day_key text NOT NULL,
+          day_date date NOT NULL,
+          fluency_minutes numeric(10,2) NOT NULL DEFAULT 0,
+          fluency_percent numeric(10,2) NOT NULL DEFAULT 0,
+          seal_code smallint NOT NULL DEFAULT 0 CHECK (seal_code BETWEEN 0 AND 6),
+          speaking_chars bigint NOT NULL DEFAULT 0,
+          listening_chars bigint NOT NULL DEFAULT 0,
+          reading_chars bigint NOT NULL DEFAULT 0,
+          flashcards_obtidos integer NOT NULL DEFAULT 0,
+          smartbooks_lidos integer NOT NULL DEFAULT 0,
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, day_key)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_fluency_seals_daily_user_date_idx
+        ON public.user_fluency_seals_daily (user_id, day_date ASC)
+      `);
+      return true;
+    })().catch((error) => {
+      userFluencySealsDailyTableReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return userFluencySealsDailyTableReadyPromise;
+};
+
 const FLUENCY_SEAL_CODE_BY_KEY = Object.freeze({
   prata: 1,
   quartz: 2,
@@ -2066,6 +2103,147 @@ const ensureDailyFluencySealSlot = async (db, user, missionSnapshot) => {
     [userId]
   );
   return rowResult.rows[0] || null;
+};
+
+const buildDayKeyStampFromDate = (dateValue) => {
+  const value = dateValue instanceof Date ? dateValue : new Date(dateValue);
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return '';
+  const day = String(value.getDate()).padStart(2, '0');
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const year = String(value.getFullYear());
+  return `${day}${month}${year}`;
+};
+
+const buildFluencyProducedMinutesFromMission = (mission) => {
+  const cardsMinutes = Math.max(0, Number(mission?.cardsToday) || 0) * DAILY_MISSION_FLASHCARD_MINUTES_PER_CARD;
+  const booksMinutes = Math.max(0, Number(mission?.booksToday) || 0) * DAILY_MISSION_SMARTBOOK_MINUTES_PER_BOOK;
+  return Math.max(0, Number((cardsMinutes + booksMinutes).toFixed(2)));
+};
+
+const buildFluencyProducedPercentFromMission = (mission, producedMinutes) => {
+  const targetMinutes = Math.max(0, Number(mission?.minutes) || 0);
+  const referenceMinutes = targetMinutes > 0 ? targetMinutes : 10;
+  if (!referenceMinutes) return 0;
+  return Math.max(0, Number(((Math.max(0, Number(producedMinutes) || 0) / referenceMinutes) * 100).toFixed(2)));
+};
+
+const upsertTodayFluencySealDailySnapshot = async (db, user, missionSnapshot) => {
+  const userId = Number.parseInt(user?.id, 10);
+  if (!Number.isInteger(userId) || userId <= 0) return null;
+  await ensureUserFluencySealsDailyTable();
+
+  const mission = missionSnapshot || await buildDailyMissionSnapshot(user, db);
+  const producedMinutes = buildFluencyProducedMinutesFromMission(mission);
+  const producedPercent = buildFluencyProducedPercentFromMission(mission, producedMinutes);
+  const isSealEarnedToday = producedMinutes >= 10;
+  const computedSealCode = isSealEarnedToday ? resolveCurrentDailyMissionSealCode(mission) : 0;
+  const sealCode = Math.max(0, Math.min(6, Number(computedSealCode) || 0));
+
+  const todayResult = await db.query(
+    `SELECT
+       (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::date AS day_date,
+       to_char((now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::date, 'DDMMYYYY') AS day_key`,
+    []
+  );
+  const dayDate = todayResult.rows[0]?.day_date || null;
+  const dayKey = String(todayResult.rows[0]?.day_key || '').trim();
+  if (!dayDate || !dayKey) return null;
+
+  const [dailyEnergyResult, dailyMissionResult] = await Promise.all([
+    db.query(
+      `SELECT reading_chars, speaking_chars, listening_chars
+         FROM public.user_daily_energy_stats
+        WHERE user_id = $1
+          AND day_key = (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::date
+        LIMIT 1`,
+      [userId]
+    ),
+    db.query(
+      `SELECT cards_today, books_today
+         FROM public.user_daily_mission_stats
+        WHERE user_id = $1
+          AND day_key = (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::date
+        LIMIT 1`,
+      [userId]
+    )
+  ]);
+  const energyRow = dailyEnergyResult.rows[0] || {};
+  const missionRow = dailyMissionResult.rows[0] || {};
+
+  const upsertResult = await db.query(
+    `INSERT INTO public.user_fluency_seals_daily (
+       user_id, day_key, day_date, fluency_minutes, fluency_percent, seal_code,
+       speaking_chars, listening_chars, reading_chars, flashcards_obtidos, smartbooks_lidos, updated_at
+     ) VALUES (
+       $1, $2, $3, $4, $5, $6,
+       $7, $8, $9, $10, $11, now()
+     )
+     ON CONFLICT (user_id, day_key)
+     DO UPDATE SET
+       fluency_minutes = EXCLUDED.fluency_minutes,
+       fluency_percent = EXCLUDED.fluency_percent,
+       seal_code = EXCLUDED.seal_code,
+       speaking_chars = EXCLUDED.speaking_chars,
+       listening_chars = EXCLUDED.listening_chars,
+       reading_chars = EXCLUDED.reading_chars,
+       flashcards_obtidos = EXCLUDED.flashcards_obtidos,
+       smartbooks_lidos = EXCLUDED.smartbooks_lidos,
+       updated_at = now()
+     RETURNING user_id, day_key, day_date, fluency_minutes, fluency_percent, seal_code`,
+    [
+      userId,
+      dayKey,
+      dayDate,
+      producedMinutes,
+      producedPercent,
+      sealCode,
+      Math.max(0, Number(energyRow?.speaking_chars) || 0),
+      Math.max(0, Number(energyRow?.listening_chars) || 0),
+      Math.max(0, Number(energyRow?.reading_chars) || 0),
+      Math.max(0, Number(missionRow?.cards_today) || 0),
+      Math.max(0, Number(missionRow?.books_today) || 0)
+    ]
+  );
+  return upsertResult.rows[0] || null;
+};
+
+const readUserFluencySealsTimeline = async (db, userId) => {
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) return [];
+  await ensureUserFluencySealsDailyTable();
+
+  const rowsResult = await db.query(
+    `SELECT day_key, day_date, seal_code, fluency_minutes, fluency_percent
+       FROM public.user_fluency_seals_daily
+      WHERE user_id = $1
+      ORDER BY day_date ASC`,
+    [normalizedUserId]
+  );
+  const rows = Array.isArray(rowsResult.rows) ? rowsResult.rows : [];
+  if (!rows.length) return [];
+
+  const byKey = new Map(rows.map((row) => [String(row.day_key || '').trim(), row]));
+  const firstDate = new Date(rows[0].day_date);
+  const todayResult = await db.query(
+    `SELECT (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::date AS day_date`,
+    []
+  );
+  const todayDate = new Date(todayResult.rows[0]?.day_date || rows[rows.length - 1].day_date);
+
+  const timeline = [];
+  let cursor = new Date(firstDate.getTime());
+  while (cursor <= todayDate) {
+    const dayKey = buildDayKeyStampFromDate(cursor);
+    const record = byKey.get(dayKey) || null;
+    timeline.push({
+      dayKey,
+      sealCode: Math.max(0, Math.min(6, Number(record?.seal_code) || 0)),
+      fluencyMinutes: Math.max(0, Number(record?.fluency_minutes) || 0),
+      fluencyPercent: Math.max(0, Number(record?.fluency_percent) || 0)
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return timeline;
 };
 
 const readUserDailyMissionProgress = async (db, userId) => {
@@ -13702,30 +13880,32 @@ app.get('/api/fluency-seals', async (req, res) => {
       return;
     }
 
-    await ensureUserFluencySealsTable();
-    const row = await ensureDailyFluencySealSlot(pool, user, null);
-    const slots = [
-      Math.max(0, Math.min(6, Number(row?.day1) || 0)),
-      Math.max(0, Math.min(6, Number(row?.day2) || 0)),
-      Math.max(0, Math.min(6, Number(row?.day3) || 0)),
-      Math.max(0, Math.min(6, Number(row?.day4) || 0)),
-      Math.max(0, Math.min(6, Number(row?.day5) || 0)),
-      Math.max(0, Math.min(6, Number(row?.day6) || 0))
-    ];
+    const missionSnapshot = await buildDailyMissionSnapshot(user, pool);
+    const todayRow = await upsertTodayFluencySealDailySnapshot(pool, user, missionSnapshot);
+    const timeline = await readUserFluencySealsTimeline(pool, user.id);
+    const slots = timeline.map((entry) => Math.max(0, Math.min(6, Number(entry?.sealCode) || 0)));
     const earnedSealsCount = slots.reduce((total, code) => total + (code > 0 ? 1 : 0), 0);
-    const planDays = 0;
-    const fluencyCompletePercent = 0;
+    const planDays = timeline.length;
+    const currentDayNumber = Math.max(1, planDays || 1);
+    const currentDayEntry = timeline[currentDayNumber - 1] || null;
+    const fluencyCompletePercent = Math.max(0, Math.min(100, Number(currentDayEntry?.fluencyPercent) || 0));
+    const currentDaySealCode = Math.max(0, Math.min(6, Number(currentDayEntry?.sealCode) || 0));
+    const currentSeal = resolveFluencySealForScore(Math.max(0, Number(missionSnapshot?.seal?.planScoreAt120) || 0));
 
     res.setHeader('Cache-Control', 'no-store');
     res.json({
       success: true,
       seals: {
         slots,
-        nextDaySlot: Math.max(1, Math.min(6, Number(row?.next_day_slot) || 1)),
-        lastAwardedDayKey: row?.last_awarded_day_key || null,
+        timeline,
+        nextDaySlot: currentDayNumber,
+        lastAwardedDayKey: String(todayRow?.day_key || currentDayEntry?.dayKey || '').trim() || null,
         earnedSealsCount,
         planDays,
-        fluencyCompletePercent
+        fluencyCompletePercent,
+        currentDayNumber,
+        currentDaySealCode,
+        currentSealLabel: safeTrim(currentSeal?.label) || 'Prata'
       }
     });
   } catch (error) {
