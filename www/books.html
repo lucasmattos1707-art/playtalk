@@ -2715,14 +2715,14 @@
     }
 
     .books-card__mission-summary {
-      position: absolute;
+      position: fixed;
       left: 50%;
-      top: calc(50% + (var(--books-card-book-height) / 2) + var(--books-card-vertical-offset) + 20px);
+      top: calc(50% + (var(--books-card-book-height) / 2) + var(--books-card-vertical-offset) + 40px);
       transform: translateX(-50%);
       width: min(var(--books-card-book-width), calc(100% - 24px));
       display: grid;
       gap: 7px;
-      z-index: 4;
+      z-index: 120;
       pointer-events: none;
     }
 
@@ -2730,7 +2730,7 @@
       margin: 0;
       text-align: center;
       font-family: "Exo 2", "Aptos", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
-      font-size: clamp(15px, 3.7vw, 20px);
+      font-size: clamp(18px, 4.4vw, 24px);
       font-weight: 700;
       color: rgba(235, 247, 255, 0.98);
       text-shadow: 0 3px 10px rgba(0, 0, 0, 0.44);
@@ -2738,7 +2738,7 @@
     }
 
     .books-card__mission-bar {
-      height: 12px;
+      height: 14px;
       width: 100%;
       border-radius: 999px;
       border: 1px solid rgba(134, 255, 181, 0.92);
