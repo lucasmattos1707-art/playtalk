@@ -240,6 +240,10 @@ let welcomeModeSettingsCache = {
   value: null,
   updatedAt: 0
 };
+let englishCorpusCache = {
+  payload: null,
+  updatedAt: 0
+};
 
 function invalidateSpeakingCardsCache() {
   speakingCardsCache = {
@@ -13860,6 +13864,93 @@ app.get('/api/daily-plan', async (req, res) => {
   }
 });
 
+app.get('/api/english/corpus', async (_req, res) => {
+  try {
+    const now = Date.now();
+    if (englishCorpusCache.payload && (now - englishCorpusCache.updatedAt) < 5 * 60 * 1000) {
+      res.setHeader('Cache-Control', 'no-store');
+      res.json(englishCorpusCache.payload);
+      return;
+    }
+
+    const normalizeText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+    const addPhrase = (set, value) => {
+      const normalized = normalizeText(value);
+      if (!normalized) return;
+      set.add(normalized);
+    };
+    const collectWords = (phrases) => {
+      const words = new Set();
+      const matcher = /[A-Za-z]+(?:'[A-Za-z]+)*/g;
+      for (const phrase of phrases) {
+        const text = String(phrase || '');
+        const found = text.match(matcher) || [];
+        for (const token of found) {
+          const normalized = token.toLowerCase();
+          if (normalized) words.add(normalized);
+        }
+      }
+      return words;
+    };
+
+    const flashcardPhrasesSet = new Set();
+    if (pool) {
+      await ensurePublicFlashcardDecksTable();
+      await seedPublicFlashcardDecksFromAllcards({ force: false });
+      const decksResult = await pool.query(
+        `SELECT payload
+           FROM public.flashcards_public_decks
+          WHERE is_hidden = false
+          ORDER BY updated_at DESC`
+      );
+      for (const row of decksResult.rows) {
+        const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+        const items = Array.isArray(payload) ? payload : (Array.isArray(payload?.items) ? payload.items : []);
+        for (const item of items) {
+          addPhrase(flashcardPhrasesSet, item?.english || item?.nomeIngles || item?.word);
+        }
+      }
+    }
+
+    const smartbookPhrasesSet = new Set();
+    const stories = await loadSpeakingCardPool().catch(() => []);
+    for (const story of (Array.isArray(stories) ? stories : [])) {
+      for (const card of (Array.isArray(story?.cards) ? story.cards : [])) {
+        addPhrase(smartbookPhrasesSet, card?.en || card?.english || card?.text || card?.sentence);
+      }
+    }
+
+    const flashcardPhrases = Array.from(flashcardPhrasesSet);
+    const smartbookPhrases = Array.from(smartbookPhrasesSet);
+    const allPhrases = Array.from(new Set([...flashcardPhrases, ...smartbookPhrases]));
+    const allWords = Array.from(collectWords(allPhrases)).sort((a, b) => a.localeCompare(b));
+
+    const payload = {
+      success: true,
+      generatedAt: new Date().toISOString(),
+      counts: {
+        flashcardPhrases: flashcardPhrases.length,
+        smartbookPhrases: smartbookPhrases.length,
+        totalPhrases: allPhrases.length,
+        uniqueWords: allWords.length
+      },
+      uniqueWords: allWords,
+      flashcardPhrases
+    };
+
+    englishCorpusCache = {
+      payload,
+      updatedAt: now
+    };
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(payload);
+  } catch (error) {
+    console.error('Erro ao montar corpus do /english:', error);
+    res.status(500).json({ success: false, message: 'Nao foi possivel carregar o corpus de ingles.' });
+  }
+});
+
 app.get('/api/fluency-seals', async (req, res) => {
   try {
     if (!pool) {
@@ -17610,6 +17701,11 @@ app.get('/', (req, res) => {
 app.get(['/play', '/play/'], (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(staticDir, 'flashcards.html'));
+});
+
+app.get(['/english', '/english/'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(staticDir, 'english.html'));
 });
 
 app.get(['/flashcards', '/flashcards/'], (req, res) => {

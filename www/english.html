@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>English Console</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #000;
+      color: #e5e7eb;
+      font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+      padding: 20px;
+    }
+    .hint {
+      opacity: 0.7;
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre-line;
+      margin-bottom: 16px;
+    }
+    .panel {
+      display: none;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      background: #050505;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .panel.is-visible { display: block; }
+    .metric { margin: 6px 0; }
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      background: #0a0a0a;
+      color: #f3f4f6;
+      padding: 12px;
+      resize: vertical;
+      outline: none;
+      font: inherit;
+    }
+    textarea:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px #3b82f6;
+    }
+    .result {
+      margin-top: 12px;
+      padding: 10px;
+      border: 1px dashed #374151;
+      border-radius: 10px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .now-playing {
+      margin-top: 14px;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="hint">Atalhos: [Q] info do corpus | [W] filtrar palavras novas | [P] play/pause leitura aleatória dos flashcards</div>
+
+  <section class="panel" id="infoPanel" aria-live="polite"></section>
+
+  <section class="panel" id="filterPanel">
+    <textarea id="inputText" placeholder="Cole texto em inglês aqui..."></textarea>
+    <div class="result" id="filterResult">Nenhum texto processado ainda.</div>
+  </section>
+
+  <div class="now-playing" id="nowPlaying">Player parado.</div>
+
+  <script>
+    (async () => {
+      const infoPanel = document.getElementById('infoPanel');
+      const filterPanel = document.getElementById('filterPanel');
+      const inputText = document.getElementById('inputText');
+      const filterResult = document.getElementById('filterResult');
+      const nowPlaying = document.getElementById('nowPlaying');
+
+      let corpusWords = new Set();
+      let flashcardPhrases = [];
+      let playing = false;
+      let speechToken = 0;
+
+      const tokenize = (text) => {
+        const safe = String(text || '').toLowerCase();
+        const found = safe.match(/[a-z]+(?:'[a-z]+)*/g) || [];
+        return found;
+      };
+
+      const updateInfoPanel = (counts) => {
+        infoPanel.innerHTML = [
+          `<div class="metric">Flashcards (frases): ${counts.flashcardPhrases}</div>`,
+          `<div class="metric">SmartBooks (frases): ${counts.smartbookPhrases}</div>`,
+          `<div class="metric">Total (frases): ${counts.totalPhrases}</div>`,
+          `<div class="metric">Palavras únicas (inglês): ${counts.uniqueWords}</div>`
+        ].join('');
+      };
+
+      const processText = () => {
+        const tokens = tokenize(inputText.value);
+        const uniqueInput = Array.from(new Set(tokens));
+        const newWords = uniqueInput.filter((word) => !corpusWords.has(word)).sort((a, b) => a.localeCompare(b));
+        filterResult.textContent = newWords.length
+          ? `${newWords.length} palavra(s) nova(s):\n\n${newWords.join(', ')}`
+          : 'Nenhuma palavra nova encontrada.';
+      };
+
+      const speakOnce = (text, rate) => new Promise((resolve) => {
+        if (!('speechSynthesis' in window) || typeof window.SpeechSynthesisUtterance !== 'function') {
+          resolve();
+          return;
+        }
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'en-US';
+        utter.rate = rate;
+        utter.pitch = 1;
+        utter.onend = () => resolve();
+        utter.onerror = () => resolve();
+        window.speechSynthesis.speak(utter);
+      });
+
+      const runPresentation = async () => {
+        if (!flashcardPhrases.length) {
+          nowPlaying.textContent = 'Sem frases de flashcards para tocar.';
+          playing = false;
+          return;
+        }
+        const token = ++speechToken;
+        while (playing && token === speechToken) {
+          const phrase = flashcardPhrases[Math.floor(Math.random() * flashcardPhrases.length)];
+          nowPlaying.textContent = `Tocando: ${phrase}`;
+          window.speechSynthesis.cancel();
+          await speakOnce(phrase, 1.0);
+          if (!playing || token !== speechToken) break;
+          await speakOnce(phrase, 0.75);
+        }
+        if (token === speechToken) nowPlaying.textContent = 'Player parado.';
+      };
+
+      const togglePlay = () => {
+        playing = !playing;
+        if (!playing) {
+          speechToken += 1;
+          if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+          nowPlaying.textContent = 'Player parado.';
+          return;
+        }
+        void runPresentation();
+      };
+
+      document.addEventListener('keydown', (event) => {
+        if (event.repeat) return;
+        const key = String(event.key || '').toLowerCase();
+        if (key === 'q') {
+          infoPanel.classList.toggle('is-visible');
+          return;
+        }
+        if (key === 'w') {
+          const visible = !filterPanel.classList.contains('is-visible');
+          filterPanel.classList.toggle('is-visible', visible);
+          if (visible) inputText.focus();
+          return;
+        }
+        if (key === 'p') {
+          togglePlay();
+        }
+      });
+
+      inputText.addEventListener('input', processText);
+      inputText.addEventListener('paste', () => {
+        window.setTimeout(processText, 0);
+      });
+
+      try {
+        const response = await fetch('/api/english/corpus', { credentials: 'include', cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success) {
+          throw new Error(payload?.message || 'Falha ao carregar corpus.');
+        }
+
+        const counts = payload.counts || {};
+        const words = Array.isArray(payload.uniqueWords) ? payload.uniqueWords : [];
+        const phrases = Array.isArray(payload.flashcardPhrases) ? payload.flashcardPhrases : [];
+        corpusWords = new Set(words.map((word) => String(word || '').trim().toLowerCase()).filter(Boolean));
+        flashcardPhrases = phrases.map((value) => String(value || '').trim()).filter(Boolean);
+        updateInfoPanel({
+          flashcardPhrases: Number(counts.flashcardPhrases) || flashcardPhrases.length,
+          smartbookPhrases: Number(counts.smartbookPhrases) || 0,
+          totalPhrases: Number(counts.totalPhrases) || 0,
+          uniqueWords: Number(counts.uniqueWords) || corpusWords.size
+        });
+      } catch (error) {
+        infoPanel.classList.add('is-visible');
+        infoPanel.textContent = `Erro: ${error?.message || 'Nao foi possivel carregar os dados.'}`;
+      }
+    })();
+  </script>
+</body>
+</html>
