@@ -17705,7 +17705,7 @@ app.get(['/play', '/play/'], (req, res) => {
 
 app.get(['/english', '/english/'], (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  res.sendFile(path.join(staticDir, 'english.html'));
+  res.sendFile(path.join(__dirname, 'www', 'english.html'));
 });
 
 app.get(['/flashcards', '/flashcards/'], (req, res) => {
