@@ -15129,6 +15129,21 @@
         return Number(application) === 0 ? 30 : 0;
       }
 
+      function fluencyVectorByTotalMinutesLocal(totalMinutes) {
+        const minutes = Math.max(0, Number(totalMinutes) || 0);
+        if (minutes <= 0) return 0;
+        if (minutes <= 15) {
+          return (minutes / 15) * 10;
+        }
+        if (minutes <= 45) {
+          return 10 + ((minutes - 15) / (45 - 15)) * 40;
+        }
+        if (minutes <= 120) {
+          return 50 + ((minutes - 45) / (120 - 45)) * 50;
+        }
+        return 100;
+      }
+
       function computeExpectedFluencyPercent(mission) {
         const minutes = Math.max(0, Number(mission?.minutes ?? state.user?.fluencyPlanMinutes) || 0);
         const months = Math.max(0, Number(state.user?.fluencyPlanMonths) || 0);
@@ -15144,6 +15159,24 @@
         return Math.max(0, Math.min(200, Math.round(base * (1 - ((cutSmartbooks + cutApplication) / 100)))));
       }
 
+      function computeProducedFluencyPercent(mission, missionView) {
+        const expectedFluency = computeExpectedFluencyPercent(mission);
+        const cardsToday = Math.max(0, Number(missionView?.cardsToday) || 0);
+        const booksToday = Math.max(0, Number(missionView?.booksToday) || 0);
+        const booksPct = Math.max(0, Number(mission?.smartbooksPercentage ?? state.user?.fluencyPlanSmartbooksPercentage) || 0);
+        const application = Number(state.user?.fluencyPlanApplication);
+
+        // Produzida = produção real diária convertida em tempo (estágios 1/2),
+        // depois aplica os mesmos cortes de estratégia do plano (estágios 3/4).
+        const producedMinutes = (cardsToday * 1) + (booksToday * 2);
+        const timeVector = fluencyVectorByTotalMinutesLocal(producedMinutes);
+        const cutSmartbooks = fluencySmartbooksCutLocal(booksPct);
+        const cutApplication = fluencyApplicationCutLocal(application);
+        const produced = timeVector * (1 - ((cutSmartbooks + cutApplication) / 100));
+
+        return Math.max(0, Math.min(expectedFluency, produced));
+      }
+
       function buildDailyPlanRotatingMessages(mission, missionView) {
         const minutes = Math.max(0, Number(mission?.minutes ?? state.user?.fluencyPlanMinutes) || 0);
         const months = Math.max(0, Number(state.user?.fluencyPlanMonths) || 0);
@@ -15151,8 +15184,7 @@
         const flashPct = Math.max(0, Number(mission?.flashcardsPercentage ?? state.user?.fluencyPlanFlashcardsPercentage) || 0);
         const booksPct = Math.max(0, Number(mission?.smartbooksPercentage ?? state.user?.fluencyPlanSmartbooksPercentage) || 0);
         const expectedFluency = computeExpectedFluencyPercent(mission);
-        const producedProgress = Math.max(0, Math.min(100, Number(missionView?.balancedProgressPercent) || 0));
-        const producedFluency = Math.max(0, Math.min(expectedFluency, (expectedFluency * producedProgress) / 100));
+        const producedFluency = computeProducedFluencyPercent(mission, missionView);
         return [
           `Seu treino diário é ${Math.round(minutes)} minutos`,
           `Seu plano é de ${Math.round(months)} meses`,
@@ -15172,9 +15204,7 @@
         const use120Preview = Boolean(options.use120Preview);
         const isNoPlanMode = safeText(mission?.seal?.mode).toLowerCase() === 'sem_plano';
         const missionView = buildDailyPlanMissionView(mission, use120Preview);
-        const expectedFluency = computeExpectedFluencyPercent(mission);
-        const producedProgress = Math.max(0, Math.min(100, Number(missionView?.balancedProgressPercent) || 0));
-        const producedFluency = Math.max(0, Math.min(expectedFluency, (expectedFluency * producedProgress) / 100));
+        const producedFluency = computeProducedFluencyPercent(mission, missionView);
         const overallPercent = clampPercent(missionView.balancedProgressPercent);
         const overallPercentRounded = Math.round(overallPercent);
         const overallPercentForVisual = isNoPlanMode
