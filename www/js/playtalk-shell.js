@@ -6,7 +6,7 @@
   const LOADER_ROOT_ID = 'playtalkGlobalLoader';
   const LOADER_STYLE_ID = 'playtalkGlobalLoaderStyles';
   const LOADER_BODY_CLASS = 'playtalk-loader-active';
-  const LOADER_MIN_VISIBLE_MS = 0;
+  const LOADER_MIN_VISIBLE_MS = 3000;
   const USERS_LOADER_MAX_VISIBLE_MS = 4000;
   const LOADER_TIPS = [
     ['UM VERBO EM USO', 'VALE MAIS QUE DEZ NA LISTA'],
@@ -22,7 +22,7 @@
     activeKeys: new Set(),
     shownAtByKey: new Map(),
     hideTimerByKey: new Map(),
-    message: 'Preparando sua jornada',
+    message: 'PREPARANDO SUA PARTIDA',
     metaItems: [],
     tipIndex: 0,
     tipTimer: 0
@@ -166,7 +166,7 @@
       }
 
       .playtalk-loader__brand {
-        font-family: "Orbitron", "Exo 2", sans-serif;
+        font-family: "Exo 2", "Segoe UI", sans-serif;
         font-size: 22px;
         font-weight: 900;
         letter-spacing: 0.18em;
@@ -199,7 +199,7 @@
         display: grid;
         align-content: center;
         gap: 8px;
-        font-family: "Orbitron", "Exo 2", sans-serif;
+        font-family: "Exo 2", "Segoe UI", sans-serif;
         font-size: clamp(18px, 4.8vw, 24px);
         line-height: 1.15;
         font-weight: 900;
@@ -349,7 +349,7 @@
         </div>
         <div class="playtalk-loader__brand">FLUENT</div>
         <div class="playtalk-loader__sub">LEVEL UP</div>
-        <div class="playtalk-loader__kicker">Dica de fluencia</div>
+        <div class="playtalk-loader__kicker">DICA DE FLUÊNCIA</div>
         <div class="playtalk-loader__tip" id="playtalkLoaderTip">
           <span class="playtalk-loader__tip-line"></span>
           <span class="playtalk-loader__tip-line"></span>
@@ -394,7 +394,7 @@
   function renderLoader() {
     const root = ensureLoader();
     const visible = loaderState.activeKeys.size > 0;
-    const message = String(loaderState.message || 'Preparando sua jornada').trim() || 'Preparando sua jornada';
+    const message = String(loaderState.message || 'PREPARANDO SUA PARTIDA').trim() || 'PREPARANDO SUA PARTIDA';
     const messageEl = root.querySelector('#playtalkLoaderMessage');
     const metaEl = root.querySelector('#playtalkLoaderMeta');
     if (messageEl) {
@@ -479,7 +479,7 @@
   }
 
   function setLoaderMessage(message) {
-    loaderState.message = String(message || 'Preparando sua jornada');
+    loaderState.message = String(message || 'PREPARANDO SUA PARTIDA');
     renderLoader();
   }
 
@@ -522,7 +522,7 @@
   ensureLoader();
   startLoaderTips();
   if (loaderPages.has(path)) {
-    showLoader('page-init', { message: 'Preparando sua jornada' });
+    showLoader('page-init', { message: 'PREPARANDO SUA PARTIDA' });
     if (path === '/users') {
       window.setTimeout(forceHideUsersLoader, USERS_LOADER_MAX_VISIBLE_MS);
     }

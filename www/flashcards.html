@@ -9134,24 +9134,11 @@
     #photoGateLoadingCopy {
       width: min(100%, 420px);
       min-height: 3.2em;
-      font-family: "Exo 2", "Trebuchet MS", sans-serif;
-      font-size: 14px;
-      line-height: 1.25;
+      font-family: "PlaytalkDisplay", "Soopafre", Arial, sans-serif;
+      font-size: clamp(24px, 5.7vw, 40px);
+      line-height: 0.92;
       letter-spacing: 0.01em;
-      color: #ffffff;
-    }
-
-    #photoGateLoadingCopy .loading-copy-pt {
-      display: block;
-      color: #ffffff;
-    }
-
-    #photoGateLoadingCopy .loading-copy-en {
-      display: block;
-      color: #33d6ff;
-      text-shadow:
-        0 0 8px rgba(51, 214, 255, 0.75),
-        0 0 16px rgba(51, 214, 255, 0.45);
+      color: #0f172a;
     }
 
     #photoGate.is-generating #photoGateLoadingCopy,
@@ -10154,7 +10141,7 @@
       const ONBOARDING_MIN_NAME_LENGTH = 3;
       const ONBOARDING_MAX_PHOTO_GENERATIONS = 5;
       const ONBOARDING_KEYBOARD_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUV'.split('');
-      const ONBOARDING_LOADING_MESSAGES_FALLBACK = [
+      const ONBOARDING_LOADING_MESSAGES = [
         'Analisando a imagem enviada...',
         'Detectando estrutura facial e proporcoes...',
         'Identificando olhos e expressao...',
@@ -10166,7 +10153,6 @@
         'Ajustando luz, profundidade e foco...',
         'Renderizando sua versao fiel...'
       ];
-      let onboardingLoadingMessages = ONBOARDING_LOADING_MESSAGES_FALLBACK.slice();
       const FLASHCARD_REPORT_TYPES = [
         { key: 'blurred-image', label: 'Imagem borrada' },
         { key: 'weak-association', label: 'Associacao fraca' },
@@ -14080,52 +14066,40 @@
       }
 
       function formatOnboardingLoadingMessage(message) {
-        if (message && typeof message === 'object') {
-          const pt = escapeHtml(safeText(message.pt));
-          const en = escapeHtml(safeText(message.en));
-          return `<span class="loading-copy-pt">${pt}</span><span class="loading-copy-en">${en}</span>`;
+        const words = String(message || '').trim().split(/\s+/).filter(Boolean);
+        if (words.length <= 2) {
+          return words.join(' ');
         }
-        return escapeHtml(String(message || ''));
-      }
 
-      async function loadOnboardingLoadingMessages() {
-        try {
-          const response = await fetch('/data/onboarding-loading-messages.json', { cache: 'no-store' });
-          if (!response.ok) return;
-          const payload = await response.json();
-          if (!Array.isArray(payload)) return;
-          const normalized = payload
-            .map((item) => ({
-              pt: safeText(item?.pt),
-              en: safeText(item?.en)
-            }))
-            .filter((item) => item.pt && item.en);
-          if (normalized.length) {
-            onboardingLoadingMessages = normalized;
+        let bestIndex = 1;
+        let bestScore = Number.POSITIVE_INFINITY;
+        for (let index = 1; index < words.length; index += 1) {
+          const firstLine = words.slice(0, index).join(' ');
+          const secondLine = words.slice(index).join(' ');
+          const score = Math.abs(firstLine.length - secondLine.length);
+          if (score < bestScore) {
+            bestScore = score;
+            bestIndex = index;
           }
-        } catch (_error) {}
-      }
+        }
 
-      function getOnboardingLoadingMessages() {
-        return onboardingLoadingMessages.length ? onboardingLoadingMessages : ONBOARDING_LOADING_MESSAGES_FALLBACK;
+        return `${words.slice(0, bestIndex).join(' ')}\n${words.slice(bestIndex).join(' ')}`;
       }
 
       function startPhotoLoadingCopy() {
         stopPhotoLoadingCopy();
         state.ui.photoLoadingMessageIndex = 0;
-        const messages = getOnboardingLoadingMessages();
         if (els.photoGateLoadingCopy) {
-          els.photoGateLoadingCopy.innerHTML = formatOnboardingLoadingMessage(messages[0] || { pt: 'Preparando', en: 'Preparing' });
+          els.photoGateLoadingCopy.textContent = formatOnboardingLoadingMessage(ONBOARDING_LOADING_MESSAGES[0]);
         }
         state.ui.photoLoadingTimer = window.setInterval(() => {
           state.ui.photoLoadingMessageIndex += 1;
           if (!els.photoGateLoadingCopy) return;
-          const loadingMessages = getOnboardingLoadingMessages();
-          if (state.ui.photoLoadingMessageIndex >= loadingMessages.length) {
-            els.photoGateLoadingCopy.innerHTML = formatOnboardingLoadingMessage({ pt: 'Finalizando', en: 'Finishing up' });
+          if (state.ui.photoLoadingMessageIndex >= ONBOARDING_LOADING_MESSAGES.length) {
+            els.photoGateLoadingCopy.textContent = 'Finalizando';
             return;
           }
-          els.photoGateLoadingCopy.innerHTML = formatOnboardingLoadingMessage(loadingMessages[state.ui.photoLoadingMessageIndex]);
+          els.photoGateLoadingCopy.textContent = formatOnboardingLoadingMessage(ONBOARDING_LOADING_MESSAGES[state.ui.photoLoadingMessageIndex]);
         }, 2000);
       }
 
@@ -14174,7 +14148,7 @@
           state.ui.photoVersionIndex = Math.max(0, state.ui.photoVersions.length - 1);
           state.ui.photoGenerationCount = Math.max(state.ui.photoVersions.length, Number(state.user?.avatarGenerationCount || 0));
           if (els.photoGateLoadingCopy) {
-            els.photoGateLoadingCopy.innerHTML = '';
+            els.photoGateLoadingCopy.textContent = '';
           }
           renderPhotoGate();
           setIdentityGateVisibility();
@@ -23624,7 +23598,6 @@
       }
 
       async function init() {
-        await loadOnboardingLoadingMessages();
         const searchParams = new URLSearchParams(window.location.search);
         const requestedView = searchParams.get('view');
         const requestedLaunch = safeText(searchParams.get('launch')).toLowerCase();

@@ -292,25 +292,15 @@
       width: min(100%, 420px);
       min-height: 3.2em;
       margin-top: 60px;
-      font-family: "Exo 2", "Trebuchet MS", sans-serif;
-      font-size: 14px;
-      line-height: 1.25;
+      font-family: "Pltay", "Trebuchet MS", sans-serif;
+      font-size: clamp(24px, 5.8vw, 40px);
+      line-height: 0.92;
+      color: #ffffff;
       text-align: center;
       text-shadow: 0 10px 24px rgba(15, 23, 42, 0.24);
       opacity: 1;
       transform: scale(1);
       transition: opacity 240ms ease, transform 320ms ease;
-    }
-    #loadingCopy .loading-copy-pt {
-      display: block;
-      color: #ffffff;
-    }
-    #loadingCopy .loading-copy-en {
-      display: block;
-      color: #33d6ff;
-      text-shadow:
-        0 0 8px rgba(51, 214, 255, 0.75),
-        0 0 16px rgba(51, 214, 255, 0.45);
     }
 
     #loadingCopy.is-changing {
@@ -509,49 +499,18 @@
   <script src="js/android-shell.js"></script>
   <script>
     const ONBOARDING_MAX_PHOTO_GENERATIONS = 5;
-    const ONBOARDING_LOADING_MESSAGES_FALLBACK = [
-      { pt: 'A fluencia nasce frase por frase', en: 'Fluency is built one phrase at a time' },
-      { pt: 'Sessoes pequenas. Evolucao gigante', en: 'Small sessions. Massive evolution.' },
-      { pt: 'Seu ouvido aprende antes da boca', en: 'Your ears learn before your mouth' },
-      { pt: 'Constancia vence intensidade', en: 'Consistency beats intensity' },
-      { pt: 'Ouca primeiro. Fale natural depois', en: 'Listen first. Speak naturally later' },
-      { pt: 'Ingles e ritmo, nao traducao', en: 'English is rhythm, not translation' },
-      { pt: 'Mais uma carta. Mais um nivel', en: 'One more card. One step stronger' },
-      { pt: 'Seu cerebro esta se adaptando', en: 'Your brain is adapting right now' },
-      { pt: 'Repeticao cria fala automatica', en: 'Repetition creates automatic speech' },
-      { pt: 'Fluencia real parece sem esforco', en: 'Real fluency feels effortless' },
-      { pt: 'Pense menos. Absorva mais', en: 'Think less. Absorb more' },
-      { pt: 'Seu sotaque melhora com coragem', en: 'Your accent improves with courage' },
-      { pt: 'Entender vale mais que perfeicao', en: 'Understanding matters more than perfection' },
-      { pt: 'Bebes aprendem por exposicao', en: 'Babies learn by exposure too' },
-      { pt: 'Pouco por dia muda tudo', en: 'Short practice. Long-term results' },
-      { pt: 'Cada erro treina seu cerebro', en: 'Every mistake teaches your brain' },
-      { pt: 'Ouca. Sinta. Repita', en: 'Hear it. Feel it. Repeat it' },
-      { pt: 'Fluencia cresce em camadas', en: 'Fluency grows in layers' },
-      { pt: 'Sua escuta esta evoluindo', en: 'Your listening is leveling up' },
-      { pt: 'Ingles natural vem do input', en: 'Natural English comes from input' },
-      { pt: 'Velocidade vem apos clareza', en: 'Speed comes after clarity' },
-      { pt: 'Entender vence decorar', en: 'Understanding beats memorizing' },
-      { pt: 'Contato diario muda tudo', en: 'Daily contact changes everything' },
-      { pt: 'O idioma ja parece familiar', en: 'The language is becoming familiar' },
-      { pt: 'Treine seus ouvidos diariamente', en: 'Train your ears every day' },
-      { pt: 'Pequenos avancos contam', en: 'Tiny progress still counts' },
-      { pt: 'Voce cria respostas automaticas', en: 'You are building automatic responses' },
-      { pt: 'Ingles fica facil com ritmo', en: 'English becomes easier with momentum' },
-      { pt: 'Fluencia e estilo de vida', en: 'Fluency is a lifestyle' },
-      { pt: 'Seu cerebro ama padroes', en: 'Your brain loves patterns' },
-      { pt: 'Frases reais criam fluencia', en: 'Real phrases create real fluency' },
-      { pt: 'Imersao muda seus instintos', en: 'Immersion changes your instincts' },
-      { pt: 'Confianca nasce da repeticao', en: 'Confidence grows through repetition' },
-      { pt: 'Pratica vira instinto natural', en: 'Practice turns confusion into instinct' },
-      { pt: 'Continue aparecendo todo dia', en: 'Keep showing up every day' },
-      { pt: 'Aprenda como na vida real', en: 'Learn naturally, like real life' },
-      { pt: 'O ingles comeca a prever', en: 'English starts sounding predictable' },
-      { pt: 'Voce esta mais perto do que pensa', en: 'You are closer than you think' },
-      { pt: 'Treine hoje. Fale livre amanha', en: 'Train daily. Speak freely later' },
-      { pt: 'Seu futuro fala ingles', en: 'Your future self speaks English' }
+    const ONBOARDING_LOADING_MESSAGES = [
+      'Analisando a imagem enviada...',
+      'Detectando estrutura facial e proporcoes...',
+      'Identificando olhos e expressoes...',
+      'Analisando cabelo, textura e volume...',
+      'Extraindo cores principais e iluminacao...',
+      'Interpretando expressao e vibe emocional...',
+      'Simplificando tracos para estilo ilustrado...',
+      'Aplicando caracteristicas animadas...',
+      'Ajustando luz, profundidade e foco...',
+      'Renderizando sua versao fiel...'
     ];
-    let onboardingLoadingMessages = ONBOARDING_LOADING_MESSAGES_FALLBACK.slice();
     const PROGRESS_DURATION_MS = 20000;
     const BLUR_SEQUENCE = [0.7, 0.6, 0.5, 0.4];
     const state = {
@@ -643,53 +602,33 @@
       if (!els.photoPromptCount) return;
       els.photoPromptCount.textContent = `${currentPromptText().length}/300`;
     }
-    function escapeHtml(value) {
-      return String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
     function formatLoadingMessage(message) {
-      if (message && typeof message === 'object') {
-        const pt = escapeHtml(message.pt);
-        const en = escapeHtml(message.en);
-        return `<span class="loading-copy-pt">${pt}</span><span class="loading-copy-en">${en}</span>`;
-      }
-      return escapeHtml(String(message || ''));
-    }
-    async function loadOnboardingLoadingMessages() {
-      try {
-        const response = await fetch('/data/onboarding-loading-messages.json', { cache: 'no-store' });
-        if (!response.ok) return;
-        const payload = await response.json();
-        if (!Array.isArray(payload)) return;
-        const normalized = payload
-          .map((item) => ({
-            pt: safeText(item?.pt),
-            en: safeText(item?.en)
-          }))
-          .filter((item) => item.pt && item.en);
-        if (normalized.length) {
-          onboardingLoadingMessages = normalized;
+      const words = String(message || '').trim().split(/\s+/).filter(Boolean);
+      if (words.length <= 2) return words.join(' ');
+      let bestIndex = 1;
+      let bestScore = Number.POSITIVE_INFINITY;
+      for (let index = 1; index < words.length; index += 1) {
+        const first = words.slice(0, index).join(' ');
+        const second = words.slice(index).join(' ');
+        const score = Math.abs(first.length - second.length);
+        if (score < bestScore) {
+          bestScore = score;
+          bestIndex = index;
         }
-      } catch (_error) {}
-    }
-    function getOnboardingLoadingMessages() {
-      return onboardingLoadingMessages.length ? onboardingLoadingMessages : ONBOARDING_LOADING_MESSAGES_FALLBACK;
+      }
+      return `${words.slice(0, bestIndex).join(' ')}\n${words.slice(bestIndex).join(' ')}`;
     }
     function setLoadingCopy(message, { animate = false } = {}) {
       if (!els.loadingCopy) return;
-      const nextText = formatLoadingMessage(message || '');
-      if (!animate || els.loadingCopy.innerHTML === nextText) {
-        els.loadingCopy.innerHTML = nextText;
+      const nextText = message || '';
+      if (!animate || els.loadingCopy.textContent === nextText) {
+        els.loadingCopy.textContent = nextText;
         els.loadingCopy.classList.remove('is-changing', 'is-entering');
         return;
       }
       els.loadingCopy.classList.add('is-changing');
       window.setTimeout(() => {
-        els.loadingCopy.innerHTML = nextText;
+        els.loadingCopy.textContent = nextText;
         els.loadingCopy.classList.remove('is-changing');
         els.loadingCopy.classList.remove('is-entering');
         void els.loadingCopy.offsetWidth;
@@ -709,15 +648,13 @@
     function startPhotoLoadingCopy() {
       stopPhotoLoadingCopy();
       state.photoLoadingMessageIndex = 0;
-      const messages = getOnboardingLoadingMessages();
-      setLoadingCopy(messages[0] || { pt: 'Preparando', en: 'Preparing' });
+      setLoadingCopy(formatLoadingMessage(ONBOARDING_LOADING_MESSAGES[0]));
       state.photoLoadingTimer = window.setInterval(() => {
         state.photoLoadingMessageIndex += 1;
-        const loadingMessages = getOnboardingLoadingMessages();
         setLoadingCopy(
-          state.photoLoadingMessageIndex >= loadingMessages.length
-            ? { pt: 'Finalizando', en: 'Finishing up' }
-            : loadingMessages[state.photoLoadingMessageIndex],
+          state.photoLoadingMessageIndex >= ONBOARDING_LOADING_MESSAGES.length
+            ? 'Finalizando'
+            : formatLoadingMessage(ONBOARDING_LOADING_MESSAGES[state.photoLoadingMessageIndex]),
           { animate: true }
         );
       }, 2000);
@@ -985,7 +922,6 @@
     }
     async function init() {
       setStatus('');
-      await loadOnboardingLoadingMessages();
       try {
         const user = await ensureProvisionedUser();
         if (user?.nextOnboardingRoute && !/^\/avataradd(?:[/?#]|$)/i.test(user.nextOnboardingRoute)) {
