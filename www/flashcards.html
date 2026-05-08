@@ -3060,13 +3060,17 @@
 
     .game-mic-side-metric__value {
       margin: 0;
-      font-size: 42px;
-      font-weight: 400;
-      font-family: "Pltay", "Soopafre", Arial, sans-serif;
+      font-size: clamp(37px, 10.2vw, 58px);
+      font-weight: 800;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
       letter-spacing: 0;
-      line-height: 1;
+      line-height: 0.88;
       white-space: nowrap;
-      color: #a8b0bd;
+      color: #ffffff;
+      text-shadow:
+        0 2px 0 rgba(0, 22, 72, 0.98),
+        0 0 12px rgba(2, 28, 92, 0.92),
+        0 0 24px rgba(6, 54, 141, 0.74);
     }
 
     .game-mic-next-seal-progress {
@@ -7111,7 +7115,8 @@
       gap: 0;
     }
 
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks {
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid.is-word-blocks {
       display: flex;
       flex-direction: column;
       flex-wrap: nowrap;
@@ -7120,9 +7125,11 @@
       justify-content: center;
       gap: 9px;
       padding: 10px;
+      transform: translateY(-25px);
     }
 
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__word-row {
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__word-row,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__word-row {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -7130,10 +7137,11 @@
       width: 100%;
     }
 
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key {
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key {
       width: auto;
       min-width: 84px;
-      max-width: min(190px, calc(50vw - 28px));
+      max-width: none;
       height: 54px;
       min-height: 54px;
       aspect-ratio: auto;
@@ -7156,9 +7164,11 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      flex: var(--word-block-grow, 1) 1 0;
     }
 
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__key.is-word-block-key {
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__key.is-word-block-key,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key.is-word-block-key {
       font-family: "Exo 2", "Open Sans", Arial, sans-serif !important;
       font-weight: 800 !important;
       letter-spacing: 0 !important;
@@ -7166,7 +7176,9 @@
     }
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key.is-correct-hit,
-    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key.is-selected {
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key.is-selected,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key.is-correct-hit,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key.is-selected {
       background: linear-gradient(145deg, rgba(9, 94, 54, 0.95) 0%, rgba(15, 162, 84, 0.94) 58%, rgba(64, 235, 143, 0.92) 100%);
       border-color: rgba(129, 255, 187, 0.98);
       color: #f7fff9;
@@ -7175,6 +7187,12 @@
         inset 0 0 0 1px rgba(226, 255, 238, 0.22),
         0 0 16px rgba(72, 255, 157, 0.44),
         0 0 32px rgba(72, 255, 157, 0.24);
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__word-row.is-long-word-row .flashcards-typing__key,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__word-row.is-long-word-row .flashcards-typing__key {
+      flex: 1 1 100%;
+      min-width: 100%;
     }
 
     .game[data-phase-key="second-star"] .navbarscreen,
@@ -7444,6 +7462,7 @@
 
     .game[data-phase-key="first-star"] .game-touch.game-touch--books-mic,
     .game[data-phase-key="second-star"] .game-touch.game-touch--stage-play,
+    .game[data-phase-key="third-star"] .game-touch.game-touch--stage-play,
     .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic,
     .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play,
     .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic {
@@ -7488,6 +7507,7 @@
 
     .game[data-phase-key="first-star"] .game-touch.game-touch--books-mic.is-busy,
     .game[data-phase-key="second-star"] .game-touch.game-touch--stage-play.is-busy,
+    .game[data-phase-key="third-star"] .game-touch.game-touch--stage-play.is-busy,
     .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic.is-busy,
     .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play.is-busy,
     .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic.is-busy {
@@ -7504,6 +7524,7 @@
 
     .game[data-phase-key="first-star"] .game-touch.game-touch--books-mic .game-touch__books-mic-icon,
     .game[data-phase-key="second-star"] .game-touch.game-touch--stage-play .game-touch__books-mic-icon,
+    .game[data-phase-key="third-star"] .game-touch.game-touch--stage-play .game-touch__books-mic-icon,
     .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic .game-touch__books-mic-icon,
     .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play .game-touch__books-mic-icon,
     .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic .game-touch__books-mic-icon {
@@ -7514,6 +7535,7 @@
 
     .game[data-phase-key="first-star"] .game-touch.game-touch--books-mic.is-busy .game-touch__books-mic-icon,
     .game[data-phase-key="second-star"] .game-touch.game-touch--stage-play.is-busy .game-touch__books-mic-icon,
+    .game[data-phase-key="third-star"] .game-touch.game-touch--stage-play.is-busy .game-touch__books-mic-icon,
     .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic.is-busy .game-touch__books-mic-icon,
     .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play.is-busy .game-touch__books-mic-icon,
     .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic.is-busy .game-touch__books-mic-icon {
@@ -7531,7 +7553,6 @@
     }
 
     .game[data-phase-key="second-star"] .game-touch.game-touch--stage-play .game-touch__books-mic-icon,
-    .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic .game-touch__books-mic-icon,
     .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play .game-touch__books-mic-icon {
       display: none !important;
     }
@@ -9919,8 +9940,11 @@
       const ENERGY_LEVEL_PHASE_TWO_SPAN = 119;
       const ENERGY_XP_MULTIPLIER = 1.5;
       const WELCOME_LEVEL_ANIMATION_MS = 2500;
-      const SECOND_STAGE_BLOCK_TOTAL = 9;
+      const SECOND_STAGE_BLOCK_MIN_TOTAL = 9;
+      const SECOND_STAGE_BLOCK_MAX_TOTAL = 11;
+      const SECOND_STAGE_BLOCK_ROWS = 4;
       const SECOND_STAGE_BLOCKS_PER_ROW = 3;
+      const SECOND_STAGE_LONG_WORD_SOLO_THRESHOLD = 12;
       const SECOND_STAGE_ROW_MIN_CHARS = 9;
       const SECOND_STAGE_ROW_MAX_CHARS = 11;
       const SECOND_STAGE_WRONG_WORD_MAX_LENGTH = 6;
@@ -17682,7 +17706,7 @@
         if (els.gamePhaseWord) {
           els.gamePhaseWord.classList.remove('is-fading');
         }
-        state.game.stageOneSwapShowsPortuguese = false;
+        state.game.stageOneSwapShowsPortuguese = true;
       }
 
       function clearTypingPromptLoop() {
@@ -18103,6 +18127,9 @@
           return;
         }
         els.gameTouchBtn.classList.add('game-touch--books-mic');
+        if (stageNumber === 3) {
+          els.gameTouchBtn.classList.add('game-touch--stage-play');
+        }
         els.gameTouchBtn.innerHTML = GAME_TOUCH_ICON_MARKUP;
         updateSpeakingStarMicSealProgress();
         syncLevelTextModeControls();
@@ -18190,6 +18217,26 @@
         const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/white.png';
         els.gameMicCurrentSealImage.src = sealSrc.startsWith('/') ? sealSrc : `/${sealSrc}`;
         els.gameMicCurrentSealImage.alt = safeText(currentSeal?.label) ? `Selo atual: ${currentSeal.label}` : 'Selo atual';
+        els.gameMicCurrentSealImage.style.display = 'none';
+        let currentRankValue = document.getElementById('gameMicCurrentSealRank');
+        if (!currentRankValue) {
+          currentRankValue = document.createElement('p');
+          currentRankValue.id = 'gameMicCurrentSealRank';
+          currentRankValue.className = 'game-mic-side-metric__value';
+          els.gameMicCurrentSealMetric.appendChild(currentRankValue);
+        }
+        const cachedRank = Math.max(
+          0,
+          Number(state.ui.librarySummaryRank) || Number(state.ui.gameStatusPreviousRank) || 0
+        );
+        currentRankValue.textContent = cachedRank > 0 ? `${cachedRank}\u00ba` : '--';
+        void refreshCurrentPlayerRank().then((rank) => {
+          if (!state.game.active) return;
+          const resolvedRank = Math.max(0, Number(rank) || 0);
+          if (resolvedRank > 0 && currentRankValue && currentRankValue.isConnected) {
+            currentRankValue.textContent = `${resolvedRank}\u00ba`;
+          }
+        }).catch(() => {});
         const previousAnimatedProgress = Number(state.entry.gameMicAnimatedProgress);
         const startProgress = Number.isFinite(previousAnimatedProgress)
           ? Math.max(0, Math.min(100, previousAnimatedProgress))
@@ -20242,121 +20289,80 @@
         return normalizeWordBlockText(option?.word || option?.normalized || '').length;
       }
 
-      function takeSecondStageDistractor(candidates, usedWords, rowCharTotal, slotsLeft) {
-        const maxRoom = SECOND_STAGE_ROW_MAX_CHARS - rowCharTotal;
-        const index = candidates.findIndex((item) => {
-          if (!item?.normalized || usedWords.has(item.normalized)) return false;
-          const length = countSecondStageBlockChars(item);
-          if (!length || length > maxRoom) return false;
-          const remainingSlotsAfterPick = Math.max(0, slotsLeft - 1);
-          if (rowCharTotal + length + (remainingSlotsAfterPick * SECOND_STAGE_WRONG_WORD_MAX_LENGTH) < SECOND_STAGE_ROW_MIN_CHARS) return false;
-          if (slotsLeft <= 1 && rowCharTotal + length < SECOND_STAGE_ROW_MIN_CHARS) return false;
-          return true;
-        });
-        if (index >= 0) {
-          const [picked] = candidates.splice(index, 1);
-          usedWords.add(picked.normalized);
-          return { ...picked, isDistractor: true };
-        }
-
-        const fallbackIndex = candidates.findIndex((item) => {
-          if (!item?.normalized || usedWords.has(item.normalized)) return false;
-          const length = countSecondStageBlockChars(item);
-          return length && length <= maxRoom;
-        });
-        if (fallbackIndex >= 0) {
-          const [picked] = candidates.splice(fallbackIndex, 1);
-          usedWords.add(picked.normalized);
-          return { ...picked, isDistractor: true };
-        }
-        return null;
+      function createSecondStageRows() {
+        return Array.from({ length: SECOND_STAGE_BLOCK_ROWS }, () => []);
       }
 
-      function packSecondStageRows(options) {
-        const rows = [];
-        options.forEach((option) => {
-          let targetRow = rows.find((row) => (
-            row.length < SECOND_STAGE_BLOCKS_PER_ROW
-            && row.reduce((total, item) => total + countSecondStageBlockChars(item), 0) + countSecondStageBlockChars(option) <= SECOND_STAGE_ROW_MAX_CHARS
-          ));
-          if (!targetRow) {
-            targetRow = [];
-            rows.push(targetRow);
+      function secondStageRowChars(row) {
+        return (Array.isArray(row) ? row : []).reduce((total, item) => total + countSecondStageBlockChars(item), 0);
+      }
+
+      function isSecondStageLongWord(option) {
+        return countSecondStageBlockChars(option) > SECOND_STAGE_LONG_WORD_SOLO_THRESHOLD;
+      }
+
+      function placeSecondStageOption(rows, option) {
+        if (!option) return;
+        const longWord = isSecondStageLongWord(option);
+        if (longWord) {
+          const emptyRow = rows.find((row) => row.length === 0);
+          if (emptyRow) {
+            emptyRow.push(option);
+            return;
           }
-          targetRow.push(option);
-        });
-        return rows;
-      }
-
-      function shuffleSecondStageOptionRows(rows) {
-        const shuffledOptions = shuffleList((Array.isArray(rows) ? rows : []).flat());
-        return packSecondStageRows(shuffledOptions)
-          .map((row) => shuffleList(row))
-          .filter((row) => row.length);
+          const rowWithFewest = rows.slice().sort((a, b) => a.length - b.length)[0];
+          rowWithFewest.push(option);
+          return;
+        }
+        const row = rows
+          .slice()
+          .sort((a, b) => (secondStageRowChars(a) - secondStageRowChars(b)) || (a.length - b.length))
+          .find((candidate) => candidate.length < SECOND_STAGE_BLOCKS_PER_ROW)
+          || rows[0];
+        row.push(option);
       }
 
       function buildSecondStageOptionRows(correctOptions, wrongWords) {
         const correct = shuffleList(Array.isArray(correctOptions) ? correctOptions : [])
           .sort((a, b) => countSecondStageBlockChars(b) - countSecondStageBlockChars(a));
-        const targetTotal = Math.max(SECOND_STAGE_BLOCK_TOTAL, correct.length);
-        if (correct.length >= SECOND_STAGE_BLOCK_TOTAL) {
-          return shuffleSecondStageOptionRows(packSecondStageRows(correct));
-        }
 
-        const rows = Array.from(
-          { length: Math.ceil(SECOND_STAGE_BLOCK_TOTAL / SECOND_STAGE_BLOCKS_PER_ROW) },
-          () => []
+        const targetTotal = Math.max(
+          SECOND_STAGE_BLOCK_MIN_TOTAL,
+          Math.min(SECOND_STAGE_BLOCK_MAX_TOTAL, correct.length)
         );
-        const rowChars = (row) => row.reduce((total, item) => total + countSecondStageBlockChars(item), 0);
-        correct.forEach((option) => {
-          const length = countSecondStageBlockChars(option);
-          const sortedRows = rows
-            .slice()
-            .sort((a, b) => (rowChars(a) - rowChars(b)) || (a.length - b.length));
-          const row = sortedRows.find((candidate) => (
-            candidate.length < SECOND_STAGE_BLOCKS_PER_ROW
-            && rowChars(candidate) + length <= SECOND_STAGE_ROW_MAX_CHARS
-          )) || sortedRows.find((candidate) => candidate.length < SECOND_STAGE_BLOCKS_PER_ROW) || rows[0];
-          row.push(option);
-        });
+        const rows = createSecondStageRows();
+        correct.slice(0, targetTotal).forEach((option) => placeSecondStageOption(rows, option));
 
-        const usedWords = new Set(correct.map((option) => option.normalized).filter(Boolean));
-        const candidates = shuffleList((Array.isArray(wrongWords) ? wrongWords : [])
+        const usedWords = new Set(
+          rows.flat().map((option) => option?.normalized).filter(Boolean)
+        );
+        const distractors = shuffleList((Array.isArray(wrongWords) ? wrongWords : [])
           .map((word) => ({
             word,
             normalized: normalizeWordBlockText(word)
           }))
           .filter((item) => item.normalized && !usedWords.has(item.normalized)));
 
+        while (rows.flat().length < targetTotal && distractors.length) {
+          const candidate = distractors.shift();
+          if (!candidate?.normalized || usedWords.has(candidate.normalized)) continue;
+          usedWords.add(candidate.normalized);
+          placeSecondStageOption(rows, { ...candidate, isDistractor: true });
+        }
+
+        // If a long word is mixed with others in the same row, move it to an empty row if possible.
         rows.forEach((row) => {
-          while (row.length < SECOND_STAGE_BLOCKS_PER_ROW) {
-            const totalOptions = rows.reduce((total, current) => total + current.length, 0);
-            if (totalOptions >= targetTotal) break;
-            const picked = takeSecondStageDistractor(
-              candidates,
-              usedWords,
-              rowChars(row),
-              SECOND_STAGE_BLOCKS_PER_ROW - row.length
-            );
-            if (!picked) break;
-            row.push(picked);
-          }
+          if (row.length <= 1) return;
+          const longIndex = row.findIndex((option) => isSecondStageLongWord(option));
+          if (longIndex < 0) return;
+          const emptyRow = rows.find((candidate) => candidate !== row && candidate.length === 0);
+          if (!emptyRow) return;
+          const [longWord] = row.splice(longIndex, 1);
+          emptyRow.push(longWord);
         });
 
-        rows.forEach((row) => {
-          while (row.length && row.length < SECOND_STAGE_BLOCKS_PER_ROW && rowChars(row) < SECOND_STAGE_ROW_MIN_CHARS) {
-            const picked = takeSecondStageDistractor(
-              candidates,
-              usedWords,
-              rowChars(row),
-              SECOND_STAGE_BLOCKS_PER_ROW - row.length
-            );
-            if (!picked) break;
-            row.push(picked);
-          }
-        });
-
-        return shuffleSecondStageOptionRows(rows);
+        // Keep exactly 4 rows; ensure visual consistency by shuffling within each row only.
+        return rows.map((row) => shuffleList(row));
       }
 
       function buildSecondStageWordBlockState(typingState, card) {
@@ -20522,7 +20528,7 @@
           return;
         }
 
-        if (phaseKey === 'second-star') {
+        if (phaseKey === 'second-star' || phaseKey === 'fourth-star') {
           clearTypingSkipAutomation();
           clearTypingPromptLoop();
           clearSecondStarIdleHintTimers();
@@ -20580,6 +20586,8 @@
             key.type = 'button';
             key.className = 'flashcards-typing__key is-word-block-key';
             key.textContent = block.word;
+            const blockGrow = Math.max(1, countSecondStageBlockChars(block));
+            key.style.setProperty('--word-block-grow', String(blockGrow));
             key.setAttribute('aria-label', `Bloco ${block.word}`);
             key.addEventListener('click', async () => {
               if (!state.game.active || state.game.paused || state.game.listening || resolving || state.game.typingSkipActive || state.game.currentId !== entry.id) return;
@@ -20610,6 +20618,9 @@
           rows.forEach((row) => {
             const rowNode = document.createElement('div');
             rowNode.className = 'flashcards-typing__word-row';
+            if (row.length === 1 && countSecondStageBlockChars(row[0]) > SECOND_STAGE_LONG_WORD_SOLO_THRESHOLD) {
+              rowNode.classList.add('is-long-word-row');
+            }
             row.forEach((block) => appendWordBlock(block, rowNode));
             grid.appendChild(rowNode);
           });
