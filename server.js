@@ -17695,7 +17695,7 @@ app.get(['/thata', '/thata/', '/thata.html'], (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(staticDir, 'landing.html'));
+  res.redirect(302, '/entrar');
 });
 
 app.get(['/play', '/play/'], (req, res) => {

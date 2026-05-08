@@ -8,11 +8,11 @@
 </head>
 <body class="auth-page">
   <main class="auth-card">
-    <img class="auth-logo" src="/arquivos-codex/welcome-gate/fluent-level-up.png" alt="Fluent LevelUp">
+    <img class="auth-logo" src="/arquivos-codex/welcome-gate/levelup.png" alt="Fluent LevelUp">
 
     <div class="auth-switch" role="tablist" aria-label="Modo de acesso">
-      <button class="auth-switch__btn is-active" id="authModeLogin" type="button" data-auth-mode="login">Entrar</button>
-      <button class="auth-switch__btn" id="authModeRegister" type="button" data-auth-mode="register">Cadastrar</button>
+      <button class="auth-switch__btn" id="authModeLogin" type="button" data-auth-mode="login">Entrar</button>
+      <button class="auth-switch__btn is-active" id="authModeRegister" type="button" data-auth-mode="register">Cadastrar</button>
     </div>
 
     <form class="auth-form" id="authForm" autocomplete="on">
@@ -32,7 +32,7 @@
   <script src="js/api-config.js"></script>
   <script>
     (function bootAuthPortal() {
-      var state = { mode: 'login', submitting: false };
+      var state = { mode: 'register', submitting: false };
       var form = document.getElementById('authForm');
       var usernameInput = document.getElementById('authUsername');
       var passwordInput = document.getElementById('authPassword');
@@ -227,7 +227,7 @@
       loginBtn.addEventListener('click', function () { setMode('login'); });
       registerBtn.addEventListener('click', function () { setMode('register'); });
       form.addEventListener('submit', submitAuth);
-      setMode('login');
+      setMode('register');
       void checkExistingSession();
     })();
   </script>
