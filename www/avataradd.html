@@ -293,7 +293,7 @@
       min-height: 3.2em;
       margin-top: 60px;
       font-family: "Exo 2", "Trebuchet MS", sans-serif;
-      font-size: 20px;
+      font-size: 14px;
       line-height: 1.25;
       text-align: center;
       text-shadow: 0 10px 24px rgba(15, 23, 42, 0.24);
@@ -509,7 +509,7 @@
   <script src="js/android-shell.js"></script>
   <script>
     const ONBOARDING_MAX_PHOTO_GENERATIONS = 5;
-    const ONBOARDING_LOADING_MESSAGES = [
+    const ONBOARDING_LOADING_MESSAGES_FALLBACK = [
       { pt: 'A fluencia nasce frase por frase', en: 'Fluency is built one phrase at a time' },
       { pt: 'Sessoes pequenas. Evolucao gigante', en: 'Small sessions. Massive evolution.' },
       { pt: 'Seu ouvido aprende antes da boca', en: 'Your ears learn before your mouth' },
@@ -551,6 +551,7 @@
       { pt: 'Treine hoje. Fale livre amanha', en: 'Train daily. Speak freely later' },
       { pt: 'Seu futuro fala ingles', en: 'Your future self speaks English' }
     ];
+    let onboardingLoadingMessages = ONBOARDING_LOADING_MESSAGES_FALLBACK.slice();
     const PROGRESS_DURATION_MS = 20000;
     const BLUR_SEQUENCE = [0.7, 0.6, 0.5, 0.4];
     const state = {
@@ -658,6 +659,26 @@
       }
       return escapeHtml(String(message || ''));
     }
+    async function loadOnboardingLoadingMessages() {
+      try {
+        const response = await fetch('/data/onboarding-loading-messages.json', { cache: 'no-store' });
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (!Array.isArray(payload)) return;
+        const normalized = payload
+          .map((item) => ({
+            pt: safeText(item?.pt),
+            en: safeText(item?.en)
+          }))
+          .filter((item) => item.pt && item.en);
+        if (normalized.length) {
+          onboardingLoadingMessages = normalized;
+        }
+      } catch (_error) {}
+    }
+    function getOnboardingLoadingMessages() {
+      return onboardingLoadingMessages.length ? onboardingLoadingMessages : ONBOARDING_LOADING_MESSAGES_FALLBACK;
+    }
     function setLoadingCopy(message, { animate = false } = {}) {
       if (!els.loadingCopy) return;
       const nextText = formatLoadingMessage(message || '');
@@ -688,13 +709,15 @@
     function startPhotoLoadingCopy() {
       stopPhotoLoadingCopy();
       state.photoLoadingMessageIndex = 0;
-      setLoadingCopy(ONBOARDING_LOADING_MESSAGES[0]);
+      const messages = getOnboardingLoadingMessages();
+      setLoadingCopy(messages[0] || { pt: 'Preparando', en: 'Preparing' });
       state.photoLoadingTimer = window.setInterval(() => {
         state.photoLoadingMessageIndex += 1;
+        const loadingMessages = getOnboardingLoadingMessages();
         setLoadingCopy(
-          state.photoLoadingMessageIndex >= ONBOARDING_LOADING_MESSAGES.length
+          state.photoLoadingMessageIndex >= loadingMessages.length
             ? { pt: 'Finalizando', en: 'Finishing up' }
-            : ONBOARDING_LOADING_MESSAGES[state.photoLoadingMessageIndex],
+            : loadingMessages[state.photoLoadingMessageIndex],
           { animate: true }
         );
       }, 2000);
@@ -962,6 +985,7 @@
     }
     async function init() {
       setStatus('');
+      await loadOnboardingLoadingMessages();
       try {
         const user = await ensureProvisionedUser();
         if (user?.nextOnboardingRoute && !/^\/avataradd(?:[/?#]|$)/i.test(user.nextOnboardingRoute)) {
