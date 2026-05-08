@@ -103,7 +103,8 @@
     }
 
     .page {
-      width: min(980px, calc(100vw - 10px));
+      width: 100%;
+      max-width: none;
       margin: 0 auto;
       min-height: 100vh;
       padding: calc(var(--native-top-offset) + 26px) 0 calc(var(--footer-total-height) + 20px);
@@ -164,10 +165,10 @@
     }
 
     .ranking-metric {
-      min-height: 34px;
-      min-width: 34px;
-      width: 34px;
-      height: 34px;
+      min-height: 40px;
+      min-width: 40px;
+      width: 40px;
+      height: 40px;
       padding: 6px;
       display: grid;
       gap: 0;
@@ -183,8 +184,8 @@
     }
 
     .ranking-metric img {
-      width: 21px;
-      height: 21px;
+      width: 27px;
+      height: 27px;
       display: block;
       object-fit: contain;
       opacity: 0.6;
@@ -977,7 +978,8 @@
 
     @media (max-width: 640px) {
       .page {
-        width: calc(100vw - 8px);
+        width: 100%;
+        max-width: none;
         padding-top: 10px;
       }
 
@@ -990,16 +992,16 @@
       }
 
       .ranking-metric {
-        min-height: 32px;
-        min-width: 32px;
-        width: 32px;
-        height: 32px;
+        min-height: 38px;
+        min-width: 38px;
+        width: 38px;
+        height: 38px;
         padding: 5px;
       }
 
       .ranking-metric img {
-        width: 19px;
-        height: 19px;
+        width: 25px;
+        height: 25px;
       }
 
       .panel-head {
