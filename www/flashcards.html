@@ -6831,6 +6831,11 @@
       letter-spacing: 0;
     }
 
+    .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual.is-fourth-star-correction.is-correction-fade {
+      opacity: 0;
+      transition: opacity 500ms linear;
+    }
+
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual,
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__key {
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
@@ -10761,12 +10766,18 @@
 
       function normalizeText(value) {
         return repairDisplayText(value)
+          .replace(/[’‘`´]/g, "'")
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
           .toLowerCase()
           .replace(/[^a-z0-9\s'/%+=-]/g, ' ')
           .replace(/\s+/g, ' ')
           .trim();
+      }
+
+      function isDontRememberCommand(value) {
+        const normalized = normalizeText(value).replace(/\s+/g, ' ').trim();
+        return normalized === "i don't remember" || normalized === 'i dont remember';
       }
 
       function normalizeAnswerList(value) {
@@ -19674,6 +19685,7 @@
 
       function normalizeTypingSource(rawText) {
         return safeText(rawText)
+          .replace(/[’‘`´]/g, "'")
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
           .toUpperCase()
@@ -20201,26 +20213,35 @@
           .filter(Boolean);
       }
 
-      function setSmartKeyLetter(key, letter) {
+      function setSmartKeyLetter(key, letter, displayValue = '') {
         if (!key || !letter) return;
         key.dataset.letter = letter;
-        key.textContent = letter;
-        key.setAttribute('aria-label', `Letra ${letter}`);
+        const label = safeText(displayValue) || letter;
+        key.textContent = label;
+        key.setAttribute('aria-label', `Letra ${label}`);
+      }
+
+      function resolveApostropheKeyLabel(target) {
+        const normalized = String(target || '').toUpperCase();
+        const match = normalized.match(/([A-Z0-9])'/);
+        return match?.[1] ? `${match[1]}\u2019` : '\u2019';
       }
 
       function resetFourthStarSmartKeyboard(keyNodes, target, total = 9) {
         if (!Array.isArray(keyNodes) || !keyNodes.length) return;
         const spec = buildSmartTypingKeyboardSpec(target, total);
         const letters = Array.isArray(spec?.letters) ? spec.letters : [];
+        const apostropheLabel = resolveApostropheKeyLabel(target);
         keyNodes.forEach((key, index) => {
           if (!key) return;
           key.disabled = false;
           key.classList.remove('is-dissolving', 'is-correct-hit', 'is-disabled');
-          setSmartKeyLetter(key, letters[index] || 'A');
+          const nextLetter = letters[index] || 'A';
+          setSmartKeyLetter(key, nextLetter, nextLetter === "'" ? apostropheLabel : '');
         });
       }
 
-      function scheduleSmartKeyReplacement(key, grid, target, typedLength, usedLetter, queue) {
+      function scheduleSmartKeyReplacement(key, grid, target, typedLength, usedLetter, queue, apostropheLabel = '') {
         if (!key || !grid) return;
         if (countRemainingSmartLetter(target, typedLength, usedLetter) > 0) return;
 
@@ -20239,7 +20260,7 @@
             }
           }
           if (!replacement) return;
-          setSmartKeyLetter(key, replacement);
+          setSmartKeyLetter(key, replacement, replacement === "'" ? apostropheLabel : '');
           key.classList.remove('is-dissolving', 'is-correct-hit');
           key.disabled = false;
         }, 500);
@@ -20285,13 +20306,24 @@
       }
 
       function tokenizeWordBlocks(value) {
-        const matches = safeText(value).match(/[A-Za-z0-9]+(?:['-][A-Za-z0-9]+)*/g) || [];
-        return matches
-          .map((word) => ({
-            word,
-            normalized: normalizeWordBlockText(word)
-          }))
-          .filter((item) => item.normalized);
+        const matches = safeText(value).replace(/[’‘`´]/g, "'").match(/[A-Za-z0-9']+/g) || [];
+        const tokens = [];
+        matches.forEach((rawWord) => {
+          let segment = String(rawWord || '');
+          while (segment.includes("'")) {
+            const apostropheIndex = segment.indexOf("'");
+            const left = segment.slice(0, apostropheIndex);
+            const right = segment.slice(apostropheIndex + 1);
+            if (left) {
+              tokens.push({ word: `${left}\u2019`, normalized: normalizeWordBlockText(`${left}'`) });
+            }
+            segment = right;
+          }
+          if (segment) {
+            tokens.push({ word: segment, normalized: normalizeWordBlockText(segment) });
+          }
+        });
+        return tokens.filter((item) => item.normalized);
       }
 
       function normalizeSecondStageWrongWordList(words) {
@@ -20779,8 +20811,11 @@
         let fourthStarResolved = false;
         let fourthStarResolutionSent = false;
         let fourthStarShowingCorrection = false;
+        let fourthStarCorrectionFadeTimer = 0;
+        let fourthStarCorrectionHideTimer = 0;
         const smartKeyboardSpec = useSmartKeyboard ? buildSmartTypingKeyboardSpec(target, 9) : null;
         const smartKeyboardQueue = smartKeyboardSpec ? smartKeyboardSpec.queue : null;
+        const apostropheKeyLabel = useSmartKeyboard ? resolveApostropheKeyLabel(target) : '';
         const keyboardLetters = useSmartKeyboard
           ? smartKeyboardSpec.letters
           : buildTypingLetterPool(target, 16);
@@ -20791,13 +20826,21 @@
           const key = document.createElement('button');
           key.type = 'button';
           key.className = 'flashcards-typing__key';
-          setSmartKeyLetter(key, letter);
+          setSmartKeyLetter(key, letter, (useSmartKeyboard && letter === "'") ? apostropheKeyLabel : '');
           key.style.setProperty('--typing-key-bg', typingPalette[index % typingPalette.length]);
           key.addEventListener('click', async () => {
             if (!state.game.active || state.game.paused || state.game.listening || state.game.typingSkipActive || state.game.currentId !== entry.id) return;
             const keyLetter = safeText(key.dataset.letter || key.textContent).toUpperCase();
             if (!keyLetter) return;
             if (useSmartKeyboard && fourthStarShowingCorrection) {
+              if (fourthStarCorrectionFadeTimer) {
+                window.clearTimeout(fourthStarCorrectionFadeTimer);
+                fourthStarCorrectionFadeTimer = 0;
+              }
+              if (fourthStarCorrectionHideTimer) {
+                window.clearTimeout(fourthStarCorrectionHideTimer);
+                fourthStarCorrectionHideTimer = 0;
+              }
               fourthStarShowingCorrection = false;
               renderTyped();
             }
@@ -20808,7 +20851,7 @@
             playTypingKeyAudio();
             if (useSmartKeyboard && fourthStarResolved) {
               if (!key.disabled) {
-                scheduleSmartKeyReplacement(key, grid, target, target.length, keyLetter, []);
+                scheduleSmartKeyReplacement(key, grid, target, target.length, keyLetter, [], apostropheKeyLabel);
               }
               return;
             }
@@ -20828,6 +20871,23 @@
               if (!finished) {
                 if (!useSmartKeyboard) {
                   renderTyped();
+                } else {
+                  const correctionDisplay = els.gameVisual.querySelector('.flashcards-typing__display--visual.is-fourth-star-correction');
+                  if (correctionDisplay) {
+                    correctionDisplay.classList.remove('is-correction-fade');
+                  }
+                  if (fourthStarCorrectionFadeTimer) window.clearTimeout(fourthStarCorrectionFadeTimer);
+                  if (fourthStarCorrectionHideTimer) window.clearTimeout(fourthStarCorrectionHideTimer);
+                  fourthStarCorrectionFadeTimer = window.setTimeout(() => {
+                    const liveCorrection = els.gameVisual.querySelector('.flashcards-typing__display--visual.is-fourth-star-correction');
+                    if (liveCorrection) liveCorrection.classList.add('is-correction-fade');
+                  }, 500);
+                  fourthStarCorrectionHideTimer = window.setTimeout(() => {
+                    if (fourthStarShowingCorrection) {
+                      fourthStarShowingCorrection = false;
+                      renderTyped();
+                    }
+                  }, 1000);
                 }
               }
               return;
@@ -20844,7 +20904,8 @@
                 target,
                 typed.length,
                 keyLetter,
-                typed.length < target.length ? smartKeyboardQueue : []
+                typed.length < target.length ? smartKeyboardQueue : [],
+                apostropheKeyLabel
               );
             }
             if (typed.length === target.length) {
@@ -20878,7 +20939,7 @@
               if (!nextKey && useSmartKeyboard) {
                 nextKey = keyNodes.find((node) => !node.classList.contains('is-dissolving')) || keyNodes[0] || null;
                 if (nextKey) {
-                  setSmartKeyLetter(nextKey, nextLetter);
+                  setSmartKeyLetter(nextKey, nextLetter, (useSmartKeyboard && nextLetter === "'") ? apostropheKeyLabel : '');
                 }
               }
               if (nextKey) {
@@ -22363,8 +22424,33 @@
         const activeCountBeforeResolution = state.game.entries.size;
         const accessibleCountBeforeResolution = accessibleFlashcardsCount();
         const evaluatedStage = entry.stage;
-        const { score, isHit } = evaluateAcceptedAnswers(expectedAnswers, transcript);
+        const dontRememberRequested = inputMode === 'speech'
+          && (evaluatedStage === 3 || evaluatedStage === 5)
+          && isDontRememberCommand(transcript);
         const card = cardById(entry.id);
+        if (dontRememberRequested) {
+          clearStageHintLoop({ clearStatus: true });
+          clearFirstStageMicHint({ clearStatus: true });
+          clearStageTwoHintTimer();
+          entry.stars = 1;
+          entry.stage = 2;
+          entry.missesWithoutStars = 0;
+          entry.typingMistakes = 0;
+          state.game.skipAutoAudioOnce = true;
+          setGameStatus('', 'live');
+          updateSpeakingStarMicSealProgress();
+          state.game.queue.push(entry.id);
+          scheduleFlashcardCloudSync(250);
+          await Promise.allSettled([
+            playPromptAudio(card, { rate: 0.8, enableMicDuringPlayback: false }),
+            wait(80)
+          ]);
+          if (state.game.active && !state.game.paused) {
+            advanceToNextCard();
+          }
+          return;
+        }
+        const { score, isHit } = evaluateAcceptedAnswers(expectedAnswers, transcript);
         if (inputMode === 'speech') {
           clearStageTutorialReminder();
           hideGameStageTutorial({ resume: false });
