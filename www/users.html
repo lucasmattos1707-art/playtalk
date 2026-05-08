@@ -103,7 +103,7 @@
     }
 
     .page {
-      width: min(900px, calc(100vw - 28px));
+      width: min(980px, calc(100vw - 10px));
       margin: 0 auto;
       min-height: 100vh;
       padding: calc(var(--native-top-offset) + 26px) 0 calc(var(--footer-total-height) + 20px);
@@ -122,13 +122,9 @@
 
     .ranking-hero__copy {
       display: grid;
-      gap: 8px;
+      gap: 4px;
       justify-items: center;
       text-align: center;
-    }
-
-    .ranking-hero--minimal .ranking-hero__copy {
-      display: none !important;
     }
 
     .ranking-hero--minimal {
@@ -138,21 +134,24 @@
 
     .ranking-title {
       margin: 0;
-      font-size: clamp(28px, 8vw, 46px);
+      font-size: clamp(12px, 2.4vw, 14px);
       line-height: 1;
-      font-weight: 800;
-      letter-spacing: 0.02em;
+      font-weight: 700;
+      letter-spacing: 0.08em;
       color: #ffffff;
-      text-shadow: 0 10px 24px rgba(4, 16, 34, 0.38);
+      text-transform: uppercase;
+      font-family: "Orbitron", "Exo 2", sans-serif;
     }
 
     .ranking-status {
       margin: 0;
       min-height: 24px;
       color: rgba(255, 255, 255, 0.88);
-      font-size: clamp(16px, 3.6vw, 22px);
+      font-size: clamp(11px, 2.8vw, 13px);
       font-weight: 600;
-      letter-spacing: 0.01em;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-family: "Orbitron", "Exo 2", sans-serif;
     }
 
     .ranking-metrics {
@@ -178,8 +177,8 @@
     }
 
     .ranking-metric img {
-      width: 26px;
-      height: 26px;
+      width: 21px;
+      height: 21px;
       display: block;
       object-fit: contain;
       opacity: 0.6;
@@ -188,15 +187,16 @@
     }
 
     .ranking-metric span {
-      display: none;
-      font-size: 11px;
+      display: block;
+      font-size: 10px;
       line-height: 1.15;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       text-align: center;
       color: rgba(14, 55, 106, 0.6);
       pointer-events: none;
+      font-family: "Orbitron", "Exo 2", sans-serif;
     }
 
     .ranking-metric.is-active {
@@ -312,7 +312,7 @@
       grid-template-columns: auto minmax(0, 1fr) minmax(88px, auto);
       gap: 12px;
       align-items: center;
-      width: 98%;
+      width: 90%;
       min-height: 74px;
       padding: 10px 14px;
       border-radius: 22px;
@@ -332,7 +332,7 @@
     .users-avatar {
       width: 64px;
       height: 64px;
-      border-radius: 0;
+      border-radius: 16px;
       display: grid;
       place-items: center;
       background: transparent;
@@ -345,6 +345,7 @@
       height: 100%;
       display: block;
       object-fit: cover;
+      border-radius: 16px;
     }
 
     .users-avatar.is-processing::before {
@@ -456,6 +457,14 @@
 
     .users-row.is-online {
       box-shadow: none;
+    }
+
+    .users-row.is-current-user {
+      background: rgba(8, 48, 28, 0.9);
+      border: 1px solid rgba(91, 255, 159, 0.78);
+      box-shadow:
+        inset 0 0 0 1px rgba(195, 255, 222, 0.16),
+        0 0 16px rgba(53, 240, 137, 0.34);
     }
 
     .users-admin-modal {
@@ -971,7 +980,7 @@
 
     @media (max-width: 640px) {
       .page {
-        width: calc(100vw - 16px);
+        width: calc(100vw - 8px);
         padding-top: 10px;
       }
 
@@ -989,8 +998,8 @@
       }
 
       .ranking-metric img {
-        width: 24px;
-        height: 24px;
+        width: 19px;
+        height: 19px;
       }
 
       .panel-head {
@@ -1015,21 +1024,25 @@
   <main class="page">
     <section class="ranking-hero ranking-hero--minimal" aria-label="Resumo do ranking">
       <div class="ranking-hero__copy">
-        <h1 class="ranking-title" id="rankingTitle">Cards</h1>
-        <p class="ranking-status" id="rankingStatus">Você está em 0º lugar.</p>
+        <h1 class="ranking-title" id="rankingTitle">Flashcards</h1>
+        <p class="ranking-status" id="rankingStatus">Você está em 0º lugar</p>
         <p class="status" id="usersStatus">Carregando usuarios...</p>
       </div>
       <div class="ranking-metrics" id="rankingMetrics" aria-label="Seletores do ranking">
         <button type="button" class="ranking-metric is-active" data-metric-key="flashcards" aria-label="Ranking de Cards">
+          <span>FlashCards</span>
           <img src="/svgnovo/cards.svg" alt="">
         </button>
         <button type="button" class="ranking-metric" data-metric-key="pronunciation" aria-label="Ranking de Pronuncia">
+          <span>Pronúncia</span>
           <img src="/SVG/voice.svg" alt="">
         </button>
         <button type="button" class="ranking-metric" data-metric-key="speed" aria-label="Ranking de Velocidade">
+          <span>Velocidade</span>
           <img src="/SVG/codex-icons/lightning.svg" alt="">
         </button>
         <button type="button" class="ranking-metric" data-metric-key="level" aria-label="Ranking de Level">
+          <span>Nível</span>
           <img src="/svgnovo/cup.svg" alt="">
         </button>
       </div>

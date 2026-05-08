@@ -15,10 +15,10 @@
   const DEFAULT_PROFILE_AVATAR = '/Avatar/profile-neon-blue.svg';
 
   const RANKING_METRICS = [
-    { slot: 1, key: 'flashcards', label: 'Cards', valueLabel: '' },
-    { slot: 2, key: 'pronunciation', label: 'Pronuncia', valueLabel: '%' },
+    { slot: 1, key: 'flashcards', label: 'FlashCards', valueLabel: '' },
+    { slot: 2, key: 'pronunciation', label: 'Pronúncia', valueLabel: '%' },
     { slot: 3, key: 'speed', label: 'Velocidade', valueLabel: '/h' },
-    { slot: 4, key: 'level', label: 'Level', valueLabel: '' }
+    { slot: 4, key: 'level', label: 'Nível', valueLabel: '' }
   ];
 
   const els = {
@@ -156,6 +156,17 @@
     return typeof value === 'string' ? value.trim() : '';
   }
 
+  function formatDisplayName(value) {
+    const source = safeText(value);
+    if (!source) return 'Usuario';
+    return source
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
   function isNativeRuntime() {
     try {
       if (window.PlaytalkNative && typeof window.PlaytalkNative.isNativeRuntime === 'function') {
@@ -211,7 +222,7 @@
   }
 
   function setRankingLabel(label) {
-    const text = safeText(label) || 'Cards';
+    const text = safeText(label) || 'FlashCards';
     if (els.rankingTitle) {
       els.rankingTitle.textContent = text;
     }
@@ -294,7 +305,7 @@
       setUsersStatus('Ranking carregado.');
       return;
     }
-    setUsersStatus(`Voce esta em ${formatOrdinal(viewer.rank)} lugar.`);
+    setUsersStatus(`Você está em ${formatOrdinal(viewer.rank)} lugar`);
   }
 
   function storageKeyForUser(baseKey, userId) {
@@ -433,7 +444,7 @@
     const users = Array.isArray(payload?.users) ? payload.users : [];
     return users.map((entry) => ({
       userId: Number(entry?.userId) || 0,
-      username: safeText(entry?.username || 'Usuario') || 'Usuario',
+      username: formatDisplayName(entry?.username || 'Usuario'),
       rank: Number(entry?.rank) || 0,
       flashcardsCount: Number(entry?.flashcardsCount) || 0,
       pronunciationPercent: Number(entry?.pronunciationPercent) || 0,
@@ -447,7 +458,7 @@
       botAvatarStatus: safeText(entry?.botAvatarStatus || 'ready') || 'ready',
       botAvatarError: safeText(entry?.botAvatarError || ''),
       botConfig: entry?.botConfig && typeof entry.botConfig === 'object' ? {
-        username: safeText(entry.botConfig.username || entry.username || 'Usuario') || 'Usuario',
+        username: formatDisplayName(entry.botConfig.username || entry.username || 'Usuario'),
         flashcardsCount: Number(entry.botConfig.flashcardsCount) || 0,
         pronunciationBase: Number(entry.botConfig.pronunciationBase) || 0,
         flashcardsPerHour: Number(entry.botConfig.flashcardsPerHour) || 0,
@@ -465,7 +476,7 @@
     if (!entry || typeof entry !== 'object') return null;
     return {
       userId: Number(entry?.userId) || 0,
-      username: safeText(entry?.username || 'Usuario') || 'Usuario',
+      username: formatDisplayName(entry?.username || 'Usuario'),
       rank: Number(entry?.rank) || 0,
       flashcardsCount: Number(entry?.flashcardsCount) || 0,
       pronunciationPercent: Number(entry?.pronunciationPercent) || 0,
@@ -868,16 +879,7 @@
   }
 
   function rowMetaText(entry) {
-    const parts = [];
-    parts.push(entry.isBot ? 'Bot' : (entry.premiumActive ? 'Premium ativo' : 'Free'));
-    if (entry.isBot && entry.botAvatarStatus === 'processing') {
-      parts.push('Avatar gerando');
-    } else if (entry.isBot && entry.botAvatarStatus === 'error') {
-      parts.push('Avatar com erro');
-    } else {
-      parts.push(entry.isOnline ? 'Online' : 'Offline');
-    }
-    return parts.join(' | ');
+    return `Nível ${Math.max(1, Number(entry?.level) || 1)}`;
   }
 
   function renderRows(rows) {
@@ -895,7 +897,7 @@
       .sort((left, right) => (left.rank || 999999) - (right.rank || 999999));
 
     const rowMarkup = displayRows.map((entry) => `
-      <div class="users-row${entry.isOnline ? ' is-online' : ''}${isAdminViewer() && entry.userId !== state.currentUser?.id ? ' is-admin-target' : ''}" data-user-id="${entry.userId}">
+      <div class="users-row${entry.isOnline ? ' is-online' : ''}${entry.userId === state.currentUser?.id ? ' is-current-user' : ''}${isAdminViewer() && entry.userId !== state.currentUser?.id ? ' is-admin-target' : ''}" data-user-id="${entry.userId}">
         <div class="users-avatar${entry.botAvatarStatus === 'processing' ? ' is-processing' : ''}">
           <img src="${escapeHtml(entry.avatarImage || DEFAULT_PROFILE_AVATAR)}" alt="${escapeHtml(entry.username)}" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_AVATAR}';">
           <span class="users-rank-badge">${escapeHtml(entry.rank || 0)}</span>
