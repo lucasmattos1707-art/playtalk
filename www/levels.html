@@ -85,6 +85,15 @@
       78%{opacity:1;transform:translateX(-50%) translateY(0)}
       100%{opacity:0;transform:translateX(-50%) translateY(10px)}
     }
+    @keyframes watchSlideIn{
+      from{opacity:0;transform:translateX(28px)}
+      to{opacity:1;transform:translateX(0)}
+    }
+    @keyframes watchPulse{
+      0%{transform:scale(1)}
+      50%{transform:scale(1.1)}
+      100%{transform:scale(1)}
+    }
     @media (max-width:640px){.deck-edit-picker__head{flex-direction:column;align-items:flex-start}.deck-edit-picker__control{flex-wrap:wrap}.deck-edit-picker__field{max-width:none;flex-basis:100%}.deck-edit-picker__level{flex:1}}
     .popover-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.media-btn{position:relative;min-height:112px;padding:14px 12px 12px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:6px;border-radius:20px;text-align:left;overflow:hidden}
     .media-btn.active{border-color:#ef8f1a;box-shadow:0 0 0 3px rgba(239,143,26,.18)}.media-btn strong{font-size:17px}.media-btn span{font-size:12px;color:rgba(255,255,255,.72)}.icon-swap{position:absolute;top:14px;right:14px;width:40px;height:40px}
@@ -131,12 +140,20 @@
     .watch-view__status{color:rgba(255,255,255,.76);font-size:14px}
     .watch-stage{flex:1;display:grid;place-items:center}
     .watch-card{width:min(720px,100%);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:22px;backdrop-filter:blur(14px);box-shadow:0 22px 60px rgba(0,0,0,.28);display:grid;gap:18px}
-    .watch-card__image{width:min(100%,420px);aspect-ratio:1/1;margin:0 auto;border-radius:30px;background:#102654 center/cover no-repeat;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+    .watch-card__media{position:relative;width:min(100%,420px);aspect-ratio:1/1;margin:0 auto;border-radius:999px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+    .watch-card__image,.watch-card__video{position:absolute;inset:0}
+    .watch-card__image{border-radius:999px;background:#102654 center/cover no-repeat}
+    .watch-card__video{width:100%;height:100%;object-fit:cover;border:none;background:#000}
+    .watch-card__video.hidden{display:none}
     .watch-card__body{display:grid;gap:10px;text-align:center}
     .watch-card__deck{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.7)}
-    .watch-card__pt{font-size:clamp(26px,5vw,44px);font-weight:700}
-    .watch-card__en{font-size:clamp(18px,3.6vw,28px);color:#bfd8ff}
+    .watch-card__pt{font-family:"Pltay","Soopafre",Arial,sans-serif;font-size:clamp(44.85px,14.6vw,89.7px);line-height:1.02;font-weight:400}
+    .watch-card__en{font-family:"Pltay","Soopafre",Arial,sans-serif;font-size:clamp(44.85px,14.6vw,89.7px);line-height:1.02;font-weight:400;color:#bfd8ff}
     .watch-card__hint{font-size:14px;color:rgba(255,255,255,.72)}
+    .watch-card.is-sliding .watch-card__media,.watch-card.is-sliding .watch-card__body{animation:watchSlideIn 420ms ease}
+    .watch-card.is-pulsing .watch-card__media,.watch-card.is-pulsing .watch-card__body{animation:watchPulse 2400ms ease-in-out}
+    .watch-card__text-line{display:block}
+    .watch-card__text-line+.watch-card__text-line{margin-top:.07em}
     .watch-view__actions{display:flex;justify-content:center;margin-top:18px}
     .watch-stop{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#fff;padding:14px 20px;border-radius:16px;font-weight:700}
     .admin-studio{display:grid;gap:12px}
@@ -151,7 +168,7 @@
     .card.is-admin-card{cursor:pointer}
     .card.is-selected{border-color:#c85732;box-shadow:0 0 0 3px rgba(200,87,50,.14)}
     #voiceModeBtn,#uploadBtn,#importJsonBtn,#exportBtn,#exportZipBtn,#translateBtn,#testOnlineBtn,#watchFlashcardsBtn,#adminStudioBar{display:none!important}
-    @media (max-width:640px){.watch-view{padding:18px 14px}.watch-card{padding:18px;border-radius:24px}.watch-card__image{border-radius:24px}.watch-view__top{margin-bottom:12px}}
+    @media (max-width:640px){.watch-view{padding:18px 14px}.watch-card{padding:18px;border-radius:24px}.watch-view__top{margin-bottom:12px}}
   </style>
 </head>
 <body>
@@ -241,6 +258,7 @@
   <input id="singleImageInput" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml" hidden>
   <input id="audioInput" type="file" accept="audio/mpeg,audio/mp3,audio/ogg,audio/opus,audio/webm,audio/wav" hidden>
   <input id="audioBatchInput" type="file" accept="audio/mpeg,audio/mp3,audio/ogg,audio/opus,audio/webm,audio/wav" multiple hidden>
+  <input id="watchMediaInput" type="file" accept="image/*,video/*" multiple hidden>
   <input id="jsonInput" type="file" accept="application/json,.json" hidden>
   <input id="jsonBatchPublishInput" type="file" accept="application/json,.json" multiple hidden>
   <div id="audioPopover" class="popover hidden" aria-hidden="true">
@@ -369,7 +387,7 @@
           </select>
         </div>
       </div>
-      <div class="mini">O audio toca primeiro em 0.75x, espera 3 segundos, toca em 1.00x e depois aguarda o intervalo escolhido antes do proximo card aleatorio.</div>
+      <div class="mini">No modo teclado: 0.75x em Portugues, espera 1s, 1.00x em English, troca em ordem sem aleatorio.</div>
       <div class="row" style="justify-content:space-between"><button id="watchPopoverCloseBtn" type="button">Fechar</button><button id="watchStartBtn" class="accent" type="button">Comecar</button></div>
     </div>
   </div>
@@ -396,8 +414,11 @@
       <button id="watchCloseBtn" class="watch-view__close" type="button" aria-label="Fechar">×</button>
     </div>
     <div class="watch-stage">
-      <div class="watch-card">
-        <div id="watchCardImage" class="watch-card__image"></div>
+      <div id="watchCard" class="watch-card">
+        <div class="watch-card__media">
+          <div id="watchCardImage" class="watch-card__image"></div>
+          <video id="watchCardVideo" class="watch-card__video hidden" playsinline muted loop></video>
+        </div>
         <div class="watch-card__body">
           <div id="watchCardDeck" class="watch-card__deck">Deck atual</div>
           <div id="watchCardPt" class="watch-card__pt">Português</div>
@@ -452,7 +473,7 @@
       const jsonBatchPublishState={files:[],results:[],busy:false};
       let deckMetaAction='r2';
       let pendingImage=null,pendingAudio=null,currentAudio=null,audioBatchTargets={pt:false,en:false},aiBatchBusy=false,aiTextBusy=false,zipBusy=false,elevenBusy=false,r2UploadBusy=false,publishLocalBusy=false,feedbackToastTimer=0;
-      let watchRuntime=null,watchVoiceAudio=null,watchMusicAudio=null,watchLibraryCache=null,editableDeckOptionsCache=null;
+      let watchRuntime=null,watchVoiceAudio=null,watchMusicAudio=null,watchLibraryCache=null,editableDeckOptionsCache=null,watchObjectUrlPool=[];
       const postgresDeckSyncTimers=new Map();
       const visualClickTimers=new Map();
       const aiImageLocks=new Set();
@@ -1558,22 +1579,24 @@
       function hideWatchView(){$('watchView').classList.add('hidden');$('watchView').setAttribute('aria-hidden','true')}
       function stopWatchMusic(){if(!watchMusicAudio)return;watchMusicAudio.pause();watchMusicAudio.removeAttribute('src');watchMusicAudio.load();watchMusicAudio=null}
       function stopWatchVoice(){if(!watchVoiceAudio)return;watchVoiceAudio.pause();watchVoiceAudio.currentTime=0;watchVoiceAudio=null}
-      function stopWatchPlayback(){if(watchRuntime)watchRuntime.running=false;stopWatchVoice();stopWatchMusic();watchRuntime=null;hideWatchView();if('mediaSession'in navigator){navigator.mediaSession.playbackState='none'}}
+      function stopWatchPlayback(){if(watchRuntime)watchRuntime.running=false;stopWatchVoice();stopWatchMusic();const videoEl=$('watchCardVideo');if(videoEl){videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchObjectUrlPool.forEach(url=>URL.revokeObjectURL(url));watchObjectUrlPool=[];watchRuntime=null;hideWatchView();if('mediaSession'in navigator){navigator.mediaSession.playbackState='none'}}
       function setWatchStatus(text){$('watchStatusText').textContent=text||''}
-      function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim();$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';$('watchCardPt').textContent=item?.pt||'Sem portugues';$('watchCardEn').textContent=item?.en||'Sem english';$('watchCardHint').textContent=extraStatus||'A reproducao segue em ordem aleatoria continua.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';setWatchStatus(extraStatus||'Preparando audio...')}
-      function normalizeWatchItem(entry,deckTitle,sourceLabel){const pt=String(entry?.nomePortugues||entry?.pt||entry?.portuguese||'').trim(),en=String(entry?.nomeIngles||entry?.en||entry?.english||'').trim(),audio=String(entry?.audio||entry?.audioFile||'').trim(),image=String(entry?.imagem||entry?.image||entry?.imageFile||'').trim();if(!audio||!(pt||en))return null;return{key:`${sourceLabel}::${deckTitle}::${pt}::${en}::${audio}`,pt,en,audio,image,deckTitle:String(deckTitle||'Flashcards').trim()||'Flashcards',sourceLabel:String(sourceLabel||'Flashcards').trim()||'Flashcards'}}
-      function currentDeckWatchItems(){return state.items.map(item=>normalizeWatchItem({pt:item.pt,en:item.en,audio:audioSrc(item,'single'),image:itemImg(item)},state.title.trim()||`Pasta ${state.day}`,'Meus flashcards')).filter(Boolean)}
+      function watchLines(text,maxChars=14){const words=String(text||'').trim().split(/\s+/).filter(Boolean);if(!words.length)return[''];const lines=[];let line='';words.forEach(word=>{const test=line?`${line} ${word}`:word;if(test.length<=maxChars||!line){line=test;return}lines.push(line);line=word});if(line)lines.push(line);return lines.slice(0,3)}
+      function renderWatchText(node,text){const lines=watchLines(text);node.innerHTML=lines.map(line=>`<span class="watch-card__text-line">${escapeHtml(line)}</span>`).join('')}
+      function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim(),video=String(item?.video||'').trim(),watchCard=$('watchCard'),videoEl=$('watchCardVideo');$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';renderWatchText($('watchCardPt'),item?.pt||'Sem portugues');renderWatchText($('watchCardEn'),item?.en||'Sem english');$('watchCardHint').textContent=extraStatus||'Sequencia em ordem, sem aleatorio.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';if(video){videoEl.classList.remove('hidden');if(videoEl.src!==video)videoEl.src=video;videoEl.play().catch(()=>{})}else{videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchCard.classList.remove('is-sliding','is-pulsing');void watchCard.offsetWidth;watchCard.classList.add('is-sliding','is-pulsing');updateWatchTransforms();setWatchStatus(extraStatus||'Preparando audio...')}
+      function normalizeWatchItem(entry,deckTitle,sourceLabel){const pt=String(entry?.nomePortugues||entry?.pt||entry?.portuguese||'').trim(),en=String(entry?.nomeIngles||entry?.en||entry?.english||'').trim(),audio=String(entry?.audio||entry?.audioFile||'').trim(),image=String(entry?.imagem||entry?.image||entry?.imageFile||'').trim(),video=String(entry?.video||'').trim();if(!(pt||en))return null;return{key:`${sourceLabel}::${deckTitle}::${pt}::${en}::${audio}::${image}::${video}`,pt,en,audio,image,video,deckTitle:String(deckTitle||'Flashcards').trim()||'Flashcards',sourceLabel:String(sourceLabel||'Flashcards').trim()||'Flashcards'}}
+      function currentDeckWatchItems(){return state.items.map(item=>normalizeWatchItem({pt:item.pt,en:item.en,audio:audioSrc(item,'single'),image:(item.imageRemoteUrl||cloud(state.day,PHASE.flashcard,item.imageFile,'flashcard')||'')},state.title.trim()||`Pasta ${state.day}`,'Meus flashcards')).filter(item=>item&&item.audio)}
       async function loadJsonFile(filePath){const response=await fetch(filePath.startsWith('/')?filePath:`/${filePath}`);if(!response.ok)throw new Error(`Nao foi possivel carregar ${filePath}.`);return response.json()}
       async function loadAllWatchItems(){if(Array.isArray(watchLibraryCache)&&watchLibraryCache.length)return watchLibraryCache;const manifest=await loadJsonFile('/data/local-level-files.json');const files=Array.isArray(manifest?.files)?manifest.files:[];const flashcardFiles=files.filter(file=>file?.folder==='words');const loaded=await Promise.all(flashcardFiles.map(async file=>{try{const data=await loadJsonFile(`/${String(file.path||'').replace(/^\/+/,'')}`);const title=String(data?.title||file?.name||'Flashcards').trim()||'Flashcards';const items=Array.isArray(data?.items)?data.items:[];return items.map(item=>normalizeWatchItem(item,title,'Todos os flashcards')).filter(Boolean)}catch(error){console.error('Falha ao carregar deck para assistir flashcards',file,error);return[]}}));watchLibraryCache=loaded.flat();return watchLibraryCache}
       function shuffleWatchItems(items){const copy=[...items];for(let i=copy.length-1;i>0;i-=1){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy}
-      function nextWatchItem(session){if(!session.queue.length){const pool=session.items.length>1&&session.lastKey?session.items.filter(item=>item.key!==session.lastKey):session.items;session.queue=shuffleWatchItems(pool.length?pool:session.items)}const item=session.queue.shift()||session.items[0]||null;if(item)session.lastKey=item.key;return item}
+      function nextWatchItem(session){if(!session.items.length)return null;session.currentIndex=(Number.isInteger(session.currentIndex)?session.currentIndex:-1)+1;if(session.currentIndex>=session.items.length)session.currentIndex=0;return session.items[session.currentIndex]||null}
       function isWatchSessionActive(session){return Boolean(session&&watchRuntime&&watchRuntime.id===session.id&&session.running)}
       function waitForWatch(session,ms,statusText){if(statusText)setWatchStatus(statusText);return new Promise(resolve=>{const started=Date.now();const tick=()=>{if(!isWatchSessionActive(session))return resolve(false);const elapsed=Date.now()-started;if(elapsed>=ms)return resolve(true);setTimeout(tick,Math.min(250,ms-elapsed))};tick()})}
       function updateWatchMediaSession(item){if(!('mediaSession'in navigator))return;try{navigator.mediaSession.metadata=new MediaMetadata({title:item?.pt||item?.en||'Flashcard',artist:item?.en||'',album:item?.deckTitle||'Fluent LevelUp',artwork:item?.image?[{src:item.image,sizes:'512x512',type:'image/png'}]:[]});navigator.mediaSession.playbackState='playing';navigator.mediaSession.setActionHandler('stop',()=>stopWatchPlayback());navigator.mediaSession.setActionHandler('pause',()=>stopWatchPlayback());navigator.mediaSession.setActionHandler('play',()=>{});}catch(error){console.error('Falha ao atualizar Media Session',error)}}
       function startWatchMusic(session){if(!session.musicEnabled)return;if(!watchMusicAudio){watchMusicAudio=new Audio();watchMusicAudio.preload='auto';watchMusicAudio.loop=false;watchMusicAudio.volume=.7;watchMusicAudio.addEventListener('ended',()=>{if(!isWatchSessionActive(session))return;session.musicQueue=session.musicQueue?.length?session.musicQueue:shuffleWatchItems(BALANCE_TRACKS);const nextTrack=session.musicQueue.shift();if(!nextTrack)return;watchMusicAudio.src=watchTrackUrl(nextTrack);watchMusicAudio.play().catch(error=>console.error('Erro ao tocar trilha',error))})}if(!session.musicQueue?.length)session.musicQueue=shuffleWatchItems(BALANCE_TRACKS);if(!watchMusicAudio.src){const nextTrack=session.musicQueue.shift();if(nextTrack)watchMusicAudio.src=watchTrackUrl(nextTrack)}watchMusicAudio.play().catch(error=>console.error('Erro ao iniciar trilha',error))}
       async function playWatchVoice(session,item,rate){if(!isWatchSessionActive(session))return false;stopWatchVoice();return new Promise(resolve=>{const audio=new Audio(item.audio);watchVoiceAudio=audio;audio.preload='auto';audio.playsInline=true;audio.playbackRate=rate;audio.defaultPlaybackRate=rate;audio.volume=1;const finish=()=>{audio.onended=null;audio.onerror=null;if(watchVoiceAudio===audio)watchVoiceAudio=null;resolve(isWatchSessionActive(session))};audio.onended=finish;audio.onerror=finish;audio.play().catch(error=>{console.error('Erro ao tocar audio do flashcard',error);finish()})})}
-      async function playWatchSequence(session,item){renderWatchCard(item,'Reproduzindo em 0.75x');updateWatchMediaSession(item);startWatchMusic(session);const firstPass=await playWatchVoice(session,item,.75);if(!firstPass)return false;const pauseBetween=await waitForWatch(session,3000,'Nova repeticao em 3 segundos...');if(!pauseBetween)return false;renderWatchCard(item,'Reproduzindo em 1.00x');const secondPass=await playWatchVoice(session,item,1);if(!secondPass)return false;return waitForWatch(session,session.gapMs,`Proximo flashcard em ${Math.round(session.gapMs/1000)} segundo(s)...`)}
-      async function startWatchPlayback(){const settings={gapMs:Number($('watchGapSelect').value)||5000,scope:$('watchScopeSelect').value==='all'?'all':'mine',music:$('watchMusicSelect').value==='on'?'on':'off'};saveWatchSettings(settings);closeWatchPopover();showWatchView();renderWatchCard({pt:'Carregando...',en:'Loading...',deckTitle:'Fluent LevelUp',sourceLabel:settings.scope==='all'?'Todos os flashcards':'Meus flashcards'},'Preparando biblioteca...');let items=[];try{items=settings.scope==='all'?await loadAllWatchItems():currentDeckWatchItems()}catch(error){hideWatchView();alert(error.message||'Erro ao preparar os flashcards para reproducao.');return}if(!items.length){hideWatchView();alert(settings.scope==='all'?'Nenhum flashcard com audio foi encontrado na biblioteca.':'Seu deck atual precisa ter flashcards com audio para assistir.');return}const session={id:`watch-${Date.now()}-${Math.random()}`,running:true,items,gapMs:settings.gapMs,musicEnabled:settings.music==='on',queue:[],musicQueue:[],lastKey:''};watchRuntime=session;try{while(isWatchSessionActive(session)){const item=nextWatchItem(session);if(!item)break;const keepGoing=await playWatchSequence(session,item);if(!keepGoing)break}}catch(error){console.error('Erro no modo assistir flashcards',error);if(isWatchSessionActive(session))alert(error.message||'Erro ao assistir flashcards.')}finally{if(isWatchSessionActive(session))stopWatchPlayback()}}
+      async function playWatchSequence(session,item){renderWatchCard(item,'Português em 0.75x');updateWatchMediaSession(item);startWatchMusic(session);$('watchCardEn').style.visibility='hidden';$('watchCardPt').style.visibility='visible';if(item.audio){const firstPass=await playWatchVoice(session,item,.75);if(!firstPass)return false}const pauseBetween=await waitForWatch(session,1000,'English em 1 segundo...');if(!pauseBetween)return false;$('watchCardPt').style.visibility='hidden';$('watchCardEn').style.visibility='visible';renderWatchCard(item,'English em 1.00x');if(item.audio){const secondPass=await playWatchVoice(session,item,1);if(!secondPass)return false}const waitNext=await waitForWatch(session,3000,'Proximo flashcard...');$('watchCardEn').style.visibility='visible';$('watchCardPt').style.visibility='visible';return waitNext}
+      async function startWatchPlayback(options={}){const settings={gapMs:3000,scope:(options.scope||$('watchScopeSelect').value)==='all'?'all':'mine',music:$('watchMusicSelect').value==='on'?'on':'off'};saveWatchSettings(settings);closeWatchPopover();showWatchView();renderWatchCard({pt:'Carregando...',en:'Loading...',deckTitle:'Fluent LevelUp',sourceLabel:settings.scope==='all'?'Todos os flashcards':'Meus flashcards'},'Preparando biblioteca...');let items=[];try{items=settings.scope==='all'?await loadAllWatchItems():currentDeckWatchItems()}catch(error){hideWatchView();alert(error.message||'Erro ao preparar os flashcards para reproducao.');return}if(options.customItems&&options.customItems.length)items=options.customItems;if(!items.length){hideWatchView();alert(settings.scope==='all'?'Nenhum flashcard com audio foi encontrado na biblioteca.':'Seu deck atual precisa ter flashcards com audio para assistir.');return}const session={id:`watch-${Date.now()}-${Math.random()}`,running:true,items,gapMs:3000,musicEnabled:settings.music==='on',musicQueue:[],currentIndex:-1,controlMode:'none',imageTransform:{x:0,y:0,scale:1},textTransform:{x:0,y:0,scale:1}};watchRuntime=session;try{while(isWatchSessionActive(session)){const item=nextWatchItem(session);if(!item)break;const keepGoing=await playWatchSequence(session,item);if(!keepGoing)break}}catch(error){console.error('Erro no modo assistir flashcards',error);if(isWatchSessionActive(session))alert(error.message||'Erro ao assistir flashcards.')}finally{if(isWatchSessionActive(session))stopWatchPlayback()}}
       function syncAiTextButton(){const supportedMode=state.mode==='flashcard'||state.mode==='scenes'||state.mode==='movies';$('aiTextBtn').classList.toggle('hidden',!supportedMode);setButtonLabel('aiTextBtn',aiTextStatusLabel());$('aiTextBtn').disabled=!supportedMode||aiTextBusy;setButtonLabel('translateBtn',aiTextBusy?'Traduzindo...':'Traduzir PT para EN');$('translateBtn').disabled=aiTextBusy||!state.items.some(item=>String(item?.pt||'').trim()&&!String(item?.en||'').trim())}
       function openTextPopover(){const sceneMode=state.mode==='scenes',movieMode=state.mode==='movies';$('textPopoverEyebrow').textContent=sceneMode?'Historia com IA':movieMode?'Filme com IA':'FlashCard com IA';$('textPopoverHeading').textContent=sceneMode?'Criar historia para Cenas':movieMode?'Criar sequencia para Filmes':'Gerar frases PT + EN';$('flashcardTextFields').classList.toggle('hidden',sceneMode||movieMode);$('movieTextFields').classList.toggle('hidden',!movieMode);$('sceneTextFields').classList.toggle('hidden',!sceneMode);if(sceneMode)renderSceneStoryEditor();if(movieMode){$('movieStoryTopicInput').value=movieStoryDraft.topic||'';$('movieStoryCountInput').value=movieStoryDraft.itemCount||8}$('textPopover').classList.remove('hidden');$('textPopover').setAttribute('aria-hidden','false')}
       function sceneStorySelectedIds(){return SCENE_CHARACTERS.filter(char=>sceneStoryDraft.selectedIds.includes(char.id)).map(char=>char.id).slice(0,4)}
@@ -1590,6 +1613,9 @@
       function applyGeneratedFlashcards(items){const normalized=normalizeAiFlashcardItems(items);if(!normalized.length)return 0;const emptyIndexes=[];state.items.forEach((item,index)=>{if(!(item.pt||item.en))emptyIndexes.push(index)});while(emptyIndexes.length<normalized.length){addItem();emptyIndexes.push(state.items.length-1)}normalized.forEach((entry,listIndex)=>{const item=state.items[emptyIndexes[listIndex]];if(!item)return;item.pt=entry.pt;item.en=entry.en;item.category=item.category||'flashcard'});queuePersistCurrentEditorDeck();save();renderAll();return normalized.length}
       async function translatePortugueseBatch(items){const response=await fetch('/api/text/openai/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao traduzir textos.');const translations=Array.isArray(payload?.items)?payload.items.map(item=>({index:Number.parseInt(item?.index,10),en:String(item?.en||'').trim()})).filter(item=>Number.isInteger(item.index)&&item.en):[];if(!translations.length)throw new Error('A OpenAI nao retornou traducoes validas.');return translations}
       function applyTranslations(items){let applied=0;(items||[]).forEach(entry=>{const item=state.items[entry.index];if(!item)return;if(!String(item.pt||'').trim())return;if(String(item.en||'').trim())return;item.en=String(entry.en||'').trim();if(item.en)applied+=1});if(applied)queuePersistCurrentEditorDeck();save();renderAll();return applied}
+      function updateWatchTransforms(){if(!watchRuntime)return;const img=$('watchCardImage'),video=$('watchCardVideo'),pt=$('watchCardPt'),en=$('watchCardEn');const imageTransform=watchRuntime.imageTransform||{x:0,y:0,scale:1},textTransform=watchRuntime.textTransform||{x:0,y:0,scale:1};const imageValue=`translate(${imageTransform.x}px,${imageTransform.y}px) scale(${imageTransform.scale})`;img.style.transform=imageValue;video.style.transform=imageValue;const textValue=`translate(${textTransform.x}px,${textTransform.y}px) scale(${textTransform.scale})`;pt.style.transform=textValue;en.style.transform=textValue}
+      function moveWatchByKeyboard(delta){if(!watchRuntime||!watchRuntime.items.length)return;watchRuntime.currentIndex=(watchRuntime.currentIndex+delta+watchRuntime.items.length)%watchRuntime.items.length;stopWatchVoice();const item=watchRuntime.items[watchRuntime.currentIndex];renderWatchCard(item,'Navegacao manual');updateWatchTransforms()}
+      async function loadWatchCustomMedia(files){const entries=[];for(const file of Array.from(files||[])){const type=String(file?.type||'').toLowerCase();if(!type.startsWith('image/')&&!type.startsWith('video/'))continue;const url=URL.createObjectURL(file);watchObjectUrlPool.push(url);entries.push(normalizeWatchItem({pt:file.name,en:file.name,image:type.startsWith('image/')?url:'',video:type.startsWith('video/')?url:'',audio:''},'Apresentacao','Upload PC'))}return entries.filter(Boolean)}
       async function uploadLevelFilesToR2(files,options={}){const day=options?.day||state.day,mode=options?.mode||state.mode;const response=await fetch('/api/r2/upload-level-files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day,mode,files})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.details||payload?.error||'Erro ao enviar arquivos para o R2.');return payload}
       function getFlashcardItemSyncTone(item){
         const status=flashcardAssetSyncState.get(item);
@@ -2333,6 +2359,7 @@
       $('watchStartBtn').onclick=()=>startWatchPlayback();
       $('watchCloseBtn').onclick=()=>stopWatchPlayback();
       $('watchStopBtn').onclick=()=>stopWatchPlayback();
+      $('watchMediaInput').onchange=async e=>{const files=Array.from(e.target.files||[]);e.target.value='';if(!files.length)return;const items=await loadWatchCustomMedia(files);if(!items.length){alert('Selecione imagens ou videos validos.');return}startWatchPlayback({scope:'mine',customItems:items})};
       $('ttsVoiceSelect').onchange=e=>{state.ttsVoice=normalizeTtsVoice(e.target.value);save();syncVoicePopover()};
       $('voicePopoverCloseBtn').onclick=()=>closeVoicePopover();
       $('voicePopoverConfirmBtn').onclick=async()=>{if(elevenBusy)return;state.ttsVoice=normalizeTtsVoice($('ttsVoiceSelect').value);save();syncVoicePopover();const providerLabel=voiceProvider(state.ttsVoice)==='elevenlabs'?'ElevenLabs':'OpenAI';try{const done=await generateRemainingVoiceAssets(state.ttsVoice);if(done&&!remainingVoiceTargets().length)alert(`${done} audio(s) gerado(s) com ${providerLabel}.`);closeVoicePopover()}catch(error){alert(error.message||'Erro ao gerar audio.')}};
@@ -2366,6 +2393,34 @@
       $('textPopover').onclick=e=>{if(e.target===e.currentTarget)closeTextPopover()};
       $('watchPopover').onclick=e=>{if(e.target===e.currentTarget)closeWatchPopover()};
       $('itemAdminPopover').onclick=e=>{if(e.target===e.currentTarget)closeItemAdminPopover()};
+      document.addEventListener('keydown',e=>{
+        const tag=String(e.target?.tagName||'').toLowerCase();
+        const editing=tag==='input'||tag==='textarea'||tag==='select'||e.target?.isContentEditable;
+        if(editing)return;
+        const key=String(e.key||'').toLowerCase();
+        if(key==='1'){e.preventDefault();startWatchPlayback({scope:'mine'});return}
+        if(key==='u'){e.preventDefault();$('watchMediaInput').click();return}
+        if(key==='escape'){if(watchRuntime){e.preventDefault();stopWatchPlayback()}return}
+        if(!watchRuntime)return;
+        if(key==='c'){watchRuntime.controlMode='none';setWatchStatus('Controle normal');return}
+        if(key==='f'){watchRuntime.controlMode='image';setWatchStatus('Controle da imagem ativo');return}
+        if(key==='t'){watchRuntime.controlMode='text';setWatchStatus('Controle do texto ativo');return}
+        if(watchRuntime.controlMode==='none'){
+          if(key==='arrowright'){e.preventDefault();moveWatchByKeyboard(1);return}
+          if(key==='arrowleft'){e.preventDefault();moveWatchByKeyboard(-1);return}
+        }
+        const target=watchRuntime.controlMode==='image'?'imageTransform':watchRuntime.controlMode==='text'?'textTransform':'';
+        if(!target)return;
+        const transform=watchRuntime[target]||{x:0,y:0,scale:1};
+        if(key==='arrowup'){e.preventDefault();transform.y-=8}
+        if(key==='arrowdown'){e.preventDefault();transform.y+=8}
+        if(key==='arrowleft'){e.preventDefault();transform.x-=8}
+        if(key==='arrowright'){e.preventDefault();transform.x+=8}
+        if(key==='+'||key==='='){e.preventDefault();transform.scale=Math.min(3,Number((transform.scale+0.05).toFixed(2)))}
+        if(key==='-'){e.preventDefault();transform.scale=Math.max(0.3,Number((transform.scale-0.05).toFixed(2)))}
+        watchRuntime[target]=transform;
+        updateWatchTransforms();
+      });
       $('batchImageInput').onchange=async e=>{for(const file of Array.from(e.target.files||[])){addItem(await prepImage(file,flashcardAssetStem(state.items.length)))}e.target.value='';save();renderAll()};
       $('singleImageInput').onchange=async e=>{
         const file=e.target.files?.[0];
