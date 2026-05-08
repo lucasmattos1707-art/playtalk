@@ -3073,23 +3073,30 @@
       display: none;
       grid-column: 1 / -1;
       grid-row: 2;
-      justify-self: center;
-      width: min(80vh, calc(100vw - 24px));
+      justify-self: stretch;
+      width: 100vw;
+      max-width: 100vw;
       height: 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(126, 255, 167, 0.88);
-      background: rgba(5, 24, 11, 0.92);
+      border-radius: 0;
+      border: none;
+      background: rgba(2, 20, 8, 0.98);
       overflow: hidden;
-      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.28);
+      box-shadow: none;
+      margin: 0;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 120;
     }
 
     .game-mic-side-metric__progress-fill {
       display: block;
       width: 0%;
       height: 100%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, #44ff8e 0%, #0eda66 100%);
-      box-shadow: 0 0 12px rgba(52, 255, 132, 0.58);
+      border-radius: 0;
+      background: linear-gradient(90deg, #39ff14 0%, #00ff66 55%, #7dff2a 100%);
+      box-shadow: 0 0 16px rgba(57, 255, 20, 0.85);
       transition: width 200ms ease;
     }
 
@@ -5734,6 +5741,16 @@
       opacity: 0;
     }
 
+    .game[data-phase-key="fourth-star"] .flashcards-typing__display-letter.is-hint {
+      background: linear-gradient(135deg, #b8ff2a 0%, #dfff6a 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      text-shadow: none;
+      filter: drop-shadow(0 0 10px rgba(184, 255, 42, 0.68));
+    }
+
     .flashcards-typing__display-prompt {
       display: inline-block;
       opacity: 0.95;
@@ -6225,7 +6242,7 @@
     }
 
     .game[data-phase-key="fifth-star"] .textscreen .game-status-wrap {
-      transform: translateY(6vh);
+      transform: translateY(calc(6vh - 35px));
       margin-top: clamp(8px, 2vh, 18px);
     }
 
@@ -7129,7 +7146,7 @@
       letter-spacing: 0;
       text-transform: uppercase;
       background: linear-gradient(145deg, rgba(5, 24, 66, 0.92) 0%, rgba(10, 54, 122, 0.92) 58%, rgba(18, 102, 197, 0.9) 100%);
-      border: 2px solid rgba(117, 215, 255, 0.88);
+      border: 2px solid rgba(7, 43, 122, 0.96);
       color: #f6fcff;
       text-shadow: 0 2px 10px rgba(20, 112, 255, 0.42);
       box-shadow:
@@ -7504,6 +7521,19 @@
         drop-shadow(0 0 10px rgba(83, 255, 140, 0.95))
         drop-shadow(0 0 18px rgba(83, 255, 140, 0.72));
       transform: scale(1.05);
+    }
+
+    .game[data-phase-key="second-star"] .game-card__seal,
+    .game[data-phase-key="fourth-star"] .game-card__seal,
+    .game[data-phase-key="second-star"] .game-mic-side-metric,
+    .game[data-phase-key="fourth-star"] .game-mic-side-metric {
+      display: none !important;
+    }
+
+    .game[data-phase-key="second-star"] .game-touch.game-touch--stage-play .game-touch__books-mic-icon,
+    .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic .game-touch__books-mic-icon,
+    .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play .game-touch__books-mic-icon {
+      display: none !important;
     }
 
     .game-touch__swap {
@@ -15129,21 +15159,6 @@
         return Number(application) === 0 ? 30 : 0;
       }
 
-      function fluencyVectorByTotalMinutesLocal(totalMinutes) {
-        const minutes = Math.max(0, Number(totalMinutes) || 0);
-        if (minutes <= 0) return 0;
-        if (minutes <= 15) {
-          return (minutes / 15) * 10;
-        }
-        if (minutes <= 45) {
-          return 10 + ((minutes - 15) / (45 - 15)) * 40;
-        }
-        if (minutes <= 120) {
-          return 50 + ((minutes - 45) / (120 - 45)) * 50;
-        }
-        return 100;
-      }
-
       function computeExpectedFluencyPercent(mission) {
         const minutes = Math.max(0, Number(mission?.minutes ?? state.user?.fluencyPlanMinutes) || 0);
         const months = Math.max(0, Number(state.user?.fluencyPlanMonths) || 0);
@@ -15161,19 +15176,8 @@
 
       function computeProducedFluencyPercent(mission, missionView) {
         const expectedFluency = computeExpectedFluencyPercent(mission);
-        const cardsToday = Math.max(0, Number(missionView?.cardsToday) || 0);
-        const booksToday = Math.max(0, Number(missionView?.booksToday) || 0);
-        const booksPct = Math.max(0, Number(mission?.smartbooksPercentage ?? state.user?.fluencyPlanSmartbooksPercentage) || 0);
-        const application = Number(state.user?.fluencyPlanApplication);
-
-        // Produzida = produção real diária convertida em tempo (estágios 1/2),
-        // depois aplica os mesmos cortes de estratégia do plano (estágios 3/4).
-        const producedMinutes = (cardsToday * 1) + (booksToday * 2);
-        const timeVector = fluencyVectorByTotalMinutesLocal(producedMinutes);
-        const cutSmartbooks = fluencySmartbooksCutLocal(booksPct);
-        const cutApplication = fluencyApplicationCutLocal(application);
-        const produced = timeVector * (1 - ((cutSmartbooks + cutApplication) / 100));
-
+        const dailyProgressPercent = Math.max(0, Math.min(100, Number(missionView?.balancedProgressPercent) || 0));
+        const produced = expectedFluency * (dailyProgressPercent / 100);
         return Math.max(0, Math.min(expectedFluency, produced));
       }
 
@@ -18428,20 +18432,12 @@
 
       function showRewardGameStatus() {
         clearStageHintLoop();
-        const levelUpLevel = Math.max(0, Number(state.lastLevelUpLevel) || 0);
         const flashcardsCount = weightedAccessibleFlashcardsScore();
         state.ui.gameStatusRankToken += 1;
         const token = state.ui.gameStatusRankToken;
         clearGameStatusRankTimer();
-        if (levelUpLevel) {
-          setGameStatus(`Voce chegou no Nivel ${levelUpLevel}`, 'flashcards-count');
-          if (els.gameStarCopy) {
-            els.gameStarCopy.textContent = `Voce chegou no Nivel ${levelUpLevel}`;
-          }
-          state.lastLevelUpLevel = 0;
-        } else {
-          setGameStatus(`${flashcardsCount} FlashCards`, 'flashcards-count');
-        }
+        setGameStatus(`${flashcardsCount} FlashCards`, 'flashcards-count');
+        state.lastLevelUpLevel = 0;
         state.ui.gameStatusRankTimer = window.setTimeout(async () => {
           state.ui.gameStatusRankTimer = 0;
           if (token !== state.ui.gameStatusRankToken || !state.game.active) return;
@@ -19575,7 +19571,7 @@
       }
 
       function buildTypingLetterPool(text, total = 16) {
-        const source = safeText(text).toUpperCase().replace(/[^A-Z]/g, '');
+        const source = safeText(text).toUpperCase().replace(/[^A-Z']/g, '');
         const pool = [];
         source.split('').forEach((letter) => {
           if (letter && !pool.includes(letter)) {
@@ -19597,7 +19593,7 @@
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
           .toUpperCase()
-          .replace(/[^A-Z\s]/g, '')
+          .replace(/[^A-Z'\s]/g, '')
           .replace(/\s+/g, ' ')
           .trim();
       }
@@ -19984,11 +19980,22 @@
 
       function renderFourthStarCorrectionSnippet(display, target, typedLength) {
         if (!display) return;
-        const letters = safeText(target)
-          .toUpperCase()
-          .replace(/[^A-Z\s]/g, '')
-          .split('');
-        const index = Math.max(0, Math.min(letters.length - 1, Number(typedLength) || 0));
+        const letters = safeText(target).toUpperCase().split('');
+        const typedIndex = Math.max(0, Number(typedLength) || 0);
+        let visibleCount = 0;
+        let index = 0;
+        for (let cursor = 0; cursor < letters.length; cursor += 1) {
+          const char = letters[cursor];
+          if (char !== ' ') {
+            if (visibleCount >= typedIndex) {
+              index = cursor;
+              break;
+            }
+            visibleCount += 1;
+          }
+          index = cursor;
+        }
+        index = Math.max(0, Math.min(letters.length - 1, index));
         const buildLetter = (char, extraClass) => (
           `<span class="flashcards-typing__display-letter${extraClass ? ` ${extraClass}` : ''}" data-char="${escapeHtml(char || ' ')}">${escapeHtml(char || ' ')}</span>`
         );
@@ -20075,7 +20082,7 @@
       function normalizeSmartTypingLetters(target) {
         return String(target || '')
           .toUpperCase()
-          .replace(/[^A-Z]/g, '')
+          .replace(/[^A-Z']/g, '')
           .split('')
           .filter(Boolean);
       }
@@ -20496,7 +20503,8 @@
         }
 
         const typingState = resolveTypingStageState(entry, card);
-        const target = typingState.normalizedTarget.replace(/\s/g, '');
+        const targetWithSpaces = typingState.normalizedTarget;
+        const target = targetWithSpaces.replace(/\s/g, '');
         syncGameAdvanceButton(entry);
         if (!target) {
           clearTypingSkipAutomation();
@@ -20751,7 +20759,7 @@
               const typedLengthBeforeReset = typed.length;
               const finished = await handleTypingMistake(entry, card, grid, typedLengthBeforeReset, {
                 wrongLetter: keyLetter,
-                targetText: target
+                targetText: targetWithSpaces
               });
               if (!finished) {
                 renderTyped();
