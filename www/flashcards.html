@@ -1402,7 +1402,7 @@
       gap: 0;
       width: min(430px, 100%);
       max-width: calc(100vw - 42px);
-      transform: translateY(70px);
+      transform: translateY(100px);
     }
 
     .daily-plan-modal__hero-title {
@@ -1499,17 +1499,39 @@
 
     .daily-plan-modal__mission-circle {
       --progress: 0%;
-      width: clamp(187px, 46vw, 242px);
-      height: clamp(187px, 46vw, 242px);
+      width: clamp(224px, 55.2vw, 290px);
+      height: clamp(224px, 55.2vw, 290px);
       border-radius: 50%;
       display: grid;
       place-items: center;
-      background:
-        radial-gradient(circle at center, rgba(4, 14, 34, 0.98) 60%, transparent 61%),
-        conic-gradient(from -90deg, #3dff86 var(--progress), rgba(34, 87, 56, 0.28) var(--progress) 100%);
+      position: relative;
+      overflow: hidden;
+      background: conic-gradient(from -90deg, #3dff86 var(--progress), rgba(34, 87, 56, 0.28) var(--progress) 100%);
       box-shadow:
         0 0 26px rgba(70, 255, 123, 0.35),
         inset 0 0 0 1px rgba(149, 255, 190, 0.32);
+    }
+
+    .daily-plan-modal__mission-circle::before {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border-radius: 50%;
+      background: rgba(4, 14, 34, 0.86);
+      z-index: 1;
+    }
+
+    .daily-plan-modal__mission-avatar {
+      position: absolute;
+      inset: 5px;
+      width: calc(100% - 10px);
+      height: calc(100% - 10px);
+      border-radius: 50%;
+      object-fit: cover;
+      filter: grayscale(1) hue-rotate(165deg) saturate(1.2) brightness(0.55) contrast(1.05);
+      opacity: 0.52;
+      z-index: 2;
+      pointer-events: none;
     }
 
     .daily-plan-modal__general-percent {
@@ -1520,7 +1542,11 @@
       margin: 0;
       text-align: center;
       color: #e6fff0;
-      text-shadow: 0 0 18px rgba(70, 255, 123, 0.35);
+      text-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.92),
+        0 0 18px rgba(70, 255, 123, 0.35);
+      position: relative;
+      z-index: 3;
     }
     .daily-plan-modal__general-percent-sign {
       font-size: 0.6em;
@@ -1770,7 +1796,7 @@
       .daily-plan-modal__counter { font-size: 24px; }
       .daily-plan-modal__overall-bar { height: 8px; }
       .daily-plan-modal__panel { transform: translateY(-24px); }
-      .daily-plan-modal__hero,
+      .daily-plan-modal__hero { transform: translateY(36px); }
       .daily-plan-modal__card,
       .daily-plan-modal__seal-progress { transform: translateY(6px); }
     }
@@ -9387,6 +9413,7 @@
         <section class="daily-plan-modal__card">
           <section class="daily-plan-modal__general-progress">
             <div class="daily-plan-modal__mission-circle" id="dailyPlanMissionCircle" aria-hidden="true">
+              <img class="daily-plan-modal__mission-avatar" id="dailyPlanMissionAvatar" src="/Avatar/profile-neon-blue.svg" alt="">
               <div class="daily-plan-modal__general-percent" id="dailyPlanGeneralPercent">0%</div>
             </div>
           </section>
@@ -9408,7 +9435,7 @@
             </div>
           </article>
 
-          <article class="daily-plan-modal__mission is-books">
+          <article class="daily-plan-modal__mission is-books" id="dailyPlanBooksMission">
             <div class="daily-plan-modal__icon-ring is-purple" aria-hidden="true">
               <svg viewBox="0 0 64 64" focusable="false">
                 <rect x="8" y="10" width="22" height="44" rx="6"></rect>
@@ -10471,10 +10498,12 @@
         dailyPlanFlashcardsTotal: document.getElementById('dailyPlanFlashcardsTotal'),
         dailyPlanFlashcardsBar: document.getElementById('dailyPlanFlashcardsBar'),
         dailyPlanBooksDone: document.getElementById('dailyPlanBooksDone'),
+        dailyPlanBooksMission: document.getElementById('dailyPlanBooksMission'),
         dailyPlanBooksTotal: document.getElementById('dailyPlanBooksTotal'),
         dailyPlanBooksBar: document.getElementById('dailyPlanBooksBar'),
         dailyPlanMissionBar: document.getElementById('dailyPlanMissionBar'),
         dailyPlanMissionCircle: document.getElementById('dailyPlanMissionCircle'),
+        dailyPlanMissionAvatar: document.getElementById('dailyPlanMissionAvatar'),
         dailyPlanOverallBar: document.getElementById('dailyPlanOverallBar'),
         dailyPlanGeneralPercent: document.getElementById('dailyPlanGeneralPercent'),
         dailyPlanGeneralLabel: document.querySelector('.daily-plan-modal__general-label'),
@@ -15328,9 +15357,13 @@
         if (els.dailyPlanGeneralPercent) {
           els.dailyPlanGeneralPercent.innerHTML = `${percentToShow}<span class="daily-plan-modal__general-percent-sign">%</span>`;
         }
+        const flashPct = Math.max(0, Number(mission?.flashcardsPercentage ?? state.user?.fluencyPlanFlashcardsPercentage) || 0);
+        const booksPct = Math.max(0, Number(mission?.smartbooksPercentage ?? state.user?.fluencyPlanSmartbooksPercentage) || 0);
         if (els.dailyPlanFlashcardsMission) {
-          const flashcardsCompleted = Math.round(Math.max(0, Number(missionView.cardsPercent) || 0)) >= 100;
-          els.dailyPlanFlashcardsMission.style.display = flashcardsCompleted ? 'grid' : 'none';
+          els.dailyPlanFlashcardsMission.style.display = flashPct > 0 ? 'grid' : 'none';
+        }
+        if (els.dailyPlanBooksMission) {
+          els.dailyPlanBooksMission.style.display = booksPct > 0 ? 'grid' : 'none';
         }
         // O selo atual acompanha a fluencia produzida.
         const totalSealProgress = Math.max(0, Math.min(100, producedFluency));
@@ -15381,6 +15414,10 @@
         if (els.dailyPlanUserAvatar) {
           const avatar = safeText(state.user?.avatarImage) || '/Avatar/profile-neon-blue.svg';
           els.dailyPlanUserAvatar.src = avatar;
+        }
+        if (els.dailyPlanMissionAvatar) {
+          const avatar = safeText(state.user?.avatarImage) || '/Avatar/profile-neon-blue.svg';
+          els.dailyPlanMissionAvatar.src = avatar;
         }
         if (els.dailyPlanUserLevel) {
           els.dailyPlanUserLevel.textContent = String(currentUserLevel());
