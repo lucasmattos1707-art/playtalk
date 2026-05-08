@@ -300,6 +300,20 @@
       visibility: visible;
     }
 
+    body.playtalk-loader-active .welcome-gate {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    body.playtalk-loader-active .welcome-gate,
+    body.playtalk-loader-active .welcome-gate *,
+    body.playtalk-loader-active .welcome-gate::before,
+    body.playtalk-loader-active .welcome-gate::after {
+      animation: none !important;
+      transition: none !important;
+    }
+
     .welcome-gate__touch {
       width: 102vw;
       max-width: 102vw;

@@ -61,7 +61,7 @@
     lastTipIndex: -1,
     tipTimer: 0,
     rotateTips: true,
-    progressTimer: 0
+    progressRaf: 0
   };
 
   function injectStars() {
@@ -507,16 +507,24 @@
     fill.style.width = `${progress.toFixed(2)}%`;
   }
 
-  function startLoaderProgress() {
-    if (loaderState.progressTimer) return;
+  function runLoaderProgressFrame() {
     updateLoaderProgress();
-    loaderState.progressTimer = window.setInterval(updateLoaderProgress, 60);
+    if (!loaderState.activeKeys.size) {
+      loaderState.progressRaf = 0;
+      return;
+    }
+    loaderState.progressRaf = window.requestAnimationFrame(runLoaderProgressFrame);
+  }
+
+  function startLoaderProgress() {
+    if (loaderState.progressRaf) return;
+    runLoaderProgressFrame();
   }
 
   function stopLoaderProgress() {
-    if (!loaderState.progressTimer) return;
-    window.clearInterval(loaderState.progressTimer);
-    loaderState.progressTimer = 0;
+    if (!loaderState.progressRaf) return;
+    window.cancelAnimationFrame(loaderState.progressRaf);
+    loaderState.progressRaf = 0;
     updateLoaderProgress();
   }
 
