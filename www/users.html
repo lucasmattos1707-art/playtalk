@@ -136,9 +136,10 @@
       margin: 0;
       font-size: clamp(12px, 2.4vw, 14px);
       line-height: 1;
-      font-weight: 700;
+      font-weight: 400;
       letter-spacing: 0.08em;
-      color: #ffffff;
+      color: #7fe7ff;
+      text-shadow: 0 0 10px rgba(127, 231, 255, 0.45);
       text-transform: uppercase;
       font-family: "Orbitron", "Exo 2", sans-serif;
     }
@@ -146,29 +147,34 @@
     .ranking-status {
       margin: 0;
       min-height: 24px;
-      color: rgba(255, 255, 255, 0.88);
+      color: #7fe7ff;
       font-size: clamp(11px, 2.8vw, 13px);
-      font-weight: 600;
+      font-weight: 400;
       letter-spacing: 0.06em;
+      text-shadow: 0 0 10px rgba(127, 231, 255, 0.45);
       text-transform: uppercase;
       font-family: "Orbitron", "Exo 2", sans-serif;
     }
 
     .ranking-metrics {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(4, auto);
+      justify-content: center;
+      gap: 8px;
     }
 
     .ranking-metric {
-      min-height: 72px;
-      padding: 12px 10px;
+      min-height: 34px;
+      min-width: 34px;
+      width: 34px;
+      height: 34px;
+      padding: 6px;
       display: grid;
-      gap: 7px;
+      gap: 0;
       justify-items: center;
       align-content: center;
-      border: 0;
-      border-radius: 20px;
+      border: 1px solid rgba(118, 198, 255, 0.24);
+      border-radius: 12px;
       background: rgba(255, 255, 255, 0.02);
       color: rgba(14, 55, 106, 0.6);
       opacity: 1;
@@ -187,16 +193,7 @@
     }
 
     .ranking-metric span {
-      display: block;
-      font-size: 10px;
-      line-height: 1.15;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      text-align: center;
-      color: rgba(14, 55, 106, 0.6);
-      pointer-events: none;
-      font-family: "Orbitron", "Exo 2", sans-serif;
+      display: none;
     }
 
     .ranking-metric.is-active {
@@ -312,7 +309,7 @@
       grid-template-columns: auto minmax(0, 1fr) minmax(88px, auto);
       gap: 12px;
       align-items: center;
-      width: 90%;
+      width: 95%;
       min-height: 74px;
       padding: 10px 14px;
       border-radius: 22px;
@@ -989,12 +986,15 @@
       }
 
       .ranking-metrics {
-        gap: 8px;
+        gap: 7px;
       }
 
       .ranking-metric {
-        min-height: 68px;
-        padding: 10px 8px;
+        min-height: 32px;
+        min-width: 32px;
+        width: 32px;
+        height: 32px;
+        padding: 5px;
       }
 
       .ranking-metric img {
