@@ -17743,6 +17743,20 @@ app.get(['/entrar', '/entrar/', '/auth', '/auth/', '/auth.html'], (req, res) => 
   });
 });
 
+app.get(['/levels', '/levels/', '/levels.html'], (req, res) => {
+  const payload = getAuthenticatedUserFromRequest(req);
+  if (!payload) {
+    res.redirect(302, '/entrar?return=%2Flevels');
+    return;
+  }
+  if (!isAdminUserRecord(payload)) {
+    res.redirect(302, '/');
+    return;
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'www', 'levels.html'));
+});
+
 app.use(express.static(staticDir));
 app.use('/newfonts', express.static(path.join(__dirname, 'newfonts')));
 app.get(['/landing', '/landing/'], (req, res) => {
@@ -17851,20 +17865,6 @@ app.get(['/inplay', '/inplay/'], (req, res) => {
 
 app.get(['/vocabulary', '/vocabulary/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'vocabulary.html'));
-});
-
-app.get(['/levels', '/levels/', '/levels.html'], (req, res) => {
-  const payload = getAuthenticatedUserFromRequest(req);
-  if (!payload) {
-    res.redirect(302, '/entrar?return=%2Flevels');
-    return;
-  }
-  if (!isAdminUserRecord(payload)) {
-    res.redirect(302, '/');
-    return;
-  }
-  res.setHeader('Cache-Control', 'no-store');
-  res.sendFile(path.join(__dirname, 'www', 'levels.html'));
 });
 
 app.get(['/database', '/database/'], (req, res) => {
