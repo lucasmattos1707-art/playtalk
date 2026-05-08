@@ -3060,7 +3060,7 @@
 
     .game-mic-side-metric__value {
       margin: 0;
-      font-size: clamp(37px, 10.2vw, 58px);
+      font-size: clamp(31px, 8.7vw, 49px);
       font-weight: 800;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
       letter-spacing: 0;
@@ -3071,6 +3071,27 @@
         0 2px 0 rgba(0, 22, 72, 0.98),
         0 0 12px rgba(2, 28, 92, 0.92),
         0 0 24px rgba(6, 54, 141, 0.74);
+    }
+
+    .game-mic-side-metric__value.is-neon-rising {
+      animation: micProgressNeonRise 1500ms ease-out;
+    }
+
+    @keyframes micProgressNeonRise {
+      0% {
+        color: #b7ff7e;
+        text-shadow:
+          0 0 12px rgba(57, 255, 20, 0.95),
+          0 0 24px rgba(57, 255, 20, 0.7),
+          0 0 40px rgba(57, 255, 20, 0.45);
+      }
+      100% {
+        color: #ffffff;
+        text-shadow:
+          0 2px 0 rgba(0, 22, 72, 0.98),
+          0 0 12px rgba(2, 28, 92, 0.92),
+          0 0 24px rgba(6, 54, 141, 0.74);
+      }
     }
 
     .game-mic-next-seal-progress {
@@ -7126,6 +7147,9 @@
       gap: 9px;
       padding: 10px;
       transform: translateY(-25px);
+      width: 90%;
+      max-width: 90%;
+      margin-inline: auto;
     }
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__word-row,
@@ -7135,6 +7159,20 @@
       justify-content: center;
       gap: 9px;
       width: 100%;
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .keyboardscreen-host,
+    .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
+      width: 90% !important;
+      max-width: 90% !important;
+      margin-inline: auto !important;
+      overflow: visible !important;
+    }
+
+    .game[data-phase-key="second-star"] .game-controls-proxy,
+    .game[data-phase-key="fourth-star"] .game-controls-proxy {
+      overflow: visible !important;
+      padding-top: 12px;
     }
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key,
@@ -18242,6 +18280,15 @@
           ? Math.max(0, Math.min(100, previousAnimatedProgress))
           : Math.max(0, Math.min(100, Number(missionBarProgress) || 0));
         const targetProgress = Math.max(0, Math.min(100, Number(missionBarProgress) || 0));
+        const isProgressRising = targetProgress > startProgress;
+        if (isProgressRising) {
+          els.gameMicNextSealProgress.classList.remove('is-neon-rising');
+          void els.gameMicNextSealProgress.offsetWidth;
+          els.gameMicNextSealProgress.classList.add('is-neon-rising');
+          window.setTimeout(() => {
+            els.gameMicNextSealProgress.classList.remove('is-neon-rising');
+          }, 1500);
+        }
         if (state.entry.gameMicProgressAnimationFrame) {
           window.cancelAnimationFrame(state.entry.gameMicProgressAnimationFrame);
           state.entry.gameMicProgressAnimationFrame = 0;
