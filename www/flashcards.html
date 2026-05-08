@@ -702,8 +702,8 @@
       position: absolute;
       right: clamp(6px, 1.4vw, 12px);
       bottom: clamp(4px, 1.2vw, 10px);
-      width: clamp(36px, 7.2vw, 48px);
-      height: clamp(36px, 7.2vw, 48px);
+      width: clamp(72px, 14.4vw, 96px);
+      height: clamp(72px, 14.4vw, 96px);
       object-fit: contain;
       z-index: 3;
       filter:
@@ -3074,27 +3074,6 @@
         0 2px 0 rgba(0, 22, 72, 0.98),
         0 0 12px rgba(2, 28, 92, 0.92),
         0 0 24px rgba(6, 54, 141, 0.74);
-    }
-
-    .game-mic-side-metric__value.is-neon-rising {
-      animation: micProgressNeonRise 1500ms ease-out;
-    }
-
-    @keyframes micProgressNeonRise {
-      0% {
-        color: #b7ff7e;
-        text-shadow:
-          0 0 12px rgba(57, 255, 20, 0.95),
-          0 0 24px rgba(57, 255, 20, 0.7),
-          0 0 40px rgba(57, 255, 20, 0.45);
-      }
-      100% {
-        color: #ffffff;
-        text-shadow:
-          0 2px 0 rgba(0, 22, 72, 0.98),
-          0 0 12px rgba(2, 28, 92, 0.92),
-          0 0 24px rgba(6, 54, 141, 0.74);
-      }
     }
 
     .game-mic-next-seal-progress {
@@ -18188,6 +18167,12 @@
           els.gameTouchBtn.classList.add('game-touch--books-mic', 'game-touch--stage-play');
           els.gameTouchBtn.setAttribute('aria-label', 'Reproduzir audio do flashcard');
           els.gameTouchBtn.innerHTML = GAME_PLAY_ICON_MARKUP;
+          if (els.gameControlsProxy) {
+            els.gameControlsProxy.hidden = false;
+            els.gameControlsProxy.classList.remove('is-hidden');
+          }
+          if (els.gameMicCurrentSealMetric) els.gameMicCurrentSealMetric.hidden = false;
+          if (els.gameMicNextSealMetric) els.gameMicNextSealMetric.hidden = false;
           updateSpeakingStarMicSealProgress();
           syncLevelTextModeControls();
           return;
@@ -18229,6 +18214,14 @@
           els.gameMicCurrentSealMetric.hidden = true;
           els.gameMicNextSealMetric.hidden = true;
           return;
+        }
+        if (phaseKey === 'second-star' || phaseKey === 'fourth-star') {
+          if (els.gameControlsProxy) {
+            els.gameControlsProxy.hidden = false;
+            els.gameControlsProxy.classList.remove('is-hidden');
+          }
+          els.gameMicCurrentSealMetric.hidden = false;
+          els.gameMicNextSealMetric.hidden = false;
         }
         const missionSnapshot = state.entry.dailyPlanMissionSnapshot && typeof state.entry.dailyPlanMissionSnapshot === 'object'
           ? state.entry.dailyPlanMissionSnapshot
@@ -18309,42 +18302,13 @@
             currentRankValue.textContent = `${resolvedRank}\u00ba`;
           }
         }).catch(() => {});
-        const previousAnimatedProgress = Number(state.entry.gameMicAnimatedProgress);
-        const startProgress = Number.isFinite(previousAnimatedProgress)
-          ? Math.max(0, Math.min(100, previousAnimatedProgress))
-          : Math.max(0, Math.min(100, Number(missionBarProgress) || 0));
         const targetProgress = Math.max(0, Math.min(100, Number(missionBarProgress) || 0));
-        const isProgressRising = targetProgress > startProgress;
-        if (isProgressRising) {
-          els.gameMicNextSealProgress.classList.remove('is-neon-rising');
-          void els.gameMicNextSealProgress.offsetWidth;
-          els.gameMicNextSealProgress.classList.add('is-neon-rising');
-          window.setTimeout(() => {
-            els.gameMicNextSealProgress.classList.remove('is-neon-rising');
-          }, 1500);
-        }
         if (state.entry.gameMicProgressAnimationFrame) {
           window.cancelAnimationFrame(state.entry.gameMicProgressAnimationFrame);
           state.entry.gameMicProgressAnimationFrame = 0;
         }
-        const animationStart = performance.now();
-        const animationDurationMs = 1000;
-        const stepAnimatedProgress = (nowTs) => {
-          const elapsed = Math.max(0, nowTs - animationStart);
-          const progress = Math.max(0, Math.min(1, elapsed / animationDurationMs));
-          const eased = 1 - Math.pow(1 - progress, 3);
-          const value = startProgress + ((targetProgress - startProgress) * eased);
-          state.entry.gameMicAnimatedProgress = value;
-          els.gameMicNextSealProgress.textContent = `${value.toFixed(1)}%`;
-          if (progress < 1) {
-            state.entry.gameMicProgressAnimationFrame = window.requestAnimationFrame(stepAnimatedProgress);
-          } else {
-            state.entry.gameMicProgressAnimationFrame = 0;
-            state.entry.gameMicAnimatedProgress = targetProgress;
-            els.gameMicNextSealProgress.textContent = `${targetProgress.toFixed(1)}%`;
-          }
-        };
-        state.entry.gameMicProgressAnimationFrame = window.requestAnimationFrame(stepAnimatedProgress);
+        state.entry.gameMicAnimatedProgress = targetProgress;
+        els.gameMicNextSealProgress.textContent = `${targetProgress.toFixed(1)}%`;
         els.gameMicNextSealProgressFill.style.width = `${missionBarProgress.toFixed(2)}%`;
         els.gameMicCurrentSealMetric.hidden = false;
         els.gameMicNextSealMetric.hidden = false;
