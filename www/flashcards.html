@@ -19721,8 +19721,9 @@
       }
 
       function normalizeTypingSource(rawText) {
+        // Accept common apostrophe variants from different keyboards/OS layouts.
         return safeText(rawText)
-          .replace(/[’‘`´]/g, "'")
+          .replace(/[\u2018\u2019\u0060\u00B4\u02BC\u02BB\u02B9\u201B\u2032\u2035\uFF07\u275B\u275C]/g, "'")
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
           .toUpperCase()
