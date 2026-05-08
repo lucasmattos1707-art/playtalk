@@ -9,14 +9,46 @@
   const LOADER_MIN_VISIBLE_MS = 3000;
   const USERS_LOADER_MAX_VISIBLE_MS = 4000;
   const LOADER_TIPS = [
-    ['UM VERBO EM USO', 'VALE MAIS QUE DEZ NA LISTA'],
-    ['ERRO TAMBEM ENSINA', 'QUANDO VOCE CONTINUA'],
-    ['FLUENCIA CRESCE', 'EM REPETICAO COM SENTIDO'],
-    ['FRASES VIVIDAS', 'GRUDAM MAIS QUE REGRAS'],
-    ['PEQUENO TODO DIA', 'VIRA GIGANTE NO TEMPO'],
-    ['OUVIR E REPETIR', 'ACELERA SUA MEMORIA'],
-    ['PRATICA DE VERDADE', 'MUDA SEU INGLES'],
-    ['UM PASSO AGORA', 'VALE MAIS QUE ESPERAR']
+    ['A fluencia nasce frase por frase', 'Fluency is built one phrase at a time'],
+    ['Sessoes pequenas. Evolucao gigante', 'Small sessions. Massive evolution.'],
+    ['Seu ouvido aprende antes da boca', 'Your ears learn before your mouth'],
+    ['Constancia vence intensidade', 'Consistency beats intensity'],
+    ['Ouca primeiro. Fale natural depois', 'Listen first. Speak naturally later'],
+    ['Ingles e ritmo, nao traducao', 'English is rhythm, not translation'],
+    ['Mais uma carta. Mais um nivel', 'One more card. One step stronger'],
+    ['Seu cerebro esta se adaptando', 'Your brain is adapting right now'],
+    ['Repeticao cria fala automatica', 'Repetition creates automatic speech'],
+    ['Fluencia real parece sem esforco', 'Real fluency feels effortless'],
+    ['Pense menos. Absorva mais', 'Think less. Absorb more'],
+    ['Seu sotaque melhora com coragem', 'Your accent improves with courage'],
+    ['Entender vale mais que perfeicao', 'Understanding matters more than perfection'],
+    ['Bebes aprendem por exposicao', 'Babies learn by exposure too'],
+    ['Pouco por dia muda tudo', 'Short practice. Long-term results'],
+    ['Cada erro treina seu cerebro', 'Every mistake teaches your brain'],
+    ['Ouca. Sinta. Repita', 'Hear it. Feel it. Repeat it'],
+    ['Fluencia cresce em camadas', 'Fluency grows in layers'],
+    ['Sua escuta esta evoluindo', 'Your listening is leveling up'],
+    ['Ingles natural vem do input', 'Natural English comes from input'],
+    ['Velocidade vem apos clareza', 'Speed comes after clarity'],
+    ['Entender vence decorar', 'Understanding beats memorizing'],
+    ['Contato diario muda tudo', 'Daily contact changes everything'],
+    ['O idioma ja parece familiar', 'The language is becoming familiar'],
+    ['Treine seus ouvidos diariamente', 'Train your ears every day'],
+    ['Pequenos avancos contam', 'Tiny progress still counts'],
+    ['Voce cria respostas automaticas', 'You are building automatic responses'],
+    ['Ingles fica facil com ritmo', 'English becomes easier with momentum'],
+    ['Fluencia e estilo de vida', 'Fluency is a lifestyle'],
+    ['Seu cerebro ama padroes', 'Your brain loves patterns'],
+    ['Frases reais criam fluencia', 'Real phrases create real fluency'],
+    ['Imersao muda seus instintos', 'Immersion changes your instincts'],
+    ['Confianca nasce da repeticao', 'Confidence grows through repetition'],
+    ['Pratica vira instinto natural', 'Practice turns confusion into instinct'],
+    ['Continue aparecendo todo dia', 'Keep showing up every day'],
+    ['Aprenda como na vida real', 'Learn naturally, like real life'],
+    ['O ingles comeca a prever', 'English starts sounding predictable'],
+    ['Voce esta mais perto do que pensa', 'You are closer than you think'],
+    ['Treine hoje. Fale livre amanha', 'Train daily. Speak freely later'],
+    ['Seu futuro fala ingles', 'Your future self speaks English']
   ];
   const loaderState = {
     activeKeys: new Set(),
@@ -25,6 +57,7 @@
     message: 'PREPARANDO SUA PARTIDA',
     metaItems: [],
     tipIndex: 0,
+    lastTipIndex: -1,
     tipTimer: 0
   };
 
@@ -202,14 +235,22 @@
         font-family: "Exo 2", "Segoe UI", sans-serif;
         font-size: clamp(18px, 4.8vw, 24px);
         line-height: 1.15;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        text-transform: none;
         text-shadow: 0 0 20px rgba(255, 255, 255, 0.12);
       }
 
       .playtalk-loader__tip-line {
         display: block;
+        color: #ffffff;
+      }
+
+      .playtalk-loader__tip-line:last-child {
+        color: #33d6ff;
+        text-shadow:
+          0 0 8px rgba(51, 214, 255, 0.75),
+          0 0 16px rgba(51, 214, 255, 0.45);
       }
 
       .playtalk-loader__progress {
@@ -418,8 +459,22 @@
 
   function startLoaderTips() {
     if (loaderState.tipTimer) return;
+    if (LOADER_TIPS.length > 1) {
+      loaderState.tipIndex = Math.floor(Math.random() * LOADER_TIPS.length);
+      loaderState.lastTipIndex = loaderState.tipIndex;
+      renderLoaderTip();
+    }
     loaderState.tipTimer = window.setInterval(() => {
-      loaderState.tipIndex = (loaderState.tipIndex + 1) % LOADER_TIPS.length;
+      if (LOADER_TIPS.length <= 1) {
+        loaderState.tipIndex = 0;
+      } else {
+        let nextIndex = loaderState.tipIndex;
+        while (nextIndex === loaderState.lastTipIndex) {
+          nextIndex = Math.floor(Math.random() * LOADER_TIPS.length);
+        }
+        loaderState.tipIndex = nextIndex;
+        loaderState.lastTipIndex = nextIndex;
+      }
       renderLoaderTip();
     }, 4000);
   }
