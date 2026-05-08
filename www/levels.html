@@ -6,7 +6,7 @@
   <title>Fluent LevelUp | Levels</title>
   <script src="/config.js"></script>
   <style>
-    @import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap");
+    @import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&family=Orbitron:wght@400&display=swap");
     body{margin:0;font-family:Arial,sans-serif;background:#000;color:#fff}button,input,select,textarea{font:inherit}
     .page{max-width:1100px;margin:0 auto;padding:24px 16px 48px}.box,.card{background:linear-gradient(180deg,rgba(11,24,56,.82),rgba(7,15,36,.9));border:1px solid rgba(79,158,255,.18);border-radius:16px;backdrop-filter:blur(6px);box-shadow:0 0 18px rgba(63,145,255,.08)}
     .box{padding:14px;margin-bottom:16px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
@@ -131,30 +131,32 @@
     .json-batch-summary{font-size:13px;color:rgba(255,255,255,.72)}
     .watch-options{display:grid;gap:12px}
     .watch-options .field{min-width:0}
-    .watch-view{position:fixed;inset:0;z-index:70;background:linear-gradient(180deg,#0d1f4a,#09142d 58%,#050b18);color:#fff;padding:24px 18px;display:flex;flex-direction:column}
+    .watch-view{position:fixed;inset:0;z-index:70;background:linear-gradient(180deg,#0d1f4a,#09142d 58%,#050b18);color:#fff;padding:24px 18px;display:flex;flex-direction:column;overflow:hidden}
+    .watch-view::before{content:'';position:absolute;inset:0;background:var(--watch-bg-image,none) center/cover no-repeat;opacity:.36;z-index:0}
+    .watch-view::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.52),rgba(0,0,0,.62));z-index:0}
     .watch-view.hidden{display:none!important}
-    .watch-view__top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+    .watch-view__top{display:none}
     .watch-view__close{min-width:48px;min-height:48px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;font-size:28px;line-height:1}
     .watch-view__meta{display:grid;gap:6px}
     .watch-view__meta h2{margin:0;font-size:clamp(24px,5vw,36px)}
     .watch-view__status{color:rgba(255,255,255,.76);font-size:14px}
-    .watch-stage{flex:1;display:grid;place-items:center}
-    .watch-card{width:min(720px,100%);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:22px;backdrop-filter:blur(14px);box-shadow:0 22px 60px rgba(0,0,0,.28);display:grid;gap:18px}
-    .watch-card__media{position:relative;width:min(100%,420px);aspect-ratio:1/1;margin:0 auto;border-radius:999px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+    .watch-stage{position:relative;z-index:1;flex:1;display:grid;place-items:center}
+    .watch-card{width:min(860px,100%);background:transparent;border:none;border-radius:0;padding:0;backdrop-filter:none;box-shadow:none;display:grid;gap:18px}
+    .watch-card__media{display:none}
     .watch-card__image,.watch-card__video{position:absolute;inset:0}
     .watch-card__image{border-radius:999px;background:#102654 center/cover no-repeat}
     .watch-card__video{width:100%;height:100%;object-fit:cover;border:none;background:#000}
     .watch-card__video.hidden{display:none}
     .watch-card__body{display:grid;gap:10px;text-align:center}
-    .watch-card__deck{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.7)}
-    .watch-card__pt{font-family:"Pltay","Soopafre",Arial,sans-serif;font-size:clamp(44.85px,14.6vw,89.7px);line-height:1.02;font-weight:400}
-    .watch-card__en{font-family:"Pltay","Soopafre",Arial,sans-serif;font-size:clamp(44.85px,14.6vw,89.7px);line-height:1.02;font-weight:400;color:#bfd8ff}
+    .watch-card__deck{display:none}
+    .watch-card__pt{font-family:"Orbitron","Exo 2",Arial,sans-serif;font-size:clamp(44.85px,14.6vw,89.7px);line-height:1.02;font-weight:400;color:#c8ff2f;text-shadow:0 0 8px rgba(200,255,47,.7),0 0 24px rgba(200,255,47,.46)}
+    .watch-card__en{font-family:"Orbitron","Exo 2",Arial,sans-serif;font-size:clamp(44.85px,14.6vw,89.7px);line-height:1.02;font-weight:400;color:#5ecbff;text-shadow:0 0 8px rgba(94,203,255,.72),0 0 24px rgba(94,203,255,.5)}
     .watch-card__hint{font-size:14px;color:rgba(255,255,255,.72)}
     .watch-card.is-sliding .watch-card__media,.watch-card.is-sliding .watch-card__body{animation:watchSlideIn 420ms ease}
     .watch-card.is-pulsing .watch-card__media,.watch-card.is-pulsing .watch-card__body{animation:watchPulse 2400ms ease-in-out}
     .watch-card__text-line{display:block}
     .watch-card__text-line+.watch-card__text-line{margin-top:.07em}
-    .watch-view__actions{display:flex;justify-content:center;margin-top:18px}
+    .watch-view__actions{position:relative;z-index:1;display:flex;justify-content:center;margin-top:18px}
     .watch-stop{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#fff;padding:14px 20px;border-radius:16px;font-weight:700}
     .admin-studio{display:grid;gap:12px}
     .admin-studio__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -1583,7 +1585,7 @@
       function setWatchStatus(text){$('watchStatusText').textContent=text||''}
       function watchLines(text,maxChars=14){const words=String(text||'').trim().split(/\s+/).filter(Boolean);if(!words.length)return[''];const lines=[];let line='';words.forEach(word=>{const test=line?`${line} ${word}`:word;if(test.length<=maxChars||!line){line=test;return}lines.push(line);line=word});if(line)lines.push(line);return lines.slice(0,3)}
       function renderWatchText(node,text){const lines=watchLines(text);node.innerHTML=lines.map(line=>`<span class="watch-card__text-line">${escapeHtml(line)}</span>`).join('')}
-      function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim(),video=String(item?.video||'').trim(),watchCard=$('watchCard'),videoEl=$('watchCardVideo');$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';renderWatchText($('watchCardPt'),item?.pt||'Sem portugues');renderWatchText($('watchCardEn'),item?.en||'Sem english');$('watchCardHint').textContent=extraStatus||'Sequencia em ordem, sem aleatorio.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';if(video){videoEl.classList.remove('hidden');if(videoEl.src!==video)videoEl.src=video;videoEl.play().catch(()=>{})}else{videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchCard.classList.remove('is-sliding','is-pulsing');void watchCard.offsetWidth;watchCard.classList.add('is-sliding','is-pulsing');updateWatchTransforms();setWatchStatus(extraStatus||'Preparando audio...')}
+      function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim(),video=String(item?.video||'').trim(),watchCard=$('watchCard'),videoEl=$('watchCardVideo'),watchView=$('watchView');$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';renderWatchText($('watchCardPt'),item?.pt||'Sem portugues');renderWatchText($('watchCardEn'),item?.en||'Sem english');$('watchCardHint').textContent=extraStatus||'Sequencia em ordem, sem aleatorio.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';watchView.style.setProperty('--watch-bg-image',image?`url("${image}")`:'none');if(video){videoEl.classList.remove('hidden');if(videoEl.src!==video)videoEl.src=video;videoEl.play().catch(()=>{})}else{videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchCard.classList.remove('is-sliding','is-pulsing');void watchCard.offsetWidth;watchCard.classList.add('is-sliding','is-pulsing');updateWatchTransforms();setWatchStatus(extraStatus||'Preparando audio...')}
       function normalizeWatchItem(entry,deckTitle,sourceLabel){const pt=String(entry?.nomePortugues||entry?.pt||entry?.portuguese||'').trim(),en=String(entry?.nomeIngles||entry?.en||entry?.english||'').trim(),audio=String(entry?.audio||entry?.audioFile||'').trim(),image=String(entry?.imagem||entry?.image||entry?.imageFile||'').trim(),video=String(entry?.video||'').trim();if(!(pt||en))return null;return{key:`${sourceLabel}::${deckTitle}::${pt}::${en}::${audio}::${image}::${video}`,pt,en,audio,image,video,deckTitle:String(deckTitle||'Flashcards').trim()||'Flashcards',sourceLabel:String(sourceLabel||'Flashcards').trim()||'Flashcards'}}
       function currentDeckWatchItems(){return state.items.map(item=>normalizeWatchItem({pt:item.pt,en:item.en,audio:audioSrc(item,'single'),image:(item.imageRemoteUrl||cloud(state.day,PHASE.flashcard,item.imageFile,'flashcard')||'')},state.title.trim()||`Pasta ${state.day}`,'Meus flashcards')).filter(item=>item&&item.audio)}
       async function loadJsonFile(filePath){const response=await fetch(filePath.startsWith('/')?filePath:`/${filePath}`);if(!response.ok)throw new Error(`Nao foi possivel carregar ${filePath}.`);return response.json()}
