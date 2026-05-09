@@ -162,10 +162,6 @@
     homeTextPanel: document.getElementById('booksHomeTextPanel'),
     homeNextTextPanel: document.getElementById('booksHomeNextTextPanel'),
     homeControls: document.getElementById('booksHomeControls'),
-    homeMissionSummary: document.getElementById('booksHomeMissionSummary'),
-    homeMissionDailyLabel: document.getElementById('booksHomeMissionDailyLabel'),
-    homeMissionSmartbooksLabel: document.getElementById('booksHomeMissionSmartbooksLabel'),
-    homeMissionFill: document.getElementById('booksHomeMissionFill'),
     homeCornerHomeBtn: document.getElementById('booksHomeCornerHomeBtn'),
     homeCornerPlayBtn: document.getElementById('booksHomeCornerPlayBtn'),
     homeBlackoutToggle: document.getElementById('booksHomeBlackoutToggle'),
@@ -2024,10 +2020,2984 @@
     };
   }
 
-  function renderHomeMissionSummary() {
-    if (!els.homeMissionSummary) return;
+  async function refreshDailyMissionFromServer() {
+    if (!state.user?.id || state.dailyMissionFetchInFlight) return state.dailyMission;
+    state.dailyMissionFetchInFlight = true;
+    try {
+      const response = await fetch(buildApiUrl('/api/daily-plan'), {
+        credentials: 'include',
+        headers: buildAuthHeaders(),
+        cache: 'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.mission || typeof payload.mission !== 'object') {
+        return state.dailyMission;
+      }
+      state.dailyMission = payload.mission;
+      if (!state.initialLoading) {
+        renderCards();
+      }
+      return state.dailyMission;
+    } catch (_error) {
+      return state.dailyMission;
+    } finally {
+      state.dailyMissionFetchInFlight = false;
+    }
+  }
 
-      card.append(background, overlay, badgeEl, approvedBadge);
+  function ensureMissionCardToggleLoop() {
+    if (state.missionCardToggleTimer) return;
+    state.missionCardToggleTimer = window.setInterval(() => {
+      state.missionCardShowDaily = !state.missionCardShowDaily;
+      if (!state.initialLoading) {
+        renderCards();
+      }
+    }, 2000);
+  }
+
+  function getQualifiedBookIdsSet() {
+    return getOwnedSmartBookIdsSet();
+  }
+
+  function isBookQualified(bookId) {
+    const normalizedBookId = safeText(bookId).toLowerCase();
+    if (!normalizedBookId) return false;
+    if (!getQualifiedBookIdsSet().has(normalizedBookId)) return false;
+    return Math.max(
+      getBookBestPercent(normalizedBookId),
+      normalizePercent(state.stats?.bookBestPercentById?.[normalizedBookId.toUpperCase()])
+    ) >= 80;
+  }
+
+  function getUnlockedBookUiLevels() {
+    const unlockedLevel = getUnlockedSmartBookLevel();
+    return Array.from({ length: unlockedLevel }, (_, index) => bookLevelToUiLevel(index + 1));
+  }
+
+  function syncSelectedLevelWithUnlocked(options = {}) {
+    if (isHomeLevel() || isStatsLevel() || isMyBooksLevel()) return;
+    const accessibleLevels = getUnlockedBookUiLevels();
+    if (!accessibleLevels.length) {
+      state.selectedLevel = bookLevelToUiLevel(1);
+      return;
+    }
+    if (options.preferUnlocked) {
+      state.selectedLevel = accessibleLevels[accessibleLevels.length - 1];
+      return;
+    }
+    state.selectedLevel = normalizeBrowseLevel(state.selectedLevel);
+  }
+
+  function getBookBestPercent(bookId) {
+    const normalizedBookId = safeText(bookId);
+    if (!normalizedBookId) return 0;
+    return normalizePercent(state.stats?.bookBestPercentById?.[normalizedBookId]);
+  }
+
+  function getMyBooksBadge(bestPercent) {
+    const normalizedPercent = normalizePercent(bestPercent);
+    return MY_BOOKS_BADGES.find((badge) => normalizedPercent >= badge.minPercent) || null;
+  }
+
+  function getMyBooksBadgeRank(badge) {
+    const src = safeText(badge?.src);
+    if (!src) return 0;
+    const index = MY_BOOKS_BADGES.findIndex((entry) => safeText(entry.src) === src);
+    return index >= 0 ? MY_BOOKS_BADGES.length - index : 0;
+  }
+
+  function buildAllBooksWindow(feed, startIndex, size = ALL_BOOKS_WINDOW_SIZE) {
+    const items = Array.isArray(feed) ? feed : [];
+    if (!items.length) return [];
+    const desiredSize = Math.max(1, Math.round(Number(size) || ALL_BOOKS_WINDOW_SIZE));
+    const normalizedStart = ((Math.round(Number(startIndex) || 0) % items.length) + items.length) % items.length;
+    const windowItems = [];
+    for (let index = 0; index < desiredSize; index += 1) {
+      windowItems.push(items[(normalizedStart + index) % items.length]);
+    }
+    return windowItems;
+  }
+
+  function getAllBooksWindow() {
+    const feed = getAllBooksFeed();
+    if (!feed.length) return [];
+    return buildAllBooksWindow(feed, state.allBooksWindowStart, ALL_BOOKS_WINDOW_SIZE);
+  }
+
+  function getAllBooksSentinelWindow() {
+    const feed = getAllBooksFeed();
+    if (feed.length <= ALL_BOOKS_WINDOW_SIZE) {
+      state.allBooksSentinelMode = false;
+      return buildAllBooksWindow(feed, state.allBooksWindowStart, ALL_BOOKS_WINDOW_SIZE);
+    }
+    state.allBooksSentinelMode = true;
+    return buildAllBooksWindow(feed, state.allBooksWindowStart - 1, ALL_BOOKS_WINDOW_SIZE + 2);
+  }
+
+  function getAllBooksSentinelBounds(pageCount = getShelfPages().length) {
+    if (!state.allBooksSentinelMode || pageCount < 3) return null;
+    const prevIndex = 0;
+    const nextIndex = Math.max(0, pageCount - 1);
+    const firstMainIndex = 1;
+    const lastMainIndex = Math.max(firstMainIndex, nextIndex - 1);
+    return {
+      prevIndex,
+      nextIndex,
+      firstMainIndex,
+      lastMainIndex
+    };
+  }
+
+  function clampVisibleShelfIndex(index) {
+    const clamped = clampShelfIndex(index);
+    const sentinelBounds = getAllBooksSentinelBounds();
+    if (!sentinelBounds) return clamped;
+    return Math.max(
+      sentinelBounds.firstMainIndex,
+      Math.min(sentinelBounds.lastMainIndex, clamped)
+    );
+  }
+
+  function queueAllBooksWindowAdvance(step = 1) {
+    if (!isAllBooksLevel()) return;
+    const normalizedStep = Math.trunc(Number(step) || 0);
+    if (!normalizedStep) return;
+    state.allBooksAdvancePending += normalizedStep;
+  }
+
+  function rotateAllBooksWindow(step = 1, preferredIndex = state.shelfIndex) {
+    const feed = getAllBooksFeed();
+    if (!feed.length) return;
+    const normalizedStep = Math.trunc(Number(step) || 0);
+    if (!normalizedStep) return;
+    state.allBooksWindowStart = ((state.allBooksWindowStart + normalizedStep) % feed.length + feed.length) % feed.length;
+    const nextIndex = Math.max(0, Math.round(Number(preferredIndex) || 0));
+    state.shelfIndex = nextIndex;
+    renderCards();
+    renderSleepFabMeta();
+  }
+
+  function flushPendingAllBooksAdvance(preferredIndex = state.shelfIndex) {
+    const pending = Math.trunc(Number(state.allBooksAdvancePending) || 0);
+    state.allBooksAdvancePending = 0;
+    if (!pending) return;
+    rotateAllBooksWindow(pending, preferredIndex);
+  }
+
+  function getBooksForSelectedLevel(options = {}) {
+    if (isMyBooksLevel()) {
+      state.allBooksSentinelMode = false;
+      return getQualifiedMyBooks();
+    }
+    if (isAllBooksLevel()) {
+      const pendingCount = Math.max(0, Math.round(Number(options.pendingCount) || 0));
+      if (pendingCount > 0) {
+        state.allBooksSentinelMode = false;
+        return getAllBooksWindow();
+      }
+      return getAllBooksSentinelWindow();
+    }
+    state.allBooksSentinelMode = false;
+    const bookLevel = uiLevelToBookLevel(state.selectedLevel);
+    if (!bookLevel) return [];
+    return state.books
+      .filter((entry) => normalizeLevel(entry?.nivel) === bookLevel)
+      .sort(sortByNome);
+  }
+
+  function normalizeBrowseLevel(value) {
+    const parsed = Number.parseInt(value, 10);
+    const accessibleLevels = getAccessibleLevels();
+    if (!accessibleLevels.length) return UI_LEVEL_ALL_BOOKS;
+    if (!Number.isFinite(parsed)) return accessibleLevels[0];
+    if (accessibleLevels.includes(parsed)) return parsed;
+    return accessibleLevels.reduce((closest, level) => {
+      if (Math.abs(level - parsed) < Math.abs(closest - parsed)) {
+        return level;
+      }
+      return closest;
+    }, accessibleLevels[0]);
+  }
+
+  function isHomeLevel() {
+    return state.selectedLevel === UI_LEVEL_HOME;
+  }
+
+  function isHomeShellActive() {
+    return state.homeIntroDismissed || state.homeSleepActive;
+  }
+
+  function isStatsLevel() {
+    return false;
+  }
+
+  function syncBooksInjectedFooterVisibility() {
+    const shouldShow = isHomeLevel()
+      && !state.homeIntroDismissed
+      && !state.homeSleepActive
+      && !state.readerOpen
+      && !state.modeBookId
+      && !state.magicBookId
+      && !state.jsonBookId
+      && !state.createModalOpen;
+    document.body.classList.toggle('books-home-footer-visible', shouldShow);
+  }
+
+  function getHomeRepeatSeconds() {
+    return HOME_REPEAT_OPTIONS[Math.max(0, Math.min(HOME_REPEAT_OPTIONS.length - 1, state.homeRepeatIndex))] || 1;
+  }
+
+  function getHomePlaybackRate() {
+    return HOME_SPEED_OPTIONS[Math.max(0, Math.min(HOME_SPEED_OPTIONS.length - 1, state.homeSpeedIndex))] || 1;
+  }
+
+  function formatHomeSpeedLabel(rate) {
+    const value = Number(rate) || 1;
+    return `${value.toFixed(2)}x`;
+  }
+
+  function randomInt(max) {
+    return Math.floor(Math.random() * Math.max(1, max));
+  }
+
+  function buildGradientPool() {
+    const colors = [];
+    let guard = 0;
+    while (colors.length < MAX_GRADIENTS && guard < 200) {
+      guard += 1;
+      const hue = randomInt(360);
+      const tooClose = colors.some((entry) => {
+        const distance = Math.min(Math.abs(entry - hue), 360 - Math.abs(entry - hue));
+        return distance < 18;
+      });
+      if (!tooClose) {
+        colors.push(hue);
+      }
+    }
+
+    if (!colors.length) {
+      colors.push(210, 270, 150, 20);
+    }
+
+    return colors.map((hue, index) => {
+      const nextHue = (hue + 35 + (index * 7)) % 360;
+      const satA = 56 + randomInt(16);
+      const satB = 52 + randomInt(15);
+      const lightA = 54 + randomInt(10);
+      const lightB = 33 + randomInt(12);
+      return `linear-gradient(160deg, hsl(${hue} ${satA}% ${lightA}%), hsl(${nextHue} ${satB}% ${lightB}%))`;
+    });
+  }
+
+  function safeCssUrl(url) {
+    return `"${String(url || '').replace(/"/g, '%22')}"`;
+  }
+
+  function wait(ms) {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
+    });
+  }
+
+  function setPreBookOverlayOpen(isOpen) {
+    document.body.classList.toggle('books-prebook-open', Boolean(isOpen));
+    if (!isOpen) {
+      document.body.classList.remove('books-prebook-training');
+    }
+  }
+
+  function isPreBookOverlayOpen() {
+    return Boolean(document.body.classList.contains('books-prebook-open'));
+  }
+
+  async function fadeOutAudioElement(audio, ms = PREBOOK_OVERLAY_MS) {
+    if (!audio) return;
+    const duration = Math.max(0, Number(ms) || 0);
+    const startVolume = Math.max(0, Math.min(1, Number(audio.volume)));
+    if (duration <= 0 || startVolume <= 0) {
+      try {
+        audio.volume = 0;
+      } catch (_error) {
+        // ignore
+      }
+      return;
+    }
+
+    const startedAt = performance.now();
+    await new Promise((resolve) => {
+      const step = (now) => {
+        const ratio = Math.max(0, Math.min(1, (now - startedAt) / duration));
+        const next = startVolume * (1 - ratio);
+        try {
+          audio.volume = Math.max(0, Math.min(1, next));
+        } catch (_error) {
+          // ignore
+        }
+        if (ratio >= 1) {
+          resolve(true);
+          return;
+        }
+        window.requestAnimationFrame(step);
+      };
+      window.requestAnimationFrame(step);
+    });
+  }
+
+  function getHomeBooksPool() {
+    return (Array.isArray(state.books) ? state.books : [])
+      .filter((book) => safeText(book?.selectedStoryId));
+  }
+
+  function getHomeLanguageIconMeta() {
+    if (state.homeTextMode === 'english') {
+      return {
+        src: '/arquivos-codex/icones/portugues.svg',
+        alt: 'Portugues'
+      };
+    }
+    return {
+      src: '/arquivos-codex/icones/ingles.svg',
+      alt: 'Ingles'
+    };
+  }
+
+  function renderHomeTextPanel(element, text) {
+    if (!element) return;
+    const value = safeText(text);
+    const nextText = value ? splitBalancedLines(sanitizeReaderDisplayText(value)) : '';
+    if (element.dataset.renderedText === nextText) {
+      element.classList.toggle('is-empty', !nextText);
+      return;
+    }
+    element.dataset.renderedText = nextText;
+    element.classList.add('is-fading');
+    window.setTimeout(() => {
+      element.textContent = nextText;
+      element.classList.toggle('is-empty', !nextText);
+      window.requestAnimationFrame(() => {
+        element.classList.remove('is-fading');
+      });
+    }, 500);
+  }
+
+  function getHomeSessionText(session, cardIndex) {
+    const cards = Array.isArray(session?.cards) ? session.cards : [];
+    const safeIndex = Math.max(0, Math.min(cards.length - 1, Number(cardIndex) || 0));
+    const card = cards[safeIndex] || cards[0] || null;
+    return {
+      english: safeText(card?.english),
+      portuguese: safeText(card?.portuguese || card?.english)
+    };
+  }
+
+  function getHomeVisibleTextForMode(english, portuguese) {
+    if (state.homeTextMode === 'english') {
+      return safeText(english);
+    }
+    if (state.homeTextMode === 'portuguese') {
+      return safeText(portuguese || english);
+    }
+    return '';
+  }
+
+  function renderHomeScreen(coverElement, textElement, session, cardIndex, options = {}) {
+    const coverUrl = safeText(session?.coverImageUrl);
+    if (coverElement) {
+      coverElement.classList.toggle('is-loading', Boolean(options.isLoading));
+      coverElement.style.backgroundImage = coverUrl
+        ? `url(${safeCssUrl(coverUrl)})`
+        : 'none';
+      coverElement.style.backgroundColor = coverUrl ? '' : 'transparent';
+    }
+    const textPayload = getHomeSessionText(session, cardIndex);
+    const visibleText = options.hideText ? '' : getHomeVisibleTextForMode(textPayload.english, textPayload.portuguese);
+    renderHomeTextPanel(textElement, visibleText);
+  }
+
+  function getVisibleShelfBook() {
+    const card = getShelfCards()[clampShelfIndex(state.shelfIndex)] || null;
+    const bookId = safeText(card?.dataset?.bookId);
+    if (!bookId || bookId.startsWith('job:')) return null;
+    return state.books.find((book) => safeText(book?.bookId) === bookId) || null;
+  }
+
+  function getHomeBookMetaItems(book) {
+    const level = normalizeLevel(book?.nivel ?? book?.level);
+    const readingSeconds = Math.max(0, Number(book?.readingTimeSeconds) || ((Number(book?.englishChars) || 0) * 60 / 400));
+    return [
+      {
+        kind: 'time',
+        value: readingSeconds > 0 ? formatEstimatedReadingMinutesEn(readingSeconds) : '0 minutes'
+      },
+      {
+        kind: 'level',
+        value: level ? `Level ${level}` : 'Level -'
+      }
+    ];
+  }
+
+  function getHomeBookMetaIcon(kind) {
+    if (kind === 'level') {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" d="M4 19h16M5 15l4-4 3 3 6-7m0 0h-4m4 0v4"/></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>';
+  }
+
+  function renderSleepFabMeta() {
+    const metaElement = els.sleepFabMeta;
+    if (!metaElement) return;
+    const book = isAllBooksLevel() && !state.homeSleepActive ? getVisibleShelfBook() : null;
+    metaElement.hidden = !book;
+    if (!book) {
+      metaElement.innerHTML = '';
+      return;
+    }
+    if (!Number(book?.readingTimeSeconds)) {
+      void ensureBookReadingTimeSeconds(book).then(() => {
+        if (getVisibleShelfBook() === book) {
+          renderSleepFabMeta();
+        }
+      });
+    }
+
+    const items = getHomeBookMetaItems(book);
+    const index = Math.max(0, Number(state.homeBookMetaIndex) || 0) % items.length;
+    const entry = items[index] || items[0];
+    const nextHtml = `<div class="books-sleep-fab-meta-row">${getHomeBookMetaIcon(entry.kind)}<span>${escapeHtml(entry.value)}</span></div>`;
+    if (metaElement.innerHTML === nextHtml) return;
+    metaElement.classList.add('is-fading');
+    window.setTimeout(() => {
+      metaElement.innerHTML = nextHtml;
+      window.requestAnimationFrame(() => {
+        metaElement.classList.remove('is-fading');
+      });
+    }, 120);
+  }
+
+  function startHomeBookMetaRotation() {
+    if (state.homeBookMetaRotationTimer) return;
+    renderSleepFabMeta();
+    state.homeBookMetaRotationTimer = window.setInterval(() => {
+      state.homeBookMetaIndex = (state.homeBookMetaIndex + 1) % 1000000;
+      renderSleepFabMeta();
+    }, HOME_BOOK_META_ROTATE_MS);
+  }
+
+  function stopHomeBookMetaRotation() {
+    if (!state.homeBookMetaRotationTimer) return;
+    window.clearInterval(state.homeBookMetaRotationTimer);
+    state.homeBookMetaRotationTimer = 0;
+  }
+
+  function renderHomeProgressUi() {
+    const ratio = Math.max(0, Math.min(1, Number(state.homeProgressRatio) || 0));
+    if (els.playerBooksProgressFill) {
+      els.playerBooksProgressFill.style.width = `${Math.round(ratio * 1000) / 10}%`;
+    }
+    if (els.playerBooksProgressTime) {
+      els.playerBooksProgressTime.textContent = `${formatHomeClock(state.homeProgressElapsedSeconds)} / ${formatHomeClock(state.homeProgressTotalSeconds)}`;
+    }
+    if (els.playerBooksProgressTrack) {
+      els.playerBooksProgressTrack.setAttribute('aria-valuenow', String(Math.round(ratio * 100)));
+    }
+  }
+
+  function seekHomeProgressFromRatio(rawRatio) {
+    const session = state.homeCurrentSession;
+    const ratio = Math.max(0, Math.min(1, Number(rawRatio) || 0));
+    const cards = Array.isArray(session?.cards) ? session.cards : [];
+    if (!session || !cards.length) return;
+    const totalSeconds = getHomeSessionTotalSeconds(session);
+    const targetSeconds = ratio * totalSeconds;
+    const gapSeconds = getHomeGapSeconds();
+    let cursor = 0;
+    for (let index = 0; index < cards.length; index += 1) {
+      const durationSeconds = getHomeCardDurationSeconds(cards[index]);
+      if (targetSeconds <= (cursor + durationSeconds) || index === (cards.length - 1)) {
+        const targetTime = Math.max(0, Math.min(durationSeconds, targetSeconds - cursor));
+        if (state.homeCurrentCardIndex === index && state.homeAudioElement) {
+          state.homeAudioElement.currentTime = targetTime;
+          refreshHomeProgressFromPlayback();
+          return;
+        }
+        state.homeSeekTarget = {
+          bookId: safeText(session?.bookId),
+          cardIndex: index,
+          startAtSeconds: targetTime
+        };
+        state.homeSkipRequested = true;
+        interruptHomeAudioPlayback();
+        updateHomeProgressTimeline(targetSeconds, totalSeconds, state.homeCurrentBookName || safeText(session?.title) || 'Livro');
+        return;
+      }
+      cursor += durationSeconds;
+      if (targetSeconds <= (cursor + gapSeconds)) {
+        state.homeSeekTarget = {
+          bookId: safeText(session?.bookId),
+          cardIndex: Math.min(cards.length - 1, index + 1),
+          startAtSeconds: 0
+        };
+        state.homeSkipRequested = true;
+        interruptHomeAudioPlayback();
+        updateHomeProgressTimeline(targetSeconds, totalSeconds, state.homeCurrentBookName || safeText(session?.title) || 'Livro');
+        return;
+      }
+      cursor += gapSeconds;
+    }
+  }
+
+  function seekHomeProgressFromClientX(clientX) {
+    const track = els.playerBooksProgressTrack;
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    if (!rect.width) return;
+    seekHomeProgressFromRatio((Number(clientX) - rect.left) / rect.width);
+  }
+
+  function startHomeProgressDrag(clientX) {
+    state.homeProgressDragging = true;
+    seekHomeProgressFromClientX(clientX);
+  }
+
+  function updateHomeProgressDrag(clientX) {
+    if (!state.homeProgressDragging) return;
+    seekHomeProgressFromClientX(clientX);
+  }
+
+  function stopHomeProgressDrag() {
+    state.homeProgressDragging = false;
+  }
+
+  function renderHomeTransportUi() {
+    if (els.homeRepeatLabel) {
+      els.homeRepeatLabel.textContent = `${getHomeRepeatSeconds()}s`;
+    }
+    if (els.homeMusicBtn) {
+      els.homeMusicBtn.classList.toggle('is-on', state.homeMusicEnabled);
+    }
+    if (els.homePauseBtn) {
+      els.homePauseBtn.classList.toggle('is-on', state.homePaused);
+      els.homePauseBtn.setAttribute('aria-label', state.homePaused ? 'Retomar reproducao' : 'Pausar reproducao');
+      els.homePauseBtn.innerHTML = state.homePaused
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72L19 12 8 5.14z"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5h3v14H8zm5 0h3v14h-3z"/></svg>';
+    }
+    if (els.homeSpeedLabel) {
+      els.homeSpeedLabel.textContent = formatHomeSpeedLabel(getHomePlaybackRate());
+    }
+    if (els.homeLanguageIcon) {
+      const icon = getHomeLanguageIconMeta();
+      els.homeLanguageIcon.src = icon.src;
+      els.homeLanguageIcon.alt = icon.alt;
+    }
+    if (els.homeCornerHomeBtn) {
+      els.homeCornerHomeBtn.hidden = !state.homeIntroDismissed;
+    }
+    if (els.homeCornerPlayBtn) {
+      els.homeCornerPlayBtn.hidden = !state.homeIntroDismissed;
+    }
+    if (els.homeBlackoutToggle) {
+      const isBlackout = Boolean(state.homeBlackoutActive && state.homeSleepActive);
+      els.homeBlackoutToggle.checked = isBlackout;
+      els.homeBlackoutToggle.setAttribute('aria-checked', isBlackout ? 'true' : 'false');
+      els.homeBlackoutToggle.setAttribute('aria-label', isBlackout ? 'Voltar para o player' : 'Ativar tela preta');
+    }
+    syncHomeMediaSession();
+  }
+
+  function clearHomeMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = 'none';
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  function syncHomeMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+    if (!state.homeIntroDismissed || !state.homeSleepActive) {
+      clearHomeMediaSession();
+      return;
+    }
+    const currentSession = state.homeCurrentSession;
+    const currentCard = state.homeCurrentCards[state.homeCurrentCardIndex] || null;
+    const title = safeText(currentCard?.english) || safeText(currentSession?.title) || 'Fluent LevelUp Books';
+    const artist = safeText(currentSession?.title) || 'Sleeping Mode';
+    const album = state.homeMusicEnabled ? 'Fluent LevelUp Sleep' : 'Fluent LevelUp Books';
+    const artworkSrc = safeText(state.homeCurrentBookCover || currentSession?.coverImageUrl);
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title,
+        artist,
+        album,
+        artwork: artworkSrc ? [{ src: artworkSrc, sizes: '512x512', type: 'image/png' }] : []
+      });
+      navigator.mediaSession.playbackState = state.homePaused ? 'paused' : 'playing';
+      navigator.mediaSession.setActionHandler('play', () => {
+        void toggleHomePausePlayback();
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        void toggleHomePausePlayback();
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        void requestHomePreviousBook();
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        void requestHomeNextBook();
+      });
+      navigator.mediaSession.setActionHandler('seekbackward', null);
+      navigator.mediaSession.setActionHandler('seekforward', null);
+      navigator.mediaSession.setActionHandler('stop', () => {
+        stopHomeSleepPlayback({ keepIntro: false });
+        renderHomeAuthUi();
+      });
+    } catch (_error) {
+      // ignore browsers with partial Media Session support
+    }
+  }
+
+  function applyHomeAudioPlaybackRate(audio) {
+    if (!audio) return;
+    const rate = getHomePlaybackRate();
+    audio.playbackRate = rate;
+    audio.defaultPlaybackRate = rate;
+    audio.preservesPitch = true;
+    audio.mozPreservesPitch = true;
+    audio.webkitPreservesPitch = true;
+  }
+
+  function updateCurrentHomeAudioRate() {
+    applyHomeAudioPlaybackRate(state.homeAudioElement);
+  }
+
+  function applyHomeBookBackground(session = state.homeCurrentSession) {
+    const primary = els.homeBookBackgroundPrimary;
+    const secondary = els.homeBookBackgroundSecondary;
+    [primary, secondary].forEach((layer) => {
+      if (!layer) return;
+      layer.style.backgroundImage = 'none';
+      layer.classList.remove('is-visible', 'is-top');
+    });
+    if (primary) {
+      primary.classList.add('is-top');
+    }
+    state.homeBackgroundUrl = '';
+    if (els.homePanel) {
+      els.homePanel.style.background = 'transparent';
+    }
+    if (els.homeShell) {
+      els.homeShell.style.background = 'transparent';
+    }
+  }
+
+  function renderHomePanel() {
+    if (!els.homePanel) return;
+    if (IS_MYBOOKS_GRID_EMBED) {
+      els.homePanel.classList.remove('is-visible', 'is-immersive', 'is-player-books');
+      els.homePanel.hidden = true;
+      if (els.homeShell) {
+        els.homeShell.hidden = true;
+        els.homeShell.classList.remove('is-visible');
+      }
+      if (els.homeControls) {
+        els.homeControls.hidden = true;
+      }
+      return;
+    }
+    const shellActive = isHomeShellActive();
+    const visible = isHomeLevel() || shellActive;
+    if (shellActive) {
+      if (els.homePanel.parentElement !== document.body) {
+        document.body.appendChild(els.homePanel);
+      }
+    } else if (homePanelMount.parent && els.homePanel.parentElement !== homePanelMount.parent) {
+      homePanelMount.parent.insertBefore(els.homePanel, homePanelMount.nextSibling);
+    }
+    syncBooksInjectedFooterVisibility();
+    document.body.classList.toggle('books-sleeping-mode', shellActive);
+    document.body.classList.toggle('books-player-blackout', shellActive && state.homeBlackoutActive);
+    els.homePanel.hidden = !visible;
+    els.homePanel.classList.toggle('is-visible', visible);
+    els.homePanel.classList.toggle('is-immersive', shellActive);
+    els.homePanel.classList.toggle('is-player-books', shellActive);
+    if (els.statsPanel) {
+      els.statsPanel.hidden = shellActive || !isStatsLevel();
+      els.statsPanel.classList.toggle('is-visible', !shellActive && isStatsLevel());
+    }
+    if (els.homeStartPanel) {
+      els.homeStartPanel.classList.toggle('is-hidden', state.homeIntroDismissed);
+    }
+    if (els.homeShell) {
+      const showShell = shellActive;
+      els.homeShell.hidden = !showShell;
+      els.homeShell.classList.toggle('is-visible', showShell);
+    }
+    if (els.homeControls) {
+      els.homeControls.hidden = !shellActive;
+    }
+    const backgroundSession = (state.homeTransitioning && state.homeNextSession) ? state.homeNextSession : state.homeCurrentSession;
+    applyHomeBookBackground(backgroundSession);
+    renderHomeScreen(els.homeCover, els.homeTextPanel, state.homeCurrentSession, state.homeCurrentCardIndex, {
+      hideText: !state.homeTextVisible,
+      isLoading: false
+    });
+    renderHomeScreen(els.homeNextCover, els.homeNextTextPanel, state.homeNextSession, 0, {
+      hideText: true,
+      isLoading: false
+    });
+    renderHomeProgressUi();
+    renderHomeTransportUi();
+    if (visible && els.cardsEmpty) {
+      els.cardsEmpty.hidden = true;
+    }
+  }
+
+  function closeBookDeleteConfirm() {
+    if (!state.deleteConfirmBookId) return;
+    state.deleteConfirmBookId = '';
+    if (!state.deleteBusyBookId) {
+      renderCards();
+    }
+  }
+
+  function openBookDeleteConfirm(bookId) {
+    const normalizedBookId = safeText(bookId);
+    if (!normalizedBookId || state.deleteBusyBookId === normalizedBookId) return;
+    state.deleteConfirmBookId = normalizedBookId;
+    renderCards();
+  }
+
+  async function deleteBookPermanently(book) {
+    const bookId = safeText(book?.bookId);
+    if (!bookId || state.deleteBusyBookId === bookId) return;
+    state.deleteConfirmBookId = bookId;
+    state.deleteBusyBookId = bookId;
+    renderCards();
+
+    const bookName = safeText(book?.nome || book?.title || 'Livro');
+    setStatus(`Excluindo "${bookName}"...`, null);
+    try {
+      await postJsonWithSuccess('/api/admin/minibooks/delete', {
+        bookId
+      }, 'Nao foi possivel excluir o livro.');
+      state.books = state.books.filter((entry) => safeText(entry?.bookId) !== bookId);
+      if (safeText(state.readerBookId) === bookId) {
+        closeReader();
+      }
+      await refreshStatsFromServer().catch(() => null);
+      closeBookDeleteConfirm();
+      setStatus(`"${bookName}" foi excluido permanentemente.`, 'success');
+      renderCards();
+    } catch (error) {
+      setStatus(error?.message || `Falha ao excluir o livro "${bookName}".`, 'error');
+    } finally {
+      state.deleteBusyBookId = '';
+      renderCards();
+    }
+  }
+
+  async function refreshStatsFromServer() {
+    if (!state.user?.id || state.statsFetchInFlight) return null;
+    state.statsFetchInFlight = true;
+    try {
+      const response = await fetch(buildApiUrl('/api/books/stats'), {
+        credentials: 'include',
+        headers: buildAuthHeaders(),
+        cache: 'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        return null;
+      }
+      setStatsState(payload.stats || null);
+      syncEnergyRedirectFromStats(payload.stats);
+      void refreshDailyMissionFromServer();
+      if (!state.initialLoading) {
+        syncSelectedLevelWithUnlocked({ preferUnlocked: !state.userSelectedBookLevel });
+        renderLevelMenu();
+        renderCards();
+      }
+      return state.stats;
+    } catch (_error) {
+      return null;
+    } finally {
+      state.statsFetchInFlight = false;
+    }
+  }
+
+  function buildStatsRotationItems() {
+    if (!state.user?.id) {
+      return [
+        {
+          kind: 'practice-time',
+          label: 'Estatisticas',
+          value: '--',
+          hint: 'Entre para ver suas metricas.'
+        },
+        {
+          kind: 'reading',
+          label: 'Reading',
+          value: formatCountCompact(state.readingCharsTotal),
+          hint: 'Caracteres lidos neste aparelho.'
+        },
+        {
+          kind: 'listening',
+          label: 'Listening',
+          value: formatCountCompact(state.listeningCharsTotal),
+          hint: 'Contador local do aparelho.'
+        },
+        {
+          kind: 'practice-time',
+          label: 'Tempo de pratica',
+          value: formatDurationCompact(state.practiceSecondsTotal),
+          hint: 'Tempo acumulado localmente.'
+        }
+      ];
+    }
+
+    const stats = state.stats || {};
+    const booksRead = Math.max(0, Number(stats.bookReadCount) || 0);
+    const pronAvg = normalizePrecisePercent(stats.generalPronunciationPercent);
+    const readingChars = Math.max(0, Number(state.readingCharsTotal) || Number(stats.readingChars) || 0);
+    const speakingChars = Math.max(0, Number(stats.speakingChars) || 0);
+    // Prefer local totals because they include pending (not-yet-flushed) progress.
+    const listeningChars = Math.max(0, Number(state.listeningCharsTotal) || 0);
+    const practiceSeconds = Math.max(0, Number(state.practiceSecondsTotal) || 0);
+
+    return [
+      {
+        kind: 'practice-time',
+        label: 'Tempo de pratica',
+        value: formatDurationCompact(practiceSeconds),
+        hint: 'Quanto voce treinou no total.'
+      },
+      {
+        kind: 'books',
+        label: 'Livros lidos',
+        value: `${booksRead}`,
+        hint: 'Livros concluidos no Books.'
+      },
+      {
+        kind: 'reading',
+        label: 'Reading',
+        value: formatCountCompact(readingChars),
+        hint: 'Caracteres em ingles vistos no Books.'
+      },
+      {
+        kind: 'listening',
+        label: 'Listening',
+        value: formatCountCompact(listeningChars),
+        hint: 'Caracteres ouvidos no Books.'
+      },
+      {
+        kind: 'speaking',
+        label: 'Speaking',
+        value: formatCountCompact(speakingChars),
+        hint: 'Caracteres falados no treino.'
+      },
+      {
+        kind: 'pronunciation',
+        label: 'Pronuncia media',
+        value: formatReaderScoreValue(pronAvg).text,
+        hint: 'Media geral das ultimas avaliacoes.'
+      }
+    ];
+  }
+
+  function stopStatsRotation() {
+    if (!state.statsRotationTimer) return;
+    window.clearInterval(state.statsRotationTimer);
+    state.statsRotationTimer = 0;
+  }
+
+  function startStatsRotation() {
+    if (state.statsRotationTimer) return;
+    state.statsRotationTimer = window.setInterval(() => {
+      state.statsRotationIndex = (state.statsRotationIndex + 1) % 1000000;
+      renderStatsPanel();
+    }, 2500);
+  }
+
+  function renderStatsPanel() {
+    if (!els.statsPanel) return;
+    if (IS_MYBOOKS_GRID_EMBED) {
+      els.statsPanel.classList.remove('is-visible');
+      els.statsPanel.hidden = true;
+      stopStatsRotation();
+      return;
+    }
+    const visible = isStatsLevel();
+    els.statsPanel.classList.toggle('is-visible', visible);
+    if (!visible) {
+      stopStatsRotation();
+      return;
+    }
+
+    startStatsRotation();
+    if (state.user?.id && !state.stats) {
+      void refreshStatsFromServer().then(() => renderStatsPanel());
+    }
+
+    const items = buildStatsRotationItems();
+    const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
+    const metric = safeItems.length
+      ? safeItems[state.statsRotationIndex % safeItems.length]
+      : null;
+    const label = safeText(metric?.label) || 'Estatisticas';
+    const value = safeText(metric?.value) || '...';
+    const hint = safeText(metric?.hint) || 'Carregando...';
+    const signature = `${safeText(metric?.kind)}|${label}|${value}|${hint}`;
+    if (state.statsLastRenderedLine !== signature) {
+      state.statsLastRenderedLine = signature;
+      if (els.statsIcon) {
+        const iconKind = safeText(metric?.kind) || 'practice-time';
+        if (els.statsIcon.dataset.kind !== iconKind) {
+          els.statsIcon.dataset.kind = iconKind;
+          els.statsIcon.innerHTML = getStatsMetricIconMarkup(iconKind);
+        }
+      }
+      if (els.statsLabel) {
+        els.statsLabel.textContent = label;
+      }
+      if (els.statsValue) {
+        cancelAnimatedNumber(els.statsValue);
+        els.statsValue.textContent = value;
+        delete els.statsValue.dataset.displayValue;
+      }
+      if (els.statsLine) {
+        els.statsLine.textContent = hint;
+      }
+    }
+  }
+
+  function renderMyBooksAdminSummary() {
+    if (!els.adminSummary) return;
+    const isVisible = isMyBooksLevel() && Boolean(state.isAdmin) && Boolean(state.stats?.adminBooksSummary);
+    els.adminSummary.hidden = !isVisible;
+    if (!isVisible) return;
+
+    const summary = state.stats?.adminBooksSummary || {};
+    const totalBooks = Math.max(0, Number(summary.totalBooks) || 0);
+    const uniqueWordsCount = Math.max(0, Number(summary.uniqueWordsCount) || 0);
+
+    if (els.adminSummaryTotalBooks) {
+      els.adminSummaryTotalBooks.textContent = `${totalBooks}`;
+    }
+    if (els.adminSummaryUniqueWords) {
+      els.adminSummaryUniqueWords.textContent = `${uniqueWordsCount}`;
+    }
+    if (els.adminSummaryHint) {
+      els.adminSummaryHint.textContent = 'Contagem feita apenas no texto em ingles dos MiniBooks e visível apenas para administradores.';
+    }
+  }
+
+  function setHomeProgress(label, ratio) {
+    const normalizedLabel = safeText(label) || 'Livro';
+    const totalSeconds = getHomeSessionTotalSeconds(state.homeCurrentSession);
+    updateHomeProgressTimeline(
+      Math.max(0, Math.min(1, Number(ratio) || 0)) * totalSeconds,
+      totalSeconds,
+      normalizedLabel
+    );
+  }
+
+  function interruptHomeAudioPlayback() {
+    const current = state.homeAudioElement;
+    const resolver = state.homeAudioResolver;
+    if (current) {
+      commitHomeAudioPracticeProgress(current);
+    }
+    state.homeAudioElement = null;
+    state.homeAudioResolver = null;
+    try {
+      if (current) {
+        current.pause();
+      }
+    } catch (_error) {
+      // ignore
+    }
+    if (typeof resolver === 'function') {
+      resolver();
+    }
+  }
+
+  function getHomeVoiceAudioElement(source) {
+    const normalizedSource = safeText(source);
+    let audio = state.homeVoiceAudioElement;
+    if (!audio) {
+      audio = new Audio();
+      audio.preload = 'auto';
+      audio.loop = false;
+      state.homeVoiceAudioElement = audio;
+    }
+    if (audio.getAttribute('src') !== normalizedSource) {
+      try {
+        audio.pause();
+      } catch (_error) {
+        // ignore
+      }
+      audio.src = normalizedSource;
+      audio.load();
+    }
+    audio.preload = 'auto';
+    audio.loop = false;
+    return audio;
+  }
+
+  function stopHomeMusicLoop() {
+    state.homeMusicEnabled = false;
+    const current = state.homeMusicAudioElement;
+    state.homeMusicAudioElement = null;
+    if (!current) {
+      renderHomePanel();
+      return;
+    }
+    try {
+      current.pause();
+      current.currentTime = 0;
+      current.src = '';
+    } catch (_error) {
+      // ignore
+    }
+    renderHomePanel();
+  }
+
+  async function playHomeMusicTrack(token) {
+    if (!state.homeMusicEnabled || !HOME_MUSIC_PLAYLIST.length) return;
+    const source = HOME_MUSIC_PLAYLIST[Math.max(0, Math.min(HOME_MUSIC_PLAYLIST.length - 1, state.homeMusicIndex))];
+    if (!source) return;
+    const audio = new Audio(source);
+    audio.preload = 'auto';
+    audio.loop = false;
+    audio.volume = 0.3;
+    state.homeMusicAudioElement = audio;
+    audio.onended = () => {
+      if (!state.homeMusicEnabled || token !== state.homePlaybackToken) return;
+      state.homeMusicIndex = (state.homeMusicIndex + 1) % HOME_MUSIC_PLAYLIST.length;
+      void playHomeMusicTrack(token);
+    };
+    if (state.homePaused) {
+      return;
+    }
+    try {
+      await audio.play();
+    } catch (_error) {
+      state.homeMusicEnabled = false;
+      state.homeMusicAudioElement = null;
+      renderHomePanel();
+    }
+  }
+
+  function startHomeMusicLoop() {
+    if (state.homeMusicEnabled) return;
+    state.homeMusicEnabled = true;
+    renderHomePanel();
+    void playHomeMusicTrack(state.homePlaybackToken);
+  }
+
+  function toggleHomeMusicLoop() {
+    if (state.homeMusicEnabled) {
+      stopHomeMusicLoop();
+      return;
+    }
+    startHomeMusicLoop();
+  }
+
+  function pauseHomeMusicIfNeeded() {
+    const current = state.homeMusicAudioElement;
+    if (!current) return;
+    try {
+      current.pause();
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  async function resumeHomeMusicIfNeeded() {
+    if (!state.homeMusicEnabled) return;
+    const current = state.homeMusicAudioElement;
+    if (!current) {
+      await playHomeMusicTrack(state.homePlaybackToken);
+      return;
+    }
+    try {
+      await current.play();
+    } catch (_error) {
+      // ignore
+    }
+  }
+
+  async function waitWhileHomePaused(token) {
+    while (state.homePaused && state.homeSleepActive && token === state.homePlaybackToken) {
+      await wait(120);
+    }
+  }
+
+  function beginHomeAudioPracticeProgress(audio) {
+    if (!audio) return;
+    state.homeAudioPracticeAnchorTime = Math.max(0, Number(audio.currentTime) || 0);
+  }
+
+  function commitHomeAudioPracticeProgress(audio) {
+    if (!audio || state.homeAudioPracticeAnchorTime == null) return;
+    const currentTime = Math.max(0, Number(audio.currentTime) || 0);
+    const anchorTime = Math.max(0, Number(state.homeAudioPracticeAnchorTime) || 0);
+    const deltaSeconds = Math.max(0, currentTime - anchorTime);
+    state.homeAudioPracticeAnchorTime = currentTime;
+    addPracticeProgressSeconds(deltaSeconds);
+  }
+
+  function resetHomeAudioPracticeProgress() {
+    state.homeAudioPracticeAnchorTime = null;
+  }
+
+  async function waitHomeDelay(ms, token, onTick) {
+    const total = Math.max(0, Number(ms) || 0);
+    const startedAt = Date.now();
+    while (state.homeSleepActive && token === state.homePlaybackToken && !state.homeSkipRequested) {
+      await waitWhileHomePaused(token);
+      if (!state.homeSleepActive || token !== state.homePlaybackToken || state.homeSkipRequested) return false;
+      const elapsed = Date.now() - startedAt;
+      if (typeof onTick === 'function') {
+        onTick(elapsed, total);
+      }
+      if (elapsed >= total) {
+        return true;
+      }
+      await wait(Math.min(120, total - elapsed));
+    }
+    return false;
+  }
+
+  function queueHomeTextReveal(delay = HOME_BOOK_TRANSITION_MS) {
+    state.homeTextRevealToken += 1;
+    const token = state.homeTextRevealToken;
+    state.homeTextVisible = false;
+    renderHomePanel();
+    window.setTimeout(() => {
+      if (token !== state.homeTextRevealToken) return;
+      state.homeTextVisible = true;
+      renderHomePanel();
+    }, Math.max(0, Number(delay) || 0));
+  }
+
+  function hideHomeTextForBookChange() {
+    state.homeTextRevealToken += 1;
+    state.homeTextVisible = false;
+    renderHomePanel();
+  }
+
+  function normalizeHomeUpcomingSessions() {
+    const seen = new Set([safeText(state.homeCurrentSession?.bookId)].filter(Boolean));
+    state.homeUpcomingSessions = (Array.isArray(state.homeUpcomingSessions) ? state.homeUpcomingSessions : [])
+      .filter((session) => {
+        const bookId = safeText(session?.bookId);
+        if (!bookId || seen.has(bookId)) return false;
+        seen.add(bookId);
+        return true;
+      });
+    state.homeNextSession = state.homeUpcomingSessions[0] || null;
+  }
+
+  function rememberHomeSession(session) {
+    const bookId = safeText(session?.bookId);
+    if (!bookId) return;
+    state.homeSessionHistory = [session]
+      .concat(state.homeSessionHistory.filter((entry) => safeText(entry?.bookId) !== bookId))
+      .slice(0, 10);
+  }
+
+  function recycleHomeSessionToUpcoming(session) {
+    const bookId = safeText(session?.bookId);
+    if (!bookId || bookId === safeText(state.homeCurrentSession?.bookId)) return;
+    state.homeUpcomingSessions = [session]
+      .concat((Array.isArray(state.homeUpcomingSessions) ? state.homeUpcomingSessions : []).filter((entry) => safeText(entry?.bookId) !== bookId));
+    normalizeHomeUpcomingSessions();
+  }
+
+  function setActiveHomeSession(session, options = {}) {
+    state.homeCurrentSession = session || null;
+    state.homeCurrentCards = Array.isArray(session?.cards) ? session.cards.slice() : [];
+    state.homeCurrentBookId = safeText(session?.bookId);
+    state.homeCurrentBookCover = safeText(session?.coverImageUrl);
+    state.homeCurrentBookName = safeText(session?.title);
+    state.homeCurrentCardIndex = 0;
+    state.homeCurrentCardText = safeText(session?.cards?.[0]?.english);
+    state.homeCurrentCardTextPt = safeText(session?.cards?.[0]?.portuguese || session?.cards?.[0]?.english);
+    state.homeTextVisible = !options.hideText;
+    state.homeBookMetaIndex = 0;
+    normalizeHomeUpcomingSessions();
+    setHomeProgress(state.homeCurrentBookName || 'Livro', 0);
+  }
+
+  async function loadHomeSessionForBook(book) {
+    if (!book) return null;
+    const cards = await fetchBookCards(book);
+    const playableCards = cards.filter((card) => safeText(card?.audio));
+    if (!playableCards.length) return null;
+    const coverImageUrl = safeText(book?.coverImageUrl);
+    const backgroundUrl = chooseReaderBackgroundUrl(book);
+    const session = {
+      bookId: safeText(book?.bookId),
+      title: safeText(book?.nome) || 'Livro',
+      coverImageUrl,
+      book,
+      readingTimeSeconds: Math.max(0, Number(book?.readingTimeSeconds) || ((Number(book?.englishChars) || 0) * 60 / 400)),
+      cards: playableCards
+    };
+    primeHomeSessionAudio(session);
+    void hydrateHomeCardDurations(playableCards).then(() => {
+      if (
+        safeText(state.homeCurrentSession?.bookId) === session.bookId
+        || safeText(state.homeNextSession?.bookId) === session.bookId
+      ) {
+        refreshHomeProgressFromPlayback();
+        renderHomePanel();
+      }
+    });
+    void ensureBookReadingTimeSeconds(book).then((seconds) => {
+      if (seconds > 0 && Number(session.readingTimeSeconds) !== seconds) {
+        session.readingTimeSeconds = seconds;
+        if (safeText(state.homeCurrentSession?.bookId) === session.bookId) {
+          renderHomePanel();
+        }
+      }
+    });
+    void Promise.allSettled([
+      coverImageUrl ? preloadImageUrl(coverImageUrl) : Promise.resolve(false),
+      backgroundUrl ? preloadImageUrl(backgroundUrl) : Promise.resolve(false)
+    ]);
+    return session;
+  }
+
+  function pickRandomHomeBook(excludedIds = []) {
+    const excludeSet = new Set(
+      (Array.isArray(excludedIds) ? excludedIds : [])
+        .map((value) => safeText(value))
+        .filter(Boolean)
+    );
+    const candidates = getHomeBooksPool().filter((book) => !excludeSet.has(safeText(book?.bookId)));
+    const pool = candidates.length ? candidates : getHomeBooksPool();
+    if (!pool.length) return null;
+    return pool[Math.floor(Math.random() * pool.length)] || pool[0] || null;
+  }
+
+  async function prepareRandomHomeSession(token, extraExcludedIds = []) {
+    const tried = new Set(
+      (Array.isArray(extraExcludedIds) ? extraExcludedIds : [])
+        .map((value) => safeText(value))
+        .filter(Boolean)
+    );
+    const attempts = Math.max(4, getHomeBooksPool().length || 0);
+    for (let index = 0; index < attempts; index += 1) {
+      if (!state.homeSleepActive || token !== state.homePlaybackToken) return null;
+      const book = pickRandomHomeBook(Array.from(tried));
+      const bookId = safeText(book?.bookId);
+      if (!book || !bookId) break;
+      tried.add(bookId);
+      try {
+        const session = await loadHomeSessionForBook(book);
+        if (session) {
+          return session;
+        }
+      } catch (_error) {
+        // try another book
+      }
+    }
+    return null;
+  }
+
+  async function ensureHomeNextSession(token, force = false) {
+    if (!state.homeSleepActive || token !== state.homePlaybackToken) return null;
+    normalizeHomeUpcomingSessions();
+    if (!force && state.homeUpcomingSessions.length >= HOME_UPCOMING_SESSION_TARGET) {
+      return state.homeNextSession;
+    }
+    const excludedIds = new Set([
+      safeText(state.homeCurrentSession?.bookId),
+      ...state.homeUpcomingSessions.map((session) => safeText(session?.bookId))
+    ].filter(Boolean));
+    while (state.homeUpcomingSessions.length < HOME_UPCOMING_SESSION_TARGET) {
+      const session = await prepareRandomHomeSession(token, Array.from(excludedIds));
+      if (!state.homeSleepActive || token !== state.homePlaybackToken || !session) break;
+      const bookId = safeText(session?.bookId);
+      if (!bookId || excludedIds.has(bookId)) break;
+      excludedIds.add(bookId);
+      state.homeUpcomingSessions.push(session);
+    }
+    normalizeHomeUpcomingSessions();
+    renderHomePanel();
+    return state.homeNextSession;
+  }
+
+  async function animateHomeSessionTransition(nextSession, token, direction = 'next') {
+    if (!nextSession || !els.homeViewport) {
+      const previousSession = state.homeCurrentSession;
+      if (direction === 'next') {
+        rememberHomeSession(previousSession);
+      } else if (direction === 'previous') {
+        recycleHomeSessionToUpcoming(previousSession);
+      }
+      setActiveHomeSession(nextSession, { hideText: true });
+      queueHomeTextReveal();
+      renderHomePanel();
+      return;
+    }
+    const previousSession = state.homeCurrentSession;
+    state.homeTransitioning = true;
+    state.homeNextSession = nextSession;
+    els.homeViewport.classList.toggle('is-reverse', direction === 'previous');
+    renderHomePanel();
+    els.homeViewport.classList.add('is-book-transitioning');
+    await wait(HOME_BOOK_TRANSITION_MS);
+    if (!state.homeSleepActive || token !== state.homePlaybackToken) {
+      els.homeViewport.classList.remove('is-book-transitioning');
+      els.homeViewport.classList.remove('is-book-resetting');
+      els.homeViewport.classList.remove('is-reverse');
+      state.homeTransitioning = false;
+      return;
+    }
+    els.homeViewport.classList.add('is-book-resetting');
+    if (direction === 'next') {
+      rememberHomeSession(previousSession);
+      state.homeUpcomingSessions = state.homeUpcomingSessions.filter((session) => safeText(session?.bookId) !== safeText(nextSession?.bookId));
+    } else if (direction === 'previous') {
+      recycleHomeSessionToUpcoming(previousSession);
+    }
+    setActiveHomeSession(nextSession, { hideText: true });
+    renderHomePanel();
+    void els.homeViewport.offsetWidth;
+    els.homeViewport.classList.remove('is-book-transitioning');
+    void els.homeViewport.offsetWidth;
+    els.homeViewport.classList.remove('is-reverse');
+    state.homeSkipRequested = false;
+    state.homeTransitioning = false;
+    state.homePendingSession = null;
+    state.homePendingDirection = 'next';
+    normalizeHomeUpcomingSessions();
+    renderHomePanel();
+    void els.homeViewport.offsetWidth;
+    els.homeViewport.classList.remove('is-book-resetting');
+    queueHomeTextReveal();
+    renderHomePanel();
+  }
+
+  function toggleHomeTextMode() {
+    if (state.homeTextMode === 'english') {
+      state.homeTextMode = 'portuguese';
+    } else {
+      state.homeTextMode = 'english';
+    }
+    renderHomePanel();
+  }
+
+  function setHomeBlackoutMode(active) {
+    if (!state.homeIntroDismissed || !state.homeSleepActive) return;
+    state.homeBlackoutActive = Boolean(active);
+    renderHomePanel();
+    renderHomeTransportUi();
+  }
+
+  async function toggleHomePausePlayback() {
+    if (!state.homeIntroDismissed) return;
+    state.homePaused = !state.homePaused;
+    if (state.homePaused) {
+      try {
+        commitHomeAudioPracticeProgress(state.homeAudioElement);
+        state.homeAudioElement?.pause();
+      } catch (_error) {
+        // ignore
+      }
+      renderHomeTransportUi();
+      return;
+    }
+    try {
+      if (state.homeAudioElement) {
+        applyHomeAudioPlaybackRate(state.homeAudioElement);
+        await state.homeAudioElement.play();
+        beginHomeAudioPracticeProgress(state.homeAudioElement);
+      } else {
+        ensureHomePlaybackLoopRunning('manual-resume');
+      }
+    } catch (_error) {
+      // ignore
+    }
+    await resumeHomeMusicIfNeeded();
+    renderHomeTransportUi();
+  }
+
+  function cycleHomeSpeed() {
+    state.homeSpeedIndex = (state.homeSpeedIndex + 1) % HOME_SPEED_OPTIONS.length;
+    updateCurrentHomeAudioRate();
+    renderHomeTransportUi();
+  }
+
+  async function requestHomeNextBook() {
+    if (!state.homeSleepActive || state.homeTransitioning) return;
+    const token = state.homePlaybackToken;
+    state.homePendingSession = null;
+    state.homePendingDirection = 'next';
+    hideHomeTextForBookChange();
+    state.homeSkipRequested = true;
+    void ensureHomeNextSession(token);
+    interruptHomeAudioPlayback();
+  }
+
+  async function requestHomePreviousBook() {
+    if (!state.homeSleepActive || state.homeTransitioning) return;
+    const previousSession = state.homeSessionHistory[0] || null;
+    if (!previousSession) return;
+    state.homeSessionHistory = state.homeSessionHistory.slice(1);
+    state.homePendingSession = previousSession;
+    state.homePendingDirection = 'previous';
+    hideHomeTextForBookChange();
+    state.homeSkipRequested = true;
+    interruptHomeAudioPlayback();
+  }
+
+  async function playHomeAudioSource(source, token, meta = {}) {
+    if (!source) return;
+    await waitWhileHomePaused(token);
+    if (!state.homeSleepActive || token !== state.homePlaybackToken || state.homeSkipRequested) {
+      return 'interrupted';
+    }
+    const audio = getHomeVoiceAudioElement(source);
+    applyHomeAudioPlaybackRate(audio);
+    state.homeAudioElement = audio;
+    state.homeCurrentCardIndex = Math.max(0, Number(meta.cardIndex) || 0);
+    state.homeCurrentCardText = safeText(meta.english);
+    state.homeCurrentCardTextPt = safeText(meta.portuguese || meta.english);
+    state.homeAudioInterrupted = false;
+    renderHomePanel();
+    const reason = await new Promise((resolve) => {
+      let finished = false;
+      const totalCards = Math.max(1, Number(meta.totalCards) || 1);
+      const baseIndex = Math.max(0, Number(meta.cardIndex) || 0);
+      const finish = (reason) => {
+        if (finished) return;
+        finished = true;
+        audio.onended = null;
+        audio.onerror = null;
+        audio.ontimeupdate = null;
+        audio.onloadedmetadata = null;
+        state.homeAudioResolver = null;
+        resetHomeAudioPracticeProgress();
+        if (state.homeAudioElement === audio) {
+          state.homeAudioElement = null;
+        }
+        resolve(reason);
+      };
+      const syncProgress = () => {
+        const duration = Number(audio.duration);
+        const currentTime = Number(audio.currentTime) || 0;
+        const totalSeconds = getHomeSessionTotalSeconds(state.homeCurrentSession);
+        const elapsedSeconds = getHomeElapsedSecondsForPosition(
+          baseIndex,
+          Math.min(currentTime, duration > 0 ? duration : currentTime),
+          state.homeCurrentSession
+        );
+        updateHomeProgressTimeline(elapsedSeconds, totalSeconds, state.homeCurrentBookName || safeText(meta.bookTitle) || 'Livro');
+      };
+      state.homeAudioResolver = () => {
+        state.homeAudioInterrupted = true;
+        finish('interrupted');
+      };
+      audio.onloadedmetadata = () => {
+        const duration = Number(audio.duration);
+        const requestedStartAt = Math.max(0, Number(meta.startAtSeconds) || 0);
+        if (requestedStartAt > 0 && Number.isFinite(duration) && duration > 0) {
+          audio.currentTime = Math.min(duration, requestedStartAt);
+        }
+        syncProgress();
+      };
+      audio.ontimeupdate = syncProgress;
+      audio.onended = () => {
+        commitHomeAudioPracticeProgress(audio);
+        addListeningProgress(meta.english);
+
+        const totalSeconds = getHomeSessionTotalSeconds(state.homeCurrentSession);
+        const elapsedSeconds = getHomeElapsedSecondsForPosition(
+          baseIndex,
+          getHomeCardDurationSeconds(state.homeCurrentCards[baseIndex]),
+          state.homeCurrentSession
+        );
+        updateHomeProgressTimeline(elapsedSeconds, totalSeconds, state.homeCurrentBookName || safeText(meta.bookTitle) || 'Livro');
+        finish('ended');
+      };
+      audio.onerror = () => finish('error');
+      if (state.homePaused) {
+        syncProgress();
+        return;
+      }
+      audio.play().then(() => {
+        beginHomeAudioPracticeProgress(audio);
+      }).catch(() => finish('error'));
+    });
+    return reason;
+  }
+
+  async function runHomePlaybackLoop(token) {
+    state.homePlaybackLoopRunningToken = token;
+    try {
+      const initialSession = state.homeCurrentSession || await prepareRandomHomeSession(token);
+      if (!initialSession) {
+        renderHomePanel();
+        return;
+      }
+      setActiveHomeSession(initialSession, { hideText: true });
+      queueHomeTextReveal();
+      renderHomePanel();
+
+      while (state.homeSleepActive && token === state.homePlaybackToken) {
+        const session = state.homeCurrentSession;
+        const cards = Array.isArray(session?.cards) ? session.cards : [];
+        if (!session || !cards.length) {
+          const fallback = await prepareRandomHomeSession(token, [safeText(session?.bookId)]);
+          if (!fallback) {
+            await wait(800);
+            continue;
+          }
+          setActiveHomeSession(fallback, { hideText: true });
+          queueHomeTextReveal();
+          renderHomePanel();
+          continue;
+        }
+
+        void ensureHomeNextSession(token);
+
+        for (let index = 0; index < cards.length; index += 1) {
+          let startAtSeconds = 0;
+          if (state.homeSeekTarget && state.homeSeekTarget.bookId === safeText(session?.bookId)) {
+            index = Math.max(0, Math.min(cards.length - 1, Number(state.homeSeekTarget.cardIndex) || 0));
+            startAtSeconds = Math.max(0, Number(state.homeSeekTarget.startAtSeconds) || 0);
+            state.homeSeekTarget = null;
+            state.homeSkipRequested = false;
+          }
+          const card = cards[index];
+          if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
+          if (state.homeSkipRequested) break;
+          const result = await playHomeAudioSource(safeText(card.audio), token, {
+            cardIndex: index,
+            totalCards: cards.length,
+            startAtSeconds,
+            english: safeText(card.english),
+            portuguese: safeText(card.portuguese || card.english),
+            bookTitle: session.title
+          });
+          if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
+          if (state.homeSeekTarget && state.homeSeekTarget.bookId === safeText(session?.bookId)) {
+            index -= 1;
+            continue;
+          }
+          if (state.homeSkipRequested) break;
+          if (result === 'interrupted') {
+            break;
+          }
+          const gapDelayMs = getHomeRepeatSeconds() * 1000;
+          const gapStartedAt = Date.now();
+          const baseElapsedSeconds = getHomeElapsedSecondsForPosition(
+            index,
+            getHomeCardDurationSeconds(cards[index]),
+            state.homeCurrentSession
+          );
+          const totalTimelineSeconds = getHomeSessionTotalSeconds(state.homeCurrentSession);
+          const waited = await waitHomeDelay(gapDelayMs, token, () => {
+            const gapElapsedSeconds = Math.max(0, Math.min(gapDelayMs, Date.now() - gapStartedAt)) / 1000;
+            updateHomeProgressTimeline(
+              baseElapsedSeconds + gapElapsedSeconds,
+              totalTimelineSeconds,
+              state.homeCurrentBookName || safeText(session?.title) || 'Livro'
+            );
+          });
+          if (state.homeSeekTarget && state.homeSeekTarget.bookId === safeText(session?.bookId)) {
+            index -= 1;
+            continue;
+          }
+          if (!waited || state.homeSkipRequested) {
+            break;
+          }
+        }
+
+        if (!state.homeSleepActive || token !== state.homePlaybackToken) return;
+        const transitionDirection = state.homePendingDirection === 'previous' && state.homePendingSession ? 'previous' : 'next';
+        const nextSession = transitionDirection === 'previous'
+          ? state.homePendingSession
+          : (state.homeNextSession || await ensureHomeNextSession(token, true));
+        if (!nextSession) {
+          state.homeSkipRequested = false;
+          state.homePendingSession = null;
+          state.homePendingDirection = 'next';
+          await wait(600);
+          continue;
+        }
+        await animateHomeSessionTransition(nextSession, token, transitionDirection);
+        void ensureHomeNextSession(token);
+      }
+    } finally {
+      if (state.homePlaybackLoopRunningToken === token) {
+        state.homePlaybackLoopRunningToken = 0;
+      }
+    }
+  }
+
+  function ensureHomePlaybackLoopRunning(reason = 'resume') {
+    if (!state.homeSleepActive || state.homePaused) return;
+    const token = state.homePlaybackToken;
+    if (!token) return;
+    if (state.homePlaybackLoopRunningToken === token) return;
+    if (state.homeAudioElement || state.homeTransitioning) return;
+    state.homeSkipRequested = false;
+    void runHomePlaybackLoop(token);
+  }
+
+  async function startHomeSleepPlayback(options = {}) {
+    if (state.homeSleepActive || state.homeStartBusy) return;
+    if (!(await guardEnergyAndRedirect({ previewTarget: options.previewTarget }))) return;
+    const visibleBook = getVisibleShelfBook();
+    state.homeStartBusy = true;
+    state.homeSleepActive = true;
+    state.homeBlackoutActive = false;
+    renderHomeAuthUi();
+    const token = state.homePlaybackToken + 1;
+    state.homePlaybackToken = token;
+    let firstSession = null;
+    try {
+      firstSession = visibleBook ? await loadHomeSessionForBook(visibleBook) : null;
+      if (!firstSession) {
+        firstSession = await prepareRandomHomeSession(token, []);
+      }
+    } catch (_error) {
+      firstSession = null;
+    }
+    if (!firstSession) {
+      state.homeStartBusy = false;
+      state.homeSleepActive = false;
+      renderHomeAuthUi();
+      setStatus('Nao consegui carregar o primeiro livro agora.', 'error');
+      return;
+    }
+    state.homeIntroDismissed = true;
+    state.homePaused = false;
+    state.homeSkipRequested = false;
+    state.homeCurrentSession = firstSession;
+    state.homeNextSession = null;
+    state.homeUpcomingSessions = [];
+    state.homeSessionHistory = [];
+    state.homePendingSession = null;
+    state.homePendingDirection = 'next';
+    state.homeCurrentCards = [];
+    state.homeCurrentCardIndex = 0;
+    state.homeCurrentCardText = '';
+    state.homeCurrentCardTextPt = '';
+    state.homeTextVisible = true;
+    state.homeTextRevealToken = 0;
+    state.homeBackgroundUrl = '';
+    state.homeBackgroundLayer = 'primary';
+    state.homeTransitioning = false;
+    if (firstSession) {
+      setActiveHomeSession(firstSession, { hideText: false });
+      void ensureHomeNextSession(token, true);
+    }
+    stopHomeBookMetaRotation();
+    renderSleepFabMeta();
+    state.homeStartBusy = false;
+    void setNativeBooksSleepModeEnabled(true);
+    renderHomePanel();
+    renderHomeAuthUi();
+    if (state.homeMusicEnabled) {
+      void playHomeMusicTrack(token);
+    }
+    void runHomePlaybackLoop(token);
+  }
+
+  function stopHomeSleepPlayback(options = {}) {
+    const keepIntro = Boolean(options.keepIntro);
+    stopHomeBookMetaRotation();
+    state.homePlaybackToken += 1;
+    state.homeSleepActive = false;
+    state.homePaused = false;
+    state.homeBlackoutActive = false;
+    state.homeSkipRequested = false;
+    state.homeTransitioning = false;
+    if (els.homeViewport) {
+      els.homeViewport.classList.remove('is-book-transitioning');
+      els.homeViewport.classList.remove('is-book-resetting');
+      els.homeViewport.classList.remove('is-reverse');
+    }
+    if (!keepIntro) {
+      state.homeIntroDismissed = false;
+      state.homeCurrentBookCover = '';
+      state.homeCurrentBookId = '';
+      state.homeCurrentBookName = '';
+      state.homeCurrentSession = null;
+      state.homeNextSession = null;
+      state.homeUpcomingSessions = [];
+      state.homeSessionHistory = [];
+      state.homePendingSession = null;
+      state.homePendingDirection = 'next';
+      state.homeCurrentCards = [];
+      state.homeCurrentCardIndex = 0;
+      state.homeCurrentCardText = '';
+      state.homeCurrentCardTextPt = '';
+      state.homeTextVisible = true;
+      state.homeTextRevealToken = 0;
+      state.homeBookMetaIndex = 0;
+      state.homeBackgroundUrl = '';
+      state.homeBackgroundLayer = 'primary';
+      setHomeProgress('Livro', 0);
+    }
+    interruptHomeAudioPlayback();
+    stopHomeMusicLoop();
+    void setNativeBooksSleepModeEnabled(false);
+    renderHomePanel();
+  }
+
+  async function animateLevelChangeTransition(direction) {
+    const isReverse = Number(direction) < 0;
+    if (els.cardsGrid) {
+      els.cardsGrid.classList.toggle('is-reverse', isReverse);
+      els.cardsGrid.classList.remove('is-level-sliding-in');
+      els.cardsGrid.classList.add('is-level-sliding-out');
+    }
+    if (els.levelTitle) {
+      els.levelTitle.classList.add('is-sliding');
+    }
+    await wait(Math.round(LEVEL_SLIDE_DURATION_MS * 0.42));
+  }
+
+  async function settleLevelChangeTransition() {
+    if (els.cardsGrid) {
+      els.cardsGrid.classList.remove('is-level-sliding-out');
+      els.cardsGrid.classList.add('is-level-sliding-in');
+    }
+    if (els.levelTitle) {
+      els.levelTitle.classList.remove('is-sliding');
+    }
+    await wait(32);
+    if (els.cardsGrid) {
+      els.cardsGrid.classList.remove('is-level-sliding-in');
+      els.cardsGrid.classList.remove('is-reverse');
+    }
+  }
+
+  function isOverlayOpen() {
+    return Boolean(
+      state.readerOpen
+      || state.modeBookId
+      || state.magicBookId
+      || state.jsonBookId
+      || state.createModalOpen
+    );
+  }
+
+  function getShelfPages() {
+    if (!els.cardsGrid) return [];
+    return Array.from(els.cardsGrid.querySelectorAll('.books-shelf-page'));
+  }
+
+  function getShelfCards() {
+    return getShelfPages()
+      .map((page) => page.querySelector('.books-card'))
+      .filter(Boolean);
+  }
+
+  function flashShelfCard(index) {
+    const cards = getShelfCards();
+    const target = cards[Math.max(0, Math.min(cards.length - 1, Number(index) || 0))];
+    if (!target) return;
+    target.classList.remove('is-appearing');
+    void target.offsetWidth;
+    target.classList.add('is-appearing');
+    window.setTimeout(() => {
+      target.classList.remove('is-appearing');
+    }, 380);
+  }
+
+  function syncShelfViewportHeight() {
+    const shelf = els.shelfViewport;
+    if (!shelf) return;
+    const top = shelf.getBoundingClientRect().top;
+    const nextHeight = Math.max(260, Math.round(window.innerHeight - top));
+    shelf.style.setProperty('--books-shelf-height', `${nextHeight}px`);
+    if (Math.abs(nextHeight - shelf.clientHeight) > 1) {
+      shelf.style.height = `${nextHeight}px`;
+    }
+    getShelfPages().forEach((page) => {
+      page.style.height = `${nextHeight}px`;
+    });
+  }
+
+  function clampShelfIndex(index) {
+    const pages = getShelfPages();
+    if (!pages.length) return 0;
+    const normalized = Number.isFinite(index) ? index : 0;
+    return Math.max(0, Math.min(pages.length - 1, Math.round(normalized)));
+  }
+
+  function easeInOutCubic(progress) {
+    const t = Math.max(0, Math.min(1, Number(progress) || 0));
+    return t < 0.5 ? (4 * t * t * t) : (1 - Math.pow(-2 * t + 2, 3) / 2);
+  }
+
+  function cancelShelfAnimation() {
+    if (state.shelfAnimationFrame) {
+      window.cancelAnimationFrame(state.shelfAnimationFrame);
+      state.shelfAnimationFrame = 0;
+    }
+    state.shelfAnimating = false;
+  }
+
+  function animateShelfScrollTo(targetScrollTop, durationMs) {
+    const shelf = els.shelfViewport;
+    if (!shelf) return Promise.resolve();
+    cancelShelfAnimation();
+    const animationToken = state.shelfAnimationToken + 1;
+    state.shelfAnimationToken = animationToken;
+    state.shelfAnimating = true;
+
+    const from = shelf.scrollTop;
+    const to = Math.max(0, Number(targetScrollTop) || 0);
+    const duration = Math.max(0, Number(durationMs) || 0);
+    if (duration <= 0 || Math.abs(to - from) < 1) {
+      shelf.scrollTop = to;
+      state.shelfAnimating = false;
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      const startedAt = performance.now();
+      const step = (now) => {
+        if (animationToken !== state.shelfAnimationToken) {
+          state.shelfAnimating = false;
+          resolve();
+          return;
+        }
+        const elapsed = now - startedAt;
+        const ratio = Math.max(0, Math.min(1, elapsed / duration));
+        const eased = easeInOutCubic(ratio);
+        shelf.scrollTop = from + ((to - from) * eased);
+        if (ratio >= 1) {
+          state.shelfAnimating = false;
+          state.shelfAnimationFrame = 0;
+          resolve();
+          return;
+        }
+        state.shelfAnimationFrame = window.requestAnimationFrame(step);
+      };
+      state.shelfAnimationFrame = window.requestAnimationFrame(step);
+    });
+  }
+
+  async function scrollShelfToIndex(index, animate) {
+    const shelf = els.shelfViewport;
+    const pages = getShelfPages();
+    if (!shelf || !pages.length) return;
+    syncShelfViewportHeight();
+    const previousIndex = state.shelfIndex;
+    const nextIndex = Math.max(0, Math.min(pages.length - 1, Number(index) || 0));
+    state.shelfIndex = nextIndex;
+    const pageHeight = Math.max(1, shelf.clientHeight);
+    const targetScrollTop = Math.max(0, nextIndex * pageHeight);
+
+    if (animate) {
+      await animateShelfScrollTo(targetScrollTop, BOOK_SNAP_DURATION_MS);
+      if (previousIndex !== nextIndex) {
+        flashShelfCard(nextIndex);
+      }
+      renderSleepFabMeta();
+      return;
+    }
+    cancelShelfAnimation();
+    shelf.scrollTop = targetScrollTop;
+    if (previousIndex !== nextIndex) {
+      flashShelfCard(nextIndex);
+    }
+    renderSleepFabMeta();
+  }
+
+  function updateShelfIndexFromViewport() {
+    const shelf = els.shelfViewport;
+    const pages = getShelfPages();
+    if (!shelf || !pages.length) {
+      state.shelfIndex = 0;
+      return;
+    }
+    const pageHeight = Math.max(1, shelf.clientHeight);
+    state.shelfIndex = clampShelfIndex(Math.round(shelf.scrollTop / pageHeight));
+    renderSleepFabMeta();
+  }
+
+  async function snapShelfByStep(direction) {
+    if (isOverlayOpen() || state.shelfAnimating) return;
+    const pages = getShelfPages();
+    if (!pages.length) return;
+    updateShelfIndexFromViewport();
+    const step = Number(direction) > 0 ? 1 : -1;
+    let target = clampShelfIndex(state.shelfIndex + step);
+    if (isAllBooksLevel()) {
+      const feed = getAllBooksFeed();
+      const sentinelBounds = getAllBooksSentinelBounds(pages.length);
+      if (sentinelBounds) {
+        if (step > 0 && state.shelfIndex >= sentinelBounds.lastMainIndex) {
+          await scrollShelfToIndex(sentinelBounds.nextIndex, true);
+          rotateAllBooksWindow(1, sentinelBounds.lastMainIndex);
+          return;
+        }
+        if (step < 0 && state.shelfIndex <= sentinelBounds.firstMainIndex) {
+          await scrollShelfToIndex(sentinelBounds.prevIndex, true);
+          rotateAllBooksWindow(-1, sentinelBounds.firstMainIndex);
+          return;
+        }
+      } else if (feed.length > pages.length) {
+        if (step > 0 && state.shelfIndex >= (pages.length - 1)) {
+          rotateAllBooksWindow(1, pages.length - 1);
+          flashShelfCard(pages.length - 1);
+          return;
+        }
+        if (step < 0 && state.shelfIndex <= 0) {
+          rotateAllBooksWindow(-1, 0);
+          flashShelfCard(0);
+          return;
+        }
+      } else if (step > 0 && state.shelfIndex >= (pages.length - 1)) {
+        target = 0;
+      } else if (step < 0 && state.shelfIndex <= 0) {
+        target = pages.length - 1;
+      }
+    }
+    if (target === state.shelfIndex) return;
+    await scrollShelfToIndex(target, true);
+  }
+
+  function setModeStartBusy(isBusy) {
+    state.modeStartBusy = Boolean(isBusy);
+    applyWelcomeModeVisibility();
+    syncManualNoEnergyUi();
+  }
+
+  function setPreBookStep(step) {
+    state.preBookStep = step === 'training' ? 'training' : 'root';
+    if (els.preBookActions) {
+      els.preBookActions.dataset.preBookStep = state.preBookStep;
+    }
+    document.body.classList.toggle('books-prebook-training', state.preBookStep === 'training');
+  }
+
+  function resetModeTransitionUi() {
+    if (els.preBookCard) {
+      els.preBookCard.classList.remove('is-starting');
+    }
+    if (els.preBookLoading) {
+      els.preBookLoading.classList.remove('is-visible');
+    }
+    window.PlaytalkLoader?.setMeta([]);
+    toggleGlobalLoader('books-mode-start', false);
+  }
+
+  async function hideModeLoadingSmoothly() {
+    if (!els.preBookLoading || !els.preBookLoading.classList.contains('is-visible')) return;
+    els.preBookLoading.classList.remove('is-visible');
+    window.PlaytalkLoader?.setMeta([]);
+    toggleGlobalLoader('books-mode-start', false);
+    await wait(MODE_LOADING_FADE_MS);
+  }
+
+  function normalizeBookKey(bookId) {
+    return safeText(bookId).toLowerCase();
+  }
+
+  function isBookProcessingMagic(bookId) {
+    return state.magicProcessingBookIds.has(normalizeBookKey(bookId));
+  }
+
+  function openUploadForBook(bookId) {
+    if (!state.isAdmin || state.uploadInFlight) return;
+    const targetBookId = safeText(bookId);
+    if (!targetBookId || !els.coverUploadInput) return;
+    if (isBookProcessingMagic(targetBookId)) return;
+    state.uploadTargetBookId = targetBookId;
+    els.coverUploadInput.value = '';
+    els.coverUploadInput.click();
+  }
+
+  function openMagicModal(book) {
+    if (!state.isAdmin || !els.magicModal || !book) return;
+    state.magicBookId = safeText(book.bookId);
+    if (!state.magicBookId) return;
+    if (isBookProcessingMagic(state.magicBookId)) {
+      setStatus('Esse livro ja esta gerando imagens agora.', null);
+      return;
+    }
+    if (els.magicTitle) {
+      els.magicTitle.textContent = `Gerar imagens: ${safeText(book.nome) || 'Livro'}`;
+    }
+    if (els.magicCoverPromptInput && !safeText(els.magicCoverPromptInput.value)) {
+      els.magicCoverPromptInput.value = `Capa do livro ${safeText(book.nome)} com atmosfera cinematica, personagens e profundidade visual.`;
+    }
+    if (els.magicBackgroundPromptInput && !safeText(els.magicBackgroundPromptInput.value)) {
+      els.magicBackgroundPromptInput.value = `Background do livro ${safeText(book.nome)} em estilo imersivo, sem texto e sem logos.`;
+    }
+    els.magicModal.classList.add('is-visible');
+  }
+
+  function closeMagicModal() {
+    state.magicBookId = '';
+    if (els.magicModal) {
+      els.magicModal.classList.remove('is-visible');
+    }
+  }
+
+  async function openEditBookModal(book) {
+    if (!state.isAdmin || !book) return;
+    const bookId = safeText(book.bookId);
+    if (!bookId || !els.createModal) return;
+    if (isBookProcessingMagic(bookId)) {
+      setStatus('Esse livro esta processando. Aguarde terminar.', null);
+      return;
+    }
+    setStatus('Carregando linhas do livro para editar...', null);
+    try {
+      const response = await fetch(buildApiUrl(`/api/admin/minibooks/edit-lines?bookId=${encodeURIComponent(bookId)}`), {
+        credentials: 'include',
+        headers: buildAuthHeaders(),
+        cache: 'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error || payload?.message || 'Nao foi possivel carregar o editor desse livro.');
+      }
+      resetCreateModalState('edit');
+      state.createEditBookId = bookId;
+      state.createOriginalLines = splitCreateInputRawLines(payload?.linesText || '');
+      if (els.createInput) {
+        els.createInput.value = String(payload?.linesText || '');
+      }
+      if (els.createVoiceSelect && safeText(payload?.voice)) {
+        els.createVoiceSelect.value = safeText(payload.voice);
+      }
+      if (els.createIdeaInput) {
+        els.createIdeaInput.value = '';
+      }
+      if (els.createCharsInput) {
+        els.createCharsInput.value = '900';
+      }
+      openCreateModal();
+      setStatus(`Editor aberto para "${safeText(payload?.book?.title || book?.nome) || 'Livro'}".`, 'success');
+    } catch (error) {
+      setStatus(error?.message || 'Falha ao abrir editor do livro.', 'error');
+    }
+  }
+
+  function closeJsonModal() {
+    state.jsonBookId = '';
+    if (els.jsonModal) {
+      els.jsonModal.classList.remove('is-visible');
+    }
+  }
+
+  function renderCreateModalMode() {
+    const isEditMode = isCreateEditMode();
+    if (els.createModalTitle) {
+      els.createModalTitle.textContent = isEditMode ? 'Editar livro por linhas' : 'Criar livro por linhas';
+    }
+    if (els.createIdeaControl) {
+      els.createIdeaControl.hidden = isEditMode;
+    }
+    if (els.createCharsControl) {
+      els.createCharsControl.hidden = isEditMode;
+    }
+    if (els.createWriteBtn) {
+      els.createWriteBtn.hidden = isEditMode;
+    }
+    if (els.createSubmitBtn) {
+      els.createSubmitBtn.textContent = isEditMode ? 'Atualizar livro' : 'Criar livro';
+    }
+    if (els.createInput) {
+      els.createInput.placeholder = isEditMode
+        ? `Titulo do livro\nNivel (1-100)\nstory_1\n${CREATE_EDIT_COVER_SENTINEL}\n${CREATE_EDIT_BACKGROUND_SENTINEL}\nFrase 1 em portugues\nSentence 1 in english`
+        : 'Titulo do livro\nNivel (1-100)\nstory_1\nPrompt capa 9:16\nPrompt background 16:9\nFrase 1 em portugues\nSentence 1 in english';
+    }
+  }
+
+  function setCreateBusy(isBusy) {
+    state.createBusy = Boolean(isBusy);
+    const lockAll = state.createBusy || state.createWriteBusy;
+    if (els.createSubmitBtn) {
+      els.createSubmitBtn.disabled = lockAll;
+    }
+    if (els.createCloseBtn) {
+      els.createCloseBtn.disabled = lockAll;
+    }
+    if (els.createInput) {
+      els.createInput.disabled = lockAll;
+    }
+    if (els.createVoiceSelect) {
+      els.createVoiceSelect.disabled = lockAll;
+    }
+    if (els.createIdeaInput) {
+      els.createIdeaInput.disabled = lockAll;
+    }
+    if (els.createCharsInput) {
+      els.createCharsInput.disabled = lockAll;
+    }
+    if (els.createWriteBtn) {
+      els.createWriteBtn.disabled = lockAll || isCreateEditMode();
+      els.createWriteBtn.textContent = state.createWriteBusy ? 'Escrevendo...' : 'Escrever livro';
+    }
+    if (els.createBookBtn) {
+      els.createBookBtn.disabled = state.createWriteBusy;
+      els.createBookBtn.textContent = 'Criar livro';
+    }
+  }
+
+  function setCreateWriteBusy(isBusy) {
+    state.createWriteBusy = Boolean(isBusy);
+    setCreateBusy(state.createBusy);
+  }
+
+  function openCreateModal() {
+    if (!state.isAdmin || !els.createModal) return;
+    state.createModalOpen = true;
+    renderCreateModalMode();
+    renderCreateInputPreview();
+    syncCreatePreviewScroll();
+    setCreateBusy(state.createBusy);
+    els.createModal.classList.add('is-visible');
+    if (els.createInput) {
+      window.setTimeout(() => {
+        try {
+          els.createInput.focus();
+        } catch (_error) {
+          // ignore focus issues
+        }
+      }, 25);
+    }
+  }
+
+  function readCreateTargetChars() {
+    const parsed = Number.parseInt(els.createCharsInput?.value, 10);
+    if (!Number.isFinite(parsed)) return 900;
+    return Math.max(0, Math.min(1500, parsed));
+  }
+
+  async function writeCreateBookWithNano() {
+    if (!state.isAdmin || state.createBusy || state.createWriteBusy) return;
+    const userPrompt = safeText(els.createIdeaInput?.value || '');
+    const targetChars = readCreateTargetChars();
+    if (els.createCharsInput) {
+      els.createCharsInput.value = String(targetChars);
+    }
+
+    setCreateWriteBusy(true);
+    setStatus('Escrevendo minibook com GPT-5.4-nano...', null);
+    try {
+      const payload = await postJsonWithSuccess('/api/admin/minibooks/write-lines', {
+        userPrompt,
+        targetChars
+      }, 'Nao foi possivel escrever o livro automaticamente.');
+
+      if (els.createInput) {
+        els.createInput.value = safeText(payload?.linesText);
+      }
+      renderCreateInputPreview();
+      syncCreatePreviewScroll();
+      const pairs = Number(payload?.stats?.pairsCount) || 0;
+      const chars = Number(payload?.stats?.englishChars) || 0;
+      setStatus(`Rascunho pronto: ${pairs} pares, ${chars} chars em ingles.`, 'success');
+    } catch (error) {
+      setStatus(error?.message || 'Falha ao escrever livro com GPT-5.4-nano.', 'error');
+    } finally {
+      setCreateWriteBusy(false);
+    }
+  }
+
+  function closeCreateModal() {
+    state.createModalOpen = false;
+    resetCreateModalState('create');
+    if (els.createModal) {
+      els.createModal.classList.remove('is-visible');
+    }
+  }
+
+  function normalizeCreateJob(job) {
+    if (!job || typeof job !== 'object') return null;
+    const id = safeText(job.id || job.jobId);
+    if (!id) return null;
+    const statusRaw = safeText(job.status).toLowerCase();
+    const status = statusRaw || 'queued';
+    const progress = Math.max(0, Math.min(100, Math.round(Number(job.progress) || 0)));
+    const step = safeText(job.step || job.message);
+    const errorMessage = safeText(job.errorMessage || job.error);
+    const book = {
+      id: safeText(job?.book?.id || job?.book?.bookId),
+      title: safeText(job?.book?.title || job?.title) || 'Livro',
+      level: normalizeLevel(job?.book?.level || job?.level),
+      fileName: safeText(job?.book?.fileName || job?.fileName)
+    };
+    const updatedAt = safeText(job.updatedAt || job.finishedAt || job.startedAt || job.createdAt);
+    return {
+      id,
+      status,
+      progress,
+      step,
+      errorMessage,
+      book,
+      updatedAt
+    };
+  }
+
+  function isCreateJobRunning(job) {
+    const status = safeText(job?.status).toLowerCase();
+    return status === 'queued' || status === 'running';
+  }
+
+  function formatCreateJobLabel(job) {
+    if (!job) return 'Criando...';
+    const progress = Math.max(0, Math.min(100, Math.round(Number(job.progress) || 0)));
+    const step = safeText(job.step);
+    if (step && progress > 0) return `${step} ${progress}%`;
+    if (step) return step;
+    if (progress > 0) return `Criando... ${progress}%`;
+    return 'Criando...';
+  }
+
+  function upsertCreateJob(job) {
+    const normalized = normalizeCreateJob(job);
+    if (!normalized) return null;
+    const next = state.createJobs.slice();
+    const index = next.findIndex((entry) => safeText(entry?.id) === normalized.id);
+    if (index >= 0) {
+      next[index] = { ...next[index], ...normalized };
+    } else {
+      next.push(normalized);
+    }
+    next.sort((left, right) => String(right?.updatedAt || '').localeCompare(String(left?.updatedAt || '')));
+    state.createJobs = next;
+    return normalized;
+  }
+
+  function hasRunningCreateJobs() {
+    return state.createJobs.some((job) => isCreateJobRunning(job));
+  }
+
+  function scheduleCreateJobsPoll(delayMs) {
+    if (!state.isAdmin) return;
+    if (state.createJobsPollTimer) {
+      window.clearTimeout(state.createJobsPollTimer);
+      state.createJobsPollTimer = 0;
+    }
+    const delay = Math.max(250, Number(delayMs) || CREATE_JOBS_POLL_MS);
+    state.createJobsPollTimer = window.setTimeout(() => {
+      state.createJobsPollTimer = 0;
+      void refreshCreateJobs();
+    }, delay);
+  }
+
+  async function refreshCreateJobs(options) {
+    if (!state.isAdmin || state.createJobsPollInFlight) return;
+    const opts = options && typeof options === 'object' ? options : {};
+    state.createJobsPollInFlight = true;
+    try {
+      const response = await fetch(buildApiUrl('/api/admin/minibooks/create-jobs'), {
+        credentials: 'include',
+        headers: buildAuthHeaders(),
+        cache: 'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !Array.isArray(payload.jobs)) {
+        throw new Error(payload?.error || payload?.message || 'Nao foi possivel carregar status de criacao.');
+      }
+
+      const previousStatusMap = state.createJobStatusById;
+      const nextStatusMap = new Map();
+      const normalizedJobs = payload.jobs
+        .map((job) => normalizeCreateJob(job))
+        .filter(Boolean);
+      const ignoreTransitions = Boolean(opts.ignoreTransitions);
+
+      let shouldReloadStories = Boolean(opts.forceStoriesReload);
+      normalizedJobs.forEach((job) => {
+        nextStatusMap.set(job.id, job.status);
+        const previousStatus = ignoreTransitions
+          ? safeText(job.status).toLowerCase()
+          : safeText(previousStatusMap.get(job.id)).toLowerCase();
+        if (job.status === 'done' && previousStatus !== 'done') {
+          shouldReloadStories = true;
+          setStatus(`Livro "${job.book.title}" criado com sucesso.`, 'success');
+        } else if (job.status === 'error' && previousStatus !== 'error') {
+          setStatus(job.errorMessage || `Falha ao criar "${job.book.title}".`, 'error');
+        }
+      });
+
+      state.createJobs = normalizedJobs;
+      state.createJobStatusById = nextStatusMap;
+
+      if (shouldReloadStories) {
+        state.books = await fetchStories();
+      }
+
+      renderCards();
+      if (hasRunningCreateJobs()) {
+        scheduleCreateJobsPoll(CREATE_JOBS_POLL_MS);
+      }
+    } catch (_error) {
+      if (hasRunningCreateJobs()) {
+        scheduleCreateJobsPoll(CREATE_JOBS_POLL_MS * 2);
+      }
+    } finally {
+      state.createJobsPollInFlight = false;
+    }
+  }
+
+  async function createBookFromLines() {
+    if (!state.isAdmin || state.createBusy || state.createWriteBusy) return;
+    const rawText = String(els.createInput?.value || '');
+    const selectedVoice = safeText(els.createVoiceSelect?.value || 'openai:fable').toLowerCase();
+
+    let parsedInput = null;
+    try {
+      parsedInput = parseCreateInputForSubmission(rawText);
+    } catch (error) {
+      setStatus(error?.message || 'Formato invalido para criar livro.', 'error');
+      return;
+    }
+
+    closeCreateModal();
+    setCreateBusy(true);
+    setStatus(`Fila iniciada para "${parsedInput.title}". A criacao segue em background.`, null);
+
+    try {
+      const payload = await postJsonWithSuccess('/api/admin/minibooks/create-from-lines', {
+        linesText: rawText,
+        voice: selectedVoice
+      }, 'Nao foi possivel criar o livro.');
+      const job = upsertCreateJob(payload?.job);
+      state.selectedLevel = bookLevelToUiLevel(job?.book?.level || parsedInput.level);
+      renderLevelMenu();
+      renderCards();
+      scheduleCreateJobsPoll(250);
+      const queuedTitle = safeText(job?.book?.title || parsedInput.title);
+      const progressLabel = formatCreateJobLabel(job);
+      setStatus(`Criacao de "${queuedTitle}" em andamento. ${progressLabel}`, 'success');
+    } catch (error) {
+      setStatus(error?.message || 'Falha ao criar livro por linhas.', 'error');
+    } finally {
+      setCreateBusy(false);
+    }
+  }
+
+  function hasCreateEditsPending() {
+    if (!isCreateEditMode()) return false;
+    const lines = splitCreateInputRawLines(String(els.createInput?.value || ''));
+    const maxLines = Math.max(lines.length, state.createOriginalLines.length);
+    for (let index = 0; index < maxLines; index += 1) {
+      if (isCreateLineEdited(lines[index] || '', index)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async function updateBookFromLines() {
+    if (!state.isAdmin || state.createBusy || state.createWriteBusy) return;
+    const rawText = String(els.createInput?.value || '');
+    const selectedVoice = safeText(els.createVoiceSelect?.value || 'openai:fable').toLowerCase();
+    const targetBookId = safeText(state.createEditBookId);
+    if (!targetBookId) {
+      setStatus('Livro alvo da edicao nao encontrado.', 'error');
+      return;
+    }
+    if (!hasCreateEditsPending()) {
+      closeCreateModal();
+      setStatus('Nenhuma linha foi editada. Livro mantido como estava.', null);
+      return;
+    }
+
+    let parsedInput = null;
+    try {
+      parsedInput = parseCreateInputForSubmission(rawText);
+    } catch (error) {
+      setStatus(error?.message || 'Formato invalido para atualizar livro.', 'error');
+      return;
+    }
+
+    closeCreateModal();
+    setCreateBusy(true);
+    setStatus(`Atualizando "${parsedInput.title}"...`, null);
+
+    try {
+      const payload = await postJsonWithSuccess('/api/admin/minibooks/update-from-lines', {
+        bookId: targetBookId,
+        linesText: rawText,
+        voice: selectedVoice
+      }, 'Nao foi possivel atualizar o livro.');
+      state.selectedLevel = bookLevelToUiLevel(payload?.book?.level || parsedInput.level);
+      state.books = await fetchStories();
+      renderLevelMenu();
+      renderCards();
+      setStatus(payload?.message || `Livro "${parsedInput.title}" atualizado.`, 'success');
+    } catch (error) {
+      setStatus(error?.message || 'Falha ao atualizar livro por linhas.', 'error');
+    } finally {
+      setCreateBusy(false);
+    }
+  }
+
+  function openPreBookModal(book) {
+    if (!els.preBookModal || !book) return;
+    const bookId = safeText(book.bookId);
+    if (!bookId) return;
+    if (isAllBooksLevel()) {
+      queueAllBooksWindowAdvance(1);
+    }
+
+    // If this comes from the Home player, pause voice + blur background while we show the pre-book overlay.
+    if (isHomeLevel() && state.homeIntroDismissed) {
+      setPreBookOverlayOpen(true);
+      state.homePreBookPausedBefore = Boolean(state.homePaused);
+      state.homePreBookVoiceVolumeBefore = Math.max(0, Math.min(1, Number(state.homeAudioElement?.volume ?? 1) || 1));
+      state.homePaused = true;
+      renderHomeTransportUi();
+      const voice = state.homeAudioElement;
+      if (voice && !voice.paused) {
+        commitHomeAudioPracticeProgress(voice);
+        try {
+          voice.pause();
+        } catch (_error) {
+          // ignore
+        }
+      }
+    } else {
+      setPreBookOverlayOpen(true);
+      hideShelfBookForPreBook(bookId);
+    }
+
+    state.modeBookId = bookId;
+    state.modeBook = book;
+    state.preBookRankedMode = true;
+    setPreBookStep('root');
+    resetModeTransitionUi();
+    setModeStartBusy(false);
+    if (els.preBookCover) {
+      const coverUrl = safeText(book.coverImageUrl);
+      els.preBookCover.classList.add('is-loading');
+      els.preBookCover.style.backgroundImage = coverUrl ? `url(${safeCssUrl(coverUrl)})` : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
+      if (coverUrl) {
+        void preloadImageUrl(coverUrl).finally(() => {
+          els.preBookCover?.classList.remove('is-loading');
+        });
+      } else {
+        els.preBookCover.classList.remove('is-loading');
+      }
+    }
+    els.preBookModal.classList.add('is-visible');
+  }
+
+  function closePreBookModal(options) {
+    const animate = !options || options.animate !== false;
+    const shouldCancelStart = !options || options.cancelStart !== false;
+    window.PlaytalkLoader?.setMeta([]);
+    toggleGlobalLoader('books-mode-start', false);
+    if (shouldCancelStart) {
+      state.modeStartToken += 1;
+    }
+
+    // Start restoring the paused home UI immediately (text/book fade back + background blur back).
+    setPreBookOverlayOpen(false);
+    restoreShelfBookFromPreBook();
+
+    // Restore voice volume (so resuming isn't silent) and optionally resume playback.
+    const voice = state.homeAudioElement;
+    if (voice) {
+      try {
+        voice.volume = Math.max(0, Math.min(1, Number(state.homePreBookVoiceVolumeBefore) || 1));
+      } catch (_error) {
+        // ignore
+      }
+    }
+    // If the home player was playing before opening pre-book, resume it after the overlay dissolve.
+    const resumeHomeAfter = isHomeLevel() && state.homeIntroDismissed && !state.homePreBookPausedBefore;
+
+    const finalizeClose = () => {
+      const preferredShelfIndex = state.shelfIndex;
+      state.modeBookId = '';
+      state.modeBook = null;
+      state.preBookRankedMode = true;
+      state.preBookInsightsFetchToken += 1;
+      stopPreBookInsightsRotation();
+      setPreBookStep('root');
+      setModeStartBusy(false);
+      resetModeTransitionUi();
+      if (els.preBookModal) {
+        els.preBookModal.classList.remove('is-visible');
+        els.preBookModal.classList.remove('is-closing');
+      }
+      if (resumeHomeAfter) {
+        state.homePaused = false;
+        // Resume current voice audio (it is paused mid-track), and keep the music always on.
+        try {
+          void voice?.play().then(() => {
+            beginHomeAudioPracticeProgress(voice);
+          });
+        } catch (_error) {
+          // ignore
+        }
+        renderHomeTransportUi();
+      }
+      if (!isHomeLevel()) {
+        flushPendingAllBooksAdvance(preferredShelfIndex);
+      }
+    };
+
+    if (els.preBookModal && animate) {
+      els.preBookModal.classList.add('is-closing');
+      window.setTimeout(finalizeClose, PREBOOK_OVERLAY_MS);
+      return;
+    }
+
+    finalizeClose();
+  }
+
+  function getPreBookInsightIcon(kind) {
+    if (kind === 'listening') {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 14h2.3l1.6-4.1L9.6 18l2.1-5.3H14l1.5-3.3L17 14h4v2h-5.2l-1-2.2-1.5 3.2h-2.9l-1.8 4.4-2.7-8L6.7 16H3z"/></svg>';
+    }
+    if (kind === 'reading') {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 4.5C4 3.7 4.7 3 5.5 3h5.1c1.4 0 2.7.6 3.6 1.6c.9-1 2.2-1.6 3.6-1.6h.7c.8 0 1.5.7 1.5 1.5v14.8c0 .9-.8 1.6-1.7 1.4c-1.2-.2-2.4-.1-3.5.4l-1 .5c-.4.2-.8.2-1.2 0l-1-.5c-1.1-.5-2.3-.6-3.5-.4c-.9.2-1.7-.5-1.7-1.4zm2 1v13.9c1.8-.2 3.6.1 5.2.9V6.1c-.6-.6-1.5-1.1-2.5-1.1zm7.2.6v14.2c1.6-.8 3.4-1.1 5.2-.9V5h-.7c-1 0-1.8.4-2.5 1.1"/></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 19h16v2H4zm2-2h3v-6H6zm5 0h3V7h-3zm5 0h3V11h-3z"/></svg>';
+  }
+
+  function buildPreBookInsights(stats) {
+    const englishChars = Math.max(0, Math.round(Number(stats?.englishChars) || 0));
+    const listening = Math.max(0, Math.min(100, Number(stats?.bestListeningPercent) || 0));
+    const reading = Math.max(0, Math.min(100, Number(stats?.bestReadingPercent) || 0));
+    const totalReads = Math.max(0, Math.round(Number(stats?.totalReads) || 0));
+    return [
+      {
+        kind: 'stats',
+        label: 'Tempo de leitura',
+        value: formatEstimatedReadingTimeFromChars(englishChars)
+      },
+      {
+        kind: 'stats',
+        label: 'Leituras totais',
+        value: `${totalReads}`
+      },
+      {
+        kind: 'listening',
+        label: 'Melhor listening',
+        value: `Nota ${formatReaderScoreValue(listening).text}`
+      },
+      {
+        kind: 'reading',
+        label: 'Melhor reading',
+        value: `Nota ${formatReaderScoreValue(reading).text}`
+      }
+    ];
+  }
+
+  function getBookReadingTimeCacheKey(book) {
+    const bookId = safeText(book?.bookId);
+    const englishChars = Math.max(0, Number(book?.englishChars) || 0);
+    return `${bookId}::${englishChars}`;
+  }
+
+  function getBookEnglishCharCacheKey(book) {
+    const bookId = safeText(book?.bookId);
+    const storyId = safeText(book?.selectedStoryId || (Array.isArray(book?.storyIds) ? book.storyIds[0] : ''));
+    return `${bookId}::${storyId}`;
+  }
+
+  async function ensureBookReadingTimeSeconds(book) {
+    const cacheKey = getBookReadingTimeCacheKey(book);
+    if (!cacheKey || cacheKey === '::') return 0;
+    const storedSeconds = Math.max(0, Number(book?.readingTimeSeconds) || 0);
+    if (storedSeconds > 0) return storedSeconds;
+    const storedChars = Math.max(0, Number(book?.englishChars) || 0);
+    if (storedChars > 0) {
+      const seconds = storedChars * 60 / 400;
+      if (book) book.readingTimeSeconds = seconds;
+      return seconds;
+    }
+    if (BOOK_READING_TIME_CACHE.has(cacheKey)) {
+      return BOOK_READING_TIME_CACHE.get(cacheKey);
+    }
+    const promise = (async () => {
+      const totalChars = await ensureBookEnglishChars(book);
+      return totalChars * 60 / 400;
+    })();
+    BOOK_READING_TIME_CACHE.set(cacheKey, promise);
+    const totalSeconds = await promise;
+    if (book && Number(book.readingTimeSeconds) !== totalSeconds) {
+      book.readingTimeSeconds = totalSeconds;
+    }
+    return totalSeconds;
+  }
+
+  async function ensureBookEnglishChars(book) {
+    const cacheKey = getBookEnglishCharCacheKey(book);
+    if (!cacheKey || cacheKey === '::') return 0;
+    if (BOOK_ENGLISH_CHAR_CACHE.has(cacheKey)) {
+      return BOOK_ENGLISH_CHAR_CACHE.get(cacheKey);
+    }
+    const promise = (async () => {
+      const cards = await fetchBookCards(book).catch(() => []);
+      return cards.reduce((sum, card) => sum + safeText(card?.english).length, 0);
+    })();
+    BOOK_ENGLISH_CHAR_CACHE.set(cacheKey, promise);
+    const totalChars = await promise;
+    if (book && Number(book.englishChars) !== totalChars) {
+      book.englishChars = totalChars;
+    }
+    return totalChars;
+  }
+
+  function stopPreBookInsightsRotation() {
+    if (state.preBookInsightsRotationTimer) {
+      window.clearInterval(state.preBookInsightsRotationTimer);
+      state.preBookInsightsRotationTimer = 0;
+    }
+  }
+
+  async function renderActivePreBookInsight(immediate) {
+    const entries = Array.isArray(state.preBookInsightsData) ? state.preBookInsightsData : [];
+    if (!entries.length || !els.preBookInsightIcon || !els.preBookInsightLabel || !els.preBookInsightValue) {
+      if (els.preBookInsights) {
+        els.preBookInsights.hidden = false;
+        els.preBookInsights.classList.add('is-empty');
+      }
+      if (els.preBookInsightLabel) {
+        els.preBookInsightLabel.textContent = '';
+      }
+      if (els.preBookInsightValue) {
+        els.preBookInsightValue.textContent = '';
+      }
+      if (els.preBookInsightIcon) {
+        els.preBookInsightIcon.innerHTML = '';
+      }
+      return;
+    }
+    if (els.preBookInsights) {
+      els.preBookInsights.hidden = false;
+      els.preBookInsights.classList.remove('is-empty');
+    }
+    const index = Math.max(0, Math.min(entries.length - 1, state.preBookInsightsIndex));
+    const entry = entries[index] || entries[0];
+    if (!entry) return;
+
+    if (els.preBookInsights && !immediate) {
+      els.preBookInsights.classList.add('is-fading');
+      await wait(PREBOOK_INSIGHT_FADE_MS);
+    }
+    els.preBookInsightIcon.innerHTML = getPreBookInsightIcon(entry.kind);
+    els.preBookInsightLabel.textContent = safeText(entry.label);
+    els.preBookInsightLabel.hidden = !safeText(entry.label);
+    els.preBookInsightValue.textContent = safeText(entry.value);
+    if (els.preBookInsights) {
+      els.preBookInsights.classList.remove('is-fading');
+    }
+  }
+
+  function startPreBookInsightsRotation() {
+    stopPreBookInsightsRotation();
+    state.preBookInsightsRotationTimer = window.setInterval(() => {
+      if (!els.preBookModal?.classList.contains('is-visible')) return;
+      const entries = Array.isArray(state.preBookInsightsData) ? state.preBookInsightsData : [];
+      if (entries.length <= 1) return;
+      state.preBookInsightsIndex = (state.preBookInsightsIndex + 1) % entries.length;
+      void renderActivePreBookInsight(false);
+    }, PREBOOK_INSIGHT_ROTATE_MS);
+  }
+
+  async function refreshPreBookInsights(fetchToken) {
+    try {
+      const bookId = safeText(state.modeBookId);
+      const selectedBook = findModeSelectedBook();
+      const englishChars = await ensureBookEnglishChars(selectedBook);
+      if (fetchToken !== state.preBookInsightsFetchToken) return;
+      const url = bookId ? `/api/books/prebook-insights?bookId=${encodeURIComponent(bookId)}` : '/api/books/prebook-insights';
+      const response = await fetch(buildApiUrl(url), {
+        method: 'GET',
+        headers: buildAuthHeaders(),
+        credentials: 'include'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        state.preBookInsightsData = buildPreBookInsights({ englishChars });
+        state.preBookInsightsIndex = 0;
+        void renderActivePreBookInsight(false);
+        return;
+      }
+      if (fetchToken !== state.preBookInsightsFetchToken) return;
+      state.preBookInsightsData = buildPreBookInsights({
+        ...(payload.stats || {}),
+        englishChars
+      });
+      state.preBookInsightsIndex = 0;
+      void renderActivePreBookInsight(false);
+    } catch (_error) {
+      const selectedBook = findModeSelectedBook();
+      const englishChars = Math.max(0, Number(selectedBook?.englishChars) || 0);
+      if (fetchToken !== state.preBookInsightsFetchToken) return;
+      state.preBookInsightsData = buildPreBookInsights({ englishChars });
+      state.preBookInsightsIndex = 0;
+      void renderActivePreBookInsight(false);
+    }
+  }
+
+  function findModeSelectedBook() {
+    const targetBookId = safeText(state.modeBookId);
+    if (!targetBookId) return null;
+    const books = Array.isArray(state.books) ? state.books : [];
+    const matchedBook = books.find((entry) => safeText(entry?.bookId) === targetBookId);
+    if (matchedBook) return matchedBook;
+    if (safeText(state.modeBook?.bookId) === targetBookId) return state.modeBook;
+    if (safeText(state.homeCurrentSession?.book?.bookId) === targetBookId) return state.homeCurrentSession.book;
+    return null;
+  }
+
+  function getShelfBookCard(bookId) {
+    const normalizedBookId = safeText(bookId);
+    if (!normalizedBookId) return null;
+    return document.querySelector(`.books-card[data-book-id="${CSS.escape(normalizedBookId)}"]`);
+  }
+
+  function hideShelfBookForPreBook(bookId) {
+    const normalizedBookId = safeText(bookId);
+    if (!normalizedBookId) return;
+    if (state.preBookHiddenCardId && state.preBookHiddenCardId !== normalizedBookId) {
+      restoreShelfBookFromPreBook();
+    }
+    const card = getShelfBookCard(normalizedBookId);
+    if (!card) return;
+    state.preBookHiddenCardId = normalizedBookId;
+    card.classList.add('is-prebook-opening');
+  }
+
+  function restoreShelfBookFromPreBook() {
+    const hiddenBookId = safeText(state.preBookHiddenCardId);
+    if (!hiddenBookId) return;
+    const card = getShelfBookCard(hiddenBookId);
+    if (card) {
+      card.classList.remove('is-prebook-opening');
+    }
+    state.preBookHiddenCardId = '';
+  }
+
+  function trackPromiseState(promise) {
+    const tracked = { settled: false };
+    tracked.promise = Promise.resolve(promise).then(
+      (value) => {
+        tracked.settled = true;
+        return value;
+      },
+      (error) => {
+        tracked.settled = true;
+        throw error;
+      }
+    );
+    return tracked;
+  }
+
+  async function prepareReaderData(book) {
+    const [cards] = await Promise.all([
+      fetchBookCards(book),
+      preloadReaderAssets(book)
+    ]);
+    return cards;
+  }
+
+  async function startBookFromPreBookModal(mode) {
+    if (state.modeStartBusy) return;
+    const selected = findModeSelectedBook();
+    if (!selected) {
+      setStatus('Nao consegui localizar esse MiniBook para abrir.', 'error');
+      return;
+    }
+
+    const startToken = state.modeStartToken + 1;
+    state.modeStartToken = startToken;
+    setModeStartBusy(true);
+    if (els.preBookCard) {
+      els.preBookCard.classList.add('is-starting');
+    }
+
+    const trackedPreparation = trackPromiseState(prepareReaderData(selected));
+    await wait(MODE_DISSOLVE_MS);
+    if (startToken !== state.modeStartToken) return;
+
+    if (!trackedPreparation.settled && els.preBookLoading) {
+      els.preBookLoading.classList.add('is-visible');
+      const loader = window.PlaytalkLoader;
+      loader?.setMeta(buildBookLoaderMetaItems(selected));
+      toggleGlobalLoader('books-mode-start', true, 'Preparando seu MiniBook');
+      await wait(MODE_LOADING_FADE_MS);
+      if (startToken !== state.modeStartToken) return;
+    }
+
+    let cards;
+    try {
+      cards = await trackedPreparation.promise;
+    } catch (error) {
+      await hideModeLoadingSmoothly();
+      if (startToken !== state.modeStartToken) return;
+      setModeStartBusy(false);
+      if (els.preBookCard) {
+        els.preBookCard.classList.remove('is-starting');
+      }
+      setStatus(error?.message || 'Nao foi possivel abrir o livro.', 'error');
+      return;
+    }
+
+    await hideModeLoadingSmoothly();
+    if (startToken !== state.modeStartToken) return;
+
+    const rankedMode = Boolean(state.preBookRankedMode);
+    closePreBookModal({ cancelStart: false, animate: false });
+    state.preBookRankedMode = rankedMode;
+    await startBookByMode(selected, mode, cards);
+  }
+
+  function renderCards() {
+    if (!els.cardsGrid || !els.cardsEmpty) return;
+    if (isHomeLevel()) {
+      els.cardsGrid.innerHTML = '';
+      els.cardsGrid.hidden = true;
+      els.cardsEmpty.hidden = true;
+      renderMyBooksAdminSummary();
+      if (els.shelfViewport) {
+        els.shelfViewport.scrollTop = 0;
+      }
+      renderHomePanel();
+      renderStatsPanel();
+      return;
+    }
+    if (isStatsLevel()) {
+      els.cardsGrid.innerHTML = '';
+      els.cardsGrid.hidden = true;
+      els.cardsEmpty.hidden = true;
+      renderMyBooksAdminSummary();
+      if (els.shelfViewport) {
+        els.shelfViewport.scrollTop = 0;
+      }
+      renderHomePanel();
+      renderStatsPanel();
+      return;
+    }
+    renderHomePanel();
+    renderStatsPanel();
+    renderMyBooksAdminSummary();
+    syncSelectedLevelWithUnlocked({ preferUnlocked: !state.userSelectedBookLevel });
+    const bookLevel = uiLevelToBookLevel(state.selectedLevel);
+    const pendingBooks = state.createJobs
+      .filter((job) => {
+        if (!isCreateJobRunning(job)) return false;
+        if (isMyBooksLevel()) return false;
+        return Boolean(bookLevel) && normalizeLevel(job?.book?.level) === bookLevel;
+      })
+      .map((job) => ({
+        bookId: `job:${job.id}`,
+        jobId: job.id,
+        nome: safeText(job?.book?.title) || 'Livro',
+        nivel: normalizeLevel(job?.book?.level),
+        isPendingCreate: true,
+        pendingLabel: formatCreateJobLabel(job)
+      }))
+      .sort(sortByNome);
+    const books = getBooksForSelectedLevel({ pendingCount: pendingBooks.length });
+    const cardsList = books.concat(pendingBooks);
+    els.cardsGrid.innerHTML = '';
+    els.cardsGrid.hidden = cardsList.length <= 0;
+    els.cardsEmpty.hidden = cardsList.length > 0;
+    els.cardsEmpty.textContent = isMyBooksLevel()
+      ? 'Nenhum MiniBook com melhor nota igual ou acima de 75% ainda.'
+      : 'sem livros aqui';
+    if (!cardsList.length) {
+      state.shelfIndex = 0;
+      cancelShelfAnimation();
+      if (els.shelfViewport) {
+        els.shelfViewport.scrollTop = 0;
+      }
+      return;
+    }
+
+    cardsList.forEach((book, index) => {
+      const coverImageUrl = safeText(book?.coverImageUrl);
+      const pendingCreate = Boolean(book?.isPendingCreate);
+      const processingMagic = pendingCreate || isBookProcessingMagic(book?.bookId);
+      const page = document.createElement('article');
+      page.className = 'books-shelf-page';
+      if (state.allBooksSentinelMode && index < books.length) {
+        page.dataset.allBooksSlot = index === 0
+          ? 'prev'
+          : (index === (books.length - 1) ? 'next' : 'main');
+      }
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'books-card';
+      card.dataset.bookId = safeText(book?.bookId);
+      card.setAttribute('aria-label', `Livro ${safeText(book?.nome) || '-'}`);
+      if (!IS_MYBOOKS_GRID_EMBED && isAdminUiEnabled()) {
+        card.classList.add('is-admin');
+      }
+      if (processingMagic) {
+        card.classList.add('is-processing');
+      }
+
+      const background = document.createElement('span');
+      background.className = 'books-card__background';
+      background.style.backgroundImage = coverImageUrl
+        ? `url(${safeCssUrl(coverImageUrl)})`
+        : 'linear-gradient(155deg, #2a5bcf, #28a7d5)';
+
+      const overlay = document.createElement('span');
+      overlay.className = 'books-card__overlay';
+
+      const badge = isMyBooksLevel() ? getMyBooksBadge(getBookBestPercent(book?.bookId)) : null;
+      const badgeEl = document.createElement('span');
+      badgeEl.className = 'books-card__badge';
+      badgeEl.hidden = !badge;
+      if (badge) {
+        const badgeImg = document.createElement('img');
+        badgeImg.src = badge.src;
+        badgeImg.alt = badge.alt;
+        badgeImg.loading = 'lazy';
+        badgeEl.appendChild(badgeImg);
+      }
+
+      const approvedBadge = document.createElement('span');
+      approvedBadge.className = 'books-card__approved-badge';
+      approvedBadge.setAttribute('aria-hidden', 'true');
+      approvedBadge.hidden = !isBookQualified(book?.bookId);
+      approvedBadge.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.55 18.2 3.9 12.55l1.42-1.42 4.23 4.23 9.13-9.13 1.42 1.42z"/></svg>';
+
+      const missionSummary = getSmartBooksMissionSummary();
+      const missionLabel = document.createElement('p');
+      missionLabel.className = 'books-card__mission-label';
+      const showingDailyMission = state.missionCardShowDaily;
+      missionLabel.textContent = showingDailyMission
+        ? `Missão Diária ${Math.round(missionSummary.missionPercent)}%`
+        : `SmartBooks ${Math.round(missionSummary.booksToday)}/${Math.round(missionSummary.booksTarget)}`;
+      const barPercent = showingDailyMission
+        ? missionSummary.missionProgressPercent
+        : missionSummary.smartBooksProgressPercent;
+      const visualBarPercent = barPercent > 0 ? Math.max(2, barPercent) : 0;
+      const missionFill = document.createElement('span');
+      missionFill.className = 'books-card__mission-fill';
+      missionFill.style.setProperty('--books-mission-progress', `${visualBarPercent.toFixed(2)}%`);
+      missionFill.style.width = `${visualBarPercent.toFixed(2)}%`;
+      const missionBar = document.createElement('div');
+      missionBar.className = 'books-card__mission-bar';
+      missionBar.appendChild(missionFill);
+      const missionSummaryEl = document.createElement('div');
+      missionSummaryEl.className = 'books-card__mission-summary';
+      missionSummaryEl.classList.toggle('is-smartbooks', !showingDailyMission);
+      missionSummaryEl.append(missionLabel, missionBar);
+
+      card.append(background, overlay, badgeEl, approvedBadge, missionSummaryEl);
 
       if (!IS_MYBOOKS_GRID_EMBED) {
         const adminChip = document.createElement('span');
@@ -2141,7 +5111,6 @@
     });
 
     syncShelfViewportHeight();
-    renderHomeMissionSummary();
     state.shelfIndex = clampVisibleShelfIndex(state.shelfIndex);
     void scrollShelfToIndex(state.shelfIndex, false);
     syncSleepFabVisibility();
@@ -3479,12 +6448,10 @@
     if (token !== state.readerFinishToken || !state.readerOpen) return;
     if (completionPayload?.stats) {
       setStatsState({ ...(state.stats || {}), ...(completionPayload.stats || {}) });
-      await refreshDailyMissionFromServer().catch(() => null);
       renderStatsPanel();
       syncSelectedLevelWithUnlocked({ preferUnlocked: !state.userSelectedBookLevel });
       renderLevelMenu();
       renderCards();
-      renderHomeMissionSummary();
     }
 
     const savedBookRead = Math.max(0, Number(completionPayload?.stats?.bookReadCount) || 0);
@@ -3546,12 +6513,10 @@
     if (token !== state.readerFinishToken || !state.readerOpen) return;
     if (completionPayload?.stats) {
       setStatsState({ ...(state.stats || {}), ...(completionPayload.stats || {}) });
-      await refreshDailyMissionFromServer().catch(() => null);
       renderStatsPanel();
       syncSelectedLevelWithUnlocked({ preferUnlocked: !state.userSelectedBookLevel });
       renderLevelMenu();
       renderCards();
-      renderHomeMissionSummary();
     }
 
     const savedBookRead = Math.max(0, Number(completionPayload?.stats?.bookReadCount) || 0);
