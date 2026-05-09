@@ -1579,6 +1579,14 @@
       transition: opacity 260ms ease, visibility 0ms linear 260ms;
     }
 
+    /* Keep mission/progress footer always visible while player-books shell is active. */
+    #booksHomePanel.is-player-books .books-home-footer {
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+      transform: none !important;
+    }
+
     .books-home-mission {
       display: grid;
       gap: 4px;
