@@ -1587,6 +1587,14 @@
       transform: none !important;
     }
 
+    /* Keep the mission/progress footer visible even during pre-book and blackout overlays. */
+    body.books-prebook-open #booksHomePanel.is-player-books .books-home-footer,
+    body.books-player-blackout #booksHomePanel.is-player-books .books-home-footer {
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+    }
+
     .books-home-mission {
       display: grid;
       gap: 4px;
