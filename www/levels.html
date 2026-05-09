@@ -481,7 +481,7 @@
       const aiImageLocks=new Set();
       const flashcardAssetSyncState=new WeakMap();
       const FLASHCARD_ASSET_SYNC_FEEDBACK_MS=10000;
-      const defaultItem=()=>({imageFile:'',imageDataUrl:'',imageRemoteUrl:'',imageMuted:false,imageRestoreFx:false,pt:'',en:'',imagePrompt:'',category:'flashcard',tense:'present-simple',sentenceForm:'affirmative',audioFile:'',audioDataUrl:'',audioRemoteUrl:'',audioPtFile:'',audioPtDataUrl:'',audioEnFile:'',audioEnDataUrl:'',characterId:''});
+      const defaultItem=()=>({imageFile:'',imageDataUrl:'',imageRemoteUrl:'',imageVersion:0,imageMuted:false,imageRestoreFx:false,pt:'',en:'',imagePrompt:'',category:'flashcard',tense:'present-simple',sentenceForm:'affirmative',audioFile:'',audioDataUrl:'',audioRemoteUrl:'',audioPtFile:'',audioPtDataUrl:'',audioEnFile:'',audioEnDataUrl:'',characterId:''});
       const defaultChar=input=>{const normalizedKey=String(input||'').trim().toLowerCase()==='jessa'?'jessica':String(input||'').trim().toLowerCase();const base=typeof input==='number'?SCENE_CHARACTERS[input]||SCENE_CHARACTERS[0]:SCENE_CHARACTER_MAP.get(normalizedKey)||SCENE_CHARACTERS[0];return{id:base.id,name:base.name,voiceId:base.voiceId,defaultImageFile:base.defaultImageFile,imageFile:'',imageDataUrl:''}};
       const normalizeDayKey=value=>String(value??'').trim();
       const sanitizeDayKey=value=>{
@@ -512,6 +512,20 @@
         if(!text)return '';
         const separator=text.includes('?')?'&':'?';
         return `${text}${separator}t=${Date.now()}`;
+      }
+      function withAssetVersion(url,version){
+        const text=safeText(url);
+        if(!text)return '';
+        const parsedVersion=Number(version)||0;
+        if(!parsedVersion)return text;
+        const separator=text.includes('?')?'&':'?';
+        return `${text}${separator}v=${parsedVersion}`;
+      }
+      function bumpImageVersion(item){
+        if(!item)return 0;
+        const next=Date.now();
+        item.imageVersion=next;
+        return next;
       }
       function normalizeFlashcardsDataPath(value){
         const cleaned=safeText(value);
@@ -924,7 +938,7 @@
       const watchTrackUrl=fileName=>`${BALANCE_TRACK_ROOT}/${encodeURIComponent(fileName)}`;
       const preferredItemAudioSrc=item=>state.mode==='flashcard'?audioSrc(item,'single'):(audioSrc(item,'en')||audioSrc(item,'pt'));
       const remoteOrLocal=(remote,local)=>state.testOnline?(remote||''):(local||remote||'');
-      const itemImg=item=>remoteOrLocal(item.imageRemoteUrl||cloud(state.day,phase(),item.imageFile,state.mode),item.imageDataUrl),charImg=char=>sceneCharacterImageUrl(char),coverImg=()=>state.mode==='flashcard'?flashcardCoverPreview():remoteOrLocal(cloud(state.day,phase(),state.coverFile,state.mode),state.coverDataUrl);
+      const itemImg=item=>remoteOrLocal(withAssetVersion(item.imageRemoteUrl||cloud(state.day,phase(),item.imageFile,state.mode),item.imageVersion),item.imageDataUrl),charImg=char=>sceneCharacterImageUrl(char),coverImg=()=>state.mode==='flashcard'?flashcardCoverPreview():remoteOrLocal(cloud(state.day,phase(),state.coverFile,state.mode),state.coverDataUrl);
       const asDataUrl=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)}),asText=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsText(file)});
       async function prepImage(file,fallback){if(ext(file.name)==='svg'||file.type==='image/svg+xml'){const blob=new Blob([await asText(file)],{type:'image/svg+xml'});return{fileName:safeFile(file.name,'svg',fallback),dataUrl:await asDataUrl(blob)}}const url=await asDataUrl(file),img=new Image();img.src=url;await img.decode();const c=document.createElement('canvas');c.width=900;c.height=900;const x=c.getContext('2d'),s=Math.max(900/img.width,900/img.height),w=img.width*s,h=img.height*s;x.drawImage(img,(900-w)/2,(900-h)/2,w,h);return{fileName:safeFile(file.name,'webp',fallback),dataUrl:c.toDataURL('image/webp',.88)}}
       const prepAudio=async(file,fallback)=>{const e=['mp3','wav','ogg','opus','webm'].includes(ext(file.name))?ext(file.name):'mp3';return{fileName:safeFile(file.name,e,fallback),dataUrl:await asDataUrl(file)}};
@@ -1131,6 +1145,7 @@
           item.imageFile='';
           item.imageDataUrl='';
           item.imageRemoteUrl='';
+          item.imageVersion=0;
           item.imageMuted=false;
           item.imageRestoreFx=false;
           if(entry.source==='search')syncSearchEntryToDeck(entry);
@@ -1587,7 +1602,7 @@
       function renderWatchText(node,text){const lines=watchLines(text);node.innerHTML=lines.map(line=>`<span class="watch-card__text-line">${escapeHtml(line)}</span>`).join('')}
       function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim(),video=String(item?.video||'').trim(),watchCard=$('watchCard'),videoEl=$('watchCardVideo'),watchView=$('watchView');$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';renderWatchText($('watchCardPt'),item?.pt||'Sem portugues');renderWatchText($('watchCardEn'),item?.en||'Sem english');$('watchCardHint').textContent=extraStatus||'Sequencia em ordem, sem aleatorio.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';watchView.style.setProperty('--watch-bg-image',image?`url("${image}")`:'none');if(video){videoEl.classList.remove('hidden');if(videoEl.src!==video)videoEl.src=video;videoEl.play().catch(()=>{})}else{videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchCard.classList.remove('is-sliding','is-pulsing');void watchCard.offsetWidth;watchCard.classList.add('is-sliding','is-pulsing');updateWatchTransforms();setWatchStatus(extraStatus||'Preparando audio...')}
       function normalizeWatchItem(entry,deckTitle,sourceLabel){const pt=String(entry?.nomePortugues||entry?.pt||entry?.portuguese||'').trim(),en=String(entry?.nomeIngles||entry?.en||entry?.english||'').trim(),audio=String(entry?.audio||entry?.audioFile||'').trim(),image=String(entry?.imagem||entry?.image||entry?.imageFile||'').trim(),video=String(entry?.video||'').trim();if(!(pt||en))return null;return{key:`${sourceLabel}::${deckTitle}::${pt}::${en}::${audio}::${image}::${video}`,pt,en,audio,image,video,deckTitle:String(deckTitle||'Flashcards').trim()||'Flashcards',sourceLabel:String(sourceLabel||'Flashcards').trim()||'Flashcards'}}
-      function currentDeckWatchItems(){return state.items.map(item=>normalizeWatchItem({pt:item.pt,en:item.en,audio:audioSrc(item,'single'),image:(item.imageRemoteUrl||cloud(state.day,PHASE.flashcard,item.imageFile,'flashcard')||'')},state.title.trim()||`Pasta ${state.day}`,'Meus flashcards')).filter(item=>item&&item.audio)}
+      function currentDeckWatchItems(){return state.items.map(item=>normalizeWatchItem({pt:item.pt,en:item.en,audio:audioSrc(item,'single'),image:(itemImg(item)||'')},state.title.trim()||`Pasta ${state.day}`,'Meus flashcards')).filter(item=>item&&item.audio)}
       async function loadJsonFile(filePath){const response=await fetch(filePath.startsWith('/')?filePath:`/${filePath}`);if(!response.ok)throw new Error(`Nao foi possivel carregar ${filePath}.`);return response.json()}
       async function loadAllWatchItems(){if(Array.isArray(watchLibraryCache)&&watchLibraryCache.length)return watchLibraryCache;const manifest=await loadJsonFile('/data/local-level-files.json');const files=Array.isArray(manifest?.files)?manifest.files:[];const flashcardFiles=files.filter(file=>file?.folder==='words');const loaded=await Promise.all(flashcardFiles.map(async file=>{try{const data=await loadJsonFile(`/${String(file.path||'').replace(/^\/+/,'')}`);const title=String(data?.title||file?.name||'Flashcards').trim()||'Flashcards';const items=Array.isArray(data?.items)?data.items:[];return items.map(item=>normalizeWatchItem(item,title,'Todos os flashcards')).filter(Boolean)}catch(error){console.error('Falha ao carregar deck para assistir flashcards',file,error);return[]}}));watchLibraryCache=loaded.flat();return watchLibraryCache}
       function shuffleWatchItems(items){const copy=[...items];for(let i=copy.length-1;i>0;i-=1){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy}
@@ -1691,13 +1706,13 @@
       function itemMatchesAdminSearch(item){const query=normalizedSearchText(adminStudio.search);if(!query)return true;const haystack=normalizedSearchText([item?.pt,item?.en,item?.category].filter(Boolean).join(' '));return haystack.includes(query)}
       function isInteractiveAdminTarget(target){return Boolean(target?.closest('button,input,select,textarea,label,a'))}
       function closeItemAdminPopover(){$('itemAdminPopover').classList.add('hidden');$('itemAdminPopover').setAttribute('aria-hidden','true');adminStudio.activeMenuIndex=null}
-      function deleteItemImage(index){clearVisualClickTimer(index);const item=state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);item.imageFile='';item.imageDataUrl='';item.imageRemoteUrl='';item.imageMuted=false;item.imageRestoreFx=false;queuePersistCurrentEditorDeck();save();renderAll()}
+      function deleteItemImage(index){clearVisualClickTimer(index);const item=state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);item.imageFile='';item.imageDataUrl='';item.imageRemoteUrl='';item.imageVersion=0;item.imageMuted=false;item.imageRestoreFx=false;queuePersistCurrentEditorDeck();save();renderAll()}
       function deleteItemAudio(index){const item=state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);item.audioFile='';item.audioDataUrl='';item.audioRemoteUrl='';queuePersistCurrentEditorDeck();save();renderAll()}
       function deleteItemContainer(index){if(index<0||index>=state.items.length)return;clearVisualClickTimer(index);state.items.splice(index,1);clearAdminSelection();closeItemAdminPopover();queuePersistCurrentEditorDeck({delay:60});save();renderAll()}
       function toggleAdminItemSelection(index){if(adminStudio.selected.has(index))adminStudio.selected.delete(index);else adminStudio.selected.add(index);syncAdminStudioControls();syncAdminRenderedItems()}
       function toggleAdminSelectionMode(){adminStudio.selectMode=!adminStudio.selectMode;if(!adminStudio.selectMode)clearAdminSelection();closeItemAdminPopover();syncAdminStudioControls();syncAdminRenderedItems()}
       function openItemAdminPopover(index){if(!isAdminStudioEnabled())return;adminStudio.activeMenuIndex=index;$('itemAdminPopoverTitle').textContent=`Acoes do flashcard ${index+1}`;$('itemAdminPopover').classList.remove('hidden');$('itemAdminPopover').setAttribute('aria-hidden','false')}
-      function deleteSelectedImages(){if(!isAdminStudioEnabled()||!adminStudio.selected.size)return;adminStudio.selected.forEach(index=>{clearVisualClickTimer(index);const item=state.items[index];if(!item)return;item.imageFile='';item.imageDataUrl='';item.imageRemoteUrl='';item.imageMuted=false;item.imageRestoreFx=false});queuePersistCurrentEditorDeck();save();renderAll()}
+      function deleteSelectedImages(){if(!isAdminStudioEnabled()||!adminStudio.selected.size)return;adminStudio.selected.forEach(index=>{clearVisualClickTimer(index);const item=state.items[index];if(!item)return;item.imageFile='';item.imageDataUrl='';item.imageRemoteUrl='';item.imageVersion=0;item.imageMuted=false;item.imageRestoreFx=false});queuePersistCurrentEditorDeck();save();renderAll()}
       function deleteSelectedAudios(){if(!isAdminStudioEnabled()||!adminStudio.selected.size)return;adminStudio.selected.forEach(index=>{const item=state.items[index];if(!item)return;item.audioFile='';item.audioDataUrl='';item.audioRemoteUrl=''});queuePersistCurrentEditorDeck();save();renderAll()}
       function resolvePublishDeckIdentity(options={}){
         const optionFileName=typeof options?.fileName==='string'?String(options.fileName).trim():'';
@@ -1946,6 +1961,7 @@
             item.imageFile=safeFile(`${flashcardAssetStem(target.index,target.entry)}-grid-${listIndex+1}`,'webp',itemStem(target.index));
             item.imageDataUrl=slice;
             item.imageRemoteUrl='';
+            bumpImageVersion(item);
             item.imageMuted=false;
             item.imageRestoreFx=false;
             if(target?.entry?.source==='search')syncSearchEntryToDeck(target.entry,{persist:false});
@@ -1975,6 +1991,7 @@
           item.imageFile=payload.fileName;
           item.imageDataUrl=payload.dataUrl;
           item.imageRemoteUrl='';
+          bumpImageVersion(item);
           item.imageMuted=false;
           item.imageRestoreFx=false;
           if(entry?.source==='search')syncSearchEntryToDeck(entry,{persist:false});
@@ -2141,7 +2158,7 @@
         });
       }
       function renderAll(){syncAssetFileNames();updateTop();renderChars();renderItems();syncAdminStudioControls();syncAdminRenderedItems();syncEditCardsDeckPicker();syncDeckAudioReplacePopover()}
-      function addItem(image=null){const item=defaultItem();if(image){item.imageFile=image.fileName;item.imageDataUrl=image.dataUrl;item.imageRemoteUrl='';item.imageMuted=false;item.imageRestoreFx=false}if(state.mode==='scenes'){ensureChars();item.characterId=state.chars[0]?.id||''}state.items.push(item)}
+      function addItem(image=null){const item=defaultItem();if(image){item.imageFile=image.fileName;item.imageDataUrl=image.dataUrl;item.imageRemoteUrl='';bumpImageVersion(item);item.imageMuted=false;item.imageRestoreFx=false}if(state.mode==='scenes'){ensureChars();item.characterId=state.chars[0]?.id||''}state.items.push(item)}
       function validateFlashcard(){if(state.mode!=='flashcard')return;if(!state.title.trim())throw new Error('Preencha o nome do deck antes de exportar.');if(!flashcardCoverPreview())throw new Error('Preencha o link publico da capa do deck antes de exportar.');if(!state.items.some(item=>item.pt&&item.en))throw new Error('Adicione pelo menos um flashcard com portugues e english antes de exportar.')}
       function validateMovie(){if(state.mode==='flashcard')return;if(!state.title.trim())throw new Error('Preencha o titulo antes de exportar.');if(!state.coverFile)throw new Error('Envie a capa antes de exportar.');if(!state.items.length)throw new Error('Adicione pelo menos um item antes de exportar.')}
       function getSceneExportData(){ensureChars();const itemEntries=state.items.filter(i=>i.pt&&i.en&&i.characterId).map((i,n)=>({id:n+1,character:i.characterId,portuguese:i.pt,english:i.en,audio_portuguese:i.audioPtFile?cloud(state.day,PHASE.scenes,i.audioPtFile):'',audio_english:i.audioEnFile?cloud(state.day,PHASE.scenes,i.audioEnFile):'',item:i}));const usedIds=new Set(itemEntries.map(entry=>entry.character));const characters=state.chars.filter(char=>{const id=String(char?.id||'').trim();const name=String(char?.name||'').trim();return id&&name&&usedIds.has(id)}).map(char=>({id:char.id.trim(),name:char.name.trim(),voiceId:char.voiceId||getSceneCharacter(char.id)?.voiceId||'',image:char.imageFile?cloud(state.day,PHASE.scenes,char.imageFile):defaultSceneCharacterImageUrl(char.id),char}));const validIds=new Set(characters.map(char=>char.id));return{characters:characters.map(({char,...entry})=>entry),items:itemEntries.filter(entry=>validIds.has(entry.character)).map(({item,...entry})=>entry),characterAssets:characters.map(entry=>entry.char)}}
@@ -2456,6 +2473,7 @@
             item.imageFile=data.fileName;
             item.imageDataUrl=data.dataUrl;
             item.imageRemoteUrl='';
+            bumpImageVersion(item);
             item.imageMuted=false;
             item.imageRestoreFx=false;
             if(searchEntry)syncSearchEntryToDeck(searchEntry,{persist:false});
