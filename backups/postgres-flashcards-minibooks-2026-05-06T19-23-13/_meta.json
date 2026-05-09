@@ -1,0 +1,62 @@
+{
+  "createdAt": "2026-05-06T19:23:13.693Z",
+  "databaseHost": "dpg-d71l8hm3jp1c739dhh1g-a.virginia-postgres.render.com",
+  "tables": [
+    {
+      "table": "public.flashcard_rankings",
+      "rows": 50
+    },
+    {
+      "table": "public.flashcards_accurate",
+      "rows": 25
+    },
+    {
+      "table": "public.flashcards_public_decks",
+      "rows": 127
+    },
+    {
+      "table": "public.minibook_json_content",
+      "rows": 175
+    },
+    {
+      "table": "public.user_books_consumption_stats",
+      "rows": 21
+    },
+    {
+      "table": "public.user_books_energy_xp_stats",
+      "rows": 5
+    },
+    {
+      "table": "public.user_books_library_stats",
+      "rows": 38
+    },
+    {
+      "table": "public.user_books_speaking_stats",
+      "rows": 15
+    },
+    {
+      "table": "public.user_flashcard_hidden",
+      "rows": 0
+    },
+    {
+      "table": "public.user_flashcard_on_table",
+      "rows": 26
+    },
+    {
+      "table": "public.user_flashcard_progress",
+      "rows": 330
+    },
+    {
+      "table": "public.user_flashcard_reports",
+      "rows": 0
+    },
+    {
+      "table": "public.user_flashcard_stats",
+      "rows": 25
+    },
+    {
+      "table": "public.user_flashcard_type_portuguese",
+      "rows": 0
+    }
+  ]
+}

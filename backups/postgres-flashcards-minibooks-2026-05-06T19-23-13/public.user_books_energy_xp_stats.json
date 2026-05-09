@@ -1,0 +1,32 @@
+[
+  {
+    "user_id": 290,
+    "energy_xp_total": "38811",
+    "created_at": "2026-05-04T23:47:52.533Z",
+    "updated_at": "2026-05-05T01:44:44.204Z"
+  },
+  {
+    "user_id": 280,
+    "energy_xp_total": "711",
+    "created_at": "2026-05-04T05:49:39.088Z",
+    "updated_at": "2026-05-04T05:52:58.061Z"
+  },
+  {
+    "user_id": 285,
+    "energy_xp_total": "6257",
+    "created_at": "2026-05-04T06:33:58.799Z",
+    "updated_at": "2026-05-04T07:14:38.473Z"
+  },
+  {
+    "user_id": 278,
+    "energy_xp_total": "7661",
+    "created_at": "2026-05-03T23:06:52.365Z",
+    "updated_at": "2026-05-04T01:16:08.159Z"
+  },
+  {
+    "user_id": 279,
+    "energy_xp_total": "5965",
+    "created_at": "2026-05-04T01:22:19.043Z",
+    "updated_at": "2026-05-04T02:36:28.873Z"
+  }
+]

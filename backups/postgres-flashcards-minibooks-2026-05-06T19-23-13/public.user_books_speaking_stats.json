@@ -1,0 +1,167 @@
+[
+  {
+    "user_id": 300,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-05T08:11:15.245Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "6285",
+    "pronunciation_samples_count": "67",
+    "latest_pronunciation_percent": 73
+  },
+  {
+    "user_id": 280,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-04T05:54:00.588Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "1200",
+    "pronunciation_samples_count": "12",
+    "latest_pronunciation_percent": 100
+  },
+  {
+    "user_id": 312,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-06T07:27:57.560Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "7063",
+    "pronunciation_samples_count": "76",
+    "latest_pronunciation_percent": 98
+  },
+  {
+    "user_id": 279,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-04T02:10:46.398Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "4300",
+    "pronunciation_samples_count": "43",
+    "latest_pronunciation_percent": 100
+  },
+  {
+    "user_id": 306,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-06T02:02:58.094Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "20917",
+    "pronunciation_samples_count": "222",
+    "latest_pronunciation_percent": 100
+  },
+  {
+    "user_id": 305,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-05T08:59:49.181Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "4966",
+    "pronunciation_samples_count": "52",
+    "latest_pronunciation_percent": 100
+  },
+  {
+    "user_id": 285,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-04T07:14:38.473Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "4652",
+    "pronunciation_samples_count": "55",
+    "latest_pronunciation_percent": 100
+  },
+  {
+    "user_id": 310,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-06T04:19:34.780Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "17243",
+    "pronunciation_samples_count": "183",
+    "latest_pronunciation_percent": 100
+  },
+  {
+    "user_id": 290,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-05T00:48:04.253Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "20812",
+    "pronunciation_samples_count": "219",
+    "latest_pronunciation_percent": 100
+  },
+  {
+    "user_id": 307,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-06T02:47:43.744Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "8572",
+    "pronunciation_samples_count": "90",
+    "latest_pronunciation_percent": 100
+  },
+  {
+    "user_id": 277,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-03T05:26:33.819Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "2600",
+    "pronunciation_samples_count": "26",
+    "latest_pronunciation_percent": 100
+  },
+  {
+    "user_id": 299,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-05T07:12:44.133Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "2285",
+    "pronunciation_samples_count": "24",
+    "latest_pronunciation_percent": 100
+  },
+  {
+    "user_id": 309,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-06T03:14:51.818Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "2590",
+    "pronunciation_samples_count": "26",
+    "latest_pronunciation_percent": 100
+  },
+  {
+    "user_id": 311,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-06T05:16:50.025Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "4407",
+    "pronunciation_samples_count": "49",
+    "latest_pronunciation_percent": 100
+  },
+  {
+    "user_id": 278,
+    "book_read": 0,
+    "pronunciation_tag": "speak-books",
+    "pronunciation_samples": [],
+    "updated_at": "2026-05-04T01:03:41.011Z",
+    "general_pronunciation_percent": 0,
+    "pronunciation_sum": "16700",
+    "pronunciation_samples_count": "167",
+    "latest_pronunciation_percent": 100
+  }
+]
