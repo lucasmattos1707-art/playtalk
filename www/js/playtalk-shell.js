@@ -674,7 +674,7 @@
       return;
     }
     if (isFlashWelcome) {
-      showLoader('welcome-flash-start', { message: 'PREPARANDO SUA PARTIDA', rotateTips: true, clearMeta: true });
+      showLoader('welcome-flash-start', { message: 'PREPARANDO SUA PARTIDA', rotateTips: false, clearMeta: true });
     }
   }, true);
   if (loaderPages.has(path)) {

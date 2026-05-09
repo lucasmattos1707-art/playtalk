@@ -10018,6 +10018,9 @@
       const STAGE_TWO_HINT_VISIBLE_MS = 3000;
       const ONBOARDING_GATE_TRANSITION_MS = 2000;
       const ONBOARDING_GATE_OPEN_DELAY_MS = 4000;
+      const WELCOME_FLASH_LOADER_MS = 3000;
+      const WELCOME_FLASH_LOADER_FADE_MS = 240;
+      const WELCOME_FLASH_LOADER_TIP_LEAD_MS = 500;
       const WATCH_SETTINGS_KEY = 'playtalk-flashcards-watch-v1';
       const FLASHCARDS_PAGE_SIZE = 30;
       const ADMIN_USERNAMES = new Set(['admin', 'adm', 'adminst']);
@@ -10284,6 +10287,8 @@
           pendingTutorialStart: false,
           pendingTutorialMuteNarration: false,
           welcomeStartRequested: false,
+          welcomeFlashStartAt: 0,
+          flashStartInFlight: false,
           authRequired: false,
           authDelayTimer: 0,
           authRevealTimer: 0,
@@ -12324,6 +12329,58 @@
         stopAudioCheckAudio();
       }
 
+      async function startWelcomeFlashGameWithLoader() {
+        if (state.entry.flashStartInFlight) return;
+        state.entry.flashStartInFlight = true;
+        try {
+          const loader = window.PlaytalkLoader;
+          const startedAt = Number(state.entry.welcomeFlashStartAt) || Date.now();
+          const elapsed = Math.max(0, Date.now() - startedAt);
+          const remaining = Math.max(0, WELCOME_FLASH_LOADER_MS - elapsed);
+          const tipDelay = Math.max(0, remaining - WELCOME_FLASH_LOADER_TIP_LEAD_MS);
+          let revealTipTimer = 0;
+          let tipLines = [];
+          if (loader) {
+            loader.show('welcome-flash-start', {
+              message: 'PREPARANDO SUA PARTIDA',
+              rotateTips: false,
+              clearMeta: true
+            });
+            const loaderRoot = document.getElementById('playtalkGlobalLoader');
+            tipLines = Array.from(loaderRoot?.querySelectorAll('.playtalk-loader__tip-line') || []);
+            tipLines.forEach((line) => {
+              line.style.opacity = '0';
+            });
+            revealTipTimer = window.setTimeout(() => {
+              tipLines.forEach((line, index) => {
+                line.style.transition = 'opacity 500ms ease, transform 500ms ease';
+                line.style.transitionDelay = index === 0 ? '0ms' : '500ms';
+                line.style.opacity = '1';
+              });
+            }, tipDelay);
+          }
+          const selectedCount = currentBaseGameCount(selectedGameLevel() || currentUserLevel());
+          hideWelcomeGate();
+          saveSelectedGameCount(selectedCount);
+          state.game.selectedCount = selectedCount;
+          if (remaining > 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, remaining));
+          }
+          if (revealTipTimer) {
+            window.clearTimeout(revealTipTimer);
+            revealTipTimer = 0;
+          }
+          if (loader) {
+            loader.hide('welcome-flash-start', { force: true });
+          }
+          await new Promise((resolve) => window.setTimeout(resolve, WELCOME_FLASH_LOADER_FADE_MS));
+          beginGame();
+        } finally {
+          state.entry.flashStartInFlight = false;
+          state.entry.welcomeFlashStartAt = 0;
+        }
+      }
+
       function requestVerifiedGameStart() {
         if (isAdminUser() && !state.entry.welcomeStartRequested) {
           state.entry.pendingPlayStart = false;
@@ -12338,6 +12395,10 @@
           return;
         }
         state.entry.welcomeStartRequested = false;
+        if (state.entry.welcomeFlashStartAt > 0) {
+          void startWelcomeFlashGameWithLoader();
+          return;
+        }
         const selectedCount = currentBaseGameCount(selectedGameLevel() || currentUserLevel());
         hideWelcomeGate();
         saveSelectedGameCount(selectedCount);
@@ -13337,6 +13398,7 @@
         state.entry.pendingTutorialStart = false;
         state.entry.pendingTutorialMuteNarration = false;
         state.entry.welcomeStartRequested = false;
+        state.entry.welcomeFlashStartAt = 0;
         state.entry.welcomeDismissed = true;
         state.entry.welcomeVisible = false;
         document.body.classList.remove('welcome-active');
@@ -13361,6 +13423,10 @@
         }
         state.entry.pendingPlayStart = false;
         state.entry.welcomeStartRequested = false;
+        if (state.entry.welcomeFlashStartAt > 0) {
+          void startWelcomeFlashGameWithLoader();
+          return true;
+        }
         const selectedCount = currentBaseGameCount(selectedGameLevel() || currentUserLevel());
         hideWelcomeGate();
         saveSelectedGameCount(selectedCount);
@@ -23165,6 +23231,7 @@
             state.game.levelTypingMode = false;
             resetScaleBatchProgress();
             state.entry.welcomeStartRequested = true;
+            state.entry.welcomeFlashStartAt = Date.now();
             void openAudioCheck();
           })();
         });
