@@ -1564,15 +1564,57 @@
 
     .books-home-footer {
       min-height: 0;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: max(0px, env(safe-area-inset-bottom));
+      z-index: 16;
       display: grid;
       align-content: end;
-      gap: 8px;
-      padding: 0 18px 8px;
-      transform: translateY(-30px);
+      gap: 6px;
+      padding: 0 18px max(8px, env(safe-area-inset-bottom));
+      transform: none;
       width: 100%;
-      margin-top: auto;
       background: transparent;
       transition: opacity 260ms ease, visibility 0ms linear 260ms;
+    }
+
+    .books-home-mission {
+      display: grid;
+      gap: 4px;
+      padding: 8px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(133, 225, 255, 0.35);
+      background: rgba(2, 18, 41, 0.5);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+    }
+
+    .books-home-mission__label {
+      margin: 0;
+      color: rgba(238, 252, 255, 0.98);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      text-align: left;
+    }
+
+    .books-home-mission__bar {
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(4, 25, 56, 0.8);
+      border: 1px solid rgba(95, 204, 255, 0.24);
+      overflow: hidden;
+    }
+
+    .books-home-mission__fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #00d7ff 0%, #33e8ff 45%, #48ff9f 100%);
+      box-shadow: 0 0 12px rgba(23, 222, 255, 0.5);
+      transition: width 220ms ease;
     }
 
     .flashcards-footer-nav[data-shell-page="books"] {
@@ -4793,10 +4835,10 @@
 
       .books-home-footer {
         height: auto;
-        grid-template-rows: minmax(0, 5px) minmax(0, 58px);
+        grid-template-rows: minmax(0, auto) minmax(0, 5px) minmax(0, 58px);
         align-content: stretch;
         gap: 2px;
-        padding: 0 16px 0;
+        padding: 0 16px max(8px, env(safe-area-inset-bottom));
       }
 
       .books-home.is-immersive .books-home-footer {
@@ -4987,6 +5029,13 @@
               </div>
             </div>
             <div class="books-home-footer" id="booksHomeControls">
+              <div class="books-home-mission" id="booksHomeMissionSummary" aria-live="polite">
+                <p class="books-home-mission__label" id="booksHomeMissionDailyLabel">Missão Diária 0%</p>
+                <p class="books-home-mission__label" id="booksHomeMissionSmartbooksLabel">SmartBooks 0/5</p>
+                <div class="books-home-mission__bar" aria-hidden="true">
+                  <span class="books-home-mission__fill" id="booksHomeMissionFill"></span>
+                </div>
+              </div>
               <div class="player-books">
                 <div class="player-books__progress">
                     <div class="player-books__progress-track" id="playerBooksProgressTrack" aria-label="Linha do tempo do livro" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
