@@ -10,17 +10,19 @@
   const DATA_MANIFEST_REMOTE_PATH = '/api/flashcards/manifest';
   const FLASHCARDS_LOCAL_SOURCE_PREFIX = 'allcards';
   const LIBRARY_RANK_SWAP_DELAY_MS = 2000;
-  const REVIEW_SCALE_VERSION = 3;
-  const REVIEW_PHASE_MAX = 6;
+  const REVIEW_SCALE_VERSION = 4;
+  const REVIEW_PHASE_MAX = 8;
   const VIEW_ORDER = ['flashcards', 'smartbooks', 'seals'];
   const SEALS_STAGE_SIZE = 1;
   const REVIEW_PHASES = {
-    1: { label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
-    2: { label: 'Second star', durationMs: 34 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
-    3: { label: 'Emerald star', durationMs: 4 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/emerald.png' },
-    4: { label: 'Third star', durationMs: 10 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/platina.png' },
-    5: { label: 'Fourth star', durationMs: 20 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/ouro.png' },
-    6: { label: 'Fifth star', durationMs: 45 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/diamante.png' }
+    1: { label: 'Vidro stage', durationMs: 12 * 60 * 1000, sealPath: 'medalhas/vidro.png' },
+    2: { label: 'Prata stage', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
+    3: { label: 'Rubi stage', durationMs: 24 * 60 * 60 * 1000, sealPath: 'medalhas/rubi.png' },
+    4: { label: 'Safira stage', durationMs: 3 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
+    5: { label: 'Esmeralda stage', durationMs: 7 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/emerald.png' },
+    6: { label: 'Ouro stage', durationMs: 15 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/ouro.png' },
+    7: { label: 'Platina stage', durationMs: 35 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/platina.png' },
+    8: { label: 'Diamante stage', durationMs: 60 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/diamante.png' }
   };
   const SEAL_SLOT_COUNT = 1;
   const SEAL_IMAGE_BY_CODE = Object.freeze({
@@ -31,7 +33,7 @@
     5: '/medalhas/ouro.png',
     6: '/medalhas/diamante.png'
   });
-  const EMPTY_SEAL_IMAGE = '/medalhas/prata.png';
+  const EMPTY_SEAL_IMAGE = '/medalhas/vidro.png';
 
   const els = {
     allGrid: document.getElementById('allGrid'),
@@ -218,12 +220,14 @@
   function phaseFromSealImage(value) {
     const normalized = safeText(value).toLowerCase();
     if (!normalized) return 0;
-    if (normalized.includes('diamante')) return 6;
-    if (normalized.includes('ouro')) return 5;
-    if (normalized.includes('platina')) return 4;
-    if (normalized.includes('emerald')) return 3;
-    if (normalized.includes('quartz')) return 2;
-    if (normalized.includes('prata')) return 1;
+    if (normalized.includes('diamante')) return 8;
+    if (normalized.includes('platina')) return 7;
+    if (normalized.includes('ouro')) return 6;
+    if (normalized.includes('emerald')) return 5;
+    if (normalized.includes('quartz') || normalized.includes('safira')) return 4;
+    if (normalized.includes('rubi') || normalized.includes('ruby')) return 3;
+    if (normalized.includes('prata') || normalized.includes('silver')) return 2;
+    if (normalized.includes('vidro') || normalized.includes('glass')) return 1;
     return 0;
   }
 
@@ -235,6 +239,15 @@
     const imagePhase = preferSealImage ? phaseFromSealImage(raw?.sealImage || raw?.seal_image) : 0;
     if (version >= REVIEW_SCALE_VERSION) return parsedPhase;
     if (imagePhase > 0) return Math.max(lowerBound, Math.min(REVIEW_PHASE_MAX, imagePhase));
+    if (version >= 3) {
+      if (parsedPhase === 1) return Math.max(lowerBound, 2);
+      if (parsedPhase === 2) return Math.max(lowerBound, 4);
+      if (parsedPhase === 3) return Math.max(lowerBound, 5);
+      if (parsedPhase === 4) return Math.max(lowerBound, 7);
+      if (parsedPhase === 5) return Math.max(lowerBound, 6);
+      if (parsedPhase >= 6) return Math.max(lowerBound, 8);
+      return parsedPhase;
+    }
     if (version >= 2) {
       if (parsedPhase === 4) return Math.max(lowerBound, 5);
       if (parsedPhase === 5) return Math.max(lowerBound, 4);

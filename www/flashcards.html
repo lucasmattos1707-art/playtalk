@@ -10188,7 +10188,7 @@
       const REVIEW_SCALE_VERSION = 4;
       const REVIEW_PHASE_MAX = 8;
       const REVIEW_PHASES = {
-        1: { key: 'metal-stage', label: 'Metal stage', durationMs: 20 * 60 * 1000, sealPath: 'medalhas/metal.png' },
+        1: { key: 'glass-stage', label: 'Glass stage', durationMs: 12 * 60 * 1000, sealPath: 'medalhas/vidro.png' },
         2: { key: 'silver-stage', label: 'Silver stage', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
         3: { key: 'ruby-stage', label: 'Ruby stage', durationMs: 24 * 60 * 60 * 1000, sealPath: 'medalhas/rubi.png' },
         4: { key: 'sapphire-stage', label: 'Sapphire stage', durationMs: 3 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
@@ -10292,6 +10292,7 @@
           welcomeStartRequested: false,
           welcomeFlashStartAt: 0,
           flashStartInFlight: false,
+          pendingFlashSessionOut: false,
           authRequired: false,
           authDelayTimer: 0,
           authRevealTimer: 0,
@@ -10401,6 +10402,7 @@
           firstStageMicHintTimer: 0,
           firstStageMicHintRotationTimer: 0,
           firstStageMicHintIndex: 0,
+          idleAutoPauseTimer: 0,
           orderedPoolCursor: {
             base: -1,
             review: -1
@@ -11470,7 +11472,7 @@
         if (normalized.includes('quartz') || normalized.includes('safira')) return 4;
         if (normalized.includes('rubi') || normalized.includes('ruby')) return 3;
         if (normalized.includes('prata') || normalized.includes('silver')) return 2;
-        if (normalized.includes('metal')) return 1;
+        if (normalized.includes('vidro') || normalized.includes('glass') || normalized.includes('metal')) return 1;
         return 0;
       }
 
@@ -11866,6 +11868,11 @@
             availableAt: Number.isFinite(Number(record?.availableAt)) ? Number(record.availableAt) : 0,
             returnedAt: Number.isFinite(Number(record?.returnedAt)) ? Number(record.returnedAt) : 0,
             createdAt: Number.isFinite(Number(record?.createdAt)) ? Number(record.createdAt) : Date.now(),
+            cardChars: (() => {
+              const card = cardById(record?.cardId);
+              const text = safeText(card?.english || card?.portuguese || '');
+              return Math.max(1, countFlashcardCharacters(text) || 10);
+            })(),
             sealImage: safeText(record?.sealImage || phaseMeta(activeSealPhase(record)).sealPath)
           })).filter(record => record.cardId),
           stats: normalizeStatsSnapshot(state.stats),
@@ -13537,6 +13544,64 @@
         return {
           usersEnabled: Boolean(payload.settings.usersEnabled)
         };
+      }
+
+      async function signalFlashcardSessionClock(action) {
+        if (!state.user?.id) return null;
+        const normalizedAction = action === 'out' ? 'out' : 'in';
+        try {
+          const response = await fetch(buildApiUrl('/api/flashcards/session-clock'), {
+            method: 'POST',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            }),
+            credentials: 'include',
+            keepalive: normalizedAction === 'out',
+            body: JSON.stringify({ action: normalizedAction })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            if (normalizedAction === 'out') {
+              state.entry.pendingFlashSessionOut = true;
+            }
+            return null;
+          }
+          if (normalizedAction === 'out') {
+            state.entry.pendingFlashSessionOut = false;
+          }
+          if (normalizedAction === 'out' && Number.isFinite(Number(payload?.trainingTimeMs))) {
+            state.stats.trainingTimeMs = Math.max(0, Math.round(Number(payload.trainingTimeMs) || 0));
+            saveUserStats({ skipCloudSync: true });
+          }
+          return payload;
+        } catch (_error) {
+          if (normalizedAction === 'out') {
+            state.entry.pendingFlashSessionOut = true;
+          }
+          return null;
+        }
+      }
+
+      function clearGameIdleAutoPauseTimer() {
+        if (state.game.idleAutoPauseTimer) {
+          window.clearTimeout(state.game.idleAutoPauseTimer);
+          state.game.idleAutoPauseTimer = 0;
+        }
+      }
+
+      function scheduleGameIdleAutoPause() {
+        clearGameIdleAutoPauseTimer();
+        if (!state.game.active || state.game.paused || state.ui.gamePausedAtWelcome) return;
+        state.game.idleAutoPauseTimer = window.setTimeout(() => {
+          state.game.idleAutoPauseTimer = 0;
+          if (!state.game.active || state.game.paused || state.ui.gamePausedAtWelcome) return;
+          pauseFlashcardsGameToWelcome();
+        }, 6000);
+      }
+
+      function markGameInteraction() {
+        if (!state.game.active || state.game.paused) return;
+        scheduleGameIdleAutoPause();
       }
 
       async function fetchFlashcardsPhaseSettings() {
@@ -22163,6 +22228,7 @@
           els.gameCard.classList.remove('is-sliding-next');
         }
         state.game.transitioning = false;
+        scheduleGameIdleAutoPause();
       }
 
       function seedLevelModeEntries() {
@@ -22336,6 +22402,8 @@
         updateLevelProgressBar();
 
         updateGameChips();
+        scheduleGameIdleAutoPause();
+        void signalFlashcardSessionClock('in');
         advanceToNextCard();
       }
 
@@ -22462,6 +22530,8 @@
         }
 
         updateGameChips();
+        scheduleGameIdleAutoPause();
+        void signalFlashcardSessionClock('in');
         scheduleFlashcardCloudSync(200);
         if (restored && state.game.currentId) {
           renderCurrentCard();
@@ -22527,11 +22597,15 @@
         updateLevelProgressBar();
 
         updateGameChips();
+        scheduleGameIdleAutoPause();
+        void signalFlashcardSessionClock('in');
         advanceToNextCard();
       }
 
       function pauseFlashcardsGameToWelcome() {
         if (!state.game.active) return;
+        clearGameIdleAutoPauseTimer();
+        void signalFlashcardSessionClock('out');
         commitCurrentCardTrainingTime();
         if (!state.game.tutorial.active && state.game.entries.size) {
           persistGameSessionLocally();
@@ -22562,6 +22636,8 @@
       function resumeFlashcardsGameFromWelcome() {
         if (!state.game.active || !state.ui.gamePausedAtWelcome) return false;
         state.ui.gamePausedAtWelcome = false;
+        void signalFlashcardSessionClock('in');
+        scheduleGameIdleAutoPause();
         hideWelcomeGate();
         closeGameSetup();
         closeAudioCheck();
@@ -22587,6 +22663,8 @@
 
       async function exitGame() {
         state.ui.gamePausedAtWelcome = false;
+        clearGameIdleAutoPauseTimer();
+        await signalFlashcardSessionClock('out');
         clearGameStatusRankTimer();
         commitCurrentCardTrainingTime();
         if (state.game.active && !state.game.tutorial.active && state.game.entries.size) {
@@ -23505,8 +23583,14 @@
         });
         const gameShell = els.game.querySelector('.game-shell');
         gameShell?.addEventListener('pointerdown', beginGameSwipeTracking);
+        gameShell?.addEventListener('pointerdown', () => {
+          markGameInteraction();
+        });
         gameShell?.addEventListener('pointerup', finishGameSwipeTracking);
         gameShell?.addEventListener('pointercancel', resetGameSwipeTracking);
+        els.game?.addEventListener('pointerdown', () => {
+          markGameInteraction();
+        }, true);
         els.gameStageTutorial?.addEventListener('pointerdown', (event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -23608,6 +23692,9 @@
           closePremiumGate();
         });
         window.addEventListener('keydown', (event) => {
+          if (state.game.active && !state.game.paused) {
+            markGameInteraction();
+          }
           if (/^h$/i.test(event.key || '') && triggerAdminSpeakingStarHitShortcut()) {
             event.preventDefault();
             event.stopPropagation();
@@ -23657,10 +23744,23 @@
             reloadCardsFromNetwork().catch(() => {});
           });
           document.addEventListener('visibilitychange', () => {
+            if (document.hidden && state.game.active && !state.game.paused) {
+              pauseFlashcardsGameToWelcome();
+              return;
+            }
             if (!state.user || document.hidden) return;
             reloadCardsFromNetwork().catch(() => {});
           });
         }
+        window.addEventListener('offline', () => {
+          if (!state.game.active || state.game.paused) return;
+          pauseFlashcardsGameToWelcome();
+        });
+        window.addEventListener('online', () => {
+          if (state.entry.pendingFlashSessionOut) {
+            void signalFlashcardSessionClock('out');
+          }
+        });
         els.gameTouchBtn.addEventListener('click', (event) => {
           event.stopPropagation();
           const phaseKey = safeText(els.game?.dataset?.phaseKey || '');

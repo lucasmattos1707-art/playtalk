@@ -335,15 +335,17 @@ const FLASHCARD_RANKING_WEEKDAY_INDEX = {
   Sat: 6
 };
 const BOOKS_PRONUNCIATION_TAG = 'speak-books';
-const FLASHCARD_REVIEW_SCALE_VERSION = 3;
-const FLASHCARD_REVIEW_PHASE_MAX = 6;
+const FLASHCARD_REVIEW_SCALE_VERSION = 4;
+const FLASHCARD_REVIEW_PHASE_MAX = 8;
 const FLASHCARD_REVIEW_PHASES = {
-  1: { key: 'first-star', label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
-  2: { key: 'second-star', label: 'Second star', durationMs: 34 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
-  3: { key: 'emerald-star', label: 'Emerald star', durationMs: 4 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/emerald.png' },
-  4: { key: 'third-star', label: 'Third star', durationMs: 10 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
-  5: { key: 'fourth-star', label: 'Fourth star', durationMs: 20 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/ouro.png' },
-  6: { key: 'fifth-star', label: 'Fifth star', durationMs: 45 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/diamante.png' }
+  1: { key: 'glass-stage', label: 'Glass stage', durationMs: 12 * 60 * 1000, sealImage: 'medalhas/vidro.png' },
+  2: { key: 'silver-stage', label: 'Silver stage', durationMs: 6 * 60 * 60 * 1000, sealImage: 'medalhas/prata.png' },
+  3: { key: 'ruby-stage', label: 'Ruby stage', durationMs: 24 * 60 * 60 * 1000, sealImage: 'medalhas/rubi.png' },
+  4: { key: 'sapphire-stage', label: 'Sapphire stage', durationMs: 3 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/quartz.png' },
+  5: { key: 'emerald-stage', label: 'Emerald stage', durationMs: 7 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/emerald.png' },
+  6: { key: 'gold-stage', label: 'Gold stage', durationMs: 15 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/ouro.png' },
+  7: { key: 'platinum-stage', label: 'Platinum stage', durationMs: 35 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/platina.png' },
+  8: { key: 'diamond-stage', label: 'Diamond stage', durationMs: 60 * 24 * 60 * 60 * 1000, sealImage: 'medalhas/diamante.png' }
 };
 const PREMIUM_BILLING_PLANS = {
   semana: {
@@ -427,12 +429,14 @@ const buildFlashcardProgressRankingScoreSql = (alias = '') => {
   const activePhaseSql = `COALESCE(NULLIF(CASE WHEN ${prefix}status = 'memorizing' THEN ${prefix}target_phase_index ELSE ${prefix}phase_index END, 0), ${prefix}phase_index, 0)`;
   return `
           CASE
-            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%diamante%' THEN 6
-            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%ouro%' THEN 5
-            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%platina%' THEN 4
-            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%emerald%' THEN 3
-            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%quartz%' THEN 2
-            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%prata%' THEN 1
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%diamante%' THEN 8
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%platina%' THEN 7
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%ouro%' THEN 6
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%emerald%' THEN 5
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%quartz%' OR lower(COALESCE(${prefix}seal_image, '')) LIKE '%safira%' THEN 4
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%rubi%' OR lower(COALESCE(${prefix}seal_image, '')) LIKE '%ruby%' THEN 3
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%prata%' OR lower(COALESCE(${prefix}seal_image, '')) LIKE '%silver%' THEN 2
+            WHEN lower(COALESCE(${prefix}seal_image, '')) LIKE '%vidro%' OR lower(COALESCE(${prefix}seal_image, '')) LIKE '%glass%' OR lower(COALESCE(${prefix}seal_image, '')) LIKE '%metal%' THEN 1
             ELSE GREATEST(0, LEAST(${FLASHCARD_REVIEW_PHASE_MAX}, ${activePhaseSql}))
           END`;
 };
@@ -1096,8 +1100,8 @@ const getFlashcardPronunciationPercent = (samples) => {
   return Math.max(0, Math.min(100, Math.round(average)));
 };
 
-const getFlashcardSpeedPerHour = (flashcardsCount, trainingTimeMs) => {
-  const normalizedCount = Math.max(0, Number(flashcardsCount) || 0);
+const getFlashcardSpeedPerHour = (lettersCount, trainingTimeMs) => {
+  const normalizedCount = Math.max(0, Number(lettersCount) || 0);
   const normalizedTrainingTimeMs = Math.max(0, Number(trainingTimeMs) || 0);
   if (!normalizedCount || normalizedTrainingTimeMs <= 0) {
     return 0;
@@ -1106,7 +1110,7 @@ const getFlashcardSpeedPerHour = (flashcardsCount, trainingTimeMs) => {
   return Math.max(0, Math.round(perHour * 10) / 10);
 };
 
-const decorateFlashcardStats = (value, flashcardsCount = 0) => {
+const decorateFlashcardStats = (value, lettersCount = 0) => {
   const pronunciationSamples = normalizeFlashcardPronunciationSamples(value);
   const trainingTimeMs = Math.max(
     0,
@@ -1123,11 +1127,11 @@ const decorateFlashcardStats = (value, flashcardsCount = 0) => {
     trainingTimeMs,
     pronunciationSamples,
     pronunciationPercent: getFlashcardPronunciationPercent(pronunciationSamples),
-    speedFlashcardsPerHour: getFlashcardSpeedPerHour(flashcardsCount, trainingTimeMs)
+    speedFlashcardsPerHour: getFlashcardSpeedPerHour(lettersCount, trainingTimeMs)
   };
 };
 
-const normalizeFlashcardStats = (value, flashcardsCount = 0) => decorateFlashcardStats(value, flashcardsCount);
+const normalizeFlashcardStats = (value, lettersCount = 0) => decorateFlashcardStats(value, lettersCount);
 
 const normalizeFlashcardOnTableRecord = (raw) => {
   const cardId = typeof raw?.cardId === 'string' ? raw.cardId.trim() : '';
@@ -1169,12 +1173,14 @@ const resolveFlashcardSealImage = (record) => {
 const flashcardPhaseFromSealImage = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return 0;
-  if (normalized.includes('diamante')) return 6;
-  if (normalized.includes('ouro')) return 5;
-  if (normalized.includes('platina')) return 4;
-  if (normalized.includes('emerald')) return 3;
-  if (normalized.includes('quartz')) return 2;
-  if (normalized.includes('prata')) return 1;
+  if (normalized.includes('diamante')) return 8;
+  if (normalized.includes('platina')) return 7;
+  if (normalized.includes('ouro')) return 6;
+  if (normalized.includes('emerald')) return 5;
+  if (normalized.includes('quartz') || normalized.includes('safira')) return 4;
+  if (normalized.includes('rubi') || normalized.includes('ruby')) return 3;
+  if (normalized.includes('prata') || normalized.includes('silver')) return 2;
+  if (normalized.includes('vidro') || normalized.includes('glass') || normalized.includes('metal')) return 1;
   return 0;
 };
 
@@ -1209,6 +1215,15 @@ const migrateFlashcardReviewPhase = (rawPhase, raw, minPhase, preferSealImage = 
   const imagePhase = preferSealImage ? flashcardPhaseFromSealImage(raw?.sealImage || raw?.seal_image) : 0;
   if (imagePhase > 0) {
     return Math.max(lowerBound, Math.min(FLASHCARD_REVIEW_PHASE_MAX, imagePhase));
+  }
+  if (version >= 3) {
+    if (parsedPhase === 1) return Math.max(lowerBound, 2);
+    if (parsedPhase === 2) return Math.max(lowerBound, 4);
+    if (parsedPhase === 3) return Math.max(lowerBound, 5);
+    if (parsedPhase === 4) return Math.max(lowerBound, 7);
+    if (parsedPhase === 5) return Math.max(lowerBound, 6);
+    if (parsedPhase >= 6) return Math.max(lowerBound, 8);
+    return parsedPhase;
   }
   if (version >= 2) {
     if (parsedPhase === 4) return Math.max(lowerBound, 5);
@@ -1250,6 +1265,7 @@ const normalizeFlashcardProgressRecord = (raw) => {
       : availableAtMs || returnedAtMs || createdAtMs,
     returnedAt: status === 'ready' ? (returnedAtMs || availableAtMs || Date.now()) : returnedAtMs,
     createdAt: createdAtMs,
+    cardChars: Math.max(1, Math.round(Number(raw?.cardChars ?? raw?.card_chars) || 10)),
     reviewScaleVersion: FLASHCARD_REVIEW_SCALE_VERSION,
     sealImage: ''
   };
@@ -1271,6 +1287,7 @@ const mapStoredFlashcardProgressRow = (row) => {
     availableAt: flashcardMillisFromTimestamp(row?.available_at),
     returnedAt: flashcardMillisFromTimestamp(row?.returned_at),
     createdAt: flashcardMillisFromTimestamp(row?.created_at),
+    cardChars: Math.max(1, Math.round(Number(row?.card_chars) || 10)),
     reviewScaleVersion: FLASHCARD_REVIEW_SCALE_VERSION,
     sealImage: String(row?.seal_image || '').trim()
   };
@@ -1282,6 +1299,13 @@ const mapStoredFlashcardProgressRow = (row) => {
     mapped.memorizingStartedAt = 0;
   }
   return mapped;
+};
+
+const totalFlashcardLettersFromProgress = (records) => {
+  const source = Array.isArray(records) ? records : [];
+  return source.reduce((total, record) => (
+    total + Math.max(1, Math.round(Number(record?.cardChars ?? record?.card_chars) || 10))
+  ), 0);
 };
 
 const ensureFlashcardUserStateTables = async () => {
@@ -1304,6 +1328,7 @@ const ensureFlashcardUserStateTables = async () => {
           memorizing_duration_ms integer NOT NULL DEFAULT 0,
           available_at timestamptz,
           returned_at timestamptz,
+          card_chars integer NOT NULL DEFAULT 10,
           seal_image text NOT NULL DEFAULT '',
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now(),
@@ -1317,6 +1342,15 @@ const ensureFlashcardUserStateTables = async () => {
       await pool.query(`
         ALTER TABLE public.user_flashcard_progress
         ADD COLUMN IF NOT EXISTS type_portuguese boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_progress
+        ADD COLUMN IF NOT EXISTS card_chars integer NOT NULL DEFAULT 10
+      `);
+      await pool.query(`
+        UPDATE public.user_flashcard_progress
+        SET card_chars = 10
+        WHERE card_chars IS NULL OR card_chars <= 0
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_flashcard_progress_user_idx
@@ -1414,6 +1448,14 @@ const ensureFlashcardUserStateTables = async () => {
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_flashcard_hidden_user_idx
         ON public.user_flashcard_hidden (user_id, updated_at DESC)
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_session_clock (
+          user_id integer PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+          flash_in_at timestamptz,
+          flash_out_at timestamptz,
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_on_table (
@@ -4290,6 +4332,7 @@ const readFlashcardStateForUser = async (userId) => {
          memorizing_duration_ms,
          available_at,
          returned_at,
+         card_chars,
          seal_image,
          created_at
        FROM public.user_flashcard_progress
@@ -4369,7 +4412,7 @@ const readFlashcardStateForUser = async (userId) => {
         trainingTimeMs: flashcardStatsRow.training_time_ms,
         pronunciationSamples: accurateAggregate.pronunciationSamples,
         secondStarErrorHeard: flashcardStatsRow.second_star_error_heard
-      }, progressRecords.length),
+      }, totalFlashcardLettersFromProgress(progressRecords)),
       booksEnergyXpTotal: Math.max(0, Number(booksEnergyXpResult.rows[0]?.energy_xp_total) || 0)
     },
     meta: {
@@ -4416,7 +4459,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     }
   });
   const progress = Array.from(dedupedProgress.values());
-  const stats = normalizeFlashcardStats(payload?.stats, progress.length);
+  const stats = normalizeFlashcardStats(payload?.stats, totalFlashcardLettersFromProgress(progress));
   const hiddenCardIds = Array.isArray(payload?.hiddenCardIds)
     ? Array.from(new Set(payload.hiddenCardIds
       .map((cardId) => typeof cardId === 'string' ? cardId.trim() : '')
@@ -4490,7 +4533,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       [normalizedUserId]
     );
     const existingProgressResult = await client.query(
-      `SELECT card_id, phase_index, target_phase_index, status, seal_image
+      `SELECT card_id, phase_index, target_phase_index, status, seal_image, card_chars
        FROM public.user_flashcard_progress
        WHERE user_id = $1`,
       [normalizedUserId]
@@ -4521,10 +4564,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     const existingSpeakings = Math.max(0, Number(existingStatsResult.rows[0]?.speakings) || 0);
     const existingListenings = Math.max(0, Number(existingStatsResult.rows[0]?.listenings) || 0);
     const existingReadings = Math.max(0, Number(existingStatsResult.rows[0]?.readings) || 0);
-    const persistedTrainingTimeMs = Math.max(
-      existingTrainingTimeMs,
-      Math.max(0, Number(stats.trainingTimeMs) || 0)
-    );
+    const persistedTrainingTimeMs = existingTrainingTimeMs;
     const persistedSpeakings = Math.max(
       existingSpeakings,
       Math.max(0, Number(stats.speakings) || 0)
@@ -4554,8 +4594,8 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       const values = [];
       const params = [];
       progress.forEach((item, index) => {
-        const offset = index * 12;
-        values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, now())`);
+        const offset = index * 13;
+        values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, now())`);
         params.push(
           normalizedUserId,
           item.cardId,
@@ -4568,6 +4608,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
           flashcardTimestampFromMillis(item.availableAt),
           flashcardTimestampFromMillis(item.returnedAt),
           flashcardTimestampFromMillis(item.createdAt),
+          Math.max(1, Math.round(Number(item.cardChars) || 10)),
           item.sealImage
         );
       });
@@ -4585,6 +4626,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
            available_at,
            returned_at,
            created_at,
+           card_chars,
            seal_image,
            updated_at
          )
@@ -4599,6 +4641,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
            memorizing_duration_ms = EXCLUDED.memorizing_duration_ms,
            available_at = EXCLUDED.available_at,
            returned_at = EXCLUDED.returned_at,
+           card_chars = EXCLUDED.card_chars,
            seal_image = EXCLUDED.seal_image,
            updated_at = now()`,
         params
@@ -4849,6 +4892,118 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     userLevelUpdatedAt: persistedUserLevelUpdatedAt,
     rankingRecord
   };
+};
+
+const startFlashcardSessionClock = async (userId) => {
+  if (!pool) throw new Error('DATABASE_URL nao configurada.');
+  await ensureFlashcardUserStateTables();
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    const error = new Error('userId invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+  await pool.query(
+    `INSERT INTO public.user_flashcard_session_clock (
+       user_id,
+       flash_in_at,
+       flash_out_at,
+       updated_at
+     )
+     VALUES ($1, now(), NULL, now())
+     ON CONFLICT (user_id)
+     DO UPDATE SET
+       flash_in_at = now(),
+       flash_out_at = NULL,
+       updated_at = now()`,
+    [normalizedUserId]
+  );
+  return { success: true, active: true };
+};
+
+const closeFlashcardSessionClock = async (userId) => {
+  if (!pool) throw new Error('DATABASE_URL nao configurada.');
+  await ensureFlashcardUserStateTables();
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    const error = new Error('userId invalido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const sessionResult = await client.query(
+      `SELECT flash_in_at
+       FROM public.user_flashcard_session_clock
+       WHERE user_id = $1
+       FOR UPDATE`,
+      [normalizedUserId]
+    );
+    const flashInAt = sessionResult.rows[0]?.flash_in_at ? Date.parse(sessionResult.rows[0].flash_in_at) : 0;
+    const nowMs = Date.now();
+    const addedTrainingMs = flashInAt > 0
+      ? Math.max(0, nowMs - flashInAt)
+      : 0;
+
+    if (addedTrainingMs > 0) {
+      await client.query(
+        `INSERT INTO public.user_flashcard_stats (
+           user_id,
+           play_time_ms,
+           speakings,
+           listenings,
+           readings,
+           training_time_ms,
+           pronunciation_samples,
+           second_star_error_heard,
+           updated_at
+         )
+         VALUES ($1, 0, 0, 0, 0, $2, '[]'::jsonb, false, now())
+         ON CONFLICT (user_id)
+         DO UPDATE SET
+           training_time_ms = public.user_flashcard_stats.training_time_ms + EXCLUDED.training_time_ms,
+           updated_at = now()`,
+        [normalizedUserId, addedTrainingMs]
+      );
+    }
+
+    await client.query(
+      `INSERT INTO public.user_flashcard_session_clock (
+         user_id,
+         flash_in_at,
+         flash_out_at,
+         updated_at
+       )
+       VALUES ($1, NULL, NULL, now())
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         flash_in_at = NULL,
+         flash_out_at = NULL,
+         updated_at = now()`,
+      [normalizedUserId]
+    );
+
+    const totalResult = await client.query(
+      `SELECT training_time_ms
+       FROM public.user_flashcard_stats
+       WHERE user_id = $1
+       LIMIT 1`,
+      [normalizedUserId]
+    );
+    await client.query('COMMIT');
+    return {
+      success: true,
+      addedTrainingMs,
+      trainingTimeMs: Math.max(0, Number(totalResult.rows[0]?.training_time_ms) || 0)
+    };
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch (_rollbackError) {}
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 const logDatabaseConnectionStatus = async () => {
@@ -13298,8 +13453,8 @@ app.get('/api/users/flashcards', async (req, res) => {
            )
          )::int AS pronunciation_percent,
          CASE
-           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(progress.card_count, 0) > 0
-             THEN ROUND((COALESCE(progress.card_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(progress.letters_count, 0) > 0
+             THEN ROUND((COALESCE(progress.letters_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
            ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
          END AS speed_flashcards_per_hour
        FROM public.users u
@@ -13307,6 +13462,7 @@ app.get('/api/users/flashcards', async (req, res) => {
          SELECT
            user_id,
            COUNT(*)::int AS card_count,
+           COALESCE(SUM(GREATEST(1, COALESCE(card_chars, 10))), 0)::int AS letters_count,
            COALESCE(SUM(${progressScoreSql}), 0)::int AS ranking_total
          FROM public.user_flashcard_progress
          GROUP BY user_id
@@ -13973,6 +14129,50 @@ app.get('/api/daily-plan', async (req, res) => {
       message: statusCode === 400
         ? 'Usuario invalido.'
         : 'Nao foi possivel carregar a missao diaria.'
+    });
+  }
+});
+
+app.post('/api/flashcards/session-clock', express.json({ limit: '16kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const action = String(req.body?.action || '').trim().toLowerCase();
+    if (action === 'in') {
+      await startFlashcardSessionClock(authUser.id);
+      res.json({ success: true, action: 'in' });
+      return;
+    }
+    if (action === 'out') {
+      const result = await closeFlashcardSessionClock(authUser.id);
+      res.json({
+        success: true,
+        action: 'out',
+        addedTrainingMs: Math.max(0, Number(result?.addedTrainingMs) || 0),
+        trainingTimeMs: Math.max(0, Number(result?.trainingTimeMs) || 0)
+      });
+      return;
+    }
+
+    res.status(400).json({ success: false, message: 'Acao invalida. Use in ou out.' });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao atualizar sessao flashcards:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: statusCode === 400
+        ? 'Requisicao invalida.'
+        : 'Erro ao atualizar sessao de flashcards.'
     });
   }
 });
@@ -17013,8 +17213,8 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
            )
          )::int AS pronunciation_percent,
          CASE
-           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(progress.card_count, 0) > 0
-             THEN ROUND((COALESCE(progress.card_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(progress.letters_count, 0) > 0
+             THEN ROUND((COALESCE(progress.letters_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
            ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
          END AS speed_flashcards_per_hour,
          COALESCE(u.level, 1)::int AS user_level
@@ -17023,6 +17223,7 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
          SELECT
            user_id,
            COUNT(*)::int AS card_count,
+           COALESCE(SUM(GREATEST(1, COALESCE(card_chars, 10))), 0)::int AS letters_count,
            COALESCE(SUM(${progressScoreSql}), 0)::int AS ranking_total
          FROM public.user_flashcard_progress
          GROUP BY user_id
