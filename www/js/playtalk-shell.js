@@ -8,7 +8,12 @@
   const LOADER_BODY_CLASS = 'playtalk-loader-active';
   const LOADER_MIN_VISIBLE_MS = 4200;
   const USERS_LOADER_MAX_VISIBLE_MS = 4200;
-  const LOADER_TIP_ROTATE_MS = 4200;
+  const LOADER_AUDIO_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
+  const LOADER_AUDIO_PATHS = {
+    pt: `${LOADER_AUDIO_BASE_URL}/Niveis/114/001`,
+    en: `${LOADER_AUDIO_BASE_URL}/Niveis/154/001`
+  };
+  const LOADER_BG_MUSIC_URL = '/audio/load.mp3';
   const LOADER_TIPS = [
     ['A fluencia nasce frase por frase', 'Fluency is built one phrase at a time'],
     ['Sessoes pequenas. Evolucao gigante', 'Small sessions. Massive evolution.'],
@@ -61,7 +66,12 @@
     lastTipIndex: -1,
     tipTimer: 0,
     rotateTips: true,
-    progressRaf: 0
+    progressRaf: 0,
+    tipLanguage: 'pt',
+    tipAudio: null,
+    bgAudio: null,
+    tipAudioToken: 0,
+    tipAdvanceTimer: 0
   };
 
   function injectStars() {
@@ -236,7 +246,7 @@
         align-content: center;
         gap: 8px;
         font-family: "Exo 2", "Segoe UI", sans-serif;
-        font-size: clamp(18px, 4.8vw, 24px);
+        font-size: clamp(21.6px, 5.76vw, 28.8px);
         line-height: 1.15;
         font-weight: 700;
         letter-spacing: 0.01em;
@@ -262,6 +272,11 @@
         opacity: 1;
         transform: translateY(0);
         transition: opacity 500ms ease, transform 500ms ease;
+      }
+
+      .playtalk-loader__tip-line.is-hidden {
+        opacity: 0;
+        transform: translateY(6px);
       }
 
       .playtalk-loader__progress {
@@ -433,24 +448,104 @@
     const root = document.getElementById(LOADER_ROOT_ID);
     if (!root) return;
     const lines = root.querySelectorAll('.playtalk-loader__tip-line');
+    if (lines[0]) lines[0].textContent = tip[0] || '';
+    if (lines[1]) lines[1].textContent = tip[1] || '';
+    const showPortuguese = loaderState.tipLanguage !== 'en';
     if (lines[0]) {
-      lines[0].classList.remove('is-visible');
-      lines[0].textContent = tip[0] || '';
+      lines[0].classList.remove('is-visible', 'is-hidden');
+      lines[0].style.transitionDelay = '0ms';
+      lines[0].classList.add(showPortuguese ? 'is-visible' : 'is-hidden');
     }
     if (lines[1]) {
-      lines[1].classList.remove('is-visible');
-      lines[1].textContent = tip[1] || '';
+      lines[1].classList.remove('is-visible', 'is-hidden');
+      lines[1].style.transitionDelay = '0ms';
+      lines[1].classList.add(showPortuguese ? 'is-hidden' : 'is-visible');
     }
-    window.requestAnimationFrame(() => {
-      if (lines[0]) {
-        lines[0].style.transitionDelay = '0ms';
-        lines[0].classList.add('is-visible');
+  }
+
+  function stopLoaderAdvanceTimer() {
+    if (!loaderState.tipAdvanceTimer) return;
+    window.clearTimeout(loaderState.tipAdvanceTimer);
+    loaderState.tipAdvanceTimer = 0;
+  }
+
+  function stopLoaderAudio() {
+    loaderState.tipAudioToken += 1;
+    stopLoaderAdvanceTimer();
+    if (loaderState.tipAudio) {
+      loaderState.tipAudio.pause();
+      loaderState.tipAudio.currentTime = 0;
+      loaderState.tipAudio = null;
+    }
+    if (loaderState.bgAudio) {
+      loaderState.bgAudio.pause();
+      loaderState.bgAudio.currentTime = 0;
+      loaderState.bgAudio = null;
+    }
+  }
+
+  function loaderTipAudioUrl(index, language) {
+    const safeIndex = Math.max(1, (Number(index) || 0) + 1);
+    const fileId = String(safeIndex).padStart(3, '0');
+    if (language === 'en') return `${LOADER_AUDIO_PATHS.en}/acts-flashcard-item-${fileId}.mp3`;
+    return `${LOADER_AUDIO_PATHS.pt}/bandeiras-flashcard-item-${fileId}.mp3`;
+  }
+
+  function ensureLoaderBackgroundMusic() {
+    if (loaderState.bgAudio) return loaderState.bgAudio;
+    const bgAudio = new Audio(LOADER_BG_MUSIC_URL);
+    bgAudio.preload = 'auto';
+    bgAudio.loop = true;
+    bgAudio.volume = 0.22;
+    loaderState.bgAudio = bgAudio;
+    return bgAudio;
+  }
+
+  function playLoaderBackgroundMusic() {
+    const bgAudio = ensureLoaderBackgroundMusic();
+    if (!bgAudio.paused) return;
+    bgAudio.play().catch(() => {});
+  }
+
+  function playLoaderTipLanguage(language, token) {
+    if (!loaderState.activeKeys.size) return;
+    loaderState.tipLanguage = language === 'en' ? 'en' : 'pt';
+    renderLoaderTip();
+    if (loaderState.tipAudio) {
+      loaderState.tipAudio.pause();
+      loaderState.tipAudio.currentTime = 0;
+      loaderState.tipAudio = null;
+    }
+    playLoaderBackgroundMusic();
+    const src = loaderTipAudioUrl(loaderState.tipIndex, loaderState.tipLanguage);
+    const audio = new Audio(src);
+    audio.preload = 'auto';
+    loaderState.tipAudio = audio;
+    const onFinish = () => {
+      if (token !== loaderState.tipAudioToken || !loaderState.activeKeys.size) return;
+      if (loaderState.tipLanguage === 'pt') {
+        playLoaderTipLanguage('en', token);
+        return;
       }
-      if (lines[1]) {
-        lines[1].style.transitionDelay = '500ms';
-        lines[1].classList.add('is-visible');
-      }
-    });
+      loaderState.tipIndex = (loaderState.tipIndex + 1) % LOADER_TIPS.length;
+      loaderState.tipLanguage = 'pt';
+      loaderState.tipAdvanceTimer = window.setTimeout(() => {
+        if (token !== loaderState.tipAudioToken || !loaderState.activeKeys.size) return;
+        playLoaderTipLanguage('pt', token);
+      }, 90);
+    };
+    audio.addEventListener('ended', onFinish, { once: true });
+    audio.addEventListener('error', onFinish, { once: true });
+    audio.play().catch(() => onFinish());
+  }
+
+  function startLoaderAudioSequence() {
+    if (!loaderState.activeKeys.size) return;
+    loaderState.tipAudioToken += 1;
+    const token = loaderState.tipAudioToken;
+    loaderState.tipLanguage = 'pt';
+    renderLoaderTip();
+    playLoaderTipLanguage('pt', token);
   }
 
   function renderLoader() {
@@ -532,25 +627,11 @@
     const rotate = options.rotate !== false;
     stopLoaderTips();
     loaderState.rotateTips = rotate;
-    if (LOADER_TIPS.length > 1) {
-      loaderState.tipIndex = Math.floor(Math.random() * LOADER_TIPS.length);
-      loaderState.lastTipIndex = loaderState.tipIndex;
-      renderLoaderTip();
-    }
-    if (!rotate) return;
-    loaderState.tipTimer = window.setInterval(() => {
-      if (LOADER_TIPS.length <= 1) {
-        loaderState.tipIndex = 0;
-      } else {
-        let nextIndex = loaderState.tipIndex;
-        while (nextIndex === loaderState.lastTipIndex) {
-          nextIndex = Math.floor(Math.random() * LOADER_TIPS.length);
-        }
-        loaderState.tipIndex = nextIndex;
-        loaderState.lastTipIndex = nextIndex;
-      }
-      renderLoaderTip();
-    }, LOADER_TIP_ROTATE_MS);
+    loaderState.tipIndex = Math.max(0, loaderState.tipIndex % LOADER_TIPS.length);
+    loaderState.lastTipIndex = loaderState.tipIndex;
+    loaderState.tipLanguage = 'pt';
+    renderLoaderTip();
+    startLoaderAudioSequence();
   }
 
   function normalizeLoaderKey(key) {
@@ -601,6 +682,7 @@
         if (!loaderState.activeKeys.size) {
           stopLoaderTips();
           stopLoaderProgress();
+          stopLoaderAudio();
         }
         renderLoader();
       }, remaining);
@@ -612,6 +694,7 @@
     if (!loaderState.activeKeys.size) {
       stopLoaderTips();
       stopLoaderProgress();
+      stopLoaderAudio();
     }
     renderLoader();
   }
@@ -636,6 +719,7 @@
     loaderState.metaItems = [];
     stopLoaderTips();
     stopLoaderProgress();
+    stopLoaderAudio();
     renderLoader();
   }
 
