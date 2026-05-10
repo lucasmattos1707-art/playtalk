@@ -841,11 +841,12 @@
         if(!deck)return;
         queuePersistDeckByPath(deck.path,{delay});
       }
-      async function persistDirtyDecksNow(){
+      async function persistDirtyDecksNow(options={}){
+        const silent=Boolean(options?.silent);
         if(!adminStudio.enabled)return 0;
         const targets=Array.from(dirtyDeckPaths.values()).map(path=>findDeckByPath(path)).filter(Boolean);
         if(!targets.length){
-          showFeedbackToast('Nenhum deck pendente para salvar no Postgres.');
+          if(!silent)showFeedbackToast('Nenhum deck pendente para salvar no Postgres.');
           return 0;
         }
         let saved=0;
@@ -862,7 +863,7 @@
         if(firstError){
           throw new Error(firstError);
         }
-        showFeedbackToast(`${saved} deck(s) salvo(s) no Postgres.`);
+        if(!silent)showFeedbackToast(`${saved} deck(s) salvo(s) no Postgres.`);
         return saved;
       }
       const safeBase=(name,fallback)=>String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase()||fallback;
@@ -2152,6 +2153,14 @@
             if(done+failed<targets.length)await wait(2000);
           }
           if(!done&&failed)throw new Error(firstError||`Nao foi possivel gerar os audios restantes na ${providerLabel}.`);
+          if(done&&adminStudio.enabled){
+            try{
+              await persistDirtyDecksNow({silent:true});
+            }catch(error){
+              console.error('Falha ao sincronizar deck apos gerar audio',error);
+              showFeedbackToast('Audio gerado, mas nao consegui sincronizar o deck no Postgres agora.');
+            }
+          }
           if(failed)alert(`${done} audio(s) gerado(s). ${failed} falharam e ficaram para a proxima tentativa.`);
           return done;
         }finally{
