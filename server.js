@@ -7180,6 +7180,7 @@ function collectPublicDeckReferencedR2ObjectKeys(payload) {
     if (!item || typeof item !== 'object') continue;
     pushKey(readFlashcardItemImage(item));
     pushKey(readFlashcardItemAudio(item));
+    pushKey(readFlashcardItemAudio2(item));
   }
 
   return Array.from(objectKeys);
@@ -8691,6 +8692,20 @@ function readFlashcardItemAudio(item) {
       : '';
 }
 
+function readFlashcardItemAudio2(item) {
+  return typeof item?.audio2 === 'string'
+    ? item.audio2.trim()
+    : typeof item?.audioUrl2 === 'string'
+      ? item.audioUrl2.trim()
+      : typeof item?.audioBritish === 'string'
+        ? item.audioBritish.trim()
+        : typeof item?.audio_blonde === 'string'
+          ? item.audio_blonde.trim()
+          : typeof item?.audioBlonde === 'string'
+            ? item.audioBlonde.trim()
+            : '';
+}
+
 function setFlashcardItemEnglish(item, value) {
   setPreferredFlashcardField(item, ['nomeIngles', 'english', 'word'], value);
 }
@@ -8705,6 +8720,10 @@ function setFlashcardItemImage(item, value) {
 
 function setFlashcardItemAudio(item, value) {
   setPreferredFlashcardField(item, ['audio', 'audioUrl'], value);
+}
+
+function setFlashcardItemAudio2(item, value) {
+  setPreferredFlashcardField(item, ['audio2', 'audioUrl2', 'audioBritish', 'audio_blonde', 'audioBlonde'], value);
 }
 
 function normalizePublicDeckAssetUrl(rawValue, options = {}) {
@@ -8806,6 +8825,13 @@ function repairPublicDeckPayloadAssets(payload, deckRow) {
     const nextAudio = normalizePublicDeckAssetUrl(currentAudio, { dayKey, kind: 'audio', remoteDeck });
     if (nextAudio && nextAudio !== currentAudio) {
       setFlashcardItemAudio(item, nextAudio);
+      changed = true;
+    }
+
+    const currentAudio2 = readFlashcardItemAudio2(item);
+    const nextAudio2 = normalizePublicDeckAssetUrl(currentAudio2, { dayKey, kind: 'audio', remoteDeck });
+    if (nextAudio2 && nextAudio2 !== currentAudio2) {
+      setFlashcardItemAudio2(item, nextAudio2);
       changed = true;
     }
   }
@@ -9046,6 +9072,7 @@ async function publishFlashcardDeckToR2FromSource(sourceInfo, payload) {
     const nextItem = JSON.parse(JSON.stringify(item || {}));
     const imageValue = readFlashcardItemImage(item);
     const audioValue = readFlashcardItemAudio(item);
+    const audioValue2 = readFlashcardItemAudio2(item);
 
     if (imageValue) {
       if (isFlashcardPlaceholderImageValue(imageValue)) {
@@ -9070,6 +9097,17 @@ async function publishFlashcardDeckToR2FromSource(sourceInfo, payload) {
         const audioObjectKey = `${remoteDeck.audioFolder}/${audioFileName}`;
         await putR2Object(audioObjectKey, audioAsset.buffer, audioAsset.contentType || contentTypeFromObjectKey(audioObjectKey));
         setFlashcardItemAudio(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey));
+      }
+    }
+
+    if (audioValue2) {
+      const audioAsset2 = await readFlashcardAssetBuffer(audioValue2);
+      if (audioAsset2?.buffer?.length) {
+        const audioExtension2 = path.extname(String(audioValue2 || '')).toLowerCase() || '.mp3';
+        const audioFileName2 = `${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}b${audioExtension2}`;
+        const audioObjectKey2 = `${remoteDeck.audioFolder}/${audioFileName2}`;
+        await putR2Object(audioObjectKey2, audioAsset2.buffer, audioAsset2.contentType || contentTypeFromObjectKey(audioObjectKey2));
+        setFlashcardItemAudio2(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey2));
       }
     }
 
@@ -9142,6 +9180,7 @@ async function publishFlashcardEditorBundle({
     const nextItem = JSON.parse(JSON.stringify(item || {}));
     const imageValue = readFlashcardItemImage(item);
     const audioValue = readFlashcardItemAudio(item);
+    const audioValue2 = readFlashcardItemAudio2(item);
     let uploaded = 0;
     let skipped = 0;
     const tasks = [];
@@ -9192,6 +9231,29 @@ async function publishFlashcardEditorBundle({
         }
         if (typeof audioValue === 'string' && audioValue.trim()) {
           setFlashcardItemAudio(nextItem, audioValue.trim());
+        }
+      })());
+    }
+
+    if (audioValue2) {
+      tasks.push((async () => {
+        const audioFileName2 = path.posix.basename(String(audioValue2 || '').trim());
+        const audioUpload2 = uploadedByName.get(audioFileName2);
+        if (audioUpload2?.buffer?.length) {
+          const audioExtension2 = path.extname(audioFileName2).toLowerCase() || '.mp3';
+          const audioObjectKey2 = `${remoteDeck.audioFolder}/${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}b${audioExtension2}`;
+          const uploadResult2 = await putR2ObjectIfChanged(
+            audioObjectKey2,
+            audioUpload2.buffer,
+            audioUpload2.contentType || contentTypeFromObjectKey(audioObjectKey2)
+          );
+          if (uploadResult2.uploaded) uploaded += 1;
+          else skipped += 1;
+          setFlashcardItemAudio2(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey2));
+          return;
+        }
+        if (typeof audioValue2 === 'string' && audioValue2.trim()) {
+          setFlashcardItemAudio2(nextItem, audioValue2.trim());
         }
       })());
     }
@@ -20081,10 +20143,12 @@ app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), as
         .map((item) => {
           const imageValue = readFlashcardItemImage(item);
           const audioValue = readFlashcardItemAudio(item);
+          const audioValue2 = readFlashcardItemAudio2(item);
           return {
             ...item,
             imagem: resolvePublishedLevelAssetUrl(imageValue, assetUrlMap),
-            audio: resolvePublishedLevelAssetUrl(audioValue, assetUrlMap)
+            audio: resolvePublishedLevelAssetUrl(audioValue, assetUrlMap),
+            audio2: resolvePublishedLevelAssetUrl(audioValue2, assetUrlMap)
           };
         })
         .filter((item) => item.imagem && readFlashcardItemPortuguese(item) && readFlashcardItemEnglish(item))
