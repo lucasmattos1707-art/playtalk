@@ -1799,24 +1799,17 @@
           alert('Selecione pelo menos um card.');
           return;
         }
-        const deckOptions=(editCardsState.decks||[]).filter(deck=>String(deck?.path||'').trim());
+        const deckOptions=(editCardsState.decks||[]).filter(deck=>String(deck?.path||'').trim()&&normalizeDeckLevelValue(deck?.deckLevel)!==null);
         if(!deckOptions.length){
-          alert('Nenhum deck encontrado para mover.');
+          alert('Nenhum deck com nivel definido foi encontrado para mover.');
           return;
         }
-        const menu=deckOptions.map((deck,index)=>`${index+1}. ${deck.title||'Deck'} (${deck.path})`).join('\n');
-        const answer=window.prompt(`Mover ${selected.length} card(s) para qual deck?\n\n${menu}\n\nDigite o numero ou o path do deck:`,String(editCardsState.selectedPath||''));
+        const answer=window.prompt(`Mover ${selected.length} card(s) para qual NIVEL? (1-100)`);
         if(answer===null)return;
-        const byNumber=Number.parseInt(String(answer||'').trim(),10);
-        let targetDeck=null;
-        if(Number.isInteger(byNumber)&&byNumber>=1&&byNumber<=deckOptions.length){
-          targetDeck=deckOptions[byNumber-1];
-        }else{
-          const normalizedPath=String(answer||'').trim();
-          targetDeck=deckOptions.find(deck=>String(deck.path||'').trim()===normalizedPath)||null;
-        }
+        const targetLevel=normalizeDeckLevelValue(answer);
+        const targetDeck=targetLevel===null?null:deckOptions.find(deck=>normalizeDeckLevelValue(deck?.deckLevel)===targetLevel)||null;
         if(!targetDeck){
-          alert('Deck de destino invalido.');
+          alert('Nivel de destino invalido ou sem deck correspondente.');
           return;
         }
         if(!targetDeck.data||!Array.isArray(targetDeck.data.items))targetDeck.data={...(targetDeck.data||{}),items:[]};
@@ -1873,7 +1866,7 @@
         syncDeckSearchResults();
         save();
         renderAll();
-        alert(`${payloadToAppend.length} card(s) movido(s) para ${targetDeck.title||targetDeck.path}.`);
+        alert(`${payloadToAppend.length} card(s) movido(s) para o nivel ${targetLevel}.`);
       }
       function moveSingleSelectedCardInDeck(){
         const selected=getSelectedEditorEntries();
@@ -2681,6 +2674,13 @@
         const editing=tag==='input'||tag==='textarea'||tag==='select'||e.target?.isContentEditable;
         if(editing)return;
         const key=String(e.key||'').toLowerCase();
+        if(isAdminStudioEnabled()&&key==='control'){
+          e.preventDefault();
+          clearAdminSelection();
+          syncAdminStudioControls();
+          syncAdminRenderedItems();
+          return;
+        }
         if(isAdminStudioEnabled()&&key==='s'){
           e.preventDefault();
           persistDirtyDecksNow().catch(error=>showFeedbackToast(error?.message||'Nao foi possivel salvar os decks no Postgres.'));
