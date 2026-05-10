@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sequence | Admin</title>
+  <style>
+    :root{
+      --bg:#030d1f;
+      --deck:#082c6a;
+      --card:#3f9ae8;
+      --text:#fff;
+      --muted:rgba(255,255,255,.72);
+      --id:rgba(255,255,255,.5);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at 20% 0%,#103067 0%,var(--bg) 48%);color:var(--text);font-family:Arial,sans-serif}
+    .page{max-width:1100px;margin:0 auto;padding:18px 14px 36px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .title{font-size:26px;font-weight:800}
+    .hint{font-size:12px;color:var(--muted)}
+    .status{font-size:12px;color:var(--muted)}
+    .stack{display:grid;gap:10px}
+    .deck{background:linear-gradient(180deg,#0b357c,#07295f);border:1px solid rgba(143,188,255,.35);border-radius:16px;padding:10px}
+    .deck-head{height:8vh;min-height:56px;width:90%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 14px;border-radius:12px;background:rgba(9,38,91,.92);cursor:pointer}
+    .deck-head strong{font-size:18px}
+    .deck-meta{font-size:12px;color:var(--muted)}
+    .deck-items{display:none;margin-top:10px;gap:8px}
+    .deck.is-open .deck-items{display:grid}
+    .card{height:8vh;min-height:52px;width:90%;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:12px;background:linear-gradient(180deg,#5caef3,#3f9ae8);color:#fff;cursor:pointer;transition:opacity .2s ease,transform .2s ease}
+    .card img{width:38px;height:38px;border-radius:999px;object-fit:cover;background:#0c3f7f;flex:0 0 auto}
+    .card .label{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .card .id{margin-left:auto;font-size:12px;opacity:.5}
+    .card.is-selected{outline:2px solid rgba(255,255,255,.95);transform:translateX(2px)}
+    .card.is-dimmed{opacity:.5}
+    .empty{font-size:13px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="top">
+      <div>
+        <div class="title">Sequence</div>
+        <div class="hint">Setas movem card selecionado, `Home` topo, `End` final, `S` salva no Postgres.</div>
+      </div>
+      <div id="status" class="status">Carregando...</div>
+    </div>
+    <div id="list" class="stack"></div>
+  </div>
+  <script>
+    (() => {
+      const state = { decks: [], openDecks: new Set(), selected: null, saving: false };
+      const $ = (id) => document.getElementById(id);
+
+      function setStatus(text, isError = false) {
+        const el = $('status');
+        el.textContent = String(text || '').trim();
+        el.style.color = isError ? '#ff9a9a' : 'rgba(255,255,255,.72)';
+      }
+
+      async function loadSequence() {
+        setStatus('Carregando sequencia...');
+        const response = await fetch('/api/admin/flashcards/sequence', { credentials: 'include', cache: 'no-store' });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.success) throw new Error(payload?.message || 'Falha ao carregar sequencia.');
+        const decks = Array.isArray(payload?.state?.decks) ? payload.state.decks : [];
+        state.decks = decks
+          .filter((deck) => Number.isInteger(Number(deck?.deckLevel)))
+          .sort((a, b) => Number(a.deckLevel) - Number(b.deckLevel))
+          .map((deck) => ({
+            source: String(deck.source || '').trim(),
+            title: `Nível ${Number(deck.deckLevel)}`,
+            deckLevel: Number(deck.deckLevel),
+            items: Array.isArray(deck.items) ? deck.items.map((item) => ({
+              id: String(item?.id || '').trim(),
+              english: String(item?.english || '').trim(),
+              portuguese: String(item?.portuguese || '').trim(),
+              image: String(item?.image || '').trim()
+            })) : []
+          }));
+        setStatus(payload?.savedAt ? `Salvo em ${new Date(payload.savedAt).toLocaleString('pt-BR')}` : 'Ordem atual carregada.');
+        render();
+      }
+
+      function toggleDeck(source) {
+        if (state.openDecks.has(source)) state.openDecks.delete(source);
+        else state.openDecks.add(source);
+        render();
+      }
+
+      function selectCard(deckSource, cardId) {
+        state.selected = { deckSource, cardId };
+        render();
+      }
+
+      function selectedPointer() {
+        if (!state.selected) return null;
+        const deckIndex = state.decks.findIndex((deck) => deck.source === state.selected.deckSource);
+        if (deckIndex < 0) return null;
+        const cardIndex = state.decks[deckIndex].items.findIndex((item) => item.id === state.selected.cardId);
+        if (cardIndex < 0) return null;
+        return { deckIndex, cardIndex };
+      }
+
+      function moveSelected(mode) {
+        const pointer = selectedPointer();
+        if (!pointer) return;
+        const deck = state.decks[pointer.deckIndex];
+        const from = pointer.cardIndex;
+        const last = deck.items.length - 1;
+        let to = from;
+        if (mode === 'up') to = Math.max(0, from - 1);
+        if (mode === 'down') to = Math.min(last, from + 1);
+        if (mode === 'home') to = 0;
+        if (mode === 'end') to = last;
+        if (to === from) return;
+        const [moved] = deck.items.splice(from, 1);
+        deck.items.splice(to, 0, moved);
+        state.selected = { deckSource: deck.source, cardId: moved.id };
+        render();
+      }
+
+      async function saveSequence() {
+        if (state.saving) return;
+        state.saving = true;
+        setStatus('Salvando sequencia...');
+        try {
+          const payload = {
+            version: 1,
+            decks: state.decks.map((deck) => ({
+              source: deck.source,
+              title: deck.title,
+              deckLevel: deck.deckLevel,
+              items: deck.items.map((item) => ({
+                id: item.id,
+                english: item.english,
+                portuguese: item.portuguese,
+                image: item.image
+              }))
+            }))
+          };
+          const response = await fetch('/api/admin/flashcards/sequence', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ state: payload })
+          });
+          const json = await response.json().catch(() => null);
+          if (!response.ok || !json?.success) throw new Error(json?.message || 'Falha ao salvar sequencia.');
+          setStatus(`Salvo em ${new Date(json.savedAt || Date.now()).toLocaleString('pt-BR')}`);
+        } catch (error) {
+          setStatus(error.message || 'Falha ao salvar sequencia.', true);
+        } finally {
+          state.saving = false;
+        }
+      }
+
+      function render() {
+        const host = $('list');
+        host.innerHTML = '';
+        if (!state.decks.length) {
+          const empty = document.createElement('div');
+          empty.className = 'empty';
+          empty.textContent = 'Nenhum deck com nível definido foi encontrado.';
+          host.appendChild(empty);
+          return;
+        }
+
+        const selected = selectedPointer();
+        state.decks.forEach((deck) => {
+          const box = document.createElement('section');
+          box.className = `deck${state.openDecks.has(deck.source) ? ' is-open' : ''}`;
+
+          const head = document.createElement('button');
+          head.type = 'button';
+          head.className = 'deck-head';
+          head.innerHTML = `<strong>${deck.title}</strong><span class="deck-meta">${deck.items.length} flashcards</span>`;
+          head.onclick = () => toggleDeck(deck.source);
+          box.appendChild(head);
+
+          const items = document.createElement('div');
+          items.className = 'deck-items';
+          deck.items.forEach((item) => {
+            const row = document.createElement('button');
+            row.type = 'button';
+            row.className = 'card';
+            const isSelected = selected && selected.deckIndex >= 0
+              && state.decks[selected.deckIndex].source === deck.source
+              && state.decks[selected.deckIndex].items[selected.cardIndex]?.id === item.id;
+            if (isSelected) row.classList.add('is-selected');
+            if (selected && !isSelected) row.classList.add('is-dimmed');
+            row.innerHTML = `
+              <img src="${item.image || ''}" alt="">
+              <span class="label">${item.english || '(sem inglês)'}</span>
+              <span class="id">${item.id}</span>
+            `;
+            row.onclick = () => selectCard(deck.source, item.id);
+            items.appendChild(row);
+          });
+          box.appendChild(items);
+          host.appendChild(box);
+        });
+      }
+
+      document.addEventListener('keydown', (event) => {
+        const key = String(event.key || '').toLowerCase();
+        if (key === 's') {
+          event.preventDefault();
+          saveSequence();
+          return;
+        }
+        if (!state.selected) return;
+        if (key === 'arrowup') { event.preventDefault(); moveSelected('up'); return; }
+        if (key === 'arrowdown') { event.preventDefault(); moveSelected('down'); return; }
+        if (key === 'home') { event.preventDefault(); moveSelected('home'); return; }
+        if (key === 'end') { event.preventDefault(); moveSelected('end'); }
+      });
+
+      loadSequence().catch((error) => setStatus(error.message || 'Falha ao abrir sequence.', true));
+    })();
+  </script>
+</body>
+</html>

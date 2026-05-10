@@ -6536,6 +6536,154 @@ async function ensurePublicFlashcardDecksTable() {
   return true;
 }
 
+let flashcardsSequenceStateTableReadyPromise = null;
+
+async function ensureFlashcardsSequenceStateTable() {
+  if (!pool) return false;
+  if (!flashcardsSequenceStateTableReadyPromise) {
+    flashcardsSequenceStateTableReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.flashcards_sequence_state (
+          singleton boolean PRIMARY KEY DEFAULT true,
+          payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          updated_by bigint
+        )
+      `);
+    })().catch((error) => {
+      flashcardsSequenceStateTableReadyPromise = null;
+      throw error;
+    });
+  }
+  await flashcardsSequenceStateTableReadyPromise;
+  return true;
+}
+
+function normalizeFlashcardsSequenceCard(sourceKey, item, index) {
+  const english = readFlashcardItemEnglish(item);
+  const portuguese = readFlashcardItemPortuguese(item);
+  const image = readFlashcardItemImage(item);
+  const rawId = typeof item?.id === 'string' || typeof item?.id === 'number'
+    ? String(item.id).trim()
+    : '';
+  const id = rawId || `${sourceKey}#${index + 1}`;
+  return {
+    id,
+    english,
+    portuguese,
+    image,
+    orderIndex: index
+  };
+}
+
+async function buildDefaultFlashcardsSequenceState() {
+  if (!pool) return { decks: [] };
+  await ensurePublicFlashcardDecksTable();
+  const result = await pool.query(
+    `SELECT file_name, title, deck_level, payload
+     FROM public.flashcards_public_decks
+     WHERE deck_level IS NOT NULL
+       AND is_hidden = false
+     ORDER BY deck_level ASC, lower(title) ASC, updated_at DESC`
+  );
+
+  const decks = result.rows.map((row) => {
+    const fileName = normalizePublicFlashcardDeckFileName(row?.file_name, 'deck.json');
+    const source = `allcards/${fileName}`;
+    const title = String(row?.title || '').trim() || fileName;
+    const deckLevel = Number.parseInt(row?.deck_level, 10);
+    const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+    const items = getFlashcardPayloadItems(payload)
+      .map((item, index) => normalizeFlashcardsSequenceCard(source, item, index))
+      .filter((item) => item.english || item.portuguese);
+    return {
+      source,
+      title,
+      deckLevel: Number.isInteger(deckLevel) ? deckLevel : null,
+      items
+    };
+  }).filter((deck) => Number.isInteger(deck.deckLevel));
+
+  return {
+    version: 1,
+    savedAt: null,
+    decks
+  };
+}
+
+function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
+  const incomingDecks = Array.isArray(payload?.decks) ? payload.decks : [];
+  const fallbackMap = new Map(
+    fallbackDecks
+      .filter((deck) => deck && typeof deck === 'object')
+      .map((deck) => [String(deck.source || '').trim(), deck])
+  );
+
+  const decks = incomingDecks
+    .map((deck) => {
+      const source = String(deck?.source || '').trim();
+      if (!source || !fallbackMap.has(source)) return null;
+      const fallback = fallbackMap.get(source);
+      const deckLevel = Number.parseInt(deck?.deckLevel, 10);
+      const items = Array.isArray(deck?.items) ? deck.items : [];
+      return {
+        source,
+        title: String(deck?.title || fallback?.title || '').trim() || String(fallback?.title || '').trim(),
+        deckLevel: Number.isInteger(deckLevel) ? deckLevel : Number(fallback?.deckLevel) || null,
+        items: items
+          .map((item, index) => {
+            const rawId = String(item?.id || '').trim();
+            const fallbackItem = Array.isArray(fallback?.items) ? fallback.items.find((entry) => String(entry?.id || '').trim() === rawId) : null;
+            const id = rawId || (fallbackItem ? String(fallbackItem.id || '').trim() : `${source}#${index + 1}`);
+            if (!id) return null;
+            return {
+              id,
+              english: String(item?.english || fallbackItem?.english || '').trim(),
+              portuguese: String(item?.portuguese || fallbackItem?.portuguese || '').trim(),
+              image: String(item?.image || fallbackItem?.image || '').trim(),
+              orderIndex: index
+            };
+          })
+          .filter(Boolean)
+      };
+    })
+    .filter((deck) => deck && Number.isInteger(deck.deckLevel));
+
+  return {
+    version: 1,
+    savedAt: new Date().toISOString(),
+    decks
+  };
+}
+
+async function readFlashcardsSequenceState() {
+  if (!pool) return null;
+  await ensureFlashcardsSequenceStateTable();
+  const result = await pool.query(
+    `SELECT payload, updated_at
+     FROM public.flashcards_sequence_state
+     WHERE singleton = true
+     LIMIT 1`
+  );
+  return result.rows[0] || null;
+}
+
+async function writeFlashcardsSequenceState(payload, updatedByUserId = null) {
+  if (!pool) return null;
+  await ensureFlashcardsSequenceStateTable();
+  const result = await pool.query(
+    `INSERT INTO public.flashcards_sequence_state (singleton, payload, updated_at, updated_by)
+     VALUES (true, $1::jsonb, now(), $2)
+     ON CONFLICT (singleton) DO UPDATE
+     SET payload = EXCLUDED.payload,
+         updated_at = now(),
+         updated_by = EXCLUDED.updated_by
+     RETURNING payload, updated_at`,
+    [JSON.stringify(payload || {}), Number(updatedByUserId) || null]
+  );
+  return result.rows[0] || null;
+}
+
 async function upsertPublicFlashcardDeck({
   deckKey,
   fileName,
@@ -13134,6 +13282,61 @@ app.post('/api/admin/flashcards/public-decks/level', express.json({ limit: '256k
   }
 });
 
+app.get('/api/admin/flashcards/sequence', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const fallback = await buildDefaultFlashcardsSequenceState();
+    const savedStateRow = await readFlashcardsSequenceState();
+    const savedPayload = savedStateRow?.payload && typeof savedStateRow.payload === 'object'
+      ? savedStateRow.payload
+      : null;
+    const state = savedPayload
+      ? sanitizeFlashcardsSequencePayload(savedPayload, fallback.decks)
+      : fallback;
+
+    res.json({
+      success: true,
+      state,
+      savedAt: savedStateRow?.updated_at || null
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao carregar sequencia dos flashcards.'
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/sequence', express.json({ limit: '4mb' }), async (req, res) => {
+  try {
+    const adminUser = await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const fallback = await buildDefaultFlashcardsSequenceState();
+    const nextState = sanitizeFlashcardsSequencePayload(req.body?.state || req.body || {}, fallback.decks);
+    const saved = await writeFlashcardsSequenceState(nextState, adminUser?.id || null);
+
+    res.json({
+      success: true,
+      state: nextState,
+      savedAt: saved?.updated_at || null
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao salvar sequencia dos flashcards.'
+    });
+  }
+});
+
 app.post('/api/admin/flashcards/public-decks/delete', express.json({ limit: '256kb' }), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -18137,6 +18340,20 @@ app.get(['/levels', '/levels/', '/levels.html'], (req, res) => {
   }
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'www', 'levels.html'));
+});
+
+app.get(['/sequence', '/sequence/', '/sequence.html'], (req, res) => {
+  const payload = getAuthenticatedUserFromRequest(req);
+  if (!payload) {
+    res.redirect(302, '/entrar?return=%2Fsequence');
+    return;
+  }
+  if (!isAdminUserRecord(payload)) {
+    res.redirect(302, '/');
+    return;
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'www', 'sequence.html'));
 });
 
 app.use(express.static(staticDir));
