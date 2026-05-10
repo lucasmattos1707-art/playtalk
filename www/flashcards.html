@@ -10403,6 +10403,7 @@
           firstStageMicHintRotationTimer: 0,
           firstStageMicHintIndex: 0,
           idleAutoPauseTimer: 0,
+          sessionClockActive: false,
           orderedPoolCursor: {
             base: -1,
             review: -1
@@ -13566,8 +13567,12 @@
             }
             return null;
           }
+          if (normalizedAction === 'in') {
+            state.game.sessionClockActive = true;
+          }
           if (normalizedAction === 'out') {
             state.entry.pendingFlashSessionOut = false;
+            state.game.sessionClockActive = false;
           }
           if (normalizedAction === 'out' && Number.isFinite(Number(payload?.trainingTimeMs))) {
             state.stats.trainingTimeMs = Math.max(0, Math.round(Number(payload.trainingTimeMs) || 0));
@@ -22212,6 +22217,9 @@
           await wait(180);
         }
         state.game.currentId = state.game.queue.shift();
+        if (!state.game.sessionClockActive) {
+          void signalFlashcardSessionClock('in');
+        }
         if (isTrainingMode()) {
           state.game.training.cycleIndex = Math.max(1, (Number(state.game.training.sourceIds?.length) || 0) - state.game.queue.length);
         }
@@ -22403,7 +22411,6 @@
 
         updateGameChips();
         scheduleGameIdleAutoPause();
-        void signalFlashcardSessionClock('in');
         advanceToNextCard();
       }
 
@@ -22531,7 +22538,6 @@
 
         updateGameChips();
         scheduleGameIdleAutoPause();
-        void signalFlashcardSessionClock('in');
         scheduleFlashcardCloudSync(200);
         if (restored && state.game.currentId) {
           renderCurrentCard();
@@ -22598,19 +22604,24 @@
 
         updateGameChips();
         scheduleGameIdleAutoPause();
-        void signalFlashcardSessionClock('in');
         advanceToNextCard();
       }
 
       function pauseFlashcardsGameToWelcome() {
         if (!state.game.active) return;
         clearGameIdleAutoPauseTimer();
+        state.game.sessionClockActive = false;
         void signalFlashcardSessionClock('out');
         commitCurrentCardTrainingTime();
         if (!state.game.tutorial.active && state.game.entries.size) {
           persistGameSessionLocally();
         }
         state.ui.gamePausedAtWelcome = true;
+        state.entry.flashStartInFlight = false;
+        state.entry.welcomeFlashStartAt = 0;
+        state.entry.welcomeStartRequested = false;
+        state.entry.pendingPlayStart = false;
+        window.PlaytalkLoader?.hide?.('welcome-flash-start', { force: true });
         state.ui.gamePausedAtDailyPlan = false;
         state.game.listening = false;
         cleanupGameRecognition();
@@ -22664,6 +22675,7 @@
       async function exitGame() {
         state.ui.gamePausedAtWelcome = false;
         clearGameIdleAutoPauseTimer();
+        state.game.sessionClockActive = false;
         await signalFlashcardSessionClock('out');
         clearGameStatusRankTimer();
         commitCurrentCardTrainingTime();
@@ -23755,6 +23767,11 @@
         window.addEventListener('offline', () => {
           if (!state.game.active || state.game.paused) return;
           pauseFlashcardsGameToWelcome();
+        });
+        window.addEventListener('beforeunload', () => {
+          if (!state.game.active || state.game.paused) return;
+          state.game.sessionClockActive = false;
+          void signalFlashcardSessionClock('out');
         });
         window.addEventListener('online', () => {
           if (state.entry.pendingFlashSessionOut) {

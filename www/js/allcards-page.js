@@ -4,7 +4,7 @@
     'playtalk-flashcards-cards-v3-postgres',
     'playtalk-flashcards-cards-v2'
   ];
-  const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
+  const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v4';
   const OWNED_STORAGE_KEY = 'playtalk-flashcards-owned-v2';
   const LAST_ACTIVE_USER_STORAGE_KEY = 'playtalk-flashcards-last-user-v1';
   const DATA_MANIFEST_REMOTE_PATH = '/api/flashcards/manifest';

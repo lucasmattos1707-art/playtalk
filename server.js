@@ -4947,6 +4947,7 @@ const closeFlashcardSessionClock = async (userId) => {
       ? Math.max(0, nowMs - flashInAt)
       : 0;
 
+    const addedPracticeSeconds = Math.max(0, Math.round(addedTrainingMs / 1000));
     if (addedTrainingMs > 0) {
       await client.query(
         `INSERT INTO public.user_flashcard_stats (
@@ -4966,6 +4967,16 @@ const closeFlashcardSessionClock = async (userId) => {
            training_time_ms = public.user_flashcard_stats.training_time_ms + EXCLUDED.training_time_ms,
            updated_at = now()`,
         [normalizedUserId, addedTrainingMs]
+      );
+      await client.query(
+        `INSERT INTO public.user_books_consumption_stats (
+           user_id, reading_chars, speaking_chars, listening_chars, practice_seconds, updated_at
+         ) VALUES ($1, 0, 0, 0, $2, now())
+         ON CONFLICT (user_id)
+         DO UPDATE SET
+           practice_seconds = public.user_books_consumption_stats.practice_seconds + EXCLUDED.practice_seconds,
+           updated_at = now()`,
+        [normalizedUserId, addedPracticeSeconds]
       );
     }
 
@@ -4996,6 +5007,7 @@ const closeFlashcardSessionClock = async (userId) => {
     return {
       success: true,
       addedTrainingMs,
+      addedPracticeSeconds,
       trainingTimeMs: Math.max(0, Number(totalResult.rows[0]?.training_time_ms) || 0)
     };
   } catch (error) {
@@ -14078,7 +14090,7 @@ app.get('/api/books/stats', async (req, res) => {
       readingChars: Math.max(0, Number(consumption.reading_chars) || 0),
       speakingChars: Math.max(0, Number(consumption.speaking_chars) || 0),
       listeningChars: Math.max(0, Number(consumption.listening_chars) || 0),
-      practiceSeconds: 0,
+      practiceSeconds: Math.max(0, Number(consumption.practice_seconds) || 0),
       accountAgeDays,
       presenceClass,
       consistencyPercent,
