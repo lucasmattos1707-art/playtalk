@@ -10709,7 +10709,8 @@
           micCheckRecognition: null,
           gameOptionsSlideIndex: 0,
           gameOptionsCardSwipeStartX: 0,
-          gameOptionsCardSwipeStartY: 0
+          gameOptionsCardSwipeStartY: 0,
+          gameOptionsSnapshotBeforeOpen: null
         },
         options: {
           difficulty: DEFAULT_GAME_OPTIONS.difficulty,
@@ -13883,6 +13884,9 @@
       }
 
       function isFourthStarUsingSecondStarBlocks() {
+        const userChoice = normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping);
+        if (userChoice === 'on') return false;
+        if (userChoice === 'off') return true;
         return Boolean(state.entry.fourthStarUsesSecondStarBlocks);
       }
 
@@ -16042,17 +16046,44 @@
       function openGameOptionsModal() {
         if (!els.gameOptionsModal) return;
         pauseFlashcardsGameForDailyPlan();
+        state.ui.gameOptionsSnapshotBeforeOpen = {
+          difficulty: normalizeGameOptionValue('difficulty', state.options?.difficulty),
+          speed: normalizeGameOptionValue('speed', state.options?.speed),
+          accent: normalizeGameOptionValue('accent', state.options?.accent),
+          fourthStageTyping: normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping)
+        };
         state.entry.gameOptionsOpen = true;
         els.gameOptionsModal.classList.add('is-visible');
         els.gameOptionsModal.setAttribute('aria-hidden', 'false');
         renderGameOptionsModal();
       }
 
+      function applyGameOptionsAfterModalClose(previousOptions) {
+        if (!previousOptions || !state.game.active) return;
+        const previousDifficulty = normalizeGameOptionValue('difficulty', previousOptions.difficulty);
+        const nextDifficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
+        const previousFourthTyping = normalizeGameOptionValue('fourthStageTyping', previousOptions.fourthStageTyping);
+        const nextFourthTyping = normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping);
+        const difficultyChanged = previousDifficulty !== nextDifficulty;
+        const fourthTypingChanged = previousFourthTyping !== nextFourthTyping;
+        if (difficultyChanged && !state.game.tutorial?.active) {
+          clearGameSessionLocally();
+          beginGame();
+          return;
+        }
+        if (fourthTypingChanged && state.game.currentId && state.game.entries.has(state.game.currentId)) {
+          renderCurrentCard();
+        }
+      }
+
       function closeGameOptionsModal() {
         if (!state.entry.gameOptionsOpen || !els.gameOptionsModal) return;
+        const previousOptions = state.ui.gameOptionsSnapshotBeforeOpen;
+        state.ui.gameOptionsSnapshotBeforeOpen = null;
         state.entry.gameOptionsOpen = false;
         els.gameOptionsModal.classList.remove('is-visible');
         els.gameOptionsModal.setAttribute('aria-hidden', 'true');
+        applyGameOptionsAfterModalClose(previousOptions);
         resumeFlashcardsGameFromDailyPlan();
       }
 
@@ -20413,10 +20444,6 @@
 
       function isTypingStage(entry) {
         const stageConfig = STAGES[resolveEntryStageNumber(entry)] || STAGES[1];
-        if (stageConfig.key === 'fourth-star') {
-          return normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping) === 'on'
-            || stageConfig.inputMode === 'typing';
-        }
         return stageConfig.inputMode === 'typing';
       }
 
