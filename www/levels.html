@@ -24,6 +24,10 @@
     @media (max-width:520px){.toolbar{grid-template-columns:repeat(3,minmax(0,1fr))}}
     .hidden{display:none!important}.muted,.mini{color:rgba(255,255,255,.72)}.mini{font-size:12px}.field{display:flex;flex-direction:column;gap:6px;min-width:180px}.field input,.field textarea,.field select{padding:10px 12px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(255,255,255,.08);color:#fff}
     .card{position:relative;overflow:hidden;padding:12px;display:flex;flex-direction:column;gap:10px}.visual,.charpic{border:none;background:rgba(255,255,255,.08) center/cover no-repeat;display:grid;place-items:center;color:rgba(255,255,255,.72)}
+    .card-select-dot{position:absolute;top:8px;left:8px;width:22px;height:22px;border-radius:999px;border:2px solid rgba(144,216,255,.95);background:rgba(144,216,255,.28);z-index:3;padding:0;display:grid;place-items:center}
+    .card-select-dot::after{content:'';width:10px;height:10px;border-radius:999px;background:transparent}
+    .card.is-selected .card-select-dot{background:rgba(89,184,255,.95);border-color:#e9f8ff}
+    .card.is-selected .card-select-dot::after{background:#fff}
     .card.has-audio::after{content:'';position:absolute;left:0;right:0;bottom:0;height:30%;pointer-events:none;background:linear-gradient(180deg,rgba(56,214,120,0) 0%,rgba(56,214,120,.16) 45%,rgba(56,214,120,.36) 100%);box-shadow:0 18px 28px rgba(56,214,120,.18)}
     .visual{position:relative;width:139px;height:139px;border-radius:999px;padding:12px;margin:0 auto;background-size:cover;background-position:center;transition:filter 1000ms ease,opacity 1000ms ease}.visual.has-image{border:none;box-shadow:none}.visual.is-loading::after{content:'';position:absolute;inset:-6px;border-radius:999px;border:3px solid rgba(255,255,255,.16);border-top-color:#fff;animation:spin 1s linear infinite}.visual.is-audio-pending{filter:grayscale(1);opacity:.5}.visual.is-restoring{animation:visualColorRestore 1000ms ease}.visual svg{width:34px;height:34px;fill:#8f8f8f}.charpic{width:70px;height:70px;border-radius:16px}.textbtn{text-align:left;min-height:56px;display:flex;align-items:center;font-size:20px;line-height:1.35;font-weight:700;background:transparent;border-color:transparent}.textbtn small{display:none}
     .asset-sync-check{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-size:17px;font-weight:900;border:1px solid transparent;box-shadow:0 10px 20px rgba(0,0,0,.28);pointer-events:none}
@@ -314,11 +318,11 @@
     <div class="popover-card send-popover-card" role="dialog" aria-modal="true">
       <div class="deck-audio-upload">
         <div><div class="mini">Upload manual de MP3</div><h2 style="margin:6px 0 0">Trocar audios do deck</h2></div>
-        <div class="mini" id="deckAudioReplaceHint">Selecione os MP3 em ordem. Cada arquivo substitui o audio do proximo flashcard completo do deck aberto e depois publica no Fluent LevelUp.</div>
+        <div class="mini" id="deckAudioReplaceHint">Selecione os MP3 em ordem. Com cards selecionados, substitui apenas os selecionados; sem selecao, segue os proximos flashcards completos do deck aberto.</div>
         <div class="field"><label for="deckAudioReplaceInput">Arquivos MP3</label><input id="deckAudioReplaceInput" type="file" accept="audio/mpeg,.mp3" multiple></div>
         <div class="mini" id="deckAudioReplaceSummary">Nenhum MP3 selecionado.</div>
         <div id="deckAudioReplaceStatus" class="deck-audio-upload__status">Abra um deck com editcards antes de usar addnewsongs.</div>
-        <div class="row" style="justify-content:space-between"><button id="deckAudioReplaceCloseBtn" type="button">Fechar</button><button id="deckAudioReplaceApplyBtn" class="accent" type="button">Trocar e publicar</button></div>
+        <div class="row" style="justify-content:space-between"><button id="deckAudioReplaceCloseBtn" type="button">Fechar</button><button id="deckAudioReplaceApplyBtn" class="accent" type="button">Trocar audios</button></div>
       </div>
     </div>
   </div>
@@ -477,9 +481,11 @@
       let pendingImage=null,pendingAudio=null,currentAudio=null,audioBatchTargets={pt:false,en:false},aiBatchBusy=false,aiTextBusy=false,zipBusy=false,elevenBusy=false,r2UploadBusy=false,publishLocalBusy=false,feedbackToastTimer=0;
       let watchRuntime=null,watchVoiceAudio=null,watchMusicAudio=null,watchLibraryCache=null,editableDeckOptionsCache=null,watchObjectUrlPool=[];
       const postgresDeckSyncTimers=new Map();
+      const dirtyDeckPaths=new Set();
       const visualClickTimers=new Map();
       const aiImageLocks=new Set();
       const flashcardAssetSyncState=new WeakMap();
+      let selectionAnchorKey='';
       const FLASHCARD_ASSET_SYNC_FEEDBACK_MS=10000;
       const defaultItem=()=>({imageFile:'',imageDataUrl:'',imageRemoteUrl:'',imageVersion:0,imageMuted:false,imageRestoreFx:false,pt:'',en:'',imagePrompt:'',category:'flashcard',tense:'present-simple',sentenceForm:'affirmative',audioFile:'',audioDataUrl:'',audioRemoteUrl:'',audioPtFile:'',audioPtDataUrl:'',audioEnFile:'',audioEnDataUrl:'',characterId:''});
       const defaultChar=input=>{const normalizedKey=String(input||'').trim().toLowerCase()==='jessa'?'jessica':String(input||'').trim().toLowerCase();const base=typeof input==='number'?SCENE_CHARACTERS[input]||SCENE_CHARACTERS[0]:SCENE_CHARACTER_MAP.get(normalizedKey)||SCENE_CHARACTERS[0];return{id:base.id,name:base.name,voiceId:base.voiceId,defaultImageFile:base.defaultImageFile,imageFile:'',imageDataUrl:''}};
@@ -785,21 +791,16 @@
         if(!response.ok)throw new Error(result?.message||result?.details||'Falha ao atualizar deck no Postgres.');
         return result;
       }
+      function markDeckDirty(deckPath){
+        const normalizedPath=String(deckPath||'').trim();
+        if(!normalizedPath||!adminStudio.enabled)return;
+        dirtyDeckPaths.add(normalizedPath);
+      }
       function queuePersistDeckByPath(deckPath,{delay=120}={}){
         const normalizedPath=String(deckPath||'').trim();
         const deck=findDeckByPath(normalizedPath);
         if(!deck||!adminStudio.enabled)return;
-        const previousTimer=postgresDeckSyncTimers.get(normalizedPath);
-        if(previousTimer)window.clearTimeout(previousTimer);
-        const timer=window.setTimeout(async()=>{
-          postgresDeckSyncTimers.delete(normalizedPath);
-          try{
-            await persistDeckToPostgres(deck);
-          }catch(error){
-            showFeedbackToast(error?.message||'Nao consegui atualizar o Postgres agora.');
-          }
-        },Math.max(0,Number(delay)||0));
-        postgresDeckSyncTimers.set(normalizedPath,timer);
+        markDeckDirty(normalizedPath);
       }
       function syncSelectedDeckFromEditor(){
         const deck=findDeckByPath(editCardsState.selectedPath);
@@ -819,6 +820,30 @@
         const deck=syncSelectedDeckFromEditor();
         if(!deck)return;
         queuePersistDeckByPath(deck.path,{delay});
+      }
+      async function persistDirtyDecksNow(){
+        if(!adminStudio.enabled)return 0;
+        const targets=Array.from(dirtyDeckPaths.values()).map(path=>findDeckByPath(path)).filter(Boolean);
+        if(!targets.length){
+          showFeedbackToast('Nenhum deck pendente para salvar no Postgres.');
+          return 0;
+        }
+        let saved=0;
+        let firstError='';
+        for(const deck of targets){
+          try{
+            await persistDeckToPostgres(deck);
+            dirtyDeckPaths.delete(String(deck.path||'').trim());
+            saved+=1;
+          }catch(error){
+            if(!firstError)firstError=error?.message||'Falha ao salvar decks no Postgres.';
+          }
+        }
+        if(firstError){
+          throw new Error(firstError);
+        }
+        showFeedbackToast(`${saved} deck(s) salvo(s) no Postgres.`);
+        return saved;
       }
       const safeBase=(name,fallback)=>String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase()||fallback;
       const safeFile=(name,ext,fallback)=>`${safeBase(name,fallback)}.${ext}`,ext=name=>(String(name).split('.').pop()||'').toLowerCase();
@@ -1476,7 +1501,16 @@
       }
       function openPastePopover(){$('pasteArea').value='';$('pastePopover').classList.remove('hidden');$('pastePopover').setAttribute('aria-hidden','false')}
       function closePastePopover(){$('pastePopover').classList.add('hidden');$('pastePopover').setAttribute('aria-hidden','true')}
-      function deckAudioReplaceTargets(){return state.items.map((item,index)=>({item,index})).filter(entry=>String(entry?.item?.pt||'').trim()&&String(entry?.item?.en||'').trim())}
+      function deckAudioReplaceTargets(){
+        const selectedEntries=getSelectedEditorEntries();
+        const selectedTargets=selectedEntries
+          .map(entry=>({item:state.items[Number(entry.itemIndex)],index:Number(entry.itemIndex)}))
+          .filter(entry=>entry.item&&Number.isInteger(entry.index)&&entry.index>=0);
+        const source=selectedTargets.length
+          ? selectedTargets
+          : state.items.map((item,index)=>({item,index}));
+        return source.filter(entry=>String(entry?.item?.pt||'').trim()&&String(entry?.item?.en||'').trim());
+      }
       function isMp3UploadFile(file){const name=String(file?.name||'').trim().toLowerCase(),type=String(file?.type||'').trim().toLowerCase();return name.endsWith('.mp3')||type==='audio/mpeg'||type==='audio/mp3'}
       function ensureDeckAudioReplaceReady(){
         if(!adminStudio.enabled)throw new Error('Entre com um usuario administrador para usar addnewsongs.');
@@ -1505,12 +1539,12 @@
         else if(!targetCount)fallbackStatus='O deck aberto ainda nao tem flashcards completos para trocar audio.';
         else if(selectedCount&&remainingCount>0)fallbackStatus=`${remainingCount} flashcard(s) vao manter o audio atual nesta rodada.`;
         else if(selectedCount&&ignoredCount>0)fallbackStatus=`${ignoredCount} MP3 extra(s) serao ignorados.`;
-        else if(selectedCount)fallbackStatus='Pronto para substituir os audios do deck e publicar.';
+        else if(selectedCount)fallbackStatus='Pronto para substituir os audios do deck.';
         status.textContent=deckAudioReplaceState.status||fallbackStatus;
         status.classList.toggle('is-error',!!deckAudioReplaceState.statusError);
         input.disabled=deckAudioReplaceState.busy;
         applyBtn.disabled=deckAudioReplaceState.busy||!selectedCount||!targetCount||!adminStudio.enabled||state.mode!=='flashcard'||editCardsState.searchMode||!hasOpenedDeckContext();
-        applyBtn.textContent=deckAudioReplaceState.busy?'Trocando...':'Trocar e publicar';
+        applyBtn.textContent=deckAudioReplaceState.busy?'Trocando...':'Trocar audios';
         closeBtn.disabled=deckAudioReplaceState.busy;
       }
       function resetDeckAudioReplaceState(){
@@ -1548,6 +1582,7 @@
           target.item.audioRemoteUrl='';
         }
         save();
+        queuePersistCurrentEditorDeck({delay:0});
         renderAll();
         return{
           usedCount,
@@ -1565,14 +1600,11 @@
           deckAudioReplaceState.statusError=false;
           syncDeckAudioReplacePopover();
           const appliedSummary=await replaceDeckAudiosFromUpload(deckAudioReplaceState.files);
-          deckAudioReplaceState.status=`${appliedSummary.usedCount} audio(s) preparado(s). Publicando no Fluent LevelUp...`;
-          syncDeckAudioReplacePopover();
-          await publishAdminFlashcardsLocal({force:true});
           deckAudioReplaceState.files=[];
           const input=$('deckAudioReplaceInput');
           if(input)input.value='';
           deckAudioReplaceState.statusError=false;
-          deckAudioReplaceState.status=`${appliedSummary.usedCount} audio(s) substituido(s) e publicados.${appliedSummary.remainingCount?` ${appliedSummary.remainingCount} card(s) mantiveram o audio atual.`:''}${appliedSummary.ignoredCount?` ${appliedSummary.ignoredCount} MP3 extra(s) foram ignorados.`:''}`;
+          deckAudioReplaceState.status=`${appliedSummary.usedCount} audio(s) substituido(s).${appliedSummary.remainingCount?` ${appliedSummary.remainingCount} card(s) mantiveram o audio atual.`:''}${appliedSummary.ignoredCount?` ${appliedSummary.ignoredCount} MP3 extra(s) foram ignorados.`:''} Pressione S para salvar no Postgres.`;
         }catch(error){
           deckAudioReplaceState.status=error?.message||'Erro ao trocar os audios do deck.';
           deckAudioReplaceState.statusError=true;
@@ -1701,7 +1733,45 @@
       const normalizeAdminUsername=value=>String(value||'').trim().toLowerCase();
       const isAdminStudioEnabled=()=>adminStudio.enabled&&state.mode==='flashcard'&&!editCardsState.searchMode;
       function setAdminStudioStatus(message,isError=false){adminStudio.status=String(message||'').trim()||'Painel do admin pronto.';adminStudio.statusError=Boolean(isError)}
-      function clearAdminSelection(){adminStudio.selected.clear()}
+      function clearAdminSelection(){adminStudio.selected.clear();selectionAnchorKey=''}
+      function entrySelectionKey(entry){return entryStorageKey(entry)}
+      function selectedEntriesInView(){
+        const selectedKeys=new Set(Array.from(adminStudio.selected.values()));
+        return renderableFlashcardEntries().filter(entry=>selectedKeys.has(entrySelectionKey(entry)));
+      }
+      function getSelectedEditorEntries(){
+        return selectedEntriesInView().filter(entry=>entry?.source==='editor');
+      }
+      function applyRangeSelection(targetEntryKey){
+        const entries=renderableFlashcardEntries();
+        if(!entries.length)return;
+        const targetIndex=entries.findIndex(entry=>entrySelectionKey(entry)===targetEntryKey);
+        if(targetIndex<0)return;
+        const anchorIndex=selectionAnchorKey
+          ? entries.findIndex(entry=>entrySelectionKey(entry)===selectionAnchorKey)
+          : -1;
+        const from=anchorIndex>=0?Math.min(anchorIndex,targetIndex):targetIndex;
+        const to=anchorIndex>=0?Math.max(anchorIndex,targetIndex):targetIndex;
+        adminStudio.selected.clear();
+        for(let index=from;index<=to;index+=1){
+          adminStudio.selected.add(entrySelectionKey(entries[index]));
+        }
+      }
+      function toggleEntrySelection(entry,{range=false}={}){
+        if(!entry)return;
+        const key=entrySelectionKey(entry);
+        if(!key)return;
+        if(range){
+          applyRangeSelection(key);
+        }else if(adminStudio.selected.has(key)){
+          adminStudio.selected.delete(key);
+        }else{
+          adminStudio.selected.add(key);
+        }
+        selectionAnchorKey=key;
+        syncAdminStudioControls();
+        syncAdminRenderedItems();
+      }
       function normalizedSearchText(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()}
       function itemMatchesAdminSearch(item){const query=normalizedSearchText(adminStudio.search);if(!query)return true;const haystack=normalizedSearchText([item?.pt,item?.en,item?.category].filter(Boolean).join(' '));return haystack.includes(query)}
       function isInteractiveAdminTarget(target){return Boolean(target?.closest('button,input,select,textarea,label,a'))}
@@ -1709,11 +1779,138 @@
       function deleteItemImage(index){clearVisualClickTimer(index);const item=state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);item.imageFile='';item.imageDataUrl='';item.imageRemoteUrl='';item.imageVersion=0;item.imageMuted=false;item.imageRestoreFx=false;queuePersistCurrentEditorDeck();save();renderAll()}
       function deleteItemAudio(index){const item=state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);item.audioFile='';item.audioDataUrl='';item.audioRemoteUrl='';queuePersistCurrentEditorDeck();save();renderAll()}
       function deleteItemContainer(index){if(index<0||index>=state.items.length)return;clearVisualClickTimer(index);state.items.splice(index,1);clearAdminSelection();closeItemAdminPopover();queuePersistCurrentEditorDeck({delay:60});save();renderAll()}
-      function toggleAdminItemSelection(index){if(adminStudio.selected.has(index))adminStudio.selected.delete(index);else adminStudio.selected.add(index);syncAdminStudioControls();syncAdminRenderedItems()}
+      function toggleAdminItemSelection(index){const entry={source:'editor',index,itemIndex:index,deckPath:editCardsState.selectedPath||''};toggleEntrySelection(entry)}
       function toggleAdminSelectionMode(){adminStudio.selectMode=!adminStudio.selectMode;if(!adminStudio.selectMode)clearAdminSelection();closeItemAdminPopover();syncAdminStudioControls();syncAdminRenderedItems()}
       function openItemAdminPopover(index){if(!isAdminStudioEnabled())return;adminStudio.activeMenuIndex=index;$('itemAdminPopoverTitle').textContent=`Acoes do flashcard ${index+1}`;$('itemAdminPopover').classList.remove('hidden');$('itemAdminPopover').setAttribute('aria-hidden','false')}
-      function deleteSelectedImages(){if(!isAdminStudioEnabled()||!adminStudio.selected.size)return;adminStudio.selected.forEach(index=>{clearVisualClickTimer(index);const item=state.items[index];if(!item)return;item.imageFile='';item.imageDataUrl='';item.imageRemoteUrl='';item.imageVersion=0;item.imageMuted=false;item.imageRestoreFx=false});queuePersistCurrentEditorDeck();save();renderAll()}
-      function deleteSelectedAudios(){if(!isAdminStudioEnabled()||!adminStudio.selected.size)return;adminStudio.selected.forEach(index=>{const item=state.items[index];if(!item)return;item.audioFile='';item.audioDataUrl='';item.audioRemoteUrl=''});queuePersistCurrentEditorDeck();save();renderAll()}
+      function deleteSelectedImages(){if(!isAdminStudioEnabled()||!adminStudio.selected.size)return;getSelectedEditorEntries().forEach(entry=>{const index=Number(entry.itemIndex);clearVisualClickTimer(index);const item=state.items[index];if(!item)return;item.imageFile='';item.imageDataUrl='';item.imageRemoteUrl='';item.imageVersion=0;item.imageMuted=false;item.imageRestoreFx=false});queuePersistCurrentEditorDeck();save();renderAll()}
+      function deleteSelectedAudios(){if(!isAdminStudioEnabled()||!adminStudio.selected.size)return;getSelectedEditorEntries().forEach(entry=>{const item=state.items[Number(entry.itemIndex)];if(!item)return;item.audioFile='';item.audioDataUrl='';item.audioRemoteUrl=''});queuePersistCurrentEditorDeck();save();renderAll()}
+      function cloneDeckItemValue(value){
+        try{
+          return typeof structuredClone==='function'
+            ? structuredClone(value)
+            : JSON.parse(JSON.stringify(value||{}));
+        }catch(_error){
+          return {...(value||{})};
+        }
+      }
+      async function moveSelectedCardsToDeck(){
+        const selected=selectedEntriesInView();
+        if(!selected.length){
+          alert('Selecione pelo menos um card.');
+          return;
+        }
+        const deckOptions=(editCardsState.decks||[]).filter(deck=>String(deck?.path||'').trim());
+        if(!deckOptions.length){
+          alert('Nenhum deck encontrado para mover.');
+          return;
+        }
+        const menu=deckOptions.map((deck,index)=>`${index+1}. ${deck.title||'Deck'} (${deck.path})`).join('\n');
+        const answer=window.prompt(`Mover ${selected.length} card(s) para qual deck?\n\n${menu}\n\nDigite o numero ou o path do deck:`,String(editCardsState.selectedPath||''));
+        if(answer===null)return;
+        const byNumber=Number.parseInt(String(answer||'').trim(),10);
+        let targetDeck=null;
+        if(Number.isInteger(byNumber)&&byNumber>=1&&byNumber<=deckOptions.length){
+          targetDeck=deckOptions[byNumber-1];
+        }else{
+          const normalizedPath=String(answer||'').trim();
+          targetDeck=deckOptions.find(deck=>String(deck.path||'').trim()===normalizedPath)||null;
+        }
+        if(!targetDeck){
+          alert('Deck de destino invalido.');
+          return;
+        }
+        if(!targetDeck.data||!Array.isArray(targetDeck.data.items))targetDeck.data={...(targetDeck.data||{}),items:[]};
+        const selectedByOrder=selected.slice();
+        const payloadToAppend=[];
+        selectedByOrder.forEach(entry=>{
+          if(entry.source==='search'){
+            const sourceDeck=findDeckByPath(entry.deckPath);
+            const sourceItem=sourceDeck?.data?.items?.[Number(entry.itemIndex)];
+            if(sourceItem)payloadToAppend.push(cloneDeckItemValue(sourceItem));
+            return;
+          }
+          const sourceItem=state.items[Number(entry.itemIndex)];
+          if(sourceItem){
+            const raw={};
+            applyEditorItemIntoDeckEntry(sourceItem,raw,entry.deckDay||state.day);
+            payloadToAppend.push(raw);
+          }
+        });
+        const grouped=new Map();
+        selectedByOrder.forEach(entry=>{
+          const deckPath=entry.source==='search'
+            ? String(entry.deckPath||'').trim()
+            : String(editCardsState.selectedPath||state.publicDeckPath||'').trim();
+          if(!deckPath)return;
+          if(!grouped.has(deckPath))grouped.set(deckPath,[]);
+          grouped.get(deckPath).push(Number(entry.itemIndex));
+        });
+        grouped.forEach((indexes,deckPath)=>{
+          const deck=findDeckByPath(deckPath);
+          if(!deck||!deck.data||!Array.isArray(deck.data.items))return;
+          Array.from(new Set(indexes)).sort((a,b)=>b-a).forEach(index=>{
+            if(index>=0&&index<deck.data.items.length){
+              deck.data.items.splice(index,1);
+            }
+          });
+          deck.count=deck.data.items.length;
+          markDeckDirty(deckPath);
+        });
+        targetDeck.data.items.push(...payloadToAppend);
+        targetDeck.count=targetDeck.data.items.length;
+        markDeckDirty(targetDeck.path);
+        const currentSelectedPath=String(editCardsState.selectedPath||'').trim();
+        if(currentSelectedPath&&grouped.has(currentSelectedPath)){
+          const currentDeck=findDeckByPath(currentSelectedPath);
+          if(currentDeck&&Array.isArray(currentDeck.data?.items)){
+            state.items=currentDeck.data.items.map(entry=>flashcardEditorItemFromDeckEntry(entry));
+          }
+        }
+        if(String(targetDeck.path||'').trim()===currentSelectedPath){
+          state.items=targetDeck.data.items.map(entry=>flashcardEditorItemFromDeckEntry(entry));
+        }
+        clearAdminSelection();
+        syncDeckSearchResults();
+        save();
+        renderAll();
+        alert(`${payloadToAppend.length} card(s) movido(s) para ${targetDeck.title||targetDeck.path}.`);
+      }
+      function moveSingleSelectedCardInDeck(){
+        const selected=getSelectedEditorEntries();
+        if(selected.length!==1){
+          alert('Selecione exatamente 1 card para mover com M.');
+          return;
+        }
+        const index=Number(selected[0].itemIndex);
+        if(!Number.isInteger(index)||index<0||index>=state.items.length){
+          alert('Card selecionado invalido.');
+          return;
+        }
+        const answer=window.prompt(`Mover card ${index+1} para qual posicao?`,String(index+1));
+        if(answer===null)return;
+        const targetPos=Number.parseInt(String(answer||'').trim(),10);
+        if(!Number.isInteger(targetPos)||targetPos<1||targetPos>state.items.length){
+          alert(`Digite uma posicao entre 1 e ${state.items.length}.`);
+          return;
+        }
+        const toIndex=targetPos-1;
+        if(toIndex===index)return;
+        const [moved]=state.items.splice(index,1);
+        state.items.splice(toIndex,0,moved);
+        queuePersistCurrentEditorDeck({delay:0});
+        const refreshedEntries=renderableFlashcardEntries();
+        const nextEntry=refreshedEntries[toIndex];
+        clearAdminSelection();
+        if(nextEntry){
+          const key=entrySelectionKey(nextEntry);
+          if(key){
+            adminStudio.selected.add(key);
+            selectionAnchorKey=key;
+          }
+        }
+        save();
+        renderAll();
+      }
       function resolvePublishDeckIdentity(options={}){
         const optionFileName=typeof options?.fileName==='string'?String(options.fileName).trim():'';
         const optionSource=typeof options?.source==='string'?String(options.source).trim():'';
@@ -1816,8 +2013,8 @@
       }
       async function publishJsonBatchDeckFiles(files){if(!adminStudio.enabled)throw new Error('Acesso restrito ao administrador.');jsonBatchPublishState.busy=true;jsonBatchPublishState.results=[];syncJsonBatchPublishPopover();try{const normalizedFiles=[];for(let index=0;index<files.length;index+=1){const file=files[index];try{const raw=await asText(file),parsed=JSON.parse(raw),payload=normalizeJsonBatchPayload(parsed,file.name);normalizedFiles.push({name:file.name,content:JSON.stringify(payload,null,2)})}catch(error){jsonBatchPublishState.results[index]={error:true,message:error.message||'Falha ao validar o deck.'}}syncJsonBatchPublishPopover()}if(!normalizedFiles.length)throw new Error('Nenhum deck valido foi selecionado para subir no Postgres.');const result=await uploadJsonDecksToPostgres(normalizedFiles);const uploadedDecks=Array.isArray(result?.decks)?result.decks:[];let uploadedIndex=0;for(let index=0;index<files.length;index+=1){if(jsonBatchPublishState.results[index]?.error)continue;const deck=uploadedDecks[uploadedIndex]||null;uploadedIndex+=1;jsonBatchPublishState.results[index]={ok:true,message:deck?.title?`Deck "${deck.title}" salvo no Postgres.`:'Deck salvo no Postgres.'}}await refreshEditCardsDeckPicker()}finally{jsonBatchPublishState.busy=false;syncJsonBatchPublishPopover()}}
       async function hydrateAdminStudio(){try{const response=await fetch('/auth/session',{credentials:'include',cache:'no-store'});if(!response.ok){window.location.href='/entrar?return=%2Flevels';return}const payload=await response.json();const user=payload?.user||{},username=normalizeAdminUsername(user?.username||user?.email||''),isAdminFlag=user?.is_admin===true||user?.isAdmin===true;adminStudio.checked=true;adminStudio.username=username;adminStudio.enabled=Boolean(isAdminFlag||ADMIN_USERNAMES.has(username));editCardsState.visible=adminStudio.enabled;setAdminStudioStatus(adminStudio.enabled?`Painel admin ativo para ${username||'admin'}. Envio manual pronto.`:'Painel admin oculto. Entre com adm/admin para liberar.');renderAll();if(adminStudio.enabled)ensureEditCardsDeckPickerReady().catch(error=>{console.error('Falha ao carregar decks automaticamente',error);editCardsState.loading=false;syncEditCardsDeckPicker();showFeedbackToast(error?.message||'Nao foi possivel carregar os decks agora.')});else syncEditCardsDeckPicker()}catch(error){window.location.href='/entrar?return=%2Flevels'}}
-      function syncAdminStudioControls(){const enabled=isAdminStudioEnabled(),selectedCount=adminStudio.selected.size;$('adminStudioBar').classList.toggle('hidden',!enabled);$('adminSelectBtn').disabled=!enabled;$('adminSelectBtn').textContent=adminStudio.selectMode?'Cancelar selecao':'Selecionar';$('adminBatchClearImageBtn').disabled=!enabled||!selectedCount;$('adminBatchClearAudioBtn').disabled=!enabled||!selectedCount;$('publishLocalBtn').disabled=!enabled||adminStudio.publishBusy;$('publishLocalBtn').textContent=adminStudio.publishBusy?'Enviando...':'Enviar para Fluent LevelUp';const sendPlaytalkBtn=$('sendPlaytalkBtn');if(sendPlaytalkBtn)sendPlaytalkBtn.disabled=!enabled||adminStudio.publishBusy;$('adminSearchInput').value=adminStudio.search||'';$('adminSearchInput').disabled=!enabled||adminStudio.publishBusy;$('adminStudioStatus').textContent=selectedCount&&enabled?`${adminStudio.status} ${selectedCount} selecionado(s).`:adminStudio.status;$('adminStudioStatus').classList.toggle('is-error',adminStudio.statusError)}
-      function syncAdminRenderedItems(){const host=$('items');const cards=Array.from(host.children);cards.forEach(card=>{if(!card.classList.contains('card'))return;const entry=getRenderedEntryFromCard(card);const item=entry?.item;if(!item||entry?.source!=='editor')return;const index=Number.parseInt(String(card.dataset.index||''),10);const visible=!isAdminStudioEnabled()||itemMatchesAdminSearch(item);card.classList.toggle('hidden',!visible);card.classList.toggle('is-admin-card',isAdminStudioEnabled());card.classList.toggle('is-selected',isAdminStudioEnabled()&&adminStudio.selected.has(index));if(isAdminStudioEnabled()&&!card.dataset.adminBound){card.dataset.adminBound='true';card.addEventListener('click',event=>{if(!isAdminStudioEnabled()||isInteractiveAdminTarget(event.target))return;const currentIndex=Number.parseInt(String(card.dataset.index||''),10);if(!Number.isInteger(currentIndex))return;if(adminStudio.selectMode){event.preventDefault();toggleAdminItemSelection(currentIndex);return}openItemAdminPopover(currentIndex)})}})}
+      function syncAdminStudioControls(){const enabled=isAdminStudioEnabled(),selectedCount=adminStudio.selected.size;$('adminStudioBar').classList.toggle('hidden',!enabled);$('adminSelectBtn').disabled=!enabled;$('adminSelectBtn').textContent=adminStudio.selectMode?'Cancelar selecao':'Selecionar';$('adminBatchClearImageBtn').disabled=!enabled||!selectedCount;$('adminBatchClearAudioBtn').disabled=!enabled||!selectedCount;$('publishLocalBtn').disabled=!enabled||adminStudio.publishBusy;$('publishLocalBtn').textContent=adminStudio.publishBusy?'Enviando...':'Enviar para Fluent LevelUp';const sendPlaytalkBtn=$('sendPlaytalkBtn');if(sendPlaytalkBtn)sendPlaytalkBtn.disabled=!enabled||adminStudio.publishBusy;$('adminSearchInput').value=adminStudio.search||'';$('adminSearchInput').disabled=!enabled||adminStudio.publishBusy;const dirtyCount=dirtyDeckPaths.size;$('adminStudioStatus').textContent=selectedCount&&enabled?`${adminStudio.status} ${selectedCount} selecionado(s).${dirtyCount?` ${dirtyCount} deck(s) pendente(s) para salvar (S).`:''}`:`${adminStudio.status}${dirtyCount&&enabled?` ${dirtyCount} deck(s) pendente(s) para salvar (S).`:''}`;$('adminStudioStatus').classList.toggle('is-error',adminStudio.statusError)}
+      function syncAdminRenderedItems(){const host=$('items');const cards=Array.from(host.children);cards.forEach(card=>{if(!card.classList.contains('card'))return;const entry=getRenderedEntryFromCard(card);const item=entry?.item;if(!item||entry?.source!=='editor')return;const visible=!isAdminStudioEnabled()||itemMatchesAdminSearch(item);card.classList.toggle('hidden',!visible);card.classList.toggle('is-admin-card',isAdminStudioEnabled());card.classList.toggle('is-selected',isAdminStudioEnabled()&&adminStudio.selected.has(entrySelectionKey(entry)));if(isAdminStudioEnabled()&&!card.dataset.adminBound){card.dataset.adminBound='true';card.addEventListener('click',event=>{if(!isAdminStudioEnabled()||isInteractiveAdminTarget(event.target))return;const currentIndex=Number.parseInt(String(card.dataset.index||''),10);if(!Number.isInteger(currentIndex))return;if(adminStudio.selectMode){event.preventDefault();toggleAdminItemSelection(currentIndex);return}openItemAdminPopover(currentIndex)})}})}
       function remainingVoiceTargets(){
         if(state.mode==='scenes'||state.mode==='movies'){
           const out=[];
@@ -1828,9 +2025,18 @@
           });
           return out;
         }
-        const sourceEntries=editCardsState.searchMode
-          ? renderableFlashcardEntries().filter(entry=>entry?.source==='search')
-          : state.items.map((item,index)=>({item,itemIndex:index,source:'editor'}));
+        const selectedEntries=selectedEntriesInView();
+        const sourceEntries=selectedEntries.length
+          ? selectedEntries
+          : (editCardsState.searchMode
+            ? renderableFlashcardEntries().filter(entry=>entry?.source==='search')
+            : state.items.map((item,index)=>({item,itemIndex:index,source:'editor'})));
+        if(selectedEntries.length){
+          return sourceEntries
+            .map(entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:String(entry?.item?.en||entry?.item?.pt||'').trim()}))
+            .filter(entry=>entry.text)
+            .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}-en.mp3`,entry:entry.entry}));
+        }
         const pendingAudio=sourceEntries
           .map(entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:String(entry?.item?.en||entry?.item?.pt||'').trim()}))
           .filter(entry=>entry.text&&entry.item?.imageMuted&&!hasGeneratedAudio(entry.item,'single'))
@@ -2008,7 +2214,53 @@
       }
       async function generateCoverImage(){if(state.mode==='flashcard')return;const lockKey=aiLockKey('cover',0);if(aiImageLocks.has(lockKey))return;aiImageLocks.add(lockKey);renderAll();try{const payload=await generateAiImage({prompt:coverImagePrompt(),fileName:coverStem()});state.coverFile=payload.fileName;state.coverDataUrl=payload.dataUrl;save()}finally{aiImageLocks.delete(lockKey);renderAll()}}
       async function generateCharImage(index){const char=state.chars[index];if(!char)throw new Error('Personagem nao encontrado.');const lockKey=aiLockKey('char',index);if(aiImageLocks.has(lockKey))return;aiImageLocks.add(lockKey);renderAll();try{const payload=await generateAiImage({prompt:charImagePrompt(char,index),fileName:charStem(index,char),background:'transparent'});char.imageFile=payload.fileName;char.imageDataUrl=payload.dataUrl;save()}finally{aiImageLocks.delete(lockKey);renderAll()}}
-      async function generateMissingAiImages(){if(aiBatchBusy)return;const targets=aiImageMissingTargets();if(!targets.length){alert(state.mode==='scenes'?'Todos os personagens e a capa ja tem imagem.':'Todos os itens e a capa ja tem imagem.');return}aiBatchBusy=true;renderAll();let done=0;try{if((state.mode==='movies'||state.mode==='scenes')&&!state.coverFile&&!state.coverDataUrl){await generateCoverImage();done+=1}if(state.mode==='scenes'){for(const target of aiImageMissingTargets().filter(target=>target.kind==='char')){await generateCharImage(target.index);done+=1}}else{while(itemBatchTargets().length){const currentTargets=itemBatchTargets();if(currentTargets.length===1){await generateItemImage(currentTargets[0].index,currentTargets[0].entry||null);done+=1}else{done+=await generateItemImageBatch(currentTargets)}}}alert(`${done} imagem(ns) gerada(s) com IA.`)}catch(error){alert(`${done} imagem(ns) gerada(s) antes da parada.\n${error.message||'Erro ao gerar imagem.'}`)}finally{aiBatchBusy=false;renderAll()}}
+      async function generateMissingAiImages(){
+        if(aiBatchBusy)return;
+        const selectedEntries=getSelectedEditorEntries();
+        const selectedTargets=selectedEntries
+          .map(entry=>({index:Number(entry.itemIndex),entry}))
+          .filter(target=>Number.isInteger(target.index)&&target.index>=0);
+        const targets=aiImageMissingTargets();
+        if(!selectedTargets.length&&!targets.length){
+          alert(state.mode==='scenes'?'Todos os personagens e a capa ja tem imagem.':'Todos os itens e a capa ja tem imagem.');
+          return;
+        }
+        aiBatchBusy=true;
+        renderAll();
+        let done=0;
+        try{
+          if(selectedTargets.length){
+            for(const target of selectedTargets){
+              await generateItemImage(target.index,target.entry||null);
+              done+=1;
+            }
+          }else if((state.mode==='movies'||state.mode==='scenes')&&!state.coverFile&&!state.coverDataUrl){
+            await generateCoverImage();
+            done+=1;
+          }else if(state.mode==='scenes'){
+            for(const target of aiImageMissingTargets().filter(target=>target.kind==='char')){
+              await generateCharImage(target.index);
+              done+=1;
+            }
+          }else{
+            while(itemBatchTargets().length){
+              const currentTargets=itemBatchTargets();
+              if(currentTargets.length===1){
+                await generateItemImage(currentTargets[0].index,currentTargets[0].entry||null);
+                done+=1;
+              }else{
+                done+=await generateItemImageBatch(currentTargets);
+              }
+            }
+          }
+          alert(`${done} imagem(ns) gerada(s) com IA.`);
+        }catch(error){
+          alert(`${done} imagem(ns) gerada(s) antes da parada.\n${error.message||'Erro ao gerar imagem.'}`);
+        }finally{
+          aiBatchBusy=false;
+          renderAll();
+        }
+      }
       function syncAudioPopover(){const movieMode=state.mode!=='flashcard';$('audioPtBtn').classList.toggle('active',!!audioBatchTargets.pt);$('audioEnBtn').classList.toggle('active',!!audioBatchTargets.en);$('audioBatchConfirmBtn').disabled=!movieMode||(!audioBatchTargets.pt&&!audioBatchTargets.en)}
       function openAudioPopover(){audioBatchTargets={pt:true,en:true};$('audioPopover').classList.remove('hidden');$('audioPopover').setAttribute('aria-hidden','false');syncAudioPopover()}
       function closeAudioPopover(){audioBatchTargets={pt:false,en:false};$('audioPopover').classList.add('hidden');$('audioPopover').setAttribute('aria-hidden','true')}
@@ -2044,6 +2296,18 @@
 
           const card=document.createElement('div');
           card.className=`card${hasAudio?' has-audio':''}`;
+          const entryKey=entrySelectionKey(entry);
+          if(isAdminStudioEnabled()&&adminStudio.selected.has(entryKey))card.classList.add('is-selected');
+
+          if(isAdminStudioEnabled()){
+            const selectDot=document.createElement('button');
+            selectDot.type='button';
+            selectDot.className='card-select-dot';
+            selectDot.setAttribute('aria-label','Selecionar card');
+            selectDot.setAttribute('title','Selecionar card');
+            selectDot.onclick=event=>{event.preventDefault();event.stopPropagation();toggleEntrySelection(entry,{range:Boolean(event.shiftKey)})};
+            card.appendChild(selectDot);
+          }
 
           const top=document.createElement('div');
           top.className='row';
@@ -2417,6 +2681,21 @@
         const editing=tag==='input'||tag==='textarea'||tag==='select'||e.target?.isContentEditable;
         if(editing)return;
         const key=String(e.key||'').toLowerCase();
+        if(isAdminStudioEnabled()&&key==='s'){
+          e.preventDefault();
+          persistDirtyDecksNow().catch(error=>showFeedbackToast(error?.message||'Nao foi possivel salvar os decks no Postgres.'));
+          return;
+        }
+        if(isAdminStudioEnabled()&&key==='c'&&!watchRuntime){
+          e.preventDefault();
+          moveSelectedCardsToDeck().catch(error=>alert(error?.message||'Erro ao mover cards.'));
+          return;
+        }
+        if(isAdminStudioEnabled()&&key==='m'&&!watchRuntime){
+          e.preventDefault();
+          moveSingleSelectedCardInDeck();
+          return;
+        }
         if(key==='1'){e.preventDefault();startWatchPlayback({scope:'mine'});return}
         if(key==='u'){e.preventDefault();$('watchMediaInput').click();return}
         if(key==='escape'){if(watchRuntime){e.preventDefault();stopWatchPlayback()}return}
