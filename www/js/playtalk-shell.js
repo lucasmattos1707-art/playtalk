@@ -464,6 +464,16 @@
     }
   }
 
+  function dissolveLoaderTip() {
+    const root = document.getElementById(LOADER_ROOT_ID);
+    if (!root) return;
+    const lines = root.querySelectorAll('.playtalk-loader__tip-line');
+    lines.forEach((line) => {
+      line.classList.remove('is-visible');
+      line.classList.add('is-hidden');
+    });
+  }
+
   function stopLoaderAdvanceTimer() {
     if (!loaderState.tipAdvanceTimer) return;
     window.clearTimeout(loaderState.tipAdvanceTimer);
@@ -529,12 +539,8 @@
         playLoaderTipLanguage('en', token);
         return;
       }
-      loaderState.tipIndex = (loaderState.tipIndex + 1) % LOADER_TIPS.length;
-      loaderState.tipLanguage = 'pt';
-      loaderState.tipAdvanceTimer = window.setTimeout(() => {
-        if (token !== loaderState.tipAudioToken || !loaderState.activeKeys.size) return;
-        playLoaderTipLanguage('pt', token);
-      }, 90);
+      loaderState.audioSequenceRunning = false;
+      dissolveLoaderTip();
     };
     audio.addEventListener('ended', onFinish, { once: true });
     audio.addEventListener('error', onFinish, { once: true });
