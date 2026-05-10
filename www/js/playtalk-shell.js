@@ -6,7 +6,7 @@
   const LOADER_ROOT_ID = 'playtalkGlobalLoader';
   const LOADER_STYLE_ID = 'playtalkGlobalLoaderStyles';
   const LOADER_BODY_CLASS = 'playtalk-loader-active';
-  const LOADER_MIN_VISIBLE_MS = 4200;
+  const LOADER_MIN_VISIBLE_MS = 9000;
   const USERS_LOADER_MAX_VISIBLE_MS = 4200;
   const LOADER_AUDIO_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
   const LOADER_AUDIO_PATHS = {
@@ -71,7 +71,8 @@
     tipAudio: null,
     bgAudio: null,
     tipAudioToken: 0,
-    tipAdvanceTimer: 0
+    tipAdvanceTimer: 0,
+    audioSequenceRunning: false
   };
 
   function injectStars() {
@@ -470,6 +471,7 @@
   }
 
   function stopLoaderAudio() {
+    loaderState.audioSequenceRunning = false;
     loaderState.tipAudioToken += 1;
     stopLoaderAdvanceTimer();
     if (loaderState.tipAudio) {
@@ -541,6 +543,8 @@
 
   function startLoaderAudioSequence() {
     if (!loaderState.activeKeys.size) return;
+    if (loaderState.audioSequenceRunning) return;
+    loaderState.audioSequenceRunning = true;
     loaderState.tipAudioToken += 1;
     const token = loaderState.tipAudioToken;
     loaderState.tipLanguage = 'pt';
@@ -649,6 +653,7 @@
   function showLoader(key, options) {
     const normalizedKey = normalizeLoaderKey(key);
     const nextOptions = options && typeof options === 'object' ? options : {};
+    const wasInactive = loaderState.activeKeys.size === 0;
     if (nextOptions.message) {
       loaderState.message = String(nextOptions.message);
     }
@@ -664,7 +669,9 @@
     loaderState.activeKeys.add(normalizedKey);
     renderLoader();
     startLoaderProgress();
-    startLoaderTips({ rotate: nextOptions.rotateTips !== false });
+    if (wasInactive) {
+      startLoaderTips({ rotate: nextOptions.rotateTips !== false });
+    }
   }
 
   function hideLoader(key, options) {
@@ -744,7 +751,6 @@
   injectStars();
   injectFooter();
   ensureLoader();
-  startLoaderTips({ rotate: path !== '/users' });
   document.addEventListener('click', (event) => {
     const trigger = event.target && typeof event.target.closest === 'function'
       ? event.target.closest('a[href], #welcomeStartBtn, #footerUsersBtn')
