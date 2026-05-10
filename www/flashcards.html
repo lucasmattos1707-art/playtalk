@@ -3931,6 +3931,162 @@
       filter: drop-shadow(0 0 10px rgba(215, 137, 255, 0.82));
     }
 
+    .game-options-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 165;
+      display: none;
+      align-items: stretch;
+      justify-content: stretch;
+      background: rgba(4, 8, 20, 0.94);
+      backdrop-filter: blur(10px);
+    }
+
+    .game-options-modal.is-visible {
+      display: flex;
+    }
+
+    .game-options-modal__panel {
+      width: 100%;
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: clamp(14px, 3vw, 24px);
+      color: #f5f7ff;
+      background:
+        radial-gradient(circle at 80% 10%, rgba(155, 92, 255, 0.28), transparent 40%),
+        radial-gradient(circle at 20% 85%, rgba(58, 174, 255, 0.2), transparent 45%),
+        linear-gradient(180deg, rgba(17, 12, 33, 0.94), rgba(4, 8, 20, 0.98));
+    }
+
+    .game-options-modal__top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .game-options-modal__title {
+      margin: 0;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(20px, 4vw, 30px);
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-shadow: 0 0 14px rgba(126, 224, 255, 0.45);
+    }
+
+    .game-options-modal__close {
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: 1px solid rgba(210, 158, 255, 0.66);
+      color: #efc7ff;
+      background: rgba(88, 35, 116, 0.48);
+      display: grid;
+      place-items: center;
+    }
+
+    .game-options-modal__close svg {
+      width: 21px;
+      height: 21px;
+      fill: currentColor;
+    }
+
+    .game-options-modal__deck {
+      display: grid;
+      gap: 12px;
+      align-content: center;
+    }
+
+    .game-options-modal__card {
+      border-radius: 24px;
+      border: 1px solid rgba(176, 210, 255, 0.22);
+      background: rgba(6, 21, 46, 0.72);
+      box-shadow: inset 0 0 32px rgba(145, 112, 255, 0.08);
+      padding: clamp(14px, 3vw, 22px);
+      display: grid;
+      gap: 10px;
+      min-height: clamp(180px, 36vh, 260px);
+      touch-action: pan-y;
+    }
+
+    .game-options-modal__label {
+      margin: 0;
+      font-size: clamp(12px, 2.2vw, 14px);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #8ec9ff;
+    }
+
+    .game-options-modal__name {
+      margin: 0;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(24px, 6vw, 40px);
+      font-weight: 800;
+      line-height: 1.06;
+      color: #ffffff;
+      text-shadow: 0 0 20px rgba(117, 226, 255, 0.34);
+    }
+
+    .game-options-modal__desc {
+      margin: 0;
+      color: rgba(231, 241, 255, 0.86);
+      font-size: clamp(13px, 2.4vw, 16px);
+      line-height: 1.45;
+    }
+
+    .game-options-modal__value-row {
+      margin-top: auto;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .game-options-modal__arrow {
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      border: 1px solid rgba(180, 223, 255, 0.5);
+      background: rgba(11, 42, 76, 0.84);
+      color: #9ee3ff;
+      font-size: 30px;
+      line-height: 1;
+      display: grid;
+      place-items: center;
+    }
+
+    .game-options-modal__value {
+      text-align: center;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(18px, 4.5vw, 30px);
+      font-weight: 700;
+      color: #e8f5ff;
+      text-shadow: 0 0 14px rgba(126, 224, 255, 0.35);
+      min-height: 1.4em;
+      display: grid;
+      place-items: center;
+    }
+
+    .game-options-modal__dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .game-options-modal__dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(156, 192, 233, 0.4);
+    }
+
+    .game-options-modal__dot.is-active {
+      width: 24px;
+      background: linear-gradient(90deg, #7ce5ff, #d48aff);
+      box-shadow: 0 0 14px rgba(188, 137, 255, 0.54);
+    }
+
     .stars-wrap p {
       margin: 0;
       color: var(--muted);
@@ -9488,6 +9644,29 @@
         </div>
       </div>
     </div>
+    <div class="game-options-modal" id="gameOptionsModal" aria-hidden="true">
+      <div class="game-options-modal__panel">
+        <div class="game-options-modal__top">
+          <h2 class="game-options-modal__title">Opções do jogo</h2>
+          <button class="game-options-modal__close" id="gameOptionsCloseBtn" type="button" aria-label="Fechar opções">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>
+          </button>
+        </div>
+        <div class="game-options-modal__deck">
+          <article class="game-options-modal__card" id="gameOptionsCard" aria-live="polite">
+            <p class="game-options-modal__label" id="gameOptionsLabel">Opção</p>
+            <h3 class="game-options-modal__name" id="gameOptionsName">Dificuldade</h3>
+            <p class="game-options-modal__desc" id="gameOptionsDesc">Ajuste rápido para o seu ritmo.</p>
+            <div class="game-options-modal__value-row">
+              <button class="game-options-modal__arrow" id="gameOptionsPrevValueBtn" type="button" aria-label="Valor anterior">&#8249;</button>
+              <div class="game-options-modal__value" id="gameOptionsValue">Automático</div>
+              <button class="game-options-modal__arrow" id="gameOptionsNextValueBtn" type="button" aria-label="Próximo valor">&#8250;</button>
+            </div>
+          </article>
+        </div>
+        <div class="game-options-modal__dots" id="gameOptionsDots" aria-hidden="true"></div>
+      </div>
+    </div>
   </section>
   <section class="robotcheck" id="robotcheck" aria-label="Robot check">
     <div class="robotcheck__touch" aria-label="Teste de som do Fluent LevelUp">
@@ -9650,11 +9829,9 @@
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10.5Z"/></svg>
             </button>
             <div class="stars" id="gameStars" aria-label="Estrelas do card"></div>
-            <button class="game-mission-btn" id="gameMissionBtn" type="button" aria-label="Abrir missao diaria">
+            <button class="game-mission-btn" id="gameMissionBtn" type="button" aria-label="Abrir opcoes do jogo">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <circle cx="12" cy="12" r="6"></circle>
-                <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle>
-                <path d="M12 3v3M12 18v3M3 12h3M18 12h3"></path>
+                <path d="M5 6h14v2H5zm0 5h14v2H5zm0 5h14v2H5z"></path>
               </svg>
             </button>
           </div>
@@ -10016,6 +10193,20 @@
       const ENABLE_STAGE_TUTORIALS = false;
       const STAGE_TWO_HINT_DELAY_MS = 2000;
       const STAGE_TWO_HINT_VISIBLE_MS = 3000;
+      const GAME_OPTIONS_STORAGE_KEY = 'playtalk-game-options-v1';
+      const GAME_OPTION_SLIDES = ['difficulty', 'speed', 'accent', 'fourthStageTyping'];
+      const GAME_OPTION_VALUE_MAP = {
+        difficulty: ['automatic', 'beginner', 'easy', 'apprentice', 'moderate', 'intermediate', 'elaborate', 'advanced', 'fluent'],
+        speed: ['0.70', '0.80', '0.90', '1.00'],
+        accent: ['american', 'british'],
+        fourthStageTyping: ['off', 'on']
+      };
+      const DEFAULT_GAME_OPTIONS = {
+        difficulty: 'automatic',
+        speed: '0.90',
+        accent: 'american',
+        fourthStageTyping: 'off'
+      };
       const ONBOARDING_GATE_TRANSITION_MS = 2000;
       const ONBOARDING_GATE_OPEN_DELAY_MS = 4000;
       const WELCOME_FLASH_LOADER_MS = 3000;
@@ -10296,7 +10487,8 @@
           authRequired: false,
           authDelayTimer: 0,
           authRevealTimer: 0,
-          cardsReloadInFlight: false
+          cardsReloadInFlight: false,
+          gameOptionsOpen: false
         },
         energyDepletionWatch: null,
         admin: {
@@ -10514,12 +10706,23 @@
           micCheckFeedbackTimer: 0,
           micCheckStatus: '',
           micCheckBusy: false,
-          micCheckRecognition: null
+          micCheckRecognition: null,
+          gameOptionsSlideIndex: 0,
+          gameOptionsCardSwipeStartX: 0,
+          gameOptionsCardSwipeStartY: 0
+        },
+        options: {
+          difficulty: DEFAULT_GAME_OPTIONS.difficulty,
+          speed: DEFAULT_GAME_OPTIONS.speed,
+          accent: DEFAULT_GAME_OPTIONS.accent,
+          fourthStageTyping: DEFAULT_GAME_OPTIONS.fourthStageTyping
         }
       };
 
       let secondStageWrongWords = null;
       let secondStageWrongWordsPromise = null;
+
+      loadGameOptionsFromStorage();
 
       const els = {
         welcomeGate: document.getElementById('welcomeGate'),
@@ -10553,6 +10756,16 @@
         dailyPlanCurrentSealImage: document.getElementById('dailyPlanCurrentSealImage'),
         dailyPlanSealProgressValue: document.getElementById('dailyPlanSealProgressValue'),
         dailyPlanTimeRemaining: document.getElementById('dailyPlanTimeRemaining'),
+        gameOptionsModal: document.getElementById('gameOptionsModal'),
+        gameOptionsCloseBtn: document.getElementById('gameOptionsCloseBtn'),
+        gameOptionsCard: document.getElementById('gameOptionsCard'),
+        gameOptionsLabel: document.getElementById('gameOptionsLabel'),
+        gameOptionsName: document.getElementById('gameOptionsName'),
+        gameOptionsDesc: document.getElementById('gameOptionsDesc'),
+        gameOptionsValue: document.getElementById('gameOptionsValue'),
+        gameOptionsPrevValueBtn: document.getElementById('gameOptionsPrevValueBtn'),
+        gameOptionsNextValueBtn: document.getElementById('gameOptionsNextValueBtn'),
+        gameOptionsDots: document.getElementById('gameOptionsDots'),
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeLogo: document.getElementById('welcomeLogo'),
         welcomeProfile: document.getElementById('welcomeProfile'),
@@ -10777,6 +10990,49 @@
 
       function safeText(value) {
         return typeof value === 'string' ? value.trim() : '';
+      }
+
+      function normalizeGameOptionValue(key, value) {
+        const values = Array.isArray(GAME_OPTION_VALUE_MAP[key]) ? GAME_OPTION_VALUE_MAP[key] : [];
+        const normalized = safeText(value).toLowerCase();
+        if (values.includes(normalized)) return normalized;
+        return DEFAULT_GAME_OPTIONS[key];
+      }
+
+      function applyStoredGameOptions(options = {}) {
+        state.options.difficulty = normalizeGameOptionValue('difficulty', options.difficulty);
+        state.options.speed = normalizeGameOptionValue('speed', options.speed);
+        state.options.accent = normalizeGameOptionValue('accent', options.accent);
+        state.options.fourthStageTyping = normalizeGameOptionValue('fourthStageTyping', options.fourthStageTyping);
+      }
+
+      function loadGameOptionsFromStorage() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(GAME_OPTIONS_STORAGE_KEY) || 'null');
+          if (parsed && typeof parsed === 'object') {
+            applyStoredGameOptions(parsed);
+          } else {
+            applyStoredGameOptions(DEFAULT_GAME_OPTIONS);
+          }
+        } catch (_error) {
+          applyStoredGameOptions(DEFAULT_GAME_OPTIONS);
+        }
+      }
+
+      function persistGameOptions() {
+        try {
+          localStorage.setItem(
+            GAME_OPTIONS_STORAGE_KEY,
+            JSON.stringify({
+              difficulty: state.options.difficulty,
+              speed: state.options.speed,
+              accent: state.options.accent,
+              fourthStageTyping: state.options.fourthStageTyping
+            })
+          );
+        } catch (_error) {
+          // ignore
+        }
       }
 
       function formatWelcomeDisplayName(value) {
@@ -15693,6 +15949,113 @@
         resumeFlashcardsGameFromDailyPlan();
       }
 
+      function gameOptionSlideMeta() {
+        return {
+          difficulty: {
+            label: 'Opção 1/4',
+            name: 'Dificuldade',
+            desc: 'Define o perfil das cartas para este jogo.',
+            values: {
+              automatic: { label: 'Automático', desc: 'Segue o fluxo normal do jogo, subindo carta por carta.' },
+              beginner: { label: 'Iniciante', desc: 'Níveis 1-2, palavras até 5 letras e até 3 palavras.' },
+              easy: { label: 'Fácil', desc: 'Níveis 1-5, palavras até 6 letras e até 3 palavras.' },
+              apprentice: { label: 'Aprendiz', desc: 'Níveis 1-10, palavras até 7 letras e até 4 palavras.' },
+              moderate: { label: 'Moderado', desc: 'Níveis 11-20, até 24 caracteres totais.' },
+              intermediate: { label: 'Intermediário', desc: 'Níveis 21-30, até 28 caracteres totais.' },
+              elaborate: { label: 'Elaborado', desc: 'Níveis 31-40, até 33 caracteres totais.' },
+              advanced: { label: 'Avançado', desc: 'Níveis 41-50, até 38 caracteres totais.' },
+              fluent: { label: 'Fluente', desc: 'Níveis 51-70, sem limite de caracteres.' }
+            }
+          },
+          speed: {
+            label: 'Opção 2/4',
+            name: 'Velocidade',
+            desc: 'Controla a velocidade da fala dos áudios.',
+            values: {
+              '0.70': { label: '0.70x', desc: 'Mais calma para treinar detalhes.' },
+              '0.80': { label: '0.80x', desc: 'Leve redução na velocidade.' },
+              '0.90': { label: '0.90x', desc: 'Equilíbrio recomendado para jogo.' },
+              '1.00': { label: '1.00x', desc: 'Velocidade natural.' }
+            }
+          },
+          accent: {
+            label: 'Opção 3/4',
+            name: 'Sotaque',
+            desc: 'Escolhe qual link de áudio será priorizado.',
+            values: {
+              american: { label: 'Americano', desc: 'Prioriza o primeiro áudio da carta.' },
+              british: { label: 'Britânico', desc: 'Prioriza o segundo áudio; se faltar, usa o primeiro.' }
+            }
+          },
+          fourthStageTyping: {
+            label: 'Opção 4/4',
+            name: 'Digitação no Fourth-stage',
+            desc: 'Troca entre blocos e teclado de 9 letras.',
+            values: {
+              off: { label: 'Desativada', desc: 'Mantém o modo de blocos no fourth-stage.' },
+              on: { label: 'Ativada', desc: 'Força o teclado de 9 letras no fourth-stage.' }
+            }
+          }
+        };
+      }
+
+      function renderGameOptionsModal() {
+        if (!els.gameOptionsModal || !els.gameOptionsCard) return;
+        const slides = GAME_OPTION_SLIDES;
+        const slideIndex = Math.max(0, Math.min(slides.length - 1, Number(state.ui.gameOptionsSlideIndex) || 0));
+        const key = slides[slideIndex] || 'difficulty';
+        const metaMap = gameOptionSlideMeta();
+        const slide = metaMap[key] || metaMap.difficulty;
+        const valueKey = normalizeGameOptionValue(key, state.options[key]);
+        const valueMeta = slide.values?.[valueKey] || {};
+        if (els.gameOptionsLabel) els.gameOptionsLabel.textContent = slide.label || 'Opção';
+        if (els.gameOptionsName) els.gameOptionsName.textContent = slide.name || 'Opção';
+        if (els.gameOptionsDesc) els.gameOptionsDesc.textContent = valueMeta.desc || slide.desc || '';
+        if (els.gameOptionsValue) els.gameOptionsValue.textContent = valueMeta.label || valueKey;
+        if (els.gameOptionsDots) {
+          els.gameOptionsDots.innerHTML = slides.map((slideKey, index) => (
+            `<span class="game-options-modal__dot${index === slideIndex ? ' is-active' : ''}" data-game-option-dot="${escapeHtml(slideKey)}"></span>`
+          )).join('');
+        }
+      }
+
+      function nudgeGameOptionSlide(delta) {
+        const total = GAME_OPTION_SLIDES.length;
+        if (!total) return;
+        const current = Math.max(0, Math.min(total - 1, Number(state.ui.gameOptionsSlideIndex) || 0));
+        state.ui.gameOptionsSlideIndex = (current + delta + total) % total;
+        renderGameOptionsModal();
+      }
+
+      function nudgeCurrentGameOptionValue(delta) {
+        const slideKey = GAME_OPTION_SLIDES[Math.max(0, Math.min(GAME_OPTION_SLIDES.length - 1, Number(state.ui.gameOptionsSlideIndex) || 0))];
+        const values = GAME_OPTION_VALUE_MAP[slideKey] || [];
+        if (!values.length) return;
+        const currentValue = normalizeGameOptionValue(slideKey, state.options[slideKey]);
+        const currentIndex = Math.max(0, values.indexOf(currentValue));
+        const nextIndex = (currentIndex + delta + values.length) % values.length;
+        state.options[slideKey] = values[nextIndex];
+        persistGameOptions();
+        renderGameOptionsModal();
+      }
+
+      function openGameOptionsModal() {
+        if (!els.gameOptionsModal) return;
+        pauseFlashcardsGameForDailyPlan();
+        state.entry.gameOptionsOpen = true;
+        els.gameOptionsModal.classList.add('is-visible');
+        els.gameOptionsModal.setAttribute('aria-hidden', 'false');
+        renderGameOptionsModal();
+      }
+
+      function closeGameOptionsModal() {
+        if (!state.entry.gameOptionsOpen || !els.gameOptionsModal) return;
+        state.entry.gameOptionsOpen = false;
+        els.gameOptionsModal.classList.remove('is-visible');
+        els.gameOptionsModal.setAttribute('aria-hidden', 'true');
+        resumeFlashcardsGameFromDailyPlan();
+      }
+
       function shouldUseLevelModeBufferedPool() {
         return Boolean(isLevelModeActive() && isAllLevelsSelected());
       }
@@ -16120,6 +16483,10 @@
         return safeText(card?.english || card?.portuguese || card?.deckTitle || '');
       }
 
+      function flashcardWordCount(text) {
+        return safeText(text).split(/\s+/).filter(Boolean).length;
+      }
+
       function longestFlashcardWordLength(text) {
         const words = safeText(text).match(/[A-Za-z0-9]+(?:['-][A-Za-z0-9]+)*/g) || [];
         return words.reduce((maxLength, word) => {
@@ -16154,6 +16521,7 @@
         return !isCardHiddenForUser(card?.id)
           && hasCoreFlashcardText(card)
           && hasPlayableFlashcardImage(card)
+          && isCardEligibleForSelectedDifficulty(card)
           && (isAdminUser() || isEarlyFlashcardLengthEligible(card));
       }
 
@@ -16162,11 +16530,45 @@
       }
 
       function isCardAllowedForUserLevel(card) {
+        if (!isCardEligibleForSelectedDifficulty(card)) return false;
         if (isAdminUser()) return true;
         const deckLevel = cardDeckLevel(card);
         return deckLevel !== null
           && deckLevel <= currentUserLevel()
           && isEarlyFlashcardLengthEligible(card);
+      }
+
+      function isCardEligibleForSelectedDifficulty(card) {
+        const difficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
+        if (difficulty === 'automatic') return true;
+        const deckLevel = cardDeckLevel(card);
+        if (deckLevel === null) return false;
+        const text = flashcardDifficultyText(card);
+        if (!text) return false;
+        const words = flashcardWordCount(text);
+        const longestWord = longestFlashcardWordLength(text);
+        const chars = countFlashcardCharacters(text);
+        const byRange = (min, max) => deckLevel >= min && deckLevel <= max;
+        switch (difficulty) {
+          case 'beginner':
+            return byRange(1, 2) && longestWord <= 5 && words <= 3;
+          case 'easy':
+            return byRange(1, 5) && longestWord <= 6 && words <= 3;
+          case 'apprentice':
+            return byRange(1, 10) && longestWord <= 7 && words <= 4;
+          case 'moderate':
+            return byRange(11, 20) && chars <= 24;
+          case 'intermediate':
+            return byRange(21, 30) && chars <= 28;
+          case 'elaborate':
+            return byRange(31, 40) && chars <= 33;
+          case 'advanced':
+            return byRange(41, 50) && chars <= 38;
+          case 'fluent':
+            return byRange(51, 70);
+          default:
+            return true;
+        }
       }
 
       function currentLevelProgressCount(level = currentUserLevel()) {
@@ -16319,6 +16721,13 @@
               item?.correctPortuguese
             ),
             audioUrl: safeText(item?.audio || item?.audioUrl),
+            audioUrlBritish: safeText(
+              item?.audio2
+              || item?.audioUrl2
+              || item?.audioBritish
+              || item?.audioBritanico
+              || item?.britishAudio
+            ),
             category: repairDisplayText(item?.categoria || title)
           };
         });
@@ -16693,8 +17102,9 @@
 
       function buildAdminLibraryCardView(card) {
         const isEmptySlot = !hasPlayableFlashcardImage(card);
-        const sealOpacity = card.audioUrl ? 1 : (isEmptySlot ? 0.3 : 0.2);
-        const sealMarkup = `<button class="mini-card__seal-btn" type="button" data-admin-audio="${escapeHtml(card.id)}" aria-label="Ouvir audio do flashcard" ${card.audioUrl ? '' : 'disabled'}><img class="mini-card__seal" src="${escapeHtml(phaseMeta(REVIEW_PHASE_MAX).sealPath)}" alt="${escapeHtml(phaseMeta(REVIEW_PHASE_MAX).label)}" style="--seal-opacity:${escapeHtml(String(sealOpacity))}"></button>`;
+        const hasAudio = Boolean(resolveCardAudioUrl(card));
+        const sealOpacity = hasAudio ? 1 : (isEmptySlot ? 0.3 : 0.2);
+        const sealMarkup = `<button class="mini-card__seal-btn" type="button" data-admin-audio="${escapeHtml(card.id)}" aria-label="Ouvir audio do flashcard" ${hasAudio ? '' : 'disabled'}><img class="mini-card__seal" src="${escapeHtml(phaseMeta(REVIEW_PHASE_MAX).sealPath)}" alt="${escapeHtml(phaseMeta(REVIEW_PHASE_MAX).label)}" style="--seal-opacity:${escapeHtml(String(sealOpacity))}"></button>`;
         const reportCounts = state.admin.reportCounts.get(card.id) || {};
         const reportsMarkup = FLASHCARD_REPORT_TYPES
           .filter((item) => Number(reportCounts?.[item.key] || 0) > 0)
@@ -19015,11 +19425,13 @@
         if (shouldSuppressTutorialCardAudio(card)) {
           return finishStagePlayReflection(false);
         }
-        const rate = Number(options?.rate) > 0 ? Number(options.rate) : 1;
+        const requestedRate = Number(options?.rate) > 0 ? Number(options.rate) : 1;
+        const rate = Math.max(0.1, Math.min(2.5, requestedRate * resolveSelectedGameSpeed()));
         stopActiveAudio();
-        if (card.audioUrl) {
-          const cachedAudio = state.game.preloadAudios.get(card.audioUrl);
-          const audio = cachedAudio || new Audio(card.audioUrl);
+        const selectedAudioUrl = resolveCardAudioUrl(card);
+        if (selectedAudioUrl) {
+          const cachedAudio = state.game.preloadAudios.get(selectedAudioUrl);
+          const audio = cachedAudio || new Audio(selectedAudioUrl);
           try {
             audio.pause();
             audio.currentTime = 0;
@@ -19053,7 +19465,7 @@
         if (window.speechSynthesis && card.english) {
           return finishStagePlayReflection(new Promise((resolve) => {
             const utterance = new SpeechSynthesisUtterance(card.english);
-            utterance.lang = 'en-US';
+            utterance.lang = normalizeGameOptionValue('accent', state.options?.accent) === 'british' ? 'en-GB' : 'en-US';
             utterance.rate = rate;
             utterance.pitch = 1;
             utterance.onend = utterance.onerror = () => {
@@ -19191,9 +19603,10 @@
       }
 
       function playAdminCardAudio(card) {
-        if (!isAdminUser() || !card?.audioUrl) return;
+        const src = resolveCardAudioUrl(card);
+        if (!isAdminUser() || !src) return;
         try {
-          const audio = new Audio(card.audioUrl);
+          const audio = new Audio(src);
           audio.play().catch(() => {});
         } catch (_error) {
           // ignore
@@ -19211,7 +19624,7 @@
 
       function preloadCardAudio(card) {
         if (isNoEnergyMediaLocked()) return;
-        const src = safeText(card?.audioUrl);
+        const src = resolveCardAudioUrl(card);
         if (!src || state.game.preloadAudios.has(src)) return;
         try {
           const audio = new Audio(src);
@@ -19221,6 +19634,20 @@
         } catch (_error) {
           // ignore
         }
+      }
+
+      function resolveSelectedGameSpeed() {
+        const parsed = Number.parseFloat(safeText(state.options?.speed || DEFAULT_GAME_OPTIONS.speed));
+        if (!Number.isFinite(parsed) || parsed <= 0) return 0.9;
+        return Math.max(0.7, Math.min(1.0, parsed));
+      }
+
+      function resolveCardAudioUrl(card) {
+        const preferredAccent = normalizeGameOptionValue('accent', state.options?.accent);
+        const primary = safeText(card?.audioUrl);
+        const british = safeText(card?.audioUrlBritish);
+        if (preferredAccent === 'british') return british || primary;
+        return primary || british;
       }
 
       function clearGameMicUnlockTimer() {
@@ -19986,6 +20413,10 @@
 
       function isTypingStage(entry) {
         const stageConfig = STAGES[resolveEntryStageNumber(entry)] || STAGES[1];
+        if (stageConfig.key === 'fourth-star') {
+          return normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping) === 'on'
+            || stageConfig.inputMode === 'typing';
+        }
         return stageConfig.inputMode === 'typing';
       }
 
@@ -21724,7 +22155,7 @@
               ...baseCandidateCards(),
               ...readyReviewCards()
             ]);
-        return sourceCards.filter(card => card.audioUrl);
+        return sourceCards.filter(card => Boolean(resolveCardAudioUrl(card)));
       }
 
       function buildWatchDeckOptions(cards) {
@@ -22084,11 +22515,13 @@
       }
 
       async function playWatchAudio(card, rate) {
-        if (!state.watch.active || !card?.audioUrl) return;
+        const src = resolveCardAudioUrl(card);
+        if (!state.watch.active || !src) return;
         stopWatchVoice();
-        const audio = new Audio(card.audioUrl);
-        audio.playbackRate = rate;
-        audio.defaultPlaybackRate = rate;
+        const resolvedRate = Math.max(0.1, Math.min(2.5, Number(rate || 1) * resolveSelectedGameSpeed()));
+        const audio = new Audio(src);
+        audio.playbackRate = resolvedRate;
+        audio.defaultPlaybackRate = resolvedRate;
         audio.preservesPitch = true;
         state.watch.voiceAudio = audio;
         try {
@@ -23556,7 +23989,47 @@
         els.gameMissionBtn?.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-          openDailyPlanModal({ fromGame: true });
+          openGameOptionsModal();
+        });
+        els.gameOptionsCloseBtn?.addEventListener('click', closeGameOptionsModal);
+        els.gameOptionsModal?.addEventListener('click', (event) => {
+          if (event.target === els.gameOptionsModal) {
+            closeGameOptionsModal();
+          }
+        });
+        els.gameOptionsPrevValueBtn?.addEventListener('click', () => {
+          nudgeCurrentGameOptionValue(-1);
+        });
+        els.gameOptionsNextValueBtn?.addEventListener('click', () => {
+          nudgeCurrentGameOptionValue(1);
+        });
+        els.gameOptionsDots?.addEventListener('click', (event) => {
+          const dot = event.target.closest('[data-game-option-dot]');
+          if (!dot) return;
+          const key = safeText(dot.getAttribute('data-game-option-dot'));
+          const index = GAME_OPTION_SLIDES.indexOf(key);
+          if (index < 0) return;
+          state.ui.gameOptionsSlideIndex = index;
+          renderGameOptionsModal();
+        });
+        els.gameOptionsCard?.addEventListener('pointerdown', (event) => {
+          state.ui.gameOptionsCardSwipeStartX = Number(event.clientX) || 0;
+          state.ui.gameOptionsCardSwipeStartY = Number(event.clientY) || 0;
+        });
+        els.gameOptionsCard?.addEventListener('pointerup', (event) => {
+          const startX = Number(state.ui.gameOptionsCardSwipeStartX) || 0;
+          const startY = Number(state.ui.gameOptionsCardSwipeStartY) || 0;
+          state.ui.gameOptionsCardSwipeStartX = 0;
+          state.ui.gameOptionsCardSwipeStartY = 0;
+          if (!startX && !startY) return;
+          const dx = (Number(event.clientX) || 0) - startX;
+          const dy = (Number(event.clientY) || 0) - startY;
+          if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
+          if (dx < 0) {
+            nudgeGameOptionSlide(1);
+          } else {
+            nudgeGameOptionSlide(-1);
+          }
         });
         els.welcomeTrainingModes?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-training-stage]');
@@ -23755,6 +24228,8 @@
           }
           if (event.key === 'Escape' && state.ui.premiumGateOpen) {
             closePremiumGate();
+          } else if (event.key === 'Escape' && state.entry.gameOptionsOpen) {
+            closeGameOptionsModal();
           } else if (event.key === 'Escape' && state.entry.dailyPlanOpen) {
             closeDailyPlanModal();
           } else if (event.key === 'Escape' && els.gameReportMenu?.classList.contains('is-visible')) {
