@@ -13601,7 +13601,7 @@
           state.game.idleAutoPauseTimer = 0;
           if (!state.game.active || state.game.paused || state.ui.gamePausedAtWelcome) return;
           pauseFlashcardsGameToWelcome();
-        }, 6000);
+        }, 8000);
       }
 
       function markGameInteraction() {
@@ -22644,8 +22644,22 @@
         syncWelcomeGate();
       }
 
+      function canResumePausedFlashGame() {
+        if (!state.game.active) return false;
+        if (!state.game.paused) return false;
+        if (state.game.entries.size <= 0) return false;
+        return true;
+      }
+
       function resumeFlashcardsGameFromWelcome() {
-        if (!state.game.active || !state.ui.gamePausedAtWelcome) return false;
+        if (!canResumePausedFlashGame() && (!state.game.active || !state.ui.gamePausedAtWelcome)) return false;
+        state.ui.gamePausedAtWelcome = true;
+        state.entry.pendingPlayStart = false;
+        state.entry.welcomeStartRequested = false;
+        state.entry.flashStartInFlight = false;
+        state.entry.welcomeFlashStartAt = 0;
+        window.PlaytalkLoader?.hide?.('welcome-flash-start', { force: true });
+        window.PlaytalkLoader?.hide?.('page-init', { force: true });
         state.ui.gamePausedAtWelcome = false;
         void signalFlashcardSessionClock('in');
         scheduleGameIdleAutoPause();
@@ -23404,6 +23418,9 @@
         };
         els.welcomeStartBtn?.addEventListener('click', (event) => {
           void (async () => {
+            if (canResumePausedFlashGame()) {
+              state.ui.gamePausedAtWelcome = true;
+            }
             if (resumeFlashcardsGameFromWelcome()) return;
             if (await handleManualWelcomeNoEnergy(event.currentTarget)) return;
             if (!(await guardWelcomeEnergy({ previewTarget: event.currentTarget }))) return;
