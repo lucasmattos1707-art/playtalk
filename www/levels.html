@@ -1973,6 +1973,11 @@
         if(typeof payload?.coverImage==='string')state.flashcardCoverUrl=payload.coverImage.trim();
         if(!publishedItems.length)return;
         state.items=publishedItems.map(entry=>normalizeImportedItem({
+          // Keep both voices after publish. Without this, audio2 disappears from
+          // editor state and can be lost on a later save to Postgres.
+          audioBlondeFile:importedFileName(readDeckEntrySecondaryAudio(entry)),
+          audioBlondeRemoteUrl:readDeckEntrySecondaryAudio(entry),
+          audioBlondeDataUrl:'',
           imageFile:importedFileName(entry?.imagem||entry?.image),
           imageRemoteUrl:String(entry?.imagem||entry?.image||'').trim(),
           imageDataUrl:'',
