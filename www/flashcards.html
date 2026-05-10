@@ -10185,15 +10185,17 @@
         'wrong-text': '<svg class="game-report-menu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14"></path><path d="M5 12h8"></path><path d="M5 18h6"></path><line x1="16" y1="11" x2="21" y2="16"></line><line x1="21" y1="11" x2="16" y2="16"></line></svg>',
         'hide-card': '<svg class="game-report-menu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"></path><line x1="4" y1="4" x2="20" y2="20"></line></svg>'
       };
-      const REVIEW_SCALE_VERSION = 3;
-      const REVIEW_PHASE_MAX = 6;
+      const REVIEW_SCALE_VERSION = 4;
+      const REVIEW_PHASE_MAX = 8;
       const REVIEW_PHASES = {
-        1: { key: 'first-star', label: 'First star', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
-        2: { key: 'second-star', label: 'Second star', durationMs: 34 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
-        3: { key: 'emerald-star', label: 'Emerald star', durationMs: 4 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/emerald.png' },
-        4: { key: 'third-star', label: 'Third star', durationMs: 10 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/platina.png' },
-        5: { key: 'fourth-star', label: 'Fourth star', durationMs: 20 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/ouro.png' },
-        6: { key: 'fifth-star', label: 'Fifth star', durationMs: 45 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/diamante.png' }
+        1: { key: 'metal-stage', label: 'Metal stage', durationMs: 20 * 60 * 1000, sealPath: 'medalhas/metal.png' },
+        2: { key: 'silver-stage', label: 'Silver stage', durationMs: 6 * 60 * 60 * 1000, sealPath: 'medalhas/prata.png' },
+        3: { key: 'ruby-stage', label: 'Ruby stage', durationMs: 24 * 60 * 60 * 1000, sealPath: 'medalhas/rubi.png' },
+        4: { key: 'sapphire-stage', label: 'Sapphire stage', durationMs: 3 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/quartz.png' },
+        5: { key: 'emerald-stage', label: 'Emerald stage', durationMs: 7 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/emerald.png' },
+        6: { key: 'gold-stage', label: 'Gold stage', durationMs: 15 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/ouro.png' },
+        7: { key: 'platinum-stage', label: 'Platinum stage', durationMs: 35 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/platina.png' },
+        8: { key: 'diamond-stage', label: 'Diamond stage', durationMs: 60 * 24 * 60 * 60 * 1000, sealPath: 'medalhas/diamante.png' }
       };
 
       const STAGES = {
@@ -11461,12 +11463,14 @@
       function phaseFromSealImage(value) {
         const normalized = safeText(value).toLowerCase();
         if (!normalized) return 0;
-        if (normalized.includes('diamante')) return 6;
-        if (normalized.includes('ouro')) return 5;
-        if (normalized.includes('platina')) return 4;
-        if (normalized.includes('emerald')) return 3;
-        if (normalized.includes('quartz')) return 2;
-        if (normalized.includes('prata')) return 1;
+        if (normalized.includes('diamante')) return 8;
+        if (normalized.includes('platina')) return 7;
+        if (normalized.includes('ouro')) return 6;
+        if (normalized.includes('emerald')) return 5;
+        if (normalized.includes('quartz') || normalized.includes('safira')) return 4;
+        if (normalized.includes('rubi') || normalized.includes('ruby')) return 3;
+        if (normalized.includes('prata') || normalized.includes('silver')) return 2;
+        if (normalized.includes('metal')) return 1;
         return 0;
       }
 
@@ -11478,6 +11482,15 @@
         const imagePhase = preferSealImage ? phaseFromSealImage(raw?.sealImage || raw?.seal_image) : 0;
         if (version >= REVIEW_SCALE_VERSION) return parsedPhase;
         if (imagePhase > 0) return Math.max(lowerBound, Math.min(REVIEW_PHASE_MAX, imagePhase));
+        if (version >= 3) {
+          if (parsedPhase === 1) return Math.max(lowerBound, 2);
+          if (parsedPhase === 2) return Math.max(lowerBound, 4);
+          if (parsedPhase === 3) return Math.max(lowerBound, 5);
+          if (parsedPhase === 4) return Math.max(lowerBound, 7);
+          if (parsedPhase === 5) return Math.max(lowerBound, 6);
+          if (parsedPhase >= 6) return Math.max(lowerBound, 8);
+          return parsedPhase;
+        }
         if (version >= 2) {
           if (parsedPhase === 4) return Math.max(lowerBound, 5);
           if (parsedPhase === 5) return Math.max(lowerBound, 4);
