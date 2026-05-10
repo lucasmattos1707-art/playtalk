@@ -2285,7 +2285,6 @@
       function audioControl(icon,labelText,has,onClick,onDelete,voiceTarget=false){const wrap=document.createElement('div');wrap.className='audio';if(voiceTarget&&state.voiceMode)wrap.classList.add('voice-target');const btn=document.createElement('button');btn.type='button';btn.className=has?'has ready':'';btn.innerHTML=`<img src="${icon}" alt="">`;const text=document.createElement('div');text.className='mini';text.textContent=has?'Ok':`${labelText} vazio`;let timer=null,held=false;btn.onpointerdown=()=>{held=false;if(!has||state.voiceMode)return;timer=setTimeout(()=>{held=true;onDelete()},2000)};['pointerup','pointerleave','pointercancel'].forEach(name=>btn.addEventListener(name,()=>{if(timer)clearTimeout(timer);timer=null}));btn.onclick=()=>{if(held){held=false;return}onClick(btn)};wrap.append(btn,text);return wrap}
       function renderChars(){const host=$('characters');host.innerHTML='';if(state.mode!=='scenes')return;ensureChars();state.chars.forEach((char,index)=>{const card=document.createElement('div');card.className='char';const pic=document.createElement('div');pic.className='charpic';pic.style.backgroundImage=charImg(char)?`url("${charImg(char)}")`:'';pic.textContent=charImg(char)?'':'Sem imagem';const id=document.createElement('div');id.className='field';id.innerHTML=`<label>ID</label><input type="text" value="${char.id||''}" readonly>`;const name=document.createElement('div');name.className='field';name.innerHTML=`<label>Nome</label><input type="text" value="${char.name||''}" readonly>`;const voice=document.createElement('div');voice.className='field';voice.innerHTML=`<label>ElevenLabs</label><input type="text" value="${char.voiceId||''}" readonly>`;const row=document.createElement('div');row.className='row';const imgBtn=document.createElement('button');imgBtn.type='button';imgBtn.textContent='Imagem';imgBtn.onclick=()=>{pendingImage={type:'char',index};$('singleImageInput').click()};const locked=isAiLocked('char',index),aiBtn=document.createElement('button');aiBtn.type='button';aiBtn.textContent=locked?'Gerando...':'IA';aiBtn.disabled=locked;aiBtn.onclick=async()=>{try{await generateCharImage(index)}catch(error){alert(error.message||'Erro ao gerar imagem.')}};row.append(imgBtn,aiBtn);card.append(pic,id,name,voice,row);host.appendChild(card)})}
       function renderItems(){
-        stopAudio();
         const host=$('items');
         host.innerHTML='';
         const entries=renderableFlashcardEntries();
@@ -2490,12 +2489,13 @@
         }
       };
       $('charactersToggleBtn').onclick=()=>{state.sceneCharactersOpen=!state.sceneCharactersOpen;save();renderAll()};
+      async function openAiImageGenerationFlow(){if(aiBatchBusy)return;const answer=window.prompt('Instrucao extra opcional para ajudar a IA nas imagens. Ex.: fundo branco, estilo catalogo, close-up, sem sombras fortes.',state.imageAiHint||'');if(answer===null)return;state.imageAiHint=answer.trim();save();try{await generateMissingAiImages()}catch(error){alert(error.message||'Erro ao gerar imagem.')}}
       $('addBtn').onclick=()=>{if(elevenBusy)return;openVoicePopover()};
       $('watchFlashcardsBtn').onclick=()=>openWatchPopover();
       $('uploadBtn').onclick=()=>$('batchImageInput').click();
       $('pasteBtn').onclick=()=>openPastePopover();
       $('voiceModeBtn').onclick=()=>{state.voiceMode=!state.voiceMode;save();renderAll()};
-      $('aiImageBtn').onclick=async()=>{if(aiBatchBusy)return;const answer=window.prompt('Instrucao extra opcional para ajudar a IA nas imagens. Ex.: fundo branco, estilo catalogo, close-up, sem sombras fortes.',state.imageAiHint||'');if(answer===null)return;state.imageAiHint=answer.trim();save();try{await generateMissingAiImages()}catch(error){alert(error.message||'Erro ao gerar imagem.')}};
+      $('aiImageBtn').onclick=()=>{openAiImageGenerationFlow().catch(error=>alert(error?.message||'Erro ao gerar imagem.'))};
       $('translateBtn').onclick=async()=>{if(aiTextBusy)return;const targets=state.items.map((item,index)=>({index,pt:String(item?.pt||'').trim(),en:String(item?.en||'').trim()})).filter(item=>item.pt&&!item.en);if(!targets.length){alert('Nao ha campos em portugues aguardando traducao para ingles.');return}aiTextBusy=true;renderAll();try{const translations=await translatePortugueseBatch(targets);const applied=applyTranslations(translations);alert(`${applied} traducao(oes) aplicada(s) no campo English.`)}catch(error){alert(error.message||'Erro ao traduzir textos.')}finally{aiTextBusy=false;renderAll()}};
       $('aiTextBtn').onclick=()=>{if(state.mode!=='flashcard'&&state.mode!=='scenes'&&state.mode!=='movies')return;openTextPopover()};
       $('importJsonBtn').onclick=()=>$('jsonInput').click();
@@ -2721,6 +2721,16 @@
             return;
           }
           openSelectionDeletePopover();
+          return;
+        }
+        if(key==='shift'&&!watchRuntime){
+          e.preventDefault();
+          if(!elevenBusy)openVoicePopover();
+          return;
+        }
+        if(key==='tab'&&!watchRuntime){
+          e.preventDefault();
+          openAiImageGenerationFlow().catch(error=>alert(error?.message||'Erro ao gerar imagem.'));
           return;
         }
         if(key==='1'){e.preventDefault();startWatchPlayback({scope:'mine'});return}
