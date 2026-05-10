@@ -64,6 +64,7 @@ const DATABASE_SSL = process.env.DATABASE_SSL
 const JWT_SECRET = process.env.JWT_SECRET;
 const ELEVENLABS_API_KEY = env(process.env.ELEVENLABS_API_KEY);
 const ELEVENLABS_VOICE_ID_HARRY = env(process.env.ELEVENLABS_VOICE_ID_HARRY);
+const ELEVENLABS_VOICE_ID_BLONDE = env(process.env.ELEVENLABS_VOICE_ID_BLONDE) || 'exsUS4vynmxd379XN4yO';
 const ELEVENLABS_VOICE_ID_BURT_RAYNALDS = env(process.env.ELEVENLABS_VOICE_ID_BURT_RAYNALDS) || '4YYIPFl9wE5c4L2eu2Gb';
 const ELEVENLABS_MODEL_ID = env(process.env.ELEVENLABS_MODEL_ID) || 'eleven_multilingual_v2';
 const OPENAI_API_KEY = env(process.env.OPENAI_API_KEY);
@@ -18593,6 +18594,8 @@ app.post('/api/tts/elevenlabs', async (req, res) => {
   const voiceId = requestedVoiceId
     || (requestedVoice === 'harry' || requestedVoice === 'elevenlabs:harry'
       ? ELEVENLABS_VOICE_ID_HARRY
+      : requestedVoice === 'blonde' || requestedVoice === 'elevenlabs:blonde'
+        ? ELEVENLABS_VOICE_ID_BLONDE
       : requestedVoice === 'burt-raynalds' || requestedVoice === 'burt' || requestedVoice === 'elevenlabs:burt-raynalds' || requestedVoice === 'elevenlabs:burt'
         ? ELEVENLABS_VOICE_ID_BURT_RAYNALDS
         : ELEVENLABS_VOICE_ID_HARRY);
