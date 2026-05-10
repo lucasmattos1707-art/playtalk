@@ -204,7 +204,7 @@
 
   function redirectToAuthGate() {
     const returnPath = buildCurrentReturnPath();
-    const authUrl = new URL('/auth.html', window.location.origin);
+    const authUrl = new URL(resolveRouteHref('/entrar') || '/auth.html', window.location.origin);
     authUrl.searchParams.set('return', returnPath);
     window.location.replace(`${authUrl.pathname}${authUrl.search}${authUrl.hash}`);
   }

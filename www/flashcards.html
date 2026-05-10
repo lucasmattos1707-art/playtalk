@@ -10281,6 +10281,7 @@
           welcomeTimer: 0,
           welcomeModesResolved: false,
           welcomeModesUsersEnabled: false,
+          fourthStarUsesSecondStarBlocks: false,
           launchAfterSoundTest: '',
           soundTestCompleted: false,
           pendingPlayStart: false,
@@ -13519,6 +13520,27 @@
         return {
           usersEnabled: Boolean(payload.settings.usersEnabled)
         };
+      }
+
+      async function fetchFlashcardsPhaseSettings() {
+        const response = await fetch(buildApiUrl('/api/flashcards/phase-settings'), {
+          headers: buildAuthHeaders(),
+          cache: 'no-store',
+          credentials: 'include'
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success || !payload?.settings) {
+          return {
+            fourthStarUsesSecondStarBlocks: false
+          };
+        }
+        return {
+          fourthStarUsesSecondStarBlocks: Boolean(payload.settings.fourthStarUsesSecondStarBlocks)
+        };
+      }
+
+      function isFourthStarUsingSecondStarBlocks() {
+        return Boolean(state.entry.fourthStarUsesSecondStarBlocks);
       }
 
       function setProfileStatus(message, tone = '') {
@@ -20740,7 +20762,9 @@
           return;
         }
 
-        if (phaseKey === 'second-star') {
+        const useSecondStarWordBlocks = phaseKey === 'second-star'
+          || (phaseKey === 'fourth-star' && isFourthStarUsingSecondStarBlocks());
+        if (useSecondStarWordBlocks) {
           clearTypingSkipAutomation();
           clearTypingPromptLoop();
           clearSecondStarIdleHintTimers();
@@ -20748,7 +20772,10 @@
           const blockState = buildSecondStageWordBlockState(typingState, card);
           if (shouldRefreshDistractors && secondStageWrongWordsPromise) {
             secondStageWrongWordsPromise.then(() => {
-              if (state.game.currentId === entry.id && safeText(els.game?.dataset?.phaseKey || '') === 'second-star') {
+              const livePhaseKey = safeText(els.game?.dataset?.phaseKey || '');
+              const liveIsWordBlocks = livePhaseKey === 'second-star'
+                || (livePhaseKey === 'fourth-star' && isFourthStarUsingSecondStarBlocks());
+              if (state.game.currentId === entry.id && liveIsWordBlocks) {
                 renderCurrentCard();
               }
             }).catch(() => {});
@@ -23741,10 +23768,12 @@
         try {
           const sessionUser = await fetchSessionUser().catch(() => null);
           const welcomeModeSettings = await fetchWelcomeModeSettings().catch(() => ({ usersEnabled: false }));
+          const flashcardsPhaseSettings = await fetchFlashcardsPhaseSettings().catch(() => ({ fourthStarUsesSecondStarBlocks: false }));
           if (sessionUser) {
             state.user = normalizeUser(sessionUser);
           }
           state.entry.welcomeModesUsersEnabled = Boolean(welcomeModeSettings?.usersEnabled);
+          state.entry.fourthStarUsesSecondStarBlocks = Boolean(flashcardsPhaseSettings?.fourthStarUsesSecondStarBlocks);
           state.entry.welcomeModesResolved = true;
           state.entry.sessionResolved = true;
           ensureFlashcardsEnergyDepletionWatch();

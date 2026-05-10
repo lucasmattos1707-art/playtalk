@@ -222,6 +222,7 @@ let userBooksEnergyXpStatsReadyPromise = null;
 let usersPresenceClassReadyPromise = null;
 let energySettingsReadyPromise = null;
 let welcomeModeSettingsReadyPromise = null;
+let flashcardPhaseSettingsReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
 let speakingCardsCache = {
@@ -237,6 +238,10 @@ let energySettingsCache = {
   updatedAt: 0
 };
 let welcomeModeSettingsCache = {
+  value: null,
+  updatedAt: 0
+};
+let flashcardPhaseSettingsCache = {
   value: null,
   updatedAt: 0
 };
@@ -266,6 +271,8 @@ const DEFAULT_ENERGY_COST_MULTIPLIER_MILLI = 1000;
 const ENERGY_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const DEFAULT_WELCOME_GAME_MODES_FOR_USERS_ENABLED = false;
 const WELCOME_MODE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
+const DEFAULT_FOURTH_STAR_USES_SECOND_STAR_BLOCKS = false;
+const FLASHCARD_PHASE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
@@ -962,6 +969,23 @@ const incrementDailyEnergyUsage = async (db, user, deltas = {}) => {
 
   const snapshot = buildDailyEnergySnapshot(user, result.rows[0] || {}, settings);
   await ensureAutoNoEnergyForSnapshot(db, user, snapshot);
+  return snapshot;
+};
+
+const buildFlashcardPhaseSettingsSnapshot = (row = {}) => ({
+  fourthStarUsesSecondStarBlocks: Boolean(
+    row?.fourth_star_uses_second_star_blocks
+    ?? row?.fourthStarUsesSecondStarBlocks
+    ?? DEFAULT_FOURTH_STAR_USES_SECOND_STAR_BLOCKS
+  )
+});
+
+const rememberFlashcardPhaseSettings = (settings) => {
+  const snapshot = buildFlashcardPhaseSettingsSnapshot(settings);
+  flashcardPhaseSettingsCache = {
+    value: snapshot,
+    updatedAt: Date.now()
+  };
   return snapshot;
 };
 
@@ -2503,6 +2527,41 @@ const ensureWelcomeModeSettingsTable = async () => {
   return welcomeModeSettingsReadyPromise;
 };
 
+const ensureFlashcardPhaseSettingsTable = async () => {
+  if (!pool) return false;
+
+  if (!flashcardPhaseSettingsReadyPromise) {
+    flashcardPhaseSettingsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.app_flashcard_phase_settings (
+          singleton_key text PRIMARY KEY,
+          fourth_star_uses_second_star_blocks boolean NOT NULL DEFAULT ${DEFAULT_FOURTH_STAR_USES_SECOND_STAR_BLOCKS ? 'true' : 'false'},
+          updated_by_user_id integer REFERENCES public.users(id) ON DELETE SET NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        INSERT INTO public.app_flashcard_phase_settings (
+          singleton_key,
+          fourth_star_uses_second_star_blocks
+        )
+        VALUES (
+          'default',
+          ${DEFAULT_FOURTH_STAR_USES_SECOND_STAR_BLOCKS ? 'true' : 'false'}
+        )
+        ON CONFLICT (singleton_key) DO NOTHING
+      `);
+      return true;
+    })().catch((error) => {
+      flashcardPhaseSettingsReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return flashcardPhaseSettingsReadyPromise;
+};
+
 async function getEnergySettings(options = {}) {
   const force = Boolean(options?.force);
   if (!pool) {
@@ -2547,6 +2606,29 @@ async function getWelcomeModeSettings(options = {}) {
      LIMIT 1`
   );
   return rememberWelcomeModeSettings(result.rows[0] || {});
+}
+
+async function getFlashcardPhaseSettings(options = {}) {
+  const force = Boolean(options?.force);
+  if (!pool) {
+    return buildFlashcardPhaseSettingsSnapshot({});
+  }
+  if (
+    !force
+    && flashcardPhaseSettingsCache.value
+    && (Date.now() - flashcardPhaseSettingsCache.updatedAt) < FLASHCARD_PHASE_SETTINGS_CACHE_TTL_MS
+  ) {
+    return flashcardPhaseSettingsCache.value;
+  }
+
+  await ensureFlashcardPhaseSettingsTable();
+  const result = await pool.query(
+    `SELECT fourth_star_uses_second_star_blocks
+     FROM public.app_flashcard_phase_settings
+     WHERE singleton_key = 'default'
+     LIMIT 1`
+  );
+  return rememberFlashcardPhaseSettings(result.rows[0] || {});
 }
 
 async function updateEnergySettings(db, values = {}, updatedByUserId = null) {
@@ -2611,6 +2693,37 @@ async function updateWelcomeModeSettings(db, values = {}, updatedByUserId = null
 
   return rememberWelcomeModeSettings(result.rows[0] || {
     users_enabled: usersEnabled
+  });
+}
+
+async function updateFlashcardPhaseSettings(db, values = {}, updatedByUserId = null) {
+  const executor = db && typeof db.query === 'function' ? db : pool;
+  if (!executor) {
+    return buildFlashcardPhaseSettingsSnapshot(values);
+  }
+
+  const fourthStarUsesSecondStarBlocks = Boolean(values?.fourthStarUsesSecondStarBlocks);
+
+  await ensureFlashcardPhaseSettingsTable();
+  const result = await executor.query(
+    `INSERT INTO public.app_flashcard_phase_settings (
+       singleton_key,
+       fourth_star_uses_second_star_blocks,
+       updated_by_user_id,
+       updated_at
+     )
+     VALUES ('default', $1, $2, now())
+     ON CONFLICT (singleton_key)
+     DO UPDATE SET
+       fourth_star_uses_second_star_blocks = EXCLUDED.fourth_star_uses_second_star_blocks,
+       updated_by_user_id = EXCLUDED.updated_by_user_id,
+       updated_at = now()
+     RETURNING fourth_star_uses_second_star_blocks`,
+    [fourthStarUsesSecondStarBlocks, Number(updatedByUserId) || null]
+  );
+
+  return rememberFlashcardPhaseSettings(result.rows[0] || {
+    fourth_star_uses_second_star_blocks: fourthStarUsesSecondStarBlocks
   });
 }
 
@@ -17131,6 +17244,21 @@ app.get('/api/flashcards/welcome-mode-settings', async (req, res) => {
   }
 });
 
+app.get('/api/flashcards/phase-settings', async (req, res) => {
+  try {
+    const settings = await getFlashcardPhaseSettings({ force: true });
+    res.json({
+      success: true,
+      settings
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel carregar as configuracoes das fases de flashcards.'
+    });
+  }
+});
+
 app.get('/api/admin/welcome-mode-settings', async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -17144,6 +17272,23 @@ app.get('/api/admin/welcome-mode-settings', async (req, res) => {
     res.status(statusCode).json({
       success: false,
       message: error?.message || 'Nao foi possivel carregar as configuracoes dos modos extras.'
+    });
+  }
+});
+
+app.get('/api/admin/flashcards/phase-settings', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const settings = await getFlashcardPhaseSettings({ force: true });
+    res.json({
+      success: true,
+      settings
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel carregar as configuracoes das fases de flashcards.'
     });
   }
 });
@@ -17201,6 +17346,29 @@ app.post('/api/admin/welcome-mode-settings', express.json({ limit: '32kb' }), as
     res.status(statusCode).json({
       success: false,
       message: error?.message || 'Nao foi possivel salvar as configuracoes dos modos extras.'
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/phase-settings', express.json({ limit: '32kb' }), async (req, res) => {
+  try {
+    const adminUser = await requireAdminUserFromRequest(req);
+    const settings = await updateFlashcardPhaseSettings(pool, {
+      fourthStarUsesSecondStarBlocks: Boolean(req.body?.fourthStarUsesSecondStarBlocks)
+    }, adminUser.id);
+
+    res.json({
+      success: true,
+      message: settings.fourthStarUsesSecondStarBlocks
+        ? 'Fourth-star agora usa os blocos da second-star.'
+        : 'Fourth-star voltou ao modo padrao.',
+      settings
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel salvar as configuracoes das fases de flashcards.'
     });
   }
 });

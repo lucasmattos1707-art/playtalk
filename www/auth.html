@@ -32,7 +32,7 @@
   <script src="js/api-config.js"></script>
   <script>
     (function bootAuthPortal() {
-      var state = { mode: 'register', submitting: false };
+      var state = { mode: 'login', submitting: false };
       var form = document.getElementById('authForm');
       var usernameInput = document.getElementById('authUsername');
       var passwordInput = document.getElementById('authPassword');
@@ -51,6 +51,80 @@
         return path;
       }
 
+      function isFetchNetworkError(error) {
+        var rawMessage = error && typeof error.message === 'string' ? error.message.trim() : '';
+        return /failed to fetch|networkerror|load failed/i.test(rawMessage);
+      }
+
+      function currentApiBaseUrl() {
+        if (window.PlaytalkApi && typeof window.PlaytalkApi.baseUrl === 'string') {
+          return String(window.PlaytalkApi.baseUrl || '').trim();
+        }
+        return String(window.PLAYTALK_API_BASE_URL || '').trim();
+      }
+
+      function buildAlternateApiBaseUrl(baseUrl) {
+        try {
+          var parsed = new URL(String(baseUrl || '').trim());
+          var host = String(parsed.hostname || '').toLowerCase();
+          if (host === 'www.fluentlevelup.com') {
+            parsed.hostname = 'fluentlevelup.com';
+            return parsed.origin;
+          }
+          if (host === 'fluentlevelup.com') {
+            parsed.hostname = 'www.fluentlevelup.com';
+            return parsed.origin;
+          }
+        } catch (_error) {
+          // ignore
+        }
+        return '';
+      }
+
+      async function postAuthJson(endpoint, payloadBody) {
+        var primaryUrl = buildApiUrl(endpoint);
+        var requestOptions = {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payloadBody || {})
+        };
+
+        try {
+          return await fetch(primaryUrl, requestOptions);
+        } catch (primaryError) {
+          if (!isNativeRuntime() || !isFetchNetworkError(primaryError)) {
+            throw primaryError;
+          }
+          var fallbackBase = buildAlternateApiBaseUrl(currentApiBaseUrl());
+          if (!fallbackBase) {
+            throw primaryError;
+          }
+          if (window.PlaytalkApi && typeof window.PlaytalkApi.setBaseUrl === 'function') {
+            window.PlaytalkApi.setBaseUrl(fallbackBase);
+          } else {
+            window.PLAYTALK_API_BASE_URL = fallbackBase;
+          }
+          var fallbackUrl = fallbackBase + endpoint;
+          return fetch(fallbackUrl, requestOptions);
+        }
+      }
+
+      async function readResponsePayload(response) {
+        var rawText = '';
+        try {
+          rawText = await response.text();
+        } catch (_error) {
+          return { payload: {}, rawText: '' };
+        }
+        if (!rawText) return { payload: {}, rawText: '' };
+        try {
+          return { payload: JSON.parse(rawText), rawText: rawText };
+        } catch (_error) {
+          return { payload: {}, rawText: rawText };
+        }
+      }
+
       function safeReturnPath() {
         var params = new URLSearchParams(window.location.search || '');
         var rawReturn = String(params.get('return') || '').trim();
@@ -67,9 +141,30 @@
       }
 
       function isNativeRuntime() {
+        var capacitor = window.Capacitor || null;
         try {
-          if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function') {
-            return Boolean(window.Capacitor.isNativePlatform());
+          if (capacitor && typeof capacitor.isNativePlatform === 'function') {
+            return Boolean(capacitor.isNativePlatform());
+          }
+        } catch (_error) {
+          // ignore
+        }
+
+        try {
+          if (capacitor && typeof capacitor.getPlatform === 'function') {
+            var platformFromGetter = String(capacitor.getPlatform() || '').toLowerCase();
+            if (platformFromGetter === 'android' || platformFromGetter === 'ios') {
+              return true;
+            }
+          }
+        } catch (_error) {
+          // ignore
+        }
+
+        try {
+          var platformFromProp = String(capacitor && capacitor.platform || '').toLowerCase();
+          if (platformFromProp === 'android' || platformFromProp === 'ios') {
+            return true;
           }
         } catch (_error) {
           // ignore
@@ -77,9 +172,7 @@
 
         var protocol = String(window.location && window.location.protocol || '').toLowerCase();
         var hostname = String(window.location && window.location.hostname || '').toLowerCase();
-        var port = String(window.location && window.location.port || '').trim();
-
-        return protocol === 'file:' || ((hostname === 'localhost' || hostname === '127.0.0.1') && !port);
+        return protocol === 'file:' || hostname === 'localhost' || hostname === '127.0.0.1';
       }
 
       function resolveNativeReturnPath(path) {
@@ -168,7 +261,12 @@
 
       async function checkExistingSession() {
         try {
+          var headers = {};
+          if (window.PlaytalkApi && typeof window.PlaytalkApi.buildAuthHeaders === 'function') {
+            headers = window.PlaytalkApi.buildAuthHeaders(headers);
+          }
           var response = await fetch(buildApiUrl('/auth/session'), {
+            headers: headers,
             credentials: 'include',
             cache: 'no-store'
           });
@@ -203,15 +301,33 @@
 
         try {
           var endpoint = state.mode === 'register' ? '/register' : '/login';
-          var response = await fetch(buildApiUrl(endpoint), {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: username, password: password })
-          });
-          var payload = await response.json().catch(function () { return {}; });
+          var response = await postAuthJson(endpoint, { username: username, password: password });
+          var parsed = await readResponsePayload(response);
+          var payload = parsed.payload || {};
+
+          if ((!response.ok || !payload.success) && isNativeRuntime()) {
+            try {
+              var homeAuthResponse = await postAuthJson('/api/books/home-auth', { username: username, password: password });
+              var homeParsed = await readResponsePayload(homeAuthResponse);
+              if (homeAuthResponse.ok && homeParsed.payload && homeParsed.payload.success) {
+                response = homeAuthResponse;
+                payload = homeParsed.payload;
+              } else if (!response.ok && !payload.message && homeParsed.payload && homeParsed.payload.message) {
+                payload = homeParsed.payload;
+              }
+            } catch (_homeAuthError) {
+              // keep original response error handling below
+            }
+          }
+
           if (!response.ok || !payload.success) {
-            throw new Error(payload.message || 'Nao foi possivel liberar a entrada.');
+            if (state.mode === 'register' && response.status === 409) {
+              throw new Error('Esse usuario ja existe. Toque em Entrar e use sua senha.');
+            }
+            if (payload && payload.message) {
+              throw new Error(String(payload.message));
+            }
+            throw new Error('Nao foi possivel liberar a entrada.');
           }
           persistAuthToken(payload.token || '');
           setMessage('Entrada liberada. Bora jogar.', 'success');
@@ -227,7 +343,7 @@
       loginBtn.addEventListener('click', function () { setMode('login'); });
       registerBtn.addEventListener('click', function () { setMode('register'); });
       form.addEventListener('submit', submitAuth);
-      setMode('register');
+      setMode('login');
       void checkExistingSession();
     })();
   </script>

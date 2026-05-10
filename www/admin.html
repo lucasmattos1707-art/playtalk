@@ -392,6 +392,27 @@
     </section>
 
     <section class="admin-card" style="margin-top:18px;">
+      <h2>Fourth-star com blocos da second-star</h2>
+      <p class="admin-card-copy">Quando ativado, ao chegar na <strong>fourth-star</strong> o usuario joga o mesmo sistema de blocos de palavras da <strong>second-star</strong> para conquistar a quarta estrela.</p>
+      <form class="admin-form" id="adminFlashcardsPhaseForm">
+        <label class="admin-toggle-row" for="adminFourthStarUsesSecondStarBlocks">
+          <div class="admin-toggle-copy">
+            <strong>Ativar blocos na fourth-star</strong>
+            <span>Liga o mesmo gameplay de blocos da second-star durante a fourth-star.</span>
+          </div>
+          <span class="admin-toggle-switch">
+            <input id="adminFourthStarUsesSecondStarBlocks" name="fourthStarUsesSecondStarBlocks" type="checkbox">
+            <span aria-hidden="true"></span>
+          </span>
+        </label>
+        <div class="admin-topbar-actions">
+          <button class="admin-btn" id="adminFlashcardsPhaseSaveBtn" type="submit">Salvar fase</button>
+        </div>
+      </form>
+      <div class="admin-status" id="adminFlashcardsPhaseStatus" aria-live="polite"></div>
+    </section>
+
+    <section class="admin-card" style="margin-top:18px;">
       <h2>Resumo rapido</h2>
       <ul class="admin-facts">
         <li class="admin-fact">
@@ -405,6 +426,10 @@
         <li class="admin-fact">
           <strong>Modos extras para usuarios</strong>
           <span id="adminFactWelcomeModes">Desligados</span>
+        </li>
+        <li class="admin-fact">
+          <strong>Fourth-star em blocos</strong>
+          <span id="adminFactFourthStarBlocks">Desligado</span>
         </li>
       </ul>
     </section>

@@ -14,7 +14,12 @@
     welcomeModesUsersEnabled: document.getElementById('adminWelcomeModesUsersEnabled'),
     welcomeModesSaveBtn: document.getElementById('adminWelcomeModesSaveBtn'),
     welcomeModesStatus: document.getElementById('adminWelcomeModesStatus'),
-    factWelcomeModes: document.getElementById('adminFactWelcomeModes')
+    factWelcomeModes: document.getElementById('adminFactWelcomeModes'),
+    flashcardsPhaseForm: document.getElementById('adminFlashcardsPhaseForm'),
+    fourthStarUsesSecondStarBlocks: document.getElementById('adminFourthStarUsesSecondStarBlocks'),
+    flashcardsPhaseSaveBtn: document.getElementById('adminFlashcardsPhaseSaveBtn'),
+    flashcardsPhaseStatus: document.getElementById('adminFlashcardsPhaseStatus'),
+    factFourthStarBlocks: document.getElementById('adminFactFourthStarBlocks')
   };
 
   const state = {
@@ -29,6 +34,10 @@
     },
     welcomeModes: {
       usersEnabled: false
+    },
+    flashcardsPhaseBusy: false,
+    flashcardsPhase: {
+      fourthStarUsesSecondStarBlocks: false
     }
   };
 
@@ -76,6 +85,10 @@
     return usersEnabled ? 'Ligados' : 'Desligados';
   }
 
+  function formatFourthStarBlocksState(enabled) {
+    return enabled ? 'Ligado' : 'Desligado';
+  }
+
   function applyMultiplier(chars, multiplier) {
     const normalizedChars = Math.max(0, Math.round(safeNumber(chars)));
     const normalizedMultiplier = Math.max(0.01, Math.min(10, safeNumber(multiplier, 1)));
@@ -106,6 +119,16 @@
     if (els.welcomeModesUsersEnabled) els.welcomeModesUsersEnabled.disabled = state.welcomeModesBusy;
   }
 
+  function syncFlashcardsPhaseBusyState() {
+    if (els.flashcardsPhaseSaveBtn) {
+      els.flashcardsPhaseSaveBtn.disabled = state.flashcardsPhaseBusy;
+      els.flashcardsPhaseSaveBtn.textContent = state.flashcardsPhaseBusy ? 'Salvando...' : 'Salvar fase';
+    }
+    if (els.fourthStarUsesSecondStarBlocks) {
+      els.fourthStarUsesSecondStarBlocks.disabled = state.flashcardsPhaseBusy;
+    }
+  }
+
   function readDraftSettings() {
     return {
       energyCostMultiplier: Math.max(0.01, Math.min(10, safeNumber(els.multiplierInput?.value, state.settings.energyCostMultiplier))),
@@ -116,6 +139,12 @@
   function readDraftWelcomeModes() {
     return {
       usersEnabled: Boolean(els.welcomeModesUsersEnabled?.checked)
+    };
+  }
+
+  function readDraftFlashcardsPhase() {
+    return {
+      fourthStarUsesSecondStarBlocks: Boolean(els.fourthStarUsesSecondStarBlocks?.checked)
     };
   }
 
@@ -133,6 +162,12 @@
   function renderWelcomeModesFact() {
     if (els.factWelcomeModes) {
       els.factWelcomeModes.textContent = formatWelcomeModesState(state.welcomeModes.usersEnabled);
+    }
+  }
+
+  function renderFlashcardsPhaseFact() {
+    if (els.factFourthStarBlocks) {
+      els.factFourthStarBlocks.textContent = formatFourthStarBlocksState(state.flashcardsPhase.fourthStarUsesSecondStarBlocks);
     }
   }
 
@@ -156,6 +191,16 @@
       els.welcomeModesUsersEnabled.checked = state.welcomeModes.usersEnabled;
     }
     renderWelcomeModesFact();
+  }
+
+  function applyFlashcardsPhase(settings) {
+    state.flashcardsPhase = {
+      fourthStarUsesSecondStarBlocks: Boolean(settings?.fourthStarUsesSecondStarBlocks)
+    };
+    if (els.fourthStarUsesSecondStarBlocks) {
+      els.fourthStarUsesSecondStarBlocks.checked = state.flashcardsPhase.fourthStarUsesSecondStarBlocks;
+    }
+    renderFlashcardsPhaseFact();
   }
 
   async function fetchSessionUser() {
@@ -195,6 +240,19 @@
       throw new Error(payload?.message || 'Nao foi possivel carregar as configuracoes dos modos extras.');
     }
     applyWelcomeModes(payload.settings);
+  }
+
+  async function loadFlashcardsPhaseSettings() {
+    const response = await fetch(buildApiUrl('/api/admin/flashcards/phase-settings'), {
+      headers: buildAuthHeaders(),
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.settings) {
+      throw new Error(payload?.message || 'Nao foi possivel carregar a configuracao da fourth-star.');
+    }
+    applyFlashcardsPhase(payload.settings);
   }
 
   async function submitEnergySettings(event) {
@@ -251,37 +309,71 @@
     }
   }
 
+  async function submitFlashcardsPhaseSettings(event) {
+    event.preventDefault();
+    state.flashcardsPhaseBusy = true;
+    syncFlashcardsPhaseBusyState();
+    setStatus(els.flashcardsPhaseStatus, 'Salvando configuracao da fourth-star...');
+    try {
+      const draft = readDraftFlashcardsPhase();
+      const response = await fetch(buildApiUrl('/api/admin/flashcards/phase-settings'), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify(draft)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.settings) {
+        throw new Error(payload?.message || 'Nao foi possivel salvar a configuracao da fourth-star.');
+      }
+      applyFlashcardsPhase(payload.settings);
+      setStatus(els.flashcardsPhaseStatus, payload?.message || 'Configuracao da fourth-star atualizada.', 'success');
+    } catch (error) {
+      setStatus(els.flashcardsPhaseStatus, error?.message || 'Nao foi possivel salvar a configuracao da fourth-star.', 'error');
+    } finally {
+      state.flashcardsPhaseBusy = false;
+      syncFlashcardsPhaseBusyState();
+    }
+  }
+
   function bindEvents() {
     els.energyForm?.addEventListener('submit', submitEnergySettings);
     els.multiplierInput?.addEventListener('input', renderPreview);
     els.limitInput?.addEventListener('input', renderPreview);
     els.welcomeModesForm?.addEventListener('submit', submitWelcomeModeSettings);
+    els.flashcardsPhaseForm?.addEventListener('submit', submitFlashcardsPhaseSettings);
   }
 
   (async () => {
     bindEvents();
     syncEnergyBusyState();
     syncWelcomeModesBusyState();
+    syncFlashcardsPhaseBusyState();
     renderPreview();
     renderWelcomeModesFact();
+    renderFlashcardsPhaseFact();
     state.user = await fetchSessionUser().catch(() => null);
     if (!state.user?.id || !state.user?.is_admin) {
       setStatus(els.energyStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.welcomeModesStatus, 'Acesso restrito ao administrador.', 'error');
+      setStatus(els.flashcardsPhaseStatus, 'Acesso restrito ao administrador.', 'error');
       window.setTimeout(() => navigateTo('/account', { replace: true }), 900);
       return;
     }
     try {
       await Promise.all([
         loadEnergySettings(),
-        loadWelcomeModeSettings()
+        loadWelcomeModeSettings(),
+        loadFlashcardsPhaseSettings()
       ]);
       setStatus(els.energyStatus, 'Configuracoes carregadas.');
       setStatus(els.welcomeModesStatus, 'Modos extras sincronizados.');
+      setStatus(els.flashcardsPhaseStatus, 'Fase fourth-star sincronizada.');
     } catch (error) {
       const message = error?.message || 'Nao foi possivel carregar as configuracoes do admin.';
       setStatus(els.energyStatus, message, 'error');
       setStatus(els.welcomeModesStatus, message, 'error');
+      setStatus(els.flashcardsPhaseStatus, message, 'error');
     }
   })();
 })();

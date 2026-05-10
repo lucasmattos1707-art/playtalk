@@ -10,9 +10,30 @@
   const DEFAULT_PUBLIC_ASSETS_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
 
   function isNativeRuntime() {
+    const capacitor = window.Capacitor || null;
     try {
-      if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function') {
-        return Boolean(window.Capacitor.isNativePlatform());
+      if (capacitor && typeof capacitor.isNativePlatform === 'function') {
+        return Boolean(capacitor.isNativePlatform());
+      }
+    } catch (_error) {
+      // ignore
+    }
+
+    try {
+      if (capacitor && typeof capacitor.getPlatform === 'function') {
+        const platform = String(capacitor.getPlatform() || '').toLowerCase();
+        if (platform === 'android' || platform === 'ios') {
+          return true;
+        }
+      }
+    } catch (_error) {
+      // ignore
+    }
+
+    try {
+      const platform = String(capacitor && capacitor.platform || '').toLowerCase();
+      if (platform === 'android' || platform === 'ios') {
+        return true;
       }
     } catch (_error) {
       // ignore
@@ -20,8 +41,7 @@
 
     const protocol = String(window.location?.protocol || '').toLowerCase();
     const hostname = String(window.location?.hostname || '').toLowerCase();
-    const port = String(window.location?.port || '').trim();
-    return protocol === 'file:' || ((hostname === 'localhost' || hostname === '127.0.0.1') && !port);
+    return protocol === 'file:' || hostname === 'localhost' || hostname === '127.0.0.1';
   }
 
   function normalizeBaseUrl(value) {

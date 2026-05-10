@@ -42,7 +42,9 @@
   </style>
   <script>
     (function redirectToEntrar() {
-      var targetUrl = new URL('/auth.html', window.location.origin);
+      var isNativeLikeHost = String(window.location.hostname || '').toLowerCase() === 'localhost';
+      var entryPath = isNativeLikeHost ? '/auth.html' : '/entrar';
+      var targetUrl = new URL(entryPath, window.location.origin);
       targetUrl.searchParams.set('return', '/play');
       window.location.replace(targetUrl.pathname + targetUrl.search + targetUrl.hash);
     })();
