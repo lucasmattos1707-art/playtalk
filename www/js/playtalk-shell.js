@@ -14,6 +14,8 @@
     en: `${LOADER_AUDIO_BASE_URL}/Niveis/154/001`
   };
   const LOADER_BG_MUSIC_URL = '/audio/load.mp3';
+  const LOADER_TIP_AUDIO_VOLUME = 0.7;
+  const LOADER_TIP_AUDIO_FADE_MS = 1500;
   const LOADER_TIPS = [
     ['A fluencia nasce frase por frase', 'Fluency is built one phrase at a time'],
     ['Sessoes pequenas. Evolucao gigante', 'Small sessions. Massive evolution.'],
@@ -72,7 +74,9 @@
     bgAudio: null,
     tipAudioToken: 0,
     tipAdvanceTimer: 0,
-    audioSequenceRunning: false
+    audioSequenceRunning: false,
+    tipFadeStartTimer: 0,
+    tipFadeInterval: 0
   };
 
   function injectStars() {
@@ -444,23 +448,46 @@
     return root;
   }
 
+  function splitTipTextBalanced(text) {
+    const clean = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!clean) return ['', ''];
+    const words = clean.split(' ');
+    if (words.length <= 2) return [clean, ''];
+    const target = Math.floor(clean.length / 2);
+    let bestIndex = 1;
+    let bestDelta = Number.POSITIVE_INFINITY;
+    let prefixLength = words[0].length;
+    for (let i = 1; i < words.length; i += 1) {
+      const delta = Math.abs(prefixLength - target);
+      if (delta < bestDelta) {
+        bestDelta = delta;
+        bestIndex = i;
+      }
+      prefixLength += 1 + words[i].length;
+    }
+    const top = words.slice(0, bestIndex).join(' ').trim();
+    const bottom = words.slice(bestIndex).join(' ').trim();
+    return [top, bottom];
+  }
+
   function renderLoaderTip() {
     const tip = LOADER_TIPS[loaderState.tipIndex % LOADER_TIPS.length] || LOADER_TIPS[0];
     const root = document.getElementById(LOADER_ROOT_ID);
     if (!root) return;
     const lines = root.querySelectorAll('.playtalk-loader__tip-line');
-    if (lines[0]) lines[0].textContent = tip[0] || '';
-    if (lines[1]) lines[1].textContent = tip[1] || '';
-    const showPortuguese = loaderState.tipLanguage !== 'en';
+    const currentText = loaderState.tipLanguage === 'en' ? (tip[1] || '') : (tip[0] || '');
+    const [lineA, lineB] = splitTipTextBalanced(currentText);
+    if (lines[0]) lines[0].textContent = lineA;
+    if (lines[1]) lines[1].textContent = lineB;
     if (lines[0]) {
       lines[0].classList.remove('is-visible', 'is-hidden');
       lines[0].style.transitionDelay = '0ms';
-      lines[0].classList.add(showPortuguese ? 'is-visible' : 'is-hidden');
+      lines[0].classList.add('is-visible');
     }
     if (lines[1]) {
       lines[1].classList.remove('is-visible', 'is-hidden');
-      lines[1].style.transitionDelay = '0ms';
-      lines[1].classList.add(showPortuguese ? 'is-hidden' : 'is-visible');
+      lines[1].style.transitionDelay = '120ms';
+      lines[1].classList.add(lineB ? 'is-visible' : 'is-hidden');
     }
   }
 
@@ -484,6 +511,14 @@
     loaderState.audioSequenceRunning = false;
     loaderState.tipAudioToken += 1;
     stopLoaderAdvanceTimer();
+    if (loaderState.tipFadeStartTimer) {
+      window.clearTimeout(loaderState.tipFadeStartTimer);
+      loaderState.tipFadeStartTimer = 0;
+    }
+    if (loaderState.tipFadeInterval) {
+      window.clearInterval(loaderState.tipFadeInterval);
+      loaderState.tipFadeInterval = 0;
+    }
     if (loaderState.tipAudio) {
       loaderState.tipAudio.pause();
       loaderState.tipAudio.currentTime = 0;
@@ -532,7 +567,16 @@
     const src = loaderTipAudioUrl(loaderState.tipIndex, loaderState.tipLanguage);
     const audio = new Audio(src);
     audio.preload = 'auto';
+    audio.volume = LOADER_TIP_AUDIO_VOLUME;
     loaderState.tipAudio = audio;
+    if (loaderState.tipFadeStartTimer) {
+      window.clearTimeout(loaderState.tipFadeStartTimer);
+      loaderState.tipFadeStartTimer = 0;
+    }
+    if (loaderState.tipFadeInterval) {
+      window.clearInterval(loaderState.tipFadeInterval);
+      loaderState.tipFadeInterval = 0;
+    }
     const onFinish = () => {
       if (token !== loaderState.tipAudioToken || !loaderState.activeKeys.size) return;
       if (loaderState.tipLanguage === 'pt') {
@@ -542,6 +586,34 @@
       loaderState.audioSequenceRunning = false;
       dissolveLoaderTip();
     };
+    const scheduleFadeOut = () => {
+      if (token !== loaderState.tipAudioToken) return;
+      const duration = Number(audio.duration);
+      if (!Number.isFinite(duration) || duration <= 0) return;
+      const fadeStartMs = Math.max(0, (duration * 1000) - LOADER_TIP_AUDIO_FADE_MS);
+      loaderState.tipFadeStartTimer = window.setTimeout(() => {
+        if (token !== loaderState.tipAudioToken) return;
+        const startVolume = Math.max(0, Number(audio.volume) || 0);
+        const steps = 15;
+        const intervalMs = Math.max(40, Math.floor(LOADER_TIP_AUDIO_FADE_MS / steps));
+        let step = 0;
+        loaderState.tipFadeInterval = window.setInterval(() => {
+          if (token !== loaderState.tipAudioToken) {
+            window.clearInterval(loaderState.tipFadeInterval);
+            loaderState.tipFadeInterval = 0;
+            return;
+          }
+          step += 1;
+          const ratio = Math.max(0, 1 - (step / steps));
+          audio.volume = Math.max(0, startVolume * ratio);
+          if (step >= steps) {
+            window.clearInterval(loaderState.tipFadeInterval);
+            loaderState.tipFadeInterval = 0;
+          }
+        }, intervalMs);
+      }, fadeStartMs);
+    };
+    audio.addEventListener('loadedmetadata', scheduleFadeOut, { once: true });
     audio.addEventListener('ended', onFinish, { once: true });
     audio.addEventListener('error', onFinish, { once: true });
     audio.play().catch(() => onFinish());
