@@ -6684,6 +6684,78 @@ async function writeFlashcardsSequenceState(payload, updatedByUserId = null) {
   return result.rows[0] || null;
 }
 
+function parseSequenceCardIndexFromId(idValue, source) {
+  const id = String(idValue || '').trim();
+  const sourcePrefix = `${String(source || '').trim()}#`;
+  if (!id || !sourcePrefix.trim()) return null;
+  if (!id.startsWith(sourcePrefix)) return null;
+  const numericPart = id.slice(sourcePrefix.length);
+  const parsed = Number.parseInt(numericPart, 10);
+  if (!Number.isInteger(parsed) || parsed < 1) return null;
+  return parsed - 1;
+}
+
+function reorderItemsBySequenceDeck(items, sequenceDeck) {
+  if (!Array.isArray(items) || !items.length) return Array.isArray(items) ? items : [];
+  if (!sequenceDeck || !Array.isArray(sequenceDeck.items) || !sequenceDeck.items.length) return items.slice();
+  const source = String(sequenceDeck.source || '').trim();
+  if (!source) return items.slice();
+
+  const usedIndexes = new Set();
+  const ordered = [];
+  for (const card of sequenceDeck.items) {
+    const itemIndex = parseSequenceCardIndexFromId(card?.id, source);
+    if (itemIndex === null || itemIndex >= items.length || usedIndexes.has(itemIndex)) continue;
+    ordered.push(items[itemIndex]);
+    usedIndexes.add(itemIndex);
+  }
+
+  items.forEach((item, index) => {
+    if (!usedIndexes.has(index)) ordered.push(item);
+  });
+  return ordered;
+}
+
+async function applyFlashcardsSequenceForPhaseSix(dayNumber, payload) {
+  if (!pool) return payload;
+  const normalizedDay = Number.parseInt(dayNumber, 10);
+  if (!Number.isInteger(normalizedDay) || normalizedDay < 1) return payload;
+  if (!payload || typeof payload !== 'object' || !Array.isArray(payload.items) || !payload.items.length) return payload;
+
+  await ensurePublicFlashcardDecksTable();
+  const deckResult = await pool.query(
+    `SELECT file_name, deck_level
+     FROM public.flashcards_public_decks
+     WHERE deck_level = $1
+       AND is_hidden = false
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+    [normalizedDay]
+  );
+  const deckRow = deckResult.rows[0] || null;
+  if (!deckRow?.file_name) return payload;
+
+  const source = `allcards/${normalizePublicFlashcardDeckFileName(deckRow.file_name, 'deck.json')}`;
+  const fallback = await buildDefaultFlashcardsSequenceState();
+  const savedStateRow = await readFlashcardsSequenceState();
+  const savedPayload = savedStateRow?.payload && typeof savedStateRow.payload === 'object'
+    ? savedStateRow.payload
+    : null;
+  const state = savedPayload
+    ? sanitizeFlashcardsSequencePayload(savedPayload, fallback.decks)
+    : fallback;
+  const sequenceDeck = Array.isArray(state?.decks)
+    ? state.decks.find((deck) => String(deck?.source || '').trim() === source)
+    : null;
+
+  if (!sequenceDeck) return payload;
+  const reorderedItems = reorderItemsBySequenceDeck(payload.items, sequenceDeck);
+  return {
+    ...payload,
+    items: reorderedItems
+  };
+}
+
 async function upsertPublicFlashcardDeck({
   deckKey,
   fileName,
@@ -12787,7 +12859,10 @@ app.get('/api/local-level/day/:day/phase/:phase', async (req, res) => {
     }
 
     const raw = await fs.promises.readFile(filePath, 'utf8');
-    const payload = JSON.parse(raw);
+    let payload = JSON.parse(raw);
+    if (phaseNumber === 6 && payload && typeof payload === 'object' && Array.isArray(payload.items)) {
+      payload = await applyFlashcardsSequenceForPhaseSix(dayNumber, payload);
+    }
     res.setHeader('Cache-Control', 'no-store');
     res.json(payload);
   } catch (error) {
