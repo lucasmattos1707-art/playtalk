@@ -10399,6 +10399,10 @@
           firstStageMicHintTimer: 0,
           firstStageMicHintRotationTimer: 0,
           firstStageMicHintIndex: 0,
+          orderedPoolCursor: {
+            base: -1,
+            review: -1
+          },
           fifthStarHintDismissed: false,
           paused: false,
           reportCardId: '',
@@ -19492,6 +19496,7 @@
         if (!sourceIds.length) return false;
         state.game.entries.clear();
         state.game.queue = [];
+        resetGameOrderedPoolCursor();
         shuffle(sourceIds).forEach((cardId) => {
           const card = cardById(cardId);
           if (!card) return;
@@ -19512,6 +19517,7 @@
         resetTutorialRuntime({ preserveCompletion: true });
         state.game.entries.clear();
         state.game.queue = [];
+        resetGameOrderedPoolCursor();
         state.game.currentId = null;
         state.game.footerNavPrimed = false;
         state.game.footerNavPrimeKey = '';
@@ -19550,7 +19556,26 @@
       function buildOrderedDeckSelection(cards, limit) {
         const normalizedLimit = Math.max(0, Number(limit) || 0);
         if (!normalizedLimit || !cards.length) return [];
-        return shuffle(cards.slice()).slice(0, normalizedLimit);
+        return cards
+          .slice()
+          .sort((left, right) => {
+            const leftLevel = normalizeDeckLevel(left?.deckLevel);
+            const rightLevel = normalizeDeckLevel(right?.deckLevel);
+            const safeLeftLevel = leftLevel === null ? Number.MAX_SAFE_INTEGER : leftLevel;
+            const safeRightLevel = rightLevel === null ? Number.MAX_SAFE_INTEGER : rightLevel;
+            if (safeLeftLevel !== safeRightLevel) return safeLeftLevel - safeRightLevel;
+
+            const leftDeck = safeText(left?.source || left?.deckTitle || '');
+            const rightDeck = safeText(right?.source || right?.deckTitle || '');
+            if (leftDeck !== rightDeck) return leftDeck.localeCompare(rightDeck);
+
+            const leftIndex = Number.isFinite(Number(left?.sourceIndex)) ? Number(left.sourceIndex) : Number.MAX_SAFE_INTEGER;
+            const rightIndex = Number.isFinite(Number(right?.sourceIndex)) ? Number(right.sourceIndex) : Number.MAX_SAFE_INTEGER;
+            if (leftIndex !== rightIndex) return leftIndex - rightIndex;
+
+            return safeText(left?.id || '').localeCompare(safeText(right?.id || ''));
+          })
+          .slice(0, normalizedLimit);
       }
 
       function cardDeckSelectionKey(card) {
@@ -19559,6 +19584,29 @@
 
       function buildDeckFirstCardSelection(cards, limit) {
         return buildOrderedDeckSelection(cards, limit);
+      }
+
+      function nextOrderedCardFromPool(cards, pool = 'base') {
+        const source = Array.isArray(cards) ? cards : [];
+        if (!source.length) return null;
+        if (!state.game.orderedPoolCursor || typeof state.game.orderedPoolCursor !== 'object') {
+          state.game.orderedPoolCursor = { base: -1, review: -1 };
+        }
+        const normalizedPool = pool === 'review' ? 'review' : 'base';
+        const ordered = buildOrderedDeckSelection(source, source.length);
+        const lastIndex = Number.isFinite(Number(state.game.orderedPoolCursor[normalizedPool]))
+          ? Number(state.game.orderedPoolCursor[normalizedPool])
+          : -1;
+        const nextIndex = (lastIndex + 1) % ordered.length;
+        state.game.orderedPoolCursor[normalizedPool] = nextIndex;
+        return ordered[nextIndex] || null;
+      }
+
+      function resetGameOrderedPoolCursor() {
+        state.game.orderedPoolCursor = {
+          base: -1,
+          review: -1
+        };
       }
 
       function buildLevelAwareRoundGroups(baseCards, reviewCards, limit) {
@@ -21453,13 +21501,12 @@
         preferredSource = preferredSource.filter(isCardEligibleForGame);
         fallbackSource = fallbackSource.filter(isCardEligibleForGame);
         const sourceCards = preferredSource.length ? preferredSource : fallbackSource;
-        let nextCard = (pool === 'review' && preferredSource.length)
-          ? sourceCards[0]
-          : buildDeckFirstCardSelection(sourceCards, 1)[0];
+        const effectivePool = preferredSource.length ? pool : (pool === 'review' ? 'base' : 'review');
+        const nextCard = nextOrderedCardFromPool(sourceCards, effectivePool);
         if (!nextCard) return null;
         return {
           card: nextCard,
-          pool: preferredSource.length ? pool : (pool === 'review' ? 'base' : 'review')
+          pool: effectivePool
         };
       }
 
@@ -22109,6 +22156,7 @@
         clearLevelSwitchTimer();
         state.game.entries.clear();
         state.game.queue = [];
+        resetGameOrderedPoolCursor();
         state.game.currentId = null;
         state.game.listening = false;
         state.game.paused = false;
@@ -22239,6 +22287,7 @@
 
         state.game.entries.clear();
         state.game.queue = [];
+        resetGameOrderedPoolCursor();
         state.game.currentId = null;
         state.game.listening = false;
         state.game.paused = false;
@@ -22303,6 +22352,7 @@
         clearStageHintLoop({ clearStatus: true });
         state.game.fifthStarHintDismissed = false;
         clearPendingRewardSeal();
+        resetGameOrderedPoolCursor();
         advanceReadyMemorizations();
         if (!hasTutorialPlanetUnlocked()) {
           clearGameSessionLocally();
@@ -22320,6 +22370,7 @@
           } else {
             state.game.entries.clear();
             state.game.queue = [];
+            resetGameOrderedPoolCursor();
             state.game.currentId = null;
             state.game.listening = false;
             state.game.paused = false;
@@ -22431,6 +22482,7 @@
         resetTutorialRuntime({ preserveCompletion: true });
         state.game.entries.clear();
         state.game.queue = [];
+        resetGameOrderedPoolCursor();
         state.game.currentId = null;
         state.game.listening = false;
         state.game.paused = false;
@@ -22551,6 +22603,7 @@
         resetScaleBatchProgress();
         state.game.entries.clear();
         state.game.queue = [];
+        resetGameOrderedPoolCursor();
         state.game.currentId = null;
         state.game.listening = false;
         state.game.paused = false;
