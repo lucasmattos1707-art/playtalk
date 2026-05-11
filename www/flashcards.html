@@ -4111,7 +4111,7 @@
       color: #06142a;
       background: linear-gradient(180deg, #56d8ff, #2ca8ff);
       box-shadow: 0 0 22px rgba(72, 212, 255, 0.58);
-      margin-top: 12px;
+      margin-top: 20px;
       margin-bottom: 8px;
       display: inline-grid;
       place-items: center;
@@ -12673,41 +12673,21 @@
         state.entry.flashStartInFlight = true;
         try {
           const loader = window.PlaytalkLoader;
-          const startedAt = Number(state.entry.welcomeFlashStartAt) || Date.now();
-          const elapsed = Math.max(0, Date.now() - startedAt);
-          const remaining = Math.max(0, WELCOME_FLASH_LOADER_MS - elapsed);
-          const tipDelay = Math.max(0, remaining - WELCOME_FLASH_LOADER_TIP_LEAD_MS);
-          let revealTipTimer = 0;
-          let tipLines = [];
           if (loader) {
             loader.show('welcome-flash-start', {
               message: 'PREPARANDO SUA PARTIDA',
               rotateTips: false,
               clearMeta: true
             });
-            const loaderRoot = document.getElementById('playtalkGlobalLoader');
-            tipLines = Array.from(loaderRoot?.querySelectorAll('.playtalk-loader__tip-line') || []);
-            tipLines.forEach((line) => {
-              line.style.opacity = '0';
-            });
-            revealTipTimer = window.setTimeout(() => {
-              tipLines.forEach((line, index) => {
-                line.style.transition = 'opacity 500ms ease, transform 500ms ease';
-                line.style.transitionDelay = index === 0 ? '0ms' : '500ms';
-                line.style.opacity = '1';
-              });
-            }, tipDelay);
           }
           const selectedCount = currentBaseGameCount(selectedGameLevel() || currentUserLevel());
           hideWelcomeGate();
           saveSelectedGameCount(selectedCount);
           state.game.selectedCount = selectedCount;
-          if (remaining > 0) {
-            await new Promise((resolve) => window.setTimeout(resolve, remaining));
-          }
-          if (revealTipTimer) {
-            window.clearTimeout(revealTipTimer);
-            revealTipTimer = 0;
+          if (loader && typeof loader.waitForAudioCycle === 'function') {
+            await loader.waitForAudioCycle({ timeoutMs: 32000 });
+          } else if (WELCOME_FLASH_LOADER_MS > 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, WELCOME_FLASH_LOADER_MS));
           }
           if (loader) {
             loader.hide('welcome-flash-start', { force: true });

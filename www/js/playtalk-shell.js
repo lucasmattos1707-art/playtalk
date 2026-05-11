@@ -77,7 +77,8 @@
     tipAdvanceTimer: 0,
     audioSequenceRunning: false,
     tipFadeStartTimer: 0,
-    tipFadeInterval: 0
+    tipFadeInterval: 0,
+    pendingAudioCycleResolvers: []
   };
 
   function injectStars() {
@@ -475,6 +476,34 @@
     if (lines[1]) lines[1].textContent = tip[1] || '';
   }
 
+  function renderLoaderTipForLanguage(language) {
+    const tip = LOADER_TIPS[loaderState.tipIndex % LOADER_TIPS.length] || LOADER_TIPS[0];
+    const root = document.getElementById(LOADER_ROOT_ID);
+    if (!root) return;
+    const lines = root.querySelectorAll('.playtalk-loader__tip-line');
+    const normalizedLanguage = language === 'en' ? 'en' : 'pt';
+    if (normalizedLanguage === 'pt') {
+      if (lines[0]) lines[0].textContent = tip[0] || '';
+      if (lines[1]) lines[1].textContent = '';
+      return;
+    }
+    if (lines[0]) lines[0].textContent = '';
+    if (lines[1]) lines[1].textContent = tip[1] || '';
+  }
+
+  function resolvePendingAudioCycleWaiters() {
+    const waiters = Array.isArray(loaderState.pendingAudioCycleResolvers)
+      ? loaderState.pendingAudioCycleResolvers.splice(0)
+      : [];
+    waiters.forEach((resolve) => {
+      try {
+        resolve();
+      } catch (_error) {
+        // ignore
+      }
+    });
+  }
+
   function stopLoaderAdvanceTimer() {
     if (!loaderState.tipAdvanceTimer) return;
     window.clearTimeout(loaderState.tipAdvanceTimer);
@@ -503,6 +532,7 @@
       loaderState.bgAudio.currentTime = 0;
       loaderState.bgAudio = null;
     }
+    resolvePendingAudioCycleWaiters();
   }
 
   function loaderTipAudioUrl(index, language) {
@@ -528,6 +558,17 @@
     ];
   }
 
+  function preloadAudioUrl(url) {
+    if (!url) return;
+    try {
+      const audio = new Audio(url);
+      audio.preload = 'auto';
+      audio.load();
+    } catch (_error) {
+      // ignore
+    }
+  }
+
   function pickNextTipIndexRandom() {
     if (LOADER_TIPS.length <= 1) return 0;
     let nextIndex = loaderState.tipIndex;
@@ -545,6 +586,19 @@
     bgAudio.volume = 0.22;
     loaderState.bgAudio = bgAudio;
     return bgAudio;
+  }
+
+  function preloadLoaderAudioBuffer() {
+    preloadAudioUrl(LOADER_BG_MUSIC_URL);
+    const tipCount = LOADER_TIPS.length;
+    if (!tipCount) return;
+    for (let offset = 0; offset <= 4; offset += 1) {
+      const targetIndex = (loaderState.tipIndex + offset) % tipCount;
+      const ptCandidates = loaderTipAudioCandidates(targetIndex, 'pt');
+      const enCandidates = loaderTipAudioCandidates(targetIndex, 'en');
+      preloadAudioUrl(ptCandidates[0]);
+      preloadAudioUrl(enCandidates[0]);
+    }
   }
 
   function playLoaderBackgroundMusic() {
@@ -581,6 +635,7 @@
   function playLoaderTipLanguage(language, token) {
     if (!loaderState.activeKeys.size) return;
     loaderState.tipLanguage = language === 'en' ? 'en' : 'pt';
+    renderLoaderTipForLanguage(loaderState.tipLanguage);
     if (loaderState.tipAudio) {
       loaderState.tipAudio.pause();
       loaderState.tipAudio.currentTime = 0;
@@ -606,6 +661,7 @@
       fadeOutLoaderBackgroundMusic(LOADER_FINAL_DISSOLVE_MS);
       loaderState.audioSequenceRunning = false;
       loaderState.tipIndex = pickNextTipIndexRandom();
+      resolvePendingAudioCycleWaiters();
     };
     const scheduleFadeOut = () => {
       if (token !== loaderState.tipAudioToken) return;
@@ -664,8 +720,29 @@
     loaderState.audioSequenceRunning = true;
     loaderState.tipAudioToken += 1;
     const token = loaderState.tipAudioToken;
-    renderLoaderTip();
+    renderLoaderTipForLanguage('pt');
+    preloadLoaderAudioBuffer();
     playLoaderTipLanguage('pt', token);
+  }
+
+  function waitForLoaderAudioCycle(options = {}) {
+    const timeoutMs = Math.max(1000, Number(options?.timeoutMs) || 30000);
+    if (!loaderState.audioSequenceRunning) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      let resolved = false;
+      const done = () => {
+        if (resolved) return;
+        resolved = true;
+        resolve();
+      };
+      const timer = window.setTimeout(done, timeoutMs);
+      loaderState.pendingAudioCycleResolvers.push(() => {
+        window.clearTimeout(timer);
+        done();
+      });
+    });
   }
 
   function renderLoader() {
@@ -866,6 +943,7 @@
     setMessage: setLoaderMessage,
     setMeta: setLoaderMeta,
     reset: resetLoader,
+    waitForAudioCycle: waitForLoaderAudioCycle,
     isVisible(key) {
       if (key == null) return loaderState.activeKeys.size > 0;
       return loaderState.activeKeys.has(normalizeLoaderKey(key));
