@@ -14,49 +14,50 @@
     en: `${LOADER_AUDIO_BASE_URL}/Niveis/154/001`
   };
   const LOADER_BG_MUSIC_URL = '/audio/load.mp3';
-  const LOADER_TIP_AUDIO_VOLUME = 0.7;
+  const LOADER_TIP_AUDIO_VOLUME = 0.56;
   const LOADER_TIP_AUDIO_FADE_MS = 1500;
+  const LOADER_FINAL_DISSOLVE_MS = 500;
   const LOADER_TIPS = [
-    ['A fluencia nasce frase por frase', 'Fluency is built one phrase at a time'],
-    ['Sessoes pequenas. Evolucao gigante', 'Small sessions. Massive evolution.'],
-    ['Seu ouvido aprende antes da boca', 'Your ears learn before your mouth'],
-    ['Constancia vence intensidade', 'Consistency beats intensity'],
-    ['Ouca primeiro. Fale natural depois', 'Listen first. Speak naturally later'],
-    ['Ingles e ritmo, nao traducao', 'English is rhythm, not translation'],
-    ['Mais uma carta. Mais um nivel', 'One more card. One step stronger'],
-    ['Seu cerebro esta se adaptando', 'Your brain is adapting right now'],
-    ['Repeticao cria fala automatica', 'Repetition creates automatic speech'],
-    ['Fluencia real parece sem esforco', 'Real fluency feels effortless'],
+    ['Fluência é construída uma frase de cada vez', 'Fluency is built one phrase at a time'],
+    ['Sessões curtas. Evolução gigantesca', 'Small sessions. Massive evolution.'],
+    ['Seus ouvidos aprendem antes da sua boca', 'Your ears learn before your mouth'],
+    ['Consistência vence intensidade', 'Consistency beats intensity'],
+    ['Escute primeiro. Fale naturalmente depois', 'Listen first. Speak naturally later'],
+    ['Inglês é ritmo, não tradução', 'English is rhythm, not translation'],
+    ['Mais um card. Mais um passo forte', 'One more card. One step stronger'],
+    ['Seu cérebro está se adaptando agora', 'Your brain is adapting right now'],
+    ['Repetição cria fala automática', 'Repetition creates automatic speech'],
+    ['Fluência real parece sem esforço', 'Real fluency feels effortless'],
     ['Pense menos. Absorva mais', 'Think less. Absorb more'],
     ['Seu sotaque melhora com coragem', 'Your accent improves with courage'],
-    ['Entender vale mais que perfeicao', 'Understanding matters more than perfection'],
-    ['Bebes aprendem por exposicao', 'Babies learn by exposure too'],
-    ['Pouco por dia muda tudo', 'Short practice. Long-term results'],
-    ['Cada erro treina seu cerebro', 'Every mistake teaches your brain'],
-    ['Ouca. Sinta. Repita', 'Hear it. Feel it. Repeat it'],
-    ['Fluencia cresce em camadas', 'Fluency grows in layers'],
-    ['Sua escuta esta evoluindo', 'Your listening is leveling up'],
-    ['Ingles natural vem do input', 'Natural English comes from input'],
-    ['Velocidade vem apos clareza', 'Speed comes after clarity'],
-    ['Entender vence decorar', 'Understanding beats memorizing'],
-    ['Contato diario muda tudo', 'Daily contact changes everything'],
-    ['O idioma ja parece familiar', 'The language is becoming familiar'],
-    ['Treine seus ouvidos diariamente', 'Train your ears every day'],
-    ['Pequenos avancos contam', 'Tiny progress still counts'],
-    ['Voce cria respostas automaticas', 'You are building automatic responses'],
-    ['Ingles fica facil com ritmo', 'English becomes easier with momentum'],
-    ['Fluencia e estilo de vida', 'Fluency is a lifestyle'],
-    ['Seu cerebro ama padroes', 'Your brain loves patterns'],
-    ['Frases reais criam fluencia', 'Real phrases create real fluency'],
-    ['Imersao muda seus instintos', 'Immersion changes your instincts'],
-    ['Confianca nasce da repeticao', 'Confidence grows through repetition'],
-    ['Pratica vira instinto natural', 'Practice turns confusion into instinct'],
-    ['Continue aparecendo todo dia', 'Keep showing up every day'],
-    ['Aprenda como na vida real', 'Learn naturally, like real life'],
-    ['O ingles comeca a prever', 'English starts sounding predictable'],
-    ['Voce esta mais perto do que pensa', 'You are closer than you think'],
-    ['Treine hoje. Fale livre amanha', 'Train daily. Speak freely later'],
-    ['Seu futuro fala ingles', 'Your future self speaks English']
+    ['Entender importa mais que perfeição', 'Understanding matters more than perfection'],
+    ['Bebês também aprendem por exposição', 'Babies learn by exposure too'],
+    ['Prática curta. Resultados de longo prazo', 'Short practice. Long-term results'],
+    ['Cada erro ensina seu cérebro', 'Every mistake teaches your brain'],
+    ['Ouça. Sinta. Repita', 'Hear it. Feel it. Repeat it'],
+    ['Fluência cresce em camadas', 'Fluency grows in layers'],
+    ['Sua escuta está evoluindo', 'Your listening is leveling up'],
+    ['Inglês natural vem da exposição', 'Natural English comes from input'],
+    ['Velocidade vem depois da clareza', 'Speed comes after clarity'],
+    ['Entender é melhor que decorar', 'Understanding beats memorizing'],
+    ['Contato diário muda tudo', 'Daily contact changes everything'],
+    ['O idioma está ficando familiar', 'The language is becoming familiar'],
+    ['Treine seus ouvidos todos os dias', 'Train your ears every day'],
+    ['Pequeno progresso ainda conta', 'Tiny progress still counts'],
+    ['Você está criando respostas automáticas', 'You are building automatic responses'],
+    ['Inglês fica mais fácil com ritmo', 'English becomes easier with momentum'],
+    ['Fluência é um estilo de vida', 'Fluency is a lifestyle'],
+    ['Seu cérebro ama padrões', 'Your brain loves patterns'],
+    ['Frases reais criam fluência real', 'Real phrases create real fluency'],
+    ['Imersão muda seus instintos', 'Immersion changes your instincts'],
+    ['Confiança cresce através da repetição', 'Confidence grows through repetition'],
+    ['Prática transforma confusão em instinto', 'Practice turns confusion into instinct'],
+    ['Continue aparecendo todos os dias', 'Keep showing up every day'],
+    ['Aprenda naturalmente, como na vida real', 'Learn naturally, like real life'],
+    ['Inglês começa a soar previsível', 'English starts sounding predictable'],
+    ['Você está mais perto do que imagina', 'You are closer than you think'],
+    ['Treine diariamente. Fale livremente depois', 'Train daily. Speak freely later'],
+    ['Seu eu do futuro fala inglês', 'Your future self speaks English']
   ];
   const loaderState = {
     activeKeys: new Set(),
@@ -262,8 +263,8 @@
       .playtalk-loader__tip-line {
         display: block;
         color: #ffffff;
-        opacity: 0;
-        transform: translateY(6px);
+        opacity: 1;
+        transform: none;
       }
 
       .playtalk-loader__tip-line:last-child {
@@ -273,15 +274,10 @@
           0 0 16px rgba(51, 214, 255, 0.45);
       }
 
-      .playtalk-loader__tip-line.is-visible {
-        opacity: 1;
-        transform: translateY(0);
-        transition: opacity 500ms ease, transform 500ms ease;
-      }
-
-      .playtalk-loader__tip-line.is-hidden {
+      .playtalk-loader__screen.is-dissolving {
         opacity: 0;
-        transform: translateY(6px);
+        transform: scale(0.992);
+        transition: opacity ${LOADER_FINAL_DISSOLVE_MS}ms ease, transform ${LOADER_FINAL_DISSOLVE_MS}ms ease;
       }
 
       .playtalk-loader__progress {
@@ -475,30 +471,8 @@
     const root = document.getElementById(LOADER_ROOT_ID);
     if (!root) return;
     const lines = root.querySelectorAll('.playtalk-loader__tip-line');
-    const currentText = loaderState.tipLanguage === 'en' ? (tip[1] || '') : (tip[0] || '');
-    const [lineA, lineB] = splitTipTextBalanced(currentText);
-    if (lines[0]) lines[0].textContent = lineA;
-    if (lines[1]) lines[1].textContent = lineB;
-    if (lines[0]) {
-      lines[0].classList.remove('is-visible', 'is-hidden');
-      lines[0].style.transitionDelay = '0ms';
-      lines[0].classList.add('is-visible');
-    }
-    if (lines[1]) {
-      lines[1].classList.remove('is-visible', 'is-hidden');
-      lines[1].style.transitionDelay = '120ms';
-      lines[1].classList.add(lineB ? 'is-visible' : 'is-hidden');
-    }
-  }
-
-  function dissolveLoaderTip() {
-    const root = document.getElementById(LOADER_ROOT_ID);
-    if (!root) return;
-    const lines = root.querySelectorAll('.playtalk-loader__tip-line');
-    lines.forEach((line) => {
-      line.classList.remove('is-visible');
-      line.classList.add('is-hidden');
-    });
+    if (lines[0]) lines[0].textContent = tip[0] || '';
+    if (lines[1]) lines[1].textContent = tip[1] || '';
   }
 
   function stopLoaderAdvanceTimer() {
@@ -538,6 +512,31 @@
     return `${LOADER_AUDIO_PATHS.pt}/bandeiras-flashcard-item-${fileId}.mp3`;
   }
 
+  function loaderTipAudioCandidates(index, language) {
+    const safeIndex = Math.max(1, (Number(index) || 0) + 1);
+    const fileId3 = String(safeIndex).padStart(3, '0');
+    const legacyEvenFile = String(safeIndex * 2).padStart(6, '0');
+    if (language === 'en') {
+      return [
+        `${LOADER_AUDIO_PATHS.en}/acts-flashcard-item-${fileId3}.mp3`,
+        `${LOADER_AUDIO_PATHS.en}/${legacyEvenFile}.mp3`
+      ];
+    }
+    return [
+      `${LOADER_AUDIO_PATHS.pt}/bandeiras-flashcard-item-${fileId3}.mp3`,
+      `${LOADER_AUDIO_PATHS.pt}/${legacyEvenFile}.mp3`
+    ];
+  }
+
+  function pickNextTipIndexRandom() {
+    if (LOADER_TIPS.length <= 1) return 0;
+    let nextIndex = loaderState.tipIndex;
+    while (nextIndex === loaderState.tipIndex) {
+      nextIndex = Math.floor(Math.random() * LOADER_TIPS.length);
+    }
+    return nextIndex;
+  }
+
   function ensureLoaderBackgroundMusic() {
     if (loaderState.bgAudio) return loaderState.bgAudio;
     const bgAudio = new Audio(LOADER_BG_MUSIC_URL);
@@ -554,21 +553,41 @@
     bgAudio.play().catch(() => {});
   }
 
+  function fadeOutLoaderBackgroundMusic(durationMs = LOADER_FINAL_DISSOLVE_MS) {
+    const bgAudio = loaderState.bgAudio;
+    if (!bgAudio) return;
+    const startVolume = Math.max(0, Number(bgAudio.volume) || 0);
+    const steps = Math.max(1, Math.round(durationMs / 40));
+    let step = 0;
+    const timer = window.setInterval(() => {
+      step += 1;
+      const ratio = Math.max(0, 1 - (step / steps));
+      bgAudio.volume = startVolume * ratio;
+      if (step >= steps) {
+        window.clearInterval(timer);
+      }
+    }, Math.max(30, Math.floor(durationMs / steps)));
+  }
+
+  function dissolveLoaderScreen() {
+    const root = document.getElementById(LOADER_ROOT_ID);
+    const screen = root?.querySelector('.playtalk-loader__screen');
+    if (!screen) return;
+    screen.classList.remove('is-dissolving');
+    void screen.offsetWidth;
+    screen.classList.add('is-dissolving');
+  }
+
   function playLoaderTipLanguage(language, token) {
     if (!loaderState.activeKeys.size) return;
     loaderState.tipLanguage = language === 'en' ? 'en' : 'pt';
-    renderLoaderTip();
     if (loaderState.tipAudio) {
       loaderState.tipAudio.pause();
       loaderState.tipAudio.currentTime = 0;
       loaderState.tipAudio = null;
     }
     playLoaderBackgroundMusic();
-    const src = loaderTipAudioUrl(loaderState.tipIndex, loaderState.tipLanguage);
-    const audio = new Audio(src);
-    audio.preload = 'auto';
-    audio.volume = LOADER_TIP_AUDIO_VOLUME;
-    loaderState.tipAudio = audio;
+    const candidates = loaderTipAudioCandidates(loaderState.tipIndex, loaderState.tipLanguage);
     if (loaderState.tipFadeStartTimer) {
       window.clearTimeout(loaderState.tipFadeStartTimer);
       loaderState.tipFadeStartTimer = 0;
@@ -583,8 +602,10 @@
         playLoaderTipLanguage('en', token);
         return;
       }
+      dissolveLoaderScreen();
+      fadeOutLoaderBackgroundMusic(LOADER_FINAL_DISSOLVE_MS);
       loaderState.audioSequenceRunning = false;
-      dissolveLoaderTip();
+      loaderState.tipIndex = pickNextTipIndexRandom();
     };
     const scheduleFadeOut = () => {
       if (token !== loaderState.tipAudioToken) return;
@@ -613,10 +634,28 @@
         }, intervalMs);
       }, fadeStartMs);
     };
-    audio.addEventListener('loadedmetadata', scheduleFadeOut, { once: true });
-    audio.addEventListener('ended', onFinish, { once: true });
-    audio.addEventListener('error', onFinish, { once: true });
-    audio.play().catch(() => onFinish());
+    const tryPlayCandidate = (candidateIndex) => {
+      if (token !== loaderState.tipAudioToken || !loaderState.activeKeys.size) return;
+      if (candidateIndex >= candidates.length) {
+        onFinish();
+        return;
+      }
+      const audio = new Audio(candidates[candidateIndex]);
+      audio.preload = 'auto';
+      audio.volume = LOADER_TIP_AUDIO_VOLUME;
+      loaderState.tipAudio = audio;
+      audio.addEventListener('loadedmetadata', scheduleFadeOut, { once: true });
+      audio.addEventListener('ended', onFinish, { once: true });
+      audio.addEventListener('error', () => {
+        if (token !== loaderState.tipAudioToken) return;
+        tryPlayCandidate(candidateIndex + 1);
+      }, { once: true });
+      audio.play().catch(() => {
+        if (token !== loaderState.tipAudioToken) return;
+        tryPlayCandidate(candidateIndex + 1);
+      });
+    };
+    tryPlayCandidate(0);
   }
 
   function startLoaderAudioSequence() {
@@ -625,7 +664,6 @@
     loaderState.audioSequenceRunning = true;
     loaderState.tipAudioToken += 1;
     const token = loaderState.tipAudioToken;
-    loaderState.tipLanguage = 'pt';
     renderLoaderTip();
     playLoaderTipLanguage('pt', token);
   }
@@ -652,6 +690,14 @@
     root.hidden = !visible;
     root.classList.toggle('is-visible', visible);
     root.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    if (visible) {
+      const screen = root.querySelector('.playtalk-loader__screen');
+      if (screen) screen.classList.remove('is-dissolving');
+      const bgAudio = loaderState.bgAudio;
+      if (bgAudio && bgAudio.volume <= 0.001) {
+        bgAudio.volume = 0.22;
+      }
+    }
     document.body.classList.toggle(LOADER_BODY_CLASS, visible);
   }
 
@@ -709,7 +755,7 @@
     const rotate = options.rotate !== false;
     stopLoaderTips();
     loaderState.rotateTips = rotate;
-    loaderState.tipIndex = Math.max(0, loaderState.tipIndex % LOADER_TIPS.length);
+    loaderState.tipIndex = pickNextTipIndexRandom();
     loaderState.lastTipIndex = loaderState.tipIndex;
     loaderState.tipLanguage = 'pt';
     renderLoaderTip();
