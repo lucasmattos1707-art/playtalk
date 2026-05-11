@@ -4116,6 +4116,7 @@
       display: inline-grid;
       place-items: center;
       min-height: 48px;
+      transform: translateY(-45px);
     }
 
 
@@ -10221,13 +10222,13 @@
       const GAME_OPTION_VALUE_MAP = {
         difficulty: ['level_1'],
         speed: ['0.70', '0.80', '0.90', '1.00'],
-        accent: ['american', 'british'],
+        accent: ['mix_100_0', 'mix_90_10', 'mix_80_20', 'mix_70_30', 'mix_60_40', 'mix_50_50', 'mix_40_60', 'mix_30_70', 'mix_20_80', 'mix_10_90', 'mix_0_100'],
         fourthStageTyping: ['off', 'on']
       };
       const DEFAULT_GAME_OPTIONS = {
         difficulty: 'level_1',
         speed: '0.90',
-        accent: 'american',
+        accent: 'mix_100_0',
         fourthStageTyping: 'off'
       };
       const ONBOARDING_GATE_TRANSITION_MS = 2000;
@@ -16014,11 +16015,13 @@
           accent: {
             label: '3/4',
             name: 'Sotaque',
-            desc: 'Escolhe qual link de áudio será priorizado.',
-            values: {
-              american: { label: 'Americano', desc: 'Prioriza o primeiro áudio da carta.' },
-              british: { label: 'Britânico', desc: 'Prioriza o segundo áudio; se faltar, usa o primeiro.' }
-            }
+            desc: 'Cada toque muda 10% entre Americano e Britânico.',
+            values: Object.fromEntries((GAME_OPTION_VALUE_MAP.accent || []).map((value) => {
+              const match = /^mix_(\d{1,3})_(\d{1,3})$/.exec(String(value || ''));
+              const american = match ? Math.max(0, Math.min(100, Number.parseInt(match[1], 10) || 0)) : 100;
+              const british = match ? Math.max(0, Math.min(100, Number.parseInt(match[2], 10) || 0)) : 0;
+              return [value, { label: `${american}-${british}`, desc: `${american}% Americano e ${british}% Britânico.` }];
+            }))
           },
           fourthStageTyping: {
             label: '4/4',
@@ -19560,7 +19563,7 @@
         if (window.speechSynthesis && card.english) {
           return finishStagePlayReflection(new Promise((resolve) => {
             const utterance = new SpeechSynthesisUtterance(card.english);
-            utterance.lang = normalizeGameOptionValue('accent', state.options?.accent) === 'british' ? 'en-GB' : 'en-US';
+            utterance.lang = pickCardAccent(card) === 'british' ? 'en-GB' : 'en-US';
             utterance.rate = rate;
             utterance.pitch = 1;
             utterance.onend = utterance.onerror = () => {
@@ -19737,11 +19740,37 @@
         return Math.max(0.7, Math.min(1.0, parsed));
       }
 
-      function resolveCardAudioUrl(card) {
-        const preferredAccent = normalizeGameOptionValue('accent', state.options?.accent);
+      function resolveAccentMixRatios() {
+        const raw = normalizeGameOptionValue('accent', state.options?.accent);
+        const match = /^mix_(\d{1,3})_(\d{1,3})$/.exec(raw);
+        if (!match) return { american: 100, british: 0 };
+        const american = Math.max(0, Math.min(100, Number.parseInt(match[1], 10) || 0));
+        const british = Math.max(0, Math.min(100, Number.parseInt(match[2], 10) || 0));
+        const total = american + british;
+        if (total <= 0) return { american: 100, british: 0 };
+        const normalizedAmerican = Math.round((american / total) * 100);
+        const normalizedBritish = 100 - normalizedAmerican;
+        return { american: normalizedAmerican, british: normalizedBritish };
+      }
+
+      function pickCardAccent(card) {
         const primary = safeText(card?.audioUrl);
         const british = safeText(card?.audioUrlBritish);
-        if (preferredAccent === 'british') return british || primary;
+        if (primary && !british) return 'american';
+        if (!primary && british) return 'british';
+        if (!primary && !british) {
+          const ratios = resolveAccentMixRatios();
+          return (Math.random() * 100) < ratios.british ? 'british' : 'american';
+        }
+        const ratios = resolveAccentMixRatios();
+        return (Math.random() * 100) < ratios.british ? 'british' : 'american';
+      }
+
+      function resolveCardAudioUrl(card) {
+        const primary = safeText(card?.audioUrl);
+        const british = safeText(card?.audioUrlBritish);
+        const pickedAccent = pickCardAccent(card);
+        if (pickedAccent === 'british') return british || primary;
         return primary || british;
       }
 
