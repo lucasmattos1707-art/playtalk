@@ -847,8 +847,16 @@
       }
       async function persistDirtyDecksNow(options={}){
         const silent=Boolean(options?.silent);
+        const fallbackCurrentDeck=Boolean(options?.fallbackCurrentDeck);
         if(!adminStudio.enabled)return 0;
-        const targets=Array.from(dirtyDeckPaths.values()).map(path=>findDeckByPath(path)).filter(Boolean);
+        let targets=Array.from(dirtyDeckPaths.values()).map(path=>findDeckByPath(path)).filter(Boolean);
+        if(!targets.length&&fallbackCurrentDeck){
+          const currentDeck=syncSelectedDeckFromEditor();
+          if(currentDeck&&currentDeck.path){
+            targets=[currentDeck];
+            markDeckDirty(currentDeck.path);
+          }
+        }
         if(!targets.length){
           if(!silent)showFeedbackToast('Nenhum deck pendente para salvar no Postgres.');
           return 0;
@@ -2752,7 +2760,7 @@
         }
         if(adminStudio.enabled&&state.mode==='flashcard'&&key==='s'){
           e.preventDefault();
-          persistDirtyDecksNow().catch(error=>showFeedbackToast(error?.message||'Nao foi possivel salvar os decks no Postgres.'));
+          persistDirtyDecksNow({fallbackCurrentDeck:true}).catch(error=>showFeedbackToast(error?.message||'Nao foi possivel salvar os decks no Postgres.'));
           return;
         }
         if(isAdminStudioEnabled()&&key==='c'&&!watchRuntime){
