@@ -24118,13 +24118,27 @@
           event.stopPropagation();
           const previousOptions = state.ui.gameOptionsSnapshotBeforeOpen;
           applyGameOptionsAfterModalClose(previousOptions);
-          state.ui.gameOptionsSnapshotBeforeOpen = {
-            difficulty: normalizeGameOptionValue('difficulty', state.options?.difficulty),
-            speed: normalizeGameOptionValue('speed', state.options?.speed),
-            accent: normalizeGameOptionValue('accent', state.options?.accent),
-            fourthStageTyping: normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping)
-          };
-          pauseFlashcardsGameToWelcome();
+          state.ui.gameOptionsSnapshotBeforeOpen = null;
+          state.entry.gameOptionsOpen = false;
+          els.gameOptionsModal?.classList.remove('is-visible');
+          els.gameOptionsModal?.setAttribute('aria-hidden', 'true');
+          state.entry.pendingPlayStart = false;
+          state.entry.welcomeStartRequested = false;
+          state.entry.flashStartInFlight = false;
+          state.entry.welcomeFlashStartAt = 0;
+          window.PlaytalkLoader?.hide?.('welcome-flash-start', { force: true });
+          window.PlaytalkLoader?.hide?.('page-init', { force: true });
+          state.game.levelMode = false;
+          state.game.levelScaleMode = false;
+          state.game.levelAudioMode = false;
+          state.game.levelTextMode = false;
+          state.game.levelTypingMode = false;
+          resetScaleBatchProgress();
+          if (canResumePausedFlashGame()) {
+            resumeFlashcardsGameFromWelcome();
+            return;
+          }
+          beginGame();
         });
         els.gameOptionsModal?.addEventListener('click', (event) => {
           if (event.target === els.gameOptionsModal) {
