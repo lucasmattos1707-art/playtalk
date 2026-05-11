@@ -10219,13 +10219,13 @@
       const GAME_OPTIONS_STORAGE_KEY = 'playtalk-game-options-v1';
       const GAME_OPTION_SLIDES = ['difficulty', 'speed', 'accent', 'fourthStageTyping'];
       const GAME_OPTION_VALUE_MAP = {
-        difficulty: ['automatic', 'beginner', 'easy', 'apprentice', 'moderate', 'intermediate', 'elaborate', 'advanced', 'fluent'],
+        difficulty: ['level_1'],
         speed: ['0.70', '0.80', '0.90', '1.00'],
         accent: ['american', 'british'],
         fourthStageTyping: ['off', 'on']
       };
       const DEFAULT_GAME_OPTIONS = {
-        difficulty: 'automatic',
+        difficulty: 'level_1',
         speed: '0.90',
         accent: 'american',
         fourthStageTyping: 'off'
@@ -11007,10 +11007,52 @@
         return typeof value === 'string' ? value.trim() : '';
       }
 
-      function normalizeGameOptionValue(key, value) {
-        const values = Array.isArray(GAME_OPTION_VALUE_MAP[key]) ? GAME_OPTION_VALUE_MAP[key] : [];
+      function availableDifficultyValues() {
+        const values = Array.isArray(GAME_OPTION_VALUE_MAP.difficulty) ? GAME_OPTION_VALUE_MAP.difficulty : [];
+        return values.length ? values : ['level_1'];
+      }
+
+      function defaultDifficultyValue() {
+        const values = availableDifficultyValues();
+        return values[0] || 'level_1';
+      }
+
+      function normalizeDifficultyLevelValue(value) {
         const normalized = safeText(value).toLowerCase();
+        return /^level_\d+$/.test(normalized) ? normalized : '';
+      }
+
+      function parseDifficultyLevelNumber(value) {
+        const normalized = normalizeDifficultyLevelValue(value);
+        if (!normalized) return null;
+        const parsed = Number.parseInt(normalized.replace('level_', ''), 10);
+        return Number.isInteger(parsed) && parsed >= 1 ? parsed : null;
+      }
+
+      function setDifficultyOptionsFromSequenceLevels(levels) {
+        const normalizedLevels = Array.from(new Set((Array.isArray(levels) ? levels : [])
+          .map((level) => Number.parseInt(level, 10))
+          .filter((level) => Number.isInteger(level) && level >= 1)))
+          .sort((a, b) => a - b);
+        const fallbackLevels = normalizedLevels.length ? normalizedLevels : [1];
+        GAME_OPTION_VALUE_MAP.difficulty = fallbackLevels.map((level) => `level_${level}`);
+        const currentDifficulty = normalizeDifficultyLevelValue(state.options?.difficulty);
+        if (!GAME_OPTION_VALUE_MAP.difficulty.includes(currentDifficulty)) {
+          state.options.difficulty = defaultDifficultyValue();
+        }
+      }
+
+      function normalizeGameOptionValue(key, value) {
+        const values = key === 'difficulty'
+          ? availableDifficultyValues()
+          : (Array.isArray(GAME_OPTION_VALUE_MAP[key]) ? GAME_OPTION_VALUE_MAP[key] : []);
+        const normalized = safeText(value).toLowerCase();
+        if (key === 'difficulty') {
+          const parsedLevel = normalizeDifficultyLevelValue(normalized);
+          if (parsedLevel) return parsedLevel;
+        }
         if (values.includes(normalized)) return normalized;
+        if (key === 'difficulty') return defaultDifficultyValue();
         return DEFAULT_GAME_OPTIONS[key];
       }
 
@@ -15972,18 +16014,11 @@
           difficulty: {
             label: '1/4',
             name: 'Dificuldade',
-            desc: 'Define os níveis de cartas para o jogo, respeitando a progressão de níveis.',
-            values: {
-              automatic: { label: 'Automático', desc: 'Segue o fluxo normal do jogo, subindo carta por carta.' },
-              beginner: { label: 'Iniciante', desc: 'Níveis 1-2, palavras até 5 letras e até 3 palavras.' },
-              easy: { label: 'Fácil', desc: 'Níveis 1-5, palavras até 6 letras e até 3 palavras.' },
-              apprentice: { label: 'Aprendiz', desc: 'Níveis 1-10, palavras até 7 letras e até 4 palavras.' },
-              moderate: { label: 'Moderado', desc: 'Níveis 11-20, até 24 caracteres totais.' },
-              intermediate: { label: 'Intermediário', desc: 'Níveis 21-30, até 28 caracteres totais.' },
-              elaborate: { label: 'Elaborado', desc: 'Níveis 31-40, até 33 caracteres totais.' },
-              advanced: { label: 'Avançado', desc: 'Níveis 41-50, até 38 caracteres totais.' },
-              fluent: { label: 'Fluente', desc: 'Níveis 51-70, sem limite de caracteres.' }
-            }
+            desc: 'Seleciona um nível exato da sequência para montar a mesa.',
+            values: Object.fromEntries(availableDifficultyValues().map((value) => {
+              const level = parseDifficultyLevelNumber(value) || 1;
+              return [value, { label: `Nível ${level}`, desc: `Carrega apenas cartas do nível ${level}.` }];
+            }))
           },
           speed: {
             label: '2/4',
@@ -16606,43 +16641,16 @@
       function isCardAllowedForUserLevel(card) {
         if (!isCardEligibleForSelectedDifficulty(card)) return false;
         if (isAdminUser()) return true;
-        const deckLevel = cardDeckLevel(card);
-        return deckLevel !== null
-          && deckLevel <= currentUserLevel()
-          && isEarlyFlashcardLengthEligible(card);
+        return isEarlyFlashcardLengthEligible(card);
       }
 
       function isCardEligibleForSelectedDifficulty(card) {
         const difficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
-        if (difficulty === 'automatic') return true;
+        const selectedLevel = parseDifficultyLevelNumber(difficulty);
+        if (selectedLevel === null) return true;
         const deckLevel = cardDeckLevel(card);
         if (deckLevel === null) return false;
-        const text = flashcardDifficultyText(card);
-        if (!text) return false;
-        const words = flashcardWordCount(text);
-        const longestWord = longestFlashcardWordLength(text);
-        const chars = countFlashcardCharacters(text);
-        const byRange = (min, max) => deckLevel >= min && deckLevel <= max;
-        switch (difficulty) {
-          case 'beginner':
-            return byRange(1, 2) && longestWord <= 5 && words <= 3;
-          case 'easy':
-            return byRange(1, 5) && longestWord <= 6 && words <= 3;
-          case 'apprentice':
-            return byRange(1, 10) && longestWord <= 7 && words <= 4;
-          case 'moderate':
-            return byRange(11, 20) && chars <= 24;
-          case 'intermediate':
-            return byRange(21, 30) && chars <= 28;
-          case 'elaborate':
-            return byRange(31, 40) && chars <= 33;
-          case 'advanced':
-            return byRange(41, 50) && chars <= 38;
-          case 'fluent':
-            return byRange(51, 70);
-          default:
-            return true;
-        }
+        return deckLevel === selectedLevel;
       }
 
       function currentLevelProgressCount(level = currentUserLevel()) {
@@ -16999,18 +17007,20 @@
             credentials: 'include'
           });
           const payload = await response.json().catch(() => ({}));
-          if (!response.ok || !payload?.success) return new Map();
+          if (!response.ok || !payload?.success) return { map: new Map(), levels: [] };
           const rows = Array.isArray(payload?.sequence?.deckLevels) ? payload.sequence.deckLevels : [];
           const map = new Map();
+          const levels = [];
           rows.forEach((row) => {
             const source = safeText(row?.source).toLowerCase();
             const level = normalizeDeckLevel(row?.deckLevel);
             if (!source || level === null) return;
             map.set(source, level);
+            levels.push(level);
           });
-          return map;
+          return { map, levels };
         } catch (_error) {
-          return new Map();
+          return { map: new Map(), levels: [] };
         }
       }
 
@@ -17018,10 +17028,13 @@
         if (isManualNoEnergyBlocked()) {
           return buildNoEnergyCardsPayload();
         }
-        const [manifestPayload, sequenceDeckLevelMap] = await Promise.all([
+        const [manifestPayload, sequenceDeckLevelsPayload] = await Promise.all([
           fetchRemoteManifestOrEmpty(DATA_MANIFEST_REMOTE_PATH),
           fetchSequenceDeckLevelMap()
         ]);
+        const sequenceDeckLevelMap = sequenceDeckLevelsPayload?.map instanceof Map ? sequenceDeckLevelsPayload.map : new Map();
+        const sequenceLevels = Array.isArray(sequenceDeckLevelsPayload?.levels) ? sequenceDeckLevelsPayload.levels : [];
+        setDifficultyOptionsFromSequenceLevels(sequenceLevels);
         const manifest = manifestPayload?.data || {};
         const serverDateHeader = manifestPayload?.response?.headers?.get('date') || '';
         const serverNow = Date.parse(serverDateHeader) || Date.parse(String(manifest?.generatedAt || '')) || 0;
