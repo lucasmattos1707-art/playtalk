@@ -2140,8 +2140,10 @@
               if(target.kind==='single'){
                 if(target?.entry?.source==='search'){
                   await autoUploadFlashcardAssetsToR2({item,dayKey:target.entry.deckDay,deckPath:target.entry.deckPath,onSynced:()=>syncSearchEntryToDeck(target.entry,{persist:false})},{audio:true});
+                  queuePersistDeckByPath(target.entry.deckPath,{delay:80});
                 }else{
                   await autoUploadFlashcardAssetsToR2(target.index,{audio:true});
+                  queuePersistCurrentEditorDeck({delay:80});
                 }
               }
               if(item.imageRestoreFx){
