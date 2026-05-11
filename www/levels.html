@@ -1737,20 +1737,24 @@
         if(image&&item.imageDataUrl&&item.imageFile){
           files.push({name:item.imageFile,base64:base64FromBytes(bytesFromDataUrl(item.imageDataUrl))});
         }
-        if(audio&&item.audioDataUrl&&item.audioFile){
+        const hasPrimaryAudioUpload=Boolean(audio&&item.audioDataUrl&&item.audioFile);
+        const hasSecondaryAudioUpload=Boolean(audio&&item.audioBlondeDataUrl&&item.audioBlondeFile);
+        if(hasPrimaryAudioUpload){
           files.push({name:item.audioFile,base64:base64FromBytes(bytesFromDataUrl(item.audioDataUrl))});
         }
-        if(audio&&item.audioBlondeDataUrl&&item.audioBlondeFile){
+        if(hasSecondaryAudioUpload){
           files.push({name:item.audioBlondeFile,base64:base64FromBytes(bytesFromDataUrl(item.audioBlondeDataUrl))});
         }
         if(!files.length)return null;
         try{
           await uploadLevelFilesToR2(files,{day:dayKey,mode:'flashcard'});
           if(image&&item.imageFile)item.imageRemoteUrl=cloud(dayKey,PHASE.flashcard,item.imageFile,'flashcard');
-          if(audio&&item.audioFile)item.audioRemoteUrl=cloud(dayKey,PHASE.flashcard,item.audioFile,'flashcard');
+          if(hasPrimaryAudioUpload){
+            item.audioRemoteUrl=cloud(dayKey,PHASE.flashcard,item.audioFile,'flashcard');
+          }
           if(image&&item.imageRemoteUrl)item.imageDataUrl='';
-          if(audio&&item.audioRemoteUrl)item.audioDataUrl='';
-          if(audio&&item.audioBlondeFile){
+          if(hasPrimaryAudioUpload&&item.audioRemoteUrl)item.audioDataUrl='';
+          if(hasSecondaryAudioUpload){
             item.audioBlondeRemoteUrl=cloud(dayKey,PHASE.flashcard,item.audioBlondeFile,'flashcard');
             if(item.audioBlondeRemoteUrl)item.audioBlondeDataUrl='';
           }
