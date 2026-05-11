@@ -13513,6 +13513,34 @@ app.get('/api/admin/flashcards/sequence', async (req, res) => {
   }
 });
 
+app.get('/api/flashcards/sequence', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const fallback = await buildDefaultFlashcardsSequenceState();
+    const savedStateRow = await readFlashcardsSequenceState();
+    const savedPayload = savedStateRow?.payload && typeof savedStateRow.payload === 'object'
+      ? savedStateRow.payload
+      : null;
+    const state = savedPayload
+      ? sanitizeFlashcardsSequencePayload(savedPayload, fallback.decks)
+      : fallback;
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      success: true,
+      state,
+      savedAt: savedStateRow?.updated_at || null
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao carregar sequencia dos flashcards.'
+    });
+  }
+});
+
 app.get('/api/flashcards/sequence-levels', async (req, res) => {
   try {
     if (!pool) {
@@ -18637,15 +18665,6 @@ app.get(['/levels', '/levels/', '/levels.html'], (req, res) => {
 });
 
 app.get(['/sequence', '/sequence/', '/sequence.html'], (req, res) => {
-  const payload = getAuthenticatedUserFromRequest(req);
-  if (!payload) {
-    res.redirect(302, '/entrar?return=%2Fsequence');
-    return;
-  }
-  if (!isAdminUserRecord(payload)) {
-    res.redirect(302, '/');
-    return;
-  }
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'www', 'sequence.html'));
 });
