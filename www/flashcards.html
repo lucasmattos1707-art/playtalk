@@ -16110,11 +16110,6 @@
         }
         renderGameOptionsModal();
         if (state.game.active) {
-          if (slideKey === 'difficulty' && currentValue !== nextValue && !state.game.tutorial?.active) {
-            clearGameSessionLocally();
-            beginGame();
-            return;
-          }
           if (slideKey === 'fourthStageTyping' && currentValue !== nextValue && state.game.currentId && state.game.entries.has(state.game.currentId)) {
             renderCurrentCard();
           }
@@ -16146,7 +16141,13 @@
         const fourthTypingChanged = previousFourthTyping !== nextFourthTyping;
         if (difficultyChanged && !state.game.tutorial?.active) {
           clearGameSessionLocally();
-          beginGame();
+          state.game.entries.clear();
+          state.game.queue = [];
+          state.game.currentId = null;
+          resetGameOrderedPoolCursor();
+          state.game.paused = true;
+          state.ui.gamePausedAtWelcome = true;
+          updateLevelProgressBar();
           return;
         }
         if (fourthTypingChanged && state.game.currentId && state.game.entries.has(state.game.currentId)) {
@@ -24099,14 +24100,21 @@
         els.gameMissionBtn?.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-          closeGameOptionsModal();
+          openGameOptionsModal();
           pauseFlashcardsGameToWelcome();
         });
         els.gameOptionsCloseBtn?.addEventListener('click', closeGameOptionsModal);
         els.gameOptionsContinueBtn?.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-          closeGameOptionsModal();
+          const previousOptions = state.ui.gameOptionsSnapshotBeforeOpen;
+          applyGameOptionsAfterModalClose(previousOptions);
+          state.ui.gameOptionsSnapshotBeforeOpen = {
+            difficulty: normalizeGameOptionValue('difficulty', state.options?.difficulty),
+            speed: normalizeGameOptionValue('speed', state.options?.speed),
+            accent: normalizeGameOptionValue('accent', state.options?.accent),
+            fourthStageTyping: normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping)
+          };
           pauseFlashcardsGameToWelcome();
         });
         els.gameOptionsModal?.addEventListener('click', (event) => {
