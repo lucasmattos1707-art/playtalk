@@ -7468,6 +7468,168 @@
     }
   }
 
+  function formatDaySealPractice(seconds) {
+    const total = Math.max(0, Number(seconds) || 0);
+    const minutes = Math.floor(total / 60);
+    return `${minutes} min`;
+  }
+
+  function injectDaySealsUserStyles() {
+    if (document.getElementById('booksDaySealsUserStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'booksDaySealsUserStyles';
+    style.textContent = `
+      .books-day-seals-user {
+        width: min(980px, 100%);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 18px 14px 110px;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 12px;
+        justify-items: center;
+        touch-action: pan-y;
+      }
+      .books-day-seals-user__title {
+        margin: 0;
+        font-family: "Exo 2", "Aptos", sans-serif;
+        font-size: clamp(34px, 10vw, 56px);
+        font-weight: 800;
+        color: #fff;
+        text-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+      }
+      .books-day-seals-user__stage {
+        width: min(520px, 94vw);
+        display: grid;
+        justify-items: center;
+        align-content: center;
+        gap: 12px;
+      }
+      .books-day-seals-user__seal {
+        width: min(40vh, 40vw, 320px);
+        max-width: 40vh;
+        object-fit: contain;
+        filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
+        transition: opacity 180ms ease, transform 180ms ease;
+      }
+      .books-day-seals-user__seal.is-empty {
+        opacity: 0.6;
+      }
+      .books-day-seals-user__label {
+        margin: 0;
+        font-family: "Exo 2", "Aptos", sans-serif;
+        font-size: clamp(24px, 7vw, 40px);
+        font-weight: 800;
+        color: #fff;
+      }
+      .books-day-seals-user__metrics {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+        width: min(420px, 92vw);
+      }
+      .books-day-seals-user__metric {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-radius: 14px;
+        padding: 10px 14px;
+        background: rgba(7, 27, 54, 0.5);
+        color: #e8f4ff;
+        font-weight: 700;
+      }
+      .books-day-seals-user__hint {
+        margin: 0;
+        color: rgba(218, 234, 255, 0.95);
+        font-size: 13px;
+        letter-spacing: 0.02em;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function renderDaySealsUserView(payload, currentDayNumber) {
+    const daySeals = payload?.daySeals || {};
+    const catalog = daySeals.sealCatalog || {};
+    const timeline = Array.isArray(daySeals.timeline) ? daySeals.timeline : [];
+    const maxDay = Math.max(Number(daySeals.maxNavigableDay) || 1, 1);
+    const dayIndex = Math.max(1, Math.min(maxDay, Number(currentDayNumber) || 1));
+    const entry = timeline[dayIndex - 1] || null;
+    const sealCode = Math.max(0, Math.min(6, Number(entry?.sealCode) || 0));
+    const sealInfo = catalog[String(sealCode)] || catalog[sealCode] || catalog['0'] || { label: 'Metal', image: '/medalhas/metal.png' };
+    const hasSeal = sealCode > 0;
+
+    const app = document.createElement('main');
+    app.className = 'books-day-seals-user';
+    app.innerHTML = `
+      <h1 class="books-day-seals-user__title">Day ${dayIndex}</h1>
+      <section class="books-day-seals-user__stage" id="booksDaySealsStage">
+        <img class="books-day-seals-user__seal ${hasSeal ? '' : 'is-empty'}" src="${escapeHtml(sealInfo.image || '/medalhas/metal.png')}" alt="${escapeHtml(`Selo ${sealInfo.label || 'Metal'}`)}">
+        <p class="books-day-seals-user__label">${escapeHtml(`Selo ${sealInfo.label || 'Metal'}`)}</p>
+      </section>
+      <ul class="books-day-seals-user__metrics">
+        <li class="books-day-seals-user__metric"><span>Prática</span><strong>${escapeHtml(formatDaySealPractice(entry?.practiceSeconds || 0))}</strong></li>
+        <li class="books-day-seals-user__metric"><span>Speaking</span><strong>${escapeHtml(String(Math.max(0, Number(entry?.speakingChars) || 0)))}</strong></li>
+        <li class="books-day-seals-user__metric"><span>Listening</span><strong>${escapeHtml(String(Math.max(0, Number(entry?.listeningChars) || 0)))}</strong></li>
+        <li class="books-day-seals-user__metric"><span>Pronúncia</span><strong>${escapeHtml(`${Math.max(0, Number(entry?.pronunciationPercent) || 0)}%`)}</strong></li>
+      </ul>
+      <p class="books-day-seals-user__hint">Deslize para esquerda/direita para navegar pelos dias.</p>
+    `;
+    return app;
+  }
+
+  async function initDaySealsUserMode() {
+    injectDaySealsUserStyles();
+    const response = await fetch(buildApiUrl('/api/books/day-seals'), {
+      headers: buildAuthHeaders(),
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.daySeals) {
+      throw new Error(payload?.message || 'Nao foi possivel carregar os selos diarios.');
+    }
+
+    const root = els.page || document.body;
+    root.innerHTML = '';
+    let currentDay = Math.max(1, Number(payload.daySeals.currentDayNumber) || 1);
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    const swipeThreshold = 44;
+
+    const mount = () => {
+      root.innerHTML = '';
+      const view = renderDaySealsUserView(payload, currentDay);
+      root.appendChild(view);
+      const stage = view.querySelector('#booksDaySealsStage');
+      if (!stage) return;
+      stage.addEventListener('pointerdown', (event) => {
+        pointerStartX = Number(event.clientX) || 0;
+        pointerStartY = Number(event.clientY) || 0;
+      });
+      stage.addEventListener('pointerup', (event) => {
+        const dx = (Number(event.clientX) || 0) - pointerStartX;
+        const dy = (Number(event.clientY) || 0) - pointerStartY;
+        pointerStartX = 0;
+        pointerStartY = 0;
+        if (Math.abs(dx) < swipeThreshold || Math.abs(dx) <= Math.abs(dy)) return;
+        const maxDay = Math.max(1, Number(payload?.daySeals?.maxNavigableDay) || 1);
+        if (dx < 0 && currentDay < maxDay) {
+          currentDay += 1;
+          mount();
+        } else if (dx > 0 && currentDay > 1) {
+          currentDay -= 1;
+          mount();
+        }
+      });
+    };
+
+    mount();
+  }
+
   async function init() {
     applyMyBooksGridEmbedUi();
     if (IS_MYBOOKS_GRID_EMBED) {
@@ -7490,21 +7652,26 @@
     loadLocalConsumptionCounters();
     renderStatsPanel();
 
-    const [sessionUser, books] = await Promise.all([
-      fetchSessionUser(),
-      fetchStories(),
-      loadWelcomeModeSettings().catch(() => null)
-    ]);
+    const sessionUser = await fetchSessionUser();
 
     state.user = sessionUser;
+    state.isAdmin = Boolean(sessionUser?.isAdmin)
+      || isAdminAlias(sessionUser?.username)
+      || isAdminAlias(state.localProfile?.username);
+
+    if (!state.isAdmin) {
+      state.initialLoading = false;
+      renderShelfLoading();
+      await initDaySealsUserMode();
+      return;
+    }
+
+    const books = await fetchStories();
     ensureEnergyDepletionWatch();
     startBooksSyncTimer();
     ensureMissionCardToggleLoop();
     void refreshDailyMissionFromServer();
     void refreshStatsFromServer().then(() => renderStatsPanel());
-    state.isAdmin = Boolean(sessionUser?.isAdmin)
-      || isAdminAlias(sessionUser?.username)
-      || isAdminAlias(state.localProfile?.username);
     state.books = Array.isArray(books) ? books : [];
     if (state.isAdmin) {
       await refreshCreateJobs({ ignoreTransitions: true });

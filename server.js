@@ -2113,11 +2113,21 @@ const ensureUserFluencySealsDailyTable = async () => {
           speaking_chars bigint NOT NULL DEFAULT 0,
           listening_chars bigint NOT NULL DEFAULT 0,
           reading_chars bigint NOT NULL DEFAULT 0,
+          practice_seconds bigint NOT NULL DEFAULT 0,
+          pronunciation_percent integer NOT NULL DEFAULT 0,
           flashcards_obtidos integer NOT NULL DEFAULT 0,
           smartbooks_lidos integer NOT NULL DEFAULT 0,
           updated_at timestamptz NOT NULL DEFAULT now(),
           PRIMARY KEY (user_id, day_key)
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_fluency_seals_daily
+        ADD COLUMN IF NOT EXISTS practice_seconds bigint NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_fluency_seals_daily
+        ADD COLUMN IF NOT EXISTS pronunciation_percent integer NOT NULL DEFAULT 0
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_fluency_seals_daily_user_date_idx
@@ -2220,7 +2230,7 @@ const upsertTodayFluencySealDailySnapshot = async (db, user, missionSnapshot) =>
   const dayKey = String(todayResult.rows[0]?.day_key || '').trim();
   if (!dayDate || !dayKey) return null;
 
-  const [dailyEnergyResult, dailyMissionResult] = await Promise.all([
+  const [dailyEnergyResult, dailyMissionResult, consumptionResult, speakingResult] = await Promise.all([
     db.query(
       `SELECT reading_chars, speaking_chars, listening_chars
          FROM public.user_daily_energy_stats
@@ -2236,18 +2246,35 @@ const upsertTodayFluencySealDailySnapshot = async (db, user, missionSnapshot) =>
           AND day_key = (now() AT TIME ZONE '${FLASHCARD_RANKING_TIMEZONE}')::date
         LIMIT 1`,
       [userId]
+    ),
+    db.query(
+      `SELECT practice_seconds
+         FROM public.user_books_consumption_stats
+        WHERE user_id = $1
+        LIMIT 1`,
+      [userId]
+    ),
+    db.query(
+      `SELECT latest_pronunciation_percent
+         FROM public.user_books_speaking_stats
+        WHERE user_id = $1
+        LIMIT 1`,
+      [userId]
     )
   ]);
   const energyRow = dailyEnergyResult.rows[0] || {};
   const missionRow = dailyMissionResult.rows[0] || {};
+  const consumptionRow = consumptionResult.rows[0] || {};
+  const speakingRow = speakingResult.rows[0] || {};
 
   const upsertResult = await db.query(
     `INSERT INTO public.user_fluency_seals_daily (
        user_id, day_key, day_date, fluency_minutes, fluency_percent, seal_code,
-       speaking_chars, listening_chars, reading_chars, flashcards_obtidos, smartbooks_lidos, updated_at
+       speaking_chars, listening_chars, reading_chars, practice_seconds, pronunciation_percent,
+       flashcards_obtidos, smartbooks_lidos, updated_at
      ) VALUES (
        $1, $2, $3, $4, $5, $6,
-       $7, $8, $9, $10, $11, now()
+       $7, $8, $9, $10, $11, $12, $13, now()
      )
      ON CONFLICT (user_id, day_key)
      DO UPDATE SET
@@ -2257,6 +2284,8 @@ const upsertTodayFluencySealDailySnapshot = async (db, user, missionSnapshot) =>
        speaking_chars = EXCLUDED.speaking_chars,
        listening_chars = EXCLUDED.listening_chars,
        reading_chars = EXCLUDED.reading_chars,
+       practice_seconds = EXCLUDED.practice_seconds,
+       pronunciation_percent = EXCLUDED.pronunciation_percent,
        flashcards_obtidos = EXCLUDED.flashcards_obtidos,
        smartbooks_lidos = EXCLUDED.smartbooks_lidos,
        updated_at = now()
@@ -2271,6 +2300,8 @@ const upsertTodayFluencySealDailySnapshot = async (db, user, missionSnapshot) =>
       Math.max(0, Number(energyRow?.speaking_chars) || 0),
       Math.max(0, Number(energyRow?.listening_chars) || 0),
       Math.max(0, Number(energyRow?.reading_chars) || 0),
+      Math.max(0, Number(consumptionRow?.practice_seconds) || 0),
+      Math.max(0, Math.round(Number(speakingRow?.latest_pronunciation_percent) || 0)),
       Math.max(0, Number(missionRow?.cards_today) || 0),
       Math.max(0, Number(missionRow?.books_today) || 0)
     ]
@@ -2284,7 +2315,9 @@ const readUserFluencySealsTimeline = async (db, userId) => {
   await ensureUserFluencySealsDailyTable();
 
   const rowsResult = await db.query(
-    `SELECT day_key, day_date, seal_code, fluency_minutes, fluency_percent
+    `SELECT day_key, day_date, seal_code, fluency_minutes, fluency_percent,
+            speaking_chars, listening_chars, reading_chars,
+            practice_seconds, pronunciation_percent
        FROM public.user_fluency_seals_daily
       WHERE user_id = $1
       ORDER BY day_date ASC`,
@@ -2308,9 +2341,15 @@ const readUserFluencySealsTimeline = async (db, userId) => {
     const record = byKey.get(dayKey) || null;
     timeline.push({
       dayKey,
+      dayDate: cursor.toISOString().slice(0, 10),
       sealCode: Math.max(0, Math.min(6, Number(record?.seal_code) || 0)),
       fluencyMinutes: Math.max(0, Number(record?.fluency_minutes) || 0),
-      fluencyPercent: Math.max(0, Number(record?.fluency_percent) || 0)
+      fluencyPercent: Math.max(0, Number(record?.fluency_percent) || 0),
+      speakingChars: Math.max(0, Number(record?.speaking_chars) || 0),
+      listeningChars: Math.max(0, Number(record?.listening_chars) || 0),
+      readingChars: Math.max(0, Number(record?.reading_chars) || 0),
+      practiceSeconds: Math.max(0, Number(record?.practice_seconds) || 0),
+      pronunciationPercent: Math.max(0, Math.round(Number(record?.pronunciation_percent) || 0))
     });
     cursor.setDate(cursor.getDate() + 1);
   }
@@ -14668,6 +14707,57 @@ app.get('/api/fluency-seals', async (req, res) => {
   } catch (error) {
     console.error('Erro ao carregar selos de fluencia:', error);
     res.status(500).json({ success: false, message: 'Nao foi possivel carregar os selos agora.' });
+  }
+});
+
+app.get('/api/books/day-seals', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const user = await readUserById(authUser.id);
+    if (!user?.id) {
+      res.status(400).json({ success: false, message: 'Usuario invalido.' });
+      return;
+    }
+
+    const missionSnapshot = await buildDailyMissionSnapshot(user, pool);
+    await upsertTodayFluencySealDailySnapshot(pool, user, missionSnapshot);
+    const timeline = await readUserFluencySealsTimeline(pool, user.id);
+    const earnedSealsCount = timeline.reduce((total, entry) => total + ((Number(entry?.sealCode) || 0) > 0 ? 1 : 0), 0);
+    const currentDayNumber = Math.max(1, timeline.length || 1);
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      success: true,
+      daySeals: {
+        currentDayNumber,
+        earnedSealsCount,
+        maxNavigableDay: Math.max(currentDayNumber, earnedSealsCount + 7),
+        timeline,
+        sealCatalog: {
+          0: { label: 'Metal', image: '/medalhas/metal.png' },
+          1: { label: 'Prata', image: '/medalhas/prata.png' },
+          2: { label: 'Quartz', image: '/medalhas/quartz.png' },
+          3: { label: 'Esmeralda', image: '/medalhas/emerald.png' },
+          4: { label: 'Platina', image: '/medalhas/platina.png' },
+          5: { label: 'Ouro', image: '/medalhas/ouro.png' },
+          6: { label: 'Diamante', image: '/medalhas/diamante.png' }
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao carregar day seals do books:', error);
+    res.status(500).json({ success: false, message: 'Nao foi possivel carregar os selos diarios.' });
   }
 });
 
