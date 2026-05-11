@@ -3950,7 +3950,7 @@
       width: 100%;
       min-height: 100%;
       display: grid;
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: auto 1fr;
       padding: clamp(14px, 3vw, 24px);
       color: #f5f7ff;
       background:
@@ -3964,6 +3964,26 @@
       align-items: center;
       justify-content: space-between;
       gap: 10px;
+    }
+
+    .game-options-modal__title-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .game-options-modal__title-icon {
+      width: 24px;
+      height: 24px;
+      color: #8ec9ff;
+      filter: drop-shadow(0 0 10px rgba(126, 224, 255, 0.45));
+      flex-shrink: 0;
+    }
+
+    .game-options-modal__title-icon svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
     }
 
     .game-options-modal__title {
@@ -3994,20 +4014,32 @@
 
     .game-options-modal__deck {
       display: grid;
-      gap: 12px;
+      gap: 10px;
       align-content: center;
+      padding-top: 10px;
+      padding-bottom: 10px;
     }
 
-    .game-options-modal__card {
+    .game-options-modal__item {
       border-radius: 24px;
       border: 1px solid rgba(176, 210, 255, 0.22);
       background: rgba(6, 21, 46, 0.72);
       box-shadow: inset 0 0 32px rgba(145, 112, 255, 0.08);
       padding: clamp(14px, 3vw, 22px);
       display: grid;
+      gap: 8px;
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    }
+
+    .game-options-modal__item:active {
+      transform: scale(0.995);
+    }
+
+    .game-options-modal__item-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
       gap: 10px;
-      min-height: clamp(180px, 36vh, 260px);
-      touch-action: pan-y;
     }
 
     .game-options-modal__label {
@@ -4021,9 +4053,9 @@
     .game-options-modal__name {
       margin: 0;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(24px, 6vw, 40px);
+      font-size: clamp(17px, 4.2vw, 24px);
       font-weight: 800;
-      line-height: 1.06;
+      line-height: 1.12;
       color: #ffffff;
       text-shadow: 0 0 20px rgba(117, 226, 255, 0.34);
     }
@@ -4036,7 +4068,6 @@
     }
 
     .game-options-modal__value-row {
-      margin-top: auto;
       display: grid;
       grid-template-columns: auto 1fr auto;
       align-items: center;
@@ -4059,32 +4090,25 @@
     .game-options-modal__value {
       text-align: center;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(18px, 4.5vw, 30px);
+      font-size: clamp(16px, 4.2vw, 24px);
       font-weight: 700;
       color: #e8f5ff;
       text-shadow: 0 0 14px rgba(126, 224, 255, 0.35);
       min-height: 1.4em;
       display: grid;
       place-items: center;
+      transition: transform 220ms ease, opacity 220ms ease;
     }
 
-    .game-options-modal__dots {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
+    .game-options-modal__value.is-swapping {
+      transform: translateY(-3px);
+      opacity: 0.74;
     }
 
-    .game-options-modal__dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: rgba(156, 192, 233, 0.4);
-    }
-
-    .game-options-modal__dot.is-active {
-      width: 24px;
-      background: linear-gradient(90deg, #7ce5ff, #d48aff);
-      box-shadow: 0 0 14px rgba(188, 137, 255, 0.54);
+    .game-options-modal__option-index {
+      color: rgba(198, 227, 255, 0.9);
+      font-size: clamp(12px, 2.5vw, 14px);
+      letter-spacing: 0.08em;
     }
 
     .stars-wrap p {
@@ -9647,24 +9671,17 @@
     <div class="game-options-modal" id="gameOptionsModal" aria-hidden="true">
       <div class="game-options-modal__panel">
         <div class="game-options-modal__top">
-          <h2 class="game-options-modal__title">Opções do jogo</h2>
+          <div class="game-options-modal__title-wrap">
+            <span class="game-options-modal__title-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M19.14 12.94a7.43 7.43 0 0 0 .05-.94 7.43 7.43 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.28 7.28 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.22-1.12.53-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.43 7.43 0 0 0-.05.94c0 .32.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.51.41 1.05.72 1.63.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.58-.22 1.12-.53 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
+            </span>
+            <h2 class="game-options-modal__title">Opções</h2>
+          </div>
           <button class="game-options-modal__close" id="gameOptionsCloseBtn" type="button" aria-label="Fechar opções">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>
           </button>
         </div>
-        <div class="game-options-modal__deck">
-          <article class="game-options-modal__card" id="gameOptionsCard" aria-live="polite">
-            <p class="game-options-modal__label" id="gameOptionsLabel">Opção</p>
-            <h3 class="game-options-modal__name" id="gameOptionsName">Dificuldade</h3>
-            <p class="game-options-modal__desc" id="gameOptionsDesc">Ajuste rápido para o seu ritmo.</p>
-            <div class="game-options-modal__value-row">
-              <button class="game-options-modal__arrow" id="gameOptionsPrevValueBtn" type="button" aria-label="Valor anterior">&#8249;</button>
-              <div class="game-options-modal__value" id="gameOptionsValue">Automático</div>
-              <button class="game-options-modal__arrow" id="gameOptionsNextValueBtn" type="button" aria-label="Próximo valor">&#8250;</button>
-            </div>
-          </article>
-        </div>
-        <div class="game-options-modal__dots" id="gameOptionsDots" aria-hidden="true"></div>
+        <div class="game-options-modal__deck" id="gameOptionsDeck" aria-live="polite"></div>
       </div>
     </div>
   </section>
@@ -10707,9 +10724,6 @@
           micCheckStatus: '',
           micCheckBusy: false,
           micCheckRecognition: null,
-          gameOptionsSlideIndex: 0,
-          gameOptionsCardSwipeStartX: 0,
-          gameOptionsCardSwipeStartY: 0,
           gameOptionsSnapshotBeforeOpen: null
         },
         options: {
@@ -10759,14 +10773,7 @@
         dailyPlanTimeRemaining: document.getElementById('dailyPlanTimeRemaining'),
         gameOptionsModal: document.getElementById('gameOptionsModal'),
         gameOptionsCloseBtn: document.getElementById('gameOptionsCloseBtn'),
-        gameOptionsCard: document.getElementById('gameOptionsCard'),
-        gameOptionsLabel: document.getElementById('gameOptionsLabel'),
-        gameOptionsName: document.getElementById('gameOptionsName'),
-        gameOptionsDesc: document.getElementById('gameOptionsDesc'),
-        gameOptionsValue: document.getElementById('gameOptionsValue'),
-        gameOptionsPrevValueBtn: document.getElementById('gameOptionsPrevValueBtn'),
-        gameOptionsNextValueBtn: document.getElementById('gameOptionsNextValueBtn'),
-        gameOptionsDots: document.getElementById('gameOptionsDots'),
+        gameOptionsDeck: document.getElementById('gameOptionsDeck'),
         welcomeTouch: document.getElementById('welcomeTouch'),
         welcomeLogo: document.getElementById('welcomeLogo'),
         welcomeProfile: document.getElementById('welcomeProfile'),
@@ -15956,9 +15963,9 @@
       function gameOptionSlideMeta() {
         return {
           difficulty: {
-            label: 'Opção 1/4',
+            label: '1/4',
             name: 'Dificuldade',
-            desc: 'Define o perfil das cartas para este jogo.',
+            desc: 'Define os níveis de cartas para o jogo, respeitando a progressão de níveis.',
             values: {
               automatic: { label: 'Automático', desc: 'Segue o fluxo normal do jogo, subindo carta por carta.' },
               beginner: { label: 'Iniciante', desc: 'Níveis 1-2, palavras até 5 letras e até 3 palavras.' },
@@ -15972,7 +15979,7 @@
             }
           },
           speed: {
-            label: 'Opção 2/4',
+            label: '2/4',
             name: 'Velocidade',
             desc: 'Controla a velocidade da fala dos áudios.',
             values: {
@@ -15983,7 +15990,7 @@
             }
           },
           accent: {
-            label: 'Opção 3/4',
+            label: '3/4',
             name: 'Sotaque',
             desc: 'Escolhe qual link de áudio será priorizado.',
             values: {
@@ -15992,7 +15999,7 @@
             }
           },
           fourthStageTyping: {
-            label: 'Opção 4/4',
+            label: '4/4',
             name: 'Digitação no Fourth-stage',
             desc: 'Troca entre blocos e teclado de 9 letras.',
             values: {
@@ -16003,44 +16010,63 @@
         };
       }
 
+      function gameOptionMetaForKey(key) {
+        const meta = gameOptionSlideMeta();
+        return meta[key] || null;
+      }
+
       function renderGameOptionsModal() {
-        if (!els.gameOptionsModal || !els.gameOptionsCard) return;
-        const slides = GAME_OPTION_SLIDES;
-        const slideIndex = Math.max(0, Math.min(slides.length - 1, Number(state.ui.gameOptionsSlideIndex) || 0));
-        const key = slides[slideIndex] || 'difficulty';
-        const metaMap = gameOptionSlideMeta();
-        const slide = metaMap[key] || metaMap.difficulty;
-        const valueKey = normalizeGameOptionValue(key, state.options[key]);
-        const valueMeta = slide.values?.[valueKey] || {};
-        if (els.gameOptionsLabel) els.gameOptionsLabel.textContent = slide.label || 'Opção';
-        if (els.gameOptionsName) els.gameOptionsName.textContent = slide.name || 'Opção';
-        if (els.gameOptionsDesc) els.gameOptionsDesc.textContent = valueMeta.desc || slide.desc || '';
-        if (els.gameOptionsValue) els.gameOptionsValue.textContent = valueMeta.label || valueKey;
-        if (els.gameOptionsDots) {
-          els.gameOptionsDots.innerHTML = slides.map((slideKey, index) => (
-            `<span class="game-options-modal__dot${index === slideIndex ? ' is-active' : ''}" data-game-option-dot="${escapeHtml(slideKey)}"></span>`
-          )).join('');
-        }
+        if (!els.gameOptionsModal || !els.gameOptionsDeck) return;
+        const cards = GAME_OPTION_SLIDES.map((key, index) => {
+          const meta = gameOptionMetaForKey(key);
+          if (!meta) return '';
+          const valueKey = normalizeGameOptionValue(key, state.options[key]);
+          const valueMeta = meta.values?.[valueKey] || {};
+          return `
+            <article class="game-options-modal__item" data-game-option-key="${escapeHtml(key)}">
+              <div class="game-options-modal__item-header">
+                <p class="game-options-modal__label">${escapeHtml(meta.label || `${index + 1}/4`)}</p>
+                <span class="game-options-modal__option-index">${escapeHtml(`Item ${index + 1}`)}</span>
+              </div>
+              <h3 class="game-options-modal__name">${escapeHtml(meta.name || key)}</h3>
+              <p class="game-options-modal__desc">${escapeHtml(valueMeta.desc || meta.desc || '')}</p>
+              <div class="game-options-modal__value-row">
+                <button class="game-options-modal__arrow" type="button" data-game-option-nav="${escapeHtml(key)}" data-game-option-step="-1" aria-label="Valor anterior">&#8249;</button>
+                <div class="game-options-modal__value" data-game-option-value="${escapeHtml(key)}">${escapeHtml(valueMeta.label || valueKey)}</div>
+                <button class="game-options-modal__arrow" type="button" data-game-option-nav="${escapeHtml(key)}" data-game-option-step="1" aria-label="Próximo valor">&#8250;</button>
+              </div>
+            </article>
+          `;
+        }).filter(Boolean);
+        els.gameOptionsDeck.innerHTML = cards.join('');
       }
 
-      function nudgeGameOptionSlide(delta) {
-        const total = GAME_OPTION_SLIDES.length;
-        if (!total) return;
-        const current = Math.max(0, Math.min(total - 1, Number(state.ui.gameOptionsSlideIndex) || 0));
-        state.ui.gameOptionsSlideIndex = (current + delta + total) % total;
-        renderGameOptionsModal();
-      }
-
-      function nudgeCurrentGameOptionValue(delta) {
-        const slideKey = GAME_OPTION_SLIDES[Math.max(0, Math.min(GAME_OPTION_SLIDES.length - 1, Number(state.ui.gameOptionsSlideIndex) || 0))];
+      function nudgeCurrentGameOptionValue(optionKey, delta) {
+        const slideKey = safeText(optionKey);
         const values = GAME_OPTION_VALUE_MAP[slideKey] || [];
         if (!values.length) return;
         const currentValue = normalizeGameOptionValue(slideKey, state.options[slideKey]);
         const currentIndex = Math.max(0, values.indexOf(currentValue));
         const nextIndex = (currentIndex + delta + values.length) % values.length;
-        state.options[slideKey] = values[nextIndex];
+        const nextValue = values[nextIndex];
+        state.options[slideKey] = nextValue;
         persistGameOptions();
+        const valueEl = els.gameOptionsDeck?.querySelector(`[data-game-option-value="${slideKey}"]`);
+        if (valueEl) {
+          valueEl.classList.add('is-swapping');
+          window.setTimeout(() => valueEl.classList.remove('is-swapping'), 220);
+        }
         renderGameOptionsModal();
+        if (state.game.active) {
+          if (slideKey === 'difficulty' && currentValue !== nextValue && !state.game.tutorial?.active) {
+            clearGameSessionLocally();
+            beginGame();
+            return;
+          }
+          if (slideKey === 'fourthStageTyping' && currentValue !== nextValue && state.game.currentId && state.game.entries.has(state.game.currentId)) {
+            renderCurrentCard();
+          }
+        }
       }
 
       function openGameOptionsModal() {
@@ -24024,39 +24050,13 @@
             closeGameOptionsModal();
           }
         });
-        els.gameOptionsPrevValueBtn?.addEventListener('click', () => {
-          nudgeCurrentGameOptionValue(-1);
-        });
-        els.gameOptionsNextValueBtn?.addEventListener('click', () => {
-          nudgeCurrentGameOptionValue(1);
-        });
-        els.gameOptionsDots?.addEventListener('click', (event) => {
-          const dot = event.target.closest('[data-game-option-dot]');
-          if (!dot) return;
-          const key = safeText(dot.getAttribute('data-game-option-dot'));
-          const index = GAME_OPTION_SLIDES.indexOf(key);
-          if (index < 0) return;
-          state.ui.gameOptionsSlideIndex = index;
-          renderGameOptionsModal();
-        });
-        els.gameOptionsCard?.addEventListener('pointerdown', (event) => {
-          state.ui.gameOptionsCardSwipeStartX = Number(event.clientX) || 0;
-          state.ui.gameOptionsCardSwipeStartY = Number(event.clientY) || 0;
-        });
-        els.gameOptionsCard?.addEventListener('pointerup', (event) => {
-          const startX = Number(state.ui.gameOptionsCardSwipeStartX) || 0;
-          const startY = Number(state.ui.gameOptionsCardSwipeStartY) || 0;
-          state.ui.gameOptionsCardSwipeStartX = 0;
-          state.ui.gameOptionsCardSwipeStartY = 0;
-          if (!startX && !startY) return;
-          const dx = (Number(event.clientX) || 0) - startX;
-          const dy = (Number(event.clientY) || 0) - startY;
-          if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
-          if (dx < 0) {
-            nudgeGameOptionSlide(1);
-          } else {
-            nudgeGameOptionSlide(-1);
-          }
+        els.gameOptionsDeck?.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-game-option-nav]');
+          if (!button) return;
+          const optionKey = safeText(button.getAttribute('data-game-option-nav'));
+          if (!optionKey) return;
+          const step = Number(button.getAttribute('data-game-option-step'));
+          nudgeCurrentGameOptionValue(optionKey, step < 0 ? -1 : 1);
         });
         els.welcomeTrainingModes?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-training-stage]');
