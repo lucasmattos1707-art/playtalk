@@ -2073,17 +2073,17 @@
             .map(entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:String(entry?.item?.en||entry?.item?.pt||'').trim()}))
             .filter(entry=>entry.text)
             .filter(entry=>normalizedVoice==='blonde'?!(entry.item?.audioBlondeFile||entry.item?.audioBlondeDataUrl):!hasGeneratedAudio(entry.item,'single'))
-            .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}-en.mp3`,entry:entry.entry}));
+            .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}.mp3`,entry:entry.entry}));
         }
         const pendingAudio=sourceEntries
           .map(entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:String(entry?.item?.en||entry?.item?.pt||'').trim()}))
           .filter(entry=>entry.text&&entry.item?.imageMuted&&(normalizedVoice==='blonde'?!(entry.item?.audioBlondeFile||entry.item?.audioBlondeDataUrl):!hasGeneratedAudio(entry.item,'single')))
-          .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}-en.mp3`,entry:entry.entry}));
+          .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}.mp3`,entry:entry.entry}));
         if(pendingAudio.length)return pendingAudio;
         return sourceEntries
           .map(entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:String(entry?.item?.en||entry?.item?.pt||'').trim()}))
           .filter(entry=>entry.text&&(normalizedVoice==='blonde'?!(entry.item?.audioBlondeFile||entry.item?.audioBlondeDataUrl):!hasGeneratedAudio(entry.item,'single')))
-          .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}-en.mp3`,entry:entry.entry}));
+          .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}.mp3`,entry:entry.entry}));
       }
       async function generateRemainingVoiceAssets(voice){
         const normalizedVoice=normalizeTtsVoice(voice);
@@ -2099,7 +2099,9 @@
         try{
           for(const target of targets){
             try{
-              const fileName=target.kind==='single'?`${flashcardAssetStem(target.index,target.entry)}-en${normalizedVoice==='blonde'?'b':''}.mp3`:target.fileName;
+              const fileName=target.kind==='single'
+                ? `${flashcardAssetStem(target.index,target.entry)}${normalizedVoice==='blonde'?'b':''}.mp3`
+                : target.fileName;
               const asset=await generateVoiceAsset(target.text,fileName,normalizedVoice);
               const item=target?.entry?.item||state.items[target.index];
               if(!item)continue;
@@ -2153,14 +2155,6 @@
             if(done+failed<targets.length)await wait(2000);
           }
           if(!done&&failed)throw new Error(firstError||`Nao foi possivel gerar os audios restantes na ${providerLabel}.`);
-          if(done&&adminStudio.enabled){
-            try{
-              await persistDirtyDecksNow({silent:true});
-            }catch(error){
-              console.error('Falha ao sincronizar deck apos gerar audio',error);
-              showFeedbackToast('Audio gerado, mas nao consegui sincronizar o deck no Postgres agora.');
-            }
-          }
           if(failed)alert(`${done} audio(s) gerado(s). ${failed} falharam e ficaram para a proxima tentativa.`);
           return done;
         }finally{
