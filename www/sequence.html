@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -7,11 +7,8 @@
   <style>
     :root{
       --bg:#030d1f;
-      --deck:#082c6a;
-      --card:#3f9ae8;
       --text:#fff;
       --muted:rgba(255,255,255,.72);
-      --id:rgba(255,255,255,.5);
     }
     *{box-sizing:border-box}
     body{margin:0;background:radial-gradient(circle at 20% 0%,#103067 0%,var(--bg) 48%);color:var(--text);font-family:Arial,sans-serif}
@@ -22,15 +19,20 @@
     .status{font-size:12px;color:var(--muted)}
     .stack{display:grid;gap:10px}
     .deck{background:linear-gradient(180deg,#0b357c,#07295f);border:1px solid rgba(143,188,255,.35);border-radius:16px;padding:10px}
-    .deck-head{height:8vh;min-height:56px;width:90%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 14px;border-radius:12px;background:rgba(9,38,91,.92);cursor:pointer}
-    .deck-head strong{font-size:18px}
+    .deck-head{height:8vh;min-height:56px;width:90%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 14px;border-radius:12px;background:rgba(9,38,91,.92);cursor:pointer;border:none;color:#fff}
+    .deck-head strong{font-size:18px;color:#fff;display:inline-flex;align-items:center;gap:8px}
+    .deck-head strong img{width:18px;height:18px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(255,255,255,.35))}
     .deck-meta{font-size:12px;color:var(--muted)}
     .deck-items{display:none;margin-top:10px;gap:8px}
     .deck.is-open .deck-items{display:grid}
-    .card{height:8vh;min-height:52px;width:90%;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:12px;background:linear-gradient(180deg,#5caef3,#3f9ae8);color:#fff;cursor:pointer;transition:opacity .2s ease,transform .2s ease}
-    .card img{width:38px;height:38px;border-radius:999px;object-fit:cover;background:#0c3f7f;flex:0 0 auto}
+    .card{height:8vh;min-height:52px;width:90%;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:12px;background:linear-gradient(180deg,#5caef3,#3f9ae8);color:#fff;cursor:pointer;transition:opacity .2s ease,transform .2s ease;border:none}
+    .card img.thumb{width:38px;height:38px;border-radius:999px;object-fit:cover;background:#0c3f7f;flex:0 0 auto}
     .card .label{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .card .id{margin-left:auto;font-size:12px;opacity:.5}
+    .card .id{margin-left:auto;font-size:12px;opacity:0;pointer-events:none;user-select:none;width:1px;overflow:hidden}
+    .card .voices{margin-left:auto;display:inline-flex;align-items:center;gap:8px}
+    .card .voice-btn{width:30px;height:30px;border:none;background:transparent;padding:0;display:grid;place-items:center;border-radius:8px;cursor:pointer}
+    .card .voice-btn img{width:22px;height:22px;border-radius:0;background:none}
+    .card .voice-btn:disabled{opacity:.35;cursor:not-allowed}
     .card.is-selected{outline:2px solid rgba(255,255,255,.95);transform:translateX(2px)}
     .card.is-dimmed{opacity:.5}
     .empty{font-size:13px;color:var(--muted)}
@@ -49,7 +51,7 @@
   </div>
   <script>
     (() => {
-      const state = { decks: [], openDecks: new Set(), selected: null, saving: false };
+      const state = { decks: [], openDecks: new Set(), selected: null, saving: false, activeAudio: null };
       const $ = (id) => document.getElementById(id);
 
       function setStatus(text, isError = false) {
@@ -75,11 +77,39 @@
               id: String(item?.id || '').trim(),
               english: String(item?.english || '').trim(),
               portuguese: String(item?.portuguese || '').trim(),
-              image: String(item?.image || '').trim()
+              image: String(item?.image || '').trim(),
+              audio: String(item?.audio || '').trim(),
+              audio2: String(item?.audio2 || '').trim()
             })) : []
           }));
         setStatus(payload?.savedAt ? `Salvo em ${new Date(payload.savedAt).toLocaleString('pt-BR')}` : 'Ordem atual carregada.');
         render();
+      }
+
+      function stopActiveAudio() {
+        if (!state.activeAudio) return;
+        try {
+          state.activeAudio.pause();
+          state.activeAudio.currentTime = 0;
+        } catch (_error) {}
+        state.activeAudio = null;
+      }
+
+      function playCardAudio(url) {
+        const source = String(url || '').trim();
+        if (!source) return;
+        stopActiveAudio();
+        try {
+          const audio = new Audio(source);
+          state.activeAudio = audio;
+          audio.addEventListener('ended', () => {
+            if (state.activeAudio === audio) state.activeAudio = null;
+          }, { once: true });
+          audio.addEventListener('error', () => {
+            if (state.activeAudio === audio) state.activeAudio = null;
+          }, { once: true });
+          audio.play().catch(() => {});
+        } catch (_error) {}
       }
 
       function toggleDeck(source) {
@@ -129,14 +159,8 @@
             version: 1,
             decks: state.decks.map((deck) => ({
               source: deck.source,
-              title: deck.title,
               deckLevel: deck.deckLevel,
-              items: deck.items.map((item) => ({
-                id: item.id,
-                english: item.english,
-                portuguese: item.portuguese,
-                image: item.image
-              }))
+              items: deck.items.map((item) => ({ id: item.id }))
             }))
           };
           const response = await fetch('/api/admin/flashcards/sequence', {
@@ -174,7 +198,7 @@
           const head = document.createElement('button');
           head.type = 'button';
           head.className = 'deck-head';
-          head.innerHTML = `<strong>${deck.title}</strong><span class="deck-meta">${deck.items.length} flashcards</span>`;
+          head.innerHTML = `<strong><img src="/SVG/codex-icons/star.svg" alt="" aria-hidden="true">${deck.title}</strong><span class="deck-meta">${deck.items.length} flashcards</span>`;
           head.onclick = () => toggleDeck(deck.source);
           box.appendChild(head);
 
@@ -189,12 +213,28 @@
               && state.decks[selected.deckIndex].items[selected.cardIndex]?.id === item.id;
             if (isSelected) row.classList.add('is-selected');
             if (selected && !isSelected) row.classList.add('is-dimmed');
+            const hasAmerican = Boolean(String(item.audio || '').trim());
+            const hasBritish = Boolean(String(item.audio2 || '').trim());
             row.innerHTML = `
-              <img src="${item.image || ''}" alt="">
+              <img class="thumb" src="${item.image || ''}" alt="">
               <span class="label">${item.english || '(sem inglês)'}</span>
+              <span class="voices">
+                <button class="voice-btn" type="button" data-voice="american" ${hasAmerican ? '' : 'disabled'} aria-label="Tocar audio americano"><img src="/SVG/codex-icons/american.svg" alt=""></button>
+                <button class="voice-btn" type="button" data-voice="british" ${hasBritish ? '' : 'disabled'} aria-label="Tocar audio britanico"><img src="/SVG/codex-icons/british.svg" alt=""></button>
+              </span>
               <span class="id">${item.id}</span>
             `;
             row.onclick = () => selectCard(deck.source, item.id);
+            row.querySelector('[data-voice="american"]')?.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              playCardAudio(item.audio);
+            });
+            row.querySelector('[data-voice="british"]')?.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              playCardAudio(item.audio2);
+            });
             items.appendChild(row);
           });
           box.appendChild(items);

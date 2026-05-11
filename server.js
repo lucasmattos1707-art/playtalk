@@ -6602,6 +6602,8 @@ function normalizeFlashcardsSequenceCard(sourceKey, item, index) {
   const english = readFlashcardItemEnglish(item);
   const portuguese = readFlashcardItemPortuguese(item);
   const image = readFlashcardItemImage(item);
+  const audio = readFlashcardItemAudio(item);
+  const audio2 = readFlashcardItemAudio2(item);
   const rawId = typeof item?.id === 'string' || typeof item?.id === 'number'
     ? String(item.id).trim()
     : '';
@@ -6611,6 +6613,8 @@ function normalizeFlashcardsSequenceCard(sourceKey, item, index) {
     english,
     portuguese,
     image,
+    audio,
+    audio2,
     orderIndex: index
   };
 }
@@ -6680,6 +6684,8 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
               english: String(item?.english || fallbackItem?.english || '').trim(),
               portuguese: String(item?.portuguese || fallbackItem?.portuguese || '').trim(),
               image: String(item?.image || fallbackItem?.image || '').trim(),
+              audio: String(item?.audio || fallbackItem?.audio || '').trim(),
+              audio2: String(item?.audio2 || fallbackItem?.audio2 || '').trim(),
               orderIndex: index
             };
           })
@@ -6688,6 +6694,25 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
     })
     .filter((deck) => deck && Number.isInteger(deck.deckLevel));
 
+  return {
+    version: 1,
+    savedAt: new Date().toISOString(),
+    decks
+  };
+}
+
+function compactFlashcardsSequenceForStorage(state) {
+  const decks = (Array.isArray(state?.decks) ? state.decks : [])
+    .map((deck) => {
+      const source = String(deck?.source || '').trim();
+      const deckLevel = Number.parseInt(deck?.deckLevel, 10);
+      if (!source || !Number.isInteger(deckLevel)) return null;
+      const items = (Array.isArray(deck?.items) ? deck.items : [])
+        .map((item) => ({ id: String(item?.id || '').trim() }))
+        .filter((item) => item.id);
+      return { source, deckLevel, items };
+    })
+    .filter(Boolean);
   return {
     version: 1,
     savedAt: new Date().toISOString(),
@@ -13539,7 +13564,8 @@ app.post('/api/admin/flashcards/sequence', express.json({ limit: '4mb' }), async
 
     const fallback = await buildDefaultFlashcardsSequenceState();
     const nextState = sanitizeFlashcardsSequencePayload(req.body?.state || req.body || {}, fallback.decks);
-    const saved = await writeFlashcardsSequenceState(nextState, adminUser?.id || null);
+    const compactState = compactFlashcardsSequenceForStorage(nextState);
+    const saved = await writeFlashcardsSequenceState(compactState, adminUser?.id || null);
 
     res.json({
       success: true,
