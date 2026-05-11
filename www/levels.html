@@ -2773,6 +2773,15 @@
           if(!elevenBusy)openVoicePopover();
           return;
         }
+        if(key==='8'&&!watchRuntime){
+          e.preventDefault();
+          try{
+            downloadJson();
+          }catch(error){
+            alert(error?.message||'Nao foi possivel baixar o JSON atual.');
+          }
+          return;
+        }
         if(key==='3'){
           e.preventDefault();
           state.duoaccentBritishPreview=!state.duoaccentBritishPreview;
