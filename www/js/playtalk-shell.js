@@ -266,9 +266,10 @@
         color: #ffffff;
         opacity: 1;
         transform: none;
+        min-height: 1.15em;
       }
 
-      .playtalk-loader__tip-line:last-child {
+      .playtalk-loader__tip-line--en {
         color: #33d6ff;
         text-shadow:
           0 0 8px rgba(51, 214, 255, 0.75),
@@ -414,8 +415,10 @@
         <div class="playtalk-loader__sub">LEVEL UP</div>
         <div class="playtalk-loader__kicker">DICA DE FLUÊNCIA</div>
         <div class="playtalk-loader__tip" id="playtalkLoaderTip">
-          <span class="playtalk-loader__tip-line"></span>
-          <span class="playtalk-loader__tip-line"></span>
+          <span class="playtalk-loader__tip-line playtalk-loader__tip-line--pt" data-tip-line="pt-1"></span>
+          <span class="playtalk-loader__tip-line playtalk-loader__tip-line--pt" data-tip-line="pt-2"></span>
+          <span class="playtalk-loader__tip-line playtalk-loader__tip-line--en" data-tip-line="en-1"></span>
+          <span class="playtalk-loader__tip-line playtalk-loader__tip-line--en" data-tip-line="en-2"></span>
         </div>
         <div class="playtalk-loader__meta" id="playtalkLoaderMeta" hidden></div>
         <section class="playtalk-loader__progress" aria-label="Carregando">
@@ -449,7 +452,12 @@
     const clean = String(text || '').replace(/\s+/g, ' ').trim();
     if (!clean) return ['', ''];
     const words = clean.split(' ');
-    if (words.length <= 2) return [clean, ''];
+    if (words.length === 1) {
+      const word = words[0];
+      const half = Math.max(1, Math.floor(word.length / 2));
+      return [word.slice(0, half), word.slice(half)];
+    }
+    if (words.length === 2) return [words[0], words[1]];
     const target = Math.floor(clean.length / 2);
     let bestIndex = 1;
     let bestDelta = Number.POSITIVE_INFINITY;
@@ -471,24 +479,40 @@
     const tip = LOADER_TIPS[loaderState.tipIndex % LOADER_TIPS.length] || LOADER_TIPS[0];
     const root = document.getElementById(LOADER_ROOT_ID);
     if (!root) return;
-    const lines = root.querySelectorAll('.playtalk-loader__tip-line');
-    if (lines[0]) lines[0].textContent = tip[0] || '';
-    if (lines[1]) lines[1].textContent = tip[1] || '';
+    const [ptTop, ptBottom] = splitTipTextBalanced(tip[0] || '');
+    const [enTop, enBottom] = splitTipTextBalanced(tip[1] || '');
+    const pt1 = root.querySelector('[data-tip-line="pt-1"]');
+    const pt2 = root.querySelector('[data-tip-line="pt-2"]');
+    const en1 = root.querySelector('[data-tip-line="en-1"]');
+    const en2 = root.querySelector('[data-tip-line="en-2"]');
+    if (pt1) pt1.textContent = ptTop;
+    if (pt2) pt2.textContent = ptBottom;
+    if (en1) en1.textContent = enTop;
+    if (en2) en2.textContent = enBottom;
   }
 
   function renderLoaderTipForLanguage(language) {
     const tip = LOADER_TIPS[loaderState.tipIndex % LOADER_TIPS.length] || LOADER_TIPS[0];
     const root = document.getElementById(LOADER_ROOT_ID);
     if (!root) return;
-    const lines = root.querySelectorAll('.playtalk-loader__tip-line');
+    const [ptTop, ptBottom] = splitTipTextBalanced(tip[0] || '');
+    const [enTop, enBottom] = splitTipTextBalanced(tip[1] || '');
+    const pt1 = root.querySelector('[data-tip-line="pt-1"]');
+    const pt2 = root.querySelector('[data-tip-line="pt-2"]');
+    const en1 = root.querySelector('[data-tip-line="en-1"]');
+    const en2 = root.querySelector('[data-tip-line="en-2"]');
     const normalizedLanguage = language === 'en' ? 'en' : 'pt';
     if (normalizedLanguage === 'pt') {
-      if (lines[0]) lines[0].textContent = tip[0] || '';
-      if (lines[1]) lines[1].textContent = '';
+      if (pt1) pt1.textContent = ptTop;
+      if (pt2) pt2.textContent = ptBottom;
+      if (en1) en1.textContent = '';
+      if (en2) en2.textContent = '';
       return;
     }
-    if (lines[0]) lines[0].textContent = '';
-    if (lines[1]) lines[1].textContent = tip[1] || '';
+    if (pt1) pt1.textContent = '';
+    if (pt2) pt2.textContent = '';
+    if (en1) en1.textContent = enTop;
+    if (en2) en2.textContent = enBottom;
   }
 
   function resolvePendingAudioCycleWaiters() {
