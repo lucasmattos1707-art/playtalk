@@ -3975,6 +3975,7 @@
       gap: 12px;
       width: 100%;
       text-align: center;
+      margin-top: 20px;
     }
 
     .game-options-modal__title-icon {
@@ -3994,7 +3995,7 @@
     .game-options-modal__title {
       margin: 0;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(20px, 4vw, 30px);
+      font-size: clamp(22px, 4.4vw, 33px);
       font-weight: 800;
       letter-spacing: 0.03em;
       text-shadow: 0 0 14px rgba(126, 224, 255, 0.45);
@@ -4004,8 +4005,9 @@
       display: grid;
       gap: 8px;
       align-content: start;
-      padding-top: 8px;
+      padding-top: 58px;
       padding-bottom: 10px;
+      overflow: auto;
     }
 
     .game-options-modal__item {
@@ -4109,6 +4111,11 @@
       color: #06142a;
       background: linear-gradient(180deg, #56d8ff, #2ca8ff);
       box-shadow: 0 0 22px rgba(72, 212, 255, 0.58);
+      margin-top: 12px;
+      margin-bottom: 8px;
+      display: inline-grid;
+      place-items: center;
+      min-height: 48px;
     }
 
 
@@ -24079,7 +24086,8 @@
         els.gameMissionBtn?.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-          openGameOptionsModal();
+          closeGameOptionsModal();
+          pauseFlashcardsGameToWelcome();
         });
         els.gameOptionsCloseBtn?.addEventListener('click', closeGameOptionsModal);
         els.gameOptionsContinueBtn?.addEventListener('click', (event) => {
