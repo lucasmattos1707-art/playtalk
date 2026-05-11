@@ -556,7 +556,9 @@
         const input=String(value||'').trim();
         if(!input)return null;
         const escapedRoot=ROOT.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-        const match=input.match(new RegExp(`^${escapedRoot}/Niveis/([^/?#]+)/([^/?#]+)/([^?#]+)`,'i'));
+        const scopedMatch=input.match(new RegExp(`^${escapedRoot}/Niveis/([^/?#]+)/([^/?#]+)/([^?#]+)`,'i'));
+        const genericMatch=input.match(/(?:^https?:\/\/[^/]+)?\/?Niveis\/([^/?#]+)\/([^/?#]+)\/([^?#]+)/i);
+        const match=scopedMatch||genericMatch;
         if(!match)return null;
         return{day:decodeURIComponent(match[1]),phaseCode:match[2],fileName:decodeURIComponent(match[3])};
       }
@@ -685,11 +687,13 @@
         const rawItem=items[itemIndex];
         if(!rawItem)return null;
         const path=String(deck?.path||'').trim();
+        const dayFromRawItem=detectDeckDayKeyFromData({items:[rawItem]});
+        const resolvedDeckDay=sanitizeDayKey(deck?.dayKey||dayFromRawItem||state.day||'1');
         return{
           source:'search',
           deckPath:path,
           deckTitle:String(deck?.title||'Flashcards').trim()||'Flashcards',
-          deckDay:sanitizeDayKey(deck?.dayKey||state.day||'1'),
+          deckDay:resolvedDeckDay,
           itemIndex,
           rawItem,
           item:flashcardEditorItemFromDeckEntry(rawItem),
@@ -2740,7 +2744,7 @@
           syncAdminRenderedItems();
           return;
         }
-        if(isAdminStudioEnabled()&&key==='s'){
+        if(adminStudio.enabled&&state.mode==='flashcard'&&key==='s'){
           e.preventDefault();
           persistDirtyDecksNow().catch(error=>showFeedbackToast(error?.message||'Nao foi possivel salvar os decks no Postgres.'));
           return;
