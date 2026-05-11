@@ -13488,6 +13488,47 @@ app.get('/api/admin/flashcards/sequence', async (req, res) => {
   }
 });
 
+app.get('/api/flashcards/sequence-levels', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const fallback = await buildDefaultFlashcardsSequenceState();
+    const savedStateRow = await readFlashcardsSequenceState();
+    const savedPayload = savedStateRow?.payload && typeof savedStateRow.payload === 'object'
+      ? savedStateRow.payload
+      : null;
+    const state = savedPayload
+      ? sanitizeFlashcardsSequencePayload(savedPayload, fallback.decks)
+      : fallback;
+
+    const deckLevels = (Array.isArray(state?.decks) ? state.decks : [])
+      .map((deck) => {
+        const source = String(deck?.source || '').trim();
+        const deckLevel = Number.parseInt(deck?.deckLevel, 10);
+        return {
+          source,
+          deckLevel: Number.isInteger(deckLevel) ? deckLevel : null
+        };
+      })
+      .filter((deck) => deck.source && Number.isInteger(deck.deckLevel));
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      success: true,
+      sequence: {
+        deckLevels,
+        updatedAt: savedStateRow?.updated_at || null
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao carregar sequence levels públicos:', error);
+    res.status(500).json({ success: false, message: 'Nao foi possivel carregar sequence levels.' });
+  }
+});
+
 app.post('/api/admin/flashcards/sequence', express.json({ limit: '4mb' }), async (req, res) => {
   try {
     const adminUser = await requireAdminUserFromRequest(req);
