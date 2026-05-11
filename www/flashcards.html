@@ -3741,6 +3741,34 @@
       transition: opacity 180ms ease, filter 180ms ease, transform 180ms ease;
     }
 
+    .game-card__coin-badge {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      z-index: 12;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(136, 96, 0, 0.92);
+      box-shadow: 0 0 0 1px rgba(255, 216, 120, 0.18), 0 10px 26px rgba(0, 0, 0, 0.25);
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      font-size: 14px;
+      line-height: 1;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .game-card__coin-badge img {
+      width: 16px;
+      height: 16px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+    }
+
     .game-card__flag {
       position: absolute;
       top: 18px;
@@ -16566,6 +16594,36 @@
           .length;
       }
 
+      function flashcardSizeMultiplier(charCount) {
+        const count = Math.max(0, Number(charCount) || 0);
+        if (count <= 9) return 1.0;
+        if (count <= 12) return 1.5;
+        if (count <= 15) return 2.0;
+        if (count <= 18) return 2.5;
+        if (count <= 21) return 3.0;
+        if (count <= 24) return 3.5;
+        if (count <= 27) return 4.0;
+        if (count <= 30) return 4.5;
+        if (count <= 33) return 5.0;
+        if (count <= 36) return 5.5;
+        if (count <= 42) return 6.0;
+        return 7.0;
+      }
+
+      function flashcardLevelMultiplier(level) {
+        const normalized = normalizeDeckLevel(level);
+        const safeLevel = Number.isInteger(normalized) && normalized >= 1 ? normalized : 1;
+        return 1.0 + (0.1 * safeLevel);
+      }
+
+      function flashcardCoinValue(card) {
+        const english = safeText(card?.english || '').trim();
+        const charCount = countFlashcardCharacters(english);
+        const sizeMult = flashcardSizeMultiplier(charCount);
+        const levelMult = flashcardLevelMultiplier(cardDeckLevel(card) || currentUserLevel());
+        return Math.max(0, Math.round(10 * sizeMult * levelMult));
+      }
+
       function flashcardLevelTextLimits(level = currentUserLevel()) {
         // Regra desativada: nao limitar caracteres por nivel no /play.
         // Mantemos a funcao para compatibilidade com os filtros existentes.
@@ -20311,7 +20369,7 @@
         };
       }
 
-      function buildGameVisual(card, stageConfig) {
+      function buildGameVisual(card, stageConfig, entry = null) {
         if (isLevelTextModeActive()) {
           els.gameVisual.className = 'game-card__visual is-level-text-mode';
           els.gameVisual.style.removeProperty('--stage-two-overlay-opacity');
@@ -20380,7 +20438,10 @@
         els.gameVisual.className = visualClasses.join(' ');
         els.gameVisual.style.removeProperty('--stage-two-overlay-opacity');
         setGameVisualNeonState('default');
-        els.gameVisual.innerHTML = `${imageMarkup}${sealMarkup}`;
+        const coinMarkup = (stageConfig?.key === 'first-star' && entry && entry.stage === 1)
+          ? `<div class="game-card__coin-badge" aria-hidden="true"><img src="/SVG/codex-icons/coin.png" alt="">${escapeHtml(String(flashcardCoinValue(card)))}</div>`
+          : '';
+        els.gameVisual.innerHTML = `${imageMarkup}${sealMarkup}${coinMarkup}`;
       }
 
       function triggerStageTwoFocusReveal(card) {
@@ -21932,7 +21993,7 @@
         if (!state.game.pendingRewardSeal || state.game.pendingRewardSeal.cardId !== entry.id) {
           setGameStatus('', '');
         }
-        buildGameVisual(card, stageConfig);
+        buildGameVisual(card, stageConfig, entry);
         primeCurrentAndUpcomingGameMedia(card);
         if (stageConfig.key === 'first-star' || stageConfig.key === 'second-star' || stageConfig.key === 'fourth-star') {
           addReadingCharsForCard(entry, card, stageConfig.key);
