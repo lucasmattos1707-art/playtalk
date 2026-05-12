@@ -2310,7 +2310,6 @@
             }
           }
           playUiCue(UI_CUE_IMAGE_DONE);
-          alert(`${done} imagem(ns) gerada(s) com IA.`);
         }catch(error){
           alert(`${done} imagem(ns) gerada(s) antes da parada.\n${error.message||'Erro ao gerar imagem.'}`);
         }finally{
@@ -2741,7 +2740,7 @@
       $('watchMediaInput').onchange=async e=>{const files=Array.from(e.target.files||[]);e.target.value='';if(!files.length)return;const items=await loadWatchCustomMedia(files);if(!items.length){alert('Selecione imagens ou videos validos.');return}startWatchPlayback({scope:'mine',customItems:items})};
       $('ttsVoiceSelect').onchange=e=>{state.ttsVoice=normalizeTtsVoice(e.target.value);save();syncVoicePopover()};
       $('voicePopoverCloseBtn').onclick=()=>closeVoicePopover();
-      $('voicePopoverConfirmBtn').onclick=async()=>{if(elevenBusy)return;state.ttsVoice=normalizeTtsVoice($('ttsVoiceSelect').value);save();syncVoicePopover();const providerLabel=voiceProvider(state.ttsVoice)==='elevenlabs'?'ElevenLabs':'OpenAI';try{const done=await generateRemainingVoiceAssets(state.ttsVoice);if(done){try{await persistDirtyDecksNow({fallbackCurrentDeck:true,silent:true})}catch(error){showFeedbackToast(error?.message||'Nao foi possivel salvar os decks no Postgres.')}playUiCue(UI_CUE_AUDIO_DONE);alert(`${done} audio(s) gerado(s) com ${providerLabel}.`)}closeVoicePopover()}catch(error){alert(error.message||'Erro ao gerar audio.')}};
+      $('voicePopoverConfirmBtn').onclick=async()=>{if(elevenBusy)return;state.ttsVoice=normalizeTtsVoice($('ttsVoiceSelect').value);save();syncVoicePopover();try{const done=await generateRemainingVoiceAssets(state.ttsVoice);if(done){try{await persistDirtyDecksNow({fallbackCurrentDeck:true,silent:true})}catch(error){showFeedbackToast(error?.message||'Nao foi possivel salvar os decks no Postgres.')}playUiCue(UI_CUE_AUDIO_DONE)}closeVoicePopover()}catch(error){alert(error.message||'Erro ao gerar audio.')}};
       $('adminSearchInput').oninput=e=>{adminStudio.search=String(e.target.value||'');syncAdminRenderedItems()};
       $('adminSelectBtn').onclick=()=>toggleAdminSelectionMode();
       $('adminBatchClearImageBtn').onclick=()=>deleteSelectedImages();
