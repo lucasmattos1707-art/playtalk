@@ -208,7 +208,7 @@
           <div class="deck-edit-picker__field">
             <div id="editCardsDeckSelectWrap" class="deck-edit-picker__select-wrap">
               <select id="editCardsDeckSelect">
-                <option value="">Escolha um deck</option>
+                <option value="">Nivel 1</option>
               </select>
             </div>
             <div id="editCardsDeckSearchWrap" class="deck-edit-picker__search-wrap is-hidden">
@@ -467,7 +467,7 @@
       const ELEVENLABS_HARRY_VOICE_ID='SOYHLrjzK2X1ezoPC6cr';
       const ELEVENLABS_BLONDE_VOICE_ID='exsUS4vynmxd379XN4yO';
       const OPENAI_NARRATION_VOICES=['marin','cedar','alloy','fable','onyx','nova'];
-      const WATCH_SETTINGS_STORE='playtalk-levels-watch-settings-v1',BALANCE_TRACKS=['zen1.mp3','zen2.mp3','zen3.mp3','zen4.mp3'],BALANCE_TRACK_ROOT=`${ROOT}/musicas`;
+      const WATCH_SETTINGS_STORE='playtalk-levels-watch-settings-v1',EDIT_DECK_LEVEL_STORE='playtalk-levels-edit-deck-level-v1',BALANCE_TRACKS=['zen1.mp3','zen2.mp3','zen3.mp3','zen4.mp3'],BALANCE_TRACK_ROOT=`${ROOT}/musicas`;
       const DEFAULT_SCENE_CHARACTER_IMAGE_ROOT=`${ROOT}/Niveis/200/001`;
       const SCENE_CHARACTERS=[
         {id:'bella',name:'Bella',voiceId:'hpp4J3VqNfWAUOO0d1Us',defaultImageFile:'000002.webp'},
@@ -990,6 +990,8 @@
       function clearLevelsLocalCache(){
         try{localStorage.removeItem(STORE)}catch{}
         try{localStorage.removeItem(WATCH_SETTINGS_STORE)}catch{}
+        try{localStorage.removeItem(EDIT_DECK_LEVEL_STORE)}catch{}
+        resetPersistedEditDeckLevel();
       }
       const load=()=>{try{const parsed=JSON.parse(localStorage.getItem(STORE)||'null');if(!parsed)return;Object.assign(state,parsed);state.mode='flashcard';state.voiceMode=false;state.day=sanitizeDayKey(state.day);state.items=Array.isArray(state.items)?state.items.map(i=>({...defaultItem(),...i})):[];state.chars=normalizeSceneChars(Array.isArray(state.chars)?state.chars:[])}catch{}state.mode='flashcard';state.voiceMode=false};
       const stopAudio=()=>{if(!currentAudio)return;currentAudio.audio.pause();currentAudio.audio.currentTime=0;currentAudio.button.classList.remove('has');currentAudio=null};
@@ -1051,6 +1053,50 @@
         const parsed=parseInt(String(value||'').trim(),10);
         return Number.isInteger(parsed)&&parsed>=1&&parsed<=100?parsed:null;
       }
+      function getPersistedEditDeckLevel(){
+        try{
+          const stored=localStorage.getItem(EDIT_DECK_LEVEL_STORE);
+          const normalized=normalizeDeckLevelValue(stored);
+          return normalized||1;
+        }catch{
+          return 1;
+        }
+      }
+      function persistEditDeckLevel(level){
+        const normalized=normalizeDeckLevelValue(level)||1;
+        try{localStorage.setItem(EDIT_DECK_LEVEL_STORE,String(normalized))}catch{}
+        return normalized;
+      }
+      function resetPersistedEditDeckLevel(){
+        persistEditDeckLevel(1);
+      }
+      function findDeckPathForLevel(level){
+        const normalized=normalizeDeckLevelValue(level)||1;
+        const exact=editCardsState.decks.find(deck=>normalizeDeckLevelValue(deck?.deckLevel)===normalized);
+        if(exact?.path)return String(exact.path).trim();
+        const firstWithLevel=editCardsState.decks.find(deck=>normalizeDeckLevelValue(deck?.deckLevel)!==null);
+        if(firstWithLevel?.path)return String(firstWithLevel.path).trim();
+        const firstDeck=editCardsState.decks[0];
+        return firstDeck?.path?String(firstDeck.path).trim():'';
+      }
+      function ensureDeckSelectionFromStoredLevel(force=false){
+        if(!Array.isArray(editCardsState.decks)||!editCardsState.decks.length){
+          editCardsState.selectedPath='';
+          return;
+        }
+        const currentSelected=String(editCardsState.selectedPath||'').trim();
+        const currentExists=currentSelected&&editCardsState.decks.some(deck=>deck.path===currentSelected);
+        if(currentExists&&!force){
+          const currentDeck=editCardsState.decks.find(deck=>deck.path===currentSelected)||null;
+          const currentLevel=normalizeDeckLevelValue(currentDeck?.deckLevel)||1;
+          persistEditDeckLevel(currentLevel);
+          return;
+        }
+        const targetLevel=getPersistedEditDeckLevel();
+        editCardsState.selectedPath=findDeckPathForLevel(targetLevel);
+        const selectedDeck=editCardsState.decks.find(deck=>deck.path===editCardsState.selectedPath)||null;
+        persistEditDeckLevel(normalizeDeckLevelValue(selectedDeck?.deckLevel)||targetLevel||1);
+      }
       function currentEditCardsDeck(){
         const selected=safeText(editCardsState.selectedPath);
         return selected?editCardsState.decks.find(deck=>deck.path===selected)||null:null;
@@ -1083,6 +1129,7 @@
           editCardsState.decks=editCardsState.decks.map(entry=>entry.path===deck.path?{...entry,deckLevel:nextLevel}:entry).sort(compareEditableDecks);
           editableDeckOptionsCache=editCardsState.decks.slice();
           editCardsState.selectedPath=deck.path;
+          persistEditDeckLevel(nextLevel||1);
           syncEditCardsDeckPicker();
           showFeedbackToast(nextLevel?`Nivel ${nextLevel} salvo para "${deck.title}".`:`Nivel removido de "${deck.title}".`);
         }finally{
@@ -1098,7 +1145,7 @@
         const canShow=adminStudio.enabled&&editCardsState.visible;
         host.classList.toggle('hidden',!canShow);
         if(!canShow){
-          select.innerHTML='<option value="">Escolha um deck</option>';
+          select.innerHTML='<option value="">Nivel 1</option>';
           select.value='';
           select.classList.remove('is-leveled');
           if(levelInput)levelInput.value='';
@@ -1117,7 +1164,8 @@
           hint.textContent=adminStudio.enabled?'Carregando menu de decks...':'Entre como admin para liberar a edicao de decks.';
           return;
         }
-        const options=['<option value="">Escolha um deck</option>'];
+        ensureDeckSelectionFromStoredLevel();
+        const options=[];
         editCardsState.decks.forEach(deck=>{
           const safeTitle=escapeHtml(deck.title||'Flashcards');
           const safePath=escapeAttr(deck.path||'');
@@ -1130,6 +1178,9 @@
         });
         select.innerHTML=options.join('');
         select.disabled=editCardsState.loading||!editCardsState.decks.length;
+        if(!editCardsState.selectedPath||!editCardsState.decks.some(deck=>deck.path===editCardsState.selectedPath)){
+          ensureDeckSelectionFromStoredLevel(true);
+        }
         select.value=editCardsState.selectedPath||'';
         const selectedDeck=currentEditCardsDeck();
         const selectedLevel=normalizeDeckLevelValue(selectedDeck?.deckLevel);
@@ -1261,7 +1312,7 @@
         return editableDeckOptionsCache;
       }
       function invalidateEditableDeckOptionsCache(){editableDeckOptionsCache=null;editCardsState.decks=[];resetDeckSearchState({clearMode:true});if(editCardsState.visible)syncEditCardsDeckPicker()}
-      async function refreshEditCardsDeckPicker(){if(!adminStudio.enabled)return;editableDeckOptionsCache=null;await ensureEditCardsDeckPickerReady();if(editCardsState.searchMode)syncDeckSearchResults();if(editCardsState.selectedPath&&!editCardsState.decks.some(deck=>deck.path===editCardsState.selectedPath)){editCardsState.selectedPath='';syncEditCardsDeckPicker()}}
+      async function refreshEditCardsDeckPicker(){if(!adminStudio.enabled)return;editableDeckOptionsCache=null;await ensureEditCardsDeckPickerReady();if(editCardsState.searchMode)syncDeckSearchResults();if(!editCardsState.decks.some(deck=>deck.path===editCardsState.selectedPath)){ensureDeckSelectionFromStoredLevel(true);syncEditCardsDeckPicker()}}
       async function ensureEditCardsDeckPickerReady(){
         if(!adminStudio.enabled)return;
         editCardsState.loading=true;
@@ -1287,6 +1338,10 @@
         }
         editableDeckOptionsCache=null;
         await ensureEditCardsDeckPickerReady();
+        const selectedPath=String(editCardsState.selectedPath||'').trim();
+        if(selectedPath){
+          await loadSelectedDeckIntoLevels(selectedPath);
+        }
       }
       async function loadSelectedDeckIntoLevels(path){
         const normalizedPath=String(path||'').trim();
@@ -1295,6 +1350,7 @@
         if(!deck)throw new Error('Deck selecionado nao foi encontrado.');
         resetDeckSearchState();
         editCardsState.selectedPath=normalizedPath;
+        persistEditDeckLevel(normalizeDeckLevelValue(deck?.deckLevel)||1);
         syncEditCardsDeckPicker();
         const payload=deck.data||await loadJsonFile(normalizedPath);
         importJsonPayload(payload);
@@ -1671,7 +1727,7 @@
       function setWatchStatus(text){$('watchStatusText').textContent=text||''}
       function watchLines(text,maxChars=14){const words=String(text||'').trim().split(/\s+/).filter(Boolean);if(!words.length)return[''];const lines=[];let line='';words.forEach(word=>{const test=line?`${line} ${word}`:word;if(test.length<=maxChars||!line){line=test;return}lines.push(line);line=word});if(line)lines.push(line);return lines.slice(0,3)}
       function renderWatchText(node,text){const lines=watchLines(text);node.innerHTML=lines.map(line=>`<span class="watch-card__text-line">${escapeHtml(line)}</span>`).join('')}
-      function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim(),video=String(item?.video||'').trim(),watchCard=$('watchCard'),videoEl=$('watchCardVideo'),watchView=$('watchView');$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';renderWatchText($('watchCardPt'),item?.pt||'Sem portugues');renderWatchText($('watchCardEn'),item?.en||'Sem english');$('watchCardHint').textContent=extraStatus||'Sequencia em ordem, sem aleatorio.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';watchView.style.setProperty('--watch-bg-image',image?`url("${image}")`:'none');if(video){videoEl.classList.remove('hidden');if(videoEl.src!==video)videoEl.src=video;videoEl.play().catch(()=>{})}else{videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchCard.classList.remove('is-sliding','is-pulsing');void watchCard.offsetWidth;watchCard.classList.add('is-sliding','is-pulsing');updateWatchTransforms();setWatchStatus(extraStatus||'Preparando audio...')}
+      function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim(),video=String(item?.video||'').trim(),watchCard=$('watchCard'),videoEl=$('watchCardVideo'),watchView=$('watchView');$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';renderWatchText($('watchCardPt'),item?.pt||'Sem portugues');renderWatchText($('watchCardEn'),item?.en||'Sem english');$('watchCardHint').textContent=extraStatus||'Sequencia em ordem, sem aleatorio.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';watchView.style.setProperty('--watch-bg-image','none');if(video){videoEl.classList.remove('hidden');if(videoEl.src!==video)videoEl.src=video;videoEl.play().catch(()=>{})}else{videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchCard.classList.remove('is-sliding','is-pulsing');void watchCard.offsetWidth;watchCard.classList.add('is-sliding','is-pulsing');updateWatchTransforms();setWatchStatus(extraStatus||'Preparando audio...')}
       function normalizeWatchItem(entry,deckTitle,sourceLabel){const pt=String(entry?.nomePortugues||entry?.pt||entry?.portuguese||'').trim(),en=String(entry?.nomeIngles||entry?.en||entry?.english||'').trim(),audio=String(entry?.audio||entry?.audioFile||'').trim(),image=String(entry?.imagem||entry?.image||entry?.imageFile||'').trim(),video=String(entry?.video||'').trim();if(!(pt||en))return null;return{key:`${sourceLabel}::${deckTitle}::${pt}::${en}::${audio}::${image}::${video}`,pt,en,audio,image,video,deckTitle:String(deckTitle||'Flashcards').trim()||'Flashcards',sourceLabel:String(sourceLabel||'Flashcards').trim()||'Flashcards'}}
       function currentDeckWatchItems(){return state.items.map(item=>normalizeWatchItem({pt:item.pt,en:item.en,audio:audioSrc(item,'single'),image:(itemImg(item)||'')},state.title.trim()||`Pasta ${state.day}`,'Meus flashcards')).filter(item=>item&&item.audio)}
       async function loadJsonFile(filePath){const response=await fetch(filePath.startsWith('/')?filePath:`/${filePath}`);if(!response.ok)throw new Error(`Nao foi possivel carregar ${filePath}.`);return response.json()}
@@ -2617,7 +2673,10 @@
           window.setTimeout(()=>window.location.reload(),140);
           return;
         }
-        const lines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean),out=[];
+        const rawLines=$('pasteArea').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+        const isChangeTextsCommand=String(rawLines[0]||'').trim().toLowerCase()==='changethetexts';
+        const lines=isChangeTextsCommand?rawLines.slice(1):rawLines;
+        const out=[];
         for(let i=0;i<lines.length;i+=2){
           const chunk=lines.slice(i,i+2);
           if(chunk.length<2)break;
@@ -2628,6 +2687,39 @@
         }
         if(!out.length){
           alert('Cole pares de linhas (Portugues e English) para criar novos flashcards.');
+          return;
+        }
+        if(isChangeTextsCommand){
+          if(state.mode!=='flashcard'){
+            alert('O comando changethetexts funciona apenas no modo FlashCard.');
+            return;
+          }
+          const replaceCount=Math.min(out.length,state.items.length);
+          if(replaceCount<=0){
+            alert('Nao existem slots para substituir neste deck.');
+            return;
+          }
+          for(let i=0;i<replaceCount;i+=1){
+            const currentItem=state.items[i]||defaultItem();
+            const nextPair=out[i]||defaultItem();
+            currentItem.pt=nextPair.pt||'';
+            currentItem.en=nextPair.en||'';
+            state.items[i]=currentItem;
+          }
+          const knownFileName=safeText(state.publicDeckFileName);
+          const inferredDeckPath=knownFileName?normalizeFlashcardsDataPath(`allcards/${knownFileName}`):'';
+          const activeDeckPath=safeText(editCardsState.selectedPath)||safeText(state.publicDeckPath)||inferredDeckPath;
+          if(activeDeckPath){
+            editCardsState.selectedPath=activeDeckPath;
+            state.publicDeckPath=activeDeckPath;
+          }
+          queuePersistCurrentEditorDeck({delay:60});
+          if(editCardsState.searchMode)syncDeckSearchResults();
+          $('pasteArea').value='';
+          save();
+          renderAll();
+          closePastePopover();
+          showFeedbackToast(`${replaceCount} slot(s) atualizado(s): apenas textos, audio e imagem preservados.`);
           return;
         }
         const knownFileName=safeText(state.publicDeckFileName);
@@ -2667,7 +2759,7 @@
       $('sendPlaytalkConfirmBtn').onclick=async()=>{state.day=sanitizeDayKey($('dayInput').value);state.title=String($('titleInput').value||'').trim();state.flashcardCoverUrl=String($('flashcardCoverUrlInput').value||'').trim();save();renderAll();if(deckMetaAction==='playtalk'){try{const result=await publishAdminFlashcardsLocal({force:true});if(!result)throw new Error('Acesso restrito ao administrador.');closeSendPlaytalkPopover()}catch(error){alert(error.message||'Erro ao enviar para Fluent LevelUp.')}return}if(zipBusy||r2UploadBusy)return;r2UploadBusy=true;renderAll();try{const bundle=await buildZipBundle({publicJsonAssets:true}),payloadFiles=bundle.files.map(file=>({name:file.name,base64:base64FromBytes(file.bytes)})),result=await uploadLevelFilesToR2(payloadFiles),uploadedCount=Number(result?.uploadedCount||0),skippedCount=Number(result?.skippedCount||0);closeSendPlaytalkPopover();showFeedbackToast(`Obrigado. R2 atualizado: ${uploadedCount} arquivo(s) novo(s), ${skippedCount} reaproveitado(s).`)}catch(error){alert(error.message||'Erro ao enviar arquivos para o R2.')}finally{r2UploadBusy=false;renderAll()}};
       $('pasteArea').oninput=()=>handlePasteAreaMode();
       $('pasteCloseBtn').onclick=()=>closePastePopover();
-      $('editCardsDeckSelect').onchange=e=>{const selectedPath=String(e.target.value||'').trim();editCardsState.selectedPath=selectedPath;syncEditCardsDeckPicker();if(!selectedPath)return;loadSelectedDeckIntoLevels(selectedPath).catch(error=>alert(error.message||'Erro ao carregar deck.'))};
+      $('editCardsDeckSelect').onchange=e=>{const selectedPath=String(e.target.value||'').trim();editCardsState.selectedPath=selectedPath;const selectedDeck=editCardsState.decks.find(deck=>deck.path===selectedPath)||null;persistEditDeckLevel(normalizeDeckLevelValue(selectedDeck?.deckLevel)||1);syncEditCardsDeckPicker();if(!selectedPath)return;loadSelectedDeckIntoLevels(selectedPath).catch(error=>alert(error.message||'Erro ao carregar deck.'))};
       $('editCardsDeckLevelSaveBtn').onclick=()=>saveCurrentDeckLevel().catch(error=>alert(error.message||'Erro ao salvar nivel do deck.'));
       $('editCardsDeckLevelInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();saveCurrentDeckLevel().catch(error=>alert(error.message||'Erro ao salvar nivel do deck.'))}};
       $('editCardsDeckSearchToggle').onclick=()=>{
