@@ -181,10 +181,10 @@
       border: 1px solid rgba(255,255,255,0.14);
       background: linear-gradient(
         90deg,
-        #0f78ff 0%,
-        #0f78ff var(--smartbooks-stop, 50%),
-        #ff7a00 var(--smartbooks-stop, 50%),
-        #ff7a00 100%
+        #65122a 0%,
+        #c1112b var(--accent-stop, 50%),
+        #0a1e5b var(--accent-stop, 50%),
+        #123c96 100%
       );
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 18px 42px rgba(9, 21, 49, 0.32);
     }
@@ -857,14 +857,14 @@
 
     <section class="screen" data-step="3">
       <div class="question-block">
-        <h1>Quanto do seu treino vai para cada lado?</h1>
+        <h1>Qual porcentagem de pronúncia você quer treinar?</h1>
       </div>
       <div class="mix-stage">
         <div class="mix-slider-shell" id="mixSliderShell">
           <div class="mix-slider-track" id="mixSliderTrack">
             <div class="mix-slider-thumb" id="mixSliderThumb" aria-hidden="true"></div>
           </div>
-          <input class="mix-slider-input" id="mixSlider" type="range" min="0" max="100" step="1" value="50" aria-label="Escolha o percentual de FlashCards e SmartBooks">
+          <input class="mix-slider-input" id="mixSlider" type="range" min="0" max="100" step="1" value="50" aria-label="Escolha o percentual de Americano e Britânico">
         </div>
         <div class="mix-cards">
           <div class="mix-card mix-card--flashcards">
@@ -881,8 +881,8 @@
               </svg>
             </div>
             <div class="mix-card__meta">
-              <span class="mix-card__label">FlashCards</span>
-              <span class="mix-card__value" id="flashcardsPercent">50%</span>
+              <span class="mix-card__label">Americano</span>
+              <span class="mix-card__value" id="americanPercent">50%</span>
             </div>
           </div>
           <div class="mix-card mix-card--smartbooks">
@@ -901,8 +901,8 @@
               </svg>
             </div>
             <div class="mix-card__meta">
-              <span class="mix-card__label">SmartBooks</span>
-              <span class="mix-card__value" id="smartbooksPercent">50%</span>
+              <span class="mix-card__label">Britânico</span>
+              <span class="mix-card__value" id="britishPercent">50%</span>
             </div>
           </div>
         </div>
@@ -956,8 +956,8 @@
       minutes: 45,
       months: 12,
       application: 1,
-      flashcardsPercentage: 50,
-      smartbooksPercentage: 50,
+      americanPercentage: 50,
+      britishPercentage: 50,
       mixVisual: 50,
       selectedGroups: {
         minutes: true,
@@ -996,8 +996,8 @@
       status: document.getElementById('status'),
       mixSliderTrack: document.getElementById('mixSliderTrack'),
       mixSlider: document.getElementById('mixSlider'),
-      flashcardsPercent: document.getElementById('flashcardsPercent'),
-      smartbooksPercent: document.getElementById('smartbooksPercent'),
+      americanPercent: document.getElementById('americanPercent'),
+      britishPercent: document.getElementById('britishPercent'),
       skipPlanBtn: document.getElementById('skipPlanBtn')
     };
 
@@ -1075,7 +1075,7 @@
     }
 
     function snapMixPercentage(value) {
-      return clamp(Math.round(clamp(Number(value) || 0, 0, 100) / 5) * 5, 0, 100);
+      return clamp(Math.round(clamp(Number(value) || 0, 0, 100) / 10) * 10, 0, 100);
     }
 
     function syncMixVisual(value) {
@@ -1083,30 +1083,30 @@
       state.mixVisual = visual;
       if (els.mixSliderTrack) {
         els.mixSliderTrack.style.setProperty('--mix-visual', `${visual}%`);
-        els.mixSliderTrack.style.setProperty('--smartbooks-stop', `${smartbooksVisualStop(visual)}%`);
+        els.mixSliderTrack.style.setProperty('--accent-stop', `${accentVisualStop(visual)}%`);
       }
     }
 
-    function smartbooksVisualStop(visual) {
+    function accentVisualStop(visual) {
       return clamp(Number(visual) || 0, 0, 100);
     }
 
     function updateMixSelection(rawValue, options = {}) {
       const visual = clamp(Number(rawValue) || 0, 0, 100);
-      const flashcardsPercentage = snapMixPercentage(100 - visual);
-      const smartbooksPercentage = 100 - flashcardsPercentage;
-      state.flashcardsPercentage = flashcardsPercentage;
-      state.smartbooksPercentage = smartbooksPercentage;
+      const americanPercentage = snapMixPercentage(100 - visual);
+      const britishPercentage = 100 - americanPercentage;
+      state.americanPercentage = americanPercentage;
+      state.britishPercentage = britishPercentage;
       syncMixVisual(visual);
 
       if (!options.skipSliderSync && els.mixSlider) {
         els.mixSlider.value = String(Math.round(visual));
       }
 
-      const flashcardsLabel = `${flashcardsPercentage}%`;
-      const smartbooksLabel = `${smartbooksPercentage}%`;
-      if (els.flashcardsPercent) els.flashcardsPercent.textContent = flashcardsLabel;
-      if (els.smartbooksPercent) els.smartbooksPercent.textContent = smartbooksLabel;
+      const americanLabel = `${americanPercentage}%`;
+      const britishLabel = `${britishPercentage}%`;
+      if (els.americanPercent) els.americanPercent.textContent = americanLabel;
+      if (els.britishPercent) els.britishPercent.textContent = britishLabel;
       updateResult();
     }
 
@@ -1128,17 +1128,6 @@
       return 50 + ((m - 6) / (24 - 6)) * 50;
     }
 
-    function smartbooksCut(percent) {
-      const value = clamp(Number(percent) || 0, 0, 100);
-      if (value >= 50) return 0;
-      if (value >= 45) return 5;
-      if (value >= 40) return 10;
-      if (value >= 35) return 15;
-      if (value >= 30) return 20;
-      if (value >= 25) return 25;
-      return 30;
-    }
-
     function applicationCut(applicationMode) {
       // 0 = somente jogar; 1/2 = aplica na vida real
       return Number(applicationMode) === 0 ? 30 : 0;
@@ -1148,9 +1137,8 @@
       const vectorA = vectorByTime(state.minutes);
       const vectorB = vectorByMonths(state.months);
       const base = vectorA + vectorB;
-      const cutSmartbooks = smartbooksCut(state.smartbooksPercentage);
       const cutApplication = applicationCut(state.application);
-      const totalCut = cutSmartbooks + cutApplication;
+      const totalCut = cutApplication;
       const finalScore = clamp(base * (1 - totalCut / 100), 0, 200);
 
       return {
@@ -1268,17 +1256,9 @@
         state.application = Number(plan.application);
         state.selectedGroups.application = true;
       }
-      const flashcardsPercentage = Number(plan.flashcardsPercentage ?? plan.flashcards_percentage);
-      const smartbooksPercentage = Number(plan.smartbooksPercentage ?? plan.smartbooks_percentage);
-      if (Number.isInteger(flashcardsPercentage) && Number.isInteger(smartbooksPercentage) && flashcardsPercentage + smartbooksPercentage === 100) {
-        state.flashcardsPercentage = snapMixPercentage(flashcardsPercentage);
-        state.smartbooksPercentage = 100 - state.flashcardsPercentage;
-        state.mixVisual = 100 - state.flashcardsPercentage;
-      } else if (Number.isInteger(Number(plan.books))) {
-        state.flashcardsPercentage = Number(plan.books) === 1 ? 50 : 100;
-        state.smartbooksPercentage = 100 - state.flashcardsPercentage;
-        state.mixVisual = 100 - state.flashcardsPercentage;
-      }
+      state.americanPercentage = 50;
+      state.britishPercentage = 50;
+      state.mixVisual = 50;
 
       syncSelectedOptionsFromState();
       updateMixSelection(state.mixVisual);
@@ -1287,6 +1267,37 @@
     function resolveNextRoute(user) {
       const nextRoute = safeText(user?.nextOnboardingRoute || state.nextOnboardingRoute);
       return nextRoute || getReturnPath();
+    }
+
+    function buildAccentOptionValue() {
+      const american = snapMixPercentage(state.americanPercentage);
+      const british = 100 - american;
+      return `mix_${american}_${british}`;
+    }
+
+    function persistAccentGameOption() {
+      const storageKey = 'playtalk-game-options-v1';
+      const defaultOptions = {
+        difficulty: 'level_1',
+        speed: '0.90',
+        accent: 'mix_100_0',
+        fourthStageTyping: 'off'
+      };
+      let nextOptions = { ...defaultOptions };
+      try {
+        const parsed = JSON.parse(localStorage.getItem(storageKey) || 'null');
+        if (parsed && typeof parsed === 'object') {
+          nextOptions = { ...nextOptions, ...parsed };
+        }
+      } catch (_error) {
+        // ignora erro de parsing e usa fallback
+      }
+      nextOptions.accent = buildAccentOptionValue();
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(nextOptions));
+      } catch (_error) {
+        // ignora erro de persistencia
+      }
     }
 
     async function fetchFluencyPlan() {
@@ -1311,8 +1322,8 @@
           minutes: state.minutes,
           months: state.months,
           application: state.application,
-          flashcardsPercentage: state.flashcardsPercentage,
-          smartbooksPercentage: state.smartbooksPercentage
+          flashcardsPercentage: 100,
+          smartbooksPercentage: 0
         })
       });
       const payload = await response.json().catch(() => ({}));
@@ -1397,6 +1408,7 @@
         renderStep();
         setStatus('Salvando seu plano de fluência...');
         try {
+          persistAccentGameOption();
           const payload = await persistFluencyPlan();
           const user = normalizeUser(payload.user);
           state.nextOnboardingRoute = safeText(payload?.user?.next_onboarding_route);

@@ -3455,18 +3455,10 @@ const ensureUsersAvatarColumn = async () => {
       `);
       await pool.query(`
         UPDATE public.users
-        SET fluency_plan_flashcards_percentage = CASE
-              WHEN fluency_plan_books = 1 THEN 50
-              WHEN fluency_plan_books = 0 THEN 100
-              ELSE fluency_plan_flashcards_percentage
-            END,
-            fluency_plan_smartbooks_percentage = CASE
-              WHEN fluency_plan_books = 1 THEN 50
-              WHEN fluency_plan_books = 0 THEN 0
-              ELSE fluency_plan_smartbooks_percentage
-            END
-        WHERE fluency_plan_flashcards_percentage IS NULL
-           OR fluency_plan_smartbooks_percentage IS NULL
+        SET fluency_plan_flashcards_percentage = 100,
+            fluency_plan_smartbooks_percentage = 0
+        WHERE COALESCE(fluency_plan_flashcards_percentage, -1) <> 100
+           OR COALESCE(fluency_plan_smartbooks_percentage, -1) <> 0
       `);
       await pool.query(`
         UPDATE public.users
@@ -12463,16 +12455,14 @@ app.patch('/auth/fluency-plan', async (req, res) => {
     const months = readNullableInteger(req.body?.months);
     const application = readNullableInteger(req.body?.application);
     const books = readNullableInteger(req.body?.books);
-    const flashcardsPercentage = readNullableInteger(req.body?.flashcardsPercentage);
-    const smartbooksPercentage = readNullableInteger(req.body?.smartbooksPercentage);
     const noPlan = req.body?.noPlan === true;
     const nextStatus = noPlan ? FLUENCY_PLAN_NO_PLAN_STATUS : FLUENCY_PLAN_COMPLETED_STATUS;
     const nextMinutes = noPlan ? null : minutes;
     const nextMonths = noPlan ? null : months;
     const nextApplication = noPlan ? null : application;
     const nextBooks = noPlan ? null : books;
-    const nextFlashcardsPercentage = noPlan ? null : flashcardsPercentage;
-    const nextSmartbooksPercentage = noPlan ? null : smartbooksPercentage;
+    const nextFlashcardsPercentage = noPlan ? null : 100;
+    const nextSmartbooksPercentage = noPlan ? null : 0;
 
     const result = await pool.query(
       `UPDATE public.users
