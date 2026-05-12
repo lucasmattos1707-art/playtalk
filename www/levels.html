@@ -464,6 +464,7 @@
   <script>
     (() => {
       const STORE='playtalk-levels-editor-v2',ROOT='https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev',MODES=['flashcard','movies','scenes'],LABEL={flashcard:'FlashCard',movies:'Filmes',scenes:'Cenas'},PHASE={flashcard:'Fase 1',movies:'Fase 11',scenes:'Fase 12'},PHASE_CODE={flashcard:'001',movies:'011',scenes:'012'};
+      const UI_CUE_IMAGE_DONE='/audio/ui-cues/imagens.mp3',UI_CUE_AUDIO_DONE='/audio/ui-cues/audios.mp3',UI_CUE_NO_BRITISH='/audio/ui-cues/sembritanico.mp3';
       const ELEVENLABS_HARRY_VOICE_ID='SOYHLrjzK2X1ezoPC6cr';
       const ELEVENLABS_BLONDE_VOICE_ID='exsUS4vynmxd379XN4yO';
       const OPENAI_NARRATION_VOICES=['marin','cedar','alloy','fable','onyx','nova'];
@@ -996,9 +997,21 @@
       const load=()=>{try{const parsed=JSON.parse(localStorage.getItem(STORE)||'null');if(!parsed)return;Object.assign(state,parsed);state.mode='flashcard';state.voiceMode=false;state.day=sanitizeDayKey(state.day);state.items=Array.isArray(state.items)?state.items.map(i=>({...defaultItem(),...i})):[];state.chars=normalizeSceneChars(Array.isArray(state.chars)?state.chars:[])}catch{}state.mode='flashcard';state.voiceMode=false};
       const stopAudio=()=>{if(!currentAudio)return;currentAudio.audio.pause();currentAudio.audio.currentTime=0;currentAudio.button.classList.remove('has');currentAudio=null};
       const play=(src,btn)=>{if(!src)return;stopAudio();const audio=new Audio(src);currentAudio={audio,button:btn};btn.classList.add('has');audio.addEventListener('ended',stopAudio);audio.addEventListener('error',stopAudio);audio.play().catch(stopAudio)};
+      function playUiCue(src){
+        try{
+          const cue=new Audio(String(src||'').trim());
+          cue.play().catch(()=>{});
+        }catch{}
+      }
       const audioSrc=(item,kind)=>kind==='single'?(item.audioDataUrl||item.audioRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioFile,'flashcard')):kind==='pt'?(item.audioPtDataUrl||cloud(state.day,phase(),item.audioPtFile,state.mode)):(item.audioEnDataUrl||cloud(state.day,phase(),item.audioEnFile,state.mode));
       const audioSrcBlonde=item=>item?.audioBlondeDataUrl||item?.audioBlondeRemoteUrl||cloud(state.day,PHASE.flashcard,item?.audioBlondeFile,'flashcard');
-      const preferredSingleAudioSrc=item=>(state.duoaccentBritishPreview&&audioSrcBlonde(item))?audioSrcBlonde(item):audioSrc(item,'single');
+      const preferredSingleAudioSrc=item=>{
+        if(state.duoaccentBritishPreview){
+          const british=audioSrcBlonde(item);
+          return british||UI_CUE_NO_BRITISH;
+        }
+        return audioSrc(item,'single');
+      };
       const hasGeneratedAudio=(item,kind)=>kind==='single'?Boolean(item?.audioFile||item?.audioDataUrl):kind==='pt'?Boolean(item?.audioPtFile||item?.audioPtDataUrl):Boolean(item?.audioEnFile||item?.audioEnDataUrl);
       const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
       const watchTrackUrl=fileName=>`${BALANCE_TRACK_ROOT}/${encodeURIComponent(fileName)}`;
@@ -1886,134 +1899,55 @@
       function clearItemAudioFields(item,{muteVisual=true}={}){if(!item)return;item.audioFile='';item.audioDataUrl='';item.audioRemoteUrl='';item.audioBlondeFile='';item.audioBlondeDataUrl='';item.audioBlondeRemoteUrl='';if(muteVisual&&Boolean(item.imageFile||item.imageDataUrl||item.imageRemoteUrl)){item.imageMuted=true;item.imageRestoreFx=false}else{item.imageMuted=false;item.imageRestoreFx=false}}
       function deleteItemImage(index){clearVisualClickTimer(index);const item=state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);clearItemImageFields(item);queuePersistCurrentEditorDeck();save();renderAll()}
       function deleteItemAudio(index){const item=state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);clearItemAudioFields(item,{muteVisual:true});queuePersistCurrentEditorDeck();save();renderAll()}
-      function deleteItemContainer(index){if(index<0||index>=state.items.length)return;clearVisualClickTimer(index);state.items.splice(index,1);clearAdminSelection();closeItemAdminPopover();queuePersistCurrentEditorDeck({delay:60});save();renderAll()}
+      function deckHasDefinedLevel(deck){return normalizeDeckLevelValue(deck?.deckLevel)!==null}
+      function canDeleteSlotEntry(entry){
+        if(!entry)return false;
+        if(entry.source==='search'){
+          const deck=findDeckByPath(entry.deckPath);
+          return !deckHasDefinedLevel(deck);
+        }
+        const currentDeckPath=String(editCardsState.selectedPath||state.publicDeckPath||'').trim();
+        if(!currentDeckPath)return true;
+        const deck=findDeckByPath(currentDeckPath);
+        return !deckHasDefinedLevel(deck);
+      }
+      function canDeleteSlotAtIndex(index){
+        if(!Number.isInteger(index)||index<0||index>=state.items.length)return false;
+        return canDeleteSlotEntry({source:'editor',itemIndex:index,deckPath:editCardsState.selectedPath||''});
+      }
+      function deleteItemContainer(index){
+        if(index<0||index>=state.items.length)return;
+        if(!canDeleteSlotAtIndex(index)){
+          showFeedbackToast('Slots com nivel definido sao fixos e nao podem ser apagados.');
+          return;
+        }
+        clearVisualClickTimer(index);
+        state.items.splice(index,1);
+        clearAdminSelection();
+        closeItemAdminPopover();
+        queuePersistCurrentEditorDeck({delay:60});
+        save();
+        renderAll();
+      }
       function toggleAdminItemSelection(index){const entry={source:'editor',index,itemIndex:index,deckPath:editCardsState.selectedPath||''};toggleEntrySelection(entry)}
       function toggleAdminSelectionMode(){adminStudio.selectMode=!adminStudio.selectMode;if(!adminStudio.selectMode)clearAdminSelection();closeItemAdminPopover();syncAdminStudioControls();syncAdminRenderedItems()}
-      function openItemAdminPopover(index){if(!isAdminStudioEnabled())return;adminStudio.activeMenuIndex=index;$('itemAdminPopoverTitle').textContent=`Acoes do flashcard ${index+1}`;$('itemAdminPopover').classList.remove('hidden');$('itemAdminPopover').setAttribute('aria-hidden','false')}
+      function openItemAdminPopover(index){
+        if(!isAdminStudioEnabled())return;
+        adminStudio.activeMenuIndex=index;
+        $('itemAdminPopoverTitle').textContent=`Acoes do flashcard ${index+1}`;
+        const deleteItemBtn=$('itemAdminDeleteItemBtn');
+        if(deleteItemBtn){
+          const canDelete=canDeleteSlotAtIndex(index);
+          deleteItemBtn.disabled=!canDelete;
+          deleteItemBtn.style.display=canDelete?'':'none';
+        }
+        $('itemAdminPopover').classList.remove('hidden');
+        $('itemAdminPopover').setAttribute('aria-hidden','false');
+      }
       function openSelectionDeletePopover(){if(!isAdminStudioEnabled())return;$('selectionDeletePopover').classList.remove('hidden');$('selectionDeletePopover').setAttribute('aria-hidden','false')}
       function closeSelectionDeletePopover(){$('selectionDeletePopover').classList.add('hidden');$('selectionDeletePopover').setAttribute('aria-hidden','true')}
       function deleteSelectedImages(){if(!isAdminStudioEnabled()||!adminStudio.selected.size)return;const selected=selectedEntriesInView();let touchedEditor=false;selected.forEach(entry=>{const index=Number(entry.itemIndex);clearVisualClickTimer(index);const item=entry?.item||state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);clearItemImageFields(item);if(entry.source==='search')syncSearchEntryToDeck(entry);else touchedEditor=true});if(touchedEditor)queuePersistCurrentEditorDeck();save();renderAll()}
       function deleteSelectedAudios(){if(!isAdminStudioEnabled()||!adminStudio.selected.size)return;const selected=selectedEntriesInView();let touchedEditor=false;selected.forEach(entry=>{const index=Number(entry.itemIndex);const item=entry?.item||state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);clearItemAudioFields(item,{muteVisual:true});if(entry.source==='search')syncSearchEntryToDeck(entry);else touchedEditor=true});if(touchedEditor)queuePersistCurrentEditorDeck();save();renderAll()}
-      function cloneDeckItemValue(value){
-        try{
-          return typeof structuredClone==='function'
-            ? structuredClone(value)
-            : JSON.parse(JSON.stringify(value||{}));
-        }catch(_error){
-          return {...(value||{})};
-        }
-      }
-      async function moveSelectedCardsToDeck(){
-        const selected=selectedEntriesInView();
-        if(!selected.length){
-          alert('Selecione pelo menos um card.');
-          return;
-        }
-        const deckOptions=(editCardsState.decks||[]).filter(deck=>String(deck?.path||'').trim()&&normalizeDeckLevelValue(deck?.deckLevel)!==null);
-        if(!deckOptions.length){
-          alert('Nenhum deck com nivel definido foi encontrado para mover.');
-          return;
-        }
-        const answer=window.prompt(`Mover ${selected.length} card(s) para qual NIVEL? (1-100)`);
-        if(answer===null)return;
-        const targetLevel=normalizeDeckLevelValue(answer);
-        const targetDeck=targetLevel===null?null:deckOptions.find(deck=>normalizeDeckLevelValue(deck?.deckLevel)===targetLevel)||null;
-        if(!targetDeck){
-          alert('Nivel de destino invalido ou sem deck correspondente.');
-          return;
-        }
-        if(!targetDeck.data||!Array.isArray(targetDeck.data.items))targetDeck.data={...(targetDeck.data||{}),items:[]};
-        const selectedByOrder=selected.slice();
-        const payloadToAppend=[];
-        selectedByOrder.forEach(entry=>{
-          if(entry.source==='search'){
-            const sourceDeck=findDeckByPath(entry.deckPath);
-            const sourceItem=sourceDeck?.data?.items?.[Number(entry.itemIndex)];
-            if(sourceItem)payloadToAppend.push(cloneDeckItemValue(sourceItem));
-            return;
-          }
-          const sourceItem=state.items[Number(entry.itemIndex)];
-          if(sourceItem){
-            const raw={};
-            applyEditorItemIntoDeckEntry(sourceItem,raw,entry.deckDay||state.day);
-            payloadToAppend.push(raw);
-          }
-        });
-        const grouped=new Map();
-        selectedByOrder.forEach(entry=>{
-          const deckPath=entry.source==='search'
-            ? String(entry.deckPath||'').trim()
-            : String(editCardsState.selectedPath||state.publicDeckPath||'').trim();
-          if(!deckPath)return;
-          if(!grouped.has(deckPath))grouped.set(deckPath,[]);
-          grouped.get(deckPath).push(Number(entry.itemIndex));
-        });
-        grouped.forEach((indexes,deckPath)=>{
-          const deck=findDeckByPath(deckPath);
-          if(!deck||!deck.data||!Array.isArray(deck.data.items))return;
-          Array.from(new Set(indexes)).sort((a,b)=>b-a).forEach(index=>{
-            if(index>=0&&index<deck.data.items.length){
-              deck.data.items.splice(index,1);
-            }
-          });
-          deck.count=deck.data.items.length;
-          markDeckDirty(deckPath);
-        });
-        targetDeck.data.items.push(...payloadToAppend);
-        targetDeck.count=targetDeck.data.items.length;
-        markDeckDirty(targetDeck.path);
-        const currentSelectedPath=String(editCardsState.selectedPath||'').trim();
-        if(currentSelectedPath&&grouped.has(currentSelectedPath)){
-          const currentDeck=findDeckByPath(currentSelectedPath);
-          if(currentDeck&&Array.isArray(currentDeck.data?.items)){
-            state.items=currentDeck.data.items.map(entry=>flashcardEditorItemFromDeckEntry(entry));
-          }
-        }
-        if(String(targetDeck.path||'').trim()===currentSelectedPath){
-          state.items=targetDeck.data.items.map(entry=>flashcardEditorItemFromDeckEntry(entry));
-        }
-        clearAdminSelection();
-        syncDeckSearchResults();
-        save();
-        renderAll();
-        alert(`${payloadToAppend.length} card(s) movido(s) para o nivel ${targetLevel}.`);
-      }
-      function moveSingleSelectedCardInDeck(){
-        const selected=getSelectedEditorEntries();
-        if(selected.length!==1){
-          alert('Selecione exatamente 1 card para mover com M.');
-          return;
-        }
-        const index=Number(selected[0].itemIndex);
-        if(!Number.isInteger(index)||index<0||index>=state.items.length){
-          alert('Card selecionado invalido.');
-          return;
-        }
-        const answer=window.prompt(`Mover card ${index+1} para qual posicao?`,String(index+1));
-        if(answer===null)return;
-        const targetPos=Number.parseInt(String(answer||'').trim(),10);
-        if(!Number.isInteger(targetPos)||targetPos<1||targetPos>state.items.length){
-          alert(`Digite uma posicao entre 1 e ${state.items.length}.`);
-          return;
-        }
-        const toIndex=targetPos-1;
-        if(toIndex===index)return;
-        const [moved]=state.items.splice(index,1);
-        state.items.splice(toIndex,0,moved);
-        queuePersistCurrentEditorDeck({delay:0});
-        const refreshedEntries=renderableFlashcardEntries();
-        const nextEntry=refreshedEntries[toIndex];
-        clearAdminSelection();
-        if(nextEntry){
-          const key=entrySelectionKey(nextEntry);
-          if(key){
-            adminStudio.selected.add(key);
-            selectionAnchorKey=key;
-          }
-        }
-        save();
-        renderAll();
-      }
       function resolvePublishDeckIdentity(options={}){
         const optionFileName=typeof options?.fileName==='string'?String(options.fileName).trim():'';
         const optionSource=typeof options?.source==='string'?String(options.source).trim():'';
@@ -2375,6 +2309,7 @@
               }
             }
           }
+          playUiCue(UI_CUE_IMAGE_DONE);
           alert(`${done} imagem(ns) gerada(s) com IA.`);
         }catch(error){
           alert(`${done} imagem(ns) gerada(s) antes da parada.\n${error.message||'Erro ao gerar imagem.'}`);
@@ -2462,34 +2397,37 @@
             if(!src)return;
             play(src,playBtn);
           };
-          const del=document.createElement('button');
-          del.type='button';
-          del.className='icon-delete';
-          del.setAttribute('aria-label',`Apagar item ${sourceIndex+1}`);
-          del.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h5v2H3V5h5l1-2Zm1 6h2v8h-2V9Zm4 0h2v8h-2V9ZM7 9h2v8H7V9Zm-1 11a2 2 0 0 1-2-2V8h16v10a2 2 0 0 1-2 2H6Z"/></svg>';
-          del.onclick=()=>{
-            clearVisualClickTimer(entryStorageKey(entry));
-            clearFlashcardItemSyncFeedback(item);
-            if(entry.source==='search'){
-              const deck=findDeckByPath(entry.deckPath);
-              if(deck&&deck.data&&Array.isArray(deck.data.items)&&entry.itemIndex>=0&&entry.itemIndex<deck.data.items.length){
-                deck.data.items.splice(entry.itemIndex,1);
-                deck.count=Math.max(0,Number(deck.count||0)-1);
-                if(deck.path===editCardsState.selectedPath&&entry.itemIndex<state.items.length)state.items.splice(entry.itemIndex,1);
-                shiftPinnedIndexesAfterRemoval(deck.path,entry.itemIndex);
-                queuePersistDeckByPath(deck.path,{delay:60});
+          top.appendChild(playBtn);
+          if(canDeleteSlotEntry(entry)){
+            const del=document.createElement('button');
+            del.type='button';
+            del.className='icon-delete';
+            del.setAttribute('aria-label',`Apagar item ${sourceIndex+1}`);
+            del.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h5v2H3V5h5l1-2Zm1 6h2v8h-2V9Zm4 0h2v8h-2V9ZM7 9h2v8H7V9Zm-1 11a2 2 0 0 1-2-2V8h16v10a2 2 0 0 1-2 2H6Z"/></svg>';
+            del.onclick=()=>{
+              clearVisualClickTimer(entryStorageKey(entry));
+              clearFlashcardItemSyncFeedback(item);
+              if(entry.source==='search'){
+                const deck=findDeckByPath(entry.deckPath);
+                if(deck&&deck.data&&Array.isArray(deck.data.items)&&entry.itemIndex>=0&&entry.itemIndex<deck.data.items.length){
+                  deck.data.items.splice(entry.itemIndex,1);
+                  deck.count=Math.max(0,Number(deck.count||0)-1);
+                  if(deck.path===editCardsState.selectedPath&&entry.itemIndex<state.items.length)state.items.splice(entry.itemIndex,1);
+                  shiftPinnedIndexesAfterRemoval(deck.path,entry.itemIndex);
+                  queuePersistDeckByPath(deck.path,{delay:60});
+                }
+                syncDeckSearchResults();
+              }else{
+                const editorDeckPath=safeText(editCardsState.selectedPath)||safeText(state.publicDeckPath);
+                state.items.splice(sourceIndex,1);
+                if(editorDeckPath)shiftPinnedIndexesAfterRemoval(editorDeckPath,sourceIndex);
+                queuePersistCurrentEditorDeck({delay:60});
               }
-              syncDeckSearchResults();
-            }else{
-              const editorDeckPath=safeText(editCardsState.selectedPath)||safeText(state.publicDeckPath);
-              state.items.splice(sourceIndex,1);
-              if(editorDeckPath)shiftPinnedIndexesAfterRemoval(editorDeckPath,sourceIndex);
-              queuePersistCurrentEditorDeck({delay:60});
-            }
-            save();
-            renderAll();
-          };
-          top.append(playBtn,del);
+              save();
+              renderAll();
+            };
+            top.appendChild(del);
+          }
           card.appendChild(top);
 
           const visual=document.createElement('button');
@@ -2803,7 +2741,7 @@
       $('watchMediaInput').onchange=async e=>{const files=Array.from(e.target.files||[]);e.target.value='';if(!files.length)return;const items=await loadWatchCustomMedia(files);if(!items.length){alert('Selecione imagens ou videos validos.');return}startWatchPlayback({scope:'mine',customItems:items})};
       $('ttsVoiceSelect').onchange=e=>{state.ttsVoice=normalizeTtsVoice(e.target.value);save();syncVoicePopover()};
       $('voicePopoverCloseBtn').onclick=()=>closeVoicePopover();
-      $('voicePopoverConfirmBtn').onclick=async()=>{if(elevenBusy)return;state.ttsVoice=normalizeTtsVoice($('ttsVoiceSelect').value);save();syncVoicePopover();const providerLabel=voiceProvider(state.ttsVoice)==='elevenlabs'?'ElevenLabs':'OpenAI';try{const done=await generateRemainingVoiceAssets(state.ttsVoice);if(done)alert(`${done} audio(s) gerado(s) com ${providerLabel}.`);closeVoicePopover()}catch(error){alert(error.message||'Erro ao gerar audio.')}};
+      $('voicePopoverConfirmBtn').onclick=async()=>{if(elevenBusy)return;state.ttsVoice=normalizeTtsVoice($('ttsVoiceSelect').value);save();syncVoicePopover();const providerLabel=voiceProvider(state.ttsVoice)==='elevenlabs'?'ElevenLabs':'OpenAI';try{const done=await generateRemainingVoiceAssets(state.ttsVoice);if(done){try{await persistDirtyDecksNow({fallbackCurrentDeck:true,silent:true})}catch(error){showFeedbackToast(error?.message||'Nao foi possivel salvar os decks no Postgres.')}playUiCue(UI_CUE_AUDIO_DONE);alert(`${done} audio(s) gerado(s) com ${providerLabel}.`)}closeVoicePopover()}catch(error){alert(error.message||'Erro ao gerar audio.')}};
       $('adminSearchInput').oninput=e=>{adminStudio.search=String(e.target.value||'');syncAdminRenderedItems()};
       $('adminSelectBtn').onclick=()=>toggleAdminSelectionMode();
       $('adminBatchClearImageBtn').onclick=()=>deleteSelectedImages();
@@ -2853,16 +2791,6 @@
         if(adminStudio.enabled&&state.mode==='flashcard'&&key==='s'){
           e.preventDefault();
           persistDirtyDecksNow({fallbackCurrentDeck:true}).catch(error=>showFeedbackToast(error?.message||'Nao foi possivel salvar os decks no Postgres.'));
-          return;
-        }
-        if(isAdminStudioEnabled()&&key==='c'&&!watchRuntime){
-          e.preventDefault();
-          moveSelectedCardsToDeck().catch(error=>alert(error?.message||'Erro ao mover cards.'));
-          return;
-        }
-        if(isAdminStudioEnabled()&&key==='m'&&!watchRuntime){
-          e.preventDefault();
-          moveSingleSelectedCardInDeck();
           return;
         }
         if(isAdminStudioEnabled()&&key==='d'&&!watchRuntime){
