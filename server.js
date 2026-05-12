@@ -6711,29 +6711,52 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
       const source = String(deck?.source || '').trim();
       if (!source || !fallbackMap.has(source)) return null;
       const fallback = fallbackMap.get(source);
-      const deckLevel = Number.parseInt(deck?.deckLevel, 10);
+      const fallbackDeckLevel = Number.parseInt(fallback?.deckLevel, 10);
+      const fallbackItems = Array.isArray(fallback?.items) ? fallback.items : [];
+      const fallbackItemsById = new Map(
+        fallbackItems
+          .map((item) => [String(item?.id || '').trim(), item])
+          .filter(([id]) => Boolean(id))
+      );
       const items = Array.isArray(deck?.items) ? deck.items : [];
+      const usedFallbackItemIds = new Set();
+      const orderedItems = items
+        .map((item, index) => {
+          const rawId = String(item?.id || '').trim();
+          if (!rawId) return null;
+          const fallbackItem = fallbackItemsById.get(rawId);
+          if (!fallbackItem) return null;
+          usedFallbackItemIds.add(rawId);
+          return {
+            id: rawId,
+            english: String(fallbackItem?.english || '').trim(),
+            portuguese: String(fallbackItem?.portuguese || '').trim(),
+            image: String(fallbackItem?.image || '').trim(),
+            audio: String(fallbackItem?.audio || '').trim(),
+            audio2: String(fallbackItem?.audio2 || '').trim(),
+            orderIndex: index
+          };
+        })
+        .filter(Boolean);
+      const appendedItems = fallbackItems
+        .filter((item) => {
+          const id = String(item?.id || '').trim();
+          return id && !usedFallbackItemIds.has(id);
+        })
+        .map((item, index) => ({
+          id: String(item?.id || '').trim(),
+          english: String(item?.english || '').trim(),
+          portuguese: String(item?.portuguese || '').trim(),
+          image: String(item?.image || '').trim(),
+          audio: String(item?.audio || '').trim(),
+          audio2: String(item?.audio2 || '').trim(),
+          orderIndex: orderedItems.length + index
+        }));
       return {
         source,
         title: String(deck?.title || fallback?.title || '').trim() || String(fallback?.title || '').trim(),
-        deckLevel: Number.isInteger(deckLevel) ? deckLevel : Number(fallback?.deckLevel) || null,
-        items: items
-          .map((item, index) => {
-            const rawId = String(item?.id || '').trim();
-            const fallbackItem = Array.isArray(fallback?.items) ? fallback.items.find((entry) => String(entry?.id || '').trim() === rawId) : null;
-            const id = rawId || (fallbackItem ? String(fallbackItem.id || '').trim() : `${source}#${index + 1}`);
-            if (!id) return null;
-            return {
-              id,
-              english: String(item?.english || fallbackItem?.english || '').trim(),
-              portuguese: String(item?.portuguese || fallbackItem?.portuguese || '').trim(),
-              image: String(item?.image || fallbackItem?.image || '').trim(),
-              audio: String(item?.audio || fallbackItem?.audio || '').trim(),
-              audio2: String(item?.audio2 || fallbackItem?.audio2 || '').trim(),
-              orderIndex: index
-            };
-          })
-          .filter(Boolean)
+        deckLevel: Number.isInteger(fallbackDeckLevel) ? fallbackDeckLevel : null,
+        items: orderedItems.concat(appendedItems)
       };
     })
     .filter((deck) => deck && Number.isInteger(deck.deckLevel));
@@ -6762,7 +6785,18 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
         : []
     }));
 
-  const mergedDecks = decks.concat(missingFallbackDecks);
+  const mergedDecks = decks
+    .concat(missingFallbackDecks)
+    .filter((deck) => deck && Number.isInteger(Number(deck.deckLevel)))
+    .sort((left, right) => {
+      const leftLevel = Number(left.deckLevel) || 0;
+      const rightLevel = Number(right.deckLevel) || 0;
+      if (leftLevel !== rightLevel) return leftLevel - rightLevel;
+      const leftTitle = String(left?.title || '').toLowerCase();
+      const rightTitle = String(right?.title || '').toLowerCase();
+      if (leftTitle !== rightTitle) return leftTitle.localeCompare(rightTitle);
+      return String(left?.source || '').localeCompare(String(right?.source || ''));
+    });
 
   return {
     version: 1,
