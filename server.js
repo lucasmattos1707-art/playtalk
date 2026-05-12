@@ -6738,10 +6738,36 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
     })
     .filter((deck) => deck && Number.isInteger(deck.deckLevel));
 
+  const includedSources = new Set(decks.map((deck) => String(deck.source || '').trim()).filter(Boolean));
+  const missingFallbackDecks = fallbackDecks
+    .filter((deck) => {
+      if (!deck || typeof deck !== 'object') return false;
+      const source = String(deck.source || '').trim();
+      return Boolean(source) && !includedSources.has(source) && Number.isInteger(Number(deck.deckLevel));
+    })
+    .map((deck) => ({
+      source: String(deck.source || '').trim(),
+      title: String(deck.title || '').trim(),
+      deckLevel: Number(deck.deckLevel),
+      items: Array.isArray(deck.items)
+        ? deck.items.map((item, index) => ({
+          id: String(item?.id || `${String(deck.source || '').trim()}#${index + 1}`).trim(),
+          english: String(item?.english || '').trim(),
+          portuguese: String(item?.portuguese || '').trim(),
+          image: String(item?.image || '').trim(),
+          audio: String(item?.audio || '').trim(),
+          audio2: String(item?.audio2 || '').trim(),
+          orderIndex: Number.isInteger(Number(item?.orderIndex)) ? Number(item.orderIndex) : index
+        })).filter((item) => item.id)
+        : []
+    }));
+
+  const mergedDecks = decks.concat(missingFallbackDecks);
+
   return {
     version: 1,
     savedAt: new Date().toISOString(),
-    decks
+    decks: mergedDecks
   };
 }
 
