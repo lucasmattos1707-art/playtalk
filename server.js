@@ -6511,6 +6511,10 @@ function normalizePublicFlashcardDeckLevel(value) {
   return parsed;
 }
 
+function quotePgIdentifier(value) {
+  return `"${String(value || '').replace(/"/g, '""')}"`;
+}
+
 async function ensurePublicFlashcardDecksTable() {
   if (!pool) return false;
   if (!publicFlashcardDecksTableReadyPromise) {
@@ -6549,6 +6553,54 @@ async function ensurePublicFlashcardDecksTable() {
         ALTER TABLE public.flashcards_public_decks
         ADD COLUMN IF NOT EXISTS deck_level integer
       `);
+      try {
+        const deckLevelConstraintResult = await pool.query(`
+          SELECT c.conname, pg_get_constraintdef(c.oid) AS definition
+          FROM pg_constraint c
+          JOIN pg_class t ON t.oid = c.conrelid
+          JOIN pg_namespace n ON n.oid = t.relnamespace
+          WHERE n.nspname = 'public'
+            AND t.relname = 'flashcards_public_decks'
+            AND c.contype = 'c'
+            AND pg_get_constraintdef(c.oid) ILIKE '%deck_level%'
+        `);
+        const deckLevelConstraintReady = deckLevelConstraintResult.rows.some((row) => {
+          const definition = String(row?.definition || '').toLowerCase();
+          return /deck_level\s*>?=\s*1/.test(definition) && /deck_level\s*<=\s*100/.test(definition);
+        });
+        if (!deckLevelConstraintReady) {
+          const client = await pool.connect();
+          try {
+            await client.query('BEGIN');
+            await client.query(`SET LOCAL lock_timeout = '4000ms'`);
+            for (const row of deckLevelConstraintResult.rows) {
+              const constraintName = String(row?.conname || '').trim();
+              if (!constraintName) continue;
+              await client.query(`
+                ALTER TABLE public.flashcards_public_decks
+                DROP CONSTRAINT IF EXISTS ${quotePgIdentifier(constraintName)}
+              `);
+            }
+            await client.query(`
+              ALTER TABLE public.flashcards_public_decks
+              ADD CONSTRAINT flashcards_public_decks_deck_level_range_check
+              CHECK (deck_level IS NULL OR deck_level BETWEEN 1 AND 100) NOT VALID
+            `);
+            await client.query(`
+              ALTER TABLE public.flashcards_public_decks
+              VALIDATE CONSTRAINT flashcards_public_decks_deck_level_range_check
+            `);
+            await client.query('COMMIT');
+          } catch (constraintError) {
+            await client.query('ROLLBACK').catch(() => {});
+            console.warn('Nao foi possivel atualizar a constraint deck_level agora:', constraintError?.message || constraintError);
+          } finally {
+            client.release();
+          }
+        }
+      } catch (constraintCheckError) {
+        console.warn('Nao foi possivel verificar a constraint deck_level:', constraintCheckError?.message || constraintCheckError);
+      }
       await pool.query(`
         CREATE INDEX IF NOT EXISTS flashcards_public_decks_hidden_idx
         ON public.flashcards_public_decks (is_hidden, updated_at DESC)
