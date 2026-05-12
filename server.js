@@ -6890,20 +6890,6 @@ async function applyFlashcardsSequenceForPhaseSix(dayNumber, payload) {
   if (!Number.isInteger(normalizedDay) || normalizedDay < 1) return payload;
   if (!payload || typeof payload !== 'object' || !Array.isArray(payload.items) || !payload.items.length) return payload;
 
-  await ensurePublicFlashcardDecksTable();
-  const deckResult = await pool.query(
-    `SELECT file_name, deck_level
-     FROM public.flashcards_public_decks
-     WHERE deck_level = $1
-       AND is_hidden = false
-     ORDER BY updated_at DESC
-     LIMIT 1`,
-    [normalizedDay]
-  );
-  const deckRow = deckResult.rows[0] || null;
-  if (!deckRow?.file_name) return payload;
-
-  const source = `allcards/${normalizePublicFlashcardDeckFileName(deckRow.file_name, 'deck.json')}`;
   const fallback = await buildDefaultFlashcardsSequenceState();
   const savedStateRow = await readFlashcardsSequenceState();
   const savedPayload = savedStateRow?.payload && typeof savedStateRow.payload === 'object'
@@ -6913,7 +6899,7 @@ async function applyFlashcardsSequenceForPhaseSix(dayNumber, payload) {
     ? sanitizeFlashcardsSequencePayload(savedPayload, fallback.decks)
     : fallback;
   const sequenceDeck = Array.isArray(state?.decks)
-    ? state.decks.find((deck) => String(deck?.source || '').trim() === source)
+    ? state.decks.find((deck) => Number.parseInt(deck?.deckLevel, 10) === normalizedDay)
     : null;
 
   if (!sequenceDeck) return payload;
