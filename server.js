@@ -4881,7 +4881,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       });
     }
     const requestedCoinsDeltaRaw = Math.max(0, Math.round(Number(payload?.stats?.coinsDelta || payload?.stats?.coins_delta) || 0));
-    const requestedCoinsDelta = cardsTodayDelta > 0 ? requestedCoinsDeltaRaw : 0;
+    const requestedCoinsDelta = requestedCoinsDeltaRaw;
 
     await client.query(
       `INSERT INTO public.user_flashcard_stats (

@@ -10748,6 +10748,7 @@
           gamePausedAtDailyPlan: false,
           gameStatusRankTimer: 0,
           gameStatusRankToken: 0,
+          gameStatusLastCoinsTotal: 0,
           gameStatusPreviousRank: 0,
       welcomeSelectedLevel: 1,
           levelModeProgress: {},
@@ -12329,12 +12330,20 @@
             throw new Error(payload?.message || 'Falha ao salvar seus flashcards.');
           }
           if (payload?.stats && typeof payload.stats === 'object') {
+            const hadCoinsTotal = Object.prototype.hasOwnProperty.call(payload.stats, 'coinsTotal')
+              || Object.prototype.hasOwnProperty.call(payload.stats, 'coins_total');
+            const hadCoinsDelta = Object.prototype.hasOwnProperty.call(payload.stats, 'coinsDelta')
+              || Object.prototype.hasOwnProperty.call(payload.stats, 'coins_delta');
+            const normalizedStats = normalizeStatsSnapshot(payload.stats);
             state.stats = {
               ...state.stats,
-              ...normalizeStatsSnapshot(payload.stats)
+              ...normalizedStats,
+              coinsTotal: hadCoinsTotal ? normalizedStats.coinsTotal : state.stats.coinsTotal,
+              coinsDelta: hadCoinsDelta ? normalizedStats.coinsDelta : state.stats.coinsDelta
             };
             // coinsDelta deve ser consumido uma unica vez por sync para evitar duplicidade.
             state.stats.coinsDelta = 0;
+            state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
             persistUserStatsLocally();
             renderWelcomeEnergyMiniTicker();
           }
@@ -14996,6 +15005,7 @@
         state.stats = hasCloudStats
           ? normalizeStatsSnapshot(cloudState?.stats)
           : localStats;
+        state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
         state.userCards = hasCloudProgress
           ? new Map(cloudProgress.map(record => [record.cardId, record]))
           : localProgress;
@@ -19446,9 +19456,14 @@
 
       function showRewardGameStatus() {
         clearStageHintLoop();
-        const coinsDelta = Math.max(0, Number(state.stats?.coinsDelta) || 0);
         const coinsTotal = Math.max(0, Number(state.stats?.coinsTotal) || 0);
-        const previousCoins = Math.max(0, coinsTotal - coinsDelta);
+        const previousCoins = Math.max(
+          0,
+          Math.min(
+            Math.round(Number(state.ui.gameStatusLastCoinsTotal) || 0),
+            coinsTotal
+          )
+        );
         state.ui.gameStatusRankToken += 1;
         const token = state.ui.gameStatusRankToken;
         clearGameStatusRankTimer();
@@ -19467,6 +19482,7 @@
               iconLabel: 'Moedas'
             });
           });
+          state.ui.gameStatusLastCoinsTotal = coinsTotal;
         }, REWARD_RANK_SWAP_DELAY_MS);
       }
 
@@ -23675,8 +23691,9 @@
             if (shouldGatePremiumAccess()) {
               setPremiumStatus('Monte uma chave premium tocando nas imagens.');
             }
-            state.stats.coinsDelta = Math.max(0, flashcardCoinValue(card));
-            state.stats.coinsTotal = Math.max(0, Number(state.stats.coinsTotal) || 0) + state.stats.coinsDelta;
+            const earnedCoins = Math.max(0, flashcardCoinValue(card));
+            state.stats.coinsDelta = Math.max(0, Number(state.stats.coinsDelta) || 0) + earnedCoins;
+            state.stats.coinsTotal = Math.max(0, Number(state.stats.coinsTotal) || 0) + earnedCoins;
             renderWelcomeEnergyMiniTicker();
             showRewardGameStatus();
             triggerLibrarySummaryRankSwap();
