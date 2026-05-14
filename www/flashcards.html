@@ -10273,16 +10273,7 @@
       const DEFAULT_GAME_CONTEXT_LIMIT = 12;
       const USER_LEVEL_MIN = 1;
       const USER_LEVEL_MAX = 200;
-      const BOOKS_ENERGY_XP_PER_LEVEL = 1000;
-      const ENERGY_XP_DIVISOR = 100;
-      const ENERGY_LEVEL_PHASE_ONE_MAX = 80;
-      const ENERGY_LEVEL_PHASE_ONE_BASE_XP = 50;
-      const ENERGY_LEVEL_PHASE_ONE_BLOCK_SIZE = 5;
-      const ENERGY_LEVEL_PHASE_ONE_BLOCK_STEP = 5;
-      const ENERGY_LEVEL_PHASE_TWO_BASE_XP = 130;
-      const ENERGY_LEVEL_PHASE_TWO_CURVE = 6909;
-      const ENERGY_LEVEL_PHASE_TWO_SPAN = 119;
-      const ENERGY_XP_MULTIPLIER = 1.5;
+      const COINS_ICON_PATH = '/SVG/codex-icons/post-results/coins.svg';
       const WELCOME_LEVEL_ANIMATION_MS = 2500;
       const SECOND_STAGE_BLOCK_MIN_TOTAL = 9;
       const SECOND_STAGE_BLOCK_MAX_TOTAL = 11;
@@ -10490,7 +10481,11 @@
           trainingTimeMs: 0,
           pronunciationSamples: [],
           pronunciationPercent: 0,
-          speedFlashcardsPerHour: 0
+          speedFlashcardsPerHour: 0,
+          booksEnergyXpTotal: 0,
+          booksEnergyXpDelta: 0,
+          coinsTotal: 0,
+          coinsDelta: 0
         },
         timeOffsetMs: 0,
         user: null,
@@ -11038,7 +11033,12 @@
 
       function availableDifficultyValues() {
         const values = Array.isArray(GAME_OPTION_VALUE_MAP.difficulty) ? GAME_OPTION_VALUE_MAP.difficulty : [];
-        return values.length ? values : ['level_1'];
+        const maxLevel = Math.max(1, currentUserLevel());
+        const filtered = values.filter((value) => {
+          const level = parseDifficultyLevelNumber(value);
+          return Number.isInteger(level) && level >= 1 && level <= maxLevel;
+        });
+        return filtered.length ? filtered : ['level_1'];
       }
 
       function defaultDifficultyValue() {
@@ -11544,6 +11544,10 @@
             )
           : 0;
         const speedFlashcardsPerHour = Math.max(0, Number(raw?.speedFlashcardsPerHour ?? raw?.speed_flashcards_per_hour) || 0);
+        const booksEnergyXpTotal = Math.max(0, Math.round(Number(raw?.booksEnergyXpTotal ?? raw?.books_energy_xp_total) || 0));
+        const booksEnergyXpDelta = Math.max(0, Math.round(Number(raw?.booksEnergyXpDelta ?? raw?.books_energy_xp_delta) || 0));
+        const coinsTotal = Math.max(0, Math.round(Number(raw?.coinsTotal ?? raw?.coins_total) || 0));
+        const coinsDelta = Math.max(0, Math.round(Number(raw?.coinsDelta ?? raw?.coins_delta) || 0));
         return {
           playTimeMs: Math.max(0, Math.round(Number(raw?.playTimeMs) || 0)),
           speakings: Math.max(0, Math.round(Number(raw?.speakings) || 0)),
@@ -11553,7 +11557,11 @@
           trainingTimeMs,
           pronunciationSamples: normalizedPronunciationSamples,
           pronunciationPercent,
-          speedFlashcardsPerHour: Math.round(speedFlashcardsPerHour * 10) / 10
+          speedFlashcardsPerHour: Math.round(speedFlashcardsPerHour * 10) / 10,
+          booksEnergyXpTotal,
+          booksEnergyXpDelta,
+          coinsTotal,
+          coinsDelta
         };
       }
 
@@ -12266,6 +12274,13 @@
               return false;
             }
             throw new Error(payload?.message || 'Falha ao salvar seus flashcards.');
+          }
+          if (payload?.stats && typeof payload.stats === 'object') {
+            state.stats = {
+              ...state.stats,
+              ...normalizeStatsSnapshot(payload.stats)
+            };
+            persistUserStatsLocally();
           }
           if (Number.isFinite(Number(payload?.userLevel))) {
             state.userLevel = normalizeUserLevel(payload.userLevel);
@@ -15316,58 +15331,21 @@
         return normalizeSelectableGameLevel(state.ui.welcomeSelectedLevel);
       }
 
-      function xpRequiredForEnergyLevel(level) {
-        const normalizedLevel = normalizeUserLevel(level);
-        if (normalizedLevel <= ENERGY_LEVEL_PHASE_ONE_MAX) {
-          return ENERGY_LEVEL_PHASE_ONE_BASE_XP
-            + ENERGY_LEVEL_PHASE_ONE_BLOCK_STEP
-              * Math.floor((normalizedLevel - 1) / ENERGY_LEVEL_PHASE_ONE_BLOCK_SIZE);
-        }
-        const t = (normalizedLevel - ENERGY_LEVEL_PHASE_ONE_MAX) / ENERGY_LEVEL_PHASE_TWO_SPAN;
-        return ENERGY_LEVEL_PHASE_TWO_BASE_XP + ENERGY_LEVEL_PHASE_TWO_CURVE * t * t;
-      }
-
-      function totalEnergySpentFromStats(stats = state.stats) {
-        const source = stats || {};
-        return Math.max(0, Number(source.readings) || 0)
-          + Math.max(0, Number(source.listenings) || 0)
-          + Math.max(0, Number(source.speakings) || 0);
-      }
-
-      function totalEnergyXp(stats = state.stats) {
-        return (totalEnergySpentFromStats(stats) / ENERGY_XP_DIVISOR) * ENERGY_XP_MULTIPLIER;
+      function xpRequiredForNextLevel(level) {
+        return normalizeUserLevel(level) + 20;
       }
 
       function resolveEnergyLevelProgress(stats = state.stats) {
         const booksEnergyXpTotal = Math.max(0, Number(stats?.booksEnergyXpTotal) || 0);
-        if (booksEnergyXpTotal > 0) {
-          const levelFromXp = Math.max(
-            USER_LEVEL_MIN,
-            Math.min(USER_LEVEL_MAX, Math.floor(booksEnergyXpTotal / BOOKS_ENERGY_XP_PER_LEVEL) + 1)
-          );
-          const currentXp = booksEnergyXpTotal % BOOKS_ENERGY_XP_PER_LEVEL;
-          const nextRequired = levelFromXp >= USER_LEVEL_MAX ? 0 : BOOKS_ENERGY_XP_PER_LEVEL;
-          const percent = levelFromXp >= USER_LEVEL_MAX
-            ? 100
-            : Math.max(0, Math.min(100, (currentXp / Math.max(1, nextRequired)) * 100));
-          return {
-            level: normalizeUserLevel(levelFromXp),
-            percent,
-            currentXp,
-            nextRequired,
-            totalXp: booksEnergyXpTotal
-          };
-        }
-
-        let remainingXp = totalEnergyXp(stats);
+        let remainingXp = booksEnergyXpTotal;
         let level = USER_LEVEL_MIN;
-        for (let currentLevel = USER_LEVEL_MIN; currentLevel < USER_LEVEL_MAX; currentLevel += 1) {
-          const required = xpRequiredForEnergyLevel(currentLevel);
+        while (level < USER_LEVEL_MAX) {
+          const required = xpRequiredForNextLevel(level);
           if (remainingXp < required) break;
           remainingXp -= required;
-          level = currentLevel + 1;
+          level += 1;
         }
-        const nextRequired = level >= USER_LEVEL_MAX ? 0 : xpRequiredForEnergyLevel(level);
+        const nextRequired = level >= USER_LEVEL_MAX ? 0 : xpRequiredForNextLevel(level);
         const percent = level >= USER_LEVEL_MAX
           ? 100
           : Math.max(0, Math.min(100, (remainingXp / Math.max(1, nextRequired)) * 100));
@@ -15376,7 +15354,7 @@
           percent,
           currentXp: Math.max(0, remainingXp),
           nextRequired,
-          totalXp: totalEnergyXp(stats)
+          totalXp: booksEnergyXpTotal
         };
       }
 
@@ -18413,17 +18391,18 @@
         return `${Math.max(0, Number(count) || 0)} FlashCards`;
       }
 
-      function formatLibrarySummaryRank(rank = state.ui.librarySummaryRank) {
-        const normalizedRank = Math.max(0, Number(rank) || 0);
-        return normalizedRank ? `${normalizedRank}\u00ba Lugar` : '';
+      function formatCoinsSummaryMarkup(coins) {
+        const safeCoins = Math.max(0, Math.round(Number(coins) || 0));
+        return `<span class="library-summary-coins"><img src="${escapeHtml(COINS_ICON_PATH)}" alt="" aria-hidden="true"> ${safeCoins}</span>`;
       }
 
       function renderLibrarySummary(count = accessibleFlashcardsCount()) {
         if (!els.allSectionCopy) return;
-        const nextText = state.ui.librarySummaryMode === 'rank'
-          ? (formatLibrarySummaryRank() || formatLibrarySummaryCount(count))
-          : formatLibrarySummaryCount(count);
-        els.allSectionCopy.textContent = nextText;
+        if (state.ui.librarySummaryMode === 'rank') {
+          els.allSectionCopy.innerHTML = formatCoinsSummaryMarkup(state.stats?.coinsTotal || 0);
+          return;
+        }
+        els.allSectionCopy.textContent = formatLibrarySummaryCount(count);
       }
 
       async function refreshLibraryRanking() {
@@ -18466,12 +18445,31 @@
         state.ui.librarySummaryTimer = window.setTimeout(async () => {
           state.ui.librarySummaryTimer = 0;
           if (token !== state.ui.librarySummaryToken) return;
-          const rank = await refreshLibraryRanking();
-          if (token !== state.ui.librarySummaryToken || !rank) return;
+          if (token !== state.ui.librarySummaryToken) return;
           state.ui.librarySummaryMode = 'rank';
           renderLibrarySummary(nextCount);
           flashLibrarySummary();
         }, LIBRARY_RANK_SWAP_DELAY_MS);
+      }
+
+      function animateCoinTotalForDuration(startValue, endValue, durationMs, render) {
+        const from = Math.max(0, Math.round(Number(startValue) || 0));
+        const to = Math.max(0, Math.round(Number(endValue) || 0));
+        if (to <= from || durationMs <= 0) {
+          render(to);
+          return;
+        }
+        const startedAt = performance.now();
+        const step = (now) => {
+          const progress = Math.max(0, Math.min(1, (now - startedAt) / durationMs));
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const current = Math.round(from + ((to - from) * eased));
+          render(current);
+          if (progress < 1) {
+            window.requestAnimationFrame(step);
+          }
+        };
+        window.requestAnimationFrame(step);
       }
 
       function refreshLibrary() {
@@ -19339,6 +19337,9 @@
       function showRewardGameStatus() {
         clearStageHintLoop();
         const flashcardsCount = weightedAccessibleFlashcardsScore();
+        const coinsDelta = Math.max(0, Number(state.stats?.coinsDelta) || 0);
+        const coinsTotal = Math.max(0, Number(state.stats?.coinsTotal) || 0);
+        const previousCoins = Math.max(0, coinsTotal - coinsDelta);
         state.ui.gameStatusRankToken += 1;
         const token = state.ui.gameStatusRankToken;
         clearGameStatusRankTimer();
@@ -19347,17 +19348,13 @@
         state.ui.gameStatusRankTimer = window.setTimeout(async () => {
           state.ui.gameStatusRankTimer = 0;
           if (token !== state.ui.gameStatusRankToken || !state.game.active) return;
-          const rank = await refreshCurrentPlayerRank();
-          if (token !== state.ui.gameStatusRankToken || !state.game.active || rank <= 0) return;
-          const trend = resolveRewardTrend(state.ui.gameStatusPreviousRank, rank);
-          state.ui.gameStatusPreviousRank = rank;
-          setGameStatus(`${rank}\u00ba Lugar`, 'flashcards-count', {
-            iconPath: REWARD_STATUS_ICON_PATHS[trend] || '',
-            iconLabel: trend
+          animateCoinTotalForDuration(previousCoins, coinsTotal, 1000, (value) => {
+            if (token !== state.ui.gameStatusRankToken || !state.game.active) return;
+            setGameStatus(String(value), 'flashcards-count', {
+              iconPath: COINS_ICON_PATH,
+              iconLabel: 'Moedas'
+            });
           });
-          if (trend === 'up') {
-            playStatusCueAudio(REWARD_STATUS_UP_AUDIO_PATH);
-          }
         }, REWARD_RANK_SWAP_DELAY_MS);
       }
 
@@ -20438,7 +20435,11 @@
         els.gameVisual.className = visualClasses.join(' ');
         els.gameVisual.style.removeProperty('--stage-two-overlay-opacity');
         setGameVisualNeonState('default');
-        const coinMarkup = (stageConfig?.key === 'first-star' && entry && entry.stage === 1)
+        const coinMarkup = (
+          (stageConfig?.key === 'first-star' || stageConfig?.key === 'third-star' || stageConfig?.key === 'fifth-star')
+          && entry
+          && Number(entry.stage) >= 1
+        )
           ? `<div class="game-card__coin-badge" aria-hidden="true"><img src="/SVG/codex-icons/coin.png" alt="">${escapeHtml(String(flashcardCoinValue(card)))}</div>`
           : '';
         els.gameVisual.innerHTML = `${imageMarkup}${sealMarkup}${coinMarkup}`;
@@ -23562,6 +23563,8 @@
             if (shouldGatePremiumAccess()) {
               setPremiumStatus('Monte uma chave premium tocando nas imagens.');
             }
+            state.stats.coinsDelta = Math.max(0, flashcardCoinValue(card));
+            state.stats.coinsTotal = Math.max(0, Number(state.stats.coinsTotal) || 0) + state.stats.coinsDelta;
             showRewardGameStatus();
             triggerLibrarySummaryRankSwap();
             entry._removeAfterReward = true;

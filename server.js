@@ -994,9 +994,86 @@ const rememberFlashcardPhaseSettings = (settings) => {
   return snapshot;
 };
 
+const xpRequiredForNextLevel = (level) => {
+  const normalizedLevel = Math.max(1, Math.floor(Number(level) || 1));
+  return normalizedLevel + 20;
+};
+
+const levelFromTotalXp = (totalXp) => {
+  let remaining = Math.max(0, Math.floor(Number(totalXp) || 0));
+  let level = 1;
+  while (level < 200) {
+    const required = xpRequiredForNextLevel(level);
+    if (remaining < required) break;
+    remaining -= required;
+    level += 1;
+  }
+  return level;
+};
+
 const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = null) => {
-  // XP flow disabled by product decision.
-  return { xpDelta: 0, levelsAwarded: 0, totalXp: 0 };
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    return { xpDelta: 0, levelsAwarded: 0, totalXp: 0, userLevel: 1 };
+  }
+
+  const cardsDelta = Math.max(0, Math.round(Number(deltas?.cardsDelta) || 0));
+  const xpDelta = cardsDelta;
+  const coinsDelta = Math.max(0, Math.round(Number(deltas?.coinsDelta) || 0));
+
+  const currentXpResult = await db.query(
+    `SELECT energy_xp_total
+     FROM public.user_books_energy_xp_stats
+     WHERE user_id = $1
+     LIMIT 1`,
+    [normalizedUserId]
+  );
+  const previousTotalXp = Math.max(0, Number(currentXpResult.rows[0]?.energy_xp_total) || 0);
+  const previousLevel = levelFromTotalXp(previousTotalXp);
+
+  const xpResult = await db.query(
+    `INSERT INTO public.user_books_energy_xp_stats (user_id, energy_xp_total, created_at, updated_at)
+     VALUES ($1, $2, now(), now())
+     ON CONFLICT (user_id)
+     DO UPDATE
+       SET energy_xp_total = public.user_books_energy_xp_stats.energy_xp_total + EXCLUDED.energy_xp_total,
+           updated_at = now()
+     RETURNING energy_xp_total`,
+    [normalizedUserId, xpDelta]
+  );
+  const totalXp = Math.max(0, Number(xpResult.rows[0]?.energy_xp_total) || 0);
+  const nextLevel = levelFromTotalXp(totalXp);
+
+  const userLevelResult = await db.query(
+    `UPDATE public.users
+     SET level = $2,
+         level_updated_at = CASE WHEN COALESCE(level, 1) <> $2 THEN now() ELSE level_updated_at END
+     WHERE id = $1
+     RETURNING level`,
+    [normalizedUserId, nextLevel]
+  );
+  const persistedLevel = normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level ?? nextLevel);
+  const levelsAwarded = Math.max(0, persistedLevel - previousLevel);
+
+  const coinsResult = await db.query(
+    `INSERT INTO public.user_coins (user_id, coins_total, created_at, updated_at)
+     VALUES ($1, $2, now(), now())
+     ON CONFLICT (user_id)
+     DO UPDATE
+       SET coins_total = public.user_coins.coins_total + EXCLUDED.coins_total,
+           updated_at = now()
+     RETURNING coins_total`,
+    [normalizedUserId, coinsDelta]
+  );
+
+  return {
+    xpDelta,
+    levelsAwarded,
+    totalXp,
+    userLevel: persistedLevel,
+    coinsDelta,
+    coinsTotal: Math.max(0, Number(coinsResult.rows[0]?.coins_total) || 0)
+  };
 };
 
 const upsertUserBooksPronunciationSamples = async (client, userId, samplesInput) => {
@@ -1942,6 +2019,23 @@ const ensureUserBooksEnergyXpStatsTable = async () => {
   }
 
   return userBooksEnergyXpStatsReadyPromise;
+};
+
+const ensureUserCoinsTable = async () => {
+  if (!pool) return false;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS public.user_coins (
+      user_id integer PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+      coins_total bigint NOT NULL DEFAULT 0,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS user_coins_updated_idx
+    ON public.user_coins (updated_at DESC)
+  `);
+  return true;
 };
 
 const ensureUserDailyMissionStatsTable = async () => {
@@ -4344,6 +4438,7 @@ const readFlashcardStateForUser = async (userId) => {
 
   await ensureFlashcardUserStateTables();
   await ensureUserBooksEnergyXpStatsTable();
+  await ensureUserCoinsTable();
 
   const normalizedUserId = Number.parseInt(userId, 10);
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
@@ -4352,7 +4447,7 @@ const readFlashcardStateForUser = async (userId) => {
     throw error;
   }
 
-  const [progressResult, statsResult, accurateResult, hiddenResult, onTableResult, userLevelResult, booksEnergyXpResult] = await Promise.all([
+  const [progressResult, statsResult, accurateResult, hiddenResult, onTableResult, userLevelResult, booksEnergyXpResult, coinsResult] = await Promise.all([
     pool.query(
       `SELECT
          card_id,
@@ -4416,6 +4511,13 @@ const readFlashcardStateForUser = async (userId) => {
        WHERE user_id = $1
        LIMIT 1`,
       [normalizedUserId]
+    ),
+    pool.query(
+      `SELECT coins_total
+       FROM public.user_coins
+       WHERE user_id = $1
+       LIMIT 1`,
+      [normalizedUserId]
     )
   ]);
 
@@ -4445,7 +4547,8 @@ const readFlashcardStateForUser = async (userId) => {
         pronunciationSamples: accurateAggregate.pronunciationSamples,
         secondStarErrorHeard: flashcardStatsRow.second_star_error_heard
       }, totalFlashcardLettersFromProgress(progressRecords)),
-      booksEnergyXpTotal: Math.max(0, Number(booksEnergyXpResult.rows[0]?.energy_xp_total) || 0)
+      booksEnergyXpTotal: Math.max(0, Number(booksEnergyXpResult.rows[0]?.energy_xp_total) || 0),
+      coinsTotal: Math.max(0, Number(coinsResult.rows[0]?.coins_total) || 0)
     },
     meta: {
       userLevel: normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level),
@@ -4516,6 +4619,8 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
   let booksEnergyXpTotal = 0;
   let booksEnergyXpDelta = 0;
   let booksEnergyLevelsAwarded = 0;
+  let coinsTotal = 0;
+  let coinsDelta = 0;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -4537,7 +4642,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     const clientSawCurrentUserLevel = !currentUserLevelUpdatedAtMs
       || requestedUserLevelSyncedAtMs >= currentUserLevelUpdatedAtMs - 1000;
 
-    if (clientSawCurrentUserLevel && requestedUserLevel !== currentPersistedUserLevel) {
+    if (clientSawCurrentUserLevel && requestedUserLevel < currentPersistedUserLevel) {
       const userLevelResult = await client.query(
         `UPDATE public.users
          SET level = $2,
@@ -4775,6 +4880,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
         cardsDelta: cardsTodayDelta
       });
     }
+    const requestedCoinsDelta = Math.max(0, Math.round(Number(payload?.stats?.coinsDelta || payload?.stats?.coins_delta) || 0));
 
     await client.query(
       `INSERT INTO public.user_flashcard_stats (
@@ -4845,9 +4951,8 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
         listeningCharsDelta
       });
       const xpAward = await awardUserBooksEnergyXp(client, normalizedUserId, {
-        readingCharsDelta,
-        speakingCharsDelta,
-        listeningCharsDelta
+        cardsDelta: cardsTodayDelta,
+        coinsDelta: requestedCoinsDelta
       }, {
         dailyFreeEnergyLimit: energySnapshot?.dailyEnergyLimit,
         energyCostMultiplierMilli: energySnapshot?.energyCostMultiplierMilli
@@ -4855,6 +4960,9 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       booksEnergyXpTotal = Math.max(0, Number(xpAward?.totalXp) || 0);
       booksEnergyXpDelta = Math.max(0, Number(xpAward?.xpDelta) || 0);
       booksEnergyLevelsAwarded = Math.max(0, Number(xpAward?.levelsAwarded) || 0);
+      coinsDelta = Math.max(0, Number(xpAward?.coinsDelta) || 0);
+      coinsTotal = Math.max(0, Number(xpAward?.coinsTotal) || 0);
+      persistedUserLevel = normalizeUserFlashcardLevel(xpAward?.userLevel ?? persistedUserLevel);
       await updateUserPresenceClassProgress(client, normalizedUserId, {
         speakingCharsDelta,
         listeningCharsDelta
@@ -4868,6 +4976,16 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
         [normalizedUserId]
       );
       booksEnergyXpTotal = Math.max(0, Number(booksXpResult.rows[0]?.energy_xp_total) || 0);
+      const xpAward = await awardUserBooksEnergyXp(client, normalizedUserId, {
+        cardsDelta: cardsTodayDelta,
+        coinsDelta: requestedCoinsDelta
+      });
+      booksEnergyXpTotal = Math.max(0, Number(xpAward?.totalXp) || booksEnergyXpTotal);
+      booksEnergyXpDelta = Math.max(0, Number(xpAward?.xpDelta) || 0);
+      booksEnergyLevelsAwarded = Math.max(0, Number(xpAward?.levelsAwarded) || 0);
+      coinsDelta = Math.max(0, Number(xpAward?.coinsDelta) || 0);
+      coinsTotal = Math.max(0, Number(xpAward?.coinsTotal) || 0);
+      persistedUserLevel = normalizeUserFlashcardLevel(xpAward?.userLevel ?? persistedUserLevel);
     }
 
     await client.query(
@@ -4918,7 +5036,9 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       ...stats,
       booksEnergyXpTotal,
       booksEnergyXpDelta,
-      booksEnergyLevelsAwarded
+      booksEnergyLevelsAwarded,
+      coinsTotal,
+      coinsDelta
     },
     userLevel: persistedUserLevel,
     userLevelUpdatedAt: persistedUserLevelUpdatedAt,
@@ -4929,6 +5049,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
 const startFlashcardSessionClock = async (userId) => {
   if (!pool) throw new Error('DATABASE_URL nao configurada.');
   await ensureFlashcardUserStateTables();
+  await ensureUserCoinsTable();
   const normalizedUserId = Number.parseInt(userId, 10);
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
     const error = new Error('userId invalido.');
@@ -14410,6 +14531,7 @@ app.post('/api/books/complete', express.json({ limit: '256kb' }), async (req, re
     await ensureUserDailyMissionStatsTable();
     await ensureUserDailyEnergyStatsTable();
     await ensureUserBooksEnergyXpStatsTable();
+    await ensureUserCoinsTable();
     await ensureEnergySettingsTable();
     await ensureUsersPresenceClassMetricStorage();
     const book = await findSpeakingBookById(bookId);
