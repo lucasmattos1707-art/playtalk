@@ -10295,7 +10295,7 @@
         'day', 'night', 'house', 'book', 'music', 'food', 'car', 'school', 'friend', 'family', 'work', 'game', 'time', 'place', 'story',
         'happy', 'sad', 'good', 'great', 'slowly', 'always', 'never', 'really', 'very', 'today', 'early', 'late'
       ];
-      const CURRENT_LEVEL_ROUND_RATIO = 0.4;
+      const CURRENT_LEVEL_ROUND_RATIO = 0.6;
       const MIN_GAME_CONTEXT_LIMIT = 1;
       const LEVEL_MODE_BUFFER_SIZE = 10;
       const LEVEL_MODE_BUFFER_REFILL_SIZE = 5;
@@ -11078,7 +11078,7 @@
         const normalized = safeText(value).toLowerCase();
         if (key === 'difficulty') {
           const parsedLevel = normalizeDifficultyLevelValue(normalized);
-          if (parsedLevel) return parsedLevel;
+          if (parsedLevel && values.includes(parsedLevel)) return parsedLevel;
         }
         if (values.includes(normalized)) return normalized;
         if (key === 'difficulty') return defaultDifficultyValue();
@@ -16063,17 +16063,21 @@
 
       function renderGameOptionsModal() {
         if (!els.gameOptionsModal || !els.gameOptionsDeck) return;
+        state.options.difficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
         const cards = GAME_OPTION_SLIDES.map((key) => {
           const meta = gameOptionMetaForKey(key);
           if (!meta) return '';
           const valueKey = normalizeGameOptionValue(key, state.options[key]);
           const valueMeta = meta.values?.[valueKey] || {};
+          const fallbackLabel = key === 'difficulty'
+            ? `Nível ${parseDifficultyLevelNumber(valueKey) || 1}`
+            : valueKey;
           return `
             <article class="game-options-modal__item" data-game-option-key="${escapeHtml(key)}">
               <h3 class="game-options-modal__name">${gameOptionIconMarkup(key)}${escapeHtml(meta.name || key)}</h3>
               <div class="game-options-modal__value-row">
                 <button class="game-options-modal__arrow" type="button" data-game-option-nav="${escapeHtml(key)}" data-game-option-step="-1" aria-label="Valor anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 4.5 8 12l7.5 7.5" /></svg></button>
-                <div class="game-options-modal__value" data-game-option-value="${escapeHtml(key)}">${escapeHtml(valueMeta.label || valueKey)}</div>
+                <div class="game-options-modal__value" data-game-option-value="${escapeHtml(key)}">${escapeHtml(valueMeta.label || fallbackLabel)}</div>
                 <button class="game-options-modal__arrow" type="button" data-game-option-nav="${escapeHtml(key)}" data-game-option-step="1" aria-label="Próximo valor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 4.5 16 12l-7.5 7.5" /></svg></button>
               </div>
             </article>
@@ -16084,12 +16088,15 @@
 
       function nudgeCurrentGameOptionValue(optionKey, delta) {
         const slideKey = safeText(optionKey);
-        const values = GAME_OPTION_VALUE_MAP[slideKey] || [];
+        const values = slideKey === 'difficulty'
+          ? availableDifficultyValues()
+          : (GAME_OPTION_VALUE_MAP[slideKey] || []);
         if (!values.length) return;
         const currentValue = normalizeGameOptionValue(slideKey, state.options[slideKey]);
         const currentIndex = Math.max(0, values.indexOf(currentValue));
-        const nextIndex = (currentIndex + delta + values.length) % values.length;
+        const nextIndex = Math.max(0, Math.min(values.length - 1, currentIndex + (delta < 0 ? -1 : 1)));
         const nextValue = values[nextIndex];
+        if (nextValue === currentValue) return;
         state.options[slideKey] = nextValue;
         persistGameOptions();
         const valueEl = els.gameOptionsDeck?.querySelector(`[data-game-option-value="${slideKey}"]`);
@@ -16670,7 +16677,10 @@
         if (selectedLevel === null) return true;
         const deckLevel = cardDeckLevel(card);
         if (deckLevel === null) return false;
-        return deckLevel === selectedLevel;
+        if (selectedLevel <= 1) {
+          return deckLevel === 1;
+        }
+        return deckLevel <= selectedLevel;
       }
 
       function currentLevelProgressCount(level = currentUserLevel()) {
@@ -16691,8 +16701,15 @@
           return allPlayableCards;
         }
         const targetLevel = normalizeUserLevel(level);
-        const exactLevelCards = allPlayableCards.filter((card) => cardDeckLevel(card) === targetLevel);
-        return exactLevelCards.length ? exactLevelCards : allPlayableCards;
+        if (targetLevel <= 1) {
+          const levelOneCards = allPlayableCards.filter((card) => cardDeckLevel(card) === 1);
+          return levelOneCards.length ? levelOneCards : allPlayableCards;
+        }
+        const uptoLevelCards = allPlayableCards.filter((card) => {
+          const deckLevel = cardDeckLevel(card);
+          return Number.isInteger(deckLevel) && deckLevel >= 1 && deckLevel <= targetLevel;
+        });
+        return uptoLevelCards.length ? uptoLevelCards : allPlayableCards;
       }
 
       function syncGameLevelNavigator() {
@@ -19336,14 +19353,16 @@
 
       function showRewardGameStatus() {
         clearStageHintLoop();
-        const flashcardsCount = weightedAccessibleFlashcardsScore();
         const coinsDelta = Math.max(0, Number(state.stats?.coinsDelta) || 0);
         const coinsTotal = Math.max(0, Number(state.stats?.coinsTotal) || 0);
         const previousCoins = Math.max(0, coinsTotal - coinsDelta);
         state.ui.gameStatusRankToken += 1;
         const token = state.ui.gameStatusRankToken;
         clearGameStatusRankTimer();
-        setGameStatus(`${flashcardsCount} FlashCards`, 'flashcards-count');
+        setGameStatus(String(previousCoins), 'flashcards-count', {
+          iconPath: COINS_ICON_PATH,
+          iconLabel: 'Moedas'
+        });
         state.lastLevelUpLevel = 0;
         state.ui.gameStatusRankTimer = window.setTimeout(async () => {
           state.ui.gameStatusRankTimer = 0;
