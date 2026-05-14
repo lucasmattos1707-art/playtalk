@@ -1094,11 +1094,12 @@
     }
 
     .welcome-gate__action-btn--flashcards {
-      --welcome-action-size-multiplier: 1.15;
+      --welcome-action-size-multiplier: 1.22;
       --welcome-action-color: #ff8a18;
       --welcome-action-soft: rgba(255, 138, 24, 0.34);
       --welcome-action-border: rgba(255, 171, 72, 0.82);
       --welcome-action-glow: rgba(255, 138, 24, 0.62);
+      order: 2;
       margin-right: -10%;
       z-index: 1;
     }
@@ -1110,11 +1111,12 @@
     }
 
     .welcome-gate__action-btn--mission {
-      --welcome-action-size-multiplier: 1.18;
+      --welcome-action-size-multiplier: 1.12;
       --welcome-action-color: #ffe44d;
       --welcome-action-soft: rgba(255, 228, 77, 0.36);
       --welcome-action-border: rgba(255, 238, 104, 0.86);
       --welcome-action-glow: rgba(255, 228, 77, 0.72);
+      order: 1;
       z-index: 2;
     }
 
@@ -1125,11 +1127,12 @@
     }
 
     .welcome-gate__action-btn--books {
-      --welcome-action-size-multiplier: 1.15;
+      --welcome-action-size-multiplier: 1.12;
       --welcome-action-color: #165dff;
       --welcome-action-soft: rgba(22, 93, 255, 0.36);
       --welcome-action-border: rgba(75, 129, 255, 0.84);
       --welcome-action-glow: rgba(22, 93, 255, 0.68);
+      order: 3;
       margin-left: -10%;
       z-index: 1;
     }
@@ -9620,11 +9623,11 @@
             </button>
           </div>
         <div class="welcome-gate__action-row" aria-label="Acoes principais">
-          <button class="welcome-gate__action-btn welcome-gate__action-btn--flashcards welcome-gate__start-btn" id="welcomeStartBtn" type="button" aria-label="FlashCards">
+          <button class="welcome-gate__action-btn welcome-gate__action-btn--flashcards welcome-gate__start-btn" id="welcomeStartBtn" type="button" aria-label="Cards">
             <span class="welcome-gate__action-circle" aria-hidden="true">
               <svg viewBox="0 0 64 64" focusable="false"><path d="M36 5 15 36h16l-4 23 22-35H34l2-19Z"></path></svg>
             </span>
-            <span class="welcome-gate__action-label">Flash</span>
+            <span class="welcome-gate__action-label">Cards</span>
             <span class="welcome-gate__start-timer" hidden>
               <img class="welcome-gate__start-timer-icon" src="/SVG/codex-icons/relógio.svg" alt="" aria-hidden="true">
               <span class="welcome-gate__start-timer-value">00:00:00</span>
@@ -9636,11 +9639,11 @@
             </span>
             <span class="welcome-gate__action-label">Missão</span>
           </button>
-          <button class="welcome-gate__action-btn welcome-gate__action-btn--books" id="welcomeBooksBtn" type="button" aria-label="MiniBooks">
+          <button class="welcome-gate__action-btn welcome-gate__action-btn--books" id="welcomeBooksBtn" type="button" aria-label="Álbuns">
             <span class="welcome-gate__action-circle" aria-hidden="true">
               <svg viewBox="0 0 64 64" focusable="false"><path d="M32 17.4c-4.9-4.2-11-6.3-18.4-6.3A3.6 3.6 0 0 0 10 14.7v32.1a3.6 3.6 0 0 0 3.7 3.6c6.9 0 12.2 1.8 16.1 5.4 1.2 1.1 3.2 1.1 4.4 0 3.9-3.6 9.2-5.4 16.1-5.4a3.6 3.6 0 0 0 3.7-3.6V14.7a3.6 3.6 0 0 0-3.6-3.6c-7.4 0-13.5 2.1-18.4 6.3Zm-3.2 29.4c-3.3-2.1-7.4-3.3-12.3-3.7V17.9c5.1.4 9.2 2.1 12.3 5v23.9Zm6.4 0V22.9c3.1-2.9 7.2-4.6 12.3-5v25.2c-4.9.4-9 1.6-12.3 3.7Z"></path></svg>
             </span>
-            <span class="welcome-gate__action-label">Books</span>
+            <span class="welcome-gate__action-label">Álbuns</span>
           </button>
         </div>
         <div class="welcome-gate__energy" id="welcomeEnergy">
@@ -15169,6 +15172,10 @@
           els.authPassword.value = '';
           await hydrateAuthenticatedApp(payload.user);
           primeGameTouchButton();
+          if (state.entry.welcomeStartRequested && !state.game.active) {
+            state.entry.welcomeFlashStartAt = Date.now();
+            void openAudioCheck();
+          }
           setAuthStatus(state.authMode === 'register' ? 'Conta criada. Bora jogar.' : 'Entrada liberada.', 'success');
         } catch (error) {
           setAuthStatus(String(error.message || 'Nao foi possivel autenticar agora.'), 'error');
