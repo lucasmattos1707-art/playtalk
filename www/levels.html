@@ -94,9 +94,9 @@
       to{opacity:1;transform:translateX(0)}
     }
     @keyframes watchPulse{
-      0%{transform:scale(1)}
-      50%{transform:scale(1.1)}
-      100%{transform:scale(1)}
+      0%{filter:brightness(1)}
+      50%{filter:brightness(1.08)}
+      100%{filter:brightness(1)}
     }
     @keyframes watchFlash{
       0%{opacity:0}
@@ -272,6 +272,7 @@
   <input id="audioBatchInput" type="file" accept="audio/mpeg,audio/mp3,audio/ogg,audio/opus,audio/webm,audio/wav" multiple hidden>
   <input id="watchMediaInput" type="file" accept="image/*,video/*" multiple hidden>
   <input id="watchFontInput" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" hidden>
+  <input id="watchTextColorInput" type="color" value="#ffffff" hidden>
   <input id="jsonInput" type="file" accept="application/json,.json" hidden>
   <input id="jsonBatchPublishInput" type="file" accept="application/json,.json" multiple hidden>
   <div id="audioPopover" class="popover hidden" aria-hidden="true">
@@ -499,7 +500,7 @@
       const jsonBatchPublishState={files:[],results:[],busy:false};
       let deckMetaAction='r2';
       let pendingImage=null,pendingAudio=null,currentAudio=null,audioBatchTargets={pt:false,en:false},aiBatchBusy=false,aiTextBusy=false,zipBusy=false,elevenBusy=false,r2UploadBusy=false,publishLocalBusy=false,feedbackToastTimer=0;
-      let watchRuntime=null,watchVoiceAudio=null,watchMusicAudio=null,watchLibraryCache=null,editableDeckOptionsCache=null,watchObjectUrlPool=[],watchBackdropImageUrl='',watchCustomFontFamily='',watchEnglishOnly=false;
+      let watchRuntime=null,watchVoiceAudio=null,watchMusicAudio=null,watchLibraryCache=null,editableDeckOptionsCache=null,watchObjectUrlPool=[],watchBackdropImageUrl='',watchCustomFontFamily='',watchEnglishOnly=false,watchTextColor='';
       const postgresDeckSyncTimers=new Map();
       const dirtyDeckPaths=new Set();
       const visualClickTimers=new Map();
@@ -1777,7 +1778,7 @@
         return lines.slice(0,3);
       }
       function renderWatchText(node,text){const lines=watchLines(text);node.innerHTML=lines.map(line=>`<span class="watch-card__text-line">${escapeHtml(line)}</span>`).join('')}
-      function syncWatchTextFont(){const family=watchCustomFontFamily?`${watchCustomFontFamily},"Orbitron","Exo 2",Arial,sans-serif`:'"Orbitron","Exo 2",Arial,sans-serif';$('watchCardPt').style.fontFamily=family;$('watchCardEn').style.fontFamily=family}
+      function syncWatchTextFont(){const family=watchCustomFontFamily?`${watchCustomFontFamily},"Orbitron","Exo 2",Arial,sans-serif`:'"Orbitron","Exo 2",Arial,sans-serif';$('watchCardPt').style.fontFamily=family;$('watchCardEn').style.fontFamily=family;const color=String(watchTextColor||'').trim();$('watchCardPt').style.color=color||'';$('watchCardEn').style.color=color||''}
       function syncWatchBackdropBackground(){const watchView=$('watchView');if(!watchView)return;if(watchBackdropImageUrl){watchView.style.setProperty('--watch-bg-image',`url("${watchBackdropImageUrl}")`);return}watchView.style.setProperty('--watch-bg-image','none')}
       function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim(),video=String(item?.video||'').trim(),watchCard=$('watchCard'),videoEl=$('watchCardVideo');$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';renderWatchText($('watchCardPt'),item?.pt||'Sem portugues');renderWatchText($('watchCardEn'),item?.en||'Sem english');syncWatchTextFont();$('watchCardHint').textContent=extraStatus||'Sequencia em ordem, sem aleatorio.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';syncWatchBackdropBackground();if(video){videoEl.classList.remove('hidden');if(videoEl.src!==video)videoEl.src=video;videoEl.play().catch(()=>{})}else{videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchCard.classList.remove('is-sliding');void watchCard.offsetWidth;watchCard.classList.add('is-sliding','is-pulsing');updateWatchTransforms();setWatchStatus(extraStatus||'Preparando audio...')}
       function normalizeWatchItem(entry,deckTitle,sourceLabel){const pt=String(entry?.nomePortugues||entry?.pt||entry?.portuguese||'').trim(),en=String(entry?.nomeIngles||entry?.en||entry?.english||'').trim(),audio=String(entry?.audio||entry?.audioFile||'').trim(),image=String(entry?.imagem||entry?.image||entry?.imageFile||'').trim(),video=String(entry?.video||'').trim();if(!(pt||en))return null;return{key:`${sourceLabel}::${deckTitle}::${pt}::${en}::${audio}::${image}::${video}`,pt,en,audio,image,video,deckTitle:String(deckTitle||'Flashcards').trim()||'Flashcards',sourceLabel:String(sourceLabel||'Flashcards').trim()||'Flashcards'}}
@@ -2779,6 +2780,7 @@
       $('watchStopBtn').onclick=()=>stopWatchPlayback();
       $('watchMediaInput').onchange=e=>{const files=Array.from(e.target.files||[]);e.target.value='';if(!files.length)return;const loaded=loadWatchBackdropImage(files);if(!loaded){alert('Selecione pelo menos 1 imagem valida para o fundo.');return}startWatchPlayback({scope:'mine'})};
       $('watchFontInput').onchange=async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{await loadWatchFontFile(file);showFeedbackToast('Fonte customizada aplicada na apresentacao.');if(watchRuntime)renderWatchCard(watchRuntime.items[watchRuntime.currentIndex]||watchRuntime.items[0]||{},'Fonte atualizada')}catch(error){alert(error?.message||'Nao foi possivel carregar a fonte.')}}
+      $('watchTextColorInput').onchange=e=>{watchTextColor=String(e.target.value||'').trim();syncWatchTextFont();if(watchRuntime)showFeedbackToast('Cor do texto atualizada.')}
       $('ttsVoiceSelect').onchange=e=>{state.ttsVoice=normalizeTtsVoice(e.target.value);save();syncVoicePopover()};
       $('voicePopoverCloseBtn').onclick=()=>closeVoicePopover();
       $('voicePopoverConfirmBtn').onclick=async()=>{if(elevenBusy)return;state.ttsVoice=normalizeTtsVoice($('ttsVoiceSelect').value);save();syncVoicePopover();try{const done=await generateRemainingVoiceAssets(state.ttsVoice);if(done){try{await persistDirtyDecksNow({fallbackCurrentDeck:true,silent:true})}catch(error){showFeedbackToast(error?.message||'Nao foi possivel salvar os decks no Postgres.')}playUiCue(UI_CUE_AUDIO_DONE)}closeVoicePopover()}catch(error){alert(error.message||'Erro ao gerar audio.')}};
@@ -2817,6 +2819,11 @@
       $('itemAdminPopover').onclick=e=>{if(e.target===e.currentTarget)closeItemAdminPopover()};
       $('selectionDeletePopover').onclick=e=>{if(e.target===e.currentTarget)closeSelectionDeletePopover()};
       document.addEventListener('keydown',e=>{
+        const overlayOpen=!$('watchView').classList.contains('hidden');
+        if(overlayOpen){
+          e.stopImmediatePropagation();
+          e.stopPropagation();
+        }
         const tag=String(e.target?.tagName||'').toLowerCase();
         const editing=tag==='input'||tag==='textarea'||tag==='select'||e.target?.isContentEditable;
         if(editing)return;
@@ -2861,9 +2868,11 @@
           return;
         }
         if(key==='o'){e.preventDefault();$('watchFontInput').click();return}
+        if(key==='z'){e.preventDefault();$('watchTextColorInput').click();return}
         if(key==='1'){e.preventDefault();startWatchPlayback({scope:'mine'});return}
         if(key==='u'){e.preventDefault();$('watchMediaInput').click();return}
         if(key==='escape'){if(watchRuntime){e.preventDefault();stopWatchPlayback()}return}
+        if(overlayOpen&&!watchRuntime){e.preventDefault();return}
         if(!watchRuntime)return;
         if(key==='c'){watchRuntime.controlMode='none';setWatchStatus('Controle normal');return}
         if(key==='f'){watchRuntime.controlMode='image';setWatchStatus('Controle da imagem ativo');return}
@@ -2873,7 +2882,7 @@
           if(key==='arrowleft'){e.preventDefault();moveWatchByKeyboard(-1);return}
         }
         const target=watchRuntime.controlMode==='image'?'imageTransform':watchRuntime.controlMode==='text'?'textTransform':'';
-        if(!target)return;
+        if(!target){if(overlayOpen)e.preventDefault();return}
         const transform=watchRuntime[target]||{x:0,y:0,scale:1};
         if(key==='arrowup'){e.preventDefault();transform.y-=8}
         if(key==='arrowdown'){e.preventDefault();transform.y+=8}
