@@ -12313,13 +12313,18 @@
 
         state.flashcardsSyncInFlight = true;
         try {
+          const coinsDeltaToSync = Math.max(0, Math.round(Number(state.stats?.coinsDelta) || 0));
+          const payloadToSync = buildFlashcardCloudPayload();
+          if (payloadToSync?.stats && typeof payloadToSync.stats === 'object') {
+            payloadToSync.stats.coinsDelta = coinsDeltaToSync;
+          }
           const response = await fetch(buildApiUrl('/api/flashcards/state'), {
             method: 'PUT',
             headers: buildAuthHeaders({
               'Content-Type': 'application/json'
             }),
             credentials: 'include',
-            body: JSON.stringify(buildFlashcardCloudPayload())
+            body: JSON.stringify(payloadToSync)
           });
           const payload = await response.json().catch(() => ({}));
           if (!response.ok || !payload?.success) {
@@ -12332,17 +12337,19 @@
           if (payload?.stats && typeof payload.stats === 'object') {
             const hadCoinsTotal = Object.prototype.hasOwnProperty.call(payload.stats, 'coinsTotal')
               || Object.prototype.hasOwnProperty.call(payload.stats, 'coins_total');
-            const hadCoinsDelta = Object.prototype.hasOwnProperty.call(payload.stats, 'coinsDelta')
-              || Object.prototype.hasOwnProperty.call(payload.stats, 'coins_delta');
             const normalizedStats = normalizeStatsSnapshot(payload.stats);
+            const localCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
+            const localCoinsDelta = Math.max(0, Math.round(Number(state.stats?.coinsDelta) || 0));
+            const ackedCoinsDelta = Math.max(0, Math.min(coinsDeltaToSync, localCoinsDelta));
+            const pendingCoinsDelta = Math.max(0, localCoinsDelta - ackedCoinsDelta);
             state.stats = {
               ...state.stats,
               ...normalizedStats,
-              coinsTotal: hadCoinsTotal ? normalizedStats.coinsTotal : state.stats.coinsTotal,
-              coinsDelta: hadCoinsDelta ? normalizedStats.coinsDelta : state.stats.coinsDelta
+              // Nunca deixa total de moedas regredir no cliente por resposta atrasada.
+              coinsTotal: hadCoinsTotal ? Math.max(localCoinsTotal, normalizedStats.coinsTotal) : localCoinsTotal,
+              // Mantem apenas as moedas ainda nao confirmadas por este request.
+              coinsDelta: pendingCoinsDelta
             };
-            // coinsDelta deve ser consumido uma unica vez por sync para evitar duplicidade.
-            state.stats.coinsDelta = 0;
             state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
             persistUserStatsLocally();
             renderWelcomeEnergyMiniTicker();
