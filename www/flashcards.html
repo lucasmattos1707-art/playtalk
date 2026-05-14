@@ -606,7 +606,7 @@
       justify-content: center;
       gap: 10px;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(22.5px, 5.25vw, 33px);
+      font-size: clamp(28px, 6.56vw, 41px);
       font-weight: 700;
       line-height: 1;
       color: rgba(57, 255, 20, 0.98);
@@ -616,11 +616,19 @@
     }
 
     .welcome-gate__energy-mini-icon {
-      width: 23px;
-      height: 23px;
+      width: 29px;
+      height: 29px;
       display: grid;
       place-items: center;
       filter: drop-shadow(0 0 10px rgba(57, 255, 20, 0.6));
+    }
+
+    .welcome-gate__energy-mini-icon.is-coins {
+      color: #ffd84a;
+      filter:
+        drop-shadow(0 0 10px rgba(255, 215, 80, 0.8))
+        drop-shadow(0 0 22px rgba(255, 194, 44, 0.42));
+      animation: welcomeCoinPulse 1.8s ease-in-out infinite;
     }
 
     .welcome-gate__energy-mini-icon svg {
@@ -628,6 +636,18 @@
       height: 100%;
       display: block;
       fill: currentColor;
+    }
+
+    .welcome-gate__energy-mini-icon img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+    }
+
+    @keyframes welcomeCoinPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
     }
 
     .welcome-gate__display-name {
@@ -9551,7 +9571,7 @@
             </div>
           </div>
           <div class="welcome-gate__energy-mini" id="welcomeEnergyMini" aria-label="Energias atuais">
-            <span class="welcome-gate__energy-mini-icon" aria-hidden="true">
+            <span class="welcome-gate__energy-mini-icon" id="welcomeEnergyMiniIcon" aria-hidden="true">
               <svg viewBox="0 0 24 24" focusable="false"><path d="M13 2 5 14h5l-1 8 8-12h-5l1-8Z"/></svg>
             </span>
             <span class="welcome-gate__energy-mini-value" id="welcomeEnergyMiniValue">--</span>
@@ -10709,6 +10729,9 @@
           welcomeEnergyBlocked: false,
           welcomeEnergyNextResetAt: '',
           welcomeEnergyTimer: 0,
+          welcomeEnergyMiniSwapTimer: 0,
+          welcomeEnergyMiniModeIndex: 0,
+          welcomeEnergyMiniEnergyLabel: '--',
           welcomeHeadingTimer: 0,
           welcomeHeadingModeIndex: 0,
           welcomeProfileReady: false,
@@ -10820,6 +10843,7 @@
         welcomeUserLevelLine: document.getElementById('welcomeUserLevelLine'),
         welcomeXpLine: document.getElementById('welcomeXpLine'),
         welcomeEnergyMini: document.getElementById('welcomeEnergyMini'),
+        welcomeEnergyMiniIcon: document.getElementById('welcomeEnergyMiniIcon'),
         welcomeEnergyMiniValue: document.getElementById('welcomeEnergyMiniValue'),
         welcomeAvatarPreview: document.getElementById('welcomeAvatarPreview'),
         welcomeAvatarSeal: document.getElementById('welcomeAvatarSeal'),
@@ -12280,7 +12304,10 @@
               ...state.stats,
               ...normalizeStatsSnapshot(payload.stats)
             };
+            // coinsDelta deve ser consumido uma unica vez por sync para evitar duplicidade.
+            state.stats.coinsDelta = 0;
             persistUserStatsLocally();
+            renderWelcomeEnergyMiniTicker();
           }
           if (Number.isFinite(Number(payload?.userLevel))) {
             state.userLevel = normalizeUserLevel(payload.userLevel);
@@ -13462,6 +13489,41 @@
         }, 1000);
       }
 
+      function stopWelcomeEnergyMiniSwap() {
+        if (!state.ui.welcomeEnergyMiniSwapTimer) return;
+        window.clearInterval(state.ui.welcomeEnergyMiniSwapTimer);
+        state.ui.welcomeEnergyMiniSwapTimer = 0;
+      }
+
+      function renderWelcomeEnergyMiniTicker() {
+        if (!els.welcomeEnergyMiniValue || !els.welcomeEnergyMiniIcon) return;
+        const energyLabel = safeText(state.ui.welcomeEnergyMiniEnergyLabel || '--') || '--';
+        const coinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
+        const showCoins = Boolean(state.user?.id) && (state.ui.welcomeEnergyMiniModeIndex % 2 === 1);
+        if (showCoins) {
+          els.welcomeEnergyMini?.setAttribute('aria-label', 'Moedas atuais');
+          els.welcomeEnergyMiniIcon.classList.add('is-coins');
+          els.welcomeEnergyMiniIcon.innerHTML = `<img src="${escapeHtml(COINS_ICON_PATH)}" alt="">`;
+          els.welcomeEnergyMiniValue.textContent = String(coinsTotal);
+          return;
+        }
+        els.welcomeEnergyMini?.setAttribute('aria-label', 'Energias atuais');
+        els.welcomeEnergyMiniIcon.classList.remove('is-coins');
+        els.welcomeEnergyMiniIcon.innerHTML = '<svg viewBox="0 0 24 24" focusable="false"><path d="M13 2 5 14h5l-1 8 8-12h-5l1-8Z"/></svg>';
+        els.welcomeEnergyMiniValue.textContent = energyLabel;
+      }
+
+      function startWelcomeEnergyMiniSwap() {
+        stopWelcomeEnergyMiniSwap();
+        state.ui.welcomeEnergyMiniModeIndex = 0;
+        renderWelcomeEnergyMiniTicker();
+        if (!state.user?.id) return;
+        state.ui.welcomeEnergyMiniSwapTimer = window.setInterval(() => {
+          state.ui.welcomeEnergyMiniModeIndex = (state.ui.welcomeEnergyMiniModeIndex + 1) % 2;
+          renderWelcomeEnergyMiniTicker();
+        }, 3000);
+      }
+
       function applyWelcomeEnergyStatus(status) {
         state.ui.welcomeEnergyStatus = status || null;
         if (!state.user?.id) {
@@ -13470,12 +13532,12 @@
           if (els.welcomeEnergyValue) {
             els.welcomeEnergyValue.textContent = '--';
           }
-          if (els.welcomeEnergyMiniValue) {
-            els.welcomeEnergyMiniValue.textContent = '--';
-          }
+          state.ui.welcomeEnergyMiniEnergyLabel = '--';
+          renderWelcomeEnergyMiniTicker();
           state.ui.welcomeEnergyReady = Boolean(state.entry.sessionResolved);
           syncWelcomeLoadingState();
           stopWelcomeEnergyCountdown();
+          stopWelcomeEnergyMiniSwap();
           syncWelcomeStartButton();
           return;
         }
@@ -13494,9 +13556,8 @@
         if (els.welcomeEnergyValue) {
           els.welcomeEnergyValue.textContent = remainingLabel;
         }
-        if (els.welcomeEnergyMiniValue) {
-          els.welcomeEnergyMiniValue.textContent = remainingLabel;
-        }
+        state.ui.welcomeEnergyMiniEnergyLabel = remainingLabel;
+        startWelcomeEnergyMiniSwap();
         state.ui.welcomeEnergyReady = true;
         syncWelcomeLoadingState();
         syncWelcomeLevelProgress();
@@ -13737,6 +13798,7 @@
         if (!visible) {
           clearWelcomeRotation();
           stopWelcomeHeadingRotation();
+          stopWelcomeEnergyMiniSwap();
           return;
         }
         if (state.entry.pendingTutorialStart) {
@@ -23584,6 +23646,7 @@
             }
             state.stats.coinsDelta = Math.max(0, flashcardCoinValue(card));
             state.stats.coinsTotal = Math.max(0, Number(state.stats.coinsTotal) || 0) + state.stats.coinsDelta;
+            renderWelcomeEnergyMiniTicker();
             showRewardGameStatus();
             triggerLibrarySummaryRankSwap();
             entry._removeAfterReward = true;
