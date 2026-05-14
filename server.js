@@ -5249,7 +5249,7 @@ const staticDir = (() => {
     return path.resolve(__dirname, customDir);
   }
 
-  const candidateDirs = ['public', 'www', 'dist'];
+  const candidateDirs = ['www', 'public', 'dist'];
   for (const dir of candidateDirs) {
     const candidatePath = path.join(__dirname, dir);
     if (fs.existsSync(candidatePath)) {
