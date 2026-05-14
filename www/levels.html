@@ -142,29 +142,28 @@
     .watch-options .field{min-width:0}
     .watch-view{position:fixed;inset:0;z-index:70;background:linear-gradient(180deg,#0d1f4a,#09142d 58%,#050b18);color:#fff;padding:24px 18px;display:flex;flex-direction:column;overflow:hidden}
     body.duoaccent-british .watch-view{background:linear-gradient(180deg,#2a0012,#120007 58%,#050305)}
-    .watch-view::before{content:'';position:absolute;inset:0;background:var(--watch-bg-image,none) center/cover no-repeat;opacity:.56;z-index:0}
-    .watch-view::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.52),rgba(0,0,0,.62));z-index:0}
+    .watch-view::before{content:'';position:absolute;inset:0;background:var(--watch-bg-image,none) center/cover no-repeat;opacity:1;z-index:0}
+    .watch-view::after{content:none}
     .watch-view.hidden{display:none!important}
     .watch-view__top{display:none}
     .watch-view__close{min-width:48px;min-height:48px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;font-size:28px;line-height:1}
     .watch-view__meta{display:grid;gap:6px}
     .watch-view__meta h2{margin:0;font-size:clamp(24px,5vw,36px)}
     .watch-view__status{color:rgba(255,255,255,.76);font-size:14px}
-    .watch-stage{position:relative;z-index:1;flex:1;display:grid;place-items:center}
-    .watch-card{position:relative;width:min(860px,100%);background:transparent;border:none;border-radius:0;padding:0;backdrop-filter:none;box-shadow:none;display:grid;gap:18px}
-    .watch-card__media{position:relative;z-index:1;width:clamp(180px,28vw,320px);aspect-ratio:1/1;margin:0 auto;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.2);box-shadow:0 0 0 1px rgba(255,255,255,.08),0 18px 44px rgba(0,0,0,.32)}
+    .watch-stage{position:relative;z-index:1;flex:1;display:grid;place-items:stretch}
+    .watch-card{position:relative;width:min(860px,100%);min-height:min(78vh,760px);margin:0 auto;background:transparent;border:none;border-radius:0;padding:0;backdrop-filter:none;box-shadow:none}
+    .watch-card__media{position:absolute;top:24px;left:50%;transform:translateX(-50%);z-index:1;width:clamp(180px,28vw,320px);aspect-ratio:1/1;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.2);box-shadow:0 0 0 1px rgba(255,255,255,.08),0 18px 44px rgba(0,0,0,.32)}
     .watch-card__image,.watch-card__video{position:absolute;inset:0}
     .watch-card__image{border-radius:999px;background:#102654 center/cover no-repeat}
     .watch-card__video{width:100%;height:100%;object-fit:cover;border:none;background:#000}
     .watch-card__video.hidden{display:none}
-    .watch-card__body{position:relative;z-index:1;display:grid;gap:10px;text-align:center}
+    .watch-card__body{position:absolute;left:0;right:0;top:calc(clamp(180px,28vw,320px) + 56px);z-index:1;display:grid;gap:10px;text-align:center}
     .watch-card__deck{display:none}
     .watch-card__pt{font-family:"Orbitron","Exo 2",Arial,sans-serif;font-size:clamp(44.85px,14.6vw,89.7px);line-height:1.02;font-weight:400;color:#c8ff2f;text-shadow:0 0 8px rgba(200,255,47,.7),0 0 24px rgba(200,255,47,.46)}
     .watch-card__en{font-family:"Orbitron","Exo 2",Arial,sans-serif;font-size:clamp(44.85px,14.6vw,89.7px);line-height:1.02;font-weight:400;color:#5ecbff;text-shadow:0 0 8px rgba(94,203,255,.72),0 0 24px rgba(94,203,255,.5)}
     .watch-card__hint{font-size:14px;color:rgba(255,255,255,.72)}
     .watch-card.is-sliding .watch-card__media,.watch-card.is-sliding .watch-card__body{animation:watchSlideIn 500ms ease}
     .watch-card.is-pulsing .watch-card__media,.watch-card.is-pulsing .watch-card__body{animation:watchPulse 2400ms ease-in-out infinite}
-    .watch-card__media.is-flashing::after{content:'';position:absolute;inset:0;border-radius:999px;background:radial-gradient(circle at center,rgba(255,255,255,.86),rgba(255,255,255,0) 62%);pointer-events:none;animation:watchFlash 220ms ease-out}
     .watch-card__text-line{display:block}
     .watch-card__text-line+.watch-card__text-line{margin-top:.07em}
     .watch-view__actions{position:relative;z-index:1;display:flex;justify-content:center;margin-top:18px}
@@ -181,7 +180,7 @@
     .card.is-admin-card{cursor:pointer}
     .card.is-selected{border-color:#c85732;box-shadow:0 0 0 3px rgba(200,87,50,.14)}
     #voiceModeBtn,#uploadBtn,#importJsonBtn,#exportBtn,#exportZipBtn,#translateBtn,#testOnlineBtn,#watchFlashcardsBtn,#adminStudioBar{display:none!important}
-    @media (max-width:640px){.watch-view{padding:18px 14px}.watch-card{padding:18px;border-radius:24px}.watch-view__top{margin-bottom:12px}}
+    @media (max-width:640px){.watch-view{padding:18px 14px}.watch-card{min-height:72vh}.watch-view__top{margin-bottom:12px}}
   </style>
 </head>
 <body>
@@ -1745,11 +1744,42 @@
       function stopWatchVoice(){if(!watchVoiceAudio)return;watchVoiceAudio.pause();watchVoiceAudio.currentTime=0;watchVoiceAudio=null}
       function stopWatchPlayback(){if(watchRuntime)watchRuntime.running=false;stopWatchVoice();stopWatchMusic();const videoEl=$('watchCardVideo');if(videoEl){videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchObjectUrlPool.forEach(url=>URL.revokeObjectURL(url));watchObjectUrlPool=[];watchBackdropImageUrl='';watchCustomFontFamily='';const watchView=$('watchView');if(watchView)watchView.style.setProperty('--watch-bg-image','none');watchRuntime=null;hideWatchView();if('mediaSession'in navigator){navigator.mediaSession.playbackState='none'}}
       function setWatchStatus(text){$('watchStatusText').textContent=text||''}
-      function watchLines(text,maxChars=14){const words=String(text||'').trim().split(/\s+/).filter(Boolean);if(!words.length)return[''];const lines=[];let line='';words.forEach(word=>{const test=line?`${line} ${word}`:word;if(test.length<=maxChars||!line){line=test;return}lines.push(line);line=word});if(line)lines.push(line);return lines.slice(0,3)}
+      function watchLines(text){
+        const source=String(text||'').trim();
+        if(!source)return[''];
+        if(source.length<=15)return[source];
+        const targetLines=source.length>=42?3:2;
+        const words=source.split(/\s+/).filter(Boolean);
+        if(words.length<=1)return[source];
+        const lines=[];
+        let index=0;
+        let remainingWords=words.length;
+        let remainingChars=words.join(' ').length;
+        for(let lineIndex=0;lineIndex<targetLines&&index<words.length;lineIndex+=1){
+          const linesLeft=targetLines-lineIndex;
+          if(linesLeft===1){lines.push(words.slice(index).join(' '));break}
+          const target=Math.max(1,Math.round(remainingChars/linesLeft));
+          let current=words[index]||'';
+          index+=1;
+          while(index<words.length){
+            const candidate=`${current} ${words[index]}`;
+            const minWordsToKeep=linesLeft-1;
+            const wordsAfter=remainingWords-(candidate.split(' ').length);
+            if(wordsAfter<minWordsToKeep)break;
+            if(candidate.length>target&&current.length>=Math.floor(target*0.75))break;
+            current=candidate;
+            index+=1;
+          }
+          lines.push(current);
+          remainingWords=words.length-index;
+          remainingChars=Math.max(0,words.slice(index).join(' ').length);
+        }
+        return lines.slice(0,3);
+      }
       function renderWatchText(node,text){const lines=watchLines(text);node.innerHTML=lines.map(line=>`<span class="watch-card__text-line">${escapeHtml(line)}</span>`).join('')}
       function syncWatchTextFont(){const family=watchCustomFontFamily?`${watchCustomFontFamily},"Orbitron","Exo 2",Arial,sans-serif`:'"Orbitron","Exo 2",Arial,sans-serif';$('watchCardPt').style.fontFamily=family;$('watchCardEn').style.fontFamily=family}
       function syncWatchBackdropBackground(){const watchView=$('watchView');if(!watchView)return;if(watchBackdropImageUrl){watchView.style.setProperty('--watch-bg-image',`url("${watchBackdropImageUrl}")`);return}watchView.style.setProperty('--watch-bg-image','none')}
-      function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim(),video=String(item?.video||'').trim(),watchCard=$('watchCard'),videoEl=$('watchCardVideo'),mediaEl=watchCard.querySelector('.watch-card__media');$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';renderWatchText($('watchCardPt'),item?.pt||'Sem portugues');renderWatchText($('watchCardEn'),item?.en||'Sem english');syncWatchTextFont();$('watchCardHint').textContent=extraStatus||'Sequencia em ordem, sem aleatorio.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';syncWatchBackdropBackground();if(video){videoEl.classList.remove('hidden');if(videoEl.src!==video)videoEl.src=video;videoEl.play().catch(()=>{})}else{videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchCard.classList.remove('is-sliding');if(mediaEl)mediaEl.classList.remove('is-flashing');void watchCard.offsetWidth;watchCard.classList.add('is-sliding','is-pulsing');if(mediaEl)mediaEl.classList.add('is-flashing');updateWatchTransforms();setWatchStatus(extraStatus||'Preparando audio...')}
+      function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim(),video=String(item?.video||'').trim(),watchCard=$('watchCard'),videoEl=$('watchCardVideo');$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';renderWatchText($('watchCardPt'),item?.pt||'Sem portugues');renderWatchText($('watchCardEn'),item?.en||'Sem english');syncWatchTextFont();$('watchCardHint').textContent=extraStatus||'Sequencia em ordem, sem aleatorio.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';syncWatchBackdropBackground();if(video){videoEl.classList.remove('hidden');if(videoEl.src!==video)videoEl.src=video;videoEl.play().catch(()=>{})}else{videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchCard.classList.remove('is-sliding');void watchCard.offsetWidth;watchCard.classList.add('is-sliding','is-pulsing');updateWatchTransforms();setWatchStatus(extraStatus||'Preparando audio...')}
       function normalizeWatchItem(entry,deckTitle,sourceLabel){const pt=String(entry?.nomePortugues||entry?.pt||entry?.portuguese||'').trim(),en=String(entry?.nomeIngles||entry?.en||entry?.english||'').trim(),audio=String(entry?.audio||entry?.audioFile||'').trim(),image=String(entry?.imagem||entry?.image||entry?.imageFile||'').trim(),video=String(entry?.video||'').trim();if(!(pt||en))return null;return{key:`${sourceLabel}::${deckTitle}::${pt}::${en}::${audio}::${image}::${video}`,pt,en,audio,image,video,deckTitle:String(deckTitle||'Flashcards').trim()||'Flashcards',sourceLabel:String(sourceLabel||'Flashcards').trim()||'Flashcards'}}
       function currentDeckWatchItems(){return state.items.map(item=>normalizeWatchItem({pt:item.pt,en:item.en,audio:audioSrc(item,'single'),image:(itemImg(item)||'')},state.title.trim()||`Pasta ${state.day}`,'Meus flashcards')).filter(item=>item&&item.audio)}
       async function loadJsonFile(filePath){const response=await fetch(filePath.startsWith('/')?filePath:`/${filePath}`);if(!response.ok)throw new Error(`Nao foi possivel carregar ${filePath}.`);return response.json()}
@@ -1779,10 +1809,10 @@
       function applyGeneratedFlashcards(items){const normalized=normalizeAiFlashcardItems(items);if(!normalized.length)return 0;const emptyIndexes=[];state.items.forEach((item,index)=>{if(!(item.pt||item.en))emptyIndexes.push(index)});while(emptyIndexes.length<normalized.length){addItem();emptyIndexes.push(state.items.length-1)}normalized.forEach((entry,listIndex)=>{const item=state.items[emptyIndexes[listIndex]];if(!item)return;item.pt=entry.pt;item.en=entry.en;item.category=item.category||'flashcard'});queuePersistCurrentEditorDeck();save();renderAll();return normalized.length}
       async function translatePortugueseBatch(items){const response=await fetch('/api/text/openai/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao traduzir textos.');const translations=Array.isArray(payload?.items)?payload.items.map(item=>({index:Number.parseInt(item?.index,10),en:String(item?.en||'').trim()})).filter(item=>Number.isInteger(item.index)&&item.en):[];if(!translations.length)throw new Error('A OpenAI nao retornou traducoes validas.');return translations}
       function applyTranslations(items){let applied=0;(items||[]).forEach(entry=>{const item=state.items[entry.index];if(!item)return;if(!String(item.pt||'').trim())return;if(String(item.en||'').trim())return;item.en=String(entry.en||'').trim();if(item.en)applied+=1});if(applied)queuePersistCurrentEditorDeck();save();renderAll();return applied}
-      function updateWatchTransforms(){if(!watchRuntime)return;const img=$('watchCardImage'),video=$('watchCardVideo'),pt=$('watchCardPt'),en=$('watchCardEn');const imageTransform=watchRuntime.imageTransform||{x:0,y:0,scale:1},textTransform=watchRuntime.textTransform||{x:0,y:0,scale:1};const imageValue=`translate(${imageTransform.x}px,${imageTransform.y}px) scale(${imageTransform.scale})`;img.style.transform=imageValue;video.style.transform=imageValue;const textValue=`translate(${textTransform.x}px,${textTransform.y}px) scale(${textTransform.scale})`;pt.style.transform=textValue;en.style.transform=textValue}
+      function updateWatchTransforms(){if(!watchRuntime)return;const media=$('watchCard').querySelector('.watch-card__media'),pt=$('watchCardPt'),en=$('watchCardEn');const imageTransform=watchRuntime.imageTransform||{x:0,y:0,scale:1},textTransform=watchRuntime.textTransform||{x:0,y:0,scale:1};const imageValue=`translate(calc(-50% + ${imageTransform.x}px),${imageTransform.y}px) scale(${imageTransform.scale})`;if(media)media.style.transform=imageValue;const textValue=`translate(${textTransform.x}px,${textTransform.y}px) scale(${textTransform.scale})`;pt.style.transform=textValue;en.style.transform=textValue}
       function moveWatchByKeyboard(delta){if(!watchRuntime||!watchRuntime.items.length)return;watchRuntime.currentIndex=(watchRuntime.currentIndex+delta+watchRuntime.items.length)%watchRuntime.items.length;stopWatchVoice();const item=watchRuntime.items[watchRuntime.currentIndex];renderWatchCard(item,'Navegacao manual');updateWatchTransforms()}
       function loadWatchBackdropImage(files){for(const file of Array.from(files||[])){const type=String(file?.type||'').toLowerCase();if(!type.startsWith('image/'))continue;const url=URL.createObjectURL(file);watchObjectUrlPool.push(url);watchBackdropImageUrl=url;return true}return false}
-      async function loadWatchFontFile(file){const type=String(file?.type||'').toLowerCase();const validExt=/\.(ttf|otf|woff2?|TTF|OTF|WOFF2?)$/.test(String(file?.name||''));if(!validExt&&!/^font\//.test(type))throw new Error('Selecione uma fonte valida (.ttf, .otf, .woff ou .woff2).');const familyName=`WatchCustomFont${Date.now()}`;const url=URL.createObjectURL(file);watchObjectUrlPool.push(url);const fontFace=new FontFace(familyName,`url("${url}")`);await fontFace.load();document.fonts.add(fontFace);watchCustomFontFamily=familyName;syncWatchTextFont()}
+      async function loadWatchFontFile(file){const fileName=String(file?.name||'').trim();const validExt=/\.(ttf|otf|woff2?)$/i.test(fileName);if(!validExt)throw new Error('Selecione uma fonte valida (.ttf, .otf, .woff ou .woff2).');const familyName=`WatchCustomFont${Date.now()}`;const url=URL.createObjectURL(file);watchObjectUrlPool.push(url);let fontFace=null;try{fontFace=new FontFace(familyName,`url("${url}")`,{display:'swap'});await fontFace.load()}catch(error){throw new Error('Nao consegui ler essa fonte. Tente outro arquivo (TTF/OTF/WOFF/WOFF2).')}document.fonts.add(fontFace);watchCustomFontFamily=familyName;syncWatchTextFont()}
       async function uploadLevelFilesToR2(files,options={}){const day=options?.day||state.day,mode=options?.mode||state.mode;const response=await fetch('/api/r2/upload-level-files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day,mode,files})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.details||payload?.error||'Erro ao enviar arquivos para o R2.');return payload}
       function getFlashcardItemSyncTone(item){
         const status=flashcardAssetSyncState.get(item);
@@ -2830,7 +2860,7 @@
           save();
           return;
         }
-        if(key==='4'){e.preventDefault();$('watchFontInput').click();return}
+        if(key==='o'){e.preventDefault();$('watchFontInput').click();return}
         if(key==='1'){e.preventDefault();startWatchPlayback({scope:'mine'});return}
         if(key==='u'){e.preventDefault();$('watchMediaInput').click();return}
         if(key==='escape'){if(watchRuntime){e.preventDefault();stopWatchPlayback()}return}
