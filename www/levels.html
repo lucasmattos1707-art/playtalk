@@ -98,6 +98,11 @@
       50%{transform:scale(1.1)}
       100%{transform:scale(1)}
     }
+    @keyframes watchFlash{
+      0%{opacity:0}
+      25%{opacity:1}
+      100%{opacity:0}
+    }
     @media (max-width:640px){.deck-edit-picker__head{flex-direction:column;align-items:flex-start}.deck-edit-picker__control{flex-wrap:wrap}.deck-edit-picker__field{max-width:none;flex-basis:100%}.deck-edit-picker__level{flex:1}}
     .popover-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.media-btn{position:relative;min-height:112px;padding:14px 12px 12px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:6px;border-radius:20px;text-align:left;overflow:hidden}
     .media-btn.active{border-color:#ef8f1a;box-shadow:0 0 0 3px rgba(239,143,26,.18)}.media-btn strong{font-size:17px}.media-btn span{font-size:12px;color:rgba(255,255,255,.72)}.icon-swap{position:absolute;top:14px;right:14px;width:40px;height:40px}
@@ -137,7 +142,7 @@
     .watch-options .field{min-width:0}
     .watch-view{position:fixed;inset:0;z-index:70;background:linear-gradient(180deg,#0d1f4a,#09142d 58%,#050b18);color:#fff;padding:24px 18px;display:flex;flex-direction:column;overflow:hidden}
     body.duoaccent-british .watch-view{background:linear-gradient(180deg,#2a0012,#120007 58%,#050305)}
-    .watch-view::before{content:'';position:absolute;inset:0;background:var(--watch-bg-image,none) center/cover no-repeat;opacity:.36;z-index:0}
+    .watch-view::before{content:'';position:absolute;inset:0;background:var(--watch-bg-image,none) center/cover no-repeat;opacity:.56;z-index:0}
     .watch-view::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.52),rgba(0,0,0,.62));z-index:0}
     .watch-view.hidden{display:none!important}
     .watch-view__top{display:none}
@@ -146,9 +151,7 @@
     .watch-view__meta h2{margin:0;font-size:clamp(24px,5vw,36px)}
     .watch-view__status{color:rgba(255,255,255,.76);font-size:14px}
     .watch-stage{position:relative;z-index:1;flex:1;display:grid;place-items:center}
-    .watch-card{width:min(860px,100%);background:transparent;border:none;border-radius:0;padding:0;backdrop-filter:none;box-shadow:none;display:grid;gap:18px}
-    .watch-backdrop-orb{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:clamp(220px,34vw,420px);aspect-ratio:1/1;border-radius:999px;background:center/cover no-repeat;opacity:.34;filter:saturate(1.05);z-index:0;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 0 48px rgba(94,203,255,.24)}
-    .watch-backdrop-orb.hidden{display:none}
+    .watch-card{position:relative;width:min(860px,100%);background:transparent;border:none;border-radius:0;padding:0;backdrop-filter:none;box-shadow:none;display:grid;gap:18px}
     .watch-card__media{position:relative;z-index:1;width:clamp(180px,28vw,320px);aspect-ratio:1/1;margin:0 auto;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.2);box-shadow:0 0 0 1px rgba(255,255,255,.08),0 18px 44px rgba(0,0,0,.32)}
     .watch-card__image,.watch-card__video{position:absolute;inset:0}
     .watch-card__image{border-radius:999px;background:#102654 center/cover no-repeat}
@@ -159,8 +162,9 @@
     .watch-card__pt{font-family:"Orbitron","Exo 2",Arial,sans-serif;font-size:clamp(44.85px,14.6vw,89.7px);line-height:1.02;font-weight:400;color:#c8ff2f;text-shadow:0 0 8px rgba(200,255,47,.7),0 0 24px rgba(200,255,47,.46)}
     .watch-card__en{font-family:"Orbitron","Exo 2",Arial,sans-serif;font-size:clamp(44.85px,14.6vw,89.7px);line-height:1.02;font-weight:400;color:#5ecbff;text-shadow:0 0 8px rgba(94,203,255,.72),0 0 24px rgba(94,203,255,.5)}
     .watch-card__hint{font-size:14px;color:rgba(255,255,255,.72)}
-    .watch-card.is-sliding .watch-card__media,.watch-card.is-sliding .watch-card__body{animation:watchSlideIn 420ms ease}
-    .watch-card.is-pulsing .watch-card__media,.watch-card.is-pulsing .watch-card__body{animation:watchPulse 2400ms ease-in-out}
+    .watch-card.is-sliding .watch-card__media,.watch-card.is-sliding .watch-card__body{animation:watchSlideIn 500ms ease}
+    .watch-card.is-pulsing .watch-card__media,.watch-card.is-pulsing .watch-card__body{animation:watchPulse 2400ms ease-in-out infinite}
+    .watch-card.is-flashing::after{content:'';position:absolute;inset:-2px;border-radius:16px;background:radial-gradient(circle at center,rgba(255,255,255,.84),rgba(255,255,255,0) 62%);pointer-events:none;animation:watchFlash 220ms ease-out}
     .watch-card__text-line{display:block}
     .watch-card__text-line+.watch-card__text-line{margin-top:.07em}
     .watch-view__actions{position:relative;z-index:1;display:flex;justify-content:center;margin-top:18px}
@@ -424,7 +428,6 @@
       <button id="watchCloseBtn" class="watch-view__close" type="button" aria-label="Fechar">×</button>
     </div>
     <div class="watch-stage">
-      <div id="watchBackdropOrb" class="watch-backdrop-orb hidden"></div>
       <div id="watchCard" class="watch-card">
         <div class="watch-card__media">
           <div id="watchCardImage" class="watch-card__image"></div>
@@ -1739,12 +1742,12 @@
       function hideWatchView(){$('watchView').classList.add('hidden');$('watchView').setAttribute('aria-hidden','true')}
       function stopWatchMusic(){if(!watchMusicAudio)return;watchMusicAudio.pause();watchMusicAudio.removeAttribute('src');watchMusicAudio.load();watchMusicAudio=null}
       function stopWatchVoice(){if(!watchVoiceAudio)return;watchVoiceAudio.pause();watchVoiceAudio.currentTime=0;watchVoiceAudio=null}
-      function stopWatchPlayback(){if(watchRuntime)watchRuntime.running=false;stopWatchVoice();stopWatchMusic();const videoEl=$('watchCardVideo');if(videoEl){videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchObjectUrlPool.forEach(url=>URL.revokeObjectURL(url));watchObjectUrlPool=[];watchBackdropImageUrl='';const orb=$('watchBackdropOrb');if(orb){orb.style.backgroundImage='none';orb.classList.add('hidden')}watchRuntime=null;hideWatchView();if('mediaSession'in navigator){navigator.mediaSession.playbackState='none'}}
+      function stopWatchPlayback(){if(watchRuntime)watchRuntime.running=false;stopWatchVoice();stopWatchMusic();const videoEl=$('watchCardVideo');if(videoEl){videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchObjectUrlPool.forEach(url=>URL.revokeObjectURL(url));watchObjectUrlPool=[];watchBackdropImageUrl='';const watchView=$('watchView');if(watchView)watchView.style.setProperty('--watch-bg-image','none');watchRuntime=null;hideWatchView();if('mediaSession'in navigator){navigator.mediaSession.playbackState='none'}}
       function setWatchStatus(text){$('watchStatusText').textContent=text||''}
       function watchLines(text,maxChars=14){const words=String(text||'').trim().split(/\s+/).filter(Boolean);if(!words.length)return[''];const lines=[];let line='';words.forEach(word=>{const test=line?`${line} ${word}`:word;if(test.length<=maxChars||!line){line=test;return}lines.push(line);line=word});if(line)lines.push(line);return lines.slice(0,3)}
       function renderWatchText(node,text){const lines=watchLines(text);node.innerHTML=lines.map(line=>`<span class="watch-card__text-line">${escapeHtml(line)}</span>`).join('')}
-      function syncWatchBackdropOrb(){const orb=$('watchBackdropOrb');if(!orb)return;if(watchBackdropImageUrl){orb.style.backgroundImage=`url("${watchBackdropImageUrl}")`;orb.classList.remove('hidden');return}orb.style.backgroundImage='none';orb.classList.add('hidden')}
-      function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim(),video=String(item?.video||'').trim(),watchCard=$('watchCard'),videoEl=$('watchCardVideo');$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';renderWatchText($('watchCardPt'),item?.pt||'Sem portugues');renderWatchText($('watchCardEn'),item?.en||'Sem english');$('watchCardHint').textContent=extraStatus||'Sequencia em ordem, sem aleatorio.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';syncWatchBackdropOrb();if(video){videoEl.classList.remove('hidden');if(videoEl.src!==video)videoEl.src=video;videoEl.play().catch(()=>{})}else{videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchCard.classList.remove('is-sliding','is-pulsing');void watchCard.offsetWidth;watchCard.classList.add('is-sliding','is-pulsing');updateWatchTransforms();setWatchStatus(extraStatus||'Preparando audio...')}
+      function syncWatchBackdropBackground(){const watchView=$('watchView');if(!watchView)return;if(watchBackdropImageUrl){watchView.style.setProperty('--watch-bg-image',`url("${watchBackdropImageUrl}")`);return}watchView.style.setProperty('--watch-bg-image','none')}
+      function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim(),video=String(item?.video||'').trim(),watchCard=$('watchCard'),videoEl=$('watchCardVideo');$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';renderWatchText($('watchCardPt'),item?.pt||'Sem portugues');renderWatchText($('watchCardEn'),item?.en||'Sem english');$('watchCardHint').textContent=extraStatus||'Sequencia em ordem, sem aleatorio.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';syncWatchBackdropBackground();if(video){videoEl.classList.remove('hidden');if(videoEl.src!==video)videoEl.src=video;videoEl.play().catch(()=>{})}else{videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchCard.classList.remove('is-sliding','is-flashing');void watchCard.offsetWidth;watchCard.classList.add('is-sliding','is-pulsing','is-flashing');updateWatchTransforms();setWatchStatus(extraStatus||'Preparando audio...')}
       function normalizeWatchItem(entry,deckTitle,sourceLabel){const pt=String(entry?.nomePortugues||entry?.pt||entry?.portuguese||'').trim(),en=String(entry?.nomeIngles||entry?.en||entry?.english||'').trim(),audio=String(entry?.audio||entry?.audioFile||'').trim(),image=String(entry?.imagem||entry?.image||entry?.imageFile||'').trim(),video=String(entry?.video||'').trim();if(!(pt||en))return null;return{key:`${sourceLabel}::${deckTitle}::${pt}::${en}::${audio}::${image}::${video}`,pt,en,audio,image,video,deckTitle:String(deckTitle||'Flashcards').trim()||'Flashcards',sourceLabel:String(sourceLabel||'Flashcards').trim()||'Flashcards'}}
       function currentDeckWatchItems(){return state.items.map(item=>normalizeWatchItem({pt:item.pt,en:item.en,audio:audioSrc(item,'single'),image:(itemImg(item)||'')},state.title.trim()||`Pasta ${state.day}`,'Meus flashcards')).filter(item=>item&&item.audio)}
       async function loadJsonFile(filePath){const response=await fetch(filePath.startsWith('/')?filePath:`/${filePath}`);if(!response.ok)throw new Error(`Nao foi possivel carregar ${filePath}.`);return response.json()}
