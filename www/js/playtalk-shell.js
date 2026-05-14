@@ -246,6 +246,11 @@
         margin-bottom: 12px;
       }
 
+      .playtalk-loader__kicker.is-english {
+        color: #ffffff;
+        text-shadow: 0 0 14px rgba(255, 255, 255, 0.62);
+      }
+
       .playtalk-loader__tip {
         min-height: 104px;
         width: min(360px, 100%);
@@ -267,6 +272,10 @@
         opacity: 1;
         transform: none;
         min-height: 1.15em;
+      }
+
+      .playtalk-loader__tip-line[hidden] {
+        display: none !important;
       }
 
       .playtalk-loader__tip-line--en {
@@ -501,18 +510,30 @@
     const pt2 = root.querySelector('[data-tip-line="pt-2"]');
     const en1 = root.querySelector('[data-tip-line="en-1"]');
     const en2 = root.querySelector('[data-tip-line="en-2"]');
+    const kicker = root.querySelector('.playtalk-loader__kicker');
     const normalizedLanguage = language === 'en' ? 'en' : 'pt';
+    if (kicker) {
+      kicker.classList.toggle('is-english', normalizedLanguage === 'en');
+    }
     if (normalizedLanguage === 'pt') {
       if (pt1) pt1.textContent = ptTop;
       if (pt2) pt2.textContent = ptBottom;
       if (en1) en1.textContent = '';
       if (en2) en2.textContent = '';
+      if (pt1) pt1.hidden = false;
+      if (pt2) pt2.hidden = !ptBottom;
+      if (en1) en1.hidden = true;
+      if (en2) en2.hidden = true;
       return;
     }
     if (pt1) pt1.textContent = '';
     if (pt2) pt2.textContent = '';
     if (en1) en1.textContent = enTop;
     if (en2) en2.textContent = enBottom;
+    if (pt1) pt1.hidden = true;
+    if (pt2) pt2.hidden = true;
+    if (en1) en1.hidden = false;
+    if (en2) en2.hidden = !enBottom;
   }
 
   function resolvePendingAudioCycleWaiters() {
