@@ -94,9 +94,9 @@
       to{opacity:1;transform:translateX(0)}
     }
     @keyframes watchPulse{
-      0%{filter:brightness(1)}
-      50%{filter:brightness(1.08)}
-      100%{filter:brightness(1)}
+      0%{transform:scale(1)}
+      50%{transform:scale(1.045)}
+      100%{transform:scale(1)}
     }
     @keyframes watchFlash{
       0%{opacity:0}
@@ -162,8 +162,8 @@
     .watch-card__pt{font-family:"Orbitron","Exo 2",Arial,sans-serif;font-size:clamp(44.85px,14.6vw,89.7px);line-height:1.02;font-weight:400;color:#c8ff2f;text-shadow:none}
     .watch-card__en{font-family:"Orbitron","Exo 2",Arial,sans-serif;font-size:clamp(44.85px,14.6vw,89.7px);line-height:1.02;font-weight:400;color:#5ecbff;text-shadow:none}
     .watch-card__hint{display:none}
-    .watch-card.is-sliding .watch-card__media,.watch-card.is-sliding .watch-card__body{animation:watchSlideIn 500ms ease}
-    .watch-card.is-pulsing .watch-card__media,.watch-card.is-pulsing .watch-card__body{animation:watchPulse 2400ms ease-in-out infinite}
+    .watch-card__image,.watch-card__video,.watch-card__body{animation:watchPulse 2400ms ease-in-out infinite;transform-origin:center}
+    .watch-card.is-sliding .watch-card__image,.watch-card.is-sliding .watch-card__video,.watch-card.is-sliding .watch-card__body{animation:watchSlideIn 500ms ease,watchPulse 2400ms ease-in-out infinite}
     .watch-card__text-line{display:block}
     .watch-card__text-line+.watch-card__text-line{margin-top:.07em}
     .watch-view__actions{display:none}
