@@ -297,6 +297,48 @@
       line-height: 1.5;
     }
 
+    .admin-level-rules-table-wrap {
+      width: 100%;
+      overflow: auto;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(3, 9, 25, 0.45);
+      max-height: 420px;
+    }
+
+    .admin-level-rules-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 460px;
+    }
+
+    .admin-level-rules-table th,
+    .admin-level-rules-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .admin-level-rules-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: rgba(10, 18, 42, 0.92);
+      color: rgba(246, 251, 255, 0.88);
+    }
+
+    .admin-level-rules-table input[type="number"] {
+      width: 100%;
+      min-width: 74px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(0, 0, 0, 0.22);
+      color: #fff;
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+
     @media (max-width: 860px) {
       .admin-shell {
         width: min(100vw, calc(100vw - 20px));
@@ -414,11 +456,23 @@
 
     <section class="admin-card" style="margin-top:18px;">
       <h2>Regras globais de nivel (/play)</h2>
-      <p class="admin-card-copy">Edite a tabela JSON dos 100 niveis com <strong>level</strong>, <strong>minChars</strong>, <strong>maxChars</strong> e <strong>hitThreshold</strong>.</p>
+      <p class="admin-card-copy">Tabela segura para edicao: apenas numeros em <strong>minChars</strong>, <strong>maxChars</strong> e <strong>hitThreshold</strong>.</p>
       <form class="admin-form" id="adminFlashcardsLevelRulesForm">
         <div class="admin-field">
-          <label for="adminFlashcardsLevelRulesInput">Tabela de niveis (JSON)</label>
-          <textarea id="adminFlashcardsLevelRulesInput" rows="10" style="width:100%;border-radius:14px;padding:10px;background:rgba(3,9,25,.5);color:#fff;border:1px solid rgba(255,255,255,.12);"></textarea>
+          <label>Tabela de niveis (1-100)</label>
+          <div class="admin-level-rules-table-wrap">
+            <table class="admin-level-rules-table" aria-label="Tabela de regras globais por nivel">
+              <thead>
+                <tr>
+                  <th>Nivel</th>
+                  <th>Min Chars</th>
+                  <th>Max Chars</th>
+                  <th>Acerto (%)</th>
+                </tr>
+              </thead>
+              <tbody id="adminFlashcardsLevelRulesTableBody"></tbody>
+            </table>
+          </div>
         </div>
         <div class="admin-topbar-actions">
           <button class="admin-btn" id="adminFlashcardsLevelRulesSaveBtn" type="submit">Salvar tabela de niveis</button>
@@ -452,6 +506,6 @@
 
   <script src="js/api-config.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/admin-page.js?v=20260515a"></script>
+  <script src="js/admin-page.js?v=20260515b"></script>
 </body>
 </html>

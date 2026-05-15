@@ -21,7 +21,7 @@
     flashcardsPhaseStatus: document.getElementById('adminFlashcardsPhaseStatus'),
     factFourthStarBlocks: document.getElementById('adminFactFourthStarBlocks'),
     flashcardsLevelRulesForm: document.getElementById('adminFlashcardsLevelRulesForm'),
-    flashcardsLevelRulesInput: document.getElementById('adminFlashcardsLevelRulesInput'),
+    flashcardsLevelRulesTableBody: document.getElementById('adminFlashcardsLevelRulesTableBody'),
     flashcardsLevelRulesSaveBtn: document.getElementById('adminFlashcardsLevelRulesSaveBtn'),
     flashcardsLevelRulesStatus: document.getElementById('adminFlashcardsLevelRulesStatus')
   };
@@ -142,9 +142,9 @@
       els.flashcardsLevelRulesSaveBtn.disabled = state.flashcardsLevelRulesBusy;
       els.flashcardsLevelRulesSaveBtn.textContent = state.flashcardsLevelRulesBusy ? 'Salvando...' : 'Salvar tabela de niveis';
     }
-    if (els.flashcardsLevelRulesInput) {
-      els.flashcardsLevelRulesInput.disabled = state.flashcardsLevelRulesBusy;
-    }
+    Array.from(els.flashcardsLevelRulesForm?.querySelectorAll('input[type="number"]') || []).forEach((input) => {
+      input.disabled = state.flashcardsLevelRulesBusy;
+    });
   }
 
   function readDraftSettings() {
@@ -224,9 +224,46 @@
   function applyFlashcardsLevelRules(settings) {
     const levels = Array.isArray(settings?.levels) ? settings.levels : [];
     state.flashcardsLevelRules = { levels };
-    if (els.flashcardsLevelRulesInput) {
-      els.flashcardsLevelRulesInput.value = JSON.stringify(levels, null, 2);
+    if (els.flashcardsLevelRulesTableBody) {
+      const rows = levels
+        .slice()
+        .sort((a, b) => (Number(a?.level) || 0) - (Number(b?.level) || 0))
+        .map((entry) => {
+          const level = Math.max(1, Math.min(100, Number.parseInt(entry?.level, 10) || 1));
+          const minChars = Math.max(0, Math.round(Number(entry?.minChars) || 0));
+          const maxChars = Math.max(1, Math.round(Number(entry?.maxChars) || 1));
+          const hitThreshold = Math.max(1, Math.min(100, Math.round(Number(entry?.hitThreshold) || 1)));
+          return `
+            <tr data-level-row="${level}">
+              <td><strong>${level}</strong></td>
+              <td><input type="number" min="0" max="300" step="1" value="${minChars}" data-level-field="minChars"></td>
+              <td><input type="number" min="1" max="300" step="1" value="${maxChars}" data-level-field="maxChars"></td>
+              <td><input type="number" min="1" max="100" step="1" value="${hitThreshold}" data-level-field="hitThreshold"></td>
+            </tr>
+          `;
+        });
+      els.flashcardsLevelRulesTableBody.innerHTML = rows.join('');
     }
+  }
+
+  function readDraftFlashcardsLevelRules() {
+    const levels = Array.from(els.flashcardsLevelRulesTableBody?.querySelectorAll('tr[data-level-row]') || []).map((row) => {
+      const level = Math.max(1, Math.min(100, Number.parseInt(row.getAttribute('data-level-row') || '0', 10) || 1));
+      const minChars = Math.max(0, Math.round(Number(row.querySelector('[data-level-field="minChars"]')?.value) || 0));
+      const maxChars = Math.max(1, Math.round(Number(row.querySelector('[data-level-field="maxChars"]')?.value) || 1));
+      const hitThreshold = Math.max(1, Math.min(100, Math.round(Number(row.querySelector('[data-level-field="hitThreshold"]')?.value) || 1)));
+      return { level, minChars, maxChars, hitThreshold };
+    });
+
+    if (!levels.length) {
+      throw new Error('Nao ha linhas para salvar na tabela de niveis.');
+    }
+    levels.forEach((entry) => {
+      if (entry.maxChars < entry.minChars) {
+        throw new Error(`Nivel ${entry.level}: maxChars nao pode ser menor que minChars.`);
+      }
+    });
+    return { levels };
   }
 
   async function fetchSessionUser() {
@@ -381,16 +418,12 @@
     syncFlashcardsLevelRulesBusyState();
     setStatus(els.flashcardsLevelRulesStatus, 'Salvando tabela de niveis...');
     try {
-      const raw = String(els.flashcardsLevelRulesInput?.value || '').trim();
-      const levels = JSON.parse(raw);
-      if (!Array.isArray(levels)) {
-        throw new Error('A tabela deve ser um array JSON.');
-      }
+      const draft = readDraftFlashcardsLevelRules();
       const response = await fetch(buildApiUrl('/api/admin/flashcards/level-rules'), {
         method: 'POST',
         headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
         credentials: 'include',
-        body: JSON.stringify({ levels })
+        body: JSON.stringify(draft)
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success || !payload?.settings) {
