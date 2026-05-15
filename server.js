@@ -22032,8 +22032,3 @@ if (require.main === module) {
 }
 
 module.exports = app;
-
-
-
-
-  const normalizedCharsTotal = Math.max(0, Number(speedSamplesResult.rows[0]?.normalized_chars_total) || 0);
