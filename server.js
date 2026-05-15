@@ -6600,7 +6600,7 @@ function buildPublicFlashcardDeckManifestEntryFromRow(row) {
   const dayKey = rawDayKey ? normalizeLevelFolderKey(rawDayKey) : '';
   const canDelete = originType !== 'allcards';
   const deckLevel = Number.parseInt(row?.deck_level, 10);
-  const normalizedDeckLevel = Number.isInteger(deckLevel) && deckLevel >= 1 && deckLevel <= 100
+  const normalizedDeckLevel = Number.isInteger(deckLevel) && deckLevel >= 1 && deckLevel <= 500
     ? deckLevel
     : null;
 
@@ -6625,8 +6625,8 @@ function buildPublicFlashcardDeckManifestEntryFromRow(row) {
 function normalizePublicFlashcardDeckLevel(value) {
   if (value === null || value === undefined || String(value).trim() === '') return null;
   const parsed = Number.parseInt(String(value).trim(), 10);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
-    const error = new Error('Nivel do deck precisa ser um numero entre 1 e 100.');
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 500) {
+    const error = new Error('Nivel do deck precisa ser um numero entre 1 e 500.');
     error.statusCode = 400;
     throw error;
   }
@@ -6688,7 +6688,7 @@ async function ensurePublicFlashcardDecksTable() {
         `);
         const deckLevelConstraintReady = deckLevelConstraintResult.rows.some((row) => {
           const definition = String(row?.definition || '').toLowerCase();
-          return /deck_level\s*>?=\s*1/.test(definition) && /deck_level\s*<=\s*100/.test(definition);
+          return /deck_level\s*>?=\s*1/.test(definition) && /deck_level\s*<=\s*500/.test(definition);
         });
         if (!deckLevelConstraintReady) {
           const client = await pool.connect();
@@ -6706,7 +6706,7 @@ async function ensurePublicFlashcardDecksTable() {
             await client.query(`
               ALTER TABLE public.flashcards_public_decks
               ADD CONSTRAINT flashcards_public_decks_deck_level_range_check
-              CHECK (deck_level IS NULL OR deck_level BETWEEN 1 AND 100) NOT VALID
+              CHECK (deck_level IS NULL OR deck_level BETWEEN 1 AND 500) NOT VALID
             `);
             await client.query(`
               ALTER TABLE public.flashcards_public_decks
@@ -9623,14 +9623,14 @@ async function listAdminFlashcardDecks() {
     title: String(entry?.title || '').trim() || String(entry?.name || '').trim() || 'Deck',
     coverImage: typeof entry?.coverImage === 'string' ? entry.coverImage.trim() : '',
     count: Math.max(0, Number(entry?.count) || 0),
-    deckLevel: Number.isInteger(Number(entry?.deckLevel)) && Number(entry.deckLevel) >= 1 && Number(entry.deckLevel) <= 100 ? Number(entry.deckLevel) : null,
+    deckLevel: Number.isInteger(Number(entry?.deckLevel)) && Number(entry.deckLevel) >= 1 && Number(entry.deckLevel) <= 500 ? Number(entry.deckLevel) : null,
     isHidden: Boolean(entry?.isHidden),
     updatedAt: entry?.updatedAt || null
   })).filter((entry) => entry.source);
 
   return decks.sort((left, right) => {
-    const leftLevel = Number.isInteger(Number(left.deckLevel)) && Number(left.deckLevel) >= 1 && Number(left.deckLevel) <= 100 ? Number(left.deckLevel) : null;
-    const rightLevel = Number.isInteger(Number(right.deckLevel)) && Number(right.deckLevel) >= 1 && Number(right.deckLevel) <= 100 ? Number(right.deckLevel) : null;
+    const leftLevel = Number.isInteger(Number(left.deckLevel)) && Number(left.deckLevel) >= 1 && Number(left.deckLevel) <= 500 ? Number(left.deckLevel) : null;
+    const rightLevel = Number.isInteger(Number(right.deckLevel)) && Number(right.deckLevel) >= 1 && Number(right.deckLevel) <= 500 ? Number(right.deckLevel) : null;
     if (leftLevel !== null || rightLevel !== null) {
       if (leftLevel === null) return 1;
       if (rightLevel === null) return -1;

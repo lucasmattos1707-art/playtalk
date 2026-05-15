@@ -1072,7 +1072,7 @@
       function resetDeckMeta(){state.day='1';state.title='';state.flashcardCoverUrl=''}
       function normalizeDeckLevelValue(value){
         const parsed=parseInt(String(value||'').trim(),10);
-        return Number.isInteger(parsed)&&parsed>=1&&parsed<=100?parsed:null;
+        return Number.isInteger(parsed)&&parsed>=1&&parsed<=500?parsed:null;
       }
       function getPersistedEditDeckLevel(){
         try{
