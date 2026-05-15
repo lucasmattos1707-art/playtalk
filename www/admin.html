@@ -413,6 +413,21 @@
     </section>
 
     <section class="admin-card" style="margin-top:18px;">
+      <h2>Regras globais de nivel (/play)</h2>
+      <p class="admin-card-copy">Edite a tabela JSON dos 100 niveis com <strong>level</strong>, <strong>minChars</strong>, <strong>maxChars</strong> e <strong>hitThreshold</strong>.</p>
+      <form class="admin-form" id="adminFlashcardsLevelRulesForm">
+        <div class="admin-field">
+          <label for="adminFlashcardsLevelRulesInput">Tabela de niveis (JSON)</label>
+          <textarea id="adminFlashcardsLevelRulesInput" rows="10" style="width:100%;border-radius:14px;padding:10px;background:rgba(3,9,25,.5);color:#fff;border:1px solid rgba(255,255,255,.12);"></textarea>
+        </div>
+        <div class="admin-topbar-actions">
+          <button class="admin-btn" id="adminFlashcardsLevelRulesSaveBtn" type="submit">Salvar tabela de niveis</button>
+        </div>
+      </form>
+      <div class="admin-status" id="adminFlashcardsLevelRulesStatus" aria-live="polite"></div>
+    </section>
+
+    <section class="admin-card" style="margin-top:18px;">
       <h2>Resumo rapido</h2>
       <ul class="admin-facts">
         <li class="admin-fact">
@@ -437,6 +452,6 @@
 
   <script src="js/api-config.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/admin-page.js?v=20260428b"></script>
+  <script src="js/admin-page.js?v=20260515a"></script>
 </body>
 </html>

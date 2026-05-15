@@ -10297,16 +10297,15 @@
       const ENABLE_STAGE_TUTORIALS = false;
       const STAGE_TWO_HINT_DELAY_MS = 2000;
       const STAGE_TWO_HINT_VISIBLE_MS = 3000;
-      const GAME_OPTIONS_STORAGE_KEY = 'playtalk-game-options-v1';
       const GAME_OPTION_SLIDES = ['difficulty', 'speed', 'accent', 'fourthStageTyping'];
       const GAME_OPTION_VALUE_MAP = {
-        difficulty: ['level_1'],
+        difficulty: ['automatic', 'manual'],
         speed: ['0.70', '0.80', '0.90', '1.00'],
         accent: ['mix_100_0', 'mix_90_10', 'mix_80_20', 'mix_70_30', 'mix_60_40', 'mix_50_50', 'mix_40_60', 'mix_30_70', 'mix_20_80', 'mix_10_90', 'mix_0_100'],
         fourthStageTyping: ['off', 'on']
       };
       const DEFAULT_GAME_OPTIONS = {
-        difficulty: 'level_1',
+        difficulty: 'automatic',
         speed: '0.90',
         accent: 'mix_100_0',
         fourthStageTyping: 'off'
@@ -10348,6 +10347,16 @@
         'happy', 'sad', 'good', 'great', 'slowly', 'always', 'never', 'really', 'very', 'today', 'early', 'late'
       ];
       const CURRENT_LEVEL_ROUND_RATIO = 0.6;
+      function buildDefaultLevelRules() {
+        const maxCharsByLevel = [12,12,13,14,15,16,16,17,18,19,20,21,22,23,24,25,25,26,26,27,27,28,29,29,30,30,31,32,32,33,33,34,34,35,36,36,37,37,38,38,39,40,40,41,41,42,42,43,44,44,45,45,46,47,47,48,48,49,49,50,51,51,52,52,53,54,54,55,56,56,57,58,58,59,59,60,61,61,62,62,63,64,64,65,66,66,67,68,68,69,69,70,71,71,72,72,73,74,74,75];
+        const hitThresholdByLevel = [50,51,52,52,53,53,54,54,55,55,55,56,56,57,57,57,58,58,59,59,60,60,60,61,61,62,62,62,63,63,64,64,65,65,65,66,66,67,67,67,68,68,69,69,70,70,70,71,71,72,72,72,73,73,74,74,75,75,75,76,76,77,77,77,78,78,79,79,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80];
+        return Array.from({ length: 100 }, (_v, index) => ({
+          level: index + 1,
+          minChars: index < 59 ? 0 : Math.max(50, maxCharsByLevel[index] || 50),
+          maxChars: maxCharsByLevel[index] || 75,
+          hitThreshold: hitThresholdByLevel[index] || 80
+        }));
+      }
       const MIN_GAME_CONTEXT_LIMIT = 1;
       const LEVEL_MODE_BUFFER_SIZE = 10;
       const LEVEL_MODE_BUFFER_REFILL_SIZE = 5;
@@ -10543,6 +10552,7 @@
         user: null,
         userLevel: 1,
         userLevelUpdatedAt: '',
+        levelRules: buildDefaultLevelRules(),
         lastLevelUpLevel: 0,
         authMode: 'login',
         authReason: 'optional',
@@ -11090,42 +11100,27 @@
 
       function availableDifficultyValues() {
         const values = Array.isArray(GAME_OPTION_VALUE_MAP.difficulty) ? GAME_OPTION_VALUE_MAP.difficulty : [];
-        const maxLevel = Math.max(1, currentUserLevel());
-        const filtered = values.filter((value) => {
-          const level = parseDifficultyLevelNumber(value);
-          return Number.isInteger(level) && level >= 1 && level <= maxLevel;
-        });
-        return filtered.length ? filtered : ['level_1'];
+        return values.length ? values : ['automatic', 'manual'];
       }
 
       function defaultDifficultyValue() {
-        const values = availableDifficultyValues();
-        return values[0] || 'level_1';
+        return 'automatic';
       }
 
       function normalizeDifficultyLevelValue(value) {
         const normalized = safeText(value).toLowerCase();
-        return /^level_\d+$/.test(normalized) ? normalized : '';
+        return normalized === 'manual' ? 'manual' : (normalized === 'automatic' ? 'automatic' : '');
       }
 
       function parseDifficultyLevelNumber(value) {
         const normalized = normalizeDifficultyLevelValue(value);
-        if (!normalized) return null;
-        const parsed = Number.parseInt(normalized.replace('level_', ''), 10);
-        return Number.isInteger(parsed) && parsed >= 1 ? parsed : null;
+        if (normalized === 'manual') return null;
+        return currentUserLevel();
       }
 
       function setDifficultyOptionsFromSequenceLevels(levels) {
-        const normalizedLevels = Array.from(new Set((Array.isArray(levels) ? levels : [])
-          .map((level) => Number.parseInt(level, 10))
-          .filter((level) => Number.isInteger(level) && level >= 1)))
-          .sort((a, b) => a - b);
-        const fallbackLevels = normalizedLevels.length ? normalizedLevels : [1];
-        GAME_OPTION_VALUE_MAP.difficulty = fallbackLevels.map((level) => `level_${level}`);
-        const currentDifficulty = normalizeDifficultyLevelValue(state.options?.difficulty);
-        if (!GAME_OPTION_VALUE_MAP.difficulty.includes(currentDifficulty)) {
-          state.options.difficulty = defaultDifficultyValue();
-        }
+        GAME_OPTION_VALUE_MAP.difficulty = ['automatic', 'manual'];
+        state.options.difficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
       }
 
       function normalizeGameOptionValue(key, value) {
@@ -11150,32 +11145,11 @@
       }
 
       function loadGameOptionsFromStorage() {
-        try {
-          const parsed = JSON.parse(localStorage.getItem(GAME_OPTIONS_STORAGE_KEY) || 'null');
-          if (parsed && typeof parsed === 'object') {
-            applyStoredGameOptions(parsed);
-          } else {
-            applyStoredGameOptions(DEFAULT_GAME_OPTIONS);
-          }
-        } catch (_error) {
-          applyStoredGameOptions(DEFAULT_GAME_OPTIONS);
-        }
+        applyStoredGameOptions(DEFAULT_GAME_OPTIONS);
       }
 
       function persistGameOptions() {
-        try {
-          localStorage.setItem(
-            GAME_OPTIONS_STORAGE_KEY,
-            JSON.stringify({
-              difficulty: state.options.difficulty,
-              speed: state.options.speed,
-              accent: state.options.accent,
-              fourthStageTyping: state.options.fourthStageTyping
-            })
-          );
-        } catch (_error) {
-          // ignore
-        }
+        scheduleFlashcardCloudSync(300);
       }
 
       function formatWelcomeDisplayName(value) {
@@ -12284,6 +12258,12 @@
             sealImage: safeText(record?.sealImage || phaseMeta(activeSealPhase(record)).sealPath)
           })).filter(record => record.cardId),
           stats: normalizeStatsSnapshot(state.stats),
+          gameOptions: {
+            difficulty: normalizeGameOptionValue('difficulty', state.options?.difficulty),
+            speed: normalizeGameOptionValue('speed', state.options?.speed),
+            accent: normalizeGameOptionValue('accent', state.options?.accent),
+            fourthStageTyping: normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping)
+          },
           userLevel: normalizeUserLevel(state.userLevel),
           userLevelUpdatedAt: safeText(state.userLevelUpdatedAt),
           hiddenCardIds: Array.from(state.hiddenCardIds.values()),
@@ -14075,6 +14055,20 @@
         };
       }
 
+      async function fetchFlashcardLevelRulesSettings() {
+        const response = await fetch(buildApiUrl('/api/flashcards/level-rules'), {
+          headers: buildAuthHeaders(),
+          cache: 'no-store',
+          credentials: 'include'
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success || !payload?.settings) {
+          return { levels: buildDefaultLevelRules() };
+        }
+        const levels = Array.isArray(payload.settings.levels) ? payload.settings.levels : buildDefaultLevelRules();
+        return { levels };
+      }
+
       function isFourthStarUsingSecondStarBlocks() {
         const userChoice = normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping);
         if (userChoice === 'on') return false;
@@ -15024,6 +15018,7 @@
           : localHidden;
         state.userLevel = normalizeUserLevel(cloudState?.userLevel ?? cloudState?.meta?.userLevel ?? state.user.level);
         state.user.level = state.userLevel;
+        applyStoredGameOptions(cloudState?.meta?.gameOptions || cloudState?.gameOptions || DEFAULT_GAME_OPTIONS);
         state.userLevelUpdatedAt = safeText(cloudState?.userLevelUpdatedAt || cloudState?.meta?.userLevelUpdatedAt);
         state.game.persistedOnTable = Array.isArray(cloudState?.onTable) ? cloudState.onTable.slice(0, ON_TABLE_MAX_CARDS) : [];
         state.game.tutorial.completed = readTutorialProgress();
@@ -15445,6 +15440,9 @@
       }
 
       function selectedGameLevel() {
+        if (normalizeGameOptionValue('difficulty', state.options?.difficulty) !== 'manual') {
+          return currentUserLevel();
+        }
         return normalizeSelectableGameLevel(state.ui.welcomeSelectedLevel);
       }
 
@@ -15550,7 +15548,10 @@
       }
 
       function formatSelectedGameLevelLabel(level = selectedGameLevel()) {
-        return Number(level) === 0 ? 'Todos os niveis' : `Nivel ${level}`;
+        if (normalizeGameOptionValue('difficulty', state.options?.difficulty) !== 'manual') {
+          return `Automatico (Nivel ${currentUserLevel()})`;
+        }
+        return Number(level) === 0 ? `Nivel ${currentUserLevel()}` : `Nivel ${level}`;
       }
 
       function isLevelModeActive() {
@@ -15620,7 +15621,7 @@
         if (els.welcomeModeModalDescription) {
           els.welcomeModeModalDescription.textContent = mode.description;
         }
-        const levelSelectorVisible = Boolean(mode.usesLevelSelector);
+        const levelSelectorVisible = Boolean(mode.usesLevelSelector && normalizeGameOptionValue('difficulty', state.options?.difficulty) === 'manual');
         if (els.welcomeModeModalLevel) {
           els.welcomeModeModalLevel.hidden = !levelSelectorVisible;
         }
@@ -16118,11 +16119,11 @@
           difficulty: {
             label: '1/4',
             name: 'Dificuldade',
-            desc: 'Seleciona um nível exato da sequência para montar a mesa.',
-            values: Object.fromEntries(availableDifficultyValues().map((value) => {
-              const level = parseDifficultyLevelNumber(value) || 1;
-              return [value, { label: `Nível ${level}`, desc: `Carrega apenas cartas do nível ${level}.` }];
-            }))
+            desc: 'Automatico segue o nivel do usuario. Manual usa seletor por nivel.',
+            values: {
+              automatic: { label: 'Automatico', desc: 'Usa sempre o mesmo nivel mostrado no welcome-gate.' },
+              manual: { label: 'Manual', desc: 'Permite escolher o nivel no seletor.' }
+            }
           },
           speed: {
             label: '2/4',
@@ -16727,9 +16728,13 @@
       }
 
       function flashcardLevelTextLimits(level = currentUserLevel()) {
-        // Regra desativada: nao limitar caracteres por nivel no /play.
-        // Mantemos a funcao para compatibilidade com os filtros existentes.
-        return null;
+        const safeLevel = normalizeUserLevel(level);
+        const rule = Array.isArray(state.levelRules)
+          ? state.levelRules.find((entry) => Number(entry?.level) === safeLevel)
+          : null;
+        const maxChars = Math.max(1, Math.round(Number(rule?.maxChars) || 75));
+        const minChars = Math.max(0, Math.round(Number(rule?.minChars) || 0));
+        return { minCharsInclusive: minChars, maxCharsInclusive: maxChars };
       }
 
       function flashcardDifficultyText(card) {
@@ -16751,10 +16756,10 @@
       function isEarlyFlashcardLengthEligible(card) {
         const limits = flashcardLevelTextLimits();
         if (!limits) return true;
-        const text = flashcardDifficultyText(card);
+        const text = safeText(card?.english || '');
         if (!text) return true;
-        return countFlashcardCharacters(text) < limits.phraseMaxExclusive
-          && longestFlashcardWordLength(text) < limits.wordMaxExclusive;
+        const chars = countFlashcardCharacters(text);
+        return chars >= limits.minCharsInclusive && chars <= limits.maxCharsInclusive;
       }
 
       function shouldRestrictEarlyFlashcards() {
@@ -16790,14 +16795,11 @@
 
       function isCardEligibleForSelectedDifficulty(card) {
         const difficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
-        const selectedLevel = parseDifficultyLevelNumber(difficulty);
-        if (selectedLevel === null) return true;
+        if (difficulty === 'manual') return true;
+        const selectedLevel = currentUserLevel();
         const deckLevel = cardDeckLevel(card);
         if (deckLevel === null) return false;
-        if (selectedLevel <= 1) {
-          return deckLevel === 1;
-        }
-        return deckLevel <= selectedLevel;
+        return deckLevel >= 1 && deckLevel <= selectedLevel;
       }
 
       function currentLevelProgressCount(level = currentUserLevel()) {
@@ -16814,19 +16816,28 @@
 
       function buildLevelModeSourceCards(level = selectedGameLevel()) {
         const allPlayableCards = state.allCards.filter(isCardPlayableInLevelMode);
-        if (Number(level) === 0) {
+        const difficultyMode = normalizeGameOptionValue('difficulty', state.options?.difficulty);
+        const targetLevel = normalizeUserLevel(Number(level) > 0 ? level : currentUserLevel());
+        if (difficultyMode !== 'manual' && Number(level) === 0) {
+          level = targetLevel;
+        }
+        if (difficultyMode === 'manual') {
+          const manualLevel = normalizeUserLevel(level || currentUserLevel());
+          return allPlayableCards.filter((card) => cardDeckLevel(card) === manualLevel);
+        }
+        if (Number(level) === 0 || !Number.isInteger(Number(level))) {
           return allPlayableCards;
         }
-        const targetLevel = normalizeUserLevel(level);
-        if (targetLevel <= 1) {
-          const levelOneCards = allPlayableCards.filter((card) => cardDeckLevel(card) === 1);
-          return levelOneCards.length ? levelOneCards : allPlayableCards;
-        }
-        const uptoLevelCards = allPlayableCards.filter((card) => {
+        const currentLevelCards = allPlayableCards.filter((card) => cardDeckLevel(card) === targetLevel);
+        const previousLevelCards = allPlayableCards.filter((card) => {
           const deckLevel = cardDeckLevel(card);
-          return Number.isInteger(deckLevel) && deckLevel >= 1 && deckLevel <= targetLevel;
+          return Number.isInteger(deckLevel) && deckLevel >= 1 && deckLevel < targetLevel;
         });
-        return uptoLevelCards.length ? uptoLevelCards : allPlayableCards;
+        if (targetLevel <= 1 || !previousLevelCards.length) return currentLevelCards.length ? currentLevelCards : allPlayableCards;
+        const totalTarget = currentLevelCards.length + previousLevelCards.length;
+        const currentTargetCount = Math.max(1, Math.round(totalTarget * CURRENT_LEVEL_ROUND_RATIO));
+        const previousTargetCount = Math.max(1, totalTarget - currentTargetCount);
+        return shuffle(currentLevelCards).slice(0, currentTargetCount).concat(shuffle(previousLevelCards).slice(0, previousTargetCount));
       }
 
       function syncGameLevelNavigator() {
@@ -20079,7 +20090,14 @@
       }
 
       const SPEECH_SEQUENCE_MIN_LENGTH = 2;
-      const SPEECH_SEQUENCE_HIT_THRESHOLD = 50;
+
+      function speechHitThresholdForLevel(level = currentUserLevel()) {
+        const safeLevel = Math.max(1, Math.min(100, normalizeUserLevel(level)));
+        const rule = Array.isArray(state.levelRules)
+          ? state.levelRules.find((entry) => Number(entry?.level) === safeLevel)
+          : null;
+        return Math.max(1, Math.min(100, Math.round(Number(rule?.hitThreshold) || 80)));
+      }
 
       function normalizeSpeechSequenceText(value) {
         return String(value || '').replace(/[^a-z0-9]+/g, '');
@@ -20182,7 +20200,7 @@
         normalizedAnswers.forEach((answer) => {
           const score = calculateSpeechMatchPercent(answer, spoken);
           bestScore = Math.max(bestScore, score);
-          if (score >= SPEECH_SEQUENCE_HIT_THRESHOLD) {
+          if (score >= speechHitThresholdForLevel()) {
             isHit = true;
           }
         });
@@ -20387,26 +20405,7 @@
       function buildOrderedDeckSelection(cards, limit) {
         const normalizedLimit = Math.max(0, Number(limit) || 0);
         if (!normalizedLimit || !cards.length) return [];
-        return cards
-          .slice()
-          .sort((left, right) => {
-            const leftLevel = normalizeDeckLevel(left?.deckLevel);
-            const rightLevel = normalizeDeckLevel(right?.deckLevel);
-            const safeLeftLevel = leftLevel === null ? Number.MAX_SAFE_INTEGER : leftLevel;
-            const safeRightLevel = rightLevel === null ? Number.MAX_SAFE_INTEGER : rightLevel;
-            if (safeLeftLevel !== safeRightLevel) return safeLeftLevel - safeRightLevel;
-
-            const leftDeck = safeText(left?.source || left?.deckTitle || '');
-            const rightDeck = safeText(right?.source || right?.deckTitle || '');
-            if (leftDeck !== rightDeck) return leftDeck.localeCompare(rightDeck);
-
-            const leftIndex = Number.isFinite(Number(left?.sourceIndex)) ? Number(left.sourceIndex) : Number.MAX_SAFE_INTEGER;
-            const rightIndex = Number.isFinite(Number(right?.sourceIndex)) ? Number(right.sourceIndex) : Number.MAX_SAFE_INTEGER;
-            if (leftIndex !== rightIndex) return leftIndex - rightIndex;
-
-            return safeText(left?.id || '').localeCompare(safeText(right?.id || ''));
-          })
-          .slice(0, normalizedLimit);
+        return shuffle(cards.slice()).slice(0, normalizedLimit);
       }
 
       function cardDeckSelectionKey(card) {
@@ -24777,11 +24776,13 @@
           const sessionUser = await fetchSessionUser().catch(() => null);
           const welcomeModeSettings = await fetchWelcomeModeSettings().catch(() => ({ usersEnabled: false }));
           const flashcardsPhaseSettings = await fetchFlashcardsPhaseSettings().catch(() => ({ fourthStarUsesSecondStarBlocks: false }));
+          const flashcardLevelRulesSettings = await fetchFlashcardLevelRulesSettings().catch(() => ({ levels: buildDefaultLevelRules() }));
           if (sessionUser) {
             state.user = normalizeUser(sessionUser);
           }
           state.entry.welcomeModesUsersEnabled = Boolean(welcomeModeSettings?.usersEnabled);
           state.entry.fourthStarUsesSecondStarBlocks = Boolean(flashcardsPhaseSettings?.fourthStarUsesSecondStarBlocks);
+          state.levelRules = Array.isArray(flashcardLevelRulesSettings?.levels) ? flashcardLevelRulesSettings.levels : buildDefaultLevelRules();
           state.entry.welcomeModesResolved = true;
           state.entry.sessionResolved = true;
           ensureFlashcardsEnergyDepletionWatch();

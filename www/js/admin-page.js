@@ -19,7 +19,11 @@
     fourthStarUsesSecondStarBlocks: document.getElementById('adminFourthStarUsesSecondStarBlocks'),
     flashcardsPhaseSaveBtn: document.getElementById('adminFlashcardsPhaseSaveBtn'),
     flashcardsPhaseStatus: document.getElementById('adminFlashcardsPhaseStatus'),
-    factFourthStarBlocks: document.getElementById('adminFactFourthStarBlocks')
+    factFourthStarBlocks: document.getElementById('adminFactFourthStarBlocks'),
+    flashcardsLevelRulesForm: document.getElementById('adminFlashcardsLevelRulesForm'),
+    flashcardsLevelRulesInput: document.getElementById('adminFlashcardsLevelRulesInput'),
+    flashcardsLevelRulesSaveBtn: document.getElementById('adminFlashcardsLevelRulesSaveBtn'),
+    flashcardsLevelRulesStatus: document.getElementById('adminFlashcardsLevelRulesStatus')
   };
 
   const state = {
@@ -38,6 +42,10 @@
     flashcardsPhaseBusy: false,
     flashcardsPhase: {
       fourthStarUsesSecondStarBlocks: false
+    },
+    flashcardsLevelRulesBusy: false,
+    flashcardsLevelRules: {
+      levels: []
     }
   };
 
@@ -129,6 +137,16 @@
     }
   }
 
+  function syncFlashcardsLevelRulesBusyState() {
+    if (els.flashcardsLevelRulesSaveBtn) {
+      els.flashcardsLevelRulesSaveBtn.disabled = state.flashcardsLevelRulesBusy;
+      els.flashcardsLevelRulesSaveBtn.textContent = state.flashcardsLevelRulesBusy ? 'Salvando...' : 'Salvar tabela de niveis';
+    }
+    if (els.flashcardsLevelRulesInput) {
+      els.flashcardsLevelRulesInput.disabled = state.flashcardsLevelRulesBusy;
+    }
+  }
+
   function readDraftSettings() {
     return {
       energyCostMultiplier: Math.max(0.01, Math.min(10, safeNumber(els.multiplierInput?.value, state.settings.energyCostMultiplier))),
@@ -203,6 +221,14 @@
     renderFlashcardsPhaseFact();
   }
 
+  function applyFlashcardsLevelRules(settings) {
+    const levels = Array.isArray(settings?.levels) ? settings.levels : [];
+    state.flashcardsLevelRules = { levels };
+    if (els.flashcardsLevelRulesInput) {
+      els.flashcardsLevelRulesInput.value = JSON.stringify(levels, null, 2);
+    }
+  }
+
   async function fetchSessionUser() {
     if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
       return window.PlaytalkApi.fetchSessionUser({ attempts: 2, timeoutMs: 3500 });
@@ -253,6 +279,19 @@
       throw new Error(payload?.message || 'Nao foi possivel carregar a configuracao da fourth-star.');
     }
     applyFlashcardsPhase(payload.settings);
+  }
+
+  async function loadFlashcardsLevelRulesSettings() {
+    const response = await fetch(buildApiUrl('/api/admin/flashcards/level-rules'), {
+      headers: buildAuthHeaders(),
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.settings) {
+      throw new Error(payload?.message || 'Nao foi possivel carregar as regras de nivel.');
+    }
+    applyFlashcardsLevelRules(payload.settings);
   }
 
   async function submitEnergySettings(event) {
@@ -336,12 +375,44 @@
     }
   }
 
+  async function submitFlashcardsLevelRulesSettings(event) {
+    event.preventDefault();
+    state.flashcardsLevelRulesBusy = true;
+    syncFlashcardsLevelRulesBusyState();
+    setStatus(els.flashcardsLevelRulesStatus, 'Salvando tabela de niveis...');
+    try {
+      const raw = String(els.flashcardsLevelRulesInput?.value || '').trim();
+      const levels = JSON.parse(raw);
+      if (!Array.isArray(levels)) {
+        throw new Error('A tabela deve ser um array JSON.');
+      }
+      const response = await fetch(buildApiUrl('/api/admin/flashcards/level-rules'), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify({ levels })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.settings) {
+        throw new Error(payload?.message || 'Nao foi possivel salvar as regras de nivel.');
+      }
+      applyFlashcardsLevelRules(payload.settings);
+      setStatus(els.flashcardsLevelRulesStatus, payload?.message || 'Regras de nivel atualizadas.', 'success');
+    } catch (error) {
+      setStatus(els.flashcardsLevelRulesStatus, error?.message || 'Nao foi possivel salvar as regras de nivel.', 'error');
+    } finally {
+      state.flashcardsLevelRulesBusy = false;
+      syncFlashcardsLevelRulesBusyState();
+    }
+  }
+
   function bindEvents() {
     els.energyForm?.addEventListener('submit', submitEnergySettings);
     els.multiplierInput?.addEventListener('input', renderPreview);
     els.limitInput?.addEventListener('input', renderPreview);
     els.welcomeModesForm?.addEventListener('submit', submitWelcomeModeSettings);
     els.flashcardsPhaseForm?.addEventListener('submit', submitFlashcardsPhaseSettings);
+    els.flashcardsLevelRulesForm?.addEventListener('submit', submitFlashcardsLevelRulesSettings);
   }
 
   (async () => {
@@ -349,6 +420,7 @@
     syncEnergyBusyState();
     syncWelcomeModesBusyState();
     syncFlashcardsPhaseBusyState();
+    syncFlashcardsLevelRulesBusyState();
     renderPreview();
     renderWelcomeModesFact();
     renderFlashcardsPhaseFact();
@@ -357,6 +429,7 @@
       setStatus(els.energyStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.welcomeModesStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.flashcardsPhaseStatus, 'Acesso restrito ao administrador.', 'error');
+      setStatus(els.flashcardsLevelRulesStatus, 'Acesso restrito ao administrador.', 'error');
       window.setTimeout(() => navigateTo('/account', { replace: true }), 900);
       return;
     }
@@ -364,16 +437,19 @@
       await Promise.all([
         loadEnergySettings(),
         loadWelcomeModeSettings(),
-        loadFlashcardsPhaseSettings()
+        loadFlashcardsPhaseSettings(),
+        loadFlashcardsLevelRulesSettings()
       ]);
       setStatus(els.energyStatus, 'Configuracoes carregadas.');
       setStatus(els.welcomeModesStatus, 'Modos extras sincronizados.');
       setStatus(els.flashcardsPhaseStatus, 'Fase fourth-star sincronizada.');
+      setStatus(els.flashcardsLevelRulesStatus, 'Tabela de niveis sincronizada.');
     } catch (error) {
       const message = error?.message || 'Nao foi possivel carregar as configuracoes do admin.';
       setStatus(els.energyStatus, message, 'error');
       setStatus(els.welcomeModesStatus, message, 'error');
       setStatus(els.flashcardsPhaseStatus, message, 'error');
+      setStatus(els.flashcardsLevelRulesStatus, message, 'error');
     }
   })();
 })();

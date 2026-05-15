@@ -224,6 +224,7 @@ let usersPresenceClassReadyPromise = null;
 let energySettingsReadyPromise = null;
 let welcomeModeSettingsReadyPromise = null;
 let flashcardPhaseSettingsReadyPromise = null;
+let flashcardLevelRulesSettingsReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
 let speakingCardsCache = {
@@ -243,6 +244,10 @@ let welcomeModeSettingsCache = {
   updatedAt: 0
 };
 let flashcardPhaseSettingsCache = {
+  value: null,
+  updatedAt: 0
+};
+let flashcardLevelRulesSettingsCache = {
   value: null,
   updatedAt: 0
 };
@@ -274,6 +279,7 @@ const DEFAULT_WELCOME_GAME_MODES_FOR_USERS_ENABLED = false;
 const WELCOME_MODE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const DEFAULT_FOURTH_STAR_USES_SECOND_STAR_BLOCKS = false;
 const FLASHCARD_PHASE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
+const FLASHCARD_LEVEL_RULES_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
@@ -994,6 +1000,49 @@ const rememberFlashcardPhaseSettings = (settings) => {
   return snapshot;
 };
 
+function buildDefaultFlashcardLevelRulesLevels() {
+  const maxCharsByLevel = [12,12,13,14,15,16,16,17,18,19,20,21,22,23,24,25,25,26,26,27,27,28,29,29,30,30,31,32,32,33,33,34,34,35,36,36,37,37,38,38,39,40,40,41,41,42,42,43,44,44,45,45,46,47,47,48,48,49,49,50,51,51,52,52,53,54,54,55,56,56,57,58,58,59,59,60,61,61,62,62,63,64,64,65,66,66,67,68,68,69,69,70,71,71,72,72,73,74,74,75];
+  const hitThresholdByLevel = [50,51,52,52,53,53,54,54,55,55,55,56,56,57,57,57,58,58,59,59,60,60,60,61,61,62,62,62,63,63,64,64,65,65,65,66,66,67,67,67,68,68,69,69,70,70,70,71,71,72,72,72,73,73,74,74,75,75,75,76,76,77,77,77,78,78,79,79,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80];
+  return Array.from({ length: 100 }, (_v, index) => ({
+    level: index + 1,
+    minChars: index < 59 ? 0 : Math.max(50, maxCharsByLevel[index] || 50),
+    maxChars: maxCharsByLevel[index] || 75,
+    hitThreshold: hitThresholdByLevel[index] || 80
+  }));
+}
+
+function normalizeFlashcardLevelRulesSnapshot(row = {}) {
+  const defaultLevels = buildDefaultFlashcardLevelRulesLevels();
+  const incoming = Array.isArray(row?.levels)
+    ? row.levels
+    : Array.isArray(row?.payload?.levels)
+      ? row.payload.levels
+      : [];
+  const byLevel = new Map(defaultLevels.map((entry) => [entry.level, entry]));
+  incoming.forEach((entry) => {
+    const level = Math.max(1, Math.min(100, Number.parseInt(entry?.level, 10) || 0));
+    if (!byLevel.has(level)) return;
+    byLevel.set(level, {
+      level,
+      minChars: Math.max(0, Math.round(Number(entry?.minChars) || 0)),
+      maxChars: Math.max(1, Math.round(Number(entry?.maxChars) || 1)),
+      hitThreshold: Math.max(1, Math.min(100, Math.round(Number(entry?.hitThreshold) || 1)))
+    });
+  });
+  return {
+    levels: Array.from(byLevel.values()).sort((a, b) => a.level - b.level)
+  };
+}
+
+function rememberFlashcardLevelRulesSettings(settings) {
+  const snapshot = normalizeFlashcardLevelRulesSnapshot(settings);
+  flashcardLevelRulesSettingsCache = {
+    value: snapshot,
+    updatedAt: Date.now()
+  };
+  return snapshot;
+}
+
 const xpRequiredForNextLevel = (level) => {
   const normalizedLevel = Math.max(1, Math.floor(Number(level) || 1));
   return normalizedLevel + 20;
@@ -1210,6 +1259,48 @@ const decorateFlashcardStats = (value, lettersCount = 0) => {
 };
 
 const normalizeFlashcardStats = (value, lettersCount = 0) => decorateFlashcardStats(value, lettersCount);
+
+const FLASHCARD_GAME_OPTIONS_DEFAULTS = Object.freeze({
+  difficulty: 'automatic',
+  speed: '0.90',
+  accent: 'mix_100_0',
+  fourthStageTyping: 'off'
+});
+
+function normalizeFlashcardGameDifficulty(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'automatic') return 'automatic';
+  return normalized === 'manual' ? 'manual' : FLASHCARD_GAME_OPTIONS_DEFAULTS.difficulty;
+}
+
+function normalizeFlashcardGameSpeed(value) {
+  const normalized = String(value || '').trim();
+  return ['0.70', '0.80', '0.90', '1.00'].includes(normalized)
+    ? normalized
+    : FLASHCARD_GAME_OPTIONS_DEFAULTS.speed;
+}
+
+function normalizeFlashcardGameAccent(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return /^mix_(100|[1-9]?\d)_(100|[1-9]?\d)$/.test(normalized)
+    ? normalized
+    : FLASHCARD_GAME_OPTIONS_DEFAULTS.accent;
+}
+
+function normalizeFlashcardGameFourthTyping(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'on' ? 'on' : 'off';
+}
+
+function normalizeFlashcardGameOptions(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  return {
+    difficulty: normalizeFlashcardGameDifficulty(source.difficulty),
+    speed: normalizeFlashcardGameSpeed(source.speed),
+    accent: normalizeFlashcardGameAccent(source.accent),
+    fourthStageTyping: normalizeFlashcardGameFourthTyping(source.fourthStageTyping)
+  };
+}
 
 const normalizeFlashcardOnTableRecord = (raw) => {
   const cardId = typeof raw?.cardId === 'string' ? raw.cardId.trim() : '';
@@ -1466,6 +1557,22 @@ const ensureFlashcardUserStateTables = async () => {
       await pool.query(`
         ALTER TABLE public.user_flashcard_stats
         ADD COLUMN IF NOT EXISTS admin_speed_flashcards_per_hour numeric(10,1) NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS game_option_difficulty text NOT NULL DEFAULT 'automatic'
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS game_option_speed text NOT NULL DEFAULT '0.90'
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS game_option_accent text NOT NULL DEFAULT 'mix_100_0'
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS game_option_fourth_stage_typing text NOT NULL DEFAULT 'off'
       `);
       await pool.query(`
         ALTER TABLE public.user_flashcard_stats
@@ -2738,6 +2845,33 @@ const ensureFlashcardPhaseSettingsTable = async () => {
   return flashcardPhaseSettingsReadyPromise;
 };
 
+const ensureFlashcardLevelRulesSettingsTable = async () => {
+  if (!pool) return false;
+  if (!flashcardLevelRulesSettingsReadyPromise) {
+    flashcardLevelRulesSettingsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.app_flashcard_level_rules_settings (
+          singleton_key text PRIMARY KEY,
+          payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+          updated_by_user_id integer REFERENCES public.users(id) ON DELETE SET NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        INSERT INTO public.app_flashcard_level_rules_settings (singleton_key, payload)
+        VALUES ('default', $1::jsonb)
+        ON CONFLICT (singleton_key) DO NOTHING
+      `, [JSON.stringify({ levels: buildDefaultFlashcardLevelRulesLevels() })]);
+      return true;
+    })().catch((error) => {
+      flashcardLevelRulesSettingsReadyPromise = null;
+      throw error;
+    });
+  }
+  return flashcardLevelRulesSettingsReadyPromise;
+};
+
 async function getEnergySettings(options = {}) {
   const force = Boolean(options?.force);
   if (!pool) {
@@ -2805,6 +2939,22 @@ async function getFlashcardPhaseSettings(options = {}) {
      LIMIT 1`
   );
   return rememberFlashcardPhaseSettings(result.rows[0] || {});
+}
+
+async function getFlashcardLevelRulesSettings(options = {}) {
+  const force = Boolean(options?.force);
+  if (!pool) return normalizeFlashcardLevelRulesSnapshot({});
+  if (!force && flashcardLevelRulesSettingsCache.value && (Date.now() - flashcardLevelRulesSettingsCache.updatedAt) < FLASHCARD_LEVEL_RULES_SETTINGS_CACHE_TTL_MS) {
+    return flashcardLevelRulesSettingsCache.value;
+  }
+  await ensureFlashcardLevelRulesSettingsTable();
+  const result = await pool.query(
+    `SELECT payload
+     FROM public.app_flashcard_level_rules_settings
+     WHERE singleton_key = 'default'
+     LIMIT 1`
+  );
+  return rememberFlashcardLevelRulesSettings(result.rows[0]?.payload || {});
 }
 
 async function updateEnergySettings(db, values = {}, updatedByUserId = null) {
@@ -2901,6 +3051,25 @@ async function updateFlashcardPhaseSettings(db, values = {}, updatedByUserId = n
   return rememberFlashcardPhaseSettings(result.rows[0] || {
     fourth_star_uses_second_star_blocks: fourthStarUsesSecondStarBlocks
   });
+}
+
+async function updateFlashcardLevelRulesSettings(db, values = {}, updatedByUserId = null) {
+  const executor = db && typeof db.query === 'function' ? db : pool;
+  if (!executor) return normalizeFlashcardLevelRulesSnapshot(values);
+  const snapshot = normalizeFlashcardLevelRulesSnapshot(values);
+  await ensureFlashcardLevelRulesSettingsTable();
+  const result = await executor.query(
+    `INSERT INTO public.app_flashcard_level_rules_settings (singleton_key, payload, updated_by_user_id, updated_at)
+     VALUES ('default', $1::jsonb, $2, now())
+     ON CONFLICT (singleton_key)
+     DO UPDATE SET
+       payload = EXCLUDED.payload,
+       updated_by_user_id = EXCLUDED.updated_by_user_id,
+       updated_at = now()
+     RETURNING payload`,
+    [JSON.stringify(snapshot), Number(updatedByUserId) || null]
+  );
+  return rememberFlashcardLevelRulesSettings(result.rows[0]?.payload || snapshot);
 }
 
 const ensureUsersPresenceClassMetricStorage = async () => {
@@ -4469,6 +4638,7 @@ const readFlashcardStateForUser = async (userId) => {
     ),
     pool.query(
       `SELECT play_time_ms, speakings, listenings, readings, training_time_ms, pronunciation_samples,
+              game_option_difficulty, game_option_speed, game_option_accent, game_option_fourth_stage_typing,
               second_star_error_heard, updated_at
        FROM public.user_flashcard_stats
        WHERE user_id = $1
@@ -4526,6 +4696,12 @@ const readFlashcardStateForUser = async (userId) => {
   const accurateAggregate = getFlashcardAccurateAggregateFromRow(accurateResult.rows[0]);
 
   const flashcardStatsRow = statsResult.rows[0] || {};
+  const gameOptions = normalizeFlashcardGameOptions({
+    difficulty: flashcardStatsRow.game_option_difficulty,
+    speed: flashcardStatsRow.game_option_speed,
+    accent: flashcardStatsRow.game_option_accent,
+    fourthStageTyping: flashcardStatsRow.game_option_fourth_stage_typing
+  });
   const onTableRecords = onTableResult.rows
     .map((row) => normalizeFlashcardOnTableRecord({
       cardId: row?.card_id,
@@ -4559,7 +4735,8 @@ const readFlashcardStateForUser = async (userId) => {
       hasStats: Boolean(statsResult.rows[0] || accurateResult.rows[0]),
       hiddenCardIds: hiddenResult.rows
         .map((row) => typeof row?.card_id === 'string' ? row.card_id.trim() : '')
-        .filter(Boolean)
+        .filter(Boolean),
+      gameOptions
     },
     onTable: onTableRecords
   };
@@ -4595,6 +4772,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
   });
   const progress = Array.from(dedupedProgress.values());
   const stats = normalizeFlashcardStats(payload?.stats, totalFlashcardLettersFromProgress(progress));
+  const gameOptions = normalizeFlashcardGameOptions(payload?.gameOptions);
   const hiddenCardIds = Array.isArray(payload?.hiddenCardIds)
     ? Array.from(new Set(payload.hiddenCardIds
       .map((cardId) => typeof cardId === 'string' ? cardId.trim() : '')
@@ -4892,22 +5070,30 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
          readings,
          training_time_ms,
          pronunciation_samples,
+         game_option_difficulty,
+         game_option_speed,
+         game_option_accent,
+         game_option_fourth_stage_typing,
          second_star_error_heard,
          updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, now())
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, now())
        ON CONFLICT (user_id)
        DO UPDATE SET
          play_time_ms = EXCLUDED.play_time_ms,
          speakings = GREATEST(public.user_flashcard_stats.speakings, EXCLUDED.speakings),
          listenings = GREATEST(public.user_flashcard_stats.listenings, EXCLUDED.listenings),
          readings = GREATEST(public.user_flashcard_stats.readings, EXCLUDED.readings),
+         game_option_difficulty = EXCLUDED.game_option_difficulty,
+         game_option_speed = EXCLUDED.game_option_speed,
+         game_option_accent = EXCLUDED.game_option_accent,
+         game_option_fourth_stage_typing = EXCLUDED.game_option_fourth_stage_typing,
          training_time_ms = CASE
-           WHEN $9::boolean THEN EXCLUDED.training_time_ms
+           WHEN $13::boolean THEN EXCLUDED.training_time_ms
            ELSE public.user_flashcard_stats.training_time_ms
          END,
          pronunciation_samples = CASE
-           WHEN $9::boolean THEN EXCLUDED.pronunciation_samples
+           WHEN $13::boolean THEN EXCLUDED.pronunciation_samples
            ELSE public.user_flashcard_stats.pronunciation_samples
          END,
          second_star_error_heard = EXCLUDED.second_star_error_heard,
@@ -4920,6 +5106,10 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
         persistedReadings,
         persistedTrainingTimeMs,
         JSON.stringify(accurateSamples),
+        gameOptions.difficulty,
+        gameOptions.speed,
+        gameOptions.accent,
+        gameOptions.fourthStageTyping,
         stats.secondStarErrorHeard,
         shouldPersistPerformanceStats
       ]
@@ -18209,6 +18399,15 @@ app.get('/api/flashcards/phase-settings', async (req, res) => {
   }
 });
 
+app.get('/api/flashcards/level-rules', async (_req, res) => {
+  try {
+    const settings = await getFlashcardLevelRulesSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error?.message || 'Nao foi possivel carregar as regras de nivel.' });
+  }
+});
+
 app.get('/api/admin/welcome-mode-settings', async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -18240,6 +18439,17 @@ app.get('/api/admin/flashcards/phase-settings', async (req, res) => {
       success: false,
       message: error?.message || 'Nao foi possivel carregar as configuracoes das fases de flashcards.'
     });
+  }
+});
+
+app.get('/api/admin/flashcards/level-rules', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const settings = await getFlashcardLevelRulesSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar as regras de nivel.' });
   }
 });
 
@@ -18320,6 +18530,23 @@ app.post('/api/admin/flashcards/phase-settings', express.json({ limit: '32kb' })
       success: false,
       message: error?.message || 'Nao foi possivel salvar as configuracoes das fases de flashcards.'
     });
+  }
+});
+
+app.post('/api/admin/flashcards/level-rules', express.json({ limit: '256kb' }), async (req, res) => {
+  try {
+    const adminUser = await requireAdminUserFromRequest(req);
+    const settings = await updateFlashcardLevelRulesSettings(pool, {
+      levels: Array.isArray(req.body?.levels) ? req.body.levels : []
+    }, adminUser.id);
+    res.json({
+      success: true,
+      message: 'Regras de nivel atualizadas.',
+      settings
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel salvar as regras de nivel.' });
   }
 });
 
