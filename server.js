@@ -225,6 +225,8 @@ let energySettingsReadyPromise = null;
 let welcomeModeSettingsReadyPromise = null;
 let flashcardPhaseSettingsReadyPromise = null;
 let flashcardLevelRulesSettingsReadyPromise = null;
+let flashcardSpeedCurveSettingsReadyPromise = null;
+let userFlashcardSpeedSamplesTableReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
 let speakingCardsCache = {
@@ -248,6 +250,10 @@ let flashcardPhaseSettingsCache = {
   updatedAt: 0
 };
 let flashcardLevelRulesSettingsCache = {
+  value: null,
+  updatedAt: 0
+};
+let flashcardSpeedCurveSettingsCache = {
   value: null,
   updatedAt: 0
 };
@@ -280,6 +286,8 @@ const WELCOME_MODE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const DEFAULT_FOURTH_STAR_USES_SECOND_STAR_BLOCKS = false;
 const FLASHCARD_PHASE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_LEVEL_RULES_SETTINGS_CACHE_TTL_MS = 30 * 1000;
+const FLASHCARD_SPEED_CURVE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
+const FLASHCARD_SPEED_SAMPLE_LIMIT = 100;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
@@ -1041,6 +1049,81 @@ function rememberFlashcardLevelRulesSettings(settings) {
     updatedAt: Date.now()
   };
   return snapshot;
+}
+
+function buildDefaultFlashcardSpeedCurveSnapshot() {
+  return {
+    anchors: [
+      { chars: 6, multiplier: 2.0 },
+      { chars: 15, multiplier: 1.0 },
+      { chars: 30, multiplier: 0.5 },
+      { chars: 60, multiplier: 0.3 }
+    ]
+  };
+}
+
+function normalizeFlashcardSpeedCurveSnapshot(value = {}) {
+  const defaults = buildDefaultFlashcardSpeedCurveSnapshot().anchors;
+  const source = Array.isArray(value?.anchors)
+    ? value.anchors
+    : Array.isArray(value?.payload?.anchors)
+      ? value.payload.anchors
+      : defaults;
+  const normalized = source
+    .map((entry) => ({
+      chars: Math.max(1, Math.min(1000, Math.round(Number(entry?.chars) || 0))),
+      multiplier: Math.max(0.01, Math.min(10, Number(Number(entry?.multiplier) || 0).toFixed(4)))
+    }))
+    .filter((entry) => Number.isFinite(entry.chars) && Number.isFinite(entry.multiplier))
+    .sort((a, b) => a.chars - b.chars)
+    .slice(0, 4);
+  if (normalized.length !== 4) {
+    return buildDefaultFlashcardSpeedCurveSnapshot();
+  }
+  const uniqueChars = new Set(normalized.map((entry) => entry.chars));
+  if (uniqueChars.size !== 4) {
+    return buildDefaultFlashcardSpeedCurveSnapshot();
+  }
+  return { anchors: normalized };
+}
+
+function rememberFlashcardSpeedCurveSettings(settings) {
+  const snapshot = normalizeFlashcardSpeedCurveSnapshot(settings);
+  flashcardSpeedCurveSettingsCache = {
+    value: snapshot,
+    updatedAt: Date.now()
+  };
+  return snapshot;
+}
+
+function interpolateFlashcardSpeedMultiplier(charsCount, curveSettings) {
+  const chars = Math.max(1, Number(charsCount) || 1);
+  const snapshot = normalizeFlashcardSpeedCurveSnapshot(curveSettings);
+  const anchors = snapshot.anchors.slice().sort((a, b) => a.chars - b.chars);
+  if (!anchors.length) return 1;
+  if (chars <= anchors[0].chars) return anchors[0].multiplier;
+  if (chars >= anchors[anchors.length - 1].chars) return anchors[anchors.length - 1].multiplier;
+  for (let index = 0; index < anchors.length - 1; index += 1) {
+    const left = anchors[index];
+    const right = anchors[index + 1];
+    if (chars >= left.chars && chars <= right.chars) {
+      const span = Math.max(1, right.chars - left.chars);
+      const ratio = (chars - left.chars) / span;
+      const interpolated = left.multiplier + ((right.multiplier - left.multiplier) * ratio);
+      return Math.max(0.01, Number(interpolated.toFixed(4)));
+    }
+  }
+  return anchors[anchors.length - 1].multiplier;
+}
+
+function buildFlashcardSpeedSampleValue(charsCount, curveSettings) {
+  const safeChars = Math.max(1, Math.round(Number(charsCount) || 1));
+  const multiplier = interpolateFlashcardSpeedMultiplier(safeChars, curveSettings);
+  return {
+    rawChars: safeChars,
+    multiplier,
+    sampleValue: Math.max(0.01, Number((safeChars * multiplier).toFixed(4)))
+  };
 }
 
 const xpRequiredForNextLevel = (level) => {
@@ -2872,6 +2955,61 @@ const ensureFlashcardLevelRulesSettingsTable = async () => {
   return flashcardLevelRulesSettingsReadyPromise;
 };
 
+const ensureFlashcardSpeedCurveSettingsTable = async () => {
+  if (!pool) return false;
+  if (!flashcardSpeedCurveSettingsReadyPromise) {
+    flashcardSpeedCurveSettingsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.app_flashcard_speed_curve_settings (
+          singleton_key text PRIMARY KEY,
+          payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+          updated_by_user_id integer REFERENCES public.users(id) ON DELETE SET NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(
+        `INSERT INTO public.app_flashcard_speed_curve_settings (singleton_key, payload)
+         VALUES ('default', $1::jsonb)
+         ON CONFLICT (singleton_key) DO NOTHING`,
+        [JSON.stringify(buildDefaultFlashcardSpeedCurveSnapshot())]
+      );
+      return true;
+    })().catch((error) => {
+      flashcardSpeedCurveSettingsReadyPromise = null;
+      throw error;
+    });
+  }
+  return flashcardSpeedCurveSettingsReadyPromise;
+};
+
+const ensureUserFlashcardSpeedSamplesTable = async () => {
+  if (!pool) return false;
+  if (!userFlashcardSpeedSamplesTableReadyPromise) {
+    userFlashcardSpeedSamplesTableReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_speed_samples (
+          id bigserial PRIMARY KEY,
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          sample_value numeric(12,4) NOT NULL DEFAULT 0,
+          raw_chars integer NOT NULL DEFAULT 1,
+          multiplier numeric(8,4) NOT NULL DEFAULT 1,
+          created_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_speed_samples_user_idx
+        ON public.user_flashcard_speed_samples (user_id, created_at DESC, id DESC)
+      `);
+      return true;
+    })().catch((error) => {
+      userFlashcardSpeedSamplesTableReadyPromise = null;
+      throw error;
+    });
+  }
+  return userFlashcardSpeedSamplesTableReadyPromise;
+};
+
 async function getEnergySettings(options = {}) {
   const force = Boolean(options?.force);
   if (!pool) {
@@ -2955,6 +3093,26 @@ async function getFlashcardLevelRulesSettings(options = {}) {
      LIMIT 1`
   );
   return rememberFlashcardLevelRulesSettings(result.rows[0]?.payload || {});
+}
+
+async function getFlashcardSpeedCurveSettings(options = {}) {
+  const force = Boolean(options?.force);
+  if (!pool) return buildDefaultFlashcardSpeedCurveSnapshot();
+  if (
+    !force
+    && flashcardSpeedCurveSettingsCache.value
+    && (Date.now() - flashcardSpeedCurveSettingsCache.updatedAt) < FLASHCARD_SPEED_CURVE_SETTINGS_CACHE_TTL_MS
+  ) {
+    return flashcardSpeedCurveSettingsCache.value;
+  }
+  await ensureFlashcardSpeedCurveSettingsTable();
+  const result = await pool.query(
+    `SELECT payload
+     FROM public.app_flashcard_speed_curve_settings
+     WHERE singleton_key = 'default'
+     LIMIT 1`
+  );
+  return rememberFlashcardSpeedCurveSettings(result.rows[0]?.payload || {});
 }
 
 async function updateEnergySettings(db, values = {}, updatedByUserId = null) {
@@ -3070,6 +3228,25 @@ async function updateFlashcardLevelRulesSettings(db, values = {}, updatedByUserI
     [JSON.stringify(snapshot), Number(updatedByUserId) || null]
   );
   return rememberFlashcardLevelRulesSettings(result.rows[0]?.payload || snapshot);
+}
+
+async function updateFlashcardSpeedCurveSettings(db, values = {}, updatedByUserId = null) {
+  const executor = db && typeof db.query === 'function' ? db : pool;
+  if (!executor) return normalizeFlashcardSpeedCurveSnapshot(values);
+  const snapshot = normalizeFlashcardSpeedCurveSnapshot(values);
+  await ensureFlashcardSpeedCurveSettingsTable();
+  const result = await executor.query(
+    `INSERT INTO public.app_flashcard_speed_curve_settings (singleton_key, payload, updated_by_user_id, updated_at)
+     VALUES ('default', $1::jsonb, $2, now())
+     ON CONFLICT (singleton_key)
+     DO UPDATE SET
+       payload = EXCLUDED.payload,
+       updated_by_user_id = EXCLUDED.updated_by_user_id,
+       updated_at = now()
+     RETURNING payload`,
+    [JSON.stringify(snapshot), Number(updatedByUserId) || null]
+  );
+  return rememberFlashcardSpeedCurveSettings(result.rows[0]?.payload || snapshot);
 }
 
 const ensureUsersPresenceClassMetricStorage = async () => {
@@ -4600,14 +4777,61 @@ const syncFlashcardRankingFromProgressCount = async (userId) => {
   return syncFlashcardRankingForUser(userId, score);
 };
 
+async function appendFlashcardSpeedSamples(client, userId, samples = []) {
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) return;
+  const source = Array.isArray(samples) ? samples : [];
+  const sanitized = source
+    .map((entry) => ({
+      sampleValue: Math.max(0.01, Number(Number(entry?.sampleValue) || 0).toFixed(4)),
+      rawChars: Math.max(1, Math.round(Number(entry?.rawChars) || 1)),
+      multiplier: Math.max(0.01, Number(Number(entry?.multiplier) || 0).toFixed(4))
+    }))
+    .filter((entry) => Number.isFinite(entry.sampleValue) && Number.isFinite(entry.rawChars) && Number.isFinite(entry.multiplier));
+  if (!sanitized.length) return;
+  await ensureUserFlashcardSpeedSamplesTable();
+  const values = [];
+  const params = [];
+  sanitized.forEach((entry, index) => {
+    const offset = index * 4;
+    values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, now())`);
+    params.push(normalizedUserId, entry.sampleValue, entry.rawChars, entry.multiplier);
+  });
+  await client.query(
+    `INSERT INTO public.user_flashcard_speed_samples (
+       user_id,
+       sample_value,
+       raw_chars,
+       multiplier,
+       created_at
+     )
+     VALUES ${values.join(', ')}`,
+    params
+  );
+  await client.query(
+    `DELETE FROM public.user_flashcard_speed_samples
+     WHERE user_id = $1
+       AND id IN (
+         SELECT id
+         FROM public.user_flashcard_speed_samples
+         WHERE user_id = $1
+         ORDER BY created_at DESC, id DESC
+         OFFSET $2
+       )`,
+    [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
+  );
+}
+
 const readFlashcardStateForUser = async (userId) => {
   if (!pool) {
     throw new Error('DATABASE_URL nao configurada.');
   }
 
   await ensureFlashcardUserStateTables();
+  await ensureUserFlashcardSpeedSamplesTable();
   await ensureUserBooksEnergyXpStatsTable();
   await ensureUserCoinsTable();
+  await ensureUserFlashcardSpeedSamplesTable();
 
   const normalizedUserId = Number.parseInt(userId, 10);
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
@@ -4616,7 +4840,7 @@ const readFlashcardStateForUser = async (userId) => {
     throw error;
   }
 
-  const [progressResult, statsResult, accurateResult, hiddenResult, onTableResult, userLevelResult, booksEnergyXpResult, coinsResult] = await Promise.all([
+  const [progressResult, statsResult, accurateResult, hiddenResult, onTableResult, userLevelResult, booksEnergyXpResult, coinsResult, speedSamplesResult] = await Promise.all([
     pool.query(
       `SELECT
          card_id,
@@ -4688,6 +4912,17 @@ const readFlashcardStateForUser = async (userId) => {
        WHERE user_id = $1
        LIMIT 1`,
       [normalizedUserId]
+    ),
+    pool.query(
+      `SELECT COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_total
+       FROM (
+         SELECT sample_value
+         FROM public.user_flashcard_speed_samples
+         WHERE user_id = $1
+         ORDER BY created_at DESC, id DESC
+         LIMIT $2
+       ) recent`,
+      [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
     )
   ]);
 
@@ -4722,7 +4957,7 @@ const readFlashcardStateForUser = async (userId) => {
         trainingTimeMs: flashcardStatsRow.training_time_ms,
         pronunciationSamples: accurateAggregate.pronunciationSamples,
         secondStarErrorHeard: flashcardStatsRow.second_star_error_heard
-      }, totalFlashcardLettersFromProgress(progressRecords)),
+      }, normalizedCharsTotal || totalFlashcardLettersFromProgress(progressRecords)),
       booksEnergyXpTotal: Math.max(0, Number(booksEnergyXpResult.rows[0]?.energy_xp_total) || 0),
       coinsTotal: Math.max(0, Number(coinsResult.rows[0]?.coins_total) || 0)
     },
@@ -4869,6 +5104,21 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       const nextPhase = resolveFlashcardMissionPhase(item);
       return nextPhase > previousPhase ? total + 1 : total;
     }, 0);
+    const speedCurveSettings = await getFlashcardSpeedCurveSettings();
+    const generatedSpeedSamples = [];
+    progress.forEach((item) => {
+      const cardId = String(item?.cardId || '').trim();
+      if (!cardId) return;
+      const previous = existingProgressByCardId.get(cardId);
+      const previousPhase = previous ? resolveFlashcardMissionPhase(previous) : 0;
+      const nextPhase = resolveFlashcardMissionPhase(item);
+      const winsDelta = Math.max(0, nextPhase - previousPhase);
+      if (!winsDelta) return;
+      const speedSample = buildFlashcardSpeedSampleValue(item?.cardChars, speedCurveSettings);
+      for (let index = 0; index < winsDelta; index += 1) {
+        generatedSpeedSamples.push(speedSample);
+      }
+    });
     const existingCardIds = new Set(existingProgressByCardId.keys());
     const shouldPersistPerformanceStats = progress.length > existingCardIds.size;
     const existingTrainingTimeMs = Math.max(0, Number(existingStatsResult.rows[0]?.training_time_ms) || 0);
@@ -5057,6 +5307,9 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       await incrementUserDailyMissionProgress(client, normalizedUserId, {
         cardsDelta: cardsTodayDelta
       });
+    }
+    if (generatedSpeedSamples.length) {
+      await appendFlashcardSpeedSamples(client, normalizedUserId, generatedSpeedSamples);
     }
     const requestedCoinsDeltaRaw = Math.max(0, Math.round(Number(payload?.stats?.coinsDelta || payload?.stats?.coins_delta) || 0));
     const requestedCoinsDelta = requestedCoinsDeltaRaw;
@@ -14270,6 +14523,7 @@ app.get('/api/users/flashcards', async (req, res) => {
     await ensurePremiumAccessTables();
     await ensureSpeakingRealtimeTables();
     await ensureUserRankingOverridesTable();
+    await ensureUserFlashcardSpeedSamplesTable();
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     const requesterIsAdmin = isAdminUserRecord(authUser);
 
@@ -14340,8 +14594,8 @@ app.get('/api/users/flashcards', async (req, res) => {
            )
          )::int AS pronunciation_percent,
          CASE
-           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(progress.letters_count, 0) > 0
-             THEN ROUND((COALESCE(progress.letters_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
+             THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
            ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
          END AS speed_flashcards_per_hour
        FROM public.users u
@@ -14375,6 +14629,21 @@ app.get('/api/users/flashcards', async (req, res) => {
          ON ranking.user_id = u.id
        LEFT JOIN public.user_flashcard_stats stats
          ON stats.user_id = u.id
+       LEFT JOIN (
+         SELECT
+           user_id,
+           COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_count
+         FROM (
+           SELECT
+             user_id,
+             sample_value,
+             ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC, id DESC) AS row_index
+           FROM public.user_flashcard_speed_samples
+         ) ranked_speed_samples
+         WHERE ranked_speed_samples.row_index <= ${FLASHCARD_SPEED_SAMPLE_LIMIT}
+         GROUP BY user_id
+       ) speed_samples
+         ON speed_samples.user_id = u.id
        LEFT JOIN public.flashcards_accurate accurate
          ON accurate.user_id = u.id
        LEFT JOIN public.user_books_speaking_stats books_speaking
@@ -18100,6 +18369,7 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
     await ensureFlashcardUserStateTables();
     await ensureFlashcardRankingsTable();
     await ensureUserRankingOverridesTable();
+    await ensureUserFlashcardSpeedSamplesTable();
 
     const authUser = await readAuthenticatedUserFromRequest(req);
     if (!authUser?.id || !isAdminUserRecord(authUser)) {
@@ -18152,8 +18422,8 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
            )
          )::int AS pronunciation_percent,
          CASE
-           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(progress.letters_count, 0) > 0
-             THEN ROUND((COALESCE(progress.letters_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
+             THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
            ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
          END AS speed_flashcards_per_hour,
          COALESCE(u.level, 1)::int AS user_level
@@ -18185,6 +18455,20 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
          WHERE deduped.row_index = 1
        ) ranking ON ranking.user_id = u.id
        LEFT JOIN public.user_flashcard_stats stats ON stats.user_id = u.id
+       LEFT JOIN (
+         SELECT
+           user_id,
+           COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_count
+         FROM (
+           SELECT
+             user_id,
+             sample_value,
+             ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC, id DESC) AS row_index
+           FROM public.user_flashcard_speed_samples
+         ) ranked_speed_samples
+         WHERE ranked_speed_samples.row_index <= ${FLASHCARD_SPEED_SAMPLE_LIMIT}
+         GROUP BY user_id
+       ) speed_samples ON speed_samples.user_id = u.id
        LEFT JOIN public.flashcards_accurate accurate ON accurate.user_id = u.id
        LEFT JOIN public.user_books_speaking_stats books_speaking ON books_speaking.user_id = u.id
        WHERE u.id = $1
@@ -18408,6 +18692,15 @@ app.get('/api/flashcards/level-rules', async (_req, res) => {
   }
 });
 
+app.get('/api/flashcards/speed-curve-settings', async (_req, res) => {
+  try {
+    const settings = await getFlashcardSpeedCurveSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error?.message || 'Nao foi possivel carregar a curva de velocidade.' });
+  }
+});
+
 app.get('/api/admin/welcome-mode-settings', async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -18450,6 +18743,17 @@ app.get('/api/admin/flashcards/level-rules', async (req, res) => {
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar as regras de nivel.' });
+  }
+});
+
+app.get('/api/admin/flashcards/speed-curve-settings', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const settings = await getFlashcardSpeedCurveSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar a curva de velocidade.' });
   }
 });
 
@@ -18547,6 +18851,22 @@ app.post('/api/admin/flashcards/level-rules', express.json({ limit: '256kb' }), 
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel salvar as regras de nivel.' });
+  }
+});
+
+app.post('/api/admin/flashcards/speed-curve-settings', express.json({ limit: '64kb' }), async (req, res) => {
+  try {
+    const adminUser = await requireAdminUserFromRequest(req);
+    const anchors = Array.isArray(req.body?.anchors) ? req.body.anchors : [];
+    const settings = await updateFlashcardSpeedCurveSettings(pool, { anchors }, adminUser.id);
+    res.json({
+      success: true,
+      message: 'Curva de velocidade atualizada.',
+      settings
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel salvar a curva de velocidade.' });
   }
 });
 
@@ -21716,3 +22036,4 @@ module.exports = app;
 
 
 
+  const normalizedCharsTotal = Math.max(0, Number(speedSamplesResult.rows[0]?.normalized_chars_total) || 0);

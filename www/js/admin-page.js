@@ -23,7 +23,14 @@
     flashcardsLevelRulesForm: document.getElementById('adminFlashcardsLevelRulesForm'),
     flashcardsLevelRulesTableBody: document.getElementById('adminFlashcardsLevelRulesTableBody'),
     flashcardsLevelRulesSaveBtn: document.getElementById('adminFlashcardsLevelRulesSaveBtn'),
-    flashcardsLevelRulesStatus: document.getElementById('adminFlashcardsLevelRulesStatus')
+    flashcardsLevelRulesStatus: document.getElementById('adminFlashcardsLevelRulesStatus'),
+    speedCurveForm: document.getElementById('adminSpeedCurveForm'),
+    speedCurveChars6: document.getElementById('adminSpeedCurveChars6'),
+    speedCurveChars15: document.getElementById('adminSpeedCurveChars15'),
+    speedCurveChars30: document.getElementById('adminSpeedCurveChars30'),
+    speedCurveChars60: document.getElementById('adminSpeedCurveChars60'),
+    speedCurveSaveBtn: document.getElementById('adminSpeedCurveSaveBtn'),
+    speedCurveStatus: document.getElementById('adminSpeedCurveStatus')
   };
 
   const state = {
@@ -46,6 +53,10 @@
     flashcardsLevelRulesBusy: false,
     flashcardsLevelRules: {
       levels: []
+    },
+    speedCurveBusy: false,
+    speedCurve: {
+      anchors: []
     }
   };
 
@@ -147,6 +158,22 @@
     });
   }
 
+  function syncSpeedCurveBusyState() {
+    if (els.speedCurveSaveBtn) {
+      els.speedCurveSaveBtn.disabled = state.speedCurveBusy;
+      els.speedCurveSaveBtn.textContent = state.speedCurveBusy ? 'Salvando...' : 'Salvar curva da velocidade';
+    }
+    [
+      els.speedCurveChars6,
+      els.speedCurveChars15,
+      els.speedCurveChars30,
+      els.speedCurveChars60
+    ].forEach((input) => {
+      if (!input) return;
+      input.disabled = state.speedCurveBusy;
+    });
+  }
+
   function readDraftSettings() {
     return {
       energyCostMultiplier: Math.max(0.01, Math.min(10, safeNumber(els.multiplierInput?.value, state.settings.energyCostMultiplier))),
@@ -163,6 +190,21 @@
   function readDraftFlashcardsPhase() {
     return {
       fourthStarUsesSecondStarBlocks: Boolean(els.fourthStarUsesSecondStarBlocks?.checked)
+    };
+  }
+
+  function anchorValue(input, fallback) {
+    return Math.max(0.01, Math.min(10, Number((safeNumber(input?.value, fallback)).toFixed(2))));
+  }
+
+  function readDraftSpeedCurve() {
+    return {
+      anchors: [
+        { chars: 6, multiplier: anchorValue(els.speedCurveChars6, 2) },
+        { chars: 15, multiplier: anchorValue(els.speedCurveChars15, 1) },
+        { chars: 30, multiplier: anchorValue(els.speedCurveChars30, 0.5) },
+        { chars: 60, multiplier: anchorValue(els.speedCurveChars60, 0.3) }
+      ]
     };
   }
 
@@ -187,6 +229,27 @@
     if (els.factFourthStarBlocks) {
       els.factFourthStarBlocks.textContent = formatFourthStarBlocksState(state.flashcardsPhase.fourthStarUsesSecondStarBlocks);
     }
+  }
+
+  function applySpeedCurve(settings) {
+    const anchors = Array.isArray(settings?.anchors) ? settings.anchors : [];
+    const byChars = new Map(anchors.map((entry) => [Number(entry?.chars), Number(entry?.multiplier)]));
+    const safe6 = Math.max(0.01, Math.min(10, Number(byChars.get(6)) || 2));
+    const safe15 = Math.max(0.01, Math.min(10, Number(byChars.get(15)) || 1));
+    const safe30 = Math.max(0.01, Math.min(10, Number(byChars.get(30)) || 0.5));
+    const safe60 = Math.max(0.01, Math.min(10, Number(byChars.get(60)) || 0.3));
+    state.speedCurve = {
+      anchors: [
+        { chars: 6, multiplier: safe6 },
+        { chars: 15, multiplier: safe15 },
+        { chars: 30, multiplier: safe30 },
+        { chars: 60, multiplier: safe60 }
+      ]
+    };
+    if (els.speedCurveChars6) els.speedCurveChars6.value = safe6.toFixed(2);
+    if (els.speedCurveChars15) els.speedCurveChars15.value = safe15.toFixed(2);
+    if (els.speedCurveChars30) els.speedCurveChars30.value = safe30.toFixed(2);
+    if (els.speedCurveChars60) els.speedCurveChars60.value = safe60.toFixed(2);
   }
 
   function applySettings(settings) {
@@ -331,6 +394,19 @@
     applyFlashcardsLevelRules(payload.settings);
   }
 
+  async function loadSpeedCurveSettings() {
+    const response = await fetch(buildApiUrl('/api/admin/flashcards/speed-curve-settings'), {
+      headers: buildAuthHeaders(),
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.settings) {
+      throw new Error(payload?.message || 'Nao foi possivel carregar a curva da velocidade.');
+    }
+    applySpeedCurve(payload.settings);
+  }
+
   async function submitEnergySettings(event) {
     event.preventDefault();
     state.energyBusy = true;
@@ -439,6 +515,33 @@
     }
   }
 
+  async function submitSpeedCurveSettings(event) {
+    event.preventDefault();
+    state.speedCurveBusy = true;
+    syncSpeedCurveBusyState();
+    setStatus(els.speedCurveStatus, 'Salvando curva da velocidade...');
+    try {
+      const draft = readDraftSpeedCurve();
+      const response = await fetch(buildApiUrl('/api/admin/flashcards/speed-curve-settings'), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify(draft)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.settings) {
+        throw new Error(payload?.message || 'Nao foi possivel salvar a curva da velocidade.');
+      }
+      applySpeedCurve(payload.settings);
+      setStatus(els.speedCurveStatus, payload?.message || 'Curva da velocidade atualizada.', 'success');
+    } catch (error) {
+      setStatus(els.speedCurveStatus, error?.message || 'Nao foi possivel salvar a curva da velocidade.', 'error');
+    } finally {
+      state.speedCurveBusy = false;
+      syncSpeedCurveBusyState();
+    }
+  }
+
   function bindEvents() {
     els.energyForm?.addEventListener('submit', submitEnergySettings);
     els.multiplierInput?.addEventListener('input', renderPreview);
@@ -446,6 +549,7 @@
     els.welcomeModesForm?.addEventListener('submit', submitWelcomeModeSettings);
     els.flashcardsPhaseForm?.addEventListener('submit', submitFlashcardsPhaseSettings);
     els.flashcardsLevelRulesForm?.addEventListener('submit', submitFlashcardsLevelRulesSettings);
+    els.speedCurveForm?.addEventListener('submit', submitSpeedCurveSettings);
   }
 
   (async () => {
@@ -454,6 +558,7 @@
     syncWelcomeModesBusyState();
     syncFlashcardsPhaseBusyState();
     syncFlashcardsLevelRulesBusyState();
+    syncSpeedCurveBusyState();
     renderPreview();
     renderWelcomeModesFact();
     renderFlashcardsPhaseFact();
@@ -463,6 +568,7 @@
       setStatus(els.welcomeModesStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.flashcardsPhaseStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.flashcardsLevelRulesStatus, 'Acesso restrito ao administrador.', 'error');
+      setStatus(els.speedCurveStatus, 'Acesso restrito ao administrador.', 'error');
       window.setTimeout(() => navigateTo('/account', { replace: true }), 900);
       return;
     }
@@ -471,18 +577,21 @@
         loadEnergySettings(),
         loadWelcomeModeSettings(),
         loadFlashcardsPhaseSettings(),
-        loadFlashcardsLevelRulesSettings()
+        loadFlashcardsLevelRulesSettings(),
+        loadSpeedCurveSettings()
       ]);
       setStatus(els.energyStatus, 'Configuracoes carregadas.');
       setStatus(els.welcomeModesStatus, 'Modos extras sincronizados.');
       setStatus(els.flashcardsPhaseStatus, 'Fase fourth-star sincronizada.');
       setStatus(els.flashcardsLevelRulesStatus, 'Tabela de niveis sincronizada.');
+      setStatus(els.speedCurveStatus, 'Curva da velocidade sincronizada.');
     } catch (error) {
       const message = error?.message || 'Nao foi possivel carregar as configuracoes do admin.';
       setStatus(els.energyStatus, message, 'error');
       setStatus(els.welcomeModesStatus, message, 'error');
       setStatus(els.flashcardsPhaseStatus, message, 'error');
       setStatus(els.flashcardsLevelRulesStatus, message, 'error');
+      setStatus(els.speedCurveStatus, message, 'error');
     }
   })();
 })();
