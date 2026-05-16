@@ -1133,13 +1133,6 @@ function resolveFlashcardSpeedLevelGainPerMinute(speedPerHour) {
   return 4;
 }
 
-function computeFlashcardSpeedPerHour(normalizedCharsTotal, trainingTimeMs) {
-  const safeCharsTotal = Math.max(0, Number(normalizedCharsTotal) || 0);
-  const safeTrainingMs = Math.max(0, Number(trainingTimeMs) || 0);
-  if (safeCharsTotal <= 0 || safeTrainingMs <= 0) return 0;
-  return Math.max(0, Number(((safeCharsTotal * 3600000) / safeTrainingMs).toFixed(1)));
-}
-
 const xpRequiredForNextLevel = (level) => {
   const normalizedLevel = Math.max(1, Math.floor(Number(level) || 1));
   return normalizedLevel + 20;
@@ -4878,8 +4871,12 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
 
   const totalsResult = await client.query(
     `SELECT
-       COALESCE(stats.training_time_ms, 0)::bigint AS training_time_ms,
-       COALESCE(speed_samples.normalized_chars_total, 0)::numeric AS normalized_chars_total
+       CASE
+         WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_total, 0) > 0
+           THEN ROUND((COALESCE(speed_samples.normalized_chars_total, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+         ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
+       END AS base_speed_per_hour,
+       COALESCE(overrides.speed_delta, 0)::numeric AS speed_delta
      FROM public.users u
      LEFT JOIN public.user_flashcard_stats stats
        ON stats.user_id = u.id
@@ -4898,14 +4895,16 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
        GROUP BY user_id
      ) speed_samples
        ON speed_samples.user_id = u.id
+     LEFT JOIN public.user_ranking_overrides overrides
+       ON overrides.user_id = u.id
      WHERE u.id = $1
      LIMIT 1`,
     [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
   );
   const totalsRow = totalsResult.rows[0] || {};
-  const speedPerHour = computeFlashcardSpeedPerHour(
-    totalsRow.normalized_chars_total,
-    totalsRow.training_time_ms
+  const speedPerHour = Math.max(
+    0,
+    Number((Number(totalsRow.base_speed_per_hour || 0) + Number(totalsRow.speed_delta || 0)).toFixed(1))
   );
   const levelGainPerMinute = resolveFlashcardSpeedLevelGainPerMinute(speedPerHour);
   const levelDelta = practiceMinutes * levelGainPerMinute;
@@ -5093,7 +5092,11 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     throw error;
   }
 
-  const rawProgress = Array.isArray(payload?.progress) ? payload.progress : [];
+  const hasProgressPayload = Array.isArray(payload?.progress);
+  const hasHiddenCardIdsPayload = Array.isArray(payload?.hiddenCardIds);
+  const hasOnTablePayload = Array.isArray(payload?.onTable);
+  const allowProgressReset = payload?.forceProgressReset === true;
+  const rawProgress = hasProgressPayload ? payload.progress : [];
   if (rawProgress.length > 5000) {
     const error = new Error('Quantidade de flashcards acima do limite suportado.');
     error.statusCode = 413;
@@ -5107,29 +5110,22 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       dedupedProgress.set(normalized.cardId, normalized);
     }
   });
-  const progress = Array.from(dedupedProgress.values());
+  let progress = Array.from(dedupedProgress.values());
   const stats = normalizeFlashcardStats(payload?.stats, totalFlashcardLettersFromProgress(progress));
   const gameOptions = normalizeFlashcardGameOptions(payload?.gameOptions);
-  const hiddenCardIds = Array.isArray(payload?.hiddenCardIds)
+  const hiddenCardIds = hasHiddenCardIdsPayload
     ? Array.from(new Set(payload.hiddenCardIds
       .map((cardId) => typeof cardId === 'string' ? cardId.trim() : '')
       .filter(Boolean)))
     : [];
-  const rawOnTable = Array.isArray(payload?.onTable) ? payload.onTable : [];
+  const rawOnTable = hasOnTablePayload ? payload.onTable : [];
   const dedupedOnTable = new Map();
   rawOnTable.forEach((item) => {
     const normalized = normalizeFlashcardOnTableRecord(item);
     if (normalized) dedupedOnTable.set(normalized.cardId, normalized);
   });
   const onTable = Array.from(dedupedOnTable.values());
-  const requestedUserLevel = normalizeUserFlashcardLevel(payload?.userLevel ?? payload?.level);
-  const requestedUserLevelSyncedAtMs = (() => {
-    const rawValue = payload?.userLevelUpdatedAt ?? payload?.meta?.userLevelUpdatedAt;
-    if (!rawValue) return 0;
-    const parsed = Date.parse(rawValue);
-    return Number.isFinite(parsed) ? parsed : 0;
-  })();
-  let persistedUserLevel = requestedUserLevel;
+  let persistedUserLevel = 1;
   let persistedUserLevelUpdatedAt = null;
   let booksEnergyXpTotal = 0;
   let booksEnergyXpDelta = 0;
@@ -5148,34 +5144,11 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       [normalizedUserId]
     );
     const currentUserLevelRow = currentUserLevelResult.rows[0] || {};
-    const currentPersistedUserLevel = normalizeUserFlashcardLevel(
-      currentUserLevelRow.level ?? requestedUserLevel
-    );
-    const currentUserLevelUpdatedAtMs = currentUserLevelRow.level_updated_at
-      ? Date.parse(currentUserLevelRow.level_updated_at)
-      : 0;
-    const clientSawCurrentUserLevel = !currentUserLevelUpdatedAtMs
-      || requestedUserLevelSyncedAtMs >= currentUserLevelUpdatedAtMs - 1000;
-
-    if (clientSawCurrentUserLevel && requestedUserLevel < currentPersistedUserLevel) {
-      const userLevelResult = await client.query(
-        `UPDATE public.users
-         SET level = $2,
-             level_updated_at = now()
-         WHERE id = $1
-         RETURNING level, level_updated_at`,
-        [normalizedUserId, requestedUserLevel]
-      );
-      persistedUserLevel = normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level ?? requestedUserLevel);
-      persistedUserLevelUpdatedAt = userLevelResult.rows[0]?.level_updated_at
-        ? new Date(userLevelResult.rows[0].level_updated_at).toISOString()
-        : null;
-    } else {
-      persistedUserLevel = currentPersistedUserLevel;
-      persistedUserLevelUpdatedAt = currentUserLevelRow.level_updated_at
-        ? new Date(currentUserLevelRow.level_updated_at).toISOString()
-        : null;
-    }
+    const currentPersistedUserLevel = normalizeUserFlashcardLevel(currentUserLevelRow.level);
+    persistedUserLevel = currentPersistedUserLevel;
+    persistedUserLevelUpdatedAt = currentUserLevelRow.level_updated_at
+      ? new Date(currentUserLevelRow.level_updated_at).toISOString()
+      : null;
 
     const existingStatsResult = await client.query(
       `SELECT training_time_ms, speakings, listenings, readings
@@ -5197,6 +5170,9 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       if (!cardId) return;
       existingProgressByCardId.set(cardId, mapped);
     });
+    if (hasProgressPayload && !allowProgressReset && !progress.length && existingProgressByCardId.size > 0) {
+      progress = Array.from(existingProgressByCardId.values());
+    }
     const cardsTodayDelta = progress.reduce((total, item) => {
       const cardId = String(item?.cardId || '').trim();
       if (!cardId) return total;
@@ -5252,160 +5228,166 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     const listeningCharsDelta = Math.max(0, persistedListenings - existingListenings);
     const readingCharsDelta = Math.max(0, persistedReadings - existingReadings);
 
-    if (progress.length) {
-      const cardIds = progress.map((item) => item.cardId);
-      await client.query(
-        `DELETE FROM public.user_flashcard_progress
-         WHERE user_id = $1
-           AND NOT (card_id = ANY($2::text[]))`,
-        [normalizedUserId, cardIds]
-      );
-
-      const values = [];
-      const params = [];
-      progress.forEach((item, index) => {
-        const offset = index * 13;
-        values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, now())`);
-        params.push(
-          normalizedUserId,
-          item.cardId,
-          item.phaseIndex,
-          item.targetPhaseIndex,
-          item.status,
-          Boolean(item.typePortuguese),
-          flashcardTimestampFromMillis(item.memorizingStartedAt),
-          item.memorizingDurationMs,
-          flashcardTimestampFromMillis(item.availableAt),
-          flashcardTimestampFromMillis(item.returnedAt),
-          flashcardTimestampFromMillis(item.createdAt),
-          Math.max(1, Math.round(Number(item.cardChars) || 10)),
-          item.sealImage
+    if (hasProgressPayload) {
+      if (progress.length) {
+        const cardIds = progress.map((item) => item.cardId);
+        await client.query(
+          `DELETE FROM public.user_flashcard_progress
+           WHERE user_id = $1
+             AND NOT (card_id = ANY($2::text[]))`,
+          [normalizedUserId, cardIds]
         );
-      });
 
-      await client.query(
-        `INSERT INTO public.user_flashcard_progress (
-           user_id,
-           card_id,
-           phase_index,
-           target_phase_index,
-           status,
-           type_portuguese,
-           memorizing_started_at,
-           memorizing_duration_ms,
-           available_at,
-           returned_at,
-           created_at,
-           card_chars,
-           seal_image,
-           updated_at
-         )
-         VALUES ${values.join(', ')}
-         ON CONFLICT (user_id, card_id)
-         DO UPDATE SET
-           phase_index = EXCLUDED.phase_index,
-           target_phase_index = EXCLUDED.target_phase_index,
-           status = EXCLUDED.status,
-           type_portuguese = EXCLUDED.type_portuguese,
-           memorizing_started_at = EXCLUDED.memorizing_started_at,
-           memorizing_duration_ms = EXCLUDED.memorizing_duration_ms,
-           available_at = EXCLUDED.available_at,
-           returned_at = EXCLUDED.returned_at,
-           card_chars = EXCLUDED.card_chars,
-           seal_image = EXCLUDED.seal_image,
-           updated_at = now()`,
-        params
-      );
-    } else {
-      await client.query(
-        `DELETE FROM public.user_flashcard_progress
-         WHERE user_id = $1`,
-        [normalizedUserId]
-      );
+        const values = [];
+        const params = [];
+        progress.forEach((item, index) => {
+          const offset = index * 13;
+          values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, now())`);
+          params.push(
+            normalizedUserId,
+            item.cardId,
+            item.phaseIndex,
+            item.targetPhaseIndex,
+            item.status,
+            Boolean(item.typePortuguese),
+            flashcardTimestampFromMillis(item.memorizingStartedAt),
+            item.memorizingDurationMs,
+            flashcardTimestampFromMillis(item.availableAt),
+            flashcardTimestampFromMillis(item.returnedAt),
+            flashcardTimestampFromMillis(item.createdAt),
+            Math.max(1, Math.round(Number(item.cardChars) || 10)),
+            item.sealImage
+          );
+        });
+
+        await client.query(
+          `INSERT INTO public.user_flashcard_progress (
+             user_id,
+             card_id,
+             phase_index,
+             target_phase_index,
+             status,
+             type_portuguese,
+             memorizing_started_at,
+             memorizing_duration_ms,
+             available_at,
+             returned_at,
+             created_at,
+             card_chars,
+             seal_image,
+             updated_at
+           )
+           VALUES ${values.join(', ')}
+           ON CONFLICT (user_id, card_id)
+           DO UPDATE SET
+             phase_index = EXCLUDED.phase_index,
+             target_phase_index = EXCLUDED.target_phase_index,
+             status = EXCLUDED.status,
+             type_portuguese = EXCLUDED.type_portuguese,
+             memorizing_started_at = EXCLUDED.memorizing_started_at,
+             memorizing_duration_ms = EXCLUDED.memorizing_duration_ms,
+             available_at = EXCLUDED.available_at,
+             returned_at = EXCLUDED.returned_at,
+             card_chars = EXCLUDED.card_chars,
+             seal_image = EXCLUDED.seal_image,
+             updated_at = now()`,
+          params
+        );
+      } else if (allowProgressReset) {
+        await client.query(
+          `DELETE FROM public.user_flashcard_progress
+           WHERE user_id = $1`,
+          [normalizedUserId]
+        );
+      }
     }
 
-    if (hiddenCardIds.length) {
-      await client.query(
-        `DELETE FROM public.user_flashcard_hidden
-         WHERE user_id = $1
-           AND NOT (card_id = ANY($2::text[]))`,
-        [normalizedUserId, hiddenCardIds]
-      );
+    if (hasHiddenCardIdsPayload) {
+      if (hiddenCardIds.length) {
+        await client.query(
+          `DELETE FROM public.user_flashcard_hidden
+           WHERE user_id = $1
+             AND NOT (card_id = ANY($2::text[]))`,
+          [normalizedUserId, hiddenCardIds]
+        );
 
-      const hiddenValues = [];
-      const hiddenParams = [];
-      hiddenCardIds.forEach((cardId, index) => {
-        const offset = index * 2;
-        hiddenValues.push(`($${offset + 1}, $${offset + 2}, now(), now())`);
-        hiddenParams.push(normalizedUserId, cardId);
-      });
+        const hiddenValues = [];
+        const hiddenParams = [];
+        hiddenCardIds.forEach((cardId, index) => {
+          const offset = index * 2;
+          hiddenValues.push(`($${offset + 1}, $${offset + 2}, now(), now())`);
+          hiddenParams.push(normalizedUserId, cardId);
+        });
 
-      await client.query(
-        `INSERT INTO public.user_flashcard_hidden (
-           user_id,
-           card_id,
-           created_at,
-           updated_at
-         )
-         VALUES ${hiddenValues.join(', ')}
-         ON CONFLICT (user_id, card_id)
-         DO UPDATE SET
-           updated_at = now()`,
-        hiddenParams
-      );
-    } else {
-      await client.query(
-        `DELETE FROM public.user_flashcard_hidden
-         WHERE user_id = $1`,
-        [normalizedUserId]
-      );
+        await client.query(
+          `INSERT INTO public.user_flashcard_hidden (
+             user_id,
+             card_id,
+             created_at,
+             updated_at
+           )
+           VALUES ${hiddenValues.join(', ')}
+           ON CONFLICT (user_id, card_id)
+           DO UPDATE SET
+             updated_at = now()`,
+          hiddenParams
+        );
+      } else {
+        await client.query(
+          `DELETE FROM public.user_flashcard_hidden
+           WHERE user_id = $1`,
+          [normalizedUserId]
+        );
+      }
     }
 
-    if (onTable.length) {
-      const onTableCardIds = onTable.map((item) => item.cardId);
-      await client.query(
-        `DELETE FROM public.user_flashcard_on_table
-         WHERE user_id = $1
-           AND NOT (card_id = ANY($2::text[]))`,
-        [normalizedUserId, onTableCardIds]
-      );
-
-      const onTableValues = [];
-      const onTableParams = [];
-      onTable.forEach((item, index) => {
-        const offset = index * 5;
-        onTableValues.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`);
-        onTableParams.push(
-          normalizedUserId,
-          item.cardId,
-          item.stars,
-          item.stage,
-          flashcardTimestampFromMillis(item.updatedAt) || new Date()
+    if (hasOnTablePayload) {
+      if (onTable.length) {
+        const onTableCardIds = onTable.map((item) => item.cardId);
+        await client.query(
+          `DELETE FROM public.user_flashcard_on_table
+           WHERE user_id = $1
+             AND NOT (card_id = ANY($2::text[]))`,
+          [normalizedUserId, onTableCardIds]
         );
-      });
 
-      await client.query(
-        `INSERT INTO public.user_flashcard_on_table (
-           user_id,
-           card_id,
-           stars,
-           stage,
-           updated_at
-         )
-         VALUES ${onTableValues.join(', ')}
-         ON CONFLICT (user_id, card_id)
-         DO UPDATE SET
-           stars = EXCLUDED.stars,
-           stage = EXCLUDED.stage,
-           updated_at = EXCLUDED.updated_at`,
-        onTableParams
-      );
-    } else {
-      await client.query(
-        `DELETE FROM public.user_flashcard_on_table
-         WHERE user_id = $1`,
-        [normalizedUserId]
-      );
+        const onTableValues = [];
+        const onTableParams = [];
+        onTable.forEach((item, index) => {
+          const offset = index * 5;
+          onTableValues.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`);
+          onTableParams.push(
+            normalizedUserId,
+            item.cardId,
+            item.stars,
+            item.stage,
+            flashcardTimestampFromMillis(item.updatedAt) || new Date()
+          );
+        });
+
+        await client.query(
+          `INSERT INTO public.user_flashcard_on_table (
+             user_id,
+             card_id,
+             stars,
+             stage,
+             updated_at
+           )
+           VALUES ${onTableValues.join(', ')}
+           ON CONFLICT (user_id, card_id)
+           DO UPDATE SET
+             stars = EXCLUDED.stars,
+             stage = EXCLUDED.stage,
+             updated_at = EXCLUDED.updated_at`,
+          onTableParams
+        );
+      } else {
+        await client.query(
+          `DELETE FROM public.user_flashcard_on_table
+           WHERE user_id = $1`,
+          [normalizedUserId]
+        );
+      }
     }
 
     if (cardsTodayDelta > 0) {
@@ -15425,6 +15407,7 @@ app.post('/api/flashcards/session-clock', express.json({ limit: '16kb' }), async
         success: true,
         action: 'out',
         addedTrainingMs: Math.max(0, Number(result?.addedTrainingMs) || 0),
+        speedDrivenLevelDelta: Math.max(0, Number(result?.speedDrivenLevelDelta) || 0),
         trainingTimeMs: Math.max(0, Number(result?.trainingTimeMs) || 0)
       });
       return;
