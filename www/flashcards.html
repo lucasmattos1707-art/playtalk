@@ -10368,6 +10368,7 @@
       const ON_TABLE_MAX_CARDS = 14;
       const ON_TABLE_BASE_MAX = 6;
       const ON_TABLE_REVIEW_MAX = 8;
+      const FLASHCARD_SESSION_TICK_INTERVAL_MS = 60000;
       const GAME_UPCOMING_PRELOAD_COUNT = 3;
       const GAME_MIC_UNLOCK_DELAY_MS = 1200;
       const TUTORIAL_AUDIO_ROOT = AUDIOSTUTO_PUBLIC_ROOT;
@@ -10705,6 +10706,7 @@
           firstStageMicHintIndex: 0,
           idleAutoPauseTimer: 0,
           sessionClockActive: false,
+          sessionClockTickTimer: 0,
           orderedPoolCursor: {
             base: -1,
             review: -1
@@ -13768,7 +13770,7 @@
         if (!els.welcomeLevelProgressBar) return;
         if (!state.entry.sessionResolved) return;
         const xpProgress = reconcileEnergyLevelProgress({ animate: Boolean(state.entry.welcomeVisible) });
-        const level = xpProgress.level;
+        const level = currentUserLevel();
         syncWelcomeIdentityHeader();
         if (state.ui.welcomeSelectedLevel === null || state.ui.welcomeSelectedLevel === undefined || state.ui.welcomeSelectedLevel === '') {
           setSelectedGameLevel(level);
@@ -13976,9 +13978,30 @@
         };
       }
 
+      function stopFlashcardSessionTick() {
+        if (!state.game.sessionClockTickTimer) return;
+        window.clearInterval(state.game.sessionClockTickTimer);
+        state.game.sessionClockTickTimer = 0;
+      }
+
+      function startFlashcardSessionTick() {
+        stopFlashcardSessionTick();
+        if (!state.user?.id) return;
+        state.game.sessionClockTickTimer = window.setInterval(() => {
+          if (!state.user?.id) return;
+          if (!state.game.active || state.game.paused || state.ui.gamePausedAtWelcome) return;
+          if (!state.game.sessionClockActive) return;
+          void signalFlashcardSessionClock('tick');
+        }, FLASHCARD_SESSION_TICK_INTERVAL_MS);
+      }
+
       async function signalFlashcardSessionClock(action) {
         if (!state.user?.id) return null;
-        const normalizedAction = action === 'out' ? 'out' : 'in';
+        const normalizedAction = action === 'out'
+          ? 'out'
+          : action === 'tick'
+            ? 'tick'
+            : 'in';
         try {
           const response = await fetch(buildApiUrl('/api/flashcards/session-clock'), {
             method: 'POST',
@@ -13998,14 +14021,23 @@
           }
           if (normalizedAction === 'in') {
             state.game.sessionClockActive = true;
+            startFlashcardSessionTick();
           }
           if (normalizedAction === 'out') {
             state.entry.pendingFlashSessionOut = false;
             state.game.sessionClockActive = false;
+            stopFlashcardSessionTick();
           }
-          if (normalizedAction === 'out' && Number.isFinite(Number(payload?.trainingTimeMs))) {
+          if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.trainingTimeMs))) {
             state.stats.trainingTimeMs = Math.max(0, Math.round(Number(payload.trainingTimeMs) || 0));
             saveUserStats({ skipCloudSync: true });
+          }
+          if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.userLevel))) {
+            state.userLevel = normalizeUserLevel(payload.userLevel);
+            if (state.user) state.user.level = state.userLevel;
+            state.userLevelUpdatedAt = safeText(payload?.userLevelUpdatedAt || state.userLevelUpdatedAt);
+            syncWelcomeLevelProgress();
+            syncGameLevelNavigator();
           }
           return payload;
         } catch (_error) {
@@ -15373,24 +15405,9 @@
       }
 
       function pruneUnavailableUserProgress() {
-        if (isAdminUser()) return false;
-        const validCardIds = new Set(state.allCards.map((card) => safeText(card?.id)).filter(Boolean));
-        let changed = false;
-        const nextUserCards = new Map();
-        state.userCards.forEach((record, cardId) => {
-          const normalizedCardId = safeText(cardId);
-          if (!normalizedCardId || !validCardIds.has(normalizedCardId)) {
-            changed = true;
-            return;
-          }
-          nextUserCards.set(normalizedCardId, record);
-        });
-        if (changed) {
-          state.userCards = nextUserCards;
-          syncOwnedIdsFromProgress();
-          persistUserProgressLocally();
-        }
-        return changed;
+        // Safety: do not auto-prune and sync deletions when catalog IDs shift
+        // (for example after deck rename/title change).
+        return false;
       }
 
       function readyReviewCards() {
@@ -15517,20 +15534,13 @@
       function reconcileEnergyLevelProgress(options = {}) {
         if (isAdminUser()) return resolveEnergyLevelProgress();
         const progress = resolveEnergyLevelProgress();
-        const current = currentUserLevel();
         const previousPercent = Number.isFinite(Number(state.ui.welcomeLevelProgressPercent))
           ? Number(state.ui.welcomeLevelProgressPercent)
           : progress.percent;
         if (!Number.isFinite(Number(state.ui.welcomeLevelDisplayPercent))) {
           state.ui.welcomeLevelDisplayPercent = previousPercent;
         }
-        const leveledUp = progress.level > current;
-        if (leveledUp) {
-          state.userLevel = progress.level;
-          if (state.user) state.user.level = progress.level;
-          state.lastLevelUpLevel = progress.level;
-          saveUserProgress();
-        }
+        const leveledUp = false;
         const shouldAnimateToFull = leveledUp && previousPercent > progress.percent;
         setWelcomeAvatarProgress(shouldAnimateToFull ? 100 : progress.percent, { animate: Boolean(options.animate) });
         if (shouldAnimateToFull) {
@@ -23367,6 +23377,7 @@
         if (!state.game.active) return;
         clearGameIdleAutoPauseTimer();
         state.game.sessionClockActive = false;
+        stopFlashcardSessionTick();
         void signalFlashcardSessionClock('out');
         commitCurrentCardTrainingTime();
         if (!state.game.tutorial.active && state.game.entries.size) {
@@ -23446,6 +23457,7 @@
         state.ui.gamePausedAtWelcome = false;
         clearGameIdleAutoPauseTimer();
         state.game.sessionClockActive = false;
+        stopFlashcardSessionTick();
         await signalFlashcardSessionClock('out');
         clearGameStatusRankTimer();
         commitCurrentCardTrainingTime();
@@ -24595,6 +24607,7 @@
         window.addEventListener('beforeunload', () => {
           if (!state.game.active || state.game.paused) return;
           state.game.sessionClockActive = false;
+          stopFlashcardSessionTick();
           void signalFlashcardSessionClock('out');
         });
         window.addEventListener('online', () => {

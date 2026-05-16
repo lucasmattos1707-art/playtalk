@@ -1185,8 +1185,8 @@ const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = 
 
   const userLevelResult = await db.query(
     `UPDATE public.users
-     SET level = $2,
-         level_updated_at = CASE WHEN COALESCE(level, 1) <> $2 THEN now() ELSE level_updated_at END
+     SET level = GREATEST(COALESCE(level, 1), $2),
+         level_updated_at = CASE WHEN COALESCE(level, 1) <> GREATEST(COALESCE(level, 1), $2) THEN now() ELSE level_updated_at END
      WHERE id = $1
      RETURNING level`,
     [normalizedUserId, nextLevel]
@@ -5124,7 +5124,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     const normalized = normalizeFlashcardOnTableRecord(item);
     if (normalized) dedupedOnTable.set(normalized.cardId, normalized);
   });
-  const onTable = Array.from(dedupedOnTable.values());
+  const onTable = Array.from(dedupedOnTable.values()).slice(0, 6);
   let persistedUserLevel = 1;
   let persistedUserLevelUpdatedAt = null;
   let booksEnergyXpTotal = 0;
@@ -5605,10 +5605,11 @@ const startFlashcardSessionClock = async (userId) => {
   return { success: true, active: true };
 };
 
-const closeFlashcardSessionClock = async (userId) => {
+const closeFlashcardSessionClock = async (userId, options = {}) => {
   if (!pool) throw new Error('DATABASE_URL nao configurada.');
   await ensureFlashcardUserStateTables();
   const normalizedUserId = Number.parseInt(userId, 10);
+  const keepOpen = Boolean(options?.keepOpen);
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
     const error = new Error('userId invalido.');
     error.statusCode = 400;
@@ -5667,36 +5668,67 @@ const closeFlashcardSessionClock = async (userId) => {
       speedDrivenLevelDelta = Math.max(0, Number(speedDrivenLevel.levelDelta) || 0);
     }
 
-    await client.query(
-      `INSERT INTO public.user_flashcard_session_clock (
-         user_id,
-         flash_in_at,
-         flash_out_at,
-         updated_at
-       )
-       VALUES ($1, NULL, NULL, now())
-       ON CONFLICT (user_id)
-       DO UPDATE SET
-         flash_in_at = NULL,
-         flash_out_at = NULL,
-         updated_at = now()`,
-      [normalizedUserId]
-    );
+    if (keepOpen) {
+      await client.query(
+        `INSERT INTO public.user_flashcard_session_clock (
+           user_id,
+           flash_in_at,
+           flash_out_at,
+           updated_at
+         )
+         VALUES ($1, now(), NULL, now())
+         ON CONFLICT (user_id)
+         DO UPDATE SET
+           flash_in_at = now(),
+           flash_out_at = NULL,
+           updated_at = now()`,
+        [normalizedUserId]
+      );
+    } else {
+      await client.query(
+        `INSERT INTO public.user_flashcard_session_clock (
+           user_id,
+           flash_in_at,
+           flash_out_at,
+           updated_at
+         )
+         VALUES ($1, NULL, NULL, now())
+         ON CONFLICT (user_id)
+         DO UPDATE SET
+           flash_in_at = NULL,
+           flash_out_at = NULL,
+           updated_at = now()`,
+        [normalizedUserId]
+      );
+    }
 
-    const totalResult = await client.query(
-      `SELECT training_time_ms
-       FROM public.user_flashcard_stats
-       WHERE user_id = $1
-       LIMIT 1`,
-      [normalizedUserId]
-    );
+    const [totalResult, userLevelResult] = await Promise.all([
+      client.query(
+        `SELECT training_time_ms
+         FROM public.user_flashcard_stats
+         WHERE user_id = $1
+         LIMIT 1`,
+        [normalizedUserId]
+      ),
+      client.query(
+        `SELECT level, level_updated_at
+         FROM public.users
+         WHERE id = $1
+         LIMIT 1`,
+        [normalizedUserId]
+      )
+    ]);
     await client.query('COMMIT');
     return {
       success: true,
       addedTrainingMs,
       addedPracticeSeconds,
       speedDrivenLevelDelta,
-      trainingTimeMs: Math.max(0, Number(totalResult.rows[0]?.training_time_ms) || 0)
+      trainingTimeMs: Math.max(0, Number(totalResult.rows[0]?.training_time_ms) || 0),
+      userLevel: normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level),
+      userLevelUpdatedAt: userLevelResult.rows[0]?.level_updated_at
+        ? new Date(userLevelResult.rows[0].level_updated_at).toISOString()
+        : null
     };
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch (_rollbackError) {}
@@ -15408,12 +15440,27 @@ app.post('/api/flashcards/session-clock', express.json({ limit: '16kb' }), async
         action: 'out',
         addedTrainingMs: Math.max(0, Number(result?.addedTrainingMs) || 0),
         speedDrivenLevelDelta: Math.max(0, Number(result?.speedDrivenLevelDelta) || 0),
-        trainingTimeMs: Math.max(0, Number(result?.trainingTimeMs) || 0)
+        trainingTimeMs: Math.max(0, Number(result?.trainingTimeMs) || 0),
+        userLevel: normalizeUserFlashcardLevel(result?.userLevel),
+        userLevelUpdatedAt: result?.userLevelUpdatedAt || null
+      });
+      return;
+    }
+    if (action === 'tick') {
+      const result = await closeFlashcardSessionClock(authUser.id, { keepOpen: true });
+      res.json({
+        success: true,
+        action: 'tick',
+        addedTrainingMs: Math.max(0, Number(result?.addedTrainingMs) || 0),
+        speedDrivenLevelDelta: Math.max(0, Number(result?.speedDrivenLevelDelta) || 0),
+        trainingTimeMs: Math.max(0, Number(result?.trainingTimeMs) || 0),
+        userLevel: normalizeUserFlashcardLevel(result?.userLevel),
+        userLevelUpdatedAt: result?.userLevelUpdatedAt || null
       });
       return;
     }
 
-    res.status(400).json({ success: false, message: 'Acao invalida. Use in ou out.' });
+    res.status(400).json({ success: false, message: 'Acao invalida. Use in, out ou tick.' });
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     console.error('Erro ao atualizar sessao flashcards:', error);
