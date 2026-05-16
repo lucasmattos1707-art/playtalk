@@ -1120,10 +1120,24 @@ function buildFlashcardSpeedSampleValue(charsCount, curveSettings) {
   const safeChars = Math.max(1, Math.round(Number(charsCount) || 1));
   const multiplier = interpolateFlashcardSpeedMultiplier(safeChars, curveSettings);
   return {
-    rawChars: safeChars,
-    multiplier,
     sampleValue: Math.max(0.01, Number((safeChars * multiplier).toFixed(4)))
   };
+}
+
+function resolveFlashcardSpeedLevelGainPerMinute(speedPerHour) {
+  const speed = Math.max(0, Math.floor(Number(speedPerHour) || 0));
+  if (speed < 800) return 0;
+  if (speed <= 999) return 1;
+  if (speed <= 1199) return 2;
+  if (speed <= 1399) return 3;
+  return 4;
+}
+
+function computeFlashcardSpeedPerHour(normalizedCharsTotal, trainingTimeMs) {
+  const safeCharsTotal = Math.max(0, Number(normalizedCharsTotal) || 0);
+  const safeTrainingMs = Math.max(0, Number(trainingTimeMs) || 0);
+  if (safeCharsTotal <= 0 || safeTrainingMs <= 0) return 0;
+  return Math.max(0, Number(((safeCharsTotal * 3600000) / safeTrainingMs).toFixed(1)));
 }
 
 const xpRequiredForNextLevel = (level) => {
@@ -2989,17 +3003,48 @@ const ensureUserFlashcardSpeedSamplesTable = async () => {
     userFlashcardSpeedSamplesTableReadyPromise = (async () => {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_speed_samples (
-          id bigserial PRIMARY KEY,
           user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
           sample_value numeric(12,4) NOT NULL DEFAULT 0,
-          raw_chars integer NOT NULL DEFAULT 1,
-          multiplier numeric(8,4) NOT NULL DEFAULT 1,
-          created_at timestamptz NOT NULL DEFAULT now()
+          current_level integer NOT NULL DEFAULT 1
         )
       `);
       await pool.query(`
+        DO $$
+        DECLARE
+          pk_name text;
+        BEGIN
+          SELECT c.conname
+            INTO pk_name
+          FROM pg_constraint c
+          WHERE c.conrelid = 'public.user_flashcard_speed_samples'::regclass
+            AND c.contype = 'p'
+          LIMIT 1;
+          IF pk_name IS NOT NULL THEN
+            EXECUTE format('ALTER TABLE public.user_flashcard_speed_samples DROP CONSTRAINT %I', pk_name);
+          END IF;
+        END $$;
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_speed_samples
+        ADD COLUMN IF NOT EXISTS current_level integer NOT NULL DEFAULT 1
+      `);
+      await pool.query(`
+        UPDATE public.user_flashcard_speed_samples samples
+        SET current_level = LEAST(200, GREATEST(1, COALESCE(u.level, 1)))
+        FROM public.users u
+        WHERE u.id = samples.user_id
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_speed_samples
+        DROP COLUMN IF EXISTS id,
+        DROP COLUMN IF EXISTS raw_chars,
+        DROP COLUMN IF EXISTS multiplier,
+        DROP COLUMN IF EXISTS created_at
+      `);
+      await pool.query(`DROP INDEX IF EXISTS public.user_flashcard_speed_samples_user_idx`);
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS user_flashcard_speed_samples_user_idx
-        ON public.user_flashcard_speed_samples (user_id, created_at DESC, id DESC)
+        ON public.user_flashcard_speed_samples (user_id)
       `);
       return true;
     })().catch((error) => {
@@ -4784,42 +4829,99 @@ async function appendFlashcardSpeedSamples(client, userId, samples = []) {
   const sanitized = source
     .map((entry) => ({
       sampleValue: Math.max(0.01, Number(Number(entry?.sampleValue) || 0).toFixed(4)),
-      rawChars: Math.max(1, Math.round(Number(entry?.rawChars) || 1)),
-      multiplier: Math.max(0.01, Number(Number(entry?.multiplier) || 0).toFixed(4))
+      currentLevel: normalizeUserFlashcardLevel(entry?.currentLevel)
     }))
-    .filter((entry) => Number.isFinite(entry.sampleValue) && Number.isFinite(entry.rawChars) && Number.isFinite(entry.multiplier));
+    .filter((entry) => Number.isFinite(entry.sampleValue) && Number.isFinite(entry.currentLevel));
   if (!sanitized.length) return;
   await ensureUserFlashcardSpeedSamplesTable();
   const values = [];
   const params = [];
   sanitized.forEach((entry, index) => {
-    const offset = index * 4;
-    values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, now())`);
-    params.push(normalizedUserId, entry.sampleValue, entry.rawChars, entry.multiplier);
+    const offset = index * 3;
+    values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3})`);
+    params.push(normalizedUserId, entry.sampleValue, entry.currentLevel);
   });
   await client.query(
     `INSERT INTO public.user_flashcard_speed_samples (
        user_id,
        sample_value,
-       raw_chars,
-       multiplier,
-       created_at
+       current_level
      )
      VALUES ${values.join(', ')}`,
     params
   );
   await client.query(
-    `DELETE FROM public.user_flashcard_speed_samples
-     WHERE user_id = $1
-       AND id IN (
-         SELECT id
-         FROM public.user_flashcard_speed_samples
-         WHERE user_id = $1
-         ORDER BY created_at DESC, id DESC
-         OFFSET $2
-       )`,
+    `WITH ranked AS (
+       SELECT
+         ctid,
+         ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ctid DESC) AS row_index
+       FROM public.user_flashcard_speed_samples
+       WHERE user_id = $1
+     )
+     DELETE FROM public.user_flashcard_speed_samples AS samples
+     USING ranked
+     WHERE samples.ctid = ranked.ctid
+       AND ranked.row_index > $2`,
     [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
   );
+}
+
+async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingMs) {
+  const normalizedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    return { levelDelta: 0, practiceMinutes: 0, speedPerHour: 0 };
+  }
+  const practiceMinutes = Math.floor(Math.max(0, Number(addedTrainingMs) || 0) / 60000);
+  if (practiceMinutes <= 0) {
+    return { levelDelta: 0, practiceMinutes: 0, speedPerHour: 0 };
+  }
+
+  const totalsResult = await client.query(
+    `SELECT
+       COALESCE(stats.training_time_ms, 0)::bigint AS training_time_ms,
+       COALESCE(speed_samples.normalized_chars_total, 0)::numeric AS normalized_chars_total
+     FROM public.users u
+     LEFT JOIN public.user_flashcard_stats stats
+       ON stats.user_id = u.id
+     LEFT JOIN (
+       SELECT
+         user_id,
+         COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_total
+       FROM (
+         SELECT
+           user_id,
+           sample_value,
+           ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ctid DESC) AS row_index
+         FROM public.user_flashcard_speed_samples
+       ) ranked_speed_samples
+       WHERE ranked_speed_samples.row_index <= $2
+       GROUP BY user_id
+     ) speed_samples
+       ON speed_samples.user_id = u.id
+     WHERE u.id = $1
+     LIMIT 1`,
+    [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
+  );
+  const totalsRow = totalsResult.rows[0] || {};
+  const speedPerHour = computeFlashcardSpeedPerHour(
+    totalsRow.normalized_chars_total,
+    totalsRow.training_time_ms
+  );
+  const levelGainPerMinute = resolveFlashcardSpeedLevelGainPerMinute(speedPerHour);
+  const levelDelta = practiceMinutes * levelGainPerMinute;
+  if (levelDelta <= 0) {
+    return { levelDelta: 0, practiceMinutes, speedPerHour };
+  }
+
+  await client.query(
+    `UPDATE public.users
+     SET level = LEAST(200, GREATEST(1, COALESCE(level, 1)) + $2),
+         level_updated_at = now()
+     WHERE id = $1`,
+    [normalizedUserId, levelDelta]
+  );
+
+  return { levelDelta, practiceMinutes, speedPerHour };
 }
 
 const readFlashcardStateForUser = async (userId) => {
@@ -4919,7 +5021,7 @@ const readFlashcardStateForUser = async (userId) => {
          SELECT sample_value
          FROM public.user_flashcard_speed_samples
          WHERE user_id = $1
-         ORDER BY created_at DESC, id DESC
+         ORDER BY ctid DESC
          LIMIT $2
        ) recent`,
       [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
@@ -5114,7 +5216,10 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       const nextPhase = resolveFlashcardMissionPhase(item);
       const winsDelta = Math.max(0, nextPhase - previousPhase);
       if (!winsDelta) return;
-      const speedSample = buildFlashcardSpeedSampleValue(item?.cardChars, speedCurveSettings);
+      const speedSample = {
+        ...buildFlashcardSpeedSampleValue(item?.cardChars, speedCurveSettings),
+        currentLevel: persistedUserLevel
+      };
       for (let index = 0; index < winsDelta; index += 1) {
         generatedSpeedSamples.push(speedSample);
       }
@@ -5545,6 +5650,7 @@ const closeFlashcardSessionClock = async (userId) => {
       : 0;
 
     const addedPracticeSeconds = Math.max(0, Math.round(addedTrainingMs / 1000));
+    let speedDrivenLevelDelta = 0;
     if (addedTrainingMs > 0) {
       await client.query(
         `INSERT INTO public.user_flashcard_stats (
@@ -5575,6 +5681,8 @@ const closeFlashcardSessionClock = async (userId) => {
            updated_at = now()`,
         [normalizedUserId, addedPracticeSeconds]
       );
+      const speedDrivenLevel = await applyFlashcardSpeedMinuteLevelGain(client, normalizedUserId, addedTrainingMs);
+      speedDrivenLevelDelta = Math.max(0, Number(speedDrivenLevel.levelDelta) || 0);
     }
 
     await client.query(
@@ -5605,6 +5713,7 @@ const closeFlashcardSessionClock = async (userId) => {
       success: true,
       addedTrainingMs,
       addedPracticeSeconds,
+      speedDrivenLevelDelta,
       trainingTimeMs: Math.max(0, Number(totalResult.rows[0]?.training_time_ms) || 0)
     };
   } catch (error) {
@@ -14637,7 +14746,7 @@ app.get('/api/users/flashcards', async (req, res) => {
            SELECT
              user_id,
              sample_value,
-             ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC, id DESC) AS row_index
+             ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ctid DESC) AS row_index
            FROM public.user_flashcard_speed_samples
          ) ranked_speed_samples
          WHERE ranked_speed_samples.row_index <= ${FLASHCARD_SPEED_SAMPLE_LIMIT}
@@ -18463,7 +18572,7 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
            SELECT
              user_id,
              sample_value,
-             ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC, id DESC) AS row_index
+             ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ctid DESC) AS row_index
            FROM public.user_flashcard_speed_samples
          ) ranked_speed_samples
          WHERE ranked_speed_samples.row_index <= ${FLASHCARD_SPEED_SAMPLE_LIMIT}
