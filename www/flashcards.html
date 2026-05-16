@@ -13770,24 +13770,25 @@
         if (!els.welcomeLevelProgressBar) return;
         if (!state.entry.sessionResolved) return;
         const xpProgress = reconcileEnergyLevelProgress({ animate: Boolean(state.entry.welcomeVisible) });
-        const level = currentUserLevel();
+        const displayLevel = normalizeUserLevel(xpProgress.level);
+        const deckLevel = currentUserLevel();
         syncWelcomeIdentityHeader();
         if (state.ui.welcomeSelectedLevel === null || state.ui.welcomeSelectedLevel === undefined || state.ui.welcomeSelectedLevel === '') {
-          setSelectedGameLevel(level);
+          setSelectedGameLevel(deckLevel);
         }
         const percent = xpProgress.percent;
         if (els.welcomeLevelHeading) {
-          els.welcomeLevelHeading.textContent = `Nível ${level}`;
+          els.welcomeLevelHeading.textContent = `Nível ${displayLevel}`;
         }
         ensureWelcomeHeadingRotation();
         if (els.welcomeUserLevelNumber) {
-          els.welcomeUserLevelNumber.textContent = String(level);
+          els.welcomeUserLevelNumber.textContent = String(displayLevel);
         }
         if (els.welcomeLevelTitle) {
-          els.welcomeLevelTitle.textContent = `Nível ${level}`;
+          els.welcomeLevelTitle.textContent = `Nível ${displayLevel}`;
         }
         if (els.welcomeUserLevelLine) {
-          els.welcomeUserLevelLine.textContent = `Nível ${level}`;
+          els.welcomeUserLevelLine.textContent = `Nível ${displayLevel}`;
         }
         if (els.welcomeXpLine) {
           const currentXp = Math.max(0, Math.round(Number(xpProgress.currentXp) || 0));

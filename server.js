@@ -1153,7 +1153,7 @@ const levelFromTotalXp = (totalXp) => {
 const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = null) => {
   const normalizedUserId = Number.parseInt(userId, 10);
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
-    return { xpDelta: 0, levelsAwarded: 0, totalXp: 0, userLevel: 1 };
+    return { xpDelta: 0, levelsAwarded: 0, totalXp: 0, xpLevel: 1 };
   }
 
   const cardsDelta = Math.max(0, Math.round(Number(deltas?.cardsDelta) || 0));
@@ -1182,17 +1182,7 @@ const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = 
   );
   const totalXp = Math.max(0, Number(xpResult.rows[0]?.energy_xp_total) || 0);
   const nextLevel = levelFromTotalXp(totalXp);
-
-  const userLevelResult = await db.query(
-    `UPDATE public.users
-     SET level = GREATEST(COALESCE(level, 1), $2),
-         level_updated_at = CASE WHEN COALESCE(level, 1) <> GREATEST(COALESCE(level, 1), $2) THEN now() ELSE level_updated_at END
-     WHERE id = $1
-     RETURNING level`,
-    [normalizedUserId, nextLevel]
-  );
-  const persistedLevel = normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level ?? nextLevel);
-  const levelsAwarded = Math.max(0, persistedLevel - previousLevel);
+  const levelsAwarded = Math.max(0, nextLevel - previousLevel);
 
   const coinsResult = await db.query(
     `INSERT INTO public.user_coins (user_id, coins_total, created_at, updated_at)
@@ -1209,7 +1199,7 @@ const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = 
     xpDelta,
     levelsAwarded,
     totalXp,
-    userLevel: persistedLevel,
+    xpLevel: nextLevel,
     coinsDelta,
     coinsTotal: Math.max(0, Number(coinsResult.rows[0]?.coins_total) || 0)
   };
@@ -5032,6 +5022,7 @@ const readFlashcardStateForUser = async (userId) => {
   const accurateAggregate = getFlashcardAccurateAggregateFromRow(accurateResult.rows[0]);
 
   const flashcardStatsRow = statsResult.rows[0] || {};
+  const normalizedCharsTotal = Math.max(0, Number(speedSamplesResult.rows[0]?.normalized_chars_total) || 0);
   const gameOptions = normalizeFlashcardGameOptions({
     difficulty: flashcardStatsRow.game_option_difficulty,
     speed: flashcardStatsRow.game_option_speed,
@@ -5493,7 +5484,6 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       booksEnergyLevelsAwarded = Math.max(0, Number(xpAward?.levelsAwarded) || 0);
       coinsDelta = Math.max(0, Number(xpAward?.coinsDelta) || 0);
       coinsTotal = Math.max(0, Number(xpAward?.coinsTotal) || 0);
-      persistedUserLevel = normalizeUserFlashcardLevel(xpAward?.userLevel ?? persistedUserLevel);
       await updateUserPresenceClassProgress(client, normalizedUserId, {
         speakingCharsDelta,
         listeningCharsDelta
@@ -5516,7 +5506,6 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       booksEnergyLevelsAwarded = Math.max(0, Number(xpAward?.levelsAwarded) || 0);
       coinsDelta = Math.max(0, Number(xpAward?.coinsDelta) || 0);
       coinsTotal = Math.max(0, Number(xpAward?.coinsTotal) || 0);
-      persistedUserLevel = normalizeUserFlashcardLevel(xpAward?.userLevel ?? persistedUserLevel);
     }
 
     await client.query(
