@@ -426,6 +426,7 @@
         id: `${slug(idSource)}-${slug(title)}-${index}`,
         legacyId,
         source: sourceKey,
+        sourceSlug: slug(sourceKey),
         sourceIndex: index,
         deckTitle: title,
         imageUrl: safeText(item?.imagem || item?.image),
@@ -595,15 +596,51 @@
   function hydrateCards(progressMap) {
     const cache = readCardsCache();
     const cardMap = new Map();
+    const sourceIndexMap = new Map();
     cache.forEach((card) => {
       const id = safeText(card?.id);
       const legacyId = safeText(card?.legacyId);
       if (id) cardMap.set(id, card);
       if (legacyId && !cardMap.has(legacyId)) cardMap.set(legacyId, card);
+      const sourceSlug = safeText(card?.sourceSlug || slug(card?.source));
+      const sourceIndex = Number.isInteger(Number(card?.sourceIndex))
+        ? Number(card.sourceIndex)
+        : Number.parseInt(card?.sourceIndex, 10);
+      if (sourceSlug && Number.isInteger(sourceIndex) && sourceIndex >= 0) {
+        const bucket = sourceIndexMap.get(sourceIndex) || [];
+        bucket.push({ sourceSlug, card });
+        sourceIndexMap.set(sourceIndex, bucket);
+      }
     });
+
+    const resolveCardByFlexibleId = (cardId) => {
+      const direct = cardMap.get(cardId);
+      if (direct) return direct;
+      const normalizedId = safeText(cardId).toLowerCase();
+      const match = normalizedId.match(/^(.*)-(\d+)$/);
+      if (!match) return null;
+      const prefix = safeText(match[1]);
+      const sourceIndex = Number.parseInt(match[2], 10);
+      if (!Number.isInteger(sourceIndex) || sourceIndex < 0) return null;
+      const bucket = sourceIndexMap.get(sourceIndex) || [];
+      let selected = null;
+      let selectedLength = -1;
+      bucket.forEach((entry) => {
+        const sourceSlug = safeText(entry?.sourceSlug);
+        if (!sourceSlug) return;
+        if (prefix === sourceSlug || prefix.startsWith(`${sourceSlug}-`)) {
+          if (sourceSlug.length > selectedLength) {
+            selected = entry.card;
+            selectedLength = sourceSlug.length;
+          }
+        }
+      });
+      return selected;
+    };
+
     state.cards = Array.from(progressMap.values())
       .map((progress) => {
-        const card = cardMap.get(progress.cardId);
+        const card = resolveCardByFlexibleId(progress.cardId);
         if (!card) return null;
         return { ...card, progress };
       })
@@ -1193,6 +1230,23 @@
         ? payload.progress.map(normalizeProgressRecord).filter(Boolean)
         : [];
       const progressMap = new Map(records.map((record) => [record.cardId, record]));
+      if (!progressMap.size && Array.isArray(payload?.onTable) && payload.onTable.length) {
+        const now = getNowMs();
+        payload.onTable.forEach((entry, index) => {
+          const cardId = safeText(entry?.cardId);
+          if (!cardId || progressMap.has(cardId)) return;
+          progressMap.set(cardId, createProgressRecord(cardId, {
+            phaseIndex: 1,
+            targetPhaseIndex: 1,
+            status: 'ready',
+            memorizingStartedAt: 0,
+            memorizingDurationMs: 0,
+            availableAt: now - 1,
+            returnedAt: now + index,
+            createdAt: now + index
+          }));
+        });
+      }
       if (progressMap.size) {
         saveUserProgressForUser(state.userId, progressMap);
       }

@@ -10354,7 +10354,6 @@
         'day', 'night', 'house', 'book', 'music', 'food', 'car', 'school', 'friend', 'family', 'work', 'game', 'time', 'place', 'story',
         'happy', 'sad', 'good', 'great', 'slowly', 'always', 'never', 'really', 'very', 'today', 'early', 'late'
       ];
-      const CURRENT_LEVEL_ROUND_RATIO = 0.6;
       function buildDefaultLevelRules() {
         const maxCharsByLevel = [12,12,13,14,15,16,16,17,18,19,20,21,22,23,24,25,25,26,26,27,27,28,29,29,30,30,31,32,32,33,33,34,34,35,36,36,37,37,38,38,39,40,40,41,41,42,42,43,44,44,45,45,46,47,47,48,48,49,49,50,51,51,52,52,53,54,54,55,56,56,57,58,58,59,59,60,61,61,62,62,63,64,64,65,66,66,67,68,68,69,69,70,71,71,72,72,73,74,74,75];
         const hitThresholdByLevel = [50,51,52,52,53,53,54,54,55,55,55,56,56,57,57,57,58,58,59,59,60,60,60,61,61,62,62,62,63,63,64,64,65,65,65,66,66,67,67,67,68,68,69,69,70,70,70,71,71,72,72,72,73,73,74,74,75,75,75,76,76,77,77,77,78,78,79,79,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80];
@@ -10417,6 +10416,65 @@
         return {
           speedLevelGainRules: speedLevelGainRules.length ? speedLevelGainRules.sort((a, b) => a.minSpeed - b.minSpeed) : defaults.speedLevelGainRules.slice(),
           firstStageMissPenaltyRules: firstStageMissPenaltyRules.length ? firstStageMissPenaltyRules.sort((a, b) => b.minLevel - a.minLevel) : defaults.firstStageMissPenaltyRules.slice()
+        };
+      }
+
+      function buildDefaultLevelWindowSettings() {
+        return {
+          rules: [
+            { minLevel: 1, maxLevel: 20, windowSize: 5 },
+            { minLevel: 21, maxLevel: 30, windowSize: 6 },
+            { minLevel: 31, maxLevel: 40, windowSize: 8 },
+            { minLevel: 41, maxLevel: 50, windowSize: 12 },
+            { minLevel: 51, maxLevel: 60, windowSize: 15 },
+            { minLevel: 61, maxLevel: 70, windowSize: 20 },
+            { minLevel: 71, maxLevel: 80, windowSize: 25 },
+            { minLevel: 81, maxLevel: 90, windowSize: 30 },
+            { minLevel: 91, maxLevel: 200, windowSize: 40 }
+          ]
+        };
+      }
+
+      function normalizeLevelWindowSettings(settings) {
+        const defaults = buildDefaultLevelWindowSettings();
+        const source = settings && typeof settings === 'object' ? settings : {};
+        const rawRules = Array.isArray(source.rules)
+          ? source.rules
+          : Array.isArray(source.levelWindowRules)
+            ? source.levelWindowRules
+            : defaults.rules;
+        const rules = rawRules
+          .map((entry) => {
+            const minLevel = Math.max(1, Math.min(200, Math.floor(Number(entry?.minLevel) || 1)));
+            const maxRaw = entry?.maxLevel;
+            const maxLevel = maxRaw === null || maxRaw === ''
+              ? 200
+              : Math.max(minLevel, Math.min(200, Math.floor(Number(maxRaw) || minLevel)));
+            const windowSize = Math.max(0, Math.min(200, Math.floor(Number(entry?.windowSize) || 0)));
+            if (!windowSize) return null;
+            return { minLevel, maxLevel, windowSize };
+          })
+          .filter(Boolean)
+          .sort((a, b) => a.minLevel - b.minLevel);
+        return { rules: rules.length ? rules : defaults.rules.slice() };
+      }
+
+      function resolveLevelWindowSize(level, settings = null) {
+        const targetLevel = normalizeUserLevel(level);
+        const snapshot = normalizeLevelWindowSettings(settings || state.entry.levelWindowSettings || buildDefaultLevelWindowSettings());
+        const match = snapshot.rules.find((rule) => targetLevel >= rule.minLevel && targetLevel <= rule.maxLevel);
+        if (match) return Math.max(0, Number(match.windowSize) || 0);
+        const fallback = snapshot.rules[snapshot.rules.length - 1];
+        return Math.max(0, Number(fallback?.windowSize) || 0);
+      }
+
+      function resolveDeckLevelBounds(level, settings = null) {
+        const centerLevel = normalizeUserLevel(level);
+        const windowSize = resolveLevelWindowSize(centerLevel, settings);
+        return {
+          minLevel: Math.max(1, centerLevel - windowSize),
+          maxLevel: Math.min(USER_LEVEL_MAX, centerLevel + windowSize),
+          windowSize
         };
       }
       const MIN_GAME_CONTEXT_LIMIT = 1;
@@ -10648,6 +10706,7 @@
           welcomeModesUsersEnabled: false,
           fourthStarUsesSecondStarBlocks: false,
           levelDynamics: buildDefaultLevelDynamicsSettings(),
+          levelWindowSettings: buildDefaultLevelWindowSettings(),
           firstStagePenaltyBusy: false,
           launchAfterSoundTest: '',
           soundTestCompleted: false,
@@ -14179,6 +14238,19 @@
         return normalizeLevelDynamicsSettings(payload.settings);
       }
 
+      async function fetchFlashcardLevelWindowSettings() {
+        const response = await fetch(buildApiUrl('/api/flashcards/level-window-settings'), {
+          headers: buildAuthHeaders(),
+          cache: 'no-store',
+          credentials: 'include'
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success || !payload?.settings) {
+          return normalizeLevelWindowSettings(buildDefaultLevelWindowSettings());
+        }
+        return normalizeLevelWindowSettings(payload.settings);
+      }
+
       function isFourthStarUsingSecondStarBlocks() {
         const userChoice = normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping);
         if (userChoice === 'on') return false;
@@ -16930,7 +17002,8 @@
         const selectedLevel = currentUserLevel();
         const deckLevel = cardDeckLevel(card);
         if (deckLevel === null) return false;
-        return deckLevel >= 1 && deckLevel <= selectedLevel;
+        const bounds = resolveDeckLevelBounds(selectedLevel);
+        return deckLevel >= bounds.minLevel && deckLevel <= bounds.maxLevel;
       }
 
       function currentLevelProgressCount(level = currentUserLevel()) {
@@ -16959,16 +17032,12 @@
         if (Number(level) === 0 || !Number.isInteger(Number(level))) {
           return allPlayableCards;
         }
-        const currentLevelCards = allPlayableCards.filter((card) => cardDeckLevel(card) === targetLevel);
-        const previousLevelCards = allPlayableCards.filter((card) => {
+        const bounds = resolveDeckLevelBounds(targetLevel);
+        const windowCards = allPlayableCards.filter((card) => {
           const deckLevel = cardDeckLevel(card);
-          return Number.isInteger(deckLevel) && deckLevel >= 1 && deckLevel < targetLevel;
+          return Number.isInteger(deckLevel) && deckLevel >= bounds.minLevel && deckLevel <= bounds.maxLevel;
         });
-        if (targetLevel <= 1 || !previousLevelCards.length) return currentLevelCards.length ? currentLevelCards : allPlayableCards;
-        const totalTarget = currentLevelCards.length + previousLevelCards.length;
-        const currentTargetCount = Math.max(1, Math.round(totalTarget * CURRENT_LEVEL_ROUND_RATIO));
-        const previousTargetCount = Math.max(1, totalTarget - currentTargetCount);
-        return shuffle(currentLevelCards).slice(0, currentTargetCount).concat(shuffle(previousLevelCards).slice(0, previousTargetCount));
+        return windowCards.length ? windowCards : allPlayableCards;
       }
 
       function syncGameLevelNavigator() {
@@ -20557,55 +20626,17 @@
             reviewCards: reviews
           };
         }
-
-        const level = currentUserLevel();
-        const currentTarget = level <= 1
-          ? normalizedLimit
-          : Math.max(1, Math.round(normalizedLimit * CURRENT_LEVEL_ROUND_RATIO));
-        const previousTarget = Math.max(0, normalizedLimit - currentTarget);
-        const currentReviews = reviews.filter(card => cardDeckLevel(card) === level).slice(0, currentTarget);
-        const previousReviews = level <= 1
-          ? []
-          : reviews.filter(card => cardDeckLevel(card) < level).slice(0, previousTarget);
-        let selectedReviews = uniqueCardsById([...currentReviews, ...previousReviews]);
-        const selectedIds = new Set(selectedReviews.map(card => card.id));
-        const baseCurrent = base.filter(card => cardDeckLevel(card) === level && !selectedIds.has(card.id));
-        const basePrevious = level <= 1
-          ? []
-          : base.filter(card => cardDeckLevel(card) < level && !selectedIds.has(card.id));
-        const selectedBase = uniqueCardsById([
-          ...buildDeckFirstCardSelection(
-            baseCurrent,
-            Math.max(0, currentTarget - currentReviews.length)
-          ),
-          ...buildDeckFirstCardSelection(
-            basePrevious,
-            Math.max(0, previousTarget - previousReviews.length)
-          )
-        ]);
-        selectedBase.forEach(card => selectedIds.add(card.id));
-
-        let selectedTotal = selectedBase.length + selectedReviews.length;
-        if (selectedTotal < normalizedLimit) {
-          const fillers = buildDeckFirstCardSelection(
-            [...baseCurrent, ...basePrevious].filter(card => !selectedIds.has(card.id)),
-            normalizedLimit - selectedTotal
-          );
-          selectedBase.push(...fillers);
-          fillers.forEach(card => selectedIds.add(card.id));
-        }
-
-        selectedTotal = selectedBase.length + selectedReviews.length;
-        if (selectedTotal < normalizedLimit) {
-          selectedReviews = uniqueCardsById([
-            ...selectedReviews,
-            ...reviews.filter(card => !selectedIds.has(card.id)).slice(0, normalizedLimit - selectedTotal)
-          ]);
-        }
-
+        const bounds = resolveDeckLevelBounds(currentUserLevel());
+        const withinBounds = (card) => {
+          const deckLevel = cardDeckLevel(card);
+          return Number.isInteger(deckLevel) && deckLevel >= bounds.minLevel && deckLevel <= bounds.maxLevel;
+        };
+        const filteredReviews = reviews.filter(withinBounds);
+        const reviewIds = new Set(filteredReviews.map((card) => card.id));
+        const filteredBase = base.filter((card) => withinBounds(card) && !reviewIds.has(card.id));
         return {
-          baseCards: selectedBase.slice(0, normalizedLimit),
-          reviewCards: selectedReviews
+          baseCards: buildOrderedDeckSelection(filteredBase, Math.max(0, normalizedLimit - filteredReviews.length)),
+          reviewCards: filteredReviews.slice(0, Math.min(REVIEW_SLOT_LIMIT, normalizedLimit))
         };
       }
 
@@ -24886,6 +24917,7 @@
           const flashcardsPhaseSettings = await fetchFlashcardsPhaseSettings().catch(() => ({ fourthStarUsesSecondStarBlocks: false }));
           const flashcardLevelRulesSettings = await fetchFlashcardLevelRulesSettings().catch(() => ({ levels: buildDefaultLevelRules() }));
           const flashcardLevelDynamicsSettings = await fetchFlashcardLevelDynamicsSettings().catch(() => normalizeLevelDynamicsSettings(buildDefaultLevelDynamicsSettings()));
+          const flashcardLevelWindowSettings = await fetchFlashcardLevelWindowSettings().catch(() => normalizeLevelWindowSettings(buildDefaultLevelWindowSettings()));
           if (sessionUser) {
             state.user = normalizeUser(sessionUser);
           }
@@ -24893,6 +24925,7 @@
           state.entry.fourthStarUsesSecondStarBlocks = Boolean(flashcardsPhaseSettings?.fourthStarUsesSecondStarBlocks);
           state.levelRules = Array.isArray(flashcardLevelRulesSettings?.levels) ? flashcardLevelRulesSettings.levels : buildDefaultLevelRules();
           state.entry.levelDynamics = normalizeLevelDynamicsSettings(flashcardLevelDynamicsSettings);
+          state.entry.levelWindowSettings = normalizeLevelWindowSettings(flashcardLevelWindowSettings);
           state.entry.welcomeModesResolved = true;
           state.entry.sessionResolved = true;
           ensureFlashcardsEnergyDepletionWatch();

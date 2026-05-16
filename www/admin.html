@@ -557,6 +557,32 @@
     </section>
 
     <section class="admin-card" style="margin-top:18px;">
+      <h2>Janela de decks por nivel (/play)</h2>
+      <p class="admin-card-copy">No modo automatico, define quantos niveis antes/depois entram na selecao de decks para cada faixa.</p>
+      <form class="admin-form" id="adminLevelWindowForm">
+        <div class="admin-field">
+          <label>Tabela da janela por faixa de nivel</label>
+          <div class="admin-level-rules-table-wrap">
+            <table class="admin-level-rules-table" aria-label="Tabela da janela de niveis dos decks">
+              <thead>
+                <tr>
+                  <th>Min Level</th>
+                  <th>Max Level</th>
+                  <th>Janela (antes/depois)</th>
+                </tr>
+              </thead>
+              <tbody id="adminLevelWindowRulesTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="admin-topbar-actions">
+          <button class="admin-btn" id="adminLevelWindowSaveBtn" type="submit">Salvar janela de decks</button>
+        </div>
+      </form>
+      <div class="admin-status" id="adminLevelWindowStatus" aria-live="polite"></div>
+    </section>
+
+    <section class="admin-card" style="margin-top:18px;">
       <h2>Resumo rapido</h2>
       <ul class="admin-facts">
         <li class="admin-fact">

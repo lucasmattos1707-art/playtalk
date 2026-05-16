@@ -35,7 +35,11 @@
     speedGainRulesTableBody: document.getElementById('adminSpeedGainRulesTableBody'),
     firstStagePenaltyRulesTableBody: document.getElementById('adminFirstStagePenaltyRulesTableBody'),
     levelDynamicsSaveBtn: document.getElementById('adminLevelDynamicsSaveBtn'),
-    levelDynamicsStatus: document.getElementById('adminLevelDynamicsStatus')
+    levelDynamicsStatus: document.getElementById('adminLevelDynamicsStatus'),
+    levelWindowForm: document.getElementById('adminLevelWindowForm'),
+    levelWindowRulesTableBody: document.getElementById('adminLevelWindowRulesTableBody'),
+    levelWindowSaveBtn: document.getElementById('adminLevelWindowSaveBtn'),
+    levelWindowStatus: document.getElementById('adminLevelWindowStatus')
   };
 
   const state = {
@@ -67,6 +71,10 @@
     levelDynamics: {
       speedLevelGainRules: [],
       firstStageMissPenaltyRules: []
+    },
+    levelWindowBusy: false,
+    levelWindow: {
+      rules: []
     }
   };
 
@@ -191,6 +199,16 @@
     }
     Array.from(els.levelDynamicsForm?.querySelectorAll('input[type="number"]') || []).forEach((input) => {
       input.disabled = state.levelDynamicsBusy;
+    });
+  }
+
+  function syncLevelWindowBusyState() {
+    if (els.levelWindowSaveBtn) {
+      els.levelWindowSaveBtn.disabled = state.levelWindowBusy;
+      els.levelWindowSaveBtn.textContent = state.levelWindowBusy ? 'Salvando...' : 'Salvar janela de decks';
+    }
+    Array.from(els.levelWindowForm?.querySelectorAll('input[type="number"]') || []).forEach((input) => {
+      input.disabled = state.levelWindowBusy;
     });
   }
 
@@ -471,6 +489,78 @@
     });
   }
 
+  function buildDefaultLevelWindowSettings() {
+    return {
+      rules: [
+        { minLevel: 1, maxLevel: 20, windowSize: 5 },
+        { minLevel: 21, maxLevel: 30, windowSize: 6 },
+        { minLevel: 31, maxLevel: 40, windowSize: 8 },
+        { minLevel: 41, maxLevel: 50, windowSize: 12 },
+        { minLevel: 51, maxLevel: 60, windowSize: 15 },
+        { minLevel: 61, maxLevel: 70, windowSize: 20 },
+        { minLevel: 71, maxLevel: 80, windowSize: 25 },
+        { minLevel: 81, maxLevel: 90, windowSize: 30 },
+        { minLevel: 91, maxLevel: 200, windowSize: 40 }
+      ]
+    };
+  }
+
+  function normalizeLevelWindowSettings(settings) {
+    const defaults = buildDefaultLevelWindowSettings();
+    const source = settings && typeof settings === 'object' ? settings : {};
+    const rawRules = Array.isArray(source.rules)
+      ? source.rules
+      : Array.isArray(source.levelWindowRules)
+        ? source.levelWindowRules
+        : defaults.rules;
+    const rules = rawRules
+      .map((entry) => {
+        const minLevel = Math.max(1, Math.min(200, Math.floor(Number(entry?.minLevel) || 1)));
+        const maxRaw = entry?.maxLevel;
+        const maxLevel = maxRaw === null || maxRaw === ''
+          ? 200
+          : Math.max(minLevel, Math.min(200, Math.floor(Number(maxRaw) || minLevel)));
+        const windowSize = Math.max(1, Math.min(200, Math.floor(Number(entry?.windowSize) || 0)));
+        if (!windowSize) return null;
+        return { minLevel, maxLevel, windowSize };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.minLevel - b.minLevel);
+    return { rules: rules.length ? rules : defaults.rules.slice() };
+  }
+
+  function applyLevelWindowSettings(settings) {
+    const snapshot = normalizeLevelWindowSettings(settings);
+    state.levelWindow = snapshot;
+    if (!els.levelWindowRulesTableBody) return;
+    const rows = snapshot.rules.map((entry, index) => {
+      const minLevel = Math.max(1, Math.min(200, Math.floor(Number(entry?.minLevel) || 1)));
+      const maxLevel = Math.max(minLevel, Math.min(200, Math.floor(Number(entry?.maxLevel) || minLevel)));
+      const windowSize = Math.max(1, Math.min(200, Math.floor(Number(entry?.windowSize) || 1)));
+      return `
+        <tr data-level-window-row="${index}">
+          <td><input type="number" min="1" max="200" step="1" value="${minLevel}" data-level-window-field="minLevel"></td>
+          <td><input type="number" min="1" max="200" step="1" value="${maxLevel}" data-level-window-field="maxLevel"></td>
+          <td><input type="number" min="1" max="200" step="1" value="${windowSize}" data-level-window-field="windowSize"></td>
+        </tr>
+      `;
+    });
+    els.levelWindowRulesTableBody.innerHTML = rows.join('');
+  }
+
+  function readDraftLevelWindowSettings() {
+    const rules = Array.from(els.levelWindowRulesTableBody?.querySelectorAll('tr[data-level-window-row]') || []).map((row) => {
+      const minLevel = Math.max(1, Math.min(200, Math.floor(Number(row.querySelector('[data-level-window-field="minLevel"]')?.value) || 1)));
+      const maxLevel = Math.max(minLevel, Math.min(200, Math.floor(Number(row.querySelector('[data-level-window-field="maxLevel"]')?.value) || minLevel)));
+      const windowSize = Math.max(1, Math.min(200, Math.floor(Number(row.querySelector('[data-level-window-field="windowSize"]')?.value) || 1)));
+      return { minLevel, maxLevel, windowSize };
+    });
+    if (!rules.length) {
+      throw new Error('Adicione ao menos uma linha na janela de decks.');
+    }
+    return normalizeLevelWindowSettings({ rules });
+  }
+
   async function fetchSessionUser() {
     if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
       return window.PlaytalkApi.fetchSessionUser({ attempts: 2, timeoutMs: 3500 });
@@ -560,6 +650,19 @@
       throw new Error(payload?.message || 'Nao foi possivel carregar as dinamicas de nivel.');
     }
     applyLevelDynamicsSettings(payload.settings);
+  }
+
+  async function loadLevelWindowSettings() {
+    const response = await fetch(buildApiUrl('/api/admin/flashcards/level-window-settings'), {
+      headers: buildAuthHeaders(),
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.settings) {
+      throw new Error(payload?.message || 'Nao foi possivel carregar a janela de niveis dos decks.');
+    }
+    applyLevelWindowSettings(payload.settings);
   }
 
   async function submitEnergySettings(event) {
@@ -724,6 +827,33 @@
     }
   }
 
+  async function submitLevelWindowSettings(event) {
+    event.preventDefault();
+    state.levelWindowBusy = true;
+    syncLevelWindowBusyState();
+    setStatus(els.levelWindowStatus, 'Salvando janela de decks...');
+    try {
+      const draft = readDraftLevelWindowSettings();
+      const response = await fetch(buildApiUrl('/api/admin/flashcards/level-window-settings'), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify(draft)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.settings) {
+        throw new Error(payload?.message || 'Nao foi possivel salvar a janela de niveis dos decks.');
+      }
+      applyLevelWindowSettings(payload.settings);
+      setStatus(els.levelWindowStatus, payload?.message || 'Janela de niveis dos decks atualizada.', 'success');
+    } catch (error) {
+      setStatus(els.levelWindowStatus, error?.message || 'Nao foi possivel salvar a janela de niveis dos decks.', 'error');
+    } finally {
+      state.levelWindowBusy = false;
+      syncLevelWindowBusyState();
+    }
+  }
+
   function bindEvents() {
     els.energyForm?.addEventListener('submit', submitEnergySettings);
     els.multiplierInput?.addEventListener('input', renderPreview);
@@ -733,6 +863,7 @@
     els.flashcardsLevelRulesForm?.addEventListener('submit', submitFlashcardsLevelRulesSettings);
     els.speedCurveForm?.addEventListener('submit', submitSpeedCurveSettings);
     els.levelDynamicsForm?.addEventListener('submit', submitLevelDynamicsSettings);
+    els.levelWindowForm?.addEventListener('submit', submitLevelWindowSettings);
   }
 
   (async () => {
@@ -743,6 +874,7 @@
     syncFlashcardsLevelRulesBusyState();
     syncSpeedCurveBusyState();
     syncLevelDynamicsBusyState();
+    syncLevelWindowBusyState();
     renderPreview();
     renderWelcomeModesFact();
     renderFlashcardsPhaseFact();
@@ -754,6 +886,7 @@
       setStatus(els.flashcardsLevelRulesStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.speedCurveStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.levelDynamicsStatus, 'Acesso restrito ao administrador.', 'error');
+      setStatus(els.levelWindowStatus, 'Acesso restrito ao administrador.', 'error');
       window.setTimeout(() => navigateTo('/account', { replace: true }), 900);
       return;
     }
@@ -764,7 +897,8 @@
         loadFlashcardsPhaseSettings(),
         loadFlashcardsLevelRulesSettings(),
         loadSpeedCurveSettings(),
-        loadLevelDynamicsSettings()
+        loadLevelDynamicsSettings(),
+        loadLevelWindowSettings()
       ]);
       setStatus(els.energyStatus, 'Configuracoes carregadas.');
       setStatus(els.welcomeModesStatus, 'Modos extras sincronizados.');
@@ -772,6 +906,7 @@
       setStatus(els.flashcardsLevelRulesStatus, 'Tabela de niveis sincronizada.');
       setStatus(els.speedCurveStatus, 'Curva da velocidade sincronizada.');
       setStatus(els.levelDynamicsStatus, 'Dinamicas de nivel sincronizadas.');
+      setStatus(els.levelWindowStatus, 'Janela de niveis dos decks sincronizada.');
     } catch (error) {
       const message = error?.message || 'Nao foi possivel carregar as configuracoes do admin.';
       setStatus(els.energyStatus, message, 'error');
@@ -780,6 +915,7 @@
       setStatus(els.flashcardsLevelRulesStatus, message, 'error');
       setStatus(els.speedCurveStatus, message, 'error');
       setStatus(els.levelDynamicsStatus, message, 'error');
+      setStatus(els.levelWindowStatus, message, 'error');
     }
   })();
 })();

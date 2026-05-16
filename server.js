@@ -227,6 +227,7 @@ let flashcardPhaseSettingsReadyPromise = null;
 let flashcardLevelRulesSettingsReadyPromise = null;
 let flashcardSpeedCurveSettingsReadyPromise = null;
 let flashcardLevelDynamicsSettingsReadyPromise = null;
+let flashcardLevelWindowSettingsReadyPromise = null;
 let userFlashcardSpeedSamplesTableReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
@@ -262,6 +263,10 @@ let flashcardLevelDynamicsSettingsCache = {
   value: null,
   updatedAt: 0
 };
+let flashcardLevelWindowSettingsCache = {
+  value: null,
+  updatedAt: 0
+};
 let englishCorpusCache = {
   payload: null,
   updatedAt: 0
@@ -293,6 +298,7 @@ const FLASHCARD_PHASE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_LEVEL_RULES_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_SPEED_CURVE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_LEVEL_DYNAMICS_SETTINGS_CACHE_TTL_MS = 30 * 1000;
+const FLASHCARD_LEVEL_WINDOW_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_SPEED_SAMPLE_LIMIT = 100;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
@@ -1126,6 +1132,57 @@ function buildDefaultFlashcardFirstStageMissPenaltyRules() {
     { minLevel: 40, levelLoss: 3 },
     { minLevel: 30, levelLoss: 2 }
   ];
+}
+
+function buildDefaultFlashcardLevelWindowRules() {
+  return [
+    { minLevel: 1, maxLevel: 20, windowSize: 5 },
+    { minLevel: 21, maxLevel: 30, windowSize: 6 },
+    { minLevel: 31, maxLevel: 40, windowSize: 8 },
+    { minLevel: 41, maxLevel: 50, windowSize: 12 },
+    { minLevel: 51, maxLevel: 60, windowSize: 15 },
+    { minLevel: 61, maxLevel: 70, windowSize: 20 },
+    { minLevel: 71, maxLevel: 80, windowSize: 25 },
+    { minLevel: 81, maxLevel: 90, windowSize: 30 },
+    { minLevel: 91, maxLevel: 200, windowSize: 40 }
+  ];
+}
+
+function normalizeFlashcardLevelWindowSettingsSnapshot(value = {}) {
+  const source = value?.payload && typeof value.payload === 'object' ? value.payload : value;
+  const defaults = buildDefaultFlashcardLevelWindowRules();
+  const rawRules = Array.isArray(source?.rules)
+    ? source.rules
+    : Array.isArray(source?.levelWindowRules)
+      ? source.levelWindowRules
+      : defaults;
+
+  const normalizedRules = rawRules
+    .map((entry) => {
+      const minLevel = Math.max(1, Math.min(200, Math.floor(Number(entry?.minLevel) || 1)));
+      const maxRaw = entry?.maxLevel;
+      const maxLevel = maxRaw === null || maxRaw === ''
+        ? 200
+        : Math.max(minLevel, Math.min(200, Math.floor(Number(maxRaw) || minLevel)));
+      const windowSize = Math.max(0, Math.min(200, Math.floor(Number(entry?.windowSize) || 0)));
+      if (!windowSize) return null;
+      return { minLevel, maxLevel, windowSize };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.minLevel - b.minLevel);
+
+  return {
+    rules: normalizedRules.length ? normalizedRules : defaults
+  };
+}
+
+function rememberFlashcardLevelWindowSettings(settings) {
+  const snapshot = normalizeFlashcardLevelWindowSettingsSnapshot(settings);
+  flashcardLevelWindowSettingsCache = {
+    value: snapshot,
+    updatedAt: Date.now()
+  };
+  return snapshot;
 }
 
 function normalizeFlashcardLevelDynamicsSnapshot(value = {}) {
@@ -3103,6 +3160,34 @@ const ensureFlashcardLevelDynamicsSettingsTable = async () => {
   return flashcardLevelDynamicsSettingsReadyPromise;
 };
 
+const ensureFlashcardLevelWindowSettingsTable = async () => {
+  if (!pool) return false;
+  if (!flashcardLevelWindowSettingsReadyPromise) {
+    flashcardLevelWindowSettingsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.app_flashcard_level_window_settings (
+          singleton_key text PRIMARY KEY,
+          payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+          updated_by_user_id integer REFERENCES public.users(id) ON DELETE SET NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(
+        `INSERT INTO public.app_flashcard_level_window_settings (singleton_key, payload)
+         VALUES ('default', $1::jsonb)
+         ON CONFLICT (singleton_key) DO NOTHING`,
+        [JSON.stringify(normalizeFlashcardLevelWindowSettingsSnapshot({}))]
+      );
+      return true;
+    })().catch((error) => {
+      flashcardLevelWindowSettingsReadyPromise = null;
+      throw error;
+    });
+  }
+  return flashcardLevelWindowSettingsReadyPromise;
+};
+
 const ensureUserFlashcardSpeedSamplesTable = async () => {
   if (!pool) return false;
   if (!userFlashcardSpeedSamplesTableReadyPromise) {
@@ -3286,6 +3371,26 @@ async function getFlashcardLevelDynamicsSettings(options = {}) {
   return rememberFlashcardLevelDynamicsSettings(result.rows[0]?.payload || {});
 }
 
+async function getFlashcardLevelWindowSettings(options = {}) {
+  const force = Boolean(options?.force);
+  if (!pool) return normalizeFlashcardLevelWindowSettingsSnapshot({});
+  if (
+    !force
+    && flashcardLevelWindowSettingsCache.value
+    && (Date.now() - flashcardLevelWindowSettingsCache.updatedAt) < FLASHCARD_LEVEL_WINDOW_SETTINGS_CACHE_TTL_MS
+  ) {
+    return flashcardLevelWindowSettingsCache.value;
+  }
+  await ensureFlashcardLevelWindowSettingsTable();
+  const result = await pool.query(
+    `SELECT payload
+     FROM public.app_flashcard_level_window_settings
+     WHERE singleton_key = 'default'
+     LIMIT 1`
+  );
+  return rememberFlashcardLevelWindowSettings(result.rows[0]?.payload || {});
+}
+
 async function updateEnergySettings(db, values = {}, updatedByUserId = null) {
   const executor = db && typeof db.query === 'function' ? db : pool;
   if (!executor) {
@@ -3437,6 +3542,25 @@ async function updateFlashcardLevelDynamicsSettings(db, values = {}, updatedByUs
     [JSON.stringify(snapshot), Number(updatedByUserId) || null]
   );
   return rememberFlashcardLevelDynamicsSettings(result.rows[0]?.payload || snapshot);
+}
+
+async function updateFlashcardLevelWindowSettings(db, values = {}, updatedByUserId = null) {
+  const executor = db && typeof db.query === 'function' ? db : pool;
+  if (!executor) return normalizeFlashcardLevelWindowSettingsSnapshot(values);
+  const snapshot = normalizeFlashcardLevelWindowSettingsSnapshot(values);
+  await ensureFlashcardLevelWindowSettingsTable();
+  const result = await executor.query(
+    `INSERT INTO public.app_flashcard_level_window_settings (singleton_key, payload, updated_by_user_id, updated_at)
+     VALUES ('default', $1::jsonb, $2, now())
+     ON CONFLICT (singleton_key)
+     DO UPDATE SET
+       payload = EXCLUDED.payload,
+       updated_by_user_id = EXCLUDED.updated_by_user_id,
+       updated_at = now()
+     RETURNING payload`,
+    [JSON.stringify(snapshot), Number(updatedByUserId) || null]
+  );
+  return rememberFlashcardLevelWindowSettings(result.rows[0]?.payload || snapshot);
 }
 
 const ensureUsersPresenceClassMetricStorage = async () => {
@@ -19089,6 +19213,15 @@ app.get('/api/flashcards/level-dynamics-settings', async (_req, res) => {
   }
 });
 
+app.get('/api/flashcards/level-window-settings', async (_req, res) => {
+  try {
+    const settings = await getFlashcardLevelWindowSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error?.message || 'Nao foi possivel carregar a janela de niveis dos decks.' });
+  }
+});
+
 app.get('/api/admin/welcome-mode-settings', async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -19153,6 +19286,17 @@ app.get('/api/admin/flashcards/level-dynamics-settings', async (req, res) => {
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar as dinamicas de nivel.' });
+  }
+});
+
+app.get('/api/admin/flashcards/level-window-settings', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const settings = await getFlashcardLevelWindowSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar a janela de niveis dos decks.' });
   }
 });
 
@@ -19284,6 +19428,23 @@ app.post('/api/admin/flashcards/level-dynamics-settings', express.json({ limit: 
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel salvar as dinamicas de nivel.' });
+  }
+});
+
+app.post('/api/admin/flashcards/level-window-settings', express.json({ limit: '64kb' }), async (req, res) => {
+  try {
+    const adminUser = await requireAdminUserFromRequest(req);
+    const settings = await updateFlashcardLevelWindowSettings(pool, {
+      rules: Array.isArray(req.body?.rules) ? req.body.rules : []
+    }, adminUser.id);
+    res.json({
+      success: true,
+      message: 'Janela de niveis dos decks atualizada.',
+      settings
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel salvar a janela de niveis dos decks.' });
   }
 });
 
