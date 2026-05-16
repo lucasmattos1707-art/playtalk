@@ -30,7 +30,12 @@
     speedCurveChars30: document.getElementById('adminSpeedCurveChars30'),
     speedCurveChars60: document.getElementById('adminSpeedCurveChars60'),
     speedCurveSaveBtn: document.getElementById('adminSpeedCurveSaveBtn'),
-    speedCurveStatus: document.getElementById('adminSpeedCurveStatus')
+    speedCurveStatus: document.getElementById('adminSpeedCurveStatus'),
+    levelDynamicsForm: document.getElementById('adminLevelDynamicsForm'),
+    speedGainRulesTableBody: document.getElementById('adminSpeedGainRulesTableBody'),
+    firstStagePenaltyRulesTableBody: document.getElementById('adminFirstStagePenaltyRulesTableBody'),
+    levelDynamicsSaveBtn: document.getElementById('adminLevelDynamicsSaveBtn'),
+    levelDynamicsStatus: document.getElementById('adminLevelDynamicsStatus')
   };
 
   const state = {
@@ -57,6 +62,11 @@
     speedCurveBusy: false,
     speedCurve: {
       anchors: []
+    },
+    levelDynamicsBusy: false,
+    levelDynamics: {
+      speedLevelGainRules: [],
+      firstStageMissPenaltyRules: []
     }
   };
 
@@ -174,6 +184,16 @@
     });
   }
 
+  function syncLevelDynamicsBusyState() {
+    if (els.levelDynamicsSaveBtn) {
+      els.levelDynamicsSaveBtn.disabled = state.levelDynamicsBusy;
+      els.levelDynamicsSaveBtn.textContent = state.levelDynamicsBusy ? 'Salvando...' : 'Salvar dinamicas de nivel';
+    }
+    Array.from(els.levelDynamicsForm?.querySelectorAll('input[type="number"]') || []).forEach((input) => {
+      input.disabled = state.levelDynamicsBusy;
+    });
+  }
+
   function readDraftSettings() {
     return {
       energyCostMultiplier: Math.max(0.01, Math.min(10, safeNumber(els.multiplierInput?.value, state.settings.energyCostMultiplier))),
@@ -205,6 +225,63 @@
         { chars: 30, multiplier: anchorValue(els.speedCurveChars30, 0.5) },
         { chars: 60, multiplier: anchorValue(els.speedCurveChars60, 0.3) }
       ]
+    };
+  }
+
+  function buildDefaultLevelDynamicsSettings() {
+    return {
+      speedLevelGainRules: [
+        { minSpeed: 0, maxSpeed: 799, levelGainPerMinute: 0 },
+        { minSpeed: 800, maxSpeed: 899, levelGainPerMinute: 1 },
+        { minSpeed: 900, maxSpeed: 999, levelGainPerMinute: 1 },
+        { minSpeed: 1000, maxSpeed: 1099, levelGainPerMinute: 2 },
+        { minSpeed: 1100, maxSpeed: 1199, levelGainPerMinute: 2 },
+        { minSpeed: 1200, maxSpeed: 1299, levelGainPerMinute: 3 },
+        { minSpeed: 1300, maxSpeed: 1399, levelGainPerMinute: 3 },
+        { minSpeed: 1400, maxSpeed: 1499, levelGainPerMinute: 4 },
+        { minSpeed: 1500, maxSpeed: 1599, levelGainPerMinute: 4 },
+        { minSpeed: 1600, maxSpeed: null, levelGainPerMinute: 4 }
+      ],
+      firstStageMissPenaltyRules: [
+        { minLevel: 80, levelLoss: 7 },
+        { minLevel: 70, levelLoss: 6 },
+        { minLevel: 60, levelLoss: 5 },
+        { minLevel: 50, levelLoss: 4 },
+        { minLevel: 40, levelLoss: 3 },
+        { minLevel: 30, levelLoss: 2 }
+      ]
+    };
+  }
+
+  function normalizeLevelDynamicsSettings(settings) {
+    const defaults = buildDefaultLevelDynamicsSettings();
+    const source = settings && typeof settings === 'object' ? settings : {};
+    const speedLevelGainRules = Array.isArray(source.speedLevelGainRules)
+      ? source.speedLevelGainRules.map((entry) => {
+          const minSpeed = Math.max(0, Math.floor(Number(entry?.minSpeed) || 0));
+          const hasMax = entry?.maxSpeed === null || entry?.maxSpeed === '' || Number.isFinite(Number(entry?.maxSpeed));
+          if (!hasMax) return null;
+          const maxSpeed = entry?.maxSpeed === null || entry?.maxSpeed === ''
+            ? null
+            : Math.max(minSpeed, Math.floor(Number(entry?.maxSpeed) || minSpeed));
+          return {
+            minSpeed,
+            maxSpeed,
+            levelGainPerMinute: Math.max(0, Math.min(20, Math.floor(Number(entry?.levelGainPerMinute) || 0)))
+          };
+        }).filter(Boolean)
+      : defaults.speedLevelGainRules.slice();
+
+    const firstStageMissPenaltyRules = Array.isArray(source.firstStageMissPenaltyRules)
+      ? source.firstStageMissPenaltyRules.map((entry) => ({
+          minLevel: Math.max(1, Math.min(200, Math.floor(Number(entry?.minLevel) || 1))),
+          levelLoss: Math.max(0, Math.min(50, Math.floor(Number(entry?.levelLoss) || 0)))
+        })).filter((entry) => entry.levelLoss > 0)
+      : defaults.firstStageMissPenaltyRules.slice();
+
+    return {
+      speedLevelGainRules: speedLevelGainRules.length ? speedLevelGainRules.sort((a, b) => a.minSpeed - b.minSpeed) : defaults.speedLevelGainRules.slice(),
+      firstStageMissPenaltyRules: firstStageMissPenaltyRules.length ? firstStageMissPenaltyRules.sort((a, b) => b.minLevel - a.minLevel) : defaults.firstStageMissPenaltyRules.slice()
     };
   }
 
@@ -329,6 +406,71 @@
     return { levels };
   }
 
+  function applyLevelDynamicsSettings(settings) {
+    const snapshot = normalizeLevelDynamicsSettings(settings);
+    state.levelDynamics = snapshot;
+
+    if (els.speedGainRulesTableBody) {
+      const rows = snapshot.speedLevelGainRules.map((entry, index) => {
+        const minSpeed = Math.max(0, Math.floor(Number(entry?.minSpeed) || 0));
+        const maxSpeed = entry?.maxSpeed === null ? '' : Math.max(minSpeed, Math.floor(Number(entry?.maxSpeed) || minSpeed));
+        const levelGainPerMinute = Math.max(0, Math.min(20, Math.floor(Number(entry?.levelGainPerMinute) || 0)));
+        return `
+          <tr data-speed-gain-row="${index}">
+            <td><input type="number" min="0" max="100000" step="1" value="${minSpeed}" data-speed-gain-field="minSpeed"></td>
+            <td><input type="number" min="0" max="100000" step="1" value="${maxSpeed}" data-speed-gain-field="maxSpeed" placeholder="sem limite"></td>
+            <td><input type="number" min="0" max="20" step="1" value="${levelGainPerMinute}" data-speed-gain-field="levelGainPerMinute"></td>
+          </tr>
+        `;
+      });
+      els.speedGainRulesTableBody.innerHTML = rows.join('');
+    }
+
+    if (els.firstStagePenaltyRulesTableBody) {
+      const rows = snapshot.firstStageMissPenaltyRules.map((entry, index) => {
+        const minLevel = Math.max(1, Math.min(200, Math.floor(Number(entry?.minLevel) || 1)));
+        const levelLoss = Math.max(0, Math.min(50, Math.floor(Number(entry?.levelLoss) || 0)));
+        return `
+          <tr data-first-stage-penalty-row="${index}">
+            <td><input type="number" min="1" max="200" step="1" value="${minLevel}" data-first-stage-penalty-field="minLevel"></td>
+            <td><input type="number" min="0" max="50" step="1" value="${levelLoss}" data-first-stage-penalty-field="levelLoss"></td>
+          </tr>
+        `;
+      });
+      els.firstStagePenaltyRulesTableBody.innerHTML = rows.join('');
+    }
+  }
+
+  function readDraftLevelDynamicsSettings() {
+    const speedLevelGainRules = Array.from(els.speedGainRulesTableBody?.querySelectorAll('tr[data-speed-gain-row]') || []).map((row) => {
+      const minSpeed = Math.max(0, Math.floor(Number(row.querySelector('[data-speed-gain-field="minSpeed"]')?.value) || 0));
+      const maxRaw = row.querySelector('[data-speed-gain-field="maxSpeed"]')?.value;
+      const maxSpeed = String(maxRaw || '').trim() === ''
+        ? null
+        : Math.max(minSpeed, Math.floor(Number(maxRaw) || minSpeed));
+      const levelGainPerMinute = Math.max(0, Math.min(20, Math.floor(Number(row.querySelector('[data-speed-gain-field="levelGainPerMinute"]')?.value) || 0)));
+      return { minSpeed, maxSpeed, levelGainPerMinute };
+    });
+
+    const firstStageMissPenaltyRules = Array.from(els.firstStagePenaltyRulesTableBody?.querySelectorAll('tr[data-first-stage-penalty-row]') || []).map((row) => {
+      const minLevel = Math.max(1, Math.min(200, Math.floor(Number(row.querySelector('[data-first-stage-penalty-field="minLevel"]')?.value) || 1)));
+      const levelLoss = Math.max(0, Math.min(50, Math.floor(Number(row.querySelector('[data-first-stage-penalty-field="levelLoss"]')?.value) || 0)));
+      return { minLevel, levelLoss };
+    }).filter((entry) => entry.levelLoss > 0);
+
+    if (!speedLevelGainRules.length) {
+      throw new Error('Adicione ao menos uma linha de ganho por minuto.');
+    }
+    if (!firstStageMissPenaltyRules.length) {
+      throw new Error('Adicione ao menos uma linha de perda por erro na first-star.');
+    }
+
+    return normalizeLevelDynamicsSettings({
+      speedLevelGainRules,
+      firstStageMissPenaltyRules
+    });
+  }
+
   async function fetchSessionUser() {
     if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
       return window.PlaytalkApi.fetchSessionUser({ attempts: 2, timeoutMs: 3500 });
@@ -405,6 +547,19 @@
       throw new Error(payload?.message || 'Nao foi possivel carregar a curva da velocidade.');
     }
     applySpeedCurve(payload.settings);
+  }
+
+  async function loadLevelDynamicsSettings() {
+    const response = await fetch(buildApiUrl('/api/admin/flashcards/level-dynamics-settings'), {
+      headers: buildAuthHeaders(),
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.settings) {
+      throw new Error(payload?.message || 'Nao foi possivel carregar as dinamicas de nivel.');
+    }
+    applyLevelDynamicsSettings(payload.settings);
   }
 
   async function submitEnergySettings(event) {
@@ -542,6 +697,33 @@
     }
   }
 
+  async function submitLevelDynamicsSettings(event) {
+    event.preventDefault();
+    state.levelDynamicsBusy = true;
+    syncLevelDynamicsBusyState();
+    setStatus(els.levelDynamicsStatus, 'Salvando dinamicas de nivel...');
+    try {
+      const draft = readDraftLevelDynamicsSettings();
+      const response = await fetch(buildApiUrl('/api/admin/flashcards/level-dynamics-settings'), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify(draft)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.settings) {
+        throw new Error(payload?.message || 'Nao foi possivel salvar as dinamicas de nivel.');
+      }
+      applyLevelDynamicsSettings(payload.settings);
+      setStatus(els.levelDynamicsStatus, payload?.message || 'Dinamicas de nivel atualizadas.', 'success');
+    } catch (error) {
+      setStatus(els.levelDynamicsStatus, error?.message || 'Nao foi possivel salvar as dinamicas de nivel.', 'error');
+    } finally {
+      state.levelDynamicsBusy = false;
+      syncLevelDynamicsBusyState();
+    }
+  }
+
   function bindEvents() {
     els.energyForm?.addEventListener('submit', submitEnergySettings);
     els.multiplierInput?.addEventListener('input', renderPreview);
@@ -550,6 +732,7 @@
     els.flashcardsPhaseForm?.addEventListener('submit', submitFlashcardsPhaseSettings);
     els.flashcardsLevelRulesForm?.addEventListener('submit', submitFlashcardsLevelRulesSettings);
     els.speedCurveForm?.addEventListener('submit', submitSpeedCurveSettings);
+    els.levelDynamicsForm?.addEventListener('submit', submitLevelDynamicsSettings);
   }
 
   (async () => {
@@ -559,6 +742,7 @@
     syncFlashcardsPhaseBusyState();
     syncFlashcardsLevelRulesBusyState();
     syncSpeedCurveBusyState();
+    syncLevelDynamicsBusyState();
     renderPreview();
     renderWelcomeModesFact();
     renderFlashcardsPhaseFact();
@@ -569,6 +753,7 @@
       setStatus(els.flashcardsPhaseStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.flashcardsLevelRulesStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.speedCurveStatus, 'Acesso restrito ao administrador.', 'error');
+      setStatus(els.levelDynamicsStatus, 'Acesso restrito ao administrador.', 'error');
       window.setTimeout(() => navigateTo('/account', { replace: true }), 900);
       return;
     }
@@ -578,13 +763,15 @@
         loadWelcomeModeSettings(),
         loadFlashcardsPhaseSettings(),
         loadFlashcardsLevelRulesSettings(),
-        loadSpeedCurveSettings()
+        loadSpeedCurveSettings(),
+        loadLevelDynamicsSettings()
       ]);
       setStatus(els.energyStatus, 'Configuracoes carregadas.');
       setStatus(els.welcomeModesStatus, 'Modos extras sincronizados.');
       setStatus(els.flashcardsPhaseStatus, 'Fase fourth-star sincronizada.');
       setStatus(els.flashcardsLevelRulesStatus, 'Tabela de niveis sincronizada.');
       setStatus(els.speedCurveStatus, 'Curva da velocidade sincronizada.');
+      setStatus(els.levelDynamicsStatus, 'Dinamicas de nivel sincronizadas.');
     } catch (error) {
       const message = error?.message || 'Nao foi possivel carregar as configuracoes do admin.';
       setStatus(els.energyStatus, message, 'error');
@@ -592,6 +779,7 @@
       setStatus(els.flashcardsPhaseStatus, message, 'error');
       setStatus(els.flashcardsLevelRulesStatus, message, 'error');
       setStatus(els.speedCurveStatus, message, 'error');
+      setStatus(els.levelDynamicsStatus, message, 'error');
     }
   })();
 })();

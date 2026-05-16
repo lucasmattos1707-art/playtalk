@@ -226,6 +226,7 @@ let welcomeModeSettingsReadyPromise = null;
 let flashcardPhaseSettingsReadyPromise = null;
 let flashcardLevelRulesSettingsReadyPromise = null;
 let flashcardSpeedCurveSettingsReadyPromise = null;
+let flashcardLevelDynamicsSettingsReadyPromise = null;
 let userFlashcardSpeedSamplesTableReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
@@ -254,6 +255,10 @@ let flashcardLevelRulesSettingsCache = {
   updatedAt: 0
 };
 let flashcardSpeedCurveSettingsCache = {
+  value: null,
+  updatedAt: 0
+};
+let flashcardLevelDynamicsSettingsCache = {
   value: null,
   updatedAt: 0
 };
@@ -287,6 +292,7 @@ const DEFAULT_FOURTH_STAR_USES_SECOND_STAR_BLOCKS = false;
 const FLASHCARD_PHASE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_LEVEL_RULES_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_SPEED_CURVE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
+const FLASHCARD_LEVEL_DYNAMICS_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_SPEED_SAMPLE_LIMIT = 100;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
@@ -1096,6 +1102,104 @@ function rememberFlashcardSpeedCurveSettings(settings) {
   return snapshot;
 }
 
+function buildDefaultFlashcardSpeedLevelGainRules() {
+  return [
+    { minSpeed: 0, maxSpeed: 799, levelGainPerMinute: 0 },
+    { minSpeed: 800, maxSpeed: 899, levelGainPerMinute: 1 },
+    { minSpeed: 900, maxSpeed: 999, levelGainPerMinute: 1 },
+    { minSpeed: 1000, maxSpeed: 1099, levelGainPerMinute: 2 },
+    { minSpeed: 1100, maxSpeed: 1199, levelGainPerMinute: 2 },
+    { minSpeed: 1200, maxSpeed: 1299, levelGainPerMinute: 3 },
+    { minSpeed: 1300, maxSpeed: 1399, levelGainPerMinute: 3 },
+    { minSpeed: 1400, maxSpeed: 1499, levelGainPerMinute: 4 },
+    { minSpeed: 1500, maxSpeed: 1599, levelGainPerMinute: 4 },
+    { minSpeed: 1600, maxSpeed: null, levelGainPerMinute: 4 }
+  ];
+}
+
+function buildDefaultFlashcardFirstStageMissPenaltyRules() {
+  return [
+    { minLevel: 80, levelLoss: 7 },
+    { minLevel: 70, levelLoss: 6 },
+    { minLevel: 60, levelLoss: 5 },
+    { minLevel: 50, levelLoss: 4 },
+    { minLevel: 40, levelLoss: 3 },
+    { minLevel: 30, levelLoss: 2 }
+  ];
+}
+
+function normalizeFlashcardLevelDynamicsSnapshot(value = {}) {
+  const source = value?.payload && typeof value.payload === 'object' ? value.payload : value;
+  const defaultSpeedRules = buildDefaultFlashcardSpeedLevelGainRules();
+  const defaultPenaltyRules = buildDefaultFlashcardFirstStageMissPenaltyRules();
+
+  const rawSpeedRules = Array.isArray(source?.speedLevelGainRules)
+    ? source.speedLevelGainRules
+    : Array.isArray(source?.speedGainRules)
+      ? source.speedGainRules
+      : defaultSpeedRules;
+  const speedLevelGainRules = rawSpeedRules
+    .map((entry) => {
+      const minSpeed = Math.max(0, Math.floor(Number(entry?.minSpeed) || 0));
+      const hasMax = entry?.maxSpeed === null || entry?.maxSpeed === '' || Number.isFinite(Number(entry?.maxSpeed));
+      const normalizedMax = entry?.maxSpeed === null || entry?.maxSpeed === ''
+        ? null
+        : Math.max(minSpeed, Math.floor(Number(entry?.maxSpeed) || minSpeed));
+      const levelGainPerMinute = Math.max(0, Math.min(20, Math.floor(Number(entry?.levelGainPerMinute) || 0)));
+      if (!hasMax) return null;
+      return {
+        minSpeed,
+        maxSpeed: normalizedMax,
+        levelGainPerMinute
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.minSpeed - b.minSpeed);
+
+  const rawPenaltyRules = Array.isArray(source?.firstStageMissPenaltyRules)
+    ? source.firstStageMissPenaltyRules
+    : Array.isArray(source?.firstStagePenalties)
+      ? source.firstStagePenalties
+      : defaultPenaltyRules;
+  const firstStageMissPenaltyRules = rawPenaltyRules
+    .map((entry) => ({
+      minLevel: Math.max(1, Math.min(200, Math.floor(Number(entry?.minLevel) || 1))),
+      levelLoss: Math.max(0, Math.min(50, Math.floor(Number(entry?.levelLoss) || 0)))
+    }))
+    .filter((entry) => entry.levelLoss > 0)
+    .sort((a, b) => b.minLevel - a.minLevel);
+
+  return {
+    speedLevelGainRules: speedLevelGainRules.length ? speedLevelGainRules : defaultSpeedRules,
+    firstStageMissPenaltyRules: firstStageMissPenaltyRules.length ? firstStageMissPenaltyRules : defaultPenaltyRules
+  };
+}
+
+function rememberFlashcardLevelDynamicsSettings(settings) {
+  const snapshot = normalizeFlashcardLevelDynamicsSnapshot(settings);
+  flashcardLevelDynamicsSettingsCache = {
+    value: snapshot,
+    updatedAt: Date.now()
+  };
+  return snapshot;
+}
+
+function resolveFlashcardSpeedLevelGainPerMinute(speedPerHour, dynamicsSettings = null) {
+  const speed = Math.max(0, Math.floor(Number(speedPerHour) || 0));
+  const snapshot = normalizeFlashcardLevelDynamicsSnapshot(dynamicsSettings || flashcardLevelDynamicsSettingsCache.value || {});
+  const match = snapshot.speedLevelGainRules.find((rule) => (
+    speed >= rule.minSpeed && (rule.maxSpeed === null || speed <= rule.maxSpeed)
+  ));
+  return Math.max(0, Number(match?.levelGainPerMinute) || 0);
+}
+
+function resolveFlashcardFirstStageMissLevelLoss(level, dynamicsSettings = null) {
+  const currentLevel = Math.max(1, Math.min(200, Math.floor(Number(level) || 1)));
+  const snapshot = normalizeFlashcardLevelDynamicsSnapshot(dynamicsSettings || flashcardLevelDynamicsSettingsCache.value || {});
+  const match = snapshot.firstStageMissPenaltyRules.find((rule) => currentLevel >= rule.minLevel);
+  return Math.max(0, Number(match?.levelLoss) || 0);
+}
+
 function interpolateFlashcardSpeedMultiplier(charsCount, curveSettings) {
   const chars = Math.max(1, Number(charsCount) || 1);
   const snapshot = normalizeFlashcardSpeedCurveSnapshot(curveSettings);
@@ -1122,15 +1226,6 @@ function buildFlashcardSpeedSampleValue(charsCount, curveSettings) {
   return {
     sampleValue: Math.max(0.01, Number((safeChars * multiplier).toFixed(4)))
   };
-}
-
-function resolveFlashcardSpeedLevelGainPerMinute(speedPerHour) {
-  const speed = Math.max(0, Math.floor(Number(speedPerHour) || 0));
-  if (speed < 800) return 0;
-  if (speed <= 999) return 1;
-  if (speed <= 1199) return 2;
-  if (speed <= 1399) return 3;
-  return 4;
 }
 
 const xpRequiredForNextLevel = (level) => {
@@ -2980,6 +3075,34 @@ const ensureFlashcardSpeedCurveSettingsTable = async () => {
   return flashcardSpeedCurveSettingsReadyPromise;
 };
 
+const ensureFlashcardLevelDynamicsSettingsTable = async () => {
+  if (!pool) return false;
+  if (!flashcardLevelDynamicsSettingsReadyPromise) {
+    flashcardLevelDynamicsSettingsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.app_flashcard_level_dynamics_settings (
+          singleton_key text PRIMARY KEY,
+          payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+          updated_by_user_id integer REFERENCES public.users(id) ON DELETE SET NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(
+        `INSERT INTO public.app_flashcard_level_dynamics_settings (singleton_key, payload)
+         VALUES ('default', $1::jsonb)
+         ON CONFLICT (singleton_key) DO NOTHING`,
+        [JSON.stringify(normalizeFlashcardLevelDynamicsSnapshot({}))]
+      );
+      return true;
+    })().catch((error) => {
+      flashcardLevelDynamicsSettingsReadyPromise = null;
+      throw error;
+    });
+  }
+  return flashcardLevelDynamicsSettingsReadyPromise;
+};
+
 const ensureUserFlashcardSpeedSamplesTable = async () => {
   if (!pool) return false;
   if (!userFlashcardSpeedSamplesTableReadyPromise) {
@@ -3143,6 +3266,26 @@ async function getFlashcardSpeedCurveSettings(options = {}) {
   return rememberFlashcardSpeedCurveSettings(result.rows[0]?.payload || {});
 }
 
+async function getFlashcardLevelDynamicsSettings(options = {}) {
+  const force = Boolean(options?.force);
+  if (!pool) return normalizeFlashcardLevelDynamicsSnapshot({});
+  if (
+    !force
+    && flashcardLevelDynamicsSettingsCache.value
+    && (Date.now() - flashcardLevelDynamicsSettingsCache.updatedAt) < FLASHCARD_LEVEL_DYNAMICS_SETTINGS_CACHE_TTL_MS
+  ) {
+    return flashcardLevelDynamicsSettingsCache.value;
+  }
+  await ensureFlashcardLevelDynamicsSettingsTable();
+  const result = await pool.query(
+    `SELECT payload
+     FROM public.app_flashcard_level_dynamics_settings
+     WHERE singleton_key = 'default'
+     LIMIT 1`
+  );
+  return rememberFlashcardLevelDynamicsSettings(result.rows[0]?.payload || {});
+}
+
 async function updateEnergySettings(db, values = {}, updatedByUserId = null) {
   const executor = db && typeof db.query === 'function' ? db : pool;
   if (!executor) {
@@ -3275,6 +3418,25 @@ async function updateFlashcardSpeedCurveSettings(db, values = {}, updatedByUserI
     [JSON.stringify(snapshot), Number(updatedByUserId) || null]
   );
   return rememberFlashcardSpeedCurveSettings(result.rows[0]?.payload || snapshot);
+}
+
+async function updateFlashcardLevelDynamicsSettings(db, values = {}, updatedByUserId = null) {
+  const executor = db && typeof db.query === 'function' ? db : pool;
+  if (!executor) return normalizeFlashcardLevelDynamicsSnapshot(values);
+  const snapshot = normalizeFlashcardLevelDynamicsSnapshot(values);
+  await ensureFlashcardLevelDynamicsSettingsTable();
+  const result = await executor.query(
+    `INSERT INTO public.app_flashcard_level_dynamics_settings (singleton_key, payload, updated_by_user_id, updated_at)
+     VALUES ('default', $1::jsonb, $2, now())
+     ON CONFLICT (singleton_key)
+     DO UPDATE SET
+       payload = EXCLUDED.payload,
+       updated_by_user_id = EXCLUDED.updated_by_user_id,
+       updated_at = now()
+     RETURNING payload`,
+    [JSON.stringify(snapshot), Number(updatedByUserId) || null]
+  );
+  return rememberFlashcardLevelDynamicsSettings(result.rows[0]?.payload || snapshot);
 }
 
 const ensureUsersPresenceClassMetricStorage = async () => {
@@ -4896,7 +5058,8 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
     0,
     Number((Number(totalsRow.base_speed_per_hour || 0) + Number(totalsRow.speed_delta || 0)).toFixed(1))
   );
-  const levelGainPerMinute = resolveFlashcardSpeedLevelGainPerMinute(speedPerHour);
+  const levelDynamicsSettings = await getFlashcardLevelDynamicsSettings();
+  const levelGainPerMinute = resolveFlashcardSpeedLevelGainPerMinute(speedPerHour, levelDynamicsSettings);
   const levelDelta = practiceMinutes * levelGainPerMinute;
   if (levelDelta <= 0) {
     return { levelDelta: 0, practiceMinutes, speedPerHour };
@@ -15462,6 +15625,94 @@ app.post('/api/flashcards/session-clock', express.json({ limit: '16kb' }), async
   }
 });
 
+app.post('/api/flashcards/first-stage-level-penalty', express.json({ limit: '16kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const userId = Number.parseInt(authUser.id, 10);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ success: false, message: 'Usuario invalido.' });
+      return;
+    }
+
+    const providedLevel = Number.parseInt(req.body?.currentLevel, 10);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const userResult = await client.query(
+        `SELECT level
+         FROM public.users
+         WHERE id = $1
+         FOR UPDATE`,
+        [userId]
+      );
+      if (!userResult.rows.length) {
+        await client.query('ROLLBACK');
+        res.status(404).json({ success: false, message: 'Usuario nao encontrado.' });
+        return;
+      }
+      const persistedLevel = normalizeUserFlashcardLevel(userResult.rows[0]?.level);
+      const baseLevel = Number.isInteger(providedLevel)
+        ? normalizeUserFlashcardLevel(providedLevel)
+        : persistedLevel;
+      const levelDynamicsSettings = await getFlashcardLevelDynamicsSettings();
+      const levelLoss = resolveFlashcardFirstStageMissLevelLoss(baseLevel, levelDynamicsSettings);
+      if (levelLoss <= 0) {
+        await client.query('COMMIT');
+        res.json({
+          success: true,
+          levelLoss: 0,
+          userLevel: persistedLevel,
+          userLevelUpdatedAt: null
+        });
+        return;
+      }
+      const updateResult = await client.query(
+        `UPDATE public.users
+         SET level = GREATEST(1, LEAST(200, COALESCE(level, 1)) - $2),
+             level_updated_at = now()
+         WHERE id = $1
+         RETURNING level, level_updated_at`,
+        [userId, levelLoss]
+      );
+      await client.query('COMMIT');
+      const updatedLevel = normalizeUserFlashcardLevel(updateResult.rows[0]?.level);
+      res.json({
+        success: true,
+        levelLoss,
+        userLevel: updatedLevel,
+        userLevelUpdatedAt: updateResult.rows[0]?.level_updated_at
+          ? new Date(updateResult.rows[0].level_updated_at).toISOString()
+          : null
+      });
+    } catch (innerError) {
+      try { await client.query('ROLLBACK'); } catch (_rollbackError) {}
+      throw innerError;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao aplicar perda de nivel da first-star:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: statusCode === 400
+        ? 'Requisicao invalida.'
+        : 'Erro ao aplicar perda de nivel da first-star.'
+    });
+  }
+});
+
 app.get('/api/english/corpus', async (_req, res) => {
   try {
     const now = Date.now();
@@ -18829,6 +19080,15 @@ app.get('/api/flashcards/speed-curve-settings', async (_req, res) => {
   }
 });
 
+app.get('/api/flashcards/level-dynamics-settings', async (_req, res) => {
+  try {
+    const settings = await getFlashcardLevelDynamicsSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error?.message || 'Nao foi possivel carregar as dinamicas de nivel.' });
+  }
+});
+
 app.get('/api/admin/welcome-mode-settings', async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -18882,6 +19142,17 @@ app.get('/api/admin/flashcards/speed-curve-settings', async (req, res) => {
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar a curva de velocidade.' });
+  }
+});
+
+app.get('/api/admin/flashcards/level-dynamics-settings', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const settings = await getFlashcardLevelDynamicsSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar as dinamicas de nivel.' });
   }
 });
 
@@ -18995,6 +19266,24 @@ app.post('/api/admin/flashcards/speed-curve-settings', express.json({ limit: '64
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel salvar a curva de velocidade.' });
+  }
+});
+
+app.post('/api/admin/flashcards/level-dynamics-settings', express.json({ limit: '128kb' }), async (req, res) => {
+  try {
+    const adminUser = await requireAdminUserFromRequest(req);
+    const settings = await updateFlashcardLevelDynamicsSettings(pool, {
+      speedLevelGainRules: Array.isArray(req.body?.speedLevelGainRules) ? req.body.speedLevelGainRules : [],
+      firstStageMissPenaltyRules: Array.isArray(req.body?.firstStageMissPenaltyRules) ? req.body.firstStageMissPenaltyRules : []
+    }, adminUser.id);
+    res.json({
+      success: true,
+      message: 'Dinamicas de nivel atualizadas.',
+      settings
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel salvar as dinamicas de nivel.' });
   }
 });
 

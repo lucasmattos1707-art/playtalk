@@ -517,6 +517,46 @@
     </section>
 
     <section class="admin-card" style="margin-top:18px;">
+      <h2>Dinamicas de nivel dos decks (/play)</h2>
+      <p class="admin-card-copy">Controle global do ganho de nivel por minuto (velocidade/h) e da perda de nivel por erro na first-star.</p>
+      <form class="admin-form" id="adminLevelDynamicsForm">
+        <div class="admin-field">
+          <label>Tabela de ganho por minuto (velocidade/h)</label>
+          <div class="admin-level-rules-table-wrap">
+            <table class="admin-level-rules-table" aria-label="Tabela de ganho de nivel por velocidade">
+              <thead>
+                <tr>
+                  <th>Min Speed</th>
+                  <th>Max Speed</th>
+                  <th>Niveis/min</th>
+                </tr>
+              </thead>
+              <tbody id="adminSpeedGainRulesTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="admin-field">
+          <label>Tabela de perda na first-star (por erro)</label>
+          <div class="admin-level-rules-table-wrap">
+            <table class="admin-level-rules-table" aria-label="Tabela de perda de nivel na first-star">
+              <thead>
+                <tr>
+                  <th>Min Level</th>
+                  <th>Niveis perdidos</th>
+                </tr>
+              </thead>
+              <tbody id="adminFirstStagePenaltyRulesTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="admin-topbar-actions">
+          <button class="admin-btn" id="adminLevelDynamicsSaveBtn" type="submit">Salvar dinamicas de nivel</button>
+        </div>
+      </form>
+      <div class="admin-status" id="adminLevelDynamicsStatus" aria-live="polite"></div>
+    </section>
+
+    <section class="admin-card" style="margin-top:18px;">
       <h2>Resumo rapido</h2>
       <ul class="admin-facts">
         <li class="admin-fact">
