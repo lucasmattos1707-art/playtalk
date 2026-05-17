@@ -16145,40 +16145,40 @@
       }
 
       const DAILY_PLAN_FLUENCY_SEALS = [
-        { key: 'white', label: 'White', minScore: 10, sealImage: 'medalhas/white.png' },
-        { key: 'vidro', label: 'Vidro', minScore: 20, sealImage: 'medalhas/vidro.png' },
-        { key: 'metal', label: 'Metal', minScore: 30, sealImage: 'medalhas/metal.png' },
-        { key: 'bronze', label: 'Bronze', minScore: 40, sealImage: 'medalhas/bronze.png' },
-        { key: 'prata', label: 'Prata', minScore: 50, sealImage: 'medalhas/prata.png' },
-        { key: 'safira', label: 'Safira', minScore: 60, sealImage: 'medalhas/quartz.png' },
-        { key: 'esmeralda', label: 'Esmeralda', minScore: 70, sealImage: 'medalhas/emerald.png' },
-        { key: 'platina', label: 'Platina', minScore: 80, sealImage: 'medalhas/platina.png' },
-        { key: 'ouro', label: 'Ouro', minScore: 90, sealImage: 'medalhas/ouro.png' },
-        { key: 'diamante', label: 'Diamante', minScore: 100, sealImage: 'medalhas/diamante.png' }
+        { key: 'white', label: 'White', minCards: 0, sealImage: 'medalhas/white.png' },
+        { key: 'vidro', label: 'Vidro', minCards: 5, sealImage: 'medalhas/vidro.png' },
+        { key: 'bronze', label: 'Bronze', minCards: 12, sealImage: 'medalhas/bronze.png' },
+        { key: 'prata', label: 'Prata', minCards: 20, sealImage: 'medalhas/prata.png' },
+        { key: 'ouro', label: 'Ouro', minCards: 30, sealImage: 'medalhas/ouro.png' },
+        { key: 'platina', label: 'Platina', minCards: 50, sealImage: 'medalhas/platina.png' },
+        { key: 'esmeralda', label: 'Esmeralda', minCards: 70, sealImage: 'medalhas/emerald.png' },
+        { key: 'quartz', label: 'Quartz', minCards: 90, sealImage: 'medalhas/quartz.png' },
+        { key: 'rubi', label: 'Rubi', minCards: 150, sealImage: 'medalhas/rubi.png' },
+        { key: 'diamante', label: 'Diamante', minCards: 180, sealImage: 'medalhas/diamante.png' }
       ];
 
       function resolveDailyPlanSealByScore(score) {
-        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
+        const normalized = Math.max(0, Number(score) || 0);
         let selected = DAILY_PLAN_FLUENCY_SEALS[0] || null;
         for (const seal of DAILY_PLAN_FLUENCY_SEALS) {
           if (!seal) continue;
-          if (normalized >= seal.minScore) selected = seal;
+          if (normalized >= seal.minCards) selected = seal;
         }
         return selected;
       }
 
       function resolveDailyPlanNextSealByScore(score) {
-        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
-        return DAILY_PLAN_FLUENCY_SEALS.find((seal) => normalized < seal.minScore) || null;
+        const normalized = Math.max(0, Number(score) || 0);
+        return DAILY_PLAN_FLUENCY_SEALS.find((seal) => normalized < seal.minCards) || null;
       }
 
       function computeDailyPlanNextSealProgress(score) {
-        const normalized = Math.max(0, Math.min(100, Number(score) || 0));
-        const nextSeal = DAILY_PLAN_FLUENCY_SEALS.find((seal) => normalized < seal.minScore) || null;
+        const normalized = Math.max(0, Number(score) || 0);
+        const nextSeal = DAILY_PLAN_FLUENCY_SEALS.find((seal) => normalized < seal.minCards) || null;
         if (!nextSeal) return 100;
         const nextIndex = DAILY_PLAN_FLUENCY_SEALS.indexOf(nextSeal);
-        const previousMinScore = nextIndex > 0 ? DAILY_PLAN_FLUENCY_SEALS[nextIndex - 1].minScore : 0;
-        const segmentSize = Math.max(1, nextSeal.minScore - previousMinScore);
+        const previousMinScore = nextIndex > 0 ? DAILY_PLAN_FLUENCY_SEALS[nextIndex - 1].minCards : 0;
+        const segmentSize = Math.max(1, nextSeal.minCards - previousMinScore);
         const segmentProgress = ((normalized - previousMinScore) / segmentSize) * 100;
         return Math.max(0, Math.min(100, segmentProgress));
       }
@@ -16287,56 +16287,41 @@
 
       function fluencyPlanApplicationLabel(value) {
         const numeric = Number(value);
-        if (numeric === 0) return 'Somente jogar sem prática real';
-        if (numeric === 1) return 'Aplicar as dicas do jogo na vida real';
-        if (numeric === 2) return 'Seguir o plano de fluência completo';
-        return 'Aplicar as dicas do jogo na vida real';
+        if (numeric === 0) return 'Pronúncia leve';
+        if (numeric === 1) return 'Pronúncia equilibrada';
+        if (numeric === 2) return 'Pronúncia intensa';
+        return 'Pronúncia equilibrada';
       }
 
       function fluencyVectorByTimeLocal(minutes) {
-        const normalizedMinutes = Math.max(15, Math.min(120, Number(minutes) || 0));
-        if (normalizedMinutes <= 45) {
-          return 10 + ((normalizedMinutes - 15) / (45 - 15)) * 40;
-        }
-        return 50 + ((normalizedMinutes - 45) / (120 - 45)) * 50;
+        const normalizedMinutes = Math.max(0, Math.min(120, Number(minutes) || 0));
+        return (normalizedMinutes / 120) * 100;
       }
 
-      function fluencyVectorByMonthsLocal(months) {
-        const normalizedMonths = Math.max(3, Math.min(24, Number(months) || 0));
-        if (normalizedMonths <= 6) {
-          return 25 + ((normalizedMonths - 3) / (6 - 3)) * 25;
-        }
-        return 50 + ((normalizedMonths - 6) / (24 - 6)) * 50;
+      function fluencyMonthsMultiplierLocal(months) {
+        const normalizedMonths = Math.max(0, Number(months) || 0);
+        if (normalizedMonths >= 12) return 2;
+        if (normalizedMonths >= 6) return 1.5;
+        return 1;
       }
 
-      function fluencySmartbooksCutLocal(percent) {
-        const normalizedPercent = Math.max(0, Math.min(100, Number(percent) || 0));
-        if (normalizedPercent >= 50) return 0;
-        if (normalizedPercent >= 45) return 5;
-        if (normalizedPercent >= 40) return 10;
-        if (normalizedPercent >= 35) return 15;
-        if (normalizedPercent >= 30) return 20;
-        if (normalizedPercent >= 25) return 25;
-        return 30;
-      }
-
-      function fluencyApplicationCutLocal(application) {
-        return Number(application) === 0 ? 30 : 0;
+      function fluencyApplicationMultiplierLocal(application) {
+        const normalized = Math.max(0, Math.min(2, Number(application) || 0));
+        if (normalized <= 0) return 0.9;
+        if (normalized === 1) return 1;
+        return 1.1;
       }
 
       function computeExpectedFluencyPercent(mission) {
         const minutes = Math.max(0, Number(mission?.minutes ?? state.user?.fluencyPlanMinutes) || 0);
         const months = Math.max(0, Number(state.user?.fluencyPlanMonths) || 0);
         const application = Number(state.user?.fluencyPlanApplication);
-        const flashPct = Math.max(0, Number(mission?.flashcardsPercentage ?? state.user?.fluencyPlanFlashcardsPercentage) || 0);
-        const booksPct = Math.max(0, Number(mission?.smartbooksPercentage ?? state.user?.fluencyPlanSmartbooksPercentage) || 0);
         const scoreFromUser = Math.max(0, Math.min(200, Number(state.user?.fluencyPlanScore) || 0));
         if (scoreFromUser > 0) return scoreFromUser;
-        if (!(minutes > 0 && months > 0 && (flashPct + booksPct) === 100)) return 0;
-        const base = fluencyVectorByTimeLocal(minutes) + fluencyVectorByMonthsLocal(months);
-        const cutSmartbooks = fluencySmartbooksCutLocal(booksPct);
-        const cutApplication = fluencyApplicationCutLocal(application);
-        return Math.max(0, Math.min(200, Math.round(base * (1 - ((cutSmartbooks + cutApplication) / 100)))));
+        if (!(minutes > 0 && months > 0)) return 0;
+        const base = fluencyVectorByTimeLocal(minutes);
+        const byJourney = base * fluencyMonthsMultiplierLocal(months);
+        return Math.max(0, Math.min(200, Math.round(byJourney * fluencyApplicationMultiplierLocal(application))));
       }
 
       function computeProducedFluencyPercent(mission, missionView) {
@@ -16350,15 +16335,12 @@
         const minutes = Math.max(0, Number(mission?.minutes ?? state.user?.fluencyPlanMinutes) || 0);
         const months = Math.max(0, Number(state.user?.fluencyPlanMonths) || 0);
         const applicationText = fluencyPlanApplicationLabel(state.user?.fluencyPlanApplication);
-        const flashPct = Math.max(0, Number(mission?.flashcardsPercentage ?? state.user?.fluencyPlanFlashcardsPercentage) || 0);
-        const booksPct = Math.max(0, Number(mission?.smartbooksPercentage ?? state.user?.fluencyPlanSmartbooksPercentage) || 0);
         const expectedFluency = computeExpectedFluencyPercent(mission);
         const producedFluency = computeProducedFluencyPercent(mission, missionView);
         return [
           `Seu treino diário é ${Math.round(minutes)} minutos`,
           `Seu plano é de ${Math.round(months)} meses`,
           applicationText,
-          `${Math.round(flashPct)}% FlashCards · ${Math.round(booksPct)}% SmartBooks`,
           `Fluência esperada ${Math.round(expectedFluency)}%`,
           `Fluência produzida ${Math.round(producedFluency)}%`
         ];
@@ -16374,6 +16356,7 @@
         const isNoPlanMode = safeText(mission?.seal?.mode).toLowerCase() === 'sem_plano';
         const missionView = buildDailyPlanMissionView(mission, use120Preview);
         const producedFluency = computeProducedFluencyPercent(mission, missionView);
+        const cardsForSealProgress = Math.max(0, Number(missionView.cardsTodayBase ?? missionView.cardsToday) || 0);
         const overallPercent = clampPercent(missionView.balancedProgressPercent);
         const overallPercentRounded = Math.round(overallPercent);
         const overallPercentForVisual = isNoPlanMode
@@ -16395,15 +16378,13 @@
           els.dailyPlanBooksTotal,
           els.dailyPlanBooksBar
         );
-        // Quando sem plano, a barra da missão mostra progresso até o próximo selo.
-        const serverPlanScoreForBar = Math.max(0, Math.min(200, Number(mission?.seal?.planScore) || 0));
-        const nextSealProgressForBar = computeDailyPlanNextSealProgress(serverPlanScoreForBar);
+        const nextSealProgressForBar = computeDailyPlanNextSealProgress(cardsForSealProgress);
         if (els.dailyPlanMissionBar) {
           const missionBarProgress = isNoPlanMode ? nextSealProgressForBar : overallPercentForVisual;
           els.dailyPlanMissionBar.style.setProperty('--progress', `${missionBarProgress.toFixed(2)}%`);
         }
         const percentToShow = isNoPlanMode
-          ? Math.round(computeDailyPlanNextSealProgress(Math.max(0, Math.min(200, Number(mission?.seal?.planScore) || 0))))
+          ? Math.round(computeDailyPlanNextSealProgress(cardsForSealProgress))
           : overallPercentRounded;
         if (els.dailyPlanMissionCircle) {
           const missionCircleProgress = Math.max(0, Math.min(100, Number(percentToShow) || 0));
@@ -16428,7 +16409,7 @@
           els.dailyPlanBooksMission.style.display = booksPct > 0 ? 'grid' : 'none';
         }
         // O selo atual acompanha a fluencia produzida.
-        const totalSealProgress = Math.max(0, Math.min(100, producedFluency));
+        const totalSealProgress = cardsForSealProgress;
         const nextSealProgress = computeDailyPlanNextSealProgress(totalSealProgress);
         const currentSeal = resolveDailyPlanSealByScore(totalSealProgress);
         if (els.dailyPlanCurrentSealImage) {
@@ -16441,7 +16422,7 @@
           els.dailyPlanCurrentSealImage.style.filter = 'none';
         }
         if (els.welcomeAvatarSeal) {
-          const fallbackUserSealProgress = Math.max(0, Math.min(100, Number(state.user?.fluencyPlanScore) || 0));
+          const fallbackUserSealProgress = Math.max(0, Number(state.user?.fluencyPlanScore) || 0);
           const welcomeSealProgress = (!isNoPlanMode && totalSealProgress <= 0 && fallbackUserSealProgress > 0)
             ? fallbackUserSealProgress
             : totalSealProgress;

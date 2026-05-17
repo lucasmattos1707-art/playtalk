@@ -846,16 +846,16 @@
 
     <section class="screen" data-step="2">
       <div class="question-block">
-        <h1>Como você pretende usar o inglês?</h1>
+        <h1>Qual foco de pronúncia você quer manter?</h1>
       </div>
       <div class="options three-text options--application" data-group="application">
-        <button class="option" data-value="0">Somente jogar sem prática real</button>
-        <button class="option" data-value="1">Aplicar as dicas do jogo na vida real</button>
-        <button class="option" data-value="2">Seguir o plano de fluência completo</button>
+        <button class="option" data-value="0">Leve</button>
+        <button class="option" data-value="1">Equilibrado</button>
+        <button class="option" data-value="2">Intenso</button>
       </div>
     </section>
 
-    <section class="screen" data-step="3">
+    <section class="screen" data-step="30">
       <div class="question-block">
         <h1>Qual porcentagem de pronúncia você quer treinar?</h1>
       </div>
@@ -909,7 +909,7 @@
       </div>
     </section>
 
-    <section class="screen result-screen" data-step="4">
+    <section class="screen result-screen" data-step="3">
       <div class="result-top">
         <h2 class="result-title">Seu resultado estimado</h2>
         <div class="score"><span id="score">0</span><span class="score-unit">%</span></div>
@@ -948,7 +948,7 @@
   <script>
     const DEFAULT_RETURN_PATH = '/play';
     const CLICK_AUDIO_PATH = '/audio/click.mp3';
-    const totalChoiceSteps = 4;
+    const totalChoiceSteps = 3;
     let step = 0;
     let busy = false;
 
@@ -1111,35 +1111,28 @@
     }
 
     function vectorByTime(minutes) {
-      const min = clamp(Number(minutes) || 0, 15, 120);
-      // 15 min => 10, 45 min => 50, 120 min => 100
-      if (min <= 45) {
-        return 10 + ((min - 15) / (45 - 15)) * 40;
-      }
-      return 50 + ((min - 45) / (120 - 45)) * 50;
+      const min = clamp(Number(minutes) || 0, 0, 120);
+      return (min / 120) * 100;
     }
 
-    function vectorByMonths(months) {
-      const m = clamp(Number(months) || 0, 3, 24);
-      // 3 meses => 25, 6 meses => 50, 24 meses => 100
-      if (m <= 6) {
-        return 25 + ((m - 3) / (6 - 3)) * 25;
-      }
-      return 50 + ((m - 6) / (24 - 6)) * 50;
+    function monthsMultiplier(months) {
+      const m = Math.max(0, Number(months) || 0);
+      if (m >= 12) return 2;
+      if (m >= 6) return 1.5;
+      return 1;
     }
 
-    function applicationCut(applicationMode) {
-      // 0 = somente jogar; 1/2 = aplica na vida real
-      return Number(applicationMode) === 0 ? 30 : 0;
+    function pronunciationMultiplier(applicationMode) {
+      const mode = Math.max(0, Math.min(2, Number(applicationMode) || 0));
+      if (mode <= 0) return 0.9;
+      if (mode === 1) return 1;
+      return 1.1;
     }
 
     function calculate() {
       const vectorA = vectorByTime(state.minutes);
-      const vectorB = vectorByMonths(state.months);
-      const base = vectorA + vectorB;
-      const cutApplication = applicationCut(state.application);
-      const totalCut = cutApplication;
-      const finalScore = clamp(base * (1 - totalCut / 100), 0, 200);
+      const afterJourney = vectorA * monthsMultiplier(state.months);
+      const finalScore = clamp(afterJourney * pronunciationMultiplier(state.application), 0, 200);
 
       return {
         finalScore
@@ -1188,7 +1181,7 @@
       if (els.liveResult && activeScreen) {
         activeScreen.appendChild(els.liveResult);
         els.liveResult.hidden = false;
-        els.liveResult.classList.toggle('is-final', step === 4);
+        els.liveResult.classList.toggle('is-final', step === 3);
       }
 
       els.backBtn.disabled = busy || step === 0;
@@ -1197,7 +1190,7 @@
         els.skipPlanBtn.disabled = busy;
       }
       els.nextBtn.textContent = step < totalChoiceSteps ? 'Continuar' : (busy ? 'Salvando...' : 'Continuar');
-      els.stepFill.style.width = `${clamp(((step + 1) / 5) * 100, 20, 100)}%`;
+      els.stepFill.style.width = `${clamp(((step + 1) / 4) * 100, 25, 100)}%`;
       updateResult();
     }
 
@@ -1396,7 +1389,7 @@
         showStepSelectionWarning();
         return;
       }
-      if (step < 4) {
+      if (step < 3) {
         step += 1;
         renderStep();
         setStatus('');

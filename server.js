@@ -2424,12 +2424,12 @@ const ensureUserFluencySealsTable = async () => {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_fluency_seals (
           user_id integer PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
-          day1 smallint NOT NULL DEFAULT 0 CHECK (day1 BETWEEN 0 AND 6),
-          day2 smallint NOT NULL DEFAULT 0 CHECK (day2 BETWEEN 0 AND 6),
-          day3 smallint NOT NULL DEFAULT 0 CHECK (day3 BETWEEN 0 AND 6),
-          day4 smallint NOT NULL DEFAULT 0 CHECK (day4 BETWEEN 0 AND 6),
-          day5 smallint NOT NULL DEFAULT 0 CHECK (day5 BETWEEN 0 AND 6),
-          day6 smallint NOT NULL DEFAULT 0 CHECK (day6 BETWEEN 0 AND 6),
+          day1 smallint NOT NULL DEFAULT 0 CHECK (day1 BETWEEN 0 AND 9),
+          day2 smallint NOT NULL DEFAULT 0 CHECK (day2 BETWEEN 0 AND 9),
+          day3 smallint NOT NULL DEFAULT 0 CHECK (day3 BETWEEN 0 AND 9),
+          day4 smallint NOT NULL DEFAULT 0 CHECK (day4 BETWEEN 0 AND 9),
+          day5 smallint NOT NULL DEFAULT 0 CHECK (day5 BETWEEN 0 AND 9),
+          day6 smallint NOT NULL DEFAULT 0 CHECK (day6 BETWEEN 0 AND 9),
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now()
         )
@@ -2542,7 +2542,7 @@ const ensureUserFluencySealsDailyTable = async () => {
           day_date date NOT NULL,
           fluency_minutes numeric(10,2) NOT NULL DEFAULT 0,
           fluency_percent numeric(10,2) NOT NULL DEFAULT 0,
-          seal_code smallint NOT NULL DEFAULT 0 CHECK (seal_code BETWEEN 0 AND 6),
+          seal_code smallint NOT NULL DEFAULT 0 CHECK (seal_code BETWEEN 0 AND 9),
           speaking_chars bigint NOT NULL DEFAULT 0,
           listening_chars bigint NOT NULL DEFAULT 0,
           reading_chars bigint NOT NULL DEFAULT 0,
@@ -2563,6 +2563,22 @@ const ensureUserFluencySealsDailyTable = async () => {
         ADD COLUMN IF NOT EXISTS pronunciation_percent integer NOT NULL DEFAULT 0
       `);
       await pool.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = 'user_fluency_seals_daily_seal_code_check'
+          ) THEN
+            ALTER TABLE public.user_fluency_seals_daily
+              DROP CONSTRAINT user_fluency_seals_daily_seal_code_check;
+          END IF;
+          ALTER TABLE public.user_fluency_seals_daily
+            ADD CONSTRAINT user_fluency_seals_daily_seal_code_check
+            CHECK (seal_code BETWEEN 0 AND 9);
+        END $$;
+      `);
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS user_fluency_seals_daily_user_date_idx
         ON public.user_fluency_seals_daily (user_id, day_date ASC)
       `);
@@ -2577,12 +2593,16 @@ const ensureUserFluencySealsDailyTable = async () => {
 };
 
 const FLUENCY_SEAL_CODE_BY_KEY = Object.freeze({
-  prata: 1,
-  quartz: 2,
-  esmeralda: 3,
-  platina: 4,
-  ouro: 5,
-  diamante: 6
+  white: 0,
+  vidro: 1,
+  bronze: 2,
+  prata: 3,
+  quartz: 7,
+  esmeralda: 6,
+  platina: 5,
+  ouro: 4,
+  rubi: 8,
+  diamante: 9
 });
 
 const resolveFluencySealCode = (seal) => {
@@ -2591,16 +2611,8 @@ const resolveFluencySealCode = (seal) => {
 };
 
 const resolveCurrentDailyMissionSealCode = (mission) => {
-  const planScoreRaw = mission?.seal?.planScoreAt120 == null
-    ? mission?.seal?.planScore
-    : mission?.seal?.planScoreAt120;
-  const planScoreAt120 = Math.max(0, Math.min(200, Number(planScoreRaw) || 0));
-  const missionProgressPercent = Math.max(0, Number(mission?.weightedPercent) || 0);
-  const totalSealProgress = Math.max(
-    0,
-    Math.min(200, (planScoreAt120 * missionProgressPercent) / 200)
-  );
-  const seal = resolveFluencySealForScore(totalSealProgress);
+  const cardsToday = Math.max(0, Number(mission?.cardsTodayBase ?? mission?.cardsToday) || 0);
+  const seal = resolveFluencySealForScore(cardsToday);
   return resolveFluencySealCode(seal);
 };
 
@@ -2629,7 +2641,7 @@ const buildDayKeyStampFromDate = (dateValue) => {
 };
 
 const buildFluencyProducedMinutesFromMission = (mission) => {
-  const cardsMinutes = Math.max(0, Number(mission?.cardsToday) || 0) * DAILY_MISSION_FLASHCARD_MINUTES_PER_CARD;
+  const cardsMinutes = Math.max(0, Number(mission?.cardsTodayBase ?? mission?.cardsToday) || 0) * (DAILY_MISSION_SECONDS_PER_FLASHCARD / 60);
   const booksMinutes = Math.max(0, Number(mission?.booksToday) || 0) * DAILY_MISSION_SMARTBOOK_MINUTES_PER_BOOK;
   return Math.max(0, Number((cardsMinutes + booksMinutes).toFixed(2)));
 };
@@ -2651,7 +2663,7 @@ const upsertTodayFluencySealDailySnapshot = async (db, user, missionSnapshot) =>
   const producedPercent = buildFluencyProducedPercentFromMission(mission, producedMinutes);
   const isSealEarnedToday = producedMinutes >= 10;
   const computedSealCode = isSealEarnedToday ? resolveCurrentDailyMissionSealCode(mission) : 0;
-  const sealCode = Math.max(0, Math.min(6, Number(computedSealCode) || 0));
+  const sealCode = Math.max(0, Math.min(9, Number(computedSealCode) || 0));
 
   const todayResult = await db.query(
     `SELECT
@@ -2775,7 +2787,7 @@ const readUserFluencySealsTimeline = async (db, userId) => {
     timeline.push({
       dayKey,
       dayDate: cursor.toISOString().slice(0, 10),
-      sealCode: Math.max(0, Math.min(6, Number(record?.seal_code) || 0)),
+      sealCode: Math.max(0, Math.min(9, Number(record?.seal_code) || 0)),
       fluencyMinutes: Math.max(0, Number(record?.fluency_minutes) || 0),
       fluencyPercent: Math.max(0, Number(record?.fluency_percent) || 0),
       speakingChars: Math.max(0, Number(record?.speaking_chars) || 0),
@@ -2878,7 +2890,7 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
 
   const targets = calculateDailyMissionTargetSnapshot(user);
   const progress = await readUserDailyMissionProgress(db, user.id);
-  const [flashcardsCountResult, smartbooksCountResult, onTableResult] = await Promise.all([
+  const [flashcardsCountResult, smartbooksCountResult] = await Promise.all([
     db.query(
       `SELECT COUNT(*)::int AS flashcards_count
        FROM public.user_flashcard_progress
@@ -2888,13 +2900,6 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
     db.query(
       `SELECT COALESCE(SUM(reads_completed), 0)::int AS smartbooks_count
        FROM public.user_books_library_stats
-       WHERE user_id = $1`,
-      [user.id]
-    ),
-    db.query(
-      `SELECT COALESCE(SUM(GREATEST(0, LEAST(5, stars))), 0)::int AS stars_sum,
-              COUNT(*)::int AS cards_count
-       FROM public.user_flashcard_on_table
        WHERE user_id = $1`,
       [user.id]
     )
@@ -2914,16 +2919,12 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
   const cardsExpected = Math.max(0, Number(targets.cardsExpected) || 0);
   const booksExpected = Math.max(0, Number(targets.booksExpected) || 0);
   const cardsToday = Math.max(0, Number(progress.cardsToday) || 0);
-  const onTableStarsSum = Math.max(0, Number(onTableResult.rows[0]?.stars_sum) || 0);
-  const onTableCardsCount = Math.max(0, Number(onTableResult.rows[0]?.cards_count) || 0);
-  const onTableCardsPartial = Math.max(0, onTableStarsSum / 5);
-  const cardsTodayWithOnTable = cardsToday + onTableCardsPartial;
   const booksToday = Math.max(0, Number(progress.booksToday) || 0);
 
-  let cardsPercent = computeDailyMissionOverflowPercent(cardsTodayWithOnTable, cardsExpected);
+  let cardsPercent = computeDailyMissionOverflowPercent(cardsToday, cardsExpected);
   let booksPercent = computeDailyMissionOverflowPercent(booksToday, booksExpected);
   let weightedExpectedUnits = computeDailyMissionWeightedUnits(cardsExpected, booksExpected);
-  let weightedDoneUnits = computeDailyMissionWeightedUnits(cardsTodayWithOnTable, booksToday);
+  let weightedDoneUnits = computeDailyMissionWeightedUnits(cardsToday, booksToday);
   let weightedPercent = computeDailyMissionOverflowPercent(weightedDoneUnits, weightedExpectedUnits);
 
   if (fluencyPlanStatus === FLUENCY_PLAN_NO_PLAN_STATUS) {
@@ -2949,12 +2950,12 @@ const buildDailyMissionSnapshot = async (userOrId, db = pool) => {
     booksExpected,
     cardsTarget,
     booksTarget,
-    cardsToday: cardsTodayWithOnTable,
+    cardsToday,
     cardsTodayBase: cardsToday,
-    onTableCardsPartial,
-    onTableCardsCount,
+    onTableCardsPartial: 0,
+    onTableCardsCount: 0,
     booksToday,
-    cardsRemaining: Math.max(0, cardsTarget - cardsTodayWithOnTable),
+    cardsRemaining: Math.max(0, cardsTarget - cardsToday),
     booksRemaining: Math.max(0, booksTarget - booksToday),
     cardsPercent,
     booksPercent,
@@ -12221,31 +12222,35 @@ function buildBotLoginPassword() {
   return password;
 }
 
-const FLUENCY_PLAN_ALLOWED_MINUTES = new Set([5, 15, 30, 45, 60, 90, 120]);
-const FLUENCY_PLAN_ALLOWED_MONTHS = new Set([3, 6, 9, 12, 18, 24]);
+const FLUENCY_PLAN_ALLOWED_MINUTES = new Set([15, 30, 45, 60, 90, 120]);
+const FLUENCY_PLAN_ALLOWED_MONTHS = new Set([3, 6, 12, 18, 24]);
 const FLUENCY_PLAN_ALLOWED_APPLICATION = new Set([0, 1, 2]);
 const FLUENCY_PLAN_ALLOWED_BOOKS = new Set([0, 1]);
 const FLUENCY_PLAN_ALLOWED_PERCENTAGES = new Set(Array.from({ length: 21 }, (_, index) => index * 5));
-const DAILY_MISSION_FLASHCARD_MINUTES_PER_CARD = 1;
+const DAILY_MISSION_SECONDS_PER_FLASHCARD = 45;
 const DAILY_MISSION_SMARTBOOK_MINUTES_PER_BOOK = 2;
 const DAILY_MISSION_FLASHCARD_WEIGHT = 1;
 const DAILY_MISSION_SMARTBOOK_WEIGHT = 2;
 
 const FLUENCY_SEAL_CONFIG = [
-  { key: 'prata', label: 'Prata', minScore: 40, sealImage: 'medalhas/prata.png' },
-  { key: 'quartz', label: 'Quartz', minScore: 50, sealImage: 'medalhas/quartz.png' },
-  { key: 'esmeralda', label: 'Esmeralda', minScore: 60, sealImage: 'medalhas/emerald.png' },
-  { key: 'platina', label: 'Platina', minScore: 70, sealImage: 'medalhas/platina.png' },
-  { key: 'ouro', label: 'Ouro', minScore: 80, sealImage: 'medalhas/ouro.png' },
-  { key: 'diamante', label: 'Diamante', minScore: 90, sealImage: 'medalhas/diamante.png' }
+  { key: 'white', label: 'White', minCards: 0, sealImage: 'medalhas/white.png', code: 0 },
+  { key: 'vidro', label: 'Vidro', minCards: 5, sealImage: 'medalhas/vidro.png', code: 1 },
+  { key: 'bronze', label: 'Bronze', minCards: 12, sealImage: 'medalhas/bronze.png', code: 2 },
+  { key: 'prata', label: 'Prata', minCards: 20, sealImage: 'medalhas/prata.png', code: 3 },
+  { key: 'ouro', label: 'Ouro', minCards: 30, sealImage: 'medalhas/ouro.png', code: 4 },
+  { key: 'platina', label: 'Platina', minCards: 50, sealImage: 'medalhas/platina.png', code: 5 },
+  { key: 'esmeralda', label: 'Esmeralda', minCards: 70, sealImage: 'medalhas/emerald.png', code: 6 },
+  { key: 'quartz', label: 'Quartz', minCards: 90, sealImage: 'medalhas/quartz.png', code: 7 },
+  { key: 'rubi', label: 'Rubi', minCards: 150, sealImage: 'medalhas/rubi.png', code: 8 },
+  { key: 'diamante', label: 'Diamante', minCards: 180, sealImage: 'medalhas/diamante.png', code: 9 }
 ];
 
 function resolveFluencySealForScore(score) {
-  const normalized = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
+  const normalized = Math.max(0, Math.round(Number(score) || 0));
   let selected = FLUENCY_SEAL_CONFIG[0] || null;
   for (const seal of FLUENCY_SEAL_CONFIG) {
     if (!seal) continue;
-    if (normalized >= seal.minScore) selected = seal;
+    if (normalized >= seal.minCards) selected = seal;
   }
   return selected;
 }
@@ -12283,36 +12288,22 @@ function normalizeFluencyPlanMonthsValue(value) {
 }
 
 function fluencyVectorByTime(minutes) {
-  const normalizedMinutes = Math.max(15, Math.min(120, Number(minutes) || 0));
-  // 15min = 10, 45min = 50, 120min = 100.
-  if (normalizedMinutes <= 45) {
-    return 10 + ((normalizedMinutes - 15) / (45 - 15)) * 40;
-  }
-  return 50 + ((normalizedMinutes - 45) / (120 - 45)) * 50;
+  const normalizedMinutes = Math.max(0, Math.min(120, Number(minutes) || 0));
+  return (normalizedMinutes / 120) * 100;
 }
 
-function fluencyVectorByMonths(months) {
-  const normalizedMonths = Math.max(3, Math.min(24, Number(months) || 0));
-  // 3 meses = 25, 6 meses = 50, 24 meses = 100.
-  if (normalizedMonths <= 6) {
-    return 25 + ((normalizedMonths - 3) / (6 - 3)) * 25;
-  }
-  return 50 + ((normalizedMonths - 6) / (24 - 6)) * 50;
+function fluencyMonthsMultiplier(months) {
+  const normalizedMonths = Math.max(0, Number(months) || 0);
+  if (normalizedMonths >= 12) return 2;
+  if (normalizedMonths >= 6) return 1.5;
+  return 1;
 }
 
-function fluencySmartbooksCut(percent) {
-  const normalizedPercent = Math.max(0, Math.min(100, Number(percent) || 0));
-  if (normalizedPercent >= 50) return 0;
-  if (normalizedPercent >= 45) return 5;
-  if (normalizedPercent >= 40) return 10;
-  if (normalizedPercent >= 35) return 15;
-  if (normalizedPercent >= 30) return 20;
-  if (normalizedPercent >= 25) return 25;
-  return 30;
-}
-
-function fluencyApplicationCut(application) {
-  return Number(application) === 0 ? 30 : 0;
+function fluencyValueMultiplier(application) {
+  const normalized = Math.max(0, Math.min(2, Number(application) || 0));
+  if (normalized <= 0) return 0.9;
+  if (normalized === 1) return 1;
+  return 1.1;
 }
 
 function fluencyVectorByTotalMinutes(totalMinutes) {
@@ -12426,13 +12417,9 @@ function calculateFluencyPlanScoreSnapshot(plan) {
     return null;
   }
 
-  const vectorA = fluencyVectorByTime(minutes);
-  const vectorB = fluencyVectorByMonths(months);
-  const base = vectorA + vectorB;
-  const cutSmartbooks = fluencySmartbooksCut(normalizedSmartbooksPercentage);
-  const cutApplication = fluencyApplicationCut(application);
-  const totalCut = cutSmartbooks + cutApplication;
-  const finalScore = Math.max(0, Math.min(200, Math.round(base * (1 - (totalCut / 100)))));
+  const baseByTime = fluencyVectorByTime(minutes);
+  const byJourney = baseByTime * fluencyMonthsMultiplier(months);
+  const finalScore = Math.max(0, Math.min(200, Math.round(byJourney * fluencyValueMultiplier(application))));
 
   return {
     minutes,
@@ -12472,13 +12459,16 @@ function calculateDailyMissionTargetSnapshot(user) {
   const flashcardsMinutes = minutes * (flashcardsPercentage / 100);
   const smartbooksMinutes = minutes * (smartbooksPercentage / 100);
   const cardsExpected = flashcardsPercentage > 0
-    ? Math.max(0, flashcardsMinutes / DAILY_MISSION_FLASHCARD_MINUTES_PER_CARD)
+    ? Math.max(0, (flashcardsMinutes * 60) / DAILY_MISSION_SECONDS_PER_FLASHCARD)
     : 0;
   const booksExpected = smartbooksPercentage > 0
     ? Math.max(0, smartbooksMinutes / DAILY_MISSION_SMARTBOOK_MINUTES_PER_BOOK)
     : 0;
   // Display goal is integer, but percent math uses the fractional expected value.
-  const cardsTarget = flashcardsPercentage > 0 ? Math.max(1, Math.ceil(cardsExpected)) : 0;
+  let cardsTarget = flashcardsPercentage > 0 ? Math.max(1, Math.ceil(cardsExpected)) : 0;
+  if (cardsTarget >= 160) {
+    cardsTarget = 200;
+  }
   const booksTarget = smartbooksPercentage > 0 ? Math.max(1, Math.ceil(booksExpected)) : 0;
 
   return {
@@ -15947,14 +15937,14 @@ app.get('/api/fluency-seals', async (req, res) => {
     const missionSnapshot = await buildDailyMissionSnapshot(user, pool);
     const todayRow = await upsertTodayFluencySealDailySnapshot(pool, user, missionSnapshot);
     const timeline = await readUserFluencySealsTimeline(pool, user.id);
-    const slots = timeline.map((entry) => Math.max(0, Math.min(6, Number(entry?.sealCode) || 0)));
+    const slots = timeline.map((entry) => Math.max(0, Math.min(9, Number(entry?.sealCode) || 0)));
     const earnedSealsCount = slots.reduce((total, code) => total + (code > 0 ? 1 : 0), 0);
     const planDays = timeline.length;
     const currentDayNumber = Math.max(1, planDays || 1);
     const currentDayEntry = timeline[currentDayNumber - 1] || null;
     const fluencyCompletePercent = Math.max(0, Math.min(100, Number(currentDayEntry?.fluencyPercent) || 0));
-    const currentDaySealCode = Math.max(0, Math.min(6, Number(currentDayEntry?.sealCode) || 0));
-    const currentSeal = resolveFluencySealForScore(Math.max(0, Number(missionSnapshot?.seal?.planScoreAt120) || 0));
+    const currentDaySealCode = Math.max(0, Math.min(9, Number(currentDayEntry?.sealCode) || 0));
+    const currentSeal = resolveFluencySealForScore(Math.max(0, Number(missionSnapshot?.cardsTodayBase ?? missionSnapshot?.cardsToday) || 0));
 
     res.setHeader('Cache-Control', 'no-store');
     res.json({
@@ -15969,7 +15959,7 @@ app.get('/api/fluency-seals', async (req, res) => {
         fluencyCompletePercent,
         currentDayNumber,
         currentDaySealCode,
-        currentSealLabel: safeTrim(currentSeal?.label) || 'Prata'
+        currentSealLabel: safeTrim(currentSeal?.label) || 'White'
       }
     });
   } catch (error) {
@@ -16013,13 +16003,16 @@ app.get('/api/books/day-seals', async (req, res) => {
         maxNavigableDay: Math.max(currentDayNumber, earnedSealsCount + 7),
         timeline,
         sealCatalog: {
-          0: { label: 'Metal', image: '/medalhas/metal.png' },
-          1: { label: 'Prata', image: '/medalhas/prata.png' },
-          2: { label: 'Quartz', image: '/medalhas/quartz.png' },
-          3: { label: 'Esmeralda', image: '/medalhas/emerald.png' },
-          4: { label: 'Platina', image: '/medalhas/platina.png' },
-          5: { label: 'Ouro', image: '/medalhas/ouro.png' },
-          6: { label: 'Diamante', image: '/medalhas/diamante.png' }
+          0: { label: 'White', image: '/medalhas/white.png' },
+          1: { label: 'Vidro', image: '/medalhas/vidro.png' },
+          2: { label: 'Bronze', image: '/medalhas/bronze.png' },
+          3: { label: 'Prata', image: '/medalhas/prata.png' },
+          4: { label: 'Ouro', image: '/medalhas/ouro.png' },
+          5: { label: 'Platina', image: '/medalhas/platina.png' },
+          6: { label: 'Esmeralda', image: '/medalhas/emerald.png' },
+          7: { label: 'Quartz', image: '/medalhas/quartz.png' },
+          8: { label: 'Rubi', image: '/medalhas/rubi.png' },
+          9: { label: 'Diamante', image: '/medalhas/diamante.png' }
         }
       }
     });
