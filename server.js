@@ -4174,8 +4174,8 @@ const ensureFlashcardRankingsTable = async () => {
         SELECT setval(
           'public.flashcard_rankings_player_number_seq',
           GREATEST(
-            COALESCE((SELECT MAX(player_number) FROM public.flashcard_rankings), 99999),
-            99999
+            COALESCE((SELECT MAX(player_number) FROM public.flashcard_rankings), 100000),
+            100000
           ),
           true
         )
