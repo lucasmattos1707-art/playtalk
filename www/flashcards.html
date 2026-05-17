@@ -3203,6 +3203,26 @@
       z-index: 120;
     }
 
+    .game-mic-next-seal-progress__label {
+      position: fixed;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      margin: 0;
+      padding: 0 10px;
+      color: #d9ffea;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(13px, 3.6vw, 16px);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+      white-space: nowrap;
+      z-index: 121;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
     .game-mic-side-metric__progress-fill {
       display: block;
       width: 0%;
@@ -3819,6 +3839,13 @@
       height: 16px;
       object-fit: contain;
       filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+    }
+
+    .game[data-phase-key="first-star"] .game-card__coin-badge,
+    .game[data-phase-key="third-star"] .game-card__coin-badge,
+    .game[data-phase-key="fifth-star"] .game-card__coin-badge {
+      transform: scale(1.5);
+      transform-origin: top left;
     }
 
     .game-card__flag {
@@ -7798,6 +7825,21 @@
       display: block;
     }
 
+    .game[data-phase-key="second-star"] .game-controls-proxy .game-mic-next-seal-progress,
+    .game[data-phase-key="fourth-star"] .game-controls-proxy .game-mic-next-seal-progress {
+      width: calc(100vw - 16px);
+      max-width: calc(100vw - 16px);
+      left: 8px;
+      right: 8px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .game[data-phase-key="second-star"] .game-controls-proxy .game-mic-next-seal-progress__label,
+    .game[data-phase-key="fourth-star"] .game-controls-proxy .game-mic-next-seal-progress__label {
+      opacity: 1;
+    }
+
     .game[data-phase-key="first-star"] .game-controls-proxy .game-language-btn,
     .game[data-phase-key="third-star"] .game-controls-proxy .game-language-btn,
     .game[data-phase-key="fifth-star"] .game-controls-proxy .game-language-btn {
@@ -10276,6 +10318,7 @@
             <p class="game-mic-side-metric__value" id="gameMicNextSealProgress">0%</p>
           </div>
           <div class="game-mic-next-seal-progress" aria-hidden="true">
+            <p class="game-mic-next-seal-progress__label" id="gameCurrentFluencyLabel">Fluência atual: 1,0</p>
             <span class="game-mic-side-metric__progress-fill" id="gameMicNextSealProgressFill"></span>
           </div>
           <button class="game-advance-btn" id="gameAdvanceBtn" type="button" aria-label="Avancar digitacao automatica" hidden>
@@ -10575,7 +10618,10 @@
       const DOUBLE_PLAY_NEON_ICON_PATH = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%237be9ff' d='M4.5 6.35v11.3L13 12 4.5 6.35Zm8.65 0v11.3L21.65 12 13.15 6.35Z'/%3E%3C/svg%3E";
       const SUCCESS_SOUND_PATH = 'gamesounds/success.mp3';
       const FOUR_STARS_SOUND_PATH = 'newsongs/4stars.mp3';
-      const FIVE_STARS_SOUND_PATH = 'newsongs/5stars.mp3';
+      const FIVE_STARS_SOUND_PATH = `${ACCESSKEY_PUBLIC_ROOT}/5star.mp3`;
+      const WELCOME_MISSION_SOUND_PATH = `${ACCESSKEY_PUBLIC_ROOT}/mission.mp3`;
+      const WELCOME_PLAY_SOUND_PATH = `${ACCESSKEY_PUBLIC_ROOT}/play.mp3`;
+      const DAILY_MISSION_COMPLETE_SOUND_PATH = `${ACCESSKEY_PUBLIC_ROOT}/daily-mission.mp3`;
       const SECOND_STAR_ERROR_SOUND_PATH = 'flashcard-audio-cues/second-star-error.mp3';
       const TYPE_PORTUGUESE_SOUND_PATH = 'flashcard-audio-cues/typeportuguese.mp3';
       const ACCESSKEY_ERROR_SOUND_PATH = 'accesskey/error.mp3';
@@ -11043,6 +11089,7 @@
           dailyPlanMissionSyncInFlight: false,
           dailyPlanOptimisticCompletedCards: 0,
           dailyPlanSnapshotCardsToday: 0,
+          dailyPlanCompletionDayKey: '',
           dailyPlanPreview120: false,
           dailyPlanPreviewTimer: 0,
           dailyPlanTimeRemainingTimer: 0,
@@ -11494,6 +11541,7 @@
         gameMicNextSealMetric: document.getElementById('gameMicNextSealMetric'),
         gameMicNextSealProgress: document.getElementById('gameMicNextSealProgress'),
         gameMicNextSealProgressFill: document.getElementById('gameMicNextSealProgressFill'),
+        gameCurrentFluencyLabel: document.getElementById('gameCurrentFluencyLabel'),
         gameAdvanceBtn: document.getElementById('gameAdvanceBtn'),
         gameTextModeHits: document.getElementById('gameTextModeHits'),
         gameTypingKeyboard: document.getElementById('gameTypingKeyboard'),
@@ -16029,6 +16077,12 @@
         return Math.max(0, Math.min(USER_LEVEL_MAX, parsed));
       }
 
+      function formatDeckLevelWithComma(value) {
+        const numeric = Number(value);
+        const safe = Number.isFinite(numeric) ? Math.max(USER_LEVEL_MIN, Math.min(USER_LEVEL_MAX, numeric)) : USER_LEVEL_MIN;
+        return safe.toFixed(1).replace('.', ',');
+      }
+
       function selectedGameLevel() {
         if (normalizeGameOptionValue('difficulty', state.options?.difficulty) !== 'manual') {
           return currentUserLevel();
@@ -16293,11 +16347,26 @@
             state.entry.dailyPlanSnapshotCardsToday = nextCardsToday;
             state.entry.dailyPlanMissionSnapshot = mission;
             state.entry.dailyPlanMissionSnapshotUpdatedAt = Date.now();
+            evaluateDailyMissionCompletionAndReturnToWelcome(mission);
           }
         } finally {
           state.entry.dailyPlanMissionSyncInFlight = false;
         }
         return state.entry.dailyPlanMissionSnapshot;
+      }
+
+      function evaluateDailyMissionCompletionAndReturnToWelcome(mission) {
+        if (!mission || typeof mission !== 'object') return;
+        const dayKey = safeText(mission?.dayKey);
+        if (!dayKey) return;
+        const missionView = buildDailyPlanMissionView(mission, false);
+        const missionPercent = Math.max(0, Math.min(100, Number(missionView?.balancedProgressPercent) || 0));
+        if (missionPercent < 100) return;
+        if (safeText(state.entry.dailyPlanCompletionDayKey) === dayKey) return;
+        state.entry.dailyPlanCompletionDayKey = dayKey;
+        if (!state.game.active || state.game.paused) return;
+        pauseFlashcardsGameToWelcome();
+        playStatusCueAudio(DAILY_MISSION_COMPLETE_SOUND_PATH);
       }
 
       function resolveDailyPlanProgressMessage(percent) {
@@ -20109,7 +20178,11 @@
         }
         state.entry.gameMicAnimatedProgress = targetProgress;
         els.gameMicNextSealProgress.textContent = `${targetProgress.toFixed(1)}%`;
-        els.gameMicNextSealProgressFill.style.width = `${missionBarProgress.toFixed(2)}%`;
+        els.gameMicNextSealProgressFill.style.width = `${targetProgress.toFixed(2)}%`;
+        if (els.gameCurrentFluencyLabel) {
+          const rawDeckLevel = Number(state.user?.level ?? state.userLevel ?? USER_LEVEL_MIN);
+          els.gameCurrentFluencyLabel.textContent = `Fluência atual: ${formatDeckLevelWithComma(rawDeckLevel)}`;
+        }
         els.gameMicCurrentSealMetric.hidden = false;
         els.gameMicNextSealMetric.hidden = false;
         void refreshDailyPlanMissionSnapshot({ maxAgeMs: 60000 });
@@ -25003,6 +25076,7 @@
         };
         els.welcomeStartBtn?.addEventListener('click', (event) => {
           void (async () => {
+            playStatusCueAudio(WELCOME_PLAY_SOUND_PATH);
             if (canResumePausedFlashGame()) {
               state.ui.gamePausedAtWelcome = true;
             }
@@ -25021,6 +25095,7 @@
           })();
         });
         els.welcomeMissionBtn?.addEventListener('click', () => {
+          playStatusCueAudio(WELCOME_MISSION_SOUND_PATH);
           openDailyPlanModal();
         });
         els.dailyPlanCloseBtn?.addEventListener('click', closeDailyPlanModal);
