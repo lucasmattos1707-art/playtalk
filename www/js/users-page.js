@@ -405,12 +405,20 @@
       .slice()
       .sort((left, right) => (Number(left?.rank) || 999999) - (Number(right?.rank) || 999999))
       .map((entry) => ({ ...entry }));
-    const total = ranked.length;
+
+    const activeRows = ranked.filter((entry) => (
+      (Number(entry?.flashcardsCount) || 0) > 0
+      || (Number(entry?.pronunciationPercent) || 0) > 0
+      || (Number(entry?.speedFlashcardsPerHour) || 0) > 0
+      || (Number(entry?.level) || 0) > 1
+    ));
+    if (!activeRows.length) return ranked;
+    const total = activeRows.length;
     let previousFlashcards = Number.POSITIVE_INFINITY;
     let previousPronunciation = Number.POSITIVE_INFINITY;
     let previousLevel = Number.POSITIVE_INFINITY;
     let previousSpeed = Number.POSITIVE_INFINITY;
-    ranked.forEach((entry, index) => {
+    activeRows.forEach((entry, index) => {
       const ratio = total <= 1 ? 0 : (index / (total - 1));
       const seed = (Number(entry?.userId) || 0) + ((index + 1) * 17);
 
@@ -447,6 +455,15 @@
       previousPronunciation = pronunciation;
       previousLevel = level;
       previousSpeed = speed;
+    });
+
+    ranked.forEach((entry) => {
+      const isActive = activeRows.some((active) => Number(active.userId) === Number(entry.userId));
+      if (isActive) return;
+      entry.flashcardsCount = 0;
+      entry.pronunciationPercent = 0;
+      entry.speedFlashcardsPerHour = 0;
+      entry.level = 1;
     });
     return ranked;
   }
