@@ -118,6 +118,12 @@
     return Number.isFinite(numeric) ? numeric : fallback;
   }
 
+  function parseLocaleDecimal(value, fallback = 0) {
+    const normalized = String(value ?? '').trim().replace(',', '.');
+    const numeric = Number(normalized);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
   function formatInteger(value) {
     return new Intl.NumberFormat('pt-BR').format(Math.max(0, Math.round(safeNumber(value))));
   }
@@ -304,7 +310,7 @@
           return {
             minSpeed,
             maxSpeed,
-            levelGainPerMinute: Math.max(0, Math.min(20, Math.floor(Number(entry?.levelGainPerMinute) || 0)))
+            levelGainPerMinute: Math.max(0, Math.min(20, Number(parseLocaleDecimal(entry?.levelGainPerMinute, 0).toFixed(2))))
           };
         }).filter(Boolean)
       : defaults.speedLevelGainRules.slice();
@@ -312,7 +318,7 @@
     const firstStageMissPenaltyRules = Array.isArray(source.firstStageMissPenaltyRules)
       ? source.firstStageMissPenaltyRules.map((entry) => ({
           minLevel: Math.max(1, Math.min(200, Math.floor(Number(entry?.minLevel) || 1))),
-          levelLoss: Math.max(0, Math.min(50, Math.floor(Number(entry?.levelLoss) || 0)))
+          levelLoss: Math.max(0, Math.min(50, Number(parseLocaleDecimal(entry?.levelLoss, 0).toFixed(2))))
         })).filter((entry) => entry.levelLoss > 0)
       : defaults.firstStageMissPenaltyRules.slice();
 
@@ -451,12 +457,12 @@
       const rows = snapshot.speedLevelGainRules.map((entry, index) => {
         const minSpeed = Math.max(0, Math.floor(Number(entry?.minSpeed) || 0));
         const maxSpeed = entry?.maxSpeed === null ? '' : Math.max(minSpeed, Math.floor(Number(entry?.maxSpeed) || minSpeed));
-        const levelGainPerMinute = Math.max(0, Math.min(20, Math.floor(Number(entry?.levelGainPerMinute) || 0)));
+        const levelGainPerMinute = Math.max(0, Math.min(20, Number(parseLocaleDecimal(entry?.levelGainPerMinute, 0).toFixed(2))));
         return `
           <tr data-speed-gain-row="${index}">
             <td><input type="number" min="0" max="100000" step="1" value="${minSpeed}" data-speed-gain-field="minSpeed"></td>
             <td><input type="number" min="0" max="100000" step="1" value="${maxSpeed}" data-speed-gain-field="maxSpeed" placeholder="sem limite"></td>
-            <td><input type="number" min="0" max="20" step="1" value="${levelGainPerMinute}" data-speed-gain-field="levelGainPerMinute"></td>
+            <td><input type="text" inputmode="decimal" value="${levelGainPerMinute}" data-speed-gain-field="levelGainPerMinute"></td>
           </tr>
         `;
       });
@@ -466,11 +472,11 @@
     if (els.firstStagePenaltyRulesTableBody) {
       const rows = snapshot.firstStageMissPenaltyRules.map((entry, index) => {
         const minLevel = Math.max(1, Math.min(200, Math.floor(Number(entry?.minLevel) || 1)));
-        const levelLoss = Math.max(0, Math.min(50, Math.floor(Number(entry?.levelLoss) || 0)));
+        const levelLoss = Math.max(0, Math.min(50, Number(parseLocaleDecimal(entry?.levelLoss, 0).toFixed(2))));
         return `
           <tr data-first-stage-penalty-row="${index}">
             <td><input type="number" min="1" max="200" step="1" value="${minLevel}" data-first-stage-penalty-field="minLevel"></td>
-            <td><input type="number" min="0" max="50" step="1" value="${levelLoss}" data-first-stage-penalty-field="levelLoss"></td>
+            <td><input type="text" inputmode="decimal" value="${levelLoss}" data-first-stage-penalty-field="levelLoss"></td>
           </tr>
         `;
       });
@@ -485,13 +491,13 @@
       const maxSpeed = String(maxRaw || '').trim() === ''
         ? null
         : Math.max(minSpeed, Math.floor(Number(maxRaw) || minSpeed));
-      const levelGainPerMinute = Math.max(0, Math.min(20, Math.floor(Number(row.querySelector('[data-speed-gain-field="levelGainPerMinute"]')?.value) || 0)));
+      const levelGainPerMinute = Math.max(0, Math.min(20, Number(parseLocaleDecimal(row.querySelector('[data-speed-gain-field="levelGainPerMinute"]')?.value, 0).toFixed(2))));
       return { minSpeed, maxSpeed, levelGainPerMinute };
     });
 
     const firstStageMissPenaltyRules = Array.from(els.firstStagePenaltyRulesTableBody?.querySelectorAll('tr[data-first-stage-penalty-row]') || []).map((row) => {
       const minLevel = Math.max(1, Math.min(200, Math.floor(Number(row.querySelector('[data-first-stage-penalty-field="minLevel"]')?.value) || 1)));
-      const levelLoss = Math.max(0, Math.min(50, Math.floor(Number(row.querySelector('[data-first-stage-penalty-field="levelLoss"]')?.value) || 0)));
+      const levelLoss = Math.max(0, Math.min(50, Number(parseLocaleDecimal(row.querySelector('[data-first-stage-penalty-field="levelLoss"]')?.value, 0).toFixed(2))));
       return { minLevel, levelLoss };
     }).filter((entry) => entry.levelLoss > 0);
 

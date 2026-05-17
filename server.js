@@ -1304,7 +1304,7 @@ function normalizeFlashcardLevelDynamicsSnapshot(value = {}) {
       const normalizedMax = entry?.maxSpeed === null || entry?.maxSpeed === ''
         ? null
         : Math.max(minSpeed, Math.floor(Number(entry?.maxSpeed) || minSpeed));
-      const levelGainPerMinute = Math.max(0, Math.min(20, Math.floor(Number(entry?.levelGainPerMinute) || 0)));
+      const levelGainPerMinute = Math.max(0, Math.min(20, Number(parseLocalizedDecimal(entry?.levelGainPerMinute, 0).toFixed(2))));
       if (!hasMax) return null;
       return {
         minSpeed,
@@ -1323,7 +1323,7 @@ function normalizeFlashcardLevelDynamicsSnapshot(value = {}) {
   const firstStageMissPenaltyRules = rawPenaltyRules
     .map((entry) => ({
       minLevel: Math.max(1, Math.min(200, Math.floor(Number(entry?.minLevel) || 1))),
-      levelLoss: Math.max(0, Math.min(50, Math.floor(Number(entry?.levelLoss) || 0)))
+      levelLoss: Math.max(0, Math.min(50, Number(parseLocalizedDecimal(entry?.levelLoss, 0).toFixed(2))))
     }))
     .filter((entry) => entry.levelLoss > 0)
     .sort((a, b) => b.minLevel - a.minLevel);
@@ -4522,6 +4522,24 @@ function normalizeUserFlashcardLevel(value) {
   return Math.max(1, Math.min(200, parsed));
 }
 
+function parseLocalizedDecimal(value, fallback = 0) {
+  if (value === null || value === undefined) return fallback;
+  const normalized = String(value).trim().replace(',', '.');
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function roundLevelDeltaByThreshold(value, maxAbs = 200) {
+  const numeric = parseLocalizedDecimal(value, 0);
+  if (!Number.isFinite(numeric) || numeric === 0) return 0;
+  const sign = numeric < 0 ? -1 : 1;
+  const abs = Math.max(0, Math.min(maxAbs, Math.abs(numeric)));
+  const whole = Math.floor(abs);
+  const fraction = abs - whole;
+  const rounded = fraction <= 0.5 ? whole : whole + 1;
+  return sign * rounded;
+}
+
 function readNullableInteger(value) {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number.parseInt(String(value).trim(), 10);
@@ -5355,9 +5373,10 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
   );
   const levelDynamicsSettings = await getFlashcardLevelDynamicsSettings();
   const levelGainPerMinute = resolveFlashcardSpeedLevelGainPerMinute(speedPerHour, levelDynamicsSettings);
-  const levelDelta = practiceMinutes * levelGainPerMinute;
+  const levelDeltaRaw = practiceMinutes * levelGainPerMinute;
+  const levelDelta = roundLevelDeltaByThreshold(levelDeltaRaw, 200);
   if (levelDelta <= 0) {
-    return { levelDelta: 0, practiceMinutes, speedPerHour };
+    return { levelDelta: 0, levelDeltaRaw: 0, practiceMinutes, speedPerHour };
   }
 
   await client.query(
@@ -5368,7 +5387,7 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
     [normalizedUserId, levelDelta]
   );
 
-  return { levelDelta, practiceMinutes, speedPerHour };
+  return { levelDelta, levelDeltaRaw, practiceMinutes, speedPerHour };
 }
 
 const readFlashcardStateForUser = async (userId) => {
@@ -15950,7 +15969,8 @@ app.post('/api/flashcards/first-stage-level-penalty', express.json({ limit: '16k
         ? normalizeUserFlashcardLevel(providedLevel)
         : persistedLevel;
       const levelDynamicsSettings = await getFlashcardLevelDynamicsSettings();
-      const levelLoss = resolveFlashcardFirstStageMissLevelLoss(baseLevel, levelDynamicsSettings);
+      const levelLossRaw = resolveFlashcardFirstStageMissLevelLoss(baseLevel, levelDynamicsSettings);
+      const levelLoss = Math.max(0, roundLevelDeltaByThreshold(levelLossRaw, 200));
       if (levelLoss <= 0) {
         await client.query('COMMIT');
         res.json({

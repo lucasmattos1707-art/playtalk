@@ -10706,14 +10706,14 @@
               return {
                 minSpeed,
                 maxSpeed,
-                levelGainPerMinute: Math.max(0, Math.min(20, Math.floor(Number(entry?.levelGainPerMinute) || 0)))
+                levelGainPerMinute: Math.max(0, Math.min(20, Number((Number(String(entry?.levelGainPerMinute ?? 0).replace(',', '.')) || 0).toFixed(2))))
               };
             }).filter(Boolean)
           : defaults.speedLevelGainRules.slice();
         const firstStageMissPenaltyRules = Array.isArray(source.firstStageMissPenaltyRules)
           ? source.firstStageMissPenaltyRules.map((entry) => ({
               minLevel: Math.max(1, Math.min(200, Math.floor(Number(entry?.minLevel) || 1))),
-              levelLoss: Math.max(0, Math.min(50, Math.floor(Number(entry?.levelLoss) || 0)))
+              levelLoss: Math.max(0, Math.min(50, Number((Number(String(entry?.levelLoss ?? 0).replace(',', '.')) || 0).toFixed(2))))
             })).filter((entry) => entry.levelLoss > 0)
           : defaults.firstStageMissPenaltyRules.slice();
         return {
@@ -17444,7 +17444,10 @@
         const normalizedLevel = normalizeUserLevel(level);
         const settings = normalizeLevelDynamicsSettings(state.entry.levelDynamics || buildDefaultLevelDynamicsSettings());
         const match = settings.firstStageMissPenaltyRules.find((rule) => normalizedLevel >= Number(rule?.minLevel || 0));
-        return Math.max(0, Number(match?.levelLoss) || 0);
+        const rawLoss = Math.max(0, Number(match?.levelLoss) || 0);
+        const whole = Math.floor(rawLoss);
+        const fraction = rawLoss - whole;
+        return Math.max(0, fraction <= 0.5 ? whole : whole + 1);
       }
 
       async function applyFirstStageMissLevelPenalty() {
