@@ -6636,20 +6636,27 @@
 
     .game[data-phase-key="fifth-star"] .textscreen .game-status.is-flashcards-count {
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(31px, 8.67vw, 49px);
+      font-size: clamp(28px, 7vw, 42px);
       font-weight: 800;
       line-height: 1;
       letter-spacing: 0;
-      text-transform: uppercase;
+      text-transform: none;
       margin-top: 0;
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      padding: 9px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 216, 120, 0.24);
+      background: rgba(136, 96, 0, 0.92);
+      box-shadow:
+        0 0 0 1px rgba(255, 216, 120, 0.18),
+        0 10px 26px rgba(0, 0, 0, 0.25);
       text-shadow:
         0 2px 0 rgba(0, 22, 72, 0.98),
         0 0 12px rgba(2, 28, 92, 0.92),
         0 0 24px rgba(6, 54, 141, 0.74);
-      border-color: rgba(111, 238, 255, 0.9);
+      border-color: rgba(255, 216, 120, 0.24);
     }
 
     .game[data-phase-key="third-star"] .textscreen .game-status {
@@ -6663,7 +6670,10 @@
     }
 
     .game[data-phase-key="fifth-star"] .textscreen .game-status-icon {
-      display: none !important;
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
     }
 
     .game[data-phase-key="third-star"] .textscreen .game-status-icon {
@@ -10619,6 +10629,7 @@
       const SUCCESS_SOUND_PATH = 'gamesounds/success.mp3';
       const FOUR_STARS_SOUND_PATH = 'newsongs/4stars.mp3';
       const FIVE_STARS_SOUND_PATH = `${ACCESSKEY_PUBLIC_ROOT}/5star.mp3`;
+      const COINS_REWARD_SOUND_PATH = `${ACCESSKEY_PUBLIC_ROOT}/coins.mp3`;
       const WELCOME_MISSION_SOUND_PATH = `${ACCESSKEY_PUBLIC_ROOT}/mission.mp3`;
       const WELCOME_PLAY_SOUND_PATH = `${ACCESSKEY_PUBLIC_ROOT}/play.mp3`;
       const DAILY_MISSION_COMPLETE_SOUND_PATH = `${ACCESSKEY_PUBLIC_ROOT}/daily-mission.mp3`;
@@ -24602,6 +24613,9 @@
             state.stats.coinsDelta = Math.max(0, Number(state.stats.coinsDelta) || 0) + earnedCoins;
             state.stats.coinsTotal = Math.max(0, Number(state.stats.coinsTotal) || 0) + earnedCoins;
             state.stats.xpDelta = Math.max(0, Number(state.stats.xpDelta) || 0) + earnedXp;
+            if (earnedCoins > 0 && evaluatedStage === 4) {
+              playStatusCueAudio(COINS_REWARD_SOUND_PATH);
+            }
             renderWelcomeEnergyMiniTicker();
             showRewardGameStatus();
             triggerLibrarySummaryRankSwap();
