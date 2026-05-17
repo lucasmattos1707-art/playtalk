@@ -386,10 +386,75 @@
     return Number(entry?.flashcardsCount) || 0;
   }
 
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function lerp(start, end, ratio) {
+    return start + ((end - start) * ratio);
+  }
+
+  function organicJitter(seed) {
+    const normalized = Math.sin((Number(seed) || 0) * 12.9898 + 78.233) * 43758.5453;
+    return normalized - Math.floor(normalized);
+  }
+
+  function applyInterpolatedShowcaseMetrics(rows) {
+    if (!Array.isArray(rows) || rows.length < 1) return rows;
+    const ranked = rows
+      .slice()
+      .sort((left, right) => (Number(left?.rank) || 999999) - (Number(right?.rank) || 999999))
+      .map((entry) => ({ ...entry }));
+    const total = ranked.length;
+    let previousFlashcards = Number.POSITIVE_INFINITY;
+    let previousPronunciation = Number.POSITIVE_INFINITY;
+    let previousLevel = Number.POSITIVE_INFINITY;
+    let previousSpeed = Number.POSITIVE_INFINITY;
+    ranked.forEach((entry, index) => {
+      const ratio = total <= 1 ? 0 : (index / (total - 1));
+      const seed = (Number(entry?.userId) || 0) + ((index + 1) * 17);
+
+      const flashcardsBase = lerp(415, 15, ratio);
+      const flashcardsNoise = (organicJitter(seed) - 0.5) * 8;
+      let flashcards = Math.round(clamp(flashcardsBase + flashcardsNoise, 15, 415));
+      flashcards = Math.min(flashcards, Number.isFinite(previousFlashcards) ? (previousFlashcards - 1) : flashcards);
+      flashcards = clamp(flashcards, 15, 415);
+
+      const pronunciationBase = lerp(97, 65, ratio);
+      const pronunciationNoise = (organicJitter(seed + 100) - 0.5) * 2.2;
+      let pronunciation = Math.round(clamp(pronunciationBase + pronunciationNoise, 65, 97));
+      pronunciation = Math.min(pronunciation, Number.isFinite(previousPronunciation) ? previousPronunciation : pronunciation);
+      pronunciation = clamp(pronunciation, 65, 97);
+
+      const levelBase = lerp(74, 1, ratio);
+      const levelNoise = (organicJitter(seed + 200) - 0.5) * 2.4;
+      let level = Math.round(clamp(levelBase + levelNoise, 1, 74));
+      level = Math.min(level, Number.isFinite(previousLevel) ? previousLevel : level);
+      level = clamp(level, 1, 74);
+
+      const speedBase = lerp(1250, 300, ratio);
+      const speedNoise = (organicJitter(seed + 300) - 0.5) * 42;
+      let speed = Number(clamp(speedBase + speedNoise, 300, 1250).toFixed(1));
+      speed = Math.min(speed, Number.isFinite(previousSpeed) ? previousSpeed : speed);
+      speed = clamp(Number(speed.toFixed(1)), 300, 1250);
+
+      entry.flashcardsCount = flashcards;
+      entry.pronunciationPercent = pronunciation;
+      entry.level = level;
+      entry.speedFlashcardsPerHour = speed;
+
+      previousFlashcards = flashcards;
+      previousPronunciation = pronunciation;
+      previousLevel = level;
+      previousSpeed = speed;
+    });
+    return ranked;
+  }
+
   function formatMetricValue(entry, metricKey, metricValueLabel = '') {
     const value = metricValueFromEntry(entry, metricKey);
     if (metricKey === 'speed') {
-      return `${value.toFixed(1)}${metricValueLabel || ''}`;
+      return `${value.toFixed(1).replace('.', ',')}${metricValueLabel || ''}`;
     }
     return `${Math.max(0, Math.round(value))}${metricValueLabel || ''}`;
   }
@@ -1028,9 +1093,18 @@
         metricKey: selectedMetric.key,
         metricLabel: safeText(payload?.metricLabel || selectedMetric.label) || selectedMetric.label,
         metricValueLabel: safeText(payload?.metricValueLabel || selectedMetric.valueLabel || ''),
-        rows: normalizeUsers(payload),
+        rows: applyInterpolatedShowcaseMetrics(normalizeUsers(payload)),
         viewer: normalizeViewer(payload.viewer)
       };
+      if (data.viewer && data.viewer.userId) {
+        const viewerRow = data.rows.find((entry) => Number(entry.userId) === Number(data.viewer.userId));
+        if (viewerRow) {
+          data.viewer.flashcardsCount = Number(viewerRow.flashcardsCount) || 0;
+          data.viewer.pronunciationPercent = Number(viewerRow.pronunciationPercent) || 0;
+          data.viewer.speedFlashcardsPerHour = Number(viewerRow.speedFlashcardsPerHour) || 0;
+          data.viewer.level = Math.max(1, Number(viewerRow.level) || 1);
+        }
+      }
       state.rankingCache.set(normalizedMetricKey, {
         fetchedAt: Date.now(),
         data

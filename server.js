@@ -15413,6 +15413,7 @@ app.get('/api/users/flashcards', async (req, res) => {
     await ensureFlashcardRankingsTable();
     await ensurePremiumAccessTables();
     await ensureSpeakingRealtimeTables();
+    await ensureBooksSpeakingStatsTable();
     await ensureUserRankingOverridesTable();
     await ensureUserFlashcardSpeedSamplesTable();
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
