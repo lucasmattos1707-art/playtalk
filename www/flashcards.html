@@ -9586,6 +9586,240 @@
       }
 
     }
+    .albums-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 2100;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 240ms ease, visibility 240ms ease;
+    }
+
+    .albums-modal::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--playtalk-global-bg-overlay);
+      pointer-events: none;
+    }
+
+    .albums-modal.is-visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .albums-modal__shell {
+      position: relative;
+      z-index: 1;
+      width: min(980px, 100%);
+      height: 100dvh;
+      padding: max(18px, env(safe-area-inset-top, 0px)) 16px calc(14px + env(safe-area-inset-bottom, 0px));
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .albums-modal__topbar {
+      display: grid;
+      grid-template-columns: 52px 1fr 52px;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .albums-modal__title-wrap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .albums-modal__title-icon {
+      width: 28px;
+      height: 28px;
+      color: #8ddfff;
+      filter: drop-shadow(0 0 8px rgba(111, 215, 255, 0.45));
+    }
+
+    .albums-modal__title-icon svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+
+    .albums-modal__title {
+      margin: 0;
+      font-family: "Exo 2", "Segoe UI", sans-serif;
+      font-weight: 600;
+      font-size: clamp(21px, 4.5vw, 30px);
+      letter-spacing: 0.03em;
+      color: #f1f8ff;
+    }
+
+    .albums-modal__nav {
+      width: 44px;
+      height: 44px;
+      border: 1px solid rgba(133, 196, 255, 0.38);
+      border-radius: 14px;
+      background: rgba(8, 22, 45, 0.58);
+      color: #d8ecff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    .albums-modal__nav svg {
+      width: 26px;
+      height: 26px;
+      fill: currentColor;
+    }
+
+    .albums-modal__content {
+      position: relative;
+      overflow: hidden;
+      border-radius: 28px;
+      border: 1px solid rgba(122, 183, 255, 0.2);
+      background: rgba(5, 17, 34, 0.44);
+      backdrop-filter: blur(10px);
+    }
+
+    .albums-modal__stage {
+      position: absolute;
+      inset: 0;
+      padding: 24px 14px 18px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 220ms ease;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 12px;
+    }
+
+    .albums-modal__stage.is-active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .albums-modal__stack {
+      position: relative;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .albums-modal__slide {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      transition: transform 260ms ease, opacity 260ms ease;
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .albums-modal__slide.is-entering-up { transform: translateY(100%); }
+    .albums-modal__slide.is-entering-down { transform: translateY(-100%); }
+    .albums-modal__slide.is-leaving-up { transform: translateY(-100%); opacity: 0.02; }
+    .albums-modal__slide.is-leaving-down { transform: translateY(100%); opacity: 0.02; }
+
+    .albums-modal__flashcard {
+      width: min(88vw, 360px);
+      max-width: 100%;
+      display: grid;
+      gap: 12px;
+      justify-items: center;
+    }
+
+    .albums-modal__flashcard-visual {
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid rgba(124, 203, 255, 0.3);
+      background: rgba(8, 19, 37, 0.78);
+      box-shadow: 0 24px 42px rgba(0, 0, 0, 0.34);
+      display: grid;
+      place-items: center;
+    }
+
+    .albums-modal__flashcard-visual img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .albums-modal__flashcard-title {
+      margin: 0;
+      font-family: "Exo 2", "Segoe UI", sans-serif;
+      font-weight: 600;
+      font-size: clamp(24px, 4.5vw, 30px);
+      color: #f4f9ff;
+      text-align: center;
+    }
+
+    .albums-modal__flashcard-subtitle {
+      margin: 0;
+      font-family: "Exo 2", "Segoe UI", sans-serif;
+      font-weight: 300;
+      font-size: clamp(17px, 3.8vw, 22px);
+      color: #c4dcf4;
+      text-align: center;
+    }
+
+    .albums-modal__seal-card {
+      width: min(88vw, 360px);
+      max-width: 100%;
+      display: grid;
+      gap: 16px;
+      justify-items: center;
+      align-content: center;
+      text-align: center;
+    }
+
+    .albums-modal__seal-day {
+      margin: 0;
+      font-family: "Exo 2", "Segoe UI", sans-serif;
+      font-weight: 600;
+      font-size: clamp(26px, 5vw, 34px);
+      color: #ecf6ff;
+    }
+
+    .albums-modal__seal-image {
+      width: min(60vw, 220px);
+      height: min(60vw, 220px);
+      object-fit: contain;
+      filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.36));
+    }
+
+    .albums-modal__seal-name {
+      margin: 0;
+      font-family: "Exo 2", "Segoe UI", sans-serif;
+      font-weight: 300;
+      font-size: clamp(20px, 4.2vw, 26px);
+      color: #d8e8f7;
+    }
+
+    .albums-modal__empty {
+      margin: 0;
+      font-family: "Exo 2", "Segoe UI", sans-serif;
+      font-weight: 300;
+      color: #d2e4f6;
+      text-align: center;
+      padding: 0 20px;
+    }
+
+    .albums-modal__hint {
+      margin: 0;
+      font-size: 12px;
+      color: rgba(203, 223, 242, 0.86);
+      text-align: center;
+      letter-spacing: 0.02em;
+    }
   </style>
 </head>
 <body class="flashcards-home-collapsed">
@@ -9763,6 +9997,34 @@
             <div class="daily-plan-modal__overall-bar"><div class="daily-plan-modal__overall-fill" id="dailyPlanOverallBar" style="--progress: 0%"></div></div>
           </div>
         </div>
+      </div>
+    </div>
+    <div class="albums-modal" id="albumsModal" aria-hidden="true">
+      <div class="albums-modal__shell">
+        <header class="albums-modal__topbar">
+          <button class="albums-modal__nav" id="albumsPrevSectionBtn" type="button" aria-label="Sessao anterior">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 5.4 8.8 12l6.6 6.6-1.4 1.4L6 12l8-8z"/></svg>
+          </button>
+          <div class="albums-modal__title-wrap">
+            <span class="albums-modal__title-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3c-2.4 0-4.2 1.8-4.2 4.2v9.6A4.2 4.2 0 1 0 12 21a4.2 4.2 0 0 0 4.2-4.2V7.2C16.2 4.8 14.4 3 12 3Zm0 2c1.3 0 2.2.9 2.2 2.2v9.6a2.2 2.2 0 1 1-4.4 0V7.2C9.8 5.9 10.7 5 12 5Z"/></svg>
+            </span>
+            <h2 class="albums-modal__title" id="albumsSectionTitle">FlashCards</h2>
+          </div>
+          <button class="albums-modal__nav" id="albumsNextSectionBtn" type="button" aria-label="Proxima sessao">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.6 18.6 6.6-6.6-6.6-6.6L10 4l8 8-8 8z"/></svg>
+          </button>
+        </header>
+        <main class="albums-modal__content">
+          <section class="albums-modal__stage is-active" id="albumsFlashcardsStage" aria-label="FlashCards">
+            <div class="albums-modal__stack" id="albumsFlashcardsStack"></div>
+            <p class="albums-modal__hint">Deslize para cima ou para baixo para ver o proximo item.</p>
+          </section>
+          <section class="albums-modal__stage" id="albumsSealsStage" aria-label="Selos">
+            <div class="albums-modal__stack" id="albumsSealsStack"></div>
+            <p class="albums-modal__hint">Deslize para cima ou para baixo para navegar pelos dias.</p>
+          </section>
+        </main>
       </div>
     </div>
     <div class="game-options-modal" id="gameOptionsModal" aria-hidden="true">
@@ -10920,6 +11182,14 @@
           premiumBusy: false,
           premiumAudioPlayed: false,
           premiumAudio: null,
+          albumsOpen: false,
+          albumsSectionIndex: 0,
+          albumsFlashIndex: 0,
+          albumsSealIndex: 0,
+          albumsSwipeStartX: 0,
+          albumsSwipeStartY: 0,
+          albumsSealsPayload: null,
+          albumsSealsLoading: false,
           soundTestOpen: false,
           soundTestBusy: false,
           soundTestStatus: '',
@@ -10973,6 +11243,14 @@
         welcomeModeModalLevelNextBtn: document.getElementById('welcomeModeModalLevelNextBtn'),
         dailyPlanModal: document.getElementById('dailyPlanModal'),
         dailyPlanCloseBtn: document.getElementById('dailyPlanCloseBtn'),
+        albumsModal: document.getElementById('albumsModal'),
+        albumsPrevSectionBtn: document.getElementById('albumsPrevSectionBtn'),
+        albumsNextSectionBtn: document.getElementById('albumsNextSectionBtn'),
+        albumsSectionTitle: document.getElementById('albumsSectionTitle'),
+        albumsFlashcardsStage: document.getElementById('albumsFlashcardsStage'),
+        albumsSealsStage: document.getElementById('albumsSealsStage'),
+        albumsFlashcardsStack: document.getElementById('albumsFlashcardsStack'),
+        albumsSealsStack: document.getElementById('albumsSealsStack'),
         dailyPlanUserAvatar: document.getElementById('dailyPlanUserAvatar'),
         dailyPlanUserLevel: document.getElementById('dailyPlanUserLevel'),
         dailyPlanFlashcardsDone: document.getElementById('dailyPlanFlashcardsDone'),
@@ -16438,6 +16716,183 @@
         els.gameOptionsModal.setAttribute('aria-hidden', 'true');
         applyGameOptionsAfterModalClose(previousOptions);
         resumeFlashcardsGameFromDailyPlan();
+      }
+
+      const ALBUMS_SECTIONS = [
+        { key: 'flashcards', label: 'FlashCards' },
+        { key: 'seals', label: 'Selos' }
+      ];
+
+      function albumFlashcardsItems() {
+        return userProgressCards().map(buildLibraryCardView);
+      }
+
+      function normalizeDaySealTimeline(daySealsPayload) {
+        const daySeals = daySealsPayload?.daySeals || {};
+        const timeline = Array.isArray(daySeals.timeline) ? daySeals.timeline : [];
+        const catalog = daySeals.sealCatalog || {};
+        return timeline
+          .map((entry, index) => {
+            const sealCode = Math.max(0, Number(entry?.sealCode) || 0);
+            if (sealCode <= 0) return null;
+            const sealInfo = catalog[String(sealCode)] || catalog[sealCode] || null;
+            if (!sealInfo) return null;
+            return {
+              day: index + 1,
+              label: safeText(sealInfo.label) || 'Selo',
+              image: safeText(sealInfo.image) || '/medalhas/metal.png',
+              isCurrent: Number(daySeals.currentDayNumber) === (index + 1)
+            };
+          })
+          .filter(Boolean);
+      }
+
+      async function ensureAlbumsSealsLoaded() {
+        if (state.ui.albumsSealsLoading || state.ui.albumsSealsPayload) return;
+        state.ui.albumsSealsLoading = true;
+        try {
+          const response = await fetch(buildApiUrl('/api/books/day-seals'), {
+            headers: buildAuthHeaders(),
+            credentials: 'include',
+            cache: 'no-store'
+          });
+          const payload = await response.json().catch(() => ({}));
+          state.ui.albumsSealsPayload = (response.ok && payload?.success)
+            ? payload
+            : { daySeals: { timeline: [], sealCatalog: {} } };
+        } catch (_error) {
+          state.ui.albumsSealsPayload = { daySeals: { timeline: [], sealCatalog: {} } };
+        } finally {
+          state.ui.albumsSealsLoading = false;
+        }
+      }
+
+      function renderAlbumsSlide(target, markup, direction = 'none') {
+        if (!target) return;
+        const current = target.querySelector('.albums-modal__slide');
+        const next = document.createElement('div');
+        next.className = 'albums-modal__slide';
+        if (direction === 'up') next.classList.add('is-entering-up');
+        if (direction === 'down') next.classList.add('is-entering-down');
+        next.innerHTML = markup;
+        target.appendChild(next);
+        requestAnimationFrame(() => {
+          if (current) {
+            current.classList.add(direction === 'up' ? 'is-leaving-up' : 'is-leaving-down');
+          }
+          next.classList.remove('is-entering-up', 'is-entering-down');
+        });
+        window.setTimeout(() => {
+          if (current && current.parentNode === target) {
+            target.removeChild(current);
+          }
+        }, 280);
+      }
+
+      function renderAlbumsFlashcards(direction = 'none') {
+        if (!els.albumsFlashcardsStack) return;
+        const items = albumFlashcardsItems();
+        if (!items.length) {
+          renderAlbumsSlide(els.albumsFlashcardsStack, '<p class="albums-modal__empty">Nenhum flashcard disponivel no momento.</p>', direction);
+          return;
+        }
+        const maxIndex = items.length - 1;
+        state.ui.albumsFlashIndex = Math.max(0, Math.min(maxIndex, Number(state.ui.albumsFlashIndex) || 0));
+        const card = items[state.ui.albumsFlashIndex];
+        const imageSrc = safeText(card?.imageDisplayUrl || card?.imageUrl);
+        const styleAttr = safeText(card?.imageStyle);
+        const visualMarkup = imageSrc
+          ? `<img src="${escapeHtml(imageSrc)}" alt="${escapeHtml(card?.displayEnglish || card?.english || 'Flashcard')}" ${styleAttr ? `style="${escapeHtml(styleAttr)}"` : ''}>`
+          : `<div class="mini-card__fallback">${escapeHtml(card?.deckTitle || 'Flashcard')}</div>`;
+        renderAlbumsSlide(els.albumsFlashcardsStack, `
+            <article class="albums-modal__flashcard">
+              <div class="albums-modal__flashcard-visual">${visualMarkup}</div>
+              <p class="albums-modal__flashcard-title">${escapeHtml(card?.displayEnglish || card?.english || 'Flashcard')}</p>
+              <p class="albums-modal__flashcard-subtitle">${escapeHtml(card?.displayPortuguese || card?.portuguese || '')}</p>
+            </article>
+          `, direction);
+      }
+
+      function renderAlbumsSeals(direction = 'none') {
+        if (!els.albumsSealsStack) return;
+        const timeline = normalizeDaySealTimeline(state.ui.albumsSealsPayload);
+        if (!timeline.length) {
+          renderAlbumsSlide(els.albumsSealsStack, '<p class="albums-modal__empty">Nenhum selo disponivel ainda. Continue treinando para desbloquear.</p>', direction);
+          return;
+        }
+        const maxIndex = timeline.length - 1;
+        state.ui.albumsSealIndex = Math.max(0, Math.min(maxIndex, Number(state.ui.albumsSealIndex) || 0));
+        const entry = timeline[state.ui.albumsSealIndex];
+        const dayLabel = `Day ${entry.day}${entry.isCurrent ? ' (Atual)' : ''}`;
+        renderAlbumsSlide(els.albumsSealsStack, `
+            <article class="albums-modal__seal-card">
+              <p class="albums-modal__seal-day">${escapeHtml(dayLabel)}</p>
+              <img class="albums-modal__seal-image" src="${escapeHtml(entry.image)}" alt="${escapeHtml(`Selo ${entry.label}`)}">
+              <p class="albums-modal__seal-name">${escapeHtml(entry.label)}</p>
+            </article>
+          `, direction);
+      }
+
+      function renderAlbumsSection() {
+        const section = ALBUMS_SECTIONS[Math.max(0, Math.min(ALBUMS_SECTIONS.length - 1, state.ui.albumsSectionIndex))] || ALBUMS_SECTIONS[0];
+        if (els.albumsSectionTitle) {
+          els.albumsSectionTitle.textContent = section.label;
+        }
+        els.albumsFlashcardsStage?.classList.toggle('is-active', section.key === 'flashcards');
+        els.albumsSealsStage?.classList.toggle('is-active', section.key === 'seals');
+        if (section.key === 'flashcards') {
+          renderAlbumsFlashcards();
+        } else {
+          renderAlbumsSeals();
+        }
+      }
+
+      function closeAlbumsModal() {
+        state.ui.albumsOpen = false;
+        if (els.albumsModal) {
+          els.albumsModal.classList.remove('is-visible');
+          els.albumsModal.setAttribute('aria-hidden', 'true');
+        }
+      }
+
+      async function openAlbumsModal() {
+        state.ui.albumsOpen = true;
+        state.ui.albumsSectionIndex = 0;
+        if (els.albumsModal) {
+          els.albumsModal.classList.add('is-visible');
+          els.albumsModal.setAttribute('aria-hidden', 'false');
+        }
+        renderAlbumsSection();
+        await ensureAlbumsSealsLoaded();
+        if (state.ui.albumsOpen && state.ui.albumsSectionIndex === 1) {
+          renderAlbumsSeals();
+        }
+      }
+
+      function nudgeAlbumsSection(step) {
+        const normalizedStep = step < 0 ? -1 : 1;
+        const total = ALBUMS_SECTIONS.length;
+        state.ui.albumsSectionIndex = (state.ui.albumsSectionIndex + normalizedStep + total) % total;
+        renderAlbumsSection();
+      }
+
+      function nudgeAlbumsVertical(step) {
+        const section = ALBUMS_SECTIONS[state.ui.albumsSectionIndex] || ALBUMS_SECTIONS[0];
+        if (section.key === 'flashcards') {
+          const items = albumFlashcardsItems();
+          if (!items.length) return;
+          const nextIndex = state.ui.albumsFlashIndex + (step < 0 ? -1 : 1);
+          if (nextIndex < 0 || nextIndex >= items.length) return;
+          state.ui.albumsFlashIndex = nextIndex;
+          renderAlbumsFlashcards(step < 0 ? 'down' : 'up');
+          return;
+        }
+        const timeline = normalizeDaySealTimeline(state.ui.albumsSealsPayload);
+        if (!timeline.length) return;
+        const nextIndex = state.ui.albumsSealIndex + (step < 0 ? -1 : 1);
+        if (nextIndex < 0 || nextIndex >= timeline.length) return;
+        state.ui.albumsSealIndex = nextIndex;
+        renderAlbumsSeals(step < 0 ? 'down' : 'up');
       }
 
       function shouldUseLevelModeBufferedPool() {
@@ -24342,8 +24797,41 @@
           window.location.href = '/fluency-plan?returnTo=/play';
         });
         els.welcomeBooksBtn?.addEventListener('click', () => {
-          window.location.href = resolveNativeRenderPageHref('books');
+          void openAlbumsModal();
         });
+        els.albumsPrevSectionBtn?.addEventListener('click', () => {
+          nudgeAlbumsSection(-1);
+        });
+        els.albumsNextSectionBtn?.addEventListener('click', () => {
+          nudgeAlbumsSection(1);
+        });
+        els.albumsModal?.addEventListener('click', (event) => {
+          if (event.target === els.albumsModal) {
+            closeAlbumsModal();
+          }
+        });
+        const bindAlbumsVerticalSwipe = (node) => {
+          if (!node) return;
+          node.addEventListener('pointerdown', (event) => {
+            state.ui.albumsSwipeStartX = Number(event.clientX) || 0;
+            state.ui.albumsSwipeStartY = Number(event.clientY) || 0;
+          });
+          node.addEventListener('pointerup', (event) => {
+            const dx = (Number(event.clientX) || 0) - (Number(state.ui.albumsSwipeStartX) || 0);
+            const dy = (Number(event.clientY) || 0) - (Number(state.ui.albumsSwipeStartY) || 0);
+            state.ui.albumsSwipeStartX = 0;
+            state.ui.albumsSwipeStartY = 0;
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 42) {
+              nudgeAlbumsSection(dx < 0 ? 1 : -1);
+              return;
+            }
+            if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 42) {
+              nudgeAlbumsVertical(dy > 0 ? -1 : 1);
+            }
+          });
+        };
+        bindAlbumsVerticalSwipe(els.albumsFlashcardsStack);
+        bindAlbumsVerticalSwipe(els.albumsSealsStack);
         els.dailyPlanModal?.addEventListener('click', (event) => {
           if (event.target === els.dailyPlanModal) {
             closeDailyPlanModal();
@@ -24664,6 +25152,33 @@
           closePremiumGate();
         });
         window.addEventListener('keydown', (event) => {
+          if (state.ui.albumsOpen) {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              closeAlbumsModal();
+              return;
+            }
+            if (event.key === 'ArrowLeft') {
+              event.preventDefault();
+              nudgeAlbumsSection(-1);
+              return;
+            }
+            if (event.key === 'ArrowRight') {
+              event.preventDefault();
+              nudgeAlbumsSection(1);
+              return;
+            }
+            if (event.key === 'ArrowUp') {
+              event.preventDefault();
+              nudgeAlbumsVertical(-1);
+              return;
+            }
+            if (event.key === 'ArrowDown') {
+              event.preventDefault();
+              nudgeAlbumsVertical(1);
+              return;
+            }
+          }
           if (state.game.active && !state.game.paused) {
             markGameInteraction();
           }
