@@ -9709,6 +9709,7 @@
       position: relative;
       overflow: hidden;
       min-height: 0;
+      touch-action: pan-y;
     }
 
     .albums-modal__slide {
@@ -9728,16 +9729,16 @@
     .albums-modal__slide.is-leaving-down { transform: translateY(100%); opacity: 0.02; }
 
     .albums-modal__flashcard {
-      width: min(88vw, 360px);
+      width: min(82vw, 310px);
       max-width: 100%;
       display: grid;
-      gap: 12px;
+      gap: 10px;
       justify-items: center;
     }
 
     .albums-modal__flashcard-visual {
       width: 100%;
-      aspect-ratio: 9 / 16;
+      aspect-ratio: 10 / 14;
       border-radius: 24px;
       overflow: hidden;
       border: 1px solid rgba(124, 203, 255, 0.3);
@@ -9745,12 +9746,41 @@
       box-shadow: 0 24px 42px rgba(0, 0, 0, 0.34);
       display: grid;
       place-items: center;
+      position: relative;
     }
 
     .albums-modal__flashcard-visual img {
+      width: 92%;
+      height: 92%;
+      object-fit: contain;
+      object-position: center;
+      border-radius: 18px;
+    }
+
+    .albums-modal__flashcard-seal {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.45));
+    }
+
+    .albums-modal__flashcard-progress {
       width: 100%;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(188, 218, 255, 0.16);
+      overflow: hidden;
+      border: 1px solid rgba(140, 199, 255, 0.34);
+    }
+
+    .albums-modal__flashcard-progress > span {
+      display: block;
       height: 100%;
-      object-fit: cover;
+      width: var(--progress, 0%);
+      background: linear-gradient(90deg, #2fc2ff, #7de0ff);
     }
 
     .albums-modal__flashcard-title {
@@ -16782,12 +16812,19 @@
         const card = items[state.ui.albumsFlashIndex];
         const imageSrc = safeText(card?.imageDisplayUrl || card?.imageUrl);
         const styleAttr = safeText(card?.imageStyle);
+        const sealSrc = safeText(card?.progress?.sealImage || card?.sealImage || '');
+        const progressValue = Math.max(0, Math.min(100, Number(progressPercent(card?.progress)) || 0));
+        const isMemorizing = safeText(card?.progress?.status) === 'memorizing';
         const visualMarkup = imageSrc
           ? `<img src="${escapeHtml(imageSrc)}" alt="${escapeHtml(card?.displayEnglish || card?.english || 'Flashcard')}" ${styleAttr ? `style="${escapeHtml(styleAttr)}"` : ''}>`
           : `<div class="mini-card__fallback">${escapeHtml(card?.deckTitle || 'Flashcard')}</div>`;
         renderAlbumsSlide(els.albumsFlashcardsStack, `
             <article class="albums-modal__flashcard">
-              <div class="albums-modal__flashcard-visual">${visualMarkup}</div>
+              <div class="albums-modal__flashcard-visual">
+                ${visualMarkup}
+                ${sealSrc ? `<img class="albums-modal__flashcard-seal" src="${escapeHtml(sealSrc.startsWith('/') ? sealSrc : `/${sealSrc}`)}" alt="Selo">` : ''}
+              </div>
+              ${isMemorizing ? `<div class="albums-modal__flashcard-progress" aria-label="Progresso memorizing"><span style="--progress:${escapeHtml(progressValue.toFixed(2))}%"></span></div>` : ''}
               <p class="albums-modal__flashcard-title">${escapeHtml(card?.displayEnglish || card?.english || 'Flashcard')}</p>
               <p class="albums-modal__flashcard-subtitle">${escapeHtml(card?.displayPortuguese || card?.portuguese || '')}</p>
             </article>
@@ -24793,6 +24830,7 @@
         });
         const bindAlbumsVerticalSwipe = (node) => {
           if (!node) return;
+          let wheelLock = 0;
           node.addEventListener('pointerdown', (event) => {
             state.ui.albumsSwipeStartX = Number(event.clientX) || 0;
             state.ui.albumsSwipeStartY = Number(event.clientY) || 0;
@@ -24810,6 +24848,20 @@
               nudgeAlbumsVertical(dy > 0 ? -1 : 1);
             }
           });
+          node.addEventListener('pointercancel', () => {
+            state.ui.albumsSwipeStartX = 0;
+            state.ui.albumsSwipeStartY = 0;
+          });
+          node.addEventListener('wheel', (event) => {
+            if (!state.ui.albumsOpen) return;
+            event.preventDefault();
+            const now = Date.now();
+            if (now - wheelLock < 220) return;
+            wheelLock = now;
+            const delta = Number(event.deltaY) || 0;
+            if (Math.abs(delta) < 6) return;
+            nudgeAlbumsVertical(delta > 0 ? 1 : -1);
+          }, { passive: false });
         };
         bindAlbumsVerticalSwipe(els.albumsFlashcardsStack);
         bindAlbumsVerticalSwipe(els.albumsSealsStack);
