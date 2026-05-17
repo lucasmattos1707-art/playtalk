@@ -386,88 +386,6 @@
     return Number(entry?.flashcardsCount) || 0;
   }
 
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-  }
-
-  function lerp(start, end, ratio) {
-    return start + ((end - start) * ratio);
-  }
-
-  function organicJitter(seed) {
-    const normalized = Math.sin((Number(seed) || 0) * 12.9898 + 78.233) * 43758.5453;
-    return normalized - Math.floor(normalized);
-  }
-
-  function applyInterpolatedShowcaseMetrics(rows) {
-    if (!Array.isArray(rows) || rows.length < 1) return rows;
-    const ranked = rows
-      .slice()
-      .sort((left, right) => (Number(left?.rank) || 999999) - (Number(right?.rank) || 999999))
-      .map((entry) => ({ ...entry }));
-
-    const activeRows = ranked.filter((entry) => (
-      (Number(entry?.flashcardsCount) || 0) > 0
-      || (Number(entry?.pronunciationPercent) || 0) > 0
-      || (Number(entry?.speedFlashcardsPerHour) || 0) > 0
-      || (Number(entry?.level) || 0) > 1
-    ));
-    if (!activeRows.length) return ranked;
-    const total = activeRows.length;
-    let previousFlashcards = Number.POSITIVE_INFINITY;
-    let previousPronunciation = Number.POSITIVE_INFINITY;
-    let previousLevel = Number.POSITIVE_INFINITY;
-    let previousSpeed = Number.POSITIVE_INFINITY;
-    activeRows.forEach((entry, index) => {
-      const ratio = total <= 1 ? 0 : (index / (total - 1));
-      const seed = (Number(entry?.userId) || 0) + ((index + 1) * 17);
-
-      const flashcardsBase = lerp(415, 15, ratio);
-      const flashcardsNoise = (organicJitter(seed) - 0.5) * 8;
-      let flashcards = Math.round(clamp(flashcardsBase + flashcardsNoise, 15, 415));
-      flashcards = Math.min(flashcards, Number.isFinite(previousFlashcards) ? (previousFlashcards - 1) : flashcards);
-      flashcards = clamp(flashcards, 15, 415);
-
-      const pronunciationBase = lerp(97, 65, ratio);
-      const pronunciationNoise = (organicJitter(seed + 100) - 0.5) * 2.2;
-      let pronunciation = Math.round(clamp(pronunciationBase + pronunciationNoise, 65, 97));
-      pronunciation = Math.min(pronunciation, Number.isFinite(previousPronunciation) ? previousPronunciation : pronunciation);
-      pronunciation = clamp(pronunciation, 65, 97);
-
-      const levelBase = lerp(74, 1, ratio);
-      const levelNoise = (organicJitter(seed + 200) - 0.5) * 2.4;
-      let level = Math.round(clamp(levelBase + levelNoise, 1, 74));
-      level = Math.min(level, Number.isFinite(previousLevel) ? previousLevel : level);
-      level = clamp(level, 1, 74);
-
-      const speedBase = lerp(1250, 300, ratio);
-      const speedNoise = (organicJitter(seed + 300) - 0.5) * 42;
-      let speed = Number(clamp(speedBase + speedNoise, 300, 1250).toFixed(1));
-      speed = Math.min(speed, Number.isFinite(previousSpeed) ? previousSpeed : speed);
-      speed = clamp(Number(speed.toFixed(1)), 300, 1250);
-
-      entry.flashcardsCount = flashcards;
-      entry.pronunciationPercent = pronunciation;
-      entry.level = level;
-      entry.speedFlashcardsPerHour = speed;
-
-      previousFlashcards = flashcards;
-      previousPronunciation = pronunciation;
-      previousLevel = level;
-      previousSpeed = speed;
-    });
-
-    ranked.forEach((entry) => {
-      const isActive = activeRows.some((active) => Number(active.userId) === Number(entry.userId));
-      if (isActive) return;
-      entry.flashcardsCount = 0;
-      entry.pronunciationPercent = 0;
-      entry.speedFlashcardsPerHour = 0;
-      entry.level = 1;
-    });
-    return ranked;
-  }
-
   function formatMetricValue(entry, metricKey, metricValueLabel = '') {
     const value = metricValueFromEntry(entry, metricKey);
     if (metricKey === 'speed') {
@@ -1149,7 +1067,7 @@
         metricKey: selectedMetric.key,
         metricLabel: safeText(payload?.metricLabel || selectedMetric.label) || selectedMetric.label,
         metricValueLabel: safeText(payload?.metricValueLabel || selectedMetric.valueLabel || ''),
-        rows: applyInterpolatedShowcaseMetrics(normalizeUsers(payload)),
+        rows: normalizeUsers(payload),
         viewer: normalizeViewer(payload.viewer)
       };
       if (data.viewer && data.viewer.userId) {
