@@ -10738,6 +10738,21 @@
         };
       }
 
+      function buildDefaultCardValueSettings() {
+        return {
+          sizeMultiplierMax: 7,
+          levelMultiplierMax: 11
+        };
+      }
+
+      function normalizeCardValueSettings(settings) {
+        const source = settings && typeof settings === 'object' ? settings : {};
+        const defaults = buildDefaultCardValueSettings();
+        const sizeMultiplierMax = Math.max(0.1, Math.min(50, Number((Number(String(source?.sizeMultiplierMax ?? defaults.sizeMultiplierMax).replace(',', '.')) || defaults.sizeMultiplierMax).toFixed(2))));
+        const levelMultiplierMax = Math.max(1, Math.min(50, Number((Number(String(source?.levelMultiplierMax ?? defaults.levelMultiplierMax).replace(',', '.')) || defaults.levelMultiplierMax).toFixed(2))));
+        return { sizeMultiplierMax, levelMultiplierMax };
+      }
+
       function normalizeLevelWindowSettings(settings) {
         const defaults = buildDefaultLevelWindowSettings();
         const source = settings && typeof settings === 'object' ? settings : {};
@@ -11010,6 +11025,7 @@
           fourthStarUsesSecondStarBlocks: false,
           levelDynamics: buildDefaultLevelDynamicsSettings(),
           levelWindowSettings: buildDefaultLevelWindowSettings(),
+          cardValueSettings: buildDefaultCardValueSettings(),
           firstStagePenaltyBusy: false,
           launchAfterSoundTest: '',
           soundTestCompleted: false,
@@ -14570,6 +14586,19 @@
         return normalizeLevelWindowSettings(payload.settings);
       }
 
+      async function fetchFlashcardCardValueSettings() {
+        const response = await fetch(buildApiUrl('/api/flashcards/card-value-settings'), {
+          headers: buildAuthHeaders(),
+          cache: 'no-store',
+          credentials: 'include'
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success || !payload?.settings) {
+          return normalizeCardValueSettings(buildDefaultCardValueSettings());
+        }
+        return normalizeCardValueSettings(payload.settings);
+      }
+
       function isFourthStarUsingSecondStarBlocks() {
         const userChoice = normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping);
         if (userChoice === 'on') return false;
@@ -17364,24 +17393,27 @@
 
       function flashcardSizeMultiplier(charCount) {
         const count = Math.max(0, Number(charCount) || 0);
+        const cardValue = normalizeCardValueSettings(state.entry.cardValueSettings || buildDefaultCardValueSettings());
+        const sizeScale = cardValue.sizeMultiplierMax / 7;
         if (count <= 9) return 1.0;
-        if (count <= 12) return 1.5;
-        if (count <= 15) return 2.0;
-        if (count <= 18) return 2.5;
-        if (count <= 21) return 3.0;
-        if (count <= 24) return 3.5;
-        if (count <= 27) return 4.0;
-        if (count <= 30) return 4.5;
-        if (count <= 33) return 5.0;
-        if (count <= 36) return 5.5;
-        if (count <= 42) return 6.0;
-        return 7.0;
+        if (count <= 12) return 1.5 * sizeScale;
+        if (count <= 15) return 2.0 * sizeScale;
+        if (count <= 18) return 2.5 * sizeScale;
+        if (count <= 21) return 3.0 * sizeScale;
+        if (count <= 24) return 3.5 * sizeScale;
+        if (count <= 27) return 4.0 * sizeScale;
+        if (count <= 30) return 4.5 * sizeScale;
+        if (count <= 33) return 5.0 * sizeScale;
+        if (count <= 36) return 5.5 * sizeScale;
+        if (count <= 42) return 6.0 * sizeScale;
+        return cardValue.sizeMultiplierMax;
       }
 
       function flashcardLevelMultiplier(level) {
         const normalized = normalizeDeckLevel(level);
         const safeLevel = Number.isInteger(normalized) && normalized >= 1 ? normalized : 1;
-        return 1.0 + (0.1 * safeLevel);
+        const cardValue = normalizeCardValueSettings(state.entry.cardValueSettings || buildDefaultCardValueSettings());
+        return 1 + ((safeLevel / 100) * (cardValue.levelMultiplierMax - 1));
       }
 
       function flashcardCoinValue(card) {
@@ -25501,6 +25533,7 @@
           const flashcardLevelRulesSettings = await fetchFlashcardLevelRulesSettings().catch(() => ({ levels: buildDefaultLevelRules() }));
           const flashcardLevelDynamicsSettings = await fetchFlashcardLevelDynamicsSettings().catch(() => normalizeLevelDynamicsSettings(buildDefaultLevelDynamicsSettings()));
           const flashcardLevelWindowSettings = await fetchFlashcardLevelWindowSettings().catch(() => normalizeLevelWindowSettings(buildDefaultLevelWindowSettings()));
+          const flashcardCardValueSettings = await fetchFlashcardCardValueSettings().catch(() => normalizeCardValueSettings(buildDefaultCardValueSettings()));
           if (sessionUser) {
             state.user = normalizeUser(sessionUser);
           }
@@ -25509,6 +25542,7 @@
           state.levelRules = Array.isArray(flashcardLevelRulesSettings?.levels) ? flashcardLevelRulesSettings.levels : buildDefaultLevelRules();
           state.entry.levelDynamics = normalizeLevelDynamicsSettings(flashcardLevelDynamicsSettings);
           state.entry.levelWindowSettings = normalizeLevelWindowSettings(flashcardLevelWindowSettings);
+          state.entry.cardValueSettings = normalizeCardValueSettings(flashcardCardValueSettings);
           state.entry.welcomeModesResolved = true;
           state.entry.sessionResolved = true;
           ensureFlashcardsEnergyDepletionWatch();

@@ -31,6 +31,11 @@
     speedCurveChars60: document.getElementById('adminSpeedCurveChars60'),
     speedCurveSaveBtn: document.getElementById('adminSpeedCurveSaveBtn'),
     speedCurveStatus: document.getElementById('adminSpeedCurveStatus'),
+    cardValueForm: document.getElementById('adminCardValueForm'),
+    cardSizeMultiplierMax: document.getElementById('adminCardSizeMultiplierMax'),
+    cardLevelMultiplierMax: document.getElementById('adminCardLevelMultiplierMax'),
+    cardValueSaveBtn: document.getElementById('adminCardValueSaveBtn'),
+    cardValueStatus: document.getElementById('adminCardValueStatus'),
     levelDynamicsForm: document.getElementById('adminLevelDynamicsForm'),
     speedGainRulesTableBody: document.getElementById('adminSpeedGainRulesTableBody'),
     firstStagePenaltyRulesTableBody: document.getElementById('adminFirstStagePenaltyRulesTableBody'),
@@ -71,6 +76,11 @@
     speedCurveBusy: false,
     speedCurve: {
       anchors: []
+    },
+    cardValueBusy: false,
+    cardValue: {
+      sizeMultiplierMax: 7,
+      levelMultiplierMax: 11
     },
     levelDynamicsBusy: false,
     levelDynamics: {
@@ -207,6 +217,16 @@
     });
   }
 
+  function syncCardValueBusyState() {
+    if (els.cardValueSaveBtn) {
+      els.cardValueSaveBtn.disabled = state.cardValueBusy;
+      els.cardValueSaveBtn.textContent = state.cardValueBusy ? 'Salvando...' : 'Salvar valor das cartas';
+    }
+    [els.cardSizeMultiplierMax, els.cardLevelMultiplierMax].forEach((input) => {
+      if (input) input.disabled = state.cardValueBusy;
+    });
+  }
+
   function syncLevelDynamicsBusyState() {
     if (els.levelDynamicsSaveBtn) {
       els.levelDynamicsSaveBtn.disabled = state.levelDynamicsBusy;
@@ -269,6 +289,26 @@
         { chars: 60, multiplier: anchorValue(els.speedCurveChars60, 0.3) }
       ]
     };
+  }
+
+  function normalizeCardValueSettings(settings) {
+    return {
+      sizeMultiplierMax: Math.max(0.1, Math.min(50, Number(parseLocaleDecimal(settings?.sizeMultiplierMax, 7).toFixed(2)))),
+      levelMultiplierMax: Math.max(1, Math.min(50, Number(parseLocaleDecimal(settings?.levelMultiplierMax, 11).toFixed(2))))
+    };
+  }
+
+  function applyCardValueSettings(settings) {
+    state.cardValue = normalizeCardValueSettings(settings);
+    if (els.cardSizeMultiplierMax) els.cardSizeMultiplierMax.value = String(state.cardValue.sizeMultiplierMax).replace('.', ',');
+    if (els.cardLevelMultiplierMax) els.cardLevelMultiplierMax.value = String(state.cardValue.levelMultiplierMax).replace('.', ',');
+  }
+
+  function readDraftCardValueSettings() {
+    return normalizeCardValueSettings({
+      sizeMultiplierMax: els.cardSizeMultiplierMax?.value,
+      levelMultiplierMax: els.cardLevelMultiplierMax?.value
+    });
   }
 
   function buildDefaultLevelDynamicsSettings() {
@@ -730,6 +770,19 @@
     applySpeedCurve(payload.settings);
   }
 
+  async function loadCardValueSettings() {
+    const response = await fetch(buildApiUrl('/api/admin/flashcards/card-value-settings'), {
+      headers: buildAuthHeaders(),
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.settings) {
+      throw new Error(payload?.message || 'Nao foi possivel carregar os multiplicadores de valor das cartas.');
+    }
+    applyCardValueSettings(payload.settings);
+  }
+
   async function loadLevelDynamicsSettings() {
     const response = await fetch(buildApiUrl('/api/admin/flashcards/level-dynamics-settings'), {
       headers: buildAuthHeaders(),
@@ -904,6 +957,33 @@
     }
   }
 
+  async function submitCardValueSettings(event) {
+    event.preventDefault();
+    state.cardValueBusy = true;
+    syncCardValueBusyState();
+    setStatus(els.cardValueStatus, 'Salvando valor das cartas...');
+    try {
+      const draft = readDraftCardValueSettings();
+      const response = await fetch(buildApiUrl('/api/admin/flashcards/card-value-settings'), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify(draft)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.settings) {
+        throw new Error(payload?.message || 'Nao foi possivel salvar os multiplicadores de valor das cartas.');
+      }
+      applyCardValueSettings(payload.settings);
+      setStatus(els.cardValueStatus, payload?.message || 'Multiplicadores de valor das cartas atualizados.', 'success');
+    } catch (error) {
+      setStatus(els.cardValueStatus, error?.message || 'Nao foi possivel salvar os multiplicadores de valor das cartas.', 'error');
+    } finally {
+      state.cardValueBusy = false;
+      syncCardValueBusyState();
+    }
+  }
+
   async function submitLevelDynamicsSettings(event) {
     event.preventDefault();
     state.levelDynamicsBusy = true;
@@ -993,6 +1073,7 @@
     els.flashcardsPhaseForm?.addEventListener('submit', submitFlashcardsPhaseSettings);
     els.flashcardsLevelRulesForm?.addEventListener('submit', submitFlashcardsLevelRulesSettings);
     els.speedCurveForm?.addEventListener('submit', submitSpeedCurveSettings);
+    els.cardValueForm?.addEventListener('submit', submitCardValueSettings);
     els.levelDynamicsForm?.addEventListener('submit', submitLevelDynamicsSettings);
     els.levelWindowForm?.addEventListener('submit', submitLevelWindowSettings);
     els.xpLevelCurveForm?.addEventListener('submit', submitXpLevelCurveSettings);
@@ -1005,6 +1086,7 @@
     syncFlashcardsPhaseBusyState();
     syncFlashcardsLevelRulesBusyState();
     syncSpeedCurveBusyState();
+    syncCardValueBusyState();
     syncLevelDynamicsBusyState();
     syncLevelWindowBusyState();
     syncXpLevelCurveBusyState();
@@ -1018,6 +1100,7 @@
       setStatus(els.flashcardsPhaseStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.flashcardsLevelRulesStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.speedCurveStatus, 'Acesso restrito ao administrador.', 'error');
+      setStatus(els.cardValueStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.levelDynamicsStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.levelWindowStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.xpLevelCurveStatus, 'Acesso restrito ao administrador.', 'error');
@@ -1031,6 +1114,7 @@
         loadFlashcardsPhaseSettings(),
         loadFlashcardsLevelRulesSettings(),
         loadSpeedCurveSettings(),
+        loadCardValueSettings(),
         loadLevelDynamicsSettings(),
         loadLevelWindowSettings(),
         loadXpLevelCurveSettings()
@@ -1040,6 +1124,7 @@
       setStatus(els.flashcardsPhaseStatus, 'Fase fourth-star sincronizada.');
       setStatus(els.flashcardsLevelRulesStatus, 'Tabela de niveis sincronizada.');
       setStatus(els.speedCurveStatus, 'Curva da velocidade sincronizada.');
+      setStatus(els.cardValueStatus, 'Multiplicadores de valor das cartas sincronizados.');
       setStatus(els.levelDynamicsStatus, 'Dinamicas de nivel sincronizadas.');
       setStatus(els.levelWindowStatus, 'Janela de niveis dos decks sincronizada.');
       setStatus(els.xpLevelCurveStatus, 'Curva de XP por nivel sincronizada.');
@@ -1050,6 +1135,7 @@
       setStatus(els.flashcardsPhaseStatus, message, 'error');
       setStatus(els.flashcardsLevelRulesStatus, message, 'error');
       setStatus(els.speedCurveStatus, message, 'error');
+      setStatus(els.cardValueStatus, message, 'error');
       setStatus(els.levelDynamicsStatus, message, 'error');
       setStatus(els.levelWindowStatus, message, 'error');
       setStatus(els.xpLevelCurveStatus, message, 'error');

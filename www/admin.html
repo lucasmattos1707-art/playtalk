@@ -517,6 +517,27 @@
     </section>
 
     <section class="admin-card" style="margin-top:18px;">
+      <h2>Valor das cartas (/play)</h2>
+      <p class="admin-card-copy">Multiplicadores globais dos dois eixos de valor das cartas. Aceita virgula ou ponto.</p>
+      <form class="admin-form" id="adminCardValueForm">
+        <div class="admin-speed-curve-grid">
+          <div class="admin-field">
+            <label for="adminCardSizeMultiplierMax">Teto chars (7x)</label>
+            <input id="adminCardSizeMultiplierMax" type="text" inputmode="decimal" value="7,00" required>
+          </div>
+          <div class="admin-field">
+            <label for="adminCardLevelMultiplierMax">Teto level (11x)</label>
+            <input id="adminCardLevelMultiplierMax" type="text" inputmode="decimal" value="11,00" required>
+          </div>
+        </div>
+        <div class="admin-topbar-actions">
+          <button class="admin-btn" id="adminCardValueSaveBtn" type="submit">Salvar valor das cartas</button>
+        </div>
+      </form>
+      <div class="admin-status" id="adminCardValueStatus" aria-live="polite"></div>
+    </section>
+
+    <section class="admin-card" style="margin-top:18px;">
       <h2>Dinamicas de nivel dos decks (/play)</h2>
       <p class="admin-card-copy">Controle global do ganho de nivel por minuto (velocidade/h) e da perda de nivel por erro na first-star.</p>
       <form class="admin-form" id="adminLevelDynamicsForm">
