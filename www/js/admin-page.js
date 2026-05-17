@@ -25,8 +25,10 @@
     flashcardsLevelRulesSaveBtn: document.getElementById('adminFlashcardsLevelRulesSaveBtn'),
     flashcardsLevelRulesStatus: document.getElementById('adminFlashcardsLevelRulesStatus'),
     speedCurveForm: document.getElementById('adminSpeedCurveForm'),
-    speedCurveStartMultiplier: document.getElementById('adminSpeedCurveStartMultiplier'),
-    speedCurveEndMultiplier: document.getElementById('adminSpeedCurveEndMultiplier'),
+    speedCurveChars6: document.getElementById('adminSpeedCurveChars6'),
+    speedCurveChars15: document.getElementById('adminSpeedCurveChars15'),
+    speedCurveChars30: document.getElementById('adminSpeedCurveChars30'),
+    speedCurveChars60: document.getElementById('adminSpeedCurveChars60'),
     speedCurveSaveBtn: document.getElementById('adminSpeedCurveSaveBtn'),
     speedCurveStatus: document.getElementById('adminSpeedCurveStatus'),
     levelDynamicsForm: document.getElementById('adminLevelDynamicsForm'),
@@ -68,10 +70,7 @@
     },
     speedCurveBusy: false,
     speedCurve: {
-      minChars: 6,
-      maxChars: 60,
-      startMultiplier: 2,
-      endMultiplier: 0.3
+      anchors: []
     },
     levelDynamicsBusy: false,
     levelDynamics: {
@@ -198,8 +197,10 @@
       els.speedCurveSaveBtn.textContent = state.speedCurveBusy ? 'Salvando...' : 'Salvar curva da velocidade';
     }
     [
-      els.speedCurveStartMultiplier,
-      els.speedCurveEndMultiplier
+      els.speedCurveChars6,
+      els.speedCurveChars15,
+      els.speedCurveChars30,
+      els.speedCurveChars60
     ].forEach((input) => {
       if (!input) return;
       input.disabled = state.speedCurveBusy;
@@ -260,13 +261,13 @@
   }
 
   function readDraftSpeedCurve() {
-    const startMultiplier = anchorValue(els.speedCurveStartMultiplier, state.speedCurve.startMultiplier || 2);
-    const endMultiplier = anchorValue(els.speedCurveEndMultiplier, state.speedCurve.endMultiplier || 0.3);
     return {
-      minChars: 6,
-      maxChars: 60,
-      startMultiplier,
-      endMultiplier
+      anchors: [
+        { chars: 6, multiplier: anchorValue(els.speedCurveChars6, 2) },
+        { chars: 15, multiplier: anchorValue(els.speedCurveChars15, 1) },
+        { chars: 30, multiplier: anchorValue(els.speedCurveChars30, 0.5) },
+        { chars: 60, multiplier: anchorValue(els.speedCurveChars60, 0.3) }
+      ]
     };
   }
 
@@ -351,16 +352,24 @@
   }
 
   function applySpeedCurve(settings) {
-    const safe6 = Math.max(0.01, Math.min(10, Number(settings?.startMultiplier) || 2));
-    const safe60 = Math.max(0.01, Math.min(10, Number(settings?.endMultiplier) || 0.3));
+    const anchors = Array.isArray(settings?.anchors) ? settings.anchors : [];
+    const byChars = new Map(anchors.map((entry) => [Number(entry?.chars), Number(entry?.multiplier)]));
+    const safe6 = Math.max(0.01, Math.min(10, Number(byChars.get(6)) || 2));
+    const safe15 = Math.max(0.01, Math.min(10, Number(byChars.get(15)) || 1));
+    const safe30 = Math.max(0.01, Math.min(10, Number(byChars.get(30)) || 0.5));
+    const safe60 = Math.max(0.01, Math.min(10, Number(byChars.get(60)) || 0.3));
     state.speedCurve = {
-      minChars: 6,
-      maxChars: 60,
-      startMultiplier: safe6,
-      endMultiplier: safe60
+      anchors: [
+        { chars: 6, multiplier: safe6 },
+        { chars: 15, multiplier: safe15 },
+        { chars: 30, multiplier: safe30 },
+        { chars: 60, multiplier: safe60 }
+      ]
     };
-    if (els.speedCurveStartMultiplier) els.speedCurveStartMultiplier.value = safe6.toFixed(2);
-    if (els.speedCurveEndMultiplier) els.speedCurveEndMultiplier.value = safe60.toFixed(2);
+    if (els.speedCurveChars6) els.speedCurveChars6.value = safe6.toFixed(2);
+    if (els.speedCurveChars15) els.speedCurveChars15.value = safe15.toFixed(2);
+    if (els.speedCurveChars30) els.speedCurveChars30.value = safe30.toFixed(2);
+    if (els.speedCurveChars60) els.speedCurveChars60.value = safe60.toFixed(2);
   }
 
   function applySettings(settings) {
