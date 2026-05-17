@@ -231,6 +231,7 @@ let flashcardLevelWindowSettingsReadyPromise = null;
 let flashcardXpLevelCurveSettingsReadyPromise = null;
 let flashcardCardValueSettingsReadyPromise = null;
 let flashcardXpValueSettingsReadyPromise = null;
+let flashcardDeckCardLimitSettingsReadyPromise = null;
 let userFlashcardSpeedSamplesTableReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
@@ -278,6 +279,10 @@ let flashcardXpValueSettingsCache = {
   value: null,
   updatedAt: 0
 };
+let flashcardDeckCardLimitSettingsCache = {
+  value: null,
+  updatedAt: 0
+};
 let flashcardXpLevelCurveSettingsCache = {
   value: null,
   updatedAt: 0
@@ -316,6 +321,7 @@ const FLASHCARD_LEVEL_DYNAMICS_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_LEVEL_WINDOW_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_CARD_VALUE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_XP_VALUE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
+const FLASHCARD_DECK_CARD_LIMIT_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_XP_LEVEL_CURVE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_SPEED_SAMPLE_LIMIT = 100;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
@@ -1175,6 +1181,42 @@ function normalizeFlashcardXpValueSettingsSnapshot(value = {}) {
 function rememberFlashcardXpValueSettings(settings) {
   const snapshot = normalizeFlashcardXpValueSettingsSnapshot(settings);
   flashcardXpValueSettingsCache = {
+    value: snapshot,
+    updatedAt: Date.now()
+  };
+  return snapshot;
+}
+
+function buildDefaultFlashcardDeckCardLimitSettings() {
+  return {
+    levels: Array.from({ length: 15 }, (_v, index) => ({
+      level: index + 1,
+      cardsLimit: 20 + index
+    }))
+  };
+}
+
+function normalizeFlashcardDeckCardLimitSettingsSnapshot(value = {}) {
+  const source = value?.payload && typeof value.payload === 'object' ? value.payload : value;
+  const defaults = buildDefaultFlashcardDeckCardLimitSettings().levels;
+  const incoming = Array.isArray(source?.levels) ? source.levels : defaults;
+  const byLevel = new Map(defaults.map((entry) => [entry.level, { ...entry }]));
+  incoming.forEach((entry) => {
+    const level = Math.max(1, Math.min(15, Math.floor(Number(entry?.level) || 0)));
+    if (!byLevel.has(level)) return;
+    byLevel.set(level, {
+      level,
+      cardsLimit: Math.max(1, Math.min(300, Math.floor(Number(entry?.cardsLimit) || 1)))
+    });
+  });
+  return {
+    levels: Array.from(byLevel.values()).sort((a, b) => a.level - b.level)
+  };
+}
+
+function rememberFlashcardDeckCardLimitSettings(settings) {
+  const snapshot = normalizeFlashcardDeckCardLimitSettingsSnapshot(settings);
+  flashcardDeckCardLimitSettingsCache = {
     value: snapshot,
     updatedAt: Date.now()
   };
@@ -3446,6 +3488,34 @@ const ensureFlashcardXpValueSettingsTable = async () => {
   return flashcardXpValueSettingsReadyPromise;
 };
 
+const ensureFlashcardDeckCardLimitSettingsTable = async () => {
+  if (!pool) return false;
+  if (!flashcardDeckCardLimitSettingsReadyPromise) {
+    flashcardDeckCardLimitSettingsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.app_flashcard_deck_card_limit_settings (
+          singleton_key text PRIMARY KEY,
+          payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+          updated_by_user_id integer REFERENCES public.users(id) ON DELETE SET NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(
+        `INSERT INTO public.app_flashcard_deck_card_limit_settings (singleton_key, payload)
+         VALUES ('default', $1::jsonb)
+         ON CONFLICT (singleton_key) DO NOTHING`,
+        [JSON.stringify(buildDefaultFlashcardDeckCardLimitSettings())]
+      );
+      return true;
+    })().catch((error) => {
+      flashcardDeckCardLimitSettingsReadyPromise = null;
+      throw error;
+    });
+  }
+  return flashcardDeckCardLimitSettingsReadyPromise;
+};
+
 const ensureUserFlashcardSpeedSamplesTable = async () => {
   if (!pool) return false;
   if (!userFlashcardSpeedSamplesTableReadyPromise) {
@@ -3709,6 +3779,26 @@ async function getFlashcardXpValueSettings(options = {}) {
   return rememberFlashcardXpValueSettings(result.rows[0] || {});
 }
 
+async function getFlashcardDeckCardLimitSettings(options = {}) {
+  const force = Boolean(options?.force);
+  if (!pool) return buildDefaultFlashcardDeckCardLimitSettings();
+  if (
+    !force
+    && flashcardDeckCardLimitSettingsCache.value
+    && (Date.now() - flashcardDeckCardLimitSettingsCache.updatedAt) < FLASHCARD_DECK_CARD_LIMIT_SETTINGS_CACHE_TTL_MS
+  ) {
+    return flashcardDeckCardLimitSettingsCache.value;
+  }
+  await ensureFlashcardDeckCardLimitSettingsTable();
+  const result = await pool.query(
+    `SELECT payload
+     FROM public.app_flashcard_deck_card_limit_settings
+     WHERE singleton_key = 'default'
+     LIMIT 1`
+  );
+  return rememberFlashcardDeckCardLimitSettings(result.rows[0] || {});
+}
+
 async function updateEnergySettings(db, values = {}, updatedByUserId = null) {
   const executor = db && typeof db.query === 'function' ? db : pool;
   if (!executor) {
@@ -3933,6 +4023,24 @@ async function updateFlashcardXpValueSettings(db, values = {}, updatedByUserId =
     [JSON.stringify(snapshot), Number(updatedByUserId) || null]
   );
   return rememberFlashcardXpValueSettings(result.rows[0] || snapshot);
+}
+
+async function updateFlashcardDeckCardLimitSettings(db, values = {}, updatedByUserId = null) {
+  const safeDb = db || pool;
+  if (!safeDb) throw new Error('Banco indisponivel para atualizar limite de cartas por deck.');
+  await ensureFlashcardDeckCardLimitSettingsTable();
+  const snapshot = normalizeFlashcardDeckCardLimitSettingsSnapshot(values || {});
+  const result = await safeDb.query(
+    `INSERT INTO public.app_flashcard_deck_card_limit_settings (singleton_key, payload, updated_by_user_id, updated_at)
+     VALUES ('default', $1::jsonb, $2, now())
+     ON CONFLICT (singleton_key)
+     DO UPDATE SET payload = EXCLUDED.payload,
+                   updated_by_user_id = EXCLUDED.updated_by_user_id,
+                   updated_at = now()
+     RETURNING payload`,
+    [JSON.stringify(snapshot), Number(updatedByUserId) || null]
+  );
+  return rememberFlashcardDeckCardLimitSettings(result.rows[0] || snapshot);
 }
 
 const ensureUsersPresenceClassMetricStorage = async () => {
@@ -19637,6 +19745,15 @@ app.get('/api/flashcards/xp-value-settings', async (_req, res) => {
   }
 });
 
+app.get('/api/flashcards/deck-card-limit-settings', async (_req, res) => {
+  try {
+    const settings = await getFlashcardDeckCardLimitSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error?.message || 'Nao foi possivel carregar o limite de cartas por deck.' });
+  }
+});
+
 app.get('/api/admin/welcome-mode-settings', async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -19745,6 +19862,17 @@ app.get('/api/admin/flashcards/xp-value-settings', async (req, res) => {
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar os vetores de XP.' });
+  }
+});
+
+app.get('/api/admin/flashcards/deck-card-limit-settings', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const settings = await getFlashcardDeckCardLimitSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar o limite de cartas por deck.' });
   }
 });
 
@@ -19946,6 +20074,23 @@ app.post('/api/admin/flashcards/xp-value-settings', express.json({ limit: '32kb'
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel salvar os vetores de XP.' });
+  }
+});
+
+app.post('/api/admin/flashcards/deck-card-limit-settings', express.json({ limit: '128kb' }), async (req, res) => {
+  try {
+    const adminUser = await requireAdminUserFromRequest(req);
+    const settings = await updateFlashcardDeckCardLimitSettings(pool, {
+      levels: Array.isArray(req.body?.levels) ? req.body.levels : []
+    }, adminUser.id);
+    res.json({
+      success: true,
+      message: 'Limite de cartas por deck atualizado.',
+      settings
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel salvar o limite de cartas por deck.' });
   }
 });
 

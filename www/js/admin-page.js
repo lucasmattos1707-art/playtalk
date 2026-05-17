@@ -54,7 +54,11 @@
     xpLevelCurveTableBody: document.getElementById('adminXpLevelCurveTableBody'),
     xpLevelCurveSaveBtn: document.getElementById('adminXpLevelCurveSaveBtn'),
     xpLevelCurveStatus: document.getElementById('adminXpLevelCurveStatus'),
-    factXpMax: document.getElementById('adminFactXpMax')
+    factXpMax: document.getElementById('adminFactXpMax'),
+    deckCardLimitForm: document.getElementById('adminDeckCardLimitForm'),
+    deckCardLimitTableBody: document.getElementById('adminDeckCardLimitTableBody'),
+    deckCardLimitSaveBtn: document.getElementById('adminDeckCardLimitSaveBtn'),
+    deckCardLimitStatus: document.getElementById('adminDeckCardLimitStatus')
   };
 
   const state = {
@@ -91,6 +95,10 @@
     xpValue: {
       sizeMultiplierMax: 7,
       levelMultiplierMax: 11
+    },
+    deckCardLimitBusy: false,
+    deckCardLimit: {
+      levels: []
     },
     levelDynamicsBusy: false,
     levelDynamics: {
@@ -247,6 +255,16 @@
     });
   }
 
+  function syncDeckCardLimitBusyState() {
+    if (els.deckCardLimitSaveBtn) {
+      els.deckCardLimitSaveBtn.disabled = state.deckCardLimitBusy;
+      els.deckCardLimitSaveBtn.textContent = state.deckCardLimitBusy ? 'Salvando...' : 'Salvar limite por deck';
+    }
+    Array.from(els.deckCardLimitForm?.querySelectorAll('input[type="number"]') || []).forEach((input) => {
+      input.disabled = state.deckCardLimitBusy;
+    });
+  }
+
   function syncLevelDynamicsBusyState() {
     if (els.levelDynamicsSaveBtn) {
       els.levelDynamicsSaveBtn.disabled = state.levelDynamicsBusy;
@@ -349,6 +367,54 @@
       sizeMultiplierMax: els.xpSizeMultiplierMax?.value,
       levelMultiplierMax: els.xpLevelMultiplierMax?.value
     });
+  }
+
+  function buildDefaultDeckCardLimitSettings() {
+    return {
+      levels: Array.from({ length: 15 }, (_v, index) => ({
+        level: index + 1,
+        cardsLimit: 20 + index
+      }))
+    };
+  }
+
+  function normalizeDeckCardLimitSettings(settings) {
+    const defaults = buildDefaultDeckCardLimitSettings().levels;
+    const source = Array.isArray(settings?.levels) ? settings.levels : defaults;
+    const byLevel = new Map(defaults.map((entry) => [entry.level, { ...entry }]));
+    source.forEach((entry) => {
+      const level = Math.max(1, Math.min(15, Math.floor(Number(entry?.level) || 0)));
+      if (!byLevel.has(level)) return;
+      byLevel.set(level, {
+        level,
+        cardsLimit: Math.max(1, Math.min(300, Math.floor(Number(entry?.cardsLimit) || 1)))
+      });
+    });
+    return {
+      levels: Array.from(byLevel.values()).sort((a, b) => a.level - b.level)
+    };
+  }
+
+  function applyDeckCardLimitSettings(settings) {
+    const snapshot = normalizeDeckCardLimitSettings(settings);
+    state.deckCardLimit = snapshot;
+    if (!els.deckCardLimitTableBody) return;
+    const rows = snapshot.levels.map((entry) => `
+      <tr data-deck-card-limit-row="${entry.level}">
+        <td><strong>${entry.level}</strong></td>
+        <td><input type="number" min="1" max="300" step="1" value="${entry.cardsLimit}" data-deck-card-limit-field="cardsLimit"></td>
+      </tr>
+    `);
+    els.deckCardLimitTableBody.innerHTML = rows.join('');
+  }
+
+  function readDraftDeckCardLimitSettings() {
+    const levels = Array.from(els.deckCardLimitTableBody?.querySelectorAll('tr[data-deck-card-limit-row]') || []).map((row) => ({
+      level: Math.max(1, Math.min(15, Number.parseInt(row.getAttribute('data-deck-card-limit-row') || '0', 10) || 1)),
+      cardsLimit: Math.max(1, Math.min(300, Math.floor(Number(row.querySelector('[data-deck-card-limit-field="cardsLimit"]')?.value) || 1)))
+    }));
+    if (!levels.length) throw new Error('Adicione as linhas de limite por nivel.');
+    return normalizeDeckCardLimitSettings({ levels });
   }
 
   function buildDefaultLevelDynamicsSettings() {
@@ -836,6 +902,19 @@
     applyXpValueSettings(payload.settings);
   }
 
+  async function loadDeckCardLimitSettings() {
+    const response = await fetch(buildApiUrl('/api/admin/flashcards/deck-card-limit-settings'), {
+      headers: buildAuthHeaders(),
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.settings) {
+      throw new Error(payload?.message || 'Nao foi possivel carregar limite de cartas por deck.');
+    }
+    applyDeckCardLimitSettings(payload.settings);
+  }
+
   async function loadLevelDynamicsSettings() {
     const response = await fetch(buildApiUrl('/api/admin/flashcards/level-dynamics-settings'), {
       headers: buildAuthHeaders(),
@@ -1064,6 +1143,33 @@
     }
   }
 
+  async function submitDeckCardLimitSettings(event) {
+    event.preventDefault();
+    state.deckCardLimitBusy = true;
+    syncDeckCardLimitBusyState();
+    setStatus(els.deckCardLimitStatus, 'Salvando limite por deck...');
+    try {
+      const draft = readDraftDeckCardLimitSettings();
+      const response = await fetch(buildApiUrl('/api/admin/flashcards/deck-card-limit-settings'), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify(draft)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.settings) {
+        throw new Error(payload?.message || 'Nao foi possivel salvar limite de cartas por deck.');
+      }
+      applyDeckCardLimitSettings(payload.settings);
+      setStatus(els.deckCardLimitStatus, payload?.message || 'Limite de cartas por deck atualizado.', 'success');
+    } catch (error) {
+      setStatus(els.deckCardLimitStatus, error?.message || 'Nao foi possivel salvar limite de cartas por deck.', 'error');
+    } finally {
+      state.deckCardLimitBusy = false;
+      syncDeckCardLimitBusyState();
+    }
+  }
+
   async function submitLevelDynamicsSettings(event) {
     event.preventDefault();
     state.levelDynamicsBusy = true;
@@ -1155,6 +1261,7 @@
     els.speedCurveForm?.addEventListener('submit', submitSpeedCurveSettings);
     els.cardValueForm?.addEventListener('submit', submitCardValueSettings);
     els.xpValueForm?.addEventListener('submit', submitXpValueSettings);
+    els.deckCardLimitForm?.addEventListener('submit', submitDeckCardLimitSettings);
     els.levelDynamicsForm?.addEventListener('submit', submitLevelDynamicsSettings);
     els.levelWindowForm?.addEventListener('submit', submitLevelWindowSettings);
     els.xpLevelCurveForm?.addEventListener('submit', submitXpLevelCurveSettings);
@@ -1169,6 +1276,7 @@
     syncSpeedCurveBusyState();
     syncCardValueBusyState();
     syncXpValueBusyState();
+    syncDeckCardLimitBusyState();
     syncLevelDynamicsBusyState();
     syncLevelWindowBusyState();
     syncXpLevelCurveBusyState();
@@ -1184,6 +1292,7 @@
       setStatus(els.speedCurveStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.cardValueStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.xpValueStatus, 'Acesso restrito ao administrador.', 'error');
+      setStatus(els.deckCardLimitStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.levelDynamicsStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.levelWindowStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.xpLevelCurveStatus, 'Acesso restrito ao administrador.', 'error');
@@ -1199,6 +1308,7 @@
         loadSpeedCurveSettings(),
         loadCardValueSettings(),
         loadXpValueSettings(),
+        loadDeckCardLimitSettings(),
         loadLevelDynamicsSettings(),
         loadLevelWindowSettings(),
         loadXpLevelCurveSettings()
@@ -1210,6 +1320,7 @@
       setStatus(els.speedCurveStatus, 'Curva da velocidade sincronizada.');
       setStatus(els.cardValueStatus, 'Multiplicadores de valor das cartas sincronizados.');
       setStatus(els.xpValueStatus, 'Vetores de XP sincronizados.');
+      setStatus(els.deckCardLimitStatus, 'Limite de cartas por deck sincronizado.');
       setStatus(els.levelDynamicsStatus, 'Dinamicas de nivel sincronizadas.');
       setStatus(els.levelWindowStatus, 'Janela de niveis dos decks sincronizada.');
       setStatus(els.xpLevelCurveStatus, 'Curva de XP por nivel sincronizada.');
@@ -1222,6 +1333,7 @@
       setStatus(els.speedCurveStatus, message, 'error');
       setStatus(els.cardValueStatus, message, 'error');
       setStatus(els.xpValueStatus, message, 'error');
+      setStatus(els.deckCardLimitStatus, message, 'error');
       setStatus(els.levelDynamicsStatus, message, 'error');
       setStatus(els.levelWindowStatus, message, 'error');
       setStatus(els.xpLevelCurveStatus, message, 'error');

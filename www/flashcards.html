@@ -10753,6 +10753,32 @@
         return { sizeMultiplierMax, levelMultiplierMax };
       }
 
+      function buildDefaultDeckCardLimitSettings() {
+        return {
+          levels: Array.from({ length: 15 }, (_v, index) => ({
+            level: index + 1,
+            cardsLimit: 20 + index
+          }))
+        };
+      }
+
+      function normalizeDeckCardLimitSettings(settings) {
+        const defaults = buildDefaultDeckCardLimitSettings().levels;
+        const source = Array.isArray(settings?.levels) ? settings.levels : defaults;
+        const byLevel = new Map(defaults.map((entry) => [entry.level, { ...entry }]));
+        source.forEach((entry) => {
+          const level = Math.max(1, Math.min(15, Math.floor(Number(entry?.level) || 0)));
+          if (!byLevel.has(level)) return;
+          byLevel.set(level, {
+            level,
+            cardsLimit: Math.max(1, Math.min(300, Math.floor(Number(entry?.cardsLimit) || 1)))
+          });
+        });
+        return {
+          levels: Array.from(byLevel.values()).sort((a, b) => a.level - b.level)
+        };
+      }
+
       function normalizeLevelWindowSettings(settings) {
         const defaults = buildDefaultLevelWindowSettings();
         const source = settings && typeof settings === 'object' ? settings : {};
@@ -11028,6 +11054,7 @@
           levelWindowSettings: buildDefaultLevelWindowSettings(),
           cardValueSettings: buildDefaultCardValueSettings(),
           xpValueSettings: buildDefaultCardValueSettings(),
+          deckCardLimitSettings: buildDefaultDeckCardLimitSettings(),
           firstStagePenaltyBusy: false,
           launchAfterSoundTest: '',
           soundTestCompleted: false,
@@ -14632,6 +14659,19 @@
         return normalizeCardValueSettings(payload.settings);
       }
 
+      async function fetchFlashcardDeckCardLimitSettings() {
+        const response = await fetch(buildApiUrl('/api/flashcards/deck-card-limit-settings'), {
+          headers: buildAuthHeaders(),
+          cache: 'no-store',
+          credentials: 'include'
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success || !payload?.settings) {
+          return normalizeDeckCardLimitSettings(buildDefaultDeckCardLimitSettings());
+        }
+        return normalizeDeckCardLimitSettings(payload.settings);
+      }
+
       function isFourthStarUsingSecondStarBlocks() {
         const userChoice = normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping);
         if (userChoice === 'on') return false;
@@ -17595,6 +17635,30 @@
         return deckLevel >= bounds.minLevel && deckLevel <= bounds.maxLevel;
       }
 
+      function deckCardsLimitForLevel(level = currentUserLevel()) {
+        const normalizedLevel = normalizeUserLevel(level);
+        const settings = normalizeDeckCardLimitSettings(state.entry.deckCardLimitSettings || buildDefaultDeckCardLimitSettings());
+        const entry = Array.isArray(settings?.levels)
+          ? settings.levels.find((item) => Number(item?.level) === normalizedLevel)
+          : null;
+        return entry ? Math.max(1, Math.floor(Number(entry.cardsLimit) || 1)) : null;
+      }
+
+      function applyDeckCardsLimit(cards, level = currentUserLevel()) {
+        if (isAdminUser()) return Array.isArray(cards) ? cards : [];
+        const limit = deckCardsLimitForLevel(level);
+        if (!Number.isInteger(limit) || limit <= 0) return Array.isArray(cards) ? cards : [];
+        const perDeckCount = new Map();
+        return (Array.isArray(cards) ? cards : []).filter((card) => {
+          const key = safeText(card?.source || card?.deckTitle || '');
+          if (!key) return true;
+          const current = perDeckCount.get(key) || 0;
+          if (current >= limit) return false;
+          perDeckCount.set(key, current + 1);
+          return true;
+        });
+      }
+
       function currentLevelProgressCount(level = currentUserLevel()) {
         const targetLevel = normalizeUserLevel(level);
         let total = 0;
@@ -17616,17 +17680,17 @@
         }
         if (difficultyMode === 'manual') {
           const manualLevel = normalizeUserLevel(level || currentUserLevel());
-          return allPlayableCards.filter((card) => cardDeckLevel(card) === manualLevel);
+          return applyDeckCardsLimit(allPlayableCards.filter((card) => cardDeckLevel(card) === manualLevel), manualLevel);
         }
         if (Number(level) === 0 || !Number.isInteger(Number(level))) {
-          return allPlayableCards;
+          return applyDeckCardsLimit(allPlayableCards, targetLevel);
         }
         const bounds = resolveDeckLevelBounds(targetLevel);
         const windowCards = allPlayableCards.filter((card) => {
           const deckLevel = cardDeckLevel(card);
           return Number.isInteger(deckLevel) && deckLevel >= bounds.minLevel && deckLevel <= bounds.maxLevel;
         });
-        return windowCards.length ? windowCards : allPlayableCards;
+        return applyDeckCardsLimit(windowCards.length ? windowCards : allPlayableCards, targetLevel);
       }
 
       function syncGameLevelNavigator() {
@@ -17688,19 +17752,19 @@
         }
         const lockedCards = state.allCards.filter(card => !state.userCards.has(card.id) && !isCardHiddenForUser(card.id));
         const playableLockedCards = lockedCards.filter(card => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card) && isCardAllowedForUserLevel(card));
-        return playableLockedCards;
+        return applyDeckCardsLimit(playableLockedCards, currentUserLevel());
       }
 
       function playableVisibleGameCards() {
         if (isLevelModeActive()) {
-          return state.allCards.filter(isCardPlayableInLevelMode);
+          return applyDeckCardsLimit(state.allCards.filter(isCardPlayableInLevelMode), selectedGameLevel());
         }
-        return state.allCards.filter((card) => (
+        return applyDeckCardsLimit(state.allCards.filter((card) => (
           !isCardHiddenForUser(card.id)
           && hasCoreFlashcardText(card)
           && hasPlayableFlashcardImage(card)
           && isCardAllowedForUserLevel(card)
-        ));
+        )), currentUserLevel());
       }
 
       function baseRoundSourceCards() {
@@ -25637,6 +25701,7 @@
           const flashcardLevelWindowSettings = await fetchFlashcardLevelWindowSettings().catch(() => normalizeLevelWindowSettings(buildDefaultLevelWindowSettings()));
           const flashcardCardValueSettings = await fetchFlashcardCardValueSettings().catch(() => normalizeCardValueSettings(buildDefaultCardValueSettings()));
           const flashcardXpValueSettings = await fetchFlashcardXpValueSettings().catch(() => normalizeCardValueSettings(buildDefaultCardValueSettings()));
+          const flashcardDeckCardLimitSettings = await fetchFlashcardDeckCardLimitSettings().catch(() => normalizeDeckCardLimitSettings(buildDefaultDeckCardLimitSettings()));
           if (sessionUser) {
             state.user = normalizeUser(sessionUser);
           }
@@ -25647,6 +25712,7 @@
           state.entry.levelWindowSettings = normalizeLevelWindowSettings(flashcardLevelWindowSettings);
           state.entry.cardValueSettings = normalizeCardValueSettings(flashcardCardValueSettings);
           state.entry.xpValueSettings = normalizeCardValueSettings(flashcardXpValueSettings);
+          state.entry.deckCardLimitSettings = normalizeDeckCardLimitSettings(flashcardDeckCardLimitSettings);
           state.entry.welcomeModesResolved = true;
           state.entry.sessionResolved = true;
           ensureFlashcardsEnergyDepletionWatch();

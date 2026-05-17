@@ -559,6 +559,31 @@
     </section>
 
     <section class="admin-card" style="margin-top:18px;">
+      <h2>Limite de cartas por deck (Níveis 1-15)</h2>
+      <p class="admin-card-copy">Define quantas primeiras cartas de cada deck ficam disponiveis nos niveis iniciais, respeitando a ordem do JSON.</p>
+      <form class="admin-form" id="adminDeckCardLimitForm">
+        <div class="admin-field">
+          <label>Tabela de limite por nivel</label>
+          <div class="admin-level-rules-table-wrap">
+            <table class="admin-level-rules-table" aria-label="Tabela de limite de cartas por deck nos niveis iniciais">
+              <thead>
+                <tr>
+                  <th>Nivel</th>
+                  <th>Cartas por deck</th>
+                </tr>
+              </thead>
+              <tbody id="adminDeckCardLimitTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="admin-topbar-actions">
+          <button class="admin-btn" id="adminDeckCardLimitSaveBtn" type="submit">Salvar limite por deck</button>
+        </div>
+      </form>
+      <div class="admin-status" id="adminDeckCardLimitStatus" aria-live="polite"></div>
+    </section>
+
+    <section class="admin-card" style="margin-top:18px;">
       <h2>Dinamicas de nivel dos decks (/play)</h2>
       <p class="admin-card-copy">Controle global do ganho de nivel por minuto (velocidade/h) e da perda de nivel por erro na first-star.</p>
       <form class="admin-form" id="adminLevelDynamicsForm">
