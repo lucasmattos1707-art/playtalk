@@ -1072,38 +1072,21 @@ function rememberFlashcardLevelRulesSettings(settings) {
 
 function buildDefaultFlashcardSpeedCurveSnapshot() {
   return {
-    anchors: [
-      { chars: 6, multiplier: 2.0 },
-      { chars: 15, multiplier: 1.0 },
-      { chars: 30, multiplier: 0.5 },
-      { chars: 60, multiplier: 0.3 }
-    ]
+    minChars: 6,
+    maxChars: 60,
+    startMultiplier: 2.0,
+    endMultiplier: 0.3
   };
 }
 
 function normalizeFlashcardSpeedCurveSnapshot(value = {}) {
-  const defaults = buildDefaultFlashcardSpeedCurveSnapshot().anchors;
-  const source = Array.isArray(value?.anchors)
-    ? value.anchors
-    : Array.isArray(value?.payload?.anchors)
-      ? value.payload.anchors
-      : defaults;
-  const normalized = source
-    .map((entry) => ({
-      chars: Math.max(1, Math.min(1000, Math.round(Number(entry?.chars) || 0))),
-      multiplier: Math.max(0.01, Math.min(10, Number(Number(entry?.multiplier) || 0).toFixed(4)))
-    }))
-    .filter((entry) => Number.isFinite(entry.chars) && Number.isFinite(entry.multiplier))
-    .sort((a, b) => a.chars - b.chars)
-    .slice(0, 4);
-  if (normalized.length !== 4) {
-    return buildDefaultFlashcardSpeedCurveSnapshot();
-  }
-  const uniqueChars = new Set(normalized.map((entry) => entry.chars));
-  if (uniqueChars.size !== 4) {
-    return buildDefaultFlashcardSpeedCurveSnapshot();
-  }
-  return { anchors: normalized };
+  const source = value?.payload && typeof value.payload === 'object' ? value.payload : value;
+  const defaults = buildDefaultFlashcardSpeedCurveSnapshot();
+  const minChars = Math.max(1, Math.min(1000, Math.round(Number(source?.minChars) || defaults.minChars)));
+  const maxChars = Math.max(minChars + 1, Math.min(1000, Math.round(Number(source?.maxChars) || defaults.maxChars)));
+  const startMultiplier = Math.max(0.01, Math.min(10, Number(Number(source?.startMultiplier) || defaults.startMultiplier).toFixed(4)));
+  const endMultiplier = Math.max(0.01, Math.min(10, Number(Number(source?.endMultiplier) || defaults.endMultiplier).toFixed(4)));
+  return { minChars, maxChars, startMultiplier, endMultiplier };
 }
 
 function rememberFlashcardSpeedCurveSettings(settings) {
@@ -1362,21 +1345,12 @@ function resolveFlashcardFirstStageMissLevelLoss(level, dynamicsSettings = null)
 function interpolateFlashcardSpeedMultiplier(charsCount, curveSettings) {
   const chars = Math.max(1, Number(charsCount) || 1);
   const snapshot = normalizeFlashcardSpeedCurveSnapshot(curveSettings);
-  const anchors = snapshot.anchors.slice().sort((a, b) => a.chars - b.chars);
-  if (!anchors.length) return 1;
-  if (chars <= anchors[0].chars) return anchors[0].multiplier;
-  if (chars >= anchors[anchors.length - 1].chars) return anchors[anchors.length - 1].multiplier;
-  for (let index = 0; index < anchors.length - 1; index += 1) {
-    const left = anchors[index];
-    const right = anchors[index + 1];
-    if (chars >= left.chars && chars <= right.chars) {
-      const span = Math.max(1, right.chars - left.chars);
-      const ratio = (chars - left.chars) / span;
-      const interpolated = left.multiplier + ((right.multiplier - left.multiplier) * ratio);
-      return Math.max(0.01, Number(interpolated.toFixed(4)));
-    }
-  }
-  return anchors[anchors.length - 1].multiplier;
+  if (chars <= snapshot.minChars) return snapshot.startMultiplier;
+  if (chars >= snapshot.maxChars) return snapshot.endMultiplier;
+  const span = Math.max(1, snapshot.maxChars - snapshot.minChars);
+  const ratio = (chars - snapshot.minChars) / span;
+  const interpolated = snapshot.startMultiplier + ((snapshot.endMultiplier - snapshot.startMultiplier) * ratio);
+  return Math.max(0.01, Number(interpolated.toFixed(4)));
 }
 
 function buildFlashcardSpeedSampleValue(charsCount, curveSettings) {
@@ -19603,8 +19577,12 @@ app.post('/api/admin/flashcards/level-rules', express.json({ limit: '256kb' }), 
 app.post('/api/admin/flashcards/speed-curve-settings', express.json({ limit: '64kb' }), async (req, res) => {
   try {
     const adminUser = await requireAdminUserFromRequest(req);
-    const anchors = Array.isArray(req.body?.anchors) ? req.body.anchors : [];
-    const settings = await updateFlashcardSpeedCurveSettings(pool, { anchors }, adminUser.id);
+    const settings = await updateFlashcardSpeedCurveSettings(pool, {
+      minChars: req.body?.minChars,
+      maxChars: req.body?.maxChars,
+      startMultiplier: req.body?.startMultiplier,
+      endMultiplier: req.body?.endMultiplier
+    }, adminUser.id);
     res.json({
       success: true,
       message: 'Curva de velocidade atualizada.',

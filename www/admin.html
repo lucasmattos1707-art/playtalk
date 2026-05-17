@@ -489,24 +489,16 @@
 
     <section class="admin-card" style="margin-top:18px;">
       <h2>Curva da velocidade (/users)</h2>
-      <p class="admin-card-copy">Define os 4 eixos da interpolacao que gera os caracteres efetivos no ganho da 5a estrela.</p>
+      <p class="admin-card-copy">Curva linear unica de 6 a 60 chars. Ajuste os dois multiplicadores (inicio e fim) para controlar o valor de cada carta.</p>
       <form class="admin-form" id="adminSpeedCurveForm">
         <div class="admin-speed-curve-grid">
           <div class="admin-field">
-            <label for="adminSpeedCurveChars6">6 chars</label>
-            <input id="adminSpeedCurveChars6" type="number" min="0.01" max="10" step="0.01" value="2.00" required>
+            <label for="adminSpeedCurveStartMultiplier">Multiplicador em 6 chars</label>
+            <input id="adminSpeedCurveStartMultiplier" type="number" min="0.01" max="10" step="0.01" value="2.00" required>
           </div>
           <div class="admin-field">
-            <label for="adminSpeedCurveChars15">15 chars</label>
-            <input id="adminSpeedCurveChars15" type="number" min="0.01" max="10" step="0.01" value="1.00" required>
-          </div>
-          <div class="admin-field">
-            <label for="adminSpeedCurveChars30">30 chars</label>
-            <input id="adminSpeedCurveChars30" type="number" min="0.01" max="10" step="0.01" value="0.50" required>
-          </div>
-          <div class="admin-field">
-            <label for="adminSpeedCurveChars60">60 chars</label>
-            <input id="adminSpeedCurveChars60" type="number" min="0.01" max="10" step="0.01" value="0.30" required>
+            <label for="adminSpeedCurveEndMultiplier">Multiplicador em 60 chars</label>
+            <input id="adminSpeedCurveEndMultiplier" type="number" min="0.01" max="10" step="0.01" value="0.30" required>
           </div>
         </div>
         <div class="admin-topbar-actions">
