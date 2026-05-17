@@ -10834,7 +10834,9 @@
       const ON_TABLE_REVIEW_MAX = 8;
       const FLASHCARD_SESSION_TICK_INTERVAL_MS = 60000;
       const GAME_UPCOMING_PRELOAD_COUNT = 3;
+      const FIRST_STAGE_AUDIO_PRELOAD_COUNT = 2;
       const GAME_MIC_UNLOCK_DELAY_MS = 1200;
+      const FIRST_STAGE_MIC_UNLOCK_DELAY_MS = 1000;
       const TUTORIAL_AUDIO_ROOT = AUDIOSTUTO_PUBLIC_ROOT;
       const TUTORIAL_NORMAL_GAME_COUNT = 1;
       const TUTORIAL_PLANET_IMAGE_NAME = 'planet.jpg';
@@ -20500,7 +20502,7 @@
         setGameVisualNeonState('default');
       }
 
-      function playAudioWithSoftEnd(audio, { registerAsActive = false } = {}) {
+      function playAudioWithSoftEnd(audio, { registerAsActive = false, onPlay = null } = {}) {
         if (isNoEnergyMediaLocked()) return Promise.resolve(false);
         if (!audio) return Promise.resolve(false);
         if (typeof audio._softEndCleanup === 'function') {
@@ -20554,6 +20556,9 @@
           if (registerAsActive) {
             state.game.activeAudio = { type: 'audio', instance: audio };
           }
+          if (typeof onPlay === 'function') {
+            audio.addEventListener('play', onPlay, { once: true });
+          }
           audio.play().catch(() => finish());
         });
       }
@@ -20589,14 +20594,20 @@
           audio.playbackRate = rate;
           audio.defaultPlaybackRate = rate;
           audio.preservesPitch = true;
-          if (options.enableMicDuringPlayback !== false) {
-            scheduleGameMicUnlock(
-              state.game.currentId ? state.game.entries.get(state.game.currentId) : null,
-              options.unlockDelayMs
-            );
-          }
+          const shouldUnlockMic = options.enableMicDuringPlayback !== false;
+          const unlockDelayMs = Number(options.unlockDelayMs);
           setLevelTextModeWaveformActive(true);
-          return finishStagePlayReflection(playAudioWithSoftEnd(audio, { registerAsActive: true }).then((played) => {
+          return finishStagePlayReflection(playAudioWithSoftEnd(audio, {
+            registerAsActive: true,
+            onPlay: shouldUnlockMic
+              ? () => {
+                  scheduleGameMicUnlock(
+                    state.game.currentId ? state.game.entries.get(state.game.currentId) : null,
+                    Number.isFinite(unlockDelayMs) ? unlockDelayMs : GAME_MIC_UNLOCK_DELAY_MS
+                  );
+                }
+              : null
+          }).then((played) => {
             setLevelTextModeWaveformActive(false);
             if (played) {
               addListeningCharsForCard(card);
@@ -20852,13 +20863,17 @@
       }
 
       function primeCurrentAndUpcomingGameMedia(currentCard = null) {
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        const upcomingCount = phaseKey === 'first-star'
+          ? FIRST_STAGE_AUDIO_PRELOAD_COUNT
+          : GAME_UPCOMING_PRELOAD_COUNT;
         if (isLevelTextModeActive()) {
           const cards = [];
           if (currentCard) {
             cards.push(currentCard);
           }
           state.game.queue
-            .slice(0, GAME_UPCOMING_PRELOAD_COUNT)
+            .slice(0, upcomingCount)
             .forEach((nextId) => {
               const nextCard = cardById(nextId);
               if (nextCard) {
@@ -20875,7 +20890,7 @@
           cards.push(currentCard);
         }
         state.game.queue
-          .slice(0, GAME_UPCOMING_PRELOAD_COUNT)
+          .slice(0, upcomingCount)
           .forEach((nextId) => {
             const nextCard = cardById(nextId);
             if (nextCard) {
@@ -23100,7 +23115,7 @@
           window.setTimeout(() => {
             if (state.game.currentId === entry.id && !state.game.listening && !state.game.paused) {
               const playback = playPromptAudio(card, {
-                unlockDelayMs: stageConfig.key === 'first-star' ? 0 : GAME_MIC_UNLOCK_DELAY_MS
+                unlockDelayMs: stageConfig.key === 'first-star' ? FIRST_STAGE_MIC_UNLOCK_DELAY_MS : GAME_MIC_UNLOCK_DELAY_MS
               });
               playback.finally(() => {
                 if (state.game.currentId === entry.id) {
