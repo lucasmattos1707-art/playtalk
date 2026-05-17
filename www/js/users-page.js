@@ -553,6 +553,45 @@
     };
   }
 
+  function buildMetricFallbackFromBase(metricKey, baseData) {
+    if (!baseData || !Array.isArray(baseData.rows)) return null;
+    const selectedMetric = metricByKey(metricKey);
+    const rows = baseData.rows
+      .map((entry) => ({ ...entry }))
+      .sort((left, right) => {
+        const primary = metricValueFromEntry(right, selectedMetric.key) - metricValueFromEntry(left, selectedMetric.key);
+        if (primary !== 0) return primary;
+        return (Number(left.rank) || 999999) - (Number(right.rank) || 999999);
+      })
+      .map((entry, index) => ({
+        ...entry,
+        rank: index + 1,
+        rankingValue: metricValueFromEntry(entry, selectedMetric.key)
+      }));
+    let viewer = baseData.viewer ? { ...baseData.viewer } : null;
+    if (viewer && viewer.userId) {
+      const viewerRow = rows.find((entry) => Number(entry.userId) === Number(viewer.userId));
+      if (viewerRow) {
+        viewer = {
+          ...viewer,
+          rank: Number(viewerRow.rank) || 0,
+          rankingValue: Number(viewerRow.rankingValue) || 0,
+          flashcardsCount: Number(viewerRow.flashcardsCount) || 0,
+          pronunciationPercent: Number(viewerRow.pronunciationPercent) || 0,
+          speedFlashcardsPerHour: Number(viewerRow.speedFlashcardsPerHour) || 0,
+          level: Math.max(1, Number(viewerRow.level) || 1)
+        };
+      }
+    }
+    return {
+      metricKey: selectedMetric.key,
+      metricLabel: selectedMetric.label,
+      metricValueLabel: selectedMetric.valueLabel || '',
+      rows,
+      viewer
+    };
+  }
+
   function isAdminViewer() {
     return Boolean(state.currentUser?.isAdmin);
   }
@@ -1111,6 +1150,18 @@
       });
       return data;
     } catch (_error) {
+      if (normalizedMetricKey !== 'flashcards') {
+        const baseCached = state.rankingCache.get('flashcards');
+        const baseData = baseCached?.data || await fetchUsersMetric('flashcards', { force });
+        const fallbackData = buildMetricFallbackFromBase(normalizedMetricKey, baseData);
+        if (fallbackData) {
+          state.rankingCache.set(normalizedMetricKey, {
+            fetchedAt: Date.now(),
+            data: fallbackData
+          });
+          return fallbackData;
+        }
+      }
       return null;
     }
   }
