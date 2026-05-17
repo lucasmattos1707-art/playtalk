@@ -228,6 +228,7 @@ let flashcardLevelRulesSettingsReadyPromise = null;
 let flashcardSpeedCurveSettingsReadyPromise = null;
 let flashcardLevelDynamicsSettingsReadyPromise = null;
 let flashcardLevelWindowSettingsReadyPromise = null;
+let flashcardXpLevelCurveSettingsReadyPromise = null;
 let userFlashcardSpeedSamplesTableReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
@@ -267,6 +268,10 @@ let flashcardLevelWindowSettingsCache = {
   value: null,
   updatedAt: 0
 };
+let flashcardXpLevelCurveSettingsCache = {
+  value: null,
+  updatedAt: 0
+};
 let englishCorpusCache = {
   payload: null,
   updatedAt: 0
@@ -299,6 +304,7 @@ const FLASHCARD_LEVEL_RULES_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_SPEED_CURVE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_LEVEL_DYNAMICS_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_LEVEL_WINDOW_SETTINGS_CACHE_TTL_MS = 30 * 1000;
+const FLASHCARD_XP_LEVEL_CURVE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_SPEED_SAMPLE_LIMIT = 100;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
@@ -327,6 +333,7 @@ const FLASHCARD_RANKING_PLACEHOLDER_AVATAR = '/Avatar/profile-neon-blue.svg';
 const FLUENCY_PLAN_DEFAULT_STATUS = 'nao';
 const FLUENCY_PLAN_COMPLETED_STATUS = 'sim';
 const FLUENCY_PLAN_NO_PLAN_STATUS = 'sem_plano';
+const FLASHCARD_XP_LEVEL_MAX = 500;
 const PRESENCE_CLASS_DAILY_TARGET = 5000;
 const FLASHCARD_RANKING_PERIODS = {
   weekly: {
@@ -1185,6 +1192,101 @@ function rememberFlashcardLevelWindowSettings(settings) {
   return snapshot;
 }
 
+function buildDefaultFlashcardXpLevelCurveAnchors() {
+  return [
+    { level: 2, xp: 50 },
+    { level: 5, xp: 300 },
+    { level: 10, xp: 1500 },
+    { level: 15, xp: 4000 },
+    { level: 20, xp: 8000 },
+    { level: 25, xp: 15000 },
+    { level: 30, xp: 30000 },
+    { level: 35, xp: 55000 },
+    { level: 40, xp: 90000 },
+    { level: 45, xp: 140000 },
+    { level: 50, xp: 220000 },
+    { level: 55, xp: 320000 },
+    { level: 60, xp: 450000 },
+    { level: 65, xp: 580000 },
+    { level: 70, xp: 700000 },
+    { level: 75, xp: 820000 },
+    { level: 80, xp: 900000 },
+    { level: 85, xp: 950000 },
+    { level: 90, xp: 980000 },
+    { level: 100, xp: 1000000 },
+    { level: 120, xp: 1400000 },
+    { level: 140, xp: 1800000 },
+    { level: 160, xp: 2200000 },
+    { level: 180, xp: 2600000 },
+    { level: 200, xp: 3000000 },
+    { level: 250, xp: 5500000 },
+    { level: 300, xp: 9000000 },
+    { level: 400, xp: 16000000 },
+    { level: 500, xp: 25000000 }
+  ];
+}
+
+function normalizeFlashcardXpLevelCurveSnapshot(value = {}) {
+  const source = value?.payload && typeof value.payload === 'object' ? value.payload : value;
+  const defaults = buildDefaultFlashcardXpLevelCurveAnchors();
+  const rawAnchors = Array.isArray(source?.anchors) ? source.anchors : defaults;
+  const normalized = rawAnchors
+    .map((entry) => ({
+      level: Math.max(2, Math.min(FLASHCARD_XP_LEVEL_MAX, Math.floor(Number(entry?.level) || 0))),
+      xp: Math.max(1, Math.floor(Number(entry?.xp) || 0))
+    }))
+    .filter((entry) => Number.isFinite(entry.level) && Number.isFinite(entry.xp))
+    .sort((a, b) => a.level - b.level);
+  const deduped = [];
+  for (const anchor of normalized) {
+    const previous = deduped[deduped.length - 1];
+    if (previous && previous.level === anchor.level) {
+      previous.xp = Math.max(previous.xp, anchor.xp);
+      continue;
+    }
+    if (previous && anchor.xp < previous.xp) {
+      deduped.push({ level: anchor.level, xp: previous.xp });
+      continue;
+    }
+    deduped.push(anchor);
+  }
+  const first = deduped[0];
+  const last = deduped[deduped.length - 1];
+  if (!first || first.level !== 2 || !last || last.level !== FLASHCARD_XP_LEVEL_MAX) {
+    return { anchors: defaults };
+  }
+  return { anchors: deduped };
+}
+
+function rememberFlashcardXpLevelCurveSettings(settings) {
+  const snapshot = normalizeFlashcardXpLevelCurveSnapshot(settings);
+  flashcardXpLevelCurveSettingsCache = {
+    value: snapshot,
+    updatedAt: Date.now()
+  };
+  return snapshot;
+}
+
+function xpTotalForLevel(level, xpCurveSettings = null) {
+  const safeLevel = Math.max(1, Math.min(FLASHCARD_XP_LEVEL_MAX, Math.floor(Number(level) || 1)));
+  if (safeLevel <= 1) return 0;
+  const snapshot = normalizeFlashcardXpLevelCurveSnapshot(xpCurveSettings || flashcardXpLevelCurveSettingsCache.value || {});
+  const anchors = snapshot.anchors;
+  if (safeLevel <= anchors[0].level) return Math.max(1, Math.floor(Number(anchors[0].xp) || 1));
+  if (safeLevel >= anchors[anchors.length - 1].level) return Math.max(0, Math.floor(Number(anchors[anchors.length - 1].xp) || 0));
+  for (let index = 0; index < anchors.length - 1; index += 1) {
+    const left = anchors[index];
+    const right = anchors[index + 1];
+    if (safeLevel >= left.level && safeLevel <= right.level) {
+      const span = Math.max(1, right.level - left.level);
+      const ratio = (safeLevel - left.level) / span;
+      const interpolated = left.xp + ((right.xp - left.xp) * ratio);
+      return Math.max(0, Math.round(interpolated));
+    }
+  }
+  return Math.max(0, Math.floor(Number(anchors[anchors.length - 1].xp) || 0));
+}
+
 function normalizeFlashcardLevelDynamicsSnapshot(value = {}) {
   const source = value?.payload && typeof value.payload === 'object' ? value.payload : value;
   const defaultSpeedRules = buildDefaultFlashcardSpeedLevelGainRules();
@@ -1285,18 +1387,20 @@ function buildFlashcardSpeedSampleValue(charsCount, curveSettings) {
   };
 }
 
-const xpRequiredForNextLevel = (level) => {
-  const normalizedLevel = Math.max(1, Math.floor(Number(level) || 1));
-  return normalizedLevel + 20;
+const xpRequiredForNextLevel = (level, xpCurveSettings = null) => {
+  const normalizedLevel = Math.max(1, Math.min(FLASHCARD_XP_LEVEL_MAX, Math.floor(Number(level) || 1)));
+  if (normalizedLevel >= FLASHCARD_XP_LEVEL_MAX) return 0;
+  const currentTotal = xpTotalForLevel(normalizedLevel, xpCurveSettings);
+  const nextTotal = xpTotalForLevel(normalizedLevel + 1, xpCurveSettings);
+  return Math.max(1, nextTotal - currentTotal);
 };
 
-const levelFromTotalXp = (totalXp) => {
-  let remaining = Math.max(0, Math.floor(Number(totalXp) || 0));
+const levelFromTotalXp = (totalXp, xpCurveSettings = null) => {
+  const safeTotalXp = Math.max(0, Math.floor(Number(totalXp) || 0));
   let level = 1;
-  while (level < 200) {
-    const required = xpRequiredForNextLevel(level);
-    if (remaining < required) break;
-    remaining -= required;
+  while (level < FLASHCARD_XP_LEVEL_MAX) {
+    const nextTotal = xpTotalForLevel(level + 1, xpCurveSettings);
+    if (safeTotalXp < nextTotal) break;
     level += 1;
   }
   return level;
@@ -1308,9 +1412,9 @@ const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = 
     return { xpDelta: 0, levelsAwarded: 0, totalXp: 0, xpLevel: 1 };
   }
 
-  const cardsDelta = Math.max(0, Math.round(Number(deltas?.cardsDelta) || 0));
-  const xpDelta = cardsDelta;
   const coinsDelta = Math.max(0, Math.round(Number(deltas?.coinsDelta) || 0));
+  const xpDelta = coinsDelta;
+  const xpCurveSettings = await getFlashcardXpLevelCurveSettings();
 
   const currentXpResult = await db.query(
     `SELECT energy_xp_total
@@ -1320,7 +1424,7 @@ const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = 
     [normalizedUserId]
   );
   const previousTotalXp = Math.max(0, Number(currentXpResult.rows[0]?.energy_xp_total) || 0);
-  const previousLevel = levelFromTotalXp(previousTotalXp);
+  const previousLevel = levelFromTotalXp(previousTotalXp, xpCurveSettings);
 
   const xpResult = await db.query(
     `INSERT INTO public.user_books_energy_xp_stats (user_id, energy_xp_total, created_at, updated_at)
@@ -1333,7 +1437,7 @@ const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = 
     [normalizedUserId, xpDelta]
   );
   const totalXp = Math.max(0, Number(xpResult.rows[0]?.energy_xp_total) || 0);
-  const nextLevel = levelFromTotalXp(totalXp);
+  const nextLevel = levelFromTotalXp(totalXp, xpCurveSettings);
   const levelsAwarded = Math.max(0, nextLevel - previousLevel);
 
   const coinsResult = await db.query(
@@ -3189,6 +3293,34 @@ const ensureFlashcardLevelWindowSettingsTable = async () => {
   return flashcardLevelWindowSettingsReadyPromise;
 };
 
+const ensureFlashcardXpLevelCurveSettingsTable = async () => {
+  if (!pool) return false;
+  if (!flashcardXpLevelCurveSettingsReadyPromise) {
+    flashcardXpLevelCurveSettingsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.app_flashcard_xp_level_curve_settings (
+          singleton_key text PRIMARY KEY,
+          payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+          updated_by_user_id integer REFERENCES public.users(id) ON DELETE SET NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(
+        `INSERT INTO public.app_flashcard_xp_level_curve_settings (singleton_key, payload)
+         VALUES ('default', $1::jsonb)
+         ON CONFLICT (singleton_key) DO NOTHING`,
+        [JSON.stringify({ anchors: buildDefaultFlashcardXpLevelCurveAnchors() })]
+      );
+      return true;
+    })().catch((error) => {
+      flashcardXpLevelCurveSettingsReadyPromise = null;
+      throw error;
+    });
+  }
+  return flashcardXpLevelCurveSettingsReadyPromise;
+};
+
 const ensureUserFlashcardSpeedSamplesTable = async () => {
   if (!pool) return false;
   if (!userFlashcardSpeedSamplesTableReadyPromise) {
@@ -3392,6 +3524,26 @@ async function getFlashcardLevelWindowSettings(options = {}) {
   return rememberFlashcardLevelWindowSettings(result.rows[0]?.payload || {});
 }
 
+async function getFlashcardXpLevelCurveSettings(options = {}) {
+  const force = Boolean(options?.force);
+  if (!pool) return normalizeFlashcardXpLevelCurveSnapshot({});
+  if (
+    !force
+    && flashcardXpLevelCurveSettingsCache.value
+    && (Date.now() - flashcardXpLevelCurveSettingsCache.updatedAt) < FLASHCARD_XP_LEVEL_CURVE_SETTINGS_CACHE_TTL_MS
+  ) {
+    return flashcardXpLevelCurveSettingsCache.value;
+  }
+  await ensureFlashcardXpLevelCurveSettingsTable();
+  const result = await pool.query(
+    `SELECT payload
+     FROM public.app_flashcard_xp_level_curve_settings
+     WHERE singleton_key = 'default'
+     LIMIT 1`
+  );
+  return rememberFlashcardXpLevelCurveSettings(result.rows[0] || {});
+}
+
 async function updateEnergySettings(db, values = {}, updatedByUserId = null) {
   const executor = db && typeof db.query === 'function' ? db : pool;
   if (!executor) {
@@ -3562,6 +3714,24 @@ async function updateFlashcardLevelWindowSettings(db, values = {}, updatedByUser
     [JSON.stringify(snapshot), Number(updatedByUserId) || null]
   );
   return rememberFlashcardLevelWindowSettings(result.rows[0]?.payload || snapshot);
+}
+
+async function updateFlashcardXpLevelCurveSettings(db, values = {}, updatedByUserId = null) {
+  const safeDb = db || pool;
+  if (!safeDb) throw new Error('Banco indisponivel para atualizar curva de XP.');
+  await ensureFlashcardXpLevelCurveSettingsTable();
+  const snapshot = normalizeFlashcardXpLevelCurveSnapshot(values || {});
+  const result = await safeDb.query(
+    `INSERT INTO public.app_flashcard_xp_level_curve_settings (singleton_key, payload, updated_by_user_id, updated_at)
+     VALUES ('default', $1::jsonb, $2, now())
+     ON CONFLICT (singleton_key)
+     DO UPDATE SET payload = EXCLUDED.payload,
+                   updated_by_user_id = EXCLUDED.updated_by_user_id,
+                   updated_at = now()
+     RETURNING payload`,
+    [JSON.stringify(snapshot), Number(updatedByUserId) || null]
+  );
+  return rememberFlashcardXpLevelCurveSettings(result.rows[0] || snapshot);
 }
 
 const ensureUsersPresenceClassMetricStorage = async () => {
@@ -19215,6 +19385,15 @@ app.get('/api/flashcards/level-window-settings', async (_req, res) => {
   }
 });
 
+app.get('/api/flashcards/xp-level-settings', async (_req, res) => {
+  try {
+    const settings = await getFlashcardXpLevelCurveSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error?.message || 'Nao foi possivel carregar a curva de XP por nivel.' });
+  }
+});
+
 app.get('/api/admin/welcome-mode-settings', async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -19290,6 +19469,17 @@ app.get('/api/admin/flashcards/level-window-settings', async (req, res) => {
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar a janela de niveis dos decks.' });
+  }
+});
+
+app.get('/api/admin/flashcards/xp-level-settings', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const settings = await getFlashcardXpLevelCurveSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar a curva de XP por nivel.' });
   }
 });
 
@@ -19438,6 +19628,23 @@ app.post('/api/admin/flashcards/level-window-settings', express.json({ limit: '6
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel salvar a janela de niveis dos decks.' });
+  }
+});
+
+app.post('/api/admin/flashcards/xp-level-settings', express.json({ limit: '256kb' }), async (req, res) => {
+  try {
+    const adminUser = await requireAdminUserFromRequest(req);
+    const settings = await updateFlashcardXpLevelCurveSettings(pool, {
+      anchors: Array.isArray(req.body?.anchors) ? req.body.anchors : []
+    }, adminUser.id);
+    res.json({
+      success: true,
+      message: 'Curva de XP por nivel atualizada.',
+      settings
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel salvar a curva de XP por nivel.' });
   }
 });
 

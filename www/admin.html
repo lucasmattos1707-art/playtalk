@@ -583,6 +583,31 @@
     </section>
 
     <section class="admin-card" style="margin-top:18px;">
+      <h2>Curva global de XP por nivel (welcome)</h2>
+      <p class="admin-card-copy">XP agora e acumulado por moedas ganhas (1 coin = 1 XP). Esta tabela define os pontos de interpolacao para o nivel de XP do welcome.</p>
+      <form class="admin-form" id="adminXpLevelCurveForm">
+        <div class="admin-field">
+          <label>Tabela de ancoras (nivel 2 ate 500)</label>
+          <div class="admin-level-rules-table-wrap">
+            <table class="admin-level-rules-table" aria-label="Tabela global de XP por nivel">
+              <thead>
+                <tr>
+                  <th>Nivel</th>
+                  <th>XP total exigido</th>
+                </tr>
+              </thead>
+              <tbody id="adminXpLevelCurveTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="admin-topbar-actions">
+          <button class="admin-btn" id="adminXpLevelCurveSaveBtn" type="submit">Salvar curva de XP</button>
+        </div>
+      </form>
+      <div class="admin-status" id="adminXpLevelCurveStatus" aria-live="polite"></div>
+    </section>
+
+    <section class="admin-card" style="margin-top:18px;">
       <h2>Resumo rapido</h2>
       <ul class="admin-facts">
         <li class="admin-fact">
@@ -601,12 +626,16 @@
           <strong>Fourth-star em blocos</strong>
           <span id="adminFactFourthStarBlocks">Desligado</span>
         </li>
+        <li class="admin-fact">
+          <strong>XP para nivel 500</strong>
+          <span id="adminFactXpMax">25.000.000 XP</span>
+        </li>
       </ul>
     </section>
   </main>
 
   <script src="js/api-config.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/admin-page.js?v=20260515c"></script>
+  <script src="js/admin-page.js?v=20260517-xpcurve"></script>
 </body>
 </html>

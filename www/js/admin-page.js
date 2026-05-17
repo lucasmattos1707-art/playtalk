@@ -39,7 +39,12 @@
     levelWindowForm: document.getElementById('adminLevelWindowForm'),
     levelWindowRulesTableBody: document.getElementById('adminLevelWindowRulesTableBody'),
     levelWindowSaveBtn: document.getElementById('adminLevelWindowSaveBtn'),
-    levelWindowStatus: document.getElementById('adminLevelWindowStatus')
+    levelWindowStatus: document.getElementById('adminLevelWindowStatus'),
+    xpLevelCurveForm: document.getElementById('adminXpLevelCurveForm'),
+    xpLevelCurveTableBody: document.getElementById('adminXpLevelCurveTableBody'),
+    xpLevelCurveSaveBtn: document.getElementById('adminXpLevelCurveSaveBtn'),
+    xpLevelCurveStatus: document.getElementById('adminXpLevelCurveStatus'),
+    factXpMax: document.getElementById('adminFactXpMax')
   };
 
   const state = {
@@ -75,6 +80,10 @@
     levelWindowBusy: false,
     levelWindow: {
       rules: []
+    },
+    xpLevelCurveBusy: false,
+    xpLevelCurve: {
+      anchors: []
     }
   };
 
@@ -209,6 +218,16 @@
     }
     Array.from(els.levelWindowForm?.querySelectorAll('input[type="number"]') || []).forEach((input) => {
       input.disabled = state.levelWindowBusy;
+    });
+  }
+
+  function syncXpLevelCurveBusyState() {
+    if (els.xpLevelCurveSaveBtn) {
+      els.xpLevelCurveSaveBtn.disabled = state.xpLevelCurveBusy;
+      els.xpLevelCurveSaveBtn.textContent = state.xpLevelCurveBusy ? 'Salvando...' : 'Salvar curva de XP';
+    }
+    Array.from(els.xpLevelCurveForm?.querySelectorAll('input[type="number"]') || []).forEach((input) => {
+      input.disabled = state.xpLevelCurveBusy;
     });
   }
 
@@ -548,6 +567,72 @@
     els.levelWindowRulesTableBody.innerHTML = rows.join('');
   }
 
+  function buildDefaultXpLevelCurveAnchors() {
+    return [
+      { level: 2, xp: 50 }, { level: 5, xp: 300 }, { level: 10, xp: 1500 }, { level: 15, xp: 4000 },
+      { level: 20, xp: 8000 }, { level: 25, xp: 15000 }, { level: 30, xp: 30000 }, { level: 35, xp: 55000 },
+      { level: 40, xp: 90000 }, { level: 45, xp: 140000 }, { level: 50, xp: 220000 }, { level: 55, xp: 320000 },
+      { level: 60, xp: 450000 }, { level: 65, xp: 580000 }, { level: 70, xp: 700000 }, { level: 75, xp: 820000 },
+      { level: 80, xp: 900000 }, { level: 85, xp: 950000 }, { level: 90, xp: 980000 }, { level: 100, xp: 1000000 },
+      { level: 120, xp: 1400000 }, { level: 140, xp: 1800000 }, { level: 160, xp: 2200000 }, { level: 180, xp: 2600000 },
+      { level: 200, xp: 3000000 }, { level: 250, xp: 5500000 }, { level: 300, xp: 9000000 }, { level: 400, xp: 16000000 },
+      { level: 500, xp: 25000000 }
+    ];
+  }
+
+  function normalizeXpLevelCurveSettings(settings) {
+    const defaults = buildDefaultXpLevelCurveAnchors();
+    const source = Array.isArray(settings?.anchors) ? settings.anchors : defaults;
+    const anchors = source
+      .map((entry) => ({
+        level: Math.max(2, Math.min(500, Math.floor(Number(entry?.level) || 0))),
+        xp: Math.max(1, Math.floor(Number(entry?.xp) || 0))
+      }))
+      .filter((entry) => Number.isFinite(entry.level) && Number.isFinite(entry.xp))
+      .sort((a, b) => a.level - b.level);
+    if (!anchors.length || anchors[0].level !== 2 || anchors[anchors.length - 1].level !== 500) {
+      return { anchors: defaults };
+    }
+    return { anchors };
+  }
+
+  function applyXpLevelCurveSettings(settings) {
+    const snapshot = normalizeXpLevelCurveSettings(settings);
+    state.xpLevelCurve = snapshot;
+    if (els.xpLevelCurveTableBody) {
+      const rows = snapshot.anchors.map((entry, index) => `
+        <tr data-xp-anchor-row="${index}">
+          <td><input type="number" min="2" max="500" step="1" value="${entry.level}" data-xp-anchor-field="level"></td>
+          <td><input type="number" min="1" max="1000000000" step="1" value="${entry.xp}" data-xp-anchor-field="xp"></td>
+        </tr>
+      `);
+      els.xpLevelCurveTableBody.innerHTML = rows.join('');
+    }
+    if (els.factXpMax) {
+      const max = snapshot.anchors[snapshot.anchors.length - 1];
+      els.factXpMax.textContent = `${formatInteger(max?.xp || 0)} XP`;
+    }
+  }
+
+  function readDraftXpLevelCurveSettings() {
+    const anchors = Array.from(els.xpLevelCurveTableBody?.querySelectorAll('tr[data-xp-anchor-row]') || []).map((row) => ({
+      level: Math.max(2, Math.min(500, Math.floor(Number(row.querySelector('[data-xp-anchor-field="level"]')?.value) || 0))),
+      xp: Math.max(1, Math.floor(Number(row.querySelector('[data-xp-anchor-field="xp"]')?.value) || 0))
+    })).sort((a, b) => a.level - b.level);
+    if (!anchors.length || anchors[0].level !== 2 || anchors[anchors.length - 1].level !== 500) {
+      throw new Error('A tabela precisa comecar no nivel 2 e terminar no nivel 500.');
+    }
+    for (let i = 1; i < anchors.length; i += 1) {
+      if (anchors[i].level === anchors[i - 1].level) {
+        throw new Error(`Nivel duplicado encontrado: ${anchors[i].level}.`);
+      }
+      if (anchors[i].xp < anchors[i - 1].xp) {
+        throw new Error(`XP deve ser crescente. Nivel ${anchors[i].level} ficou menor que o anterior.`);
+      }
+    }
+    return { anchors };
+  }
+
   function readDraftLevelWindowSettings() {
     const rules = Array.from(els.levelWindowRulesTableBody?.querySelectorAll('tr[data-level-window-row]') || []).map((row) => {
       const minLevel = Math.max(1, Math.min(200, Math.floor(Number(row.querySelector('[data-level-window-field="minLevel"]')?.value) || 1)));
@@ -663,6 +748,19 @@
       throw new Error(payload?.message || 'Nao foi possivel carregar a janela de niveis dos decks.');
     }
     applyLevelWindowSettings(payload.settings);
+  }
+
+  async function loadXpLevelCurveSettings() {
+    const response = await fetch(buildApiUrl('/api/admin/flashcards/xp-level-settings'), {
+      headers: buildAuthHeaders(),
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.settings) {
+      throw new Error(payload?.message || 'Nao foi possivel carregar a curva de XP por nivel.');
+    }
+    applyXpLevelCurveSettings(payload.settings);
   }
 
   async function submitEnergySettings(event) {
@@ -854,6 +952,33 @@
     }
   }
 
+  async function submitXpLevelCurveSettings(event) {
+    event.preventDefault();
+    state.xpLevelCurveBusy = true;
+    syncXpLevelCurveBusyState();
+    setStatus(els.xpLevelCurveStatus, 'Salvando curva de XP...');
+    try {
+      const draft = readDraftXpLevelCurveSettings();
+      const response = await fetch(buildApiUrl('/api/admin/flashcards/xp-level-settings'), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify(draft)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.settings) {
+        throw new Error(payload?.message || 'Nao foi possivel salvar a curva de XP por nivel.');
+      }
+      applyXpLevelCurveSettings(payload.settings);
+      setStatus(els.xpLevelCurveStatus, payload?.message || 'Curva de XP por nivel atualizada.', 'success');
+    } catch (error) {
+      setStatus(els.xpLevelCurveStatus, error?.message || 'Nao foi possivel salvar a curva de XP por nivel.', 'error');
+    } finally {
+      state.xpLevelCurveBusy = false;
+      syncXpLevelCurveBusyState();
+    }
+  }
+
   function bindEvents() {
     els.energyForm?.addEventListener('submit', submitEnergySettings);
     els.multiplierInput?.addEventListener('input', renderPreview);
@@ -864,6 +989,7 @@
     els.speedCurveForm?.addEventListener('submit', submitSpeedCurveSettings);
     els.levelDynamicsForm?.addEventListener('submit', submitLevelDynamicsSettings);
     els.levelWindowForm?.addEventListener('submit', submitLevelWindowSettings);
+    els.xpLevelCurveForm?.addEventListener('submit', submitXpLevelCurveSettings);
   }
 
   (async () => {
@@ -875,6 +1001,7 @@
     syncSpeedCurveBusyState();
     syncLevelDynamicsBusyState();
     syncLevelWindowBusyState();
+    syncXpLevelCurveBusyState();
     renderPreview();
     renderWelcomeModesFact();
     renderFlashcardsPhaseFact();
@@ -887,6 +1014,7 @@
       setStatus(els.speedCurveStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.levelDynamicsStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.levelWindowStatus, 'Acesso restrito ao administrador.', 'error');
+      setStatus(els.xpLevelCurveStatus, 'Acesso restrito ao administrador.', 'error');
       window.setTimeout(() => navigateTo('/account', { replace: true }), 900);
       return;
     }
@@ -898,7 +1026,8 @@
         loadFlashcardsLevelRulesSettings(),
         loadSpeedCurveSettings(),
         loadLevelDynamicsSettings(),
-        loadLevelWindowSettings()
+        loadLevelWindowSettings(),
+        loadXpLevelCurveSettings()
       ]);
       setStatus(els.energyStatus, 'Configuracoes carregadas.');
       setStatus(els.welcomeModesStatus, 'Modos extras sincronizados.');
@@ -907,6 +1036,7 @@
       setStatus(els.speedCurveStatus, 'Curva da velocidade sincronizada.');
       setStatus(els.levelDynamicsStatus, 'Dinamicas de nivel sincronizadas.');
       setStatus(els.levelWindowStatus, 'Janela de niveis dos decks sincronizada.');
+      setStatus(els.xpLevelCurveStatus, 'Curva de XP por nivel sincronizada.');
     } catch (error) {
       const message = error?.message || 'Nao foi possivel carregar as configuracoes do admin.';
       setStatus(els.energyStatus, message, 'error');
@@ -916,6 +1046,7 @@
       setStatus(els.speedCurveStatus, message, 'error');
       setStatus(els.levelDynamicsStatus, message, 'error');
       setStatus(els.levelWindowStatus, message, 'error');
+      setStatus(els.xpLevelCurveStatus, message, 'error');
     }
   })();
 })();

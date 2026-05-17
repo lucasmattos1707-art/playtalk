@@ -10624,6 +10624,17 @@
       const DEFAULT_GAME_CONTEXT_LIMIT = 12;
       const USER_LEVEL_MIN = 1;
       const USER_LEVEL_MAX = 200;
+      const ENERGY_XP_LEVEL_MAX = 500;
+      const ENERGY_XP_LEVEL_ANCHORS = [
+        { level: 2, xp: 50 }, { level: 5, xp: 300 }, { level: 10, xp: 1500 }, { level: 15, xp: 4000 },
+        { level: 20, xp: 8000 }, { level: 25, xp: 15000 }, { level: 30, xp: 30000 }, { level: 35, xp: 55000 },
+        { level: 40, xp: 90000 }, { level: 45, xp: 140000 }, { level: 50, xp: 220000 }, { level: 55, xp: 320000 },
+        { level: 60, xp: 450000 }, { level: 65, xp: 580000 }, { level: 70, xp: 700000 }, { level: 75, xp: 820000 },
+        { level: 80, xp: 900000 }, { level: 85, xp: 950000 }, { level: 90, xp: 980000 }, { level: 100, xp: 1000000 },
+        { level: 120, xp: 1400000 }, { level: 140, xp: 1800000 }, { level: 160, xp: 2200000 }, { level: 180, xp: 2600000 },
+        { level: 200, xp: 3000000 }, { level: 250, xp: 5500000 }, { level: 300, xp: 9000000 }, { level: 400, xp: 16000000 },
+        { level: 500, xp: 25000000 }
+      ];
       const COINS_ICON_PATH = '/SVG/codex-icons/post-results/coins.svg';
       const WELCOME_LEVEL_ANIMATION_MS = 2500;
       const SECOND_STAGE_BLOCK_MIN_TOTAL = 9;
@@ -14201,7 +14212,7 @@
         if (!els.welcomeLevelProgressBar) return;
         if (!state.entry.sessionResolved) return;
         const xpProgress = reconcileEnergyLevelProgress({ animate: Boolean(state.entry.welcomeVisible) });
-        const displayLevel = normalizeUserLevel(xpProgress.level);
+        const displayLevel = Math.max(USER_LEVEL_MIN, Math.min(ENERGY_XP_LEVEL_MAX, Math.round(Number(xpProgress.level) || USER_LEVEL_MIN)));
         const deckLevel = currentUserLevel();
         syncWelcomeIdentityHeader();
         if (state.ui.welcomeSelectedLevel === null || state.ui.welcomeSelectedLevel === undefined || state.ui.welcomeSelectedLevel === '') {
@@ -15921,26 +15932,47 @@
         return normalizeSelectableGameLevel(state.ui.welcomeSelectedLevel);
       }
 
+      function xpTotalForEnergyLevel(level) {
+        const safeLevel = Math.max(1, Math.min(ENERGY_XP_LEVEL_MAX, Math.floor(Number(level) || 1)));
+        if (safeLevel <= 1) return 0;
+        const anchors = ENERGY_XP_LEVEL_ANCHORS;
+        if (safeLevel <= anchors[0].level) return Math.max(1, Number(anchors[0].xp) || 1);
+        if (safeLevel >= anchors[anchors.length - 1].level) return Math.max(0, Number(anchors[anchors.length - 1].xp) || 0);
+        for (let index = 0; index < anchors.length - 1; index += 1) {
+          const left = anchors[index];
+          const right = anchors[index + 1];
+          if (safeLevel >= left.level && safeLevel <= right.level) {
+            const span = Math.max(1, right.level - left.level);
+            const ratio = (safeLevel - left.level) / span;
+            return Math.max(0, Math.round(left.xp + ((right.xp - left.xp) * ratio)));
+          }
+        }
+        return Math.max(0, Number(anchors[anchors.length - 1].xp) || 0);
+      }
+
       function xpRequiredForNextLevel(level) {
-        return normalizeUserLevel(level) + 20;
+        const safeLevel = Math.max(1, Math.min(ENERGY_XP_LEVEL_MAX, Math.floor(Number(level) || 1)));
+        if (safeLevel >= ENERGY_XP_LEVEL_MAX) return 0;
+        return Math.max(1, xpTotalForEnergyLevel(safeLevel + 1) - xpTotalForEnergyLevel(safeLevel));
       }
 
       function resolveEnergyLevelProgress(stats = state.stats) {
         const booksEnergyXpTotal = Math.max(0, Number(stats?.booksEnergyXpTotal) || 0);
         let remainingXp = booksEnergyXpTotal;
         let level = USER_LEVEL_MIN;
-        while (level < USER_LEVEL_MAX) {
-          const required = xpRequiredForNextLevel(level);
-          if (remainingXp < required) break;
-          remainingXp -= required;
+        while (level < ENERGY_XP_LEVEL_MAX) {
+          const nextTotal = xpTotalForEnergyLevel(level + 1);
+          if (booksEnergyXpTotal < nextTotal) break;
           level += 1;
         }
-        const nextRequired = level >= USER_LEVEL_MAX ? 0 : xpRequiredForNextLevel(level);
-        const percent = level >= USER_LEVEL_MAX
+        const currentTotal = xpTotalForEnergyLevel(level);
+        remainingXp = Math.max(0, booksEnergyXpTotal - currentTotal);
+        const nextRequired = level >= ENERGY_XP_LEVEL_MAX ? 0 : xpRequiredForNextLevel(level);
+        const percent = level >= ENERGY_XP_LEVEL_MAX
           ? 100
           : Math.max(0, Math.min(100, (remainingXp / Math.max(1, nextRequired)) * 100));
         return {
-          level: normalizeUserLevel(level),
+          level: Math.max(USER_LEVEL_MIN, Math.min(ENERGY_XP_LEVEL_MAX, level)),
           percent,
           currentXp: Math.max(0, remainingXp),
           nextRequired,
