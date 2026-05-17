@@ -10985,7 +10985,8 @@
           booksEnergyXpTotal: 0,
           booksEnergyXpDelta: 0,
           coinsTotal: 0,
-          coinsDelta: 0
+          coinsDelta: 0,
+          xpDelta: 0
         },
         timeOffsetMs: 0,
         user: null,
@@ -11026,6 +11027,7 @@
           levelDynamics: buildDefaultLevelDynamicsSettings(),
           levelWindowSettings: buildDefaultLevelWindowSettings(),
           cardValueSettings: buildDefaultCardValueSettings(),
+          xpValueSettings: buildDefaultCardValueSettings(),
           firstStagePenaltyBusy: false,
           launchAfterSoundTest: '',
           soundTestCompleted: false,
@@ -12039,6 +12041,7 @@
         const booksEnergyXpDelta = Math.max(0, Math.round(Number(raw?.booksEnergyXpDelta ?? raw?.books_energy_xp_delta) || 0));
         const coinsTotal = Math.max(0, Math.round(Number(raw?.coinsTotal ?? raw?.coins_total) || 0));
         const coinsDelta = Math.max(0, Math.round(Number(raw?.coinsDelta ?? raw?.coins_delta) || 0));
+        const xpDelta = Math.max(0, Math.round(Number(raw?.xpDelta ?? raw?.xp_delta) || 0));
         return {
           playTimeMs: Math.max(0, Math.round(Number(raw?.playTimeMs) || 0)),
           speakings: Math.max(0, Math.round(Number(raw?.speakings) || 0)),
@@ -12052,7 +12055,8 @@
           booksEnergyXpTotal,
           booksEnergyXpDelta,
           coinsTotal,
-          coinsDelta
+          coinsDelta,
+          xpDelta
         };
       }
 
@@ -12757,9 +12761,11 @@
         state.flashcardsSyncInFlight = true;
         try {
           const coinsDeltaToSync = Math.max(0, Math.round(Number(state.stats?.coinsDelta) || 0));
+          const xpDeltaToSync = Math.max(0, Math.round(Number(state.stats?.xpDelta) || 0));
           const payloadToSync = buildFlashcardCloudPayload();
           if (payloadToSync?.stats && typeof payloadToSync.stats === 'object') {
             payloadToSync.stats.coinsDelta = coinsDeltaToSync;
+            payloadToSync.stats.xpDelta = xpDeltaToSync;
           }
           const response = await fetch(buildApiUrl('/api/flashcards/state'), {
             method: 'PUT',
@@ -12783,15 +12789,19 @@
             const normalizedStats = normalizeStatsSnapshot(payload.stats);
             const localCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
             const localCoinsDelta = Math.max(0, Math.round(Number(state.stats?.coinsDelta) || 0));
+            const localXpDelta = Math.max(0, Math.round(Number(state.stats?.xpDelta) || 0));
             const ackedCoinsDelta = Math.max(0, Math.min(coinsDeltaToSync, localCoinsDelta));
+            const ackedXpDelta = Math.max(0, Math.min(xpDeltaToSync, localXpDelta));
             const pendingCoinsDelta = Math.max(0, localCoinsDelta - ackedCoinsDelta);
+            const pendingXpDelta = Math.max(0, localXpDelta - ackedXpDelta);
             state.stats = {
               ...state.stats,
               ...normalizedStats,
               // Nunca deixa total de moedas regredir no cliente por resposta atrasada.
               coinsTotal: hadCoinsTotal ? Math.max(localCoinsTotal, normalizedStats.coinsTotal) : localCoinsTotal,
               // Mantem apenas as moedas ainda nao confirmadas por este request.
-              coinsDelta: pendingCoinsDelta
+              coinsDelta: pendingCoinsDelta,
+              xpDelta: pendingXpDelta
             };
             state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
             persistUserStatsLocally();
@@ -14588,6 +14598,19 @@
 
       async function fetchFlashcardCardValueSettings() {
         const response = await fetch(buildApiUrl('/api/flashcards/card-value-settings'), {
+          headers: buildAuthHeaders(),
+          cache: 'no-store',
+          credentials: 'include'
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success || !payload?.settings) {
+          return normalizeCardValueSettings(buildDefaultCardValueSettings());
+        }
+        return normalizeCardValueSettings(payload.settings);
+      }
+
+      async function fetchFlashcardXpValueSettings() {
+        const response = await fetch(buildApiUrl('/api/flashcards/xp-value-settings'), {
           headers: buildAuthHeaders(),
           cache: 'no-store',
           credentials: 'include'
@@ -17421,6 +17444,18 @@
         const charCount = countFlashcardCharacters(english);
         const sizeMult = flashcardSizeMultiplier(charCount);
         const levelMult = flashcardLevelMultiplier(cardDeckLevel(card) || currentUserLevel());
+        return Math.max(0, Math.round(10 * sizeMult * levelMult));
+      }
+
+      function flashcardXpValue(card) {
+        const english = safeText(card?.english || '').trim();
+        const charCount = countFlashcardCharacters(english);
+        const xpSettings = normalizeCardValueSettings(state.entry.xpValueSettings || buildDefaultCardValueSettings());
+        const sizeScale = xpSettings.sizeMultiplierMax / 7;
+        const sizeMult = Math.max(0.1, flashcardSizeMultiplier(charCount) * sizeScale);
+        const normalized = normalizeDeckLevel(cardDeckLevel(card) || currentUserLevel());
+        const safeLevel = Number.isInteger(normalized) && normalized >= 1 ? normalized : 1;
+        const levelMult = 1 + ((safeLevel / 100) * (xpSettings.levelMultiplierMax - 1));
         return Math.max(0, Math.round(10 * sizeMult * levelMult));
       }
 
@@ -24380,8 +24415,10 @@
               setPremiumStatus('Monte uma chave premium tocando nas imagens.');
             }
             const earnedCoins = Math.max(0, flashcardCoinValue(card));
+            const earnedXp = Math.max(0, flashcardXpValue(card));
             state.stats.coinsDelta = Math.max(0, Number(state.stats.coinsDelta) || 0) + earnedCoins;
             state.stats.coinsTotal = Math.max(0, Number(state.stats.coinsTotal) || 0) + earnedCoins;
+            state.stats.xpDelta = Math.max(0, Number(state.stats.xpDelta) || 0) + earnedXp;
             renderWelcomeEnergyMiniTicker();
             showRewardGameStatus();
             triggerLibrarySummaryRankSwap();
@@ -24898,6 +24935,9 @@
         const bindAlbumsVerticalSwipe = (node) => {
           if (!node) return;
           let wheelLock = 0;
+          let touchStartX = 0;
+          let touchStartY = 0;
+          let touchMoved = false;
           node.addEventListener('pointerdown', (event) => {
             state.ui.albumsSwipeStartX = Number(event.clientX) || 0;
             state.ui.albumsSwipeStartY = Number(event.clientY) || 0;
@@ -24929,6 +24969,37 @@
             if (Math.abs(delta) < 6) return;
             nudgeAlbumsVertical(delta > 0 ? 1 : -1);
           }, { passive: false });
+          node.addEventListener('touchstart', (event) => {
+            if (!state.ui.albumsOpen) return;
+            const touch = event.touches && event.touches[0];
+            touchStartX = Number(touch?.clientX) || 0;
+            touchStartY = Number(touch?.clientY) || 0;
+            touchMoved = false;
+          }, { passive: true });
+          node.addEventListener('touchmove', (event) => {
+            if (!state.ui.albumsOpen) return;
+            const touch = event.touches && event.touches[0];
+            if (!touch) return;
+            const dx = (Number(touch.clientX) || 0) - touchStartX;
+            const dy = (Number(touch.clientY) || 0) - touchStartY;
+            if (Math.abs(dx) > 8 || Math.abs(dy) > 8) touchMoved = true;
+          }, { passive: true });
+          node.addEventListener('touchend', (event) => {
+            if (!state.ui.albumsOpen || !touchMoved) return;
+            const touch = event.changedTouches && event.changedTouches[0];
+            const dx = (Number(touch?.clientX) || 0) - touchStartX;
+            const dy = (Number(touch?.clientY) || 0) - touchStartY;
+            touchStartX = 0;
+            touchStartY = 0;
+            touchMoved = false;
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 42) {
+              nudgeAlbumsSection(dx < 0 ? 1 : -1);
+              return;
+            }
+            if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 42) {
+              nudgeAlbumsVertical(dy > 0 ? -1 : 1);
+            }
+          }, { passive: true });
         };
         bindAlbumsVerticalSwipe(els.albumsFlashcardsStack);
         bindAlbumsVerticalSwipe(els.albumsSealsStack);
@@ -25534,6 +25605,7 @@
           const flashcardLevelDynamicsSettings = await fetchFlashcardLevelDynamicsSettings().catch(() => normalizeLevelDynamicsSettings(buildDefaultLevelDynamicsSettings()));
           const flashcardLevelWindowSettings = await fetchFlashcardLevelWindowSettings().catch(() => normalizeLevelWindowSettings(buildDefaultLevelWindowSettings()));
           const flashcardCardValueSettings = await fetchFlashcardCardValueSettings().catch(() => normalizeCardValueSettings(buildDefaultCardValueSettings()));
+          const flashcardXpValueSettings = await fetchFlashcardXpValueSettings().catch(() => normalizeCardValueSettings(buildDefaultCardValueSettings()));
           if (sessionUser) {
             state.user = normalizeUser(sessionUser);
           }
@@ -25543,6 +25615,7 @@
           state.entry.levelDynamics = normalizeLevelDynamicsSettings(flashcardLevelDynamicsSettings);
           state.entry.levelWindowSettings = normalizeLevelWindowSettings(flashcardLevelWindowSettings);
           state.entry.cardValueSettings = normalizeCardValueSettings(flashcardCardValueSettings);
+          state.entry.xpValueSettings = normalizeCardValueSettings(flashcardXpValueSettings);
           state.entry.welcomeModesResolved = true;
           state.entry.sessionResolved = true;
           ensureFlashcardsEnergyDepletionWatch();

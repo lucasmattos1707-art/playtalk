@@ -230,6 +230,7 @@ let flashcardLevelDynamicsSettingsReadyPromise = null;
 let flashcardLevelWindowSettingsReadyPromise = null;
 let flashcardXpLevelCurveSettingsReadyPromise = null;
 let flashcardCardValueSettingsReadyPromise = null;
+let flashcardXpValueSettingsReadyPromise = null;
 let userFlashcardSpeedSamplesTableReadyPromise = null;
 let publicFlashcardDecksTableReadyPromise = null;
 let publicFlashcardDecksSeedPromise = null;
@@ -273,6 +274,10 @@ let flashcardCardValueSettingsCache = {
   value: null,
   updatedAt: 0
 };
+let flashcardXpValueSettingsCache = {
+  value: null,
+  updatedAt: 0
+};
 let flashcardXpLevelCurveSettingsCache = {
   value: null,
   updatedAt: 0
@@ -310,6 +315,7 @@ const FLASHCARD_SPEED_CURVE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_LEVEL_DYNAMICS_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_LEVEL_WINDOW_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_CARD_VALUE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
+const FLASHCARD_XP_VALUE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_XP_LEVEL_CURVE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_SPEED_SAMPLE_LIMIT = 100;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
@@ -1148,6 +1154,33 @@ function rememberFlashcardCardValueSettings(settings) {
   return snapshot;
 }
 
+function buildDefaultFlashcardXpValueSettingsSnapshot() {
+  return {
+    sizeMultiplierMax: 7,
+    levelMultiplierMax: 11
+  };
+}
+
+function normalizeFlashcardXpValueSettingsSnapshot(value = {}) {
+  const source = value?.payload && typeof value.payload === 'object' ? value.payload : value;
+  const defaults = buildDefaultFlashcardXpValueSettingsSnapshot();
+  const sizeMultiplierMax = Math.max(0.1, Math.min(50, Number(parseLocalizedDecimal(source?.sizeMultiplierMax, defaults.sizeMultiplierMax).toFixed(2))));
+  const levelMultiplierMax = Math.max(1, Math.min(50, Number(parseLocalizedDecimal(source?.levelMultiplierMax, defaults.levelMultiplierMax).toFixed(2))));
+  return {
+    sizeMultiplierMax,
+    levelMultiplierMax
+  };
+}
+
+function rememberFlashcardXpValueSettings(settings) {
+  const snapshot = normalizeFlashcardXpValueSettingsSnapshot(settings);
+  flashcardXpValueSettingsCache = {
+    value: snapshot,
+    updatedAt: Date.now()
+  };
+  return snapshot;
+}
+
 function buildDefaultFlashcardSpeedLevelGainRules() {
   return [
     { minSpeed: 0, maxSpeed: 799, levelGainPerMinute: 0 },
@@ -1446,7 +1479,10 @@ const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = 
   }
 
   const coinsDelta = Math.max(0, Math.round(Number(deltas?.coinsDelta) || 0));
-  const xpDelta = coinsDelta;
+  const hasExplicitXpDelta = deltas && Object.prototype.hasOwnProperty.call(deltas, 'xpDelta');
+  const xpDelta = hasExplicitXpDelta
+    ? Math.max(0, Math.round(Number(deltas?.xpDelta) || 0))
+    : coinsDelta;
   const xpCurveSettings = await getFlashcardXpLevelCurveSettings();
 
   const currentXpResult = await db.query(
@@ -3382,6 +3418,34 @@ const ensureFlashcardCardValueSettingsTable = async () => {
   return flashcardCardValueSettingsReadyPromise;
 };
 
+const ensureFlashcardXpValueSettingsTable = async () => {
+  if (!pool) return false;
+  if (!flashcardXpValueSettingsReadyPromise) {
+    flashcardXpValueSettingsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.app_flashcard_xp_value_settings (
+          singleton_key text PRIMARY KEY,
+          payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+          updated_by_user_id integer REFERENCES public.users(id) ON DELETE SET NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(
+        `INSERT INTO public.app_flashcard_xp_value_settings (singleton_key, payload)
+         VALUES ('default', $1::jsonb)
+         ON CONFLICT (singleton_key) DO NOTHING`,
+        [JSON.stringify(buildDefaultFlashcardXpValueSettingsSnapshot())]
+      );
+      return true;
+    })().catch((error) => {
+      flashcardXpValueSettingsReadyPromise = null;
+      throw error;
+    });
+  }
+  return flashcardXpValueSettingsReadyPromise;
+};
+
 const ensureUserFlashcardSpeedSamplesTable = async () => {
   if (!pool) return false;
   if (!userFlashcardSpeedSamplesTableReadyPromise) {
@@ -3625,6 +3689,26 @@ async function getFlashcardCardValueSettings(options = {}) {
   return rememberFlashcardCardValueSettings(result.rows[0] || {});
 }
 
+async function getFlashcardXpValueSettings(options = {}) {
+  const force = Boolean(options?.force);
+  if (!pool) return buildDefaultFlashcardXpValueSettingsSnapshot();
+  if (
+    !force
+    && flashcardXpValueSettingsCache.value
+    && (Date.now() - flashcardXpValueSettingsCache.updatedAt) < FLASHCARD_XP_VALUE_SETTINGS_CACHE_TTL_MS
+  ) {
+    return flashcardXpValueSettingsCache.value;
+  }
+  await ensureFlashcardXpValueSettingsTable();
+  const result = await pool.query(
+    `SELECT payload
+     FROM public.app_flashcard_xp_value_settings
+     WHERE singleton_key = 'default'
+     LIMIT 1`
+  );
+  return rememberFlashcardXpValueSettings(result.rows[0] || {});
+}
+
 async function updateEnergySettings(db, values = {}, updatedByUserId = null) {
   const executor = db && typeof db.query === 'function' ? db : pool;
   if (!executor) {
@@ -3831,6 +3915,24 @@ async function updateFlashcardCardValueSettings(db, values = {}, updatedByUserId
     [JSON.stringify(snapshot), Number(updatedByUserId) || null]
   );
   return rememberFlashcardCardValueSettings(result.rows[0] || snapshot);
+}
+
+async function updateFlashcardXpValueSettings(db, values = {}, updatedByUserId = null) {
+  const safeDb = db || pool;
+  if (!safeDb) throw new Error('Banco indisponivel para atualizar vetores de XP.');
+  await ensureFlashcardXpValueSettingsTable();
+  const snapshot = normalizeFlashcardXpValueSettingsSnapshot(values || {});
+  const result = await safeDb.query(
+    `INSERT INTO public.app_flashcard_xp_value_settings (singleton_key, payload, updated_by_user_id, updated_at)
+     VALUES ('default', $1::jsonb, $2, now())
+     ON CONFLICT (singleton_key)
+     DO UPDATE SET payload = EXCLUDED.payload,
+                   updated_by_user_id = EXCLUDED.updated_by_user_id,
+                   updated_at = now()
+     RETURNING payload`,
+    [JSON.stringify(snapshot), Number(updatedByUserId) || null]
+  );
+  return rememberFlashcardXpValueSettings(result.rows[0] || snapshot);
 }
 
 const ensureUsersPresenceClassMetricStorage = async () => {
@@ -5966,7 +6068,9 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       await appendFlashcardSpeedSamples(client, normalizedUserId, generatedSpeedSamples);
     }
     const requestedCoinsDeltaRaw = Math.max(0, Math.round(Number(payload?.stats?.coinsDelta || payload?.stats?.coins_delta) || 0));
+    const requestedXpDeltaRaw = Math.max(0, Math.round(Number(payload?.stats?.xpDelta || payload?.stats?.xp_delta) || 0));
     const requestedCoinsDelta = requestedCoinsDeltaRaw;
+    const requestedXpDelta = requestedXpDeltaRaw;
 
     await client.query(
       `INSERT INTO public.user_flashcard_stats (
@@ -6050,7 +6154,8 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       });
       const xpAward = await awardUserBooksEnergyXp(client, normalizedUserId, {
         cardsDelta: cardsTodayDelta,
-        coinsDelta: requestedCoinsDelta
+        coinsDelta: requestedCoinsDelta,
+        xpDelta: requestedXpDelta
       }, {
         dailyFreeEnergyLimit: energySnapshot?.dailyEnergyLimit,
         energyCostMultiplierMilli: energySnapshot?.energyCostMultiplierMilli
@@ -6075,7 +6180,8 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       booksEnergyXpTotal = Math.max(0, Number(booksXpResult.rows[0]?.energy_xp_total) || 0);
       const xpAward = await awardUserBooksEnergyXp(client, normalizedUserId, {
         cardsDelta: cardsTodayDelta,
-        coinsDelta: requestedCoinsDelta
+        coinsDelta: requestedCoinsDelta,
+        xpDelta: requestedXpDelta
       });
       booksEnergyXpTotal = Math.max(0, Number(xpAward?.totalXp) || booksEnergyXpTotal);
       booksEnergyXpDelta = Math.max(0, Number(xpAward?.xpDelta) || 0);
@@ -19522,6 +19628,15 @@ app.get('/api/flashcards/card-value-settings', async (_req, res) => {
   }
 });
 
+app.get('/api/flashcards/xp-value-settings', async (_req, res) => {
+  try {
+    const settings = await getFlashcardXpValueSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error?.message || 'Nao foi possivel carregar os vetores de XP.' });
+  }
+});
+
 app.get('/api/admin/welcome-mode-settings', async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -19619,6 +19734,17 @@ app.get('/api/admin/flashcards/card-value-settings', async (req, res) => {
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar os multiplicadores de valor das cartas.' });
+  }
+});
+
+app.get('/api/admin/flashcards/xp-value-settings', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const settings = await getFlashcardXpValueSettings({ force: true });
+    res.json({ success: true, settings });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar os vetores de XP.' });
   }
 });
 
@@ -19802,6 +19928,24 @@ app.post('/api/admin/flashcards/card-value-settings', express.json({ limit: '32k
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel salvar os multiplicadores de valor das cartas.' });
+  }
+});
+
+app.post('/api/admin/flashcards/xp-value-settings', express.json({ limit: '32kb' }), async (req, res) => {
+  try {
+    const adminUser = await requireAdminUserFromRequest(req);
+    const settings = await updateFlashcardXpValueSettings(pool, {
+      sizeMultiplierMax: req.body?.sizeMultiplierMax,
+      levelMultiplierMax: req.body?.levelMultiplierMax
+    }, adminUser.id);
+    res.json({
+      success: true,
+      message: 'Vetores de XP atualizados.',
+      settings
+    });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel salvar os vetores de XP.' });
   }
 });
 

@@ -36,6 +36,11 @@
     cardLevelMultiplierMax: document.getElementById('adminCardLevelMultiplierMax'),
     cardValueSaveBtn: document.getElementById('adminCardValueSaveBtn'),
     cardValueStatus: document.getElementById('adminCardValueStatus'),
+    xpValueForm: document.getElementById('adminXpValueForm'),
+    xpSizeMultiplierMax: document.getElementById('adminXpSizeMultiplierMax'),
+    xpLevelMultiplierMax: document.getElementById('adminXpLevelMultiplierMax'),
+    xpValueSaveBtn: document.getElementById('adminXpValueSaveBtn'),
+    xpValueStatus: document.getElementById('adminXpValueStatus'),
     levelDynamicsForm: document.getElementById('adminLevelDynamicsForm'),
     speedGainRulesTableBody: document.getElementById('adminSpeedGainRulesTableBody'),
     firstStagePenaltyRulesTableBody: document.getElementById('adminFirstStagePenaltyRulesTableBody'),
@@ -79,6 +84,11 @@
     },
     cardValueBusy: false,
     cardValue: {
+      sizeMultiplierMax: 7,
+      levelMultiplierMax: 11
+    },
+    xpValueBusy: false,
+    xpValue: {
       sizeMultiplierMax: 7,
       levelMultiplierMax: 11
     },
@@ -227,6 +237,16 @@
     });
   }
 
+  function syncXpValueBusyState() {
+    if (els.xpValueSaveBtn) {
+      els.xpValueSaveBtn.disabled = state.xpValueBusy;
+      els.xpValueSaveBtn.textContent = state.xpValueBusy ? 'Salvando...' : 'Salvar vetores de XP';
+    }
+    [els.xpSizeMultiplierMax, els.xpLevelMultiplierMax].forEach((input) => {
+      if (input) input.disabled = state.xpValueBusy;
+    });
+  }
+
   function syncLevelDynamicsBusyState() {
     if (els.levelDynamicsSaveBtn) {
       els.levelDynamicsSaveBtn.disabled = state.levelDynamicsBusy;
@@ -308,6 +328,26 @@
     return normalizeCardValueSettings({
       sizeMultiplierMax: els.cardSizeMultiplierMax?.value,
       levelMultiplierMax: els.cardLevelMultiplierMax?.value
+    });
+  }
+
+  function normalizeXpValueSettings(settings) {
+    return {
+      sizeMultiplierMax: Math.max(0.1, Math.min(50, Number(parseLocaleDecimal(settings?.sizeMultiplierMax, 7).toFixed(2)))),
+      levelMultiplierMax: Math.max(1, Math.min(50, Number(parseLocaleDecimal(settings?.levelMultiplierMax, 11).toFixed(2))))
+    };
+  }
+
+  function applyXpValueSettings(settings) {
+    state.xpValue = normalizeXpValueSettings(settings);
+    if (els.xpSizeMultiplierMax) els.xpSizeMultiplierMax.value = String(state.xpValue.sizeMultiplierMax).replace('.', ',');
+    if (els.xpLevelMultiplierMax) els.xpLevelMultiplierMax.value = String(state.xpValue.levelMultiplierMax).replace('.', ',');
+  }
+
+  function readDraftXpValueSettings() {
+    return normalizeXpValueSettings({
+      sizeMultiplierMax: els.xpSizeMultiplierMax?.value,
+      levelMultiplierMax: els.xpLevelMultiplierMax?.value
     });
   }
 
@@ -783,6 +823,19 @@
     applyCardValueSettings(payload.settings);
   }
 
+  async function loadXpValueSettings() {
+    const response = await fetch(buildApiUrl('/api/admin/flashcards/xp-value-settings'), {
+      headers: buildAuthHeaders(),
+      credentials: 'include',
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success || !payload?.settings) {
+      throw new Error(payload?.message || 'Nao foi possivel carregar os vetores de XP.');
+    }
+    applyXpValueSettings(payload.settings);
+  }
+
   async function loadLevelDynamicsSettings() {
     const response = await fetch(buildApiUrl('/api/admin/flashcards/level-dynamics-settings'), {
       headers: buildAuthHeaders(),
@@ -984,6 +1037,33 @@
     }
   }
 
+  async function submitXpValueSettings(event) {
+    event.preventDefault();
+    state.xpValueBusy = true;
+    syncXpValueBusyState();
+    setStatus(els.xpValueStatus, 'Salvando vetores de XP...');
+    try {
+      const draft = readDraftXpValueSettings();
+      const response = await fetch(buildApiUrl('/api/admin/flashcards/xp-value-settings'), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify(draft)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success || !payload?.settings) {
+        throw new Error(payload?.message || 'Nao foi possivel salvar os vetores de XP.');
+      }
+      applyXpValueSettings(payload.settings);
+      setStatus(els.xpValueStatus, payload?.message || 'Vetores de XP atualizados.', 'success');
+    } catch (error) {
+      setStatus(els.xpValueStatus, error?.message || 'Nao foi possivel salvar os vetores de XP.', 'error');
+    } finally {
+      state.xpValueBusy = false;
+      syncXpValueBusyState();
+    }
+  }
+
   async function submitLevelDynamicsSettings(event) {
     event.preventDefault();
     state.levelDynamicsBusy = true;
@@ -1074,6 +1154,7 @@
     els.flashcardsLevelRulesForm?.addEventListener('submit', submitFlashcardsLevelRulesSettings);
     els.speedCurveForm?.addEventListener('submit', submitSpeedCurveSettings);
     els.cardValueForm?.addEventListener('submit', submitCardValueSettings);
+    els.xpValueForm?.addEventListener('submit', submitXpValueSettings);
     els.levelDynamicsForm?.addEventListener('submit', submitLevelDynamicsSettings);
     els.levelWindowForm?.addEventListener('submit', submitLevelWindowSettings);
     els.xpLevelCurveForm?.addEventListener('submit', submitXpLevelCurveSettings);
@@ -1087,6 +1168,7 @@
     syncFlashcardsLevelRulesBusyState();
     syncSpeedCurveBusyState();
     syncCardValueBusyState();
+    syncXpValueBusyState();
     syncLevelDynamicsBusyState();
     syncLevelWindowBusyState();
     syncXpLevelCurveBusyState();
@@ -1101,6 +1183,7 @@
       setStatus(els.flashcardsLevelRulesStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.speedCurveStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.cardValueStatus, 'Acesso restrito ao administrador.', 'error');
+      setStatus(els.xpValueStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.levelDynamicsStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.levelWindowStatus, 'Acesso restrito ao administrador.', 'error');
       setStatus(els.xpLevelCurveStatus, 'Acesso restrito ao administrador.', 'error');
@@ -1115,6 +1198,7 @@
         loadFlashcardsLevelRulesSettings(),
         loadSpeedCurveSettings(),
         loadCardValueSettings(),
+        loadXpValueSettings(),
         loadLevelDynamicsSettings(),
         loadLevelWindowSettings(),
         loadXpLevelCurveSettings()
@@ -1125,6 +1209,7 @@
       setStatus(els.flashcardsLevelRulesStatus, 'Tabela de niveis sincronizada.');
       setStatus(els.speedCurveStatus, 'Curva da velocidade sincronizada.');
       setStatus(els.cardValueStatus, 'Multiplicadores de valor das cartas sincronizados.');
+      setStatus(els.xpValueStatus, 'Vetores de XP sincronizados.');
       setStatus(els.levelDynamicsStatus, 'Dinamicas de nivel sincronizadas.');
       setStatus(els.levelWindowStatus, 'Janela de niveis dos decks sincronizada.');
       setStatus(els.xpLevelCurveStatus, 'Curva de XP por nivel sincronizada.');
@@ -1136,6 +1221,7 @@
       setStatus(els.flashcardsLevelRulesStatus, message, 'error');
       setStatus(els.speedCurveStatus, message, 'error');
       setStatus(els.cardValueStatus, message, 'error');
+      setStatus(els.xpValueStatus, message, 'error');
       setStatus(els.levelDynamicsStatus, message, 'error');
       setStatus(els.levelWindowStatus, message, 'error');
       setStatus(els.xpLevelCurveStatus, message, 'error');

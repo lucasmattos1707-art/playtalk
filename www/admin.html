@@ -538,6 +538,27 @@
     </section>
 
     <section class="admin-card" style="margin-top:18px;">
+      <h2>Lógica XP Vetores</h2>
+      <p class="admin-card-copy">Vetores globais que controlam o ganho de XP por carta, separados da economia de moedas.</p>
+      <form class="admin-form" id="adminXpValueForm">
+        <div class="admin-speed-curve-grid">
+          <div class="admin-field">
+            <label for="adminXpSizeMultiplierMax">Teto chars XP (7x)</label>
+            <input id="adminXpSizeMultiplierMax" type="text" inputmode="decimal" value="7,00" required>
+          </div>
+          <div class="admin-field">
+            <label for="adminXpLevelMultiplierMax">Teto level XP (11x)</label>
+            <input id="adminXpLevelMultiplierMax" type="text" inputmode="decimal" value="11,00" required>
+          </div>
+        </div>
+        <div class="admin-topbar-actions">
+          <button class="admin-btn" id="adminXpValueSaveBtn" type="submit">Salvar vetores de XP</button>
+        </div>
+      </form>
+      <div class="admin-status" id="adminXpValueStatus" aria-live="polite"></div>
+    </section>
+
+    <section class="admin-card" style="margin-top:18px;">
       <h2>Dinamicas de nivel dos decks (/play)</h2>
       <p class="admin-card-copy">Controle global do ganho de nivel por minuto (velocidade/h) e da perda de nivel por erro na first-star.</p>
       <form class="admin-form" id="adminLevelDynamicsForm">
@@ -657,6 +678,6 @@
 
   <script src="js/api-config.js"></script>
   <script src="js/android-shell.js"></script>
-  <script src="js/admin-page.js?v=20260517-xpcurve"></script>
+  <script src="js/admin-page.js?v=20260517-xp-logic"></script>
 </body>
 </html>
