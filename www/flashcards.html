@@ -20632,8 +20632,8 @@
           return Number.isInteger(deckLevel) && deckLevel >= bounds.minLevel && deckLevel <= bounds.maxLevel;
         };
         const filteredReviews = reviews.filter(withinBounds);
-        const reviewIds = new Set(filteredReviews.map((card) => card.id));
-        const filteredBase = base.filter((card) => withinBounds(card) && !reviewIds.has(card.id));
+        const filteredReviewIds = new Set(filteredReviews.map((card) => card.id));
+        const filteredBase = base.filter((card) => withinBounds(card) && !filteredReviewIds.has(card.id));
         return {
           baseCards: buildOrderedDeckSelection(filteredBase, Math.max(0, normalizedLimit - filteredReviews.length)),
           reviewCards: filteredReviews.slice(0, Math.min(REVIEW_SLOT_LIMIT, normalizedLimit))
