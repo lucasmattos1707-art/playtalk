@@ -11213,6 +11213,8 @@
           levelModeProgress: {},
           levelSwitchTimer: 0,
           levelSwitchResetTimer: 0,
+          levelSyncRefreshTimer: 0,
+          levelSyncLastReloadAt: 0,
           gameLevelSwipeStartX: 0,
           gameLevelSwipeStartY: 0,
           welcomeEnergyBlocked: false,
@@ -12808,10 +12810,14 @@
             renderWelcomeEnergyMiniTicker();
           }
           if (Number.isFinite(Number(payload?.userLevel))) {
+            const previousLevel = currentUserLevel();
             state.userLevel = normalizeUserLevel(payload.userLevel);
             if (state.user) state.user.level = state.userLevel;
             state.userLevelUpdatedAt = safeText(payload.userLevelUpdatedAt || state.userLevelUpdatedAt);
             syncWelcomeLevelProgress();
+            if (currentUserLevel() !== previousLevel) {
+              scheduleLevelSyncRefresh({ delayMs: 0 });
+            }
           }
           if (state.entry.dailyPlanMissionSnapshot) {
             void refreshDailyPlanMissionSnapshot({ force: true }).then(() => {
@@ -14502,11 +14508,15 @@
             saveUserStats({ skipCloudSync: true });
           }
           if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.userLevel))) {
+            const previousLevel = currentUserLevel();
             state.userLevel = normalizeUserLevel(payload.userLevel);
             if (state.user) state.user.level = state.userLevel;
             state.userLevelUpdatedAt = safeText(payload?.userLevelUpdatedAt || state.userLevelUpdatedAt);
             syncWelcomeLevelProgress();
             syncGameLevelNavigator();
+            if (currentUserLevel() !== previousLevel) {
+              scheduleLevelSyncRefresh({ delayMs: normalizedAction === 'tick' ? 120 : 0 });
+            }
           }
           return payload;
         } catch (_error) {
@@ -17539,10 +17549,14 @@
           });
           const payload = await response.json().catch(() => ({}));
           if (response.ok && payload?.success && Number.isFinite(Number(payload?.userLevel))) {
+            const previousLevel = currentUserLevel();
             state.userLevel = normalizeUserLevel(payload.userLevel);
             if (state.user) state.user.level = state.userLevel;
             state.userLevelUpdatedAt = safeText(payload?.userLevelUpdatedAt || state.userLevelUpdatedAt);
             syncGameLevelNavigator();
+            if (currentUserLevel() !== previousLevel) {
+              scheduleLevelSyncRefresh({ delayMs: 0 });
+            }
             return Math.max(0, Number(payload?.levelLoss) || levelLoss);
           }
           return levelLoss;
@@ -17753,6 +17767,23 @@
             category: repairDisplayText(item?.categoria || title)
           };
         });
+      }
+
+      function scheduleLevelSyncRefresh(options = {}) {
+        if (state.ui.levelSyncRefreshTimer) {
+          window.clearTimeout(state.ui.levelSyncRefreshTimer);
+          state.ui.levelSyncRefreshTimer = 0;
+        }
+        const delayMs = Math.max(0, Math.round(Number(options.delayMs) || 180));
+        state.ui.levelSyncRefreshTimer = window.setTimeout(() => {
+          state.ui.levelSyncRefreshTimer = 0;
+          refreshLibrary();
+          syncGameLevelNavigator();
+          const now = Date.now();
+          if ((now - Number(state.ui.levelSyncLastReloadAt || 0)) < 8000) return;
+          state.ui.levelSyncLastReloadAt = now;
+          reloadCardsFromNetwork().catch(() => {});
+        }, delayMs);
       }
 
       function hasCoreFlashcardText(card) {
