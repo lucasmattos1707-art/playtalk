@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -35,6 +35,8 @@
     .status.is-warn{color:var(--warn)}
     .stack{display:grid;gap:10px}
     .deck{background:linear-gradient(180deg,#0b357c,#07295f);border:1px solid rgba(143,188,255,.35);border-radius:16px;padding:10px}
+    .deck.is-dimmed{opacity:.52}
+    .deck.is-dimmed .deck-head{border-color:rgba(255,255,255,.08)}
     .deck-head{
       height:8vh;
       min-height:56px;
@@ -55,6 +57,20 @@
       box-shadow:0 0 0 1px rgba(255,255,255,.22);
     }
     .deck-head-left{display:flex;align-items:center;gap:10px;min-width:0}
+    .deck-pick{
+      width:16px;
+      height:16px;
+      border-radius:999px;
+      border:2px solid rgba(255,255,255,.62);
+      background:transparent;
+      flex:0 0 auto;
+      box-shadow:0 0 0 1px rgba(0,0,0,.2) inset;
+    }
+    .deck-pick.is-on{
+      border-color:#fff;
+      background:#fff;
+      box-shadow:0 0 0 4px rgba(255,255,255,.26);
+    }
     .deck-slot{
       border-radius:999px;
       padding:4px 10px;
@@ -139,8 +155,8 @@
         <div class="title">Sequence (Admin)</div>
         <div class="hint">
           <strong>Cartas:</strong> selecione com clique, <code>Shift</code> (intervalo) e <code>Ctrl/Cmd</code> (isoladas).<br>
-          <strong>Teclas:</strong> <code>↑</code>/<code>↓</code> move selecionadas no deck, <code>M</code> exporta para slot, <code>S</code> salva.<br>
-          <strong>Slots:</strong> use <code>↑</code>/<code>↓</code> no cabeçalho do deck para trocar posição dos decks.
+          <strong>Decks:</strong> clique no cabecalho para selecionar o deck e limpar a selecao de cartas.<br>
+          <strong>Teclas:</strong> <code>&uarr;</code>/<code>&darr;</code> move cartas selecionadas, ou deck ativo quando nao ha cartas selecionadas. <code>M</code> exporta para slot, <code>S</code> salva.
         </div>
       </div>
       <div>
@@ -237,6 +253,13 @@
       function clearCardSelection() {
         state.selectedCardKeys.clear();
         state.selectionAnchor = null;
+      }
+
+      function selectDeck(deckSource) {
+        const deck = findDeckBySource(deckSource);
+        if (!deck) return;
+        setActiveDeck(deck.source);
+        clearCardSelection();
       }
 
       function selectCard(deckSource, cardId, event) {
@@ -458,26 +481,29 @@
         }
 
         const hasSelection = state.selectedCardKeys.size > 0;
+        const deckSelectionMode = !hasSelection && Boolean(state.selectedDeckSource);
         state.decks.forEach((deck) => {
           const box = document.createElement('section');
           box.className = `deck${state.openDecks.has(deck.source) ? ' is-open' : ''}`;
+          if (deckSelectionMode && state.selectedDeckSource !== deck.source) box.classList.add('is-dimmed');
 
           const head = document.createElement('div');
           head.className = `deck-head${state.selectedDeckSource === deck.source ? ' is-active' : ''}`;
           head.innerHTML = `
             <span class="deck-head-left">
+              <span class="deck-pick${state.selectedDeckSource === deck.source && !hasSelection ? ' is-on' : ''}" aria-hidden="true"></span>
               <span class="deck-slot">SLOT ${Number(deck.deckLevel)}</span>
               <span class="deck-title">${deck.title || 'Deck'}</span>
             </span>
             <span class="deck-actions">
               <span class="deck-meta">${deck.items.length} cards</span>
-              <button type="button" data-action="up" aria-label="Subir slot">↑</button>
-              <button type="button" data-action="down" aria-label="Descer slot">↓</button>
+              <button type="button" data-action="up" aria-label="Subir slot">&uarr;</button>
+              <button type="button" data-action="down" aria-label="Descer slot">&darr;</button>
             </span>
           `;
           head.addEventListener('click', () => {
-            setActiveDeck(deck.source);
-            toggleDeck(deck.source);
+            selectDeck(deck.source);
+            render();
           });
           head.querySelector('[data-action="up"]')?.addEventListener('click', (event) => {
             event.preventDefault();
@@ -566,3 +592,5 @@
   </script>
 </body>
 </html>
+
+
