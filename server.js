@@ -8173,72 +8173,110 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
       .map((deck) => [String(deck.source || '').trim(), deck])
   );
 
-  const decks = incomingDecks
-    .map((deck) => {
-      const source = String(deck?.source || '').trim();
-      if (!source || !fallbackMap.has(source)) return null;
-      const fallback = fallbackMap.get(source);
-      const fallbackDeckLevel = Number.parseInt(fallback?.deckLevel, 10);
-      const fallbackItems = Array.isArray(fallback?.items) ? fallback.items : [];
-      const fallbackItemsById = new Map(
-        fallbackItems
-          .map((item) => [String(item?.id || '').trim(), item])
-          .filter(([id]) => Boolean(id))
-      );
-      const items = Array.isArray(deck?.items) ? deck.items : [];
-      const usedFallbackItemIds = new Set();
-      const orderedItems = items
-        .map((item, index) => {
-          const rawId = String(item?.id || '').trim();
-          if (!rawId) return null;
-          const fallbackItem = fallbackItemsById.get(rawId);
-          if (!fallbackItem) return null;
-          usedFallbackItemIds.add(rawId);
-          return {
-            id: rawId,
-            english: String(fallbackItem?.english || '').trim(),
-            portuguese: String(fallbackItem?.portuguese || '').trim(),
-            image: String(fallbackItem?.image || '').trim(),
-            audio: String(fallbackItem?.audio || '').trim(),
-            audio2: String(fallbackItem?.audio2 || '').trim(),
-            orderIndex: index
-          };
-        })
-        .filter(Boolean);
-      const appendedItems = fallbackItems
-        .filter((item) => {
-          const id = String(item?.id || '').trim();
-          return id && !usedFallbackItemIds.has(id);
-        })
-        .map((item, index) => ({
-          id: String(item?.id || '').trim(),
-          english: String(item?.english || '').trim(),
-          portuguese: String(item?.portuguese || '').trim(),
-          image: String(item?.image || '').trim(),
-          audio: String(item?.audio || '').trim(),
-          audio2: String(item?.audio2 || '').trim(),
-          orderIndex: orderedItems.length + index
-        }));
-      return {
-        source,
-        title: String(deck?.title || fallback?.title || '').trim() || String(fallback?.title || '').trim(),
-        deckLevel: Number.isInteger(fallbackDeckLevel) ? fallbackDeckLevel : null,
-        items: orderedItems.concat(appendedItems)
-      };
-    })
-    .filter((deck) => deck && Number.isInteger(deck.deckLevel));
+  const parseSlot = (value) => {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) && parsed >= 1 ? parsed : null;
+  };
+  const usedSlots = new Set();
+  const reserveSlot = (preferredValue) => {
+    const preferred = parseSlot(preferredValue);
+    if (preferred !== null && !usedSlots.has(preferred)) {
+      usedSlots.add(preferred);
+      return preferred;
+    }
+    let slot = 1;
+    while (usedSlots.has(slot)) slot += 1;
+    usedSlots.add(slot);
+    return slot;
+  };
+
+  const fallbackItemCatalog = new Map();
+  fallbackDecks.forEach((deck) => {
+    const items = Array.isArray(deck?.items) ? deck.items : [];
+    items.forEach((item) => {
+      const id = String(item?.id || '').trim();
+      if (!id || fallbackItemCatalog.has(id)) return;
+      fallbackItemCatalog.set(id, {
+        id,
+        english: String(item?.english || '').trim(),
+        portuguese: String(item?.portuguese || '').trim(),
+        image: String(item?.image || '').trim(),
+        audio: String(item?.audio || '').trim(),
+        audio2: String(item?.audio2 || '').trim()
+      });
+    });
+  });
+
+  const incomingSelectedIds = new Set();
+  incomingDecks.forEach((deck) => {
+    const items = Array.isArray(deck?.items) ? deck.items : [];
+    items.forEach((item) => {
+      const id = String(item?.id || '').trim();
+      if (id) incomingSelectedIds.add(id);
+    });
+  });
+
+  const decks = [];
+  incomingDecks.forEach((deck) => {
+    const source = String(deck?.source || '').trim();
+    if (!source || !fallbackMap.has(source)) return;
+    const fallback = fallbackMap.get(source);
+    const fallbackItems = Array.isArray(fallback?.items) ? fallback.items : [];
+    const deckLevel = reserveSlot(deck?.deckLevel ?? fallback?.deckLevel);
+    const title = String(deck?.title || fallback?.title || '').trim() || String(fallback?.title || '').trim();
+
+    const usedDeckItemIds = new Set();
+    const orderedItems = [];
+    (Array.isArray(deck?.items) ? deck.items : []).forEach((item) => {
+      const rawId = String(item?.id || '').trim();
+      if (!rawId || usedDeckItemIds.has(rawId)) return;
+      const catalogItem = fallbackItemCatalog.get(rawId);
+      if (!catalogItem) return;
+      usedDeckItemIds.add(rawId);
+      orderedItems.push({
+        ...catalogItem,
+        orderIndex: orderedItems.length
+      });
+    });
+
+    const appendedItems = fallbackItems
+      .filter((item) => {
+        const id = String(item?.id || '').trim();
+        if (!id) return false;
+        if (usedDeckItemIds.has(id)) return false;
+        // If card is already placed in another deck in sequence state, keep that move.
+        if (incomingSelectedIds.has(id)) return false;
+        return true;
+      })
+      .map((item, index) => ({
+        id: String(item?.id || '').trim(),
+        english: String(item?.english || '').trim(),
+        portuguese: String(item?.portuguese || '').trim(),
+        image: String(item?.image || '').trim(),
+        audio: String(item?.audio || '').trim(),
+        audio2: String(item?.audio2 || '').trim(),
+        orderIndex: orderedItems.length + index
+      }));
+
+    decks.push({
+      source,
+      title,
+      deckLevel,
+      items: orderedItems.concat(appendedItems)
+    });
+  });
 
   const includedSources = new Set(decks.map((deck) => String(deck.source || '').trim()).filter(Boolean));
   const missingFallbackDecks = fallbackDecks
     .filter((deck) => {
       if (!deck || typeof deck !== 'object') return false;
       const source = String(deck.source || '').trim();
-      return Boolean(source) && !includedSources.has(source) && Number.isInteger(Number(deck.deckLevel));
+      return Boolean(source) && !includedSources.has(source);
     })
     .map((deck) => ({
       source: String(deck.source || '').trim(),
       title: String(deck.title || '').trim(),
-      deckLevel: Number(deck.deckLevel),
+      deckLevel: reserveSlot(deck.deckLevel),
       items: Array.isArray(deck.items)
         ? deck.items.map((item, index) => ({
           id: String(item?.id || `${String(deck.source || '').trim()}#${index + 1}`).trim(),
@@ -8370,6 +8408,24 @@ async function applyFlashcardsSequenceForPhaseSix(dayNumber, payload) {
     : null;
 
   if (!sequenceDeck) return payload;
+  const mappedSequenceItems = Array.isArray(sequenceDeck.items)
+    ? sequenceDeck.items
+      .map((item) => ({
+        id: String(item?.id || '').trim(),
+        english: String(item?.english || '').trim(),
+        portuguese: String(item?.portuguese || '').trim(),
+        image: String(item?.image || '').trim(),
+        audio: String(item?.audio || '').trim(),
+        audio2: String(item?.audio2 || '').trim()
+      }))
+      .filter((item) => item.id && (item.english || item.portuguese))
+    : [];
+  if (mappedSequenceItems.length) {
+    return {
+      ...payload,
+      items: mappedSequenceItems
+    };
+  }
   const reorderedItems = reorderItemsBySequenceDeck(payload.items, sequenceDeck);
   return {
     ...payload,
@@ -15016,13 +15072,13 @@ app.post('/api/admin/flashcards/public-decks/level', express.json({ limit: '256k
     if (error?.code === '23505') {
       res.status(409).json({
         success: false,
-        message: 'Ja existe outro deck usando esse nivel.'
+        message: 'Ja existe outro deck usando esse slot.'
       });
       return;
     }
     res.status(error.statusCode || 500).json({
       success: false,
-      message: error.message || 'Falha ao atualizar o nivel do deck.'
+      message: error.message || 'Falha ao atualizar o slot do deck.'
     });
   }
 });

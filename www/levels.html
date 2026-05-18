@@ -215,7 +215,7 @@
           <div class="deck-edit-picker__field">
             <div id="editCardsDeckSelectWrap" class="deck-edit-picker__select-wrap">
               <select id="editCardsDeckSelect">
-                <option value="">Nivel 1</option>
+                <option value="">Slot 1</option>
               </select>
             </div>
             <div id="editCardsDeckSearchWrap" class="deck-edit-picker__search-wrap is-hidden">
@@ -228,7 +228,7 @@
             </svg>
           </button>
           <div class="deck-edit-picker__level">
-            <input id="editCardsDeckLevelInput" type="number" min="1" max="100" step="1" placeholder="Nivel" aria-label="Nivel do deck">
+            <input id="editCardsDeckLevelInput" type="number" min="1" max="100" step="1" placeholder="Slot" aria-label="Slot do deck">
             <button id="editCardsDeckLevelSaveBtn" type="button">OK</button>
           </div>
         </div>
@@ -1134,17 +1134,17 @@
       async function saveCurrentDeckLevel(){
         if(!adminStudio.enabled||editCardsState.levelBusy)return;
         const deck=currentEditCardsDeck();
-        if(!deck)throw new Error('Escolha um deck antes de definir o nivel.');
+        if(!deck)throw new Error('Escolha um deck antes de definir o slot.');
         const input=$('editCardsDeckLevelInput');
         const rawValue=String(input?.value||'').trim();
         const deckLevel=rawValue?normalizeDeckLevelValue(rawValue):null;
-        if(rawValue&&deckLevel===null)throw new Error('Digite um nivel valido para o deck.');
+        if(rawValue&&deckLevel===null)throw new Error('Digite um slot valido para o deck.');
         editCardsState.levelBusy=true;
         syncEditCardsDeckPicker();
         try{
           const response=await fetch('/api/admin/flashcards/public-decks/level',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({source:deck.source||deck.path,deckLevel})});
           const result=await response.json().catch(()=>({}));
-          if(!response.ok)throw new Error(result?.message||'Erro ao atualizar o nivel do deck.');
+          if(!response.ok)throw new Error(result?.message||'Erro ao atualizar o slot do deck.');
           const updated=result?.deck||{};
           const nextLevel=normalizeDeckLevelValue(updated.deckLevel);
           editCardsState.decks=editCardsState.decks.map(entry=>entry.path===deck.path?{...entry,deckLevel:nextLevel}:entry).sort(compareEditableDecks);
@@ -1152,7 +1152,7 @@
           editCardsState.selectedPath=deck.path;
           persistEditDeckLevel(nextLevel||1);
           syncEditCardsDeckPicker();
-          showFeedbackToast(nextLevel?`Nivel ${nextLevel} salvo para "${deck.title}".`:`Nivel removido de "${deck.title}".`);
+          showFeedbackToast(nextLevel?`Slot ${nextLevel} salvo para "${deck.title}".`:`Slot removido de "${deck.title}".`);
         }finally{
           editCardsState.levelBusy=false;
           syncEditCardsDeckPicker();
@@ -1166,7 +1166,7 @@
         const canShow=adminStudio.enabled&&editCardsState.visible;
         host.classList.toggle('hidden',!canShow);
         if(!canShow){
-          select.innerHTML='<option value="">Nivel 1</option>';
+          select.innerHTML='<option value="">Slot 1</option>';
           select.value='';
           select.classList.remove('is-leveled');
           if(levelInput)levelInput.value='';
@@ -1193,7 +1193,7 @@
           const countLabel=deck.count?` (${deck.count})`:'';
           const statusLabel=deck.loadError?' [json indisponivel]':'';
           const deckLevel=normalizeDeckLevelValue(deck.deckLevel);
-          const levelLabel=deckLevel?`Nivel ${deckLevel} - `:'';
+          const levelLabel=deckLevel?`Slot ${deckLevel} - `:'';
           const classAttr=deckLevel?' class="is-leveled"':'';
           options.push(`<option${classAttr} value="${safePath}">${levelLabel}${safeTitle}${countLabel}${statusLabel}</option>`);
         });
@@ -2741,8 +2741,8 @@
       $('pasteArea').oninput=()=>handlePasteAreaMode();
       $('pasteCloseBtn').onclick=()=>closePastePopover();
       $('editCardsDeckSelect').onchange=e=>{const selectedPath=String(e.target.value||'').trim();editCardsState.selectedPath=selectedPath;const selectedDeck=editCardsState.decks.find(deck=>deck.path===selectedPath)||null;persistEditDeckLevel(normalizeDeckLevelValue(selectedDeck?.deckLevel)||1);syncEditCardsDeckPicker();if(!selectedPath)return;loadSelectedDeckIntoLevels(selectedPath).catch(error=>alert(error.message||'Erro ao carregar deck.'))};
-      $('editCardsDeckLevelSaveBtn').onclick=()=>saveCurrentDeckLevel().catch(error=>alert(error.message||'Erro ao salvar nivel do deck.'));
-      $('editCardsDeckLevelInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();saveCurrentDeckLevel().catch(error=>alert(error.message||'Erro ao salvar nivel do deck.'))}};
+      $('editCardsDeckLevelSaveBtn').onclick=()=>saveCurrentDeckLevel().catch(error=>alert(error.message||'Erro ao salvar slot do deck.'));
+      $('editCardsDeckLevelInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();saveCurrentDeckLevel().catch(error=>alert(error.message||'Erro ao salvar slot do deck.'))}};
       $('editCardsDeckSearchToggle').onclick=()=>{
         if(editCardsState.loading||!editCardsState.decks.length)return;
         if(editCardsState.searchMode){
