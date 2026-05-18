@@ -315,8 +315,8 @@
     }
 
     .mix-card--flashcards .mix-card__label {
-      color: #ff7a00;
-      text-shadow: 0 0 24px rgba(255, 122, 0, 0.22);
+      color: #ff2a2a;
+      text-shadow: 0 0 24px rgba(255, 42, 42, 0.35);
     }
 
     .mix-card--smartbooks .mix-card__label {
@@ -819,7 +819,7 @@
   <main class="modal">
     <section class="screen active" data-step="0">
       <div class="question-block">
-        <h1>Quanto vocÃª quer jogar por dia?</h1>
+        <h1>Quanto você quer jogar por dia?</h1>
       </div>
       <div class="options options--minutes" data-group="minutes">
         <button class="option" data-value="15"><span class="time-option__value">15</span><span class="time-option__unit">min</span></button>
@@ -833,7 +833,7 @@
 
     <section class="screen" data-step="1">
       <div class="question-block">
-        <h1>VocÃª vai treinar por quanto tempo?</h1>
+        <h1>Você vai treinar por quanto tempo?</h1>
       </div>
       <div class="options options--months" data-group="months">
         <button class="option" data-value="3">3 meses</button>
@@ -854,7 +854,7 @@
           <div class="mix-slider-track" id="mixSliderTrack">
             <div class="mix-slider-thumb" id="mixSliderThumb" aria-hidden="true"></div>
           </div>
-          <input class="mix-slider-input" id="mixSlider" type="range" min="0" max="100" step="1" value="50" aria-label="Escolha o percentual de Americano e BritÃ¢nico">
+          <input class="mix-slider-input" id="mixSlider" type="range" min="0" max="100" step="1" value="50" aria-label="Escolha o percentual de Americano e Britânico">
         </div>
         <div class="mix-cards">
           <div class="mix-card mix-card--flashcards">
@@ -871,7 +871,7 @@
               <img src="/SVG/codex-icons/british.svg" alt="">
             </div>
             <div class="mix-card__meta">
-              <span class="mix-card__label">BritÃ¢nico</span>
+              <span class="mix-card__label">Britânico</span>
               <span class="mix-card__value" id="britishPercent">50%</span>
             </div>
           </div>
@@ -887,7 +887,7 @@
     </section>
 
     <div class="live-result" id="liveResult" hidden>
-      <div class="live-kicker">COM ESSE PLANO VOCÃŠ ALCANÃ‡A</div>
+      <div class="live-kicker">COM ESSE PLANO VOCÊ ALCANÇA</div>
       <div class="live-title-wrap">
         <img class="live-medal" id="liveMedal" src="/medalhas/white.png" alt="Medalha de fluencia">
         <div class="live-title" id="liveTitle">Nenhum contato com o idioma ate agora.</div>
@@ -1177,7 +1177,7 @@
 
       options.forEach((button) => button.classList.add('is-warning'));
       if (els.liveTitle) {
-        els.liveTitle.textContent = 'Escolha uma opÃ§Ã£o';
+        els.liveTitle.textContent = 'Escolha uma opção';
         els.liveTitle.classList.remove('is-warning');
         void els.liveTitle.offsetWidth;
         els.liveTitle.classList.add('is-warning');
@@ -1191,7 +1191,7 @@
         clearOptionWarning(activeScreen);
         if (els.liveTitle) {
           els.liveTitle.classList.remove('is-warning');
-          els.liveTitle.textContent = state.liveTitleDefault || 'FluÃªncia prÃ¡tica';
+          els.liveTitle.textContent = state.liveTitleDefault || 'Fluência prática';
         }
         state.warningTimer = 0;
       }, 1000);
@@ -1361,7 +1361,7 @@
       void (async () => {
         busy = true;
         renderStep();
-        setStatus('Salvando seu plano de fluÃªncia...');
+        setStatus('Salvando seu plano de fluência...');
         try {
           persistAccentGameOption();
           const payload = await persistFluencyPlan();
@@ -1370,7 +1370,7 @@
           setStatus('Plano salvo com sucesso.', 'success');
           navigateTo(resolveNextRoute(user), { replace: true });
         } catch (error) {
-          setStatus(error?.message || 'NÃ£o foi possÃ­vel salvar o plano de fluÃªncia.', 'error');
+          setStatus(error?.message || 'Não foi possível salvar o plano de fluência.', 'error');
         } finally {
           busy = false;
           renderStep();
@@ -1414,7 +1414,7 @@
         setStatus('');
         renderStep();
       } catch (error) {
-        setStatus(error?.message || 'NÃ£o foi possÃ­vel abrir o plano de fluÃªncia.', 'error');
+        setStatus(error?.message || 'Não foi possível abrir o plano de fluência.', 'error');
       }
     }
 
@@ -1426,6 +1426,7 @@
   </script>
 </body>
 </html>
+
 
 
 
