@@ -6659,6 +6659,18 @@
       border-color: rgba(255, 216, 120, 0.24);
     }
 
+    .game[data-phase-key="fifth-star"] .textscreen .game-status-wrap.is-flashcards-count-display {
+      width: auto;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 216, 120, 0.24);
+      background: rgba(136, 96, 0, 0.92);
+      box-shadow:
+        0 0 0 1px rgba(255, 216, 120, 0.18),
+        0 10px 26px rgba(0, 0, 0, 0.25);
+    }
+
     .game[data-phase-key="third-star"] .textscreen .game-status {
       color: #ffffff !important;
       font-family: "Soopafre", Arial, sans-serif;
@@ -6674,6 +6686,16 @@
       width: 24px;
       height: 24px;
       filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+    }
+
+    .game[data-phase-key="fifth-star"] .textscreen .game-status-icon.is-coin-flash {
+      animation: fifthCoinIconFlash 640ms ease;
+    }
+
+    @keyframes fifthCoinIconFlash {
+      0% { transform: scale(1); filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35)); }
+      40% { transform: scale(1.18); filter: drop-shadow(0 0 14px rgba(255, 238, 138, 0.95)); }
+      100% { transform: scale(1); filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35)); }
     }
 
     .game[data-phase-key="third-star"] .textscreen .game-status-icon {
@@ -10338,7 +10360,7 @@
 
         <div class="game-status-slot textscreen" id="gameStatusSlot" aria-live="polite" aria-atomic="true">
           <h3 class="game-phase-word container-translations" id="gamePhaseWord" aria-live="polite"></h3>
-          <div class="game-status-wrap">
+          <div class="game-status-wrap" id="gameStatusWrap">
             <img class="game-status-icon" id="gameStatusIcon" alt="">
             <p class="game-status" id="gameStatus">Carregando rodada...</p>
           </div>
@@ -10629,6 +10651,7 @@
       const SUCCESS_SOUND_PATH = 'gamesounds/success.mp3';
       const FOUR_STARS_SOUND_PATH = 'newsongs/4stars.mp3';
       const FIVE_STARS_SOUND_PATH = '/accesskey/5star.mp3';
+      const FIFTH_STAGE_COINS_GAIN_SOUND_PATH = '/accesskey/fifth-stage-coins.mp3';
       const COINS_REWARD_SOUND_PATH = '/accesskey/coins.mp3';
       const WELCOME_MISSION_SOUND_PATH = '/accesskey/mission.mp3';
       const WELCOME_PLAY_SOUND_PATH = '/accesskey/play.mp3';
@@ -11293,6 +11316,7 @@
           gamePausedAtWelcome: false,
           gamePausedAtDailyPlan: false,
           gameStatusRankTimer: 0,
+          fifthStageCoinsSoundTimer: 0,
           gameStatusRankToken: 0,
           gameStatusLastCoinsTotal: 0,
           gameStatusPreviousRank: 0,
@@ -11539,6 +11563,7 @@
         gamePhaseWord: document.getElementById('gamePhaseWord'),
         gameStep: document.getElementById('gameStep'),
         gameStatus: document.getElementById('gameStatus'),
+        gameStatusWrap: document.getElementById('gameStatusWrap'),
         gameStatusIcon: document.getElementById('gameStatusIcon'),
         flashcardLevelProgress: document.getElementById('flashcardLevelProgress'),
         flashcardLevelProgressBar: document.getElementById('flashcardLevelProgressBar'),
@@ -20274,6 +20299,12 @@
           : (text || '');
         els.gameStatus.textContent = resolvedText;
         els.gameStatus.className = 'game-status';
+        if (els.gameStatusWrap) {
+          els.gameStatusWrap.classList.remove('is-flashcards-count-display');
+          if (tone === 'flashcards-count') {
+            els.gameStatusWrap.classList.add('is-flashcards-count-display');
+          }
+        }
         if (els.gameStatusIcon) {
           const iconPath = safeText(options.iconPath);
           els.gameStatusIcon.className = 'game-status-icon';
@@ -20283,6 +20314,9 @@
             els.gameStatusIcon.src = iconPath;
             els.gameStatusIcon.alt = safeText(options.iconLabel) || '';
             els.gameStatusIcon.classList.add('is-visible');
+            if (options.iconFlash) {
+              els.gameStatusIcon.classList.add('is-coin-flash');
+            }
           }
         }
         if (tone) {
@@ -20375,6 +20409,12 @@
         state.ui.gameStatusRankTimer = 0;
       }
 
+      function clearFifthStageCoinsSoundTimer() {
+        if (!state.ui.fifthStageCoinsSoundTimer) return;
+        window.clearTimeout(state.ui.fifthStageCoinsSoundTimer);
+        state.ui.fifthStageCoinsSoundTimer = 0;
+      }
+
       async function refreshCurrentPlayerRank() {
         try {
           await ensureProvisionedUser();
@@ -20421,7 +20461,8 @@
         clearGameStatusRankTimer();
         setGameStatus(String(previousCoins), 'flashcards-count', {
           iconPath: COINS_ICON_PATH,
-          iconLabel: 'Moedas'
+          iconLabel: 'Moedas',
+          iconFlash: true
         });
         state.lastLevelUpLevel = 0;
         state.ui.gameStatusRankTimer = window.setTimeout(async () => {
@@ -20876,6 +20917,17 @@
         } catch (_error) {
           // ignore
         }
+      }
+
+      function queueFifthStageCoinsGainAudio(delayMs = 500) {
+        if (state.ui.fifthStageCoinsSoundTimer) {
+          window.clearTimeout(state.ui.fifthStageCoinsSoundTimer);
+          state.ui.fifthStageCoinsSoundTimer = 0;
+        }
+        state.ui.fifthStageCoinsSoundTimer = window.setTimeout(() => {
+          state.ui.fifthStageCoinsSoundTimer = 0;
+          playStatusCueAudio(FIFTH_STAGE_COINS_GAIN_SOUND_PATH);
+        }, Math.max(0, Number(delayMs) || 0));
       }
 
       function resolveSelectedGameSpeed() {
@@ -24574,6 +24626,7 @@
             triggerFourStarGlow();
           } else if (entry.stars === 5) {
             playMilestoneAudio(FIVE_STARS_SOUND_PATH);
+            queueFifthStageCoinsGainAudio(500);
           } else {
             playSuccessAudio();
           }
