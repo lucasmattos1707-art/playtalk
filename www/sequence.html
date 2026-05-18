@@ -101,6 +101,13 @@
       font-weight:800;
       cursor:pointer;
     }
+    .deck-expand-btn{
+      font-size:20px;
+      line-height:1;
+      padding:0;
+      display:grid;
+      place-items:center;
+    }
     .deck-items{display:none;margin-top:10px;gap:8px}
     .deck.is-open .deck-items{display:grid}
     .card{
@@ -225,7 +232,7 @@
           .filter((deck) => deck.source && Number.isInteger(deck.deckLevel));
 
         sortDecksBySlot();
-        state.openDecks = new Set(state.decks.map((deck) => deck.source));
+        state.openDecks = new Set();
         state.selectedCardKeys.clear();
         state.selectionAnchor = null;
         state.selectedDeckSource = state.decks[0]?.source || '';
@@ -497,46 +504,41 @@
             </span>
             <span class="deck-actions">
               <span class="deck-meta">${deck.items.length} cards</span>
-              <button type="button" data-action="up" aria-label="Subir slot">&uarr;</button>
-              <button type="button" data-action="down" aria-label="Descer slot">&darr;</button>
+              <button type="button" class="deck-expand-btn" data-action="toggle" aria-label="${state.openDecks.has(deck.source) ? 'Fechar deck' : 'Abrir deck'}">${state.openDecks.has(deck.source) ? '−' : '+'}</button>
             </span>
           `;
           head.addEventListener('click', () => {
             selectDeck(deck.source);
             render();
           });
-          head.querySelector('[data-action="up"]')?.addEventListener('click', (event) => {
+          head.querySelector('[data-action="toggle"]')?.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
-            moveDeckSlot(deck.source, 'up');
-          });
-          head.querySelector('[data-action="down"]')?.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            moveDeckSlot(deck.source, 'down');
+            toggleDeck(deck.source);
           });
           box.appendChild(head);
 
-          const itemsHost = document.createElement('div');
-          itemsHost.className = 'deck-items';
-          deck.items.forEach((item) => {
-            const row = document.createElement('button');
-            row.type = 'button';
-            row.className = 'card';
-            const selected = isSelectedCard(deck.source, item.id);
-            if (selected) row.classList.add('is-selected');
-            if (hasSelection && !selected) row.classList.add('is-dimmed');
-            row.innerHTML = `
-              <span class="pick${selected ? ' is-on' : ''}" aria-hidden="true"></span>
-              <img src="${item.image || ''}" alt="">
-              <span class="label">${item.english || item.portuguese || '(sem texto)'}</span>
-              <span class="id">${item.id}</span>
-            `;
-            row.addEventListener('click', (event) => selectCard(deck.source, item.id, event));
-            itemsHost.appendChild(row);
-          });
-
-          box.appendChild(itemsHost);
+          if (state.openDecks.has(deck.source)) {
+            const itemsHost = document.createElement('div');
+            itemsHost.className = 'deck-items';
+            deck.items.forEach((item) => {
+              const row = document.createElement('button');
+              row.type = 'button';
+              row.className = 'card';
+              const selected = isSelectedCard(deck.source, item.id);
+              if (selected) row.classList.add('is-selected');
+              if (hasSelection && !selected) row.classList.add('is-dimmed');
+              row.innerHTML = `
+                <span class="pick${selected ? ' is-on' : ''}" aria-hidden="true"></span>
+                <img src="${item.image || ''}" alt="">
+                <span class="label">${item.english || item.portuguese || '(sem texto)'}</span>
+                <span class="id">${item.id}</span>
+              `;
+              row.addEventListener('click', (event) => selectCard(deck.source, item.id, event));
+              itemsHost.appendChild(row);
+            });
+            box.appendChild(itemsHost);
+          }
           host.appendChild(box);
         });
       }
