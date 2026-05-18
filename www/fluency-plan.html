@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -818,7 +818,7 @@
   <main class="modal">
     <section class="screen active" data-step="0">
       <div class="question-block">
-        <h1>Quanto você quer jogar por dia?</h1>
+        <h1>Quanto vocÃª quer jogar por dia?</h1>
       </div>
       <div class="options options--minutes" data-group="minutes">
         <button class="option" data-value="15"><span class="time-option__value">15</span><span class="time-option__unit">min</span></button>
@@ -832,7 +832,7 @@
 
     <section class="screen" data-step="1">
       <div class="question-block">
-        <h1>Você vai treinar por quanto tempo?</h1>
+        <h1>VocÃª vai treinar por quanto tempo?</h1>
       </div>
       <div class="options options--months" data-group="months">
         <button class="option" data-value="3">3 meses</button>
@@ -846,25 +846,14 @@
 
     <section class="screen" data-step="2">
       <div class="question-block">
-        <h1>Qual foco de pronúncia você quer manter?</h1>
-      </div>
-      <div class="options three-text options--application" data-group="application">
-        <button class="option" data-value="0">Leve</button>
-        <button class="option" data-value="1">Equilibrado</button>
-        <button class="option" data-value="2">Intenso</button>
-      </div>
-    </section>
-
-    <section class="screen" data-step="30">
-      <div class="question-block">
-        <h1>Qual porcentagem de pronúncia você quer treinar?</h1>
+        <h1>Qual porcentagem de pronÃºncia vocÃª quer treinar?</h1>
       </div>
       <div class="mix-stage">
         <div class="mix-slider-shell" id="mixSliderShell">
           <div class="mix-slider-track" id="mixSliderTrack">
             <div class="mix-slider-thumb" id="mixSliderThumb" aria-hidden="true"></div>
           </div>
-          <input class="mix-slider-input" id="mixSlider" type="range" min="0" max="100" step="1" value="50" aria-label="Escolha o percentual de Americano e Britânico">
+          <input class="mix-slider-input" id="mixSlider" type="range" min="0" max="100" step="1" value="50" aria-label="Escolha o percentual de Americano e BritÃ¢nico">
         </div>
         <div class="mix-cards">
           <div class="mix-card mix-card--flashcards">
@@ -901,7 +890,7 @@
               </svg>
             </div>
             <div class="mix-card__meta">
-              <span class="mix-card__label">Britânico</span>
+              <span class="mix-card__label">BritÃ¢nico</span>
               <span class="mix-card__value" id="britishPercent">50%</span>
             </div>
           </div>
@@ -917,7 +906,7 @@
     </section>
 
     <div class="live-result" id="liveResult" hidden>
-      <div class="live-kicker">COM ESSE PLANO VOCÊ ALCANÇA</div>
+      <div class="live-kicker">COM ESSE PLANO VOCÃŠ ALCANÃ‡A</div>
       <div class="live-title-wrap">
         <img class="live-medal" id="liveMedal" src="/medalhas/white.png" alt="Medalha de fluencia">
         <div class="live-title" id="liveTitle">Nenhum contato com o idioma ate agora.</div>
@@ -1122,17 +1111,10 @@
       return 1;
     }
 
-    function pronunciationMultiplier(applicationMode) {
-      const mode = Math.max(0, Math.min(2, Number(applicationMode) || 0));
-      if (mode <= 0) return 0.9;
-      if (mode === 1) return 1;
-      return 1.1;
-    }
-
     function calculate() {
       const vectorA = vectorByTime(state.minutes);
       const afterJourney = vectorA * monthsMultiplier(state.months);
-      const finalScore = clamp(afterJourney * pronunciationMultiplier(state.application), 0, 200);
+      const finalScore = clamp(afterJourney, 0, 200);
 
       return {
         finalScore
@@ -1197,8 +1179,7 @@
     function requiredGroupForStep(currentStep) {
       if (currentStep === 0) return 'minutes';
       if (currentStep === 1) return 'months';
-      if (currentStep === 2) return 'application';
-      return '';
+            return '';
     }
 
     function clearOptionWarning(screen) {
@@ -1215,7 +1196,7 @@
 
       options.forEach((button) => button.classList.add('is-warning'));
       if (els.liveTitle) {
-        els.liveTitle.textContent = 'Escolha uma opção';
+        els.liveTitle.textContent = 'Escolha uma opÃ§Ã£o';
         els.liveTitle.classList.remove('is-warning');
         void els.liveTitle.offsetWidth;
         els.liveTitle.classList.add('is-warning');
@@ -1229,7 +1210,7 @@
         clearOptionWarning(activeScreen);
         if (els.liveTitle) {
           els.liveTitle.classList.remove('is-warning');
-          els.liveTitle.textContent = state.liveTitleDefault || 'Fluência prática';
+          els.liveTitle.textContent = state.liveTitleDefault || 'FluÃªncia prÃ¡tica';
         }
         state.warningTimer = 0;
       }, 1000);
@@ -1399,7 +1380,7 @@
       void (async () => {
         busy = true;
         renderStep();
-        setStatus('Salvando seu plano de fluência...');
+        setStatus('Salvando seu plano de fluÃªncia...');
         try {
           persistAccentGameOption();
           const payload = await persistFluencyPlan();
@@ -1408,7 +1389,7 @@
           setStatus('Plano salvo com sucesso.', 'success');
           navigateTo(resolveNextRoute(user), { replace: true });
         } catch (error) {
-          setStatus(error?.message || 'Não foi possível salvar o plano de fluência.', 'error');
+          setStatus(error?.message || 'NÃ£o foi possÃ­vel salvar o plano de fluÃªncia.', 'error');
         } finally {
           busy = false;
           renderStep();
@@ -1452,7 +1433,7 @@
         setStatus('');
         renderStep();
       } catch (error) {
-        setStatus(error?.message || 'Não foi possível abrir o plano de fluência.', 'error');
+        setStatus(error?.message || 'NÃ£o foi possÃ­vel abrir o plano de fluÃªncia.', 'error');
       }
     }
 
@@ -1464,4 +1445,5 @@
   </script>
 </body>
 </html>
+
 
