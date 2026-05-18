@@ -1037,7 +1037,9 @@
       clickSound: null,
       nextOnboardingRoute: '',
       previewAccent: '',
-      previewToken: 0
+      previewAudio: null,
+      accentPreviewTracks: { american: [], british: [] },
+      accentPreviewCursor: { american: 0, british: 0 }
     };
 
     const labels = [
@@ -1130,18 +1132,6 @@
       }
     }
 
-    const previewPhrases = ['The house', 'The door', 'The man'];
-
-    function resolveAccentVoice(accent) {
-      const language = accent === 'british' ? 'en-GB' : 'en-US';
-      const voices = window.speechSynthesis?.getVoices?.() || [];
-      const matcher = accent === 'british'
-        ? /en[-_ ]gb|brit/i
-        : /en[-_ ]us|american|united states/i;
-      const voice = voices.find((item) => matcher.test(`${item.lang} ${item.name}`)) || voices.find((item) => /^en[-_]/i.test(item.lang)) || null;
-      return { language, voice };
-    }
-
     function updateAccentPreviewButtons() {
       els.accentPreviewButtons.forEach((button) => {
         button.classList.toggle('is-playing', button.dataset.accentPreview === state.previewAccent);
@@ -1149,48 +1139,88 @@
     }
 
     function stopAccentPreview() {
-      state.previewToken += 1;
       state.previewAccent = '';
+      if (state.previewAudio) {
+        try {
+          state.previewAudio.pause();
+          state.previewAudio.currentTime = 0;
+        } catch (_error) {
+          // ignora
+        }
+      }
+      state.previewAudio = null;
       updateAccentPreviewButtons();
-      if (window.speechSynthesis && typeof window.speechSynthesis.cancel === 'function') {
-        window.speechSynthesis.cancel();
+    }
+
+    async function loadAccentPreviewTracks() {
+      try {
+        const response = await fetch('/api/flashcards/sequence', { credentials: 'include', cache: 'no-store' });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.success) return;
+        const decks = Array.isArray(payload?.state?.decks) ? payload.state.decks : [];
+        const sorted = decks
+          .filter((deck) => Number.isInteger(Number(deck?.deckLevel)))
+          .sort((a, b) => Number(a.deckLevel) - Number(b.deckLevel));
+        const level1Deck = sorted.find((deck) => Number(deck.deckLevel) === 1) || sorted[0];
+        const firstItems = Array.isArray(level1Deck?.items) ? level1Deck.items.slice(0, 3) : [];
+        state.accentPreviewTracks.american = firstItems
+          .map((item) => String(item?.audio || '').trim())
+          .filter(Boolean);
+        state.accentPreviewTracks.british = firstItems
+          .map((item) => String(item?.audio2 || '').trim())
+          .filter(Boolean);
+        state.accentPreviewCursor.american = 0;
+        state.accentPreviewCursor.british = 0;
+      } catch (_error) {
+        // fallback silencioso
       }
     }
 
     function playAccentPreview(accent) {
-      if (!window.speechSynthesis || typeof window.SpeechSynthesisUtterance !== 'function') {
-        setStatus('Prévia de voz não suportada neste dispositivo.', 'error');
+      const tracks = accent === 'british' ? state.accentPreviewTracks.british : state.accentPreviewTracks.american;
+      if (!tracks.length) {
+        setStatus('Áudios de prévia ainda não disponíveis.', 'error');
         return;
       }
-      state.previewToken += 1;
-      const token = state.previewToken;
       state.previewAccent = accent;
       updateAccentPreviewButtons();
-      window.speechSynthesis.cancel();
-
-      const { language, voice } = resolveAccentVoice(accent);
-      const rate = accent === 'british' ? 0.91 : 0.95;
-
-      const speakIndex = (index) => {
-        if (token !== state.previewToken || state.previewAccent !== accent) return;
-        const phrase = previewPhrases[index % previewPhrases.length];
-        const utterance = new SpeechSynthesisUtterance(phrase);
-        utterance.lang = language;
-        utterance.rate = rate;
-        utterance.pitch = 1;
-        if (voice) utterance.voice = voice;
-        utterance.onend = () => {
-          if (token !== state.previewToken || state.previewAccent !== accent) return;
-          speakIndex((index + 1) % previewPhrases.length);
-        };
-        utterance.onerror = () => {
-          if (token !== state.previewToken || state.previewAccent !== accent) return;
-          window.setTimeout(() => speakIndex((index + 1) % previewPhrases.length), 320);
-        };
-        window.speechSynthesis.speak(utterance);
-      };
-
-      speakIndex(0);
+      const index = state.accentPreviewCursor[accent] % tracks.length;
+      state.accentPreviewCursor[accent] = (index + 1) % tracks.length;
+      if (state.previewAudio) {
+        try {
+          state.previewAudio.pause();
+          state.previewAudio.currentTime = 0;
+        } catch (_error) {
+          // ignora
+        }
+      }
+      const audio = new Audio(tracks[index]);
+      audio.preload = 'auto';
+      audio.addEventListener('ended', () => {
+        if (state.previewAudio === audio) {
+          state.previewAccent = '';
+          state.previewAudio = null;
+          updateAccentPreviewButtons();
+        }
+      }, { once: true });
+      audio.addEventListener('error', () => {
+        if (state.previewAudio === audio) {
+          state.previewAccent = '';
+          state.previewAudio = null;
+          updateAccentPreviewButtons();
+        }
+      }, { once: true });
+      state.previewAudio = audio;
+      const playback = audio.play();
+      if (playback && typeof playback.catch === 'function') {
+        playback.catch(() => {
+          if (state.previewAudio === audio) {
+            state.previewAccent = '';
+            state.previewAudio = null;
+            updateAccentPreviewButtons();
+          }
+        });
+      }
     }
 
     function setStatus(message, tone = '') {
@@ -1578,6 +1608,7 @@
     async function init() {
       setStatus('Carregando seu plano...');
       try {
+        await loadAccentPreviewTracks();
         const payload = await fetchFluencyPlan();
         const user = normalizeUser(payload.user);
         if (user?.nextOnboardingRoute && !/^\/fluency-plan(?:[/?#]|$)/i.test(user.nextOnboardingRoute)) {
@@ -1596,9 +1627,6 @@
     syncSelectedOptionsFromState();
     renderStep();
     updateMixSelection(state.mixVisual);
-    if (window.speechSynthesis && typeof window.speechSynthesis.onvoiceschanged !== 'undefined') {
-      window.speechSynthesis.onvoiceschanged = () => {};
-    }
     window.addEventListener('beforeunload', stopAccentPreview);
     ensureClickSound();
     void init();
