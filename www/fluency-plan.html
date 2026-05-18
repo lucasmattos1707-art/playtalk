@@ -88,6 +88,22 @@
       align-items: center;
     }
 
+    .question-icon {
+      width: 150px;
+      height: 150px;
+      display: block;
+      margin-top: 8px;
+      filter: drop-shadow(0 0 24px rgba(72, 194, 255, 0.5));
+      opacity: 0.98;
+    }
+
+    .question-icon path,
+    .question-icon line,
+    .question-icon circle,
+    .question-icon rect {
+      stroke: #48c2ff;
+    }
+
     .stage-illustration {
       width: clamp(149px, 21.5vw, 226px);
       height: auto;
@@ -302,6 +318,37 @@
       flex-direction: column;
       gap: 4px;
       min-width: 0;
+    }
+
+    .mix-preview-btn {
+      margin-left: auto;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.12);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      flex: 0 0 auto;
+      transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+
+    .mix-preview-btn:hover {
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.18);
+    }
+
+    .mix-preview-btn.is-playing {
+      box-shadow: 0 0 18px rgba(255,255,255,0.42);
+      background: rgba(255,255,255,0.24);
+    }
+
+    .mix-preview-btn img {
+      width: 20px;
+      height: 20px;
+      filter: brightness(0) invert(1);
+      pointer-events: none;
     }
 
     .mix-card__label {
@@ -694,6 +741,26 @@
       .mix-card { min-height: 92px; width: min(440px, 100%); }
     }
 
+    @media (min-width: 901px) {
+      .question-block {
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .question-icon {
+        width: 92px;
+        height: 92px;
+        margin-top: 0;
+        flex: 0 0 auto;
+      }
+
+      .question-block h1 {
+        text-align: left;
+      }
+    }
+
     @media (max-height: 760px) {
       .modal { padding: 8px 10px; }
       .screen {
@@ -820,6 +887,12 @@
     <section class="screen active" data-step="0">
       <div class="question-block">
         <h1>Quanto você quer jogar por dia?</h1>
+        <svg class="question-icon" viewBox="0 0 150 150" fill="none" aria-hidden="true">
+          <circle cx="75" cy="75" r="52" stroke-width="8"/>
+          <line x1="75" y1="75" x2="75" y2="46" stroke-width="8" stroke-linecap="round"/>
+          <line x1="75" y1="75" x2="97" y2="86" stroke-width="8" stroke-linecap="round"/>
+          <circle cx="75" cy="75" r="70" stroke-width="3" opacity="0.55"/>
+        </svg>
       </div>
       <div class="options options--minutes" data-group="minutes">
         <button class="option" data-value="15"><span class="time-option__value">15</span><span class="time-option__unit">min</span></button>
@@ -834,6 +907,14 @@
     <section class="screen" data-step="1">
       <div class="question-block">
         <h1>Você vai treinar por quanto tempo?</h1>
+        <svg class="question-icon" viewBox="0 0 150 150" fill="none" aria-hidden="true">
+          <rect x="22" y="30" width="106" height="96" rx="18" stroke-width="8"/>
+          <line x1="22" y1="57" x2="128" y2="57" stroke-width="8"/>
+          <line x1="48" y1="19" x2="48" y2="40" stroke-width="8" stroke-linecap="round"/>
+          <line x1="102" y1="19" x2="102" y2="40" stroke-width="8" stroke-linecap="round"/>
+          <rect x="44" y="74" width="20" height="20" rx="4" stroke-width="6"/>
+          <rect x="84" y="74" width="20" height="20" rx="4" stroke-width="6"/>
+        </svg>
       </div>
       <div class="options options--months" data-group="months">
         <button class="option" data-value="3">3 meses</button>
@@ -848,6 +929,17 @@
     <section class="screen" data-step="2">
       <div class="question-block">
         <h1>Qual porcentagem de pronúncia você quer treinar?</h1>
+        <svg class="question-icon" viewBox="0 0 150 150" fill="none" aria-hidden="true">
+          <line x1="14" y1="75" x2="34" y2="75" stroke-width="6" stroke-linecap="round"/>
+          <line x1="40" y1="75" x2="48" y2="56" stroke-width="6" stroke-linecap="round"/>
+          <line x1="48" y1="56" x2="58" y2="94" stroke-width="6" stroke-linecap="round"/>
+          <line x1="58" y1="94" x2="70" y2="40" stroke-width="6" stroke-linecap="round"/>
+          <line x1="70" y1="40" x2="80" y2="108" stroke-width="6" stroke-linecap="round"/>
+          <line x1="80" y1="108" x2="92" y2="60" stroke-width="6" stroke-linecap="round"/>
+          <line x1="92" y1="60" x2="104" y2="86" stroke-width="6" stroke-linecap="round"/>
+          <line x1="104" y1="86" x2="116" y2="75" stroke-width="6" stroke-linecap="round"/>
+          <line x1="122" y1="75" x2="136" y2="75" stroke-width="6" stroke-linecap="round"/>
+        </svg>
       </div>
       <div class="mix-stage">
         <div class="mix-slider-shell" id="mixSliderShell">
@@ -865,6 +957,9 @@
               <span class="mix-card__label">Americano</span>
               <span class="mix-card__value" id="americanPercent">50%</span>
             </div>
+            <button class="mix-preview-btn" type="button" data-accent-preview="american" aria-label="Ouvir prévia de voz americana">
+              <img src="/SVG/codex-icons/volume.svg" alt="">
+            </button>
           </div>
           <div class="mix-card mix-card--smartbooks">
             <div class="mix-icon mix-icon--smartbooks" aria-hidden="true">
@@ -874,6 +969,9 @@
               <span class="mix-card__label">Britânico</span>
               <span class="mix-card__value" id="britishPercent">50%</span>
             </div>
+            <button class="mix-preview-btn" type="button" data-accent-preview="british" aria-label="Ouvir prévia de voz britânica">
+              <img src="/SVG/codex-icons/volume.svg" alt="">
+            </button>
           </div>
         </div>
       </div>
@@ -937,7 +1035,9 @@
       liveTitleDefault: '',
       warningTimer: 0,
       clickSound: null,
-      nextOnboardingRoute: ''
+      nextOnboardingRoute: '',
+      previewAccent: '',
+      previewToken: 0
     };
 
     const labels = [
@@ -970,6 +1070,7 @@
       britishPercent: document.getElementById('britishPercent'),
       skipPlanBtn: document.getElementById('skipPlanBtn')
     };
+    els.accentPreviewButtons = Array.from(document.querySelectorAll('[data-accent-preview]'));
 
     function clamp(value, min, max) {
       return Math.max(min, Math.min(max, value));
@@ -1027,6 +1128,69 @@
       } catch (_error) {
         // Ignora falha silenciosamente para nao atrapalhar a interacao.
       }
+    }
+
+    const previewPhrases = ['The house', 'The door', 'The man'];
+
+    function resolveAccentVoice(accent) {
+      const language = accent === 'british' ? 'en-GB' : 'en-US';
+      const voices = window.speechSynthesis?.getVoices?.() || [];
+      const matcher = accent === 'british'
+        ? /en[-_ ]gb|brit/i
+        : /en[-_ ]us|american|united states/i;
+      const voice = voices.find((item) => matcher.test(`${item.lang} ${item.name}`)) || voices.find((item) => /^en[-_]/i.test(item.lang)) || null;
+      return { language, voice };
+    }
+
+    function updateAccentPreviewButtons() {
+      els.accentPreviewButtons.forEach((button) => {
+        button.classList.toggle('is-playing', button.dataset.accentPreview === state.previewAccent);
+      });
+    }
+
+    function stopAccentPreview() {
+      state.previewToken += 1;
+      state.previewAccent = '';
+      updateAccentPreviewButtons();
+      if (window.speechSynthesis && typeof window.speechSynthesis.cancel === 'function') {
+        window.speechSynthesis.cancel();
+      }
+    }
+
+    function playAccentPreview(accent) {
+      if (!window.speechSynthesis || typeof window.SpeechSynthesisUtterance !== 'function') {
+        setStatus('Prévia de voz não suportada neste dispositivo.', 'error');
+        return;
+      }
+      state.previewToken += 1;
+      const token = state.previewToken;
+      state.previewAccent = accent;
+      updateAccentPreviewButtons();
+      window.speechSynthesis.cancel();
+
+      const { language, voice } = resolveAccentVoice(accent);
+      const rate = accent === 'british' ? 0.91 : 0.95;
+
+      const speakIndex = (index) => {
+        if (token !== state.previewToken || state.previewAccent !== accent) return;
+        const phrase = previewPhrases[index % previewPhrases.length];
+        const utterance = new SpeechSynthesisUtterance(phrase);
+        utterance.lang = language;
+        utterance.rate = rate;
+        utterance.pitch = 1;
+        if (voice) utterance.voice = voice;
+        utterance.onend = () => {
+          if (token !== state.previewToken || state.previewAccent !== accent) return;
+          speakIndex((index + 1) % previewPhrases.length);
+        };
+        utterance.onerror = () => {
+          if (token !== state.previewToken || state.previewAccent !== accent) return;
+          window.setTimeout(() => speakIndex((index + 1) % previewPhrases.length), 320);
+        };
+        window.speechSynthesis.speak(utterance);
+      };
+
+      speakIndex(0);
     }
 
     function setStatus(message, tone = '') {
@@ -1154,6 +1318,9 @@
       }
       els.nextBtn.textContent = step < totalChoiceSteps ? 'Continuar' : (busy ? 'Salvando...' : 'Continuar');
       els.stepFill.style.width = `${clamp(((step + 1) / 4) * 100, 25, 100)}%`;
+      if (step !== 2 && state.previewAccent) {
+        stopAccentPreview();
+      }
       updateResult();
     }
 
@@ -1335,6 +1502,14 @@
       });
     }
 
+    els.accentPreviewButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        if (busy) return;
+        playClickSound();
+        playAccentPreview(button.dataset.accentPreview || 'american');
+      });
+    });
+
     els.backBtn.addEventListener('click', () => {
       if (busy || step === 0) return;
       playClickSound();
@@ -1421,6 +1596,10 @@
     syncSelectedOptionsFromState();
     renderStep();
     updateMixSelection(state.mixVisual);
+    if (window.speechSynthesis && typeof window.speechSynthesis.onvoiceschanged !== 'undefined') {
+      window.speechSynthesis.onvoiceschanged = () => {};
+    }
+    window.addEventListener('beforeunload', stopAccentPreview);
     ensureClickSound();
     void init();
   </script>
