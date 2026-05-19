@@ -10780,7 +10780,7 @@
               return {
                 minSpeed,
                 maxSpeed,
-                levelGainPerMinute: Math.max(0, Math.min(20, Number((Number(String(entry?.levelGainPerMinute ?? 0).replace(',', '.')) || 0).toFixed(2))))
+                levelGainPerMinute: Math.max(-20, Math.min(20, Number((Number(String(entry?.levelGainPerMinute ?? 0).replace(',', '.')) || 0).toFixed(2))))
               };
             }).filter(Boolean)
           : defaults.speedLevelGainRules.slice();

@@ -466,7 +466,7 @@
           return {
             minSpeed,
             maxSpeed,
-            levelGainPerMinute: Math.max(0, Math.min(20, Number(parseLocaleDecimal(entry?.levelGainPerMinute, 0).toFixed(2))))
+            levelGainPerMinute: Math.max(-20, Math.min(20, Number(parseLocaleDecimal(entry?.levelGainPerMinute, 0).toFixed(2))))
           };
         }).filter(Boolean)
       : defaults.speedLevelGainRules.slice();
@@ -625,7 +625,7 @@
       const rows = snapshot.speedLevelGainRules.map((entry, index) => {
         const minSpeed = Math.max(0, Math.floor(Number(entry?.minSpeed) || 0));
         const maxSpeed = entry?.maxSpeed === null ? '' : Math.max(minSpeed, Math.floor(Number(entry?.maxSpeed) || minSpeed));
-        const levelGainPerMinute = Math.max(0, Math.min(20, Number(parseLocaleDecimal(entry?.levelGainPerMinute, 0).toFixed(2))));
+        const levelGainPerMinute = Math.max(-20, Math.min(20, Number(parseLocaleDecimal(entry?.levelGainPerMinute, 0).toFixed(2))));
         return `
           <tr data-speed-gain-row="${index}">
             <td><input type="number" min="0" max="100000" step="1" value="${minSpeed}" data-speed-gain-field="minSpeed"></td>
@@ -659,7 +659,7 @@
       const maxSpeed = String(maxRaw || '').trim() === ''
         ? null
         : Math.max(minSpeed, Math.floor(Number(maxRaw) || minSpeed));
-      const levelGainPerMinute = Math.max(0, Math.min(20, Number(parseLocaleDecimal(row.querySelector('[data-speed-gain-field="levelGainPerMinute"]')?.value, 0).toFixed(2))));
+      const levelGainPerMinute = Math.max(-20, Math.min(20, Number(parseLocaleDecimal(row.querySelector('[data-speed-gain-field="levelGainPerMinute"]')?.value, 0).toFixed(2))));
       return { minSpeed, maxSpeed, levelGainPerMinute };
     });
 

@@ -1404,11 +1404,12 @@ function normalizeFlashcardLevelDynamicsSnapshot(value = {}) {
         ? null
         : Math.max(minSpeed, Math.floor(Number(entry?.maxSpeed) || minSpeed));
       const levelGainPerMinute = Math.max(0, Math.min(20, Number(parseLocalizedDecimal(entry?.levelGainPerMinute, 0).toFixed(2))));
+      const normalizedLevelGainPerMinute = Math.max(-20, Math.min(20, Number(parseLocalizedDecimal(entry?.levelGainPerMinute, 0).toFixed(2))));
       if (!hasMax) return null;
       return {
         minSpeed,
         maxSpeed: normalizedMax,
-        levelGainPerMinute
+        levelGainPerMinute: normalizedLevelGainPerMinute
       };
     })
     .filter(Boolean)
@@ -1460,7 +1461,7 @@ function resolveFlashcardSpeedLevelGainPerMinute(speedPerHour, dynamicsSettings 
   const match = snapshot.speedLevelGainRules.find((rule) => (
     speed >= rule.minSpeed && (rule.maxSpeed === null || speed <= rule.maxSpeed)
   ));
-  return Math.max(0, Number(match?.levelGainPerMinute) || 0);
+  return Math.max(-20, Math.min(20, Number(match?.levelGainPerMinute) || 0));
 }
 
 function resolveFlashcardFirstStageMissLevelLoss(level, dynamicsSettings = null) {
@@ -5715,13 +5716,13 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
   const levelGainPerMinute = resolveFlashcardSpeedLevelGainPerMinute(speedPerHour, levelDynamicsSettings);
   const levelDeltaRaw = practiceMinutes * levelGainPerMinute;
   const levelDelta = roundLevelDeltaByThreshold(levelDeltaRaw, 200);
-  if (levelDelta <= 0) {
+  if (levelDelta === 0) {
     return { levelDelta: 0, levelDeltaRaw: 0, practiceMinutes, speedPerHour };
   }
 
   await client.query(
     `UPDATE public.users
-     SET level = LEAST(200, GREATEST(1, COALESCE(level, 1)) + $2),
+     SET level = GREATEST(1, LEAST(200, GREATEST(1, COALESCE(level, 1)) + $2)),
          level_updated_at = now()
      WHERE id = $1`,
     [normalizedUserId, levelDelta]
