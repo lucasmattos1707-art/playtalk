@@ -21068,7 +21068,7 @@ app.get(['/admin', '/admin/', '/admin.html'], async (req, res) => {
   }
 });
 
-app.get(['/sounds', '/sounds/', '/sounds.html'], async (req, res) => {
+app.get(['/sounds', '/sounds/', '/sounds.html', '/audios', '/audios/', '/audios.html'], async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
     res.sendFile(path.join(staticDir, 'sounds.html'));
