@@ -478,9 +478,25 @@
         })).filter((entry) => entry.levelLoss > 0)
       : defaults.firstStageMissPenaltyRules.slice();
 
+    const normalizedSpeedRules = speedLevelGainRules.length
+      ? speedLevelGainRules.sort((a, b) => a.minSpeed - b.minSpeed)
+      : defaults.speedLevelGainRules.slice();
+    const speedByMin = new Map(normalizedSpeedRules.map((rule) => [rule.minSpeed, rule]));
+    const mergedSpeedRules = defaults.speedLevelGainRules.map((rule) => (
+      speedByMin.get(rule.minSpeed) || { ...rule }
+    ));
+
+    const normalizedPenaltyRules = firstStageMissPenaltyRules.length
+      ? firstStageMissPenaltyRules.sort((a, b) => b.minLevel - a.minLevel)
+      : defaults.firstStageMissPenaltyRules.slice();
+    const penaltyByMin = new Map(normalizedPenaltyRules.map((rule) => [rule.minLevel, rule]));
+    const mergedPenaltyRules = defaults.firstStageMissPenaltyRules.map((rule) => (
+      penaltyByMin.get(rule.minLevel) || { ...rule }
+    ));
+
     return {
-      speedLevelGainRules: speedLevelGainRules.length ? speedLevelGainRules.sort((a, b) => a.minSpeed - b.minSpeed) : defaults.speedLevelGainRules.slice(),
-      firstStageMissPenaltyRules: firstStageMissPenaltyRules.length ? firstStageMissPenaltyRules.sort((a, b) => b.minLevel - a.minLevel) : defaults.firstStageMissPenaltyRules.slice()
+      speedLevelGainRules: mergedSpeedRules,
+      firstStageMissPenaltyRules: mergedPenaltyRules.sort((a, b) => b.minLevel - a.minLevel)
     };
   }
 

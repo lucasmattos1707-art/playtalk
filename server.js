@@ -1426,9 +1426,21 @@ function normalizeFlashcardLevelDynamicsSnapshot(value = {}) {
     .filter((entry) => entry.levelLoss > 0)
     .sort((a, b) => b.minLevel - a.minLevel);
 
+  const normalizedSpeedRules = speedLevelGainRules.length ? speedLevelGainRules : defaultSpeedRules;
+  const speedByMin = new Map(normalizedSpeedRules.map((rule) => [rule.minSpeed, rule]));
+  const mergedSpeedRules = defaultSpeedRules.map((rule) => (
+    speedByMin.get(rule.minSpeed) || { ...rule }
+  ));
+
+  const normalizedPenaltyRules = firstStageMissPenaltyRules.length ? firstStageMissPenaltyRules : defaultPenaltyRules;
+  const penaltyByMin = new Map(normalizedPenaltyRules.map((rule) => [rule.minLevel, rule]));
+  const mergedPenaltyRules = defaultPenaltyRules.map((rule) => (
+    penaltyByMin.get(rule.minLevel) || { ...rule }
+  ));
+
   return {
-    speedLevelGainRules: speedLevelGainRules.length ? speedLevelGainRules : defaultSpeedRules,
-    firstStageMissPenaltyRules: firstStageMissPenaltyRules.length ? firstStageMissPenaltyRules : defaultPenaltyRules
+    speedLevelGainRules: mergedSpeedRules,
+    firstStageMissPenaltyRules: mergedPenaltyRules.sort((a, b) => b.minLevel - a.minLevel)
   };
 }
 
