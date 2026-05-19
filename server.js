@@ -323,8 +323,7 @@ const FLASHCARD_CARD_VALUE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_XP_VALUE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_DECK_CARD_LIMIT_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_XP_LEVEL_CURVE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
-const FLASHCARD_SPEED_SAMPLE_LIMIT = 100;
-const FLASHCARD_SPEED_PRACTICE_WINDOW_MS = 180000;
+const FLASHCARD_SPEED_SAMPLE_LIMIT = 50;
 const FLASHCARD_ON_TABLE_MAX_CARDS = 12;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
@@ -1695,6 +1694,35 @@ const getFlashcardSpeedPerHour = (lettersCount, trainingTimeMs) => {
   }
   const perHour = normalizedCount * (60 * 60 * 1000) / normalizedTrainingTimeMs;
   return Math.max(0, Math.round(perHour * 10) / 10);
+};
+
+const getFlashcardSpeedPerHourFromSamples = ({
+  normalizedCharsCount = 0,
+  sampleCount = 0,
+  practiceWindowMs = 0,
+  trainingTimeMs = 0,
+  fallbackSpeedPerHour = 0,
+  sampleLimit = FLASHCARD_SPEED_SAMPLE_LIMIT
+} = {}) => {
+  const chars = Math.max(0, Number(normalizedCharsCount) || 0);
+  const count = Math.max(0, Math.round(Number(sampleCount) || 0));
+  const windowMs = Math.max(0, Math.round(Number(practiceWindowMs) || 0));
+  const trainingMs = Math.max(0, Math.round(Number(trainingTimeMs) || 0));
+  const fallback = Math.max(0, Number(fallbackSpeedPerHour) || 0);
+
+  if (chars <= 0) {
+    return Math.max(0, Math.round(fallback * 10) / 10);
+  }
+
+  if (count >= sampleLimit && windowMs > 0) {
+    return Math.max(0, Math.round(((chars * 3600000) / windowMs) * 10) / 10);
+  }
+
+  if (trainingMs > 0) {
+    return Math.max(0, Math.round(((chars * 3600000) / trainingMs) * 10) / 10);
+  }
+
+  return Math.max(0, Math.round(fallback * 10) / 10);
 };
 
 const decorateFlashcardStats = (value, lettersCount = 0) => {
@@ -5679,52 +5707,30 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
   );
   const totalsRow = totalsResult.rows[0] || {};
   const currentPracticeMs = Math.max(0, Math.round(Number(totalsRow.training_time_ms) || 0));
-  const adminSpeedPerHour = Math.max(0, Number(totalsRow.admin_speed_per_hour) || 0);
   const speedSamplesResult = await client.query(
-    `SELECT sample_value, practice_ms_total
-     FROM public.user_flashcard_speed_samples
-     WHERE user_id = $1
-     ORDER BY ctid DESC
-     LIMIT $2`,
+    `SELECT
+       COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_count,
+       COUNT(*)::int AS sample_count,
+       GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
+     FROM (
+       SELECT sample_value, practice_ms_total
+       FROM public.user_flashcard_speed_samples
+       WHERE user_id = $1
+       ORDER BY ctid DESC
+       LIMIT $2
+     ) recent_speed_samples`,
     [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
   );
-  const recentSamples = speedSamplesResult.rows
-    .map((row) => ({
-      sampleValue: Math.max(0, Number(row?.sample_value) || 0),
-      practiceMsTotal: Math.max(0, Math.round(Number(row?.practice_ms_total) || 0))
-    }))
-    .filter((entry) => entry.sampleValue > 0 && Number.isFinite(entry.practiceMsTotal))
-    .sort((a, b) => a.practiceMsTotal - b.practiceMsTotal);
-  const lastSamplePracticeMs = recentSamples.length
-    ? Math.max(0, Number(recentSamples[recentSamples.length - 1]?.practiceMsTotal) || 0)
-    : currentPracticeMs;
-  const windowEndPracticeMs = lastSamplePracticeMs;
-  const targetPracticeMs = Math.max(0, windowEndPracticeMs - FLASHCARD_SPEED_PRACTICE_WINDOW_MS);
-  let anchorPracticeMs = targetPracticeMs;
-  if (recentSamples.length) {
-    let best = recentSamples[0];
-    let bestDistance = Math.abs(best.practiceMsTotal - targetPracticeMs);
-    for (let index = 1; index < recentSamples.length; index += 1) {
-      const candidate = recentSamples[index];
-      const distance = Math.abs(candidate.practiceMsTotal - targetPracticeMs);
-      if (distance < bestDistance) {
-        best = candidate;
-        bestDistance = distance;
-      }
-    }
-    anchorPracticeMs = best.practiceMsTotal;
-  }
-  const windowMs = Math.max(1, windowEndPracticeMs - anchorPracticeMs);
-  const normalizedCharsRecent = recentSamples
-    .filter((entry) => entry.practiceMsTotal > anchorPracticeMs && entry.practiceMsTotal <= windowEndPracticeMs)
-    .reduce((sum, entry) => sum + entry.sampleValue, 0);
-  const baseSpeedPerHour = normalizedCharsRecent > 0
-    ? Number(((normalizedCharsRecent * 3600000) / windowMs).toFixed(1))
-    : adminSpeedPerHour;
-  const speedPerHour = Math.max(
-    0,
-    Number((baseSpeedPerHour + Number(totalsRow.speed_delta || 0)).toFixed(1))
-  );
+  const speedRow = speedSamplesResult.rows[0] || {};
+  const baseSpeedPerHour = getFlashcardSpeedPerHourFromSamples({
+    normalizedCharsCount: speedRow.normalized_chars_count,
+    sampleCount: speedRow.sample_count,
+    practiceWindowMs: speedRow.practice_window_ms,
+    trainingTimeMs: currentPracticeMs,
+    fallbackSpeedPerHour: totalsRow.admin_speed_per_hour,
+    sampleLimit: FLASHCARD_SPEED_SAMPLE_LIMIT
+  });
+  const speedPerHour = Math.max(0, Number((baseSpeedPerHour + Number(totalsRow.speed_delta || 0)).toFixed(1)));
   const levelDynamicsSettings = await getFlashcardLevelDynamicsSettings();
   const levelGainPerMinute = resolveFlashcardSpeedLevelGainPerMinute(speedPerHour, levelDynamicsSettings);
   const levelDeltaRaw = practiceMinutes * levelGainPerMinute;
@@ -5784,6 +5790,7 @@ const readFlashcardStateForUser = async (userId) => {
     ),
     pool.query(
       `SELECT play_time_ms, speakings, listenings, readings, training_time_ms, pronunciation_samples,
+              admin_speed_flashcards_per_hour,
               game_option_difficulty, game_option_speed, game_option_accent, game_option_fourth_stage_typing,
               second_star_error_heard, updated_at
        FROM public.user_flashcard_stats
@@ -5836,9 +5843,12 @@ const readFlashcardStateForUser = async (userId) => {
       [normalizedUserId]
     ),
     pool.query(
-      `SELECT COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_total
+      `SELECT
+         COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_total,
+         COUNT(*)::int AS sample_count,
+         GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
        FROM (
-         SELECT sample_value
+         SELECT sample_value, practice_ms_total
          FROM public.user_flashcard_speed_samples
          WHERE user_id = $1
          ORDER BY ctid DESC
@@ -5854,6 +5864,16 @@ const readFlashcardStateForUser = async (userId) => {
 
   const flashcardStatsRow = statsResult.rows[0] || {};
   const normalizedCharsTotal = Math.max(0, Number(speedSamplesResult.rows[0]?.normalized_chars_total) || 0);
+  const speedSampleCount = Math.max(0, Number(speedSamplesResult.rows[0]?.sample_count) || 0);
+  const speedPracticeWindowMs = Math.max(0, Number(speedSamplesResult.rows[0]?.practice_window_ms) || 0);
+  const resolvedSpeedPerHour = getFlashcardSpeedPerHourFromSamples({
+    normalizedCharsCount: normalizedCharsTotal,
+    sampleCount: speedSampleCount,
+    practiceWindowMs: speedPracticeWindowMs,
+    trainingTimeMs: flashcardStatsRow.training_time_ms,
+    fallbackSpeedPerHour: flashcardStatsRow.admin_speed_flashcards_per_hour,
+    sampleLimit: FLASHCARD_SPEED_SAMPLE_LIMIT
+  });
   const gameOptions = normalizeFlashcardGameOptions({
     difficulty: flashcardStatsRow.game_option_difficulty,
     speed: flashcardStatsRow.game_option_speed,
@@ -5880,7 +5900,8 @@ const readFlashcardStateForUser = async (userId) => {
         trainingTimeMs: flashcardStatsRow.training_time_ms,
         pronunciationSamples: accurateAggregate.pronunciationSamples,
         secondStarErrorHeard: flashcardStatsRow.second_star_error_heard
-      }, normalizedCharsTotal || totalFlashcardLettersFromProgress(progressRecords)),
+      }, normalizedCharsTotal),
+      speedFlashcardsPerHour: resolvedSpeedPerHour,
       booksEnergyXpTotal: Math.max(0, Number(booksEnergyXpResult.rows[0]?.energy_xp_total) || 0),
       coinsTotal: Math.max(0, Number(coinsResult.rows[0]?.coins_total) || 0)
     },
@@ -5954,6 +5975,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
   let booksEnergyLevelsAwarded = 0;
   let coinsTotal = 0;
   let coinsDelta = 0;
+  let resolvedSpeedPerHour = 0;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -5973,7 +5995,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       : null;
 
     const existingStatsResult = await client.query(
-      `SELECT training_time_ms, speakings, listenings, readings
+      `SELECT training_time_ms, speakings, listenings, readings, admin_speed_flashcards_per_hour
        FROM public.user_flashcard_stats
        WHERE user_id = $1
        LIMIT 1`,
@@ -6285,6 +6307,30 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       ]
     );
 
+    const speedSummaryResult = await client.query(
+      `SELECT
+         COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_total,
+         COUNT(*)::int AS sample_count,
+         GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
+       FROM (
+         SELECT sample_value, practice_ms_total
+         FROM public.user_flashcard_speed_samples
+         WHERE user_id = $1
+         ORDER BY ctid DESC
+         LIMIT $2
+       ) recent_speed_samples`,
+      [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
+    );
+    const speedSummaryRow = speedSummaryResult.rows[0] || {};
+    resolvedSpeedPerHour = getFlashcardSpeedPerHourFromSamples({
+      normalizedCharsCount: speedSummaryRow.normalized_chars_total,
+      sampleCount: speedSummaryRow.sample_count,
+      practiceWindowMs: speedSummaryRow.practice_window_ms,
+      trainingTimeMs: persistedTrainingTimeMs,
+      fallbackSpeedPerHour: existingStatsResult.rows[0]?.admin_speed_flashcards_per_hour,
+      sampleLimit: FLASHCARD_SPEED_SAMPLE_LIMIT
+    });
+
     if (readingCharsDelta > 0 || speakingCharsDelta > 0 || listeningCharsDelta > 0) {
       await ensureUserBooksConsumptionStatsTable();
       await ensureUserDailyEnergyStatsTable();
@@ -6395,6 +6441,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     onTable,
     stats: {
       ...stats,
+      speedFlashcardsPerHour: resolvedSpeedPerHour,
       booksEnergyXpTotal,
       booksEnergyXpDelta,
       booksEnergyLevelsAwarded,
