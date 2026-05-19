@@ -9727,7 +9727,7 @@
     .albums-modal__shell {
       position: relative;
       z-index: 1;
-      width: min(560px, 100%);
+      width: min(420px, 100%);
       height: 100dvh;
       padding: max(12px, env(safe-area-inset-top, 0px)) 12px calc(10px + env(safe-area-inset-bottom, 0px));
       display: grid;
@@ -9740,6 +9740,7 @@
       grid-template-columns: 52px 1fr 52px;
       align-items: center;
       gap: 12px;
+      margin-top: 20px;
     }
 
     .albums-modal__title-wrap {
@@ -9787,6 +9788,34 @@
       color: #d8b448;
       text-transform: uppercase;
       opacity: 0.95;
+      line-height: 1.1;
+      text-align: center;
+    }
+
+    .albums-modal__deck-value-label {
+      display: block;
+    }
+
+    .albums-modal__deck-value-number-row {
+      margin-top: 2px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .albums-modal__deck-value-coins {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 6px rgba(78, 223, 255, 0.35));
+    }
+
+    .albums-modal__deck-value-number {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f1f8ff;
+      letter-spacing: 0.01em;
     }
 
     .albums-modal__nav {
@@ -9810,16 +9839,16 @@
     .albums-modal__content {
       position: relative;
       overflow: hidden;
-      border-radius: 16px;
+      border-radius: 12px;
       border: 0;
-      background: rgba(5, 17, 34, 0.22);
-      backdrop-filter: blur(4px);
+      background: rgba(5, 17, 34, 0.14);
+      backdrop-filter: blur(2px);
     }
 
     .albums-modal__stage {
       position: absolute;
       inset: 0;
-      padding: 10px 8px 10px;
+      padding: 6px 4px 6px;
       opacity: 0;
       pointer-events: none;
       transition: opacity 220ms ease;
@@ -9857,7 +9886,7 @@
     .albums-modal__slide.is-leaving-down { transform: translateY(100%); opacity: 0.02; }
 
     .albums-modal__flashcard {
-      width: min(64vw, 248px);
+      width: min(58vw, 220px);
       max-width: 100%;
       display: grid;
       gap: 6px;
@@ -9887,10 +9916,12 @@
 
     .albums-modal__flashcard-seal {
       position: absolute;
-      right: 4px;
-      bottom: 4px;
-      width: 12px;
-      height: 12px;
+      right: 3%;
+      bottom: 3%;
+      width: 25%;
+      max-width: 52px;
+      min-width: 22px;
+      height: auto;
       object-fit: contain;
       filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.3));
     }
@@ -10166,7 +10197,13 @@
               </span>
               <h2 class="albums-modal__title" id="albumsSectionTitle">FlashCards</h2>
             </div>
-            <p class="albums-modal__deck-value" id="albumsDeckValue">Valor do DECK: 0 moedas</p>
+            <p class="albums-modal__deck-value" id="albumsDeckValue">
+              <span class="albums-modal__deck-value-label">Valor do DECK</span>
+              <span class="albums-modal__deck-value-number-row">
+                <img class="albums-modal__deck-value-coins" src="/SVG/codex-icons/post-results/coins.svg" alt="">
+                <span class="albums-modal__deck-value-number">0</span>
+              </span>
+            </p>
           </div>
           <button class="albums-modal__nav" id="albumsNextSectionBtn" type="button" aria-label="Proxima sessao">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.6 18.6 6.6-6.6-6.6-6.6L10 4l8 8-8 8z"/></svg>
@@ -17061,7 +17098,13 @@
       function renderAlbumsDeckValue() {
         if (!els.albumsDeckValue) return;
         const totalCoins = Math.max(0, Math.round(albumsDeckCoinsTotal()));
-        els.albumsDeckValue.textContent = `Valor do DECK: ${totalCoins.toLocaleString('pt-BR')} moedas`;
+        els.albumsDeckValue.innerHTML = `
+          <span class="albums-modal__deck-value-label">Valor do DECK</span>
+          <span class="albums-modal__deck-value-number-row">
+            <img class="albums-modal__deck-value-coins" src="/SVG/codex-icons/post-results/coins.svg" alt="">
+            <span class="albums-modal__deck-value-number">${escapeHtml(totalCoins.toLocaleString('pt-BR'))}</span>
+          </span>
+        `;
       }
 
       function albumFlashcardsItems() {
