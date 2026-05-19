@@ -15578,8 +15578,8 @@ app.get('/api/users/flashcards', async (req, res) => {
            )
          )::int AS pronunciation_percent,
          CASE
-           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
-             THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+           WHEN COALESCE(speed_samples.practice_window_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
+             THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(speed_samples.practice_window_ms, 1)::numeric, 1)
            ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
          END AS speed_flashcards_per_hour
        FROM public.users u
@@ -15616,11 +15616,13 @@ app.get('/api/users/flashcards', async (req, res) => {
        LEFT JOIN (
          SELECT
            user_id,
-           COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_count
+           COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_count,
+           GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
          FROM (
            SELECT
              user_id,
              sample_value,
+             practice_ms_total,
              ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ctid DESC) AS row_index
            FROM public.user_flashcard_speed_samples
          ) ranked_speed_samples
@@ -19514,8 +19516,8 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
            )
          )::int AS pronunciation_percent,
          CASE
-           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
-             THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
+           WHEN COALESCE(speed_samples.practice_window_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
+             THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(speed_samples.practice_window_ms, 1)::numeric, 1)
            ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
          END AS speed_flashcards_per_hour,
          COALESCE(u.level, 1)::int AS user_level
@@ -19550,11 +19552,13 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
        LEFT JOIN (
          SELECT
            user_id,
-           COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_count
+           COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_count,
+           GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
          FROM (
            SELECT
              user_id,
              sample_value,
+             practice_ms_total,
              ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ctid DESC) AS row_index
            FROM public.user_flashcard_speed_samples
          ) ranked_speed_samples
