@@ -13,7 +13,9 @@
     pt: `${LOADER_AUDIO_BASE_URL}/Niveis/114/001`,
     en: `${LOADER_AUDIO_BASE_URL}/Niveis/154/001`
   };
-  const LOADER_BG_MUSIC_URL = '/audio/load.mp3';
+  const LOADER_BG_MUSIC_URL = typeof window.getGameSoundUrl === 'function'
+    ? window.getGameSoundUrl('gamesounds/load.mp3')
+    : '/audio/load.mp3';
   const LOADER_TIP_AUDIO_VOLUME = 0.56;
   const LOADER_TIP_AUDIO_FADE_MS = 1500;
   const LOADER_FINAL_DISSOLVE_MS = 500;

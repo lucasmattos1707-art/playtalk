@@ -244,17 +244,32 @@
     11: 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/tips/11.mp3',
     12: 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/tips/12.mp3'
   };
+  const GAME_SOUND_ERROR_URL = typeof window.getGameSoundUrl === 'function'
+    ? window.getGameSoundUrl('gamesounds/error.mp3')
+    : 'gamesounds/error.mp3';
+  const GAME_SOUND_LEVEL_COMPLETE_URL = typeof window.getGameSoundUrl === 'function'
+    ? window.getGameSoundUrl('gamesounds/level-complete.mp3')
+    : 'gamesounds/level-complete.mp3';
+  const GAME_SOUND_RESULTS_PLUS_URL = typeof window.getGameSoundUrl === 'function'
+    ? window.getGameSoundUrl('gamesounds/plus.mp3')
+    : 'gamesounds/plus.mp3';
+  const GAME_SOUND_TYPING_KEY_URL = typeof window.getGameSoundUrl === 'function'
+    ? window.getGameSoundUrl('gamesounds/type.mp3')
+    : 'gamesounds/type.mp3';
   const ERROR_AUDIO_SOURCES = [
+    GAME_SOUND_ERROR_URL,
     '../thesongs/error.mp3',
     'thesongs/error.mp3',
     '/thesongs/error.mp3'
   ];
   const LEVEL_COMPLETE_AUDIO_SOURCES = [
+    GAME_SOUND_LEVEL_COMPLETE_URL,
     '../thesongs/level%20complete.mp3',
     'thesongs/level%20complete.mp3',
     '/thesongs/level%20complete.mp3'
   ];
   const RESULTS_PLUS_AUDIO_SOURCES = [
+    GAME_SOUND_RESULTS_PLUS_URL,
     '../thesongs/plus.mp3',
     'thesongs/plus.mp3',
     '/thesongs/plus.mp3'
@@ -339,7 +354,7 @@
   const PHASE_NINE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   const PHASE_NINE_BASE_KEY_COUNT = 16;
   const PHASE_NINE_EXTENDED_KEY_COUNT = 20;
-  const PHASE_NINE_TYPE_SOUND_SRC = 'sounds/type.mp3';
+  const PHASE_NINE_TYPE_SOUND_SRC = GAME_SOUND_TYPING_KEY_URL || 'sounds/type.mp3';
   const PHASE_NINE_TAP_FLASH_MS = 500;
   const HEART_ICON_URL = 'SVG/codex-icons/star.svg';
   const JOURNEY_PHASE_ORDER = [1, 10, 2, 5, 4, 9, 3, 7, 6, 8, 11, 12];

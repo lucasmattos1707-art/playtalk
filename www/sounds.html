@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Sounds | Fluent LevelUp</title>
+  <style>
+    :root {
+      --bg: #07162a;
+      --panel: #0f2745;
+      --line: #1d446f;
+      --text: #eef7ff;
+      --muted: #97b5d6;
+      --accent: #40c4ff;
+      --ok: #58e9a7;
+      --danger: #ff7f8f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Exo 2", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at 20% 0%, #133968 0%, var(--bg) 55%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap {
+      width: min(1100px, calc(100% - 24px));
+      margin: 28px auto 40px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(24px, 5vw, 34px);
+    }
+    .subtitle {
+      margin: 0 0 24px;
+      color: var(--muted);
+    }
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+    .title {
+      margin: 0 0 4px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .desc {
+      margin: 0;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    button, .upload-label {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      color: var(--text);
+      height: 40px;
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover, .upload-label:hover {
+      border-color: var(--accent);
+      color: #fff;
+    }
+    button[disabled] {
+      opacity: 0.5;
+      cursor: default;
+    }
+    .upload-label input {
+      display: none;
+    }
+    .status {
+      margin-top: 18px;
+      min-height: 22px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .status.ok { color: var(--ok); }
+    .status.error { color: var(--danger); }
+    .icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+    @media (max-width: 760px) {
+      .card { grid-template-columns: 1fr; }
+      .actions { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>/sounds (admin)</h1>
+    <p class="subtitle">Sons globais do jogo com preview e substituição via upload no R2.</p>
+    <section id="soundGrid" class="grid" aria-live="polite"></section>
+    <p id="status" class="status"></p>
+  </main>
+
+  <script>
+    (function initSoundsAdminPage() {
+      const grid = document.getElementById('soundGrid');
+      const statusEl = document.getElementById('status');
+      let currentAudio = null;
+
+      function setStatus(message, kind) {
+        statusEl.textContent = message || '';
+        statusEl.className = `status${kind ? ` ${kind}` : ''}`;
+      }
+
+      function makeIconPlay() {
+        return '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>';
+      }
+
+      function makeIconPause() {
+        return '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zm6 0h4v14h-4z"></path></svg>';
+      }
+
+      function makeIconUpload() {
+        return '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 7 8h3v6h4V8h3zM5 16h14v5H5z"></path></svg>';
+      }
+
+      async function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(new Error('Falha ao ler arquivo.'));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function stopCurrentAudio() {
+        if (!currentAudio) return;
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio = null;
+        document.querySelectorAll('[data-play-btn]').forEach((btn) => {
+          btn.innerHTML = `${makeIconPlay()} Ouvir`;
+        });
+      }
+
+      async function uploadSound(sound, file, uploadBtn) {
+        if (!sound || !file) return;
+        uploadBtn.disabled = true;
+        setStatus(`Enviando "${sound.title}" para o R2...`);
+        try {
+          const audioDataUrl = await readFileAsDataUrl(file);
+          const response = await fetch(`/api/admin/sounds/${encodeURIComponent(sound.id)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audioDataUrl })
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data?.success) {
+            throw new Error(data?.message || 'Falha no upload.');
+          }
+          sound.publicUrl = data.sound?.publicUrl || sound.publicUrl;
+          setStatus(`Som "${sound.title}" atualizado com sucesso.`, 'ok');
+        } catch (error) {
+          setStatus(error.message || 'Erro ao enviar áudio.', 'error');
+        } finally {
+          uploadBtn.disabled = false;
+        }
+      }
+
+      function renderSounds(sounds) {
+        grid.innerHTML = '';
+        sounds.forEach((sound) => {
+          const card = document.createElement('article');
+          card.className = 'card';
+          card.innerHTML = `
+            <div>
+              <h2 class="title">${sound.title}</h2>
+              <p class="desc">${sound.description}</p>
+            </div>
+            <div class="actions">
+              <button type="button" data-play-btn>${makeIconPlay()} Ouvir</button>
+              <label class="upload-label">
+                ${makeIconUpload()} Upload
+                <input type="file" accept="audio/*" />
+              </label>
+            </div>
+          `;
+
+          const playBtn = card.querySelector('[data-play-btn]');
+          const uploadInput = card.querySelector('input[type="file"]');
+          const uploadLabel = card.querySelector('.upload-label');
+
+          playBtn.addEventListener('click', () => {
+            const canPlay = Boolean(sound.publicUrl);
+            if (!canPlay) {
+              setStatus('URL de áudio não disponível para esse item.', 'error');
+              return;
+            }
+            if (currentAudio && currentAudio.dataset.soundId === sound.id) {
+              stopCurrentAudio();
+              return;
+            }
+            stopCurrentAudio();
+            const audio = new Audio(sound.publicUrl);
+            audio.dataset.soundId = sound.id;
+            currentAudio = audio;
+            playBtn.innerHTML = `${makeIconPause()} Parar`;
+            audio.addEventListener('ended', stopCurrentAudio, { once: true });
+            audio.addEventListener('error', () => {
+              stopCurrentAudio();
+              setStatus(`Falha ao reproduzir "${sound.title}".`, 'error');
+            }, { once: true });
+            audio.play().catch(() => {
+              stopCurrentAudio();
+              setStatus(`Navegador bloqueou o play de "${sound.title}".`, 'error');
+            });
+          });
+
+          uploadInput.addEventListener('change', async () => {
+            const file = uploadInput.files && uploadInput.files[0];
+            if (!file) return;
+            await uploadSound(sound, file, uploadLabel);
+            uploadInput.value = '';
+          });
+
+          grid.appendChild(card);
+        });
+      }
+
+      async function bootstrap() {
+        setStatus('Carregando catálogo de sons...');
+        try {
+          const response = await fetch('/api/admin/sounds');
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data?.success) {
+            throw new Error(data?.message || 'Falha ao carregar sons.');
+          }
+          renderSounds(Array.isArray(data.sounds) ? data.sounds : []);
+          setStatus('Pronto. Você pode ouvir e substituir os sons globais.', 'ok');
+        } catch (error) {
+          setStatus(error.message || 'Erro ao carregar página de sons.', 'error');
+        }
+      }
+
+      bootstrap();
+    })();
+  </script>
+</body>
+</html>

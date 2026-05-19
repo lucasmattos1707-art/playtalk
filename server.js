@@ -6812,6 +6812,56 @@ const FORCE_R2_GAME_SOUND_FILES = new Set([
   'final_1.mp3.mp3',
   'final_1.mp3'
 ]);
+const ADMIN_SOUND_LIBRARY = [
+  {
+    id: 'loader_bg',
+    title: 'Loader Background',
+    description: 'Trilha de fundo do carregamento global do Playtalk.',
+    objectKey: 'gamesounds/load.mp3'
+  },
+  {
+    id: 'loader_tip_pt_sample',
+    title: 'Loader Tip PT (sample)',
+    description: 'Exemplo de narração PT das dicas do loader (bandeiras).',
+    objectKey: 'Niveis/114/001/bandeiras-flashcard-item-001.mp3'
+  },
+  {
+    id: 'loader_tip_en_sample',
+    title: 'Loader Tip EN (sample)',
+    description: 'Exemplo de narração EN das dicas do loader (acts).',
+    objectKey: 'Niveis/154/001/acts-flashcard-item-001.mp3'
+  },
+  {
+    id: 'game_success',
+    title: 'Game Success',
+    description: 'Som de acerto e feedback positivo.',
+    objectKey: 'gamesounds/success.mp3'
+  },
+  {
+    id: 'game_error',
+    title: 'Game Error',
+    description: 'Som de erro durante a rodada.',
+    objectKey: 'gamesounds/error.mp3'
+  },
+  {
+    id: 'level_complete',
+    title: 'Level Complete',
+    description: 'Som de conclusão de fase.',
+    objectKey: 'gamesounds/level-complete.mp3'
+  },
+  {
+    id: 'results_plus',
+    title: 'Results Plus',
+    description: 'Som de incremento/exibição de resultado.',
+    objectKey: 'gamesounds/plus.mp3'
+  },
+  {
+    id: 'typing_key',
+    title: 'Typing Key',
+    description: 'Som de toque no teclado da fase de typing.',
+    objectKey: 'gamesounds/type.mp3'
+  }
+];
 let imageIndex = null;
 let imageLevelIndex = null;
 let voiceIndex = null;
@@ -12626,6 +12676,25 @@ async function resolveMediaUrl(fileName) {
   return relativePath ? `/${relativePath.replace(/\\/g, '/')}` : null;
 }
 
+function buildAdminSoundPreviewUrl(objectKey) {
+  const normalized = String(objectKey || '').trim().replace(/^\/+/, '');
+  if (!normalized) return '';
+  if (normalized.startsWith('gamesounds/')) {
+    return `${GAME_SOUNDS_BASE_URL}/${encodePublicUrlPath(normalized.replace(/^gamesounds\//, ''))}`;
+  }
+  return buildFlashcardsR2PublicUrl(normalized);
+}
+
+function buildAdminSoundCatalogPayload() {
+  return ADMIN_SOUND_LIBRARY.map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+    description: entry.description,
+    objectKey: entry.objectKey,
+    publicUrl: buildAdminSoundPreviewUrl(entry.objectKey)
+  }));
+}
+
 async function collectVoiceFiles(directory) {
   const entries = await fs.promises.readdir(directory, { withFileTypes: true });
   const files = [];
@@ -14525,6 +14594,65 @@ app.get('/api/media/resolve', async (req, res) => {
   } catch (error) {
     console.error('Erro ao resolver arquivo de mídia:', error);
     res.status(500).json({ success: false, message: 'Erro ao resolver arquivo de mídia.' });
+  }
+});
+
+app.get('/api/sounds/catalog', async (_req, res) => {
+  res.json({
+    success: true,
+    sounds: buildAdminSoundCatalogPayload()
+  });
+});
+
+app.get('/api/admin/sounds', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    res.json({
+      success: true,
+      sounds: buildAdminSoundCatalogPayload()
+    });
+  } catch (error) {
+    const status = Number(error?.statusCode) || 500;
+    res.status(status).json({ success: false, message: error.message || 'Falha ao carregar sons.' });
+  }
+});
+
+app.post('/api/admin/sounds/:soundId', express.json({ limit: '25mb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!isR2FluencyConfigured()) {
+      res.status(503).json({ success: false, message: 'R2 nao configurado para upload de sons.' });
+      return;
+    }
+
+    const soundId = String(req.params?.soundId || '').trim();
+    const sound = ADMIN_SOUND_LIBRARY.find((entry) => entry.id === soundId);
+    if (!sound) {
+      res.status(404).json({ success: false, message: 'Som nao encontrado.' });
+      return;
+    }
+
+    const parsed = parseBase64DataUrl(req.body?.audioDataUrl);
+    const mimeType = String(parsed?.mimeType || '').toLowerCase();
+    if (!parsed?.buffer?.length || !mimeType.startsWith('audio/')) {
+      res.status(400).json({ success: false, message: 'Envie um arquivo de audio valido.' });
+      return;
+    }
+
+    await putR2Object(sound.objectKey, parsed.buffer, mimeType || contentTypeFromObjectKey(sound.objectKey));
+    res.json({
+      success: true,
+      sound: {
+        ...sound,
+        publicUrl: `${buildAdminSoundPreviewUrl(sound.objectKey)}?v=${Date.now()}`
+      }
+    });
+  } catch (error) {
+    const status = Number(error?.statusCode) || 500;
+    res.status(status).json({
+      success: false,
+      message: error.message || 'Falha ao enviar som para o R2.'
+    });
   }
 });
 
@@ -20930,6 +21058,20 @@ app.get(['/admin', '/admin/', '/admin.html'], async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
     res.sendFile(path.join(staticDir, 'admin.html'));
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 403;
+    if (statusCode === 401) {
+      res.redirect(302, '/account');
+      return;
+    }
+    res.status(403).send('Acesso restrito ao administrador.');
+  }
+});
+
+app.get(['/sounds', '/sounds/', '/sounds.html'], async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    res.sendFile(path.join(staticDir, 'sounds.html'));
   } catch (error) {
     const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 403;
     if (statusCode === 401) {
