@@ -5679,7 +5679,6 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
   const totalsRow = totalsResult.rows[0] || {};
   const currentPracticeMs = Math.max(0, Math.round(Number(totalsRow.training_time_ms) || 0));
   const adminSpeedPerHour = Math.max(0, Number(totalsRow.admin_speed_per_hour) || 0);
-  const targetPracticeMs = Math.max(0, currentPracticeMs - FLASHCARD_SPEED_PRACTICE_WINDOW_MS);
   const speedSamplesResult = await client.query(
     `SELECT sample_value, practice_ms_total
      FROM public.user_flashcard_speed_samples
@@ -5695,6 +5694,11 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
     }))
     .filter((entry) => entry.sampleValue > 0 && Number.isFinite(entry.practiceMsTotal))
     .sort((a, b) => a.practiceMsTotal - b.practiceMsTotal);
+  const lastSamplePracticeMs = recentSamples.length
+    ? Math.max(0, Number(recentSamples[recentSamples.length - 1]?.practiceMsTotal) || 0)
+    : currentPracticeMs;
+  const windowEndPracticeMs = lastSamplePracticeMs;
+  const targetPracticeMs = Math.max(0, windowEndPracticeMs - FLASHCARD_SPEED_PRACTICE_WINDOW_MS);
   let anchorPracticeMs = targetPracticeMs;
   if (recentSamples.length) {
     let best = recentSamples[0];
@@ -5709,9 +5713,9 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
     }
     anchorPracticeMs = best.practiceMsTotal;
   }
-  const windowMs = Math.max(1, currentPracticeMs - anchorPracticeMs);
+  const windowMs = Math.max(1, windowEndPracticeMs - anchorPracticeMs);
   const normalizedCharsRecent = recentSamples
-    .filter((entry) => entry.practiceMsTotal > anchorPracticeMs && entry.practiceMsTotal <= currentPracticeMs)
+    .filter((entry) => entry.practiceMsTotal > anchorPracticeMs && entry.practiceMsTotal <= windowEndPracticeMs)
     .reduce((sum, entry) => sum + entry.sampleValue, 0);
   const baseSpeedPerHour = normalizedCharsRecent > 0
     ? Number(((normalizedCharsRecent * 3600000) / windowMs).toFixed(1))
