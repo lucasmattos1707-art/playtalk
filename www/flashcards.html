@@ -7841,11 +7841,13 @@
       transform: translateX(-50%);
     }
 
+    .game[data-phase-key="first-star"] .game-controls-proxy .game-mic-side-metric,
     .game[data-phase-key="second-star"] .game-controls-proxy .game-mic-side-metric,
     .game[data-phase-key="fourth-star"] .game-controls-proxy .game-mic-side-metric {
       display: inline-flex;
     }
 
+    .game[data-phase-key="first-star"] .game-controls-proxy .game-mic-next-seal-progress,
     .game[data-phase-key="second-star"] .game-controls-proxy .game-mic-next-seal-progress,
     .game[data-phase-key="fourth-star"] .game-controls-proxy .game-mic-next-seal-progress {
       display: block;
@@ -7988,9 +7990,7 @@
     }
 
     .game[data-phase-key="second-star"] .game-card__seal,
-    .game[data-phase-key="fourth-star"] .game-card__seal,
-    .game[data-phase-key="second-star"] .game-mic-side-metric,
-    .game[data-phase-key="fourth-star"] .game-mic-side-metric {
+    .game[data-phase-key="fourth-star"] .game-card__seal {
       display: none !important;
     }
 
@@ -10914,10 +10914,10 @@
       const TRAINING_MAX_CARD_COUNT = 500;
       const TRAINING_CARD_STEP = 10;
       const GAME_STAR_TARGET = 5;
-      const REVIEW_SLOT_LIMIT = 4;
-      const ON_TABLE_MAX_CARDS = 14;
-      const ON_TABLE_BASE_MAX = 6;
-      const ON_TABLE_REVIEW_MAX = 8;
+      const REVIEW_SLOT_LIMIT = 7;
+      const ON_TABLE_MAX_CARDS = 12;
+      const ON_TABLE_BASE_MAX = 5;
+      const ON_TABLE_REVIEW_MAX = 7;
       const FLASHCARD_SESSION_TICK_INTERVAL_MS = 60000;
       const GAME_UPCOMING_PRELOAD_COUNT = 3;
       const FIRST_STAGE_AUDIO_PRELOAD_COUNT = 2;
@@ -12039,19 +12039,8 @@
       }
 
       function persistGameSessionLocally() {
-        const snapshot = serializeCurrentGameState();
-        if (!snapshot) {
-          removeScopedStorage(GAME_SESSION_STORAGE_KEY, state.user?.id);
-          return;
-        }
-        try {
-          localStorage.setItem(
-            storageKeyForUser(GAME_SESSION_STORAGE_KEY, state.user?.id),
-            JSON.stringify(snapshot)
-          );
-        } catch (_error) {
-          // ignore
-        }
+        // Mesa do jogo agora depende apenas do estado em nuvem (Postgres).
+        return;
       }
 
       function clearGameSessionLocally(userId = state.user?.id) {
@@ -12059,7 +12048,7 @@
       }
 
       function readGameSessionForUser(userId = state.user?.id) {
-        return readScopedStorage(GAME_SESSION_STORAGE_KEY, null, userId);
+        return null;
       }
 
       function setTutorialCompleted(completed) {
@@ -20122,7 +20111,9 @@
           || !els.gameMicNextSealProgressFill
         ) return;
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
-        const isMissionMetricPhase = phaseKey === 'second-star' || phaseKey === 'fourth-star';
+        const isMissionMetricPhase = phaseKey === 'first-star'
+          || phaseKey === 'second-star'
+          || phaseKey === 'fourth-star';
         if (!isMissionMetricPhase) {
           if (state.entry.gameMicProgressAnimationFrame) {
             window.cancelAnimationFrame(state.entry.gameMicProgressAnimationFrame);
@@ -20208,7 +20199,12 @@
           els.gameMicCurrentSealMetric.appendChild(currentRankValue);
         }
         const targetProgress = Math.max(0, Math.min(100, Number(missionBarProgress) || 0));
-        currentRankValue.textContent = `${targetProgress.toFixed(1)}%`;
+        const currentSpeed = Math.max(0, Number(state.stats?.speedFlashcardsPerHour) || 0);
+        if (phaseKey === 'second-star' || phaseKey === 'fourth-star') {
+          currentRankValue.textContent = `${formatSpeedWithComma(currentSpeed)}/h`;
+        } else {
+          currentRankValue.textContent = `${targetProgress.toFixed(1)}%`;
+        }
         if (state.entry.gameMicProgressAnimationFrame) {
           window.cancelAnimationFrame(state.entry.gameMicProgressAnimationFrame);
           state.entry.gameMicProgressAnimationFrame = 0;
@@ -20217,15 +20213,8 @@
         els.gameMicNextSealProgress.textContent = `${Math.max(1, normalizeUserLevel(currentUserLevel()))}`;
         els.gameMicNextSealProgressFill.style.width = `${targetProgress.toFixed(2)}%`;
         if (els.gameCurrentFluencyLabel) {
-          const phaseKey = safeText(state.game?.entry?.stage || state.game?.stage || els.game?.dataset?.phaseKey).toLowerCase();
-          if (phaseKey === 'second-star' || phaseKey === 'fourth-star') {
-            els.gameCurrentFluencyLabel.textContent = '';
-            els.gameCurrentFluencyLabel.hidden = true;
-          } else {
-            const currentSpeed = Math.max(0, Number(state.stats?.speedFlashcardsPerHour) || 0);
-            els.gameCurrentFluencyLabel.textContent = `Velocidade atual: ${formatSpeedWithComma(currentSpeed)}/h`;
-            els.gameCurrentFluencyLabel.hidden = false;
-          }
+          els.gameCurrentFluencyLabel.textContent = '';
+          els.gameCurrentFluencyLabel.hidden = true;
         }
         els.gameMicCurrentSealMetric.hidden = false;
         els.gameMicNextSealMetric.hidden = false;
@@ -24163,9 +24152,7 @@
         if (!hasTutorialPlanetUnlocked()) {
           clearGameSessionLocally();
         }
-        const restored = !isLevelModeActive()
-          && hasTutorialPlanetUnlocked()
-          && applyGameSessionSnapshot(readGameSessionForUser(), { addFreshCard: true });
+        const restored = false;
         if (!restored) {
           resetTutorialRuntime({ preserveCompletion: true });
           if (isLevelModeActive()) {
