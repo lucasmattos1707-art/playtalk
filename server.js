@@ -324,6 +324,7 @@ const FLASHCARD_XP_VALUE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_DECK_CARD_LIMIT_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_XP_LEVEL_CURVE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_SPEED_SAMPLE_LIMIT = 100;
+const FLASHCARD_SPEED_PRACTICE_WINDOW_MS = 180000;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
@@ -3526,6 +3527,7 @@ const ensureUserFlashcardSpeedSamplesTable = async () => {
         CREATE TABLE IF NOT EXISTS public.user_flashcard_speed_samples (
           user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
           sample_value numeric(12,4) NOT NULL DEFAULT 0,
+          practice_ms_total bigint NOT NULL DEFAULT 0,
           current_level integer NOT NULL DEFAULT 1
         )
       `);
@@ -3544,6 +3546,10 @@ const ensureUserFlashcardSpeedSamplesTable = async () => {
             EXECUTE format('ALTER TABLE public.user_flashcard_speed_samples DROP CONSTRAINT %I', pk_name);
           END IF;
         END $$;
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_speed_samples
+        ADD COLUMN IF NOT EXISTS practice_ms_total bigint NOT NULL DEFAULT 0
       `);
       await pool.query(`
         ALTER TABLE public.user_flashcard_speed_samples
@@ -5598,22 +5604,24 @@ async function appendFlashcardSpeedSamples(client, userId, samples = []) {
   const sanitized = source
     .map((entry) => ({
       sampleValue: Math.max(0.01, Number(Number(entry?.sampleValue) || 0).toFixed(4)),
+      practiceMsTotal: Math.max(0, Math.round(Number(entry?.practiceMsTotal) || 0)),
       currentLevel: normalizeUserFlashcardLevel(entry?.currentLevel)
     }))
-    .filter((entry) => Number.isFinite(entry.sampleValue) && Number.isFinite(entry.currentLevel));
+    .filter((entry) => Number.isFinite(entry.sampleValue) && Number.isFinite(entry.currentLevel) && Number.isFinite(entry.practiceMsTotal));
   if (!sanitized.length) return;
   await ensureUserFlashcardSpeedSamplesTable();
   const values = [];
   const params = [];
   sanitized.forEach((entry, index) => {
-    const offset = index * 3;
-    values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3})`);
-    params.push(normalizedUserId, entry.sampleValue, entry.currentLevel);
+    const offset = index * 4;
+    values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`);
+    params.push(normalizedUserId, entry.sampleValue, entry.practiceMsTotal, entry.currentLevel);
   });
   await client.query(
     `INSERT INTO public.user_flashcard_speed_samples (
        user_id,
        sample_value,
+       practice_ms_total,
        current_level
      )
      VALUES ${values.join(', ')}`,
@@ -5647,40 +5655,61 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
 
   const totalsResult = await client.query(
     `SELECT
-       CASE
-         WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_total, 0) > 0
-           THEN ROUND((COALESCE(speed_samples.normalized_chars_total, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
-         ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
-       END AS base_speed_per_hour,
+       COALESCE(stats.training_time_ms, 0)::bigint AS training_time_ms,
+       COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric AS admin_speed_per_hour,
        COALESCE(overrides.speed_delta, 0)::numeric AS speed_delta
      FROM public.users u
      LEFT JOIN public.user_flashcard_stats stats
-       ON stats.user_id = u.id
-     LEFT JOIN (
-       SELECT
-         user_id,
-         COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_total
-       FROM (
-         SELECT
-           user_id,
-           sample_value,
-           ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ctid DESC) AS row_index
-         FROM public.user_flashcard_speed_samples
-       ) ranked_speed_samples
-       WHERE ranked_speed_samples.row_index <= $2
-       GROUP BY user_id
-     ) speed_samples
-       ON speed_samples.user_id = u.id
+      ON stats.user_id = u.id
      LEFT JOIN public.user_ranking_overrides overrides
        ON overrides.user_id = u.id
      WHERE u.id = $1
      LIMIT 1`,
-    [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
+    [normalizedUserId]
   );
   const totalsRow = totalsResult.rows[0] || {};
+  const currentPracticeMs = Math.max(0, Math.round(Number(totalsRow.training_time_ms) || 0));
+  const adminSpeedPerHour = Math.max(0, Number(totalsRow.admin_speed_per_hour) || 0);
+  const targetPracticeMs = Math.max(0, currentPracticeMs - FLASHCARD_SPEED_PRACTICE_WINDOW_MS);
+  const speedSamplesResult = await client.query(
+    `SELECT sample_value, practice_ms_total
+     FROM public.user_flashcard_speed_samples
+     WHERE user_id = $1
+     ORDER BY ctid DESC
+     LIMIT $2`,
+    [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
+  );
+  const recentSamples = speedSamplesResult.rows
+    .map((row) => ({
+      sampleValue: Math.max(0, Number(row?.sample_value) || 0),
+      practiceMsTotal: Math.max(0, Math.round(Number(row?.practice_ms_total) || 0))
+    }))
+    .filter((entry) => entry.sampleValue > 0 && Number.isFinite(entry.practiceMsTotal))
+    .sort((a, b) => a.practiceMsTotal - b.practiceMsTotal);
+  let anchorPracticeMs = targetPracticeMs;
+  if (recentSamples.length) {
+    let best = recentSamples[0];
+    let bestDistance = Math.abs(best.practiceMsTotal - targetPracticeMs);
+    for (let index = 1; index < recentSamples.length; index += 1) {
+      const candidate = recentSamples[index];
+      const distance = Math.abs(candidate.practiceMsTotal - targetPracticeMs);
+      if (distance < bestDistance) {
+        best = candidate;
+        bestDistance = distance;
+      }
+    }
+    anchorPracticeMs = best.practiceMsTotal;
+  }
+  const windowMs = Math.max(1, currentPracticeMs - anchorPracticeMs);
+  const normalizedCharsRecent = recentSamples
+    .filter((entry) => entry.practiceMsTotal > anchorPracticeMs && entry.practiceMsTotal <= currentPracticeMs)
+    .reduce((sum, entry) => sum + entry.sampleValue, 0);
+  const baseSpeedPerHour = normalizedCharsRecent > 0
+    ? Number(((normalizedCharsRecent * 3600000) / windowMs).toFixed(1))
+    : adminSpeedPerHour;
   const speedPerHour = Math.max(
     0,
-    Number((Number(totalsRow.base_speed_per_hour || 0) + Number(totalsRow.speed_delta || 0)).toFixed(1))
+    Number((baseSpeedPerHour + Number(totalsRow.speed_delta || 0)).toFixed(1))
   );
   const levelDynamicsSettings = await getFlashcardLevelDynamicsSettings();
   const levelGainPerMinute = resolveFlashcardSpeedLevelGainPerMinute(speedPerHour, levelDynamicsSettings);
@@ -5973,6 +6002,10 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       if (!winsDelta) return;
       const speedSample = {
         ...buildFlashcardSpeedSampleValue(item?.cardChars, speedCurveSettings),
+        practiceMsTotal: Math.max(
+          0,
+          Math.round(Number(stats?.trainingTimeMs ?? stats?.training_time_ms) || 0)
+        ),
         currentLevel: persistedUserLevel
       };
       for (let index = 0; index < winsDelta; index += 1) {
