@@ -9842,48 +9842,43 @@
       width: min(82vw, 310px);
       max-width: 100%;
       display: grid;
-      gap: 10px;
+      gap: 6px;
       justify-items: center;
     }
 
     .albums-modal__flashcard-visual {
-      width: 100%;
-      aspect-ratio: 10 / 14;
-      border-radius: 24px;
-      overflow: hidden;
-      border: 1px solid rgba(124, 203, 255, 0.3);
-      background: rgba(8, 19, 37, 0.78);
-      box-shadow: 0 24px 42px rgba(0, 0, 0, 0.34);
+      width: auto;
+      max-width: 100%;
+      border-radius: 16px;
+      overflow: visible;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
       display: grid;
       place-items: center;
       position: relative;
     }
 
     .albums-modal__flashcard-visual img {
-      width: 92%;
-      height: 92%;
+      width: 74%;
+      height: auto;
       object-fit: contain;
       object-position: center;
-      border-radius: 18px;
+      border-radius: 14px;
     }
 
     .albums-modal__flashcard-seal {
       position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 56px;
-      height: 56px;
+      right: calc(13% - 8px);
+      bottom: 8px;
+      width: 18px;
+      height: 18px;
       object-fit: contain;
-      filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.45));
+      filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.38));
     }
 
     .albums-modal__flashcard-progress {
-      width: 100%;
-      height: 7px;
-      border-radius: 999px;
-      background: rgba(188, 218, 255, 0.16);
-      overflow: hidden;
-      border: 1px solid rgba(140, 199, 255, 0.34);
+      display: none;
     }
 
     .albums-modal__flashcard-progress > span {
@@ -9909,6 +9904,7 @@
       font-size: clamp(17px, 3.8vw, 22px);
       color: #c4dcf4;
       text-align: center;
+      min-height: 0;
     }
 
     .albums-modal__seal-card {
@@ -11408,6 +11404,8 @@
           albumsSwipeStartY: 0,
           albumsSealsPayload: null,
           albumsSealsLoading: false,
+          albumsFlashSwapTimer: 0,
+          albumsFlashSwapCardId: '',
           soundTestOpen: false,
           soundTestBusy: false,
           soundTestStatus: '',
@@ -17066,24 +17064,39 @@
 
       function renderAlbumsSlide(target, markup, direction = 'none') {
         if (!target) return;
-        const current = target.querySelector('.albums-modal__slide');
         const next = document.createElement('div');
         next.className = 'albums-modal__slide';
-        if (direction === 'up') next.classList.add('is-entering-up');
-        if (direction === 'down') next.classList.add('is-entering-down');
         next.innerHTML = markup;
-        target.appendChild(next);
-        requestAnimationFrame(() => {
-          if (current) {
-            current.classList.add(direction === 'up' ? 'is-leaving-up' : 'is-leaving-down');
-          }
-          next.classList.remove('is-entering-up', 'is-entering-down');
-        });
-        window.setTimeout(() => {
-          if (current && current.parentNode === target) {
-            target.removeChild(current);
-          }
-        }, 280);
+        target.replaceChildren(next);
+      }
+
+      function stopAlbumsFlashSwapLoop() {
+        if (state.ui.albumsFlashSwapTimer) {
+          window.clearTimeout(state.ui.albumsFlashSwapTimer);
+          state.ui.albumsFlashSwapTimer = 0;
+        }
+        state.ui.albumsFlashSwapCardId = '';
+      }
+
+      function scheduleAlbumsFlashSwap(card) {
+        stopAlbumsFlashSwapLoop();
+        const cardId = safeText(card?.id || card?.cardId);
+        if (!cardId || !state.ui.albumsOpen) return;
+        state.ui.albumsFlashSwapCardId = cardId;
+        const english = safeText(card?.displayEnglish || card?.english || 'Flashcard');
+        const portuguese = safeText(card?.displayPortuguese || card?.portuguese || '');
+        if (!portuguese) return;
+
+        let showPortuguese = false;
+        const tick = () => {
+          if (!state.ui.albumsOpen || state.ui.albumsFlashSwapCardId !== cardId) return;
+          const titleNode = els.albumsFlashcardsStack?.querySelector('.albums-modal__flashcard-title');
+          if (!titleNode) return;
+          showPortuguese = !showPortuguese;
+          titleNode.textContent = showPortuguese ? portuguese : english;
+          state.ui.albumsFlashSwapTimer = window.setTimeout(tick, 3000);
+        };
+        state.ui.albumsFlashSwapTimer = window.setTimeout(tick, 3000);
       }
 
       function renderAlbumsFlashcards(direction = 'none') {
@@ -17112,9 +17125,10 @@
               </div>
               ${isMemorizing ? `<div class="albums-modal__flashcard-progress" aria-label="Progresso memorizing"><span style="--progress:${escapeHtml(progressValue.toFixed(2))}%"></span></div>` : ''}
               <p class="albums-modal__flashcard-title">${escapeHtml(card?.displayEnglish || card?.english || 'Flashcard')}</p>
-              <p class="albums-modal__flashcard-subtitle">${escapeHtml(card?.displayPortuguese || card?.portuguese || '')}</p>
+              <p class="albums-modal__flashcard-subtitle"></p>
             </article>
           `, direction);
+        scheduleAlbumsFlashSwap(card);
       }
 
       function renderAlbumsSeals(direction = 'none') {
@@ -17153,6 +17167,7 @@
 
       function closeAlbumsModal() {
         state.ui.albumsOpen = false;
+        stopAlbumsFlashSwapLoop();
         if (els.albumsModal) {
           els.albumsModal.classList.remove('is-visible');
           els.albumsModal.setAttribute('aria-hidden', 'true');
@@ -17177,6 +17192,7 @@
         const normalizedStep = step < 0 ? -1 : 1;
         const total = ALBUMS_SECTIONS.length;
         state.ui.albumsSectionIndex = (state.ui.albumsSectionIndex + normalizedStep + total) % total;
+        stopAlbumsFlashSwapLoop();
         renderAlbumsSection();
       }
 
