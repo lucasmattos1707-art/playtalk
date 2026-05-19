@@ -325,6 +325,7 @@ const FLASHCARD_DECK_CARD_LIMIT_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_XP_LEVEL_CURVE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_SPEED_SAMPLE_LIMIT = 100;
 const FLASHCARD_SPEED_PRACTICE_WINDOW_MS = 180000;
+const FLASHCARD_ON_TABLE_MAX_CARDS = 12;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
 const SPEAKING_CHALLENGE_PENDING_TTL_SECONDS = 120;
@@ -5945,7 +5946,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     const normalized = normalizeFlashcardOnTableRecord(item);
     if (normalized) dedupedOnTable.set(normalized.cardId, normalized);
   });
-  const onTable = Array.from(dedupedOnTable.values()).slice(0, 6);
+  const onTable = Array.from(dedupedOnTable.values()).slice(0, FLASHCARD_ON_TABLE_MAX_CARDS);
   let persistedUserLevel = 1;
   let persistedUserLevelUpdatedAt = null;
   let booksEnergyXpTotal = 0;
