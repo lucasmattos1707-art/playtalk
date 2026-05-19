@@ -6458,7 +6458,8 @@ const closeFlashcardSessionClock = async (userId, options = {}) => {
       : 0;
 
     const addedPracticeSeconds = Math.max(0, Math.round(addedTrainingMs / 1000));
-    let speedDrivenLevelDelta = 0;
+  let speedDrivenLevelDelta = 0;
+  let speedPerHour = 0;
     if (addedTrainingMs > 0) {
       await client.query(
         `INSERT INTO public.user_flashcard_stats (
@@ -6491,6 +6492,7 @@ const closeFlashcardSessionClock = async (userId, options = {}) => {
       );
       const speedDrivenLevel = await applyFlashcardSpeedMinuteLevelGain(client, normalizedUserId, addedTrainingMs);
       speedDrivenLevelDelta = Math.max(0, Number(speedDrivenLevel.levelDelta) || 0);
+      speedPerHour = Math.max(0, Number(speedDrivenLevel.speedPerHour) || 0);
     }
 
     if (keepOpen) {
@@ -6549,6 +6551,7 @@ const closeFlashcardSessionClock = async (userId, options = {}) => {
       addedTrainingMs,
       addedPracticeSeconds,
       speedDrivenLevelDelta,
+      speedPerHour,
       trainingTimeMs: Math.max(0, Number(totalResult.rows[0]?.training_time_ms) || 0),
       userLevel: normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level),
       userLevelUpdatedAt: userLevelResult.rows[0]?.level_updated_at
@@ -15588,8 +15591,12 @@ app.get('/api/users/flashcards', async (req, res) => {
            )
          )::int AS pronunciation_percent,
          CASE
-           WHEN COALESCE(speed_samples.practice_window_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
+           WHEN COALESCE(speed_samples.sample_count, 0) >= ${FLASHCARD_SPEED_SAMPLE_LIMIT}
+             AND COALESCE(speed_samples.practice_window_ms, 0) > 0
+             AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
              THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(speed_samples.practice_window_ms, 1)::numeric, 1)
+           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
+             THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
            ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
          END AS speed_flashcards_per_hour
        FROM public.users u
@@ -15627,6 +15634,7 @@ app.get('/api/users/flashcards', async (req, res) => {
          SELECT
            user_id,
            COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_count,
+           COUNT(*)::int AS sample_count,
            GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
          FROM (
            SELECT
@@ -16313,6 +16321,7 @@ app.post('/api/flashcards/session-clock', express.json({ limit: '16kb' }), async
         action: 'out',
         addedTrainingMs: Math.max(0, Number(result?.addedTrainingMs) || 0),
         speedDrivenLevelDelta: Math.max(0, Number(result?.speedDrivenLevelDelta) || 0),
+        speedPerHour: Math.max(0, Number(result?.speedPerHour) || 0),
         trainingTimeMs: Math.max(0, Number(result?.trainingTimeMs) || 0),
         userLevel: normalizeUserFlashcardLevel(result?.userLevel),
         userLevelUpdatedAt: result?.userLevelUpdatedAt || null
@@ -16326,6 +16335,7 @@ app.post('/api/flashcards/session-clock', express.json({ limit: '16kb' }), async
         action: 'tick',
         addedTrainingMs: Math.max(0, Number(result?.addedTrainingMs) || 0),
         speedDrivenLevelDelta: Math.max(0, Number(result?.speedDrivenLevelDelta) || 0),
+        speedPerHour: Math.max(0, Number(result?.speedPerHour) || 0),
         trainingTimeMs: Math.max(0, Number(result?.trainingTimeMs) || 0),
         userLevel: normalizeUserFlashcardLevel(result?.userLevel),
         userLevelUpdatedAt: result?.userLevelUpdatedAt || null
@@ -19526,8 +19536,12 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
            )
          )::int AS pronunciation_percent,
          CASE
-           WHEN COALESCE(speed_samples.practice_window_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
+           WHEN COALESCE(speed_samples.sample_count, 0) >= ${FLASHCARD_SPEED_SAMPLE_LIMIT}
+             AND COALESCE(speed_samples.practice_window_ms, 0) > 0
+             AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
              THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(speed_samples.practice_window_ms, 1)::numeric, 1)
+           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
+             THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
            ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
          END AS speed_flashcards_per_hour,
          COALESCE(u.level, 1)::int AS user_level
@@ -19563,6 +19577,7 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
          SELECT
            user_id,
            COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_count,
+           COUNT(*)::int AS sample_count,
            GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
          FROM (
            SELECT

@@ -8923,6 +8923,8 @@
       position: fixed;
       left: 0;
       right: 0;
+      width: 100vw;
+      max-width: 100vw;
       bottom: 0;
       height: 3vh;
       min-height: 18px;
@@ -14630,6 +14632,10 @@
             state.stats.trainingTimeMs = Math.max(0, Math.round(Number(payload.trainingTimeMs) || 0));
             saveUserStats({ skipCloudSync: true });
           }
+          if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.speedPerHour))) {
+            state.stats.speedFlashcardsPerHour = Math.max(0, Number(Number(payload.speedPerHour).toFixed(1)) || 0);
+            saveUserStats({ skipCloudSync: true });
+          }
           if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.userLevel))) {
             const previousLevel = currentUserLevel();
             state.userLevel = normalizeUserLevel(payload.userLevel);
@@ -20226,8 +20232,8 @@
         els.gameMicNextSealProgress.textContent = `${targetProgress.toFixed(1)}%`;
         els.gameMicNextSealProgressFill.style.width = `${targetProgress.toFixed(2)}%`;
         if (els.gameCurrentFluencyLabel) {
-          const rawDeckLevel = Number(state.user?.level ?? state.userLevel ?? USER_LEVEL_MIN);
-          els.gameCurrentFluencyLabel.textContent = `Fluência atual: ${formatDeckLevelWithComma(rawDeckLevel)}`;
+          const currentSpeed = Math.max(0, Number(state.stats?.speedFlashcardsPerHour) || 0);
+          els.gameCurrentFluencyLabel.textContent = `Velocidade atual: ${formatDeckLevelWithComma(currentSpeed)}/h`;
         }
         els.gameMicCurrentSealMetric.hidden = false;
         els.gameMicNextSealMetric.hidden = false;
