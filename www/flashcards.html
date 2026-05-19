@@ -7842,12 +7842,16 @@
     }
 
     .game[data-phase-key="first-star"] .game-controls-proxy .game-mic-side-metric,
+    .game[data-phase-key="third-star"] .game-controls-proxy .game-mic-side-metric,
+    .game[data-phase-key="fifth-star"] .game-controls-proxy .game-mic-side-metric,
     .game[data-phase-key="second-star"] .game-controls-proxy .game-mic-side-metric,
     .game[data-phase-key="fourth-star"] .game-controls-proxy .game-mic-side-metric {
       display: inline-flex;
     }
 
     .game[data-phase-key="first-star"] .game-controls-proxy .game-mic-next-seal-progress,
+    .game[data-phase-key="third-star"] .game-controls-proxy .game-mic-next-seal-progress,
+    .game[data-phase-key="fifth-star"] .game-controls-proxy .game-mic-next-seal-progress,
     .game[data-phase-key="second-star"] .game-controls-proxy .game-mic-next-seal-progress,
     .game[data-phase-key="fourth-star"] .game-controls-proxy .game-mic-next-seal-progress {
       display: block;
@@ -20093,11 +20097,8 @@
           syncLevelTextModeControls();
           return;
         }
-        els.gameTouchBtn.classList.add('game-touch--books-mic');
-        if (stageNumber === 3) {
-          els.gameTouchBtn.classList.add('game-touch--stage-play');
-        }
-        els.gameTouchBtn.innerHTML = GAME_TOUCH_ICON_MARKUP;
+        els.gameTouchBtn.textContent = 'Toque na tela';
+        els.gameTouchBtn.setAttribute('aria-label', 'Toque na tela para falar');
         updateSpeakingStarMicSealProgress();
         syncLevelTextModeControls();
       }
@@ -20112,6 +20113,8 @@
         ) return;
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
         const isMissionMetricPhase = phaseKey === 'first-star'
+          || phaseKey === 'third-star'
+          || phaseKey === 'fifth-star'
           || phaseKey === 'second-star'
           || phaseKey === 'fourth-star';
         if (!isMissionMetricPhase) {
@@ -20203,7 +20206,7 @@
         if (phaseKey === 'second-star' || phaseKey === 'fourth-star') {
           currentRankValue.textContent = `${formatSpeedWithComma(currentSpeed)}/h`;
         } else {
-          currentRankValue.textContent = `${targetProgress.toFixed(1)}%`;
+          currentRankValue.textContent = `${Math.round(targetProgress)}%`;
         }
         if (state.entry.gameMicProgressAnimationFrame) {
           window.cancelAnimationFrame(state.entry.gameMicProgressAnimationFrame);
