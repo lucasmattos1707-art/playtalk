@@ -11074,6 +11074,7 @@
       const LIBRARY_RANK_SWAP_DELAY_MS = 2000;
       const REWARD_RANK_SWAP_DELAY_MS = 1000;
       const REWARD_RANK_VISIBLE_MS = 1000;
+      const REWARD_COIN_COUNT_ANIMATION_MS = 1000;
       const FIFTH_STAR_HINT_ROTATION_MS = 1500;
       const FIFTH_STAR_HINT_MESSAGES = [];
       const THIRD_STAR_HINT_MESSAGES = [];
@@ -21017,6 +21018,10 @@
         }
         if (stageNumber === 5) {
           triggerOverlayDissolve();
+          if (options.skipPromptAudio) {
+            await wait(220);
+            return;
+          }
           const audioPlayback = playPromptAudio(card);
           await wait(500);
           await audioPlayback;
@@ -24828,13 +24833,16 @@
             showRewardGameStatus();
             triggerLibrarySummaryRankSwap();
             entry._removeAfterReward = true;
+            if (evaluatedStage === 5) {
+              entry._skipRewardStagePromptAudio = true;
+            }
           } else {
             setGameStatus('', 'hit');
             state.game.queue.push(entry.id);
           }
           scheduleFlashcardCloudSync(250);
         } else {
-          if (evaluatedStage === 1) {
+          if (evaluatedStage === 1 || evaluatedStage === 3 || evaluatedStage === 5) {
             void applyFirstStageMissLevelPenalty();
           }
           if (entry.stars > 0) {
@@ -24872,14 +24880,18 @@
         if (evaluatedStage === 3) {
           state.game.skipAutoAudioOnce = true;
         }
-        const skipPromptAudio = Boolean(entry._skipStageTwoResponseAudio);
+        const skipPromptAudio = Boolean(entry._skipStageTwoResponseAudio || entry._skipRewardStagePromptAudio);
         entry._skipStageTwoResponseAudio = false;
+        entry._skipRewardStagePromptAudio = false;
         await playStageResponseSequence(evaluatedStage, card, { skipPromptAudio });
         const redirectingToUsername = Boolean(entry._redirectToUsername);
+        const rewardAdvanceDelayMs = (evaluatedStage === 5 && (entry._removeAfterReward || entry._requeueAfterReward))
+          ? (REWARD_RANK_SWAP_DELAY_MS + REWARD_COIN_COUNT_ANIMATION_MS)
+          : (REWARD_RANK_SWAP_DELAY_MS + REWARD_RANK_VISIBLE_MS);
         await wait(redirectingToUsername
           ? 180
           : entry._removeAfterReward || entry._requeueAfterReward
-            ? (REWARD_RANK_SWAP_DELAY_MS + REWARD_RANK_VISIBLE_MS)
+            ? rewardAdvanceDelayMs
             : (evaluatedStage === 3 ? 120 : 1200));
         if (entry._redirectToUsername) {
           entry._redirectToUsername = false;
