@@ -7841,19 +7841,13 @@
       transform: translateX(-50%);
     }
 
-    .game[data-phase-key="first-star"] .game-controls-proxy .game-mic-side-metric,
     .game[data-phase-key="second-star"] .game-controls-proxy .game-mic-side-metric,
-    .game[data-phase-key="third-star"] .game-controls-proxy .game-mic-side-metric,
-    .game[data-phase-key="fourth-star"] .game-controls-proxy .game-mic-side-metric,
-    .game[data-phase-key="fifth-star"] .game-controls-proxy .game-mic-side-metric {
+    .game[data-phase-key="fourth-star"] .game-controls-proxy .game-mic-side-metric {
       display: inline-flex;
     }
 
-    .game[data-phase-key="first-star"] .game-controls-proxy .game-mic-next-seal-progress,
     .game[data-phase-key="second-star"] .game-controls-proxy .game-mic-next-seal-progress,
-    .game[data-phase-key="third-star"] .game-controls-proxy .game-mic-next-seal-progress,
-    .game[data-phase-key="fourth-star"] .game-controls-proxy .game-mic-next-seal-progress,
-    .game[data-phase-key="fifth-star"] .game-controls-proxy .game-mic-next-seal-progress {
+    .game[data-phase-key="fourth-star"] .game-controls-proxy .game-mic-next-seal-progress {
       display: block;
     }
 
@@ -20128,11 +20122,7 @@
           || !els.gameMicNextSealProgressFill
         ) return;
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
-        const isMissionMetricPhase = phaseKey === 'first-star'
-          || phaseKey === 'second-star'
-          || phaseKey === 'third-star'
-          || phaseKey === 'fourth-star'
-          || phaseKey === 'fifth-star';
+        const isMissionMetricPhase = phaseKey === 'second-star' || phaseKey === 'fourth-star';
         if (!isMissionMetricPhase) {
           if (state.entry.gameMicProgressAnimationFrame) {
             window.cancelAnimationFrame(state.entry.gameMicProgressAnimationFrame);
