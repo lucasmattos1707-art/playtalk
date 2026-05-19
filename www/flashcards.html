@@ -12039,6 +12039,10 @@
         return storageKeyForUser(baseKey, state.user?.id);
       }
 
+      function canUseLocalCompetitiveStorage(userId = state.user?.id) {
+        return (Number(userId) || 0) <= 0;
+      }
+
       function clearFlashcardsLocalStorage() {
         const scopedKeys = [
           OWNED_STORAGE_KEY,
@@ -12289,6 +12293,9 @@
       }
 
       function readUserStatsForUser(userId = state.user?.id) {
+        if (!canUseLocalCompetitiveStorage(userId)) {
+          return normalizeStatsSnapshot({});
+        }
         const parsed = readScopedStorage(USER_STATS_STORAGE_KEY, {}, userId);
         return normalizeStatsSnapshot(parsed);
       }
@@ -12298,6 +12305,9 @@
       }
 
       function persistUserStatsLocally() {
+        if (!canUseLocalCompetitiveStorage(state.user?.id)) {
+          return;
+        }
         try {
           localStorage.setItem(
             storageKeyForUser(USER_STATS_STORAGE_KEY, state.user?.id),
@@ -12589,6 +12599,9 @@
       }
 
       function readUserProgressForUser(userId = state.user?.id) {
+        if (!canUseLocalCompetitiveStorage(userId)) {
+          return new Map();
+        }
         try {
           const parsed = JSON.parse(localStorage.getItem(storageKeyForUser(USER_PROGRESS_STORAGE_KEY, userId)) || 'null');
           const records = Array.isArray(parsed) ? parsed.map(normalizeProgressRecord).filter(Boolean) : [];
@@ -12620,6 +12633,9 @@
 
       function persistUserProgressLocally() {
         syncOwnedIdsFromProgress();
+        if (!canUseLocalCompetitiveStorage(state.user?.id)) {
+          return;
+        }
         persistOwnedIdsLocally();
         try {
           localStorage.setItem(
@@ -12632,6 +12648,9 @@
       }
 
       function readHiddenCardIdsForUser(userId = state.user?.id) {
+        if (!canUseLocalCompetitiveStorage(userId)) {
+          return new Set();
+        }
         const parsed = readScopedStorage(USER_HIDDEN_STORAGE_KEY, [], userId);
         const ids = Array.isArray(parsed)
           ? parsed.map((cardId) => safeText(cardId)).filter(Boolean)
@@ -12644,6 +12663,9 @@
       }
 
       function persistHiddenCardIdsLocally() {
+        if (!canUseLocalCompetitiveStorage(state.user?.id)) {
+          return;
+        }
         try {
           localStorage.setItem(
             storageKeyForUser(USER_HIDDEN_STORAGE_KEY, state.user?.id),
@@ -12800,43 +12822,8 @@
         if (!state.user?.id) return false;
         const guestSnapshot = captureGuestSnapshot();
         if (!guestSnapshotHasData(guestSnapshot)) return false;
-
-        const mergedProgress = new Map(state.userCards);
-        guestSnapshot.progress.forEach((record, cardId) => {
-          mergedProgress.set(cardId, pickMoreAdvancedProgress(mergedProgress.get(cardId), record));
-        });
-        state.userCards = mergedProgress;
-        state.hiddenCardIds = new Set([
-          ...Array.from(state.hiddenCardIds.values()),
-          ...Array.from(guestSnapshot.hiddenCardIds.values())
-        ]);
-        state.stats = normalizeStatsSnapshot({
-          playTimeMs: Number(state.stats.playTimeMs || 0) + Number(guestSnapshot.stats?.playTimeMs || 0),
-          speakings: Number(state.stats.speakings || 0) + Number(guestSnapshot.stats?.speakings || 0),
-          listenings: Number(state.stats.listenings || 0) + Number(guestSnapshot.stats?.listenings || 0),
-          readings: Number(state.stats.readings || 0) + Number(guestSnapshot.stats?.readings || 0),
-          trainingTimeMs: Number(state.stats.trainingTimeMs || 0) + Number(guestSnapshot.stats?.trainingTimeMs || 0),
-          pronunciationSamples: [
-            ...(Array.isArray(state.stats.pronunciationSamples) ? state.stats.pronunciationSamples : []),
-            ...(Array.isArray(guestSnapshot.stats?.pronunciationSamples) ? guestSnapshot.stats.pronunciationSamples : [])
-          ].slice(-PRONUNCIATION_SAMPLE_LIMIT),
-          secondStarErrorHeard: Boolean(state.stats.secondStarErrorHeard || guestSnapshot.stats?.secondStarErrorHeard)
-        });
-        if (guestSnapshot.tutorialCompleted) {
-          state.game.tutorial.completed = true;
-        }
-
-        persistUserStatsLocally();
-        persistUserProgressLocally();
-        persistHiddenCardIdsLocally();
-        persistTutorialProgressLocally();
         clearGuestLocalState();
-        syncOwnedIdsFromProgress();
-        reconcileTutorialProgress();
-        refreshLibrary();
-        syncWelcomeGate();
-        await syncFlashcardCloudNow();
-        return true;
+        return false;
       }
 
       function isAdminUsername(value) {
@@ -15783,9 +15770,6 @@
         scheduleCardsRefresh();
         state.libraryPage = 1;
 
-        const localStats = readUserStats();
-        const localProgress = readUserProgress();
-        const localHidden = readHiddenCardIds();
         let cloudState = null;
         try {
           cloudState = await fetchFlashcardCloudState();
@@ -15804,14 +15788,14 @@
         const hasCloudStats = Boolean(cloudState?.meta?.hasStats);
         state.stats = hasCloudStats
           ? normalizeStatsSnapshot(cloudState?.stats)
-          : localStats;
+          : normalizeStatsSnapshot({});
         state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
         state.userCards = hasCloudProgress
           ? new Map(cloudProgress.map(record => [record.cardId, record]))
-          : localProgress;
+          : new Map();
         state.hiddenCardIds = Array.isArray(cloudState?.meta?.hiddenCardIds)
           ? new Set(cloudState.meta.hiddenCardIds.map((cardId) => safeText(cardId)).filter(Boolean))
-          : localHidden;
+          : new Set();
         state.userLevel = normalizeUserLevel(cloudState?.userLevel ?? cloudState?.meta?.userLevel ?? state.user.level);
         state.user.level = state.userLevel;
         applyStoredGameOptions(cloudState?.meta?.gameOptions || cloudState?.gameOptions || DEFAULT_GAME_OPTIONS);
@@ -15870,9 +15854,6 @@
 
         await migrateGuestProgressToAuthenticatedUser();
 
-        if ((!hasCloudProgress && localProgress.size > 0) || (!hasCloudStats && hasMeaningfulStats(localStats))) {
-          await syncFlashcardCloudNow();
-        }
         await refreshAdminWelcomeSummary();
         syncWelcomeGate();
       }
