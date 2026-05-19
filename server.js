@@ -618,6 +618,7 @@ const clampInteger = (value, minimum, maximum, fallback) => {
 const normalizeFlashcardStatus = (value) => (value === 'ready' ? 'ready' : 'memorizing');
 
 const FLASHCARD_PRONUNCIATION_SAMPLE_LIMIT = 200;
+const USERS_PRONUNCIATION_MIN_PERCENT = 60;
 
 const normalizeFlashcardPronunciationSamples = (value) => {
   const source = Array.isArray(value)
@@ -631,6 +632,11 @@ const normalizeFlashcardPronunciationSamples = (value) => {
     .map((sample) => Math.max(0, Math.min(100, Math.round(Number(sample) || 0))))
     .filter((sample) => Number.isFinite(sample))
     .slice(-FLASHCARD_PRONUNCIATION_SAMPLE_LIMIT);
+};
+
+const filterPronunciationSamplesForUsersMetric = (samples) => {
+  const source = Array.isArray(samples) ? samples : [];
+  return source.filter((sample) => Number.isFinite(sample) && sample > USERS_PRONUNCIATION_MIN_PERCENT);
 };
 
 const getFlashcardAccurateAggregateFromRow = (row) => {
@@ -1577,7 +1583,9 @@ const awardUserBooksEnergyXp = async (db, userId, deltas = {}, energySettings = 
 };
 
 const upsertUserBooksPronunciationSamples = async (client, userId, samplesInput) => {
-  const samplesToAppend = normalizeBooksPronunciationPayload(samplesInput);
+  const samplesToAppend = filterPronunciationSamplesForUsersMetric(
+    normalizeBooksPronunciationPayload(samplesInput)
+  );
   const appendedCount = samplesToAppend.length;
   const appendedSum = samplesToAppend.reduce((total, sample) => total + sample, 0);
   const latestPercent = appendedCount ? samplesToAppend[appendedCount - 1] : 0;
@@ -6016,7 +6024,9 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     const existingCardIds = new Set(existingProgressByCardId.keys());
     const shouldPersistPerformanceStats = progress.length > existingCardIds.size;
     const existingTrainingTimeMs = Math.max(0, Number(existingStatsResult.rows[0]?.training_time_ms) || 0);
-    const accurateSamples = normalizeFlashcardPronunciationSamples(stats.pronunciationSamples);
+    const accurateSamples = filterPronunciationSamplesForUsersMetric(
+      normalizeFlashcardPronunciationSamples(stats.pronunciationSamples)
+    );
     const accurateSum = accurateSamples.reduce((total, sample) => total + sample, 0);
     const accurateCount = accurateSamples.length;
     const accurateLatest = accurateCount ? accurateSamples[accurateCount - 1] : 0;
