@@ -3159,6 +3159,14 @@
       pointer-events: none;
     }
 
+    .game-mic-side-metric--left {
+      justify-self: start;
+    }
+
+    .game-mic-side-metric--right {
+      justify-self: end;
+    }
+
     .game-mic-side-metric__seal {
       width: 49px;
       height: 49px;
@@ -3172,7 +3180,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: clamp(18px, 4.2vw, 26px);
+      font-size: clamp(27px, 6.3vw, 39px);
       font-weight: 500;
       font-family: "Manrope", "Exo 2", "Open Sans", Arial, sans-serif;
       letter-spacing: 0.01em;
@@ -3183,8 +3191,8 @@
     }
 
     .game-mic-side-metric__icon {
-      width: 14px;
-      height: 14px;
+      width: 21px;
+      height: 21px;
       color: rgba(255, 255, 255, 0.92);
       opacity: 0.92;
       flex: 0 0 auto;
@@ -20106,9 +20114,7 @@
         }
         els.gameTouchBtn.parentElement.hidden = false;
         if (useStagePlay) {
-          els.gameTouchBtn.classList.add('game-touch--books-mic', 'game-touch--stage-play');
-          els.gameTouchBtn.setAttribute('aria-label', 'Reproduzir audio do flashcard');
-          els.gameTouchBtn.innerHTML = GAME_PLAY_ICON_MARKUP;
+          els.gameTouchBtn.classList.add('is-hidden');
           if (els.gameControlsProxy) {
             els.gameControlsProxy.hidden = false;
             els.gameControlsProxy.classList.remove('is-hidden');
