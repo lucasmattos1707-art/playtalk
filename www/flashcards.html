@@ -3169,7 +3169,7 @@
 
     .game-mic-side-metric__value {
       margin: 0;
-      font-size: clamp(31px, 8.7vw, 49px);
+      font-size: clamp(38px, 10.5vw, 60px);
       font-weight: 800;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
       letter-spacing: 0;
@@ -20217,29 +20217,25 @@
           currentRankValue.className = 'game-mic-side-metric__value';
           els.gameMicCurrentSealMetric.appendChild(currentRankValue);
         }
-        const cachedRank = Math.max(
-          0,
-          Number(state.ui.librarySummaryRank) || Number(state.ui.gameStatusPreviousRank) || 0
-        );
-        currentRankValue.textContent = cachedRank > 0 ? `${cachedRank}\u00ba` : '--';
-        void refreshCurrentPlayerRank().then((rank) => {
-          if (!state.game.active) return;
-          const resolvedRank = Math.max(0, Number(rank) || 0);
-          if (resolvedRank > 0 && currentRankValue && currentRankValue.isConnected) {
-            currentRankValue.textContent = `${resolvedRank}\u00ba`;
-          }
-        }).catch(() => {});
         const targetProgress = Math.max(0, Math.min(100, Number(missionBarProgress) || 0));
+        currentRankValue.textContent = `${targetProgress.toFixed(1)}%`;
         if (state.entry.gameMicProgressAnimationFrame) {
           window.cancelAnimationFrame(state.entry.gameMicProgressAnimationFrame);
           state.entry.gameMicProgressAnimationFrame = 0;
         }
         state.entry.gameMicAnimatedProgress = targetProgress;
-        els.gameMicNextSealProgress.textContent = `${targetProgress.toFixed(1)}%`;
+        els.gameMicNextSealProgress.textContent = `${Math.max(1, normalizeUserLevel(currentUserLevel()))}`;
         els.gameMicNextSealProgressFill.style.width = `${targetProgress.toFixed(2)}%`;
         if (els.gameCurrentFluencyLabel) {
-          const currentSpeed = Math.max(0, Number(state.stats?.speedFlashcardsPerHour) || 0);
-          els.gameCurrentFluencyLabel.textContent = `Velocidade atual: ${formatSpeedWithComma(currentSpeed)}/h`;
+          const phaseKey = safeText(state.game?.entry?.stage || state.game?.stage || els.game?.dataset?.phaseKey).toLowerCase();
+          if (phaseKey === 'second-star' || phaseKey === 'fourth-star') {
+            els.gameCurrentFluencyLabel.textContent = '';
+            els.gameCurrentFluencyLabel.hidden = true;
+          } else {
+            const currentSpeed = Math.max(0, Number(state.stats?.speedFlashcardsPerHour) || 0);
+            els.gameCurrentFluencyLabel.textContent = `Velocidade atual: ${formatSpeedWithComma(currentSpeed)}/h`;
+            els.gameCurrentFluencyLabel.hidden = false;
+          }
         }
         els.gameMicCurrentSealMetric.hidden = false;
         els.gameMicNextSealMetric.hidden = false;
