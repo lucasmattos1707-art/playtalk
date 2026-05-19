@@ -16135,6 +16135,12 @@
         return safe.toFixed(1).replace('.', ',');
       }
 
+      function formatSpeedWithComma(value) {
+        const numeric = Number(value);
+        const safe = Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
+        return safe.toFixed(1).replace('.', ',');
+      }
+
       function selectedGameLevel() {
         if (normalizeGameOptionValue('difficulty', state.options?.difficulty) !== 'manual') {
           return currentUserLevel();
@@ -20233,7 +20239,7 @@
         els.gameMicNextSealProgressFill.style.width = `${targetProgress.toFixed(2)}%`;
         if (els.gameCurrentFluencyLabel) {
           const currentSpeed = Math.max(0, Number(state.stats?.speedFlashcardsPerHour) || 0);
-          els.gameCurrentFluencyLabel.textContent = `Velocidade atual: ${formatDeckLevelWithComma(currentSpeed)}/h`;
+          els.gameCurrentFluencyLabel.textContent = `Velocidade atual: ${formatSpeedWithComma(currentSpeed)}/h`;
         }
         els.gameMicCurrentSealMetric.hidden = false;
         els.gameMicNextSealMetric.hidden = false;
