@@ -489,24 +489,48 @@
 
     <section class="admin-card" style="margin-top:18px;">
       <h2>Curva da velocidade (/users)</h2>
-      <p class="admin-card-copy">Define os 4 eixos da interpolacao que gera os caracteres efetivos no ganho da 5a estrela.</p>
+      <p class="admin-card-copy">Define os 10 eixos da interpolacao que gera os caracteres efetivos no ganho da 5a estrela.</p>
       <form class="admin-form" id="adminSpeedCurveForm">
         <div class="admin-speed-curve-grid">
           <div class="admin-field">
             <label for="adminSpeedCurveChars6">6 chars</label>
-            <input id="adminSpeedCurveChars6" type="number" min="0.01" max="10" step="0.01" value="2.00" required>
+            <input id="adminSpeedCurveChars6" type="number" min="0.01" max="10" step="0.01" value="1.25" data-speed-curve-field="6" required>
           </div>
           <div class="admin-field">
-            <label for="adminSpeedCurveChars15">15 chars</label>
-            <input id="adminSpeedCurveChars15" type="number" min="0.01" max="10" step="0.01" value="1.00" required>
+            <label for="adminSpeedCurveChars12">12 chars</label>
+            <input id="adminSpeedCurveChars12" type="number" min="0.01" max="10" step="0.01" value="1.18" data-speed-curve-field="12" required>
+          </div>
+          <div class="admin-field">
+            <label for="adminSpeedCurveChars18">18 chars</label>
+            <input id="adminSpeedCurveChars18" type="number" min="0.01" max="10" step="0.01" value="1.11" data-speed-curve-field="18" required>
+          </div>
+          <div class="admin-field">
+            <label for="adminSpeedCurveChars24">24 chars</label>
+            <input id="adminSpeedCurveChars24" type="number" min="0.01" max="10" step="0.01" value="1.03" data-speed-curve-field="24" required>
           </div>
           <div class="admin-field">
             <label for="adminSpeedCurveChars30">30 chars</label>
-            <input id="adminSpeedCurveChars30" type="number" min="0.01" max="10" step="0.01" value="0.50" required>
+            <input id="adminSpeedCurveChars30" type="number" min="0.01" max="10" step="0.01" value="0.96" data-speed-curve-field="30" required>
+          </div>
+          <div class="admin-field">
+            <label for="adminSpeedCurveChars36">36 chars</label>
+            <input id="adminSpeedCurveChars36" type="number" min="0.01" max="10" step="0.01" value="0.89" data-speed-curve-field="36" required>
+          </div>
+          <div class="admin-field">
+            <label for="adminSpeedCurveChars42">42 chars</label>
+            <input id="adminSpeedCurveChars42" type="number" min="0.01" max="10" step="0.01" value="0.82" data-speed-curve-field="42" required>
+          </div>
+          <div class="admin-field">
+            <label for="adminSpeedCurveChars48">48 chars</label>
+            <input id="adminSpeedCurveChars48" type="number" min="0.01" max="10" step="0.01" value="0.74" data-speed-curve-field="48" required>
+          </div>
+          <div class="admin-field">
+            <label for="adminSpeedCurveChars54">54 chars</label>
+            <input id="adminSpeedCurveChars54" type="number" min="0.01" max="10" step="0.01" value="0.67" data-speed-curve-field="54" required>
           </div>
           <div class="admin-field">
             <label for="adminSpeedCurveChars60">60 chars</label>
-            <input id="adminSpeedCurveChars60" type="number" min="0.01" max="10" step="0.01" value="0.30" required>
+            <input id="adminSpeedCurveChars60" type="number" min="0.01" max="10" step="0.01" value="0.60" data-speed-curve-field="60" required>
           </div>
         </div>
         <div class="admin-topbar-actions">

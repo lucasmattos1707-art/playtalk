@@ -1089,13 +1089,15 @@ function rememberFlashcardLevelRulesSettings(settings) {
 }
 
 function buildDefaultFlashcardSpeedCurveSnapshot() {
+  const charsAnchors = [6, 12, 18, 24, 30, 36, 42, 48, 54, 60];
+  const minMultiplier = 0.60;
+  const maxMultiplier = 1.25;
+  const span = Math.max(1, charsAnchors.length - 1);
   return {
-    anchors: [
-      { chars: 6, multiplier: 2.0 },
-      { chars: 15, multiplier: 1.0 },
-      { chars: 30, multiplier: 0.5 },
-      { chars: 60, multiplier: 0.3 }
-    ]
+    anchors: charsAnchors.map((chars, index) => ({
+      chars,
+      multiplier: Number((maxMultiplier - (((maxMultiplier - minMultiplier) * index) / span)).toFixed(2))
+    }))
   };
 }
 
@@ -1106,21 +1108,17 @@ function normalizeFlashcardSpeedCurveSnapshot(value = {}) {
     : Array.isArray(value?.payload?.anchors)
       ? value.payload.anchors
       : defaults;
-  const normalized = source
+  const byChars = new Map(source
     .map((entry) => ({
       chars: Math.max(1, Math.min(1000, Math.round(Number(entry?.chars) || 0))),
       multiplier: Math.max(0.01, Math.min(10, Number(Number(entry?.multiplier) || 0).toFixed(4)))
     }))
     .filter((entry) => Number.isFinite(entry.chars) && Number.isFinite(entry.multiplier))
-    .sort((a, b) => a.chars - b.chars)
-    .slice(0, 4);
-  if (normalized.length !== 4) {
-    return buildDefaultFlashcardSpeedCurveSnapshot();
-  }
-  const uniqueChars = new Set(normalized.map((entry) => entry.chars));
-  if (uniqueChars.size !== 4) {
-    return buildDefaultFlashcardSpeedCurveSnapshot();
-  }
+    .map((entry) => [entry.chars, entry.multiplier]));
+  const normalized = defaults.map((entry) => ({
+    chars: entry.chars,
+    multiplier: Math.max(0.01, Math.min(10, Number(byChars.get(entry.chars) || entry.multiplier)))
+  }));
   return { anchors: normalized };
 }
 
@@ -1224,29 +1222,21 @@ function rememberFlashcardDeckCardLimitSettings(settings) {
 }
 
 function buildDefaultFlashcardSpeedLevelGainRules() {
-  return [
-    { minSpeed: 0, maxSpeed: 799, levelGainPerMinute: 0 },
-    { minSpeed: 800, maxSpeed: 899, levelGainPerMinute: 1 },
-    { minSpeed: 900, maxSpeed: 999, levelGainPerMinute: 1 },
-    { minSpeed: 1000, maxSpeed: 1099, levelGainPerMinute: 2 },
-    { minSpeed: 1100, maxSpeed: 1199, levelGainPerMinute: 2 },
-    { minSpeed: 1200, maxSpeed: 1299, levelGainPerMinute: 3 },
-    { minSpeed: 1300, maxSpeed: 1399, levelGainPerMinute: 3 },
-    { minSpeed: 1400, maxSpeed: 1499, levelGainPerMinute: 4 },
-    { minSpeed: 1500, maxSpeed: 1599, levelGainPerMinute: 4 },
-    { minSpeed: 1600, maxSpeed: null, levelGainPerMinute: 4 }
-  ];
+  return Array.from({ length: 15 }, (_v, index) => {
+    const minSpeed = index * 100;
+    return {
+      minSpeed,
+      maxSpeed: minSpeed + 100,
+      levelGainPerMinute: Number(((index + 1) * 0.5).toFixed(2))
+    };
+  });
 }
 
 function buildDefaultFlashcardFirstStageMissPenaltyRules() {
-  return [
-    { minLevel: 80, levelLoss: 7 },
-    { minLevel: 70, levelLoss: 6 },
-    { minLevel: 60, levelLoss: 5 },
-    { minLevel: 50, levelLoss: 4 },
-    { minLevel: 40, levelLoss: 3 },
-    { minLevel: 30, levelLoss: 2 }
-  ];
+  return Array.from({ length: 20 }, (_v, index) => ({
+    minLevel: (index + 1) * 5,
+    levelLoss: Number(((index + 1) * 0.5).toFixed(2))
+  }));
 }
 
 function buildDefaultFlashcardLevelWindowRules() {

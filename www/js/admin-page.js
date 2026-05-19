@@ -1,4 +1,16 @@
 (function initPlaytalkAdminPage() {
+  const SPEED_CURVE_CHAR_ANCHORS = [6, 12, 18, 24, 30, 36, 42, 48, 54, 60];
+
+  function buildDefaultSpeedCurveAnchors() {
+    const minMultiplier = 0.60;
+    const maxMultiplier = 1.25;
+    const span = Math.max(1, SPEED_CURVE_CHAR_ANCHORS.length - 1);
+    return SPEED_CURVE_CHAR_ANCHORS.map((chars, index) => ({
+      chars,
+      multiplier: Number((maxMultiplier - (((maxMultiplier - minMultiplier) * index) / span)).toFixed(2))
+    }));
+  }
+
   const els = {
     energyForm: document.getElementById('adminEnergyForm'),
     multiplierInput: document.getElementById('adminEnergyMultiplierInput'),
@@ -26,8 +38,14 @@
     flashcardsLevelRulesStatus: document.getElementById('adminFlashcardsLevelRulesStatus'),
     speedCurveForm: document.getElementById('adminSpeedCurveForm'),
     speedCurveChars6: document.getElementById('adminSpeedCurveChars6'),
-    speedCurveChars15: document.getElementById('adminSpeedCurveChars15'),
+    speedCurveChars12: document.getElementById('adminSpeedCurveChars12'),
+    speedCurveChars18: document.getElementById('adminSpeedCurveChars18'),
+    speedCurveChars24: document.getElementById('adminSpeedCurveChars24'),
     speedCurveChars30: document.getElementById('adminSpeedCurveChars30'),
+    speedCurveChars36: document.getElementById('adminSpeedCurveChars36'),
+    speedCurveChars42: document.getElementById('adminSpeedCurveChars42'),
+    speedCurveChars48: document.getElementById('adminSpeedCurveChars48'),
+    speedCurveChars54: document.getElementById('adminSpeedCurveChars54'),
     speedCurveChars60: document.getElementById('adminSpeedCurveChars60'),
     speedCurveSaveBtn: document.getElementById('adminSpeedCurveSaveBtn'),
     speedCurveStatus: document.getElementById('adminSpeedCurveStatus'),
@@ -224,12 +242,7 @@
       els.speedCurveSaveBtn.disabled = state.speedCurveBusy;
       els.speedCurveSaveBtn.textContent = state.speedCurveBusy ? 'Salvando...' : 'Salvar curva da velocidade';
     }
-    [
-      els.speedCurveChars6,
-      els.speedCurveChars15,
-      els.speedCurveChars30,
-      els.speedCurveChars60
-    ].forEach((input) => {
+    Array.from(els.speedCurveForm?.querySelectorAll('[data-speed-curve-field]') || []).forEach((input) => {
       if (!input) return;
       input.disabled = state.speedCurveBusy;
     });
@@ -319,13 +332,15 @@
   }
 
   function readDraftSpeedCurve() {
+    const defaults = new Map(buildDefaultSpeedCurveAnchors().map((entry) => [entry.chars, entry.multiplier]));
     return {
-      anchors: [
-        { chars: 6, multiplier: anchorValue(els.speedCurveChars6, 2) },
-        { chars: 15, multiplier: anchorValue(els.speedCurveChars15, 1) },
-        { chars: 30, multiplier: anchorValue(els.speedCurveChars30, 0.5) },
-        { chars: 60, multiplier: anchorValue(els.speedCurveChars60, 0.3) }
-      ]
+      anchors: SPEED_CURVE_CHAR_ANCHORS.map((chars) => ({
+        chars,
+        multiplier: anchorValue(
+          els.speedCurveForm?.querySelector(`[data-speed-curve-field="${chars}"]`),
+          defaults.get(chars) || 1
+        )
+      }))
     };
   }
 
@@ -418,27 +433,22 @@
   }
 
   function buildDefaultLevelDynamicsSettings() {
+    const speedLevelGainRules = Array.from({ length: 15 }, (_v, index) => {
+      const minSpeed = index * 100;
+      const maxSpeed = minSpeed + 100;
+      return {
+        minSpeed,
+        maxSpeed,
+        levelGainPerMinute: Number(((index + 1) * 0.5).toFixed(2))
+      };
+    });
+    const firstStageMissPenaltyRules = Array.from({ length: 20 }, (_v, index) => ({
+      minLevel: (index + 1) * 5,
+      levelLoss: Number(((index + 1) * 0.5).toFixed(2))
+    }));
     return {
-      speedLevelGainRules: [
-        { minSpeed: 0, maxSpeed: 799, levelGainPerMinute: 0 },
-        { minSpeed: 800, maxSpeed: 899, levelGainPerMinute: 1 },
-        { minSpeed: 900, maxSpeed: 999, levelGainPerMinute: 1 },
-        { minSpeed: 1000, maxSpeed: 1099, levelGainPerMinute: 2 },
-        { minSpeed: 1100, maxSpeed: 1199, levelGainPerMinute: 2 },
-        { minSpeed: 1200, maxSpeed: 1299, levelGainPerMinute: 3 },
-        { minSpeed: 1300, maxSpeed: 1399, levelGainPerMinute: 3 },
-        { minSpeed: 1400, maxSpeed: 1499, levelGainPerMinute: 4 },
-        { minSpeed: 1500, maxSpeed: 1599, levelGainPerMinute: 4 },
-        { minSpeed: 1600, maxSpeed: null, levelGainPerMinute: 4 }
-      ],
-      firstStageMissPenaltyRules: [
-        { minLevel: 80, levelLoss: 7 },
-        { minLevel: 70, levelLoss: 6 },
-        { minLevel: 60, levelLoss: 5 },
-        { minLevel: 50, levelLoss: 4 },
-        { minLevel: 40, levelLoss: 3 },
-        { minLevel: 30, levelLoss: 2 }
-      ]
+      speedLevelGainRules,
+      firstStageMissPenaltyRules
     };
   }
 
@@ -498,24 +508,20 @@
   }
 
   function applySpeedCurve(settings) {
-    const anchors = Array.isArray(settings?.anchors) ? settings.anchors : [];
-    const byChars = new Map(anchors.map((entry) => [Number(entry?.chars), Number(entry?.multiplier)]));
-    const safe6 = Math.max(0.01, Math.min(10, Number(byChars.get(6)) || 2));
-    const safe15 = Math.max(0.01, Math.min(10, Number(byChars.get(15)) || 1));
-    const safe30 = Math.max(0.01, Math.min(10, Number(byChars.get(30)) || 0.5));
-    const safe60 = Math.max(0.01, Math.min(10, Number(byChars.get(60)) || 0.3));
-    state.speedCurve = {
-      anchors: [
-        { chars: 6, multiplier: safe6 },
-        { chars: 15, multiplier: safe15 },
-        { chars: 30, multiplier: safe30 },
-        { chars: 60, multiplier: safe60 }
-      ]
-    };
-    if (els.speedCurveChars6) els.speedCurveChars6.value = safe6.toFixed(2);
-    if (els.speedCurveChars15) els.speedCurveChars15.value = safe15.toFixed(2);
-    if (els.speedCurveChars30) els.speedCurveChars30.value = safe30.toFixed(2);
-    if (els.speedCurveChars60) els.speedCurveChars60.value = safe60.toFixed(2);
+    const defaults = buildDefaultSpeedCurveAnchors();
+    const byChars = new Map((Array.isArray(settings?.anchors) ? settings.anchors : []).map((entry) => [
+      Number(entry?.chars),
+      Number(entry?.multiplier)
+    ]));
+    const anchors = defaults.map((entry) => ({
+      chars: entry.chars,
+      multiplier: Math.max(0.01, Math.min(10, Number(byChars.get(entry.chars) || entry.multiplier)))
+    }));
+    state.speedCurve = { anchors };
+    anchors.forEach((entry) => {
+      const input = els.speedCurveForm?.querySelector(`[data-speed-curve-field="${entry.chars}"]`);
+      if (input) input.value = Number(entry.multiplier).toFixed(2);
+    });
   }
 
   function applySettings(settings) {

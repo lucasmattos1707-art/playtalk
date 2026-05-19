@@ -10748,27 +10748,21 @@
         }));
       }
       function buildDefaultLevelDynamicsSettings() {
+        const speedLevelGainRules = Array.from({ length: 15 }, (_v, index) => {
+          const minSpeed = index * 100;
+          return {
+            minSpeed,
+            maxSpeed: minSpeed + 100,
+            levelGainPerMinute: Number(((index + 1) * 0.5).toFixed(2))
+          };
+        });
+        const firstStageMissPenaltyRules = Array.from({ length: 20 }, (_v, index) => ({
+          minLevel: (index + 1) * 5,
+          levelLoss: Number(((index + 1) * 0.5).toFixed(2))
+        }));
         return {
-          speedLevelGainRules: [
-            { minSpeed: 0, maxSpeed: 799, levelGainPerMinute: 0 },
-            { minSpeed: 800, maxSpeed: 899, levelGainPerMinute: 1 },
-            { minSpeed: 900, maxSpeed: 999, levelGainPerMinute: 1 },
-            { minSpeed: 1000, maxSpeed: 1099, levelGainPerMinute: 2 },
-            { minSpeed: 1100, maxSpeed: 1199, levelGainPerMinute: 2 },
-            { minSpeed: 1200, maxSpeed: 1299, levelGainPerMinute: 3 },
-            { minSpeed: 1300, maxSpeed: 1399, levelGainPerMinute: 3 },
-            { minSpeed: 1400, maxSpeed: 1499, levelGainPerMinute: 4 },
-            { minSpeed: 1500, maxSpeed: 1599, levelGainPerMinute: 4 },
-            { minSpeed: 1600, maxSpeed: null, levelGainPerMinute: 4 }
-          ],
-          firstStageMissPenaltyRules: [
-            { minLevel: 80, levelLoss: 7 },
-            { minLevel: 70, levelLoss: 6 },
-            { minLevel: 60, levelLoss: 5 },
-            { minLevel: 50, levelLoss: 4 },
-            { minLevel: 40, levelLoss: 3 },
-            { minLevel: 30, levelLoss: 2 }
-          ]
+          speedLevelGainRules,
+          firstStageMissPenaltyRules
         };
       }
 
