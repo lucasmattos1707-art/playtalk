@@ -9727,12 +9727,12 @@
     .albums-modal__shell {
       position: relative;
       z-index: 1;
-      width: min(980px, 100%);
+      width: min(560px, 100%);
       height: 100dvh;
-      padding: max(18px, env(safe-area-inset-top, 0px)) 16px calc(14px + env(safe-area-inset-bottom, 0px));
+      padding: max(12px, env(safe-area-inset-top, 0px)) 12px calc(10px + env(safe-area-inset-bottom, 0px));
       display: grid;
       grid-template-rows: auto minmax(0, 1fr);
-      gap: 16px;
+      gap: 8px;
     }
 
     .albums-modal__topbar {
@@ -9743,10 +9743,18 @@
     }
 
     .albums-modal__title-wrap {
+      display: inline-grid;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      justify-items: center;
+    }
+
+    .albums-modal__title-row {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
+      gap: 8px;
     }
 
     .albums-modal__title-icon {
@@ -9771,6 +9779,16 @@
       color: #f1f8ff;
     }
 
+    .albums-modal__deck-value {
+      margin: 0;
+      font-family: "Exo 2", "Segoe UI", sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      color: #d8b448;
+      text-transform: uppercase;
+      opacity: 0.95;
+    }
+
     .albums-modal__nav {
       width: 44px;
       height: 44px;
@@ -9792,22 +9810,22 @@
     .albums-modal__content {
       position: relative;
       overflow: hidden;
-      border-radius: 28px;
-      border: 1px solid rgba(122, 183, 255, 0.2);
-      background: rgba(5, 17, 34, 0.44);
-      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      border: 0;
+      background: rgba(5, 17, 34, 0.22);
+      backdrop-filter: blur(4px);
     }
 
     .albums-modal__stage {
       position: absolute;
       inset: 0;
-      padding: 24px 14px 18px;
+      padding: 10px 8px 10px;
       opacity: 0;
       pointer-events: none;
       transition: opacity 220ms ease;
       display: grid;
       grid-template-rows: minmax(0, 1fr) auto;
-      gap: 12px;
+      gap: 6px;
     }
 
     .albums-modal__stage.is-active {
@@ -9839,7 +9857,7 @@
     .albums-modal__slide.is-leaving-down { transform: translateY(100%); opacity: 0.02; }
 
     .albums-modal__flashcard {
-      width: min(82vw, 310px);
+      width: min(64vw, 248px);
       max-width: 100%;
       display: grid;
       gap: 6px;
@@ -9860,7 +9878,7 @@
     }
 
     .albums-modal__flashcard-visual img {
-      width: 74%;
+      width: 100%;
       height: auto;
       object-fit: contain;
       object-position: center;
@@ -9869,12 +9887,12 @@
 
     .albums-modal__flashcard-seal {
       position: absolute;
-      right: calc(13% - 8px);
-      bottom: 8px;
-      width: 18px;
-      height: 18px;
+      right: 4px;
+      bottom: 4px;
+      width: 12px;
+      height: 12px;
       object-fit: contain;
-      filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.38));
+      filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.3));
     }
 
     .albums-modal__flashcard-progress {
@@ -10142,10 +10160,13 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 5.4 8.8 12l6.6 6.6-1.4 1.4L6 12l8-8z"/></svg>
           </button>
           <div class="albums-modal__title-wrap">
-            <span class="albums-modal__title-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M12 3c-2.4 0-4.2 1.8-4.2 4.2v9.6A4.2 4.2 0 1 0 12 21a4.2 4.2 0 0 0 4.2-4.2V7.2C16.2 4.8 14.4 3 12 3Zm0 2c1.3 0 2.2.9 2.2 2.2v9.6a2.2 2.2 0 1 1-4.4 0V7.2C9.8 5.9 10.7 5 12 5Z"/></svg>
-            </span>
-            <h2 class="albums-modal__title" id="albumsSectionTitle">FlashCards</h2>
+            <div class="albums-modal__title-row">
+              <span class="albums-modal__title-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 3c-2.4 0-4.2 1.8-4.2 4.2v9.6A4.2 4.2 0 1 0 12 21a4.2 4.2 0 0 0 4.2-4.2V7.2C16.2 4.8 14.4 3 12 3Zm0 2c1.3 0 2.2.9 2.2 2.2v9.6a2.2 2.2 0 1 1-4.4 0V7.2C9.8 5.9 10.7 5 12 5Z"/></svg>
+              </span>
+              <h2 class="albums-modal__title" id="albumsSectionTitle">FlashCards</h2>
+            </div>
+            <p class="albums-modal__deck-value" id="albumsDeckValue">Valor do DECK: 0 moedas</p>
           </div>
           <button class="albums-modal__nav" id="albumsNextSectionBtn" type="button" aria-label="Proxima sessao">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.6 18.6 6.6-6.6-6.6-6.6L10 4l8 8-8 8z"/></svg>
@@ -11463,6 +11484,7 @@
         albumsPrevSectionBtn: document.getElementById('albumsPrevSectionBtn'),
         albumsNextSectionBtn: document.getElementById('albumsNextSectionBtn'),
         albumsSectionTitle: document.getElementById('albumsSectionTitle'),
+        albumsDeckValue: document.getElementById('albumsDeckValue'),
         albumsFlashcardsStage: document.getElementById('albumsFlashcardsStage'),
         albumsSealsStage: document.getElementById('albumsSealsStage'),
         albumsFlashcardsStack: document.getElementById('albumsFlashcardsStack'),
@@ -17018,6 +17040,30 @@
         { key: 'seals', label: 'Selos' }
       ];
 
+      function albumSealCoinMultiplier(phase) {
+        const safePhase = Math.max(1, Math.floor(Number(phase) || 1));
+        if (safePhase <= 1) return 1;
+        if (safePhase === 2) return 1.5;
+        if (safePhase >= 8) return 9;
+        return safePhase;
+      }
+
+      function albumsDeckCoinsTotal() {
+        const cards = userProgressCards();
+        return cards.reduce((total, card) => {
+          const baseCoins = Math.max(0, Number(flashcardCoinValue(card)) || 0);
+          const sealPhase = Math.max(1, Number(activeSealPhase(card?.progress)) || 1);
+          const weighted = baseCoins * albumSealCoinMultiplier(sealPhase);
+          return total + weighted;
+        }, 0);
+      }
+
+      function renderAlbumsDeckValue() {
+        if (!els.albumsDeckValue) return;
+        const totalCoins = Math.max(0, Math.round(albumsDeckCoinsTotal()));
+        els.albumsDeckValue.textContent = `Valor do DECK: ${totalCoins.toLocaleString('pt-BR')} moedas`;
+      }
+
       function albumFlashcardsItems() {
         return userProgressCards().map(buildLibraryCardView);
       }
@@ -17153,6 +17199,7 @@
 
       function renderAlbumsSection() {
         const section = ALBUMS_SECTIONS[Math.max(0, Math.min(ALBUMS_SECTIONS.length - 1, state.ui.albumsSectionIndex))] || ALBUMS_SECTIONS[0];
+        renderAlbumsDeckValue();
         if (els.albumsSectionTitle) {
           els.albumsSectionTitle.textContent = section.label;
         }
