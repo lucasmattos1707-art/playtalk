@@ -6832,6 +6832,10 @@
       opacity: 1;
     }
 
+    .first-star-seals.is-mic-live .first-star-seal[disabled] {
+      opacity: 1;
+    }
+
     .first-star-seal--listen {
       left: 0;
       transform: translate(-36%, -50%);
@@ -20801,6 +20805,7 @@
         const visible = isFirstStarEntry(entry);
         els.firstStarSeals.hidden = !visible;
         els.firstStarSeals.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        els.firstStarSeals.classList.toggle('is-mic-live', visible && state.game.listening);
         if (!visible) {
           setFirstStarListenSealPlaying(false);
           setFirstStarJumpBusy(false);
