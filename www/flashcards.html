@@ -6820,18 +6820,22 @@
     }
 
     .first-star-seal[disabled] {
-      opacity: 0.58;
+      opacity: 0.78;
       cursor: default;
+    }
+
+    .first-star-seal--listen.is-playing[disabled] {
+      opacity: 1;
     }
 
     .first-star-seal--listen {
       left: 0;
-      transform: translate(-50%, -50%);
+      transform: translate(-36%, -50%);
     }
 
     .first-star-seal--jump {
       right: 0;
-      transform: translate(50%, -50%);
+      transform: translate(36%, -50%);
     }
 
     .first-star-seal__circle {
@@ -11894,6 +11898,7 @@
         gameLevelNextBtn: document.getElementById('gameLevelNextBtn'),
         gameStatusSlot: document.getElementById('gameStatusSlot'),
         gameKeyboardHost: document.getElementById('gameKeyboardHost'),
+        gameFooterSlot: document.getElementById('gameFooterSlot'),
         gameControlsProxy: document.getElementById('gameControlsProxy'),
         gameChipRow: document.getElementById('gameChipRow'),
         gameHeaderCopy: document.getElementById('gameHeaderCopy'),
@@ -20805,6 +20810,45 @@
         els.firstStarJumpBtn.disabled = disabled || state.game.firstStarJumpBusy;
       }
 
+      function enforceBottomInfoContainersLayout() {
+        if (els.gameStatusSlot) {
+          els.gameStatusSlot.style.position = 'fixed';
+          els.gameStatusSlot.style.left = '0';
+          els.gameStatusSlot.style.right = '0';
+          els.gameStatusSlot.style.bottom = '0';
+          els.gameStatusSlot.style.width = '100%';
+          els.gameStatusSlot.style.maxWidth = '100%';
+          els.gameStatusSlot.style.margin = '0';
+          els.gameStatusSlot.style.padding = '0';
+          els.gameStatusSlot.style.background = 'transparent';
+          els.gameStatusSlot.style.border = '0';
+          els.gameStatusSlot.style.boxShadow = 'none';
+        }
+        if (els.gamePhaseWord) {
+          els.gamePhaseWord.style.opacity = '0';
+          els.gamePhaseWord.style.pointerEvents = 'none';
+        }
+        if (els.gameStatusWrap) {
+          els.gameStatusWrap.style.opacity = '0';
+          els.gameStatusWrap.style.pointerEvents = 'none';
+        }
+        if (els.gameFooterSlot) {
+          els.gameFooterSlot.style.position = 'fixed';
+          els.gameFooterSlot.style.left = '0';
+          els.gameFooterSlot.style.right = '0';
+          els.gameFooterSlot.style.bottom = '0';
+          els.gameFooterSlot.style.width = '100%';
+          els.gameFooterSlot.style.maxWidth = '100%';
+          els.gameFooterSlot.style.margin = '0';
+          els.gameFooterSlot.style.padding = '0';
+          els.gameFooterSlot.style.background = 'transparent';
+          els.gameFooterSlot.style.border = '0';
+          els.gameFooterSlot.style.boxShadow = 'none';
+          els.gameFooterSlot.style.opacity = '0';
+          els.gameFooterSlot.style.pointerEvents = 'none';
+        }
+      }
+
       function finalizeStageAutoAudioPlayback(entry, stageConfig) {
         if (state.game.currentId !== entry.id) return;
         state.game.canListen = !isLevelAudioModeActive();
@@ -23673,6 +23717,7 @@
       }
 
       function renderCurrentCard(options = {}) {
+        enforceBottomInfoContainersLayout();
         cleanupGameRecognition();
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) {
