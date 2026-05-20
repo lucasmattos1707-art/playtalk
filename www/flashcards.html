@@ -16581,12 +16581,43 @@
         return Math.max(0, Math.min(100, (Number(value) || 0) / 2));
       }
 
+      function resolveLiveOnTableCardsPartial() {
+        const byCardId = new Map();
+        const liveEntries = Array.from(state.game?.entries?.values?.() || []);
+        liveEntries.forEach((entry) => {
+          const cardId = safeText(entry?.id);
+          if (!cardId) return;
+          byCardId.set(cardId, {
+            cardId,
+            stars: Math.max(0, Math.min(GAME_STAR_TARGET - 1, Number.parseInt(entry?.stars, 10) || 0))
+          });
+        });
+        if (!byCardId.size) {
+          const persisted = Array.isArray(state.game?.persistedOnTable) ? state.game.persistedOnTable : [];
+          persisted.forEach((entry) => {
+            const cardId = safeText(entry?.cardId || entry?.id);
+            if (!cardId || byCardId.has(cardId)) return;
+            byCardId.set(cardId, {
+              cardId,
+              stars: Math.max(0, Math.min(GAME_STAR_TARGET - 1, Number.parseInt(entry?.stars, 10) || 0))
+            });
+          });
+        }
+        const partial = Array.from(byCardId.values()).reduce((total, entry) => (
+          total + (Math.max(0, Number(entry?.stars) || 0) / GAME_STAR_TARGET)
+        ), 0);
+        return Math.max(0, Number(partial.toFixed(2)) || 0);
+      }
+
       function buildDailyPlanMissionView(mission, use120Preview = false) {
         const source = mission || {};
         const minutes = Math.max(0, Number(source?.minutes) || 0);
         const cardsTodayBase = Math.max(0, Number(source?.cardsTodayBase) || Number(source?.cardsToday) || 0);
-        const onTableCardsPartial = Math.max(0, Number(source?.onTableCardsPartial) || 0);
-        const cardsToday = cardsTodayBase;
+        const onTableCardsPartial = Math.max(
+          Math.max(0, Number(source?.onTableCardsPartial) || 0),
+          resolveLiveOnTableCardsPartial()
+        );
+        const cardsToday = cardsTodayBase + onTableCardsPartial;
         const booksToday = Math.max(0, Number(source?.booksToday) || 0);
         const scale = use120Preview && minutes > 0 ? (120 / minutes) : 1;
         const cardsExpected = Math.max(0, Number(source?.cardsExpected) || 0) * scale;
@@ -16722,7 +16753,7 @@
         const isNoPlanMode = safeText(mission?.seal?.mode).toLowerCase() === 'sem_plano';
         const missionView = buildDailyPlanMissionView(mission, use120Preview);
         const producedFluency = computeProducedFluencyPercent(mission, missionView);
-        const cardsForSealProgress = Math.max(0, Number(missionView.cardsTodayBase ?? missionView.cardsToday) || 0);
+        const cardsForSealProgress = Math.max(0, Number(missionView.cardsToday) || 0);
         const overallPercent = clampPercent(missionView.balancedProgressPercent);
         const overallPercentRounded = Math.round(overallPercent);
         const overallPercentForVisual = isNoPlanMode
