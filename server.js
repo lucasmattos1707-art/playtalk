@@ -1505,6 +1505,19 @@ function buildFlashcardSpeedSampleValue(charsCount, curveSettings) {
   };
 }
 
+const FLASHCARD_SPEED_STAGE_PROGRESS_STEP = 1 / 5;
+
+function resolveFlashcardSpeedStageProgress(stars) {
+  const normalizedStars = Math.max(0, Math.min(4, Math.round(Number(stars) || 0)));
+  return Number((normalizedStars * FLASHCARD_SPEED_STAGE_PROGRESS_STEP).toFixed(4));
+}
+
+function resolveFlashcardSpeedUnitsFromState(progressRecord, onTableRecord) {
+  const phaseUnits = Math.max(0, Number(resolveFlashcardMissionPhase(progressRecord)) || 0);
+  const stageUnits = resolveFlashcardSpeedStageProgress(onTableRecord?.stars);
+  return Number((phaseUnits + stageUnits).toFixed(4));
+}
+
 const xpRequiredForNextLevel = (level, xpCurveSettings = null) => {
   const normalizedLevel = Math.max(1, Math.min(FLASHCARD_XP_LEVEL_MAX, Math.floor(Number(level) || 1)));
   if (normalizedLevel >= FLASHCARD_XP_LEVEL_MAX) return 0;
@@ -5641,11 +5654,16 @@ async function appendFlashcardSpeedSamples(client, userId, samples = []) {
   const source = Array.isArray(samples) ? samples : [];
   const sanitized = source
     .map((entry) => ({
-      sampleValue: Math.max(0.01, Number(Number(entry?.sampleValue) || 0).toFixed(4)),
+      sampleValue: Number((Number(entry?.sampleValue) || 0).toFixed(4)),
       practiceMsTotal: Math.max(0, Math.round(Number(entry?.practiceMsTotal) || 0)),
       currentLevel: normalizeUserFlashcardLevel(entry?.currentLevel)
     }))
-    .filter((entry) => Number.isFinite(entry.sampleValue) && Number.isFinite(entry.currentLevel) && Number.isFinite(entry.practiceMsTotal));
+    .filter((entry) => (
+      Number.isFinite(entry.sampleValue)
+      && Math.abs(entry.sampleValue) >= 0.0001
+      && Number.isFinite(entry.currentLevel)
+      && Number.isFinite(entry.practiceMsTotal)
+    ));
   if (!sanitized.length) return;
   await ensureUserFlashcardSpeedSamplesTable();
   const values = [];
@@ -6007,12 +6025,29 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
        WHERE user_id = $1`,
       [normalizedUserId]
     );
+    const existingOnTableResult = await client.query(
+      `SELECT card_id, stars, stage, updated_at
+       FROM public.user_flashcard_on_table
+       WHERE user_id = $1`,
+      [normalizedUserId]
+    );
     const existingProgressByCardId = new Map();
     existingProgressResult.rows.forEach((row) => {
       const mapped = mapStoredFlashcardProgressRow(row);
       const cardId = String(mapped?.cardId || '').trim();
       if (!cardId) return;
       existingProgressByCardId.set(cardId, mapped);
+    });
+    const existingOnTableByCardId = new Map();
+    existingOnTableResult.rows.forEach((row) => {
+      const mapped = normalizeFlashcardOnTableRecord({
+        cardId: row?.card_id,
+        stars: row?.stars,
+        stage: row?.stage,
+        updatedAt: flashcardMillisFromTimestamp(row?.updated_at)
+      });
+      if (!mapped?.cardId) return;
+      existingOnTableByCardId.set(mapped.cardId, mapped);
     });
     if (hasProgressPayload && !allowProgressReset && !progress.length && existingProgressByCardId.size > 0) {
       progress = Array.from(existingProgressByCardId.values());
@@ -6027,26 +6062,44 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       return nextPhase > previousPhase ? total + 1 : total;
     }, 0);
     const speedCurveSettings = await getFlashcardSpeedCurveSettings();
+    const nextProgressByCardId = hasProgressPayload
+      ? new Map(progress.map((item) => [String(item?.cardId || '').trim(), item]).filter(([cardId]) => Boolean(cardId)))
+      : new Map(existingProgressByCardId);
+    const nextOnTableByCardId = hasOnTablePayload
+      ? new Map(onTable.map((item) => [String(item?.cardId || '').trim(), item]).filter(([cardId]) => Boolean(cardId)))
+      : new Map(existingOnTableByCardId);
+    const speedDeltaCardIds = new Set([
+      ...existingProgressByCardId.keys(),
+      ...nextProgressByCardId.keys(),
+      ...existingOnTableByCardId.keys(),
+      ...nextOnTableByCardId.keys()
+    ]);
     const generatedSpeedSamples = [];
-    progress.forEach((item) => {
-      const cardId = String(item?.cardId || '').trim();
-      if (!cardId) return;
-      const previous = existingProgressByCardId.get(cardId);
-      const previousPhase = previous ? resolveFlashcardMissionPhase(previous) : 0;
-      const nextPhase = resolveFlashcardMissionPhase(item);
-      const winsDelta = Math.max(0, nextPhase - previousPhase);
-      if (!winsDelta) return;
+    speedDeltaCardIds.forEach((cardId) => {
+      const previousProgress = existingProgressByCardId.get(cardId) || null;
+      const nextProgress = nextProgressByCardId.get(cardId) || null;
+      const previousOnTable = existingOnTableByCardId.get(cardId) || null;
+      const nextOnTable = nextOnTableByCardId.get(cardId) || null;
+      const previousUnits = resolveFlashcardSpeedUnitsFromState(previousProgress, previousOnTable);
+      const nextUnits = resolveFlashcardSpeedUnitsFromState(nextProgress, nextOnTable);
+      const unitsDelta = Number((nextUnits - previousUnits).toFixed(4));
+      if (Math.abs(unitsDelta) < 0.0001) return;
+      const charsForSample = Math.max(
+        1,
+        Math.round(Number(nextProgress?.cardChars ?? previousProgress?.cardChars) || 10)
+      );
+      const baseSample = buildFlashcardSpeedSampleValue(charsForSample, speedCurveSettings);
+      const sampleValue = Number((baseSample.sampleValue * unitsDelta).toFixed(4));
+      if (Math.abs(sampleValue) < 0.0001) return;
       const speedSample = {
-        ...buildFlashcardSpeedSampleValue(item?.cardChars, speedCurveSettings),
+        sampleValue,
         practiceMsTotal: Math.max(
           0,
           Math.round(Number(stats?.trainingTimeMs ?? stats?.training_time_ms) || 0)
         ),
         currentLevel: persistedUserLevel
       };
-      for (let index = 0; index < winsDelta; index += 1) {
-        generatedSpeedSamples.push(speedSample);
-      }
+      generatedSpeedSamples.push(speedSample);
     });
     const existingCardIds = new Set(existingProgressByCardId.keys());
     const shouldPersistPerformanceStats = progress.length > existingCardIds.size;
@@ -6060,7 +6113,10 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     const existingSpeakings = Math.max(0, Number(existingStatsResult.rows[0]?.speakings) || 0);
     const existingListenings = Math.max(0, Number(existingStatsResult.rows[0]?.listenings) || 0);
     const existingReadings = Math.max(0, Number(existingStatsResult.rows[0]?.readings) || 0);
-    const persistedTrainingTimeMs = existingTrainingTimeMs;
+    const persistedTrainingTimeMs = Math.max(
+      existingTrainingTimeMs,
+      Math.max(0, Math.round(Number(stats?.trainingTimeMs ?? stats?.training_time_ms) || 0))
+    );
     const persistedSpeakings = Math.max(
       existingSpeakings,
       Math.max(0, Number(stats.speakings) || 0)
@@ -6280,10 +6336,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
          game_option_speed = EXCLUDED.game_option_speed,
          game_option_accent = EXCLUDED.game_option_accent,
          game_option_fourth_stage_typing = EXCLUDED.game_option_fourth_stage_typing,
-         training_time_ms = CASE
-           WHEN $13::boolean THEN EXCLUDED.training_time_ms
-           ELSE public.user_flashcard_stats.training_time_ms
-         END,
+         training_time_ms = GREATEST(public.user_flashcard_stats.training_time_ms, EXCLUDED.training_time_ms),
          pronunciation_samples = CASE
            WHEN $13::boolean THEN EXCLUDED.pronunciation_samples
            ELSE public.user_flashcard_stats.pronunciation_samples
