@@ -3864,8 +3864,10 @@
     .game[data-phase-key="first-star"] .game-card__coin-badge,
     .game[data-phase-key="third-star"] .game-card__coin-badge,
     .game[data-phase-key="fifth-star"] .game-card__coin-badge {
-      transform: scale(1.5);
-      transform-origin: top left;
+      top: 0;
+      left: 50%;
+      transform: translate(-50%, -52%) scale(1.02);
+      transform-origin: center;
     }
 
     .game-card__flag {
@@ -6803,19 +6805,17 @@
     }
 
     .first-star-seal {
-      --first-star-seal-offset: clamp(146px, 24vw, 208px);
+      --first-star-seal-offset: clamp(148px, 24vw, 212px);
       position: absolute;
       top: 50%;
-      transform: translateY(calc(-50% - 38px));
-      width: clamp(84px, 12vw, 108px);
+      transform: translateY(-50%);
+      width: clamp(66px, 10vw, 84px);
       border: 0;
       background: transparent;
       padding: 0;
       margin: 0;
       display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: 9px;
       color: #ffffff;
       pointer-events: auto;
       cursor: pointer;
@@ -6835,19 +6835,13 @@
     }
 
     .first-star-seal__circle {
-      width: clamp(62px, 9.8vw, 84px);
-      height: clamp(62px, 9.8vw, 84px);
+      width: clamp(62px, 9.6vw, 78px);
+      height: clamp(62px, 9.6vw, 78px);
       border-radius: 50%;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       text-align: center;
-      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
-      font-size: clamp(13px, 1.9vw, 16px);
-      letter-spacing: 0.06em;
-      line-height: 1;
-      font-weight: 900;
-      text-transform: uppercase;
       user-select: none;
       border: 1.5px solid rgba(255, 171, 72, 0.82);
       background:
@@ -6865,16 +6859,11 @@
         transform 140ms ease;
     }
 
-    .first-star-seal__label {
-      margin: 0;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(12px, 1.8vw, 15px);
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: rgba(234, 245, 255, 0.95);
-      text-shadow: 0 0 12px rgba(56, 146, 255, 0.35);
-      user-select: none;
+    .first-star-seal__circle svg {
+      width: clamp(28px, 4.8vw, 34px);
+      height: clamp(28px, 4.8vw, 34px);
+      fill: #fff7ee;
+      filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
     }
 
     .first-star-seal:not([disabled]):active .first-star-seal__circle {
@@ -6883,7 +6872,6 @@
 
     .first-star-seal--listen.is-playing .first-star-seal__circle {
       border-color: rgba(103, 255, 173, 0.92);
-      color: #e6fff1;
       background:
         linear-gradient(160deg, rgba(84, 255, 165, 0.34) 0%, rgba(6, 70, 35, 0.92) 74%),
         radial-gradient(circle, rgba(97, 242, 164, 0.46), rgba(2, 25, 15, 0.95) 74%);
@@ -6893,20 +6881,36 @@
         0 0 30px rgba(80, 236, 147, 0.24);
     }
 
+    .first-star-seal--listen.is-playing .first-star-seal__circle svg {
+      fill: #ecfff4;
+    }
+
     .first-star-seal--jump .first-star-seal__circle {
-      border-color: rgba(192, 124, 255, 0.88);
-      color: #f6e8ff;
+      border-color: rgba(255, 171, 72, 0.82);
       background:
-        linear-gradient(160deg, rgba(175, 89, 255, 0.32) 0%, rgba(46, 9, 74, 0.92) 74%),
-        radial-gradient(circle, rgba(154, 85, 255, 0.42), rgba(13, 5, 26, 0.96) 74%);
+        linear-gradient(160deg, rgba(255, 183, 92, 0.36) 0%, rgba(102, 48, 0, 0.9) 74%),
+        radial-gradient(circle, rgba(255, 136, 8, 0.36), rgba(16, 7, 0, 0.95) 74%);
       box-shadow:
-        inset 0 0 22px rgba(173, 102, 255, 0.34),
-        0 0 20px rgba(164, 92, 255, 0.42),
-        0 0 30px rgba(164, 92, 255, 0.22);
+        inset 0 0 20px rgba(255, 143, 12, 0.34),
+        0 0 20px rgba(255, 131, 34, 0.38),
+        0 0 30px rgba(255, 131, 34, 0.22);
     }
 
     .first-star-seal--jump.is-busy .first-star-seal__circle {
       filter: saturate(0.72);
+    }
+
+    #gameStatusSlot,
+    #gameFooterSlot {
+      margin-bottom: 0 !important;
+      bottom: 0 !important;
+    }
+
+    #gameStatusSlot .game-phase-word,
+    #gameStatusSlot .game-status-wrap,
+    #gameFooterSlot {
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
 
     .game[data-phase-key="first-star"] #gameVisual > img:not(.game-card__seal),
@@ -10543,12 +10547,21 @@
             <div class="game-card__visual" id="gameVisual"></div>
             <div class="first-star-seals" id="firstStarSeals" hidden aria-hidden="true">
               <button class="first-star-seal first-star-seal--listen" id="firstStarListenBtn" type="button" aria-label="Reproduzir audio do flashcard">
-                <span class="first-star-seal__circle">PLAY</span>
-                <span class="first-star-seal__label">Listen</span>
+                <span class="first-star-seal__circle" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M8 6v12l10-6z"></path>
+                  </svg>
+                </span>
               </button>
               <button class="first-star-seal first-star-seal--jump" id="firstStarJumpBtn" type="button" aria-label="Pular carta e perder 1 nivel de deck">
-                <span class="first-star-seal__circle">JUMP</span>
-                <span class="first-star-seal__label">Jump</span>
+                <span class="first-star-seal__circle" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M7 7h10v2H7z"></path>
+                    <path d="M13 11h4v2h-4z"></path>
+                    <path d="M13 15h4v2h-4z"></path>
+                    <path d="M9 9 5 12l4 3z"></path>
+                  </svg>
+                </span>
               </button>
             </div>
             <div class="game-translation-slot" id="gameTranslationSlot" aria-hidden="true"></div>
@@ -20798,9 +20811,9 @@
 
       function runAutoAudioPlaybackAttempt(entry, card, stageConfig, attempt = 1) {
         if (!state.game.active || state.game.currentId !== entry.id || state.game.listening || state.game.paused) return;
-        const playback = playPromptAudio(card, {
-          unlockDelayMs: stageConfig.key === 'first-star' ? FIRST_STAGE_MIC_UNLOCK_DELAY_MS : GAME_MIC_UNLOCK_DELAY_MS
-        });
+        const playback = stageConfig.key === 'first-star'
+          ? playFirstStarPromptAudio()
+          : playPromptAudio(card, { unlockDelayMs: GAME_MIC_UNLOCK_DELAY_MS });
         Promise.resolve(playback)
           .then((played) => {
             if (state.game.currentId !== entry.id) return;
