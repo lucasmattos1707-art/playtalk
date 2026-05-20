@@ -11148,6 +11148,24 @@
       const TRAINING_MAX_CARD_COUNT = 500;
       const TRAINING_CARD_STEP = 10;
       const GAME_STAR_TARGET = 5;
+      const GAME_STAGE_PROGRESS_WEIGHTS = Object.freeze([25, 25, 10, 25, 15]);
+      const GAME_STAGE_PROGRESS_TOTAL = Math.max(
+        1,
+        GAME_STAGE_PROGRESS_WEIGHTS.reduce((sum, weight) => (
+          sum + Math.max(0, Number(weight) || 0)
+        ), 0)
+      );
+      const GAME_STAGE_PROGRESS_BY_STARS = Object.freeze((() => {
+        let cumulative = 0;
+        const steps = [0];
+        GAME_STAGE_PROGRESS_WEIGHTS
+          .slice(0, -1)
+          .forEach((weight) => {
+            cumulative += Math.max(0, Number(weight) || 0);
+            steps.push(Number((cumulative / GAME_STAGE_PROGRESS_TOTAL).toFixed(4)));
+          });
+        return steps;
+      })());
       const REVIEW_SLOT_LIMIT = 7;
       const ON_TABLE_MAX_CARDS = 12;
       const ON_TABLE_BASE_MAX = 5;
@@ -16804,6 +16822,14 @@
         return Math.max(0, Math.min(100, (Number(value) || 0) / 2));
       }
 
+      function resolveLiveOnTableCardPartialByStars(stars) {
+        const normalizedStars = Math.max(
+          0,
+          Math.min(GAME_STAGE_PROGRESS_BY_STARS.length - 1, Number.parseInt(stars, 10) || 0)
+        );
+        return GAME_STAGE_PROGRESS_BY_STARS[normalizedStars] || 0;
+      }
+
       function resolveLiveOnTableCardsPartial() {
         const byCardId = new Map();
         const liveEntries = Array.from(state.game?.entries?.values?.() || []);
@@ -16827,7 +16853,7 @@
           });
         }
         const partial = Array.from(byCardId.values()).reduce((total, entry) => (
-          total + (Math.max(0, Number(entry?.stars) || 0) / GAME_STAR_TARGET)
+          total + resolveLiveOnTableCardPartialByStars(entry?.stars)
         ), 0);
         return Math.max(0, Number(partial.toFixed(2)) || 0);
       }

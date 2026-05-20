@@ -323,7 +323,8 @@ const FLASHCARD_CARD_VALUE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_XP_VALUE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_DECK_CARD_LIMIT_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_XP_LEVEL_CURVE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
-const FLASHCARD_SPEED_SAMPLE_LIMIT = 50;
+const FLASHCARD_SPEED_SAMPLE_STORAGE_LIMIT = 40;
+const FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE = 30;
 const FLASHCARD_ON_TABLE_MAX_CARDS = 12;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
@@ -1505,11 +1506,31 @@ function buildFlashcardSpeedSampleValue(charsCount, curveSettings) {
   };
 }
 
-const FLASHCARD_SPEED_STAGE_PROGRESS_STEP = 1 / 5;
+const FLASHCARD_SPEED_STAGE_PROGRESS_WEIGHTS = Object.freeze([25, 25, 10, 25, 15]);
+const FLASHCARD_SPEED_STAGE_PROGRESS_TOTAL = Math.max(
+  1,
+  FLASHCARD_SPEED_STAGE_PROGRESS_WEIGHTS.reduce((sum, weight) => (
+    sum + Math.max(0, Number(weight) || 0)
+  ), 0)
+);
+const FLASHCARD_SPEED_STAGE_PROGRESS_BY_STARS = Object.freeze((() => {
+  let cumulative = 0;
+  const steps = [0];
+  FLASHCARD_SPEED_STAGE_PROGRESS_WEIGHTS
+    .slice(0, -1)
+    .forEach((weight) => {
+      cumulative += Math.max(0, Number(weight) || 0);
+      steps.push(Number((cumulative / FLASHCARD_SPEED_STAGE_PROGRESS_TOTAL).toFixed(4)));
+    });
+  return steps;
+})());
 
 function resolveFlashcardSpeedStageProgress(stars) {
-  const normalizedStars = Math.max(0, Math.min(4, Math.round(Number(stars) || 0)));
-  return Number((normalizedStars * FLASHCARD_SPEED_STAGE_PROGRESS_STEP).toFixed(4));
+  const normalizedStars = Math.max(
+    0,
+    Math.min(FLASHCARD_SPEED_STAGE_PROGRESS_BY_STARS.length - 1, Math.round(Number(stars) || 0))
+  );
+  return FLASHCARD_SPEED_STAGE_PROGRESS_BY_STARS[normalizedStars] || 0;
 }
 
 function resolveFlashcardSpeedUnitsFromState(progressRecord, onTableRecord) {
@@ -1714,8 +1735,7 @@ const getFlashcardSpeedPerHourFromSamples = ({
   sampleCount = 0,
   practiceWindowMs = 0,
   trainingTimeMs = 0,
-  fallbackSpeedPerHour = 0,
-  sampleLimit = FLASHCARD_SPEED_SAMPLE_LIMIT
+  fallbackSpeedPerHour = 0
 } = {}) => {
   const chars = Math.max(0, Number(normalizedCharsCount) || 0);
   const count = Math.max(0, Math.round(Number(sampleCount) || 0));
@@ -1727,7 +1747,7 @@ const getFlashcardSpeedPerHourFromSamples = ({
     return Math.max(0, Math.round(fallback * 10) / 10);
   }
 
-  if (count >= sampleLimit && windowMs > 0) {
+  if (count >= 2 && windowMs > 0) {
     return Math.max(0, Math.round(((chars * 3600000) / windowMs) * 10) / 10);
   }
 
@@ -3615,6 +3635,36 @@ const ensureUserFlashcardSpeedSamplesTable = async () => {
         ADD COLUMN IF NOT EXISTS current_level integer NOT NULL DEFAULT 1
       `);
       await pool.query(`
+        CREATE SEQUENCE IF NOT EXISTS public.user_flashcard_speed_samples_seq
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_speed_samples
+        ADD COLUMN IF NOT EXISTS sample_seq bigint
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_speed_samples
+        ALTER COLUMN sample_seq SET DEFAULT nextval('public.user_flashcard_speed_samples_seq'::regclass)
+      `);
+      await pool.query(`
+        UPDATE public.user_flashcard_speed_samples
+        SET sample_seq = nextval('public.user_flashcard_speed_samples_seq'::regclass)
+        WHERE sample_seq IS NULL
+      `);
+      await pool.query(`
+        SELECT setval(
+          'public.user_flashcard_speed_samples_seq'::regclass,
+          GREATEST(
+            COALESCE((SELECT MAX(sample_seq) FROM public.user_flashcard_speed_samples), 0),
+            1
+          ),
+          true
+        )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_speed_samples
+        ALTER COLUMN sample_seq SET NOT NULL
+      `);
+      await pool.query(`
         UPDATE public.user_flashcard_speed_samples samples
         SET current_level = LEAST(200, GREATEST(1, COALESCE(u.level, 1)))
         FROM public.users u
@@ -3631,6 +3681,10 @@ const ensureUserFlashcardSpeedSamplesTable = async () => {
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_flashcard_speed_samples_user_idx
         ON public.user_flashcard_speed_samples (user_id)
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_speed_samples_user_seq_idx
+        ON public.user_flashcard_speed_samples (user_id, sample_seq DESC)
       `);
       return true;
     })().catch((error) => {
@@ -5695,7 +5749,7 @@ async function appendFlashcardSpeedSamples(client, userId, samples = []) {
     `WITH ranked AS (
        SELECT
          ctid,
-         ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ctid DESC) AS row_index
+         ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY sample_seq DESC, ctid DESC) AS row_index
        FROM public.user_flashcard_speed_samples
        WHERE user_id = $1
      )
@@ -5703,7 +5757,7 @@ async function appendFlashcardSpeedSamples(client, userId, samples = []) {
      USING ranked
      WHERE samples.ctid = ranked.ctid
        AND ranked.row_index > $2`,
-    [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
+    [normalizedUserId, FLASHCARD_SPEED_SAMPLE_STORAGE_LIMIT]
   );
 }
 
@@ -5749,10 +5803,10 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
        SELECT sample_value, practice_ms_total
        FROM public.user_flashcard_speed_samples
        WHERE user_id = $1
-       ORDER BY ctid DESC
+       ORDER BY sample_seq DESC, ctid DESC
        LIMIT $2
      ) recent_speed_samples`,
-    [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
+    [normalizedUserId, FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE]
   );
   const speedRow = speedSamplesResult.rows[0] || {};
   const baseSpeedPerHour = getFlashcardSpeedPerHourFromSamples({
@@ -5760,8 +5814,7 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
     sampleCount: speedRow.sample_count,
     practiceWindowMs: speedRow.practice_window_ms,
     trainingTimeMs: currentPracticeMs,
-    fallbackSpeedPerHour: totalsRow.admin_speed_per_hour,
-    sampleLimit: FLASHCARD_SPEED_SAMPLE_LIMIT
+    fallbackSpeedPerHour: totalsRow.admin_speed_per_hour
   });
   const speedPerHour = Math.max(0, Number((baseSpeedPerHour + Number(totalsRow.speed_delta || 0)).toFixed(1)));
   if (practiceMinutes <= 0) {
@@ -5916,10 +5969,10 @@ const readFlashcardStateForUser = async (userId) => {
          SELECT sample_value, practice_ms_total
          FROM public.user_flashcard_speed_samples
          WHERE user_id = $1
-         ORDER BY ctid DESC
+         ORDER BY sample_seq DESC, ctid DESC
          LIMIT $2
        ) recent`,
-      [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
+      [normalizedUserId, FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE]
     )
   ]);
 
@@ -5936,8 +5989,7 @@ const readFlashcardStateForUser = async (userId) => {
     sampleCount: speedSampleCount,
     practiceWindowMs: speedPracticeWindowMs,
     trainingTimeMs: flashcardStatsRow.training_time_ms,
-    fallbackSpeedPerHour: flashcardStatsRow.admin_speed_flashcards_per_hour,
-    sampleLimit: FLASHCARD_SPEED_SAMPLE_LIMIT
+    fallbackSpeedPerHour: flashcardStatsRow.admin_speed_flashcards_per_hour
   });
   const resolvedSpeedPerHour = Math.max(
     0,
@@ -6430,10 +6482,10 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
          SELECT sample_value, practice_ms_total
          FROM public.user_flashcard_speed_samples
          WHERE user_id = $1
-         ORDER BY ctid DESC
+         ORDER BY sample_seq DESC, ctid DESC
          LIMIT $2
        ) recent_speed_samples`,
-      [normalizedUserId, FLASHCARD_SPEED_SAMPLE_LIMIT]
+      [normalizedUserId, FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE]
     );
     const speedSummaryRow = speedSummaryResult.rows[0] || {};
     resolvedSpeedPerHour = getFlashcardSpeedPerHourFromSamples({
@@ -6441,8 +6493,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       sampleCount: speedSummaryRow.sample_count,
       practiceWindowMs: speedSummaryRow.practice_window_ms,
       trainingTimeMs: persistedTrainingTimeMs,
-      fallbackSpeedPerHour: existingStatsResult.rows[0]?.admin_speed_flashcards_per_hour,
-      sampleLimit: FLASHCARD_SPEED_SAMPLE_LIMIT
+      fallbackSpeedPerHour: existingStatsResult.rows[0]?.admin_speed_flashcards_per_hour
     });
 
     if (readingCharsDelta > 0 || speakingCharsDelta > 0 || listeningCharsDelta > 0) {
@@ -15890,7 +15941,7 @@ app.get('/api/users/flashcards', async (req, res) => {
            )
          )::int AS pronunciation_percent,
          CASE
-           WHEN COALESCE(speed_samples.sample_count, 0) >= ${FLASHCARD_SPEED_SAMPLE_LIMIT}
+           WHEN COALESCE(speed_samples.sample_count, 0) >= 2
              AND COALESCE(speed_samples.practice_window_ms, 0) > 0
              AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
              THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(speed_samples.practice_window_ms, 1)::numeric, 1)
@@ -15940,10 +15991,10 @@ app.get('/api/users/flashcards', async (req, res) => {
              user_id,
              sample_value,
              practice_ms_total,
-             ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ctid DESC) AS row_index
+             ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY sample_seq DESC, ctid DESC) AS row_index
            FROM public.user_flashcard_speed_samples
          ) ranked_speed_samples
-         WHERE ranked_speed_samples.row_index <= ${FLASHCARD_SPEED_SAMPLE_LIMIT}
+         WHERE ranked_speed_samples.row_index <= ${FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE}
          GROUP BY user_id
        ) speed_samples
          ON speed_samples.user_id = u.id
@@ -20006,7 +20057,7 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
            )
          )::int AS pronunciation_percent,
          CASE
-           WHEN COALESCE(speed_samples.sample_count, 0) >= ${FLASHCARD_SPEED_SAMPLE_LIMIT}
+           WHEN COALESCE(speed_samples.sample_count, 0) >= 2
              AND COALESCE(speed_samples.practice_window_ms, 0) > 0
              AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
              THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(speed_samples.practice_window_ms, 1)::numeric, 1)
@@ -20054,10 +20105,10 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
              user_id,
              sample_value,
              practice_ms_total,
-             ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ctid DESC) AS row_index
+             ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY sample_seq DESC, ctid DESC) AS row_index
            FROM public.user_flashcard_speed_samples
          ) ranked_speed_samples
-         WHERE ranked_speed_samples.row_index <= ${FLASHCARD_SPEED_SAMPLE_LIMIT}
+         WHERE ranked_speed_samples.row_index <= ${FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE}
          GROUP BY user_id
        ) speed_samples ON speed_samples.user_id = u.id
        LEFT JOIN public.flashcards_accurate accurate ON accurate.user_id = u.id
