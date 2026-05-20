@@ -2077,6 +2077,10 @@ const ensureFlashcardUserStateTables = async () => {
       `);
       await pool.query(`
         ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS speed_level_gain_carry numeric(10,4) NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
         ALTER COLUMN speakings TYPE bigint
       `);
       await pool.query(`
@@ -5713,6 +5717,7 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
     `SELECT
        COALESCE(stats.training_time_ms, 0)::bigint AS training_time_ms,
        COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric AS admin_speed_per_hour,
+       COALESCE(stats.speed_level_gain_carry, 0)::numeric AS speed_level_gain_carry,
        COALESCE(overrides.speed_delta, 0)::numeric AS speed_delta
      FROM public.users u
      LEFT JOIN public.user_flashcard_stats stats
@@ -5752,9 +5757,21 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
   const levelDynamicsSettings = await getFlashcardLevelDynamicsSettings();
   const levelGainPerMinute = resolveFlashcardSpeedLevelGainPerMinute(speedPerHour, levelDynamicsSettings);
   const levelDeltaRaw = practiceMinutes * levelGainPerMinute;
-  const levelDelta = roundLevelDeltaByThreshold(levelDeltaRaw, 200);
+  const levelGainCarry = Number(totalsRow.speed_level_gain_carry || 0);
+  const levelDeltaRawWithCarry = Number((levelDeltaRaw + levelGainCarry).toFixed(4));
+  const levelDelta = roundLevelDeltaByThreshold(levelDeltaRawWithCarry, 200);
+  const nextLevelGainCarry = Number((levelDeltaRawWithCarry - levelDelta).toFixed(4));
+
+  await client.query(
+    `UPDATE public.user_flashcard_stats
+     SET speed_level_gain_carry = $2,
+         updated_at = now()
+     WHERE user_id = $1`,
+    [normalizedUserId, nextLevelGainCarry]
+  );
+
   if (levelDelta === 0) {
-    return { levelDelta: 0, levelDeltaRaw: 0, practiceMinutes, speedPerHour };
+    return { levelDelta: 0, levelDeltaRaw: levelDeltaRawWithCarry, practiceMinutes, speedPerHour };
   }
 
   await client.query(
@@ -5765,7 +5782,7 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
     [normalizedUserId, levelDelta]
   );
 
-  return { levelDelta, levelDeltaRaw, practiceMinutes, speedPerHour };
+  return { levelDelta, levelDeltaRaw: levelDeltaRawWithCarry, practiceMinutes, speedPerHour };
 }
 
 const readFlashcardStateForUser = async (userId) => {
