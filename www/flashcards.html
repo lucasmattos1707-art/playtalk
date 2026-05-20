@@ -17374,11 +17374,13 @@
       }
 
       function currentBaseGameCount(level = currentUserLevel()) {
-        return 6;
+        return 5;
       }
 
       function currentGameActiveCardCap(level = currentUserLevel(), baseCount = currentBaseGameCount(level)) {
-        return Math.max(MIN_GAME_CONTEXT_LIMIT, Number(baseCount) || 0) + REVIEW_SLOT_LIMIT;
+        const normalizedBaseCount = Math.max(MIN_GAME_CONTEXT_LIMIT, Number(baseCount) || 0);
+        const readyReviewsCount = Math.min(REVIEW_SLOT_LIMIT, readyReviewCards().length);
+        return normalizedBaseCount + readyReviewsCount;
       }
 
       function normalizeDeckLevel(value) {
