@@ -3866,7 +3866,7 @@
     .game[data-phase-key="fifth-star"] .game-card__coin-badge {
       top: 0;
       left: 50%;
-      transform: translate(-50%, -52%) scale(1.02);
+      transform: translate(-50%, -52%) scale(1.43);
       transform-origin: center;
     }
 
@@ -6805,10 +6805,8 @@
     }
 
     .first-star-seal {
-      --first-star-seal-offset: clamp(148px, 24vw, 212px);
       position: absolute;
       top: 50%;
-      transform: translateY(-50%);
       width: clamp(66px, 10vw, 84px);
       border: 0;
       background: transparent;
@@ -6827,11 +6825,13 @@
     }
 
     .first-star-seal--listen {
-      left: calc(50% - var(--first-star-seal-offset));
+      left: 0;
+      transform: translate(-50%, -50%);
     }
 
     .first-star-seal--jump {
-      right: calc(50% - var(--first-star-seal-offset));
+      right: 0;
+      transform: translate(50%, -50%);
     }
 
     .first-star-seal__circle {
@@ -6886,14 +6886,14 @@
     }
 
     .first-star-seal--jump .first-star-seal__circle {
-      border-color: rgba(255, 171, 72, 0.82);
+      border-color: rgba(192, 124, 255, 0.9);
       background:
-        linear-gradient(160deg, rgba(255, 183, 92, 0.36) 0%, rgba(102, 48, 0, 0.9) 74%),
-        radial-gradient(circle, rgba(255, 136, 8, 0.36), rgba(16, 7, 0, 0.95) 74%);
+        linear-gradient(160deg, rgba(175, 89, 255, 0.34) 0%, rgba(46, 9, 74, 0.92) 74%),
+        radial-gradient(circle, rgba(154, 85, 255, 0.42), rgba(13, 5, 26, 0.96) 74%);
       box-shadow:
-        inset 0 0 20px rgba(255, 143, 12, 0.34),
-        0 0 20px rgba(255, 131, 34, 0.38),
-        0 0 30px rgba(255, 131, 34, 0.22);
+        inset 0 0 22px rgba(173, 102, 255, 0.34),
+        0 0 20px rgba(164, 92, 255, 0.42),
+        0 0 30px rgba(164, 92, 255, 0.22);
     }
 
     .first-star-seal--jump.is-busy .first-star-seal__circle {
@@ -6902,6 +6902,17 @@
 
     #gameStatusSlot,
     #gameFooterSlot {
+      position: fixed !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-height: 0 !important;
+      height: auto !important;
+      padding: 0 !important;
+      background: transparent !important;
+      border: 0 !important;
+      box-shadow: none !important;
       margin-bottom: 0 !important;
       bottom: 0 !important;
     }
