@@ -5840,9 +5840,14 @@ const readFlashcardStateForUser = async (userId) => {
       [normalizedUserId]
     ),
     pool.query(
-      `SELECT level, level_updated_at
-       FROM public.users
-       WHERE id = $1
+      `SELECT
+         u.level,
+         u.level_updated_at,
+         COALESCE(overrides.speed_delta, 0)::numeric AS speed_delta
+       FROM public.users u
+       LEFT JOIN public.user_ranking_overrides overrides
+         ON overrides.user_id = u.id
+       WHERE u.id = $1
        LIMIT 1`,
       [normalizedUserId]
     ),
@@ -5884,7 +5889,7 @@ const readFlashcardStateForUser = async (userId) => {
   const normalizedCharsTotal = Math.max(0, Number(speedSamplesResult.rows[0]?.normalized_chars_total) || 0);
   const speedSampleCount = Math.max(0, Number(speedSamplesResult.rows[0]?.sample_count) || 0);
   const speedPracticeWindowMs = Math.max(0, Number(speedSamplesResult.rows[0]?.practice_window_ms) || 0);
-  const resolvedSpeedPerHour = getFlashcardSpeedPerHourFromSamples({
+  const resolvedSpeedPerHourBase = getFlashcardSpeedPerHourFromSamples({
     normalizedCharsCount: normalizedCharsTotal,
     sampleCount: speedSampleCount,
     practiceWindowMs: speedPracticeWindowMs,
@@ -5892,6 +5897,10 @@ const readFlashcardStateForUser = async (userId) => {
     fallbackSpeedPerHour: flashcardStatsRow.admin_speed_flashcards_per_hour,
     sampleLimit: FLASHCARD_SPEED_SAMPLE_LIMIT
   });
+  const resolvedSpeedPerHour = Math.max(
+    0,
+    Number((resolvedSpeedPerHourBase + Number(userLevelResult.rows[0]?.speed_delta || 0)).toFixed(1))
+  );
   const gameOptions = normalizeFlashcardGameOptions({
     difficulty: flashcardStatsRow.game_option_difficulty,
     speed: flashcardStatsRow.game_option_speed,
@@ -5994,19 +6003,26 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
   let coinsTotal = 0;
   let coinsDelta = 0;
   let resolvedSpeedPerHour = 0;
+  let speedOverrideDelta = 0;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
     const currentUserLevelResult = await client.query(
-      `SELECT level, level_updated_at
-       FROM public.users
-       WHERE id = $1
+      `SELECT
+         u.level,
+         u.level_updated_at,
+         COALESCE(overrides.speed_delta, 0)::numeric AS speed_delta
+       FROM public.users u
+       LEFT JOIN public.user_ranking_overrides overrides
+         ON overrides.user_id = u.id
+       WHERE u.id = $1
        FOR UPDATE`,
       [normalizedUserId]
     );
     const currentUserLevelRow = currentUserLevelResult.rows[0] || {};
     const currentPersistedUserLevel = normalizeUserFlashcardLevel(currentUserLevelRow.level);
+    speedOverrideDelta = Number(currentUserLevelRow?.speed_delta || 0);
     persistedUserLevel = currentPersistedUserLevel;
     persistedUserLevelUpdatedAt = currentUserLevelRow.level_updated_at
       ? new Date(currentUserLevelRow.level_updated_at).toISOString()
@@ -6488,13 +6504,18 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     normalizedUserId,
     flashcardProgressRankingScoreTotal(progress)
   );
+  const resolvedSpeedPerHourWithOverride = Math.max(
+    0,
+    Number((resolvedSpeedPerHour + speedOverrideDelta).toFixed(1))
+  );
+
   return {
     progressCount: progress.length,
     onTableCount: onTable.length,
     onTable,
     stats: {
       ...stats,
-      speedFlashcardsPerHour: resolvedSpeedPerHour,
+      speedFlashcardsPerHour: resolvedSpeedPerHourWithOverride,
       booksEnergyXpTotal,
       booksEnergyXpDelta,
       booksEnergyLevelsAwarded,
