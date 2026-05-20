@@ -11024,6 +11024,8 @@
       const ON_TABLE_BASE_MAX = 5;
       const ON_TABLE_REVIEW_MAX = 7;
       const FLASHCARD_SESSION_TICK_INTERVAL_MS = 60000;
+      const FLASHCARD_SESSION_STAGE_PLAY_TICK_INTERVAL_MS = 8000;
+      const FLASHCARD_SESSION_TICK_LOOP_INTERVAL_MS = 1000;
       const GAME_UPCOMING_PRELOAD_COUNT = 3;
       const FIRST_STAGE_AUDIO_PRELOAD_COUNT = 2;
       const GAME_MIC_UNLOCK_DELAY_MS = 1200;
@@ -11373,6 +11375,9 @@
           idleAutoPauseTimer: 0,
           sessionClockActive: false,
           sessionClockTickTimer: 0,
+          sessionClockLastTickAt: 0,
+          sessionClockTickInFlight: false,
+          sessionClockStagePrimeKey: '',
           orderedPoolCursor: {
             base: -1,
             review: -1
@@ -14661,17 +14666,45 @@
         if (!state.game.sessionClockTickTimer) return;
         window.clearInterval(state.game.sessionClockTickTimer);
         state.game.sessionClockTickTimer = 0;
+        state.game.sessionClockTickInFlight = false;
+      }
+
+      function isStagePlayPhaseKey(phaseKey) {
+        return phaseKey === 'second-star' || phaseKey === 'fourth-star';
+      }
+
+      function resolveFlashcardSessionTickIntervalMs() {
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        return isStagePlayPhaseKey(phaseKey)
+          ? FLASHCARD_SESSION_STAGE_PLAY_TICK_INTERVAL_MS
+          : FLASHCARD_SESSION_TICK_INTERVAL_MS;
+      }
+
+      function requestFlashcardSessionClockTick(force = false) {
+        if (!state.user?.id) return;
+        if (!state.game.active || state.game.paused || state.ui.gamePausedAtWelcome) return;
+        if (!state.game.sessionClockActive) return;
+        if (state.game.sessionClockTickInFlight) return;
+        const now = Date.now();
+        const intervalMs = resolveFlashcardSessionTickIntervalMs();
+        const lastTickAt = Math.max(0, Number(state.game.sessionClockLastTickAt) || 0);
+        if (!force && lastTickAt > 0 && (now - lastTickAt) < intervalMs) return;
+        state.game.sessionClockTickInFlight = true;
+        state.game.sessionClockLastTickAt = now;
+        void signalFlashcardSessionClock('tick')
+          .finally(() => {
+            state.game.sessionClockTickInFlight = false;
+            state.game.sessionClockLastTickAt = Date.now();
+          });
       }
 
       function startFlashcardSessionTick() {
         stopFlashcardSessionTick();
         if (!state.user?.id) return;
+        state.game.sessionClockLastTickAt = Date.now();
         state.game.sessionClockTickTimer = window.setInterval(() => {
-          if (!state.user?.id) return;
-          if (!state.game.active || state.game.paused || state.ui.gamePausedAtWelcome) return;
-          if (!state.game.sessionClockActive) return;
-          void signalFlashcardSessionClock('tick');
-        }, FLASHCARD_SESSION_TICK_INTERVAL_MS);
+          requestFlashcardSessionClockTick(false);
+        }, FLASHCARD_SESSION_TICK_LOOP_INTERVAL_MS);
       }
 
       async function signalFlashcardSessionClock(action) {
@@ -14701,19 +14734,24 @@
           if (normalizedAction === 'in') {
             state.game.sessionClockActive = true;
             startFlashcardSessionTick();
+            state.game.sessionClockLastTickAt = 0;
+            requestFlashcardSessionClockTick(true);
           }
           if (normalizedAction === 'out') {
             state.entry.pendingFlashSessionOut = false;
             state.game.sessionClockActive = false;
+            state.game.sessionClockStagePrimeKey = '';
             stopFlashcardSessionTick();
           }
           if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.trainingTimeMs))) {
             state.stats.trainingTimeMs = Math.max(0, Math.round(Number(payload.trainingTimeMs) || 0));
             saveUserStats({ skipCloudSync: true });
+            updateSpeakingStarMicSealProgress();
           }
           if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.speedPerHour))) {
             state.stats.speedFlashcardsPerHour = Math.max(0, Number(Number(payload.speedPerHour).toFixed(1)) || 0);
             saveUserStats({ skipCloudSync: true });
+            updateSpeakingStarMicSealProgress();
           }
           if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.userLevel))) {
             const previousLevel = currentUserLevel();
@@ -16208,10 +16246,10 @@
         return safe.toFixed(1).replace('.', ',');
       }
 
-      function formatSpeedWithComma(value) {
+      function formatSpeedWithoutDecimals(value) {
         const numeric = Number(value);
         const safe = Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
-        return safe.toFixed(1).replace('.', ',');
+        return String(Math.max(0, Math.round(safe)));
       }
 
       function selectedGameLevel() {
@@ -20388,7 +20426,7 @@
         if (phaseKey === 'second-star' || phaseKey === 'fourth-star') {
           renderMetricValue(currentRankValue, {
             icon: 'bolt',
-            text: `${formatSpeedWithComma(currentSpeed)}/h`
+            text: `${formatSpeedWithoutDecimals(currentSpeed)}/h`
           });
         } else {
           renderMetricValue(currentRankValue, {
@@ -23203,6 +23241,7 @@
         cleanupGameRecognition();
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) {
+          state.game.sessionClockStagePrimeKey = '';
           clearStageTutorialReminder();
           hideGameStageTutorial({ resume: false });
           els.game.removeAttribute('data-phase-key');
@@ -23277,6 +23316,16 @@
           entry.typingMistakes = 0;
         }
         els.game.dataset.phaseKey = stageConfig.key || '';
+        const stagePrimeKey = `${entry.id}:${stageConfig.key || ''}`;
+        if (isStagePlayPhaseKey(stageConfig.key || '')) {
+          if (state.game.sessionClockStagePrimeKey !== stagePrimeKey) {
+            state.game.sessionClockStagePrimeKey = stagePrimeKey;
+            state.game.sessionClockLastTickAt = 0;
+            requestFlashcardSessionClockTick(true);
+          }
+        } else {
+          state.game.sessionClockStagePrimeKey = '';
+        }
         syncGamePhaseWordHost(stageConfig.key || '');
         els.gameCard.style.display = '';
         els.gameCard.classList.toggle('is-typing-stage', typingStage);
