@@ -1094,13 +1094,13 @@
     }
 
     .welcome-gate__action-btn--flashcards {
-      --welcome-action-size-multiplier: 1.22;
+      --welcome-action-size-multiplier: 1;
       --welcome-action-color: #ff8a18;
       --welcome-action-soft: rgba(255, 138, 24, 0.34);
       --welcome-action-border: rgba(255, 171, 72, 0.82);
       --welcome-action-glow: rgba(255, 138, 24, 0.62);
       order: 2;
-      margin-right: -10%;
+      margin: 0;
       z-index: 1;
     }
 
@@ -1111,13 +1111,14 @@
     }
 
     .welcome-gate__action-btn--mission {
-      --welcome-action-size-multiplier: 1.12;
+      --welcome-action-size-multiplier: 0.8;
       --welcome-action-color: #ffe44d;
       --welcome-action-soft: rgba(255, 228, 77, 0.36);
       --welcome-action-border: rgba(255, 238, 104, 0.86);
       --welcome-action-glow: rgba(255, 228, 77, 0.72);
       order: 1;
-      z-index: 2;
+      margin-right: -8px;
+      z-index: 1;
     }
 
     .welcome-gate__action-btn--mission .welcome-gate__action-circle {
@@ -1127,13 +1128,13 @@
     }
 
     .welcome-gate__action-btn--books {
-      --welcome-action-size-multiplier: 1.12;
+      --welcome-action-size-multiplier: 0.8;
       --welcome-action-color: #165dff;
       --welcome-action-soft: rgba(22, 93, 255, 0.36);
       --welcome-action-border: rgba(75, 129, 255, 0.84);
       --welcome-action-glow: rgba(22, 93, 255, 0.68);
       order: 3;
-      margin-left: -10%;
+      margin-left: -8px;
       z-index: 1;
     }
 
@@ -7449,7 +7450,7 @@
     .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
       position: fixed;
       left: 50%;
-      bottom: 0;
+      bottom: calc(12vh + 8px);
       transform: translateX(-50%);
       width: min(433px, calc(100vw - 32px));
       height: auto;
@@ -7472,11 +7473,9 @@
       box-shadow: none;
       backdrop-filter: none;
       top: auto;
-      bottom: 0;
     }
 
     .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
-      bottom: 0;
       width: min(520px, calc(100vw - 40px));
       padding: 2px;
       background: transparent;
@@ -10206,11 +10205,11 @@
             </button>
           </div>
         <div class="welcome-gate__action-row" aria-label="Acoes principais">
-          <button class="welcome-gate__action-btn welcome-gate__action-btn--flashcards welcome-gate__start-btn" id="welcomeStartBtn" type="button" aria-label="Cards">
+          <button class="welcome-gate__action-btn welcome-gate__action-btn--flashcards welcome-gate__start-btn" id="welcomeStartBtn" type="button" aria-label="Jogar">
             <span class="welcome-gate__action-circle" aria-hidden="true">
-              <svg viewBox="0 0 64 64" focusable="false"><path d="M36 5 15 36h16l-4 23 22-35H34l2-19Z"></path></svg>
+              <svg viewBox="0 0 64 64" focusable="false"><path d="M24 17v30l24-15z"></path></svg>
             </span>
-            <span class="welcome-gate__action-label">Cards</span>
+            <span class="welcome-gate__action-label">jogar</span>
             <span class="welcome-gate__start-timer" hidden>
               <img class="welcome-gate__start-timer-icon" src="/SVG/codex-icons/relógio.svg" alt="" aria-hidden="true">
               <span class="welcome-gate__start-timer-value">00:00:00</span>
