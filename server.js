@@ -2081,6 +2081,10 @@ const ensureFlashcardUserStateTables = async () => {
       `);
       await pool.query(`
         ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS speed_level_practice_carry_ms bigint NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
         ALTER COLUMN speakings TYPE bigint
       `);
       await pool.query(`
@@ -5708,9 +5712,8 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
     return { levelDelta: 0, practiceMinutes: 0, speedPerHour: 0 };
   }
-  const practiceMs = Math.max(0, Number(addedTrainingMs) || 0);
-  const practiceMinutes = practiceMs / 60000;
-  if (practiceMinutes <= 0) {
+  const practiceMs = Math.max(0, Math.round(Number(addedTrainingMs) || 0));
+  if (practiceMs <= 0) {
     return { levelDelta: 0, practiceMinutes: 0, speedPerHour: 0 };
   }
 
@@ -5719,6 +5722,7 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
        COALESCE(stats.training_time_ms, 0)::bigint AS training_time_ms,
        COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric AS admin_speed_per_hour,
        COALESCE(stats.speed_level_gain_carry, 0)::numeric AS speed_level_gain_carry,
+       COALESCE(stats.speed_level_practice_carry_ms, 0)::bigint AS speed_level_practice_carry_ms,
        COALESCE(overrides.speed_delta, 0)::numeric AS speed_delta
      FROM public.users u
      LEFT JOIN public.user_flashcard_stats stats
@@ -5730,6 +5734,11 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
     [normalizedUserId]
   );
   const totalsRow = totalsResult.rows[0] || {};
+  const carriedPracticeMs = Math.max(0, Math.round(Number(totalsRow.speed_level_practice_carry_ms) || 0));
+  const totalPracticeMs = carriedPracticeMs + practiceMs;
+  const practiceMinutes = Math.floor(totalPracticeMs / 60000);
+  const nextPracticeCarryMs = Math.max(0, totalPracticeMs - (practiceMinutes * 60000));
+
   const currentPracticeMs = Math.max(0, Math.round(Number(totalsRow.training_time_ms) || 0));
   const speedSamplesResult = await client.query(
     `SELECT
@@ -5755,6 +5764,17 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
     sampleLimit: FLASHCARD_SPEED_SAMPLE_LIMIT
   });
   const speedPerHour = Math.max(0, Number((baseSpeedPerHour + Number(totalsRow.speed_delta || 0)).toFixed(1)));
+  if (practiceMinutes <= 0) {
+    await client.query(
+      `UPDATE public.user_flashcard_stats
+       SET speed_level_practice_carry_ms = $2,
+           updated_at = now()
+       WHERE user_id = $1`,
+      [normalizedUserId, nextPracticeCarryMs]
+    );
+    return { levelDelta: 0, levelDeltaRaw: 0, practiceMinutes: 0, speedPerHour };
+  }
+
   const levelDynamicsSettings = await getFlashcardLevelDynamicsSettings();
   const levelGainPerMinute = resolveFlashcardSpeedLevelGainPerMinute(speedPerHour, levelDynamicsSettings);
   const levelDeltaRaw = practiceMinutes * levelGainPerMinute;
@@ -5769,9 +5789,10 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
   await client.query(
     `UPDATE public.user_flashcard_stats
      SET speed_level_gain_carry = $2,
+         speed_level_practice_carry_ms = $3,
          updated_at = now()
      WHERE user_id = $1`,
-    [normalizedUserId, nextLevelGainCarry]
+    [normalizedUserId, nextLevelGainCarry, nextPracticeCarryMs]
   );
 
   if (levelDelta === 0) {
