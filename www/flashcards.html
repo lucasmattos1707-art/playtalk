@@ -11378,6 +11378,8 @@
           sessionClockLastTickAt: 0,
           sessionClockTickInFlight: false,
           sessionClockStagePrimeKey: '',
+          stageSpeedLoading: false,
+          stageSpeedLoadingTimer: 0,
           orderedPoolCursor: {
             base: -1,
             review: -1
@@ -14669,6 +14671,31 @@
         state.game.sessionClockTickInFlight = false;
       }
 
+      function clearStageSpeedLoadingTimer() {
+        if (!state.game.stageSpeedLoadingTimer) return;
+        window.clearTimeout(state.game.stageSpeedLoadingTimer);
+        state.game.stageSpeedLoadingTimer = 0;
+      }
+
+      function setStageSpeedLoading(active, options = {}) {
+        const next = Boolean(active);
+        const force = Boolean(options?.force);
+        const fallbackMs = Math.max(0, Number(options?.fallbackMs) || 0);
+        if (!force && state.game.stageSpeedLoading === next && fallbackMs <= 0) {
+          return;
+        }
+        clearStageSpeedLoadingTimer();
+        state.game.stageSpeedLoading = next;
+        if (next && fallbackMs > 0) {
+          state.game.stageSpeedLoadingTimer = window.setTimeout(() => {
+            state.game.stageSpeedLoadingTimer = 0;
+            state.game.stageSpeedLoading = false;
+            updateSpeakingStarMicSealProgress();
+          }, fallbackMs);
+        }
+        updateSpeakingStarMicSealProgress();
+      }
+
       function isStagePlayPhaseKey(phaseKey) {
         return phaseKey === 'second-star' || phaseKey === 'fourth-star';
       }
@@ -14696,6 +14723,25 @@
             state.game.sessionClockTickInFlight = false;
             state.game.sessionClockLastTickAt = Date.now();
           });
+      }
+
+      async function refreshStagePlaySpeedSnapshot(expectedStagePrimeKey = '') {
+        if (!state.user?.id) return;
+        try {
+          const payload = await fetchFlashcardCloudState();
+          if (expectedStagePrimeKey && state.game.sessionClockStagePrimeKey !== expectedStagePrimeKey) return;
+          const rawSpeed = Number(payload?.stats?.speedFlashcardsPerHour ?? payload?.stats?.speed_flashcards_per_hour);
+          if (!Number.isFinite(rawSpeed)) return;
+          state.stats.speedFlashcardsPerHour = Math.max(0, Number(rawSpeed.toFixed(1)) || 0);
+          const rawTrainingMs = Number(payload?.stats?.trainingTimeMs ?? payload?.stats?.training_time_ms);
+          if (Number.isFinite(rawTrainingMs)) {
+            state.stats.trainingTimeMs = Math.max(0, Math.round(rawTrainingMs) || 0);
+          }
+          saveUserStats({ skipCloudSync: true });
+          setStageSpeedLoading(false);
+        } catch (_error) {
+          // keep fallback loading flow
+        }
       }
 
       function startFlashcardSessionTick() {
@@ -14741,6 +14787,7 @@
             state.entry.pendingFlashSessionOut = false;
             state.game.sessionClockActive = false;
             state.game.sessionClockStagePrimeKey = '';
+            setStageSpeedLoading(false);
             stopFlashcardSessionTick();
           }
           if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.trainingTimeMs))) {
@@ -14751,6 +14798,7 @@
           if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.speedPerHour))) {
             state.stats.speedFlashcardsPerHour = Math.max(0, Number(Number(payload.speedPerHour).toFixed(1)) || 0);
             saveUserStats({ skipCloudSync: true });
+            setStageSpeedLoading(false);
             updateSpeakingStarMicSealProgress();
           }
           if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.userLevel))) {
@@ -20424,9 +20472,12 @@
         const targetProgress = Math.max(0, Math.min(100, Number(missionBarProgress) || 0));
         const currentSpeed = Math.max(0, Number(state.stats?.speedFlashcardsPerHour) || 0);
         if (phaseKey === 'second-star' || phaseKey === 'fourth-star') {
+          const speedText = state.game.stageSpeedLoading
+            ? '...'
+            : `${formatSpeedWithoutDecimals(currentSpeed)}`;
           renderMetricValue(currentRankValue, {
             icon: 'bolt',
-            text: `${formatSpeedWithoutDecimals(currentSpeed)}/h`
+            text: speedText
           });
         } else {
           renderMetricValue(currentRankValue, {
@@ -23242,6 +23293,7 @@
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) {
           state.game.sessionClockStagePrimeKey = '';
+          setStageSpeedLoading(false);
           clearStageTutorialReminder();
           hideGameStageTutorial({ resume: false });
           els.game.removeAttribute('data-phase-key');
@@ -23320,11 +23372,14 @@
         if (isStagePlayPhaseKey(stageConfig.key || '')) {
           if (state.game.sessionClockStagePrimeKey !== stagePrimeKey) {
             state.game.sessionClockStagePrimeKey = stagePrimeKey;
+            setStageSpeedLoading(true, { fallbackMs: 4200 });
             state.game.sessionClockLastTickAt = 0;
             requestFlashcardSessionClockTick(true);
+            void refreshStagePlaySpeedSnapshot(stagePrimeKey);
           }
         } else {
           state.game.sessionClockStagePrimeKey = '';
+          setStageSpeedLoading(false);
         }
         syncGamePhaseWordHost(stageConfig.key || '');
         els.gameCard.style.display = '';
