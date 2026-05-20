@@ -5708,7 +5708,8 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
     return { levelDelta: 0, practiceMinutes: 0, speedPerHour: 0 };
   }
-  const practiceMinutes = Math.floor(Math.max(0, Number(addedTrainingMs) || 0) / 60000);
+  const practiceMs = Math.max(0, Number(addedTrainingMs) || 0);
+  const practiceMinutes = practiceMs / 60000;
   if (practiceMinutes <= 0) {
     return { levelDelta: 0, practiceMinutes: 0, speedPerHour: 0 };
   }
@@ -5759,7 +5760,10 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
   const levelDeltaRaw = practiceMinutes * levelGainPerMinute;
   const levelGainCarry = Number(totalsRow.speed_level_gain_carry || 0);
   const levelDeltaRawWithCarry = Number((levelDeltaRaw + levelGainCarry).toFixed(4));
-  const levelDelta = roundLevelDeltaByThreshold(levelDeltaRawWithCarry, 200);
+  const sign = levelDeltaRawWithCarry < 0 ? -1 : 1;
+  const absDelta = Math.abs(levelDeltaRawWithCarry);
+  const wholeDelta = Math.floor(absDelta);
+  const levelDelta = sign * Math.min(200, wholeDelta);
   const nextLevelGainCarry = Number((levelDeltaRawWithCarry - levelDelta).toFixed(4));
 
   await client.query(
