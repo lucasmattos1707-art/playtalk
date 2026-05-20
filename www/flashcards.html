@@ -6794,7 +6794,11 @@
 
     .first-star-seals {
       position: absolute;
-      inset: 0;
+      left: 50%;
+      top: 50%;
+      width: 270px;
+      height: 270px;
+      transform: translate(-50%, -50%);
       z-index: 22;
       pointer-events: none;
       display: none;
@@ -20811,41 +20815,47 @@
       }
 
       function enforceBottomInfoContainersLayout() {
+        const forceStyle = (el, property, value) => {
+          if (!el) return;
+          el.style.setProperty(property, value, 'important');
+        };
         if (els.gameStatusSlot) {
-          els.gameStatusSlot.style.position = 'fixed';
-          els.gameStatusSlot.style.left = '0';
-          els.gameStatusSlot.style.right = '0';
-          els.gameStatusSlot.style.bottom = '0';
-          els.gameStatusSlot.style.width = '100%';
-          els.gameStatusSlot.style.maxWidth = '100%';
-          els.gameStatusSlot.style.margin = '0';
-          els.gameStatusSlot.style.padding = '0';
-          els.gameStatusSlot.style.background = 'transparent';
-          els.gameStatusSlot.style.border = '0';
-          els.gameStatusSlot.style.boxShadow = 'none';
+          forceStyle(els.gameStatusSlot, 'position', 'fixed');
+          forceStyle(els.gameStatusSlot, 'left', '0');
+          forceStyle(els.gameStatusSlot, 'right', '0');
+          forceStyle(els.gameStatusSlot, 'bottom', '0');
+          forceStyle(els.gameStatusSlot, 'width', '100%');
+          forceStyle(els.gameStatusSlot, 'max-width', '100%');
+          forceStyle(els.gameStatusSlot, 'margin', '0');
+          forceStyle(els.gameStatusSlot, 'padding', '0');
+          forceStyle(els.gameStatusSlot, 'background', 'transparent');
+          forceStyle(els.gameStatusSlot, 'border', '0');
+          forceStyle(els.gameStatusSlot, 'box-shadow', 'none');
+          forceStyle(els.gameStatusSlot, 'opacity', '0');
+          forceStyle(els.gameStatusSlot, 'pointer-events', 'none');
         }
         if (els.gamePhaseWord) {
-          els.gamePhaseWord.style.opacity = '0';
-          els.gamePhaseWord.style.pointerEvents = 'none';
+          forceStyle(els.gamePhaseWord, 'opacity', '0');
+          forceStyle(els.gamePhaseWord, 'pointer-events', 'none');
         }
         if (els.gameStatusWrap) {
-          els.gameStatusWrap.style.opacity = '0';
-          els.gameStatusWrap.style.pointerEvents = 'none';
+          forceStyle(els.gameStatusWrap, 'opacity', '0');
+          forceStyle(els.gameStatusWrap, 'pointer-events', 'none');
         }
         if (els.gameFooterSlot) {
-          els.gameFooterSlot.style.position = 'fixed';
-          els.gameFooterSlot.style.left = '0';
-          els.gameFooterSlot.style.right = '0';
-          els.gameFooterSlot.style.bottom = '0';
-          els.gameFooterSlot.style.width = '100%';
-          els.gameFooterSlot.style.maxWidth = '100%';
-          els.gameFooterSlot.style.margin = '0';
-          els.gameFooterSlot.style.padding = '0';
-          els.gameFooterSlot.style.background = 'transparent';
-          els.gameFooterSlot.style.border = '0';
-          els.gameFooterSlot.style.boxShadow = 'none';
-          els.gameFooterSlot.style.opacity = '0';
-          els.gameFooterSlot.style.pointerEvents = 'none';
+          forceStyle(els.gameFooterSlot, 'position', 'fixed');
+          forceStyle(els.gameFooterSlot, 'left', '0');
+          forceStyle(els.gameFooterSlot, 'right', '0');
+          forceStyle(els.gameFooterSlot, 'bottom', '0');
+          forceStyle(els.gameFooterSlot, 'width', '100%');
+          forceStyle(els.gameFooterSlot, 'max-width', '100%');
+          forceStyle(els.gameFooterSlot, 'margin', '0');
+          forceStyle(els.gameFooterSlot, 'padding', '0');
+          forceStyle(els.gameFooterSlot, 'background', 'transparent');
+          forceStyle(els.gameFooterSlot, 'border', '0');
+          forceStyle(els.gameFooterSlot, 'box-shadow', 'none');
+          forceStyle(els.gameFooterSlot, 'opacity', '0');
+          forceStyle(els.gameFooterSlot, 'pointer-events', 'none');
         }
       }
 
