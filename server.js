@@ -16744,6 +16744,71 @@ app.post('/api/flashcards/first-stage-level-penalty', express.json({ limit: '16k
   }
 });
 
+app.post('/api/flashcards/jump-level-penalty', express.json({ limit: '16kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+
+    const userId = Number.parseInt(authUser.id, 10);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ success: false, message: 'Usuario invalido.' });
+      return;
+    }
+
+    const levelLoss = 1;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const updateResult = await client.query(
+        `UPDATE public.users
+         SET level = GREATEST(1, LEAST(200, COALESCE(level, 1)) - $2),
+             level_updated_at = now()
+         WHERE id = $1
+         RETURNING level, level_updated_at`,
+        [userId, levelLoss]
+      );
+      if (!updateResult.rows.length) {
+        await client.query('ROLLBACK');
+        res.status(404).json({ success: false, message: 'Usuario nao encontrado.' });
+        return;
+      }
+      await client.query('COMMIT');
+      const updatedLevel = normalizeUserFlashcardLevel(updateResult.rows[0]?.level);
+      res.json({
+        success: true,
+        levelLoss,
+        userLevel: updatedLevel,
+        userLevelUpdatedAt: updateResult.rows[0]?.level_updated_at
+          ? new Date(updateResult.rows[0].level_updated_at).toISOString()
+          : null
+      });
+    } catch (innerError) {
+      try { await client.query('ROLLBACK'); } catch (_rollbackError) {}
+      throw innerError;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao aplicar perda de nivel por jump:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: statusCode === 400
+        ? 'Requisicao invalida.'
+        : 'Erro ao aplicar perda de nivel por jump.'
+    });
+  }
+});
+
 app.get('/api/english/corpus', async (_req, res) => {
   try {
     const now = Date.now();

@@ -6790,6 +6790,125 @@
         drop-shadow(0 0 64px rgba(32, 102, 255, 0.3));
     }
 
+    .first-star-seals {
+      position: absolute;
+      inset: 0;
+      z-index: 22;
+      pointer-events: none;
+      display: none;
+    }
+
+    .game[data-phase-key="first-star"] .first-star-seals {
+      display: block;
+    }
+
+    .first-star-seal {
+      --first-star-seal-offset: clamp(146px, 24vw, 208px);
+      position: absolute;
+      top: 50%;
+      transform: translateY(calc(-50% - 38px));
+      width: clamp(84px, 12vw, 108px);
+      border: 0;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 9px;
+      color: #ffffff;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .first-star-seal[disabled] {
+      opacity: 0.58;
+      cursor: default;
+    }
+
+    .first-star-seal--listen {
+      left: calc(50% - var(--first-star-seal-offset));
+    }
+
+    .first-star-seal--jump {
+      right: calc(50% - var(--first-star-seal-offset));
+    }
+
+    .first-star-seal__circle {
+      width: clamp(62px, 9.8vw, 84px);
+      height: clamp(62px, 9.8vw, 84px);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: clamp(13px, 1.9vw, 16px);
+      letter-spacing: 0.06em;
+      line-height: 1;
+      font-weight: 900;
+      text-transform: uppercase;
+      user-select: none;
+      border: 1.5px solid rgba(255, 171, 72, 0.82);
+      background:
+        linear-gradient(160deg, rgba(255, 183, 92, 0.36) 0%, rgba(102, 48, 0, 0.9) 74%),
+        radial-gradient(circle, rgba(255, 136, 8, 0.36), rgba(16, 7, 0, 0.95) 74%);
+      box-shadow:
+        inset 0 0 20px rgba(255, 143, 12, 0.34),
+        0 0 20px rgba(255, 131, 34, 0.38),
+        0 0 30px rgba(255, 131, 34, 0.22);
+      transition:
+        color 500ms ease,
+        border-color 500ms ease,
+        background 500ms ease,
+        box-shadow 500ms ease,
+        transform 140ms ease;
+    }
+
+    .first-star-seal__label {
+      margin: 0;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(12px, 1.8vw, 15px);
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: rgba(234, 245, 255, 0.95);
+      text-shadow: 0 0 12px rgba(56, 146, 255, 0.35);
+      user-select: none;
+    }
+
+    .first-star-seal:not([disabled]):active .first-star-seal__circle {
+      transform: scale(0.96);
+    }
+
+    .first-star-seal--listen.is-playing .first-star-seal__circle {
+      border-color: rgba(103, 255, 173, 0.92);
+      color: #e6fff1;
+      background:
+        linear-gradient(160deg, rgba(84, 255, 165, 0.34) 0%, rgba(6, 70, 35, 0.92) 74%),
+        radial-gradient(circle, rgba(97, 242, 164, 0.46), rgba(2, 25, 15, 0.95) 74%);
+      box-shadow:
+        inset 0 0 22px rgba(111, 255, 184, 0.36),
+        0 0 20px rgba(80, 236, 147, 0.42),
+        0 0 30px rgba(80, 236, 147, 0.24);
+    }
+
+    .first-star-seal--jump .first-star-seal__circle {
+      border-color: rgba(192, 124, 255, 0.88);
+      color: #f6e8ff;
+      background:
+        linear-gradient(160deg, rgba(175, 89, 255, 0.32) 0%, rgba(46, 9, 74, 0.92) 74%),
+        radial-gradient(circle, rgba(154, 85, 255, 0.42), rgba(13, 5, 26, 0.96) 74%);
+      box-shadow:
+        inset 0 0 22px rgba(173, 102, 255, 0.34),
+        0 0 20px rgba(164, 92, 255, 0.42),
+        0 0 30px rgba(164, 92, 255, 0.22);
+    }
+
+    .first-star-seal--jump.is-busy .first-star-seal__circle {
+      filter: saturate(0.72);
+    }
+
     .game[data-phase-key="first-star"] #gameVisual > img:not(.game-card__seal),
     .game[data-phase-key="first-star"] #gameVisual .mini-card__fallback,
     .game[data-phase-key="first-star"] #gameVisual .game-card__placeholder,
@@ -10422,6 +10541,16 @@
         <article class="game-card circlescreen" id="gameCard" aria-live="polite">
           <div class="game-card__layout">
             <div class="game-card__visual" id="gameVisual"></div>
+            <div class="first-star-seals" id="firstStarSeals" hidden aria-hidden="true">
+              <button class="first-star-seal first-star-seal--listen" id="firstStarListenBtn" type="button" aria-label="Reproduzir audio do flashcard">
+                <span class="first-star-seal__circle">PLAY</span>
+                <span class="first-star-seal__label">Listen</span>
+              </button>
+              <button class="first-star-seal first-star-seal--jump" id="firstStarJumpBtn" type="button" aria-label="Pular carta e perder 1 nivel de deck">
+                <span class="first-star-seal__circle">JUMP</span>
+                <span class="first-star-seal__label">Jump</span>
+              </button>
+            </div>
             <div class="game-translation-slot" id="gameTranslationSlot" aria-hidden="true"></div>
             <div class="game-card__content">
               <div>
@@ -11030,6 +11159,8 @@
       const FIRST_STAGE_AUDIO_PRELOAD_COUNT = 2;
       const GAME_MIC_UNLOCK_DELAY_MS = 1200;
       const FIRST_STAGE_MIC_UNLOCK_DELAY_MS = 1000;
+      const FIRST_STAR_AUTO_AUDIO_MAX_ATTEMPTS = 4;
+      const FIRST_STAR_AUTO_AUDIO_RETRY_BASE_DELAY_MS = 320;
       const TUTORIAL_AUDIO_ROOT = AUDIOSTUTO_PUBLIC_ROOT;
       const TUTORIAL_NORMAL_GAME_COUNT = 1;
       const TUTORIAL_PLANET_IMAGE_NAME = 'planet.jpg';
@@ -11253,6 +11384,7 @@
           xpValueSettings: buildDefaultCardValueSettings(),
           deckCardLimitSettings: buildDefaultDeckCardLimitSettings(),
           firstStagePenaltyBusy: false,
+          firstStarJumpPenaltyBusy: false,
           launchAfterSoundTest: '',
           soundTestCompleted: false,
           pendingPlayStart: false,
@@ -11368,6 +11500,8 @@
           stageTutorialReminderTimer: 0,
           stageHintTimer: 0,
           stageHintIndex: 0,
+          firstStarAutoPlayRetryTimer: 0,
+          firstStarJumpBusy: false,
           firstStageIdleTimer: 0,
           firstStageMicHintTimer: 0,
           firstStageMicHintRotationTimer: 0,
@@ -11680,6 +11814,9 @@
         gameEnd: document.getElementById('gameEnd'),
         gameCard: document.getElementById('gameCard'),
         gameVisual: document.getElementById('gameVisual'),
+        firstStarSeals: document.getElementById('firstStarSeals'),
+        firstStarListenBtn: document.getElementById('firstStarListenBtn'),
+        firstStarJumpBtn: document.getElementById('firstStarJumpBtn'),
         gameWord: document.getElementById('gameWord'),
         gameSubword: document.getElementById('gameSubword'),
         gamePhaseWord: document.getElementById('gamePhaseWord'),
@@ -17977,6 +18114,46 @@
         }
       }
 
+      async function applyJumpDeckLevelPenalty() {
+        if (!state.user?.id) return 0;
+        if (state.entry.firstStarJumpPenaltyBusy) return 0;
+        const baseLevel = currentUserLevel();
+        const levelLoss = Math.min(1, Math.max(0, baseLevel - 1));
+        if (levelLoss <= 0) return 0;
+        const optimisticLevel = normalizeUserLevel(baseLevel - levelLoss);
+        state.userLevel = optimisticLevel;
+        if (state.user) state.user.level = optimisticLevel;
+        syncGameLevelNavigator();
+        state.entry.firstStarJumpPenaltyBusy = true;
+        try {
+          const response = await fetch(buildApiUrl('/api/flashcards/jump-level-penalty'), {
+            method: 'POST',
+            headers: buildAuthHeaders({
+              'Content-Type': 'application/json'
+            }),
+            credentials: 'include',
+            body: JSON.stringify({ currentLevel: baseLevel, levelLoss: 1 })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (response.ok && payload?.success && Number.isFinite(Number(payload?.userLevel))) {
+            const previousLevel = currentUserLevel();
+            state.userLevel = normalizeUserLevel(payload.userLevel);
+            if (state.user) state.user.level = state.userLevel;
+            state.userLevelUpdatedAt = safeText(payload?.userLevelUpdatedAt || state.userLevelUpdatedAt);
+            syncGameLevelNavigator();
+            if (currentUserLevel() !== previousLevel) {
+              scheduleLevelSyncRefresh({ delayMs: 0 });
+            }
+            return Math.max(0, Number(payload?.levelLoss) || levelLoss);
+          }
+          return levelLoss;
+        } catch (_error) {
+          return levelLoss;
+        } finally {
+          state.entry.firstStarJumpPenaltyBusy = false;
+        }
+      }
+
       function isCardPlayableInLevelMode(card) {
         return !isCardHiddenForUser(card?.id)
           && hasCoreFlashcardText(card)
@@ -20536,6 +20713,155 @@
         els.gameTouchBtn?.classList.toggle('is-busy', Boolean(active));
       }
 
+      function clearFirstStarAutoPlayRetryTimer() {
+        if (!state.game.firstStarAutoPlayRetryTimer) return;
+        window.clearTimeout(state.game.firstStarAutoPlayRetryTimer);
+        state.game.firstStarAutoPlayRetryTimer = 0;
+      }
+
+      function isFirstStarEntry(entry = null) {
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        return phaseKey === 'first-star' && Boolean(entry && Number(entry.stage) === 1);
+      }
+
+      function setFirstStarListenSealPlaying(active) {
+        if (!els.firstStarListenBtn) return;
+        els.firstStarListenBtn.classList.toggle('is-playing', Boolean(active));
+      }
+
+      function setFirstStarJumpBusy(active) {
+        state.game.firstStarJumpBusy = Boolean(active);
+        if (!els.firstStarJumpBtn) return;
+        els.firstStarJumpBtn.classList.toggle('is-busy', Boolean(active));
+        if (active) {
+          els.firstStarJumpBtn.disabled = true;
+        }
+      }
+
+      function renderFirstStarSeals(entry = null) {
+        if (!els.firstStarSeals || !els.firstStarListenBtn || !els.firstStarJumpBtn) return;
+        const visible = isFirstStarEntry(entry);
+        els.firstStarSeals.hidden = !visible;
+        els.firstStarSeals.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        if (!visible) {
+          setFirstStarListenSealPlaying(false);
+          setFirstStarJumpBusy(false);
+          els.firstStarListenBtn.disabled = true;
+          els.firstStarJumpBtn.disabled = true;
+          return;
+        }
+        const disabled = !state.game.active || state.game.paused || state.game.listening;
+        els.firstStarListenBtn.disabled = disabled;
+        els.firstStarJumpBtn.disabled = disabled || state.game.firstStarJumpBusy;
+      }
+
+      function finalizeStageAutoAudioPlayback(entry, stageConfig) {
+        if (state.game.currentId !== entry.id) return;
+        state.game.canListen = !isLevelAudioModeActive();
+        renderGameTouchButton(stageConfig, entry);
+        renderFirstStarSeals(entry);
+        if (isLevelAudioModeActive()) {
+          window.setTimeout(() => {
+            if (state.game.active && state.game.currentId === entry.id && isLevelAudioModeActive()) {
+              rotateLevelModeEntry(entry);
+              advanceToNextCard();
+            }
+          }, 700);
+        }
+      }
+
+      function runAutoAudioPlaybackAttempt(entry, card, stageConfig, attempt = 1) {
+        if (!state.game.active || state.game.currentId !== entry.id || state.game.listening || state.game.paused) return;
+        const playback = playPromptAudio(card, {
+          unlockDelayMs: stageConfig.key === 'first-star' ? FIRST_STAGE_MIC_UNLOCK_DELAY_MS : GAME_MIC_UNLOCK_DELAY_MS
+        });
+        Promise.resolve(playback)
+          .then((played) => {
+            if (state.game.currentId !== entry.id) return;
+            const shouldRetry = stageConfig.key === 'first-star'
+              && !played
+              && attempt < FIRST_STAR_AUTO_AUDIO_MAX_ATTEMPTS
+              && !state.game.listening
+              && !state.game.paused;
+            if (shouldRetry) {
+              clearFirstStarAutoPlayRetryTimer();
+              state.game.firstStarAutoPlayRetryTimer = window.setTimeout(() => {
+                state.game.firstStarAutoPlayRetryTimer = 0;
+                runAutoAudioPlaybackAttempt(entry, card, stageConfig, attempt + 1);
+              }, FIRST_STAR_AUTO_AUDIO_RETRY_BASE_DELAY_MS * attempt);
+              return;
+            }
+            finalizeStageAutoAudioPlayback(entry, stageConfig);
+          })
+          .catch(() => {
+            if (state.game.currentId !== entry.id) return;
+            const shouldRetry = stageConfig.key === 'first-star'
+              && attempt < FIRST_STAR_AUTO_AUDIO_MAX_ATTEMPTS
+              && !state.game.listening
+              && !state.game.paused;
+            if (shouldRetry) {
+              clearFirstStarAutoPlayRetryTimer();
+              state.game.firstStarAutoPlayRetryTimer = window.setTimeout(() => {
+                state.game.firstStarAutoPlayRetryTimer = 0;
+                runAutoAudioPlaybackAttempt(entry, card, stageConfig, attempt + 1);
+              }, FIRST_STAR_AUTO_AUDIO_RETRY_BASE_DELAY_MS * attempt);
+              return;
+            }
+            finalizeStageAutoAudioPlayback(entry, stageConfig);
+          });
+      }
+
+      async function playFirstStarPromptAudio() {
+        const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+        if (!entry || !isFirstStarEntry(entry) || state.game.paused || state.game.listening) return false;
+        const card = cardById(entry.id);
+        if (!card) return false;
+        clearFirstStarAutoPlayRetryTimer();
+        state.game.canListen = false;
+        renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
+        renderFirstStarSeals(entry);
+        try {
+          return await playPromptAudio(card, { unlockDelayMs: FIRST_STAGE_MIC_UNLOCK_DELAY_MS });
+        } finally {
+          if (state.game.currentId === entry.id) {
+            state.game.canListen = !isLevelAudioModeActive();
+            renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
+            renderFirstStarSeals(entry);
+          }
+        }
+      }
+
+      async function jumpCurrentFirstStarCard() {
+        const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+        if (!entry || !isFirstStarEntry(entry) || state.game.paused || state.game.listening || state.game.firstStarJumpBusy) {
+          return false;
+        }
+        const replacementChoice = nextGameCardForPool(entry.pool || 'base', { excludedIds: [entry.id] });
+        if (!replacementChoice?.card?.id) {
+          setGameStatus('Nao ha outra carta disponivel para pular agora.', 'live');
+          return false;
+        }
+
+        setFirstStarJumpBusy(true);
+        clearFirstStarAutoPlayRetryTimer();
+        stopActiveAudio();
+        cleanupGameRecognition();
+        const replacementEntry = createGameEntry(replacementChoice.card, replacementChoice.pool);
+        removeGameEntry(entry.id);
+        state.game.entries.set(replacementEntry.id, replacementEntry);
+        state.game.queue = state.game.queue.filter((id) => id !== replacementEntry.id);
+        state.game.currentId = replacementEntry.id;
+        persistGameSessionLocally();
+        updateGameChips();
+        setGameStatus('-1 nivel de deck', 'live');
+        void applyJumpDeckLevelPenalty();
+        renderCurrentCard({ jumpedFromFirstStar: true });
+        scheduleGameIdleAutoPause();
+        setFirstStarJumpBusy(false);
+        renderFirstStarSeals(state.game.currentId ? state.game.entries.get(state.game.currentId) : null);
+        return true;
+      }
+
       async function playCurrentStagePromptAudio(options = {}) {
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return false;
@@ -20815,6 +21141,8 @@
         const current = state.game.activeAudio;
         setGameVisualNeonState('default');
         setLevelTextModeWaveformActive(false);
+        setFirstStarListenSealPlaying(false);
+        clearFirstStarAutoPlayRetryTimer();
         if (state.game.blockedAudioFlashTimer) {
           window.clearTimeout(state.game.blockedAudioFlashTimer);
           state.game.blockedAudioFlashTimer = 0;
@@ -20833,6 +21161,7 @@
         const current = state.game.activeAudio;
         setGameVisualNeonState('default');
         setLevelTextModeWaveformActive(false);
+        setFirstStarListenSealPlaying(false);
         if (state.game.blockedAudioFlashTimer) {
           window.clearTimeout(state.game.blockedAudioFlashTimer);
           state.game.blockedAudioFlashTimer = 0;
@@ -20905,6 +21234,8 @@
           state.game.blockedAudioFlashTimer = 0;
         }
         setGameVisualNeonState('default');
+        const currentEntry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+        renderFirstStarSeals(currentEntry);
       }
 
       function playAudioWithSoftEnd(audio, { registerAsActive = false, onPlay = null } = {}) {
@@ -20971,16 +21302,19 @@
       function playPromptAudio(card, options = {}) {
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
         const reflectStagePlay = phaseKey === 'second-star' || phaseKey === 'fourth-star';
-        const finishStagePlayReflection = (result) => Promise.resolve(result).finally(() => {
+        const reflectFirstStarListen = phaseKey === 'first-star';
+        const finishPromptReflection = (result) => Promise.resolve(result).finally(() => {
           if (reflectStagePlay) setStagePlayButtonActive(false);
+          if (reflectFirstStarListen) setFirstStarListenSealPlaying(false);
         });
         if (reflectStagePlay) setStagePlayButtonActive(true);
+        if (reflectFirstStarListen) setFirstStarListenSealPlaying(true);
         if (isNoEnergyMediaLocked()) {
           stopActiveAudio();
-          return finishStagePlayReflection(false);
+          return finishPromptReflection(false);
         }
         if (shouldSuppressTutorialCardAudio(card)) {
-          return finishStagePlayReflection(false);
+          return finishPromptReflection(false);
         }
         const requestedRate = Number(options?.rate) > 0 ? Number(options.rate) : 1;
         const rate = Math.max(0.1, Math.min(2.5, requestedRate * resolveSelectedGameSpeed()));
@@ -21002,7 +21336,7 @@
           const shouldUnlockMic = options.enableMicDuringPlayback !== false;
           const unlockDelayMs = Number(options.unlockDelayMs);
           setLevelTextModeWaveformActive(true);
-          return finishStagePlayReflection(playAudioWithSoftEnd(audio, {
+          return finishPromptReflection(playAudioWithSoftEnd(audio, {
             registerAsActive: true,
             onPlay: shouldUnlockMic
               ? () => {
@@ -21026,7 +21360,7 @@
         }
 
         if (window.speechSynthesis && card.english) {
-          return finishStagePlayReflection(new Promise((resolve) => {
+          return finishPromptReflection(new Promise((resolve) => {
             const utterance = new SpeechSynthesisUtterance(card.english);
             utterance.lang = pickCardAccent(card) === 'british' ? 'en-GB' : 'en-US';
             utterance.rate = rate;
@@ -21044,7 +21378,7 @@
             window.speechSynthesis.speak(utterance);
           }));
         }
-        return finishStagePlayReflection(false);
+        return finishPromptReflection(false);
       }
 
       function playSuccessAudio() {
@@ -23294,6 +23628,7 @@
         if (!entry) {
           state.game.sessionClockStagePrimeKey = '';
           setStageSpeedLoading(false);
+          clearFirstStarAutoPlayRetryTimer();
           clearStageTutorialReminder();
           hideGameStageTutorial({ resume: false });
           els.game.removeAttribute('data-phase-key');
@@ -23313,6 +23648,7 @@
             els.gamePhaseWord.textContent = '';
             els.gamePhaseWord.classList.remove('is-visible');
           }
+          renderFirstStarSeals(null);
           syncGamePhaseWordHost('');
           els.gameCard.classList.remove('is-typing-stage');
           els.gameTypingKeyboard.classList.remove('is-portuguese', 'is-visible');
@@ -23354,6 +23690,10 @@
           return;
         }
         const stageConfig = resolveGameStageConfig(entry);
+        if (stageConfig.key !== 'first-star') {
+          clearFirstStarAutoPlayRetryTimer();
+          setFirstStarListenSealPlaying(false);
+        }
         const textOnlyMode = isLevelTextModeActive();
         if (maybeShowStageTutorialBeforeCard(entry, options)) {
           return;
@@ -23466,6 +23806,7 @@
         }
         state.game.canListen = !typingStage && (!stageConfig.autoAudio || entry.stage === 1);
         renderGameTouchButton(stageConfig, entry);
+        renderFirstStarSeals(entry);
         const keepMissionHudInTyping = typingStage && (stageConfig.key === 'second-star' || stageConfig.key === 'fourth-star');
         els.gameTouchBtn.parentElement.classList.toggle(
           'is-hidden',
@@ -23543,42 +23884,38 @@
             state.game.skipAutoAudioOnce = false;
             state.game.canListen = !isLevelAudioModeActive();
             renderGameTouchButton(stageConfig, entry);
+            renderFirstStarSeals(entry);
             return;
           }
           state.game.canListen = false;
           renderGameTouchButton(stageConfig, entry);
+          renderFirstStarSeals(entry);
+          clearFirstStarAutoPlayRetryTimer();
           window.setTimeout(() => {
             if (state.game.currentId === entry.id && !state.game.listening && !state.game.paused) {
-              const playback = playPromptAudio(card, {
-                unlockDelayMs: stageConfig.key === 'first-star' ? FIRST_STAGE_MIC_UNLOCK_DELAY_MS : GAME_MIC_UNLOCK_DELAY_MS
-              });
-              playback.finally(() => {
-                if (state.game.currentId === entry.id) {
-                  state.game.canListen = !isLevelAudioModeActive();
-                  renderGameTouchButton(stageConfig, entry);
-                  if (isLevelAudioModeActive()) {
-                    window.setTimeout(() => {
-                      if (state.game.active && state.game.currentId === entry.id && isLevelAudioModeActive()) {
-                        rotateLevelModeEntry(entry);
-                        advanceToNextCard();
-                      }
-                    }, 700);
-                  }
-                }
-              });
+              runAutoAudioPlaybackAttempt(entry, card, stageConfig, 1);
             }
           }, 220);
         }
       }
 
-      function nextGameCardForPool(pool = 'base') {
-        const activeIds = new Set(Array.from(state.game.entries.keys()));
+      function nextGameCardForPool(pool = 'base', options = {}) {
+        const excludedIds = new Set(
+          (Array.isArray(options?.excludedIds) ? options.excludedIds : [])
+            .map((value) => safeText(value))
+            .filter(Boolean)
+        );
+        const activeIds = new Set(
+          [...Array.from(state.game.entries.keys()), ...Array.from(excludedIds)]
+            .map((value) => safeText(value))
+            .filter(Boolean)
+        );
         const earlyRestricted = shouldRestrictEarlyFlashcards();
         let preferredSource = pool === 'review'
-          ? readyReviewCards().filter(card => !activeIds.has(card.id))
-          : baseRoundSourceCards().filter(card => !activeIds.has(card.id));
+          ? readyReviewCards().filter(card => !activeIds.has(safeText(card?.id)))
+          : baseRoundSourceCards().filter(card => !activeIds.has(safeText(card?.id)));
         let fallbackSource = pool === 'review'
-          ? baseRoundSourceCards().filter(card => !activeIds.has(card.id))
+          ? baseRoundSourceCards().filter(card => !activeIds.has(safeText(card?.id)))
           : [];
         if (earlyRestricted) {
           if (pool === 'base') {
@@ -24196,6 +24533,7 @@
       async function advanceToNextCard() {
         if (!state.game.active) return;
         cleanupGameRecognition();
+        clearFirstStarAutoPlayRetryTimer();
         commitCurrentCardTrainingTime();
         clearPendingRewardSeal();
         clearStageTutorialReminder();
@@ -25119,6 +25457,7 @@
         els.gameVisual.classList.add('is-mic-live');
         setGameVisualNeonState('touch');
         setGameStatus('', 'live');
+        renderFirstStarSeals(entry);
         updateGuestFirstStarResultsBanner(entry, true);
 
         const recognitionLanguage = isLevelTextModeActive()
@@ -25135,6 +25474,7 @@
           if (state.game.active && state.game.currentId === entry.id) {
             state.game.canListen = true;
             renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
+            renderFirstStarSeals(entry);
             if (shouldShowStageHintLoop(entry) && statusText === 'Toque para falar') {
               startStageHintLoop(entry);
             } else {
@@ -25165,6 +25505,7 @@
           state.game.canListen = true;
           els.gameTouchBtn.classList.remove('is-busy');
           renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
+          renderFirstStarSeals(entry);
           els.gameCard.classList.remove('is-listening');
           els.gameVisual.classList.remove('is-mic-live');
           setGameVisualNeonState('default');
@@ -25991,6 +26332,16 @@
             return;
           }
           startRecognition();
+        });
+        els.firstStarListenBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void playFirstStarPromptAudio();
+        });
+        els.firstStarJumpBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void jumpCurrentFirstStarCard();
         });
         els.gameLanguageBtn?.addEventListener('click', (event) => {
           event.stopPropagation();
