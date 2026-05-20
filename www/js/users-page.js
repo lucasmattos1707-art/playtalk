@@ -54,6 +54,7 @@
     toggleNoEnergyBtn: document.getElementById('toggleNoEnergyBtn'),
     toggleOfflineModeBtn: document.getElementById('toggleOfflineModeBtn'),
     premiumUserBtn: document.getElementById('premiumUserBtn'),
+    resetUserDataBtn: document.getElementById('resetUserDataBtn'),
     deleteUserBtn: document.getElementById('deleteUserBtn'),
     closeAdminModalBtn: document.getElementById('closeAdminModalBtn'),
     closeAdminModalTopBtn: document.getElementById('closeAdminModalTopBtn'),
@@ -591,7 +592,7 @@
 
   function syncAdminButtons() {
     const disabled = state.adminBusy || !state.selectedUser;
-    [els.toggleOfflineModeBtn, els.toggleNoEnergyBtn, els.premiumUserBtn, els.deleteUserBtn].forEach((button) => {
+    [els.toggleOfflineModeBtn, els.toggleNoEnergyBtn, els.premiumUserBtn, els.resetUserDataBtn, els.deleteUserBtn].forEach((button) => {
       if (!button) return;
       button.disabled = disabled;
     });
@@ -1456,6 +1457,35 @@
     }
   }
 
+  async function resetSelectedUserData() {
+    if (!state.selectedUser || state.adminBusy) return;
+    const confirmed = window.confirm(
+      `Resetar todos os dados de jogo de ${state.selectedUser.username}? Isso vai zerar progresso, XP/energia, moedas, mesa, speaking/listening/reading e ranking.`
+    );
+    if (!confirmed) return;
+    state.adminBusy = true;
+    syncAdminButtons();
+    setAdminStatus('Resetando dados do usuario...');
+    try {
+      const response = await fetch(buildApiUrl(`/api/admin/users/${state.selectedUser.userId}/reset-data`), {
+        method: 'POST',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Nao foi possivel resetar os dados do usuario.');
+      }
+      setAdminStatus(payload?.message || 'Dados do usuario resetados.');
+      await loadUsers('', { metricKey: state.currentMetricKey, force: true });
+    } catch (error) {
+      setAdminStatus(error?.message || 'Nao foi possivel resetar os dados do usuario.');
+    } finally {
+      state.adminBusy = false;
+      syncAdminButtons();
+    }
+  }
+
   async function toggleSelectedUserPremium() {
     if (!state.selectedUser || state.adminBusy) return;
     state.adminBusy = true;
@@ -1634,6 +1664,7 @@
   els.toggleNoEnergyBtn?.addEventListener('click', () => { void toggleSelectedUserNoEnergy(); });
   els.toggleOfflineModeBtn?.addEventListener('click', () => { void toggleSelectedUserOfflineMode(); });
   els.premiumUserBtn?.addEventListener('click', () => { void toggleSelectedUserPremium(); });
+  els.resetUserDataBtn?.addEventListener('click', () => { void resetSelectedUserData(); });
   els.deleteUserBtn?.addEventListener('click', () => { void deleteUser(); });
   els.closeAdminModalTopBtn?.addEventListener('click', closeAdminModal);
   els.challengeActionBtn?.addEventListener('click', () => {

@@ -19654,6 +19654,112 @@ app.post('/api/admin/users/:userId/offline-mode', async (req, res) => {
   }
 });
 
+app.post('/api/admin/users/:userId/reset-data', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    await ensureUsersAvatarColumn();
+    await ensureFlashcardUserStateTables();
+    await ensureUserBooksConsumptionStatsTable();
+    await ensureUserBooksLibraryStatsTable();
+    await ensureBooksSpeakingStatsTable();
+    await ensureUserDailyEnergyStatsTable();
+    await ensureUserDailyMissionStatsTable();
+    await ensureUserBooksEnergyXpStatsTable();
+    await ensureUserCoinsTable();
+    await ensureUserFlashcardSpeedSamplesTable();
+    await ensureFlashcardRankingsTable();
+
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id || !isAdminUserRecord(authUser)) {
+      clearAuthCookie(res);
+      res.status(403).json({ success: false, message: 'Apenas admin pode resetar dados de usuarios.' });
+      return;
+    }
+
+    const userId = Number.parseInt(req.params.userId, 10);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ success: false, message: 'Usuario invalido.' });
+      return;
+    }
+    if (userId === Number(authUser.id)) {
+      res.status(400).json({ success: false, message: 'Nao e permitido resetar a propria conta por aqui.' });
+      return;
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const existsResult = await client.query(
+        `SELECT id, username
+         FROM public.users
+         WHERE id = $1
+         LIMIT 1
+         FOR UPDATE`,
+        [userId]
+      );
+      if (!existsResult.rows.length) {
+        await client.query('ROLLBACK');
+        res.status(404).json({ success: false, message: 'Usuario nao encontrado.' });
+        return;
+      }
+
+      await client.query('DELETE FROM public.user_flashcard_reports WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_flashcard_hidden WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_flashcard_type_portuguese WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_flashcard_on_table WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_flashcard_progress WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_flashcard_session_clock WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_flashcard_speed_samples WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_flashcard_stats WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.flashcards_accurate WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_books_consumption_stats WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_books_library_stats WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_books_speaking_stats WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_daily_energy_stats WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_daily_mission_stats WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_books_energy_xp_stats WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_coins WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.flashcard_rankings WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_ranking_overrides WHERE user_id = $1', [userId]);
+
+      await client.query(
+        `UPDATE public.users
+         SET level = 1,
+             level_updated_at = now(),
+             no_energy = false,
+             offline_mode = false
+         WHERE id = $1`,
+        [userId]
+      );
+
+      await client.query('COMMIT');
+      res.json({
+        success: true,
+        userId,
+        username: String(existsResult.rows[0]?.username || '').trim(),
+        message: 'Dados do usuario resetados com sucesso.'
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    console.error('Erro ao resetar dados do usuario pelo admin:', error);
+    res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel resetar os dados do usuario.'
+    });
+  }
+});
+
 app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb' }), async (req, res) => {
   try {
     if (!pool) {
