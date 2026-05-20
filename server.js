@@ -6012,10 +6012,13 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       `SELECT
          u.level,
          u.level_updated_at,
-         COALESCE(overrides.speed_delta, 0)::numeric AS speed_delta
+         COALESCE((
+           SELECT o.speed_delta
+           FROM public.user_ranking_overrides o
+           WHERE o.user_id = u.id
+           LIMIT 1
+         ), 0)::numeric AS speed_delta
        FROM public.users u
-       LEFT JOIN public.user_ranking_overrides overrides
-         ON overrides.user_id = u.id
        WHERE u.id = $1
        FOR UPDATE`,
       [normalizedUserId]
