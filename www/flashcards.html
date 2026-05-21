@@ -23272,17 +23272,24 @@
       }
 
       async function handleSecondStageWordBlockMistake(entry, card, grid, selectedButtons) {
+        entry.typingMistakes = (entry.typingMistakes || 0) + 1;
+        void applyJumpDeckLevelPenalty();
         setTypingKeysDisabled(grid, true);
         triggerTypingMistakeFeedback(grid, 2000);
         playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
         await Promise.allSettled([playPromptAudio(card, { rate: 0.8, enableMicDuringPlayback: false }), wait(2000)]);
-        if (!state.game.active || state.game.currentId !== entry.id) return;
+        if (!state.game.active || state.game.currentId !== entry.id) return true;
+        if (entry.typingMistakes >= 2) {
+          await handleRecognitionResult('', 'typing');
+          return true;
+        }
         selectedButtons.forEach((button) => {
           button.disabled = false;
           button.classList.remove('is-selected', 'is-correct-hit');
         });
         selectedButtons.length = 0;
         setTypingKeysDisabled(grid, false);
+        return false;
       }
 
       function renderTypingKeyboard(entry, card) {
@@ -23398,7 +23405,8 @@
               const nextWords = [...selectedWords, block.normalized];
               if (!wordBlockSequenceMatchesPrefix(blockState.targetSequences, nextWords)) {
                 resolving = true;
-                await handleSecondStageWordBlockMistake(entry, card, grid, selectedButtons);
+                const finished = await handleSecondStageWordBlockMistake(entry, card, grid, selectedButtons);
+                if (finished) return;
                 selectedWords.length = 0;
                 renderSelected();
                 resolving = false;
