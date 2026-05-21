@@ -23996,11 +23996,7 @@
           renderGameTouchButton(stageConfig, entry);
           renderFirstStarSeals(entry);
           clearFirstStarAutoPlayRetryTimer();
-          window.setTimeout(() => {
-            if (state.game.currentId === entry.id && !state.game.listening && !state.game.paused) {
-              runAutoAudioPlaybackAttempt(entry, card, stageConfig, 1);
-            }
-          }, 220);
+          runAutoAudioPlaybackAttempt(entry, card, stageConfig, 1);
         }
       }
 
