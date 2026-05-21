@@ -1111,13 +1111,13 @@
     }
 
     .welcome-gate__action-btn--mission {
-      --welcome-action-size-multiplier: 0.8;
+      --welcome-action-size-multiplier: 1;
       --welcome-action-color: #ffe44d;
       --welcome-action-soft: rgba(255, 228, 77, 0.36);
       --welcome-action-border: rgba(255, 238, 104, 0.86);
       --welcome-action-glow: rgba(255, 228, 77, 0.72);
       order: 1;
-      margin-right: -8px;
+      margin-right: -16px;
       z-index: 1;
     }
 
@@ -1128,13 +1128,13 @@
     }
 
     .welcome-gate__action-btn--books {
-      --welcome-action-size-multiplier: 0.8;
+      --welcome-action-size-multiplier: 1;
       --welcome-action-color: #165dff;
       --welcome-action-soft: rgba(22, 93, 255, 0.36);
       --welcome-action-border: rgba(75, 129, 255, 0.84);
       --welcome-action-glow: rgba(22, 93, 255, 0.68);
       order: 3;
-      margin-left: -8px;
+      margin-left: -16px;
       z-index: 1;
     }
 
@@ -10209,7 +10209,7 @@
             <span class="welcome-gate__action-circle" aria-hidden="true">
               <svg viewBox="0 0 64 64" focusable="false"><path d="M24 17v30l24-15z"></path></svg>
             </span>
-            <span class="welcome-gate__action-label">jogar</span>
+            <span class="welcome-gate__action-label">Jogar</span>
             <span class="welcome-gate__start-timer" hidden>
               <img class="welcome-gate__start-timer-icon" src="/SVG/codex-icons/relógio.svg" alt="" aria-hidden="true">
               <span class="welcome-gate__start-timer-value">00:00:00</span>
@@ -22836,7 +22836,12 @@
         entry.typingMistakes = (entry.typingMistakes || 0) + 1;
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
         const isFourthStar = phaseKey === 'fourth-star';
+        const isSecondStar = phaseKey === 'second-star';
         const nowMs = Date.now();
+
+        if (isSecondStar || isFourthStar) {
+          void applyJumpDeckLevelPenalty();
+        }
 
         if (shouldPlayMistakeCue(nowMs)) {
           playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
@@ -22859,7 +22864,7 @@
             renderFourthStarCorrectionSnippet(display, safeText(options.targetText || ''), typedLength);
           }
           void playPromptAudio(card, { rate: 0.8, enableMicDuringPlayback: false }).catch(() => false);
-          if (entry.typingMistakes >= 3) {
+          if (entry.typingMistakes >= 2) {
             await handleRecognitionResult('', 'typing');
             return true;
           }
