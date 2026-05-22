@@ -17748,8 +17748,7 @@
 
       function currentGameActiveCardCap(level = currentUserLevel(), baseCount = currentBaseGameCount(level)) {
         const normalizedBaseCount = Math.max(MIN_GAME_CONTEXT_LIMIT, Number(baseCount) || 0);
-        const readyReviewsCount = Math.min(REVIEW_SLOT_LIMIT, readyReviewCards().length);
-        return normalizedBaseCount + readyReviewsCount;
+        return Math.min(ON_TABLE_MAX_CARDS, normalizedBaseCount + REVIEW_SLOT_LIMIT);
       }
 
       function normalizeDeckLevel(value) {
