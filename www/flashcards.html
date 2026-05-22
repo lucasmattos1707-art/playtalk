@@ -24981,6 +24981,10 @@
             const roundCount = Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount());
             state.game.contextLimit = currentGameActiveCardCap(currentUserLevel(), roundCount);
             state.game.selectedCount = roundCount;
+            const targetActiveLimit = Math.min(
+              ON_TABLE_MAX_CARDS,
+              Math.max(MIN_GAME_CONTEXT_LIMIT, Number(state.game.contextLimit) || roundCount)
+            );
             const reviewCards = readyReviewCards().slice(0, REVIEW_SLOT_LIMIT);
             const basePool = applyEarlyFlashcardFilter(baseRoundSourceCards());
             const roundGroups = buildLevelAwareRoundGroups(
@@ -25002,7 +25006,7 @@
             const availableBase = roundGroups.baseCards.filter((card) => card && !seedIds.has(card.id));
             const availableReview = roundGroups.reviewCards.filter((card) => card && !seedIds.has(card.id));
             availableBase.forEach((card) => {
-              if (state.game.entries.size >= roundCount || availableBase.length <= 0) return;
+              if (state.game.entries.size >= targetActiveLimit || availableBase.length <= 0) return;
               if (state.game.entries.size >= ON_TABLE_MAX_CARDS) return;
               const currentBaseCount = Array.from(state.game.entries.values()).filter((entry) => entry.pool === 'base').length;
               if (currentBaseCount >= ON_TABLE_BASE_MAX) return;
@@ -25012,7 +25016,7 @@
               seedIds.add(card.id);
             });
             availableReview.forEach((card) => {
-              if (state.game.entries.size >= roundCount || availableReview.length <= 0) return;
+              if (state.game.entries.size >= targetActiveLimit || availableReview.length <= 0) return;
               if (state.game.entries.size >= ON_TABLE_MAX_CARDS) return;
               const currentReviewCount = Array.from(state.game.entries.values()).filter((entry) => entry.pool === 'review').length;
               if (currentReviewCount >= ON_TABLE_REVIEW_MAX) return;
@@ -25022,8 +25026,8 @@
               seedIds.add(card.id);
             });
 
-            while (state.game.entries.size < Math.min(roundCount, ON_TABLE_MAX_CARDS)) {
-              if (!refillGameEntry('base', Math.min(roundCount, ON_TABLE_MAX_CARDS))) break;
+            while (state.game.entries.size < targetActiveLimit) {
+              if (!refillGameEntry('base', targetActiveLimit)) break;
             }
             persistGameSessionLocally();
           }
