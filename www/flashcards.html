@@ -6567,6 +6567,11 @@
       padding: 8px 14px;
     }
 
+    .game[data-phase-key="fifth-star"] .textscreen {
+      align-items: flex-end;
+      padding-bottom: clamp(10px, 3vh, 28px);
+    }
+
     .game[data-phase-key="first-star"] .textscreen .game-status-wrap {
       display: none;
     }
@@ -6622,8 +6627,8 @@
     }
 
     .game[data-phase-key="fifth-star"] .textscreen .game-status-wrap {
-      transform: translateY(calc(6vh - 35px));
-      margin-top: clamp(8px, 2vh, 18px);
+      transform: none;
+      margin-top: 0;
       align-items: center;
       justify-content: center;
     }
