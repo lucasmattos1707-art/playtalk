@@ -21117,9 +21117,17 @@
           'Ouvindo...',
           'Analisando...'
         ]);
-        const resolvedText = speakingStarPhase && suppressedSpeakingStarStatuses.has(normalizedText)
-          ? ''
-          : (text || '');
+        const suppressedSpeakingPrompt = speakingStarPhase && suppressedSpeakingStarStatuses.has(normalizedText);
+        const resolvedText = suppressedSpeakingPrompt ? '' : (text || '');
+        if (
+          phaseKey === 'fifth-star'
+          && state.user?.id
+          && tone === 'live'
+          && suppressedSpeakingPrompt
+          && els.gameStatus?.classList.contains('is-flashcards-count')
+        ) {
+          return;
+        }
         els.gameStatus.textContent = resolvedText;
         els.gameStatus.className = 'game-status';
         if (els.gameStatusWrap) {
