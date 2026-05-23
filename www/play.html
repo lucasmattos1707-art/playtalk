@@ -6655,7 +6655,7 @@
 
     .game[data-phase-key="fifth-star"] .textscreen .game-status-wrap {
       transform: none;
-      margin-top: 0;
+      margin-top: -25px;
       align-items: center;
       justify-content: center;
     }
@@ -23608,6 +23608,16 @@
 
           const grid = document.createElement('div');
           grid.className = 'flashcards-typing__grid is-word-blocks';
+          const fourthStarBlocksTranslationText = phaseKey === 'fourth-star'
+            ? capitalizeWords(card?.portuguese || card?.english || card?.deckTitle || '')
+            : '';
+          const fourthStarBlocksTranslationDisplay = fourthStarBlocksTranslationText
+            ? document.createElement('div')
+            : null;
+          if (fourthStarBlocksTranslationDisplay) {
+            fourthStarBlocksTranslationDisplay.className = 'flashcards-typing__display flashcards-typing__display--visual is-second-star-translation';
+            renderSecondStageTranslationDisplay(fourthStarBlocksTranslationDisplay, fourthStarBlocksTranslationText);
+          }
           const selectedWords = [];
           const selectedButtons = [];
           const keyNodes = [];
@@ -23720,6 +23730,9 @@
           }
           els.gameTypingKeyboard.innerHTML = '';
           els.gameTypingKeyboard.appendChild(toolbar);
+          if (fourthStarBlocksTranslationDisplay) {
+            els.gameTypingKeyboard.appendChild(fourthStarBlocksTranslationDisplay);
+          }
           els.gameTypingKeyboard.appendChild(grid);
           els.gameTypingKeyboard.classList.add('is-visible');
           els.gameTypingKeyboard.classList.remove('is-portuguese');
