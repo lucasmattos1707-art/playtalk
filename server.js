@@ -21232,21 +21232,12 @@ app.get('/', (req, res) => {
 
 app.get(['/play', '/play/'], (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  res.sendFile(path.join(staticDir, 'flashcards.html'));
+  res.sendFile(path.join(staticDir, 'play.html'));
 });
 
 app.get(['/english', '/english/'], (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'www', 'english.html'));
-});
-
-app.get(['/flashcards', '/flashcards/'], (req, res) => {
-  const view = typeof req.query?.view === 'string' ? req.query.view.trim().toLowerCase() : '';
-  if (view === 'play') {
-    res.redirect(302, '/play');
-    return;
-  }
-  res.redirect(302, '/play');
 });
 
 app.get(['/entrar', '/entrar/', '/auth', '/auth/', '/auth.html'], (req, res) => {
@@ -21397,7 +21388,7 @@ app.get(['/game', '/game/'], (req, res) => {
 });
 
 app.get(['/inplay', '/inplay/'], (req, res) => {
-  res.redirect('/play.html#play');
+  res.redirect('/play#play');
 });
 
 app.get(['/vocabulary', '/vocabulary/'], (req, res) => {
@@ -21409,7 +21400,9 @@ app.get(['/database', '/database/'], (req, res) => {
 });
 
 app.get(['/flashcards', '/flashcards/'], (req, res) => {
-  res.sendFile(path.join(__dirname, 'www', 'flashcards.html'));
+  const queryIndex = req.originalUrl.indexOf('?');
+  const search = queryIndex >= 0 ? req.originalUrl.slice(queryIndex) : '';
+  res.redirect(302, `/play${search}`);
 });
 
 app.get(['/fast', '/fast/'], (req, res) => {
