@@ -5796,7 +5796,7 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
   const currentPracticeMs = Math.max(0, Math.round(Number(totalsRow.training_time_ms) || 0));
   const speedSamplesResult = await client.query(
     `SELECT
-       COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_count,
+       COALESCE(SUM(GREATEST(sample_value, 0)), 0)::numeric AS normalized_chars_count,
        COUNT(*)::int AS sample_count,
        GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
      FROM (
@@ -5962,7 +5962,7 @@ const readFlashcardStateForUser = async (userId) => {
     ),
     pool.query(
       `SELECT
-         COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_total,
+         COALESCE(SUM(GREATEST(sample_value, 0)), 0)::numeric AS normalized_chars_total,
          COUNT(*)::int AS sample_count,
          GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
        FROM (
@@ -6196,7 +6196,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       const previousUnits = resolveFlashcardSpeedUnitsFromState(previousProgress, previousOnTable);
       const nextUnits = resolveFlashcardSpeedUnitsFromState(nextProgress, nextOnTable);
       const unitsDelta = Number((nextUnits - previousUnits).toFixed(4));
-      if (Math.abs(unitsDelta) < 0.0001) return;
+      if (unitsDelta <= 0.0001) return;
       const charsForSample = Math.max(
         1,
         Math.round(Number(nextProgress?.cardChars ?? previousProgress?.cardChars) || 10)
@@ -6475,7 +6475,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
 
     const speedSummaryResult = await client.query(
       `SELECT
-         COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_total,
+         COALESCE(SUM(GREATEST(sample_value, 0)), 0)::numeric AS normalized_chars_total,
          COUNT(*)::int AS sample_count,
          GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
        FROM (
@@ -15983,7 +15983,7 @@ app.get('/api/users/flashcards', async (req, res) => {
        LEFT JOIN (
          SELECT
            user_id,
-           COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_count,
+           COALESCE(SUM(GREATEST(sample_value, 0)), 0)::numeric AS normalized_chars_count,
            COUNT(*)::int AS sample_count,
            GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
          FROM (
@@ -20097,7 +20097,7 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
        LEFT JOIN (
          SELECT
            user_id,
-           COALESCE(SUM(sample_value), 0)::numeric AS normalized_chars_count,
+           COALESCE(SUM(GREATEST(sample_value, 0)), 0)::numeric AS normalized_chars_count,
            COUNT(*)::int AS sample_count,
            GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
          FROM (
