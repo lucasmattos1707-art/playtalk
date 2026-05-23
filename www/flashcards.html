@@ -7367,6 +7367,10 @@
       z-index: 5;
     }
 
+    .game[data-phase-key="fifth-star"] .flashcards-typing__display--visual.is-second-star-translation {
+      top: calc(50% + 30px);
+    }
+
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation .flashcards-typing__translation-line,
     .game[data-phase-key="fifth-star"] .flashcards-typing__display--visual.is-second-star-translation .flashcards-typing__translation-line {
       display: block;
@@ -7481,7 +7485,9 @@
       border-color: transparent;
       box-shadow: none;
       backdrop-filter: none;
-      top: auto;
+      top: 50%;
+      bottom: auto;
+      transform: translate(-50%, -50%);
     }
 
     .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
@@ -7491,6 +7497,29 @@
       border-color: transparent;
       box-shadow: none;
       backdrop-filter: none;
+    }
+
+    .game[data-phase-key="second-star"] #gameVisual {
+      opacity: 1;
+      transform: scale(1);
+      transition: opacity 500ms ease, transform 500ms ease;
+    }
+
+    .game[data-phase-key="second-star"].is-second-star-input-phase #gameVisual {
+      opacity: 0;
+      transform: scale(0.94);
+      pointer-events: none;
+    }
+
+    .game[data-phase-key="second-star"] .textscreen .keyboardscreen-host {
+      transition: opacity 500ms ease, transform 500ms ease;
+      opacity: 1;
+    }
+
+    .game[data-phase-key="second-star"].is-second-star-reveal-phase .textscreen .keyboardscreen-host {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.96);
+      pointer-events: none;
     }
 
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid {
@@ -23838,6 +23867,26 @@
         target.appendChild(els.gamePhaseWord);
       }
 
+      function setSecondStarVisualPhase(phase = '') {
+        if (!els.game) return;
+        els.game.classList.remove('is-second-star-input-phase', 'is-second-star-reveal-phase');
+        if (phase === 'input') {
+          els.game.classList.add('is-second-star-input-phase');
+          return;
+        }
+        if (phase === 'reveal') {
+          els.game.classList.add('is-second-star-reveal-phase');
+        }
+      }
+
+      async function revealSecondStarAnswerForCurrentCard() {
+        const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+        if (!entry || Number(entry.stage) !== 2) return;
+        if (safeText(els.game?.dataset?.phaseKey || '') !== 'second-star') return;
+        setSecondStarVisualPhase('reveal');
+        await wait(500);
+      }
+
       function renderCurrentCard(options = {}) {
         enforceBottomInfoContainersLayout();
         cleanupGameRecognition();
@@ -23855,6 +23904,7 @@
           clearStageTwoHintTimer();
           clearFirstStageIdleTimer();
           clearStageHintLoop({ clearStatus: true });
+          setSecondStarVisualPhase('');
           state.game.footerNavPrimed = false;
           state.game.footerNavPrimeKey = '';
           syncFooterGuardState(null);
@@ -23907,6 +23957,11 @@
           return;
         }
         const stageConfig = resolveGameStageConfig(entry);
+        if (stageConfig.key === 'second-star' && isTypingStage(entry)) {
+          setSecondStarVisualPhase('input');
+        } else {
+          setSecondStarVisualPhase('');
+        }
         if (stageConfig.key !== 'first-star') {
           clearFirstStarAutoPlayRetryTimer();
           setFirstStarListenSealPlaying(false);
@@ -25443,6 +25498,7 @@
             persistSecondStageTutorialCompleted(true);
             clearStageTutorialReminder();
             hideGameStageTutorial({ resume: false });
+            await revealSecondStarAnswerForCurrentCard();
           }
           if (evaluatedStage === 5) {
         clearStageHintLoop({ clearStatus: true });
