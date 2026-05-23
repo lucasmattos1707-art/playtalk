@@ -3871,13 +3871,6 @@
       transform-origin: center;
     }
 
-    .game[data-phase-key="fifth-star"] .game-card__coin-badge {
-      top: calc(100% - 14px);
-      left: 50%;
-      transform: translateX(-50%) scale(1.2);
-      transform-origin: center top;
-    }
-
     .game-card__flag {
       position: absolute;
       top: 18px;
@@ -6731,6 +6724,7 @@
       box-shadow:
         0 0 0 1px rgba(255, 216, 120, 0.18),
         0 10px 26px rgba(0, 0, 0, 0.25);
+      transform: translateY(-60px);
     }
 
     .game[data-phase-key="third-star"] .textscreen .game-status {
@@ -7446,11 +7440,14 @@
     }
 
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual.is-second-star-translation {
-      top: calc(50% - 44px);
-      width: min(88%, 280px);
-      transform: translate(-50%, -50%);
-      z-index: 4;
+      position: static;
+      top: auto;
+      left: auto;
+      width: min(100%, 420px);
+      transform: none;
+      z-index: 1;
       text-align: center;
+      margin: 0 auto 10px auto;
     }
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation .flashcards-typing__translation-line,
@@ -23940,11 +23937,15 @@
         }
 
         els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
-        els.gameVisual.appendChild(display);
         if (keyboardTarget && els.gameTypingKeyboard.parentElement !== keyboardTarget) {
           keyboardTarget.appendChild(els.gameTypingKeyboard);
         }
         els.gameTypingKeyboard.innerHTML = '';
+        if (useSmartKeyboard) {
+          els.gameTypingKeyboard.appendChild(display);
+        } else {
+          els.gameVisual.appendChild(display);
+        }
         els.gameTypingKeyboard.appendChild(toolbar);
         els.gameTypingKeyboard.appendChild(grid);
         els.gameTypingKeyboard.classList.add('is-visible');
