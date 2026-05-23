@@ -7349,6 +7349,14 @@
       top: calc(50% - 50px);
     }
 
+    .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation {
+      top: 50%;
+      width: min(72%, 230px);
+      transform: translate(-50%, -50%);
+      z-index: 4;
+      text-align: center;
+    }
+
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation,
     .game[data-phase-key="fifth-star"] .flashcards-typing__display--visual.is-second-star-translation {
       width: min(92%, 290px);
@@ -23397,6 +23405,20 @@
           .join('');
       }
 
+      function renderSecondStarRevealTranslation(card) {
+        if (!els.gameVisual) return;
+        els.gameVisual.querySelector('.flashcards-typing__display--visual.is-second-star-translation')?.remove();
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        if (phaseKey !== 'second-star') return;
+        if (!els.game?.classList.contains('is-second-star-reveal-phase')) return;
+        const text = capitalizeWords(card?.portuguese || card?.english || card?.deckTitle || '');
+        if (!text) return;
+        const translationDisplay = document.createElement('div');
+        translationDisplay.className = 'flashcards-typing__display flashcards-typing__display--visual is-second-star-translation';
+        renderSecondStageTranslationDisplay(translationDisplay, text);
+        els.gameVisual.appendChild(translationDisplay);
+      }
+
       function renderFifthStarPortugueseDisplay(card, stageKey) {
         els.gameVisual.querySelector('.flashcards-typing__display--visual.is-fifth-star-portuguese')?.remove();
         if (stageKey !== 'fifth-star' || isLevelTextModeActive()) return;
@@ -23620,13 +23642,6 @@
           }
 
           els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
-          const translationDisplay = document.createElement('div');
-          translationDisplay.className = 'flashcards-typing__display flashcards-typing__display--visual is-second-star-translation';
-          renderSecondStageTranslationDisplay(
-            translationDisplay,
-            capitalizeWords(card?.portuguese || card?.english || card?.deckTitle || '')
-          );
-          els.gameVisual.appendChild(translationDisplay);
           if (keyboardTarget && els.gameTypingKeyboard.parentElement !== keyboardTarget) {
             keyboardTarget.appendChild(els.gameTypingKeyboard);
           }
@@ -23892,6 +23907,8 @@
         if (!entry || Number(entry.stage) !== 2) return;
         if (safeText(els.game?.dataset?.phaseKey || '') !== 'second-star') return;
         setSecondStarVisualPhase('reveal');
+        const card = cardById(entry.id);
+        renderSecondStarRevealTranslation(card);
         await wait(500);
       }
 
