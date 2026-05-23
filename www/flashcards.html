@@ -21121,6 +21121,17 @@
         }
       }
 
+      function showPersistentFifthStarCoinsStatus({ iconFlash = false } = {}) {
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        if (phaseKey !== 'fifth-star') return;
+        const coinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
+        setGameStatus(String(coinsTotal), 'flashcards-count', {
+          iconPath: COINS_ICON_PATH,
+          iconLabel: 'Moedas',
+          iconFlash
+        });
+      }
+
       function updateGuestFirstStarResultsBanner(entry, micActive = false) {
         if (!els.gameResultsScreen) return;
         const isFirstStar = Boolean(entry && Number(entry.stage) === 1);
@@ -21145,7 +21156,11 @@
         if (clearStatus) {
           const phaseKey = safeText(els.game?.dataset?.phaseKey);
           if (phaseKey === 'third-star' || phaseKey === 'fifth-star') {
-            setGameStatus('', '');
+            if (phaseKey === 'fifth-star' && state.user?.id) {
+              showPersistentFifthStarCoinsStatus();
+            } else {
+              setGameStatus('', '');
+            }
           }
         }
       }
@@ -21161,7 +21176,7 @@
           return !state.user?.id;
         }
         if (stage === 5) {
-          return !state.game.fifthStarHintDismissed;
+          return !state.user?.id && !state.game.fifthStarHintDismissed;
         }
         return false;
       }
