@@ -24114,6 +24114,9 @@
           startStageHintLoop(entry);
         } else {
           clearStageHintLoop();
+          if (isFifthStarEntry(entry) && state.user?.id) {
+            showPersistentFifthStarCoinsStatus();
+          }
         }
         if (isTrainingMode()) {
           state.game.training.cycleIndex = Math.max(1, (Number(state.game.training.sourceIds?.length) || 0) - state.game.queue.length);
