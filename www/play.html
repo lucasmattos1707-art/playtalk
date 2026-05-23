@@ -6,7 +6,7 @@
   <title>Fluent LevelUp | Flashcards</title>
   <link rel="stylesheet" href="css/playtalk-shell.css">
   <style>
-    @import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800;900&family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap");
+    @import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800;900&family=Open+Sans:wght@700;800&family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap");
 
     @font-face {
       font-family: "Soopafre";
@@ -10049,8 +10049,8 @@
 
     .albums-modal__title {
       margin: 0;
-      font-family: "Exo 2", "Segoe UI", sans-serif;
-      font-weight: 850;
+      font-family: "Open Sans", "Segoe UI", sans-serif;
+      font-weight: 800;
       font-size: clamp(32px, 8.4vw, 46px);
       letter-spacing: 0;
       color: #f1f8ff;
@@ -10062,7 +10062,7 @@
     }
 
     .albums-modal__deck-value {
-      margin: 8px 0 0;
+      margin: 48px 0 0;
       font-family: "Exo 2", "Segoe UI", sans-serif;
       font-size: clamp(13px, 3.2vw, 17px);
       letter-spacing: 0.08em;
@@ -10150,8 +10150,8 @@
       overflow: hidden;
       border-radius: 12px;
       border: 0;
-      background: rgba(5, 17, 34, 0.14);
-      backdrop-filter: blur(2px);
+      background: transparent;
+      backdrop-filter: none;
     }
 
     .albums-modal__stage {
@@ -10201,6 +10201,7 @@
       gap: 8px;
       justify-items: center;
       transform: translateY(-50px);
+      background: transparent;
     }
 
     .albums-modal__flashcard-visual {
@@ -10222,13 +10223,15 @@
       object-fit: contain;
       object-position: center;
       border-radius: 14px;
+      transform: scale(1.06);
+      transform-origin: center;
     }
 
     .albums-modal__flashcard-seal {
       position: absolute;
-      right: 3%;
+      right: -1%;
       bottom: 3%;
-      width: 25%;
+      width: 30%;
       max-width: 52px;
       min-width: 22px;
       height: auto;
@@ -17589,6 +17592,36 @@
         return userProgressCards().map(buildLibraryCardView);
       }
 
+      const albumsFlashImageBuffer = new Set();
+
+      function preloadAlbumsImage(src) {
+        const safeSrc = safeText(src);
+        if (!safeSrc || albumsFlashImageBuffer.has(safeSrc)) return;
+        albumsFlashImageBuffer.add(safeSrc);
+        const img = new Image();
+        img.decoding = 'async';
+        img.loading = 'eager';
+        img.src = safeSrc;
+      }
+
+      function prefetchAlbumsFlashcards(items, startIndex) {
+        if (!Array.isArray(items) || !items.length) return;
+        const base = Math.max(0, Math.min(items.length - 1, Number(startIndex) || 0));
+        for (let offset = 1; offset <= 6; offset += 1) {
+          const idx = base + offset;
+          if (idx >= items.length) break;
+          const entry = items[idx];
+          preloadAlbumsImage(entry?.imageDisplayUrl || entry?.imageUrl);
+          preloadAlbumsImage(entry?.progress?.sealImage || entry?.sealImage);
+        }
+      }
+
+      function albumsCurrentDayIndex() {
+        const timeline = normalizeDaySealTimeline(state.ui.albumsSealsPayload);
+        const currentIndex = timeline.findIndex((entry) => entry && entry.isCurrent);
+        return currentIndex >= 0 ? currentIndex : 0;
+      }
+
       function normalizeDaySealTimeline(daySealsPayload) {
         const daySeals = daySealsPayload?.daySeals || {};
         const timeline = Array.isArray(daySeals.timeline) ? daySeals.timeline : [];
@@ -17697,6 +17730,7 @@
               ${renderAlbumsDeckValueMarkup()}
             </article>
           `, direction);
+        prefetchAlbumsFlashcards(items, state.ui.albumsFlashIndex);
         scheduleAlbumsFlashSwap(card);
       }
 
@@ -17710,7 +17744,7 @@
         const maxIndex = timeline.length - 1;
         state.ui.albumsSealIndex = Math.max(0, Math.min(maxIndex, Number(state.ui.albumsSealIndex) || 0));
         const entry = timeline[state.ui.albumsSealIndex];
-        const dayLabel = `Day ${entry.day}${entry.isCurrent ? ' (Atual)' : ''}`;
+        const dayLabel = `Day ${entry.day}`;
         renderAlbumsSlide(els.albumsSealsStack, `
             <article class="albums-modal__seal-card">
               <p class="albums-modal__seal-day">${escapeHtml(dayLabel)}</p>
@@ -17747,12 +17781,14 @@
       async function openAlbumsModal() {
         state.ui.albumsOpen = true;
         state.ui.albumsSectionIndex = 0;
+        state.ui.albumsSealIndex = 0;
         if (els.albumsModal) {
           els.albumsModal.classList.add('is-visible');
           els.albumsModal.setAttribute('aria-hidden', 'false');
         }
         renderAlbumsSection();
         await ensureAlbumsSealsLoaded();
+        state.ui.albumsSealIndex = albumsCurrentDayIndex();
         if (state.ui.albumsOpen && state.ui.albumsSectionIndex === 1) {
           renderAlbumsSeals();
         }
