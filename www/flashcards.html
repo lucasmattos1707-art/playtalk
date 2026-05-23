@@ -3747,7 +3747,7 @@
       opacity: 1;
     }
 
-    .game-card.is-sliding-next .game-card__layout > :not(.game-controls-proxy) {
+    .game-card.is-sliding-next .game-card__layout > :not(.game-controls-proxy):not(.first-star-seals) {
       animation: flashcardsNextCardSlide 320ms ease-out both;
     }
 
@@ -6799,7 +6799,7 @@
       top: 50%;
       width: 284px;
       height: 284px;
-      transform: translate(-50%, -50%);
+      transform: translate(-50%, calc(-50% - 40px));
       z-index: 22;
       pointer-events: none;
       display: none;
@@ -10599,26 +10599,25 @@
 
         <article class="game-card circlescreen" id="gameCard" aria-live="polite">
           <div class="game-card__layout">
-            <div class="game-card__visual" id="gameVisual">
-              <div class="first-star-seals" id="firstStarSeals" hidden aria-hidden="true">
-                <button class="first-star-seal first-star-seal--listen" id="firstStarListenBtn" type="button" aria-label="Reproduzir audio do flashcard">
-                  <span class="first-star-seal__circle" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                      <path d="M8 6v12l10-6z"></path>
-                    </svg>
-                  </span>
-                </button>
-                <button class="first-star-seal first-star-seal--jump" id="firstStarJumpBtn" type="button" aria-label="Pular carta e perder 1 nivel de deck">
-                  <span class="first-star-seal__circle" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                      <path d="M7 7h10v2H7z"></path>
-                      <path d="M13 11h4v2h-4z"></path>
-                      <path d="M13 15h4v2h-4z"></path>
-                      <path d="M9 9 5 12l4 3z"></path>
-                    </svg>
-                  </span>
-                </button>
-              </div>
+            <div class="game-card__visual" id="gameVisual"></div>
+            <div class="first-star-seals" id="firstStarSeals" hidden aria-hidden="true">
+              <button class="first-star-seal first-star-seal--listen" id="firstStarListenBtn" type="button" aria-label="Reproduzir audio do flashcard">
+                <span class="first-star-seal__circle" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M8 6v12l10-6z"></path>
+                  </svg>
+                </span>
+              </button>
+              <button class="first-star-seal first-star-seal--jump" id="firstStarJumpBtn" type="button" aria-label="Pular carta e perder 1 nivel de deck">
+                <span class="first-star-seal__circle" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M7 7h10v2H7z"></path>
+                    <path d="M13 11h4v2h-4z"></path>
+                    <path d="M13 15h4v2h-4z"></path>
+                    <path d="M9 9 5 12l4 3z"></path>
+                  </svg>
+                </span>
+              </button>
             </div>
             <div class="game-translation-slot" id="gameTranslationSlot" aria-hidden="true"></div>
             <div class="game-card__content">
