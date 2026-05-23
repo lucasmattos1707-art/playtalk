@@ -11246,6 +11246,7 @@
       const FLASHCARD_SESSION_TICK_INTERVAL_MS = 60000;
       const FLASHCARD_SESSION_STAGE_PLAY_TICK_INTERVAL_MS = 8000;
       const FLASHCARD_SESSION_TICK_LOOP_INTERVAL_MS = 1000;
+      const GAME_CARD_RELEASE_INTERVAL_MS = 12000;
       const GAME_UPCOMING_PRELOAD_COUNT = 3;
       const FIRST_STAGE_AUDIO_PRELOAD_COUNT = 2;
       const GAME_MIC_UNLOCK_DELAY_MS = 1200;
@@ -11603,6 +11604,8 @@
           sessionClockLastTickAt: 0,
           sessionClockTickInFlight: false,
           sessionClockStagePrimeKey: '',
+          timedReleaseBudget: 0,
+          timedReleaseWindowIndex: 0,
           stageSpeedLoading: false,
           stageSpeedLoadingTimer: 0,
           orderedPoolCursor: {
@@ -14977,6 +14980,7 @@
         if (!state.user?.id) return;
         state.game.sessionClockLastTickAt = Date.now();
         state.game.sessionClockTickTimer = window.setInterval(() => {
+          maybeReleaseTimedGameCard();
           requestFlashcardSessionClockTick(false);
         }, FLASHCARD_SESSION_TICK_LOOP_INTERVAL_MS);
       }
@@ -17753,6 +17757,34 @@
       function currentGameActiveCardCap(level = currentUserLevel(), baseCount = currentBaseGameCount(level)) {
         const normalizedBaseCount = Math.max(MIN_GAME_CONTEXT_LIMIT, Number(baseCount) || 0);
         return Math.min(ON_TABLE_MAX_CARDS, normalizedBaseCount + REVIEW_SLOT_LIMIT);
+      }
+
+      function shouldUseTimedGameCardRelease() {
+        return state.game.active && !state.game.levelMode && !state.game.training.active;
+      }
+
+      function resetTimedGameCardRelease({ seedInitialCard = false } = {}) {
+        const now = getNowMs();
+        state.game.timedReleaseWindowIndex = Math.floor(now / GAME_CARD_RELEASE_INTERVAL_MS);
+        state.game.timedReleaseBudget = seedInitialCard ? 1 : 0;
+      }
+
+      function syncTimedGameCardReleaseBudget() {
+        if (!shouldUseTimedGameCardRelease()) return;
+        const now = getNowMs();
+        const nextWindowIndex = Math.floor(now / GAME_CARD_RELEASE_INTERVAL_MS);
+        const currentWindowIndex = Math.max(0, Number(state.game.timedReleaseWindowIndex) || 0);
+        if (!currentWindowIndex) {
+          state.game.timedReleaseWindowIndex = nextWindowIndex;
+          return;
+        }
+        if (nextWindowIndex <= currentWindowIndex) return;
+        const gainedSlots = nextWindowIndex - currentWindowIndex;
+        state.game.timedReleaseWindowIndex = nextWindowIndex;
+        state.game.timedReleaseBudget = Math.min(
+          ON_TABLE_MAX_CARDS,
+          Math.max(0, Number(state.game.timedReleaseBudget) || 0) + gainedSlots
+        );
       }
 
       function normalizeDeckLevel(value) {
@@ -24103,11 +24135,27 @@
         };
       }
 
-      function refillGameEntry(pool = 'base', limit = state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT) {
+      function maybeReleaseTimedGameCard() {
+        if (!shouldUseTimedGameCardRelease()) return false;
+        syncTimedGameCardReleaseBudget();
+        const activeLimit = Math.max(MIN_GAME_CONTEXT_LIMIT, Number(state.game.contextLimit) || currentGameActiveCardCap());
+        if (state.game.entries.size >= activeLimit) return false;
+        return refillGameEntry('base', activeLimit);
+      }
+
+      function refillGameEntry(pool = 'base', limit = state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT, options = {}) {
         const hardLimit = Math.min(ON_TABLE_MAX_CARDS, Math.max(MIN_GAME_CONTEXT_LIMIT, Number(limit) || 0));
         if (state.game.entries.size >= hardLimit) {
           updateGameChips();
           return false;
+        }
+        const timedReleaseGateActive = shouldUseTimedGameCardRelease() && !options?.ignoreTimedReleaseGate;
+        if (timedReleaseGateActive) {
+          syncTimedGameCardReleaseBudget();
+          if ((Number(state.game.timedReleaseBudget) || 0) < 1) {
+            updateGameChips();
+            return false;
+          }
         }
         const baseCount = Array.from(state.game.entries.values()).filter((entry) => entry.pool === 'base').length;
         const reviewCount = Array.from(state.game.entries.values()).filter((entry) => entry.pool === 'review').length;
@@ -24128,6 +24176,9 @@
         const entry = createGameEntry(nextCard, nextChoice.pool);
         state.game.entries.set(entry.id, entry);
         state.game.queue.push(entry.id);
+        if (timedReleaseGateActive) {
+          state.game.timedReleaseBudget = Math.max(0, (Number(state.game.timedReleaseBudget) || 0) - 1);
+        }
         persistGameSessionLocally();
         updateGameChips();
         return true;
@@ -24754,6 +24805,7 @@
 
       function seedLevelModeEntries() {
         clearLevelSwitchTimer();
+        resetTimedGameCardRelease({ seedInitialCard: false });
         state.game.entries.clear();
         state.game.queue = [];
         resetGameOrderedPoolCursor();
@@ -24886,6 +24938,7 @@
         resetTrainingRuntime({ keepPending: true });
 
         state.game.entries.clear();
+        resetTimedGameCardRelease({ seedInitialCard: false });
         state.game.queue = [];
         resetGameOrderedPoolCursor();
         state.game.currentId = null;
@@ -24967,6 +25020,7 @@
             }
             seedLevelModeEntries();
           } else {
+            resetTimedGameCardRelease({ seedInitialCard: true });
             state.game.entries.clear();
             state.game.queue = [];
             resetGameOrderedPoolCursor();
@@ -24989,50 +25043,7 @@
               ON_TABLE_MAX_CARDS,
               Math.max(MIN_GAME_CONTEXT_LIMIT, Number(state.game.contextLimit) || roundCount)
             );
-            const reviewCards = readyReviewCards().slice(0, REVIEW_SLOT_LIMIT);
-            const basePool = applyEarlyFlashcardFilter(baseRoundSourceCards());
-            const roundGroups = buildLevelAwareRoundGroups(
-              basePool,
-              reviewCards,
-              roundCount
-            );
-            const seeded = buildEntriesFromPersistedOnTable(roundCount);
-            seeded.baseEntries.forEach((entry) => {
-              state.game.entries.set(entry.id, entry);
-              state.game.queue.push(entry.id);
-            });
-            seeded.reviewEntries.forEach((entry) => {
-              state.game.entries.set(entry.id, entry);
-              state.game.queue.push(entry.id);
-            });
-
-            const seedIds = new Set(Array.from(state.game.entries.keys()));
-            const availableBase = roundGroups.baseCards.filter((card) => card && !seedIds.has(card.id));
-            const availableReview = roundGroups.reviewCards.filter((card) => card && !seedIds.has(card.id));
-            availableBase.forEach((card) => {
-              if (state.game.entries.size >= targetActiveLimit || availableBase.length <= 0) return;
-              if (state.game.entries.size >= ON_TABLE_MAX_CARDS) return;
-              const currentBaseCount = Array.from(state.game.entries.values()).filter((entry) => entry.pool === 'base').length;
-              if (currentBaseCount >= ON_TABLE_BASE_MAX) return;
-              const entry = createGameEntry(card, 'base');
-              state.game.entries.set(entry.id, entry);
-              state.game.queue.push(entry.id);
-              seedIds.add(card.id);
-            });
-            availableReview.forEach((card) => {
-              if (state.game.entries.size >= targetActiveLimit || availableReview.length <= 0) return;
-              if (state.game.entries.size >= ON_TABLE_MAX_CARDS) return;
-              const currentReviewCount = Array.from(state.game.entries.values()).filter((entry) => entry.pool === 'review').length;
-              if (currentReviewCount >= ON_TABLE_REVIEW_MAX) return;
-              const entry = createGameEntry(card, 'review');
-              state.game.entries.set(entry.id, entry);
-              state.game.queue.push(entry.id);
-              seedIds.add(card.id);
-            });
-
-            while (state.game.entries.size < targetActiveLimit) {
-              if (!refillGameEntry('base', targetActiveLimit)) break;
-            }
+            refillGameEntry('base', targetActiveLimit);
             persistGameSessionLocally();
           }
         }
