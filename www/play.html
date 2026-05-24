@@ -21213,9 +21213,12 @@
         }
       }
 
-      function finalizeStageAutoAudioPlayback(entry, stageConfig) {
+      function finalizeStageAutoAudioPlayback(entry, stageConfig, played = false) {
         if (state.game.currentId !== entry.id) return;
-        state.game.canListen = !isLevelAudioModeActive();
+        const isFirstStarAuto = stageConfig?.key === 'first-star';
+        state.game.canListen = isFirstStarAuto
+          ? (!isLevelAudioModeActive() && Boolean(played))
+          : !isLevelAudioModeActive();
         renderGameTouchButton(stageConfig, entry);
         renderFirstStarSeals(entry);
         if (isLevelAudioModeActive()) {
@@ -21238,34 +21241,36 @@
             if (state.game.currentId !== entry.id) return;
             const shouldRetry = stageConfig.key === 'first-star'
               && !played
-              && attempt < FIRST_STAR_AUTO_AUDIO_MAX_ATTEMPTS
               && !state.game.listening
               && !state.game.paused;
             if (shouldRetry) {
               clearFirstStarAutoPlayRetryTimer();
+              const retryAttempt = Math.min(attempt + 1, FIRST_STAR_AUTO_AUDIO_MAX_ATTEMPTS);
+              const retryDelayMultiplier = Math.max(1, Math.min(retryAttempt, FIRST_STAR_AUTO_AUDIO_MAX_ATTEMPTS));
               state.game.firstStarAutoPlayRetryTimer = window.setTimeout(() => {
                 state.game.firstStarAutoPlayRetryTimer = 0;
-                runAutoAudioPlaybackAttempt(entry, card, stageConfig, attempt + 1);
-              }, FIRST_STAR_AUTO_AUDIO_RETRY_BASE_DELAY_MS * attempt);
+                runAutoAudioPlaybackAttempt(entry, card, stageConfig, retryAttempt);
+              }, FIRST_STAR_AUTO_AUDIO_RETRY_BASE_DELAY_MS * retryDelayMultiplier);
               return;
             }
-            finalizeStageAutoAudioPlayback(entry, stageConfig);
+            finalizeStageAutoAudioPlayback(entry, stageConfig, played);
           })
           .catch(() => {
             if (state.game.currentId !== entry.id) return;
             const shouldRetry = stageConfig.key === 'first-star'
-              && attempt < FIRST_STAR_AUTO_AUDIO_MAX_ATTEMPTS
               && !state.game.listening
               && !state.game.paused;
             if (shouldRetry) {
               clearFirstStarAutoPlayRetryTimer();
+              const retryAttempt = Math.min(attempt + 1, FIRST_STAR_AUTO_AUDIO_MAX_ATTEMPTS);
+              const retryDelayMultiplier = Math.max(1, Math.min(retryAttempt, FIRST_STAR_AUTO_AUDIO_MAX_ATTEMPTS));
               state.game.firstStarAutoPlayRetryTimer = window.setTimeout(() => {
                 state.game.firstStarAutoPlayRetryTimer = 0;
-                runAutoAudioPlaybackAttempt(entry, card, stageConfig, attempt + 1);
-              }, FIRST_STAR_AUTO_AUDIO_RETRY_BASE_DELAY_MS * attempt);
+                runAutoAudioPlaybackAttempt(entry, card, stageConfig, retryAttempt);
+              }, FIRST_STAR_AUTO_AUDIO_RETRY_BASE_DELAY_MS * retryDelayMultiplier);
               return;
             }
-            finalizeStageAutoAudioPlayback(entry, stageConfig);
+            finalizeStageAutoAudioPlayback(entry, stageConfig, false);
           });
       }
 
@@ -21278,11 +21283,13 @@
         state.game.canListen = false;
         renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
         renderFirstStarSeals(entry);
+        let played = false;
         try {
-          return await playPromptAudio(card, { unlockDelayMs: FIRST_STAGE_MIC_UNLOCK_DELAY_MS });
+          played = await playPromptAudio(card, { unlockDelayMs: FIRST_STAGE_MIC_UNLOCK_DELAY_MS });
+          return played;
         } finally {
           if (state.game.currentId === entry.id) {
-            state.game.canListen = !isLevelAudioModeActive();
+            state.game.canListen = !isLevelAudioModeActive() && Boolean(played);
             renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
             renderFirstStarSeals(entry);
           }
@@ -23638,9 +23645,20 @@
           .join('');
       }
 
+      function clearSecondStageTranslationDisplays() {
+        if (els.gameVisual) {
+          Array.from(els.gameVisual.querySelectorAll('.flashcards-typing__display--visual.is-second-star-translation'))
+            .forEach((node) => node.remove());
+        }
+        if (els.gameTypingKeyboard) {
+          Array.from(els.gameTypingKeyboard.querySelectorAll('.flashcards-typing__display--visual.is-second-star-translation'))
+            .forEach((node) => node.remove());
+        }
+      }
+
       function renderSecondStarRevealTranslation(card) {
         if (!els.gameVisual) return;
-        els.gameVisual.querySelector('.flashcards-typing__display--visual.is-second-star-translation')?.remove();
+        clearSecondStageTranslationDisplays();
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
         if (phaseKey !== 'second-star') return;
         if (!els.game?.classList.contains('is-second-star-reveal-phase')) return;
