@@ -6553,6 +6553,37 @@
       --flashcards-neon-glow-4: rgba(194, 44, 44, 0.5);
     }
 
+    .game[data-phase-key="first-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="first-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="first-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="first-star"] #gameVisual .game-card__reveal-image,
+    .game[data-phase-key="third-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="third-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="third-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="third-star"] #gameVisual .game-card__reveal-image,
+    .game[data-phase-key="fifth-star"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="fifth-star"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="fifth-star"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="fifth-star"] #gameVisual .game-card__reveal-image {
+      filter: grayscale(1);
+      transition: filter 500ms ease;
+    }
+
+    .game[data-phase-key="first-star"] #gameVisual.is-mic-live > img:not(.game-card__seal),
+    .game[data-phase-key="first-star"] #gameVisual.is-mic-live .mini-card__fallback,
+    .game[data-phase-key="first-star"] #gameVisual.is-mic-live .game-card__placeholder,
+    .game[data-phase-key="first-star"] #gameVisual.is-mic-live .game-card__reveal-image,
+    .game[data-phase-key="third-star"] #gameVisual.is-mic-live > img:not(.game-card__seal),
+    .game[data-phase-key="third-star"] #gameVisual.is-mic-live .mini-card__fallback,
+    .game[data-phase-key="third-star"] #gameVisual.is-mic-live .game-card__placeholder,
+    .game[data-phase-key="third-star"] #gameVisual.is-mic-live .game-card__reveal-image,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-mic-live > img:not(.game-card__seal),
+    .game[data-phase-key="fifth-star"] #gameVisual.is-mic-live .mini-card__fallback,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-mic-live .game-card__placeholder,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-mic-live .game-card__reveal-image {
+      filter: grayscale(0);
+    }
+
     .game[data-phase-key="first-star"] #gameVisual::before,
     .game[data-phase-key="third-star"] #gameVisual::before,
     .game[data-phase-key="fifth-star"] #gameVisual::before {
@@ -6655,7 +6686,7 @@
 
     .game[data-phase-key="fifth-star"] .textscreen .game-status-wrap {
       transform: none;
-      margin-top: -25px;
+      margin-top: -30px;
       align-items: center;
       justify-content: center;
     }
@@ -7307,6 +7338,10 @@
       aspect-ratio: 1 / 1;
     }
 
+    .game[data-phase-key="second-star"] #gameVisual {
+      transform: translateY(-40px) !important;
+    }
+
     .game[data-phase-key="second-star"] #gameVisual > img:not(.game-card__seal),
     .game[data-phase-key="second-star"] #gameVisual .mini-card__fallback,
     .game[data-phase-key="second-star"] #gameVisual .game-card__placeholder,
@@ -7356,7 +7391,7 @@
       max-height: 270px;
       min-width: 270px;
       min-height: 270px;
-      transform: none !important;
+      transform: translateY(-40px) !important;
       margin: 0 auto;
       align-self: center;
       justify-self: center;
@@ -7395,12 +7430,16 @@
       text-align: center;
     }
 
+    .game[data-phase-key="second-star"] .flashcards-typing__display--visual {
+      top: calc(50% - 70px);
+    }
+
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual {
       top: calc(50% - 50px);
     }
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation {
-      top: 50%;
+      top: calc(50% - 40px);
       width: min(88%, 280px);
       transform: translate(-50%, -50%);
       z-index: 4;
@@ -7447,7 +7486,7 @@
       transform: none;
       z-index: 1;
       text-align: center;
-      margin: 0 auto 10px auto;
+      margin: -50px auto 10px auto;
     }
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation .flashcards-typing__translation-line,
