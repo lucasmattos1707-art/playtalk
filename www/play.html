@@ -6896,6 +6896,7 @@
     }
 
     .game[data-phase-key="first-star"] #gameVisual {
+      --first-star-audio-progress: 0;
       border-radius: 50%;
       overflow: visible;
       --flashcards-mic-ring-padding: 12px;
@@ -6906,6 +6907,23 @@
         drop-shadow(0 0 18px rgba(68, 206, 255, 0.95))
         drop-shadow(0 0 36px rgba(68, 206, 255, 0.55))
         drop-shadow(0 0 64px rgba(32, 102, 255, 0.3));
+    }
+
+    .game[data-phase-key="first-star"] #gameVisual.is-first-star-audio-playing::after {
+      content: '';
+      position: absolute;
+      inset: -7px;
+      border-radius: 50%;
+      pointer-events: none;
+      background: conic-gradient(
+        from -90deg,
+        rgba(85, 255, 168, 0.98) calc(var(--first-star-audio-progress, 0) * 1turn),
+        rgba(85, 255, 168, 0.12) 0
+      );
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+      mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+      filter: drop-shadow(0 0 10px rgba(85, 255, 168, 0.45));
+      z-index: 4;
     }
 
     .first-star-seals {
@@ -7017,28 +7035,6 @@
 
     .first-star-seal--listen.is-playing .first-star-seal__circle svg {
       fill: #ecfff4;
-    }
-
-    .first-star-seal--listen .first-star-seal__circle::before {
-      content: '';
-      position: absolute;
-      inset: -4px;
-      border-radius: 50%;
-      pointer-events: none;
-      background: conic-gradient(
-        from -90deg,
-        rgba(85, 255, 168, 0.96) calc(var(--first-star-listen-progress, 0) * 1turn),
-        rgba(85, 255, 168, 0.12) 0
-      );
-      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
-      mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
-      opacity: 0;
-      transform: scale(1);
-      transition: opacity 160ms ease;
-    }
-
-    .first-star-seal--listen.is-playing .first-star-seal__circle::before {
-      opacity: 1;
     }
 
     .first-star-seal--jump .first-star-seal__circle {
@@ -11861,6 +11857,8 @@
           firstStarAutoPlayRetryTimer: 0,
           firstStarJumpBusy: false,
           firstStarListenProgressRaf: 0,
+          firstStarAudioPlayingEntryKey: '',
+          firstStarAudioPlayedEntryKey: '',
           firstStageIdleTimer: 0,
           firstStageMicHintTimer: 0,
           firstStageMicHintRotationTimer: 0,
@@ -21239,21 +21237,22 @@
 
       function setFirstStarListenProgress(value = 0) {
         const progress = Math.max(0, Math.min(1, Number(value) || 0));
-        const circle = els.firstStarListenBtn?.querySelector('.first-star-seal__circle');
-        if (!circle) return;
-        circle.style.setProperty('--first-star-listen-progress', String(progress));
+        if (!els.gameVisual) return;
+        els.gameVisual.style.setProperty('--first-star-audio-progress', String(progress));
       }
 
       function clearFirstStarListenProgressAnimation() {
         if (!state.game.firstStarListenProgressRaf) return;
         window.cancelAnimationFrame(state.game.firstStarListenProgressRaf);
         state.game.firstStarListenProgressRaf = 0;
+        els.gameVisual?.classList.remove('is-first-star-audio-playing');
       }
 
       function startFirstStarListenProgressAnimation(audio) {
         clearFirstStarListenProgressAnimation();
         setFirstStarListenProgress(0);
         if (!audio) return;
+        els.gameVisual?.classList.add('is-first-star-audio-playing');
         const tick = () => {
           if (!audio.paused && Number.isFinite(audio.duration) && audio.duration > 0) {
             setFirstStarListenProgress(audio.currentTime / audio.duration);
@@ -21395,10 +21394,19 @@
       async function playFirstStarPromptAudio() {
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry || !isFirstStarEntry(entry) || state.game.paused || state.game.listening) return false;
+        const playbackKey = `${safeText(entry.id)}:${Number(entry.stage) || 0}`;
+        if (
+          state.game.firstStarAudioPlayingEntryKey === playbackKey
+          && state.game.activeAudio
+          && state.game.activeAudio.type === 'audio'
+        ) {
+          return true;
+        }
         const card = cardById(entry.id);
         if (!card) return false;
         clearFirstStarAutoPlayRetryTimer();
         state.game.canListen = false;
+        state.game.firstStarAudioPlayingEntryKey = playbackKey;
         renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
         renderFirstStarSeals(entry);
         let played = false;
@@ -21407,8 +21415,14 @@
             unlockDelayMs: FIRST_STAGE_MIC_UNLOCK_DELAY_MS,
             enableMicDuringPlayback: false
           });
+          if (played && state.game.currentId === entry.id) {
+            state.game.firstStarAudioPlayedEntryKey = playbackKey;
+          }
           return played;
         } finally {
+          if (state.game.firstStarAudioPlayingEntryKey === playbackKey) {
+            state.game.firstStarAudioPlayingEntryKey = '';
+          }
           if (state.game.currentId === entry.id) {
             state.game.canListen = !isLevelAudioModeActive() && Boolean(played);
             renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
@@ -24441,6 +24455,17 @@
         }
         els.game.dataset.phaseKey = stageConfig.key || '';
         const stagePrimeKey = `${entry.id}:${stageConfig.key || ''}`;
+        if (stageConfig.key !== 'first-star') {
+          state.game.firstStarAudioPlayingEntryKey = '';
+          state.game.firstStarAudioPlayedEntryKey = '';
+          clearFirstStarListenProgressAnimation();
+          setFirstStarListenProgress(0);
+        } else {
+          const firstStarEntryKey = `${safeText(entry.id)}:${Number(entry.stage) || 0}`;
+          if (state.game.firstStarAudioPlayedEntryKey !== firstStarEntryKey) {
+            state.game.canListen = false;
+          }
+        }
         if (isStagePlayPhaseKey(stageConfig.key || '')) {
           if (state.game.sessionClockStagePrimeKey !== stagePrimeKey) {
             state.game.sessionClockStagePrimeKey = stagePrimeKey;
@@ -26164,6 +26189,16 @@
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return;
         if (isTypingStage(entry)) return;
+        if (Number(entry.stage) === 1) {
+          const playbackKey = `${safeText(entry.id)}:${Number(entry.stage) || 0}`;
+          const hasPlayedFirstStarAudio = state.game.firstStarAudioPlayedEntryKey === playbackKey;
+          if (!hasPlayedFirstStarAudio) {
+            if (state.game.firstStarAudioPlayingEntryKey !== playbackKey) {
+              void requestFirstStarListenPlayback();
+            }
+            return;
+          }
+        }
         if (state.game.activeAudio) {
           const canInterruptAudio = state.game.canListen
             && Number(state.game.audioCanBeInterruptedAt) > 0
@@ -26469,6 +26504,10 @@
       async function handleFirstStarTouchFlow() {
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry || Number(entry.stage) !== 1 || isTypingStage(entry)) return false;
+        const playbackKey = `${safeText(entry.id)}:${Number(entry.stage) || 0}`;
+        if (state.game.firstStarAudioPlayingEntryKey === playbackKey) {
+          return true;
+        }
         if (!state.game.canListen) {
           await requestFirstStarListenPlayback();
           return true;
