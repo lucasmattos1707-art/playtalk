@@ -8268,8 +8268,11 @@
     }
 
     .game-remember-btn {
-      grid-column: 1 / -1;
-      margin-top: 8px;
+      position: absolute;
+      left: 50%;
+      bottom: 6px;
+      transform: translateX(-50%);
+      z-index: 9;
       min-height: 42px;
       padding: 8px 18px;
       border-radius: 999px;
@@ -8280,10 +8283,19 @@
       letter-spacing: 0.02em;
       pointer-events: auto;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.34);
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 500ms ease, visibility 500ms ease;
     }
 
     .game-remember-btn[hidden] {
       display: none !important;
+    }
+
+    .game-remember-btn.is-mic-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
 
     .game:not(.is-level-text-mode)[data-phase-key="first-star"] .game-controls-proxy .game-language-btn,
@@ -10886,7 +10898,6 @@
           <button class="game-advance-btn" id="gameAdvanceBtn" type="button" aria-label="Avancar digitacao automatica" hidden>
             <img src="/SVG/codex-icons/%C3%ADcones%20modo%203/portugues.svg" alt="Portugues">
           </button>
-          <button class="game-remember-btn" id="gameRememberBtn" type="button" hidden>Não lembro</button>
         </div>
 
         <div class="game-status-slot textscreen" id="gameStatusSlot" aria-live="polite" aria-atomic="true">
@@ -10895,6 +10906,7 @@
             <img class="game-status-icon" id="gameStatusIcon" alt="">
             <p class="game-status" id="gameStatus">Carregando rodada...</p>
           </div>
+          <button class="game-remember-btn" id="gameRememberBtn" type="button" hidden>Não lembro</button>
           <div class="keyboardscreen-host" id="gameKeyboardHost"></div>
         </div>
 
@@ -20952,7 +20964,10 @@
         }
         if (!showMissionHud) {
           els.gameTouchBtn.classList.add('is-hidden');
-          if (els.gameRememberBtn) els.gameRememberBtn.hidden = true;
+          if (els.gameRememberBtn) {
+            els.gameRememberBtn.hidden = true;
+            els.gameRememberBtn.classList.add('is-mic-hidden');
+          }
           if (els.gameMicCurrentSealMetric) els.gameMicCurrentSealMetric.hidden = true;
           if (els.gameMicNextSealMetric) els.gameMicNextSealMetric.hidden = true;
           syncLevelTextModeControls();
@@ -20961,7 +20976,10 @@
         els.gameTouchBtn.parentElement.hidden = false;
         if (useStagePlay) {
           els.gameTouchBtn.classList.add('is-hidden');
-          if (els.gameRememberBtn) els.gameRememberBtn.hidden = true;
+          if (els.gameRememberBtn) {
+            els.gameRememberBtn.hidden = true;
+            els.gameRememberBtn.classList.add('is-mic-hidden');
+          }
           if (els.gameControlsProxy) {
             els.gameControlsProxy.hidden = false;
             els.gameControlsProxy.classList.remove('is-hidden');
@@ -20974,7 +20992,10 @@
         }
         if (!useBooksMic) {
           els.gameTouchBtn.classList.add('is-hidden');
-          if (els.gameRememberBtn) els.gameRememberBtn.hidden = true;
+          if (els.gameRememberBtn) {
+            els.gameRememberBtn.hidden = true;
+            els.gameRememberBtn.classList.add('is-mic-hidden');
+          }
           updateSpeakingStarMicSealProgress();
           syncLevelTextModeControls();
           return;
@@ -20984,6 +21005,7 @@
         if (els.gameRememberBtn) {
           els.gameRememberBtn.hidden = !canShowRemember;
           els.gameRememberBtn.disabled = !canShowRemember || !state.game.active || state.game.paused || state.game.listening;
+          els.gameRememberBtn.classList.toggle('is-mic-hidden', Boolean(state.game.listening));
         }
         updateSpeakingStarMicSealProgress();
         syncLevelTextModeControls();
@@ -26102,6 +26124,7 @@
         els.gameTouchBtn.classList.add('is-busy');
         els.gameCard.classList.add('is-listening');
         els.gameVisual.classList.add('is-mic-live');
+        renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
         setGameVisualNeonState('touch');
         setGameStatus('', 'live');
         renderFirstStarSeals(entry);
