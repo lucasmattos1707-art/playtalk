@@ -6565,8 +6565,8 @@
     .game[data-phase-key="fifth-star"] #gameVisual .mini-card__fallback,
     .game[data-phase-key="fifth-star"] #gameVisual .game-card__placeholder,
     .game[data-phase-key="fifth-star"] #gameVisual .game-card__reveal-image {
-      filter: grayscale(1);
-      transition: filter 500ms ease;
+      filter: grayscale(1) !important;
+      transition: filter 750ms ease !important;
     }
 
     .game[data-phase-key="first-star"] #gameVisual.is-mic-live > img:not(.game-card__seal),
@@ -6581,7 +6581,37 @@
     .game[data-phase-key="fifth-star"] #gameVisual.is-mic-live .mini-card__fallback,
     .game[data-phase-key="fifth-star"] #gameVisual.is-mic-live .game-card__placeholder,
     .game[data-phase-key="fifth-star"] #gameVisual.is-mic-live .game-card__reveal-image {
-      filter: grayscale(0);
+      filter: grayscale(0) !important;
+    }
+
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-hit > img:not(.game-card__seal),
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-hit .mini-card__fallback,
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-hit .game-card__placeholder,
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-hit .game-card__reveal-image,
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-tone-hit > img:not(.game-card__seal),
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-tone-hit .mini-card__fallback,
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-tone-hit .game-card__placeholder,
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-tone-hit .game-card__reveal-image,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-hit > img:not(.game-card__seal),
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-hit .mini-card__fallback,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-hit .game-card__placeholder,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-hit .game-card__reveal-image {
+      filter: grayscale(1) sepia(0.9) hue-rotate(35deg) saturate(1.35) brightness(0.85) !important;
+    }
+
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-miss > img:not(.game-card__seal),
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-miss .mini-card__fallback,
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-miss .game-card__placeholder,
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-miss .game-card__reveal-image,
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-tone-miss > img:not(.game-card__seal),
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-tone-miss .mini-card__fallback,
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-tone-miss .game-card__placeholder,
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-tone-miss .game-card__reveal-image,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-miss > img:not(.game-card__seal),
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-miss .mini-card__fallback,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-miss .game-card__placeholder,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-miss .game-card__reveal-image {
+      filter: grayscale(1) sepia(0.9) hue-rotate(-25deg) saturate(1.45) brightness(0.84) !important;
     }
 
     .game[data-phase-key="first-star"] #gameVisual::before,
@@ -7486,7 +7516,7 @@
       transform: none;
       z-index: 1;
       text-align: center;
-      margin: -50px auto 10px auto;
+      margin: -100px auto 10px auto;
     }
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation .flashcards-typing__translation-line,
@@ -11114,6 +11144,7 @@
       const SECOND_STAR_ERROR_SOUND_PATH = 'flashcard-audio-cues/second-star-error.mp3';
       const TYPE_PORTUGUESE_SOUND_PATH = 'flashcard-audio-cues/typeportuguese.mp3';
       const ACCESSKEY_ERROR_SOUND_PATH = 'accesskey/error.mp3';
+      const MISTAKE_SOUND_PATH = 'accesskey/mistake.mp3';
       const LESS_SOUND_PATH = 'svgnovo/less.wav';
       const REPORT_SOUND_PATH = 'thesongs/report.wav';
       const TYPING_KEY_SOUND_PATH = 'sounds/type.mp3';
@@ -19988,6 +20019,26 @@
         return audio.play().catch(() => false);
       }
 
+      function playSpeakingMistakeSound() {
+        playCueAudio(MISTAKE_SOUND_PATH)
+          .then((ok) => {
+            if (!ok) playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
+          })
+          .catch(() => {
+            playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
+          });
+      }
+
+      function setSpeakingVisualTone(tone = '') {
+        if (!els.gameVisual) return;
+        els.gameVisual.classList.remove('is-speaking-tone-hit', 'is-speaking-tone-miss');
+        if (tone === 'hit') {
+          els.gameVisual.classList.add('is-speaking-tone-hit');
+        } else if (tone === 'miss') {
+          els.gameVisual.classList.add('is-speaking-tone-miss');
+        }
+      }
+
       function isFooterGuardStage(entry = currentGameEntry()) {
         return false;
       }
@@ -25550,6 +25601,7 @@
         const activeCountBeforeResolution = state.game.entries.size;
         const accessibleCountBeforeResolution = accessibleFlashcardsCount();
         const evaluatedStage = entry.stage;
+        const isSpeakingStarStage = evaluatedStage === 1 || evaluatedStage === 3 || evaluatedStage === 5;
         const dontRememberRequested = inputMode === 'speech'
           && (evaluatedStage === 3 || evaluatedStage === 5)
           && isDontRememberCommand(transcript);
@@ -25687,6 +25739,9 @@
         }
 
         if (isHit) {
+          if (isSpeakingStarStage) {
+            setSpeakingVisualTone('hit');
+          }
           if (evaluatedStage === 2) {
             persistSecondStageTutorialCompleted(true);
             clearStageTutorialReminder();
@@ -25762,6 +25817,10 @@
           }
           scheduleFlashcardCloudSync(250);
         } else {
+          if (isSpeakingStarStage) {
+            setSpeakingVisualTone('miss');
+            playSpeakingMistakeSound();
+          }
           if (evaluatedStage === 1 || evaluatedStage === 3 || evaluatedStage === 5) {
             void applyFirstStageMissLevelPenalty();
           }
