@@ -7495,6 +7495,11 @@
       transform: translate(-50%, -50%);
       z-index: 4;
       text-align: center;
+      left: 50%;
+      right: auto;
+      margin: 0 auto;
+      align-items: center;
+      justify-items: center;
     }
 
     .game[data-phase-key="second-star"].is-second-star-reveal-phase #gameVisual > img:not(.game-card__seal),
@@ -8259,6 +8264,25 @@
     .game[data-phase-key="first-star"] .game-controls-proxy .game-language-btn,
     .game[data-phase-key="third-star"] .game-controls-proxy .game-language-btn,
     .game[data-phase-key="fifth-star"] .game-controls-proxy .game-language-btn {
+      display: none !important;
+    }
+
+    .game-remember-btn {
+      grid-column: 1 / -1;
+      margin-top: 8px;
+      min-height: 42px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(126, 208, 255, 0.55);
+      background: rgba(4, 22, 47, 0.82);
+      color: #eaf6ff;
+      font: 700 16px/1 "Exo 2", Arial, sans-serif;
+      letter-spacing: 0.02em;
+      pointer-events: auto;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.34);
+    }
+
+    .game-remember-btn[hidden] {
       display: none !important;
     }
 
@@ -10862,6 +10886,7 @@
           <button class="game-advance-btn" id="gameAdvanceBtn" type="button" aria-label="Avancar digitacao automatica" hidden>
             <img src="/SVG/codex-icons/%C3%ADcones%20modo%203/portugues.svg" alt="Portugues">
           </button>
+          <button class="game-remember-btn" id="gameRememberBtn" type="button" hidden>Não lembro</button>
         </div>
 
         <div class="game-status-slot textscreen" id="gameStatusSlot" aria-live="polite" aria-atomic="true">
@@ -11582,7 +11607,7 @@
       };
 
       const STAGES = {
-        1: { key: 'first-star', badge: 'First star', instruction: 'Fale ingles', showImage: true, showWord: false, wordType: 'portuguese', subtitleType: 'none', expected: 'english', autoAudio: true },
+        1: { key: 'first-star', badge: 'First star', instruction: 'Fale ingles', showImage: true, showWord: false, wordType: 'portuguese', subtitleType: 'none', expected: 'english', autoAudio: false },
         2: { key: 'second-star', badge: 'Second star', instruction: 'Escreva ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false, inputMode: 'typing', typingMode: 'english' },
         3: { key: 'third-star', badge: 'Third star', instruction: 'Fale ingles', showImage: true, showWord: false, wordType: 'portuguese', subtitleType: 'none', expected: 'english', autoAudio: false, placeholderUsesPortuguese: false, revealOnHit: false },
         4: { key: 'fourth-star', badge: 'Fourth star', instruction: 'Escreva ingles', showImage: true, showWord: false, subtitleType: 'none', expected: 'english', autoAudio: false, inputMode: 'typing', typingMode: 'english' },
@@ -11870,6 +11895,7 @@
           fifthStageCoinsSoundTimer: 0,
           gameStatusRankToken: 0,
           gameStatusLastCoinsTotal: 0,
+          fifthStarDisplayedCoinsTotal: 0,
           gameStatusPreviousRank: 0,
       welcomeSelectedLevel: 1,
           levelModeProgress: {},
@@ -12135,6 +12161,7 @@
         gameMicNextSealProgressFill: document.getElementById('gameMicNextSealProgressFill'),
         gameCurrentFluencyLabel: document.getElementById('gameCurrentFluencyLabel'),
         gameAdvanceBtn: document.getElementById('gameAdvanceBtn'),
+        gameRememberBtn: document.getElementById('gameRememberBtn'),
         gameTextModeHits: document.getElementById('gameTextModeHits'),
         gameTypingKeyboard: document.getElementById('gameTypingKeyboard'),
         gameStageTutorial: document.getElementById('gameStageTutorial'),
@@ -13452,6 +13479,7 @@
               xpDelta: pendingXpDelta
             };
             state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
+            state.ui.fifthStarDisplayedCoinsTotal = state.ui.gameStatusLastCoinsTotal;
             persistUserStatsLocally();
             renderWelcomeEnergyMiniTicker();
           }
@@ -16313,6 +16341,7 @@
           ? normalizeStatsSnapshot(cloudState?.stats)
           : normalizeStatsSnapshot({});
         state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
+        state.ui.fifthStarDisplayedCoinsTotal = state.ui.gameStatusLastCoinsTotal;
         state.userCards = hasCloudProgress
           ? new Map(cloudProgress.map(record => [record.cardId, record]))
           : new Map();
@@ -20908,6 +20937,7 @@
         const stageNumber = resolveEntryStageNumber(entry);
         const useBooksMic = (!isLevelAudioModeActive() || isLevelTextModeActive()) && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5);
         const useStagePlay = stageNumber === 2 || stageNumber === 4;
+        const canShowRemember = stageNumber === 3 || stageNumber === 5;
         const showMissionHud = stageNumber >= 1 && stageNumber <= 5;
         els.gameTouchBtn.parentElement.hidden = !showMissionHud;
         els.gameTouchBtn.className = 'game-touch';
@@ -20922,6 +20952,7 @@
         }
         if (!showMissionHud) {
           els.gameTouchBtn.classList.add('is-hidden');
+          if (els.gameRememberBtn) els.gameRememberBtn.hidden = true;
           if (els.gameMicCurrentSealMetric) els.gameMicCurrentSealMetric.hidden = true;
           if (els.gameMicNextSealMetric) els.gameMicNextSealMetric.hidden = true;
           syncLevelTextModeControls();
@@ -20930,6 +20961,7 @@
         els.gameTouchBtn.parentElement.hidden = false;
         if (useStagePlay) {
           els.gameTouchBtn.classList.add('is-hidden');
+          if (els.gameRememberBtn) els.gameRememberBtn.hidden = true;
           if (els.gameControlsProxy) {
             els.gameControlsProxy.hidden = false;
             els.gameControlsProxy.classList.remove('is-hidden');
@@ -20942,12 +20974,17 @@
         }
         if (!useBooksMic) {
           els.gameTouchBtn.classList.add('is-hidden');
+          if (els.gameRememberBtn) els.gameRememberBtn.hidden = true;
           updateSpeakingStarMicSealProgress();
           syncLevelTextModeControls();
           return;
         }
         els.gameTouchBtn.classList.add('game-touch--stealth');
         els.gameTouchBtn.setAttribute('aria-label', 'Toque na tela para falar');
+        if (els.gameRememberBtn) {
+          els.gameRememberBtn.hidden = !canShowRemember;
+          els.gameRememberBtn.disabled = !canShowRemember || !state.game.active || state.game.paused || state.game.listening;
+        }
         updateSpeakingStarMicSealProgress();
         syncLevelTextModeControls();
       }
@@ -21410,10 +21447,19 @@
         }
       }
 
+      async function handleDontRememberRequest() {
+        if (!state.game.active || state.game.transitioning || state.game.listening || state.game.paused) return false;
+        const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+        if (!entry || (entry.stage !== 3 && entry.stage !== 5)) return false;
+        await handleRecognitionResult("i don't remember", 'dont-remember-button');
+        return true;
+      }
+
       function showPersistentFifthStarCoinsStatus({ iconFlash = false } = {}) {
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
         if (phaseKey !== 'fifth-star') return;
-        const coinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
+        const fallbackCoins = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
+        const coinsTotal = Math.max(0, Math.round(Number(state.ui?.fifthStarDisplayedCoinsTotal) || fallbackCoins));
         setGameStatus(String(coinsTotal), 'flashcards-count', {
           iconPath: COINS_ICON_PATH,
           iconLabel: 'Moedas',
@@ -21557,6 +21603,7 @@
         state.ui.gameStatusRankToken += 1;
         const token = state.ui.gameStatusRankToken;
         clearGameStatusRankTimer();
+        state.ui.fifthStarDisplayedCoinsTotal = previousCoins;
         setGameStatus(String(previousCoins), 'flashcards-count', {
           iconPath: COINS_ICON_PATH,
           iconLabel: 'Moedas',
@@ -21568,12 +21615,14 @@
           if (token !== state.ui.gameStatusRankToken || !state.game.active) return;
           animateCoinTotalForDuration(previousCoins, coinsTotal, 1000, (value) => {
             if (token !== state.ui.gameStatusRankToken || !state.game.active) return;
+            state.ui.fifthStarDisplayedCoinsTotal = Math.max(0, Math.round(Number(value) || 0));
             setGameStatus(String(value), 'flashcards-count', {
               iconPath: COINS_ICON_PATH,
               iconLabel: 'Moedas'
             });
           });
           state.ui.gameStatusLastCoinsTotal = coinsTotal;
+          state.ui.fifthStarDisplayedCoinsTotal = coinsTotal;
         }, REWARD_RANK_SWAP_DELAY_MS);
       }
 
@@ -24393,7 +24442,11 @@
         if (!isSimpleStarPhase) {
           renderStageOneWordSwap(entry, Boolean(subword));
         }
-        state.game.canListen = !typingStage && (!stageConfig.autoAudio || entry.stage === 1);
+        state.game.canListen = !typingStage && (
+          stageConfig.key === 'first-star'
+            ? false
+            : !stageConfig.autoAudio
+        );
         renderGameTouchButton(stageConfig, entry);
         renderFirstStarSeals(entry);
         const keepMissionHudInTyping = typingStage && (stageConfig.key === 'second-star' || stageConfig.key === 'fourth-star');
@@ -24432,6 +24485,10 @@
         } else {
           clearStageHintLoop();
           if (isFifthStarEntry(entry) && state.user?.id) {
+            state.ui.fifthStarDisplayedCoinsTotal = Math.max(
+              0,
+              Math.round(Number(state.ui.gameStatusLastCoinsTotal) || Number(state.stats?.coinsTotal) || 0)
+            );
             showPersistentFifthStarCoinsStatus();
           }
         }
@@ -25684,16 +25741,17 @@
         const accessibleCountBeforeResolution = accessibleFlashcardsCount();
         const evaluatedStage = entry.stage;
         const isSpeakingStarStage = evaluatedStage === 1 || evaluatedStage === 3 || evaluatedStage === 5;
-        const dontRememberRequested = inputMode === 'speech'
-          && (evaluatedStage === 3 || evaluatedStage === 5)
-          && isDontRememberCommand(transcript);
+        const dontRememberRequested = (
+          (inputMode === 'speech' && isDontRememberCommand(transcript))
+          || inputMode === 'dont-remember-button'
+        ) && (evaluatedStage === 3 || evaluatedStage === 5);
         const card = cardById(entry.id);
         if (dontRememberRequested) {
           clearStageHintLoop({ clearStatus: true });
           clearFirstStageMicHint({ clearStatus: true });
           clearStageTwoHintTimer();
-          entry.stars = 1;
-          entry.stage = 2;
+          entry.stars = Math.max(0, (Number(entry.stars) || 0) - 1);
+          entry.stage = Math.min(entry.stars + 1, GAME_STAR_TARGET);
           entry.missesWithoutStars = 0;
           entry.typingMistakes = 0;
           state.game.skipAutoAudioOnce = true;
@@ -25702,7 +25760,7 @@
           state.game.queue.push(entry.id);
           scheduleFlashcardCloudSync(250);
           await Promise.allSettled([
-            playPromptAudio(card, { rate: 0.8, enableMicDuringPlayback: false }),
+            playPromptAudio(card, { rate: 0.75, enableMicDuringPlayback: false }),
             wait(80)
           ]);
           if (state.game.active && !state.game.paused) {
@@ -26307,6 +26365,17 @@
         }
       }
 
+      async function handleFirstStarTouchFlow() {
+        const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+        if (!entry || Number(entry.stage) !== 1 || isTypingStage(entry)) return false;
+        if (!state.game.canListen) {
+          await requestFirstStarListenPlayback();
+          return true;
+        }
+        startRecognition();
+        return true;
+      }
+
       async function guardWelcomeEnergy(options = {}) {
         if (!window.PlaytalkEnergy || typeof window.PlaytalkEnergy.guardEnergyGate !== 'function') {
           return true;
@@ -26730,6 +26799,12 @@
           if (event.target.closest('.game-home-btn')) return;
           if (event.target.closest('.game-mission-btn')) return;
           if (event.target.closest('.game-report-trigger')) return;
+          if (event.target.closest('.game-remember-btn')) return;
+          const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+          if (phaseKey === 'first-star') {
+            void handleFirstStarTouchFlow();
+            return;
+          }
           startRecognition();
         });
         els.gameReportTrigger?.addEventListener('click', openGameReportMenu);
@@ -26916,6 +26991,10 @@
         els.gameTouchBtn.addEventListener('click', (event) => {
           event.stopPropagation();
           const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+          if (phaseKey === 'first-star') {
+            void handleFirstStarTouchFlow();
+            return;
+          }
           if (phaseKey === 'second-star' || phaseKey === 'fourth-star') {
             void playCurrentStagePromptAudio({ rate: phaseKey === 'fourth-star' ? 0.8 : 1 });
             return;
@@ -26931,6 +27010,11 @@
           event.preventDefault();
           event.stopPropagation();
           void jumpCurrentFirstStarCard();
+        });
+        els.gameRememberBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void handleDontRememberRequest();
         });
         els.gameLanguageBtn?.addEventListener('click', (event) => {
           event.stopPropagation();
