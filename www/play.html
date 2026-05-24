@@ -6565,7 +6565,7 @@
     .game[data-phase-key="fifth-star"] #gameVisual .mini-card__fallback,
     .game[data-phase-key="fifth-star"] #gameVisual .game-card__placeholder,
     .game[data-phase-key="fifth-star"] #gameVisual .game-card__reveal-image {
-      filter: grayscale(1) !important;
+      filter: saturate(0.62) brightness(0.9) contrast(0.96) !important;
       transition: filter 750ms ease !important;
     }
 
@@ -6581,7 +6581,22 @@
     .game[data-phase-key="fifth-star"] #gameVisual.is-mic-live .mini-card__fallback,
     .game[data-phase-key="fifth-star"] #gameVisual.is-mic-live .game-card__placeholder,
     .game[data-phase-key="fifth-star"] #gameVisual.is-mic-live .game-card__reveal-image {
-      filter: grayscale(0) !important;
+      filter: saturate(1) brightness(1) contrast(1) !important;
+    }
+
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-keep-color > img:not(.game-card__seal),
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-keep-color .mini-card__fallback,
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-keep-color .game-card__placeholder,
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-keep-color .game-card__reveal-image,
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-keep-color > img:not(.game-card__seal),
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-keep-color .mini-card__fallback,
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-keep-color .game-card__placeholder,
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-keep-color .game-card__reveal-image,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-keep-color > img:not(.game-card__seal),
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-keep-color .mini-card__fallback,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-keep-color .game-card__placeholder,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-keep-color .game-card__reveal-image {
+      filter: saturate(1) brightness(1) contrast(1) !important;
     }
 
     .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-miss > img:not(.game-card__seal),
@@ -6615,9 +6630,9 @@
     }
 
     @keyframes speakingHitFlashInsideCircle {
-      0% { filter: grayscale(0) brightness(1) saturate(1); }
-      35% { filter: grayscale(0) brightness(1.85) saturate(1.4) drop-shadow(0 0 20px rgba(255, 255, 255, 0.95)); }
-      100% { filter: grayscale(1) brightness(0.95) saturate(0.95); }
+      0% { filter: saturate(1) brightness(1); }
+      35% { filter: saturate(1.4) brightness(1.85) drop-shadow(0 0 20px rgba(255, 255, 255, 0.95)); }
+      100% { filter: saturate(1) brightness(1); }
     }
 
     .game[data-phase-key="first-star"] #gameVisual::before,
@@ -7519,10 +7534,10 @@
       top: auto;
       left: auto;
       width: min(100%, 420px);
-      transform: none;
+      transform: translateY(-40px);
       z-index: 1;
       text-align: center;
-      margin: -40px auto 10px auto;
+      margin: 0 auto 10px auto;
     }
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation .flashcards-typing__translation-line,
@@ -20043,6 +20058,11 @@
         }
       }
 
+      function setSpeakingKeepColor(active = false) {
+        if (!els.gameVisual) return;
+        els.gameVisual.classList.toggle('is-speaking-keep-color', Boolean(active));
+      }
+
       function triggerSpeakingHitFlash() {
         if (!els.gameVisual) return;
         els.gameVisual.classList.remove('is-speaking-hit-flash');
@@ -25755,6 +25775,7 @@
         if (isHit) {
           if (isSpeakingStarStage) {
             setSpeakingVisualTone('');
+            setSpeakingKeepColor(true);
             triggerSpeakingHitFlash();
           }
           if (evaluatedStage === 2) {
@@ -25833,6 +25854,7 @@
           scheduleFlashcardCloudSync(250);
         } else {
           if (isSpeakingStarStage) {
+            setSpeakingKeepColor(false);
             setSpeakingVisualTone('miss');
             playSpeakingMistakeSound();
           }
