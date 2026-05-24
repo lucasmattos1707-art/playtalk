@@ -6584,21 +6584,6 @@
       filter: grayscale(0) !important;
     }
 
-    .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-hit > img:not(.game-card__seal),
-    .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-hit .mini-card__fallback,
-    .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-hit .game-card__placeholder,
-    .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-hit .game-card__reveal-image,
-    .game[data-phase-key="third-star"] #gameVisual.is-speaking-tone-hit > img:not(.game-card__seal),
-    .game[data-phase-key="third-star"] #gameVisual.is-speaking-tone-hit .mini-card__fallback,
-    .game[data-phase-key="third-star"] #gameVisual.is-speaking-tone-hit .game-card__placeholder,
-    .game[data-phase-key="third-star"] #gameVisual.is-speaking-tone-hit .game-card__reveal-image,
-    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-hit > img:not(.game-card__seal),
-    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-hit .mini-card__fallback,
-    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-hit .game-card__placeholder,
-    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-hit .game-card__reveal-image {
-      filter: grayscale(1) sepia(0.9) hue-rotate(35deg) saturate(1.35) brightness(0.85) !important;
-    }
-
     .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-miss > img:not(.game-card__seal),
     .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-miss .mini-card__fallback,
     .game[data-phase-key="first-star"] #gameVisual.is-speaking-tone-miss .game-card__placeholder,
@@ -6612,6 +6597,27 @@
     .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-miss .game-card__placeholder,
     .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-tone-miss .game-card__reveal-image {
       filter: grayscale(1) sepia(0.9) hue-rotate(-25deg) saturate(1.45) brightness(0.84) !important;
+    }
+
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-hit-flash > img:not(.game-card__seal),
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-hit-flash .mini-card__fallback,
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-hit-flash .game-card__placeholder,
+    .game[data-phase-key="first-star"] #gameVisual.is-speaking-hit-flash .game-card__reveal-image,
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-hit-flash > img:not(.game-card__seal),
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-hit-flash .mini-card__fallback,
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-hit-flash .game-card__placeholder,
+    .game[data-phase-key="third-star"] #gameVisual.is-speaking-hit-flash .game-card__reveal-image,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-hit-flash > img:not(.game-card__seal),
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-hit-flash .mini-card__fallback,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-hit-flash .game-card__placeholder,
+    .game[data-phase-key="fifth-star"] #gameVisual.is-speaking-hit-flash .game-card__reveal-image {
+      animation: speakingHitFlashInsideCircle 750ms ease-out;
+    }
+
+    @keyframes speakingHitFlashInsideCircle {
+      0% { filter: grayscale(0) brightness(1) saturate(1); }
+      35% { filter: grayscale(0) brightness(1.85) saturate(1.4) drop-shadow(0 0 20px rgba(255, 255, 255, 0.95)); }
+      100% { filter: grayscale(1) brightness(0.95) saturate(0.95); }
     }
 
     .game[data-phase-key="first-star"] #gameVisual::before,
@@ -7516,7 +7522,7 @@
       transform: none;
       z-index: 1;
       text-align: center;
-      margin: -100px auto 10px auto;
+      margin: -40px auto 10px auto;
     }
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation .flashcards-typing__translation-line,
@@ -20031,12 +20037,20 @@
 
       function setSpeakingVisualTone(tone = '') {
         if (!els.gameVisual) return;
-        els.gameVisual.classList.remove('is-speaking-tone-hit', 'is-speaking-tone-miss');
-        if (tone === 'hit') {
-          els.gameVisual.classList.add('is-speaking-tone-hit');
-        } else if (tone === 'miss') {
+        els.gameVisual.classList.remove('is-speaking-tone-miss');
+        if (tone === 'miss') {
           els.gameVisual.classList.add('is-speaking-tone-miss');
         }
+      }
+
+      function triggerSpeakingHitFlash() {
+        if (!els.gameVisual) return;
+        els.gameVisual.classList.remove('is-speaking-hit-flash');
+        void els.gameVisual.offsetWidth;
+        els.gameVisual.classList.add('is-speaking-hit-flash');
+        window.setTimeout(() => {
+          els.gameVisual?.classList.remove('is-speaking-hit-flash');
+        }, 780);
       }
 
       function isFooterGuardStage(entry = currentGameEntry()) {
@@ -25740,7 +25754,8 @@
 
         if (isHit) {
           if (isSpeakingStarStage) {
-            setSpeakingVisualTone('hit');
+            setSpeakingVisualTone('');
+            triggerSpeakingHitFlash();
           }
           if (evaluatedStage === 2) {
             persistSecondStageTutorialCompleted(true);
