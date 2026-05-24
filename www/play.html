@@ -21234,7 +21234,7 @@
       function runAutoAudioPlaybackAttempt(entry, card, stageConfig, attempt = 1) {
         if (!state.game.active || state.game.currentId !== entry.id || state.game.listening || state.game.paused) return;
         const playback = stageConfig.key === 'first-star'
-          ? playFirstStarPromptAudio()
+          ? requestFirstStarListenPlayback()
           : playPromptAudio(card, { unlockDelayMs: GAME_MIC_UNLOCK_DELAY_MS });
         Promise.resolve(playback)
           .then((played) => {
@@ -21294,6 +21294,10 @@
             renderFirstStarSeals(entry);
           }
         }
+      }
+
+      function requestFirstStarListenPlayback() {
+        return playFirstStarPromptAudio();
       }
 
       async function jumpCurrentFirstStarCard() {
@@ -26921,7 +26925,7 @@
         els.firstStarListenBtn?.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-          void playFirstStarPromptAudio();
+          void requestFirstStarListenPlayback();
         });
         els.firstStarJumpBtn?.addEventListener('click', (event) => {
           event.preventDefault();
