@@ -11452,7 +11452,7 @@
       const FLASHCARD_SESSION_TICK_LOOP_INTERVAL_MS = 1000;
       const GAME_CARD_RELEASE_INTERVAL_MS = 12000;
       const GAME_UPCOMING_PRELOAD_COUNT = 3;
-      const FIRST_STAGE_AUDIO_PRELOAD_COUNT = 2;
+      const FIRST_STAGE_AUDIO_PRELOAD_COUNT = 6;
       const GAME_MIC_UNLOCK_DELAY_MS = 1200;
       const FIRST_STAGE_MIC_UNLOCK_DELAY_MS = 1000;
       const FIRST_STAR_AUTO_AUDIO_MAX_ATTEMPTS = 4;
@@ -22025,6 +22025,23 @@
         }
       }
 
+      function maintainFirstStageAudioBuffer() {
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        if (phaseKey !== 'first-star') return;
+        const candidateIds = [];
+        if (state.game.currentId) {
+          candidateIds.push(state.game.currentId);
+        }
+        state.game.queue.forEach((id) => candidateIds.push(id));
+        const uniqueIds = Array.from(new Set(candidateIds.map((id) => safeText(id)).filter(Boolean)));
+        uniqueIds
+          .slice(0, FIRST_STAGE_AUDIO_PRELOAD_COUNT)
+          .forEach((id) => {
+            const card = cardById(id);
+            if (card) preloadCardAudio(card);
+          });
+      }
+
       function queueFifthStageCoinsGainAudio(delayMs = 500) {
         if (state.ui.fifthStageCoinsSoundTimer) {
           window.clearTimeout(state.ui.fifthStageCoinsSoundTimer);
@@ -22109,6 +22126,9 @@
         const upcomingCount = phaseKey === 'first-star'
           ? FIRST_STAGE_AUDIO_PRELOAD_COUNT
           : GAME_UPCOMING_PRELOAD_COUNT;
+        if (phaseKey === 'first-star') {
+          maintainFirstStageAudioBuffer();
+        }
         if (isLevelTextModeActive()) {
           const cards = [];
           if (currentCard) {
@@ -24506,7 +24526,11 @@
         syncTimedGameCardReleaseBudget();
         const activeLimit = Math.max(MIN_GAME_CONTEXT_LIMIT, Number(state.game.contextLimit) || currentGameActiveCardCap());
         if (state.game.entries.size >= activeLimit) return false;
-        return refillGameEntry('base', activeLimit);
+        const released = refillGameEntry('base', activeLimit);
+        if (released) {
+          maintainFirstStageAudioBuffer();
+        }
+        return released;
       }
 
       function refillGameEntry(pool = 'base', limit = state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT, options = {}) {
@@ -24547,6 +24571,7 @@
         }
         persistGameSessionLocally();
         updateGameChips();
+        maintainFirstStageAudioBuffer();
         return true;
       }
 
@@ -24599,6 +24624,7 @@
         }
         persistGameSessionLocally();
         updateSpeakingStarMicSealProgress();
+        maintainFirstStageAudioBuffer();
       }
 
       function wait(ms) {
