@@ -6897,6 +6897,8 @@
 
     .game[data-phase-key="first-star"] #gameVisual {
       --first-star-audio-progress: 0;
+      --first-star-audio-color: #ff2b2b;
+      position: relative;
       border-radius: 50%;
       overflow: visible;
       --flashcards-mic-ring-padding: 12px;
@@ -6917,16 +6919,8 @@
       pointer-events: none;
       background: conic-gradient(
         from -90deg,
-        #ff2b2b 0turn 0.2turn,
-        #ff8a1f 0.2turn 0.3turn,
-        #6dff2a 0.3turn 0.5turn,
-        #48dfcf 0.5turn 0.7turn,
-        #eafff7 0.7turn 1turn
-      ),
-      conic-gradient(
-        from -90deg,
-        transparent calc(var(--first-star-audio-progress, 0) * 1turn),
-        rgba(0, 0, 0, 0.78) 0
+        var(--first-star-audio-color) calc(var(--first-star-audio-progress, 0) * 1turn),
+        transparent 0
       );
       -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
       mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
@@ -21248,6 +21242,7 @@
         state.game.firstStarAudioProgress = progress;
         if (!els.gameVisual) return;
         els.gameVisual.style.setProperty('--first-star-audio-progress', String(progress));
+        els.gameVisual.style.setProperty('--first-star-audio-color', resolveFirstStarProgressColor(progress));
         const currentEntry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (
           currentEntry
@@ -21261,6 +21256,39 @@
           renderGameTouchButton(STAGES[currentEntry.stage] || STAGES[1], currentEntry);
           renderFirstStarSeals(currentEntry);
         }
+      }
+
+      function hexToRgb(hex) {
+        const normalized = String(hex || '').replace('#', '').trim();
+        if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return { r: 255, g: 43, b: 43 };
+        return {
+          r: Number.parseInt(normalized.slice(0, 2), 16),
+          g: Number.parseInt(normalized.slice(2, 4), 16),
+          b: Number.parseInt(normalized.slice(4, 6), 16)
+        };
+      }
+
+      function mixRgbHex(fromHex, toHex, ratio = 0) {
+        const from = hexToRgb(fromHex);
+        const to = hexToRgb(toHex);
+        const t = Math.max(0, Math.min(1, Number(ratio) || 0));
+        const r = Math.round(from.r + (to.r - from.r) * t);
+        const g = Math.round(from.g + (to.g - from.g) * t);
+        const b = Math.round(from.b + (to.b - from.b) * t);
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+
+      function resolveFirstStarProgressColor(progress = 0) {
+        const p = Math.max(0, Math.min(1, Number(progress) || 0));
+        if (p <= 0.2) return '#ff2b2b';
+        if (p <= 0.3) return '#ff8a1f';
+        if (p <= 0.5) {
+          return mixRgbHex('#ff8a1f', '#6dff2a', (p - 0.3) / 0.2);
+        }
+        if (p <= 0.7) {
+          return mixRgbHex('#6dff2a', '#48dfcf', (p - 0.5) / 0.2);
+        }
+        return mixRgbHex('#48dfcf', '#eafff7', (p - 0.7) / 0.3);
       }
 
       function clearFirstStarListenProgressAnimation() {
