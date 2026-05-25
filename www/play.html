@@ -23916,6 +23916,11 @@
         }
       }
 
+      function clearGameVisualTypingDisplays() {
+        if (!els.gameVisual) return;
+        Array.from(els.gameVisual.querySelectorAll('.flashcards-typing__display--visual'))
+          .forEach((node) => node.remove());
+      }
       function renderSecondStarRevealTranslation(card) {
         if (!els.gameVisual) return;
         clearSecondStageTranslationDisplays();
@@ -23973,7 +23978,7 @@
           clearTypingPromptLoop();
           clearSecondStarIdleHintTimers();
           syncGameAdvanceButton(null);
-          els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
+          clearGameVisualTypingDisplays();
           els.gameTypingKeyboard.innerHTML = '';
           els.gameTypingKeyboard.classList.remove('is-visible');
           els.gameTypingKeyboard.classList.remove('is-portuguese');
@@ -23993,7 +23998,7 @@
           clearTypingPromptLoop();
           clearSecondStarIdleHintTimers();
           syncGameAdvanceButton(null);
-          els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
+          clearGameVisualTypingDisplays();
           els.gameTypingKeyboard.innerHTML = '';
           els.gameTypingKeyboard.classList.remove('is-visible');
           els.gameTypingKeyboard.classList.remove('is-portuguese');
@@ -24024,7 +24029,7 @@
           }
           if (!blockState.options.length || !blockState.targetSequences.length) {
             syncGameAdvanceButton(null);
-            els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
+            clearGameVisualTypingDisplays();
             els.gameTypingKeyboard.innerHTML = '';
             els.gameTypingKeyboard.classList.remove('is-visible', 'is-portuguese');
             els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
@@ -24162,7 +24167,7 @@
             advanceBtn.classList.remove('is-visible');
           }
 
-          els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
+          clearGameVisualTypingDisplays();
           if (keyboardTarget && els.gameTypingKeyboard.parentElement !== keyboardTarget) {
             keyboardTarget.appendChild(els.gameTypingKeyboard);
           }
@@ -24387,7 +24392,7 @@
           advanceBtn.classList.remove('is-visible');
         }
 
-        els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
+        clearGameVisualTypingDisplays();
         if (keyboardTarget && els.gameTypingKeyboard.parentElement !== keyboardTarget) {
           keyboardTarget.appendChild(els.gameTypingKeyboard);
         }
@@ -24474,7 +24479,7 @@
           els.gameTypingKeyboard.classList.remove('is-portuguese', 'is-visible');
           els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
           els.gameTypingKeyboard.innerHTML = '';
-          els.gameVisual.querySelector('.flashcards-typing__display--visual')?.remove();
+          clearGameVisualTypingDisplays();
           updateGameChips();
           if (!state.game.entries.size) {
             clearGameSessionLocally();
@@ -27507,6 +27512,7 @@
   </script>
 </body>
 </html>
+
 
 
 
