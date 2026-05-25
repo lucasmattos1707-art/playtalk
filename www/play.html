@@ -8298,17 +8298,18 @@
     .game-remember-btn {
       position: absolute;
       left: 50%;
-      bottom: 6px;
+      bottom: 76px;
       transform: translateX(-50%);
       z-index: 9;
-      min-height: 42px;
-      padding: 8px 18px;
+      min-height: 55px;
+      padding: 10px 24px;
       border-radius: 999px;
       border: 1px solid rgba(126, 208, 255, 0.55);
       background: rgba(4, 22, 47, 0.82);
       color: #eaf6ff;
-      font: 700 16px/1 "Exo 2", Arial, sans-serif;
-      letter-spacing: 0.02em;
+      font: 700 21px/1 "Exo 2", Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
       pointer-events: auto;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.34);
       opacity: 1;
@@ -10934,7 +10935,7 @@
             <img class="game-status-icon" id="gameStatusIcon" alt="">
             <p class="game-status" id="gameStatus">Carregando rodada...</p>
           </div>
-          <button class="game-remember-btn" id="gameRememberBtn" type="button" hidden>Não lembro</button>
+          <button class="game-remember-btn" id="gameRememberBtn" type="button" hidden>I forgot</button>
           <div class="keyboardscreen-host" id="gameKeyboardHost"></div>
         </div>
 
@@ -11868,6 +11869,7 @@
           firstStarAudioProgress: 0,
           firstStarAudioPlayingEntryKey: '',
           firstStarAudioPlayedEntryKey: '',
+          rememberHiddenCardId: '',
           firstStageIdleTimer: 0,
           firstStageMicHintTimer: 0,
           firstStageMicHintRotationTimer: 0,
@@ -20982,7 +20984,9 @@
         const stageNumber = resolveEntryStageNumber(entry);
         const useBooksMic = (!isLevelAudioModeActive() || isLevelTextModeActive()) && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5);
         const useStagePlay = stageNumber === 2 || stageNumber === 4;
-        const canShowRemember = stageNumber === 3 || stageNumber === 5;
+        const rememberCardId = safeText(entry?.id);
+        const rememberBlockedForCard = Boolean(rememberCardId) && state.game.rememberHiddenCardId === rememberCardId;
+        const canShowRemember = (stageNumber === 3 || stageNumber === 5) && !rememberBlockedForCard;
         const showMissionHud = stageNumber >= 1 && stageNumber <= 5;
         els.gameTouchBtn.parentElement.hidden = !showMissionHud;
         els.gameTouchBtn.className = 'game-touch';
@@ -26254,6 +26258,11 @@
         hideGameStageTutorial({ resume: false });
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return;
+        const previousRememberCardId = safeText(state.game.rememberHiddenCardId);
+        const currentCardId = safeText(entry.id);
+        if (previousRememberCardId && currentCardId && previousRememberCardId !== currentCardId) {
+          state.game.rememberHiddenCardId = '';
+        }
         if (isTypingStage(entry)) return;
         if (Number(entry.stage) === 1) {
           const playbackKey = `${safeText(entry.id)}:${Number(entry.stage) || 0}`;
@@ -26312,6 +26321,9 @@
           stopActiveAudio();
         }
         state.game.listening = true;
+        if (entry.stage === 3 || entry.stage === 5) {
+          state.game.rememberHiddenCardId = safeText(entry.id);
+        }
         els.gameTouchBtn.classList.add('is-busy');
         els.gameCard.classList.add('is-listening');
         els.gameVisual.classList.add('is-mic-live');
