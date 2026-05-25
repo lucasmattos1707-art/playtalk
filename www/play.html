@@ -8030,14 +8030,13 @@
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key.is-selected,
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key.is-correct-hit,
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key.is-selected {
-      background: linear-gradient(145deg, rgba(9, 94, 54, 0.95) 0%, rgba(15, 162, 84, 0.94) 58%, rgba(64, 235, 143, 0.92) 100%);
-      border-color: rgba(129, 255, 187, 0.98);
+      background: linear-gradient(145deg, rgba(18, 74, 44, 0.98) 0%, rgba(28, 112, 66, 0.97) 52%, rgba(74, 156, 102, 0.95) 100%);
+      border-color: rgba(152, 212, 172, 0.9);
       color: #f7fff9;
-      filter: brightness(1.06) drop-shadow(0 0 16px rgba(90, 255, 166, 0.5));
+      filter: none;
       box-shadow:
-        inset 0 0 0 1px rgba(226, 255, 238, 0.22),
-        0 0 16px rgba(72, 255, 157, 0.44),
-        0 0 32px rgba(72, 255, 157, 0.24);
+        inset 0 0 0 1px rgba(230, 248, 236, 0.18),
+        0 6px 14px rgba(8, 34, 20, 0.36);
     }
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__word-row.is-long-word-row .flashcards-typing__key,
@@ -8110,22 +8109,22 @@
 
     .game[data-phase-key="second-star"] .flashcards-typing__key.is-correct-hit,
     .game[data-phase-key="fourth-star"] .flashcards-typing__key.is-correct-hit {
-      filter: brightness(1.2) drop-shadow(0 0 16px rgba(255, 255, 255, 0.75));
+      filter: none;
       box-shadow: none;
     }
 
-    .game[data-phase-key="second-star"] .flashcards-typing__grid.is-error .flashcards-typing__key {
-      background: linear-gradient(145deg, #4e0816 0%, #7b1023 58%, #a61f33 100%) !important;
+    .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks.is-error .flashcards-typing__key,
+    .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__grid.is-word-blocks.is-error .flashcards-typing__key {
+      background: linear-gradient(145deg, #5a0d1a 0%, #7c1327 52%, #4a0f1f 100%) !important;
       background-image: none !important;
-      border-color: rgba(255, 103, 137, 0.96) !important;
+      border-color: rgba(205, 108, 128, 0.92) !important;
       color: #fff5f7;
       text-shadow:
-        0 2px 0 rgba(73, 7, 21, 0.98),
-        0 6px 12px rgba(73, 7, 21, 0.5);
+        0 1px 0 rgba(60, 9, 21, 0.94),
+        0 4px 10px rgba(50, 7, 17, 0.42);
       box-shadow:
-        inset 0 0 0 1px rgba(255, 188, 201, 0.12),
-        0 0 14px rgba(255, 60, 99, 0.34),
-        0 0 28px rgba(255, 60, 99, 0.22);
+        inset 0 0 0 1px rgba(255, 204, 215, 0.12),
+        0 6px 14px rgba(58, 10, 22, 0.44);
       animation: flashcardsTypingErrorShake 1000ms ease-in-out;
     }
 
