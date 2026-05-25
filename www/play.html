@@ -21043,8 +21043,8 @@
         els.gameTouchBtn.setAttribute('aria-label', 'Toque na tela para falar');
         if (els.gameRememberBtn) {
           els.gameRememberBtn.hidden = !canShowRemember;
-          els.gameRememberBtn.disabled = !canShowRemember || !state.game.active || state.game.paused || state.game.listening;
-          els.gameRememberBtn.classList.toggle('is-mic-hidden', Boolean(state.game.listening));
+          els.gameRememberBtn.disabled = !canShowRemember || !state.game.active || state.game.paused;
+          els.gameRememberBtn.classList.remove('is-mic-hidden');
         }
         updateSpeakingStarMicSealProgress();
         syncLevelTextModeControls();
@@ -21629,9 +21629,13 @@
       }
 
       async function handleDontRememberRequest() {
-        if (!state.game.active || state.game.transitioning || state.game.listening || state.game.paused) return false;
+        if (!state.game.active || state.game.transitioning || state.game.paused) return false;
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry || (entry.stage !== 3 && entry.stage !== 5)) return false;
+        if (state.game.listening) {
+          cleanupGameRecognition();
+          await wait(40);
+        }
         await handleRecognitionResult("i don't remember", 'dont-remember-button');
         return true;
       }
@@ -26339,9 +26343,6 @@
           stopActiveAudio();
         }
         state.game.listening = true;
-        if (entry.stage === 3 || entry.stage === 5) {
-          state.game.rememberHiddenCardId = safeText(entry.id);
-        }
         els.gameTouchBtn.classList.add('is-busy');
         els.gameCard.classList.add('is-listening');
         els.gameVisual.classList.add('is-mic-live');
@@ -26393,6 +26394,9 @@
             state.game.recognition = null;
           }
           state.game.listening = false;
+          if (entry.stage === 3 || entry.stage === 5) {
+            state.game.rememberHiddenCardId = safeText(entry.id);
+          }
           state.game.canListen = true;
           els.gameTouchBtn.classList.remove('is-busy');
           renderGameTouchButton(STAGES[entry.stage] || STAGES[1], entry);
