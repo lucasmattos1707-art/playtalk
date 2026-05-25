@@ -6912,17 +6912,16 @@
     .game[data-phase-key="first-star"] #gameVisual.is-first-star-audio-playing::after {
       content: '';
       position: absolute;
-      inset: -7px;
+      inset: 0;
       border-radius: 50%;
       pointer-events: none;
       background: conic-gradient(
         from -90deg,
-        rgba(85, 255, 168, 0.98) calc(var(--first-star-audio-progress, 0) * 1turn),
-        rgba(85, 255, 168, 0.12) 0
+        rgba(183, 255, 26, 1) calc(var(--first-star-audio-progress, 0) * 1turn),
+        rgba(183, 255, 26, 0.14) 0
       );
-      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
-      mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
-      filter: drop-shadow(0 0 10px rgba(85, 255, 168, 0.45));
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+      mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
       z-index: 4;
     }
 
@@ -21253,10 +21252,17 @@
         setFirstStarListenProgress(0);
         if (!audio) return;
         els.gameVisual?.classList.add('is-first-star-audio-playing');
+        let displayedProgress = 0;
         const tick = () => {
+          let targetProgress = 0;
           if (!audio.paused && Number.isFinite(audio.duration) && audio.duration > 0) {
-            setFirstStarListenProgress(audio.currentTime / audio.duration);
+            targetProgress = Math.max(0, Math.min(1, audio.currentTime / audio.duration));
           }
+          displayedProgress += (targetProgress - displayedProgress) * 0.35;
+          if (Math.abs(targetProgress - displayedProgress) < 0.001) {
+            displayedProgress = targetProgress;
+          }
+          setFirstStarListenProgress(displayedProgress);
           if (!audio.paused && !audio.ended) {
             state.game.firstStarListenProgressRaf = window.requestAnimationFrame(tick);
             return;
