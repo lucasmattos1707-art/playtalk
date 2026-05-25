@@ -6914,7 +6914,7 @@
     .game[data-phase-key="first-star"] #gameVisual.is-first-star-audio-playing::after {
       content: '';
       position: absolute;
-      inset: 0;
+      inset: -2px;
       top: 0;
       left: 0;
       width: 100%;
@@ -6929,8 +6929,8 @@
         var(--first-star-audio-color) calc(var(--first-star-audio-progress, 0) * 1turn),
         transparent 0
       );
-      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
-      mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+      mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
       z-index: 6;
     }
 
@@ -11521,6 +11521,7 @@
       const GAME_MIC_UNLOCK_DELAY_MS = 1200;
       const FIRST_STAGE_MIC_UNLOCK_DELAY_MS = 1000;
       const FIRST_STAR_AUTO_PLAY_AFTER_ENTRY_MS = 25;
+      const FIRST_STAR_PROGRESS_FRAME_COUNT = 200;
       const FIRST_STAR_AUTO_AUDIO_MAX_ATTEMPTS = 4;
       const FIRST_STAR_AUTO_AUDIO_RETRY_BASE_DELAY_MS = 320;
       const TUTORIAL_AUDIO_ROOT = AUDIOSTUTO_PUBLIC_ROOT;
@@ -21316,6 +21317,7 @@
         if (!audio) return;
         els.gameVisual?.classList.add('is-first-star-audio-playing');
         let displayedProgress = 0;
+        let lastFrameIndex = -1;
         const tick = () => {
           let targetProgress = 0;
           if (!audio.paused && Number.isFinite(audio.duration) && audio.duration > 0) {
@@ -21325,7 +21327,17 @@
           if (Math.abs(targetProgress - displayedProgress) < 0.001) {
             displayedProgress = targetProgress;
           }
-          setFirstStarListenProgress(displayedProgress);
+          const frameIndex = Math.max(
+            0,
+            Math.min(
+              FIRST_STAR_PROGRESS_FRAME_COUNT,
+              Math.round(displayedProgress * FIRST_STAR_PROGRESS_FRAME_COUNT)
+            )
+          );
+          if (frameIndex !== lastFrameIndex) {
+            lastFrameIndex = frameIndex;
+            setFirstStarListenProgress(frameIndex / FIRST_STAR_PROGRESS_FRAME_COUNT);
+          }
           if (!audio.paused && !audio.ended) {
             state.game.firstStarListenProgressRaf = window.requestAnimationFrame(tick);
             return;
