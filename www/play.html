@@ -8295,23 +8295,27 @@
     .game-remember-btn {
       position: absolute;
       left: 50%;
-      bottom: 76px;
+      bottom: 126px;
       transform: translateX(-50%);
       z-index: 9;
       min-height: 55px;
       padding: 10px 24px;
       border-radius: 999px;
-      border: 1px solid rgba(126, 208, 255, 0.55);
-      background: rgba(4, 22, 47, 0.82);
-      color: #eaf6ff;
+      border: 1px solid rgba(255, 179, 94, 0.75);
+      background: linear-gradient(180deg, rgba(255, 160, 48, 0.95) 0%, rgba(233, 108, 8, 0.95) 100%);
+      color: #fff7ee;
       font: 700 21px/1 "Exo 2", Arial, sans-serif;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       pointer-events: auto;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.34);
+      box-shadow: 0 8px 20px rgba(60, 20, 0, 0.32);
       opacity: 1;
       visibility: visible;
       transition: opacity 500ms ease, visibility 500ms ease;
+    }
+
+    .game[data-phase-key="fifth-star"] .game-remember-btn {
+      bottom: 226px;
     }
 
     .game-remember-btn[hidden] {
