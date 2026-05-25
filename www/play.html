@@ -6917,8 +6917,16 @@
       pointer-events: none;
       background: conic-gradient(
         from -90deg,
-        rgba(183, 255, 26, 1) calc(var(--first-star-audio-progress, 0) * 1turn),
-        rgba(183, 255, 26, 0.14) 0
+        #ff2b2b 0turn 0.2turn,
+        #ff8a1f 0.2turn 0.3turn,
+        #6dff2a 0.3turn 0.5turn,
+        #48dfcf 0.5turn 0.7turn,
+        #eafff7 0.7turn 1turn
+      ),
+      conic-gradient(
+        from -90deg,
+        transparent calc(var(--first-star-audio-progress, 0) * 1turn),
+        rgba(0, 0, 0, 0.78) 0
       );
       -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
       mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
@@ -11856,6 +11864,7 @@
           firstStarAutoPlayRetryTimer: 0,
           firstStarJumpBusy: false,
           firstStarListenProgressRaf: 0,
+          firstStarAudioProgress: 0,
           firstStarAudioPlayingEntryKey: '',
           firstStarAudioPlayedEntryKey: '',
           firstStageIdleTimer: 0,
@@ -21236,14 +21245,30 @@
 
       function setFirstStarListenProgress(value = 0) {
         const progress = Math.max(0, Math.min(1, Number(value) || 0));
+        state.game.firstStarAudioProgress = progress;
         if (!els.gameVisual) return;
         els.gameVisual.style.setProperty('--first-star-audio-progress', String(progress));
+        const currentEntry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+        if (
+          currentEntry
+          && Number(currentEntry.stage) === 1
+          && progress >= 0.5
+          && !state.game.canListen
+          && !state.game.listening
+          && !state.game.paused
+        ) {
+          state.game.canListen = true;
+          renderGameTouchButton(STAGES[currentEntry.stage] || STAGES[1], currentEntry);
+          renderFirstStarSeals(currentEntry);
+        }
       }
 
       function clearFirstStarListenProgressAnimation() {
-        if (!state.game.firstStarListenProgressRaf) return;
-        window.cancelAnimationFrame(state.game.firstStarListenProgressRaf);
-        state.game.firstStarListenProgressRaf = 0;
+        if (state.game.firstStarListenProgressRaf) {
+          window.cancelAnimationFrame(state.game.firstStarListenProgressRaf);
+          state.game.firstStarListenProgressRaf = 0;
+        }
+        state.game.firstStarAudioProgress = 0;
         els.gameVisual?.classList.remove('is-first-star-audio-playing');
       }
 
@@ -26198,7 +26223,9 @@
         if (Number(entry.stage) === 1) {
           const playbackKey = `${safeText(entry.id)}:${Number(entry.stage) || 0}`;
           const hasPlayedFirstStarAudio = state.game.firstStarAudioPlayedEntryKey === playbackKey;
-          if (!hasPlayedFirstStarAudio) {
+          const reachedMidpointGate = state.game.firstStarAudioPlayingEntryKey === playbackKey
+            && Number(state.game.firstStarAudioProgress) >= 0.5;
+          if (!hasPlayedFirstStarAudio && !reachedMidpointGate) {
             if (state.game.firstStarAudioPlayingEntryKey !== playbackKey) {
               void requestFirstStarListenPlayback();
             }
@@ -26206,20 +26233,30 @@
           }
         }
         if (state.game.activeAudio) {
-          const canInterruptAudio = state.game.canListen
-            && Number(state.game.audioCanBeInterruptedAt) > 0
-            && Date.now() >= Number(state.game.audioCanBeInterruptedAt);
+          const stageOneAudioGateReady = Number(entry.stage) === 1
+            && Number(state.game.firstStarAudioProgress) >= 0.5;
+          const canInterruptAudio = Number(entry.stage) === 1
+            ? stageOneAudioGateReady
+            : (
+              state.game.canListen
+              && Number(state.game.audioCanBeInterruptedAt) > 0
+              && Date.now() >= Number(state.game.audioCanBeInterruptedAt)
+            );
           if (!canInterruptAudio) {
             flashGameVisualBlockedAudio();
             return;
           }
           if (entry.stage === 1) {
-            fadeOutActiveAudio(1000).catch(() => {});
+            await fadeOutActiveAudio(420);
           } else {
             await fadeOutActiveAudio(180);
           }
         }
-        if (!state.game.canListen) return;
+        if (!state.game.canListen) {
+          const stageOneBypass = Number(entry.stage) === 1 && Number(state.game.firstStarAudioProgress) >= 0.5;
+          if (!stageOneBypass) return;
+          state.game.canListen = true;
+        }
 
         const nativeSpeech = getNativeSpeechRecognition();
         const openAiSpeech = getOpenAiSpeechRecognition();
