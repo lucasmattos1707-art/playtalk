@@ -6864,6 +6864,7 @@
       position: absolute;
       inset: 0;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       pointer-events: none;
@@ -6896,42 +6897,34 @@
     }
 
     .game[data-phase-key="first-star"] #gameVisual {
-      --first-star-audio-progress: 0;
-      --first-star-audio-color: #ff2b2b;
       position: relative;
       border-radius: 50%;
       overflow: visible;
-      --flashcards-mic-ring-padding: 12px;
-      --flashcards-mic-ring-fill:
-        linear-gradient(180deg, rgba(4, 24, 55, 0) 0%, rgba(4, 24, 55, 0.3) 48%, rgba(4, 24, 55, 0.88) 78%, rgba(4, 24, 55, 1) 100%),
-        linear-gradient(180deg, rgba(118, 231, 255, 1) 0%, rgba(67, 205, 255, 1) 100%);
-      --flashcards-mic-ring-glow:
-        drop-shadow(0 0 18px rgba(68, 206, 255, 0.95))
-        drop-shadow(0 0 36px rgba(68, 206, 255, 0.55))
-        drop-shadow(0 0 64px rgba(32, 102, 255, 0.3));
     }
 
-    .game[data-phase-key="first-star"] #gameVisual.is-first-star-audio-playing::after {
-      content: '';
-      position: absolute;
-      inset: -2px;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      transform: none !important;
-      border-radius: 50%;
-      border: 0;
-      box-shadow: none;
+    .first-star-progress {
+      width: min(240px, calc(100% - 72px));
+      height: 8px;
+      margin-top: 12px;
+      border-radius: 999px;
+      background: rgba(8, 31, 15, 0.18);
+      border: 1px solid rgba(140, 214, 121, 0.32);
+      overflow: hidden;
       pointer-events: none;
-      background: conic-gradient(
-        from -90deg,
-        var(--first-star-audio-color) calc(var(--first-star-audio-progress, 0) * 1turn),
-        transparent 0
-      );
-      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
-      mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
-      z-index: 6;
+      order: 2;
+    }
+
+    .first-star-progress[hidden] {
+      display: none !important;
+    }
+
+    .first-star-progress__fill {
+      display: block;
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #85c96d 0%, #9ed784 100%);
+      transition: width 90ms linear;
     }
 
     .first-star-seals {
@@ -7187,6 +7180,7 @@
       box-shadow: none !important;
       transform: translateY(calc(clamp(112px, 16vw, 152px) + 30px));
       padding: 0;
+      order: 1;
     }
 
     .game[data-phase-key="first-star"] .navbarscreen,
@@ -10893,7 +10887,11 @@
                 </span>
               </button>
             </div>
-            <div class="game-translation-slot" id="gameTranslationSlot" aria-hidden="true"></div>
+            <div class="game-translation-slot" id="gameTranslationSlot" aria-hidden="true">
+              <div class="first-star-progress" id="firstStarProgress" hidden aria-hidden="true">
+                <span class="first-star-progress__fill" id="firstStarProgressFill"></span>
+              </div>
+            </div>
             <div class="game-card__content">
               <div>
                 <div class="game-step" id="gameStep">Etapa 1/5</div>
@@ -11277,7 +11275,7 @@
       const TYPING_KEY_BLUES = ['#6ebcff', '#76c3ff', '#7dc9ff', '#86ceff', '#8fd4ff', '#98d9ff'];
       const DEFAULT_GAME_CONTEXT_LIMIT = 12;
       const USER_LEVEL_MIN = 1;
-      const USER_LEVEL_MAX = 200;
+      const USER_LEVEL_MAX = 500;
       const ENERGY_XP_LEVEL_MAX = 500;
       const ENERGY_XP_LEVEL_ANCHORS = [
         { level: 2, xp: 50 }, { level: 5, xp: 300 }, { level: 10, xp: 1500 }, { level: 15, xp: 4000 },
@@ -11397,7 +11395,7 @@
             { minLevel: 61, maxLevel: 70, windowSize: 20 },
             { minLevel: 71, maxLevel: 80, windowSize: 25 },
             { minLevel: 81, maxLevel: 90, windowSize: 30 },
-            { minLevel: 91, maxLevel: 200, windowSize: 40 }
+            { minLevel: 91, maxLevel: 500, windowSize: 40 }
           ]
         };
       }
@@ -11453,12 +11451,12 @@
             : defaults.rules;
         const rules = rawRules
           .map((entry) => {
-            const minLevel = Math.max(1, Math.min(200, Math.floor(Number(entry?.minLevel) || 1)));
+            const minLevel = Math.max(1, Math.min(USER_LEVEL_MAX, Math.floor(Number(entry?.minLevel) || 1)));
             const maxRaw = entry?.maxLevel;
             const maxLevel = maxRaw === null || maxRaw === ''
-              ? 200
-              : Math.max(minLevel, Math.min(200, Math.floor(Number(maxRaw) || minLevel)));
-            const windowSize = Math.max(0, Math.min(200, Math.floor(Number(entry?.windowSize) || 0)));
+              ? USER_LEVEL_MAX
+              : Math.max(minLevel, Math.min(USER_LEVEL_MAX, Math.floor(Number(maxRaw) || minLevel)));
+            const windowSize = Math.max(0, Math.min(USER_LEVEL_MAX, Math.floor(Number(entry?.windowSize) || 0)));
             if (!windowSize) return null;
             return { minLevel, maxLevel, windowSize };
           })
@@ -11477,11 +11475,11 @@
       }
 
       function resolveDeckLevelBounds(level, settings = null) {
-        const centerLevel = normalizeUserLevel(level);
+        const centerLevel = Math.max(USER_LEVEL_MIN, Math.min(maxSelectableGameLevel(), normalizeUserLevel(level)));
         const windowSize = resolveLevelWindowSize(centerLevel, settings);
         return {
           minLevel: Math.max(1, centerLevel - windowSize),
-          maxLevel: Math.min(USER_LEVEL_MAX, centerLevel + windowSize),
+          maxLevel: Math.min(maxSelectableGameLevel(), centerLevel + windowSize),
           windowSize
         };
       }
@@ -11753,6 +11751,7 @@
           launchAfterSoundTest: '',
           soundTestCompleted: false,
           pendingPlayStart: false,
+          sequenceContinuousMaxLevel: USER_LEVEL_MAX,
           pendingTutorialStart: false,
           pendingTutorialMuteNarration: false,
           welcomeStartRequested: false,
@@ -12218,6 +12217,8 @@
         gameHeadCopy: document.getElementById('gameHeadCopy'),
         gameStarsWrap: document.getElementById('gameStarsWrap'),
         gameTranslationSlot: document.getElementById('gameTranslationSlot'),
+        firstStarProgress: document.getElementById('firstStarProgress'),
+        firstStarProgressFill: document.getElementById('firstStarProgressFill'),
         gameResultsScreen: document.getElementById('gameResultsScreen'),
         gameLevelStrip: document.getElementById('gameLevelStrip'),
         gameLevelPrevBtn: document.getElementById('gameLevelPrevBtn'),
@@ -12329,8 +12330,36 @@
       }
 
       function setDifficultyOptionsFromSequenceLevels(levels) {
+        state.entry.sequenceContinuousMaxLevel = resolveSequenceContinuousMaxLevel(levels);
+        if (selectedGameLevel() > state.entry.sequenceContinuousMaxLevel) {
+          state.ui.welcomeSelectedLevel = state.entry.sequenceContinuousMaxLevel;
+        }
         GAME_OPTION_VALUE_MAP.difficulty = ['automatic', 'manual'];
         state.options.difficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
+      }
+
+      function resolveSequenceContinuousMaxLevel(levels = []) {
+        const normalizedLevels = Array.from(new Set(
+          (Array.isArray(levels) ? levels : [])
+            .map((value) => Number.parseInt(String(value ?? '').trim(), 10))
+            .filter((value) => Number.isInteger(value) && value >= USER_LEVEL_MIN && value <= USER_LEVEL_MAX)
+        )).sort((a, b) => a - b);
+        if (!normalizedLevels.length) return USER_LEVEL_MAX;
+        let continuousMax = 0;
+        for (const level of normalizedLevels) {
+          if (level === continuousMax + 1) {
+            continuousMax = level;
+            continue;
+          }
+          if (level > continuousMax + 1) break;
+        }
+        return Math.max(USER_LEVEL_MIN, continuousMax || normalizedLevels[normalizedLevels.length - 1]);
+      }
+
+      function maxSelectableGameLevel() {
+        const configuredMax = Number.parseInt(String(state.entry.sequenceContinuousMaxLevel ?? USER_LEVEL_MAX), 10);
+        if (!Number.isInteger(configuredMax)) return USER_LEVEL_MAX;
+        return Math.max(USER_LEVEL_MIN, Math.min(USER_LEVEL_MAX, configuredMax));
       }
 
       function normalizeGameOptionValue(key, value) {
@@ -16799,12 +16828,12 @@
       function normalizeSelectableGameLevel(value) {
         const parsed = Number.parseInt(String(value ?? '').trim(), 10);
         if (!Number.isInteger(parsed)) return 0;
-        return Math.max(0, Math.min(USER_LEVEL_MAX, parsed));
+        return Math.max(0, Math.min(maxSelectableGameLevel(), parsed));
       }
 
       function formatDeckLevelWithComma(value) {
         const numeric = Number(value);
-        const safe = Number.isFinite(numeric) ? Math.max(USER_LEVEL_MIN, Math.min(USER_LEVEL_MAX, numeric)) : USER_LEVEL_MIN;
+        const safe = Number.isFinite(numeric) ? Math.max(USER_LEVEL_MIN, Math.min(maxSelectableGameLevel(), numeric)) : USER_LEVEL_MIN;
         return safe.toFixed(1).replace('.', ',');
       }
 
@@ -17021,7 +17050,7 @@
           els.welcomeModeModalLevelPrevBtn.disabled = !levelSelectorVisible || selectedGameLevel() <= 0;
         }
         if (els.welcomeModeModalLevelNextBtn) {
-          els.welcomeModeModalLevelNextBtn.disabled = !levelSelectorVisible || selectedGameLevel() >= USER_LEVEL_MAX;
+          els.welcomeModeModalLevelNextBtn.disabled = !levelSelectorVisible || selectedGameLevel() >= maxSelectableGameLevel();
         }
       }
 
@@ -18060,8 +18089,9 @@
       }
 
       function userLevelCardTarget(level = currentUserLevel()) {
-        const normalizedLevel = normalizeUserLevel(level);
-        if (normalizedLevel >= USER_LEVEL_MAX) return USER_LEVEL_MAX;
+        const normalizedLevel = normalizeSelectableGameLevel(level);
+        if (normalizedLevel <= 0) return 0;
+        if (normalizedLevel >= maxSelectableGameLevel()) return maxSelectableGameLevel();
         return normalizedLevel + 1;
       }
 
@@ -18717,13 +18747,19 @@
         if (els.gameLevelLabel) {
           els.gameLevelLabel.textContent = formatSelectedGameLevelLabel(level);
         }
+        if (els.gameLevelPrevBtn) {
+          els.gameLevelPrevBtn.disabled = level <= USER_LEVEL_MIN;
+        }
+        if (els.gameLevelNextBtn) {
+          els.gameLevelNextBtn.disabled = level >= maxSelectableGameLevel();
+        }
       }
 
       function advanceSelectedGameLevelIfNeeded() {
         if (!isLevelModeActive()) return false;
         const currentLevel = selectedGameLevel();
         if (currentLevel <= 0) return false;
-        if (currentLevel >= USER_LEVEL_MAX) return false;
+        if (currentLevel >= maxSelectableGameLevel()) return false;
         const levelProgress = Math.max(0, Number(state.ui.levelModeProgress?.[currentLevel]) || 0);
         if (levelProgress < userLevelCardTarget(currentLevel)) return false;
         setSelectedGameLevel(currentLevel + 1);
@@ -21250,12 +21286,20 @@
         }
       }
 
+      function setFirstStarProgressVisible(visible) {
+        if (!els.firstStarProgress) return;
+        const shouldShow = Boolean(visible) && safeText(els.game?.dataset?.phaseKey || '') === 'first-star';
+        els.firstStarProgress.hidden = !shouldShow;
+        els.firstStarProgress.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+      }
+
       function setFirstStarListenProgress(value = 0) {
         const progress = Math.max(0, Math.min(1, Number(value) || 0));
         state.game.firstStarAudioProgress = progress;
-        if (!els.gameVisual) return;
-        els.gameVisual.style.setProperty('--first-star-audio-progress', String(progress));
-        els.gameVisual.style.setProperty('--first-star-audio-color', resolveFirstStarProgressColor(progress));
+        if (els.firstStarProgressFill) {
+          els.firstStarProgressFill.style.width = `${progress * 100}%`;
+        }
+        setFirstStarProgressVisible(progress > 0);
         const currentEntry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (
           currentEntry
@@ -21271,53 +21315,23 @@
         }
       }
 
-      function hexToRgb(hex) {
-        const normalized = String(hex || '').replace('#', '').trim();
-        if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return { r: 255, g: 43, b: 43 };
-        return {
-          r: Number.parseInt(normalized.slice(0, 2), 16),
-          g: Number.parseInt(normalized.slice(2, 4), 16),
-          b: Number.parseInt(normalized.slice(4, 6), 16)
-        };
-      }
-
-      function mixRgbHex(fromHex, toHex, ratio = 0) {
-        const from = hexToRgb(fromHex);
-        const to = hexToRgb(toHex);
-        const t = Math.max(0, Math.min(1, Number(ratio) || 0));
-        const r = Math.round(from.r + (to.r - from.r) * t);
-        const g = Math.round(from.g + (to.g - from.g) * t);
-        const b = Math.round(from.b + (to.b - from.b) * t);
-        return `rgb(${r}, ${g}, ${b})`;
-      }
-
-      function resolveFirstStarProgressColor(progress = 0) {
-        const p = Math.max(0, Math.min(1, Number(progress) || 0));
-        if (p <= 0.2) return '#ff2b2b';
-        if (p <= 0.3) return '#ff8a1f';
-        if (p <= 0.5) {
-          return mixRgbHex('#ff8a1f', '#6dff2a', (p - 0.3) / 0.2);
-        }
-        if (p <= 0.7) {
-          return mixRgbHex('#6dff2a', '#48dfcf', (p - 0.5) / 0.2);
-        }
-        return mixRgbHex('#48dfcf', '#eafff7', (p - 0.7) / 0.3);
-      }
-
       function clearFirstStarListenProgressAnimation() {
         if (state.game.firstStarListenProgressRaf) {
           window.cancelAnimationFrame(state.game.firstStarListenProgressRaf);
           state.game.firstStarListenProgressRaf = 0;
         }
         state.game.firstStarAudioProgress = 0;
-        els.gameVisual?.classList.remove('is-first-star-audio-playing');
+        if (els.firstStarProgressFill) {
+          els.firstStarProgressFill.style.width = '0%';
+        }
+        setFirstStarProgressVisible(false);
       }
 
       function startFirstStarListenProgressAnimation(audio) {
         clearFirstStarListenProgressAnimation();
         setFirstStarListenProgress(0);
         if (!audio) return;
-        els.gameVisual?.classList.add('is-first-star-audio-playing');
+        setFirstStarProgressVisible(true);
         let displayedProgress = 0;
         let lastFrameIndex = -1;
         const tick = () => {
