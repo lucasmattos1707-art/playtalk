@@ -3160,14 +3160,6 @@
       pointer-events: none;
     }
 
-    .game-mic-side-metric--left {
-      justify-self: start;
-    }
-
-    .game-mic-side-metric--right {
-      justify-self: end;
-    }
-
     .game-mic-side-metric__seal {
       width: 49px;
       height: 49px;
@@ -3222,6 +3214,7 @@
       right: 0;
       bottom: 0;
       z-index: 120;
+      pointer-events: none;
     }
 
     .game-mic-next-seal-progress__label {
@@ -3240,8 +3233,33 @@
       white-space: nowrap;
       z-index: 121;
       pointer-events: none;
-      opacity: 0;
+      opacity: 1;
       transition: opacity 180ms ease;
+    }
+
+    .game-mic-next-seal-progress__edge {
+      position: fixed;
+      bottom: 14px;
+      margin: 0;
+      color: #eef9ee;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(12px, 3.1vw, 15px);
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+      white-space: nowrap;
+      z-index: 121;
+      pointer-events: none;
+    }
+
+    .game-mic-next-seal-progress__edge--start {
+      left: 14px;
+    }
+
+    .game-mic-next-seal-progress__edge--end {
+      right: 14px;
+      text-align: right;
     }
 
     .game-mic-side-metric__progress-fill {
@@ -3249,8 +3267,8 @@
       width: 0%;
       height: 100%;
       border-radius: 0;
-      background: linear-gradient(90deg, #39ff14 0%, #00ff66 55%, #7dff2a 100%);
-      box-shadow: 0 0 16px rgba(57, 255, 20, 0.85);
+      background: linear-gradient(90deg, #4f9d33 0%, #79ca57 52%, #a1e174 100%);
+      box-shadow: 0 0 16px rgba(117, 213, 94, 0.42);
       transition: width 200ms ease;
     }
 
@@ -11042,7 +11060,9 @@
             <p class="game-mic-side-metric__value" id="gameMicNextSealProgress">0%</p>
           </div>
           <div class="game-mic-next-seal-progress" aria-hidden="true">
-            <p class="game-mic-next-seal-progress__label" id="gameCurrentFluencyLabel">Fluência atual: 1,0</p>
+            <p class="game-mic-next-seal-progress__edge game-mic-next-seal-progress__edge--start" id="gameCurrentMedalStartLevel">Nivel 1</p>
+            <p class="game-mic-next-seal-progress__label" id="gameCurrentFluencyLabel">Selo 1</p>
+            <p class="game-mic-next-seal-progress__edge game-mic-next-seal-progress__edge--end" id="gameCurrentMedalEndLevel">Nivel 10</p>
             <span class="game-mic-side-metric__progress-fill" id="gameMicNextSealProgressFill"></span>
           </div>
           <button class="game-advance-btn" id="gameAdvanceBtn" type="button" aria-label="Avancar digitacao automatica" hidden>
@@ -12347,6 +12367,8 @@
         gameMicNextSealMetric: document.getElementById('gameMicNextSealMetric'),
         gameMicNextSealProgress: document.getElementById('gameMicNextSealProgress'),
         gameMicNextSealProgressFill: document.getElementById('gameMicNextSealProgressFill'),
+        gameCurrentMedalStartLevel: document.getElementById('gameCurrentMedalStartLevel'),
+        gameCurrentMedalEndLevel: document.getElementById('gameCurrentMedalEndLevel'),
         gameCurrentFluencyLabel: document.getElementById('gameCurrentFluencyLabel'),
         gameAdvanceBtn: document.getElementById('gameAdvanceBtn'),
         gameRememberBtn: document.getElementById('gameRememberBtn'),
@@ -13709,14 +13731,12 @@
             renderWelcomeEnergyMiniTicker();
           }
           if (Number.isFinite(Number(payload?.userLevel))) {
-            const previousLevel = currentUserLevel();
-            state.userLevel = normalizeUserLevel(payload.userLevel);
-            if (state.user) state.user.level = state.userLevel;
-            state.userLevelUpdatedAt = safeText(payload.userLevelUpdatedAt || state.userLevelUpdatedAt);
-            syncWelcomeLevelProgress();
-            if (currentUserLevel() !== previousLevel) {
-              scheduleLevelSyncRefresh({ delayMs: 0 });
-            }
+            applyUserLevelState(payload.userLevel, {
+              updatedAt: payload.userLevelUpdatedAt || state.userLevelUpdatedAt,
+              allowTransition: true,
+              scheduleRefresh: true,
+              delayMs: 0
+            });
           }
           if (state.entry.dailyPlanMissionSnapshot) {
             void refreshDailyPlanMissionSnapshot({ force: true }).then(() => {
@@ -15476,15 +15496,12 @@
             updateSpeakingStarMicSealProgress();
           }
           if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.userLevel))) {
-            const previousLevel = currentUserLevel();
-            state.userLevel = normalizeUserLevel(payload.userLevel);
-            if (state.user) state.user.level = state.userLevel;
-            state.userLevelUpdatedAt = safeText(payload?.userLevelUpdatedAt || state.userLevelUpdatedAt);
-            syncWelcomeLevelProgress();
-            syncGameLevelNavigator();
-            if (currentUserLevel() !== previousLevel) {
-              scheduleLevelSyncRefresh({ delayMs: normalizedAction === 'tick' ? 120 : 0 });
-            }
+            applyUserLevelState(payload.userLevel, {
+              updatedAt: payload?.userLevelUpdatedAt || state.userLevelUpdatedAt,
+              allowTransition: true,
+              scheduleRefresh: true,
+              delayMs: normalizedAction === 'tick' ? 120 : 0
+            });
           }
           return payload;
         } catch (_error) {
@@ -17352,6 +17369,36 @@
         els.medalTransitionModal.setAttribute('aria-hidden', 'true');
       }
 
+      function applyUserLevelState(nextLevel, options = {}) {
+        const previousLevel = currentUserLevel();
+        const normalizedLevel = normalizeUserLevel(nextLevel);
+        state.userLevel = normalizedLevel;
+        if (state.user) state.user.level = normalizedLevel;
+        if (Object.prototype.hasOwnProperty.call(options, 'updatedAt')) {
+          state.userLevelUpdatedAt = safeText(options.updatedAt || state.userLevelUpdatedAt);
+        }
+        if (options.syncNavigator !== false) {
+          syncGameLevelNavigator();
+        }
+        if (options.allowTransition && state.entry.sessionResolved) {
+          syncWelcomeLevelProgress();
+        } else {
+          syncUserMedalUi();
+        }
+        if (options.refreshGameHud !== false) {
+          updateSpeakingStarMicSealProgress();
+        }
+        const changed = normalizedLevel !== previousLevel;
+        if (changed && options.scheduleRefresh) {
+          scheduleLevelSyncRefresh({ delayMs: Math.max(0, Number(options.delayMs) || 0) });
+        }
+        return {
+          previousLevel,
+          level: normalizedLevel,
+          changed
+        };
+      }
+
       function setUserMedalTransitionContent(nodeImage, nodeLabel, nodeRange, medal, altPrefix) {
         if (nodeImage) {
           nodeImage.src = safeText(medal?.image) || '/medals/user-level/medal-1.png';
@@ -18846,9 +18893,7 @@
         const levelLoss = resolveFirstStageMissPenaltyForLevel(baseLevel);
         if (levelLoss <= 0) return 0;
         const optimisticLevel = normalizeUserLevel(baseLevel - levelLoss);
-        state.userLevel = optimisticLevel;
-        if (state.user) state.user.level = optimisticLevel;
-        syncGameLevelNavigator();
+        applyUserLevelState(optimisticLevel, { allowTransition: true, scheduleRefresh: false });
         state.entry.firstStagePenaltyBusy = true;
         try {
           const response = await fetch(buildApiUrl('/api/flashcards/first-stage-level-penalty'), {
@@ -18861,14 +18906,12 @@
           });
           const payload = await response.json().catch(() => ({}));
           if (response.ok && payload?.success && Number.isFinite(Number(payload?.userLevel))) {
-            const previousLevel = currentUserLevel();
-            state.userLevel = normalizeUserLevel(payload.userLevel);
-            if (state.user) state.user.level = state.userLevel;
-            state.userLevelUpdatedAt = safeText(payload?.userLevelUpdatedAt || state.userLevelUpdatedAt);
-            syncGameLevelNavigator();
-            if (currentUserLevel() !== previousLevel) {
-              scheduleLevelSyncRefresh({ delayMs: 0 });
-            }
+            applyUserLevelState(payload.userLevel, {
+              updatedAt: payload?.userLevelUpdatedAt || state.userLevelUpdatedAt,
+              allowTransition: true,
+              scheduleRefresh: true,
+              delayMs: 0
+            });
             return Math.max(0, Number(payload?.levelLoss) || levelLoss);
           }
           return levelLoss;
@@ -18886,9 +18929,7 @@
         const levelLoss = Math.min(1, Math.max(0, baseLevel - 1));
         if (levelLoss <= 0) return 0;
         const optimisticLevel = normalizeUserLevel(baseLevel - levelLoss);
-        state.userLevel = optimisticLevel;
-        if (state.user) state.user.level = optimisticLevel;
-        syncGameLevelNavigator();
+        applyUserLevelState(optimisticLevel, { allowTransition: true, scheduleRefresh: false });
         state.entry.firstStarJumpPenaltyBusy = true;
         try {
           const response = await fetch(buildApiUrl('/api/flashcards/jump-level-penalty'), {
@@ -18901,14 +18942,12 @@
           });
           const payload = await response.json().catch(() => ({}));
           if (response.ok && payload?.success && Number.isFinite(Number(payload?.userLevel))) {
-            const previousLevel = currentUserLevel();
-            state.userLevel = normalizeUserLevel(payload.userLevel);
-            if (state.user) state.user.level = state.userLevel;
-            state.userLevelUpdatedAt = safeText(payload?.userLevelUpdatedAt || state.userLevelUpdatedAt);
-            syncGameLevelNavigator();
-            if (currentUserLevel() !== previousLevel) {
-              scheduleLevelSyncRefresh({ delayMs: 0 });
-            }
+            applyUserLevelState(payload.userLevel, {
+              updatedAt: payload?.userLevelUpdatedAt || state.userLevelUpdatedAt,
+              allowTransition: true,
+              scheduleRefresh: true,
+              delayMs: 0
+            });
             return Math.max(0, Number(payload?.levelLoss) || levelLoss);
           }
           return levelLoss;
@@ -21329,8 +21368,6 @@
             els.gameControlsProxy.hidden = false;
             els.gameControlsProxy.classList.remove('is-hidden');
           }
-          if (els.gameMicCurrentSealMetric) els.gameMicCurrentSealMetric.hidden = false;
-          if (els.gameMicNextSealMetric) els.gameMicNextSealMetric.hidden = false;
           updateSpeakingStarMicSealProgress();
           syncLevelTextModeControls();
           return;
@@ -21379,6 +21416,8 @@
           || !els.gameMicNextSealMetric
           || !els.gameMicNextSealProgress
           || !els.gameMicNextSealProgressFill
+          || !els.gameCurrentMedalStartLevel
+          || !els.gameCurrentMedalEndLevel
         ) return;
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
         const isMissionMetricPhase = phaseKey === 'first-star'
@@ -21393,116 +21432,54 @@
           }
           els.gameMicCurrentSealMetric.hidden = true;
           els.gameMicNextSealMetric.hidden = true;
+          if (els.gameCurrentFluencyLabel) {
+            els.gameCurrentFluencyLabel.hidden = true;
+          }
+          const gameProgressBar = els.gameMicNextSealProgressFill?.parentElement;
+          if (gameProgressBar) {
+            gameProgressBar.style.display = 'none';
+            gameProgressBar.setAttribute('aria-hidden', 'true');
+          }
           return;
+        }
+        const gameProgressBar = els.gameMicNextSealProgressFill?.parentElement;
+        if (gameProgressBar) {
+          gameProgressBar.style.display = 'block';
+          gameProgressBar.setAttribute('aria-hidden', 'false');
         }
         if (phaseKey === 'second-star' || phaseKey === 'fourth-star') {
           if (els.gameControlsProxy) {
             els.gameControlsProxy.hidden = false;
             els.gameControlsProxy.classList.remove('is-hidden');
           }
-          els.gameMicCurrentSealMetric.hidden = false;
-          els.gameMicNextSealMetric.hidden = false;
         }
-        const missionSnapshot = state.entry.dailyPlanMissionSnapshot && typeof state.entry.dailyPlanMissionSnapshot === 'object'
-          ? state.entry.dailyPlanMissionSnapshot
-          : null;
-        const missionView = missionSnapshot ? buildDailyPlanMissionView(missionSnapshot, false) : null;
-        const planMode = safeText(missionSnapshot?.seal?.mode).toLowerCase();
-        const isNoPlanMode = planMode === 'sem_plano';
-        const planScoreFromMission = Number(missionSnapshot?.seal?.planScore);
-        const planScoreFallback = Number(state.user?.fluencyPlanScore);
-        const targetPlanScore = Number.isFinite(planScoreFromMission)
-          ? Math.max(0, Math.min(200, planScoreFromMission))
-          : Math.max(0, Math.min(200, Number.isFinite(planScoreFallback) ? planScoreFallback : 0));
-        const dynamicProgress = (() => {
-          if (!missionView) {
-            const fallbackScore = Math.max(0, Math.min(200, targetPlanScore));
-            return {
-              dynamicPlanScore: fallbackScore,
-              missionTotalProgressPercent: 0
-            };
-          }
-          const cardsToday = Math.max(0, Number(missionView.cardsToday) || 0);
-          const cardsExpected = Math.max(0, Number(missionView.cardsExpected) || 0);
-          const cardsDoneCapped = cardsExpected > 0 ? Math.min(cardsToday, cardsExpected) : cardsToday;
-          const booksDoneRaw = Math.max(0, Number(missionView.booksToday) || 0);
-          const booksExpected = Math.max(0, Number(missionView.booksExpected) || 0);
-          const booksDone = booksExpected > 0 ? Math.min(booksDoneRaw, booksExpected) : booksDoneRaw;
-          const weightedDoneUnits = cardsDoneCapped + (booksDone * 2);
-          const weightedExpectedUnits = cardsExpected + (booksExpected * 2);
-          const missionBaseProgressPercent = Math.max(
-            0,
-            Math.min(200, computeDailyPlanRawPercent(weightedDoneUnits, weightedExpectedUnits))
-          );
-          const missionTotalProgressPercent = missionBaseProgressPercent;
-          if (isNoPlanMode) {
-            return {
-              dynamicPlanScore: Math.max(0, Math.min(200, targetPlanScore)),
-              missionTotalProgressPercent
-            };
-          }
-          const progressRatio = weightedExpectedUnits > 0
-            ? Math.max(0, Math.min(1, weightedDoneUnits / weightedExpectedUnits))
-            : 0;
-          const dynamicPlanScore = Math.max(0, Math.min(targetPlanScore, targetPlanScore * progressRatio));
-          return {
-            dynamicPlanScore,
-            missionTotalProgressPercent
-          };
-        })();
-        const planScore = Math.max(
-          0,
-          Math.min(200, Number(dynamicProgress.missionTotalProgressPercent) || Number(dynamicProgress.dynamicPlanScore) || 0)
-        );
-        const currentSeal = resolveDailyPlanSealByScore(planScore);
-        const missionBarProgress = Math.max(
-          0,
-          Math.min(100, Number(dynamicProgress.missionTotalProgressPercent) || 0)
-        );
-        const sealSrc = safeText(currentSeal?.sealImage) || 'medalhas/white.png';
-        els.gameMicCurrentSealImage.src = sealSrc.startsWith('/') ? sealSrc : `/${sealSrc}`;
-        els.gameMicCurrentSealImage.alt = safeText(currentSeal?.label) ? `Selo atual: ${currentSeal.label}` : 'Selo atual';
-        els.gameMicCurrentSealImage.style.display = 'none';
-        let currentRankValue = document.getElementById('gameMicCurrentSealRank');
-        if (!currentRankValue) {
-          currentRankValue = document.createElement('p');
-          currentRankValue.id = 'gameMicCurrentSealRank';
-          currentRankValue.className = 'game-mic-side-metric__value';
-          els.gameMicCurrentSealMetric.appendChild(currentRankValue);
-        }
-        const targetProgress = Math.max(0, Math.min(100, Number(missionBarProgress) || 0));
-        const currentSpeed = Math.max(0, Number(state.stats?.speedFlashcardsPerHour) || 0);
-        if (phaseKey === 'second-star' || phaseKey === 'fourth-star') {
-          const speedText = state.game.stageSpeedLoading
-            ? '...'
-            : `${formatSpeedWithoutDecimals(currentSpeed)}`;
-          renderMetricValue(currentRankValue, {
-            icon: 'bolt',
-            text: speedText
-          });
-        } else {
-          renderMetricValue(currentRankValue, {
-            icon: 'target',
-            text: `${Math.round(targetProgress)}%`
-          });
-        }
+        const level = clampUserMedalSourceLevel(currentUserLevel());
+        const medal = resolveUserMedalByLevel(level);
+        const targetProgress = computeUserMedalProgressPercent(level);
         if (state.entry.gameMicProgressAnimationFrame) {
           window.cancelAnimationFrame(state.entry.gameMicProgressAnimationFrame);
           state.entry.gameMicProgressAnimationFrame = 0;
         }
         state.entry.gameMicAnimatedProgress = targetProgress;
+        els.gameCurrentMedalStartLevel.textContent = `Nivel ${Math.max(1, Number(medal?.minLevel) || 1)}`;
+        els.gameCurrentMedalEndLevel.textContent = `Nivel ${Math.max(1, Number(medal?.maxLevel) || 1)}`;
+        if (els.gameCurrentFluencyLabel) {
+          els.gameCurrentFluencyLabel.textContent = safeText(medal?.label) || 'Selo';
+          els.gameCurrentFluencyLabel.hidden = false;
+        }
         renderMetricValue(els.gameMicNextSealProgress, {
           icon: 'level',
           text: `${Math.max(1, normalizeUserLevel(currentUserLevel()))}`
         });
         els.gameMicNextSealProgressFill.style.width = `${targetProgress.toFixed(2)}%`;
-        if (els.gameCurrentFluencyLabel) {
-          els.gameCurrentFluencyLabel.textContent = '';
-          els.gameCurrentFluencyLabel.hidden = true;
+        if (gameProgressBar) {
+          gameProgressBar.setAttribute(
+            'aria-label',
+            `${safeText(medal?.label) || 'Selo atual'}: ${Math.round(targetProgress)}% da faixa ${Math.max(1, Number(medal?.minLevel) || 1)}-${Math.max(1, Number(medal?.maxLevel) || 1)}`
+          );
         }
-        els.gameMicCurrentSealMetric.hidden = false;
-        els.gameMicNextSealMetric.hidden = false;
-        void refreshDailyPlanMissionSnapshot({ maxAgeMs: 60000 });
+        els.gameMicCurrentSealMetric.hidden = true;
+        els.gameMicNextSealMetric.hidden = true;
       }
 
       function primeGameTouchButton() {
